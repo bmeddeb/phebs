@@ -4092,6 +4092,25 @@ inputs, ambiguous provenance, and every resolver abstention remain classified
 `unresolved`. The builder never parses source again, guesses through a
 conflict, reads Git or the store, or starts a child process.
 
+T42.1r4 checks that same validated namespace inventory before requesting a
+member. A namespace proven absent needs neither a member read nor a retained
+negative cache entry; present namespaces still undergo complete member
+validation and the unchanged 16,384-read ceiling. Invalid namespace text,
+cancellation, and missing or corrupt declared members remain failures. No
+service filter or guessed protocol changes the posting classifications.
+
+After upgrading, ordinary reconciliation in both relationship scheduling paths
+can replace a terminal schedule from the previous operational build policy
+with a bounded successor; do not delete jobs, pointers or publication files to
+force recovery. This applies to old-policy terminal refusals generally, not
+only namespace refusals. An old active direct schedule may also be replaced
+through the existing predecessor-bound path. Exact-current catalog-V3
+publications remain reusable; the older catalog-v2 path can still schedule
+redundant relationship work because of a separate identity-comparison defect.
+This change leaves that behavior unchanged. Historical artifact policies remain
+unchanged, and a terminal refusal
+under the new policy remains terminal until its governing target changes.
+
 Posting members are split into 256 deterministic buckets per protocol. An
 operation lookup validates only the selected member; unresolved inspection
 uses the protocol's fixed sentinel bucket. Complete validation still runs

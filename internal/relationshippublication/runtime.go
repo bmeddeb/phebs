@@ -1026,7 +1026,9 @@ func runtimeTargetV2(
 // policy and to the three operational resident fences applied by Handle. A
 // policy-only change therefore supersedes a settled terminal schedule without
 // pretending that unchanged source authority is a new generation. Every input
-// is a process constant, so the digest is computed once.
+// is a process constant, so the digest is computed once. The v2 domain also
+// binds corrected bounded namespace admission without rekeying any serialized
+// component policy or successful publication.
 var runtimeBuildPolicyDigest = sync.OnceValues(func() (string, error) {
 	return digestValue(struct {
 		Domain           string                   `json:"domain"`
@@ -1038,7 +1040,7 @@ var runtimeBuildPolicyDigest = sync.OnceValues(func() (string, error) {
 		RPCResident      int64                    `json:"rpc_resident_bytes"`
 		KafkaResident    int64                    `json:"kafka_resident_bytes"`
 	}{
-		Domain:   "phebs-relationship-build-policy-v1",
+		Domain:   "phebs-relationship-build-policy-v2",
 		Resolver: resolvernamespace.FrozenPolicy(), RPC: rpccallerposting.FrozenPolicy(),
 		Kafka: kafkatopicposting.FrozenPolicy(), Relationship: FrozenPolicy(),
 		ResolverResident: ResolverResidentLimit, RPCResident: RPCResidentLimit,

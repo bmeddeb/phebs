@@ -41,9 +41,10 @@ logical-service target. T42.1 is integrated through closure
 T42.2 runner implementation is authorized, but its readiness audit found
 frozen authority/work-contract conflicts. T42.1r1 prospective correction is
 approved, with local checkpoint integration explicitly requested despite its
-known-red complete constructor. T42.1r2/r3 are integrated; the newly proposed
-T42.1r4 namespace prerequisite requires separate production-fix approval.
-Correction acceptance and ceremony execution remain unestablished.
+known-red complete constructor. T42.1r2/r3 are integrated; T42.1r4's separate
+namespace/terminal-recovery production fix is implemented and component-tested.
+Complete acceptance now stops on a stale modeled pressure epoch; correction
+acceptance and ceremony execution remain unestablished.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -3211,7 +3212,7 @@ transport/trigger coverage nor a ceremony pass. Ben approved the local
 fast-forward merge; the verified-clean merged worktree and branch were removed,
 with all commits retained on main. No push, freeze or ceremony was performed.
 
-**T42.1r4 · Bounded RPC namespace lookup (proposed; approval required)** —
+**T42.1r4 · Bounded RPC namespace lookup (implemented; acceptance hold)** —
 separate production prerequisite, not part of the contract-only T42.1r1 draft.
 The native constructor reaches the ordinary RPC namespace cache, where the
 frozen overlay requires 20,002 distinct protocol/import keys against a 16,384
@@ -3220,7 +3221,7 @@ resolver root without member I/O; they still consume cache/read budget today.
 AC: correct bounded lookup/admission at the shared production seam without
 widening caps, reducing corpus inputs or changing exact outputs/root authority;
 account negative probes, actual member reads and retained memory separately;
-test many absent namespaces, genuine member-limit exhaustion, exact output
+test many absent namespaces, positive-read boundaries, oversized-root refusal, exact output
 preservation, corruption and cancellation; review policy/identity compatibility
 and per-query/tick/startup/retry/publication cost. Existing runtime retains this
 refusal as a closed same-target terminal failure: select and test an explicit
@@ -3229,7 +3230,31 @@ historical publication reads, reuse and archive compatibility. Do not blindly
 bump the RPC artifact policy. Require the ordinary full
 component regression under native resident limits, independent review and
 separate integration before resuming complete T42.1r1 constructor acceptance.
-No implementation, branch, merge or execution approval is implied by this row.
+Ben approved implementation on `codex/t42.1r4-bounded-namespace-lookup` from
+checkpoint main `a57a4bd9`. Both selected-V2 and ordinary catalog-V3 scheduling
+must bind the operational policy change; preserve legacy binding readability
+and shadow-V1 continuation. Exact-current direct-V3 publications remain reusable; old
+failed/active direct schedules may use existing predecessor-bound replacement.
+The new genuine selected-V2 publication check exposes an unchanged catalog-vs-
+namespace generation comparison that schedules redundant work. Keep its actual
+behavior and historical artifact readability explicit; that separate baseline
+defect is not fixed here and supplies no V2 no-op claim.
+Affected full normal/race and the native full-overlay component regression
+pass; its two runs take 301.80s and 404.22s with unchanged counts and limits.
+Independent working-tree reviews report no remaining findings in scope.
+The host-permitted complete constructor clears native construction in its
+926.30s run, then fails the modeled `pressure_80` row: its helper hardcodes
+server epoch 2 instead of the corrected post-restart epoch 4. Follow up in the
+contract fixture with phase-table derivation and a cheap V1/V2 pressure test;
+leave the validator, production code and retained artifacts unchanged. This
+is not a pressure execution or capacity finding. Complete constructor
+acceptance and exact-commit review remain open; the known missing UI screenshot
+is the only docs-check failure.
+The same contract-fixture follow-up must isolate the unkeyed test freeze cache
+by exact plan/commit inputs and check both V1/V2 orders. The constructor's
+private binding helper assumes prior admission; require real freeze admission
+so a cached wrong-version profile is rejected before expensive native work.
+No main merge, push, corrected freeze or ceremony is authorized.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.

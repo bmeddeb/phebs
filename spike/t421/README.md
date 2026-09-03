@@ -511,6 +511,83 @@ gates. T42.1r4 implementation still requires separate approval. The original
 unmerged draft remains at `afcaef1d` on `codex/t42.2-combined-ceremony`; no push,
 new canonical artifact, freeze or ceremony is authorized by this integration.
 
+### T42.1r4 prerequisite validation
+
+Ben then approved the separate production prerequisite on
+`codex/t42.1r4-bounded-namespace-lookup`, based on checkpoint `a57a4bd9`.
+The shared RPC builder now proves absence from its already-validated immutable
+namespace inventory before attempting a member read. Absent keys retain no
+cache entry and consume no member-read budget; present keys retain validation,
+integrity checks and the unchanged 16,384 ceiling. Serialized component policies,
+output identities, frozen corpus and resident limits are unchanged.
+
+Both selected-V2 and direct catalog-V3 scheduling now bind the revised
+operational build policy. Queue-model regressions exercise the real reconcile
+and target derivation paths: old terminal/active targets can be superseded,
+same-new-policy terminals remain retained, and exact-current direct-V3
+publications remain reusable before admission. Historical direct bindings and
+legacy shadow continuation remain readable. A genuine selected-V2 publication
+test exposes its unchanged resolver-catalog vs resolver-namespace comparison
+defect; it preserves that baseline redundant scheduling, not a fabricated V2
+no-op. These tests are not a live-server upgrade or recovery receipt.
+
+`TestFrozenOverlayNativeRelationshipComponents` first passed in 301.80 seconds
+(302.233 seconds for the package). It constructs all frozen overlay inputs
+through real source/observation, proto extraction, resolver and posting builders:
+21,601 observations, 20,002 distinct lookup keys, 10,000 present namespaces,
+10,002 absent keys, 10,999 resolved RPC rows, and 500 producer plus 9,500 consumer
+Kafka rows. Resolver/RPC/Kafka resident fences remain 128/192/160 MiB. Structural
+inputs are the existing replay's representative census; declaration publication
+and current selection use its strict in-memory store model. This test does not
+execute the other eight extraction domains, caller leaves, service projections,
+durable scheduling, archive, authorization or an ordinary server. Kafka row
+counts are not a service relationship-pair proof.
+
+The initial test used a five-minute context. Its final context is ten minutes,
+twice that rounded observed runtime, solely for host-variance headroom; no
+production or ceremony deadline changes. The context-only revision passed its
+single final run in 404.22 seconds (404.803 seconds for the package), with the
+same exact counts and limits; its temporary source and known children were
+removed by normal test cleanup. Full affected package normal/race, scoped vet
+and pinned lint, repository compilation, module verification, glossary and
+whitespace checks pass. The missing UI screenshot remains the only docs-check
+failure. The remaining T42 normal suite stopped in 433.566 seconds with only
+the complete constructor failing on sandbox local-port denial before opening
+its database; the separate native pipeline replay passed in 277.71 seconds.
+
+The host-permitted constructor then ran for 926.30 seconds (926.833 seconds for
+the package). It completed A/B/return-A's 56 chunks and nine roots, both
+56-result recoveries with zero source acquisition/evidence appends, and all
+native downstream construction before `ValidateReceipt` rejected
+`phase "pressure_80" pressure facts are invalid`. Thus the RPC namespace
+refusal is cleared, but complete constructor acceptance is still red. The
+pressure rows are explicitly modeled measurements, not an executed pressure
+ceremony. Their shared test helper hardcodes `ServerEpoch: 2`; the corrected
+phase table and checkpoint injection derive post-restart epoch 4, which the
+unchanged validator correctly requires. The contract-fixture follow-up must
+derive pressure epochs from that same phase table for both retained and
+corrected plans, with a cheap pressure-only counterexample before another full
+constructor run. Do not weaken the validator, hardcode 4, or call this a host
+pressure failure. The existing phase-table regression passes in 0.609 seconds;
+the constructor workspace was removed and its known processes exited.
+Independent working-tree implementation, component-test and documentation
+reviews report no remaining findings in their stated scope. Retained plan,
+T41.10 receipt and logical-restart regression hashes remain unchanged.
+Source review also found a separate cross-version fixture hazard:
+`mustExecutionFreeze` caches one freeze under an unkeyed `sync.Once`, despite
+receiving either a V1 or V2 plan. The constructor uses the private receipt
+binding helper, which assumes prior freeze admission; unlike the public binding
+entry point, it does not validate that freeze against the supplied plan. Mixed
+test order can therefore supply the wrong profile. This did not cause the
+isolated epoch-4 failure above. `ValidateReceipt` still rejects the wrong
+plan digest after construction; no false-positive complete acceptance is
+established. The contract-fixture follow-up must isolate
+caches by exact inputs, cover both V1/V2 orders without native construction,
+and exercise real freeze admission before claiming constructor acceptance.
+These are test-fixture changes, not permission to weaken the public validator.
+No complete-constructor acceptance, exact-commit review, new canonical artifact,
+merge, push, freeze or ceremony is claimed here.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

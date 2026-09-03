@@ -831,6 +831,19 @@ T42.1r1 checkpoint with the disclosed constructor failure retained. This is an
 integration exception, not ticket closure or T42.1r4 implementation approval;
 acceptance/review, scoped metering and freeze remain open. Preserve the original
 unmerged lineage at `afcaef1d`; no push or ceremony is authorized.
+Ben then approved the separate T42.1r4 production prerequisite, branched from
+checkpoint main `a57a4bd9`. Implement exact-root absent-namespace bypass with
+unchanged limits and output policy, plus operational target versioning in both
+selected-V2 and ordinary catalog-V3 scheduling. Preserve historical artifacts,
+legacy bindings and exact-current reuse. Full validation/review remains open;
+this approval includes no main merge, push, new freeze or ceremony.
+T42.1r4's affected normal/race and two full-overlay component runs now pass;
+independent working-tree reviews report no remaining findings in scope. The
+926.30-second host-permitted constructor clears native construction but still
+fails receipt validation: modeled pressure rows hardcode epoch 2 instead of
+the corrected phase table's post-restart epoch 4. The contract-fixture
+follow-up must derive that value, not weaken the oracle. No complete acceptance,
+exact-commit review, integration, push or ceremony is claimed.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

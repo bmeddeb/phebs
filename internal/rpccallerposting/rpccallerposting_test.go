@@ -53,9 +53,11 @@ func (source fakeObservationSource) WalkObserved(
 type countingResolver struct {
 	publication *resolvernamespace.Publication
 	reads       int
+	rootReads   int
 }
 
 func (resolver *countingResolver) Root() resolvernamespace.Root {
+	resolver.rootReads++
 	return resolver.publication.Root()
 }
 
@@ -159,10 +161,10 @@ func charge(client any) { _ = pb.Marker; client.Charge(nil) }
 		unresolved[0].Operation != "" || unresolved[1].Operation != "" {
 		t.Fatalf("unresolved classifications = %+v", unresolved)
 	}
-	// The same imported namespace is opened once per protocol across all three
-	// observation records. Empty thrift authority is cached as deliberately as grpc.
-	if resolver.reads != 2 {
-		t.Fatalf("namespace reads = %d, want 2", resolver.reads)
+	// Only the present grpc namespace is opened, once across all three records.
+	// The captured exact root proves thrift absent without a member read/cache.
+	if resolver.reads != 1 || resolver.rootReads != 1 {
+		t.Fatalf("namespace/root reads = %d/%d, want 1/1", resolver.reads, resolver.rootReads)
 	}
 
 	second, err := buildSources(t.Context(), root, source, resolver)
@@ -275,7 +277,7 @@ func charge(client pb.OtherClient) { client.Charge(nil) }
 	}
 	projection, present, err := projectCall(
 		t.Context(),
-		&namespaceCache{resolver: resolver, values: make(map[string][]resolvernamespace.Record)},
+		&namespaceCache{resolver: resolver, namespaces: resolver.Root().Namespaces, values: make(map[string][]resolvernamespace.Record)},
 		nameObservation, nameObservation.Functions[0].Calls[0], "grpc",
 	)
 	if err != nil || !present || projection.class != "name_match" ||

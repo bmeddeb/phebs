@@ -158,8 +158,9 @@ exact implementation
 T42.2 runner implementation is authorized, but the pre-implementation audit
 found frozen authority/work-contract conflicts. T42.1r1 correction is approved
 with local checkpoint integration explicitly requested despite known-red
-complete-constructor acceptance. T42.1r2/r3 are integrated; the proposed T42.1r4
-namespace prerequisite needs separate production-fix approval. Correction
+complete-constructor acceptance. T42.1r2/r3 are integrated; the separate T42.1r4
+namespace/terminal-recovery prerequisite is implemented and component-tested.
+Complete acceptance now stops on a stale modeled pressure epoch; correction
 acceptance and freeze remain open. No T42.2 execution, private rerun, or release
 is authorized.
 
@@ -1125,6 +1126,20 @@ relationship, or correctness authority.
   current T42.1r1 checkpoint, retaining its known-red constructor. Integration
   is not ticket closure or a waiver of acceptance/review gates, and does not
   approve T42.1r4 implementation, remote push, corrected freeze or execution.
+- Ben then approved T42.1r4 on its separate branch from checkpoint `a57a4bd9`.
+  Exact-root absence bypass must preserve the namespace-read cap, validation,
+  cancellation and positive-member integrity. Both runtime scheduling paths
+  need the operational build-policy binding so existing terminal failures can
+  recover, without changing artifact policies or exact-current output reuse.
+  Validation and independent review remain open; no merge, push or ceremony.
+- T42.1r4's affected normal/race and both native full-overlay component runs
+  now pass, with no remaining findings in working-tree reviews. The complete
+  host-permitted constructor clears native construction but fails receipt
+  validation at `pressure_80`: its modeled row retains epoch 2 instead of the
+  corrected post-restart epoch 4. Derive the fixture epoch from the phase table
+  and test both plan versions before another full constructor run. Preserve
+  the oracle, caps and retained artifacts; complete acceptance, exact-commit
+  review, integration and ceremony remain unclaimed.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

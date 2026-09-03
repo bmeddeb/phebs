@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
@@ -151,6 +152,14 @@ func (runtime *Runtime) ReconcileV3(ctx context.Context, repository string) (boo
 		ctx, repository, components, authority, policyDigest,
 	); continueErr != nil || continued {
 		return false, continueErr
+	}
+	// Legacy shadow bindings above retain their artifact-policy identity.
+	// New direct bindings instead include operational component admission so
+	// an unchanged terminal target can recover after a runtime-only fix. Old
+	// direct bindings remain readable against their own recorded digest.
+	policyDigest, err = runtimeBuildPolicyDigestV3()
+	if err != nil {
+		return false, err
 	}
 	target, err := runtimeTargetDirectV3(
 		repository, components.upstream.Digest, components.upstream.ProvenanceDigest,
@@ -716,28 +725,6 @@ func cloneRuntimeStatesV3(values []servicecatalog.ServiceState) []servicecatalog
 	return result
 }
 
-func matchesRuntimeAuthorityV3(
-	root RootV3,
-	source Root,
-	authority runtimeAuthorityV3,
-) bool {
-	value := root.Authority
-	upstream := source.Authority.Upstream
-	return root.Schema == RootSchemaV3 && upstream != nil &&
-		value.Repository == source.Authority.Repository &&
-		value.CatalogRootDigest == authority.pointer.RootDigest &&
-		value.CatalogControlRevision == authority.pointer.ControlRevision &&
-		value.ServiceStateSummaryDigest == authority.summary.SummaryDigest &&
-		value.ServiceStateControlRevision == authority.summary.ControlRevision &&
-		value.UpstreamDigest == upstream.Digest &&
-		value.ResolverGenerationDigest == source.Authority.ResolverGenerationDigest &&
-		value.ResolverRootDigest == source.Authority.ResolverRootDigest &&
-		value.RPCGenerationDigest == source.Authority.RPCGenerationDigest &&
-		value.RPCRootDigest == source.Authority.RPCRootDigest &&
-		value.KafkaGenerationDigest == source.Authority.KafkaGenerationDigest &&
-		value.KafkaRootDigest == source.Authority.KafkaRootDigest
-}
-
 func bindingMatchesRuntimeAuthorityV3(
 	binding runtimeBindingV3,
 	authority runtimeAuthorityV3,
@@ -828,6 +815,23 @@ func runtimeTargetShadowV3(
 		PolicyDigest: policyDigest,
 	})
 }
+
+// Only new direct schedule targets use this operational policy. Current
+// publication matching happens first, and artifact policies remain unchanged.
+var runtimeBuildPolicyDigestV3 = sync.OnceValues(func() (string, error) {
+	components, err := runtimeBuildPolicyDigest()
+	if err != nil {
+		return "", err
+	}
+	return digestValue(struct {
+		Domain       string   `json:"domain"`
+		Components   string   `json:"components"`
+		Relationship PolicyV3 `json:"relationship"`
+	}{
+		Domain:     "phebs-relationship-v3-runtime-build-policy-v1",
+		Components: components, Relationship: FrozenPolicyV3(),
+	})
+})
 
 func runtimeTargetDirectV3(
 	repository, upstream, upstreamProvenance, resolver, catalogRoot string,

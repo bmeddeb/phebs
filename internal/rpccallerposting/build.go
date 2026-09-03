@@ -57,9 +57,10 @@ type Prepared struct {
 }
 
 type namespaceCache struct {
-	resolver resolverSource
-	values   map[string][]resolvernamespace.Record
-	reads    int
+	resolver   resolverSource
+	namespaces []resolvernamespace.NamespaceReceipt
+	values     map[string][]resolvernamespace.Record
+	reads      int
 }
 
 type callProjection struct {
@@ -112,7 +113,7 @@ func BuildV2(ctx context.Context, request BuildRequestV2) (*Prepared, error) {
 		resolvernamespace.ValidateRoot(resolverRoot) != nil || observation.Repository != resolverRoot.Authority.Repository {
 		return nil, fmt.Errorf("%w: RPC caller posting v2 authority", ErrInvalid)
 	}
-	return buildObservedBounded(ctx, request.Root, request.Observations, request.Resolver, authority,
+	return buildObservedBounded(ctx, request.Root, request.Observations, request.Resolver, resolverRoot.Namespaces, authority,
 		observation.ObservedCount, RootSchemaV2, request.Prior, request.ResidentLimitBytes)
 }
 
@@ -162,7 +163,7 @@ func buildSourcesBounded(
 	if err := validateAuthority(RootSchema, authority); err != nil {
 		return nil, err
 	}
-	return buildObservedBounded(ctx, root, observations, resolver, authority,
+	return buildObservedBounded(ctx, root, observations, resolver, resolverRoot.Namespaces, authority,
 		observationManifest.ObservedCount, RootSchema, nil, residentLimit)
 }
 
@@ -171,11 +172,14 @@ type observedSource interface {
 }
 
 func buildObservedBounded(
-	ctx context.Context, root string, observations observedSource, resolver resolverSource, authority Authority,
+	ctx context.Context, root string, observations observedSource, resolver resolverSource,
+	namespaces []resolvernamespace.NamespaceReceipt, authority Authority,
 	expectedObserved int, rootSchema string, prior *Publication, residentLimit int64,
 ) (*Prepared, error) {
 
-	cache := &namespaceCache{resolver: resolver, values: make(map[string][]resolvernamespace.Record)}
+	// Both entry paths validated this immutable Go namespace inventory already.
+	// Retain their single root snapshot, not a second copy or a negative cache.
+	cache := &namespaceCache{resolver: resolver, namespaces: namespaces, values: make(map[string][]resolvernamespace.Record)}
 	byMember := make(map[string][]Posting)
 	seen := make(map[string]struct{})
 	var identityBytes int64
@@ -360,9 +364,24 @@ func (cache *namespaceCache) namespace(
 	ctx context.Context,
 	protocol, namespace string,
 ) ([]resolvernamespace.Record, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if (protocol != "grpc" && protocol != "thrift") || !validText(namespace) {
+		return nil, fmt.Errorf("%w: namespace lookup", resolvernamespace.ErrInvalid)
+	}
 	key := protocol + "\x00" + namespace
 	if values, present := cache.values[key]; present {
 		return values, nil
+	}
+	_, present := slices.BinarySearchFunc(cache.namespaces, namespace, func(receipt resolvernamespace.NamespaceReceipt, target string) int {
+		if compared := strings.Compare(receipt.Protocol, protocol); compared != 0 {
+			return compared
+		}
+		return strings.Compare(receipt.Namespace, target)
+	})
+	if !present {
+		return []resolvernamespace.Record{}, nil
 	}
 	if cache.reads >= MaxNamespaceReads {
 		return nil, ErrLimit
