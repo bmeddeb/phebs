@@ -3127,7 +3127,7 @@ is verified and retained contract bytes are unchanged. Eligible only for a
 separate integration request; no main merge, deployment, freeze, or ceremony
 is authorized, and T42.1r1 remains the next contract prerequisite.
 
-**T42.1r3 · Exact completed-generation recovery preparation (approved, in progress)** —
+**T42.1r3 · Exact completed-generation recovery preparation (implemented; integration pending)** —
 separate default-inactive production primitive on
 `codex/t42.1r3-recovery-preparation`; the T42.1r1 contract draft stays isolated.
 Normal completed same-target reconciliation must continue reusing its settled
@@ -3145,6 +3145,17 @@ This library primitive does not claim binary trigger arming or a ceremony pass;
 the future admitted transport must use the actual live instance and arm before
 new workers can pass the selected trigger. Corrected contract acceptance,
 integration, freeze and execution remain separate gates.
+
+Exact implementation `0adada19bb06914aea901874a18268802e1ec939` passes complete
+runtime normal/race, affected dependency/command gates, repository compilation,
+scoped vet/pinned lint, module, glossary and whitespace checks. Independent
+exact-commit manual review of all eight files reports `0/0/0/0`. The genuine
+one-partition real-store regression uses native extraction and real scheduler
+settlement; both preparations recover the same evidence/results without new
+source work. Counterexamples reject foreign plans, stale post-enqueue authority
+and coherently relabeled generation identities. The known baseline missing
+UI screenshot is the only docs-check failure. This is neither binary-control
+transport/trigger coverage nor a ceremony pass; no merge or push was performed.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
