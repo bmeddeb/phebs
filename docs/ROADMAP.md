@@ -1090,15 +1090,17 @@ relationship, or correctness authority.
   completed files. Ordinary completed same-target reconciliation reuses the
   settled schedule. Full constructor acceptance and new canonical plan
   authoring remain pending use of the separately implemented boundary below.
-- T42.1r3 is implemented and independently reviewed on
-  `codex/t42.1r3-recovery-preparation`, based on local main's integrated
+- T42.1r3 is independently reviewed and integrated locally through
+  `3b16f721783d443b57c76505ec37fa31a8bac5aa`, atop the integrated
   T42.1r2 bytes. It adds a default-inactive in-process completed-generation
   preparation primitive; the T42.1r1 contract draft remains isolated. Real
   completed controls, exact predecessor/root/authority fencing, native
   schedule binding, preservation, cancellation and bounded-cost gates pass at
   exact implementation `0adada19bb06914aea901874a18268802e1ec939`; independent
   manual review reports `0/0/0/0`. The pre-existing UI screenshot remains the
-  only docs-check failure. Integration is separate. There is no new binary transport or
+  only docs-check failure. The isolated T42.1r1 draft is rebased onto these
+  bytes; genuine completed-constructor wiring and prospective control-read
+  accounting remain next. There is no push, new binary transport or
   trigger-arming claim, corrected freeze, or execution authorization.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden

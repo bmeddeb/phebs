@@ -353,9 +353,26 @@ settled counters: it requires actual current roots and successful real-store
 settlement, and rejects a recovery schedule that never advances. The small native
 runtime regression creates completed files and proves ordinary reconciliation
 reuses the schedule and source work; its scheduler settlement remains a labeled
-test double, not a real-store or zero-publication-write claim. A separately
-approved T42.1r3 same-process preparation control is still required; no complete
-constructor rerun, new artifact, or ceremony is claimed.
+test double, not a real-store or zero-publication-write claim. The separately
+reviewed T42.1r3 same-process preparation control is now integrated locally
+through `3b16f721783d443b57c76505ec37fa31a8bac5aa`, and this draft is rebased
+onto it. Genuine worker completion must be wired while each physical candidate
+is current, before calling the same live reconciler's preparation hook; a later
+second execution pass cannot reopen already-replaced candidate members. The
+hook's control-read costs also need prospective accounting: the inherited
+topology proxy is not a read-event meter, store query retries and candidate-cache
+miss validation need charges, and one enqueue call is not one transaction
+attempt. Derive the full-phase bound under unchanged ceilings. No complete
+constructor rerun, new artifact, remote push, freeze, or ceremony is claimed.
+
+Integration checks pass for the focused contract suite normally (45.747s),
+and the real-store preparation plus ordinary same-target reuse regressions
+normally (1.838s) and under race (2.979s). The broad contract race selector
+hit its five-minute package allowance while rebuilding the independent oracle
+inside `TestCorrectionSupersedesWithoutChangingCorpusOrSafety` (300.715s).
+It is incomplete, not a race or acceptance pass. The isolated compact
+work/startup/recovery/retained-runtime validators pass under race (2.400s),
+without repeating that oracle construction; no test process remains.
 
 Earlier draft checks: focused identity/table checks passed in 23.128 seconds;
 retained-v1 preservation and v2 canonical/size/framing checks passed in 54.876

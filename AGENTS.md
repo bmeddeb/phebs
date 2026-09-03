@@ -800,6 +800,13 @@ files correctly reuses the settled schedule. A proposed separate T42.1r3
 default-inactive preparation control requires approval before production code
 is changed. Keep full constructor acceptance and new canonical plan authoring
 pending; do not treat synthetic settled counters as that missing proof.
+Ben subsequently approved and integrated the independently reviewed T42.1r3
+primitive locally through `3b16f721783d443b57c76505ec37fa31a8bac5aa`.
+This supersedes the preparation-authorization hold above. The isolated
+T42.1r1 draft is rebased onto it, with no production edits in the draft.
+The hook is available, but genuine completed-worker constructor wiring and
+prospective control-read accounting remain unpassed prerequisites. No remote
+push, new canonical plan, freeze or ceremony occurred.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

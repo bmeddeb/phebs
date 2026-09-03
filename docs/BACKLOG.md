@@ -3110,11 +3110,14 @@ The first real-server attempt exposed the native declaration-visibility defect;
 the separately integrated T42.1r2 reader/cutover now closes that prerequisite
 with an exact-source real upgrade and logical-restart pass. The original draft
 is retained at `afcaef1d`; correction resumes on
-`codex/t42.1r1-contract-correction` atop main `529cb1d5`. The full constructor
+`codex/t42.1r1-contract-correction` atop main `3b16f721`. The full constructor
 witness remains unpassed. The resumed audit requires exact cold/B/return-A
 schedule lineage, independently checked per-epoch startup timing, and recovery
 preparation from genuinely completed files rather than modeled settled counters
-over an unfinished generation. No new canonical plan or freeze is ready.
+over an unfinished generation. The separately reviewed T42.1r3 hook is now
+integrated; wiring genuine worker completion into the constructor witness and
+accounting for the hook's exact control reads remain. No new canonical plan or
+freeze is ready.
 
 **T42.1r2 ✅ · Partitioned-native declaration reader and versioned repair** —
 integrated locally through closure `529cb1d5e5d65274f41851d93ad2df6bfaf3e3fe`,
@@ -3157,9 +3160,9 @@ fast-forward integration; the clean temporary branch/worktree was removed,
 with all commits retained on main. No push, deployment, freeze, or ceremony
 was performed, and T42.1r1 remains the next contract prerequisite.
 
-**T42.1r3 · Exact completed-generation recovery preparation (implemented; integration pending)** —
-separate default-inactive production primitive on
-`codex/t42.1r3-recovery-preparation`; the T42.1r1 contract draft stays isolated.
+**T42.1r3 ✅ · Exact completed-generation recovery preparation (integrated)** —
+separate default-inactive production primitive integrated locally through
+`3b16f721783d443b57c76505ec37fa31a8bac5aa`; the T42.1r1 contract draft stays isolated.
 Normal completed same-target reconciliation must continue reusing its settled
 schedule. AC: a gated call on the same live reconciler/runtime validates exact
 predecessor, authority, all completed result/bitmap/root controls and matching
@@ -3174,7 +3177,7 @@ caller, API/CLI/environment transport, epoch, job reset, fallback or cap change.
 This library primitive does not claim binary trigger arming or a ceremony pass;
 the future admitted transport must use the actual live instance and arm before
 new workers can pass the selected trigger. Corrected contract acceptance,
-integration, freeze and execution remain separate gates.
+freeze and execution remain separate gates.
 
 Exact implementation `0adada19bb06914aea901874a18268802e1ec939` passes complete
 runtime normal/race, affected dependency/command gates, repository compilation,
@@ -3185,7 +3188,9 @@ settlement; both preparations recover the same evidence/results without new
 source work. Counterexamples reject foreign plans, stale post-enqueue authority
 and coherently relabeled generation identities. The known baseline missing
 UI screenshot is the only docs-check failure. This is neither binary-control
-transport/trigger coverage nor a ceremony pass; no merge or push was performed.
+transport/trigger coverage nor a ceremony pass. Ben approved the local
+fast-forward merge; the verified-clean merged worktree and branch were removed,
+with all commits retained on main. No push, freeze or ceremony was performed.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
