@@ -3127,6 +3127,25 @@ is verified and retained contract bytes are unchanged. Eligible only for a
 separate integration request; no main merge, deployment, freeze, or ceremony
 is authorized, and T42.1r1 remains the next contract prerequisite.
 
+**T42.1r3 · Exact completed-generation recovery preparation (approved, in progress)** —
+separate default-inactive production primitive on
+`codex/t42.1r3-recovery-preparation`; the T42.1r1 contract draft stays isolated.
+Normal completed same-target reconciliation must continue reusing its settled
+schedule. AC: a gated call on the same live reconciler/runtime validates exact
+predecessor, authority, all completed result/bitmap/root controls and matching
+store roots; holds the existing reconcile → selected assembly → exclusive
+publication lock order; creates one native predecessor-bound schedule; and
+preserves canonical results, sealed evidence, immutable/store authority and
+pins. Checkpoint preparation changes only one completion bit and the selected
+local current/root controls, with durable prefixes and no rollback on uncertain
+enqueue. Require genuine completed real-store tests, stale/corrupt/canceled
+refusals, bounded write/cost accounting and independent review. No ordinary
+caller, API/CLI/environment transport, epoch, job reset, fallback or cap change.
+This library primitive does not claim binary trigger arming or a ceremony pass;
+the future admitted transport must use the actual live instance and arm before
+new workers can pass the selected trigger. Corrected contract acceptance,
+integration, freeze and execution remain separate gates.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 AC: one shared physical source/search/observation generation per frozen

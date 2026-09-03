@@ -1072,6 +1072,14 @@ relationship, or correctness authority.
   eligible for a separate merge request, not deployment or ceremony.
   Contract validation resumes only after this reader ticket clears its own
   bar; no new freeze, execution, or combined result is established.
+- T42.1r3 is separately approved and in progress on
+  `codex/t42.1r3-recovery-preparation`, based on local main's integrated
+  T42.1r2 bytes. It adds a default-inactive in-process completed-generation
+  preparation primitive; the T42.1r1 contract draft remains isolated. Real
+  completed controls, exact predecessor/root/authority fencing, native
+  schedule binding, preservation, cancellation, bounded-cost and independent
+  review gates precede integration. There is no new binary transport or
+  trigger-arming claim, corrected freeze, or execution authorization.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

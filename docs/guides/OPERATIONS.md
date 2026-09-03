@@ -4348,6 +4348,64 @@ generation. Do not delete control files, edit publication pointers, reuse an
 expired citation, or bypass a failed generation fence to make the demo pass.
 Epic 39 owns measured replay, operating gates, and any release decision.
 
+### T42.1r3 completed-generation preparation boundary
+
+Ordinary servers leave `Reconciler.RecoveryPreparationEnabled` false. The
+in-process `PrepareRecovery` primitive is for separately admitted ceremony
+code using the **same live reconciler and runtime**, not a repair procedure.
+There is no HTTP endpoint, CLI option, environment variable, polling service,
+or binary control transport. Constructing a second reconciler would not share
+the locks and is not an authorized substitute. Future T42.2 transport must
+separately admit exact controls and arm its failure boundary before newly
+enqueued workers can pass it; this primitive does not prove that protocol.
+
+A call binds the exact planning authority, immutable generation, successful
+settled predecessor schedule, complete ordered domain roots, and selected
+domain/partition ordinal. Missing results, incomplete bitmaps, noncurrent or
+mismatched local/store roots, failed/in-flight work, stale authority, and a
+replayed predecessor refuse. All result files are validated against the
+canonical roots before mutation. No source acquisition, extractor execution,
+evidence publication or old-job reset occurs during preparation.
+
+Schedule-only preparation creates the existing native binding and successor
+schedule without changing completed controls. Checkpoint preparation first
+clears the selected completion bit and decrements its count, then removes the
+selected local current pointer and local root, syncing each affected
+directory. The canonical result remains available for ordinary checkpoint
+reuse. Store roots and their prior roots, sealed evidence, immutable plans and
+generation, relationship authority and pins remain unchanged. The same live
+repository reconcile shard, selected assembly shard and exclusive publication
+fence protect preparation; each mutex acquisition has a five-second bound.
+Every lock is released before return, not held while recovery runs.
+
+Any preparation error is terminal for that attempt. It may follow a durable
+filesystem prefix or an ambiguously committed schedule transaction; do not
+blindly retry, restore old controls, or assume zero writes. Stop the admitted
+runner and preserve its exact state for the existing review/teardown policy.
+Successful return proves the exact successor binding, not untouched successor
+counters: workers may have started already.
+
+The explicit preparation cost is bounded by the existing 64-domain and
+490-results-per-domain limits. It re-derives the frozen native v1 generation
+identity with one canonical hash over at most 64 ordered plan digests, rather
+than accepting agreement among relabeled control files. It opens one generation,
+the selected plan and one streamed plan/root/bitmap/current/store-root set per
+domain, and at most
+31,360 result files (8 KiB each). Plan/root controls retain their 4-MiB bounds;
+only the selected plan and the current domain are retained together, not a
+whole-generation result cache. It makes four schedule reads (including the
+native enqueue predecessor read), three compact candidate/source/observation
+confirmations, bounded authority/binding reads,
+and the existing publication-fence check. Native enqueue adds one binding
+file/sync and its existing schedule/current/repository-state transaction; it
+is not a store-level predecessor CAS. Checkpoint adds one atomic completion
+write, two unlinks and three parent-directory syncs. Recovery then pays the
+ordinary idempotent publication/completion costs; they are not free or part of
+the preparation's no-publication claim. Ordinary query, sync, startup, retry,
+publication, cache, schema, process and memory/disk behavior is unchanged
+because none of those paths enables or invokes preparation. These control
+reads must be reconciled prospectively in T42.1r1 before a new freeze.
+
 ## Developing phebs
 
 

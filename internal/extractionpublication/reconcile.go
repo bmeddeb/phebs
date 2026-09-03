@@ -39,6 +39,10 @@ type Reconciler struct {
 	CandidateReference CandidateReferenceReader
 	AuthorityReference AuthorityReader
 
+	// RecoveryPreparationEnabled admits only explicit in-process ceremony
+	// preparation. Configure before workers start; ordinary servers leave it false.
+	RecoveryPreparationEnabled bool
+
 	mu [64]sync.Mutex
 }
 
