@@ -28,18 +28,23 @@ type AssertionReader interface {
 	ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error)
 }
 
+type partitionedAssertionReader interface {
+	ListPartitionedAssertions(context.Context, store.AssertionQuery, store.PartitionedAssertionAuthority) ([]store.Assertion, error)
+}
+
 type BlobReader func(
 	context.Context, string, string, int64,
 ) ([]byte, error)
 
 type DeclarationInput struct {
-	Protocol         Protocol
-	Domain           string
-	RunID            string
-	GenerationDigest string
-	AuthoritySchema  string
-	PlanDigest       string
-	RootDigest       string
+	Protocol              Protocol
+	Domain                string
+	RunID                 string
+	GenerationDigest      string
+	AuthoritySchema       string
+	PlanDigest            string
+	RootDigest            string
+	CandidatePolicyDigest string
 }
 
 type BuildRequest struct {
@@ -652,9 +657,29 @@ func emitDeclarationTargets(
 	if input.Domain != current.declarationDomain || input.Protocol != current.protocol {
 		return nil, errors.New("declaration input does not match resolver adapter")
 	}
+	listAssertions := request.Assertions.ListAssertions
+	if input.AuthoritySchema != "" {
+		if input.AuthoritySchema != store.PartitionedExtractionDomainSchema {
+			return nil, errors.New("declaration input has an unknown authority schema")
+		}
+		reader, ok := request.Assertions.(partitionedAssertionReader)
+		if !ok {
+			return nil, errors.New("partitioned declaration assertion reader is unavailable")
+		}
+		authority := store.PartitionedAssertionAuthority{
+			Repository: request.Identity.Repository, Domain: input.Domain,
+			RunID: input.RunID, PlanDigest: input.PlanDigest, RootDigest: input.RootDigest,
+			Commit: request.Identity.Commit, UnitDigest: request.Identity.UnitDigest,
+			CandidateManifestDigest: request.Identity.CandidateManifestDigest,
+			CandidatePolicyDigest:   input.CandidatePolicyDigest,
+		}
+		listAssertions = func(ctx context.Context, query store.AssertionQuery) ([]store.Assertion, error) {
+			return reader.ListPartitionedAssertions(ctx, query, authority)
+		}
+	}
 	var after *store.AssertionCursor
 	for {
-		rows, err := request.Assertions.ListAssertions(ctx, store.AssertionQuery{
+		rows, err := listAssertions(ctx, store.AssertionQuery{
 			Repo: request.Identity.Repository, RunID: input.RunID,
 			Predicate: "DECLARES_OPERATION", Limit: assertionPageSize,
 			After: after, AllowTruncate: true,

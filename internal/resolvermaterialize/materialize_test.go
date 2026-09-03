@@ -175,8 +175,30 @@ func (fixture *materializeBlobFixture) read(
 }
 
 type materializeAssertionReader struct {
-	rows  map[string][]store.Assertion
-	calls []store.AssertionQuery
+	rows             map[string][]store.Assertion
+	runs             map[string]materializeAssertionRun
+	current          map[string]store.PartitionedAssertionAuthority
+	calls            []store.AssertionQuery
+	legacyCalls      int
+	partitionedCalls []store.PartitionedAssertionAuthority
+	partitionedHook  func(store.AssertionQuery)
+}
+
+type materializeAssertionRun struct {
+	status       string
+	sealed       bool
+	active       bool
+	publishedKey bool
+	quarantined  bool
+	authority    store.PartitionedAssertionAuthority
+}
+
+func newMaterializePublishedAssertions(rows map[string][]store.Assertion) *materializeAssertionReader {
+	runs := make(map[string]materializeAssertionRun, len(rows))
+	for runID := range rows {
+		runs[runID] = materializeAssertionRun{status: "published", publishedKey: true}
+	}
+	return &materializeAssertionReader{rows: rows, runs: runs}
 }
 
 func (reader *materializeAssertionReader) ListAssertions(
@@ -187,6 +209,45 @@ func (reader *materializeAssertionReader) ListAssertions(
 		return nil, err
 	}
 	reader.calls = append(reader.calls, query)
+	reader.legacyCalls++
+	run := reader.runs[query.RunID]
+	if run.status != "published" || !run.publishedKey || run.quarantined {
+		return nil, nil
+	}
+	return reader.page(query)
+}
+
+func (reader *materializeAssertionReader) ListPartitionedAssertions(
+	ctx context.Context,
+	query store.AssertionQuery,
+	authority store.PartitionedAssertionAuthority,
+) ([]store.Assertion, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	reader.calls = append(reader.calls, query)
+	reader.partitionedCalls = append(reader.partitionedCalls, authority)
+	if reader.partitionedHook != nil {
+		reader.partitionedHook(query)
+	}
+	run, exists := reader.runs[query.RunID]
+	if !exists || run.status != "staged" || !run.sealed || run.active || run.publishedKey || run.quarantined ||
+		authority.RunID != query.RunID || authority.Repository != query.Repo ||
+		authority.RootDigest == "" || authority.PlanDigest == "" ||
+		authority.CandidateManifestDigest == "" || authority.CandidatePolicyDigest == "" ||
+		run.authority != authority || reader.current[authority.Domain] != authority {
+		if query.After != nil {
+			return nil, store.ErrConflict
+		}
+		return nil, store.ErrNotFound
+	}
+	if query.After != nil && query.After.RunID != query.RunID {
+		return nil, store.ErrConflict
+	}
+	return reader.page(query)
+}
+
+func (reader *materializeAssertionReader) page(query store.AssertionQuery) ([]store.Assertion, error) {
 	rows := slices.Clone(reader.rows[query.RunID])
 	sort.Slice(rows, func(i, j int) bool {
 		return assertionOrder(rows[i], rows[j]) < 0
@@ -982,7 +1043,7 @@ func TestGeneratedMappingAggregateCapSpansAdaptersInBuild(t *testing.T) {
 			request := newMaterializeBuildRequest(
 				t, t.TempDir(), registry, manifest, blobs,
 				[]DeclarationInput{grpc, thrift},
-				&materializeAssertionReader{rows: rows},
+				newMaterializePublishedAssertions(rows),
 			)
 			prepared, err := Build(t.Context(), request)
 			if prepared != nil {
@@ -1070,12 +1131,12 @@ func TestBuildPreservesAmbiguousGeneratedSelector(t *testing.T) {
 		blobs.add("idl/b/api.proto", "syntax = \"proto3\";\n"),
 	}
 	declaration := materializeTestDeclaration(ProtocolGRPC)
-	reader := &materializeAssertionReader{rows: map[string][]store.Assertion{
+	reader := newMaterializePublishedAssertions(map[string][]store.Assertion{
 		declaration.RunID: {
 			materializeTestAssertion(declaration.RunID, "idl/a/api.proto", "lineage-a", 1),
 			materializeTestAssertion(declaration.RunID, "idl/b/api.proto", "lineage-b", 2),
 		},
-	}}
+	})
 	manifest := &materializeTestManifest{identity: testManifestDigest, files: files}
 	request := newMaterializeBuildRequest(
 		t, t.TempDir(), registry, manifest, blobs,
@@ -1229,9 +1290,9 @@ func TestDeclarationMaterializationRefusesCapPlusOne(t *testing.T) {
 			index,
 		)
 	}
-	reader := &materializeAssertionReader{rows: map[string][]store.Assertion{
+	reader := newMaterializePublishedAssertions(map[string][]store.Assertion{
 		declaration.RunID: rows,
-	}}
+	})
 	identity := newMaterializeTestIdentity(
 		t, registry, testManifestDigest, []DeclarationInput{declaration},
 	)
@@ -1288,7 +1349,7 @@ func TestDeclarationMaterializationAggregateCapSpansAdapters(t *testing.T) {
 				)
 			}
 			request, _ := resolvedMaterializeRequest(t, t.TempDir(), registry)
-			request.Assertions = &materializeAssertionReader{rows: rows}
+			request.Assertions = newMaterializePublishedAssertions(rows)
 			prepared, err := Build(t.Context(), request)
 			if prepared != nil {
 				_ = prepared.Discard()
@@ -1338,9 +1399,9 @@ func TestDeclarationMaterializationPathBytesBoundary(t *testing.T) {
 					declaration.RunID, "z", "lineage-extra", len(currentRows),
 				))
 			}
-			reader := &materializeAssertionReader{rows: map[string][]store.Assertion{
+			reader := newMaterializePublishedAssertions(map[string][]store.Assertion{
 				declaration.RunID: currentRows,
-			}}
+			})
 			writes := 0
 			_, err := emitDeclarationTargets(
 				t.Context(),
@@ -1425,6 +1486,8 @@ func newMaterializeTestIdentity(
 		publications = append(publications, resolvercatalog.DeclarationPublication{
 			Domain: declaration.Domain, RunID: declaration.RunID,
 			GenerationDigest: declaration.GenerationDigest,
+			AuthoritySchema:  declaration.AuthoritySchema,
+			PlanDigest:       declaration.PlanDigest, RootDigest: declaration.RootDigest,
 		})
 	}
 	sort.Slice(publications, func(i, j int) bool {
@@ -1497,14 +1560,14 @@ func resolvedMaterializeRequest(
 	}
 	grpc := materializeTestDeclaration(ProtocolGRPC)
 	thrift := materializeTestDeclaration(ProtocolThrift)
-	assertions := &materializeAssertionReader{rows: map[string][]store.Assertion{
+	assertions := newMaterializePublishedAssertions(map[string][]store.Assertion{
 		grpc.RunID: {
 			materializeTestAssertion(grpc.RunID, "idl/proto/orders.proto", "lineage-grpc", 1),
 		},
 		thrift.RunID: {
 			materializeTestAssertion(thrift.RunID, "idl/thrift/ledger.thrift", "lineage-thrift", 2),
 		},
-	}}
+	})
 	manifest := &materializeTestManifest{identity: testManifestDigest, files: files}
 	return newMaterializeBuildRequest(
 		t, root, registry, manifest, blobs,

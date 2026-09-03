@@ -3087,6 +3087,31 @@ The complete merge bar and independent zero-finding review pass. T42.1 is
 eligible only for separate integration. This retained plan is not an exact-main
 execution freeze, and T42.2 remains unauthorized and unexecuted.
 
+**T42.1r2 · Partitioned-native declaration reader (approved, in progress)** —
+separate production prerequisite to the unmerged T42.1r1 contract correction,
+on `codex/t42.1r2-partitioned-declaration-reader`. Correct silent resolver
+declaration omission for native staged/sealed domain publications without
+changing writers, schema, legacy visibility, contract counts, or leaf scope.
+AC: exact current-root/plan/run/candidate/repository fence on every bounded
+page; not-found for missing/superseded initial authority and typed conflict
+for invalidated continuation; no fallback-on-empty; visibility-faithful
+resolver/replay doubles; real store empty/stale/quarantined/foreign/bounded
+page coverage and superseded-root refusal; small real-server logical restart
+plus authorized search/caller/relationship regression; steady-state-cost pass
+and independent exact-source review. Validation and any upgrade disposition
+must be explicit before branch closure. No merge or ceremony authorization.
+
+The 10,000-descriptor native replay and real store normal/race checks pass.
+The corrected fresh-data ordinary-server regression passes in 100.25 seconds:
+authorized scoped search, Caller Map, and relationships survive a logical
+restart, with one census, zero source-blob commands, and zero index children;
+the settled reader window contains watcher commands only. These are
+working-tree observations, not an exact-clean-commit or existing-upgrade
+proof. Four-file independent cross-review reports zero findings; external
+review is partial (three files complete without findings, store reader
+timeout). Final immutable-source review and the pack-version cutover decision
+remain open.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 AC: one shared physical source/search/observation generation per frozen

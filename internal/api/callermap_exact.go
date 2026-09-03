@@ -1619,23 +1619,50 @@ func exactCallerDeclaration(
 	if source == nil || read == nil || read.Resolver == nil || read.Summary == nil {
 		return ContractCatalogClaim{}, huma.Error409Conflict("caller declaration generation is unavailable")
 	}
-	runID := ""
+	var selected store.ResolverCatalogDeclarationPublication
 	for _, declaration := range read.Resolver.Declarations {
 		if declaration.Domain == pack.declarationDomain {
-			runID = declaration.RunID
+			selected = declaration
 			break
 		}
 	}
+	runID := selected.RunID
 	if runID == "" {
 		return ContractCatalogClaim{}, huma.Error404NotFound("caller map endpoint not found")
 	}
-	rows, err := source.ListAssertions(ctx, store.AssertionQuery{
+	queryAssertions := store.AssertionQuery{
 		Repo: query.Endpoint.Repository, RunID: runID,
 		Predicate: "DECLARES_OPERATION",
 		Object:    strings.TrimPrefix(query.Endpoint.Operation, "/"),
 		Lineage:   query.Endpoint.Lineage, Limit: 1,
-	})
+	}
+	native := selected.AuthoritySchema != "" || selected.PlanDigest != "" || selected.RootDigest != ""
+	var rows []store.Assertion
+	var err error
+	if native {
+		reader, ok := source.(exactPartitionedDeclarationSource)
+		if !ok || read.Availability != callerexecute.PublicationCurrent ||
+			selected.AuthoritySchema != store.PartitionedExtractionDomainSchema ||
+			selected.GenerationDigest != selected.RootDigest {
+			return ContractCatalogClaim{}, exactCallerAuthorityConflict()
+		}
+		generation := callerReadGeneration(read)
+		authority := store.PartitionedAssertionAuthority{
+			Repository: generation.Repository, Domain: selected.Domain, RunID: runID,
+			PlanDigest: selected.PlanDigest, RootDigest: selected.RootDigest,
+			Commit: generation.HeadCommit, UnitDigest: generation.UnitDigest,
+			CandidateManifestDigest: generation.CandidateManifestDigest,
+			CandidatePolicyDigest:   generation.CandidatePolicyDigest,
+		}
+		rows, err = reader.ListPartitionedAssertions(ctx, queryAssertions, authority)
+		source = exactPartitionedDeclarationEvidence{EvidenceStore: source, native: reader, authority: authority}
+	} else {
+		rows, err = source.ListAssertions(ctx, queryAssertions)
+	}
 	if err != nil {
+		if native {
+			return ContractCatalogClaim{}, exactPartitionedDeclarationError("read caller declaration", err)
+		}
 		return ContractCatalogClaim{}, huma.Error500InternalServerError("read caller declaration", err)
 	}
 	if len(rows) != 1 {
@@ -1646,9 +1673,42 @@ func exactCallerDeclaration(
 		catalogLocatorsPerClaimLimit,
 	)
 	if err != nil {
+		if native {
+			return ContractCatalogClaim{}, exactPartitionedDeclarationError("resolve caller declaration", err)
+		}
 		return ContractCatalogClaim{}, huma.Error500InternalServerError("resolve caller declaration", err)
 	}
 	return claim, nil
+}
+
+type exactPartitionedDeclarationSource interface {
+	ListPartitionedAssertions(context.Context, store.AssertionQuery, store.PartitionedAssertionAuthority) ([]store.Assertion, error)
+	ResolvePartitionedEvidence(context.Context, store.PartitionedAssertionAuthority, string) (*store.EvidenceResolution, error)
+}
+
+// Only the selected native run gains the exact-root locator read. The shared
+// claim builder and legacy published/pinned-retained visibility stay unchanged.
+type exactPartitionedDeclarationEvidence struct {
+	store.EvidenceStore
+	native    exactPartitionedDeclarationSource
+	authority store.PartitionedAssertionAuthority
+}
+
+func (source exactPartitionedDeclarationEvidence) ResolveEvidence(ctx context.Context, repository, runID, atomID string) (*store.EvidenceResolution, error) {
+	if repository != source.authority.Repository || runID != source.authority.RunID {
+		return nil, store.ErrConflict
+	}
+	return source.native.ResolvePartitionedEvidence(ctx, source.authority, atomID)
+}
+
+func exactPartitionedDeclarationError(action string, err error) error {
+	if errors.Is(err, store.ErrNotFound) {
+		return huma.Error404NotFound("caller map endpoint not found")
+	}
+	if errors.Is(err, store.ErrConflict) {
+		return exactCallerAuthorityConflict()
+	}
+	return huma.Error500InternalServerError(action, err)
 }
 
 func (service *exactCallerMapService) authorize(

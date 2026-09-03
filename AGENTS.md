@@ -748,6 +748,22 @@ independently reproduced exact-base findings: the UI-owned missing
 `internal/relationshippublication/runtime_v3.go:719 matchesRuntimeAuthorityV3`.
 T42.1 is eligible only for separate integration; it neither authorizes nor
 records T42.2 execution or a combined gate result.
+Subsequent ordinary-path validation exposed contract contradictions and a
+separate production declaration-visibility defect. The unmerged T42.1r1
+contract correction remains isolated; its retained predecessor plan is not
+mutated or execution-ready. T42.1r2 is the separately approved native
+partitioned declaration-reader ticket on
+`codex/t42.1r2-partitioned-declaration-reader`. It preserves staged/sealed
+writer semantics and legacy visibility, requires exact current-root fences
+on each bounded assertion/locator read, and forbids fallback-on-empty.
+Strict mocks, real store refusals, ordinary-server restart and authorized
+reader validation, an explicit existing-catalog upgrade disposition, and
+independent review remain its closure bar. Native replay and real store
+normal/race gates pass. The corrected fresh-data ordinary-server restart and
+authorized-reader regression passes in 100.25 seconds with one census, zero
+source-blob commands, and zero index children; exact-clean-commit provenance,
+existing-catalog repair, and final review remain open. No merge, new freeze,
+or ceremony execution is authorized by this work.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

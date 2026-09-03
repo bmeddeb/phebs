@@ -98,7 +98,7 @@ func TestBuildGeneratedCandidateIdentityBytesSpanAdapters(t *testing.T) {
 			request := newMaterializeBuildRequest(
 				t, t.TempDir(), registry,
 				&materializeTestManifest{identity: testManifestDigest, files: files},
-				blobs, declarations, &materializeAssertionReader{rows: rows},
+				blobs, declarations, newMaterializePublishedAssertions(rows),
 			)
 			prepared, err := Build(t.Context(), request)
 			if prepared != nil {
@@ -175,7 +175,7 @@ func TestBuildDeclarationPathBytesSpanAdapters(t *testing.T) {
 				t, t.TempDir(), registry,
 				&materializeTestManifest{identity: testManifestDigest}, blobs,
 				[]DeclarationInput{grpc, thrift},
-				&materializeAssertionReader{rows: rows},
+				newMaterializePublishedAssertions(rows),
 			)
 			prepared, err := Build(t.Context(), request)
 			if prepared != nil {

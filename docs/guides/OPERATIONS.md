@@ -320,6 +320,24 @@ manifest/member path identities; it opens or hashes no member content.
 
 #### Resolver catalog materialization
 
+Native partitioned declarations are published by their current domain root,
+while the underlying run deliberately remains `staged` and sealed. Resolver
+materialization reads those assertions only through an exact-root-fenced,
+bounded page; a superseded root is unavailable, and a change during pagination
+is a conflict that requires a fresh attempt. This does not expose arbitrary
+staged runs or grant repository-wide attribution to partition-scoped leaves.
+Legacy declarations retain their separate published-run visibility rules.
+Exact Caller Map declaration claims use the same native fence for assertion
+and stored-source-locator reads. A change during those reads fails closed;
+this grants neither arbitrary staged visibility nor historical-native access,
+and does not reopen source blobs.
+
+The reader correction alone does not repair an already materialized incomplete
+`1.1.0` catalog: its unchanged identity can still be reused. Existing generation
+artifacts are immutable; do not force different output under that identity or
+delete publication controls manually. Repair needs a separately reviewed
+versioned rebuild, and a restart alone is not evidence of that repair.
+
 The enabled extraction registry determines one ordered resolver generation.
 The current resolver set contains `go-module` plus the enabled
 `grpc-generated-attribution` and `thrift-generated-attribution` packs, all at

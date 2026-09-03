@@ -93,20 +93,28 @@ func (state *t421ProductionReplayPointerStore) GetCandidateManifestPublication(
 
 type t421ProductionReplayEvidence struct {
 	store.EvidenceStore
-	mu     sync.Mutex
-	chunks map[string]store.EvidenceChunkAccounting
-	runs   map[string]*t421ProductionReplayEvidenceRun
+	mu      sync.Mutex
+	chunks  map[string]store.EvidenceChunkAccounting
+	runs    map[string]*t421ProductionReplayEvidenceRun
+	current map[string]store.PartitionedAssertionAuthority
 }
 
 type t421ProductionReplayEvidenceRun struct {
 	associations map[string]struct{}
 	assertions   map[string]store.Assertion
+	status       string
+	sealed       bool
+	active       bool
+	publishedKey bool
+	quarantined  bool
+	authority    store.PartitionedAssertionAuthority
 }
 
 func newT421ProductionReplayEvidence() *t421ProductionReplayEvidence {
 	return &t421ProductionReplayEvidence{
-		chunks: make(map[string]store.EvidenceChunkAccounting),
-		runs:   make(map[string]*t421ProductionReplayEvidenceRun),
+		chunks:  make(map[string]store.EvidenceChunkAccounting),
+		runs:    make(map[string]*t421ProductionReplayEvidenceRun),
+		current: make(map[string]store.PartitionedAssertionAuthority),
 	}
 }
 
@@ -135,6 +143,7 @@ func (evidence *t421ProductionReplayEvidence) AddEvidenceChunk(
 		run = &t421ProductionReplayEvidenceRun{
 			associations: make(map[string]struct{}),
 			assertions:   make(map[string]store.Assertion),
+			status:       "staged",
 		}
 		evidence.runs[runID] = run
 	}
@@ -208,9 +217,43 @@ func (evidence *t421ProductionReplayEvidence) ListAssertions(
 	evidence.mu.Lock()
 	defer evidence.mu.Unlock()
 	run := evidence.runs[query.RunID]
-	if run == nil {
+	if run == nil || run.status != "published" || !run.publishedKey || run.quarantined {
 		return nil, nil
 	}
+	return t421ProductionReplayAssertions(run, query)
+}
+
+func (evidence *t421ProductionReplayEvidence) ListPartitionedAssertions(
+	ctx context.Context,
+	query store.AssertionQuery,
+	authority store.PartitionedAssertionAuthority,
+) ([]store.Assertion, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	evidence.mu.Lock()
+	defer evidence.mu.Unlock()
+	run := evidence.runs[query.RunID]
+	if run == nil || run.status != "staged" || !run.sealed || run.active || run.publishedKey || run.quarantined ||
+		authority.Repository != query.Repo || authority.RunID != query.RunID ||
+		authority.RootDigest == "" || authority.PlanDigest == "" ||
+		authority.CandidateManifestDigest == "" || authority.CandidatePolicyDigest == "" ||
+		run.authority != authority || evidence.current[authority.Domain] != authority {
+		if query.After != nil {
+			return nil, store.ErrConflict
+		}
+		return nil, store.ErrNotFound
+	}
+	if query.After != nil && query.After.RunID != query.RunID {
+		return nil, store.ErrConflict
+	}
+	return t421ProductionReplayAssertions(run, query)
+}
+
+func t421ProductionReplayAssertions(
+	run *t421ProductionReplayEvidenceRun,
+	query store.AssertionQuery,
+) ([]store.Assertion, error) {
 	result := make([]store.Assertion, 0, len(run.assertions))
 	for _, assertion := range run.assertions {
 		if query.Repo != "" && assertion.Repo != query.Repo ||
@@ -242,6 +285,52 @@ func (evidence *t421ProductionReplayEvidence) ListAssertions(
 		result = result[:min(len(result), limit+1)]
 	}
 	return result, nil
+}
+
+func TestProductionReplayAssertionVisibilityIsNotMorePermissiveThanStore(t *testing.T) {
+	evidence := newT421ProductionReplayEvidence()
+	authority := store.PartitionedAssertionAuthority{
+		Repository: t421ProductionReplayRepository, Domain: "proto-contract", RunID: "partitioned-run",
+		Commit: strings.Repeat("a", 40), PlanDigest: SHA256([]byte("plan")), RootDigest: SHA256([]byte("root")),
+		CandidateManifestDigest: SHA256([]byte("candidate")), CandidatePolicyDigest: SHA256([]byte("policy")),
+	}
+	row := store.Assertion{ID: "assertion", Repo: authority.Repository, RunID: authority.RunID,
+		Predicate: "DECLARES_OPERATION", Subject: "api.proto", Object: "API.Call"}
+	run := &t421ProductionReplayEvidenceRun{
+		status: "staged", sealed: true, authority: authority,
+		assertions: map[string]store.Assertion{row.ID: row},
+	}
+	evidence.runs[authority.RunID] = run
+	evidence.current[authority.Domain] = authority
+	query := store.AssertionQuery{Repo: authority.Repository, RunID: authority.RunID, Predicate: row.Predicate, Limit: 1}
+	if rows, err := evidence.ListAssertions(t.Context(), query); err != nil || len(rows) != 0 {
+		t.Fatalf("legacy mock exposed staged rows: %+v, %v", rows, err)
+	}
+	if rows, err := evidence.ListPartitionedAssertions(t.Context(), query, authority); err != nil || len(rows) != 1 {
+		t.Fatalf("native mock hid exact current rows: %+v, %v", rows, err)
+	}
+	run.sealed = false
+	if _, err := evidence.ListPartitionedAssertions(t.Context(), query, authority); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("native mock exposed unsealed run: %v", err)
+	}
+	run.sealed = true
+	delete(evidence.current, authority.Domain)
+	if _, err := evidence.ListPartitionedAssertions(t.Context(), query, authority); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("native mock exposed absent root: %v", err)
+	}
+	query.After = &store.AssertionCursor{RunID: authority.RunID, ID: row.ID}
+	if _, err := evidence.ListPartitionedAssertions(t.Context(), query, authority); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("native mock accepted superseded continuation: %v", err)
+	}
+	run.status = "published"
+	query.After = nil
+	if rows, err := evidence.ListAssertions(t.Context(), query); err != nil || len(rows) != 0 {
+		t.Fatalf("legacy mock exposed a run without a publication key: %+v, %v", rows, err)
+	}
+	run.publishedKey = true
+	if rows, err := evidence.ListAssertions(t.Context(), query); err != nil || len(rows) != 1 {
+		t.Fatalf("legacy mock rejected published rows: %+v, %v", rows, err)
+	}
 }
 
 func t421ProductionReplayUnion(left, right []string) []string {
@@ -446,6 +535,23 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 			t.Fatalf("%s production extraction totals = %+v / %+v, want %+v", expectedDomain.Domain, actualTotals, root.Totals, expectedDomain.Expected)
 		}
 		roots[expectedDomain.Domain] = root
+		// Model the writer's partitioned-native visibility only after every
+		// partition has sealed and the production constructor accepts the root.
+		runID := "t421-production-" + expectedDomain.Domain
+		run := evidence.runs[runID]
+		if run == nil {
+			run = &t421ProductionReplayEvidenceRun{status: "staged"}
+			evidence.runs[runID] = run
+		}
+		run.sealed = true
+		run.authority = store.PartitionedAssertionAuthority{
+			Repository: plan.Repository, Domain: plan.Domain, RunID: runID,
+			PlanDigest: plan.Digest, RootDigest: root.Digest,
+			Commit: candidateState.Commit, UnitDigest: candidateState.UnitDigest,
+			CandidateManifestDigest: plan.CandidateManifestDigest,
+			CandidatePolicyDigest:   plan.CandidatePolicyDigest,
+		}
+		evidence.current[plan.Domain] = run.authority
 	}
 
 	policySet, err := candidatejob.CompilePolicies(extractors)
@@ -528,6 +634,7 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 			GenerationDigest: declaration.GenerationDigest,
 			AuthoritySchema:  declaration.AuthoritySchema,
 			PlanDigest:       declaration.PlanDigest, RootDigest: declaration.RootDigest,
+			CandidatePolicyDigest: protoPlan.CandidatePolicyDigest,
 		}},
 		Assertions: evidence, ReadBlob: readResolverBlob,
 	})

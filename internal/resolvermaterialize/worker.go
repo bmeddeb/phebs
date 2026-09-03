@@ -38,6 +38,7 @@ type Store interface {
 		context.Context, string, string,
 	) (*store.PartitionedExtractionDomain, error)
 	ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error)
+	ListPartitionedAssertions(context.Context, store.AssertionQuery, store.PartitionedAssertionAuthority) ([]store.Assertion, error)
 	EnsureJobSuccessor(context.Context, store.Job, bool) (*store.Job, error)
 }
 
@@ -345,9 +346,10 @@ func (worker *Worker) currentDeclarations(
 				result = append(result, DeclarationInput{
 					Protocol: current.protocol, Domain: current.declarationDomain,
 					RunID: partitioned.RunID, GenerationDigest: partitioned.RootDigest,
-					AuthoritySchema: store.PartitionedExtractionDomainSchema,
-					PlanDigest:      partitioned.PlanDigest,
-					RootDigest:      partitioned.RootDigest,
+					AuthoritySchema:       store.PartitionedExtractionDomainSchema,
+					PlanDigest:            partitioned.PlanDigest,
+					RootDigest:            partitioned.RootDigest,
+					CandidatePolicyDigest: partitioned.CandidatePolicyDigest,
 				})
 			}
 			continue

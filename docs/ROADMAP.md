@@ -1049,6 +1049,21 @@ relationship, or correctness authority.
   exact-commit review reports critical/high/medium/low `0/0/0/0`. T42.1 is
   eligible only for separate integration; it does not authorize T42.2 or
   establish a combined gate result.
+- Subsequent ordinary-path validation selected two isolated prerequisites:
+  the unmerged T42.1r1 contract correction and the separately approved
+  T42.1r2 partitioned-native declaration reader. T42.1r2 repairs a production
+  visibility defect without changing staged/sealed writers, legacy readers,
+  schema, retained plan bytes, or contract counters. Exact current-root
+  assertion/locator fences, strict visibility doubles, real store refusals,
+  ordinary-server logical restart and authorized reader checks, an explicit
+  existing-catalog upgrade disposition, and independent review are its bar.
+  The native 10,000-descriptor replay, store normal/race checks, and corrected
+  fresh-data ordinary-server restart/authorized-reader regression now pass;
+  the latter took 100.25 seconds and observed one census, no source-blob
+  commands, and no index children. Existing-catalog repair and final review
+  remain open; this is not exact-clean-commit or ceremony provenance.
+  Contract validation resumes only after this reader ticket clears its own
+  bar; no new freeze, execution, or combined result is established.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

@@ -14,6 +14,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
@@ -118,11 +119,13 @@ func (provider *workerTestManifestProvider) OpenCandidateManifest(
 }
 
 type workerTestStore struct {
-	repository  *store.Repo
-	pointer     *store.ResolverCatalogPublication
-	outcomes    map[string]*store.ExtractionDomainOutcome
-	partitioned map[string]*store.PartitionedExtractionDomain
-	assertions  []store.Assertion
+	repository         *store.Repo
+	pointer            *store.ResolverCatalogPublication
+	outcomes           map[string]*store.ExtractionDomainOutcome
+	partitioned        map[string]*store.PartitionedExtractionDomain
+	assertions         []store.Assertion
+	assertionRuns      map[string]materializeAssertionRun
+	partitionedQueries []store.PartitionedAssertionAuthority
 
 	getRepoErr       error
 	pointerErr       error
@@ -278,7 +281,7 @@ func (state *workerTestStore) GetPartitionedExtractionDomain(
 }
 
 func (state *workerTestStore) ListAssertions(
-	_ context.Context,
+	ctx context.Context,
 	query store.AssertionQuery,
 ) ([]store.Assertion, error) {
 	state.assertionCalls++
@@ -286,7 +289,41 @@ func (state *workerTestStore) ListAssertions(
 	if state.assertionErr != nil {
 		return nil, state.assertionErr
 	}
-	return slices.Clone(state.assertions), nil
+	reader := &materializeAssertionReader{
+		rows: map[string][]store.Assertion{query.RunID: state.assertions},
+		runs: state.assertionRuns,
+	}
+	return reader.ListAssertions(ctx, query)
+}
+
+func (state *workerTestStore) ListPartitionedAssertions(
+	ctx context.Context,
+	query store.AssertionQuery,
+	authority store.PartitionedAssertionAuthority,
+) ([]store.Assertion, error) {
+	state.assertionCalls++
+	state.queries = append(state.queries, query)
+	state.partitionedQueries = append(state.partitionedQueries, authority)
+	if state.assertionErr != nil {
+		return nil, state.assertionErr
+	}
+	current, err := extractionpublication.CurrentDomainAuthority(ctx, state, query.Repo, authority.Domain)
+	if err != nil {
+		return nil, err
+	}
+	reader := &materializeAssertionReader{
+		rows: map[string][]store.Assertion{query.RunID: state.assertions},
+		runs: state.assertionRuns,
+		current: map[string]store.PartitionedAssertionAuthority{authority.Domain: {
+			Repository: state.repository.Name, Commit: state.repository.IndexedCommitHash,
+			UnitDigest: unitDigest(state.repository.IndexedAnalysisUnit),
+			Domain:     current.Domain, RunID: current.RunID,
+			PlanDigest: current.PlanDigest, RootDigest: current.RootDigest,
+			CandidateManifestDigest: current.CandidateManifestDigest,
+			CandidatePolicyDigest:   current.CandidatePolicyDigest,
+		}},
+	}
+	return reader.ListPartitionedAssertions(ctx, query, authority)
 }
 
 type workerFixture struct {
@@ -321,6 +358,7 @@ func newWorkerFixture(t *testing.T) *workerFixture {
 			Name: repository, IndexedCommitHash: workerTestCommit,
 		},
 		outcomes:         make(map[string]*store.ExtractionDomainOutcome),
+		assertionRuns:    make(map[string]materializeAssertionRun),
 		authorityCurrent: true,
 	}
 	dataDir := t.TempDir()
@@ -363,6 +401,7 @@ func (fixture *workerFixture) publishDeclaration(candidateDigest string) {
 		Generation:  generation,
 		RunID:       "run-proto-1",
 	}
+	fixture.state.assertionRuns["run-proto-1"] = materializeAssertionRun{status: "published", publishedKey: true}
 }
 
 func (fixture *workerFixture) identity() resolvercatalog.Identity {
