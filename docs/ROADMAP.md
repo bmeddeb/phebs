@@ -160,9 +160,10 @@ found frozen authority/work-contract conflicts. T42.1r1 correction is approved
 with local checkpoint integration explicitly requested despite known-red
 complete-constructor acceptance. T42.1r2/r3 are integrated; the separate T42.1r4
 namespace/terminal-recovery prerequisite is implemented and component-tested.
-Complete acceptance now stops on a stale modeled pressure epoch; correction
-acceptance and freeze remain open. No T42.2 execution, private rerun, or release
-is authorized.
+T42.1r5's fixture-only follow-up above local checkpoint `1ba00f7d` now passes
+complete constructor acceptance, all 62 top-level normal tests, and targeted
+race gates. Overall correction acceptance and freeze remain open. No T42.2
+execution, private rerun, or release is authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
@@ -1140,6 +1141,15 @@ relationship, or correctness authority.
   and test both plan versions before another full constructor run. Preserve
   the oracle, caps and retained artifacts; complete acceptance, exact-commit
   review, integration and ceremony remain unclaimed.
+- T42.1r5's separate fixture-only follow-up restores complete constructor
+  acceptance in 786.40s. Pressure epochs follow the admitted phase table, and
+  exact-input bindings are publicly admitted before native work. Both version
+  orders and the final ownership/pressure selector pass under race; all 62
+  top-level normal tests pass in 1799.598s. Working-tree source/documentation
+  review has no findings; the known UI screenshot remains the only docs-check
+  failure. This supersedes the prior constructor stop, not the overall
+  correction hold. Production code, the oracle, retained artifacts and all caps
+  stay unchanged. No integration or ceremony.
 - Later tickets stay dependency-ordered
   and may be refined by preceding retained measurements, but may not broaden
   identity, authority, authorization, or release semantics.

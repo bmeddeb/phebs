@@ -844,6 +844,18 @@ fails receipt validation: modeled pressure rows hardcode epoch 2 instead of
 the corrected phase table's post-restart epoch 4. The contract-fixture
 follow-up must derive that value, not weaken the oracle. No complete acceptance,
 exact-commit review, integration, push or ceremony is claimed.
+Ben approved T42.1r5's separate fixture-only correction. T42.1r4 is checkpointed
+locally at `1ba00f7d`; `codex/t42.1r5-fixture-epoch-admission` is stacked above
+it. Derive pressure epochs, isolate exact-plan/commit admission caches and
+publicly validate bindings before native construction. Preserve production
+code, the oracle, caps and retained artifacts. The corrected constructor now
+passes in 786.40s; its 484,348-byte fixture retains modeled measurements/search
+evidence and is not a ceremony receipt. Both version orders pass under race;
+the final ownership/pressure race selector passes in 802.655s. Working-tree
+source/documentation review has no findings. The complete normal package passes
+all 62 top-level tests in 1799.598s, with no test failures or skips; no test or
+Surreal process remains. Docs-check retains only the known UI screenshot gap.
+No main merge, push, new canonical plan, freeze or ceremony is authorized.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

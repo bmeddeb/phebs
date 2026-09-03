@@ -164,7 +164,7 @@ func startupRuntimeTestInventory(t *testing.T, corrected bool) (ExecutionFreeze,
 			t.Fatal(err)
 		}
 	}
-	tools, host := executionFreezeTestTools(plan), executionFreezeTestHost()
+	tools, host := executionFreezeTestTools(plan, executionFreezeTestCommits()), executionFreezeTestHost()
 	profile, err := expectedExecutionProfile(plan, tools, host, executionProfileTestAdmission(t, plan, tools, host))
 	if err != nil {
 		t.Fatal(err)

@@ -43,8 +43,9 @@ frozen authority/work-contract conflicts. T42.1r1 prospective correction is
 approved, with local checkpoint integration explicitly requested despite its
 known-red complete constructor. T42.1r2/r3 are integrated; T42.1r4's separate
 namespace/terminal-recovery production fix is implemented and component-tested.
-Complete acceptance now stops on a stale modeled pressure epoch; correction
-acceptance and ceremony execution remain unestablished.
+T42.1r5's fixture-only correction now passes complete constructor acceptance;
+all 62 top-level normal tests and the targeted race gates pass. Overall
+correction acceptance and ceremony execution remain unestablished.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -3255,6 +3256,26 @@ by exact plan/commit inputs and check both V1/V2 orders. The constructor's
 private binding helper assumes prior admission; require real freeze admission
 so a cached wrong-version profile is rejected before expensive native work.
 No main merge, push, corrected freeze or ceremony is authorized.
+
+**T42.1r5 · Fixture epoch and exact admission (implemented; validated; unmerged)** —
+test/document-only follow-up on `codex/t42.1r5-fixture-epoch-admission`, stacked
+above local T42.1r4 checkpoint `1ba00f7d`. Derive modeled pressure epochs from
+the admitted phase table, not a version-specific constant. Replace unkeyed
+freeze/binding caches with one exact-plan/commit cache of publicly admitted
+bindings; derive modeled tool provenance from those commits and isolate
+returned mutable fields. Refuse reuse of the native authority/recovery witness
+for a different exact plan. AC: both V1/V2 orders, changed input keys, copy
+isolation, public admission refusal, and all pressure phases plus stale-epoch
+counterexamples pass without native construction; then rerun complete
+constructor acceptance and affected normal/race gates. Preserve retained V1
+bytes, native identity derivation, oracle predicates, caps and production code.
+The corrected complete constructor passes in 786.40s, both version orders pass
+under race, and the final ownership/pressure race selector passes in 802.655s.
+Working-tree source/documentation review has no findings; all 62 top-level
+normal tests pass in 1799.598s, without failures or skipped tests. Docs-check
+retains only the known UI screenshot gap. This is constructor-fixture evidence,
+not an ordinary pressure or failure-injection run.
+No new canonical plan, main merge, push, freeze or ceremony is authorized.
 
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.

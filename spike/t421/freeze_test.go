@@ -7,20 +7,13 @@ import (
 	"reflect"
 	"slices"
 	"strings"
-	"sync"
 	"testing"
-)
-
-var (
-	executionFreezeFixtureOnce sync.Once
-	executionFreezeFixture     ExecutionFreeze
-	executionFreezeFixtureErr  error
 )
 
 func TestExecutionFreezeIsCanonicalBoundedAndExact(t *testing.T) {
 	plan := frozenTestPlan(t)
 	commits := executionFreezeTestCommits()
-	tools := executionFreezeTestTools(plan)
+	tools := executionFreezeTestTools(plan, commits)
 	checkout := executionFreezeTestCheckout(t, commits, tools)
 	host := executionFreezeTestHost()
 	profile := executionProfileTestAdmission(t, plan, tools, host)
@@ -133,7 +126,7 @@ func TestBuildExecutionFreezeRejectsMalformedPressureTargetsWithoutPanic(t *test
 				}
 			}()
 			if _, err := BuildExecutionFreeze(
-				plan, executionFreezeTestCommits(), executionFreezeTestTools(plan), executionFreezeTestHost(),
+				plan, executionFreezeTestCommits(), executionFreezeTestTools(plan, executionFreezeTestCommits()), executionFreezeTestHost(),
 				executionFreezeTestSigner(), CheckoutAdmissionBinding{}, ExecutionProfileAdmissionBinding{},
 			); err == nil {
 				t.Fatal("malformed pressure targets were accepted")
@@ -145,7 +138,7 @@ func TestBuildExecutionFreezeRejectsMalformedPressureTargetsWithoutPanic(t *test
 func TestDecodeExecutionFreezeRejectsNoncanonicalAndSourceBearing(t *testing.T) {
 	plan := frozenTestPlan(t)
 	commits := executionFreezeTestCommits()
-	tools := executionFreezeTestTools(plan)
+	tools := executionFreezeTestTools(plan, commits)
 	checkout := executionFreezeTestCheckout(t, commits, tools)
 	profile := executionProfileTestAdmission(t, plan, tools, executionFreezeTestHost())
 	freeze := mustExecutionFreeze(t, plan, commits)
@@ -208,7 +201,7 @@ func TestDecodeExecutionFreezeRejectsNoncanonicalAndSourceBearing(t *testing.T) 
 func TestValidateExecutionFreezeRejectsAuthorityInventoryAndHostDrift(t *testing.T) {
 	plan := frozenTestPlan(t)
 	commits := executionFreezeTestCommits()
-	tools := executionFreezeTestTools(plan)
+	tools := executionFreezeTestTools(plan, commits)
 	checkout := executionFreezeTestCheckout(t, commits, tools)
 	profile := executionProfileTestAdmission(t, plan, tools, executionFreezeTestHost())
 	freeze := mustExecutionFreeze(t, plan, commits)
@@ -265,7 +258,7 @@ func TestValidateExecutionFreezeRejectsAuthorityInventoryAndHostDrift(t *testing
 func TestBuildExecutionFreezeRejectsProfileAdmissionDrift(t *testing.T) {
 	plan := frozenTestPlan(t)
 	commits := executionFreezeTestCommits()
-	tools := executionFreezeTestTools(plan)
+	tools := executionFreezeTestTools(plan, commits)
 	host := executionFreezeTestHost()
 	profile := executionProfileTestAdmission(t, plan, tools, host)
 	profile.closedEnvironment = false
@@ -348,7 +341,7 @@ func executionFreezeTestCommits() ExecutionCommits {
 	}
 }
 
-func executionFreezeTestTools(plan Plan) []ExecutionToolIdentity {
+func executionFreezeTestTools(plan Plan, commits ExecutionCommits) []ExecutionToolIdentity {
 	tools := make([]ExecutionToolIdentity, 0, len(plan.ToolPolicy.RequiredTools))
 	for _, role := range plan.ToolPolicy.RequiredTools {
 		version := "version-1.0.0"
@@ -363,7 +356,7 @@ func executionFreezeTestTools(plan Plan) []ExecutionToolIdentity {
 		switch role {
 		case "phebs", "phebs-focused-index", "t422-author", "t422-execute":
 			tool.Provenance = "go-build-info-vcs-v1"
-			tool.BuildVCSRevision = executionFreezeTestCommits().T422SourceCommit
+			tool.BuildVCSRevision = commits.T422SourceCommit
 		case "buf":
 			tool.Provenance = "go-module-build-v1"
 			tool.ModulePath = plan.ToolPolicy.BufModulePath
@@ -409,19 +402,7 @@ func executionFreezeTestSigner() string {
 
 func mustExecutionFreeze(t *testing.T, plan Plan, commits ExecutionCommits) ExecutionFreeze {
 	t.Helper()
-	executionFreezeFixtureOnce.Do(func() {
-		tools := executionFreezeTestTools(plan)
-		host := executionFreezeTestHost()
-		executionFreezeFixture, executionFreezeFixtureErr = BuildExecutionFreeze(
-			plan, commits, tools, host, executionFreezeTestSigner(),
-			executionFreezeTestCheckout(t, commits, tools),
-			executionProfileTestAdmission(t, plan, tools, host),
-		)
-	})
-	if executionFreezeFixtureErr != nil {
-		t.Fatal(executionFreezeFixtureErr)
-	}
-	return cloneExecutionFreeze(t, executionFreezeFixture)
+	return admittedExecutionFreezeTestBinding(t, plan, commits).freeze
 }
 
 func executionProfileTestAdmission(

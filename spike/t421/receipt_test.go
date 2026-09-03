@@ -8,17 +8,10 @@ import (
 	"reflect"
 	"slices"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
-)
-
-var (
-	receiptFreezeOnce    sync.Once
-	receiptFreezeBinding ExecutionFreezeBinding
-	receiptFreezeErr     error
 )
 
 func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
@@ -58,7 +51,7 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 func TestBindExecutionFreezeForReceiptOwnsAndValidatesFreeze(t *testing.T) {
 	plan := frozenTestPlan(t)
 	commits := executionFreezeTestCommits()
-	tools := executionFreezeTestTools(plan)
+	tools := executionFreezeTestTools(plan, commits)
 	host := executionFreezeTestHost()
 	freeze := mustExecutionFreeze(t, plan, commits)
 	checkout := executionFreezeTestCheckout(t, commits, tools)
@@ -784,17 +777,7 @@ func TestDecodeReceiptRejectsUnknownTrailingAndNoncanonical(t *testing.T) {
 
 func frozenReceiptTestBinding(t *testing.T, plan Plan) ExecutionFreezeBinding {
 	t.Helper()
-	receiptFreezeOnce.Do(func() {
-		commits := executionFreezeTestCommits()
-		freeze := mustExecutionFreeze(t, plan, commits)
-		receiptFreezeBinding, receiptFreezeErr = bindExecutionFreezeForReceipt(
-			freeze, plan, commits, executionFreezeTestSigner(), executionFreezeTestAdmission(t, plan, freeze),
-		)
-	})
-	if receiptFreezeErr != nil {
-		t.Fatal(receiptFreezeErr)
-	}
-	return receiptFreezeBinding
+	return admittedExecutionFreezeTestBinding(t, plan, executionFreezeTestCommits())
 }
 
 func executionFreezeTestAdmission(t *testing.T, plan Plan, freeze ExecutionFreeze) ExecutionFreezeAdmissionBinding {
@@ -1710,11 +1693,15 @@ func testPressureTransitions(
 		ballastAfter := usedAfter - baseUsed
 		allocatedAfter := baseAllocated + ballastAfter
 		authoritySHA256, _ := authorityIdentitySHA256(authority[phase])
+		epoch, _, ok := expectedPhaseRuntime(freeze.Profile.Epochs, phase)
+		if !ok {
+			t.Fatalf("pressure phase %q has no admitted runtime epoch", phase)
+		}
 		value := &PressureTransition{
 			Schema:            plan.ReceiptContract.TransitionSchema + "/pressure-v1",
 			TargetUsedPercent: target.TargetUsedPercent, Action: target.Action,
 			ExpectedDisposition: target.ExpectedDisposition, ObservedDisposition: target.ExpectedDisposition,
-			PriorGateSequenceSHA256: priorSequence, ServerEpoch: 2,
+			PriorGateSequenceSHA256: priorSequence, ServerEpoch: epoch,
 			VolumeAvailableBytesBefore: freeze.Pressure.PressureVolumeBytes - priorUsed,
 			VolumeAvailableBytesAfter:  freeze.Pressure.PressureVolumeBytes - usedAfter,
 			VolumeUsedBytesBefore:      priorUsed, VolumeUsedBytesAfter: usedAfter,

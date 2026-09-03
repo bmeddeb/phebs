@@ -588,6 +588,46 @@ These are test-fixture changes, not permission to weaken the public validator.
 No complete-constructor acceptance, exact-commit review, new canonical artifact,
 merge, push, freeze or ceremony is claimed here.
 
+### T42.1r5 fixture-only follow-up
+
+Ben approved this follow-up on `codex/t42.1r5-fixture-epoch-admission`, stacked
+above local namespace-fix checkpoint `1ba00f7d`. Pressure rows derive their
+server epoch from the admitted phase table. A single exact-plan/commit cache
+owns publicly admitted freeze bindings and returns defensive copies; the
+constructor obtains one before native work. Mock tool provenance follows the
+supplied source commit. The native authority/recovery witness remains a single
+exact-plan result rather than a multi-corpus cache.
+
+Complete production-derived constructor acceptance now passes in 786.40s,
+including the formerly invalid `pressure_80` boundary. Its completed fixture is
+484,348 bytes. All three physical revisions settle 56 extraction chunks and
+nine current domain roots; both result-reuse preparations complete with zero
+source acquisition and evidence appends. Measurements/search-leaf evidence
+remain modeled, and these preparations do not inject a stale lease or process
+death. This is constructor acceptance, not ceremony evidence.
+
+The complete normal command,
+`go test -json ./spike/t421/... -count=1 -timeout=60m`, passes in 1799.598s:
+62 top-level tests, no failures and no skipped
+tests (the author command package has no tests). This includes the separate
+production pipeline replay (300.28s), full-overlay native relationship
+components (301.09s), cross-version/exact-input/copy-isolation/public-admission
+refusals, pressure counterexamples, and retained receipt/recovery gates.
+Both cache version orders also pass under race in 1336.37s. The broad
+race selector was intentionally interrupted after that result (1486.973s total)
+because full-plan regeneration under instrumentation made it expensive; that
+command is not an aggregate pass. The final targeted ownership/pressure race
+selector passes in 802.655s, covering both versions and all six stale-epoch
+counterexamples. No full-package race pass is claimed.
+
+Independent working-tree source/documentation reviews have no findings. No test
+or Surreal process remains after the complete run. Scoped vet/pinned
+lint, module verification, glossary, formatting and whitespace pass; docs-check
+retains the known missing UI screenshot only. Production code, oracle checks,
+retained artifacts and safety/ceremony limits stay unchanged. No merge, push,
+new canonical plan, freeze or ceremony is authorized. The owning decision and
+cost record are in `PLAN.md`.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

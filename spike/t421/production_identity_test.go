@@ -31,9 +31,10 @@ import (
 )
 
 var (
-	productionAuthorityOnce  sync.Once
-	productionAuthorityCache map[string]AuthorityPhaseResult
-	productionRecoveryCache  map[string]productionRecoverySchedule
+	productionAuthorityOnce       sync.Once
+	productionAuthorityCache      map[string]AuthorityPhaseResult
+	productionRecoveryCache       map[string]productionRecoverySchedule
+	productionAuthorityPlanSHA256 string
 )
 
 type productionRecoverySchedule struct {
@@ -52,12 +53,17 @@ func productionRecoveryScheduleFixture(t *testing.T, plan Plan, phase string) pr
 
 func productionAuthorityFixture(t *testing.T, plan Plan) map[string]AuthorityPhaseResult {
 	t.Helper()
+	planSHA256 := mustReceiptSHA256(t, plan)
 	productionAuthorityOnce.Do(func() {
 		physical := productionPhysicalIdentities(t, plan)
 		productionAuthorityCache = productionLogicalAuthorities(t, plan, physical)
+		productionAuthorityPlanSHA256 = planSHA256
 	})
 	if productionAuthorityCache == nil {
 		t.Fatal("native constructor fixture did not complete")
+	}
+	if productionAuthorityPlanSHA256 != planSHA256 {
+		t.Fatal("native constructor fixture belongs to a different exact plan")
 	}
 	return productionAuthorityCache
 }
@@ -68,12 +74,7 @@ func productionAuthorityFixture(t *testing.T, plan Plan) map[string]AuthorityPha
 func TestContractAdmitsProductionDerivedOrdinaryPass(t *testing.T) {
 	plan := correctedTestPlan(t)
 	commits := executionFreezeTestCommits()
-	freeze := mustExecutionFreeze(t, plan, commits)
-	binding, err := bindExecutionFreezeForReceipt(freeze, plan, commits,
-		executionFreezeTestSigner(), executionFreezeTestAdmission(t, plan, freeze))
-	if err != nil {
-		t.Fatal(err)
-	}
+	binding := admittedExecutionFreezeTestBinding(t, plan, commits)
 	receipt := completeTestReceipt(t, plan, binding)
 	returned := returnedPackageTestBinding(t, receipt, plan, binding)
 	if err := ValidateReceipt(receipt, plan, binding, returned); err != nil {
