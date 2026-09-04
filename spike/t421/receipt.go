@@ -2382,6 +2382,14 @@ func validateTransitionResults(
 			if value.ReadAccounting == nil || validatePressure75TransitionReadSubtotal(*value.ReadAccounting) != nil {
 				return errors.New("pressure 75 transition read accounting is invalid")
 			}
+		} else if phase == "archive_restore" {
+			if value.ReadAccounting == nil || validateArchiveTransitionReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("archive transition read accounting is invalid")
+			}
+		} else if phase == "lifecycle_collection" {
+			if value.ReadAccounting == nil || validateLifecycleTransitionReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("lifecycle transition read accounting is invalid")
+			}
 		} else if value.ReadAccounting != nil {
 			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
@@ -2727,6 +2735,32 @@ func validatePressure75TransitionReadSubtotal(value TransitionReadSubtotal) erro
 		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
 		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
 		return errors.New("pressure 75 transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
+func validateArchiveTransitionReadSubtotal(value TransitionReadSubtotal) error {
+	bound := correctedArchiveTransitionReadBound()
+	if value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedArchiveTransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum {
+		return errors.New("archive transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
+func validateLifecycleTransitionReadSubtotal(value TransitionReadSubtotal) error {
+	bound := correctedLifecycleTransitionReadBound()
+	if value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedLifecycleTransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum {
+		return errors.New("lifecycle transition read subtotal differs from its derived bound")
 	}
 	return nil
 }

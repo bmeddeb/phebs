@@ -291,6 +291,72 @@ func TestCycleCollectorFailsClosedAtItsTurnLimit(t *testing.T) {
 	}
 }
 
+func TestCycleCollectorAwaitFreshAllowsDurableJobBacklog(t *testing.T) {
+	owners := testCycleObservationOwners()
+	collector, err := NewCycleCollector(owners, MaxCycleObservationTurns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := time.Now().UTC()
+	var tick time.Duration
+	collector.now = func() time.Time {
+		tick++
+		return base.Add(tick)
+	}
+	ctx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	type observed struct {
+		value CycleObservation
+		err   error
+	}
+	result := make(chan observed, 1)
+	go func() {
+		value, observeErr := collector.AwaitFresh(ctx)
+		result <- observed{value: value, err: observeErr}
+	}()
+	for !collectorStarted(collector) {
+		time.Sleep(time.Millisecond)
+	}
+	for index, owner := range owners {
+		completeness := Exact
+		more := false
+		if owner.Name() == JobOwner {
+			completeness, more = LowerBound, true
+		}
+		collector.ObserveOwner(OwnerResult{
+			Owner: owner.Name(), AttemptedAt: collector.now(), Completeness: completeness, More: more,
+			CycleStart: index == 0, CycleComplete: index == len(owners)-1,
+		})
+		collector.ObserveCapacity(Capacity{
+			TotalBytes: 1_000, AvailableBytes: 300, UsedBytes: 700,
+			ProjectedBytes: 700, UsedPercent: 70, Pressure: PressureNormal,
+		}, nil)
+	}
+	got := <-result
+	if got.err != nil {
+		t.Fatal(got.err)
+	}
+	job := -1
+	for index := range got.value.Owners {
+		if got.value.Owners[index].Name == JobOwner {
+			job = index
+			break
+		}
+	}
+	if FreshCycleReportCalls != 1 || got.value.Schema != CycleObservationSchema ||
+		got.value.OwnerTurns != uint64(len(owners)) || job < 0 || !got.value.Owners[job].Backlog {
+		t.Fatalf("fresh lifecycle cycle = %+v", got.value)
+	}
+	if _, repeatErr := collector.AwaitFresh(ctx); repeatErr == nil {
+		t.Fatal("fresh lifecycle observation was repeated")
+	}
+	if counts, accountingErr := ledger.Finish(); accountingErr != nil || counts != (readaccounting.Counts{}) {
+		t.Fatalf("fresh lifecycle observation charged native reads: %+v, %v", counts, accountingErr)
+	}
+}
+
 func TestCycleCollectorCancellationWinsBufferedCompletion(t *testing.T) {
 	owners := []Owner{StaticOwner{OwnerName: "alpha", Completeness: Exact}}
 	collector, err := NewCycleCollector(owners, 1)

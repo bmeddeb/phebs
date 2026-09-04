@@ -18,6 +18,7 @@ const (
 	Pressure80ReportCalls               = uint64(2)
 	Pressure90ReportCalls               = uint64(1)
 	Pressure75ReportCalls               = uint64(3)
+	FreshCycleReportCalls               = uint64(1)
 	MaxCycleObservationTurns            = CycleTurnLimit(4_096)
 )
 
@@ -132,6 +133,7 @@ type CycleCollector struct {
 	recoveryComplete bool
 	preStartNormal   bool
 	normalAttempted  bool
+	allowJobBacklog  bool
 	awaitingCapacity bool
 }
 
@@ -167,6 +169,19 @@ func NewCycleCollector(owners []Owner, maxTurns CycleTurnLimit) (*CycleCollector
 // sorted cycle followed immediately by lifecycle.Run's exact-normal capacity
 // callback. A collector has one waiter and one result.
 func (collector *CycleCollector) AwaitNormal(ctx context.Context) (CycleObservation, error) {
+	return collector.await(ctx, false)
+}
+
+// AwaitFresh arms the same bounded collector for the final exact-mode cycle.
+// Unlike AwaitNormal, a truthful durable-job lower-bound backlog is allowed.
+func (collector *CycleCollector) AwaitFresh(ctx context.Context) (CycleObservation, error) {
+	return collector.await(ctx, true)
+}
+
+func (collector *CycleCollector) await(
+	ctx context.Context,
+	allowJobBacklog bool,
+) (CycleObservation, error) {
 	if ctx == nil || collector == nil {
 		return CycleObservation{}, errors.New("lifecycle cycle observation is incomplete")
 	}
@@ -179,6 +194,7 @@ func (collector *CycleCollector) AwaitNormal(ctx context.Context) (CycleObservat
 	collector.fence = collector.now().UTC()
 	collector.latest = collector.fence
 	collector.done = make(chan cycleObservationResult, 1)
+	collector.allowJobBacklog = allowJobBacklog
 	done := collector.done
 	collector.mu.Unlock()
 
@@ -273,7 +289,7 @@ func (collector *CycleCollector) ObserveOwner(result OwnerResult) {
 	}
 	if result.Owner == JobOwner {
 		collector.cycleValid = collector.cycleValid &&
-			result.Completeness == LowerBound && (!result.More || collector.recoveryMode)
+			result.Completeness == LowerBound && (!result.More || collector.allowJobBacklog)
 	} else {
 		collector.cycleValid = collector.cycleValid &&
 			result.Completeness == Exact && !result.More
@@ -595,6 +611,7 @@ func (collector *CycleCollector) AwaitPressure75Recovery(
 	collector.recoveryMode = true
 	collector.recoveryComplete = false
 	collector.preStartNormal = false
+	collector.allowJobBacklog = true
 	done := collector.done
 	collector.mu.Unlock()
 

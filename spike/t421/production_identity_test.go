@@ -441,20 +441,35 @@ func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
 			}
 		})
 	}
-	t.Run("unfinished_transition_accounting", func(t *testing.T) {
-		changed := cloneTestReceipt(t, base)
-		unfinished := slices.IndexFunc(changed.TransitionResults, func(value TransitionResult) bool {
-			return value.Phase == "archive_restore"
-		})
-		if unfinished < 0 || changed.TransitionResults[unfinished].ReadAccounting != nil {
-			t.Fatal("unfinished transition fixture is invalid")
+	t.Run("all_transition_accounting_complete", func(t *testing.T) {
+		for _, transition := range base.TransitionResults {
+			if transition.ReadAccounting == nil {
+				t.Fatalf("%s transition read accounting is absent", transition.Phase)
+			}
 		}
-		subtotal := *changed.TransitionResults[stale].ReadAccounting
-		changed.TransitionResults[unfinished].ReadAccounting = &subtotal
-		if err := ValidateReceipt(
-			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
-		); err == nil {
-			t.Fatal("unfinished transition read accounting was accepted")
+		for _, phase := range []string{"archive_restore", "lifecycle_collection"} {
+			changed := cloneTestReceipt(t, base)
+			index := slices.IndexFunc(changed.TransitionResults, func(value TransitionResult) bool {
+				return value.Phase == phase
+			})
+			if index < 0 {
+				t.Fatalf("%s transition is absent", phase)
+			}
+			changed.TransitionResults[index].ReadAccounting = nil
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatalf("missing %s read accounting was accepted", phase)
+			}
+		}
+		rows, _, err := correctedInspectionInventory(plan.Profile)
+		product := slices.IndexFunc(rows, func(value phaseInspectionInventory) bool {
+			return value.Phase == "product_queries"
+		})
+		if err != nil || product < 0 || rows[product].TransitionRead != nil ||
+			rows[product].TransitionReadClass != "none" || rows[product].ProductHTTPCalls.Minimum == 0 ||
+			rows[product].ProductMCPCalls.Minimum == 0 {
+			t.Fatal("product queries are not governed solely by Q accounting")
 		}
 	})
 }

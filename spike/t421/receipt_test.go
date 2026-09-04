@@ -105,6 +105,11 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 	if pressure75Index < 0 || receipt.TransitionResults[pressure75Index].ReadAccounting != nil {
 		t.Fatal("retained V1 pressure-75 transition gained read accounting")
 	}
+	for _, transition := range receipt.TransitionResults {
+		if transition.ReadAccounting != nil {
+			t.Fatalf("retained V1 %s transition gained read accounting", transition.Phase)
+		}
+	}
 }
 
 func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
@@ -356,6 +361,54 @@ func TestPressure75TransitionReadSubtotalMatchesNativeReader(t *testing.T) {
 			mutate(&changed)
 			if validatePressure75TransitionReadSubtotal(changed) == nil {
 				t.Fatal("mutated pressure-75 transition subtotal was accepted")
+			}
+		})
+	}
+}
+
+func TestArchiveAndLifecycleTransitionReadSubtotalsMatchNativeReaders(t *testing.T) {
+	for _, test := range []struct {
+		name, class     string
+		bound           inspectionReadBound
+		calls, controls uint64
+		validate        func(TransitionReadSubtotal) error
+	}{
+		{name: "archive", class: correctedArchiveTransitionReadClass, bound: correctedArchiveTransitionReadBound(), calls: recovery.ArchiveTransitionReportCalls, controls: 1, validate: validateArchiveTransitionReadSubtotal},
+		{name: "lifecycle", class: correctedLifecycleTransitionReadClass, bound: correctedLifecycleTransitionReadBound(), calls: lifecycle.FreshCycleReportCalls, validate: validateLifecycleTransitionReadSubtotal},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if test.bound.Calls != exactInspectionCalls(test.calls) || test.calls != 1 ||
+				test.bound.ControlFileReads != exactInspectionCalls(test.controls) ||
+				test.bound.StoreReadAttempts != exactInspectionCalls(0) ||
+				test.bound.MemberReads != exactInspectionCalls(0) ||
+				test.bound.StoreWriteAttempts != exactInspectionCalls(0) {
+				t.Fatalf("native transition bound = %+v", test.bound)
+			}
+			base := TransitionReadSubtotal{
+				Schema: "t422-transition-read-accounting-v1", Class: test.class,
+				ReportCalls: test.bound.Calls.Minimum, ControlFileReads: test.bound.ControlFileReads.Minimum,
+				StoreReadAttempts: test.bound.StoreReadAttempts.Minimum, MemberReads: test.bound.MemberReads.Minimum,
+				StoreWriteAttempts: test.bound.StoreWriteAttempts.Minimum,
+			}
+			if err := test.validate(base); err != nil {
+				t.Fatal(err)
+			}
+			for name, mutate := range map[string]func(*TransitionReadSubtotal){
+				"schema":  func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+				"class":   func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+				"calls":   func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+				"control": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+				"store":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+				"member":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+				"write":   func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+			} {
+				t.Run(name, func(t *testing.T) {
+					changed := base
+					mutate(&changed)
+					if test.validate(changed) == nil {
+						t.Fatal("mutated transition subtotal was accepted")
+					}
+				})
 			}
 		})
 	}
@@ -2099,8 +2152,22 @@ func completeTestTransitions(
 			// Filled as one contiguous sequence below.
 		case "archive_restore":
 			transition.Archive = testArchiveTransition(t, plan, transition, authority)
+			if plan.Schema == PlanV2Schema {
+				readBound := correctedArchiveTransitionReadBound()
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedArchiveTransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
+				}
+			}
 		case "lifecycle_collection":
 			transition.Lifecycle = testLifecycleTransition(t, plan, transition, authority, measurement)
+			if plan.Schema == PlanV2Schema {
+				readBound := correctedLifecycleTransitionReadBound()
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedLifecycleTransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum,
+				}
+			}
 		}
 		result[index] = transition
 	}

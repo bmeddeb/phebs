@@ -7,6 +7,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -26,6 +27,8 @@ const (
 	correctedPressure80TransitionReadClass  = "pressure-normalization-and-collect-cycle"
 	correctedPressure90TransitionReadClass  = "typed-pressure-refusal"
 	correctedPressure75TransitionReadClass  = "pressure-refusal-removal-and-recovery-cycle"
+	correctedArchiveTransitionReadClass     = "archive-destroy-empty-target-restore-and-semantic-binding"
+	correctedLifecycleTransitionReadClass   = "fresh-sixteen-owner-cycle"
 	correctedInspectionPolicy               = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
 )
 
@@ -163,6 +166,26 @@ func correctedPressure90TransitionReadBound() inspectionReadBound {
 func correctedPressure75TransitionReadBound() inspectionReadBound {
 	return inspectionReadBound{
 		Calls:              exactInspectionCalls(lifecycle.Pressure75ReportCalls),
+		ControlFileReads:   exactInspectionCalls(0),
+		StoreReadAttempts:  exactInspectionCalls(0),
+		MemberReads:        exactInspectionCalls(0),
+		StoreWriteAttempts: exactInspectionCalls(0),
+	}
+}
+
+func correctedArchiveTransitionReadBound() inspectionReadBound {
+	return inspectionReadBound{
+		Calls:              exactInspectionCalls(recovery.ArchiveTransitionReportCalls),
+		ControlFileReads:   exactInspectionCalls(1),
+		StoreReadAttempts:  exactInspectionCalls(0),
+		MemberReads:        exactInspectionCalls(0),
+		StoreWriteAttempts: exactInspectionCalls(0),
+	}
+}
+
+func correctedLifecycleTransitionReadBound() inspectionReadBound {
+	return inspectionReadBound{
+		Calls:              exactInspectionCalls(lifecycle.FreshCycleReportCalls),
 		ControlFileReads:   exactInspectionCalls(0),
 		StoreReadAttempts:  exactInspectionCalls(0),
 		MemberReads:        exactInspectionCalls(0),
@@ -359,7 +382,9 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 			row.TransitionRead = &readBound
 			row.TransitionReadEpochs = []uint64{beforeEpoch, row.ServerEpoch}
 		case "archive_restore":
-			row.TransitionReadClass = "archive-destroy-empty-target-restore-and-semantic-binding"
+			row.TransitionReadClass = correctedArchiveTransitionReadClass
+			readBound := correctedArchiveTransitionReadBound()
+			row.TransitionRead = &readBound
 		case "pressure_80", "pressure_75", "lifecycle_collection":
 			maximum, err := maximumInspectionAttempts(deadlines[index].DeadlineMS, correctedInspectionPollMS)
 			if err != nil {
@@ -378,7 +403,9 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 				row.TransitionRead = &readBound
 				row.ImmutableMemberReusePhase = "pressure_90"
 			case "lifecycle_collection":
-				row.TransitionReadClass = "fresh-sixteen-owner-cycle"
+				row.TransitionReadClass = correctedLifecycleTransitionReadClass
+				readBound := correctedLifecycleTransitionReadBound()
+				row.TransitionRead = &readBound
 				row.ImmutableMemberReusePhase = "archive_restore"
 			}
 		case "pressure_90":

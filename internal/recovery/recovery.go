@@ -23,6 +23,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -42,6 +43,8 @@ const (
 	CallerPublicationName                = "caller-publication.tar"
 	ObservationPublicationName           = "observation-publication.tar"
 	RelationshipPublicationName          = "relationship-publication.tar"
+	// ArchiveTransitionReportCalls is the exact single-manifest R cost.
+	ArchiveTransitionReportCalls = uint64(1)
 
 	maxManifestBytes = 1 << 20
 	maxCommandOutput = 64 << 10
@@ -157,6 +160,33 @@ type Manifest struct {
 	ManifestSHA256    string                         `json:"manifest_sha256"`
 }
 
+// ArchiveTransitionManifest is the source-free manifest projection required
+// by the exact archive/restore transition receipt.
+type ArchiveTransitionManifest struct {
+	ManifestSchema string                       `json:"manifest_schema"`
+	ManifestSHA256 string                       `json:"manifest_sha256"`
+	Components     []ArchiveTransitionComponent `json:"components"`
+	Reports        []ArchiveTransitionReport    `json:"reports"`
+}
+
+type ArchiveTransitionComponent struct {
+	Name           string `json:"name"`
+	Classification string `json:"classification"`
+	MediaType      string `json:"media_type"`
+	Bytes          uint64 `json:"bytes"`
+	SHA256         string `json:"sha256"`
+}
+
+type ArchiveTransitionReport struct {
+	Name           string `json:"name"`
+	Schema         string `json:"schema"`
+	Publications   uint64 `json:"publications"`
+	V1Publications uint64 `json:"v1_publications,omitempty"`
+	V2Publications uint64 `json:"v2_publications,omitempty"`
+	Files          uint64 `json:"files,omitempty"`
+	Bytes          uint64 `json:"bytes,omitempty"`
+}
+
 type Options struct {
 	DataDir      string
 	Config       []byte
@@ -178,6 +208,100 @@ type RestoreOptions struct {
 // ConfigDigest is the canonical raw-config identity stored in runtime
 // descriptors and backup manifests. Whitespace is intentionally significant.
 func ConfigDigest(data []byte) string { return digestBytes(data) }
+
+// ReadArchiveTransitionManifest performs the single strict manifest read used
+// by exact archive/restore transition accounting. Artifact bytes are not read.
+func ReadArchiveTransitionManifest(
+	ctx context.Context,
+	backup, backupCommandSHA256, restoreCommandSHA256 string,
+) (ArchiveTransitionManifest, error) {
+	if ctx == nil {
+		return ArchiveTransitionManifest{}, errors.New("archive transition context is required")
+	}
+	if err := ctx.Err(); err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	if !validSHA256(backupCommandSHA256) || !validSHA256(restoreCommandSHA256) {
+		return ArchiveTransitionManifest{}, errors.New("archive transition manifest digest is invalid")
+	}
+	backup, err := absoluteCleanPath("archive transition backup", backup)
+	if err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	if err := readaccounting.Charge(
+		ctx, readaccounting.ControlFileRead, 1,
+	); err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	manifest, err := readManifest(filepath.Join(backup, ManifestName))
+	if err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	if err := validateManifest(manifest); err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	digest, err := manifestDigest(manifest)
+	if err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	if digest != manifest.ManifestSHA256 || digest != backupCommandSHA256 ||
+		digest != restoreCommandSHA256 {
+		return ArchiveTransitionManifest{}, errors.New("archive transition manifest digest mismatch")
+	}
+	if manifest.FocusedIndex.Publications == 0 ||
+		manifest.FocusedIndex.OmittedPublications != 0 ||
+		manifest.FocusedIndex.OmittedArtifacts != 0 ||
+		manifest.FocusedIndex.StaleMarkers != 0 ||
+		manifest.ResolverCatalog.Publications == 0 ||
+		manifest.ResolverCatalog.OmittedPublications != 0 ||
+		manifest.ResolverCatalog.OmittedArtifacts != 0 ||
+		manifest.ResolverCatalog.StaleMarkers != 0 ||
+		len(manifest.ResolverCatalog.Details) != 0 ||
+		manifest.ResolverCatalog.TruncatedDetails != 0 ||
+		manifest.CallerPublication.Publications == 0 ||
+		manifest.CallerPublication.OmittedPublications != 0 ||
+		manifest.CallerPublication.OmittedArtifacts != 0 ||
+		manifest.CallerPublication.StaleMarkers != 0 ||
+		len(manifest.CallerPublication.Details) != 0 ||
+		manifest.CallerPublication.TruncatedDetails != 0 ||
+		manifest.Observation.Publications == 0 ||
+		manifest.Observation.Files == 0 || manifest.Observation.Bytes == 0 ||
+		manifest.Observation.Omitted != 0 ||
+		manifest.Observation.OmittedPublications != 0 ||
+		manifest.Observation.OmittedArtifacts != 0 ||
+		manifest.Observation.StaleMarkers != 0 ||
+		manifest.Relationship.Publications == 0 ||
+		manifest.Relationship.Files == 0 || manifest.Relationship.Bytes == 0 ||
+		manifest.Relationship.Omitted != 0 {
+		return ArchiveTransitionManifest{}, errors.New("archive transition manifest reports omissions or no publication")
+	}
+	if err := ctx.Err(); err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	components := make([]ArchiveTransitionComponent, len(manifest.Inventory))
+	for index, artifact := range manifest.Inventory {
+		components[index] = ArchiveTransitionComponent{
+			Name: artifact.Path, Classification: artifact.Classification,
+			MediaType: artifact.MediaType, Bytes: uint64(artifact.Size), SHA256: artifact.SHA256,
+		}
+	}
+	reports := []ArchiveTransitionReport{
+		{Name: "focused_index", Schema: manifest.FocusedIndex.Schema, Publications: uint64(manifest.FocusedIndex.Publications)},
+		{Name: "resolver_catalog", Schema: manifest.ResolverCatalog.Schema, Publications: uint64(manifest.ResolverCatalog.Publications)},
+		{Name: "caller_publication", Schema: manifest.CallerPublication.Schema, Publications: uint64(manifest.CallerPublication.Publications)},
+		{Name: "observation", Schema: manifest.Observation.Schema, Publications: uint64(manifest.Observation.Publications), V1Publications: uint64(manifest.Observation.V1Publications), V2Publications: uint64(manifest.Observation.V2Publications), Files: uint64(manifest.Observation.Files), Bytes: uint64(manifest.Observation.Bytes)},
+		{Name: "relationship", Schema: manifest.Relationship.Schema, Publications: uint64(manifest.Relationship.Publications), Files: uint64(manifest.Relationship.Files), Bytes: uint64(manifest.Relationship.Bytes)},
+	}
+	if err := ctx.Err(); err != nil {
+		return ArchiveTransitionManifest{}, err
+	}
+	return ArchiveTransitionManifest{
+		ManifestSchema: manifest.Schema,
+		ManifestSHA256: digest,
+		Components:     components,
+		Reports:        reports,
+	}, nil
+}
 
 // Create exports a running local instance into an atomically published,
 // private backup directory. Output must not already exist.

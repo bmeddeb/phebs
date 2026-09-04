@@ -1626,6 +1626,44 @@ hourly idle. Archive and lifecycle R, cross-phase sums, final ordinal,
 replacement freeze, and execution remain open. No pressure phase pass, merge,
 freeze, execution, release, scale result, or SLO is established or authorized.
 
+#### Archive/restore and lifecycle-collection R readers
+
+The last prospective V2 transition-local R slice uses two existing production
+paths. Archive/restore calls `recovery.ReadArchiveTransitionManifest` exactly
+once after its archive, destroy, empty-target, restore, and comparison facts.
+The reader opens only the strict at-most-1-MiB manifest, validates it and both
+archive/restore command digests, canonically re-encodes and hashes that manifest,
+rejects omissions, and returns the bounded component/report projection without
+reading any archived artifact. Lifecycle
+collection calls `CycleCollector.AwaitFresh` exactly once for a new sorted
+sixteen-owner callback cycle after archive/restore. Fifteen non-job owners are
+exact and drained; `durable-jobs` remains lower-bound and may truthfully retain
+backlog. That compatibility is not evidence that the production runner reached
+hourly idle. Existing archive and lifecycle semantic validators remain the
+authority.
+
+Archive R is `C/S/M/W=1/0/0/0`; lifecycle R is `0/0/0/0`. Retained V1 keeps
+both subtotals nil. V2 requires a read subtotal for every transition result,
+and `product_queries` remains outside that inventory under Q. The compact token
+`;80/90/75/lc=2/1/3/1xC0S0M0W0;ar=1xC1S0M0W0` is a positional zip:
+`80,90,75,lifecycle_collection` map to `2,1,3,1` zero-I/O reports and
+`ar=archive_restore` maps to one control-read report. Prior pressure semantics
+are unchanged. Epoch-five transition calls are 2, control reads are 1, and its
+requests rise from 8,689 to 8,691; total requests rise from 43,776 to 43,778.
+The canonical plan is exactly 262,144 bytes and the limit does not change.
+
+Exact archive work adds one bounded manifest allocation/parse and canonical
+re-encode/SHA-256 of the decoded at-most-1-MiB manifest, and no
+store/member/write/artifact read. Exact lifecycle work reuses the bounded
+callback collector and adds no I/O or independent scan. Ordinary query/request,
+sync, startup/restart, retry/no-op, publication, lifecycle cadence, store/schema,
+cache, source/corpus/shard read, hashing, disk allocation, child, and persistent
+work are unchanged because these report paths are default-inactive. Controller
+binding, archive custody, destroy/empty-target ordering, exclusive phase
+ownership, report-failure latching, phase passes, cross-phase sums, final
+ordinal, replacement freeze, and execution remain open. This authorizes no
+merge, freeze, execution, release, scale result, or SLO.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

@@ -3956,6 +3956,38 @@ hourly-idle state. Archive and lifecycle R, cross-phase sums, final ordinal, and
 replacement freeze remain open. This is no phase pass and authorizes no merge,
 freeze, execution, release, scale result, or SLO.
 
+The final transition-local V2 R slice binds archive/restore to exactly one
+production `ReadArchiveTransitionManifest` report and lifecycle collection to
+exactly one production `AwaitFresh` callback-cycle report. Archive reads and
+strictly validates only the at-most-1-MiB manifest, confirms the digest used by
+both archive commands, rejects omissions, and projects its component/report
+inventory without reading artifact bytes. The lifecycle report is one new
+sorted sixteen-owner cycle after archive/restore. Its fifteen non-job owners
+are exact and drained; `durable-jobs` remains lower-bound and may truthfully
+retain backlog, so this does not establish production hourly idle. Existing
+archive and lifecycle semantic validation is unchanged. V1 keeps both read
+subtotals nil. Every V2 transition result now owns a subtotal; product queries
+remain exclusively under Q accounting.
+
+Archive R is `1xC1S0M0W0`; lifecycle R is `1xC0S0M0W0`. The exact compact
+policy token is `;80/90/75/lc=2/1/3/1xC0S0M0W0;ar=1xC1S0M0W0`: the positional
+zip maps `80,90,75,lifecycle_collection` to `2,1,3,1`, and `ar` means
+`archive_restore`; prior pressure semantics do not change. Epoch-five
+transition calls become 2, control reads become 1, and requests advance
+`8,689→8,691`; total requests advance `43,776→43,778`. The compact plan is
+exactly 262,144 bytes, without raising its cap. Exact archive work adds one
+bounded manifest read/allocation/parse and one bounded canonical
+re-encode/SHA-256 of the decoded at-most-1-MiB manifest, with no
+store/member/write/artifact read; exact lifecycle work adds one bounded,
+zero-I/O callback cycle and no new scanner. Ordinary query/request, sync,
+startup/restart, retry/no-op,
+publication, lifecycle cadence, store/schema, cache, source/corpus/shard read,
+hashing, disk allocation, child, and persistent work remain unchanged.
+Controller binding, archive custody, destroy/empty-target ordering, exclusive
+phase ownership, report-failure latching, phase passes, cross-phase sums, final
+ordinal, replacement freeze, and execution remain open. This authorizes no
+merge, freeze, execution, release, scale result, or SLO.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

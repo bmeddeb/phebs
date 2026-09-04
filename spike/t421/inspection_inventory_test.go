@@ -45,8 +45,8 @@ func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
 		{Phase: "pressure_80", ServerEpoch: 4, ExtractionProgressCalls: exactInspectionCalls(1), FinalAuthorityPasses: exactInspectionCalls(1), LifecycleStatusCalls: CounterBound{Minimum: 1, Maximum: 241}, TransitionReadClass: correctedPressure80TransitionReadClass, TransitionRead: &inspectionReadBound{Calls: exactInspectionCalls(2), ControlFileReads: exactInspectionCalls(0), StoreReadAttempts: exactInspectionCalls(0), MemberReads: exactInspectionCalls(0), StoreWriteAttempts: exactInspectionCalls(0)}, ImmutableMemberReusePhase: "process_restart"},
 		{Phase: "pressure_90", ServerEpoch: 4, ExtractionProgressCalls: exactInspectionCalls(1), FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: correctedPressure90TransitionReadClass, TransitionRead: &inspectionReadBound{Calls: exactInspectionCalls(1), ControlFileReads: exactInspectionCalls(0), StoreReadAttempts: exactInspectionCalls(0), MemberReads: exactInspectionCalls(0), StoreWriteAttempts: exactInspectionCalls(0)}, ImmutableMemberReusePhase: "pressure_80"},
 		{Phase: "pressure_75", ServerEpoch: 4, ExtractionProgressCalls: exactInspectionCalls(1), FinalAuthorityPasses: exactInspectionCalls(1), LifecycleStatusCalls: CounterBound{Minimum: 1, Maximum: 241}, TransitionReadClass: correctedPressure75TransitionReadClass, TransitionRead: &inspectionReadBound{Calls: exactInspectionCalls(3), ControlFileReads: exactInspectionCalls(0), StoreReadAttempts: exactInspectionCalls(0), MemberReads: exactInspectionCalls(0), StoreWriteAttempts: exactInspectionCalls(0)}, ImmutableMemberReusePhase: "pressure_90"},
-		{Phase: "archive_restore", ServerEpoch: 5, HealthCalls: CounterBound{Minimum: 1, Maximum: 3_601}, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: "archive-destroy-empty-target-restore-and-semantic-binding"},
-		{Phase: "lifecycle_collection", ServerEpoch: 5, ExtractionProgressCalls: exactInspectionCalls(1), FinalAuthorityPasses: exactInspectionCalls(1), LifecycleStatusCalls: CounterBound{Minimum: 1, Maximum: 2_881}, TransitionReadClass: "fresh-sixteen-owner-cycle", ImmutableMemberReusePhase: "archive_restore"},
+		{Phase: "archive_restore", ServerEpoch: 5, HealthCalls: CounterBound{Minimum: 1, Maximum: 3_601}, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: correctedArchiveTransitionReadClass, TransitionRead: &inspectionReadBound{Calls: exactInspectionCalls(1), ControlFileReads: exactInspectionCalls(1), StoreReadAttempts: exactInspectionCalls(0), MemberReads: exactInspectionCalls(0), StoreWriteAttempts: exactInspectionCalls(0)}},
+		{Phase: "lifecycle_collection", ServerEpoch: 5, ExtractionProgressCalls: exactInspectionCalls(1), FinalAuthorityPasses: exactInspectionCalls(1), LifecycleStatusCalls: CounterBound{Minimum: 1, Maximum: 2_881}, TransitionReadClass: correctedLifecycleTransitionReadClass, TransitionRead: &inspectionReadBound{Calls: exactInspectionCalls(1), ControlFileReads: exactInspectionCalls(0), StoreReadAttempts: exactInspectionCalls(0), MemberReads: exactInspectionCalls(0), StoreWriteAttempts: exactInspectionCalls(0)}, ImmutableMemberReusePhase: "archive_restore"},
 		{Phase: "product_queries", ServerEpoch: 5, ExtractionProgressCalls: exactInspectionCalls(1), FinalAuthorityPasses: exactInspectionCalls(2), TransitionReadClass: "none", ProductHTTPCalls: exactInspectionCalls(19), ProductMCPCalls: exactInspectionCalls(19), ProductControlFileReads: exactInspectionCalls(160), ProductStoreReadAttempts: exactInspectionCalls(164), ImmutableMemberReusePhase: "lifecycle_collection"},
 		{Phase: "teardown", TransitionReadClass: "none"},
 	}
@@ -72,7 +72,7 @@ func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
 		{ServerEpoch: 2, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 2_881, TailReadinessCallsMaximum: 2_881, TailControlFileReadsMaximum: 11_524, TailStoreReadAttemptsMaximum: 11_524, FinalAuthorityPassesMaximum: 1, TransitionReadCallsMaximum: 2, TransitionStoreReadAttemptsMaximum: 10, AccountedServerRequestsMaximum: 5_765},
 		{ServerEpoch: 3, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 5_762, TailReadinessCallsMaximum: 5_762, TailControlFileReadsMaximum: 23_048, TailStoreReadAttemptsMaximum: 23_048, FinalAuthorityPassesMaximum: 2, TransitionReadCallsMaximum: 5, TransitionControlFileReadsMaximum: 25, TransitionStoreReadAttemptsMaximum: 12, AccountedServerRequestsMaximum: 11_531},
 		{ServerEpoch: 4, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 2_884, TailReadinessCallsMaximum: 2_884, TailControlFileReadsMaximum: 11_536, TailStoreReadAttemptsMaximum: 11_536, FinalAuthorityPassesMaximum: 4, LifecycleStatusCallsMaximum: 482, TransitionReadCallsMaximum: 7, TransitionControlFileReadsMaximum: 7, TransitionStoreReadAttemptsMaximum: 4, AccountedServerRequestsMaximum: 6_261},
-		{ServerEpoch: 5, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 2_883, TailReadinessCallsMaximum: 2_883, TailControlFileReadsMaximum: 11_532, TailStoreReadAttemptsMaximum: 11_532, FinalAuthorityPassesMaximum: 4, LifecycleStatusCallsMaximum: 2_881, ProductHTTPCallsMaximum: 19, ProductMCPCallsMaximum: 19, ProductControlFileReadsMaximum: 160, ProductStoreReadAttemptsMaximum: 164, AccountedServerRequestsMaximum: 8_689},
+		{ServerEpoch: 5, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 2_883, TailReadinessCallsMaximum: 2_883, TailControlFileReadsMaximum: 11_532, TailStoreReadAttemptsMaximum: 11_532, FinalAuthorityPassesMaximum: 4, LifecycleStatusCallsMaximum: 2_881, TransitionReadCallsMaximum: 2, TransitionControlFileReadsMaximum: 1, ProductHTTPCallsMaximum: 19, ProductMCPCallsMaximum: 19, ProductControlFileReadsMaximum: 160, ProductStoreReadAttemptsMaximum: 164, AccountedServerRequestsMaximum: 8_691},
 	}
 	if !reflect.DeepEqual(epochs, wantEpochs) {
 		t.Fatalf("compact inspector epoch inventory = %+v, want %+v", epochs, wantEpochs)
@@ -81,7 +81,7 @@ func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
 	for _, epoch := range epochs {
 		accountedMaximum += epoch.AccountedServerRequestsMaximum
 	}
-	if accountedMaximum != 43_776 {
+	if accountedMaximum != 43_778 {
 		t.Fatalf("compact inspector accounted request maximum = %d", accountedMaximum)
 	}
 	changedProfile := plan.Profile
@@ -125,7 +125,10 @@ func TestCorrectedInspectionInventoryPinsFreshAndCacheableBoundaries(t *testing.
 		byPhase["logical_delta_b"].ImmutableMemberReusePhase != "" ||
 		byPhase["process_restart"].ImmutableMemberReusePhase != "" ||
 		byPhase["archive_restore"].ImmutableMemberReusePhase != "" ||
-		byPhase["archive_restore"].TransitionReadClass == "none" ||
+		byPhase["archive_restore"].TransitionRead == nil ||
+		byPhase["lifecycle_collection"].TransitionRead == nil ||
+		byPhase["product_queries"].TransitionRead != nil ||
+		byPhase["product_queries"].TransitionReadClass != "none" ||
 		byPhase["logical_delta_b"].HealthCalls.Minimum != 1 ||
 		byPhase["process_restart"].HealthCalls.Minimum != 1 ||
 		byPhase["product_queries"].TailReadinessCalls != exactInspectionCalls(1) ||

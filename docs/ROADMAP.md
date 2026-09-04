@@ -297,6 +297,29 @@ latch. Archive and lifecycle R, cross-phase sums, final ordinal, replacement
 freeze, and execution remain open. No phase pass, merge, freeze, execution,
 release, scale result, or SLO is established or authorized.
 
+The final transition-local V2 R slice adds exactly one strict archive-manifest
+report and one fresh lifecycle callback-cycle report. Archive reads and projects
+only the at-most-1-MiB validated manifest and performs one bounded canonical
+re-encode/hash of its decoded value (`C/S/M/W=1/0/0/0`), without reading artifact
+bytes. Lifecycle consumes one new
+sorted sixteen-owner callback cycle (`C/S/M/W=0/0/0/0`); fifteen owners are
+exact/drained and the lower-bound `durable-jobs` row may retain backlog, which
+proves no production hourly-idle state. V1 keeps both subtotals nil. Every V2
+transition result is now accounted, while product queries remain Q-only.
+
+The exact token `;80/90/75/lc=2/1/3/1xC0S0M0W0;ar=1xC1S0M0W0` positionally
+maps `80,90,75,lifecycle_collection` to `2,1,3,1` and `ar` to
+`archive_restore`, preserving all prior pressure semantics. Epoch-five
+transition calls become 2, control reads 1, requests `8,689→8,691`, and total
+requests `43,776→43,778`. The plan exactly fills its 262,144-byte cap. Ordinary
+mode and its query/request, sync, startup/restart, retry/no-op, publication,
+lifecycle cadence, locks, cache, schema/store, source/corpus/shard reads,
+hashing, disk, children, and persistent memory remain unchanged. Controller
+binding, archive custody, destroy/empty-target proof, exclusive phase ownership,
+report-failure latching, phase passes, cross-phase sums, final ordinal,
+replacement freeze, and execution remain open. No merge, freeze, execution,
+release, scale result, or SLO is established or authorized.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens
