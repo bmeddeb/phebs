@@ -106,10 +106,21 @@ type wholeLease struct {
 	searcher   zoekt.Streamer
 }
 
+// ExactGenerationReader is a synchronous, digest-selected whole-repository
+// reader for exact validation. It is independent of the asynchronous cache and
+// retains its validated file identities until Close.
+type ExactGenerationReader struct {
+	mu        sync.Mutex
+	entry     *wholeCacheEntry
+	admission chan struct{}
+}
+
 // WholeGenerationWarmingTimeout bounds one cache-owned validation or exact
 // reader load independently of the request that started it.
 const WholeGenerationWarmingTimeout = 10 * time.Minute
 const maxConcurrentWholeLoads = 2
+
+var exactGenerationReaderSlots = make(chan struct{}, maxConcurrentWholeLoads)
 
 var errWholeSharedBaselineChanged = errors.New(
 	"whole-repository shared baseline changed",
@@ -132,6 +143,105 @@ func newWholeCache(indexDir string) *wholeCache {
 		cancel:    cancel,
 		loadSlots: make(chan struct{}, maxConcurrentWholeLoads),
 	}
+}
+
+// OpenExactGenerationReader accounts and validates one immutable generation
+// synchronously in the caller's context. Ordinary search does not call it.
+func OpenExactGenerationReader(
+	ctx context.Context, indexDir, repository, digest string,
+) (*ExactGenerationReader, error) {
+	loadCtx, cancel := context.WithTimeout(ctx, WholeGenerationWarmingTimeout)
+	defer cancel()
+	select {
+	case exactGenerationReaderSlots <- struct{}{}:
+	case <-loadCtx.Done():
+		return nil, loadCtx.Err()
+	}
+	admitted := true
+	defer func() {
+		if admitted {
+			<-exactGenerationReaderSlots
+		}
+	}()
+	controls, err := focusedindex.ReadSearchGenerationControlsWithReceiptIdentity(
+		loadCtx, indexDir, repository, digest,
+	)
+	if err != nil {
+		return nil, err
+	}
+	receiptIdentity := focusedArtifactIdentity{
+		name:       controls.ReceiptFileInfo.Name(),
+		info:       controls.ReceiptFileInfo,
+		changeTime: fileInfoChangeTime(controls.ReceiptFileInfo),
+	}
+	entry, err := (&wholeCache{}).load(
+		loadCtx, controls.Directory, repository, digest, controls.Receipt.Revisions, 0,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil || entry.searcher == nil {
+		closeWholeEntry(entry)
+		return nil, errors.New("exact whole-repository reader is unavailable")
+	}
+	entry.fingerprint = append(entry.fingerprint, receiptIdentity)
+	if err := exactGenerationReaderFence(loadCtx, entry); err != nil {
+		closeWholeEntry(entry)
+		return nil, err
+	}
+	admitted = false
+	return &ExactGenerationReader{
+		entry: entry, admission: exactGenerationReaderSlots,
+	}, nil
+}
+
+// Search runs one bounded query between complete file-identity fences.
+func (reader *ExactGenerationReader) Search(
+	ctx context.Context, q query.Q, options Options,
+) (*zoekt.SearchResult, error) {
+	if reader == nil || q == nil {
+		return nil, errors.New("invalid exact whole-repository query")
+	}
+	reader.mu.Lock()
+	defer reader.mu.Unlock()
+	if reader.entry == nil || reader.entry.searcher == nil {
+		return nil, errors.New("exact whole-repository reader is closed")
+	}
+	if err := exactGenerationReaderFence(ctx, reader.entry); err != nil {
+		return nil, err
+	}
+	result, searchErr := reader.entry.searcher.Search(ctx, q, options.zoektWithin(ctx))
+	fenceErr := exactGenerationReaderFence(ctx, reader.entry)
+	if searchErr != nil || fenceErr != nil {
+		return nil, errors.Join(searchErr, fenceErr)
+	}
+	return result, nil
+}
+
+func exactGenerationReaderFence(ctx context.Context, entry *wholeCacheEntry) error {
+	current, err := focusedFingerprintKnownNames(ctx, entry.directory, entry.fingerprint)
+	if err != nil {
+		return err
+	}
+	if !equalFocusedFingerprint(entry.fingerprint, current) {
+		return errors.New("exact whole-repository generation changed")
+	}
+	return nil
+}
+
+// Close releases the mmap-backed immutable reader. It is idempotent.
+func (reader *ExactGenerationReader) Close() {
+	if reader == nil {
+		return
+	}
+	reader.mu.Lock()
+	closeWholeEntry(reader.entry)
+	reader.entry = nil
+	if reader.admission != nil {
+		<-reader.admission
+		reader.admission = nil
+	}
+	reader.mu.Unlock()
 }
 
 // acquireIfStale returns nil when the shared DirectorySearcher is proven to
@@ -875,7 +985,17 @@ func (c *wholeCache) load(
 			"whole-repository publication changed during exact binding",
 		)
 	}
-	searchDigest := repositorySearchDigest(directory, repository)
+	searchDigest := ""
+	searchManifestName := repositoryindex.SearchManifestName(repository)
+	if digest != "" || slices.ContainsFunc(after, func(identity focusedArtifactIdentity) bool {
+		return identity.name == searchManifestName
+	}) {
+		searchDigest, err = repositorySearchDigest(ctx, directory, repository)
+		if err != nil {
+			searcher.Close()
+			return nil, err
+		}
+	}
 	if digest != "" && searchDigest != digest {
 		searcher.Close()
 		return nil, errors.New("bound whole-repository search generation mismatch")
@@ -889,12 +1009,12 @@ func (c *wholeCache) load(
 	}, nil
 }
 
-func repositorySearchDigest(indexDir, repository string) string {
-	manifest, err := repositoryindex.ReadSearchManifest(indexDir, repository)
+func repositorySearchDigest(ctx context.Context, indexDir, repository string) (string, error) {
+	manifest, err := repositoryindex.ReadSearchManifestContext(ctx, indexDir, repository)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return manifest.Digest
+	return manifest.Digest, nil
 }
 
 func wholePublicationSnapshot(
@@ -920,8 +1040,8 @@ func wholePublicationSnapshot(
 		indexDir, repositoryindex.SearchManifestName(repository),
 	)
 	if _, statErr := os.Lstat(searchPath); statErr == nil {
-		_, source, openErr := focusedindex.ReadRepositorySearchGeneration(
-			indexDir, repository, revisions,
+		_, source, openErr := focusedindex.ReadRepositorySearchGenerationContext(
+			ctx, indexDir, repository, revisions,
 		)
 		if openErr != nil {
 			return focusedindex.WholeManifest{}, nil, openErr

@@ -3615,6 +3615,23 @@ cold F, all 38 query reports, warm F, late-selector conflict, terminal nonzero
 stop, and bounded clean teardown. R, cumulative phase bounds, final ordinal,
 corrected-plan freeze, execution, release, and scale/SLO claims remain open.
 
+The physical-replacement R slice corrects the retained delete-A contradiction
+at the production root. One ordinary A-to-B publication leaves B current and A
+prior; both lifecycle turns are exact/drained with zero scanned and deleted,
+and A is reprobed through the retained exact reader after only its separate
+generation pin is released. The operation is one report with derived
+`C/S/M/W=41/0/(2N)/0`; frozen N is 2,031,604, so M is 4,063,208. Its phase
+R inventory binds that subtotal and epoch one's shared report inventory becomes
+11,530. The generic phase read caps remain unchanged so partial R closure cannot
+hide still-open inspector work. The production regression also proves the required order: pin
+A before publication, then open A after B settles because publication changes
+A's hard-link ctime. V1 bytes remain exact, no second physical pass is invented,
+and all other R classes remain explicitly open. Exact-reader construction is
+ten-minute bounded and holds one of two process-wide sessions until close; the
+single R report runs serially. Cumulative phase accounting,
+the final ordinal, replacement freeze, runner execution, release, and scale/SLO
+claims remain open pending the completed validation record.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

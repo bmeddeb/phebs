@@ -162,7 +162,11 @@ complete-constructor acceptance. T42.1r2/r3 are integrated; the separate T42.1r4
 namespace/terminal-recovery prerequisite is implemented and component-tested.
 T42.1r5's fixture-only follow-up above local checkpoint `1ba00f7d` now passes
 complete constructor acceptance, all 62 top-level normal tests, and targeted
-race gates. Overall correction acceptance and freeze remain open. No T42.2
+race gates. T42.1r6 has closed F/Q native accounting and now corrects physical
+R to the production current/prior lifecycle with one exact `41/0/4,063,208/0`
+serial report under a ten-minute, two-session exact-reader admission; the other
+R classes, cumulative phase sums, final ordinal, replacement
+freeze, and runner remain open. Overall correction acceptance and freeze remain open. No T42.2
 execution, private rerun, or release is authorized.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the

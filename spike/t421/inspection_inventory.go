@@ -7,17 +7,19 @@ import (
 )
 
 const (
-	correctedInspectionInventorySchema = "t421-compact-inspection-inventory-v2"
-	correctedHealthPollMS              = uint64(250)
-	correctedInspectionPollMS          = uint64(5_000)
-	correctedTailControlReads          = uint64(4)
-	correctedTailStoreReads            = uint64(4)
-	correctedInspectionPolicy          = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
+	correctedInspectionInventorySchema      = "t421-compact-inspection-inventory-v2"
+	correctedHealthPollMS                   = uint64(250)
+	correctedInspectionPollMS               = uint64(5_000)
+	correctedTailControlReads               = uint64(4)
+	correctedTailStoreReads                 = uint64(4)
+	correctedPhysicalTransitionControlReads = uint64(41)
+	correctedPhysicalTransitionReadClass    = "search-reader-current-prior-retention"
+	correctedInspectionPolicy               = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
 )
 
 // phaseInspectionInventory is the prospective compact T42 inspector call
 // graph. It is derived from the phase/deadline/epoch tables; it is not a
-// receipt and does not estimate uninstrumented native reads.
+// receipt. A nil TransitionRead leaves that phase's R accounting open.
 type phaseInspectionInventory struct {
 	Phase                     string
 	ServerEpoch               uint64
@@ -29,6 +31,7 @@ type phaseInspectionInventory struct {
 	FinalAuthorityPasses      CounterBound
 	LifecycleStatusCalls      CounterBound
 	TransitionReadClass       string
+	TransitionRead            *inspectionReadBound
 	ProductHTTPCalls          CounterBound
 	ProductMCPCalls           CounterBound
 	ProductControlFileReads   CounterBound
@@ -36,20 +39,48 @@ type phaseInspectionInventory struct {
 	ImmutableMemberReusePhase string
 }
 
+type inspectionReadBound struct {
+	Calls              CounterBound
+	ControlFileReads   CounterBound
+	StoreReadAttempts  CounterBound
+	MemberReads        CounterBound
+	StoreWriteAttempts CounterBound
+}
+
+func correctedPhysicalTransitionReadBound(profile CombinedProfile) (inspectionReadBound, error) {
+	memberReads, err := checkedMultiply(2, profile.Physical.CombinedPhysicalOwners)
+	if err != nil {
+		return inspectionReadBound{}, err
+	}
+	return inspectionReadBound{
+		Calls:              exactInspectionCalls(1),
+		ControlFileReads:   exactInspectionCalls(correctedPhysicalTransitionControlReads),
+		StoreReadAttempts:  exactInspectionCalls(0),
+		MemberReads:        exactInspectionCalls(memberReads),
+		StoreWriteAttempts: exactInspectionCalls(0),
+	}, nil
+}
+
 type epochInspectionInventory struct {
-	ServerEpoch                     uint64
-	HealthCallsMaximum              uint64
-	ExtractionProgressCallsMaximum  uint64
-	TailReadinessCallsMaximum       uint64
-	TailControlFileReadsMaximum     uint64
-	TailStoreReadAttemptsMaximum    uint64
-	FinalAuthorityPassesMaximum     uint64
-	LifecycleStatusCallsMaximum     uint64
-	ProductHTTPCallsMaximum         uint64
-	ProductMCPCallsMaximum          uint64
-	ProductControlFileReadsMaximum  uint64
-	ProductStoreReadAttemptsMaximum uint64
-	AccountedServerRequestsMaximum  uint64
+	ServerEpoch                         uint64
+	HealthCallsMaximum                  uint64
+	ExtractionProgressCallsMaximum      uint64
+	TailReadinessCallsMaximum           uint64
+	TailControlFileReadsMaximum         uint64
+	TailStoreReadAttemptsMaximum        uint64
+	FinalAuthorityPassesMaximum         uint64
+	LifecycleStatusCallsMaximum         uint64
+	TransitionReadCallsMaximum          uint64
+	TransitionControlFileReadsMaximum   uint64
+	TransitionStoreReadAttemptsMaximum  uint64
+	TransitionMemberReadsMaximum        uint64
+	TransitionStoreWriteAttemptsMaximum uint64
+	ProductHTTPCallsMaximum             uint64
+	ProductMCPCallsMaximum              uint64
+	ProductControlFileReadsMaximum      uint64
+	ProductStoreReadAttemptsMaximum     uint64
+	// Includes exact operation reports sharing the server-report ordinal.
+	AccountedServerRequestsMaximum uint64
 }
 
 type tailReadinessTransition struct {
@@ -121,7 +152,7 @@ func correctedTailReadinessTransitionReady(
 	return relationshipReady && callerReady, nil
 }
 
-func correctedInspectionInventory() ([]phaseInspectionInventory, []epochInspectionInventory, error) {
+func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInventory, []epochInspectionInventory, error) {
 	phases := frozenPhaseOrder()
 	deadlines := frozenPhaseDeadlines()
 	epochs := correctedExecutionServerEpochs()
@@ -178,7 +209,12 @@ func correctedInspectionInventory() ([]phaseInspectionInventory, []epochInspecti
 		case "warm_noop":
 			row.ImmutableMemberReusePhase = "cold"
 		case "physical_delta_b":
-			row.TransitionReadClass = "search-reader-lease-and-retirement"
+			row.TransitionReadClass = correctedPhysicalTransitionReadClass
+			readBound, err := correctedPhysicalTransitionReadBound(profile)
+			if err != nil {
+				return nil, nil, err
+			}
+			row.TransitionRead = &readBound
 		case "logical_delta_b":
 			row.TransitionReadClass = "catalog-activation-residue-and-recovery"
 		case "return_a":
@@ -256,10 +292,25 @@ func correctedInspectionInventory() ([]phaseInspectionInventory, []epochInspecti
 				}
 				*destination += add
 			}
+			if row.TransitionRead != nil {
+				for destination, add := range map[*uint64]uint64{
+					&value.TransitionReadCallsMaximum:          row.TransitionRead.Calls.Maximum,
+					&value.TransitionControlFileReadsMaximum:   row.TransitionRead.ControlFileReads.Maximum,
+					&value.TransitionStoreReadAttemptsMaximum:  row.TransitionRead.StoreReadAttempts.Maximum,
+					&value.TransitionMemberReadsMaximum:        row.TransitionRead.MemberReads.Maximum,
+					&value.TransitionStoreWriteAttemptsMaximum: row.TransitionRead.StoreWriteAttempts.Maximum,
+				} {
+					if add > math.MaxUint64-*destination {
+						return nil, nil, errors.New("corrected inspection epoch transition inventory overflows")
+					}
+					*destination += add
+				}
+			}
 		}
 		for _, add := range []uint64{
 			value.ExtractionProgressCallsMaximum, value.TailReadinessCallsMaximum,
 			value.FinalAuthorityPassesMaximum, value.LifecycleStatusCallsMaximum,
+			value.TransitionReadCallsMaximum,
 			value.ProductHTTPCallsMaximum, value.ProductMCPCallsMaximum,
 		} {
 			if add > math.MaxUint64-value.AccountedServerRequestsMaximum {
@@ -366,8 +417,8 @@ func correctedProductQueryNativeControlReads() (uint64, uint64, error) {
 	return controls, stores, nil
 }
 
-func correctedInspectionInventorySHA256() (string, error) {
-	phases, epochs, err := correctedInspectionInventory()
+func correctedInspectionInventorySHA256(profile CombinedProfile) (string, error) {
+	phases, epochs, err := correctedInspectionInventory(profile)
 	if err != nil {
 		return "", err
 	}

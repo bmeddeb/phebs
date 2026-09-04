@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 type SearchGenerationLifecycleResult struct {
@@ -172,14 +174,14 @@ func SweepSearchGenerationLifecycle(
 	}
 	if probe.name != "" {
 		receipt, err := readSearchLifecycleReceipt(
-			filepath.Join(repositoryDirectory, probe.name), result.Cursor, probe.digest,
+			ctx, filepath.Join(repositoryDirectory, probe.name), result.Cursor, probe.digest,
 		)
 		if err != nil {
 			return result, err
 		}
 		repository = receipt.Repository
 	}
-	root, rootErr := ReadSearchGenerationRoot(indexDir, repository)
+	root, rootErr := ReadSearchGenerationRootContext(ctx, indexDir, repository)
 	rootMissing := errors.Is(rootErr, os.ErrNotExist)
 	if repository != "" && rootErr != nil && !rootMissing {
 		return result, rootErr
@@ -200,7 +202,7 @@ func SweepSearchGenerationLifecycle(
 	} else {
 		result.AllocatedState = "unavailable"
 	}
-	marker, markerErr := readSearchGenerationMarker(indexDir, repository)
+	marker, markerErr := readSearchGenerationMarkerContext(ctx, indexDir, repository)
 	if repository != "" && markerErr != nil && !errors.Is(markerErr, os.ErrNotExist) {
 		return result, markerErr
 	}
@@ -210,7 +212,7 @@ func SweepSearchGenerationLifecycle(
 		for _, candidate := range collecting {
 			result.Scanned++
 			if _, err := readSearchLifecycleReceipt(
-				filepath.Join(repositoryDirectory, candidate.name), result.Cursor, candidate.digest,
+				ctx, filepath.Join(repositoryDirectory, candidate.name), result.Cursor, candidate.digest,
 			); err != nil {
 				return result, err
 			}
@@ -250,7 +252,7 @@ func SweepSearchGenerationLifecycle(
 			continue
 		}
 		if _, err := readSearchLifecycleReceipt(
-			filepath.Join(repositoryDirectory, candidate.name), result.Cursor, candidate.digest,
+			ctx, filepath.Join(repositoryDirectory, candidate.name), result.Cursor, candidate.digest,
 		); err != nil {
 			return result, err
 		}
@@ -259,7 +261,7 @@ func SweepSearchGenerationLifecycle(
 			continue
 		}
 		if err := searchGenerationLifecycleFence(
-			indexDir, repository, candidate.digest, pins,
+			ctx, indexDir, repository, candidate.digest, pins,
 		); err != nil {
 			releaseRetire()
 			if errors.Is(err, errSearchGenerationPinned) {
@@ -289,9 +291,12 @@ func SweepSearchGenerationLifecycle(
 var errSearchGenerationPinned = errors.New("search generation is pinned")
 
 func readSearchLifecycleReceipt(
-	directory, repositoryHash, generation string,
+	ctx context.Context, directory, repositoryHash, generation string,
 ) (SearchGenerationReceipt, error) {
 	var envelope SearchGenerationReceipt
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return SearchGenerationReceipt{}, err
+	}
 	if err := readControlFile(
 		filepath.Join(directory, searchGenerationReceiptName), &envelope,
 	); err != nil {
@@ -300,7 +305,7 @@ func readSearchLifecycleReceipt(
 	if envelope.Repository == "" || repositoryKey(envelope.Repository) != repositoryHash {
 		return SearchGenerationReceipt{}, errors.New("search lifecycle receipt repository mismatch")
 	}
-	receipt, err := readSearchGenerationReceipt(directory, envelope.Repository)
+	receipt, err := readSearchGenerationReceiptContext(ctx, directory, envelope.Repository)
 	if err != nil {
 		return SearchGenerationReceipt{}, err
 	}
@@ -311,9 +316,9 @@ func readSearchLifecycleReceipt(
 }
 
 func searchGenerationLifecycleFence(
-	indexDir, repository, generation string, pins SearchGenerationPinChecker,
+	ctx context.Context, indexDir, repository, generation string, pins SearchGenerationPinChecker,
 ) error {
-	root, err := ReadSearchGenerationRoot(indexDir, repository)
+	root, err := ReadSearchGenerationRootContext(ctx, indexDir, repository)
 	if err == nil && (root.Current.GenerationDigest == generation ||
 		(root.Prior != nil && root.Prior.GenerationDigest == generation)) {
 		return errSearchGenerationPinned
@@ -321,7 +326,7 @@ func searchGenerationLifecycleFence(
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	marker, err := readSearchGenerationMarker(indexDir, repository)
+	marker, err := readSearchGenerationMarkerContext(ctx, indexDir, repository)
 	if err == nil && (marker.Candidate.GenerationDigest == generation ||
 		(marker.Previous != nil && (marker.Previous.Current.GenerationDigest == generation ||
 			marker.Previous.Prior != nil && marker.Previous.Prior.GenerationDigest == generation))) {

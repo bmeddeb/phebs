@@ -2,6 +2,7 @@ package t421
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -9,7 +10,8 @@ import (
 )
 
 func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
-	rows, epochs, err := correctedInspectionInventory()
+	plan := correctedTestPlan(t)
+	rows, epochs, err := correctedInspectionInventory(plan.Profile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +37,7 @@ func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
 		{Phase: "preflight", TransitionReadClass: "none"},
 		{Phase: "cold", ServerEpoch: 1, HealthCalls: CounterBound{Minimum: 1, Maximum: 3_601}, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: "none"},
 		{Phase: "warm_noop", ServerEpoch: 1, ExtractionProgressCalls: exactInspectionCalls(1), FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: "none", ImmutableMemberReusePhase: "cold"},
-		{Phase: "physical_delta_b", ServerEpoch: 1, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: "search-reader-lease-and-retirement"},
+		{Phase: "physical_delta_b", ServerEpoch: 1, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: correctedPhysicalTransitionReadClass, TransitionRead: &inspectionReadBound{Calls: exactInspectionCalls(1), ControlFileReads: exactInspectionCalls(41), StoreReadAttempts: exactInspectionCalls(0), MemberReads: exactInspectionCalls(4_063_208), StoreWriteAttempts: exactInspectionCalls(0)}},
 		{Phase: "logical_delta_b", ServerEpoch: 2, HealthCalls: CounterBound{Minimum: 1, Maximum: 3_601}, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: "catalog-activation-residue-and-recovery"},
 		{Phase: "return_a", ServerEpoch: 3, HealthCalls: CounterBound{Minimum: 1, Maximum: 3_601}, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: "relationship-marker-recovery"},
 		{Phase: "stale_lease", ServerEpoch: 3, ExtractionProgressCalls: CounterBound{Minimum: 1, Maximum: 2_881}, FinalAuthorityPasses: exactInspectionCalls(1), TransitionReadClass: "prepared-stale-lease-schedule-and-result", ImmutableMemberReusePhase: "return_a"},
@@ -66,7 +68,7 @@ func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
 		t.Fatalf("compact inspector phase inventory = %+v, want %+v", rows, wantRows)
 	}
 	wantEpochs := []epochInspectionInventory{
-		{ServerEpoch: 1, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 5_763, TailReadinessCallsMaximum: 5_763, TailControlFileReadsMaximum: 23_052, TailStoreReadAttemptsMaximum: 23_052, FinalAuthorityPassesMaximum: 3, AccountedServerRequestsMaximum: 11_529},
+		{ServerEpoch: 1, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 5_763, TailReadinessCallsMaximum: 5_763, TailControlFileReadsMaximum: 23_052, TailStoreReadAttemptsMaximum: 23_052, FinalAuthorityPassesMaximum: 3, TransitionReadCallsMaximum: 1, TransitionControlFileReadsMaximum: 41, TransitionMemberReadsMaximum: 4_063_208, AccountedServerRequestsMaximum: 11_530},
 		{ServerEpoch: 2, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 2_881, TailReadinessCallsMaximum: 2_881, TailControlFileReadsMaximum: 11_524, TailStoreReadAttemptsMaximum: 11_524, FinalAuthorityPassesMaximum: 1, AccountedServerRequestsMaximum: 5_763},
 		{ServerEpoch: 3, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 5_762, TailReadinessCallsMaximum: 5_762, TailControlFileReadsMaximum: 23_048, TailStoreReadAttemptsMaximum: 23_048, FinalAuthorityPassesMaximum: 2, AccountedServerRequestsMaximum: 11_526},
 		{ServerEpoch: 4, HealthCallsMaximum: 3_601, ExtractionProgressCallsMaximum: 2_884, TailReadinessCallsMaximum: 2_884, TailControlFileReadsMaximum: 11_536, TailStoreReadAttemptsMaximum: 11_536, FinalAuthorityPassesMaximum: 4, LifecycleStatusCallsMaximum: 482, AccountedServerRequestsMaximum: 6_254},
@@ -75,8 +77,13 @@ func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
 	if !reflect.DeepEqual(epochs, wantEpochs) {
 		t.Fatalf("compact inspector epoch inventory = %+v, want %+v", epochs, wantEpochs)
 	}
-	digest, err := correctedInspectionInventorySHA256()
-	plan := correctedTestPlan(t)
+	changedProfile := plan.Profile
+	changedProfile.Physical.CombinedPhysicalOwners++
+	changedRows, _, err := correctedInspectionInventory(changedProfile)
+	if err != nil || changedRows[slices.Index(plan.PhaseOrder, "physical_delta_b")].TransitionRead.MemberReads != exactInspectionCalls(4_063_210) {
+		t.Fatal("physical transition member reads are not derived from the plan profile")
+	}
+	digest, err := correctedInspectionInventorySHA256(plan.Profile)
 	if err != nil || plan.Correction.InspectionInventorySHA256 != digest {
 		t.Fatalf("compact inspector inventory digest = %q, %v", digest, err)
 	}
@@ -90,7 +97,8 @@ func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
 }
 
 func TestCorrectedInspectionInventoryPinsFreshAndCacheableBoundaries(t *testing.T) {
-	rows, _, err := correctedInspectionInventory()
+	plan := correctedTestPlan(t)
+	rows, _, err := correctedInspectionInventory(plan.Profile)
 	if err != nil {
 		t.Fatal(err)
 	}

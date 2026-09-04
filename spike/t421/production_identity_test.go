@@ -87,6 +87,88 @@ func TestContractAdmitsProductionDerivedOrdinaryPass(t *testing.T) {
 	t.Logf("production-derived constructor fixture bytes=%d (modeled measurements/search leaf; not ceremony evidence)", len(raw))
 }
 
+func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
+	plan := correctedTestPlan(t)
+	binding := admittedExecutionFreezeTestBinding(t, plan, executionFreezeTestCommits())
+	base := completeTestReceipt(t, plan, binding)
+	index := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "physical_delta_b"
+	})
+	measurement := slices.Index(plan.PhaseOrder, "physical_delta_b")
+	if index < 0 || measurement < 0 || base.TransitionResults[index].Reader == nil ||
+		base.TransitionResults[index].ReadAccounting == nil {
+		t.Fatal("corrected reader fixture is absent")
+	}
+	for name, mutate := range map[string]func(*Receipt){
+		"swapped_roles": func(value *Receipt) {
+			reader := value.TransitionResults[index].Reader
+			reader.OldRoleAfterReplacement, reader.NewRoleAfterReplacement = "current", "prior"
+		},
+		"post_release_not_found": func(value *Receipt) {
+			value.TransitionResults[index].Reader.PostReleaseOldOutcome = "not_found"
+		},
+		"omitted_zero_scan": func(value *Receipt) {
+			value.TransitionResults[index].Reader.HeldLifecycleScanned = nil
+		},
+		"held_scan": func(value *Receipt) {
+			*value.TransitionResults[index].Reader.HeldLifecycleScanned = 1
+		},
+		"post_release_scan": func(value *Receipt) {
+			*value.TransitionResults[index].Reader.PostReleaseLifecycleScanned = 1
+		},
+		"incomplete_lifecycle": func(value *Receipt) {
+			value.TransitionResults[index].Reader.PostReleaseLifecycleOutcome = "lower_bound"
+		},
+		"released_old_reader": func(value *Receipt) {
+			value.TransitionResults[index].Reader.OldReaderHeldThroughReprobe = false
+		},
+		"post_release_projection": func(value *Receipt) {
+			value.TransitionResults[index].Reader.PostReleaseOldProjectionSHA256 = zeroDigest()
+		},
+		"legacy_delete_field": func(value *Receipt) {
+			value.TransitionResults[index].Reader.DeletedAfterRelease = 1
+		},
+		"deleted_prior": func(value *Receipt) {
+			value.Measurements[measurement].Metrics.LifecycleDeleted = 1
+			value.Measurements[measurement].Metrics.MaxLifecycleDeletesTurn = 1
+		},
+		"missing_read_accounting": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting = nil
+		},
+		"wrong_read_schema": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting.Schema = "wrong"
+		},
+		"wrong_read_class": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting.Class = "wrong"
+		},
+		"wrong_read_calls": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting.ReportCalls++
+		},
+		"wrong_control_reads": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting.ControlFileReads++
+		},
+		"store_read": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting.StoreReadAttempts++
+		},
+		"wrong_member_reads": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting.MemberReads--
+		},
+		"store_write": func(value *Receipt) {
+			value.TransitionResults[index].ReadAccounting.StoreWriteAttempts++
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := cloneTestReceipt(t, base)
+			mutate(&changed)
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatal("impossible physical reader transition was accepted")
+			}
+		})
+	}
+}
+
 type productionIdentityState struct {
 	Authority         AuthorityState
 	Source            repositoryindex.SourceManifest

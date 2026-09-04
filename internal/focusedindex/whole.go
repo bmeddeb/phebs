@@ -268,12 +268,14 @@ func ReadRepositorySearchGeneration(
 	indexDir, repository string,
 	revisions []store.IndexedRevision,
 ) (repositoryindex.SearchManifest, repositoryindex.SourceManifest, error) {
-	return readRepositorySearchGenerationContext(
+	return ReadRepositorySearchGenerationContext(
 		context.Background(), indexDir, repository, revisions,
 	)
 }
 
-func readRepositorySearchGenerationContext(
+// ReadRepositorySearchGenerationContext is the request-accounted form of
+// ReadRepositorySearchGeneration.
+func ReadRepositorySearchGenerationContext(
 	ctx context.Context,
 	indexDir, repository string,
 	revisions []store.IndexedRevision,
@@ -366,7 +368,7 @@ func validateWholePublishedContext(
 			"whole-repository publication is in progress",
 		)
 	}
-	manifest, err := ReadWholeManifest(indexDir, repository, revisions)
+	manifest, err := ReadWholeManifestContext(ctx, indexDir, repository, revisions)
 	if err != nil {
 		return WholeManifest{}, err
 	}

@@ -78,6 +78,33 @@ func TestCorrectionSupersedesWithoutChangingCorpusOrSafety(t *testing.T) {
 	}
 }
 
+func TestCorrectionUsesProductionCurrentPriorReaderContract(t *testing.T) {
+	prior, next := frozenTestPlan(t), correctedTestPlan(t)
+	if prior.ReaderProbe.PostDeleteOutcome != "not_found" || prior.ReaderProbe.PostReleaseOutcome != "" ||
+		next.ReaderProbe.Schema != "t422-revision-reader-probe-v2" ||
+		next.ReaderProbe.Reader != "search-generation-current-prior-content-probe-v2" ||
+		next.ReaderProbe.PostDeleteOutcome != "" || next.ReaderProbe.OldRoleAfterReplacement != "prior" ||
+		next.ReaderProbe.NewRoleAfterReplacement != "current" || next.ReaderProbe.PostReleaseOutcome != "retained_prior" {
+		t.Fatal("corrected reader contract does not describe the production current/prior root")
+	}
+	index := slices.IndexFunc(next.WorkEnvelope.Phases, func(value PhaseWorkBounds) bool {
+		return value.Phase == "physical_delta_b"
+	})
+	priorIndex := slices.IndexFunc(prior.WorkEnvelope.Phases, func(value PhaseWorkBounds) bool {
+		return value.Phase == "physical_delta_b"
+	})
+	readBound, err := correctedPhysicalTransitionReadBound(next.Profile)
+	if index < 0 || next.WorkEnvelope.Phases[index].LifecycleOwnerTurns != (CounterBound{Minimum: 2, Maximum: 2}) ||
+		priorIndex < 0 || err != nil || next.WorkEnvelope.Phases[index].LifecycleDeleted != (CounterBound{}) ||
+		next.WorkEnvelope.Phases[index].ControlReads != prior.WorkEnvelope.Phases[priorIndex].ControlReads ||
+		next.WorkEnvelope.Phases[index].MemberReads != prior.WorkEnvelope.Phases[priorIndex].MemberReads ||
+		readBound.ControlFileReads != exactInspectionCalls(41) || readBound.MemberReads != exactInspectionCalls(4_063_208) ||
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-physical-C=17+1+3+17+3=41") ||
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-physical-M=2*physical.combined_physical_owners") {
+		t.Fatal("corrected physical reader work still requires retirement of the durable prior")
+	}
+}
+
 func TestCorrectionUsesProductionShapedHiddenServiceSearch(t *testing.T) {
 	prior, next := frozenTestPlan(t), correctedTestPlan(t)
 	find := func(plan Plan) QueryCase {

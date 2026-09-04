@@ -85,9 +85,11 @@ type SearchGenerationReceipt struct {
 // Search and Source are strict control-only reads from that root.
 type SearchGenerationControls struct {
 	Directory string
-	Receipt   SearchGenerationReceipt
-	Search    repositoryindex.SearchManifest
-	Source    repositoryindex.SourceManifest
+	// ReceiptFileInfo is set only by the exact identity-fenced reader.
+	ReceiptFileInfo os.FileInfo
+	Receipt         SearchGenerationReceipt
+	Search          repositoryindex.SearchManifest
+	Source          repositoryindex.SourceManifest
 }
 
 type SearchGenerationRoot struct {
@@ -459,9 +461,18 @@ func writeSearchGenerationMarker(indexDir string, marker searchGenerationMarker)
 }
 
 func readSearchGenerationMarker(indexDir, repository string) (searchGenerationMarker, error) {
+	return readSearchGenerationMarkerContext(context.Background(), indexDir, repository)
+}
+
+func readSearchGenerationMarkerContext(
+	ctx context.Context, indexDir, repository string,
+) (searchGenerationMarker, error) {
 	var marker searchGenerationMarker
 	path := filepath.Join(indexDir, searchGenerationMarkerName(repository))
 	if _, err := os.Lstat(path); err != nil {
+		return searchGenerationMarker{}, err
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
 		return searchGenerationMarker{}, err
 	}
 	if err := readControlFile(path, &marker); err != nil {
@@ -826,6 +837,23 @@ func ReadSearchGenerationControls(
 	ctx context.Context,
 	indexDir, repository, digest string,
 ) (SearchGenerationControls, error) {
+	return readSearchGenerationControls(ctx, indexDir, repository, digest, false)
+}
+
+// ReadSearchGenerationControlsWithReceiptIdentity adds the pre-read receipt
+// identity required by an exact reader's later file fence.
+func ReadSearchGenerationControlsWithReceiptIdentity(
+	ctx context.Context,
+	indexDir, repository, digest string,
+) (SearchGenerationControls, error) {
+	return readSearchGenerationControls(ctx, indexDir, repository, digest, true)
+}
+
+func readSearchGenerationControls(
+	ctx context.Context,
+	indexDir, repository, digest string,
+	withReceiptIdentity bool,
+) (SearchGenerationControls, error) {
 	if err := ctx.Err(); err != nil {
 		return SearchGenerationControls{}, err
 	}
@@ -836,6 +864,16 @@ func ReadSearchGenerationControls(
 	if err := ensureRealDirectory(directory); err != nil {
 		return SearchGenerationControls{}, err
 	}
+	var receiptInfo os.FileInfo
+	if withReceiptIdentity {
+		receiptInfo, err = os.Lstat(filepath.Join(directory, searchGenerationReceiptName))
+		if err != nil || !receiptInfo.Mode().IsRegular() {
+			if err != nil {
+				return SearchGenerationControls{}, err
+			}
+			return SearchGenerationControls{}, errors.New("search generation receipt is not regular")
+		}
+	}
 	receipt, err := readSearchGenerationReceiptContext(ctx, directory, repository)
 	if err != nil {
 		return SearchGenerationControls{}, err
@@ -845,7 +883,7 @@ func ReadSearchGenerationControls(
 			"search generation directory identity mismatch",
 		)
 	}
-	search, source, err := readRepositorySearchGenerationContext(
+	search, source, err := ReadRepositorySearchGenerationContext(
 		ctx, directory, repository, receipt.Revisions,
 	)
 	if err != nil {
@@ -861,7 +899,8 @@ func ReadSearchGenerationControls(
 		)
 	}
 	return SearchGenerationControls{
-		Directory: directory, Receipt: receipt, Search: search, Source: source,
+		Directory: directory, ReceiptFileInfo: receiptInfo,
+		Receipt: receipt, Search: search, Source: source,
 	}, nil
 }
 

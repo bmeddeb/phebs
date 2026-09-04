@@ -136,6 +136,12 @@ func correctedQueryCases() []QueryCase {
 }
 
 func applyExecutionCorrection(plan *Plan) error {
+	plan.ReaderProbe.Schema = "t422-revision-reader-probe-v2"
+	plan.ReaderProbe.Reader = "search-generation-current-prior-content-probe-v2"
+	plan.ReaderProbe.PostDeleteOutcome = ""
+	plan.ReaderProbe.OldRoleAfterReplacement = "prior"
+	plan.ReaderProbe.NewRoleAfterReplacement = "current"
+	plan.ReaderProbe.PostReleaseOutcome = "retained_prior"
 	plan.PhaseStates = correctedPhaseStates()
 	plan.FailurePoints = frozenFailurePoints()
 	for index := range plan.FailurePoints {
@@ -188,7 +194,7 @@ func applyExecutionCorrection(plan *Plan) error {
 	plan.MeterPolicy.RequiredMetricsSHA256 = recipeDigest("t422-required-metrics-v2", plan.ReceiptContract.RequiredMetrics...)
 	plan.Claims = frozenClaims()
 	plan.Claims.ChangesProductionBehavior = false
-	inspectionInventorySHA256, err := correctedInspectionInventorySHA256()
+	inspectionInventorySHA256, err := correctedInspectionInventorySHA256(plan.Profile)
 	if err != nil {
 		return err
 	}
@@ -202,7 +208,7 @@ func applyExecutionCorrection(plan *Plan) error {
 		StartupDeadlineDerivation: "each-new-epoch-inherits-SafetyEnvelope.ServerHealthDeadlineMS-from-retained-T40/T41-host-readiness-policy;no-deadline-increase;phase-and-total-deadlines-still-apply",
 		NativeGitAdmissionPolicy:  "resolve-and-hash-actual-native-Git-image-not-Apple-launcher-shim;prove-builtin-aliases-resolve-to-that-image;admit-transport-shell-separately-as-sh-tool/git-transport-shell-role;Git-helper-slots=upload-pack,pack-objects,one-of-index-pack-or-unpack-objects,rev-list,maintenance;record-packed-and-loose-object-posture-after-clone-and-each-fetch-under-unchanged-admitted-Git-config;any-extra-helper-or-image-refuses;no-gc-disable-or-fetch-flag-change",
 		ProcessAccountingPolicy:   "T42-requires-new-bounded-admitted-image-epoch-accounting-before-runner-readiness;retained-T40-8192-image-cap-and-validators-remain-exact;stream-bounded-events-with-checked-cumulative-counts;enforce-closed-role-budgets-and-resource-gauges-before-work;no-relabeling-missed-processes-as-zero",
-		ReadAccountingPolicy:      "v2-scope=H/X/T/F/L/R/Q/prep;not-total-pipeline-I/O;C=file-control-attempt;S=read-query-attempt;K=C+S;W=enqueue-transaction-attempt;metadata=0;" + correctedInspectionPolicy + ";T-C=4;T-S=4;T-M=0;T-W=0;Q-C=2*(2+2*16+6*5+8*2)=160;Q-S=2*(2+1+7+2*11+6*4+8*3)+3+1=164;Q-M=checked-sum-plan-order(query_results.results[*].http.member_reads+query_results.results[*].mcp.member_reads);Q-W=0;prep-C=24+4D+N+checkpoint+cold-open+[0,1]-binding-reread;prep-S=D+10+sum(A1..A4),Ai=[1,64];phase-K=prep+inspection+query",
+		ReadAccountingPolicy:      "v2-scope=H/X/T/F/L/R/Q/prep;not-total-pipeline-I/O;C=file-control-attempt;S=read-query-attempt;K=C+S;W=enqueue-transaction-attempt;metadata=0;" + correctedInspectionPolicy + ";T-C=4;T-S=4;T-M=0;T-W=0;R-physical-calls=1;R-physical-C=17+1+3+17+3=41;R-physical-S=0;R-physical-M=2*physical.combined_physical_owners;R-physical-W=0;Q-C=2*(2+2*16+6*5+8*2)=160;Q-S=2*(2+1+7+2*11+6*4+8*3)+3+1=164;Q-M=checked-sum-plan-order(query_results.results[*].http.member_reads+query_results.results[*].mcp.member_reads);Q-W=0;prep-C=24+4D+N+checkpoint+cold-open+[0,1]-binding-reread;prep-S=D+10+sum(A1..A4),Ai=[1,64];phase-K=prep+inspection+query",
 		InspectionInventorySHA256: inspectionInventorySHA256,
 		RequiredReadiness:         []string{"production-constructor-derived-completed-fixture-accepted", "post-logical-restart-authorized-search-caller-and-relationship-reads:zero-resolver-and-caller-materialization;Git-children-exactly-observed-watcher-plus-census-plus-frozen-startup-commands", "result-preserving-preparation-and-checkpoint-reuse-counterexamples", "compact-H/X/T/F/L/R/Q-phase-and-epoch-call-inventory", "post-X-tail-readiness-converges-on-exact-selected-relationship-resolver-and-caller-current;frozen-phase-transition-versus-prior-accepted-F-before-one-F", "actual-scoped-read-event-ledger-and-complete-native-T/F/L/R/Q-costs-with-inventory-derived-phase-caps-before-execution", "fresh-independent-exact-source-review-before-new-freeze"},
 	}

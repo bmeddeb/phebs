@@ -135,12 +135,15 @@ func TestReceiptRejectsUnauthenticatedAndMutatedExactEvidence(t *testing.T) {
 	pressureIndex := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
 		return value.Phase == "pressure_80"
 	})
+	readerIndex := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "physical_delta_b"
+	})
 	warmIndex := slices.Index(plan.PhaseOrder, "warm_noop")
 	warmBound := plan.WorkEnvelope.Phases[warmIndex].MemberReads.Maximum
 	productWorkIndex := slices.IndexFunc(plan.WorkEnvelope.Phases, func(value PhaseWorkBounds) bool {
 		return value.Phase == "product_queries"
 	})
-	if productWorkIndex < 0 {
+	if productWorkIndex < 0 || readerIndex < 0 || base.TransitionResults[readerIndex].Reader == nil {
 		t.Fatal("product query work bounds are absent")
 	}
 	productBounds := plan.WorkEnvelope.Phases[productWorkIndex]
@@ -219,6 +222,12 @@ func TestReceiptRejectsUnauthenticatedAndMutatedExactEvidence(t *testing.T) {
 		}},
 		{"relationship authority", func(value *Receipt) { value.RelationshipResults.AuthorityAfterSHA256 = zeroDigest() }},
 		{"pressure sequence", func(value *Receipt) { value.TransitionResults[pressureIndex].Pressure.VolumeAvailableBytesBefore-- }},
+		{"v2 reader fact in v1", func(value *Receipt) {
+			value.TransitionResults[readerIndex].Reader.OldRoleAfterReplacement = "prior"
+		}},
+		{"v2 transition reads in v1", func(value *Receipt) {
+			value.TransitionResults[readerIndex].ReadAccounting = &TransitionReadSubtotal{Schema: "t422-transition-read-accounting-v1"}
+		}},
 		{"work meter", func(value *Receipt) { value.Measurements[warmIndex].Metrics.MemberReads = CountMetric(warmBound + 1) }},
 		{"teardown attempt", func(value *Receipt) { value.Teardown.Attempted = false }},
 	}
@@ -1412,30 +1421,63 @@ func completeTestTransitions(
 		switch phase {
 		case "physical_delta_b":
 			measurement.Metrics.LifecycleOwnerTurns = 2
-			measurement.Metrics.LifecycleDeleted = 1
-			measurement.Metrics.MaxLifecycleDeletesTurn = 1
 			before, _ := authorityIdentitySHA256(authority["warm_noop"])
 			after, _ := authorityIdentitySHA256(authority[phase])
 			start := transition.StartEventOrdinal
-			transition.Reader = &ReaderTransition{
-				Schema: plan.ReceiptContract.TransitionSchema + "/reader-v1", Reader: plan.ReaderProbe.Reader,
+			reader := &ReaderTransition{
+				Reader:                    plan.ReaderProbe.Reader,
 				QuerySHA256:               plan.ReaderProbe.QuerySHA256,
 				OldSearchGenerationSHA256: authority["warm_noop"].SearchGenerationSHA256,
 				NewSearchGenerationSHA256: authority[phase].SearchGenerationSHA256,
 				OldHeldRecords:            plan.ReaderProbe.ExpectedRecords, NewHeldRecords: plan.ReaderProbe.ExpectedRecords,
-				OldHeldProjectionSHA256:        plan.ReaderProbe.OldProjectionSHA256,
-				NewHeldProjectionSHA256:        plan.ReaderProbe.NewProjectionSHA256,
-				PostDeleteOldGenerationOutcome: plan.ReaderProbe.PostDeleteOutcome,
-				LeaseAcquired:                  1, OldVisibleWhileHeld: true, NewCurrentWhileHeld: true,
-				RetirementAttemptsWhileHeld: 1, ProtectedWhileHeld: 1, LeaseReleased: 1,
-				RetirementAttemptsAfterRelease: 1, DeletedAfterRelease: 1,
+				OldHeldProjectionSHA256: plan.ReaderProbe.OldProjectionSHA256,
+				NewHeldProjectionSHA256: plan.ReaderProbe.NewProjectionSHA256,
+				LeaseAcquired:           1, OldVisibleWhileHeld: true, NewCurrentWhileHeld: true,
+				LeaseReleased:            1,
 				LeaseAcquireEventOrdinal: start + 1, NewCurrentEventOrdinal: start + 2,
-				HeldRetirementEventOrdinal: start + 3, OldHeldQueryEventOrdinal: start + 4,
-				NewHeldQueryEventOrdinal: start + 5, LeaseReleaseEventOrdinal: start + 6,
-				PostReleaseRetirementOrdinal: start + 7, DeleteEventOrdinal: start + 8,
-				PostDeleteProbeEventOrdinal: start + 9,
-				AuthorityBeforeSHA256:       before, AuthorityAfterSHA256: after,
+				OldHeldQueryEventOrdinal: start + 4, NewHeldQueryEventOrdinal: start + 5,
+				LeaseReleaseEventOrdinal: start + 6, AuthorityBeforeSHA256: before, AuthorityAfterSHA256: after,
 			}
+			if plan.Schema == PlanV2Schema {
+				readBound, err := correctedPhysicalTransitionReadBound(plan.Profile)
+				if err != nil {
+					t.Fatal(err)
+				}
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedPhysicalTransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
+					StoreReadAttempts: readBound.StoreReadAttempts.Minimum, MemberReads: readBound.MemberReads.Minimum,
+					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
+				}
+				reader.Schema = plan.ReceiptContract.TransitionSchema + "/reader-v2"
+				reader.OldRoleAfterReplacement = plan.ReaderProbe.OldRoleAfterReplacement
+				reader.NewRoleAfterReplacement = plan.ReaderProbe.NewRoleAfterReplacement
+				reader.LifecycleAttemptsWhileHeld, reader.OldRootProtectedWhileHeld = 1, 1
+				reader.HeldLifecycleScanned = ptr(uint64(0))
+				reader.HeldLifecycleOutcome = "exact_drained"
+				reader.LifecycleAttemptsAfterRelease, reader.OldRootProtectedAfterRelease = 1, 1
+				reader.PostReleaseLifecycleScanned = ptr(uint64(0))
+				reader.PostReleaseLifecycleOutcome = "exact_drained"
+				reader.PostReleaseOldRecords = plan.ReaderProbe.ExpectedRecords
+				reader.PostReleaseOldProjectionSHA256 = plan.ReaderProbe.OldProjectionSHA256
+				reader.PostReleaseOldOutcome = plan.ReaderProbe.PostReleaseOutcome
+				reader.OldReaderHeldThroughReprobe = true
+				reader.HeldLifecycleEventOrdinal = start + 3
+				reader.PostReleaseLifecycleOrdinal = start + 7
+				reader.PostReleaseOldQueryOrdinal = start + 8
+			} else {
+				measurement.Metrics.LifecycleDeleted = 1
+				measurement.Metrics.MaxLifecycleDeletesTurn = 1
+				reader.Schema = plan.ReceiptContract.TransitionSchema + "/reader-v1"
+				reader.PostDeleteOldGenerationOutcome = plan.ReaderProbe.PostDeleteOutcome
+				reader.RetirementAttemptsWhileHeld, reader.ProtectedWhileHeld = 1, 1
+				reader.RetirementAttemptsAfterRelease, reader.DeletedAfterRelease = 1, 1
+				reader.HeldRetirementEventOrdinal = start + 3
+				reader.PostReleaseRetirementOrdinal = start + 7
+				reader.DeleteEventOrdinal = start + 8
+				reader.PostDeleteProbeEventOrdinal = start + 9
+			}
+			transition.Reader = reader
 		case "logical_delta_b", "return_a", "stale_lease", "process_restart":
 			for _, point := range failurePointsForPhase(plan.FailurePoints, phase) {
 				transition.Injections = append(transition.Injections,
@@ -1927,7 +1969,7 @@ func stopTestReceipt(
 			value.StartEventOrdinal, value.FinishEventOrdinal = 0, 0
 		}
 		value.FailureProjection, value.Injections, value.Pressure = nil, nil, nil
-		value.Archive, value.Reader, value.Lifecycle = nil, nil, nil
+		value.Archive, value.Reader, value.Lifecycle, value.ReadAccounting = nil, nil, nil, nil
 	}
 	usedSnapshots := make(map[string]struct{})
 	for index := range receipt.Authority.Results {

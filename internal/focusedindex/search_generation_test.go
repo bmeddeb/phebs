@@ -121,14 +121,21 @@ func TestSearchGenerationPublicationRollbackRecoveryAndAccounting(t *testing.T) 
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := ReadSearchGenerationControls(
+		controls, err := ReadSearchGenerationControls(
 			ctx, indexDir, repository, rootA.Current.GenerationDigest,
-		); err != nil {
+		)
+		if err != nil || controls.ReceiptFileInfo != nil {
 			t.Fatal(err)
 		}
 		counts, finishErr := ledger.Finish()
 		if finishErr != nil || counts != (readaccounting.Counts{ControlFileReads: 4}) {
 			t.Fatalf("search control reads = %+v, %v", counts, finishErr)
+		}
+		exactControls, err := ReadSearchGenerationControlsWithReceiptIdentity(
+			t.Context(), indexDir, repository, rootA.Current.GenerationDigest,
+		)
+		if err != nil || exactControls.ReceiptFileInfo == nil {
+			t.Fatalf("exact receipt identity = %v, %v", exactControls.ReceiptFileInfo, err)
 		}
 
 		ctx, ledger, err = readaccounting.Start(t.Context(), readaccounting.Counts{

@@ -473,14 +473,17 @@ type PhaseDeadline struct {
 }
 
 type ReaderProbeProfile struct {
-	Schema              string `json:"schema"`
-	Reader              string `json:"reader"`
-	QuerySHA256         string `json:"query_sha256"`
-	PathSHA256          string `json:"path_sha256"`
-	OldProjectionSHA256 string `json:"old_projection_sha256"`
-	NewProjectionSHA256 string `json:"new_projection_sha256"`
-	ExpectedRecords     uint64 `json:"expected_records"`
-	PostDeleteOutcome   string `json:"post_delete_outcome"`
+	Schema                  string `json:"schema"`
+	Reader                  string `json:"reader"`
+	QuerySHA256             string `json:"query_sha256"`
+	PathSHA256              string `json:"path_sha256"`
+	OldProjectionSHA256     string `json:"old_projection_sha256"`
+	NewProjectionSHA256     string `json:"new_projection_sha256"`
+	ExpectedRecords         uint64 `json:"expected_records"`
+	PostDeleteOutcome       string `json:"post_delete_outcome,omitempty"`
+	OldRoleAfterReplacement string `json:"old_role_after_replacement,omitempty"`
+	NewRoleAfterReplacement string `json:"new_role_after_replacement,omitempty"`
+	PostReleaseOutcome      string `json:"post_release_outcome,omitempty"`
 }
 
 type SafetyEnvelope struct {

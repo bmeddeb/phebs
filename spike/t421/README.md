@@ -1182,6 +1182,48 @@ helper or Surreal child. This closes F/Q native-accounting validation only. R,
 cumulative phase bounds, the final ordinal, replacement freeze, execution,
 release, and scale/SLO claims remain open.
 
+#### Physical replacement R correction
+
+The production search root retains exactly two durable roles after A to B:
+B is `current` and A is `prior`. Lifecycle skips both roles, so releasing a
+separate A reader pin cannot delete A. V2 therefore replaces its impossible
+delete-A oracle with two exact drained lifecycle turns, each scanning and
+deleting zero, and reprobes A through the same retained exact reader after the
+pin release. V1 receipt bytes and its historical predicate remain unchanged.
+
+The exact operation order is pin A, publish B once, bind B/current and A/prior,
+run the held lifecycle turn, synchronously open and query A and B, release only
+the A generation pin, run the second lifecycle turn, and reprobe A before
+closing its reader. Opening A before B is invalid: B publication legitimately
+changes A's hard-link ctime, and the exact reader's file-identity fence must
+reject that mutation. No second physical build or fabricated legacy
+publication state is admitted.
+
+Physical R is one operation report with
+`C/S/M/W=41/0/(2*combined_physical_owners)/0`; the frozen member subtotal is
+4,063,208. Each exact reader contributes C17 and N decoded source-owner visits,
+the settled current/prior root contributes C1, and the two lifecycle turns
+contribute C3 each. The dedicated R inventory records this subtotal, and the
+first epoch's shared report-ordinal inventory rises from 11,529 to 11,530.
+Other non-`none` R classes remain nullable and open rather than appearing as
+zero. The generic physical phase read caps remain unchanged because adding R
+alone would mask still-open inspector work. Whole-phase cross-scope sums, the final ordinal, replacement freeze,
+runner execution, release, and scale/SLO claims remain open.
+
+Each exact open performs two complete shard-byte hash passes: whole-publication
+validation and static-shard materialization. The A/B pair therefore performs
+four shard passes and temporarily retains two mmap-backed reader sets, each
+bounded by the existing 256-shard generation cap. Construction is capped at
+ten minutes and holds one of two process-wide exact-reader sessions until
+`Close`; the one frozen R report runs serially, avoiding two transitions each
+holding one session while waiting for the other. A query holds only its reader
+mutex and fences the complete retained file-identity set before and after the
+bounded search; the static searcher also performs its existing per-shard
+metadata checks. Those metadata probes and byte hashes are not C/S/M/W events;
+the decoded source-owner validations are the recorded M visits. No ordinary
+query, startup, sync, retry, publication, lifecycle, cache, store, child, or
+persistent-state path calls the exact reader.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

@@ -217,6 +217,11 @@ func correctedWorkEnvelope(profile CombinedProfile) (WorkEnvelope, []PhaseBudget
 			value.ResolverBlobReads, value.ResolverBlobBytes = CounterBound{}, CounterBound{}
 			value.GitReads = CounterBound{}
 		}
+		if value.Phase == "physical_delta_b" {
+			// A remains the production root's prior generation after A-to-B.
+			// Both lifecycle turns therefore protect it and delete nothing.
+			value.LifecycleDeleted = CounterBound{}
+		}
 		if derivation.ServerEpochStarts > 0 {
 			starts := derivation.ServerEpochStarts
 			if value.Phase == "archive_restore" {

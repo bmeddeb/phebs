@@ -15,8 +15,11 @@ import (
 
 	"github.com/sourcegraph/zoekt"
 	"github.com/sourcegraph/zoekt/index"
+	"github.com/sourcegraph/zoekt/query"
 
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicequery"
@@ -417,6 +420,159 @@ type serviceSearchFixture struct {
 	repositoryDir string
 	store         *serviceSearchStore
 	search        repositoryindex.SearchManifest
+}
+
+func TestExactGenerationReaderAccountsCurrentPriorRetention(t *testing.T) {
+	fixture := buildServiceSearchFixture(t)
+	rootA, err := focusedindex.ReadSearchGenerationRoot(fixture.indexDir, fixture.store.repo.Name)
+	if err != nil || rootA.Current.GenerationDigest != fixture.search.Digest || rootA.Prior != nil {
+		t.Fatalf("initial search root = %+v, %v", rootA, err)
+	}
+	ctx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{
+		ControlFileReads: 41, MemberVisits: 4,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pins := &focusedindex.SearchGenerationPins{}
+	pinA, err := pins.Acquire(fixture.store.repo.Name, rootA.Current.GenerationDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pinA.Release()
+	searchB := advanceServiceSearchGeneration(t, fixture)
+	rootB, err := focusedindex.ReadSearchGenerationRootContext(ctx, fixture.indexDir, fixture.store.repo.Name)
+	if err != nil || rootB.Current.GenerationDigest != searchB.Digest || rootB.Prior == nil ||
+		rootB.Prior.GenerationDigest != rootA.Current.GenerationDigest {
+		t.Fatalf("replacement search root = %+v, %v", rootB, err)
+	}
+	owner := lifecycle.SearchGenerationOwnerImpl{
+		IndexDir: fixture.indexDir, Pins: pins,
+		Acquire: func(context.Context) (func(), error) { return func() {}, nil },
+	}
+	sweep := func() {
+		t.Helper()
+		result := owner.Sweep(ctx, time.Now().Add(30*24*time.Hour), "", lifecycle.DefaultLimits())
+		if result.Err != nil || result.Completeness != lifecycle.Exact || result.More ||
+			result.Scanned != 0 || result.Deleted != 0 {
+			t.Fatalf("current/prior lifecycle turn = %+v", result)
+		}
+	}
+	sweep()
+	readerA, err := OpenExactGenerationReader(
+		ctx, fixture.indexDir, fixture.store.repo.Name, rootA.Current.GenerationDigest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer readerA.Close()
+	searchExact := func(reader *ExactGenerationReader, pattern string, want int) {
+		t.Helper()
+		result, searchErr := reader.Search(ctx, &query.Substring{
+			Pattern: pattern, CaseSensitive: true, Content: true,
+		}, Options{})
+		if searchErr != nil {
+			t.Fatalf("exact query %q: %v", pattern, searchErr)
+		}
+		if len(result.Files) != want {
+			t.Fatalf("exact query %q files=%d, want %d", pattern, len(result.Files), want)
+		}
+	}
+	searchExact(readerA, "T343_NEEDLE", 2)
+	readerB, err := OpenExactGenerationReader(ctx, fixture.indexDir, fixture.store.repo.Name, searchB.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer readerB.Close()
+	searchExact(readerB, "T419_REPLACEMENT", 2)
+	pinA.Release()
+	sweep()
+	searchExact(readerA, "T343_NEEDLE", 2)
+	counts, finishErr := ledger.Finish()
+	if finishErr != nil || counts != (readaccounting.Counts{ControlFileReads: 41, MemberVisits: 4}) {
+		t.Fatalf("physical reader accounting = %+v, %v", counts, finishErr)
+	}
+	receiptIndex := slices.IndexFunc(readerA.entry.fingerprint, func(value focusedArtifactIdentity) bool {
+		return value.name == "generation.json"
+	})
+	if receiptIndex < 0 {
+		t.Fatal("exact prior reader retained no generation receipt identity")
+	}
+	path := filepath.Join(readerA.entry.directory, readerA.entry.fingerprint[receiptIndex].name)
+	changed := time.Now().Add(time.Second)
+	if err := os.Chtimes(path, changed, changed); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readerA.Search(t.Context(), &query.Substring{Pattern: "T343_NEEDLE", Content: true}, Options{}); err == nil ||
+		!strings.Contains(err.Error(), "generation changed") {
+		t.Fatalf("changed prior generation was not refused: %v", err)
+	}
+}
+
+func TestExactGenerationReaderReturnsAccountingRefusal(t *testing.T) {
+	fixture := buildServiceSearchFixture(t)
+	for _, test := range []struct {
+		name   string
+		limits readaccounting.Counts
+		want   readaccounting.Counts
+	}{
+		{name: "control", limits: readaccounting.Counts{ControlFileReads: 16, MemberVisits: 2}, want: readaccounting.Counts{ControlFileReads: 17, MemberVisits: 2}},
+		{name: "member", limits: readaccounting.Counts{ControlFileReads: 17, MemberVisits: 1}, want: readaccounting.Counts{ControlFileReads: 11, MemberVisits: 2}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, ledger, err := readaccounting.Start(t.Context(), test.limits)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reader, openErr := OpenExactGenerationReader(
+				ctx, fixture.indexDir, fixture.store.repo.Name, fixture.search.Digest,
+			)
+			if reader != nil {
+				reader.Close()
+			}
+			counts, finishErr := ledger.Finish()
+			if !errors.Is(openErr, readaccounting.ErrLimit) || !errors.Is(finishErr, readaccounting.ErrLimit) || counts != test.want {
+				t.Fatalf("exact reader refusal = %+v, open=%v finish=%v", counts, openErr, finishErr)
+			}
+		})
+	}
+}
+
+func TestExactGenerationReaderAdmissionIsReleasedByClose(t *testing.T) {
+	fixture := buildServiceSearchFixture(t)
+	first, err := OpenExactGenerationReader(
+		t.Context(), fixture.indexDir, fixture.store.repo.Name, fixture.search.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	second, err := OpenExactGenerationReader(
+		t.Context(), fixture.indexDir, fixture.store.repo.Name, fixture.search.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+
+	blockedCtx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+	blocked, err := OpenExactGenerationReader(
+		blockedCtx, fixture.indexDir, fixture.store.repo.Name, fixture.search.Digest,
+	)
+	if blocked != nil || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("third exact reader = %v, %v; want bounded deadline refusal", blocked, err)
+	}
+
+	first.Close()
+	first.Close()
+	third, err := OpenExactGenerationReader(
+		t.Context(), fixture.indexDir, fixture.store.repo.Name, fixture.search.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	third.Close()
 }
 
 func buildServiceSearchFixture(t *testing.T) serviceSearchFixture {

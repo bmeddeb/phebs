@@ -386,11 +386,11 @@ func ValidatePublished(
 	revisions []store.IndexedRevision,
 	physical PhysicalRoot,
 ) (SearchManifest, error) {
-	search, err := ReadSearchManifest(directory, repository)
+	search, err := ReadSearchManifestContext(ctx, directory, repository)
 	if err != nil {
 		return SearchManifest{}, err
 	}
-	source, err := ReadSourceManifest(directory, repository)
+	source, err := ReadSourceManifestContext(ctx, directory, repository)
 	if err != nil {
 		return SearchManifest{}, err
 	}

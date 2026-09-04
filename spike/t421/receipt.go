@@ -592,6 +592,17 @@ type TransitionResult struct {
 	Archive            *ArchiveTransition           `json:"archive,omitempty"`
 	Reader             *ReaderTransition            `json:"reader,omitempty"`
 	Lifecycle          *LifecycleTransition         `json:"lifecycle,omitempty"`
+	ReadAccounting     *TransitionReadSubtotal      `json:"transition_read_accounting,omitempty"`
+}
+
+type TransitionReadSubtotal struct {
+	Schema             string `json:"schema"`
+	Class              string `json:"class"`
+	ReportCalls        uint64 `json:"report_calls"`
+	ControlFileReads   uint64 `json:"control_file_reads"`
+	StoreReadAttempts  uint64 `json:"store_read_attempts"`
+	MemberReads        uint64 `json:"member_reads"`
+	StoreWriteAttempts uint64 `json:"store_write_attempts"`
 }
 
 type TransitionFailureProjection struct {
@@ -811,35 +822,52 @@ type ArchiveReportProjection struct {
 }
 
 type ReaderTransition struct {
-	Schema                         string `json:"schema"`
-	Reader                         string `json:"reader"`
-	QuerySHA256                    string `json:"query_sha256"`
-	OldSearchGenerationSHA256      string `json:"old_search_generation_sha256"`
-	NewSearchGenerationSHA256      string `json:"new_search_generation_sha256"`
-	OldHeldRecords                 uint64 `json:"old_held_records"`
-	NewHeldRecords                 uint64 `json:"new_held_records"`
-	OldHeldProjectionSHA256        string `json:"old_held_projection_sha256"`
-	NewHeldProjectionSHA256        string `json:"new_held_projection_sha256"`
-	PostDeleteOldGenerationOutcome string `json:"post_delete_old_generation_outcome"`
-	LeaseAcquired                  uint64 `json:"lease_acquired"`
-	OldVisibleWhileHeld            bool   `json:"old_visible_while_held"`
-	NewCurrentWhileHeld            bool   `json:"new_current_while_held"`
-	RetirementAttemptsWhileHeld    uint64 `json:"retirement_attempts_while_held"`
-	ProtectedWhileHeld             uint64 `json:"protected_while_held"`
-	LeaseReleased                  uint64 `json:"lease_released"`
-	RetirementAttemptsAfterRelease uint64 `json:"retirement_attempts_after_release"`
-	DeletedAfterRelease            uint64 `json:"deleted_after_release"`
-	LeaseAcquireEventOrdinal       uint64 `json:"lease_acquire_event_ordinal"`
-	NewCurrentEventOrdinal         uint64 `json:"new_current_event_ordinal"`
-	HeldRetirementEventOrdinal     uint64 `json:"held_retirement_event_ordinal"`
-	OldHeldQueryEventOrdinal       uint64 `json:"old_held_query_event_ordinal"`
-	NewHeldQueryEventOrdinal       uint64 `json:"new_held_query_event_ordinal"`
-	LeaseReleaseEventOrdinal       uint64 `json:"lease_release_event_ordinal"`
-	PostReleaseRetirementOrdinal   uint64 `json:"post_release_retirement_event_ordinal"`
-	DeleteEventOrdinal             uint64 `json:"delete_event_ordinal"`
-	PostDeleteProbeEventOrdinal    uint64 `json:"post_delete_probe_event_ordinal"`
-	AuthorityBeforeSHA256          string `json:"authority_before_sha256"`
-	AuthorityAfterSHA256           string `json:"authority_after_sha256"`
+	Schema                         string  `json:"schema"`
+	Reader                         string  `json:"reader"`
+	QuerySHA256                    string  `json:"query_sha256"`
+	OldSearchGenerationSHA256      string  `json:"old_search_generation_sha256"`
+	NewSearchGenerationSHA256      string  `json:"new_search_generation_sha256"`
+	OldHeldRecords                 uint64  `json:"old_held_records"`
+	NewHeldRecords                 uint64  `json:"new_held_records"`
+	OldHeldProjectionSHA256        string  `json:"old_held_projection_sha256"`
+	NewHeldProjectionSHA256        string  `json:"new_held_projection_sha256"`
+	PostDeleteOldGenerationOutcome string  `json:"post_delete_old_generation_outcome,omitempty"`
+	LeaseAcquired                  uint64  `json:"lease_acquired"`
+	OldVisibleWhileHeld            bool    `json:"old_visible_while_held"`
+	NewCurrentWhileHeld            bool    `json:"new_current_while_held"`
+	RetirementAttemptsWhileHeld    uint64  `json:"retirement_attempts_while_held,omitempty"`
+	ProtectedWhileHeld             uint64  `json:"protected_while_held,omitempty"`
+	LeaseReleased                  uint64  `json:"lease_released"`
+	RetirementAttemptsAfterRelease uint64  `json:"retirement_attempts_after_release,omitempty"`
+	DeletedAfterRelease            uint64  `json:"deleted_after_release,omitempty"`
+	LeaseAcquireEventOrdinal       uint64  `json:"lease_acquire_event_ordinal"`
+	NewCurrentEventOrdinal         uint64  `json:"new_current_event_ordinal"`
+	HeldRetirementEventOrdinal     uint64  `json:"held_retirement_event_ordinal,omitempty"`
+	OldHeldQueryEventOrdinal       uint64  `json:"old_held_query_event_ordinal"`
+	NewHeldQueryEventOrdinal       uint64  `json:"new_held_query_event_ordinal"`
+	LeaseReleaseEventOrdinal       uint64  `json:"lease_release_event_ordinal"`
+	PostReleaseRetirementOrdinal   uint64  `json:"post_release_retirement_event_ordinal,omitempty"`
+	DeleteEventOrdinal             uint64  `json:"delete_event_ordinal,omitempty"`
+	PostDeleteProbeEventOrdinal    uint64  `json:"post_delete_probe_event_ordinal,omitempty"`
+	OldRoleAfterReplacement        string  `json:"old_role_after_replacement,omitempty"`
+	NewRoleAfterReplacement        string  `json:"new_role_after_replacement,omitempty"`
+	LifecycleAttemptsWhileHeld     uint64  `json:"lifecycle_attempts_while_held,omitempty"`
+	OldRootProtectedWhileHeld      uint64  `json:"old_root_protected_while_held,omitempty"`
+	HeldLifecycleScanned           *uint64 `json:"held_lifecycle_scanned,omitempty"`
+	HeldLifecycleOutcome           string  `json:"held_lifecycle_outcome,omitempty"`
+	LifecycleAttemptsAfterRelease  uint64  `json:"lifecycle_attempts_after_release,omitempty"`
+	OldRootProtectedAfterRelease   uint64  `json:"old_root_protected_after_release,omitempty"`
+	PostReleaseLifecycleScanned    *uint64 `json:"post_release_lifecycle_scanned,omitempty"`
+	PostReleaseLifecycleOutcome    string  `json:"post_release_lifecycle_outcome,omitempty"`
+	PostReleaseOldRecords          uint64  `json:"post_release_old_records,omitempty"`
+	PostReleaseOldProjectionSHA256 string  `json:"post_release_old_projection_sha256,omitempty"`
+	PostReleaseOldOutcome          string  `json:"post_release_old_outcome,omitempty"`
+	OldReaderHeldThroughReprobe    bool    `json:"old_reader_held_through_reprobe,omitempty"`
+	HeldLifecycleEventOrdinal      uint64  `json:"held_lifecycle_event_ordinal,omitempty"`
+	PostReleaseLifecycleOrdinal    uint64  `json:"post_release_lifecycle_event_ordinal,omitempty"`
+	PostReleaseOldQueryOrdinal     uint64  `json:"post_release_old_query_event_ordinal,omitempty"`
+	AuthorityBeforeSHA256          string  `json:"authority_before_sha256"`
+	AuthorityAfterSHA256           string  `json:"authority_after_sha256"`
 }
 
 type LifecycleTransition struct {
@@ -2281,6 +2309,9 @@ func validateTransitionResults(
 		payloads := boolCount(len(value.Injections) != 0) + boolCount(value.Pressure != nil) +
 			boolCount(value.Archive != nil) + boolCount(value.Reader != nil) + boolCount(value.Lifecycle != nil)
 		if value.Outcome != "passed" {
+			if value.ReadAccounting != nil {
+				return fmt.Errorf("phase %q retained incomplete transition read accounting", phase)
+			}
 			if payloads != 0 {
 				return fmt.Errorf("phase %q retained an incomplete transition", phase)
 			}
@@ -2305,6 +2336,17 @@ func validateTransitionResults(
 		}
 		if payloads != 1 {
 			return fmt.Errorf("phase %q lacks one exact transition", phase)
+		}
+		if plan.Schema == PlanSchema {
+			if value.ReadAccounting != nil {
+				return fmt.Errorf("phase %q added transition read accounting to v1", phase)
+			}
+		} else if phase == "physical_delta_b" {
+			if value.ReadAccounting == nil || validatePhysicalTransitionReadSubtotal(*value.ReadAccounting, plan) != nil {
+				return errors.New("physical delta transition read accounting is invalid")
+			}
+		} else if value.ReadAccounting != nil {
+			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
 		switch phase {
 		case "physical_delta_b":
@@ -2410,6 +2452,9 @@ func validateTransitionFailureProjection(
 		"archive_restore":      "archive_restore_compare",
 		"lifecycle_collection": "fresh_owner_cycle",
 	}[phase]
+	if plan.Schema == PlanV2Schema && phase == "physical_delta_b" {
+		boundary = "reader_lease_current_prior_release"
+	}
 	if value.FailurePoint != "" {
 		index := slices.IndexFunc(plan.FailurePoints, func(point FailurePoint) bool {
 			return point.Phase == phase && point.Name == value.FailurePoint
@@ -2424,7 +2469,7 @@ func validateTransitionFailureProjection(
 	expectedAuthority := authority
 	expectedAuthority.ExtractionRoots = nil
 	if boundary == "" || value.Schema != plan.ReceiptContract.TransitionSchema+"/failed-projection-v1" ||
-		value.Phase != phase || value.Boundary != boundary || !validTransitionStep(phase, value.LastCompletedStep) ||
+		value.Phase != phase || value.Boundary != boundary || !validTransitionStep(plan.Schema, phase, value.LastCompletedStep) ||
 		!orderedEventsWithin(startEventOrdinal, finishEventOrdinal, value.EventOrdinal) ||
 		!reflect.DeepEqual(projectedAuthority, expectedAuthority) {
 		return "", errors.New("failed transition projection is invalid")
@@ -2432,7 +2477,7 @@ func validateTransitionFailureProjection(
 	return receiptSHA256(value)
 }
 
-func validTransitionStep(phase, step string) bool {
+func validTransitionStep(planSchema, phase, step string) bool {
 	steps := map[string][]string{
 		"physical_delta_b":     {"lease_acquired", "new_current", "held_retirement", "lease_released", "post_release_retirement", "deleted"},
 		"logical_delta_b":      {"armed", "hit", "recovered", "cleared"},
@@ -2444,6 +2489,12 @@ func validTransitionStep(phase, step string) bool {
 		"pressure_75":          {"ballast_mutated", "gate_observed", "recovery_ballast_removed", "lifecycle_fenced", "capacity_observed", "recovery_gate_observed"},
 		"archive_restore":      {"archive_created", "installation_destroyed", "empty_restore_target_observed", "restore_started", "comparison_completed"},
 		"lifecycle_collection": {"lifecycle_fenced", "capacity_observed"},
+	}
+	if planSchema == PlanV2Schema {
+		steps["physical_delta_b"] = []string{
+			"lease_acquired", "new_current", "held_lifecycle", "old_queried", "new_queried",
+			"lease_released", "post_release_lifecycle", "post_release_old_queried",
+		}
 	}
 	return slices.Contains(steps[phase], step)
 }
@@ -2468,8 +2519,7 @@ func validateReaderTransition(
 ) error {
 	before, beforeOK := authorityIdentitySHA256(authority["warm_noop"])
 	after, afterOK := authorityIdentitySHA256(authority["physical_delta_b"])
-	returnError := value.Schema != plan.ReceiptContract.TransitionSchema+"/reader-v1" ||
-		value.Reader != plan.ReaderProbe.Reader || value.QuerySHA256 != plan.ReaderProbe.QuerySHA256 ||
+	commonError := value.Reader != plan.ReaderProbe.Reader || value.QuerySHA256 != plan.ReaderProbe.QuerySHA256 ||
 		!beforeOK || !afterOK || value.OldSearchGenerationSHA256 != authority["warm_noop"].SearchGenerationSHA256 ||
 		value.NewSearchGenerationSHA256 != authority["physical_delta_b"].SearchGenerationSHA256 ||
 		value.OldSearchGenerationSHA256 == value.NewSearchGenerationSHA256 ||
@@ -2477,19 +2527,71 @@ func validateReaderTransition(
 		value.OldHeldProjectionSHA256 != plan.ReaderProbe.OldProjectionSHA256 ||
 		value.NewHeldProjectionSHA256 != plan.ReaderProbe.NewProjectionSHA256 ||
 		value.OldHeldProjectionSHA256 == value.NewHeldProjectionSHA256 ||
-		value.PostDeleteOldGenerationOutcome != plan.ReaderProbe.PostDeleteOutcome ||
-		value.LeaseAcquired != 1 || !value.OldVisibleWhileHeld || !value.NewCurrentWhileHeld ||
-		value.RetirementAttemptsWhileHeld != 1 || value.ProtectedWhileHeld != 1 || value.LeaseReleased != 1 ||
-		value.RetirementAttemptsAfterRelease != 1 || value.DeletedAfterRelease != 1 ||
+		value.LeaseAcquired != 1 || !value.OldVisibleWhileHeld || !value.NewCurrentWhileHeld || value.LeaseReleased != 1 ||
+		value.AuthorityBeforeSHA256 != before || value.AuthorityAfterSHA256 != after
+	if commonError {
+		return errors.New("reader facts differ from the physical A-to-B replacement")
+	}
+	if plan.Schema == PlanSchema {
+		returnError := value.Schema != plan.ReceiptContract.TransitionSchema+"/reader-v1" ||
+			value.PostDeleteOldGenerationOutcome != plan.ReaderProbe.PostDeleteOutcome ||
+			value.RetirementAttemptsWhileHeld != 1 || value.ProtectedWhileHeld != 1 || value.LeaseReleased != 1 ||
+			value.RetirementAttemptsAfterRelease != 1 || value.DeletedAfterRelease != 1 ||
+			!orderedEventsWithin(startEventOrdinal, finishEventOrdinal,
+				value.LeaseAcquireEventOrdinal, value.NewCurrentEventOrdinal, value.HeldRetirementEventOrdinal,
+				value.OldHeldQueryEventOrdinal, value.NewHeldQueryEventOrdinal, value.LeaseReleaseEventOrdinal,
+				value.PostReleaseRetirementOrdinal, value.DeleteEventOrdinal, value.PostDeleteProbeEventOrdinal,
+			) ||
+			metrics.LifecycleOwnerTurns != 2 || metrics.LifecycleDeleted != 1 || metrics.MaxLifecycleDeletesTurn != 1 ||
+			value.OldRoleAfterReplacement != "" || value.NewRoleAfterReplacement != "" ||
+			value.LifecycleAttemptsWhileHeld != 0 || value.OldRootProtectedWhileHeld != 0 ||
+			value.HeldLifecycleScanned != nil || value.HeldLifecycleOutcome != "" ||
+			value.LifecycleAttemptsAfterRelease != 0 || value.OldRootProtectedAfterRelease != 0 ||
+			value.PostReleaseLifecycleScanned != nil || value.PostReleaseLifecycleOutcome != "" ||
+			value.PostReleaseOldRecords != 0 || value.PostReleaseOldProjectionSHA256 != "" ||
+			value.PostReleaseOldOutcome != "" || value.OldReaderHeldThroughReprobe || value.HeldLifecycleEventOrdinal != 0 ||
+			value.PostReleaseLifecycleOrdinal != 0 || value.PostReleaseOldQueryOrdinal != 0
+		if returnError {
+			return errors.New("reader lease facts differ from the physical A-to-B replacement")
+		}
+		return nil
+	}
+	returnError := value.Schema != plan.ReceiptContract.TransitionSchema+"/reader-v2" ||
+		value.PostDeleteOldGenerationOutcome != "" || value.RetirementAttemptsWhileHeld != 0 ||
+		value.ProtectedWhileHeld != 0 || value.RetirementAttemptsAfterRelease != 0 || value.DeletedAfterRelease != 0 ||
+		value.HeldRetirementEventOrdinal != 0 || value.PostReleaseRetirementOrdinal != 0 ||
+		value.DeleteEventOrdinal != 0 || value.PostDeleteProbeEventOrdinal != 0 ||
+		value.OldRoleAfterReplacement != plan.ReaderProbe.OldRoleAfterReplacement ||
+		value.NewRoleAfterReplacement != plan.ReaderProbe.NewRoleAfterReplacement ||
+		value.LifecycleAttemptsWhileHeld != 1 || value.OldRootProtectedWhileHeld != 1 ||
+		value.HeldLifecycleScanned == nil || *value.HeldLifecycleScanned != 0 || value.HeldLifecycleOutcome != "exact_drained" ||
+		value.LifecycleAttemptsAfterRelease != 1 || value.OldRootProtectedAfterRelease != 1 ||
+		value.PostReleaseLifecycleScanned == nil || *value.PostReleaseLifecycleScanned != 0 || value.PostReleaseLifecycleOutcome != "exact_drained" ||
+		value.PostReleaseOldRecords != plan.ReaderProbe.ExpectedRecords ||
+		value.PostReleaseOldProjectionSHA256 != plan.ReaderProbe.OldProjectionSHA256 ||
+		value.PostReleaseOldOutcome != plan.ReaderProbe.PostReleaseOutcome || !value.OldReaderHeldThroughReprobe ||
 		!orderedEventsWithin(startEventOrdinal, finishEventOrdinal,
-			value.LeaseAcquireEventOrdinal, value.NewCurrentEventOrdinal, value.HeldRetirementEventOrdinal,
+			value.LeaseAcquireEventOrdinal, value.NewCurrentEventOrdinal, value.HeldLifecycleEventOrdinal,
 			value.OldHeldQueryEventOrdinal, value.NewHeldQueryEventOrdinal, value.LeaseReleaseEventOrdinal,
-			value.PostReleaseRetirementOrdinal, value.DeleteEventOrdinal, value.PostDeleteProbeEventOrdinal,
+			value.PostReleaseLifecycleOrdinal, value.PostReleaseOldQueryOrdinal,
 		) ||
-		value.AuthorityBeforeSHA256 != before || value.AuthorityAfterSHA256 != after ||
-		metrics.LifecycleOwnerTurns != 2 || metrics.LifecycleDeleted != 1 || metrics.MaxLifecycleDeletesTurn != 1
+		metrics.LifecycleOwnerTurns != 2 || metrics.LifecycleDeleted != 0 || metrics.MaxLifecycleDeletesTurn != 0
 	if returnError {
-		return errors.New("reader lease facts differ from the physical A-to-B replacement")
+		return errors.New("reader current/prior facts differ from the physical A-to-B replacement")
+	}
+	return nil
+}
+
+func validatePhysicalTransitionReadSubtotal(value TransitionReadSubtotal, plan Plan) error {
+	bound, err := correctedPhysicalTransitionReadBound(plan.Profile)
+	if err != nil || value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedPhysicalTransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
+		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
+		return errors.New("physical transition read subtotal differs from its derived bound")
 	}
 	return nil
 }
