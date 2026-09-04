@@ -16,6 +16,7 @@ import (
 	"slices"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/repopath"
 )
 
@@ -85,6 +86,10 @@ func validateSourceMembers(
 			if err := decoder.Decode(&record); err != nil {
 				_ = file.Close()
 				return invalidf("decode source member: %v", err)
+			}
+			if err := readaccounting.Charge(ctx, readaccounting.MemberVisit, 1); err != nil {
+				_ = file.Close()
+				return err
 			}
 			if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 				_ = file.Close()
@@ -263,7 +268,7 @@ func WalkPublishedSource(
 	directory, repository string,
 	visit func(SourceRecord) error,
 ) (SourceManifest, error) {
-	manifest, err := ReadSourceManifest(directory, repository)
+	manifest, err := ReadSourceManifestContext(ctx, directory, repository)
 	if err != nil {
 		return SourceManifest{}, err
 	}

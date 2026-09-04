@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 const (
@@ -300,6 +301,15 @@ type sparseMemberSubrange struct {
 type SparseTypedSourceScope struct {
 	raw     []byte
 	records int
+}
+
+// SparseTypedSourceScopeSummary is the bounded source-free identity of one
+// already-validated typed source scope.
+type SparseTypedSourceScopeSummary struct {
+	Records       int    `json:"records"`
+	PathBytes     int64  `json:"path_bytes"`
+	EncodedBytes  int64  `json:"encoded_bytes"`
+	ContentDigest string `json:"content_digest"`
 }
 
 func sparseDomainName(ordinal int) string {
@@ -933,7 +943,7 @@ func OpenSparse(
 	if IsPublishing(candidateRoot, state.Repository) {
 		return nil, ErrPublishing
 	}
-	manifest, err := readManifest(filepath.Join(candidateRoot, state.Manifest))
+	manifest, err := readManifestContext(ctx, filepath.Join(candidateRoot, state.Manifest))
 	if err != nil {
 		return nil, err
 	}
@@ -946,7 +956,7 @@ func OpenSparse(
 	if err := validateManifestIdentity(manifest, Expected{}, &state); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrSparseStale, err)
 	}
-	root, raw, err := readSparseRoot(filepath.Join(sparseDirectory, SparseRootFileName))
+	root, raw, err := readSparseRootContext(ctx, filepath.Join(sparseDirectory, SparseRootFileName))
 	if err != nil {
 		return nil, err
 	}
@@ -1004,7 +1014,7 @@ func (publication *SparsePublication) OpenDomain(
 	if err != nil {
 		return nil, err
 	}
-	index, raw, err := readSparseDomain(filepath.Join(publication.sparseRoot, descriptor.IndexName))
+	index, raw, err := readSparseDomainContext(ctx, filepath.Join(publication.sparseRoot, descriptor.IndexName))
 	if err != nil {
 		return nil, err
 	}
@@ -1193,7 +1203,8 @@ func (domain *SparseDomain) TypedSourceScope(
 	if IsPublishing(publication.candidateRoot, publication.state.Repository) {
 		return SparseTypedSourceScope{}, ErrPublishing
 	}
-	scope, err := readSparseTypedScope(
+	scope, err := readSparseTypedScopeContext(
+		ctx,
 		filepath.Join(publication.sparseRoot, partition.TypedScope.Name), *partition.TypedScope,
 	)
 	if err != nil {
@@ -1671,6 +1682,12 @@ func readSparseRoot(filePath string) (SparseRoot, []byte, error) {
 	return root, raw, err
 }
 
+func readSparseRootContext(ctx context.Context, filePath string) (SparseRoot, []byte, error) {
+	var root SparseRoot
+	raw, err := readSparseJSONContext(ctx, filePath, MaxSparseRootBytes, &root)
+	return root, raw, err
+}
+
 func writeSparseControl(filePath string, payload []byte) (resultErr error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
@@ -1693,14 +1710,28 @@ func readSparseDomain(filePath string) (SparseDomainIndex, []byte, error) {
 	return index, raw, err
 }
 
+func readSparseDomainContext(ctx context.Context, filePath string) (SparseDomainIndex, []byte, error) {
+	var index SparseDomainIndex
+	raw, err := readSparseJSONContext(ctx, filePath, MaxSparseDomainBytes, &index)
+	return index, raw, err
+}
+
 func readSparseTypedScope(
+	filePath string,
+	descriptor SparseTypedScopeDescriptor,
+) (SparseTypedSourceScope, error) {
+	return readSparseTypedScopeContext(context.Background(), filePath, descriptor)
+}
+
+func readSparseTypedScopeContext(
+	ctx context.Context,
 	filePath string,
 	descriptor SparseTypedScopeDescriptor,
 ) (SparseTypedSourceScope, error) {
 	if !validSparseTypedScopeDescriptor(descriptor, -1, -1) {
 		return SparseTypedSourceScope{}, sparseInvalid("typed source scope descriptor is invalid")
 	}
-	raw, err := readSparseBytes(filePath, MaxSparseTypedScopeBytes)
+	raw, err := readSparseBytesContext(ctx, filePath, MaxSparseTypedScopeBytes)
 	if err != nil {
 		return SparseTypedSourceScope{}, err
 	}
@@ -1810,6 +1841,25 @@ func (scope SparseTypedSourceScope) offset(ordinal int) int {
 // Records returns the exact number of admitted typed source identities.
 func (scope SparseTypedSourceScope) Records() int { return scope.records }
 
+// Summary returns the exact record, path-byte, encoded-byte, and content
+// identity already validated by TypedSourceScope without exposing paths.
+func (scope SparseTypedSourceScope) Summary(ctx context.Context) (SparseTypedSourceScopeSummary, error) {
+	if ctx == nil || !validSparseTypedScope(scope.raw, scope.records) {
+		return SparseTypedSourceScopeSummary{}, errors.New("typed source scope summary is invalid")
+	}
+	var pathBytes int64
+	if err := scope.Walk(ctx, func(path string) error {
+		pathBytes += int64(len(path))
+		return nil
+	}); err != nil {
+		return SparseTypedSourceScopeSummary{}, err
+	}
+	return SparseTypedSourceScopeSummary{
+		Records: scope.records, PathBytes: pathBytes, EncodedBytes: int64(len(scope.raw)),
+		ContentDigest: sparseContentDigest(scope.raw),
+	}, nil
+}
+
 // Walk visits every canonical admitted path in path-identity order.
 func (scope SparseTypedSourceScope) Walk(
 	ctx context.Context,
@@ -1832,7 +1882,10 @@ func (scope SparseTypedSourceScope) Walk(
 	return nil
 }
 
-func readSparseBytes(filePath string, limit int64) (_ []byte, resultErr error) {
+func readSparseBytesContext(ctx context.Context, filePath string, limit int64) (_ []byte, resultErr error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return nil, err
+	}
 	info, err := os.Lstat(filePath)
 	if err != nil {
 		return nil, err
@@ -1864,7 +1917,16 @@ func readSparseBytes(filePath string, limit int64) (_ []byte, resultErr error) {
 }
 
 func readSparseJSON(filePath string, limit int64, target any) (_ []byte, resultErr error) {
-	raw, err := readSparseBytes(filePath, limit)
+	return readSparseJSONContext(context.Background(), filePath, limit, target)
+}
+
+func readSparseJSONContext(
+	ctx context.Context,
+	filePath string,
+	limit int64,
+	target any,
+) (_ []byte, resultErr error) {
+	raw, err := readSparseBytesContext(ctx, filePath, limit)
 	if err != nil {
 		return nil, err
 	}

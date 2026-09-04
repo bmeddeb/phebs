@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 )
@@ -263,6 +264,15 @@ func ValidateInventoryRootV2(root InventoryRootV2) error {
 }
 
 func ReadInventoryRootV2(directory, repository string) (InventoryRootV2, error) {
+	return ReadInventoryRootV2Context(context.Background(), directory, repository)
+}
+
+// ReadInventoryRootV2Context reads one compact inventory-root control,
+// including its failed preflight/open attempt. It does not open members.
+func ReadInventoryRootV2Context(ctx context.Context, directory, repository string) (InventoryRootV2, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return InventoryRootV2{}, err
+	}
 	raw, err := readBoundedRegular(filepath.Join(directory, InventoryRootNameV2), MaxInventoryRootBytesV2)
 	if err != nil {
 		return InventoryRootV2{}, err

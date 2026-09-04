@@ -52,7 +52,7 @@ func CaptureControlFingerprintContext(
 			ErrInvalidManifest, err,
 		)
 	}
-	manifest, err := readManifest(manifestPath)
+	manifest, err := readManifestContext(ctx, manifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidManifest, err)
 	}

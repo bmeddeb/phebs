@@ -35,11 +35,7 @@ func (runtime *Runtime) restorePublished(
 		return "", err
 	}
 
-	semantic := struct {
-		Schema     string   `json:"schema"`
-		Repository string   `json:"repository"`
-		Plans      []string `json:"plans"`
-	}{Schema: GenerationSchema, Repository: repository, Plans: make([]string, 0, len(domains))}
+	planDigests := make([]string, 0, len(domains))
 	seen := make(map[string]struct{}, len(domains))
 	plans := make([]DomainPlan, len(domains))
 	for index, restored := range domains {
@@ -57,10 +53,12 @@ func (runtime *Runtime) restorePublished(
 		}
 		seen[key] = struct{}{}
 		plans[index] = domain
-		semantic.Plans = append(semantic.Plans, domain.Plan.Digest)
+		planDigests = append(planDigests, domain.Plan.Digest)
 	}
-	semanticRaw, _ := canonical(semantic)
-	target := digest("phebs-extraction-partition-generation-v1", semanticRaw)
+	target, err := GenerationDigest(repository, planDigests)
+	if err != nil {
+		return "", err
+	}
 	directory := runtime.generationDirectory(repository, target)
 	if _, err := os.Lstat(directory); err == nil {
 		return "", invalid("restored generation already exists")

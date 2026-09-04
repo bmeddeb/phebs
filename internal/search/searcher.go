@@ -688,8 +688,8 @@ func (s *Searcher) requestWholeRepair(
 	revisions []store.IndexedRevision,
 ) error {
 	key := "missing-or-invalid"
-	if manifest, err := focusedindex.ReadWholeManifest(
-		s.indexDir, repository, revisions,
+	if manifest, err := focusedindex.ReadWholeManifestContext(
+		ctx, s.indexDir, repository, revisions,
 	); err == nil {
 		key = manifest.Digest
 	} else if info, statErr := os.Lstat(filepath.Join(
@@ -772,8 +772,8 @@ func (s *Searcher) validateSharedWhole(
 	if !full {
 		return true
 	}
-	manifest, err := focusedindex.ReadWholeManifest(
-		s.indexDir, repository, revisions,
+	manifest, err := focusedindex.ReadWholeManifestContext(
+		ctx, s.indexDir, repository, revisions,
 	)
 	if err != nil {
 		s.whole.invalidateShared(repository, revisions)
@@ -837,8 +837,8 @@ func (s *Searcher) validateWholeGenerations(
 				ctx, repository, revisions, full,
 			)
 		if current && full {
-			manifest, manifestErr := focusedindex.ReadWholeManifest(
-				s.indexDir, repository, revisions,
+			manifest, manifestErr := focusedindex.ReadWholeManifestContext(
+				ctx, s.indexDir, repository, revisions,
 			)
 			current = manifestErr == nil && inventoryOK &&
 				wholeRepoEntryMatches(
@@ -929,8 +929,8 @@ func (s *Searcher) validateWholeTouchedSet(
 				ctx, repository, revisions, full,
 			)
 		if current && full {
-			manifest, err := focusedindex.ReadWholeManifest(
-				s.indexDir, repository, revisions,
+			manifest, err := focusedindex.ReadWholeManifestContext(
+				ctx, s.indexDir, repository, revisions,
 			)
 			current = err == nil && inventoryOK &&
 				wholeRepoEntryMatches(
@@ -1071,7 +1071,9 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 		} else {
 			revisions := canonicalWholeRevisions(repo)
 			if s.generationPins != nil {
-				root, rootErr := focusedindex.ReadSearchGenerationRoot(s.indexDir, repo.Name)
+				root, rootErr := focusedindex.ReadSearchGenerationRootContext(
+					ctx, s.indexDir, repo.Name,
+				)
 				if rootErr == nil {
 					if !slices.Equal(root.Current.Revisions, revisions) {
 						releaseLeases()

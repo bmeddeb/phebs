@@ -194,8 +194,9 @@ type DomainStatus struct {
 }
 
 // Progress is the bounded operational projection of the current extraction
-// schedule. It reads two schedule rows, one small generation control, and at
-// most MaxDomains current pointers; it never opens partition results, candidate
+// schedule. A successful bound read makes two schedule calls (each with the
+// store's bounded retries), attempts one schedule binding, and reads one small
+// generation control and at most MaxDomains current pointers; it never opens partition results, candidate
 // members, source content, or evidence rows.
 type ExtractionProgress struct {
 	State          string `json:"state"`

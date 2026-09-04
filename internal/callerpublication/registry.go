@@ -342,7 +342,7 @@ func (registry *Registry) Acquire(
 		lease := &Lease{
 			registry: registry, entry: entry, publication: publication,
 		}
-		current, err := publication.CurrentResult()
+		current, err := publication.CurrentResultContext(ctx)
 		if err != nil {
 			_ = lease.Release()
 			return nil, err
@@ -388,7 +388,7 @@ func (registry *Registry) Acquire(
 	entryCurrent := false
 	if entry != nil {
 		var err error
-		entryCurrent, err = entry.publication.CurrentResult()
+		entryCurrent, err = entry.publication.CurrentResultContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -416,7 +416,7 @@ func (registry *Registry) Acquire(
 	if err != nil {
 		return nil, err
 	}
-	publicationCurrent, err := publication.CurrentResult()
+	publicationCurrent, err := publication.CurrentResultContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +435,7 @@ func (registry *Registry) Acquire(
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	publicationCurrent, err = publication.CurrentResult()
+	publicationCurrent, err = publication.CurrentResultContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +478,7 @@ func (registry *Registry) Acquire(
 	lease := &Lease{
 		registry: registry, entry: entry, publication: publication,
 	}
-	publicationCurrent, err = publication.CurrentResult()
+	publicationCurrent, err = publication.CurrentResultContext(ctx)
 	if err != nil || !publicationCurrent {
 		// The per-repository transition is already held, so unwind directly
 		// rather than recursively entering Release.

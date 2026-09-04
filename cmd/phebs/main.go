@@ -97,6 +97,17 @@ func deferPendingPartitionAuthority(err error) (error, bool) {
 	return err, false
 }
 
+func partitionFenceAuthority(ctx context.Context, root, repository string) (string, string, error) {
+	if _, err := observationpublication.ReadInventoryPublicationRootV2Context(ctx, root, repository); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", "", fmt.Errorf("%w: %v", errPartitionAuthorityPending, err)
+		}
+		return "", "", err
+	}
+	authority, err := observationpublication.CurrentInventoryAuthorityReferenceV2(ctx, root, repository)
+	return authority.SourceGenerationDigest, authority.ObservationGenerationDigest, err
+}
+
 func afterResolverPublication(
 	ctx context.Context,
 	repository string,
@@ -392,12 +403,34 @@ func t4013ExactReportTerminalError(failed <-chan struct{}) error {
 	}
 }
 
+func serverTerminalError(
+	serveErr, shutdownErr error,
+	exactReportFailed <-chan struct{},
+	exactReadFailed <-chan error,
+) error {
+	if errors.Is(serveErr, http.ErrServerClosed) {
+		serveErr = nil
+	}
+	if exactReportFailed == nil && exactReadFailed == nil {
+		shutdownErr = nil
+	}
+	return errors.Join(
+		serveErr, shutdownErr,
+		t4013ExactReportTerminalError(exactReportFailed),
+		t421ExactReadTerminalError(exactReadFailed),
+	)
+}
+
 func serve(args []string) error {
 	flags := flag.NewFlagSet("serve", flag.ExitOnError)
 	cfgPath := flags.String("config", "", "path to config file (defaults apply if omitted)")
 	addr := flags.String("addr", "", "listen address (overrides config)")
 	_ = flags.Parse(args)
 	exactReports, err := t4013ExactReportsEnabled()
+	if err != nil {
+		return err
+	}
+	exactReads, err := t421ExactReadsEnabled()
 	if err != nil {
 		return err
 	}
@@ -485,6 +518,18 @@ func serve(args []string) error {
 		failExactReport = func(error) {
 			exactReportFailureOnce.Do(func() { close(exactReportFailed) })
 			cancel()
+		}
+	}
+	var exactReadFailed chan error
+	var failExactRead func(error)
+	if exactReads {
+		exactReadFailed = make(chan error, 1)
+		failExactRead = func(failure error) {
+			select {
+			case exactReadFailed <- failure:
+				cancel()
+			default:
+			}
 		}
 	}
 
@@ -1191,6 +1236,10 @@ func serve(args []string) error {
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service
 	var partitionRuntime *extractionpublication.Runtime
+	var manifestProvider *candidatejob.Provider
+	var openPartitionDomain func(
+		context.Context, candidate.DomainResultPlan,
+	) (*candidate.SparseDomain, error)
 	if len(exs) > 0 {
 		if cfg.Experimental.ProvisionalProtoExtraction {
 			log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
@@ -1218,12 +1267,13 @@ func serve(args []string) error {
 		} else {
 			compatibility = checker
 		}
-		candidateWorker, manifestProvider, err := candidatejob.New(
+		candidateWorker, provider, err := candidatejob.New(
 			cfg.Server.DataDir, st, exs,
 		)
 		if err != nil {
 			return fmt.Errorf("configure candidate planning: %w", err)
 		}
+		manifestProvider = provider
 		worker := &extract.Worker{
 			Repos: st, Evidence: st,
 			NewCorpus:        extract.GitCorpus(cfg.Server.DataDir),
@@ -1274,19 +1324,9 @@ func serve(args []string) error {
 			authorityCtx context.Context,
 			repository string,
 		) (string, string, error) {
-			if _, rootErr := observationpublication.ReadInventoryPublicationRootV2(
-				filepath.Join(cfg.Server.DataDir, "observations"), repository,
-			); rootErr != nil {
-				if errors.Is(rootErr, os.ErrNotExist) {
-					return "", "", fmt.Errorf("%w: %v", errPartitionAuthorityPending, rootErr)
-				}
-				return "", "", rootErr
-			}
-			authority, authorityErr := observationpublication.CurrentInventoryAuthorityReferenceV2(
+			return partitionFenceAuthority(
 				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), repository,
 			)
-			return authority.SourceGenerationDigest,
-				authority.ObservationGenerationDigest, authorityErr
 		}
 		partitionRuntime = &extractionpublication.Runtime{
 			Root: partitionPublicationRoot, Store: st,
@@ -1352,6 +1392,7 @@ func serve(args []string) error {
 			CandidateReference: readPartitionCandidateReference,
 			AuthorityReference: readPartitionFenceAuthority,
 		}
+		openPartitionDomain = partitionReconciler.OpenDomain
 		partitionRuntime.Source = extractionpublication.GitSparseSource{
 			DataDir: cfg.Server.DataDir, OpenDomain: partitionReconciler.OpenDomain,
 		}
@@ -1877,6 +1918,41 @@ func serve(args []string) error {
 			log.Printf("WARNING: synthetic Change Workbench enabled for make dev; not a production or continuation surface")
 		}
 	}
+	var finalAuthority t421ExactFinalAuthorityRead
+	var tailReadiness t421ExactFinalAuthorityRead
+	if exactReads {
+		repository, err := t421FinalAuthorityRepository(cfg.ServiceCatalogs)
+		if err != nil {
+			return err
+		}
+		if _, focused := analysisUnits[repository]; focused {
+			return errors.New("T42.1 exact mode requires whole-repository authority")
+		}
+		if manifestProvider == nil || openPartitionDomain == nil || callerReader == nil {
+			return errors.New("T42.1 exact mode requires the complete extraction runtime")
+		}
+		policies, err := extract.CandidatePolicies(exs)
+		if err != nil {
+			return fmt.Errorf("configure T42.1 exact candidate policies: %w", err)
+		}
+		reader, err := newT421FinalAuthorityReader(
+			repository, cfg.Server.DataDir, indexDir, st, searchGenerationPins,
+			policies,
+			func(readCtx context.Context) (candidate.State, error) {
+				return manifestProvider.CurrentPublicationState(readCtx, repository, nil)
+			},
+			openPartitionDomain, relationshipV3Cache, callerReader, visibleFor,
+		)
+		if err != nil {
+			return fmt.Errorf("configure T42.1 final authority reader: %w", err)
+		}
+		finalAuthority = t421ExactFinalAuthorityRead{
+			Limits: t421FinalAuthorityReadLimits(), Read: reader.Read,
+		}
+		tailReadiness = t421ExactFinalAuthorityRead{
+			Limits: t421TailReadinessLimits(), Read: reader.ReadTailReadiness,
+		}
+	}
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
@@ -1920,7 +1996,7 @@ func serve(args []string) error {
 	// without its own auth package). Stateless makes each POST carry its own
 	// authenticated principal; phebs tools are plain request/response, so
 	// nothing is lost.
-	mcpHandler := mcpsdk.NewStreamableHTTPHandler(
+	var mcpHandler http.Handler = mcpsdk.NewStreamableHTTPHandler(
 		func(request *http.Request) *mcpsdk.Server {
 			if mcpInvestigationMutation(request.Context()) {
 				return mcpWriteServer
@@ -1929,33 +2005,51 @@ func serve(args []string) error {
 		},
 		&mcpsdk.StreamableHTTPOptions{Stateless: true},
 	)
+	apiHandler, mcpHandler = t421ExactReadHandlers(
+		exactReads, apiHandler, mcpHandler,
+		t4013ExactReportSink("exact read accounting: "), failExactRead,
+		finalAuthority, tailReadiness,
+	)
 	handler := newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist))
 
-	srv := &http.Server{Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
-	shutdownDone := make(chan struct{})
+	srv := &http.Server{
+		Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second,
+		BaseContext: t421ExactReadServerBaseContext(ctx, exactReads),
+	}
+	shutdownErr := make(chan error, 1)
 	runBackground(func() {
-		defer close(shutdownDone)
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(shutdownCtx)
+		shutdownErr <- srv.Shutdown(shutdownCtx)
 	})
 
 	listener, err := net.Listen("tcp", cfg.Server.Addr)
 	if err != nil {
-		return err
+		stopBackground()
+		return serverTerminalError(
+			err, <-shutdownErr, exactReportFailed, exactReadFailed,
+		)
 	}
 	log.Printf("phebs %s listening on %s (data: %s)", version, cfg.Server.Addr, cfg.Server.DataDir)
 	reportT4013Startup("http_ready")
-	if err := srv.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
-		return err
-	}
-	// Serve returns as soon as Shutdown STARTS; wait for the drain so
-	// in-flight handlers (and their audit/usage writes) finish before the
-	// deferred store/searcher Closes run.
-	<-shutdownDone
+	serveErr := srv.Serve(listener)
+	// Shutdown waits at most five seconds. Exact modes retain a timeout as a
+	// terminal error; ordinary mode preserves its existing shutdown behavior.
 	stopBackground()
-	return t4013ExactReportTerminalError(exactReportFailed)
+	return serverTerminalError(
+		serveErr, <-shutdownErr, exactReportFailed, exactReadFailed,
+	)
+}
+
+func t421ExactReadServerBaseContext(
+	ctx context.Context,
+	enabled bool,
+) func(net.Listener) context.Context {
+	if !enabled {
+		return nil
+	}
+	return func(net.Listener) context.Context { return ctx }
 }
 
 func legacyServiceCatalogSelections(

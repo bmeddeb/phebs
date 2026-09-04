@@ -15,6 +15,7 @@ import (
 	"github.com/sourcegraph/zoekt"
 	"github.com/sourcegraph/zoekt/index"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -96,6 +97,20 @@ func ReadWholeManifest(
 	indexDir, repository string,
 	revisions []store.IndexedRevision,
 ) (WholeManifest, error) {
+	return ReadWholeManifestContext(
+		context.Background(), indexDir, repository, revisions,
+	)
+}
+
+// ReadWholeManifestContext is the request-accounted form of ReadWholeManifest.
+func ReadWholeManifestContext(
+	ctx context.Context,
+	indexDir, repository string,
+	revisions []store.IndexedRevision,
+) (WholeManifest, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return WholeManifest{}, err
+	}
 	var manifest WholeManifest
 	if err := readControlFile(
 		filepath.Join(indexDir, WholeManifestName(repository)), &manifest,
@@ -253,19 +268,29 @@ func ReadRepositorySearchGeneration(
 	indexDir, repository string,
 	revisions []store.IndexedRevision,
 ) (repositoryindex.SearchManifest, repositoryindex.SourceManifest, error) {
+	return readRepositorySearchGenerationContext(
+		context.Background(), indexDir, repository, revisions,
+	)
+}
+
+func readRepositorySearchGenerationContext(
+	ctx context.Context,
+	indexDir, repository string,
+	revisions []store.IndexedRevision,
+) (repositoryindex.SearchManifest, repositoryindex.SourceManifest, error) {
 	if IsPublishing(indexDir, repository) {
 		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{},
 			errors.New("whole-repository publication is in progress")
 	}
-	whole, err := ReadWholeManifest(indexDir, repository, revisions)
+	whole, err := ReadWholeManifestContext(ctx, indexDir, repository, revisions)
 	if err != nil {
 		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{}, err
 	}
-	search, err := repositoryindex.ReadSearchManifest(indexDir, repository)
+	search, err := repositoryindex.ReadSearchManifestContext(ctx, indexDir, repository)
 	if err != nil {
 		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{}, err
 	}
-	source, err := repositoryindex.ReadSourceManifest(indexDir, repository)
+	source, err := repositoryindex.ReadSourceManifestContext(ctx, indexDir, repository)
 	if err != nil {
 		return repositoryindex.SearchManifest{}, repositoryindex.SourceManifest{}, err
 	}

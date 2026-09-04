@@ -9,6 +9,8 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,12 +19,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/candidateid"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -57,6 +61,66 @@ func TestRecoveryPreparationRealStoreCompletedGeneration(t *testing.T) {
 	controls := recoveryPreparationFiles(t, fixture.runtime.Root)
 	paths := recoveryPreparationControlPaths(t, controls, generation)
 	assertRecoveryPreparationCompletion(t, controls[paths.completion].content, baseline.root.PlanDigest, 1)
+	for _, test := range []struct {
+		name   string
+		limits readaccounting.Counts
+		want   readaccounting.Counts
+		refuse bool
+	}{
+		{
+			name: "progress_read_accounting",
+			// Binding + generation + one current pointer; two native schedule
+			// reads, each retaining its existing maximum of 64 SDK attempts.
+			limits: readaccounting.Counts{ControlFileReads: 3, StoreReadAttempts: 2 * 64},
+			want:   readaccounting.Counts{ControlFileReads: 3, StoreReadAttempts: 2},
+		},
+		{name: "progress_query_limit", want: readaccounting.Counts{StoreReadAttempts: 1}, refuse: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			inspectionCtx, ledger, err := readaccounting.Start(ctx, test.limits)
+			if err != nil {
+				t.Fatal(err)
+			}
+			progress, readErr := fixture.runtime.Progress(inspectionCtx, fixture.repository)
+			counts, accountingErr := ledger.Finish()
+			if counts != test.want {
+				t.Fatalf("progress events=%+v, want %+v", counts, test.want)
+			}
+			if test.refuse {
+				if !errors.Is(readErr, readaccounting.ErrLimit) || !errors.Is(accountingErr, readaccounting.ErrLimit) ||
+					progress != (extractionpublication.Progress{}) {
+					t.Fatalf("progress query refusal=%+v, %v accounting=%v", progress, readErr, accountingErr)
+				}
+			} else if readErr != nil || accountingErr != nil || extractionpublication.ValidateProgress(progress) != nil ||
+				progress.State != "current" || progress.Domains != 1 || progress.CurrentDomains != 1 || progress.Succeeded != 1 {
+				t.Fatalf("completed native progress=%+v, %v accounting=%v", progress, readErr, accountingErr)
+			}
+		})
+		if t.Failed() {
+			return
+		}
+	}
+	apiOpts := api.Options{Version: "test", Store: fixture.state}
+	apiOpts.ExtractionProgress = api.NewExtractionProgressService(apiOpts, fixture.runtime)
+	handler := api.New(apiOpts)
+	httpCtx, httpLedger, err := readaccounting.Start(ctx, readaccounting.Counts{
+		ControlFileReads: 3, StoreReadAttempts: 4,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	httpRequest := httptest.NewRequest(
+		http.MethodGet,
+		api.ExtractionProgressPath+"?repository="+fixture.repository,
+		nil,
+	).WithContext(httpCtx)
+	httpResponse := httptest.NewRecorder()
+	handler.ServeHTTP(httpResponse, httpRequest)
+	httpCounts, httpAccountingErr := httpLedger.Finish()
+	if httpResponse.Code != http.StatusOK || httpAccountingErr != nil ||
+		httpCounts != (readaccounting.Counts{ControlFileReads: 3, StoreReadAttempts: 4}) {
+		t.Fatalf("production HTTP progress = %d events=%+v accounting=%v body=%s", httpResponse.Code, httpCounts, httpAccountingErr, httpResponse.Body.String())
+	}
 	request := extractionpublication.RecoveryPreparationRequest{
 		Schema:    extractionpublication.RecoveryPreparationSchema,
 		Authority: fixture.authority, GenerationDigest: generation, PriorScheduleDigest: initial.Digest,
@@ -65,8 +129,17 @@ func TestRecoveryPreparationRealStoreCompletedGeneration(t *testing.T) {
 		}},
 		Mode: extractionpublication.RecoveryPreparationScheduleOnly, TargetDomain: baseline.root.Domain, TargetOrdinal: 0,
 	}
-	if _, err := fixture.reconciler.PrepareRecovery(ctx, request); !errors.Is(err, extractionpublication.ErrRecoveryPreparationDisabled) {
-		t.Fatalf("default-inactive recovery preparation returned %v", err)
+	disabledCtx, disabledLedger, err := readaccounting.Start(ctx, readaccounting.Counts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, disabledErr := fixture.reconciler.PrepareRecovery(disabledCtx, request)
+	disabledCounts, disabledAccountingErr := disabledLedger.Finish()
+	if !errors.Is(disabledErr, extractionpublication.ErrRecoveryPreparationDisabled) {
+		t.Fatalf("default-inactive recovery preparation returned %v", disabledErr)
+	}
+	if disabledAccountingErr != nil || disabledCounts != (readaccounting.Counts{}) {
+		t.Fatalf("disabled preparation recorded work: %+v, %v", disabledCounts, disabledAccountingErr)
 	}
 	if !reflect.DeepEqual(controls, recoveryPreparationFiles(t, fixture.runtime.Root)) ||
 		!reflect.DeepEqual(initial, fixture.schedule(t, ctx)) ||
@@ -91,10 +164,33 @@ func TestRecoveryPreparationRealStoreCompletedGeneration(t *testing.T) {
 			before := fixture.schedule(t, ctx)
 			beforeFiles := recoveryPreparationFiles(t, fixture.runtime.Root)
 			request.PriorScheduleDigest, request.Mode = before.Digest, mode
-			prepared, err := fixture.reconciler.PrepareRecovery(ctx, request)
+			// Scope only the native operation, not this test's snapshots,
+			// assertions or subsequent scheduler recovery. One domain/partition
+			// reads generation+selected plan (2), authority/schedule bindings (4),
+			// domain plan/root/pointer/bitmap/result (5), and enqueue/post bindings
+			// (2). Checkpoint adds one bitmap reread. The fixture's real pointer
+			// callback runs four times, plus one domain and four schedule queries.
+			// Its source/observation callbacks are modeled; these counts do not
+			// claim the ordinary server's additional authority/candidate reads.
+			wantCounts := readaccounting.Counts{ControlFileReads: 13, StoreReadAttempts: 9, StoreWriteAttempts: 1}
+			if mode == extractionpublication.RecoveryPreparationCheckpoint {
+				wantCounts.ControlFileReads++
+			}
+			preparationCtx, ledger, err := readaccounting.Start(ctx, readaccounting.Counts{
+				ControlFileReads: wantCounts.ControlFileReads, StoreReadAttempts: 5 + 4*64, StoreWriteAttempts: 64,
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
+			prepared, err := fixture.reconciler.PrepareRecovery(preparationCtx, request)
+			counts, accountingErr := ledger.Finish()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if accountingErr != nil || counts != wantCounts {
+				t.Fatalf("native preparation read events = %+v, want %+v: %v", counts, wantCounts, accountingErr)
+			}
+			t.Logf("native preparation events: control_files=%d store_reads=%d member_visits=%d store_writes=%d", counts.ControlFileReads, counts.StoreReadAttempts, counts.MemberVisits, counts.StoreWriteAttempts)
 			wantGeneration := recoveryPreparationDigest("phebs-extraction-recovery-schedule-v1\x00" + generation + "\x00" + before.Digest)
 			wantDigest, err := store.GenerationScheduleDigest(store.GenerationScheduleSpec{
 				Repository: fixture.repository, Stage: extractionpublication.ScheduleStage,

@@ -1,6 +1,7 @@
 package rpccallerposting
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -73,6 +75,9 @@ func Open(ctx context.Context, root string, expected Root) (*Publication, error)
 		return nil, err
 	}
 	directory := generationDirectory(root, expected.Authority.Repository, expected.GenerationDigest)
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return nil, err
+	}
 	raw, err := readRegular(filepath.Join(directory, "root.json"), MaxRootBytes)
 	if err != nil {
 		return nil, err
@@ -101,6 +106,9 @@ func OpenGeneration(
 		return nil, fmt.Errorf("%w: generation lookup", ErrInvalid)
 	}
 	directory := generationDirectory(root, repository, generation)
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return nil, err
+	}
 	raw, err := readRegular(filepath.Join(directory, "root.json"), MaxRootBytes)
 	if err != nil {
 		return nil, err
@@ -339,12 +347,31 @@ func (publication *Publication) openMember(
 	if err := ctx.Err(); err != nil {
 		return Member{}, err
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return Member{}, err
+	}
 	raw, err := readRegular(filepath.Join(publication.directory, receipt.Name), MaxMemberBytes)
 	if err != nil || int64(len(raw)) != receipt.ContentBytes {
 		return Member{}, fmt.Errorf("%w: member bytes", ErrInvalid)
 	}
 	var value Member
-	if err := decodeExact(raw, MaxMemberBytes, &value); err != nil || validateMember(value) != nil ||
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
+		return Member{}, fmt.Errorf("%w: member", ErrInvalid)
+	}
+	if len(value.Postings) > 0 {
+		if err := readaccounting.Charge(
+			ctx, readaccounting.MemberVisit, uint64(len(value.Postings)),
+		); err != nil {
+			return Member{}, err
+		}
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return Member{}, fmt.Errorf("%w: member", ErrInvalid)
+	}
+	if validateMember(value) != nil ||
 		value.Protocol != receipt.Protocol || value.Bucket != receipt.Bucket ||
 		len(value.Postings) != receipt.PostingCount || value.Digest != receipt.ContentDigest {
 		return Member{}, fmt.Errorf("%w: member", ErrInvalid)

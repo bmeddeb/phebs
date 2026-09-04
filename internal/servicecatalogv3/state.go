@@ -1,6 +1,7 @@
 package servicecatalogv3
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -98,21 +99,33 @@ func ProjectServiceMember(
 	if err != nil {
 		return nil, err
 	}
-	return projectServiceMember(root, descriptor, raw, sourceGeneration)
+	return projectServiceMember(
+		context.Background(), root, descriptor, raw, sourceGeneration,
+	)
 }
 
 func projectServiceMember(
+	ctx context.Context,
 	root Root,
 	descriptor MemberDescriptor,
 	raw []byte,
 	sourceGeneration string,
 ) ([]servicecatalog.ServiceProjection, error) {
+	if ctx == nil {
+		return nil, ErrInvalid
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if descriptor.Kind != "service" || len(raw) != descriptor.ContentBytes ||
 		rawDigest(raw) != descriptor.Digest {
 		return nil, ErrInvalid
 	}
 	var member ServiceMember
-	if err := decodeCanonical(raw, &member); err != nil {
+	if err := decodeCanonicalMember(
+		ctx, raw, &member,
+		func() int { return len(member.Services) + len(member.Memberships) },
+	); err != nil {
 		return nil, err
 	}
 	if err := validateServiceMember(root, descriptor, member); err != nil {

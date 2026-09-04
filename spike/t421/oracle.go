@@ -1,17 +1,18 @@
 package t421
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"hash"
 	"slices"
 
 	"github.com/bmeddeb/phebs/internal/resolverinput"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/t421catalogprojection"
 )
 
 const combinedServices = 10_000
@@ -730,125 +731,15 @@ func queryCase(spec queryCaseSpec) QueryCase {
 }
 
 func deriveAuthoredOracle(catalog servicecatalog.Catalog) (Oracle, error) {
-	services := slices.Clone(catalog.Services)
-	slices.SortFunc(services, func(left, right servicecatalog.Service) int {
-		return compareStrings(left.Key, right.Key)
-	})
-	memberships := slices.Clone(catalog.Memberships)
-	slices.SortFunc(memberships, compareMemberships)
-	unowned := slices.Clone(catalog.Unowned)
-	slices.SortFunc(unowned, func(left, right servicecatalog.UnownedPlacement) int {
-		return compareStrings(left.Path, right.Path)
-	})
-
-	catalogIdentity := newIdentityBuilder("t421-independent-catalog-v1")
-	membershipIdentity := newIdentityBuilder("t421-independent-memberships-v1")
-	placementIdentity := newIdentityBuilder("t421-independent-placements-v1")
-	unownedPrefixIdentity := newIdentityBuilder("t421-independent-unowned-prefixes-v1")
-	queryIdentity := newIdentityBuilder("t421-independent-service-queries-v1")
-	for _, service := range services {
-		if err := catalogIdentity.add(service); err != nil {
-			return Oracle{}, err
-		}
-	}
-	for _, membership := range memberships {
-		if err := membershipIdentity.add(membership); err != nil {
-			return Oracle{}, err
-		}
-	}
-
-	dispositions := make(map[string]string, len(services))
-	queries := make(map[string][]oracleQueryPath, len(services))
-	placements := make(map[string]*oraclePlacement, len(memberships)+len(unowned))
-	for _, service := range services {
-		dispositions[service.Key] = service.Disposition
-	}
-	for _, membership := range memberships {
-		placement := placements[membership.Path]
-		if placement == nil {
-			placement = &oraclePlacement{Path: membership.Path, Claims: []oracleClaim{}}
-			placements[membership.Path] = placement
-		}
-		claimIndex := slices.IndexFunc(placement.Claims, func(claim oracleClaim) bool {
-			return claim.ServiceKey == membership.ServiceKey
-		})
-		if claimIndex < 0 {
-			placement.Claims = append(placement.Claims, oracleClaim{
-				ServiceKey: membership.ServiceKey, Disposition: dispositions[membership.ServiceKey],
-				Roles: []oracleRole{},
-			})
-			claimIndex = len(placement.Claims) - 1
-		}
-		placement.Claims[claimIndex].Roles = append(placement.Claims[claimIndex].Roles, oracleRole{
-			Role: membership.Role, Origin: membership.Origin,
-		})
-
-		servicePaths := queries[membership.ServiceKey]
-		if len(servicePaths) == 0 || servicePaths[len(servicePaths)-1].Path != membership.Path {
-			servicePaths = append(servicePaths, oracleQueryPath{Path: membership.Path})
-		}
-		servicePaths[len(servicePaths)-1].Roles = append(servicePaths[len(servicePaths)-1].Roles, oracleRole{
-			Role: membership.Role, Origin: membership.Origin,
-		})
-		queries[membership.ServiceKey] = servicePaths
-	}
-	for _, placement := range unowned {
-		if placements[placement.Path] != nil {
-			return Oracle{}, errors.New("T42.1 authored path is both owned and unowned")
-		}
-		placements[placement.Path] = &oraclePlacement{
-			Path: placement.Path, Unowned: true, UnownedOrigin: placement.Origin,
-			Claims: []oracleClaim{},
-		}
-		if placement.Origin == servicecatalog.OriginOverride {
-			if err := unownedPrefixIdentity.add(placement); err != nil {
-				return Oracle{}, err
-			}
-		}
-	}
-	paths := make([]string, 0, len(placements))
-	for path := range placements {
-		paths = append(paths, path)
-	}
-	slices.Sort(paths)
-	for _, path := range paths {
-		if err := placementIdentity.add(*placements[path]); err != nil {
-			return Oracle{}, err
-		}
-	}
-	for _, service := range services {
-		if err := queryIdentity.add(oracleServiceQuery{
-			ServiceKey: service.Key, Paths: queries[service.Key],
-		}); err != nil {
-			return Oracle{}, err
-		}
+	projection, err := t421catalogprojection.Derive(context.Background(), catalog)
+	if err != nil {
+		return Oracle{}, err
 	}
 	return Oracle{
 		Schema: OracleSchema, Independent: false, ConsumesPhebsResults: false,
-		Catalog: catalogIdentity.finish(), Memberships: membershipIdentity.finish(),
-		Placements: placementIdentity.finish(), UnownedPrefixes: unownedPrefixIdentity.finish(),
-		ServiceQueries: queryIdentity.finish(),
+		Catalog: SetIdentity(projection.Catalog), Memberships: SetIdentity(projection.Memberships),
+		Placements:      SetIdentity(projection.Placements),
+		UnownedPrefixes: SetIdentity(projection.UnownedPrefixes),
+		ServiceQueries:  SetIdentity(projection.ServiceQueries),
 	}, nil
-}
-
-func compareMemberships(left, right servicecatalog.Membership) int {
-	for _, pair := range [][2]string{
-		{left.ServiceKey, right.ServiceKey}, {left.Path, right.Path},
-		{left.Role, right.Role}, {left.Origin, right.Origin},
-	} {
-		if comparison := compareStrings(pair[0], pair[1]); comparison != 0 {
-			return comparison
-		}
-	}
-	return 0
-}
-
-func compareStrings(left, right string) int {
-	if left < right {
-		return -1
-	}
-	if left > right {
-		return 1
-	}
-	return 0
 }

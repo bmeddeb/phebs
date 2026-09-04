@@ -110,8 +110,8 @@ The runnable source-free HTTP/MCP inventory freezes:
 
 - one bounded structural All-code marker result while binding the exact
   combined physical authority;
-- one existence-hiding unauthorized-repository result with no repository or
-  generation read;
+- one existence-hiding unauthorized service-search result with one repository
+  authorization point read and no service-runtime, generation, or search read;
 - first-service detail with six memberships over five paths;
 - one 20-claim shared placement;
 - one unowned exclusion;
@@ -123,10 +123,13 @@ Selectors are source-free enums. Their projection digests commit the exact
 independent records rather than embedding generated source or paths in the
 retained plan.
 Every HTTP and MCP result separately records request-local control and member
-reads. Visible cases require at least one read and cannot exceed the matching
-`product_queries` phase-work maximum; the existence-hiding denial is exact
-zero/zero. Overflow-safe sums across both transports must fit the measured
-`product_queries` phase totals.
+reads. Visible cases require at least one control read and cannot exceed the
+matching `product_queries` phase-work maximum; corrected V2 permits a zero
+member count for a warm or empty result. Retained V1 keeps its historical
+zero/zero denial fixture; corrected V2 uses the production-shaped service
+selector and requires exactly one control read and zero member reads for each
+denied transport. Overflow-safe sums across both transports must fit the
+measured `product_queries` phase totals.
 
 ## Frozen execution contract
 
@@ -627,6 +630,557 @@ retains the known missing UI screenshot only. Production code, oracle checks,
 retained artifacts and safety/ceremony limits stay unchanged. No merge, push,
 new canonical plan, freeze or ceremony is authorized. The owning decision and
 cost record are in `PLAN.md`.
+
+### T42.1r6 bounded native read-accounting prerequisite
+
+The separate approved prerequisite starts from integrated T42.1r4/r5 commit
+`d776e1d7`. Its first slice attaches an explicit operation-context ledger to
+native recovery preparation and candidate reads. There is no ordinary server
+caller, environment switch, HTTP endpoint, background collector or event log.
+Four fixed counters distinguish control-file attempts, read-query attempts,
+decoded member visits and enqueue-write attempts. Actual retry-loop attempts
+are charged individually; topology and expected-result formulas are not events.
+Invalid/nested scopes, invalid events, late charges and the first over-limit
+charge make the ledger unusable as successful evidence. The first over-limit
+counter is a refusal sentinel, not a claim that its denied I/O executed.
+Owners finish only after all scoped operations have returned; scope context is
+never stored on a reusable publication. A successful ledger result does not
+replace the operation's error or cancellation result. Independent metadata
+probes are not control reads, and failed decoding invents no decoded record.
+Successful decoding is charged even when subsequent canonical/semantic
+validation refuses.
+
+The existing one-partition real-store test scopes only `PrepareRecovery`,
+excluding setup, verification and later recovery. With D domains, N results
+and checkpoint C, its file-read derivation is `8 + 4D + N + C`, plus one
+optional identical-binding reread. Its smaller authority callbacks yield
+`D + 4 + sum(four schedule-query attempt counts)` store reads. For D=N=1 and
+no retries, that means 13/14 file attempts, nine read queries, one enqueue
+attempt and zero member visits. The callback source/observation inputs remain
+modeled. Ordinary server callbacks and the full constructor have different
+read costs; this test cannot establish those totals.
+
+Candidate strict-open accounting includes the manifest attempt and decoded
+artifact records plus every projection-spool merge/final-scan visit. Member
+replays use their current caller context; retaining an already validated
+publication does not itself reread members. Ordinary operations add bounded
+context lookups/branches and no ledger allocation or locking. Each temporary
+projection reader also carries its operation context; at most two merge input
+readers are open, adding two interface fields (32 bytes on 64-bit hosts).
+An active ledger retains four counts, four limits and one local mutex; charges
+hold that mutex only for checked integer updates, never I/O or callbacks.
+
+The genuine real-store preparation passes with the exact counts above and
+unchanged result/evidence preservation. Complete ledger/candidate/extraction
+normal and race packages pass, together with scoped store accounting tests
+normally and under race, repository compilation, scoped vet, repository-pinned
+2.12.2 lint, module verification and glossary. Additional late-control-limit
+tests preserve the committed successor and checkpoint prefix without retry or
+rollback. Independent source cross-review has no actionable findings within
+this scope. Docs-check retains only the known UI screenshot gap. This is a
+working-tree result, not a full-store/full-repository runtime or ceremony pass.
+
+That first slice did not close ordinary callback, public-query or complete
+inspector coverage, and changed no prospective phase budget or retained freeze.
+Sparse-root/domain controls and publication-marker reads are not covered by
+the candidate slice. Whole-phase cadence/retry/member derivation remains
+T42.1r1 work before T42.2 can execute.
+
+The subsequent bounded slice exercises the actual ordinary candidate provider
+against native candidate output and a real store: cold open observes four
+queries, one manifest and four decoded visits for its two-record fixture;
+warm open observes four queries only, and a compact reference two queries.
+Marker checks on these paths are metadata-only `IsPublishing` probes, not
+marker-content reads. A later replay charges its own scope. Final pointer
+refusal can evict the existing cache and make a subsequent attempt cold;
+that existing behavior must remain in any retry budget.
+
+The ordinary observation-fence callback is now tested through its shared
+server helper and native source/inventory builders: one initial pending probe
+plus the selected pointer, selected super-root and confirming pointer means
+four control attempts. The compact reference alone costs three. Existing
+authority, error and cancellation behavior stays unchanged; accounting does
+not add per-read cancellation checks. Each of its four recovery-preparation
+invocations therefore adds four controls. Combining the measured components
+with the production call graph gives ordinary preparation
+`24 + 4D + N + C + B + H` file attempts and
+`D + 10 + sum(A1..A4)` read-query attempts: C is checkpoint, B is an optional
+identical-binding reread, H is a cold manifest open (each 0/1), and each A is
+one schedule read's actual 1–64 attempts. This composition is not an end-to-end
+ordinary preparation run. Cold member work is the actual strict-open/projection
+work already described, not one visit per logical member.
+
+Direct extraction inspections also carry the scope through their existing
+readers. With complete current authority, `Current` costs four controls;
+`Status` costs `1 + 6D + N`; `Progress` costs `2 + D` controls and two native
+schedule reads, each with 1–64 attempts. Missing/invalid pointers can shorten
+Status without making it current. Scoped accounting errors cannot be swallowed
+as ordinary not-current results. Real-store one-partition Progress observes
+three controls and two queries. These paths add no I/O, children, persistent
+state or new locks: only the existing inactive lookup or scoped counter update.
+Full-stage source/inventory scans, sparse candidate controls and HTTP/MCP
+attribution remain outside this proof. No whole-inspector budget, phase cap,
+retained plan, freeze or ceremony is changed.
+
+The first real transport slice started narrower than the unfinished inspector.
+With `PHEBS_T421_EXACT_READS=source-free-v1`, the server wraps the
+post-authentication legacy-config-key `GET /api/extraction-progress` handler.
+Exact requests carry `X-Phebs-T421-Exact-Reads: source-free-v1` and the
+next canonical `X-Phebs-T421-Exact-Read-Ordinal`. The server, not the client,
+sets limits: `2 + extractionpublication.MaxDomains` control reads, two
+authorization reads plus two independently retried schedule reads, and zero
+members/writes. Ordinals are canonical, strictly sequential, single-active and
+bounded against integer overflow. The exact per-epoch call inventory is still
+open, so this slice deliberately claims no smaller cadence-derived quota; the
+final runner must derive and freeze one from its cumulative phase inventory.
+
+After the synchronous handler returns, one canonical
+`t421-source-free-read-accounting-v1` object is written both to the exact log
+sink and the base64url `X-Phebs-T421-Exact-Read-Report` response trailer. It
+contains only schema, ordinal, accounting status and the four counters. Exact
+admission, ledger, report or incomplete-handler failure cancels the server and
+survives as a distinct terminal error. Authentication remains outside the
+scope, and anonymous headers on public routes cannot reach the failure latch.
+`complete` means the accounting scope closed, not that HTTP semantics passed;
+the runner must also bind the response oracle, server epoch and phase.
+Ordinary mode returns the original handler without a wrapper; it gains only the
+already-recorded inactive context checks in instrumented readers.
+
+The subsequent compact-inventory slice derives calls from the existing phase,
+deadline and five-epoch tables instead of copying T40's full scan. `H` is
+epoch-launch health at 250 ms; `X` is exact extraction progress, immediate then
+at five-second cadence only until stage readiness; `F` is one coherent final
+current-authority and authorized-semantic pass; `L` is lifecycle status only
+for pressure-80, pressure-75 and lifecycle collection; `R` is transition-local
+evidence, including archive/destroy/restore comparison; and `Q` is the frozen
+HTTP/MCP page inventory. Product queries use
+`F,Q,F`; every other operational phase has one final `F`. The maximum attempt
+formula is `1 + floor(deadline_ms/cadence_ms)`, conservatively admitting a
+timer/ticker tie at the deadline. At that pre-T slice this yielded
+accounted-server-call maxima of 5,763, 2,881, 5,762, 3,366 and 5,802 for epochs
+one through five.
+Stale-lease recovery is part of X readiness and therefore retains the full
+five-second retry inventory rather than one optimistic call.
+
+V2 binds the inventory schema, both cadences, every phase row and every epoch
+aggregate through `inspection_inventory_sha256`; plan validation rejects a
+changed digest. The rows stay derived from the existing phase/deadline tables
+instead of being duplicated into the plan.
+
+Q runs cases in plan order, HTTP then MCP, without unrelated product traffic.
+All-code uses the shared-current reader. Startup's current service-runtime pin
+already warms the shared relationship generation cache; F cannot warm the
+separate catalog root/member cache, which therefore misses once on the first
+visible detail. With six relationship first pages and eight continuations, the
+two transports derive `C=2*(2+2*16+6*5+8*2)=160` file controls and
+`S=2*(2+1+7+2*11+6*4+8*3)+3+1=164` store attempts, so `K=324`; writes are zero.
+These are contract formulas awaiting transport instrumentation, not a measured
+Q pass. A member visit is one application record successfully decoded from a
+bounded immutable member payload, charged before any later framing, canonical,
+semantic or consumer refusal. The frozen units are candidate artifacts and
+projection rows, source owners, catalog services/memberships/inherited entries/
+placements, relationship fragments/services, RPC/Kafka postings and caller
+leaves. Rereads count; roots, pointers, receipts/descriptors, response wrappers,
+derived objects and cache hits do not; warm and empty reads may visit zero.
+The first HTTP service detail and both relationship transports must be positive;
+the following MCP detail cache hit and other warm/empty cases must be zero.
+
+Native M instrumentation now lives at the shared immutable-member decoders:
+source owners, caller leaves, catalog services/memberships/inherited entries/
+placements, relationship fragments/services, and RPC/Kafka postings. A charge
+follows successful application-record decode but precedes later framing,
+canonical, semantic, or consumer checks. Bounded array-backed members charge
+their decoded cardinality once. Refusal happens before delivery or cache
+insertion; retries and explicit rereads therefore count again. Roots, pointers,
+receipts/descriptors, wrappers, derived projections, current checks and cache
+hits remain zero. The context-aware complete-catalog form is `CatalogContext`;
+ordinary `Catalog` retains its prior behavior through a background wrapper.
+These sites enable later F/Q receipts but do not yet derive their totals.
+
+All affected current-source packages pass normally and under race, together
+with repository compilation, scoped vet, pinned 2.12.2 lint, module
+verification, glossary and whitespace. Independent review found one catalog
+ordering defect: whole-input preflight rejected a trailing value before the
+typed decode could charge its already-decoded records. The shared decoder now
+preflights the bounded first value, performs typed decode and M charge, then
+rejects trailing or noncanonical input; strict collection preflight retains its
+whole-input EOF check. The trailing-value regression passes normally and under
+race, and exact correction re-review is critical/high/medium/low `0/0/0/0`.
+Docs-check still reaches only the known UI-owned missing screenshot. F must use
+`CatalogContext`, Q must use the cache-backed catalog reader, and relationship
+reads must remain V3-only for this coverage to be complete.
+
+F's first bounded foundation is the private V3 relationship snapshot. The
+cache entry's existing lease pins the selected generation through a full scan;
+the reader validates every service and repository member and every reference
+join, collects only deterministic projections, then rechecks the current
+pointer before exposing the result. It returns no partial object on a late
+failure. One physical snapshot therefore charges one C per service/repository
+member file and exact M of `service_count + projection_fragment_count`;
+repeated calls reread and recharge because no semantic result cache was added.
+The retained projection charge is
+canonical JSON bytes plus the builder's 512-byte allowance per projection,
+bounded by the existing 512 MiB resident fence. That fence is not a process-RSS
+bound: one bounded member, validation maps, marshal temporaries and slice growth
+are additional transient memory. The ordinary complete validator supplies no
+collector, retaining no projections and doing no new semantic marshal.
+
+The focused suite covers exact completion and caller ownership, exact resident
+admission, corrupt final-member refusal after full decoded-record charging,
+M-limit refusal, cancellation and final-pointer supersession. The independent
+correction re-review is critical/high/medium/low `0/0/0/0`. The complete
+relationship-publication package passes normally in 32.125s and under race in
+207.095s; repository compilation, scoped vet/pinned 2.12.2 lint, glossary and
+whitespace pass. Docs-check reaches only the unchanged UI-owned missing
+screenshot. This slice does not implement F's catalog/state/search/source/
+extraction authority, authorization, RPC/Kafka composition, private semantic
+cache, exact C/S/M totals, handler, phase caps or replacement freeze.
+
+F1 now supplies the selected-catalog foundation without publishing a partial F
+surface. `ReadCatalogContext` accepts the exact root supplied by the later
+outer authority reader, takes ownership of each service/placement member byte
+slice, and performs the complete `CatalogContext` validation. The cold M term
+is therefore the records actually decoded before any later refusal: 10,000
+services + 60,000 memberships + zero inherited placement entries + 31,605
+placements = 101,605 for the frozen corpus. The validated catalog is reduced
+once to its logical digest, authority-neutral semantic digest, canonical source
+identity, and catalog, membership, placement, override-unowned-prefix, and
+service-query set identities. The common five-set derivation now serves both
+plan authoring and exact F, while the independent arithmetic oracle remains the
+plan's separate cross-check; a runtime regression compares all eight fields for
+A, B, and A-return. Member decoders batch-charge once per member, so the cold
+M total takes at most 64 short ledger mutex updates rather than 101,605 locks.
+
+The private cache holds only those scalar identities in one slot keyed by the
+complete comparable runtime selector. A miss returns a pending value and does
+not warm the slot; only the future whole-F reader may call the deliberately
+named `commitAfterFinalFence` after reauthorization and all final authority
+checks. Cancellation, decoded-record limit, corruption, derivation failure, or
+an omitted commit leaves the old slot unchanged. A committed hit charges zero
+M, performs no member read or semantic walk, and returns its own exact-root
+descriptor slices. A replacement selector displaces the one old slot only
+after its successful final fence, and a restarted process begins cold. Q's
+existing catalog root/member cache is never consulted or warmed.
+
+Cold transient memory remains bounded but is not equated with the logical-byte
+limit: at most 64 owned encoded members/32 MiB plus one at-most-2-MiB
+source-returned member buffer, the normalized catalog Go object whose canonical
+logical encoding is at most 16 MiB, an at-most-16-MiB canonical source buffer,
+sorted shallow views, bounded placement/query maps, and hash state can coexist
+before being discarded; this inventory is not a process-RSS bound. The retained
+slot is the full selector key, eight
+scalar identities, a flag, and a mutex. A warm hit uses one short mutex section,
+separately performs the complete at-most-256-KiB root validation/digest pass,
+and clones at most 64 root descriptors; it does no member read or catalog walk. The
+at-most-64 member reads become production Surreal queries, but F1 does not yet
+charge or derive their S total. This slice is still deliberately unwired. The
+outer F reader must add initial/final repository authorization, initial/final
+complete runtime selector and selected-state fences, fresh exact-root
+acquisition, every other authority plane, the route/receipt, and exact C/S/M
+totals. No phase cap, ordinal ceiling, plan freeze, merge, execution, release,
+or scale claim follows.
+
+Independent F1 review found one medium cost defect in the first grouping pass:
+each membership scanned the claims already accumulated for its path. The
+membership sort makes the current service's claim the last claim for that path,
+so the corrected implementation uses one constant-time last-claim check.
+Correction re-review is critical/high/medium/low `0/0/0/0`. Complete normal
+catalog/projection/command suites and the exact focused race/parity gate pass;
+repository-wide compilation, scoped vet, pinned lint with zero issues, module
+verification, glossary, formatting, and whitespace pass. The complete package
+crossed a 30-minute cumulative allowance while the inherited Kafka
+relationship-component test was syncing a file; that test passes alone in
+296.036s, and no test process remains. Docs-check still reaches only the known
+UI-owned missing screenshot.
+
+Only immutable decoded member inventories may be reused within one live server
+epoch after a fresh complete authority-key match. Logical delta B and process
+restart launch new epochs and therefore start cold. Mutable pointers,
+authorization, epoch/config identity, lifecycle/capacity, recovery residue and
+pagination remain fresh. F reads selected activation authority from the store
+and uses a private catalog projection cache, isolated from Q's catalog cache.
+V2 therefore names F's semantic reader as private exact-current authority;
+retained V1 keeps the historical public-product-reader label.
+Archive does not borrow extraction/relationship evidence across destruction;
+its exact catalog binding continues to use the intentionally census-free native
+reuse path selected by the later correction ADR.
+
+V2's closed server environment now enables the exact-read mode. The same
+post-auth wrapper also admits `GET /api/lifecycle-status` with zero native-read
+limits: the endpoint returns its already-maintained bounded in-memory snapshot,
+so a future instrumented file/query/member/write event fails closed. This adds
+one ledger/report only to marked exact-mode calls and no ordinary endpoint work.
+
+This is still not complete HTTP/MCP or phase accounting. Local `F/R/Q` reads,
+transition polling, product protocol overhead, final ordinal ceiling and
+replacement phase budgets remain uninstrumented. The audit also proves
+the retained prospective caps cannot yet be frozen: warm/logical phases still
+allow zero controls despite native nonzero reads, while one fresh inherited
+T40 extraction scan needs at least 294 controls for the T42 profile, already
+above the 255 full-pass cap. The correction therefore requires a compact T42
+inspector budget; neither retained artifact nor phase cap changes here.
+
+Final validation closes this transport slice. Complete `cmd/phebs` and
+`internal/extractionpublication` suites pass normally in 53.881s/41.746s and
+under race in 55.947s/39.722s. The real-store regression observes the complete
+one-domain HTTP/Huma/authorization/runtime composition at three controls and
+four store reads; the wire test reads a 200 body to EOF before comparing its
+trailer with the synchronous sink. Affected vet and pinned lint, all-package
+compile, module verification, glossary, formatting and whitespace pass.
+Independent review passes plus the final correction re-review leave
+critical/high/medium/low `0/0/0/0`. The one
+documentation failure is the unchanged UI-owned missing
+`ui/receipts/fixtures/service-boundary.png`.
+
+The expanded working tree passes full normal and race suites for ledger,
+candidate, candidatejob, extractionpublication, sourcepartition,
+observationpublication and cmd/phebs; scoped store accounting normal/race;
+repository compilation; scoped vet and pinned 2.12.2 lint; module verification,
+glossary and whitespace. Independent source/cost review is clear after one
+cost-comment wording correction. Docs-check still reports only the known
+missing UI screenshot. These are package/component gates, not a full store,
+full repository runtime, ordinary-server replay or ceremony pass.
+
+#### F2 final-authority reader, transport, and accounting
+
+F is one private exact-mode `GET /api/t421/final-authority`, admitted only after
+legacy-config-key authentication, the exact activation header and the next
+canonical ordinal. It accepts no query and permits one active marked request.
+The response uses `t421-final-authority-source-free-v1` with the
+`t421-final-state-projection-source-free-v1` projection and contains no
+repository path, directory, private error, cause or outcome text.
+
+The reader authorizes the repository before touching private authority. It then
+reads the complete runtime selector, selected state and exact activated
+plan/settled schedule/unit; acquires the selected catalog root and complete
+catalog; pins the immutable search generation and validates equal HEAD-only
+receipt/search/source controls; derives the physical tree and source-free
+search, observation and candidate identities; reads current observation and
+candidate authority; and opens every exact extraction plan/root and physical
+candidate-member partition. Final confirmation repeats every extraction
+authority, candidate, observation, catalog root, selected state, activation,
+caller, relationship pointer, runtime selector and repository
+authorization/commit fence.
+
+Source candidate membership is checked through two independent physical
+planes. The source walk derives an order-independent proof over each selected
+regular record's path, object ID, declared bytes and required flag. Extraction
+replay rebuilds that proof from every candidate-member execution partition and
+requires exact cardinality and exact proof equality. Repeated execution
+subranges are physical rereads and are charged again.
+
+The relationship side reads and validates every V3 service and projection
+member, derives the source-free semantic families and product projection, then
+opens the exact resolver, RPC and Kafka component generations. Resolver
+validation reads every namespace member. RPC and Kafka walk every posting
+member, and the resulting multiset must exactly equal the relationship
+projections by kind, plane, class, lookup key and posting digest; missing, extra
+or self-consistently replaced components refuse. The caller generation must
+bind the same commit, candidate, resolver and relationship upstream authority
+and remain current at the final fence.
+
+F owns two process-local one-slot caches. The source key is repository, search
+generation, source generation, commit and policy digest; the catalog key is the
+complete runtime selector. A miss is only prepared. After all authority fences,
+the caller lease is explicitly released and any release error refuses the read;
+the deferred release remains idempotent cleanup. The transport must then write
+the complete body and finish the ledger cleanly before committing the pending
+source and catalog values together under the fixed source-before-catalog lock
+order. No cache lock spans I/O or projection work. Q's catalog cache and the
+shared candidate, relationship and caller caches retain their independent
+policies.
+
+For one F call, with indicators in `{0,1}`:
+
+`C = 29 + 3D + T + V_f + R_f + U + I_s + I_c + I_r + 5I_l`
+
+`S = 30 + 6D + 3A + G*I_g + H`
+
+`M = V + E + R_m + Z + 2N*I_s + P*I_c + K*I_g + J*I_l`
+
+`W = 0`
+
+`D` is the extraction-domain count; `T` is the number of present typed-scope
+controls; `A` is the caller-adapter count; `V_f` is the V3 relationship service-
+plus-repository-member-file count; `R_f` is the resolver namespace
+member-file count; `R_m` is the resolver decoded-record count; `U` and `Z` are
+the combined RPC/Kafka member-file and decoded-posting counts; `G` is the
+selected catalog member-query count; and `H` is the actual zero-through-two
+selected-state historical-preimage fallback reads. `N` is the source-owner
+count; `P` is one candidate repository-plus-caller artifact traversal, every
+input record reread by the existing 512-record binary-carry and final-fold
+merges, and one final projection scan. Whole-repository exact F admits no local
+projections. `K` is the decoded catalog-record count; `V` is V3 relationship service records plus
+projection fragments; `E` is physical candidate records decoded by extraction
+replay, repeated for every execution subrange; and `J` is caller-leaf records.
+`I_s`, `I_c`, `I_r`, `I_g` and `I_l` respectively indicate source, candidate,
+relationship-root, catalog and caller cache misses.
+
+Thus the empty-reader-cache cold envelope on the current-summary path is
+`C=37+3D+T+V_f+R_f+U`, `S=30+6D+3A+G`,
+`M=2N+P+K+V+E+R_m+Z+J`, `W=0`. Fully warm is
+`C=29+3D+T+V_f+R_f+U`, `S=30+6D+3A`,
+`M=V+E+R_m+Z`, `W=0`. Warm still rereads extraction candidate members,
+complete relationship semantics, resolver namespaces and RPC/Kafka postings.
+“Warm” means these reader caches, not OS page cache. A ceremony epoch may
+already have a warm relationship root, but the receipt records the observed
+`I_r`; admission never substitutes that startup assumption.
+
+The no-slack per-request maximum is derived from the owning production limits:
+
+`Cmax = 37 + 3*extractionpublication.MaxDomains
+          + extractionpublication.MaxDomains
+          + relationshippublication.MaxServiceMembersV3
+          + relationshippublication.RepositoryBuckets
+          + resolvernamespace.MaxNamespaces
+          + rpccallerposting.MaxMembers
+          + kafkatopicposting.MaxMembers
+       = 18,469`
+
+`Smax = 32 + 6*extractionpublication.MaxDomains
+          + 3*callerleaf.MaxCallerDomains
+          + servicecatalogv3.MaxMembers
+       = 528`
+
+`Mmax = 2*repositoryindex.MaxOwners
+          + candidate.MaxWholeRepositoryStrictOpenMemberVisits()
+          + extractionpublication.MaxDomains
+            * candidate.MaxDomainResultPartitions
+            * candidate.MaxRecordsPerArtifact
+          + servicecatalogv3.MaxTotalServices
+          + servicecatalogv3.MaxMemberships
+          + servicecatalogv3.MaxDistinctPaths
+          + servicecatalogv3.MaxMembers*servicecatalogv3.MaxDistinctPaths
+          + resolvernamespace.MaxRecords
+          + relationshippublication.MaxProjectionRecords
+            * relationshippublication.MaxProjectionBucketsV3
+          + relationshippublication.MaxServicesV3
+          + rpccallerposting.MaxPostings
+          + kafkatopicposting.MaxPostings
+          + callerleaf.MaxAggregateCoveredCandidates
+       = 589,656,064`
+
+The candidate term is exactly
+`4*candidate.MaxCorpusEntries + B512(2*candidate.MaxCorpusEntries)
+= 353,296,640`, where `B512(n)` sums every input-run length consumed by the
+production binary-carry and final-fold merges. It is neither slack nor a local-
+projection allowance.
+
+`Wmax=0`. These are request-admission ceilings with an exact limit-plus-one
+refusal sentinel, not frozen phase totals, expected ceremony counts, memory/RSS
+bounds or supported production scale.
+
+Only exact mode installs the server root as `http.Server.BaseContext`; terminal
+exact failure therefore cancels other in-flight work and blocks pending cache
+commit. Disabled mode returns the ordinary handler directly and leaves the root
+context nil. Caller release uses the existing registry transition token, so a
+concurrent publication transition may delay F and a last reader may perform
+retired-byte cleanup. That cleanup is existing publication-transition work,
+not a native read/write event; release is deliberately not request-cancellable,
+and cleanup failure refuses F. F adds no Git/blob read, child, store write, new
+publication mutation, persistent artifact, ordinary request, sync tick,
+startup scan or retry/no-op work beyond the default-inactive accounting
+branches and existing lease-release behavior.
+
+Focused accounting, candidate-proof, component-composition, source-free-shape,
+limit/refusal, cancellation and cache-order tests pass normally and under race.
+Complete `cmd/phebs` and resolver-namespace normal suites, the complete
+resolver-namespace race suite, all-package compilation, scoped vet, module
+verification, formatting, whitespace, and glossary checks pass; docs-check
+reaches only the pre-existing UI-owned
+missing `ui/receipts/fixtures/service-boundary.png`. Final independent review
+reports critical/high/medium/low `0/0/0/0`. This is an implemented F2
+surface, not a completed replacement-plan gate. It does not close R/Q totals,
+cumulative phase budgets, the final ordinal, corrected-plan freeze or execution,
+and establishes no public API, release, accuracy/completeness, supported limit,
+SLO, topology, migration, decommission or Epic-42 claim.
+
+#### F2 post-X tail-readiness correction
+
+Extraction-current is necessary but not sufficient before the phase's one F
+pass: downstream relationship and caller authority can still be settling, and
+a logical phase's selected runtime intentionally remains on A until B is ready
+to publish. Exact mode therefore adds one source-free `T` read after X. T reads
+the selected runtime, relationship pointer, relationship root, resolver
+namespace root, caller summary/current predicate, relationship pointer again,
+and selected-runtime confirmation. Its caller comparison uses the resolver
+namespace root's underlying resolver-catalog generation and manifest. F's
+resolver fields and caller comparison use the same identities; the enclosing
+namespace generation/root is storage authority, not the resolver-catalog
+identity consumed by caller publication.
+
+A missing relationship or resolver immutable root is pending only when a
+second relationship-pointer read proves the first authority was superseded.
+When the pointer is unchanged, missing bytes are terminal corruption. The ready
+path is exactly `C=4,S=4,M=0,W=0`: two pointer reads, one relationship-root read,
+one resolver-root read, the selected-runtime read and confirm, and caller
+summary/current reads. A deep attempt transiently decodes at most 256 KiB of
+relationship root and 8 MiB of resolver root and hashes at most the bounded
+caller summary. It adds no write, child, lock class, retained cache, cache
+invalidation, or ordinary-mode handler/state. At five-second cadence a
+four-hour phase can start at most 2,881 attempts.
+
+The prospective runner must combine T with the digest-bound phase-transition
+table in the compact inventory. Relative to the prior accepted F: cold is
+initial; warm, stale, restart, pressure, lifecycle, and product phases retain
+both relationship and caller pairs; physical B and return A replace both pairs;
+logical B replaces only the relationship pair; after the archive comparison R
+oracle completes, archive permits the relationship pair to remain or be wholly
+replaced while caller remains equal. Mixed generation/root changes refuse. The
+logical old-A counterexample proves the transition predicate rejects old
+logical A. The table itself participates
+in the inspection-inventory digest.
+
+With T, the five epoch accounted-request maxima are
+`11,529/5,763/11,526/6,254/8,689`; each ready T is exactly four C plus four S,
+and every attempt is budgeted at that at-most-four/four ceiling. Focused normal/race, supersession-versus-corruption, typed
+resolver identity, transition, inventory, contract, and whitespace checks pass.
+Production-shaped review then removed an invalid cross-scope upstream-digest
+comparison, counted candidate execution partitions instead of distinct backing
+members while retaining one physical decode charge per execution, and restored
+the exact frozen structural Go sentinel. A production-policy fixture preflight
+now checks every frozen domain count before server launch. The source-equivalent
+production/exercised-regression path passed in 465.56 seconds: ready T was `4/4/0/0`, cold F
+was `10,763/126/415,836/0`, warm F was `10,761/90/251,021/0`, and the
+candidate/relationship/caller cache-miss tuple was `0/1/0`. Deterministic
+late-selector supersession refused stale success, stopped exact mode nonzero,
+and bounded cleanup left no helper or Surreal process. The future runner still
+owns phase-table execution, R/Q accounting, replacement phase caps, the final
+ordinal, a superseding plan, freeze, and execution.
+
+#### F/Q exact native-accounting closure
+
+F's candidate strict-open term includes two complete repository/caller input
+walks, every input run consumed by the 512-record binary-carry and final-fold
+merges, the finished projection scan, and any local-projection records. Exact
+whole-repository F admits no local projections. Therefore
+`P=4*candidate.MaxCorpusEntries+B512(2*candidate.MaxCorpusEntries)
+=353,296,640`, and the corrected no-slack F member maximum is `589,656,064`.
+
+Q keeps exact `C/S/W=160/164/0`. Its M evidence is the checked plan-order sum
+of each query result's HTTP and MCP `member_reads`; it is not a plan-authored
+fixture scalar. The production-shaped regression separately derives each
+request's exact M from the current catalog member containing the selected
+service and the distinct current relationship projection and RPC/Kafka
+component members touched by that page. The first relationship page also
+charges its selected service member. This bar binds those independent reads to
+the same immutable roots used by the request.
+
+Repository identity is deliberately part of declaration lineage. It reaches
+resolver records, RPC postings, relationship projection digests, and the first
+digest byte that selects one of 256 repository members. Fresh repositories with
+equal commits can therefore redistribute the same projections and change the
+physical member counts charged by Q; co-resident RPC fragments can also change
+a Kafka page's member cost. A literal observed Q-M total is invalid, while the
+root-bound page oracle remains exact. This is expected physical packing, not
+cache drift or a product defect.
+
+The exact-tree two-server witness must build publication custody, restart on
+that custody, pass cold F, all 38 plan-order HTTP/MCP reports, warm F, and a
+deterministic late-selector conflict, then stop exact mode nonzero and leave no
+helper or Surreal child. This closes F/Q native-accounting validation only. R,
+cumulative phase bounds, the final ordinal, replacement freeze, execution,
+release, and scale/SLO claims remain open.
 
 ## Cost and nonclaims
 

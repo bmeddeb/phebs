@@ -1,6 +1,7 @@
 package servicecatalogv3
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
@@ -107,10 +109,20 @@ func FromV2(publication servicecatalog.Publication, catalog servicecatalog.Catal
 }
 
 func ValidateGeneration(generation Generation) error {
-	return validateGeneration(generation, nil)
+	return validateGeneration(context.Background(), generation, nil)
 }
 
-func validateGeneration(generation Generation, opened *servicecatalog.Catalog) error {
+func validateGeneration(
+	ctx context.Context,
+	generation Generation,
+	opened *servicecatalog.Catalog,
+) error {
+	if ctx == nil {
+		return ErrInvalid
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	root := generation.Root
 	if err := ValidateRoot(root); err != nil {
 		return err
@@ -122,13 +134,25 @@ func validateGeneration(generation Generation, opened *servicecatalog.Catalog) e
 	placementView := servicecatalog.Catalog{Schema: servicecatalog.Schema, Authority: root.Binding.Authority, Override: cloneOverride(root.Binding.Override)}
 	memberIndex := 0
 	for ordinal, descriptor := range root.ServiceMembers {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		encoded := generation.Members[memberIndex]
 		memberIndex++
 		if encoded.Kind != "service" || encoded.Ordinal != ordinal || len(encoded.Content) != descriptor.ContentBytes || rawDigest(encoded.Content) != descriptor.Digest {
 			return invalidf("service member inventory")
 		}
 		var member ServiceMember
-		if decodeCanonical(encoded.Content, &member) != nil || validateServiceMember(root, descriptor, member) != nil {
+		if err := decodeCanonicalMember(
+			ctx, encoded.Content, &member,
+			func() int { return len(member.Services) + len(member.Memberships) },
+		); err != nil {
+			if readaccounting.IsError(err) {
+				return err
+			}
+			return invalidf("service member %d", ordinal)
+		}
+		if validateServiceMember(root, descriptor, member) != nil {
 			return invalidf("service member %d", ordinal)
 		}
 		serviceView.Services = append(serviceView.Services, member.Services...)
@@ -141,13 +165,25 @@ func validateGeneration(generation Generation, opened *servicecatalog.Catalog) e
 	priorByPath := make(map[string]Placement, root.Paths)
 	prior := make([]Placement, 0, root.Paths)
 	for ordinal, descriptor := range root.PlacementMembers {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		encoded := generation.Members[memberIndex]
 		memberIndex++
 		if encoded.Kind != "placement" || encoded.Ordinal != ordinal || len(encoded.Content) != descriptor.ContentBytes || rawDigest(encoded.Content) != descriptor.Digest {
 			return invalidf("placement member inventory")
 		}
 		var member PlacementMember
-		if decodeCanonical(encoded.Content, &member) != nil || validatePlacementMember(root, descriptor, member) != nil {
+		if err := decodeCanonicalMember(
+			ctx, encoded.Content, &member,
+			func() int { return len(member.Inherited) + len(member.Placements) },
+		); err != nil {
+			if readaccounting.IsError(err) {
+				return err
+			}
+			return invalidf("placement member %d", ordinal)
+		}
+		if validatePlacementMember(root, descriptor, member) != nil {
 			return invalidf("placement member %d", ordinal)
 		}
 		next := ""
@@ -270,8 +306,17 @@ func validatePlacementMember(root Root, descriptor MemberDescriptor, member Plac
 }
 
 func (generation Generation) Catalog() (servicecatalog.Catalog, error) {
+	return generation.CatalogContext(context.Background())
+}
+
+// CatalogContext opens the complete generation and charges successfully
+// decoded service, membership, placement, and inherited-placement records to
+// an attached read-accounting scope. Ordinary callers attach no scope.
+func (generation Generation) CatalogContext(
+	ctx context.Context,
+) (servicecatalog.Catalog, error) {
 	var catalog servicecatalog.Catalog
-	if err := validateGeneration(generation, &catalog); err != nil {
+	if err := validateGeneration(ctx, generation, &catalog); err != nil {
 		return servicecatalog.Catalog{}, err
 	}
 	return catalog, nil

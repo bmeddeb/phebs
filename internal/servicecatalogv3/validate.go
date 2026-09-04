@@ -1,6 +1,7 @@
 package servicecatalogv3
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -259,9 +260,32 @@ func validateSuccessors(services map[string]servicecatalog.Service) error {
 }
 
 func logicalIdentity(catalog servicecatalog.Catalog) (int, string, error) {
+	return logicalIdentityContext(context.Background(), catalog)
+}
+
+// NormalizedCatalogLogicalDigest returns the V3 logical identity of an
+// already-validated, normalized catalog without rebuilding segmented members.
+func NormalizedCatalogLogicalDigest(
+	ctx context.Context,
+	catalog servicecatalog.Catalog,
+) (string, error) {
+	if ctx == nil {
+		return "", ErrInvalid
+	}
+	_, digest, err := logicalIdentityContext(ctx, catalog)
+	return digest, err
+}
+
+func logicalIdentityContext(
+	ctx context.Context,
+	catalog servicecatalog.Catalog,
+) (int, string, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, "", err
+	}
 	h := sha256.New()
 	_, _ = h.Write([]byte("phebs-service-catalog-v3-logical\x00"))
-	writer := &limitedWriter{limit: MaxLogicalBytes, writers: []io.Writer{h}}
+	writer := &limitedWriter{ctx: ctx, limit: MaxLogicalBytes, writers: []io.Writer{h}}
 	if err := writeLogical(writer, catalog); err != nil {
 		return 0, "", err
 	}
@@ -269,11 +293,15 @@ func logicalIdentity(catalog servicecatalog.Catalog) (int, string, error) {
 }
 
 type limitedWriter struct {
+	ctx            context.Context
 	limit, written int
 	writers        []io.Writer
 }
 
 func (writer *limitedWriter) Write(raw []byte) (int, error) {
+	if err := writer.ctx.Err(); err != nil {
+		return 0, err
+	}
 	if len(raw) > writer.limit-writer.written {
 		return 0, limitf("logical canonical bytes")
 	}

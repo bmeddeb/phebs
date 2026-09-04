@@ -15,6 +15,7 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 )
@@ -802,6 +803,11 @@ func (s *Surreal) GetServiceStateV3SummarySnapshot(
 		snapshotRevision > math.MaxInt64 || !validSHA256Digest(snapshotDigest) {
 		return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return servicecatalog.RepositoryState{}, fmt.Errorf(
+			"get service state v3 summary snapshot: %w", err,
+		)
+	}
 	currentResults, err := surrealdb.Query[[]serviceRepositoryStateRec](
 		ctx,
 		s.db,
@@ -828,6 +834,11 @@ func (s *Surreal) GetServiceStateV3SummarySnapshot(
 			return servicecatalog.RepositoryState{}, ErrInvalidServiceStateV3
 		}
 		return *summary, nil
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return servicecatalog.RepositoryState{}, fmt.Errorf(
+			"get service state v3 summary snapshot: %w", err,
+		)
 	}
 	preimageResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, s.db, `
 SELECT * FROM service_state_v3_repository_preimage
@@ -904,6 +915,11 @@ func (s *Surreal) GetServiceStateV3PointSnapshot(
 		!validSHA256Digest(snapshotDigest) {
 		return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return servicecatalog.ServiceState{}, fmt.Errorf(
+			"get service state v3 point snapshot: %w", err,
+		)
+	}
 	results, err := surrealdb.Query[[]serviceStateRec](
 		ctx,
 		s.db,
@@ -930,6 +946,11 @@ func (s *Surreal) GetServiceStateV3PointSnapshot(
 			return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
 		}
 		return cloneServiceStateV3(*state), nil
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return servicecatalog.ServiceState{}, fmt.Errorf(
+			"get service state v3 point snapshot: %w", err,
+		)
 	}
 	preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
 SELECT * FROM service_state_v3_preimage

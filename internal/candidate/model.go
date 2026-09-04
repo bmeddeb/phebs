@@ -4,6 +4,7 @@ package candidate
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repopath"
 )
@@ -663,6 +665,12 @@ func safePath(value string) bool {
 }
 
 func strictDecode(reader io.Reader, limit int64, destination any) error {
+	return strictDecodeMember(nil, reader, limit, destination) //nolint:staticcheck // Control decoding deliberately carries no member-observation context.
+}
+
+// A nil member context keeps control decoding uncharged. Record consumers
+// charge the first successful decode before trailing or semantic validation.
+func strictDecodeMember(memberContext context.Context, reader io.Reader, limit int64, destination any) error {
 	raw, err := io.ReadAll(io.LimitReader(reader, limit+1))
 	if err != nil {
 		return err
@@ -674,6 +682,11 @@ func strictDecode(reader io.Reader, limit int64, destination any) error {
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(destination); err != nil {
 		return err
+	}
+	if memberContext != nil {
+		if err := readaccounting.Charge(memberContext, readaccounting.MemberVisit, 1); err != nil {
+			return err
+		}
 	}
 	var trailing any
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {

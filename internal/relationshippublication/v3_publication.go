@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -26,6 +27,13 @@ type PublicationV3 struct {
 	rootValue  RootV3
 	pointer    PointerV3
 	pointerRaw []byte
+}
+
+// SemanticSnapshotV3 is one completely validated immutable generation. It is
+// returned only after every service and repository member agrees with the root.
+type SemanticSnapshotV3 struct {
+	Root        RootV3
+	Projections []Projection
 }
 
 // RecoveryPinStoreV3 can reconstruct every durable owner from a completely
@@ -787,6 +795,9 @@ func ReadPointerV3(ctx context.Context, root, repository string) (PointerV3, err
 		}
 		return PointerV3{}, err
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return PointerV3{}, err
+	}
 	raw, err := readRegular(filepath.Join(base, "current.json"), MaxRootBytesV3)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -844,6 +855,9 @@ func OpenGenerationV3(
 		}
 		return nil, err
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return nil, err
+	}
 	raw, err := readRegular(filepath.Join(directory, "root.json"), MaxRootBytesV3)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -885,6 +899,53 @@ func (publication *PublicationV3) Root() RootV3 {
 		return RootV3{}
 	}
 	return cloneRootV3(publication.rootValue)
+}
+
+// readSemanticSnapshotV3 validates and decodes every immutable member once. It
+// returns no partial snapshot when any later member or cross-member join fails.
+func (publication *PublicationV3) readSemanticSnapshotV3(
+	ctx context.Context,
+) (SemanticSnapshotV3, error) {
+	if publication == nil || ctx == nil {
+		return SemanticSnapshotV3{}, fmt.Errorf("%w: v3 semantic snapshot", ErrInvalid)
+	}
+	if err := ctx.Err(); err != nil {
+		return SemanticSnapshotV3{}, err
+	}
+	info, err := os.Lstat(publication.directory)
+	if err != nil {
+		return SemanticSnapshotV3{}, fmt.Errorf("stat v3 generation directory: %w", err)
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return SemanticSnapshotV3{}, fmt.Errorf("%w: v3 generation directory", ErrInvalid)
+	}
+	snapshot := SemanticSnapshotV3{
+		Root:        cloneRootV3(publication.rootValue),
+		Projections: make([]Projection, 0, min(publication.rootValue.ProjectionCount, 4096)),
+	}
+	if err := publication.validateSemanticSnapshotV3(ctx, info, &snapshot); err != nil {
+		return SemanticSnapshotV3{}, err
+	}
+	return snapshot, nil
+}
+
+func (publication *PublicationV3) readCurrentSemanticSnapshotV3(
+	ctx context.Context,
+) (SemanticSnapshotV3, error) {
+	snapshot, err := publication.readSemanticSnapshotV3(ctx)
+	if err != nil {
+		return SemanticSnapshotV3{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return SemanticSnapshotV3{}, err
+	}
+	if err := publication.confirmCurrent(ctx); err != nil {
+		return SemanticSnapshotV3{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return SemanticSnapshotV3{}, err
+	}
+	return snapshot, nil
 }
 
 func (publication *PublicationV3) ReadService(
@@ -1029,8 +1090,15 @@ func (publication *PublicationV3) ReadProjections(
 }
 
 func (publication *PublicationV3) ConfirmCurrent() error {
+	return publication.confirmCurrent(context.Background())
+}
+
+func (publication *PublicationV3) confirmCurrent(ctx context.Context) error {
 	if publication == nil || publication.base == "" || len(publication.pointerRaw) == 0 {
 		return fmt.Errorf("%w: v3 current confirmation", ErrInvalid)
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return err
 	}
 	raw, err := readRegular(filepath.Join(publication.base, "current.json"), MaxRootBytesV3)
 	if err != nil || !bytes.Equal(raw, publication.pointerRaw) {
@@ -1086,6 +1154,18 @@ func openDirectoryCompleteIdentityV3(
 		return nil, fmt.Errorf("%w: noncanonical v3 root", ErrInvalid)
 	}
 	publication := &PublicationV3{directory: directory, rootValue: value}
+	if err := publication.validateSemanticSnapshotV3(ctx, info, nil); err != nil {
+		return nil, err
+	}
+	return publication, nil
+}
+
+func (publication *PublicationV3) validateSemanticSnapshotV3(
+	ctx context.Context,
+	directoryInfo os.FileInfo,
+	snapshot *SemanticSnapshotV3,
+) error {
+	value := publication.rootValue
 	wanted := map[string]struct{}{"root.json": {}}
 	for _, receipt := range value.RepositoryMembers {
 		wanted[receipt.Name] = struct{}{}
@@ -1093,36 +1173,37 @@ func openDirectoryCompleteIdentityV3(
 	for _, receipt := range value.ServiceMembers {
 		wanted[receipt.Name] = struct{}{}
 	}
-	entries, err := readGenerationInventoryV3(directory, info)
+	entries, err := readGenerationInventoryV3(publication.directory, directoryInfo)
 	if err != nil {
-		return nil, fmt.Errorf("read v3 generation inventory: %w", err)
+		return fmt.Errorf("read v3 generation inventory: %w", err)
 	}
 	if len(entries) != len(wanted) {
-		return nil, fmt.Errorf("%w: v3 generation inventory", ErrInvalid)
+		return fmt.Errorf("%w: v3 generation inventory", ErrInvalid)
 	}
 	for _, entry := range entries {
 		if _, present := wanted[entry.Name()]; !present || entry.IsDir() ||
 			entry.Type()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("%w: unexpected v3 generation entry", ErrInvalid)
+			return fmt.Errorf("%w: unexpected v3 generation entry", ErrInvalid)
 		}
 	}
 	serviceSet := make([]serviceSetIdentityV3, 0, value.ServiceCount)
 	serviceRecords := make(map[string]*serviceValidationV3, value.ServiceCount)
+	var snapshotResidentCharge int64
 	var services, complete, empty, failed, references int
 	var serviceBytes int64
 	for _, receipt := range value.ServiceMembers {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return err
 		}
 		member, err := publication.openServiceMemberV3(ctx, receipt)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		services += len(member.Services)
 		serviceBytes += receipt.ContentBytes
 		for _, record := range member.Services {
 			if _, duplicate := serviceRecords[record.ServiceKey]; duplicate {
-				return nil, fmt.Errorf("%w: duplicate v3 service", ErrInvalid)
+				return fmt.Errorf("%w: duplicate v3 service", ErrInvalid)
 			}
 			validation := &serviceValidationV3{state: record.State}
 			for _, reference := range record.References {
@@ -1148,11 +1229,11 @@ func openDirectoryCompleteIdentityV3(
 	var repositoryBytes int64
 	for _, receipt := range value.RepositoryMembers {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return err
 		}
 		member, err := publication.openRepositoryMemberV3(ctx, receipt)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		fragments += len(member.Fragments)
 		repositoryBytes += receipt.ContentBytes
@@ -1160,11 +1241,19 @@ func openDirectoryCompleteIdentityV3(
 			count := member.Fragments[index].Count
 			projection, flattenErr := flattenProjectionBucketsV3(member.Fragments[index : index+count])
 			if flattenErr != nil {
-				return nil, flattenErr
+				return flattenErr
 			}
 			projections++
 			if joinErr := accumulateProjectionReferencesV3(projection, serviceRecords); joinErr != nil {
-				return nil, joinErr
+				return joinErr
+			}
+			if snapshot != nil {
+				if err := appendSemanticProjectionV3(
+					snapshot, &snapshotResidentCharge,
+					MaxResidentChargeBytes, projection,
+				); err != nil {
+					return err
+				}
 			}
 			index += count
 		}
@@ -1176,14 +1265,33 @@ func openDirectoryCompleteIdentityV3(
 		failed != value.FailedServiceCount || references != value.ServiceReferenceCount ||
 		serviceBytes != value.EncodedServiceBytes ||
 		wantServiceSet != value.Authority.ServiceStateSetDigest {
-		return nil, fmt.Errorf("%w: v3 generation totals", ErrInvalid)
+		return fmt.Errorf("%w: v3 generation totals", ErrInvalid)
 	}
 	for _, validation := range serviceRecords {
 		if validation.state != "failed" && validation.actual != validation.expected {
-			return nil, fmt.Errorf("%w: v3 service reference join", ErrInvalid)
+			return fmt.Errorf("%w: v3 service reference join", ErrInvalid)
 		}
 	}
-	return publication, nil
+	return nil
+}
+
+func appendSemanticProjectionV3(
+	snapshot *SemanticSnapshotV3,
+	residentCharge *int64,
+	residentLimit int64,
+	projection Projection,
+) error {
+	raw, err := json.Marshal(projection)
+	if err != nil {
+		return err
+	}
+	charge := int64(len(raw) + projectionResidentOverhead)
+	if charge > residentLimit-*residentCharge {
+		return ErrLimit
+	}
+	*residentCharge += charge
+	snapshot.Projections = append(snapshot.Projections, projection)
+	return nil
 }
 
 func readGenerationInventoryV3(
@@ -1225,6 +1333,9 @@ func (publication *PublicationV3) openRepositoryMemberV3(
 	if err := ctx.Err(); err != nil {
 		return RepositoryMemberV3{}, err
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return RepositoryMemberV3{}, err
+	}
 	raw, err := readRegular(
 		filepath.Join(publication.directory, receipt.Name), MaxRepositoryMemberBytes,
 	)
@@ -1235,8 +1346,23 @@ func (publication *PublicationV3) openRepositoryMemberV3(
 		return RepositoryMemberV3{}, fmt.Errorf("%w: v3 repository member bytes", ErrInvalid)
 	}
 	var value RepositoryMemberV3
-	if err := decodeExact(raw, MaxRepositoryMemberBytes, &value); err != nil ||
-		validateRepositoryMemberV3(value) != nil || value.Bucket != receipt.Bucket ||
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
+		return RepositoryMemberV3{}, fmt.Errorf("%w: v3 repository member", ErrInvalid)
+	}
+	if len(value.Fragments) > 0 {
+		if err := readaccounting.Charge(
+			ctx, readaccounting.MemberVisit, uint64(len(value.Fragments)),
+		); err != nil {
+			return RepositoryMemberV3{}, err
+		}
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return RepositoryMemberV3{}, fmt.Errorf("%w: v3 repository member", ErrInvalid)
+	}
+	if validateRepositoryMemberV3(value) != nil || value.Bucket != receipt.Bucket ||
 		len(value.Fragments) != receipt.FragmentCount || value.Digest != receipt.ContentDigest {
 		return RepositoryMemberV3{}, fmt.Errorf("%w: v3 repository member", ErrInvalid)
 	}
@@ -1262,6 +1388,9 @@ func (publication *PublicationV3) openServiceMemberV3(
 	if err := ctx.Err(); err != nil {
 		return ServiceMemberV3{}, err
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return ServiceMemberV3{}, err
+	}
 	raw, err := readRegular(
 		filepath.Join(publication.directory, receipt.Name), MaxServiceMemberBytes,
 	)
@@ -1272,8 +1401,23 @@ func (publication *PublicationV3) openServiceMemberV3(
 		return ServiceMemberV3{}, fmt.Errorf("%w: v3 service member bytes", ErrInvalid)
 	}
 	var value ServiceMemberV3
-	if err := decodeExact(raw, MaxServiceMemberBytes, &value); err != nil ||
-		validateServiceMemberV3(value) != nil || value.Ordinal != receipt.Ordinal ||
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
+		return ServiceMemberV3{}, fmt.Errorf("%w: v3 service member", ErrInvalid)
+	}
+	if len(value.Services) > 0 {
+		if err := readaccounting.Charge(
+			ctx, readaccounting.MemberVisit, uint64(len(value.Services)),
+		); err != nil {
+			return ServiceMemberV3{}, err
+		}
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return ServiceMemberV3{}, fmt.Errorf("%w: v3 service member", ErrInvalid)
+	}
+	if validateServiceMemberV3(value) != nil || value.Ordinal != receipt.Ordinal ||
 		value.Count != receipt.Count || value.FirstKey != receipt.FirstKey ||
 		value.LastKey != receipt.LastKey || len(value.Services) != receipt.ServiceCount ||
 		value.Digest != receipt.ContentDigest {

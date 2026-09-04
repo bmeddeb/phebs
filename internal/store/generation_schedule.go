@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -915,6 +916,9 @@ func (s *Surreal) EnqueueGenerationSchedule(
 		"max_active_stages": MaxGenerationActiveStagesPerRepository,
 	}
 	for attempt := 0; ; attempt++ {
+		if err := readaccounting.Charge(ctx, readaccounting.StoreWriteAttempt, 1); err != nil {
+			return nil, fmt.Errorf("enqueue generation schedule: %w", err)
+		}
 		results, queryErr := surrealdb.Query[[]generationScheduleRec](ctx, s.db, enqueueGenerationScheduleSQL, variables)
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
@@ -956,6 +960,10 @@ func generationScheduleRows(results *[]surrealdb.QueryResult[[]generationSchedul
 // already expired while the server committed.
 const generationReconcileTimeout = 5 * time.Second
 
+// MaxGenerationScheduleReadAttempts is the retry ceiling for one
+// GetGenerationSchedule call, including its first attempt.
+const MaxGenerationScheduleReadAttempts = maxQueueRetries
+
 // queryGenerationSchedule retries only SurrealDB's explicit transient
 // conflict class. Generation transactions bind immutable digests, exact
 // offsets, and exact worker leases, so replay after an aborted conflict cannot
@@ -968,6 +976,13 @@ func queryGenerationSchedule[T any](
 	variables map[string]any,
 ) (*[]surrealdb.QueryResult[T], error) {
 	for attempt := 0; ; attempt++ {
+		// This helper also executes writes. Only this preparation-reachable
+		// read operation belongs to the narrowly scoped read-attempt ledger.
+		if operation == "get_schedule" {
+			if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+				return nil, err
+			}
+		}
 		results, err := surrealdb.Query[T](ctx, db, statement, variables)
 		if err == nil {
 			return results, nil

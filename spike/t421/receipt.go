@@ -2170,13 +2170,14 @@ func observedPhaseStateMatchesAuthority(
 	authority AuthorityPhaseResult,
 	schema string,
 ) bool {
+	semanticReader := semanticReaderForObservationSchema(schema)
 	authoritySHA256, err := authoritySnapshotSHA256(authority.AuthorityState)
-	if err != nil || value.Schema != schema || !validDigest(value.ProjectionSHA256) ||
+	if err != nil || semanticReader == "" || value.Schema != schema || !validDigest(value.ProjectionSHA256) ||
 		!slices.Contains([]string{"passed", "stopped"}, authority.Outcome) || !authority.Current ||
 		value.AuthoritySnapshotSHA256 != authoritySHA256 ||
 		value.SourceAuthorityRecipe != "source-generation-and-authored-tree-recipe-v1" ||
 		value.AuthorityReader != "current-root-then-generation-then-exact-member-inventory-v1" ||
-		value.SemanticReader != "authorized-product-reader-canonical-projection-v1" {
+		value.SemanticReader != semanticReader {
 		return false
 	}
 	if value.Projection == nil {
@@ -2186,6 +2187,16 @@ func observedPhaseStateMatchesAuthority(
 		value.Projection.LogicalRevision == authority.LogicalRevision &&
 		value.Projection.SearchInventory == authority.SearchInventory &&
 		value.Projection.ObservationInputInventory == authority.ObservationInputInventory
+}
+
+func semanticReaderForObservationSchema(schema string) string {
+	if schema == "t422-observed-phase-state-v4" {
+		return "authorized-product-reader-canonical-projection-v1"
+	}
+	if schema == "t422-observed-phase-state-v5" {
+		return "private-exact-current-authorized-canonical-projection-v1"
+	}
+	return ""
 }
 
 func validDiagnosticProjection(value, frozen PhaseStateProjection) bool {
@@ -3364,7 +3375,7 @@ func validateQueryEvidence(value QueryEvidence, outcome, authoritySHA256 string,
 	var controlReads, memberReads uint64
 	for index, result := range value.Results {
 		if err := validateQueryResult(
-			result, plan.Oracle.QueryCases[index], plan.ReceiptContract.QueryTransportSchema, authoritySHA256, workBounds,
+			result, plan.Oracle.QueryCases[index], plan.ReceiptContract.QueryTransportSchema, authoritySHA256, workBounds, plan.Schema,
 		); err != nil {
 			return fmt.Errorf("T42.2 query result %q differs from the frozen oracle", result.Name)
 		}
@@ -3478,6 +3489,7 @@ func validateQueryResult(
 	value QueryCase,
 	schema, authoritySHA256 string,
 	workBounds PhaseWorkBounds,
+	planSchema string,
 ) error {
 	pages := uint64(1)
 	if value.PageSize > 0 && value.ExpectedRecords > 0 {
@@ -3490,9 +3502,14 @@ func validateQueryResult(
 	transports := []QueryTransportResult{result.HTTP, result.MCP}
 	for index, transport := range transports {
 		denied := value.ExpectedStatus == 404
-		readsValid := denied && transport.ControlReads == 0 && transport.MemberReads == 0 ||
+		deniedControlReads := uint64(0)
+		if denied && value.Surface == "service_search" {
+			deniedControlReads = 1
+		}
+		memberReadsValid := validQueryMemberReads(planSchema, value, index, transport.MemberReads, workBounds.MemberReads.Maximum)
+		readsValid := denied && transport.ControlReads == deniedControlReads && transport.MemberReads == 0 ||
 			!denied && transport.ControlReads >= 1 && transport.ControlReads <= workBounds.ControlReads.Maximum &&
-				transport.MemberReads >= 1 && transport.MemberReads <= workBounds.MemberReads.Maximum
+				memberReadsValid
 		if transport.Schema != schema || transport.Code != wantCodes[index] ||
 			transport.Pages != pages || transport.Records != value.ExpectedRecords ||
 			transport.Paths != value.ExpectedPaths || transport.ProjectionSHA256 != value.ProjectionSHA256 ||
@@ -3516,6 +3533,19 @@ func validateQueryResult(
 	return nil
 }
 
+func validQueryMemberReads(planSchema string, query QueryCase, transportIndex int, reads, maximum uint64) bool {
+	if reads > maximum {
+		return false
+	}
+	if planSchema != PlanV2Schema {
+		return reads >= 1
+	}
+	if query.Surface == "service_relationships" || query.Name == "first_service" && transportIndex == 0 {
+		return reads >= 1
+	}
+	return reads == 0
+}
+
 func authorityResultSHA256(values []AuthorityPhaseResult, phase string) (string, error) {
 	index := slices.IndexFunc(values, func(value AuthorityPhaseResult) bool { return value.Phase == phase })
 	if index < 0 || values[index].Outcome != "passed" {
@@ -3524,12 +3554,12 @@ func authorityResultSHA256(values []AuthorityPhaseResult, phase string) (string,
 	return receiptSHA256(values[index])
 }
 
-func expectedQueryResult(value QueryCase, schema, authoritySHA256 string) QueryResult {
+func expectedQueryResult(value QueryCase, schema, authoritySHA256, planSchema string) QueryResult {
 	pages := uint64(1)
 	if value.PageSize > 0 && value.ExpectedRecords > 0 {
 		pages = (value.ExpectedRecords + value.PageSize - 1) / value.PageSize
 	}
-	transport := func(code string) QueryTransportResult {
+	transport := func(code string, index int) QueryTransportResult {
 		result := QueryTransportResult{
 			Schema: schema, Code: code, Pages: pages, Records: value.ExpectedRecords,
 			Paths: value.ExpectedPaths, ProjectionSHA256: value.ProjectionSHA256,
@@ -3538,17 +3568,21 @@ func expectedQueryResult(value QueryCase, schema, authoritySHA256 string) QueryR
 			AuthoritySnapshots:    1,
 			AuthorityBeforeSHA256: authoritySHA256, AuthorityAfterSHA256: authoritySHA256,
 		}
-		if value.ExpectedStatus != 404 {
+		if value.ExpectedStatus == 404 && value.Surface == "service_search" {
+			result.ControlReads = 1
+		} else if value.ExpectedStatus != 404 {
 			result.AuthorizedRepositories = 1
 			result.ControlReads = 1
-			result.MemberReads = 1
+			if planSchema != PlanV2Schema || value.Surface == "service_relationships" || value.Name == "first_service" && index == 0 {
+				result.MemberReads = 1
+			}
 		}
 		return result
 	}
 	return QueryResult{
 		Name: value.Name,
-		HTTP: transport(fmt.Sprint(value.ExpectedStatus)),
-		MCP:  transport(value.ExpectedMCPCode),
+		HTTP: transport(fmt.Sprint(value.ExpectedStatus), 0),
+		MCP:  transport(value.ExpectedMCPCode, 1),
 	}
 }
 

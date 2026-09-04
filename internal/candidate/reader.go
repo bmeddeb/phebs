@@ -931,7 +931,7 @@ func validateArtifactFile(
 		line, readErr := readCanonicalLine(reader, maxTreeRecordBytes)
 		if len(line) > 0 {
 			var record Record
-			if err := strictCanonicalJSONLine(line, &record); err != nil {
+			if err := strictCanonicalJSONLineContext(ctx, line, &record); err != nil {
 				return err
 			}
 			if record.DeclaredBytes > MaxDeclaredBytesPerArtifact-declared {
@@ -1037,11 +1037,15 @@ func (reader *byteCountingReader) Read(buffer []byte) (int, error) {
 }
 
 func strictCanonicalJSONLine(line []byte, destination any) error {
+	return strictCanonicalJSONLineContext(context.Background(), line, destination)
+}
+
+func strictCanonicalJSONLineContext(ctx context.Context, line []byte, destination any) error {
 	if len(line) == 0 || line[len(line)-1] != '\n' {
 		return errors.New("candidate JSON line is partial")
 	}
-	if err := strictDecode(
-		bytes.NewReader(line[:len(line)-1]), int64(len(line)), destination,
+	if err := strictDecodeMember(
+		ctx, bytes.NewReader(line[:len(line)-1]), int64(len(line)), destination,
 	); err != nil {
 		return err
 	}
@@ -1161,7 +1165,7 @@ func validateCorpusSummary(
 	if projectionPath == "" {
 		return nil
 	}
-	run, err := openProjectionRun(projectionPath)
+	run, err := openProjectionRun(ctx, projectionPath)
 	if err != nil {
 		return err
 	}
@@ -1297,7 +1301,7 @@ func forEachCanonicalRecordContext(
 		line, readErr := readCanonicalLine(reader, maxTreeRecordBytes)
 		if len(line) > 0 {
 			var record Record
-			if err := strictCanonicalJSONLine(line, &record); err != nil {
+			if err := strictCanonicalJSONLineContext(ctx, line, &record); err != nil {
 				return err
 			}
 			if err := visit(record); err != nil {

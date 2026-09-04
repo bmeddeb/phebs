@@ -29,13 +29,13 @@ func CurrentInventoryAuthorityReferenceV2(
 	if err := ctx.Err(); err != nil {
 		return InventoryAuthorityV2{}, err
 	}
-	selected, err := ReadInventoryPublicationRootV2(root, repository)
+	selected, err := ReadInventoryPublicationRootV2Context(ctx, root, repository)
 	if err != nil {
 		return InventoryAuthorityV2{}, err
 	}
 	directory := inventoryGenerationDirectoryV2(root, repository, selected.Current.GenerationDigest)
-	sourceRoot, err := sourcepartition.ReadSuperRoot(
-		filepath.Join(directory, InventoryPublicationSourceNameV2), repository,
+	sourceRoot, err := sourcepartition.ReadSuperRootContext(
+		ctx, filepath.Join(directory, InventoryPublicationSourceNameV2), repository,
 	)
 	if err != nil {
 		return InventoryAuthorityV2{}, err
@@ -43,7 +43,7 @@ func CurrentInventoryAuthorityReferenceV2(
 	if sourceRoot.Digest != selected.Current.SourceRootDigest {
 		return InventoryAuthorityV2{}, invalid("inventory v2 selected source authority changed")
 	}
-	confirmed, err := ReadInventoryPublicationRootV2(root, repository)
+	confirmed, err := ReadInventoryPublicationRootV2Context(ctx, root, repository)
 	if err != nil || confirmed.Current != selected.Current {
 		return InventoryAuthorityV2{}, invalid("inventory v2 pointer changed during authority read")
 	}

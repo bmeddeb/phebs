@@ -2,6 +2,7 @@ package servicecatalogv3
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
 
@@ -167,6 +169,81 @@ func TestBuildV2ParityDeterminismAndPrefixRoutedLookup(t *testing.T) {
 	placements, err := first.LookupPath("tree/02049/file.go")
 	if err != nil || len(placements) != 2 || placements[0].Path != "tree" || placements[1].Path != "tree/02049" {
 		t.Fatalf("path lookup = %+v, %v", placements, err)
+	}
+}
+
+func TestCatalogContextAccountsDecodedGenerationRecords(t *testing.T) {
+	catalog := acceptedCatalog(MaxPathsPerMember+1, true)
+	catalog.Services = append(catalog.Services, servicecatalog.Service{
+		Key: "tree-owner", DisplayName: "tree owner",
+		Disposition: servicecatalog.DispositionAccepted,
+		Origin:      servicecatalog.OriginBase,
+	})
+	catalog.Memberships = append(catalog.Memberships, servicecatalog.Membership{
+		ServiceKey: "tree-owner", Path: "tree",
+		Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase,
+	})
+	generation, err := Build(testBinding(catalog.Authority), catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var serviceVisits, placementVisits, inheritedVisits uint64
+	for _, encoded := range generation.Members {
+		switch encoded.Kind {
+		case "service":
+			var member ServiceMember
+			if err := decodeCanonical(encoded.Content, &member); err != nil {
+				t.Fatal(err)
+			}
+			serviceVisits += uint64(len(member.Services) + len(member.Memberships))
+		case "placement":
+			var member PlacementMember
+			if err := decodeCanonical(encoded.Content, &member); err != nil {
+				t.Fatal(err)
+			}
+			placementVisits += uint64(len(member.Inherited) + len(member.Placements))
+			inheritedVisits += uint64(len(member.Inherited))
+		default:
+			t.Fatalf("unexpected member kind %q", encoded.Kind)
+		}
+	}
+	if serviceVisits == 0 || placementVisits == 0 || inheritedVisits == 0 {
+		t.Fatalf(
+			"incomplete accounting fixture: service=%d placement=%d inherited=%d",
+			serviceVisits, placementVisits, inheritedVisits,
+		)
+	}
+	wantVisits := serviceVisits + placementVisits
+	scoped, ledger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opened, err := generation.CatalogContext(scoped)
+	if err != nil || len(opened.Services) != len(catalog.Services) {
+		t.Fatalf("catalog context = %d services, %v", len(opened.Services), err)
+	}
+	counts, err := ledger.Finish()
+	if err != nil || counts.MemberVisits != wantVisits {
+		t.Fatalf("generation member visits = %+v, %v", counts, err)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := generation.CatalogContext(canceled); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled catalog context = %v", err)
+	}
+	closed, closedLedger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := closedLedger.Finish(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := generation.CatalogContext(closed); !errors.Is(err, readaccounting.ErrClosed) {
+		t.Fatalf("closed-scope catalog = %v", err)
 	}
 }
 

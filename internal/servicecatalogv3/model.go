@@ -5,6 +5,7 @@ package servicecatalogv3
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
 
@@ -237,7 +239,18 @@ func canonical(value any) ([]byte, error) {
 }
 
 func decodeCanonical(raw []byte, value any) error {
-	if err := preflightJSON(raw, MaxMemberBytes, memberCollectionLimit); err != nil {
+	return decodeCanonicalMember(context.Background(), raw, value, nil)
+}
+
+func decodeCanonicalMember(
+	ctx context.Context,
+	raw []byte,
+	value any,
+	visits func() int,
+) error {
+	if _, err := preflightFirstJSONValue(
+		raw, MaxMemberBytes, memberCollectionLimit,
+	); err != nil {
 		return err
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
@@ -245,7 +258,16 @@ func decodeCanonical(raw []byte, value any) error {
 	if err := decoder.Decode(value); err != nil {
 		return err
 	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+	if visits != nil {
+		if count := visits(); count > 0 {
+			if err := readaccounting.Charge(
+				ctx, readaccounting.MemberVisit, uint64(count),
+			); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
 		return ErrInvalid
 	}
 	want, err := canonical(value)
@@ -262,17 +284,29 @@ func preflightCollections(raw []byte) error {
 type collectionLimit func(string) (int, bool)
 
 func preflightJSON(raw []byte, maxBytes int, limit collectionLimit) error {
-	if len(raw) > maxBytes {
-		return limitf("encoded bytes")
-	}
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	if err := preflightValue(decoder, "", 0, limit); err != nil {
+	decoder, err := preflightFirstJSONValue(raw, maxBytes, limit)
+	if err != nil {
 		return err
 	}
 	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
 		return ErrInvalid
 	}
 	return nil
+}
+
+func preflightFirstJSONValue(
+	raw []byte,
+	maxBytes int,
+	limit collectionLimit,
+) (*json.Decoder, error) {
+	if len(raw) > maxBytes {
+		return nil, limitf("encoded bytes")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	if err := preflightValue(decoder, "", 0, limit); err != nil {
+		return nil, err
+	}
+	return decoder, nil
 }
 
 func preflightValue(

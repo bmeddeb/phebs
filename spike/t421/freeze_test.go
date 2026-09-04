@@ -456,7 +456,7 @@ func executionProfileTestAdmission(
 		Commands:                 frozenExecutionCommands(),
 		HarnessCommandSetSHA256:  admission.harnessCommandSetSHA256,
 		PressureCommandSetSHA256: admission.pressureCommandSetSHA256,
-		Environment:              frozenExecutionEnvironment(admission),
+		Environment:              frozenExecutionEnvironment(plan, admission),
 		Config:                   config,
 		Runtime:                  frozenExecutionRuntime(plan),
 		Roots:                    frozenExecutionRoots(host, admission.rootVolumeBindingsSHA256),

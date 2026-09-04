@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -45,10 +46,12 @@ func TestCorrectionPreservesRetainedV1BytesAndValidation(t *testing.T) {
 
 func TestCorrectionSupersedesWithoutChangingCorpusOrSafety(t *testing.T) {
 	prior, next := frozenTestPlan(t), correctedTestPlan(t)
+	priorOracle, nextOracle := prior.Oracle, next.Oracle
+	priorOracle.QueryCases, nextOracle.QueryCases = nil, nil
 	if next.Schema != PlanV2Schema || next.Correction == nil || next.Correction.SupersedesSHA256 != retainedPlanSHA256 {
 		t.Fatal("prospective contract lacks exact supersession")
 	}
-	if !reflect.DeepEqual(prior.SafetyEnvelope, next.SafetyEnvelope) || !reflect.DeepEqual(prior.Oracle, next.Oracle) ||
+	if !reflect.DeepEqual(prior.SafetyEnvelope, next.SafetyEnvelope) || !reflect.DeepEqual(priorOracle, nextOracle) ||
 		!reflect.DeepEqual(prior.Profile.Physical, next.Profile.Physical) || !reflect.DeepEqual(prior.Profile.Pipeline, next.Profile.Pipeline) ||
 		next.Claims.ChangesProductionBehavior || next.Claims.AuthorizesExecution {
 		t.Fatal("correction changed corpus, safety, production behavior, or execution authority")
@@ -72,6 +75,99 @@ func TestCorrectionSupersedesWithoutChangingCorpusOrSafety(t *testing.T) {
 	decoded, err := DecodePlan(raw)
 	if err != nil || !reflect.DeepEqual(next, decoded) {
 		t.Fatalf("corrected round trip: %v", err)
+	}
+}
+
+func TestCorrectionUsesProductionShapedHiddenServiceSearch(t *testing.T) {
+	prior, next := frozenTestPlan(t), correctedTestPlan(t)
+	find := func(plan Plan) QueryCase {
+		t.Helper()
+		index := slices.IndexFunc(plan.Oracle.QueryCases, func(value QueryCase) bool {
+			return value.Name == "hidden_repository_denied"
+		})
+		if index < 0 {
+			t.Fatal("hidden-repository query case is absent")
+		}
+		return plan.Oracle.QueryCases[index]
+	}
+	old, corrected := find(prior), find(next)
+	if !strings.Contains(old.HTTP.Path, "scope=all_code&repository=") ||
+		corrected.Surface != "service_search" ||
+		!strings.Contains(corrected.HTTP.Path, "scope=service&repository=$hidden_repository&service_key=") ||
+		corrected.ExpectedStatus != 404 || corrected.ExpectedMCPCode != "unknown_repository" {
+		t.Fatalf("hidden query correction = %+v", corrected)
+	}
+	expected := expectedQueryResult(corrected, next.ReceiptContract.QueryTransportSchema, zeroDigest(), next.Schema)
+	for _, transport := range []QueryTransportResult{expected.HTTP, expected.MCP} {
+		if transport.ControlReads != 1 || transport.MemberReads != 0 {
+			t.Fatalf("hidden service-search native reads = %+v", transport)
+		}
+	}
+}
+
+func TestCorrectionAllowsExactZeroMemberWarmProductResult(t *testing.T) {
+	plan := correctedTestPlan(t)
+	queryIndex := slices.IndexFunc(plan.Oracle.QueryCases, func(value QueryCase) bool {
+		return value.Name == "unowned_excluded_from_service_scope"
+	})
+	workIndex := slices.IndexFunc(plan.WorkEnvelope.Phases, func(value PhaseWorkBounds) bool {
+		return value.Phase == "product_queries"
+	})
+	if queryIndex < 0 || workIndex < 0 {
+		t.Fatal("corrected warm-empty product case or work bound is absent")
+	}
+	query := plan.Oracle.QueryCases[queryIndex]
+	result := expectedQueryResult(query, plan.ReceiptContract.QueryTransportSchema, zeroDigest(), plan.Schema)
+	result.HTTP.MemberReads, result.MCP.MemberReads = 0, 0
+	if err := validateQueryResult(
+		result, query, plan.ReceiptContract.QueryTransportSchema, zeroDigest(),
+		plan.WorkEnvelope.Phases[workIndex], plan.Schema,
+	); err != nil {
+		t.Fatalf("warm empty product result was rejected: %v", err)
+	}
+	result.HTTP.ControlReads = 0
+	if err := validateQueryResult(
+		result, query, plan.ReceiptContract.QueryTransportSchema, zeroDigest(),
+		plan.WorkEnvelope.Phases[workIndex], plan.Schema,
+	); err == nil {
+		t.Fatal("warm empty product result without a control read was accepted")
+	}
+}
+
+func TestCorrectionRequiresOnlyNecessaryQueryMemberReads(t *testing.T) {
+	plan := correctedTestPlan(t)
+	workIndex := slices.IndexFunc(plan.WorkEnvelope.Phases, func(value PhaseWorkBounds) bool {
+		return value.Phase == "product_queries"
+	})
+	if workIndex < 0 {
+		t.Fatal("product-query work bound is absent")
+	}
+	validate := func(name string, mutate func(*QueryResult), wantOK bool) {
+		t.Helper()
+		index := slices.IndexFunc(plan.Oracle.QueryCases, func(value QueryCase) bool { return value.Name == name })
+		if index < 0 {
+			t.Fatalf("query %q is absent", name)
+		}
+		query := plan.Oracle.QueryCases[index]
+		result := expectedQueryResult(query, plan.ReceiptContract.QueryTransportSchema, zeroDigest(), plan.Schema)
+		mutate(&result)
+		err := validateQueryResult(result, query, plan.ReceiptContract.QueryTransportSchema, zeroDigest(), plan.WorkEnvelope.Phases[workIndex], plan.Schema)
+		if (err == nil) != wantOK {
+			t.Fatalf("query %q member shape accepted=%t, want %t: %v", name, err == nil, wantOK, err)
+		}
+	}
+	validate("first_service", func(*QueryResult) {}, true)
+	validate("first_service", func(value *QueryResult) { value.HTTP.MemberReads = 0 }, false)
+	validate("first_service", func(value *QueryResult) { value.MCP.MemberReads = 1 }, false)
+	validate("chain_dependency", func(value *QueryResult) { value.HTTP.MemberReads = 0 }, false)
+}
+
+func TestCorrectionDerivesProductMembersFromQueryResults(t *testing.T) {
+	plan := correctedTestPlan(t)
+	if plan.Correction == nil ||
+		!strings.Contains(plan.Correction.ReadAccountingPolicy, ";Q-M=checked-sum-plan-order(query_results.results[*].http.member_reads+query_results.results[*].mcp.member_reads);Q-W=0;") ||
+		strings.Count(plan.Correction.ReadAccountingPolicy, ";Q-M=") != 1 {
+		t.Fatalf("product member accounting is not exact: %+v", plan.Correction)
 	}
 }
 
@@ -124,5 +220,27 @@ func TestCorrectedEpochConfigAdmission(t *testing.T) {
 	next := frozenExecutionConfig(plan, admission.configBytesSHA256)
 	if old.Schema == next.Schema || old.Policy == next.Policy {
 		t.Fatal("config-set digest is mislabeled as one raw config digest")
+	}
+}
+
+func TestCorrectedExecutionEnvironmentEnablesOnlyTheProspectiveExactReader(t *testing.T) {
+	admission := ExecutionProfileAdmissionBinding{}
+	variable := "PHEBS_T421_EXACT_READS=source-free-v1"
+	retained := frozenExecutionEnvironment(Plan{Schema: PlanSchema}, admission)
+	corrected := frozenExecutionEnvironment(Plan{Schema: PlanV2Schema}, admission)
+	if slices.Contains(retained.ServerVariables, variable) ||
+		!slices.Contains(corrected.ServerVariables, variable) ||
+		len(corrected.ServerVariables) != len(retained.ServerVariables)+1 {
+		t.Fatal("exact read mode leaked into V1 or is absent from V2")
+	}
+}
+
+func TestCorrectionVersionsThePrivateExactSemanticReader(t *testing.T) {
+	prior, next := frozenTestPlan(t), correctedTestPlan(t)
+	if prior.ReceiptContract.StateObservationSchema != "t422-observed-phase-state-v4" ||
+		next.ReceiptContract.StateObservationSchema != "t422-observed-phase-state-v5" ||
+		semanticReaderForObservationSchema(prior.ReceiptContract.StateObservationSchema) != "authorized-product-reader-canonical-projection-v1" ||
+		semanticReaderForObservationSchema(next.ReceiptContract.StateObservationSchema) != "private-exact-current-authorized-canonical-projection-v1" {
+		t.Fatal("semantic reader is not versioned across retained and corrected contracts")
 	}
 }

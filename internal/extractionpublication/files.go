@@ -2,6 +2,7 @@ package extractionpublication
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 func digest(domain string, value []byte) string {
@@ -44,6 +47,15 @@ func canonical(value any) ([]byte, error) {
 }
 
 func readBounded(path string, limit int64) ([]byte, error) {
+	return readBoundedContext(context.Background(), path, limit)
+}
+
+func readBoundedContext(ctx context.Context, path string, limit int64) ([]byte, error) {
+	// Charge the selected control-read operation, including failed admission or
+	// open attempts. Standalone directory/stat probes are not control reads.
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return nil, err
+	}
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err

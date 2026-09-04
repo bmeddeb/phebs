@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -178,9 +179,22 @@ func SearchGenerationReaderCounts(source repositoryindex.SourceManifest) (batch,
 }
 
 func ReadSearchGenerationRoot(indexDir, repository string) (SearchGenerationRoot, error) {
+	return ReadSearchGenerationRootContext(context.Background(), indexDir, repository)
+}
+
+// ReadSearchGenerationRootContext is the request-accounted form of
+// ReadSearchGenerationRoot. Directory metadata remains outside control-file
+// accounting; the bounded root read is charged immediately before its attempt.
+func ReadSearchGenerationRootContext(
+	ctx context.Context,
+	indexDir, repository string,
+) (SearchGenerationRoot, error) {
 	var root SearchGenerationRoot
 	path := filepath.Join(indexDir, SearchGenerationRootName(repository))
 	if _, err := os.Lstat(path); err != nil {
+		return SearchGenerationRoot{}, err
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
 		return SearchGenerationRoot{}, err
 	}
 	if err := readControlFile(path, &root); err != nil {
@@ -236,6 +250,16 @@ func readSearchGenerationReceipt(directory, repository string) (SearchGeneration
 	return readSearchGenerationReceiptFile(
 		filepath.Join(directory, searchGenerationReceiptName), repository,
 	)
+}
+
+func readSearchGenerationReceiptContext(
+	ctx context.Context,
+	directory, repository string,
+) (SearchGenerationReceipt, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return SearchGenerationReceipt{}, err
+	}
+	return readSearchGenerationReceipt(directory, repository)
 }
 
 func readSearchGenerationReceiptFile(path, repository string) (SearchGenerationReceipt, error) {
@@ -812,7 +836,7 @@ func ReadSearchGenerationControls(
 	if err := ensureRealDirectory(directory); err != nil {
 		return SearchGenerationControls{}, err
 	}
-	receipt, err := readSearchGenerationReceipt(directory, repository)
+	receipt, err := readSearchGenerationReceiptContext(ctx, directory, repository)
 	if err != nil {
 		return SearchGenerationControls{}, err
 	}
@@ -821,8 +845,8 @@ func ReadSearchGenerationControls(
 			"search generation directory identity mismatch",
 		)
 	}
-	search, source, err := ReadRepositorySearchGeneration(
-		directory, repository, receipt.Revisions,
+	search, source, err := readRepositorySearchGenerationContext(
+		ctx, directory, repository, receipt.Revisions,
 	)
 	if err != nil {
 		return SearchGenerationControls{}, err

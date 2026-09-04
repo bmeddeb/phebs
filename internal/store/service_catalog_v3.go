@@ -10,6 +10,7 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 )
@@ -697,6 +698,9 @@ func (s *Surreal) ReadServiceCatalogV3Root(
 			ErrInvalidServiceCatalogV3Candidate,
 		)
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return servicecatalogv3.Root{}, fmt.Errorf("read service catalog v3 root: %w", err)
+	}
 	rootResults, err := surrealdb.Query[[]serviceCatalogV3RootRec](
 		ctx, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceCatalogV3RootID(digest)},
@@ -726,6 +730,11 @@ func (s *Surreal) ReadServiceCatalogV3Root(
 	}
 	overrideID, overrideVersion := serviceCatalogV3Override(root)
 	versionID := serviceCatalogV3AuthorityVersionID(root)
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root authority version: %w", err,
+		)
+	}
 	versionResults, err := surrealdb.Query[[]serviceCatalogV3AuthorityVersionRec](
 		ctx, s.db, "SELECT * FROM $rid", map[string]any{"rid": versionID},
 	)
@@ -749,6 +758,11 @@ func (s *Surreal) ReadServiceCatalogV3Root(
 		return servicecatalogv3.Root{}, fmt.Errorf(
 			"read service catalog v3 root authority-version identity: %w",
 			ErrInvalidServiceCatalogV3Candidate,
+		)
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return servicecatalogv3.Root{}, fmt.Errorf(
+			"read service catalog v3 root lifecycle: %w", err,
 		)
 	}
 	lifecycleResults, err := surrealdb.Query[[]serviceCatalogV3LifecycleRec](

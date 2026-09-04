@@ -14,6 +14,7 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 )
@@ -501,6 +502,9 @@ func (s *Surreal) GetResolverCatalogPublication(
 	if err := reponame.Validate(repository); err != nil {
 		return nil, fmt.Errorf("get resolver catalog: %w", err)
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, fmt.Errorf("get resolver catalog: %w", err)
+	}
 	results, err := surrealdb.Query[[]resolverCatalogPublicationRec](
 		ctx, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": resolverCatalogPublicationID(repository)},
@@ -561,6 +565,9 @@ func (s *Surreal) ResolverCatalogPublicationCurrent(
 	publication ResolverCatalogPublication,
 ) (bool, error) {
 	if err := validateResolverCatalogPublication(publication, true); err != nil {
+		return false, fmt.Errorf("check resolver catalog authority: %w", err)
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return false, fmt.Errorf("check resolver catalog authority: %w", err)
 	}
 	results, err := surrealdb.Query[[]resolverCatalogCurrentResult](

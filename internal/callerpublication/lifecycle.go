@@ -19,6 +19,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -471,7 +472,10 @@ func open(
 	}
 	defer authority.close()
 	wantedMarker := markerForState(expected)
-	if err := checkPublishingAt(authority, wantedMarker, allowPublishing); err != nil {
+	if err := checkPublishingContextAt(ctx, authority, wantedMarker, allowPublishing); err != nil {
+		return nil, err
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
 		return nil, err
 	}
 	raw, manifestInfo, err := readStableRegularAt(
@@ -503,7 +507,7 @@ func open(
 		}
 		leaves[index] = leaf
 	}
-	if err := checkPublishingAt(authority, wantedMarker, allowPublishing); err != nil {
+	if err := checkPublishingContextAt(ctx, authority, wantedMarker, allowPublishing); err != nil {
 		return nil, err
 	}
 	currentManifest, err := authority.root.Lstat(expected.Manifest)
@@ -551,15 +555,25 @@ func (publication *Publication) Current() bool {
 // Missing or replaced derived authority is an ordinary transition and returns
 // (false, nil); permission, device, and other path I/O failures remain errors.
 func (publication *Publication) CurrentResult() (bool, error) {
-	return publication.currentResult(false)
+	return publication.currentResult(context.Background(), false)
+}
+
+// CurrentResultContext is the exact-read form of CurrentResult. It charges the
+// bounded publication-marker control attempt while retaining metadata-only
+// identity checks for the manifest and leaf artifacts.
+func (publication *Publication) CurrentResultContext(ctx context.Context) (bool, error) {
+	return publication.currentResult(ctx, false)
 }
 
 func (publication *Publication) current(allowPublishing bool) bool {
-	current, _ := publication.currentResult(allowPublishing)
+	current, _ := publication.currentResult(context.Background(), allowPublishing)
 	return current
 }
 
-func (publication *Publication) currentResult(allowPublishing bool) (bool, error) {
+func (publication *Publication) currentResult(
+	ctx context.Context,
+	allowPublishing bool,
+) (bool, error) {
 	if publication == nil || ValidateState(publication.state) != nil {
 		return false, nil
 	}
@@ -573,8 +587,8 @@ func (publication *Publication) currentResult(allowPublishing bool) (bool, error
 	if !sameDirectory(publication.directoryInfo, authority.info) {
 		return false, nil
 	}
-	if err := checkPublishingAt(
-		authority, markerForState(publication.state), allowPublishing,
+	if err := checkPublishingContextAt(
+		ctx, authority, markerForState(publication.state), allowPublishing,
 	); err != nil {
 		return false, currentOperationalError(err)
 	}
@@ -702,6 +716,18 @@ func checkPublishingAt(
 	wanted marker,
 	required bool,
 ) error {
+	return checkPublishingContextAt(context.Background(), authority, wanted, required)
+}
+
+func checkPublishingContextAt(
+	ctx context.Context,
+	authority *directoryAuthority,
+	wanted marker,
+	required bool,
+) error {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return err
+	}
 	observed, _, err := readMarkerAt(authority)
 	if errors.Is(err, os.ErrNotExist) {
 		if required {

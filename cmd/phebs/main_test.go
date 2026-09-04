@@ -35,8 +35,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
+	"github.com/bmeddeb/phebs/internal/sourcepartition"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -49,6 +52,85 @@ func TestDeferPendingPartitionAuthorityOnlySuppressesExpectedOrdering(t *testing
 	corrupt := errors.New("current v2 source root is missing")
 	if err, deferred := deferPendingPartitionAuthority(corrupt); !errors.Is(err, corrupt) || deferred {
 		t.Fatalf("corrupt authority = %v, %t", err, deferred)
+	}
+}
+
+func TestPartitionFenceAuthorityReadAccounting(t *testing.T) {
+	ctx := t.Context()
+	const repository = "example.invalid/partition-fence-accounting"
+	directory := t.TempDir()
+	t307Git(t, directory, "init", "-q")
+	if err := os.WriteFile(filepath.Join(directory, "a.go"), []byte("package demo\nconst A = 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t307Git(t, directory, "add", "--", "a.go")
+	t307Git(t, directory, "-c", "user.name=Neutral", "-c", "user.email=neutral@example.invalid", "commit", "-q", "-m", "neutral fixture")
+	commit := strings.TrimSpace(t307Git(t, directory, "rev-parse", "HEAD"))
+	sourceDirectory := filepath.Join(t.TempDir(), "source")
+	source, err := repositoryindex.BuildSourceGeneration(ctx, directory, sourceDirectory, repository,
+		[]store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: commit}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(t.TempDir(), "observations")
+	transition, err := observationpublication.BeginInventoryPublicationV2(root, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceRoot, err := sourcepartition.BuildSuperRoot(ctx, sourcepartition.BuildRequest{
+		SourceDirectory: sourceDirectory, OutputDirectory: transition.SourceDirectory,
+		Repository: repository, Source: source,
+		Policy: sourcepartition.Policy{Schema: sourcepartition.PolicySchema, Name: "go-source", Version: "1.0.0", IncludeSuffixes: []string{".go"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := sourcepartition.OpenSuperRoot(ctx, transition.SourceDirectory, sourceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := observationpublication.BuildInventoryStageV2(ctx, observationpublication.InventoryBuildRequestV2{
+		OutputDirectory: transition.InventoryDirectory, RepositoryDirectory: directory, Plan: plan,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	publication, err := observationpublication.CompleteInventoryPublicationV2(ctx, root, repository, transition.TransitionID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Observe the very same helper installed on the ordinary reconciler. Fixture
+	// construction is deliberately outside the scope; no identities or read
+	// events are supplied by a mock.
+	for _, limit := range []uint64{4, 0, 1, 2, 3, 4} {
+		t.Run(fmt.Sprintf("control_limit_%d", limit), func(t *testing.T) {
+			scoped, ledger, err := readaccounting.Start(ctx, readaccounting.Counts{ControlFileReads: limit})
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotSource, gotObservation, readErr := partitionFenceAuthority(scoped, root, repository)
+			counts, accountingErr := ledger.Finish()
+			wantReads := uint64(4) // precheck + selected pointer + source root + pointer confirmation
+			if limit < 4 {
+				wantReads = limit + 1 // denied-attempt sentinel, not an executed read
+				if readErr == nil || gotSource != "" || gotObservation != "" || !errors.Is(accountingErr, readaccounting.ErrLimit) {
+					t.Fatalf("refusal returned authority: %q, %q, %v; ledger %v", gotSource, gotObservation, readErr, accountingErr)
+				}
+			} else if readErr != nil || accountingErr != nil || gotSource != sourceRoot.SourceGenerationDigest || gotObservation != publication.Current.GenerationDigest {
+				t.Fatalf("authority: %q, %q, %v; ledger %v", gotSource, gotObservation, readErr, accountingErr)
+			}
+			if counts != (readaccounting.Counts{ControlFileReads: wantReads}) {
+				t.Fatalf("counts = %+v", counts)
+			}
+		})
+	}
+	scoped, ledger, err := readaccounting.Start(ctx, readaccounting.Counts{ControlFileReads: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = partitionFenceAuthority(scoped, t.TempDir(), repository)
+	counts, accountingErr := ledger.Finish()
+	if !errors.Is(err, errPartitionAuthorityPending) || accountingErr != nil || counts != (readaccounting.Counts{ControlFileReads: 1}) {
+		t.Fatalf("missing initial authority: %v; counts %+v, %v", err, counts, accountingErr)
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -299,6 +300,19 @@ func ValidateSearchManifest(manifest SearchManifest) error {
 }
 
 func ReadSourceManifest(directory, repository string) (SourceManifest, error) {
+	return ReadSourceManifestContext(context.Background(), directory, repository)
+}
+
+// ReadSourceManifestContext is the exact-read form of ReadSourceManifest.
+// The manifest is one bounded control read; source-member payloads are counted
+// separately by their streaming reader.
+func ReadSourceManifestContext(
+	ctx context.Context,
+	directory, repository string,
+) (SourceManifest, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return SourceManifest{}, err
+	}
 	var manifest SourceManifest
 	if err := readControl(filepath.Join(directory, SourceManifestName(repository)), &manifest); err != nil {
 		return SourceManifest{}, err
@@ -313,6 +327,17 @@ func ReadSourceManifest(directory, repository string) (SourceManifest, error) {
 }
 
 func ReadSearchManifest(directory, repository string) (SearchManifest, error) {
+	return ReadSearchManifestContext(context.Background(), directory, repository)
+}
+
+// ReadSearchManifestContext is the exact-read form of ReadSearchManifest.
+func ReadSearchManifestContext(
+	ctx context.Context,
+	directory, repository string,
+) (SearchManifest, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return SearchManifest{}, err
+	}
 	var manifest SearchManifest
 	if err := readControl(filepath.Join(directory, SearchManifestName(repository)), &manifest); err != nil {
 		return SearchManifest{}, err

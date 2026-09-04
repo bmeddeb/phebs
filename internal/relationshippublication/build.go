@@ -20,6 +20,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
 
+const projectionResidentOverhead = 512
+
 type BuildRequest struct {
 	Root     string
 	Catalog  servicecatalog.Publication
@@ -432,13 +434,12 @@ func (accumulator *buildAccumulator) add(projection Projection) error {
 	if err != nil {
 		return err
 	}
-	const projectionOverhead = 512
-	if int64(len(raw)+projectionOverhead) > accumulator.residentLimit-accumulator.residentCharge {
+	if int64(len(raw)+projectionResidentOverhead) > accumulator.residentLimit-accumulator.residentCharge {
 		return ErrLimit
 	}
 	accumulator.seen[projection.Digest] = struct{}{}
 	accumulator.projectionCount++
-	accumulator.residentCharge += int64(len(raw) + projectionOverhead)
+	accumulator.residentCharge += int64(len(raw) + projectionResidentOverhead)
 	bucket := projectionBucket(projection.Digest)
 	accumulator.repository[bucket] = append(accumulator.repository[bucket], cloneProjection(projection))
 	participation := make(map[string][]string)

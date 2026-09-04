@@ -14,6 +14,7 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 )
@@ -84,6 +85,14 @@ type ServiceStateV3ChunkResult struct {
 	// Settled means the durable plan is terminal. The generation scheduler
 	// still owns this chunk lease and completes it after downstream handoff.
 	Settled bool
+}
+
+// ServiceStateV3ActivationAuthority is the source-free identity of the
+// selected T42 activation plan and its frozen ninth service-member unit.
+type ServiceStateV3ActivationAuthority struct {
+	PlanDigest     string
+	ScheduleDigest string
+	UnitDigest     string
 }
 
 type serviceStateV3PlanRec struct {
@@ -309,6 +318,113 @@ func (s *Surreal) getServiceStateV3Plan(
 		return nil, ErrInvalidServiceStateV3
 	}
 	return &plan, nil
+}
+
+// ReadServiceStateV3ActivationAuthority resolves the immutable activation
+// proof behind one selected v3 runtime. The three bounded queries are charged
+// separately; raw plan, schedule, chunk, worker, and timestamp fields do not
+// cross this store boundary.
+func (s *Surreal) ReadServiceStateV3ActivationAuthority(
+	ctx context.Context,
+	selector ServiceRuntimeSelector,
+) (ServiceStateV3ActivationAuthority, error) {
+	if ctx == nil || validateServiceRuntimeSelector(selector) != nil ||
+		selector.Backend != ServiceRuntimeV3 {
+		return ServiceStateV3ActivationAuthority{}, ErrInvalidServiceStateV3
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
+			"read service state v3 activation plan: %w", err,
+		)
+	}
+	planResults, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
+SELECT * FROM service_state_v3_plan
+	WHERE repository = $repository AND phase = 'activate' AND state = 'activated'
+		AND catalog_root = $catalog_root
+		AND catalog_control_revision = $catalog_revision
+		AND search_generation = $search
+		AND summary_control_revision = $summary_revision
+		AND summary_digest = $summary_digest
+	ORDER BY repair LIMIT 2`, map[string]any{
+		"repository": selector.Repository, "catalog_root": selector.CatalogRootDigest,
+		"catalog_revision": selector.CatalogControlRevision,
+		"search":           selector.SearchGenerationDigest,
+		"summary_revision": selector.StateControlRevision,
+		"summary_digest":   selector.StateSummaryDigest,
+	})
+	if err != nil {
+		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
+			"read service state v3 activation plan: %w", err,
+		)
+	}
+	plans := firstDomainRows(planResults)
+	if len(plans) != 1 {
+		return ServiceStateV3ActivationAuthority{}, ErrInvalidServiceStateV3
+	}
+	plan := plans[0].plan()
+	if validateServiceStateV3Plan(plan) != nil ||
+		!validServiceCatalogV3RecordID(
+			plans[0].RecID, "service_state_v3_plan", strings.TrimPrefix(plan.Digest, "sha256:"),
+		) || plan.Repository != selector.Repository || plan.Phase != serviceStateV3Activate ||
+		plan.State != serviceStateV3Activated || plan.CatalogRoot != selector.CatalogRootDigest ||
+		plan.CatalogControlRevision != selector.CatalogControlRevision ||
+		plan.SearchGeneration != selector.SearchGenerationDigest ||
+		plan.SummaryControlRevision != selector.StateControlRevision ||
+		plan.SummaryDigest != selector.StateSummaryDigest || plan.Repair != 0 ||
+		plan.BaseChunk != 0 || plan.ServiceMemberChunks <= 9 || plan.NextChunk != plan.TotalChunks {
+		return ServiceStateV3ActivationAuthority{}, ErrInvalidServiceStateV3
+	}
+
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
+			"read service state v3 activation schedule: %w", err,
+		)
+	}
+	schedule, err := s.generationScheduleByDigest(ctx, plan.ScheduleDigest)
+	if err != nil || schedule == nil || ValidateGenerationSchedule(*schedule) != nil ||
+		schedule.Digest != plan.ScheduleDigest || schedule.Repository != selector.Repository ||
+		schedule.Stage != ServiceStateV3ActivateStage || schedule.Generation != plan.Digest ||
+		schedule.ResourceClass != GenerationResourceCPU || schedule.TotalItems != int64(plan.TotalChunks) ||
+		schedule.ChunkItems != 1 || schedule.TotalChunks != plan.TotalChunks ||
+		schedule.Status != GenerationScheduleSettled || schedule.Succeeded != schedule.TotalChunks ||
+		schedule.Failed != 0 {
+		return ServiceStateV3ActivationAuthority{}, errors.Join(err, ErrInvalidServiceStateV3)
+	}
+
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
+			"read service state v3 activation unit: %w", err,
+		)
+	}
+	unitResults, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
+SELECT * FROM generation_schedule_chunk
+	WHERE schedule_digest = $schedule AND repository = $repository
+		AND stage = $stage AND generation = $generation AND offset = 9
+	ORDER BY attempt LIMIT 2`, map[string]any{
+		"schedule": schedule.Digest, "repository": selector.Repository,
+		"stage": ServiceStateV3ActivateStage, "generation": plan.Digest,
+	})
+	if err != nil {
+		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
+			"read service state v3 activation unit: %w", err,
+		)
+	}
+	units := generationChunkRows(unitResults)
+	if len(units) != 1 {
+		return ServiceStateV3ActivationAuthority{}, ErrInvalidServiceStateV3
+	}
+	unit, err := units[0].chunk()
+	if err != nil || unit.Identity != generationChunkID(schedule.Digest, 9, 0) ||
+		unit.ScheduleDigest != schedule.Digest || unit.Repository != selector.Repository ||
+		unit.Stage != ServiceStateV3ActivateStage || unit.Generation != plan.Digest ||
+		unit.ResourceClass != GenerationResourceCPU || unit.Offset != 9 || unit.Length != 1 ||
+		unit.Attempt != 0 || unit.Status != GenerationChunkDone || unit.LeaseToken != "" ||
+		unit.Error != "" {
+		return ServiceStateV3ActivationAuthority{}, errors.Join(err, ErrInvalidServiceStateV3)
+	}
+	return ServiceStateV3ActivationAuthority{
+		PlanDigest: plan.Digest, ScheduleDigest: schedule.Digest, UnitDigest: unit.Identity,
+	}, nil
 }
 
 func (s *Surreal) getRawServiceStateV3Summary(
@@ -1028,6 +1144,9 @@ func (s *Surreal) serviceCatalogV3MemberContent(
 	ctx context.Context,
 	descriptor servicecatalogv3.MemberDescriptor,
 ) ([]byte, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, fmt.Errorf("service catalog v3 member content: %w", err)
+	}
 	results, err := surrealdb.Query[[]serviceCatalogV3MemberRec](
 		ctx, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceCatalogV3MemberID(descriptor.Digest)},

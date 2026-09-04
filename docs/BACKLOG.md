@@ -3277,6 +3277,344 @@ retains only the known UI screenshot gap. This is constructor-fixture evidence,
 not an ordinary pressure or failure-injection run.
 No new canonical plan, main merge, push, freeze or ceremony is authorized.
 
+**T42.1r6 · Scoped native read accounting (implemented; validation recorded)** — separate
+production prerequisite on `codex/t42.1r6-native-read-accounting` from integrated
+T42.1r4/r5 commit `d776e1d7`. AC: default-inactive, operation-context-scoped
+control-file attempts, native read-query/enqueue retry attempts and candidate
+artifact/projection decoded visits; fixed source-free counters; failed-read
+charging, independent metadata exclusion, cold/warm distinctions, isolated
+concurrent scopes, bounded overflow and sticky invalid/late-event refusals;
+genuine one-partition real-store preparation counts and existing preservation
+checks; affected normal/race gates, steady-state-cost pass and independent
+review. No ordinary callback/HTTP/MCP/full-inspector coverage is inferred from
+the smaller native fixture. No public transport, production semantic change,
+retained-artifact rewrite, phase-cap change, freeze or execution. T42.1r1 must
+subsequently derive the complete prospective inspection budgets; its zero
+warm/logical control-read caps cannot support honest inspection. Wider scope
+coverage and the replacement contract remain open, not satisfied by this slice.
+The genuine real-store preparation observes 13/14 control-file attempts,
+nine read-query attempts, zero member visits and one enqueue attempt for its
+two modes; preservation checks remain green. Complete ledger/candidate/
+extraction normal and race packages, scoped store accounting normal/race,
+repository compilation, scoped vet and pinned lint, module verification and
+glossary pass. The post-enqueue accounting refusal preserves the committed
+successor and checkpoint prefix without retry or rollback. Docs-check retains
+only the known UI screenshot gap. No full store package, full repository runtime
+suite, ordinary-server meter, corrected contract or ceremony pass is claimed.
+
+The next bounded slice now carries that ledger across the authenticated real
+HTTP boundary for `GET /api/extraction-progress` only. A separate closed exact
+mode admits the legacy config principal and canonical sequential request
+ordinals, applies server-owned limits derived from the production domain and
+schedule-retry ceilings, and emits one identical source-free trailer/log
+report. It is default-inactive and terminally refuses gaps, overlap, unsupported
+authenticated marked routes, accounting overflow, incomplete handlers, and
+report failure; anonymous headers on public routes cannot trip the latch.
+The cumulative per-epoch call inventory remains open, so no smaller ordinal
+quota is claimed yet. Authentication reads, other HTTP routes, MCP,
+client-process inspector reads, phase call inventories and corrected budgets
+remain open. The retained plan, receipt and current phase caps stay
+byte-identical; no freeze or execution is authorized.
+
+The final transport bytes pass complete command/extraction-publication normal
+and race suites, the real-store HTTP-to-runtime regression, all-package compile,
+affected vet/pinned lint, module, glossary, formatting and whitespace.
+Independent review passes plus the final correction re-review leave no finding
+at any severity. The only
+docs-check failure remains the pre-existing UI-owned missing
+`ui/receipts/fixtures/service-boundary.png`. Complete per-epoch request
+inventory, other read surfaces and corrected phase budgets remain the next
+prerequisite; this validation does not authorize a freeze or ceremony.
+
+The next bounded r6 slice covers the ordinary candidate provider and observation
+fence callback, plus direct extraction `Current`/`Status`/`Progress` inspections.
+Native fixtures verify cold versus warm cache costs and scoped refusal; the
+one-partition real-store Progress observation is three file controls and two
+SDK reads. Ordinary preparation costs are now composed from those measured
+components and the source call graph, not claimed as a full preparation replay.
+Public-request attribution, full inspector coverage and phase cadence/retry
+budget derivation remain open. No retained plan or phase cap changes.
+The expanded seven-package normal/race, scoped store normal/race, compilation,
+vet, pinned lint, module, glossary and whitespace gates pass. Independent
+source/cost review is clear; docs-check retains only the known UI screenshot gap.
+
+The next compact-inspector slice now derives every operational phase and all
+five server epochs from the existing phase/deadline/epoch tables. It selects
+health `H`, cheap exact extraction progress `X`, one final coherent authority
+and semantic fence `F`, lifecycle status `L` only where lifecycle evidence is
+required, transition-local reads `R`, and final HTTP/MCP pages `Q`; product
+queries use `F,Q,F`. Five-second inspector attempts and 250-ms startup attempts
+include one possible deadline-tie call. At that pre-T slice, the maximum
+accounted server calls by epoch were 5,763/2,881/5,762/3,366/5,802, but this was
+not yet the final
+ordinal ceiling because `F/R/Q` native costs and protocol overhead remain open.
+Stale-lease recovery keeps X active at the same five-second cadence until its
+same-generation schedule is ready; it is not an exact-one inspection.
+V2 execution admission now includes the closed exact-read mode, and the
+post-auth wrapper admits lifecycle status with a zero-read ledger around its
+existing in-memory snapshot. Current zero/255/4,096 read caps are explicitly
+known incomplete and cannot be frozen; retained V1 and archive no-census reuse
+remain exact. Focused inventory, plan round-trip, environment and exact-route
+tests pass. Complete instrumentation, replacement phase budgets, full gates,
+review and a new canonical plan remain required; no execution is authorized.
+
+Source review then found two prospective-contract defects before budget
+authoring. The compact graph was test-only and omitted archive/restore from its
+transition-local `R` class; V2 now binds the graph, both cadences, every phase
+row and each epoch aggregate by one canonical digest and rejects a changed
+digest. The hidden-repository query also combined `all_code` with a repository,
+which production rejects as malformed before authorization. Corrected V2 uses
+the ordinary service-search selector and charges the real existence-hiding
+path's one repository point read in each transport, with zero member,
+service-runtime, generation or search reads. Retained V1 bytes and validation
+remain exact. Build, focused V1/V2 plan, digest-mutation, selector/read-arithmetic,
+receipt-mutation and compact-inventory tests pass; exact visible-Q and final
+F/R costs, replacement phase budgets, full gates and final review remain open.
+
+The source trace now derives the Q control planes without pretending its member
+plane is complete. The exclusive plan-order HTTP-then-MCP corridor requires the
+shared-current All-code reader. Startup's current service-runtime pin already
+warms the shared relationship generation cache; the separate catalog root and
+member cache stays cold until the first visible service detail. Therefore the
+two transports compose to `C=160`, `S=164`, `K=324`, `W=0`. Those formulas and
+cache/order predicates are digest-bound. A member visit is one validated
+canonical record delivered or visited; rereads count, wrappers/cache hits do
+not, and warm or empty visible results may be zero. V2 receipt validation now
+admits that zero while retaining positive control work; V1 remains exact. Q
+member charge sites, the full transport regression, F and most R readers remain
+open, so these control formulas do not authorize revised caps or a freeze.
+
+The follow-up contract audit removes two cross-process cache assumptions:
+logical delta B and process restart each begin a new server epoch and therefore
+cannot reuse the preceding epoch's immutable-member cache. F preserves its
+activation projection through a bounded store authority read and a private
+catalog cache isolated from Q. The single M atom is now the ledger's existing
+application-record decode from a bounded immutable member payload, before later
+framing/canonical/semantic or consumer refusal. The closed unit list covers the
+native candidate, source, catalog, relationship, posting and caller-leaf
+formats; roots, pointers, receipts/descriptors, response wrappers, derived
+objects and cache hits are zero, while rereads count. V2 also names the F reader
+as private exact-current authority instead of the bounded public product reader;
+retained V1 keeps its historical label. The digest-bound inventory and mutation
+regression carry those rules.
+Exact F/R and Q-member totals, production charge sites and phase-cap replacement
+remain open; the Q C/S formulas are unchanged and no freeze is authorized.
+The V2 receipt predicate now rejects zero M on the first HTTP catalog miss or
+either relationship transport, while requiring zero on the corresponding MCP
+cache hit and other warm/empty cases. This supersedes the earlier same-day
+validated-record wording; the decoded-application-record atom above is final.
+
+The next r6 implementation slice places that atom at the shared native decode
+points for repository source, caller leaves, service-catalog members, V3
+relationship members, and RPC/Kafka posting members. Charges happen before
+later framing/canonical/semantic refusal and before delivery or cache insertion;
+physical rereads count, while controls, descriptors, wrappers, derived values,
+current checks and cache hits stay zero. `CatalogContext` is the sole new public
+primitive and keeps the existing full-catalog validation cancellable; `Catalog`
+remains its ordinary background wrapper. This is leaf coverage only: exact F/Q
+totals, routes, transport regression, phase caps and freeze remain open.
+All affected current-source package suites pass normally and under race, with
+repository compilation, scoped vet, pinned 2.12.2 lint, module verification,
+glossary and whitespace green. Independent review found one catalog framing
+ordering defect: whole-input preflight rejected trailing JSON before the typed
+decode could charge its records. The shared decoder now bounds and preflights
+the first value, performs the typed decode and charge, then applies trailing and
+canonical checks; strict collection preflight still requires whole-input EOF.
+The new trailing-value regression passes normally and under race, and exact
+correction re-review reports critical/high/medium/low `0/0/0/0`. Docs-check
+retains only the known UI-owned missing screenshot. F must use
+`CatalogContext`, Q must use the catalog cache APIs, and the T42 relationship
+path must stay V3-only; enforcing those call-graph bindings belongs to the
+still-open F/Q transport slice.
+
+The first bounded F foundation slice adds one private complete current-V3
+relationship snapshot. It acquires and pins the exact current generation,
+decodes every service and repository member once, validates the complete
+cross-member joins, retains only the deterministic projections, and confirms
+the current pointer before returning. Any later failure returns no partial
+snapshot. Each physical call charges one C per service/repository member file
+and exactly `service_count + projection_fragment_count` M visits; there is no
+semantic result cache, so a reread charges again. Retained projections reuse the
+builder's canonical-JSON-plus-512-byte charge and 512 MiB admission fence;
+that is not a whole-process RSS claim. Ordinary publication validation passes
+no collector and therefore gains no retained projections or semantic marshal.
+Focused completion/ownership, exact-bound, final-member corruption, M-limit,
+cancellation, and pointer-supersession regressions pass. Independent correction
+re-review reports critical/high/medium/low `0/0/0/0`. The complete
+relationship-publication package passes normally in 32.125s and under race in
+207.095s; repository compilation, scoped vet/pinned lint, glossary and
+whitespace pass. Docs-check reaches only the unchanged UI-owned missing
+screenshot. The selected catalog and remaining F authority/authorization/
+posting inputs, private cache, exact totals, handler, phase caps and replacement
+freeze remain open.
+
+The selected-catalog F1 foundation now reads a complete supplied exact V3 root
+through every service and placement member, owns the member buffers, and uses
+the shared `CatalogContext` validator so the cold path charges the exact decoded
+service, membership, inherited-placement, and placement M atoms. It immediately
+reduces the validated catalog to the eight source-free identities required by
+the phase-state projection and discards the raw generation and catalog. A
+private one-slot process-epoch cache is keyed by the full selected runtime
+selector and is isolated from Q. A cold miss is only prepared: the later whole-F
+reader must finish its reauthorization and final authority confirmations before
+committing it. Failure or cancellation never inserts or displaces the prior
+slot; a committed same-selector hit is zero M, and a new process is cold. The
+shared five-set derivation remains checked by the independent authored-plan
+oracle and an explicit A/B/A-return comparison of logical, semantic, source,
+catalog, membership, placement, unowned-prefix, and service-query identities.
+The frozen cold term is 101,605 M and the warm term is zero. Focused normal and
+race cache tests cover no-early-insert, final-fence commit, selector-keyed
+replacement, caller ownership, cancellation, limit refusal/retry, and epoch
+reset. F1 adds no route and no ordinary or Q cache work. Initial/final
+authorization, selector and selected-state reads, fresh root acquisition,
+remaining F planes, exact S/C totals, handler, phase caps, ordinal ceiling,
+replacement freeze, and execution remain open.
+
+Independent review found one medium steady-state-cost defect in the first F1
+projection: it repeatedly scanned the claims already accumulated for a path.
+Because the input is sorted by service key then path, the corrected single pass
+checks only the last claim. Correction re-review is critical/high/medium/low
+`0/0/0/0`. Complete normal catalog/projection/command suites and the exact
+focused race/parity gate pass; repository-wide compilation, scoped vet, pinned
+lint with zero issues, module verification, glossary, formatting, and
+whitespace also pass. The complete `spike/t421` suite exceeded a 30-minute
+cumulative package allowance in the inherited Kafka relationship-component
+filesystem sync; that exact test passes alone in 296.036s and leaves no test
+process. Docs-check reaches only the known UI-owned missing
+`ui/receipts/fixtures/service-boundary.png`.
+
+F2 now supplies the complete private final-authority reader. One authenticated,
+strictly ordered exact-mode GET authorizes first and coherently binds the
+repository commit/tree, runtime selector, selected state, exact activation
+plan/schedule/unit, catalog, search/source, observation, candidate, every
+extraction plan/root, complete V3 relationship, resolver namespace, RPC/Kafka
+components and caller publication. It then rechecks every mutable authority and
+repository authorization. The source-side order-independent candidate proof
+over path/object/declared-bytes/required must equal the proof reconstructed from
+every physical candidate-member execution partition, so equal cardinality
+cannot hide member substitution. Resolver validation opens every namespace
+member; RPC and Kafka full walks must exactly compose the relationship
+projection multiset by kind, plane, class, lookup key and posting digest.
+
+The exact per-call formulas are
+`C=29+3D+T+V_f+R_f+U+I_s+I_c+I_r+5I_l`,
+`S=30+6D+3A+G*I_g+H`,
+`M=V+E+R_m+Z+2N*I_s+P*I_c+K*I_g+J*I_l`, and `W=0`.
+`V_f` is the V3 relationship service-plus-repository-member-file count and is
+unconditional because each F validates the complete semantic snapshot.
+`P` is one candidate repository-plus-caller artifact traversal, every input
+record reread by the existing 512-record binary-carry and final-fold merges,
+and one final projection scan. Whole-repository exact F admits no local
+projections.
+Empty-reader-cache cold is
+`C=37+3D+T+V_f+R_f+U`, `S=30+6D+3A+G`, and
+`M=2N+P+K+V+E+R_m+Z+J`; fully warm is
+`C=29+3D+T+V_f+R_f+U`, `S=30+6D+3A`, and `M=V+E+R_m+Z`.
+The derived no-slack request maxima are
+`C/S/M/W=18,469/528/589,656,064/0`; the member ceiling includes the exact
+`B512(2*candidate.MaxCorpusEntries)=313,296,640` merge-input term and
+limit-plus-one refuses.
+The receipt records actual cache posture, including any relationship cache miss,
+rather than assuming startup warming.
+
+Source and catalog misses remain private pending values. After all final fences,
+the caller lease is explicitly and error-propagatingly released; only a complete
+body and clean ledger allow the source/catalog pair to commit under the fixed
+source-before-catalog lock order. Release is serialized with concurrent caller
+publication transitions by the existing registry token and may wait for that
+bounded transition or perform last-reader retired-byte cleanup; it is not
+request-cancellable, and cleanup failure refuses F. Exact mode alone installs
+the server root as `BaseContext`, allowing terminal exact failure to cancel
+another active read without warming its caches. Ordinary mode retains the
+original handler and nil root context.
+
+Focused accounting, candidate-proof, component-composition, maximum/refusal,
+source-free-shape, cancellation and cache-order tests pass normally and under
+race. Complete `cmd/phebs` and resolver-namespace normal suites, the complete
+resolver-namespace race suite, all-package compilation, scoped vet, module
+verification, whitespace, and glossary checks pass; docs-check reaches only
+the pre-existing UI-owned missing
+`ui/receipts/fixtures/service-boundary.png`. Final independent review reports
+critical/high/medium/low `0/0/0/0`. This F2 result does
+not supply R/Q totals, replacement phase caps, the final ordinal, a superseding
+plan/freeze, ceremony authority, a public product endpoint, release,
+accuracy/completeness, supported scale, SLO, topology, migration or
+decommission evidence.
+
+Post-X review found that the single F call could still observe the prior
+phase's complete authority while the next phase was legitimately building its
+replacement. The corrected compact corridor inserts `T`, a private source-free
+tail-readiness read, after X and before F. T freshly reads the selected runtime,
+the exact V3 relationship pointer and immutable root, the exact resolver
+namespace root, and the current caller summary; it compares the caller against
+the resolver namespace's underlying resolver-catalog generation/manifest, then
+reconfirms the relationship pointer and selected runtime. F uses those same
+typed resolver-catalog identities rather than exposing or comparing the
+enclosing namespace generation/root. If an immutable relationship or resolver
+root disappears, T polls only when a second pointer read proves supersession;
+an unchanged pointer naming absent bytes fails closed as corruption.
+
+One ready T is exactly `C/S/M/W=4/4/0/0`. A deep attempt decodes at most the
+existing 256-KiB relationship root and 8-MiB resolver root, hashes the bounded
+caller current summary, and performs no write, child, new lock, persistent
+cache, or invalidation. At the unchanged five-second cadence, a four-hour phase
+admits at most 2,881 attempts. Adding T to every operational phase derives
+five-epoch accounted-request maxima of
+`11,529/5,763/11,526/6,254/8,689`; these are inspector request counts, not phase
+native-read caps.
+
+Current selectors deliberately remain on A until B publication exists, so T
+cannot infer the phase target from current production state. The compact
+inventory therefore hashes an explicit transition table against the prior
+accepted F identity: logical B requires both relationship identities to change
+while both caller identities remain equal; physical B and return A require both
+pairs to change; warm, stale, restart, pressure, lifecycle, and product phases
+require equality; archive accepts either a wholly equal or wholly replaced
+relationship pair while retaining caller identity only after its existing
+archive comparison R oracle completes. A counterexample proves the transition
+predicate rejects old logical A. The future runner
+must retain the prior accepted F identity and enforce this table; this branch
+does not yet implement that runner.
+
+Focused T normal/race, missing-root/supersession, identity-alias, phase-table,
+old-A counterexample, inventory, contract, fixture-scope, split-member, and
+whitespace checks pass. The first production-shaped attempt exposed an
+impossible comparison between the relationship's nine-domain upstream digest
+and the caller's two-adapter upstream digest; T and F now bind the shared
+underlying resolver-catalog identity while each reader independently validates
+its own upstream scope. The next attempt exposed a black-box-oracle error:
+member partitions are execution partitions, so repeated backing members are
+physically decoded and charged once per execution. The exact frozen structural
+Go sentinel also replaces the non-candidate placeholder, and a cheap production
+policy preflight now proves all nine frozen candidate counts before launch.
+
+The source-equivalent production/exercised-regression real-server path then
+passed in 465.56 seconds. Ready
+T recorded `C/S/M/W=4/4/0/0`; cold F recorded
+`10,763/126/415,836/0`; warm F recorded `10,761/90/251,021/0`; the
+candidate/relationship/caller cache-miss tuple was `0/1/0`. The deterministic
+late-selector race refused stale success, latched a nonzero terminal exact-mode
+exit, and bounded cleanup left no helper or Surreal process. R/Q totals,
+replacement phase caps, the final ordinal, superseding plan/freeze, execution,
+merge, release, and scale claims remain open.
+
+The next exact-tree F/Q bar corrects F's candidate strict-open arithmetic and
+closes the real product corridor. Candidate work includes both direct input
+walks, every 512-record binary-carry/final-fold merge input, and the final
+projection scan; whole-repository F admits no local projections. The resulting
+candidate maximum is 353,296,640 M and the corrected F request maximum is
+589,656,064 M. Q remains exactly `C/S/W=160/164/0`; Q-M is the overflow-checked
+plan-order sum of the HTTP and MCP `member_reads` retained by each query result,
+not a frozen scalar. The real-server bar independently derives every page's M
+from the selected immutable catalog/relationship/component member receipts.
+Repository identity is part of declaration lineage and projection digests, so
+otherwise equal repositories can pack the same projections into different
+relationship members and produce different exact Q-M totals. No literal total
+is admissible and no production defect follows. The two-server witness covers
+cold F, all 38 query reports, warm F, late-selector conflict, terminal nonzero
+stop, and bounded clean teardown. R, cumulative phase bounds, final ordinal,
+corrected-plan freeze, execution, release, and scale/SLO claims remain open.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

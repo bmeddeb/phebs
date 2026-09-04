@@ -1,13 +1,16 @@
 package servicecatalogv3
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
 
@@ -173,6 +176,253 @@ func TestReadCacheColdWarmConcurrentAndLeaseRetirement(t *testing.T) {
 	replacement.Close()
 	if bounded.Stats().RootEntries != 1 {
 		t.Fatalf("bounded root entries = %+v", bounded.Stats())
+	}
+}
+
+func TestReadCacheMemberAccountingColdWarmAndLimitRefusal(t *testing.T) {
+	generation := readTestGeneration(t, "accounting", 2)
+	descriptor := generation.Root.ServiceMembers[0]
+	wantVisits := uint64(descriptor.Records + descriptor.Memberships)
+	if wantVisits < 2 {
+		t.Fatalf("member visits = %d, want at least two", wantVisits)
+	}
+
+	source := newReadTestSource(generation)
+	cache := NewDefaultReadCache()
+	lease, err := cache.Open(
+		t.Context(), source, generation.Root.Binding.Repository, generation.Root.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lease.Close()
+	scoped, ledger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		projection, readErr := lease.Service(scoped, source, "service-00000")
+		if readErr != nil || projection.Service.Key != "service-00000" {
+			t.Fatalf("cold/warm projection = %+v, %v", projection, readErr)
+		}
+	}
+	counts, err := ledger.Finish()
+	if err != nil || counts.MemberVisits != wantVisits {
+		t.Fatalf("cold/warm member visits = %+v, %v", counts, err)
+	}
+	if stats := cache.Stats(); stats.MemberReads != 1 || stats.MemberEntries != 1 {
+		t.Fatalf("cold/warm cache stats = %+v", stats)
+	}
+
+	refusalSource := newReadTestSource(generation)
+	refusalCache := NewDefaultReadCache()
+	refusalLease, err := refusalCache.Open(
+		t.Context(), refusalSource,
+		generation.Root.Binding.Repository, generation.Root.Digest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer refusalLease.Close()
+	limited, limitedLedger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits - 1},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection, err := refusalLease.Service(limited, refusalSource, "service-00000")
+	if !errors.Is(err, readaccounting.ErrLimit) || projection.Service.Key != "" {
+		t.Fatalf("limited projection = %+v, %v", projection, err)
+	}
+	counts, err = limitedLedger.Finish()
+	if !errors.Is(err, readaccounting.ErrLimit) || counts.MemberVisits != wantVisits {
+		t.Fatalf("limited member visits = %+v, %v", counts, err)
+	}
+	if stats := refusalCache.Stats(); stats.MemberReads != 1 || stats.MemberEntries != 0 {
+		t.Fatalf("refused fill cache stats = %+v", stats)
+	}
+
+	retry, retryLedger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection, err = refusalLease.Service(retry, refusalSource, "service-00000")
+	if err != nil || projection.Service.Key != "service-00000" {
+		t.Fatalf("retry projection = %+v, %v", projection, err)
+	}
+	counts, err = retryLedger.Finish()
+	if err != nil || counts.MemberVisits != wantVisits {
+		t.Fatalf("retry member visits = %+v, %v", counts, err)
+	}
+	if stats := refusalCache.Stats(); stats.MemberReads != 2 || stats.MemberEntries != 1 {
+		t.Fatalf("retry cache stats = %+v", stats)
+	}
+}
+
+func TestReadCatalogContextReadsCompleteGenerationAndAccountsMembers(t *testing.T) {
+	catalog := acceptedCatalog(MaxPathsPerMember+1, true)
+	catalog.Services = append(catalog.Services, servicecatalog.Service{
+		Key: "tree-owner", DisplayName: "tree owner",
+		Disposition: servicecatalog.DispositionAccepted,
+		Origin:      servicecatalog.OriginBase,
+	})
+	catalog.Memberships = append(catalog.Memberships, servicecatalog.Membership{
+		ServiceKey: "tree-owner", Path: "tree",
+		Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase,
+	})
+	generation, err := Build(testBinding(catalog.Authority), catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(generation.Root.ServiceMembers) < 2 || len(generation.Root.PlacementMembers) < 2 {
+		t.Fatalf("incomplete fixture: service=%d placement=%d", len(generation.Root.ServiceMembers), len(generation.Root.PlacementMembers))
+	}
+	var wantVisits uint64
+	for _, encoded := range generation.Members {
+		switch encoded.Kind {
+		case "service":
+			var member ServiceMember
+			if err := decodeCanonical(encoded.Content, &member); err != nil {
+				t.Fatal(err)
+			}
+			wantVisits += uint64(len(member.Services) + len(member.Memberships))
+		case "placement":
+			var member PlacementMember
+			if err := decodeCanonical(encoded.Content, &member); err != nil {
+				t.Fatal(err)
+			}
+			wantVisits += uint64(len(member.Inherited) + len(member.Placements))
+		default:
+			t.Fatalf("unexpected member kind %q", encoded.Kind)
+		}
+	}
+	source := newReadTestSource(generation)
+	scoped, ledger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opened, err := ReadCatalogContext(scoped, source, generation.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := servicecatalog.Normalize(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(opened, want) {
+		t.Fatal("complete catalog differs")
+	}
+	logicalDigest, err := NormalizedCatalogLogicalDigest(t.Context(), opened)
+	if err != nil || logicalDigest != generation.Root.LogicalDigest {
+		t.Fatalf("logical digest = %q, %v", logicalDigest, err)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := NormalizedCatalogLogicalDigest(canceled, opened); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled logical digest = %v", err)
+	}
+	counts, err := ledger.Finish()
+	if err != nil || counts.MemberVisits != wantVisits {
+		t.Fatalf("member visits = %+v, %v", counts, err)
+	}
+	if source.rootReads != 0 || source.memberReads != len(generation.Members) {
+		t.Fatalf("source reads: root=%d member=%d, want root=0 member=%d", source.rootReads, source.memberReads, len(generation.Members))
+	}
+
+	source.mu.Lock()
+	for digest := range source.members {
+		source.members[digest][0] ^= 0xff
+		break
+	}
+	source.mu.Unlock()
+	if !reflect.DeepEqual(opened, want) {
+		t.Fatal("returned catalog aliases source member bytes")
+	}
+}
+
+func TestProjectServiceMemberAccountsDecodedRecordsBeforeSemanticRefusal(t *testing.T) {
+	generation := readTestGeneration(t, "semantic-refusal", 2)
+	descriptor := generation.Root.ServiceMembers[0]
+	raw := generation.Members[0].Content
+	var member ServiceMember
+	if err := decodeCanonical(raw, &member); err != nil {
+		t.Fatal(err)
+	}
+	wantVisits := uint64(len(member.Services) + len(member.Memberships))
+	member.PolicyDigest = rawDigest([]byte("wrong policy"))
+	raw, err := canonical(member)
+	if err != nil {
+		t.Fatal(err)
+	}
+	descriptor.ContentBytes = len(raw)
+	descriptor.Digest = rawDigest(raw)
+	sourceGeneration, err := SourceGenerationDigest(generation.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scoped, ledger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projections, err := projectServiceMember(
+		scoped, generation.Root, descriptor, raw, sourceGeneration,
+	)
+	if !errors.Is(err, ErrInvalid) || projections != nil {
+		t.Fatalf("semantic refusal = %+v, %v", projections, err)
+	}
+	counts, accountingErr := ledger.Finish()
+	if accountingErr != nil || counts.MemberVisits != wantVisits {
+		t.Fatalf("semantic-refusal visits = %+v, %v", counts, accountingErr)
+	}
+
+	raw = append([]byte(" "), generation.Members[0].Content...)
+	descriptor = generation.Root.ServiceMembers[0]
+	descriptor.ContentBytes = len(raw)
+	descriptor.Digest = rawDigest(raw)
+	scoped, ledger, err = readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projections, err = projectServiceMember(
+		scoped, generation.Root, descriptor, raw, sourceGeneration,
+	)
+	if !errors.Is(err, ErrInvalid) || projections != nil {
+		t.Fatalf("canonical refusal = %+v, %v", projections, err)
+	}
+	counts, accountingErr = ledger.Finish()
+	if accountingErr != nil || counts.MemberVisits != wantVisits {
+		t.Fatalf("canonical-refusal visits = %+v, %v", counts, accountingErr)
+	}
+
+	raw = append(bytes.Clone(generation.Members[0].Content), []byte("{}")...)
+	descriptor = generation.Root.ServiceMembers[0]
+	descriptor.ContentBytes = len(raw)
+	descriptor.Digest = rawDigest(raw)
+	scoped, ledger, err = readaccounting.Start(
+		t.Context(), readaccounting.Counts{MemberVisits: wantVisits},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projections, err = projectServiceMember(
+		scoped, generation.Root, descriptor, raw, sourceGeneration,
+	)
+	if !errors.Is(err, ErrInvalid) || projections != nil {
+		t.Fatalf("trailing-value refusal = %+v, %v", projections, err)
+	}
+	counts, accountingErr = ledger.Finish()
+	if accountingErr != nil || counts.MemberVisits != wantVisits {
+		t.Fatalf("trailing-value visits = %+v, %v", counts, accountingErr)
 	}
 }
 

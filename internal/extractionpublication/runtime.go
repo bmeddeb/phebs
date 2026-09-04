@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -42,6 +43,29 @@ type Runtime struct {
 	TimingReports func([]byte) error
 
 	assembly [64]sync.Mutex
+}
+
+// GenerationDigest derives the production extraction-generation identity from
+// one exact ordered plan inventory without opening its controls.
+func GenerationDigest(repository string, planDigests []string) (string, error) {
+	if reponame.Validate(repository) != nil || planDigests == nil || len(planDigests) > MaxDomains {
+		return "", invalid("generation digest inventory")
+	}
+	for _, planDigest := range planDigests {
+		if !validDigest(planDigest) {
+			return "", invalid("generation digest plan")
+		}
+	}
+	semantic := struct {
+		Schema     string   `json:"schema"`
+		Repository string   `json:"repository"`
+		Plans      []string `json:"plans"`
+	}{Schema: GenerationSchema, Repository: repository, Plans: planDigests}
+	raw, err := canonical(semantic)
+	if err != nil {
+		return "", err
+	}
+	return digest(GenerationSchema, raw), nil
 }
 
 const (
@@ -314,19 +338,17 @@ func (runtime *Runtime) ExistingPlans(
 		plans == nil || len(plans) > MaxDomains {
 		return nil, false, invalid("existing generation inventory")
 	}
-	semantic := struct {
-		Schema     string   `json:"schema"`
-		Repository string   `json:"repository"`
-		Plans      []string `json:"plans"`
-	}{Schema: GenerationSchema, Repository: repository, Plans: make([]string, 0, len(plans))}
+	planDigests := make([]string, 0, len(plans))
 	for _, plan := range plans {
 		if plan.Repository != repository || candidate.ValidateDomainResultPlanControl(plan) != nil {
 			return nil, false, invalid("existing generation plan")
 		}
-		semantic.Plans = append(semantic.Plans, plan.Digest)
+		planDigests = append(planDigests, plan.Digest)
 	}
-	raw, _ := canonical(semantic)
-	target := digest("phebs-extraction-partition-generation-v1", raw)
+	target, err := GenerationDigest(repository, planDigests)
+	if err != nil {
+		return nil, false, err
+	}
 	directory := runtime.generationDirectory(repository, target)
 	generation, err := runtime.openGeneration(directory, repository, target)
 	if errors.Is(err, os.ErrNotExist) {
@@ -369,11 +391,7 @@ func (runtime *Runtime) Reconcile(
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	semantic := struct {
-		Schema     string   `json:"schema"`
-		Repository string   `json:"repository"`
-		Plans      []string `json:"plans"`
-	}{Schema: GenerationSchema, Repository: repository, Plans: make([]string, 0, len(domains))}
+	planDigests := make([]string, 0, len(domains))
 	seen := make(map[string]struct{}, len(domains))
 	for index := range domains {
 		domain := domains[index]
@@ -387,10 +405,12 @@ func (runtime *Runtime) Reconcile(
 			return "", invalid("duplicate domain plan")
 		}
 		seen[key] = struct{}{}
-		semantic.Plans = append(semantic.Plans, domain.Plan.Digest)
+		planDigests = append(planDigests, domain.Plan.Digest)
 	}
-	semanticRaw, _ := canonical(semantic)
-	target := digest("phebs-extraction-partition-generation-v1", semanticRaw)
+	target, err := GenerationDigest(repository, planDigests)
+	if err != nil {
+		return "", err
+	}
 	var authority PlanningAuthority
 	hasAuthorityBinding := false
 	if len(domains) > 0 {
@@ -558,6 +578,10 @@ func (runtime *Runtime) currentPath(repository, domain string) string {
 }
 
 func (runtime *Runtime) openGeneration(directory, repository, target string) (Generation, error) {
+	return runtime.openGenerationContext(context.Background(), directory, repository, target)
+}
+
+func (runtime *Runtime) openGenerationContext(ctx context.Context, directory, repository, target string) (Generation, error) {
 	info, err := os.Lstat(directory)
 	if err != nil {
 		return Generation{}, err
@@ -565,7 +589,7 @@ func (runtime *Runtime) openGeneration(directory, repository, target string) (Ge
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return Generation{}, invalid("generation directory")
 	}
-	raw, err := readBounded(filepath.Join(directory, generationName()), MaxGenerationControlBytes)
+	raw, err := readBoundedContext(ctx, filepath.Join(directory, generationName()), MaxGenerationControlBytes)
 	if err != nil {
 		return Generation{}, err
 	}
@@ -584,7 +608,11 @@ func (runtime *Runtime) openGeneration(directory, repository, target string) (Ge
 }
 
 func (runtime *Runtime) openDomainPlan(directory string, descriptor DomainDescriptor) (DomainPlan, error) {
-	raw, err := readBounded(filepath.Join(directory, descriptor.PlanName), candidate.MaxDomainResultPlanBytes+1024)
+	return runtime.openDomainPlanContext(context.Background(), directory, descriptor)
+}
+
+func (runtime *Runtime) openDomainPlanContext(ctx context.Context, directory string, descriptor DomainDescriptor) (DomainPlan, error) {
+	raw, err := readBoundedContext(ctx, filepath.Join(directory, descriptor.PlanName), candidate.MaxDomainResultPlanBytes+1024)
 	if err != nil {
 		return DomainPlan{}, err
 	}
@@ -608,7 +636,7 @@ func (runtime *Runtime) enqueue(ctx context.Context, generation Generation) erro
 	prior := ""
 	current, err := runtime.Store.GetGenerationSchedule(ctx, generation.Repository, ScheduleStage)
 	if err == nil {
-		bindingTarget, targetErr := runtime.scheduleTarget(generation.Repository, current.Generation)
+		bindingTarget, targetErr := runtime.scheduleTargetContext(ctx, generation.Repository, current.Generation)
 		if targetErr != nil {
 			return targetErr
 		}
@@ -628,7 +656,7 @@ func (runtime *Runtime) enqueue(ctx context.Context, generation Generation) erro
 		ScheduleGeneration: scheduleGeneration, TargetGeneration: generation.Digest,
 		PriorSchedule: prior,
 	}
-	if err := runtime.writeBinding(binding); err != nil {
+	if err := runtime.writeBindingContext(ctx, binding); err != nil {
 		return err
 	}
 	_, err = runtime.Store.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{
@@ -659,6 +687,10 @@ func (runtime *Runtime) ensureCompleteSchedule(ctx context.Context, generation G
 }
 
 func (runtime *Runtime) writeBinding(binding scheduleBinding) error {
+	return runtime.writeBindingContext(context.Background(), binding)
+}
+
+func (runtime *Runtime) writeBindingContext(ctx context.Context, binding scheduleBinding) error {
 	if validateBinding(binding) != nil {
 		return invalid("schedule binding")
 	}
@@ -667,7 +699,7 @@ func (runtime *Runtime) writeBinding(binding scheduleBinding) error {
 		if !errors.Is(err, os.ErrExist) {
 			return err
 		}
-		existing, readErr := runtime.readBinding(binding.Repository, binding.ScheduleGeneration)
+		existing, readErr := runtime.readBindingContext(ctx, binding.Repository, binding.ScheduleGeneration)
 		if readErr != nil || existing != binding {
 			return errors.Join(readErr, invalid("schedule binding collision"))
 		}
@@ -692,7 +724,11 @@ func validateBinding(binding scheduleBinding) error {
 }
 
 func (runtime *Runtime) readBinding(repository, schedule string) (scheduleBinding, error) {
-	raw, err := readBounded(runtime.bindingPath(repository, schedule), MaxPointerBytes)
+	return runtime.readBindingContext(context.Background(), repository, schedule)
+}
+
+func (runtime *Runtime) readBindingContext(ctx context.Context, repository, schedule string) (scheduleBinding, error) {
+	raw, err := readBoundedContext(ctx, runtime.bindingPath(repository, schedule), MaxPointerBytes)
 	if err != nil {
 		return scheduleBinding{}, err
 	}
@@ -705,7 +741,11 @@ func (runtime *Runtime) readBinding(repository, schedule string) (scheduleBindin
 }
 
 func (runtime *Runtime) scheduleTarget(repository, schedule string) (string, error) {
-	binding, err := runtime.readBinding(repository, schedule)
+	return runtime.scheduleTargetContext(context.Background(), repository, schedule)
+}
+
+func (runtime *Runtime) scheduleTargetContext(ctx context.Context, repository, schedule string) (string, error) {
+	binding, err := runtime.readBindingContext(ctx, repository, schedule)
 	if err == nil {
 		return binding.TargetGeneration, nil
 	}
@@ -1009,7 +1049,11 @@ func domainForOffset(generation Generation, offset int) (DomainDescriptor, int, 
 }
 
 func readPartitionResult(path string, plan candidate.DomainResultPlan, ordinal int) (candidate.PartitionResult, bool, error) {
-	raw, err := readBounded(path, candidate.MaxPartitionResultBytes)
+	return readPartitionResultContext(context.Background(), path, plan, ordinal)
+}
+
+func readPartitionResultContext(ctx context.Context, path string, plan candidate.DomainResultPlan, ordinal int) (candidate.PartitionResult, bool, error) {
+	raw, err := readBoundedContext(ctx, path, candidate.MaxPartitionResultBytes)
 	if errors.Is(err, os.ErrNotExist) {
 		return candidate.PartitionResult{}, false, nil
 	}
@@ -1059,7 +1103,11 @@ func newCompletionControl(plan candidate.DomainResultPlan) completionControl {
 }
 
 func readCompletionControl(path string, plan candidate.DomainResultPlan) (completionControl, error) {
-	raw, err := readBounded(path, MaxCompletionBytes)
+	return readCompletionControlContext(context.Background(), path, plan)
+}
+
+func readCompletionControlContext(ctx context.Context, path string, plan candidate.DomainResultPlan) (completionControl, error) {
+	raw, err := readBoundedContext(ctx, path, MaxCompletionBytes)
 	if err != nil {
 		return completionControl{}, err
 	}
@@ -1295,7 +1343,11 @@ func classifyAuthorityFenceError(ctx context.Context, err error) error {
 }
 
 func readDomainRoot(path string, plan candidate.DomainResultPlan) (candidate.DomainResultRoot, bool, error) {
-	raw, err := readBounded(path, candidate.MaxDomainResultRootBytes)
+	return readDomainRootContext(context.Background(), path, plan)
+}
+
+func readDomainRootContext(ctx context.Context, path string, plan candidate.DomainResultPlan) (candidate.DomainResultRoot, bool, error) {
+	raw, err := readBoundedContext(ctx, path, candidate.MaxDomainResultRootBytes)
 	if errors.Is(err, os.ErrNotExist) {
 		return candidate.DomainResultRoot{}, false, nil
 	}
@@ -1321,7 +1373,11 @@ func (runtime *Runtime) generationSettled(generation Generation, directory strin
 }
 
 func (runtime *Runtime) readCurrentPointer(repository, domainName string) (Pointer, error) {
-	raw, err := readBounded(runtime.currentPath(repository, domainName), MaxPointerBytes)
+	return runtime.readCurrentPointerContext(context.Background(), repository, domainName)
+}
+
+func (runtime *Runtime) readCurrentPointerContext(ctx context.Context, repository, domainName string) (Pointer, error) {
+	raw, err := readBoundedContext(ctx, runtime.currentPath(repository, domainName), MaxPointerBytes)
 	if err != nil {
 		return Pointer{}, err
 	}
@@ -1344,12 +1400,12 @@ func (runtime *Runtime) Current(
 	if runtime == nil || ctx == nil || reponame.Validate(repository) != nil || !boundedIdentity(domainName, 128) {
 		return candidate.DomainResultRoot{}, invalid("current scope")
 	}
-	pointer, err := runtime.readCurrentPointer(repository, domainName)
+	pointer, err := runtime.readCurrentPointerContext(ctx, repository, domainName)
 	if err != nil {
 		return candidate.DomainResultRoot{}, err
 	}
 	directory := runtime.generationDirectory(repository, pointer.GenerationDigest)
-	generation, err := runtime.openGeneration(directory, repository, pointer.GenerationDigest)
+	generation, err := runtime.openGenerationContext(ctx, directory, repository, pointer.GenerationDigest)
 	if err != nil {
 		return candidate.DomainResultRoot{}, err
 	}
@@ -1357,11 +1413,11 @@ func (runtime *Runtime) Current(
 	if index < 0 {
 		return candidate.DomainResultRoot{}, invalid("current domain is absent")
 	}
-	domain, err := runtime.openDomainPlan(directory, generation.Domains[index])
+	domain, err := runtime.openDomainPlanContext(ctx, directory, generation.Domains[index])
 	if err != nil {
 		return candidate.DomainResultRoot{}, err
 	}
-	root, present, err := readDomainRoot(filepath.Join(directory, domainKey(domainName), rootName()), domain.Plan)
+	root, present, err := readDomainRootContext(ctx, filepath.Join(directory, domainKey(domainName), rootName()), domain.Plan)
 	if err != nil || !present || root.Digest != pointer.RootDigest {
 		return candidate.DomainResultRoot{}, errors.Join(err, invalid("current root"))
 	}
@@ -1378,19 +1434,19 @@ func (runtime *Runtime) Status(
 		return Status{}, invalid("status scope")
 	}
 	directory := runtime.generationDirectory(repository, generationDigest)
-	generation, err := runtime.openGeneration(directory, repository, generationDigest)
+	generation, err := runtime.openGenerationContext(ctx, directory, repository, generationDigest)
 	if err != nil {
 		return Status{}, err
 	}
 	status := Status{Repository: repository, Generation: generationDigest, Domains: make([]DomainStatus, 0, len(generation.Domains))}
 	for _, descriptor := range generation.Domains {
-		domain, err := runtime.openDomainPlan(directory, descriptor)
+		domain, err := runtime.openDomainPlanContext(ctx, directory, descriptor)
 		if err != nil {
 			return Status{}, err
 		}
 		item := DomainStatus{Domain: descriptor.Domain, PlanDigest: descriptor.PlanDigest, Expected: len(domain.Plan.Expected)}
 		for ordinal := range domain.Plan.Expected {
-			result, present, err := readPartitionResult(filepath.Join(directory, domainKey(descriptor.Domain), resultName(ordinal)), domain.Plan, ordinal)
+			result, present, err := readPartitionResultContext(ctx, filepath.Join(directory, domainKey(descriptor.Domain), resultName(ordinal)), domain.Plan, ordinal)
 			if err != nil {
 				return Status{}, err
 			}
@@ -1404,7 +1460,7 @@ func (runtime *Runtime) Status(
 				}
 			}
 		}
-		root, present, err := readDomainRoot(filepath.Join(directory, domainKey(descriptor.Domain), rootName()), domain.Plan)
+		root, present, err := readDomainRootContext(ctx, filepath.Join(directory, domainKey(descriptor.Domain), rootName()), domain.Plan)
 		if err != nil {
 			return Status{}, err
 		}
@@ -1413,6 +1469,10 @@ func (runtime *Runtime) Status(
 		}
 		if current, err := runtime.Current(ctx, repository, descriptor.Domain); err == nil {
 			item.Current = current.PlanDigest == descriptor.PlanDigest
+		} else if readaccounting.IsError(err) {
+			// Missing or invalid current authority still means not-current, but
+			// an incomplete scoped observation cannot become a successful status.
+			return Status{}, err
 		}
 		status.Domains = append(status.Domains, item)
 	}
@@ -1437,12 +1497,12 @@ func (runtime *Runtime) Progress(ctx context.Context, repository string) (Progre
 		schedule.Stage != ScheduleStage || schedule.ResourceClass != store.GenerationResourceExtraction {
 		return Progress{}, invalid("progress schedule")
 	}
-	target, err := runtime.scheduleTarget(repository, schedule.Generation)
+	target, err := runtime.scheduleTargetContext(ctx, repository, schedule.Generation)
 	if err != nil {
 		return Progress{}, err
 	}
-	generation, err := runtime.openGeneration(
-		runtime.generationDirectory(repository, target), repository, target,
+	generation, err := runtime.openGenerationContext(
+		ctx, runtime.generationDirectory(repository, target), repository, target,
 	)
 	if err != nil {
 		return Progress{}, err
@@ -1457,7 +1517,7 @@ func (runtime *Runtime) Progress(ctx context.Context, repository string) (Progre
 		Failed: schedule.Failed, Domains: len(generation.Domains),
 	}
 	for _, descriptor := range generation.Domains {
-		pointer, pointerErr := runtime.readCurrentPointer(repository, descriptor.Domain)
+		pointer, pointerErr := runtime.readCurrentPointerContext(ctx, repository, descriptor.Domain)
 		if errors.Is(pointerErr, os.ErrNotExist) {
 			continue
 		}

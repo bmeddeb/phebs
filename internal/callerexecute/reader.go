@@ -645,7 +645,7 @@ func (reader *PublicationReader) acquire(
 	publicationCurrent := false
 	var publicationErr error
 	if lease.Publication() != nil {
-		publicationCurrent, publicationErr = lease.Publication().CurrentResult()
+		publicationCurrent, publicationErr = lease.Publication().CurrentResultContext(ctx)
 	}
 	if err != nil || upstreamErr != nil || publicationErr != nil || !storeCurrent ||
 		!upstreamCurrent ||
@@ -788,7 +788,7 @@ func (reader *PublicationReader) Current(
 	if publication == nil {
 		return false, nil
 	}
-	filesystemCurrent, err := publication.CurrentResult()
+	filesystemCurrent, err := publication.CurrentResultContext(ctx)
 	if err != nil || !filesystemCurrent {
 		return false, err
 	}
@@ -861,7 +861,7 @@ func (reader *PublicationReader) CurrentPair(
 		}
 	}
 	for _, publication := range filesystems {
-		current, err = publication.CurrentResult()
+		current, err = publication.CurrentResultContext(ctx)
 		if err != nil || !current {
 			return false, err
 		}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority/authorityvalidate"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -872,6 +873,9 @@ func (s *Surreal) GetCallerGenerationPublication(
 	if err := reponame.Validate(repository); err != nil {
 		return nil, fmt.Errorf("get caller generation: %w", err)
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, fmt.Errorf("get caller generation: %w", err)
+	}
 	results, err := surrealdb.Query[[]callerGenerationPublicationRec](
 		ctx, s.db, "SELECT *, ("+callerGenerationPairPayloadDigestSQL+") = "+
 			"pair_payload_digest AS pair_payload_valid FROM $rid", map[string]any{
@@ -903,6 +907,9 @@ func (s *Surreal) GetCallerGenerationPublicationSummary(
 	repository string,
 ) (*CallerGenerationPublicationSummary, error) {
 	if err := reponame.Validate(repository); err != nil {
+		return nil, fmt.Errorf("get caller generation summary: %w", err)
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, fmt.Errorf("get caller generation summary: %w", err)
 	}
 	results, err := surrealdb.Query[[]callerGenerationPublicationSummaryRec](
@@ -1339,6 +1346,11 @@ func (s *Surreal) callerGenerationPublicationSummaryCurrent(
 		},
 	)
 	if err != nil {
+		return false, fmt.Errorf(
+			"check caller generation summary authority: %w", err,
+		)
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return false, fmt.Errorf(
 			"check caller generation summary authority: %w", err,
 		)

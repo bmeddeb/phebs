@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -200,6 +201,15 @@ func validSegmentPrefix(value string) bool {
 }
 
 func ReadSuperRoot(directory, repository string) (SuperRoot, error) {
+	return ReadSuperRootContext(context.Background(), directory, repository)
+}
+
+// ReadSuperRootContext reads and validates one compact root control. It does
+// not inspect segment controls or members and retains no observation context.
+func ReadSuperRootContext(ctx context.Context, directory, repository string) (SuperRoot, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return SuperRoot{}, err
+	}
 	var root SuperRoot
 	if err := readCanonicalJSON(
 		filepath.Join(directory, SuperRootName(repository)), MaxManifestBytes, &root,

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
 )
 
@@ -364,6 +365,15 @@ func RecoverInventoryPublicationsV2(ctx context.Context, root string) (Inventory
 }
 
 func ReadInventoryPublicationRootV2(root, repository string) (InventoryPublicationRootV2, error) {
+	return ReadInventoryPublicationRootV2Context(context.Background(), root, repository)
+}
+
+// ReadInventoryPublicationRootV2Context reads one compact current control,
+// including its failed preflight/open attempt. It does not open its generation.
+func ReadInventoryPublicationRootV2Context(ctx context.Context, root, repository string) (InventoryPublicationRootV2, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return InventoryPublicationRootV2{}, err
+	}
 	raw, err := readBoundedRegular(inventoryPublicationRootPathV2(root, repository), MaxManifestBytes)
 	if err != nil {
 		return InventoryPublicationRootV2{}, err

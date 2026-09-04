@@ -216,7 +216,7 @@ func expectedExecutionProfile(
 		Commands:                 commands,
 		HarnessCommandSetSHA256:  admission.harnessCommandSetSHA256,
 		PressureCommandSetSHA256: admission.pressureCommandSetSHA256,
-		Environment:              frozenExecutionEnvironment(admission),
+		Environment:              frozenExecutionEnvironment(plan, admission),
 		Config:                   config,
 		Runtime:                  frozenExecutionRuntime(plan),
 		Roots:                    frozenExecutionRoots(host, admission.rootVolumeBindingsSHA256),
@@ -264,8 +264,8 @@ func frozenExecutionCommands() []ExecutionCommandProfile {
 	}
 }
 
-func frozenExecutionEnvironment(admission ExecutionProfileAdmissionBinding) ExecutionEnvironmentProfile {
-	return ExecutionEnvironmentProfile{
+func frozenExecutionEnvironment(plan Plan, admission ExecutionProfileAdmissionBinding) ExecutionEnvironmentProfile {
+	value := ExecutionEnvironmentProfile{
 		Schema:           "t422-closed-execution-environment-v1",
 		Policy:           "closed-exact-name-and-value-set-v1",
 		Canonicalization: "sort-by-name;role-tokenize-private-paths;sha256-length-framed-name-value-records-v1",
@@ -293,6 +293,11 @@ func frozenExecutionEnvironment(admission ExecutionProfileAdmissionBinding) Exec
 		ServerSHA256:   admission.serverEnvironmentSHA256,
 		RejectUnlisted: true, RejectDemoVariables: true,
 	}
+	if plan.Schema == PlanV2Schema {
+		value.ServerVariables = append(value.ServerVariables, "PHEBS_T421_EXACT_READS=source-free-v1")
+		slices.Sort(value.ServerVariables)
+	}
+	return value
 }
 
 func frozenExecutionConfig(plan Plan, bytesSHA256 string) ExecutionConfigProfile {

@@ -93,7 +93,7 @@ func (reconciler *Reconciler) PrepareRecovery(
 		}
 	}
 	directory := runtime.generationDirectory(repository, request.GenerationDigest)
-	generation, err := runtime.openGeneration(directory, repository, request.GenerationDigest)
+	generation, err := runtime.openGenerationContext(ctx, directory, repository, request.GenerationDigest)
 	if err != nil {
 		return nil, err
 	}
@@ -103,16 +103,12 @@ func (reconciler *Reconciler) PrepareRecovery(
 	// Re-derive the immutable v1 producer identity, not merely agreement among
 	// caller-supplied names and mutable bindings/pointers. Keep the field order
 	// and domain separator identical to Runtime.Reconcile's frozen v1 recipe.
-	semantic := struct {
-		Schema     string   `json:"schema"`
-		Repository string   `json:"repository"`
-		Plans      []string `json:"plans"`
-	}{Schema: GenerationSchema, Repository: repository, Plans: make([]string, 0, len(generation.Domains))}
+	planDigests := make([]string, 0, len(generation.Domains))
 	for _, descriptor := range generation.Domains {
-		semantic.Plans = append(semantic.Plans, descriptor.PlanDigest)
+		planDigests = append(planDigests, descriptor.PlanDigest)
 	}
-	semanticRaw, _ := canonical(semantic)
-	if digest(GenerationSchema, semanticRaw) != generation.Digest {
+	generationDigest, err := GenerationDigest(repository, planDigests)
+	if err != nil || generationDigest != generation.Digest {
 		return nil, ErrStale
 	}
 	target := -1
@@ -127,7 +123,7 @@ func (reconciler *Reconciler) PrepareRecovery(
 	if target < 0 {
 		return nil, ErrStale
 	}
-	targetDomain, err := runtime.openDomainPlan(directory, generation.Domains[target])
+	targetDomain, err := runtime.openDomainPlanContext(ctx, directory, generation.Domains[target])
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +154,7 @@ func (reconciler *Reconciler) PrepareRecovery(
 		return nil, err
 	}
 	for index, descriptor := range generation.Domains {
-		domain, err := runtime.openDomainPlan(directory, descriptor)
+		domain, err := runtime.openDomainPlanContext(ctx, directory, descriptor)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +194,7 @@ func (reconciler *Reconciler) PrepareRecovery(
 	if current == nil || !recoveryScheduleMatches(*current, generation) || current.Generation != want {
 		return nil, ErrStale
 	}
-	binding, err := runtime.readBinding(repository, want)
+	binding, err := runtime.readBindingContext(ctx, repository, want)
 	if err != nil || binding.TargetGeneration != generation.Digest || binding.PriorSchedule != request.PriorScheduleDigest {
 		return nil, errors.Join(err, ErrStale)
 	}
@@ -252,7 +248,7 @@ func (reconciler *Reconciler) confirmRecoveryAuthority(
 		return err
 	}
 	runtime := reconciler.Runtime
-	raw, err := readBounded(runtime.authorityBindingPath(authority), MaxPointerBytes)
+	raw, err := readBoundedContext(ctx, runtime.authorityBindingPath(authority), MaxPointerBytes)
 	var authorityBinding authorityBinding
 	if err != nil || decodeExact(raw, &authorityBinding) != nil ||
 		authorityBinding.Schema != AuthorityBindingSchema || authorityBinding.Authority != authority ||
@@ -267,7 +263,7 @@ func (reconciler *Reconciler) confirmRecoveryAuthority(
 		current.Status != store.GenerationScheduleSettled || current.Failed != 0 || current.Succeeded != current.TotalChunks {
 		return ErrStale
 	}
-	binding, err := runtime.readBinding(authority.Repository, current.Generation)
+	binding, err := runtime.readBindingContext(ctx, authority.Repository, current.Generation)
 	if err != nil || binding.TargetGeneration != generation.Digest {
 		return errors.Join(err, ErrStale)
 	}
@@ -303,16 +299,16 @@ func (reconciler *Reconciler) validateRecoveryDomain(
 	}
 	plan := domain.Plan
 	resultDirectory := filepath.Join(directory, domainKey(plan.Domain))
-	root, present, err := readDomainRoot(filepath.Join(resultDirectory, rootName()), plan)
+	root, present, err := readDomainRootContext(ctx, filepath.Join(resultDirectory, rootName()), plan)
 	if err != nil || !present || root.Digest != expected.RootDigest ||
 		root.Disposition == candidate.PartitionResultTerminalRefusal || root.Disposition == candidate.PartitionResultRetryable {
 		return errors.Join(err, ErrStale)
 	}
-	pointer, err := reconciler.Runtime.readCurrentPointer(plan.Repository, plan.Domain)
+	pointer, err := reconciler.Runtime.readCurrentPointerContext(ctx, plan.Repository, plan.Domain)
 	if err != nil || pointer.GenerationDigest != generation.Digest || pointer.PlanDigest != plan.Digest || pointer.RootDigest != root.Digest {
 		return errors.Join(err, ErrStale)
 	}
-	completion, err := readCompletionControl(filepath.Join(resultDirectory, completionName()), plan)
+	completion, err := readCompletionControlContext(ctx, filepath.Join(resultDirectory, completionName()), plan)
 	if err != nil || completion.Count != completion.Expected || len(root.Results) != len(plan.Expected) {
 		return errors.Join(err, ErrStale)
 	}
@@ -320,7 +316,7 @@ func (reconciler *Reconciler) validateRecoveryDomain(
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		result, present, err := readPartitionResult(filepath.Join(resultDirectory, resultName(ordinal)), plan, ordinal)
+		result, present, err := readPartitionResultContext(ctx, filepath.Join(resultDirectory, resultName(ordinal)), plan, ordinal)
 		if err != nil || !present || result != root.Results[ordinal] {
 			return errors.Join(err, ErrStale)
 		}
@@ -345,7 +341,7 @@ func (reconciler *Reconciler) validateRecoveryDomain(
 func (runtime *Runtime) prepareRecoveryCheckpoint(ctx context.Context, directory string, domain DomainPlan, ordinal int) error {
 	resultDirectory := filepath.Join(directory, domainKey(domain.Plan.Domain))
 	completionPath := filepath.Join(resultDirectory, completionName())
-	completion, err := readCompletionControl(completionPath, domain.Plan)
+	completion, err := readCompletionControlContext(ctx, completionPath, domain.Plan)
 	if err != nil {
 		return err
 	}

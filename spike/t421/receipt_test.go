@@ -852,7 +852,7 @@ func completeTestReceipt(t *testing.T, plan Plan, binding ExecutionFreezeBinding
 	queries := make([]QueryResult, len(plan.Oracle.QueryCases))
 	var queryControlReads, queryMemberReads uint64
 	for index, value := range plan.Oracle.QueryCases {
-		queries[index] = expectedQueryResult(value, plan.ReceiptContract.QueryTransportSchema, productAuthority)
+		queries[index] = expectedQueryResult(value, plan.ReceiptContract.QueryTransportSchema, productAuthority, plan.Schema)
 		queryControlReads += queries[index].HTTP.ControlReads + queries[index].MCP.ControlReads
 		queryMemberReads += queries[index].HTTP.MemberReads + queries[index].MCP.MemberReads
 	}
@@ -1217,7 +1217,7 @@ func testObservedPhaseState(
 		AuthoritySnapshotSHA256: mustReceiptSHA256(t, authority.AuthorityState),
 		SourceAuthorityRecipe:   "source-generation-and-authored-tree-recipe-v1",
 		AuthorityReader:         "current-root-then-generation-then-exact-member-inventory-v1",
-		SemanticReader:          "authorized-product-reader-canonical-projection-v1",
+		SemanticReader:          semanticReaderForObservationSchema(plan.ReceiptContract.StateObservationSchema),
 	}
 }
 

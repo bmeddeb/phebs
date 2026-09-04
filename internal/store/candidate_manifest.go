@@ -11,6 +11,7 @@ import (
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/candidateid"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -405,6 +406,9 @@ func (s *Surreal) GetCandidateManifestPublication(
 ) (*CandidateManifestPublication, error) {
 	if err := validateCandidateRepository(repository); err != nil {
 		return nil, fmt.Errorf("get candidate manifest: repository: %w", err)
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, fmt.Errorf("get candidate manifest: %w", err)
 	}
 	results, err := surrealdb.Query[[]candidateManifestPublicationRec](
 		ctx,

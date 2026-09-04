@@ -34,6 +34,37 @@ type ReadSource interface {
 	) ([]byte, error)
 }
 
+// ReadCatalogContext reads every exact-root member once and opens the complete
+// logical catalog. It owns no cache; callers decide whether a validated result
+// may be retained after their wider authority fences complete.
+func ReadCatalogContext(
+	ctx context.Context,
+	source ReadSource,
+	root Root,
+) (servicecatalog.Catalog, error) {
+	if ctx == nil || source == nil || ValidateRoot(root) != nil {
+		return servicecatalog.Catalog{}, ErrInvalid
+	}
+	root = cloneReadRoot(root)
+	descriptors := make([]MemberDescriptor, 0, len(root.ServiceMembers)+len(root.PlacementMembers))
+	descriptors = append(descriptors, root.ServiceMembers...)
+	descriptors = append(descriptors, root.PlacementMembers...)
+	members := make([]EncodedMember, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		if err := ctx.Err(); err != nil {
+			return servicecatalog.Catalog{}, err
+		}
+		raw, err := source.ReadServiceCatalogV3Member(ctx, descriptor)
+		if err != nil {
+			return servicecatalog.Catalog{}, err
+		}
+		members = append(members, EncodedMember{
+			Kind: descriptor.Kind, Ordinal: descriptor.Ordinal, Content: slices.Clone(raw),
+		})
+	}
+	return (Generation{Root: root, Members: members}).CatalogContext(ctx)
+}
+
 type readRootKey struct {
 	repository string
 	digest     string
@@ -266,7 +297,7 @@ func (cache *ReadCache) openMember(
 		var projections []servicecatalog.ServiceProjection
 		if err == nil {
 			projections, err = projectServiceMember(
-				root, descriptor, raw, sourceGeneration,
+				ctx, root, descriptor, raw, sourceGeneration,
 			)
 		}
 

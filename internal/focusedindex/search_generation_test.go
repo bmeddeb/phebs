@@ -1,6 +1,7 @@
 package focusedindex
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -63,6 +65,89 @@ func TestSearchGenerationPublicationRollbackRecoveryAndAccounting(t *testing.T) 
 	if rootA.Prior != nil || !sameSearchRevisions(rootA.Current.Revisions, revisionsA) {
 		t.Fatalf("first root = %+v", rootA)
 	}
+	t.Run("exact control reads", func(t *testing.T) {
+		for _, test := range []struct {
+			name string
+			read func(context.Context) error
+		}{
+			{
+				name: "root",
+				read: func(ctx context.Context) error {
+					_, err := ReadSearchGenerationRootContext(ctx, indexDir, repository)
+					return err
+				},
+			},
+			{
+				name: "whole manifest",
+				read: func(ctx context.Context) error {
+					_, err := ReadWholeManifestContext(ctx, indexDir, repository, revisionsA)
+					return err
+				},
+			},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				ctx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{
+					ControlFileReads: 1,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := test.read(ctx); err != nil {
+					t.Fatal(err)
+				}
+				counts, finishErr := ledger.Finish()
+				if finishErr != nil || counts != (readaccounting.Counts{ControlFileReads: 1}) {
+					t.Fatalf("control read = %+v, %v", counts, finishErr)
+				}
+
+				ctx, ledger, err = readaccounting.Start(t.Context(), readaccounting.Counts{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := test.read(ctx); !errors.Is(err, readaccounting.ErrLimit) {
+					t.Fatalf("control limit = %v", err)
+				}
+				counts, finishErr = ledger.Finish()
+				if !errors.Is(finishErr, readaccounting.ErrLimit) ||
+					counts != (readaccounting.Counts{ControlFileReads: 1}) {
+					t.Fatalf("control refusal = %+v, %v", counts, finishErr)
+				}
+			})
+		}
+
+		ctx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{
+			ControlFileReads: 4,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ReadSearchGenerationControls(
+			ctx, indexDir, repository, rootA.Current.GenerationDigest,
+		); err != nil {
+			t.Fatal(err)
+		}
+		counts, finishErr := ledger.Finish()
+		if finishErr != nil || counts != (readaccounting.Counts{ControlFileReads: 4}) {
+			t.Fatalf("search control reads = %+v, %v", counts, finishErr)
+		}
+
+		ctx, ledger, err = readaccounting.Start(t.Context(), readaccounting.Counts{
+			ControlFileReads: 3,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ReadSearchGenerationControls(
+			ctx, indexDir, repository, rootA.Current.GenerationDigest,
+		); !errors.Is(err, readaccounting.ErrLimit) {
+			t.Fatalf("search control limit = %v", err)
+		}
+		counts, finishErr = ledger.Finish()
+		if !errors.Is(finishErr, readaccounting.ErrLimit) ||
+			counts != (readaccounting.Counts{ControlFileReads: 4}) {
+			t.Fatalf("search control refusal = %+v, %v", counts, finishErr)
+		}
+	})
 	directoryA, err := searchGenerationDirectory(
 		indexDir, repository, rootA.Current.GenerationDigest,
 	)

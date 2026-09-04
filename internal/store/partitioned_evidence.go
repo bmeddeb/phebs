@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -364,6 +365,9 @@ func (s *Surreal) GetPartitionedExtractionDomain(
 	if strings.TrimSpace(repository) != repository || repository == "" ||
 		strings.TrimSpace(domain) != domain || domain == "" {
 		return nil, errors.New("get partitioned extraction domain: invalid scope")
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, fmt.Errorf("get partitioned extraction domain: %w", err)
 	}
 	results, err := surrealdb.Query[[]partitionedDomainRec](ctx, s.db,
 		"SELECT * FROM $rid LIMIT 1", map[string]any{"rid": partitionedDomainID(repository, domain)})

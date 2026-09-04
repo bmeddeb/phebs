@@ -26,6 +26,7 @@ type ContractCorrection struct {
 	NativeGitAdmissionPolicy  string                    `json:"native_git_admission_policy"`
 	ProcessAccountingPolicy   string                    `json:"process_accounting_policy"`
 	ReadAccountingPolicy      string                    `json:"read_accounting_policy"`
+	InspectionInventorySHA256 string                    `json:"inspection_inventory_sha256"`
 	RequiredReadiness         []string                  `json:"required_readiness"`
 }
 
@@ -105,12 +106,33 @@ func applyContractCorrection(plan *Plan) error {
 	plan.Profile.Schema = combinedProfileV2Schema
 	plan.Profile.Bytes.CombinedObservationInputBytes = plan.Profile.Bytes.StructuralDeclaredGoBytes - plan.Profile.Bytes.StructuralNonCandidateBytes + plan.Profile.Bytes.OverlayGoBytes
 	plan.Profile.Bytes.CombinedNonObservationBytes = plan.Profile.Bytes.CombinedLogicalSourceBytes - plan.Profile.Bytes.CombinedObservationInputBytes
+	plan.Oracle.QueryCases = correctedQueryCases()
 	var err error
 	plan.Revisions, err = revisionHistoryForScope(plan.Profile, plan.Revisions.Logical, true)
 	if err != nil {
 		return err
 	}
 	return applyExecutionCorrection(plan)
+}
+
+func correctedQueryCases() []QueryCase {
+	cases := frozenQueryCases()
+	index := slices.IndexFunc(cases, func(value QueryCase) bool {
+		return value.Name == "hidden_repository_denied"
+	})
+	if index < 0 {
+		panic("T42.1 hidden-repository query case is absent")
+	}
+	cases[index].Surface = "service_search"
+	cases[index].HTTP.Path = "/api/search?q=T401Fixture&scope=service&repository=$hidden_repository&service_key=$accepted_service_00000&max_matches=1&context_lines=0"
+	cases[index].Parameters = []QueryParameter{
+		{Name: "query", Value: "T401Fixture"}, {Name: "scope", Value: "service"},
+		{Name: "repository", Value: "$hidden_repository"},
+		{Name: "service_key", Value: "$accepted_service_00000"},
+		{Name: "max_matches", Value: "1"}, {Name: "context_lines", Value: "0"},
+	}
+	cases[index].AuthorityFence = "authorize-visibility-then-one-repository-point-read;no-service-runtime,scope-generation,or-search-read;confirm-current-authority-unchanged"
+	return cases
 }
 
 func applyExecutionCorrection(plan *Plan) error {
@@ -161,10 +183,15 @@ func applyExecutionCorrection(plan *Plan) error {
 	slices.Sort(plan.ToolPolicy.RequiredTools)
 	plan.ReceiptContract = frozenReceiptContract()
 	plan.ReceiptContract.Schema = "t422-combined-convergence-receipt-v2"
+	plan.ReceiptContract.StateObservationSchema = "t422-observed-phase-state-v5"
 	plan.ReceiptContract.RequiredMetrics = correctedReceiptMetricNames()
 	plan.MeterPolicy.RequiredMetricsSHA256 = recipeDigest("t422-required-metrics-v2", plan.ReceiptContract.RequiredMetrics...)
 	plan.Claims = frozenClaims()
 	plan.Claims.ChangesProductionBehavior = false
+	inspectionInventorySHA256, err := correctedInspectionInventorySHA256()
+	if err != nil {
+		return err
+	}
 	plan.Correction = &ContractCorrection{
 		SupersedesSHA256:    retainedPlanSHA256,
 		IdentityDerivations: frozenIdentityDerivations(), ChildBudgets: budgets, AuthorGitCommands: correctedAuthorGitCommands(),
@@ -175,8 +202,9 @@ func applyExecutionCorrection(plan *Plan) error {
 		StartupDeadlineDerivation: "each-new-epoch-inherits-SafetyEnvelope.ServerHealthDeadlineMS-from-retained-T40/T41-host-readiness-policy;no-deadline-increase;phase-and-total-deadlines-still-apply",
 		NativeGitAdmissionPolicy:  "resolve-and-hash-actual-native-Git-image-not-Apple-launcher-shim;prove-builtin-aliases-resolve-to-that-image;admit-transport-shell-separately-as-sh-tool/git-transport-shell-role;Git-helper-slots=upload-pack,pack-objects,one-of-index-pack-or-unpack-objects,rev-list,maintenance;record-packed-and-loose-object-posture-after-clone-and-each-fetch-under-unchanged-admitted-Git-config;any-extra-helper-or-image-refuses;no-gc-disable-or-fetch-flag-change",
 		ProcessAccountingPolicy:   "T42-requires-new-bounded-admitted-image-epoch-accounting-before-runner-readiness;retained-T40-8192-image-cap-and-validators-remain-exact;stream-bounded-events-with-checked-cumulative-counts;enforce-closed-role-budgets-and-resource-gauges-before-work;no-relabeling-missed-processes-as-zero",
-		ReadAccountingPolicy:      "v2-actual-scoped-events:inspection,readiness,native-preparation,public-query;not-all-pipeline-I/O;T40-topology-proxy-is-not-events;control=file-control-read-attempt-or-read-only-store-query-attempt;metadata-probes-excluded;prep-files=24+4*domains+partitions+checkpoint+cold-open+[0,1]-binding-reread;prep-queries=domains+10+four-schedule-reads*native-store-attempts[1,64];phase-controls=prep-files+prep-queries+other-scoped-controls;unchanged-phase-cap-includes-all-subtotals;member=decoded-artifact-or-projection-spool-record-visit-including-rereads;warm-prep-members=0;cold-open<=1;store-writes=attempted-enqueue-transactions[1,64];schedule-writes=one-native-enqueue-call;no-read-query-is-a-write-transaction",
-		RequiredReadiness:         []string{"production-constructor-derived-completed-fixture-accepted", "post-logical-restart-authorized-search-caller-and-relationship-reads:zero-resolver-and-caller-materialization;Git-children-exactly-observed-watcher-plus-census-plus-frozen-startup-commands", "result-preserving-preparation-and-checkpoint-reuse-counterexamples", "actual-scoped-read-event-ledger-and-complete-nonpreparation-inspection-budget-within-unchanged-phase-caps-before-execution", "fresh-independent-exact-source-review-before-new-freeze"},
+		ReadAccountingPolicy:      "v2-scope=H/X/T/F/L/R/Q/prep;not-total-pipeline-I/O;C=file-control-attempt;S=read-query-attempt;K=C+S;W=enqueue-transaction-attempt;metadata=0;" + correctedInspectionPolicy + ";T-C=4;T-S=4;T-M=0;T-W=0;Q-C=2*(2+2*16+6*5+8*2)=160;Q-S=2*(2+1+7+2*11+6*4+8*3)+3+1=164;Q-M=checked-sum-plan-order(query_results.results[*].http.member_reads+query_results.results[*].mcp.member_reads);Q-W=0;prep-C=24+4D+N+checkpoint+cold-open+[0,1]-binding-reread;prep-S=D+10+sum(A1..A4),Ai=[1,64];phase-K=prep+inspection+query",
+		InspectionInventorySHA256: inspectionInventorySHA256,
+		RequiredReadiness:         []string{"production-constructor-derived-completed-fixture-accepted", "post-logical-restart-authorized-search-caller-and-relationship-reads:zero-resolver-and-caller-materialization;Git-children-exactly-observed-watcher-plus-census-plus-frozen-startup-commands", "result-preserving-preparation-and-checkpoint-reuse-counterexamples", "compact-H/X/T/F/L/R/Q-phase-and-epoch-call-inventory", "post-X-tail-readiness-converges-on-exact-selected-relationship-resolver-and-caller-current;frozen-phase-transition-versus-prior-accepted-F-before-one-F", "actual-scoped-read-event-ledger-and-complete-native-T/F/L/R/Q-costs-with-inventory-derived-phase-caps-before-execution", "fresh-independent-exact-source-review-before-new-freeze"},
 	}
 	return nil
 }

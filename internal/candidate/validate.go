@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 // ValidateStage performs strict identity and artifact validation over an
@@ -51,7 +52,7 @@ func validatePublication(
 	if state != nil {
 		manifestPath = filepath.Join(directory, state.Manifest)
 	}
-	manifest, err := readManifest(manifestPath)
+	manifest, err := readManifestContext(ctx, manifestPath)
 	if err != nil {
 		return Manifest{}, err
 	}
@@ -66,7 +67,14 @@ func validatePublication(
 	return manifest, nil
 }
 
-func readManifest(filePath string) (_ Manifest, resultErr error) {
+func readManifest(filePath string) (Manifest, error) {
+	return readManifestContext(context.Background(), filePath)
+}
+
+func readManifestContext(ctx context.Context, filePath string) (_ Manifest, resultErr error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return Manifest{}, err
+	}
 	info, err := os.Lstat(filePath)
 	if err != nil {
 		return Manifest{}, err

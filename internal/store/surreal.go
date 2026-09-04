@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -1578,6 +1579,9 @@ func (s *Surreal) UpsertRepo(ctx context.Context, r Repo) error {
 }
 
 func (s *Surreal) GetRepo(ctx context.Context, name string) (*Repo, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, err
+	}
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
 		"SELECT * FROM $rid",
 		map[string]any{"rid": repoID(name)})
@@ -1595,6 +1599,9 @@ func (s *Surreal) GetRepo(ctx context.Context, name string) (*Repo, error) {
 }
 
 func (s *Surreal) ListRepos(ctx context.Context) ([]Repo, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, err
+	}
 	results, err := surrealdb.Query[[]Repo](ctx, s.db, "SELECT * FROM repo ORDER BY name", nil)
 	if err != nil {
 		return nil, err

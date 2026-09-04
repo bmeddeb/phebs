@@ -246,6 +246,56 @@ func (lease *LeaseV3) Publication() *PublicationV3 {
 	return lease.entry.publication
 }
 
+// ReadCurrentSemanticSnapshot acquires and holds the exact current generation
+// while validating every immutable member, then confirms the pointer again
+// before exposing the completed snapshot.
+func (cache *CacheV3) ReadCurrentSemanticSnapshot(
+	ctx context.Context,
+	root, repository string,
+) (SemanticSnapshotV3, error) {
+	lease, err := cache.Acquire(ctx, root, repository)
+	if err != nil {
+		return SemanticSnapshotV3{}, err
+	}
+	defer lease.Release()
+	publication := lease.Publication()
+	if publication == nil {
+		return SemanticSnapshotV3{}, fmt.Errorf("%w: current semantic snapshot lease", ErrInvalid)
+	}
+	return publication.readCurrentSemanticSnapshotV3(ctx)
+}
+
+// ConfirmCurrentSemanticSnapshot is the final control-only fence for a
+// completely validated semantic snapshot. It rechecks only the mutable
+// current pointer; immutable generation members are not opened or decoded a
+// second time.
+func (cache *CacheV3) ConfirmCurrentSemanticSnapshot(
+	ctx context.Context,
+	root, repository string,
+	snapshot SemanticSnapshotV3,
+) error {
+	if cache == nil {
+		return errors.New("relationship v3 cache is nil")
+	}
+	if ctx == nil || ValidateRootV3(snapshot.Root) != nil ||
+		snapshot.Root.Authority.Repository != repository ||
+		len(snapshot.Projections) != snapshot.Root.ProjectionCount {
+		return fmt.Errorf("%w: current semantic snapshot confirmation", ErrInvalid)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	pointer, err := ReadPointerV3(ctx, root, repository)
+	if err != nil {
+		return err
+	}
+	if pointer.GenerationDigest != snapshot.Root.GenerationDigest ||
+		pointer.RootDigest != snapshot.Root.Digest {
+		return ErrPublishing
+	}
+	return nil
+}
+
 func (lease *LeaseV3) Release() {
 	if lease == nil || lease.cache == nil || lease.entry == nil {
 		return

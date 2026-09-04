@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 // Publication is one immutable root. Opening current validates only bounded
@@ -241,7 +243,7 @@ func OpenGeneration(
 		return nil, fmt.Errorf("%w: generation lookup", ErrInvalid)
 	}
 	directory := generationPath(root, repository, generation)
-	rootValue, err := readRoot(directory, pointer)
+	rootValue, err := readRootContext(ctx, directory, pointer)
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +334,13 @@ func LookupCurrent(
 }
 
 func readRoot(directory string, pointer Pointer) (Root, error) {
+	return readRootContext(context.Background(), directory, pointer)
+}
+
+func readRootContext(ctx context.Context, directory string, pointer Pointer) (Root, error) {
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return Root{}, err
+	}
 	raw, err := readRegular(filepath.Join(directory, pointer.RootFile), MaxRootBytes)
 	if err != nil {
 		return Root{}, err
@@ -376,29 +385,41 @@ func openGeneration(
 		return nil, fmt.Errorf("%w: generation root bytes", ErrInvalid)
 	}
 	publication.rootValue = value
-	entries, err := os.ReadDir(directory)
-	if err != nil {
+	if err := publication.ValidateComplete(ctx); err != nil {
 		return nil, err
 	}
-	if len(entries) != len(value.Namespaces)+1 {
-		return nil, fmt.Errorf("%w: generation inventory", ErrInvalid)
+	return publication, nil
+}
+
+// ValidateComplete validates the exact immutable namespace inventory and each
+// member bound by the root already opened for this generation.
+func (publication *Publication) ValidateComplete(ctx context.Context) error {
+	if publication == nil {
+		return fmt.Errorf("%w: nil publication", ErrInvalid)
+	}
+	entries, err := os.ReadDir(publication.directory)
+	if err != nil {
+		return err
+	}
+	if len(entries) != len(publication.rootValue.Namespaces)+1 {
+		return fmt.Errorf("%w: generation inventory", ErrInvalid)
 	}
 	wanted := map[string]struct{}{"root.json": {}}
-	for _, receipt := range value.Namespaces {
+	for _, receipt := range publication.rootValue.Namespaces {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return err
 		}
 		wanted[receipt.Member] = struct{}{}
 		if _, _, err := publication.openMember(ctx, receipt); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	for _, entry := range entries {
 		if _, found := wanted[entry.Name()]; !found || entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("%w: unexpected generation entry", ErrInvalid)
+			return fmt.Errorf("%w: unexpected generation entry", ErrInvalid)
 		}
 	}
-	return publication, nil
+	return nil
 }
 
 func openValidatedDirectory(directory string, expected Root) (*Publication, error) {
@@ -416,6 +437,9 @@ func (publication *Publication) openMember(
 	if err := ctx.Err(); err != nil {
 		return Member{}, nil, err
 	}
+	if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 1); err != nil {
+		return Member{}, nil, err
+	}
 	raw, err := readRegular(filepath.Join(publication.directory, receipt.Member), MaxMemberBytes)
 	if err != nil {
 		return Member{}, nil, err
@@ -424,7 +448,15 @@ func (publication *Publication) openMember(
 		return Member{}, nil, fmt.Errorf("%w: member bytes", ErrInvalid)
 	}
 	var member Member
-	if err := decodeExact(raw, MaxMemberBytes, &member); err != nil || validateMember(member) != nil ||
+	if err := decodeExact(raw, MaxMemberBytes, &member); err != nil {
+		return Member{}, nil, fmt.Errorf("%w: member", ErrInvalid)
+	}
+	if len(member.Records) > 0 {
+		if err := readaccounting.Charge(ctx, readaccounting.MemberVisit, uint64(len(member.Records))); err != nil {
+			return Member{}, nil, err
+		}
+	}
+	if validateMember(member) != nil ||
 		member.Language != receipt.Language || member.Protocol != receipt.Protocol ||
 		member.Namespace != receipt.Namespace ||
 		len(member.Records) != receipt.RecordCount || member.Digest != receipt.ContentDigest {

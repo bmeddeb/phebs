@@ -19,12 +19,13 @@ func CurrentInventoryDownstreamAuthorityV2(
 	if err := ctx.Err(); err != nil {
 		return DownstreamAuthority{}, err
 	}
-	selected, err := ReadInventoryPublicationRootV2(root, repository)
+	selected, err := ReadInventoryPublicationRootV2Context(ctx, root, repository)
 	if err != nil {
 		return DownstreamAuthority{}, err
 	}
 	directory := inventoryGenerationDirectoryV2(root, repository, selected.Current.GenerationDigest)
-	inventory, err := ReadInventoryRootV2(
+	inventory, err := ReadInventoryRootV2Context(
+		ctx,
 		filepath.Join(directory, InventoryPublicationInventoryNameV2), repository,
 	)
 	if err != nil || inventory.GenerationDigest != selected.Current.GenerationDigest ||
@@ -32,7 +33,7 @@ func CurrentInventoryDownstreamAuthorityV2(
 		inventory.SourcePartitionRootDigest != selected.Current.SourceRootDigest {
 		return DownstreamAuthority{}, errors.Join(err, invalid("inventory v2 downstream authority"))
 	}
-	confirmed, err := ReadInventoryPublicationRootV2(root, repository)
+	confirmed, err := ReadInventoryPublicationRootV2Context(ctx, root, repository)
 	if err != nil || confirmed.Current != selected.Current {
 		return DownstreamAuthority{}, errors.Join(err, invalid("inventory v2 pointer changed during downstream read"))
 	}

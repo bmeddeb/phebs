@@ -145,7 +145,7 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 	if err := validateCombinedProfile(plan.Profile); err != nil {
 		return err
 	}
-	if err := validateOracle(plan.Oracle, plan.Profile); err != nil {
+	if err := validateOracle(plan.Oracle, plan.Profile, plan.Schema); err != nil {
 		return err
 	}
 	wantRevisions := RevisionHistory{}
@@ -492,7 +492,7 @@ func addResultTotalsWithin(total *ResultTotals, value, limit ResultTotals) bool 
 	return true
 }
 
-func validateOracle(oracle Oracle, profile CombinedProfile) error {
+func validateOracle(oracle Oracle, profile CombinedProfile, schema string) error {
 	if oracle.Schema != OracleSchema || !oracle.Independent || oracle.ConsumesPhebsResults ||
 		oracle.Catalog.Records != profile.Logical.TotalServiceRecords ||
 		oracle.Memberships.Records != profile.Logical.Memberships ||
@@ -508,7 +508,11 @@ func validateOracle(oracle Oracle, profile CombinedProfile) error {
 			return errors.New("T42.1 independent oracle identity is invalid")
 		}
 	}
-	if !reflect.DeepEqual(oracle.QueryCases, frozenQueryCases()) || len(oracle.Relationships) != 4 {
+	queryCases := frozenQueryCases()
+	if schema == PlanV2Schema {
+		queryCases = correctedQueryCases()
+	}
+	if !reflect.DeepEqual(oracle.QueryCases, queryCases) || len(oracle.Relationships) != 4 {
 		return errors.New("T42.1 query or relationship inventory is incomplete")
 	}
 	productIdentity, rpcIdentity, err := independentProductProjectionIdentity()

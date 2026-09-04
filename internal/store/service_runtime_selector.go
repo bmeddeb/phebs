@@ -14,6 +14,7 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 )
@@ -298,6 +299,9 @@ func (s *Surreal) GetServiceRuntimeSelector(
 		return ServiceRuntimeSelector{}, fmt.Errorf(
 			"get service runtime selector: repository: %w", err,
 		)
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return ServiceRuntimeSelector{}, fmt.Errorf("get service runtime selector: %w", err)
 	}
 	results, err := surrealdb.Query[[]serviceRuntimeSelectorRec](
 		ctx, s.db, "SELECT * FROM $rid",

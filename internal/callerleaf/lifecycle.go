@@ -20,6 +20,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerleafid"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -708,7 +709,10 @@ func verifyReaderAt(
 		}
 		if len(line) > 0 {
 			var record Record
-			if err := decodeCanonicalLine(line, &record); err != nil {
+			if err := decodeCanonicalLine(ctx, line, &record); err != nil {
+				if readaccounting.IsError(err) {
+					return err
+				}
 				return fmt.Errorf("%w: %v", ErrInvalidArtifact, err)
 			}
 			if err := ValidateRecord(record); err != nil {
@@ -984,8 +988,16 @@ func (publication *Publication) ReadRecord(
 		}
 		return Record{}, fmt.Errorf("read referenced caller leaf record: %w", err)
 	}
-	if recordReferenceDigest(raw) != reference.Digest ||
-		decodeCanonicalLine(raw, &result) != nil || ValidateRecord(result) != nil {
+	if recordReferenceDigest(raw) != reference.Digest {
+		return Record{}, fmt.Errorf("%w: referenced caller leaf record differs", ErrInvalidArtifact)
+	}
+	if err := decodeCanonicalLine(ctx, raw, &result); err != nil {
+		if readaccounting.IsError(err) {
+			return Record{}, err
+		}
+		return Record{}, fmt.Errorf("%w: referenced caller leaf record differs", ErrInvalidArtifact)
+	}
+	if ValidateRecord(result) != nil {
 		return Record{}, fmt.Errorf("%w: referenced caller leaf record differs", ErrInvalidArtifact)
 	}
 	if err := ctx.Err(); err != nil {
@@ -1908,14 +1920,20 @@ func readLine(reader *bufio.Reader, limit int) ([]byte, error) {
 	}
 }
 
-func decodeCanonicalLine(line []byte, destination any) error {
-	if len(line) == 0 || line[len(line)-1] != '\n' {
+func decodeCanonicalLine(ctx context.Context, line []byte, destination any) error {
+	if len(line) == 0 {
 		return errors.New("caller leaf record is partial")
 	}
-	decoder := json.NewDecoder(bytes.NewReader(line[:len(line)-1]))
+	decoder := json.NewDecoder(bytes.NewReader(line))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(destination); err != nil {
 		return err
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.MemberVisit, 1); err != nil {
+		return err
+	}
+	if line[len(line)-1] != '\n' {
+		return errors.New("caller leaf record is partial")
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return errors.New("caller leaf record has trailing JSON")

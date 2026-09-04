@@ -905,8 +905,8 @@ func wholePublicationSnapshot(
 	if err := ctx.Err(); err != nil {
 		return focusedindex.WholeManifest{}, nil, err
 	}
-	manifest, err := focusedindex.ReadWholeManifest(
-		indexDir, repository, revisions,
+	manifest, err := focusedindex.ReadWholeManifestContext(
+		ctx, indexDir, repository, revisions,
 	)
 	if err != nil {
 		return focusedindex.WholeManifest{}, nil, err
@@ -980,7 +980,7 @@ func validateWholeSearchPublication(
 		); err != nil {
 			return focusedindex.WholeManifest{}, err
 		}
-		return focusedindex.ReadWholeManifest(indexDir, repository, revisions)
+		return focusedindex.ReadWholeManifestContext(ctx, indexDir, repository, revisions)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return focusedindex.WholeManifest{}, err
 	}

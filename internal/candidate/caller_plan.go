@@ -81,7 +81,7 @@ func OpenCallerPlanContext(
 	if err := ensureRealDirectory(root); err != nil {
 		return nil, err
 	}
-	manifest, err := readManifest(
+	manifest, err := readManifestContext(ctx,
 		filepath.Join(root, ManifestName(expected.Repository)),
 	)
 	if err != nil {

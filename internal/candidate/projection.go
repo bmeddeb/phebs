@@ -11,9 +11,55 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 const projectionChunkRecords = 512
+
+// MaxWholeRepositoryStrictOpenMemberVisits is the exact member-visit ceiling
+// for strict validation of a whole-repository publication. Repository and
+// caller records can each reach MaxCorpusEntries; whole-repository manifests
+// have no local projections.
+func MaxWholeRepositoryStrictOpenMemberVisits() uint64 {
+	records := uint64(2 * MaxCorpusEntries)
+	return 2*records + projectionMergeMemberVisits(records)
+}
+
+func projectionMergeMemberVisits(records uint64) uint64 {
+	levels := make([]uint64, 0, 16)
+	var visits uint64
+	for remaining := records; remaining > 0; {
+		run := min(remaining, uint64(projectionChunkRecords))
+		remaining -= run
+		for level := 0; ; level++ {
+			if level == len(levels) {
+				levels = append(levels, run)
+				break
+			}
+			if levels[level] == 0 {
+				levels[level] = run
+				break
+			}
+			run += levels[level]
+			visits += run
+			levels[level] = 0
+		}
+	}
+	var result uint64
+	for _, run := range levels {
+		if run == 0 {
+			continue
+		}
+		if result == 0 {
+			result = run
+			continue
+		}
+		result += run
+		visits += result
+	}
+	return visits
+}
 
 // candidateProjection is the minimum identity needed to validate uniqueness,
 // cross-plane agreement, and the corpus lower bounds. It is externally sorted
@@ -209,7 +255,7 @@ func (sorter *projectionSorter) writeRun(
 func (sorter *projectionSorter) mergeRuns(
 	leftPath, rightPath string,
 ) (path string, resultErr error) {
-	left, err := openProjectionRun(leftPath)
+	left, err := openProjectionRun(sorter.ctx, leftPath)
 	if err != nil {
 		return "", err
 	}
@@ -218,7 +264,7 @@ func (sorter *projectionSorter) mergeRuns(
 			resultErr = closeErr
 		}
 	}()
-	right, err := openProjectionRun(rightPath)
+	right, err := openProjectionRun(sorter.ctx, rightPath)
 	if err != nil {
 		return "", err
 	}
@@ -306,17 +352,19 @@ func (sorter *projectionSorter) mergeRuns(
 }
 
 type projectionRun struct {
+	ctx     context.Context
 	file    *os.File
 	decoder *json.Decoder
 	current *candidateProjection
 }
 
-func openProjectionRun(path string) (*projectionRun, error) {
+func openProjectionRun(ctx context.Context, path string) (*projectionRun, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	run := &projectionRun{
+		ctx:  ctx,
 		file: file,
 		decoder: json.NewDecoder(
 			bufio.NewReaderSize(file, 64<<10),
@@ -338,6 +386,9 @@ func (run *projectionRun) advance() error {
 		run.current = nil
 		return nil
 	} else if err != nil {
+		return err
+	}
+	if err := readaccounting.Charge(run.ctx, readaccounting.MemberVisit, 1); err != nil {
 		return err
 	}
 	run.current = &current
