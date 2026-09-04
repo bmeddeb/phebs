@@ -234,15 +234,48 @@ func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
 			t.Fatal("missing return transition read accounting was accepted")
 		}
 	})
+	stale := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "stale_lease"
+	})
+	if stale < 0 || base.TransitionResults[stale].ReadAccounting == nil {
+		t.Fatal("stale lease transition read accounting is absent")
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"wrong_class": func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"wrong_calls": func(value *TransitionReadSubtotal) { value.ReportCalls-- },
+		"control_read": func(value *TransitionReadSubtotal) {
+			value.ControlFileReads++
+		},
+		"store_read": func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+	} {
+		t.Run("stale_"+name, func(t *testing.T) {
+			changed := cloneTestReceipt(t, base)
+			mutate(changed.TransitionResults[stale].ReadAccounting)
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatal("impossible stale lease transition read accounting was accepted")
+			}
+		})
+	}
+	t.Run("stale_missing", func(t *testing.T) {
+		changed := cloneTestReceipt(t, base)
+		changed.TransitionResults[stale].ReadAccounting = nil
+		if err := ValidateReceipt(
+			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+		); err == nil {
+			t.Fatal("missing stale lease transition read accounting was accepted")
+		}
+	})
 	t.Run("unfinished_transition_accounting", func(t *testing.T) {
 		changed := cloneTestReceipt(t, base)
 		unfinished := slices.IndexFunc(changed.TransitionResults, func(value TransitionResult) bool {
-			return value.Phase == "stale_lease"
+			return value.Phase == "process_restart"
 		})
 		if unfinished < 0 || changed.TransitionResults[unfinished].ReadAccounting != nil {
 			t.Fatal("unfinished transition fixture is invalid")
 		}
-		subtotal := *changed.TransitionResults[returned].ReadAccounting
+		subtotal := *changed.TransitionResults[stale].ReadAccounting
 		changed.TransitionResults[unfinished].ReadAccounting = &subtotal
 		if err := ValidateReceipt(
 			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),

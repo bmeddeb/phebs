@@ -20,20 +20,24 @@ import (
 )
 
 const (
-	GenerationScheduleSchema                     = "phebs-generation-schedule-v1"
-	MaxGenerationStageBytes                      = 64
-	MaxGenerationItems                     int64 = 80_000_000
-	MaxGenerationChunkItems                      = 4_096
-	MaxGenerationChunks                          = 1_000_000
-	MaxGenerationFanoutPage                      = 64
-	MaxGenerationClaimCandidates                 = 64
-	MaxGenerationActiveStagesPerRepository       = 8
-	maxGenerationScheduleClaimCandidates         = MaxGenerationClaimCandidates * MaxGenerationActiveStagesPerRepository
-	MaxGenerationAttempts                        = 8
-	ServiceRelationshipV3ScheduleStage           = "service-relationship-v3-shadow"
-	MaxGenerationRepositoryTokens                = 8
-	MaxGenerationWorkerBytes                     = 256
-	MaxGenerationErrorBytes                      = 2_048
+	GenerationScheduleSchema = "phebs-generation-schedule-v1"
+	// GenerationStaleLeaseTransitionStoreReadAttempts is the complete store
+	// cost of one exact transition snapshot. Callers read the current schedule
+	// and target chunk once before and once after their immutable controls.
+	GenerationStaleLeaseTransitionStoreReadAttempts uint64 = 4
+	MaxGenerationStageBytes                                = 64
+	MaxGenerationItems                              int64  = 80_000_000
+	MaxGenerationChunkItems                                = 4_096
+	MaxGenerationChunks                                    = 1_000_000
+	MaxGenerationFanoutPage                                = 64
+	MaxGenerationClaimCandidates                           = 64
+	MaxGenerationActiveStagesPerRepository                 = 8
+	maxGenerationScheduleClaimCandidates                   = MaxGenerationClaimCandidates * MaxGenerationActiveStagesPerRepository
+	MaxGenerationAttempts                                  = 8
+	ServiceRelationshipV3ScheduleStage                     = "service-relationship-v3-shadow"
+	MaxGenerationRepositoryTokens                          = 8
+	MaxGenerationWorkerBytes                               = 256
+	MaxGenerationErrorBytes                                = 2_048
 )
 
 var (
@@ -251,6 +255,67 @@ type GenerationChunk struct {
 	Error          string                  `json:"error,omitempty"`
 	LeaseToken     string                  `json:"-" cbor:"lease_token,omitempty"`
 }
+
+type GenerationStaleLeaseTransitionPoint string
+
+const (
+	GenerationStaleLeaseTransitionHit       GenerationStaleLeaseTransitionPoint = "hit"
+	GenerationStaleLeaseTransitionRequeued  GenerationStaleLeaseTransitionPoint = "requeued"
+	GenerationStaleLeaseTransitionRecovered GenerationStaleLeaseTransitionPoint = "recovered"
+)
+
+// GenerationStaleLeaseTransitionRequest names one exact stale-lease unit.
+// StaleBefore is the reaper-owned cutoff and is required only at the hit.
+// It is control input and never appears in the returned source-free receipt.
+type GenerationStaleLeaseTransitionRequest struct {
+	Point          GenerationStaleLeaseTransitionPoint
+	Repository     string
+	Stage          string
+	Generation     string
+	ResourceClass  GenerationResourceClass
+	ScheduleDigest string
+	ChunkIdentity  string
+	Offset         int64
+	Length         int
+	Attempt        int
+	StaleBefore    time.Time
+}
+
+// GenerationStaleLeaseTransition is a bounded source-free fact emitted at the
+// transaction-owner boundary or returned by the exact point reader. The state
+// digest lets a caller prove that the target row did not change around its
+// immutable reads without exposing worker, lease, error, or timestamp values.
+type GenerationStaleLeaseTransition struct {
+	Point            GenerationStaleLeaseTransitionPoint `json:"point"`
+	Repository       string                              `json:"repository"`
+	Stage            string                              `json:"stage"`
+	Generation       string                              `json:"generation"`
+	ResourceClass    GenerationResourceClass             `json:"resource_class"`
+	ScheduleDigest   string                              `json:"schedule_digest"`
+	ScheduleStatus   GenerationScheduleStatus            `json:"schedule_status"`
+	ChunkIdentity    string                              `json:"chunk_identity"`
+	Offset           int64                               `json:"offset"`
+	Length           int                                 `json:"length"`
+	Attempt          int                                 `json:"attempt"`
+	Priority         int                                 `json:"priority"`
+	ChunkStatus      GenerationChunkStatus               `json:"chunk_status"`
+	Leased           bool                                `json:"leased"`
+	ChunkStateDigest string                              `json:"-"`
+	StaleBefore      time.Time                           `json:"-"`
+}
+
+type generationStaleLeaseChunkFenceRec struct {
+	Chunk                 generationChunkRec `json:"chunk"`
+	CurrentScheduleDigest string             `json:"current_schedule_digest"`
+}
+
+// GenerationStaleLeaseTransitionObserver runs synchronously at the exact
+// store/scheduler transition boundary. Implementations must be concurrency
+// safe: the reaper and a completing worker can invoke it concurrently.
+type GenerationStaleLeaseTransitionObserver func(
+	context.Context,
+	GenerationStaleLeaseTransition,
+) error
 
 // GenerationChunkLeaseState is the source-free authoritative projection used
 // to prove one exact scheduler attempt's lease state. Priority plus the
@@ -670,7 +735,20 @@ type GenerationSchedulerStore interface {
 	GetGenerationSchedule(context.Context, string, string) (*GenerationSchedule, error)
 }
 
+// GenerationStaleLeaseTransitionReaper is an optional scheduler capability.
+// Ordinary GenerationSchedulerStore implementations remain source compatible;
+// a scheduler asks for this capability only when an exact observer is set.
+type GenerationStaleLeaseTransitionReaper interface {
+	ReapStaleGenerationChunksObserved(
+		context.Context,
+		GenerationResourceClass,
+		time.Duration,
+		GenerationStaleLeaseTransitionObserver,
+	) (int, error)
+}
+
 var _ GenerationSchedulerStore = (*Surreal)(nil)
+var _ GenerationStaleLeaseTransitionReaper = (*Surreal)(nil)
 
 func normalizeGenerationScheduleSpec(spec GenerationScheduleSpec) (GenerationScheduleSpec, error) {
 	if strings.TrimSpace(spec.Repository) != spec.Repository || spec.Repository == "" ||
@@ -1022,6 +1100,186 @@ RETURN SELECT * FROM generation_schedule WHERE digest = $digest LIMIT 1;`, map[s
 		return nil, fmt.Errorf("get generation schedule: %w", err)
 	}
 	return &schedule, nil
+}
+
+// ReadGenerationStaleLeaseTransition reads one side of an exact transition
+// snapshot. It charges two store attempts: the current schedule and the exact
+// target chunk. The caller invokes it before and after its immutable controls,
+// for the exported four-attempt complete-snapshot cost.
+func (s *Surreal) ReadGenerationStaleLeaseTransition(
+	ctx context.Context,
+	request GenerationStaleLeaseTransitionRequest,
+) (GenerationStaleLeaseTransition, error) {
+	if ctx == nil {
+		return GenerationStaleLeaseTransition{}, errors.New(
+			"read generation stale lease transition: context is required",
+		)
+	}
+	if err := validateGenerationStaleLeaseTransitionRequest(request); err != nil {
+		return GenerationStaleLeaseTransition{}, err
+	}
+	schedule, err := s.GetGenerationSchedule(ctx, request.Repository, request.Stage)
+	if err != nil {
+		return GenerationStaleLeaseTransition{}, fmt.Errorf(
+			"read generation stale lease transition schedule: %w", err,
+		)
+	}
+	if ValidateGenerationSchedule(*schedule) != nil ||
+		schedule.Digest != request.ScheduleDigest ||
+		schedule.Repository != request.Repository || schedule.Stage != request.Stage ||
+		schedule.Generation != request.Generation ||
+		schedule.ResourceClass != request.ResourceClass ||
+		schedule.NextOffset != schedule.TotalItems ||
+		schedule.Materialized != schedule.TotalChunks {
+		return GenerationStaleLeaseTransition{}, ErrGenerationStale
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return GenerationStaleLeaseTransition{}, fmt.Errorf(
+			"read generation stale lease transition chunk: %w", err,
+		)
+	}
+	chunkResults, err := surrealdb.Query[[]generationStaleLeaseChunkFenceRec](ctx, s.db, `
+BEGIN;
+LET $chunk = (SELECT * FROM generation_schedule_chunk
+	WHERE identity = $identity LIMIT 1)[0];
+LET $current_digest = (SELECT VALUE schedule_digest FROM $current LIMIT 1)[0];
+RETURN [{ chunk: $chunk, current_schedule_digest: $current_digest }];
+COMMIT;`, map[string]any{
+		"identity": request.ChunkIdentity,
+		"current": models.NewRecordID(
+			"generation_schedule_current",
+			strings.TrimPrefix(
+				generationCurrentID(request.Repository, request.Stage),
+				"sha256:",
+			),
+		),
+	})
+	if err != nil {
+		return GenerationStaleLeaseTransition{}, fmt.Errorf(
+			"read generation stale lease transition chunk: %w", err,
+		)
+	}
+	var fenced []generationStaleLeaseChunkFenceRec
+	for _, result := range *chunkResults {
+		if len(result.Result) > 0 {
+			fenced = result.Result
+			break
+		}
+	}
+	if len(fenced) != 1 || fenced[0].CurrentScheduleDigest != request.ScheduleDigest {
+		return GenerationStaleLeaseTransition{}, ErrGenerationLeaseLost
+	}
+	chunk, err := fenced[0].Chunk.chunk()
+	if err != nil {
+		return GenerationStaleLeaseTransition{}, errors.Join(err, ErrGenerationLeaseLost)
+	}
+	if chunk.Identity != request.ChunkIdentity ||
+		chunk.Identity != generationChunkID(request.ScheduleDigest, request.Offset, request.Attempt) ||
+		chunk.ScheduleDigest != request.ScheduleDigest ||
+		chunk.Repository != request.Repository || chunk.Stage != request.Stage ||
+		chunk.Generation != request.Generation || chunk.ResourceClass != request.ResourceClass ||
+		chunk.Offset != request.Offset || chunk.Length != request.Length ||
+		chunk.Attempt != request.Attempt {
+		return GenerationStaleLeaseTransition{}, ErrGenerationLeaseLost
+	}
+	if !validGenerationStaleLeaseTransitionShape(request, *schedule, chunk) {
+		return GenerationStaleLeaseTransition{}, ErrGenerationStale
+	}
+	return GenerationStaleLeaseTransition{
+		Point: request.Point, Repository: chunk.Repository, Stage: chunk.Stage,
+		Generation: chunk.Generation, ResourceClass: chunk.ResourceClass,
+		ScheduleDigest: schedule.Digest, ScheduleStatus: schedule.Status,
+		ChunkIdentity: chunk.Identity, Offset: chunk.Offset, Length: chunk.Length,
+		Attempt: chunk.Attempt, Priority: chunk.Priority, ChunkStatus: chunk.Status,
+		Leased:           chunk.LeaseToken != "",
+		ChunkStateDigest: generationStaleLeaseChunkStateDigest(chunk),
+		StaleBefore:      request.StaleBefore,
+	}, nil
+}
+
+func validateGenerationStaleLeaseTransitionRequest(
+	request GenerationStaleLeaseTransitionRequest,
+) error {
+	if strings.TrimSpace(request.Repository) != request.Repository || request.Repository == "" ||
+		len(request.Repository) > MaxJobHistoryTargetCharacters || !utf8.ValidString(request.Repository) ||
+		!validGenerationToken(request.Stage) || request.Stage == "" ||
+		!validSHA256(request.Generation) || !validGenerationResourceClass(request.ResourceClass) ||
+		!validSHA256(request.ScheduleDigest) || !validSHA256(request.ChunkIdentity) ||
+		request.Offset < 0 || request.Length != 1 || request.Attempt != 0 ||
+		request.ChunkIdentity != generationChunkID(
+			request.ScheduleDigest, request.Offset, request.Attempt,
+		) {
+		return errors.New("read generation stale lease transition: request is invalid")
+	}
+	switch request.Point {
+	case GenerationStaleLeaseTransitionHit:
+		if request.StaleBefore.IsZero() {
+			return errors.New("read generation stale lease transition: cutoff is required")
+		}
+	case GenerationStaleLeaseTransitionRequeued, GenerationStaleLeaseTransitionRecovered:
+		if !request.StaleBefore.IsZero() {
+			return errors.New("read generation stale lease transition: cutoff is unexpected")
+		}
+	default:
+		return errors.New("read generation stale lease transition: point is invalid")
+	}
+	return nil
+}
+
+func validGenerationStaleLeaseTransitionShape(
+	request GenerationStaleLeaseTransitionRequest,
+	schedule GenerationSchedule,
+	chunk GenerationChunk,
+) bool {
+	validWorker := chunk.ClaimedBy != "" && strings.TrimSpace(chunk.ClaimedBy) == chunk.ClaimedBy &&
+		len(chunk.ClaimedBy) <= MaxGenerationWorkerBytes && utf8.ValidString(chunk.ClaimedBy)
+	validActiveCounters := schedule.Pending+schedule.Running+schedule.Succeeded+schedule.Failed ==
+		schedule.TotalChunks && schedule.Running <= schedule.RepositoryTokens
+	switch request.Point {
+	case GenerationStaleLeaseTransitionHit:
+		return schedule.Status == GenerationScheduleActive && validActiveCounters && schedule.Running > 0 &&
+			chunk.Priority == GenerationPriorityNeverRun &&
+			chunk.Status == GenerationChunkRunning && validGenerationChunkLease(chunk) == nil && validWorker &&
+			validServiceStateV3LeaseToken(chunk.LeaseToken) &&
+			chunk.NotBefore == nil && chunk.ClaimedAt != nil && !chunk.ClaimedAt.IsZero() &&
+			chunk.HeartbeatAt != nil && !chunk.HeartbeatAt.IsZero() &&
+			!chunk.HeartbeatAt.Before(*chunk.ClaimedAt) &&
+			chunk.HeartbeatAt.Before(request.StaleBefore) && chunk.FinishedAt == nil && chunk.Error == ""
+	case GenerationStaleLeaseTransitionRequeued:
+		return schedule.Status == GenerationScheduleActive && validActiveCounters && schedule.Pending > 0 &&
+			chunk.Priority == GenerationPriorityStale && chunk.Status == GenerationChunkPending &&
+			chunk.NotBefore != nil && !chunk.NotBefore.IsZero() && chunk.ClaimedBy == "" &&
+			chunk.ClaimedAt == nil && chunk.HeartbeatAt == nil && chunk.FinishedAt == nil &&
+			chunk.LeaseToken == "" && chunk.Error == "stale worker lease reaped"
+	case GenerationStaleLeaseTransitionRecovered:
+		return schedule.Status == GenerationScheduleSettled && schedule.Pending == 0 &&
+			schedule.Running == 0 && schedule.Succeeded == schedule.TotalChunks &&
+			schedule.Failed == 0 && chunk.Priority == GenerationPriorityStale &&
+			chunk.Status == GenerationChunkDone && chunk.NotBefore == nil &&
+			validWorker && chunk.ClaimedAt != nil && !chunk.ClaimedAt.IsZero() &&
+			chunk.HeartbeatAt == nil && chunk.FinishedAt != nil && !chunk.FinishedAt.IsZero() &&
+			!chunk.FinishedAt.Before(*chunk.ClaimedAt) && chunk.LeaseToken == "" &&
+			chunk.Error == "stale worker lease reaped"
+	default:
+		return false
+	}
+}
+
+func generationStaleLeaseChunkStateDigest(chunk GenerationChunk) string {
+	timeValue := func(value *time.Time) string {
+		if value == nil {
+			return ""
+		}
+		return value.UTC().Format(time.RFC3339Nano)
+	}
+	return generationSchedulerDigest("phebs-generation-stale-lease-state-v1", strings.Join([]string{
+		chunk.ID, chunk.Identity, chunk.ScheduleDigest, chunk.Repository, chunk.Stage,
+		chunk.Generation, string(chunk.ResourceClass), fmt.Sprint(chunk.Offset),
+		fmt.Sprint(chunk.Length), fmt.Sprint(chunk.Attempt), fmt.Sprint(chunk.Priority),
+		string(chunk.Status), timeValue(chunk.NotBefore), chunk.ClaimedBy,
+		timeValue(chunk.ClaimedAt), timeValue(chunk.HeartbeatAt), timeValue(chunk.FinishedAt),
+		chunk.Error, chunk.LeaseToken,
+	}, "\x00"))
 }
 
 type retireCurrentGenerationScheduleRec struct {
@@ -1849,10 +2107,48 @@ func (s *Surreal) releaseStaleGenerationChunk(
 	return nil
 }
 
+func (s *Surreal) releaseStaleGenerationChunkTransition(
+	ctx context.Context,
+	chunk GenerationChunk,
+	cutoff time.Time,
+) (GenerationStaleLeaseTransition, error) {
+	if err := s.releaseStaleGenerationChunk(ctx, chunk, cutoff); err != nil {
+		return GenerationStaleLeaseTransition{}, err
+	}
+	return generationStaleLeaseTransitionFromChunk(
+		GenerationStaleLeaseTransitionRequeued, chunk, cutoff,
+	), nil
+}
+
 func (s *Surreal) ReapStaleGenerationChunks(
 	ctx context.Context,
 	class GenerationResourceClass,
 	staleAfter time.Duration,
+) (int, error) {
+	return s.reapStaleGenerationChunks(ctx, class, staleAfter, nil)
+}
+
+// ReapStaleGenerationChunksObserved preserves the ordinary bounded reaper but
+// exposes its exact target transition to an explicitly configured controller.
+// Hit runs after candidate/cutoff validation and before mutation. Requeued
+// runs only after the current-schedule requeue transaction commits.
+func (s *Surreal) ReapStaleGenerationChunksObserved(
+	ctx context.Context,
+	class GenerationResourceClass,
+	staleAfter time.Duration,
+	observer GenerationStaleLeaseTransitionObserver,
+) (int, error) {
+	if observer == nil {
+		return 0, errors.New("reap generation chunks: observer is required")
+	}
+	return s.reapStaleGenerationChunks(ctx, class, staleAfter, observer)
+}
+
+func (s *Surreal) reapStaleGenerationChunks(
+	ctx context.Context,
+	class GenerationResourceClass,
+	staleAfter time.Duration,
+	observer GenerationStaleLeaseTransitionObserver,
 ) (int, error) {
 	if !validGenerationResourceClass(class) || staleAfter <= 0 {
 		return 0, errors.New("reap generation chunks: invalid class or cutoff")
@@ -1874,7 +2170,25 @@ SELECT * FROM generation_schedule_chunk WITH INDEX generation_schedule_chunk_sta
 		if chunkErr != nil {
 			return reaped, chunkErr
 		}
-		if releaseErr := s.releaseStaleGenerationChunk(ctx, chunk, cutoff); releaseErr != nil {
+		if observer != nil {
+			hit := generationStaleLeaseTransitionFromChunk(
+				GenerationStaleLeaseTransitionHit, chunk, cutoff,
+			)
+			if observerErr := observer(ctx, hit); observerErr != nil {
+				return reaped, fmt.Errorf(
+					"observe generation stale lease hit: %w", observerErr,
+				)
+			}
+		}
+		var requeued *GenerationStaleLeaseTransition
+		var releaseErr error
+		if observer == nil {
+			releaseErr = s.releaseStaleGenerationChunk(ctx, chunk, cutoff)
+		} else {
+			value, err := s.releaseStaleGenerationChunkTransition(ctx, chunk, cutoff)
+			requeued, releaseErr = &value, err
+		}
+		if releaseErr != nil {
 			if errors.Is(releaseErr, ErrGenerationStale) {
 				reaped++
 				continue
@@ -1885,8 +2199,42 @@ SELECT * FROM generation_schedule_chunk WITH INDEX generation_schedule_chunk_sta
 			return reaped, releaseErr
 		}
 		reaped++
+		if observer != nil {
+			if observerErr := observer(ctx, *requeued); observerErr != nil {
+				return reaped, fmt.Errorf(
+					"observe generation stale lease requeue: %w", observerErr,
+				)
+			}
+		}
 	}
 	return reaped, nil
+}
+
+func generationStaleLeaseTransitionFromChunk(
+	point GenerationStaleLeaseTransitionPoint,
+	chunk GenerationChunk,
+	cutoff time.Time,
+) GenerationStaleLeaseTransition {
+	transition := GenerationStaleLeaseTransition{
+		Point: point, Repository: chunk.Repository, Stage: chunk.Stage,
+		Generation: chunk.Generation, ResourceClass: chunk.ResourceClass,
+		ScheduleDigest: chunk.ScheduleDigest, ChunkIdentity: chunk.Identity,
+		Offset: chunk.Offset, Length: chunk.Length, Attempt: chunk.Attempt,
+		Priority: chunk.Priority, ChunkStatus: chunk.Status,
+		Leased: chunk.LeaseToken != "", StaleBefore: cutoff,
+	}
+	if point == GenerationStaleLeaseTransitionHit {
+		transition.ScheduleStatus = GenerationScheduleActive
+		transition.ChunkStateDigest = generationStaleLeaseChunkStateDigest(chunk)
+	}
+	if point == GenerationStaleLeaseTransitionRequeued {
+		transition.ScheduleStatus = GenerationScheduleActive
+		transition.Priority = GenerationPriorityStale
+		transition.ChunkStatus = GenerationChunkPending
+		transition.Leased = false
+		transition.StaleBefore = time.Time{}
+	}
+	return transition
 }
 
 func (s *Surreal) generationScheduleByDigest(ctx context.Context, digest string) (*GenerationSchedule, error) {

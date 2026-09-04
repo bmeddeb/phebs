@@ -1350,6 +1350,62 @@ an SLO. Stale-lease, restart, pressure, archive/restore, and lifecycle R remain
 open, and T42.2 remains next only after this and the remaining T42.1 gates
 close.
 
+#### Prepared stale-lease schedule/result R accounting
+
+The stale-lease transition now owns an exact
+`prepared-stale-lease-schedule-and-result` witness. Exact control installs the
+generation scheduler's default-nil pre-heartbeat gate before the heartbeat
+goroutine starts, allowing the selected attempt-0 chunk to cross the existing
+stale cutoff without a refresh race. An optional store observer runs
+immediately before and after the existing heartbeat-fenced durable stale
+requeue. The pre-mutation callback emits the hit report. The post-mutation
+callback only releases exact-control synchronization; it is not recovery. The
+recovered report is emitted only after a worker reclaims that same attempt-0
+row and completes it successfully.
+
+Each report uses the same self-confirming source-free reader. It reads four
+control files exactly once: the immutable recovery-preparation binding, exact
+extraction generation, exact domain plan, and canonical partition result. It
+then reads the current generation schedule and exact target chunk, and repeats
+both store reads as confirmation. The hit requires the two schedule/chunk
+pairs to agree on an active current schedule and a priority-0 attempt-0 row
+that is running, claimed, leased, and stale under the reaper's observed
+heartbeat. The recovered state requires a settled schedule with no pending,
+running, or failed chunk, plus the same row at priority 2, done and unleased,
+with bounded `stale worker lease reaped` provenance. Pending after requeue is
+deliberately not recovered.
+
+V2 maps the target directly to the prepared immutable work:
+`GenerationSHA256` is the exact extraction generation,
+`PlanSHA256` is its domain plan, `ScheduleSHA256` is the preparation's recovery
+schedule, and `UnitSHA256` plus ordinal/kind/member/source bounds identify the
+canonical partition result. The recovery-schedule generation is a separate
+prepared identity; its canonical binding must map it to that exact target
+generation and predecessor schedule. The plan and result are then read from
+the target generation. These identities cannot be aliased, and the legacy
+root-level schedule field cannot stand in for the recovery schedule. The stale
+phase authority must be byte-identical to accepted return-A authority at both
+reports. Retained V1 mapping, authority, validation, and bytes remain exact.
+
+The hit and recovered report each cost exactly
+`C/S/M/W=4/4/0/0`, for stale-lease subtotal `8/8/0/0`. Epoch three's shared
+exact-report maximum is therefore 11,530. Limit-plus-one refusal occurs before
+the unavailable read. The reader is synchronous, one-shot, nonpolling,
+uncached, child-free, member-free, and write-free. It decodes only those four
+bounded controls and metadata-checks one generation plus at most 64 domain
+directories. A successful report executes exactly four one-row store queries;
+any retry consumes the fixed ledger and refuses. Exact mode deliberately
+extends the stale window and runs bounded callbacks on the existing scheduler,
+reaper, and completion paths; its recovered callback adds one bounded timeout
+context/timer after completion. Ordinary work pays only inactive nil branches;
+there is no global hook, store-schema change, ledger, persistent state,
+additional goroutine, lock class, or production I/O.
+
+This slice does not supply the runner, whole-phase sums, final ordinal,
+corrected-plan freeze, ceremony execution, release evidence, a scale pass, or
+an SLO. Restart, pressure, archive/restore, and lifecycle R remain open. T42.2
+remains unauthorized until the remaining T42.1 gates close.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

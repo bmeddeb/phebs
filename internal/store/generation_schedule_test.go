@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
@@ -974,5 +976,241 @@ func TestGenerationScheduleRepositoryFairnessAndStaleLeaseRecovery(t *testing.T)
 	}
 	if err := store.CompleteGenerationChunk(t.Context(), *recovered); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGenerationStaleLeaseTransitionObservationAndPointReader(t *testing.T) {
+	state := newRunnerStore(t)
+	spec := generationSpec(
+		"example.invalid/observed-stale-lease",
+		"sha256:"+strings.Repeat("8", 64),
+	)
+	spec.TotalItems, spec.ChunkItems = 2, 1
+	schedule, err := state.EnqueueGenerationSchedule(t.Context(), spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := state.ExpandGenerationSchedule(
+		t.Context(), spec.Repository, spec.Stage, spec.Generation,
+	); err != nil {
+		t.Fatal(err)
+	}
+	claimed, err := state.ClaimGenerationChunk(
+		t.Context(), spec.ResourceClass, "stale-lease-first",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	if _, err := surrealdb.Query[any](t.Context(), state.db,
+		"UPDATE $chunk SET claimed_at = $claim, heartbeat_at = $old RETURN NONE", map[string]any{
+			"chunk": generationChunkRecordID(*claimed),
+			"claim": now.Add(-2 * time.Hour), "old": now.Add(-time.Hour),
+		}); err != nil {
+		t.Fatal(err)
+	}
+	stale, err := state.generationChunkByIdentity(t.Context(), claimed.Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	observerFailure := errors.New("hit reader refused")
+	reaped, err := state.ReapStaleGenerationChunksObserved(
+		t.Context(), spec.ResourceClass, time.Minute,
+		func(_ context.Context, transition GenerationStaleLeaseTransition) error {
+			if transition.Point != GenerationStaleLeaseTransitionHit ||
+				transition.ChunkIdentity != claimed.Identity || transition.StaleBefore.IsZero() {
+				t.Fatalf("hit transition = %+v", transition)
+			}
+			return observerFailure
+		},
+	)
+	if reaped != 0 || !errors.Is(err, observerFailure) {
+		t.Fatalf("refused observation = %d, %v", reaped, err)
+	}
+	preserved, err := state.generationChunkByIdentity(t.Context(), claimed.Identity)
+	if err != nil || generationStaleLeaseChunkStateDigest(*preserved) !=
+		generationStaleLeaseChunkStateDigest(*stale) {
+		t.Fatalf("refused hit mutated lease = %+v, %v", preserved, err)
+	}
+
+	requestFor := func(transition GenerationStaleLeaseTransition) GenerationStaleLeaseTransitionRequest {
+		return GenerationStaleLeaseTransitionRequest{
+			Point: transition.Point, Repository: transition.Repository,
+			Stage: transition.Stage, Generation: transition.Generation,
+			ResourceClass: transition.ResourceClass, ScheduleDigest: transition.ScheduleDigest,
+			ChunkIdentity: transition.ChunkIdentity, Offset: transition.Offset,
+			Length: transition.Length, Attempt: transition.Attempt,
+			StaleBefore: transition.StaleBefore,
+		}
+	}
+	active, err := state.GetGenerationSchedule(t.Context(), spec.Repository, spec.Stage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hitRequest := requestFor(generationStaleLeaseTransitionFromChunk(
+		GenerationStaleLeaseTransitionHit, *stale, now.Add(-30*time.Minute),
+	))
+	if !validGenerationStaleLeaseTransitionShape(hitRequest, *active, *stale) {
+		t.Fatal("valid stale lease hit was rejected")
+	}
+	for name, mutate := range map[string]func(*GenerationChunk){
+		"untrimmed worker": func(chunk *GenerationChunk) { chunk.ClaimedBy = " invalid" },
+		"invalid worker":   func(chunk *GenerationChunk) { chunk.ClaimedBy = string([]byte{0xff}) },
+		"oversized worker": func(chunk *GenerationChunk) {
+			chunk.ClaimedBy = strings.Repeat("w", MaxGenerationWorkerBytes+1)
+		},
+		"noncanonical lease": func(chunk *GenerationChunk) { chunk.LeaseToken = "lease" },
+		"reversed heartbeat": func(chunk *GenerationChunk) {
+			value := chunk.ClaimedAt.Add(-time.Second)
+			chunk.HeartbeatAt = &value
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := *stale
+			mutate(&changed)
+			if validGenerationStaleLeaseTransitionShape(hitRequest, *active, changed) {
+				t.Fatal("malformed stale lease hit was accepted")
+			}
+		})
+	}
+	for name, mutate := range map[string]func(*GenerationSchedule){
+		"double-counted terminal": func(schedule *GenerationSchedule) { schedule.Succeeded++ },
+		"running over token limit": func(schedule *GenerationSchedule) {
+			schedule.Pending--
+			schedule.Running++
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := *active
+			mutate(&changed)
+			if validGenerationStaleLeaseTransitionShape(hitRequest, changed, *stale) {
+				t.Fatal("impossible stale lease schedule counters were accepted")
+			}
+		})
+	}
+	var points []GenerationStaleLeaseTransitionPoint
+	requeueFailure := errors.New("requeue signal refused")
+	reaped, err = state.ReapStaleGenerationChunksObserved(
+		t.Context(), spec.ResourceClass, time.Minute,
+		func(ctx context.Context, transition GenerationStaleLeaseTransition) error {
+			points = append(points, transition.Point)
+			switch transition.Point {
+			case GenerationStaleLeaseTransitionHit:
+				readCtx, ledger, startErr := readaccounting.Start(ctx, readaccounting.Counts{
+					StoreReadAttempts: GenerationStaleLeaseTransitionStoreReadAttempts,
+				})
+				if startErr != nil {
+					t.Fatal(startErr)
+				}
+				request := requestFor(transition)
+				before, beforeErr := state.ReadGenerationStaleLeaseTransition(readCtx, request)
+				after, afterErr := state.ReadGenerationStaleLeaseTransition(readCtx, request)
+				counts, finishErr := ledger.Finish()
+				if errors.Join(beforeErr, afterErr, finishErr) != nil ||
+					before != transition || before != after ||
+					counts != (readaccounting.Counts{
+						StoreReadAttempts: GenerationStaleLeaseTransitionStoreReadAttempts,
+					}) {
+					t.Fatalf(
+						"hit snapshots/counts = %+v / %+v / %+v, errors=%v",
+						before, after, counts, errors.Join(beforeErr, afterErr, finishErr),
+					)
+				}
+			case GenerationStaleLeaseTransitionRequeued:
+				if transition.ChunkStatus != GenerationChunkPending ||
+					transition.Priority != GenerationPriorityStale || transition.Leased {
+					t.Fatalf("requeued transition = %+v", transition)
+				}
+				return requeueFailure
+			default:
+				t.Fatalf("unexpected transition = %+v", transition)
+			}
+			return nil
+		},
+	)
+	if reaped != 1 || !errors.Is(err, requeueFailure) ||
+		!slices.Equal(points, []GenerationStaleLeaseTransitionPoint{
+			GenerationStaleLeaseTransitionHit,
+			GenerationStaleLeaseTransitionRequeued,
+		}) {
+		t.Fatalf("observed reaping = %d, %v, points=%v", reaped, err, points)
+	}
+	requeued, err := state.generationChunkByIdentity(t.Context(), claimed.Identity)
+	if err != nil || requeued.Status != GenerationChunkPending ||
+		requeued.Priority != GenerationPriorityStale || requeued.LeaseToken != "" {
+		t.Fatalf("durable requeue after observer error = %+v, %v", requeued, err)
+	}
+	if err := state.CompleteGenerationChunk(t.Context(), *claimed); !errors.Is(err, ErrGenerationLeaseLost) {
+		t.Fatalf("old lease completed after requeue: %v", err)
+	}
+	recovered, err := state.ClaimGenerationChunk(
+		t.Context(), spec.ResourceClass, "stale-lease-recovered",
+	)
+	recoveredFirst := err == nil && recovered != nil && recovered.Identity == claimed.Identity
+	if err == nil && recovered != nil && !recoveredFirst {
+		if err = state.CompleteGenerationChunk(t.Context(), *recovered); err == nil {
+			recovered, err = state.ClaimGenerationChunk(
+				t.Context(), spec.ResourceClass, "stale-lease-recovered",
+			)
+		}
+	}
+	if err != nil || recovered == nil || recovered.Identity != claimed.Identity ||
+		recovered.Attempt != 0 || recovered.Priority != GenerationPriorityStale {
+		t.Fatalf("recovered claim = %+v, %v", recovered, err)
+	}
+	if err := state.CompleteGenerationChunk(t.Context(), *recovered); err != nil {
+		t.Fatal(err)
+	}
+	if recoveredFirst {
+		remaining, err := state.ClaimGenerationChunk(
+			t.Context(), spec.ResourceClass, "stale-lease-final",
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := state.CompleteGenerationChunk(t.Context(), *remaining); err != nil {
+			t.Fatal(err)
+		}
+	}
+	recoveredRequest := GenerationStaleLeaseTransitionRequest{
+		Point:      GenerationStaleLeaseTransitionRecovered,
+		Repository: spec.Repository, Stage: spec.Stage, Generation: spec.Generation,
+		ResourceClass: spec.ResourceClass, ScheduleDigest: schedule.Digest,
+		ChunkIdentity: recovered.Identity, Offset: recovered.Offset,
+		Length: recovered.Length, Attempt: recovered.Attempt,
+	}
+	readCtx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{
+		StoreReadAttempts: GenerationStaleLeaseTransitionStoreReadAttempts,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, beforeErr := state.ReadGenerationStaleLeaseTransition(readCtx, recoveredRequest)
+	after, afterErr := state.ReadGenerationStaleLeaseTransition(readCtx, recoveredRequest)
+	counts, finishErr := ledger.Finish()
+	if errors.Join(beforeErr, afterErr, finishErr) != nil || before != after ||
+		before.Point != GenerationStaleLeaseTransitionRecovered ||
+		before.ScheduleStatus != GenerationScheduleSettled ||
+		before.ChunkStatus != GenerationChunkDone || before.Leased ||
+		counts != (readaccounting.Counts{
+			StoreReadAttempts: GenerationStaleLeaseTransitionStoreReadAttempts,
+		}) {
+		t.Fatalf(
+			"recovered snapshots/counts = %+v / %+v / %+v, errors=%v",
+			before, after, counts, errors.Join(beforeErr, afterErr, finishErr),
+		)
+	}
+	limitedCtx, limitedLedger, err := readaccounting.Start(t.Context(), readaccounting.Counts{
+		StoreReadAttempts: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, limitedErr := state.ReadGenerationStaleLeaseTransition(limitedCtx, recoveredRequest)
+	limitedCounts, finishErr := limitedLedger.Finish()
+	if !errors.Is(errors.Join(limitedErr, finishErr), readaccounting.ErrLimit) ||
+		limitedCounts != (readaccounting.Counts{StoreReadAttempts: 2}) {
+		t.Fatalf("limited point read = %+v, %v", limitedCounts, limitedErr)
 	}
 }

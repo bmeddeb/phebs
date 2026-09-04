@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -19,6 +20,7 @@ const (
 	correctedPhysicalTransitionReadClass    = "search-reader-current-prior-retention"
 	correctedLogicalTransitionReadClass     = "catalog-activation-residue-and-recovery"
 	correctedReturnTransitionReadClass      = "relationship-marker-recovery"
+	correctedStaleLeaseTransitionReadClass  = "prepared-stale-lease-schedule-and-result"
 	correctedInspectionPolicy               = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
 )
 
@@ -91,6 +93,24 @@ func correctedReturnTransitionReadBound() (inspectionReadBound, error) {
 		Calls:              exactInspectionCalls(2),
 		ControlFileReads:   exactInspectionCalls(controlReads),
 		StoreReadAttempts:  exactInspectionCalls(0),
+		MemberReads:        exactInspectionCalls(0),
+		StoreWriteAttempts: exactInspectionCalls(0),
+	}, nil
+}
+
+func correctedStaleLeaseTransitionReadBound() (inspectionReadBound, error) {
+	controlReads, err := checkedMultiply(2, extractionpublication.StaleLeaseTransitionControlFileReads)
+	if err != nil {
+		return inspectionReadBound{}, err
+	}
+	storeReads, err := checkedMultiply(2, store.GenerationStaleLeaseTransitionStoreReadAttempts)
+	if err != nil {
+		return inspectionReadBound{}, err
+	}
+	return inspectionReadBound{
+		Calls:              exactInspectionCalls(2),
+		ControlFileReads:   exactInspectionCalls(controlReads),
+		StoreReadAttempts:  exactInspectionCalls(storeReads),
 		MemberReads:        exactInspectionCalls(0),
 		StoreWriteAttempts: exactInspectionCalls(0),
 	}, nil
@@ -265,7 +285,12 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 			}
 			row.TransitionRead = &readBound
 		case "stale_lease":
-			row.TransitionReadClass = "prepared-stale-lease-schedule-and-result"
+			row.TransitionReadClass = correctedStaleLeaseTransitionReadClass
+			readBound, err := correctedStaleLeaseTransitionReadBound()
+			if err != nil {
+				return nil, nil, err
+			}
+			row.TransitionRead = &readBound
 			row.ImmutableMemberReusePhase = "return_a"
 		case "process_restart":
 			row.TransitionReadClass = "prepared-checkpoint-hard-restart"

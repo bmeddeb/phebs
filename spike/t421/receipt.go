@@ -2353,6 +2353,10 @@ func validateTransitionResults(
 			if value.ReadAccounting == nil || validateReturnTransitionReadSubtotal(*value.ReadAccounting) != nil {
 				return errors.New("return transition read accounting is invalid")
 			}
+		} else if phase == "stale_lease" {
+			if value.ReadAccounting == nil || validateStaleLeaseTransitionReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("stale lease transition read accounting is invalid")
+			}
 		} else if value.ReadAccounting != nil {
 			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
@@ -2632,6 +2636,20 @@ func validateReturnTransitionReadSubtotal(value TransitionReadSubtotal) error {
 	return nil
 }
 
+func validateStaleLeaseTransitionReadSubtotal(value TransitionReadSubtotal) error {
+	bound, err := correctedStaleLeaseTransitionReadBound()
+	if err != nil || value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedStaleLeaseTransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
+		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
+		return errors.New("stale lease transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
 func validateInjectionTransition(
 	point FailurePoint,
 	value InjectionTransition,
@@ -2670,6 +2688,10 @@ func validateInjectionTransition(
 	hitSHA256, hitErr := injectionHitReportSHA256(value, point)
 	recoverySHA256, recoveryErr := injectionRecoveryProjectionSHA256(value, point)
 	authorityAtHitOK := value.AuthorityAtHitSHA256 == authorityBeforeSHA256
+	if point.Name == "stale_partition_lease" && plan.Schema == PlanV2Schema {
+		want, ok := staleLeaseAuthorityAtHitSHA256(authorityBefore, phaseAuthority)
+		authorityAtHitOK = ok && value.AuthorityAtHitSHA256 == want
+	}
 	if point.Name == "interrupted_publication" {
 		want, ok := interruptedPublicationAuthorityAtHitSHA256(authorityBefore, phaseAuthority, plan)
 		authorityAtHitOK = ok && value.AuthorityAtHitSHA256 == want
@@ -3473,6 +3495,12 @@ func interruptedPublicationAuthorityAtHitSHA256(
 	hit.RelationshipRootSHA256 = prior.RelationshipRootSHA256
 	hit.RelationshipProvenanceSHA256 = prior.RelationshipProvenanceSHA256
 	return authorityIdentitySHA256(hit)
+}
+
+func staleLeaseAuthorityAtHitSHA256(prior, final AuthorityPhaseResult) (string, bool) {
+	priorSHA256, priorOK := authorityIdentitySHA256(prior)
+	finalSHA256, finalOK := authorityIdentitySHA256(final)
+	return priorSHA256, priorOK && finalOK && priorSHA256 == finalSHA256
 }
 
 func validInterruptedPublicationTargetMapping(value InjectionTargetProjection, plan Plan) bool {

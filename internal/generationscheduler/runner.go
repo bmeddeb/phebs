@@ -38,10 +38,12 @@ type Handler func(context.Context, store.GenerationChunk, Budget) error
 type ExhaustedHandler func(context.Context, store.GenerationChunk, error) error
 
 type Class struct {
-	Concurrency int
-	Budget      Budget
-	Handle      Handler
-	OnExhausted ExhaustedHandler
+	Concurrency            int
+	Budget                 Budget
+	Handle                 Handler
+	OnExhausted            ExhaustedHandler
+	BeforeLeaseHeartbeat   func(context.Context, store.GenerationChunk) error
+	OnStaleLeaseTransition store.GenerationStaleLeaseTransitionObserver
 }
 
 type Scheduler struct {
@@ -101,7 +103,7 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 		}()
 		go func() {
 			defer workers.Done()
-			scheduler.reap(ctx, class)
+			scheduler.reap(ctx, class, configuration.OnStaleLeaseTransition)
 		}()
 		for index := range configuration.Concurrency {
 			workers.Add(1)
@@ -205,6 +207,21 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 			configuration.Budget.MaxDescriptors > MaxChunkDescriptors {
 			return nil, fmt.Errorf("generation scheduler class %q bounds are invalid", class)
 		}
+		if configuration.BeforeLeaseHeartbeat != nil &&
+			configuration.OnStaleLeaseTransition == nil {
+			return nil, fmt.Errorf(
+				"generation scheduler class %q lease gate requires a transition observer",
+				class,
+			)
+		}
+		if configuration.OnStaleLeaseTransition != nil {
+			if _, ok := scheduler.Store.(store.GenerationStaleLeaseTransitionReaper); !ok {
+				return nil, fmt.Errorf(
+					"generation scheduler class %q store lacks observed stale reaping",
+					class,
+				)
+			}
+		}
 		totalConcurrency += configuration.Concurrency
 		totalMemory += int64(configuration.Concurrency) * configuration.Budget.MaxMemoryBytes
 		totalDescriptors += configuration.Concurrency * configuration.Budget.MaxDescriptors
@@ -270,12 +287,27 @@ func (scheduler *Scheduler) plan(ctx context.Context, class store.GenerationReso
 	}
 }
 
-func (scheduler *Scheduler) reap(ctx context.Context, class store.GenerationResourceClass) {
+func (scheduler *Scheduler) reap(
+	ctx context.Context,
+	class store.GenerationResourceClass,
+	observer store.GenerationStaleLeaseTransitionObserver,
+) {
 	ticker := time.NewTicker(scheduler.PollEvery)
 	defer ticker.Stop()
 	for {
 		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
-		_, err := scheduler.Store.ReapStaleGenerationChunks(callCtx, class, scheduler.StaleAfter)
+		var err error
+		if observer == nil {
+			_, err = scheduler.Store.ReapStaleGenerationChunks(
+				callCtx, class, scheduler.StaleAfter,
+			)
+		} else if observed, ok := scheduler.Store.(store.GenerationStaleLeaseTransitionReaper); ok {
+			_, err = observed.ReapStaleGenerationChunksObserved(
+				callCtx, class, scheduler.StaleAfter, observer,
+			)
+		} else {
+			err = errors.New("store lacks observed stale reaping")
+		}
 		cancel()
 		if err != nil &&
 			ctx.Err() == nil {
@@ -330,6 +362,19 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 			scheduler.emitChunkLifecycleDuration("settled", chunk, outcome, time.Since(started).Milliseconds())
 		}
 	}()
+	if configuration.BeforeLeaseHeartbeat != nil {
+		if err := configuration.BeforeLeaseHeartbeat(ctx, chunk); err != nil {
+			if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) {
+				outcome = "stale_fenced"
+			} else {
+				outcome = "pre_heartbeat_failed"
+				if ctx.Err() == nil {
+					scheduler.report(fmt.Errorf("gate generation chunk heartbeat: %w", err))
+				}
+			}
+			return
+		}
+	}
 	handleCtx, cancel := context.WithCancel(ctx)
 	heartbeat := make(chan error, 1)
 	go func() {
@@ -406,12 +451,34 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 	}
 	if handleErr == nil {
 		outcome = "completed"
-		if err := scheduler.Store.CompleteGenerationChunk(writeCtx, chunk); err != nil &&
-			!errors.Is(err, store.ErrGenerationLeaseLost) && !errors.Is(err, store.ErrGenerationStale) {
+		err := scheduler.Store.CompleteGenerationChunk(writeCtx, chunk)
+		if err != nil && !errors.Is(err, store.ErrGenerationLeaseLost) &&
+			!errors.Is(err, store.ErrGenerationStale) {
 			outcome = "completion_failed"
 			scheduler.report(fmt.Errorf("complete generation chunk: %w", err))
-		} else if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) {
+		} else if errors.Is(err, store.ErrGenerationLeaseLost) ||
+			errors.Is(err, store.ErrGenerationStale) {
 			outcome = "stale_fenced"
+		} else if chunk.Priority == store.GenerationPriorityStale &&
+			configuration.OnStaleLeaseTransition != nil {
+			transition := store.GenerationStaleLeaseTransition{
+				Point:      store.GenerationStaleLeaseTransitionRecovered,
+				Repository: chunk.Repository, Stage: chunk.Stage,
+				Generation: chunk.Generation, ResourceClass: chunk.ResourceClass,
+				ScheduleDigest: chunk.ScheduleDigest, ChunkIdentity: chunk.Identity,
+				Offset: chunk.Offset, Length: chunk.Length, Attempt: chunk.Attempt,
+				Priority: chunk.Priority, ChunkStatus: store.GenerationChunkDone,
+			}
+			observerCtx, observerCancel := context.WithTimeout(
+				context.WithoutCancel(ctx), scheduler.storeCallTimeout(),
+			)
+			observerErr := configuration.OnStaleLeaseTransition(observerCtx, transition)
+			observerCancel()
+			if observerErr != nil {
+				scheduler.report(fmt.Errorf(
+					"observe recovered generation stale lease: %w", observerErr,
+				))
+			}
 		}
 		return
 	}

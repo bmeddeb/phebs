@@ -179,11 +179,23 @@ still logical B. V2 distinguishes the stable runtime target, claimed schedule
 row, and marker-owned output generation/root, and binds the hit to the mixed
 return-A-input/logical-B-caller-and-relationship authority. Epoch-three report
 admission is now 11,528, while V1 remains exact.
-Stale-lease, restart, pressure, archive/restore, and lifecycle R, cumulative
-phase sums, final ordinal, replacement freeze, and runner remain open. Overall
-correction acceptance and freeze remain open. No T42.2 execution, private
-rerun, release, scale pass, or SLO claim is authorized; T42.2 remains next only
-after the remaining T42.1 gates close.
+The stale-lease R slice now binds one pre-reap and one post-completion snapshot
+of the exact prepared schedule/result mapping. Each reads the binding, target
+generation, domain plan, and canonical result plus two independently confirmed
+schedule/chunk store pairs, for aggregate `C/S/M/W=8/8/0/0`. The hit requires
+the active schedule's stale priority-0 attempt-0 row still running and leased;
+recovery requires a settled all-success schedule and that same row priority 2,
+done and unleased with stale-reap provenance. The distinct recovery-schedule
+generation remains bound to the immutable target generation and predecessor
+schedule, while return-A authority remains unchanged. Epoch-three report
+admission is now 11,530. Ordinary scheduling/reaping adds only inactive nil
+branches; exact mode alone extends the stale window and runs bounded observers
+without a global hook, schema, or goroutine.
+Restart, pressure, archive/restore, and lifecycle R, cumulative phase sums,
+final ordinal, replacement freeze, and runner remain open. Overall correction
+acceptance and freeze remain open. No T42.2 execution, private rerun, release,
+scale pass, or SLO claim is authorized; T42.2 remains next only after the
+remaining T42.1 gates close.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -55,6 +56,75 @@ type schedulerStore struct {
 	done         chan struct{}
 	retryErr     error
 	heartbeatErr error
+}
+
+type observedSchedulerStore struct {
+	*schedulerStore
+	chunk         store.GenerationChunk
+	observed      bool
+	observedReaps int
+	ordinaryReaps int
+	heartbeats    int
+}
+
+func (state *observedSchedulerStore) HeartbeatGenerationChunk(
+	context.Context,
+	store.GenerationChunk,
+) error {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	state.heartbeats++
+	return nil
+}
+
+func (state *observedSchedulerStore) ReapStaleGenerationChunks(
+	context.Context,
+	store.GenerationResourceClass,
+	time.Duration,
+) (int, error) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	state.ordinaryReaps++
+	return 0, nil
+}
+
+func (state *observedSchedulerStore) ReapStaleGenerationChunksObserved(
+	ctx context.Context,
+	_ store.GenerationResourceClass,
+	_ time.Duration,
+	observer store.GenerationStaleLeaseTransitionObserver,
+) (int, error) {
+	state.mu.Lock()
+	if state.observed {
+		state.mu.Unlock()
+		return 0, nil
+	}
+	state.observed = true
+	state.observedReaps++
+	chunk := state.chunk
+	state.mu.Unlock()
+	hit := store.GenerationStaleLeaseTransition{
+		Point:      store.GenerationStaleLeaseTransitionHit,
+		Repository: chunk.Repository, Stage: chunk.Stage, Generation: chunk.Generation,
+		ResourceClass: chunk.ResourceClass, ScheduleDigest: chunk.ScheduleDigest,
+		ScheduleStatus: store.GenerationScheduleActive, ChunkIdentity: chunk.Identity,
+		Offset: chunk.Offset, Length: chunk.Length, Attempt: chunk.Attempt,
+		Priority: chunk.Priority, ChunkStatus: store.GenerationChunkRunning,
+		Leased: true, ChunkStateDigest: "sha256:" + strings.Repeat("f", 64),
+	}
+	if err := observer(ctx, hit); err != nil {
+		return 0, err
+	}
+	requeued := hit
+	requeued.Point = store.GenerationStaleLeaseTransitionRequeued
+	requeued.Priority = store.GenerationPriorityStale
+	requeued.ChunkStatus = store.GenerationChunkPending
+	requeued.Leased = false
+	requeued.ChunkStateDigest = ""
+	if err := observer(ctx, requeued); err != nil {
+		return 1, err
+	}
+	return 1, nil
 }
 
 type blockedExpansionRecoveryStore struct {
@@ -228,6 +298,135 @@ func TestSchedulerReaperProgressIsIndependentOfBlockedExpansion(t *testing.T) {
 	defer state.mu.Unlock()
 	if state.reaped != 1 || state.completed != 2 {
 		t.Fatalf("reaped/completion attempts = %d/%d, want 1/2", state.reaped, state.completed)
+	}
+}
+
+func TestSchedulerObservedStaleLeaseGateAndRecoveredCompletion(t *testing.T) {
+	first := store.GenerationChunk{
+		ID: "observed-stale", Identity: "sha256:" + strings.Repeat("1", 64),
+		ScheduleDigest: "sha256:" + strings.Repeat("2", 64),
+		Repository:     "example.invalid/observed-stale", Stage: "extraction-partitions",
+		Generation:    "sha256:" + strings.Repeat("3", 64),
+		ResourceClass: store.GenerationResourceExtraction,
+		Offset:        6, Length: 1, Attempt: 0, Priority: store.GenerationPriorityNeverRun,
+		Status: store.GenerationChunkRunning, LeaseToken: "first-lease",
+	}
+	state := &observedSchedulerStore{schedulerStore: &schedulerStore{}, chunk: first}
+	gateEntered := make(chan struct{})
+	requeued := make(chan struct{})
+	var requeuedOnce sync.Once
+	var pointsMu sync.Mutex
+	var points []store.GenerationStaleLeaseTransitionPoint
+	recoveredObserverFailure := errors.New("recovered transition report failed")
+	observer := func(_ context.Context, transition store.GenerationStaleLeaseTransition) error {
+		pointsMu.Lock()
+		points = append(points, transition.Point)
+		pointsMu.Unlock()
+		if transition.Point == store.GenerationStaleLeaseTransitionRequeued {
+			requeuedOnce.Do(func() { close(requeued) })
+		}
+		if transition.Point == store.GenerationStaleLeaseTransitionRecovered {
+			return recoveredObserverFailure
+		}
+		return nil
+	}
+	var handled atomic.Int64
+	configuration := Class{
+		Concurrency: 1, Budget: Budget{MaxMemoryBytes: 1, MaxDescriptors: 1},
+		Handle: func(context.Context, store.GenerationChunk, Budget) error {
+			handled.Add(1)
+			return nil
+		},
+		BeforeLeaseHeartbeat: func(ctx context.Context, chunk store.GenerationChunk) error {
+			if chunk.LeaseToken != first.LeaseToken {
+				return nil
+			}
+			close(gateEntered)
+			select {
+			case <-requeued:
+				return store.ErrGenerationLeaseLost
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		},
+		OnStaleLeaseTransition: observer,
+	}
+	reports := make(chan error, 1)
+	scheduler := &Scheduler{
+		Store: state,
+		Classes: map[store.GenerationResourceClass]Class{
+			store.GenerationResourceExtraction: configuration,
+		},
+		PollEvery: time.Hour, HeartbeatEvery: time.Hour, StaleAfter: 2 * time.Hour,
+		Report: func(err error) { reports <- err },
+	}
+	firstDone := make(chan struct{})
+	go func() {
+		defer close(firstDone)
+		scheduler.execute(t.Context(), configuration, first)
+	}()
+	select {
+	case <-gateEntered:
+	case <-time.After(time.Second):
+		t.Fatal("first lease did not stop before its heartbeat")
+	}
+	reapCtx, cancelReap := context.WithCancel(t.Context())
+	reapDone := make(chan struct{})
+	go func() {
+		defer close(reapDone)
+		scheduler.reap(reapCtx, store.GenerationResourceExtraction, observer)
+	}()
+	select {
+	case <-requeued:
+		cancelReap()
+	case <-time.After(time.Second):
+		cancelReap()
+		t.Fatal("observed reaper did not signal durable requeue")
+	}
+	<-reapDone
+	select {
+	case <-firstDone:
+	case <-time.After(time.Second):
+		t.Fatal("old lease did not leave the pre-heartbeat gate")
+	}
+	if handled.Load() != 0 {
+		t.Fatalf("old lease reached handler %d times", handled.Load())
+	}
+
+	recovered := first
+	recovered.Priority = store.GenerationPriorityStale
+	recovered.LeaseToken = "recovered-lease"
+	scheduler.execute(t.Context(), configuration, recovered)
+	if handled.Load() != 1 {
+		t.Fatalf("recovered lease handler calls = %d, want 1", handled.Load())
+	}
+	select {
+	case report := <-reports:
+		if !errors.Is(report, recoveredObserverFailure) {
+			t.Fatalf("recovered observer report = %v", report)
+		}
+	default:
+		t.Fatal("recovered observer failure was not reported")
+	}
+	state.mu.Lock()
+	completed, heartbeats := state.completed, state.heartbeats
+	observedReaps, ordinaryReaps := state.observedReaps, state.ordinaryReaps
+	state.mu.Unlock()
+	if completed != 1 || heartbeats != 0 || observedReaps != 1 || ordinaryReaps != 0 {
+		t.Fatalf(
+			"completed/heartbeats/observed/ordinary = %d/%d/%d/%d",
+			completed, heartbeats, observedReaps, ordinaryReaps,
+		)
+	}
+	pointsMu.Lock()
+	defer pointsMu.Unlock()
+	wantPoints := []store.GenerationStaleLeaseTransitionPoint{
+		store.GenerationStaleLeaseTransitionHit,
+		store.GenerationStaleLeaseTransitionRequeued,
+		store.GenerationStaleLeaseTransitionRecovered,
+	}
+	if !slices.Equal(points, wantPoints) {
+		t.Fatalf("transition points = %v, want %v", points, wantPoints)
 	}
 }
 

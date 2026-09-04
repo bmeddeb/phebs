@@ -3738,6 +3738,47 @@ scale, or SLO evidence. Stale-lease, process-restart, pressure,
 archive/restore, and lifecycle R remain open. T42.2 stays next only after this
 slice and the remaining T42.1 correction gates close.
 
+The stale-lease R slice closes only
+`prepared-stale-lease-schedule-and-result`. Exact control installs the
+generation scheduler's default-nil pre-heartbeat gate so one selected
+attempt-0 chunk can cross the existing stale cutoff without being refreshed.
+The store's optional observer brackets the existing heartbeat-fenced durable
+stale requeue: the hit callback runs immediately before mutation and the
+second observer callback runs immediately after the successful requeue. That
+second callback is synchronization, not recovery evidence. The recovered
+report remains unavailable until the reclaimed same-attempt chunk completes
+successfully.
+
+Both event readers are self-confirming and source-free. Each reads the exact
+preparation binding, extraction generation, domain plan, and canonical
+partition result once from disk, then reads the current generation schedule
+and exact target chunk twice from the store. At the hit, the attempt-0 chunk
+must still be in an active current schedule at priority 0, running, claimed and
+leased, with the same stale heartbeat selected by the reaper. At recovery, the
+schedule must be settled with no pending, running, or failed chunks, and that
+exact row must be priority 2, done and unleased, retaining the bounded
+stale-reap provenance. The recovery-schedule generation is a distinct prepared
+identity whose binding maps to the immutable target extraction generation and
+predecessor schedule; the exact plan and result belong to that target
+generation. The stale-lease phase authority must remain byte-exact return-A
+authority; a mixed or moving authority, merely pending requeue, new attempt,
+different schedule, plan, generation, or result refuses.
+
+The V2 receipt therefore owns one hit and one recovered report, each exactly
+`C/S/M/W=4/4/0/0`, for subtotal `8/8/0/0`; epoch three's shared exact-report
+maximum advances from 11,528 to 11,530. V1 remains byte-exact and gains no
+subtotal. Limit-plus-one, malformed state, callback failure, and incomplete
+completion all fail closed. The readers are synchronous, one-shot,
+nonpolling, uncached, child-free, member-free, and write-free.
+
+Ordinary scheduler, reaper, and completion paths add only default-inactive nil
+branches. Exact mode deliberately extends the selected stale window and runs
+the bounded callbacks on those existing paths; it adds no global hook, store
+schema, ledger, persistent state, goroutine, lock class, or production I/O.
+Process-restart, pressure, archive/restore, and lifecycle R, whole-phase sums,
+the final ordinal, corrected-plan freeze, runner execution, release, and
+scale/SLO evidence remain open. This slice does not authorize T42.2.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

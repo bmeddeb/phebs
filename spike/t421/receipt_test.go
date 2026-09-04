@@ -10,9 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
@@ -63,6 +65,12 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 		receipt.TransitionResults[returnIndex].Injections[0].Target.ScheduleSHA256 !=
 			receipt.TransitionResults[returnIndex].Injections[0].Target.GenerationSHA256 {
 		t.Fatal("retained V1 relationship transition changed shape")
+	}
+	staleIndex := slices.IndexFunc(receipt.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "stale_lease"
+	})
+	if staleIndex < 0 || receipt.TransitionResults[staleIndex].ReadAccounting != nil {
+		t.Fatal("retained V1 stale-lease transition gained read accounting")
 	}
 }
 
@@ -138,6 +146,48 @@ func TestReturnTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
 	}
 }
 
+func TestStaleLeaseTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
+	bound, err := correctedStaleLeaseTransitionReadBound()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bound.Calls != exactInspectionCalls(2) ||
+		bound.ControlFileReads != exactInspectionCalls(
+			2*extractionpublication.StaleLeaseTransitionControlFileReads,
+		) || bound.StoreReadAttempts != exactInspectionCalls(
+		2*store.GenerationStaleLeaseTransitionStoreReadAttempts,
+	) || bound.MemberReads != exactInspectionCalls(0) ||
+		bound.StoreWriteAttempts != exactInspectionCalls(0) {
+		t.Fatal("stale lease transition subtotal does not match the native per-report reader cost")
+	}
+	base := TransitionReadSubtotal{
+		Schema: "t422-transition-read-accounting-v1", Class: correctedStaleLeaseTransitionReadClass,
+		ReportCalls: bound.Calls.Minimum, ControlFileReads: bound.ControlFileReads.Minimum,
+		StoreReadAttempts: bound.StoreReadAttempts.Minimum, MemberReads: bound.MemberReads.Minimum,
+		StoreWriteAttempts: bound.StoreWriteAttempts.Minimum,
+	}
+	if err := validateStaleLeaseTransitionReadSubtotal(base); err != nil {
+		t.Fatal(err)
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"schema":  func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+		"class":   func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"calls":   func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+		"control": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+		"store":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+		"member":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+		"write":   func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := base
+			mutate(&changed)
+			if err := validateStaleLeaseTransitionReadSubtotal(changed); err == nil {
+				t.Fatal("mutated stale lease transition subtotal was accepted")
+			}
+		})
+	}
+}
+
 func TestInterruptedPublicationV2AuthorityAndTargetMapping(t *testing.T) {
 	prior := AuthorityPhaseResult{
 		Phase: "logical_delta_b", Outcome: "passed",
@@ -204,6 +254,80 @@ func TestInterruptedPublicationV2AuthorityAndTargetMapping(t *testing.T) {
 	}
 	if !validInterruptedPublicationTargetMapping(legacy, Plan{Schema: PlanSchema}) {
 		t.Fatal("V1 legacy target mapping changed")
+	}
+}
+
+func TestStaleLeaseV2AuthorityAndTargetMapping(t *testing.T) {
+	prior := AuthorityPhaseResult{
+		Phase: "return_a", Outcome: "passed",
+		AuthorityState: AuthorityState{
+			LogicalRevision: "a-return", RelationshipRootSHA256: testDigest("stale", "relationship"),
+			Current: true,
+		},
+	}
+	final := prior
+	final.Phase = "stale_lease"
+	wantSHA256, _ := authorityIdentitySHA256(prior)
+	gotSHA256, ok := staleLeaseAuthorityAtHitSHA256(prior, final)
+	if !ok || gotSHA256 != wantSHA256 {
+		t.Fatal("stale lease did not retain exact return-A authority")
+	}
+	changedAuthority := final
+	changedAuthority.RelationshipRootSHA256 = testDigest("stale", "mixed-relationship")
+	if _, ok := staleLeaseAuthorityAtHitSHA256(prior, changedAuthority); ok {
+		t.Fatal("stale lease accepted mixed authority")
+	}
+
+	generation := testDigest("stale", "generation")
+	plan := testDigest("stale", "plan")
+	schedule := testDigest("stale", "recovery-schedule")
+	unit := testDigest("stale", "result")
+	root := ExtractionRootResult{
+		Domain: "grpc-caller", GenerationSHA256: generation, PlanSHA256: plan,
+		PartitionResults: []ExtractionPartitionResult{{
+			Ordinal: 0, Kind: "candidate_member", MemberOrdinal: 0,
+			SourceStart: 1, SourceEnd: 2, ResultIdentitySHA256: unit,
+		}},
+	}
+	value := InjectionTransition{
+		Target: InjectionTargetProjection{
+			Domain: "grpc-caller", GenerationSHA256: generation, PlanSHA256: plan,
+			ScheduleSHA256: schedule, UnitSHA256: unit, Ordinal: 0,
+			Kind: "candidate_member", MemberOrdinal: 0, SourceStart: 1, SourceEnd: 2,
+		},
+		Preparation: &RecoveryPreparationResult{RecoveryScheduleSHA256: schedule},
+	}
+	if !injectionTargetMatchesPreparedExtraction(value, root) {
+		t.Fatal("stale lease production identity mapping was rejected")
+	}
+	for name, mutate := range map[string]func(*InjectionTransition, *ExtractionRootResult){
+		"generation": func(value *InjectionTransition, _ *ExtractionRootResult) {
+			value.Target.GenerationSHA256 = testDigest("stale", "other-generation")
+		},
+		"plan": func(value *InjectionTransition, _ *ExtractionRootResult) {
+			value.Target.PlanSHA256 = testDigest("stale", "other-plan")
+		},
+		"schedule": func(value *InjectionTransition, _ *ExtractionRootResult) {
+			value.Target.ScheduleSHA256 = testDigest("stale", "other-schedule")
+		},
+		"unit": func(value *InjectionTransition, _ *ExtractionRootResult) {
+			value.Target.UnitSHA256 = testDigest("stale", "other-result")
+		},
+		"legacy_root_schedule": func(_ *InjectionTransition, root *ExtractionRootResult) {
+			root.ScheduleSHA256 = schedule
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			changedValue := value
+			changedPreparation := *value.Preparation
+			changedValue.Preparation = &changedPreparation
+			changedRoot := root
+			changedRoot.PartitionResults = slices.Clone(root.PartitionResults)
+			mutate(&changedValue, &changedRoot)
+			if injectionTargetMatchesPreparedExtraction(changedValue, changedRoot) {
+				t.Fatal("stale lease accepted a mixed target identity")
+			}
+		})
 	}
 }
 
@@ -1661,6 +1785,18 @@ func completeTestTransitions(
 				}
 				transition.ReadAccounting = &TransitionReadSubtotal{
 					Schema: "t422-transition-read-accounting-v1", Class: correctedReturnTransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
+					StoreReadAttempts: readBound.StoreReadAttempts.Minimum, MemberReads: readBound.MemberReads.Minimum,
+					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
+				}
+			}
+			if phase == "stale_lease" && plan.Schema == PlanV2Schema {
+				readBound, err := correctedStaleLeaseTransitionReadBound()
+				if err != nil {
+					t.Fatal(err)
+				}
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedStaleLeaseTransitionReadClass,
 					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
 					StoreReadAttempts: readBound.StoreReadAttempts.Minimum, MemberReads: readBound.MemberReads.Minimum,
 					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
