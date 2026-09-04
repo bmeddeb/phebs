@@ -12,7 +12,9 @@ import (
 const (
 	CycleObservationSchema      = "phebs-lifecycle-cycle-observation-v1"
 	Pressure80ObservationSchema = "phebs-pressure-80-observation-v1"
+	Pressure90ObservationSchema = "phebs-pressure-90-observation-v1"
 	Pressure80ReportCalls       = uint64(2)
+	Pressure90ReportCalls       = uint64(1)
 	MaxCycleObservationTurns    = CycleTurnLimit(4_096)
 )
 
@@ -64,6 +66,13 @@ type Pressure80Observation struct {
 	Capacity                TransitionCapacityObservation `json:"capacity"`
 }
 
+type Pressure90Observation struct {
+	Schema                  string                        `json:"schema"`
+	BallastFenceAt          time.Time                     `json:"ballast_fence_at"`
+	PriorCapacityObservedAt time.Time                     `json:"prior_capacity_observed_at"`
+	Capacity                TransitionCapacityObservation `json:"capacity"`
+}
+
 type cycleObservationResult struct {
 	value CycleObservation
 	err   error
@@ -96,6 +105,9 @@ type CycleCollector struct {
 	latest           time.Time
 	observation      CycleObservation
 	collectAttempted bool
+	pressure80       Pressure80Observation
+	pressureGate     *Gate
+	refuseAttempted  bool
 	awaitingCapacity bool
 }
 
@@ -354,9 +366,78 @@ func (collector *CycleCollector) ReadPressure80Collect(
 		observed.AvailableBytes >= normal.Capacity.AvailableBytes {
 		return Pressure80Observation{}, errors.New("pressure 80 capacity is not a contiguous collect transition")
 	}
-	return Pressure80Observation{
+	result := Pressure80Observation{
 		Schema: Pressure80ObservationSchema, BallastFenceAt: ballastFence.UTC(),
 		PriorCapacityObservedAt: normal.Capacity.ObservedAt, Capacity: observed,
+	}
+	if err := ctx.Err(); err != nil {
+		return Pressure80Observation{}, err
+	}
+	collector.mu.Lock()
+	if collector.observation.Schema != CycleObservationSchema {
+		collector.mu.Unlock()
+		return Pressure80Observation{}, ErrCycleObservationPending
+	}
+	collector.pressure80 = result
+	collector.pressureGate = gate
+	collector.mu.Unlock()
+	return result, nil
+}
+
+// ReadPressure90Refusal performs the one-shot zero-native-read pressure-90 R
+// observation against the same gate that produced the pressure-80 report.
+func (collector *CycleCollector) ReadPressure90Refusal(
+	ctx context.Context,
+	gate *Gate,
+	ballastFence time.Time,
+) (Pressure90Observation, error) {
+	if ctx == nil || collector == nil || gate == nil {
+		return Pressure90Observation{}, errors.New("pressure 90 observation is incomplete")
+	}
+	if err := ctx.Err(); err != nil {
+		return Pressure90Observation{}, err
+	}
+	collector.mu.Lock()
+	if collector.refuseAttempted {
+		collector.mu.Unlock()
+		return Pressure90Observation{}, errors.New("pressure 90 observation was already attempted")
+	}
+	collector.refuseAttempted = true
+	prior := collector.pressure80
+	priorGate := collector.pressureGate
+	now := collector.now
+	collector.mu.Unlock()
+	if prior.Schema != Pressure80ObservationSchema || priorGate != gate ||
+		ballastFence.IsZero() || ballastFence.Before(prior.Capacity.ObservedAt) {
+		return Pressure90Observation{}, errors.New("pressure 90 observation does not follow pressure 80")
+	}
+	capacity, err := gate.Check(ctx, 0)
+	if contextErr := ctx.Err(); contextErr != nil {
+		return Pressure90Observation{}, contextErr
+	}
+	if !errors.Is(err, ErrPressureRefusal) {
+		return Pressure90Observation{}, errors.New("pressure 90 capacity observation failed")
+	}
+	observedAt := now().UTC()
+	if observedAt.Before(ballastFence) {
+		return Pressure90Observation{}, errors.New("pressure 90 capacity did not follow ballast")
+	}
+	observed, observedErr := transitionCapacityObservation(capacity, PressureRefuse, observedAt)
+	if observedErr != nil {
+		return Pressure90Observation{}, observedErr
+	}
+	if observed.UsedPercent != HardWatermarkPercent ||
+		observed.TotalBytes != prior.Capacity.TotalBytes ||
+		observed.UsedBytes <= prior.Capacity.UsedBytes ||
+		observed.AvailableBytes >= prior.Capacity.AvailableBytes {
+		return Pressure90Observation{}, errors.New("pressure 90 capacity is not a contiguous refusal transition")
+	}
+	if err := ctx.Err(); err != nil {
+		return Pressure90Observation{}, err
+	}
+	return Pressure90Observation{
+		Schema: Pressure90ObservationSchema, BallastFenceAt: ballastFence.UTC(),
+		PriorCapacityObservedAt: prior.Capacity.ObservedAt, Capacity: observed,
 	}, nil
 }
 
@@ -364,6 +445,8 @@ func (collector *CycleCollector) cancel() {
 	collector.mu.Lock()
 	collector.finished = true
 	collector.observation = CycleObservation{}
+	collector.pressure80 = Pressure80Observation{}
+	collector.pressureGate = nil
 	collector.cycle = nil
 	collector.readyCycle = nil
 	collector.mu.Unlock()

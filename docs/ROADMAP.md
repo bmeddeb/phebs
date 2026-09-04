@@ -245,6 +245,25 @@ and wake the existing potentially hour-idle runner, and own the ballast and
 authority fences, event ordinals, and report path. Deletion and
 prepared-residue proof remain open.
 
+The following V2 R slice binds pressure 90 to one zero-native-read report. It
+reuses the successful pressure-80 collector and the same production `Gate`,
+then makes exactly one direct `Gate.Check(ctx, 0)` after the post-ballast fence.
+Only the typed `ErrPressureRefusal` with exact 90% refuse capacity is success;
+the positive total must match pressure 80 while used bytes increase and
+available bytes decrease. It performs no lifecycle/status read or extra turn,
+and cancellation, a different gate, malformed capacity, an untyped error, or
+a repeated attempt fails closed. Same-gate identity does not prove this was the
+first 90% latch probe.
+
+Its exact `C/S/M/W=0/0/0/0` report advances epoch-four calls `3→4`,
+epoch-four requests `6,257→6,258`, and overall requests `43,772→43,773`.
+The token `;90=1xC0S0M0W0` leaves the plan at 262,129 of 262,144 bytes.
+V1 stays byte-exact; ordinary mode is unchanged. Current controller wiring,
+runner parking between pressure 80 and 90, ballast/authority/event/report
+ownership, prevention of any intervening `Gate.Check`, and report-failure
+latching remain open. This is no phase pass, freeze, execution, release, scale
+result, or SLO.
+
 Pressure, archive/restore, and lifecycle R, cumulative phase sums,
 final ordinal, replacement freeze, and runner remain open. Overall correction
 acceptance and freeze remain open. No T42.2 execution, private rerun, release,

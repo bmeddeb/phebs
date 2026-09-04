@@ -1549,6 +1549,42 @@ Deletion and prepared-residue proof; pressure-90, pressure-75, archive, and
 lifecycle R; cross-phase sums; final ordinal; corrected freeze; execution;
 release; and scale/SLO evidence remain open.
 
+#### Pressure-90 refusal R reader
+
+V2 pressure-90 R is one source-free, zero-native-read report. After successful
+pressure-80 collection and capacity observations, the same one-shot collector
+accepts only the same production `Gate` identity and one direct
+`Gate.Check(ctx, 0)` after the post-ballast fence. Success is the typed
+`ErrPressureRefusal` with exact refuse pressure at 90%, the same positive total
+bytes as pressure 80, greater used bytes, fewer available bytes, and a
+nondecreasing observation time. A missing predecessor, different gate,
+cancellation, raw/untyped error, malformed or noncontiguous capacity, or
+second attempt fails closed with fixed source-free errors. No lifecycle/status
+read or extra lifecycle turn is involved.
+
+The report is exactly `C/S/M/W=0/0/0/0`. Epoch-four transition calls rise from
+3 to 4, epoch-four requests from 6,257 to 6,258, and the five-epoch total from
+43,772 to 43,773. The compact token `;90=1xC0S0M0W0` leaves the corrected plan
+at 262,129 of 262,144 bytes. V1 stays byte-exact and keeps pressure-90 R absent.
+Ordinary mode is unchanged. The reader reuses the pressure-80 collector and
+gate and adds one direct capacity metadata probe; it adds no status poll,
+lifecycle turn, cache, child, schema, persistent state, source retention,
+goroutine, or lock class. Successful pressure 80 adds one post-probe collector
+lock to retain its fixed predecessor and gate pointer. A pressure-90 first
+attempt takes that mutex once and releases it before the existing gate probe
+and short latch-mutex section; a repeat takes only the collector mutex and
+performs no probe. Query, sync, startup/restart, retry/no-op, and publication
+paths are unchanged, with no full-corpus read, hashing, cache invalidation, or
+unbounded memory/disk cost.
+
+This is not server/controller wiring and does not prove the direct call was the
+first 90% latch probe. The later controller must park or quiesce the existing
+runner between pressure 80 and 90, prevent any intervening `Gate.Check`, own
+ballast/authority/event/report fences, and latch report failure. Pressure-75,
+archive and lifecycle R, cross-phase sums, final ordinal, and replacement
+freeze remain open. No pressure phase pass, merge, freeze, execution, release,
+scale result, or SLO is established or authorized.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

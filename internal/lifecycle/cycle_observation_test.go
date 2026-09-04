@@ -122,6 +122,24 @@ func TestCycleCollectorUsesSerialCallbacksForZeroReadPressure80Evidence(t *testi
 	if _, secondErr := collector.ReadPressure80Collect(readCtx, gate, clock()); secondErr == nil {
 		t.Fatal("pressure 80 observation was repeated")
 	}
+	pressure90Fence := clock()
+	capacityMu.Lock()
+	used = 900
+	capacityMu.Unlock()
+	refuse, err := collector.ReadPressure90Refusal(readCtx, gate, pressure90Fence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if refuse.Schema != Pressure90ObservationSchema ||
+		refuse.Capacity.Pressure != PressureRefuse || refuse.Capacity.UsedPercent != 90 ||
+		refuse.Capacity.TotalBytes != 1_000 ||
+		refuse.PriorCapacityObservedAt != collect.Capacity.ObservedAt ||
+		refuse.Capacity.ObservedAt.Before(refuse.BallastFenceAt) {
+		t.Fatalf("pressure 90 observation = %+v", refuse)
+	}
+	if _, secondErr := collector.ReadPressure90Refusal(readCtx, gate, clock()); secondErr == nil {
+		t.Fatal("pressure 90 observation was repeated")
+	}
 	if counts, accountingErr := ledger.Finish(); accountingErr != nil || counts != (readaccounting.Counts{}) {
 		t.Fatalf("pressure observations charged native reads: %+v, %v", counts, accountingErr)
 	}
@@ -296,6 +314,69 @@ func TestPressure80ObservationRefusesCancellationDuringCapacityProbe(t *testing.
 		ctx, gate, base.Add(time.Nanosecond),
 	); !errors.Is(err, context.Canceled) {
 		t.Fatalf("pressure-80 observation error = %v, want context cancellation", err)
+	}
+}
+
+func TestPressure90ObservationRequiresSameGateAndRedactsProbeFailure(t *testing.T) {
+	base := time.Now().UTC()
+	priorGate := NewGateWithProbe(t.TempDir(), func(context.Context, string) (Capacity, error) {
+		return Capacity{}, errors.New("unused")
+	})
+	collector := &CycleCollector{
+		now: func() time.Time { return base.Add(2 * time.Nanosecond) },
+		pressure80: Pressure80Observation{
+			Schema: Pressure80ObservationSchema,
+			Capacity: TransitionCapacityObservation{
+				Completeness: Exact, Pressure: PressureCollect,
+				TotalBytes: 1_000, AvailableBytes: 200, UsedBytes: 800,
+				ProjectedBytes: 800, UsedPercent: 80, ObservedAt: base,
+			},
+		},
+		pressureGate: priorGate,
+	}
+	probes := 0
+	otherGate := NewGateWithProbe(t.TempDir(), func(context.Context, string) (Capacity, error) {
+		probes++
+		return Capacity{}, errors.New("private probe failure")
+	})
+	if _, err := collector.ReadPressure90Refusal(
+		t.Context(), otherGate, base.Add(time.Nanosecond),
+	); err == nil || err.Error() != "pressure 90 observation does not follow pressure 80" || probes != 0 {
+		t.Fatalf("different-gate result = %v, probes = %d", err, probes)
+	}
+
+	collector.refuseAttempted = false
+	collector.pressureGate = otherGate
+	if _, err := collector.ReadPressure90Refusal(
+		t.Context(), otherGate, base.Add(time.Nanosecond),
+	); err == nil || err.Error() != "pressure 90 capacity observation failed" || probes != 1 {
+		t.Fatalf("probe-failure result = %v, probes = %d", err, probes)
+	}
+}
+
+func TestPressure90ObservationRefusesCancellationDuringCapacityProbe(t *testing.T) {
+	base := time.Now().UTC()
+	ctx, cancel := context.WithCancel(t.Context())
+	gate := NewGateWithProbe(t.TempDir(), func(context.Context, string) (Capacity, error) {
+		cancel()
+		return Capacity{TotalBytes: 1_000, AvailableBytes: 100, UsedBytes: 900}, nil
+	})
+	collector := &CycleCollector{
+		now: func() time.Time { return base.Add(2 * time.Nanosecond) },
+		pressure80: Pressure80Observation{
+			Schema: Pressure80ObservationSchema,
+			Capacity: TransitionCapacityObservation{
+				Completeness: Exact, Pressure: PressureCollect,
+				TotalBytes: 1_000, AvailableBytes: 200, UsedBytes: 800,
+				ProjectedBytes: 800, UsedPercent: 80, ObservedAt: base,
+			},
+		},
+		pressureGate: gate,
+	}
+	if _, err := collector.ReadPressure90Refusal(
+		ctx, gate, base.Add(time.Nanosecond),
+	); !errors.Is(err, context.Canceled) {
+		t.Fatalf("pressure-90 observation error = %v, want context cancellation", err)
 	}
 }
 

@@ -69,7 +69,7 @@ func TestCorrectionSupersedesWithoutChangingCorpusOrSafety(t *testing.T) {
 		t.Fatal("observation byte correction is not exactly the IDL exclusion")
 	}
 	raw, err := MarshalCanonical(next)
-	if err != nil || len(raw) != 262_115 || len(raw) > MaxPlanBytes {
+	if err != nil || len(raw) != 262_129 || len(raw) > MaxPlanBytes {
 		t.Fatalf("corrected plan bytes=%d err=%v", len(raw), err)
 	}
 	decoded, err := DecodePlan(raw)
@@ -99,6 +99,7 @@ func TestCorrectionUsesProductionCurrentPriorReaderContract(t *testing.T) {
 	staleReadBound, staleErr := correctedStaleLeaseTransitionReadBound()
 	restartReadBound, restartErr := correctedCheckpointRestartReadBound()
 	pressure80ReadBound := correctedPressure80TransitionReadBound()
+	pressure90ReadBound := correctedPressure90TransitionReadBound()
 	if index < 0 || next.WorkEnvelope.Phases[index].LifecycleOwnerTurns != (CounterBound{Minimum: 2, Maximum: 2}) ||
 		priorIndex < 0 || err != nil || logicalErr != nil || returnErr != nil || staleErr != nil || restartErr != nil || next.WorkEnvelope.Phases[index].LifecycleDeleted != (CounterBound{}) ||
 		next.WorkEnvelope.Phases[index].ControlReads != prior.WorkEnvelope.Phases[priorIndex].ControlReads ||
@@ -111,9 +112,12 @@ func TestCorrectionUsesProductionCurrentPriorReaderContract(t *testing.T) {
 		pressure80ReadBound.Calls != exactInspectionCalls(2) || pressure80ReadBound.ControlFileReads != exactInspectionCalls(0) ||
 		pressure80ReadBound.StoreReadAttempts != exactInspectionCalls(0) || pressure80ReadBound.MemberReads != exactInspectionCalls(0) ||
 		pressure80ReadBound.StoreWriteAttempts != exactInspectionCalls(0) ||
+		pressure90ReadBound.Calls != exactInspectionCalls(1) || pressure90ReadBound.ControlFileReads != exactInspectionCalls(0) ||
+		pressure90ReadBound.StoreReadAttempts != exactInspectionCalls(0) || pressure90ReadBound.MemberReads != exactInspectionCalls(0) ||
+		pressure90ReadBound.StoreWriteAttempts != exactInspectionCalls(0) ||
 		!strings.Contains(next.Correction.ReadAccountingPolicy, "R:physical=1xC(17+1+3+17+3=41)S0M(2*physical.combined_physical_owners)W0") ||
 		!strings.Contains(next.Correction.ReadAccountingPolicy, "logical=2xC0S(2*(selector+plan+schedule+unit+selector-confirm)=10)M0W0") ||
-		!strings.Contains(next.Correction.ReadAccountingPolicy, "r2C5;s2C4S4;p2C7S4;80=2xC0S0M0W0") {
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "r2C5;s2C4S4;p2C7S4;80=2xC0S0M0W0;90=1xC0S0M0W0") {
 		t.Fatal("corrected transition reader work differs from the production contracts")
 	}
 }

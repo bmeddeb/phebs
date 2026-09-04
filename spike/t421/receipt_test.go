@@ -93,6 +93,12 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 	if pressure80Index < 0 || receipt.TransitionResults[pressure80Index].ReadAccounting != nil {
 		t.Fatal("retained V1 pressure-80 transition gained read accounting")
 	}
+	pressure90Index := slices.IndexFunc(receipt.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "pressure_90"
+	})
+	if pressure90Index < 0 || receipt.TransitionResults[pressure90Index].ReadAccounting != nil {
+		t.Fatal("retained V1 pressure-90 transition gained read accounting")
+	}
 }
 
 func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
@@ -283,6 +289,34 @@ func TestPressure80TransitionReadSubtotalMatchesNativeReader(t *testing.T) {
 			mutate(&changed)
 			if err := validatePressure80TransitionReadSubtotal(changed); err == nil {
 				t.Fatal("mutated pressure-80 transition subtotal was accepted")
+			}
+		})
+	}
+}
+
+func TestPressure90TransitionReadSubtotalMatchesNativeReader(t *testing.T) {
+	bound := correctedPressure90TransitionReadBound()
+	base := TransitionReadSubtotal{
+		Schema: "t422-transition-read-accounting-v1", Class: correctedPressure90TransitionReadClass,
+		ReportCalls: bound.Calls.Minimum,
+	}
+	if bound.Calls != exactInspectionCalls(lifecycle.Pressure90ReportCalls) ||
+		bound.ControlFileReads != exactInspectionCalls(0) ||
+		bound.StoreReadAttempts != exactInspectionCalls(0) ||
+		bound.MemberReads != exactInspectionCalls(0) ||
+		bound.StoreWriteAttempts != exactInspectionCalls(0) ||
+		validatePressure90TransitionReadSubtotal(base) != nil {
+		t.Fatal("pressure-90 transition subtotal differs from its one in-memory report")
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"schema": func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+		"calls":  func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := base
+			mutate(&changed)
+			if validatePressure90TransitionReadSubtotal(changed) == nil {
+				t.Fatal("mutated pressure-90 transition subtotal was accepted")
 			}
 		})
 	}
@@ -2358,6 +2392,13 @@ func testPressureTransitions(
 			measurement.Metrics.MaxLifecycleDeletesTurn = CountMetric(divCeil(deleted, ownerTurns))
 		case "pressure_90":
 			value.GateOutcome = "err_pressure_refusal"
+			if plan.Schema == PlanV2Schema {
+				readBound := correctedPressure90TransitionReadBound()
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedPressure90TransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum,
+				}
+			}
 			measurement.Metrics.DataAllocatedBytes = Bytes(allocatedAfter)
 		case "pressure_75":
 			value.GateOutcome = "err_pressure_refusal"

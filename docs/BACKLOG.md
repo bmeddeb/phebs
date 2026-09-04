@@ -3893,6 +3893,34 @@ Deletion and prepared-residue proof; pressure-90, pressure-75, archive, and
 lifecycle R; cross-phase sums; the final ordinal; replacement freeze;
 execution; release; and scale/SLO evidence remain open.
 
+The next V2 R slice binds pressure 90 to one source-free report from the same
+production `Gate` that successfully reported pressure 80. After the
+controller's post-ballast fence, the one-shot reader performs exactly one
+direct `Gate.Check(ctx, 0)` and succeeds only on the typed
+`ErrPressureRefusal` with exact refuse pressure at 90%. Total bytes must remain
+the same positive pressure-volume total, used bytes must increase, available
+bytes must decrease, and the observation time must not precede either the
+pressure-80 capacity or the ballast fence. A missing pressure-80 predecessor,
+different gate, cancellation, raw/untyped error, malformed or noncontiguous
+capacity, or second attempt fails closed. It performs no lifecycle turn or
+status read. Same-gate identity does not prove this direct call was the first
+90% latch probe.
+
+The pressure-90 report is exactly `C/S/M/W=0/0/0/0`. Epoch-four transition
+calls advance `3→4`, epoch-four requests `6,257→6,258`, overall requests
+`43,772→43,773`, and `;90=1xC0S0M0W0` leaves the plan at 262,129 of
+262,144 bytes. Retained V1 remains byte-exact and keeps pressure-90 read
+accounting absent. Ordinary mode is unchanged; the reader reuses the existing
+pressure-80 collector and gate and adds only one direct capacity metadata
+probe, with no cache, child, schema, persistent state, source retention,
+goroutine, lock class, or separately scheduled work. Current server/controller
+wiring remains open and must park the existing runner between pressure 80 and
+90, prevent any intervening `Gate.Check`, own ballast/authority/event/report
+fences, and latch report failures.
+Pressure-75, archive and lifecycle R, cross-phase sums, final ordinal, and
+replacement freeze remain open. This establishes no phase pass and authorizes
+no merge, freeze, execution, release, scale result, or SLO.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as
