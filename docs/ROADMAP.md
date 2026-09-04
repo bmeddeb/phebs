@@ -270,6 +270,33 @@ acceptance and freeze remain open. No T42.2 execution, private rerun, release,
 scale pass, or SLO claim is authorized; T42.2 remains next only after the
 remaining T42.1 gates close.
 
+The next prospective V2 slice closes only pressure-75 R with three
+zero-native-read reports in one exclusive pressure-80→90→75 corridor on the
+same production `Gate`: typed refusal at exact 75%, one fresh sixteen-owner
+cycle after a pre-start and then per-owner same-total normal sample at most 74%
+following remaining ballast removal, and final exact-normal capacity at
+most 74%. The cycle keeps fifteen exact/drained owners and permits the truthful
+lower-bound `durable-jobs` row to retain backlog; this is receipt-compatible and
+does not prove the production runner reached hourly idle. Cancellation, a
+missing predecessor, a different gate, raw/untyped errors, malformed or
+noncontiguous capacity, callback-order failure, and repeated reads fail closed.
+V1 stays byte-exact and keeps pressure-75 R absent.
+
+The reports are each `C/S/M/W=0/0/0/0`, while the existing pressure-75
+`L=1..241` remains separate. Epoch-four calls advance `4→7`, requests
+`6,258→6,261`, and overall requests `43,773→43,776`. The token
+`;75=3xC0S0M0W0` leaves the plan at 262,143 of 262,144 bytes; the next R slice
+needs separately justified compaction. Exact mode reuses the existing collector,
+callbacks, and gate for two direct capacity probes and one bounded fresh cycle.
+Ordinary query/request, sync, startup/restart, retry/no-op, publication,
+lifecycle cadence, locks, cache, schema/store, source/corpus/shard reads,
+hashing, disk, children, and persistent memory are unchanged because current
+controller/server wiring is absent. That wiring must own the exclusive corridor,
+runner wake, ballast/authority/event/deletion/residue fences, and report-failure
+latch. Archive and lifecycle R, cross-phase sums, final ordinal, replacement
+freeze, and execution remain open. No phase pass, merge, freeze, execution,
+release, scale result, or SLO is established or authorized.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

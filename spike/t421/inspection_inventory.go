@@ -25,6 +25,7 @@ const (
 	correctedCheckpointRestartReadClass     = "prepared-checkpoint-hard-restart"
 	correctedPressure80TransitionReadClass  = "pressure-normalization-and-collect-cycle"
 	correctedPressure90TransitionReadClass  = "typed-pressure-refusal"
+	correctedPressure75TransitionReadClass  = "pressure-refusal-removal-and-recovery-cycle"
 	correctedInspectionPolicy               = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
 )
 
@@ -152,6 +153,16 @@ func correctedPressure80TransitionReadBound() inspectionReadBound {
 func correctedPressure90TransitionReadBound() inspectionReadBound {
 	return inspectionReadBound{
 		Calls:              exactInspectionCalls(lifecycle.Pressure90ReportCalls),
+		ControlFileReads:   exactInspectionCalls(0),
+		StoreReadAttempts:  exactInspectionCalls(0),
+		MemberReads:        exactInspectionCalls(0),
+		StoreWriteAttempts: exactInspectionCalls(0),
+	}
+}
+
+func correctedPressure75TransitionReadBound() inspectionReadBound {
+	return inspectionReadBound{
+		Calls:              exactInspectionCalls(lifecycle.Pressure75ReportCalls),
 		ControlFileReads:   exactInspectionCalls(0),
 		StoreReadAttempts:  exactInspectionCalls(0),
 		MemberReads:        exactInspectionCalls(0),
@@ -362,7 +373,9 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 				row.TransitionRead = &readBound
 				row.ImmutableMemberReusePhase = "process_restart"
 			case "pressure_75":
-				row.TransitionReadClass = "pressure-refusal-removal-and-recovery-cycle"
+				row.TransitionReadClass = correctedPressure75TransitionReadClass
+				readBound := correctedPressure75TransitionReadBound()
+				row.TransitionRead = &readBound
 				row.ImmutableMemberReusePhase = "pressure_90"
 			case "lifecycle_collection":
 				row.TransitionReadClass = "fresh-sixteen-owner-cycle"

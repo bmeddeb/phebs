@@ -99,6 +99,12 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 	if pressure90Index < 0 || receipt.TransitionResults[pressure90Index].ReadAccounting != nil {
 		t.Fatal("retained V1 pressure-90 transition gained read accounting")
 	}
+	pressure75Index := slices.IndexFunc(receipt.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "pressure_75"
+	})
+	if pressure75Index < 0 || receipt.TransitionResults[pressure75Index].ReadAccounting != nil {
+		t.Fatal("retained V1 pressure-75 transition gained read accounting")
+	}
 }
 
 func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
@@ -322,7 +328,40 @@ func TestPressure90TransitionReadSubtotalMatchesNativeReader(t *testing.T) {
 	}
 }
 
-func TestPressure80LifecycleRequiresDrainedDurableJobs(t *testing.T) {
+func TestPressure75TransitionReadSubtotalMatchesNativeReader(t *testing.T) {
+	bound := correctedPressure75TransitionReadBound()
+	base := TransitionReadSubtotal{
+		Schema: "t422-transition-read-accounting-v1", Class: correctedPressure75TransitionReadClass,
+		ReportCalls: bound.Calls.Minimum,
+	}
+	if bound.Calls != exactInspectionCalls(lifecycle.Pressure75ReportCalls) ||
+		bound.ControlFileReads != exactInspectionCalls(0) ||
+		bound.StoreReadAttempts != exactInspectionCalls(0) ||
+		bound.MemberReads != exactInspectionCalls(0) ||
+		bound.StoreWriteAttempts != exactInspectionCalls(0) ||
+		validatePressure75TransitionReadSubtotal(base) != nil {
+		t.Fatal("pressure-75 transition subtotal differs from its three in-memory reports")
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"schema":  func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+		"class":   func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"calls":   func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+		"control": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+		"store":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+		"member":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+		"write":   func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := base
+			mutate(&changed)
+			if validatePressure75TransitionReadSubtotal(changed) == nil {
+				t.Fatal("mutated pressure-75 transition subtotal was accepted")
+			}
+		})
+	}
+}
+
+func TestPressure75LifecycleAllowsDurableJobBacklogButPressure80RequiresDrained(t *testing.T) {
 	plan := correctedTestPlan(t)
 	owners, capacity := testLifecycleOwners(plan, 1_000)
 	value := PressureTransition{
@@ -350,7 +389,7 @@ func TestPressure80LifecycleRequiresDrainedDurableJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := validatePressureLifecycle(value, metrics, plan); err != nil {
-		t.Fatalf("shared lifecycle validation rejected its allowed lower-bound backlog: %v", err)
+		t.Fatalf("pressure 75 rejected its allowed lower-bound backlog: %v", err)
 	}
 	if err := validatePressure80Lifecycle(value, metrics, plan); err == nil {
 		t.Fatal("pressure 80 accepted durable-job backlog")
@@ -2402,6 +2441,13 @@ func testPressureTransitions(
 			measurement.Metrics.DataAllocatedBytes = Bytes(allocatedAfter)
 		case "pressure_75":
 			value.GateOutcome = "err_pressure_refusal"
+			if plan.Schema == PlanV2Schema {
+				readBound := correctedPressure75TransitionReadBound()
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedPressure75TransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum,
+				}
+			}
 			value.RecoveryUsedBytes = baseUsed
 			value.RecoveryAvailableBytes = freeze.Pressure.PressureVolumeBytes - baseUsed
 			value.RecoveryUsedPercent = usedPercentCeiling(baseUsed, freeze.Pressure.PressureVolumeBytes)

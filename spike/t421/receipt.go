@@ -2378,6 +2378,10 @@ func validateTransitionResults(
 			if value.ReadAccounting == nil || validatePressure90TransitionReadSubtotal(*value.ReadAccounting) != nil {
 				return errors.New("pressure 90 transition read accounting is invalid")
 			}
+		} else if phase == "pressure_75" {
+			if value.ReadAccounting == nil || validatePressure75TransitionReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("pressure 75 transition read accounting is invalid")
+			}
 		} else if value.ReadAccounting != nil {
 			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
@@ -2709,6 +2713,20 @@ func validatePressure90TransitionReadSubtotal(value TransitionReadSubtotal) erro
 		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
 		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
 		return errors.New("pressure 90 transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
+func validatePressure75TransitionReadSubtotal(value TransitionReadSubtotal) error {
+	bound := correctedPressure75TransitionReadBound()
+	if value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedPressure75TransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
+		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
+		return errors.New("pressure 75 transition read subtotal differs from its derived bound")
 	}
 	return nil
 }

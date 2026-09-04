@@ -1585,6 +1585,47 @@ archive and lifecycle R, cross-phase sums, final ordinal, and replacement
 freeze remain open. No pressure phase pass, merge, freeze, execution, release,
 scale result, or SLO is established or authorized.
 
+#### Pressure-75 recovery R reader
+
+V2 pressure-75 R is exactly three source-free, zero-native-read reports inside
+one exclusive pressure-80→90→75 corridor on the same production `Gate`. After
+the target-75 ballast mutation, the first direct check must return the typed
+`ErrPressureRefusal` at exact 75%, preserve the positive pressure-volume total,
+and report lower used bytes and higher available bytes than pressure 90. After
+the remaining ballast is removed, the existing callback collector is re-armed
+behind a fresh fence and accepts one new sorted sixteen-owner cycle only after
+a paired exact-normal capacity at most 74% precedes its cycle start and the
+same-total condition follows every owner. An immediate cycle without that
+pre-start sample is rejected. The fifteen non-job owners remain exact and
+drained; `durable-jobs` remains lower-bound and may truthfully report backlog.
+The third direct check requires the same gate to remain normal at most 74%, with
+nondecreasing time and no capacity regression from the completed cycle.
+
+Cancellation, a missing predecessor, a different gate, a raw or untyped error,
+malformed or noncontiguous capacity, invalid callback order, or a repeated read
+fails closed. Same-gate identity cannot prove exclusive ownership of every
+`Gate.Check`; the later controller must provide that corridor. V1 remains
+byte-exact and keeps pressure-75 R absent.
+
+Each report is `C/S/M/W=0/0/0/0`; the existing pressure-75 `L=1..241` remains
+separate. Epoch-four transition calls rise from 4 to 7, epoch-four requests from
+6,258 to 6,261, and total requests from 43,773 to 43,776. The compact token
+`;75=3xC0S0M0W0` leaves 262,143 of 262,144 plan bytes. Any later R accounting
+needs separately justified compaction rather than a larger limit.
+
+Exact mode reuses the bounded collector, callback stream, and gate, adding two
+direct capacity metadata probes and one reset/fresh cycle. It adds no second
+scanner, status authority, cache, child, schema, persistent state, source
+retention, goroutine, or lock class. Ordinary query/request, sync,
+startup/restart, retry/no-op, publication, and lifecycle cadence are unchanged
+because server/controller wiring is not part of this slice. That wiring must
+reject disabled lifecycle, wake the existing runner, enforce the exclusive
+corridor, and own ballast, authority, event, deletion/residue, and report-failure
+fences. Permitted durable-job backlog is not evidence of production runner
+hourly idle. Archive and lifecycle R, cross-phase sums, final ordinal,
+replacement freeze, and execution remain open. No pressure phase pass, merge,
+freeze, execution, release, scale result, or SLO is established or authorized.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

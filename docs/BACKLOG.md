@@ -3921,6 +3921,41 @@ Pressure-75, archive and lifecycle R, cross-phase sums, final ordinal, and
 replacement freeze remain open. This establishes no phase pass and authorizes
 no merge, freeze, execution, release, scale result, or SLO.
 
+The subsequent V2 R slice binds pressure 75 to three source-free reports inside
+one exclusive pressure-80→90→75 corridor on the same production `Gate`. The
+first direct check must retain the typed refusal at exact 75% after the target
+ballast mutation, with the same positive total and a contiguous decrease from
+pressure 90. After the remaining ballast is removed, the existing callback
+collector is re-armed behind a fresh fence and must complete a new sorted
+sixteen-owner cycle only after a paired exact-normal sample at most 74% precedes
+its cycle start and the same-total exact-normal condition follows every owner.
+An immediate cycle without that pre-start sample is rejected. The fifteen
+non-job owners are exact and drained; the lower-bound `durable-jobs` row may
+truthfully retain backlog. The third direct check must observe the same gate as
+normal at most 74%, with nondecreasing time and no regression from the cycle's
+final capacity.
+Missing predecessors, a different gate, cancellation, raw/untyped errors,
+malformed or noncontiguous capacity, callback-order failures, and repeated reads
+fail closed. The helper proves same-gate identity but not exclusive control of
+all calls; retained V1 stays byte-exact and keeps pressure-75 accounting absent.
+
+Each report is exactly `C/S/M/W=0/0/0/0`; pressure-75's existing `L=1..241`
+status-call bound remains separate. Epoch-four calls advance `4→7`, its requests
+`6,258→6,261`, and total requests `43,773→43,776`. The token
+`;75=3xC0S0M0W0` leaves 262,143 of 262,144 plan bytes, so any later R slice needs
+separately justified compaction rather than more capacity. Exact mode adds two
+direct capacity metadata probes and one bounded collector reset/callback cycle,
+without a new scanner, status authority, cache, child, schema, persistent state,
+source retention, goroutine, or lock class. Ordinary query/request, sync,
+startup/restart, retry/no-op, publication, and lifecycle cadence remain
+unchanged because controller/server wiring is still absent. That wiring must
+fail when lifecycle is disabled, wake the existing runner, enforce the exclusive
+same-gate corridor, and own ballast, authority, event, deletion/residue, and
+report-failure fences. Permitted durable-job backlog proves no production runner
+hourly-idle state. Archive and lifecycle R, cross-phase sums, final ordinal, and
+replacement freeze remain open. This is no phase pass and authorizes no merge,
+freeze, execution, release, scale result, or SLO.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

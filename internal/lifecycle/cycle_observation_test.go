@@ -10,7 +10,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
-func TestCycleCollectorUsesSerialCallbacksForZeroReadPressure80Evidence(t *testing.T) {
+func TestCycleCollectorUsesSerialCallbacksForZeroReadPressureEvidence(t *testing.T) {
 	owners := testCycleObservationOwners()
 	cursorStore := newMemoryCursorStore()
 	cursorStore.values[rotationCursorKey] = RelationshipOwner
@@ -69,11 +69,13 @@ func TestCycleCollectorUsesSerialCallbacksForZeroReadPressure80Evidence(t *testi
 		result <- observed{value: value, err: observeErr}
 	}()
 	<-armed
+	runnerCtx, cancelRunner := context.WithCancel(readCtx)
+	defer cancelRunner()
 	runDone := make(chan struct{})
 	go func() {
 		defer close(runDone)
 		Run(
-			ctx, controller, gate, time.Hour, time.Millisecond,
+			runnerCtx, controller, gate, time.Hour, time.Millisecond,
 			collector.ObserveOwner, collector.ObserveCapacity,
 		)
 	}()
@@ -140,14 +142,95 @@ func TestCycleCollectorUsesSerialCallbacksForZeroReadPressure80Evidence(t *testi
 	if _, secondErr := collector.ReadPressure90Refusal(readCtx, gate, clock()); secondErr == nil {
 		t.Fatal("pressure 90 observation was repeated")
 	}
-	if counts, accountingErr := ledger.Finish(); accountingErr != nil || counts != (readaccounting.Counts{}) {
-		t.Fatalf("pressure observations charged native reads: %+v, %v", counts, accountingErr)
+	pressure75Fence := clock()
+	capacityMu.Lock()
+	used = 750
+	capacityMu.Unlock()
+	target75, err := collector.ReadPressure75Refusal(readCtx, gate, pressure75Fence)
+	if err != nil {
+		t.Fatal(err)
 	}
-	cancel()
+	if target75.Schema != Pressure75ObservationSchema ||
+		target75.Capacity.Pressure != PressureRefuse || target75.Capacity.UsedPercent != 75 ||
+		target75.Capacity.TotalBytes != 1_000 ||
+		target75.PriorCapacityObservedAt != refuse.Capacity.ObservedAt ||
+		target75.Capacity.ObservedAt.Before(target75.BallastFenceAt) {
+		t.Fatalf("pressure 75 observation = %+v", target75)
+	}
+	if _, secondErr := collector.ReadPressure75Refusal(readCtx, gate, clock()); secondErr == nil {
+		t.Fatal("pressure 75 observation was repeated")
+	}
+
+	cancelRunner()
 	select {
 	case <-runDone:
 	case <-time.After(time.Second):
 		t.Fatal("lifecycle runner did not stop")
+	}
+	capacityMu.Lock()
+	used = 700
+	capacityMu.Unlock()
+	recoveryFence := clock()
+	recoveryResult := make(chan observed, 1)
+	go func() {
+		value, observeErr := collector.AwaitPressure75Recovery(readCtx, gate, recoveryFence)
+		recoveryResult <- observed{value: value, err: observeErr}
+	}()
+	for !collectorRecoveryStarted(collector) {
+		time.Sleep(time.Millisecond)
+	}
+	for cycle := range 2 {
+		for index, owner := range owners {
+			completeness := Exact
+			if owner.Name() == JobOwner {
+				completeness = LowerBound
+			}
+			collector.ObserveOwner(OwnerResult{
+				Owner: owner.Name(), AttemptedAt: clock(), Completeness: completeness,
+				CycleStart: index == 0, CycleComplete: index == len(owners)-1,
+				More: cycle == 1 && owner.Name() == JobOwner,
+			})
+			capacity, capacityErr := gate.Check(readCtx, 0)
+			collector.ObserveCapacity(capacity, capacityErr)
+		}
+	}
+	var recovery CycleObservation
+	select {
+	case got := <-recoveryResult:
+		if got.err != nil {
+			t.Fatal(got.err)
+		}
+		recovery = got.value
+	case <-time.After(time.Second):
+		t.Fatal("pressure 75 recovery cycle was not observed")
+	}
+	job := -1
+	for index := range recovery.Owners {
+		if recovery.Owners[index].Name == JobOwner {
+			job = index
+			break
+		}
+	}
+	if recovery.Schema != CycleObservationSchema || recovery.OwnerTurns != 2*uint64(len(owners)) ||
+		recovery.Capacity.Pressure != PressureNormal || recovery.Capacity.UsedPercent != 70 ||
+		job < 0 || !recovery.Owners[job].Backlog {
+		t.Fatalf("pressure 75 recovery cycle = %+v", recovery)
+	}
+	final75, err := collector.ReadPressure75Normal(readCtx, gate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if final75.Schema != Pressure75RecoveryObservationSchema ||
+		final75.Capacity.Pressure != PressureNormal || final75.Capacity.UsedPercent != 70 ||
+		final75.Capacity.TotalBytes != 1_000 ||
+		final75.PriorCapacityObservedAt != recovery.Capacity.ObservedAt {
+		t.Fatalf("pressure 75 final observation = %+v", final75)
+	}
+	if _, secondErr := collector.ReadPressure75Normal(readCtx, gate); secondErr == nil {
+		t.Fatal("pressure 75 final observation was repeated")
+	}
+	if counts, accountingErr := ledger.Finish(); accountingErr != nil || counts != (readaccounting.Counts{}) {
+		t.Fatalf("pressure observations charged native reads: %+v, %v", counts, accountingErr)
 	}
 }
 
@@ -380,6 +463,66 @@ func TestPressure90ObservationRefusesCancellationDuringCapacityProbe(t *testing.
 	}
 }
 
+func TestPressure75NormalRequiresCompletedRecoveryCycle(t *testing.T) {
+	base := time.Now().UTC()
+	probes := 0
+	gate := NewGateWithProbe(t.TempDir(), func(context.Context, string) (Capacity, error) {
+		probes++
+		return Capacity{TotalBytes: 1_000, AvailableBytes: 300, UsedBytes: 700}, nil
+	})
+	collector := &CycleCollector{
+		now: func() time.Time { return base.Add(time.Nanosecond) },
+		observation: CycleObservation{
+			Schema: CycleObservationSchema,
+			Capacity: TransitionCapacityObservation{
+				Completeness: Exact, Pressure: PressureNormal,
+				TotalBytes: 1_000, AvailableBytes: 300, UsedBytes: 700,
+				ProjectedBytes: 700, UsedPercent: 70, ObservedAt: base,
+			},
+		},
+		pressureGate: gate,
+	}
+	if _, err := collector.ReadPressure75Normal(t.Context(), gate); err == nil ||
+		err.Error() != "pressure 75 normal observation does not follow recovery" || probes != 0 {
+		t.Fatalf("pre-recovery normal result = %v, probes = %d", err, probes)
+	}
+}
+
+func TestPressure75NormalRefusesRecoveryCanceledDuringProbe(t *testing.T) {
+	base := time.Now().UTC()
+	started := make(chan struct{})
+	release := make(chan struct{})
+	gate := NewGateWithProbe(t.TempDir(), func(context.Context, string) (Capacity, error) {
+		close(started)
+		<-release
+		return Capacity{TotalBytes: 1_000, AvailableBytes: 300, UsedBytes: 700}, nil
+	})
+	collector := &CycleCollector{
+		now: func() time.Time { return base.Add(time.Nanosecond) },
+		observation: CycleObservation{
+			Schema: CycleObservationSchema,
+			Capacity: TransitionCapacityObservation{
+				Completeness: Exact, Pressure: PressureNormal,
+				TotalBytes: 1_000, AvailableBytes: 300, UsedBytes: 700,
+				ProjectedBytes: 700, UsedPercent: 70, ObservedAt: base,
+			},
+		},
+		pressureGate: gate, recoveryComplete: true,
+	}
+	result := make(chan error, 1)
+	go func() {
+		_, err := collector.ReadPressure75Normal(t.Context(), gate)
+		result <- err
+	}()
+	<-started
+	collector.cancel()
+	close(release)
+	if err := <-result; err == nil ||
+		err.Error() != "pressure 75 normal observation does not follow recovery" {
+		t.Fatalf("canceled recovery normal result = %v", err)
+	}
+}
+
 func TestTransitionCapacityObservationRejectsMislabeledPressure(t *testing.T) {
 	_, err := transitionCapacityObservation(Capacity{
 		TotalBytes: 1_000, AvailableBytes: 200, UsedBytes: 800,
@@ -394,6 +537,12 @@ func collectorStarted(collector *CycleCollector) bool {
 	collector.mu.Lock()
 	defer collector.mu.Unlock()
 	return collector.started
+}
+
+func collectorRecoveryStarted(collector *CycleCollector) bool {
+	collector.mu.Lock()
+	defer collector.mu.Unlock()
+	return collector.recoveryMode && !collector.finished
 }
 
 func testCycleObservationOwners() []Owner {
