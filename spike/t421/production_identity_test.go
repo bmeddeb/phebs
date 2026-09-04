@@ -219,15 +219,30 @@ func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
 			}
 		})
 	}
+	returned := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "return_a"
+	})
+	if returned < 0 || base.TransitionResults[returned].ReadAccounting == nil {
+		t.Fatal("return transition read accounting is absent")
+	}
+	t.Run("return_missing", func(t *testing.T) {
+		changed := cloneTestReceipt(t, base)
+		changed.TransitionResults[returned].ReadAccounting = nil
+		if err := ValidateReceipt(
+			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+		); err == nil {
+			t.Fatal("missing return transition read accounting was accepted")
+		}
+	})
 	t.Run("unfinished_transition_accounting", func(t *testing.T) {
 		changed := cloneTestReceipt(t, base)
 		unfinished := slices.IndexFunc(changed.TransitionResults, func(value TransitionResult) bool {
-			return value.Phase == "return_a"
+			return value.Phase == "stale_lease"
 		})
 		if unfinished < 0 || changed.TransitionResults[unfinished].ReadAccounting != nil {
 			t.Fatal("unfinished transition fixture is invalid")
 		}
-		subtotal := *changed.TransitionResults[logical].ReadAccounting
+		subtotal := *changed.TransitionResults[returned].ReadAccounting
 		changed.TransitionResults[unfinished].ReadAccounting = &subtotal
 		if err := ValidateReceipt(
 			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),

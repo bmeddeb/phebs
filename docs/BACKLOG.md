@@ -3675,6 +3675,69 @@ later scheduler replay is idempotent and cannot re-report.
 Cumulative phase accounting, final ordinal, replacement freeze, runner
 execution, release, and scale/SLO claims remain open.
 
+The return-A relationship-marker R slice binds the production publication
+commit point and startup recovery point instead of borrowing the later F
+result. Exact control reports the hit only after `publishing.json` owns the
+complete target and the target rename/removal plus repository-directory sync
+has finished, but before `current.json` moves. Its reader takes the current
+relationship pointer, canonical marker, exact target root, current-pointer
+confirmation, and marker confirmation. It requires the logical-B pointer and
+marker to remain unchanged, the root to equal the marker pointer, and both the
+marker-named stage and `publishing.json.tmp` to be absent. The stage check is
+mandatory even when an identical target generation already existed: target
+existence alone would otherwise admit the earlier marker-installed window
+while the private stage still remained.
+
+After restart, `RecoverV3` reports only after installing that same pointer,
+removing any marker temporary and the marker, and syncing the repository
+directory. The recovered reader repeats the same five-control shape against
+the retained target identity and requires the return-A pointer to remain
+unchanged, the marker to be absent twice, the exact root to remain present, and
+the temporary to be absent. These independent confirmations make the reader
+self-contained across the publication/recovery callbacks. Metadata probes are
+charged zero but refuse symlinks, wrong types, residue, or I/O ambiguity. There
+is no selector read: the service-runtime selector is still logical B at both
+callbacks and moves to return A only when startup recovery has returned and
+the controller later advances. There is likewise no caller, application-member,
+or store read. The later accepted F remains the complete return-A authority
+proof.
+
+V2 records the marker output as target `Generation` and `Unit`, respectively
+`marker.Pointer.GenerationDigest` and `marker.Pointer.RootDigest`. Its `Plan`
+is the stable semantic work identity `binding.TargetGeneration`, while
+`Schedule` is the actually claimed immutable row `chunk.ScheduleDigest`.
+The production hook separately strict-validates the binding and requires
+`chunk.Generation == binding.ScheduleGeneration`; it never aliases either
+schedule identity with the published relationship generation. V2's
+`AuthorityAtHitSHA256` is an exact mixed current authority: clone final
+return-A authority, then substitute logical-B caller generation/root and
+relationship generation/root/provenance before applying the existing authority
+identity recipe. Retained V1 target mapping, hit authority, validation, and
+bytes remain exact.
+
+Each event snapshot performs five control reads and nothing else. Return-A R
+is therefore exactly two reports with report-scoped
+`C/S/M/W=10/0/0/0`; epoch three's shared report maximum rises from 11,526 to
+11,528. The synchronous hit callback extends the existing relationship
+filesystem-mutation lock, publication-transition mutex, claimed schedule
+lease, and repository token. Its deliberate interruption or a report failure
+leaves the durably owned marker and target intact, latches exact cancellation,
+and terminates nonzero rather than retrying or advancing the pointer. The
+recovery callback extends the existing exclusive startup mutation hold. A
+recovery-report failure happens only after current installation and marker
+removal are durably synced, so it cannot roll back or recreate residue; startup
+fails closed, and a later restart sees no marker and cannot report recovery a
+second time. Ordinary publication and recovery add only inactive nil-hook
+branches—no ledger, allocation, I/O, goroutine, new lock class, or persistent
+state. The reader is one-shot, source-free, nonpolling, uncached, child-free,
+and write-free.
+
+This slice does not implement the runner, replace the whole-phase sums or final
+ordinal, freeze a corrected plan, execute a ceremony, or establish release,
+scale, or SLO evidence. Stale-lease, process-restart, pressure,
+archive/restore, and lifecycle R remain open. T42.2 stays next only after this
+slice and the remaining T42.1 correction gates close.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

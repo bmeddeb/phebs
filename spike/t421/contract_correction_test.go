@@ -95,15 +95,18 @@ func TestCorrectionUsesProductionCurrentPriorReaderContract(t *testing.T) {
 	})
 	readBound, err := correctedPhysicalTransitionReadBound(next.Profile)
 	logicalReadBound, logicalErr := correctedLogicalTransitionReadBound()
+	returnReadBound, returnErr := correctedReturnTransitionReadBound()
 	if index < 0 || next.WorkEnvelope.Phases[index].LifecycleOwnerTurns != (CounterBound{Minimum: 2, Maximum: 2}) ||
-		priorIndex < 0 || err != nil || logicalErr != nil || next.WorkEnvelope.Phases[index].LifecycleDeleted != (CounterBound{}) ||
+		priorIndex < 0 || err != nil || logicalErr != nil || returnErr != nil || next.WorkEnvelope.Phases[index].LifecycleDeleted != (CounterBound{}) ||
 		next.WorkEnvelope.Phases[index].ControlReads != prior.WorkEnvelope.Phases[priorIndex].ControlReads ||
 		next.WorkEnvelope.Phases[index].MemberReads != prior.WorkEnvelope.Phases[priorIndex].MemberReads ||
 		readBound.ControlFileReads != exactInspectionCalls(41) || readBound.MemberReads != exactInspectionCalls(4_063_208) ||
 		logicalReadBound.Calls != exactInspectionCalls(2) || logicalReadBound.StoreReadAttempts != exactInspectionCalls(10) ||
+		returnReadBound.Calls != exactInspectionCalls(2) || returnReadBound.ControlFileReads != exactInspectionCalls(10) ||
 		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-physical-C=17+1+3+17+3=41") ||
 		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-physical-M=2*physical.combined_physical_owners") ||
-		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-logical-S=2*(selector+plan+schedule+unit+selector-confirm)=10") {
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-logical-S=2*(selector+plan+schedule+unit+selector-confirm)=10") ||
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-return:2xC5") {
 		t.Fatal("corrected physical reader work still requires retirement of the durable prior")
 	}
 }

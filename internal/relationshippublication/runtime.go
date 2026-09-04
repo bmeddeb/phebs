@@ -67,13 +67,14 @@ type RuntimeStore interface {
 }
 
 type Runtime struct {
-	DataDir        string
-	Store          RuntimeStore
-	Cache          *observationpublication.Cache
-	InventoryCache *observationpublication.InventoryCacheV2
-	Domains        []downstreamauthority.DomainIdentity
-	Admit          func(context.Context) error
-	Acquire        func(context.Context) (func(), error)
+	DataDir              string
+	Store                RuntimeStore
+	Cache                *observationpublication.Cache
+	InventoryCache       *observationpublication.InventoryCacheV2
+	Domains              []downstreamauthority.DomainIdentity
+	Admit                func(context.Context) error
+	Acquire              func(context.Context) (func(), error)
+	AfterV3MarkerInstall PublicationTransitionObserverV3
 
 	transition sync.Mutex
 }

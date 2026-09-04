@@ -56,6 +56,28 @@ type recoveryStoreError struct{ error }
 // exclusive startup mutation lock. Corrupt derived state is counted and left
 // invisible; component-only crash residue is independently discovered.
 func RecoverAll(ctx context.Context, dataDir string, pins RecoveryPinStore) (RecoveryReport, error) {
+	return recoverAll(ctx, dataDir, pins, nil)
+}
+
+// RecoverAllWithV3TransitionObserver preserves RecoverAll's startup authority
+// while reporting a marker recovery only after current, marker removal, and
+// the repository directory sync are durable. A nil observer is identical to
+// RecoverAll.
+func RecoverAllWithV3TransitionObserver(
+	ctx context.Context,
+	dataDir string,
+	pins RecoveryPinStore,
+	afterRecovery PublicationTransitionRecoveryObserverV3,
+) (RecoveryReport, error) {
+	return recoverAll(ctx, dataDir, pins, afterRecovery)
+}
+
+func recoverAll(
+	ctx context.Context,
+	dataDir string,
+	pins RecoveryPinStore,
+	afterRecovery PublicationTransitionRecoveryObserverV3,
+) (RecoveryReport, error) {
 	var report RecoveryReport
 	if !filepath.IsAbs(dataDir) || pins == nil {
 		return report, ErrInvalid
@@ -239,7 +261,9 @@ func RecoverAll(ctx context.Context, dataDir string, pins RecoveryPinStore) (Rec
 			}
 		}
 		if shadowRepositoryValid {
-			completed, recoverErr := RecoverV3(ctx, root, shadowRepository, v3Pins)
+			completed, recoverErr := recoverV3(
+				ctx, root, shadowRepository, v3Pins, afterRecovery,
+			)
 			if recoverErr != nil {
 				if fatal := recoveryFatal(ctx, recoverErr); fatal != nil {
 					return report, fatal

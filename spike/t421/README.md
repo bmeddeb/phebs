@@ -1280,6 +1280,76 @@ Return, stale-lease, restart, pressure, archive/restore, and lifecycle R remain
 nullable and open. Cumulative phase accounting, final ordinal, replacement
 freeze, runner execution, release, and scale/SLO claims remain open.
 
+#### Return-A relationship marker-recovery R accounting
+
+Return A now has an exact transition-local relationship witness instead of
+equating the marker hit with either complete logical B or the later final
+return-A authority. Exact control's synchronous hit callback runs only after a
+canonical `publishing.json` marker owns the complete target generation and the
+stage rename/removal plus repository-directory sync has completed, but before
+the relationship `current.json` pointer moves. The hit reader reads the current
+pointer, marker, exact target root, pointer confirmation, and marker
+confirmation. It accepts only an unchanged logical-B pointer, byte-identical
+canonical marker, and target root matching the marker pointer. The marker's
+nonempty named stage and `publishing.json.tmp` must both be absent. Those
+zero-charged metadata checks prevent an already-existing target from making the
+earlier marker-plus-stage window look like the frozen boundary.
+
+On restart, `RecoverV3` invokes the recovered callback only after it installs
+the marker pointer, removes the temporary and marker, and completes the final
+repository-directory sync. The same five-read shape then requires the
+return-A pointer twice, the marker absent twice, the same exact target root,
+and no temporary. Because recovery returns only after marker removal and the
+directory sync, `ResidueAfter=0` is a durable statement. Symlinks, wrong file
+types, noncanonical bytes, mismatched roots, unexpected residue, or ambiguous
+I/O refuse the report.
+
+The reader deliberately performs no selected-runtime query. The selector is
+still logical B at both the hit and startup-recovery callbacks; only a later
+controller advance selects return A. It also reads no caller, application
+member, or store row. Instead, V2's hit authority uses the existing source-free
+authority identity over the exact mixed current projection: clone final
+return-A authority and replace caller generation/root plus relationship
+generation/root/provenance with their accepted logical-B values. The later F
+still proves the complete selected return-A authority. Retained V1 hit
+authority, target projection, validation, and bytes do not change.
+
+The V2 injection target keeps the distinct production identities straight:
+`GenerationSHA256` is the marker output generation,
+`UnitSHA256` is its root digest, `PlanSHA256` is
+`binding.TargetGeneration`, and `ScheduleSHA256` is
+`chunk.ScheduleDigest`. The hook strict-validates the runtime binding and
+requires `chunk.Generation == binding.ScheduleGeneration`; neither scheduler
+generation nor schedule-row digest is the published relationship generation,
+and the stable runtime target must not be replaced with the attempt-specific
+binding digest.
+
+One hit and one recovered report each perform exactly five control-file reads:
+pointer, marker, root, pointer confirmation, and marker confirmation. The
+return-A R subtotal is therefore two reports with
+`C/S/M/W=10/0/0/0`, and epoch three's shared exact-report maximum is 11,528.
+Metadata checks are zero-charge. The reader is synchronous, source-free,
+one-shot, nonpolling, uncached, child-free, member-free, store-free, and
+write-free.
+
+At the hit, exact read/report work extends the existing relationship
+filesystem-mutation lock, publication-transition mutex, claimed schedule lease,
+and repository token. The deliberate stop or a report failure leaves the
+already-durable marker-owned target intact, latches exact cancellation, and
+terminates the process nonzero before pointer publication. Recovery reporting
+extends the existing exclusive startup mutation hold. If that report fails,
+the recovered pointer and cleared marker are already directory-synced: recovery
+does not roll back, recreate residue, or retry, startup fails closed, and the
+next startup cannot duplicate the report because no marker remains. Ordinary
+publication and recovery pay only inactive nil-hook branches and add no ledger,
+allocation, I/O, goroutine, lock class, or persistent state.
+
+This reader does not supply a runner, whole-phase accounting, a final ordinal,
+a replacement freeze, ceremony execution, release evidence, a scale pass, or
+an SLO. Stale-lease, restart, pressure, archive/restore, and lifecycle R remain
+open, and T42.2 remains next only after this and the remaining T42.1 gates
+close.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

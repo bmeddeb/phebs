@@ -12,6 +12,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 )
 
 func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
@@ -53,6 +54,16 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 		receipt.TransitionResults[logical].Injections[0].RequeueCount != 0 {
 		t.Fatal("retained V1 logical transition gained a requeue")
 	}
+	returnIndex := slices.IndexFunc(receipt.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "return_a"
+	})
+	if returnIndex < 0 || receipt.TransitionResults[returnIndex].ReadAccounting != nil ||
+		len(receipt.TransitionResults[returnIndex].Injections) != 1 ||
+		receipt.TransitionResults[returnIndex].Injections[0].Target.PlanSHA256 != "" ||
+		receipt.TransitionResults[returnIndex].Injections[0].Target.ScheduleSHA256 !=
+			receipt.TransitionResults[returnIndex].Injections[0].Target.GenerationSHA256 {
+		t.Fatal("retained V1 relationship transition changed shape")
+	}
 }
 
 func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
@@ -85,6 +96,114 @@ func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
 				t.Fatal("mutated logical transition subtotal was accepted")
 			}
 		})
+	}
+}
+
+func TestReturnTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
+	bound, err := correctedReturnTransitionReadBound()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bound.Calls.Minimum != 2 || bound.Calls.Maximum != 2 ||
+		bound.ControlFileReads.Minimum !=
+			bound.Calls.Minimum*relationshippublication.PublicationTransitionControlFileReadsV3 ||
+		bound.ControlFileReads.Maximum != bound.ControlFileReads.Minimum {
+		t.Fatal("return transition subtotal does not match the native per-report reader cost")
+	}
+	base := TransitionReadSubtotal{
+		Schema: "t422-transition-read-accounting-v1", Class: correctedReturnTransitionReadClass,
+		ReportCalls: bound.Calls.Minimum, ControlFileReads: bound.ControlFileReads.Minimum,
+		StoreReadAttempts: bound.StoreReadAttempts.Minimum, MemberReads: bound.MemberReads.Minimum,
+		StoreWriteAttempts: bound.StoreWriteAttempts.Minimum,
+	}
+	if err := validateReturnTransitionReadSubtotal(base); err != nil {
+		t.Fatal(err)
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"schema":  func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+		"class":   func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"calls":   func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+		"control": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+		"store":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+		"member":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+		"write":   func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := base
+			mutate(&changed)
+			if err := validateReturnTransitionReadSubtotal(changed); err == nil {
+				t.Fatal("mutated return transition subtotal was accepted")
+			}
+		})
+	}
+}
+
+func TestInterruptedPublicationV2AuthorityAndTargetMapping(t *testing.T) {
+	prior := AuthorityPhaseResult{
+		Phase: "logical_delta_b", Outcome: "passed",
+		AuthorityState: AuthorityState{
+			LogicalRevision:              "b",
+			SourceGenerationSHA256:       testDigest("prior", "source"),
+			SearchGenerationSHA256:       testDigest("prior", "search"),
+			CatalogRootSHA256:            testDigest("prior", "catalog"),
+			CallerGenerationSHA256:       testDigest("prior", "caller-generation"),
+			CallerRootSHA256:             testDigest("prior", "caller-root"),
+			RelationshipGenerationSHA256: testDigest("prior", "relationship-generation"),
+			RelationshipRootSHA256:       testDigest("prior", "relationship-root"),
+			RelationshipProvenanceSHA256: testDigest("prior", "relationship-provenance"),
+			Current:                      true,
+		},
+	}
+	final := prior
+	final.Phase = "return_a"
+	final.LogicalRevision = "a-return"
+	final.SourceGenerationSHA256 = testDigest("final", "source")
+	final.SearchGenerationSHA256 = testDigest("final", "search")
+	final.CatalogRootSHA256 = testDigest("final", "catalog")
+	final.CallerGenerationSHA256 = testDigest("final", "caller-generation")
+	final.CallerRootSHA256 = testDigest("final", "caller-root")
+	final.RelationshipGenerationSHA256 = testDigest("final", "relationship-generation")
+	final.RelationshipRootSHA256 = testDigest("final", "relationship-root")
+	final.RelationshipProvenanceSHA256 = testDigest("final", "relationship-provenance")
+
+	want := final
+	want.CallerGenerationSHA256 = prior.CallerGenerationSHA256
+	want.CallerRootSHA256 = prior.CallerRootSHA256
+	want.RelationshipGenerationSHA256 = prior.RelationshipGenerationSHA256
+	want.RelationshipRootSHA256 = prior.RelationshipRootSHA256
+	want.RelationshipProvenanceSHA256 = prior.RelationshipProvenanceSHA256
+	wantSHA256, ok := authorityIdentitySHA256(want)
+	if !ok {
+		t.Fatal("mixed authority digest is unavailable")
+	}
+	priorSHA256, _ := authorityIdentitySHA256(prior)
+	finalSHA256, _ := authorityIdentitySHA256(final)
+	gotSHA256, ok := interruptedPublicationAuthorityAtHitSHA256(prior, final, Plan{Schema: PlanV2Schema})
+	if !ok || gotSHA256 != wantSHA256 || gotSHA256 == priorSHA256 || gotSHA256 == finalSHA256 {
+		t.Fatal("V2 interrupted-publication authority is not the exact mixed boundary")
+	}
+	legacySHA256, ok := interruptedPublicationAuthorityAtHitSHA256(prior, final, Plan{Schema: PlanSchema})
+	if !ok || legacySHA256 != priorSHA256 {
+		t.Fatal("V1 interrupted-publication authority changed")
+	}
+
+	target := InjectionTargetProjection{
+		GenerationSHA256: testDigest("return", "output-generation"),
+		UnitSHA256:       testDigest("return", "output-root"),
+		PlanSHA256:       testDigest("return", "runtime-target"),
+		ScheduleSHA256:   testDigest("return", "schedule"),
+	}
+	if !validInterruptedPublicationTargetMapping(target, Plan{Schema: PlanV2Schema}) {
+		t.Fatal("V2 production target mapping was rejected")
+	}
+	legacy := target
+	legacy.PlanSHA256 = ""
+	legacy.ScheduleSHA256 = legacy.GenerationSHA256
+	if validInterruptedPublicationTargetMapping(legacy, Plan{Schema: PlanV2Schema}) {
+		t.Fatal("V2 accepted the legacy generation/schedule alias")
+	}
+	if !validInterruptedPublicationTargetMapping(legacy, Plan{Schema: PlanSchema}) {
+		t.Fatal("V1 legacy target mapping changed")
 	}
 }
 
@@ -1535,6 +1654,18 @@ func completeTestTransitions(
 					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
 				}
 			}
+			if phase == "return_a" && plan.Schema == PlanV2Schema {
+				readBound, err := correctedReturnTransitionReadBound()
+				if err != nil {
+					t.Fatal(err)
+				}
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedReturnTransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
+					StoreReadAttempts: readBound.StoreReadAttempts.Minimum, MemberReads: readBound.MemberReads.Minimum,
+					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
+				}
+			}
 		case "pressure_80", "pressure_90", "pressure_75":
 			// Filled as one contiguous sequence below.
 		case "archive_restore":
@@ -1606,8 +1737,20 @@ func testInjectionTransition(
 		value.SuccessCount = 1
 	case "interrupted_publication":
 		value.Target.GenerationSHA256 = phaseAuthority.RelationshipGenerationSHA256
-		value.Target.ScheduleSHA256 = phaseAuthority.RelationshipGenerationSHA256
 		value.Target.UnitSHA256 = phaseAuthority.RelationshipRootSHA256
+		if plan.Schema == PlanV2Schema {
+			value.Target.PlanSHA256 = testDigest("return_a", "relationship-runtime-target")
+			value.Target.ScheduleSHA256 = testDigest("return_a", "relationship-schedule")
+			var ok bool
+			value.AuthorityAtHitSHA256, ok = interruptedPublicationAuthorityAtHitSHA256(
+				beforeAuthority, phaseAuthority, plan,
+			)
+			if !ok {
+				t.Fatal("return transition lacks its mixed hit authority")
+			}
+		} else {
+			value.Target.ScheduleSHA256 = phaseAuthority.RelationshipGenerationSHA256
+		}
 		value.TargetGenerationBefore = beforeAuthority.RelationshipGenerationSHA256
 		value.TargetGenerationAfter = phaseAuthority.RelationshipGenerationSHA256
 		value.ObservedRecoveryBranch = "recover_marker_owned"

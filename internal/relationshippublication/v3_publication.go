@@ -453,6 +453,17 @@ func PublishV3(
 	prepared *PreparedV3,
 	pins PublishPinStoreV3,
 ) (*PublicationV3, error) {
+	return publishV3(ctx, prepared, pins, nil)
+}
+
+type markerInstalledObserverV3 func(context.Context, MarkerV3) error
+
+func publishV3(
+	ctx context.Context,
+	prepared *PreparedV3,
+	pins PublishPinStoreV3,
+	afterMarkerInstall markerInstalledObserverV3,
+) (*PublicationV3, error) {
 	if prepared == nil || prepared.closed || pins == nil {
 		return nil, errors.New("relationship v3 stage is closed or pins are unavailable")
 	}
@@ -513,7 +524,7 @@ func PublishV3(
 	if err != nil {
 		return nil, err
 	}
-	_, markerRaw, pointerRaw, err := publicationControlsV3(
+	marker, markerRaw, pointerRaw, err := publicationControlsV3(
 		pointer, filepath.Base(prepared.directory),
 	)
 	if err != nil {
@@ -557,6 +568,11 @@ func PublishV3(
 	}
 	if err := syncDirectory(base); err != nil {
 		return nil, err
+	}
+	if afterMarkerInstall != nil {
+		if err := afterMarkerInstall(ctx, marker); err != nil {
+			return nil, err
+		}
 	}
 	if err := replaceFile(filepath.Join(base, "current.json"), pointerRaw); err != nil {
 		return nil, err
@@ -695,6 +711,15 @@ func RecoverV3(
 	root, repository string,
 	pins RecoveryPinStoreV3,
 ) (bool, error) {
+	return recoverV3(ctx, root, repository, pins, nil)
+}
+
+func recoverV3(
+	ctx context.Context,
+	root, repository string,
+	pins RecoveryPinStoreV3,
+	afterRecovery PublicationTransitionRecoveryObserverV3,
+) (bool, error) {
 	if pins == nil {
 		return false, errors.New("relationship v3 recovery pins are unavailable")
 	}
@@ -778,7 +803,20 @@ func RecoverV3(
 	if err := os.Remove(filepath.Join(base, "publishing.json")); err != nil {
 		return false, err
 	}
-	return true, syncDirectory(base)
+	if err := syncDirectory(base); err != nil {
+		return false, err
+	}
+	if afterRecovery != nil {
+		if err := afterRecovery(ctx, PublicationTransitionRecoveryTargetV3{
+			Repository:             repository,
+			TargetGenerationDigest: marker.Pointer.GenerationDigest,
+			TargetRootDigest:       marker.Pointer.RootDigest,
+			FormerStageName:        marker.StageName,
+		}); err != nil {
+			return true, recoveryStoreError{err}
+		}
+	}
+	return true, nil
 }
 
 func ReadPointerV3(ctx context.Context, root, repository string) (PointerV3, error) {

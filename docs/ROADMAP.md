@@ -171,11 +171,19 @@ real controller call site observes the target only after commit and suppresses
 its zero-row replay. Epoch-two report admission is now 5,765.
 The V2 stop path requires one same-attempt stale-priority requeue while V1
 retains zero; final activation authority accepts clean or exact recovered
-attempt-0 success.
-Return, stale-lease, restart, pressure, archive/restore, and lifecycle R,
-cumulative phase sums, final ordinal, replacement freeze, and runner remain
-open. Overall correction acceptance and freeze remain open. No T42.2 execution,
-private rerun, or release is authorized.
+attempt-0 success. Return-A relationship marker recovery is now bound to two
+filesystem-only five-control snapshots around the exact installed-target and
+durably recovered boundaries, for aggregate `C/S/M/W=10/0/0/0`; it performs no
+selector read because startup recovery completes while the selected runtime is
+still logical B. V2 distinguishes the stable runtime target, claimed schedule
+row, and marker-owned output generation/root, and binds the hit to the mixed
+return-A-input/logical-B-caller-and-relationship authority. Epoch-three report
+admission is now 11,528, while V1 remains exact.
+Stale-lease, restart, pressure, archive/restore, and lifecycle R, cumulative
+phase sums, final ordinal, replacement freeze, and runner remain open. Overall
+correction acceptance and freeze remain open. No T42.2 execution, private
+rerun, release, scale pass, or SLO claim is authorized; T42.2 remains next only
+after the remaining T42.1 gates close.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only

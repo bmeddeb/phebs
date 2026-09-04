@@ -296,6 +296,16 @@ func (runtime *Runtime) HandleV3(
 	if err != nil {
 		return err
 	}
+	transitionObserver := runtime.AfterV3MarkerInstall
+	transitionPlan, transitionSchedule := "", ""
+	if transitionObserver != nil {
+		transitionPlan, transitionSchedule, err = publicationTransitionRuntimeIdentityV3(
+			chunk, binding,
+		)
+		if err != nil {
+			return err
+		}
+	}
 	if err := runtime.ensureBuildRoots(); err != nil {
 		return err
 	}
@@ -431,7 +441,22 @@ func (runtime *Runtime) HandleV3(
 	if err := runtime.fenceScheduleV3(ctx, binding); err != nil {
 		return err
 	}
-	if _, err := PublishV3(ctx, prepared, state); err != nil {
+	var afterMarkerInstall markerInstalledObserverV3
+	if transitionObserver != nil {
+		if prior == nil {
+			return fmt.Errorf("%w: relationship v3 transition prior", ErrInvalid)
+		}
+		afterMarkerInstall = func(ctx context.Context, marker MarkerV3) error {
+			target, targetErr := publicationTransitionTargetV3(
+				prior.pointer, marker, transitionPlan, transitionSchedule,
+			)
+			if targetErr != nil {
+				return targetErr
+			}
+			return transitionObserver(ctx, target)
+		}
+	}
+	if _, err := publishV3(ctx, prepared, state, afterMarkerInstall); err != nil {
 		return fmt.Errorf("publish relationship v3 root: %w", err)
 	}
 	return nil

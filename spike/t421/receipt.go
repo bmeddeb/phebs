@@ -2349,6 +2349,10 @@ func validateTransitionResults(
 			if value.ReadAccounting == nil || validateLogicalTransitionReadSubtotal(*value.ReadAccounting) != nil {
 				return errors.New("logical delta transition read accounting is invalid")
 			}
+		} else if phase == "return_a" {
+			if value.ReadAccounting == nil || validateReturnTransitionReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("return transition read accounting is invalid")
+			}
 		} else if value.ReadAccounting != nil {
 			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
@@ -2614,6 +2618,20 @@ func validateLogicalTransitionReadSubtotal(value TransitionReadSubtotal) error {
 	return nil
 }
 
+func validateReturnTransitionReadSubtotal(value TransitionReadSubtotal) error {
+	bound, err := correctedReturnTransitionReadBound()
+	if err != nil || value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedReturnTransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
+		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
+		return errors.New("return transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
 func validateInjectionTransition(
 	point FailurePoint,
 	value InjectionTransition,
@@ -2652,6 +2670,10 @@ func validateInjectionTransition(
 	hitSHA256, hitErr := injectionHitReportSHA256(value, point)
 	recoverySHA256, recoveryErr := injectionRecoveryProjectionSHA256(value, point)
 	authorityAtHitOK := value.AuthorityAtHitSHA256 == authorityBeforeSHA256
+	if point.Name == "interrupted_publication" {
+		want, ok := interruptedPublicationAuthorityAtHitSHA256(authorityBefore, phaseAuthority, plan)
+		authorityAtHitOK = ok && value.AuthorityAtHitSHA256 == want
+	}
 	if point.Name == "checkpointed_hard_restart" && plan.Schema != PlanV2Schema {
 		authorityAtHitOK = validDigest(value.AuthorityAtHitSHA256) &&
 			value.AuthorityAtHitSHA256 != authorityBeforeSHA256 && value.AuthorityAtHitSHA256 != authorityAfterSHA256
@@ -2705,7 +2727,7 @@ func validateInjectionTransition(
 		if value.ObservedRecoveryBranch != "recover_marker_owned" || value.RecoveredCandidates != 1 ||
 			value.CollectedCandidates != 0 || value.Target.UnitSHA256 != phaseAuthority.RelationshipRootSHA256 ||
 			value.Target.GenerationSHA256 != phaseAuthority.RelationshipGenerationSHA256 ||
-			value.Target.ScheduleSHA256 != phaseAuthority.RelationshipGenerationSHA256 || value.Target.PlanSHA256 != "" ||
+			!validInterruptedPublicationTargetMapping(value.Target, plan) ||
 			authorityBefore.RelationshipGenerationSHA256 == value.Target.GenerationSHA256 ||
 			value.TargetGenerationBefore != authorityBefore.RelationshipGenerationSHA256 ||
 			value.TargetGenerationAfter != value.Target.GenerationSHA256 ||
@@ -3435,6 +3457,32 @@ func authorityIdentitySHA256(value AuthorityPhaseResult) (string, bool) {
 	value.Phase, value.Outcome = "", ""
 	digest, err := receiptSHA256(value)
 	return digest, err == nil
+}
+
+func interruptedPublicationAuthorityAtHitSHA256(
+	prior, final AuthorityPhaseResult,
+	plan Plan,
+) (string, bool) {
+	if plan.Schema != PlanV2Schema {
+		return authorityIdentitySHA256(prior)
+	}
+	hit := final
+	hit.CallerGenerationSHA256 = prior.CallerGenerationSHA256
+	hit.CallerRootSHA256 = prior.CallerRootSHA256
+	hit.RelationshipGenerationSHA256 = prior.RelationshipGenerationSHA256
+	hit.RelationshipRootSHA256 = prior.RelationshipRootSHA256
+	hit.RelationshipProvenanceSHA256 = prior.RelationshipProvenanceSHA256
+	return authorityIdentitySHA256(hit)
+}
+
+func validInterruptedPublicationTargetMapping(value InjectionTargetProjection, plan Plan) bool {
+	if plan.Schema != PlanV2Schema {
+		return value.PlanSHA256 == "" && value.ScheduleSHA256 == value.GenerationSHA256
+	}
+	return validDigest(value.PlanSHA256) &&
+		value.PlanSHA256 != value.GenerationSHA256 &&
+		value.ScheduleSHA256 != value.GenerationSHA256 &&
+		value.ScheduleSHA256 != value.PlanSHA256
 }
 
 func expectedArchiveSemanticStateSHA256(plan Plan) (string, error) {
