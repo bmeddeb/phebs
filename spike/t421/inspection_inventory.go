@@ -21,6 +21,7 @@ const (
 	correctedLogicalTransitionReadClass     = "catalog-activation-residue-and-recovery"
 	correctedReturnTransitionReadClass      = "relationship-marker-recovery"
 	correctedStaleLeaseTransitionReadClass  = "prepared-stale-lease-schedule-and-result"
+	correctedCheckpointRestartReadClass     = "prepared-checkpoint-hard-restart"
 	correctedInspectionPolicy               = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
 )
 
@@ -39,6 +40,7 @@ type phaseInspectionInventory struct {
 	LifecycleStatusCalls      CounterBound
 	TransitionReadClass       string
 	TransitionRead            *inspectionReadBound
+	TransitionReadEpochs      []uint64
 	ProductHTTPCalls          CounterBound
 	ProductMCPCalls           CounterBound
 	ProductControlFileReads   CounterBound
@@ -100,6 +102,24 @@ func correctedReturnTransitionReadBound() (inspectionReadBound, error) {
 
 func correctedStaleLeaseTransitionReadBound() (inspectionReadBound, error) {
 	controlReads, err := checkedMultiply(2, extractionpublication.StaleLeaseTransitionControlFileReads)
+	if err != nil {
+		return inspectionReadBound{}, err
+	}
+	storeReads, err := checkedMultiply(2, store.GenerationStaleLeaseTransitionStoreReadAttempts)
+	if err != nil {
+		return inspectionReadBound{}, err
+	}
+	return inspectionReadBound{
+		Calls:              exactInspectionCalls(2),
+		ControlFileReads:   exactInspectionCalls(controlReads),
+		StoreReadAttempts:  exactInspectionCalls(storeReads),
+		MemberReads:        exactInspectionCalls(0),
+		StoreWriteAttempts: exactInspectionCalls(0),
+	}, nil
+}
+
+func correctedCheckpointRestartReadBound() (inspectionReadBound, error) {
+	controlReads, err := checkedMultiply(2, extractionpublication.CheckpointRestartTransitionControlFileReads)
 	if err != nil {
 		return inspectionReadBound{}, err
 	}
@@ -293,7 +313,17 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 			row.TransitionRead = &readBound
 			row.ImmutableMemberReusePhase = "return_a"
 		case "process_restart":
-			row.TransitionReadClass = "prepared-checkpoint-hard-restart"
+			beforeEpoch, _, ok := expectedPhaseRuntime(epochs, "stale_lease")
+			if !ok {
+				return nil, nil, errors.New("corrected checkpoint restart prior epoch is absent")
+			}
+			row.TransitionReadClass = correctedCheckpointRestartReadClass
+			readBound, err := correctedCheckpointRestartReadBound()
+			if err != nil {
+				return nil, nil, err
+			}
+			row.TransitionRead = &readBound
+			row.TransitionReadEpochs = []uint64{beforeEpoch, row.ServerEpoch}
 		case "archive_restore":
 			row.TransitionReadClass = "archive-destroy-empty-target-restore-and-semantic-binding"
 		case "pressure_80", "pressure_75", "lifecycle_collection":
@@ -341,40 +371,49 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 	for index, epoch := range epochs {
 		value := epochInspectionInventory{ServerEpoch: epoch.ServerEpoch}
 		for _, row := range rows {
-			if row.ServerEpoch != epoch.ServerEpoch {
-				continue
-			}
-			for destination, add := range map[*uint64]uint64{
-				&value.HealthCallsMaximum:              row.HealthCalls.Maximum,
-				&value.ExtractionProgressCallsMaximum:  row.ExtractionProgressCalls.Maximum,
-				&value.TailReadinessCallsMaximum:       row.TailReadinessCalls.Maximum,
-				&value.TailControlFileReadsMaximum:     row.TailControlFileReads.Maximum,
-				&value.TailStoreReadAttemptsMaximum:    row.TailStoreReadAttempts.Maximum,
-				&value.FinalAuthorityPassesMaximum:     row.FinalAuthorityPasses.Maximum,
-				&value.LifecycleStatusCallsMaximum:     row.LifecycleStatusCalls.Maximum,
-				&value.ProductHTTPCallsMaximum:         row.ProductHTTPCalls.Maximum,
-				&value.ProductMCPCallsMaximum:          row.ProductMCPCalls.Maximum,
-				&value.ProductControlFileReadsMaximum:  row.ProductControlFileReads.Maximum,
-				&value.ProductStoreReadAttemptsMaximum: row.ProductStoreReadAttempts.Maximum,
-			} {
-				if add > math.MaxUint64-*destination {
-					return nil, nil, errors.New("corrected inspection epoch inventory overflows")
-				}
-				*destination += add
-			}
-			if row.TransitionRead != nil {
+			if row.ServerEpoch == epoch.ServerEpoch {
 				for destination, add := range map[*uint64]uint64{
-					&value.TransitionReadCallsMaximum:          row.TransitionRead.Calls.Maximum,
-					&value.TransitionControlFileReadsMaximum:   row.TransitionRead.ControlFileReads.Maximum,
-					&value.TransitionStoreReadAttemptsMaximum:  row.TransitionRead.StoreReadAttempts.Maximum,
-					&value.TransitionMemberReadsMaximum:        row.TransitionRead.MemberReads.Maximum,
-					&value.TransitionStoreWriteAttemptsMaximum: row.TransitionRead.StoreWriteAttempts.Maximum,
+					&value.HealthCallsMaximum:              row.HealthCalls.Maximum,
+					&value.ExtractionProgressCallsMaximum:  row.ExtractionProgressCalls.Maximum,
+					&value.TailReadinessCallsMaximum:       row.TailReadinessCalls.Maximum,
+					&value.TailControlFileReadsMaximum:     row.TailControlFileReads.Maximum,
+					&value.TailStoreReadAttemptsMaximum:    row.TailStoreReadAttempts.Maximum,
+					&value.FinalAuthorityPassesMaximum:     row.FinalAuthorityPasses.Maximum,
+					&value.LifecycleStatusCallsMaximum:     row.LifecycleStatusCalls.Maximum,
+					&value.ProductHTTPCallsMaximum:         row.ProductHTTPCalls.Maximum,
+					&value.ProductMCPCallsMaximum:          row.ProductMCPCalls.Maximum,
+					&value.ProductControlFileReadsMaximum:  row.ProductControlFileReads.Maximum,
+					&value.ProductStoreReadAttemptsMaximum: row.ProductStoreReadAttempts.Maximum,
 				} {
 					if add > math.MaxUint64-*destination {
-						return nil, nil, errors.New("corrected inspection epoch transition inventory overflows")
+						return nil, nil, errors.New("corrected inspection epoch inventory overflows")
 					}
 					*destination += add
 				}
+			}
+			ownsTransition, parts := row.ServerEpoch == epoch.ServerEpoch, uint64(1)
+			if len(row.TransitionReadEpochs) > 0 {
+				ownsTransition = slices.Contains(row.TransitionReadEpochs, epoch.ServerEpoch)
+				parts = uint64(len(row.TransitionReadEpochs))
+			}
+			if row.TransitionRead == nil || !ownsTransition {
+				continue
+			}
+			for destination, bound := range map[*uint64]CounterBound{
+				&value.TransitionReadCallsMaximum:          row.TransitionRead.Calls,
+				&value.TransitionControlFileReadsMaximum:   row.TransitionRead.ControlFileReads,
+				&value.TransitionStoreReadAttemptsMaximum:  row.TransitionRead.StoreReadAttempts,
+				&value.TransitionMemberReadsMaximum:        row.TransitionRead.MemberReads,
+				&value.TransitionStoreWriteAttemptsMaximum: row.TransitionRead.StoreWriteAttempts,
+			} {
+				if bound.Minimum != bound.Maximum || bound.Maximum%parts != 0 {
+					return nil, nil, errors.New("corrected inspection transition epoch split is not exact")
+				}
+				add := bound.Maximum / parts
+				if add > math.MaxUint64-*destination {
+					return nil, nil, errors.New("corrected inspection epoch transition inventory overflows")
+				}
+				*destination += add
 			}
 		}
 		for _, add := range []uint64{

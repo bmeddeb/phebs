@@ -259,9 +259,10 @@ type GenerationChunk struct {
 type GenerationStaleLeaseTransitionPoint string
 
 const (
-	GenerationStaleLeaseTransitionHit       GenerationStaleLeaseTransitionPoint = "hit"
-	GenerationStaleLeaseTransitionRequeued  GenerationStaleLeaseTransitionPoint = "requeued"
-	GenerationStaleLeaseTransitionRecovered GenerationStaleLeaseTransitionPoint = "recovered"
+	GenerationStaleLeaseTransitionHit           GenerationStaleLeaseTransitionPoint = "hit"
+	GenerationStaleLeaseTransitionCheckpointHit GenerationStaleLeaseTransitionPoint = "checkpoint_hit"
+	GenerationStaleLeaseTransitionRequeued      GenerationStaleLeaseTransitionPoint = "requeued"
+	GenerationStaleLeaseTransitionRecovered     GenerationStaleLeaseTransitionPoint = "recovered"
 )
 
 // GenerationStaleLeaseTransitionRequest names one exact stale-lease unit.
@@ -301,7 +302,11 @@ type GenerationStaleLeaseTransition struct {
 	ChunkStatus      GenerationChunkStatus               `json:"chunk_status"`
 	Leased           bool                                `json:"leased"`
 	ChunkStateDigest string                              `json:"-"`
-	StaleBefore      time.Time                           `json:"-"`
+	// CheckpointStateDigest excludes HeartbeatAt so a live worker can renew its
+	// lease while an exact checkpoint reader fences every stable row field.
+	CheckpointStateDigest   string    `json:"-"`
+	PrivateLeaseTokenDigest string    `json:"-"`
+	StaleBefore             time.Time `json:"-"`
 }
 
 type generationStaleLeaseChunkFenceRec struct {
@@ -839,8 +844,9 @@ func ValidateGenerationSchedule(schedule GenerationSchedule) error {
 		schedule.NextOffset < 0 || schedule.NextOffset > schedule.TotalItems ||
 		schedule.Materialized < 0 || schedule.Materialized > schedule.TotalChunks*schedule.MaxAttempts ||
 		schedule.Pending < 0 || schedule.Running < 0 || schedule.Succeeded < 0 || schedule.Failed < 0 ||
-		schedule.Pending+schedule.Running > schedule.Materialized ||
-		schedule.Succeeded+schedule.Failed > schedule.TotalChunks || schedule.CreatedAt.IsZero() ||
+		schedule.Pending > schedule.Materialized || schedule.Running > schedule.Materialized-schedule.Pending ||
+		schedule.Succeeded > schedule.TotalChunks || schedule.Failed > schedule.TotalChunks-schedule.Succeeded ||
+		schedule.CreatedAt.IsZero() ||
 		schedule.UpdatedAt.IsZero() || schedule.UpdatedAt.Before(schedule.CreatedAt) {
 		return errors.New("generation schedule row is invalid")
 	}
@@ -848,7 +854,7 @@ func ValidateGenerationSchedule(schedule GenerationSchedule) error {
 	case GenerationScheduleActive, GenerationScheduleSuperseded:
 	case GenerationScheduleSettled:
 		if schedule.NextOffset != schedule.TotalItems || schedule.Pending != 0 || schedule.Running != 0 ||
-			schedule.Succeeded+schedule.Failed != schedule.TotalChunks {
+			schedule.Succeeded != schedule.TotalChunks-schedule.Failed {
 			return errors.New("settled generation schedule row is invalid")
 		}
 	default:
@@ -867,6 +873,16 @@ func generationRepositoryID(repository string) string {
 
 func generationChunkID(schedule string, offset int64, attempt int) string {
 	return generationSchedulerDigest("phebs-generation-chunk-v1", fmt.Sprintf("%s\x00%d\x00%d", schedule, offset, attempt))
+}
+
+// GenerationChunkIdentity derives the exact scheduler-row identity retained by
+// external source-free transition evidence.
+func GenerationChunkIdentity(schedule string, offset int64, attempt int) (string, error) {
+	if !validSHA256(schedule) || offset < 0 || offset >= MaxGenerationItems ||
+		attempt < 0 || attempt >= MaxGenerationAttempts {
+		return "", errors.New("generation chunk identity input is invalid")
+	}
+	return generationChunkID(schedule, offset, attempt), nil
 }
 
 func generationSchedulerDigest(domain, value string) string {
@@ -1191,9 +1207,11 @@ COMMIT;`, map[string]any{
 		ScheduleDigest: schedule.Digest, ScheduleStatus: schedule.Status,
 		ChunkIdentity: chunk.Identity, Offset: chunk.Offset, Length: chunk.Length,
 		Attempt: chunk.Attempt, Priority: chunk.Priority, ChunkStatus: chunk.Status,
-		Leased:           chunk.LeaseToken != "",
-		ChunkStateDigest: generationStaleLeaseChunkStateDigest(chunk),
-		StaleBefore:      request.StaleBefore,
+		Leased:                  chunk.LeaseToken != "",
+		ChunkStateDigest:        generationStaleLeaseChunkStateDigest(chunk),
+		CheckpointStateDigest:   generationCheckpointLeaseStateDigest(chunk),
+		PrivateLeaseTokenDigest: GenerationLeaseTokenDigest(chunk.LeaseToken),
+		StaleBefore:             request.StaleBefore,
 	}, nil
 }
 
@@ -1216,7 +1234,8 @@ func validateGenerationStaleLeaseTransitionRequest(
 		if request.StaleBefore.IsZero() {
 			return errors.New("read generation stale lease transition: cutoff is required")
 		}
-	case GenerationStaleLeaseTransitionRequeued, GenerationStaleLeaseTransitionRecovered:
+	case GenerationStaleLeaseTransitionCheckpointHit,
+		GenerationStaleLeaseTransitionRequeued, GenerationStaleLeaseTransitionRecovered:
 		if !request.StaleBefore.IsZero() {
 			return errors.New("read generation stale lease transition: cutoff is unexpected")
 		}
@@ -1233,18 +1252,24 @@ func validGenerationStaleLeaseTransitionShape(
 ) bool {
 	validWorker := chunk.ClaimedBy != "" && strings.TrimSpace(chunk.ClaimedBy) == chunk.ClaimedBy &&
 		len(chunk.ClaimedBy) <= MaxGenerationWorkerBytes && utf8.ValidString(chunk.ClaimedBy)
-	validActiveCounters := schedule.Pending+schedule.Running+schedule.Succeeded+schedule.Failed ==
-		schedule.TotalChunks && schedule.Running <= schedule.RepositoryTokens
+	validActiveCounters := schedule.Pending >= 0 && schedule.Pending <= schedule.TotalChunks &&
+		schedule.Running >= 0 && schedule.Running <= schedule.TotalChunks-schedule.Pending &&
+		schedule.Succeeded >= 0 &&
+		schedule.Succeeded <= schedule.TotalChunks-schedule.Pending-schedule.Running &&
+		schedule.Failed == schedule.TotalChunks-schedule.Pending-schedule.Running-schedule.Succeeded &&
+		schedule.Running <= schedule.RepositoryTokens
+	validRunning := schedule.Status == GenerationScheduleActive && validActiveCounters && schedule.Running > 0 &&
+		chunk.Priority == GenerationPriorityNeverRun &&
+		chunk.Status == GenerationChunkRunning && validGenerationChunkLease(chunk) == nil && validWorker &&
+		validServiceStateV3LeaseToken(chunk.LeaseToken) &&
+		chunk.NotBefore == nil && chunk.ClaimedAt != nil && !chunk.ClaimedAt.IsZero() &&
+		chunk.HeartbeatAt != nil && !chunk.HeartbeatAt.IsZero() &&
+		!chunk.HeartbeatAt.Before(*chunk.ClaimedAt) && chunk.FinishedAt == nil && chunk.Error == ""
 	switch request.Point {
 	case GenerationStaleLeaseTransitionHit:
-		return schedule.Status == GenerationScheduleActive && validActiveCounters && schedule.Running > 0 &&
-			chunk.Priority == GenerationPriorityNeverRun &&
-			chunk.Status == GenerationChunkRunning && validGenerationChunkLease(chunk) == nil && validWorker &&
-			validServiceStateV3LeaseToken(chunk.LeaseToken) &&
-			chunk.NotBefore == nil && chunk.ClaimedAt != nil && !chunk.ClaimedAt.IsZero() &&
-			chunk.HeartbeatAt != nil && !chunk.HeartbeatAt.IsZero() &&
-			!chunk.HeartbeatAt.Before(*chunk.ClaimedAt) &&
-			chunk.HeartbeatAt.Before(request.StaleBefore) && chunk.FinishedAt == nil && chunk.Error == ""
+		return validRunning && chunk.HeartbeatAt.Before(request.StaleBefore)
+	case GenerationStaleLeaseTransitionCheckpointHit:
+		return validRunning
 	case GenerationStaleLeaseTransitionRequeued:
 		return schedule.Status == GenerationScheduleActive && validActiveCounters && schedule.Pending > 0 &&
 			chunk.Priority == GenerationPriorityStale && chunk.Status == GenerationChunkPending &&
@@ -1280,6 +1305,28 @@ func generationStaleLeaseChunkStateDigest(chunk GenerationChunk) string {
 		timeValue(chunk.ClaimedAt), timeValue(chunk.HeartbeatAt), timeValue(chunk.FinishedAt),
 		chunk.Error, chunk.LeaseToken,
 	}, "\x00"))
+}
+
+func generationCheckpointLeaseStateDigest(chunk GenerationChunk) string {
+	claimedAt := ""
+	if chunk.ClaimedAt != nil {
+		claimedAt = chunk.ClaimedAt.UTC().Format(time.RFC3339Nano)
+	}
+	return generationSchedulerDigest("phebs-generation-checkpoint-lease-state-v1", strings.Join([]string{
+		chunk.ID, chunk.Identity, chunk.ScheduleDigest, chunk.Repository, chunk.Stage,
+		chunk.Generation, string(chunk.ResourceClass), fmt.Sprint(chunk.Offset),
+		fmt.Sprint(chunk.Length), fmt.Sprint(chunk.Attempt), fmt.Sprint(chunk.Priority),
+		string(chunk.Status), chunk.ClaimedBy, claimedAt, chunk.LeaseToken,
+	}, "\x00"))
+}
+
+// GenerationLeaseTokenDigest returns an opaque identity for comparing private
+// scheduler lease tokens without exposing the token itself.
+func GenerationLeaseTokenDigest(token string) string {
+	if token == "" {
+		return ""
+	}
+	return generationSchedulerDigest("phebs-generation-private-lease-token-v1", token)
 }
 
 type retireCurrentGenerationScheduleRec struct {
@@ -2226,6 +2273,8 @@ func generationStaleLeaseTransitionFromChunk(
 	if point == GenerationStaleLeaseTransitionHit {
 		transition.ScheduleStatus = GenerationScheduleActive
 		transition.ChunkStateDigest = generationStaleLeaseChunkStateDigest(chunk)
+		transition.CheckpointStateDigest = generationCheckpointLeaseStateDigest(chunk)
+		transition.PrivateLeaseTokenDigest = GenerationLeaseTokenDigest(chunk.LeaseToken)
 	}
 	if point == GenerationStaleLeaseTransitionRequeued {
 		transition.ScheduleStatus = GenerationScheduleActive

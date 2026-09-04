@@ -32,15 +32,16 @@ type scheduleStore interface {
 }
 
 type Runtime struct {
-	Root          string
-	Store         scheduleStore
-	Source        Source
-	Executor      Executor
-	Publisher     Publisher
-	Fence         Fence
-	OnSettled     func(context.Context, string) error
-	Diagnostics   bool
-	TimingReports func([]byte) error
+	Root                  string
+	Store                 scheduleStore
+	Source                Source
+	Executor              Executor
+	Publisher             Publisher
+	Fence                 Fence
+	OnSettled             func(context.Context, string) error
+	OnPartitionCheckpoint store.GenerationStaleLeaseTransitionObserver
+	Diagnostics           bool
+	TimingReports         func([]byte) error
 
 	assembly [64]sync.Mutex
 }
@@ -934,6 +935,22 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		}
 	} else {
 		timing.Reused = true
+		if runtime.OnPartitionCheckpoint != nil && chunk.Attempt == 0 &&
+			chunk.Priority == store.GenerationPriorityNeverRun &&
+			chunk.Status == store.GenerationChunkRunning && chunk.LeaseToken != "" {
+			if err := runtime.OnPartitionCheckpoint(ctx, store.GenerationStaleLeaseTransition{
+				Point:      store.GenerationStaleLeaseTransitionCheckpointHit,
+				Repository: chunk.Repository, Stage: chunk.Stage,
+				Generation: chunk.Generation, ResourceClass: chunk.ResourceClass,
+				ScheduleDigest: chunk.ScheduleDigest, ScheduleStatus: store.GenerationScheduleActive,
+				ChunkIdentity: chunk.Identity, Offset: chunk.Offset, Length: chunk.Length,
+				Attempt: chunk.Attempt, Priority: chunk.Priority,
+				ChunkStatus: chunk.Status, Leased: true,
+				PrivateLeaseTokenDigest: store.GenerationLeaseTokenDigest(chunk.LeaseToken),
+			}); err != nil {
+				return err
+			}
+		}
 	}
 	var phaseStarted time.Time
 	if timingEnabled {

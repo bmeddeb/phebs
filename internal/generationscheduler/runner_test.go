@@ -317,6 +317,7 @@ func TestSchedulerObservedStaleLeaseGateAndRecoveredCompletion(t *testing.T) {
 	var requeuedOnce sync.Once
 	var pointsMu sync.Mutex
 	var points []store.GenerationStaleLeaseTransitionPoint
+	var recoveredLeaseDigest string
 	recoveredObserverFailure := errors.New("recovered transition report failed")
 	observer := func(_ context.Context, transition store.GenerationStaleLeaseTransition) error {
 		pointsMu.Lock()
@@ -326,6 +327,7 @@ func TestSchedulerObservedStaleLeaseGateAndRecoveredCompletion(t *testing.T) {
 			requeuedOnce.Do(func() { close(requeued) })
 		}
 		if transition.Point == store.GenerationStaleLeaseTransitionRecovered {
+			recoveredLeaseDigest = transition.PrivateLeaseTokenDigest
 			return recoveredObserverFailure
 		}
 		return nil
@@ -427,6 +429,10 @@ func TestSchedulerObservedStaleLeaseGateAndRecoveredCompletion(t *testing.T) {
 	}
 	if !slices.Equal(points, wantPoints) {
 		t.Fatalf("transition points = %v, want %v", points, wantPoints)
+	}
+	if recoveredLeaseDigest != store.GenerationLeaseTokenDigest("recovered-lease") ||
+		recoveredLeaseDigest == store.GenerationLeaseTokenDigest(first.LeaseToken) {
+		t.Fatalf("recovered private lease digest = %q", recoveredLeaseDigest)
 	}
 }
 

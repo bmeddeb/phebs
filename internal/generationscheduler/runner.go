@@ -468,6 +468,7 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 				ScheduleDigest: chunk.ScheduleDigest, ChunkIdentity: chunk.Identity,
 				Offset: chunk.Offset, Length: chunk.Length, Attempt: chunk.Attempt,
 				Priority: chunk.Priority, ChunkStatus: store.GenerationChunkDone,
+				PrivateLeaseTokenDigest: store.GenerationLeaseTokenDigest(chunk.LeaseToken),
 			}
 			observerCtx, observerCancel := context.WithTimeout(
 				context.WithoutCancel(ctx), scheduler.storeCallTimeout(),

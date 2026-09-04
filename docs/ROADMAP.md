@@ -191,7 +191,27 @@ schedule, while return-A authority remains unchanged. Epoch-three report
 admission is now 11,530. Ordinary scheduling/reaping adds only inactive nil
 branches; exact mode alone extends the stale window and runs bounded observers
 without a global hook, schema, or goroutine.
-Restart, pressure, archive/restore, and lifecycle R, cumulative phase sums,
+The prepared-checkpoint hard-restart R slice now binds one old-epoch-three hit
+and one new-epoch-four recovered snapshot to the same immutable preparation.
+Each reads seven bounded controls and twice confirms the current schedule and
+exact chunk, for aggregate `C/S/M/W=14/8/0/0`. The hit requires the attempt-0
+priority-0 row running and leased over a durable canonical result while its
+completion bit is clear and root/current are absent; recovery requires the same
+chunk priority 2, done and unleased with no retry successor, byte-identical
+result, restored completion/root/current, a distinct private lease-token
+fingerprint from the recovered callback versus the killed-token fingerprint
+privately carried by the reaper Hit, and a distinct process identity. The final
+row token is clear; its identity is derived from the recovery schedule, the
+generation-global partition offset, and attempt 0. Neither raw token nor the
+reaper events become R evidence. The reader uses the existing context-bounded
+per-plan assembly-lock acquisition and releases it before its confirming store
+reads.
+Protected return-A authority is unchanged. Epoch-three requests advance to 11,531 with transition
+`calls/C/S=5/25/12`; epoch four advances to 6,255 and `1/7/4`. The requeue is
+synchronization only. Ordinary work adds one inactive nil branch; V1 remains
+exact. `p2C7S4` compactly records the report shape, while `meta=0` only shortens
+the zero-cost metadata label for the unchanged plan-byte cap.
+Pressure, archive/restore, and lifecycle R, cumulative phase sums,
 final ordinal, replacement freeze, and runner remain open. Overall correction
 acceptance and freeze remain open. No T42.2 execution, private rerun, release,
 scale pass, or SLO claim is authorized; T42.2 remains next only after the

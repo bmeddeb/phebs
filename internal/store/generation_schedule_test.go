@@ -15,6 +15,28 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
+func TestGenerationChunkIdentityIsValidated(t *testing.T) {
+	schedule := generationSchedulerDigest("test-schedule", "one")
+	got, err := GenerationChunkIdentity(schedule, 7, 0)
+	if err != nil || got != generationChunkID(schedule, 7, 0) {
+		t.Fatalf("generation chunk identity = %q, %v", got, err)
+	}
+	for _, input := range []struct {
+		schedule string
+		offset   int64
+		attempt  int
+	}{
+		{schedule: "invalid", offset: 7},
+		{schedule: schedule, offset: -1},
+		{schedule: schedule, offset: MaxGenerationItems},
+		{schedule: schedule, offset: 7, attempt: MaxGenerationAttempts},
+	} {
+		if _, err := GenerationChunkIdentity(input.schedule, input.offset, input.attempt); err == nil {
+			t.Fatalf("invalid generation chunk identity input was accepted: %+v", input)
+		}
+	}
+}
+
 func TestLocalGenerationChunkReaderReportsAuthoritativeLeaseState(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
@@ -474,6 +496,15 @@ func TestGenerationScheduleValidationClosesProgressRows(t *testing.T) {
 	invalid.Digest = "sha256:" + strings.Repeat("b", 64)
 	if err := ValidateGenerationSchedule(invalid); err == nil {
 		t.Fatal("schedule with relabeled digest validated")
+	}
+	invalid = active
+	invalid.Materialized = invalid.TotalChunks
+	invalid.Pending = int(^uint(0) >> 1)
+	invalid.Running = 1
+	invalid.Succeeded = int(^uint(0) >> 1)
+	invalid.Failed = 2
+	if err := ValidateGenerationSchedule(invalid); err == nil {
+		t.Fatal("schedule with overflowing counters validated")
 	}
 }
 
@@ -1054,6 +1085,43 @@ func TestGenerationStaleLeaseTransitionObservationAndPointReader(t *testing.T) {
 	if !validGenerationStaleLeaseTransitionShape(hitRequest, *active, *stale) {
 		t.Fatal("valid stale lease hit was rejected")
 	}
+	checkpointRequest := hitRequest
+	checkpointRequest.Point = GenerationStaleLeaseTransitionCheckpointHit
+	checkpointRequest.StaleBefore = time.Time{}
+	if !validGenerationStaleLeaseTransitionShape(checkpointRequest, *active, *stale) {
+		t.Fatal("valid checkpoint hit was rejected")
+	}
+	checkpointCtx, checkpointLedger, err := readaccounting.Start(
+		t.Context(), readaccounting.Counts{
+			StoreReadAttempts: GenerationStaleLeaseTransitionStoreReadAttempts,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpointBefore, checkpointBeforeErr := state.ReadGenerationStaleLeaseTransition(
+		checkpointCtx, checkpointRequest,
+	)
+	checkpointAfter, checkpointAfterErr := state.ReadGenerationStaleLeaseTransition(
+		checkpointCtx, checkpointRequest,
+	)
+	checkpointCounts, checkpointFinishErr := checkpointLedger.Finish()
+	if errors.Join(checkpointBeforeErr, checkpointAfterErr, checkpointFinishErr) != nil ||
+		checkpointBefore != checkpointAfter ||
+		checkpointBefore.Point != GenerationStaleLeaseTransitionCheckpointHit ||
+		checkpointBefore.Priority != GenerationPriorityNeverRun ||
+		checkpointBefore.ChunkStatus != GenerationChunkRunning || !checkpointBefore.Leased ||
+		!validSHA256(checkpointBefore.CheckpointStateDigest) ||
+		checkpointBefore.PrivateLeaseTokenDigest != GenerationLeaseTokenDigest(stale.LeaseToken) ||
+		checkpointCounts != (readaccounting.Counts{
+			StoreReadAttempts: GenerationStaleLeaseTransitionStoreReadAttempts,
+		}) {
+		t.Fatalf(
+			"checkpoint snapshots/counts = %+v / %+v / %+v, errors=%v",
+			checkpointBefore, checkpointAfter, checkpointCounts,
+			errors.Join(checkpointBeforeErr, checkpointAfterErr, checkpointFinishErr),
+		)
+	}
 	for name, mutate := range map[string]func(*GenerationChunk){
 		"untrimmed worker": func(chunk *GenerationChunk) { chunk.ClaimedBy = " invalid" },
 		"invalid worker":   func(chunk *GenerationChunk) { chunk.ClaimedBy = string([]byte{0xff}) },
@@ -1079,6 +1147,12 @@ func TestGenerationStaleLeaseTransitionObservationAndPointReader(t *testing.T) {
 		"running over token limit": func(schedule *GenerationSchedule) {
 			schedule.Pending--
 			schedule.Running++
+		},
+		"overflowed counters": func(schedule *GenerationSchedule) {
+			schedule.Pending = int(^uint(0) >> 1)
+			schedule.Running = 1
+			schedule.Succeeded = int(^uint(0) >> 1)
+			schedule.Failed = 2
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -72,6 +72,21 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 	if staleIndex < 0 || receipt.TransitionResults[staleIndex].ReadAccounting != nil {
 		t.Fatal("retained V1 stale-lease transition gained read accounting")
 	}
+	restartIndex := slices.IndexFunc(receipt.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "process_restart"
+	})
+	if restartIndex < 0 || receipt.TransitionResults[restartIndex].ReadAccounting != nil ||
+		len(receipt.TransitionResults[restartIndex].Injections) != 1 ||
+		receipt.TransitionResults[restartIndex].Injections[0].Checkpoint == nil {
+		t.Fatal("retained V1 checkpoint restart transition gained read accounting")
+	}
+	legacyCheckpoint := receipt.TransitionResults[restartIndex].Injections[0].Checkpoint
+	if legacyCheckpoint.ChunkIdentitySHA256 != "" || legacyCheckpoint.ScheduleStatusAtHit != "" ||
+		legacyCheckpoint.ChunkStatusAtHit != "" || legacyCheckpoint.LeasedAtHit ||
+		legacyCheckpoint.CurrentAbsentAtHit || legacyCheckpoint.ScheduleStatusAfter != "" ||
+		legacyCheckpoint.ChunkStatusAfter != "" || legacyCheckpoint.UnleasedAfter {
+		t.Fatal("retained V1 checkpoint restart gained V2 reader state")
+	}
 }
 
 func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
@@ -183,6 +198,48 @@ func TestStaleLeaseTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
 			mutate(&changed)
 			if err := validateStaleLeaseTransitionReadSubtotal(changed); err == nil {
 				t.Fatal("mutated stale lease transition subtotal was accepted")
+			}
+		})
+	}
+}
+
+func TestCheckpointRestartReadSubtotalMatchesNativeReader(t *testing.T) {
+	bound, err := correctedCheckpointRestartReadBound()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bound.Calls != exactInspectionCalls(2) ||
+		bound.ControlFileReads != exactInspectionCalls(
+			2*extractionpublication.CheckpointRestartTransitionControlFileReads,
+		) || bound.StoreReadAttempts != exactInspectionCalls(
+		2*store.GenerationStaleLeaseTransitionStoreReadAttempts,
+	) || bound.MemberReads != exactInspectionCalls(0) ||
+		bound.StoreWriteAttempts != exactInspectionCalls(0) {
+		t.Fatal("checkpoint restart subtotal does not match the native per-report reader cost")
+	}
+	base := TransitionReadSubtotal{
+		Schema: "t422-transition-read-accounting-v1", Class: correctedCheckpointRestartReadClass,
+		ReportCalls: bound.Calls.Minimum, ControlFileReads: bound.ControlFileReads.Minimum,
+		StoreReadAttempts: bound.StoreReadAttempts.Minimum, MemberReads: bound.MemberReads.Minimum,
+		StoreWriteAttempts: bound.StoreWriteAttempts.Minimum,
+	}
+	if err := validateCheckpointRestartReadSubtotal(base); err != nil {
+		t.Fatal(err)
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"schema":  func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+		"class":   func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"calls":   func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+		"control": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+		"store":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+		"member":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+		"write":   func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := base
+			mutate(&changed)
+			if err := validateCheckpointRestartReadSubtotal(changed); err == nil {
+				t.Fatal("mutated checkpoint restart subtotal was accepted")
 			}
 		})
 	}
@@ -1802,6 +1859,18 @@ func completeTestTransitions(
 					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
 				}
 			}
+			if phase == "process_restart" && plan.Schema == PlanV2Schema {
+				readBound, err := correctedCheckpointRestartReadBound()
+				if err != nil {
+					t.Fatal(err)
+				}
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedCheckpointRestartReadClass,
+					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
+					StoreReadAttempts: readBound.StoreReadAttempts.Minimum, MemberReads: readBound.MemberReads.Minimum,
+					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
+				}
+			}
 		case "pressure_80", "pressure_90", "pressure_75":
 			// Filled as one contiguous sequence below.
 		case "archive_restore":
@@ -1969,9 +2038,29 @@ func testInjectionTransition(
 			}
 			if plan.Schema == PlanV2Schema {
 				value.AuthorityAtHitSHA256 = beforeSHA256
+				globalOffset := point.TargetOrdinal
+				for index := 0; index < rootIndex; index++ {
+					globalOffset += uint64(len(phaseAuthority.ExtractionRoots[index].PartitionResults))
+				}
+				chunkIdentity, err := store.GenerationChunkIdentity(
+					value.Target.ScheduleSHA256, int64(globalOffset), 0,
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				value.Checkpoint.ChunkIdentitySHA256 = chunkIdentity
+				value.Checkpoint.ScheduleStatusAtHit = store.GenerationScheduleActive
+				value.Checkpoint.ChunkStatusAtHit = store.GenerationChunkRunning
+				value.Checkpoint.LeasedAtHit = true
 				value.Checkpoint.CompletionAbsentAtHit = false
 				value.Checkpoint.CompletionFileExistsAtHit = true
 				value.Checkpoint.CompletionBitClearAtHit = true
+				value.Checkpoint.CurrentAbsentAtHit = true
+				value.Checkpoint.ScheduleStatusAfter = store.GenerationScheduleSettled
+				value.Checkpoint.ChunkStatusAfter = store.GenerationChunkDone
+				value.Checkpoint.UnleasedAfter = true
+				value.Checkpoint.AttemptBefore = 0
+				value.Checkpoint.AttemptAfter = 0
 			}
 			childIndex := slices.IndexFunc(measurement.ChildProcessRoles, func(value Count) bool { return value.Name == "phebs" })
 			if childIndex >= 0 {

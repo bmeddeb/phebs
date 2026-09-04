@@ -1406,6 +1406,95 @@ corrected-plan freeze, ceremony execution, release evidence, a scale pass, or
 an SLO. Restart, pressure, archive/restore, and lifecycle R remain open. T42.2
 remains unauthorized until the remaining T42.1 gates close.
 
+#### Prepared checkpoint hard-restart R accounting
+
+The V2 process-restart transition now owns an exact
+`prepared-checkpoint-hard-restart` witness. Exact control installs a
+default-nil runtime hook after the existing worker has selected and validated
+the canonical result for reuse, but before domain assembly. The old server in
+epoch three emits the checkpoint hit. One later stale requeue is synchronization
+only and emits no R report. The reaper's preceding store-owned Hit event is also
+private synchronization, not evidence. The recovered report belongs to the
+distinct new server in epoch four and remains unavailable until the same
+reclaimed chunk has completed successfully. This slice supplies that production
+hook/reader and prospective receipt validation; it does not supply the
+controller, runner, or hard kill that will drive the boundary.
+
+Each report uses the same self-confirming, source-free read. It opens exactly
+seven controls: the immutable recovery-preparation binding, exact target
+generation, target domain plan, canonical partition result, completion control,
+exact root attempt, and current pointer. A current-schedule read plus exact-chunk
+read runs before those controls, and the same two store reads run again as a
+confirmation fence. An absent root or current pointer at the hit is still one
+charged read attempt. Independent metadata probes remain zero-cost.
+
+V2 maps `GenerationSHA256` to the immutable target extraction generation,
+`PlanSHA256` to its domain plan, `ScheduleSHA256` to the preparation's recovery
+schedule, and `UnitSHA256` plus ordinal/kind/member/source bounds to the exact
+canonical result. The recovery-schedule generation is a distinct prepared
+identity whose canonical binding maps to that target generation and its
+predecessor schedule. The receipt derives the exact scheduler-row identity from
+that schedule, the target's generation-global partition offset, and attempt 0.
+None of those identity roles may be aliased.
+
+At the hit, the schedule is active and the selected attempt-0 row is priority 0,
+running, claimed, and leased. The canonical result already exists durably, the
+completion file exists with exactly that result's bit clear, and the exact root
+and current pointer are absent. A worker may renew its heartbeat while the
+reader runs, so the checkpoint fingerprint deliberately excludes mutable
+`HeartbeatAt`; it still binds every fixed row field and an opaque digest of the
+private lease token. Any other row or schedule movement refuses the snapshot.
+
+Recovery requires a settled all-success schedule and the same attempt-0 chunk
+at priority 2, done and unleased, with no retry successor and its final row token
+cleared. The new-epoch controller compares the opaque killed-token fingerprint
+carried by the reaper's private Hit event with the recovered scheduler
+callback's new-claim fingerprint. They must differ. The prepared checkpoint hit
+may keep its fingerprint private in-process; no raw token or private reaper
+event enters the receipt or R subtotal. The canonical result bytes are
+identical, the completion file is complete with the selected bit restored, the
+exact root contains that result, and the current pointer names that target
+generation, plan, and root. The old and new Phebs process identities are
+distinct, while the prepared target mapping and complete protected return-A
+authority are byte-identical before and after. Requeue alone, a new attempt, a
+replacement result, mixed authority, incomplete assembly, or an aliased
+process/lease identity cannot satisfy recovery.
+
+The hit and recovered reports each cost exactly
+`C/S/M/W=7/4/0/0`, for process-restart subtotal `14/8/0/0`. Because the reports
+straddle the restart, the hit increases epoch three's request maximum from
+11,530 to 11,531 and its transition `calls/C/S` from `4/18/8` to `5/25/12`.
+Recovery increases epoch four from 6,254 to 6,255 requests and transition
+`calls/C/S` from `0/0/0` to `1/7/4`. V1 keeps its historical process-restart
+semantics and bytes and gains no subtotal. The plan policy encodes the new shape
+as `p2C7S4`. The spelling change from `metadata=0` to `meta=0` only compacts the
+same zero-cost metadata rule to preserve the existing plan-byte ceiling.
+
+The read is synchronous, one-shot, nonpolling, uncached, child-free,
+member-free, and write-free. It decodes only the seven bounded controls,
+metadata-checks one generation plus at most 64 domain directories, and executes
+exactly four one-row store queries. Each report acquires the existing per-plan
+assembly mutex once through the existing context-bounded acquisition around
+completion/root/current inspection, then releases it before the second store
+confirmation and before any report or wait. It creates no retained cache, state,
+or lock class. A limit, malformed control, store drift,
+identity mismatch, hook error,
+reaper-synchronization error, or report error fails exact mode closed and
+invents no report. Hit failure returns before assembly, leaving the durable
+prepared checkpoint for explicit recovery. A recovered-report failure occurs
+only after the completion transaction and exact root/current installation are
+durable; it cannot roll them back and is surfaced through the scheduler report
+path. The recovered callback uses the existing bounded post-completion timeout
+context/timer. Ordinary reused-result handling adds one nil branch and no global
+hook, store schema, persistent state, goroutine, lock class, cache, retry, lock
+acquisition, or I/O.
+
+This slice does not provide actual controller/runner hard death, whole-phase
+sums, a final ordinal, corrected-plan freeze, ceremony execution, release
+evidence, a scale pass, or an SLO. Pressure, archive/restore, and lifecycle R
+remain open, and T42.2 remains unauthorized until the remaining T42.1 gates
+close.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

@@ -1352,14 +1352,14 @@ func t421BlackBoxParseSuccessfulQueryPage(
 			search.Result
 		}
 		t421BlackBoxDecodeExactJSON(t, raw, &result)
-		if result.Result.Stats.MatchCount < 0 {
+		if result.Stats.MatchCount < 0 {
 			t.Fatalf("Q %s returned a negative match count", query.Name)
 		}
-		page.records = uint64(result.Result.Stats.MatchCount)
-		for _, file := range result.Result.Files {
+		page.records = uint64(result.Stats.MatchCount)
+		for _, file := range result.Files {
 			page.paths = append(page.paths, file.Path)
 		}
-		result.Result.Stats.DurationMS = 0
+		result.Stats.DurationMS = 0
 		page.semantic = t421BlackBoxMarshalJSON(t, result.Result)
 	case "service_detail":
 		var detail struct {
@@ -1367,9 +1367,9 @@ func t421BlackBoxParseSuccessfulQueryPage(
 			apiresponse.ServiceDetail
 		}
 		t421BlackBoxDecodeExactJSON(t, raw, &detail)
-		page.records = uint64(len(detail.ServiceDetail.Memberships))
-		page.serviceKey = detail.ServiceDetail.Service.Key
-		for _, membership := range detail.ServiceDetail.Memberships {
+		page.records = uint64(len(detail.Memberships))
+		page.serviceKey = detail.Service.Key
+		for _, membership := range detail.Memberships {
 			page.paths = append(page.paths, membership.Path)
 		}
 		page.semantic = t421BlackBoxMarshalJSON(t, detail.ServiceDetail)
@@ -1379,17 +1379,17 @@ func t421BlackBoxParseSuccessfulQueryPage(
 			apiresponse.RelationshipPage
 		}
 		t421BlackBoxDecodeExactJSON(t, raw, &relationship)
-		page.records = uint64(len(relationship.RelationshipPage.Rows))
-		page.nextCursor = relationship.RelationshipPage.Pagination.NextCursor
-		for index := range relationship.RelationshipPage.Rows {
-			row := &relationship.RelationshipPage.Rows[index]
+		page.records = uint64(len(relationship.Rows))
+		page.nextCursor = relationship.Pagination.NextCursor
+		for index := range relationship.Rows {
+			row := &relationship.Rows[index]
 			page.paths = append(page.paths, row.Source.Path, row.Evidence.Path)
 			if row.Target != nil {
 				page.paths = append(page.paths, row.Target.Path)
 			}
 			row.Citation = ""
 		}
-		relationship.RelationshipPage.Pagination.NextCursor = ""
+		relationship.Pagination.NextCursor = ""
 		page.relationship = &relationship.RelationshipPage
 		page.semantic = t421BlackBoxMarshalJSON(t, relationship.RelationshipPage)
 	default:

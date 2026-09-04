@@ -15,10 +15,11 @@ import (
 
 type staleLeaseTransitionTestStore struct {
 	*testScheduleStore
-	mu         sync.Mutex
-	transition store.GenerationStaleLeaseTransition
-	calls      int
-	drift      bool
+	mu          sync.Mutex
+	transition  store.GenerationStaleLeaseTransition
+	calls       int
+	drift       bool
+	stableDrift bool
 }
 
 func (state *staleLeaseTransitionTestStore) ReadGenerationStaleLeaseTransition(
@@ -45,6 +46,10 @@ func (state *staleLeaseTransitionTestStore) ReadGenerationStaleLeaseTransition(
 	if state.drift && state.calls == 2 {
 		value.ChunkStateDigest = digest("stale-lease-test-drift", nil)
 	}
+	if state.stableDrift && state.calls == 2 {
+		value.CheckpointStateDigest = digest("checkpoint-test-drift", nil)
+		value.PrivateLeaseTokenDigest = digest("checkpoint-token-test-drift", nil)
+	}
 	return value, nil
 }
 
@@ -57,6 +62,7 @@ func (state *staleLeaseTransitionTestStore) set(
 	state.transition = value
 	state.calls = 0
 	state.drift = drift
+	state.stableDrift = false
 }
 
 func TestReadStaleLeaseTransitionBindsResultAndExactReadCost(t *testing.T) {

@@ -267,10 +267,84 @@ func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
 			t.Fatal("missing stale lease transition read accounting was accepted")
 		}
 	})
+	restart := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "process_restart"
+	})
+	if restart < 0 || base.TransitionResults[restart].ReadAccounting == nil ||
+		len(base.TransitionResults[restart].Injections) != 1 ||
+		base.TransitionResults[restart].Injections[0].Checkpoint == nil {
+		t.Fatal("checkpoint restart transition read accounting is absent")
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"wrong_class": func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"wrong_calls": func(value *TransitionReadSubtotal) { value.ReportCalls-- },
+		"control_read": func(value *TransitionReadSubtotal) {
+			value.ControlFileReads++
+		},
+		"store_read": func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+	} {
+		t.Run("restart_"+name, func(t *testing.T) {
+			changed := cloneTestReceipt(t, base)
+			mutate(changed.TransitionResults[restart].ReadAccounting)
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatal("impossible checkpoint restart transition read accounting was accepted")
+			}
+		})
+	}
+	t.Run("restart_missing", func(t *testing.T) {
+		changed := cloneTestReceipt(t, base)
+		changed.TransitionResults[restart].ReadAccounting = nil
+		if err := ValidateReceipt(
+			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+		); err == nil {
+			t.Fatal("missing checkpoint restart transition read accounting was accepted")
+		}
+	})
+	for name, mutate := range map[string]func(*CheckpointRecovery){
+		"chunk_identity": func(value *CheckpointRecovery) { value.ChunkIdentitySHA256 = zeroDigest() },
+		"hit_schedule":   func(value *CheckpointRecovery) { value.ScheduleStatusAtHit = store.GenerationScheduleSettled },
+		"hit_chunk":      func(value *CheckpointRecovery) { value.ChunkStatusAtHit = store.GenerationChunkDone },
+		"hit_lease":      func(value *CheckpointRecovery) { value.LeasedAtHit = false },
+		"hit_current":    func(value *CheckpointRecovery) { value.CurrentAbsentAtHit = false },
+		"after_schedule": func(value *CheckpointRecovery) { value.ScheduleStatusAfter = store.GenerationScheduleActive },
+		"after_chunk":    func(value *CheckpointRecovery) { value.ChunkStatusAfter = store.GenerationChunkRunning },
+		"after_lease":    func(value *CheckpointRecovery) { value.UnleasedAfter = false },
+		"retry_attempt": func(value *CheckpointRecovery) {
+			value.AttemptBefore, value.AttemptAfter = 1, 1
+		},
+	} {
+		t.Run("restart_"+name, func(t *testing.T) {
+			changed := cloneTestReceipt(t, base)
+			injection := &changed.TransitionResults[restart].Injections[0]
+			mutate(injection.Checkpoint)
+			pointIndex := slices.IndexFunc(plan.FailurePoints, func(value FailurePoint) bool {
+				return value.Name == injection.FailurePoint
+			})
+			if pointIndex < 0 {
+				t.Fatal("checkpoint restart failure point is absent")
+			}
+			var err error
+			injection.HitReportSHA256, err = injectionHitReportSHA256(*injection, plan.FailurePoints[pointIndex])
+			if err != nil {
+				t.Fatal(err)
+			}
+			injection.RecoveryProjectionSHA256, err = injectionRecoveryProjectionSHA256(*injection, plan.FailurePoints[pointIndex])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatal("impossible checkpoint restart reader state was accepted")
+			}
+		})
+	}
 	t.Run("unfinished_transition_accounting", func(t *testing.T) {
 		changed := cloneTestReceipt(t, base)
 		unfinished := slices.IndexFunc(changed.TransitionResults, func(value TransitionResult) bool {
-			return value.Phase == "process_restart"
+			return value.Phase == "pressure_80"
 		})
 		if unfinished < 0 || changed.TransitionResults[unfinished].ReadAccounting != nil {
 			t.Fatal("unfinished transition fixture is invalid")

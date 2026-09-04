@@ -14,6 +14,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 type Bytes uint64
@@ -679,37 +680,45 @@ type InjectionTargetProjection struct {
 }
 
 type CheckpointRecovery struct {
-	ResultIdentitySHA256        string `json:"result_identity_sha256"`
-	ResultDigestSHA256          string `json:"result_digest_sha256"`
-	PlanSHA256                  string `json:"plan_sha256"`
-	ExpectationSHA256           string `json:"expectation_sha256"`
-	PartitionSHA256             string `json:"partition_sha256"`
-	CandidateGenerationSHA256   string `json:"candidate_generation_sha256"`
-	SourceGenerationSHA256      string `json:"source_generation_sha256"`
-	ObservationGenerationSHA256 string `json:"observation_generation_sha256"`
-	Domain                      string `json:"domain"`
-	ExtractorVersion            string `json:"extractor_version"`
-	ExtractionPolicySHA256      string `json:"extraction_policy_sha256"`
-	CanonicalResultExistsAtHit  bool   `json:"canonical_result_exists_at_hit"`
-	ResultDirectorySyncedAtHit  bool   `json:"result_directory_synced_at_hit"`
-	CompletionAbsentAtHit       bool   `json:"completion_absent_at_hit"`
-	CompletionFileExistsAtHit   bool   `json:"completion_file_exists_at_hit,omitempty"`
-	CompletionBitClearAtHit     bool   `json:"completion_bit_clear_at_hit,omitempty"`
-	RootAbsentAtHit             bool   `json:"root_absent_at_hit"`
-	SameResultBytesReused       bool   `json:"same_result_bytes_reused"`
-	CompletionExistsAfter       bool   `json:"completion_exists_after"`
-	RootExistsAfter             bool   `json:"root_exists_after"`
-	CurrentAfter                bool   `json:"current_after"`
-	StartCount                  uint64 `json:"start_count"`
-	CompletionCount             uint64 `json:"completion_count"`
-	RetrySuccessorCount         uint64 `json:"retry_successor_count"`
-	PriorityBefore              uint64 `json:"priority_before"`
-	PriorityAfter               uint64 `json:"priority_after"`
-	AttemptBefore               uint64 `json:"attempt_before"`
-	AttemptAfter                uint64 `json:"attempt_after"`
-	PrivateLeaseTokenChanged    bool   `json:"private_lease_token_changed"`
-	HardDeath                   bool   `json:"hard_death"`
-	CooperativeRelease          bool   `json:"cooperative_release"`
+	ResultIdentitySHA256        string                         `json:"result_identity_sha256"`
+	ResultDigestSHA256          string                         `json:"result_digest_sha256"`
+	PlanSHA256                  string                         `json:"plan_sha256"`
+	ExpectationSHA256           string                         `json:"expectation_sha256"`
+	PartitionSHA256             string                         `json:"partition_sha256"`
+	CandidateGenerationSHA256   string                         `json:"candidate_generation_sha256"`
+	SourceGenerationSHA256      string                         `json:"source_generation_sha256"`
+	ObservationGenerationSHA256 string                         `json:"observation_generation_sha256"`
+	Domain                      string                         `json:"domain"`
+	ExtractorVersion            string                         `json:"extractor_version"`
+	ExtractionPolicySHA256      string                         `json:"extraction_policy_sha256"`
+	ChunkIdentitySHA256         string                         `json:"chunk_identity_sha256,omitempty"`
+	ScheduleStatusAtHit         store.GenerationScheduleStatus `json:"schedule_status_at_hit,omitempty"`
+	ChunkStatusAtHit            store.GenerationChunkStatus    `json:"chunk_status_at_hit,omitempty"`
+	LeasedAtHit                 bool                           `json:"leased_at_hit,omitempty"`
+	CanonicalResultExistsAtHit  bool                           `json:"canonical_result_exists_at_hit"`
+	ResultDirectorySyncedAtHit  bool                           `json:"result_directory_synced_at_hit"`
+	CompletionAbsentAtHit       bool                           `json:"completion_absent_at_hit"`
+	CompletionFileExistsAtHit   bool                           `json:"completion_file_exists_at_hit,omitempty"`
+	CompletionBitClearAtHit     bool                           `json:"completion_bit_clear_at_hit,omitempty"`
+	RootAbsentAtHit             bool                           `json:"root_absent_at_hit"`
+	CurrentAbsentAtHit          bool                           `json:"current_absent_at_hit,omitempty"`
+	SameResultBytesReused       bool                           `json:"same_result_bytes_reused"`
+	CompletionExistsAfter       bool                           `json:"completion_exists_after"`
+	RootExistsAfter             bool                           `json:"root_exists_after"`
+	CurrentAfter                bool                           `json:"current_after"`
+	ScheduleStatusAfter         store.GenerationScheduleStatus `json:"schedule_status_after,omitempty"`
+	ChunkStatusAfter            store.GenerationChunkStatus    `json:"chunk_status_after,omitempty"`
+	UnleasedAfter               bool                           `json:"unleased_after,omitempty"`
+	StartCount                  uint64                         `json:"start_count"`
+	CompletionCount             uint64                         `json:"completion_count"`
+	RetrySuccessorCount         uint64                         `json:"retry_successor_count"`
+	PriorityBefore              uint64                         `json:"priority_before"`
+	PriorityAfter               uint64                         `json:"priority_after"`
+	AttemptBefore               uint64                         `json:"attempt_before"`
+	AttemptAfter                uint64                         `json:"attempt_after"`
+	PrivateLeaseTokenChanged    bool                           `json:"private_lease_token_changed"`
+	HardDeath                   bool                           `json:"hard_death"`
+	CooperativeRelease          bool                           `json:"cooperative_release"`
 }
 
 type PressureTransition struct {
@@ -2357,6 +2366,10 @@ func validateTransitionResults(
 			if value.ReadAccounting == nil || validateStaleLeaseTransitionReadSubtotal(*value.ReadAccounting) != nil {
 				return errors.New("stale lease transition read accounting is invalid")
 			}
+		} else if phase == "process_restart" {
+			if value.ReadAccounting == nil || validateCheckpointRestartReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("checkpoint restart transition read accounting is invalid")
+			}
 		} else if value.ReadAccounting != nil {
 			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
@@ -2650,6 +2663,20 @@ func validateStaleLeaseTransitionReadSubtotal(value TransitionReadSubtotal) erro
 	return nil
 }
 
+func validateCheckpointRestartReadSubtotal(value TransitionReadSubtotal) error {
+	bound, err := correctedCheckpointRestartReadBound()
+	if err != nil || value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedCheckpointRestartReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
+		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
+		return errors.New("checkpoint restart transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
 func validateInjectionTransition(
 	point FailurePoint,
 	value InjectionTransition,
@@ -2742,7 +2769,7 @@ func validateInjectionTransition(
 			return errors.New("activation chunk recovery is invalid")
 		}
 	case "checkpointed_hard_restart":
-		if err := validateCheckpointRecovery(value, phaseAuthority, children, freeze); err != nil {
+		if err := validateCheckpointRecovery(value, phaseAuthority, children, plan, freeze); err != nil {
 			return err
 		}
 	case "interrupted_publication":
@@ -2779,6 +2806,7 @@ func validateCheckpointRecovery(
 	value InjectionTransition,
 	authority AuthorityPhaseResult,
 	children []Count,
+	plan Plan,
 	freeze ExecutionFreeze,
 ) error {
 	checkpoint := value.Checkpoint
@@ -2813,6 +2841,31 @@ func validateCheckpointRecovery(
 			return errors.New("checkpoint identity is invalid")
 		}
 	}
+	attemptsExact := checkpoint.AttemptBefore != 0 && checkpoint.AttemptAfter == checkpoint.AttemptBefore
+	checkpointStateExact := checkpoint.ChunkIdentitySHA256 == "" &&
+		checkpoint.ScheduleStatusAtHit == "" && checkpoint.ChunkStatusAtHit == "" && !checkpoint.LeasedAtHit &&
+		!checkpoint.CurrentAbsentAtHit && checkpoint.ScheduleStatusAfter == "" &&
+		checkpoint.ChunkStatusAfter == "" && !checkpoint.UnleasedAfter
+	if plan.Schema == PlanV2Schema {
+		attemptsExact = checkpoint.AttemptBefore == 0 && checkpoint.AttemptAfter == 0
+		globalOffset := value.Target.Ordinal
+		for index := 0; index < rootIndex; index++ {
+			count := uint64(len(authority.ExtractionRoots[index].PartitionResults))
+			if globalOffset > uint64(math.MaxInt64) || count > uint64(math.MaxInt64)-globalOffset {
+				return errors.New("checkpoint chunk offset overflows")
+			}
+			globalOffset += count
+		}
+		chunkIdentity, err := store.GenerationChunkIdentity(
+			value.Target.ScheduleSHA256, int64(globalOffset), 0,
+		)
+		checkpointStateExact = err == nil && checkpoint.ChunkIdentitySHA256 == chunkIdentity &&
+			checkpoint.ScheduleStatusAtHit == store.GenerationScheduleActive &&
+			checkpoint.ChunkStatusAtHit == store.GenerationChunkRunning && checkpoint.LeasedAtHit &&
+			checkpoint.CurrentAbsentAtHit &&
+			checkpoint.ScheduleStatusAfter == store.GenerationScheduleSettled &&
+			checkpoint.ChunkStatusAfter == store.GenerationChunkDone && checkpoint.UnleasedAfter
+	}
 	if checkpoint.Domain != value.Target.Domain || !safeToken(checkpoint.ExtractorVersion, 128) ||
 		!injectionTargetMatchesPreparedExtraction(value, root) ||
 		checkpoint.ResultIdentitySHA256 != value.Target.UnitSHA256 ||
@@ -2827,8 +2880,8 @@ func validateCheckpointRecovery(
 		!checkpoint.SameResultBytesReused || !checkpoint.CompletionExistsAfter ||
 		!checkpoint.RootExistsAfter || !checkpoint.CurrentAfter || checkpoint.StartCount != 2 ||
 		checkpoint.CompletionCount != 1 || checkpoint.RetrySuccessorCount != 0 ||
-		checkpoint.PriorityBefore != 0 || checkpoint.PriorityAfter != 2 || checkpoint.AttemptBefore == 0 ||
-		checkpoint.AttemptAfter != checkpoint.AttemptBefore || !checkpoint.PrivateLeaseTokenChanged ||
+		checkpoint.PriorityBefore != 0 || checkpoint.PriorityAfter != 2 || !attemptsExact || !checkpointStateExact ||
+		!checkpoint.PrivateLeaseTokenChanged ||
 		!checkpoint.HardDeath || checkpoint.CooperativeRelease || children[phebsChildren].Count != 1 ||
 		value.ObservedRecoveryBranch != "hard_restart_reap_and_reuse_checkpoint" ||
 		value.RecoveredCandidates != 1 || value.CollectedCandidates != 0 ||
@@ -2942,11 +2995,32 @@ func injectionHitReportSHA256(value InjectionTransition, point FailurePoint) (st
 		CompletionFileExists, CompletionBitClear                                                                                    bool
 	}{preparation.PrepareEventOrdinal, preparation.AuthoritySHA256, preparation.PreservedRootsSHA256,
 		preparation.TargetGenerationSHA256, preparation.PriorScheduleSHA256, preparation.RecoveryGenerationSHA256, preparation.RecoveryScheduleSHA256,
-		preparation.ScheduleWrites, preparation.PreparationCompletionWrites, preparation.PreparationDeletes, fileExists, bitClear})
+		preparation.ScheduleWrites, preparation.PreparationCompletionWrites, preparation.PreparationDeletes,
+		fileExists, bitClear})
 	if err != nil {
 		return "", err
 	}
-	return recipeDigest("t422-prepared-exact-control-hit-report-v1", legacy, prefix), nil
+	if value.Checkpoint == nil {
+		return recipeDigest("t422-prepared-exact-control-hit-report-v1", legacy, prefix), nil
+	}
+	checkpointPrefix, err := receiptSHA256(struct {
+		ChunkIdentitySHA256             string
+		ScheduleStatusAtHit             store.GenerationScheduleStatus
+		ChunkStatusAtHit                store.GenerationChunkStatus
+		LeasedAtHit, CurrentAbsentAtHit bool
+	}{
+		value.Checkpoint.ChunkIdentitySHA256,
+		value.Checkpoint.ScheduleStatusAtHit,
+		value.Checkpoint.ChunkStatusAtHit,
+		value.Checkpoint.LeasedAtHit,
+		value.Checkpoint.CurrentAbsentAtHit,
+	})
+	if err != nil {
+		return "", err
+	}
+	return recipeDigest(
+		"t422-prepared-checkpoint-exact-control-hit-report-v1", legacy, prefix, checkpointPrefix,
+	), nil
 }
 
 func injectionRecoveryProjectionSHA256(value InjectionTransition, point FailurePoint) (string, error) {

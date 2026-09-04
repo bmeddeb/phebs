@@ -3779,6 +3779,67 @@ Process-restart, pressure, archive/restore, and lifecycle R, whole-phase sums,
 the final ordinal, corrected-plan freeze, runner execution, release, and
 scale/SLO evidence remain open. This slice does not authorize T42.2.
 
+The prepared-checkpoint hard-restart slice closes the prospective
+`prepared-checkpoint-hard-restart` R reader/accounting contract. Exact control
+installs one default-nil runtime hook after canonical-result reuse is validated
+and before domain assembly. The old epoch-three process emits the hit report;
+the reaper's store-owned Hit and requeue events remain private synchronization;
+and the new epoch-four process may emit recovery only after the same attempt-0
+chunk completes successfully. Neither reaper event is an R report. This ticket
+does not provide the controller, runner, or hard kill.
+
+Each event uses one self-confirming source-free reader. It reads the prepared
+binding, exact target generation, domain plan, canonical result, completion
+control, exact root attempt, and current pointer once, between two independently
+confirmed current-schedule/exact-chunk store pairs. The hit requires an active
+priority-0 attempt-0 row still running and leased, a durable canonical result,
+the selected completion bit clear, and both root and current pointer absent.
+Heartbeat renewal is intentionally excluded from the checkpoint fingerprint;
+every fixed scheduler field and the opaque private lease-token identity remain
+fenced. At recovery, the same attempt-0 chunk must be priority 2, done and
+unleased in a settled schedule, with no retry successor and its final row token
+cleared. The new-epoch controller privately compares the killed-token
+fingerprint from the reaper Hit with the recovered callback's new-claim
+fingerprint; the prepared hit fingerprint may remain in-process, and raw tokens
+are never evidence. The canonical result bytes must be identical, and the
+completion bit, exact root, and exact current pointer must all be restored.
+Distinct old/new process identities and byte-exact protected return-A authority
+are mandatory.
+
+V2 maps the target generation to the immutable extraction generation, the plan
+to that generation's domain plan, the schedule to the preparation recovery
+schedule, and the unit plus selector bounds to the canonical result. The
+distinct recovery-schedule generation remains bound to that target and its
+predecessor schedule. The exact scheduler-row identity is derived from that
+schedule, the target's generation-global partition offset, and attempt 0;
+mixed identity roles refuse.
+
+The two V2 reports each cost exactly `C/S/M/W=7/4/0/0`, for aggregate
+`14/8/0/0`. The hit raises epoch-three requests `11,530→11,531` and transition
+`calls/C/S` `4/18/8→5/25/12`; recovery raises epoch four `6,254→6,255` and
+`0/0/0→1/7/4`. V1 bytes and semantics stay exact and gain no subtotal. The
+seven charged controls include the expected absent root/current attempts at
+the hit; four one-row store reads fence each report. The compact policy token is
+`p2C7S4`. Its `meta=0` spelling only shortens the former `metadata=0` label to
+stay inside the existing plan-byte cap and changes no semantics.
+
+Readers are synchronous, one-shot, nonpolling, uncached, child-free,
+member-free, and write-free. Each report takes the existing per-plan assembly
+mutex once through its existing context-bounded acquisition around
+completion/root/current inspection and releases it before the second store
+confirmation and any report or wait; no new lock class is added.
+Limit-plus-one, malformed or moving state, hook, reaper-synchronization, and
+report errors fail exact mode closed. Hit failure
+returns before assembly and preserves the prepared checkpoint. Recovery-report
+failure occurs after successful completion and exact root/current durability,
+cannot roll those facts back, and is surfaced by the scheduler report path.
+Ordinary reused-result handling adds only one inactive nil branch and no global
+hook, schema, state, goroutine, lock class, cache, retry, lock acquisition, or
+I/O. Pressure,
+archive/restore, and lifecycle R, whole-phase sums, final ordinal, corrected-plan
+freeze, actual hard-kill/runner execution, release, and scale/SLO evidence
+remain open. This slice does not authorize T42.2.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

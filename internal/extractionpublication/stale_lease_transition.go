@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -43,6 +44,15 @@ type StaleLeaseTransition struct {
 	Ordinal             int                                       `json:"ordinal"`
 	PlanDigest          string                                    `json:"plan_digest"`
 	ResultIdentity      string                                    `json:"result_identity"`
+}
+
+type preparedTransitionTarget struct {
+	binding    scheduleBinding
+	generation Generation
+	descriptor DomainDescriptor
+	domain     DomainPlan
+	result     candidate.PartitionResult
+	ordinal    int
 }
 
 // ReadStaleLeaseTransition reads one exact hit or post-completion recovery.
@@ -87,56 +97,12 @@ func (runtime *Runtime) ReadStaleLeaseTransition(
 		return StaleLeaseTransition{}, ErrStale
 	}
 
-	binding, err := runtime.readBindingContext(ctx, transition.Repository, transition.Generation)
-	if err != nil {
-		return StaleLeaseTransition{}, err
-	}
-	if binding.TargetGeneration != request.TargetGeneration ||
-		binding.PriorSchedule != request.PriorScheduleDigest {
-		return StaleLeaseTransition{}, ErrStale
-	}
-	directory := runtime.generationDirectory(transition.Repository, request.TargetGeneration)
-	generation, err := runtime.openGenerationContext(
-		ctx, directory, transition.Repository, request.TargetGeneration,
+	target, err := runtime.readPreparedTransitionTarget(
+		ctx, transition, request.TargetGeneration, request.PriorScheduleDigest,
+		request.Domain, request.Ordinal, request.PlanDigest, request.ResultIdentity,
 	)
 	if err != nil {
 		return StaleLeaseTransition{}, err
-	}
-	wantSchedule, err := store.GenerationScheduleDigest(store.GenerationScheduleSpec{
-		Repository: transition.Repository, Stage: ScheduleStage,
-		Generation: transition.Generation, ResourceClass: store.GenerationResourceExtraction,
-		TotalItems: int64(generation.WorkItems), ChunkItems: ScheduleChunkItems,
-		MaxAttempts: ScheduleMaxAttempts, RepositoryTokens: ScheduleRepositoryTokens,
-	})
-	if err != nil || transition.ScheduleDigest != wantSchedule {
-		return StaleLeaseTransition{}, ErrStale
-	}
-	descriptor, ordinal, err := domainForOffset(generation, int(transition.Offset))
-	if err != nil {
-		return StaleLeaseTransition{}, err
-	}
-	if descriptor.Domain != request.Domain || descriptor.PlanDigest != request.PlanDigest ||
-		ordinal != request.Ordinal {
-		return StaleLeaseTransition{}, ErrStale
-	}
-	domain, err := runtime.openDomainPlanContext(ctx, directory, descriptor)
-	if err != nil {
-		return StaleLeaseTransition{}, err
-	}
-	if domain.Plan.Repository != transition.Repository {
-		return StaleLeaseTransition{}, ErrStale
-	}
-	result, present, err := readPartitionResultContext(
-		ctx,
-		filepath.Join(directory, domainKey(descriptor.Domain), resultName(ordinal)),
-		domain.Plan,
-		ordinal,
-	)
-	if err != nil {
-		return StaleLeaseTransition{}, err
-	}
-	if !present || result.Identity != request.ResultIdentity {
-		return StaleLeaseTransition{}, ErrStale
 	}
 	after, err := reader.ReadGenerationStaleLeaseTransition(ctx, storeRequest)
 	if err != nil {
@@ -146,11 +112,76 @@ func (runtime *Runtime) ReadStaleLeaseTransition(
 		return StaleLeaseTransition{}, ErrStale
 	}
 	return StaleLeaseTransition{
-		Point: transition.Point, TargetGeneration: generation.Digest,
-		ScheduleGeneration:  binding.ScheduleGeneration,
-		PriorScheduleDigest: binding.PriorSchedule, ScheduleDigest: transition.ScheduleDigest,
-		ChunkIdentity: transition.ChunkIdentity, Domain: descriptor.Domain,
-		Ordinal: ordinal, PlanDigest: domain.Plan.Digest, ResultIdentity: result.Identity,
+		Point: transition.Point, TargetGeneration: target.generation.Digest,
+		ScheduleGeneration:  target.binding.ScheduleGeneration,
+		PriorScheduleDigest: target.binding.PriorSchedule, ScheduleDigest: transition.ScheduleDigest,
+		ChunkIdentity: transition.ChunkIdentity, Domain: target.descriptor.Domain,
+		Ordinal: target.ordinal, PlanDigest: target.domain.Plan.Digest, ResultIdentity: target.result.Identity,
+	}, nil
+}
+
+func (runtime *Runtime) readPreparedTransitionTarget(
+	ctx context.Context,
+	transition store.GenerationStaleLeaseTransition,
+	targetGeneration string,
+	priorScheduleDigest string,
+	domainName string,
+	ordinal int,
+	planDigest string,
+	resultIdentity string,
+) (preparedTransitionTarget, error) {
+	binding, err := runtime.readBindingContext(ctx, transition.Repository, transition.Generation)
+	if err != nil {
+		return preparedTransitionTarget{}, err
+	}
+	if binding.TargetGeneration != targetGeneration || binding.PriorSchedule != priorScheduleDigest {
+		return preparedTransitionTarget{}, ErrStale
+	}
+	directory := runtime.generationDirectory(transition.Repository, targetGeneration)
+	generation, err := runtime.openGenerationContext(
+		ctx, directory, transition.Repository, targetGeneration,
+	)
+	if err != nil {
+		return preparedTransitionTarget{}, err
+	}
+	wantSchedule, err := store.GenerationScheduleDigest(store.GenerationScheduleSpec{
+		Repository: transition.Repository, Stage: ScheduleStage,
+		Generation: transition.Generation, ResourceClass: store.GenerationResourceExtraction,
+		TotalItems: int64(generation.WorkItems), ChunkItems: ScheduleChunkItems,
+		MaxAttempts: ScheduleMaxAttempts, RepositoryTokens: ScheduleRepositoryTokens,
+	})
+	if err != nil || transition.ScheduleDigest != wantSchedule {
+		return preparedTransitionTarget{}, ErrStale
+	}
+	descriptor, localOrdinal, err := domainForOffset(generation, int(transition.Offset))
+	if err != nil {
+		return preparedTransitionTarget{}, err
+	}
+	if descriptor.Domain != domainName || descriptor.PlanDigest != planDigest || localOrdinal != ordinal {
+		return preparedTransitionTarget{}, ErrStale
+	}
+	domain, err := runtime.openDomainPlanContext(ctx, directory, descriptor)
+	if err != nil {
+		return preparedTransitionTarget{}, err
+	}
+	if domain.Plan.Repository != transition.Repository {
+		return preparedTransitionTarget{}, ErrStale
+	}
+	result, present, err := readPartitionResultContext(
+		ctx,
+		filepath.Join(directory, domainKey(descriptor.Domain), resultName(localOrdinal)),
+		domain.Plan,
+		localOrdinal,
+	)
+	if err != nil {
+		return preparedTransitionTarget{}, err
+	}
+	if !present || result.Identity != resultIdentity {
+		return preparedTransitionTarget{}, ErrStale
+	}
+	return preparedTransitionTarget{
+		binding: binding, generation: generation, descriptor: descriptor,
+		domain: domain, result: result, ordinal: localOrdinal,
 	}, nil
 }
 
