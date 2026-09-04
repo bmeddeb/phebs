@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
@@ -21,6 +23,11 @@ import (
 
 const (
 	MaxServiceStateV3ChunkRows = 512
+	// ServiceStateV3ActivationTransitionTargetOffset is the frozen T42 logical
+	// transition unit. The exact transition reader performs five store reads:
+	// selector, plan, schedule, this unit, and the selector confirmation.
+	ServiceStateV3ActivationTransitionTargetOffset      int64  = 9
+	ServiceStateV3ActivationTransitionStoreReadAttempts uint64 = 5
 
 	ServiceStateV3ReconcileStage = "service-state-v3-reconcile"
 	ServiceStateV3ActivateStage  = "service-state-v3-activate"
@@ -93,6 +100,37 @@ type ServiceStateV3ActivationAuthority struct {
 	PlanDigest     string
 	ScheduleDigest string
 	UnitDigest     string
+}
+
+type ServiceStateV3ActivationTransitionPoint string
+
+const (
+	ServiceStateV3ActivationTransitionHit       ServiceStateV3ActivationTransitionPoint = "hit"
+	ServiceStateV3ActivationTransitionRecovered ServiceStateV3ActivationTransitionPoint = "recovered"
+)
+
+// ServiceStateV3ActivationTransitionRequest names one exact logical-transition
+// snapshot. ExpectedSelector is the already-observed prior or final product
+// authority; the reader refuses if current selection changed.
+type ServiceStateV3ActivationTransitionRequest struct {
+	Point            ServiceStateV3ActivationTransitionPoint
+	ExpectedSelector ServiceRuntimeSelector
+	PlanDigest       string
+	ScheduleDigest   string
+	UnitDigest       string
+}
+
+// ServiceStateV3ActivationTransition is the bounded source-free identity of a
+// validated hit or recovered snapshot. Worker identity, lease token, raw rows,
+// and timestamps stay inside the store.
+type ServiceStateV3ActivationTransition struct {
+	Point                  ServiceStateV3ActivationTransitionPoint
+	SelectorDigest         string
+	CatalogRootDigest      string
+	SearchGenerationDigest string
+	PlanDigest             string
+	ScheduleDigest         string
+	UnitDigest             string
 }
 
 type serviceStateV3PlanRec struct {
@@ -371,7 +409,9 @@ SELECT * FROM service_state_v3_plan
 		plan.SearchGeneration != selector.SearchGenerationDigest ||
 		plan.SummaryControlRevision != selector.StateControlRevision ||
 		plan.SummaryDigest != selector.StateSummaryDigest || plan.Repair != 0 ||
-		plan.BaseChunk != 0 || plan.ServiceMemberChunks <= 9 || plan.NextChunk != plan.TotalChunks {
+		plan.BaseChunk != 0 ||
+		plan.ServiceMemberChunks <= int(ServiceStateV3ActivationTransitionTargetOffset) ||
+		plan.NextChunk != plan.TotalChunks {
 		return ServiceStateV3ActivationAuthority{}, ErrInvalidServiceStateV3
 	}
 
@@ -399,10 +439,11 @@ SELECT * FROM service_state_v3_plan
 	unitResults, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
 SELECT * FROM generation_schedule_chunk
 	WHERE schedule_digest = $schedule AND repository = $repository
-		AND stage = $stage AND generation = $generation AND offset = 9
+		AND stage = $stage AND generation = $generation AND offset = $offset
 	ORDER BY attempt LIMIT 2`, map[string]any{
 		"schedule": schedule.Digest, "repository": selector.Repository,
 		"stage": ServiceStateV3ActivateStage, "generation": plan.Digest,
+		"offset": ServiceStateV3ActivationTransitionTargetOffset,
 	})
 	if err != nil {
 		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
@@ -414,17 +455,191 @@ SELECT * FROM generation_schedule_chunk
 		return ServiceStateV3ActivationAuthority{}, ErrInvalidServiceStateV3
 	}
 	unit, err := units[0].chunk()
-	if err != nil || unit.Identity != generationChunkID(schedule.Digest, 9, 0) ||
+	_, cleanCompletion, recoveredCompletion := serviceStateV3ActivationUnitShape(unit)
+	if err != nil || unit.Identity != generationChunkID(
+		schedule.Digest, ServiceStateV3ActivationTransitionTargetOffset, 0,
+	) ||
 		unit.ScheduleDigest != schedule.Digest || unit.Repository != selector.Repository ||
 		unit.Stage != ServiceStateV3ActivateStage || unit.Generation != plan.Digest ||
-		unit.ResourceClass != GenerationResourceCPU || unit.Offset != 9 || unit.Length != 1 ||
-		unit.Attempt != 0 || unit.Status != GenerationChunkDone || unit.LeaseToken != "" ||
-		unit.Error != "" {
+		unit.ResourceClass != GenerationResourceCPU ||
+		unit.Offset != ServiceStateV3ActivationTransitionTargetOffset || unit.Length != 1 ||
+		unit.Attempt != 0 || (!cleanCompletion && !recoveredCompletion) {
 		return ServiceStateV3ActivationAuthority{}, errors.Join(err, ErrInvalidServiceStateV3)
 	}
 	return ServiceStateV3ActivationAuthority{
 		PlanDigest: plan.Digest, ScheduleDigest: schedule.Digest, UnitDigest: unit.Identity,
 	}, nil
+}
+
+// ReadServiceStateV3ActivationTransition validates one exact snapshot at the
+// committed ninth activation unit or after its schedule recovers. The five
+// bounded queries are charged separately and never mutate scheduler state.
+func (s *Surreal) ReadServiceStateV3ActivationTransition(
+	ctx context.Context,
+	request ServiceStateV3ActivationTransitionRequest,
+) (ServiceStateV3ActivationTransition, error) {
+	if ctx == nil || validateServiceRuntimeSelector(request.ExpectedSelector) != nil ||
+		request.ExpectedSelector.Backend != ServiceRuntimeV3 ||
+		!validSHA256Digest(request.PlanDigest) ||
+		!validSHA256Digest(request.ScheduleDigest) ||
+		!validSHA256Digest(request.UnitDigest) ||
+		(request.Point != ServiceStateV3ActivationTransitionHit &&
+			request.Point != ServiceStateV3ActivationTransitionRecovered) {
+		return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+	}
+	selector, err := s.GetServiceRuntimeSelector(ctx, request.ExpectedSelector.Repository)
+	if err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"read service state v3 activation transition selector: %w", err,
+		)
+	}
+	if selector != request.ExpectedSelector {
+		return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+	}
+
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"read service state v3 activation transition plan: %w", err,
+		)
+	}
+	plan, err := s.getServiceStateV3Plan(ctx, request.PlanDigest)
+	if err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"read service state v3 activation transition plan: %w", err,
+		)
+	}
+	if plan.Digest != request.PlanDigest || plan.Repository != selector.Repository ||
+		plan.Phase != serviceStateV3Activate || plan.Repair != 0 || plan.BaseChunk != 0 ||
+		plan.ScheduleDigest != request.ScheduleDigest ||
+		plan.SearchGeneration != selector.SearchGenerationDigest ||
+		plan.ServiceMemberChunks <= int(ServiceStateV3ActivationTransitionTargetOffset) ||
+		plan.TotalChunks <= int(ServiceStateV3ActivationTransitionTargetOffset)+1 {
+		return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+	}
+
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"read service state v3 activation transition schedule: %w", err,
+		)
+	}
+	schedule, err := s.generationScheduleByDigest(ctx, request.ScheduleDigest)
+	if err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"read service state v3 activation transition schedule: %w", err,
+		)
+	}
+	if ValidateGenerationSchedule(*schedule) != nil || schedule.Digest != request.ScheduleDigest ||
+		schedule.Repository != plan.Repository || schedule.Stage != ServiceStateV3ActivateStage ||
+		schedule.Generation != plan.Digest || schedule.ResourceClass != GenerationResourceCPU ||
+		schedule.TotalItems != int64(plan.TotalChunks) || schedule.ChunkItems != 1 ||
+		schedule.TotalChunks != plan.TotalChunks || schedule.MaxAttempts != MaxGenerationAttempts ||
+		schedule.RepositoryTokens != 1 || schedule.NextOffset != schedule.TotalItems ||
+		schedule.Materialized != schedule.TotalChunks {
+		return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+	}
+
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"read service state v3 activation transition unit: %w", err,
+		)
+	}
+	unitResults, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
+SELECT * FROM generation_schedule_chunk
+	WHERE schedule_digest = $schedule AND repository = $repository
+		AND stage = $stage AND generation = $generation AND offset = $offset
+	ORDER BY attempt LIMIT 2`, map[string]any{
+		"schedule": schedule.Digest, "repository": plan.Repository,
+		"stage": ServiceStateV3ActivateStage, "generation": plan.Digest,
+		"offset": ServiceStateV3ActivationTransitionTargetOffset,
+	})
+	if err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"read service state v3 activation transition unit: %w", err,
+		)
+	}
+	units := generationChunkRows(unitResults)
+	if len(units) != 1 {
+		return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+	}
+	unit, err := units[0].chunk()
+	if err != nil {
+		return ServiceStateV3ActivationTransition{}, errors.Join(err, ErrInvalidServiceStateV3)
+	}
+	if unit.Identity != request.UnitDigest ||
+		unit.Identity != generationChunkID(
+			schedule.Digest, ServiceStateV3ActivationTransitionTargetOffset, 0,
+		) || unit.ScheduleDigest != schedule.Digest || unit.Repository != plan.Repository ||
+		unit.Stage != ServiceStateV3ActivateStage || unit.Generation != plan.Digest ||
+		unit.ResourceClass != GenerationResourceCPU ||
+		unit.Offset != ServiceStateV3ActivationTransitionTargetOffset || unit.Length != 1 ||
+		unit.Attempt != 0 {
+		return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+	}
+
+	targetNext := int(ServiceStateV3ActivationTransitionTargetOffset) + 1
+	runningUnit, _, recoveredUnit := serviceStateV3ActivationUnitShape(unit)
+	switch request.Point {
+	case ServiceStateV3ActivationTransitionHit:
+		if plan.State != serviceStateV3Running || plan.NextChunk != targetNext ||
+			schedule.Status != GenerationScheduleActive || schedule.Pending != schedule.TotalChunks-targetNext ||
+			schedule.Running != 1 || schedule.Succeeded != targetNext-1 || schedule.Failed != 0 ||
+			!runningUnit {
+			return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+		}
+	case ServiceStateV3ActivationTransitionRecovered:
+		if plan.State != serviceStateV3Activated || plan.NextChunk != plan.TotalChunks ||
+			plan.CatalogRoot != selector.CatalogRootDigest ||
+			plan.CatalogControlRevision != selector.CatalogControlRevision ||
+			plan.SummaryControlRevision != selector.StateControlRevision ||
+			plan.SummaryDigest != selector.StateSummaryDigest ||
+			schedule.Status != GenerationScheduleSettled || schedule.Pending != 0 ||
+			schedule.Running != 0 || schedule.Succeeded != schedule.TotalChunks ||
+			schedule.Failed != 0 || !recoveredUnit {
+			return ServiceStateV3ActivationTransition{}, ErrInvalidServiceStateV3
+		}
+	}
+	if err := s.ConfirmServiceRuntimeSelector(ctx, request.ExpectedSelector); err != nil {
+		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
+			"confirm service state v3 activation transition selector: %w", err,
+		)
+	}
+	return ServiceStateV3ActivationTransition{
+		Point: request.Point, SelectorDigest: selector.Digest,
+		CatalogRootDigest: plan.CatalogRoot, SearchGenerationDigest: plan.SearchGeneration,
+		PlanDigest: plan.Digest, ScheduleDigest: schedule.Digest, UnitDigest: unit.Identity,
+	}, nil
+}
+
+// serviceStateV3ActivationUnitShape accepts only row shapes written by claim,
+// completion, and the one release/reclaim path used by the exact transition.
+func serviceStateV3ActivationUnitShape(unit GenerationChunk) (running, clean, recovered bool) {
+	validWorker := unit.ClaimedBy != "" && strings.TrimSpace(unit.ClaimedBy) == unit.ClaimedBy &&
+		len(unit.ClaimedBy) <= MaxGenerationWorkerBytes && utf8.ValidString(unit.ClaimedBy)
+	if !validWorker || unit.NotBefore != nil || unit.ClaimedAt == nil || unit.ClaimedAt.IsZero() {
+		return false, false, false
+	}
+	if unit.Status == GenerationChunkRunning && validGenerationChunkLease(unit) == nil &&
+		validServiceStateV3LeaseToken(unit.LeaseToken) && unit.Priority == GenerationPriorityNeverRun &&
+		unit.HeartbeatAt != nil && !unit.HeartbeatAt.IsZero() &&
+		!unit.HeartbeatAt.Before(*unit.ClaimedAt) && unit.FinishedAt == nil && unit.Error == "" {
+		running = true
+	}
+	if unit.Status != GenerationChunkDone || unit.LeaseToken != "" || unit.HeartbeatAt != nil ||
+		unit.FinishedAt == nil || unit.FinishedAt.IsZero() || unit.FinishedAt.Before(*unit.ClaimedAt) {
+		return running, false, false
+	}
+	clean = unit.Priority == GenerationPriorityNeverRun && unit.Error == ""
+	recovered = unit.Priority == GenerationPriorityStale && unit.Error != "" &&
+		boundedGenerationError(unit.Error) == unit.Error
+	return running, clean, recovered
+}
+
+func validServiceStateV3LeaseToken(token string) bool {
+	if len(token) != 32 {
+		return false
+	}
+	decoded, err := hex.DecodeString(token)
+	return err == nil && hex.EncodeToString(decoded) == token
 }
 
 func (s *Surreal) getRawServiceStateV3Summary(

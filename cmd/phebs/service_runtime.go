@@ -59,6 +59,10 @@ type serviceRuntimeController struct {
 	relationshipV3Cache *relationshippublication.CacheV3
 	pins                map[string]*serviceRuntimeProcessPins
 	uncertainPins       map[string]*serviceRuntimeProcessPins
+	// afterActivationTransitionCommit is installed only by the prospective
+	// exact-control path. It owns any reporting failure because the state chunk
+	// is already durable when this callback runs.
+	afterActivationTransitionCommit func(context.Context, store.GenerationChunk)
 }
 
 func newServiceRuntimeController(
@@ -169,8 +173,12 @@ func (controller *serviceRuntimeController) ProcessServiceStateV3Chunk(
 	}
 	defer release()
 	result, err := controller.store.ProcessServiceStateV3Chunk(ctx, chunk)
-	if err != nil || !result.Settled {
+	if err != nil {
 		return result, err
+	}
+	if !result.Settled {
+		controller.reportActivationTransitionCommit(ctx, chunk, result)
+		return result, nil
 	}
 	err = controller.advanceLocked(ctx, chunk.Repository)
 	if errors.Is(err, errServiceRuntimeContinuation) {
@@ -179,6 +187,21 @@ func (controller *serviceRuntimeController) ProcessServiceStateV3Chunk(
 		err = store.WithDeferral(err)
 	}
 	return result, err
+}
+
+func (controller *serviceRuntimeController) reportActivationTransitionCommit(
+	ctx context.Context,
+	chunk store.GenerationChunk,
+	result store.ServiceStateV3ChunkResult,
+) {
+	if controller.afterActivationTransitionCommit == nil ||
+		chunk.Stage != store.ServiceStateV3ActivateStage ||
+		chunk.Offset != store.ServiceStateV3ActivationTransitionTargetOffset ||
+		chunk.Attempt != 0 || result.Read != store.MaxServiceStateV3ChunkRows ||
+		result.Applied != 1 {
+		return
+	}
+	controller.afterActivationTransitionCommit(ctx, chunk)
 }
 
 func advanceV2WithHolding(

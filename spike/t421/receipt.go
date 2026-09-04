@@ -2345,6 +2345,10 @@ func validateTransitionResults(
 			if value.ReadAccounting == nil || validatePhysicalTransitionReadSubtotal(*value.ReadAccounting, plan) != nil {
 				return errors.New("physical delta transition read accounting is invalid")
 			}
+		} else if phase == "logical_delta_b" {
+			if value.ReadAccounting == nil || validateLogicalTransitionReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("logical delta transition read accounting is invalid")
+			}
 		} else if value.ReadAccounting != nil {
 			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
@@ -2596,6 +2600,20 @@ func validatePhysicalTransitionReadSubtotal(value TransitionReadSubtotal, plan P
 	return nil
 }
 
+func validateLogicalTransitionReadSubtotal(value TransitionReadSubtotal) error {
+	bound, err := correctedLogicalTransitionReadBound()
+	if err != nil || value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedLogicalTransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
+		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
+		return errors.New("logical transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
 func validateInjectionTransition(
 	point FailurePoint,
 	value InjectionTransition,
@@ -2663,6 +2681,10 @@ func validateInjectionTransition(
 	}
 	switch point.Name {
 	case "partial_service_activation":
+		wantRequeues := uint64(0)
+		if plan.Schema == PlanV2Schema {
+			wantRequeues = 1
+		}
 		if value.ObservedRecoveryBranch != "resume_activation_schedule" || value.RecoveredCandidates != 1 ||
 			value.CollectedCandidates != 0 || value.TargetGenerationBefore != authorityBefore.CatalogRootSHA256 ||
 			value.TargetGenerationAfter != phaseAuthority.CatalogRootSHA256 ||
@@ -2671,7 +2693,7 @@ func validateInjectionTransition(
 			value.Target.PlanSHA256 != phaseAuthority.CatalogActivationPlanSHA256 ||
 			value.Target.ScheduleSHA256 != phaseAuthority.CatalogActivationScheduleSHA256 ||
 			value.Target.UnitSHA256 != phaseAuthority.CatalogActivationUnitSHA256 ||
-			value.RequeueCount != 0 || value.SuccessCount != 1 || value.Checkpoint != nil ||
+			value.RequeueCount != wantRequeues || value.SuccessCount != 1 || value.Checkpoint != nil ||
 			hasProcessEvidence(value) {
 			return errors.New("activation chunk recovery is invalid")
 		}

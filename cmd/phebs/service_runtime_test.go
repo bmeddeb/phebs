@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -139,6 +140,218 @@ func TestServiceStateV3ChunkWaitsForMutationFence(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("state chunk did not resume after mutation fence")
+	}
+}
+
+func TestServiceRuntimeReportsOnlyFreshActivationTransitionCommit(t *testing.T) {
+	var reported []store.GenerationChunk
+	controller := &serviceRuntimeController{
+		afterActivationTransitionCommit: func(_ context.Context, chunk store.GenerationChunk) {
+			reported = append(reported, chunk)
+		},
+	}
+	target := store.GenerationChunk{
+		Stage:  store.ServiceStateV3ActivateStage,
+		Offset: store.ServiceStateV3ActivationTransitionTargetOffset,
+	}
+	controller.reportActivationTransitionCommit(
+		t.Context(), target, store.ServiceStateV3ChunkResult{
+			Applied: 1, Read: store.MaxServiceStateV3ChunkRows,
+		},
+	)
+	exact := store.ServiceStateV3ChunkResult{Applied: 1, Read: store.MaxServiceStateV3ChunkRows}
+	for _, changed := range []struct {
+		chunk  store.GenerationChunk
+		result store.ServiceStateV3ChunkResult
+	}{
+		{chunk: store.GenerationChunk{Stage: store.ServiceStateV3ReconcileStage, Offset: target.Offset}, result: exact},
+		{chunk: store.GenerationChunk{Stage: target.Stage, Offset: target.Offset - 1}, result: exact},
+		{chunk: store.GenerationChunk{Stage: target.Stage, Offset: target.Offset, Attempt: 1}, result: exact},
+		{chunk: target},
+		{chunk: target, result: store.ServiceStateV3ChunkResult{Read: store.MaxServiceStateV3ChunkRows}},
+		{chunk: target, result: store.ServiceStateV3ChunkResult{Applied: 2, Read: store.MaxServiceStateV3ChunkRows}},
+		{chunk: target, result: store.ServiceStateV3ChunkResult{Applied: 1, Read: store.MaxServiceStateV3ChunkRows - 1}},
+	} {
+		controller.reportActivationTransitionCommit(t.Context(), changed.chunk, changed.result)
+	}
+	if len(reported) != 1 || reported[0] != target {
+		t.Fatalf("activation transition reports = %+v", reported)
+	}
+}
+
+func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
+	ctx := t.Context()
+	st, err := store.OpenLocal(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+	const repository = "example.com/acme/runtime-transition"
+	commit := strings.Repeat("7", 40)
+	if err := st.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://" + repository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	services := make([]servicecatalog.Service, 5_121)
+	memberships := make([]servicecatalog.Membership, len(services))
+	for index := range services {
+		key := fmt.Sprintf("service-%05d", index)
+		services[index] = servicecatalog.Service{
+			Key: key, DisplayName: fmt.Sprintf("Service %d", index),
+			Disposition: servicecatalog.DispositionAccepted, Origin: servicecatalog.OriginBase,
+		}
+		memberships[index] = servicecatalog.Membership{
+			ServiceKey: key, Path: fmt.Sprintf("svc/%05d", index),
+			Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase,
+		}
+	}
+	build := func(version string, values []servicecatalog.Service) servicecatalogv3.Generation {
+		t.Helper()
+		authority := servicecatalog.Authority{
+			Kind: servicecatalog.AuthorityOperator, ID: "runtime-transition", Version: version,
+		}
+		generation, buildErr := servicecatalogv3.Build(servicecatalogv3.Binding{
+			Repository: repository,
+			Source: servicecatalogv3.Source{
+				Kind: servicecatalog.SourceOperator, Path: "/catalog.json", Commit: commit,
+				CensusDigest: testRuntimeDigest("c"), FileCount: 1, AcceptedFileCount: 1,
+			},
+			Authority: authority,
+		}, servicecatalog.Catalog{
+			Schema: servicecatalog.Schema, Authority: authority,
+			Services: values, Memberships: memberships,
+		})
+		if buildErr != nil {
+			t.Fatal(buildErr)
+		}
+		return generation
+	}
+	expand := func(begin store.ServiceStateV3Begin) {
+		t.Helper()
+		schedule := begin.Schedule
+		for schedule.NextOffset < schedule.TotalItems {
+			schedule, err = st.ExpandGenerationSchedule(
+				ctx, schedule.Repository, schedule.Stage, schedule.Generation,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	run := func(begin store.ServiceStateV3Begin) {
+		t.Helper()
+		expand(begin)
+		for {
+			chunk, claimErr := st.ClaimGenerationChunk(
+				ctx, store.GenerationResourceCPU, "runtime-transition-setup",
+			)
+			if claimErr != nil {
+				t.Fatal(claimErr)
+			}
+			if _, processErr := st.ProcessServiceStateV3Chunk(ctx, *chunk); processErr != nil {
+				t.Fatal(processErr)
+			}
+			if completeErr := st.CompleteGenerationChunk(ctx, *chunk); completeErr != nil {
+				t.Fatal(completeErr)
+			}
+			schedule, scheduleErr := st.GetGenerationSchedule(ctx, chunk.Repository, chunk.Stage)
+			if scheduleErr != nil {
+				t.Fatal(scheduleErr)
+			}
+			if schedule.Status == store.GenerationScheduleSettled {
+				return
+			}
+		}
+	}
+
+	generationA := build("a", services)
+	if err := st.PublishServiceCatalogV3Candidate(ctx, generationA); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err := st.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run(reconcile)
+	search := testRuntimeDigest("8")
+	activation, err := st.BeginServiceStateV3Activation(ctx, repository, search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run(activation)
+
+	servicesB := slices.Clone(services)
+	servicesB[5_000].DisplayName = "Service 5000 B"
+	generationB := build("b", servicesB)
+	if err := st.PublishServiceCatalogV3Candidate(ctx, generationB); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err = st.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run(reconcile)
+	activation, err = st.BeginServiceStateV3Activation(ctx, repository, search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expand(activation)
+	for offset := int64(0); offset < store.ServiceStateV3ActivationTransitionTargetOffset; offset++ {
+		chunk, claimErr := st.ClaimGenerationChunk(ctx, store.GenerationResourceCPU, "runtime-transition")
+		if claimErr != nil || chunk.Offset != offset {
+			t.Fatalf("claim activation offset %d = %+v, %v", offset, chunk, claimErr)
+		}
+		if _, processErr := st.ProcessServiceStateV3Chunk(ctx, *chunk); processErr != nil {
+			t.Fatal(processErr)
+		}
+		if completeErr := st.CompleteGenerationChunk(ctx, *chunk); completeErr != nil {
+			t.Fatal(completeErr)
+		}
+	}
+	target, err := st.ClaimGenerationChunk(ctx, store.GenerationResourceCPU, "runtime-transition")
+	if err != nil || target.Offset != store.ServiceStateV3ActivationTransitionTargetOffset {
+		t.Fatalf("claim activation target = %+v, %v", target, err)
+	}
+
+	locked := false
+	reports := 0
+	controller := &serviceRuntimeController{
+		store: st, selections: map[string]config.ServiceCatalog{},
+		acquire: func(context.Context) (func(), error) {
+			if locked {
+				t.Fatal("transition lock was reacquired")
+			}
+			locked = true
+			return func() { locked = false }, nil
+		},
+		afterActivationTransitionCommit: func(callbackCtx context.Context, chunk store.GenerationChunk) {
+			reports++
+			if !locked || chunk.Identity != target.Identity {
+				t.Fatalf("activation callback lost commit lock or target: locked=%t chunk=%+v", locked, chunk)
+			}
+			point, pointErr := st.GetServiceStateV3Point(
+				callbackCtx, repository, servicesB[5_000].Key,
+			)
+			if pointErr != nil || point.DisplayName != servicesB[5_000].DisplayName ||
+				point.ActiveCatalogGeneration != generationB.Root.Digest {
+				t.Fatalf("activation callback preceded durable member commit: %+v, %v", point, pointErr)
+			}
+		},
+	}
+	result, err := controller.ProcessServiceStateV3Chunk(ctx, *target)
+	if err != nil || result.Settled || result.Read != store.MaxServiceStateV3ChunkRows ||
+		result.Applied != 1 || reports != 1 || locked {
+		t.Fatalf("activation target = %+v, reports=%d, locked=%t, err=%v", result, reports, locked, err)
+	}
+	replay, err := controller.ProcessServiceStateV3Chunk(ctx, *target)
+	if err != nil || replay.Settled || replay.Read != 0 || replay.Applied != 0 ||
+		reports != 1 || locked {
+		t.Fatalf("activation replay = %+v, reports=%d, locked=%t, err=%v", replay, reports, locked, err)
 	}
 }
 

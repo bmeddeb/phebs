@@ -1224,6 +1224,62 @@ the decoded source-owner validations are the recorded M visits. No ordinary
 query, startup, sync, retry, publication, lifecycle, cache, store, child, or
 persistent-state path calls the exact reader.
 
+#### Logical activation R accounting
+
+Logical B now has an exact transition-local witness rather than borrowing F's
+settled activation proof. The default-inactive controller hook recognizes only
+the fresh attempt-0 offset-9 activation commit. It runs before the handler
+returns, so the target unit remains leased and the schedule's one repository
+token prevents a next claim. Replays have zero newly read rows and do not
+re-report the hit.
+
+The hit snapshot binds the prior selector, its unchanged physical search
+generation, a running plan at `next_chunk=10`, a fully materialized active
+schedule with nine succeeded/one running, and the leased target unit. The
+recovered snapshot binds the final selector and the
+same immutable plan/schedule/unit identities with an activated plan, settled
+all-success schedule, and a done, unleased, released/reclaimed stale-priority
+attempt-0 target with internal failure provenance. Both snapshots reject
+malformed worker, lease, defer, claim/heartbeat/finish ordering, and retained
+error shapes. The real-store regression runs an A-to-B logical catalog
+transition over the actual target member, proves the token exclusion and that
+the real controller callback sees the changed member only after commit under
+the transition lock, and proves a zero-row same-lease replay cannot report. It
+refuses the released target as a hit and refuses the real
+intermediate state where the plan and selector are final but the scheduler's
+last lease is still active.
+
+V2 requires exactly one same-attempt stale-priority requeue for that stop;
+V1 keeps its frozen zero. The final activation-authority pass accepts either a
+clean attempt-0 completion or this exact stale-success residue, and rejects
+mixed priority/error states.
+
+Each snapshot reads the selector, exact plan, immutable schedule, exact unit,
+and selector confirmation once. Logical R is therefore two reports with
+report-scoped `C/S/M/W=0/10/0/0`; controls are not decoded application-member
+visits. Epoch two's shared report inventory is 5,765. The forced V2 stop
+separately pays existing pipeline recovery outside that subtotal: one scheduler
+release transaction, one bounded claim-candidate read plus one later claim
+transaction, one replay plan point read returning zero member rows and changes,
+one completion transaction, and the controller's existing settled advance/no-op
+handoff. The replay also creates the existing per-claim heartbeat goroutine,
+ticker, and channel and emits configured lifecycle reports; its plan-point work
+normally finishes before a heartbeat write and adds no concurrency class.
+Limit-plus-one refusal occurs before the unavailable query, ordinary callers
+attach no ledger, and the reader performs no write, poll, cache, file read,
+child, or persistent mutation.
+The default hook adds only a nil branch to ordinary nonterminal service-state
+handling. When exact control installs it, synchronous bounded read/report I/O
+extends the existing shared filesystem-mutation lock, controller mutex, target
+lease, and repository-token hold; the callback receives the operation context
+and owns timeout/report failure after the already-durable commit. It does not
+retry the report or transaction; the later scheduler replay is idempotent and
+cannot re-report.
+
+Return, stale-lease, restart, pressure, archive/restore, and lifecycle R remain
+nullable and open. Cumulative phase accounting, final ordinal, replacement
+freeze, runner execution, release, and scale/SLO claims remain open.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

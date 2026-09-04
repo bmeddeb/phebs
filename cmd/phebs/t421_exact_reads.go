@@ -42,9 +42,9 @@ const (
 	t421ProductServicePath        = "/api/service"
 	t421ProductRelationshipsPath  = "/api/service-relationships"
 
-	// X/T/L phase calls are derived, but F/R/Q native costs and final protocol
-	// calls remain open. Keep admission at the non-overflow type bound until
-	// the complete inventory supplies one smaller ceiling.
+	// X/T/F/L/Q plus physical/logical R calls are derived, but the remaining R
+	// classes and final protocol calls stay open. Keep admission at the
+	// non-overflow type bound until the complete inventory supplies one ceiling.
 	t421ExactReadMaxOrdinal uint64 = math.MaxUint64 - 1
 )
 

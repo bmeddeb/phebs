@@ -167,6 +167,74 @@ func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
 			}
 		})
 	}
+	logical := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "logical_delta_b"
+	})
+	logicalPoint := slices.IndexFunc(plan.FailurePoints, func(value FailurePoint) bool {
+		return value.Name == "partial_service_activation"
+	})
+	if logical < 0 || logicalPoint < 0 || base.TransitionResults[logical].ReadAccounting == nil ||
+		len(base.TransitionResults[logical].Injections) != 1 ||
+		base.TransitionResults[logical].Injections[0].RequeueCount != 1 {
+		t.Fatal("logical transition read accounting is absent")
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"wrong_class": func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"wrong_calls": func(value *TransitionReadSubtotal) { value.ReportCalls-- },
+		"store_read":  func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+	} {
+		t.Run("logical_"+name, func(t *testing.T) {
+			changed := cloneTestReceipt(t, base)
+			mutate(changed.TransitionResults[logical].ReadAccounting)
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatal("impossible logical transition read accounting was accepted")
+			}
+		})
+	}
+	t.Run("logical_missing", func(t *testing.T) {
+		changed := cloneTestReceipt(t, base)
+		changed.TransitionResults[logical].ReadAccounting = nil
+		if err := ValidateReceipt(
+			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+		); err == nil {
+			t.Fatal("missing logical transition read accounting was accepted")
+		}
+	})
+	for _, requeues := range []uint64{0, 2} {
+		t.Run(fmt.Sprintf("logical_requeues_%d", requeues), func(t *testing.T) {
+			changed := cloneTestReceipt(t, base)
+			injection := &changed.TransitionResults[logical].Injections[0]
+			injection.RequeueCount = requeues
+			digest, err := injectionRecoveryProjectionSHA256(*injection, plan.FailurePoints[logicalPoint])
+			if err != nil {
+				t.Fatal(err)
+			}
+			injection.RecoveryProjectionSHA256 = digest
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatalf("V2 logical transition with %d requeues was accepted", requeues)
+			}
+		})
+	}
+	t.Run("unfinished_transition_accounting", func(t *testing.T) {
+		changed := cloneTestReceipt(t, base)
+		unfinished := slices.IndexFunc(changed.TransitionResults, func(value TransitionResult) bool {
+			return value.Phase == "return_a"
+		})
+		if unfinished < 0 || changed.TransitionResults[unfinished].ReadAccounting != nil {
+			t.Fatal("unfinished transition fixture is invalid")
+		}
+		subtotal := *changed.TransitionResults[logical].ReadAccounting
+		changed.TransitionResults[unfinished].ReadAccounting = &subtotal
+		if err := ValidateReceipt(
+			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+		); err == nil {
+			t.Fatal("unfinished transition read accounting was accepted")
+		}
+	})
 }
 
 type productionIdentityState struct {

@@ -46,6 +46,46 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 		states["logical_delta_b"] == states["return_a"] {
 		t.Fatal("logical B does not have an independent exact state identity")
 	}
+	logical := slices.IndexFunc(receipt.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "logical_delta_b"
+	})
+	if logical < 0 || len(receipt.TransitionResults[logical].Injections) != 1 ||
+		receipt.TransitionResults[logical].Injections[0].RequeueCount != 0 {
+		t.Fatal("retained V1 logical transition gained a requeue")
+	}
+}
+
+func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
+	bound, err := correctedLogicalTransitionReadBound()
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := TransitionReadSubtotal{
+		Schema: "t422-transition-read-accounting-v1", Class: correctedLogicalTransitionReadClass,
+		ReportCalls: bound.Calls.Minimum, ControlFileReads: bound.ControlFileReads.Minimum,
+		StoreReadAttempts: bound.StoreReadAttempts.Minimum, MemberReads: bound.MemberReads.Minimum,
+		StoreWriteAttempts: bound.StoreWriteAttempts.Minimum,
+	}
+	if err := validateLogicalTransitionReadSubtotal(base); err != nil {
+		t.Fatal(err)
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"schema":  func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+		"class":   func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"calls":   func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+		"control": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+		"store":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+		"member":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+		"write":   func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := base
+			mutate(&changed)
+			if err := validateLogicalTransitionReadSubtotal(changed); err == nil {
+				t.Fatal("mutated logical transition subtotal was accepted")
+			}
+		})
+	}
 }
 
 func TestBindExecutionFreezeForReceiptOwnsAndValidatesFreeze(t *testing.T) {
@@ -1483,6 +1523,18 @@ func completeTestTransitions(
 				transition.Injections = append(transition.Injections,
 					testInjectionTransition(t, plan, point, transition, authority, freeze, measurement))
 			}
+			if phase == "logical_delta_b" && plan.Schema == PlanV2Schema {
+				readBound, err := correctedLogicalTransitionReadBound()
+				if err != nil {
+					t.Fatal(err)
+				}
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedLogicalTransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
+					StoreReadAttempts: readBound.StoreReadAttempts.Minimum, MemberReads: readBound.MemberReads.Minimum,
+					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
+				}
+			}
 		case "pressure_80", "pressure_90", "pressure_75":
 			// Filled as one contiguous sequence below.
 		case "archive_restore":
@@ -1548,6 +1600,9 @@ func testInjectionTransition(
 		value.TargetGenerationBefore = beforeAuthority.CatalogRootSHA256
 		value.TargetGenerationAfter = phaseAuthority.CatalogRootSHA256
 		value.ObservedRecoveryBranch = "resume_activation_schedule"
+		if plan.Schema == PlanV2Schema {
+			value.RequeueCount = 1
+		}
 		value.SuccessCount = 1
 	case "interrupted_publication":
 		value.Target.GenerationSHA256 = phaseAuthority.RelationshipGenerationSHA256

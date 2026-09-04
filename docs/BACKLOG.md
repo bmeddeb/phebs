@@ -3632,6 +3632,49 @@ single R report runs serially. Cumulative phase accounting,
 the final ordinal, replacement freeze, runner execution, release, and scale/SLO
 claims remain open pending the completed validation record.
 
+The logical-activation R slice binds the real offset-9 service-member commit
+and its recovered successor to two source-free exact snapshots. A
+default-inactive controller hook runs after the target transaction commits but
+before its attempt-0 lease returns to the scheduler; repository-token `1`
+prevents a next claim across that hook. The hit requires the prior selector,
+its unchanged physical search generation, a running plan at chunk 10, an active
+fully materialized schedule with nine
+succeeded/one running, and the leased target. Recovery requires the final
+selector, the same plan/schedule/unit identities, an activated plan, settled
+all-success schedule, and a done, unleased, released/reclaimed stale-priority
+attempt-0 target with internal failure provenance. The real-store regression
+rejects malformed worker, lease, defer, claim/heartbeat/finish ordering, and
+retained-error shapes. It also proves the real controller callback observes the
+changed member only after commit under the transition lock, while a zero-row
+same-lease replay cannot report. The regression refuses the released target as
+a hit and the production intermediate
+where plan/selector are final while the last schedule lease remains active.
+V2 requires exactly one same-attempt requeue for the released target; V1 keeps
+its frozen zero. The final activation-authority reader admits either clean
+attempt-0 completion or this exact stale-success residue and rejects mixed
+priority/error states.
+
+Each snapshot performs an initial selector, exact-plan, immutable-schedule,
+exact-unit, and final selector-confirmation query, so the two-report subtotal
+is exactly report-scoped `C/S/M/W=0/10/0/0`; epoch two's report maximum remains
+5,765 because the report count is still two. The forced V2 stop separately
+pays existing pipeline recovery outside that subtotal: one scheduler release
+transaction, one bounded claim-candidate read plus one later claim transaction,
+one replay plan point read returning zero member rows and changes, one completion
+transaction, and the controller's existing settled advance/no-op handoff. The
+replay also creates the existing per-claim heartbeat goroutine, ticker, and
+channel and emits configured lifecycle reports; its plan-point work normally
+finishes before a heartbeat write and adds no concurrency class. V1 bytes remain
+unchanged and other non-`none` R classes remain nullable/open. The default path
+adds only the nil-hook branch.
+An installed exact-control callback runs while the existing shared
+filesystem-mutation lock, controller mutex, target lease, and repository token
+remain held; its bounded read/report I/O must honor the operation context and
+own timeout/report failure without retrying the report or transaction. The
+later scheduler replay is idempotent and cannot re-report.
+Cumulative phase accounting, final ordinal, replacement freeze, runner
+execution, release, and scale/SLO claims remain open.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as
