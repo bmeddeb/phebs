@@ -1495,6 +1495,23 @@ evidence, a scale pass, or an SLO. Pressure, archive/restore, and lifecycle R
 remain open, and T42.2 remains unauthorized until the remaining T42.1 gates
 close.
 
+#### V2 production lifecycle-owner inventory
+
+Pressure and lifecycle evidence must cover the production rotation, not the
+older T40 list. The T42 base already registers `catalog-v3-generations` and
+`relationship-v3-namespaces`, so V2 now requires those rows alongside the
+historical fourteen. Both are exact and drained; `durable-jobs` remains the
+only lower-bound row. V1 construction and retained bytes stay unchanged.
+
+The two names add 68 canonical plan bytes. Rewriting only the versioned
+physical/logical R policy into the same explicit compact grammar saves 108,
+leaving the plan at 262,101 of 262,144 bytes. The lifecycle transition class is
+now `fresh-sixteen-owner-cycle`, and either missing V3 row fails the common
+receipt validator. No production status collector, lifecycle work, storage,
+I/O, lock, cache, child, cadence, or safety ceiling changes. Pressure readers,
+archive/restore, final lifecycle R, whole-phase accounting, freeze, and
+execution remain open.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

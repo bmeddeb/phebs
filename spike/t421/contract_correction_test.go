@@ -107,10 +107,9 @@ func TestCorrectionUsesProductionCurrentPriorReaderContract(t *testing.T) {
 		returnReadBound.Calls != exactInspectionCalls(2) || returnReadBound.ControlFileReads != exactInspectionCalls(10) ||
 		staleReadBound.Calls != exactInspectionCalls(2) || staleReadBound.ControlFileReads != exactInspectionCalls(8) || staleReadBound.StoreReadAttempts != exactInspectionCalls(8) ||
 		restartReadBound.Calls != exactInspectionCalls(2) || restartReadBound.ControlFileReads != exactInspectionCalls(14) || restartReadBound.StoreReadAttempts != exactInspectionCalls(8) ||
-		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-physical-C=17+1+3+17+3=41") ||
-		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-physical-M=2*physical.combined_physical_owners") ||
-		!strings.Contains(next.Correction.ReadAccountingPolicy, "R-logical-S=2*(selector+plan+schedule+unit+selector-confirm)=10") ||
-		!strings.Contains(next.Correction.ReadAccountingPolicy, "R:r2C5;s2C4S4;p2C7S4") {
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "R:physical=1xC(17+1+3+17+3=41)S0M(2*physical.combined_physical_owners)W0") ||
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "logical=2xC0S(2*(selector+plan+schedule+unit+selector-confirm)=10)M0W0") ||
+		!strings.Contains(next.Correction.ReadAccountingPolicy, "r2C5;s2C4S4;p2C7S4") {
 		t.Fatal("corrected transition reader work differs from the production contracts")
 	}
 }

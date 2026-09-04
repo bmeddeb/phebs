@@ -45,6 +45,7 @@ func correctedWorkEnvelope(profile CombinedProfile) (WorkEnvelope, []PhaseBudget
 	}
 	work := frozenWorkEnvelope(profile)
 	work.Schema = "t422-phase-work-envelope-v2"
+	work.LifecycleOwners = correctedLifecycleOwners()
 	work.ChildProcessRoles = slices.Insert(work.ChildProcessRoles, 1, "git-transport-shell")
 	for index := range work.Phases {
 		work.Phases[index].ChildProcessRoles = slices.Insert(work.Phases[index].ChildProcessRoles, 1, RoleBound{Name: "git-transport-shell"})

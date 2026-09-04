@@ -923,6 +923,12 @@ func frozenLifecycleOwners() []string {
 	}
 }
 
+func correctedLifecycleOwners() []string {
+	owners := append(frozenLifecycleOwners(), lifecycle.CatalogV3Owner, lifecycle.RelationshipV3Owner)
+	slices.Sort(owners)
+	return owners
+}
+
 func frozenSealPolicy() SealPolicy {
 	return SealPolicy{
 		Schema: "t422-source-free-seal-policy-v1", KeyAlgorithm: "ssh-ed25519",

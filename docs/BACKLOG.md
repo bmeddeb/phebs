@@ -3840,6 +3840,23 @@ archive/restore, and lifecycle R, whole-phase sums, final ordinal, corrected-pla
 freeze, actual hard-kill/runner execution, release, and scale/SLO evidence
 remain open. This slice does not authorize T42.2.
 
+The next prerequisite corrects the prospective lifecycle inventory before any
+pressure-cycle R claim. V1 retains its exact historical fourteen-owner bytes.
+V2 adds the already-production `catalog-v3-generations` and
+`relationship-v3-namespaces` owners to the sorted work envelope, making all
+pressure and lifecycle cycles require the complete sixteen-owner rotation.
+Missing either row now fails the shared receipt validator. The lifecycle R
+class is renamed `fresh-sixteen-owner-cycle`.
+
+No runtime collector or second authority is added. The two extra source-free
+rows were already produced by the ordinary lifecycle controller; this changes
+only the prospective contract. An equivalent compact physical/logical R policy
+grammar recovers the needed plan space, leaving 262,101 bytes under the
+unchanged 262,144-byte cap. Targeted retained-V1, corrected-plan, inventory,
+missing-owner and byte-limit tests pass. Pressure, archive/restore and lifecycle
+R, complete phase sums, final ordinal, replacement freeze, execution, release,
+and scale/SLO evidence remain open.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

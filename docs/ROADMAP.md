@@ -211,6 +211,13 @@ Protected return-A authority is unchanged. Epoch-three requests advance to 11,53
 synchronization only. Ordinary work adds one inactive nil branch; V1 remains
 exact. `p2C7S4` compactly records the report shape, while `meta=0` only shortens
 the zero-cost metadata label for the unchanged plan-byte cap.
+The prospective V2 work envelope now also corrects the stale T40 lifecycle
+inventory: it requires all sixteen production owners, including the already
+registered catalog-v3 and relationship-v3 owners, while retained V1 remains
+byte-exact at fourteen. The shared lifecycle receipt validator rejects either
+missing row, and the corrected plan remains under its unchanged byte ceiling
+through an equivalent compact R-policy grammar. This is contract-only; it adds
+no lifecycle turn, runtime read, or collector.
 Pressure, archive/restore, and lifecycle R, cumulative phase sums,
 final ordinal, replacement freeze, and runner remain open. Overall correction
 acceptance and freeze remain open. No T42.2 execution, private rerun, release,

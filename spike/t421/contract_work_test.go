@@ -243,6 +243,41 @@ func TestCorrectedWorkBudgetsCountCensusWatcherAndEveryRole(t *testing.T) {
 	}
 }
 
+func TestCorrectedLifecycleOwnersMatchProductionInventory(t *testing.T) {
+	work, _, err := correctedWorkEnvelope(retainedWorkPlan(t).Profile)
+	want := []string{
+		"catalog-generations", "catalog-v3-generations", "durable-jobs", "generation-schedules",
+		"investigations", "observation-namespaces", "observation-v2-generations", "partial-stages",
+		"proof-bundles", "readers", "relationship-namespaces", "relationship-v3-namespaces",
+		"resolver-namespaces", "search-generations", "service-tombstones", "source-generations",
+	}
+	if err != nil || !slices.Equal(work.LifecycleOwners, want) {
+		t.Fatalf("corrected lifecycle owners = %q, err=%v", work.LifecycleOwners, err)
+	}
+	if retained := frozenLifecycleOwners(); len(retained) != 14 ||
+		slices.Contains(retained, "catalog-v3-generations") ||
+		slices.Contains(retained, "relationship-v3-namespaces") {
+		t.Fatalf("retained V1 lifecycle owners changed: %q", retained)
+	}
+}
+
+func TestCorrectedLifecycleReceiptRequiresV3Owners(t *testing.T) {
+	plan := correctedTestPlan(t)
+	owners, capacity := testLifecycleOwners(plan, 1_000)
+	for _, name := range []string{"catalog-v3-generations", "relationship-v3-namespaces"} {
+		t.Run(name, func(t *testing.T) {
+			index := slices.IndexFunc(owners, func(owner LifecycleOwnerResult) bool { return owner.Name == name })
+			if index < 0 {
+				t.Fatal("production lifecycle owner is absent from the fixture")
+			}
+			changed := slices.Delete(slices.Clone(owners), index, index+1)
+			if _, err := validateLifecycleOwners(changed, plan, 1_000, capacity); err == nil {
+				t.Fatal("receipt accepted an incomplete production lifecycle cycle")
+			}
+		})
+	}
+}
+
 func TestCorrectedLogicalBudgetAdmitsMeasuredDirectGitTrace(t *testing.T) {
 	work, derivations, err := correctedWorkEnvelope(retainedWorkPlan(t).Profile)
 	if err != nil {

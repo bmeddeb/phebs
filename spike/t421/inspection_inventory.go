@@ -340,7 +340,7 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 				row.TransitionReadClass = "pressure-refusal-removal-and-recovery-cycle"
 				row.ImmutableMemberReusePhase = "pressure_90"
 			case "lifecycle_collection":
-				row.TransitionReadClass = "fresh-fourteen-owner-cycle"
+				row.TransitionReadClass = "fresh-sixteen-owner-cycle"
 				row.ImmutableMemberReusePhase = "archive_restore"
 			}
 		case "pressure_90":
