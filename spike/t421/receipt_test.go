@@ -87,6 +87,12 @@ func TestReceiptRoundTripIsCanonicalExactAndSourceFree(t *testing.T) {
 		legacyCheckpoint.ChunkStatusAfter != "" || legacyCheckpoint.UnleasedAfter {
 		t.Fatal("retained V1 checkpoint restart gained V2 reader state")
 	}
+	pressure80Index := slices.IndexFunc(receipt.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "pressure_80"
+	})
+	if pressure80Index < 0 || receipt.TransitionResults[pressure80Index].ReadAccounting != nil {
+		t.Fatal("retained V1 pressure-80 transition gained read accounting")
+	}
 }
 
 func TestLogicalTransitionReadSubtotalMatchesNativeReader(t *testing.T) {
@@ -242,6 +248,151 @@ func TestCheckpointRestartReadSubtotalMatchesNativeReader(t *testing.T) {
 				t.Fatal("mutated checkpoint restart subtotal was accepted")
 			}
 		})
+	}
+}
+
+func TestPressure80TransitionReadSubtotalMatchesNativeReader(t *testing.T) {
+	bound := correctedPressure80TransitionReadBound()
+	if bound.Calls != exactInspectionCalls(lifecycle.Pressure80ReportCalls) ||
+		bound.ControlFileReads != exactInspectionCalls(0) ||
+		bound.StoreReadAttempts != exactInspectionCalls(0) ||
+		bound.MemberReads != exactInspectionCalls(0) ||
+		bound.StoreWriteAttempts != exactInspectionCalls(0) {
+		t.Fatal("pressure-80 transition subtotal does not match the two in-memory reports")
+	}
+	base := TransitionReadSubtotal{
+		Schema: "t422-transition-read-accounting-v1", Class: correctedPressure80TransitionReadClass,
+		ReportCalls: bound.Calls.Minimum, ControlFileReads: bound.ControlFileReads.Minimum,
+		StoreReadAttempts: bound.StoreReadAttempts.Minimum, MemberReads: bound.MemberReads.Minimum,
+		StoreWriteAttempts: bound.StoreWriteAttempts.Minimum,
+	}
+	if err := validatePressure80TransitionReadSubtotal(base); err != nil {
+		t.Fatal(err)
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"schema":  func(value *TransitionReadSubtotal) { value.Schema = "wrong" },
+		"class":   func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"calls":   func(value *TransitionReadSubtotal) { value.ReportCalls++ },
+		"control": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+		"store":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+		"member":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+		"write":   func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := base
+			mutate(&changed)
+			if err := validatePressure80TransitionReadSubtotal(changed); err == nil {
+				t.Fatal("mutated pressure-80 transition subtotal was accepted")
+			}
+		})
+	}
+}
+
+func TestPressure80LifecycleRequiresDrainedDurableJobs(t *testing.T) {
+	plan := correctedTestPlan(t)
+	owners, capacity := testLifecycleOwners(plan, 1_000)
+	value := PressureTransition{
+		LifecycleFenceUnixMS: 1_000, CapacityObservedUnixMS: capacity,
+		LifecycleOwnerTurns: uint64(len(owners)), Owners: owners,
+	}
+	var err error
+	value.LifecycleCycleSHA256, err = pressureLifecycleCycleSHA256(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	metrics := ReceiptMetrics{LifecycleOwnerTurns: CountMetric(len(owners))}
+	if err := validatePressure80Lifecycle(value, metrics, plan); err != nil {
+		t.Fatal(err)
+	}
+	job := slices.IndexFunc(value.Owners, func(owner LifecycleOwnerResult) bool {
+		return owner.Name == lifecycle.JobOwner
+	})
+	if job < 0 {
+		t.Fatal("durable-job lifecycle owner is absent")
+	}
+	value.Owners[job].Backlog = true
+	value.LifecycleCycleSHA256, err = pressureLifecycleCycleSHA256(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePressureLifecycle(value, metrics, plan); err != nil {
+		t.Fatalf("shared lifecycle validation rejected its allowed lower-bound backlog: %v", err)
+	}
+	if err := validatePressure80Lifecycle(value, metrics, plan); err == nil {
+		t.Fatal("pressure 80 accepted durable-job backlog")
+	}
+
+	retained := frozenTestPlan(t)
+	owners, capacity = testLifecycleOwners(retained, 1_000)
+	job = slices.IndexFunc(owners, func(owner LifecycleOwnerResult) bool {
+		return owner.Name == lifecycle.JobOwner
+	})
+	if job < 0 {
+		t.Fatal("retained durable-job lifecycle owner is absent")
+	}
+	owners[job].Backlog = true
+	value = PressureTransition{
+		LifecycleFenceUnixMS: 1_000, CapacityObservedUnixMS: capacity,
+		LifecycleOwnerTurns: uint64(len(owners)), Owners: owners,
+	}
+	value.LifecycleCycleSHA256, err = pressureLifecycleCycleSHA256(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	metrics = ReceiptMetrics{LifecycleOwnerTurns: CountMetric(len(owners))}
+	if err := validatePressure80Lifecycle(value, metrics, retained); err != nil {
+		t.Fatalf("retained V1 pressure lifecycle semantics changed: %v", err)
+	}
+}
+
+func TestLifecycleOwnerTimestampOrderingIsVersioned(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		plan Plan
+	}{
+		{name: "v1", plan: frozenTestPlan(t)},
+		{name: "v2", plan: correctedTestPlan(t)},
+	} {
+		t.Run(test.name+"_equal_owner_milliseconds", func(t *testing.T) {
+			const fence = uint64(1_000)
+			owners, _ := testLifecycleOwners(test.plan, fence)
+			for index := range owners {
+				owners[index].AttemptedAtUnixMS = fence
+			}
+			_, err := validateLifecycleOwners(owners, test.plan, fence, fence+1)
+			if test.plan.Schema == PlanSchema && err == nil {
+				t.Fatal("retained V1 accepted equal owner milliseconds")
+			}
+			if test.plan.Schema == PlanV2Schema && err != nil {
+				t.Fatalf("V2 rejected equal owner milliseconds: %v", err)
+			}
+		})
+
+		t.Run(test.name+"_equal_capacity_milliseconds", func(t *testing.T) {
+			const fence = uint64(1_000)
+			owners, _ := testLifecycleOwners(test.plan, fence)
+			capacity := owners[len(owners)-1].AttemptedAtUnixMS
+			_, err := validateLifecycleOwners(owners, test.plan, fence, capacity)
+			if test.plan.Schema == PlanSchema && err == nil {
+				t.Fatal("retained V1 accepted an equal capacity millisecond")
+			}
+			if test.plan.Schema == PlanV2Schema && err != nil {
+				t.Fatalf("V2 rejected an equal capacity millisecond: %v", err)
+			}
+		})
+	}
+
+	v2 := correctedTestPlan(t)
+	owners, capacity := testLifecycleOwners(v2, 1_000)
+	owners[0].AttemptedAtUnixMS = 999
+	if _, err := validateLifecycleOwners(owners, v2, 1_000, capacity); err == nil {
+		t.Fatal("V2 accepted a backwards owner timestamp")
+	}
+	owners, _ = testLifecycleOwners(v2, 1_000)
+	if _, err := validateLifecycleOwners(
+		owners, v2, 1_000, owners[len(owners)-1].AttemptedAtUnixMS-1,
+	); err == nil {
+		t.Fatal("V2 accepted a backwards capacity timestamp")
 	}
 }
 
@@ -2182,6 +2333,15 @@ func testPressureTransitions(
 		switch phase {
 		case "pressure_80":
 			value.GateOutcome = "success"
+			if plan.Schema == PlanV2Schema {
+				readBound := correctedPressure80TransitionReadBound()
+				transition.ReadAccounting = &TransitionReadSubtotal{
+					Schema: "t422-transition-read-accounting-v1", Class: correctedPressure80TransitionReadClass,
+					ReportCalls: readBound.Calls.Minimum, ControlFileReads: readBound.ControlFileReads.Minimum,
+					StoreReadAttempts: readBound.StoreReadAttempts.Minimum, MemberReads: readBound.MemberReads.Minimum,
+					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
+				}
+			}
 			value.PrePressureAllocatedBytes = baseAllocated
 			owners, capacity := testLifecycleOwners(plan, 1_000)
 			deleted := uint64(measurement.Metrics.LifecycleDeleted)

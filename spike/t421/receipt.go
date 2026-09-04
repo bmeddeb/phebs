@@ -2370,6 +2370,10 @@ func validateTransitionResults(
 			if value.ReadAccounting == nil || validateCheckpointRestartReadSubtotal(*value.ReadAccounting) != nil {
 				return errors.New("checkpoint restart transition read accounting is invalid")
 			}
+		} else if phase == "pressure_80" {
+			if value.ReadAccounting == nil || validatePressure80TransitionReadSubtotal(*value.ReadAccounting) != nil {
+				return errors.New("pressure 80 transition read accounting is invalid")
+			}
 		} else if value.ReadAccounting != nil {
 			return fmt.Errorf("phase %q claims unfinished transition read accounting", phase)
 		}
@@ -2673,6 +2677,20 @@ func validateCheckpointRestartReadSubtotal(value TransitionReadSubtotal) error {
 		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
 		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
 		return errors.New("checkpoint restart transition read subtotal differs from its derived bound")
+	}
+	return nil
+}
+
+func validatePressure80TransitionReadSubtotal(value TransitionReadSubtotal) error {
+	bound := correctedPressure80TransitionReadBound()
+	if value.Schema != "t422-transition-read-accounting-v1" ||
+		value.Class != correctedPressure80TransitionReadClass || value.ReportCalls != bound.Calls.Minimum ||
+		value.ControlFileReads != bound.ControlFileReads.Minimum ||
+		value.StoreReadAttempts != bound.StoreReadAttempts.Minimum ||
+		value.MemberReads != bound.MemberReads.Minimum ||
+		value.StoreWriteAttempts != bound.StoreWriteAttempts.Minimum ||
+		value.StoreReadAttempts > math.MaxUint64-value.ControlFileReads {
+		return errors.New("pressure 80 transition read subtotal differs from its derived bound")
 	}
 	return nil
 }
@@ -3262,7 +3280,8 @@ func validateLifecycleOwners(
 	latestAttempt := fenceUnixMS
 	for index, name := range plan.WorkEnvelope.LifecycleOwners {
 		value := values[index]
-		if value.Name != name || value.State != "ok" || value.AttemptedAtUnixMS <= latestAttempt ||
+		if value.Name != name || value.State != "ok" ||
+			lifecycleTimestampOutOfOrder(plan.Schema, value.AttemptedAtUnixMS, latestAttempt) ||
 			value.Scanned > uint64(lifecycle.MaxCandidatesPerTick) ||
 			value.Deleted > uint64(lifecycle.MaxDeletesPerTick) || value.Deleted > value.Scanned {
 			return lifecycleAggregate{}, errors.New("lifecycle owner row is invalid")
@@ -3289,10 +3308,14 @@ func validateLifecycleOwners(
 			*add.destination += add.value
 		}
 	}
-	if capacityObservedUnixMS <= latestAttempt {
+	if lifecycleTimestampOutOfOrder(plan.Schema, capacityObservedUnixMS, latestAttempt) {
 		return lifecycleAggregate{}, errors.New("lifecycle owner accounting or freshness is invalid")
 	}
 	return result, nil
+}
+
+func lifecycleTimestampOutOfOrder(planSchema string, current, previous uint64) bool {
+	return current < previous || planSchema != PlanV2Schema && current == previous
 }
 
 func validateLifecycleTotals(total, finalRows lifecycleAggregate, ownerTurns, minimumTurns uint64) error {
@@ -3387,7 +3410,7 @@ func validatePressureTransitions(
 				return errors.New("pressure 80 pre-pressure normalization is invalid")
 			}
 			baseAllocated = value.PrePressureAllocatedBytes
-			if err := validatePressureLifecycle(*value, metrics[phase], plan); err != nil ||
+			if err := validatePressure80Lifecycle(*value, metrics[phase], plan); err != nil ||
 				value.PrePressureDeletedUnits != value.LifecycleDeleted ||
 				!orderedEventsWithin(transition.StartEventOrdinal, transition.FinishEventOrdinal,
 					value.LifecycleFenceEventOrdinal, value.CapacityObservedEventOrdinal,
@@ -3513,6 +3536,22 @@ func validatePressureLifecycle(value PressureTransition, metrics ReceiptMetrics,
 		metrics.LifecycleOwnerTurns != CountMetric(value.LifecycleOwnerTurns) ||
 		metrics.LifecycleDeleted != CountMetric(value.LifecycleDeleted) {
 		return errors.New("pressure lifecycle cumulative evidence is invalid")
+	}
+	return nil
+}
+
+func validatePressure80Lifecycle(value PressureTransition, metrics ReceiptMetrics, plan Plan) error {
+	if err := validatePressureLifecycle(value, metrics, plan); err != nil {
+		return err
+	}
+	if plan.Schema != PlanV2Schema {
+		return nil
+	}
+	index := slices.IndexFunc(value.Owners, func(owner LifecycleOwnerResult) bool {
+		return owner.Name == lifecycle.JobOwner
+	})
+	if index < 0 || value.Owners[index].Backlog {
+		return errors.New("pressure 80 durable-job lifecycle owner is not drained")
 	}
 	return nil
 }

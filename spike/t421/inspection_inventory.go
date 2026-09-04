@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -22,6 +23,7 @@ const (
 	correctedReturnTransitionReadClass      = "relationship-marker-recovery"
 	correctedStaleLeaseTransitionReadClass  = "prepared-stale-lease-schedule-and-result"
 	correctedCheckpointRestartReadClass     = "prepared-checkpoint-hard-restart"
+	correctedPressure80TransitionReadClass  = "pressure-normalization-and-collect-cycle"
 	correctedInspectionPolicy               = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
 )
 
@@ -134,6 +136,16 @@ func correctedCheckpointRestartReadBound() (inspectionReadBound, error) {
 		MemberReads:        exactInspectionCalls(0),
 		StoreWriteAttempts: exactInspectionCalls(0),
 	}, nil
+}
+
+func correctedPressure80TransitionReadBound() inspectionReadBound {
+	return inspectionReadBound{
+		Calls:              exactInspectionCalls(lifecycle.Pressure80ReportCalls),
+		ControlFileReads:   exactInspectionCalls(0),
+		StoreReadAttempts:  exactInspectionCalls(0),
+		MemberReads:        exactInspectionCalls(0),
+		StoreWriteAttempts: exactInspectionCalls(0),
+	}
 }
 
 type epochInspectionInventory struct {
@@ -334,7 +346,9 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 			row.LifecycleStatusCalls = CounterBound{Minimum: 1, Maximum: maximum}
 			switch phase {
 			case "pressure_80":
-				row.TransitionReadClass = "pressure-normalization-and-collect-cycle"
+				row.TransitionReadClass = correctedPressure80TransitionReadClass
+				readBound := correctedPressure80TransitionReadBound()
+				row.TransitionRead = &readBound
 				row.ImmutableMemberReusePhase = "process_restart"
 			case "pressure_75":
 				row.TransitionReadClass = "pressure-refusal-removal-and-recovery-cycle"

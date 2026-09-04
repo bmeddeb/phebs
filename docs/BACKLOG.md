@@ -3857,6 +3857,42 @@ missing-owner and byte-limit tests pass. Pressure, archive/restore and lifecycle
 R, complete phase sums, final ordinal, replacement freeze, execution, release,
 and scale/SLO evidence remain open.
 
+The pressure-80 V2 R reader slice then adds an exact-only one-shot collector
+over the existing serial `lifecycle.Run` owner and capacity callbacks. After
+its phase-local fence it cumulatively admits at most 4,096 turns and retains
+only scalar work totals, the final sixteen source-free owner rows, and final
+capacity. Success requires one complete sorted sixteen-owner cycle with every
+row `state=ok` and drained: all fifteen non-`durable-jobs` owners are exact,
+`durable-jobs` is lower-bound with backlog false, and every paired capacity
+sample is exact-normal, with the final one following the latest owner.
+Ownerless, unpaired, malformed, out-of-order, overflow, and limit callbacks
+fail closed. It does not consult
+`StatusMonitor`, start another scanner, retain source or persistent state, or
+perform a lifecycle turn of its own. V2 Unix-millisecond evidence may be
+nondecreasing because the serial callback order is authoritative. V1 keeps its
+strict historical timestamps, and the reader invents none.
+
+After the later controller removes ballast and establishes its fence, the
+pressure-80 reader makes exactly one direct call to the existing
+`Gate.Check(ctx, 0)`. It requires exact collect pressure at 80%, the same total
+capacity, increased used bytes, and decreased available bytes, without a
+second lifecycle turn. The cycle and collect observations are exactly two R
+reports, each `C/S/M/W=0/0/0/0`; epoch-four report calls advance `1→3`, its
+requests `6,255→6,257`, and the overall request inventory
+`43,770→43,772`. The compact token `;80=2xC0S0M0W0` leaves the plan at
+262,115 of 262,144 bytes.
+
+Ordinary mode remains unchanged. The collector is constructed only by later
+exact mode and uses one mutex and one capacity-one result channel; it adds no
+I/O, cache, child, schema, persistent work, source retention, or independent
+scan. The pressure-80 read adds only its direct capacity metadata probe. No
+current server wiring is claimed. The later controller/runner must fail if
+lifecycle is disabled, arm and wake the existing potentially hour-idle runner,
+and own the ballast and authority fences, event ordinals, and report path.
+Deletion and prepared-residue proof; pressure-90, pressure-75, archive, and
+lifecycle R; cross-phase sums; the final ordinal; replacement freeze;
+execution; release; and scale/SLO evidence remain open.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

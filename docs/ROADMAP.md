@@ -218,6 +218,33 @@ byte-exact at fourteen. The shared lifecycle receipt validator rejects either
 missing row, and the corrected plan remains under its unchanged byte ceiling
 through an equivalent compact R-policy grammar. This is contract-only; it adds
 no lifecycle turn, runtime read, or collector.
+
+The next prospective V2 slice closes only the pressure-80 R reader. An
+exact-only one-shot collector consumes the existing serial `lifecycle.Run`
+owner and capacity callbacks after a phase-local fence. It retains cumulative
+scalar work for at most 4,096 turns plus the final sixteen source-free rows,
+and accepts only a complete sorted cycle with every row `state=ok` and drained,
+the fifteen non-job owners exact, `durable-jobs` lower-bound with backlog false,
+and every paired capacity exact-normal, including the final sample after the
+latest owner. Ownerless or malformed callback streams fail closed. It uses no
+`StatusMonitor`, second scanner, persistent state, or source. After a later
+controller removes ballast, the pressure reader makes one direct existing
+`Gate.Check(ctx, 0)` capacity metadata probe and requires exact collect at 80%;
+it runs no second lifecycle turn. Serial callback order authorizes
+nondecreasing V2 Unix-millisecond evidence; V1 remains strict and no timestamp
+is invented.
+
+The two R reports are each exactly `C/S/M/W=0/0/0/0`. Epoch-four calls advance
+`1→3`, epoch-four requests `6,255→6,257`, overall requests
+`43,770→43,772`, and `;80=2xC0S0M0W0` leaves the plan at 262,115 of
+262,144 bytes. Ordinary mode is unchanged. Only later exact mode constructs
+the collector: one mutex, one capacity-one result channel, and no I/O, cache,
+child, schema, persistent, source, or other ordinary work. This is not server
+wiring. The later controller/runner must fail when lifecycle is disabled, arm
+and wake the existing potentially hour-idle runner, and own the ballast and
+authority fences, event ordinals, and report path. Deletion and
+prepared-residue proof remain open.
+
 Pressure, archive/restore, and lifecycle R, cumulative phase sums,
 final ordinal, replacement freeze, and runner remain open. Overall correction
 acceptance and freeze remain open. No T42.2 execution, private rerun, release,

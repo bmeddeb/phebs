@@ -1512,6 +1512,43 @@ I/O, lock, cache, child, cadence, or safety ceiling changes. Pressure readers,
 archive/restore, final lifecycle R, whole-phase accounting, freeze, and
 execution remain open.
 
+#### Pressure-80 lifecycle R reader
+
+V2 pressure-80 R now owns exactly two source-free, zero-native-read
+observations. An exact-only one-shot collector consumes the existing serial
+`lifecycle.Run` owner and capacity callbacks after a phase-local fence. It
+cumulatively admits at most 4,096 turns and retains only scalar work totals,
+the final sixteen owner rows, and final capacity. Success requires one complete
+sorted cycle with every row `state=ok` and drained: the fifteen non-job owners
+are exact, `durable-jobs` is lower-bound with backlog false, and every paired
+capacity callback is exact-normal, including the final callback. Ownerless,
+unpaired, malformed, out-of-order, overflow, and limit callbacks fail closed.
+It does not use `StatusMonitor`, start a second scanner, retain source or
+persistent state, or run a lifecycle turn.
+
+After the later controller mutates ballast and records its fence, the second
+reader calls the existing `Gate.Check(ctx, 0)` once. It requires exact collect
+pressure at 80%, unchanged total bytes, increased used bytes, and decreased
+available bytes, without waiting for another lifecycle turn. Callback order
+is authoritative, so V2 admits nondecreasing Unix-millisecond projections;
+retained V1 remains strict, and neither path invents timestamps.
+
+Both reports are exactly `C/S/M/W=0/0/0/0`. Epoch-four transition calls rise
+from 1 to 3, epoch-four requests from 6,255 to 6,257, and the five-epoch total
+from 43,770 to 43,772. The compact policy token is
+`;80=2xC0S0M0W0`, leaving the plan at 262,115 of 262,144 bytes. Ordinary mode
+is unchanged. Only later exact mode constructs the collector; its bounded work
+is one mutex, one capacity-one result channel, bounded sixteen-row copies,
+and one direct capacity metadata probe. It adds no I/O, cache, child, schema,
+persistent state, source retention, or lock nesting.
+
+This slice does not wire the server. The later controller/runner must reject
+disabled lifecycle, arm and wake the existing potentially hour-idle runner,
+and own ballast and authority fences, event ordinals, and report delivery.
+Deletion and prepared-residue proof; pressure-90, pressure-75, archive, and
+lifecycle R; cross-phase sums; final ordinal; corrected freeze; execution;
+release; and scale/SLO evidence remain open.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

@@ -302,6 +302,39 @@ func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
 			t.Fatal("missing checkpoint restart transition read accounting was accepted")
 		}
 	})
+	pressure80 := slices.IndexFunc(base.TransitionResults, func(value TransitionResult) bool {
+		return value.Phase == "pressure_80"
+	})
+	if pressure80 < 0 || base.TransitionResults[pressure80].ReadAccounting == nil {
+		t.Fatal("pressure-80 transition read accounting is absent")
+	}
+	for name, mutate := range map[string]func(*TransitionReadSubtotal){
+		"wrong_class":  func(value *TransitionReadSubtotal) { value.Class = "wrong" },
+		"wrong_calls":  func(value *TransitionReadSubtotal) { value.ReportCalls-- },
+		"control_read": func(value *TransitionReadSubtotal) { value.ControlFileReads++ },
+		"store_read":   func(value *TransitionReadSubtotal) { value.StoreReadAttempts++ },
+		"member_read":  func(value *TransitionReadSubtotal) { value.MemberReads++ },
+		"store_write":  func(value *TransitionReadSubtotal) { value.StoreWriteAttempts++ },
+	} {
+		t.Run("pressure_80_"+name, func(t *testing.T) {
+			changed := cloneTestReceipt(t, base)
+			mutate(changed.TransitionResults[pressure80].ReadAccounting)
+			if err := ValidateReceipt(
+				changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+			); err == nil {
+				t.Fatal("impossible pressure-80 transition read accounting was accepted")
+			}
+		})
+	}
+	t.Run("pressure_80_missing", func(t *testing.T) {
+		changed := cloneTestReceipt(t, base)
+		changed.TransitionResults[pressure80].ReadAccounting = nil
+		if err := ValidateReceipt(
+			changed, plan, binding, returnedPackageTestBinding(t, changed, plan, binding),
+		); err == nil {
+			t.Fatal("missing pressure-80 transition read accounting was accepted")
+		}
+	})
 	for name, mutate := range map[string]func(*CheckpointRecovery){
 		"chunk_identity": func(value *CheckpointRecovery) { value.ChunkIdentitySHA256 = zeroDigest() },
 		"hit_schedule":   func(value *CheckpointRecovery) { value.ScheduleStatusAtHit = store.GenerationScheduleSettled },
@@ -344,7 +377,7 @@ func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
 	t.Run("unfinished_transition_accounting", func(t *testing.T) {
 		changed := cloneTestReceipt(t, base)
 		unfinished := slices.IndexFunc(changed.TransitionResults, func(value TransitionResult) bool {
-			return value.Phase == "pressure_80"
+			return value.Phase == "pressure_90"
 		})
 		if unfinished < 0 || changed.TransitionResults[unfinished].ReadAccounting != nil {
 			t.Fatal("unfinished transition fixture is invalid")
