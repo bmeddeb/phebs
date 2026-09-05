@@ -4564,6 +4564,15 @@ three race repeats in 4.380s; scoped vet and pinned lint passed. The opt-in
 full-repository protected Phebs/Zoekt/Surreal indexed-query and complete-stop
 rehearsal is written but unrun pending an immutable corrected candidate. Native
 session, full-source admission and genuine readiness remain unestablished.
+Exact parent review identified a medium healthy-clone custody conflict and a
+low receiver-bound wording issue. The parent now generates an escaped file
+URL, preserving ordinary watched local transport without the plain-path clone's
+source/mirror hardlink aliases. Actual packed/loose clone and retained control
+checks passed five race repeats in 7.076s. The receiver's five-second timer now
+explicitly initiates cancellation before a cooperative join; it cannot interrupt
+native metadata calls, and caller expiry never releases uncertain custody.
+Independent corrected-source review and the real full-repository rehearsal
+remain required.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay

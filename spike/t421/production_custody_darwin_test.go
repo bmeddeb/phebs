@@ -21,6 +21,9 @@ func TestExecutionProductionSourceAdmission(t *testing.T) {
 	for _, name := range []string{"actual source", "actual packed source", "extra ref", "hook config", "symlink", "extra file", "oversized file", "changed pack"} {
 		t.Run(name, func(t *testing.T) {
 			source := filepath.Join(parent, strings.ReplaceAll(name, " ", "-"))
+			if name == "actual packed source" {
+				source += " #?%"
+			}
 			gitCustodyTestRun(t, git, parent, nil, "init", "--bare", "--template=", "--initial-branch=main", source)
 			if err := os.Chmod(source, 0o700); err != nil {
 				t.Fatal(err)
@@ -76,6 +79,46 @@ func TestExecutionProductionSourceAdmission(t *testing.T) {
 			}
 			if name == "actual packed source" && len(custody.controls) != 5 {
 				t.Fatalf("source controls and native pack pair not retained: %d", len(custody.controls))
+			}
+			if name == "actual source" || name == "actual packed source" {
+				mirror := source + "-mirror"
+				gitCustodyTestRun(t, git, parent, nil, "clone", "--mirror", productionSourceURL(source), mirror)
+				if got := gitCustodyTestRevision(t, git, parent, mirror)[0]; got != commit {
+					t.Fatal("file transport changed the selected source commit")
+				}
+				for _, control := range custody.controls {
+					current, err := os.Lstat(control.path)
+					if err != nil || !inputCustodySame(control.info, current) {
+						t.Fatal("ordinary mirror clone changed retained source control custody", err)
+					}
+				}
+				err := filepath.WalkDir(filepath.Join(source, "objects"), func(path string, entry os.DirEntry, walkErr error) error {
+					if walkErr != nil || entry.IsDir() {
+						return walkErr
+					}
+					relative, err := filepath.Rel(source, path)
+					if err != nil {
+						return err
+					}
+					original, err := os.Lstat(path)
+					if err != nil {
+						return err
+					}
+					copied, err := os.Lstat(filepath.Join(mirror, relative))
+					if os.IsNotExist(err) {
+						return nil // Transport may choose another pack layout.
+					}
+					if err != nil {
+						return err
+					}
+					if os.SameFile(original, copied) {
+						return fmt.Errorf("source and mirror share a native object")
+					}
+					return nil
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 		})
 	}

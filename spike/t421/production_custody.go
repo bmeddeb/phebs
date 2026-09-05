@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -181,18 +182,19 @@ func PrepareExecutionProduction(ctx context.Context, parent string, request Exec
 		return custody, ErrExecutionProductionCustody
 	}
 	custody.apiKey = hex.EncodeToString(key[:])
+	sourceURL := productionSourceURL(request.SourceRepository)
 	raw, err := yaml.Marshal(map[string]any{
 		"server":      map[string]string{"addr": request.Listen, "data_dir": request.DataRoot},
 		"auth":        map[string]string{"api_key": custody.apiKey},
 		"sync":        map[string]string{"resync_interval": "0"},
-		"connections": []map[string]any{{"name": "t422-local", "type": "git", "url": request.SourceRepository, "watch": true}},
+		"connections": []map[string]any{{"name": "t422-local", "type": "git", "url": sourceURL, "watch": true}},
 	})
 	if err != nil || len(raw) > 16<<10 {
 		return custody, ErrExecutionProductionCustody
 	}
 	parsed, err := config.Parse(raw)
 	if err != nil || parsed.Server.Addr != request.Listen || parsed.Server.DataDir != request.DataRoot || len(parsed.Connections) != 1 ||
-		parsed.Connections[0].URL != request.SourceRepository || !parsed.Connections[0].Watch {
+		parsed.Connections[0].URL != sourceURL || !parsed.Connections[0].Watch {
 		return custody, ErrExecutionProductionCustody
 	}
 	custody.config, err = protectProductionConfig(ctx, parent, raw)
@@ -204,6 +206,12 @@ func PrepareExecutionProduction(ctx context.Context, parent string, request Exec
 		return custody, ErrExecutionProductionCustody
 	}
 	return custody, nil
+}
+
+// A file URL selects ordinary Git transport instead of local-clone hardlinks.
+// Source and mirror keep distinct object custody without changing Mirror flags.
+func productionSourceURL(path string) string {
+	return (&url.URL{Scheme: "file", Path: path}).String()
 }
 
 func openProductionRoot(path string) (productionRoot, error) {

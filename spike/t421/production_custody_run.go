@@ -230,7 +230,9 @@ func (run *ExecutionProductionRun) finish(runCtx context.Context, cancelRun, rel
 		case <-joinTimer.C:
 			failure = ErrExecutionProductionCustody
 			releaseLifetime()
-			<-served // cancellation closes its owned socket; no native work here.
+			// Socket cancellation does not interrupt a synchronous custody
+			// metadata callback. Join it cooperatively and retain custody.
+			<-served
 		}
 		joinTimer.Stop()
 	}
@@ -262,7 +264,8 @@ func (run *ExecutionProductionRun) finish(runCtx context.Context, cancelRun, rel
 }
 
 // Stop is idempotent. A caller deadline bounds only its wait: retained cleanup
-// continues under the fixed native stop/join bound, without releasing custody.
+// continues after bounded stop/join attempts, without releasing custody. A
+// synchronous metadata callback can prolong the cooperative receiver join.
 func (run *ExecutionProductionRun) Stop(ctx context.Context) (ExecutionProductionResult, error) {
 	if run == nil || ctx == nil || run.stop == nil || run.done == nil || run.controller == nil {
 		return ExecutionProductionResult{}, ErrExecutionProductionCustody
