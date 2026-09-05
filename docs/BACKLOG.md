@@ -4611,6 +4611,11 @@ and a real offline module lookup. The normalizer now preserves that observed
 value while refusing missing/null time; all version, shape and independently
 verified h1 boundaries remain. Corrected-source review and a new bounded real
 admission attempt remain required, with no source-admission or readiness pass.
+Exact correction `a438a51eb9d25be45413ec1b75990060529261db` then passed
+independent review with all severity counts zero, focused exact-tree race three
+repeats (1.967s), pinned lint, docs (0.489s), glossary and whitespace. Its one
+new bounded genuine-parent rehearsal uses the explicit native Git input;
+completion is not yet established.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
@@ -4645,6 +4650,17 @@ and one low cost/cancellation wording issue. The owning row now records full
 plan regeneration and addition hashing on every author process, with context
 checks around rather than within the existing contextless generators. Actual
 parent process deadlines and uncertain-custody retention remain mandatory.
+The genuine parent author vertical now binds the observed plan/integration/
+execution ancestry, owns the source lease and fresh source/home/tmp roots,
+and selects actual A → B → A-return CLI calls internally. Each successful
+operation requires the real canonical response, checkpoint acknowledgement,
+natural close, one native Wait, empty recorded session, exact stdout EOF and
+parent-rechecked source controls. Failure retains its accounting/source prefix
+and cannot advance or retry. Light normal three repeats (4.618s), race three
+repeats (6.815s), final race (3.199s), related request/inventory regressions
+(4.149s), vet, pinned lint, formatting and whitespace pass. Independent exact
+review and genuine reference rebuild/full-population CLI execution remain open;
+this is not full executor/admission/launcher acceptance or a freeze.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation

@@ -69,6 +69,7 @@ type ExecutionGoBuildCustody struct {
 	git        *ExecutionGitCustody
 	reference  executionReferenceSource
 	commits    ExecutionCommits
+	planSource string
 	closed     bool
 	err        error
 }
@@ -178,6 +179,7 @@ func ProtectExecutionGoBuildInputs(ctx context.Context, parent string, request E
 	if err != nil || after != commits {
 		return custody, ErrExecutionGoBuildCustody
 	}
+	custody.planSource = request.PlanSourceCommit
 	return custody, nil
 }
 
