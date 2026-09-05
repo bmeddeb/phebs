@@ -4281,7 +4281,7 @@ or ceremony is claimed. Production bootstrap and phase coordination, followed
 by complete protected admission/author/executor/launcher wiring, remain next.
 
 **T42.2f · Remote producer accounting coordination** — stacked on the reviewed
-V3 foundation in `codex/t42.2f-production-dispatch`. Add a bounded inherited
+V3 foundation in `codex/t42.2f-production-dispatch`. Implements a bounded inherited
 phase-control socket beside unchanged DA01 admission/settlement. Quiesced owners
 use Pause-all → controller fence → producer checkpoints → independent semantic
 checks → controller advance → Resume-all before reopening entry. Parked calls
@@ -4300,6 +4300,21 @@ frozen transport/stage/cadence bounds, full author/executor/launcher and readine
 remain before author/seal or freeze. The implementation refines the unsealed
 single-descriptor draft to two explicit bounded endpoints; retained V1/V2 stay
 exact and no production behavior, integration or ceremony changes.
+
+Exact clean implementation `676031a9749c7b484e3ba0bac64c9a606a654218`
+passed independent source, documentation and cost review with
+critical/high/medium/low all zero. It passed the full dispatch-admission package
+ten times (5.267s) and race five
+times (4.516s), including real inherited-descriptor custody and duplicate
+receiver refusal. Selected V3 canonical/version-routing/runtime and typed
+production-inventory checks passed in 0.766s. Repository compilation, affected
+vet, pinned v2.12.2 lint, module verification, glossary and whitespace passed;
+the retained V1/V2 plan hashes are unchanged. Docs-check remains red only on the
+existing presentation-owned `ui/receipts/fixtures/service-boundary.png` link;
+no UI change or waiver is included. The full constructor/receipt fixture was
+not rerun for this isolated, production-unwired accounting slice; its earlier
+exact-source result remains separately attributed above. Full production
+admission and launcher readiness remain open, not waived by these gates.
 
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
