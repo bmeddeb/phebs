@@ -4701,7 +4701,7 @@ the durable result if its observer fails, and refuses replay after marker
 consumption. Retained ordinary stage/startup/historical recovery stays unchanged.
 The final selected/retained normal selector passed in 33.082s, expanded selected
 and transition/runtime race in 37.009s, with package vet and pinned lint clean.
-Its owning cost separates the extra bounded binding/pointer/metadata and S2
+Its owning cost separates the extra bounded binding/pointer/metadata and healthy-S2/worst-S65
 lease checks from existing full-generation recovery and the C5 observations.
 Independent exact review and main same-attempt/Advance/error wiring remain open.
 

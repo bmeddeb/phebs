@@ -112,8 +112,10 @@ func (selected *selectedRecoveryV3) confirmLease(ctx context.Context) error {
 	}
 	chunk := selected.chunk
 	// Reuse the existing bounded running-attempt reader, not checkpoint evidence.
-	// Its schedule plus transactional chunk/current reads cost S2, outside either
-	// C5 transition report, and run after full target validation before any write.
+	// Its schedule plus transactional chunk/current reads cost healthy S2 and
+	// at most S65 (64 schedule retries plus one chunk query), outside either C5
+	// report, after full target validation and before any write. The existing
+	// operation context still bounds all attempts; no retry policy changes.
 	request := store.GenerationStaleLeaseTransitionRequest{
 		Point:      store.GenerationStaleLeaseTransitionCheckpointHit,
 		Repository: chunk.Repository, Stage: chunk.Stage, Generation: chunk.Generation,
