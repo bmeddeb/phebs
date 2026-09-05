@@ -129,19 +129,19 @@ func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, orig
 func normalizeGoBuildModuleInfo(raw []byte, version string) ([]byte, error) {
 	var info struct {
 		Version string
-		Time    time.Time
+		Time    *time.Time
 		Origin  json.RawMessage
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
-	if len(raw) > maxReferenceGoSumBytes || decoder.Decode(&info) != nil || info.Version != version || info.Time.IsZero() ||
+	if len(raw) > maxReferenceGoSumBytes || decoder.Decode(&info) != nil || info.Version != version || info.Time == nil ||
 		!errors.Is(decoder.Decode(new(any)), io.EOF) {
 		return nil, ErrExecutionGoBuildCustody
 	}
 	result, err := json.Marshal(struct {
 		Version string
 		Time    time.Time
-	}{info.Version, info.Time})
+	}{info.Version, *info.Time})
 	if err != nil {
 		return nil, ErrExecutionGoBuildCustody
 	}

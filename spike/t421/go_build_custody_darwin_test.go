@@ -171,6 +171,7 @@ func TestExecutionGoBuildCustodyBoundsAndInfo(t *testing.T) {
 	for _, test := range []struct{ raw, version string }{
 		{`{"Version":"v1.0.1","Time":"2026-01-01T00:00:00Z"}`, "v1.0.0"},
 		{`{"Version":"v1.0.0"}`, "v1.0.0"},
+		{`{"Version":"v1.0.0","Time":null}`, "v1.0.0"},
 		{`{"Version":"v1.0.0","Time":"2026-01-01T00:00:00Z","unknown":true}`, "v1.0.0"},
 		{`{} {}`, "v1.0.0"},
 	} {
@@ -370,6 +371,17 @@ func TestExecutionGoBuildModuleChecksumRefusal(t *testing.T) {
 				t.Fatalf("source-independent cache alteration accepted: %v", err)
 			}
 		})
+	}
+}
+
+func TestExecutionGoBuildModuleInfoPreservesObservedZeroTime(t *testing.T) {
+	// Generated-module proxies can explicitly report zero time. The selected
+	// Go driver's module lookup accepts it; chronology is not checksum authority.
+	const version = "v1.20.0-20250718181942-e35f9b667443.1"
+	raw := []byte(`{"Version":"` + version + `","Time":"0001-01-01T00:00:00Z"}`)
+	normalized, err := normalizeGoBuildModuleInfo(raw, version)
+	if err != nil || string(normalized) != string(raw) {
+		t.Fatalf("observed zero metadata time was changed or invented: %s, %v", normalized, err)
 	}
 }
 

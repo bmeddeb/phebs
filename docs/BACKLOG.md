@@ -4602,6 +4602,15 @@ created; its empty private diagnostic root remains. A subsequent PATH-only
 selection failed the test driver's clang/resolv link before the test began.
 The test now requires explicit native Git selection without changing compiler
 discovery. Neither attempt establishes full-source admission or server readiness.
+After explicit native Git selection, exact `31703f1e67c345982a1d8a8f5413524de06faed9`
+passed Git custody but refused full Go-input admission in 73.80s, before any
+reference build or server launch. Its exact source/SDK and first module-control
+copies remain retained. The first generated-module .info contains an explicit
+zero timestamp accepted unchanged by both the selected Go 1.26.5 implementation
+and a real offline module lookup. The normalizer now preserves that observed
+value while refusing missing/null time; all version, shape and independently
+verified h1 boundaries remain. Corrected-source review and a new bounded real
+admission attempt remain required, with no source-admission or readiness pass.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
