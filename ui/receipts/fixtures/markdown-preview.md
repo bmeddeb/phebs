@@ -9,7 +9,7 @@ and a [safe external link](https://example.invalid/markdown-preview).
 
 - Source remains the default view.
 - Preview state is carried in the URL.
-- Repository images remain named placeholders: ![Service boundary](./service-boundary.png)
+- Repository images remain named placeholders: ![Service boundary](../baselines/markdown-preview--light--comfortable.png)
 
 | Surface | Expected result |
 | --- | --- |

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { segmentMarkdown } from './markdown'
 import { sanitizeMarkdownSegments } from './markdownSanitize'
@@ -81,6 +83,17 @@ describe('renderMarkdown trust boundary', () => {
     expect(html).not.toContain('src=')
     expect(html).not.toContain('secret-relative.png')
     expect(html).toContain('Image unavailable: a diagram')
+  })
+
+  it('keeps the repaired receipt image inert and its preview unchanged', () => {
+    const source = readFileSync(resolve(process.cwd(), 'receipts/fixtures/markdown-preview.md'), 'utf8')
+    const target = '../baselines/markdown-preview--light--comfortable.png'
+    expect(source).toContain(`![Service boundary](${target})`)
+    const html = renderMarkdown(source)
+    expect(html).toBe(renderMarkdown(source.replace(target, './service-boundary.png')))
+    expect(html).toContain('Image unavailable: Service boundary')
+    expect(html).not.toMatch(/<img\b|\bsrc=/)
+    expect(html).not.toContain(target)
   })
 
   it('strips style tags and attributes', () => {
