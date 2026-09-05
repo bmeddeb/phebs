@@ -4460,6 +4460,24 @@ These tickets are pending, not acceptance evidence. Agents may refine an
 in-scope implementation choice in the owning ADR, but cannot relax an AC,
 invent a measurement or expand the frozen program to force completion.
 
+T42.2i's implementation protects seven actual core/helper copies and supplies
+the Git-child-only resource environment. Real protected init/fast-import,
+revision/tree reads, local clone and incremental fetch preserve exact commits,
+trees and content; the clone produced zero loose/three packed objects and the
+incremental fetch three loose/three packed objects, without changing GC or
+fetch policy. The five-repeat normal selector passed in 13.483s, three-repeat
+race in 11.147s and pinned lint with zero issues; alias, drift, closed/invalid
+custody, environment, cancellation and exact fixture cleanup regressions pass.
+Independent exact-commit source/documentation/cost review and exact-tree gates
+remain pending. This is a scoped Git-resource proof, not full input/bootstrap
+admission, author/executor/launcher readiness or a freeze.
+
+The initial delegated-run host observation found 74 GiB backing space available
+against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation
+continues; freeze remains closed until real host admission satisfies that bound.
+Only validated disposable task build scratch may be reclaimed without a new
+scope decision; retained evidence, validation lineages and user data remain.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
