@@ -457,6 +457,13 @@ normal/race/static gates. Its process/signature/package bindings remain modeled;
 full launcher readiness is still open. Docs-check retains the presentation-owned
 missing-image failure, without a waiver. The stack remains unmerged.
 
+T42.2f next supplies remote accounting coordination through a second bounded
+inherited socket while preserving DA01 admission bytes. Pause/checkpoint/resume
+does not establish worker or authority quiet. Real immutable tool/input custody
+and authenticated production bootstrap remain required before wiring launch
+sites; no raw caller-asserted client is enabled. This is not full runner readiness,
+author/seal, integration, freeze or execution.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

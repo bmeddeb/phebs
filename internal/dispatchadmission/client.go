@@ -22,25 +22,28 @@ type commandState struct {
 // Do not copy it. Constructors/owners must already have verified tool/input
 // identity and bound this producer's sites to the selected compiled source.
 type Client struct {
-	mu          sync.Mutex
-	conn        *net.UnixConn
-	ctx         context.Context
-	cancel      context.CancelCauseFunc
-	stopContext func() bool
-	gate        chan struct{}
-	changed     chan struct{}
-	binding     [32]byte
-	sites       map[uint32]Site
-	limits      Limits
-	phase       uint32
-	ordinal     uint64
-	sequence    uint64
-	wireBytes   uint64
-	active      map[uint64]*commandState
-	fenced      bool
-	checkpoint  bool
-	closed      bool
-	err         error
+	mu              sync.Mutex
+	conn            *net.UnixConn
+	ctx             context.Context
+	cancel          context.CancelCauseFunc
+	stopContext     func() bool
+	gate            chan struct{}
+	changed         chan struct{}
+	binding         [32]byte
+	sites           map[uint32]Site
+	limits          Limits
+	phase           uint32
+	ordinal         uint64
+	sequence        uint64
+	wireBytes       uint64
+	active          map[uint64]*commandState
+	paused          bool
+	waiters         int
+	controlAttached bool
+	fenced          bool
+	checkpoint      bool
+	closed          bool
+	err             error
 }
 
 // NewClient adopts and closes file even on failure. The file is explicitly
@@ -193,11 +196,25 @@ func (c *Client) Start(ctx context.Context, site uint32, command *exec.Cmd) (Han
 
 // admit is private so callers cannot bypass the owned Start/Wait boundary.
 func (c *Client) admit(ctx context.Context, site uint32, command *exec.Cmd) (uint64, error) {
-	release, err := c.acquire(ctx)
-	if err != nil {
-		return 0, err
+	var release func()
+	var err error
+	for {
+		if err := c.waitUnpaused(ctx); err != nil {
+			return 0, err
+		}
+		release, err = c.acquire(ctx)
+		if err != nil {
+			return 0, err
+		}
+		c.mu.Lock()
+		if !c.paused || c.err != nil || c.closed {
+			break
+		}
+		// Pause may have won after waitUnpaused but before gate acquisition.
+		// Release the RPC gate before parking, so settlement can still drain.
+		c.mu.Unlock()
+		release()
 	}
-	c.mu.Lock()
 	bound, known := c.sites[site]
 	if c.err != nil {
 		err = c.err
@@ -224,6 +241,107 @@ func (c *Client) admit(ctx context.Context, site uint32, command *exec.Cmd) (uin
 		return 0, err
 	}
 	return ordinal, nil
+}
+
+// waitUnpaused reserves a bounded waiter, not a dispatch token. The reservation
+// survives change notifications until this caller resumes or cancels. A canceled
+// unadmitted caller changes no accounting state and is not a producer failure.
+func (c *Client) waitUnpaused(ctx context.Context) error {
+	if ctx == nil {
+		return c.fail(ErrCanceled)
+	}
+	c.mu.Lock()
+	if !c.paused || c.err != nil || c.closed {
+		c.mu.Unlock()
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		c.mu.Unlock()
+		return err
+	}
+	if c.waiters >= c.limits.ActivePerProducer {
+		c.mu.Unlock()
+		return c.fail(ErrLimit)
+	}
+	c.waiters++
+	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		c.waiters--
+		c.mu.Unlock()
+	}()
+	for {
+		c.mu.Lock()
+		err, paused, closed, changed := c.err, c.paused, c.closed, c.changed
+		c.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if closed {
+			return context.Canceled
+		}
+		if !paused {
+			return nil
+		}
+		select {
+		case <-changed:
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-c.ctx.Done():
+			c.mu.Lock()
+			err := c.err
+			c.mu.Unlock()
+			if err != nil {
+				return err
+			}
+			// Parent cancellation causes may contain private diagnostics.
+			return c.ctx.Err()
+		}
+	}
+}
+
+// Pause reversibly parks new dispatch callers before admission and returns only
+// after the existing request gate clears. Already admitted commands, including
+// the ACK-to-Start gap, remain owned by their handles and the later Checkpoint.
+// Parked callers are separately capped at ActivePerProducer and hold neither an
+// RPC gate nor a state mutex. Overflow is a sticky limit refusal.
+//
+// The owner must quiesce its work sources before requesting a phase checkpoint.
+// Pausing dispatch is not worker/store/authority readiness: an admitted owner
+// that needs another child can otherwise stall behind Pause until the owner's
+// checkpoint deadline refuses. No positive admission prefix is erased.
+func (c *Client) Pause(ctx context.Context) error {
+	if c == nil {
+		return nil
+	}
+	if ctx == nil {
+		return c.fail(ErrCanceled)
+	}
+	c.mu.Lock()
+	err := c.err
+	if err == nil && (c.paused || c.fenced || c.closed || c.checkpoint) {
+		err = ErrProtocol
+	}
+	if err == nil {
+		c.paused = true
+		c.notifyLocked()
+	}
+	c.mu.Unlock()
+	if err != nil {
+		return c.fail(err)
+	}
+	release, err := c.acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	if ctx.Err() != nil || c.ctx.Err() != nil {
+		return c.fail(ErrCanceled)
+	}
+	return nil
 }
 
 func (c *Client) settle(ordinal uint64) error {
@@ -377,8 +495,10 @@ func (c *Client) Resume(phase uint32) error {
 		return c.fail(ErrProtocol)
 	}
 	c.phase = phase
+	c.paused = false
 	c.fenced = false
 	c.checkpoint = false
+	c.notifyLocked()
 	c.mu.Unlock()
 	return nil
 }

@@ -931,6 +931,13 @@ signature and package bindings remain modeled, not live launcher evidence.
 Recorded fixture processes and listeners are gone; the known presentation-owned
 docs-check failure remains, and the stack is unmerged. Production bootstrap,
 phase coordination and full protected admission/launcher wiring remain next.
+T42.2f adds bounded remote producer accounting coordination on
+`codex/t42.2f-production-dispatch`: a separate inherited control socket drives
+pause/checkpoint/resume while DA01 admission/settlement remains exact. This
+attests neither semantic owner quiescence nor private tool/input admission.
+Production bootstrap and launch sites stay disabled until genuine immutable
+custody and command admission exist; complete runner/launcher readiness, seal,
+integration, freeze and ceremony remain open.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

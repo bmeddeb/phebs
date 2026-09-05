@@ -4280,6 +4280,27 @@ repository/store suite, real admission/launcher rehearsal, merge, seal, freeze
 or ceremony is claimed. Production bootstrap and phase coordination, followed
 by complete protected admission/author/executor/launcher wiring, remain next.
 
+**T42.2f · Remote producer accounting coordination** — stacked on the reviewed
+V3 foundation in `codex/t42.2f-production-dispatch`. Add a bounded inherited
+phase-control socket beside unchanged DA01 admission/settlement. Quiesced owners
+use Pause-all → controller fence → producer checkpoints → independent semantic
+checks → controller advance → Resume-all before reopening entry. Parked calls
+receive no admission ordinal; settlement remains available; loss, malformed
+frames, illegal order and deadline exhaustion fail closed. AC: real socket and
+inherited-child handoffs, paused cancellation/waiter bounds, ACK-to-Start and
+persistent-handle regressions, lost checkpoint/resume ACKs, strict protocol
+refusal, affected normal/race/static gates and independent review. This proves
+only accounting coordination, not worker/authority quiet or private admission.
+
+Production bootstrap remains disabled: no existing issuer establishes immutable
+tool/input custody for the actual command. Per-attempt whole-image hashing is
+unbudgeted work and a writable-path metadata cache is not an immutable-content
+proof. Protected admission and the sixteen production launch sites, actual
+frozen transport/stage/cadence bounds, full author/executor/launcher and readiness
+remain before author/seal or freeze. The implementation refines the unsealed
+single-descriptor draft to two explicit bounded endpoints; retained V1/V2 stay
+exact and no production behavior, integration or ceremony changes.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
