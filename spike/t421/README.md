@@ -332,6 +332,24 @@ Full admission, host/profile, real author/executor/controller, remaining native
 controls, signed launcher and rehearsal still precede freeze. The layer remains
 unmerged and both sealed plans remain exact.
 
+Exact implementation `6ec99eb544c5c43a0399ad7097f3a8b961a00173` passed the
+complete focused external-image/observer/probe selector three times normally
+(13.139s) and once under race (5.933s), with the explicit real SurrealDB
+opt-in enabled alongside the other five real images. Public wrong-role and
+script/shim refusals, malformed bounded headers, closed environment, exact
+stream bounds, descendant cancellation, and success/failure probe cleanup
+pass. The shared supervisor version checks passed normal/race
+(0.661s/1.562s); affected host-toolchain checks passed normal/race
+(4.425s/4.732s). Repository compilation, scoped vet, pinned lint with zero
+issues, module verification, glossary and whitespace pass. Independent
+exact-commit review reports critical/high/medium/low `0/0/0/0`.
+
+Docs-check retains only the known presentation-owned missing
+`service-boundary.png`; no waiver or cross-track repair is made. The expensive
+full retained-plan/corpus and store suites were not rerun for these new
+observers and pure shared exports. No complete private tool/profile binding,
+freeze, ceremony receipt, release or scale/SLO result is established.
+
 ### T42.2c implementation: exact-reference Go tools
 
 `VerifyExecutionReferenceTool` measures a supplied executable only after its

@@ -4197,6 +4197,18 @@ immutable custody, full tool admission or a freeze binding. Host/profile
 admission, real author/executor/controller, remaining native controls, signed
 launcher and rehearsal remain open. No plan bytes, main merge or ceremony.
 
+Exact implementation `6ec99eb544c5c43a0399ad7097f3a8b961a00173` passed three
+focused native-image/public-observer/probe repetitions (13.139s) and race
+(5.933s), including all six real external images with explicit SurrealDB,
+script/shim/wrong-role refusal, closed environment, stream caps, cancellation
+and success/failure cleanup. Shared version and host-reader normal/race gates,
+repository compilation, scoped vet/pinned lint, module verification, glossary
+and whitespace pass. Independent exact-commit review reports `0/0/0/0`.
+Docs-check retains only the known presentation-owned missing image, without a
+waiver. The full retained-plan/corpus and store suites were not rerun for these
+new observers and pure shared exports. Neither sealed plan changed; no full
+tool inventory/private binding, integration or execution is claimed.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
