@@ -4789,6 +4789,14 @@ and transition/runtime race in 37.009s, with package vet and pinned lint clean.
 Its owning cost separates the extra bounded binding/pointer/metadata and healthy-S2/worst-S65
 lease checks from existing full-generation recovery and the C5 observations.
 Independent exact review and main same-attempt/Advance/error wiring remain open.
+The concrete main marker helper now calls actual HandleV3, exact selected
+recovery under the exclusive fence and actual Advance after release. Its two
+read barriers cannot release on body production alone; a separate successful
+after-report callback is required. Normal five repeats (0.900s), race three
+repeats (1.792s), vet, lint and whitespace pass for helper/barrier/refusal tests.
+Independent source read-through found no blocker in that bounded slice; actual
+main routing, after-report integration and a successful live graph through the
+scheduler's own completion remain open. No engine or ceremony ran for this gate.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation
