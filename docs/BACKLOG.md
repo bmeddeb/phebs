@@ -4182,6 +4182,21 @@ independent exact-commit review reports `0/0/0/0`. Docs-check retains only the
 known presentation-owned missing image, without a waiver. Full real tool
 inventory admission, retained-plan suite replay, and ceremony remain unperformed.
 
+**T42.2d · External image observation** — stacked on T42.2c in
+`codex/t42.2d-external-tool-identities`. Observe all six V2 external roles from
+explicit trusted Darwin/arm64 images: Git, Go, SurrealDB, hdiutil, ssh-keygen,
+and sh. Screen bounded native executable headers and repeat contextual image
+hashes. Use private closed read-only version probes for Git/Go/SurrealDB; reject
+the Git shim by actual core-image equality. Fixed platform image-only roles
+retain the honest `bound executable` descriptor and are never launched.
+AC: real native positive cases, script/wrong-image and invalid-input refusal,
+bounded output, closed environment, cancellation, focused normal/race,
+compilation/static/docs and independent exact-commit review gates. This is an
+image observation, not vendor authentication, native delegation/helper closure,
+immutable custody, full tool admission or a freeze binding. Host/profile
+admission, real author/executor/controller, remaining native controls, signed
+launcher and rehearsal remain open. No plan bytes, main merge or ceremony.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:

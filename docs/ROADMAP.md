@@ -419,6 +419,14 @@ fabricate the absent author/executor commands or issue full tool/profile
 admission. All three implementation layers remain unmerged; freeze, execution
 and Epic 42 closure are still ahead.
 
+T42.2d adds explicit external image observations for all six V2 roles,
+including its added shell. Native header checks, bounded closed version
+probes and repeated hashes reuse existing admission primitives; fixed system
+image-only roles are not launched. This fourth layer remains unmerged and
+issues no full binding. Protected tool/helper dispatch, host/profile admission,
+real author/executor/controller, native controls, launcher and rehearsal still
+precede freeze. Neither sealed plan changes.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

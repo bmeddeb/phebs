@@ -4474,6 +4474,24 @@ but no hard cache-disk or RSS quota is claimed. Complete external-tool and
 host/profile admission, real author/executor commands, controller, launcher
 and rehearsal remain open; this helper issues no private freeze binding.
 
+### T42.2d external-image observation
+
+The implementation-only `ObserveExecutionExternalTool` takes one explicit
+trusted native Darwin/arm64 image for `git`, `go`, `surreal`, `hdiutil`,
+`ssh-keygen`, or `sh`. Git must be the actual core image, not the macOS shim;
+Go must match the verifier's toolchain. Only the first three roles are launched,
+using fixed read-only version probes in private closed custody. The other
+roles must resolve to their fixed platform paths and retain `bound executable`
+as an image descriptor, not an invented product version. No keys or volumes
+are created and no shell is launched.
+
+This observes trusted inputs; it is not a sandbox for unknown executables or
+vendor attestation. Its private probe directory is cleaned, but it holds no
+mutation lock or future launch authority. Complete tool/helper dispatch,
+host/profile admission, real author/executor/controller, native controls,
+launcher and rehearsal remain required. There is still no freeze or ceremony
+terminal command to run.
+
 ## Developing phebs
 
 

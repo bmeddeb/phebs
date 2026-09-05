@@ -895,6 +895,12 @@ and build-identity comparison, and repeated source/SDK/tool checks. It issues
 no full checkout/tool freeze binding and invents no author/executor command.
 This next stacked layer also remains unmerged; remaining admission, controller,
 launcher and rehearsal work still precede any execution freeze.
+T42.2d adds bounded native external-image observations for all six V2 roles,
+including sh, with closed version probes and repeated hashes. Fixed system
+image-only tools are not launched. It does not establish immutable custody,
+native delegation/helper closure or full admission. This fourth stacked layer
+remains unmerged; host/profile, author/executor/controller, native controls,
+launcher and rehearsal remain before freeze. Both sealed plans stay exact.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

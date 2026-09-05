@@ -308,6 +308,30 @@ identities to satisfy the oracle, silently enlarge budgets, or reuse the old
 T40.13/T41.10 launchers. The retained plan bytes remain untouched. No ceremony
 has been launched, and no execution command is ready.
 
+### T42.2d implementation: external image observations
+
+`ObserveExecutionExternalTool` observes one of the six V2 external roles from
+an explicitly trusted absolute image path on Darwin/arm64. Bounded native
+executable-header screening rejects scripts and non-host images. Contextual
+256-MiB image hashing reuses T40's reader. Git/Go/SurrealDB receive closed
+read-only probes in fresh private custody, with 4-KiB per-stream limits and
+process-group cancellation; Git must equal its resolved core image, Go must
+match the verifier toolchain, and SurrealDB reuses the supervisor's pure 3.x
+version check. hdiutil, ssh-keygen and V2's sh require their fixed platform
+paths and receive only the truthful `bound executable` descriptor, without
+launching them. Errors never retain raw child diagnostics or selected paths.
+
+The helper repeats image hashes before probes and before returning the public
+identity, cleans only its newly created probe directory, and issues no private
+binding. Header screening is not vendor attestation or proof against arbitrary
+native delegation; Git builtin/helper closure and protected actual dispatch
+remain full-admission responsibilities. Per-role hash/probe counts and lack of
+hard child RSS/scratch-disk or durable supervision bounds are recorded in the
+owning PLAN ADR. No source/SDK/module rebuild or production work is added.
+Full admission, host/profile, real author/executor/controller, remaining native
+controls, signed launcher and rehearsal still precede freeze. The layer remains
+unmerged and both sealed plans remain exact.
+
 ### T42.2c implementation: exact-reference Go tools
 
 `VerifyExecutionReferenceTool` measures a supplied executable only after its

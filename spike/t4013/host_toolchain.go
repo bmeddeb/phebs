@@ -748,6 +748,18 @@ func executableDigestContext(ctx context.Context, path string) (string, error) {
 	return regularFileDigestContext(ctx, path, maxHostExecutableBytes)
 }
 
+// DigestHostExecutable observes one stable executable image with cancellation
+// and the existing 256-MiB host-image limit. It does not establish host custody.
+func DigestHostExecutable(ctx context.Context, path string) (string, error) {
+	return executableDigestContext(ctx, path)
+}
+
+// OpenHostImage reuses the non-following, nonblocking host-image open. The
+// caller must check the descriptor's type/identity and close it on every path.
+func OpenHostImage(path string) (*os.File, error) {
+	return openNoFollowRegular(path)
+}
+
 func regularFileDigestContext(ctx context.Context, path string, maximumBytes int64) (string, error) {
 	if ctx == nil {
 		return "", errors.New("host digest context is nil")

@@ -184,6 +184,12 @@ func inspectSurrealBinary(
 	return identity, nil
 }
 
+// ValidateSurrealVersionToken applies the same supported-version check used by
+// the child supervisor without discovering or executing a binary.
+func ValidateSurrealVersionToken(token string) error {
+	return validateSurrealVersionToken(token)
+}
+
 func validateSurrealVersionToken(token string) error {
 	if strings.TrimSpace(token) != token || token == "" {
 		return fmt.Errorf("invalid surreal version %q", token)
