@@ -388,6 +388,38 @@ func TestRunnerControlUnavailableCycleNeverExecutesOverflowTurn(t *testing.T) {
 	}
 }
 
+func TestRunnerControlClockBackstepCannotHideActualTurns(t *testing.T) {
+	for _, recoverClock := range []bool{false, true} {
+		t.Run(map[bool]string{false: "always_before_fence", true: "later_current"}[recoverClock], func(t *testing.T) {
+			var turns atomic.Int32
+			owners := []Owner{controlledTestOwner{name: "a", work: func(context.Context) OwnerResult {
+				turns.Add(1)
+				return OwnerResult{Completeness: Exact}
+			}}}
+			runner := newControlledTestRunner(t, owners, nil)
+			collector := testControlCollector(t, owners, 2)
+			fence := time.Now().Add(time.Hour)
+			collector.now = func() time.Time { return fence }
+			clockCalls := 0
+			runner.controller.now = func() time.Time {
+				clockCalls++
+				if recoverClock && clockCalls > 1 {
+					return fence
+				}
+				return fence.Add(-time.Second)
+			}
+			result, err := runner.control.DriveNormal(runner.ctx, collector)
+			if err == nil || result.Schema != "" || turns.Load() != 1 || runner.probes.Load() != 1 {
+				t.Fatalf("clock backstep undercounted work: %+v / %v / turns %d / probes %d",
+					result, err, turns.Load(), runner.probes.Load())
+			}
+			if _, err := runner.control.DriveNormal(runner.ctx, collector); err == nil || turns.Load() != 1 {
+				t.Fatal("failed controlled observation resumed after clock recovery")
+			}
+		})
+	}
+}
+
 func TestRunnerControlPressureUsesSameGateWithoutExtraTurns(t *testing.T) {
 	var calls []string
 	owners := []Owner{recordingOwner{name: "a", calls: &calls}}

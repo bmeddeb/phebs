@@ -280,7 +280,10 @@ func (state *runnerState) drive(ctx context.Context, command *runnerCommand, due
 	if err != nil {
 		return CycleObservation{}, err
 	}
-	for {
+	for actualTurns := uint64(0); actualTurns < collector.maxTurns; {
+		// Native work admission is independent of the asynchronous collector's
+		// wall-clock filters. A backward clock step cannot create free turns.
+		actualTurns++
 		if !state.turn(ctx, controller, gate, report, reportCapacity, collector) || ctx.Err() != nil {
 			collector.cancel()
 			return CycleObservation{}, ctx.Err()
@@ -289,10 +292,15 @@ func (state *runnerState) drive(ctx context.Context, command *runnerCommand, due
 		// Check after the actual report/capacity tail, before admitting another
 		// turn. An unavailable cycle at its limit never executes a cap+1 turn.
 		collector.mu.Lock()
-		if !collector.finished && collector.turns == collector.maxTurns {
+		counted := collector.turns
+		if !collector.finished && actualTurns == collector.maxTurns {
 			collector.finishLocked(CycleObservation{}, errors.New("lifecycle cycle observation exceeded its bound"))
 		}
 		collector.mu.Unlock()
+		if counted != actualTurns {
+			collector.cancel()
+			return CycleObservation{}, errors.New("controlled lifecycle observation did not count its actual turn")
+		}
 		select {
 		case result := <-done:
 			return cloneCycleObservation(result.value), result.err
@@ -307,4 +315,5 @@ func (state *runnerState) drive(ctx context.Context, command *runnerCommand, due
 		case <-timer.C:
 		}
 	}
+	return CycleObservation{}, errors.New("controlled lifecycle exceeded its actual turn bound")
 }

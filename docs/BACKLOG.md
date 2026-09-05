@@ -4459,6 +4459,13 @@ owns the design and dependency order. Execution remains excluded.
 These tickets are pending, not acceptance evidence. Agents may refine an
 in-scope implementation choice in the owning ADR, but cannot relax an AC,
 invent a measurement or expand the frozen program to force completion.
+Independent review of the lifecycle rendezvous found one medium clock-backstep
+gap: an observation rejected as older than its fence could still represent an
+actual native sweep. The correction now bounds actual turns before execution
+and refuses any completed pair the collector did not count. Always-stale and
+stale-then-current regressions pass with exactly one real turn/probe and no
+reuse. Normal five repeats (1.871s), race three repeats (2.318s), vet, pinned lint
+and whitespace pass; independent correction re-review remains required.
 The implementation stack splits T42.2k into bootstrap/dispatch, semantic-owner
 control and genuine-parent custody slices, and T42.2l into the current-revision
 core, authenticated request/CLI and complete executor/admission slices. These
