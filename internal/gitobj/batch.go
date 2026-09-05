@@ -26,7 +26,7 @@ const maxBatchHeaderBytes = 256
 type BatchBlobReader struct {
 	ctx    context.Context
 	cmd    *exec.Cmd
-	handle dispatchadmission.Handle
+	handle dispatchadmission.PipedHandle
 	stdin  io.WriteCloser
 	stdout *bufio.Reader
 	stderr *StderrBuffer
@@ -43,18 +43,19 @@ func NewBatchBlobReader(ctx context.Context, dir string) (*BatchBlobReader, erro
 		return nil, err
 	}
 	cmd := Command(ctx, dir, "cat-file", "--batch")
-	stdin, err := cmd.StdinPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdin, err := pipes.StdinPipe(cmd)
 	if err != nil {
 		return nil, err
 	}
-	stdout, err := cmd.StdoutPipe()
+	stdout, err := pipes.StdoutPipe(cmd)
 	if err != nil {
 		_ = stdin.Close()
 		return nil, err
 	}
 	stderr := &StderrBuffer{}
 	cmd.Stderr = stderr
-	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteGitBlobBatch, cmd)
+	handle, err := dispatchadmission.StartPipedProduction(ctx, dispatchadmission.SiteGitBlobBatch, cmd, &pipes)
 	if err != nil {
 		_ = stdin.Close()
 		return nil, err

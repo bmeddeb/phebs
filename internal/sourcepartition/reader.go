@@ -57,18 +57,19 @@ func (plan *Plan) ReadPartition(
 	batchContext, cancel := context.WithTimeout(ctx, MaxBatchDuration)
 	defer cancel()
 	command := gitobj.Command(batchContext, repositoryDirectory, "cat-file", "--batch")
-	input, err := command.StdinPipe()
+	var pipes dispatchadmission.CommandPipes
+	input, err := pipes.StdinPipe(command)
 	if err != nil {
 		return ReadStats{}, errors.New("open immutable batch input")
 	}
-	output, err := command.StdoutPipe()
+	output, err := pipes.StdoutPipe(command)
 	if err != nil {
 		_ = input.Close()
 		return ReadStats{}, errors.New("open immutable batch output")
 	}
 	var stderr gitobj.StderrBuffer
 	command.Stderr = &stderr
-	handle, err := dispatchadmission.StartProduction(batchContext, dispatchadmission.SiteSourcePartitionBatch, command)
+	handle, err := dispatchadmission.StartPipedProduction(batchContext, dispatchadmission.SiteSourcePartitionBatch, command, &pipes)
 	if err != nil {
 		_ = input.Close()
 		_ = output.Close()

@@ -375,13 +375,14 @@ func (r *Reconciler) censusValidated(
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	cmd := gitobj.Command(childCtx, dir, "ls-tree", "-rz", "--full-tree", commit)
-	stdout, err := cmd.StdoutPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdout, err := pipes.StdoutPipe(cmd)
 	if err != nil {
 		return censusResult{}, fmt.Errorf("open source census: %w", err)
 	}
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
-	handle, err := dispatchadmission.StartProduction(childCtx, dispatchadmission.SiteServiceCatalogCensus, cmd)
+	handle, err := dispatchadmission.StartPipedProduction(childCtx, dispatchadmission.SiteServiceCatalogCensus, cmd, &pipes)
 	if err != nil {
 		return censusResult{}, fmt.Errorf("start source census: %w", err)
 	}

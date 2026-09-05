@@ -205,6 +205,7 @@ func TestProductionDispatchSitesMatchActualBoundaries(t *testing.T) {
 	want["internal/dispatchadmission/client.go:(*Client).Start"] = 2
 	want["internal/dispatchadmission/client.go:(*Client).Run"] = 2
 	want["internal/dispatchadmission/production.go:StartProduction"] = 1
+	want["internal/dispatchadmission/production_pipes.go:StartPipedProduction"] = 1
 	want["internal/dispatchadmission/production.go:startProductionCommand"] = 1
 	want["internal/dispatchadmission/production.go:RunProduction"] = 2
 	want["internal/dispatchadmission/production.go:CombinedOutputProduction"] = 2
@@ -282,7 +283,7 @@ func typedDispatchBoundaries(file *ast.File, info *types.Info) map[string]int {
 			case "syscall", "golang.org/x/sys/unix":
 				launch = slices.Contains([]string{"StartProcess", "ForkExec", "Exec", "Fexecve"}, function.Name())
 			case "github.com/bmeddeb/phebs/internal/dispatchadmission":
-				launch = slices.Contains([]string{"StartProduction", "StartAuthor", "RunProduction", "CombinedOutputProduction"}, function.Name())
+				launch = slices.Contains([]string{"StartProduction", "StartPipedProduction", "StartAuthor", "RunProduction", "CombinedOutputProduction"}, function.Name())
 				if slices.Contains([]string{"Start", "Run"}, function.Name()) {
 					receiver := function.Type().(*types.Signature).Recv()
 					launch = receiver != nil && types.TypeString(receiver.Type(), func(*types.Package) string { return "" }) == "*Client"
@@ -328,11 +329,15 @@ func verifyProductionSiteArguments(t *testing.T, path string, file *ast.File, in
 			}
 			callee, ok := info.Uses[selector.Sel].(*types.Func)
 			if !ok || callee.Pkg() == nil || callee.Pkg().Path() != "github.com/bmeddeb/phebs/internal/dispatchadmission" ||
-				!slices.Contains([]string{"StartProduction", "RunProduction", "CombinedOutputProduction"}, callee.Name()) {
+				!slices.Contains([]string{"StartProduction", "StartPipedProduction", "RunProduction", "CombinedOutputProduction"}, callee.Name()) {
 				return true
 			}
 			found++
-			if len(call.Args) != 3 || info.Types[call.Args[1]].Value == nil {
+			arguments := 3
+			if callee.Name() == "StartPipedProduction" {
+				arguments = 4
+			}
+			if len(call.Args) != arguments || info.Types[call.Args[1]].Value == nil {
 				t.Fatalf("dispatch site %s:%s lacks its fixed site constant", path, name)
 			}
 			got, exact := constant.Uint64Val(info.Types[call.Args[1]].Value)

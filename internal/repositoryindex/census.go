@@ -32,7 +32,7 @@ type treeStream struct {
 	ordinal     int
 	commit      string
 	command     *exec.Cmd
-	handle      dispatchadmission.Handle
+	handle      dispatchadmission.PipedHandle
 	reader      *bufio.Reader
 	stderr      gitobj.StderrBuffer
 	current     *treeRecord
@@ -257,12 +257,13 @@ func startTreeStream(
 	args := []string{"ls-tree", "-r", "-l", "-z", "--full-tree", revision.Commit}
 	stream := &treeStream{ordinal: ordinal, commit: revision.Commit}
 	stream.command = gitobj.Command(ctx, repositoryDir, args...)
-	stdout, err := stream.command.StdoutPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdout, err := pipes.StdoutPipe(stream.command)
 	if err != nil {
 		return nil, err
 	}
 	stream.command.Stderr = &stream.stderr
-	stream.handle, err = dispatchadmission.StartProduction(ctx, dispatchadmission.SiteRepositoryTree, stream.command)
+	stream.handle, err = dispatchadmission.StartPipedProduction(ctx, dispatchadmission.SiteRepositoryTree, stream.command, &pipes)
 	if err != nil {
 		return nil, err
 	}

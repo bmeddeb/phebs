@@ -103,13 +103,14 @@ func WrapError(ctx context.Context, args []string, runErr error, stderr string) 
 // ErrTooLarge: object and metadata reads must never silently truncate.
 func Output(ctx context.Context, dir string, maxOutput int64, args ...string) ([]byte, error) {
 	cmd := Command(ctx, dir, args...)
-	stdout, err := cmd.StdoutPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdout, err := pipes.StdoutPipe(cmd)
 	if err != nil {
 		return nil, err
 	}
 	var stderr StderrBuffer
 	cmd.Stderr = &stderr
-	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteGitOutput, cmd)
+	handle, err := dispatchadmission.StartPipedProduction(ctx, dispatchadmission.SiteGitOutput, cmd, &pipes)
 	if err != nil {
 		return nil, err
 	}

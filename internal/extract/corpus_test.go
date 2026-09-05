@@ -263,11 +263,12 @@ func TestStopTreeCommandKillsBlockedWriter(t *testing.T) {
 		t.Skip("process cleanup regression")
 	}
 	cmd := exec.Command("sh", "-c", `while :; do printf 'tree-output-tree-output-tree-output\n'; done`)
-	stdout, err := cmd.StdoutPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdout, err := pipes.StdoutPipe(cmd)
 	if err != nil {
 		t.Fatal(err)
 	}
-	handle, err := dispatchadmission.StartProduction(t.Context(), dispatchadmission.SiteExtractTree, cmd)
+	handle, err := dispatchadmission.StartPipedProduction(t.Context(), dispatchadmission.SiteExtractTree, cmd, &pipes)
 	if err != nil {
 		t.Fatal(err)
 	}

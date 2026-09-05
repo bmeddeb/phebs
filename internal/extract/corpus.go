@@ -226,7 +226,8 @@ func (g *gitCorpus) walkTree(
 	defer cancel()
 	args := []string{"ls-tree", "-r", "-z", "--full-tree", g.commit}
 	cmd := gitobj.Command(cmdCtx, dir, args...)
-	stdout, err := cmd.StdoutPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdout, err := pipes.StdoutPipe(cmd)
 	if err != nil {
 		return fmt.Errorf("walk corpus: stdout: %w", err)
 	}
@@ -242,7 +243,7 @@ func (g *gitCorpus) walkTree(
 	cmd.WaitDelay = abortTimeout
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
-	handle, err := dispatchadmission.StartProduction(cmdCtx, dispatchadmission.SiteExtractTree, cmd)
+	handle, err := dispatchadmission.StartPipedProduction(cmdCtx, dispatchadmission.SiteExtractTree, cmd, &pipes)
 	if err != nil {
 		return fmt.Errorf("walk corpus: start git: %w", err)
 	}
@@ -755,7 +756,8 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 		"--", ":(literal)" + root,
 	}
 	cmd := gitobj.Command(cmdCtx, dir, args...)
-	stdout, err := cmd.StdoutPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdout, err := pipes.StdoutPipe(cmd)
 	if err != nil {
 		return false, fmt.Errorf("lookup corpus root: stdout: %w", err)
 	}
@@ -766,7 +768,7 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 	cmd.WaitDelay = abortTimeout
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
-	handle, err := dispatchadmission.StartProduction(cmdCtx, dispatchadmission.SiteExtractSubtree, cmd)
+	handle, err := dispatchadmission.StartPipedProduction(cmdCtx, dispatchadmission.SiteExtractSubtree, cmd, &pipes)
 	if err != nil {
 		return false, fmt.Errorf("lookup corpus root: start git: %w", err)
 	}
@@ -1052,7 +1054,7 @@ func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {
 // stopTreeCommand synchronously closes, kills, and reaps a tree walk whose
 // output is no longer being consumed. Closing first prevents a writer from
 // remaining blocked on a full pipe while Process.Kill and Wait race.
-func stopTreeCommand(cmd *exec.Cmd, stdout io.Closer, handle *dispatchadmission.Handle) {
+func stopTreeCommand(cmd *exec.Cmd, stdout io.Closer, handle *dispatchadmission.PipedHandle) {
 	_ = stdout.Close()
 	if cmd.Process != nil {
 		_ = cmd.Process.Kill()

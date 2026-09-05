@@ -4573,6 +4573,17 @@ explicitly initiates cancellation before a cooperative join; it cannot interrupt
 native metadata calls, and caller expiry never releases uncertain custody.
 Independent corrected-source review and the real full-repository rehearsal
 remain required.
+The shared pre-Start pipe leak is corrected at all eight affected streaming
+sites. Explicit owners close every pipe end even when admission never enters
+exec.Start; normal successful streams still join/settle before parent-end
+closure. Sixty-four retained commands per refusal/failure/cancellation mode,
+borrowed stdio, setup errors, real zero-budget refusal, ordinary/admitted echo,
+double Start, first-close failure and canceled-child join regressions pass
+without forced GC. All six affected packages passed normal and race; full
+dispatch-admission race, focused new-test race five repeats, exact sixteen-site
+inventory, scoped vet, pinned lint, format and whitespace pass. These are
+working-tree scoped gates; independent immutable corrected-source review and
+the real protected Phebs/Surreal rehearsal remain required.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay

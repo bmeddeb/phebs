@@ -573,13 +573,14 @@ func walkTree(
 ) error {
 	args := []string{"ls-tree", "-r", "-l", "-z", "--full-tree", commit}
 	command := gitobj.Command(ctx, repoDir, args...)
-	stdout, err := command.StdoutPipe()
+	var pipes dispatchadmission.CommandPipes
+	stdout, err := pipes.StdoutPipe(command)
 	if err != nil {
 		return err
 	}
 	var stderr gitobj.StderrBuffer
 	command.Stderr = &stderr
-	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteCandidateTree, command)
+	handle, err := dispatchadmission.StartPipedProduction(ctx, dispatchadmission.SiteCandidateTree, command, &pipes)
 	if err != nil {
 		return err
 	}
