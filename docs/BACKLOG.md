@@ -4638,6 +4638,12 @@ execution. Inherited normal/author/semantic/refusal paths pass race three repeat
 (1.752s), scoped vet and pinned lint. Main input/config/epoch validation, native
 phase wiring and exact review remain open; this is not semantic admission or a
 freeze by itself.
+Exact semantic-bootstrap source `fcb0bb905b567e4dd801bde8beec33d3cb8a8288`
+passed independent review with all severity counts zero; the final expanded
+inherited/snapshot race three-repeat selector passed in 1.681s. The earlier
+1.752s run covered the inherited selector before the additional snapshot unit
+test. The prospective V3 marker-contract correction through `a9e84e3a` also
+passed independent review with all severity counts zero.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
@@ -4683,6 +4689,11 @@ repeats (6.815s), final race (3.199s), related request/inventory regressions
 (4.149s), vet, pinned lint, formatting and whitespace pass. Independent exact
 review and genuine reference rebuild/full-population CLI execution remain open;
 this is not full executor/admission/launcher acceptance or a freeze.
+Independent parent-author review found no critical/high/medium code issue and
+one low owning-cost omission: the source pre/post continuity reads, their author
+mutex hold and the 16-byte observed plan-source field. The owning cost now lists
+the five successful continuity passes and their bounded controls/inventories.
+Source-identical re-review remains required.
 Two independent call-graph reviews identified and resolved the return-A epoch
 conflict prospectively for V3: its server already runs in epoch three when the
 marker is produced, and epoch four belongs to process_restart. V3 now explicitly
