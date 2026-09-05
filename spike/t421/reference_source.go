@@ -32,10 +32,16 @@ type executionReferenceSource struct {
 func createExecutionReferenceSource(
 	ctx context.Context, origin executionCheckoutInspector, source, destination string,
 ) (_ executionReferenceSource, retErr error) {
+	return createExecutionReferenceSourceBounded(ctx, origin, source, destination, maxCheckoutBytes)
+}
+
+func createExecutionReferenceSourceBounded(
+	ctx context.Context, origin executionCheckoutInspector, source, destination string, rawByteLimit int64,
+) (_ executionReferenceSource, retErr error) {
 	if err := ctx.Err(); err != nil {
 		return executionReferenceSource{}, fmt.Errorf("reference source canceled: %w", err)
 	}
-	if !validCommit(source) || !filepath.IsAbs(destination) || filepath.Clean(destination) != destination {
+	if !validCommit(source) || !filepath.IsAbs(destination) || filepath.Clean(destination) != destination || rawByteLimit < 0 || rawByteLimit > maxCheckoutBytes {
 		return executionReferenceSource{}, errors.New("reference source identity or destination is invalid")
 	}
 	parent := filepath.Dir(destination)
@@ -85,7 +91,7 @@ func createExecutionReferenceSource(
 		if err := ctx.Err(); err != nil {
 			return executionReferenceSource{}, fmt.Errorf("reference source copy canceled: %w", err)
 		}
-		size, err := copyExecutionReferenceFile(input, output, entry, maxCheckoutBytes-total)
+		size, err := copyExecutionReferenceFile(ctx, input, output, entry, rawByteLimit-total)
 		if err != nil {
 			return executionReferenceSource{}, err
 		}
@@ -100,7 +106,7 @@ func createExecutionReferenceSource(
 		index.WriteString(row)
 	}
 	reference := executionReferenceSource{
-		root:   executionCheckoutInspector{root: destination, git: origin.git, digest: origin.digest},
+		root:   executionCheckoutInspector{root: destination, git: origin.git, digest: origin.digest, custody: origin.custody},
 		source: source, tree: tree, entries: entries,
 	}
 	if _, err := reference.root.run(ctx, 4096, "init", "--quiet", "--template=", "--object-format=sha1"); err != nil {
@@ -153,7 +159,7 @@ func createExecutionReferenceSource(
 	return reference, nil
 }
 
-func copyExecutionReferenceFile(input, output *os.Root, entry executionCheckoutEntry, remaining int64) (int64, error) {
+func copyExecutionReferenceFile(ctx context.Context, input, output *os.Root, entry executionCheckoutEntry, remaining int64) (int64, error) {
 	for parent := filepath.Dir(entry.path); parent != "."; parent = filepath.Dir(parent) {
 		info, err := input.Lstat(parent)
 		if err != nil || !info.IsDir() {
@@ -192,13 +198,15 @@ func copyExecutionReferenceFile(input, output *os.Root, entry executionCheckoutE
 	//nolint:gosec // Hash exactly the raw Git blob while copying bounded bytes.
 	digest := sha1.New()
 	_, _ = fmt.Fprintf(digest, "blob %d\x00", before.Size())
-	written, copyErr := io.Copy(io.MultiWriter(destination, digest), io.LimitReader(source, before.Size()+1))
+	written, copyErr := io.Copy(io.MultiWriter(destination, digest), executionInputReader{ctx, io.LimitReader(source, before.Size())})
+	var overflow [1]byte
+	_, tailErr := io.ReadFull(executionInputReader{ctx, source}, overflow[:])
 	after, statErr := source.Stat()
 	sourceCloseErr := source.Close()
 	modeErr := destination.Chmod(mode)
 	destinationCloseErr := destination.Close()
 	current, pathErr := input.Lstat(entry.path)
-	if copyErr != nil || statErr != nil || sourceCloseErr != nil || modeErr != nil || destinationCloseErr != nil ||
+	if copyErr != nil || !errors.Is(tailErr, io.EOF) || statErr != nil || sourceCloseErr != nil || modeErr != nil || destinationCloseErr != nil ||
 		pathErr != nil || written != before.Size() || !sameCheckoutFile(before, after) || !sameCheckoutFile(before, current) ||
 		fmt.Sprintf("%x", digest.Sum(nil)) != entry.object {
 		return 0, errors.New("reference source copied file differs from exact source blob")

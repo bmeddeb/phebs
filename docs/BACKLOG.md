@@ -4468,9 +4468,27 @@ incremental fetch three loose/three packed objects, without changing GC or
 fetch policy. The five-repeat normal selector passed in 13.483s, three-repeat
 race in 11.147s and pinned lint with zero issues; alias, drift, closed/invalid
 custody, environment, cancellation and exact fixture cleanup regressions pass.
-Independent exact-commit source/documentation/cost review and exact-tree gates
-remain pending. This is a scoped Git-resource proof, not full input/bootstrap
-admission, author/executor/launcher readiness or a freeze.
+Exact implementation `f5e121c476e9eee9b7269c46dcbfd33c4221cf8e` passed
+independent manual source/documentation/cost review with all severity counts
+zero. Its clean detached tree passed new normal (4.277s) and race (5.262s)
+selectors, repository build, module verification, scoped vet, pinned lint,
+documentation and glossary checks. An optional secondary review tool timed out
+with zero completed files; that attempt is not passing review evidence and was
+not retried. This closes the scoped Git-resource slice only, not full
+input/bootstrap admission, author/executor/launcher readiness or a freeze.
+
+T42.2j now implements protected SDK/module/source custody and reference builds
+that consume those exact trees. The real native SDK plus tiny committed source
+and one independently verified offline module passed normal (94.967s) and
+race (112.763s) acceptance, including poisoned ambient settings, forged original
+ziphash and original-cache mutation after copy. The race fixture retained
+12,903 inventory entries, 11,536 regular files and 208,496,524 logical bytes;
+construction took 87.604s and the protected reference recipe 15.052s. Bounded
+tree/path/module, symlink, ancestor, hardlink, FIFO, sparse/aggregate overflow,
+partial cancellation and constant-descriptor checks pass; pinned lint reports
+zero issues and affected vet passes. These are pre-review implementation
+results, not the full repository module footprint, full admission or freeze
+readiness. Immutable-source independent review and exact-tree gates remain.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation

@@ -60,6 +60,10 @@ func InspectExecutionCheckout(
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	inspection := executionCheckoutInspector{root: root, git: gitBinary, digest: digest}
+	return inspectExecutionCheckout(ctx, inspection, planSource, integratedMain, source)
+}
+
+func inspectExecutionCheckout(ctx context.Context, inspection executionCheckoutInspector, planSource, integratedMain, source string) (ExecutionCommits, error) {
 	before, err := inspection.authority(ctx, planSource, integratedMain, source)
 	if err != nil {
 		return ExecutionCommits{}, err
@@ -75,7 +79,7 @@ func InspectExecutionCheckout(
 	if err := inspection.inventory(ctx, entries); err != nil {
 		return ExecutionCommits{}, err
 	}
-	if err := inspectCheckoutFiles(ctx, root, entries); err != nil {
+	if err := inspectCheckoutFiles(ctx, inspection.root, entries); err != nil {
 		return ExecutionCommits{}, err
 	}
 	if err := inspection.inventory(ctx, entries); err != nil {
@@ -85,7 +89,7 @@ func InspectExecutionCheckout(
 	if err != nil {
 		return ExecutionCommits{}, err
 	}
-	if before != after || executableidentity.Verify(gitBinary, digest) != nil {
+	if before != after || inspection.checkGit(ctx) != nil {
 		return ExecutionCommits{}, errors.New("checkout admission authority changed during inspection")
 	}
 	if err := ctx.Err(); err != nil {
@@ -94,7 +98,21 @@ func InspectExecutionCheckout(
 	return after, nil
 }
 
-type executionCheckoutInspector struct{ root, git, digest string }
+type executionCheckoutInspector struct {
+	root, git, digest string
+	custody           *ExecutionGitCustody
+}
+
+func (inspection executionCheckoutInspector) checkGit(ctx context.Context) error {
+	if inspection.custody != nil {
+		identity, path, err := inspection.custody.Check(ctx)
+		if err != nil || identity.SHA256 != inspection.digest || path != inspection.git {
+			return ErrExecutionGitCustody
+		}
+		return nil
+	}
+	return executableidentity.Verify(inspection.git, inspection.digest)
+}
 
 // No status/diff command is used: those can invoke checkout-local filters and
 // trust index stat caches. Each child gets a closed environment regardless of
@@ -109,7 +127,7 @@ func (inspection executionCheckoutInspector) runInput(ctx context.Context, input
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("checkout admission canceled: %w", err)
 	}
-	if err := executableidentity.Verify(inspection.git, inspection.digest); err != nil {
+	if err := inspection.checkGit(ctx); err != nil {
 		return nil, errors.New("checkout admission Git executable changed")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -125,6 +143,14 @@ func (inspection executionCheckoutInspector) runInput(ctx context.Context, input
 		"GIT_NO_LAZY_FETCH=1", "GIT_NO_REPLACE_OBJECTS=1", "GIT_TERMINAL_PROMPT=0",
 		"GIT_OPTIONAL_LOCKS=0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=" + os.DevNull,
 		"GIT_ATTR_NOSYSTEM=1",
+	}
+	if inspection.custody != nil {
+		private := filepath.Dir(inspection.custody.Directory())
+		environment, err := inspection.custody.Environment(ctx, private, private)
+		if err != nil {
+			return nil, ErrExecutionGitCustody
+		}
+		command.Env = environment
 	}
 	command.Stderr = io.Discard
 	command.WaitDelay = time.Second
