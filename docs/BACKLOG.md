@@ -4456,6 +4456,36 @@ owns the design and dependency order. Execution remains excluded.
   retained V1/V2 unchanged, exact invocation and custody/expiry handoff; no
   ceremony execution, Epic closure, release or scale claim.
 
+Scoped gate updates: exact literal-config correction 726e8953 passed independent
+source/test/cost review with all severity counts zero; its clean detached
+config/main pinned lint reported zero issues, and docs (0.515s), glossary and
+whitespace passed. Independent exact owner-control review of 0834fc42 and
+system-image review of ac58c8cb also closed all severity counts at zero. The
+system-image three-repeat native tests passed in 0.644s, race in 1.757s, with
+vet, pinned lint and whitespace clean. These supersede only their scoped
+pending-review/static statements below.
+
+Exact transport correction 91af48e6 independently re-reviewed with all severity
+counts zero, then passed the actual full-population author rehearsal from its
+clean detached source. Genuine source/SDK/module custody admitted 67,420 entries,
+55,703 files and 1,352,680,289 bytes in 6m4.959s. Supplied/reference author builds
+took 47.062s/2m13.488s. Actual A, B and A-return CLI/census/checkpoint/join took
+19.870s/14.890s/14.809s with 4/3/3 dispatch attempts and 1,280/1,024/1,024 reserved
+DA01 bytes. The complete test passed in 658.86s (package 659.491s), including
+natural child closure, empty recorded sessions and successful owned cleanup.
+This closes that three-author rehearsal only, not full controller composition,
+all-tool admission, executor/launcher, host freeze or a ceremony.
+
+An earlier complete receipt selector at exact 4c786ff4 exceeded its mistakenly
+short ten-minute package alarm while its existing twenty-minute native physical
+identity fixture was still materializing the A-return resolver. Retained V1/V2
+bytes and the V3 frozen round-trip passed; all three physical generations had
+executed 56 extraction chunks and nine current domain roots. Package status was
+failure (660.662s), not a complete receipt or later freeze-test pass. No matching
+engine/test process or port-65499 listener remained before the separate author
+rehearsal. One new exact-clean selector uses a thirty-minute outer package alarm
+that covers the unchanged fixture deadline; no frozen deadline is raised.
+
 These tickets are pending, not acceptance evidence. Agents may refine an
 in-scope implementation choice in the owning ADR, but cannot relax an AC,
 invent a measurement or expand the frozen program to force completion.
