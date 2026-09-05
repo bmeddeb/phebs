@@ -5490,9 +5490,9 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
+## Deliberate non-goals
 
-SCIM provisioning, multi-org RBAC / seats, and a cloned "Ask" chat app —
+SCIM provisioning, multi-org RBAC / seats, and a built-in chat app —
 phebs stays **MCP-first** (agents bring their own chat) and **single-tenant**.
 Kubernetes/Helm waits for the P6 fleet profile. Anonymous-access and
 entitlement gating are deleted outright (config bool, no license backend).
@@ -5504,5 +5504,5 @@ entitlement gating are deleted outright (config bool, no license backend).
 - Decisions land as dated ADR bullets in PLAN.md, same PR as the change.
 - Every epic ends with a `make dev` demo state — no epic is "done" if it
   can't be shown end-to-end.
-- Upstream repo is behavior reference only; `ee/` paths never opened.
+- Independent application code; respect dependency licenses and preserve notices.
 - Personal hardware, personal time, no employer code or credentials.

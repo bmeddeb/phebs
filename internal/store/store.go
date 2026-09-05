@@ -81,7 +81,7 @@ const (
 	JobProjectionUnavailable JobProjectionState = "unavailable"
 )
 
-// Repo mirrors the upstream Repo model's P1 fields (PORT_MAP §5).
+// Repo holds the repository metadata used by the sync and index pipeline.
 type Repo struct {
 	Name                string              `json:"name"` // unique, e.g. "github.com/foo/bar"
 	DisplayName         string              `json:"display_name,omitempty"`

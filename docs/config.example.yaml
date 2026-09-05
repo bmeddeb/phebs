@@ -1,5 +1,5 @@
 # phebs configuration - exhaustive annotated reference (T1.1).
-# phebs' own schema; not compatible with Sourcebot's config.json.
+# phebs' own YAML configuration schema.
 # This file passes strict config parsing as written. Connector URLs, selectors,
 # paths, and identities are illustrative and must be replaced before use.
 # Optional integrations use empty values, while commented examples show how to

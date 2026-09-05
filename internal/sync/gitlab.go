@@ -12,8 +12,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-// glProject is the subset of the GitLab project object phebs consumes
-// (PORT_MAP §5).
+// glProject is the subset of the GitLab project object phebs consumes.
 type glProject struct {
 	ID                int64      `json:"id"`
 	PathWithNamespace string     `json:"path_with_namespace"`

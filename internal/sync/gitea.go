@@ -12,8 +12,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-// gtRepo is the subset of the Gitea repository object phebs consumes
-// (PORT_MAP §5). Gitea's API is a near-superset of GitHub's shape.
+// gtRepo is the subset of the Gitea repository object phebs consumes.
+// Gitea's API is a near-superset of GitHub's shape.
 type gtRepo struct {
 	ID            int64      `json:"id"`
 	FullName      string     `json:"full_name"`

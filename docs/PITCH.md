@@ -178,7 +178,7 @@ Stop conditions and authority live only in the
 
 ## Intellectual property and provenance
 
-phebs is Apache-2.0 and developed as a personal, reference-only implementation.
+phebs is an independently developed personal project licensed under Apache-2.0.
 Its commit history, dependencies, SBOM, and development record are available
 for ordinary employment-invention, open-source, security, and provenance
 review. Internal deployment, sponsorship, licensing, or assignment requires

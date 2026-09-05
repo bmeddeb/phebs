@@ -1,14 +1,13 @@
 # AGENTS.md — phebs
 
-Self-hosted code search in one Go binary. Ground-up, **reference-only** port of
-Sourcebot: zoekt in-process, SurrealDB 3.0, huma OpenAPI, Vite + React +
+Independent self-hosted code search in one Go binary. Built with
+zoekt in-process, SurrealDB 3.0, huma OpenAPI, Vite + React +
 CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
 
 ## Source of truth (read before working)
 
 - `PLAN.md` — architecture + dated ADR bullets. Every decision lands here as an
   ADR bullet **in the same PR** as the change. No other design docs.
-- `docs/PORT_MAP.md` — removed 2026-07-12 (historical; see git history).
 - `docs/BACKLOG.md` — epics + PR-sized tickets. Work proceeds in ticket order;
   branch names carry ticket IDs (e.g. `t1.3-job-claim-spike`).
 - `docs/ROADMAP.md` — current posture and sequencing; completed tickets live in
@@ -83,11 +82,11 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 ## Hard rules
 
-- **Never open, copy, or paraphrase upstream Sourcebot source.** Behavior, docs,
-  and API shapes are the only reference. Never read any path under `ee/` in the
-  upstream repo under any circumstances. Upstream is FSL-1.1 + proprietary ee/;
-  phebs is Apache-2.0 (confirmed, T0.2) and must stay uncontaminated.
-- Depend on upstream `github.com/sourcegraph/zoekt`, not the sourcebot-dev fork.
+- **Independent implementation:** do not open, copy, or paraphrase proprietary
+  or source-available application code, UI, CSS, or schemas as implementation
+  references. Respect dependency licenses and preserve required notices.
+  phebs is Apache-2.0 (confirmed, T0.2).
+- Depend directly on upstream `github.com/sourcegraph/zoekt`.
 - No employer code, credentials, hosts, or infrastructure. Personal project,
   personal hardware.
 

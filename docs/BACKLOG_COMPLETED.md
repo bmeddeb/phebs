@@ -5,8 +5,8 @@
 > [roadmap](./ROADMAP.md). Ticket narratives below are retained as completed
 > engineering history.
 
-Epics 0–10 historically mirrored the removed `PORT_MAP.md`; later epics extend
-the same ticket ledger. Tickets are PR-sized and dependency-ordered for a
+Epics 0–10 record the initial implementation; later epics extend the same
+ticket ledger. Tickets are PR-sized and dependency-ordered for a
 stacked workflow. Acceptance criteria (AC) are the merge bar. Decisions get
 appended to PLAN.md as dated ADR bullets — no new architecture docs.
 
@@ -97,7 +97,7 @@ embedded storage with zero external services.
 ## EPIC 1 — Skeleton & storage (slice 1) ✅ 2026-07-09 — demoed via `make dev`
 
 **T1.1 · Config schema + loader** ✅ 2026-07-09
-Own YAML schema (NOT upstream's JSON schemas): server block, connections list
+Phebs YAML schema: server block, connections list
 (github, generic-git), index dir, auth token. AC: invalid config fails fast
 with line-level errors; example config in `docs/`.
 
@@ -154,8 +154,8 @@ added to CLAUDE.md: behavior changes update the manual in the same PR.
 Drive-by fixes from verifying the quickstart: `make build` binary now finds
 `bin/zoekt-git-index`; UI page title.
 `GET /api/repo-status`; orphaned repos (no connection) flagged; cleanup behind
-config flag (default off, mirroring upstream's isAutoCleanupDisabled
-semantics). AC: status endpoint reflects sync/index state transitions live.
+config flag (default off). AC: status endpoint reflects sync/index state
+transitions live.
 
 ## EPIC 3 — Index (slice 3) ✅ 2026-07-09 — demoed: sync→index chain to shards via `make dev`
 
@@ -234,30 +234,28 @@ button. AC: reindex button enqueues job visible in status within one poll.
 
 ## P1 cut line
 
-Everything above ships = P1 (complete 2026-07-10). The post-P1 roadmap below
-closes the Sourcebot free/paid feature gaps (derived 2026-07-10 from a
-public-sources feature comparison + PORT_MAP §12). Waves are ordered by
-value-over-effort and dependency; tickets are PR-sized, ACs are the merge bar.
-Sourcebot tier in each ticket = where that feature sits upstream (free vs
-paid/EE), from public docs/pricing only — never their source, never `ee/`.
+Everything above ships = P1 (complete 2026-07-10). The post-P1 roadmap below,
+recorded 2026-07-10, expands search, navigation, connectors, authentication,
+and operations. Waves are ordered by value-over-effort and dependency;
+tickets are PR-sized, ACs are the merge bar.
 
 ---
 
-## EPIC 6 — Parity quick wins ✅ 2026-07-10 *(Wave 0 — days each, no architecture change)*
+## EPIC 6 — Search and navigation improvements ✅ 2026-07-10 *(Wave 0 — days each, no architecture change)*
 
-**T6.1 · Broaden syntax highlighting** ✅ 2026-07-10 — *Sourcebot free (100+ langs)*
+**T6.1 · Broaden syntax highlighting** ✅ 2026-07-10
 Added CM6 language packs beyond the initial ~6: official Lezer grammars
 (Rust, Java, C/C++, PHP, SQL, HTML, CSS, XML, YAML) + legacy stream modes
 (Ruby, shell, C#, Kotlin, Scala, Swift, Lua, Perl, Dart, TOML, Dockerfile) in
 `ui/src/lang.ts`, each a lazy code-split chunk. Shared `langName`/`langColor`.
 Verified: YAML + TypeScript highlight in the viewer; header shows the language.
 
-**T6.2 · File-tree navigation column** ✅ 2026-07-10 — *Sourcebot free (file explorer)*
+**T6.2 · File-tree navigation column** ✅ 2026-07-10
 240px sticky tree column in `FilePage` over `/api/tree` (`fetchTree`): builds a
 nested tree, auto-expands the path to the current file, active-row bar, dirs
 toggle, files navigate. Verified: auto-expand + active highlight; clicking a
-collapsed dir reveals its files; file rows deep-link. Moves "file explorer"
-partial → have. *(buildTree unit test landed with T6.4.)*
+collapsed dir reveals its files; file rows deep-link. Completes the file
+explorer. *(buildTree unit test landed with T6.4.)*
 
 **T6.3 · Live GitHub PAT verification** ✅ 2026-07-10 — *closes a testing caveat*
 Ran the adapter live (200-repo account): `users:` pagination, `orgs:`,
@@ -274,23 +272,23 @@ typing guard + collapse guard/facet toggling (styletron+baseui render, mocked
 lang/highlight), and the T6.2 buildTree unit tests. CI wiring lands with the
 first CI pipeline (none exists yet).
 
-## EPIC 7 — Connectors & freshness ✅ 2026-07-11 *(Wave 1 — the biggest free-tier gap)*
+## EPIC 7 — Connectors & freshness ✅ 2026-07-11 *(Wave 1)*
 
-**T7.1 · GitLab connector** ✅ 2026-07-11 — *Sourcebot free* *(fake-API tests; live run pending)*
+**T7.1 · GitLab connector** ✅ 2026-07-11 *(fake-API tests; live run pending)*
 `type: gitlab` (PAT, optional self-hosted `url:`): groups (subgroups
 included), users (requester-scoped — own private projects appear), explicit
 repos, excludes, Link-header pagination + 429 Retry-After, §5 metadata,
 oauth2-basic authenticated clone. Shared `hostClient` extracted from the
 GitHub adapter. Path-traversal guard on server-supplied project paths.
 
-**T7.2 · Gitea connector** ✅ 2026-07-11 — *Sourcebot free*
+**T7.2 · Gitea connector** ✅ 2026-07-11
 `type: gitea` (PAT + required base URL): orgs/users/repos on the shared
 `hostClient`. **Verified live against a real Gitea 1.26 container**: private
 org repo synced, indexed, searched; token-as-basic-username clone auth
 confirmed; token absent from data dir. *(Bitbucket Cloud/DC, Azure DevOps,
 Gerrit follow as T7.x by demand — same adapter shape.)*
 
-**T7.3 · GitHub App auth** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs* *(fake-API tests; live App run pending)*
+**T7.3 · GitHub App auth** ✅ 2026-07-11 *(fake-API tests; live App run pending)*
 `app:` block (id, installation_id, PEM key by path or inline env) on github
 connections; stdlib RS256 JWT → installation token per sync run (always
 fresh — AC "tokens refresh"), so no `ghinstallation`/go-github dependency.
@@ -298,7 +296,7 @@ No selectors → syncs the installation's granted repos. PAT/anon connections
 unchanged (AC "falls back cleanly").
 Deps: T2.2.
 
-**T7.4 · Webhook-driven reindex** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+**T7.4 · Webhook-driven reindex** ✅ 2026-07-11
 `POST /api/webhook` (HMAC `X-Hub-Signature-256`, constant-time, 404 when no
 secret): push → targeted `repo_fetch_job` (fetch + reindex, no host
 re-listing); repository/installation events → remote-connection re-sync.
@@ -306,21 +304,21 @@ re-listing); repository/installation events → remote-connection re-sync.
 searchable with `resync_interval: "0"`; bad signature 401 live + tested.
 Deps: T7.3.
 
-**T7.5 · Periodic re-sync cadence** ✅ 2026-07-11 — *Sourcebot free (auto-freshness)*
+**T7.5 · Periodic re-sync cadence** ✅ 2026-07-11
 `sync.resync_interval` (default `1h`, `"0"` disables) enqueues re-syncs for
 remote connections; `EnqueueUnlessInFlight` is the debounce, local repos stay
-watch/boot-owned. Moves "periodic re-sync" partial → have.
+watch/boot-owned. Completes periodic re-sync.
 
-## EPIC 8 — Differentiators: paid features, OSS in phebs ✅ 2026-07-11 *(Wave 2 — high value)*
+## EPIC 8 — Search contexts and MCP ✅ 2026-07-11 *(Wave 2 — high value)*
 
-**T8.1 · Search contexts** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+**T8.1 · Search contexts** ✅ 2026-07-11
 Config-defined contexts (name → repo-name globs) + string-level `context:`
 extraction ahead of `query.Parse` (zoekt has no such atom), compiled to one
 `RepoSet` AND'd over the query; multiple atoms union. Table-driven Compile
 tests + e2e over real shards. No DB table — config is the single source;
 add CRUD when a UI needs it.
 
-**T8.2 · MCP server** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs; flagship differentiator (PLAN P4)*
+**T8.2 · MCP server** ✅ 2026-07-11 — *PLAN P4*
 Official go-sdk server at `/api/mcp` (Streamable HTTP, same authentication as
 the API): `search_code` (full query syntax incl. `context:`), `read_file`
 (ranged), `list_repos`. **Verified live from Claude Code**: a headless
@@ -345,21 +343,21 @@ artifact paths, and responsive UI corrections.
 
 ## EPIC 9 — Auth & code navigation ✅ 2026-07-11 *(Wave 3 — heavier lifts)*
 
-**T9.1 · DB-backed users, sessions, multiple API keys** ✅ 2026-07-11 — *Sourcebot free (login/members)*
+**T9.1 · DB-backed users, sessions, multiple API keys** ✅ 2026-07-11
 Surreal-backed users/SCS sessions, Argon2id local passwords, hashed named API
 keys, one-time setup/bootstrap, login/logout, CSRF, Settings key lifecycle,
 and always-on API/MCP auth. Tests cover atomic first-user creation, session
 restart persistence, key create/use/revoke, legacy config-key hash migration,
 rate limiting, malformed credentials, and CSRF enforcement.
 
-**T9.2 · OIDC / SSO** ✅ 2026-07-11 — *Sourcebot paid/EE (enterprise SSO)*
+**T9.2 · OIDC / SSO** ✅ 2026-07-11
 `coreos/go-oidc` discovery + authorization code/PKCE/state/nonce, verified
 ID-token email, stable issuer/subject linking, and T9.1 session bridging with
 no seat gate. A fake IdP test completes redirect → callback → persisted user
 → authenticated session, verifies PKCE + nonce wiring, and rejects callback
 replay after one-time state consumption.
 
-**T9.3 · Code navigation (SCIP)** ✅ 2026-07-11 — *Sourcebot paid/EE (Pro code nav) — PLAN P4*
+**T9.3 · Code navigation (SCIP)** ✅ 2026-07-11 — *PLAN P4*
 Lazy immutable `index.scip` ingestion from the indexed commit; precise
 definition/reference/hover API, file-viewer panel, and MCP tools with UTF-8/
 UTF-16/UTF-32 conversion and 500-reference cap. Fixture tests prove def/ref/
@@ -368,7 +366,7 @@ validation, deterministic reference bounds, canceled-ingest snapshot
 preservation, bounded semantic/cache/source budgets, oversized hover rejection,
 LRU eviction, and graceful `available:false` when the index is absent.
 
-**T9.4 · Git history / blame / commit / diff** ✅ 2026-07-11 — *Sourcebot free (history + blame)*
+**T9.4 · Git history / blame / commit / diff** ✅ 2026-07-11
 Revision-pinned `/api/blame`, `/api/commits`, `/api/commit`, `/api/diff`, three
 viewer routes, and four MCP tools over bare-mirror Git plumbing. Multi-commit
 fixture tests cover blame line mapping, rename-following history, parents/root
@@ -391,23 +389,23 @@ through the current source helper: its global 10 MiB blob contract conflicts
 with SCIP's independent 64 MiB index and per-source limits. AC: one tested error
 classifier and bounded reader serve all three callers without weakening any cap.
 
-## EPIC 10 — Enterprise surface ✅ 2026-07-11 *(Wave 4 — build-our-own, historical PORT_MAP §12)* — demoed live via `make dev`: audit trail, analytics dashboard, and admin-vs-non-admin visibility over API + stateless MCP. T10.4 was subsequently completed on demand on 2026-07-22.
+## EPIC 10 — Operations and access controls ✅ 2026-07-11 *(Wave 4)* — demoed live via `make dev`: audit trail, analytics dashboard, and admin-vs-non-admin visibility over API + stateless MCP. T10.4 was subsequently completed on demand on 2026-07-22.
 
-**T10.1 · Audit log** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+**T10.1 · Audit log** ✅ 2026-07-11
 Append-only `audit_event` table (narrow `AuditStore`), huma middleware
 recording every mutating operation by operation ID + injected recorder for
 the non-huma auth surface (logins incl. failures, setup, logout, key
 lifecycle, OIDC); synchronous non-fatal writes; `audit.retention` sweep
 (default 90d); admin-gated `GET /api/audit` + `#/audit` page with paging.
 
-**T10.2 · Analytics** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+**T10.2 · Analytics** ✅ 2026-07-11
 `usage_event` recorded by one `Searcher.Usage` hook (covers REST/SSE/MCP);
 no query text stored; Go-side windowed aggregation; admin-gated
 `GET /api/analytics` + `#/analytics` dashboard (tiles, per-day bars, top
 repos) with zero chart dependencies. **Zero telemetry** — events never leave
 the machine. `analytics.retention` (default 365d) shares the 12h sweep.
 
-**T10.3 · Permission syncing + permission-aware search** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs; the durable moat*
+**T10.3 · Permission syncing + permission-aware search** ✅ 2026-07-11
 `repo_permission` edges (`<host>:<login>` → repo) mirrored in the adapters'
 per-repo loops for private repos (GitHub/GitLab/Gitea; replace-set writes,
 stale-kept on failure); config map links users → identities; enforcement
@@ -427,7 +425,7 @@ without materializing rows; shutdown drains in-flight requests (and their
 audit/usage writes) before the store closes; the audit page dedupes pages
 shifted by live writes. Regression tests pin each.
 
-**T10.4 ✅ · Multi-branch / tag indexing (`rev:`)** — *Sourcebot free (up to 64 revs/repo)*
+**T10.4 ✅ · Multi-branch / tag indexing (`rev:`)**
 **Architectural, not a ticket-sized change** — HEAD-only is a core P1
 assumption (indexer, watch, freshness all lean on it). Gated on real demand;
 sequence last. AC: an explicit per-repo branch allowlist (cap ≈8 per PLAN §1)

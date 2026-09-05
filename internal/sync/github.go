@@ -28,7 +28,7 @@ const (
 	maxRateLimitRetries = 1
 )
 
-// ghRepo is the subset of the REST repo object phebs consumes (PORT_MAP §5).
+// ghRepo is the subset of the GitHub REST repository object phebs consumes.
 type ghRepo struct {
 	ID            int64      `json:"id"`
 	FullName      string     `json:"full_name"`

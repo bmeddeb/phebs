@@ -1,4 +1,4 @@
--- phebs schema (T1.2, PORT_MAP §5 P1 subset). Idempotent: IF NOT EXISTS
+-- phebs schema (T1.2). Idempotent: IF NOT EXISTS
 -- everywhere; applied on every Open.
 -- ponytail: SCHEMALESS + Go-typed structs for now; tighten to per-field
 -- DEFINEs once shapes stabilize (metadata typing decided in T2.2).

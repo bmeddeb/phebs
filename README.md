@@ -180,17 +180,13 @@ and hidden repositories are not serialized into proof material.
 - [Backlog](./docs/BACKLOG.md) — active work and ticket acceptance criteria.
 - [Architecture decisions](./PLAN.md) — append-only ADR ledger.
 
-## Lineage and license
+## Technology and license
 
-phebs is a ground-up, reference-only reimplementation of ideas observed in
-[Sourcebot](https://github.com/sourcebot-dev/sourcebot). It does not copy
-Sourcebot source code, UI code, or assets.
-
-Core dependencies include
-[zoekt](https://github.com/sourcegraph/zoekt),
-[SurrealDB](https://surrealdb.com),
-[huma](https://github.com/danielgtaylor/huma),
-[Base Web](https://baseweb.design), and
-[CodeMirror](https://codemirror.net).
+phebs is an independent Go application. Its technical foundation is Git for
+repository access, [zoekt](https://github.com/sourcegraph/zoekt) for search,
+[SurrealDB](https://surrealdb.com) for state and jobs, and
+[huma](https://github.com/danielgtaylor/huma) for the OpenAPI HTTP API.
+The embedded UI uses TypeScript, React, Vite,
+[Base Web](https://baseweb.design), and [CodeMirror](https://codemirror.net).
 
 Licensed under [Apache-2.0](./LICENSE).

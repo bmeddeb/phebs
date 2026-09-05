@@ -1,7 +1,6 @@
 // Package config defines and loads the phebs YAML config schema (T1.1).
 //
-// The schema is phebs' own (PLAN §1): upstream's JSON schemas are never
-// copied. See docs/config.example.yaml for the annotated reference.
+// See docs/config.example.yaml for the annotated reference.
 package config
 
 import (
