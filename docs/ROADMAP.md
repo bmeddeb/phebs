@@ -427,6 +427,13 @@ issues no full binding. Protected tool/helper dispatch, host/profile admission,
 real author/executor/controller, native controls, launcher and rehearsal still
 precede freeze. Neither sealed plan changes.
 
+The subsequent full-runner request stopped at V2's exact descendant-image
+accounting requirement: existing Darwin snapshots/kqueue cannot establish the
+complete event count. Ben must route a separately admitted event observer or
+prospective contract design/review. Unfinished wiring was removed; T42.2a–d
+and both seals remain intact. Native `-layout NONE` APFS geometry was measured
+at exactly 96 GiB, but no full admission, freeze or ceremony passed.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

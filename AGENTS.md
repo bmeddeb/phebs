@@ -901,6 +901,13 @@ image-only tools are not launched. It does not establish immutable custody,
 native delegation/helper closure or full admission. This fourth stacked layer
 remains unmerged; host/profile, author/executor/controller, native controls,
 launcher and rehearsal remain before freeze. Both sealed plans stay exact.
+The full-runner request then stopped at the exact descendant executable-image
+event requirement: existing Darwin snapshots/kqueue cannot establish it.
+Ben must route a separately admitted complete event observer or prospective
+accounting-contract design/review; no entitlement, host upgrade or sealed-plan
+change is authorized. Unfinished wiring was removed, preserving T42.2a–d.
+Temporary APFS diagnostics established exact 96-GiB geometry with `-layout NONE`
+and were detached and removed; they establish no admission or ceremony pass.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

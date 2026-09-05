@@ -4209,6 +4209,22 @@ waiver. The full retained-plan/corpus and store suites were not rerun for these
 new observers and pure shared exports. Neither sealed plan changed; no full
 tool inventory/private binding, integration or execution is claimed.
 
+**T42.2 full-admission/runner hold (2026-09-04).** The full implementation
+request exposed an unadmitted process-event capability: V2 requires every
+descendant executable-image epoch, including same-PID exec transitions, not
+sampled lower bounds. Existing snapshots miss short-lived processes; Darwin
+kqueue aggregates events and does not supply recursive fork tracking. Direct
+launch reports and known Git aliases do not account for every native helper.
+Endpoint Security entails new capability/host authorization; the macOS-27
+descendants API still requires its entitlement and is absent from the installed
+macOS-26 SDK. Ben must route a separately admitted complete observer or a
+prospective accounting-contract design/review. No new contract is authored or
+sealed by this hold. Unfinished implementation was removed; T42.2a–d remain
+intact and unmerged. Temporary native APFS checks resolved exact 96-GiB
+geometry with `-layout NONE`, then detached and removed both diagnostic images.
+This is no freeze, rehearsal, execution or Epic closure. The owning PLAN
+decision records the evidence and unchanged authority boundary.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
