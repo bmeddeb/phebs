@@ -118,7 +118,7 @@ func (state *runnerState) turn(ctx context.Context, controller *Controller, gate
 	report Reporter, reportCapacity CapacityReporter, collector *CycleCollector,
 ) bool {
 	result := controller.Tick(ctx)
-	if ctx.Err() != nil {
+	if ctx.Err() != nil && collector == nil {
 		return false
 	}
 	if report != nil {
@@ -130,6 +130,13 @@ func (state *runnerState) turn(ctx context.Context, controller *Controller, gate
 		log.Printf("lifecycle owner %q: %v", result.Owner, result.Err)
 	}
 	if collector != nil {
+		// A completed native Tick may retain deletions even when its caller
+		// canceled during Sweep or cursor persistence. Deliver that actual
+		// result to the owning exact reporter before stopping; do not invent
+		// a successful cycle or admit a capacity probe after cancellation.
+		if ctx.Err() != nil {
+			return false
+		}
 		collector.ObserveOwner(result)
 	}
 	if result.CycleStart {

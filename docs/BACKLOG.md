@@ -4515,6 +4515,13 @@ normal repeats (1.459s) and five race repeats (2.172s); request-identity tests
 passed twenty normal repeats (0.716s) and ten race repeats (1.792s), with combined
 vet, pinned lint and whitespace clean. Independent immutable review remains;
 this is no claim of request drainage, native inactivity or authority readiness.
+Controlled lifecycle turns now deliver the actual returned Tick result before
+honoring post-Tick cancellation, preserving completed deletion counts without
+emitting a capacity probe or successful cycle. The ordinary nil-collector path
+is unchanged. Positive canceled-result and existing control/owner regressions
+passed five normal repeats (1.987s), three race repeats (2.481s), vet, pinned
+lint and whitespace. Independent exact review and the main bounded source-free
+attempt-prefix sink remain gates; a panic before Tick returns remains unavailable.
 Main now consumes the authenticated bounded V3 semantic launch record through
 an actual inherited Unix socket before config/source path opening. It checks
 the same config bytes once, keeps the fixed epoch/phase membership and one

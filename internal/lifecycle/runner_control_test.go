@@ -224,6 +224,48 @@ func TestRunnerControlDriveCancellationJoinsActiveWork(t *testing.T) {
 	}
 }
 
+func TestRunnerControlReportsCanceledNativeResultWithoutCapacity(t *testing.T) {
+	for _, exact := range []bool{false, true} {
+		t.Run(map[bool]string{false: "ordinary", true: "controlled"}[exact], func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			calls, reports, probes := 0, 0, 0
+			owners := []Owner{controlledTestOwner{name: "a", work: func(context.Context) OwnerResult {
+				calls++
+				cancel()
+				return OwnerResult{Completeness: Unavailable, Scanned: 4, Deleted: 3,
+					LogicalBytes: 21, RootBytes: 8, MemberBytes: 13, Err: context.Canceled}
+			}}}
+			controller, err := NewController(newMemoryCursorStore(), owners...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gate := NewGateWithProbe(t.TempDir(), func(context.Context, string) (Capacity, error) {
+				probes++
+				return Capacity{}, errors.New("unexpected canceled capacity probe")
+			})
+			var collector *CycleCollector
+			if exact {
+				collector = testControlCollector(t, owners, 1)
+			}
+			var retained OwnerResult
+			state := runnerState{idleInterval: time.Hour, backlogDelay: time.Second}
+			if state.turn(ctx, controller, gate, func(result OwnerResult) {
+				reports++
+				retained = result
+			}, nil, collector) || calls != 1 || probes != 0 || (reports == 1) != exact {
+				t.Fatalf("canceled turn continued or lost its report: calls=%d reports=%d probes=%d", calls, reports, probes)
+			}
+			if exact && (retained.Owner != "a" || retained.AttemptedAt.IsZero() ||
+				retained.Scanned != 4 || retained.Deleted != 3 || retained.LogicalBytes != 21 ||
+				retained.RootBytes != 8 || retained.MemberBytes != 13 || !errors.Is(retained.Err, context.Canceled) ||
+				collector.observation.Schema != "") {
+				t.Fatalf("actual canceled deletion prefix changed or became a successful cycle: %+v", retained)
+			}
+		})
+	}
+}
+
 func TestRunnerControlUnacceptedCancellationDoesNotStartRunner(t *testing.T) {
 	control := NewRunnerControl()
 	ctx, cancel := context.WithTimeout(t.Context(), time.Millisecond)
