@@ -1296,6 +1296,13 @@ drained by one poller per kind that wakes every `poll_interval` (±50 %
 jitter). Job states:
 `pending → claimed → running → done | failed | canceled`.
 
+An empty or future-only queue is checked by a read-only selection and causes
+no claim write or lease-token allocation. A due candidate is then conditionally
+claimed by its exact record ID; another worker winning that race causes fresh
+selection. Eligibility is sampled at selection, as before. This preserves the
+poll cadence and lease fences; a successful claim adds one SDK roundtrip
+compared with the earlier combined selection/write request.
+
 Each target has at most one pending slot. An event arriving while work is
 running creates or upgrades one pending successor, so pushes and forced
 reindexes are not lost. Claims carry random lease tokens; every heartbeat,

@@ -4588,6 +4588,20 @@ time window; none were deleted on timestamp/prefix evidence alone. This closes
 normal-return temporary-tool leakage, not hard-death custody or the unchanged
 120-GiB host backing-space gate.
 
+The shared read-only idle-claim correction passed independent source/test/cost
+review with all severities zero. Pure normal repetitions (five, 0.602s), race
+repetitions (three, 1.620s), vet, pinned lint and whitespace passed. Separate
+native eligibility/concurrency and transaction-diagnostic gates passed in
+1.327s and 1.219s respectively, with both owned engines joined. All eight job
+kinds, future-only and oldest-due selection, preserved selection-time
+eligibility, actual lost conditional update, and 24-job/four-poller unique
+drain were checked. Native scoped counters changed from baseline R53/W250 to
+R54/W250 after the empty claim; SELECT, CreateJob and positive claim controls
+then reached R55/W250, R55/W251 and R56/W252. Thus empty claims submit no write
+transaction while positive claims preserve one read/one write. The bootstrap
+W250 is not an already-migrated restart floor. Full attempted-write/row coverage
+and exact-commit broader gates remain separate; no phase-budget pass is claimed.
+
 Scoped gate updates: exact literal-config correction 726e8953 passed independent
 source/test/cost review with all severity counts zero; its clean detached
 config/main pinned lint reported zero issues, and docs (0.515s), glossary and

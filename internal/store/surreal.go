@@ -2894,10 +2894,10 @@ func jobRecordCursorID(row jobRec) (string, error) {
 	return id, nil
 }
 
-// claimSQL is the T1.3 spike winner: optimistic conditional update, no
-// explicit transaction. The UPDATE re-checks status = 'pending' so a lost
-// race returns empty instead of double-claiming; losing costs one cheap read
-// versus a server-side transaction abort (see PLAN.md 2026-07-09 ADR).
+// claimSQL retains the original T1.3 one-query recipe for its comparison
+// spike. ClaimJob now separates its read-only selection from the conditional
+// write: the native engine otherwise opens a write transaction even when
+// this RETURN takes the empty arm.
 const claimSQL = `
 LET $cand = (SELECT id, created_at FROM type::table($table)
     WHERE status = 'pending' AND (not_before = NONE OR not_before <= time::now())
@@ -2908,20 +2908,28 @@ RETURN IF $cand != NONE THEN
      WHERE status = 'pending' RETURN AFTER)
 ELSE [] END;`
 
+const claimCandidateSQL = `SELECT id, created_at FROM type::table($table)
+    WHERE status = 'pending' AND (not_before = NONE OR not_before <= time::now())
+    ORDER BY created_at LIMIT 1`
+
+// Recheck the same pending predicate as the original optimistic UPDATE.
+// Eligibility is sampled at selection; not_before is deliberately not a new
+// update-time predicate. A lost race returns no row and restarts selection.
+const claimSelectedJobSQL = `UPDATE $cand
+SET status = 'claimed', claimed_by = $who, lease_token = $lease, pending_key = NONE,
+    claimed_at = time::now(), heartbeat_at = time::now(), recovery_lease = NONE
+WHERE status = 'pending' RETURN AFTER`
+
 // ClaimJob atomically claims the oldest pending job of kind for who. It
-// retries internally on lost races and returns ErrNotFound once no pending
-// jobs remain.
+// retries internally on lost races and returns ErrNotFound when no eligible
+// candidate remains, before allocating a lease or submitting a write.
 func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) {
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		lease, err := newLeaseToken()
-		if err != nil {
-			return nil, err
-		}
-		res, err := surrealdb.Query[[]jobRec](ctx, s.db, claimSQL,
-			map[string]any{"table": string(kind), "who": who, "lease": lease})
+		res, err := surrealdb.Query[[]jobRec](ctx, s.db, claimCandidateSQL,
+			map[string]any{"table": string(kind)})
 		if err != nil {
 			if isRetryable(err) {
 				continue
@@ -2929,16 +2937,37 @@ func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job,
 			return nil, err
 		}
 		rows := firstNonEmpty(res)
-		if len(rows) > 0 {
-			j := rows[0].toJob(kind)
-			return &j, nil
+		if len(rows) == 0 {
+			return nil, fmt.Errorf("no pending %s: %w", kind, ErrNotFound)
 		}
-		n, err := s.countPending(ctx, kind)
+		if len(rows) != 1 {
+			return nil, errors.New("claim candidate query returned multiple jobs")
+		}
+		if _, err := jobRecordCursorID(rows[0]); err != nil {
+			return nil, fmt.Errorf("claim candidate: %w", err)
+		}
+		if rows[0].RecID.Table != string(kind) {
+			return nil, errors.New("claim candidate belongs to another job kind")
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		lease, err := newLeaseToken()
 		if err != nil {
 			return nil, err
 		}
-		if n == 0 {
-			return nil, fmt.Errorf("no pending %s: %w", kind, ErrNotFound)
+		res, err = surrealdb.Query[[]jobRec](ctx, s.db, claimSelectedJobSQL,
+			map[string]any{"cand": *rows[0].RecID, "who": who, "lease": lease})
+		if err != nil {
+			if isRetryable(err) {
+				continue
+			}
+			return nil, err
+		}
+		rows = firstNonEmpty(res)
+		if len(rows) > 0 {
+			j := rows[0].toJob(kind)
+			return &j, nil
 		}
 	}
 }
