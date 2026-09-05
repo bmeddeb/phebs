@@ -191,12 +191,33 @@ func TestReferenceBuildInfoRefusesMissingReplacedOrWrongAuthority(t *testing.T) 
 }
 
 func TestVerifyExecutionReferenceToolRefusesUnavailableRolesBeforeWork(t *testing.T) {
-	for _, role := range []string{"t422-author", "t422-execute", "git", "go", "surreal", ""} {
+	for _, role := range []string{"t422-execute", "git", "go", "surreal", ""} {
 		t.Run(role, func(t *testing.T) {
 			if identity, err := VerifyExecutionReferenceTool(t.Context(), ReferenceToolRequest{Role: role}); err == nil || identity != (ExecutionToolIdentity{}) {
 				t.Fatalf("unimplemented/non-Go role admitted: %#v, %v", identity, err)
 			}
 		})
+	}
+}
+
+func TestReferenceAuthorRoleUsesExactSourceAuthority(t *testing.T) {
+	path, module, version, sum, recipe, err := referenceToolRole("t422-author")
+	if err != nil || path != "github.com/bmeddeb/phebs/spike/t422/cmd/author" || module != "" || version != "" || sum != "" || recipe != "" {
+		t.Fatalf("author role lost exact checkout authority: %q, %q, %q, %q, %q, %v", path, module, version, sum, recipe, err)
+	}
+	commit := strings.Repeat("a", 40)
+	info := &debug.BuildInfo{GoVersion: runtime.Version(), Path: path, Main: debug.Module{Path: "github.com/bmeddeb/phebs", Version: "(devel)"},
+		Settings: []debug.BuildSetting{
+			{Key: "CGO_ENABLED", Value: "0"}, {Key: "-trimpath", Value: "true"},
+			{Key: "GOOS", Value: runtime.GOOS}, {Key: "GOARCH", Value: runtime.GOARCH},
+			{Key: "vcs", Value: "git"}, {Key: "vcs.revision", Value: commit}, {Key: "vcs.modified", Value: "false"},
+		}}
+	if err := validateReferenceBuildInfo(info, path, commit, module, version, sum, map[string]string{}); err != nil {
+		t.Fatal(err)
+	}
+	info.Path = "github.com/bmeddeb/phebs/cmd/phebs"
+	if err := validateReferenceBuildInfo(info, path, commit, module, version, sum, nil); err == nil {
+		t.Fatal("another actual command was admitted as author")
 	}
 }
 

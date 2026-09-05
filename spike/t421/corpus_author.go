@@ -46,8 +46,13 @@ type ExecutionCorpusAuthor struct {
 	err       error
 	// Only the public constructor installs the real, fail-closed author
 	// bootstrap. Tiny tests install an actual controller/client transport.
-	gitPath string
-	start   func(context.Context, *exec.Cmd) (dispatchadmission.Handle, error)
+	gitPath         string
+	start           func(context.Context, *exec.Cmd) (dispatchadmission.Handle, error)
+	requestRevision string
+	requestUsed     bool
+	planFile        *os.File
+	planInfo        os.FileInfo
+	planPath        string
 }
 
 // NewExecutionCorpusAuthor accepts bounded canonical frozen V3 plan bytes,
@@ -121,6 +126,9 @@ func (author *ExecutionCorpusAuthor) Close() error {
 		if author.root != nil && author.root.Close() != nil {
 			author.err = ErrExecutionCorpusAuthor
 		}
+		if author.planFile != nil && author.planFile.Close() != nil {
+			author.err = ErrExecutionCorpusAuthor
+		}
 	}
 	return author.err
 }
@@ -148,8 +156,12 @@ func (author *ExecutionCorpusAuthor) AuthorNext(ctx context.Context, name string
 		return AuthoredExecutionRevision{}, errors.Join(ErrExecutionCorpusAuthor, corpusAuthorContextError(ctx))
 	}
 	if author.checkRoot(ctx) != nil || author.next >= len(author.source.revisions) ||
-		name != author.source.revisions[author.next].Name {
+		name != author.source.revisions[author.next].Name ||
+		author.requestRevision != "" && (author.requestUsed || name != author.requestRevision) {
 		return fail()
+	}
+	if author.requestRevision != "" {
+		author.requestUsed = true
 	}
 	if author.next == 0 {
 		if _, err := author.runOutput(ctx, 0, 4096); err != nil {
@@ -211,7 +223,7 @@ func (author *ExecutionCorpusAuthor) checkRoot(ctx context.Context) error {
 		return ErrExecutionCorpusAuthor
 	}
 	volume, err := inputCustodyVolume(author.root)
-	if err != nil || volume != author.volume {
+	if err != nil || volume != author.volume || author.checkPlan(ctx) != nil {
 		return ErrExecutionCorpusAuthor
 	}
 	return nil

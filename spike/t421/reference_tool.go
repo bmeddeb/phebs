@@ -37,7 +37,7 @@ type ReferenceToolRequest struct {
 // VerifyExecutionReferenceTool rebuilds one implemented Go tool from a private
 // exact source snapshot and compares the complete binary, not just its metadata.
 // It neither runs the supplied binary nor issues a CheckoutAdmissionBinding.
-// T422 author/executor roles remain unavailable until their real commands exist.
+// The executor role remains unavailable until its real command exists.
 func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequest) (identity ExecutionToolIdentity, retErr error) {
 	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRole(request.Role)
 	if err != nil {
@@ -191,6 +191,8 @@ func referenceToolRole(role string) (packagePath, modulePath, version, sum, reci
 	switch role {
 	case "phebs", "phebs-focused-index":
 		packagePath = "github.com/bmeddeb/phebs/cmd/" + role
+	case "t422-author":
+		packagePath = "github.com/bmeddeb/phebs/spike/t422/cmd/author"
 	case "buf":
 		modulePath, version, sum = policy.BufModulePath, policy.BufModuleVersion, policy.BufModuleSum
 		packagePath = modulePath + "/cmd/buf"

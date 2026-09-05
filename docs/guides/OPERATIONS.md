@@ -4523,6 +4523,14 @@ loaders or every process goroutine, and it does not yet implement full recovery
 preparation or a pressure wake. No public request header, manually set selector
 or local owner result supplies a complete ceremony admission or freeze.
 
+The implemented `spike/t422/cmd/author` command likewise has no standalone or
+unmetered mode. Its parent supplies one authenticated bounded private request,
+the protected V3 plan, the exact owned source directory and the actual prior
+author result. It streams only the requested revision, returns a bounded
+source-free result, and waits for acknowledged accounting checkpoint before
+closing. Direct invocation refuses; this command is not yet the full ceremony
+launcher or a freeze command.
+
 ## Developing phebs
 
 

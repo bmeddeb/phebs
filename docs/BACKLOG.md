@@ -4557,6 +4557,18 @@ retain source and join every started command. Five normal repeats passed in
 bounded response is below 4 KiB for the tiny fixture. Cross-process parent-bound
 input/previous-result continuity, actual CLI, full-population execution and
 independent exact-source review remain open; no future phase or ceremony ran.
+The authenticated request/resume and actual author CLI are now implemented.
+One private digest-bound request names the protected V3 plan and exact native
+parent-owned root, and binds only the preceding response actually received by
+the parent. The command has no unbound or tiny execution mode; tests use the
+same private resume machinery for tiny actual A/B/A-return subprocesses, not a
+full-population CLI run. Normal three repeats passed in 17.334s (author),
+0.658s (dispatch) and 1.118s (CLI); race three repeats passed in 145.998s,
+2.859s and 2.754s respectively. Full-shape response bounds passed in 0.514s.
+The actual author's exact-source reference-role routing and wrong-command
+refusal passed three repeats in 0.667s; the absent executor remains refused.
+Independent review, real parent author custody, full CLI execution and complete
+executor/admission/launcher acceptance remain open.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation

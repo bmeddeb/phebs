@@ -149,7 +149,7 @@ func TestProtectExecutionReferenceToolUnavailableBeforeCopy(t *testing.T) {
 	if err := os.Chmod(parent, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	for _, role := range []string{"", "unknown", "t422-author", "t422-execute", "git", "go", "surreal"} {
+	for _, role := range []string{"", "unknown", "t422-execute", "git", "go", "surreal"} {
 		t.Run("role "+role, func(t *testing.T) {
 			tool, err := ProtectExecutionReferenceTool(t.Context(), parent, ReferenceToolRequest{Role: role, Binary: "/usr/bin/true"})
 			if tool != nil && tool.input != nil {
