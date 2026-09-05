@@ -871,6 +871,43 @@ func FrozenStructuralGoFixture(profile Profile, ordinal uint64) (string, []byte,
 	), content, nil
 }
 
+// WalkFrozenStructuralRevisionBlobs exposes only the blob bytes needed to
+// author the next frozen structural revision. Baseline A visits the two
+// controls and one representative of each reused Go blob class; B and A-return
+// visit only the changed first Go file. It authors no Git object or future
+// revision. Callers stream placement records separately with WalkFrozenTreeRecords.
+func WalkFrozenStructuralRevisionBlobs(profile Profile, revision string, visit func(path string, content []byte) error) error {
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
+	if visit == nil || profile.Name != StructuralProfileName || profile.Kind != "structural" ||
+		profile.Scale != "frozen" || revision != "a" && revision != "b" && revision != "a-return" {
+		return errors.New("T40.1 frozen structural blob request is invalid")
+	}
+	if revision != "a" {
+		file, err := firstEligibleFile(profile, revision)
+		if err != nil {
+			return err
+		}
+		return visit(file.Path, file.Content)
+	}
+	for _, control := range frozenControls {
+		if err := visit(control.Path, slices.Clone(control.Content)); err != nil {
+			return err
+		}
+	}
+	for ordinal := uint64(0); ordinal < profile.Shape.GoBlobReuseClasses; ordinal++ {
+		path, content, err := FrozenStructuralGoFixture(profile, ordinal)
+		if err != nil {
+			return err
+		}
+		if err := visit(path, content); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // FrozenTreeRecord is one source-free expected Git leaf for the frozen
 // structural corpus. BlobOID is the canonical Git SHA-1 object identity.
 type FrozenTreeRecord struct {

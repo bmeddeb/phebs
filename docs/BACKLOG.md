@@ -4507,6 +4507,17 @@ boundaries. These intermediate results do not replace exact-tree independent
 review, full store/command gates, genuine protected-parent Phebs/Surreal
 readiness, semantic owner quiescence or full admission/freeze.
 
+T42.2l's current-revision author core now reuses the frozen source generators
+and one admitted native Git boundary. Actual tiny A → B → A-return replay
+records exactly 4/7/10 accepted commands, independently checks parents, trees
+and streamed census, and proves future commits absent at earlier boundaries.
+Missing/changed refs, config/root drift, cancellation and failed stream paths
+retain source and join every started command. Five normal repeats passed in
+5.617s, three race repeats in 5.762s; affected vet and pinned lint pass. The
+bounded response is below 4 KiB for the tiny fixture. Cross-process parent-bound
+input/previous-result continuity, actual CLI, full-population execution and
+independent exact-source review remain open; no future phase or ceremony ran.
+
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation
 continues; freeze remains closed until real host admission satisfies that bound.
