@@ -3,6 +3,7 @@
 package t421
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -310,15 +311,84 @@ func TestExecutionAuthorCustodySocketAdoption(t *testing.T) {
 				return
 			}
 			defer func() { _ = connection.Close() }()
+			peerSocket, err := adoptAuthorCustodySocket(peer)
+			if err != nil {
+				t.Fatal("adopt test peer", err)
+			}
+			defer func() { _ = peerSocket.Close() }()
 			if connection.SetReadDeadline(time.Now().Add(time.Second)) != nil ||
 				connection.SetWriteDeadline(time.Now().Add(time.Second)) != nil {
 				t.Fatal("adopted socket is not pollable")
 			}
-			if _, err := peer.Write([]byte("exact input")); err != nil || peer.Close() != nil {
+			if err := writeAuthorCustodyRequest(t.Context(), connection, []byte("bounded request")); err != nil ||
+				peerSocket.SetReadDeadline(time.Now().Add(time.Second)) != nil {
+				t.Fatal("send actual parent request", err)
+			}
+			if raw, err := io.ReadAll(peerSocket); err != nil || string(raw) != "bounded request" {
+				t.Fatalf("parent request EOF: %q / %v", raw, err)
+			}
+			if _, err := peerSocket.Write([]byte("exact input")); err != nil || peerSocket.CloseWrite() != nil {
 				t.Fatal("write actual socket peer", err)
 			}
 			if raw, err := io.ReadAll(connection); err != nil || string(raw) != "exact input" {
 				t.Fatalf("bounded socket EOF: %q / %v", raw, err)
+			}
+			if err := readAuthorCustodyEOF(t.Context(), connection, bufio.NewReader(connection)); err != nil {
+				t.Fatal("actual parent terminal EOF", err)
+			}
+		})
+	}
+}
+
+func TestExecutionAuthorCustodyCanceledDeadlineResetDoesNotAdmitIO(t *testing.T) {
+	for _, operation := range []string{"request-write", "terminal-read"} {
+		t.Run(operation, func(t *testing.T) {
+			parent, child, err := dispatchadmission.NewPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			connection, err := adoptAuthorCustodySocket(parent)
+			if err != nil {
+				_ = child.Close()
+				t.Fatal(err)
+			}
+			defer func() { _ = connection.Close(); _ = child.Close() }()
+			peerSocket, err := adoptAuthorCustodySocket(child)
+			if err != nil {
+				t.Fatal("adopt test peer", err)
+			}
+			defer func() { _ = peerSocket.Close() }()
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			reader := bufio.NewReader(connection)
+			if operation == "terminal-read" {
+				if _, err := peerSocket.Write([]byte{'x'}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := reader.Peek(1); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// Deterministically place cancellation before the production future
+			// deadline setter, as when its AfterFunc already unblocked the socket.
+			cancel()
+			if connection.SetDeadline(time.Now()) != nil {
+				t.Fatal("set canceled deadline")
+			}
+			if operation == "request-write" {
+				if !errors.Is(writeAuthorCustodyRequest(ctx, connection, []byte("must not be sent")), ErrExecutionAuthorCustody) {
+					t.Fatal("canceled request write passed")
+				}
+				if peerSocket.SetReadDeadline(time.Now().Add(time.Second)) != nil {
+					t.Fatal("peer deadline")
+				}
+				if raw, err := io.ReadAll(peerSocket); err != nil || len(raw) != 0 {
+					t.Fatalf("canceled request sent bytes before EOF: %q / %v", raw, err)
+				}
+			} else {
+				if !errors.Is(readAuthorCustodyEOF(ctx, connection, reader), ErrExecutionAuthorCustody) || reader.Buffered() != 1 {
+					t.Fatal("canceled EOF operation consumed input after resetting the deadline")
+				}
 			}
 		})
 	}

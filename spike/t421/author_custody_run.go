@@ -220,14 +220,7 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 	}
 	reader := bufio.NewReaderSize(output, MaxExecutionCorpusAuthorResponseBytes+1)
 	if retErr == nil {
-		if input.SetWriteDeadline(time.Now().Add(dispatchadmission.ProductionBootstrapTimeout)) != nil {
-			retErr = ErrExecutionAuthorCustody
-		} else if count, err := input.Write(raw); err != nil || count != len(raw) {
-			retErr = ErrExecutionAuthorCustody
-		}
-		if input.CloseWrite() != nil {
-			retErr = ErrExecutionAuthorCustody
-		}
+		retErr = writeAuthorCustodyRequest(ctx, input, raw)
 	}
 	if retErr == nil {
 		responseRaw, err := reader.ReadSlice('\n')
@@ -246,11 +239,7 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 	if retErr == nil {
 		// Check the exact EOF after natural child close; a second response or
 		// any trailing byte refuses. A leaked non-session writer cannot hang it.
-		if output.SetReadDeadline(time.Now().Add(time.Second)) != nil {
-			retErr = ErrExecutionAuthorCustody
-		} else if _, err := reader.ReadByte(); !errors.Is(err, io.EOF) {
-			retErr = ErrExecutionAuthorCustody
-		}
+		retErr = readAuthorCustodyEOF(ctx, output, reader)
 		custody.mu.Lock()
 		if custody.check(ctx) != nil || custody.checkSource(ctx, result.Response) != nil ||
 			result.Accounting.Attempts != config.Limits.Attempts {
@@ -259,6 +248,33 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 		custody.mu.Unlock()
 	}
 	return result, retErr
+}
+
+func writeAuthorCustodyRequest(ctx context.Context, input *net.UnixConn, raw []byte) (retErr error) {
+	defer func() {
+		if input.CloseWrite() != nil {
+			retErr = ErrExecutionAuthorCustody
+		}
+	}()
+	// Cancellation may have already advanced the deadline. Check it after
+	// this setter so resetting that deadline cannot admit a later blocked I/O.
+	if input.SetWriteDeadline(time.Now().Add(dispatchadmission.ProductionBootstrapTimeout)) != nil || ctx.Err() != nil {
+		return ErrExecutionAuthorCustody
+	}
+	if count, err := input.Write(raw); err != nil || count != len(raw) {
+		return ErrExecutionAuthorCustody
+	}
+	return nil
+}
+
+func readAuthorCustodyEOF(ctx context.Context, output *net.UnixConn, reader *bufio.Reader) error {
+	if output.SetReadDeadline(time.Now().Add(time.Second)) != nil || ctx.Err() != nil {
+		return ErrExecutionAuthorCustody
+	}
+	if _, err := reader.ReadByte(); !errors.Is(err, io.EOF) {
+		return ErrExecutionAuthorCustody
+	}
+	return nil
 }
 
 // The passed endpoint is owned, unlike the child's borrowed fd0/fd1. Replace

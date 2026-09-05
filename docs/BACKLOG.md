@@ -4752,6 +4752,13 @@ Actual inherited fd0/fd1 completion/cancellation and wrong-descriptor regression
 pass. Author normal three repeats took 0.848s and race three repeats 12.031s;
 parent transport race three repeats took 3.213s; vet, pinned lint and whitespace
 pass. Independent review and the real full-population CLI run remain required.
+Independent transport review found one medium cancellation/deadline ordering
+gap in the parent. Both future deadline setters now check the caller context
+before admitting I/O; cancellation cannot be overwritten and followed by a
+blocked operation. Deterministic socket regressions, normal five repeats
+(4.080s), race three repeats (5.967s), vet, lint and whitespace pass, and the
+independent correction source review found no remaining issue. Exact immutable
+attribution and full CLI execution remain required.
 Two independent call-graph reviews identified and resolved the return-A epoch
 conflict prospectively for V3: its server already runs in epoch three when the
 marker is produced, and epoch four belongs to process_restart. V3 now explicitly
