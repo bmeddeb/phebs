@@ -58,7 +58,7 @@ func TestProductionBootstrapHelper(t *testing.T) {
 	mode := os.Args[len(os.Args)-1]
 	var lifetime *ProductionLifetime
 	var err error
-	if mode == "author" {
+	if mode == "author" || mode == "terminal-author" {
 		lifetime, err = BootstrapAuthor(ctx)
 	} else {
 		lifetime, err = BootstrapProduction(ctx)
@@ -85,7 +85,7 @@ func TestProductionBootstrapHelper(t *testing.T) {
 		}
 		return
 	}
-	if mode == "author" {
+	if mode == "author" || mode == "terminal-author" {
 		if err := RequireAuthorBootstrap(); err != nil {
 			t.Fatal(err)
 		}
@@ -102,7 +102,7 @@ func TestProductionBootstrapHelper(t *testing.T) {
 		if _, err := fmt.Fprintln(os.Stdout, "ready"); err != nil {
 			t.Fatal(err)
 		}
-		if err := WaitAuthorCheckpoint(ctx); err != nil {
+		if err := WaitAuthorCompletion(ctx); err != nil {
 			t.Fatal(err)
 		}
 		if err := lifetime.Close(ctx); err != nil {

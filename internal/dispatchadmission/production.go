@@ -159,6 +159,25 @@ func AuthorInputSHA256() ([32]byte, error) {
 // close its lifetime without cutting off the parent's pending PC01 response.
 // Semantic completion/output must precede this wait; it adds no wire operation.
 func WaitAuthorCheckpoint(ctx context.Context) error {
+	return waitAuthorCompletion(ctx, false)
+}
+
+// WaitAuthorCompletion waits only for the authenticated bootstrap's selected
+// terminal handshake. Terminal authors use a complete Pause echo ACK followed
+// by their own Client.Close, not a whole-controller checkpoint. The default
+// legacy author still requires its complete checkpoint echo ACK.
+func WaitAuthorCompletion(ctx context.Context) error {
+	if RequireAuthorBootstrap() != nil {
+		return ErrProductionBootstrap
+	}
+	client := productionRuntime.Load().client
+	client.mu.Lock()
+	terminal := client.controlTerminalAuthor
+	client.mu.Unlock()
+	return waitAuthorCompletion(ctx, terminal)
+}
+
+func waitAuthorCompletion(ctx context.Context, terminal bool) error {
 	if ctx == nil || RequireAuthorBootstrap() != nil {
 		return ErrProductionBootstrap
 	}
@@ -166,10 +185,16 @@ func WaitAuthorCheckpoint(ctx context.Context) error {
 	for {
 		client.mu.Lock()
 		err := client.err
+		if client.controlTerminalAuthor != terminal {
+			err = ErrProductionBootstrap
+		}
 		if err == nil && (client.closed || client.ctx.Err() != nil) {
 			err = ErrIncomplete
 		}
 		ready := client.checkpoint && client.controlCheckpointAcknowledged
+		if terminal {
+			ready = client.paused && client.controlPauseAcknowledged
+		}
 		changed := client.changed
 		client.mu.Unlock()
 		if err != nil {

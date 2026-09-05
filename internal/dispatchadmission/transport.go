@@ -183,15 +183,21 @@ func (c *Controller) serve(ctx context.Context, producer uint32, pid int, file *
 	if err != nil {
 		return c.fail(err)
 	}
+	if err := c.attach(producer, pid); err != nil {
+		_ = conn.Close()
+		return err
+	}
+	return c.serveAttached(ctx, producer, conn, check)
+}
+
+// The caller has synchronously adopted and attached this exact endpoint once.
+func (c *Controller) serveAttached(ctx context.Context, producer uint32, conn *net.UnixConn, check func(context.Context, Site) error) (err error) {
 	defer func() {
 		_ = conn.Close()
 		if recover() != nil {
 			err = c.fail(ErrPanic)
 		}
 	}()
-	if err := c.attach(producer, pid); err != nil {
-		return err
-	}
 	stopContext := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	stopController := context.AfterFunc(c.ctx, func() { _ = conn.Close() })
 	defer stopContext()

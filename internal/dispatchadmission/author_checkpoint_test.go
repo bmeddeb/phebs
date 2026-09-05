@@ -5,6 +5,7 @@ package dispatchadmission
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os/exec"
@@ -13,10 +14,14 @@ import (
 )
 
 func TestAuthorCheckpointWaitsForCompleteControlACK(t *testing.T) {
-	for _, lost := range []bool{false, true} {
+	for _, variant := range []struct{ terminal, lost bool }{{false, false}, {false, true}, {true, false}, {true, true}} {
+		terminal, lost := variant.terminal, variant.lost
 		name := "delayed"
 		if lost {
 			name = "lost"
+		}
+		if terminal {
+			name = "terminal-" + name
 		}
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
@@ -44,18 +49,32 @@ func TestAuthorCheckpointWaitsForCompleteControlACK(t *testing.T) {
 			defer func() { _ = child.Close() }()
 			config := PhaseControlConfig{Phases: []uint32{1, 2}, InitialPhase: 1, MaximumPhases: 2,
 				MaximumWireBytes: 4096, Timeout: time.Second}
+			if terminal {
+				config.TerminalAuthor, config.Phases, config.MaximumPhases = true, []uint32{1}, 1
+				client.controlTerminalAuthor = true // Mechanical receiver fixture, not bootstrap admission.
+				if err := WaitAuthorCheckpoint(ctx); !errors.Is(err, ErrProductionBootstrap) {
+					t.Fatal("terminal Pause reinterpreted as checkpoint")
+				}
+			}
 			controlDone := make(chan error, 1)
-			go func() { controlDone <- servePhaseControl(ctx, child, client, config, 0, client.binding) }()
+			startControl := func() {
+				go func() { controlDone <- servePhaseControl(ctx, child, client, config, 0, client.binding) }()
+			}
+			if !terminal {
+				startControl()
+			}
 			pause := phaseControlFrame{op: phasePause, phase: 1, sequence: 1, binding: client.binding}.encode()
-			if _, err := parent.Write(pause[:]); err != nil {
-				t.Fatal(err)
-			}
 			var ack [FrameBytes]byte
-			if _, err := io.ReadFull(parent, ack[:]); err != nil || ack != pause {
-				t.Fatal("pause ACK failed")
-			}
-			if err := controller.Fence(); err != nil {
-				t.Fatal(err)
+			if !terminal {
+				if _, err := parent.Write(pause[:]); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := io.ReadFull(parent, ack[:]); err != nil || ack != pause {
+					t.Fatal("pause ACK failed")
+				}
+				if err := controller.Fence(); err != nil {
+					t.Fatal(err)
+				}
 			}
 			// Fill the actual socket's outbound buffer before the checkpoint.
 			// Its 64-byte ACK then cannot complete until this parent drains it.
@@ -73,13 +92,24 @@ func TestAuthorCheckpointWaitsForCompleteControlACK(t *testing.T) {
 			if filled == 0 || filled >= 1<<20 || child.SetWriteDeadline(time.Time{}) != nil {
 				t.Fatal("ACK fixture did not establish bounded backpressure")
 			}
+			// Fill before this receiver starts: its initial idle SetDeadline(0)
+			// must not overwrite the fixture's bounded fill deadline.
+			if terminal {
+				startControl()
+			}
 			checkpoint := phaseControlFrame{op: phaseCheckpoint, phase: 1, sequence: 2, binding: client.binding}.encode()
+			if terminal {
+				checkpoint = pause
+			}
 			if _, err := parent.Write(checkpoint[:]); err != nil {
 				t.Fatal(err)
 			}
 			for {
 				client.mu.Lock()
 				checkpointed, acknowledged, changed := client.checkpoint, client.controlCheckpointAcknowledged, client.changed
+				if terminal {
+					checkpointed, acknowledged = client.paused, client.controlPauseAcknowledged
+				}
 				client.mu.Unlock()
 				if checkpointed {
 					if acknowledged {
@@ -94,7 +124,7 @@ func TestAuthorCheckpointWaitsForCompleteControlACK(t *testing.T) {
 				}
 			}
 			waited := make(chan error, 1)
-			go func() { waited <- WaitAuthorCheckpoint(ctx) }()
+			go func() { waited <- WaitAuthorCompletion(ctx) }()
 			select {
 			case err := <-waited:
 				t.Fatalf("checkpoint wait returned before blocked ACK: %v", err)
@@ -138,6 +168,44 @@ func TestAuthorCheckpointWaitsForCompleteControlACK(t *testing.T) {
 				t.Fatal("closed author retained checkpoint permission")
 			}
 		})
+	}
+}
+
+func TestTerminalAuthorBootstrapAndFiniteRecipe(t *testing.T) {
+	record := productionTestRecord()
+	legacy, err := json.Marshal(record.Control)
+	if err != nil || string(legacy) != `{"OwnerControl":false,"Phases":[1,2],"InitialPhase":1,"MaximumPhases":2,"MaximumWireBytes":65536,"Timeout":2000000000}` {
+		t.Fatal("default canonical control bytes changed", err)
+	}
+	record.Control.TerminalAuthor = true
+	if record.validate() == nil {
+		t.Fatal("Phebs accepted author terminal mode")
+	}
+	record.Program, record.Producer.Sites, record.Tools = ProgramCorpusAuthor, AuthorSites(), record.Tools[:1]
+	record.InputSHA256 = [32]byte{7}
+	if record.validate() == nil {
+		t.Fatal("multi-phase terminal author accepted")
+	}
+	record.Control.Phases, record.Control.MaximumPhases = []uint32{1}, 1
+	if record.validate() != nil {
+		t.Fatal("closed single-phase terminal author refused")
+	}
+	terminalRaw, _ := json.Marshal(record.Control)
+	if !bytes.Contains(terminalRaw, []byte(`"TerminalAuthor":true`)) {
+		t.Fatal("terminal mode omitted from authenticated bytes")
+	}
+	for state := byte(0); state <= phasePreparingRequests; state++ {
+		for op := phasePause; op <= phaseOwnersReopen; op++ {
+			next, index, err := nextConfiguredControlState(state, 0, op, record.Control)
+			valid := state == 0 && op == phasePause
+			if valid != (err == nil) || valid && (next != phasePause || index != 0) {
+				t.Fatal("terminal mode accepted nonterminal recipe", state, op, err)
+			}
+		}
+	}
+	record.Control.OwnerControl = true
+	if record.validate() == nil {
+		t.Fatal("terminal author accepted owner control")
 	}
 }
 

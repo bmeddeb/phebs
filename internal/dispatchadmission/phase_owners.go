@@ -38,6 +38,12 @@ func (control *PhaseControl) ReopenOwners(ctx context.Context) error {
 }
 
 func nextConfiguredControlState(state byte, index int, op byte, config PhaseControlConfig) (byte, int, error) {
+	if config.TerminalAuthor {
+		if op == phasePause && state == 0 {
+			return phasePause, index, nil
+		}
+		return 0, 0, ErrProtocol
+	}
 	if !config.OwnerControl {
 		return nextControlState(state, index, op, config.Phases)
 	}

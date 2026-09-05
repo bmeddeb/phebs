@@ -26,6 +26,8 @@ const (
 // caller-owned limits are not frozen ceremony limits or tool/input admission.
 // The separate control socket preserves DA01's single-request echo protocol.
 type PhaseControlConfig struct {
+	// Omitted when false to preserve existing canonical bootstrap bytes.
+	TerminalAuthor   bool `json:",omitempty"`
 	OwnerControl     bool
 	Phases           []uint32
 	InitialPhase     uint32
@@ -35,6 +37,9 @@ type PhaseControlConfig struct {
 }
 
 func (config PhaseControlConfig) validate() (int, error) {
+	if config.TerminalAuthor && (config.OwnerControl || len(config.Phases) != 1 || config.MaximumPhases != 1) {
+		return 0, ErrConfig
+	}
 	if config.MaximumPhases < 1 || len(config.Phases) == 0 || len(config.Phases) > config.MaximumPhases ||
 		config.MaximumWireBytes < 2*FrameBytes || config.Timeout <= 0 {
 		return 0, ErrConfig
@@ -307,6 +312,7 @@ func StartPhaseControl(ctx context.Context, file *os.File, client *Client, confi
 	binding := client.binding
 	if valid {
 		client.controlAttached = true
+		client.controlTerminalAuthor = config.TerminalAuthor
 		client.ownersRequired = config.OwnerControl
 		if config.OwnerControl {
 			client.ownersReady = make(chan struct{})
@@ -404,9 +410,13 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		if count, err := conn.Write(raw[:]); err != nil || count != len(raw) {
 			return client.fail(ErrTransport)
 		}
-		if frame.op == phaseCheckpoint {
+		if frame.op == phaseCheckpoint || config.TerminalAuthor && frame.op == phasePause {
 			client.mu.Lock()
-			client.controlCheckpointAcknowledged = true
+			if frame.op == phaseCheckpoint {
+				client.controlCheckpointAcknowledged = true
+			} else {
+				client.controlPauseAcknowledged = true
+			}
 			client.notifyLocked()
 			client.mu.Unlock()
 		}

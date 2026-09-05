@@ -202,8 +202,11 @@ func TestProductionDispatchSitesMatchActualBoundaries(t *testing.T) {
 	}
 	// Count both the owned site adapters and their finite internal forwarding
 	// boundaries; do not hide the admission package from the launch inventory.
-	want["internal/dispatchadmission/client.go:(*Client).Start"] = 2
+	want["internal/dispatchadmission/client.go:(*Client).Start"] = 1
+	want["internal/dispatchadmission/client.go:(*Client).start"] = 2
 	want["internal/dispatchadmission/client.go:(*Client).Run"] = 2
+	want["internal/dispatchadmission/local_producer.go:(*LocalProducer).Start"] = 1
+	want["internal/dispatchadmission/local_producer.go:(*LocalProducer).StartInPhase"] = 1
 	want["internal/dispatchadmission/production.go:StartProduction"] = 1
 	want["internal/dispatchadmission/production_pipes.go:StartPipedProduction"] = 1
 	want["internal/dispatchadmission/production.go:startProductionCommand"] = 1
@@ -284,9 +287,9 @@ func typedDispatchBoundaries(file *ast.File, info *types.Info) map[string]int {
 				launch = slices.Contains([]string{"StartProcess", "ForkExec", "Exec", "Fexecve"}, function.Name())
 			case "github.com/bmeddeb/phebs/internal/dispatchadmission":
 				launch = slices.Contains([]string{"StartProduction", "StartPipedProduction", "StartAuthor", "RunProduction", "CombinedOutputProduction"}, function.Name())
-				if slices.Contains([]string{"Start", "Run"}, function.Name()) {
+				if slices.Contains([]string{"Start", "Run", "start", "StartInPhase"}, function.Name()) {
 					receiver := function.Type().(*types.Signature).Recv()
-					launch = receiver != nil && types.TypeString(receiver.Type(), func(*types.Package) string { return "" }) == "*Client"
+					launch = receiver != nil && slices.Contains([]string{"*Client", "*LocalProducer"}, types.TypeString(receiver.Type(), func(*types.Package) string { return "" }))
 				}
 			}
 			if launch {

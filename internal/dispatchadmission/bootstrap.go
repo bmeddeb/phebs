@@ -57,6 +57,9 @@ func (record ProductionBootstrap) validate() error {
 	minimumRoles := 4
 	switch record.Program {
 	case ProgramPhebs:
+		if record.Control.TerminalAuthor {
+			return ErrProductionBootstrap
+		}
 		switch record.SemanticMode {
 		case "":
 			if record.InputSHA256 != ([32]byte{}) {

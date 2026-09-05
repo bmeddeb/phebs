@@ -49,6 +49,7 @@ type ExecutionAuthorCustody struct {
 	tools       []dispatchadmission.ProductionToolBinding
 	expected    [3]AuthoredExecutionRevision
 	deadlines   [3]time.Duration
+	phases      [3]uint32
 	previous    *ExecutionCorpusAuthorResponse
 	results     []ExecutionAuthorResult
 	next        int
@@ -179,12 +180,17 @@ func (custody *ExecutionAuthorCustody) bindPlan(plan Plan) error {
 		custody.expected[index] = AuthoredExecutionRevision{Name: name, Commit: physical.ExpectedCommit,
 			Tree: physical.ExpectedTree, ParentCommit: parent, Manifest: source.manifest(physical, physical.ExpectedTreeInventory, SHA256(raw))}
 		phase := []string{"cold", "physical_delta_b", "return_a"}[index]
+		for phaseIndex, candidate := range plan.PhaseOrder {
+			if candidate == phase {
+				custody.phases[index] = uint32(phaseIndex + 1)
+			}
+		}
 		for _, deadline := range plan.PhaseDeadlines {
 			if deadline.Phase == phase && deadline.DeadlineMS > 0 && deadline.DeadlineMS <= uint64(math.MaxInt64/int64(time.Millisecond)) {
 				custody.deadlines[index] = time.Duration(deadline.DeadlineMS) * time.Millisecond
 			}
 		}
-		if custody.deadlines[index] == 0 {
+		if custody.deadlines[index] == 0 || custody.phases[index] == 0 {
 			return ErrExecutionAuthorCustody
 		}
 		parent = physical.ExpectedCommit

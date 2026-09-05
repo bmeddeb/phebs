@@ -40,6 +40,8 @@ type Client struct {
 	paused                        bool
 	waiters                       int
 	controlAttached               bool
+	controlTerminalAuthor         bool
+	controlPauseAcknowledged      bool
 	controlCheckpointAcknowledged bool
 	ownersRequired                bool
 	ownersReady                   chan struct{}
@@ -174,13 +176,17 @@ type Handle struct {
 // before Cmd.Start. A nil client is the ordinary pass-through path and creates
 // no admission state. Failed starts remain counted and are settled separately.
 func (c *Client) Start(ctx context.Context, site uint32, command *exec.Cmd) (Handle, error) {
+	return c.start(ctx, site, command, 0)
+}
+
+func (c *Client) start(ctx context.Context, site uint32, command *exec.Cmd, phase uint32) (Handle, error) {
 	if command == nil {
 		return Handle{}, ErrConfig
 	}
 	if c == nil {
 		return Handle{command: command}, command.Start()
 	}
-	ordinal, err := c.admit(ctx, site, command)
+	ordinal, err := c.admitInPhase(ctx, site, command, phase)
 	if err != nil {
 		return Handle{}, err
 	}
@@ -202,6 +208,10 @@ func (c *Client) Start(ctx context.Context, site uint32, command *exec.Cmd) (Han
 
 // admit is private so callers cannot bypass the owned Start/Wait boundary.
 func (c *Client) admit(ctx context.Context, site uint32, command *exec.Cmd) (uint64, error) {
+	return c.admitInPhase(ctx, site, command, 0)
+}
+
+func (c *Client) admitInPhase(ctx context.Context, site uint32, command *exec.Cmd, phase uint32) (uint64, error) {
 	var release func()
 	var err error
 	for {
@@ -224,7 +234,7 @@ func (c *Client) admit(ctx context.Context, site uint32, command *exec.Cmd) (uin
 	bound, known := c.sites[site]
 	if c.err != nil {
 		err = c.err
-	} else if !known || command.Process != nil {
+	} else if !known || command.Process != nil || phase != 0 && c.phase != phase {
 		err = ErrProtocol
 	} else if c.fenced || c.closed {
 		err = ErrFenced

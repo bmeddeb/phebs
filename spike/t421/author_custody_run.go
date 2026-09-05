@@ -19,10 +19,11 @@ import (
 
 // ExecutionAuthorResult retains the actual validated child response beside
 // mechanical facts and its committed accounting prefix. A nonnil Response
-// alone is not success: checkpoint, natural Close, join, session and continuity
+// alone is not success: authenticated handshake, natural Close, join, session and continuity
 // may still fail. Completed denotes this one author operation, not a ceremony.
 type ExecutionAuthorResult struct {
 	Revision     string
+	ProducerID   uint32
 	Response     *ExecutionCorpusAuthorResponse
 	RootStarted  bool
 	RootJoined   bool
@@ -57,6 +58,38 @@ func authorCustodyConfig(index int, binding [32]byte) (dispatchadmission.Config,
 // cooperative. Cleanup is separate failed work and never extends valid success.
 // No retry or future revision is authored after a failed operation.
 func (custody *ExecutionAuthorCustody) AuthorNext(ctx context.Context) (result ExecutionAuthorResult, retErr error) {
+	return custody.authorNext(ctx, nil, nil, 0)
+}
+
+// ExecutionParentAuthorSite is the fixed direct-author launch site in the
+// parent's separate producer. This is source inventory, not a budget issuer.
+func ExecutionParentAuthorSite() dispatchadmission.Site {
+	return dispatchadmission.Site{ID: executionSiteAuthor, Role: executionRoleAuthor}
+}
+
+// AuthorNextOn composes the same actual CLI with a genuine local parent
+// producer on the same shared controller. The direct author launch and its
+// nested Git attempts are accounted together; other producers remain live.
+// The caller owns the full controller limits and phase choreography. This does
+// not issue a full host/tool/profile admission or run a ceremony.
+func (custody *ExecutionAuthorCustody) AuthorNextOn(ctx context.Context, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer, producerID uint32) (result ExecutionAuthorResult, err error) {
+	if !parent.OnController(controller) || producerID == 0 {
+		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
+	}
+	defer func() {
+		if err != nil {
+			_ = controller.Fence()
+			result.Accounting, _ = controller.Snapshot()
+		}
+	}()
+	count, countErr := parent.Count()
+	if countErr != nil || count.Producer != executionRootProducer || !count.Attached || count.Closed {
+		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
+	}
+	return custody.authorNext(ctx, controller, parent, producerID)
+}
+
+func (custody *ExecutionAuthorCustody) authorNext(ctx context.Context, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer, producerID uint32) (result ExecutionAuthorResult, retErr error) {
 	if custody == nil || ctx == nil || ctx.Err() != nil {
 		return result, ErrExecutionAuthorCustody
 	}
@@ -66,6 +99,10 @@ func (custody *ExecutionAuthorCustody) AuthorNext(ctx context.Context) (result E
 		return result, ErrExecutionAuthorCustody
 	}
 	index := custody.next
+	if parent != nil && producerID != uint32(7+index) {
+		custody.mu.Unlock()
+		return result, ErrExecutionAuthorCustody
+	}
 	ctx, cancel := context.WithTimeout(ctx, custody.deadlines[index])
 	defer cancel()
 	if custody.check(ctx) != nil || custody.checkSource(ctx, custody.previous) != nil {
@@ -99,7 +136,18 @@ func (custody *ExecutionAuthorCustody) AuthorNext(ctx context.Context) (result E
 	if err != nil {
 		return result, ErrExecutionAuthorCustody
 	}
-	return custody.runAuthor(ctx, cancel, index, raw, result)
+	if parent == nil {
+		return custody.runAuthor(ctx, cancel, index, raw, result)
+	}
+	view, err := controller.ProducerLaunch(producerID)
+	if err != nil || view.Phase != custody.phases[index] || !slices.Equal(view.Producer.Sites, dispatchadmission.AuthorSites()) {
+		_ = controller.Fence()
+		result.Accounting, _ = controller.Snapshot()
+		return result, ErrExecutionAuthorCustody
+	}
+	control := dispatchadmission.PhaseControlConfig{TerminalAuthor: true, Phases: []uint32{view.Phase}, InitialPhase: view.Phase,
+		MaximumPhases: 1, MaximumWireBytes: 4 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+	return custody.runAuthorConfigured(ctx, cancel, index, raw, result, controller, parent, view, control)
 }
 
 func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel context.CancelFunc, index int, raw []byte, result ExecutionAuthorResult) (_ ExecutionAuthorResult, retErr error) {
@@ -114,6 +162,25 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 	if err != nil {
 		return result, ErrExecutionAuthorCustody
 	}
+	view := dispatchadmission.ProducerLaunch{Producer: config.Producers[0], Limits: config.Limits, Phase: 1}
+	return custody.runAuthorConfigured(ctx, cancel, index, raw, result, controller, nil, view, controlConfig)
+}
+
+func (custody *ExecutionAuthorCustody) runAuthorConfigured(ctx context.Context, cancel context.CancelFunc, index int, raw []byte,
+	result ExecutionAuthorResult, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer,
+	view dispatchadmission.ProducerLaunch, controlConfig dispatchadmission.PhaseControlConfig,
+) (out ExecutionAuthorResult, retErr error) {
+	lifetime, release := context.WithCancel(context.Background())
+	defer release()
+	result.ProducerID = view.Producer.ID
+	// Include a failed direct Start's committed admission/settlement even when
+	// no child was born. The shared controller is never canceled on success.
+	defer func() {
+		if retErr != nil {
+			_ = controller.Fence()
+			out.Accounting, _ = controller.Snapshot()
+		}
+	}()
 	stopController := context.AfterFunc(controller.Context(), cancel)
 	defer stopController()
 	// Exactly four owned socket pairs: DA01, PC01, stdin, stdout. Pollable
@@ -129,6 +196,7 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 			}
 		}
 	}()
+	var err error
 	for index := 0; index < len(owned); index += 2 {
 		owned[index], owned[index+1], err = dispatchadmission.NewPipe()
 		if err != nil {
@@ -162,12 +230,34 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 	command.Stderr = &checkoutCommandOutput{remaining: 8 << 10, cancel: cancel}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
-	if ctx.Err() != nil || command.Start() != nil {
+	var handle dispatchadmission.Handle
+	if parent != nil {
+		custody.mu.Lock()
+		err = custody.check(ctx)
+		custody.mu.Unlock()
+		if err == nil {
+			handle, err = parent.StartInPhase(ctx, view.Phase, ExecutionParentAuthorSite(), command)
+		}
+	} else if ctx.Err() != nil {
+		err = ErrExecutionAuthorCustody
+	} else {
+		err = command.Start()
+	}
+	if err != nil {
+		_ = controller.Fence()
+		_ = controller.CancelUnused(view.Producer.ID)
+		result.Accounting, _ = controller.Snapshot()
 		return result, ErrExecutionAuthorCustody
 	}
 	result.RootStarted = true
 	waited := make(chan error, 1)
-	go func() { waited <- command.Wait() }() // The sole native Wait.
+	go func() {
+		if parent != nil {
+			waited <- handle.Wait() // The sole native Wait plus root settlement.
+		} else {
+			waited <- command.Wait()
+		}
+	}()
 	var control *dispatchadmission.PhaseControl
 	var served <-chan error
 	canceled := make(chan struct{})
@@ -190,13 +280,13 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 		owned[index] = nil
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramCorpusAuthor,
-		InputSHA256: sha256.Sum256(raw), Producer: config.Producers[0], Phase: 1,
-		Limits: config.Limits, Control: controlConfig, Tools: custody.tools}
+		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: view.Phase,
+		Limits: view.Limits, Control: controlConfig, Tools: custody.tools}
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(ctx, owned[0], owned[2], bootstrap) != nil {
 		retErr = ErrExecutionAuthorCustody
 	}
 	if retErr == nil {
-		control, err = dispatchadmission.NewPhaseControl(lifetime, owned[2], binding, controlConfig)
+		control, err = dispatchadmission.NewPhaseControl(lifetime, owned[2], view.Producer.Binding, controlConfig)
 		owned[2] = nil // This API adopts even on refusal.
 		if err != nil {
 			retErr = ErrExecutionAuthorCustody
@@ -205,10 +295,10 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 			serverFile := owned[0]
 			owned[0] = nil
 			go func() {
-				completion <- controller.ServeChecked(lifetime, 1, command.Process.Pid, serverFile, func(ctx context.Context, site dispatchadmission.Site) error {
+				completion <- controller.ServeChecked(lifetime, view.Producer.ID, command.Process.Pid, serverFile, func(ctx context.Context, site dispatchadmission.Site) error {
 					custody.mu.Lock()
 					defer custody.mu.Unlock()
-					if site.ID != dispatchadmission.SiteCorpusAuthorGit || site.Role != dispatchadmission.RoleGit || site.Persistent || custody.check(ctx) != nil {
+					if parent != nil && !authorCustodyDispatchAllowed(controller, view.Producer.ID, index) || site.ID != dispatchadmission.SiteCorpusAuthorGit || site.Role != dispatchadmission.RoleGit || site.Persistent || custody.check(ctx) != nil {
 						custody.err = ErrExecutionAuthorCustody
 						return custody.err
 					}
@@ -230,19 +320,19 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 			retErr = ErrExecutionAuthorCustody
 		} else {
 			result.Response = &response
-			if control.Pause(ctx) != nil || controller.Fence() != nil || control.Checkpoint(ctx) != nil {
+			if control.Pause(ctx) != nil || parent == nil && (controller.Fence() != nil || control.Checkpoint(ctx) != nil) {
 				retErr = ErrExecutionAuthorCustody
 			}
 		}
 	}
-	result, retErr = finishAuthorCustody(command, controller, control, waited, served, release, result, retErr)
+	result, retErr = finishAuthorCustody(command, controller, control, waited, served, release, result, retErr, parent != nil)
 	if retErr == nil {
 		// Check the exact EOF after natural child close; a second response or
 		// any trailing byte refuses. A leaked non-session writer cannot hang it.
 		retErr = readAuthorCustodyEOF(ctx, output, reader)
 		custody.mu.Lock()
 		if custody.check(ctx) != nil || custody.checkSource(ctx, result.Response) != nil ||
-			result.Accounting.Attempts != config.Limits.Attempts {
+			!authorCustodyProducerComplete(result.Accounting, view.Producer.ID, authorCustodyAttempts(index)) {
 			retErr = ErrExecutionAuthorCustody
 		}
 		custody.mu.Unlock()
@@ -299,13 +389,14 @@ func adoptAuthorCustodySocket(file *os.File) (*net.UnixConn, error) {
 
 func finishAuthorCustody(command *exec.Cmd, controller *dispatchadmission.Controller, control *dispatchadmission.PhaseControl,
 	waited, served <-chan error, release context.CancelFunc, result ExecutionAuthorResult, failure error,
+	shared bool,
 ) (ExecutionAuthorResult, error) {
 	if failure != nil {
 		_ = controller.Fence()
 		_ = signalProductionStop(command.Process)
 	}
 	if served == nil {
-		_ = controller.CancelUnused(1)
+		_ = controller.CancelUnused(result.ProducerID)
 	}
 	joinTimer := time.NewTimer(30 * time.Second)
 	select {
@@ -351,10 +442,31 @@ func finishAuthorCustody(command *exec.Cmd, controller *dispatchadmission.Contro
 	}
 	var snapshotErr error
 	result.Accounting, snapshotErr = controller.Snapshot()
-	if !result.RootJoined || !result.SessionEmpty || snapshotErr != nil || !result.Accounting.Complete {
+	if !result.RootJoined || !result.SessionEmpty || snapshotErr != nil || !shared && !result.Accounting.Complete {
 		failure = ErrExecutionAuthorCustody
 	}
 	return result, failure
+}
+
+func authorCustodyAttempts(index int) uint64 {
+	if index == 0 {
+		return 4
+	}
+	return 3
+}
+
+func authorCustodyDispatchAllowed(controller *dispatchadmission.Controller, producer uint32, index int) bool {
+	count, err := controller.ProducerCount(producer)
+	return err == nil && count.Attached && !count.Closed && count.Active == 0 && count.Ordinal < authorCustodyAttempts(index)
+}
+
+func authorCustodyProducerComplete(snapshot dispatchadmission.Snapshot, producer uint32, attempts uint64) bool {
+	for _, count := range snapshot.Producers {
+		if count.Producer == producer {
+			return count.Attached && count.Closed && count.Active == 0 && count.Ordinal == attempts
+		}
+	}
+	return false
 }
 
 func cloneAuthorCustodyResult(result ExecutionAuthorResult) ExecutionAuthorResult {

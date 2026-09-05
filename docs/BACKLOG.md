@@ -4511,6 +4511,21 @@ correction review and source-attributed tests remain required. Corrected source,
 tests, arithmetic and owning-cost re-review subsequently closed all severity
 counts at zero. Three normal repeats (1.617s), three race repeats (20.650s), vet,
 repository-pinned lint, docs (0.591s), glossary and whitespace pass.
+Shared author composition now uses a genuine local root producer and the same
+controller for actual direct author Start/Handle.Wait and nested four/three/three
+Git admissions. Authenticated terminal authors acknowledge one complete Pause
+before natural producer-local Close; legacy standalone checkpoint semantics and
+canonical bootstrap bytes remain exact. Phase/site checks occur inside admission,
+while completed-author row validation does not claim whole-controller completion.
+Independent source/test/resource and owning-documentation/cost review found all
+severity counts zero; the protected shared-author rehearsal remains a gate.
+Full dispatch normal three repeats passed in 3.427s; owned author/inventory normal
+three repeats in 5.962s; author/shared race three in 6.858s, author command race
+three in 12.090s, new dispatch/FD race five in 7.283s and bounded-close race three
+in 4.836s. Vet, repository-pinned lint 2.12.2 and whitespace pass. A mistakenly
+broad author race selector included inherited full V1 regeneration and exceeded
+its 90-second package alarm; it was not a pass, launched no engine, and the
+subsequent selectors were restricted to the owned custody/command tests.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map

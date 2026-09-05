@@ -24,7 +24,7 @@ func main() {
 
 // This command has no ordinary/unmetered mode, input-path flags or test recipe.
 // The owning launcher supplies one authenticated request and both inherited
-// dispatch endpoints. It fences/checkpoints after receiving the actual result.
+// dispatch endpoints and selects the authenticated terminal handshake.
 func run() (retErr error) {
 	defer func() {
 		if recover() != nil {
@@ -60,7 +60,7 @@ func run() (retErr error) {
 	if writeAuthorResponse(ctx, os.Stdout, response) != nil {
 		return t421.ErrExecutionCorpusAuthor
 	}
-	return dispatchadmission.WaitAuthorCheckpoint(ctx)
+	return dispatchadmission.WaitAuthorCompletion(ctx)
 }
 
 func readAuthorRequest(ctx context.Context, input *os.File) (_ []byte, retErr error) {
