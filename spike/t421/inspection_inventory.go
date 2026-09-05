@@ -5,9 +5,14 @@ import (
 	"math"
 	"slices"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
+	"github.com/bmeddeb/phebs/internal/rpccallerposting"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -29,7 +34,13 @@ const (
 	correctedPressure75TransitionReadClass  = "pressure-refusal-removal-and-recovery-cycle"
 	correctedArchiveTransitionReadClass     = "archive-destroy-empty-target-restore-and-semantic-binding"
 	correctedLifecycleTransitionReadClass   = "fresh-sixteen-owner-cycle"
-	correctedInspectionPolicy               = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
+	// cmd/phebs/TestT421FinalAuthorityMaximumReadLimitsAndRefusal pins these
+	// values to the production admission derivation without exporting a second
+	// production API solely for the prospective contract.
+	correctedFinalAuthorityControlReadMaximum = uint64(18_469)
+	correctedFinalAuthorityStoreReadMaximum   = uint64(528)
+	correctedFinalAuthorityMemberReadMaximum  = uint64(589_656_064)
+	correctedInspectionPolicy                 = "compact-inspector-v2:H=health@250ms;X=progress@0,+5s-until-ready;T=selected-relationship+resolver-catalog+caller-current@0,+5s-after-X-until-ready;F=coherent-current+selected-activation+authorized-semantics-once-after-T;L=lifecycle@0,+5s-only:p80,p75,lifecycle;R=transition-local;Q=plan-pages;product=T,F,Q,F;archive=R,T,F;other=T,F;attempt-max=1+floor(deadline/cadence);cache=process-epoch-local-immutable-members-after-fresh-complete-key;fresh=pointers,auth,epoch,lifecycle,residue,pages;M=decoded-application-record@candidate-artifact/projection,source-owner,catalog-service/membership/inherited/placement,relationship-fragment/service,rpc/kafka-posting,caller-leaf;before-later-checks;reread=1;root/pointer/receipt/descriptor/response-wrapper/cache-hit=0;warm/empty=0;Q-order=plan-case:http,mcp;Q-exclusive;Q-all-code=shared-current;Q-cache=relationship-prewarmed-by-current-pin,catalog-root/member-cold-once;F-catalog-cache=private-from-Q"
 )
 
 // phaseInspectionInventory is the prospective compact T42 inspector call
@@ -61,6 +72,174 @@ type inspectionReadBound struct {
 	StoreReadAttempts  CounterBound
 	MemberReads        CounterBound
 	StoreWriteAttempts CounterBound
+}
+
+type phaseReadMaximum struct {
+	Phase        string
+	ControlReads uint64
+	MemberReads  uint64
+}
+
+// applyCorrectedPhaseReadMaximums replaces the retained topology proxies with
+// the prospective V2 scoped ledger. Minima and every unrelated work ceiling
+// remain inherited. H and L are in-memory and therefore contribute no native
+// reads; X/T/F/R/Q/prep are derived below from their owning call inventories.
+func applyCorrectedPhaseReadMaximums(work *WorkEnvelope, profile CombinedProfile) error {
+	maximums, err := correctedPhaseReadMaximums(Plan{Profile: profile})
+	if err != nil {
+		return err
+	}
+	if len(work.Phases) != len(maximums) {
+		return errors.New("corrected phase read maximum inventory differs")
+	}
+	for index := range work.Phases {
+		value, maximum := &work.Phases[index], maximums[index]
+		if value.Phase != maximum.Phase || maximum.ControlReads < value.ControlReads.Minimum ||
+			maximum.MemberReads < value.MemberReads.Minimum {
+			return errors.New("corrected phase read maximum is invalid")
+		}
+		value.ControlReads.Maximum = maximum.ControlReads
+		value.MemberReads.Maximum = maximum.MemberReads
+	}
+	return nil
+}
+
+func correctedPhaseReadMaximums(plan Plan) ([]phaseReadMaximum, error) {
+	rows, _, err := correctedInspectionInventory(plan.Profile)
+	if err != nil {
+		return nil, err
+	}
+	queryMembers, err := correctedProductQueryMemberReadMaximum(correctedQueryCases())
+	if err != nil {
+		return nil, err
+	}
+	result := make([]phaseReadMaximum, len(rows))
+	for index, row := range rows {
+		controls, members, boundErr := correctedScopedPhaseReadMaximum(plan, row, queryMembers)
+		if boundErr != nil {
+			return nil, boundErr
+		}
+		result[index] = phaseReadMaximum{Phase: row.Phase, ControlReads: controls, MemberReads: members}
+	}
+	return result, nil
+}
+
+func correctedScopedPhaseReadMaximum(
+	plan Plan,
+	row phaseInspectionInventory,
+	queryMembers uint64,
+) (uint64, uint64, error) {
+	domains := uint64(len(plan.Profile.Pipeline.ExtractionDomains))
+	xControlPerCall, err := checkedInspectionReadSum(2, domains)
+	if err != nil {
+		return 0, 0, errors.New("corrected extraction control read maximum overflows")
+	}
+	xStorePerCall, err := checkedMultiply(2, store.MaxGenerationScheduleReadAttempts)
+	if err != nil {
+		return 0, 0, errors.New("corrected extraction store read maximum overflows")
+	}
+	xStorePerCall, err = checkedInspectionReadSum(2, xStorePerCall)
+	if err != nil {
+		return 0, 0, errors.New("corrected extraction store read maximum overflows")
+	}
+	xPerCall, err := checkedInspectionReadSum(xControlPerCall, xStorePerCall)
+	if err != nil {
+		return 0, 0, errors.New("corrected extraction read maximum overflows")
+	}
+	xReads, err := checkedMultiply(row.ExtractionProgressCalls.Maximum, xPerCall)
+	if err != nil {
+		return 0, 0, errors.New("corrected extraction phase read maximum overflows")
+	}
+	tailReads, err := checkedInspectionReadSum(
+		row.TailControlFileReads.Maximum,
+		row.TailStoreReadAttempts.Maximum,
+	)
+	if err != nil {
+		return 0, 0, errors.New("corrected tail phase read maximum overflows")
+	}
+	finalPerCall, err := checkedInspectionReadSum(
+		correctedFinalAuthorityControlReadMaximum,
+		correctedFinalAuthorityStoreReadMaximum,
+	)
+	if err != nil {
+		return 0, 0, errors.New("corrected final-authority read maximum overflows")
+	}
+	finalReads, err := checkedMultiply(row.FinalAuthorityPasses.Maximum, finalPerCall)
+	if err != nil {
+		return 0, 0, errors.New("corrected final-authority phase read maximum overflows")
+	}
+	finalMembers, err := checkedMultiply(
+		row.FinalAuthorityPasses.Maximum,
+		correctedFinalAuthorityMemberReadMaximum,
+	)
+	if err != nil {
+		return 0, 0, errors.New("corrected final-authority phase member maximum overflows")
+	}
+
+	var transitionReads, transitionMembers uint64
+	if row.TransitionRead != nil {
+		transitionReads, err = checkedInspectionReadSum(
+			row.TransitionRead.ControlFileReads.Maximum,
+			row.TransitionRead.StoreReadAttempts.Maximum,
+		)
+		if err != nil {
+			return 0, 0, errors.New("corrected transition read maximum overflows")
+		}
+		transitionMembers = row.TransitionRead.MemberReads.Maximum
+	}
+	queryReads, err := checkedInspectionReadSum(
+		row.ProductControlFileReads.Maximum,
+		row.ProductStoreReadAttempts.Maximum,
+	)
+	if err != nil {
+		return 0, 0, errors.New("corrected product read maximum overflows")
+	}
+	if row.ProductHTTPCalls.Maximum == 0 && row.ProductMCPCalls.Maximum == 0 {
+		queryMembers = 0
+	}
+
+	var preparationReads, preparationMembers uint64
+	for _, preparation := range correctedRecoveryPreparations() {
+		if preparation.Phase != row.Phase {
+			continue
+		}
+		files, stores, boundsErr := recoveryPreparationReadBounds(plan, preparation)
+		if boundsErr != nil {
+			return 0, 0, boundsErr
+		}
+		// Maximum preparation admits the optional binding reread and one cold
+		// candidate manifest open. That cold open owns the strict projection M.
+		preparationReads, err = checkedInspectionReadSum(files.Maximum, stores.Maximum, 1)
+		if err != nil {
+			return 0, 0, errors.New("corrected recovery preparation read maximum overflows")
+		}
+		preparationMembers = candidate.MaxWholeRepositoryStrictOpenMemberVisits()
+		break
+	}
+	controls, err := checkedInspectionReadSum(
+		xReads, tailReads, finalReads, transitionReads, queryReads, preparationReads,
+	)
+	if err != nil {
+		return 0, 0, errors.New("corrected scoped phase control read maximum overflows")
+	}
+	members, err := checkedInspectionReadSum(
+		finalMembers, transitionMembers, queryMembers, preparationMembers,
+	)
+	if err != nil {
+		return 0, 0, errors.New("corrected scoped phase member read maximum overflows")
+	}
+	return controls, members, nil
+}
+
+func checkedInspectionReadSum(values ...uint64) (uint64, error) {
+	var result uint64
+	for _, value := range values {
+		if value > math.MaxUint64-result {
+			return 0, errors.New("corrected inspection read sum overflows")
+		}
+		result += value
+	}
+	return result, nil
 }
 
 func correctedPhysicalTransitionReadBound(profile CombinedProfile) (inspectionReadBound, error) {
@@ -591,6 +770,90 @@ func correctedProductQueryNativeControlReads() (uint64, uint64, error) {
 		return 0, 0, errors.New("corrected product query inventory never opens the catalog")
 	}
 	return controls, stores, nil
+}
+
+// correctedProductQueryMemberReadMaximum follows the closed execution order:
+// all plan-ordered HTTP cases, then all plan-ordered MCP cases. The first
+// authorized catalog route owns the only catalog member miss; relationship
+// members remain fresh per page and per transport under their route ceilings.
+func correctedProductQueryMemberReadMaximum(queries []QueryCase) (uint64, error) {
+	catalogMemberMaximum, err := checkedInspectionReadSum(
+		servicecatalogv3.MaxServicesPerMember,
+		servicecatalogv3.MaxMemberships,
+	)
+	if err != nil {
+		return 0, errors.New("corrected product catalog member maximum overflows")
+	}
+	relationshipMembers, err := checkedMultiply(
+		relationshippublication.MaxProjectionRecords,
+		relationshippublication.MaxProjectionBucketsV3,
+	)
+	if err != nil {
+		return 0, errors.New("corrected product relationship member maximum overflows")
+	}
+
+	var total uint64
+	catalogCold := true
+	for range 2 { // HTTP corridor, then MCP corridor.
+		for _, query := range queries {
+			switch query.Surface {
+			case "all_code_search":
+				continue
+			case "service_detail", "service_search":
+				if query.ExpectedStatus == 404 || !catalogCold {
+					continue
+				}
+				if catalogMemberMaximum > math.MaxUint64-total {
+					return 0, errors.New("corrected product catalog member total overflows")
+				}
+				total += catalogMemberMaximum
+				catalogCold = false
+			case "service_relationships":
+				kind := ""
+				for _, parameter := range query.Parameters {
+					if parameter.Name != "kind" {
+						continue
+					}
+					if kind != "" {
+						return 0, errors.New("corrected product relationship kind is duplicated")
+					}
+					kind = parameter.Value
+				}
+				var postings uint64
+				switch kind {
+				case "rpc":
+					postings = rpccallerposting.MaxPostingsPerMember
+				case "kafka":
+					postings = kafkatopicposting.MaxPostingsPerMember
+				default:
+					return 0, errors.New("corrected product relationship kind is unknown")
+				}
+				perPage, sumErr := checkedInspectionReadSum(relationshipMembers, postings)
+				if sumErr != nil {
+					return 0, errors.New("corrected product relationship page maximum overflows")
+				}
+				pages := correctedProductQueryPages(query)
+				queryMembers, multiplyErr := checkedMultiply(perPage, pages)
+				if multiplyErr != nil {
+					return 0, errors.New("corrected product relationship query maximum overflows")
+				}
+				queryMembers, sumErr = checkedInspectionReadSum(
+					queryMembers,
+					relationshippublication.MaxServicesPerServiceMemberV3,
+				)
+				if sumErr != nil || queryMembers > math.MaxUint64-total {
+					return 0, errors.New("corrected product relationship total overflows")
+				}
+				total += queryMembers
+			default:
+				return 0, errors.New("corrected product member surface is unknown")
+			}
+		}
+	}
+	if catalogCold {
+		return 0, errors.New("corrected product member inventory never opens the catalog")
+	}
+	return total, nil
 }
 
 func correctedInspectionInventorySHA256(profile CombinedProfile) (string, error) {

@@ -364,6 +364,7 @@ func TestCorrectedWorkPreservesIndependentSafetyCeilings(t *testing.T) {
 	}
 	before.Schema, before.MaximumChildProcessesPerPhase, before.Phases = after.Schema, after.MaximumChildProcessesPerPhase, after.Phases
 	before.ChildProcessRoles = after.ChildProcessRoles
+	before.LifecycleOwners = after.LifecycleOwners
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("prospective work correction widened an independent safety ceiling")
 	}

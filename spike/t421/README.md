@@ -1664,6 +1664,49 @@ ownership, report-failure latching, phase passes, cross-phase sums, final
 ordinal, replacement freeze, and execution remain open. This authorizes no
 merge, freeze, execution, release, scale result, or SLO.
 
+#### Whole-phase scoped read ceilings
+
+The prospective V2 work envelope now replaces its inherited read proxies with
+the checked sum of every closed scoped-read plane. `ControlReads.Maximum` is
+X+T+F+L+R+Q+preparation C+S; H and L cost zero. `MemberReads.Maximum` is the
+corresponding F+R+Q+cold-preparation M sum. Existing minima remain conservative,
+and no other work or safety ceiling changes.
+
+| Phase | K maximum | M maximum |
+|---|---:|---:|
+| preflight | 0 | 0 |
+| cold | 448,266 | 589,656,064 |
+| warm_noop | 19,146 | 589,656,064 |
+| physical_delta_b | 448,307 | 593,719,272 |
+| logical_delta_b | 448,276 | 589,656,064 |
+| return_a | 448,276 | 589,656,064 |
+| stale_lease | 448,675 | 942,952,704 |
+| process_restart | 448,682 | 942,952,704 |
+| pressure_80 | 19,146 | 589,656,064 |
+| pressure_90 | 19,146 | 589,656,064 |
+| pressure_75 | 19,146 | 589,656,064 |
+| archive_restore | 448,267 | 589,656,064 |
+| lifecycle_collection | 19,146 | 589,656,064 |
+| product_queries | 38,467 | 1,628,855,928 |
+| teardown | 0 | 0 |
+
+X is at most 2,881 calls of `C/S=11/130`; T is at most 2,881 calls of
+`4/4`; each F uses its production-derived `18469/528/589656064` ceiling. R
+reuses the exact transition subtotals. Q adds `K=324` and the checked plan-order
+route ceiling `M=449543800`. Stale and restart preparation add at most
+`K=393/394` and one cold candidate strict-open ceiling `M=353296640`.
+Limit arithmetic is checked before assignment.
+
+The equivalent compact grammar uses `p/l` for physical/logical R,
+`Q-M=checked-plan-sum(query_results.results[*].(http+mcp).member_reads)`, and
+`phase-K=prep+X+T+F+L+R+Q`. Numeric growth is 56 bytes and policy savings are
+60, so the canonical plan is 262,140 bytes under the unchanged 262,144-byte
+cap. These are admission maxima for the scoped ledger, not total pipeline I/O
+or observed costs. Plan construction performs only bounded arithmetic over the
+existing phase, query, and preparation rows. Runtime phase ownership, exact
+report-to-meter binding and report-failure latching, the final ordinal,
+replacement freeze, execution, release, and scale/SLO claims remain open.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

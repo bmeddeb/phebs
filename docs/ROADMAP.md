@@ -320,6 +320,25 @@ report-failure latching, phase passes, cross-phase sums, final ordinal,
 replacement freeze, and execution remain open. No merge, freeze, execution,
 release, scale result, or SLO is established or authorized.
 
+The subsequent V2 slice replaces the inherited read proxies with complete
+checked scoped maxima in the existing work envelope. Per phase, K sums X, T,
+F, L, R, Q, and recovery-preparation C+S; M sums the matching F, R, Q, and cold-
+preparation member ceilings. H/L add no native reads. The resulting maxima range
+from `K/M=19146/589656064` on a one-shot warm/pressure/lifecycle phase through
+`448682/942952704` on process restart; product queries admit two F passes plus
+Q at `38467/1628855928`. Preflight and teardown remain zero. The exact fifteen-
+row table is pinned in code, inherited minima and every non-read safety ceiling
+remain unchanged, and all arithmetic refuses overflow.
+
+Equivalent `R:p/l`, checked plan-sum Q-M, and explicit phase-formula policy
+tokens save four net bytes, leaving the canonical plan at 262,140 of 262,144.
+This is static scoped admission, not total pipeline I/O, measured cost, runtime
+meter wiring, or a phase pass. It adds only bounded offline construction work;
+ordinary requests, sync, startup/restart, retry/no-op, publication, lifecycle,
+locks, caches, stores, disk, children, and persistent memory are unchanged.
+Runtime phase/report ownership, failure latching, the final ordinal, replacement
+freeze, execution, release, and scale/SLO claims remain open and unauthorized.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

@@ -249,6 +249,9 @@ func correctedWorkEnvelope(profile CombinedProfile) (WorkEnvelope, []PhaseBudget
 		work.MaximumChildProcessesPerPhase = max(work.MaximumChildProcessesPerPhase, derivation.MaximumChildrenAllRoles)
 		derivations = append(derivations, derivation)
 	}
+	if err := applyCorrectedPhaseReadMaximums(&work, profile); err != nil {
+		return WorkEnvelope{}, nil, err
+	}
 	return work, derivations, nil
 }
 

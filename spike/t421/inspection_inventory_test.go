@@ -1,12 +1,11 @@
 package t421
 
 import (
+	"math"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/bmeddeb/phebs/internal/store"
 )
 
 func TestCorrectedInspectionInventoryIsPhaseAndEpochDerived(t *testing.T) {
@@ -208,29 +207,91 @@ func TestCorrectedTailReadinessFencesPhaseIntentBeforeFinalAuthority(t *testing.
 	}
 }
 
-func TestCurrentV2ReadCapsCannotAdmitCompactInspector(t *testing.T) {
-	plan := correctedTestPlan(t)
-	work := func(phase string) PhaseWorkBounds {
-		for _, row := range plan.WorkEnvelope.Phases {
-			if row.Phase == phase {
-				return row
-			}
-		}
-		t.Fatalf("phase %q is absent", phase)
-		return PhaseWorkBounds{}
+func TestCorrectedPhaseReadMaximumsAreExactAndPreserveV1(t *testing.T) {
+	retained := retainedWorkPlan(t)
+	before := frozenWorkEnvelope(retained.Profile)
+	after, _, err := correctedWorkEnvelope(retained.Profile)
+	if err != nil {
+		t.Fatal(err)
 	}
-	domains := uint64(len(plan.Profile.Pipeline.ExtractionDomains))
-	exactProgressMaximum := 2 + domains + 2 + 2*store.MaxGenerationScheduleReadAttempts
-	for _, phase := range []string{"warm_noop", "logical_delta_b"} {
-		if work(phase).ControlReads.Maximum >= exactProgressMaximum {
-			t.Fatalf("%s no longer exposes the zero-control counterexample", phase)
+	want := []phaseReadMaximum{
+		{Phase: "preflight"},
+		{Phase: "cold", ControlReads: 448_266, MemberReads: 589_656_064},
+		{Phase: "warm_noop", ControlReads: 19_146, MemberReads: 589_656_064},
+		{Phase: "physical_delta_b", ControlReads: 448_307, MemberReads: 593_719_272},
+		{Phase: "logical_delta_b", ControlReads: 448_276, MemberReads: 589_656_064},
+		{Phase: "return_a", ControlReads: 448_276, MemberReads: 589_656_064},
+		{Phase: "stale_lease", ControlReads: 448_675, MemberReads: 942_952_704},
+		{Phase: "process_restart", ControlReads: 448_682, MemberReads: 942_952_704},
+		{Phase: "pressure_80", ControlReads: 19_146, MemberReads: 589_656_064},
+		{Phase: "pressure_90", ControlReads: 19_146, MemberReads: 589_656_064},
+		{Phase: "pressure_75", ControlReads: 19_146, MemberReads: 589_656_064},
+		{Phase: "archive_restore", ControlReads: 448_267, MemberReads: 589_656_064},
+		{Phase: "lifecycle_collection", ControlReads: 19_146, MemberReads: 589_656_064},
+		{Phase: "product_queries", ControlReads: 38_467, MemberReads: 1_628_855_928},
+		{Phase: "teardown"},
+	}
+	if len(after.Phases) != len(want) || !reflect.DeepEqual(retained.WorkEnvelope, before) {
+		t.Fatal("corrected reads changed the retained V1 envelope")
+	}
+	for index, value := range after.Phases {
+		if value.Phase != want[index].Phase || value.ControlReads.Maximum != want[index].ControlReads ||
+			value.MemberReads.Maximum != want[index].MemberReads {
+			t.Fatalf("%s read maximum = C%d/M%d, want C%d/M%d", value.Phase,
+				value.ControlReads.Maximum, value.MemberReads.Maximum,
+				want[index].ControlReads, want[index].MemberReads)
+		}
+		if value.ControlReads.Minimum != before.Phases[index].ControlReads.Minimum ||
+			value.MemberReads.Minimum != before.Phases[index].MemberReads.Minimum {
+			t.Fatalf("%s read minimum changed", value.Phase)
 		}
 	}
-	fullScan := 1 + 6*domains + plan.Profile.Physical.CombinedModeledPartitions + 4*domains
-	for _, phase := range []string{"cold", "physical_delta_b", "return_a"} {
-		if work(phase).ControlReads.Maximum >= 2*fullScan {
-			t.Fatalf("%s no longer exposes the inherited double-scan counterexample", phase)
-		}
+}
+
+func TestCorrectedPhaseReadMaximumComponentsMatchNativeAdmissions(t *testing.T) {
+	if correctedFinalAuthorityControlReadMaximum != 18_469 ||
+		correctedFinalAuthorityStoreReadMaximum != 528 ||
+		correctedFinalAuthorityMemberReadMaximum != 589_656_064 {
+		t.Fatal("F maxima differ from cmd/phebs production admission")
+	}
+	queryMembers, err := correctedProductQueryMemberReadMaximum(correctedQueryCases())
+	if err != nil || queryMembers != 449_543_800 {
+		t.Fatalf("Q member maximum = %d, %v", queryMembers, err)
+	}
+	plan := retainedWorkPlan(t)
+	maximums, err := correctedPhaseReadMaximums(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	product := maximums[slices.IndexFunc(maximums, func(value phaseReadMaximum) bool {
+		return value.Phase == "product_queries"
+	})]
+	if product.ControlReads != 149+2*(18_469+528)+160+164 ||
+		product.MemberReads != 2*589_656_064+queryMembers {
+		t.Fatal("product phase double-counted its retained query proxy")
+	}
+}
+
+func TestCorrectedPhaseReadMaximumsRejectOverflow(t *testing.T) {
+	plan := retainedWorkPlan(t)
+	if _, _, err := correctedScopedPhaseReadMaximum(plan, phaseInspectionInventory{
+		Phase: "cold", ExtractionProgressCalls: CounterBound{Maximum: math.MaxUint64},
+	}, 0); err == nil {
+		t.Fatal("overflowing X phase maximum was accepted")
+	}
+	queries := correctedQueryCases()
+	index := slices.IndexFunc(queries, func(value QueryCase) bool {
+		return value.Surface == "service_relationships"
+	})
+	if index < 0 {
+		t.Fatal("relationship query is absent")
+	}
+	queries[index].ExpectedRecords, queries[index].PageSize = math.MaxUint64, 1
+	if _, err := correctedProductQueryMemberReadMaximum(queries); err == nil {
+		t.Fatal("overflowing Q member maximum was accepted")
+	}
+	if _, err := checkedInspectionReadSum(math.MaxUint64, 1); err == nil {
+		t.Fatal("overflowing scoped sum was accepted")
 	}
 }
 

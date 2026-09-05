@@ -3988,6 +3988,34 @@ phase ownership, report-failure latching, phase passes, cross-phase sums, final
 ordinal, replacement freeze, and execution remain open. This authorizes no
 merge, freeze, execution, release, scale result, or SLO.
 
+The next V2 slice closes the prospective whole-phase scoped read maxima. It
+replaces only `ControlReads.Maximum` and `MemberReads.Maximum` in the existing
+work-envelope rows, preserves their conservative minima and every unrelated
+safety ceiling, and reuses the already-closed X/T/F/L/R/Q and recovery-
+preparation inventories. `K` is C+S. The exact `K/M` rows are:
+`preflight 0/0`; `cold 448266/589656064`; `warm_noop 19146/589656064`;
+`physical_delta_b 448307/593719272`; `logical_delta_b` and `return_a`
+`448276/589656064`; `stale_lease 448675/942952704`; `process_restart`
+`448682/942952704`; each pressure phase and `lifecycle_collection`
+`19146/589656064`; `archive_restore 448267/589656064`; `product_queries`
+`38467/1628855928`; and `teardown 0/0`.
+
+These are checked admission maxima for the explicitly scoped ledger, not total
+pipeline-I/O predictions or observed costs. The construction derives X from
+the frozen nine-domain profile and store retry ceiling, T/R/Q from the compact
+inventory, F from its production maximum, and stale/restart preparation from
+the existing one-shot bounds. Q-M is the checked plan-order route ceiling
+`449543800`; a cold preparation admits the existing whole-repository candidate
+maximum `353296640`. Equivalent policy abbreviations define `R:p/l` as
+physical/logical and make the phase formula explicit. The larger numeric rows
+add 56 plan bytes while that policy compaction saves 60, leaving 262,140 of the
+unchanged 262,144-byte cap. Plan construction adds only bounded arithmetic over
+the existing fifteen phases, query cases, and two preparations. No production
+request, worker, storage, lock, cache, child, schema, or persistent work changes.
+Runtime phase ownership, report-to-meter equality and failure latching, the
+final ordinal, replacement freeze, execution, release, and scale/SLO evidence
+remain open. This authorizes no merge, freeze, or execution.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as
