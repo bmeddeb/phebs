@@ -123,12 +123,16 @@ func TestOpenRejectsSymlinkedShard(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	os.Exit(runTestMain(m))
+}
+
+func runTestMain(m *testing.M) int {
 	flag.Parse()
 	if _, err := indexer.FindBinary(); err != nil {
 		dir, err := os.MkdirTemp("", "phebs-zoekt")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return 1
 		}
 		defer func() { _ = os.RemoveAll(dir) }()
 		bin := filepath.Join(dir, "zoekt-git-index")
@@ -136,7 +140,7 @@ func TestMain(m *testing.M) {
 			"github.com/sourcegraph/zoekt/cmd/zoekt-git-index").CombinedOutput()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "build zoekt-git-index: %v\n%s", err, out)
-			os.Exit(1)
+			return 1
 		}
 		_ = os.Setenv("PHEBS_ZOEKT_GIT_INDEX", bin)
 	}
@@ -144,7 +148,7 @@ func TestMain(m *testing.M) {
 		dir, err := os.MkdirTemp("", "phebs-focused-index")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return 1
 		}
 		defer func() { _ = os.RemoveAll(dir) }()
 		bin := filepath.Join(dir, "phebs-focused-index")
@@ -152,11 +156,11 @@ func TestMain(m *testing.M) {
 			"github.com/bmeddeb/phebs/cmd/phebs-focused-index").CombinedOutput()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "build phebs-focused-index: %v\n%s", err, out)
-			os.Exit(1)
+			return 1
 		}
 		_ = os.Setenv("PHEBS_FOCUSED_INDEX", bin)
 	}
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 func TestFocusedManifestAndPublicationMarkerFailClosed(t *testing.T) {

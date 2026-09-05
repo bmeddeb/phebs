@@ -22,10 +22,14 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	os.Exit(runTestMain(m))
+}
+
+func runTestMain(m *testing.M) int {
 	dir, err := os.MkdirTemp("", "phebs-buf-test-")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	defer func() { _ = os.RemoveAll(dir) }()
 	bin := filepath.Join(dir, "buf")
@@ -34,10 +38,10 @@ func TestMain(m *testing.M) {
 	output, err := command.CombinedOutput()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "build pinned buf: %v\n%s", err, output)
-		os.Exit(1)
+		return 1
 	}
 	testChecker, checkerSetupErr = New(bin)
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 func requireChecker(t *testing.T) *Checker {

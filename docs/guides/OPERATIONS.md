@@ -4594,6 +4594,12 @@ setting an environment variable cannot select it without genuine bootstrap.
 | `make db-server`     | SurrealDB in server mode via docker compose (testing only)                                                                                              |
 | `make verify-glossary` | regenerate the canonical Go, TypeScript, schema, MCP, and MANUAL glossary bytes in memory and reject checked-in drift                                |
 
+Compatibility, indexer and search test bootstraps remove only their own
+temporary fallback-tool directories after normal test returns and joined build
+failures. Discovered tools and their directories are not removed. Forced
+termination or a cleanup error can still leave temporary outputs; historical
+directory names alone do not authorize deleting them.
+
 `make clean` is not an index, candidate, evidence, backup, or database cleanup
 command. It never reads configuration or follows `DATA`/`RELEASE_ROOT`, and no
 other target invokes it implicitly. The three listed `dist` prefixes are

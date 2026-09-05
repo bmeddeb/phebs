@@ -4569,6 +4569,25 @@ member-nine and combined broader gates remain next. Result limits deliberately
 do not imply history-independent scans or predecode response-byte bounds.
 No whole-phase transaction fit is established.
 
+Exact no-removal commit `7bdf8ce6bd7599f4631208f9ab258c43d9a6b425` passed
+the combined no-removal, prefix-headroom and actual member-nine selectors in
+19.272s normal and 37.987s race. Store/command vet, pinned lint (zero issues),
+documentation (0.513s), glossary, whitespace, module verification and repository
+compilation passed. Its isolated exact-commit full-store run passed in
+1055.691s; this is a store regression gate, not full parent readiness or a
+ceremony result.
+
+A separate three-file test-bootstrap correction now runs the previously
+bypassed cleanup defers before os.Exit. Independent source/cost review reports
+all severities zero. Actual uncached no-tests fallback-build gates passed for
+compatibility (3.681s), indexer (4.239s) and search (3.943s); each fresh owned
+TMPDIR was empty and all matching processes joined. Only those three verified
+empty wrapper directories were removed. A read-only historical inventory found
+437 matching roots using 6.876 GiB, of which five were created during this goal's
+time window; none were deleted on timestamp/prefix evidence alone. This closes
+normal-return temporary-tool leakage, not hard-death custody or the unchanged
+120-GiB host backing-space gate.
+
 Scoped gate updates: exact literal-config correction 726e8953 passed independent
 source/test/cost review with all severity counts zero; its clean detached
 config/main pinned lint reported zero issues, and docs (0.515s), glossary and
