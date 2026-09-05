@@ -351,6 +351,33 @@ controller must still reset only at the five admitted launches, reject unmodeled
 bind gap-free reports to phase meters, and route/reserve R ordinals. Freeze,
 execution, merge, release, scale, and SLO claims remain open and unauthorized.
 
+T42.1r1 validation is closed on exact source
+`a2831a172c05fa8ff4852d780dd594509b601173`. Its first aggregate invocation
+mistakenly retained a 30-minute allowance and timed out at 1,800.546 seconds in
+`TestPlanRejectsNoncanonicalSourceBearingAndMutatedInputs/ceiling` during the
+expected frozen-tree hash, with no prior assertion failure and no surviving
+process. It remains a timeout, not a pass. The repository-documented
+`go test -timeout 60m ./spike/t421 -count=1` then passed all 91 top-level tests
+in 1,802.076 seconds. The exact three-test tail passed in 19.904 seconds, and
+the exact focused command and affected spike race selectors passed in 4.029
+and 584.284 seconds. The later success supersedes only the inadequate allowance.
+
+V1 remains 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
+Two separate-process, unsealed in-memory V2 builds were each 262,140 bytes at
+`sha256:23a9daa56be7c7fd870bd729a8c099c0cedcd54ae9963032a07a809b53dbf944`
+and passed strict byte-identical round trips. No author, seal, or canonical
+artifact was produced. Compilation, vet, pinned lint with zero issues, module
+verification, glossary, five explicit shell syntax checks, gofmt-diff, and
+whitespace pass. Docs-check reaches only the known UI-owned missing
+`ui/receipts/fixtures/service-boundary.png`; cleanup found no Go, test,
+SurrealDB, Phebs, or Zoekt process and no port-65499 listener. Independent
+review reports critical/high/medium/low `0/0/0/1` for the cost sentence only;
+the docs-only correction re-review reports `0/0/0/0`. This validation-only
+record changes no runtime or retained artifact. Authoring, sealing, and merge remain open and
+each requires Ben's separate explicit request; freeze, execution, release,
+scale, and SLO claims remain unauthorized.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens
@@ -366,7 +393,8 @@ changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.8 are integrated. T41.8a's catalog-absence and
 exhausted-result recovery, T41.9, and T41.10 are integrated, closing Epic 41.
 T42.1 is integrated; T42.2 runner implementation is authorized but held for
-completion of the approved T42.1r1 contract correction. Ceremony execution remains
+separately authorized T42.1r1 replacement-plan authoring, sealing, merge, and
+later freeze. Source/test validation is complete; ceremony execution remains
 unauthorized and unexecuted.
 
 Epic 44 is now active in the presentation track. T44.1 completed on

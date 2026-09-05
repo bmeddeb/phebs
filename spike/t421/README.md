@@ -298,9 +298,11 @@ run could satisfy all phase predicates together.
 
 T42.2 runner implementation is authorized on
 `codex/t42.2-combined-ceremony`, but the approved T42.1r1 prospective contract
-correction and its gates must finish before it can continue. Native failure controls, complete server
-telemetry, real private admission constructors, and source-free sealing remain
-implementation work. Do not substitute fixture counters, change production
+correction's source/test validation is complete. No replacement plan has been
+authored, sealed, or merged, so runner work remains held through those
+separately authorized steps. Native failure controls, complete server telemetry,
+real private admission constructors, and source-free sealing remain implementation
+work. Do not substitute fixture counters, change production
 identities to satisfy the oracle, silently enlarge budgets, or reuse the old
 T40.13/T41.10 launchers. The retained plan bytes remain untouched. No ceremony
 has been launched, and no execution command is ready.
@@ -1780,3 +1782,44 @@ customer scale, accuracy/completeness, commit cadence, queue catch-up,
 freshness-under-cadence, migration/decommission, topology, private replay,
 release, or `GATE2-V2` result. T42.2 requires separate authorization and
 remains unexecuted.
+
+## T42.1r1 validation-only closure
+
+Validation closes on exact source
+`a2831a172c05fa8ff4852d780dd594509b601173`. The first aggregate invocation
+mistakenly retained a 30-minute allowance and timed out at 1,800.546 seconds in
+`TestPlanRejectsNoncanonicalSourceBearingAndMutatedInputs/ceiling` during
+expected frozen-tree hashing. No assertion had failed before the timeout, the
+command did not pass, and cleanup found no surviving process. The
+repository-documented command
+
+```text
+go test -timeout 60m ./spike/t421 -count=1
+```
+
+then passed all 91 top-level tests in 1,802.076 seconds. The exact three-test
+tail passed in 19.904 seconds. The exact focused `cmd/phebs` race selector
+passed in 4.029 seconds, and the exact affected `spike/t421` race selector
+passed in 584.284 seconds. The later 60-minute success supersedes only the
+mistaken allowance; it does not turn the earlier timeout into a pass.
+
+The retained V1 plan remains byte-exact at 199,561 bytes and
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
+Two separate-process, unsealed in-memory V2 builds each produced 262,140 bytes
+at `sha256:23a9daa56be7c7fd870bd729a8c099c0cedcd54ae9963032a07a809b53dbf944`.
+Both passed strict byte-identical round-trip validation. No author command or
+seal ran and no canonical artifact was written.
+
+Repository compilation, vet, repository-pinned lint with zero issues, module
+verification, glossary, explicit `bash -n` checks over all five tracked shell
+scripts, gofmt-diff, and whitespace gates pass. Documentation validation reaches only
+the known UI-owned missing `ui/receipts/fixtures/service-boundary.png`.
+Independent exact-source review reports critical/high/medium/low `0/0/0/1` for
+the cost sentence only; the docs-only correction re-review reports `0/0/0/0`.
+Final cleanup found no Go, test, SurrealDB, Phebs, or Zoekt process and no port-65499
+listener.
+
+This validation-only record changes no runtime or retained artifact. Validation
+is closed; artifact authoring, artifact sealing, and merge remain open and each
+separately requires Ben's explicit request. No freeze, execution, release,
+scale result, or SLO is established or authorized.

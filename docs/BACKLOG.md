@@ -3098,7 +3098,7 @@ The later T42.2 call-graph audit below identifies execution-readiness defects
 not established by those contract fixtures and bounded production replays.
 This retained plan is not an exact-main execution freeze or a combined pass.
 
-**T42.1r1 · Ordinary-path contract correction (approved, in progress)** —
+**T42.1r1 · Ordinary-path contract correction (validation complete; artifact pending)** —
 supersede, never mutate, the retained v1 plan. AC: production-derived identity
 table and complete constructor-fixture acceptance; formula-based workload,
 census, watcher, executable-image and preparation budgets; five phase-derived
@@ -4029,12 +4029,43 @@ admitted launches, reject unmodeled restarts, bind the gap-free report stream to
 phase meters, and route/reserve R ordinals. Replacement freeze, execution,
 merge, release, scale, and SLO claims remain open and unauthorized.
 
+Validation closes on exact source
+`a2831a172c05fa8ff4852d780dd594509b601173`. The first aggregate invocation
+mistakenly retained a 30-minute allowance and timed out at 1,800.546 seconds in
+`TestPlanRejectsNoncanonicalSourceBearingAndMutatedInputs/ceiling` during
+expected frozen-tree hashing. No assertion had failed before the timeout, no
+process survived, and that command is not a pass. The repository-documented
+`go test -timeout 60m ./spike/t421 -count=1` subsequently passed all 91
+top-level tests in 1,802.076 seconds. The exact three-test tail passed in 19.904
+seconds; exact focused `cmd/phebs` race and affected `spike/t421` race selectors
+passed in 4.029 and 584.284 seconds. The 60-minute pass supersedes only the
+inadequate allowance and does not relabel the earlier timeout.
+
+Retained V1 is unchanged at 199,561 bytes and
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`.
+Two separate-process unsealed in-memory V2 builds each produced 262,140 bytes
+at `sha256:23a9daa56be7c7fd870bd729a8c099c0cedcd54ae9963032a07a809b53dbf944`
+and passed strict byte-identical round trips. No author or seal ran and no
+canonical artifact was written. Compilation, vet, repository-pinned lint with
+zero issues, module verification, glossary, explicit five-script `bash -n`,
+gofmt-diff, and whitespace pass. Docs-check retains only the known UI-owned
+missing `ui/receipts/fixtures/service-boundary.png`. Cleanup found no Go, test,
+SurrealDB, Phebs, or Zoekt process and no port-65499 listener. Independent
+exact-source review reports critical/high/medium/low `0/0/0/1` for the cost
+sentence only; the docs-only correction re-review reports `0/0/0/0`.
+Validation is closed, but
+artifact authoring, artifact sealing, and merge remain open and each separately
+requires Ben's explicit request. This validation-only record changes no runtime
+or retained artifact; no
+freeze, execution, release, scale result, or SLO is established or authorized.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as
 `codex/t42.2-combined-ceremony`; no ceremony was launched. Implementation is
-held pending completion of the approved T42.1r1 prospective correction. The retained
-contract incorrectly requires resolver/caller identity replacement on a
+held pending separately authorized T42.1r1 replacement-plan authoring, sealing,
+merge, and later freeze; source/test validation is complete. The retained contract
+incorrectly requires resolver/caller identity replacement on a
 logical-only change; permits at most 64 cold Git children despite 10,002
 ordinary resolver blob children alone; assigns zero Git children to phases
 with the required three-second Git watcher; and lacks a target-preparation
