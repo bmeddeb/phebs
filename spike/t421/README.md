@@ -336,6 +336,24 @@ This produces one source-free tool identity, not a private
 author/executor/controller, signed launcher, readiness pass or execution
 authorization. Both plans stay exact and the stack stays unmerged.
 
+Exact implementation `aa72212ef57151d6e0381c56818ccdad4b5a15d7` passed the
+combined checkout/reference selectors normally (32.697s) and under race
+(29.967s). The separate metadata gate passed five normal repetitions (0.546s)
+and race (1.570s); the shared SDK-reader gate passed normal/race
+(0.547s/1.790s). The real Go regression uses a neutral focused-index package:
+an exact binary passes, while an ignored-source variant with identical Go
+metadata and a clean VCS stamp refuses. It is not a complete real tool-inventory
+admission. The opt-in repository graph replay verified 483 rows and 175
+downloaded directories against source checksums, including frozen Buf/Zoekt
+pins (10.759s), without changing `go.sum`.
+
+Repository compilation, module verification, scoped vet, pinned lint with zero
+issues, glossary and whitespace pass. Independent exact-commit review reports
+critical/high/medium/low `0/0/0/0`. Docs-check retains only the inherited
+presentation-owned missing `service-boundary.png`; no exception is invented.
+The full retained T42.1 corpus/plan suite and ceremony were not rerun for this
+independently exercised verifier; both retained plan hashes remain exact.
+
 ### T42.2b implementation: strict checkout observation
 
 `InspectExecutionCheckout` is the real checkout prerequisite, stacked after

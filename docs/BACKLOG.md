@@ -4170,6 +4170,18 @@ command is supplied. Remaining external-tool/profile/host admission, real
 author/executor/controller, native controls, launcher and rehearsal still gate
 freeze. The slice is unmerged and preserves both sealed plans.
 
+Exact implementation `aa72212ef57151d6e0381c56818ccdad4b5a15d7` passed the
+combined checkout/reference normal (32.697s) and race (29.967s) selectors,
+separate build-metadata normal/race checks, and shared SDK-reader normal/race
+checks. The real Go regression rebuilds a neutral focused-index package and
+rejects metadata-identical ignored-source contamination. The opt-in repository
+graph replay independently verified 483 module rows and 175 downloaded
+directories, including frozen Buf/Zoekt sums (10.759s). Repository compilation,
+module verification, scoped vet/pinned lint, glossary and whitespace pass;
+independent exact-commit review reports `0/0/0/0`. Docs-check retains only the
+known presentation-owned missing image, without a waiver. Full real tool
+inventory admission, retained-plan suite replay, and ceremony remain unperformed.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
