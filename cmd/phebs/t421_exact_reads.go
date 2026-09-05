@@ -82,15 +82,18 @@ type t421ExactReadAccountingHandler struct {
 }
 
 type t421ExactReadAccountingState struct {
-	report func([]byte) error
-	fail   func(error)
-	final  t421ExactFinalAuthorityRead
-	tail   t421ExactFinalAuthorityRead
+	report   func([]byte) error
+	fail     func(error)
+	final    t421ExactFinalAuthorityRead
+	tail     t421ExactFinalAuthorityRead
+	semantic *t422SemanticLaunch
 
-	mu          sync.Mutex
-	nextOrdinal uint64
-	active      bool
-	failed      bool
+	mu           sync.Mutex
+	nextOrdinal  uint64
+	active       bool
+	failed       bool
+	readersBound bool
+	wrapped      bool
 }
 
 var _ http.Handler = (*t421ExactReadAccountingHandler)(nil)
@@ -163,13 +166,33 @@ func t421NewExactReadAccountingState(
 	} else if len(final) == 2 {
 		state.final, state.tail = final[0], final[1]
 	}
+	state.readersBound = len(final) != 0
 	return state
+}
+
+// Main creates this single ordinal/failure boundary before its native hooks,
+// then binds actual final readers once, before exposing either HTTP transport.
+// This never replaces the state or resets a consumed ordinal.
+func (state *t421ExactReadAccountingState) bindFinalReaders(final, tail t421ExactFinalAuthorityRead) error {
+	if state == nil || final.Read == nil || tail.Read == nil {
+		return errT421ExactReadAdmission
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.readersBound || state.wrapped || state.active || state.failed || state.nextOrdinal != 1 {
+		return errT421ExactReadAdmission
+	}
+	state.final, state.tail, state.readersBound = final, tail, true
+	return nil
 }
 
 func (state *t421ExactReadAccountingState) wrap(next http.Handler) http.Handler {
 	if state == nil || next == nil {
 		panic("T42.1 exact-read reporting is incomplete")
 	}
+	state.mu.Lock()
+	state.wrapped = true
+	state.mu.Unlock()
 	return &t421ExactReadAccountingHandler{next: next, state: state}
 }
 
@@ -263,6 +286,9 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 }
 
 func (state *t421ExactReadAccountingState) admit(request *http.Request, target bool) (uint64, bool) {
+	if state.semantic != nil && !state.semantic.requestCurrent(request.Context()) {
+		return 0, false
+	}
 	activation := request.Header.Values(t421ExactReadActivationHeader)
 	ordinals := request.Header.Values(t421ExactReadOrdinalHeader)
 	principal, authenticated := auth.PrincipalFromContext(request.Context())

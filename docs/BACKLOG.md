@@ -4459,6 +4459,16 @@ owns the design and dependency order. Execution remains excluded.
 These tickets are pending, not acceptance evidence. Agents may refine an
 in-scope implementation choice in the owning ADR, but cannot relax an AC,
 invent a measurement or expand the frozen program to force completion.
+Main now consumes the authenticated bounded V3 semantic launch record through
+an actual inherited Unix socket before config/source path opening. It checks
+the same config bytes once, keeps the fixed epoch/phase membership and one
+shared exact-read state, and binds accepted HTTP requests to their reserved
+producer/input/phase/window tuple through auth and report tails. No native
+preparation route, plan admission or full readiness is claimed. Focused normal
+three repeats passed in 14.303s, broad focused race three repeats in 20.737s,
+and final inherited-socket completion/cancellation race repeats in 2.462s;
+vet, pinned lint, formatting and whitespace pass. Independent review remains
+required before this slice closes.
 Independent review of the lifecycle rendezvous found one medium clock-backstep
 gap: an observation rejected as older than its fence could still represent an
 actual native sweep. The correction now bounds actual turns before execution

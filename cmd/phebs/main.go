@@ -486,9 +486,16 @@ func serve(args []string) (retErr error) {
 	if err != nil {
 		return err
 	}
+	semanticLaunch, err := readT422SemanticLaunch(dispatchadmission.ProcessContext(), os.Stdin)
+	if err != nil {
+		return err
+	}
+	if err := semanticLaunch.validateServeSelection(*addr, flags.Args(), exactReads, exactReports); err != nil {
+		return err
+	}
 	reportT4013Startup("process_started")
 
-	cfg, rawConfig, err := loadServerConfig(*cfgPath)
+	cfg, rawConfig, err := semanticLaunch.loadConfig(*cfgPath)
 	if err != nil {
 		return err
 	}
@@ -597,6 +604,7 @@ func serve(args []string) (retErr error) {
 	}
 	var exactReadFailed chan error
 	var failExactRead func(error)
+	var exactReadState *t421ExactReadAccountingState
 	if exactReads {
 		exactReadFailed = make(chan error, 1)
 		failExactRead = func(failure error) {
@@ -605,6 +613,13 @@ func serve(args []string) (retErr error) {
 				cancel()
 			default:
 			}
+		}
+		exactReadState = t421NewExactReadAccountingState(
+			t4013ExactReportSink("exact read accounting: "), failExactRead,
+		)
+		exactReadState.semantic = semanticLaunch
+		if semanticLaunch != nil {
+			semanticLaunch.fail = failExactRead
 		}
 	}
 
@@ -2100,12 +2115,13 @@ func serve(args []string) (retErr error) {
 		},
 		&mcpsdk.StreamableHTTPOptions{Stateless: true},
 	)
-	apiHandler, mcpHandler = t421ExactReadHandlers(
-		exactReads, apiHandler, mcpHandler,
-		t4013ExactReportSink("exact read accounting: "), failExactRead,
-		finalAuthority, tailReadiness,
-	)
-	handler := t422OwnerHTTPHandler(owners, newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist)))
+	if exactReadState != nil {
+		if err := exactReadState.bindFinalReaders(finalAuthority, tailReadiness); err != nil {
+			return err
+		}
+		apiHandler, mcpHandler = exactReadState.wrap(apiHandler), exactReadState.wrap(mcpHandler)
+	}
+	handler := t422OwnerHTTPHandler(owners, newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist)), semanticLaunch)
 
 	srv := &http.Server{
 		Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second,
