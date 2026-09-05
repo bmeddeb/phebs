@@ -4499,6 +4499,14 @@ lint. Full package gates and independent immutable review remain required; this
 primitive alone supplies neither shared author composition nor archive readiness.
 Its full dispatch package subsequently passed five normal repeats (5.521s) and
 three race repeats (4.892s); immutable independent review remains open.
+Root's independent exact source/test/cost review of 03827a78 found no code
+finding. Its owning cost wording is corrected here: terminal Close updates
+bounded producer state, not the admission-only digest. The authenticated flag
+test's prior unfenced-help refusal is now a valid producer-local close; the test
+explicitly checks that success without global completion and preserves actual
+cleanup-error precedence through a mismatched authenticated DA01 binding. Three
+normal repeats (0.991s), three race repeats (2.481s), vet, pinned lint and
+whitespace pass. No parser/runtime code changed in that correction.
 The semantic snapshot now exposes the actual ordinary-owner drainage fact,
 separately from its immutable request identity. Initial registration/token and
 pending drainage stay false; completed drain stays true through preparation
@@ -4866,6 +4874,10 @@ repeats (16.957s), broader read/semantic/marker race three repeats (25.482s),
 final marker/legacy route race three repeats (7.368s), vet, pinned lint, format
 and whitespace pass. Independent immutable review and the successful actual
 graph through native Advance/scheduler completion remain required.
+Independent exact source/test/docs/cost reviews of e260da34 and 35b7efa7 each
+closed all severity counts at zero. The actual full graph through selector
+readiness and scheduler completion remains unestablished; Advance may truthfully
+return pending, and source review is not that native readiness result.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation

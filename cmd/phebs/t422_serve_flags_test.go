@@ -39,21 +39,30 @@ func t422ServeFlagsRecord() dispatchadmission.ProductionBootstrap {
 
 func TestT422ServeFlagsReturnThroughAdmittedCleanup(t *testing.T) {
 	for _, test := range []struct {
-		name     string
-		mode     string
-		code     int
-		unfenced bool
+		name       string
+		mode       string
+		code       int
+		unfenced   bool
+		badBinding bool
 	}{
 		{name: "serve-help", mode: "serve-help"},
 		{name: "serve-invalid", mode: "serve-invalid", code: 2},
-		{name: "cleanup-error-wins", mode: "serve-help", code: 1, unfenced: true},
+		{name: "unfenced-help", mode: "serve-help", unfenced: true},
+		{name: "cleanup-error-wins", mode: "serve-help", code: 1, unfenced: true, badBinding: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 			defer cancel()
 			record := t422ServeFlagsRecord()
+			producer := record.Producer
+			if test.badBinding {
+				// Authenticate the bootstrap, then deliberately bind its DA01
+				// endpoint to a different lifetime. This is a real terminal
+				// protocol failure, unlike valid unfenced producer-local Close.
+				producer.Binding[1] = 1
+			}
 			controller, err := dispatchadmission.New(ctx, dispatchadmission.Config{
-				Limits: record.Limits, Producers: []dispatchadmission.Producer{record.Producer},
+				Limits: record.Limits, Producers: []dispatchadmission.Producer{producer},
 				Phases: []dispatchadmission.Phase{{ID: 1, Roles: []dispatchadmission.RoleBudget{
 					{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal},
 					{Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility},
@@ -62,8 +71,8 @@ func TestT422ServeFlagsReturnThroughAdmittedCleanup(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			// Early parser return has no owner work. The controlling parent
-			// closes admission before releasing the authenticated bootstrap.
+			// Early parser return has no owner work. Both a globally fenced
+			// completion and an unfenced producer-local terminal Close are valid.
 			if !test.unfenced {
 				if err := controller.Fence(); err != nil {
 					t.Fatal(err)
@@ -114,20 +123,20 @@ func TestT422ServeFlagsReturnThroughAdmittedCleanup(t *testing.T) {
 				code = exited.ExitCode()
 			}
 			if code != test.code || !strings.Contains(output.String(), "owned_cleanup_returned") ||
-				strings.Contains(output.String(), "terminal_error") != test.unfenced {
+				strings.Contains(output.String(), "terminal_error") != test.badBinding {
 				t.Fatalf("serve parser code=%d, output=%q, error=%v", code, output.String(), err)
 			}
 			select {
 			case err := <-served:
-				if (err != nil) != test.unfenced {
-					t.Fatalf("parser closure result=%v, want refusal=%v", err, test.unfenced)
+				if (err != nil) != test.badBinding {
+					t.Fatalf("parser closure result=%v, want refusal=%v", err, test.badBinding)
 				}
 			case <-ctx.Done():
 				t.Fatal("admission receiver did not join the parser return")
 			}
 			snapshot, err := controller.Snapshot()
-			if (err != nil) != test.unfenced || snapshot.Complete == test.unfenced ||
-				snapshot.Attempts != 0 || snapshot.Producers[0].Closed == test.unfenced {
+			if (err != nil) != test.badBinding || snapshot.Complete != (!test.unfenced && !test.badBinding) ||
+				snapshot.Attempts != 0 || snapshot.Producers[0].Closed == test.badBinding {
 				t.Fatalf("parser did not close its exact empty prefix: %+v, %v", snapshot, err)
 			}
 		})
