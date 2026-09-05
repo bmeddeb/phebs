@@ -339,6 +339,18 @@ locks, caches, stores, disk, children, and persistent memory are unchanged.
 Runtime phase/report ownership, failure latching, the final ordinal, replacement
 freeze, execution, release, and scale/SLO claims remain open and unauthorized.
 
+The audited final-ordinal slice now gives every live serve process/server epoch
+the same accepted exact-read request ceiling, 11,531. The five modeled epoch
+maxima are `11,530/5,765/11,531/6,261/8,691`; API and MCP share one sequence
+starting at 1, so 11,531 is accepted and 11,532 is refused. A fresh admitted
+process resets to 1. The 43,778 ceremony total is the checked cross-epoch sum,
+not the live-process cap. The existing 20-byte input guard remains bounded
+decimal parsing only. This changes no canonical plan bytes or digest—the plan
+stays 262,140 of 262,144 bytes—and ordinary mode remains unchanged. The future
+controller must still reset only at the five admitted launches, reject unmodeled restarts,
+bind gap-free reports to phase meters, and route/reserve R ordinals. Freeze,
+execution, merge, release, scale, and SLO claims remain open and unauthorized.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

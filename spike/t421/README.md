@@ -1707,6 +1707,28 @@ existing phase, query, and preparation rows. Runtime phase ownership, exact
 report-to-meter binding and report-failure latching, the final ordinal,
 replacement freeze, execution, release, and scale/SLO claims remain open.
 
+#### Final exact-read request ordinal
+
+The audited ceiling is uniformly 11,531 accepted requests for each live serve
+process/server epoch. The five epoch maxima are
+`11,530/5,765/11,531/6,261/8,691`. Exact API and MCP requests consume the same
+gap-free ordinal sequence starting at 1: ordinal 11,531 is accepted and 11,532
+is refused. Each fresh admitted process resets the sequence to 1. The checked
+43,778 total is the sum across the five ceremony epochs, not a per-process cap.
+
+The existing 20-byte ordinal-input guard remains bounded decimal parsing only.
+The derived ceiling changes no canonical plan bytes or digest, so the plan
+remains 262,140 of 262,144 bytes. Ordinary mode is unchanged. The future
+controller must reset only at the five modeled admitted launches, reject an
+unmodeled restart, bind every gap-free exact report to its phase meter, and
+route/reserve transition-local R reports without ordinal collision. Replacement
+freeze, execution, merge, release, scale, and SLO claims remain open and
+unauthorized.
+
+The exact path retains its existing bounded parse, comparison, and mutex work.
+No query, sync, startup/restart, retry/no-op, publication, lifecycle, store,
+cache, lock, source/shard read, hashing, memory/disk, or child cost changes.
+
 ## Cost and nonclaims
 
 The production correction is confined to the existing partition executor. A

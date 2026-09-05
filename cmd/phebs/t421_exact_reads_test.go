@@ -93,7 +93,7 @@ func TestT421ExactReadsEnvironmentAndFrozenBounds(t *testing.T) {
 		t.Fatal("unknown exact-read contract was accepted")
 	}
 
-	if t421ExactReadMaxOrdinal != math.MaxUint64-1 {
+	if t421ExactReadMaxOrdinal != 11_531 {
 		t.Fatalf("maximum ordinal = %d", t421ExactReadMaxOrdinal)
 	}
 	if t421ExtractionProgressReadLimits() != (readaccounting.Counts{
@@ -112,6 +112,44 @@ func TestT421ExactReadsEnvironmentAndFrozenBounds(t *testing.T) {
 	failed <- errT421ExactReadAccounting
 	if err := t421ExactReadTerminalError(failed); !errors.Is(err, errT421ExactReadAccounting) {
 		t.Fatalf("terminal exact-read error = %v", err)
+	}
+}
+
+func TestT421ExactReadOrdinalCeilingAndProcessReset(t *testing.T) {
+	authService := newT421ExactReadAuthService(t)
+	var calls atomic.Uint64
+	next := http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		writer.WriteHeader(http.StatusNoContent)
+	})
+
+	capture := &t421ExactReadTestCapture{}
+	state := t421NewExactReadAccountingState(capture.report, capture.fail)
+	state.nextOrdinal = t421ExactReadMaxOrdinal
+	handler := authService.Require(state.wrap(next))
+	accepted := serveT421ExactReadRequest(t, handler, exactT421ReadRequest(
+		http.MethodGet, "/api/extraction-progress?repository=private", t421ExactReadMaxOrdinal,
+	))
+	refused := serveT421ExactReadRequest(t, handler, exactT421ReadRequest(
+		http.MethodGet, "/api/extraction-progress?repository=private", t421ExactReadMaxOrdinal+1,
+	))
+
+	freshCapture := &t421ExactReadTestCapture{}
+	fresh := authService.Require(t421NewExactReadAccountingState(freshCapture.report, freshCapture.fail).wrap(next))
+	reset := serveT421ExactReadRequest(t, fresh, exactT421ReadRequest(
+		http.MethodGet, "/api/extraction-progress?repository=private", 1,
+	))
+	_, failures := capture.snapshot()
+	_, freshFailures := freshCapture.snapshot()
+	if accepted.status != http.StatusNoContent ||
+		!strings.Contains(accepted.report, `"request_ordinal":11531`) ||
+		refused.status != http.StatusConflict ||
+		!strings.Contains(refused.report, `"request_ordinal":0`) ||
+		reset.status != http.StatusNoContent ||
+		!strings.Contains(reset.report, `"request_ordinal":1`) ||
+		calls.Load() != 2 || len(failures) != 1 || len(freshFailures) != 0 {
+		t.Fatalf("ceiling statuses=%d/%d reset=%d calls=%d failures=%v/%v",
+			accepted.status, refused.status, reset.status, calls.Load(), failures, freshFailures)
 	}
 }
 

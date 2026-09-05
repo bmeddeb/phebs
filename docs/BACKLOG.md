@@ -4016,6 +4016,19 @@ Runtime phase ownership, report-to-meter equality and failure latching, the
 final ordinal, replacement freeze, execution, release, and scale/SLO evidence
 remain open. This authorizes no merge, freeze, or execution.
 
+The audited final-ordinal slice sets one accepted ceiling of 11,531 for the
+shared API-and-MCP exact-read sequence in each live serve process/server epoch.
+The five epoch request maxima are `11,530/5,765/11,531/6,261/8,691`.
+Each fresh admitted process starts at ordinal 1; 11,531 is accepted and 11,532
+is refused. The checked ceremony sum `43,778` is not a per-process cap. The
+existing 20-byte input guard remains bounded decimal parsing only, and ordinary
+mode is unchanged. Because this ceiling is derived from the already-closed
+compact inventory, it changes zero canonical plan bytes or digest; the plan
+remains 262,140 of 262,144 bytes. The controller must still reset only for the five
+admitted launches, reject unmodeled restarts, bind the gap-free report stream to
+phase meters, and route/reserve R ordinals. Replacement freeze, execution,
+merge, release, scale, and SLO claims remain open and unauthorized.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as

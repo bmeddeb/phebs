@@ -42,10 +42,9 @@ const (
 	t421ProductServicePath        = "/api/service"
 	t421ProductRelationshipsPath  = "/api/service-relationships"
 
-	// X/T/F/L/Q plus physical/logical R calls are derived, but the remaining R
-	// classes and final protocol calls stay open. Keep admission at the
-	// non-overflow type bound until the complete inventory supplies one ceiling.
-	t421ExactReadMaxOrdinal uint64 = math.MaxUint64 - 1
+	// The complete phase inventory's largest live server epoch admits 11,531
+	// shared API/MCP requests. A new serve process starts again at ordinal one.
+	t421ExactReadMaxOrdinal uint64 = 11_531
 )
 
 var (
@@ -271,8 +270,8 @@ func (state *t421ExactReadAccountingState) admit(request *http.Request, target b
 		len(ordinals) != 1 || !authenticated || !t421ExactReadLegacyPrincipal(principal) {
 		return 0, false
 	}
-	// The largest admitted ordinal is twenty digits. Reject before ParseUint so
-	// an attacker cannot turn this private exact-mode boundary into text work.
+	// Bound parsing before ParseUint so an attacker cannot turn this private
+	// exact-mode boundary into text work.
 	if len(ordinals[0]) == 0 || len(ordinals[0]) > 20 {
 		return 0, false
 	}
