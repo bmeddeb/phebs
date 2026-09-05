@@ -608,6 +608,9 @@ func serve(args []string) (retErr error) {
 	if exactReads {
 		exactReadFailed = make(chan error, 1)
 		failExactRead = func(failure error) {
+			if exactReadState != nil {
+				exactReadState.markFailed()
+			}
 			select {
 			case exactReadFailed <- failure:
 				cancel()
@@ -1057,6 +1060,14 @@ func serve(args []string) (retErr error) {
 		relationshipRuntime, acquireLifecycleMutation, searchGenerationPins,
 		relationshipCache, relationshipV3Cache,
 	)
+	var markerControl *t422MarkerControl
+	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 3 {
+		markerControl, err = newT422MarkerControl(ctx, semanticLaunch, relationshipRuntime, serviceRuntime, acquireObservationTransition)
+		if err != nil {
+			return err
+		}
+		exactReadState.marker = markerControl
+	}
 	catalogReconciler.WithMutation = serviceRuntime.withV2Mutation
 	defer func() {
 		stopBackground()
@@ -1315,6 +1326,9 @@ func serve(args []string) (retErr error) {
 					Handle: func(workerCtx context.Context, chunk store.GenerationChunk, _ generationscheduler.Budget) error {
 						var err error
 						if chunk.Stage == relationshippublication.ScheduleStageV3 {
+							if markerControl != nil {
+								return markerControl.handleInEpoch(workerCtx, chunk)
+							}
 							err = relationshipRuntime.HandleV3(workerCtx, chunk)
 						} else {
 							err = relationshipRuntime.Handle(workerCtx, chunk)

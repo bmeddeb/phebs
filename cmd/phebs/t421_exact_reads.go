@@ -87,6 +87,7 @@ type t421ExactReadAccountingState struct {
 	final    t421ExactFinalAuthorityRead
 	tail     t421ExactFinalAuthorityRead
 	semantic *t422SemanticLaunch
+	marker   *t422MarkerControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -205,6 +206,10 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		return
 	}
 	limits, target := t421ExactReadLimits(request, handler.state.final, handler.state.tail)
+	nativeRead := handler.state.markerRead(request)
+	if nativeRead != nil {
+		limits, target = readaccounting.Counts{ControlFileReads: 5}, true
+	}
 	ordinal, ok := handler.state.admit(request, target)
 	if !ok {
 		handler.state.refuse(writer, 0, "admission_refused", errT421ExactReadAdmission)
@@ -225,44 +230,26 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	status := "complete"
 	var terminalErr error
 	var commit func() error
+	var afterReport func(error)
 	defer func() {
-		counts, accountingErr := ledger.Finish()
-		if accountingErr != nil {
-			status = "accounting_refused"
-			terminalErr = errors.Join(terminalErr, errT421ExactReadAccounting)
-		}
-		if !completed && terminalErr == nil {
-			status = "handler_incomplete"
-			terminalErr = errors.Join(terminalErr, errT421ExactReadIncomplete)
-		}
-		if completed && terminalErr == nil && commit != nil {
-			if err := handler.state.commit(commit); err != nil {
-				status = "commit_refused"
-				terminalErr = errT421ExactReadCommit
-			}
-		}
-		reportErr := handler.state.emit(writer, t421ExactReadReport{
-			Schema:             t421ExactReadReportSchema,
-			RequestOrdinal:     ordinal,
-			Status:             status,
-			ControlFileReads:   counts.ControlFileReads,
-			StoreReadAttempts:  counts.StoreReadAttempts,
-			MemberVisits:       counts.MemberVisits,
-			StoreWriteAttempts: counts.StoreWriteAttempts,
-		})
-		if reportErr != nil {
-			terminalErr = errors.Join(terminalErr, errT421ExactReadReport)
-		}
-		handler.state.release(terminalErr)
+		handler.state.finishRead(writer, ledger, ordinal, completed, status, terminalErr, commit, afterReport)
 	}()
 
-	if request.URL.Path == t421ExactFinalAuthorityPath ||
+	if nativeRead != nil || request.URL.Path == t421ExactFinalAuthorityPath ||
 		request.URL.Path == t421ExactTailReadinessPath {
 		read, failureStatus, failure := handler.state.final, "final_authority_refused", errT421ExactReadAuthority
 		if request.URL.Path == t421ExactTailReadinessPath {
 			read, failureStatus, failure = handler.state.tail, "tail_readiness_refused", errT421ExactReadTail
 		}
-		canonical, pendingCommit, readErr := read.Read(ctx)
+		var canonical []byte
+		var pendingCommit func() error
+		var readErr error
+		if nativeRead != nil {
+			failureStatus, failure = "marker_observation_refused", errT422MarkerControl
+			canonical, afterReport, readErr = nativeRead(ctx)
+		} else {
+			canonical, pendingCommit, readErr = read.Read(ctx)
+		}
 		if readErr != nil || !json.Valid(canonical) {
 			status = failureStatus
 			terminalErr = failure
@@ -283,6 +270,42 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 
 	handler.next.ServeHTTP(writer, request.WithContext(ctx))
 	completed = true
+}
+
+// Final-cache commits retain their pre-report position. Native continuations
+// run once after the body/ledger/report tail and before shared request release.
+func (state *t421ExactReadAccountingState) finishRead(writer http.ResponseWriter, ledger *readaccounting.Ledger,
+	ordinal uint64, completed bool, status string, terminalErr error, commit func() error, afterReport func(error),
+) {
+	counts, accountingErr := ledger.Finish()
+	if accountingErr != nil {
+		status = "accounting_refused"
+		terminalErr = errors.Join(terminalErr, errT421ExactReadAccounting)
+	}
+	if !completed && terminalErr == nil {
+		status = "handler_incomplete"
+		terminalErr = errors.Join(terminalErr, errT421ExactReadIncomplete)
+	}
+	if completed && terminalErr == nil && commit != nil {
+		if err := state.commit(commit); err != nil {
+			status = "commit_refused"
+			terminalErr = errT421ExactReadCommit
+		}
+	}
+	reportErr := state.emit(writer, t421ExactReadReport{
+		Schema: t421ExactReadReportSchema, RequestOrdinal: ordinal, Status: status,
+		ControlFileReads: counts.ControlFileReads, StoreReadAttempts: counts.StoreReadAttempts,
+		MemberVisits: counts.MemberVisits, StoreWriteAttempts: counts.StoreWriteAttempts,
+	})
+	if reportErr != nil {
+		terminalErr = errors.Join(terminalErr, errT421ExactReadReport)
+	}
+	if afterReport != nil {
+		if err := t422CompleteReadReport(afterReport, terminalErr); err != nil {
+			terminalErr = errors.Join(terminalErr, err)
+		}
+	}
+	state.release(terminalErr)
 }
 
 func (state *t421ExactReadAccountingState) admit(request *http.Request, target bool) (uint64, bool) {

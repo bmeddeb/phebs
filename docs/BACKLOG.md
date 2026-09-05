@@ -4810,6 +4810,14 @@ repeats (1.792s), vet, lint and whitespace pass for helper/barrier/refusal tests
 Independent source read-through found no blocker in that bounded slice; actual
 main routing, after-report integration and a successful live graph through the
 scheduler's own completion remain open. No engine or ceremony ran for this gate.
+The actual epoch-three worker and both fixed HTTP routes are now wired to that
+helper. The shared response finalizer invokes its completion only after body,
+ledger and synchronous report, preserves legacy final-cache ordering, and
+latches native completion failures in the existing state. Focused normal three
+repeats (16.957s), broader read/semantic/marker race three repeats (25.482s),
+final marker/legacy route race three repeats (7.368s), vet, pinned lint, format
+and whitespace pass. Independent immutable review and the successful actual
+graph through native Advance/scheduler completion remain required.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation
