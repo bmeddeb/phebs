@@ -4353,6 +4353,29 @@ admission/bootstrap and launcher rehearsal were not rerun or established by
 this isolated unwired primitive. This source-identical record grants no merge,
 seal, freeze, execution or scale claim.
 
+**T42.2h · Verified direct-tool custody** — stacked on T42.2g in
+`codex/t42.2h-verified-tool-custody`. Connect real independent tool verification
+to protected private copies: copy/protect first, run the existing verifier on
+those bytes, then recheck custody before publishing a role-bound opaque handle.
+Accept no caller-authored identity or verification assertion. AC: real tiny
+reference-build and native external-probe success, metadata-identical wrong
+image refusal, source/copy isolation, role/zero-value/drift/close refusal,
+closed retained custody after failed verification, exact fixture cleanup,
+focused normal/race/static gates and independent source/cost review.
+
+This supports the four actual Go tool roles and copied SurrealDB direct images.
+Real copied Go and Apple Git probes lost their GOROOT/helper locations while
+protected metadata remained exact; both roles now refuse before copying until
+their actual resource-location recipes are independently admitted. It neither
+relocates/adopts Git's helpers or the Go SDK nor copies the three fixed-system
+roles. Unknown/unimplemented roles refuse before work.
+Existing reference/probe scratch and repeated input observations remain their
+own bounded costs. No full twelve-tool/profile binding, source-free evidence
+of native helper closure, production bootstrap, launch permission or launcher
+readiness is issued. These remain required before author/seal or freeze;
+protected direct-image custody alone does not waive them. V1/V2 and `main`
+remain unchanged.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:

@@ -662,9 +662,14 @@ type inputCustodyCleanupFile struct {
 func inputCustodyTestProtect(t *testing.T, ctx context.Context, parent string, inputs []ExecutionInputCopy) (*ExecutionInputCustody, error) {
 	t.Helper()
 	custody, resultErr := ProtectExecutionInputs(ctx, parent, inputs)
-	if custody == nil {
-		return nil, resultErr
+	if custody != nil {
+		inputCustodyTestCleanup(t, custody, inputs)
 	}
+	return custody, resultErr
+}
+
+func inputCustodyTestCleanup(t *testing.T, custody *ExecutionInputCustody, inputs []ExecutionInputCopy) {
+	t.Helper()
 	var root *os.File
 	var rootInfo os.FileInfo
 	var files []inputCustodyCleanupFile
@@ -747,7 +752,6 @@ func inputCustodyTestProtect(t *testing.T, ctx context.Context, parent string, i
 			t.Fatal("test cleanup entry is not an owned regular copy")
 		}
 	}
-	return custody, resultErr
 }
 
 func inputCustodyTestClearOwnedFlag(t *testing.T, file *os.File, known os.FileInfo) {

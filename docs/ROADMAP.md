@@ -478,6 +478,13 @@ zero-finding review and focused native normal/race, retained V3/inventory and
 affected static gates. The existing presentation missing-image docs-check
 failure remains; `main`, V1/V2 bytes and the unsealed V3 posture are unchanged.
 
+T42.2h connects the real tool verifiers to protected private direct images,
+returning role-bound custody rather than accepting caller-authored identities.
+Failed verification retains closed cleanup custody. Copied external observation
+is limited to SurrealDB after real Go/Git relocation refusals. Git helpers, Go SDK,
+fixed-system roles, full checkout/profile admission, production bootstrap and
+launcher readiness remain separate; no merge, seal or freeze is established.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

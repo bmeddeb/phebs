@@ -954,6 +954,14 @@ zero-finding independent review, repeated native normal/race, selected retained
 V3/inventory, affected static and unchanged V1/V2-byte gates. Its owning backlog
 record retains the existing presentation docs-check failure and distinguishes
 these primitive gates from still-open full admission/bootstrap/launcher work.
+T42.2h connects protected direct-image copies to the actual independent Go
+reference verifier and copied SurrealDB observer, retaining an opaque
+role-bound identity only after final custody confirmation. Failed verification
+retains closed cleanup custody, never a usable identity. This is not native
+helper/SDK, full checkout/profile or production bootstrap admission; fixed
+system roles and the complete launcher remain separate prerequisites to freeze.
+Real copied Go/Git probes lost their SDK/helper locations with intact protected
+metadata; both now refuse before copying pending admitted resource recipes.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active
