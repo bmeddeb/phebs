@@ -4110,6 +4110,20 @@ launch event; any stop remains a stopped receipt with later phases `not_run`;
 no SLO or release inference; full recovery and merge bars. T42.1 completion
 alone does not authorize this execution.
 
+**T42.2a · Fail-closed generation-chunk telemetry** — first implementation
+slice on `codex/t42.2a-exact-chunk-reports`, after integrated V2 `9ac960c9`.
+Bind all three live generation schedulers only in T42 exact-read mode to the
+existing synchronous sink and process-lifetime failure latch. AC: ordinary
+and historical T40 reporting remain advisory; encode/cap/sink/panic failures
+are bounded and terminal in exact mode; failed start reporting never enters
+the chunk handler; settled failure preserves the actual durable outcome;
+workers join before terminal error; focused normal/race, affected-package,
+static and independent review gates pass. No retained plan changes. Real
+checkout/tool and profile admission, controller/phase routing, remaining native
+telemetry and failure controls, signed launcher, and readiness rehearsal remain
+before an execution freeze. T42.2 and T42.3 remain open; no ceremony is run by
+this slice.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:

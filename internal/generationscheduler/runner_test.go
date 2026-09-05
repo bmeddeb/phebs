@@ -26,7 +26,9 @@ func TestChunkLifecycleReportBindsStartedLeaseIdentity(t *testing.T) {
 		Identity: "sha256:" + strings.Repeat("1", 64),
 		Stage:    "extraction-partitions", Generation: "sha256:" + strings.Repeat("2", 64), Attempt: 3,
 	}
-	scheduler.emitChunkLifecycle("started", chunk, "running")
+	if err := scheduler.emitChunkLifecycle("started", chunk, "running"); err != nil {
+		t.Fatal(err)
+	}
 	if len(reports) != 1 {
 		t.Fatalf("reports = %d", len(reports))
 	}
@@ -38,6 +40,235 @@ func TestChunkLifecycleReportBindsStartedLeaseIdentity(t *testing.T) {
 		report.Identity != chunk.Identity || report.Generation != chunk.Generation ||
 		report.Attempt != chunk.Attempt || report.Outcome != "running" {
 		t.Fatalf("report = %+v", report)
+	}
+}
+
+func TestChunkLifecycleFailuresAreExactOnly(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		sink      func([]byte) error
+		oversized bool
+	}{
+		{"sink error", func([]byte) error { return errors.New("private sink cause") }, false},
+		{"sink panic", func([]byte) error { panic("private sink panic") }, false},
+		{"size limit", func([]byte) error { t.Fatal("oversized report reached sink"); return nil }, true},
+	} {
+		for _, exact := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/exact=%t", test.name, exact), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				fake := &schedulerStore{}
+				failures, handled, gated := 0, 0, 0
+				scheduler := &Scheduler{
+					Store: fake, HeartbeatEvery: time.Hour, ChunkReports: test.sink,
+				}
+				if exact {
+					scheduler.ChunkReportFailure = func(err error) {
+						if err == nil || strings.Contains(err.Error(), "private") {
+							t.Fatalf("failure contains private cause: %v", err)
+						}
+						failures++
+						cancel()
+					}
+				}
+				chunk := store.GenerationChunk{Identity: "chunk"}
+				if test.oversized {
+					chunk.Identity = strings.Repeat("x", MaxChunkLifecycleReportSize)
+				}
+				scheduler.execute(ctx, Class{
+					BeforeLeaseHeartbeat: func(context.Context, store.GenerationChunk) error {
+						gated++
+						return nil
+					},
+					Handle: func(context.Context, store.GenerationChunk, Budget) error {
+						handled++
+						return nil
+					},
+				}, chunk)
+				if exact {
+					if failures != 1 || ctx.Err() == nil || handled != 0 || gated != 0 ||
+						fake.completed+fake.retried+fake.failed+fake.released+fake.deferred != 0 {
+						t.Fatalf("exact failure advanced work: failures=%d gated=%d handled=%d state=%+v",
+							failures, gated, handled, fake)
+					}
+				} else if failures != 0 || ctx.Err() != nil || handled != 1 || gated != 1 || fake.completed != 1 {
+					t.Fatalf("advisory failure changed work: failures=%d gated=%d handled=%d completed=%d",
+						failures, gated, handled, fake.completed)
+				}
+			})
+		}
+	}
+}
+
+func TestExactChunkReportFailureStopsFurtherClaims(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	fake := &schedulerStore{chunks: []store.GenerationChunk{
+		{Identity: "first", ResourceClass: store.GenerationResourceCPU},
+		{Identity: "second", ResourceClass: store.GenerationResourceCPU},
+	}}
+	scheduler := &Scheduler{
+		Store: fake, PollEvery: time.Nanosecond,
+		ChunkReports:       func([]byte) error { return errors.New("private sink cause") },
+		ChunkReportFailure: func(error) { cancel() },
+	}
+	scheduler.work(ctx, store.GenerationResourceCPU, Class{
+		Handle: func(context.Context, store.GenerationChunk, Budget) error {
+			t.Fatal("handler ran after start report failed")
+			return nil
+		},
+	}, 0)
+	if len(fake.chunks) != 1 || fake.chunks[0].Identity != "second" {
+		t.Fatalf("claims after report cancellation: %+v", fake.chunks)
+	}
+}
+
+func TestExactChunkReportingCanceledAdmission(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		run  func(*Scheduler, context.Context)
+	}{
+		{"plan", func(s *Scheduler, ctx context.Context) { s.plan(ctx, store.GenerationResourceCPU) }},
+		{"reap", func(s *Scheduler, ctx context.Context) { s.reap(ctx, store.GenerationResourceCPU, nil) }},
+		{"work", func(s *Scheduler, ctx context.Context) { s.work(ctx, store.GenerationResourceCPU, Class{}, 0) }},
+		{"execute", func(s *Scheduler, ctx context.Context) { s.execute(ctx, Class{}, store.GenerationChunk{}) }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+			// No store or handler: any canceled native admission would panic.
+			test.run(&Scheduler{PollEvery: time.Nanosecond, ChunkReportFailure: func(error) {}}, ctx)
+		})
+	}
+}
+
+func TestExactChunkSettledFailureFollowsDurableCompletion(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	fake := &schedulerStore{}
+	reports, failures := 0, 0
+	scheduler := &Scheduler{
+		Store: fake, HeartbeatEvery: time.Hour,
+		ChunkReports: func([]byte) error {
+			reports++
+			if reports == 2 {
+				return errors.New("private settled sink failure")
+			}
+			return nil
+		},
+		ChunkReportFailure: func(error) {
+			if fake.completed != 1 {
+				t.Fatal("settled failure preceded durable completion")
+			}
+			failures++
+			cancel()
+		},
+	}
+	scheduler.execute(ctx, Class{
+		Handle: func(context.Context, store.GenerationChunk, Budget) error { return nil },
+	}, store.GenerationChunk{})
+	if reports != 2 || failures != 1 || ctx.Err() == nil || fake.completed != 1 {
+		t.Fatalf("settled reports=%d failures=%d completed=%d canceled=%v", reports, failures, fake.completed, ctx.Err())
+	}
+}
+
+func TestExactChunkReportFailureCallbackPanicStillRefuses(t *testing.T) {
+	scheduler := &Scheduler{
+		ChunkReports:       func([]byte) error { return errors.New("private failure") },
+		ChunkReportFailure: func(error) { panic("private callback panic") },
+	}
+	if err := scheduler.emitChunkLifecycle("started", store.GenerationChunk{}, "running"); err == nil || strings.Contains(err.Error(), "private") {
+		t.Fatalf("callback panic did not return bounded failure: %v", err)
+	}
+	// Neither native store access nor the handler may follow the failed report,
+	// even when its faulty callback failed to cancel the context.
+	scheduler.execute(t.Context(), Class{}, store.GenerationChunk{})
+}
+
+func TestExactChunkReportCancellationDuringGateDoesNotStartHandler(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	reports := 0
+	scheduler := &Scheduler{
+		ChunkReports:       func([]byte) error { reports++; return nil },
+		ChunkReportFailure: func(error) { cancel() },
+	}
+	scheduler.execute(ctx, Class{
+		BeforeLeaseHeartbeat: func(context.Context, store.GenerationChunk) error {
+			cancel()
+			return nil
+		},
+		// Nil handler/store prove neither starts after the gate cancels.
+	}, store.GenerationChunk{})
+	if reports != 1 {
+		t.Fatalf("canceled gate invented a settled report: %d reports", reports)
+	}
+}
+
+func TestExactChunkReportingRequiresSink(t *testing.T) {
+	failures := 0
+	scheduler := &Scheduler{
+		Store:              &schedulerStore{},
+		Classes:            map[store.GenerationResourceClass]Class{store.GenerationResourceCPU: {}},
+		ChunkReportFailure: func(error) { failures++ },
+	}
+	if _, err := scheduler.validate(); err == nil || !strings.Contains(err.Error(), "requires a sink") {
+		t.Fatalf("exact reporting without sink was admitted: %v", err)
+	}
+	if err := scheduler.emitChunkLifecycle("started", store.GenerationChunk{}, "running"); err == nil || failures != 1 {
+		t.Fatalf("exact report fell back to advisory logging: err=%v failures=%d", err, failures)
+	}
+}
+
+func TestCanceledHandlerReleaseReportsExactDurableOutcome(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		err     error
+		outcome string
+	}{
+		{"success", nil, "released"},
+		{"failure", errors.New("private release failure"), "release_failed"},
+		{"lost lease", fmt.Errorf("private lease: %w", store.ErrGenerationLeaseLost), "stale_fenced"},
+		{"stale schedule", fmt.Errorf("private schedule: %w", store.ErrGenerationStale), "stale_fenced"},
+	} {
+		for _, exact := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/exact=%t", test.name, exact), func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				fake := &schedulerStore{releaseErr: test.err}
+				var reports []ChunkLifecycleReport
+				scheduler := &Scheduler{
+					Store: fake, HeartbeatEvery: time.Hour,
+					ChunkReports: func(raw []byte) error {
+						var report ChunkLifecycleReport
+						if err := json.Unmarshal(raw, &report); err != nil {
+							return err
+						}
+						reports = append(reports, report)
+						return nil
+					},
+				}
+				if exact {
+					scheduler.ChunkReportFailure = func(err error) {
+						t.Fatalf("reporting failed: %v", err)
+					}
+				}
+				scheduler.execute(ctx, Class{
+					Handle: func(context.Context, store.GenerationChunk, Budget) error {
+						cancel()
+						return ctx.Err()
+					},
+				}, store.GenerationChunk{})
+				want := "released"
+				if exact {
+					want = test.outcome
+				}
+				if len(reports) != 2 || reports[1].Event != "settled" || reports[1].Outcome != want ||
+					fake.released != 1 || fake.completed+fake.failed+fake.retried+fake.deferred != 0 {
+					t.Fatalf("release outcome = %+v, want %q; release attempts=%d", reports, want, fake.released)
+				}
+			})
+		}
 	}
 }
 
@@ -55,6 +286,7 @@ type schedulerStore struct {
 	deferErrors  []string
 	done         chan struct{}
 	retryErr     error
+	releaseErr   error
 	heartbeatErr error
 }
 
@@ -703,7 +935,7 @@ func (scheduler *schedulerStore) ReleaseGenerationChunk(context.Context, store.G
 	scheduler.mu.Lock()
 	defer scheduler.mu.Unlock()
 	scheduler.released++
-	return nil
+	return scheduler.releaseErr
 }
 func (scheduler *schedulerStore) ReapStaleGenerationChunks(context.Context, store.GenerationResourceClass, time.Duration) (int, error) {
 	return 0, nil

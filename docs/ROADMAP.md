@@ -393,6 +393,15 @@ follows integration; the host/tool execution freeze follows implementation and r
 execution still separately unauthorized. This artifact/docs record adds no
 runtime cost or scale/SLO claim.
 
+T42.2 implementation resumed from integrated V2 `9ac960c9` with T42.2a's
+fail-closed generation-chunk telemetry on `codex/t42.2a-exact-chunk-reports`.
+The observation/catalog, relationship, and partitioned-extraction schedulers
+use the existing synchronous report sink and cancellation latch only in T42
+exact-read mode. Ordinary and historical T40 reporting remain advisory. This
+slice awaits its gates and independent review; it supplies neither the private
+admission/controller/launcher nor a ceremony receipt. T42.2 execution and
+T42.3 posture/product review are still required before Epic 42 can close.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

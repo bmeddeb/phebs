@@ -403,6 +403,19 @@ func t4013ExactReportTerminalError(failed <-chan struct{}) error {
 	}
 }
 
+// T42 exact mode extends the existing process-lifetime failure latch to the
+// three generation schedulers. Historical T40 reporting remains unchanged.
+func bindT422ExactChunkReports(enabled bool, fail func(error), scheduler *generationscheduler.Scheduler) {
+	if !enabled {
+		return
+	}
+	if fail == nil || scheduler == nil {
+		panic("T42.2 exact chunk reporting lacks its failure latch or scheduler")
+	}
+	scheduler.ChunkReports = t4013ExactReportSink("generation chunk lifecycle: ")
+	scheduler.ChunkReportFailure = fail
+}
+
 func serverTerminalError(
 	serveErr, shutdownErr error,
 	exactReportFailed <-chan struct{},
@@ -1193,6 +1206,7 @@ func serve(args []string) error {
 			diagnostics.Logf("observation scheduler unavailable: %v", err)
 		},
 	}
+	bindT422ExactChunkReports(exactReads, failExactRead, observationScheduler)
 	runBackground(func() {
 		if err := observationScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 			diagnostics.Logf("observation scheduler stopped: %v", err)
@@ -1226,6 +1240,7 @@ func serve(args []string) error {
 				diagnostics.Logf("relationship scheduler unavailable: %v", err)
 			},
 		}
+		bindT422ExactChunkReports(exactReads, failExactRead, relationshipScheduler)
 		runBackground(func() {
 			if err := relationshipScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 				diagnostics.Logf("relationship scheduler stopped: %v", err)
@@ -1561,6 +1576,7 @@ func serve(args []string) error {
 				diagnostics.Logf("partitioned extraction scheduler unavailable: %v", err)
 			},
 		}
+		bindT422ExactChunkReports(exactReads, failExactRead, partitionScheduler)
 		runBackground(func() {
 			if err := partitionScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 				diagnostics.Logf("partitioned extraction scheduler stopped: %v", err)

@@ -61,9 +61,15 @@ type Scheduler struct {
 	Report           func(error)
 	Diagnostics      bool
 	ChunkReports     func([]byte) error
+	// ChunkReportFailure is optional and preserves ordinary advisory reports.
+	// Exact-control callers synchronously latch failure and cancel Run's context.
+	ChunkReportFailure func(error)
 }
 
-const ChunkLifecycleSchema = "phebs-generation-chunk-lifecycle-v1"
+const (
+	ChunkLifecycleSchema        = "phebs-generation-chunk-lifecycle-v1"
+	MaxChunkLifecycleReportSize = 4 << 10
+)
 
 type ChunkLifecycleReport struct {
 	Schema     string `json:"schema"`
@@ -155,6 +161,9 @@ func (scheduler *Scheduler) acquireProcessAdmission(
 func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) {
 	if scheduler.Store == nil || len(scheduler.Classes) == 0 {
 		return nil, errors.New("generation scheduler requires a store and classes")
+	}
+	if scheduler.ChunkReportFailure != nil && scheduler.ChunkReports == nil {
+		return nil, errors.New("exact generation chunk reporting requires a sink")
 	}
 	if scheduler.MaxConcurrency == 0 {
 		scheduler.MaxConcurrency = MaxProcessConcurrency
@@ -269,6 +278,9 @@ func (scheduler *Scheduler) plan(ctx context.Context, class store.GenerationReso
 	ticker := time.NewTicker(scheduler.PollEvery)
 	defer ticker.Stop()
 	for {
+		if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
+			return
+		}
 		// Expansion is one atomic fanout transaction: a per-call deadline
 		// would abort a slow-but-progressing page and restart the identical
 		// work from the same offset every tick. It runs under the scheduler
@@ -295,6 +307,9 @@ func (scheduler *Scheduler) reap(
 	ticker := time.NewTicker(scheduler.PollEvery)
 	defer ticker.Stop()
 	for {
+		if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
+			return
+		}
 		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
 		var err error
 		if observer == nil {
@@ -331,6 +346,9 @@ func (scheduler *Scheduler) work(
 	defer ticker.Stop()
 	worker := fmt.Sprintf("%s-%s-%d", scheduler.WorkerPrefix, class, index)
 	for {
+		if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
+			return
+		}
 		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
 		chunk, err := scheduler.Store.ClaimGenerationChunk(callCtx, class, worker)
 		cancel()
@@ -350,16 +368,27 @@ func (scheduler *Scheduler) work(
 }
 
 func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, chunk store.GenerationChunk) {
-	timingEnabled := scheduler != nil && (scheduler.Diagnostics || scheduler.ChunkReports != nil)
+	if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
+		return
+	}
+	timingEnabled := scheduler != nil && (scheduler.Diagnostics || scheduler.ChunkReports != nil ||
+		scheduler.ChunkReportFailure != nil)
 	var started time.Time
 	if timingEnabled {
 		started = time.Now()
 	}
-	scheduler.emitChunkLifecycle("started", chunk, "running")
+	if err := scheduler.emitChunkLifecycle("started", chunk, "running"); err != nil {
+		// The claim is already durable. Leave it for stopped-run recovery;
+		// do not heartbeat, invoke the handler, or invent a settled transition.
+		return
+	}
+	if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
+		return
+	}
 	outcome := "handler_failed"
 	defer func() {
-		if timingEnabled {
-			scheduler.emitChunkLifecycleDuration("settled", chunk, outcome, time.Since(started).Milliseconds())
+		if timingEnabled && outcome != "" {
+			_ = scheduler.emitChunkLifecycleDuration("settled", chunk, outcome, time.Since(started).Milliseconds())
 		}
 	}()
 	if configuration.BeforeLeaseHeartbeat != nil {
@@ -374,6 +403,12 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 			}
 			return
 		}
+	}
+	if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
+		// A gate may block while another exact report cancels the process.
+		// No handler ran and no durable transition settled this claim.
+		outcome = ""
+		return
 	}
 	handleCtx, cancel := context.WithCancel(ctx)
 	heartbeat := make(chan error, 1)
@@ -445,7 +480,12 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		outcome = "released"
 		if err := scheduler.Store.ReleaseGenerationChunk(writeCtx, chunk, ctx.Err().Error()); err != nil &&
 			!errors.Is(err, store.ErrGenerationLeaseLost) && !errors.Is(err, store.ErrGenerationStale) {
+			if scheduler.ChunkReportFailure != nil {
+				outcome = "release_failed"
+			}
 			scheduler.report(fmt.Errorf("release generation chunk: %w", err))
+		} else if scheduler.ChunkReportFailure != nil && err != nil {
+			outcome = "stale_fenced"
 		}
 		return
 	}
@@ -549,8 +589,8 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 	}
 }
 
-func (scheduler *Scheduler) emitChunkLifecycle(event string, chunk store.GenerationChunk, outcome string) {
-	scheduler.emitChunkLifecycleDuration(event, chunk, outcome, 0)
+func (scheduler *Scheduler) emitChunkLifecycle(event string, chunk store.GenerationChunk, outcome string) error {
+	return scheduler.emitChunkLifecycleDuration(event, chunk, outcome, 0)
 }
 
 func (scheduler *Scheduler) emitChunkLifecycleDuration(
@@ -558,17 +598,24 @@ func (scheduler *Scheduler) emitChunkLifecycleDuration(
 	chunk store.GenerationChunk,
 	outcome string,
 	durationMS int64,
-) {
-	if scheduler == nil || (!scheduler.Diagnostics && scheduler.ChunkReports == nil) {
-		return
+) (result error) {
+	if scheduler == nil || (!scheduler.Diagnostics && scheduler.ChunkReports == nil &&
+		scheduler.ChunkReportFailure == nil) {
+		return nil
+	}
+	if scheduler.ChunkReportFailure != nil && scheduler.ChunkReports == nil {
+		return scheduler.failChunkReport(errors.New("generation chunk lifecycle sink is unavailable"))
 	}
 	report, err := json.Marshal(ChunkLifecycleReport{
 		Schema: ChunkLifecycleSchema, Event: event, Identity: chunk.Identity,
 		Stage: chunk.Stage, Generation: chunk.Generation, Attempt: chunk.Attempt, Outcome: outcome,
 		DurationMS: durationMS,
 	})
-	if err != nil || len(report) > 4096 {
-		return
+	if err != nil {
+		return scheduler.failChunkReport(errors.New("encode generation chunk lifecycle"))
+	}
+	if len(report) > MaxChunkLifecycleReportSize {
+		return scheduler.failChunkReport(errors.New("generation chunk lifecycle report exceeds its bound"))
 	}
 	sink := scheduler.ChunkReports
 	if sink == nil {
@@ -577,10 +624,29 @@ func (scheduler *Scheduler) emitChunkLifecycleDuration(
 			return nil
 		}
 	}
-	func() {
-		defer func() { _ = recover() }()
-		_ = sink(report)
+	defer func() {
+		if recover() != nil {
+			result = scheduler.failChunkReport(errors.New("generation chunk lifecycle sink panicked"))
+		}
 	}()
+	if err := sink(report); err != nil {
+		return scheduler.failChunkReport(errors.New("generation chunk lifecycle sink failed"))
+	}
+	return nil
+}
+
+func (scheduler *Scheduler) failChunkReport(err error) (result error) {
+	if scheduler == nil || scheduler.ChunkReportFailure == nil || err == nil {
+		return nil
+	}
+	result = err
+	defer func() {
+		if recover() != nil {
+			result = errors.New("generation chunk lifecycle failure callback panicked")
+		}
+	}()
+	scheduler.ChunkReportFailure(err)
+	return result
 }
 
 func (scheduler *Scheduler) report(err error) {

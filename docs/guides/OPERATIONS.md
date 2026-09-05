@@ -4425,6 +4425,24 @@ publication, cache, schema, process and memory/disk behavior is unchanged
 because none of those paths enables or invokes preparation. These control
 reads must be reconciled prospectively in T42.1r1 before a new freeze.
 
+### T42.2a exact generation-chunk reporting
+
+The private `PHEBS_T421_EXACT_READS=source-free-v1` mode also binds the
+observation/catalog, relationship, and partitioned-extraction schedulers to
+synchronous generation-chunk reporting. Encode, 4-KiB report-cap, sink-error,
+and sink-panic failures cancel the server and retain a nonzero terminal error
+after worker join. A rejected start report leaves an already-claimed lease for
+stopped-run recovery without running its handler; a rejected settled report
+does not roll back a completed chunk. In exact mode, cancellation reports
+`released` only on successful durable release, `release_failed` on a release
+error, or `stale_fenced` on a lost/stale lease. Already-in-flight work retains its native
+cancellation and cleanup semantics. Ordinary mode and historical T40 exact
+report mode remain advisory for these chunk reports.
+
+This mode is not an operator repair command or execution authorization. It
+does not provide T42.2's remaining controller, real admission verifiers, signed
+launcher or complete telemetry. No V2 ceremony command is available yet.
+
 ## Developing phebs
 
 

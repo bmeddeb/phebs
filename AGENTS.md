@@ -868,6 +868,16 @@ integration of the sealed artifact and reviewed stack; T42.2 runner implementati
 follows that integration. Host/tool execution freeze follows implementation and
 review; ceremony execution, remote push,
 release, and scale/SLO claims remain separately unauthorized.
+T42.2 implementation resumes from integrated V2 `9ac960c9` with T42.2a's
+exact generation-chunk telemetry on `codex/t42.2a-exact-chunk-reports`.
+The three live generation schedulers share the existing synchronous log sink
+and process-lifetime failure latch only under T42 exact-read mode; ordinary
+and historical T40 modes remain advisory. A failed start report leaves the
+durable claim without entering the handler; a failed settled report preserves
+the actual durable outcome. Validation/review, remaining telemetry and native
+controls, real admission, phase routing and the signed launcher remain open.
+This is not a freeze or ceremony result; Epic 42 still needs T42.2 execution
+and T42.3 review/closure.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

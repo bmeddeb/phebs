@@ -308,6 +308,27 @@ identities to satisfy the oracle, silently enlarge budgets, or reuse the old
 T40.13/T41.10 launchers. The retained plan bytes remain untouched. No ceremony
 has been launched, and no execution command is ready.
 
+### T42.2a implementation: exact generation-chunk reports
+
+After V2 integration at `9ac960c9`, the first T42.2 implementation slice binds
+the observation/catalog, relationship, and partitioned-extraction schedulers'
+existing started/settled reports to the synchronous sink and shared terminal
+failure latch. This binding is enabled only by T42 exact-read mode; ordinary
+and historical T40 mode remain advisory. The existing 4-KiB report bound and
+schema stay unchanged. A failed start report stops before heartbeat/handler
+work; a failed settled report does not undo a durable completion. Both refuse
+exact execution with a bounded source-free error after worker join.
+Canceled handlers report `released` only after a successful release in exact
+mode; a failed release is `release_failed`, and a lost/stale lease is
+`stale_fenced`. Historical advisory outcomes stay unchanged. The synchronous
+sink may extend the already-held claim, including before heartbeat startup;
+this slice adds no separate log-write deadline or outer process safety proof.
+
+This is telemetry plumbing, not complete phase measurement, a private
+admission constructor, a freeze/execute CLI, or a ceremony result. Those
+remaining T42.2 requirements and T42.3 receipt/product review still gate Epic
+42 closure. V1 and V2 plan bytes remain untouched.
+
 ### Prospective correction
 
 The owning decision is the T42.1r1 row in [PLAN.md](../../PLAN.md). V1 authoring
