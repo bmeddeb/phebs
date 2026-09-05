@@ -898,17 +898,18 @@ func buildLogicalRevisions(
 	censusDigest string,
 	combinedFiles, acceptedFiles uint64,
 ) ([]LogicalRevision, servicecatalogv3.Generation, error) {
-	a := cloneCatalog(base)
-	a.Authority.Version = combinedAuthorityA
-	b := cloneCatalog(base)
-	b.Authority.Version = combinedAuthorityB
-	middle := len(b.Services) / 2
-	if len(b.Services) == 0 {
-		return nil, servicecatalogv3.Generation{}, errors.New("T42.1 logical catalog is empty")
+	a, err := logicalCatalogForRevision(base, "a")
+	if err != nil {
+		return nil, servicecatalogv3.Generation{}, err
 	}
-	b.Services[middle].DisplayName += "-b"
-	aReturn := cloneCatalog(base)
-	aReturn.Authority.Version = combinedAuthorityAReturn
+	b, err := logicalCatalogForRevision(base, "b")
+	if err != nil {
+		return nil, servicecatalogv3.Generation{}, err
+	}
+	aReturn, err := logicalCatalogForRevision(base, "a-return")
+	if err != nil {
+		return nil, servicecatalogv3.Generation{}, err
+	}
 
 	aGeneration, err := buildCatalogGeneration(a, censusDigest, combinedFiles, acceptedFiles)
 	if err != nil {
@@ -964,6 +965,27 @@ func buildLogicalRevisions(
 		logicalRevision("a-return", "b", "content_return", 1, aReturnGeneration.Root.LogicalDigest, aSemantic, aReturnSource, aReturnOracle),
 	}
 	return revisions, aGeneration, nil
+}
+
+// The authoring identity and protected runtime catalogs use this same fixed
+// logical transition; neither creates a new physical generation here.
+func logicalCatalogForRevision(base servicecatalog.Catalog, revision string) (servicecatalog.Catalog, error) {
+	if len(base.Services) == 0 {
+		return servicecatalog.Catalog{}, errors.New("T42.1 logical catalog is empty")
+	}
+	catalog := cloneCatalog(base)
+	switch revision {
+	case "a":
+		catalog.Authority.Version = combinedAuthorityA
+	case "b":
+		catalog.Authority.Version = combinedAuthorityB
+		catalog.Services[len(catalog.Services)/2].DisplayName += "-b"
+	case "a-return":
+		catalog.Authority.Version = combinedAuthorityAReturn
+	default:
+		return servicecatalog.Catalog{}, errors.New("T42.1 logical revision is unknown")
+	}
+	return catalog, nil
 }
 
 func logicalRevision(

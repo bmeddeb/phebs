@@ -253,6 +253,7 @@ func TestExecutionAuthorOptionalSharedControllerRehearsal(t *testing.T) {
 			t.Fatal("genuine launched/unused producer closure differs", producer)
 		}
 	}
+	registerEpochCleanup := rehearseExecutionEpochConfigs(t, ctx, custody)
 	if len(custody.Results()) != 3 || !canRelease() || custody.Close() != nil ||
 		planInput.Close() != nil || author.Close() != nil || inputs.Close() != nil || git.Close() != nil {
 		t.Fatal("joined shared-author inputs did not close; retaining protected custody")
@@ -262,6 +263,7 @@ func TestExecutionAuthorOptionalSharedControllerRehearsal(t *testing.T) {
 	// Capture exact private fixture identities only after every child/session,
 	// local receiver, source lease and protected descriptor has closed. Any
 	// preceding failure retains the protected positive prefix without thawing.
+	registerEpochCleanup()
 	gitCustodyTestCleanup(t, git)
 	goBuildTestCleanup(t, inputs)
 	inputCustodyTestCleanup(t, author.input, []ExecutionInputCopy{{Name: "t422-author"}})

@@ -4567,8 +4567,8 @@ only after successful warm F reporting, acquires its real pin in phase four
 before B through one fixed non-R POST, and implements the original single C41
 R with two concrete owner sweeps and actual A/B/held-A queries. It adds no fair
 runner turn or R request. Lead independent source/test/integration/cost review
-found no finding. A first tiny native test correctly refused a fixture mistake
-comparing artifact-file and source-record units; the corrected test passed
+found no remaining finding. A first tiny native test exposed the helper's invalid
+comparison of artifact-file and source-record units; the corrected helper passed
 in 1.098s and confirmed C41/S0/M4/W0 for two actual source files. Final retention
 normal three repeats passed in 2.754s, race three in 6.793s, with vet, pinned
 2.12.2 lint and whitespace clean. Five inherited PB01/PC01 tests prove actual
@@ -4577,6 +4577,31 @@ payload; they do not claim full F/native-R success or production lifetime
 custody. Native positive deletion, cancellation and sink-panic prefixes remain
 visible and terminal. Full admitted phase choreography, parent log/IPC budgets
 and exact-tree integration gates remain open.
+Five-epoch input custody now derives three canonical catalogs and five strict
+private configurations from the genuine admitted author's protected plan/source,
+using two existing flat custodians, four writable roots and five independently
+reserved loopback listeners. It preserves one shared source/data/key and the
+A/B/A-return/A-return/A-return logical sequence. The shared logical-catalog
+helper preserves valid historical generation inputs; retained byte replay remains
+an exact-tree gate. Actual generated catalog identities total 22,755,996 bytes;
+the tiny fixture configurations total 4,446 bytes, not a promise about later
+private-path lengths. Focused final tests passed in 1.441s, race three in
+37.931s, with build, vet, pinned lint and whitespace clean. These gates prove
+catalog identities, strict config refusals and real immutable staging/listener
+mechanics; they do not fabricate an admitted author for constructor success.
+Independent source/test/cost review subsequently found all severity counts zero.
+An exact-clean extension of the genuine shared-author rehearsal remains required.
+That extension reuses the same protected build fixture,
+checks actual input bytes/native protection, releases and rebinds the five
+reservations in order, and registers exact cleanup only after all owned closes.
+It launches no server and establishes no full runtime/profile/freeze authority.
+Lead review found one low rehearsal cleanup gap: a failed input-reader Close
+could report an error and still return a cleanup-registration closure. Both
+reader and constructor close failures now stop that return and retain custody;
+corrected source/test/cleanup review found no remaining finding. The opt-in-absent
+compile/skip passed in 0.473s. Retained V1/V2 canonical byte replay separately
+passed in 0.614s, docs in 0.544s, glossary and whitespace passed. The genuine
+extended constructor rehearsal still requires exact-clean execution.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map
