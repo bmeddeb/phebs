@@ -385,6 +385,67 @@ func TestExecutionGoBuildModuleInfoPreservesObservedZeroTime(t *testing.T) {
 	}
 }
 
+func TestExecutionGoBuildModuleDescriptorOnlyIgnoresCachedContents(t *testing.T) {
+	for _, cached := range []string{"absent", "directory", "symlink"} {
+		t.Run(cached, func(t *testing.T) {
+			custody := newGoBuildTestTree(t)
+			goBuildTestCleanup(t, custody)
+			cache, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			const directory = "example.com/neutral@v1.0.0"
+			const control = "cache/download/example.com/neutral/@v/v1.0.0"
+			if err := os.MkdirAll(filepath.Dir(filepath.Join(cache, control)), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			raw := []byte("module example.com/neutral\n\ngo 1.26\n")
+			if err := os.WriteFile(filepath.Join(cache, control+".mod"), raw, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			sum, err := dirhash.Hash1([]string{"go.mod"}, func(string) (io.ReadCloser, error) {
+				return io.NopCloser(bytes.NewReader(raw)), nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := custody.writeControl(t.Context(), "source/go.mod", []byte("module github.com/bmeddeb/phebs\n\ngo 1.26\n")); err != nil {
+				t.Fatal(err)
+			}
+			if err := custody.writeControl(t.Context(), "source/go.sum", []byte("example.com/neutral v1.0.0/go.mod "+sum+"\n")); err != nil {
+				t.Fatal(err)
+			}
+			switch cached {
+			case "directory":
+				if err := os.MkdirAll(filepath.Join(cache, directory), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(cache, directory, "untrusted.go"), []byte("unverified ambient contents"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			case "symlink":
+				if err := os.Mkdir(filepath.Join(cache, "example.com"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(t.TempDir(), filepath.Join(cache, directory)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := custody.prepareModules(t.Context(), cache); err != nil {
+				t.Fatal("descriptor-only historical module refused", err)
+			}
+			if _, err := custody.tree.Lstat(filepath.Join("modules", control+".mod")); err != nil {
+				t.Fatal("verified descriptor was not retained", err)
+			}
+			for _, absent := range []string{directory, control + ".ziphash"} {
+				if _, err := custody.tree.Lstat(filepath.Join("modules", absent)); !errors.Is(err, os.ErrNotExist) {
+					t.Fatal("descriptor-only authority imported module contents or checksum", err)
+				}
+			}
+		})
+	}
+}
+
 // A unit-only tree owner exercises the bounded copier without executing Go or
 // issuing a protected build identity. Public construction uses actual Git/source.
 func newGoBuildTestTree(t *testing.T) *ExecutionGoBuildCustody {

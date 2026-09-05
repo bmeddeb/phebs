@@ -102,10 +102,16 @@ func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, orig
 				return ErrExecutionGoBuildCustody
 			}
 		}
+		// A go.mod-only sum authorizes the descriptor, not module contents.
+		// Ignore unrelated ambient cached versions; if the offline build needs
+		// their contents it must refuse, never borrow unverified source bytes.
+		if sums[key] == "" {
+			continue
+		}
 		directory := filepath.FromSlash(escapedPath + "@" + escapedVersion)
 		if _, err := cache.Lstat(directory); errors.Is(err, fs.ErrNotExist) {
 			continue
-		} else if err != nil || sums[key] == "" {
+		} else if err != nil {
 			return ErrExecutionGoBuildCustody
 		}
 		if err := custody.copyTree(ctx, original, directory, filepath.Join("modules", directory)); err != nil {

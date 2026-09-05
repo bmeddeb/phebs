@@ -4616,6 +4616,14 @@ independent review with all severity counts zero, focused exact-tree race three
 repeats (1.967s), pinned lint, docs (0.489s), glossary and whitespace. Its one
 new bounded genuine-parent rehearsal uses the explicit native Git input;
 completion is not yet established.
+That exact a438a51e rehearsal stopped after 127.91s during module admission,
+again before reference build/server launch. Its retained prefix establishes the
+next cause: a historical module with only a committed go.mod sum had an ambient
+cached content directory; the constructor incorrectly refused that irrelevant
+directory after admitting its valid descriptor. The corrected path skips content
+and ziphash admission without a committed content h1. Required missing content
+still fails the actual offline graph/build, and verified-content tamper checks
+remain unchanged. Exact review and a new bounded rehearsal remain required.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
