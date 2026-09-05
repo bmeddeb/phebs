@@ -451,6 +451,11 @@ observation gauge and local dispatch primitive. It does not wire production
 launches or issue private admission. Actual flow-derived transport/stage bounds,
 bootstrap, protected dispatch, complete author/executor/launcher and readiness
 remain next; V1/V2 seals and all release/scale caveats are unchanged.
+Exact source `2ac77b9d80ea57667c9553cd796710fe9762c769` passed independent
+zero-finding review, the full V3 constructor/receipt fixture and affected
+normal/race/static gates. Its process/signature/package bindings remain modeled;
+full launcher readiness is still open. Docs-check retains the presentation-owned
+missing-image failure, without a waiver. The stack remains unmerged.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only

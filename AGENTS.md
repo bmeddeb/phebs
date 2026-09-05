@@ -924,6 +924,13 @@ launches remain unwired and ordinary runtime unchanged. Actual frozen flow
 limits, bootstrap, protected dispatch, complete admission/author/executor,
 scoped launcher cleanup and full readiness remain open; this foundation is not
 T42.1r7 acceptance, an artifact seal, a freeze command or Epic closure.
+Exact source `2ac77b9d80ea57667c9553cd796710fe9762c769` passed independent
+review with all severity counts zero and the full V3 constructor/receipt
+fixture in 828.390s, plus affected normal/race/static gates. Process/start,
+signature and package bindings remain modeled, not live launcher evidence.
+Recorded fixture processes and listeners are gone; the known presentation-owned
+docs-check failure remains, and the stack is unmerged. Production bootstrap,
+phase coordination and full protected admission/launcher wiring remain next.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

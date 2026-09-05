@@ -4258,6 +4258,28 @@ dispatch, bootstrap, author/executor, private admission, scoped cleanup and
 full returned-package/readiness replay must be completed before a separate
 author/seal decision. This is not a freeze command or Epic closure.
 
+Exact foundation source `2ac77b9d80ea57667c9553cd796710fe9762c769`
+passed independent review with critical/high/medium/low `0/0/0/0`. Its clean,
+unchanged full V3 constructor/receipt replay passed in 828.390s: the successful,
+positive-incomplete-prefix and observed-RSS-overshoot-then-unavailable receipts
+strictly round-trip at 330,512, 311,547 and 311,540 bytes. The fixture reuses the
+actual retained V2 source/observation/extraction/relationship constructors;
+process measurements, successful-start evidence, signatures and returned-package
+bindings remain modeled. It is not live failure injection, a complete signed
+package-size proof or launcher readiness. The unsealed canonical V3 plan is
+165,038 bytes, below the 192-KiB authoring target; retained V1/V2 bytes are exact.
+
+The exact-source historical/V3 contract selector passed in 161.986s, the full
+V3 plan constructor/inventory/native race selector in 324.758s, and focused
+accounting, dispatch and historical Darwin native checks passed normal/race.
+Repository compilation, module verification, scoped vet/pinned lint, glossary
+and whitespace pass. Docs-check still fails only the presentation-owned missing
+`ui/receipts/fixtures/service-boundary.png`, without a waiver. Recorded fixture
+processes, its owned process group and both database listeners are gone. No full
+repository/store suite, real admission/launcher rehearsal, merge, seal, freeze
+or ceremony is claimed. Production bootstrap and phase coordination, followed
+by complete protected admission/author/executor/launcher wiring, remain next.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
