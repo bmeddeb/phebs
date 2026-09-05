@@ -967,6 +967,16 @@ zero-finding independent review, real-reference/Surreal custody normal/race,
 selected V3/inventory and affected static gates. The owning backlog records
 Ben's merge/push request held at the inherited presentation docs-check failure;
 no merge, push or freeze is established.
+That integration hold is superseded by Ben's explicitly authorized narrow
+presentation handoff. Exact repair `004148eaaac617b972a95bbbe10f277f21dc82b0`
+reuses a tracked receipt image without changing sanitized preview HTML and
+passed independent review with all severity counts zero. Pinned-Node focused
+UI/lint/type checks, documentation/glossary, affected race/static gates and
+retained V1/V2 byte checks pass; the owning backlog records the exact results.
+The reviewed partial implementation stack is cleared for the requested
+fast-forward merge/push. Full admission/bootstrap/launcher, V3 seal, host
+freeze, ceremony and Epic 42 closure remain open; hosted CI is not established
+by these local checks.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

@@ -4394,6 +4394,31 @@ by this isolated connection. Ben's subsequent merge/push request remains held
 at that documentation gate; local and remote `main` still match
 `9ac960c95eb7783ee06525aa097e637333104284` and no stack branch was pushed.
 
+Authorized merge-gate handoff (2026-09-05): Ben explicitly approved the narrow
+presentation fixture repair and subsequent merge/push. Exact clean repair
+`004148eaaac617b972a95bbbe10f277f21dc82b0` changes only the inert image target,
+its regression test and the owning ADR; it reuses an existing tracked receipt
+PNG, preserves the alt text and byte-identical sanitized preview HTML, and
+emits neither an image element nor a source attribute. No renderer, retained
+screenshot, asset or design-charter byte changes. Independent exact-commit
+source/test/docs/cost review reports critical/high/medium/low `0/0/0/0`.
+All 47 focused Markdown/preview/FilePage/receipt-manifest tests pass under
+pinned Node 24.18.0, as do UI lint and TypeScript checks. An initial ambient
+Node 26 run also passed but does not replace the pinned result. Documentation
+and glossary gates now pass without a checker waiver. Extra exact-source race
+checks passed: dispatch admission (1.821s), generation scheduler (1.382s),
+T42.2 command telemetry (1.748s), native process records (1.674s), and the
+combined checkout/reference/external-tool/protected-custody/V3 canonical,
+full frozen round-trip/profile/dispatch-inventory selector (377.268s), with
+real SurrealDB version probes explicitly enabled. Module verification,
+affected vet, pinned lint, whitespace and retained V1/V2 byte checks pass.
+These supersede only the fixture and local integration holds. The approved
+fast-forward merge/push includes the reviewed partial T42.2 slices and unsealed
+V3 accounting foundation, not full admission/bootstrap/launcher acceptance,
+V3 author/seal, host freeze, ceremony, Epic 42 closure, release or a scale claim.
+Hosted CI remains a separate post-push observation; no full store/corpus or
+ceremony rerun is claimed by this fixture-only repair.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
