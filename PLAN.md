@@ -111,10 +111,216 @@ records the design's evolution and is not the active roadmap.
 
 ---
 
+## T42.1r7 — Prospective V3 process-accounting correction
+
+**Draft authorized by Ben on 2026-09-04; no executable contract or seal.** V3
+would replace V2's complete descendant executable-image history with exact
+Phebs-controlled dispatch admission and explicitly sampled native resource
+observations. This is a narrower evidence claim, not a way to satisfy V2 with
+missing events. No entitlement, privileged observer, host upgrade or new
+dependency is selected. The neutral corpus, functional authority, five server
+epochs, recovery/query predicates and limits in unchanged units remain intact.
+`GATE2-V2=NOT_ESTABLISHED` and `DO_NOT_RELEASE` remain unchanged.
+
+### Controlled dispatch, not process births
+
+`controlled_dispatch_attempts` counts controller-accepted, synchronous
+`dispatch_admitted` records at repository-owned launch sites. Admission follows
+exact direct-image/input checks and checked role-budget reservation, immediately
+before `Start`/`Run`/`Output`/`CombinedOutput`; constructing an `exec.Cmd` or
+failing pipe/pre-admission setup counts nothing. Each accepted attempt counts
+once even if `Start` fails or cancellation/crash occurs between acknowledgement
+and `Start`. A retry needs a new admission. The counter proves permission to
+attempt a dispatch, not a successful launch, process birth or native exec.
+The five required server starts separately require successful owned starts,
+native identity and health evidence; a counter or sample alone cannot prove
+an epoch. No additional generic per-child outcome ledger is required.
+
+Bind each record to an admitted producer lifetime, gap-free ordinal, closed
+source-owned callsite/tool role and admission-time phase. The controller commits
+the ordinal, checked totals and running digest before acknowledging admission;
+accepted records count even if the acknowledgement is lost or not consumed.
+An uncertain acknowledgement permits no dispatch or replay of that ordinal;
+any allowed retry needs a new admission. Records contain only closed tags,
+ordinals and digests, never raw paths, argv, environment values or stderr.
+Retain no per-attempt or per-PID history. Role totals must equal the attempt
+total. Unknown producers/roles, duplicate or missing ordinals, overflow,
+sink error/panic, acknowledgement timeout or exhausted budget refuse
+before dispatch and latch cancellation. A missing terminal/checkpoint record
+means incomplete accounting, not zero. Intentional hard-death phases may close
+a producer using its controller-committed prefix after fencing admissions,
+successful owned termination/wait and EOF; otherwise closure fails.
+Phase handoff fences new admissions and drains accepted records. Before each
+producer acknowledges its checkpoint, every admitted one-shot must have
+started and been joined, or be irrevocably canceled/failed before `Start`;
+no old-phase permission may start after that checkpoint. Only explicitly
+modeled already-started persistent handles, including the server and its
+SurrealDB child, may span the boundary. Reopen under the new phase only after
+these checkpoints; bounded active-dispatch/quiescence state suffices without
+an outcome-history ledger. Each attempt retains its admission-time phase.
+
+Use a private inherited bidirectional descriptor for each registered Go
+producer, with bounded frames and one outstanding request per producer; reuse
+existing native socket/descriptor support, not HTTP or diagnostic-log parsing.
+The V3-only closed environment selector enables bootstrap but supplies no
+authority without the parent-owned endpoint and frozen producer binding.
+Register both server and backup/restore processes; do not rely on the existing
+server-only exact-read flag or operation contexts, since version probes also
+use background contexts. Prevent endpoint inheritance by unregistered native
+children. Freeze the descriptor number, selector value, frame/producer/total
+byte bounds and acknowledgement deadline with the actual implementation before
+authoring; neither an ambient variable nor a caller-supplied assertion can
+create an admitted producer. Admission/reference builds, image probes, signing
+and preparation need separate explicit bounded stages, not unmetered work
+hidden outside the operational phases. Operator invocation and the initial
+controller's own birth are declared roots, not self-observed dispatches.
+
+### Native observations and budgets
+
+Native sampling retains bounded observed-descendant row counts, observed image
+classifications and the high-water sum of RSS rows in completed censuses. Their
+measurement kind is `sampled_observation`; complete native process history is
+`not_established`. Individually coherent records are gathered sequentially, not
+as one atomic snapshot: neither their count nor RSS sum is a proven upper or
+lower bound on true simultaneous concurrency/RSS. There is **no cumulative
+native executable-image counter** in V3. Zero means none observed in the
+required samples, never no native work.
+Every required sample must succeed without denial, truncation or overflow;
+failure makes measurement unavailable and preserves earlier observations.
+Healthy sampling still cannot exclude short-lived children or same-PID execs.
+Unrecognized observed names/classifications or positive identity/path drift
+refuse; absence of such observations does not prove a closed native helper
+inventory. Native classification must not claim an executable digest the
+backend did not obtain.
+The unchanged numeric RSS threshold becomes a sampled refusal threshold, not
+a continuous maximum or hard OS resource bound; retain full positive
+overshoots instead of clipping them to the limit.
+Reuse bounded native record collection, not T40's cumulative image-epoch
+bookkeeping or its lifetime cap as a hidden V3 refusal. Freeze the per-census
+limits, cadence and failure handling; historical T40 accounting stays exact.
+
+V3 uses new attempt-budget fields, not V2's `child_processes` or exact
+`ChildProcessRoles` semantics. Derive each role maximum from controlled work
+units, direct attempts per unit, allowed owner retries, fixed commands and
+deadline-bounded watchers. Do not carry native Git/helper/shell multipliers into
+an exact attempt count or assert a total native upper bound from them. Unknown,
+compatibility and focused-index roles have zero controlled-dispatch budgets in
+this whole-repository ceremony. Audit actual dispatch sites, not command
+constructors: current production has sixteen sites across Git readers/writers,
+indexing, SurrealDB supervision/recovery and compatibility. Bind the complete
+source-site inventory to the selected source and reference-built binaries; a
+new unaccounted `exec`/direct OS launch site fails the readiness gate. Include
+the later author/executor/launcher sites and admission-stage launches.
+
+Retain all twelve tool identities, private direct-path bindings and immutable
+admission/custody requirements. Exact direct-image checks and closed Git
+configuration describe admitted inputs, not vendor attestation or a complete
+history of native delegation. This assumes trusted admitted native tools; it
+is not a malicious-process sandbox. Bind the V3 accounting policy, producer
+inventory, transport bounds and stage budgets into the execution recipe and
+freeze, so a V2 invocation cannot be replayed as V3.
+
+### Scoped teardown evidence
+
+Launcher admission must put operational/admission/cleanup children in its
+recorded private execution sessions, either inherited or created by a controlled
+start. Register newly created sessions from owned successful start semantics,
+not a later sampling opportunity. The controller and final-signing roots are
+outside the execution-session zero predicate; their live sessions are never
+reported as zero. Unknown child-session ownership prevents admission/closure.
+Teardown must fence operational producer admissions, stop operational work,
+close the store, join its owned command handles and drain the existing durable
+custody lease. Only the separately budgeted controller teardown commands remain admissible,
+including `hdiutil` detach. Require complete, error-free bounded censuses
+returning zero for every recorded execution session; repeated terminal zero
+samples detect instability but cannot exclude all fork races or
+escaped/unobserved sessions. Then require **non-forced APFS detach before
+unlinking source/data**, and remove only the exact validated backing image and
+root under the existing custody-mutation lock, verifying their absence. Put
+all writable execution custody, including source/config/data, ballast,
+backup, HOME/TMP and tool outputs, on the admitted pressure volume; keep only
+explicit bounded signing/control and returned source-free custody outside it.
+The launcher must cover preparation and hard death, not just a healthy server.
+Close cleanup accounting only after detach, exact removal and the cleanup
+children's joins and recorded-session checks, followed by its final checkpoint.
+
+Unknown session ownership, held leases, failed/partial census, identity drift,
+busy detach or uncertain removal retain the relevant custody and fail teardown.
+New V3 fields attest owned-handle joins, lease drainage, recorded-session zero
+censuses, kernel-accepted non-forced detach and exact image/root removal.
+They must not reuse V2's stronger descendant-zero claims. Successful detach
+is a filesystem-writer barrier, not proof of no global escaped process or no
+source bytes in another process's memory. No evidence field may turn that
+unestablished global claim into a successful boolean.
+
+Final return-package signing follows closure of the operational/teardown
+meter. Its separately frozen finite launcher command recipe and terminal
+status remain required, but are not recursively included in the operational
+bytes being signed. Post-sign status is launcher-local terminal evidence;
+cryptographic verification establishes the signature itself, not a retroactive
+claim about the signer in its input. Failed signing returns no successful sealed
+package. This explicit outer stage is not an unlimited accounting exemption;
+its tool/input identity, exact command recipe, no automatic retries, output
+caps, deadline, owned-handle cleanup and custody checks belong to freeze and
+launcher readiness.
+
+### Versioning, size and acceptance
+
+Preserve V1/V2 builders, encoders, validators and retained bytes exactly. V3
+explicitly supersedes V2
+`sha256:2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`;
+V2's V1 supersession stays intact. Add explicit closed version routing for
+plan, work envelope, phase meter, receipt, execution profile and teardown;
+audit existing not-V2 branches so V3 never silently takes a V1 path. Centralize
+V3 canonical bytes for authoring, hashing and strict decoding. Use compact
+canonical JSON only for V3; V1/V2 formatting stays unchanged.
+
+The plan cap remains 256 KiB, with a V3 authoring target at most 192 KiB to leave
+64 KiB headroom. V2 currently occupies 262,140 bytes; compacting that same
+content diagnostically gives 160,944 bytes, not a V3 artifact or size proof.
+Freeze (64 KiB), receipt (512 KiB), compressed package and expanded package
+(4 MiB each) caps stay unchanged. Measure actual canonical V3, fully populated
+success and worst-case stopped receipts, large counters and complete returned
+packages before sealing; omit duplicate budget tables and raw process logs.
+
+Before implementation acceptance: derive all attempt/transport/stage limits
+from the inventoried flow; independently review the complete constructor and
+every cross-version path; test pre-admission/Start failures, retries, crash
+gaps, report loss/panic/overflow/timeouts, ordinal gaps, unknown/zero-budget
+roles, phase fences (including a pause between acknowledgement and `Start`)
+and hard-death prefix closure. Native tests must show that short-lived helpers
+and same-PID execs create no exact-history claim; unavailable
+samples and observed unknown images still fail closed. Real-launcher rehearsal
+must cover held leases, orphaned recorded sessions, open-volume/busy detach,
+path replacement and source-free failure output. Retained V1/V2 hashes and
+strict replay remain mandatory. Complete admission/runner writing, exact-tree
+gates and independent review precede canonical author/seal; integration,
+exact-main preflight, host/tool freeze and execution remain separately gated.
+
+### Steady-state cost
+
+This draft changes no runtime. Prospective exact mode adds one bounded local
+request/acknowledgement per controlled attempt, producer/phase checkpoints,
+checked role counters and a running digest, with bounded producer/role state
+and descriptors, no full-history map or growing event-log replay. Sink waiting
+extends any caller-held repository/shard lock or durable lease and must have a
+frozen deadline; no accounting lock is held across child execution/wait.
+Reusing one Git batch reader does not emit an event per source file. Existing
+native sampling remains bounded and gains no completeness claim. Ordinary
+startup adds only the closed selector check when absent, and ordinary dispatch
+adds a disabled-path check with no report channel, sink, persistent state or
+extra child. Production query/sync/retry/publication algorithms, source/shard
+reads, cache invalidation, schema and worker concurrency remain unchanged.
+Admission-stage builds/hashes/scratch and teardown volume costs must retain
+their own measured limits and cost records; neither moves into query costs nor
+disappears behind the new counter. Implementation acceptance must enumerate
+actual memory/disk/descriptor ceilings and lock holds before freeze.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-04 — T42.1r7 prospective V3 accounting design | **Ben selected design/review of the prospective correction described above.** Count controlled dispatch admissions exactly; report native process/RSS observations only as sequentially sampled observations, not simultaneous peak bounds, with complete native history not established. Scope teardown to owned handles, drained custody, recorded-session censuses, non-forced detach and exact image/root removal. Preserve all functional authority and retained V1/V2 evidence; use V3-only compact encoding under the existing caps. | This routes the prior hold to a narrower, explicit evidence contract; it is not implementation acceptance, canonical authoring/sealing, integration, host/tool freeze or execution authorization. Numerical attempt/transport/stage derivations, versioned implementation, complete readiness and independent review remain required. The draft changes no runtime or steady-state cost and supplies no scale/SLO, release or Epic-closure claim. |
 | 2026-09-04 — T42.2 full-runner process-accounting authority hold | **Stop full admission/launcher implementation at the unadmitted event-observation boundary; preserve sealed V1/V2 and reviewed T42.2a–d.** V2 requires cumulative descendant executable-image epochs, including same-PID exec transitions, and forbids treating missed processes as zero. The existing 50-ms process snapshots cannot establish all short-lived descendant events. Apple's `kqueue(2)` documents event aggregation; the installed SDK `sys/event.h` states that fork child PIDs are not returned and `NOTE_TRACK`/`NOTE_CHILD` have been unsupported since 10.5. Direct-child reports and Git image/alias hashes cannot close native Git/shell/helper descendants. The installed Endpoint Security API requires additional entitlement/host authority; Apple's macOS-27 descendants client avoids root/TCC but still requires the Endpoint Security entitlement and is absent from the installed macOS 26.5 SDK on the macOS 26.6.2 host. This is not proof that exact accounting is impossible with a separately admitted capability. | Ben must route either admission of a complete event-observation capability or design/review of a prospective accounting correction before runner wiring resumes; no capability, entitlement, host upgrade, signature exception, environment addition, sampling reinterpretation, or new plan is authorized here. Unfinished current-turn implementation was removed, not committed as another prerequisite slice. Two temporary sparse-APFS preparation diagnostics separately established that default GPT geometry reports 102,869,458,944 bytes, while `-size 96g -layout NONE` reports the exact required 103,079,215,104 bytes through descriptor `Fstatfs`; both images were detached and removed. This resolves geometry only, not host admission, readiness or a ceremony. Documentation-only hold: zero production query/request, sync, startup/restart, retry/no-op, publication, lifecycle, lock, cache, schema, memory/disk or child cost changes. No merge, freeze, execution, release or scale/SLO claim follows. |
 | 2026-09-04 — T42.2d external image observation | **Observe the six V2 external roles through explicit trusted image paths, never ambient discovery.** `ObserveExecutionExternalTool` requires Darwin/arm64, a bounded native executable header, and repeated contextual image hashes. Git receives closed `--version` and `--exec-path` probes and must equal its resolved core image; Go's closed version must equal the verifier's host toolchain; SurrealDB's closed version reuses the supervisor's pure supported-3.x validator. The fixed platform `hdiutil`, `ssh-keygen`, and `sh` images receive the truthful existing `bound executable` descriptor without launching them. No mount, key generation, signing, source build, or measured phase occurs. Only source-free version text and exact image digests are returned. | Admission-only: Git uses five image hashes and two serial probes; Go/SurrealDB each use three hashes and one probe; fixed platform tools each use two hashes and zero probes. Each hash reuses T40's context-aware 256-MiB limit with one open file; native-header screening uses bounded reads and at most eight fat records. Probes have independent 4-KiB stdout/stderr caps, reject stderr, use ten-second contexts within a cooperative thirty-second observation, and reuse the private process-group cancellation and one-second pipe wait. Each probing role owns one temporary directory removed on every return; no hard child RSS, scratch-disk, or escaped-session bound is claimed. These are observations of explicitly trusted tools, not vendor attestation, proof against arbitrary native delegation, Git builtin/helper closure, or immutable custody; final admission must protect resolved inputs and bind actual dispatch. No query/request, sync tick, startup/restart, retry/no-op, publication, lifecycle, schema, cache, lock, source/SDK/module/shard read, or persistent production cost changes. Narrow exports reuse existing hash/version checks without changing historical callers. Full inventory/private bindings, author/executor, host/profile admission, controller, native controls, signed launcher and rehearsal still precede freeze; retained plans and release posture remain exact, and no merge or execution is authorized. |
 | 2026-09-04 — T42.2c exact-reference Go tool builds | **Verify actual supplied Go executables by rebuilding them, not by accepting their VCS metadata alone.** `VerifyExecutionReferenceTool` supports the implemented `phebs`, `phebs-focused-index`, `buf`, and `zoekt-git-index` roles only. It independently inspects the original selected lineage, copies/hash-checks only raw tracked blobs into private custody, and constructs a fresh Git object database with the exact selected commit/tree and an explicit one-commit shallow boundary; no original Git configuration, filter, hook, alternate, or history is imported. Closed offline builds use the actual digest-bound Git core image, a fresh build cache, host-native default-architecture Go, trimpath, PGO off, readonly module graph, no workspace/ambient flags, and serial package compilation. Cached module descriptors and every available graph module directory are independently h1-checked against the source `go.sum`, including modules actually present in the binary; mutable `.ziphash` files do not establish authority. Full supplied/reference binary SHA-256 and BuildInfo must match. Original/private source, module graph/bytes, SDK build-input trees, and Go/Git/supplied images are rechecked before returning a source-free tool identity. | This is admission-only build work, never production request, sync, startup/restart, retry/no-op, publication, schema, cache-policy or worker work. Per role: two complete original checkout inspections; one raw source copy, batched native Git blob/tree/commit publication, and two complete private-source verifications; two module-directory/descriptor hash passes plus two native `go mod verify` passes; two SDK tree hashes; and one fresh serial compile. Source limits remain 100,000 entries / 256 MiB per file / 2 GiB aggregate with 64 MiB inventories and a 4 MiB commit. Each module pass has 1,024 graph rows / 8 MiB JSON / 1 MiB go.sum and descriptor limits, 100,000 total entries / 2 GiB read bytes, and 128-entry directory batches. SDK hashing reuses the existing T40 host reader (100,000 entries / 2 GiB accepted bytes; native directory enumeration still materializes each selected directory before the entry check). Hashing retains bounded inventories and one active file pair or module file, not a source-corpus product. Six explicit Go commands use ten-minute contexts within a cooperative twenty-minute verification context; compilation uses `-p=1` and `GOMAXPROCS=2`, not an RSS or disk quota. Fresh cache/tmp/output and native compiler work have no hard byte/RSS ceiling here; build/cache work, ordinary Go VCS reads, and possible offline module-cache bookkeeping are additional to explicit verification scans. Cooperative cancellation kills the private compiler process group; this is not durable hard-death or escaped-session supervision. No mutation lock or cache is retained, and before/after hashes do not establish immutable host custody. All newly owned reference source/cache/output is removed on return; supplied binaries and module caches are not deleted. Full tool inventory, real author/executor commands, profile/host admission, controller, native controls, signed launcher, review/rehearsal and explicit ceremony authorization remain required. No private freeze binding is issued and neither retained plan changes. |

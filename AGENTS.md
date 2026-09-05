@@ -908,6 +908,15 @@ accounting-contract design/review; no entitlement, host upgrade or sealed-plan
 change is authorized. Unfinished wiring was removed, preserving T42.2a–d.
 Temporary APFS diagnostics established exact 96-GiB geometry with `-layout NONE`
 and were detached and removed; they establish no admission or ceremony pass.
+Ben then selected T42.1r7's prospective V3 accounting design/review in PLAN:
+exact controlled-dispatch admissions, sampled native process/RSS observations
+without simultaneous peak bounds, and no complete native history claim.
+Teardown proves only scoped owned-handle, lease, recorded-session, non-forced
+detach and exact-removal facts. V1/V2 stay exact; V3-only compact encoding
+retains existing caps.
+This draft changes no runtime and authorizes no seal, merge, freeze or run.
+Budget derivation, versioned implementation, complete admission/runner readiness
+and independent review remain prerequisites to those separate decisions.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

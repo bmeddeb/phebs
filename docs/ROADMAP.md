@@ -434,6 +434,17 @@ prospective contract design/review. Unfinished wiring was removed; T42.2a–d
 and both seals remain intact. Native `-layout NONE` APFS geometry was measured
 at exactly 96 GiB, but no full admission, freeze or ceremony passed.
 
+Ben then selected T42.1r7's prospective V3 design/review in `PLAN.md`:
+controlled-dispatch admissions are exact, native process/RSS observations
+are sampled observations rather than simultaneous peak bounds, and complete
+native history remains unestablished.
+Scoped custody/detach/removal evidence replaces any global descendant-zero
+claim. V1/V2 remain exact; V3-only compact encoding keeps existing byte caps.
+This is a draft, not runtime or artifact authoring. Budget derivation, versioned
+implementation, complete admission/runner readiness and independent review
+remain before separate author/seal, integration, exact-main preflight,
+host/tool freeze and execution. No release or scale posture changes.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

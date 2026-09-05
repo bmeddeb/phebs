@@ -4225,6 +4225,29 @@ geometry with `-layout NONE`, then detached and removed both diagnostic images.
 This is no freeze, rehearsal, execution or Epic closure. The owning PLAN
 decision records the evidence and unchanged authority boundary.
 
+**T42.1r7 · Prospective V3 process-accounting correction (design/review)** —
+Ben routed the full-runner hold to the V3 draft in `PLAN.md`, not a new native
+observer capability. Exact controlled-dispatch admissions replace complete
+native executable-image history; native process/RSS observations remain
+explicitly sampled observations, not simultaneous peak bounds. Teardown attests
+only its scoped owned-handle, lease, recorded-session, detach and exact-removal
+facts. This narrows evidence, not functional authority, and preserves V1/V2
+bytes and replay. AC: source-owned launch inventory and checked attempt
+budgets; bounded fail-closed producer
+transport and phase/hard-death closure; explicit V3 routing with no V1 fallback;
+unchanged artifact caps with V3-only compact encoding; complete constructor,
+failure/custody rehearsal, exact-tree gates and independent review. This draft
+does not implement or seal V3. Complete admission/runner writing precedes a
+separate author/seal decision; integration, exact-main preflight, host/tool
+freeze and execution remain open. T42.2a–d and the historical hold are retained
+on the local stack, not merged; `GATE2-V2` and `DO_NOT_RELEASE` stay unchanged.
+
+Draft validation: only the four owning spine documents changed; glossary,
+whitespace and retained V1/V2 SHA-256 checks pass. Docs-check still fails only
+the known presentation-owned missing `ui/receipts/fixtures/service-boundary.png`,
+without a waiver. No runtime, constructor, launcher or ceremony gate is claimed
+for this documentation-only draft.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
