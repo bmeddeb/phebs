@@ -874,8 +874,13 @@ The three live generation schedulers share the existing synchronous log sink
 and process-lifetime failure latch only under T42 exact-read mode; ordinary
 and historical T40 modes remain advisory. A failed start report leaves the
 durable claim without entering the handler; a failed settled report preserves
-the actual durable outcome. Validation/review, remaining telemetry and native
-controls, real admission, phase routing and the signed launcher remain open.
+the actual durable outcome. Exact implementation `57198444b3df4dcdf22a51c576952e1064073601`
+passed full command/scheduler normal and race gates, repository compilation,
+module verification, scoped vet and pinned lint, glossary and whitespace checks,
+and independent exact-commit review with all severity counts zero. Documentation
+checking retains only the existing UI-owned missing `service-boundary.png`.
+Remaining telemetry and native controls, real admission, phase routing and the
+signed launcher remain open. No integration is performed by this slice.
 This is not a freeze or ceremony result; Epic 42 still needs T42.2 execution
 and T42.3 review/closure.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its

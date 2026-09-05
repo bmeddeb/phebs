@@ -397,9 +397,12 @@ T42.2 implementation resumed from integrated V2 `9ac960c9` with T42.2a's
 fail-closed generation-chunk telemetry on `codex/t42.2a-exact-chunk-reports`.
 The observation/catalog, relationship, and partitioned-extraction schedulers
 use the existing synchronous report sink and cancellation latch only in T42
-exact-read mode. Ordinary and historical T40 reporting remain advisory. This
-slice awaits its gates and independent review; it supplies neither the private
-admission/controller/launcher nor a ceremony receipt. T42.2 execution and
+exact-read mode. Ordinary and historical T40 reporting remain advisory. Exact
+implementation `57198444b3df4dcdf22a51c576952e1064073601` passed full affected
+normal/race, compilation, module, scoped vet/pinned lint, glossary and whitespace
+gates and zero-finding independent review; docs-check retains only the known
+UI-owned missing fixture. The slice is not merged and supplies neither the
+private admission/controller/launcher nor a ceremony receipt. T42.2 execution and
 T42.3 posture/product review are still required before Epic 42 can close.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the

@@ -4124,6 +4124,15 @@ telemetry and failure controls, signed launcher, and readiness rehearsal remain
 before an execution freeze. T42.2 and T42.3 remain open; no ceremony is run by
 this slice.
 
+Implementation `57198444b3df4dcdf22a51c576952e1064073601` is committed and
+independently reviewed with critical/high/medium/low `0/0/0/0`. Full affected
+normal and race gates, repository compilation, module verification, scoped vet,
+repository-pinned lint, glossary and whitespace checks pass. Docs-check remains
+red only for the existing presentation-owned missing `service-boundary.png`;
+no fixture or merge-bar exception is invented here. The branch is unmerged.
+Next implementation is real checkout/tool admission, then closed profile
+admission and controller/phase wiring; no placeholder freeze CLI is supplied.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:

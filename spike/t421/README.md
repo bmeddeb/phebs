@@ -329,6 +329,17 @@ admission constructor, a freeze/execute CLI, or a ceremony result. Those
 remaining T42.2 requirements and T42.3 receipt/product review still gate Epic
 42 closure. V1 and V2 plan bytes remain untouched.
 
+Implementation `57198444b3df4dcdf22a51c576952e1064073601` passed the full
+command/scheduler normal gates in 130.853s/0.346s and race gates in
+433.549s/1.932s. The corrected built source was unchanged across commit;
+independent review of that exact immutable commit reports
+critical/high/medium/low `0/0/0/0`. Go 1.26.5, repository compilation, module
+verification, scoped vet, pinned golangci-lint 2.12.2, glossary and whitespace
+checks pass. Docs-check retains only the pre-existing UI-owned missing
+`service-boundary.png`; no broader repository-test or ceremony gate is claimed.
+V1/V2 SHA-256 identities still match the retained values. The ticket branch
+remains unmerged, and no freeze or ceremony was performed.
+
 ### Prospective correction
 
 The owning decision is the T42.1r1 row in [PLAN.md](../../PLAN.md). V1 authoring
