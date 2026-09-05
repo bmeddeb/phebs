@@ -4741,6 +4741,13 @@ semantic inlet exposed a shared pending author-stdio defect: inherited standard
 files do not automatically support Go deadlines. Both author stdin/stdout and
 parent endpoint ownership must use genuine pollable native transport before
 the full CLI rehearsal; no deadline is waived or false readiness recorded.
+That shared transport correction is implemented in both the actual author and
+its parent: four owned Unix socket pairs, pollable duplicates, joined
+cancellation callbacks, request half-close and post-Wait exact response EOF.
+Actual inherited fd0/fd1 completion/cancellation and wrong-descriptor regressions
+pass. Author normal three repeats took 0.848s and race three repeats 12.031s;
+parent transport race three repeats took 3.213s; vet, pinned lint and whitespace
+pass. Independent review and the real full-population CLI run remain required.
 Two independent call-graph reviews identified and resolved the return-A epoch
 conflict prospectively for V3: its server already runs in epoch three when the
 marker is produced, and epoch four belongs to process_restart. V3 now explicitly

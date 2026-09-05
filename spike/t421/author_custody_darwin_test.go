@@ -274,6 +274,56 @@ func TestExecutionAuthorCustodyActualWrongProgramJoined(t *testing.T) {
 	}
 }
 
+func TestExecutionAuthorCustodySocketAdoption(t *testing.T) {
+	for _, mode := range []string{"socket", "anonymous-pipe", "regular", "closed"} {
+		t.Run(mode, func(t *testing.T) {
+			var file, peer *os.File
+			var err error
+			switch mode {
+			case "socket", "closed":
+				file, peer, err = dispatchadmission.NewPipe()
+			case "anonymous-pipe":
+				file, peer, err = os.Pipe()
+			case "regular":
+				file, err = os.CreateTemp(t.TempDir(), "not-a-socket")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				_ = file.Close()
+				if peer != nil {
+					_ = peer.Close()
+				}
+			})
+			if mode == "closed" {
+				_ = file.Close()
+			}
+			connection, err := adoptAuthorCustodySocket(file)
+			if (err == nil) != (mode == "socket") {
+				t.Fatalf("adoption %s: %v", mode, err)
+			}
+			if _, err := file.Stat(); !errors.Is(err, os.ErrClosed) {
+				t.Fatal("adoption retained original descriptor", err)
+			}
+			if connection == nil {
+				return
+			}
+			defer func() { _ = connection.Close() }()
+			if connection.SetReadDeadline(time.Now().Add(time.Second)) != nil ||
+				connection.SetWriteDeadline(time.Now().Add(time.Second)) != nil {
+				t.Fatal("adopted socket is not pollable")
+			}
+			if _, err := peer.Write([]byte("exact input")); err != nil || peer.Close() != nil {
+				t.Fatal("write actual socket peer", err)
+			}
+			if raw, err := io.ReadAll(connection); err != nil || string(raw) != "exact input" {
+				t.Fatalf("bounded socket EOF: %q / %v", raw, err)
+			}
+		})
+	}
+}
+
 func TestExecutionAuthorCustodyRetainedPrefixAndResponse(t *testing.T) {
 	result := ExecutionAuthorResult{Revision: "b", RootStarted: true, Accounting: dispatchadmission.Snapshot{
 		Attempts: 2, Phases: []dispatchadmission.PhaseCount{{Phase: 1, Attempts: 2, Roles: []dispatchadmission.RoleCount{{Role: 1, Attempts: 2}}}},

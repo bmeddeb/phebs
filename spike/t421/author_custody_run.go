@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"slices"
@@ -115,8 +116,9 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 	}
 	stopController := context.AfterFunc(controller.Context(), cancel)
 	defer stopController()
-	// Exactly four owned pairs: DA01, PC01, stdin, stdout. All eight original
-	// descriptors close on every path; no borrowed stdio or Cmd private state.
+	// Exactly four owned socket pairs: DA01, PC01, stdin, stdout. Pollable
+	// parent endpoints replace their originals before Start; FileConn briefly
+	// adds one descriptor per adoption. Child stdio copies close after Start.
 	var owned [8]*os.File
 	defer func() {
 		for _, file := range owned {
@@ -128,19 +130,35 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 		}
 	}()
 	for index := 0; index < len(owned); index += 2 {
-		if index < 4 {
-			owned[index], owned[index+1], err = dispatchadmission.NewPipe()
-		} else {
-			owned[index], owned[index+1], err = os.Pipe()
-		}
+		owned[index], owned[index+1], err = dispatchadmission.NewPipe()
 		if err != nil {
 			return result, ErrExecutionAuthorCustody
 		}
 	}
+	input, err := adoptAuthorCustodySocket(owned[4])
+	owned[4] = nil // Adoption closes the original even on refusal.
+	if err != nil {
+		return result, ErrExecutionAuthorCustody
+	}
+	defer func() {
+		if input.Close() != nil {
+			retErr = ErrExecutionAuthorCustody
+		}
+	}()
+	output, err := adoptAuthorCustodySocket(owned[6])
+	owned[6] = nil
+	if err != nil {
+		return result, ErrExecutionAuthorCustody
+	}
+	defer func() {
+		if output.Close() != nil {
+			retErr = ErrExecutionAuthorCustody
+		}
+	}()
 	command := exec.Command(custody.authorPath)
 	command.Dir, command.Env = custody.parent, slices.Clone(custody.environment)
 	command.ExtraFiles = []*os.File{owned[1], owned[3]}
-	command.Stdin, command.Stdout = owned[4], owned[7]
+	command.Stdin, command.Stdout = owned[5], owned[7]
 	command.Stderr = &checkoutCommandOutput{remaining: 8 << 10, cancel: cancel}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
@@ -152,12 +170,11 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 	go func() { waited <- command.Wait() }() // The sole native Wait.
 	var control *dispatchadmission.PhaseControl
 	var served <-chan error
-	input, output := owned[5], owned[6]
 	canceled := make(chan struct{})
 	stopCancel := context.AfterFunc(ctx, func() {
 		defer close(canceled)
-		_ = input.Close()
-		_ = output.Close()
+		_ = input.SetDeadline(time.Now())
+		_ = output.SetDeadline(time.Now())
 		_ = signalProductionStop(command.Process)
 	})
 	defer func() {
@@ -166,7 +183,7 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 		}
 	}()
 	// Every post-Start path reaches finishAuthor and preserves its prefix.
-	for _, index := range []int{1, 3, 4, 7} {
+	for _, index := range []int{1, 3, 5, 7} {
 		if owned[index].Close() != nil {
 			retErr = ErrExecutionAuthorCustody
 		}
@@ -208,7 +225,7 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 		} else if count, err := input.Write(raw); err != nil || count != len(raw) {
 			retErr = ErrExecutionAuthorCustody
 		}
-		if input.Close() != nil {
+		if input.CloseWrite() != nil {
 			retErr = ErrExecutionAuthorCustody
 		}
 	}
@@ -242,6 +259,26 @@ func (custody *ExecutionAuthorCustody) runAuthor(ctx context.Context, cancel con
 		custody.mu.Unlock()
 	}
 	return result, retErr
+}
+
+// The passed endpoint is owned, unlike the child's borrowed fd0/fd1. Replace
+// it with one pollable close-on-exec duplicate, closing the original on every
+// path. There is no file/anonymous-pipe fallback without real deadlines.
+func adoptAuthorCustodySocket(file *os.File) (*net.UnixConn, error) {
+	if file == nil {
+		return nil, ErrExecutionAuthorCustody
+	}
+	connection, err := net.FileConn(file)
+	closeErr := file.Close()
+	if err != nil {
+		return nil, ErrExecutionAuthorCustody
+	}
+	socket, ok := connection.(*net.UnixConn)
+	if !ok || closeErr != nil {
+		_ = connection.Close()
+		return nil, ErrExecutionAuthorCustody
+	}
+	return socket, nil
 }
 
 func finishAuthorCustody(command *exec.Cmd, controller *dispatchadmission.Controller, control *dispatchadmission.PhaseControl,
