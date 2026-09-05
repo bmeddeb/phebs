@@ -100,6 +100,12 @@ type executionCheckoutInspector struct{ root, git, digest string }
 // trust index stat caches. Each child gets a closed environment regardless of
 // the admitted executable's basename. No private child diagnostic is returned.
 func (inspection executionCheckoutInspector) run(ctx context.Context, limit int64, args ...string) ([]byte, error) {
+	return inspection.runInput(ctx, nil, limit, args...)
+}
+
+// runInput also supports bounded native Git writes into newly owned reference
+// metadata; ordinary checkout inspection always supplies nil input.
+func (inspection executionCheckoutInspector) runInput(ctx context.Context, input io.Reader, limit int64, args ...string) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("checkout admission canceled: %w", err)
 	}
@@ -113,6 +119,7 @@ func (inspection executionCheckoutInspector) run(ctx context.Context, limit int6
 		"-c", "core.hooksPath=" + os.DevNull, "-c", "core.commitGraph=false",
 	}, args...)...)
 	command.Dir = inspection.root
+	command.Stdin = input
 	command.Env = []string{
 		"PATH=/usr/bin:/bin", "LANG=C", "LC_ALL=C", "TZ=UTC",
 		"GIT_NO_LAZY_FETCH=1", "GIT_NO_REPLACE_OBJECTS=1", "GIT_TERMINAL_PROMPT=0",

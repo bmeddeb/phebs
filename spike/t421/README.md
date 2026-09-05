@@ -308,6 +308,34 @@ identities to satisfy the oracle, silently enlarge budgets, or reuse the old
 T40.13/T41.10 launchers. The retained plan bytes remain untouched. No ceremony
 has been launched, and no execution command is ready.
 
+### T42.2c implementation: exact-reference Go tools
+
+`VerifyExecutionReferenceTool` measures a supplied executable only after its
+bytes and complete Go BuildInfo match a real isolated rebuild. The supported
+roles are `phebs`, `phebs-focused-index`, `buf`, and `zoekt-git-index`; missing
+T422 author/executor roles refuse rather than receiving placeholder tools.
+The private source contains the exact selected commit/tree, a deliberate
+single-commit shallow boundary, and newly initialized Git controls—not the
+original repository's configuration, filters, hooks, alternates or history.
+This private build snapshot does not weaken T42.2b's refusal of shallow
+original authority. Both ancestry edges still come from the original full
+checkout before and after verification.
+
+The build uses explicit host-native Go/Git images, fresh GOCACHE, offline
+readonly module resolution, no ambient overlays/workspace/flags, and no UI
+build tag or presentation-track edits. Independent h1 checks bind cached
+`.mod` and available graph-module files to original `go.sum`; a forged
+`.ziphash` cannot substitute. Original/private source, module bytes and graph,
+SDK trees and tool images are rechecked; cleanup removes only the newly owned
+reference workspace. The owning T42.2c ADR in [PLAN.md](../../PLAN.md) records
+the repeated scans, uncached compile cost, cooperative deadlines and absence
+of a hard build cache/RSS quota or immutable host custody.
+
+This produces one source-free tool identity, not a private
+`CheckoutAdmissionBinding`, complete tool inventory, profile admission,
+author/executor/controller, signed launcher, readiness pass or execution
+authorization. Both plans stay exact and the stack stays unmerged.
+
 ### T42.2b implementation: strict checkout observation
 
 `InspectExecutionCheckout` is the real checkout prerequisite, stacked after

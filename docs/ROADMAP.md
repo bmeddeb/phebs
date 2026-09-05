@@ -412,6 +412,13 @@ tool provenance; exact-reference executable builds and the remaining
 profile/controller/launcher work are still required. Both implementation
 layers remain unmerged; neither sealed plan is changed or executed.
 
+T42.2c follows with isolated exact-reference builds for the four implemented
+Go tools. Binary bytes must match their actual rebuild, with independently
+verified module checksums and repeated source/SDK/image checks. It does not
+fabricate the absent author/executor commands or issue full tool/profile
+admission. All three implementation layers remain unmerged; freeze, execution
+and Epic 42 closure are still ahead.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

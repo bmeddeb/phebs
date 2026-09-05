@@ -4456,6 +4456,24 @@ lock, proves no binary came from those bytes, and returns no private freeze
 binding. Exact-reference tool provenance, profile admission, controller and
 signed launcher remain necessary before a terminal ceremony command exists.
 
+### T42.2c reference-build verification
+
+The implementation-only `VerifyExecutionReferenceTool` rebuilds `phebs`,
+`phebs-focused-index`, `buf`, or `zoekt-git-index` from an isolated exact source
+snapshot. Provide a clean dedicated source checkout, the actual Git core
+executable (not the macOS shim), an explicit Go SDK and already populated
+offline module cache, and the supplied binary to compare. It never executes
+that supplied binary. Local Git configuration and ignored files cannot enter
+the private reference source; module-cache checksum files cannot replace
+independent checks against source `go.sum`.
+
+This is potentially expensive uncached build work, not an operator ceremony
+command. Its private source/build cache/output is removed after verification;
+the supplied binary and module cache remain. Compiler concurrency is serial,
+but no hard cache-disk or RSS quota is claimed. Complete external-tool and
+host/profile admission, real author/executor commands, controller, launcher
+and rehearsal remain open; this helper issues no private freeze binding.
+
 ## Developing phebs
 
 

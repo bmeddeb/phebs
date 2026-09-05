@@ -889,6 +889,12 @@ with ignored/untracked and hidden inputs refused. It does not issue the private
 checkout/tool freeze binding; exact-reference executable provenance and the
 remaining profile/controller/launcher work stay open. This slice remains
 unmerged, preserves both sealed plans, and authorizes no ceremony.
+T42.2c adds actual private exact-reference builds for the four implemented Go
+tools, independent module-cache checks against source `go.sum`, complete binary
+and build-identity comparison, and repeated source/SDK/tool checks. It issues
+no full checkout/tool freeze binding and invents no author/executor command.
+This next stacked layer also remains unmerged; remaining admission, controller,
+launcher and rehearsal work still precede any execution freeze.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

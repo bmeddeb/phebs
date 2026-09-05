@@ -398,6 +398,12 @@ func observeBoundExecutable(ctx context.Context, name, path string) (HostToolObs
 	return HostToolObservation{Name: name, Version: "bound executable", SHA256: digest}, nil
 }
 
+// DigestBuildInputTrees reuses the bounded host-tree identity reader for later
+// reference builds. It observes bytes and modes, not exclusive host custody.
+func DigestBuildInputTrees(ctx context.Context, root string, trees ...string) (string, error) {
+	return hostTreeDigest(ctx, root, trees...)
+}
+
 func hostTreeDigest(ctx context.Context, root string, trees ...string) (string, error) {
 	if ctx == nil {
 		return "", errors.New("host tree context is nil")

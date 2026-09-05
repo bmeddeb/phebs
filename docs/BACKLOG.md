@@ -4155,6 +4155,21 @@ missing `service-boundary.png`; no waiver or cross-track repair is made.
 Both retained plan digests are unchanged. This is checkout-observation closure
 only; next is real exact-reference tool admission, not an execution freeze.
 
+**T42.2c · Exact-reference Go tool builds** — stacked on T42.2b in
+`codex/t42.2c-reference-tool-builds`. Rebuild the four implemented Go roles in
+private exact raw-source custody with independent Git metadata and a closed
+offline environment; independently verify cached module/descriptor bytes
+against source `go.sum`, and require complete binary and BuildInfo equality.
+Recheck original/private source, SDK, tool images and module inputs, and clean
+owned scratch custody on every return. AC: real source snapshot and Go-build
+positive/refusal tests, ignored-source contamination, local-filter and ambient
+control isolation, cache tampering, cancellation, focused normal/race, affected
+static/compilation/documentation and independent exact-commit review gates.
+No author/executor stub, private freeze binding, full tool inventory or ceremony
+command is supplied. Remaining external-tool/profile/host admission, real
+author/executor/controller, native controls, launcher and rehearsal still gate
+freeze. The slice is unmerged and preserves both sealed plans.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
