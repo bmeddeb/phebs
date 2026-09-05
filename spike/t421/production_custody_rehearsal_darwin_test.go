@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -31,12 +30,10 @@ func TestExecutionProductionOptionalRealServeRehearsal(t *testing.T) {
 	commit := os.Getenv("PHEBS_T422_PRODUCTION_COMMIT")
 	goRoot := os.Getenv("PHEBS_T422_PRODUCTION_GOROOT")
 	moduleCache := os.Getenv("PHEBS_T422_PRODUCTION_MODULE_CACHE")
-	if !validCommit(commit) || !executionGitAbsolutePath(repository) || !executionGitAbsolutePath(goRoot) || !executionGitAbsolutePath(moduleCache) {
-		t.Fatal("explicit exact source, protected-copy SDK and offline cache selections required")
-	}
-	gitBinary, err := exec.LookPath("git")
-	if err != nil {
-		t.Fatal(err)
+	gitBinary := os.Getenv("PHEBS_T422_PRODUCTION_GIT")
+	if !validCommit(commit) || !executionGitAbsolutePath(repository) || !executionGitAbsolutePath(goRoot) ||
+		!executionGitAbsolutePath(moduleCache) || !executionGitAbsolutePath(gitBinary) {
+		t.Fatal("explicit exact source, native Git, protected-copy SDK and offline cache selections required")
 	}
 	surrealBinary := toolCustodyExternalSurreal(t)
 	parent, err := os.MkdirTemp("", "t422-production-rehearsal-")

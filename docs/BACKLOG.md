@@ -4591,6 +4591,17 @@ same owned pipe again could overwrite the original pair. The eight actual
 adapters do not do this, but the shared owner now rejects it and closes the
 original pair. Both-stream retained-original-FD regressions are included;
 independent exact correction review remains required.
+Exact `b93f68cc40fdf8ccab4e9b81fcb28890837388ce` re-review closed the pipe
+finding with all severity counts zero. Its clean detached light gates passed
+full dispatch normal/race (1.264/2.512s), T42.2 command normal/race
+(0.893/4.469s), sixteen-site inventory (1.220s), docs (0.454s), glossary,
+module verification, scoped vet and pinned lint with zero issues.
+The actual opt-in rehearsal then refused in 0.03s at protected Git admission:
+ambient selection found the macOS Git shim, so no protected copy or server was
+created; its empty private diagnostic root remains. A subsequent PATH-only
+selection failed the test driver's clang/resolv link before the test began.
+The test now requires explicit native Git selection without changing compiler
+discovery. Neither attempt establishes full-source admission or server readiness.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
