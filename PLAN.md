@@ -316,10 +316,61 @@ their own measured limits and cost records; neither moves into query costs nor
 disappears behind the new counter. Implementation acceptance must enumerate
 actual memory/disk/descriptor ceilings and lock holds before freeze.
 
+### Delegated path to the next freeze (2026-09-05)
+
+Ben delegated in-scope decisions and agent orchestration through the next exact
+ceremony freeze while away. The lead owns the shared checkout, commits and
+integration; bounded implementation agents own disjoint paths; a non-authoring
+agent independently reviews exact immutable commits and their cost records.
+This authorizes prerequisite implementation, bounded native diagnostics and
+readiness rehearsals, reviewed ticket integration/push, V3 author/seal and the
+exact-main host/tool freeze when their existing gates pass. It does not
+authorize ceremony execution, new host entitlements, changed admission bounds,
+unrelated presentation work, weakened evidence, Epic closure or release/scale
+claims. Required observations cannot be supplied by an agent's decision.
+
+The dependency order is:
+
+1. T42.2i protects the actual closed Git resource recipe and proves real local
+   commands. T42.2j admits the exact Go SDK, module and source build inputs
+   before trusting their execution. Reuse existing readers and custodians;
+   neither a mutable resource path nor a successful fixture issues admission.
+2. T42.2k joins protected tools/configuration to authenticated inherited
+   producer bootstrap and the sixteen production launch sites. Prove a small
+   real Phebs/Surreal launch, controlled native command and complete stop. Its
+   explicitly limited rehearsal cannot create a twelve-tool freeze binding.
+3. T42.2l implements the real V3 author and executor against the existing
+   fifteen-phase contract, including semantic owner drainage, five actual
+   server epochs and exact private checkout/profile issuers. Derive actual
+   producer, transport, stage, concurrency and cadence limits from that flow;
+   do not resolve the missing-tool dependency with placeholder binaries.
+4. T42.2m completes the signed outer launcher and return firewall, separately
+   bounded admission/signing stages, execution-session and lease custody,
+   non-forced detach before exact removal, and real refusal-path rehearsals.
+5. T42.2n closes exact-source normal/race, full relevant package, static,
+   documentation, glossary, retained-version, real readiness and independent
+   review gates. Every changed launch site and per-operation cost is accounted.
+   A failed or unavailable gate remains open; fix a substantiated defect and
+   repeat the affected exact-tree gates, never relabel a failed run as passed.
+6. T42.2o authors and seals canonical V3 only after implementation acceptance,
+   integrates the reviewed artifact stack, reruns exact-main preflight, admits
+   the exact tools/host/profile and writes the authentic signed freeze. Verify
+   all retained and returned bytes independently, then stop before execution
+   with the exact terminal command and custody/expiry conditions for Ben.
+
+Independent work may overlap reading, targeted tests and review; shared-tree
+mutations, commits, admission custody and resource-heavy real rehearsals remain
+serialized by the lead. A source change invalidates affected exact-tree gates;
+documentation-only preservation requires proof that no compiled, embedded,
+fixture or harness input changed. Each ticket closes only its stated ACs.
+The existing V1/V2 seals, V3 claim boundaries and numerical envelopes stay
+unchanged. This plan is orchestration, not evidence that any later gate passed.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-05 — T42.2 delegated freeze orchestration | **Ben delegates in-scope implementation/sequencing choices, agent orchestration, reviewed ticket integration/push, canonical V3 author/seal and exact-main host/tool freeze through the next freeze without further routine input.** Follow the dependency and independent-review gates above; the lead alone controls Git and shared spine records. | This task-scoped authorization supersedes only the earlier separate-request holds for these prerequisites. It neither waives a gate nor authorizes ceremony execution, unrelated tracks, host entitlements, expanded bounds, release or a scale claim. Required independent measurements remain evidence, not delegated choices. |
 | 2026-09-05 — Independent product identity and technology foundation | **Describe phebs as an independent application whose technical foundation is its actual libraries and stack: Go, Git, sourcegraph/zoekt, SurrealDB, huma, TypeScript, React, Vite, Base Web and CodeMirror.** Ben explicitly requested removal of inspiration-based lineage, product-port framing and associated competitor references from the documentation, including non-sealed historical prose. | This is a scoped exception to append-only narrative maintenance, not a rewrite of Git history or sealed evidence. Preserve implementation dates/results, dependency acknowledgments, license safeguards and all capability/validation caveats. No runtime, dependency, license, authority, cost, release or scale claim changes. |
 | 2026-09-05 — T42.2 authorized presentation fixture merge-gate handoff | **Ben explicitly authorized the narrow presentation-owned fixture repair, followed by merge-gate verification and local stack integration/push.** Reuse the already tracked Markdown preview receipt PNG as the fixture's inert repository-relative image target instead of the absent `service-boundary.png`; preserve the alt text and prove byte-identical sanitized preview HTML with no image element or source attribute. | No asset, dependency, renderer, retained screenshot, design-charter, product authority or caveat changes; the documentation checker remains unmodified. The fixture/test-only change adds no production query/request, sync, startup/restart, retry/no-op, publication, lock, cache, schema, memory/disk or child cost. This supersedes only the fixture routing and merge/push authorization holds, not full admission, author/executor, launcher, V3 seal, host freeze, ceremony, release or scale gates. |
 | 2026-09-05 — T42.2h verified direct-image custody | **Compose the existing direct-copy custodian and real tool verifiers into an opaque role-bound result: bounded selected-image digest → fresh protected copy → actual reference rebuild or external observation against that copy → final custody check.** Only then retain the independently measured identity; no public constructor accepts caller-authored identity, digest, verification callback or successful boolean. `Check` returns a value copy of that identity and the private path only for its verified role while custody remains intact. Unknown roles, wrong-role use, cancellation, drift and closed custody fail closed. | Reference construction supports the four implemented Go roles; copied external observation supports only SurrealDB's direct image. A real copied Go probe could not infer its GOROOT, and copied Apple Git resolved a nonexistent compiled helper directory; both failed with intact protected metadata. Their constructors therefore refuse before copying until their actual helper/SDK location recipes are independently admitted; no ambient path override or relaxed observer check repairs them here. Fixed-system `hdiutil`, `ssh-keygen` and `sh` roles likewise refuse copying before work and retain their separate original-path requirements. Trusted tools, native helpers/resources, SDK/module/source observations, closed command/input recipes and process bootstrap are not replaced by this handle. Missing author/executor images still block the full twelve-tool binding, not a later honestly scoped bootstrap rehearsal. No `CheckoutAdmissionBinding`, profile issuer, production installer, launcher, seal, merge or freeze is added. |

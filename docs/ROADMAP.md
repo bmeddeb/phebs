@@ -498,6 +498,16 @@ backlog records results. Full protected admission, production bootstrap,
 launcher/author/executor readiness, V3 seal and host freeze remain next, not
 passed. Local gates make no hosted-CI, ceremony, release or scale claim.
 
+On 2026-09-05 Ben delegated autonomous orchestration through the next exact
+freeze. T42.2i–o now order protected Git and Go build inputs, authenticated
+production dispatch with a real small launch/stop rehearsal, real author and
+executor, signed scoped-custody launcher, exact-tree acceptance, then V3
+author/seal and exact-main host/tool freeze. The owning PLAN and BACKLOG retain
+the evidence gates; reviewed integration/push is authorized within this task.
+None of those pending gates is passed by this delegation, and ceremony
+execution, admission-bound changes, unrelated presentation work, release and
+scale claims remain excluded.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

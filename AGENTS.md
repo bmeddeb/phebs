@@ -45,6 +45,14 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 - **Agents never merge into `main` without Ben's explicit request** (2026-07-22).
  Passing the merge bar authorizes a merge *request*, not the merge itself;
  completed ticket work stays on its ticket branch until Ben says to integrate.
+- **Task-scoped freeze delegation (2026-09-05).** Ben explicitly delegates
+  decisions and agent orchestration through the next T42.2 ceremony freeze,
+  including reviewed prerequisite integration/push and V3 author/seal after
+  their gates pass. Follow the owning PLAN orchestration and BACKLOG ACs.
+  The lead serializes Git and shared spine edits; independent reviewers may
+  not waive evidence. This supersedes routine separate-request holds only for
+  this task, not the general merge rule, ceremony execution, unrelated tracks,
+  host entitlements, admission bounds, release or scale claims.
 - **Parallel tracks (2026-08-07).** The scale track owns Epics 40–42 in this
   checkout on `codex/t4*` branches and owns `internal/`, `cmd/`, `spike/`, the
   store schema, `Makefile`, and `go.mod`. The presentation track owns Epic 43

@@ -4419,6 +4419,47 @@ V3 author/seal, host freeze, ceremony, Epic 42 closure, release or a scale claim
 Hosted CI remains a separate post-push observation; no full store/corpus or
 ceremony rerun is claimed by this fixture-only repair.
 
+**T42.2 delegated completion sequence (2026-09-05).** Ben authorized agent
+decisions and orchestration through the next exact freeze, including reviewed
+integration/push and V3 author/seal when the existing gates pass. The lead owns
+Git/shared spine edits, independent review remains non-authoring, and PLAN
+owns the design and dependency order. Execution remains excluded.
+
+- **T42.2i · Protected Git resource admission** — closed core/helper recipe,
+  child-only environment and real protected local Git commands. AC: actual
+  core/resource identity and custody checks; positive, drift, unsupported and
+  cancellation tests; bounded failure custody; independent source/cost review.
+- **T42.2j · Protected Go build-input admission** — exact SDK/module/source
+  custody before reference execution. AC: real offline rebuild, independently
+  verified module bytes, missing/tampered resource refusal, owned cleanup and
+  explicit tree/build cost bounds; no mutable-root or installed-flag shortcut.
+- **T42.2k · Admitted production bootstrap and dispatch** — private inherited
+  authority, protected recipes and all sixteen owned launch sites. AC: real
+  small Phebs/Surreal launch/native-command/stop rehearsal, endpoint isolation,
+  ordinary disabled-path preservation, exact failure and phase-fence tests.
+  The narrow rehearsal issues no full-tool freeze binding.
+- **T42.2l · Real V3 author/executor and full private admission** — assemble
+  existing phase/read/injection machinery and genuine checkout/profile issuers.
+  AC: all fifteen phases and five epochs implemented, owner drainage truthful,
+  actual flow-derived numerical limits, twelve real tools and no placeholders.
+- **T42.2m · Signed launcher and custody closure** — finite outer-stage recipes,
+  source-free return firewall and scoped lease/session/volume teardown.
+  AC: real healthy and held-lease/orphan/busy-detach/path-replacement failure
+  rehearsals, bounded complete packages, no successful seal after uncertainty.
+- **T42.2n · Exact-tree acceptance** — complete relevant normal/race, static,
+  docs/glossary, retained-version, real readiness and independent-review gates.
+  AC: immutable source attribution, no open finding, explicit steady-state and
+  admission cost record, no surviving owned rehearsal process/custody ambiguity.
+- **T42.2o · V3 seal and exact-main freeze** — canonical author/seal after full
+  acceptance, reviewed integration, exact-main preflight, real host/tool/profile
+  admission and authenticated freeze. AC: independent signature/byte replay,
+  retained V1/V2 unchanged, exact invocation and custody/expiry handoff; no
+  ceremony execution, Epic closure, release or scale claim.
+
+These tickets are pending, not acceptance evidence. Agents may refine an
+in-scope implementation choice in the owning ADR, but cannot relax an AC,
+invent a measurement or expand the frozen program to force completion.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
