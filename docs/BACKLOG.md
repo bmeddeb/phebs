@@ -4645,7 +4645,7 @@ whole-work accounting, real five-server readiness or freeze prerequisites.
 Final focused regression confirmation on exact implementation 3fe4d838
 (with only the later hold/gate documentation uncommitted) passed the complete
 `internal/dispatchadmission` package normal/race in 1.283s/3.482s,
-all `cmd/phebs` T42.2 tests in 2.956s/8.419s, and the epoch-config,
+the `cmd/phebs` `TestT422`-prefix selector in 2.956s/8.419s, and the epoch-config,
 compatibility-profile and retained canonical-byte selector in 1.392s/13.890s.
 Affected vet and pinned 2.12.2 lint pass with zero issues; docs (0.552s),
 glossary and whitespace pass. These are focused gates, not full repository,
