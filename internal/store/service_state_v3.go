@@ -1120,8 +1120,8 @@ func (s *Surreal) processServiceStateV3ReconcileChunk(
 		if err != nil {
 			return ServiceStateV3ChunkResult{}, err
 		}
-		updates := make([]serviceStateUpdate, 0, len(projections))
-		nextPlan := plan
+		changes := make([]serviceStateV3Change, 0, len(projections))
+		projectedPlan := plan
 		now := storeTimestamp(time.Now())
 		for _, projection := range projections {
 			prior, exists := existing[projection.Service.Key]
@@ -1131,7 +1131,7 @@ func (s *Surreal) processServiceStateV3ReconcileChunk(
 			if projectErr != nil {
 				return ServiceStateV3ChunkResult{}, projectErr
 			}
-			if err := applyServiceStateV3CountDelta(&nextPlan, prior, exists, next); err != nil {
+			if err := applyServiceStateV3CountDelta(&projectedPlan, prior, exists, next); err != nil {
 				return ServiceStateV3ChunkResult{}, err
 			}
 			if changed {
@@ -1140,18 +1140,18 @@ func (s *Surreal) processServiceStateV3ReconcileChunk(
 					update.ExpectedRevision = prior.ControlRevision
 					update.ExpectedDigest = prior.StateDigest
 				}
-				updates = append(updates, update)
+				changes = append(changes, serviceStateV3Change{
+					update: update, prior: prior, existed: exists,
+				})
 			}
 		}
-		nextPlan.NextChunk++
-		advanceServiceStateV3Metrics(&nextPlan, len(projections), updates)
-		if err := s.commitServiceStateV3Chunk(
-			ctx, chunk, plan, nextPlan, updates, nil, nil, false,
+		if err := s.commitServiceStateV3Changes(
+			ctx, chunk, plan, changes, len(projections), plan.RemovalCursor, nil,
 		); err != nil {
 			return ServiceStateV3ChunkResult{}, err
 		}
 		return ServiceStateV3ChunkResult{
-			Applied: len(updates), Read: len(projections),
+			Applied: len(changes), Read: len(projections),
 		}, nil
 	}
 	removalEnd := plan.ServiceMemberChunks + plan.RemovalChunks
@@ -1160,15 +1160,15 @@ func (s *Surreal) processServiceStateV3ReconcileChunk(
 		if err != nil {
 			return ServiceStateV3ChunkResult{}, err
 		}
-		updates := make([]serviceStateUpdate, 0, len(rows))
-		nextPlan := plan
+		changes := make([]serviceStateV3Change, 0, len(rows))
+		removalCursor := plan.RemovalCursor
 		now := storeTimestamp(time.Now())
 		present, err := s.serviceStateV3PresentKeys(ctx, opened.Root, rows)
 		if err != nil {
 			return ServiceStateV3ChunkResult{}, err
 		}
 		for _, prior := range rows {
-			nextPlan.RemovalCursor = prior.ServiceKey
+			removalCursor = prior.ServiceKey
 			if present[prior.ServiceKey] {
 				continue
 			}
@@ -1176,22 +1176,20 @@ func (s *Surreal) processServiceStateV3ReconcileChunk(
 			if removalErr != nil {
 				return ServiceStateV3ChunkResult{}, removalErr
 			}
-			if err := applyServiceStateV3CountDelta(&nextPlan, prior, true, next); err != nil {
-				return ServiceStateV3ChunkResult{}, err
-			}
-			updates = append(updates, serviceStateUpdate{
-				State: next, ExpectedRevision: prior.ControlRevision,
-				ExpectedDigest: prior.StateDigest,
+			changes = append(changes, serviceStateV3Change{
+				update: serviceStateUpdate{
+					State: next, ExpectedRevision: prior.ControlRevision,
+					ExpectedDigest: prior.StateDigest,
+				},
+				prior: prior, existed: true,
 			})
 		}
-		nextPlan.NextChunk++
-		advanceServiceStateV3Metrics(&nextPlan, len(rows), updates)
-		if err := s.commitServiceStateV3Chunk(
-			ctx, chunk, plan, nextPlan, updates, nil, nil, false,
+		if err := s.commitServiceStateV3Changes(
+			ctx, chunk, plan, changes, len(rows), removalCursor, nil,
 		); err != nil {
 			return ServiceStateV3ChunkResult{}, err
 		}
-		return ServiceStateV3ChunkResult{Applied: len(updates), Read: len(rows)}, nil
+		return ServiceStateV3ChunkResult{Applied: len(changes), Read: len(rows)}, nil
 	}
 	if logicalChunk != plan.TotalChunks-1 {
 		return ServiceStateV3ChunkResult{}, ErrInvalidServiceStateV3
@@ -1277,8 +1275,7 @@ func (s *Surreal) processServiceStateV3ActivationChunk(
 		summary.SummaryDigest != plan.SummaryDigest {
 		return ServiceStateV3ChunkResult{}, fmt.Errorf("activate service state v3 summary: %w", ErrConflict)
 	}
-	updates := make([]serviceStateUpdate, 0, len(projections))
-	nextPlan := plan
+	changes := make([]serviceStateV3Change, 0, len(projections))
 	now := storeTimestamp(time.Now())
 	for _, projection := range projections {
 		state, found := existing[projection.Service.Key]
@@ -1316,43 +1313,20 @@ func (s *Surreal) processServiceStateV3ActivationChunk(
 		if err := servicecatalogv3.SetServiceStateDigest(&next); err != nil {
 			return ServiceStateV3ChunkResult{}, err
 		}
-		if err := applyServiceStateV3CountDelta(&nextPlan, state, true, next); err != nil {
-			return ServiceStateV3ChunkResult{}, err
-		}
-		updates = append(updates, serviceStateUpdate{
-			State: next, ExpectedRevision: state.ControlRevision,
-			ExpectedDigest: state.StateDigest,
+		changes = append(changes, serviceStateV3Change{
+			update: serviceStateUpdate{
+				State: next, ExpectedRevision: state.ControlRevision,
+				ExpectedDigest: state.StateDigest,
+			},
+			prior: state, existed: true,
 		})
 	}
-	nextPlan.NextChunk++
-	advanceServiceStateV3Metrics(&nextPlan, len(projections), updates)
-	var nextSummary *servicecatalog.RepositoryState
-	if len(updates) != 0 {
-		candidateSummary := *summary
-		candidateSummary.LiveServiceCount = nextPlan.LiveServiceCount
-		candidateSummary.CurrentCount = nextPlan.CurrentCount
-		candidateSummary.StaleCount = nextPlan.StaleCount
-		candidateSummary.UnavailableCount = nextPlan.UnavailableCount
-		candidateSummary.ConflictCount = nextPlan.ConflictCount
-		candidateSummary.TombstoneCount = nextPlan.TombstoneCount
-		candidateSummary.ControlRevision++
-		candidateSummary.UpdatedAt = now
-		if err := servicecatalogv3.SetRepositoryStateDigest(&candidateSummary); err != nil {
-			return ServiceStateV3ChunkResult{}, err
-		}
-		if err := servicecatalogv3.ValidateRepositoryState(candidateSummary, true); err != nil {
-			return ServiceStateV3ChunkResult{}, err
-		}
-		nextPlan.SummaryControlRevision = candidateSummary.ControlRevision
-		nextPlan.SummaryDigest = candidateSummary.SummaryDigest
-		nextSummary = &candidateSummary
-	}
-	if err := s.commitServiceStateV3Chunk(
-		ctx, chunk, plan, nextPlan, updates, summary, nextSummary, false,
+	if err := s.commitServiceStateV3Changes(
+		ctx, chunk, plan, changes, len(projections), plan.RemovalCursor, summary,
 	); err != nil {
 		return ServiceStateV3ChunkResult{}, err
 	}
-	return ServiceStateV3ChunkResult{Applied: len(updates), Read: len(projections)}, nil
+	return ServiceStateV3ChunkResult{Applied: len(changes), Read: len(projections)}, nil
 }
 
 func (s *Surreal) serviceCatalogV3MemberContent(
@@ -1667,6 +1641,151 @@ func advanceServiceStateV3Metrics(
 	plan.UpdatedAt = storeTimestamp(time.Now())
 }
 
+type serviceStateV3Change struct {
+	update  serviceStateUpdate
+	prior   servicecatalog.ServiceState
+	existed bool
+}
+
+type serviceStateV3ChunkWrite struct {
+	plan    ServiceStateV3Plan
+	updates []serviceStateUpdate
+	summary *servicecatalog.RepositoryState
+}
+
+// nextServiceStateV3ChunkWrite reserves payload records for the plan and, during
+// activation, its matching summary. Member packing and the durable ordinal stay
+// unchanged: only the final prefix completes the member. Already-written states
+// are skipped by the ordinary projection/current-state checks after a retry.
+func nextServiceStateV3ChunkWrite(
+	plan ServiceStateV3Plan,
+	changes []serviceStateV3Change,
+	read int,
+	removalCursor string,
+	summary *servicecatalog.RepositoryState,
+) (serviceStateV3ChunkWrite, error) {
+	if validateServiceStateV3Plan(plan) != nil || len(changes) > read ||
+		read < 0 || read > MaxServiceStateV3ChunkRows ||
+		plan.SummaryControlRevision >= math.MaxInt64 ||
+		(plan.Phase == serviceStateV3Activate) != (summary != nil) {
+		return serviceStateV3ChunkWrite{}, ErrInvalidServiceStateV3
+	}
+	limit := MaxServiceStateV3ChunkRows - 1
+	if summary != nil {
+		if summary.Repository != plan.Repository ||
+			summary.ControlRevision != plan.SummaryControlRevision ||
+			summary.SummaryDigest != plan.SummaryDigest {
+			return serviceStateV3ChunkWrite{}, ErrInvalidServiceStateV3
+		}
+		limit--
+	}
+	count := min(len(changes), limit)
+	write := serviceStateV3ChunkWrite{
+		plan: plan, updates: make([]serviceStateUpdate, 0, count),
+	}
+	for _, change := range changes[:count] {
+		if change.update.State.Repository != plan.Repository ||
+			servicecatalogv3.ValidateServiceState(change.update.State, true) != nil {
+			return serviceStateV3ChunkWrite{}, ErrInvalidServiceStateV3
+		}
+		if err := applyServiceStateV3CountDelta(
+			&write.plan, change.prior, change.existed, change.update.State,
+		); err != nil {
+			return serviceStateV3ChunkWrite{}, err
+		}
+		write.updates = append(write.updates, change.update)
+	}
+	completedRead := 0
+	if count == len(changes) {
+		write.plan.NextChunk++
+		write.plan.RemovalCursor = removalCursor
+		completedRead = read
+	}
+	// These durable summaries describe committed writes and completed-member
+	// reads, not failed/retried read attempts or phase-wide work accounting.
+	advanceServiceStateV3Metrics(&write.plan, completedRead, write.updates)
+	if summary != nil && count != 0 {
+		nextSummary := *summary
+		nextSummary.LiveServiceCount = write.plan.LiveServiceCount
+		nextSummary.CurrentCount = write.plan.CurrentCount
+		nextSummary.StaleCount = write.plan.StaleCount
+		nextSummary.UnavailableCount = write.plan.UnavailableCount
+		nextSummary.ConflictCount = write.plan.ConflictCount
+		nextSummary.TombstoneCount = write.plan.TombstoneCount
+		nextSummary.ControlRevision++
+		nextSummary.UpdatedAt = write.plan.UpdatedAt
+		if err := servicecatalogv3.SetRepositoryStateDigest(&nextSummary); err != nil {
+			return serviceStateV3ChunkWrite{}, err
+		}
+		if err := servicecatalogv3.ValidateRepositoryState(nextSummary, true); err != nil {
+			return serviceStateV3ChunkWrite{}, err
+		}
+		write.plan.SummaryControlRevision = nextSummary.ControlRevision
+		write.plan.SummaryDigest = nextSummary.SummaryDigest
+		write.summary = &nextSummary
+	}
+	if err := validateServiceStateV3Plan(write.plan); err != nil {
+		return serviceStateV3ChunkWrite{}, err
+	}
+	return write, nil
+}
+
+func (s *Surreal) commitServiceStateV3Changes(
+	ctx context.Context,
+	chunk GenerationChunk,
+	plan ServiceStateV3Plan,
+	changes []serviceStateV3Change,
+	read int,
+	removalCursor string,
+	summary *servicecatalog.RepositoryState,
+) error {
+	// Validate every prefix before submitting the first one, just as the old
+	// single transaction validated every state and final summary before I/O.
+	// Store/lease/cancellation failure can still leave a valid committed prefix.
+	var writes [2]serviceStateV3ChunkWrite
+	writeCount := 0
+	projectedPlan, projectedSummary := plan, summary
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if writeCount == len(writes) {
+			return ErrInvalidServiceStateV3
+		}
+		write, err := nextServiceStateV3ChunkWrite(
+			projectedPlan, changes, read, removalCursor, projectedSummary,
+		)
+		if err != nil {
+			return err
+		}
+		writes[writeCount] = write
+		writeCount++
+		if len(write.updates) == len(changes) {
+			break
+		}
+		changes = changes[len(write.updates):]
+		projectedPlan = write.plan
+		if write.summary != nil {
+			projectedSummary = write.summary
+		}
+	}
+	for _, write := range writes[:writeCount] {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := s.commitServiceStateV3Chunk(
+			ctx, chunk, plan, write.plan, write.updates, summary, write.summary, false,
+		); err != nil {
+			return err
+		}
+		plan = write.plan
+		if write.summary != nil {
+			summary = write.summary
+		}
+	}
+	return nil
+}
+
 func (s *Surreal) commitServiceStateV3Chunk(
 	ctx context.Context,
 	chunk GenerationChunk,
@@ -1676,11 +1795,15 @@ func (s *Surreal) commitServiceStateV3Chunk(
 	nextSummary *servicecatalog.RepositoryState,
 	requireRemovalDrain bool,
 ) error {
+	payloadRecords := len(updates) + 1 // The plan is submitted even for a no-op.
+	if nextSummary != nil {
+		payloadRecords++
+	}
 	if validateServiceStateV3Plan(priorPlan) != nil ||
 		validateServiceStateV3Plan(nextPlan) != nil ||
 		priorPlan.Digest != nextPlan.Digest ||
 		priorPlan.ScheduleDigest != nextPlan.ScheduleDigest ||
-		len(updates) > MaxServiceStateV3ChunkRows {
+		payloadRecords > MaxServiceStateV3ChunkRows {
 		return ErrInvalidServiceStateV3
 	}
 	if expectedSummary != nil &&
@@ -1796,7 +1919,18 @@ LET $summary_ok = IF $expected_summary_revision = 0 THEN $summary = NONE
 LET $plan_ok = $plan != NONE AND $plan.digest = $plan_digest
 	AND $plan.schedule_digest = $schedule_digest AND $plan.state = 'running'
 	AND $plan.next_chunk = $expected_next_chunk
+	AND $plan.removal_cursor = $expected_removal_cursor
+	AND $plan.catalog_service_count = $expected_catalog_count
+	AND $plan.live_service_count = $expected_live_count
+	AND $plan.current_count = $expected_current_count
+	AND $plan.stale_count = $expected_stale_count
+	AND $plan.unavailable_count = $expected_unavailable_count
+	AND $plan.conflict_count = $expected_conflict_count
 	AND $plan.tombstone_count = $expected_tombstones
+	AND $plan.rows_read = $expected_rows_read
+	AND $plan.rows_written = $expected_rows_written
+	AND $plan.bytes_written = $expected_bytes_written
+	AND $plan.max_chunk_rows = $expected_max_chunk_rows
 	AND $plan.summary_control_revision = $expected_summary_revision
 	AND $plan.summary_digest = $expected_summary_digest;
 LET $lease_ok = $chunk != NONE AND $chunk.identity = $chunk_identity
@@ -1936,13 +2070,24 @@ COMMIT;`, map[string]any{
 		"repository": priorPlan.Repository, "stage": chunk.Stage,
 		"chunk_identity": chunk.Identity, "attempt": chunk.Attempt,
 		"lease": chunk.LeaseToken, "worker": chunk.ClaimedBy,
-		"expected_next_chunk":       priorPlan.NextChunk,
-		"expected_tombstones":       priorPlan.TombstoneCount,
-		"expected_summary_revision": priorPlan.SummaryControlRevision,
-		"expected_summary_digest":   priorPlan.SummaryDigest,
-		"require_removal_drain":     requireRemovalDrain,
-		"removal_cursor":            priorPlan.RemovalCursor,
-		"updates":                   encodedUpdates, "write_summary": writeSummary,
+		"expected_next_chunk":        priorPlan.NextChunk,
+		"expected_removal_cursor":    priorPlan.RemovalCursor,
+		"expected_catalog_count":     priorPlan.CatalogServiceCount,
+		"expected_live_count":        priorPlan.LiveServiceCount,
+		"expected_current_count":     priorPlan.CurrentCount,
+		"expected_stale_count":       priorPlan.StaleCount,
+		"expected_unavailable_count": priorPlan.UnavailableCount,
+		"expected_conflict_count":    priorPlan.ConflictCount,
+		"expected_tombstones":        priorPlan.TombstoneCount,
+		"expected_rows_read":         priorPlan.RowsRead,
+		"expected_rows_written":      priorPlan.RowsWritten,
+		"expected_bytes_written":     priorPlan.BytesWritten,
+		"expected_max_chunk_rows":    priorPlan.MaxChunkRows,
+		"expected_summary_revision":  priorPlan.SummaryControlRevision,
+		"expected_summary_digest":    priorPlan.SummaryDigest,
+		"require_removal_drain":      requireRemovalDrain,
+		"removal_cursor":             priorPlan.RemovalCursor,
+		"updates":                    encodedUpdates, "write_summary": writeSummary,
 		"summary_content": summaryContent,
 		"plan_content":    serviceStateV3PlanContent(nextPlan),
 	})

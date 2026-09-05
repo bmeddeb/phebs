@@ -520,6 +520,18 @@ their stated scopes. Full executor/launcher acceptance, V3 seal and freeze are
 not ready; no new archive format, engine/tool, weakened metric or higher bound
 has been selected to bypass this dependency.
 
+A fresh scope review distinguishes that acceptance dependency from authority:
+Ben's autonomous delegation already covers independently reviewed correctness
+prerequisites in the owned scale paths. The isolated service-state transaction
+headroom correction and a same-format restore feasibility review therefore
+continue. The frozen units, ceilings, archive compatibility and member-nine
+failure target remain unchanged; neither prerequisite is yet a freeze pass.
+The follow-up source audit additionally establishes a logical-B floor of 246
+state/scheduler write transactions against its frozen 170 maximum, before
+other writers. That separate work-count dependency also requires an actual
+production correctness/performance solution; the row-headroom fix cannot
+close it and the ceiling remains unchanged.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

@@ -4471,6 +4471,39 @@ repacked. Full Go write-site coverage and other phase work-event collectors are
 also missing. Complete executor/launcher acceptance, author/seal and freeze
 remain unready regardless of passing partial custody/control tests.
 
+An independent scope review clarified that this acceptance hold does not
+require new blanket permission: Ben's existing delegation covers reviewed
+scale-path correctness prerequisites preserving the actual frozen guarantees.
+The isolated `codex/t42.2l-store-headroom` slice will preserve immutable
+512-row members and the exact member-nine hook while reserving transaction
+space for the plan and optional summary. Its merge bar includes prefix-specific
+counts and summary digests, stale-plan/lease/selector/preimage fences, interrupted
+prefix replay and exact submitted-row tests. A separate same-format native
+archive replay design remains under review; no implementation or complete
+phase-work accounting is implied by that design investigation.
+
+The same whole-work review also proves a distinct source-level mismatch:
+successful logical-B state reconciliation/activation currently needs at least
+246 claim/state/completion write transactions, exceeding the frozen phase
+maximum of 170 before other writers. The row-headroom repair does not reduce
+that count. PLAN retains the derivation; a separately reviewed ordinary
+work-elision design and complete phase fit remain prerequisites, with no
+counter omission, boundary shift or raised ceiling authorized.
+
+The state-headroom implementation and focused tests now pass independent
+source review with all severity counts zero. Review caught and corrected a
+near-maximum summary-revision refusal in the second prebuilt prefix; a nil-store
+regression proves that refusal occurs before any first write. Pure payload,
+target-shape and prevalidation selectors passed. The first native selector
+failed in 13.354s because its fixture assumed a reaped priority-two lease would
+be claimed before untouched priority-zero future units. The corrected fixture
+uses actual claim/refuse/release transitions, proves future ordinals leave
+the plan unchanged, and the identical native selector passed in 15.437s.
+It covers prefix restart/repair/reap, cancellation, stale zero-update CAS,
+activation lease loss, old-selector readability and removal refill. These
+results are not a new full native member-nine rehearsal or exact-tree/store
+acceptance; immutable-commit broader gates and final cost review remain next.
+
 Scoped gate updates: exact literal-config correction 726e8953 passed independent
 source/test/cost review with all severity counts zero; its clean detached
 config/main pinned lint reported zero issues, and docs (0.515s), glossary and

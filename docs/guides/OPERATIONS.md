@@ -3172,9 +3172,17 @@ and repository summaries remain precious across backup/restore; restartable v3
 state plans are cleared on restore and reconstructed from the bounded surviving
 rows. Indexed desired/active catalog references pin their historical roots.
 Reconcile keeps the summary catalog-mismatched until its final CAS; activation
-updates at most 512 rows plus the matching summary atomically. The production
-scheduler runs these workers for repositories with an explicit service-catalog
-configuration; only the durable runtime selector makes their results visible.
+keeps each state prefix atomic with its matching summary and progress plan.
+Immutable catalog members remain at most 512 rows, but each write transaction
+reserves space for its controls: at most 511 changed state rows plus the plan
+for reconcile/removal, or 510 plus summary and plan for activation. A split
+member advances its scheduler position only after its final prefix; restart
+uses the durable prefix and unchanged-state checks without repacking members.
+The durable plan's read totals describe completed chunks, not all failed or
+retried reads and not the ceremony's phase-wide attempted-work meter. The
+production scheduler runs these workers for repositories with an explicit
+service-catalog configuration; only the durable runtime selector makes their
+results visible.
 
 The v3 read backend strict-opens the selected catalog root and summary before
 serving state. A bounded verified cache retains at most eight roots and 128
