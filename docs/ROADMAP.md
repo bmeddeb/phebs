@@ -468,6 +468,12 @@ zero-finding source/documentation/cost review, affected
 normal/race/static gates and retained-byte checks. The existing presentation
 missing-image docs-check failure remains; no merge or freeze is established.
 
+T42.2g adds protected private direct-image/fixed-input copies, hashing only
+after closing writers and applying native file/directory protection. This is
+not full tool/helper/profile admission or production bootstrap. Descriptor
+release leaves protected custody intact for the later detach-before-removal
+sequence; full launcher readiness and freeze remain open.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

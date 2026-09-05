@@ -943,6 +943,12 @@ independent source/documentation/cost review and repeated
 normal/race, affected static and retained-byte gates. Its owning T42.2f backlog
 record preserves the existing presentation-owned docs-check failure and the
 separate, still-open full production admission/launcher gates.
+T42.2g adds bounded protected private copies of direct images/fixed inputs.
+The native diagnostic found that owner-set immutable flags do not revoke an
+already-open writing descriptor; the constructor therefore closes its exclusive
+writer before protection and hashing. Close releases read descriptors without
+thawing or removing custody. This is not full tool/helper/profile admission or
+production bootstrap; author/executor/launcher readiness and freeze remain open.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

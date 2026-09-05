@@ -4316,6 +4316,25 @@ not rerun for this isolated, production-unwired accounting slice; its earlier
 exact-source result remains separately attributed above. Full production
 admission and launcher readiness remain open, not waived by these gates.
 
+**T42.2g · Protected direct-input custody** — stacked on T42.2f in
+`codex/t42.2g-immutable-input-custody`. Create bounded fresh private copies of
+direct images/fixed inputs, close every writing descriptor, protect their bytes
+and directory entries, and hash only after protection. AC: real native copy
+execution, write/rename/link refusal, source/copy isolation, read-only retained
+descriptors, metadata/path/cancellation refusal, exact partial-custody retention,
+descriptor-only close, focused normal/race/static gates and independent review.
+Darwin immutable flags do not revoke pre-opened writers; they are not a defense
+against hostile same-user flag clearing. Never flag installed tools or broad
+user directories. Unsupported platforms fail closed.
+
+This slice proves protected direct bytes, not full tool/input provenance,
+closed native Git helpers, profile admission or bootstrap. Initial fixed inputs
+and a later backup's publication-to-import custody remain separate. Release
+read descriptors without thaw/deletion so the eventual launcher preserves
+non-forced detach before source/data removal. Actual frozen flow limits,
+production wiring and full author/executor/launcher readiness still precede
+author/seal or freeze. Retained V1/V2 and `main` remain unchanged.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
