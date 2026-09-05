@@ -4629,6 +4629,16 @@ passed independent review with all severity counts zero. Exact
 `b62024847fd85ccf88597cc7617636059b59c502` passed targeted race three repeats
 (2.024s), pinned lint, docs (0.441s), glossary and whitespace; its next genuine
 parent rehearsal is running, not yet a readiness result.
+That exact `b62024847fd85ccf88597cc7617636059b59c502` genuine-parent
+rehearsal then passed in 807.55s (808.083s package): complete protected source/
+SDK/module custody admitted 67,406 entries, 55,689 files and 1,352,503,293 bytes
+in 7m4.495s; supplied Phebs/Zoekt builds took 43.390s/12.948s, independent
+reference admissions took 2m11.333s/1m58.661s, and actual Phebs/Surreal indexed
+query plus owner-drained stop took 31.335s. The actual prefix admitted 16 calls
+(Git 13, Surreal 2, Zoekt 1, compatibility 0), reserved 4,224 DA01 bytes and
+closed with native root/session joins. Successful exact fixture cleanup passed.
+This closes the small launch gate for those source bytes, not later semantic
+server wiring, full executor/launcher acceptance, integration or freeze.
 
 The next bootstrap slice adds a closed, digest-bound semantic-launch selector
 for Phebs owner-control mode, while retaining empty-mode rehearsal and author
@@ -4705,6 +4715,15 @@ one low owning-cost omission: the source pre/post continuity reads, their author
 mutex hold and the 16-byte observed plan-source field. The owning cost now lists
 the five successful continuity passes and their bounded controls/inventories.
 Source-identical re-review remains required.
+The exact parent-author cost re-review through `c097fc3c` closed all severity
+counts at zero. An opt-in actual full-population author rehearsal now composes
+genuine input/reference admission, a private unsealed V3 plan and all three
+actual CLI calls; its default disabled selector compiles/skips cleanly and lint
+passes, but no full CLI run is claimed. A separate inherited-FD test of the main
+semantic inlet exposed a shared pending author-stdio defect: inherited standard
+files do not automatically support Go deadlines. Both author stdin/stdout and
+parent endpoint ownership must use genuine pollable native transport before
+the full CLI rehearsal; no deadline is waived or false readiness recorded.
 Two independent call-graph reviews identified and resolved the return-A epoch
 conflict prospectively for V3: its server already runs in epoch three when the
 marker is produced, and epoch four belongs to process_restart. V3 now explicitly
