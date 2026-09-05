@@ -405,6 +405,13 @@ UI-owned missing fixture. The slice is not merged and supplies neither the
 private admission/controller/launcher nor a ceremony receipt. T42.2 execution and
 T42.3 posture/product review are still required before Epic 42 can close.
 
+T42.2b stacks the real checkout-observation prerequisite on T42.2a. It checks
+explicit commit/tree lineage, bounded index inventories and raw file bytes,
+including refusal of ignored build inputs. It produces no freeze binding or
+tool provenance; exact-reference executable builds and the remaining
+profile/controller/launcher work are still required. Both implementation
+layers remain unmerged; neither sealed plan is changed or executed.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens

@@ -4443,6 +4443,19 @@ This mode is not an operator repair command or execution authorization. It
 does not provide T42.2's remaining controller, real admission verifiers, signed
 launcher or complete telemetry. No V2 ceremony command is available yet.
 
+### T42.2b checkout observation prerequisite
+
+The implementation-only `InspectExecutionCheckout` helper measures the exact
+selected plan → integration → source lineage and raw checkout inputs. It
+requires a dedicated clean checkout: keep build outputs and tools outside it;
+ignored files are refused along with ordinary untracked and hidden-index
+inputs. It neither removes files nor executes checkout-local filters.
+
+This is a read-only prerequisite, not a freeze command. It holds no mutation
+lock, proves no binary came from those bytes, and returns no private freeze
+binding. Exact-reference tool provenance, profile admission, controller and
+signed launcher remain necessary before a terminal ceremony command exists.
+
 ## Developing phebs
 
 

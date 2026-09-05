@@ -308,6 +308,25 @@ identities to satisfy the oracle, silently enlarge budgets, or reuse the old
 T40.13/T41.10 launchers. The retained plan bytes remain untouched. No ceremony
 has been launched, and no execution command is ready.
 
+### T42.2b implementation: strict checkout observation
+
+`InspectExecutionCheckout` is the real checkout prerequisite, stacked after
+T42.2a. It takes explicit full plan/integration/source commits and an absolute
+Git image, measures both ancestry edges and tree IDs, and checks raw regular
+file bytes/modes against the exact tree and index. Git status, clean filters,
+stat-cache claims and hidden index flags cannot substitute for raw bytes.
+Ignored and untracked inputs, symlinks/gitlinks, grafts and shallow history
+refuse. Tests use real isolated Git repositories; no ceremonial stub tool is
+introduced. Bounds and admission-only costs are recorded in the owning
+T42.2b ADR in [PLAN.md](../../PLAN.md).
+
+The helper returns observations only: it does not issue
+`CheckoutAdmissionBinding`, protect a checkout from concurrent mutation, or
+prove executable build provenance. A later exact-reference build must cover
+real author/executor tools; profile, controller, native controls, launcher,
+review/rehearsal and explicit execution authority are still required. Keep
+outputs outside the dedicated checkout. V1 and V2 bytes stay unchanged.
+
 ### T42.2a implementation: exact generation-chunk reports
 
 After V2 integration at `9ac960c9`, the first T42.2 implementation slice binds

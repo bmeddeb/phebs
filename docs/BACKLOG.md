@@ -4133,6 +4133,19 @@ no fixture or merge-bar exception is invented here. The branch is unmerged.
 Next implementation is real checkout/tool admission, then closed profile
 admission and controller/phase wiring; no placeholder freeze CLI is supplied.
 
+**T42.2b · Strict checkout observation prerequisite** — stacked on T42.2a in
+`codex/t42.2b-checkout-tool-admission`. Measure externally selected commit/tree
+lineage using bounded closed-environment Git reads; compare raw tracked bytes
+and executable modes rather than trusting Git's stat cache or clean filters;
+refuse hidden/unmerged, ignored/untracked, grafted/shallow and unsupported
+inputs. Repeat authority/index checks at return. AC: real temporary-Git
+positive/refusal cases, focused normal/race, compilation/static/documentation
+and independent review gates. This slice deliberately issues no
+`CheckoutAdmissionBinding`: exact-reference tool builds, executable provenance,
+closed profile, remaining telemetry/native controls, controller and signed
+launcher still precede freeze. No fake author/executor binary or ceremony
+command is added. The slice is unmerged and changes neither sealed plan.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:

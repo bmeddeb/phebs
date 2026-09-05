@@ -133,7 +133,7 @@ type PressureRecoveryGeometry struct {
 
 // BuildExecutionFreeze constructs and validates one prospective execution
 // freeze. Tool identities must already have been measured from the executed
-// regular files; this package performs no filesystem or process discovery.
+// regular files; this constructor performs no filesystem or process discovery.
 func BuildExecutionFreeze(
 	plan Plan,
 	commits ExecutionCommits,

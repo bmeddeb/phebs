@@ -883,6 +883,12 @@ Remaining telemetry and native controls, real admission, phase routing and the
 signed launcher remain open. No integration is performed by this slice.
 This is not a freeze or ceremony result; Epic 42 still needs T42.2 execution
 and T42.3 review/closure.
+T42.2b adds a bounded real checkout observation on the next stacked branch:
+explicit commit/tree ancestry, exact index, raw blob bytes and executable modes,
+with ignored/untracked and hidden inputs refused. It does not issue the private
+checkout/tool freeze binding; exact-reference executable provenance and the
+remaining profile/controller/launcher work stay open. This slice remains
+unmerged, preserves both sealed plans, and authorizes no ceremony.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active
