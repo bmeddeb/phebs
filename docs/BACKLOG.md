@@ -4694,6 +4694,16 @@ V1/V2, two C5 reports, target/result predicates, zero requeues, one success,
 deadlines and all numerical bounds remain exact. Native guard/recovery costs
 remain separate from the read subtotal. Runtime wiring, counterexamples,
 independent exact review and complete receipt/size gates remain open.
+The selected native recovery primitive is now implemented over the existing
+recovery engine. It checks the captured exact binding/prior pointer/marker,
+installed complete target and actual live attempt before mutation, preserves
+the durable result if its observer fails, and refuses replay after marker
+consumption. Retained ordinary stage/startup/historical recovery stays unchanged.
+The final selected/retained normal selector passed in 33.082s, expanded selected
+and transition/runtime race in 37.009s, with package vet and pinned lint clean.
+Its owning cost separates the extra bounded binding/pointer/metadata and S2
+lease checks from existing full-generation recovery and the C5 observations.
+Independent exact review and main same-attempt/Advance/error wiring remain open.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation

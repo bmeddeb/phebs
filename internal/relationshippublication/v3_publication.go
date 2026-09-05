@@ -720,6 +720,16 @@ func recoverV3(
 	pins RecoveryPinStoreV3,
 	afterRecovery PublicationTransitionRecoveryObserverV3,
 ) (bool, error) {
+	return recoverMarkerV3(ctx, root, repository, pins, afterRecovery, nil)
+}
+
+func recoverMarkerV3(
+	ctx context.Context,
+	root, repository string,
+	pins RecoveryPinStoreV3,
+	afterRecovery PublicationTransitionRecoveryObserverV3,
+	selected *selectedRecoveryV3,
+) (bool, error) {
 	if pins == nil {
 		return false, errors.New("relationship v3 recovery pins are unavailable")
 	}
@@ -732,6 +742,9 @@ func recoverV3(
 	}
 	raw, err := readRegular(filepath.Join(base, "publishing.json"), MaxRootBytesV3)
 	if errors.Is(err, os.ErrNotExist) {
+		if selected != nil {
+			return false, fmt.Errorf("%w: selected relationship v3 marker absent", ErrInvalid)
+		}
 		return false, nil
 	}
 	if err != nil {
@@ -752,8 +765,16 @@ func recoverV3(
 	if err != nil {
 		return false, err
 	}
+	if selected != nil {
+		if err := selected.confirmMarker(ctx, root, base, target, marker); err != nil {
+			return false, err
+		}
+	}
 	var publication *PublicationV3
 	if _, err := os.Lstat(target); errors.Is(err, os.ErrNotExist) {
+		if selected != nil {
+			return false, fmt.Errorf("%w: selected relationship v3 target absent", ErrInvalid)
+		}
 		if marker.StageName == "" {
 			return false, fmt.Errorf("%w: v3 publishing generation absent", ErrInvalid)
 		}
@@ -778,6 +799,15 @@ func recoverV3(
 			ctx, root, repository, marker.Pointer.GenerationDigest, marker.Pointer.RootDigest,
 		)
 		if err != nil {
+			return false, err
+		}
+	}
+	if selected != nil {
+		if !publication.rootValue.RepositoryComplete || !publication.rootValue.AllServicesComplete ||
+			publication.rootValue.FailedServiceCount != 0 {
+			return false, fmt.Errorf("%w: selected relationship v3 target incomplete", ErrInvalid)
+		}
+		if err := selected.confirmLease(ctx); err != nil {
 			return false, err
 		}
 	}
