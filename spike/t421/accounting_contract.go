@@ -82,6 +82,16 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 		return errors.New("V3 dispatch budget phase inventory differs")
 	}
 	plan.Schema = PlanV3Schema
+	// Epoch three must already run the return-A configuration to produce its
+	// marker. Epoch four belongs to the later hard-death proof, so V3 recovers
+	// this marker in the same scheduler attempt after publication unwinds.
+	for index := range plan.FailurePoints {
+		point := &plan.FailurePoints[index]
+		if point.Name == "interrupted_publication" {
+			point.Trigger = "relationship_publication_same_attempt_exact_control_v3"
+			point.RecoveryAction = "unwind_publication_then_exclusive_exact_marker_recovery_then_advance_same_attempt"
+		}
+	}
 	plan.WorkEnvelope.Schema = WorkEnvelopeV3Schema
 	plan.WorkEnvelope.ChildProcessRoles = nil
 	plan.WorkEnvelope.MaximumChildProcessesPerPhase = 0
@@ -119,6 +129,7 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 	plan.Correction.ProcessAccountingPolicy = "controlled-dispatch-accounting-v1;V1-V2-and-historical-T40-exact;V3-process-history-not-established;no-sampling-relabelled-as-exact-execution"
 	plan.Correction.RequiredReadiness[1] = "post-logical-restart-authorized-search-caller-and-relationship-reads:zero-resolver-and-caller-materialization;controlled-Git-admissions-include-watcher-census-startup;owned-successful-server-starts-and-native-health-prove-epochs"
 	plan.Correction.RequiredReadiness = append(plan.Correction.RequiredReadiness,
+		"return-A-same-epoch-same-attempt-marker-hit-unwind-exclusive-exact-target-recovery-and-recovered-R-before-selector-advance;zero-requeue-one-success;not-startup-or-crash-recovery;process_restart-remains-separate-hard-death-proof",
 		"source-owned-dispatch-site-inventory-and-checked-operational-admission-preparation-cleanup-signing-budgets",
 		"bounded-inherited-transport-bootstrap-for-server-recovery-author-and-controller;settlement-and-phase-checkpoint-loss-refuses",
 		"full-V3-completed-and-worst-stopped-constructor-and-byte-cap-replay;retained-V1-V2-byte-exact",

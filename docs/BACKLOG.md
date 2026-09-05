@@ -4661,6 +4661,17 @@ repeats (6.815s), final race (3.199s), related request/inventory regressions
 (4.149s), vet, pinned lint, formatting and whitespace pass. Independent exact
 review and genuine reference rebuild/full-population CLI execution remain open;
 this is not full executor/admission/launcher acceptance or a freeze.
+Two independent call-graph reviews identified and resolved the return-A epoch
+conflict prospectively for V3: its server already runs in epoch three when the
+marker is produced, and epoch four belongs to process_restart. V3 now explicitly
+requires same-attempt publication unwind, exact selected-marker recovery under
+the existing exclusive mutation fence, recovered C5 observation before selector
+advancement, and the actual controller Advance before one successful completion.
+This is not startup/crash recovery; the later hard-death proof is unchanged.
+V1/V2, two C5 reports, target/result predicates, zero requeues, one success,
+deadlines and all numerical bounds remain exact. Native guard/recovery costs
+remain separate from the read subtotal. Runtime wiring, counterexamples,
+independent exact review and complete receipt/size gates remain open.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation

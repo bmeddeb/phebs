@@ -94,6 +94,10 @@ func TestAccountingV3RejectsCrossVersionAndPolicyMutation(t *testing.T) {
 		{"global_teardown_claim", func(p *Plan) { p.Teardown.RequireZeroChildren = true }},
 		{"unbound_sites", func(p *Plan) { p.ProcessAccounting.ProductionSiteInventorySHA256 = "" }},
 		{"unbound_budget", func(p *Plan) { p.WorkEnvelope.Phases[1].ControlledDispatchRoles[1].Maximum++ }},
+		{"legacy_marker_trigger", func(p *Plan) { p.FailurePoints[1].Trigger = "relationship_publication_exact_control_v1" }},
+		{"legacy_marker_recovery", func(p *Plan) {
+			p.FailurePoints[1].RecoveryAction = "recover_marker_owned_then_publish_exact_relationship_root"
+		}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			plan := accountingTestPlan(t)
@@ -105,6 +109,25 @@ func TestAccountingV3RejectsCrossVersionAndPolicyMutation(t *testing.T) {
 	}
 	if err := ValidateFrozenPlan(Plan{Schema: "unknown"}); err == nil {
 		t.Fatal("unknown schema reached a historical generator")
+	}
+}
+
+func TestAccountingV3MarkerRecoveryKeepsEpochAndObservationBounds(t *testing.T) {
+	plan := accountingTestPlan(t)
+	point := plan.FailurePoints[1]
+	if point.Name != "interrupted_publication" || point.Phase != "return_a" ||
+		point.Trigger != "relationship_publication_same_attempt_exact_control_v3" ||
+		point.RecoveryAction != "unwind_publication_then_exclusive_exact_marker_recovery_then_advance_same_attempt" {
+		t.Fatal("V3 marker continuation is not explicit")
+	}
+	legacy := frozenFailurePoints()[1]
+	point.Trigger, point.RecoveryAction = legacy.Trigger, legacy.RecoveryAction
+	if !reflect.DeepEqual(point, legacy) || len(correctedExecutionServerEpochs()) != 5 || len(plan.PhaseOrder) != 15 {
+		t.Fatal("marker correction changed target, deadlines, epochs or phases")
+	}
+	if bound := correctedReturnTransitionReadBound(); bound.Calls.Minimum != 2 || bound.Calls.Maximum != 2 ||
+		bound.ControlFileReads.Minimum != 10 || bound.ControlFileReads.Maximum != 10 {
+		t.Fatal("marker correction changed the two C5 observations")
 	}
 }
 
