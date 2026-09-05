@@ -4538,6 +4538,18 @@ sequencing. Independent source/test review found all severity counts zero.
 Five semantic/request-owner normal repeats passed in 1.826s, three race repeats
 in 2.772s, vet and repository-pinned lint pass. Ordinary nil-semantic serving
 is unchanged; immutable source/docs/cost attribution remains required.
+The actual inherited lifecycle mechanics test subsequently passed five normal
+repeats in 2.088s and three race repeats in 4.859s, with vet, pinned lint and
+independent source/test review all clean. It uses sixteen supplied owners,
+cursor/capacity and a captured failure callback; it does not prove native store,
+physical pressure, production lifetime failure or complete custody.
+One separate opt-in protected shared-author rehearsal is implemented and reviewed
+by the lead with no source/test/cost finding. It requires actual A/B/A-return
+through one root producer, thirteen admissions and fourteen mechanical phase
+handoffs, with seven never-launched producers explicitly canceled unused. Its
+opt-in-absent compile/skip (0.553s), vet, pinned lint and whitespace pass; genuine
+execution remains pending on a clean immutable tree. Empty accounting phases
+do not establish any server, archive, pressure, recovery or full ceremony phase.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map
