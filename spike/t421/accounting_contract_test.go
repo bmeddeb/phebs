@@ -125,7 +125,7 @@ func TestAccountingV3MarkerRecoveryKeepsEpochAndObservationBounds(t *testing.T) 
 	if !reflect.DeepEqual(point, legacy) || len(correctedExecutionServerEpochs()) != 5 || len(plan.PhaseOrder) != 15 {
 		t.Fatal("marker correction changed target, deadlines, epochs or phases")
 	}
-	if bound := correctedReturnTransitionReadBound(); bound.Calls.Minimum != 2 || bound.Calls.Maximum != 2 ||
+	if bound, err := correctedReturnTransitionReadBound(); err != nil || bound.Calls.Minimum != 2 || bound.Calls.Maximum != 2 ||
 		bound.ControlFileReads.Minimum != 10 || bound.ControlFileReads.Maximum != 10 {
 		t.Fatal("marker correction changed the two C5 observations")
 	}
