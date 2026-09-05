@@ -4458,8 +4458,9 @@ owns the design and dependency order. Execution remains excluded.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
-Full changed reconciliation/activation transactions submit 513/514 explicit
-records, and current native restore can import batches of 1,000, exceeding the
+Before the isolated headroom correction, full changed reconciliation/activation
+transactions submitted 513/514 explicit records; current native restore can
+still import batches of 1,000, exceeding the
 512-row limit. Successful chunk totals are not native attempted-transaction
 accounting. The native import path also has no admitted before-statement
 census/ACK, so rollback/interruption can erase the distinction between different
@@ -4503,6 +4504,36 @@ It covers prefix restart/repair/reap, cancellation, stale zero-update CAS,
 activation lease loss, old-selector readability and removal refill. These
 results are not a new full native member-nine rehearsal or exact-tree/store
 acceptance; immutable-commit broader gates and final cost review remain next.
+
+Exact headroom commit `99ab9547710c0f19fb6c4dc7b92e4876c1b0e53f` then passed
+fresh independent source/test/cost/documentation review with all severities
+zero. Its clean detached full-store gate passed in 1,213.721 seconds under the
+existing 30-minute allowance; pure headroom race tests (3.522s), the pure fresh
+activation-report race test (1.756s), store/command vet, pinned lint (zero
+issues), documentation, glossary and whitespace also passed. Native focused
+race and the real activation-report hook remain separate pending gates.
+A further source audit proves
+that no-removal alone would still leave at least 195 logical-phase writes:
+126 state transactions plus 69 unconditional startup field overwrites. The
+`codex/t42.2l-schema-batches` prerequisite now groups each of the five existing
+DDL batches in its own native transaction while preserving migration ordering
+and schema repair. AC: closed trusted-schema shape/count guard, fresh/populated
+reapply, missing-index repair, failure/metadata rollback and reopen, retained
+guard metadata retention, cancellation and no later migration after failure, scoped and
+broader store gates plus independent cost review. No-removal and complete
+phase-work accounting remain separate pending work.
+
+The schema source/test/cost/manual review closed with all severity counts zero
+after adding a four-minute cooperative test deadline below its five-minute
+outer limit. One initial test command stopped at compilation during the
+concurrent no-removal edit, before any database launch. On the subsequently
+compile-stable working tree, the native schema selector passed in 11.727s:
+fresh 490-result base transaction, idempotent reapply, populated late unique-index
+failure, explicit THROW rollback, metadata retention on the same connection,
+fresh connection and reopened engine, prevention of later migration, and
+successful repair. Guard evidence is metadata retention, not guard invocation.
+No database child remained. Pure shape/transport/cancellation tests passed
+three repetitions; immutable-commit attribution and broader gates remain next.
 
 Scoped gate updates: exact literal-config correction 726e8953 passed independent
 source/test/cost review with all severity counts zero; its clean detached

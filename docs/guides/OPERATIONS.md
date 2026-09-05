@@ -32,6 +32,22 @@ OIDC links, API-key hashes, and sessions (see *Backup & restore*). Deleting
 the whole data directory is an intentional auth reset as well as a reindex;
 the next start requires first-user enrollment.
 
+### Startup schema repair
+
+Every store open reapplies the existing schema definitions and migrations;
+there is no schema-cache shortcut. Each of the five definition groups now
+commits in one native transaction at its existing place between migrations.
+Missing indexes and overwritten field definitions are still repaired, and
+index repair can scan existing data.
+
+A later statement failure rolls back earlier definitions in that same group,
+including a newly installed guard beside a failing index, and prevents later
+migrations from running. Definitions already committed by earlier groups remain
+committed. Startup reports the error without retrying the failed group or
+falling back to individual statements. A transport failure does not establish
+whether the transaction committed; investigate the error before restarting.
+The source-definition guard is not a database-row or memory limit.
+
 ### Backup & restore
 
 Precious state is `$DATA/db` plus the exact config file — the users, OIDC

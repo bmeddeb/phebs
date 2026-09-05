@@ -531,6 +531,13 @@ state/scheduler write transactions against its frozen 170 maximum, before
 other writers. That separate work-count dependency also requires an actual
 production correctness/performance solution; the row-headroom fix cannot
 close it and the ceiling remains unchanged.
+The headroom correction is now committed and independently reviewed at
+`99ab9547710c0f19fb6c4dc7b92e4876c1b0e53f`; its clean detached full-store gate
+passed in 1,213.721 seconds. Focused native race and real-hook gates remain open.
+The next native-schema batching prerequisite preserves the existing schema
+repair and migration order while reducing separate startup write transactions.
+Even a prospective no-removal optimization would otherwise leave at least
+195 writes against 170. Neither prerequisite establishes complete phase fit.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only

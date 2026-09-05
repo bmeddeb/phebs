@@ -392,8 +392,10 @@ archive/restore; V3 changes process accounting, not this unit or its 512-row
 maximum. Current R ledgers and successful T41.10 state-chunk summaries do not
 implement that phase-wide meter.
 
-The writer at `internal/store/service_state_v3.go` and ordinary native restore
-expose these counterexamples, excluding conditional database-generated preimages:
+Before the isolated headroom correction, the writer at
+`internal/store/service_state_v3.go` and ordinary native restore exposed these
+counterexamples, excluding conditional database-generated preimages; native
+restore remains unresolved:
 
 | Reachable operation | Explicit submitted records in one transaction |
 |---|---:|
@@ -425,8 +427,21 @@ Cold catalog publication itself remains structurally bounded at 132 records,
 or at most 135 for a successor, and needs no atomicity split. A possible
 future state-prefix writer must preserve member identity, selector/preimage/CAS
 fences, cumulative prefix counts and complete-member hook timing; merely slicing
-updates while writing the final aggregate plan is incorrect. No such writer or
-schema/atomicity change is selected here.
+updates while writing the final aggregate plan is incorrect. The independently
+reviewed writer at `99ab9547710c0f19fb6c4dc7b92e4876c1b0e53f` now implements
+that row-headroom correction; broader exact-tree gates remain pending and it
+does not resolve the transaction-count or native-import dependencies.
+
+Even a proposed no-removal proof reducing state work to 126 transactions would
+not alone fit logical-B. Its new server epoch unconditionally reapplies 69
+top-level field-overwrite definitions in the base schema, without an enclosing
+transaction, before migration-marker checks. Documented per-statement native
+transactions give a source-derived floor of 195 including only those writes.
+The five always-submitted DDL groups contain 488/1/2/2/4 definitions (497 in
+total, 73 overwrites). The next isolated prerequisite selects native batching
+of each existing group, preserving intervening migrations and definition
+bytes; native correctness, the no-removal proof, other write coverage and
+whole-phase fit remain separate gates.
 
 Ordinary `internal/recovery/recovery.go` restores through the pinned native
 SurrealDB import command. The pinned engine's server-side
@@ -476,6 +491,8 @@ collector, protocol or numerical limit:
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-05 — T42.2l schema-batch steady-state cost | **Startup/restart still submits five SDK queries for the five existing DDL groups.** It adds five trusted-source scans and five wrapped query strings: 59,243 original bytes plus 75 transaction-control bytes, 59,318 in total, with a largest wrapped query of 57,607 bytes. The pinned engine returns ten additional BEGIN/COMMIT result entries. | Each group now retains its native transaction's metadata/index work, conflict exposure and engine resources until commit; missing-index rebuilds may scan populated tables. The definition-count guard bounds source declarations, not physical index rows, engine memory or the frozen submitted-row metric. There is no new Go mutex, descriptor, goroutine, child, cache, schema marker or retry, and no added query/request, sync, idle/no-op, publication or ordinary worker work. A retrying startup repeats the five groups and existing migrations; a lost response remains an attempted transaction with unknown outcome. Complete whole-phase accounting remains pending. |
+| 2026-09-05 — T42.2l native schema batches | **Execute each of the five existing always-submitted DDL groups in one explicit native transaction, in its original position around migrations.** Keep all definition bytes, ordering, IF NOT EXISTS and OVERWRITE behavior; do not introduce a marker/cache that skips schema repair or combine intervening migrations. The source-owned batches contain 488/1/2/2/4 definitions. A closed trusted-literal format/count check rejects unsupported shape or more than 512 declarations before submission; it is neither a general SurrealQL parser nor a definition of the phase meter's submitted data rows. | Native grouping deliberately rolls back an earlier successful DDL prefix if a later statement fails, including a newly installed guard beside a failed index in the same group. Successful meaning, idempotent reapply and repair still require pinned-engine tests, including metadata visibility after rollback/reopen and failure preventing subsequent migrations. Existing SDK statement/commit error propagation remains mandatory; lost response is not evidence of rollback or zero work, and no retry/fallback is added. One wider transaction retains the group's metadata/index work and conflicts for longer; missing-index rebuilds may still scan populated tables. This is not a whole-phase 170-transaction fit or freeze pass. |
 | 2026-09-05 — T42.2l state-prefix steady-state cost | **A service-member turn still reads at most 512 projections and their state rows; a removal turn processes at most 512 states plus one raw overflow row and retains its existing present-key census of at most 64 full members/32,768 keys.** The correction retains at most 512 change records with shallow prior-state values, a fixed two-write array containing at most 512 update copies in total, and at most two summary values. Prebuild adds one changed-state validation/hash pass and two plan validations per prefix before the existing commit-boundary validation; metric JSON encoding remains once per changed state. Activation constructs one or two summaries, each with its existing set/validate/boundary digest checks. Reconcile retains its all-projection count prevalidation and applies changed-row deltas again while building prefixes. | A member with at most 511 reconcile/removal changes or 510 activation changes still submits one transaction; a larger member submits two, adding exactly one selector SDK read and one transaction SDK call with its existing repository-preimage inventories/fences. Per-record row CAS/preimage checks still occur once per changed record on success; conditional database-generated preimages are not additional submitted payloads. The same filesystem mutation/backup fence and controller mutex span prebuild and the extra serial call; no new lock class or cadence is introduced. Each transaction adds eleven CAS comparisons/bindings. Partial retry rereads the member or refills its removal page, while completed-read totals deliberately exclude failed attempts. No new query/request work, periodic idle/no-op work, corpus/shard scan, cache, schema, FD, goroutine or child is introduced; state-producing startup/sync/retry work pays these worker costs. The additional real transaction and activation summary revision must enter the still-pending whole-phase meter. |
 | 2026-09-05 — T42.2l service-state transaction headroom | **Keep immutable 512-row catalog members and scheduler ordinals, but reserve explicit payload space for each progress plan and optional activation summary.** The shared writer accepts at most 511 changed states for reconcile/removal or 510 for activation, yielding at most two transactions per member. Prevalidate both concrete prefixes before the first submission; each persists only its own counts, committed-write metrics and summary identity. Only the final prefix charges completed-member reads and advances the member/cursor. | Enforce the total-record cap again at the shared commit boundary and CAS the complete mutable progress/count tuple, including write totals that distinguish net-zero status changes. Every prefix keeps candidate, selector, preimage, row revision and leased-scheduler fences. Restart reuses already-desired/current rows; partial removal retains its old cursor until a successful final page, and the final drain check remains mandatory. The logical member-nine single-row target stays one three-record write with its existing post-member hook. No schema, catalog packing or phase-meter claim changes; this does not solve the separate logical-phase transaction-count or native-import gaps. |
 | 2026-09-05 — T42.2l delegated accounting prerequisites | **Continue independently reviewed correctness work under Ben's existing freeze delegation.** The whole-work acceptance hold does not create a new user restriction against changing an owned production implementation. Isolate the service-state transaction headroom repair and a bounded same-format restore feasibility review before completing the phase-work collector. | Preserve the exact member-nine hook, immutable 512-row catalog members, selector/preimage/lease/progress fences, manifest-v8 archive components, admitted tool identities, top-level commands and all frozen measurement units and ceilings. A source-backed design gap is not a pass; no alternate parser/import implementation, new format/tool/engine or weakened evidence is selected here. |

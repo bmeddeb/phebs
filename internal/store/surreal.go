@@ -38,10 +38,11 @@ func OpenLocal(ctx context.Context, dataDir string) (*Surreal, error) {
 
 // OpenLocalMemory is the test bootstrap seam: the identical supervised child,
 // WS session, runtime descriptor, schema, and migrations as OpenLocal, but on
-// SurrealDB's volatile in-process "memory" engine. A fresh surrealkv data
-// directory pays ~6s of per-DEFINE fsync cost applying the schema; memory
-// applies it in ~40ms. Nothing survives Close, so production servers and any
-// test that reopens a data directory must use OpenLocal.
+// SurrealDB's volatile in-process "memory" engine. Before schema batching, a
+// fresh surrealkv directory paid ~6s of per-DEFINE fsync cost versus ~40ms in
+// memory; those historical timings do not describe the batched implementation.
+// Nothing survives Close, so production servers and any test that reopens a
+// data directory must use OpenLocal.
 func OpenLocalMemory(ctx context.Context, dataDir string) (*Surreal, error) {
 	return openLocal(ctx, dataDir, "", true)
 }
@@ -129,14 +130,8 @@ func openConnected(
 }
 
 func (s *Surreal) applySchema(ctx context.Context) error {
-	results, err := surrealdb.Query[any](ctx, s.db, schema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, schema, ""); err != nil {
 		return err
-	}
-	for i, r := range *results {
-		if r.Error != nil {
-			return fmt.Errorf("statement %d: %s", i, r.Error.Message)
-		}
 	}
 	if err := s.migrateGenerationResourceClasses(ctx); err != nil {
 		return err
@@ -165,14 +160,8 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateServiceRuntimeSelectorSchema(ctx); err != nil {
 		return err
 	}
-	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilityPreMigrationSchema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, apiKeyCapabilityPreMigrationSchema, "API key capability pre-migration "); err != nil {
 		return err
-	}
-	for i, r := range *results {
-		if r.Error != nil {
-			return fmt.Errorf("API key capability pre-migration statement %d: %s", i, r.Error.Message)
-		}
 	}
 	if err := s.migrateAPIKeyCapabilities(ctx); err != nil {
 		return err
@@ -189,23 +178,11 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateCallerGenerationPublications(ctx); err != nil {
 		return err
 	}
-	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilitySchema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, apiKeyCapabilitySchema, "API key capability schema "); err != nil {
 		return err
 	}
-	for i, r := range *results {
-		if r.Error != nil {
-			return fmt.Errorf("API key capability schema statement %d: %s", i, r.Error.Message)
-		}
-	}
-	results, err = surrealdb.Query[any](ctx, s.db, evidencePreMigrationSchema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, evidencePreMigrationSchema, "evidence pre-migration "); err != nil {
 		return err
-	}
-	for i, r := range *results {
-		if r.Error != nil {
-			return fmt.Errorf("evidence pre-migration statement %d: %s", i, r.Error.Message)
-		}
 	}
 	if err := s.migrateLegacyJobs(ctx); err != nil {
 		return err
@@ -213,16 +190,88 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateEvidenceRuns(ctx); err != nil {
 		return err
 	}
-	results, err = surrealdb.Query[any](ctx, s.db, evidenceIndexes, nil)
+	if err := s.applySchemaBatch(ctx, evidenceIndexes, "evidence index "); err != nil {
+		return err
+	}
+	return nil
+}
+
+// applySchemaBatch groups one existing trusted definition recipe, never data
+// migrations. A failed batch rolls back its formerly independent DDL prefix;
+// later migration stages still run only after this whole batch succeeds.
+func (s *Surreal) applySchemaBatch(ctx context.Context, definitions, statementLabel string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if _, err := schemaBatchDefinitionCount(definitions); err != nil {
+		return fmt.Errorf("%sdefinition batch: %w", statementLabel, err)
+	}
+	query := "BEGIN;\n" + definitions + "\nCOMMIT;"
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	results, err := surrealdb.Query[any](ctx, s.db, query, nil)
 	if err != nil {
 		return err
 	}
 	for i, r := range *results {
 		if r.Error != nil {
-			return fmt.Errorf("evidence index statement %d: %s", i, r.Error.Message)
+			return fmt.Errorf("%sstatement %d: %s", statementLabel, i, r.Error.Message)
 		}
 	}
 	return nil
+}
+
+// schemaBatchDefinitionCount checks only our trusted literal source format, not
+// arbitrary SurrealQL semantics or submitted-row accounting. Definitions start
+// at column zero, continuations are indented, and their sole semicolon ends the
+// statement. A new source format requires review instead of silent rewriting.
+func schemaBatchDefinitionCount(definitions string) (int, error) {
+	count, open := 0, false
+	for line := range strings.Lines(definitions) {
+		line = strings.TrimSuffix(line, "\n")
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "--") {
+			continue
+		}
+		if !open {
+			allowed := false
+			for _, kind := range [...]string{"TABLE", "FIELD", "INDEX", "EVENT"} {
+				if strings.HasPrefix(line, "DEFINE "+kind+" IF NOT EXISTS ") ||
+					strings.HasPrefix(line, "DEFINE "+kind+" OVERWRITE ") {
+					allowed = true
+					break
+				}
+			}
+			if !allowed || count == 512 {
+				return 0, errors.New("unsupported trusted definition source shape or count")
+			}
+			count++
+			open = true
+		} else if line[0] != ' ' && line[0] != '\t' {
+			return 0, errors.New("definition continuation must be indented")
+		}
+		for token := range strings.FieldsSeq(trimmed) {
+			switch strings.TrimSuffix(token, ";") {
+			case "BEGIN", "COMMIT", "CANCEL", "CONCURRENTLY", "DEFER", "ASYNC", "SELECT":
+				return 0, errors.New("unsupported transaction or asynchronous definition clause")
+			}
+		}
+		switch strings.Count(trimmed, ";") {
+		case 0:
+		case 1:
+			if !strings.HasSuffix(trimmed, ";") {
+				return 0, errors.New("definition terminator must end its source line")
+			}
+			open = false
+		default:
+			return 0, errors.New("definition source line has multiple terminators")
+		}
+	}
+	if open || count == 0 {
+		return 0, errors.New("empty or unterminated definition batch")
+	}
+	return count, nil
 }
 
 const candidateControlRevisionMigrationVersion = "t30.6b-candidate-control-v1"
