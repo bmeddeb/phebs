@@ -279,5 +279,8 @@ func (launch *t422SemanticLaunch) requestCurrent(ctx context.Context) bool {
 }
 
 func (launch *t422SemanticLaunch) sameRequest(admitted, current dispatchadmission.ProductionSemanticSnapshot) bool {
-	return launch.matches(current) && admitted == current
+	// Ordinary-owner drainage is live coordination state, not reservation
+	// identity. A command requiring that fence must check it separately.
+	return launch.matches(current) && admitted.Mode == current.Mode && admitted.InputSHA256 == current.InputSHA256 &&
+		admitted.ProducerID == current.ProducerID && admitted.Phase == current.Phase && admitted.RequestSequence == current.RequestSequence
 }

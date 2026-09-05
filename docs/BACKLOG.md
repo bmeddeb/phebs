@@ -4497,6 +4497,16 @@ live child, pending/carried refusal, lost ACK and immutable-terminal tests passe
 five focused normal repeats (0.387s), ten race repeats (1.383s), vet and pinned
 lint. Full package gates and independent immutable review remain required; this
 primitive alone supplies neither shared author composition nor archive readiness.
+Its full dispatch package subsequently passed five normal repeats (5.521s) and
+three race repeats (4.892s); immutable independent review remains open.
+The semantic snapshot now exposes the actual ordinary-owner drainage fact,
+separately from its immutable request identity. Initial registration/token and
+pending drainage stay false; completed drain stays true through preparation
+requests, and reopening/cancellation clear it. Shared snapshot tests passed ten
+normal repeats (1.459s) and five race repeats (2.172s); request-identity tests
+passed twenty normal repeats (0.716s) and ten race repeats (1.792s), with combined
+vet, pinned lint and whitespace clean. Independent immutable review remains;
+this is no claim of request drainage, native inactivity or authority readiness.
 Main now consumes the authenticated bounded V3 semantic launch record through
 an actual inherited Unix socket before config/source path opening. It checks
 the same config bytes once, keeps the fixed epoch/phase membership and one

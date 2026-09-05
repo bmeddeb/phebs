@@ -99,6 +99,15 @@ func TestT422SemanticEpochAndWindowIdentity(t *testing.T) {
 	if err != nil || !launch.sameRequest(snapshot, snapshot) {
 		t.Fatal("same-window snapshot refused", err)
 	}
+	for _, admittedDrained := range []bool{false, true} {
+		for _, currentDrained := range []bool{false, true} {
+			admitted, current := snapshot, snapshot
+			admitted.OrdinaryOwnersDrained, current.OrdinaryOwnersDrained = admittedDrained, currentDrained
+			if !launch.sameRequest(admitted, current) {
+				t.Fatal("ordinary-owner drainage changed an admitted request's identity")
+			}
+		}
+	}
 	for _, change := range []func(*dispatchadmission.ProductionSemanticSnapshot){
 		func(value *dispatchadmission.ProductionSemanticSnapshot) { value.Mode = "" },
 		func(value *dispatchadmission.ProductionSemanticSnapshot) { value.InputSHA256[0] ^= 1 },

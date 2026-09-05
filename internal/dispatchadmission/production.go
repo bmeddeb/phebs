@@ -88,6 +88,10 @@ type ProductionSemanticSnapshot struct {
 	ProducerID      uint32
 	Phase           uint32
 	RequestSequence uint64
+	// OrdinaryOwnersDrained describes the completed ordinary-owner fence only.
+	// An admitted preparation request may still be active; this is not request
+	// drainage, native inactivity, authority readiness or input custody.
+	OrdinaryOwnersDrained bool
 }
 
 // ProductionSemanticSelected remains true after a selected lifetime fails.
@@ -109,8 +113,16 @@ func ProductionSemanticState() (ProductionSemanticSnapshot, error) {
 	if client.closed || client.err != nil || client.ctx.Err() != nil || !client.ownersRequired {
 		return ProductionSemanticSnapshot{}, ErrProductionBootstrap
 	}
+	ordinaryOwnersDrained := false
+	if owners := client.owners; owners != nil {
+		owners.mu.Lock()
+		ordinaryOwnersDrained = owners.err == nil && owners.ctx.Err() == nil &&
+			owners.paused && owners.pausedReady && owners.active == 0
+		owners.mu.Unlock()
+	}
 	return ProductionSemanticSnapshot{Mode: lifetime.semanticMode, InputSHA256: lifetime.inputSHA256,
-		ProducerID: lifetime.producerID, Phase: client.phase, RequestSequence: client.ownerRequestSequence}, nil
+		ProducerID: lifetime.producerID, Phase: client.phase, RequestSequence: client.ownerRequestSequence,
+		OrdinaryOwnersDrained: ordinaryOwnersDrained}, nil
 }
 
 // AuthorSites names the real author's one shared native Git start boundary.

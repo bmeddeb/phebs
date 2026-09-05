@@ -72,7 +72,7 @@ func TestProductionBootstrapHelper(t *testing.T) {
 	if mode == "semantic" {
 		state, err := ProductionSemanticState()
 		if err != nil || !ProductionSemanticSelected() || state.Mode != ProductionSemanticV3 ||
-			state.InputSHA256 != ([32]byte{7}) || state.ProducerID != 1 || state.Phase != 1 || state.RequestSequence != 0 {
+			state.InputSHA256 != ([32]byte{7}) || state.ProducerID != 1 || state.Phase != 1 || state.RequestSequence != 0 || state.OrdinaryOwnersDrained {
 			t.Fatal("semantic input/phase did not bind inherited parent", err)
 		}
 		owners, err := NewProductionOwners(ctx, OwnerLimits{Owners: 1, Requests: 1})
@@ -450,6 +450,82 @@ func TestProductionSemanticSnapshotCannotSupplyOrRetainAuthority(t *testing.T) {
 			t.Fatal("selected unavailable semantic state fell back or returned authority", mode)
 		}
 	}
+}
+
+func TestProductionSemanticSnapshotOrdinaryOwnerFence(t *testing.T) {
+	old := productionRuntime.Load()
+	defer productionRuntime.Store(old)
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	client := &Client{ctx: ctx, ownersRequired: true, ownersReady: make(chan struct{}), phase: 9,
+		binding: [32]byte{4}, ownerRequestsOpen: true}
+	productionRuntime.Store(&ProductionLifetime{program: ProgramPhebs, semanticMode: ProductionSemanticV3,
+		producerID: 4, inputSHA256: [32]byte{9}, client: client})
+	assertDrained := func(want bool) {
+		t.Helper()
+		state, err := ProductionSemanticState()
+		if err != nil || state.OrdinaryOwnersDrained != want {
+			t.Fatalf("ordinary owner fence = %v, want %v: %v", state.OrdinaryOwnersDrained, want, err)
+		}
+	}
+	assertDrained(false) // Initial token precedes owner registration and drainage.
+	owners, err := NewOwners(ctx, OwnerLimits{Owners: 1, Requests: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := BindProductionOwners(owners); err != nil {
+		t.Fatal(err)
+	}
+	assertDrained(false) // Registration and an empty active set are not a fence.
+	initialRequest, err := EnterProductionRequest(ctx, owners, ownerRequestToken(client.binding, client.phase, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertDrained(false) // A valid initial token is not ordinary-owner drainage.
+	initialRequest.End()
+	turn, err := owners.Enter(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pauseDone := make(chan error, 1)
+	go func() { pauseDone <- owners.Pause(ctx) }()
+	ownerTestWait(t, owners, func() bool { return owners.paused })
+	assertDrained(false) // A requested fence must still join the actual turn.
+	turn.End()
+	if err := phaseTestResult(t, pauseDone); err != nil {
+		t.Fatal(err)
+	}
+	assertDrained(true)
+	if err := owners.FenceRequests(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := owners.OpenRequests(); err != nil {
+		t.Fatal(err)
+	}
+	request, err := EnterProductionRequest(ctx, owners, ownerRequestToken(client.binding, client.phase, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertDrained(true) // A preparation request does not reopen ordinary owners.
+	requestDone := make(chan error, 1)
+	go func() { requestDone <- owners.FenceRequests(ctx) }()
+	ownerTestWait(t, owners, func() bool { return owners.requestsFenced })
+	assertDrained(true) // Nor does it attest completion of that request's tail.
+	request.End()
+	if err := phaseTestResult(t, requestDone); err != nil {
+		t.Fatal(err)
+	}
+	assertDrained(true)
+	if err := owners.Resume(); err != nil {
+		t.Fatal(err)
+	}
+	assertDrained(false)
+	if err := owners.Pause(ctx); err != nil {
+		t.Fatal(err)
+	}
+	assertDrained(true)
+	owners.cancel(ErrIncomplete)
+	assertDrained(false)
 }
 
 func TestProductionBootstrapMalformedAndCanceled(t *testing.T) {
