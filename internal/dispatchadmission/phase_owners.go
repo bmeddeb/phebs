@@ -91,19 +91,13 @@ func ownerRequestToken(binding [32]byte, phase uint32, sequence uint64) string {
 	return hex.EncodeToString(digest[:])
 }
 
-// ProductionRequestAllowed runs before the complete auth/session/request stack.
-// Absent owner control leaves the ordinary and mechanical-only paths unchanged.
-func ProductionRequestAllowed(token string) bool {
-	runtime := productionRuntime.Load()
-	if runtime == nil {
-		return true
-	}
-	return runtime.client.ownerRequestAllowed(token)
-}
-
 func (client *Client) ownerRequestAllowed(token string) bool {
 	client.mu.Lock()
 	defer client.mu.Unlock()
+	return client.ownerRequestAllowedLocked(token)
+}
+
+func (client *Client) ownerRequestAllowedLocked(token string) bool {
 	if !client.ownersRequired {
 		return true
 	}
@@ -112,6 +106,26 @@ func (client *Client) ownerRequestAllowed(token string) bool {
 	}
 	expected := ownerRequestToken(client.binding, client.phase, client.ownerRequestSequence)
 	return subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1
+}
+
+// EnterProductionRequest atomically binds token validation to the actual owner
+// slot. Lock order is client then owners; control never holds these in reverse.
+// Invalid tokens consume no slot and never reach the ordinary auth/session stack.
+func EnterProductionRequest(ctx context.Context, owners *Owners, token string) (OwnerTurn, error) {
+	runtime := productionRuntime.Load()
+	if runtime == nil {
+		return owners.EnterRequest(ctx)
+	}
+	return runtime.client.enterOwnerRequest(ctx, owners, token)
+}
+
+func (client *Client) enterOwnerRequest(ctx context.Context, owners *Owners, token string) (OwnerTurn, error) {
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	if client.ownersRequired && (owners == nil || owners != client.owners) || !client.ownerRequestAllowedLocked(token) {
+		return OwnerTurn{}, ErrFenced
+	}
+	return owners.EnterRequest(ctx)
 }
 
 // BindProductionOwners registers exactly the main-owned barrier, after main has

@@ -4546,6 +4546,15 @@ The broader owner-hook ordinary regressions passed full command (140.162s),
 store runner (135.888s), auth (0.810s), lifecycle (4.611s), sync (67.278s) and
 generation scheduler (1.004s). Full store and independent corrected-source
 review are not implied by the runner selector.
+Independent exact semantic-owner review of
+`9a19d34755d3100a77fa57a87d210b1ff0049a3b` found zero critical/high/low
+and one medium token-check/request-slot race: a descheduled request could pass
+an old token check before drainage and acquire a slot after a later window
+opened. One shared atomic entry helper now validates the token and reserves the
+bound owner slot in client-to-owner lock order, with no handler work under
+either lock. The deterministic interleaving and existing control selectors
+passed twenty race repeats in 5.734s; command owner/flag boundaries passed three
+normal repeats in 1.532s. Exact corrected-source re-review remains required.
 The genuine parent serve slice now accepts only linked protected build/tool
 custody, owns a native source-mutation lease, generates its protected config
 and performs real inherited bootstrap. Its fixed tiny source and conservative
@@ -4578,6 +4587,17 @@ The actual author's exact-source reference-role routing and wrong-command
 refusal passed three repeats in 0.667s; the absent executor remains refused.
 Independent review, real parent author custody, full CLI execution and complete
 executor/admission/launcher acceptance remain open.
+Independent exact-core review of `23281900b5f0e3c7879eeac1b28808989bd87ce1`
+found zero critical/high/medium code findings and one low owning-cost omission.
+PLAN now distinguishes the two new addition-generator passes and their bounded
+temporary T41/catalog/mapping allocations from the small retained descriptors;
+no source or frozen bytes changed for this correction.
+Independent exact request/CLI review of
+`8edb2b0573d144307273a798ac2c7b66765df428` found zero critical/high/medium
+and one low cost/cancellation wording issue. The owning row now records full
+plan regeneration and addition hashing on every author process, with context
+checks around rather than within the existing contextless generators. Actual
+parent process deadlines and uncertain-custody retention remain mandatory.
 
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation

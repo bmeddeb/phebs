@@ -22,11 +22,7 @@ func t422OwnerHTTPHandler(owners *dispatchadmission.Owners, next http.Handler) h
 		return next
 	}
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if !dispatchadmission.ProductionRequestAllowed(request.Header.Get(dispatchadmission.ProductionRequestHeader)) {
-			http.Error(writer, "request admission unavailable", http.StatusServiceUnavailable)
-			return
-		}
-		turn, err := owners.EnterRequest(request.Context())
+		turn, err := dispatchadmission.EnterProductionRequest(request.Context(), owners, request.Header.Get(dispatchadmission.ProductionRequestHeader))
 		if err != nil {
 			http.Error(writer, "request admission unavailable", http.StatusServiceUnavailable)
 			return

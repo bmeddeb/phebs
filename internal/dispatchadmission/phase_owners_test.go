@@ -6,9 +6,96 @@ import (
 	"context"
 	"errors"
 	"os/exec"
+	"runtime"
 	"testing"
 	"time"
 )
+
+func TestOwnerRequestTokenAndSlotAreOneAdmission(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	owners, err := NewOwners(ctx, OwnerLimits{Owners: 1, Requests: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ready := make(chan struct{})
+	close(ready)
+	client := &Client{ctx: ctx, binding: [32]byte{1}, phase: 1, ownersRequired: true, owners: owners,
+		ownersReady: ready, ownerRequestsOpen: true}
+	token := ownerRequestToken(client.binding, 1, 0)
+	if turn, err := client.enterOwnerRequest(ctx, owners, "invalid"); err == nil || turn.owners != nil || owners.requests != 0 {
+		t.Fatal("invalid token consumed an owner slot")
+	}
+	type admitted struct {
+		turn OwnerTurn
+		err  error
+	}
+	entry := make(chan admitted, 1)
+	owners.mu.Lock()
+	go func() {
+		turn, err := client.enterOwnerRequest(ctx, owners, token)
+		entry <- admitted{turn, err}
+	}()
+	// Hold the actual reservation mutex until entry holds the token mutex.
+	// This schedules the exact former check/reservation gap without time sleeps.
+	for client.mu.TryLock() {
+		client.mu.Unlock()
+		if ctx.Err() != nil {
+			owners.mu.Unlock()
+			t.Fatal("request did not reach atomic reservation")
+		}
+		runtime.Gosched()
+	}
+	drained := make(chan error, 1)
+	go func() { drained <- client.controlOwners(ctx, phaseControlFrame{op: phaseOwnerDrain}) }()
+	owners.mu.Unlock()
+	result := <-entry
+	if result.err != nil {
+		t.Fatal(result.err)
+	}
+	ended := false
+	defer func() {
+		if !ended {
+			result.turn.End()
+		}
+	}()
+	for {
+		owners.mu.Lock()
+		fenced := owners.requestsFenced
+		owners.mu.Unlock()
+		if fenced {
+			break
+		}
+		if ctx.Err() != nil {
+			t.Fatal("concurrent drain did not fence request admission")
+		}
+		runtime.Gosched()
+	}
+	select {
+	case err := <-drained:
+		t.Fatal("drained before the token-bound request tail", err)
+	default:
+	}
+	result.turn.End()
+	ended = true
+	if err := <-drained; err != nil {
+		t.Fatal(err)
+	}
+	if err := client.controlOwners(ctx, phaseControlFrame{op: phaseRequestsOpen, sequence: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if turn, err := client.enterOwnerRequest(ctx, owners, token); err == nil || turn.owners != nil {
+		t.Fatal("old token entered the later observation window")
+	}
+	turn, err := client.enterOwnerRequest(ctx, owners, ownerRequestToken(client.binding, 1, 1))
+	if err != nil {
+		t.Fatal("current observation token was refused", err)
+	}
+	turn.End()
+	if err := client.controlOwners(ctx, phaseControlFrame{op: phaseRequestsFence}); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func phaseOwnersPair(t *testing.T, client *Client, timeout time.Duration) (*PhaseControl, <-chan error) {
 	t.Helper()
