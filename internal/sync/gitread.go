@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -60,7 +61,7 @@ func runGitRaw(ctx context.Context, dir string, args ...string) ([]byte, error) 
 	var stdout bytes.Buffer
 	var stderr gitobj.StderrBuffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	if err := cmd.Run(); err != nil {
+	if err := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteSyncGitRead, cmd); err != nil {
 		return nil, gitobj.WrapError(ctx, args, err, stderr.String())
 	}
 	return stdout.Bytes(), nil

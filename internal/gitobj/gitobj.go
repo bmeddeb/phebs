@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -38,7 +39,7 @@ const maxStderrBytes = 64 << 10
 // network writers keep their own runners.
 func Command(ctx context.Context, dir string, args ...string) *exec.Cmd {
 	full := append([]string{"--no-replace-objects", "-c", "core.quotePath=false"}, args...)
-	cmd := exec.CommandContext(ctx, "git", full...)
+	cmd := exec.CommandContext(ctx, dispatchadmission.ProductionTool("git"), full...)
 	cmd.Dir = dir
 	env := make([]string, 0, len(os.Environ())+6)
 	for _, value := range os.Environ() {
@@ -108,21 +109,22 @@ func Output(ctx context.Context, dir string, maxOutput int64, args ...string) ([
 	}
 	var stderr StderrBuffer
 	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteGitOutput, cmd)
+	if err != nil {
 		return nil, err
 	}
 	out, readErr := io.ReadAll(io.LimitReader(stdout, maxOutput+1))
 	if readErr != nil {
 		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
+		_ = handle.Wait()
 		return nil, readErr
 	}
 	if int64(len(out)) > maxOutput {
 		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
+		_ = handle.Wait()
 		return nil, fmt.Errorf("git output exceeds %d-byte limit: %w", maxOutput, ErrTooLarge)
 	}
-	if err := cmd.Wait(); err != nil {
+	if err := handle.Wait(); err != nil {
 		return nil, WrapError(ctx, args, err, stderr.String())
 	}
 	return out, nil

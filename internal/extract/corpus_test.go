@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -266,7 +267,8 @@ func TestStopTreeCommandKillsBlockedWriter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := cmd.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(t.Context(), dispatchadmission.SiteExtractTree, cmd)
+	if err != nil {
 		t.Fatal(err)
 	}
 	// Prove the child reached its writer before abandoning the pipe.
@@ -277,7 +279,7 @@ func TestStopTreeCommandKillsBlockedWriter(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		stopTreeCommand(cmd, stdout)
+		stopTreeCommand(cmd, stdout, &handle)
 		close(done)
 	}()
 	select {

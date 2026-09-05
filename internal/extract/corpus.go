@@ -16,6 +16,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
@@ -241,7 +242,8 @@ func (g *gitCorpus) walkTree(
 	cmd.WaitDelay = abortTimeout
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(cmdCtx, dispatchadmission.SiteExtractTree, cmd)
+	if err != nil {
 		return fmt.Errorf("walk corpus: start git: %w", err)
 	}
 
@@ -407,13 +409,13 @@ func (g *gitCorpus) walkTree(
 	}
 	if walkErr != nil {
 		cancel()
-		stopTreeCommand(cmd, stdout)
+		stopTreeCommand(cmd, stdout, &handle)
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return fmt.Errorf("walk corpus: %w", ctxErr)
 		}
 		return walkErr
 	}
-	if err := cmd.Wait(); err != nil {
+	if err := handle.Wait(); err != nil {
 		return gitobj.WrapError(ctx, args, err, stderr.String())
 	}
 	if len(candidateSymlinks) > 0 {
@@ -764,7 +766,8 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 	cmd.WaitDelay = abortTimeout
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(cmdCtx, dispatchadmission.SiteExtractSubtree, cmd)
+	if err != nil {
 		return false, fmt.Errorf("lookup corpus root: start git: %w", err)
 	}
 
@@ -773,14 +776,14 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 	pathBytes := 0
 	for {
 		if err := ctx.Err(); err != nil {
-			stopTreeCommand(cmd, stdout)
+			stopTreeCommand(cmd, stdout, &handle)
 			return false, fmt.Errorf("lookup corpus root: %w", err)
 		}
 		record, readErr := readNULRecord(reader, maxTreeRecordBytes+31)
 		if len(record) > 0 {
 			records++
 			if records > maxCorpusLookupRecords {
-				stopTreeCommand(cmd, stdout)
+				stopTreeCommand(cmd, stdout, &handle)
 				return false, measuredOperationLimitError(
 					fmt.Sprintf(
 						"lookup corpus root %q exceeds %d-record probe limit",
@@ -792,12 +795,12 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 			}
 			entry, parseErr := parseSizedTreeRecord(record)
 			if parseErr != nil {
-				stopTreeCommand(cmd, stdout)
+				stopTreeCommand(cmd, stdout, &handle)
 				return false, parseErr
 			}
 			pathBytes += len(entry.path)
 			if pathBytes > maxCorpusLookupPathBytes {
-				stopTreeCommand(cmd, stdout)
+				stopTreeCommand(cmd, stdout, &handle)
 				return false, measuredOperationLimitError(
 					fmt.Sprintf(
 						"lookup corpus root %q exceeds %d-byte path probe limit",
@@ -813,19 +816,19 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 				(entry.mode == "100644" || entry.mode == "100755") &&
 				entry.size >= 0 &&
 				checkCorpusPath(entry.path) == nil {
-				stopTreeCommand(cmd, stdout)
+				stopTreeCommand(cmd, stdout, &handle)
 				return true, nil
 			}
 		}
 		if readErr != nil {
 			if !errors.Is(readErr, io.EOF) {
-				stopTreeCommand(cmd, stdout)
+				stopTreeCommand(cmd, stdout, &handle)
 				return false, fmt.Errorf("lookup corpus root: read tree: %w", readErr)
 			}
 			break
 		}
 	}
-	if err := cmd.Wait(); err != nil {
+	if err := handle.Wait(); err != nil {
 		return false, gitobj.WrapError(ctx, args, err, stderr.String())
 	}
 	return false, nil
@@ -1049,10 +1052,10 @@ func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {
 // stopTreeCommand synchronously closes, kills, and reaps a tree walk whose
 // output is no longer being consumed. Closing first prevents a writer from
 // remaining blocked on a full pipe while Process.Kill and Wait race.
-func stopTreeCommand(cmd *exec.Cmd, stdout io.Closer) {
+func stopTreeCommand(cmd *exec.Cmd, stdout io.Closer, handle *dispatchadmission.Handle) {
 	_ = stdout.Close()
 	if cmd.Process != nil {
 		_ = cmd.Process.Kill()
 	}
-	_ = cmd.Wait()
+	_ = handle.Wait()
 }

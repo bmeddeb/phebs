@@ -4490,6 +4490,23 @@ zero issues and affected vet passes. These are pre-review implementation
 results, not the full repository module footprint, full admission or freeze
 readiness. Immutable-source independent review and exact-tree gates remain.
 
+T42.2k's early bootstrap and sixteen source-owned production adapters are
+implemented, not yet the genuine parent launch/rehearsal. Real inherited
+Phebs/author probe processes pass both-endpoint binding, alias/swapped endpoint,
+wrong recipe/site/zero budget, cancellation and bounded Close regressions. An
+isolated command-boundary test exposed an absent-FD path that could adopt the Go
+runtime's poller descriptor; native socket/parent checks now precede ownership,
+and the exact refusal returns normally. Exact version-output overflow kills and
+joins only its owned child. Dispatch package normal five repeats (4.022s),
+race three repeats (3.830s), command-boundary three repeats (1.173s), Linux
+cross-build and pinned lint pass. The seven affected Git/source/candidate/
+extraction/repository/catalog/sync packages also passed full normal and race
+checks; the largest race result was extraction at 84.275s. The strengthened
+typed inventory checks each fixed site constant and counts internal forwarding
+boundaries. These intermediate results do not replace exact-tree independent
+review, full store/command gates, genuine protected-parent Phebs/Surreal
+readiness, semantic owner quiescence or full admission/freeze.
+
 The initial delegated-run host observation found 74 GiB backing space available
 against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation
 continues; freeze remains closed until real host admission satisfies that bound.

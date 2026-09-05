@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/repopath"
 )
@@ -578,7 +579,8 @@ func walkTree(
 	}
 	var stderr gitobj.StderrBuffer
 	command.Stderr = &stderr
-	if err := command.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteCandidateTree, command)
+	if err != nil {
 		return err
 	}
 	reader := bufio.NewReaderSize(stdout, 64<<10)
@@ -606,10 +608,10 @@ func walkTree(
 	}
 	if walkErr != nil {
 		_ = command.Process.Kill()
-		_ = command.Wait()
+		_ = handle.Wait()
 		return walkErr
 	}
-	if err := command.Wait(); err != nil {
+	if err := handle.Wait(); err != nil {
 		return gitobj.WrapError(ctx, args, err, stderr.String())
 	}
 	return nil

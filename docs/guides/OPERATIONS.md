@@ -4492,6 +4492,22 @@ host/profile admission, real author/executor/controller, native controls,
 launcher and rehearsal remain required. There is still no freeze or ceremony
 terminal command to run.
 
+### T42.2k private dispatch bootstrap
+
+The implementation-only `PHEBS_T422_DISPATCH=parent-bound-v1` selector requires
+two exact inherited parent-owned endpoints; setting the variable yourself is
+not admission and refuses without them. The selected Phebs lifetime binds its
+sixteen source-owned native launch sites to protected parent recipes, while the
+corpus author has a separate Git-only program. Invalid endpoints, recipes,
+budgets or lost transport cannot fall back to ordinary uncounted launches.
+Without the selector, ordinary Phebs behavior remains unchanged.
+
+This wiring is not yet the genuine full admission/launcher or a terminal
+ceremony command. It counts permitted controlled launch attempts, not native
+process births or successful child outcomes. Dispatch pause is not worker or
+store quiescence; the owning executor must drain semantic work before phase
+fencing, retain actual input custody and join application/native cleanup.
+
 ## Developing phebs
 
 

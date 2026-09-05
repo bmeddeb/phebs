@@ -13,16 +13,17 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, dispatchadmission.ProductionTool("git"), args...)
 	cmd.Dir = dir
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
-	if err := cmd.Run(); err != nil {
+	if err := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteSyncGit, cmd); err != nil {
 		return "", gitCommandError(ctx, args, out.String(), err)
 	}
 	return strings.TrimSpace(out.String()), nil

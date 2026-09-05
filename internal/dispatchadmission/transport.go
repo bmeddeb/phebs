@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"math"
 	"net"
 	"os"
 	"time"
@@ -119,7 +120,59 @@ func (c *Controller) endStream(producer uint32) error {
 // and blocks until terminal closure or failure. Call it once per producer.
 // Idle reads need no activity heartbeat; partial frames and ACK writes have the
 // frozen timeout. Both context cancellation and controller failure close the FD.
-func (c *Controller) Serve(ctx context.Context, producer uint32, pid int, file *os.File) (err error) {
+func (c *Controller) Serve(ctx context.Context, producer uint32, pid int, file *os.File) error {
+	return c.serve(ctx, producer, pid, file, nil)
+}
+
+// ServeChecked adds the owning parent's synchronous pre-admission resource
+// check. This callback is not an admission issuer: the real launcher must close
+// over its genuine opaque custody, never caller-authored verification claims.
+// Cheap frame/site checks precede it and accept revalidates after it. No state
+// mutex spans filesystem work. The check must honor its bounded context; no
+// detached callback goroutine or retry is created. Settlement is never checked.
+func (c *Controller) ServeChecked(ctx context.Context, producer uint32, pid int, file *os.File, check func(context.Context, Site) error) error {
+	if check == nil {
+		if file != nil {
+			_ = file.Close()
+		}
+		return c.fail(ErrConfig)
+	}
+	return c.serve(ctx, producer, pid, file, check)
+}
+
+func (c *Controller) checkedAdmissionSite(producer uint32, request frame) (Site, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.checkLocked(); err != nil {
+		return Site{}, err
+	}
+	p := c.producers[producer]
+	if p != nil && p.hardDeath {
+		return Site{}, errTerminating
+	}
+	if p == nil || !p.attached || p.closed || request.binding != p.binding ||
+		p.sequence == math.MaxUint64 || request.sequence != p.sequence+1 || request.phase != c.phases[c.phase].ID {
+		return Site{}, c.failLocked(ErrProtocol)
+	}
+	site, known := p.sites[request.site]
+	if !known || p.ordinal == math.MaxUint64 || request.ordinal != p.ordinal+1 || p.checkpoint == request.phase {
+		return Site{}, c.failLocked(ErrProtocol)
+	}
+	if c.fenced {
+		return Site{}, c.failLocked(ErrFenced)
+	}
+	if len(p.active) >= c.limits.ActivePerProducer || c.attempts >= c.limits.Attempts {
+		return Site{}, c.failLocked(ErrLimit)
+	}
+	for index, role := range c.phases[c.phase].Roles {
+		if role.Role == site.Role && c.counts[c.phase].Roles[index].Attempts < role.Attempts {
+			return site, nil
+		}
+	}
+	return Site{}, c.failLocked(ErrLimit)
+}
+
+func (c *Controller) serve(ctx context.Context, producer uint32, pid int, file *os.File, check func(context.Context, Site) error) (err error) {
 	if ctx == nil || ctx.Err() != nil {
 		if file != nil {
 			_ = file.Close()
@@ -158,7 +211,8 @@ func (c *Controller) Serve(ctx context.Context, producer uint32, pid int, file *
 		if err != nil {
 			return c.fail(ErrTransport)
 		}
-		if err := conn.SetDeadline(time.Now().Add(c.limits.AckTimeout)); err != nil {
+		requestDeadline := time.Now().Add(c.limits.AckTimeout)
+		if err := conn.SetDeadline(requestDeadline); err != nil {
 			return c.fail(ErrTransport)
 		}
 		_, err = io.ReadFull(conn, raw[1:])
@@ -171,6 +225,24 @@ func (c *Controller) Serve(ctx context.Context, producer uint32, pid int, file *
 		request, err := decode(raw)
 		if err != nil {
 			return c.fail(err)
+		}
+		if check != nil && request.op == opAdmit {
+			site, err := c.checkedAdmissionSite(producer, request)
+			if err == errTerminating {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			checkCtx, cancel := context.WithDeadline(ctx, requestDeadline)
+			stopFailure := context.AfterFunc(c.ctx, cancel)
+			checkErr := check(checkCtx, site)
+			canceled := checkCtx.Err() != nil
+			stopFailure()
+			cancel()
+			if checkErr != nil || canceled {
+				return c.fail(ErrProductionBootstrap)
+			}
 		}
 		if err := c.accept(producer, request); err != nil {
 			if err == errTerminating {

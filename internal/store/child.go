@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/executableidentity"
 )
 
@@ -164,7 +165,8 @@ func inspectSurrealBinary(
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	output, err := exec.CommandContext(ctx, resolved, "version").CombinedOutput()
+	output, err := dispatchadmission.CombinedOutputProduction(ctx, dispatchadmission.SiteSurrealVersion,
+		exec.CommandContext(ctx, resolved, "version"))
 	if err != nil {
 		return SurrealIdentity{}, fmt.Errorf("run surreal version: %w", err)
 	}
@@ -272,13 +274,14 @@ func startEngine(ctx context.Context, engine string) (runtime LocalRuntime, stop
 	)
 	cmd.Stderr = os.Stderr
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
-	if err := cmd.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteSurrealEngine, cmd)
+	if err != nil {
 		return LocalRuntime{}, nil, fmt.Errorf("start surreal child: %w", err)
 	}
 	stop = func() {
 		_ = cmd.Process.Signal(os.Interrupt)
 		done := make(chan struct{})
-		go func() { _ = cmd.Wait(); close(done) }()
+		go func() { _ = handle.Wait(); close(done) }()
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):

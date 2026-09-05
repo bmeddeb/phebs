@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"go/ast"
+	"go/constant"
 	"go/importer"
 	"go/parser"
 	"go/token"
@@ -16,6 +17,8 @@ import (
 	"testing"
 
 	"golang.org/x/tools/go/packages"
+
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
 func TestControlledDispatchBudgetsExactOperationalInventory(t *testing.T) {
@@ -175,7 +178,12 @@ func TestProductionDispatchSitesMatchActualBoundaries(t *testing.T) {
 	var prior string
 	var gitSites, surrealSites int
 	want := make(map[string]int, len(sites)+2)
-	for _, site := range sites {
+	wantIDs := make(map[string]uint64, len(sites))
+	wired := dispatchadmission.ProductionSites()
+	if len(wired) != len(sites) {
+		t.Fatal("production bootstrap site count differs from source inventory")
+	}
+	for index, site := range sites {
 		if site.Tag <= prior || !slices.IsSorted(site.Roles) || len(site.Roles) == 0 {
 			t.Fatalf("site inventory is not closed and sorted: %+v", site)
 		}
@@ -187,15 +195,19 @@ func TestProductionDispatchSitesMatchActualBoundaries(t *testing.T) {
 			surrealSites++
 		}
 		want[site.Path+":"+site.Callsite]++
+		wantIDs[site.Path+":"+site.Callsite] = uint64(wired[index].ID)
 	}
 	if gitSites != 11 || surrealSites != 3 {
 		t.Fatalf("site role counts git=%d surreal=%d", gitSites, surrealSites)
 	}
-	// The unwired admission primitive has two Start alternatives and one Run
-	// pass-through, not three additional production role sites. Check these
-	// explicitly instead of hiding the whole package from independent inventory.
+	// Count both the owned site adapters and their finite internal forwarding
+	// boundaries; do not hide the admission package from the launch inventory.
 	want["internal/dispatchadmission/client.go:(*Client).Start"] = 2
-	want["internal/dispatchadmission/client.go:(*Client).Run"] = 1
+	want["internal/dispatchadmission/client.go:(*Client).Run"] = 2
+	want["internal/dispatchadmission/production.go:StartProduction"] = 1
+	want["internal/dispatchadmission/production.go:startProductionCommand"] = 1
+	want["internal/dispatchadmission/production.go:RunProduction"] = 2
+	want["internal/dispatchadmission/production.go:CombinedOutputProduction"] = 2
 	root, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatal(err)
@@ -221,6 +233,7 @@ func TestProductionDispatchSitesMatchActualBoundaries(t *testing.T) {
 			for boundary, count := range typedDispatchBoundaries(file, pkg.TypesInfo) {
 				got[filepath.ToSlash(path)+":"+boundary] += count
 			}
+			verifyProductionSiteArguments(t, filepath.ToSlash(path), file, pkg.TypesInfo, wantIDs)
 		}
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -268,6 +281,12 @@ func typedDispatchBoundaries(file *ast.File, info *types.Info) map[string]int {
 				launch = function.Name() == "StartProcess"
 			case "syscall", "golang.org/x/sys/unix":
 				launch = slices.Contains([]string{"StartProcess", "ForkExec", "Exec", "Fexecve"}, function.Name())
+			case "github.com/bmeddeb/phebs/internal/dispatchadmission":
+				launch = slices.Contains([]string{"StartProduction", "StartAuthor", "RunProduction", "CombinedOutputProduction"}, function.Name())
+				if slices.Contains([]string{"Start", "Run"}, function.Name()) {
+					receiver := function.Type().(*types.Signature).Recv()
+					launch = receiver != nil && types.TypeString(receiver.Type(), func(*types.Package) string { return "" }) == "*Client"
+				}
 			}
 			if launch {
 				result[boundary]++
@@ -276,6 +295,56 @@ func typedDispatchBoundaries(file *ast.File, info *types.Info) map[string]int {
 		})
 	}
 	return result
+}
+
+// A listed function must pass its own exact constant, not a different admitted
+// site's ID or a runtime-selected expression that the boundary count misses.
+func verifyProductionSiteArguments(t *testing.T, path string, file *ast.File, info *types.Info, expected map[string]uint64) {
+	t.Helper()
+	for _, declaration := range file.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		name := function.Name.Name
+		if object, ok := info.Defs[function.Name].(*types.Func); ok {
+			if receiver := object.Type().(*types.Signature).Recv(); receiver != nil {
+				name = "(" + types.TypeString(receiver.Type(), func(*types.Package) string { return "" }) + ")." + name
+			}
+		}
+		want, selected := expected[path+":"+name]
+		if !selected {
+			continue
+		}
+		found := 0
+		ast.Inspect(function.Body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			callee, ok := info.Uses[selector.Sel].(*types.Func)
+			if !ok || callee.Pkg() == nil || callee.Pkg().Path() != "github.com/bmeddeb/phebs/internal/dispatchadmission" ||
+				!slices.Contains([]string{"StartProduction", "RunProduction", "CombinedOutputProduction"}, callee.Name()) {
+				return true
+			}
+			found++
+			if len(call.Args) != 3 || info.Types[call.Args[1]].Value == nil {
+				t.Fatalf("dispatch site %s:%s lacks its fixed site constant", path, name)
+			}
+			got, exact := constant.Uint64Val(info.Types[call.Args[1]].Value)
+			if !exact || got != want {
+				t.Fatalf("dispatch site %s:%s ID=%d, want %d", path, name, got, want)
+			}
+			return true
+		})
+		if found != 1 {
+			t.Fatalf("dispatch site %s:%s has %d controlled calls, want one", path, name, found)
+		}
+	}
 }
 
 func TestProductionDispatchInventoryFindsUnlistedAndAliasedLaunches(t *testing.T) {

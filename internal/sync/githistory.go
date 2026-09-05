@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 )
 
@@ -454,7 +455,7 @@ func runGitLimited(ctx context.Context, dir string, limit int64, args ...string)
 	stdout := &limitedBuffer{limit: limit, onOverflow: stop}
 	stderr := &limitedBuffer{limit: historyStderrLimit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
-	if err := cmd.Run(); err != nil {
+	if err := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteSyncGitHistory, cmd); err != nil {
 		// Caller cancellation/deadline wins over an internal output-limit kill.
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, false, ctxErr

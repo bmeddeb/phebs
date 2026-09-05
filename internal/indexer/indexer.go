@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/executableidentity"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
@@ -412,7 +413,7 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if err := executableidentity.Verify(cmd.Path, expectedSHA256); err != nil {
 		return fmt.Errorf("index %s: verify %s identity before launch: %w", repo.Name, childName, err)
 	}
-	runErr := cmd.Run()
+	runErr := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteIndexBuild, cmd)
 	out.Flush()
 	if runErr != nil {
 		err := runErr

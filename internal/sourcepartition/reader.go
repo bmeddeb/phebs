@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -67,7 +68,8 @@ func (plan *Plan) ReadPartition(
 	}
 	var stderr gitobj.StderrBuffer
 	command.Stderr = &stderr
-	if err := command.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(batchContext, dispatchadmission.SiteSourcePartitionBatch, command)
+	if err != nil {
 		_ = input.Close()
 		_ = output.Close()
 		return ReadStats{}, errors.New("start immutable batch reader")
@@ -81,7 +83,7 @@ func (plan *Plan) ReadPartition(
 		if failed {
 			_ = command.Process.Kill()
 			_ = input.Close()
-			_ = command.Wait()
+			_ = handle.Wait()
 		}
 	}()
 	for index, record := range records {
@@ -172,10 +174,11 @@ func (plan *Plan) ReadPartition(
 	} else if !errors.Is(err, io.EOF) {
 		return ReadStats{}, batchFailure(batchContext, len(records), "finish output", err)
 	}
-	if err := command.Wait(); err != nil {
+	// Wait joins even on error; never settle the same admitted attempt twice.
+	failed = false
+	if err := handle.Wait(); err != nil {
 		return ReadStats{}, batchFailure(batchContext, len(records), "wait for reader", err)
 	}
-	failed = false
 	if stats.Blobs != member.BlobCount || stats.Placements != member.PlacementCount ||
 		stats.BlobBytes != member.DeclaredBytes || stats.OutputBytes > MaxBatchOutputBytes {
 		return ReadStats{}, invalidf("batch reader totals disagree with the partition")

@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -380,7 +381,8 @@ func (r *Reconciler) censusValidated(
 	}
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(childCtx, dispatchadmission.SiteServiceCatalogCensus, cmd)
+	if err != nil {
 		return censusResult{}, fmt.Errorf("start source census: %w", err)
 	}
 	result := censusResult{LegacyUnowned: []servicecatalog.UnownedPlacement{}}
@@ -447,7 +449,7 @@ func (r *Reconciler) censusValidated(
 	if parseErr != nil {
 		cancel()
 	}
-	waitErr := cmd.Wait()
+	waitErr := handle.Wait()
 	if parseErr != nil {
 		return censusResult{}, fmt.Errorf("stream source census: %w", parseErr)
 	}

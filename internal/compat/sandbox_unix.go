@@ -14,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
 const (
@@ -91,12 +93,13 @@ func runSandboxed(ctx context.Context, root, bin string, arguments []string) (co
 	stdout := &limitedBuffer{limit: maxOutputBytes}
 	stderr := &limitedBuffer{limit: maxOutputBytes}
 	command.Stdout, command.Stderr = stdout, stderr
-	if err := command.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteCompatibilitySandbox, command)
+	if err != nil {
 		return commandOutput{}, fmt.Errorf("%w: start sandboxed buf: %v", ErrUnavailable, err)
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- command.Wait() }()
+	go func() { done <- handle.Wait() }()
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	memoryProbeFailures := 0

@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -31,6 +32,7 @@ type treeStream struct {
 	ordinal     int
 	commit      string
 	command     *exec.Cmd
+	handle      dispatchadmission.Handle
 	reader      *bufio.Reader
 	stderr      gitobj.StderrBuffer
 	current     *treeRecord
@@ -260,7 +262,8 @@ func startTreeStream(
 		return nil, err
 	}
 	stream.command.Stderr = &stream.stderr
-	if err := stream.command.Start(); err != nil {
+	stream.handle, err = dispatchadmission.StartProduction(ctx, dispatchadmission.SiteRepositoryTree, stream.command)
+	if err != nil {
 		return nil, err
 	}
 	stream.reader = bufio.NewReaderSize(stdout, 64<<10)
@@ -304,7 +307,7 @@ func waitTreeStreams(ctx context.Context, streams []*treeStream) error {
 			continue
 		}
 		stream.waited = true
-		if err := stream.command.Wait(); err != nil {
+		if err := stream.handle.Wait(); err != nil {
 			args := []string{
 				"ls-tree", "-r", "-l", "-z", "--full-tree",
 				stream.commit,

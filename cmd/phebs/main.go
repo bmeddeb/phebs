@@ -39,6 +39,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/diagnostics"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
@@ -240,27 +241,51 @@ func legacyExtractionRequired(
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(2)
+	code, err := runPhebs(os.Args[1:])
+	if err != nil {
+		log.Print(err)
 	}
-	var err error
-	switch os.Args[1] {
+	if code != 0 {
+		os.Exit(code)
+	}
+}
+
+// runPhebs returns through owned exact-mode cleanup before main can exit.
+// Ordinary invocations keep the absent-selector path with no producer state.
+func runPhebs(args []string) (code int, retErr error) {
+	lifetime, err := dispatchadmission.BootstrapProduction(context.Background())
+	if err != nil {
+		return 1, err
+	}
+	if lifetime != nil {
+		defer func() {
+			retErr = errors.Join(retErr, lifetime.Close(context.Background()))
+			if retErr != nil {
+				code = 1
+			}
+		}()
+	}
+	if len(args) == 0 {
+		printUsage()
+		return 2, nil
+	}
+	switch args[0] {
 	case "serve":
-		err = serve(os.Args[2:])
+		err = serve(args[1:])
 	case "backup":
-		err = backup(os.Args[2:])
+		err = backup(args[1:])
 	case "restore":
-		err = restore(os.Args[2:])
+		err = restore(args[1:])
 	case "version":
-		err = printVersion(os.Args[2:], os.Stdout)
+		err = printVersion(args[1:], os.Stdout)
 	default:
 		printUsage()
-		os.Exit(2)
+		return 2, nil
 	}
 	if err != nil {
-		log.Fatal(err)
+		return 1, err
 	}
+	return 0, nil
 }
 
 func printUsage() {
@@ -295,7 +320,7 @@ func backup(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(dispatchadmission.ProcessContext(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
@@ -324,7 +349,7 @@ func restore(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(dispatchadmission.ProcessContext(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	manifest, err := recovery.Restore(ctx, recovery.RestoreOptions{
 		Options: recovery.Options{
@@ -521,7 +546,7 @@ func serve(args []string) error {
 		callerexecute.Root(cfg.Server.DataDir),
 	)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(dispatchadmission.ProcessContext(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	var exactReportFailed chan struct{}
 	var failExactReport func(error)

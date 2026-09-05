@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -25,6 +26,7 @@ const maxBatchHeaderBytes = 256
 type BatchBlobReader struct {
 	ctx    context.Context
 	cmd    *exec.Cmd
+	handle dispatchadmission.Handle
 	stdin  io.WriteCloser
 	stdout *bufio.Reader
 	stderr *StderrBuffer
@@ -52,12 +54,13 @@ func NewBatchBlobReader(ctx context.Context, dir string) (*BatchBlobReader, erro
 	}
 	stderr := &StderrBuffer{}
 	cmd.Stderr = stderr
-	if err := cmd.Start(); err != nil {
+	handle, err := dispatchadmission.StartProduction(ctx, dispatchadmission.SiteGitBlobBatch, cmd)
+	if err != nil {
 		_ = stdin.Close()
 		return nil, err
 	}
 	return &BatchBlobReader{
-		ctx: ctx, cmd: cmd, stdin: stdin, stdout: bufio.NewReader(stdout), stderr: stderr,
+		ctx: ctx, cmd: cmd, handle: handle, stdin: stdin, stdout: bufio.NewReader(stdout), stderr: stderr,
 	}, nil
 }
 
@@ -134,7 +137,7 @@ func (reader *BatchBlobReader) Close() error {
 	}
 	reader.closed = true
 	closeErr := reader.stdin.Close()
-	waitErr := reader.cmd.Wait()
+	waitErr := reader.handle.Wait()
 	if waitErr != nil {
 		waitErr = WrapError(reader.ctx, []string{"cat-file", "--batch"}, waitErr, reader.stderr.String())
 	}
@@ -150,6 +153,6 @@ func (reader *BatchBlobReader) failLocked(cause error) error {
 	if reader.cmd.Process != nil {
 		_ = reader.cmd.Process.Kill()
 	}
-	_ = reader.cmd.Wait()
+	_ = reader.handle.Wait()
 	return cause
 }

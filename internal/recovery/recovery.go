@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
@@ -1265,7 +1266,7 @@ func runSurreal(ctx context.Context, binary string, args []string) error {
 	cmd.Env = append(os.Environ(), "SURREAL_USER=root", "SURREAL_PASS=root")
 	output := &boundedOutput{limit: maxCommandOutput}
 	cmd.Stdout, cmd.Stderr = output, output
-	if err := cmd.Run(); err != nil {
+	if err := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteRecoverySurreal, cmd); err != nil {
 		message := strings.TrimSpace(output.String())
 		if message == "" {
 			return err
