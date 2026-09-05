@@ -473,6 +473,10 @@ after closing writers and applying native file/directory protection. This is
 not full tool/helper/profile admission or production bootstrap. Descriptor
 release leaves protected custody intact for the later detach-before-removal
 sequence; full launcher readiness and freeze remain open.
+Exact source `6e24436e67d01ecde217f1cd38f43bf4eef2e3a6` passed independent
+zero-finding review and focused native normal/race, retained V3/inventory and
+affected static gates. The existing presentation missing-image docs-check
+failure remains; `main`, V1/V2 bytes and the unsealed V3 posture are unchanged.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
