@@ -69,6 +69,22 @@ func TestProductionBootstrapHelper(t *testing.T) {
 	if lifetime == nil || ProcessContext() != lifetime.client.Context() || ProductionTool("unknown") != "" || ProductionTool("phebs-focused-index") != "" {
 		t.Fatal("bootstrap did not bind the exact lifetime")
 	}
+	if mode == "semantic" {
+		state, err := ProductionSemanticState()
+		if err != nil || !ProductionSemanticSelected() || state.Mode != ProductionSemanticV3 ||
+			state.InputSHA256 != ([32]byte{7}) || state.ProducerID != 1 || state.Phase != 1 || state.RequestSequence != 0 {
+			t.Fatal("semantic input/phase did not bind inherited parent", err)
+		}
+		owners, err := NewProductionOwners(ctx, OwnerLimits{Owners: 1, Requests: 1})
+		if err != nil || BindProductionOwners(owners) != nil {
+			t.Fatal("semantic helper could not bind owned control")
+		}
+		productionHelperFinish(t, ctx, lifetime)
+		if _, err := ProductionSemanticState(); err == nil || !ProductionSemanticSelected() {
+			t.Fatal("closed semantic lifetime fell back or retained live state")
+		}
+		return
+	}
 	if mode == "author" {
 		if err := RequireAuthorBootstrap(); err != nil {
 			t.Fatal(err)
@@ -206,7 +222,7 @@ func productionHelperFinish(t *testing.T, ctx context.Context, lifetime *Product
 }
 
 func TestProductionBootstrapInheritedBoundary(t *testing.T) {
-	for _, mode := range []string{"healthy", "author", "wrong-path", "wrong-argv0", "extra-files", "unknown-site", "compatibility", "check-refused", "zero-budget", "output-overflow"} {
+	for _, mode := range []string{"healthy", "author", "semantic", "wrong-path", "wrong-argv0", "extra-files", "unknown-site", "compatibility", "check-refused", "zero-budget", "output-overflow"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 			defer cancel()
@@ -214,6 +230,9 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 			if mode == "author" {
 				record.Program, record.Producer.Sites, record.Tools = ProgramCorpusAuthor, AuthorSites(), record.Tools[:1]
 				record.InputSHA256 = [32]byte{7}
+			}
+			if mode == "semantic" {
+				record.SemanticMode, record.InputSHA256, record.Control.OwnerControl = ProductionSemanticV3, [32]byte{7}, true
 			}
 			config := productionTestConfig(record)
 			if mode == "zero-budget" {
@@ -284,12 +303,15 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 					return nil
 				})
 			}()
-			if mode == "healthy" || mode == "author" {
+			if mode == "healthy" || mode == "author" || mode == "semantic" {
 				reader := bufio.NewReader(output)
 				ready, err := reader.ReadString('\n')
 				if err != nil || ready != "ready\n" {
 					rest, _ := io.ReadAll(reader)
 					t.Fatalf("helper ready: %q %q, %v", ready, rest, err)
+				}
+				if mode == "semantic" && control.DrainOwners(ctx) != nil {
+					t.Fatal("semantic helper owner drainage failed")
 				}
 				if err := control.Pause(ctx); err != nil {
 					t.Fatal(err)
@@ -300,7 +322,7 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 				if err := control.Checkpoint(ctx); err != nil {
 					t.Fatal(err)
 				}
-				if mode == "healthy" {
+				if mode == "healthy" || mode == "semantic" {
 					if _, err := input.Write([]byte{1}); err != nil {
 						t.Fatal(err)
 					}
@@ -311,10 +333,13 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 			}
 			serveErr := <-server
 			snapshot, snapshotErr := controller.Snapshot()
-			if mode == "healthy" || mode == "author" {
+			if mode == "healthy" || mode == "author" || mode == "semantic" {
 				expected := uint64(3)
 				if mode == "author" {
 					expected = 1
+				}
+				if mode == "semantic" {
+					expected = 0
 				}
 				if serveErr != nil || snapshotErr != nil || !snapshot.Complete || snapshot.Attempts != expected || uint64(checks.Load()) != expected {
 					t.Fatalf("healthy prefix: %+v, %v/%v, checks=%d", snapshot, serveErr, snapshotErr, checks.Load())
@@ -341,6 +366,13 @@ func TestProductionBootstrapRecordRefusals(t *testing.T) {
 		{"unknown-program", func(r *ProductionBootstrap) { r.Program = "unknown" }},
 		{"other-program", func(r *ProductionBootstrap) { r.Program = ProgramCorpusAuthor }},
 		{"app-author-input", func(r *ProductionBootstrap) { r.InputSHA256 = [32]byte{7} }},
+		{"unknown-semantic-mode", func(r *ProductionBootstrap) { r.SemanticMode = "unknown" }},
+		{"semantic-no-digest", func(r *ProductionBootstrap) { r.SemanticMode, r.Control.OwnerControl = ProductionSemanticV3, true }},
+		{"semantic-no-owner-control", func(r *ProductionBootstrap) { r.SemanticMode, r.InputSHA256 = ProductionSemanticV3, [32]byte{7} }},
+		{"author-semantic-mode", func(r *ProductionBootstrap) {
+			r.Program, r.Producer.Sites, r.Tools = ProgramCorpusAuthor, AuthorSites(), r.Tools[:1]
+			r.InputSHA256, r.SemanticMode = [32]byte{7}, ProductionSemanticV3
+		}},
 		{"author-missing-input", func(r *ProductionBootstrap) {
 			r.Program, r.Producer.Sites, r.Tools = ProgramCorpusAuthor, AuthorSites(), r.Tools[:1]
 		}},
@@ -373,6 +405,50 @@ func TestProductionBootstrapRecordRefusals(t *testing.T) {
 				t.Fatal("invalid bootstrap accepted")
 			}
 		})
+	}
+}
+
+func TestProductionSemanticSnapshotCannotSupplyOrRetainAuthority(t *testing.T) {
+	old := productionRuntime.Load()
+	defer productionRuntime.Store(old)
+	productionRuntime.Store(nil)
+	if _, err := ProductionSemanticState(); err == nil || ProductionSemanticSelected() {
+		t.Fatal("ordinary execution supplied semantic identity")
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	client := &Client{ctx: ctx, ownersRequired: true, phase: 6, ownerRequestSequence: 17}
+	lifetime := &ProductionLifetime{program: ProgramPhebs, semanticMode: ProductionSemanticV3,
+		producerID: 3, inputSHA256: [32]byte{9}, client: client}
+	productionRuntime.Store(lifetime)
+	observed, err := ProductionSemanticState()
+	if err != nil || observed.ProducerID != 3 || observed.Phase != 6 || observed.RequestSequence != 17 || observed.InputSHA256 != ([32]byte{9}) {
+		t.Fatal("snapshot differs from observed parent/client state", err)
+	}
+	observed.Phase, observed.RequestSequence, observed.InputSHA256 = 99, 99, [32]byte{}
+	client.mu.Lock()
+	client.phase, client.ownerRequestSequence = 7, 21
+	client.mu.Unlock()
+	if current, err := ProductionSemanticState(); err != nil || current.Phase != 7 || current.RequestSequence != 21 || current.InputSHA256 != ([32]byte{9}) {
+		t.Fatal("snapshot did not copy the current phase/window", err)
+	}
+	for _, mode := range []string{"wrong-program", "no-owners", "closed", "failed", "canceled"} {
+		lifetime.program, client.ownersRequired, client.closed, client.err = ProgramPhebs, true, false, nil
+		switch mode {
+		case "wrong-program":
+			lifetime.program = ProgramCorpusAuthor
+		case "no-owners":
+			client.ownersRequired = false
+		case "closed":
+			client.closed = true
+		case "failed":
+			client.err = ErrIncomplete
+		case "canceled":
+			cancel()
+		}
+		if got, err := ProductionSemanticState(); err == nil || got != (ProductionSemanticSnapshot{}) || !ProductionSemanticSelected() {
+			t.Fatal("selected unavailable semantic state fell back or returned authority", mode)
+		}
 	}
 }
 

@@ -20,6 +20,7 @@ const (
 	ProductionSelector    = "parent-bound-v1"
 	ProgramPhebs          = "phebs"
 	ProgramCorpusAuthor   = "t422-author"
+	ProductionSemanticV3  = "t422-phase-control-v3"
 	// These are bootstrap construction ceilings, not frozen ceremony limits.
 	MaximumProductionBootstrapBytes = 64 << 10
 	ProductionBootstrapTimeout      = 10 * time.Second
@@ -41,13 +42,14 @@ type ProductionToolBinding struct {
 // The caller supplies already-derived bounds; this value issues no freeze or
 // private tool/configuration admission and must come from the owning launcher.
 type ProductionBootstrap struct {
-	Program     string
-	InputSHA256 [32]byte
-	Producer    Producer
-	Phase       uint32
-	Limits      Limits
-	Control     PhaseControlConfig
-	Tools       []ProductionToolBinding
+	Program      string
+	SemanticMode string
+	InputSHA256  [32]byte
+	Producer     Producer
+	Phase        uint32
+	Limits       Limits
+	Control      PhaseControlConfig
+	Tools        []ProductionToolBinding
 }
 
 func (record ProductionBootstrap) validate() error {
@@ -55,11 +57,20 @@ func (record ProductionBootstrap) validate() error {
 	minimumRoles := 4
 	switch record.Program {
 	case ProgramPhebs:
-		if record.InputSHA256 != ([32]byte{}) {
+		switch record.SemanticMode {
+		case "":
+			if record.InputSHA256 != ([32]byte{}) {
+				return ErrProductionBootstrap
+			}
+		case ProductionSemanticV3:
+			if !record.Control.OwnerControl || record.InputSHA256 == ([32]byte{}) {
+				return ErrProductionBootstrap
+			}
+		default:
 			return ErrProductionBootstrap
 		}
 	case ProgramCorpusAuthor:
-		if record.Control.OwnerControl {
+		if record.Control.OwnerControl || record.SemanticMode != "" {
 			return ErrProductionBootstrap
 		}
 		if record.InputSHA256 == ([32]byte{}) {
@@ -83,7 +94,7 @@ func (record ProductionBootstrap) validate() error {
 	if _, err := record.Control.validate(); err != nil {
 		return ErrProductionBootstrap
 	}
-	textBytes := len(record.Program)
+	textBytes := len(record.Program) + len(record.SemanticMode)
 	for index, role := range roles {
 		tool := record.Tools[index]
 		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionEnvironment(tool.Environment, role != "surreal") {
@@ -395,7 +406,8 @@ func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, 
 	if err != nil {
 		return nil, ErrProductionBootstrap
 	}
-	lifetime = &ProductionLifetime{program: program, inputSHA256: record.InputSHA256, client: client, controlDone: done, tools: make(map[string]ProductionToolBinding, len(record.Tools))}
+	lifetime = &ProductionLifetime{program: program, semanticMode: record.SemanticMode, producerID: record.Producer.ID,
+		inputSHA256: record.InputSHA256, client: client, controlDone: done, tools: make(map[string]ProductionToolBinding, len(record.Tools))}
 	for _, tool := range record.Tools {
 		tool.Environment = slices.Clone(tool.Environment)
 		lifetime.tools[tool.Role] = tool

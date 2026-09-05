@@ -67,13 +67,50 @@ func ProductionSites() []Site {
 // first, then Close, and propagate its terminal failure even if work returned nil.
 // A failed/closed lifetime is never replaced with the ordinary pass-through.
 type ProductionLifetime struct {
-	program     string
-	inputSHA256 [32]byte
-	client      *Client
-	controlDone <-chan error
-	tools       map[string]ProductionToolBinding
-	closeOnce   sync.Once
-	closeErr    error
+	program      string
+	semanticMode string
+	producerID   uint32
+	inputSHA256  [32]byte
+	client       *Client
+	controlDone  <-chan error
+	tools        map[string]ProductionToolBinding
+	closeOnce    sync.Once
+	closeErr     error
+}
+
+// ProductionSemanticSnapshot contains copied parent-bound launch identity and
+// current local phase/window state, never a mutable phase setter or native
+// readiness assertion. An HTTP caller must already hold its admitted request
+// owner so FenceRequests cannot complete a window transition during its tail.
+type ProductionSemanticSnapshot struct {
+	Mode            string
+	InputSHA256     [32]byte
+	ProducerID      uint32
+	Phase           uint32
+	RequestSequence uint64
+}
+
+// ProductionSemanticSelected remains true after a selected lifetime fails.
+// Main must then refuse, not fall back to ordinary execution or ignore stdin.
+func ProductionSemanticSelected() bool {
+	lifetime := productionRuntime.Load()
+	return lifetime != nil && lifetime.semanticMode != ""
+}
+
+func ProductionSemanticState() (ProductionSemanticSnapshot, error) {
+	lifetime := productionRuntime.Load()
+	if lifetime == nil || lifetime.program != ProgramPhebs || lifetime.semanticMode != ProductionSemanticV3 ||
+		lifetime.producerID == 0 || lifetime.inputSHA256 == ([32]byte{}) || lifetime.client == nil {
+		return ProductionSemanticSnapshot{}, ErrProductionBootstrap
+	}
+	client := lifetime.client
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	if client.closed || client.err != nil || client.ctx.Err() != nil || !client.ownersRequired {
+		return ProductionSemanticSnapshot{}, ErrProductionBootstrap
+	}
+	return ProductionSemanticSnapshot{Mode: lifetime.semanticMode, InputSHA256: lifetime.inputSHA256,
+		ProducerID: lifetime.producerID, Phase: client.phase, RequestSequence: client.ownerRequestSequence}, nil
 }
 
 // AuthorSites names the real author's one shared native Git start boundary.

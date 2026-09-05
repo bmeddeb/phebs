@@ -4624,6 +4624,20 @@ directory after admitting its valid descriptor. The corrected path skips content
 and ziphash admission without a committed content h1. Required missing content
 still fails the actual offline graph/build, and verified-content tamper checks
 remain unchanged. Exact review and a new bounded rehearsal remain required.
+The module-content correction and its test-only delayed cleanup registration
+passed independent review with all severity counts zero. Exact
+`b62024847fd85ccf88597cc7617636059b59c502` passed targeted race three repeats
+(2.024s), pinned lint, docs (0.441s), glossary and whitespace; its next genuine
+parent rehearsal is running, not yet a readiness result.
+
+The next bootstrap slice adds a closed, digest-bound semantic-launch selector
+for Phebs owner-control mode, while retaining empty-mode rehearsal and author
+separation. A locked copied snapshot exposes only its parent-bound input and
+current producer/phase/window; selected failure never falls back to ordinary
+execution. Inherited normal/author/semantic/refusal paths pass race three repeats
+(1.752s), scoped vet and pinned lint. Main input/config/epoch validation, native
+phase wiring and exact review remain open; this is not semantic admission or a
+freeze by itself.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
