@@ -484,6 +484,10 @@ Failed verification retains closed cleanup custody. Copied external observation
 is limited to SurrealDB after real Go/Git relocation refusals. Git helpers, Go SDK,
 fixed-system roles, full checkout/profile admission, production bootstrap and
 launcher readiness remain separate; no merge, seal or freeze is established.
+Exact source `3fd88e8225c59be3d6bd102718cf024a6ea6207d` passed independent
+zero-finding review, real-reference/Surreal custody normal/race and affected
+static/V3 gates. Ben's merge/push request remains held at the inherited
+presentation missing-image docs-check failure; local/remote main are unchanged.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only

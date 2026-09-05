@@ -4376,6 +4376,24 @@ readiness is issued. These remain required before author/seal or freeze;
 protected direct-image custody alone does not waive them. V1/V2 and `main`
 remain unchanged.
 
+Exact clean source `3fd88e8225c59be3d6bd102718cf024a6ea6207d` passed
+independent source/test/documentation/cost review with all severity counts zero.
+The complete focused custody/reference selector passed normal (27.702s) and
+race (33.622s), explicitly enabling the real 233,283,488-byte SurrealDB image's
+version probes. The tiny committed Go fixture independently rebuilt and
+executed its protected image and rejected a metadata-identical injected image.
+No database server or ceremony was launched; exact FD-owned fixture cleanup
+verified removal. Selected V3 canonical/profile, typed inventory and budget
+regressions passed in 27.594s. Repository compilation, Linux package
+cross-compilation, affected vet, pinned lint, module verification, glossary,
+whitespace and unchanged V1/V2 byte checks passed. `make docs-check` still
+fails only on the inherited presentation-owned missing
+`ui/receipts/fixtures/service-boundary.png`; no UI file changed or failure was
+waived. Full corpus/production admission/launcher readiness were not established
+by this isolated connection. Ben's subsequent merge/push request remains held
+at that documentation gate; local and remote `main` still match
+`9ac960c95eb7783ee06525aa097e637333104284` and no stack branch was pushed.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
