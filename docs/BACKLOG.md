@@ -4456,6 +4456,21 @@ owns the design and dependency order. Execution remains excluded.
   retained V1/V2 unchanged, exact invocation and custody/expiry handoff; no
   ceremony execution, Epic closure, release or scale claim.
 
+**Acceptance hold — whole-work accounting.** Two independent audits confirmed
+that the unchanged phase-wide store contract includes ordinary archive/import.
+Full changed reconciliation/activation transactions submit 513/514 explicit
+records, and current native restore can import batches of 1,000, exceeding the
+512-row limit. Successful chunk totals are not native attempted-transaction
+accounting. The native import path also has no admitted before-statement
+census/ACK, so rollback/interruption can erase the distinction between different
+attempted prefixes. PLAN owns the source-backed counterexample and the required
+separately reviewed production restore/instrumentation boundary; no alternate
+import, new format/tool/engine, raised bound or guessed counters are selected.
+The single changed-state logical member-nine target itself fits and must not be
+repacked. Full Go write-site coverage and other phase work-event collectors are
+also missing. Complete executor/launcher acceptance, author/seal and freeze
+remain unready regardless of passing partial custody/control tests.
+
 Scoped gate updates: exact literal-config correction 726e8953 passed independent
 source/test/cost review with all severity counts zero; its clean detached
 config/main pinned lint reported zero issues, and docs (0.515s), glossary and
@@ -4602,6 +4617,19 @@ corrected source/test/cleanup review found no remaining finding. The opt-in-abse
 compile/skip passed in 0.473s. Retained V1/V2 canonical byte replay separately
 passed in 0.614s, docs in 0.544s, glossary and whitespace passed. The genuine
 extended constructor rehearsal still requires exact-clean execution.
+That extended rehearsal subsequently passed at exact clean
+95369beb7e1d80229c2dbc5902c9a283d933c53f in 674.12s (package 674.748s).
+Actual source custody admitted 67,470 entries, 55,753 files and 1,353,092,023
+bytes in 6m2.727s; supplied/reference builds took 52.073s/2m23.937s. The
+three shared authors took 20.071s/14.954s/14.994s and again closed with thirteen
+admissions and 5,632 reserved wire bytes. The genuine epoch constructor,
+protected byte verification and five sequential native listener-release probes
+passed in 937.981ms: catalogs total 22,755,996 bytes and actual private configs
+1,264/1,264/1,278/1,278/1,278 bytes (6,362 total). Exact owned cleanup passed;
+the subsequent host check found no matching rehearsal/author/Surreal process
+or port-65499 listener. This closes the protected constructor/listener gate at
+that source, not native Phebs startup, five-server readiness, the later
+compatibility-selection change or the whole-work accounting hold.
 The actual nine-domain startup trace also exposed an attempted Buf sandbox
 validation despite V3's zero compatibility budget. The selected decoded V3
 launch now explicitly leaves compatibility unavailable before discovery or
@@ -4614,6 +4642,21 @@ repeats passed in 1.019s, race three in 1.950s; profile normal three in 0.645s,
 race three in 1.894s; affected vet, pinned lint and whitespace pass. This
 selection removes a substantiated startup refusal, not the full parent,
 whole-work accounting, real five-server readiness or freeze prerequisites.
+Final focused regression confirmation on exact implementation 3fe4d838
+(with only the later hold/gate documentation uncommitted) passed the complete
+`internal/dispatchadmission` package normal/race in 1.283s/3.482s,
+all `cmd/phebs` T42.2 tests in 2.956s/8.419s, and the epoch-config,
+compatibility-profile and retained canonical-byte selector in 1.392s/13.890s.
+Affected vet and pinned 2.12.2 lint pass with zero issues; docs (0.552s),
+glossary and whitespace pass. These are focused gates, not full repository,
+store, real five-server or launcher acceptance. Independent review of the
+accounting-hold text corrected two low wording issues (native-import source
+attribution and full *changed* state members), then closed every severity at
+zero. Local and freshly queried remote main remain 6e38ce97; no integration,
+push, seal, freeze or ceremony occurred. The post-gate host has no matching
+rehearsal/test/author/Surreal process or port-65499 listener. Its approximately
+110 GiB free backing space is also below the unchanged 120 GiB admission floor;
+no unrelated user cache or retained diagnostic custody was removed to mask it.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map

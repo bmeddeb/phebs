@@ -370,6 +370,78 @@ fixture or harness input changed. Each ticket closes only its stated ACs.
 The existing V1/V2 seals, V3 claim boundaries and numerical envelopes stay
 unchanged. This plan is orchestration, not evidence that any later gate passed.
 
+### T42.2 whole-work accounting acceptance hold (2026-09-05)
+
+Two independent source reviews found an unresolved prerequisite before full
+executor/launcher acceptance or freeze. The inherited `MeterPolicy.StoreSemantics`
+is phase-wide attempted/committed write transactions and submitted rows, including
+archive/restore; V3 changes process accounting, not this unit or its 512-row
+maximum. Current R ledgers and successful T41.10 state-chunk summaries do not
+implement that phase-wide meter.
+
+The writer at `internal/store/service_state_v3.go` and ordinary native restore
+expose these counterexamples, excluding conditional database-generated preimages:
+
+| Reachable operation | Explicit submitted records in one transaction |
+|---|---:|
+| Full changed reconciliation member | 512 states plus one plan = 513 |
+| Full changed activation member | 512 states plus one summary and one plan = 514 |
+| Default native restore insertion batch | Up to 1,000 |
+
+Cold's 10,000 accepted services reaches full changed members. The frozen logical
+failure target remains member nine `[0,512)`, but changes only one state and
+submits three payload records; it must not be repacked or have its hook moved.
+Cold catalog publication itself remains structurally bounded at 132 records,
+or at most 135 for a successor, and needs no atomicity split. A possible
+future state-prefix writer must preserve member identity, selector/preimage/CAS
+fences, cumulative prefix counts and complete-member hook timing; merely slicing
+updates while writing the final aggregate plan is incorrect. No such writer or
+schema/atomicity change is selected here.
+
+Ordinary `internal/recovery/recovery.go` restores through the pinned native
+SurrealDB import command. The pinned engine's server-side
+[`export_batch_size` default](https://github.com/surrealdb/surrealdb/blob/v3.2.0/surrealdb/core/src/cnf/mod.rs)
+and [export implementation](https://github.com/surrealdb/surrealdb/blob/v3.2.0/surrealdb/core/src/kvs/export.rs)
+explain the 1,000-record batches. Setting the actual exporting server to 512
+would address only insertion granularity, not attempted-prefix evidence.
+The [native import path](https://github.com/surrealdb/surrealdb/blob/v3.2.0/surrealdb/core/src/kvs/ds.rs)
+provides no admitted before-statement census/acknowledgment. An interruption just
+before a statement versus after it starts and rolls back can leave identical
+database and terminal evidence with different attempted work. Child admission,
+input-byte totals, post-import census, affected rows and KV counts cannot resolve
+that distinction. No existing pinned SDK parser or bounded native typed-export
+adapter closes it. This is a limit of the current admitted mechanisms, not a
+universal impossibility claim.
+
+Resolution requires a separately reviewed production restore/instrumentation
+boundary before continuation of complete freeze assembly. No alternate import,
+new archive format/tool/engine, relaxed metric, raised bound or guessed zero is
+authorized by this hold. Whole-phase Go write-site coverage and the other native
+work-event collectors remain required too. Independently reviewed partial
+author, config, control and custody work stays on the stack; bounded gates
+already underway may finish, but they do not close this acceptance dependency.
+
+Retained audit routing for a later approved implementation, not a selected
+collector, protocol or numerical limit:
+
+- Git content requires all three existing paths: `gitobj.ReadBlob`,
+  `BatchBlobReader.ReadBlob` and `sourcepartition.Plan.ReadPartition`.
+- Index offers have a promising pinned-child selected-queue report; the
+  prelaunch manifest-derived Phebs line is not an executed offer. Missing or
+  partial native output remains unavailable, not zero.
+- Observation retains the frozen native `ParsedBlobs` event, not every parser
+  invocation. The production inventory runtime currently discards its metrics.
+- Catalog cache accounting needs actual root/member load-validation events and
+  both cache-level and lease-local hit branches, preserving coalesced loads.
+- Resolver and relationship work needs actual blob-load and posting/projector
+  events, not final catalog or root cardinality.
+- Frozen extraction publication work counts actual `PublishDomain` calls,
+  including exact-current recounts; authority movement, marker writes and
+  `OnPublished` callbacks are distinct units, not interchangeable counters.
+- Each collector still needs phase ownership and retained-prefix transfer.
+  Lifetime statistics, successful final returns and scoped R ledgers cannot
+  reconstruct retries or an unexpected hard-death prefix.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |

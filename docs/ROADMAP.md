@@ -508,6 +508,18 @@ None of those pending gates is passed by this delegation, and ceremony
 execution, admission-bound changes, unrelated presentation work, release and
 scale claims remain excluded.
 
+The delegated source audits subsequently found a whole-work accounting hold:
+full changed service-state transactions submit 513/514 explicit records despite the
+frozen 512 maximum, and ordinary native restore can import 1,000-record batches
+without exposing the required attempted-transaction prefix. Two independent
+reviews found no existing admitted mechanism to close the native import gap;
+changing export batch size alone is insufficient. PLAN records the source
+counterexample and required restore/instrumentation decision. Reviewed partial
+author/control/input work and bounded rehearsal passes remain valid only in
+their stated scopes. Full executor/launcher acceptance, V3 seal and freeze are
+not ready; no new archive format, engine/tool, weakened metric or higher bound
+has been selected to bypass this dependency.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens
