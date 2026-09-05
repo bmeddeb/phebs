@@ -378,6 +378,21 @@ record changes no runtime or retained artifact. Authoring, sealing, and merge re
 each requires Ben's separate explicit request; freeze, execution, release,
 scale, and SLO claims remain unauthorized.
 
+On 2026-09-04 Ben authorized V2 authoring/sealing and local integration of the
+reviewed stack. The create-only author succeeded from clean source
+`1b4456fe791b9e10816989f20fd1cdbcdb96c34c`: `spike/t421/plan-v2.json` is
+262,140 bytes at
+`sha256:2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+Exact source/supersession bindings, strict round trip, independent second build,
+and unchanged V1 identity/round trip pass. Only `source_commit` differs from the
+validated preview, preserving its source-identical gates. These facts supersede
+the historical author/seal/local-merge holds above; Ben authorized local
+fast-forward integration of the sealed artifact and reviewed stack. Independent
+artifact/provenance review reports zero findings. T42.2 runner implementation
+follows integration; the host/tool execution freeze follows implementation and review, with ceremony
+execution still separately unauthorized. This artifact/docs record adds no
+runtime cost or scale/SLO claim.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens
@@ -392,10 +407,10 @@ comparison. It
 changed no scale-plane runtime or product authority and made no scale or
 release claim; T41.2–T41.8 are integrated. T41.8a's catalog-absence and
 exhausted-result recovery, T41.9, and T41.10 are integrated, closing Epic 41.
-T42.1 is integrated; T42.2 runner implementation is authorized but held for
-separately authorized T42.1r1 replacement-plan authoring, sealing, merge, and
-later freeze. Source/test validation is complete; ceremony execution remains
-unauthorized and unexecuted.
+T42.1 is integrated; T42.1r1 V2 is sealed and local integration is authorized.
+T42.2 runner implementation resumes after that integration. Source/test
+validation is complete; the later host/tool execution freeze and ceremony
+execution remain separately unauthorized and unexecuted.
 
 Epic 44 is now active in the presentation track. T44.1 completed on
 2026-08-31 at exact implementation commit `287072e` under an explicit
@@ -1168,7 +1183,7 @@ service count × repository bytes
   10,000-service recovery/lifecycle/product gate and is integrated at main
   `d92b6673db6d4b582c2223536fe52358629ae60e`, closing the epic. No
   constants-only increase is permitted.
-- **Epic 42 — combined scale gate and topology decision (T42.1 integrated; T42.2 contract-readiness hold):**
+- **Epic 42 — combined scale gate and topology decision (V2 sealed; local integration authorized):**
   T42.1 freezes the deterministic combined corpus, independent oracle, typed
   revisions, native failure targets, ordinary-production execution profile,
   reader/archive/pressure transitions, and content-addressed receipt contract.
@@ -1181,9 +1196,10 @@ service count × repository bytes
   logical-only resolver/caller identity transition, ordinary Git costs outside
   the frozen child budgets, and missing recovery-target preparation/cost
   definitions. Ben approved T42.1r1 correction, including census accounting
-  and restart-bound logical changes; its proof and review gates must finish
-  before runner work resumes. The retained plan remains unchanged and records no
-  execution or gate result.
+  and restart-bound logical changes. Its validation and review are complete,
+  V2 is sealed, and local integration is authorized. Runner work resumes after
+  integration; host/tool execution freeze follows implementation and review.
+  V1 remains exact, and neither plan records an execution or gate result.
 
 The scale corpus is first-party and profile-separated. A streaming author
 creates external scratch bare-Git generations with fixed identities and A→B→A

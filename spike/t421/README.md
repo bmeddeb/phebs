@@ -272,7 +272,7 @@ exact-main execution freeze and does not authorize T42.2 execution, a combined
 gate result, topology selection, SLO, supported limit, accuracy/completeness,
 private replay, or release.
 
-## T42.2 execution-readiness hold
+## T42.2 readiness: V2 sealed; local integration authorized
 
 The 2026-09-02 runner implementation audit found conflicts between this
 contract and ordinary production behavior. The historical contract tests and
@@ -296,12 +296,13 @@ run could satisfy all phase predicates together.
   deleting published controls is not an implicit runner action. Their zero
   publication-write budgets also do not cover recovery assembly.
 
-T42.2 runner implementation is authorized on
-`codex/t42.2-combined-ceremony`, but the approved T42.1r1 prospective contract
-correction's source/test validation is complete. No replacement plan has been
-authored, sealed, or merged, so runner work remains held through those
-separately authorized steps. Native failure controls, complete server telemetry,
-real private admission constructors, and source-free sealing remain implementation
+T42.2 runner implementation is authorized. The approved T42.1r1 correction's
+source/test validation is complete and [V2 is sealed](#t421r1-authorized-v2-seal).
+Ben authorized local fast-forward integration of the sealed artifact and reviewed
+stack; runner implementation follows that integration. Its later host/tool
+execution freeze follows implementation and review. Native failure controls,
+complete server telemetry, real private admission constructors, and source-free
+sealing remain implementation
 work. Do not substitute fixture counters, change production
 identities to satisfy the oracle, silently enlarge budgets, or reuse the old
 T40.13/T41.10 launchers. The retained plan bytes remain untouched. No ceremony
@@ -311,7 +312,7 @@ has been launched, and no execution command is ready.
 
 The owning decision is the T42.1r1 row in [PLAN.md](../../PLAN.md). V1 authoring
 and validation remain available internally for exact retained-byte tests;
-new plan authoring targets v2. No superseding artifact has been sealed yet.
+new plan authoring targets v2. The superseding artifact is [plan-v2.json](./plan-v2.json).
 The production identity derivation table and checked budget formulas are part
 of that prospective plan, not changes to the retained `plan.json`.
 The compact table's `changes.physical_revision` expands to `physical_delta_b`
@@ -1780,8 +1781,8 @@ no ordinary steady-state child.
 This plan establishes no combined execution pass, target SLO, supported
 customer scale, accuracy/completeness, commit cadence, queue catch-up,
 freshness-under-cadence, migration/decommission, topology, private replay,
-release, or `GATE2-V2` result. T42.2 requires separate authorization and
-remains unexecuted.
+release, or `GATE2-V2` result. T42.2 ceremony execution requires separate
+authorization and remains unexecuted.
 
 ## T42.1r1 validation-only closure
 
@@ -1823,3 +1824,32 @@ This validation-only record changes no runtime or retained artifact. Validation
 is closed; artifact authoring, artifact sealing, and merge remain open and each
 separately requires Ben's explicit request. No freeze, execution, release,
 scale result, or SLO is established or authorized.
+
+## T42.1r1 authorized V2 seal
+
+On 2026-09-04 Ben authorized authoring/sealing V2 and local fast-forward
+integration of the sealed artifact and reviewed stack. From clean source
+`1b4456fe791b9e10816989f20fd1cdbcdb96c34c`, the create-only author succeeded:
+
+```text
+go run ./spike/t421/cmd/author -repository-root /Users/ben/phebs.com -source-commit 1b4456fe791b9e10816989f20fd1cdbcdb96c34c -out /Users/ben/phebs.com/spike/t421/plan-v2.json
+```
+
+The sealed [plan-v2.json](./plan-v2.json) is 262,140 bytes at
+`sha256:2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`,
+created with mode `0600`. Exact source/supersession binding, strict
+decode/re-encode equality, and an independent second `BuildPlan` byte comparison
+pass. Normalizing only `source_commit` to
+`a2831a172c05fa8ff4852d780dd594509b601173` reproduces the prior preview digest
+`sha256:23a9daa56be7c7fd870bd729a8c099c0cedcd54ae9963032a07a809b53dbf944`.
+The retained [V1 plan](./plan.json) remains 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`
+and passes its strict byte-identical round trip. Independent artifact/provenance
+review reports zero findings.
+
+Compiled source is unchanged from the validation closure, preserving its
+91-test, affected-race, static, and independent review evidence. This seal
+supersedes the historical author/seal/local-merge holds above and adds no runtime
+cost. T42.2 runner implementation follows the authorized local integration;
+host/tool execution freeze follows implementation and review. Ceremony execution,
+remote push, release, and scale/SLO claims remain separately unauthorized.

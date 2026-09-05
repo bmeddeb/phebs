@@ -44,8 +44,12 @@ approved, with local checkpoint integration explicitly requested despite its
 known-red complete constructor. T42.1r2/r3 are integrated; T42.1r4's separate
 namespace/terminal-recovery production fix is implemented and component-tested.
 T42.1r5's fixture-only correction now passes complete constructor acceptance;
-all 62 top-level normal tests and the targeted race gates pass. Overall
-correction acceptance and ceremony execution remain unestablished.
+all 62 top-level normal tests and the targeted race gates pass. The final
+T42.1r1 correction now passes all 91 top-level normal tests, affected race gates,
+and independent review; V2 is sealed. Ben authorized local fast-forward
+integration of the sealed artifact and reviewed stack, followed by T42.2 runner
+implementation. Host/tool execution freeze and ceremony execution remain
+separately unauthorized and unestablished.
 Epic 43 runs in parallel as the charter-governed presentation track: it
 applies [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) to every product surface,
 starts at T43.1, and may not touch a scale plane, authority, or claim.
@@ -3059,7 +3063,7 @@ and closes Epic 41. T42.1 is integrated; T42.2 runner implementation is
 authorized but held for the approved T42.1r1 contract correction. Ceremony
 execution remains unauthorized and unexecuted.
 
-## Epic 42 · Combined scale gate and topology decision *(T42.1 integrated; T42.2 contract-readiness hold)*
+## Epic 42 · Combined scale gate and topology decision *(V2 sealed; local integration authorized)*
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
@@ -3098,7 +3102,7 @@ The later T42.2 call-graph audit below identifies execution-readiness defects
 not established by those contract fixtures and bounded production replays.
 This retained plan is not an exact-main execution freeze or a combined pass.
 
-**T42.1r1 · Ordinary-path contract correction (validation complete; artifact pending)** —
+**T42.1r1 · Ordinary-path contract correction (V2 sealed; local integration authorized)** —
 supersede, never mutate, the retained v1 plan. AC: production-derived identity
 table and complete constructor-fixture acceptance; formula-based workload,
 census, watcher, executable-image and preparation budgets; five phase-derived
@@ -4059,12 +4063,26 @@ requires Ben's explicit request. This validation-only record changes no runtime
 or retained artifact; no
 freeze, execution, release, scale result, or SLO is established or authorized.
 
+On 2026-09-04 Ben authorized V2 authoring/sealing and local integration of the
+reviewed stack. The create-only author succeeded from clean source
+`1b4456fe791b9e10816989f20fd1cdbcdb96c34c`: `spike/t421/plan-v2.json` is
+262,140 bytes at
+`sha256:2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+Its source/supersession bindings, strict round trip, independent second build,
+and unchanged V1 identity/round trip pass. Only `source_commit` differs from the
+validated preview; compiled source and its recorded gates are unchanged.
+Independent artifact/provenance review reports zero findings. This supersedes
+the historical author/seal/local-merge holds above. Ben authorized local
+fast-forward integration of the sealed artifact and reviewed stack; the
+artifact and docs add no runtime cost.
+
 **T42.2 · Combined convergence, recovery, and pressure execution** — run the
 frozen corpus through ordinary production workers and retain a closed receipt.
 Runner implementation was authorized on 2026-09-02 and branched as
-`codex/t42.2-combined-ceremony`; no ceremony was launched. Implementation is
-held pending separately authorized T42.1r1 replacement-plan authoring, sealing,
-merge, and later freeze; source/test validation is complete. The retained contract
+`codex/t42.2-combined-ceremony`; no ceremony was launched. Runner implementation
+resumes after the authorized local integration of sealed T42.1r1 V2. Its later
+host/tool execution freeze follows implementation and review; ceremony execution
+still requires separate authorization. The historical V1 contract
 incorrectly requires resolver/caller identity replacement on a
 logical-only change; permits at most 64 cold Git children despite 10,002
 ordinary resolver blob children alone; assigns zero Git children to phases

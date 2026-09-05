@@ -856,6 +856,18 @@ source/documentation review has no findings. The complete normal package passes
 all 62 top-level tests in 1799.598s, with no test failures or skips; no test or
 Surreal process remains. Docs-check retains only the known UI screenshot gap.
 No main merge, push, new canonical plan, freeze or ceremony is authorized.
+On 2026-09-04 Ben authorized V2 authoring/sealing and local integration of the
+reviewed T42.1r1 stack. The create-only author succeeded from clean source
+`1b4456fe791b9e10816989f20fd1cdbcdb96c34c`; `spike/t421/plan-v2.json` is
+262,140 bytes at
+`sha256:2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+Independent rebuilding and strict V1/V2 round trips pass; compiled source and
+the completed validation/review evidence remain unchanged. This supersedes the
+historical author/seal/local-merge holds above. Ben authorized local fast-forward
+integration of the sealed artifact and reviewed stack; T42.2 runner implementation
+follows that integration. Host/tool execution freeze follows implementation and
+review; ceremony execution, remote push,
+release, and scale/SLO claims remain separately unauthorized.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active
