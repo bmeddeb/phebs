@@ -87,6 +87,11 @@ func RequireAuthorBootstrap() error {
 	if runtime == nil || runtime.program != ProgramCorpusAuthor || runtime.client.Context().Err() != nil {
 		return ErrProductionBootstrap
 	}
+	runtime.client.mu.Lock()
+	defer runtime.client.mu.Unlock()
+	if runtime.client.closed || runtime.client.err != nil {
+		return ErrProductionBootstrap
+	}
 	return nil
 }
 

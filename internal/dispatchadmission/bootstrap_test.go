@@ -81,6 +81,9 @@ func TestProductionBootstrapHelper(t *testing.T) {
 			t.Fatal(err)
 		}
 		productionHelperFinish(t, ctx, lifetime)
+		if RequireAuthorBootstrap() == nil {
+			t.Fatal("closed author lifetime retained construction permission")
+		}
 		return
 	}
 	if mode == "output-overflow" {
