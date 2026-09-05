@@ -4602,6 +4602,18 @@ corrected source/test/cleanup review found no remaining finding. The opt-in-abse
 compile/skip passed in 0.473s. Retained V1/V2 canonical byte replay separately
 passed in 0.614s, docs in 0.544s, glossary and whitespace passed. The genuine
 extended constructor rehearsal still requires exact-clean execution.
+The actual nine-domain startup trace also exposed an attempted Buf sandbox
+validation despite V3's zero compatibility budget. The selected decoded V3
+launch now explicitly leaves compatibility unavailable before discovery or
+validation; ordinary and older exact modes keep their original behavior and
+warnings. The shared sandbox refusal remains sticky. Its V3-only optional
+profile posture adds 67 bytes; tests pin complete prior V1/V2 config hashes
+and reject posture drift even after caller digest recomputation. Independent
+source/test/cost review found all severity counts zero. Command normal five
+repeats passed in 1.019s, race three in 1.950s; profile normal three in 0.645s,
+race three in 1.894s; affected vet, pinned lint and whitespace pass. This
+selection removes a substantiated startup refusal, not the full parent,
+whole-work accounting, real five-server readiness or freeze prerequisites.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map

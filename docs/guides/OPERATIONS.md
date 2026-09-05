@@ -4531,6 +4531,15 @@ source-free result, and waits for acknowledged accounting checkpoint before
 closing. Direct invocation refuses; this command is not yet the full ceremony
 launcher or a freeze command.
 
+The decoded parent-bound V3 execution recipe deliberately leaves contract
+compatibility unavailable: its compatibility child budget is zero, so it skips
+Buf discovery and startup sandbox validation. Its closed read recipes never
+request compatibility. This does not change ordinary or older exact startup,
+does not omit Buf from required protected tool admission, and does not allow an
+accidental compatibility launch to fall back to uncounted execution. The
+prospective V3 execution profile records this selection explicitly; manually
+setting an environment variable cannot select it without genuine bootstrap.
+
 ## Developing phebs
 
 

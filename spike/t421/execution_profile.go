@@ -81,6 +81,7 @@ type ExecutionConfigProfile struct {
 	ProvisionalWorkbench             bool     `json:"provisional_workbench"`
 	EnabledExtractorDomains          []string `json:"enabled_extractor_domains"`
 	AbsentOptionalConfiguration      []string `json:"absent_optional_configuration"`
+	CompatibilityPosture             string   `json:"compatibility_posture,omitempty"`
 }
 
 type ExecutionRuntimeProfile struct {
@@ -378,6 +379,9 @@ func frozenExecutionConfig(plan Plan, bytesSHA256 string) ExecutionConfigProfile
 	if correctedPlanSemantics(plan.Schema) {
 		value.Schema = "t422-execution-config-projection-v2"
 		value.Policy = "ordered-epoch-config-bytes-set-and-closed-semantic-projection-v2"
+	}
+	if plan.Schema == PlanV3Schema {
+		value.CompatibilityPosture = "unavailable-no-validation-zero-budget-v1"
 	}
 	return value
 }

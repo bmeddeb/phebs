@@ -468,6 +468,30 @@ func serverTerminalError(
 	)
 }
 
+// Only the decoded parent-bound V3 recipe selects unavailable compatibility.
+// Its closed requests never ask for compatibility and its sandbox budget is
+// zero. Keep the shared dispatch refusal as a terminal guard against any later
+// accidental call. Ordinary and older exact launches still validate Buf.
+func initializeCompatibilityForLaunch(ctx context.Context, semanticLaunch *t422SemanticLaunch) (compat.Service, error) {
+	if semanticLaunch != nil {
+		return nil, nil
+	}
+	bin, err := compat.FindBinary()
+	if err != nil {
+		return nil, fmt.Errorf("pinned buf not found — contract compatibility disabled (make build provides it; or set PHEBS_BUF): %w", err)
+	}
+	checker, err := compat.New(bin)
+	if err != nil {
+		//nolint:staticcheck // Buf is a proper name; preserve the ordinary startup warning.
+		return nil, fmt.Errorf("Buf sandbox unavailable — contract compatibility disabled: %w", err)
+	}
+	if err := checker.Validate(ctx); err != nil {
+		//nolint:staticcheck // Buf is a proper name; preserve the ordinary startup warning.
+		return nil, fmt.Errorf("Buf validation failed — contract compatibility disabled: %w", err)
+	}
+	return checker, nil
+}
+
 func serve(args []string) (retErr error) {
 	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 	cfgPath := flags.String("config", "", "path to config file (defaults apply if omitted)")
@@ -1404,15 +1428,11 @@ func serve(args []string) (retErr error) {
 		}
 		evidenceView = st
 		proofBundles = st
-		if bin, err := compat.FindBinary(); err != nil {
-			log.Printf("WARNING: pinned buf not found — contract compatibility disabled (make build provides it; or set PHEBS_BUF): %v", err)
-		} else if checker, err := compat.New(bin); err != nil {
-			log.Printf("WARNING: Buf sandbox unavailable — contract compatibility disabled: %v", err)
-		} else if err := checker.Validate(ctx); err != nil {
-			log.Printf("WARNING: Buf validation failed — contract compatibility disabled: %v", err)
-		} else {
-			compatibility = checker
+		selectedCompatibility, compatibilityErr := initializeCompatibilityForLaunch(ctx, semanticLaunch)
+		if compatibilityErr != nil {
+			log.Printf("WARNING: %v", compatibilityErr)
 		}
+		compatibility = selectedCompatibility
 		candidateWorker, provider, err := candidatejob.New(
 			cfg.Server.DataDir, st, exs,
 		)
