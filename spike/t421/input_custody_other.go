@@ -18,3 +18,7 @@ func inputCustodyFlag(*os.File, bool) error {
 func inputCustodyVolume(*os.File) ([2]int32, error) {
 	return [2]int32{}, errors.New("input custody requires Darwin file protection")
 }
+
+func systemToolReadOnlyVolume(*os.File, os.FileInfo) ([2]int32, error) {
+	return [2]int32{}, ErrExecutionToolCustody
+}

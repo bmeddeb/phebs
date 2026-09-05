@@ -4493,6 +4493,13 @@ The implementation stack splits T42.2k into bootstrap/dispatch, semantic-owner
 control and genuine-parent custody slices, and T42.2l into the current-revision
 core, authenticated request/CLI and complete executor/admission slices. These
 are PR-sized dependency splits, not extra acceptance or freeze authority.
+The fixed platform-image custody slice now holds the three source-owned macOS
+tool paths on their actual read-only native volume, reusing exact image
+observation and metadata continuity without copying or modifying OS files.
+Real three-role observation/close tests and sticky wrong-role/context/path/
+volume/descriptor refusals pass; each caller still owns command and session
+joins. This is not a twelve-tool issuer, command admission or freeze. Independent
+source/cost review and exact committed static gates remain required.
 
 T42.2i's implementation protects seven actual core/helper copies and supplies
 the Git-child-only resource environment. Real protected init/fast-import,

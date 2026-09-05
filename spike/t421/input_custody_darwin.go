@@ -75,3 +75,21 @@ func inputCustodyVolume(file *os.File) ([2]int32, error) {
 	}
 	return stat.Fsid.Val, nil
 }
+
+// Fixed platform images remain on their native read-only system volume. This
+// does not assert a vendor signature or make a privileged host adversary safe.
+func systemToolReadOnlyVolume(file *os.File, info os.FileInfo) ([2]int32, error) {
+	if file == nil || info == nil || !info.Mode().IsRegular() || info.Mode()&(os.ModeSetuid|os.ModeSetgid) != 0 {
+		return [2]int32{}, ErrExecutionToolCustody
+	}
+	metadata, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || metadata == nil || metadata.Uid != 0 || metadata.Gid != 0 || metadata.Nlink != 1 ||
+		metadata.Mode&unix.S_IFMT != unix.S_IFREG || metadata.Mode&(unix.S_ISUID|unix.S_ISGID|0o022) != 0 || metadata.Mode&0o111 == 0 {
+		return [2]int32{}, ErrExecutionToolCustody
+	}
+	var stat unix.Statfs_t
+	if unix.Fstatfs(int(file.Fd()), &stat) != nil || stat.Flags&unix.MNT_RDONLY == 0 {
+		return [2]int32{}, ErrExecutionToolCustody
+	}
+	return stat.Fsid.Val, nil
+}
