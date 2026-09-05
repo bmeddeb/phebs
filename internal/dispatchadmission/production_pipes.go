@@ -35,7 +35,7 @@ func (pipes *CommandPipes) StdinPipe(command *exec.Cmd) (io.WriteCloser, error) 
 	if err := pipes.prepare(command); err != nil {
 		return nil, err
 	}
-	if command.Stdin != nil {
+	if pipes.stdin[0] != nil || command.Stdin != nil {
 		return nil, errors.Join(ErrConfig, pipes.Close())
 	}
 	reader, writer, err := os.Pipe()
@@ -51,7 +51,7 @@ func (pipes *CommandPipes) StdoutPipe(command *exec.Cmd) (io.ReadCloser, error) 
 	if err := pipes.prepare(command); err != nil {
 		return nil, err
 	}
-	if command.Stdout != nil {
+	if pipes.stdout[0] != nil || command.Stdout != nil {
 		return nil, errors.Join(ErrConfig, pipes.Close())
 	}
 	reader, writer, err := os.Pipe()

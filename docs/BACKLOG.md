@@ -4584,6 +4584,13 @@ dispatch-admission race, focused new-test race five repeats, exact sixteen-site
 inventory, scoped vet, pinned lint, format and whitespace pass. These are
 working-tree scoped gates; independent immutable corrected-source review and
 the real protected Phebs/Surreal rehearsal remain required.
+Independent exact pipe review of
+`74ec2da442e55f8b150f9218d4f64b5550ce5fc8` found zero critical/high/low
+and one medium setup-boundary leak: clearing command stdio then setting up the
+same owned pipe again could overwrite the original pair. The eight actual
+adapters do not do this, but the shared owner now rejects it and closes the
+original pair. Both-stream retained-original-FD regressions are included;
+independent exact correction review remains required.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay

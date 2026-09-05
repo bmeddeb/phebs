@@ -35,6 +35,38 @@ func setPipedTestRuntime(t *testing.T, lifetime *ProductionLifetime) {
 	t.Cleanup(func() { productionRuntime.Store(prior) })
 }
 
+func TestCommandPipesRefusesReplacingOwnedPair(t *testing.T) {
+	for _, stdin := range []bool{false, true} {
+		t.Run(map[bool]string{false: "stdout", true: "stdin"}[stdin], func(t *testing.T) {
+			command := exec.Command("/usr/bin/true")
+			var pipes CommandPipes
+			defer func() { _ = pipes.Close() }()
+			var err error
+			if stdin {
+				_, err = pipes.StdinPipe(command)
+			} else {
+				_, err = pipes.StdoutPipe(command)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			original := pipes // Retain the original descriptors without GC.
+			if stdin {
+				command.Stdin = nil
+				_, err = pipes.StdinPipe(command)
+			} else {
+				command.Stdout = nil
+				_, err = pipes.StdoutPipe(command)
+			}
+			if !errors.Is(err, ErrConfig) {
+				t.Fatal("replacement pipe pair admitted", err)
+			}
+			assertCommandPipesClosed(t, &original)
+			assertCommandPipesClosed(t, &pipes)
+		})
+	}
+}
+
 func TestPipedProductionOrdinaryAndAdmittedWait(t *testing.T) {
 	for _, exact := range []bool{false, true} {
 		t.Run(map[bool]string{false: "ordinary", true: "admitted"}[exact], func(t *testing.T) {
