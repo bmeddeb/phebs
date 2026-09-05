@@ -22,6 +22,7 @@ type ExecutionProfile struct {
 	Posture                  string                        `json:"posture"`
 	RuntimeBindingSchema     string                        `json:"runtime_binding_schema"`
 	PhaseRecipeSHA256        string                        `json:"phase_recipe_sha256"`
+	ProcessAccountingSHA256  string                        `json:"process_accounting_sha256,omitempty"`
 	Commands                 []ExecutionCommandProfile     `json:"commands"`
 	HarnessCommandSetSHA256  string                        `json:"harness_command_set_sha256"`
 	PressureCommandSetSHA256 string                        `json:"pressure_command_set_sha256"`
@@ -107,6 +108,10 @@ type ExecutionRootProfile struct {
 	DataRootRole              string `json:"data_root_role"`
 	BallastRootRole           string `json:"ballast_root_role"`
 	BackupRootRole            string `json:"backup_root_role"`
+	HomeRootRole              string `json:"home_root_role,omitempty"`
+	TemporaryRootRole         string `json:"temporary_root_role,omitempty"`
+	ToolOutputRootRole        string `json:"tool_output_root_role,omitempty"`
+	SessionPolicy             string `json:"session_policy,omitempty"`
 	BackingVolumeIdentity     string `json:"backing_volume_identity"`
 	DataVolumeIdentity        string `json:"data_volume_identity"`
 	BallastVolumeIdentity     string `json:"ballast_volume_identity"`
@@ -143,21 +148,36 @@ type ExecutionProfileAdmissionBinding struct {
 	rootVolumeBindingsSHA256  string
 	closedEnvironment         bool
 	verifiedBeforeWork        bool
+	processAccountingSHA256   string
 }
 
 // PhaseRuntimeBinding ties one phase observation to the exact admitted serve
 // invocation and to the source-free identity of the server process epoch that
 // produced it.
 type PhaseRuntimeBinding struct {
-	Schema                string                 `json:"schema"`
-	Phase                 string                 `json:"phase"`
-	ProfileSHA256         string                 `json:"profile_sha256"`
-	InvocationSHA256      string                 `json:"invocation_sha256"`
-	ProcessImageSHA256    string                 `json:"process_image_sha256"`
-	ProcessIdentitySHA256 string                 `json:"process_identity_sha256"`
-	ServerEpoch           uint64                 `json:"server_epoch"`
-	StartEventOrdinal     uint64                 `json:"start_event_ordinal"`
-	Startup               *ServerStartupEvidence `json:"startup,omitempty"`
+	Schema                string                    `json:"schema"`
+	Phase                 string                    `json:"phase"`
+	ProfileSHA256         string                    `json:"profile_sha256"`
+	InvocationSHA256      string                    `json:"invocation_sha256"`
+	ProcessImageSHA256    string                    `json:"process_image_sha256"`
+	ProcessIdentitySHA256 string                    `json:"process_identity_sha256"`
+	ServerEpoch           uint64                    `json:"server_epoch"`
+	StartEventOrdinal     uint64                    `json:"start_event_ordinal"`
+	Startup               *ServerStartupEvidence    `json:"startup,omitempty"`
+	OwnedStart            *OwnedServerStartEvidence `json:"owned_start,omitempty"`
+}
+
+// OwnedServerStartEvidence records the launcher's successful Start and native
+// lifetime observation. Admitted dispatch attempts cannot substitute for it.
+// The private native token/PID never appears in returned evidence.
+type OwnedServerStartEvidence struct {
+	Schema                  string `json:"schema"`
+	ServerEpoch             uint64 `json:"server_epoch"`
+	StartEventOrdinal       uint64 `json:"start_event_ordinal"`
+	ProcessImageSHA256      string `json:"process_image_sha256"`
+	NativeIdentitySHA256    string `json:"native_identity_sha256"`
+	NativeIdentityAvailable bool   `json:"native_identity_available"`
+	OwnedStartSucceeded     bool   `json:"owned_start_succeeded"`
 }
 
 // ServerStartupEvidence appears only on its epoch's launch phase. Finish is
@@ -171,10 +191,16 @@ type ServerStartupEvidence struct {
 }
 
 func phaseRuntimeBindingSchema(plan Plan) string {
-	if plan.Schema == PlanV2Schema {
+	switch plan.Schema {
+	case PlanSchema:
+		return PhaseRuntimeBindingSchema
+	case PlanV2Schema:
 		return PhaseRuntimeBindingV2Schema
+	case PlanV3Schema:
+		return PhaseRuntimeBindingV3Schema
+	default:
+		return ""
 	}
-	return PhaseRuntimeBindingSchema
 }
 
 func expectedExecutionProfile(
@@ -183,7 +209,7 @@ func expectedExecutionProfile(
 	host ExecutionHost,
 	admission ExecutionProfileAdmissionBinding,
 ) (ExecutionProfile, error) {
-	if admission.schema != ExecutionProfileSchema ||
+	if !knownPlanSchema(plan.Schema) || admission.schema != plan.ToolPolicy.ExecutionProfileSchema ||
 		!validExecutionSHA256(admission.harnessCommandSetSHA256) ||
 		!validExecutionSHA256(admission.pressureCommandSetSHA256) ||
 		!validExecutionSHA256(admission.configBytesSHA256) ||
@@ -193,6 +219,20 @@ func expectedExecutionProfile(
 		!validExecutionSHA256(admission.rootVolumeBindingsSHA256) ||
 		!admission.closedEnvironment || !admission.verifiedBeforeWork {
 		return ExecutionProfile{}, errors.New("T42.2 execution profile lacks external pre-work admission")
+	}
+	accountingSHA256 := ""
+	if plan.Schema == PlanV3Schema {
+		if plan.ProcessAccounting == nil {
+			return ExecutionProfile{}, errors.New("V3 execution profile lacks its process accounting contract")
+		}
+		var err error
+		accountingSHA256, err = canonicalSHA256(plan.ProcessAccounting)
+		if err != nil {
+			return ExecutionProfile{}, err
+		}
+	}
+	if admission.processAccountingSHA256 != accountingSHA256 {
+		return ExecutionProfile{}, errors.New("execution profile accounting differs from its private admission")
 	}
 	commands := frozenExecutionCommands()
 	commandsSHA256, err := canonicalSHA256(commands)
@@ -213,6 +253,7 @@ func expectedExecutionProfile(
 		Posture:                  "ordinary-production-workers-exact-v1",
 		RuntimeBindingSchema:     phaseRuntimeBindingSchema(plan),
 		PhaseRecipeSHA256:        executionPhaseRecipeSHA256(plan),
+		ProcessAccountingSHA256:  accountingSHA256,
 		Commands:                 commands,
 		HarnessCommandSetSHA256:  admission.harnessCommandSetSHA256,
 		PressureCommandSetSHA256: admission.pressureCommandSetSHA256,
@@ -221,6 +262,9 @@ func expectedExecutionProfile(
 		Runtime:                  frozenExecutionRuntime(plan),
 		Roots:                    frozenExecutionRoots(host, admission.rootVolumeBindingsSHA256),
 		Epochs:                   epochs,
+	}
+	if plan.Schema == PlanV3Schema {
+		applyV3ExecutionProfile(&profile)
 	}
 	profile.InvocationSHA256, err = executionInvocationSHA256(profile, tools)
 	if err != nil {
@@ -237,6 +281,15 @@ func expectedExecutionProfile(
 		return ExecutionProfile{}, errors.New("T42.2 execution profile differs from its external admission")
 	}
 	return profile, nil
+}
+
+func applyV3ExecutionProfile(profile *ExecutionProfile) {
+	profile.Posture = "ordinary-production-workers-controlled-dispatch-v3"
+	profile.Roots.Schema = "t422-execution-root-roles-v3"
+	profile.Roots.HomeRootRole = "private-home-on-mounted-pressure-volume-v1"
+	profile.Roots.TemporaryRootRole = "private-temp-on-mounted-pressure-volume-v1"
+	profile.Roots.ToolOutputRootRole = "tool-outputs-on-mounted-pressure-volume-v1"
+	profile.Roots.SessionPolicy = "private-recorded-execution-sessions;controller-and-final-signer-roots-excluded;unknown-child-session-refuses"
 }
 
 func validateExecutionProfile(
@@ -293,7 +346,7 @@ func frozenExecutionEnvironment(plan Plan, admission ExecutionProfileAdmissionBi
 		ServerSHA256:   admission.serverEnvironmentSHA256,
 		RejectUnlisted: true, RejectDemoVariables: true,
 	}
-	if plan.Schema == PlanV2Schema {
+	if correctedPlanSemantics(plan.Schema) {
 		value.ServerVariables = append(value.ServerVariables, "PHEBS_T421_EXACT_READS=source-free-v1")
 		slices.Sort(value.ServerVariables)
 	}
@@ -322,7 +375,7 @@ func frozenExecutionConfig(plan Plan, bytesSHA256 string) ExecutionConfigProfile
 			"analysis_units", "contexts", "demo_environment", "permissions", "revisions", "webhook",
 		},
 	}
-	if plan.Schema == PlanV2Schema {
+	if correctedPlanSemantics(plan.Schema) {
 		value.Schema = "t422-execution-config-projection-v2"
 		value.Policy = "ordered-epoch-config-bytes-set-and-closed-semantic-projection-v2"
 	}
@@ -374,7 +427,10 @@ func frozenExecutionServerEpochs() []ExecutionServerEpochProfile {
 }
 
 func admittedExecutionServerEpochs(plan Plan, admission ExecutionProfileAdmissionBinding) ([]ExecutionServerEpochProfile, error) {
-	if plan.Schema != PlanV2Schema {
+	if !knownPlanSchema(plan.Schema) {
+		return nil, errors.New("server epochs require a known plan schema")
+	}
+	if !correctedPlanSemantics(plan.Schema) {
 		if len(admission.epochConfigBytesSHA256) != 0 {
 			return nil, errors.New("v1 admission retained prospective epoch configs")
 		}
@@ -414,6 +470,17 @@ func executionPhaseRecipeSHA256(plan Plan) string {
 	phaseStatesSHA256, _ := canonicalSHA256(plan.PhaseStates)
 	phaseDeadlinesSHA256, _ := canonicalSHA256(plan.PhaseDeadlines)
 	failurePointsSHA256, _ := canonicalSHA256(plan.FailurePoints)
+	if plan.Schema == PlanV3Schema {
+		accountingSHA256, err := canonicalSHA256(plan.ProcessAccounting)
+		if err != nil || plan.ProcessAccounting == nil {
+			return ""
+		}
+		return recipeDigest("t422-execution-phase-recipe-v3", phaseOrderSHA256,
+			phaseStatesSHA256, phaseDeadlinesSHA256, failurePointsSHA256, accountingSHA256)
+	}
+	if !knownPlanSchema(plan.Schema) {
+		return ""
+	}
 	return recipeDigest(
 		"t422-execution-phase-recipe-v1", phaseOrderSHA256, phaseStatesSHA256,
 		phaseDeadlinesSHA256, failurePointsSHA256,
@@ -465,6 +532,11 @@ func validatePhaseRuntimeBindings(
 	measurements []PhaseMeasurement,
 	freeze ExecutionFreeze,
 ) error {
+	v3 := freeze.Profile.RuntimeBindingSchema == PhaseRuntimeBindingV3Schema
+	if len(values) != len(phases) || (!v3 && freeze.Profile.RuntimeBindingSchema != PhaseRuntimeBindingSchema &&
+		freeze.Profile.RuntimeBindingSchema != PhaseRuntimeBindingV2Schema) {
+		return errors.New("runtime binding inventory or schema is invalid")
+	}
 	profileSHA256, err := canonicalSHA256(freeze.Profile)
 	if err != nil {
 		return err
@@ -486,6 +558,7 @@ func validatePhaseRuntimeBindings(
 	type epochIdentity struct {
 		startEventOrdinal     uint64
 		processIdentitySHA256 string
+		nativeIdentitySHA256  string
 	}
 	epochs := make(map[uint64]epochIdentity, len(freeze.Profile.Epochs))
 	for index, phase := range phases {
@@ -497,7 +570,14 @@ func validatePhaseRuntimeBindings(
 		measurement, measured := measurementByPhase[phase]
 		launchMeasurement, launchMeasured := measurementByPhase[launchPhase]
 		launchPhebsStarted := false
-		if launchMeasured {
+		var ownedStart *OwnedServerStartEvidence
+		if v3 {
+			launchIndex := slices.Index(phases, launchPhase)
+			if launchIndex >= 0 && values[launchIndex].Runtime != nil {
+				ownedStart = values[launchIndex].Runtime.OwnedStart
+				launchPhebsStarted = ownedStart != nil && ownedStart.OwnedStartSucceeded
+			}
+		} else if launchMeasured {
 			roleIndex := slices.IndexFunc(launchMeasurement.ChildProcessRoles, func(value Count) bool {
 				return value.Name == "phebs"
 			})
@@ -519,6 +599,34 @@ func validatePhaseRuntimeBindings(
 		expectedProcessIdentity := recipeDigest(
 			"t422-phebs-process-identity-v1", processImageSHA256, fmt.Sprint(epoch),
 		)
+		nativeIdentity := ""
+		if v3 {
+			if ownedStart == nil || ownedStart.Schema != "t422-owned-server-start-v1" ||
+				ownedStart.ServerEpoch != epoch || ownedStart.StartEventOrdinal != binding.StartEventOrdinal ||
+				ownedStart.ProcessImageSHA256 != processImageSHA256 || !ownedStart.OwnedStartSucceeded ||
+				(phase != launchPhase && binding.OwnedStart != nil) {
+				return fmt.Errorf("phase %q lacks exact owned successful start evidence", phase)
+			}
+			if launchMeasurement.DispatchAccounting == nil || !slices.ContainsFunc(launchMeasurement.DispatchAccounting.Roles, func(value Count) bool {
+				return value.Name == "phebs" && value.Count > 0
+			}) {
+				return fmt.Errorf("phase %q started a server without an admitted dispatch", phase)
+			}
+			nativeIdentity = ownedStart.NativeIdentitySHA256
+			if ownedStart.NativeIdentityAvailable {
+				if !validExecutionSHA256(nativeIdentity) {
+					return fmt.Errorf("phase %q native lifetime identity is invalid", phase)
+				}
+				expectedProcessIdentity = recipeDigest("t422-phebs-process-identity-v3", processImageSHA256, nativeIdentity)
+			} else {
+				if nativeIdentity != "" || value.Outcome != "stopped" || value.Observed != nil || launchMeasurement.Metrics.NativeMeasurementAvailable {
+					return fmt.Errorf("phase %q cannot establish a native lifetime", phase)
+				}
+				expectedProcessIdentity = ""
+			}
+		} else if binding.OwnedStart != nil {
+			return fmt.Errorf("phase %q retained prospective owned start evidence", phase)
+		}
 		if !measured || !launchMeasured || !launchPhebsStarted || digestErr != nil ||
 			binding.Schema != freeze.Profile.RuntimeBindingSchema || binding.Phase != phase ||
 			binding.ProfileSHA256 != profileSHA256 || binding.InvocationSHA256 != freeze.Profile.InvocationSHA256 ||
@@ -531,7 +639,7 @@ func validatePhaseRuntimeBindings(
 			value.RuntimeSHA256 != bindingSHA256 {
 			return fmt.Errorf("phase %q runtime binding is invalid", phase)
 		}
-		if freeze.Profile.RuntimeBindingSchema == PhaseRuntimeBindingV2Schema {
+		if v3 || freeze.Profile.RuntimeBindingSchema == PhaseRuntimeBindingV2Schema {
 			epochIndex := slices.IndexFunc(freeze.Profile.Epochs, func(value ExecutionServerEpochProfile) bool {
 				return value.ServerEpoch == epoch
 			})
@@ -544,12 +652,12 @@ func validatePhaseRuntimeBindings(
 		} else if binding.Startup != nil {
 			return fmt.Errorf("phase %q retained prospective startup evidence", phase)
 		}
-		identity := epochIdentity{binding.StartEventOrdinal, binding.ProcessIdentitySHA256}
+		identity := epochIdentity{binding.StartEventOrdinal, binding.ProcessIdentitySHA256, nativeIdentity}
 		if previous, present := epochs[epoch]; present && previous != identity {
 			return fmt.Errorf("phase %q changed server identity inside epoch %d", phase, epoch)
 		}
 		for otherEpoch, previous := range epochs {
-			if otherEpoch != epoch && previous.processIdentitySHA256 == binding.ProcessIdentitySHA256 {
+			if otherEpoch != epoch && binding.ProcessIdentitySHA256 != "" && previous.processIdentitySHA256 == binding.ProcessIdentitySHA256 {
 				return fmt.Errorf("phase %q reused a process identity across server epochs", phase)
 			}
 		}

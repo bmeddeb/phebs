@@ -17,6 +17,7 @@ import (
 const (
 	PlanSchema      = "t421-combined-gate-plan-v1"
 	PlanV2Schema    = "t421-combined-gate-plan-v2"
+	PlanV3Schema    = "t421-combined-gate-plan-v3"
 	OracleSchema    = "t421-independent-combined-oracle-v1"
 	ReceiptSchema   = "t422-combined-convergence-receipt-v1"
 	MaxPlanBytes    = 256 << 10
@@ -24,28 +25,29 @@ const (
 )
 
 type Plan struct {
-	Schema          string              `json:"schema"`
-	FrozenOn        string              `json:"frozen_on"`
-	SourceCommit    string              `json:"source_commit"`
-	Inputs          []InputBinding      `json:"inputs"`
-	Profile         CombinedProfile     `json:"profile"`
-	Oracle          Oracle              `json:"oracle"`
-	Revisions       RevisionHistory     `json:"revision_history"`
-	PhaseStates     []PhaseState        `json:"phase_states"`
-	PhaseOrder      []string            `json:"phase_order"`
-	PhaseDeadlines  []PhaseDeadline     `json:"phase_deadlines"`
-	FailurePoints   []FailurePoint      `json:"failure_points"`
-	ReaderProbe     ReaderProbeProfile  `json:"reader_probe"`
-	SafetyEnvelope  SafetyEnvelope      `json:"safety_envelope"`
-	WorkEnvelope    WorkEnvelope        `json:"work_envelope"`
-	MeterPolicy     MeterPolicy         `json:"meter_policy"`
-	ToolPolicy      ToolPolicy          `json:"tool_policy"`
-	SealPolicy      SealPolicy          `json:"seal_policy"`
-	StopRules       []StopRule          `json:"stop_rules"`
-	Teardown        TeardownRule        `json:"teardown_rule"`
-	ReceiptContract ReceiptContract     `json:"receipt_contract"`
-	Claims          Claims              `json:"claims"`
-	Correction      *ContractCorrection `json:"correction,omitempty"`
+	Schema            string                     `json:"schema"`
+	FrozenOn          string                     `json:"frozen_on"`
+	SourceCommit      string                     `json:"source_commit"`
+	Inputs            []InputBinding             `json:"inputs"`
+	Profile           CombinedProfile            `json:"profile"`
+	Oracle            Oracle                     `json:"oracle"`
+	Revisions         RevisionHistory            `json:"revision_history"`
+	PhaseStates       []PhaseState               `json:"phase_states"`
+	PhaseOrder        []string                   `json:"phase_order"`
+	PhaseDeadlines    []PhaseDeadline            `json:"phase_deadlines"`
+	FailurePoints     []FailurePoint             `json:"failure_points"`
+	ReaderProbe       ReaderProbeProfile         `json:"reader_probe"`
+	SafetyEnvelope    SafetyEnvelope             `json:"safety_envelope"`
+	WorkEnvelope      WorkEnvelope               `json:"work_envelope"`
+	MeterPolicy       MeterPolicy                `json:"meter_policy"`
+	ToolPolicy        ToolPolicy                 `json:"tool_policy"`
+	SealPolicy        SealPolicy                 `json:"seal_policy"`
+	StopRules         []StopRule                 `json:"stop_rules"`
+	Teardown          TeardownRule               `json:"teardown_rule"`
+	ReceiptContract   ReceiptContract            `json:"receipt_contract"`
+	Claims            Claims                     `json:"claims"`
+	Correction        *ContractCorrection        `json:"correction,omitempty"`
+	ProcessAccounting *ProcessAccountingContract `json:"process_accounting,omitempty"`
 }
 
 type InputBinding struct {
@@ -529,16 +531,18 @@ type ToolPolicy struct {
 }
 
 type WorkEnvelope struct {
-	Schema                         string            `json:"schema"`
-	MaximumRetriesPerUnit          uint64            `json:"maximum_retries_per_unit"`
-	MaximumStoreRowsPerTransaction uint64            `json:"maximum_store_rows_per_transaction"`
-	MaximumAggregatePartitions     uint64            `json:"maximum_aggregate_partitions"`
-	MaximumLifecycleDeletesPerTurn uint64            `json:"maximum_lifecycle_deletes_per_turn"`
-	MaximumDataLogicalBytes        uint64            `json:"maximum_data_logical_bytes"`
-	MaximumChildProcessesPerPhase  uint64            `json:"maximum_child_processes_per_phase"`
-	ChildProcessRoles              []string          `json:"child_process_roles"`
-	LifecycleOwners                []string          `json:"lifecycle_owners"`
-	Phases                         []PhaseWorkBounds `json:"phases"`
+	Schema                                    string            `json:"schema"`
+	MaximumRetriesPerUnit                     uint64            `json:"maximum_retries_per_unit"`
+	MaximumStoreRowsPerTransaction            uint64            `json:"maximum_store_rows_per_transaction"`
+	MaximumAggregatePartitions                uint64            `json:"maximum_aggregate_partitions"`
+	MaximumLifecycleDeletesPerTurn            uint64            `json:"maximum_lifecycle_deletes_per_turn"`
+	MaximumDataLogicalBytes                   uint64            `json:"maximum_data_logical_bytes"`
+	MaximumChildProcessesPerPhase             uint64            `json:"maximum_child_processes_per_phase"`
+	ChildProcessRoles                         []string          `json:"child_process_roles"`
+	MaximumControlledDispatchAttemptsPerPhase uint64            `json:"maximum_controlled_dispatch_attempts_per_phase,omitempty"`
+	ControlledDispatchRoles                   []string          `json:"controlled_dispatch_roles,omitempty"`
+	LifecycleOwners                           []string          `json:"lifecycle_owners"`
+	Phases                                    []PhaseWorkBounds `json:"phases"`
 }
 
 type CounterBound struct {
@@ -549,6 +553,7 @@ type CounterBound struct {
 type PhaseWorkBounds struct {
 	Phase                     string       `json:"phase"`
 	ChildProcessRoles         []RoleBound  `json:"child_process_roles"`
+	ControlledDispatchRoles   []RoleBound  `json:"controlled_dispatch_roles,omitempty"`
 	PhysicalCorpusPasses      CounterBound `json:"physical_corpus_passes"`
 	ChangedPhysicalFiles      CounterBound `json:"changed_physical_files"`
 	ChangedLogicalServices    CounterBound `json:"changed_logical_services"`
@@ -642,12 +647,13 @@ type StopRule struct {
 }
 
 type TeardownRule struct {
-	StopDescendants      bool `json:"stop_descendants"`
-	CloseStore           bool `json:"close_store"`
-	RemoveDerivedCustody bool `json:"remove_derived_custody"`
-	RemoveScratchSource  bool `json:"remove_scratch_source"`
-	RequireZeroChildren  bool `json:"require_zero_children"`
-	RetainSourceFreeOnly bool `json:"retain_source_free_only"`
+	Scope                string `json:"scope,omitempty"`
+	StopDescendants      bool   `json:"stop_descendants"`
+	CloseStore           bool   `json:"close_store"`
+	RemoveDerivedCustody bool   `json:"remove_derived_custody"`
+	RemoveScratchSource  bool   `json:"remove_scratch_source"`
+	RequireZeroChildren  bool   `json:"require_zero_children"`
+	RetainSourceFreeOnly bool   `json:"retain_source_free_only"`
 }
 
 type ReceiptContract struct {
@@ -697,6 +703,28 @@ type Claims struct {
 }
 
 func MarshalCanonical(value any) ([]byte, error) {
+	compact := false
+	switch typed := value.(type) {
+	case Plan:
+		compact = typed.Schema == PlanV3Schema
+	case *Plan:
+		compact = typed != nil && typed.Schema == PlanV3Schema
+	case ExecutionFreeze:
+		compact = typed.Schema == ExecutionFreezeV3Schema
+	case *ExecutionFreeze:
+		compact = typed != nil && typed.Schema == ExecutionFreezeV3Schema
+	case Receipt:
+		compact = typed.Schema == ReceiptV3Schema
+	case *Receipt:
+		compact = typed != nil && typed.Schema == ReceiptV3Schema
+	}
+	if compact {
+		raw, err := json.Marshal(value)
+		if err != nil {
+			return nil, err
+		}
+		return append(raw, '\n'), nil
+	}
 	raw, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return nil, err

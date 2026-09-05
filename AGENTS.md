@@ -917,6 +917,13 @@ retains existing caps.
 This draft changes no runtime and authorizes no seal, merge, freeze or run.
 Budget derivation, versioned implementation, complete admission/runner readiness
 and independent review remain prerequisites to those separate decisions.
+The 2026-09-05 continuation implements an unsealed V3 constructor,
+versioned accounting/receipt/runtime validators, checked direct-attempt budgets,
+bounded native observations and a fail-closed dispatch primitive. Production
+launches remain unwired and ordinary runtime unchanged. Actual frozen flow
+limits, bootstrap, protected dispatch, complete admission/author/executor,
+scoped launcher cleanup and full readiness remain open; this foundation is not
+T42.1r7 acceptance, an artifact seal, a freeze command or Epic closure.
 `docs/DESIGN_CHARTER.md` is the presentation authority; Epic 43, its
 charter-gated presentation-only track, completed on 2026-08-08 (closure
 record `spike/t431/CLOSURE.md`; residue queued as T43R.1–5 in the active

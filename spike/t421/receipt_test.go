@@ -1494,6 +1494,15 @@ func completeTestReceipt(t *testing.T, plan Plan, binding ExecutionFreezeBinding
 		relationships[index] = expectedRelationshipResult(value)
 	}
 	sourceVerificationSHA256 := SHA256([]byte("t422-test-source-verification"))
+	teardown := ReceiptTeardown{
+		Attempted: true, Completed: true, Outcome: "clean", DescendantsStopped: true, StoreClosed: true,
+		PressureVolumeDetached: true, PressureImageRemoved: true,
+		BackingVolumeIdentity: freeze.Host.BackingVolumeIdentity, RetainedSourceFreeOnly: true,
+	}
+	if plan.Schema == PlanV3Schema {
+		teardown, _ = accountingTestTeardown(plan)
+		teardown.BackingVolumeIdentity = freeze.Host.BackingVolumeIdentity
+	}
 	return Receipt{
 		Schema: plan.ReceiptContract.Schema,
 		Authority: ReceiptAuthority{
@@ -1541,11 +1550,7 @@ func completeTestReceipt(t *testing.T, plan Plan, binding ExecutionFreezeBinding
 			ReturnedSignatureNamespace:           plan.SealPolicy.ReturnedSignatureNamespace,
 			VerificationPosture:                  "freeze_preflight_source_and_returned_signatures_verified_by_external_bindings",
 		},
-		Teardown: ReceiptTeardown{
-			Attempted: true, Completed: true, Outcome: "clean", DescendantsStopped: true, StoreClosed: true,
-			PressureVolumeDetached: true, PressureImageRemoved: true,
-			BackingVolumeIdentity: freeze.Host.BackingVolumeIdentity, RetainedSourceFreeOnly: true,
-		},
+		Teardown:   teardown,
 		SourceFree: true,
 	}
 }
@@ -1659,8 +1664,8 @@ func completeTestAuthorities(
 	operational := plan.PhaseOrder[1 : len(plan.PhaseOrder)-1]
 	results := make([]AuthorityPhaseResult, len(operational))
 	statesByGroup := make(map[string]AuthorityPhaseResult)
-	if plan.Schema == PlanV2Schema {
-		statesByGroup = productionAuthorityFixture(t, plan)
+	if correctedPlanSemantics(plan.Schema) {
+		statesByGroup = productionAuthorityFixture(t, productionFixtureInputPlan(t, plan))
 	}
 	for index, phase := range operational {
 		stateIndex := slices.IndexFunc(plan.PhaseStates, func(value PhaseState) bool { return value.Phase == phase })
@@ -1668,7 +1673,7 @@ func completeTestAuthorities(
 		group := testAuthorityGroup(phase)
 		template, ok := statesByGroup[group]
 		if !ok {
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				t.Fatalf("native constructor fixture omitted authority group %q", group)
 			}
 			physical, _ := namedPhysicalRevision(plan.Revisions.Physical, phaseState.PhysicalRevision)
@@ -1906,7 +1911,18 @@ func testPhaseRuntime(
 		ProcessIdentitySHA256: recipeDigest("t422-phebs-process-identity-v1", image, fmt.Sprint(epoch)),
 		ServerEpoch:           epoch, StartEventOrdinal: measurements[launchIndex].StartEventOrdinal + 50,
 	}
-	if value.Schema == PhaseRuntimeBindingV2Schema && phase == launchPhase {
+	if value.Schema == PhaseRuntimeBindingV3Schema {
+		nativeIdentity := testDigest("modeled-native-server-lifetime", fmt.Sprint(epoch))
+		value.ProcessIdentitySHA256 = recipeDigest("t422-phebs-process-identity-v3", image, nativeIdentity)
+		if phase == launchPhase {
+			value.OwnedStart = &OwnedServerStartEvidence{
+				Schema: "t422-owned-server-start-v1", ServerEpoch: epoch, StartEventOrdinal: value.StartEventOrdinal,
+				ProcessImageSHA256: image, NativeIdentitySHA256: nativeIdentity,
+				NativeIdentityAvailable: true, OwnedStartSucceeded: true,
+			}
+		}
+	}
+	if (value.Schema == PhaseRuntimeBindingV2Schema || value.Schema == PhaseRuntimeBindingV3Schema) && phase == launchPhase {
 		elapsed := uint64(1)
 		value.Startup = &ServerStartupEvidence{
 			ServerEpoch: epoch, Outcome: "ready", FinishEventOrdinal: value.StartEventOrdinal + 1, ElapsedMS: &elapsed,
@@ -2002,10 +2018,56 @@ func testPhaseMeasurement(plan Plan, freeze ExecutionFreeze, index int) PhaseMea
 		metrics.MinimumPrePressureAllocatedBytes = Bytes(pressure.MinimumPrePressureBytes)
 		metrics.MaximumPrePressureAllocatedBytes = Bytes(pressure.MaximumPrePressureBytes)
 	}
-	return PhaseMeasurement{
+	measurement := PhaseMeasurement{
 		Phase: phase, StartEventOrdinal: uint64(index*100 + 10), FinishEventOrdinal: uint64(index*100 + 99),
 		Metrics: metrics, ChildProcessRoles: children,
 	}
+	if plan.Schema == PlanV3Schema {
+		accounting := accountingTestMeasurement(plan, phase)
+		measurement.ChildProcessRoles = nil
+		measurement.DispatchAccounting, measurement.NativeObservation = accounting.DispatchAccounting, accounting.NativeObservation
+		measurement.Metrics.ChildProcesses, measurement.Metrics.PeakRSSBytes = 0, 0
+		measurement.Metrics.ProcessMeasurementAvailable = false
+		measurement.Metrics.DispatchMeasurementAvailable, measurement.Metrics.NativeMeasurementAvailable = true, true
+		measurement.Metrics.ObservedRSSHighWaterBytes = Bytes(accounting.NativeObservation.ObservedRSSHighWaterBytes)
+		_, launchPhase, _ := expectedPhaseRuntime(freeze.Profile.Epochs, phase)
+		for roleIndex, role := range measurement.DispatchAccounting.Roles {
+			if role.Name == "phebs" && phase == launchPhase || role.Name == "hdiutil" && phase == "teardown" {
+				measurement.DispatchAccounting.Roles[roleIndex].Count = 1
+				measurement.Metrics.ControlledDispatchAttempts++
+			}
+		}
+	}
+	return measurement
+}
+
+// V3 changes accounting, not the constructor graph. Reuse the exact V2 native
+// fixture only after comparing the complete expected prospective plan;
+// retain its existing exact-plan cache and avoid a second full corpus build.
+func productionFixtureInputPlan(t *testing.T, plan Plan) Plan {
+	t.Helper()
+	if plan.Schema != PlanV3Schema {
+		return plan
+	}
+	prior := correctedTestPlan(t)
+	if !productionFixturePlanMatches(plan, prior) {
+		t.Fatal("V3 native fixture inputs differ from the retained functional graph")
+	}
+	return prior
+}
+
+func productionFixturePlanMatches(plan, prior Plan) bool {
+	// The correction mutates nested slices/pointers, so detach the retained
+	// plan before deriving the only V3 plan this constructor cache can serve.
+	raw, err := json.Marshal(prior)
+	if err != nil {
+		return false
+	}
+	var expected Plan
+	if json.Unmarshal(raw, &expected) != nil || applyProcessAccountingCorrection(&expected) != nil {
+		return false
+	}
+	return reflect.DeepEqual(plan, expected)
 }
 
 func divCeil(value, divisor uint64) uint64 {
@@ -2055,7 +2117,7 @@ func completeTestTransitions(
 				OldHeldQueryEventOrdinal: start + 4, NewHeldQueryEventOrdinal: start + 5,
 				LeaseReleaseEventOrdinal: start + 6, AuthorityBeforeSHA256: before, AuthorityAfterSHA256: after,
 			}
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				readBound, err := correctedPhysicalTransitionReadBound(plan.Profile)
 				if err != nil {
 					t.Fatal(err)
@@ -2100,7 +2162,7 @@ func completeTestTransitions(
 				transition.Injections = append(transition.Injections,
 					testInjectionTransition(t, plan, point, transition, authority, freeze, measurement))
 			}
-			if phase == "logical_delta_b" && plan.Schema == PlanV2Schema {
+			if phase == "logical_delta_b" && correctedPlanSemantics(plan.Schema) {
 				readBound, err := correctedLogicalTransitionReadBound()
 				if err != nil {
 					t.Fatal(err)
@@ -2112,7 +2174,7 @@ func completeTestTransitions(
 					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
 				}
 			}
-			if phase == "return_a" && plan.Schema == PlanV2Schema {
+			if phase == "return_a" && correctedPlanSemantics(plan.Schema) {
 				readBound, err := correctedReturnTransitionReadBound()
 				if err != nil {
 					t.Fatal(err)
@@ -2124,7 +2186,7 @@ func completeTestTransitions(
 					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
 				}
 			}
-			if phase == "stale_lease" && plan.Schema == PlanV2Schema {
+			if phase == "stale_lease" && correctedPlanSemantics(plan.Schema) {
 				readBound, err := correctedStaleLeaseTransitionReadBound()
 				if err != nil {
 					t.Fatal(err)
@@ -2136,7 +2198,7 @@ func completeTestTransitions(
 					StoreWriteAttempts: readBound.StoreWriteAttempts.Minimum,
 				}
 			}
-			if phase == "process_restart" && plan.Schema == PlanV2Schema {
+			if phase == "process_restart" && correctedPlanSemantics(plan.Schema) {
 				readBound, err := correctedCheckpointRestartReadBound()
 				if err != nil {
 					t.Fatal(err)
@@ -2152,7 +2214,7 @@ func completeTestTransitions(
 			// Filled as one contiguous sequence below.
 		case "archive_restore":
 			transition.Archive = testArchiveTransition(t, plan, transition, authority)
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				readBound := correctedArchiveTransitionReadBound()
 				transition.ReadAccounting = &TransitionReadSubtotal{
 					Schema: "t422-transition-read-accounting-v1", Class: correctedArchiveTransitionReadClass,
@@ -2161,7 +2223,7 @@ func completeTestTransitions(
 			}
 		case "lifecycle_collection":
 			transition.Lifecycle = testLifecycleTransition(t, plan, transition, authority, measurement)
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				readBound := correctedLifecycleTransitionReadBound()
 				transition.ReadAccounting = &TransitionReadSubtotal{
 					Schema: "t422-transition-read-accounting-v1", Class: correctedLifecycleTransitionReadClass,
@@ -2227,14 +2289,14 @@ func testInjectionTransition(
 		value.TargetGenerationBefore = beforeAuthority.CatalogRootSHA256
 		value.TargetGenerationAfter = phaseAuthority.CatalogRootSHA256
 		value.ObservedRecoveryBranch = "resume_activation_schedule"
-		if plan.Schema == PlanV2Schema {
+		if correctedPlanSemantics(plan.Schema) {
 			value.RequeueCount = 1
 		}
 		value.SuccessCount = 1
 	case "interrupted_publication":
 		value.Target.GenerationSHA256 = phaseAuthority.RelationshipGenerationSHA256
 		value.Target.UnitSHA256 = phaseAuthority.RelationshipRootSHA256
-		if plan.Schema == PlanV2Schema {
+		if correctedPlanSemantics(plan.Schema) {
 			value.Target.PlanSHA256 = testDigest("return_a", "relationship-runtime-target")
 			value.Target.ScheduleSHA256 = testDigest("return_a", "relationship-schedule")
 			var ok bool
@@ -2263,8 +2325,8 @@ func testInjectionTransition(
 		value.Target.UnitSHA256 = partition.ResultIdentitySHA256
 		value.TargetGenerationBefore, value.TargetGenerationAfter = root.GenerationSHA256, root.GenerationSHA256
 		value.RequeueCount, value.SuccessCount = 1, 1
-		if plan.Schema == PlanV2Schema {
-			recovery := productionRecoveryScheduleFixture(t, plan, point.Phase)
+		if correctedPlanSemantics(plan.Schema) {
+			recovery := productionRecoveryScheduleFixture(t, productionFixtureInputPlan(t, plan), point.Phase)
 			preparationIndex := slices.IndexFunc(plan.Correction.RecoveryPreparations, func(row RecoveryPreparation) bool { return row.Phase == point.Phase })
 			preparation := plan.Correction.RecoveryPreparations[preparationIndex]
 			if recovery.Target != root.GenerationSHA256 {
@@ -2312,6 +2374,10 @@ func testInjectionTransition(
 			value.ProcessImageSHA256 = freeze.Tools[imageIndex].SHA256
 			value.ProcessIdentityBeforeSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, fmt.Sprint(value.ProcessEpochBefore))
 			value.ProcessIdentityAfterSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, fmt.Sprint(value.ProcessEpochAfter))
+			if plan.Schema == PlanV3Schema {
+				value.ProcessIdentityBeforeSHA256 = recipeDigest("t422-phebs-process-identity-v3", value.ProcessImageSHA256, testDigest("modeled-native-server-lifetime", fmt.Sprint(value.ProcessEpochBefore)))
+				value.ProcessIdentityAfterSHA256 = recipeDigest("t422-phebs-process-identity-v3", value.ProcessImageSHA256, testDigest("modeled-native-server-lifetime", fmt.Sprint(value.ProcessEpochAfter)))
+			}
 			value.ProcessStopEventOrdinal = transition.StartEventOrdinal + 30
 			value.ProcessStartEventOrdinal = transition.StartEventOrdinal + 50
 			value.Checkpoint = &CheckpointRecovery{
@@ -2327,7 +2393,7 @@ func testInjectionTransition(
 				StartCount: 2, CompletionCount: 1, PriorityAfter: 2, AttemptBefore: 1, AttemptAfter: 1,
 				PrivateLeaseTokenChanged: true, HardDeath: true,
 			}
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				value.AuthorityAtHitSHA256 = beforeSHA256
 				globalOffset := point.TargetOrdinal
 				for index := 0; index < rootIndex; index++ {
@@ -2473,7 +2539,7 @@ func testPressureTransitions(
 		switch phase {
 		case "pressure_80":
 			value.GateOutcome = "success"
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				readBound := correctedPressure80TransitionReadBound()
 				transition.ReadAccounting = &TransitionReadSubtotal{
 					Schema: "t422-transition-read-accounting-v1", Class: correctedPressure80TransitionReadClass,
@@ -2498,7 +2564,7 @@ func testPressureTransitions(
 			measurement.Metrics.MaxLifecycleDeletesTurn = CountMetric(divCeil(deleted, ownerTurns))
 		case "pressure_90":
 			value.GateOutcome = "err_pressure_refusal"
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				readBound := correctedPressure90TransitionReadBound()
 				transition.ReadAccounting = &TransitionReadSubtotal{
 					Schema: "t422-transition-read-accounting-v1", Class: correctedPressure90TransitionReadClass,
@@ -2508,7 +2574,7 @@ func testPressureTransitions(
 			measurement.Metrics.DataAllocatedBytes = Bytes(allocatedAfter)
 		case "pressure_75":
 			value.GateOutcome = "err_pressure_refusal"
-			if plan.Schema == PlanV2Schema {
+			if correctedPlanSemantics(plan.Schema) {
 				readBound := correctedPressure75TransitionReadBound()
 				transition.ReadAccounting = &TransitionReadSubtotal{
 					Schema: "t422-transition-read-accounting-v1", Class: correctedPressure75TransitionReadClass,

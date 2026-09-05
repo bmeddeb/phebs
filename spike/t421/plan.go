@@ -114,9 +114,16 @@ func buildPlanV1(sourceCommit string) (Plan, error) {
 }
 
 func ValidateFrozenPlan(plan Plan) error {
-	build := BuildPlan
-	if plan.Schema == PlanSchema {
+	var build func(string) (Plan, error)
+	switch plan.Schema {
+	case PlanSchema:
 		build = buildPlanV1
+	case PlanV2Schema:
+		build = BuildPlan
+	case PlanV3Schema:
+		build = BuildPlanV3
+	default:
+		return errors.New("T42.1 plan schema is unknown")
 	}
 	want, err := build(plan.SourceCommit)
 	if err != nil {
@@ -133,7 +140,7 @@ func ValidatePlan(plan Plan) error {
 }
 
 func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
-	if (plan.Schema != PlanSchema && plan.Schema != PlanV2Schema) || plan.FrozenOn != frozenDate || !validCommit(plan.SourceCommit) {
+	if !knownPlanSchema(plan.Schema) || plan.FrozenOn != frozenDate || !validCommit(plan.SourceCommit) {
 		return errors.New("T42.1 plan identity is invalid")
 	}
 	if err := validateInputBindings(plan.Inputs); err != nil {
@@ -151,7 +158,7 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 	wantRevisions := RevisionHistory{}
 	if knownRevisions == nil {
 		var err error
-		wantRevisions, err = revisionHistoryForScope(plan.Profile, plan.Revisions.Logical, plan.Schema == PlanV2Schema)
+		wantRevisions, err = revisionHistoryForScope(plan.Profile, plan.Revisions.Logical, correctedPlanSemantics(plan.Schema))
 		if err != nil {
 			return err
 		}
@@ -169,7 +176,7 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 		return errors.New("T42.1 revision history is not the frozen A-B-A shape")
 	}
 	supportedInputs := plan.Profile.Pipeline.SupportedGoFiles + plan.Profile.Pipeline.SupportedIDLFiles
-	if plan.Schema == PlanV2Schema {
+	if correctedPlanSemantics(plan.Schema) {
 		supportedInputs = plan.Profile.Pipeline.SupportedGoFiles
 	}
 	for _, revision := range plan.Revisions.Physical {
@@ -233,6 +240,9 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 	}
 	if len(raw) > MaxPlanBytes {
 		return fmt.Errorf("T42.1 plan exceeds its frozen byte bound: observed=%d limit=%d", len(raw), MaxPlanBytes)
+	}
+	if plan.Schema == PlanV3Schema && len(raw) > MaxPlanV3AuthorBytes {
+		return fmt.Errorf("T42.1 V3 plan exceeds its authoring headroom target: observed=%d limit=%d", len(raw), MaxPlanV3AuthorBytes)
 	}
 	return rejectSourceBearingPlan(raw)
 }
@@ -509,7 +519,7 @@ func validateOracle(oracle Oracle, profile CombinedProfile, schema string) error
 		}
 	}
 	queryCases := frozenQueryCases()
-	if schema == PlanV2Schema {
+	if correctedPlanSemantics(schema) {
 		queryCases = correctedQueryCases()
 	}
 	if !reflect.DeepEqual(oracle.QueryCases, queryCases) || len(oracle.Relationships) != 4 {

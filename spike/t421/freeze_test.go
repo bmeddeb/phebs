@@ -413,7 +413,7 @@ func executionProfileTestAdmission(
 ) ExecutionProfileAdmissionBinding {
 	t.Helper()
 	admission := ExecutionProfileAdmissionBinding{
-		schema:                    ExecutionProfileSchema,
+		schema:                    plan.ToolPolicy.ExecutionProfileSchema,
 		harnessCommandSetSHA256:   SHA256([]byte("t422-test-harness-commands")),
 		pressureCommandSetSHA256:  SHA256([]byte("t422-test-pressure-commands")),
 		configBytesSHA256:         SHA256([]byte("t422-test-config")),
@@ -424,7 +424,7 @@ func executionProfileTestAdmission(
 		verifiedBeforeWork:        true,
 	}
 	var err error
-	if plan.Schema == PlanV2Schema {
+	if correctedPlanSemantics(plan.Schema) {
 		for _, epoch := range correctedExecutionServerEpochs() {
 			state := slices.IndexFunc(plan.PhaseStates, func(value PhaseState) bool { return value.Phase == epoch.LaunchPhase })
 			admission.epochConfigBytesSHA256 = append(admission.epochConfigBytesSHA256, SHA256([]byte("t422-test-config/"+plan.PhaseStates[state].LogicalRevision)))
@@ -461,6 +461,14 @@ func executionProfileTestAdmission(
 		Runtime:                  frozenExecutionRuntime(plan),
 		Roots:                    frozenExecutionRoots(host, admission.rootVolumeBindingsSHA256),
 		Epochs:                   epochs,
+	}
+	if plan.Schema == PlanV3Schema {
+		admission.processAccountingSHA256, err = canonicalSHA256(plan.ProcessAccounting)
+		if err != nil {
+			t.Fatal(err)
+		}
+		profile.ProcessAccountingSHA256 = admission.processAccountingSHA256
+		applyV3ExecutionProfile(&profile)
 	}
 	profile.InvocationSHA256, err = executionInvocationSHA256(profile, tools)
 	if err != nil {

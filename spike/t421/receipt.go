@@ -192,11 +192,13 @@ type FailureObservation struct {
 }
 
 type PhaseMeasurement struct {
-	Phase              string         `json:"phase"`
-	StartEventOrdinal  uint64         `json:"start_event_ordinal"`
-	FinishEventOrdinal uint64         `json:"finish_event_ordinal"`
-	Metrics            ReceiptMetrics `json:"metrics"`
-	ChildProcessRoles  []Count        `json:"child_process_roles"`
+	Phase              string                         `json:"phase"`
+	StartEventOrdinal  uint64                         `json:"start_event_ordinal"`
+	FinishEventOrdinal uint64                         `json:"finish_event_ordinal"`
+	Metrics            ReceiptMetrics                 `json:"metrics"`
+	ChildProcessRoles  []Count                        `json:"child_process_roles"`
+	DispatchAccounting *DispatchAccountingMeasurement `json:"dispatch_accounting,omitempty"`
+	NativeObservation  *ProcessObservation            `json:"native_observation,omitempty"`
 }
 
 type ReceiptMetrics struct {
@@ -264,6 +266,10 @@ type ReceiptMetrics struct {
 	TotalDiskBytes                   Bytes        `json:"total_disk_bytes"`
 	UnsupportedSourceFiles           CountMetric  `json:"unsupported_source_files"`
 	WallMS                           Milliseconds `json:"wall_ms"`
+	ControlledDispatchAttempts       CountMetric  `json:"controlled_dispatch_attempts,omitempty"`
+	DispatchMeasurementAvailable     bool         `json:"dispatch_measurement_available,omitempty"`
+	ObservedRSSHighWaterBytes        Bytes        `json:"observed_rss_high_water_bytes,omitempty"`
+	NativeMeasurementAvailable       bool         `json:"native_measurement_available,omitempty"`
 }
 
 type AuthorityPhaseResult struct {
@@ -936,31 +942,32 @@ type ReceiptNonClaims struct {
 }
 
 type ReceiptTeardown struct {
-	Attempted                  bool             `json:"attempted"`
-	Completed                  bool             `json:"completed"`
-	Outcome                    string           `json:"outcome"`
-	Failure                    *TeardownFailure `json:"failure,omitempty"`
-	DescendantsStopped         bool             `json:"descendants_stopped"`
-	StoreClosed                bool             `json:"store_closed"`
-	DerivedCustodyPaths        uint64           `json:"derived_custody_paths"`
-	ScratchSourcePaths         uint64           `json:"scratch_source_paths"`
-	ChildrenRemaining          uint64           `json:"children_remaining"`
-	PressureBallastBytes       uint64           `json:"pressure_ballast_bytes"`
-	PressureVolumeDetached     bool             `json:"pressure_volume_detached"`
-	PressureImagePaths         uint64           `json:"pressure_image_paths"`
-	PressureImageRemoved       bool             `json:"pressure_image_removed"`
-	BackingDerivedCustodyPaths uint64           `json:"backing_derived_custody_paths"`
-	BackingVolumeIdentity      string           `json:"backing_volume_identity"`
-	RetainedSourceFreeOnly     bool             `json:"retained_source_free_only"`
-	DescendantStopErrors       uint64           `json:"descendant_stop_errors"`
-	StoreCloseErrors           uint64           `json:"store_close_errors"`
-	DerivedRemovalErrors       uint64           `json:"derived_removal_errors"`
-	ScratchRemovalErrors       uint64           `json:"scratch_removal_errors"`
-	BallastRemovalErrors       uint64           `json:"ballast_removal_errors"`
-	VolumeDetachErrors         uint64           `json:"volume_detach_errors"`
-	ImageRemovalErrors         uint64           `json:"image_removal_errors"`
-	MeasurementErrors          uint64           `json:"measurement_errors"`
-	MeasurementUnavailable     []string         `json:"measurement_unavailable"`
+	Scoped                     *ScopedTeardownEvidence `json:"scoped,omitempty"`
+	Attempted                  bool                    `json:"attempted"`
+	Completed                  bool                    `json:"completed"`
+	Outcome                    string                  `json:"outcome"`
+	Failure                    *TeardownFailure        `json:"failure,omitempty"`
+	DescendantsStopped         bool                    `json:"descendants_stopped"`
+	StoreClosed                bool                    `json:"store_closed"`
+	DerivedCustodyPaths        uint64                  `json:"derived_custody_paths"`
+	ScratchSourcePaths         uint64                  `json:"scratch_source_paths"`
+	ChildrenRemaining          uint64                  `json:"children_remaining"`
+	PressureBallastBytes       uint64                  `json:"pressure_ballast_bytes"`
+	PressureVolumeDetached     bool                    `json:"pressure_volume_detached"`
+	PressureImagePaths         uint64                  `json:"pressure_image_paths"`
+	PressureImageRemoved       bool                    `json:"pressure_image_removed"`
+	BackingDerivedCustodyPaths uint64                  `json:"backing_derived_custody_paths"`
+	BackingVolumeIdentity      string                  `json:"backing_volume_identity"`
+	RetainedSourceFreeOnly     bool                    `json:"retained_source_free_only"`
+	DescendantStopErrors       uint64                  `json:"descendant_stop_errors"`
+	StoreCloseErrors           uint64                  `json:"store_close_errors"`
+	DerivedRemovalErrors       uint64                  `json:"derived_removal_errors"`
+	ScratchRemovalErrors       uint64                  `json:"scratch_removal_errors"`
+	BallastRemovalErrors       uint64                  `json:"ballast_removal_errors"`
+	VolumeDetachErrors         uint64                  `json:"volume_detach_errors"`
+	ImageRemovalErrors         uint64                  `json:"image_removal_errors"`
+	MeasurementErrors          uint64                  `json:"measurement_errors"`
+	MeasurementUnavailable     []string                `json:"measurement_unavailable"`
 }
 
 type TeardownFailure struct {
@@ -1137,6 +1144,9 @@ func ValidateReceipt(
 	binding ExecutionFreezeBinding,
 	packageBinding ReturnedPackageBinding,
 ) error {
+	if err := validateReceiptAccountingVersion(receipt, plan); err != nil {
+		return err
+	}
 	planSHA256, err := receiptSHA256(plan)
 	if err != nil {
 		return err
@@ -1239,7 +1249,7 @@ func ValidateReceipt(
 	); err != nil {
 		return err
 	}
-	teardownClean, err := validateReceiptTeardown(receipt.Teardown, receipt.Measurements, plan, freeze)
+	teardownClean, err := validateReceiptTeardown(receipt.Teardown, receipt.Measurements, plan, freeze, hasOwnedServerStart(receipt.StateResults))
 	if err != nil {
 		return err
 	}
@@ -1468,7 +1478,8 @@ func expectedStoppedDecision(
 		}
 		return frozenDecision(plan, 4)
 	}
-	peakCrossed := uint64(metrics.PeakRSSBytes) > plan.SafetyEnvelope.MaximumPeakRSSBytes
+	peakMetric, peakBytes := receiptRSSMetric(metrics, plan.Schema)
+	peakCrossed := peakBytes > plan.SafetyEnvelope.MaximumPeakRSSBytes
 	dataCrossed := uint64(metrics.DataAllocatedBytes) > plan.SafetyEnvelope.MaximumDataAllocatedBytes
 	logicalCrossed := uint64(metrics.DataLogicalBytes) > plan.WorkEnvelope.MaximumDataLogicalBytes
 	totalWall, err := measuredWallThrough(measurements, stopped.Phase)
@@ -1487,7 +1498,7 @@ func expectedStoppedDecision(
 			crossings++
 		}
 	}
-	resourceCodeMatches := stopped.Class == "resource" && (stopped.Code == "peak_rss_ceiling" && peakCrossed ||
+	resourceCodeMatches := stopped.Class == "resource" && (stopped.Code == receiptRSSStopCode(plan.Schema) && peakCrossed ||
 		stopped.Code == "data_allocated_ceiling" && dataCrossed ||
 		stopped.Code == "data_logical_ceiling" && logicalCrossed ||
 		stopped.Code == "total_wall_ceiling" && totalCrossed ||
@@ -1507,8 +1518,8 @@ func expectedStoppedDecision(
 		}
 		metric, limit, observed := "", uint64(0), uint64(0)
 		switch stopped.Code {
-		case "peak_rss_ceiling":
-			metric, limit, observed = "peak_rss_bytes", plan.SafetyEnvelope.MaximumPeakRSSBytes, uint64(metrics.PeakRSSBytes)
+		case "peak_rss_ceiling", "observed_rss_ceiling":
+			metric, limit, observed = peakMetric, plan.SafetyEnvelope.MaximumPeakRSSBytes, peakBytes
 		case "data_allocated_ceiling":
 			metric, limit, observed = "data_allocated_bytes", plan.SafetyEnvelope.MaximumDataAllocatedBytes, uint64(metrics.DataAllocatedBytes)
 		case "data_logical_ceiling":
@@ -1520,6 +1531,11 @@ func expectedStoppedDecision(
 		}
 		if !gaugeObservationMatches(stopped.Observation, metric, limit, observed) {
 			return "", 0, errors.New("T42.2 resource stop observation is not exact")
+		}
+		if plan.Schema == PlanV3Schema && (!metrics.NativeMeasurementAvailable || !metrics.DispatchMeasurementAvailable) {
+			// A retained crossing plus an independent accounting failure is not
+			// resource-only evidence for a topology/cohort recommendation.
+			return frozenDecision(plan, 4)
 		}
 		if slices.Index(plan.PhaseOrder, stopped.Phase) <= 0 {
 			return frozenDecision(plan, 4)
@@ -1615,7 +1631,7 @@ func validateStoppedFailureEvidence(
 		if !slices.Contains([]string{"pressure_80", "pressure_75", "lifecycle_collection"}, stopped.Phase) {
 			return errors.New("T42.2 lifecycle error occurred outside a lifecycle phase")
 		}
-	case "measurement_unavailable", "internal_error", "peak_rss_ceiling", "data_allocated_ceiling", "data_logical_ceiling",
+	case "measurement_unavailable", "internal_error", "peak_rss_ceiling", "observed_rss_ceiling", "data_allocated_ceiling", "data_logical_ceiling",
 		"total_wall_ceiling", "multiple_resource_ceilings", "materialized_cartesian_owner_pairs_nonzero",
 		"direct_recovery_topology_limit":
 		// Measurement sentinels and resource/topology crossings are matched by
@@ -1770,8 +1786,11 @@ func validateReceiptMeasurements(
 	freeze ExecutionFreeze,
 ) error {
 	wantMetrics := receiptMetricNames
-	if plan.Schema == PlanV2Schema {
+	if correctedPlanSemantics(plan.Schema) {
 		wantMetrics = correctedReceiptMetricNames()
+	}
+	if plan.Schema == PlanV3Schema {
+		wantMetrics = accountingReceiptMetricNames()
 	}
 	if !slices.Equal(plan.ReceiptContract.RequiredMetrics, wantMetrics) ||
 		len(values) != len(plan.PhaseOrder) || len(plan.PhaseDeadlines) != len(plan.PhaseOrder) ||
@@ -1788,7 +1807,8 @@ func validateReceiptMeasurements(
 		}
 		if outcomes[phase] == "not_run" {
 			if value.StartEventOrdinal != 0 || value.FinishEventOrdinal != 0 ||
-				value.Metrics != (ReceiptMetrics{}) || value.ChildProcessRoles != nil {
+				value.Metrics != (ReceiptMetrics{}) || value.ChildProcessRoles != nil ||
+				value.DispatchAccounting != nil || value.NativeObservation != nil {
 				return errors.New("T42.2 not-run phase retained measurements")
 			}
 			continue
@@ -1813,6 +1833,15 @@ func validateReceiptMeasurements(
 		availableUnavailable := unavailable("available_disk_bytes") || teardownUnavailable("available_disk_bytes")
 		totalDiskUnavailable := unavailable("total_disk_bytes") || teardownUnavailable("total_disk_bytes")
 		processUnavailable := unavailable("peak_rss_bytes") || teardownUnavailable("peak_rss_bytes")
+		processInvalid := value.Metrics.ProcessMeasurementAvailable == processUnavailable ||
+			(value.Metrics.PeakRSSBytes == 0) != processUnavailable
+		if plan.Schema == PlanV3Schema {
+			processInvalid = false
+			if err := validateAccountingMeasurement(value, outcomes[phase], stopped, teardown, plan); err != nil {
+				return fmt.Errorf("T42.2 phase %q process accounting: %w", phase, err)
+			}
+		}
+		_, rssBytes := receiptRSSMetric(value.Metrics, plan.Schema)
 		allocationUnavailable := unavailable("data_allocated_bytes") || teardownUnavailable("data_allocated_bytes")
 		logicalUnavailable := unavailable("data_logical_bytes") || teardownUnavailable("data_logical_bytes")
 		if (value.Metrics.WallMS == 0) != wallUnavailable ||
@@ -1821,8 +1850,7 @@ func validateReceiptMeasurements(
 			!totalDiskUnavailable && value.Metrics.TotalDiskBytes != Bytes(freeze.Host.PressureTotalDiskBytes) ||
 			!availableUnavailable && !totalDiskUnavailable &&
 				value.Metrics.AvailableDiskBytes > value.Metrics.TotalDiskBytes ||
-			value.Metrics.ProcessMeasurementAvailable == processUnavailable ||
-			(value.Metrics.PeakRSSBytes == 0) != processUnavailable ||
+			processInvalid ||
 			!value.Metrics.AllocationMeasurementAvailable && !allocationUnavailable ||
 			value.Metrics.AllocationMeasurementAvailable && allocationUnavailable ||
 			value.Metrics.DataAllocatedBytes != 0 && allocationUnavailable ||
@@ -1839,7 +1867,7 @@ func validateReceiptMeasurements(
 			return fmt.Errorf("T42.2 phase %q lacks live data byte gauges", phase)
 		}
 		if outcomes[phase] == "passed" &&
-			(value.Metrics.PeakRSSBytes > Bytes(plan.SafetyEnvelope.MaximumPeakRSSBytes) ||
+			(rssBytes > plan.SafetyEnvelope.MaximumPeakRSSBytes ||
 				value.Metrics.DataAllocatedBytes > Bytes(plan.SafetyEnvelope.MaximumDataAllocatedBytes) ||
 				value.Metrics.MaterializedOwnerPairs != 0 || value.Metrics.DirectRecoveryLimits != 0 ||
 				uint64(value.Metrics.WallMS) > plan.PhaseDeadlines[index].DeadlineMS) {
@@ -1857,12 +1885,16 @@ func validateReceiptMeasurements(
 			workOutcome = "passed"
 		}
 		if workOutcome == "passed" &&
-			(value.Metrics.PeakRSSBytes > Bytes(plan.SafetyEnvelope.MaximumPeakRSSBytes) ||
+			(rssBytes > plan.SafetyEnvelope.MaximumPeakRSSBytes ||
 				value.Metrics.DataAllocatedBytes > Bytes(plan.SafetyEnvelope.MaximumDataAllocatedBytes) ||
 				value.Metrics.DataLogicalBytes > Bytes(plan.WorkEnvelope.MaximumDataLogicalBytes)) {
 			return fmt.Errorf("T42.2 phase %q clean work crossed a frozen gauge ceiling", phase)
 		}
-		if err := validatePhaseWorkMetrics(value.Metrics, value.ChildProcessRoles, plan.WorkEnvelope.Phases[index], workOutcome, observation, plan.WorkEnvelope); err != nil {
+		roles := value.ChildProcessRoles
+		if plan.Schema == PlanV3Schema {
+			roles = value.DispatchAccounting.Roles
+		}
+		if err := validatePhaseWorkMetrics(value.Metrics, roles, plan.WorkEnvelope.Phases[index], workOutcome, observation, plan.WorkEnvelope); err != nil {
 			return fmt.Errorf("T42.2 phase %q work: %w", phase, err)
 		}
 		wall := uint64(value.Metrics.WallMS)
@@ -1936,25 +1968,31 @@ func validatePhaseWorkMetrics(
 		uint64(metrics.CacheLookups) != uint64(metrics.CacheHits)+uint64(metrics.CacheMisses) {
 		return errors.New("cache lookup, load, or validation accounting is incoherent")
 	}
-	if len(children) != len(envelope.ChildProcessRoles) || len(bounds.ChildProcessRoles) != len(envelope.ChildProcessRoles) {
-		return errors.New("child-process role inventory is incomplete")
-	}
-	var childTotal uint64
-	for index, role := range envelope.ChildProcessRoles {
-		roleBound := bounds.ChildProcessRoles[index]
-		if children[index].Name != role || roleBound.Name != role ||
-			outcome == "passed" && children[index].Count < roleBound.Minimum ||
-			children[index].Count > roleBound.Maximum ||
-			children[index].Count > envelope.MaximumChildProcessesPerPhase+1 ||
-			children[index].Count > math.MaxUint64-childTotal {
-			return errors.New("child-process role inventory is invalid")
+	if envelope.Schema == WorkEnvelopeV3Schema {
+		if err := validateControlledDispatchCounts(metrics, children, bounds, envelope); err != nil {
+			return err
 		}
-		childTotal += children[index].Count
-	}
-	if childTotal != uint64(metrics.ChildProcesses) || childTotal > envelope.MaximumChildProcessesPerPhase &&
-		(outcome != "stopped" || observation == nil ||
-			!counterObservationMatches(*observation, "child_processes", envelope.MaximumChildProcessesPerPhase, childTotal)) {
-		return errors.New("child-process count crossed its frozen phase bound")
+	} else {
+		if len(children) != len(envelope.ChildProcessRoles) || len(bounds.ChildProcessRoles) != len(envelope.ChildProcessRoles) {
+			return errors.New("child-process role inventory is incomplete")
+		}
+		var childTotal uint64
+		for index, role := range envelope.ChildProcessRoles {
+			roleBound := bounds.ChildProcessRoles[index]
+			if children[index].Name != role || roleBound.Name != role ||
+				outcome == "passed" && children[index].Count < roleBound.Minimum ||
+				children[index].Count > roleBound.Maximum ||
+				children[index].Count > envelope.MaximumChildProcessesPerPhase+1 ||
+				children[index].Count > math.MaxUint64-childTotal {
+				return errors.New("child-process role inventory is invalid")
+			}
+			childTotal += children[index].Count
+		}
+		if childTotal != uint64(metrics.ChildProcesses) || childTotal > envelope.MaximumChildProcessesPerPhase &&
+			(outcome != "stopped" || observation == nil ||
+				!counterObservationMatches(*observation, "child_processes", envelope.MaximumChildProcessesPerPhase, childTotal)) {
+			return errors.New("child-process count crossed its frozen phase bound")
+		}
 	}
 	if err := validateMeasuredMaximum("max_retries_on_any_unit", uint64(metrics.MaxRetriesUnit),
 		envelope.MaximumRetriesPerUnit, outcome, observation); err != nil {
@@ -2230,7 +2268,7 @@ func semanticReaderForObservationSchema(schema string) string {
 	if schema == "t422-observed-phase-state-v4" {
 		return "authorized-product-reader-canonical-projection-v1"
 	}
-	if schema == "t422-observed-phase-state-v5" {
+	if schema == "t422-observed-phase-state-v5" || schema == "t422-observed-phase-state-v6" {
 		return "private-exact-current-authorized-canonical-projection-v1"
 	}
 	return ""
@@ -2497,7 +2535,7 @@ func validateTransitionFailureProjection(
 		"archive_restore":      "archive_restore_compare",
 		"lifecycle_collection": "fresh_owner_cycle",
 	}[phase]
-	if plan.Schema == PlanV2Schema && phase == "physical_delta_b" {
+	if correctedPlanSemantics(plan.Schema) && phase == "physical_delta_b" {
 		boundary = "reader_lease_current_prior_release"
 	}
 	if value.FailurePoint != "" {
@@ -2535,7 +2573,7 @@ func validTransitionStep(planSchema, phase, step string) bool {
 		"archive_restore":      {"archive_created", "installation_destroyed", "empty_restore_target_observed", "restore_started", "comparison_completed"},
 		"lifecycle_collection": {"lifecycle_fenced", "capacity_observed"},
 	}
-	if planSchema == PlanV2Schema {
+	if correctedPlanSemantics(planSchema) {
 		steps["physical_delta_b"] = []string{
 			"lease_acquired", "new_current", "held_lifecycle", "old_queried", "new_queried",
 			"lease_released", "post_release_lifecycle", "post_release_old_queried",
@@ -2803,7 +2841,7 @@ func validateInjectionTransition(
 	hitSHA256, hitErr := injectionHitReportSHA256(value, point)
 	recoverySHA256, recoveryErr := injectionRecoveryProjectionSHA256(value, point)
 	authorityAtHitOK := value.AuthorityAtHitSHA256 == authorityBeforeSHA256
-	if point.Name == "stale_partition_lease" && plan.Schema == PlanV2Schema {
+	if point.Name == "stale_partition_lease" && correctedPlanSemantics(plan.Schema) {
 		want, ok := staleLeaseAuthorityAtHitSHA256(authorityBefore, phaseAuthority)
 		authorityAtHitOK = ok && value.AuthorityAtHitSHA256 == want
 	}
@@ -2811,7 +2849,7 @@ func validateInjectionTransition(
 		want, ok := interruptedPublicationAuthorityAtHitSHA256(authorityBefore, phaseAuthority, plan)
 		authorityAtHitOK = ok && value.AuthorityAtHitSHA256 == want
 	}
-	if point.Name == "checkpointed_hard_restart" && plan.Schema != PlanV2Schema {
+	if point.Name == "checkpointed_hard_restart" && !correctedPlanSemantics(plan.Schema) {
 		authorityAtHitOK = validDigest(value.AuthorityAtHitSHA256) &&
 			value.AuthorityAtHitSHA256 != authorityBeforeSHA256 && value.AuthorityAtHitSHA256 != authorityAfterSHA256
 	}
@@ -2841,7 +2879,7 @@ func validateInjectionTransition(
 	switch point.Name {
 	case "partial_service_activation":
 		wantRequeues := uint64(0)
-		if plan.Schema == PlanV2Schema {
+		if correctedPlanSemantics(plan.Schema) {
 			wantRequeues = 1
 		}
 		if value.ObservedRecoveryBranch != "resume_activation_schedule" || value.RecoveredCandidates != 1 ||
@@ -2903,7 +2941,8 @@ func validateCheckpointRecovery(
 	})
 	toolIndex := slices.IndexFunc(freeze.Tools, func(tool ExecutionToolIdentity) bool { return tool.Role == "phebs" })
 	phebsChildren := slices.IndexFunc(children, func(value Count) bool { return value.Name == "phebs" })
-	if checkpoint == nil || rootIndex < 0 || toolIndex < 0 || phebsChildren < 0 ||
+	if checkpoint == nil || rootIndex < 0 || toolIndex < 0 ||
+		plan.Schema != PlanV3Schema && phebsChildren < 0 ||
 		value.Target.Ordinal >= uint64(len(authority.ExtractionRoots[rootIndex].PartitionResults)) {
 		return errors.New("checkpoint restart evidence is absent")
 	}
@@ -2912,6 +2951,16 @@ func validateCheckpointRecovery(
 	imageSHA256 := freeze.Tools[toolIndex].SHA256
 	beforeIdentity := recipeDigest("t422-phebs-process-identity-v1", imageSHA256, fmt.Sprint(value.ProcessEpochBefore))
 	afterIdentity := recipeDigest("t422-phebs-process-identity-v1", imageSHA256, fmt.Sprint(value.ProcessEpochAfter))
+	processIdentityValid := value.ProcessIdentityBeforeSHA256 == beforeIdentity &&
+		value.ProcessIdentityAfterSHA256 == afterIdentity && beforeIdentity != afterIdentity
+	processStartsValid := phebsChildren >= 0 && children[phebsChildren].Count == 1
+	if plan.Schema == PlanV3Schema {
+		// V3's separately validated runtime bindings carry successful owned
+		// starts. Admission permissions cannot substantiate a server birth.
+		processStartsValid = children == nil
+		processIdentityValid = validDigest(value.ProcessIdentityBeforeSHA256) &&
+			validDigest(value.ProcessIdentityAfterSHA256) && value.ProcessIdentityBeforeSHA256 != value.ProcessIdentityAfterSHA256
+	}
 	beforeEpoch, _, beforeOK := expectedPhaseRuntime(freeze.Profile.Epochs, "stale_lease")
 	afterEpoch, _, afterOK := expectedPhaseRuntime(freeze.Profile.Epochs, "process_restart")
 	completionAtHit := checkpoint.CompletionAbsentAtHit && !checkpoint.CompletionFileExistsAtHit && !checkpoint.CompletionBitClearAtHit
@@ -2934,7 +2983,7 @@ func validateCheckpointRecovery(
 		checkpoint.ScheduleStatusAtHit == "" && checkpoint.ChunkStatusAtHit == "" && !checkpoint.LeasedAtHit &&
 		!checkpoint.CurrentAbsentAtHit && checkpoint.ScheduleStatusAfter == "" &&
 		checkpoint.ChunkStatusAfter == "" && !checkpoint.UnleasedAfter
-	if plan.Schema == PlanV2Schema {
+	if correctedPlanSemantics(plan.Schema) {
 		attemptsExact = checkpoint.AttemptBefore == 0 && checkpoint.AttemptAfter == 0
 		globalOffset := value.Target.Ordinal
 		for index := 0; index < rootIndex; index++ {
@@ -2970,12 +3019,11 @@ func validateCheckpointRecovery(
 		checkpoint.CompletionCount != 1 || checkpoint.RetrySuccessorCount != 0 ||
 		checkpoint.PriorityBefore != 0 || checkpoint.PriorityAfter != 2 || !attemptsExact || !checkpointStateExact ||
 		!checkpoint.PrivateLeaseTokenChanged ||
-		!checkpoint.HardDeath || checkpoint.CooperativeRelease || children[phebsChildren].Count != 1 ||
+		!checkpoint.HardDeath || checkpoint.CooperativeRelease || !processStartsValid ||
 		value.ObservedRecoveryBranch != "hard_restart_reap_and_reuse_checkpoint" ||
 		value.RecoveredCandidates != 1 || value.CollectedCandidates != 0 ||
 		!beforeOK || !afterOK || value.ProcessEpochBefore != beforeEpoch || value.ProcessEpochAfter != afterEpoch ||
-		value.ProcessImageSHA256 != imageSHA256 || value.ProcessIdentityBeforeSHA256 != beforeIdentity ||
-		value.ProcessIdentityAfterSHA256 != afterIdentity || beforeIdentity == afterIdentity ||
+		value.ProcessImageSHA256 != imageSHA256 || !processIdentityValid ||
 		value.ProcessStopEventOrdinal <= value.HitEventOrdinal ||
 		value.ProcessStartEventOrdinal <= value.ProcessStopEventOrdinal ||
 		value.ProcessStartEventOrdinal >= value.RecoveryEventOrdinal ||
@@ -3385,7 +3433,7 @@ func validateLifecycleOwners(
 }
 
 func lifecycleTimestampOutOfOrder(planSchema string, current, previous uint64) bool {
-	return current < previous || planSchema != PlanV2Schema && current == previous
+	return current < previous || !correctedPlanSemantics(planSchema) && current == previous
 }
 
 func validateLifecycleTotals(total, finalRows lifecycleAggregate, ownerTurns, minimumTurns uint64) error {
@@ -3614,7 +3662,7 @@ func validatePressure80Lifecycle(value PressureTransition, metrics ReceiptMetric
 	if err := validatePressureLifecycle(value, metrics, plan); err != nil {
 		return err
 	}
-	if plan.Schema != PlanV2Schema {
+	if !correctedPlanSemantics(plan.Schema) {
 		return nil
 	}
 	index := slices.IndexFunc(value.Owners, func(owner LifecycleOwnerResult) bool {
@@ -3668,7 +3716,7 @@ func interruptedPublicationAuthorityAtHitSHA256(
 	prior, final AuthorityPhaseResult,
 	plan Plan,
 ) (string, bool) {
-	if plan.Schema != PlanV2Schema {
+	if !correctedPlanSemantics(plan.Schema) {
 		return authorityIdentitySHA256(prior)
 	}
 	hit := final
@@ -3687,7 +3735,7 @@ func staleLeaseAuthorityAtHitSHA256(prior, final AuthorityPhaseResult) (string, 
 }
 
 func validInterruptedPublicationTargetMapping(value InjectionTargetProjection, plan Plan) bool {
-	if plan.Schema != PlanV2Schema {
+	if !correctedPlanSemantics(plan.Schema) {
 		return value.PlanSHA256 == "" && value.ScheduleSHA256 == value.GenerationSHA256
 	}
 	return validDigest(value.PlanSHA256) &&
@@ -3920,7 +3968,7 @@ func validQueryMemberReads(planSchema string, query QueryCase, transportIndex in
 	if reads > maximum {
 		return false
 	}
-	if planSchema != PlanV2Schema {
+	if !correctedPlanSemantics(planSchema) {
 		return reads >= 1
 	}
 	if query.Surface == "service_relationships" || query.Name == "first_service" && transportIndex == 0 {
@@ -3956,7 +4004,7 @@ func expectedQueryResult(value QueryCase, schema, authoritySHA256, planSchema st
 		} else if value.ExpectedStatus != 404 {
 			result.AuthorizedRepositories = 1
 			result.ControlReads = 1
-			if planSchema != PlanV2Schema || value.Surface == "service_relationships" || value.Name == "first_service" && index == 0 {
+			if !correctedPlanSemantics(planSchema) || value.Surface == "service_relationships" || value.Name == "first_service" && index == 0 {
 				result.MemberReads = 1
 			}
 		}
@@ -3997,13 +4045,14 @@ func validateReceiptTeardown(
 	measurements []PhaseMeasurement,
 	plan Plan,
 	freeze ExecutionFreeze,
+	ownedServerStarted bool,
 ) (bool, error) {
 	contract, rule := plan.ReceiptContract, plan.Teardown
 	if !value.Attempted || value.BackingVolumeIdentity != freeze.Host.BackingVolumeIdentity ||
 		!slices.Contains(contract.TeardownOutcomes, value.Outcome) {
 		return false, errors.New("T42.2 teardown authority is invalid")
 	}
-	if !validUnavailableMetrics(value.MeasurementUnavailable) ||
+	if !validUnavailableMetricsForPlan(value.MeasurementUnavailable, plan.Schema) ||
 		uint64(len(value.MeasurementUnavailable)) != value.MeasurementErrors {
 		return false, errors.New("T42.2 teardown measurement-error inventory is invalid")
 	}
@@ -4019,6 +4068,13 @@ func validateReceiptTeardown(
 	add("derived_custody_not_removed", rule.RemoveDerivedCustody && (value.DerivedCustodyPaths != 0 || value.DerivedRemovalErrors != 0))
 	add("scratch_source_not_removed", rule.RemoveScratchSource && (value.ScratchSourcePaths != 0 || value.ScratchRemovalErrors != 0))
 	add("children_remain", rule.RequireZeroChildren && value.ChildrenRemaining != 0)
+	if plan.Schema == PlanV3Schema {
+		var err error
+		failed, err = appendAccountingTeardownFailures(failed, value, measurements, ownedServerStarted)
+		if err != nil {
+			return false, err
+		}
+	}
 	add("pressure_ballast_not_removed", value.PressureBallastBytes != 0 || value.BallastRemovalErrors != 0)
 	add("pressure_volume_not_detached", !value.PressureVolumeDetached || value.VolumeDetachErrors != 0)
 	add("pressure_image_not_removed", value.PressureImagePaths != 0 || !value.PressureImageRemoved || value.ImageRemovalErrors != 0)
@@ -4156,7 +4212,7 @@ func validateAuthorityResults(
 				!validDigest(value.ResolverCatalogGenerationSHA256) || !validDigest(value.ResolverCatalogRootSHA256) ||
 				!validDigest(value.CallerGenerationSHA256) || !validDigest(value.CallerRootSHA256) ||
 				!validDigest(value.RelationshipGenerationSHA256) ||
-				plan.Schema == PlanV2Schema && !validDigest(value.RelationshipProvenanceSHA256) ||
+				correctedPlanSemantics(plan.Schema) && !validDigest(value.RelationshipProvenanceSHA256) ||
 				!validDigest(value.RelationshipRootSHA256) || !value.Current ||
 				validateAuthorityCoverage(value, physicalPlan, plan) != nil {
 				return fmt.Errorf("phase %q authority is not exact", phase)
@@ -4213,12 +4269,12 @@ func validateAuthorityCoverage(value AuthorityPhaseResult, physical PhysicalRevi
 		typedRevision, typedRevisionOK := namedTypedScopeRevision(expected.TypedScopeRevisions, physical.Name)
 		partitionResultsSHA256, partitionErr := receiptSHA256(root.PartitionResults)
 		membersOK := validPossiblyEmptySetIdentity(root.Members)
-		if plan.Schema == PlanV2Schema {
+		if correctedPlanSemantics(plan.Schema) {
 			members, err := extractionResultMembers(root.PartitionResults)
 			membersOK = err == nil && root.Members == members
 		}
 		scheduleOK := validDigest(root.ScheduleSHA256)
-		if plan.Schema == PlanV2Schema {
+		if correctedPlanSemantics(plan.Schema) {
 			scheduleOK = root.ScheduleSHA256 == ""
 		}
 		if root.Domain != domain || !root.Current || !validDigest(root.GenerationSHA256) ||
@@ -4290,7 +4346,7 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 	if current, ok := values["physical_delta_b"]; ok {
 		prior, priorOK := values["warm_noop"]
 		if !priorOK || current.PhysicalCommit == prior.PhysicalCommit || current.PhysicalTree == prior.PhysicalTree ||
-			plan.Schema == PlanV2Schema && current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256 ||
+			correctedPlanSemantics(plan.Schema) && current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256 ||
 			current.SourceGenerationSHA256 == prior.SourceGenerationSHA256 ||
 			current.SearchGenerationSHA256 == prior.SearchGenerationSHA256 ||
 			current.ObservationGenerationSHA256 == prior.ObservationGenerationSHA256 ||
@@ -4318,14 +4374,14 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 			current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 &&
 			current.CallerRootSHA256 != prior.CallerRootSHA256
 		resolverCallerValid := resolverCallerChanged
-		if plan.Schema == PlanV2Schema {
+		if correctedPlanSemantics(plan.Schema) {
 			resolverCallerValid = current.ResolverCatalogGenerationSHA256 == prior.ResolverCatalogGenerationSHA256 &&
 				current.ResolverCatalogRootSHA256 == prior.ResolverCatalogRootSHA256 &&
 				current.CallerGenerationSHA256 == prior.CallerGenerationSHA256 &&
 				current.CallerRootSHA256 == prior.CallerRootSHA256
 		}
 		if !priorOK || current.PhysicalCommit != prior.PhysicalCommit || current.PhysicalTree != prior.PhysicalTree ||
-			plan.Schema == PlanV2Schema && current.RelationshipProvenanceSHA256 != prior.RelationshipProvenanceSHA256 ||
+			correctedPlanSemantics(plan.Schema) && current.RelationshipProvenanceSHA256 != prior.RelationshipProvenanceSHA256 ||
 			current.SourceGenerationSHA256 != prior.SourceGenerationSHA256 ||
 			current.SearchGenerationSHA256 != prior.SearchGenerationSHA256 ||
 			current.ObservationGenerationSHA256 != prior.ObservationGenerationSHA256 ||
@@ -4347,7 +4403,7 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 		cold, coldOK := values["cold"]
 		if !priorOK || !coldOK || current.PhysicalTree != cold.PhysicalTree ||
 			current.PhysicalCommit == prior.PhysicalCommit ||
-			plan.Schema == PlanV2Schema && current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256 ||
+			correctedPlanSemantics(plan.Schema) && current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256 ||
 			current.SourceGenerationSHA256 == prior.SourceGenerationSHA256 ||
 			current.SearchGenerationSHA256 == prior.SearchGenerationSHA256 ||
 			current.ObservationGenerationSHA256 == prior.ObservationGenerationSHA256 ||
@@ -4381,14 +4437,14 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 		if !priorOK || !sameAuthorityExceptRelationship(current, prior) {
 			return errors.New("archive restore did not preserve semantic authority")
 		}
-		if plan.Schema == PlanV2Schema &&
+		if correctedPlanSemantics(plan.Schema) &&
 			(current.ResolverCatalogGenerationSHA256 != prior.ResolverCatalogGenerationSHA256 ||
 				current.ResolverCatalogRootSHA256 != prior.ResolverCatalogRootSHA256 ||
 				current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 ||
 				current.CallerRootSHA256 != prior.CallerRootSHA256) {
 			return errors.New("archive restore changed immutable resolver or caller authority")
 		}
-		if plan.Schema == PlanV2Schema {
+		if correctedPlanSemantics(plan.Schema) {
 			sameProvenance := current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256
 			sameRelationship := current.RelationshipGenerationSHA256 == prior.RelationshipGenerationSHA256 &&
 				current.RelationshipRootSHA256 == prior.RelationshipRootSHA256
@@ -4788,6 +4844,10 @@ func validReceiptFailure(value ReceiptFailure, phase string, plan Plan) bool {
 		"internal_error":                             "internal/typed_error",
 		"lifecycle_error":                            "lifecycle/typed_error",
 	}
+	if plan.Schema == PlanV3Schema {
+		delete(want, "peak_rss_ceiling")
+		want["observed_rss_ceiling"] = "resource/gauge_limit"
+	}
 	if want[value.Code] != value.Class+"/"+value.Observation.Kind {
 		return false
 	}
@@ -4817,7 +4877,7 @@ func validReceiptFailure(value ReceiptFailure, phase string, plan Plan) bool {
 			observation.ExpectedSHA256 == "" && observation.ObservedSHA256 == ""
 	case "measurement_unavailable":
 		return observation.Metric == "" && len(observation.UnavailableMetrics) > 0 &&
-			validUnavailableMetrics(observation.UnavailableMetrics) && observation.Expected == 0 &&
+			validUnavailableMetricsForPlan(observation.UnavailableMetrics, plan.Schema) && observation.Expected == 0 &&
 			observation.Observed == 0 && observation.Limit == 0 &&
 			observation.ExpectedSHA256 == "" && observation.ObservedSHA256 == ""
 	case "typed_error":

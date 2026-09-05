@@ -4248,6 +4248,16 @@ the known presentation-owned missing `ui/receipts/fixtures/service-boundary.png`
 without a waiver. No runtime, constructor, launcher or ceremony gate is claimed
 for this documentation-only draft.
 
+Implementation continuation (2026-09-05): the unsealed V3 constructor,
+versioned measurements/receipt/runtime validation, checked operational attempt
+budgets, bounded sampled native gauge and fail-closed local dispatch primitive
+are implemented. Production launch sites remain unwired; ordinary runtime is
+unchanged. The complete constructor/receipt/launcher acceptance bar above is
+still open: actual producer/site/active/transport/stage/cadence limits, protected
+dispatch, bootstrap, author/executor, private admission, scoped cleanup and
+full returned-package/readiness replay must be completed before a separate
+author/seal decision. This is not a freeze command or Epic closure.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:

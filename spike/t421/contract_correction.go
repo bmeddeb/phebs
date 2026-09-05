@@ -16,7 +16,7 @@ const (
 type ContractCorrection struct {
 	SupersedesSHA256          string                    `json:"supersedes_sha256"`
 	IdentityDerivations       []IdentityDerivation      `json:"identity_derivations"`
-	ChildBudgets              []PhaseBudgetDerivation   `json:"child_budgets"`
+	ChildBudgets              []PhaseBudgetDerivation   `json:"child_budgets,omitempty"`
 	AuthorGitCommands         []ExecutionCommandProfile `json:"author_git_commands"`
 	RecoveryPreparations      []RecoveryPreparation     `json:"recovery_preparations"`
 	ObservationPolicy         string                    `json:"observation_policy"`
@@ -220,14 +220,22 @@ func correctedReceiptMetricNames() []string {
 }
 
 func validatePlanExecutionContract(plan Plan) error {
+	if !knownPlanSchema(plan.Schema) {
+		return errors.New("T42.1 execution contract schema is unknown")
+	}
 	want := Plan{
 		PhaseOrder: frozenPhaseOrder(), PhaseStates: frozenPhaseStates(), PhaseDeadlines: frozenPhaseDeadlines(),
 		FailurePoints: frozenFailurePoints(), SafetyEnvelope: frozenSafetyEnvelope(), WorkEnvelope: frozenWorkEnvelope(plan.Profile),
 		MeterPolicy: frozenMeterPolicy(), ToolPolicy: frozenToolPolicy(), SealPolicy: frozenSealPolicy(), StopRules: frozenStopRules(),
 		Teardown: frozenTeardownRule(), ReceiptContract: frozenReceiptContract(), Claims: frozenClaims(), Profile: plan.Profile,
 	}
-	if plan.Schema == PlanV2Schema {
+	if correctedPlanSemantics(plan.Schema) {
 		if err := applyExecutionCorrection(&want); err != nil {
+			return err
+		}
+	}
+	if plan.Schema == PlanV3Schema {
+		if err := applyProcessAccountingCorrection(&want); err != nil {
 			return err
 		}
 	}
@@ -237,7 +245,8 @@ func validatePlanExecutionContract(plan Plan) error {
 		plan.MeterPolicy != want.MeterPolicy || !reflect.DeepEqual(plan.ToolPolicy, want.ToolPolicy) ||
 		!reflect.DeepEqual(plan.SealPolicy, want.SealPolicy) || !reflect.DeepEqual(plan.StopRules, want.StopRules) ||
 		plan.Teardown != want.Teardown || !reflect.DeepEqual(plan.ReceiptContract, want.ReceiptContract) ||
-		plan.Claims != want.Claims || !reflect.DeepEqual(plan.Correction, want.Correction) {
+		plan.Claims != want.Claims || !reflect.DeepEqual(plan.Correction, want.Correction) ||
+		!reflect.DeepEqual(plan.ProcessAccounting, want.ProcessAccounting) {
 		return errors.New("T42.1 execution contract differs from the frozen plan")
 	}
 	return nil

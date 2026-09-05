@@ -53,7 +53,7 @@ type RecoveryPreparationResult struct {
 
 func validateRecoveryPreparation(value InjectionTransition, authority AuthorityPhaseResult, metrics ReceiptMetrics, start uint64, plan Plan) error {
 	index := -1
-	if plan.Schema == PlanV2Schema && plan.Correction != nil {
+	if correctedPlanSemantics(plan.Schema) && plan.Correction != nil {
 		index = slices.IndexFunc(plan.Correction.RecoveryPreparations, func(row RecoveryPreparation) bool { return row.Phase == value.Target.Phase })
 	}
 	if index < 0 {

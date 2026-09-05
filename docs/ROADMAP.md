@@ -445,6 +445,13 @@ implementation, complete admission/runner readiness and independent review
 remain before separate author/seal, integration, exact-main preflight,
 host/tool freeze and execution. No release or scale posture changes.
 
+The 2026-09-05 continuation implements V3's unsealed constructor, accounting
+and scoped receipt validators, direct-attempt budget derivation, bounded native
+observation gauge and local dispatch primitive. It does not wire production
+launches or issue private admission. Actual flow-derived transport/stage bounds,
+bootstrap, protected dispatch, complete author/executor/launcher and readiness
+remain next; V1/V2 seals and all release/scale caveats are unchanged.
+
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only
 track: twelve charter-gated tickets from audit ledger and semantic tokens
