@@ -68,6 +68,7 @@ func ProductionSites() []Site {
 // A failed/closed lifetime is never replaced with the ordinary pass-through.
 type ProductionLifetime struct {
 	program     string
+	inputSHA256 [32]byte
 	client      *Client
 	controlDone <-chan error
 	tools       map[string]ProductionToolBinding
@@ -93,6 +94,52 @@ func RequireAuthorBootstrap() error {
 		return ErrProductionBootstrap
 	}
 	return nil
+}
+
+// AuthorInputSHA256 returns only the live author program's parent-authenticated
+// request digest. It does not attest the request's semantic inputs or custody.
+func AuthorInputSHA256() ([32]byte, error) {
+	if RequireAuthorBootstrap() != nil {
+		return [32]byte{}, ErrProductionBootstrap
+	}
+	return productionRuntime.Load().inputSHA256, nil
+}
+
+// WaitAuthorCheckpoint waits for the existing remote checkpoint's complete
+// echo ACK, not merely the local DA01 checkpoint flag. Only then may an author
+// close its lifetime without cutting off the parent's pending PC01 response.
+// Semantic completion/output must precede this wait; it adds no wire operation.
+func WaitAuthorCheckpoint(ctx context.Context) error {
+	if ctx == nil || RequireAuthorBootstrap() != nil {
+		return ErrProductionBootstrap
+	}
+	client := productionRuntime.Load().client
+	for {
+		client.mu.Lock()
+		err := client.err
+		if err == nil && (client.closed || client.ctx.Err() != nil) {
+			err = ErrIncomplete
+		}
+		ready := client.checkpoint && client.controlCheckpointAcknowledged
+		changed := client.changed
+		client.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if ready {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-client.ctx.Done():
+			return ErrIncomplete
+		case <-changed:
+		}
+	}
 }
 
 // ProcessContext adds no state to the ordinary path. Exact-mode main uses this

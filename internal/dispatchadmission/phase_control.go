@@ -16,12 +16,17 @@ const (
 	phasePause byte = iota + 1
 	phaseCheckpoint
 	phaseResume
+	phaseOwnerDrain
+	phaseRequestsOpen
+	phaseRequestsFence
+	phaseOwnersReopen
 )
 
 // PhaseControlConfig bounds an explicitly inherited control endpoint. These
 // caller-owned limits are not frozen ceremony limits or tool/input admission.
 // The separate control socket preserves DA01's single-request echo protocol.
 type PhaseControlConfig struct {
+	OwnerControl     bool
 	Phases           []uint32
 	InitialPhase     uint32
 	MaximumPhases    int
@@ -68,7 +73,7 @@ func decodePhaseControl(raw [FrameBytes]byte) (phaseControlFrame, error) {
 	frame := phaseControlFrame{op: raw[4], phase: binary.BigEndian.Uint32(raw[8:12]),
 		sequence: binary.BigEndian.Uint64(raw[16:24])}
 	copy(frame.binding[:], raw[32:])
-	if frame.op < phasePause || frame.op > phaseResume || frame.encode() != raw {
+	if frame.op < phasePause || frame.op > phaseOwnersReopen || frame.encode() != raw {
 		return phaseControlFrame{}, ErrProtocol
 	}
 	return frame, nil
@@ -80,20 +85,21 @@ func decodePhaseControl(raw [FrameBytes]byte) (phaseControlFrame, error) {
 // also propagate a returned control failure to its execution failure latch.
 // No autonomous reader or heartbeat runs on the parent side.
 type PhaseControl struct {
-	mu          sync.Mutex
-	conn        *net.UnixConn
-	ctx         context.Context
-	cancel      context.CancelCauseFunc
-	stopContext func() bool
-	gate        chan struct{}
-	config      PhaseControlConfig
-	binding     [32]byte
-	index       int
-	state       byte
-	sequence    uint64
-	wireBytes   uint64
-	closed      bool
-	err         error
+	mu              sync.Mutex
+	conn            *net.UnixConn
+	ctx             context.Context
+	cancel          context.CancelCauseFunc
+	stopContext     func() bool
+	gate            chan struct{}
+	config          PhaseControlConfig
+	binding         [32]byte
+	index           int
+	state           byte
+	sequence        uint64
+	wireBytes       uint64
+	requestSequence uint64
+	closed          bool
+	err             error
 }
 
 // NewPhaseControl adopts file on every path. The owner must have bound both
@@ -184,7 +190,7 @@ func (control *PhaseControl) exchange(ctx context.Context, op byte) error {
 		return control.fail(ErrCanceled)
 	}
 	control.mu.Lock()
-	state, index, err := nextControlState(control.state, control.index, op, control.config.Phases)
+	state, index, err := nextConfiguredControlState(control.state, control.index, op, control.config)
 	if control.err != nil {
 		err = control.err
 	} else if control.closed || control.ctx.Err() != nil || opCtx.Err() != nil {
@@ -222,6 +228,9 @@ func (control *PhaseControl) exchange(ctx context.Context, op byte) error {
 	}
 	control.mu.Lock()
 	control.state, control.index = state, index
+	if op == phaseRequestsOpen || op == phaseOwnersReopen {
+		control.requestSequence = frame.sequence
+	}
 	control.mu.Unlock()
 	return nil
 }
@@ -298,6 +307,11 @@ func StartPhaseControl(ctx context.Context, file *os.File, client *Client, confi
 	binding := client.binding
 	if valid {
 		client.controlAttached = true
+		client.ownersRequired = config.OwnerControl
+		if config.OwnerControl {
+			client.ownersReady = make(chan struct{})
+			client.ownerRequestsOpen = true
+		}
 	}
 	client.mu.Unlock()
 	if !valid {
@@ -363,7 +377,7 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		if err != nil || frame.binding != binding || sequence == math.MaxUint64 || frame.sequence != sequence+1 {
 			return client.fail(ErrProtocol)
 		}
-		nextState, nextIndex, err := nextControlState(state, index, frame.op, config.Phases)
+		nextState, nextIndex, err := nextConfiguredControlState(state, index, frame.op, config)
 		if err != nil || frame.phase != config.Phases[nextIndex] {
 			return client.fail(ErrProtocol)
 		}
@@ -376,6 +390,8 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 			err = client.Checkpoint(opCtx)
 		case phaseResume:
 			err = client.Resume(frame.phase)
+		case phaseOwnerDrain, phaseRequestsOpen, phaseRequestsFence, phaseOwnersReopen:
+			err = client.controlOwners(opCtx, frame)
 		}
 		if err == nil && opCtx.Err() != nil {
 			err = ErrCanceled
@@ -387,6 +403,12 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		state, index = nextState, nextIndex
 		if count, err := conn.Write(raw[:]); err != nil || count != len(raw) {
 			return client.fail(ErrTransport)
+		}
+		if frame.op == phaseCheckpoint {
+			client.mu.Lock()
+			client.controlCheckpointAcknowledged = true
+			client.notifyLocked()
+			client.mu.Unlock()
 		}
 	}
 }

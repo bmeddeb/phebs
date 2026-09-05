@@ -18,6 +18,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -34,6 +35,8 @@ type Options struct {
 	Store      store.AuthStore
 	HTTPClient *http.Client
 	Now        func() time.Time
+	// Owners makes the exact-mode expiration loop parkable and joinable.
+	Owners *dispatchadmission.Owners
 	// ArgonConcurrency bounds memory-hard password work. Zero selects the
 	// production default of four concurrent hashes.
 	ArgonConcurrency int
@@ -44,10 +47,12 @@ type Options struct {
 
 // Service is safe for concurrent HTTP use.
 type Service struct {
-	store    store.AuthStore
-	cfg      config.Auth
-	sessions *scs.SessionManager
-	now      func() time.Time
+	owners      *dispatchadmission.Owners
+	cleanupDone chan struct{}
+	store       store.AuthStore
+	cfg         config.Auth
+	sessions    *scs.SessionManager
+	now         func() time.Time
 
 	provider    *oidc.Provider
 	verifier    *oidc.IDTokenVerifier
@@ -169,7 +174,16 @@ func New(ctx context.Context, options Options) (*Service, error) {
 	if _, err := options.Store.DeleteExpiredAuthSessions(ctx, now()); err != nil {
 		return nil, fmt.Errorf("auth: clean expired sessions: %w", err)
 	}
-	go s.cleanExpiredSessions(ctx)
+	s.owners = options.Owners
+	if s.owners != nil {
+		s.cleanupDone = make(chan struct{})
+		go func() {
+			defer close(s.cleanupDone)
+			s.cleanExpiredSessions(ctx)
+		}()
+	} else {
+		go s.cleanExpiredSessions(ctx)
+	}
 	return s, nil
 }
 
@@ -285,8 +299,28 @@ func (s *Service) cleanExpiredSessions(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			_, _ = s.store.DeleteExpiredAuthSessions(ctx, s.now())
+			if !s.expireSessions(ctx) {
+				return
+			}
 		}
+	}
+}
+
+func (s *Service) expireSessions(ctx context.Context) bool {
+	turn, err := s.owners.Enter(ctx)
+	if err != nil {
+		return false
+	}
+	defer turn.End()
+	_, _ = s.store.DeleteExpiredAuthSessions(ctx, s.now())
+	return true
+}
+
+// WaitCleanup joins the exact-mode expiration loop after its owning context is
+// canceled. It neither cancels requests nor changes ordinary auth lifecycle.
+func (s *Service) WaitCleanup() {
+	if s != nil && s.cleanupDone != nil {
+		<-s.cleanupDone
 	}
 }
 

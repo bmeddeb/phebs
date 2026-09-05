@@ -26,6 +26,8 @@ func TestT422CommandBoundary(t *testing.T) {
 		{name: "unknown", code: 2},
 		{name: "version"},
 		{name: "version-arguments", code: 1, failed: true},
+		{name: "serve-help"},
+		{name: "serve-invalid", code: 2},
 		{name: "invalid-selector", selector: "not-a-contract", code: 1, failed: true},
 		{name: "missing-endpoints", selector: dispatchadmission.ProductionSelector, code: 1, failed: true},
 	} {
@@ -77,12 +79,23 @@ func TestT422CommandBoundaryHelper(t *testing.T) {
 		args = []string{"version"}
 	case "version-arguments":
 		args = []string{"version", "unexpected"}
+	case "serve-help":
+		args = []string{"serve", "-help"}
+	case "serve-invalid":
+		args = []string{"serve", "-not-a-serve-flag"}
 	default:
 		t.Fatal("unknown command boundary fixture")
 	}
 	code, err := runPhebs(args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "terminal_error")
+	}
+	if (name == "serve-help" || name == "serve-invalid") &&
+		os.Getenv(dispatchadmission.ProductionEnvironment) == dispatchadmission.ProductionSelector {
+		if dispatchadmission.ProcessContext().Err() == nil {
+			t.Fatal("serve flag handling skipped the admitted lifetime close")
+		}
+		fmt.Fprintln(os.Stderr, "owned_cleanup_returned")
 	}
 	os.Exit(code)
 }

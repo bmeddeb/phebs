@@ -8,6 +8,8 @@ import (
 	"math/rand/v2"
 	"os"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
 // Runner is a jittered polling worker over one job table (PLAN §1: polling,
@@ -17,6 +19,9 @@ type Runner struct {
 	Store  Store
 	Kind   JobKind
 	Handle func(ctx context.Context, job Job) error
+	// Owners optionally fences complete reap and claim/execute/report turns.
+	// It is nil outside parent-bound V3 execution.
+	Owners *dispatchadmission.Owners
 
 	Interval       time.Duration                               // base poll cadence, jittered to [0.5x, 1.5x); default 15s
 	HeartbeatEvery time.Duration                               // default max(Interval/3, 5s)
@@ -81,6 +86,10 @@ func (r *Runner) Run(ctx context.Context) {
 			return
 		case <-time.After(jitter(r.Interval)):
 		}
+		turn, err := r.Owners.Enter(ctx)
+		if err != nil {
+			return
+		}
 		if n, err := r.Store.ReapStale(ctx, r.Kind, r.StaleAfter, r.MaxAttempts); err != nil {
 			if ctx.Err() == nil {
 				log.Printf("runner %s: reap stale %s: %v", r.Who, r.Kind, err)
@@ -91,13 +100,19 @@ func (r *Runner) Run(ctx context.Context) {
 			jobsTotal.WithLabelValues(string(r.Kind), "reaped").Add(float64(n))
 			r.failLifecycleReport(errors.New("job lifecycle stale reap changed durable state"))
 		}
+		turn.End()
 		var dependencyDrainDeadline time.Time
 		for ctx.Err() == nil {
+			turn, entryErr := r.Owners.Enter(ctx)
+			if entryErr != nil {
+				return
+			}
 			job, err := r.Store.ClaimJob(ctx, r.Kind, r.Who)
 			if err != nil {
 				if !errors.Is(err, ErrNotFound) && ctx.Err() == nil {
 					log.Printf("runner %s: claim %s: %v", r.Who, r.Kind, err)
 				}
+				turn.End()
 				break // drained, canceled, or store error; next poll retries
 			}
 			r.emitLifecycle("claimed", *job, 0, "claimed", nil)
@@ -110,8 +125,10 @@ func (r *Runner) Run(ctx context.Context) {
 			}
 			if !dependencyDrainDeadline.IsZero() &&
 				!time.Now().Before(dependencyDrainDeadline) {
+				turn.End()
 				break
 			}
+			turn.End()
 		}
 	}
 }

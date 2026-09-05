@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -25,6 +26,7 @@ type Watcher struct {
 	Conns     []config.Connection // watched local connections only
 	Revisions config.RevisionAllowlist
 	Interval  time.Duration // default 3s
+	Owners    *dispatchadmission.Owners
 }
 
 // Watched filters cfg down to the connections a Watcher should poll.
@@ -56,6 +58,10 @@ func (w *Watcher) Run(ctx context.Context) {
 			return
 		case <-ticker.C:
 		}
+		turn, err := w.Owners.Enter(ctx)
+		if err != nil {
+			return
+		}
 		for _, conn := range w.Conns {
 			source, err := resolveGenericGitSource(conn.URL)
 			if err != nil {
@@ -79,6 +85,7 @@ func (w *Watcher) Run(ctx context.Context) {
 			}
 			last[conn.Name] = fingerprint
 		}
+		turn.End()
 	}
 }
 

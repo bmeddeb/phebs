@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repowork"
@@ -527,6 +528,12 @@ func IsRemote(conn config.Connection) bool {
 // debounce: repeated ticks collapse into one pending successor, so slow syncs
 // never pile up and still run once more after an in-flight snapshot.
 func Resync(ctx context.Context, st store.Store, cfg *config.Config, every time.Duration) {
+	ResyncWithOwners(ctx, st, cfg, every, nil)
+}
+
+// ResyncWithOwners preserves the same ticker and enqueue policy while allowing
+// parent-bound execution to park only between complete resync turns.
+func ResyncWithOwners(ctx context.Context, st store.Store, cfg *config.Config, every time.Duration, owners *dispatchadmission.Owners) {
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
@@ -534,6 +541,10 @@ func Resync(ctx context.Context, st store.Store, cfg *config.Config, every time.
 		case <-ctx.Done():
 			return
 		case <-t.C:
+			turn, err := owners.Enter(ctx)
+			if err != nil {
+				return
+			}
 			for _, conn := range cfg.Connections {
 				if !IsRemote(conn) {
 					continue
@@ -542,6 +553,7 @@ func Resync(ctx context.Context, st store.Store, cfg *config.Config, every time.
 					log.Printf("resync: enqueue %s: %v", conn.Name, err)
 				}
 			}
+			turn.End()
 		}
 	}
 }

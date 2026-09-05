@@ -22,28 +22,34 @@ type commandState struct {
 // Do not copy it. Constructors/owners must already have verified tool/input
 // identity and bound this producer's sites to the selected compiled source.
 type Client struct {
-	mu              sync.Mutex
-	conn            *net.UnixConn
-	ctx             context.Context
-	cancel          context.CancelCauseFunc
-	stopContext     func() bool
-	gate            chan struct{}
-	changed         chan struct{}
-	binding         [32]byte
-	sites           map[uint32]Site
-	limits          Limits
-	phase           uint32
-	ordinal         uint64
-	sequence        uint64
-	wireBytes       uint64
-	active          map[uint64]*commandState
-	paused          bool
-	waiters         int
-	controlAttached bool
-	fenced          bool
-	checkpoint      bool
-	closed          bool
-	err             error
+	mu                            sync.Mutex
+	conn                          *net.UnixConn
+	ctx                           context.Context
+	cancel                        context.CancelCauseFunc
+	stopContext                   func() bool
+	gate                          chan struct{}
+	changed                       chan struct{}
+	binding                       [32]byte
+	sites                         map[uint32]Site
+	limits                        Limits
+	phase                         uint32
+	ordinal                       uint64
+	sequence                      uint64
+	wireBytes                     uint64
+	active                        map[uint64]*commandState
+	paused                        bool
+	waiters                       int
+	controlAttached               bool
+	controlCheckpointAcknowledged bool
+	ownersRequired                bool
+	ownersReady                   chan struct{}
+	owners                        *Owners
+	ownerRequestsOpen             bool
+	ownerRequestSequence          uint64
+	fenced                        bool
+	checkpoint                    bool
+	closed                        bool
+	err                           error
 }
 
 // NewClient adopts and closes file even on failure. The file is explicitly
@@ -472,6 +478,7 @@ func (c *Client) checkpointOrClose(ctx context.Context, closeAll bool) error {
 	c.mu.Lock()
 	c.checkpoint = true
 	c.closed = closeAll
+	c.notifyLocked()
 	c.mu.Unlock()
 	if closeAll {
 		c.stopContext()
@@ -495,6 +502,7 @@ func (c *Client) Resume(phase uint32) error {
 		return c.fail(ErrProtocol)
 	}
 	c.phase = phase
+	c.controlCheckpointAcknowledged = false
 	c.paused = false
 	c.fenced = false
 	c.checkpoint = false

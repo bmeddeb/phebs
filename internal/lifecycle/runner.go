@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
 const (
@@ -23,6 +25,21 @@ func Run(
 	idleInterval, backlogDelay time.Duration,
 	report Reporter,
 	reportCapacity CapacityReporter,
+) {
+	RunWithOwners(ctx, controller, gate, idleInterval, backlogDelay, report, reportCapacity, nil)
+}
+
+// RunWithOwners adds an optional complete-turn boundary without restarting the
+// runner or resetting its fair-cycle and pressure-recovery state. Resume does
+// not itself wake an idle timer or add a capacity probe.
+func RunWithOwners(
+	ctx context.Context,
+	controller *Controller,
+	gate *Gate,
+	idleInterval, backlogDelay time.Duration,
+	report Reporter,
+	reportCapacity CapacityReporter,
+	owners *dispatchadmission.Owners,
 ) {
 	if controller == nil || idleInterval <= 0 || backlogDelay <= 0 {
 		return
@@ -44,8 +61,13 @@ func Run(
 			case <-timer.C:
 			}
 		}
+		turn, err := owners.Enter(ctx)
+		if err != nil {
+			return
+		}
 		result := controller.Tick(ctx)
 		if ctx.Err() != nil {
+			turn.End()
 			return
 		}
 		if report != nil {
@@ -107,6 +129,7 @@ func Run(
 			cycleStarted = false
 			cycleNeedsRetry = false
 		}
+		turn.End()
 	}
 }
 

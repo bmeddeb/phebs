@@ -41,12 +41,13 @@ type ProductionToolBinding struct {
 // The caller supplies already-derived bounds; this value issues no freeze or
 // private tool/configuration admission and must come from the owning launcher.
 type ProductionBootstrap struct {
-	Program  string
-	Producer Producer
-	Phase    uint32
-	Limits   Limits
-	Control  PhaseControlConfig
-	Tools    []ProductionToolBinding
+	Program     string
+	InputSHA256 [32]byte
+	Producer    Producer
+	Phase       uint32
+	Limits      Limits
+	Control     PhaseControlConfig
+	Tools       []ProductionToolBinding
 }
 
 func (record ProductionBootstrap) validate() error {
@@ -54,7 +55,16 @@ func (record ProductionBootstrap) validate() error {
 	minimumRoles := 4
 	switch record.Program {
 	case ProgramPhebs:
+		if record.InputSHA256 != ([32]byte{}) {
+			return ErrProductionBootstrap
+		}
 	case ProgramCorpusAuthor:
+		if record.Control.OwnerControl {
+			return ErrProductionBootstrap
+		}
+		if record.InputSHA256 == ([32]byte{}) {
+			return ErrProductionBootstrap
+		}
 		sites, roles, minimumRoles = AuthorSites(), []string{"git"}, 1
 	default:
 		return ErrProductionBootstrap
@@ -385,7 +395,7 @@ func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, 
 	if err != nil {
 		return nil, ErrProductionBootstrap
 	}
-	lifetime = &ProductionLifetime{program: program, client: client, controlDone: done, tools: make(map[string]ProductionToolBinding, len(record.Tools))}
+	lifetime = &ProductionLifetime{program: program, inputSHA256: record.InputSHA256, client: client, controlDone: done, tools: make(map[string]ProductionToolBinding, len(record.Tools))}
 	for _, tool := range record.Tools {
 		tool.Environment = slices.Clone(tool.Environment)
 		lifetime.tools[tool.Role] = tool

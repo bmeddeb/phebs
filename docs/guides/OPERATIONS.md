@@ -4508,6 +4508,21 @@ process births or successful child outcomes. Dispatch pause is not worker or
 store quiescence; the owning executor must drain semantic work before phase
 fencing, retain actual input custody and join application/native cleanup.
 
+The optional inherited owner-control mode now drains whole enrolled loop and
+HTTP/auth/session turns before dispatch pause. Its observation window and
+next-phase preparation window require a private, phase/window-specific parent
+token **in addition to** normal API authentication. Missing or stale tokens are
+refused before authentication/session work. These windows remain dispatch-open;
+they must close and drain before mechanical fencing. Checkpoint-time HTTP is
+not allowed. Resume alone does not resume background owners: the parent must
+complete the next phase's preparation and explicitly reopen them.
+
+This barrier preserves loop-local scheduler, watcher and lifecycle state. It
+does not establish quiescence of native database internals, asynchronous cache
+loaders or every process goroutine, and it does not yet implement full recovery
+preparation or a pressure wake. No public request header, manually set selector
+or local owner result supplies a complete ceremony admission or freeze.
+
 ## Developing phebs
 
 

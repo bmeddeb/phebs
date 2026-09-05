@@ -90,6 +90,7 @@ const (
 )
 
 var errPartitionAuthorityPending = errors.New("partitioned extraction authority pending")
+var errServeFlags = errors.New("invalid serve flags")
 
 func deferPendingPartitionAuthority(err error) (error, bool) {
 	if errors.Is(err, errPartitionAuthorityPending) {
@@ -272,6 +273,14 @@ func runPhebs(args []string) (code int, retErr error) {
 	switch args[0] {
 	case "serve":
 		err = serve(args[1:])
+		// The flag package already printed usage/diagnostics. Preserve its
+		// ordinary exit codes, but return through any admitted lifetime close.
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
+		if errors.Is(err, errServeFlags) {
+			return 2, nil
+		}
 	case "backup":
 		err = backup(args[1:])
 	case "restore":
@@ -459,11 +468,16 @@ func serverTerminalError(
 	)
 }
 
-func serve(args []string) error {
-	flags := flag.NewFlagSet("serve", flag.ExitOnError)
+func serve(args []string) (retErr error) {
+	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 	cfgPath := flags.String("config", "", "path to config file (defaults apply if omitted)")
 	addr := flags.String("addr", "", "listen address (overrides config)")
-	_ = flags.Parse(args)
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
+		return fmt.Errorf("%w: %w", errServeFlags, err)
+	}
 	exactReports, err := t4013ExactReportsEnabled()
 	if err != nil {
 		return err
@@ -548,6 +562,29 @@ func serve(args []string) error {
 
 	ctx, cancel := signal.NotifyContext(dispatchadmission.ProcessContext(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	owners, err := dispatchadmission.NewProductionOwners(ctx, t422ServerOwnerLimits())
+	if err != nil {
+		return err
+	}
+	var startupTurn dispatchadmission.OwnerTurn
+	startupEnded := false
+	if owners != nil {
+		startupTurn, err = owners.Enter(ctx)
+		if err != nil {
+			return err
+		}
+		stopOwnerFailure := context.AfterFunc(owners.Context(), cancel)
+		defer func() {
+			stopOwnerFailure()
+			if !startupEnded {
+				startupTurn.End()
+			}
+			retErr = errors.Join(retErr, owners.Err())
+		}()
+	}
+	if err := dispatchadmission.BindProductionOwners(owners); err != nil {
+		return err
+	}
 	var exactReportFailed chan struct{}
 	var failExactReport func(error)
 	if exactReports {
@@ -836,9 +873,15 @@ func serve(args []string) error {
 		}
 	}
 
-	authService, err := auth.New(ctx, auth.Options{Config: cfg.Auth, Store: st, Audit: auditRecord})
+	authService, err := auth.New(ctx, auth.Options{Config: cfg.Auth, Store: st, Audit: auditRecord, Owners: owners})
 	if err != nil {
 		return err
+	}
+	if owners != nil {
+		defer func() {
+			cancel()
+			authService.WaitCleanup()
+		}()
 	}
 	// T10.1/T10.2 retention sweep: boot, then twice a day
 	auditRetention, usageRetention := cfg.Audit.RetentionFor(), cfg.Analytics.RetentionFor()
@@ -847,6 +890,10 @@ func serve(args []string) error {
 			ticker := time.NewTicker(12 * time.Hour)
 			defer ticker.Stop()
 			for {
+				turn, err := owners.Enter(ctx)
+				if err != nil {
+					return
+				}
 				sweep := func(name string, keep time.Duration, prune func(context.Context, time.Time) (int, error)) {
 					if keep <= 0 {
 						return
@@ -859,6 +906,7 @@ func serve(args []string) error {
 				}
 				sweep("audit", auditRetention, st.PruneAuditEvents)
 				sweep("analytics", usageRetention, st.PruneUsageEvents)
+				turn.End()
 				select {
 				case <-ctx.Done():
 					return
@@ -1086,7 +1134,7 @@ func serve(args []string) error {
 	}
 	if lifecycleController != nil {
 		runBackground(func() {
-			lifecycle.Run(
+			lifecycle.RunWithOwners(
 				ctx, lifecycleController, capacityGate,
 				lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay,
 				func(result lifecycle.OwnerResult) {
@@ -1105,29 +1153,32 @@ func serve(args []string) error {
 					}
 				},
 				lifecycleStatus.ObserveCapacity,
+				owners,
 			)
 		})
 	}
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
 	}
-	runner := &store.Runner{Store: st, Kind: store.JobSync,
+	runner := &store.Runner{Store: st, Kind: store.JobSync, Owners: owners,
 		Handle: phebssync.HandlerWithLifecycles(
 			cfg, st, callerPublications, serviceRuntime,
 		),
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
-	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st),
+	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st), Owners: owners,
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 	bindT4013ExactReports(exactReports, failExactReport, nil, runner, fetchRunner)
 	runBackground(func() { runner.Run(ctx) })
 	runBackground(func() { fetchRunner.Run(ctx) })
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
 		log.Printf("watch mode: polling %d local repo(s)", len(watched))
-		runBackground(func() { (&phebssync.Watcher{Store: st, Conns: watched, Revisions: cfg.Revisions}).Run(ctx) })
+		runBackground(func() {
+			(&phebssync.Watcher{Store: st, Conns: watched, Revisions: cfg.Revisions, Owners: owners}).Run(ctx)
+		})
 	}
 	// T7.5: periodic freshness for remote connections
 	if every := cfg.Sync.ResyncEvery(); every > 0 {
-		runBackground(func() { phebssync.Resync(ctx, st, cfg, every) })
+		runBackground(func() { phebssync.ResyncWithOwners(ctx, st, cfg, every, owners) })
 	}
 
 	// Candidate planning and extraction are independent queue consumers: they
@@ -1191,7 +1242,7 @@ func serve(args []string) error {
 		}
 	}
 	observationScheduler := &generationscheduler.Scheduler{
-		Store: st,
+		Store: st, Owners: owners,
 		Classes: map[store.GenerationResourceClass]generationscheduler.Class{
 			store.GenerationResourceIO: {
 				Concurrency: 1,
@@ -1239,7 +1290,7 @@ func serve(args []string) error {
 	})
 	if relationshipRuntime != nil {
 		relationshipScheduler := &generationscheduler.Scheduler{
-			Store: st,
+			Store: st, Owners: owners,
 			Classes: map[store.GenerationResourceClass]generationscheduler.Class{
 				store.GenerationResourceMemory: {
 					Concurrency: 1,
@@ -1492,7 +1543,7 @@ func serve(args []string) error {
 				}
 			}
 			resolverRunner = &store.Runner{
-				Store: st, Kind: store.JobResolverCatalog,
+				Store: st, Kind: store.JobResolverCatalog, Owners: owners,
 				Handle: func(jobCtx context.Context, job store.Job) error {
 					return resolverWorker.Handle(jobCtx, job)
 				},
@@ -1523,7 +1574,7 @@ func serve(args []string) error {
 				}
 			}
 			callerRunner = &store.Runner{
-				Store: st, Kind: store.JobCallerLeaf,
+				Store: st, Kind: store.JobCallerLeaf, Owners: owners,
 				Handle: func(jobCtx context.Context, job store.Job) error {
 					return callerWorker.Handle(jobCtx, job)
 				},
@@ -1532,10 +1583,10 @@ func serve(args []string) error {
 			}
 		}
 		candidateRunner := &store.Runner{
-			Store: st, Kind: store.JobCandidate, Handle: candidateWorker.Handle,
+			Store: st, Kind: store.JobCandidate, Handle: candidateWorker.Handle, Owners: owners,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs,
 		}
-		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: func(
+		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Owners: owners, Handle: func(
 			jobCtx context.Context,
 			job store.Job,
 		) error {
@@ -1579,6 +1630,7 @@ func serve(args []string) error {
 		runBackground(func() { exRunner.Run(ctx) })
 		partitionScheduler := &generationscheduler.Scheduler{
 			Store:       st,
+			Owners:      owners,
 			Diagnostics: cfg.Diagnostics.Extraction,
 			Classes: map[store.GenerationResourceClass]generationscheduler.Class{
 				store.GenerationResourceExtraction: {
@@ -1627,14 +1679,16 @@ func serve(args []string) error {
 	}
 	if lifetime := cfg.ProofBundles.RetentionFor(); lifetime > 0 {
 		runBackground(func() {
-			runProofBundleMaintenance(
+			runProofBundleMaintenanceWithOwners(
 				ctx, st, lifetime, evidenceSweepIdleInterval, evidenceSweepBacklogDelay,
+				owners,
 			)
 		})
 	}
 	runBackground(func() {
-		runEvidenceMaintenance(
+		runEvidenceMaintenanceWithOwners(
 			ctx, st, evidenceSweepIdleInterval, evidenceSweepBacklogDelay, evidenceStagedMaxAge,
+			owners,
 		)
 	})
 
@@ -1669,7 +1723,7 @@ func serve(args []string) error {
 				return admissionErr
 			},
 		}
-		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
+		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle, Owners: owners,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		bindT4013ExactReports(exactReports, failExactReport, nil, ixRunner)
 		runBackground(func() { ixRunner.Run(ctx) })
@@ -2051,7 +2105,7 @@ func serve(args []string) error {
 		t4013ExactReportSink("exact read accounting: "), failExactRead,
 		finalAuthority, tailReadiness,
 	)
-	handler := newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist))
+	handler := t422OwnerHTTPHandler(owners, newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist)))
 
 	srv := &http.Server{
 		Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second,
@@ -2074,6 +2128,8 @@ func serve(args []string) error {
 	}
 	log.Printf("phebs %s listening on %s (data: %s)", version, cfg.Server.Addr, cfg.Server.DataDir)
 	reportT4013Startup("http_ready")
+	startupTurn.End()
+	startupEnded = true
 	serveErr := srv.Serve(listener)
 	// Shutdown waits at most five seconds. Exact modes retain a timeout as a
 	// terminal error; ordinary mode preserves its existing shutdown behavior.
@@ -3090,6 +3146,13 @@ func runProofBundleSweepPass(
 func runProofBundleMaintenance(
 	ctx context.Context, bundles store.ProofBundleRetentionStore, lifetime, idleInterval, backlogDelay time.Duration,
 ) {
+	runProofBundleMaintenanceWithOwners(ctx, bundles, lifetime, idleInterval, backlogDelay, nil)
+}
+
+func runProofBundleMaintenanceWithOwners(
+	ctx context.Context, bundles store.ProofBundleRetentionStore, lifetime, idleInterval, backlogDelay time.Duration,
+	owners *dispatchadmission.Owners,
+) {
 	if lifetime <= 0 || idleInterval <= 0 || backlogDelay <= 0 {
 		log.Printf("proof-bundle retention disabled: invalid lifetime/idle/backlog intervals %s/%s/%s", lifetime, idleInterval, backlogDelay)
 		return
@@ -3108,13 +3171,19 @@ func runProofBundleMaintenance(
 			case <-timer.C:
 			}
 		}
+		turn, entryErr := owners.Enter(ctx)
+		if entryErr != nil {
+			return
+		}
 		deleted, backlogLikely, err := runProofBundleSweepPass(ctx, bundles, lifetime)
 		if err != nil {
 			if ctx.Err() != nil {
+				turn.End()
 				return
 			}
 			log.Printf("proof-bundle retention: %v", err)
 			delay = idleInterval
+			turn.End()
 			continue
 		}
 		if deleted > 0 {
@@ -3125,6 +3194,7 @@ func runProofBundleMaintenance(
 		} else {
 			delay = idleInterval
 		}
+		turn.End()
 	}
 }
 
@@ -3135,6 +3205,14 @@ func runProofBundleMaintenance(
 func runEvidenceMaintenance(
 	ctx context.Context, evidence store.EvidenceStore,
 	idleInterval, backlogDelay, staleStagedAfter time.Duration,
+) {
+	runEvidenceMaintenanceWithOwners(ctx, evidence, idleInterval, backlogDelay, staleStagedAfter, nil)
+}
+
+func runEvidenceMaintenanceWithOwners(
+	ctx context.Context, evidence store.EvidenceStore,
+	idleInterval, backlogDelay, staleStagedAfter time.Duration,
+	owners *dispatchadmission.Owners,
 ) {
 	if idleInterval <= 0 || backlogDelay <= 0 {
 		log.Printf("evidence retention disabled: invalid idle/backlog intervals %s/%s", idleInterval, backlogDelay)
@@ -3154,13 +3232,19 @@ func runEvidenceMaintenance(
 			case <-timer.C:
 			}
 		}
+		turn, entryErr := owners.Enter(ctx)
+		if entryErr != nil {
+			return
+		}
 		progress, backlogLikely, err := runEvidenceSweepPass(ctx, evidence, staleStagedAfter)
 		if err != nil {
 			if ctx.Err() != nil {
+				turn.End()
 				return
 			}
 			log.Printf("evidence retention: %v", err)
 			delay = idleInterval
+			turn.End()
 			continue
 		}
 		if progress.DidWork() {
@@ -3177,6 +3261,7 @@ func runEvidenceMaintenance(
 		} else {
 			delay = idleInterval
 		}
+		turn.End()
 	}
 }
 

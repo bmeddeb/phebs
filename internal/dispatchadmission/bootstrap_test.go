@@ -73,6 +73,9 @@ func TestProductionBootstrapHelper(t *testing.T) {
 		if err := RequireAuthorBootstrap(); err != nil {
 			t.Fatal(err)
 		}
+		if digest, err := AuthorInputSHA256(); err != nil || digest != ([32]byte{7}) {
+			t.Fatal("author input digest was not bound")
+		}
 		handle, err := StartAuthor(ctx, exec.CommandContext(ctx, ProductionTool("git"), "-c", "exit 0"))
 		if err != nil {
 			t.Fatal(err)
@@ -80,7 +83,15 @@ func TestProductionBootstrapHelper(t *testing.T) {
 		if err := handle.Wait(); err != nil {
 			t.Fatal(err)
 		}
-		productionHelperFinish(t, ctx, lifetime)
+		if _, err := fmt.Fprintln(os.Stdout, "ready"); err != nil {
+			t.Fatal(err)
+		}
+		if err := WaitAuthorCheckpoint(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if err := lifetime.Close(ctx); err != nil {
+			t.Fatal(err)
+		}
 		if RequireAuthorBootstrap() == nil {
 			t.Fatal("closed author lifetime retained construction permission")
 		}
@@ -202,6 +213,7 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 			record := productionTestRecord()
 			if mode == "author" {
 				record.Program, record.Producer.Sites, record.Tools = ProgramCorpusAuthor, AuthorSites(), record.Tools[:1]
+				record.InputSHA256 = [32]byte{7}
 			}
 			config := productionTestConfig(record)
 			if mode == "zero-budget" {
@@ -288,8 +300,10 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 				if err := control.Checkpoint(ctx); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := input.Write([]byte{1}); err != nil {
-					t.Fatal(err)
+				if mode == "healthy" {
+					if _, err := input.Write([]byte{1}); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}
 			if err := command.Wait(); err != nil {
@@ -326,6 +340,10 @@ func TestProductionBootstrapRecordRefusals(t *testing.T) {
 	}{
 		{"unknown-program", func(r *ProductionBootstrap) { r.Program = "unknown" }},
 		{"other-program", func(r *ProductionBootstrap) { r.Program = ProgramCorpusAuthor }},
+		{"app-author-input", func(r *ProductionBootstrap) { r.InputSHA256 = [32]byte{7} }},
+		{"author-missing-input", func(r *ProductionBootstrap) {
+			r.Program, r.Producer.Sites, r.Tools = ProgramCorpusAuthor, AuthorSites(), r.Tools[:1]
+		}},
 		{"binding", func(r *ProductionBootstrap) { r.Producer.Binding = [32]byte{} }},
 		{"site-alias", func(r *ProductionBootstrap) { r.Producer.Sites[0].Role = RoleSurreal }},
 		{"missing-site", func(r *ProductionBootstrap) { r.Producer.Sites = r.Producer.Sites[1:] }},
@@ -377,6 +395,7 @@ func TestProductionBootstrapMalformedAndCanceled(t *testing.T) {
 			record := productionTestRecord()
 			if mode == "other-program" {
 				record.Program, record.Producer.Sites, record.Tools = ProgramCorpusAuthor, AuthorSites(), record.Tools[:1]
+				record.InputSHA256 = [32]byte{7}
 			}
 			raw, err := json.Marshal(record)
 			if err != nil {

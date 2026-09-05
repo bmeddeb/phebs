@@ -4459,6 +4459,10 @@ owns the design and dependency order. Execution remains excluded.
 These tickets are pending, not acceptance evidence. Agents may refine an
 in-scope implementation choice in the owning ADR, but cannot relax an AC,
 invent a measurement or expand the frozen program to force completion.
+The implementation stack splits T42.2k into bootstrap/dispatch, semantic-owner
+control and genuine-parent custody slices, and T42.2l into the current-revision
+core, authenticated request/CLI and complete executor/admission slices. These
+are PR-sized dependency splits, not extra acceptance or freeze authority.
 
 T42.2i's implementation protects seven actual core/helper copies and supplies
 the Git-child-only resource environment. Real protected init/fast-import,
@@ -4489,6 +4493,13 @@ partial cancellation and constant-descriptor checks pass; pinned lint reports
 zero issues and affected vet passes. These are pre-review implementation
 results, not the full repository module footprint, full admission or freeze
 readiness. Immutable-source independent review and exact-tree gates remain.
+Exact source `5a67267aa7daa640d4a0e4bd36db9c740a3997d2` subsequently passed
+independent review with all severity counts zero and clean detached normal
+(114.883s), race (120.013s), repository build, module verification, scoped vet,
+pinned lint, documentation and glossary gates. Its reference-build timer begins
+after the build mutex, initial inventory check and selected-image copy; the
+owning outer stage must separately bound the whole public call and cleanup.
+These results close the scoped build-input slice, not full-repository admission.
 
 T42.2k's early bootstrap and sixteen source-owned production adapters are
 implemented, not yet the genuine parent launch/rehearsal. Real inherited
@@ -4506,6 +4517,35 @@ typed inventory checks each fixed site constant and counts internal forwarding
 boundaries. These intermediate results do not replace exact-tree independent
 review, full store/command gates, genuine protected-parent Phebs/Surreal
 readiness, semantic owner quiescence or full admission/freeze.
+Independent review of exact `8e4d1a0a9733e52ef03dc232806e2f551e99bb55`
+against the protected-input base found zero critical/high/low and two medium
+findings: pre-Start admission refusal bypassed exec-owned pipe cleanup at eight
+pipe sites, and serve's exiting flag parser bypassed lifetime cleanup on help
+or invalid arguments. Both correction paths are active; neither is waived.
+
+The next semantic-owner slice preserves complete job persistence/report and
+HTTP/auth/session tails, with a live-owner drain before mechanical Pause.
+Observation and next-phase preparation windows remain dispatch-enabled and
+private-token-bound; fencing joins complete requests before accounting closure.
+The focused owner-control selector passed normal (0.487s) and ten race repeats
+(3.532s), including successive real children while an owner drains, late tails,
+phase/window-token refusal and bounded missing-registration/refusal paths.
+Owner hooks across store, generation, authentication, lifecycle and sync passed
+focused normal/race; whole maintenance and all-connection resync regressions
+passed five normal repeats (command 0.887s, sync 1.007s) and three race repeats
+(command 1.912s, sync 2.201s). Pinned lint across the seven affected packages
+reported zero issues. These are intermediate source gates; immutable review,
+genuine Phebs/Surreal handoff and full preparation/executor gates remain open.
+The serve parser finding is corrected through standard non-exiting parsing and
+owned main return. Real authenticated help/error regressions preserve exit
+0/2 only after successful cleanup, while unfenced cleanup failure returns 1.
+Five focused normal repeats passed across dispatch/store/generation/auth/
+lifecycle/sync/command (0.292/1.198/0.629/0.896/2.021/2.947/3.452s); the
+ordinary/authenticated parser race selector passed three repeats in 12.975s.
+The broader owner-hook ordinary regressions passed full command (140.162s),
+store runner (135.888s), auth (0.810s), lifecycle (4.611s), sync (67.278s) and
+generation scheduler (1.004s). Full store and independent corrected-source
+review are not implied by the runner selector.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
@@ -4523,6 +4563,13 @@ against the unchanged 120-GiB freeze prerequisite. Safe bounded implementation
 continues; freeze remains closed until real host admission satisfies that bound.
 Only validated disposable task build scratch may be reclaimed without a new
 scope decision; retained evidence, validation lineages and user data remain.
+The later bounded cleanup used Go's own cache cleaner on 73 explicitly
+validated Phebs task build caches, including four whose regular cached Go test
+executables were independently identified. It removed only reproducible cache
+contents: no source, protected/retained binary, proof, module cache, worktree or
+user-global build cache was removed. The resulting host observation was
+122 GiB available. Cache contents can be regenerated; admission must remeasure
+the unchanged 120-GiB prerequisite, and this observation is not host freeze.
 
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →

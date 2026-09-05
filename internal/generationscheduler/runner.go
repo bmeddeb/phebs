@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/diagnostics"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -47,7 +48,9 @@ type Class struct {
 }
 
 type Scheduler struct {
-	Store            store.GenerationSchedulerStore
+	Store store.GenerationSchedulerStore
+	// Owners optionally fences expansion, reaping and full leased work turns.
+	Owners           *dispatchadmission.Owners
 	Classes          map[store.GenerationResourceClass]Class
 	MaxConcurrency   int
 	MaxMemoryBytes   int64
@@ -281,6 +284,10 @@ func (scheduler *Scheduler) plan(ctx context.Context, class store.GenerationReso
 		if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
 			return
 		}
+		turn, entryErr := scheduler.Owners.Enter(ctx)
+		if entryErr != nil {
+			return
+		}
 		// Expansion is one atomic fanout transaction: a per-call deadline
 		// would abort a slow-but-progressing page and restart the identical
 		// work from the same offset every tick. It runs under the scheduler
@@ -291,6 +298,7 @@ func (scheduler *Scheduler) plan(ctx context.Context, class store.GenerationReso
 			!errors.Is(err, store.ErrNotFound) && ctx.Err() == nil {
 			scheduler.report(fmt.Errorf("expand %s generation page: %w", class, err))
 		}
+		turn.End()
 		select {
 		case <-ctx.Done():
 			return
@@ -308,6 +316,10 @@ func (scheduler *Scheduler) reap(
 	defer ticker.Stop()
 	for {
 		if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
+			return
+		}
+		turn, entryErr := scheduler.Owners.Enter(ctx)
+		if entryErr != nil {
 			return
 		}
 		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
@@ -328,6 +340,7 @@ func (scheduler *Scheduler) reap(
 			ctx.Err() == nil {
 			scheduler.report(fmt.Errorf("reap %s generation chunks: %w", class, err))
 		}
+		turn.End()
 		select {
 		case <-ctx.Done():
 			return
@@ -349,16 +362,22 @@ func (scheduler *Scheduler) work(
 		if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
 			return
 		}
+		turn, entryErr := scheduler.Owners.Enter(ctx)
+		if entryErr != nil {
+			return
+		}
 		callCtx, cancel := context.WithTimeout(ctx, scheduler.storeCallTimeout())
 		chunk, err := scheduler.Store.ClaimGenerationChunk(callCtx, class, worker)
 		cancel()
 		if err == nil {
 			scheduler.execute(ctx, configuration, *chunk)
+			turn.End()
 			continue
 		}
 		if !errors.Is(err, store.ErrNotFound) && ctx.Err() == nil {
 			scheduler.report(fmt.Errorf("claim %s generation chunk: %w", class, err))
 		}
+		turn.End()
 		select {
 		case <-ctx.Done():
 			return
