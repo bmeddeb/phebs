@@ -201,6 +201,7 @@ func TestT422SemanticInheritedSocketHelper(t *testing.T) {
 }
 
 func TestT422SemanticConfigAndServeBinding(t *testing.T) {
+	t.Setenv("PHEBS_LITERAL_TEST", "ambient-value")
 	raw, snapshot := t422SemanticTestRequest(t)
 	launch, err := decodeT422SemanticLaunch(raw, snapshot)
 	if err != nil {
@@ -226,6 +227,12 @@ func TestT422SemanticConfigAndServeBinding(t *testing.T) {
 		bytes.Replace(configRaw, []byte("runtime: v3"), []byte("runtime: v2"), 1),
 		bytes.Replace(configRaw, []byte("local/tmp/t422-source:"), []byte("local/tmp/other:"), 1),
 		bytes.Replace(configRaw, []byte("exact-test"), []byte("$AMBIENT"), 1),
+		bytes.Replace(configRaw, []byte("exact-test"), []byte(`"\u0024{PHEBS_LITERAL_TEST}"`), 1),
+		bytes.Replace(configRaw, []byte("exact-test"), []byte(`"\x24{PHEBS_LITERAL_TEST}"`), 1),
+		bytes.Replace(configRaw, []byte(", data_dir: /tmp/t422-data"), nil, 1),
+		bytes.Replace(configRaw, []byte("/tmp/t422-data"), []byte("'~/t422-data'"), 1),
+		bytes.Replace(configRaw, []byte("/tmp/t422-data"), []byte("relative/t422-data"), 1),
+		bytes.Replace(configRaw, []byte("/tmp/t422-data"), []byte("/tmp/../t422-data"), 1),
 		bytes.Replace(configRaw, []byte("file:///tmp/t422-source.git"), []byte("file:///tmp/other.git"), 1),
 		bytes.Replace(configRaw, []byte("file:///tmp/t422-source.git"), []byte("https://example.test/t422-source.git"), 1),
 		bytes.Replace(configRaw, []byte("watch: true"), []byte("watch: false"), 1),

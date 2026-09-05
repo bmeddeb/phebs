@@ -4469,6 +4469,15 @@ three repeats passed in 14.303s, broad focused race three repeats in 20.737s,
 and final inherited-socket completion/cancellation race repeats in 2.462s;
 vet, pinned lint, formatting and whitespace pass. Independent review remains
 required before this slice closes.
+Independent inlet review found one medium literal-config bypass through YAML
+decoding and path defaults, plus one low setup-cost omission. ParseLiteral now
+rejects decoded interpolation and requires an explicit canonical absolute data
+directory before any ambient expansion; ordinary Parse/recovery behavior is
+preserved. The owning cost includes three setup locks and nine override lookups.
+Normal three repeats passed in 0.240s (config) and 0.604s (main); broad race three
+repeats passed in 1.421s and 22.081s. Vet, config lint and whitespace pass; main
+lint must be rerun on the committed correction without unrelated unbound work,
+and independent exact correction review remains required.
 Independent review of the lifecycle rendezvous found one medium clock-backstep
 gap: an observation rejected as older than its fence could still represent an
 actual native sweep. The correction now bounds actual turns before execution

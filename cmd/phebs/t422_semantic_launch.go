@@ -188,12 +188,12 @@ func (launch *t422SemanticLaunch) loadConfig(path string) (*config.Config, []byt
 func (launch *t422SemanticLaunch) parseConfig(raw []byte) (*config.Config, []byte, error) {
 	digest := sha256.Sum256(raw)
 	if len(raw) == 0 || len(raw) > t422SemanticConfigBytes ||
-		"sha256:"+hex.EncodeToString(digest[:]) != launch.request.ConfigSHA256 || bytes.Contains(raw, []byte("$")) {
+		"sha256:"+hex.EncodeToString(digest[:]) != launch.request.ConfigSHA256 {
 		return nil, nil, errT422SemanticLaunch
 	}
 	// Parse these very bytes once; do not re-open a mutable path after its
 	// digest check, or let ambient secret expansion replace admitted bytes.
-	cfg, err := config.Parse(raw)
+	cfg, err := config.ParseLiteral(raw)
 	if err != nil {
 		return nil, nil, errT422SemanticLaunch
 	}

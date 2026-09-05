@@ -481,7 +481,7 @@ func LoadForRecovery(path string) (*Config, []byte, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("read config: %w", err)
 	}
-	cfg, err := parse(data, false)
+	cfg, err := parse(data, false, false)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w", path, err)
 	}
@@ -492,10 +492,18 @@ func LoadForRecovery(path string) (*Config, []byte, error) {
 // syntax/type/unknown-field errors from the strict decoder, semantic errors
 // from the node tree.
 func Parse(data []byte) (*Config, error) {
-	return parse(data, true)
+	return parse(data, true, false)
 }
 
-func parse(data []byte, expandSecrets bool) (*Config, error) {
+// ParseLiteral validates an explicitly located configuration without ambient
+// secret or data-directory expansion. It shares Parse's strict decoder,
+// validation and deterministic defaults, but rejects decoded dollar signs and
+// requires a clean absolute data_dir before defaults can resolve HOME or cwd.
+func ParseLiteral(data []byte) (*Config, error) {
+	return parse(data, false, true)
+}
+
+func parse(data []byte, expandSecrets, literal bool) (*Config, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 	var cfg Config
@@ -508,6 +516,14 @@ func parse(data []byte, expandSecrets bool) (*Config, error) {
 	var doc yaml.Node
 	// cannot fail: the strict decode above already parsed the same bytes
 	_ = yaml.Unmarshal(data, &doc)
+	if literal {
+		if err := literalConfigScalars(&doc); err != nil {
+			return nil, err
+		}
+		if !filepath.IsAbs(cfg.Server.DataDir) || filepath.Clean(cfg.Server.DataDir) != cfg.Server.DataDir {
+			return nil, errors.New("literal config requires an explicit clean absolute server.data_dir")
+		}
+	}
 	// A bare `permissions:` key decodes to a nil pointer (YAML null), which
 	// would silently DISABLE the enforcement its presence promises (T10.3).
 	// Presence is the documented switch, so null means the empty block.
@@ -521,6 +537,29 @@ func parse(data []byte, expandSecrets bool) (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// The existing node tree already contains escaped string values. Binary
+// scalars additionally decode base64 when assigned to Config's string fields.
+// Visit Content only: each alias target is already present at its declaration.
+func literalConfigScalars(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		value := node.Value
+		if node.Tag == "!!binary" {
+			if err := node.Decode(&value); err != nil {
+				return err
+			}
+		}
+		if strings.Contains(value, "$") {
+			return fmt.Errorf("line %d: literal config scalar must not contain a dollar sign", node.Line)
+		}
+	}
+	for _, child := range node.Content {
+		if err := literalConfigScalars(child); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // hasTopLevelKey reports whether the document's root mapping contains key.
