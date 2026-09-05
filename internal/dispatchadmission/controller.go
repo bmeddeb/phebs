@@ -402,7 +402,11 @@ func (c *Controller) accept(producer uint32, frame frame) error {
 			p.active[frame.ordinal] = active
 		}
 	case opCheckpoint, opClose:
-		if frame.site != 0 || frame.ordinal != p.ordinal || !c.fenced || (frame.op == opCheckpoint && p.checkpoint == frame.phase) {
+		// Terminal closure fences only this producer. A serial one-shot may
+		// finish while other producers still work in the same global phase.
+		// Checkpoints and Advance retain their global fence requirement.
+		if frame.site != 0 || frame.ordinal != p.ordinal ||
+			(frame.op == opCheckpoint && (!c.fenced || p.checkpoint == frame.phase)) {
 			return c.failLocked(ErrProtocol)
 		}
 		for _, active := range p.active {

@@ -4489,6 +4489,14 @@ that covers the unchanged fixture deadline; no frozen deadline is raised.
 These tickets are pending, not acceptance evidence. Agents may refine an
 in-scope implementation choice in the owning ADR, but cannot relax an AC,
 invent a measurement or expand the frozen program to force completion.
+The terminal-close primitive now closes one fully joined producer without
+globally fencing other same-phase work. Checkpoint/Advance still require the
+global fence, and binding, phase, sequence, ordinal and empty-local-active-map
+checks remain exact. Real serial child lifetimes alongside another producer's
+live child, pending/carried refusal, lost ACK and immutable-terminal tests passed
+five focused normal repeats (0.387s), ten race repeats (1.383s), vet and pinned
+lint. Full package gates and independent immutable review remain required; this
+primitive alone supplies neither shared author composition nor archive readiness.
 Main now consumes the authenticated bounded V3 semantic launch record through
 an actual inherited Unix socket before config/source path opening. It checks
 the same config bytes once, keeps the fixed epoch/phase membership and one

@@ -406,8 +406,10 @@ func (c *Client) quiescentLocked(closeAll bool) bool {
 // persistent handles can carry. Controller.Fence must precede the RPC.
 func (c *Client) Checkpoint(ctx context.Context) error { return c.checkpointOrClose(ctx, false) }
 
-// Close requires every handle, including persistent handles, to be joined.
-// It sends a terminal checkpoint and closes the endpoint. It cannot replace
+// Close irrevocably fences this producer, waits for every handle (including
+// pending Starts and persistent handles), and closes its endpoint. Other
+// producers may keep working in the same unfenced global phase. This terminal
+// record is not a global checkpoint or permission to Advance, and cannot replace
 // intentional hard-death closure, native session census, or custody checks.
 func (c *Client) Close(ctx context.Context) error {
 	if c == nil {
