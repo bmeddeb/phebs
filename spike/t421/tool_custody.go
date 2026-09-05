@@ -18,8 +18,9 @@ var ErrExecutionToolCustody = errors.New("execution tool copy verification unava
 // or a CheckoutAdmissionBinding. Native helpers, SDKs, mutable inputs and command
 // recipes retain their separate admission requirements and trusted-host boundary.
 type ExecutionToolCustody struct {
-	input    *ExecutionInputCustody
-	identity ExecutionToolIdentity
+	input           *ExecutionInputCustody
+	identity        ExecutionToolIdentity
+	referenceInputs *ExecutionGoBuildCustody
 }
 
 // ProtectExecutionReferenceTool verifies the protected copy with the existing

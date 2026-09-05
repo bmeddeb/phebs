@@ -36,7 +36,13 @@ func (custody *ExecutionGoBuildCustody) ProtectReferenceTool(ctx context.Context
 		return tool, err
 	}
 	identity, err := custody.verifyReferenceTool(ctx, parent, role, selection.Path)
-	return finishExecutionToolCopy(ctx, tool, selection, identity, err)
+	tool, err = finishExecutionToolCopy(ctx, tool, selection, identity, err)
+	if err == nil {
+		// Only this measured protected-input issuer binds a source/resource
+		// lineage. A legacy observer or caller-authored identity cannot set it.
+		tool.referenceInputs = custody
+	}
+	return tool, err
 }
 
 func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context, parent, role, binary string) (identity ExecutionToolIdentity, retErr error) {

@@ -4546,6 +4546,15 @@ The broader owner-hook ordinary regressions passed full command (140.162s),
 store runner (135.888s), auth (0.810s), lifecycle (4.611s), sync (67.278s) and
 generation scheduler (1.004s). Full store and independent corrected-source
 review are not implied by the runner selector.
+The genuine parent serve slice now accepts only linked protected build/tool
+custody, owns a native source-mutation lease, generates its protected config
+and performs real inherited bootstrap. Its fixed tiny source and conservative
+local command/wire limits are expressly not a full-profile issuer. Source,
+parser, lease and local-budget tests passed three normal repeats in 2.786s and
+three race repeats in 4.380s; scoped vet and pinned lint passed. The opt-in
+full-repository protected Phebs/Zoekt/Surreal indexed-query and complete-stop
+rehearsal is written but unrun pending an immutable corrected candidate. Native
+session, full-source admission and genuine readiness remain unestablished.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay
