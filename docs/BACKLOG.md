@@ -4476,6 +4476,10 @@ and refuses any completed pair the collector did not count. Always-stale and
 stale-then-current regressions pass with exactly one real turn/probe and no
 reuse. Normal five repeats (1.871s), race three repeats (2.318s), vet, pinned lint
 and whitespace pass; independent correction re-review remains required.
+Independent exact correction review of fd81e2d1 closed all lifecycle severity
+counts at zero. Separate full-author rehearsal review found only one low
+failure-path nil cleanup; the plan-input defer now checks a returned handle
+before Close. Neither source review is an execution or freeze result.
 The implementation stack splits T42.2k into bootstrap/dispatch, semantic-owner
 control and genuine-parent custody slices, and T42.2l into the current-revision
 core, authenticated request/CLI and complete executor/admission slices. These

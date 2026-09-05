@@ -119,7 +119,7 @@ func TestExecutionAuthorOptionalRealCLIRehearsal(t *testing.T) {
 	}
 	planInput, err := ProtectExecutionInputs(ctx, parent, []ExecutionInputCopy{{Name: "plan", Path: planPath, SHA256: SHA256(raw)}})
 	defer func() {
-		if canRelease() {
+		if planInput != nil && canRelease() {
 			_ = planInput.Close()
 		}
 	}()
