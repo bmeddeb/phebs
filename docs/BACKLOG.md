@@ -4485,10 +4485,32 @@ failure (660.662s), not a complete receipt or later freeze-test pass. No matchin
 engine/test process or port-65499 listener remained before the separate author
 rehearsal. One new exact-clean selector uses a thirty-minute outer package alarm
 that covers the unchanged fixture deadline; no frozen deadline is raised.
+That clean selector at exact 35b7efa7418ac7af79f89341e4622eec9a9b906a
+subsequently passed in 957.727s. Retained V1/V2 bytes, full V3 round-trip,
+all stopped-prefix cases and later freeze validators passed. Its modeled
+successful receipt is 330,512 bytes under the 524,288-byte cap; positive
+incomplete and overshoot/unavailable prefixes are 311,547 and 311,540 bytes.
+The native identity fixture executes three physical generations with 56
+extraction chunks and nine roots each; its stale/restart constructor reuse
+does not perform actual lease or hard-death injection. This is a constructor
+and validator gate, not full executor readiness or a ceremony.
 
 These tickets are pending, not acceptance evidence. Agents may refine an
 in-scope implementation choice in the owning ADR, but cannot relax an AC,
 invent a measurement or expand the frozen program to force completion.
+The pure operational-flow constructor now maps the unchanged plan to eleven
+producers, 120 sites, seven roles and fifteen phases, with 547,195 admissions
+and a 140,090,368-byte DA01 ceiling. Its conservative 61-active limit applies
+only to the selected HEAD-only closed HTTP recipe, which remains to be wired;
+it does not admit arbitrary token-authorized HTTP/MCP batches. Actual producer
+and phase ownership, PC01/PB01/log/outer-stage budgets and full admission remain
+separate gates. Independent review found one medium malformed-history panic;
+the correction guards the shared validator and tests physical lengths zero,
+one, two and four through both the direct fast path and constructor. Exact
+correction review and source-attributed tests remain required. Corrected source,
+tests, arithmetic and owning-cost re-review subsequently closed all severity
+counts at zero. Three normal repeats (1.617s), three race repeats (20.650s), vet,
+repository-pinned lint, docs (0.591s), glossary and whitespace pass.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map
@@ -4534,7 +4556,9 @@ Unit/refusal/context/report selectors passed five normal repeats (20.694s),
 three race repeats (19.282s), final focused normal ten repeats (0.606s), race
 five repeats (1.763s), vet, pinned lint and whitespace. Independent source/test
 review found all severity counts zero; immutable owning-documentation review
-and one real inherited-bootstrap mechanics success remain required. Supplied
+and one real inherited-bootstrap mechanics success remain required. Exact
+3b038a45 source/test/docs/cost review subsequently closed all severities at zero.
+Supplied
 test owners/capacity do not establish physical pressure or the native store/graph.
 The separate physical-delta two-reader retention hook remains unwired.
 Main now consumes the authenticated bounded V3 semantic launch record through

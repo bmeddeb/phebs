@@ -165,7 +165,8 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 	} else {
 		wantRevisions = *knownRevisions
 	}
-	if plan.Revisions.SourceRecipe != wantRevisions.SourceRecipe ||
+	if len(plan.Revisions.Physical) != 3 ||
+		plan.Revisions.SourceRecipe != wantRevisions.SourceRecipe ||
 		!reflect.DeepEqual(plan.Revisions.Physical, wantRevisions.Physical) ||
 		len(plan.Revisions.Logical) != 3 ||
 		plan.Revisions.Logical[0].Name != "a" || plan.Revisions.Logical[1].Name != "b" ||
