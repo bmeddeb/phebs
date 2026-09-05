@@ -861,6 +861,8 @@ func serve(args []string) (retErr error) {
 	}
 	reportT4013Startup("authority_recovery_complete")
 	var lifecycleController *lifecycle.Controller
+	var lifecycleControl *t422LifecycleControl
+	var lifecycleRunnerControl *lifecycle.RunnerControl
 	if cfg.Lifecycle.EnabledFor() {
 		lifecycleController, lifecycleErr = lifecycle.NewController(
 			st, lifecycleOwners...,
@@ -868,6 +870,17 @@ func serve(args []string) (retErr error) {
 		if lifecycleErr != nil {
 			return fmt.Errorf("configure lifecycle maintenance: %w", lifecycleErr)
 		}
+	}
+	if semanticLaunch != nil {
+		if lifecycleController == nil {
+			return errT422LifecycleControl
+		}
+		lifecycleControl, err = newT422LifecycleControl(ctx, semanticLaunch, lifecycleOwners)
+		if err != nil {
+			return err
+		}
+		lifecycleRunnerControl = lifecycleControl.runner
+		exactReadState.lifecycle = lifecycleControl
 	}
 
 	// T10.1: one audit recorder feeds the auth surface and the huma middleware.
@@ -1160,10 +1173,13 @@ func serve(args []string) (retErr error) {
 	}
 	if lifecycleController != nil {
 		runBackground(func() {
-			lifecycle.RunWithOwners(
+			lifecycle.RunWithControl(
 				ctx, lifecycleController, capacityGate,
 				lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay,
 				func(result lifecycle.OwnerResult) {
+					if lifecycleControl != nil {
+						lifecycleControl.ObserveOwner(result)
+					}
 					lifecycleStatus.ObserveOwner(result)
 					if result.Err != nil {
 						diagnostics.Logf(
@@ -1180,6 +1196,7 @@ func serve(args []string) (retErr error) {
 				},
 				lifecycleStatus.ObserveCapacity,
 				owners,
+				lifecycleRunnerControl,
 			)
 		})
 	}

@@ -4522,6 +4522,21 @@ is unchanged. Positive canceled-result and existing control/owner regressions
 passed five normal repeats (1.987s), three race repeats (2.481s), vet, pinned
 lint and whitespace. Independent exact review and the main bounded source-free
 attempt-prefix sink remain gates; a panic before Tick returns remains unavailable.
+Independent exact source/test/docs/cost review of 1c26e9cc and 17a68099 closed
+all severity counts at zero.
+Main now keeps the native lifecycle runner parked in all five exact epochs and
+exposes five initial Parks, three native drives and seven exact R observations
+through a closed authenticated sequence. Four capacity probes remain inside
+their zero-C/S/M/W R scopes; the three native owner cycles remain outside R.
+The same reporter retains actual returned-Tick/deletion prefixes before bounded
+source-free log output, including post-Tick cancellation and positive overshoot.
+Unit/refusal/context/report selectors passed five normal repeats (20.694s),
+three race repeats (19.282s), final focused normal ten repeats (0.606s), race
+five repeats (1.763s), vet, pinned lint and whitespace. Independent source/test
+review found all severity counts zero; immutable owning-documentation review
+and one real inherited-bootstrap mechanics success remain required. Supplied
+test owners/capacity do not establish physical pressure or the native store/graph.
+The separate physical-delta two-reader retention hook remains unwired.
 Main now consumes the authenticated bounded V3 semantic launch record through
 an actual inherited Unix socket before config/source path opening. It checks
 the same config bytes once, keeps the fixed epoch/phase membership and one

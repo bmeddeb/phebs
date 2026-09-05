@@ -82,12 +82,13 @@ type t421ExactReadAccountingHandler struct {
 }
 
 type t421ExactReadAccountingState struct {
-	report   func([]byte) error
-	fail     func(error)
-	final    t421ExactFinalAuthorityRead
-	tail     t421ExactFinalAuthorityRead
-	semantic *t422SemanticLaunch
-	marker   *t422MarkerControl
+	report    func([]byte) error
+	fail      func(error)
+	final     t421ExactFinalAuthorityRead
+	tail      t421ExactFinalAuthorityRead
+	semantic  *t422SemanticLaunch
+	marker    *t422MarkerControl
+	lifecycle *t422LifecycleControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -201,14 +202,24 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
+	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleCommand(request.URL.Path) {
+		handler.state.lifecycle.command(writer, request)
+		return
+	}
 	if !t421ExactReadAttempt(request) {
 		handler.next.ServeHTTP(writer, request)
 		return
 	}
 	limits, target := t421ExactReadLimits(request, handler.state.final, handler.state.tail)
 	nativeRead := handler.state.markerRead(request)
+	nativeFailureStatus, nativeFailure := "marker_observation_refused", errT422MarkerControl
 	if nativeRead != nil {
 		limits, target = readaccounting.Counts{ControlFileReads: 5}, true
+	}
+	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleRead(request.URL.Path) {
+		nativeRead = handler.state.lifecycle.read(request)
+		limits, target = readaccounting.Counts{}, nativeRead != nil
+		nativeFailureStatus, nativeFailure = "lifecycle_observation_refused", errT422LifecycleControl
 	}
 	ordinal, ok := handler.state.admit(request, target)
 	if !ok {
@@ -245,7 +256,7 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		var pendingCommit func() error
 		var readErr error
 		if nativeRead != nil {
-			failureStatus, failure = "marker_observation_refused", errT422MarkerControl
+			failureStatus, failure = nativeFailureStatus, nativeFailure
 			canonical, afterReport, readErr = nativeRead(ctx)
 		} else {
 			canonical, pendingCommit, readErr = read.Read(ctx)
