@@ -389,7 +389,7 @@ func TestExecutionGoBuildModuleDescriptorOnlyIgnoresCachedContents(t *testing.T)
 	for _, cached := range []string{"absent", "directory", "symlink"} {
 		t.Run(cached, func(t *testing.T) {
 			custody := newGoBuildTestTree(t)
-			goBuildTestCleanup(t, custody)
+			defer func() { goBuildTestCleanup(t, custody) }()
 			cache, err := filepath.EvalSymlinks(t.TempDir())
 			if err != nil {
 				t.Fatal(err)
