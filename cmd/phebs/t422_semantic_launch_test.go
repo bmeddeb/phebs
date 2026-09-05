@@ -37,6 +37,56 @@ func t422SemanticTestRequest(t *testing.T) ([]byte, dispatchadmission.Production
 	}
 }
 
+func TestT422SemanticClosedHTTPRecipes(t *testing.T) {
+	for _, test := range []struct {
+		name, method, path string
+		marked, want       bool
+	}{
+		{"health", "GET", "/api/health", false, true},
+		{"marked-health", "GET", "/api/health", true, false},
+		{"health-query", "GET", "/api/health?x=1", false, false},
+		{"health-post", "POST", "/api/health", false, false},
+		{"park", "POST", t422LifecycleParkPath, false, true},
+		{"marked-park", "POST", t422LifecycleParkPath, true, false},
+		{"lifecycle-read", "GET", t422LifecycleNormalRead, true, true},
+		{"unmarked-read", "GET", t422LifecycleNormalRead, false, false},
+		{"marker", "GET", t422MarkerHitPath, true, true},
+		{"search", "GET", "/api/search?q=x", true, true},
+		{"unmarked-search", "GET", "/api/search?q=x", false, false},
+		{"unmarked-mcp", "POST", t421ExactMCPPath, false, false},
+		{"marked-mcp", "POST", t421ExactMCPPath, true, true},
+		{"mcp-query", "POST", t421ExactMCPPath + "?x=1", true, false},
+		{"mcp-get", "GET", t421ExactMCPPath, true, false},
+		{"unknown-api", "GET", "/api/repos", true, false},
+		{"encoded-alias", "GET", "/api/%68ealth", false, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.method, test.path, nil)
+			if test.marked {
+				request.Header.Set(t421ExactReadActivationHeader, t421ExactReadsContract)
+				request.Header.Set(t421ExactReadOrdinalHeader, "1")
+			}
+			if t422SemanticRequestRoute(request) != test.want {
+				t.Fatal("closed route selection differs")
+			}
+		})
+	}
+	// A marked batch reaches the existing bounded decoder, not the legacy SDK
+	// batch path. An unmarked batch never reaches either body decoder here.
+	for _, marked := range []bool{false, true} {
+		request := httptest.NewRequest(http.MethodPost, t421ExactMCPPath, strings.NewReader(`[{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{}}]`))
+		if marked {
+			request.Header.Set(t421ExactReadActivationHeader, t421ExactReadsContract)
+			request.Header.Set(t421ExactReadOrdinalHeader, "1")
+		}
+		if t422SemanticRequestRoute(request) {
+			if _, accepted := t421ExactMCPReadLimits(request); accepted {
+				t.Fatal("legacy batch escaped the exact request recipe")
+			}
+		}
+	}
+}
+
 func TestT422SemanticLaunchClosedEnvelope(t *testing.T) {
 	raw, snapshot := t422SemanticTestRequest(t)
 	if launch, err := decodeT422SemanticLaunch(raw, snapshot); err != nil || launch.request.ServerEpoch != 1 {

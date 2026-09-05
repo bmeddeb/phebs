@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -261,15 +262,57 @@ func (launch *t422SemanticLaunch) matches(snapshot dispatchadmission.ProductionS
 
 func (launch *t422SemanticLaunch) admitRequest(request *http.Request) (*http.Request, error) {
 	snapshot, err := dispatchadmission.ProductionSemanticState()
-	if err != nil || !launch.matches(snapshot) {
+	if err != nil || !launch.matches(snapshot) || !t422SemanticRequestRoute(request) {
 		// A valid private request already owns its slot. A changed semantic
-		// producer/phase is terminal, unlike an unauthenticated token refusal.
+		// producer/phase or unlisted route is terminal, unlike a bad token.
 		if launch.fail != nil {
 			launch.fail(errT422SemanticLaunch)
 		}
 		return nil, errT422SemanticLaunch
 	}
 	return request.WithContext(context.WithValue(request.Context(), t422SemanticRequestKey{}, snapshot)), nil
+}
+
+// Exact V3 admits only its implemented fixed routes. In particular, a private
+// request token cannot admit an unmarked legacy MCP batch: marked MCP passes
+// through the existing single-tools/call decoder inside authentication. Do not
+// read or decode its body twice here. Native route owners still enforce their
+// exact phase, sequence, arguments, authentication and complete report tails.
+func t422SemanticRequestRoute(request *http.Request) bool {
+	if request == nil || request.URL == nil || request.URL.Path != request.URL.EscapedPath() ||
+		request.URL.Fragment != "" {
+		return false
+	}
+	path := request.URL.Path
+	activation := request.Header.Values(t421ExactReadActivationHeader)
+	ordinals := request.Header.Values(t421ExactReadOrdinalHeader)
+	if path == "/api/health" || t422LifecycleCommand(path) {
+		method := http.MethodPost
+		if path == "/api/health" {
+			method = http.MethodGet
+		}
+		return request.Method == method && request.URL.RawQuery == "" && !request.URL.ForceQuery &&
+			request.ContentLength == 0 && len(request.TransferEncoding) == 0 &&
+			len(activation) == 0 && len(ordinals) == 0
+	}
+	if len(activation) != 1 || activation[0] != t421ExactReadsContract || len(ordinals) != 1 ||
+		len(ordinals[0]) == 0 || len(ordinals[0]) > 20 {
+		return false
+	}
+	if path == t421ExactMCPPath {
+		return request.Method == http.MethodPost && request.URL.RawQuery == "" && !request.URL.ForceQuery
+	}
+	if request.Method != http.MethodGet || request.ContentLength != 0 || len(request.TransferEncoding) != 0 {
+		return false
+	}
+	switch path {
+	case api.ExtractionProgressPath, api.LifecycleStatusPath, t421ExactFinalAuthorityPath,
+		t421ExactTailReadinessPath, api.SearchPath, t421ProductServicePath, t421ProductRelationshipsPath,
+		t422MarkerHitPath, t422MarkerRecoveredPath:
+		return true
+	default:
+		return t422LifecycleRead(path)
+	}
 }
 
 func (launch *t422SemanticLaunch) requestCurrent(ctx context.Context) bool {

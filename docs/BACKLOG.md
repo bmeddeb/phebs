@@ -4526,6 +4526,18 @@ in 4.836s. Vet, repository-pinned lint 2.12.2 and whitespace pass. A mistakenly
 broad author race selector included inherited full V1 regeneration and exceeded
 its 90-second package alarm; it was not a pass, launched no engine, and the
 subsequent selectors were restricted to the owned custody/command tests.
+An additional source-owner cost readback corrected the site-check lock location
+and distinguished the added custody-mutex metadata hold from short controller/
+Client holds; it also records ordinary forwarding and changed-channel allocation.
+These are source-identical wording corrections, not new passing runtime evidence.
+Exact V3 HTTP now refuses unknown or unmarked product/MCP routes after genuine
+token/owner reservation and before normal authentication/handler work. Existing
+marked MCP parsing still rejects batches with one bounded decode. This closes
+the arbitrary-HTTP caveat of the 61-active construction, not full phase/request
+sequencing. Independent source/test review found all severity counts zero.
+Five semantic/request-owner normal repeats passed in 1.826s, three race repeats
+in 2.772s, vet and repository-pinned lint pass. Ordinary nil-semantic serving
+is unchanged; immutable source/docs/cost attribution remains required.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map
