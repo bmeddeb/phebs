@@ -32,11 +32,15 @@ type currentOnlyServiceStateV3ReadSource struct {
 
 func newServiceRuntimeSelectorFixture(t *testing.T) serviceRuntimeSelectorFixture {
 	t.Helper()
-	s := newServiceCatalogV3InternalStore(t)
-	ctx := t.Context()
+	return newServiceRuntimeSelectorFixtureContext(t.Context(), t)
+}
+
+func newServiceRuntimeSelectorFixtureContext(ctx context.Context, t *testing.T) serviceRuntimeSelectorFixture {
+	t.Helper()
+	s := newServiceCatalogV3InternalStoreContext(ctx, t)
 	repository := "example.com/acme/service-runtime-" + strings.ToLower(t.Name())
 	commit := strings.Repeat("7", 40)
-	seedServiceCatalogV3Repo(t, s, repository, commit)
+	seedServiceCatalogV3RepoContext(ctx, t, s, repository, commit)
 
 	v2Publication := serviceStateV2Publication(t, repository, commit)
 	if err := s.PublishServiceCatalog(ctx, v2Publication); err != nil {
@@ -78,13 +82,13 @@ func newServiceRuntimeSelectorFixture(t *testing.T) serviceRuntimeSelectorFixtur
 	if err != nil {
 		t.Fatal(err)
 	}
-	runServiceStateV3Plan(t, s, reconcile)
+	runServiceStateV3PlanContext(ctx, t, s, reconcile)
 	v3Search := selectorTestDigest("2")
 	activation, err := s.BeginServiceStateV3Activation(ctx, repository, v3Search)
 	if err != nil {
 		t.Fatal(err)
 	}
-	runServiceStateV3Plan(t, s, activation)
+	runServiceStateV3PlanContext(ctx, t, s, activation)
 	v3Pointer, err := s.GetServiceCatalogV3CandidatePointer(ctx, repository)
 	if err != nil {
 		t.Fatal(err)

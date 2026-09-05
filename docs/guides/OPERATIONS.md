@@ -3200,6 +3200,16 @@ production scheduler runs these workers for repositories with an explicit
 service-catalog configuration; only the durable runtime selector makes their
 results visible.
 
+A new reconcile schedule can omit removal-only chunks when a bounded census
+proves that all actual live service keys are present in the incoming catalog.
+Creation rechecks that proof against the unchanged summary, prior plan and
+candidate; final reconciliation requires the exact expected live-key set.
+Explicitly removed or rejected services still pass through their ordinary
+member updates. A real absent key retains the conservative removal scan;
+invalid or inconsistent proof refuses. Existing running and repaired plans
+keep their original layout. The census limits returned rows, not database
+scan work across retained tombstones, and does not freshly recount tombstones.
+
 The v3 read backend strict-opens the selected catalog root and summary before
 serving state. A bounded verified cache retains at most eight roots and 128
 decoded service members; concurrent cold fills coalesce, and an active detail

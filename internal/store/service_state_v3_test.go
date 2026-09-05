@@ -435,7 +435,11 @@ func newServiceStateV3ProvenanceFixture(
 
 func runServiceStateV3Plan(t *testing.T, s *Surreal, begin ServiceStateV3Begin) {
 	t.Helper()
-	ctx := t.Context()
+	runServiceStateV3PlanContext(t.Context(), t, s, begin)
+}
+
+func runServiceStateV3PlanContext(ctx context.Context, t *testing.T, s *Surreal, begin ServiceStateV3Begin) {
+	t.Helper()
 	schedule := begin.Schedule
 	for schedule.NextOffset < schedule.TotalItems {
 		var err error
@@ -1909,11 +1913,16 @@ func assertServiceStateV3PlanBounds(
 
 func expandServiceStateV3Plan(t *testing.T, s *Surreal, begin ServiceStateV3Begin) {
 	t.Helper()
+	expandServiceStateV3PlanContext(t.Context(), t, s, begin)
+}
+
+func expandServiceStateV3PlanContext(ctx context.Context, t *testing.T, s *Surreal, begin ServiceStateV3Begin) {
+	t.Helper()
 	schedule := begin.Schedule
 	for schedule.NextOffset < schedule.TotalItems {
 		var err error
 		schedule, err = s.ExpandGenerationSchedule(
-			t.Context(), schedule.Repository, schedule.Stage, schedule.Generation,
+			ctx, schedule.Repository, schedule.Stage, schedule.Generation,
 		)
 		if err != nil {
 			t.Fatal(err)

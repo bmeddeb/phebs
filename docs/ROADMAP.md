@@ -538,6 +538,12 @@ The next native-schema batching prerequisite preserves the existing schema
 repair and migration order while reducing separate startup write transactions.
 Even a prospective no-removal optimization would otherwise leave at least
 195 writes against 170. Neither prerequisite establishes complete phase fit.
+Exact schema-batch commit `e8dd1d789855509307ffbd5967a7e36be6247a79`
+passed isolated native atomicity/self-healing and pure race gates. The next
+no-removal slice keeps admitted running/repair layouts and uses actual live-key
+proofs at new-plan creation and final commit; implementation/review gates are
+pending, with retained-tombstone scan costs explicit. Full accounting, native
+restore replay and the complete parent ceremony readiness remain open.
 
 On the same day the [design charter](./DESIGN_CHARTER.md) became the
 presentation authority, and Epic 43 ran as its parallel presentation-only

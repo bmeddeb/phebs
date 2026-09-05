@@ -455,10 +455,18 @@ func TestServiceCatalogV3LifecyclePinsRestartAndMalformedIsolation(t *testing.T)
 
 func newServiceCatalogV3InternalStore(t *testing.T) *Surreal {
 	t.Helper()
+	return newServiceCatalogV3InternalStoreContext(context.Background(), t)
+}
+
+func newServiceCatalogV3InternalStoreContext(ctx context.Context, t *testing.T) *Surreal {
+	t.Helper()
+	if err := ctx.Err(); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	t.Cleanup(cancel)
 	s, err := OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
@@ -474,12 +482,22 @@ func seedServiceCatalogV3Repo(
 	repository, commit string,
 ) {
 	t.Helper()
-	if err := s.UpsertRepo(t.Context(), Repo{
+	seedServiceCatalogV3RepoContext(t.Context(), t, s, repository, commit)
+}
+
+func seedServiceCatalogV3RepoContext(
+	ctx context.Context,
+	t *testing.T,
+	s *Surreal,
+	repository, commit string,
+) {
+	t.Helper()
+	if err := s.UpsertRepo(ctx, Repo{
 		Name: repository, CloneURL: "https://" + repository + ".git",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetRepoIndexed(t.Context(), repository, commit, time.Now().UTC()); err != nil {
+	if err := s.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 }

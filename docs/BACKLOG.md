@@ -4533,7 +4533,41 @@ failure, explicit THROW rollback, metadata retention on the same connection,
 fresh connection and reopened engine, prevention of later migration, and
 successful repair. Guard evidence is metadata retention, not guard invocation.
 No database child remained. Pure shape/transport/cancellation tests passed
-three repetitions; immutable-commit attribution and broader gates remain next.
+three repetitions. The clean detached exact commit
+`e8dd1d789855509307ffbd5967a7e36be6247a79` then passed all schema selectors
+including native atomicity/self-healing (10.427s), pure schema race (1.582s),
+pinned store lint (zero issues), documentation (0.540s), glossary and whitespace.
+The preceding exact headroom commit separately passed its native prefix
+restart/removal race (18.819s) and real committed-activation hook normal
+(15.861s) and race (29.360s). These complete the named focused headroom gates;
+combined broader store/command gates remain next, not a ceremony or freeze pass.
+
+The next `codex/t42.2l-no-removal` slice uses actual live-key membership to
+avoid unnecessary removal-only scheduler turns for genuinely new reconcile
+plans. AC: closed capped projection/candidate validation, exact create and
+final transaction fences, real-removal fallback, no malformed-data fallback,
+same-layout active/repair/restore behavior, candidate/summary/prior-plan races,
+unchanged member-nine activation and prefix restart gates, normal/race/native
+checks and independent steady-state-cost review. The first native selector
+failed in 2.478s on an introduced extra SQL END before any state-member commit;
+all four engines joined. After correcting the expression, the core 11-case
+suite and restore-state test passed, while two test setups failed in 2.885s:
+the real catalog publisher correctly refused an unsettled successor, and the
+failure loop overclaimed an already-settled schedule. Corrected tests retain
+that public publisher refusal, exercise stale prior progress only at the
+private creation boundary, and stop on actual settlement. The complete new
+selector then passed in 2.748s with clean child teardown, including actual
+repair-layout preservation and the production restore-state/clear sequence.
+No archive import was performed by that store-level restore test.
+
+Independent review closed with all severity counts zero after adding a
+four-minute cooperative operation context (capped at the outer deadline minus
+one minute) through minimal shared test-helper variants; ordinary helper
+signatures and independent cleanup remain unchanged. The timeout-only
+correction passed three pure repetitions in 0.504s; exact committed native/race,
+member-nine and combined broader gates remain next. Result limits deliberately
+do not imply history-independent scans or predecode response-byte bounds.
+No whole-phase transaction fit is established.
 
 Scoped gate updates: exact literal-config correction 726e8953 passed independent
 source/test/cost review with all severity counts zero; its clean detached

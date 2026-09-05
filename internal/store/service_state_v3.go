@@ -888,6 +888,18 @@ func (s *Surreal) beginServiceStateV3Plan(
 		plan.CreatedAt = time.Time{}
 		plan.UpdatedAt = time.Time{}
 	}
+	var removalProof *serviceStateV3RemovalProof
+	if phase == serviceStateV3Reconcile && plan.Repair == 0 {
+		var proofErr error
+		removalProof, proofErr = s.proveServiceStateV3NoRemovals(ctx, candidate, summary)
+		if proofErr != nil {
+			return ServiceStateV3Begin{}, proofErr
+		}
+		if removalProof != nil {
+			plan.RemovalChunks = 0
+			plan.TotalChunks = plan.ServiceMemberChunks + 1
+		}
+	}
 	remaining := plan.TotalChunks - plan.BaseChunk
 	if remaining < 1 {
 		return ServiceStateV3Begin{}, ErrInvalidServiceStateV3
@@ -921,13 +933,17 @@ func (s *Surreal) beginServiceStateV3Plan(
 	plan.ScheduleDigest = schedule.Digest
 	now := storeTimestamp(time.Now())
 	plan.CreatedAt, plan.UpdatedAt = now, now
-	if err := s.createServiceStateV3Plan(ctx, plan, prior); err != nil {
+	if err := s.createServiceStateV3Plan(ctx, plan, prior, removalProof); err != nil {
 		existing, readErr := s.getServiceStateV3Plan(ctx, plan.Digest)
 		if readErr == nil && existing.ScheduleDigest == schedule.Digest &&
 			existing.Repository == plan.Repository && existing.Phase == plan.Phase &&
 			existing.CatalogRoot == plan.CatalogRoot &&
 			existing.CatalogControlRevision == plan.CatalogControlRevision &&
 			existing.SearchGeneration == plan.SearchGeneration &&
+			existing.ServiceMemberChunks == plan.ServiceMemberChunks &&
+			existing.RemovalChunks == plan.RemovalChunks &&
+			existing.TotalChunks == plan.TotalChunks && existing.BaseChunk == plan.BaseChunk &&
+			existing.Repair == plan.Repair &&
 			existing.State == serviceStateV3Running {
 			return ServiceStateV3Begin{Plan: existing, Schedule: schedule}, nil
 		}
@@ -957,19 +973,257 @@ func (s *Surreal) retireTerminalServiceStateV3Schedule(
 	return nil
 }
 
+// This is an ephemeral proof for a new schedule, never a persisted plan mode.
+// Repairs keep their already-admitted removal layout and cumulative counters.
+type serviceStateV3RemovalProof struct {
+	repository      string
+	catalogRoot     string
+	catalogRevision uint64
+	summary         servicecatalog.RepositoryState
+	liveKeys        []string
+}
+
+type serviceStateV3LiveRec struct {
+	RecID           *models.RecordID `json:"id"`
+	ServiceKey      string           `json:"service_key"`
+	Status          string           `json:"status"`
+	Removed         bool             `json:"removed"`
+	ControlRevision uint64           `json:"control_revision"`
+	VisibleFrom     uint64           `json:"visible_from"`
+}
+
+type serviceStateV3CatalogKeys struct {
+	all  []string
+	live []string
+}
+
+func (keys *serviceStateV3CatalogKeys) appendMember(
+	ctx context.Context,
+	root servicecatalogv3.Root,
+	descriptor servicecatalogv3.MemberDescriptor,
+	raw []byte,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	projections, err := servicecatalogv3.ProjectServiceMember(root, descriptor, raw)
+	if err != nil {
+		return err
+	}
+	for _, projection := range projections {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		key := projection.Service.Key
+		if len(keys.all) >= servicecatalogv3.MaxTotalServices ||
+			len(keys.all) != 0 && key <= keys.all[len(keys.all)-1] {
+			return ErrInvalidServiceStateV3
+		}
+		keys.all = append(keys.all, key)
+		if !projection.Removed {
+			keys.live = append(keys.live, key)
+		}
+	}
+	return nil
+}
+
+func serviceStateV3CandidateKeys(
+	ctx context.Context,
+	generation servicecatalogv3.Generation,
+) (serviceStateV3CatalogKeys, error) {
+	keys := serviceStateV3CatalogKeys{all: []string{}, live: []string{}}
+	if ctx == nil {
+		return keys, ErrInvalidServiceStateV3
+	}
+	if err := ctx.Err(); err != nil {
+		return keys, err
+	}
+	if err := servicecatalogv3.ValidateRoot(generation.Root); err != nil {
+		return keys, err
+	}
+	ordinal := 0
+	for _, member := range generation.Members {
+		if err := ctx.Err(); err != nil {
+			return keys, err
+		}
+		if member.Kind != "service" {
+			continue
+		}
+		if ordinal >= len(generation.Root.ServiceMembers) || member.Ordinal != ordinal {
+			return keys, ErrInvalidServiceStateV3
+		}
+		if err := keys.appendMember(ctx, generation.Root,
+			generation.Root.ServiceMembers[ordinal], member.Content); err != nil {
+			return keys, err
+		}
+		ordinal++
+	}
+	if ordinal != len(generation.Root.ServiceMembers) || len(keys.all) != generation.Root.Services {
+		return keys, ErrInvalidServiceStateV3
+	}
+	return keys, nil
+}
+
+func (s *Surreal) proveServiceStateV3NoRemovals(
+	ctx context.Context,
+	candidate *ServiceCatalogV3Candidate,
+	summary *servicecatalog.RepositoryState,
+) (*serviceStateV3RemovalProof, error) {
+	keys, err := serviceStateV3CandidateKeys(ctx, candidate.Generation)
+	if err != nil {
+		return nil, err
+	}
+	// ponytail: the existing (repository, service_key) index can traverse all
+	// retained tombstones. The limit bounds results, not physical scan work;
+	// review a live-key index if profiling warrants a history-independent scan.
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, err
+	}
+	results, err := surrealdb.Query[[]serviceStateV3LiveRec](ctx, s.db, `
+SELECT id, service_key, status, removed, control_revision, visible_from
+	FROM service_state_v3_current WHERE repository = $repository AND removed = false
+	ORDER BY service_key LIMIT $limit`, map[string]any{
+		"repository": candidate.Generation.Root.Binding.Repository,
+		"limit":      servicecatalogv3.MaxTotalServices*2 + 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	liveKeys, counts, err := serviceStateV3LiveCensus(
+		ctx, candidate.Generation.Root.Binding.Repository, firstDomainRows(results),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if summary == nil || counts.Live != summary.LiveServiceCount ||
+		counts.Current != summary.CurrentCount || counts.Stale != summary.StaleCount ||
+		counts.Unavailable != summary.UnavailableCount || counts.Conflict != summary.ConflictCount {
+		return nil, ErrConflict
+	}
+	for _, key := range liveKeys {
+		if _, present := slices.BinarySearch(keys.all, key); !present {
+			return nil, nil // A real removal needs the existing conservative scan.
+		}
+	}
+	return &serviceStateV3RemovalProof{
+		repository:  candidate.Generation.Root.Binding.Repository,
+		catalogRoot: candidate.Generation.Root.Digest, catalogRevision: candidate.ControlRevision,
+		// Tombstones are inherited under the exact summary CAS, not recounted.
+		summary: *summary, liveKeys: liveKeys,
+	}, nil
+}
+
+// Only the closed projection is validated here. Normal member processing still
+// validates full state rows and their digests; this does not fetch successors.
+func serviceStateV3LiveCensus(
+	ctx context.Context,
+	repository string,
+	rows []serviceStateV3LiveRec,
+) ([]string, serviceStateV3Counts, error) {
+	counts := serviceStateV3Counts{}
+	if ctx == nil || len(rows) > servicecatalogv3.MaxTotalServices*2 {
+		return nil, counts, ErrInvalidServiceStateV3
+	}
+	keys := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if err := ctx.Err(); err != nil {
+			return nil, counts, err
+		}
+		key := row.ServiceKey
+		if len(key) == 0 || len(key) > servicecatalog.MaxServiceKeyBytes ||
+			len(keys) != 0 && key <= keys[len(keys)-1] || row.Removed ||
+			row.ControlRevision == 0 || row.VisibleFrom == 0 {
+			return nil, counts, ErrInvalidServiceStateV3
+		}
+		for index, value := range []byte(key) {
+			if value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z' ||
+				value >= '0' && value <= '9' || index != 0 && (value == '.' || value == '_' || value == '-') {
+				continue
+			}
+			return nil, counts, ErrInvalidServiceStateV3
+		}
+		expected := serviceStateV3ID(repository, key)
+		identifier, _ := expected.ID.(string)
+		if !validServiceCatalogV3RecordID(row.RecID, "service_state_v3_current", identifier) {
+			return nil, counts, ErrInvalidServiceStateV3
+		}
+		counts.Live++
+		switch row.Status {
+		case servicecatalog.StatusCurrent:
+			counts.Current++
+		case servicecatalog.StatusStale:
+			counts.Stale++
+		case servicecatalog.StatusUnavailable:
+			counts.Unavailable++
+		case servicecatalog.StatusConflict:
+			counts.Conflict++
+		default:
+			return nil, counts, ErrInvalidServiceStateV3
+		}
+		keys = append(keys, key)
+	}
+	return keys, counts, ctx.Err()
+}
+
+func (s *Surreal) serviceStateV3RemovalDrainKeys(
+	ctx context.Context,
+	plan ServiceStateV3Plan,
+) ([]string, error) {
+	root, err := s.ReadServiceCatalogV3Root(ctx, plan.Repository, plan.CatalogRoot)
+	if err != nil {
+		return nil, err
+	}
+	if root.Services != plan.CatalogServiceCount || len(root.ServiceMembers) != plan.ServiceMemberChunks {
+		return nil, ErrInvalidServiceStateV3
+	}
+	keys := serviceStateV3CatalogKeys{all: []string{}, live: []string{}}
+	for _, descriptor := range root.ServiceMembers {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		raw, err := s.serviceCatalogV3MemberContent(ctx, descriptor)
+		if err != nil {
+			return nil, err
+		}
+		if err := keys.appendMember(ctx, root, descriptor, raw); err != nil {
+			return nil, err
+		}
+	}
+	if len(keys.all) != root.Services {
+		return nil, ErrInvalidServiceStateV3
+	}
+	return keys.live, ctx.Err()
+}
+
 func (s *Surreal) createServiceStateV3Plan(
 	ctx context.Context,
 	plan ServiceStateV3Plan,
 	prior *ServiceStateV3Plan,
+	removalProof *serviceStateV3RemovalProof,
 ) error {
 	if validateServiceStateV3Plan(plan) != nil {
 		return ErrInvalidServiceStateV3
 	}
 	priorRID := models.NewRecordID("service_state_v3_plan", "absent")
 	priorDigest := ""
+	var priorContent map[string]any
 	if prior != nil {
 		priorRID = serviceStateV3PlanID(prior.Digest)
 		priorDigest = prior.Digest
+		priorContent = serviceStateV3PlanContent(*prior)
+	}
+	var summaryContent map[string]any
+	liveKeys := []string{}
+	if removalProof != nil {
+		if plan.Phase != serviceStateV3Reconcile || plan.RemovalChunks != 0 ||
+			removalProof.repository != plan.Repository || removalProof.catalogRoot != plan.CatalogRoot ||
+			removalProof.catalogRevision != plan.CatalogControlRevision || removalProof.liveKeys == nil {
+			return ErrInvalidServiceStateV3
+		}
+		liveKeys = removalProof.liveKeys
+		if removalProof.summary.ControlRevision != 0 {
+			summaryContent = serviceRepositoryStateContent(removalProof.summary)
+		}
 	}
 	results, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
 BEGIN;
@@ -977,6 +1231,17 @@ LET $candidate = (SELECT root_digest, control_revision FROM $candidate_rid LIMIT
 LET $current = (SELECT schedule_digest FROM $schedule_current LIMIT 1)[0].schedule_digest;
 LET $schedule = (SELECT digest, generation, status FROM $schedule_rid LIMIT 1)[0];
 LET $existing = (SELECT id FROM $plan_rid LIMIT 1)[0].id;
+IF $check_removal_proof {
+	LET $prior = (SELECT * OMIT id FROM $prior_rid LIMIT 1)[0];
+	LET $summary = (SELECT * OMIT id FROM $summary_rid LIMIT 1)[0];
+	LET $prior_ok = IF $prior_present THEN $prior = $expected_prior ELSE $prior = NONE END;
+	LET $summary_ok = IF $summary_present THEN $summary = $expected_summary ELSE $summary = NONE END;
+	LET $live_keys = SELECT VALUE service_key FROM service_state_v3_current
+		WHERE repository = $repository AND removed = false ORDER BY service_key LIMIT $live_limit;
+	IF !$prior_ok OR !$summary_ok OR $live_keys != $expected_live_keys {
+		THROW 'phebs-permanent: service state v3 removal proof changed';
+	};
+};
 IF $candidate = NONE OR $candidate.root_digest != $catalog_root OR
 	$candidate.control_revision != $catalog_revision OR $current != $schedule_digest OR
 	$schedule = NONE OR $schedule.digest != $schedule_digest OR
@@ -999,6 +1264,12 @@ COMMIT;`, map[string]any{
 		),
 		"plan_rid":  serviceStateV3PlanID(plan.Digest),
 		"prior_rid": priorRID, "prior_digest": priorDigest,
+		"prior_present": prior != nil, "expected_prior": priorContent,
+		"check_removal_proof": removalProof != nil,
+		"summary_rid":         serviceStateV3RepositoryID(plan.Repository),
+		"summary_present":     summaryContent != nil, "expected_summary": summaryContent,
+		"repository": plan.Repository, "expected_live_keys": liveKeys,
+		"live_limit":       servicecatalogv3.MaxTotalServices*2 + 1,
 		"catalog_root":     plan.CatalogRoot,
 		"catalog_revision": plan.CatalogControlRevision,
 		"schedule_digest":  plan.ScheduleDigest, "digest": plan.Digest,
@@ -1811,6 +2082,18 @@ func (s *Surreal) commitServiceStateV3Chunk(
 			expectedSummary.SummaryDigest != priorPlan.SummaryDigest) {
 		return ErrInvalidServiceStateV3
 	}
+	checkLiveKeys := requireRemovalDrain && priorPlan.RemovalChunks == 0
+	drainKeys := []string{}
+	if checkLiveKeys {
+		if priorPlan.Phase != serviceStateV3Reconcile {
+			return ErrInvalidServiceStateV3
+		}
+		var err error
+		drainKeys, err = s.serviceStateV3RemovalDrainKeys(ctx, priorPlan)
+		if err != nil {
+			return err
+		}
+	}
 	if priorPlan.SummaryControlRevision >= math.MaxInt64 {
 		return ErrInvalidServiceStateV3
 	}
@@ -1938,11 +2221,16 @@ LET $lease_ok = $chunk != NONE AND $chunk.identity = $chunk_identity
 	AND $chunk.stage = $stage AND $chunk.generation = $plan_digest
 	AND $chunk.status = 'running' AND $chunk.attempt = $attempt
 	AND $chunk.lease_token = $lease AND $chunk.claimed_by = $worker;
-LET $drained = !$require_removal_drain OR array::len(
-	SELECT id FROM service_state_v3_current
-		WHERE repository = $repository AND removed = false
-			AND service_key > $removal_cursor LIMIT 1
-) = 0;
+LET $drained = IF !$require_removal_drain THEN true ELSE
+	IF $check_live_keys THEN (
+		SELECT VALUE service_key FROM service_state_v3_current
+			WHERE repository = $repository AND removed = false
+			ORDER BY service_key LIMIT $final_live_limit
+	) = $expected_final_live_keys ELSE array::len(
+		SELECT id FROM service_state_v3_current
+			WHERE repository = $repository AND removed = false
+				AND service_key > $removal_cursor LIMIT 1
+	) = 0 END;
 IF $repository_state = NONE OR $repository_state.deleting = true OR
 	$candidate = NONE OR $candidate.root_digest != $catalog_root OR
 	$candidate.control_revision != $catalog_revision OR $current != $schedule_digest OR
@@ -2086,6 +2374,9 @@ COMMIT;`, map[string]any{
 		"expected_summary_revision":  priorPlan.SummaryControlRevision,
 		"expected_summary_digest":    priorPlan.SummaryDigest,
 		"require_removal_drain":      requireRemovalDrain,
+		"check_live_keys":            checkLiveKeys,
+		"expected_final_live_keys":   drainKeys,
+		"final_live_limit":           servicecatalogv3.MaxTotalServices + 1,
 		"removal_cursor":             priorPlan.RemovalCursor,
 		"updates":                    encodedUpdates, "write_summary": writeSummary,
 		"summary_content": summaryContent,
