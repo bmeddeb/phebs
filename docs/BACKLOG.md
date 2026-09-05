@@ -4644,6 +4644,17 @@ inherited/snapshot race three-repeat selector passed in 1.681s. The earlier
 1.752s run covered the inherited selector before the additional snapshot unit
 test. The prospective V3 marker-contract correction through `a9e84e3a` also
 passed independent review with all severity counts zero.
+The lifecycle control seam now parks/drives the same existing runner and Gate,
+synchronously arms its existing collector, and preserves cadence/cursor/recovery
+state. Its exact-only controlled first wake and bounded pending-turn delay do
+not change ordinary hourly/backlog behavior. The combined existing/new normal
+three-repeat selector passed in 13.598s and race three-repeat in 14.635s before
+two narrow cancellation/panic guards. Final new-control normal five-repeat and
+race three-repeat selectors then passed in 1.830s and 2.330s, with vet, pinned
+lint and whitespace clean. One root inspection caught the panic-defer nil-error
+reply; the corrected real controlled-runner regression preserves panic while
+returning explicit failure. Independent exact review, final combined gates and
+authenticated main/parent phase wiring remain open.
 
 T42.2l's current-revision author core now reuses the frozen source generators
 and one admitted native Git boundary. Actual tiny A → B → A-return replay

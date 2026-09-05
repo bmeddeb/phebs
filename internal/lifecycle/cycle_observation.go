@@ -185,19 +185,33 @@ func (collector *CycleCollector) await(
 	if ctx == nil || collector == nil {
 		return CycleObservation{}, errors.New("lifecycle cycle observation is incomplete")
 	}
+	if err := ctx.Err(); err != nil {
+		return CycleObservation{}, err
+	}
+	done, err := collector.arm(allowJobBacklog)
+	if err != nil {
+		return CycleObservation{}, err
+	}
+	return collector.wait(ctx, done)
+}
+
+// arm is synchronous: the controlled runner calls it before its first turn,
+// rather than racing an Await goroutine against an immediately ready owner.
+func (collector *CycleCollector) arm(allowJobBacklog bool) (<-chan cycleObservationResult, error) {
 	collector.mu.Lock()
+	defer collector.mu.Unlock()
 	if collector.started {
-		collector.mu.Unlock()
-		return CycleObservation{}, errors.New("lifecycle cycle observation was already started")
+		return nil, errors.New("lifecycle cycle observation was already started")
 	}
 	collector.started = true
 	collector.fence = collector.now().UTC()
 	collector.latest = collector.fence
 	collector.done = make(chan cycleObservationResult, 1)
 	collector.allowJobBacklog = allowJobBacklog
-	done := collector.done
-	collector.mu.Unlock()
+	return collector.done, nil
+}
 
+func (collector *CycleCollector) wait(ctx context.Context, done <-chan cycleObservationResult) (CycleObservation, error) {
 	select {
 	case <-ctx.Done():
 		collector.cancel()
@@ -581,16 +595,23 @@ func (collector *CycleCollector) AwaitPressure75Recovery(
 	if err := ctx.Err(); err != nil {
 		return CycleObservation{}, err
 	}
+	done, err := collector.armPressure75Recovery(gate, ballastFence)
+	if err != nil {
+		return CycleObservation{}, err
+	}
+	return collector.wait(ctx, done)
+}
+
+func (collector *CycleCollector) armPressure75Recovery(gate *Gate, ballastFence time.Time) (<-chan cycleObservationResult, error) {
 	collector.mu.Lock()
+	defer collector.mu.Unlock()
 	if collector.recoveryStarted {
-		collector.mu.Unlock()
-		return CycleObservation{}, errors.New("pressure 75 recovery observation was already started")
+		return nil, errors.New("pressure 75 recovery observation was already started")
 	}
 	collector.recoveryStarted = true
 	if collector.pressure75.Schema != Pressure75ObservationSchema || collector.pressureGate != gate ||
 		ballastFence.IsZero() || ballastFence.Before(collector.pressure75.Capacity.ObservedAt) {
-		collector.mu.Unlock()
-		return CycleObservation{}, errors.New("pressure 75 recovery does not follow its refusal")
+		return nil, errors.New("pressure 75 recovery does not follow its refusal")
 	}
 	collector.finished = false
 	collector.fence = ballastFence.UTC()
@@ -612,20 +633,7 @@ func (collector *CycleCollector) AwaitPressure75Recovery(
 	collector.recoveryComplete = false
 	collector.preStartNormal = false
 	collector.allowJobBacklog = true
-	done := collector.done
-	collector.mu.Unlock()
-
-	select {
-	case <-ctx.Done():
-		collector.cancel()
-		return CycleObservation{}, ctx.Err()
-	case result := <-done:
-		if err := ctx.Err(); err != nil {
-			collector.cancel()
-			return CycleObservation{}, err
-		}
-		return cloneCycleObservation(result.value), result.err
-	}
+	return collector.done, nil
 }
 
 // ReadPressure75Normal confirms the same gate remains normal after the fresh
