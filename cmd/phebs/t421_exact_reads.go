@@ -89,6 +89,7 @@ type t421ExactReadAccountingState struct {
 	semantic  *t422SemanticLaunch
 	marker    *t422MarkerControl
 	lifecycle *t422LifecycleControl
+	retention *t422RetentionControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -202,6 +203,10 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
+	if handler.state.retention != nil && request.URL != nil && request.URL.Path == t422RetentionPinPath {
+		handler.state.retention.command(writer, request)
+		return
+	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleCommand(request.URL.Path) {
 		handler.state.lifecycle.command(writer, request)
 		return
@@ -220,6 +225,13 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		nativeRead = handler.state.lifecycle.read(request)
 		limits, target = readaccounting.Counts{}, nativeRead != nil
 		nativeFailureStatus, nativeFailure = "lifecycle_observation_refused", errT422LifecycleControl
+	}
+	if handler.state.retention != nil && request.URL != nil && request.URL.Path == t422RetentionReadPath {
+		limits, target = handler.state.retention.limits(), t422RetentionRequest(request, false)
+		if target {
+			nativeRead = handler.state.retention.read
+		}
+		nativeFailureStatus, nativeFailure = "retention_observation_refused", errT422RetentionControl
 	}
 	ordinal, ok := handler.state.admit(request, target)
 	if !ok {
@@ -260,6 +272,9 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 			canonical, afterReport, readErr = nativeRead(ctx)
 		} else {
 			canonical, pendingCommit, readErr = read.Read(ctx)
+			if readErr == nil && handler.state.retention != nil && request.URL.Path == t421ExactFinalAuthorityPath {
+				afterReport, readErr = handler.state.retention.finalTail(ctx, canonical)
+			}
 		}
 		if readErr != nil || !json.Valid(canonical) {
 			status = failureStatus

@@ -712,10 +712,19 @@ func serve(args []string) (retErr error) {
 		lifecycle.JobOwnerImpl{Store: st, Acquire: acquireLifecycleMutation},
 	}
 	searchGenerationPins := &focusedindex.SearchGenerationPins{}
-	lifecycleOwners = append(lifecycleOwners, lifecycle.SearchGenerationOwnerImpl{
+	searchGenerationOwner := lifecycle.SearchGenerationOwnerImpl{
 		IndexDir: filepath.Join(cfg.Server.DataDir, "index"),
 		Pins:     searchGenerationPins, Acquire: acquireLifecycleMutation,
-	})
+	}
+	lifecycleOwners = append(lifecycleOwners, searchGenerationOwner)
+	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 1 {
+		retention, retentionErr := newT422RetentionControl(ctx, semanticLaunch, searchGenerationOwner, searchGenerationPins)
+		if retentionErr != nil {
+			return retentionErr
+		}
+		exactReadState.retention = retention
+		defer func() { stopBackground(); retention.Close() }()
+	}
 	observationCache := &observationpublication.Cache{}
 	observationInventoryCache := &observationpublication.InventoryCacheV2{}
 	relationshipCache := &relationshippublication.Cache{}

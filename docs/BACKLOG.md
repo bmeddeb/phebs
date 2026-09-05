@@ -4550,6 +4550,33 @@ handoffs, with seven never-launched producers explicitly canceled unused. Its
 opt-in-absent compile/skip (0.553s), vet, pinned lint and whitespace pass; genuine
 execution remains pending on a clean immutable tree. Empty accounting phases
 do not establish any server, archive, pressure, recovery or full ceremony phase.
+That genuine shared-author rehearsal subsequently passed from exact clean
+5737c5876b64b099b6d0711f6e285672fc4a7f23 in 670.18s (package 670.814s).
+Source/SDK/module custody admitted 67,458 entries, 55,741 files and
+1,352,969,322 bytes in 6m8.762s; supplied/reference builds took
+49.461s/2m15.475s. Actual shared A/B/A-return runs took
+20.753s/15.597s/14.835s and retained cumulative attempts 5/9/13.
+The final complete mechanical snapshot has three root-author and ten nested
+Git admissions, 5,632 reserved wire bytes and all other roles zero. Native
+joins, source continuity and exact owned cleanup passed; a subsequent host
+check found no matching test, author or Surreal process. This supersedes only
+the pending shared-author execution gate, not the empty semantic phases.
+
+The epoch-one current/prior retention helper now captures the actual A identity
+only after successful warm F reporting, acquires its real pin in phase four
+before B through one fixed non-R POST, and implements the original single C41
+R with two concrete owner sweeps and actual A/B/held-A queries. It adds no fair
+runner turn or R request. Lead independent source/test/integration/cost review
+found no finding. A first tiny native test correctly refused a fixture mistake
+comparing artifact-file and source-record units; the corrected test passed
+in 1.098s and confirmed C41/S0/M4/W0 for two actual source files. Final retention
+normal three repeats passed in 2.754s, race three in 6.793s, with vet, pinned
+2.12.2 lint and whitespace clean. Five inherited PB01/PC01 tests prove actual
+private-token/auth/F-tail/pin and terminal-error mechanics using a supplied F
+payload; they do not claim full F/native-R success or production lifetime
+custody. Native positive deletion, cancellation and sink-panic prefixes remain
+visible and terminal. Full admitted phase choreography, parent log/IPC budgets
+and exact-tree integration gates remain open.
 The terminal-close primitive now closes one fully joined producer without
 globally fencing other same-phase work. Checkpoint/Advance still require the
 global fence, and binding, phase, sequence, ordinal and empty-local-active-map
