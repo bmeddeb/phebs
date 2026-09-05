@@ -279,14 +279,20 @@ func TestOwnerControlClosedOperationOrdering(t *testing.T) {
 	}{
 		{0, phasePause}, {0, phaseRequestsOpen}, {phaseOwnerDrain, phaseCheckpoint},
 		{phaseRequestsOpen, phasePause}, {phaseCheckpoint, phaseRequestsOpen},
-		{phaseCheckpoint, phaseOwnersReopen}, {phaseResume, phasePause},
+		{phaseCheckpoint, phaseOwnersReopen}, {phasePreparingRequests, phasePause},
 		{phasePreparingRequests, phaseOwnersReopen},
 	} {
 		if _, _, err := nextConfiguredControlState(test.state, 0, test.op, config); err == nil {
 			t.Fatalf("invalid owner sequence state=%d op=%d", test.state, test.op)
 		}
 	}
+	if state, index, err := nextConfiguredControlState(phaseResume, 1, phasePause, config); err != nil || state != phasePause || index != 1 {
+		t.Fatal("retained owner fences cannot close a quiet next phase", err)
+	}
 	config.OwnerControl = false
+	if _, _, err := nextConfiguredControlState(phaseResume, 1, phasePause, config); err == nil {
+		t.Fatal("mechanical-only control gained owner-resume state")
+	}
 	for _, op := range []byte{phaseOwnerDrain, phaseRequestsOpen, phaseRequestsFence, phaseOwnersReopen} {
 		if _, _, err := nextConfiguredControlState(0, 0, op, config); err == nil {
 			t.Fatal("mechanical-only control accepted owner operation")
@@ -297,5 +303,113 @@ func TestOwnerControlClosedOperationOrdering(t *testing.T) {
 	record.InputSHA256, record.Control.OwnerControl = [32]byte{1}, true
 	if record.validate() == nil {
 		t.Fatal("author program accepted Phebs owner control")
+	}
+}
+
+func TestOwnerControlConsecutiveQuietPhasesRetainFences(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	config := testConfig()
+	config.Limits.Phases = 3
+	config.Phases = append(config.Phases, Phase{ID: 3, Roles: config.Phases[1].Roles})
+	controller, client, server := paired(t, config)
+	parent, child, err := NewPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	phaseConfig := phaseTestConfig()
+	phaseConfig.OwnerControl, phaseConfig.Phases, phaseConfig.MaximumPhases = true, []uint32{1, 2, 3}, 3
+	control, err := NewPhaseControl(ctx, parent, client.binding, phaseConfig)
+	if err != nil {
+		_ = child.Close()
+		t.Fatal(err)
+	}
+	done, err := StartPhaseControl(ctx, child, client, phaseConfig)
+	if err != nil {
+		_ = control.Close()
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = control.Close(); _ = phaseTestResult(t, done) })
+	owners, err := NewOwners(ctx, OwnerLimits{Owners: 1, Requests: 1})
+	if err != nil || client.bindOwners(owners) != nil {
+		t.Fatal("owner registration failed", err)
+	}
+	if err := control.DrainOwners(ctx); err != nil {
+		t.Fatal(err)
+	}
+	parkedCtx, stopParked := context.WithCancel(ctx)
+	parked := make(chan error, 1)
+	go func() {
+		turn, err := owners.Enter(parkedCtx)
+		if err == nil {
+			turn.End()
+		}
+		parked <- err
+	}()
+	defer stopParked()
+	ownerTestWait(t, owners, func() bool { return owners.waiters == 1 })
+	for phase := 1; phase <= 3; phase++ {
+		if phase == 3 {
+			if err := control.OpenRequests(ctx); err != nil {
+				t.Fatal(err)
+			}
+			request, err := client.enterOwnerRequest(ctx, owners, control.RequestToken())
+			if err != nil {
+				t.Fatal(err)
+			}
+			fenced := make(chan error, 1)
+			go func() { fenced <- control.FenceRequests(ctx) }()
+			ownerTestWait(t, owners, func() bool { return owners.requestsFenced })
+			select {
+			case err := <-fenced:
+				request.End()
+				t.Fatal("preparation tail was skipped", err)
+			default:
+			}
+			request.End()
+			if err := phaseTestResult(t, fenced); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if control.RequestToken() != "" {
+			t.Fatal("quiet phase reopened request admission")
+		}
+		owners.mu.Lock()
+		quiet := owners.paused && owners.pausedReady && owners.requestsFenced && owners.requestsReady && owners.active == 0 && owners.requests == 0
+		owners.mu.Unlock()
+		if !quiet {
+			t.Fatal("quiet next phase lost a proven owner/request fence")
+		}
+		select {
+		case err := <-parked:
+			t.Fatal("consecutive pressure phases admitted ordinary work", err)
+		default:
+		}
+		if err := control.Pause(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if phase == 3 {
+			break
+		}
+		if err := controller.Fence(); err != nil {
+			t.Fatal(err)
+		}
+		if err := control.Checkpoint(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if err := controller.Advance(); err != nil {
+			t.Fatal(err)
+		}
+		if err := control.Resume(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stopParked()
+	if err := phaseTestResult(t, parked); !errors.Is(err, context.Canceled) {
+		t.Fatal("parked owner did not join without admission", err)
+	}
+	snapshot := finishPair(t, controller, client, server)
+	if snapshot.Attempts != 0 {
+		t.Fatal("quiet phase transitions invented a dispatch")
 	}
 }

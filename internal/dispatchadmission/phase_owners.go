@@ -44,7 +44,10 @@ func nextConfiguredControlState(state byte, index int, op byte, config PhaseCont
 	switch {
 	case op == phaseOwnerDrain && state == 0:
 		return phaseOwnerDrain, index, nil
-	case op == phasePause && state == phaseOwnerDrain:
+	case op == phasePause && (state == phaseOwnerDrain || state == phaseResume):
+		// Resume keeps the previously proven owner/request fences. A fenced
+		// preparation window returns here too, so consecutive quiet phases
+		// need not reopen ordinary work just to close dispatch again.
 		return phasePause, index, nil
 	case op == phaseCheckpoint && state == phasePause:
 		return phaseCheckpoint, index, nil
