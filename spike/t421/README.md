@@ -327,6 +327,16 @@ real author/executor tools; profile, controller, native controls, launcher,
 review/rehearsal and explicit execution authority are still required. Keep
 outputs outside the dedicated checkout. V1 and V2 bytes stay unchanged.
 
+Exact implementation `5e8f8cf0e521f09d374d4896c35d8646209cd19b` passed the
+complete new checkout selector five times normally (36.717s) and once under
+race (9.709s), repository compilation, module verification, scoped vet and
+repository-pinned lint, glossary and whitespace. Independent exact-commit
+review reports critical/high/medium/low `0/0/0/0`. Documentation checking still
+refuses the inherited presentation-owned missing `service-boundary.png`;
+neither this slice nor its gate record changes that merge bar. The full retained
+T42.1 corpus/plan suite was not rerun for this independently exercised helper.
+Both sealed-plan hashes remain exact, and the stack remains unmerged.
+
 ### T42.2a implementation: exact generation-chunk reports
 
 After V2 integration at `9ac960c9`, the first T42.2 implementation slice binds

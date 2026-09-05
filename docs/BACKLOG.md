@@ -4146,6 +4146,15 @@ closed profile, remaining telemetry/native controls, controller and signed
 launcher still precede freeze. No fake author/executor binary or ceremony
 command is added. The slice is unmerged and changes neither sealed plan.
 
+Exact implementation `5e8f8cf0e521f09d374d4896c35d8646209cd19b` passed five
+focused normal repetitions (36.717s), focused race (9.709s), repository
+compilation, module verification, scoped vet/pinned lint, glossary and
+whitespace. Independent exact-commit review reports `0/0/0/0` across all
+severity levels. Docs-check retains only the existing presentation-owned
+missing `service-boundary.png`; no waiver or cross-track repair is made.
+Both retained plan digests are unchanged. This is checkout-observation closure
+only; next is real exact-reference tool admission, not an execution freeze.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
