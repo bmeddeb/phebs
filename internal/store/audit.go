@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
@@ -55,7 +54,7 @@ func (s *Surreal) AppendAuditEvent(ctx context.Context, event AuditEvent) error 
 	if createdAt.IsZero() {
 		createdAt = time.Now().UTC()
 	}
-	results, err := surrealdb.Query[[]auditEventRec](ctx, s.db,
+	results, err := storeQuery[[]auditEventRec](ctx, s.accounting, s.db,
 		`CREATE $rid SET action = $action, target = $target, actor_id = $actor_id,
             actor_email = $actor_email, api_key_id = $api_key_id,
             auth_method = $auth_method, source_ip = $source_ip,
@@ -65,7 +64,7 @@ func (s *Surreal) AppendAuditEvent(ctx context.Context, event AuditEvent) error 
 			"actor_id": event.ActorID, "actor_email": event.ActorEmail,
 			"api_key_id": event.APIKeyID, "auth_method": event.AuthMethod,
 			"source_ip": event.SourceIP, "status": event.Status, "created_at": createdAt,
-		})
+		}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("append audit event: %w", err)
 	}
@@ -81,9 +80,9 @@ func (s *Surreal) ListAuditEvents(ctx context.Context, offset, limit int) ([]Aud
 	if offset < 0 || limit <= 0 {
 		return nil, errors.New("audit listing needs offset >= 0 and limit > 0")
 	}
-	results, err := surrealdb.Query[[]auditEventRec](ctx, s.db,
+	results, err := storeQuery[[]auditEventRec](ctx, s.accounting, s.db,
 		"SELECT * FROM audit_event ORDER BY created_at DESC LIMIT $limit START $offset",
-		map[string]any{"limit": limit, "offset": offset})
+		map[string]any{"limit": limit, "offset": offset}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("list audit events: %w", err)
 	}
@@ -112,9 +111,9 @@ func (s *Surreal) pruneByCreatedAt(ctx context.Context, table string, cutoff tim
 	type counts struct {
 		N int `json:"n"`
 	}
-	results, err := surrealdb.Query[[]counts](ctx, s.db,
+	results, err := storeQuery[[]counts](ctx, s.accounting, s.db,
 		"SELECT count() AS n FROM type::table($table) WHERE created_at <= $cutoff GROUP ALL",
-		map[string]any{"table": table, "cutoff": cutoff})
+		map[string]any{"table": table, "cutoff": cutoff}, storeRead())
 	if err != nil {
 		return 0, err
 	}
@@ -128,9 +127,9 @@ func (s *Surreal) pruneByCreatedAt(ctx context.Context, table string, cutoff tim
 	if n == 0 {
 		return 0, nil
 	}
-	if _, err := surrealdb.Query[any](ctx, s.db,
+	if _, err := storeQuery[any](ctx, s.accounting, s.db,
 		"DELETE type::table($table) WHERE created_at <= $cutoff RETURN NONE",
-		map[string]any{"table": table, "cutoff": cutoff}); err != nil {
+		map[string]any{"table": table, "cutoff": cutoff}, storeUnsupported()); err != nil {
 		return 0, err
 	}
 	return n, nil

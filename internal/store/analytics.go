@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
@@ -57,7 +56,7 @@ func (s *Surreal) RecordUsageEvent(ctx context.Context, event UsageEvent) error 
 	if repos == nil {
 		repos = []string{}
 	}
-	results, err := surrealdb.Query[[]usageEventRec](ctx, s.db,
+	results, err := storeQuery[[]usageEventRec](ctx, s.accounting, s.db,
 		`CREATE $rid SET kind = $kind, actor_id = $actor_id, api_key_id = $api_key_id,
             repos = $repos, match_count = $match_count, file_count = $file_count,
             duration_ms = $duration_ms, created_at = $created_at RETURN AFTER`,
@@ -66,7 +65,7 @@ func (s *Surreal) RecordUsageEvent(ctx context.Context, event UsageEvent) error 
 			"api_key_id": event.APIKeyID, "repos": repos,
 			"match_count": event.MatchCount, "file_count": event.FileCount,
 			"duration_ms": event.DurationMS, "created_at": createdAt,
-		})
+		}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("record usage event: %w", err)
 	}
@@ -82,9 +81,9 @@ func (s *Surreal) RecordUsageEvent(ctx context.Context, event UsageEvent) error 
 // ponytail: windowed full scan; push GROUP BY into SurrealQL if the
 // dashboard gets slow at real volume.
 func (s *Surreal) ListUsageEvents(ctx context.Context, since time.Time) ([]UsageEvent, error) {
-	results, err := surrealdb.Query[[]usageEventRec](ctx, s.db,
+	results, err := storeQuery[[]usageEventRec](ctx, s.accounting, s.db,
 		"SELECT * FROM usage_event WHERE created_at > $since ORDER BY created_at ASC",
-		map[string]any{"since": since})
+		map[string]any{"since": since}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("list usage events: %w", err)
 	}

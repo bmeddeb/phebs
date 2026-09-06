@@ -5141,6 +5141,23 @@ whitespace passed. Fresh correction/owning-doc review reported all severity
 counts zero at factory `5dfa483c`, tests `71977ab2`, initializer `067f8a8a` and
 core `47c399ae`. Immutable gates remain pending.
 
+Auth and request-store annotation buckets passed independent source/test review
+with all severity counts zero. Their twenty plus nine Query sites comprise
+twelve reads, eleven actual one-RID writes and six explicit unsupported recipes;
+all SQL strings and ordinary behavior remain unchanged. The auth tests passed
+pure three-repeat normal/race in 0.610s/1.737s and complete TestAuth normal/race
+in 11.958s/13.160s, with vet, pinned lint and whitespace clean. Request-store
+tests passed pure three-repeat in 0.648s/1.632s and the four existing native
+audit/usage/permission selectors in 2.718s/4.046s; vet passed. That preliminary
+lint encountered only the then-in-progress factory's exact SDK error type;
+the factory's later narrowly documented correction passed pinned lint with zero
+findings. No native engine survived. Tests retain genuine SA01 ACK-before-native
+prefixes, actual record operands, unsupported refusal and ordinary compatibility;
+auth additionally has closed AST source coverage. Accepted source/test hashes
+are auth `8248b019`/`1313e331`, audit `f91183d2`, usage `d6e527e1`, permission
+`c019b5cd` and request test `c6a48a22`. Integrated exact-tree acceptance remains
+required; this is not a complete ceremony meter or a freeze.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

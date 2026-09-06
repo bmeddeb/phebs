@@ -67,8 +67,8 @@ func (s *Surreal) AuthStats(ctx context.Context) (AuthStats, error) {
 		Users         int `json:"users"`
 		PasswordUsers int `json:"password_users"`
 	}
-	results, err := surrealdb.Query[[]counts](ctx, s.db,
-		`SELECT count() AS users, count(password_hash != NONE AND password_hash != '') AS password_users FROM user GROUP ALL`, nil)
+	results, err := storeQuery[[]counts](ctx, s.accounting, s.db,
+		`SELECT count() AS users, count(password_hash != NONE AND password_hash != '') AS password_users FROM user GROUP ALL`, nil, storeRead())
 	if err != nil {
 		return AuthStats{}, err
 	}
@@ -80,11 +80,11 @@ func (s *Surreal) AuthStats(ctx context.Context) (AuthStats, error) {
 			break
 		}
 	}
-	guard, err := surrealdb.Query[[]struct {
+	guard, err := storeQuery[[]struct {
 		RecID *models.RecordID `json:"id"`
-	}](ctx, s.db, "SELECT id FROM $guard", map[string]any{
+	}](ctx, s.accounting, s.db, "SELECT id FROM $guard", map[string]any{
 		"guard": models.NewRecordID("auth_setup", "first"),
-	})
+	}, storeRead())
 	if err != nil {
 		return AuthStats{}, err
 	}
@@ -124,14 +124,14 @@ func (s *Surreal) CreateFirstUser(ctx context.Context, user User) (*User, error)
 	user.IsAdmin = true
 	vars := userVars(user)
 	vars["guard"] = models.NewRecordID("auth_setup", "first")
-	results, err := surrealdb.Query[[]userRec](ctx, s.db,
+	results, err := storeQuery[[]userRec](ctx, s.accounting, s.db,
 		`BEGIN;
 CREATE ONLY $guard SET completed_at = $now RETURN NONE;
 LET $existing = (SELECT id FROM user LIMIT 1);
 RETURN IF array::len($existing) = 0 THEN
     (CREATE $rid SET `+createUserFields+` RETURN AFTER)
 ELSE [] END;
-COMMIT;`, vars)
+COMMIT;`, vars, storeUnsupported())
 	if err != nil {
 		return nil, wrapAuthConflict(err)
 	}
@@ -143,8 +143,8 @@ COMMIT;`, vars)
 }
 
 func (s *Surreal) CreateUser(ctx context.Context, user User) (*User, error) {
-	results, err := surrealdb.Query[[]userRec](ctx, s.db,
-		"CREATE $rid SET "+createUserFields+" RETURN AFTER", userVars(user))
+	results, err := storeQuery[[]userRec](ctx, s.accounting, s.db,
+		"CREATE $rid SET "+createUserFields+" RETURN AFTER", userVars(user), storeWrite(1))
 	if err != nil {
 		return nil, wrapAuthConflict(err)
 	}
@@ -156,8 +156,8 @@ func (s *Surreal) CreateUser(ctx context.Context, user User) (*User, error) {
 }
 
 func (s *Surreal) GetUserByID(ctx context.Context, id string) (*User, error) {
-	results, err := surrealdb.Query[[]userRec](ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": userID(id)})
+	results, err := storeQuery[[]userRec](ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": userID(id)}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -169,9 +169,9 @@ func (s *Surreal) GetUserByID(ctx context.Context, id string) (*User, error) {
 }
 
 func (s *Surreal) GetUserByEmail(ctx context.Context, normalizedEmail string) (*User, error) {
-	results, err := surrealdb.Query[[]userRec](ctx, s.db,
+	results, err := storeQuery[[]userRec](ctx, s.accounting, s.db,
 		"SELECT * FROM user WHERE normalized_email = $email LIMIT 1",
-		map[string]any{"email": normalizedEmail})
+		map[string]any{"email": normalizedEmail}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (s *Surreal) UpsertOIDCUser(ctx context.Context, issuer, subject, email, no
 		"email": email, "normalized_email": normalizedEmail,
 		"display_name": displayName, "now": now,
 	}
-	results, err := surrealdb.Query[[]userRec](ctx, s.db,
+	results, err := storeQuery[[]userRec](ctx, s.accounting, s.db,
 		`BEGIN;
 UPSERT $guard SET completed_at = IF completed_at = NONE THEN $now ELSE completed_at END RETURN NONE;
 LET $identity = (SELECT id FROM user WHERE oidc_issuer = $issuer AND oidc_subject = $subject LIMIT 1)[0].id;
@@ -217,7 +217,7 @@ ELSE IF $by_email.id = NONE THEN
         disabled = false, created_at = $now, updated_at = $now
      RETURN AFTER)
 ELSE [] END;
-COMMIT;`, vars)
+COMMIT;`, vars, storeUnsupported())
 	if err != nil {
 		return nil, wrapAuthConflict(err)
 	}
@@ -237,9 +237,9 @@ func authRandomID() (string, error) {
 }
 
 func (s *Surreal) MarkUserLogin(ctx context.Context, id string, at time.Time) error {
-	results, err := surrealdb.Query[[]userRec](ctx, s.db,
+	results, err := storeQuery[[]userRec](ctx, s.accounting, s.db,
 		"UPDATE $rid SET last_login_at = $at, updated_at = $at RETURN AFTER",
-		map[string]any{"rid": userID(id), "at": at})
+		map[string]any{"rid": userID(id), "at": at}, storeWrite(1))
 	if err != nil {
 		return err
 	}
@@ -295,13 +295,13 @@ func (s *Surreal) CreateAPIKey(ctx context.Context, key APIKey) (*APIKey, error)
 	if err != nil {
 		return nil, fmt.Errorf("create API key: %w", err)
 	}
-	results, err := surrealdb.Query[[]apiKeyRec](ctx, s.db,
+	results, err := storeQuery[[]apiKeyRec](ctx, s.accounting, s.db,
 		`CREATE $rid SET user_id = $user_id, name = $name, prefix = $prefix,
             hash = $hash, capabilities = $capabilities,
             created_at = $created_at, expires_at = $expires_at RETURN AFTER`,
 		map[string]any{"rid": apiKeyID(key.ID), "user_id": key.UserID, "name": key.Name,
 			"prefix": key.Prefix, "hash": key.Hash, "created_at": key.CreatedAt,
-			"expires_at": key.ExpiresAt, "capabilities": capabilities})
+			"expires_at": key.ExpiresAt, "capabilities": capabilities}, storeWrite(1))
 	if err != nil {
 		return nil, wrapAuthConflict(err)
 	}
@@ -316,8 +316,8 @@ func (s *Surreal) CreateAPIKey(ctx context.Context, key APIKey) (*APIKey, error)
 }
 
 func (s *Surreal) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
-	results, err := surrealdb.Query[[]apiKeyRec](ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": apiKeyID(id)})
+	results, err := storeQuery[[]apiKeyRec](ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": apiKeyID(id)}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -332,9 +332,9 @@ func (s *Surreal) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
 }
 
 func (s *Surreal) ListAPIKeys(ctx context.Context, userID string) ([]APIKey, error) {
-	results, err := surrealdb.Query[[]apiKeyRec](ctx, s.db,
+	results, err := storeQuery[[]apiKeyRec](ctx, s.accounting, s.db,
 		"SELECT * FROM api_key WHERE user_id = $user_id AND revoked_at = NONE ORDER BY created_at DESC",
-		map[string]any{"user_id": userID})
+		map[string]any{"user_id": userID}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -352,9 +352,9 @@ func (s *Surreal) ListAPIKeys(ctx context.Context, userID string) ([]APIKey, err
 }
 
 func (s *Surreal) RevokeAPIKey(ctx context.Context, id, userID string, at time.Time) error {
-	results, err := surrealdb.Query[[]apiKeyRec](ctx, s.db,
+	results, err := storeQuery[[]apiKeyRec](ctx, s.accounting, s.db,
 		"UPDATE $rid SET revoked_at = $at WHERE user_id = $user_id AND revoked_at = NONE RETURN AFTER",
-		map[string]any{"rid": apiKeyID(id), "user_id": userID, "at": at})
+		map[string]any{"rid": apiKeyID(id), "user_id": userID, "at": at}, storeWrite(1))
 	if err != nil {
 		return err
 	}
@@ -369,8 +369,8 @@ func (s *Surreal) RevokeAPIKey(ctx context.Context, id, userID string, at time.T
 }
 
 func (s *Surreal) TouchAPIKey(ctx context.Context, id string, at time.Time) error {
-	_, err := surrealdb.Query[any](ctx, s.db, "UPDATE $rid SET last_used_at = $at",
-		map[string]any{"rid": apiKeyID(id), "at": at})
+	_, err := storeQuery[any](ctx, s.accounting, s.db, "UPDATE $rid SET last_used_at = $at",
+		map[string]any{"rid": apiKeyID(id), "at": at}, storeWrite(1))
 	return err
 }
 
@@ -378,16 +378,16 @@ const legacyAPIKeyID = "legacy-config"
 
 func (s *Surreal) SetLegacyAPIKey(ctx context.Context, hash string, at time.Time) error {
 	if hash == "" {
-		_, err := surrealdb.Query[any](ctx, s.db, "DELETE $rid",
-			map[string]any{"rid": apiKeyID(legacyAPIKeyID)})
+		_, err := storeQuery[any](ctx, s.accounting, s.db, "DELETE $rid",
+			map[string]any{"rid": apiKeyID(legacyAPIKeyID)}, storeWrite(1))
 		return err
 	}
-	_, err := surrealdb.Query[any](ctx, s.db,
+	_, err := storeQuery[any](ctx, s.accounting, s.db,
 		`UPSERT $rid SET user_id = '', name = 'Legacy config key', prefix = 'legacy',
             hash = $hash, capabilities = [],
             created_at = IF created_at = NONE THEN $at ELSE created_at END,
             revoked_at = NONE`,
-		map[string]any{"rid": apiKeyID(legacyAPIKeyID), "hash": hash, "at": at})
+		map[string]any{"rid": apiKeyID(legacyAPIKeyID), "hash": hash, "at": at}, storeWrite(1))
 	return err
 }
 
@@ -397,16 +397,16 @@ type authSessionRec struct {
 }
 
 func (s *Surreal) CommitAuthSession(ctx context.Context, tokenHash string, data []byte, expiry time.Time) error {
-	_, err := surrealdb.Query[any](ctx, s.db,
+	_, err := storeQuery[any](ctx, s.accounting, s.db,
 		"UPSERT $rid SET data = $data, expiry = $expiry",
-		map[string]any{"rid": authSessionID(tokenHash), "data": base64.RawStdEncoding.EncodeToString(data), "expiry": expiry})
+		map[string]any{"rid": authSessionID(tokenHash), "data": base64.RawStdEncoding.EncodeToString(data), "expiry": expiry}, storeWrite(1))
 	return err
 }
 
 func (s *Surreal) FindAuthSession(ctx context.Context, tokenHash string, now time.Time) ([]byte, bool, error) {
-	results, err := surrealdb.Query[[]authSessionRec](ctx, s.db,
+	results, err := storeQuery[[]authSessionRec](ctx, s.accounting, s.db,
 		"SELECT data, expiry FROM $rid WHERE expiry > $now",
-		map[string]any{"rid": authSessionID(tokenHash), "now": now})
+		map[string]any{"rid": authSessionID(tokenHash), "now": now}, storeRead())
 	if err != nil {
 		return nil, false, err
 	}
@@ -424,8 +424,8 @@ func (s *Surreal) FindAuthSession(ctx context.Context, tokenHash string, now tim
 }
 
 func (s *Surreal) DeleteAuthSession(ctx context.Context, tokenHash string) error {
-	_, err := surrealdb.Query[any](ctx, s.db, "DELETE $rid",
-		map[string]any{"rid": authSessionID(tokenHash)})
+	_, err := storeQuery[any](ctx, s.accounting, s.db, "DELETE $rid",
+		map[string]any{"rid": authSessionID(tokenHash)}, storeWrite(1))
 	return err
 }
 
@@ -436,8 +436,8 @@ func (s *Surreal) DeleteExpiredAuthSessions(ctx context.Context, now time.Time) 
 	vars := map[string]any{"now": now}
 	// Startup and periodic cleanup are usually idle. Observe an actual expired
 	// identity before submitting the existing write-capable deletion query.
-	probe, err := surrealdb.Query[[]models.RecordID](ctx, s.db,
-		"SELECT VALUE id FROM auth_session WHERE expiry <= $now LIMIT 1", vars)
+	probe, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db,
+		"SELECT VALUE id FROM auth_session WHERE expiry <= $now LIMIT 1", vars, storeRead())
 	if err != nil {
 		return 0, err
 	}
@@ -455,8 +455,8 @@ func (s *Surreal) DeleteExpiredAuthSessions(ctx context.Context, now time.Time) 
 	if identity.Table != "auth_session" {
 		return 0, errors.New("expired authentication session identity belongs to another table")
 	}
-	results, err := surrealdb.Query[[]authSessionRec](ctx, s.db,
-		"DELETE auth_session WHERE expiry <= $now RETURN BEFORE", vars)
+	results, err := storeQuery[[]authSessionRec](ctx, s.accounting, s.db,
+		"DELETE auth_session WHERE expiry <= $now RETURN BEFORE", vars, storeUnsupported())
 	if err != nil {
 		return 0, err
 	}
