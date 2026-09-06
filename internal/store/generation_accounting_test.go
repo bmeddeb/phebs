@@ -46,6 +46,53 @@ func generationAccountingCensusReply(controls int, rows any) []surrealdb.QueryRe
 	return results
 }
 
+func TestGenerationAccountingRetrySubmittedOperands(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		attempt int
+		current bool
+		wantErr error
+	}{
+		{"successor", 0, true, nil},
+		{"exhausted", 2, true, ErrGenerationExhausted},
+		{"stale", 2, false, ErrGenerationStale},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, owner, controller := storeAccountingFixture(t, 40, 2)
+			db, native := storeAccountingDB(t, ctx, owner)
+			digest := "sha256:" + strings.Repeat("a", 64)
+			native.call = func(_ context.Context, request *connection.RPCRequest) (any, error) {
+				if native.calls == 1 {
+					return []surrealdb.QueryResult[any]{{Status: "OK", Result: []GenerationSchedule{{Digest: digest, MaxAttempts: 3}}}}, nil
+				}
+				if native.calls == 3 && test.wantErr == nil {
+					return []surrealdb.QueryResult[any]{{Status: "OK", Result: []any{map[string]any{
+						"id": models.NewRecordID("generation_schedule_chunk", "successor"), "attempt": 1,
+					}}}}, nil
+				}
+				sql, ok := request.Params[0].(string)
+				if !ok || strings.Count(sql, "UPDATE ") != 3 || strings.Count(sql, "CREATE generation_schedule_chunk CONTENT") != 1 {
+					return nil, errors.New("retry submitted mutation bodies changed")
+				}
+				prefix, err := controller.Snapshot()
+				if err != nil || prefix.Transactions != 1 || prefix.Rows != 4 || prefix.MaximumRows != 4 {
+					t.Errorf("four supplied retry operands lack exact ACK: %+v, %v", prefix, err)
+				}
+				return []surrealdb.QueryResult[any]{{Status: "OK", Result: []any{map[string]any{
+					"owned": true, "current": test.current, "exhausted": test.attempt == 2,
+				}}}}, nil
+			}
+			_, err := (&Surreal{db: db, accounting: owner}).RetryGenerationChunk(ctx, GenerationChunk{
+				ID: "actual", ScheduleDigest: digest, Repository: "example.com/acme/retry", Stage: "source-observation",
+				Status: GenerationChunkRunning, LeaseToken: "lease", ClaimedBy: "worker", Attempt: test.attempt,
+			}, "neutral failure", time.Now())
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("retry error=%v; want %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestGenerationAccountingCensusShapeAndCancellation(t *testing.T) {
 	for _, test := range []struct {
 		name     string

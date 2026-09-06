@@ -60,8 +60,9 @@ func stateAccountingScript(t *testing.T, steps []stateAccountingStep) (context.C
 				PreimageRID    models.RecordID `json:"preimage_rid"`
 				CreatePreimage bool            `json:"create_preimage"`
 			} `json:"updates"`
-			WriteSummary  bool `json:"write_summary"`
-			CreateSummary bool `json:"create_summary_preimage"`
+			PreimageIDs   []models.RecordID `json:"preimage_ids"`
+			WriteSummary  bool              `json:"write_summary"`
+			CreateSummary bool              `json:"create_summary_preimage"`
 		}
 		if err := native.codec.Unmarshal(raw, &payload); err != nil {
 			return nil, err
@@ -74,16 +75,29 @@ func stateAccountingScript(t *testing.T, steps []stateAccountingStep) (context.C
 				actual++
 			}
 		case "chunk":
-			actual = uint64(1 + len(payload.Updates))
+			actual = uint64(1 + len(payload.Updates) + len(payload.PreimageIDs))
+			preimageIDs := []models.RecordID{}
 			for _, update := range payload.Updates {
 				if update.CreatePreimage {
-					actual++
+					preimageIDs = append(preimageIDs, update.RID)
 				}
 			}
-			if payload.WriteSummary {
+			if !reflect.DeepEqual(preimageIDs, payload.PreimageIDs) ||
+				!strings.Contains(sql, "FOR $rid IN $preimage_ids") ||
+				strings.Count(sql, "CREATE service_state_v3_preimage CONTENT") != 1 {
+				t.Error("preimage CREATE must consume only the supplied selected vector")
+				return nil, errors.New("preimage CREATE must consume only the supplied selected vector")
+			}
+			writesSummary := strings.Contains(sql, "UPSERT $summary_rid CONTENT")
+			createsSummary := strings.Contains(sql, "CREATE service_state_v3_repository_preimage CONTENT")
+			if writesSummary != payload.WriteSummary || createsSummary != payload.CreateSummary {
+				t.Error("inactive fixed summary mutation was submitted")
+				return nil, errors.New("inactive fixed summary mutation was submitted")
+			}
+			if writesSummary {
 				actual++
 			}
-			if payload.CreateSummary {
+			if createsSummary {
 				actual++
 			}
 		case "ids":
@@ -146,23 +160,29 @@ func TestServiceStateV3AccountingPlanAndPrefixes(t *testing.T) {
 		})
 	}
 	for _, test := range []struct {
-		name, phase string
-		count       int
-		preimages   bool
+		name, phase     string
+		count           int
+		preimages       int
+		summaryPreimage bool
 	}{
-		{"unchanged_summary", serviceStateV3Activate, 0, false},
-		{"member9_single_change", serviceStateV3Activate, 1, false},
-		{"activation_512", serviceStateV3Activate, 512, false},
-		{"activation_preimages_255", serviceStateV3Activate, 255, true},
-		{"reconcile_preimages_256", serviceStateV3Reconcile, 256, true},
+		{"unchanged_summary", serviceStateV3Activate, 0, 0, false},
+		{"member9_single_change", serviceStateV3Activate, 1, 0, false},
+		{"activation_512", serviceStateV3Activate, 512, 0, false},
+		{"reconcile_511", serviceStateV3Reconcile, 511, 0, false},
+		{"reconcile_512", serviceStateV3Reconcile, 512, 0, false},
+		{"reconcile_noop", serviceStateV3Reconcile, 0, 0, false},
+		{"activation_preimages_255", serviceStateV3Activate, 255, 255, true},
+		{"reconcile_preimages_256", serviceStateV3Reconcile, 256, 256, true},
+		{"mixed_preimages", serviceStateV3Reconcile, 511, 1, true},
+		{"existing_summary_preimage", serviceStateV3Activate, 511, 1, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			plan, changes, summary := serviceStateV3HeadroomFixture(t, test.phase, test.count)
 			preimages := make([]bool, len(changes))
 			for index := range preimages {
-				preimages[index] = test.preimages
+				preimages[index] = index < test.preimages
 			}
-			writes, count, err := serviceStateV3ChunkWrites(t.Context(), plan, changes, 512, "", summary, preimages, test.preimages)
+			writes, count, err := serviceStateV3ChunkWrites(t.Context(), plan, changes, 512, "", summary, preimages, test.summaryPreimage)
 			if err != nil {
 				t.Fatal(err)
 			}

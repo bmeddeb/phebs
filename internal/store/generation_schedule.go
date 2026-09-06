@@ -1994,12 +1994,10 @@ func (s *Surreal) RetryGenerationChunk(
 		"stage": chunk.Stage, "generation": chunk.Generation,
 		"resource_class": chunk.ResourceClass, "offset": chunk.Offset, "length": chunk.Length,
 	}
-	rowsSubmitted := uint64(3)
-	if chunk.Attempt+1 < schedule.MaxAttempts {
-		rowsSubmitted++
-	}
+	// The three UPDATE operands and successor CREATE body are supplied even
+	// when the native ownership/current/exhaustion guards affect no rows.
 	results, err := queryGenerationSchedule[[]generationTransitionRec](
-		ctx, s.accounting, s.db, "retry", retryGenerationChunkSQL, variables, storeWrite(rowsSubmitted),
+		ctx, s.accounting, s.db, "retry", retryGenerationChunkSQL, variables, storeWrite(4),
 	)
 	if err != nil {
 		if s.reconcileGenerationExhaustion(ctx, chunk, schedule.MaxAttempts, errMessage) {

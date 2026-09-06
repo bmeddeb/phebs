@@ -2364,6 +2364,7 @@ func (s *Surreal) commitServiceStateV3TargetChunk(
 	}
 	nextVisibleFrom := priorPlan.SummaryControlRevision + 1
 	encodedUpdates := make([]map[string]any, 0, len(updates))
+	preimageIDs := []models.RecordID{}
 	for index, update := range updates {
 		if update.State.Repository != priorPlan.Repository ||
 			servicecatalogv3.ValidateServiceState(update.State, true) != nil {
@@ -2371,13 +2372,17 @@ func (s *Surreal) commitServiceStateV3TargetChunk(
 		}
 		content := serviceStateContent(update.State)
 		content["visible_from"] = nextVisibleFrom
+		rid := serviceStateV3ID(update.State.Repository, update.State.ServiceKey)
 		encodedUpdates = append(encodedUpdates, map[string]any{
-			"rid":               serviceStateV3ID(update.State.Repository, update.State.ServiceKey),
+			"rid":               rid,
 			"expected_revision": update.ExpectedRevision,
 			"expected_digest":   update.ExpectedDigest,
 			"content":           content,
 			"create_preimage":   len(preimages) != 0 && preimages[index],
 		})
+		if len(preimages) != 0 && preimages[index] {
+			preimageIDs = append(preimageIDs, rid)
+		}
 	}
 	writeSummary := nextSummary != nil
 	var summaryContent map[string]any
@@ -2389,6 +2394,32 @@ func (s *Surreal) commitServiceStateV3TargetChunk(
 			return ErrInvalidServiceStateV3
 		}
 		summaryContent = serviceRepositoryStateContent(*nextSummary)
+	}
+	// Fixed operands must be absent from the submitted SQL when unselected;
+	// a false native guard alone does not remove their submission cost.
+	summaryWriteSQL := ""
+	if writeSummary {
+		summaryWriteSQL = "UPSERT $summary_rid CONTENT $summary_content RETURN NONE;"
+	}
+	summaryPreimageSQL := ""
+	if createSummary {
+		summaryPreimageSQL = `CREATE service_state_v3_repository_preimage CONTENT {
+			schema: $summary.schema, repository: $summary.repository,
+			catalog_generation: $summary.catalog_generation,
+			catalog_control_revision: $summary.catalog_control_revision,
+			catalog_service_count: $summary.catalog_service_count,
+			live_service_count: $summary.live_service_count,
+			current_count: $summary.current_count,
+			stale_count: $summary.stale_count,
+			unavailable_count: $summary.unavailable_count,
+			conflict_count: $summary.conflict_count,
+			tombstone_count: $summary.tombstone_count,
+			summary_digest: $summary.summary_digest,
+			control_revision: $summary.control_revision,
+			updated_at: $summary.updated_at,
+			snapshot_revision: $selector.state_control_revision,
+			snapshot_digest: $selector.state_summary_digest
+		} RETURN NONE;`
 	}
 	results, err := storeQuery[[]serviceStateV3PlanRec](ctx, s.accounting, s.db, `
 BEGIN;
@@ -2551,35 +2582,39 @@ FOR $update IN $updates {
 			THROW 'phebs-permanent: duplicate service state v3 preimage';
 		};
 		LET $prior = $prior_rows[0];
-		IF $prior = NONE {
-			CREATE service_state_v3_preimage CONTENT {
-				schema: $existing.schema, repository: $existing.repository,
-				service_key: $existing.service_key,
-				display_name: $existing.display_name,
-				disposition: $existing.disposition, origin: $existing.origin,
-				reason: $existing.reason, successors: $existing.successors,
-				incarnation: $existing.incarnation,
-				desired_generation: $existing.desired_generation,
-				desired_source_generation: $existing.desired_source_generation,
-				desired_catalog_generation: $existing.desired_catalog_generation,
-				active_desired_generation: $existing.active_desired_generation,
-				active_source_generation: $existing.active_source_generation,
-				active_catalog_generation: $existing.active_catalog_generation,
-				active_search_generation: $existing.active_search_generation,
-				status: $existing.status, removed: $existing.removed,
-				state_digest: $existing.state_digest,
-				control_revision: $existing.control_revision,
-				changed_at: $existing.changed_at,
-				visible_from: $existing.visible_from ?? 1,
-				snapshot_revision: $selector.state_control_revision,
-				snapshot_digest: $selector.state_summary_digest
-			} RETURN NONE;
-		} ELSE IF $prior.state_digest != $existing.state_digest
+		IF $prior != NONE AND ($prior.state_digest != $existing.state_digest
 			OR $prior.control_revision != $existing.control_revision
-			OR $prior.snapshot_digest != $selector.state_summary_digest {
+			OR $prior.snapshot_digest != $selector.state_summary_digest) {
 			THROW 'phebs-permanent: service state v3 preimage conflict';
 		};
 	};
+};
+FOR $rid IN $preimage_ids {
+	LET $existing = (SELECT * FROM $rid LIMIT 1)[0];
+	CREATE service_state_v3_preimage CONTENT {
+		schema: $existing.schema, repository: $existing.repository,
+		service_key: $existing.service_key,
+		display_name: $existing.display_name,
+		disposition: $existing.disposition, origin: $existing.origin,
+		reason: $existing.reason, successors: $existing.successors,
+		incarnation: $existing.incarnation,
+		desired_generation: $existing.desired_generation,
+		desired_source_generation: $existing.desired_source_generation,
+		desired_catalog_generation: $existing.desired_catalog_generation,
+		active_desired_generation: $existing.active_desired_generation,
+		active_source_generation: $existing.active_source_generation,
+		active_catalog_generation: $existing.active_catalog_generation,
+		active_search_generation: $existing.active_search_generation,
+		status: $existing.status, removed: $existing.removed,
+		state_digest: $existing.state_digest,
+		control_revision: $existing.control_revision,
+		changed_at: $existing.changed_at,
+		visible_from: $existing.visible_from ?? 1,
+		snapshot_revision: $selector.state_control_revision,
+		snapshot_digest: $selector.state_summary_digest
+	} RETURN NONE;
+};
+FOR $update IN $updates {
 	UPSERT $update.rid CONTENT $update.content RETURN NONE;
 };
 IF $preserve_summary {
@@ -2592,31 +2627,13 @@ IF $preserve_summary {
 	};
 	LET $prior_summary = $prior_summary_rows[0];
 	IF $prior_summary = NONE {
-		CREATE service_state_v3_repository_preimage CONTENT {
-			schema: $summary.schema, repository: $summary.repository,
-			catalog_generation: $summary.catalog_generation,
-			catalog_control_revision: $summary.catalog_control_revision,
-			catalog_service_count: $summary.catalog_service_count,
-			live_service_count: $summary.live_service_count,
-			current_count: $summary.current_count,
-			stale_count: $summary.stale_count,
-			unavailable_count: $summary.unavailable_count,
-			conflict_count: $summary.conflict_count,
-			tombstone_count: $summary.tombstone_count,
-			summary_digest: $summary.summary_digest,
-			control_revision: $summary.control_revision,
-			updated_at: $summary.updated_at,
-			snapshot_revision: $selector.state_control_revision,
-			snapshot_digest: $selector.state_summary_digest
-		} RETURN NONE;
+		`+summaryPreimageSQL+`
 	} ELSE IF $prior_summary.summary_digest != $summary.summary_digest
 		OR $prior_summary.snapshot_digest != $selector.state_summary_digest {
 		THROW 'phebs-permanent: service state v3 summary preimage conflict';
 	};
 };
-IF $write_summary {
-	UPSERT $summary_rid CONTENT $summary_content RETURN NONE;
-};
+`+summaryWriteSQL+`
 UPDATE $plan_rid CONTENT $plan_content RETURN AFTER;
 COMMIT;`, map[string]any{
 		"candidate_rid":  serviceCatalogV3CandidateID(priorPlan.Repository),
@@ -2661,6 +2678,7 @@ COMMIT;`, map[string]any{
 		"final_live_limit":           servicecatalogv3.MaxTotalServices + 1,
 		"removal_cursor":             priorPlan.RemovalCursor,
 		"updates":                    encodedUpdates, "write_summary": writeSummary,
+		"preimage_ids":            preimageIDs,
 		"create_summary_preimage": createSummary,
 		"payload_records":         payloadRecords,
 		"summary_content":         summaryContent,

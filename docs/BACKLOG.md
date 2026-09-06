@@ -5345,6 +5345,24 @@ bucket, not an exact-commit, full-store, native selected-server or runner
 gate; after its explicit-path commit, the exact-tree gates, integration, seal
 and freeze remain open.
 
+The subsequent pre-merge review of `a9bb6289` reproduced two submitted-operand
+mismatches: a 511-state reconcile prefix retained an uncounted summary UPSERT,
+and an exhausted generation retry counted three while retaining four mutation
+operands. The correction omits inactive fixed summary/preimage SQL, supplies
+only selected preimage RIDs to their CREATE loop, and counts all four retry
+operands without changing native retry semantics. Existing prefix packing and
+all transaction fences remain. The owning ADR records the bounded extra
+preimage point reads and SQL/vector assembly. Regression checks inspect actual
+submitted SQL and CBOR beside the real SDK/SA01 acknowledged prefix, including
+511/512 states, no-ops, mixed preimages, exhausted and stale retries.
+The final correction source passed the combined accounting/headroom/census and
+native preimage/retry/exhaustion selectors normally (35.808s) and under race
+(47.190s). Complete generationscheduler and storeaccounting packages passed
+(0.593s each), with affected-package vet, pinned 2.12.2 lint (zero issues),
+documentation, glossary and whitespace checks clean. These are working-tree,
+scoped correction results, not a full-store or full-stack acceptance run.
+Nothing was committed, merged or pushed; freeze remains unestablished.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

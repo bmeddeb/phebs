@@ -4647,6 +4647,12 @@ extra census calls inside the existing twelve-query ceiling. The unchanged
 cadence can therefore need more owner turns; this is not a lifecycle-deadline
 or complete ceremony pass.
 
+Service-state prefixes keep the 512-submitted-operand ceiling, including their
+plan, selected summary and actual preimage creations. Inactive fixed summary
+mutations are omitted from the submitted SQL. Generation retry counts all four
+supplied mutation operands even when exhaustion or stale ownership prevents
+their effects; affected-row counts are not the ceremony accounting unit.
+
 Final repository cleanup still commits its store changes atomically after
 artifact removal. Bounded cleanup rechecks actual native ID vectors before
 writing; it never splits the deletion into online pages to fit accounting.
