@@ -1217,9 +1217,14 @@ known service generation/state unavailability returns 409. Unexpected store,
 reader, or runtime faults remain HTTP 500 rather than being relabeled as an
 ordinary unavailable service.
 
-The v3 catalog and service-state runtime writes at most 512 rows per durable
-reconcile or activation chunk and keeps strict reads unavailable until the
-final matching-summary CAS. Services already activated from the same catalog
+The v3 service-state runtime preserves members of at most 512 services while
+splitting a member into at most three native transactions. Each transaction
+submits at most 512 records, including current-state updates, actually missing
+selected-snapshot preimages, changed summaries and the plan record. A changed
+preimage census refuses before mutation. Interrupted prefixes retain their
+progress and continue under a valid lease without changing the member's
+identity; strict reads remain unavailable until the final matching-summary
+CAS. Services already activated from the same catalog
 remain readable while later chunks settle. `service_catalogs.<repository>.
 runtime: v3` selects the complete v3 catalog/state/search/relationship tuple
 only after it validates; omission preserves v2, and neither path falls back to

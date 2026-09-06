@@ -429,8 +429,13 @@ func TestServiceStateV3PayloadPrefixRestartAndRemovalRefill(t *testing.T) {
 func serviceStateV3HeadroomChanges(
 	t *testing.T, s *Surreal, plan ServiceStateV3Plan,
 ) ([]serviceStateV3Change, int, string, *servicecatalog.RepositoryState) {
+	return serviceStateV3HeadroomChangesContext(t.Context(), t, s, plan)
+}
+
+func serviceStateV3HeadroomChangesContext(
+	ctx context.Context, t *testing.T, s *Surreal, plan ServiceStateV3Plan,
+) ([]serviceStateV3Change, int, string, *servicecatalog.RepositoryState) {
 	t.Helper()
-	ctx := t.Context()
 	opened, err := s.GetServiceCatalogV3CandidateRoot(ctx, plan.Repository)
 	if err != nil {
 		t.Fatal(err)
@@ -517,8 +522,11 @@ func serviceStateV3HeadroomCommitPrefix(
 }
 
 func serviceStateV3HeadroomClaim(t *testing.T, s *Surreal, plan ServiceStateV3Plan, offset int64) GenerationChunk {
+	return serviceStateV3HeadroomClaimContext(t.Context(), t, s, plan, offset)
+}
+
+func serviceStateV3HeadroomClaimContext(ctx context.Context, t *testing.T, s *Surreal, plan ServiceStateV3Plan, offset int64) GenerationChunk {
 	t.Helper()
-	ctx := t.Context()
 	for range plan.TotalChunks {
 		chunk, err := s.ClaimGenerationChunk(ctx, GenerationResourceCPU, "payload-prefix")
 		if err != nil || chunk == nil || chunk.Generation != plan.Digest || chunk.Offset < offset {
@@ -537,7 +545,10 @@ func serviceStateV3HeadroomClaim(t *testing.T, s *Surreal, plan ServiceStateV3Pl
 		if result, err := s.ProcessServiceStateV3Chunk(ctx, *chunk); !errors.Is(err, ErrConflict) {
 			t.Fatalf("future chunk crossed incomplete prefix: result=%+v err=%v", result, err)
 		}
-		serviceStateV3HeadroomUnchanged(t, s, before)
+		after, err := s.getServiceStateV3Plan(ctx, plan.Digest)
+		if err != nil || !reflect.DeepEqual(before, after) {
+			t.Fatalf("future claim changed plan: before=%+v after=%+v err=%v", before, after, err)
+		}
 		if err := s.ReleaseGenerationChunk(ctx, *chunk, "waiting for incomplete prefix"); err != nil {
 			t.Fatal(err)
 		}

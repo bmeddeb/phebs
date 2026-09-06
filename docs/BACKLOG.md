@@ -4877,6 +4877,40 @@ lint and whitespace clean. Its policy inputs are not genuine frozen admission;
 the parent channel, whole SDK-call drain, complete source descriptors, runtime
 work collectors, exact-tree gates and freeze remain open.
 
+Exact reducer commit `a09d725b2fc3d6479fad7b70085e343c1f0f6506`
+then passed detached-clean normal twenty-repeat (0.254s), race five-repeat
+(1.286s), vet, pinned lint, documentation (0.522s), glossary and whitespace
+gates. Independent owning documentation review reported all severity counts
+zero. These close the pure reducer slice only; authenticated channel and
+native source descriptors remain unimplemented acceptance prerequisites.
+
+The online v3 state writer now reserves actual missing selected preimages and
+their summary alongside current-state/plan/changed-summary payloads. The
+existing selected 512-service transition demonstrates the original gap:
+511 current UPSERTs plus 511 preimage CREATEs, one summary preimage and one
+plan target submitted 1,024 records. The corrected shared writer preserves
+the same member and creates at most three exact-payload prefixes, repeating
+target predicates before any mutation. Independent source/test review at
+`028caf88baf5a75da9c9470cafceb7399d9654c77f864b59270e93e908660103`,
+`32a3cf2cc9faca997f7da0ab83a05942861b5bd4c978e32439a004de9f7f3c15`
+and `bbcce09d340358721c09faa4abef1c893e241b9733e93c7a56e6f8567a2e3c6a`
+reported all severity counts zero. Pure packing/prevalidation passed in
+0.849s. One bounded native engine exercised dense selected reconcile,
+activation and removal, actual preimage inventories, omitted/stale target
+refusal, cancellation and genuine new-lease continuation: test 4.57s,
+package 5.487s, with all owned processes joined. Native race then passed in
+12.912s (test 11.26s), with clean process teardown. Final self-review tightened
+the four-result census to require actual arrays, not NULL absence evidence;
+its SDK-codec regression rejects null/missing/extra/unknown-status envelopes.
+Corrected source `30fff2b6e9d6f14b917d7d6bda1940c9b09db9f4d3019cf5f02da552936b4916`
+and test `6299433a41ee8666aca796259dd7baf50b9e7bc0d619fca512a0445a3c2885ed`
+passed pure normal three-repeat (1.324s), race three-repeat (11.478s), vet,
+pinned lint and whitespace. Independent owning documentation review closed all
+severity counts at zero. Corrected native, unchanged headroom/member-nine
+compatibility and immutable-tree gates remain pending. PLAN records repeated
+planning, metadata census and extended existing-lock costs; this closes no
+whole-phase 170-transaction fit or freeze.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

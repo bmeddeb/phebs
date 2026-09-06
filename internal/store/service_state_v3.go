@@ -1919,9 +1919,12 @@ type serviceStateV3Change struct {
 }
 
 type serviceStateV3ChunkWrite struct {
-	plan    ServiceStateV3Plan
-	updates []serviceStateUpdate
-	summary *servicecatalog.RepositoryState
+	plan            ServiceStateV3Plan
+	updates         []serviceStateUpdate
+	summary         *servicecatalog.RepositoryState
+	preimages       []bool
+	summaryPreimage bool
+	payloadRecords  int
 }
 
 // nextServiceStateV3ChunkWrite reserves payload records for the plan and, during
@@ -1935,24 +1938,62 @@ func nextServiceStateV3ChunkWrite(
 	removalCursor string,
 	summary *servicecatalog.RepositoryState,
 ) (serviceStateV3ChunkWrite, error) {
+	return nextServiceStateV3TargetWrite(plan, changes, read, removalCursor, summary, nil, false)
+}
+
+func nextServiceStateV3TargetWrite(
+	plan ServiceStateV3Plan,
+	changes []serviceStateV3Change,
+	read int,
+	removalCursor string,
+	summary *servicecatalog.RepositoryState,
+	preimages []bool,
+	mayCreateSummary bool,
+) (serviceStateV3ChunkWrite, error) {
 	if validateServiceStateV3Plan(plan) != nil || len(changes) > read ||
 		read < 0 || read > MaxServiceStateV3ChunkRows ||
+		(len(preimages) != 0 && len(preimages) != len(changes)) ||
 		plan.SummaryControlRevision >= math.MaxInt64 ||
 		(plan.Phase == serviceStateV3Activate) != (summary != nil) {
 		return serviceStateV3ChunkWrite{}, ErrInvalidServiceStateV3
 	}
-	limit := MaxServiceStateV3ChunkRows - 1
 	if summary != nil {
 		if summary.Repository != plan.Repository ||
 			summary.ControlRevision != plan.SummaryControlRevision ||
 			summary.SummaryDigest != plan.SummaryDigest {
 			return serviceStateV3ChunkWrite{}, ErrInvalidServiceStateV3
 		}
-		limit--
 	}
-	count := min(len(changes), limit)
+	count, payloadRecords := 0, 1 // Every prefix writes its plan.
+	if summary != nil && len(changes) != 0 {
+		payloadRecords++
+	}
+	createSummary := mayCreateSummary && summary != nil && len(changes) != 0
+	if createSummary {
+		payloadRecords++
+	}
+	for index := range changes {
+		cost := 1
+		preserve := len(preimages) != 0 && preimages[index]
+		if preserve {
+			cost++
+			if mayCreateSummary && !createSummary {
+				cost++
+			}
+		}
+		if payloadRecords+cost > MaxServiceStateV3ChunkRows {
+			break
+		}
+		payloadRecords += cost
+		createSummary = createSummary || mayCreateSummary && preserve
+		count++
+	}
 	write := serviceStateV3ChunkWrite{
 		plan: plan, updates: make([]serviceStateUpdate, 0, count),
+		summaryPreimage: createSummary, payloadRecords: payloadRecords,
+	}
+	if len(preimages) != 0 {
+		write.preimages = preimages[:count]
 	}
 	for _, change := range changes[:count] {
 		if change.update.State.Repository != plan.Repository ||
@@ -2001,6 +2042,182 @@ func nextServiceStateV3ChunkWrite(
 	return write, nil
 }
 
+type serviceStateV3WriteTargets struct {
+	selector        ServiceRuntimeSelector
+	selectorPresent bool
+	preimages       []bool
+	summaryPreimage bool
+}
+
+type serviceStateV3TargetRec struct {
+	ID              *models.RecordID `json:"id"`
+	ServiceKey      string           `json:"service_key"`
+	ControlRevision uint64           `json:"control_revision"`
+	StateDigest     string           `json:"state_digest"`
+	VisibleFrom     uint64           `json:"visible_from"`
+	SummaryDigest   string           `json:"summary_digest"`
+	SnapshotDigest  string           `json:"snapshot_digest"`
+}
+
+// serviceStateV3WriteTargetCensus reads only the metadata needed to distinguish
+// an actual missing selected preimage from a possible one. The transaction
+// repeats these creation predicates before any mutation; a changed census is a
+// conflict, never permission to submit more targets than were counted.
+func (s *Surreal) serviceStateV3WriteTargetCensus(
+	ctx context.Context,
+	plan ServiceStateV3Plan,
+	updates []serviceStateUpdate,
+	writeSummary bool,
+) (serviceStateV3WriteTargets, error) {
+	targets := serviceStateV3WriteTargets{preimages: make([]bool, len(updates))}
+	selector, err := s.GetServiceRuntimeSelector(ctx, plan.Repository)
+	if errors.Is(err, ErrNotFound) {
+		return targets, nil
+	}
+	if err != nil {
+		return targets, err
+	}
+	targets.selector, targets.selectorPresent = selector, true
+	// With no changed row or summary, valid existing ownership cannot create
+	// a new preimage. The transaction still rejects orphan/backlogged images.
+	if selector.Backend != ServiceRuntimeV3 || len(updates) == 0 && !writeSummary {
+		return targets, nil
+	}
+	rids := make([]models.RecordID, 0, len(updates))
+	keys := make([]string, 0, len(updates))
+	wanted := make(map[string]int, len(updates))
+	for index, update := range updates {
+		key := update.State.ServiceKey
+		if _, duplicate := wanted[key]; duplicate {
+			return targets, ErrInvalidServiceStateV3
+		}
+		wanted[key] = index
+		keys = append(keys, key)
+		rids = append(rids, serviceStateV3ID(plan.Repository, key))
+	}
+	results, err := surrealdb.Query[[]serviceStateV3TargetRec](ctx, s.db, `
+SELECT id, service_key, control_revision, state_digest, visible_from FROM $rids;
+SELECT service_key, control_revision, state_digest, snapshot_digest
+	FROM service_state_v3_preimage WHERE repository = $repository
+		AND snapshot_revision = $snapshot AND service_key IN $keys LIMIT $limit;
+SELECT control_revision, summary_digest FROM $summary_rid;
+SELECT summary_digest, snapshot_digest FROM service_state_v3_repository_preimage
+	WHERE repository = $repository AND snapshot_revision = $snapshot LIMIT 2;`, map[string]any{
+		"rids": rids, "keys": keys, "repository": plan.Repository,
+		"snapshot": selector.StateControlRevision, "limit": len(updates) + 1,
+		"summary_rid": serviceStateV3RepositoryID(plan.Repository),
+	})
+	if err != nil {
+		return targets, err
+	}
+	if results == nil || len(*results) != 4 {
+		return targets, ErrInvalidServiceStateV3
+	}
+	for _, result := range *results {
+		if result.Status != "OK" || result.Result == nil {
+			return targets, ErrInvalidServiceStateV3
+		}
+	}
+	currentRows, priorRows := (*results)[0].Result, (*results)[1].Result
+	summaries, priorSummaries := (*results)[2].Result, (*results)[3].Result
+	if len(currentRows) > len(updates) || len(priorRows) > len(updates) ||
+		len(summaries) > 1 || len(priorSummaries) > 1 {
+		return targets, ErrInvalidServiceStateV3
+	}
+	current := make(map[string]serviceStateV3TargetRec, len(currentRows))
+	for _, row := range currentRows {
+		index, present := wanted[row.ServiceKey]
+		_, duplicate := current[row.ServiceKey]
+		if !present || duplicate {
+			return targets, ErrInvalidServiceStateV3
+		}
+		expectedID := serviceStateV3ID(plan.Repository, row.ServiceKey)
+		identifier, _ := expectedID.ID.(string)
+		if !validServiceCatalogV3RecordID(row.ID, "service_state_v3_current", identifier) ||
+			row.ControlRevision != updates[index].ExpectedRevision || row.StateDigest != updates[index].ExpectedDigest {
+			return targets, ErrConflict
+		}
+		current[row.ServiceKey] = row
+		targets.preimages[index] = row.VisibleFrom <= selector.StateControlRevision
+	}
+	for _, update := range updates {
+		if _, present := current[update.State.ServiceKey]; !present && update.ExpectedRevision != 0 {
+			return targets, ErrConflict
+		}
+	}
+	seen := make(map[string]struct{}, len(priorRows))
+	for _, row := range priorRows {
+		index, present := wanted[row.ServiceKey]
+		_, duplicate := seen[row.ServiceKey]
+		if !present || duplicate {
+			return targets, ErrInvalidServiceStateV3
+		}
+		seen[row.ServiceKey] = struct{}{}
+		if targets.preimages[index] {
+			prior := current[row.ServiceKey]
+			if row.ControlRevision != prior.ControlRevision || row.StateDigest != prior.StateDigest ||
+				row.SnapshotDigest != selector.StateSummaryDigest {
+				return targets, ErrConflict
+			}
+			targets.preimages[index] = false
+		}
+	}
+	if len(summaries) == 0 {
+		if plan.SummaryControlRevision != 0 {
+			return targets, ErrConflict
+		}
+	} else {
+		summary := summaries[0]
+		if summary.ControlRevision != plan.SummaryControlRevision || summary.SummaryDigest != plan.SummaryDigest {
+			return targets, ErrConflict
+		}
+		if summary.ControlRevision == selector.StateControlRevision && summary.SummaryDigest == selector.StateSummaryDigest {
+			targets.summaryPreimage = len(priorSummaries) == 0
+			if len(priorSummaries) == 1 && (priorSummaries[0].SummaryDigest != summary.SummaryDigest ||
+				priorSummaries[0].SnapshotDigest != selector.StateSummaryDigest) {
+				return targets, ErrConflict
+			}
+		}
+	}
+	return targets, ctx.Err()
+}
+
+func serviceStateV3ChunkWrites(
+	ctx context.Context,
+	plan ServiceStateV3Plan,
+	changes []serviceStateV3Change,
+	read int,
+	removalCursor string,
+	summary *servicecatalog.RepositoryState,
+	preimages []bool,
+	mayCreateSummary bool,
+) ([3]serviceStateV3ChunkWrite, int, error) {
+	var writes [3]serviceStateV3ChunkWrite
+	for index := range writes {
+		if err := ctx.Err(); err != nil {
+			return writes, 0, err
+		}
+		write, err := nextServiceStateV3TargetWrite(plan, changes, read, removalCursor, summary, preimages, mayCreateSummary)
+		if err != nil {
+			return writes, 0, err
+		}
+		writes[index] = write
+		if len(write.updates) == len(changes) {
+			return writes, index + 1, nil
+		}
+		changes = changes[len(write.updates):]
+		if len(preimages) != 0 {
+			preimages = preimages[len(write.updates):]
+		}
+		plan = write.plan
+		if write.summary != nil {
+			summary = write.summary
+		}
+		mayCreateSummary = mayCreateSummary && !write.summaryPreimage
+	}
+	return writes, 0, ErrInvalidServiceStateV3
+}
+
 func (s *Surreal) commitServiceStateV3Changes(
 	ctx context.Context,
 	chunk GenerationChunk,
@@ -2013,39 +2230,32 @@ func (s *Surreal) commitServiceStateV3Changes(
 	// Validate every prefix before submitting the first one, just as the old
 	// single transaction validated every state and final summary before I/O.
 	// Store/lease/cancellation failure can still leave a valid committed prefix.
-	var writes [2]serviceStateV3ChunkWrite
-	writeCount := 0
-	projectedPlan, projectedSummary := plan, summary
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if writeCount == len(writes) {
-			return ErrInvalidServiceStateV3
-		}
-		write, err := nextServiceStateV3ChunkWrite(
-			projectedPlan, changes, read, removalCursor, projectedSummary,
-		)
+	writes, writeCount, err := serviceStateV3ChunkWrites(ctx, plan, changes, read, removalCursor, summary, nil, false)
+	if err != nil {
+		return err
+	}
+	updates := make([]serviceStateUpdate, 0, len(changes))
+	for _, change := range changes {
+		updates = append(updates, change.update)
+	}
+	targets, err := s.serviceStateV3WriteTargetCensus(ctx, plan, updates, summary != nil && len(updates) != 0)
+	if err != nil {
+		return err
+	}
+	if targets.summaryPreimage || slices.Contains(targets.preimages, true) {
+		writes, writeCount, err = serviceStateV3ChunkWrites(ctx, plan, changes, read, removalCursor, summary,
+			targets.preimages, targets.summaryPreimage)
 		if err != nil {
 			return err
-		}
-		writes[writeCount] = write
-		writeCount++
-		if len(write.updates) == len(changes) {
-			break
-		}
-		changes = changes[len(write.updates):]
-		projectedPlan = write.plan
-		if write.summary != nil {
-			projectedSummary = write.summary
 		}
 	}
 	for _, write := range writes[:writeCount] {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if err := s.commitServiceStateV3Chunk(
+		if err := s.commitServiceStateV3TargetChunk(
 			ctx, chunk, plan, write.plan, write.updates, summary, write.summary, false,
+			targets, write.preimages, write.summaryPreimage, write.payloadRecords,
 		); err != nil {
 			return err
 		}
@@ -2077,6 +2287,53 @@ func (s *Surreal) commitServiceStateV3Chunk(
 		payloadRecords > MaxServiceStateV3ChunkRows {
 		return ErrInvalidServiceStateV3
 	}
+	targets, err := s.serviceStateV3WriteTargetCensus(ctx, priorPlan, updates, nextSummary != nil)
+	if err != nil {
+		return err
+	}
+	createSummary := targets.summaryPreimage && (nextSummary != nil || slices.Contains(targets.preimages, true))
+	for _, create := range targets.preimages {
+		if create {
+			payloadRecords++
+		}
+	}
+	if createSummary {
+		payloadRecords++
+	}
+	return s.commitServiceStateV3TargetChunk(ctx, chunk, priorPlan, nextPlan, updates,
+		expectedSummary, nextSummary, requireRemovalDrain, targets, targets.preimages, createSummary, payloadRecords)
+}
+
+func (s *Surreal) commitServiceStateV3TargetChunk(
+	ctx context.Context,
+	chunk GenerationChunk,
+	priorPlan, nextPlan ServiceStateV3Plan,
+	updates []serviceStateUpdate,
+	expectedSummary, nextSummary *servicecatalog.RepositoryState,
+	requireRemovalDrain bool,
+	targets serviceStateV3WriteTargets,
+	preimages []bool,
+	createSummary bool,
+	payloadRecords int,
+) error {
+	actualRecords := len(updates) + 1
+	if nextSummary != nil {
+		actualRecords++
+	}
+	for _, create := range preimages {
+		if create {
+			actualRecords++
+		}
+	}
+	if createSummary {
+		actualRecords++
+	}
+	if validateServiceStateV3Plan(priorPlan) != nil || validateServiceStateV3Plan(nextPlan) != nil ||
+		priorPlan.Digest != nextPlan.Digest || priorPlan.ScheduleDigest != nextPlan.ScheduleDigest ||
+		(len(preimages) != 0 && len(preimages) != len(updates)) ||
+		payloadRecords != actualRecords || payloadRecords > MaxServiceStateV3ChunkRows {
+		return ErrInvalidServiceStateV3
+	}
 	if expectedSummary != nil &&
 		(expectedSummary.ControlRevision != priorPlan.SummaryControlRevision ||
 			expectedSummary.SummaryDigest != priorPlan.SummaryDigest) {
@@ -2097,22 +2354,13 @@ func (s *Surreal) commitServiceStateV3Chunk(
 	if priorPlan.SummaryControlRevision >= math.MaxInt64 {
 		return ErrInvalidServiceStateV3
 	}
-	selector, selectorErr := s.GetServiceRuntimeSelector(ctx, priorPlan.Repository)
-	selectorPresent := true
-	if errors.Is(selectorErr, ErrNotFound) {
-		selectorPresent = false
-		selectorErr = nil
-	}
-	if selectorErr != nil {
-		return fmt.Errorf("commit service state v3 chunk: selector preflight: %w", selectorErr)
-	}
 	selectorContent := map[string]any{}
-	if selectorPresent {
-		selectorContent = serviceRuntimeSelectorContent(selector)
+	if targets.selectorPresent {
+		selectorContent = serviceRuntimeSelectorContent(targets.selector)
 	}
 	nextVisibleFrom := priorPlan.SummaryControlRevision + 1
 	encodedUpdates := make([]map[string]any, 0, len(updates))
-	for _, update := range updates {
+	for index, update := range updates {
 		if update.State.Repository != priorPlan.Repository ||
 			servicecatalogv3.ValidateServiceState(update.State, true) != nil {
 			return ErrInvalidServiceStateV3
@@ -2124,6 +2372,7 @@ func (s *Surreal) commitServiceStateV3Chunk(
 			"expected_revision": update.ExpectedRevision,
 			"expected_digest":   update.ExpectedDigest,
 			"content":           content,
+			"create_preimage":   len(preimages) != 0 && preimages[index],
 		})
 	}
 	writeSummary := nextSummary != nil
@@ -2240,6 +2489,45 @@ IF $repository_state = NONE OR $repository_state.deleting = true OR
 	THROW 'phebs-permanent: service state v3 chunk fence changed';
 };
 FOR $update IN $updates {
+	LET $existing = (SELECT control_revision, state_digest, visible_from FROM $update.rid LIMIT 1)[0];
+	LET $revision = IF $existing = NONE THEN 0 ELSE $existing.control_revision END;
+	LET $digest = IF $existing = NONE THEN '' ELSE $existing.state_digest END;
+	IF $revision != $update.expected_revision OR $digest != $update.expected_digest {
+		THROW 'phebs-permanent: service state v3 row compare-and-swap conflict';
+	};
+	LET $preserve = $existing != NONE AND $selector != NONE
+		AND $selector.backend = 'v3'
+		AND ($existing.visible_from ?? 1) <= $selector.state_control_revision;
+	LET $prior_rows = IF $preserve THEN (
+		SELECT id FROM service_state_v3_preimage WHERE repository = $repository
+			AND snapshot_revision = $selector.state_control_revision
+			AND service_key = $update.content.service_key LIMIT 2
+	) ELSE [] END;
+	IF array::len($prior_rows) > 1 OR
+		($preserve AND array::len($prior_rows) = 0) != $update.create_preimage {
+		THROW 'phebs-permanent: service state v3 preimage target changed';
+	};
+};
+LET $preserved_rows = IF $selector = NONE THEN 0 ELSE array::len(
+	SELECT id FROM service_state_v3_preimage
+		WHERE repository = $repository
+			AND snapshot_revision = $selector.state_control_revision
+			AND snapshot_digest = $selector.state_summary_digest LIMIT 1
+) END;
+LET $preserve_summary = $summary != NONE AND $selector != NONE
+	AND $selector.backend = 'v3'
+	AND ($preserved_rows = 1 OR array::len($updates[WHERE create_preimage = true]) > 0 OR $write_summary)
+	AND $summary.control_revision = $selector.state_control_revision
+	AND $summary.summary_digest = $selector.state_summary_digest;
+IF ($preserve_summary AND array::len($preimage_summaries) = 0) != $create_summary_preimage {
+	THROW 'phebs-permanent: service state v3 summary preimage target changed';
+};
+IF array::len($updates) + array::len($updates[WHERE create_preimage = true]) + 1 +
+	(IF $write_summary THEN 1 ELSE 0 END) + (IF $create_summary_preimage THEN 1 ELSE 0 END) != $payload_records
+	OR $payload_records > 512 {
+	THROW 'phebs-permanent: service state v3 payload target count changed';
+};
+FOR $update IN $updates {
 	LET $existing = (SELECT * FROM $update.rid LIMIT 1)[0];
 	LET $revision = IF $existing = NONE THEN 0 ELSE $existing.control_revision END;
 	LET $digest = IF $existing = NONE THEN '' ELSE $existing.state_digest END;
@@ -2290,16 +2578,6 @@ FOR $update IN $updates {
 	};
 	UPSERT $update.rid CONTENT $update.content RETURN NONE;
 };
-LET $preserved_rows = IF $selector = NONE THEN 0 ELSE array::len(
-	SELECT id FROM service_state_v3_preimage
-		WHERE repository = $repository
-			AND snapshot_revision = $selector.state_control_revision
-			AND snapshot_digest = $selector.state_summary_digest LIMIT 1
-) END;
-LET $preserve_summary = $summary != NONE AND $selector != NONE
-	AND $selector.backend = 'v3' AND ($preserved_rows = 1 OR $write_summary)
-	AND $summary.control_revision = $selector.state_control_revision
-	AND $summary.summary_digest = $selector.state_summary_digest;
 IF $preserve_summary {
 	LET $prior_summary_rows = SELECT summary_digest, snapshot_digest
 		FROM service_state_v3_repository_preimage
@@ -2350,7 +2628,7 @@ COMMIT;`, map[string]any{
 		"plan_rid":          serviceStateV3PlanID(priorPlan.Digest),
 		"summary_rid":       serviceStateV3RepositoryID(priorPlan.Repository),
 		"selector_rid":      serviceRuntimeSelectorID(priorPlan.Repository),
-		"selector_present":  selectorPresent,
+		"selector_present":  targets.selectorPresent,
 		"expected_selector": selectorContent,
 		"catalog_root":      priorPlan.CatalogRoot,
 		"catalog_revision":  priorPlan.CatalogControlRevision,
@@ -2379,8 +2657,10 @@ COMMIT;`, map[string]any{
 		"final_live_limit":           servicecatalogv3.MaxTotalServices + 1,
 		"removal_cursor":             priorPlan.RemovalCursor,
 		"updates":                    encodedUpdates, "write_summary": writeSummary,
-		"summary_content": summaryContent,
-		"plan_content":    serviceStateV3PlanContent(nextPlan),
+		"create_summary_preimage": createSummary,
+		"payload_records":         payloadRecords,
+		"summary_content":         summaryContent,
+		"plan_content":            serviceStateV3PlanContent(nextPlan),
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), serviceStateV3PreimageBacklogMarker) {
