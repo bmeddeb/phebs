@@ -170,28 +170,34 @@ type ExecutionEpochOneResult struct {
 }
 
 type ExecutionEpochOneRun struct {
-	mu           sync.Mutex
-	flow         *ExecutionEpochOne
-	epoch        ExecutionEpochConfig
-	control      *dispatchadmission.PhaseControl
-	command      *exec.Cmd
-	output       *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
-	stop, done   chan struct{}
-	stopOnce     sync.Once
-	healthUsed   bool
-	healthCancel context.CancelFunc
-	healthDone   chan struct{}
-	healthy      bool
-	healthLimit  time.Duration
-	coldDeadline time.Time
-	coldUsed     bool
-	coldCancel   context.CancelFunc
-	coldDone     chan struct{}
-	warm         bool // Only the completed coordinated handoff sets this.
-	inspection   *executionEpochInspection
-	stopping     bool
-	result       ExecutionEpochOneResult
-	err          error
+	mu               sync.Mutex
+	flow             *ExecutionEpochOne
+	epoch            ExecutionEpochConfig
+	control          *dispatchadmission.PhaseControl
+	command          *exec.Cmd
+	output           *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
+	stop, done       chan struct{}
+	stopOnce         sync.Once
+	healthUsed       bool
+	healthCancel     context.CancelFunc
+	healthDone       chan struct{}
+	healthy          bool
+	healthLimit      time.Duration
+	coldDeadline     time.Time
+	coldUsed         bool
+	coldCancel       context.CancelFunc
+	coldDone         chan struct{}
+	phaseTimer       *time.Timer
+	phaseDone        chan struct{}
+	phaseDeadline    time.Time
+	lifetimeDeadline time.Time
+	warmLimit        time.Duration
+	cancelRun        context.CancelFunc
+	warm             bool // Only the completed coordinated handoff sets this.
+	inspection       *executionEpochInspection
+	stopping         bool
+	result           ExecutionEpochOneResult
+	err              error
 }
 
 func (flow *ExecutionEpochOne) checkTools(ctx context.Context) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -259,16 +265,37 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		}
 	}
 	flow.used = true
+	runCtx, cancel := context.WithDeadline(ctx, deadline)
+	run := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
+		healthLimit: bounds.health, coldDeadline: coldDeadline, lifetimeDeadline: deadline,
+		warmLimit: bounds.lifetime - bounds.cold, cancelRun: cancel}
+	started := false
+	defer func() {
+		if !started {
+			run.stopPhaseDeadline()
+			cancel()
+		}
+	}()
+	launchCtx := runCtx
+	if mode == epochOneCold {
+		run.mu.Lock()
+		run.setPhaseDeadlineLocked(coldDeadline)
+		run.mu.Unlock()
+		var launchCancel context.CancelFunc
+		launchCtx, launchCancel = context.WithDeadline(runCtx, coldDeadline)
+		defer launchCancel()
+	}
 	author, epochs := flow.epochs.author, flow.epochs
 	author.mu.Lock()
 	epochs.mu.Lock()
-	if author.active || epochs.active || author.next != 1 || epochs.checkLocked(ctx, 1) != nil || author.checkSource(ctx, author.previous) != nil {
+	if author.active || epochs.active || author.next != 1 || epochs.checkLocked(launchCtx, 1) != nil || author.checkSource(launchCtx, author.previous) != nil {
 		epochs.mu.Unlock()
 		author.mu.Unlock()
 		return nil, ErrExecutionEpochOne
 	}
-	path, tools, environment, err := flow.checkTools(ctx)
+	path, tools, environment, err := flow.checkTools(launchCtx)
 	epoch := epochs.epochs[0]
+	run.epoch = epoch
 	if err == nil && (epochs.released != 0 || epochs.listeners[0].Close() != nil) {
 		err = ErrExecutionEpochOne
 	}
@@ -283,7 +310,6 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
-	started := false
 	defer func() {
 		if !started {
 			author.mu.Lock()
@@ -334,9 +360,6 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		return nil, ErrExecutionEpochOne
 	}
 	defer func() { _ = storeFile.Close() }() // Explicit post-Start close is checked below.
-	runCtx, cancel := context.WithDeadline(ctx, deadline)
-	run := &ExecutionEpochOneRun{flow: flow, epoch: epoch, stop: make(chan struct{}), done: make(chan struct{}),
-		healthLimit: bounds.health, coldDeadline: coldDeadline}
 	output := &checkoutCommandOutput{remaining: bounds.outputBytes, cancel: cancel}
 	run.output = output
 	command := exec.Command(path, "serve", "--config", epoch.ConfigPath)
@@ -346,7 +369,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
 	run.command = command
-	handle, err := flow.parent.StartInPhase(runCtx, 2, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
+	handle, err := flow.parent.StartInPhase(launchCtx, 2, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
 	if err != nil {
 		cancel()
 		return nil, ErrExecutionEpochOne
@@ -367,7 +390,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: 2, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
 	var served <-chan error
-	if retErr == nil && dispatchadmission.SendProductionBootstrap(runCtx, files[0], files[2], bootstrap) != nil {
+	if retErr == nil && dispatchadmission.SendProductionBootstrap(launchCtx, files[0], files[2], bootstrap) != nil {
 		retErr = ErrExecutionEpochOne
 	}
 	if retErr == nil {
@@ -395,7 +418,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 			served = completion
 		}
 	}
-	if retErr == nil && writeAuthorCustodyRequest(runCtx, input, raw) != nil {
+	if retErr == nil && writeAuthorCustodyRequest(launchCtx, input, raw) != nil {
 		retErr = ErrExecutionEpochOne
 	}
 	// Bind parent stdin release to the same terminal result before handing
@@ -429,7 +452,11 @@ func (run *ExecutionEpochOneRun) Health(ctx context.Context) (retErr error) {
 	if healthLimit == 0 {
 		healthLimit = 5 * time.Minute
 	}
-	ctx, cancel := context.WithTimeout(ctx, healthLimit)
+	healthDeadline := time.Now().Add(healthLimit)
+	if !run.coldDeadline.IsZero() && run.coldDeadline.Before(healthDeadline) {
+		healthDeadline = run.coldDeadline
+	}
+	ctx, cancel := context.WithDeadline(ctx, healthDeadline)
 	run.healthCancel, run.healthDone = cancel, make(chan struct{})
 	run.healthUsed = true
 	run.mu.Unlock()
@@ -522,6 +549,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		coldCancel()
 		<-coldDone
 	}
+	run.stopPhaseDeadline()
 	run.mu.Lock()
 	warm := run.warm
 	if run.err != nil {

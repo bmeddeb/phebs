@@ -5627,6 +5627,17 @@ Documentation/glossary, whitespace and unchanged retained V1/V2 bytes pass.
 Exact immutable review and the opted-in native cold/handoff gate remain open;
 the earlier startup-only pass at `1bb06fb8` is not attributed to this source.
 
+Source `67f67738` passed exact focused normal (0.784s), three-repeat race
+(7.303s), vet, pinned lint and documentation gates. Its initial independent
+all-zero review was superseded by a targeted confirmed medium: the cold
+deadline was only enforced by `ColdToWarm`, leaving startup/health/idle without
+that operation able to consume the longer total lifetime. The correction moves
+enforcement into the run owner, joins timer callbacks at cleanup, and retires
+the cold deadline only after handoff before arming the bounded warm deadline.
+Deterministic virtual-time checks cover idle expiry without inspection, the
+real health wait, expiry refusal, timer retirement and the total-lifetime cap.
+Corrected immutable gates/re-review and native cold/handoff evidence remain open.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

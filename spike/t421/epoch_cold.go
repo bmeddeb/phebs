@@ -124,10 +124,67 @@ func (run *ExecutionEpochOneRun) ColdToWarm(ctx context.Context) (retErr error) 
 	if run.control.FenceRequests(ctx) != nil || run.advanceCold(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
+	return run.completeCold(ctx)
+}
+
+// One phase timer covers bootstrap, health, inspection and idle time alike.
+// The caller holds run.mu; cleanup joins an already-started callback outside it.
+func (run *ExecutionEpochOneRun) setPhaseDeadlineLocked(deadline time.Time) {
+	done := make(chan struct{})
+	run.phaseDeadline, run.phaseDone = deadline, done
+	run.phaseTimer = time.AfterFunc(time.Until(deadline), func() {
+		defer close(done)
+		run.mu.Lock()
+		run.err = ErrExecutionEpochOne
+		run.mu.Unlock()
+		run.cancelRun()
+		run.stopOnce.Do(func() { close(run.stop) })
+	})
+}
+
+// Retire the cold deadline only after the coordinated handoff succeeds. A
+// callback that has started wins the race, even if still waiting for run.mu.
+func (run *ExecutionEpochOneRun) completeCold(ctx context.Context) error {
 	run.mu.Lock()
+	defer run.mu.Unlock()
+	if ctx.Err() != nil || run.stopping || run.err != nil || run.phaseTimer == nil ||
+		!time.Now().Before(run.coldDeadline) || !run.phaseTimer.Stop() {
+		return ErrExecutionEpochOne
+	}
+	close(run.phaseDone) // Stop won: no callback owns this completion.
+	now := time.Now()
+	if !now.Before(run.coldDeadline) {
+		return ErrExecutionEpochOne
+	}
+	select {
+	case <-run.stop:
+		return ErrExecutionEpochOne
+	default:
+	}
+	deadline := now.Add(run.warmLimit)
+	if deadline.After(run.lifetimeDeadline) {
+		deadline = run.lifetimeDeadline
+	}
 	run.warm = true
-	run.mu.Unlock()
+	run.setPhaseDeadlineLocked(deadline)
 	return nil
+}
+
+func (run *ExecutionEpochOneRun) stopPhaseDeadline() {
+	run.mu.Lock()
+	timer, done := run.phaseTimer, run.phaseDone
+	run.phaseTimer, run.phaseDone = nil, nil
+	if timer != nil && !time.Now().Before(run.phaseDeadline) {
+		run.err = ErrExecutionEpochOne
+	}
+	run.mu.Unlock()
+	if timer != nil {
+		if timer.Stop() {
+			close(done)
+		} else {
+			<-done
+		}
+	}
 }
 
 func epochInspectionDelay(ctx context.Context) error {

@@ -3,7 +3,10 @@ package t421
 import (
 	"context"
 	"testing"
+	"testing/synctest"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
 func TestExecutionEpochOneColdBoundsPreserveStartupAndPlan(t *testing.T) {
@@ -34,6 +37,84 @@ func TestExecutionEpochOneColdBoundsPreserveStartupAndPlan(t *testing.T) {
 	if _, err := epochOneBounds(plan, 0); err == nil {
 		t.Fatal("unknown launch mode admitted")
 	}
+}
+
+func TestExecutionEpochOnePhaseDeadline(t *testing.T) {
+	for _, stage := range []string{"bootstrap", "health", "idle_without_inspection", "handoff_at_expiry", "warm", "stop_before_expiry"} {
+		t.Run(stage, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				now := time.Now()
+				run := &ExecutionEpochOneRun{stop: make(chan struct{}), cancelRun: cancel,
+					coldDeadline: now.Add(time.Second), lifetimeDeadline: now.Add(3 * time.Second), warmLimit: time.Second}
+				run.mu.Lock()
+				run.setPhaseDeadlineLocked(run.coldDeadline)
+				run.mu.Unlock()
+				defer run.stopPhaseDeadline()
+				switch stage {
+				case "health":
+					// An invalid address refuses TCP immediately, leaving the real
+					// Health loop waiting under the shorter cold deadline.
+					run.done = make(chan struct{})
+					run.control = &dispatchadmission.PhaseControl{}
+					run.epoch.Listen = "invalid"
+					if run.Health(t.Context()) == nil || time.Since(now) != time.Second {
+						t.Fatal("health did not stop at the cold deadline")
+					}
+				case "idle_without_inspection":
+					run.healthy = true
+				case "warm":
+					time.Sleep(500 * time.Millisecond)
+					if run.completeCold(ctx) != nil || !run.warm || !run.phaseDeadline.Equal(now.Add(1500*time.Millisecond)) {
+						t.Fatal("successful handoff did not install phase-local warm deadline")
+					}
+					time.Sleep(600 * time.Millisecond)
+					synctest.Wait()
+					if ctx.Err() != nil {
+						t.Fatal("retired cold timer stopped phase three")
+					}
+				case "stop_before_expiry":
+					run.stopPhaseDeadline()
+					time.Sleep(4 * time.Second)
+					synctest.Wait()
+					if ctx.Err() != nil || run.err != nil {
+						t.Fatal("joined timer fired after clean stop")
+					}
+					return
+				}
+				time.Sleep(2 * time.Second)
+				synctest.Wait()
+				if ctx.Err() == nil || run.err != ErrExecutionEpochOne {
+					t.Fatal("deadline did not independently latch and cancel native lifetime")
+				}
+				select {
+				case <-run.stop:
+				default:
+					t.Fatal("deadline did not request existing stop/join")
+				}
+				if stage == "handoff_at_expiry" && (run.completeCold(t.Context()) == nil || run.warm) {
+					t.Fatal("expired cold phase admitted handoff")
+				}
+			})
+		})
+	}
+}
+
+func TestExecutionEpochOneHandoffCannotOutliveTotalDeadline(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		run := &ExecutionEpochOneRun{stop: make(chan struct{}), cancelRun: cancel,
+			coldDeadline: time.Now().Add(time.Second), lifetimeDeadline: time.Now().Add(2 * time.Second), warmLimit: 20 * time.Minute}
+		run.mu.Lock()
+		run.setPhaseDeadlineLocked(run.coldDeadline)
+		run.mu.Unlock()
+		defer run.stopPhaseDeadline()
+		if run.completeCold(ctx) != nil || run.phaseDeadline != run.lifetimeDeadline {
+			t.Fatal("warm phase widened total lifetime")
+		}
+	})
 }
 
 func TestExecutionEpochOneColdRefusesWithoutLiveHealthyColdOwner(t *testing.T) {
