@@ -2308,6 +2308,24 @@ func (s *Surreal) SetRepoIndexedRevisions(ctx context.Context, name, defaultComm
 
 func (s *Surreal) SetRepoIndexedState(
 	ctx context.Context,
+	name, defaultCommit string,
+	revisions []IndexedRevision,
+	unit *analysisunit.State,
+	at time.Time,
+) error {
+	for attempt := 0; ; attempt++ {
+		err := s.setRepoIndexedStateOnce(ctx, name, defaultCommit, revisions, unit, at)
+		conflict, known := repoIndexCensusConflict(err)
+		if conflict && known &&
+			ctx.Err() == nil && attempt+1 < maxQueueRetries {
+			continue
+		}
+		return err
+	}
+}
+
+func (s *Surreal) setRepoIndexedStateOnce(
+	ctx context.Context,
 	name,
 	defaultCommit string,
 	revisions []IndexedRevision,
@@ -2452,6 +2470,18 @@ COMMIT;`
 }
 
 func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
+	for attempt := 0; ; attempt++ {
+		err := s.clearRepoIndexStateOnce(ctx, name)
+		conflict, known := repoIndexCensusConflict(err)
+		if conflict && known &&
+			ctx.Err() == nil && attempt+1 < maxQueueRetries {
+			continue
+		}
+		return err
+	}
+}
+
+func (s *Surreal) clearRepoIndexStateOnce(ctx context.Context, name string) error {
 	vars := map[string]any{
 		"rid":                      repoID(name),
 		"publication_rid":          candidateManifestPublicationID(name),
@@ -2627,6 +2657,31 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN $index_census.pending[0].id ELSE NONE END;
 LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN [] ELSE ` + write + ` END;
 ` + repoIndexResolverProjectionSQL
+}
+
+// The pinned SDK joins native statement errors, including aborted statements
+// before the actual THROW. Retry only an all-QueryError tree containing this
+// exact conflict; any unknown/transport leaf keeps the outcome uncertain.
+func repoIndexCensusConflict(err error) (conflict, known bool) {
+	switch err := err.(type) {
+	case *surrealdb.QueryError:
+		if err == nil {
+			return false, false
+		}
+		return err.Message == "phebs-conflict: repository index census changed" ||
+			err.Message == "An error occurred: phebs-conflict: repository index census changed", true
+	case interface{ Unwrap() []error }:
+		for _, child := range err.Unwrap() {
+			matched, complete := repoIndexCensusConflict(child)
+			if !complete {
+				return false, false
+			}
+			conflict = conflict || matched
+		}
+		return conflict, true
+	default:
+		return false, false
+	}
 }
 
 const repoIndexCensusFenceSQL = `

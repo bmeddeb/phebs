@@ -189,6 +189,9 @@ func (c *Controller) wireConfiguration(config WireConfig) ([MaximumProducers]Cli
 	}
 	global, err := wireBudget(totalTransactions, totalRows, checkpoints, uint64(c.producerCount))
 	if err == nil {
+		for _, input := range config.Producers {
+			c.producerLocked(input.ID).lastPhase = uint32(bits.Len16(input.Phases))
+		}
 		c.wireOwned = true
 	}
 	return clients, global, err

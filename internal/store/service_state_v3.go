@@ -1226,8 +1226,11 @@ func (s *Surreal) createServiceStateV3Plan(
 		}
 	}
 	submittedRows := uint64(1)
+	supersedePrior := ""
 	if priorDigest != "" {
 		submittedRows++
+		supersedePrior = `UPDATE $prior_rid SET state = 'superseded', updated_at = time::now()
+		WHERE digest = $prior_digest AND state = 'running' RETURN NONE;`
 	}
 	results, err := storeQuery[[]serviceStateV3PlanRec](ctx, s.accounting, s.db, `
 BEGIN;
@@ -1252,10 +1255,7 @@ IF $candidate = NONE OR $candidate.root_digest != $catalog_root OR
 	$schedule.generation != $digest OR $schedule.status != 'active' OR $existing != NONE {
 	THROW 'phebs-permanent: service state v3 plan fence changed';
 };
-IF $prior_digest != '' {
-	UPDATE $prior_rid SET state = 'superseded', updated_at = time::now()
-		WHERE digest = $prior_digest AND state = 'running' RETURN NONE;
-};
+`+supersedePrior+`
 CREATE $plan_rid CONTENT $content RETURN AFTER;
 COMMIT;`, map[string]any{
 		"candidate_rid": serviceCatalogV3CandidateID(plan.Repository),

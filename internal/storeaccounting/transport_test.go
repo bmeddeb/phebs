@@ -161,6 +161,69 @@ func TestTransportPhaseHandoffAndIndependentProducerClose(t *testing.T) {
 	}
 }
 
+func TestTransportAdvanceWaitsForEndingProducerClose(t *testing.T) {
+	ctx := t.Context()
+	c, err := New(ctx, Config{
+		Producers: []Producer{{ID: 2, Calls: 1, Transactions: 1}, {ID: 3, Calls: 1, Transactions: 1}},
+		Phases:    []Phase{{ID: 1, Transactions: 2, Rows: 2}, {ID: 2, Transactions: 2, Rows: 2}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	transport, err := NewTransport(ctx, c, WireConfig{AckTimeout: time.Second, Producers: []WireProducer{
+		{ID: 2, Binding: [32]byte{2}, Phases: 1},
+		{ID: 3, Binding: [32]byte{3}, Phases: 3},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = transport.Close() })
+	ending := transportClient(t, transport, ctx, 2)
+	continuing := transportClient(t, transport, ctx, 3)
+	if err := transport.Fence(); err != nil {
+		t.Fatal(err)
+	}
+	for _, client := range []*Client{ending, continuing} {
+		if err := client.Checkpoint(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Both public entry points must leave the phase and latch unchanged.
+	for _, advance := range []func() error{transport.Advance, c.Advance} {
+		if err := advance(); !errors.Is(err, ErrBusy) {
+			t.Fatalf("advance before close: %v", err)
+		}
+		if snapshot, err := c.Snapshot(); err != nil || snapshot.Phase != 1 {
+			t.Fatalf("premature advance: %+v %v", snapshot, err)
+		}
+	}
+	if err := ending.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Wait(ctx, 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Advance(); err != nil {
+		t.Fatal(err)
+	}
+	if err := continuing.Resume(2); err != nil {
+		t.Fatal(err)
+	}
+	submitSettle(t, ctx, continuing, ImplicitWrite, 0, 1)
+	if err := continuing.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Wait(ctx, 3); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Fence(); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot, err := transport.Snapshot(); err != nil || !snapshot.Complete {
+		t.Fatalf("closure: %+v %v", snapshot, err)
+	}
+}
+
 func rawTransportClient(t *testing.T, transport *Transport, id uint32) (*net.UnixConn, wireFrame) {
 	t.Helper()
 	file, config, err := transport.Open(id)

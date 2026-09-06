@@ -5407,6 +5407,54 @@ and named race records remain attributed to `a2464e74`, not rerun or relabeled
 for this policy-only follow-up. This is not a fresh independent full-stack
 review, integration or freeze result.
 
+Ben supplied Claude's seven-reviewer report for the full 81-commit range
+`6e38ce97..48d3cba8`: 251 files, reported code findings 0 critical, 0 high,
+4 medium and 25 low. This supplies the previously missing stack-wide source
+review coverage, not new machine gates. The report independently confirms
+the final V3 policy correction without changing retained V1/V2 bytes.
+Ben then approved fixes for M-A1/M-B1/M-C1a while retaining M-C1b's existing
+fail-closed selected read-cancellation contract; waivers remain separate.
+The correction adds exact-native-census-conflict retries to both index-state
+writers, omits the absent prior-plan UPDATE, and refuses advancement until
+an ending producer closes. All three new regressions failed before their
+respective fixes and passed afterward. The owning ADRs record retry costs,
+submitted SQL and phase-ordering costs, and the selected-read blast radius.
+Full corrected-tree gates and independent correction review remain pending.
+
+The missing author lifetime-guard ADR for `8e4d1a0` is now recorded without
+backdating a gate. Claude's report identifies `1b9a8af` as a non-compiling
+test window corrected by the following `a9e84e3`; it is not an accepted test
+candidate. Other missing historical gate/review records are not reconstructed
+as successful runs. The report's restore/store scope-ratification request
+remains Ben's decision; this correction does not ratify that expansion.
+Prior interactive approvals for the prospective V3 five-read correction and
+60-minute test allowance remain distinct from autonomous-delegation claims.
+No inherited-failure waiver is issued: the retained candidate and base
+`6e38ce97` logs show four `t211` glossary-validation failures on the unaccepted
+`relationship_explorer` surface, `t306m`'s `TestT306MFollowupSplit` allocation
+comparison and `TestT306MStatusBoundAndWarning` budget disagreement, and
+`t324`'s `TestRetainedReceiptIsClosedAndInputBound` input-hash mismatch.
+These observations do not prove an additional Git-version assertion failed.
+Retained evidence is unchanged and its repair is not folded into this slice.
+
+The first strengthened native conflict assertion exposed the engine's
+`An error occurred:` prefix and the SDK's joined aborted-statement errors;
+the initial single-error matcher therefore did not suffice. The correction
+now traverses the actual typed error tree, accepts only a known QueryError
+tree containing the exact conflict and rejects unknown leaves before or
+after it. The real-engine stale-projection/rollback check then passed, as did
+ordinary/selected retry, fresh-census, exhaustion and uncertainty regressions.
+Final focused normal checks passed for store/storeaccounting/dispatchadmission
+in 3.824s/0.427s/2.771s; three-repeat race checks passed in
+20.409s/2.780s/9.125s. Complete storeaccounting, dispatchadmission and indexer
+packages passed normally in 0.814s/3.663s/21.414s. Final ci-static passed
+module-wide vet, pinned 2.12.2 lint with zero issues, glossary and package
+compilation. Documentation and whitespace checks passed, with retained
+V1/V2 plan digests unchanged. These are uncommitted correction-tree results,
+not a full-store normal run, full ci-go/ci-race rerun, or independent review.
+The review skill's pre-commit confirmation remains pending; no new immutable
+candidate, waiver, merge, push or freeze is claimed.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

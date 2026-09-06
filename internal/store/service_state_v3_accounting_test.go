@@ -70,6 +70,10 @@ func stateAccountingScript(t *testing.T, steps []stateAccountingStep) (context.C
 		actual := uint64(0)
 		switch step.vector {
 		case "plan":
+			if strings.Contains(sql, "UPDATE $prior_rid") != (payload.PriorDigest != "") {
+				t.Error("inactive prior-plan mutation was submitted")
+				return nil, errors.New("inactive prior-plan mutation was submitted")
+			}
 			actual = 1
 			if payload.PriorDigest != "" {
 				actual++

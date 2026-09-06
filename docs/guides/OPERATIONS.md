@@ -8,6 +8,15 @@ and contributor commands.
 
 ## Operations
 
+Index-state publication and clearing retry an explicitly rejected, stale
+database census up to 64 attempts while the caller context remains live.
+Each retry rereads the census; missing rows, other errors and uncertain
+transport outcomes retain the existing recovery path without that retry.
+
+In privately admitted V3 accounting mode, a canceled or transport-uncertain
+read can fail the shared store producer, including when a search client
+disconnects. It prevents successful launch closure rather than remaining an
+isolated HTTP failure. Ordinary serving without that selected owner is unchanged.
 
 
 ### Data layout

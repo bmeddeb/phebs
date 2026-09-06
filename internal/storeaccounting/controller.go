@@ -132,6 +132,7 @@ type producerState struct {
 	calls        [MaximumCalls]call
 	transactions [MaximumTransactions]transaction
 	checkpoint   uint32
+	lastPhase    uint32 // Set only by successful wire configuration; zero for a standalone reducer.
 	attached     bool
 	closed       bool
 }
@@ -442,7 +443,7 @@ func (c *Controller) Advance() error {
 	}
 	for i := 0; i < c.producerCount; i++ {
 		p := &c.producers[i]
-		if p.attached && !p.closed && p.checkpoint != c.phases[c.phase].ID {
+		if p.attached && !p.closed && (p.checkpoint != c.phases[c.phase].ID || p.lastPhase == c.phases[c.phase].ID) {
 			return ErrBusy
 		}
 	}

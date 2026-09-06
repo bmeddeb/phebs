@@ -30,8 +30,119 @@ func repoIndexTestObservation(clearing bool) repoIndexObservation {
 	}
 }
 
-// These real SA01/SDK/CBOR fixtures prove pre-forward accounting and failure
-// custody, not native evaluation of the SQL or its transaction atomicity.
+func TestRepoIndexCensusRetry(t *testing.T) {
+	for _, selected := range []bool{false, true} {
+		for _, clearing := range []bool{false, true} {
+			for _, mode := range []string{"retry", "exhausted", "lost", "canceled", "other_query", "untyped_conflict"} {
+				t.Run(fmt.Sprintf("selected_%t/clear_%t/%s", selected, clearing, mode), func(t *testing.T) {
+					base, owner, controller := storeAccountingFixture(t, 40, 2)
+					ctx, cancel := context.WithCancel(base)
+					defer cancel()
+					if !selected {
+						owner = nil
+					}
+					db, native := storeAccountingDB(t, base, owner)
+					calls, attempts := 0, 0
+					census := repoIndexTestObservation(clearing)
+					*census.Branches.Retire, *census.Branches.Revision = true, true
+					native.call = func(_ context.Context, request *connection.RPCRequest) (any, error) {
+						calls++
+						if calls%2 == 1 {
+							// A new identity each time proves the writer reobserves its
+							// inputs rather than replaying the stale transaction.
+							census.Callers = []models.RecordID{models.NewRecordID("caller_generation_publication", fmt.Sprint(calls))}
+							return generationAccountingCensusReply(7, []repoIndexObservation{census}), nil
+						}
+						attempts++
+						raw, err := native.codec.Marshal(request.Params[1])
+						if err != nil {
+							return nil, err
+						}
+						var payload struct {
+							Census repoIndexObservation `json:"index_census"`
+						}
+						if err := native.codec.Unmarshal(raw, &payload); err != nil {
+							return nil, err
+						}
+						if !reflect.DeepEqual(payload.Census, census) {
+							t.Fatal("retry reused stale census")
+						}
+						if selected {
+							prefix, err := controller.Snapshot()
+							if err != nil || prefix.Transactions != uint64(attempts) || prefix.Rows != uint64(5*attempts) {
+								t.Fatalf("retry lacks exact ACK: %+v %v", prefix, err)
+							}
+						}
+						switch mode {
+						case "lost":
+							return nil, context.DeadlineExceeded
+						case "canceled":
+							cancel()
+						case "other_query":
+							return nil, &surrealdb.QueryError{Message: "other conflict"}
+						case "untyped_conflict":
+							return nil, errors.New("phebs-conflict: repository index census changed")
+						}
+						if mode != "retry" || attempts == 1 {
+							return []surrealdb.QueryResult[any]{
+								{Status: "ERR", Result: "The query was not executed due to a failed transaction"},
+								{Status: "ERR", Result: "An error occurred: phebs-conflict: repository index census changed"},
+								{Status: "ERR", Result: "Cannot COMMIT: the transaction was aborted due to a prior error"},
+							}, nil
+						}
+						return queueAccountingOK([]Repo{{Name: "neutral"}}), nil
+					}
+					s := &Surreal{db: db, accounting: owner}
+					var err error
+					if clearing {
+						err = s.ClearRepoIndexState(ctx, "neutral")
+					} else {
+						err = s.SetRepoIndexedState(ctx, "neutral", "commit", nil, nil, time.Now())
+					}
+					wantAttempts := 1
+					if mode == "retry" {
+						wantAttempts = 2
+					}
+					if mode == "exhausted" {
+						wantAttempts = maxQueueRetries
+					}
+					if (err == nil) != (mode == "retry") || attempts != wantAttempts || calls != 2*wantAttempts {
+						t.Fatalf("calls=%d attempts=%d want=%d err=%v", calls, attempts, wantAttempts, err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestRepoIndexCensusConflictRequiresKnownReply(t *testing.T) {
+	conflict := &surrealdb.QueryError{Message: "An error occurred: phebs-conflict: repository index census changed"}
+	aborted := &surrealdb.QueryError{Message: "The query was not executed due to a failed transaction"}
+	for _, test := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"native_join", errors.Join(aborted, errors.Join(aborted, conflict), aborted), true},
+		{"unknown_before", errors.Join(context.DeadlineExceeded, conflict), false},
+		{"unknown_after", errors.Join(conflict, context.DeadlineExceeded), false},
+		{"nested_unknown", errors.Join(aborted, errors.Join(conflict, context.Canceled)), false},
+		{"untyped_marker", errors.New(conflict.Message), false},
+		{"different_conflict", &surrealdb.QueryError{Message: "other conflict"}, false},
+		{"nil", nil, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			matched, known := repoIndexCensusConflict(test.err)
+			if got := matched && known; got != test.want {
+				t.Fatalf("retry=%t want=%t", got, test.want)
+			}
+		})
+	}
+}
+
+// These single-attempt SA01/SDK/CBOR fixtures prove pre-forward accounting and
+// failure custody, not native SQL evaluation. TestRepoIndexCensusRetry exercises
+// the public methods' refresh/retry policy separately.
 func TestRepoIndexAccountingOperands(t *testing.T) {
 	for _, clearing := range []bool{false, true} {
 		for _, mode := range []string{"noop", "changed", "caller", "fanout", "coalesce", "repair", "missing", "changed_census", "lost", "canceled"} {
@@ -129,9 +240,9 @@ func TestRepoIndexAccountingOperands(t *testing.T) {
 				s := &Surreal{db: db, accounting: owner}
 				var err error
 				if clearing {
-					err = s.ClearRepoIndexState(ctx, "neutral")
+					err = s.clearRepoIndexStateOnce(ctx, "neutral")
 				} else {
-					err = s.SetRepoIndexedState(ctx, "neutral", "commit", nil, nil, time.Now())
+					err = s.setRepoIndexedStateOnce(ctx, "neutral", "commit", nil, nil, time.Now())
 				}
 				wantCalls, wantTX := 2, uint64(1)
 				if mode == "canceled" {
@@ -226,7 +337,7 @@ func TestRepoIndexAccountingBoundAndRefusals(t *testing.T) {
 				}
 				return generationAccountingCensusReply(7, []repoIndexObservation{census}), nil
 			}
-			err := (&Surreal{db: db, accounting: owner}).SetRepoIndexedState(ctx, "neutral", "commit", nil, unit, time.Now())
+			err := (&Surreal{db: db, accounting: owner}).setRepoIndexedStateOnce(ctx, "neutral", "commit", nil, unit, time.Now())
 			prefix, _ := controller.Snapshot()
 			wantCalls, wantRows, wantTX := 1, uint64(0), uint64(0)
 			if mode == "unit" {
@@ -339,7 +450,7 @@ CREATE $rid CONTENT {
 	_, err = surrealdb.Query[any](ctx, s.db, "BEGIN;"+sql+repoIndexCensusFenceSQL+`
 UPDATE $rid SET indexed_commit_hash = 'must-not-commit';
 COMMIT;`, vars)
-	if err == nil || !strings.Contains(err.Error(), "census changed") {
+	if conflict, known := repoIndexCensusConflict(err); !conflict || !known {
 		t.Fatalf("changed actual projection was not fenced: %v", err)
 	}
 	repo, err := s.GetRepo(ctx, repository)
