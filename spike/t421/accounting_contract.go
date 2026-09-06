@@ -3,6 +3,7 @@ package t421
 import (
 	"errors"
 	"slices"
+	"strings"
 )
 
 const (
@@ -85,6 +86,8 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 	if err := applyCorrectedPhaseReadMaximums(&plan.WorkEnvelope, *plan); err != nil {
 		return err
 	}
+	plan.Correction.ReadAccountingPolicy = strings.Replace(plan.Correction.ReadAccountingPolicy,
+		"prep-S=D+10+sum(A1..A4),Ai=[1,64]", "prep-S=D+10+sum(A1..A5),Ai=[1,64]", 1)
 	// Epoch three must already run the return-A configuration to produce its
 	// marker. Epoch four belongs to the later hard-death proof, so V3 recovers
 	// this marker in the same scheduler attempt after publication unwinds.

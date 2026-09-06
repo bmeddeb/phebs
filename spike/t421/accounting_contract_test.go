@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -133,6 +134,21 @@ func TestAccountingV3MarkerRecoveryKeepsEpochAndObservationBounds(t *testing.T) 
 
 func TestAccountingV3RecoveryCensusPhaseBounds(t *testing.T) {
 	plan := accountingTestPlan(t)
+	const current = "prep-S=D+10+sum(A1..A5),Ai=[1,64]"
+	const prior = "prep-S=D+10+sum(A1..A4),Ai=[1,64]"
+	if strings.Count(plan.Correction.ReadAccountingPolicy, current) != 1 || strings.Contains(plan.Correction.ReadAccountingPolicy, prior) {
+		t.Fatal("V3 policy must include exactly one five-read preparation formula")
+	}
+	raw, err := MarshalCanonical(plan)
+	if err != nil || !bytes.Contains(raw, []byte(current)) {
+		t.Fatalf("canonical V3 omitted its preparation policy: %v", err)
+	}
+	for _, row := range plan.Correction.RecoveryPreparations {
+		_, reads, err := recoveryPreparationReadBounds(plan, row)
+		if err != nil || reads.Minimum != 24 || reads.Maximum != 339 {
+			t.Fatalf("%s: reads=%+v differ from five-read policy: %v", row.Phase, reads, err)
+		}
+	}
 	legacy, _, err := correctedWorkEnvelope(plan.Profile)
 	if err != nil {
 		t.Fatal(err)
@@ -145,6 +161,10 @@ func TestAccountingV3RecoveryCensusPhaseBounds(t *testing.T) {
 		if phase.ControlReads != want || phase.MemberReads != legacy.Phases[index].MemberReads {
 			t.Fatalf("%s: reads=%+v want=%+v", phase.Phase, phase.ControlReads, want)
 		}
+	}
+	plan.Correction.ReadAccountingPolicy = strings.Replace(plan.Correction.ReadAccountingPolicy, current, prior, 1)
+	if err := validatePlanExecutionContract(plan); err == nil {
+		t.Fatal("V3 accepted the retained four-read policy")
 	}
 }
 

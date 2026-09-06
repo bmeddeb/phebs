@@ -5386,6 +5386,27 @@ timeout interrupted an individually in-budget test. Ben's reported
 2,071.970-second pass is additional evidence of the aggregate mismatch, not
 an exact-candidate normal/race result. Normal and full race gates remain due.
 
+The subsequent full run at `a2464e74` passed 108 packages, including T42.1 in
+2,082.128s, with only the inherited `t211`/`t306m`/`t324` failures already
+reproduced at main. The complete named seven-package race gate also passed;
+these results do not waive baseline failures. The operations timeout wording
+was corrected separately in `29a8bbd5`. Independent review of the 17-file
+correction range found one medium issue: V3's serialized preparation policy
+still described four retryable reads while its numerical bounds used five.
+The approved follow-up replaces only that V3 formula and extends the existing
+regression to check canonical policy, 24–339 bounds, unchanged phase ceilings
+and refusal of the old policy. V1/V2 retained bytes stay exact; the owning ADR
+records the bounded constructor allocation and changed prospective identity.
+The new policy regression failed before the fix and passed afterward. Focused
+normal checks including the full V3 plan round trip and retained V1 validation
+passed in 37.264s; focused race passed in 4.000s, and native-fixture input
+compatibility/canonical artifact routing under race passed in 2.167s. V3's
+canonical plan remains 165,333 bytes, within its authoring cap. Vet, pinned
+lint, docs, glossary and whitespace checks passed. The earlier full normal
+and named race records remain attributed to `a2464e74`, not rerun or relabeled
+for this policy-only follow-up. This is not a fresh independent full-stack
+review, integration or freeze result.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
