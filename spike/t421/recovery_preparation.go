@@ -120,8 +120,14 @@ func recoveryPreparationReadBounds(plan Plan, row RecoveryPreparation) (CounterB
 	// + every result + optional checkpoint reread. The main callback adds four
 	// latest/latest/source/latest authority confirmations (sixteen controls).
 	files := 24 + 4*domainCount + partitions + row.PreparationCompletionWrites
+	readsPerAttempt := uint64(4)
+	if plan.Schema == PlanV3Schema {
+		// The enqueue census adds one charged read per native attempt.
+		// Retained V1/V2 interpretation remains byte/version exact.
+		readsPerAttempt = 5
+	}
 	return CounterBound{Minimum: files, Maximum: files + 1}, CounterBound{
-		Minimum: domainCount + 10 + 4, Maximum: domainCount + 10 + 4*recoveryPreparationStoreAttempts,
+		Minimum: domainCount + 10 + readsPerAttempt, Maximum: domainCount + 10 + readsPerAttempt*recoveryPreparationStoreAttempts,
 	}, nil
 }
 

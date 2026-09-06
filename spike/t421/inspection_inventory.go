@@ -81,11 +81,11 @@ type phaseReadMaximum struct {
 }
 
 // applyCorrectedPhaseReadMaximums replaces the retained topology proxies with
-// the prospective V2 scoped ledger. Minima and every unrelated work ceiling
+// the versioned scoped ledger. Minima and every unrelated work ceiling
 // remain inherited. H and L are in-memory and therefore contribute no native
 // reads; X/T/F/R/Q/prep are derived below from their owning call inventories.
-func applyCorrectedPhaseReadMaximums(work *WorkEnvelope, profile CombinedProfile) error {
-	maximums, err := correctedPhaseReadMaximums(Plan{Profile: profile})
+func applyCorrectedPhaseReadMaximums(work *WorkEnvelope, plan Plan) error {
+	maximums, err := correctedPhaseReadMaximums(plan)
 	if err != nil {
 		return err
 	}

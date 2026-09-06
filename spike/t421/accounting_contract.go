@@ -82,6 +82,9 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 		return errors.New("V3 dispatch budget phase inventory differs")
 	}
 	plan.Schema = PlanV3Schema
+	if err := applyCorrectedPhaseReadMaximums(&plan.WorkEnvelope, *plan); err != nil {
+		return err
+	}
 	// Epoch three must already run the return-A configuration to produce its
 	// marker. Epoch four belongs to the later hard-death proof, so V3 recovers
 	// this marker in the same scheduler attempt after publication unwinds.

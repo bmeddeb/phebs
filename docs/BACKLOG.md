@@ -5363,6 +5363,21 @@ documentation, glossary and whitespace checks clean. These are working-tree,
 scoped correction results, not a full-store or full-stack acceptance run.
 Nothing was committed, merged or pushed; freeze remains unestablished.
 
+The lead correction was subsequently bookmarked locally as `3ffa56e9` on
+2026-09-06, without merge or push. The merge-bar recovery mismatch was the
+enqueue's already-charged prior-schedule census, not an extra publication:
+the one-domain fixture now expects ten store reads in both modes. Prospective
+V3 derives five retryable reads, admitting 24–339 reads for nine domains and
+adding 64 to each recovery phase's control-read maximum. Native retry depth
+remains 64. The retained V2 275 ceiling fits only 51 fully charged attempts
+(274 reads; 52 needs 279); V1/V2 bytes and validation stay unchanged.
+The owning ADR records the existing read cost and added bounded V3 derivation.
+The complete extractionpublication package passed normally (16.929s) and under
+race (20.038s). Focused recovery/phase-bound and V3 canonical/retained-byte
+checks passed normally (0.915s) and under race (2.444s); documentation and CI
+contract checks also passed. Full-stack gates and independent review remain
+pending; no merge, push or freeze is implied.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

@@ -169,15 +169,17 @@ func TestRecoveryPreparationRealStoreCompletedGeneration(t *testing.T) {
 			// reads generation+selected plan (2), authority/schedule bindings (4),
 			// domain plan/root/pointer/bitmap/result (5), and enqueue/post bindings
 			// (2). Checkpoint adds one bitmap reread. The fixture's real pointer
-			// callback runs four times, plus one domain and four schedule queries.
+			// callback runs four times, plus one domain query, the enqueue's
+			// prior-schedule census read (one per enqueue attempt; one here),
+			// and four schedule queries.
 			// Its source/observation callbacks are modeled; these counts do not
 			// claim the ordinary server's additional authority/candidate reads.
-			wantCounts := readaccounting.Counts{ControlFileReads: 13, StoreReadAttempts: 9, StoreWriteAttempts: 1}
+			wantCounts := readaccounting.Counts{ControlFileReads: 13, StoreReadAttempts: 10, StoreWriteAttempts: 1}
 			if mode == extractionpublication.RecoveryPreparationCheckpoint {
 				wantCounts.ControlFileReads++
 			}
 			preparationCtx, ledger, err := readaccounting.Start(ctx, readaccounting.Counts{
-				ControlFileReads: wantCounts.ControlFileReads, StoreReadAttempts: 5 + 4*64, StoreWriteAttempts: 64,
+				ControlFileReads: wantCounts.ControlFileReads, StoreReadAttempts: 5 + 5*64, StoreWriteAttempts: 64,
 			})
 			if err != nil {
 				t.Fatal(err)

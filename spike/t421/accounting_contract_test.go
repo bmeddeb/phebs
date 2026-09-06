@@ -131,6 +131,23 @@ func TestAccountingV3MarkerRecoveryKeepsEpochAndObservationBounds(t *testing.T) 
 	}
 }
 
+func TestAccountingV3RecoveryCensusPhaseBounds(t *testing.T) {
+	plan := accountingTestPlan(t)
+	legacy, _, err := correctedWorkEnvelope(plan.Profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, phase := range plan.WorkEnvelope.Phases {
+		want := legacy.Phases[index].ControlReads
+		if phase.Phase == "stale_lease" || phase.Phase == "process_restart" {
+			want.Maximum += 64
+		}
+		if phase.ControlReads != want || phase.MemberReads != legacy.Phases[index].MemberReads {
+			t.Fatalf("%s: reads=%+v want=%+v", phase.Phase, phase.ControlReads, want)
+		}
+	}
+}
+
 func TestAccountingV3FullFrozenRoundTrip(t *testing.T) {
 	plan, err := BuildPlanV3(testSourceCommit)
 	if err != nil {
