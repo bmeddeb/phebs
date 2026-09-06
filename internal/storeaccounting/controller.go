@@ -156,6 +156,7 @@ type Controller struct {
 	rows          uint64
 	maximumRows   uint64
 	err           error
+	wireOwned     bool
 }
 
 func New(ctx context.Context, config Config) (*Controller, error) {

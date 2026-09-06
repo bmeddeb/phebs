@@ -4919,6 +4919,33 @@ documentation (0.637s), glossary and whitespace passed; the checkout remained
 clean. These are scoped immutable-tree gates, not a full store-package,
 phase-wide accounting or ceremony pass.
 
+The SA01 store-prefix transport is implemented over the existing owned socket
+primitive. It binds each mechanical producer and phase with a unique nonce,
+retains parent-accepted submissions before ACK, refuses malformed/replayed or
+uncertain traffic, and joins each receiver after exact terminal EOF. It retains
+fixed live slots, not submission history. Native UUID ownership, full SDK decode
+and read-tail lifetimes, genuine process admission and actual runtime selection
+remain separate unfinished requirements. Its conservative wire reservation is
+not allocated memory or an admitted frozen source recipe; PLAN records both
+the formula and its 62.15-GiB worst-case reservation at current phase ceilings.
+Independent review of all nine source/test files and the subsequent immutable
+capacity accessor reported zero findings at every severity. Real socket-pair
+tests cover concurrency, one-owner construction, lost ACKs, retained prefixes,
+phase refusal, close protocol, cancellation and deterministic descriptor
+cleanup. Two initial test-only failures were corrected: a transient
+descriptor-directory entry was counted (5.536s), and a fake parent closed
+before the child's required half-close (5.575s); pinned lint also caught two
+unchecked test cleanup errors, now handled. Stable normal five-repeat/race
+five-repeat checks passed in 2.092s/2.920s. The final accessor tree passed normal
+three-repeat/race three-repeat in 1.225s/2.345s, vet, pinned lint and whitespace.
+Owning documentation and immutable-tree gates remain pending. This closes no
+whole-store collector, full execution profile or freeze.
+
+The SA01 owning-doc review found one low precision issue: its protocol-complete
+flag observes terminal EOF, while explicit Wait/Close separately proves receiver
+join. The ADR now distinguishes those boundaries; documentation (0.481s),
+glossary and whitespace pass on the corrected wording.
+
 Selected-state restore now preserves the original rollback target count while
 paging actual future deletions at 512 and current/preimage pairs at 256, then
 writing the final selected summary. It reuses the existing raw clear for four
@@ -4942,6 +4969,14 @@ engine joined. Vet, pinned lint and whitespace pass. Independent owning-doc
 review reported zero findings at all severities; documentation, glossary and
 whitespace passed. Immutable-tree and complete six-artifact compatibility gates remain pending;
 neither phase-wide submission accounting nor freeze follows from this fix.
+
+Exact selected-restore commit `3e4ded3838b789ffa87b5e20580acd9834b4de80`
+passed detached-clean selected rollback/clear normal (2.542s) and race (6.582s)
+gates, then the complete six-artifact recovery package in normal (79.547s) and
+race (95.584s) modes. Vet, pinned lint (zero findings), documentation (0.549s),
+glossary and whitespace passed, with the checkout clean before and after.
+This closes this restore fix's immutable-tree and archive compatibility gates,
+not the full store collector or phase-wide ceremony acceptance.
 
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
