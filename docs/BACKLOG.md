@@ -5499,6 +5499,18 @@ folded into this stack. This supersedes only the pending baseline disposition
 above, not the separate restore/store scope-ratification requirement, and
 authorizes no merge, push, freeze, ceremony execution or Epic closure.
 
+Ben then explicitly ratified the restore/store prerequisite scope previously
+clarified at `99ab9547710c0f19fb6c4dc7b92e4876c1b0e53f`, covering the
+same-format, same-engine restore and bounded service-state writer/accounting
+corrections in the reviewed stack through tested source `a9734771`. This
+closes the separate D2 scope-authority hold; the preceding inherited-failure
+waiver remains limited to its seven named assertions. Neither decision
+backdates approval, reconstructs missing historical gates, changes retained
+evidence, expands admission bounds or establishes full admission, freeze,
+execution or Epic closure. Changes since the full tested source are confined
+to PLAN and this backlog, preserving compiled, embedded, fixture and harness
+inputs and the original exact-source gate attribution.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
