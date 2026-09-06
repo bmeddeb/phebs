@@ -5455,6 +5455,38 @@ not a full-store normal run, full ci-go/ci-race rerun, or independent review.
 The review skill's pre-commit confirmation remains pending; no new immutable
 candidate, waiver, merge, push or freeze is claimed.
 
+Ben then approved the local correction commit, one independent read-only
+reviewer and the full exact-tip merge bar. The correction was committed as
+`a9734771e3fd399596a297b2f4ea3e50eca253c6` (tree
+`484946ebdf79bfec357347adf4540fa1c659ad5f`). The reviewer covered all ten
+changed files, including tests and cost/governance records, with none skipped
+and critical/high/medium/low actionable findings all zero. The review traced
+native SDK error joins, caller recovery, selected attempt charging, prior-plan
+fences and both Advance entry points. This closes the three scoped correction
+findings; selected read cancellation remains deliberately fail-closed.
+
+One serial merge bar then ran against that unchanged, tracked-clean commit.
+`ci-static` passed with pinned lint zero issues, module verification passed,
+and `ci-go` completed in 3,760 seconds with 108 packages passing and only the
+same `t211`/`t306m`/`t324` assertion failures listed above. Their assertion
+messages compare byte-for-byte equal to the retained main `6e38ce97` run;
+those three package directories are unchanged from that base. Every internal
+package passed, including store in 1,009.456s; T42.1 passed in 2,081.656s.
+This normal gate remains baseline-red (make exit 2), not waived or all-green.
+The complete named seven-package `ci-race` passed: store 1,157.806s, sync
+24.019s, indexer 24.849s, search 28.954s, extract 82.943s, callerpublication
+5.622s and observationpublication 20.512s. Additional full storeaccounting
+and dispatchadmission race packages passed in 1.774s/5.986s; this is not a
+claim of repository-wide `go test -race ./...`. Node 24.18.0 UI checks passed
+all 44 files/775 tests, lint, production UI and embedded Go builds. Final
+documentation, glossary and whitespace checks passed. Retained V1/V2 plan
+digests are unchanged, and no gate-owned test or SurrealDB process remains.
+This subsequent record changes no source, embedded input, fixture or harness;
+the full machine results remain attributed to `a9734771`, not relabeled as
+a later record-only commit. Baseline disposition and the separately reported
+scope ratification remain Ben's decisions. No merge, push, waiver, full
+admission, freeze, ceremony execution or Epic closure is claimed.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
