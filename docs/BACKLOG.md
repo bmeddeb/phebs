@@ -5028,6 +5028,39 @@ severity counts zero; documentation (0.665s), glossary and whitespace passed.
 Immutable-tree gates remain pending; neither a complete 170-transaction phase
 fit nor freeze follows.
 
+Exact startup-recipe commit `b12d533e70c53e4eee7786044607c68953fe7f7b`
+passed detached-clean schema/batch/migration/orphan/startup selectors in normal
+(13.664s) and race (14.683s) modes. Vet, pinned lint (zero findings),
+documentation (0.616s), glossary and whitespace passed; the checkout remained
+clean. This closes the combined startup correction's scoped immutable gates,
+not the remaining state migrations or a full execution profile.
+
+The private typed-SDK adapter core now retains selected reads through decode,
+counts accepted logical attempts before native forwarding, preserves unknown
+outcomes and refuses unbound controls. Its initial source
+`fda22a05ef5691a0e600a3f79204c1f7dd89169dfa8b8a34ba5b6a5b6fd40af1`
+passed normal three-repeat/race three-repeat in 0.533s/1.672s, then independent
+review found two medium issues: the SDK exposes mutable transaction UUID
+pointers, and two local owners could each admit forty reads for one client.
+Fixed slots now bind the actual SDK object plus copied UUID/connection and
+forward only the copied UUID; the client permits one irreversible ALL-call
+owner claim. A prior self-review also removed an owner/SDK mutex inversion and
+joined selected-call cancellation bridges; ordinary nil-owner calls remain
+direct. Final adapter source
+`d70ccefc840452067dd52648d45eafee73891e1c35f694d3f0629f4c53f8f99a`
+and test `a42a2c6bf6acfa31318a841986a654b89bb72b2f777f536004e5011633e152a5`
+passed normal three-repeat/race three-repeat in 0.648s/1.671s, vet, pinned lint
+and whitespace, with fresh independent severity counts all zero. The client
+claim source/test `002a3a01`/`0a5ee0f7` passed its focused five-repeat normal/race
+gates in 0.262s/1.287s and separate all-zero review. Root's combined working-tree
+checks passed the transport package (0.576s) and adapter selectors (0.441s).
+These tests use real SA01 sockets/reducer and the real SDK codec with a scripted
+native transport, not an engine or complete production meter. Independent
+owning-doc review reported all severity counts zero; documentation (0.696s),
+glossary and whitespace passed. Immutable-tree gates, actual
+source/factory/bootstrap/HTTP integration and native lifecycle proof remain
+pending.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

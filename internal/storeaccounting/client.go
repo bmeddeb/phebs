@@ -40,6 +40,7 @@ type Client struct {
 	calls                    [MaximumCalls]clientCall
 	transactions             [MaximumTransactions]clientTransaction
 	fenced, closed           bool
+	sdkOwned                 bool
 	err                      error
 }
 
@@ -74,6 +75,30 @@ func (c *Client) Capacities() (calls, transactions int) {
 		return 0, 0
 	}
 	return c.config.Calls, c.config.Transactions
+}
+
+// ClaimSDKOwner reserves the one ALL-call owner for this client lifetime. It
+// is never released, including after failure, and grants no source authority.
+func (c *Client) ClaimSDKOwner() error {
+	if c == nil {
+		return ErrConfig
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ctx == nil || c.conn == nil {
+		return ErrConfig
+	}
+	if c.err != nil {
+		return c.err
+	}
+	if c.closed || c.ctx.Err() != nil {
+		return ErrCanceled
+	}
+	if c.sdkOwned {
+		return ErrConfig
+	}
+	c.sdkOwned = true
+	return nil
 }
 
 func (c *Client) closeOwned() {

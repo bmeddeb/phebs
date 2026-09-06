@@ -198,6 +198,60 @@ func TestClientImmutableCapacities(t *testing.T) {
 	}
 }
 
+func TestClientSingleSDKOwner(t *testing.T) {
+	for _, client := range []*Client{nil, {}} {
+		if err := client.ClaimSDKOwner(); !errors.Is(err, ErrConfig) {
+			t.Fatalf("invalid client claim: %v", err)
+		}
+	}
+	transport, ctx := transportFixture(t, []uint32{2}, []Phase{{ID: 1}}, time.Second)
+	client := transportClient(t, transport, ctx, 2)
+	before := client.bytes
+	claims := make(chan error, 2)
+	for range 2 {
+		go func() { claims <- client.ClaimSDKOwner() }()
+	}
+	winners := 0
+	for range 2 {
+		if err := <-claims; err == nil {
+			winners++
+		} else if !errors.Is(err, ErrConfig) {
+			t.Fatalf("duplicate claim: %v", err)
+		}
+	}
+	if winners != 1 || client.bytes != before || !client.sdkOwned {
+		t.Fatalf("claims=%d bytes=%d/%d owned=%v", winners, client.bytes, before, client.sdkOwned)
+	}
+	if err := client.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Wait(ctx, 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.ClaimSDKOwner(); !errors.Is(err, ErrCanceled) || !client.sdkOwned {
+		t.Fatalf("closed claim=%v owned=%v", err, client.sdkOwned)
+	}
+}
+
+func TestClientSDKOwnerRequiresLiveClient(t *testing.T) {
+	for _, failed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "canceled", true: "failed"}[failed], func(t *testing.T) {
+			transport, ctx := transportFixture(t, []uint32{2}, []Phase{{ID: 1}}, time.Second)
+			client := transportClient(t, transport, ctx, 2)
+			want := ErrCanceled
+			if failed {
+				want = ErrProtocol
+				_ = client.Fail(ctx, want)
+			} else {
+				client.cancel()
+			}
+			if err := client.ClaimSDKOwner(); !errors.Is(err, want) || client.sdkOwned {
+				t.Fatalf("inactive claim=%v owned=%v", err, client.sdkOwned)
+			}
+		})
+	}
+}
+
 func TestClientBoundedEntrantsAndConcurrentNativeSlots(t *testing.T) {
 	transport, ctx := transportFixture(t, []uint32{2}, []Phase{{ID: 1, Transactions: MaximumCalls, Rows: MaximumCalls}}, time.Second)
 	client := transportClient(t, transport, ctx, 2)
