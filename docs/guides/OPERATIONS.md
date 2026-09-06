@@ -114,6 +114,14 @@ committed page prefixes in its partial target. Keep that target offline and
 follow the existing quarantine/removal procedure before another restore;
 partial progress is never successful restored authority.
 
+Selected v3 service-state rollback also uses bounded pages: at most 512 future
+current-state deletions, then 256 current/preimage replacement pairs per
+transaction, followed by the selected summary and its optional preimage.
+Every page repeats exact selector and state witnesses; the final summary
+requires future rows and selected row preimages to be drained. Already-settled
+state performs no rollback write. Interrupted rollback remains an offline
+failed target, not partially restored service authority.
+
 For the recognized SurrealDB 3.2.0 export subset on Unix, restore preflights the
 complete database artifact, then replays unchanged native definitions and
 literal records through the same supervised engine in explicit transactions

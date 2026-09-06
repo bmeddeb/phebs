@@ -4911,6 +4911,38 @@ compatibility and immutable-tree gates remain pending. PLAN records repeated
 planning, metadata census and extended existing-lock costs; this closes no
 whole-phase 170-transaction fit or freeze.
 
+Exact selected-preimage commit
+`74dda9d2b88141e918572f90e60899e67efd2b8f` passed the complete selected
+preimage/payload and ninth-unit compatibility selectors in 24.312s normal and
+51.680s race from a clean detached checkout. Vet, pinned lint (zero findings),
+documentation (0.637s), glossary and whitespace passed; the checkout remained
+clean. These are scoped immutable-tree gates, not a full store-package,
+phase-wide accounting or ceremony pass.
+
+Selected-state restore now preserves the original rollback target count while
+paging actual future deletions at 512 and current/preimage pairs at 256, then
+writing the final selected summary. It reuses the existing raw clear for four
+unselected tables. The original six-artifact interrupted fixture has 516 actual
+targets, not a hypothetical maximum. A larger genuine A300-to-B513 native
+case submitted exact payloads `[512,1,512,88,2]` and preserved the selected
+state/summary. Its first package run failed in 2.236s only because seven small
+test cases reused another repository's relationship identity; the large case
+passed in 0.71s. Correcting those test identities passed all eight cases in
+2.336s. A separate pure test's composite-ID expected integer normalization
+mismatch (0.886s) was corrected without changing production behavior.
+Independent review requested strict one-result/OK/array census evidence and a
+bounded, error-reporting native test cleanup; both are corrected. Final source
+`fd3e10b9fda8fc917f78016201c2d4f28f38fead22a6156b6eaabff337c069bc`
+and test `97e5a430c36e780e6121bfdb2f616c159906ae5bf50d9e4563a1bbecefbb6e94`
+have no remaining source/test findings. Normal three-repeat/race three-repeat
+pure checks passed in 1.257s/5.770s; final native normal/race passed in
+2.488s/5.741s, including selector, future, preimage, target and summary drift,
+post-commit cancellation and lost-reply retention. Both SDK connections and the
+engine joined. Vet, pinned lint and whitespace pass. Independent owning-doc
+review reported zero findings at all severities; documentation, glossary and
+whitespace passed. Immutable-tree and complete six-artifact compatibility gates remain pending;
+neither phase-wide submission accounting nor freeze follows from this fix.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/fxamacker/cbor/v2"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
+	"github.com/surrealdb/surrealdb.go/surrealcbor"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
@@ -102,29 +104,19 @@ SELECT repository FROM service_state_v3_repository
 	}
 	sort.Strings(repositories)
 	for _, repository := range repositories {
-		results, queryErr := surrealdb.Query[any](ctx, s.db, `
-BEGIN;
+		const guard = `
 LET $selected = SELECT id FROM service_runtime_selector
 	WHERE repository = $repository AND backend = 'v3' LIMIT 1;
 IF array::len($selected) != 0 {
 	THROW 'phebs-permanent: unselected service state v3 restore fence changed';
-};
-DELETE service_state_v3_current WHERE repository = $repository RETURN NONE;
-DELETE service_state_v3_repository WHERE repository = $repository RETURN NONE;
-DELETE service_state_v3_preimage WHERE repository = $repository RETURN NONE;
-DELETE service_state_v3_repository_preimage WHERE repository = $repository RETURN NONE;
-COMMIT;`, map[string]any{"repository": repository})
-		if queryErr != nil {
-			return fmt.Errorf("discard unselected service state v3 for %q: %w", repository, queryErr)
-		}
-		for index, result := range *results {
-			if result.Error != nil {
-				return fmt.Errorf(
-					"discard unselected service state v3 for %q statement %d: %s",
-					repository,
-					index,
-					result.Error.Message,
-				)
+};`
+		for _, table := range []string{
+			"service_state_v3_current", "service_state_v3_repository",
+			"service_state_v3_preimage", "service_state_v3_repository_preimage",
+		} {
+			if err := s.clearRestoreTable(ctx, table, " WHERE repository = $repository", guard,
+				map[string]any{"repository": repository}); err != nil {
+				return fmt.Errorf("discard unselected service state v3 for %q: %w", repository, err)
 			}
 		}
 	}
@@ -136,63 +128,87 @@ func (s *Surreal) restoreSelectedServiceStateV3Snapshot(
 	selector ServiceRuntimeSelector,
 	summary servicecatalog.RepositoryState,
 ) error {
-	if summary.Repository != selector.Repository ||
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if validateServiceRuntimeSelector(selector) != nil || selector.Backend != ServiceRuntimeV3 ||
+		servicecatalogv3.ValidateRepositoryState(summary, true) != nil ||
+		summary.Repository != selector.Repository ||
 		summary.ControlRevision != selector.StateControlRevision ||
 		summary.SummaryDigest != selector.StateSummaryDigest {
 		return fmt.Errorf("restore selected service state v3 for %q: %w", selector.Repository, ErrInvalidServiceStateV3)
 	}
 	const maxRows = servicecatalogv3.MaxTotalServices * 2
-	type recordID struct {
-		RecID *models.RecordID `json:"id"`
-	}
-	summaryResults, err := surrealdb.Query[[]recordID](ctx, s.db, `
-SELECT id FROM service_state_v3_repository_preimage
-	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
-		AND snapshot_digest = $snapshot_digest LIMIT 2`, map[string]any{
+	vars := map[string]any{
 		"repository": selector.Repository, "snapshot_revision": selector.StateControlRevision,
-		"snapshot_digest": selector.StateSummaryDigest,
-	})
+		"snapshot_digest": selector.StateSummaryDigest, "limit": maxRows + 1,
+		"selector_rid":      serviceRuntimeSelectorID(selector.Repository),
+		"expected_selector": serviceRuntimeSelectorContent(selector),
+		"summary_rid":       serviceStateV3RepositoryID(selector.Repository),
+		"summary_content":   serviceRepositoryStateContent(summary),
+	}
+	summaries, err := s.restoreStateV3RawRows(ctx, `SELECT * FROM service_state_v3_repository_preimage
+	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
+		AND snapshot_digest = $snapshot_digest LIMIT 2`, vars, 1)
 	if err != nil {
 		return fmt.Errorf("restore selected service state v3 for %q: summary preimage: %w", selector.Repository, err)
 	}
-	summaryPreimages := firstDomainRows(summaryResults)
-	if len(summaryPreimages) > 1 {
-		return fmt.Errorf("restore selected service state v3 for %q: summary preimage: %w", selector.Repository, ErrInvalidServiceStateV3)
-	}
-	preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
-SELECT * FROM service_state_v3_preimage
+	preimages, err := s.restoreStateV3RawRows(ctx, `SELECT * FROM service_state_v3_preimage
 	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
 		AND snapshot_digest = $snapshot_digest
-	ORDER BY service_key LIMIT $limit`, map[string]any{
-		"repository": selector.Repository, "snapshot_revision": selector.StateControlRevision,
-		"snapshot_digest": selector.StateSummaryDigest, "limit": maxRows + 1,
-	})
+	ORDER BY service_key LIMIT $limit`, vars, maxRows)
 	if err != nil {
 		return fmt.Errorf("restore selected service state v3 for %q: rows: %w", selector.Repository, err)
 	}
-	preimages := firstDomainRows(preimageResults)
-	if len(preimages) > maxRows {
-		return fmt.Errorf("restore selected service state v3 for %q: rows: %w", selector.Repository, ErrInvalidServiceStateV3)
-	}
-	futureResults, err := surrealdb.Query[[]recordID](ctx, s.db, `
-SELECT id FROM service_state_v3_current
+	future, err := s.restoreStateV3RawRows(ctx, `SELECT `+restoreStateV3FutureFields+` FROM service_state_v3_current
 	WHERE repository = $repository AND visible_from > $snapshot_revision
-	LIMIT $limit`, map[string]any{
-		"repository": selector.Repository, "snapshot_revision": selector.StateControlRevision,
-		"limit": maxRows + 1,
-	})
+	ORDER BY id LIMIT $limit`, vars, maxRows)
 	if err != nil {
 		return fmt.Errorf("restore selected service state v3 for %q: future rows: %w", selector.Repository, err)
 	}
-	future := firstDomainRows(futureResults)
-	if len(future) > maxRows {
-		return fmt.Errorf("restore selected service state v3 for %q: future rows: %w", selector.Repository, ErrInvalidServiceStateV3)
-	}
-	if len(summaryPreimages) == 0 && len(preimages) == 0 && len(future) == 0 {
+	if len(summaries) == 0 && len(preimages) == 0 && len(future) == 0 {
 		return nil
 	}
+	// ponytail: this offline, unserved target retains one bounded census (at most
+	// 25,000 preimages and future projections), not a new staging schema. Full
+	// preimage bodies retain their existing row-shape cost; the row limit is not
+	// a pre-decode byte or historical native-scan bound. Future projections bind
+	// supported writers' native identity/revision/digest controls, not arbitrary
+	// direct-SQL changes to omitted fields. Revisit streaming only if the existing
+	// restore admission's memory profile requires it.
+	codec := surrealcbor.New()
+	futureIDs := make([]models.RecordID, 0, len(future))
+	futureKeys := make(map[string]bool, len(future))
+	for _, raw := range future {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		var row serviceStateRec
+		if err := codec.Unmarshal(raw, &row); err != nil {
+			return fmt.Errorf("decode restore future row: %w", err)
+		}
+		expected := serviceStateV3ID(selector.Repository, row.ServiceKey)
+		identifier, _ := expected.ID.(string)
+		if row.Repository != selector.Repository || row.ServiceKey == "" ||
+			len(row.ServiceKey) > servicecatalog.MaxServiceKeyBytes || row.ControlRevision == 0 ||
+			!validSHA256Digest(row.StateDigest) || row.VisibleFrom <= selector.StateControlRevision ||
+			!validServiceCatalogV3RecordID(row.RecID, "service_state_v3_current", identifier) ||
+			futureKeys[row.ServiceKey] {
+			return ErrInvalidServiceStateV3
+		}
+		futureKeys[row.ServiceKey] = true
+		futureIDs = append(futureIDs, *row.RecID)
+	}
 	updates := make([]map[string]any, 0, len(preimages))
-	for _, preimage := range preimages {
+	previousKey := ""
+	for _, raw := range preimages {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		var preimage serviceStateRec
+		if err := codec.Unmarshal(raw, &preimage); err != nil {
+			return fmt.Errorf("decode restore preimage: %w", err)
+		}
 		state, stateErr := decodeServiceStateV3Preimage(
 			selector.Repository,
 			preimage.ServiceKey,
@@ -200,20 +216,81 @@ SELECT id FROM service_state_v3_current
 			selector.StateSummaryDigest,
 			preimage,
 		)
-		if stateErr != nil {
-			return fmt.Errorf("restore selected service state v3 for %q: row: %w", selector.Repository, stateErr)
+		if stateErr != nil || preimage.ServiceKey <= previousKey || !futureKeys[preimage.ServiceKey] {
+			return fmt.Errorf("restore selected service state v3 for %q: row: %w", selector.Repository, ErrInvalidServiceStateV3)
 		}
+		previousKey = preimage.ServiceKey
 		content := serviceStateContent(state)
 		content["visible_from"] = preimage.VisibleFrom
 		updates = append(updates, map[string]any{
-			"rid":     serviceStateV3ID(selector.Repository, preimage.ServiceKey),
-			"content": content,
+			"rid": serviceStateV3ID(selector.Repository, preimage.ServiceKey), "content": content,
+			"preimage_rid": *preimage.RecID, "preimage": raw,
 		})
 	}
-	summaryContent := serviceRepositoryStateContent(summary)
-	selectorContent := serviceRuntimeSelectorContent(selector)
-	mutationResults, err := surrealdb.Query[any](ctx, s.db, `
-BEGIN;
+	summaryIDs := make([]models.RecordID, 0, len(summaries))
+	for _, raw := range summaries {
+		var row serviceRepositoryStateRec
+		if err := codec.Unmarshal(raw, &row); err != nil {
+			return fmt.Errorf("decode restore summary preimage: %w", err)
+		}
+		prior, err := serviceStateV3RepositoryFromRec(row)
+		if err != nil || !sameServiceStateV3Summary(*prior, summary) ||
+			row.SnapshotRevision != selector.StateControlRevision || row.SnapshotDigest != selector.StateSummaryDigest ||
+			!validServiceStateV3PreimageRecord(row.RecID, "service_state_v3_repository_preimage") {
+			return ErrInvalidServiceStateV3
+		}
+		summaryIDs = append(summaryIDs, *row.RecID)
+	}
+	currentSummary, err := s.restoreStateV3RawRows(ctx, "SELECT * FROM $summary_rid LIMIT 2", vars, 1)
+	if err != nil {
+		return fmt.Errorf("read restore current summary: %w", err)
+	}
+	vars["expected_summaries"], vars["expected_current_summary"] = summaries, currentSummary
+	vars["summary_preimage_ids"] = summaryIDs
+	// Every payload target is prevalidated before the first mutation. The exact
+	// imported native preimages are echoed without re-encoding their values.
+	for start := 0; start < len(future); start += restoreClearRows {
+		end := min(start+restoreClearRows, len(future))
+		vars["future_ids"], vars["expected_future"] = futureIDs[start:end], future[start:end]
+		if err := s.restoreClearWrite(ctx, restoreStateV3DeleteFutureSQL, vars); err != nil {
+			return err
+		}
+	}
+	delete(vars, "future_ids")
+	delete(vars, "expected_future")
+	for start := 0; start < len(updates); start += restoreClearRows / 2 {
+		vars["updates"] = updates[start:min(start+restoreClearRows/2, len(updates))]
+		if err := s.restoreClearWrite(ctx, restoreStateV3PairsSQL, vars); err != nil {
+			return err
+		}
+	}
+	delete(vars, "updates")
+	return s.restoreClearWrite(ctx, restoreStateV3SummarySQL, vars)
+}
+
+// Native raw values are kept for exact per-page comparison, not treated as new
+// authority. The only caller has already validated the imported precious state.
+func (s *Surreal) restoreStateV3RawRows(ctx context.Context, query string, vars map[string]any, maximum int) ([]cbor.RawMessage, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	results, err := surrealdb.Query[[]cbor.RawMessage](ctx, s.db, query, vars)
+	if err != nil {
+		return nil, err
+	}
+	if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" || (*results)[0].Error != nil {
+		return nil, ErrInvalidServiceStateV3
+	}
+	rows := (*results)[0].Result
+	if rows == nil || len(rows) > maximum {
+		return nil, ErrInvalidServiceStateV3
+	}
+	return rows, ctx.Err()
+}
+
+const restoreStateV3FutureFields = `id, repository, service_key, control_revision, state_digest, visible_from`
+
+const restoreStateV3Guard = `
 LET $selector = (SELECT schema, repository, backend,
 	catalog_generation_digest, catalog_root_digest, catalog_control_revision,
 	state_control_revision, state_summary_digest, search_generation_digest,
@@ -234,58 +311,43 @@ LET $selector_ok = $selector != NONE
 	AND $selector.control_revision = $expected_selector.control_revision
 	AND $selector.digest = $expected_selector.digest
 	AND $selector.changed_at = $expected_selector.changed_at;
-LET $summaries = SELECT id FROM service_state_v3_repository_preimage
+LET $summaries = SELECT * FROM service_state_v3_repository_preimage
 	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
 		AND snapshot_digest = $snapshot_digest LIMIT 2;
+LET $current_summary = SELECT * FROM $summary_rid LIMIT 2;
+IF !$selector_ok OR $summaries != $expected_summaries OR $current_summary != $expected_current_summary {
+	THROW 'phebs-permanent: selected service state v3 restore fence changed';
+};`
+
+const restoreStateV3DeleteFutureSQL = "BEGIN;" + restoreStateV3Guard + `
+LET $actual = SELECT ` + restoreStateV3FutureFields + ` FROM $future_ids ORDER BY id;
+IF $actual != $expected_future {
+ THROW 'phebs-permanent: selected service state v3 future row changed';
+};
+FOR $rid IN $future_ids { DELETE $rid RETURN NONE; };
+COMMIT;`
+
+const restoreStateV3PairsSQL = "BEGIN;" + restoreStateV3Guard + `
+FOR $update IN $updates {
+	LET $actual = (SELECT * FROM $update.preimage_rid LIMIT 1)[0];
+	LET $current = SELECT id FROM $update.rid LIMIT 1;
+	IF $actual != $update.preimage OR array::len($current) != 0 {
+		THROW 'phebs-permanent: selected service state v3 restore row changed';
+	};
+	UPSERT $update.rid CONTENT $update.content RETURN NONE;
+	DELETE $update.preimage_rid RETURN NONE;
+};
+COMMIT;`
+
+const restoreStateV3SummarySQL = "BEGIN;" + restoreStateV3Guard + `
 LET $preimages = SELECT id FROM service_state_v3_preimage
 	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
-		AND snapshot_digest = $snapshot_digest LIMIT $row_limit;
+		AND snapshot_digest = $snapshot_digest LIMIT 1;
 LET $future = SELECT id FROM service_state_v3_current
-	WHERE repository = $repository AND visible_from > $snapshot_revision
-	LIMIT $row_limit;
-IF !$selector_ok OR array::len($summaries) != $summary_preimage_count OR
-	array::len($preimages) != $preimage_count OR
-	array::len($future) != $future_count {
-	THROW 'phebs-permanent: selected service state v3 restore fence changed';
-};
-DELETE service_state_v3_current
-	WHERE repository = $repository AND visible_from > $snapshot_revision RETURN NONE;
-FOR $update IN $updates {
-	UPSERT $update.rid CONTENT $update.content RETURN NONE;
+	WHERE repository = $repository AND visible_from > $snapshot_revision LIMIT 1;
+IF array::len($preimages) != 0 OR array::len($future) != 0 {
+	THROW 'phebs-permanent: selected service state v3 restore is not drained';
 };
 UPSERT $summary_rid CONTENT $summary_content RETURN NONE;
-DELETE service_state_v3_preimage
-	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
-		AND snapshot_digest = $snapshot_digest RETURN NONE;
-DELETE service_state_v3_repository_preimage
-	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
-		AND snapshot_digest = $snapshot_digest RETURN NONE;
-COMMIT;`, map[string]any{
-		"selector_rid":           serviceRuntimeSelectorID(selector.Repository),
-		"expected_selector":      selectorContent,
-		"repository":             selector.Repository,
-		"snapshot_revision":      selector.StateControlRevision,
-		"snapshot_digest":        selector.StateSummaryDigest,
-		"row_limit":              maxRows + 1,
-		"summary_preimage_count": len(summaryPreimages),
-		"preimage_count":         len(preimages),
-		"future_count":           len(future),
-		"updates":                updates,
-		"summary_rid":            serviceStateV3RepositoryID(selector.Repository),
-		"summary_content":        summaryContent,
-	})
-	if err != nil {
-		return fmt.Errorf("restore selected service state v3 for %q: %w", selector.Repository, err)
-	}
-	for index, result := range *mutationResults {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"restore selected service state v3 for %q statement %d: %s",
-				selector.Repository,
-				index,
-				result.Error.Message,
-			)
-		}
-	}
-	return nil
-}
+FOR $rid IN $summary_preimage_ids { DELETE $rid RETURN NONE; };
+COMMIT;`
