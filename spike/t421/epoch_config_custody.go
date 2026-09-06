@@ -57,6 +57,7 @@ type ExecutionEpochConfigCustody struct {
 	listeners [5]net.Listener
 	released  uint64
 	stages    []string
+	active    bool // A native epoch user must join before these inputs can close.
 	closed    bool
 	err       error
 }
@@ -456,6 +457,9 @@ func (custody *ExecutionEpochConfigCustody) Close() error {
 	}
 	custody.mu.Lock()
 	defer custody.mu.Unlock()
+	if custody.active {
+		return ErrExecutionEpochConfigs
+	}
 	return custody.closeLocked()
 }
 

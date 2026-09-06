@@ -200,6 +200,17 @@ func TestExecutionEpochConfigRefusesMissingAuthority(t *testing.T) {
 	}
 }
 
+func TestExecutionEpochConfigCloseRefusesActiveUser(t *testing.T) {
+	custody := &ExecutionEpochConfigCustody{active: true}
+	if err := custody.Close(); err != ErrExecutionEpochConfigs || custody.closed {
+		t.Fatal("active native user lost configuration custody", err)
+	}
+	custody.active = false // The native owner must establish its join first.
+	if err := custody.Close(); err != nil || !custody.closed {
+		t.Fatal("joined native user could not release configuration custody", err)
+	}
+}
+
 // This isolates the real existing copy/flag/hash and descriptor lifecycle;
 // the partial private author below is only a staging path, never admission.
 func TestExecutionEpochConfigProtectedStagingAndClose(t *testing.T) {

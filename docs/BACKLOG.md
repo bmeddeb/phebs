@@ -5537,6 +5537,34 @@ claim that the native contention behavior is proven unchanged. Full gates
 remain attributed to `a9734771`; no implementation or retained input changed,
 and T42.2m/n/o acceptance, full admission and ceremony gates remain separate.
 
+**Next executor slice — first shared native epoch.** Integration of the reviewed
+store-accounting stack does not complete T42.2l's executor. The real author and
+protected five-configuration constructor already have their recorded native
+passes; do not relaunch those old gates merely because earlier pending text
+remains in this chronological record. Implement one actual epoch-one parent
+launch using shared DA01/SA01 controllers, genuine protected tools/config/source,
+authenticated semantic stdin and PC01 owner control. AC: real startup and one
+private health request, truthful owner/SDK/dispatch closure and native join,
+failure-prefix retention, active-input Close refusal, focused normal/race and
+independent source/cost review. Cold convergence, phase advancement, all five
+epochs, complete executor/profile admission and the signed launcher remain
+later gates. Host backing space observed at approximately 105 GiB remains
+below the unchanged 120-GiB freeze floor; this neither blocks scoped source
+implementation nor authorizes deleting retained evidence or unrelated data.
+
+The first shared-epoch implementation now composes the actual author and
+parent-accounted Phebs launch with DA01/PC01/SA01, a one-shot private health
+request and joined owner/store/session stop. Focused normal/race, retained
+V1/V2 bytes, vet, pinned lint and documentation checks passed before independent
+review. The reviewer covered all ten source/test/documentation files with
+0 critical, 0 high, 1 medium and 0 low findings: Stop could win a simultaneous
+lifetime-cancellation select and return clean completion. The correction checks
+the lifetime before cleanup and again at terminal acceptance, preserving the
+joined prefix while refusing nil/canceled/expired contexts. The terminal-gate
+regression and three-repeat epoch-one race selector passed in 1.754s.
+Corrected immutable review and one real protected startup rehearsal remain
+required; no native epoch-one startup or phase advancement is claimed yet.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
