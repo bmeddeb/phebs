@@ -132,33 +132,8 @@ func (s *Surreal) generationResourceClassMigrationComplete(ctx context.Context) 
 // them. Immutable outcomes remain available for exact reuse by the successor
 // schedule.
 func (s *Surreal) ClearAllGenerationScheduleStateForRestore(ctx context.Context) error {
-	results, err := surrealdb.Query[any](ctx, s.db, `
-BEGIN;
-UPDATE repo UNSET
-	latest_extraction_job, latest_extraction_job_created_at,
-	latest_extraction_job_projection_version,
-	latest_resolver_job, latest_resolver_job_created_at,
-	latest_resolver_job_projection_version,
-	latest_caller_job, latest_caller_job_created_at,
-	latest_caller_job_projection_version
-	RETURN NONE;
-DELETE generation_schedule_chunk RETURN NONE;
-DELETE generation_schedule_current RETURN NONE;
-DELETE generation_schedule_repository RETURN NONE;
-DELETE generation_schedule RETURN NONE;
-DELETE service_state_v3_plan RETURN NONE;
-DELETE extraction_domain_root RETURN NONE;
-COMMIT;`, nil)
-	if err != nil {
+	if err := s.clearRestoreState(ctx, restoreClearSchedules); err != nil {
 		return fmt.Errorf("clear generation schedules for restore: %w", err)
-	}
-	for index, result := range *results {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"clear generation schedules for restore statement %d: %s",
-				index, result.Error.Message,
-			)
-		}
 	}
 	return nil
 }

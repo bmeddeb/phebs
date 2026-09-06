@@ -93,6 +93,19 @@ and restore grants no authority to those bytes. Taking a backup therefore
 neither pins live state nor turns omitted caller residue into recoverable
 history.
 
+Offline restore clears restartable generation schedules and derived candidate,
+resolver and caller authority in bounded native-record pages. Each deletion
+page submits at most 512 actual records; caller-pointer invalidation pairs at
+most 256 pointers and 256 matching repository revision updates atomically.
+Repository job projections are reset in 512-record pages. Writer-generation
+checks and final absence checks remain mandatory; malformed imported payloads
+are not reinterpreted as application structs merely to clear their identities.
+These limits bound the explicit page payloads, not database scanning, response
+bytes or the complete restore transaction count. A failed restore can retain
+committed page prefixes in its partial target. Keep that target offline and
+follow the existing quarantine/removal procedure before another restore;
+partial progress is never successful restored authority.
+
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
 

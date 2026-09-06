@@ -551,40 +551,7 @@ func (s *Surreal) ClearCandidateManifestPublication(
 func (s *Surreal) ClearAllCandidateManifestPublications(
 	ctx context.Context,
 ) error {
-	_, err := surrealdb.Query[any](
-		ctx,
-		s.db,
-		`BEGIN;
-LET $writer_ok = array::len(SELECT id FROM $migration_rid
-	WHERE version = $evidence_migration_version LIMIT 1) = 1;
-LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
-	WHERE version = $caller_migration_version LIMIT 1) = 1;
-IF $writer_ok = false OR $caller_writer_ok = false {
-	THROW 'phebs-permanent: evidence writer generation is not active'
-};
-LET $caller_repositories = SELECT VALUE record::id(id)
-	FROM caller_generation_publication;
-UPDATE repo SET caller_publication_revision =
-	(caller_publication_revision ?? 0) + 1
-	WHERE name IN $caller_repositories RETURN NONE;
-DELETE candidate_manifest_publication RETURN NONE;
-DELETE resolver_catalog_publication RETURN NONE;
-DELETE caller_generation_publication RETURN NONE;
-DELETE extraction_domain_outcome
-	WHERE candidate_control_failure = true
-		AND store_schema_version = $store_schema_version
-		AND evidence_migration_version = $evidence_migration_version
-	RETURN NONE;
-COMMIT;`,
-		map[string]any{
-			"migration_rid":              evidenceMigrationStateID(),
-			"store_schema_version":       evidenceStoreSchemaVersion,
-			"evidence_migration_version": evidenceMigrationVersion,
-			"caller_migration_rid":       callerGenerationPublicationMigrationID(),
-			"caller_migration_version":   callerGenerationPublicationMigrationVersion,
-		},
-	)
-	if err != nil {
+	if err := s.clearRestoreState(ctx, restoreClearCandidate); err != nil {
 		return fmt.Errorf("clear all candidate manifests: %w", err)
 	}
 	return nil

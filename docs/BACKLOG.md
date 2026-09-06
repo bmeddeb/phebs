@@ -4602,6 +4602,55 @@ transaction while positive claims preserve one read/one write. The bootstrap
 W250 is not an already-migrated restart floor. Full attempted-write/row coverage
 and exact-commit broader gates remain separate; no phase-budget pass is claimed.
 
+Exact idle-claim commit `9817d0b96f3b73647f9e363ca08bc00068445c03`
+subsequently passed its clean detached pure race selectors three times (1.727s),
+store/command vet, repository-pinned lint (zero issues), documentation (0.574s),
+glossary and whitespace. These close those scoped exact-tree gates, not the
+still-open whole-phase collector.
+
+The `codex/t42.2l-restore-clears` prerequisite now bounds the four offline
+derived-state clears while preserving their native record-ID and writer-marker
+semantics. Independent review caught one medium compatibility narrowing in
+repository name/revision witnesses; raw CBOR now preserves the former native
+comparison and arithmetic, including numeric/composite names and non-integer
+revisions. The corrected native page/pairing gate passed in 2.312s, including
+comparison with the actual former recipe and invalid-arithmetic rollback.
+Corrected pure normal and race selectors passed three repetitions (0.527s and
+1.652s), with vet, pinned lint and whitespace green. Fresh independent
+source/test/cost re-review of helper `3694752c6a4793fa1ad3ab7c23acdbf7be5b2c44548a5ad633309212854d2530`
+and tests `1104e9b86521441f2c17b6a20024f6e5510238c19a8e338cbd45ea7ecd1898f4`
+closed all severity counts at zero. That native gate uses a schemaless fixture
+to preserve malformed/raw-value compatibility; existing production-schema
+restore-clear gates, exact committed checks and complete Restore remain separate.
+All owned native processes/connections joined. Selected-state restoration,
+native archive replay and durable whole-phase write accounting are not closed
+by these four page recipes.
+
+The unchanged corrected source then passed native page/pairing race (3.648s),
+eight existing production-schema selectors (47.637s), and the nested resolver
+restore-clear/queue-kind selector (1.179s). These cover generation clearing,
+downstream projection reset/rebind, malformed caller pointers/leaves, inactive
+writer refusal, malformed candidate clearing, candidate rebind and no-removal
+after restore. All engines/connections joined. Independent review of the
+owning PLAN/BACKLOG/manual cost and scope record reported all severities zero;
+documentation (0.677s), glossary and whitespace passed. Exact immutable-commit
+attribution and complete Restore remain the next gates.
+
+The backing-space prerequisite separately reclaimed exactly 952 source-proven,
+rebuildable Phebs Go cache archives after independent cleanup-script review
+reported all severity counts zero. The fixed manifest digest was
+`ab1850ec760ea7f892107905967b1e153e593a803a9ea9a3879f2bd4e4ebf5a5`.
+Every regular archive's complete content hash, identity and main-checkout
+scale-package provenance were verified in a validate-only pass and again
+before deletion during a joined, quiet build window. The operation removed
+25,785,404,468 logical bytes and 25,787,416,576 allocated bytes; observed
+available space afterward was 134,961,928 KiB, about 128.7 GiB. It selected no
+source, executable tool, presentation archive, dependency archive, retained
+evidence or worktree. This trusted-owner quiet-window check does not claim an
+atomic hostile-same-UID unlink defense; cache reuse can require rebuilding.
+Historical temporary-tool roots remain untouched. This is point-in-time
+headroom above the unchanged 120-GiB floor, not host freeze admission.
+
 Scoped gate updates: exact literal-config correction 726e8953 passed independent
 source/test/cost review with all severity counts zero; its clean detached
 config/main pinned lint reported zero issues, and docs (0.515s), glossary and

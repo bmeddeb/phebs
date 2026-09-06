@@ -1591,42 +1591,12 @@ func (s *Surreal) ClearAllCallerPublicationStateForRestore(
 	ctx context.Context,
 ) error {
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[any](ctx, s.db, `
-BEGIN;
-LET $writer_ok = array::len(SELECT id FROM $migration_rid
-	WHERE version = $migration_version LIMIT 1) = 1;
-LET $leaf_writer_ok = array::len(SELECT id FROM $leaf_migration_rid
-	WHERE version = $leaf_migration_version LIMIT 1) = 1;
-IF $writer_ok = false OR $leaf_writer_ok = false {
-	THROW 'phebs-permanent: caller publication writer generation is not active'
-};
-LET $repositories = SELECT VALUE record::id(id)
-	FROM caller_generation_publication;
-UPDATE repo SET caller_publication_revision =
-	(caller_publication_revision ?? 0) + 1
-	WHERE name IN $repositories RETURN NONE;
-DELETE caller_generation_publication RETURN NONE;
-DELETE caller_leaf_outcome RETURN NONE;
-DELETE caller_generation_admission RETURN NONE;
-COMMIT;`, map[string]any{
-			"migration_rid":          callerGenerationPublicationMigrationID(),
-			"migration_version":      callerGenerationPublicationMigrationVersion,
-			"leaf_migration_rid":     callerLeafMigrationID(),
-			"leaf_migration_version": callerLeafWriterMigrationVersion,
-		})
+		err := s.clearRestoreState(ctx, restoreClearCaller)
 		if err != nil {
 			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
 			}
 			return fmt.Errorf("clear caller publication state for restore: %w", err)
-		}
-		for index, result := range *results {
-			if result.Error != nil {
-				return fmt.Errorf(
-					"clear caller publication state for restore statement %d: %s",
-					index, result.Error.Message,
-				)
-			}
 		}
 		return nil
 	}
