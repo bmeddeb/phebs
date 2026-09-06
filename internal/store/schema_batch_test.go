@@ -26,6 +26,11 @@ func TestSchemaBatchTrustedRecipes(t *testing.T) {
 		{"API capability", apiKeyCapabilitySchema, 2},
 		{"evidence pre-migration", evidencePreMigrationSchema, 2},
 		{"evidence index", evidenceIndexes, 4},
+		{"catalog v3 preflight", serviceCatalogV3PreflightSchema, 4},
+		{"catalog v3", serviceCatalogV3Schema, 27},
+		{"catalog v3 lifecycle preflight", serviceCatalogV3LifecyclePreflightSchema, 3},
+		{"catalog v3 lifecycle", serviceCatalogV3LifecycleSchema, 28},
+		{"runtime selector", serviceRuntimeSelectorSchema, 16},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			count, err := schemaBatchDefinitionCount(test.definitions)

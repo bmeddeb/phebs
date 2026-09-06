@@ -302,6 +302,11 @@ func serviceCatalogV3LifecycleSchemaMigrationID() models.RecordID {
 	return models.NewRecordID("store_migration", "service_catalog_v3_lifecycle_schema")
 }
 
+const serviceCatalogV3LifecyclePreflightSchema = `
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_lifecycle SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_root_member SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_state_reference SCHEMALESS;`
+
 const serviceCatalogV3LifecycleSchema = `
 DEFINE TABLE OVERWRITE service_catalog_v3_lifecycle SCHEMAFULL;
 DEFINE FIELD OVERWRITE root_digest ON service_catalog_v3_lifecycle TYPE string;
@@ -356,20 +361,8 @@ func (s *Surreal) migrateServiceCatalogV3LifecycleSchema(ctx context.Context) er
 	if len(markerRows) > 1 {
 		return errors.New("migrate service catalog v3 lifecycle schema: duplicate marker")
 	}
-	preflight, err := surrealdb.Query[any](ctx, s.db, `
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_lifecycle SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_root_member SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_state_reference SCHEMALESS;`, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceCatalogV3LifecyclePreflightSchema, "migrate service catalog v3 lifecycle preflight "); err != nil {
 		return fmt.Errorf("migrate service catalog v3 lifecycle schema: preflight schema: %w", err)
-	}
-	for index, result := range *preflight {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"migrate service catalog v3 lifecycle preflight statement %d: %s",
-				index, result.Error.Message,
-			)
-		}
 	}
 	probe, err := surrealdb.Query[[]struct {
 		Count int `json:"count"`
@@ -385,17 +378,8 @@ DEFINE TABLE IF NOT EXISTS service_catalog_v3_state_reference SCHEMALESS;`, nil)
 	if len(probeRows) != 1 || probeRows[0].Count != 0 {
 		return errors.New("migrate service catalog v3 lifecycle schema: unowned pre-migration rows")
 	}
-	results, err := surrealdb.Query[any](ctx, s.db, serviceCatalogV3LifecycleSchema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceCatalogV3LifecycleSchema, "migrate service catalog v3 lifecycle schema "); err != nil {
 		return fmt.Errorf("migrate service catalog v3 lifecycle schema: define: %w", err)
-	}
-	for index, result := range *results {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"migrate service catalog v3 lifecycle schema statement %d: %s",
-				index, result.Error.Message,
-			)
-		}
 	}
 	written, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
@@ -726,15 +710,17 @@ SELECT * FROM service_catalog_v3_root_member
 			!equalServiceCatalogV3RootMember(edge, edge) {
 			return ErrInvalidServiceCatalogV3Lifecycle
 		}
-		deleted, deleteErr := s.deleteServiceCatalogV3Orphan(ctx, `
+		deleted, deleteErr := s.deleteServiceCatalogV3Orphan(ctx,
+			"service_catalog_v3_lifecycle",
+			"SELECT VALUE id FROM service_catalog_v3_lifecycle WHERE root_digest = $root_digest LIMIT 1", `
 BEGIN;
 LET $owned = array::len(SELECT id FROM service_catalog_v3_lifecycle
 	WHERE root_digest = $root_digest LIMIT 1);
 LET $deleted = IF $owned = 0 THEN DELETE $rid RETURN BEFORE ELSE [] END;
 RETURN [{ deleted: array::len($deleted) }];
 COMMIT;`, map[string]any{
-			"rid": edge.RecID, "root_digest": edge.RootDigest,
-		})
+				"rid": edge.RecID, "root_digest": edge.RootDigest,
+			})
 		if deleteErr != nil {
 			return fmt.Errorf("repair service catalog v3 startup: orphan edge: %w", deleteErr)
 		}
@@ -767,15 +753,17 @@ SELECT id, member_digest FROM service_catalog_v3_member
 			) {
 			return ErrInvalidServiceCatalogV3Lifecycle
 		}
-		deleted, deleteErr := s.deleteServiceCatalogV3Orphan(ctx, `
+		deleted, deleteErr := s.deleteServiceCatalogV3Orphan(ctx,
+			"service_catalog_v3_root_member",
+			"SELECT VALUE id FROM service_catalog_v3_root_member WHERE member_digest = $member_digest LIMIT 1", `
 BEGIN;
 LET $owned = array::len(SELECT id FROM service_catalog_v3_root_member
 	WHERE member_digest = $member_digest LIMIT 1);
 LET $deleted = IF $owned = 0 THEN DELETE $rid RETURN BEFORE ELSE [] END;
 RETURN [{ deleted: array::len($deleted) }];
 COMMIT;`, map[string]any{
-			"rid": member.RecID, "member_digest": member.MemberDigest,
-		})
+				"rid": member.RecID, "member_digest": member.MemberDigest,
+			})
 		if deleteErr != nil {
 			return fmt.Errorf("repair service catalog v3 startup: orphan member: %w", deleteErr)
 		}
@@ -808,15 +796,17 @@ SELECT id FROM service_catalog_v3_authority_version
 		if !ok || identifier == "" {
 			return ErrInvalidServiceCatalogV3Lifecycle
 		}
-		deleted, deleteErr := s.deleteServiceCatalogV3Orphan(ctx, `
+		deleted, deleteErr := s.deleteServiceCatalogV3Orphan(ctx,
+			"service_catalog_v3_lifecycle",
+			"SELECT VALUE id FROM service_catalog_v3_lifecycle WHERE authority_version_id = $authority_version_id LIMIT 1", `
 BEGIN;
 LET $owned = array::len(SELECT id FROM service_catalog_v3_lifecycle
 	WHERE authority_version_id = $authority_version_id LIMIT 1);
 LET $deleted = IF $owned = 0 THEN DELETE $rid RETURN BEFORE ELSE [] END;
 RETURN [{ deleted: array::len($deleted) }];
 COMMIT;`, map[string]any{
-			"rid": version.RecID, "authority_version_id": identifier,
-		})
+				"rid": version.RecID, "authority_version_id": identifier,
+			})
 		if deleteErr != nil {
 			return fmt.Errorf("repair service catalog v3 startup: orphan authority version: %w", deleteErr)
 		}
@@ -827,9 +817,33 @@ COMMIT;`, map[string]any{
 
 func (s *Surreal) deleteServiceCatalogV3Orphan(
 	ctx context.Context,
-	statement string,
+	ownerTable, ownership, statement string,
 	vars map[string]any,
 ) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	// The three caller-owned recipes submit no write while a real owner exists.
+	// An empty read is only eligibility: the unchanged transaction rechecks
+	// ownership before deleting, including an owner created after this read.
+	probe, err := surrealdb.Query[[]models.RecordID](ctx, s.db, ownership, vars)
+	if err != nil {
+		return 0, err
+	}
+	if probe == nil || len(*probe) != 1 || (*probe)[0].Status != "OK" ||
+		(*probe)[0].Error != nil || (*probe)[0].Result == nil || len((*probe)[0].Result) > 1 {
+		return 0, ErrInvalidServiceCatalogV3Lifecycle
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if owners := (*probe)[0].Result; len(owners) != 0 {
+		identity, ok := owners[0].ID.(string)
+		if owners[0].Table != ownerTable || !ok || identity == "" {
+			return 0, ErrInvalidServiceCatalogV3Lifecycle
+		}
+		return 0, nil
+	}
 	results, err := surrealdb.Query[[]serviceCatalogV3OrphanDelete](
 		ctx, s.db, statement, vars,
 	)

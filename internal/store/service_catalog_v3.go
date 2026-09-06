@@ -836,6 +836,12 @@ func serviceCatalogV3SchemaMigrationID() models.RecordID {
 	return models.NewRecordID("store_migration", "service_catalog_v3_schema")
 }
 
+const serviceCatalogV3PreflightSchema = `
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_root SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_member SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_authority_version SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_candidate SCHEMALESS;`
+
 const serviceCatalogV3Schema = `
 DEFINE TABLE OVERWRITE service_catalog_v3_root SCHEMAFULL;
 DEFINE FIELD OVERWRITE root_digest ON service_catalog_v3_root TYPE string;
@@ -891,21 +897,8 @@ func (s *Surreal) migrateServiceCatalogV3Schema(ctx context.Context) error {
 	if len(markerRows) > 1 {
 		return errors.New("migrate service catalog v3 schema: duplicate marker")
 	}
-	preflightSchema, err := surrealdb.Query[any](ctx, s.db, `
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_root SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_member SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_authority_version SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_candidate SCHEMALESS;`, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceCatalogV3PreflightSchema, "migrate service catalog v3 preflight "); err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: preflight schema: %w", err)
-	}
-	for index, result := range *preflightSchema {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"migrate service catalog v3 preflight statement %d: %s",
-				index, result.Error.Message,
-			)
-		}
 	}
 	probe, err := surrealdb.Query[[]struct {
 		Count int `json:"count"`
@@ -922,17 +915,8 @@ DEFINE TABLE IF NOT EXISTS service_catalog_v3_candidate SCHEMALESS;`, nil)
 	if len(probeRows) != 1 || probeRows[0].Count != 0 {
 		return errors.New("migrate service catalog v3 schema: unowned pre-migration rows")
 	}
-	results, err := surrealdb.Query[any](ctx, s.db, serviceCatalogV3Schema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceCatalogV3Schema, "migrate service catalog v3 schema "); err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: define: %w", err)
-	}
-	for index, result := range *results {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"migrate service catalog v3 schema statement %d: %s",
-				index, result.Error.Message,
-			)
-		}
 	}
 	markerWrite, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;

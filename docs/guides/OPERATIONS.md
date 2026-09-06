@@ -43,10 +43,17 @@ earlier successful metadata definition is not rolled back. Generic remote
 connections keep their existing selection and permission requirements.
 
 Every store open reapplies the existing schema definitions and migrations;
-there is no schema-cache shortcut. Each of the five definition groups now
-commits in one native transaction at its existing place between migrations.
+there is no schema-cache shortcut. Five always-reapplied definition groups each
+commit in one native transaction at their existing places between migrations.
 Missing indexes and overwritten field definitions are still repaired, and
 index repair can scan existing data.
+
+Missing-marker v3 catalog, catalog-lifecycle and runtime-selector migrations
+also use five bounded definition batches in total, preserving their separate
+empty-table probes and completion markers. Existing valid markers skip those
+migration batches as before. Startup catalog cleanup reads ownership before
+attempting deletion; a possible orphan still passes the original atomic
+ownership check before removal.
 
 A later statement failure rolls back earlier definitions in that same group,
 including a newly installed guard beside a failing index, and prevents later

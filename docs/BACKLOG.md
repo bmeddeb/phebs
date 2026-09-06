@@ -4997,6 +4997,37 @@ whitespace passed. Native compatibility and immutable-tree gates remain pending.
 remains outside the established exact source-descriptor boundary; this is no
 assumed zero-write recipe or phase-five transaction-fit claim.
 
+Exact authentication-expiry commit
+`d48d9d3356daae088c49a48e6b7444a28d678d9f` passed detached-clean native
+expiry and existing API-key/session compatibility in normal (1.899s) and race
+(2.683s), then the complete auth package in normal (0.803s) and race (5.401s).
+Vet, pinned lint (zero findings), documentation (0.617s), glossary and
+whitespace passed; the checkout remained clean and no native engine survives.
+These close that guard's scoped compatibility and immutable-tree gates only.
+
+The complete catalog/lifecycle/selector source inventory found five genuine
+missing-marker multi-definition calls and an always-reached orphan scan that
+submitted empty conditional deletion transactions for owned records. Reusing
+the existing batch helper preserves 78 exact definitions across five explicit
+transactions. Actual owner probes now avoid healthy orphan deletions, while
+positive eligibility retains the original native fence and successful-delete
+cap. Root independently reviewed both source/test deltas with no findings.
+The orphan selectors passed pure normal three-repeat/race three-repeat in
+0.624s/1.595s and existing genuine startup repair/orphan compatibility in
+1.170s. These prove dispatch and compatibility separately, not native phase
+counts. The DDL test fixture initially failed compilation on two SDK-shape
+assumptions, then a missing mock codec caused failures in 0.484s and the
+already-started 0.453s/0.621s repeats; these test-only setup errors were
+corrected without changing production definitions. Corrected pure three-repeat
+normal/race passed in 0.484s/1.707s. Existing real schema atomicity,
+self-healing/reopen and catalog/lifecycle migration repair tests passed in
+11.708s across four serial engine epochs, all joined. Vet, pinned lint and
+whitespace pass. PLAN records actual fresh/marker-present costs and the
+worst-case extra orphan probes. Independent owning-doc review reported all
+severity counts zero; documentation (0.665s), glossary and whitespace passed.
+Immutable-tree gates remain pending; neither a complete 170-transaction phase
+fit nor freeze follows.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

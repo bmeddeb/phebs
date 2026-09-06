@@ -1135,14 +1135,8 @@ DEFINE TABLE IF NOT EXISTS service_runtime_selector SCHEMALESS;`, nil)
 	if len(probeRows) != 1 || probeRows[0].Count != 0 {
 		return errors.New("migrate service runtime selector schema: unowned pre-migration rows")
 	}
-	results, err := surrealdb.Query[any](ctx, s.db, serviceRuntimeSelectorSchema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceRuntimeSelectorSchema, "migrate service runtime selector schema "); err != nil {
 		return fmt.Errorf("migrate service runtime selector schema: define: %w", err)
-	}
-	for index, result := range *results {
-		if result.Error != nil {
-			return fmt.Errorf("migrate service runtime selector schema statement %d: %s", index, result.Error.Message)
-		}
 	}
 	written, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
