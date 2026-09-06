@@ -5597,6 +5597,36 @@ This closes the bounded first-epoch slice only: cold convergence, semantic
 phase handoffs, all five epochs, full executor/launcher admission, exact-tree
 acceptance and freeze remain open. No ceremony was executed.
 
+**Next bounded slice — cold convergence and first handoff.** Extend the same
+genuine epoch owner, not a replacement runner. `StartCold` preserves the small
+startup-only `Start` path and admits the unchanged cold/health deadlines;
+`ColdToWarm` consumes serial, bounded, gap-free X/T/F responses and read reports,
+binds the one final authority to actual authored A and the frozen oracle, then
+joins owner/request tails and coordinates both reducers into phase three.
+Ordinary owners and requests stay fenced there; no warm observation is claimed.
+The owning PLAN rows specify the eight PC01 pairs and separate 64-MiB private
+diagnostic refusal cap, which is not full log-fit or native measurement proof.
+AC: strict transport/response/report/oracle refusals, cancellation and one-shot
+ownership, actual inherited DA01/PC01/SA01 handoff mechanics and clean stop,
+focused normal/race/static/docs/retained-byte gates, independent exact-source
+and steady-state-cost review, then a separately opt-in full-population native
+cold/handoff rehearsal before integration. Full phase-work/log capture and
+executor/launcher/acceptance/freeze remain separate. Source-only tests must not
+be relabeled as a native cold or ceremony pass.
+
+The implementation now passes focused normal tests (0.619s), three-repeat
+focused race tests (6.309s), vet and pinned lint. The inherited test-binary
+fixture exercises the actual bootstrap, SDK owner, persistent parent handle,
+both reducers' checkpoints, phase-three owner/request fences and joined close;
+it executes no generic tool and supplies no native Phebs/F authority claim.
+Strict inspector tests include actual Huma serialization and a full modeled
+oracle F response (105,991 bytes), plus malformed/duplicate/truncated responses,
+report/ordinal/count refusals, authored-A/projection mismatches and accepted
+positive-prefix preservation. The modeled runtime digests are not live evidence.
+Documentation/glossary, whitespace and unchanged retained V1/V2 bytes pass.
+Exact immutable review and the opted-in native cold/handoff gate remain open;
+the earlier startup-only pass at `1bb06fb8` is not attributed to this source.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

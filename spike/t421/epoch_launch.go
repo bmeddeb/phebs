@@ -29,6 +29,8 @@ var ErrExecutionEpochOne = errors.New("execution epoch-one launch unavailable or
 type ExecutionEpochOne struct {
 	mu                     sync.Mutex
 	epochs                 *ExecutionEpochConfigCustody
+	plan                   Plan // Privately decoded once by this constructor.
+	authorStarted          time.Time
 	phebs, zoekt, surreal  *ExecutionToolCustody
 	controller             *dispatchadmission.Controller
 	parent                 *dispatchadmission.LocalProducer
@@ -72,7 +74,7 @@ func PrepareExecutionEpochOne(ctx context.Context, epochs *ExecutionEpochConfigC
 		return nil, ErrExecutionEpochOne
 	}
 	lifetime, release := context.WithCancel(context.Background())
-	flow := &ExecutionEpochOne{epochs: epochs, phebs: phebs, zoekt: zoekt, surreal: surreal, release: release}
+	flow := &ExecutionEpochOne{epochs: epochs, plan: plan, phebs: phebs, zoekt: zoekt, surreal: surreal, release: release}
 	defer func() {
 		if retErr != nil {
 			_ = flow.Close()
@@ -110,6 +112,7 @@ func (flow *ExecutionEpochOne) AuthorA(ctx context.Context) (ExecutionAuthorResu
 	if flow.closed || flow.used || flow.authored {
 		return ExecutionAuthorResult{}, ErrExecutionEpochOne
 	}
+	flow.authorStarted = time.Now()
 	result, err := flow.epochs.author.AuthorNextOn(ctx, flow.controller, flow.parent, 7)
 	flow.authored = err == nil && result.Completed
 	return result, err
@@ -178,6 +181,14 @@ type ExecutionEpochOneRun struct {
 	healthUsed   bool
 	healthCancel context.CancelFunc
 	healthDone   chan struct{}
+	healthy      bool
+	healthLimit  time.Duration
+	coldDeadline time.Time
+	coldUsed     bool
+	coldCancel   context.CancelFunc
+	coldDone     chan struct{}
+	warm         bool // Only the completed coordinated handoff sets this.
+	inspection   *executionEpochInspection
 	stopping     bool
 	result       ExecutionEpochOneResult
 	err          error
@@ -219,6 +230,10 @@ func (flow *ExecutionEpochOne) checkTools(ctx context.Context) (string, []dispat
 // rehearsal, not frozen full-cold budgets. PC01 reserves DrainOwners, Pause,
 // and one terminal EOF pair; no phase transition is implemented by this slice.
 func (flow *ExecutionEpochOne) Start(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
+	return flow.start(ctx, epochOneStartup)
+}
+
+func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ *ExecutionEpochOneRun, retErr error) {
 	if flow == nil || flow.epochs == nil || flow.controller == nil || flow.parent == nil || flow.store == nil || ctx == nil || ctx.Err() != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -226,6 +241,22 @@ func (flow *ExecutionEpochOne) Start(ctx context.Context) (_ *ExecutionEpochOneR
 	defer flow.mu.Unlock()
 	if flow.closed || flow.used || !flow.authored {
 		return nil, ErrExecutionEpochOne
+	}
+	bounds, err := epochOneBounds(flow.plan, mode)
+	if err != nil {
+		return nil, err
+	}
+	deadline := time.Now().Add(bounds.lifetime)
+	var coldDeadline time.Time
+	if mode == epochOneCold {
+		if flow.authorStarted.IsZero() {
+			return nil, ErrExecutionEpochOne
+		}
+		coldDeadline = flow.authorStarted.Add(bounds.cold)
+		deadline = flow.authorStarted.Add(bounds.lifetime)
+		if !time.Now().Before(coldDeadline) {
+			return nil, ErrExecutionEpochOne
+		}
 	}
 	flow.used = true
 	author, epochs := flow.epochs.author, flow.epochs
@@ -303,9 +334,10 @@ func (flow *ExecutionEpochOne) Start(ctx context.Context) (_ *ExecutionEpochOneR
 		return nil, ErrExecutionEpochOne
 	}
 	defer func() { _ = storeFile.Close() }() // Explicit post-Start close is checked below.
-	runCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
-	run := &ExecutionEpochOneRun{flow: flow, epoch: epoch, stop: make(chan struct{}), done: make(chan struct{})}
-	output := &checkoutCommandOutput{remaining: 1 << 20, cancel: cancel}
+	runCtx, cancel := context.WithDeadline(ctx, deadline)
+	run := &ExecutionEpochOneRun{flow: flow, epoch: epoch, stop: make(chan struct{}), done: make(chan struct{}),
+		healthLimit: bounds.health, coldDeadline: coldDeadline}
+	output := &checkoutCommandOutput{remaining: bounds.outputBytes, cancel: cancel}
 	run.output = output
 	command := exec.Command(path, "serve", "--config", epoch.ConfigPath)
 	command.Dir, command.Env = author.parent, environment
@@ -331,7 +363,7 @@ func (flow *ExecutionEpochOne) Start(ctx context.Context) (_ *ExecutionEpochOneR
 	if storeFile.Close() != nil {
 		retErr = ErrExecutionEpochOne
 	}
-	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: 3 * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: 2, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
 	var served <-chan error
@@ -393,7 +425,11 @@ func (run *ExecutionEpochOneRun) Health(ctx context.Context) (retErr error) {
 		return ErrExecutionEpochOne
 	default:
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	healthLimit := run.healthLimit
+	if healthLimit == 0 {
+		healthLimit = 5 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(ctx, healthLimit)
 	run.healthCancel, run.healthDone = cancel, make(chan struct{})
 	run.healthUsed = true
 	run.mu.Unlock()
@@ -445,6 +481,9 @@ func (run *ExecutionEpochOneRun) Health(ctx context.Context) (retErr error) {
 		run.stopOnce.Do(func() { close(run.stop) })
 		return ErrExecutionEpochOne
 	}
+	run.mu.Lock()
+	run.healthy = true
+	run.mu.Unlock()
 	return nil
 }
 
@@ -473,14 +512,25 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	run.mu.Lock()
 	run.stopping = true
 	healthCancel, healthDone := run.healthCancel, run.healthDone
+	coldCancel, coldDone := run.coldCancel, run.coldDone
 	run.mu.Unlock()
 	if healthCancel != nil {
 		healthCancel()
 		<-healthDone
 	}
+	if coldCancel != nil {
+		coldCancel()
+		<-coldDone
+	}
+	run.mu.Lock()
+	warm := run.warm
+	if run.err != nil {
+		failure = ErrExecutionEpochOne
+	}
+	run.mu.Unlock()
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer stopCancel()
-	if !joined && failure == nil && (run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
+	if !joined && failure == nil && (!warm && run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
 		failure = ErrExecutionEpochOne
 	}
 	if run.flow.parent.Pause(stopCtx) != nil || run.flow.controller.Fence() != nil {

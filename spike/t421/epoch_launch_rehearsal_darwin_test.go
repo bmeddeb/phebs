@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-// Only startup, one authenticated health request and a joined stop are claimed.
-// This uses the actual full-population A author and protected epoch-one inputs;
-// it does not wait for cold convergence, advance a semantic phase, sign evidence,
-// admit a host/profile, create a pressure volume or execute a ceremony.
+// Default: startup, one authenticated health request and a joined stop only.
+// The additional COLD selector opts into actual A convergence and phase 2->3;
+// neither mode signs evidence, admits a host/profile, creates a pressure volume
+// or executes a ceremony. No warm phase or full-work accounting pass is claimed.
 func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if os.Getenv("PHEBS_T422_EPOCH_ONE_REHEARSAL") != "1" {
 		t.Skip("requires explicit serial protected epoch-one startup rehearsal")
@@ -56,7 +56,12 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	ctx, cancel := context.WithTimeout(t.Context(), time.Hour)
+	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
+	allowance := time.Hour
+	if cold {
+		allowance = 5 * time.Hour // Includes protected builds; phase bounds remain separate.
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
 	var author *ExecutionAuthorCustody
 	var epochs *ExecutionEpochConfigCustody
@@ -188,7 +193,11 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)
 	}
 	started = time.Now()
-	run, err = flow.Start(ctx)
+	if cold {
+		run, err = flow.StartCold(ctx)
+	} else {
+		run, err = flow.Start(ctx)
+	}
 	if run != nil {
 		defer func() {
 			stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
@@ -221,13 +230,19 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err := run.Health(ctx); err != nil {
 		t.Fatal("actual authenticated epoch-one health", err)
 	}
+	if cold {
+		if err := run.ColdToWarm(ctx); err != nil {
+			t.Fatal("actual epoch-one cold convergence/handoff", err)
+		}
+		t.Log("actual cold X/T/F and phase-three handoff returned; warm remains unobserved")
+	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()
 	stopped, err := run.Stop(stopCtx)
 	if err != nil || !stopped.RootStarted || !stopped.RootJoined || !stopped.SessionEmpty {
 		t.Fatalf("actual epoch-one owner-drained stop: %+v; %v", stopped, err)
 	}
-	t.Logf("epoch-one startup/health/stop ONLY: %s; %+v; no cold/phase/receipt/freeze claim", time.Since(started), stopped)
+	t.Logf("epoch-one startup/health/stop: %s; cold_handoff_selector=%t; %+v; no warm/receipt/freeze claim", time.Since(started), cold, stopped)
 	if !canRelease() || flow.Close() != nil || epochs.Close() != nil || author.Close() != nil || planInput.Close() != nil {
 		t.Fatal("joined epoch-one owner/input closure failed; retaining custody")
 	}
