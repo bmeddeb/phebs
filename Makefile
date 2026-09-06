@@ -144,7 +144,7 @@ smoke-release: verify-release verify-surreal ## empty-data sync/index/search and
 	go run ./scripts/release-smoke -bundle "$(RELEASE_BUNDLE)" -timeout 2m
 
 test: verify-glossary
-	go test ./... -timeout=25m
+	go test ./... -timeout=60m
 
 docs-check: ## resolve tracked docs, enforce map coverage, and verify sealed T11.1 bytes
 	go test ./scripts \
@@ -208,7 +208,7 @@ ci-static: verify-go verify-golangci-lint verify-glossary
 	go test ./... -run '^$$'
 
 ci-go: verify-go verify-surreal
-	go test ./... -count=1 -timeout=25m
+	go test ./... -count=1 -timeout=60m
 
 ci-race: verify-go verify-surreal
 	go test -race ./internal/store ./internal/sync ./internal/indexer ./internal/search ./internal/extract ./internal/callerpublication ./internal/observationpublication -count=1 -timeout=40m

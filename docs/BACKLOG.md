@@ -5378,6 +5378,14 @@ checks passed normally (0.915s) and under race (2.444s); documentation and CI
 contract checks also passed. Full-stack gates and independent review remain
 pending; no merge, push or freeze is implied.
 
+The following test-budget slice raises `make test`/`ci-go` to a 60-minute
+per-package alarm and the enclosing full-Go CI job to 90 minutes. It retains
+the whole suite and all individual-test, race and ceremony deadlines; a small
+CI contract check covers both allowances. The earlier 25-minute T42.1 package
+timeout interrupted an individually in-budget test. Ben's reported
+2,071.970-second pass is additional evidence of the aggregate mismatch, not
+an exact-candidate normal/race result. Normal and full race gates remain due.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

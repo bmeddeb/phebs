@@ -40,6 +40,21 @@ func TestCIContractPinsToolsAndNamedGates(t *testing.T) {
 		t.Fatal(err)
 	}
 	workflow := string(workflowBytes)
+	if !strings.Contains(workflow, "  go-test:\n    name: Go full test\n    runs-on: ubuntu-latest\n    timeout-minutes: 90\n") {
+		t.Error("full Go job must retain setup and scheduling headroom beyond its 60-minute package allowance")
+	}
+	makefile, err := os.ReadFile(filepath.Join(root, "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, command := range []string{
+		"test: verify-glossary\n\tgo test ./... -timeout=60m\n",
+		"ci-go: verify-go verify-surreal\n\tgo test ./... -count=1 -timeout=60m\n",
+	} {
+		if !strings.Contains(string(makefile), command) {
+			t.Errorf("Makefile is missing full-suite allowance %q", command)
+		}
+	}
 	for _, exact := range []string{
 		"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
 		"actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
