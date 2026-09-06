@@ -5511,6 +5511,32 @@ execution or Epic closure. Changes since the full tested source are confined
 to PLAN and this backlog, preserving compiled, embedded, fixture and harness
 inputs and the original exact-source gate attribution.
 
+Ben supplied a further independent correction review confirming M-A1/M-B1/
+M-C1a closed and M-C1b's documented fail-closed disposition, while reporting
+0 critical, 0 high, 1 medium and 1 low new finding. Lead disposition: retain
+tested source `a9734771` and track both as explicit follow-ups, not silently
+fold them into the earlier zero-finding review or the inherited-test waiver.
+
+- Native index-commit conflict retry (medium): the census matcher does not
+  retry the engine's own optimistic conflict at COMMIT. Base writers also
+  lacked that retry, but the wider fenced read set may change contention;
+  unchanged failure frequency is not established. Before changing either
+  writer, reproduce the pinned engine's conflict and rollback, bind safe
+  QueryError-tree classification including aborted companions, reject mixed
+  unknown/transport/permanent errors, and gate ordinary/selected set/clear,
+  exhaustion, cancellation and fresh per-attempt census/charging. The shared
+  `isRetryable` helper's broad text matching is not itself this proof.
+- Selected retry budget (low): each accepted attempt consumes the phase's
+  remaining allowance; `ErrLimit` can latch before the 64-attempt cap. Retain
+  that fail-closed behavior and existing cost disclosure. Explicit ceiling-
+  exhaustion coverage belongs in the same retry follow-up; do not grant a
+  larger phase budget or claim that 64 attempts always fit.
+
+These are accepted non-blocking residuals for this stack's merge bar, not a
+claim that the native contention behavior is proven unchanged. Full gates
+remain attributed to `a9734771`; no implementation or retained input changed,
+and T42.2m/n/o acceptance, full admission and ceremony gates remain separate.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
