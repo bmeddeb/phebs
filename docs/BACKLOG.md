@@ -5565,6 +5565,38 @@ regression and three-repeat epoch-one race selector passed in 1.754s.
 Corrected immutable review and one real protected startup rehearsal remain
 required; no native epoch-one startup or phase advancement is claimed yet.
 
+Exact corrected source `1bb06fb834762b6b5d579fc7c58c765b65102468`
+(tree `40eef5a02bdad7d34d9b0c347abccb9102c74ade`) subsequently passed
+independent re-review of all ten source/test/documentation files with
+critical/high/medium/low all zero. Corrected focused normal tests passed in
+0.941s; the focused race run passed in 7.001s before the cancellation correction,
+whose three-repeat epoch-one race regression then passed in 1.754s. Vet,
+repository-pinned lint, documentation/glossary and whitespace checks passed;
+retained V1/V2 plan bytes are unchanged from integrated `7bb7b798`.
+
+The first real-start attempt refused build-input admission in 0.46s, before
+launching Phebs or SurrealDB. Its selected working checkout contained untracked
+and ignored inputs, which strict checkout admission refuses. That diagnostic
+custody remains retained. With no code or bound change, one corrected-input run
+used a dedicated clean detached checkout of the exact source above. Actual
+source/SDK/module custody passed in 382.093s with 67,624 entries, 55,905 files
+and 1,354,633,746 logical bytes. Actual supplied author/Phebs/indexer builds and
+independent protected reference admissions passed. The genuine shared author A
+then completed, and real epoch-one startup, one authenticated health request
+and owner-drained stop passed in 10.251s. The Phebs root joined with an empty
+native session; all three attached dispatch producers closed with zero active
+children, and the one opened store lifetime reached terminal EOF with zero
+outstanding calls/transactions. Observed store work was 39 transactions,
+746 rows and a 488-row maximum; unopened future lifetimes truthfully remained
+incomplete. Active author/epoch input Close refusal was exercised while the
+native server lived. Checked successful cleanup removed only this run's owned
+custody; a post-run check found no matching process or port-65499 listener.
+The rehearsal passed in 942.41s (package 943.082s), with its log retained at
+`/private/tmp/phebs-t422-epoch-one.v5Lw7S/native-start-clean-checkout.log`.
+This closes the bounded first-epoch slice only: cold convergence, semantic
+phase handoffs, all five epochs, full executor/launcher admission, exact-tree
+acceptance and freeze remain open. No ceremony was executed.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
