@@ -430,8 +430,33 @@ func (s *Surreal) DeleteAuthSession(ctx context.Context, tokenHash string) error
 }
 
 func (s *Surreal) DeleteExpiredAuthSessions(ctx context.Context, now time.Time) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	vars := map[string]any{"now": now}
+	// Startup and periodic cleanup are usually idle. Observe an actual expired
+	// identity before submitting the existing write-capable deletion query.
+	probe, err := surrealdb.Query[[]models.RecordID](ctx, s.db,
+		"SELECT VALUE id FROM auth_session WHERE expiry <= $now LIMIT 1", vars)
+	if err != nil {
+		return 0, err
+	}
+	if probe == nil || len(*probe) != 1 || (*probe)[0].Status != "OK" ||
+		(*probe)[0].Error != nil || (*probe)[0].Result == nil || len((*probe)[0].Result) > 1 {
+		return 0, errors.New("invalid expired authentication session census")
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if len((*probe)[0].Result) == 0 {
+		return 0, nil
+	}
+	identity := (*probe)[0].Result[0]
+	if identity.Table != "auth_session" {
+		return 0, errors.New("expired authentication session identity belongs to another table")
+	}
 	results, err := surrealdb.Query[[]authSessionRec](ctx, s.db,
-		"DELETE auth_session WHERE expiry <= $now RETURN BEFORE", map[string]any{"now": now})
+		"DELETE auth_session WHERE expiry <= $now RETURN BEFORE", vars)
 	if err != nil {
 		return 0, err
 	}

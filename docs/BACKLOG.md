@@ -4946,6 +4946,13 @@ flag observes terminal EOF, while explicit Wait/Close separately proves receiver
 join. The ADR now distinguishes those boundaries; documentation (0.481s),
 glossary and whitespace pass on the corrected wording.
 
+Fresh independent review closed that low finding and left all severity counts
+zero. Exact transport commit `de757d18d16bb02722cfde4628808b3cc33c7878`
+passed detached-clean package normal five-repeat (1.876s), race five-repeat
+(3.044s), vet, pinned lint (zero findings), documentation (0.527s), glossary
+and whitespace. The checkout remained clean; these close only the mechanical
+channel slice, not its genuine runtime/SDK admission or whole-store counters.
+
 Selected-state restore now preserves the original rollback target count while
 paging actual future deletions at 512 and current/preimage pairs at 256, then
 writing the final selected summary. It reuses the existing raw clear for four
@@ -4977,6 +4984,18 @@ race (95.584s) modes. Vet, pinned lint (zero findings), documentation (0.549s),
 glossary and whitespace passed, with the checkout clean before and after.
 This closes this restore fix's immutable-tree and archive compatibility gates,
 not the full store collector or phase-wide ceremony acceptance.
+
+Shared authentication-session expiry now performs one actual read-only probe
+before the unchanged predicate deletion. An exact empty array submits no write;
+positive cleanup returns the actual deletion count and preserves renewal
+semantics. Independent source/test/cost review reported all severity counts
+zero at source `034ceb99a4ee2124cc39702a44982aa132d1be513f64b81715819bc9cff9228d`
+and test `857b8cfff2b51e4b8ab68f4fea787268b675e98b7c0a9ccf19b0eaea505cc565`.
+Pure three-repeat checks passed in 0.606s. Independent owning-doc review
+reported all severity counts zero; documentation (0.718s), glossary and
+whitespace passed. Native compatibility and immutable-tree gates remain pending. Positive bulk expiry
+remains outside the established exact source-descriptor boundary; this is no
+assumed zero-write recipe or phase-five transaction-fit claim.
 
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review

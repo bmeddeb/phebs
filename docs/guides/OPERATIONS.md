@@ -1248,6 +1248,12 @@ phebs at the same config, and start; the same automatic backfill applies.
 
 ### Security boundary
 
+Session-expiry cleanup runs at startup and on the existing hourly cadence.
+When its read-only probe finds no expired session, it performs no deletion.
+Otherwise the existing expiry predicate is checked by the deletion itself;
+session validity continues to reject expired credentials independently of
+cleanup timing.
+
 - Use HTTPS outside loopback and keep `auth.cookie_secure: true`. When a
 reverse proxy terminates TLS, restrict direct access to phebs and configure
 every trusted proxy-hop CIDR in `auth.trusted_proxies` so clients receive
