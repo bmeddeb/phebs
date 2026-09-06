@@ -4612,6 +4612,16 @@ accidental compatibility launch to fall back to uncounted execution. The
 prospective V3 execution profile records this selection explicitly; manually
 setting an environment variable cannot select it without genuine bootstrap.
 
+Prospective V3 receipts now keep incomplete store evidence explicit through
+the existing unavailable-metrics list: transaction count, submitted-row count
+and per-transaction row maximum are one all-or-none family. A retained positive
+prefix is not reset to zero after transport loss or hard death. Refused work
+before actual submission does not invent an attempt or a cap-plus-one result.
+A separately observed resource crossing remains visible, but incomplete store
+evidence prevents a resource-only diagnosis. This failure vocabulary does not
+implement the complete store collector or make the launcher ready; the 512-row
+and 170-transaction limits and retained V1/V2 evidence stay unchanged.
+
 ## Developing phebs
 
 

@@ -4684,6 +4684,45 @@ Documentation (0.630s), glossary and whitespace also passed. Complete immutable
 candidate native/Restore gates remain pending; these review results do not
 supersede them.
 
+The clean immutable replay commit
+`042621b7765dee79df637fa62cbdbbf5258dc0e4` then failed its complete recovery
+package in 56.524s. The six-artifact test stopped at its new preflight assertion
+after 15.75s: its actual owned export contains an unsupported literal delimiter
+at byte 16,617, before import began. The later focused backup/restore test
+passed, but cannot supersede that failure. All native/SDK processes joined and
+the detached checkout remains unchanged. The next correction must isolate and
+native-test that real export form; neither permissive parsing nor silent
+fallback is a protected replay pass.
+
+The next `codex/t42.2l-store-failure-truth` slice selects the existing V3
+failure surface for an atomic incomplete-store metric family and a closed
+typed store-submission refusal. PLAN owns the exact linearization decision:
+prevalidation/budget refusal does not fabricate an attempt or cap+1; an actual
+source submission committed by the parent remains in its positive prefix even
+if its ACK/native reply is lost, without claiming native start/commit.
+AC: V3-only all-or-none store family, preserved primary evidence and positive
+counts, truthful reduction with incomplete resource evidence, unchanged
+substantiated topology precedence, clean-teardown refusal and passed-phase
+rejection, retained V1/V2 and numerical/measurement contracts unchanged,
+focused normal/race and independent source/cost review. Implementation and
+exact-tree gates remain pending, and this is not the complete SDK/HTTP collector.
+
+The scoped V3 validator implementation passed final focused normal and race
+selectors three times (0.936s/5.599s), vet, repository-pinned lint and whitespace.
+These are section-validation and canonical-wire regressions: they preserve a
+positive 170-transaction/512-row-maximum prefix, reject partial families and
+invented cap-plus-one work, preserve a primary resource crossing and independent
+topology precedence, and require failed teardown checks for missing store
+evidence. They are not a full constructor or native collector gate. Final
+independent source/cost/manual review and immutable-commit checks remain pending.
+
+Fresh independent review of the exact V3 source, tests and owning PLAN/backlog/
+manual record then closed critical/high/medium/low at zero. It confirmed the
+atomic three-name family, ten-name accepted list, six closed reasons, exact
+88-byte secondary evidence and 28-byte unsealed trigger additions, retained
+primary/positive evidence, historical routing and exact teardown checks.
+Immutable-commit gates and actual transport/coverage remain separate.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

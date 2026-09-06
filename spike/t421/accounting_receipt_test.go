@@ -285,6 +285,201 @@ func TestAccountingMixedResourceFailureReducesWithoutErasingCrossing(t *testing.
 	}
 }
 
+func TestAccountingStoreUnavailableVocabulary(t *testing.T) {
+	family := []string{"max_rows_in_any_transaction", "store_rows", "store_transactions"}
+	if !slices.Equal(family, storeUnavailableMetricNames) {
+		t.Fatal("store metric family changed")
+	}
+	for _, test := range []struct {
+		name, schema string
+		names        []string
+		want         bool
+	}{
+		{"complete", PlanV3Schema, nil, true},
+		{"retained_prefix", PlanV3Schema, family, true},
+		{"mixed_unavailable", PlanV3Schema, slices.Concat([]string{"controlled_dispatch_attempts"}, family), true},
+		{"missing_maximum", PlanV3Schema, family[1:], false},
+		{"missing_rows", PlanV3Schema, []string{family[0], family[2]}, false},
+		{"missing_transactions", PlanV3Schema, family[:2], false},
+		{"unsorted", PlanV3Schema, []string{family[2], family[1], family[0]}, false},
+		{"duplicate", PlanV3Schema, slices.Concat(family, []string{family[2]}), false},
+		{"unknown", PlanV3Schema, slices.Concat(family, []string{"unobserved_rows"}), false},
+		{"historical_v1", PlanSchema, family, false},
+		{"historical_v2", PlanV2Schema, family, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := validUnavailableMetricsForPlan(test.names, test.schema); got != test.want {
+				t.Fatalf("unavailable vocabulary = %t, want %t", got, test.want)
+			}
+		})
+	}
+}
+
+func accountingStoreTestFailure(t *testing.T, plan Plan, measurement PhaseMeasurement, reason string) ReceiptFailure {
+	t.Helper()
+	failure := ReceiptFailure{Phase: measurement.Phase, Class: "internal", Code: "measurement_unavailable",
+		Observation: FailureObservation{Schema: plan.ReceiptContract.FailureObservationSchema,
+			Kind: "measurement_unavailable", UnavailableMetrics: slices.Clone(storeUnavailableMetricNames)}}
+	if reason != "" {
+		failure.Code, failure.Observation.Kind, failure.Observation.Metric = "internal_error", "typed_error", "internal_error"
+		failure.Evidence = &FailureEvidenceProjection{Schema: plan.ReceiptContract.FailureObservationSchema + "/public-projection-v1",
+			Kind: "internal", Internal: &InternalFailureEvidence{Phase: measurement.Phase,
+				Stage: "store_submission", ErrorClass: reason, EventOrdinal: measurement.StartEventOrdinal + 1}}
+		failure.Observation.ObservedSHA256 = mustReceiptSHA256(t, *failure.Evidence)
+	}
+	failure.Observation.EvidenceSHA256 = mustReceiptSHA256(t, failure.Observation)
+	return failure
+}
+
+// These are bounded section-validator/wire regressions, not a production
+// submission channel, private receipt issuer or full constructor replay.
+func TestAccountingStorePrefixRefusalDoesNotInventWork(t *testing.T) {
+	plan := accountingTestPlan(t)
+	phase := "logical_delta_b"
+	measurement := accountingTestMeasurement(plan, phase)
+	bounds := plan.WorkEnvelope.Phases[slices.Index(plan.PhaseOrder, phase)]
+	if bounds.StoreTransactions.Maximum != 170 || plan.WorkEnvelope.MaximumStoreRowsPerTransaction != 512 ||
+		plan.MeterPolicy.StoreSemantics != frozenMeterPolicy().StoreSemantics {
+		t.Fatal("frozen store unit or safety numbers changed")
+	}
+	for _, reason := range []string{"", "budget_refused", "invalid_descriptor", "invalid_protocol", "transport_unavailable", "canceled", "incomplete"} {
+		t.Run("reason_"+reason, func(t *testing.T) {
+			value := measurement
+			value.Metrics.StoreTransactions, value.Metrics.StoreRows, value.Metrics.MaxRowsTransaction = 170, 170*512, 512
+			failure := accountingStoreTestFailure(t, plan, value, reason)
+			if !validReceiptFailure(failure, phase, plan) {
+				t.Fatal("positive incomplete store prefix rejected")
+			}
+			receipt := Receipt{Schema: ReceiptV3Schema, Measurements: []PhaseMeasurement{value}}
+			if reason != "" {
+				if err := validateFailureEvidenceProjection(receipt, failure, plan); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := validatePhaseWorkMetrics(value.Metrics, value.DispatchAccounting.Roles, bounds, "stopped", &failure.Observation, plan.WorkEnvelope); err != nil {
+				t.Fatal(err)
+			}
+			if decision, priority, err := expectedStoppedDecision(failure, receipt.Measurements, plan); err != nil || decision != "reduce" || priority != 4 {
+				t.Fatalf("store refusal decision = %s/%d: %v", decision, priority, err)
+			}
+			type storeWire struct {
+				Measurement PhaseMeasurement `json:"measurement"`
+				Failure     ReceiptFailure   `json:"failure"`
+			}
+			wire := storeWire{value, failure}
+			raw, err := MarshalCanonical(wire)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded storeWire
+			if err := json.Unmarshal(raw, &decoded); err != nil || !reflect.DeepEqual(wire, decoded) {
+				t.Fatalf("store prefix wire roundtrip: %v", err)
+			}
+			value.Metrics.StoreTransactions++
+			if err := validatePhaseWorkMetrics(value.Metrics, value.DispatchAccounting.Roles, bounds, "stopped", &failure.Observation, plan.WorkEnvelope); err == nil {
+				t.Fatal("refused permission manufactured a cap+1 attempt")
+			}
+		})
+	}
+	for _, reason := range []string{"unknown", "native_committed", "private host error"} {
+		failure := accountingStoreTestFailure(t, plan, measurement, reason)
+		if err := validateFailureEvidenceProjection(Receipt{Measurements: []PhaseMeasurement{measurement}}, failure, plan); err == nil {
+			t.Fatalf("unknown store failure %q accepted", reason)
+		}
+	}
+	failure := accountingStoreTestFailure(t, plan, measurement, "budget_refused")
+	failure.Observation.UnavailableMetrics = nil
+	if err := validateFailureEvidenceProjection(Receipt{Measurements: []PhaseMeasurement{measurement}}, failure, plan); err == nil {
+		t.Fatal("store refusal claimed a complete phase")
+	}
+	// A failure before the first concrete submission retains a truthful zero
+	// prefix with explicit incompleteness; no nonzero sentinel is manufactured.
+	failure = accountingStoreTestFailure(t, plan, measurement, "")
+	if !validReceiptFailure(failure, phase, plan) || validatePhaseWorkMetrics(measurement.Metrics, measurement.DispatchAccounting.Roles, bounds, "stopped", &failure.Observation, plan.WorkEnvelope) != nil {
+		t.Fatal("explicitly incomplete pre-submission zero prefix refused")
+	}
+}
+
+func TestAccountingStoreSecondaryFailureRetainsPrimaryEvidence(t *testing.T) {
+	plan := accountingTestPlan(t)
+	measurement := accountingTestMeasurement(plan, "product_queries")
+	measurement.Metrics.StoreTransactions, measurement.Metrics.StoreRows, measurement.Metrics.MaxRowsTransaction = 2, 3, 2
+	measurement.Metrics.ObservedRSSHighWaterBytes = Bytes(plan.SafetyEnvelope.MaximumPeakRSSBytes + 1)
+	measurement.NativeObservation.ObservedRSSHighWaterBytes = uint64(measurement.Metrics.ObservedRSSHighWaterBytes)
+	failure := ReceiptFailure{Phase: measurement.Phase, Class: "resource", Code: "observed_rss_ceiling",
+		Observation: FailureObservation{Schema: plan.ReceiptContract.FailureObservationSchema, Kind: "gauge_limit",
+			Metric: "observed_rss_high_water_bytes", Limit: plan.SafetyEnvelope.MaximumPeakRSSBytes,
+			Observed: uint64(measurement.Metrics.ObservedRSSHighWaterBytes), UnavailableMetrics: slices.Clone(storeUnavailableMetricNames)}}
+	failure.Observation.EvidenceSHA256 = mustReceiptSHA256(t, failure.Observation)
+	if !validReceiptFailure(failure, measurement.Phase, plan) {
+		t.Fatal("substantiated crossing with an incomplete store prefix refused")
+	}
+	if err := validateAccountingMeasurement(measurement, "stopped", &failure, ReceiptTeardown{}, plan); err != nil {
+		t.Fatal(err)
+	}
+	if decision, priority, err := expectedStoppedDecision(failure, []PhaseMeasurement{measurement}, plan); err != nil || decision != "reduce" || priority != 4 {
+		t.Fatalf("mixed resource/store failure = %s/%d: %v", decision, priority, err)
+	}
+	for _, schema := range []string{PlanSchema, PlanV2Schema} {
+		legacy := plan
+		legacy.Schema = schema
+		historicalFailure := failure
+		historicalFailure.Code, historicalFailure.Observation.Metric = "data_allocated_ceiling", "data_allocated_bytes"
+		historicalFailure.Observation.EvidenceSHA256 = ""
+		historicalFailure.Observation.EvidenceSHA256 = mustReceiptSHA256(t, historicalFailure.Observation)
+		if validReceiptFailure(historicalFailure, measurement.Phase, legacy) {
+			t.Fatal("historical receipt accepted V3 secondary store evidence")
+		}
+		historicalFailure.Observation.UnavailableMetrics, historicalFailure.Observation.EvidenceSHA256 = nil, ""
+		historicalFailure.Observation.EvidenceSHA256 = mustReceiptSHA256(t, historicalFailure.Observation)
+		if !validReceiptFailure(historicalFailure, measurement.Phase, legacy) {
+			t.Fatal("historical primary failure changed")
+		}
+	}
+	for _, names := range [][]string{storeUnavailableMetricNames[:2], {}, {"observed_rss_high_water_bytes"}} {
+		invalid := failure
+		invalid.Observation.UnavailableMetrics = slices.Clone(names)
+		invalid.Observation.EvidenceSHA256 = ""
+		invalid.Observation.EvidenceSHA256 = mustReceiptSHA256(t, invalid.Observation)
+		if validReceiptFailure(invalid, measurement.Phase, plan) {
+			t.Fatal("partial or unrelated secondary unavailable family accepted")
+		}
+	}
+	measurement.Metrics.MaterializedOwnerPairs = 1
+	failure.Class, failure.Code = "topology", "materialized_cartesian_owner_pairs_nonzero"
+	failure.Observation.Kind, failure.Observation.Metric = "counter_crossing", "materialized_cartesian_owner_pairs"
+	failure.Observation.Limit, failure.Observation.Observed, failure.Observation.EvidenceSHA256 = 0, 1, ""
+	failure.Observation.EvidenceSHA256 = mustReceiptSHA256(t, failure.Observation)
+	if !validReceiptFailure(failure, measurement.Phase, plan) {
+		t.Fatal("independent topology evidence refused")
+	}
+	if decision, priority, err := expectedStoppedDecision(failure, []PhaseMeasurement{measurement}, plan); err != nil || decision != "p6_investigation" || priority != 1 {
+		t.Fatalf("independent topology evidence = %s/%d: %v", decision, priority, err)
+	}
+}
+
+func TestAccountingStoreUnavailableTeardownRetainsPrefix(t *testing.T) {
+	plan := accountingTestPlan(t)
+	value, measurements := accountingTestTeardown(plan)
+	measurements[0].Metrics.StoreTransactions, measurements[0].Metrics.StoreRows, measurements[0].Metrics.MaxRowsTransaction = 2, 3, 2
+	value.MeasurementUnavailable, value.MeasurementErrors = slices.Clone(storeUnavailableMetricNames), 3
+	if _, err := validateReceiptTeardown(value, measurements, plan, ExecutionFreeze{}, false); err == nil {
+		t.Fatal("clean teardown accepted an incomplete store prefix")
+	}
+	value.Outcome = "failed"
+	value.Failure = &TeardownFailure{Schema: plan.ReceiptContract.TeardownFailureSchema, Kind: "multiple"}
+	for _, name := range storeUnavailableMetricNames {
+		value.Failure.FailedChecks = append(value.Failure.FailedChecks, "measurement_"+name+"_unavailable")
+	}
+	value.Failure.EvidenceSHA256 = mustReceiptSHA256(t, *value.Failure)
+	if clean, err := validateReceiptTeardown(value, measurements, plan, ExecutionFreeze{}, false); err != nil || clean {
+		t.Fatalf("truthful incomplete-store teardown refused: %v", err)
+	}
+	if measurements[0].Metrics.StoreTransactions != 2 || measurements[0].Metrics.StoreRows != 3 || measurements[0].Metrics.MaxRowsTransaction != 2 {
+		t.Fatal("incomplete cleanup erased the retained store prefix")
+	}
+}
+
 func TestAccountingProductionFixtureRejectsChangedInputs(t *testing.T) {
 	// Use the retained fixture bytes, not another production corpus build.
 	prospective := accountingTestPlan(t)

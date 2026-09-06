@@ -1532,7 +1532,8 @@ func expectedStoppedDecision(
 		if !gaugeObservationMatches(stopped.Observation, metric, limit, observed) {
 			return "", 0, errors.New("T42.2 resource stop observation is not exact")
 		}
-		if plan.Schema == PlanV3Schema && (!metrics.NativeMeasurementAvailable || !metrics.DispatchMeasurementAvailable) {
+		if plan.Schema == PlanV3Schema && (!metrics.NativeMeasurementAvailable || !metrics.DispatchMeasurementAvailable ||
+			hasUnavailableStoreMetrics(stopped.Observation.UnavailableMetrics)) {
 			// A retained crossing plus an independent accounting failure is not
 			// resource-only evidence for a topology/cohort recommendation.
 			return frozenDecision(plan, 4)
@@ -1676,6 +1677,11 @@ func validateFailureEvidenceProjection(receipt Receipt, stopped ReceiptFailure, 
 		if projection.Kind != "internal" || value == nil || value.Phase != stopped.Phase ||
 			!within(value.EventOrdinal) || !safeToken(value.Stage, 64) || !safeToken(value.ErrorClass, 64) {
 			return errors.New("T42.2 internal failure projection is invalid")
+		}
+		if plan.Schema == PlanV3Schema && value.Stage == "store_submission" &&
+			(!slices.Equal(stopped.Observation.UnavailableMetrics, storeUnavailableMetricNames) ||
+				!slices.Contains([]string{"budget_refused", "invalid_descriptor", "invalid_protocol", "transport_unavailable", "canceled", "incomplete"}, value.ErrorClass)) {
+			return errors.New("T42.2 store submission refusal lacks its closed incomplete-prefix evidence")
 		}
 	default:
 		return errors.New("T42.2 failure code has no public projection contract")
@@ -4853,7 +4859,12 @@ func validReceiptFailure(value ReceiptFailure, phase string, plan Plan) bool {
 	}
 	observation := value.Observation
 	if observation.Kind != "measurement_unavailable" && observation.UnavailableMetrics != nil {
-		return false
+		// V3 may retain an independently substantiated primary stop beside an
+		// incomplete store prefix. The existing metric values remain the exact
+		// retained positive prefix; absence of completeness never means zero.
+		if plan.Schema != PlanV3Schema || !slices.Equal(observation.UnavailableMetrics, storeUnavailableMetricNames) {
+			return false
+		}
 	}
 	switch observation.Kind {
 	case "exact_mismatch":

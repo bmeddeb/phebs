@@ -165,6 +165,21 @@ func receiptRSSStopCode(schema string) string {
 	return "peak_rss_ceiling"
 }
 
+// A failed store submission channel retains one coherent transaction/row
+// prefix. None of these three counters may imply completeness independently.
+var storeUnavailableMetricNames = []string{
+	"max_rows_in_any_transaction", "store_rows", "store_transactions",
+}
+
+func hasUnavailableStoreMetrics(values []string) bool {
+	for _, name := range storeUnavailableMetricNames {
+		if slices.Contains(values, name) {
+			return true
+		}
+	}
+	return false
+}
+
 func validUnavailableMetricsForPlan(values []string, schema string) bool {
 	if schema != PlanV3Schema {
 		return validUnavailableMetrics(values)
@@ -172,15 +187,20 @@ func validUnavailableMetricsForPlan(values []string, schema string) bool {
 	if !slices.IsSorted(values) {
 		return false
 	}
+	storeMetrics := 0
 	for index, value := range values {
 		if index > 0 && values[index-1] == value || !slices.Contains([]string{
 			"available_disk_bytes", "controlled_dispatch_attempts", "data_allocated_bytes", "data_logical_bytes",
-			"observed_rss_high_water_bytes", "total_disk_bytes", "wall_ms",
+			"max_rows_in_any_transaction", "observed_rss_high_water_bytes", "store_rows", "store_transactions",
+			"total_disk_bytes", "wall_ms",
 		}, value) {
 			return false
 		}
+		if slices.Contains(storeUnavailableMetricNames, value) {
+			storeMetrics++
+		}
 	}
-	return true
+	return storeMetrics == 0 || storeMetrics == len(storeUnavailableMetricNames)
 }
 
 func validateAccountingMeasurement(value PhaseMeasurement, outcome string, stopped *ReceiptFailure, teardown ReceiptTeardown, plan Plan) error {

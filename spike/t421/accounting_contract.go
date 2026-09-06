@@ -150,7 +150,7 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 	plan.Teardown.Scope = "owned-handles-recorded-private-sessions-and-nonforced-detach-v1"
 	for index := range plan.StopRules {
 		if plan.StopRules[index].Priority == 2 {
-			plan.StopRules[index].Trigger += "_with_complete_dispatch_and_available_native_measurement;otherwise_preserve_overshoot_and_reduce"
+			plan.StopRules[index].Trigger += "_with_complete_dispatch_and_store_submission_prefix_and_available_native_measurement;otherwise_preserve_overshoot_and_reduce"
 		}
 	}
 	return nil
