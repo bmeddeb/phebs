@@ -5061,6 +5061,30 @@ glossary and whitespace passed. Immutable-tree gates, actual
 source/factory/bootstrap/HTTP integration and native lifecycle proof remain
 pending.
 
+Exact adapter-core commit `f0e0eaeee387d152d2af9ac2c7ee084f93bbf89f`
+passed detached-clean transport normal five-repeat/race five-repeat in
+1.941s/3.050s and typed adapter selectors in 0.530s/1.678s. Vet, pinned lint
+(zero findings), documentation (0.535s), glossary and whitespace passed; the
+checkout remained clean. These close the core's scoped immutable gates only.
+
+The state-schema prerequisite now batches its existing definitions and repairs
+missing visible revisions in actual native-ID pages of at most 512, retaining
+the existing compatibility latch and marker order. Each positive write repeats
+the sorted census in its transaction. Pure page/order/failure selectors passed
+three repetitions in normal (0.610s) and race (1.774s) modes. The first native
+selector passed in 2.131s: existing schema idempotence, snapshot backfill and a
+514-row fixture covering numeric/composite IDs, a committed-page lost reply,
+explicit later resumption, a changed-page refusal and final exact content.
+The late-schema failure test now exercises a real native unique-index failure,
+not a formatter rejection. No automatic failed-write retry or total migration
+row cap was introduced, and no engine survived. An earlier compile-only attempt
+was blocked by concurrent unfinished private-control symbols and executed no
+test or child; the preliminary package lint encountered only the separately
+owned in-progress control branch. Independent source/test/owning-doc review
+reported all severity counts zero; documentation (0.635s), glossary and whitespace
+passed. Immutable-tree gates remain pending; PLAN records the added
+census/transaction costs and limitations.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

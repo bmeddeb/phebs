@@ -15,6 +15,7 @@ import (
 	"time"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
@@ -622,6 +623,11 @@ func TestServiceStateV3SnapshotSchemaMigrationBackfillsVisibleRevision(t *testin
 			DisplayName: "Orders",
 			Disposition: servicecatalog.DispositionAccepted,
 			Origin:      servicecatalog.OriginBase,
+		}, {
+			Key:         "payments",
+			DisplayName: "Payments",
+			Disposition: servicecatalog.DispositionAccepted,
+			Origin:      servicecatalog.OriginBase,
 		}},
 	)
 	if err := s.PublishServiceCatalogV3Candidate(ctx, generation); err != nil {
@@ -669,7 +675,7 @@ SELECT * FROM service_state_v3_current WHERE repository = $repository`, map[stri
 		t.Fatal(err)
 	}
 	got := firstDomainRows(rows)
-	if len(got) != 1 || got[0].VisibleFrom != 1 {
+	if len(got) != 2 || got[0].VisibleFrom != 1 || got[1].VisibleFrom != 1 {
 		t.Fatalf("migrated visible revision = %+v", got)
 	}
 
@@ -690,12 +696,19 @@ UPDATE $compatibility SET version = $prior RETURN NONE;`, map[string]any{
 	}
 	if err := s.migrateServiceStateV3SnapshotSchemaWithDefinition(
 		ctx,
-		"THROW 'forced snapshot schema failure';",
-	); err == nil {
-		t.Fatal("forced snapshot schema failure unexpectedly completed migration")
+		`DEFINE FIELD OVERWRITE visible_from ON service_state_v3_current TYPE int ASSERT $value >= 1;
+DEFINE INDEX OVERWRITE forced_snapshot_visible_unique ON service_state_v3_current FIELDS visible_from UNIQUE;`,
+	); err == nil || !strings.Contains(err.Error(), "forced_snapshot_visible_unique") {
+		t.Fatalf("late native unique-index failure = %v", err)
 	}
 	if version := serviceRuntimeCompatibilityMarker(t, s); version != serviceStateV3SnapshotCompatibilityMigrationVersion {
 		t.Fatalf("failed schema migration did not preserve compatibility latch: %q", version)
+	}
+	markers, err := surrealdb.Query[[]models.RecordID](ctx, s.db, "SELECT VALUE id FROM $rid", map[string]any{
+		"rid": serviceStateV3SnapshotSchemaMigrationID(),
+	})
+	if err != nil || markers == nil || len(*markers) != 1 || len((*markers)[0].Result) != 0 {
+		t.Fatalf("failed schema migration wrote its completion marker: %+v, %v", markers, err)
 	}
 }
 

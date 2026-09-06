@@ -55,6 +55,15 @@ migration batches as before. Startup catalog cleanup reads ownership before
 attempting deletion; a possible orphan still passes the original atomic
 ownership check before removal.
 
+Missing-marker service-state migrations also batch their definitions. Legacy
+rows missing a visible revision are repaired in pages of at most 512 actual
+record IDs, with the same page rechecked inside each write transaction. A
+concurrent page change refuses the write. A later failure leaves earlier pages
+committed and the compatibility latch raised, but no completion marker; a later
+startup re-censuses the remaining missing rows before completing the schema.
+There is no total migration row limit, and the page limit does not bound native
+scan work or memory. Existing valid markers retain their existing skip behavior.
+
 A later statement failure rolls back earlier definitions in that same group,
 including a newly installed guard beside a failing index, and prevents later
 migrations from running. Definitions already committed by earlier groups remain

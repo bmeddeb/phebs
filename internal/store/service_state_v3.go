@@ -2686,6 +2686,11 @@ COMMIT;`, map[string]any{
 
 const serviceStateV3SchemaMigrationVersion = "t41.5-service-state-v3-schema-v1"
 
+const serviceStateV3PreflightSchema = `
+DEFINE TABLE IF NOT EXISTS service_state_v3_current SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS service_state_v3_repository SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS service_state_v3_plan SCHEMALESS;`
+
 func serviceStateV3SchemaMigrationID() models.RecordID {
 	return models.NewRecordID("store_migration", "service_state_v3_schema")
 }
@@ -2788,17 +2793,8 @@ func (s *Surreal) migrateServiceStateV3Schema(ctx context.Context) error {
 	if len(markerRows) > 1 {
 		return errors.New("migrate service state v3 schema: duplicate marker")
 	}
-	preflight, err := surrealdb.Query[any](ctx, s.db, `
-DEFINE TABLE IF NOT EXISTS service_state_v3_current SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS service_state_v3_repository SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS service_state_v3_plan SCHEMALESS;`, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceStateV3PreflightSchema, "migrate service state v3 preflight "); err != nil {
 		return fmt.Errorf("migrate service state v3 schema: preflight schema: %w", err)
-	}
-	for index, result := range *preflight {
-		if result.Error != nil {
-			return fmt.Errorf("migrate service state v3 preflight statement %d: %s", index, result.Error.Message)
-		}
 	}
 	probe, err := surrealdb.Query[[]struct {
 		Count int `json:"count"`
@@ -2814,14 +2810,8 @@ DEFINE TABLE IF NOT EXISTS service_state_v3_plan SCHEMALESS;`, nil)
 	if len(probeRows) != 1 || probeRows[0].Count != 0 {
 		return errors.New("migrate service state v3 schema: unowned pre-migration rows")
 	}
-	results, err := surrealdb.Query[any](ctx, s.db, serviceStateV3Schema, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceStateV3Schema, "migrate service state v3 schema "); err != nil {
 		return fmt.Errorf("migrate service state v3 schema: define: %w", err)
-	}
-	for index, result := range *results {
-		if result.Error != nil {
-			return fmt.Errorf("migrate service state v3 schema statement %d: %s", index, result.Error.Message)
-		}
 	}
 	marker, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
@@ -2855,9 +2845,11 @@ func serviceStateV3SnapshotSchemaMigrationID() models.RecordID {
 	return models.NewRecordID("store_migration", "service_state_v3_snapshot_schema")
 }
 
-const serviceStateV3SnapshotSchema = `
+const serviceStateV3SnapshotOptionalSchema = `
 DEFINE FIELD OVERWRITE visible_from ON service_state_v3_current TYPE option<int>;
-UPDATE service_state_v3_current SET visible_from = 1 WHERE visible_from = NONE;
+`
+
+const serviceStateV3SnapshotSchema = `
 DEFINE FIELD OVERWRITE visible_from ON service_state_v3_current TYPE int ASSERT $value >= 1;
 
 DEFINE TABLE OVERWRITE service_state_v3_preimage SCHEMAFULL;
@@ -2971,14 +2963,14 @@ COMMIT;`, map[string]any{
 	if current {
 		return nil
 	}
-	defined, err := surrealdb.Query[any](ctx, s.db, definition, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceStateV3SnapshotOptionalSchema, "migrate service state v3 snapshot schema "); err != nil {
 		return fmt.Errorf("migrate service state v3 snapshot schema: define: %w", err)
 	}
-	for index, result := range *defined {
-		if result.Error != nil {
-			return fmt.Errorf("migrate service state v3 snapshot schema statement %d: %s", index, result.Error.Message)
-		}
+	if err := s.backfillServiceStateV3VisibleFrom(ctx); err != nil {
+		return fmt.Errorf("migrate service state v3 snapshot schema: backfill: %w", err)
+	}
+	if err := s.applySchemaBatch(ctx, definition, "migrate service state v3 snapshot schema "); err != nil {
+		return fmt.Errorf("migrate service state v3 snapshot schema: define: %w", err)
 	}
 	written, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
@@ -3000,6 +2992,64 @@ COMMIT;`, map[string]any{
 		}
 	}
 	return nil
+}
+
+const serviceStateV3VisibleFromSelection = `SELECT VALUE id FROM service_state_v3_current WHERE visible_from = NONE ORDER BY id LIMIT $limit`
+
+const serviceStateV3VisibleFromWrite = "BEGIN;\n" + `
+LET $actual = ` + serviceStateV3VisibleFromSelection + `;
+IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
+	THROW 'phebs-conflict: service state v3 visible revision page changed';
+};
+FOR $rid IN $ids {
+	UPDATE $rid SET visible_from = 1 WHERE visible_from = NONE RETURN NONE;
+};
+COMMIT;`
+
+// backfillServiceStateV3VisibleFrom preserves the legacy missing-value predicate
+// and accepts native record IDs without imposing a total migration row limit.
+// Every committed page disappears from the next census. An error stops without
+// retrying its write; a later startup resumes from the still-missing rows while
+// the snapshot marker remains absent and the compatibility latch stays raised.
+func (s *Surreal) backfillServiceStateV3VisibleFrom(ctx context.Context) error {
+	vars := map[string]any{"limit": MaxServiceStateV3ChunkRows}
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		delete(vars, "ids")
+		results, err := surrealdb.Query[[]models.RecordID](ctx, s.db, serviceStateV3VisibleFromSelection, vars)
+		if err != nil {
+			return fmt.Errorf("read visible revision page: %w", err)
+		}
+		if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" ||
+			(*results)[0].Error != nil || (*results)[0].Result == nil {
+			return errors.New("invalid service state v3 visible revision page")
+		}
+		ids := (*results)[0].Result
+		if err := validateRestoreClearIDs(ids, "service_state_v3_current", MaxServiceStateV3ChunkRows); err != nil {
+			return fmt.Errorf("validate visible revision page: %w", err)
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if len(ids) == 0 {
+			return nil
+		}
+		vars["ids"] = ids
+		written, err := surrealdb.Query[any](ctx, s.db, serviceStateV3VisibleFromWrite, vars)
+		if err != nil {
+			return fmt.Errorf("write visible revision page: %w", err)
+		}
+		if written == nil || len(*written) == 0 {
+			return errors.New("missing service state v3 visible revision write result")
+		}
+		for index, result := range *written {
+			if result.Error != nil || result.Status != "OK" {
+				return fmt.Errorf("invalid service state v3 visible revision write statement %d", index)
+			}
+		}
+	}
 }
 
 // migrateServiceSourceGenerationCompatibility irreversibly raises the common
