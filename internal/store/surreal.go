@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -16,6 +17,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/connection"
+	"github.com/surrealdb/surrealdb.go/pkg/connection/gorillaws"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
@@ -73,7 +76,7 @@ func openLocal(ctx context.Context, dataDir, configSHA256 string, memory bool) (
 		return nil, err
 	}
 	runtime.ConfigSHA256 = configSHA256
-	s, err := Open(ctx, runtime.Endpoint, "root", "root", "phebs", "phebs")
+	s, err := openLocalRoot(ctx, runtime.Endpoint)
 	if err != nil {
 		stop()
 		return nil, err
@@ -101,9 +104,42 @@ func Open(ctx context.Context, endpoint, user, pass, namespace, database string)
 	return openConnected(ctx, db, user, pass, namespace, database)
 }
 
+// openLocalRoot retains the same concrete SDK connection used by DB so that
+// namespace-only selection sends a real null database. It is called only after
+// starting our own local engine; generic remote Open keeps its existing scope
+// selection and permissions requirements.
+func openLocalRoot(ctx context.Context, endpoint string) (*Surreal, error) {
+	u, err := url.ParseRequestURI(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
+	}
+	config := connection.NewConfig(u)
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("connect %s: invalid connection config: %w", endpoint, err)
+	}
+	if u.Scheme != "ws" {
+		return nil, errors.New("connect local store: expected supervised WebSocket endpoint")
+	}
+	conn := gorillaws.New(config)
+	db, err := surrealdb.FromConnection(ctx, conn)
+	if err != nil {
+		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
+	}
+	return openStoreConnection(ctx, db, conn, "root", "root", "phebs", "phebs")
+}
+
 func openConnected(
 	ctx context.Context,
 	db *surrealdb.DB,
+	user, pass, namespace, database string,
+) (*Surreal, error) {
+	return openStoreConnection(ctx, db, nil, user, pass, namespace, database)
+}
+
+func openStoreConnection(
+	ctx context.Context,
+	db *surrealdb.DB,
+	local *gorillaws.Connection,
 	user, pass, namespace, database string,
 ) (_ *Surreal, retErr error) {
 	failed := true
@@ -118,6 +154,11 @@ func openConnected(
 	if _, err := db.SignIn(ctx, surrealdb.Auth{Username: user, Password: pass}); err != nil {
 		return nil, fmt.Errorf("signin: %w", err)
 	}
+	if local != nil {
+		if err := initializeLocalScope(ctx, db, local); err != nil {
+			return nil, err
+		}
+	}
 	if err := db.Use(ctx, namespace, database); err != nil {
 		return nil, fmt.Errorf("use %s/%s: %w", namespace, database, err)
 	}
@@ -127,6 +168,33 @@ func openConnected(
 	}
 	failed = false
 	return s, nil
+}
+
+// initializeLocalScope makes both local metadata definition submissions
+// explicit, including attempted IF NOT EXISTS writes on reopen. This does not
+// classify the engine's internal KV work or replace submission accounting.
+func initializeLocalScope(ctx context.Context, db *surrealdb.DB, conn *gorillaws.Connection) error {
+	for i, definition := range [...]struct{ kind, query string }{
+		{"namespace", "DEFINE NAMESPACE IF NOT EXISTS phebs;"},
+		{"database", "DEFINE DATABASE IF NOT EXISTS phebs;"},
+	} {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		results, err := surrealdb.Query[any](ctx, db, definition.query, nil)
+		if err != nil {
+			return fmt.Errorf("define local %s: %w", definition.kind, err)
+		}
+		if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" {
+			return fmt.Errorf("define local %s: unexpected result shape or status", definition.kind)
+		}
+		if i == 0 {
+			if err := connection.Send[any](conn, ctx, nil, "use", "phebs", nil); err != nil {
+				return fmt.Errorf("select local namespace: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Surreal) applySchema(ctx context.Context) error {

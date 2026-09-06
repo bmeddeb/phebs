@@ -4826,6 +4826,33 @@ reported all severity counts zero. All owned engines and selectors joined.
 Immutable-tree and owning documentation gates remain pending; no complete
 phase-budget fit follows.
 
+Exact pin commit `c463050504e4dad7d21642bb4d546a17f40716a7` then passed
+detached-clean native/pure normal (1.406s), race (3.000s), existing exact
+accounted-publication compatibility (1.131s), vet, pinned lint, documentation
+(0.551s), glossary and whitespace. Its checkout stayed clean and no engine
+or selector survived. The owning guide's one low query-versus-record cost
+phrase was corrected before that commit; exact documentation re-review closed
+all severity counts at zero. These close the scoped pin gates only.
+
+The supervised-local initializer now owns explicit namespace and database
+definitions through the same pinned SDK. It sends genuine null for the
+namespace-only selection; final Use selects the already-defined fixed scope.
+Generic remote/borrowed Open is unchanged. Independent source/test review at
+`ddc53912331c85bb0f3ff22b42db1cb0b6f32c90eba809e7b5cb3c95bbee98bb`
+and `fca03dcdb39eda670d593ba5eaa6cc0b5850c1c728407ddd02c6d40abc325f9a`
+closed all severity counts at zero after adding a pre-child cancellation check
+to the bounded native test. Real local initialization/reinitialization passed
+in 1.320s, preserving a neutral repository and SDK Begin/SELECT/Cancel support.
+The final isolated native handshake/Begin probe at
+`08f8cb55b1492eb2bb1898411f149e5bebb46a255ad532265d50b5af765cc80e`
+passed in 1.351s; absent auth produced native NotAllowed and wrong auth an HTTP
+401 handshake refusal. It retained the earlier 1.379s SQL-fixture failure and
+1.586s corrected intermediate pass. All owned processes joined. PLAN records
+the actual source recipe, three extra local RPCs/two definition attempts and
+the diagnostic's distinct completed-KV semantics. Final owning documentation
+and immutable-tree gates remain pending; the real store collector and freeze
+are not established by these prerequisites.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

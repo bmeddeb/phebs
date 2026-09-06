@@ -34,6 +34,14 @@ the next start requires first-user enrollment.
 
 ### Startup schema repair
 
+The supervised local engine explicitly defines its fixed `phebs` namespace
+and database before final selection and schema repair. Reopening submits the
+same two `IF NOT EXISTS` definitions; existing data is retained. This adds
+three serial SDK calls per local startup, not a schema-cache shortcut.
+A failure stops initialization and closes the owned connection/child; an
+earlier successful metadata definition is not rolled back. Generic remote
+connections keep their existing selection and permission requirements.
+
 Every store open reapplies the existing schema definitions and migrations;
 there is no schema-cache shortcut. Each of the five definition groups now
 commits in one native transaction at its existing place between migrations.
