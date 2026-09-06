@@ -79,12 +79,16 @@ type PartitionedEvidenceStore interface {
 	ReconcilePartitionedExtractionOwners(context.Context, []string) error
 }
 
-func (s *Surreal) PinPartitionedExtractionRun(ctx context.Context, runID, owner string) error {
-	if strings.TrimSpace(runID) != runID || runID == "" || len(runID) > maxEvidenceIdentityBytes ||
-		strings.TrimSpace(owner) != owner || owner == "" || len(owner) > maxEvidenceIdentityBytes {
-		return errors.New("pin partitioned extraction run: invalid identity")
-	}
-	const query = `
+const existingPartitionedExtractionPinSQL = `
+SELECT VALUE id FROM $pin_rid
+	WHERE run_id = $run_id AND kind = $owner AND pin_key = $pin_key
+	AND array::len(SELECT id FROM $run_rid
+		WHERE run_id = $run_id AND run_id = record::id(id)
+		AND status = 'staged' AND (partition_sealed ?? false) = true
+		AND retention_quarantined = false LIMIT 1) = 1
+	LIMIT 1;`
+
+const pinPartitionedExtractionRunSQL = `
 BEGIN;
 LET $run = (SELECT * FROM $run_rid WHERE run_id = $run_id AND run_id = record::id(id)
 	AND status = 'staged' AND (partition_sealed ?? false) = true
@@ -97,11 +101,41 @@ LET $pinned = IF $run != NONE AND ($rooted OR $existing) THEN
 		kind: $owner, created_at: time::now() } RETURN AFTER) ELSE [] END;
 RETURN $pinned;
 COMMIT;`
+
+func (s *Surreal) PinPartitionedExtractionRun(ctx context.Context, runID, owner string) error {
+	if strings.TrimSpace(runID) != runID || runID == "" || len(runID) > maxEvidenceIdentityBytes ||
+		strings.TrimSpace(owner) != owner || owner == "" || len(owner) > maxEvidenceIdentityBytes {
+		return errors.New("pin partitioned extraction run: invalid identity")
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("pin partitioned extraction run: %w", err)
+	}
 	pinKey := hashIdentity("pin_", runID, owner)
-	results, err := surrealdb.Query[[]evidencePinRec](ctx, s.db, query, map[string]any{
+	pinID := evidencePinRecordID(runID, owner)
+	variables := map[string]any{
 		"run_rid": extractionRunID(runID), "run_id": runID,
-		"pin_rid": evidencePinRecordID(runID, owner), "pin_key": pinKey, "owner": owner,
-	})
+		"pin_rid": pinID, "pin_key": pinKey, "owner": owner,
+	}
+	// Reacquisition preserves the original pin timestamp. The same run fence
+	// remains mandatory even when its existing pin is no longer domain-rooted.
+	existing, err := surrealdb.Query[[]models.RecordID](ctx, s.db, existingPartitionedExtractionPinSQL, variables)
+	if err != nil {
+		return fmt.Errorf("read partitioned extraction pin: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("pin partitioned extraction run: %w", err)
+	}
+	if existing == nil || len(*existing) != 1 || len((*existing)[0].Result) > 1 {
+		return errors.New("read partitioned extraction pin: invalid result count")
+	}
+	if rows := (*existing)[0].Result; len(rows) == 1 {
+		key, ok := rows[0].ID.(string)
+		if !ok || rows[0].Table != pinID.Table || key != pinID.ID {
+			return errors.New("read partitioned extraction pin: invalid stored identity")
+		}
+		return nil
+	}
+	results, err := surrealdb.Query[[]evidencePinRec](ctx, s.db, pinPartitionedExtractionRunSQL, variables)
 	if err != nil {
 		return fmt.Errorf("pin partitioned extraction run: %w", err)
 	}

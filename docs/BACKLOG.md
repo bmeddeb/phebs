@@ -4783,6 +4783,49 @@ startup/version/readiness and SDK connection-bootstrap traffic still occur
 outside those windows. No native diagnostic result is established by this
 review.
 
+Exact clean SDK-control commit
+`758639fb0194cb5ccf86b1ef9eaf77e9c00b2ea7` then passed the write-only native
+diagnostic (1.385s) and one unchanged confirmation (1.265s). Both retained
+flat-write scrape controls around all eleven windows: fresh root SignIn added
+one completed native write-mode transaction, fresh Use added five, and repeat
+fresh Use added two. Independent ROOT inspection immediately after fresh Use
+proved the namespace existed. Existing root SignIn added one, existing and
+repeat Use added two each, and all five measured INFO operations added zero.
+Read attribution remains explicitly unavailable. These are completed native
+KV-mode observations, not SQL transaction, submitted-row or hard-death
+attempted-prefix accounting; one RPC must not silently stand in for all native
+work. All owned engines and connections joined. The same immutable tree passed
+pure normal/race selectors three times (0.632s/1.638s), vet, pinned lint,
+documentation (0.563s), glossary and whitespace; its detached checkout stayed
+clean. The production store collector still requires a defensible unit and
+control-submission boundary before implementation can establish completeness.
+
+The shared extraction-pin acquisition correction now checks an exact existing
+pin and its still-valid canonical staged/sealed/nonquarantined run in one
+read-only query. It preserves the initial pin timestamp and existing unrooted
+protection; absent/mismatched pins retain the original fenced UPSERT after one
+extra read. Cancellation, read errors and malformed response counts refuse.
+All publication/recovery callers and retention consumers were traced; existing
+mutation locks and explicit unpin ordering are unchanged, with no timestamp
+TTL introduced. This removes repeat pin writes at their common source, not by
+skipping startup recovery. The first native check failed in 1.403s because its
+expected-one count for the original UPSERT was unproven; it never measured the
+repeat. It does not prove the initial scalar lookup caused native writes. The
+revised top-level SELECT returns and verifies at most one exact native pin ID;
+controlled native normal/race checks (1.395s/2.659s) measured lookup zero,
+original UPSERT four and public reacquisition zero completed native writes.
+These KV observations do not convert one logical transaction into four.
+Pure normal/race selectors passed three times (0.582s/1.723s), the existing
+exact accounted-publication compatibility case passed (1.290s), and vet,
+pinned lint and whitespace were clean. Independent source/test/cost review of
+production hash
+`9b8376a33e318c600ea6fbadd63fc9418854df6bbe626d9cc2b9a2b62b14855f`
+and test hash
+`aadc0c752d18e474f8ce5b75fa76ff79d54e1098da2ce2ad1d2f740b6cfc3648`
+reported all severity counts zero. All owned engines and selectors joined.
+Immutable-tree and owning documentation gates remain pending; no complete
+phase-budget fit follows.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

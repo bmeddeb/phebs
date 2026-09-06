@@ -4281,6 +4281,15 @@ current/rollback audit also writes each of at most 16,384 catalog references
 once, performs one bounded reference inventory/delete pass, and reconciles the
 fixed extraction-owner set.
 
+Reacquiring an exact existing extraction-run pin is read-only when its same
+canonical run is still staged, sealed and not quarantined. Its original
+`created_at` is retained; pin presence, not that timestamp, protects retention.
+An existing valid pin remains admissible after its domain root moves. A new
+or mismatched pin still passes the unchanged rooted-or-existing transactional
+check, with one additional read-only query before that transaction. Invalid
+runs and uncertain reads refuse; the existing publication/recovery/lifecycle
+locks and explicit unpin ordering are unchanged.
+
 Each v3 lifecycle turn holds that exclusive lock through its filesystem sweep,
 store unpins, and confirmation. It inventories at most 4,096 repository
 directories and at most 20,000 direct entries for the selected repository,
