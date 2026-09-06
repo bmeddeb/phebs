@@ -5487,6 +5487,18 @@ a later record-only commit. Baseline disposition and the separately reported
 scope ratification remain Ben's decisions. No merge, push, waiver, full
 admission, freeze, ceremony execution or Epic closure is claimed.
 
+Ben subsequently waived the three reproduced inherited-failure packages for
+this stack's merge bar: `spike/t211` (the four glossary assertions above),
+`spike/t306m` (the split-allocation and status-budget assertions above), and
+`spike/t324` (the retained-receipt input-binding assertion above). The waiver
+is limited to those seven unchanged assertions at tested source `a9734771`,
+reproduced without regression at base
+`6e38ce97d552892805e6aee8c1d9d87f537ceb74`. The normal run remains
+baseline-red, not all-green; retained evidence is unchanged and repair is not
+folded into this stack. This supersedes only the pending baseline disposition
+above, not the separate restore/store scope-ratification requirement, and
+authorizes no merge, push, freeze, ceremony execution or Epic closure.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
