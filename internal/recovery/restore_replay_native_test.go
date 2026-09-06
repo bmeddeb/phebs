@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
 	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -232,6 +233,23 @@ COMMIT;`, nil); err != nil {
 		}
 	}
 	post("OPTION IMPORT; BEGIN; DEFINE TABLE probe_extra TYPE ANY SCHEMALESS PERMISSIONS NONE; COMMIT;", true, true)
+	// The complete native export contains unquoted SHA record IDs beginning
+	// with digits. Preserve their string identity and value, not just parsing.
+	const digitID = "1fe44fe9046fd23d55ff4dd34fd046827a8004d6c1ba5379fb9eedeb4f6838d9"
+	digitLiteral := "OPTION IMPORT; INSERT [{id: probe_extra:" + digitID + ", body: 'original'}];"
+	digitScanner := newRestoreReplayScanner(strings.NewReader(digitLiteral))
+	digitUnit, err := digitScanner.next()
+	if err != nil || digitUnit.Count != 1 || digitUnit.Definition {
+		t.Fatalf("native digit-leading ID census: %+v %v", digitUnit, err)
+	}
+	post("OPTION IMPORT; BEGIN; INSERT ["+digitLiteral[digitUnit.Span.Start:digitUnit.Span.End]+"]; COMMIT;", true, false)
+	digitRows, err := surrealdb.Query[[]struct {
+		Body string `json:"body"`
+	}](ctx, db, "SELECT body FROM $rid;", map[string]any{"rid": models.NewRecordID("probe_extra", digitID)})
+	if err != nil || digitRows == nil || len(*digitRows) != 1 || len((*digitRows)[0].Result) != 1 ||
+		(*digitRows)[0].Result[0].Body != "original" {
+		t.Fatalf("native digit-leading string ID/value not preserved: %+v %v", digitRows, err)
+	}
 	before := restoreReplayProbeWrites(ctx, t, client, endpoint)
 	for _, step := range []struct{ start, count int }{{0, 512}, {512, 1}} {
 		parts := make([]string, step.count)

@@ -111,7 +111,8 @@ complete database artifact, then replays unchanged native definitions and
 literal records through the same supervised engine in explicit transactions
 of one definition or at most 512 records. Fresh namespace/database setup adds
 two real definition transactions. The backup format and six artifacts do not
-change. Unsupported ordinary syntax, other engine versions and other platforms
+change. Native unquoted digit-leading alphanumeric record IDs retain their
+exact original bytes. Unsupported ordinary syntax, other engine versions and other platforms
 retain the existing native import path; cancellation, I/O or identity failure
 never selects fallback, and no fallback occurs after replay starts.
 

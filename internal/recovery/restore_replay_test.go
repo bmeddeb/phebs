@@ -48,6 +48,30 @@ func restoreReplayTestArtifact(t *testing.T, raw string) (string, Artifact) {
 	return path, Artifact{Path: DatabaseName, Size: int64(len(raw)), SHA256: digestBytes([]byte(raw))}
 }
 
+func TestRestoreReplayDigitLeadingRecordIDs(t *testing.T) {
+	for _, id := range []string{"1", "1234567890", "1fe44fe9046fd23d55ff4dd34fd046827a8004d6c1ba5379fb9eedeb4f6838d9", "01neutral", "1e2"} {
+		t.Run(id, func(t *testing.T) {
+			record := "{id: generation_schedule:" + id + ", original: 'unchanged'}"
+			raw := "OPTION IMPORT; INSERT [" + record + "];"
+			scanner := newRestoreReplayScanner(strings.NewReader(raw))
+			unit, err := scanner.next()
+			if err != nil || unit.Count != 1 || unit.Definition || raw[unit.Span.Start:unit.Span.End] != record {
+				t.Fatalf("native digit-leading record ID changed/refused: %+v %v", unit, err)
+			}
+			if _, err := scanner.next(); !errors.Is(err, io.EOF) {
+				t.Fatalf("record terminator: %v", err)
+			}
+		})
+	}
+	for _, id := range []string{"1neutral()", "1neutral::run()", "1neutral + 2", "1neutral/*comment*/", "1neutral; DELETE generation_schedule"} {
+		scanner := newRestoreReplayScanner(strings.NewReader("OPTION IMPORT; INSERT [{id: generation_schedule:" + id + "}];"))
+		var unsupported *restoreReplayUnsupported
+		if _, err := scanner.next(); !errors.As(err, &unsupported) {
+			t.Fatalf("nonliteral record ID accepted: %q %v", id, err)
+		}
+	}
+}
+
 func TestRestoreReplayRecordBoundaries(t *testing.T) {
 	for _, count := range []int{511, 512, 513, 1000} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {

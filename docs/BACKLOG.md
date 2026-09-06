@@ -4694,6 +4694,25 @@ the detached checkout remains unchanged. The next correction must isolate and
 native-test that real export form; neither permissive parsing nor silent
 fallback is a protected replay pass.
 
+The source-identical diagnostic reproduced that refusal in 15.771s and retained
+the actual private native export. It proved an unquoted digit-leading
+alphanumeric generation record ID, not an arbitrary SQL expression. The narrow
+`codex/t42.2l-native-record-ids` correction reuses the literal identifier-tail
+scanner after its numeric prefix. Pure normal/race selectors passed three
+times (2.425s/9.027s), and the exact retained export preflight recognized
+752 units, 716 definitions and 1,109 records. The corrected native string-ID/
+value and rollback probe passed in 1.29s; complete six-artifact backup,
+recognized preflight, ordinary Restore and startup exact-search recovery passed
+in 38.88s (combined command 40.739s). All engines/connections joined; vet,
+pinned lint and whitespace passed. Independent source/test/cost review reported
+all severities zero. Temporary diagnostic code was removed; the private export
+remains retained for audit. Exact immutable-commit full-package gates and owning
+documentation review remain next, not a whole-ceremony or store-meter claim.
+
+The owning digit-ID PLAN/backlog/manual record then passed independent review
+with all severity counts zero; documentation (0.628s), glossary and whitespace
+also passed. Corrected immutable-commit gates remain next.
+
 The next `codex/t42.2l-store-failure-truth` slice selects the existing V3
 failure surface for an atomic incomplete-store metric family and a closed
 typed store-submission refusal. PLAN owns the exact linearization decision:
@@ -4722,6 +4741,12 @@ atomic three-name family, ten-name accepted list, six closed reasons, exact
 88-byte secondary evidence and 28-byte unsealed trigger additions, retained
 primary/positive evidence, historical routing and exact teardown checks.
 Immutable-commit gates and actual transport/coverage remain separate.
+
+Exact store-failure commit `404f2888b06dcf66f86b8a72c958f4700db9237c`
+then passed clean detached focused normal/race selectors three times
+(0.592s/2.216s), vet, pinned lint (zero issues), documentation (0.526s),
+glossary and whitespace. The checkout remained clean. This closes the scoped
+immutable V3 failure-vocabulary gates, not the actual store submission channel.
 
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review

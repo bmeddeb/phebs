@@ -608,7 +608,15 @@ func (scanner *restoreReplayScanner) value(depth int) error {
 				return err
 			}
 			if restoreReplayDigit(value) {
-				return scanner.digits()
+				if err := scanner.digits(); err != nil {
+					return err
+				}
+				// Native export also emits unquoted string IDs beginning with
+				// digits, including our SHA-256 generation identities.
+				value, err = scanner.peek()
+				if err != nil || !restoreReplayIdentifierStart(value) {
+					return err
+				}
 			}
 			return scanner.identifier()
 		}
