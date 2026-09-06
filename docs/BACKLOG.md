@@ -5115,6 +5115,32 @@ re-review reported all severity counts zero; documentation (0.546s), glossary
 and whitespace passed again. Immutable gates, genuine issuer/SDK-owner phase
 linkage and full execution proof remain pending.
 
+Exact inherited-channel commit `6d01f0c2a751f44e1098262dd56c48a3e22f2120`
+passed detached-clean dispatch/store-transport normal three-repeat in
+10.023s/1.208s and race three-repeat in 14.669s/2.520s. Vet, pinned lint (zero
+findings), documentation (0.500s), glossary and whitespace passed, with a clean
+checkout afterward. This closes that mechanical bootstrap slice's scoped gates.
+
+The private local-store factory now places the final SDK gate before connection
+initialization and executes its fixed five native controls/definitions on that
+same connection. The first version passed focused normal/race three-repeat in
+0.522s/1.847s, then independent review found one medium issue: selected Use
+discarded its result shape. A pure pinned-codec check (0.646s) proved that null,
+undefined and missing fields collapse to the same pointer before SDK Send.
+The correction preserves the exact envelope's raw result only in selected mode
+and validates actual null at both Use steps; all other typed decoding and
+ordinary configuration remain on the SDK codec. Initial real-WebSocket
+correction checks passed in 0.550s. The selected factory still refuses the first
+unannotated schema call after an authentic five-call/two-transaction/two-row
+prefix; no native-engine or complete startup claim follows. Final correction
+core/factory/ordinary-initialization selectors passed three-repeat normal/race
+in 0.583s/2.024s, plus vet, pinned lint (zero findings) and whitespace. The
+narrow lint suppression preserves the pinned SDK's exact deprecated error-wire
+type rather than substituting semantics. Documentation (0.796s), glossary and
+whitespace passed. Fresh correction/owning-doc review reported all severity
+counts zero at factory `5dfa483c`, tests `71977ab2`, initializer `067f8a8a` and
+core `47c399ae`. Immutable gates remain pending.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

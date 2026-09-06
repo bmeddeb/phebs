@@ -16,10 +16,12 @@ import (
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
+	"github.com/bmeddeb/phebs/internal/storeaccounting"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/connection"
 	"github.com/surrealdb/surrealdb.go/pkg/connection/gorillaws"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
+	"github.com/surrealdb/surrealdb.go/surrealcbor"
 )
 
 //go:embed schema.surql
@@ -27,8 +29,9 @@ var schema string
 
 // Surreal implements Store over the official SDK (WebSocket RPC).
 type Surreal struct {
-	db   *surrealdb.DB
-	stop func() // non-nil when we supervise a local child
+	db         *surrealdb.DB
+	stop       func()          // non-nil when we supervise a local child
+	accounting *storeCallOwner // captured for selected background calls; ordinary opens leave nil
 }
 
 var _ Store = (*Surreal)(nil)
@@ -109,6 +112,27 @@ func Open(ctx context.Context, endpoint, user, pass, namespace, database string)
 // starting our own local engine; generic remote Open keeps its existing scope
 // selection and permissions requirements.
 func openLocalRoot(ctx context.Context, endpoint string) (*Surreal, error) {
+	return openLocalRootWithOwner(ctx, endpoint, nil)
+}
+
+func openLocalRootWithOwner(ctx context.Context, endpoint string, owner *storeCallOwner) (*Surreal, error) {
+	if owner != nil {
+		if owner.client == nil {
+			return nil, storeaccounting.ErrConfig
+		}
+		owner.mu.Lock()
+		err := owner.err
+		if err == nil && (ctx == nil || ctx.Err() != nil || owner.client.Context().Err() != nil) {
+			err = context.Canceled
+		}
+		if err == nil && owner.fenced {
+			err = storeaccounting.ErrFenced
+		}
+		owner.mu.Unlock()
+		if err != nil {
+			return nil, err
+		}
+	}
 	u, err := url.ParseRequestURI(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
@@ -120,12 +144,28 @@ func openLocalRoot(ctx context.Context, endpoint string) (*Surreal, error) {
 	if u.Scheme != "ws" {
 		return nil, errors.New("connect local store: expected supervised WebSocket endpoint")
 	}
+	if owner != nil {
+		config.Unmarshaler = storeLocalReplyDecoder{Codec: surrealcbor.New()}
+	}
 	conn := gorillaws.New(config)
-	db, err := surrealdb.FromConnection(ctx, conn)
+	var selected *storeAccountingConnection
+	var sdk connection.Connection = conn
+	if owner != nil {
+		selected, err = newStoreAccountingConnection(owner, conn)
+		if err != nil {
+			return nil, err
+		}
+		selected.localStep = storeLocalSignIn
+		sdk = selected
+	}
+	db, err := surrealdb.FromConnection(ctx, sdk)
 	if err != nil {
+		if selected != nil {
+			return nil, selected.owner.fail(ctx, storeaccounting.ErrTransport)
+		}
 		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
 	}
-	return openStoreConnection(ctx, db, conn, "root", "root", "phebs", "phebs")
+	return openStoreConnection(ctx, db, conn, selected, "root", "root", "phebs", "phebs")
 }
 
 func openConnected(
@@ -133,13 +173,14 @@ func openConnected(
 	db *surrealdb.DB,
 	user, pass, namespace, database string,
 ) (*Surreal, error) {
-	return openStoreConnection(ctx, db, nil, user, pass, namespace, database)
+	return openStoreConnection(ctx, db, nil, nil, user, pass, namespace, database)
 }
 
 func openStoreConnection(
 	ctx context.Context,
 	db *surrealdb.DB,
 	local *gorillaws.Connection,
+	selected *storeAccountingConnection,
 	user, pass, namespace, database string,
 ) (_ *Surreal, retErr error) {
 	failed := true
@@ -151,18 +192,27 @@ func openStoreConnection(
 			retErr = errors.Join(retErr, fmt.Errorf("close store connection: %w", err))
 		}
 	}()
-	if _, err := db.SignIn(ctx, surrealdb.Auth{Username: user, Password: pass}); err != nil {
-		return nil, fmt.Errorf("signin: %w", err)
-	}
-	if local != nil {
-		if err := initializeLocalScope(ctx, db, local); err != nil {
+	if selected != nil {
+		if err := initializeAccountedLocalScope(ctx, db, selected); err != nil {
 			return nil, err
 		}
-	}
-	if err := db.Use(ctx, namespace, database); err != nil {
-		return nil, fmt.Errorf("use %s/%s: %w", namespace, database, err)
+	} else {
+		if _, err := db.SignIn(ctx, surrealdb.Auth{Username: user, Password: pass}); err != nil {
+			return nil, fmt.Errorf("signin: %w", err)
+		}
+		if local != nil {
+			if err := initializeLocalScope(ctx, db, local); err != nil {
+				return nil, err
+			}
+		}
+		if err := db.Use(ctx, namespace, database); err != nil {
+			return nil, fmt.Errorf("use %s/%s: %w", namespace, database, err)
+		}
 	}
 	s := &Surreal{db: db}
+	if selected != nil {
+		s.accounting = selected.owner
+	}
 	if err := s.applySchema(ctx); err != nil {
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
@@ -175,8 +225,8 @@ func openStoreConnection(
 // classify the engine's internal KV work or replace submission accounting.
 func initializeLocalScope(ctx context.Context, db *surrealdb.DB, conn *gorillaws.Connection) error {
 	for i, definition := range [...]struct{ kind, query string }{
-		{"namespace", "DEFINE NAMESPACE IF NOT EXISTS phebs;"},
-		{"database", "DEFINE DATABASE IF NOT EXISTS phebs;"},
+		{"namespace", storeLocalNamespaceSQL},
+		{"database", storeLocalDatabaseSQL},
 	} {
 		if err := ctx.Err(); err != nil {
 			return err

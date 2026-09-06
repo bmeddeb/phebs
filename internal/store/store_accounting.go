@@ -19,6 +19,8 @@ import (
 type storeQueryRecipe struct {
 	read, supported bool
 	rows            uint64
+	local           *storeAccountingConnection
+	localStep       storeLocalStep
 }
 
 func storeRead() storeQueryRecipe { return storeQueryRecipe{read: true, supported: true} }
@@ -40,6 +42,8 @@ type storeNativeTransaction struct {
 type storeSDKCall struct {
 	owner      *storeCallOwner
 	connection *storeAccountingConnection
+	local      *storeAccountingConnection
+	localStep  storeLocalStep
 	sql        string
 	vars       cbor.RawMessage
 	kind       storeaccounting.Kind // zero is a locally tracked read
@@ -225,6 +229,10 @@ func (call *storeSDKCall) finish(ctx context.Context, returned error, tx *surrea
 		return owner.err
 	}
 	owner.releaseLocked(call)
+	if call.local != nil && returned == nil {
+		call.local.localStep++
+		call.local.localBusy = false
+	}
 	if call.tx >= 0 {
 		if call.kind == storeaccounting.Commit || call.kind == storeaccounting.Cancel {
 			owner.transactions[call.tx] = storeNativeTransaction{}
@@ -377,9 +385,13 @@ func storeQuery[T any, S storeSDKSender](ctx context.Context, owner *storeCallOw
 			result, err = nil, owner.fail(ctx, storeaccounting.ErrProtocol)
 			return
 		}
+		if call.local != nil && err == nil && (result == nil || len(*result) != 1 || (*result)[0].Status != "OK" || (*result)[0].Error != nil) {
+			err = storeaccounting.ErrProtocol
+		}
 		err = call.finish(ctx, err, nil)
 	}()
 	call.sql, call.rows = sql, recipe.rows
+	call.local, call.localStep = recipe.local, recipe.localStep
 	// Selected mode owns one immutable variable snapshot until typed decoding
 	// finishes. This is extra serialization/live-buffer cost, not a byte cap.
 	call.vars, err = surrealcbor.New().Marshal(vars)
@@ -446,7 +458,9 @@ func storeTerminal(ctx context.Context, owner *storeCallOwner, tx *surrealdb.Tra
 // control methods deliberately refuse until an owning source recipe exists.
 type storeAccountingConnection struct {
 	connection.WebSocketConnection
-	owner *storeCallOwner
+	owner     *storeCallOwner
+	localStep storeLocalStep // guarded by owner.mu; zero is not a local initializer
+	localBusy bool
 }
 
 func newStoreAccountingConnection(owner *storeCallOwner, native *gorillaws.Connection) (*storeAccountingConnection, error) {
@@ -471,6 +485,7 @@ func (conn *storeAccountingConnection) Call(ctx context.Context, request *connec
 	owner := conn.owner
 	owner.mu.Lock()
 	valid := owner.err == nil && !owner.fenced && !call.consumed && storeAbsentUUID(request.Session) && request.ID == nil
+	valid = valid && conn.validLocalCallLocked(call, request)
 	transaction := uint64(0)
 	var nativeTransaction models.UUID
 	if call.tx >= 0 && call.kind != storeaccounting.Begin {
@@ -498,6 +513,12 @@ func (conn *storeAccountingConnection) Call(ctx context.Context, request *connec
 	if call.kind == storeaccounting.Cancel {
 		wantMethod = "cancel"
 	}
+	switch call.localStep {
+	case storeLocalSignIn:
+		wantMethod = "signin"
+	case storeLocalNamespaceUse, storeLocalDatabaseUse:
+		wantMethod = "use"
+	}
 	valid = valid && request.Method == wantMethod
 	switch wantMethod {
 	case "query":
@@ -516,6 +537,9 @@ func (conn *storeAccountingConnection) Call(ctx context.Context, request *connec
 		return nil, owner.fail(ctx, storeaccounting.ErrDescriptor)
 	}
 	call.consumed, call.connection = true, conn
+	if call.local != nil {
+		conn.localBusy = true
+	}
 	owner.mu.Unlock()
 	if call.kind != 0 {
 		submission, err := owner.client.Submit(ctx, call.kind, transaction, call.rows)
@@ -544,6 +568,10 @@ func (conn *storeAccountingConnection) Call(ctx context.Context, request *connec
 		// SDK ID() exposes a mutable pointer. Forward only the validated slot
 		// copy, never that externally mutable pointer after the final gate.
 		forwarded.Params = []any{&nativeTransaction}
+	case "signin":
+		forwarded.Params = []any{storeLocalAuth()}
+	case "use":
+		forwarded.Params = storeLocalUseParams(call.localStep)
 	}
 	response, err := conn.WebSocketConnection.Call(ctx, &forwarded)
 	var rpc *connection.ServerError
@@ -575,9 +603,6 @@ func storeAbsentUUID(value any) bool {
 	return ok && id == nil
 }
 
-func (conn *storeAccountingConnection) Use(ctx context.Context, _, _ string) error {
-	return conn.owner.fail(ctx, storeaccounting.ErrDescriptor)
-}
 func (conn *storeAccountingConnection) Let(ctx context.Context, _ string, _ any) error {
 	return conn.owner.fail(ctx, storeaccounting.ErrDescriptor)
 }
@@ -585,9 +610,6 @@ func (conn *storeAccountingConnection) Authenticate(ctx context.Context, _ strin
 	return conn.owner.fail(ctx, storeaccounting.ErrDescriptor)
 }
 func (conn *storeAccountingConnection) SignUp(ctx context.Context, _ any) (string, error) {
-	return "", conn.owner.fail(ctx, storeaccounting.ErrDescriptor)
-}
-func (conn *storeAccountingConnection) SignIn(ctx context.Context, _ any) (string, error) {
 	return "", conn.owner.fail(ctx, storeaccounting.ErrDescriptor)
 }
 func (conn *storeAccountingConnection) SignUpWithRefresh(ctx context.Context, _ any) (*connection.Tokens, error) {
