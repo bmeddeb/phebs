@@ -4729,7 +4729,7 @@ and 170-transaction limits and retained V1/V2 evidence stay unchanged.
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
 | `make smoke-release` | run the verified bundle from empty state through auth, sync, index, search, pinned browse, and default-dark Contract Atlas checks                       |
-| `make test`          | verify generated glossary projections, then `go test ./... -timeout=25m`; store/sync/indexer tests need `surreal`, the timeout matches CI's integration-suite allowance, and child tests build pinned zoekt and Buf binaries |
+| `make test`          | verify generated glossary projections, then `go test ./... -timeout=60m`; store/sync/indexer tests need `surreal`, the per-package timeout matches `ci-go` (whose enclosing CI job allows 90 minutes), and child tests build pinned zoekt and Buf binaries |
 | `make t20-closure`   | run the opt-in Epic 20 empty-data scale/failure journey and write its reference-machine receipt to `/private/tmp` by default                       |
 | `make ui-test`       | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
 | `make lint`          | verify generated glossary projections, then run golangci-lint                                                                                          |
