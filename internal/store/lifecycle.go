@@ -9,7 +9,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
@@ -32,10 +31,10 @@ func (s *Surreal) GetLifecycleCursor(
 	if err := validateLifecycleCursor(key, ""); err != nil {
 		return "", 0, err
 	}
-	results, err := surrealdb.Query[[]lifecycleCursorRecord](ctx, s.db,
+	results, err := storeQuery[[]lifecycleCursorRecord](ctx, s.accounting, s.db,
 		"RETURN SELECT key, cursor, revision FROM $rid LIMIT 1", map[string]any{
 			"rid": lifecycleCursorRecordID(key),
-		})
+		}, storeRead())
 	if err != nil {
 		return "", 0, fmt.Errorf("get lifecycle cursor: %w", err)
 	}
@@ -59,7 +58,7 @@ func (s *Surreal) CompareAndSwapLifecycleCursor(
 	if err := validateLifecycleCursor(key, cursor); err != nil {
 		return err
 	}
-	results, err := surrealdb.Query[[]bool](ctx, s.db, `
+	results, err := storeQuery[[]bool](ctx, s.accounting, s.db, `
 BEGIN;
 LET $existing = (SELECT revision FROM $rid LIMIT 1)[0].revision;
 LET $matches = IF $expected = 0 THEN $existing = NONE ELSE $existing = $expected END;
@@ -71,7 +70,7 @@ RETURN [$matches];
 COMMIT;`, map[string]any{
 		"rid": lifecycleCursorRecordID(key), "key": key,
 		"cursor": cursor, "expected": expected,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("compare and swap lifecycle cursor: %w", err)
 	}

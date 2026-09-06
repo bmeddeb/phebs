@@ -144,7 +144,7 @@ func TestPreparationStoreReadAccountingIncludesEveryRetry(t *testing.T) {
 			}
 			// Exercise the existing native retry seam against real SurrealDB,
 			// not a store double that skips error or visibility semantics.
-			_, queryErr := queryGenerationSchedule[any](ctx, state.db, "get_schedule", test.statement, nil)
+			_, queryErr := queryGenerationSchedule[any](ctx, state.accounting, state.db, "get_schedule", test.statement, nil, storeRead())
 			counts, finishErr := ledger.Finish()
 			if (queryErr != nil) != test.queryError || (finishErr != nil) != test.ledgerError ||
 				counts != (readaccounting.Counts{StoreReadAttempts: test.want}) {
@@ -156,7 +156,7 @@ func TestPreparationStoreReadAccountingIncludesEveryRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := queryGenerationSchedule[any](ctx, state.db, "complete", "RETURN [];", nil); err != nil {
+	if _, err := queryGenerationSchedule[any](ctx, state.accounting, state.db, "complete", "RETURN [];", nil, storeRead()); err != nil {
 		t.Fatalf("unrelated scheduler operation was classified as a preparation read: %v", err)
 	}
 	if counts, err := ledger.Finish(); err != nil || counts != (readaccounting.Counts{}) {
@@ -194,14 +194,16 @@ THEN { THROW '%s' };`, repository, test.message), nil)
 						"REMOVE EVENT read_accounting_enqueue_failure ON TABLE generation_schedule;", nil)
 				})
 			}
-			ctx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{StoreWriteAttempts: test.limit})
+			ctx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{
+				StoreReadAttempts: test.limit, StoreWriteAttempts: test.limit,
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
 			schedule, enqueueErr := state.EnqueueGenerationSchedule(ctx, spec)
 			counts, finishErr := ledger.Finish()
 			if (enqueueErr != nil) != (test.message != "") || (finishErr != nil) != test.ledgerError ||
-				counts != (readaccounting.Counts{StoreWriteAttempts: test.want}) {
+				counts != (readaccounting.Counts{StoreReadAttempts: min(test.want, test.limit), StoreWriteAttempts: test.want}) {
 				t.Fatalf("attempts=%+v enqueue=%v ledger=%v", counts, enqueueErr, finishErr)
 			}
 			stored, readErr := state.GetGenerationSchedule(t.Context(), repository, spec.Stage)

@@ -12,7 +12,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
@@ -302,7 +301,27 @@ func callerGenerationAdmissionID(generation CallerGenerationIdentity) models.Rec
 }
 
 func (s *Surreal) migrateCallerLeafWriter(ctx context.Context) error {
-	results, err := surrealdb.Query[any](ctx, s.db, `
+	marker := callerLeafMigrationID()
+	current, err := s.startupWriterMarker(ctx, marker)
+	if err != nil {
+		return fmt.Errorf("migrate caller-leaf writer: %w", err)
+	}
+	if current == callerLeafWriterMigrationVersion {
+		return nil
+	}
+	if current != "" {
+		return errors.New("migrate caller-leaf writer: phebs-permanent: unsupported caller-leaf writer generation")
+	}
+	predicate := "(writer_schema ?? '') != '" + CallerLeafWriterSchema + "'"
+	outcomesEmpty, err := s.migrationTableEmpty(ctx, "caller_leaf_outcome", predicate)
+	if err != nil {
+		return err
+	}
+	admissionsEmpty, err := s.migrationTableEmpty(ctx, "caller_generation_admission", predicate)
+	if err != nil {
+		return err
+	}
+	statement := `
 BEGIN;
 LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
 IF $current != NONE AND $current != $wanted {
@@ -316,20 +335,43 @@ UPSERT $marker SET
 	version = IF $current = NONE THEN $wanted ELSE $current END,
 	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END
 	RETURN NONE;
-COMMIT;`, map[string]any{
-		"marker": callerLeafMigrationID(), "wanted": callerLeafWriterMigrationVersion,
+COMMIT;`
+	recipe := storeUnsupported()
+	if outcomesEmpty && admissionsEmpty {
+		statement = callerLeafEmptyMigration
+		recipe = storeWrite(1)
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, map[string]any{
+		"marker": marker, "wanted": callerLeafWriterMigrationVersion,
 		"writer_schema": CallerLeafWriterSchema,
-	})
+	}, recipe)
 	if err != nil {
 		return fmt.Errorf("migrate caller-leaf writer: %w", err)
 	}
+	if results == nil || len(*results) == 0 {
+		return errors.New("migrate caller-leaf writer: missing transaction result")
+	}
 	for index, result := range *results {
+		if result.Status != "OK" && result.Error == nil {
+			return errors.New("migrate caller-leaf writer: invalid transaction status")
+		}
 		if result.Error != nil {
 			return fmt.Errorf("migrate caller-leaf writer statement %d: %s", index, result.Error.Message)
 		}
 	}
-	return nil
+	return s.verifyStartupWriterMarker(ctx, marker, callerLeafWriterMigrationVersion)
 }
+
+const callerLeafEmptyMigration = `
+BEGIN;
+LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
+IF $current != NONE
+ OR array::len(SELECT VALUE id FROM caller_leaf_outcome WHERE (writer_schema ?? '') != $writer_schema LIMIT 1) != 0
+ OR array::len(SELECT VALUE id FROM caller_generation_admission WHERE (writer_schema ?? '') != $writer_schema LIMIT 1) != 0 {
+ THROW 'phebs-conflict: caller-leaf migration preimage changed';
+};
+UPSERT $marker SET version = $wanted, completed_at = time::now() RETURN NONE;
+COMMIT;`
 
 func prepareCallerGeneration(identity CallerGenerationIdentity) (CallerGenerationIdentity, error) {
 	if err := reponame.Validate(identity.Repository); err != nil {
@@ -600,7 +642,7 @@ type callerLeafOutcomeRec struct {
 	RecID            *models.RecordID `json:"id"`
 }
 
-const recordCallerLeafOutcomeSQL = `
+const recordCallerLeafOutcomePrefixSQL = `
 BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
@@ -663,15 +705,32 @@ LET $written = IF $authority_ok = false THEN []
 		writer_schema: $writer_schema,
 		recorded_at: time::now()
 	} RETURN AFTER) END;
-LET $pending = IF array::len($written) = 1 THEN
+LET $actual_pending = IF array::len($written) = 1 THEN
 	(SELECT id, created_at FROM caller_leaf_job
 		WHERE pending_key = $repository AND status = 'pending'
 		ORDER BY created_at LIMIT 1)[0].id
 	ELSE NONE END;
+IF array::len($written) = 1 AND [$actual_pending] != [$pending_ids[0]] {
+	THROW 'phebs-conflict: caller leaf pending census changed'
+};
+LET $pending = $pending_ids[0];
 LET $successor = IF array::len($written) != 1 THEN []
-	ELSE IF $pending != NONE THEN
-		(UPDATE $pending SET force = force RETURN AFTER)
-	ELSE (CREATE caller_leaf_job CONTENT {
+	ELSE (`
+
+const recordCallerLeafOutcomeSuffixSQL = `) END;
+LET $caller_projected = IF array::len($written) = 1 AND array::len($successor) = 1
+	THEN $successor[0] ELSE NONE END;` + projectCallerJobSQL + `
+RETURN IF array::len($written) = 1 AND array::len($successor) = 1
+	THEN $written ELSE [] END;
+COMMIT;`
+
+// Only one actual fanout operand is emitted. The other conditional mutation
+// body is absent, not counted as if a later native branch had removed it.
+const recordCallerLeafOutcomeUpdateSQL = recordCallerLeafOutcomePrefixSQL +
+	`UPDATE $pending SET force = force RETURN AFTER` + recordCallerLeafOutcomeSuffixSQL
+
+const recordCallerLeafOutcomeCreateSQL = recordCallerLeafOutcomePrefixSQL + `
+CREATE caller_leaf_job CONTENT {
 		target: $repository,
 		status: 'pending',
 		attempts: 0,
@@ -679,12 +738,7 @@ LET $successor = IF array::len($written) != 1 THEN []
 		pending_key: $repository,
 		force: false,
 		recovery_lease: $lease
-	} RETURN AFTER) END;
-LET $caller_projected = IF array::len($written) = 1 AND array::len($successor) = 1
-	THEN $successor[0] ELSE NONE END;` + projectCallerJobSQL + `
-RETURN IF array::len($written) = 1 AND array::len($successor) = 1
-	THEN $written ELSE [] END;
-COMMIT;`
+	} RETURN AFTER` + recordCallerLeafOutcomeSuffixSQL
 
 func (s *Surreal) RecordCallerLeafOutcome(ctx context.Context, job Job, outcome CallerLeafOutcome) error {
 	prepared, err := prepareCallerLeafOutcome(outcome)
@@ -694,7 +748,16 @@ func (s *Surreal) RecordCallerLeafOutcome(ctx context.Context, job Job, outcome 
 	if err := validateCallerJob(job, prepared.Generation.Repository); err != nil {
 		return fmt.Errorf("record caller leaf outcome: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerLeafOutcomeRec](ctx, s.db, recordCallerLeafOutcomeSQL, map[string]any{
+	pending, err := s.queuePendingIDs(ctx, JobCallerLeaf, prepared.Generation.Repository, "")
+	if err != nil {
+		return fmt.Errorf("record caller leaf outcome pending census: %w", err)
+	}
+	statement := recordCallerLeafOutcomeCreateSQL
+	if len(pending) == 1 {
+		statement = recordCallerLeafOutcomeUpdateSQL
+	}
+	results, err := storeQuery[[]callerLeafOutcomeRec](ctx, s.accounting, s.db, statement, map[string]any{
+		"pending_ids":       pending,
 		"migration_rid":     callerLeafMigrationID(),
 		"migration_version": callerLeafWriterMigrationVersion,
 		"repo_rid":          repoID(prepared.Generation.Repository),
@@ -722,7 +785,7 @@ func (s *Surreal) RecordCallerLeafOutcome(ctx context.Context, job Job, outcome 
 		"receipt":                    prepared.Receipt,
 		"refusal":                    prepared.Refusal,
 		"writer_schema":              CallerLeafWriterSchema,
-	})
+	}, storeWrite(3))
 	if err != nil {
 		return fmt.Errorf("record caller leaf outcome: %w", err)
 	}
@@ -767,8 +830,8 @@ func (s *Surreal) GetCallerLeafOutcome(ctx context.Context, generation CallerGen
 	if err != nil {
 		return nil, fmt.Errorf("get caller leaf outcome: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerLeafOutcomeRec](ctx, s.db,
-		"SELECT * FROM $rid", map[string]any{"rid": callerLeafOutcomeID(preparedGeneration, preparedPair)})
+	results, err := storeQuery[[]callerLeafOutcomeRec](ctx, s.accounting, s.db,
+		"SELECT * FROM $rid", map[string]any{"rid": callerLeafOutcomeID(preparedGeneration, preparedPair)}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("get caller leaf outcome: %w", err)
 	}
@@ -791,13 +854,13 @@ func (s *Surreal) ListCallerLeafOutcomes(ctx context.Context, generation CallerG
 	if err != nil {
 		return nil, fmt.Errorf("list caller leaf outcomes: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerLeafOutcomeRec](ctx, s.db,
+	results, err := storeQuery[[]callerLeafOutcomeRec](ctx, s.accounting, s.db,
 		`SELECT * FROM caller_leaf_outcome
 		 WHERE repository = $repository AND generation_digest = $generation_digest
 		 ORDER BY domain, leaf_prefix`, map[string]any{
 			"repository":        preparedGeneration.Repository,
 			"generation_digest": preparedGeneration.Digest,
-		})
+		}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("list caller leaf outcomes: %w", err)
 	}
@@ -837,7 +900,7 @@ func (s *Surreal) GetCallerLeafOutcomeProgress(
 		CallerLeafOutcomeProgress
 		ShapeCount int `json:"shape_count"`
 	}
-	results, err := surrealdb.Query[[]progressRow](ctx, s.db, `
+	results, err := storeQuery[[]progressRow](ctx, s.accounting, s.db, `
 SELECT
 	count() AS settled_count,
 	count(disposition = $succeeded) AS succeeded_count,
@@ -854,7 +917,7 @@ GROUP ALL`, map[string]any{
 		"succeeded":         string(CallerLeafSucceeded),
 		"refused":           string(CallerLeafTerminalGenerationRefusal),
 		"writer_schema":     CallerLeafWriterSchema,
-	})
+	}, storeRead())
 	if err != nil {
 		return CallerLeafOutcomeProgress{}, fmt.Errorf(
 			"get caller leaf outcome progress: %w", err,
@@ -1294,7 +1357,9 @@ func (s *Surreal) RecordCallerGenerationAdmission(
 	if err := validateCallerJob(job, prepared.Generation.Repository); err != nil {
 		return fmt.Errorf("record caller generation admission: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerGenerationAdmissionRec](ctx, s.db,
+	// The one admission RID/body is submitted even when native authority or
+	// replay guards choose not to create it. This is not an affected-row count.
+	results, err := storeQuery[[]callerGenerationAdmissionRec](ctx, s.accounting, s.db,
 		recordCallerGenerationAdmissionSQL, map[string]any{
 			"migration_rid":     callerLeafMigrationID(),
 			"migration_version": callerLeafWriterMigrationVersion,
@@ -1330,7 +1395,7 @@ func (s *Surreal) RecordCallerGenerationAdmission(
 			"peak_open_files":            prepared.PeakOpenFiles,
 			"refusals":                   prepared.Refusals,
 			"writer_schema":              CallerLeafWriterSchema,
-		})
+		}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("record caller generation admission: %w", err)
 	}
@@ -1412,8 +1477,8 @@ func (s *Surreal) GetCallerGenerationAdmission(ctx context.Context, generation C
 	if err != nil {
 		return nil, fmt.Errorf("get caller generation admission: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerGenerationAdmissionRec](ctx, s.db,
-		"SELECT * FROM $rid", map[string]any{"rid": callerGenerationAdmissionID(prepared)})
+	results, err := storeQuery[[]callerGenerationAdmissionRec](ctx, s.accounting, s.db,
+		"SELECT * FROM $rid", map[string]any{"rid": callerGenerationAdmissionID(prepared)}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("get caller generation admission: %w", err)
 	}
@@ -1433,10 +1498,10 @@ func (s *Surreal) ListCallerGenerationAdmissions(ctx context.Context, repository
 	if err := reponame.Validate(repository); err != nil {
 		return nil, fmt.Errorf("list caller generation admissions: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerGenerationAdmissionRec](ctx, s.db,
+	results, err := storeQuery[[]callerGenerationAdmissionRec](ctx, s.accounting, s.db,
 		`SELECT * FROM caller_generation_admission
 		 WHERE repository = $repository ORDER BY recorded_at, generation_digest`,
-		map[string]any{"repository": repository})
+		map[string]any{"repository": repository}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("list caller generation admissions: %w", err)
 	}
@@ -1466,7 +1531,7 @@ func (s *Surreal) ClearCallerLeafOutcome(ctx context.Context, generation CallerG
 		"outcome_rid":   callerLeafOutcomeID(preparedGeneration, preparedPair),
 		"admission_rid": callerGenerationAdmissionID(preparedGeneration),
 	}, preparedGeneration.Repository, preparedGeneration.Digest, false,
-		"clear caller leaf outcome")
+		"clear caller leaf outcome", storeWrite(4))
 }
 
 func (s *Surreal) ClearCallerLeafGeneration(ctx context.Context, generation CallerGenerationIdentity) error {
@@ -1482,7 +1547,7 @@ func (s *Surreal) ClearCallerLeafGeneration(ctx context.Context, generation Call
 		"generation_digest": prepared.Digest,
 		"admission_rid":     callerGenerationAdmissionID(prepared),
 	}, prepared.Repository, prepared.Digest, false,
-		"clear caller leaf generation")
+		"clear caller leaf generation", storeUnsupported())
 }
 
 func (s *Surreal) ClearAllCallerLeafState(ctx context.Context, repository string) error {
@@ -1493,7 +1558,7 @@ func (s *Surreal) ClearAllCallerLeafState(ctx context.Context, repository string
 		DELETE caller_leaf_outcome WHERE repository = $repository RETURN NONE;
 		DELETE caller_generation_admission WHERE repository = $repository RETURN NONE;`,
 		map[string]any{"repository": repository}, repository, "", true,
-		"clear all caller leaf state")
+		"clear all caller leaf state", storeUnsupported())
 }
 
 // ClearAllCallerLeafStateForRestore is the compatibility entry point for the
@@ -1511,6 +1576,7 @@ func (s *Surreal) clearCallerLeafState(
 	generationDigest string,
 	clearAll bool,
 	operation string,
+	recipe storeQueryRecipe,
 ) error {
 	statement := `BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
@@ -1539,7 +1605,9 @@ COMMIT;`
 	vars["repo_rid"] = repoID(repository)
 	vars["generation_digest"] = generationDigest
 	vars["clear_all"] = clearAll
-	results, err := surrealdb.Query[any](ctx, s.db, statement, vars)
+	// The outcome-only source supplies four fixed write operands. The two
+	// table-wide callers require actual target vectors before selected use.
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, vars, recipe)
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)
 	}

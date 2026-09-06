@@ -7,7 +7,6 @@ import (
 	"maps"
 
 	"github.com/fxamacker/cbor/v2"
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
@@ -132,7 +131,7 @@ IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
  THROW 'phebs-permanent: restore clear page changed';
 };
 FOR $rid IN $ids { DELETE $rid RETURN NONE; };
-COMMIT;`, vars); err != nil {
+COMMIT;`, vars, uint64(len(ids))); err != nil {
 			return err
 		}
 	}
@@ -144,7 +143,7 @@ func (s *Surreal) restoreClearIDs(
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	results, err := surrealdb.Query[[]models.RecordID](ctx, s.db, statement, vars)
+	results, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, statement, vars, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("read restore clear %s: %w", table, err)
 	}
@@ -175,11 +174,11 @@ func validateRestoreClearIDs(ids []models.RecordID, table string, limit int) err
 	return nil
 }
 
-func (s *Surreal) restoreClearWrite(ctx context.Context, statement string, vars map[string]any) error {
+func (s *Surreal) restoreClearWrite(ctx context.Context, statement string, vars map[string]any, rows uint64) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if _, err := surrealdb.Query[any](ctx, s.db, statement, vars); err != nil {
+	if _, err := storeQuery[any](ctx, s.accounting, s.db, statement, vars, storeWrite(rows)); err != nil {
 		return fmt.Errorf("commit restore clear page: %w", err)
 	}
 	return nil
@@ -212,7 +211,7 @@ IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
  THROW 'phebs-permanent: restore repository page changed';
 };
 FOR $rid IN $ids { UPDATE $rid UNSET `+restoreRepoProjectionFields+` RETURN NONE; };
-COMMIT;`, vars); err != nil {
+COMMIT;`, vars, uint64(len(ids))); err != nil {
 			return err
 		}
 		vars["after"] = ids[len(ids)-1]
@@ -262,7 +261,7 @@ func (s *Surreal) clearRestoreCallerPointers(ctx context.Context, guard string, 
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		results, err := surrealdb.Query[[]restoreCallerRepo](ctx, s.db, guard+repos+";", vars)
+		results, err := storeQuery[[]restoreCallerRepo](ctx, s.accounting, s.db, guard+repos+";", vars, storeRead())
 		if err != nil {
 			return fmt.Errorf("read restore caller repositories: %w", err)
 		}
@@ -290,7 +289,7 @@ FOR $repository IN $repos {
  UPDATE $repository.id SET caller_publication_revision = $repository.revision + 1 RETURN NONE;
 };
 FOR $rid IN $ids { DELETE $rid RETURN NONE; };
-COMMIT;`, vars); err != nil {
+COMMIT;`, vars, uint64(len(ids)+len(rows))); err != nil {
 			return err
 		}
 	}

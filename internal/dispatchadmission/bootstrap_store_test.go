@@ -96,7 +96,7 @@ func TestProductionStoreRecord(t *testing.T) {
 		t.Fatal("legacy canonical record gained a store field")
 	}
 	var lifetime *ProductionLifetime
-	if client, err := lifetime.TakeStoreClient(); client != nil || err != nil {
+	if client, err := lifetime.TakeStoreOwner(); client != nil || err != nil {
 		t.Fatal("ordinary path acquired store state")
 	}
 }
@@ -187,13 +187,19 @@ func TestProductionStoreHelper(t *testing.T) {
 	if err != nil || lifetime == nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
+	if owner, err := ProcessStoreOwner(); owner != nil || !errors.Is(err, ErrProductionBootstrap) {
+		t.Fatal("selected factory acquired an untaken owner")
+	}
 	if mode != "unclaimed" {
-		client, err := lifetime.TakeStoreClient()
-		if err != nil || client == nil || client.Context().Err() != nil {
+		owner, err := lifetime.TakeStoreOwner()
+		if err != nil || owner == nil || owner.Check(ctx) != nil {
 			t.Fatalf("store lifetime expired with bootstrap: %v", err)
 		}
-		if again, err := lifetime.TakeStoreClient(); again != nil || !errors.Is(err, ErrProductionBootstrap) {
+		if again, err := lifetime.TakeStoreOwner(); again != nil || !errors.Is(err, ErrProductionBootstrap) {
 			t.Fatal("duplicate handoff accepted")
+		}
+		if actual, err := ProcessStoreOwner(); actual != owner || err != nil {
+			t.Fatal("factory did not receive the retained exact owner")
 		}
 	}
 	probe := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestProductionStoreFDIsolation$")
@@ -208,22 +214,26 @@ func TestProductionStoreHelper(t *testing.T) {
 	if _, err := io.ReadFull(os.Stdin, signal[:]); err != nil {
 		t.Fatal(err)
 	}
-	if mode == "healthy" {
-		if err := lifetime.storeClient.Close(ctx); err != nil {
-			t.Fatal(err)
+	if mode == "failed-store" {
+		_ = lifetime.storeClient.Fail(ctx, storeaccounting.ErrTransport)
+		if owner, err := ProcessStoreOwner(); owner != nil || !errors.Is(err, ErrProductionBootstrap) {
+			t.Fatal("failed store owner fell back to ordinary execution")
 		}
 	}
 	err = lifetime.Close(ctx)
 	if mode == "healthy" && err != nil || mode != "healthy" && err == nil {
 		t.Fatalf("terminal %s: %v", mode, err)
 	}
-	if _, err := lifetime.TakeStoreClient(); !errors.Is(err, ErrProductionBootstrap) {
+	if _, err := lifetime.TakeStoreOwner(); !errors.Is(err, ErrProductionBootstrap) {
 		t.Fatal("closed lifetime handed out a store client")
+	}
+	if owner, err := ProcessStoreOwner(); owner != nil || !errors.Is(err, ErrProductionBootstrap) {
+		t.Fatal("closed lifetime handed out its store owner")
 	}
 }
 
 func TestProductionStoreInheritedBootstrap(t *testing.T) {
-	for _, mode := range []string{"healthy", "unclaimed", "live-close", "refuse-missing-fd", "refuse-old-selector", "refuse-missing-record", "refuse-binding", "refuse-alias-admission", "refuse-alias-control"} {
+	for _, mode := range []string{"healthy", "unclaimed", "failed-store", "refuse-missing-fd", "refuse-old-selector", "refuse-missing-record", "refuse-binding", "refuse-alias-admission", "refuse-alias-control"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 8*time.Second)
 			defer cancel()
@@ -336,8 +346,12 @@ func TestProductionStoreInheritedBootstrap(t *testing.T) {
 			if err := control.Pause(ctx); err != nil {
 				t.Fatal(err)
 			}
-			if dispatch.Fence() != nil || transport.Fence() != nil || control.Checkpoint(ctx) != nil {
+			if dispatch.Fence() != nil || transport.Fence() != nil {
 				t.Fatal("mechanical test fence failed")
+			}
+			checkpointErr := control.Checkpoint(ctx)
+			if (checkpointErr != nil) != (mode == "unclaimed") {
+				t.Fatalf("SDK-bound checkpoint: %v", checkpointErr)
 			}
 			if _, err := input.Write([]byte{1}); err != nil {
 				t.Fatal(err)
@@ -345,8 +359,8 @@ func TestProductionStoreInheritedBootstrap(t *testing.T) {
 			if err := command.Wait(); err != nil {
 				t.Fatal(err)
 			}
-			if err := <-done; err != nil {
-				t.Fatal(err)
+			if err := <-done; (err == nil) != (mode == "healthy") {
+				t.Fatalf("dispatch closure: %v", err)
 			}
 			storeErr := transport.Wait(ctx, 10)
 			snapshot, snapshotErr := transport.Snapshot()

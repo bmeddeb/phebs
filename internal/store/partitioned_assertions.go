@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
-
-	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
 // PartitionedAssertionAuthority binds a page to the exact current domain
@@ -110,9 +108,9 @@ func (s *Surreal) ListPartitionedAssertions(
 		Visible bool           `json:"visible"`
 		Rows    []assertionRec `json:"rows"`
 	}
-	results, err := surrealdb.Query[page](ctx, s.db,
+	results, err := storeQuery[page](ctx, s.accounting, s.db,
 		"LET $current = ("+partitionedAssertionFenceSQL+"); RETURN {visible: array::len($current) = 1, rows: (SELECT * FROM assertion WHERE "+where+
-			" ORDER BY predicate, subject, object, assertion_id, run_id LIMIT $limit)};", vars)
+			" ORDER BY predicate, subject, object, assertion_id, run_id LIMIT $limit)};", vars, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("list partitioned assertions: page: %w", err)
 	}
@@ -138,7 +136,7 @@ func (s *Surreal) ListPartitionedAssertions(
 }
 
 func (s *Surreal) partitionedAssertionAuthorityCurrent(ctx context.Context, vars map[string]any) (bool, error) {
-	results, err := surrealdb.Query[bool](ctx, s.db, "RETURN array::len("+partitionedAssertionFenceSQL+") = 1", vars)
+	results, err := storeQuery[bool](ctx, s.accounting, s.db, "RETURN array::len("+partitionedAssertionFenceSQL+") = 1", vars, storeRead())
 	if err != nil {
 		return false, fmt.Errorf("list partitioned assertions: authority: %w", err)
 	}
@@ -189,11 +187,11 @@ func (s *Surreal) ResolvePartitionedEvidence(
 		Visible bool                    `json:"visible"`
 		Rows    []evidenceResolutionRec `json:"rows"`
 	}
-	results, err := surrealdb.Query[resolution](ctx, s.db,
+	results, err := storeQuery[resolution](ctx, s.accounting, s.db,
 		"LET $current = ("+partitionedAssertionFenceSQL+"); RETURN {visible: array::len($current) = 1, rows: ("+
 			`SELECT * FROM snapshot_evidence WHERE repo = $repo AND run_id = $run_id
 			AND run_id IN $current AND commit = $commit AND atom_id = $atom
-			ORDER BY occurrence_id LIMIT $limit FETCH atom_record)};`, vars)
+			ORDER BY occurrence_id LIMIT $limit FETCH atom_record)};`, vars, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("resolve partitioned evidence: locators: %w", err)
 	}

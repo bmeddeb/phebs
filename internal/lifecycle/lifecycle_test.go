@@ -990,7 +990,7 @@ func TestGenerationOwnerHonorsAggregateQueryBudgetAndBackupLock(t *testing.T) {
 			_ context.Context, _ string, scan, deletes, retained int,
 		) (store.GenerationLifecycleSweep, error) {
 			called = true
-			if scan != MaxOwnerQueriesPerTick-1 || deletes != MaxDeletesPerTick ||
+			if scan != (MaxOwnerQueriesPerTick-1)/2 || deletes != MaxDeletesPerTick ||
 				retained != GenerationScheduleRetained {
 				t.Fatalf("generation limits = scan %d deletes %d retained %d", scan, deletes, retained)
 			}

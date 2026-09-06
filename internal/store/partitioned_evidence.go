@@ -118,7 +118,7 @@ func (s *Surreal) PinPartitionedExtractionRun(ctx context.Context, runID, owner 
 	}
 	// Reacquisition preserves the original pin timestamp. The same run fence
 	// remains mandatory even when its existing pin is no longer domain-rooted.
-	existing, err := surrealdb.Query[[]models.RecordID](ctx, s.db, existingPartitionedExtractionPinSQL, variables)
+	existing, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, existingPartitionedExtractionPinSQL, variables, storeRead())
 	if err != nil {
 		return fmt.Errorf("read partitioned extraction pin: %w", err)
 	}
@@ -135,7 +135,7 @@ func (s *Surreal) PinPartitionedExtractionRun(ctx context.Context, runID, owner 
 		}
 		return nil
 	}
-	results, err := surrealdb.Query[[]evidencePinRec](ctx, s.db, pinPartitionedExtractionRunSQL, variables)
+	results, err := storeQuery[[]evidencePinRec](ctx, s.accounting, s.db, pinPartitionedExtractionRunSQL, variables, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("pin partitioned extraction run: %w", err)
 	}
@@ -152,9 +152,9 @@ func (s *Surreal) UnpinPartitionedExtractionRun(ctx context.Context, runID, owne
 		strings.TrimSpace(owner) != owner || owner == "" || len(owner) > maxEvidenceIdentityBytes {
 		return errors.New("unpin partitioned extraction run: invalid identity")
 	}
-	_, err := surrealdb.Query[[]evidencePinRec](ctx, s.db,
+	_, err := storeQuery[[]evidencePinRec](ctx, s.accounting, s.db,
 		"DELETE $rid WHERE run_id = $run_id AND kind = $owner RETURN BEFORE",
-		map[string]any{"rid": evidencePinRecordID(runID, owner), "run_id": runID, "owner": owner})
+		map[string]any{"rid": evidencePinRecordID(runID, owner), "run_id": runID, "owner": owner}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("unpin partitioned extraction run: %w", err)
 	}
@@ -165,8 +165,7 @@ func (s *Surreal) UnpinPartitionedExtractionOwner(ctx context.Context, owner str
 	if strings.TrimSpace(owner) != owner || owner == "" || len(owner) > maxEvidenceIdentityBytes {
 		return errors.New("unpin partitioned extraction owner: invalid identity")
 	}
-	_, err := surrealdb.Query[[]evidencePinRec](ctx, s.db,
-		"DELETE evidence_pin WHERE kind = $owner RETURN BEFORE", map[string]any{"owner": owner})
+	err := s.deletePartitionedPins(ctx, "kind = $owner", map[string]any{"owner": owner})
 	if err != nil {
 		return fmt.Errorf("unpin partitioned extraction owner: %w", err)
 	}
@@ -183,13 +182,50 @@ func (s *Surreal) ReconcilePartitionedExtractionOwners(ctx context.Context, owne
 			return errors.New("reconcile partitioned extraction owners: invalid owner")
 		}
 	}
-	_, err := surrealdb.Query[[]evidencePinRec](ctx, s.db,
-		"DELETE evidence_pin WHERE string::starts_with(kind, 'relationship:') AND kind NOT IN $owners RETURN BEFORE",
-		map[string]any{"owners": owners})
+	err := s.deletePartitionedPins(ctx,
+		"string::starts_with(kind, 'relationship:') AND kind NOT IN $owners", map[string]any{"owners": owners})
 	if err != nil {
 		return fmt.Errorf("reconcile partitioned extraction owners: %w", err)
 	}
 	return nil
+}
+
+// The two closed predicates above keep the existing atomic cleanup. An
+// ordinary oversized historical set still uses its original single query;
+// selected accounting cannot invent its unknown submitted target vector.
+func (s *Surreal) deletePartitionedPins(ctx context.Context, predicate string, vars map[string]any) error {
+	selection := "SELECT VALUE id FROM evidence_pin WHERE " + predicate + " ORDER BY id LIMIT 513"
+	selected, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, selection+";", vars, storeRead())
+	if err != nil {
+		return err
+	}
+	ids, err := generationCensusRows(ctx, selected, 0)
+	if err != nil {
+		return err
+	}
+	if len(ids) > 513 {
+		return errors.New("read partitioned pin cleanup: invalid census")
+	}
+	if len(ids) > 512 {
+		_, err := storeQuery[[]evidencePinRec](ctx, s.accounting, s.db,
+			"DELETE evidence_pin WHERE "+predicate+" RETURN BEFORE", vars, storeUnsupported())
+		return err
+	}
+	if err := validateRestoreClearIDs(ids, "evidence_pin", 512); err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	vars["ids"] = ids
+	_, err = storeQuery[[]evidencePinRec](ctx, s.accounting, s.db, `BEGIN;
+LET $actual = `+selection+`;
+IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
+	THROW 'phebs-permanent: partitioned pin selection changed';
+};
+DELETE $ids WHERE `+predicate+` RETURN BEFORE;
+COMMIT;`, vars, storeWrite(uint64(len(ids))))
+	return err
 }
 
 var _ PartitionedEvidenceStore = (*Surreal)(nil)
@@ -349,7 +385,7 @@ func (s *Surreal) PublishPartitionedExtractionDomain(
 		"evidence_format_version":    evidenceFormatVersion,
 		"evidence_migration_version": evidenceMigrationVersion,
 	}
-	results, err := surrealdb.Query[[]partitionedDomainRec](ctx, s.db, publishPartitionedExtractionDomainSQL, variables)
+	results, err := storeQuery[[]partitionedDomainRec](ctx, s.accounting, s.db, publishPartitionedExtractionDomainSQL, variables, storeWrite(2))
 	if err != nil {
 		return fmt.Errorf("publish partitioned extraction domain: %w", err)
 	}
@@ -403,8 +439,8 @@ func (s *Surreal) GetPartitionedExtractionDomain(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, fmt.Errorf("get partitioned extraction domain: %w", err)
 	}
-	results, err := surrealdb.Query[[]partitionedDomainRec](ctx, s.db,
-		"SELECT * FROM $rid LIMIT 1", map[string]any{"rid": partitionedDomainID(repository, domain)})
+	results, err := storeQuery[[]partitionedDomainRec](ctx, s.accounting, s.db,
+		"SELECT * FROM $rid LIMIT 1", map[string]any{"rid": partitionedDomainID(repository, domain)}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("get partitioned extraction domain: %w", err)
 	}
@@ -422,9 +458,7 @@ func (s *Surreal) GetPartitionedExtractionDomain(
 // ReleaseOneUnrootedPartitionRun transfers at most one sealed historical run
 // to the existing evidence sweeper. Current and one per-domain rollback floor
 // remain sealed; evidence pins still outrank collection in the later sweep.
-func (s *Surreal) ReleaseOneUnrootedPartitionRun(ctx context.Context) (bool, error) {
-	const query = `
-BEGIN;
+const unrootedPartitionRunSelectionSQL = `
 LET $candidate = (SELECT id, run_id, started_at FROM extraction_run
 	WHERE status = 'staged' AND (partition_sealed ?? false) = true
 		AND (partition_active ?? false) = false
@@ -433,12 +467,29 @@ LET $candidate = (SELECT id, run_id, started_at FROM extraction_run
 		AND run_id NOT IN (SELECT VALUE run_id FROM extraction_domain_root)
 		AND run_id NOT IN (SELECT VALUE prior_run_id FROM extraction_domain_root
 			WHERE prior_run_id != NONE)
-	ORDER BY started_at, run_id LIMIT 1)[0];
+	ORDER BY started_at, run_id LIMIT 1)[0];`
+
+func (s *Surreal) ReleaseOneUnrootedPartitionRun(ctx context.Context) (bool, error) {
+	selected, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db,
+		unrootedPartitionRunSelectionSQL+`
+RETURN IF $candidate != NONE THEN [$candidate.id] ELSE [] END;`, nil, storeRead())
+	if err != nil {
+		return false, fmt.Errorf("select unrooted partition run: %w", err)
+	}
+	ids, err := generationMutationIDs(ctx, selected, "extraction_run", 1, 1)
+	if err != nil || len(ids) == 0 {
+		return false, err
+	}
+	const query = `BEGIN;` + unrootedPartitionRunSelectionSQL + `
+IF $candidate != NONE AND $candidate.id != $rid {
+	THROW 'phebs-permanent: unrooted partition run selection changed';
+};
 LET $released = IF $candidate != NONE THEN
-	(UPDATE $candidate.id SET partition_sealed = false RETURN AFTER) ELSE [] END;
+	(UPDATE $rid SET partition_sealed = false RETURN AFTER) ELSE [] END;
 RETURN $released;
 COMMIT;`
-	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db, query, nil)
+	results, err := storeQuery[[]extractionRunRec](ctx, s.accounting, s.db, query,
+		map[string]any{"rid": ids[0]}, storeWrite(1))
 	if err != nil {
 		return false, fmt.Errorf("release unrooted partition run: %w", err)
 	}

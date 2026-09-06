@@ -255,21 +255,21 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 	rootRaw []byte,
 	holding *ServiceRuntimeSelector,
 ) error {
-	tx, err := s.db.Begin(ctx)
+	tx, err := storeBegin(ctx, s.accounting, s.db)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		cancelCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = tx.Cancel(cancelCtx)
+		_ = storeCancel(cancelCtx, s.accounting, tx)
 	}()
 	root := generation.Root
 	now := storeTimestamp(time.Now())
 
-	repoResults, err := surrealdb.Query[[]serviceCatalogV3RepoFenceRec](
-		ctx, tx, "SELECT indexed_commit_hash, deleting FROM $rid",
-		map[string]any{"rid": repoID(root.Binding.Repository)},
+	repoResults, err := storeQuery[[]serviceCatalogV3RepoFenceRec](
+		ctx, s.accounting, tx, "SELECT indexed_commit_hash, deleting FROM $rid",
+		map[string]any{"rid": repoID(root.Binding.Repository)}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		if repos[0].IndexedCommitHash != root.Binding.Source.Commit {
 			return ErrConflict
 		}
-	} else if err := verifyServiceCatalogV3HoldingFence(
+	} else if err := s.verifyServiceCatalogV3HoldingFence(
 		ctx, tx, root, *holding,
 	); err != nil {
 		return err
@@ -292,8 +292,8 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 	for _, wanted := range memberRecords {
 		identifier := wanted.MemberDigest[len("sha256:"):]
 		rid := serviceCatalogV3MemberID(wanted.MemberDigest)
-		results, queryErr := surrealdb.Query[[]serviceCatalogV3MemberRec](
-			ctx, tx, "SELECT * FROM $rid", map[string]any{"rid": rid},
+		results, queryErr := storeQuery[[]serviceCatalogV3MemberRec](
+			ctx, s.accounting, tx, "SELECT * FROM $rid", map[string]any{"rid": rid}, storeRead(),
 		)
 		if queryErr != nil {
 			return queryErr
@@ -305,8 +305,8 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 			return ErrConflict
 		}
 		if len(rows) == 0 {
-			created, createErr := surrealdb.Query[[]serviceCatalogV3MemberRec](
-				ctx, tx, `CREATE $rid CONTENT {
+			created, createErr := storeQuery[[]serviceCatalogV3MemberRec](
+				ctx, s.accounting, tx, `CREATE $rid CONTENT {
 					member_digest: $member_digest,
 					kind: $kind,
 					ordinal: $ordinal,
@@ -318,7 +318,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 					"kind": wanted.Kind, "ordinal": wanted.Ordinal,
 					"content_bytes": wanted.ContentBytes,
 					"content":       wanted.Content, "recorded_at": wanted.RecordedAt,
-				},
+				}, storeWrite(1),
 			)
 			if createErr != nil {
 				return createErr
@@ -340,8 +340,8 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		RecordedAt: now,
 	}
 	rootID := serviceCatalogV3RootID(root.Digest)
-	rootResults, err := surrealdb.Query[[]serviceCatalogV3RootRec](
-		ctx, tx, "SELECT * FROM $rid", map[string]any{"rid": rootID},
+	rootResults, err := storeQuery[[]serviceCatalogV3RootRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid", map[string]any{"rid": rootID}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -356,8 +356,8 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		rootWanted.RecordedAt = rootRows[0].RecordedAt
 	}
 	if len(rootRows) == 0 {
-		created, createErr := surrealdb.Query[[]serviceCatalogV3RootRec](
-			ctx, tx, `CREATE $rid CONTENT {
+		created, createErr := storeQuery[[]serviceCatalogV3RootRec](
+			ctx, s.accounting, tx, `CREATE $rid CONTENT {
 				root_digest: $root_digest,
 				repository: $repository,
 				root_bytes: $root_bytes,
@@ -367,7 +367,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 				"rid": rootID, "root_digest": rootWanted.RootDigest,
 				"repository": rootWanted.Repository, "root_bytes": rootWanted.RootBytes,
 				"root_json": rootWanted.RootJSON, "recorded_at": rootWanted.RecordedAt,
-			},
+			}, storeWrite(1),
 		)
 		if createErr != nil {
 			return createErr
@@ -390,8 +390,8 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		LogicalDigest: root.LogicalDigest, RecordedAt: now,
 	}
 	versionID := serviceCatalogV3AuthorityVersionID(root)
-	versionResults, err := surrealdb.Query[[]serviceCatalogV3AuthorityVersionRec](
-		ctx, tx, "SELECT * FROM $rid", map[string]any{"rid": versionID},
+	versionResults, err := storeQuery[[]serviceCatalogV3AuthorityVersionRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid", map[string]any{"rid": versionID}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -405,8 +405,8 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		return ErrConflict
 	}
 	if len(versionRows) == 0 {
-		created, createErr := surrealdb.Query[[]serviceCatalogV3AuthorityVersionRec](
-			ctx, tx, `CREATE $rid CONTENT {
+		created, createErr := storeQuery[[]serviceCatalogV3AuthorityVersionRec](
+			ctx, s.accounting, tx, `CREATE $rid CONTENT {
 				repository: $repository,
 				authority_kind: $authority_kind,
 				authority_id: $authority_id,
@@ -424,7 +424,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 				"override_version":  versionWanted.OverrideVersion,
 				"logical_digest":    versionWanted.LogicalDigest,
 				"recorded_at":       versionWanted.RecordedAt,
-			},
+			}, storeWrite(1),
 		)
 		if createErr != nil {
 			return createErr
@@ -437,14 +437,14 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		}
 	}
 	if _, err := ensureServiceCatalogV3LifecycleMetadata(
-		ctx, tx, root, rootWanted.RecordedAt, true,
+		ctx, s.accounting, tx, root, rootWanted.RecordedAt, true,
 	); err != nil {
 		return err
 	}
 
 	candidateID := serviceCatalogV3CandidateID(root.Binding.Repository)
-	candidateResults, err := surrealdb.Query[[]serviceCatalogV3CandidateRec](
-		ctx, tx, "SELECT * FROM $rid", map[string]any{"rid": candidateID},
+	candidateResults, err := storeQuery[[]serviceCatalogV3CandidateRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid", map[string]any{"rid": candidateID}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -460,7 +460,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 	if len(candidateRows) == 1 {
 		priorRoot = candidateRows[0].RootDigest
 	}
-	if err := fenceServiceStateV3CandidateAdvance(
+	if err := s.fenceServiceStateV3CandidateAdvance(
 		ctx, tx, root.Binding.Repository, priorRoot, root.Digest,
 	); err != nil {
 		return err
@@ -470,8 +470,8 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 		if len(candidateRows) == 1 {
 			revision = candidateRows[0].ControlRevision + 1
 		}
-		updated, updateErr := surrealdb.Query[[]serviceCatalogV3CandidateRec](
-			ctx, tx, `UPSERT $rid CONTENT {
+		updated, updateErr := storeQuery[[]serviceCatalogV3CandidateRec](
+			ctx, s.accounting, tx, `UPSERT $rid CONTENT {
 				repository: $repository,
 				root_digest: $root_digest,
 				control_revision: $control_revision,
@@ -480,7 +480,7 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 				"rid": candidateID, "repository": root.Binding.Repository,
 				"root_digest": root.Digest, "control_revision": revision,
 				"published_at": now,
-			},
+			}, storeWrite(1),
 		)
 		if updateErr != nil {
 			return updateErr
@@ -493,10 +493,10 @@ func (s *Surreal) publishServiceCatalogV3CandidateOnce(
 			return ErrConflict
 		}
 	}
-	return tx.Commit(ctx)
+	return storeCommit(ctx, s.accounting, tx)
 }
 
-func verifyServiceCatalogV3HoldingFence(
+func (s *Surreal) verifyServiceCatalogV3HoldingFence(
 	ctx context.Context,
 	tx *surrealdb.Transaction,
 	root servicecatalogv3.Root,
@@ -508,9 +508,9 @@ func verifyServiceCatalogV3HoldingFence(
 		root.MappedV2Digest == "" {
 		return ErrInvalidServiceRuntimeSelector
 	}
-	selectorResults, err := surrealdb.Query[[]serviceRuntimeSelectorRec](
-		ctx, tx, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceRuntimeSelectorID(selector.Repository)},
+	selectorResults, err := storeQuery[[]serviceRuntimeSelectorRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceRuntimeSelectorID(selector.Repository)}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -533,15 +533,15 @@ func verifyServiceCatalogV3HoldingFence(
 		RelationshipRootDigest:       selector.RelationshipRootDigest,
 	}
 	if err := verifyServiceRuntimeV2Target(
-		ctx, tx, selector.Repository, target,
+		ctx, s.accounting, tx, selector.Repository, target,
 	); err != nil {
 		return err
 	}
-	generationResults, err := surrealdb.Query[[]serviceCatalogGenerationRec](
-		ctx, tx, "SELECT * FROM $rid",
+	generationResults, err := storeQuery[[]serviceCatalogGenerationRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid",
 		map[string]any{
 			"rid": serviceCatalogGenerationID(selector.CatalogGenerationDigest),
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -658,9 +658,9 @@ func (s *Surreal) GetServiceCatalogV3CandidatePointer(
 			"get service catalog v3 candidate pointer: repository: %w", err,
 		)
 	}
-	candidateResults, err := surrealdb.Query[[]serviceCatalogV3CandidateRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogV3CandidateID(repository)},
+	candidateResults, err := storeQuery[[]serviceCatalogV3CandidateRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogV3CandidateID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return ServiceCatalogV3Pointer{}, fmt.Errorf(
@@ -701,9 +701,9 @@ func (s *Surreal) ReadServiceCatalogV3Root(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return servicecatalogv3.Root{}, fmt.Errorf("read service catalog v3 root: %w", err)
 	}
-	rootResults, err := surrealdb.Query[[]serviceCatalogV3RootRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogV3RootID(digest)},
+	rootResults, err := storeQuery[[]serviceCatalogV3RootRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogV3RootID(digest)}, storeRead(),
 	)
 	if err != nil {
 		return servicecatalogv3.Root{}, fmt.Errorf("read service catalog v3 root: %w", err)
@@ -735,8 +735,8 @@ func (s *Surreal) ReadServiceCatalogV3Root(
 			"read service catalog v3 root authority version: %w", err,
 		)
 	}
-	versionResults, err := surrealdb.Query[[]serviceCatalogV3AuthorityVersionRec](
-		ctx, s.db, "SELECT * FROM $rid", map[string]any{"rid": versionID},
+	versionResults, err := storeQuery[[]serviceCatalogV3AuthorityVersionRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid", map[string]any{"rid": versionID}, storeRead(),
 	)
 	if err != nil {
 		return servicecatalogv3.Root{}, fmt.Errorf(
@@ -765,9 +765,9 @@ func (s *Surreal) ReadServiceCatalogV3Root(
 			"read service catalog v3 root lifecycle: %w", err,
 		)
 	}
-	lifecycleResults, err := surrealdb.Query[[]serviceCatalogV3LifecycleRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogV3LifecycleID(root.Digest)},
+	lifecycleResults, err := storeQuery[[]serviceCatalogV3LifecycleRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogV3LifecycleID(root.Digest)}, storeRead(),
 	)
 	if err != nil {
 		return servicecatalogv3.Root{}, fmt.Errorf(
@@ -876,11 +876,11 @@ DEFINE FIELD OVERWRITE published_at ON service_catalog_v3_candidate TYPE datetim
 `
 
 func (s *Surreal) migrateServiceCatalogV3Schema(ctx context.Context) error {
-	markerResults, err := surrealdb.Query[[]struct {
+	markerResults, err := storeQuery[[]struct {
 		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $rid", map[string]any{
+	}](ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{
 		"rid": serviceCatalogV3SchemaMigrationID(),
-	})
+	}, storeRead())
 	if err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: marker: %w", err)
 	}
@@ -900,14 +900,14 @@ func (s *Surreal) migrateServiceCatalogV3Schema(ctx context.Context) error {
 	if err := s.applySchemaBatch(ctx, serviceCatalogV3PreflightSchema, "migrate service catalog v3 preflight "); err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: preflight schema: %w", err)
 	}
-	probe, err := surrealdb.Query[[]struct {
+	probe, err := storeQuery[[]struct {
 		Count int `json:"count"`
-	}](ctx, s.db, `RETURN [{ count:
+	}](ctx, s.accounting, s.db, `RETURN [{ count:
 		array::len(SELECT id FROM service_catalog_v3_root LIMIT 1) +
 		array::len(SELECT id FROM service_catalog_v3_member LIMIT 1) +
 		array::len(SELECT id FROM service_catalog_v3_authority_version LIMIT 1) +
 		array::len(SELECT id FROM service_catalog_v3_candidate LIMIT 1)
-	}];`, nil)
+	}];`, nil, storeRead())
 	if err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: preflight: %w", err)
 	}
@@ -918,7 +918,7 @@ func (s *Surreal) migrateServiceCatalogV3Schema(ctx context.Context) error {
 	if err := s.applySchemaBatch(ctx, serviceCatalogV3Schema, "migrate service catalog v3 schema "); err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: define: %w", err)
 	}
-	markerWrite, err := surrealdb.Query[any](ctx, s.db, `
+	markerWrite, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $rid LIMIT 1)[0].version;
 IF $current != NONE AND $current != $wanted {
@@ -931,7 +931,7 @@ UPSERT $rid SET
 COMMIT;`, map[string]any{
 		"rid":    serviceCatalogV3SchemaMigrationID(),
 		"wanted": serviceCatalogV3SchemaMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: marker write: %w", err)
 	}
@@ -943,11 +943,11 @@ COMMIT;`, map[string]any{
 			)
 		}
 	}
-	verified, err := surrealdb.Query[[]struct {
+	verified, err := storeQuery[[]struct {
 		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $rid", map[string]any{
+	}](ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{
 		"rid": serviceCatalogV3SchemaMigrationID(),
-	})
+	}, storeRead())
 	if err != nil {
 		return fmt.Errorf("migrate service catalog v3 schema: verify: %w", err)
 	}

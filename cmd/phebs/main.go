@@ -265,6 +265,9 @@ func runPhebs(args []string) (code int, retErr error) {
 				code = 1
 			}
 		}()
+		if _, err := lifetime.TakeStoreOwner(); err != nil {
+			return 1, err
+		}
 	}
 	if len(args) == 0 {
 		printUsage()
@@ -670,7 +673,7 @@ func serve(args []string) (retErr error) {
 		return err
 	}
 	reportT4013Startup("store_opened")
-	defer func() { _ = st.Close(context.Background()) }()
+	defer func() { retErr = errors.Join(retErr, st.Close(context.Background())) }()
 	var callerReader *callerexecute.PublicationReader
 	if callerRegistry.Enabled() {
 		callerReader, err = callerexecute.NewPublicationReader(
@@ -3274,9 +3277,9 @@ func runProofBundleMaintenanceWithOwners(
 	}
 }
 
-// runEvidenceMaintenance checks immediately at boot. Empty stores cost one
-// query per idle interval; a likely backlog is processed in bounded bursts
-// separated by a short yield. Pinned proof/checkpoint runs are excluded by the
+// runEvidenceMaintenance checks immediately at boot. Empty stores repeat the
+// existing marker and candidate checks per idle interval; a likely backlog is
+// processed in bounded bursts separated by a short yield. Pinned proof/checkpoint runs are excluded by the
 // store, and each individual deletion transaction has its own fixed row cap.
 func runEvidenceMaintenance(
 	ctx context.Context, evidence store.EvidenceStore,

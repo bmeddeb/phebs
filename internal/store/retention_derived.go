@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
@@ -377,7 +376,7 @@ func (collection *DerivedRetentionCollection) recordDerivedRetentionError(
 func (s *Surreal) derivedRetentionCatalogTables(
 	ctx context.Context,
 ) (map[string]struct{}, error) {
-	results, err := surrealdb.Query[[]string](ctx, s.db, derivedRetentionCatalogSQL, nil)
+	results, err := storeQuery[[]string](ctx, s.accounting, s.db, derivedRetentionCatalogSQL, nil, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("inspect derived retention database catalog: %w", err)
 	}
@@ -434,8 +433,8 @@ func (s *Surreal) derivedRetentionReadiness(
 	default:
 		return false, errors.New("unknown derived retention readiness fence")
 	}
-	rows, err := surrealdb.Query[[]retentionMarkerState](ctx, s.db,
-		"SELECT version FROM $rid LIMIT 1", map[string]any{"rid": rid})
+	rows, err := storeQuery[[]retentionMarkerState](ctx, s.accounting, s.db,
+		"SELECT version FROM $rid LIMIT 1", map[string]any{"rid": rid}, storeRead())
 	if err != nil {
 		return false, fmt.Errorf("derived retention readiness %d: %w", kind, err)
 	}
@@ -477,9 +476,9 @@ func (s *Surreal) collectDerivedCandidate(
 	request RetentionComponentRequest,
 	collection *DerivedRetentionCollection,
 ) error {
-	results, err := surrealdb.Query[[]candidateManifestPublicationRec](
-		ctx, s.db, derivedRetentionCandidateSQL,
-		map[string]any{"scan_limit": request.ScanIdentities},
+	results, err := storeQuery[[]candidateManifestPublicationRec](
+		ctx, s.accounting, s.db, derivedRetentionCandidateSQL,
+		map[string]any{"scan_limit": request.ScanIdentities}, storeRead(),
 	)
 	if err != nil {
 		return fmt.Errorf("derived retention candidate authorities: %w", err)
@@ -523,9 +522,9 @@ func (s *Surreal) collectDerivedFocused(
 	request RetentionComponentRequest,
 	collection *DerivedRetentionCollection,
 ) error {
-	results, err := surrealdb.Query[[]derivedRetentionFocusedRow](
-		ctx, s.db, derivedRetentionFocusedSQL,
-		map[string]any{"scan_limit": request.ScanIdentities},
+	results, err := storeQuery[[]derivedRetentionFocusedRow](
+		ctx, s.accounting, s.db, derivedRetentionFocusedSQL,
+		map[string]any{"scan_limit": request.ScanIdentities}, storeRead(),
 	)
 	if err != nil {
 		return fmt.Errorf("derived retention focused authorities: %w", err)
@@ -585,9 +584,9 @@ func (s *Surreal) collectDerivedResolver(
 	request RetentionComponentRequest,
 	collection *DerivedRetentionCollection,
 ) error {
-	results, err := surrealdb.Query[[]resolverCatalogPublicationRec](
-		ctx, s.db, derivedRetentionResolverSQL,
-		map[string]any{"scan_limit": request.ScanIdentities},
+	results, err := storeQuery[[]resolverCatalogPublicationRec](
+		ctx, s.accounting, s.db, derivedRetentionResolverSQL,
+		map[string]any{"scan_limit": request.ScanIdentities}, storeRead(),
 	)
 	if err != nil {
 		return fmt.Errorf("derived retention resolver authorities: %w", err)
@@ -631,9 +630,9 @@ func (s *Surreal) collectDerivedCaller(
 	request RetentionComponentRequest,
 	collection *DerivedRetentionCollection,
 ) error {
-	results, err := surrealdb.Query[[]callerGenerationPublicationSummaryRec](
-		ctx, s.db, derivedRetentionCallerSQL,
-		map[string]any{"scan_limit": request.ScanIdentities},
+	results, err := storeQuery[[]callerGenerationPublicationSummaryRec](
+		ctx, s.accounting, s.db, derivedRetentionCallerSQL,
+		map[string]any{"scan_limit": request.ScanIdentities}, storeRead(),
 	)
 	if err != nil {
 		return fmt.Errorf("derived retention caller authorities: %w", err)
@@ -692,14 +691,14 @@ func (s *Surreal) derivedRetentionCallerAuthoritiesCurrent(
 			Summary:        summary,
 		}
 	}
-	results, err := surrealdb.Query[[]callerGenerationCurrentResult](
-		ctx, s.db, derivedRetentionCallerAuthoritiesCurrentSQL,
+	results, err := storeQuery[[]callerGenerationCurrentResult](
+		ctx, s.accounting, s.db, derivedRetentionCallerAuthoritiesCurrentSQL,
 		map[string]any{
 			"migration_rid":     callerGenerationPublicationMigrationID(),
 			"migration_version": callerGenerationPublicationMigrationVersion,
 			"bindings":          bindings,
 			"writer_schema":     CallerGenerationPublicationWriterSchema,
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return false, fmt.Errorf(

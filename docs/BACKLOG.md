@@ -5158,6 +5158,193 @@ are auth `8248b019`/`1313e331`, audit `f91183d2`, usage `d6e527e1`, permission
 `c019b5cd` and request test `c6a48a22`. Integrated exact-tree acceptance remains
 required; this is not a complete ceremony meter or a freeze.
 
+The integrated store-accounting bucket now reuses one concrete SDK owner for
+authenticated bootstrap, factories and phase control. Independent rehome,
+phase bridge, state/catalog and lifecycle/selector/reference source reviews
+reported all severity counts zero. Rehome/bridge complete dispatch and store
+transport normal three-repeat passed in 9.997s/1.424s, race three-repeat in
+15.139s/2.713s; affected-package vet and pinned lint passed. These are scoped
+working-tree results, not native engine or full runner evidence.
+
+The shared empty-startup migration checks passed the combined focused/native
+selector normally in 19.214s and under race in 21.103s. The subsequent
+active-job/schema accounting checks passed normal in 0.603s and race
+three-repeat in 1.836s. The same-schema eight-index batch, actual evidence
+migration recipes, genuine factory binding, complete native selected opening
+and owning documentation still require their combined review/gates. The
+earlier first-unannotated-schema refusal is superseded by the actual metered
+488-definition submission, not by a complete-startup assertion. Main remains
+unmerged and V3 remains unsealed/unfrozen.
+
+The first actual selected full-initialization test failed in 1.085s after an
+accepted one-transaction/one-row namespace definition prefix. Its engine
+joined. A bounded native reply diagnostic then passed in 1.220s and showed
+that both Use replies are scope maps, not the null assumed by the earlier
+mocked positive fixtures. Correct exact-scope validation and another complete
+selected startup/reopen test remain required; earlier null-fixture green
+results do not establish native startup compatibility.
+
+A second bounded native diagnostic (2.420s) identified the exact two-field
+28/32-byte scope maps, with native tagged NONE only for namespace-only Use.
+The corrected selected validator and fixtures reject wrong or incomplete
+scope maps. The next full selected opening advanced past the controls but
+failed in 1.310s at the unannotated resolver writer migration, retaining
+27 transactions, 722 rows and a 488-row maximum. The engine joined. This
+establishes native control compatibility, not complete selected startup;
+remaining startup source coverage is the next gate.
+
+The three writer migrations now close that startup gate. Strict native marker
+decoding and exact empty-set fences passed the actual selected full opening
+and reopen in 1.110s: fresh 36 transactions/743 rows and reopen 7/499, both
+maximum 488 with 82 tables. Both remain inside each unchanged 170-transaction
+and 87,040-row phase budget. The engine joined. This supersedes the preceding
+incomplete startup record only, not full controlled-server or runner acceptance.
+
+Queue source/test review is clean; pure three-repeat normal/race passed in
+0.632s/2.413s and seven native selectors passed in 18.376s/21.049s. Vet and
+repository-pinned 2.12.2 lint passed; the separate unpinned lint result is not
+substituted for that gate. Generation's initial native gates failed in 49.854s
+and 52.645s, first on LET result arity and then on the existing-schedule
+census. A single 9.069s diagnostic isolated an absent IF-wrapped ID array.
+The corrected unconditional native SELECT preserves every predicate and
+strict absence refusal; its replacing-schedule confirmation passed in 9.583s,
+then all eight native selectors passed normal/race in 51.855s/51.745s.
+Generation pure race three-repeat, vet and pinned lint also pass. All owned
+engines joined. These are source-scoped working-tree results: independent
+integrated review, full runner/readiness, merge, seal and freeze remain open.
+
+Connection membership's independent source/test/cost review reported all
+severity counts zero. Repository deletion/reactivation now uses a native
+branch/ID observation with an exact in-transaction echo. Combined pure normal
+passed in 0.632s and race three-repeat in 1.720s. Four actual membership,
+rollback, reactivation and stale-census selectors passed normal/race in
+2.373s/4.193s. All engine cleanups joined. Independent review of the new
+deletion-state path and the combined exact-tree gates remain required.
+
+Independent deletion-state source/test/cost review is now clean at all
+severities. First-user enrollment's earlier conservative unsupported recipe
+is replaced with its two actual fixed operands, without SQL or behavior
+changes. The initial source assertion failed in 0.550s because it still
+required every auth write to have one operand; its correction names only the
+existing two-target first-user transaction. Auth accounting three-repeat
+normal/race then passed in 0.637s/1.767s. This is not yet a complete authenticated
+server rehearsal or full runner proof.
+
+The first three-writer native compatibility selector failed in 27.002s:
+the new read-only refusals preserved the guard but lost the established
+future/mixed-generation error vocabulary. Restoring the original permanent
+messages, without weakening the checks, passed the combined three-selector
+and actual selected startup/auth test in 27.488s. Fresh startup's 36/743
+transaction/row prefix became 37/745 after the first-user submission; reopen's
+7/499 became 8/501 after a known conflicting first-user attempt. Both kept
+maximum 488, 82 tables and complete final SA closure, and the engine joined.
+The separate ordinary first-user atomicity selector passed in 1.363s.
+
+Complete store-accounting and dispatch-admission packages then passed normal
+in 0.641s/3.816s and race in 1.690s/5.908s, with scoped vet clean. These are
+working-tree transport and store proofs, not an exact-tree full runner gate.
+
+Cross-bucket review then reopened one medium source/operand consistency
+finding in the repository state writers, including the previously reviewed
+deletion-state path: an inactive native branch still contained fixed write
+operands in the submitted SQL while its descriptor omitted them. Bounded
+source recipes now specialize those write fragments from their exact echoed
+observation, preserving the original authority guards; inactive mutations
+must actually be absent, and a pending successor submits only its selected
+UPDATE or CREATE body. Ordinary overflow keeps its original transaction.
+The first corrected deletion-state pure three-repeat passed in 0.680s;
+fresh independent review and native confirmation are required. Earlier green
+results and the earlier zero-finding review do not close this reopened issue.
+
+The corrected deletion-state source and tests then passed independent review
+with all severity counts zero. Corrected pure race three-repeat passed in
+1.736s; the four native membership/deletion/reactivation selectors passed
+normal/race in 2.351s/3.562s. The index-state correction likewise passed exact
+source/test review with all severities zero and six native race selectors in
+21.607s. Its initial native command failed in 19.596s only on a new fixture's
+missing required status; all five existing cases passed. The next 1.264s run
+proved the transition but failed its test-only ORDER BY projection. Correcting
+those fixture errors, without changing production source or lowering the
+assertions, passed the new native fixture in 1.268s. All engines joined.
+Equivalent inactive operands in queue projections/coalescers were identified
+and remain under correction; these scoped results do not close that issue.
+
+Atomic DeleteRepo's actual eighteen-vector census, stale-set refusal and late
+rollback passed normal/race in 2.157s/3.322s across three native selectors.
+Pure checks, vet and pinned lint passed, and independent source/test/cost review
+reported all severities zero. One earlier race invocation failed compilation
+only while a neighboring shared source constant was being edited; no engine
+started for that invocation. Final native runs joined. This proves the selected
+cleanup recipe's tested branches, not all eighteen positive tables or a full
+controlled-server run.
+
+The queue medium finding is now corrected: submitted SQL includes only the
+chosen pending/terminal mutation and source-known repository projection.
+Independent exact source/test review reports all severities zero. Eight pure
+selectors passed three-repeat normal/race in 0.702s/2.296s; seven native
+selectors passed normal/race in 19.005s/20.774s. Vet, pinned lint and whitespace
+passed, and all engines joined. The two unused legacy projection constants
+were then moved byte-identically into the existing parity test; runtime queue
+source stayed unchanged and parity three-repeat passed in 0.637s. This closes
+the scoped queue finding, not the full store or runner admission.
+
+Fourteen lifecycle-cursor/core/derived-retention source annotations preserve
+the original SQL, payload and native call count. Independent review reports
+all severities zero; focused three-repeat normal/race passed in 0.540s/1.693s,
+and six existing native selectors passed in 10.521s/13.066s with joined
+engines. The subsequent catalog scan and fixed evidence-sweep annotations
+passed combined pure three-repeat in 0.603s. Positive dynamic cleanup and
+full native selected-server closure remain open; no empty scan substitutes
+for those requirements.
+
+The four existing evidence-retention native selectors subsequently passed
+normal/race in 26.249s/27.544s; final combined maintenance accounting checks
+passed race three-repeat in 1.802s. Vet, pinned lint, documentation, glossary
+and whitespace checks passed, with no SurrealDB process or port-65499
+listener remaining. These preserve ordinary shared-atom, pin, cardinality,
+restart and invalid-phase behavior; the new selected dynamic sweep vectors
+remain a separate required implementation, not an inferred native pass.
+
+The lead session was stopped on 2026-09-06 with the two newest T42.2l rows
+(partitioned extraction runtime call capture; caller and resolver runtime
+admission) implemented but unrecorded. Independent source/test/cost review of
+those slices reported critical 0, high 2, medium 2, low 1. Both high findings
+and one medium were un-ADR'd next-slice starts made after the last recorded
+gate, not defects in the recorded rows: a bounded evidence sweep-chunk census
+that contradicted the maintenance row above and broke
+`TestEvidenceSweepFixedAccounting/dynamic`, and a census-fenced rewrite of
+candidate-manifest publication/clear with no row, tests or native fences.
+Both were reverted to their last gated source; the removed source is retained
+outside the tracked tree as `t42.2l-inflight-reverted.patch` (checkout
+`.cowork-reverted/` and the session record) for their owning slices, which remain
+required: selected dynamic sweep vectors must fit a 512-submitted-operand page
+(a full 512-row page plus two fixed operands cannot), and candidate-manifest
+publication/clear stay unannotated until their own recipe, tests and fences
+land. The remaining medium and low findings are closed in source and the owning
+row: the two table-wide caller-leaf clears are explicitly unsupported in
+selected mode with a refusal test, and resolver publication/clear census
+conflicts are recorded as job-retried. The corrected tree's gates are recorded
+below once run; nothing here is a merge, seal or freeze.
+
+The corrected working tree then passed its gates on 2026-09-06 with Go 1.26.5
+and SurrealDB 3.2.0 on PATH: repository build; the combined focused selectors
+for both slices plus the sweep, lifecycle/retention, candidate-manifest and new
+table-wide-clear refusal tests, three-repeat normal in 36.217s and race in
+38.154s; the storeaccounting, dispatchadmission and lifecycle packages normal
+in 0.687s/3.800s/4.635s, with storeaccounting/dispatchadmission race
+three-repeat in 2.592s/15.151s; documentation (0.490s), glossary and
+whitespace including untracked files; and the repository-pinned 2.12.2 static
+gate — vet, lint with zero issues and compile-all across 111 packages — in 40s,
+after the version guard refused the PATH's unpinned 2.13.1. No SurrealDB
+process or port-65499 listener remained. Fresh independent source/test/cost
+review of the corrected slices confirmed all five earlier findings closed and
+reported critical 0, high 0, medium 0, low 1: the owning row's "typed conflict"
+wording overstated a `phebs-conflict` query error that is not `ErrConflict`;
+the row now says so. These are working-tree results on the still-uncommitted
+bucket, not an exact-commit, full-store, native selected-server or runner
+gate; after its explicit-path commit, the exact-tree gates, integration, seal
+and freeze remain open.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

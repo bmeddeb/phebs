@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
 type CatalogLifecycleSweep struct {
@@ -41,11 +39,11 @@ func (s *Surreal) SweepCatalogLifecycle(
 		deleteLimit < 1 || deleteLimit > 16 || retained < 1 || retained > 8 {
 		return CatalogLifecycleSweep{}, errors.New("sweep catalog lifecycle: limits are invalid")
 	}
-	results, err := surrealdb.Query[[]catalogLifecycleCandidate](ctx, s.db, `
+	results, err := storeQuery[[]catalogLifecycleCandidate](ctx, s.accounting, s.db, `
 RETURN SELECT generation_digest, repository, recorded_at FROM service_catalog_generation
 	WHERE generation_digest > $after ORDER BY generation_digest LIMIT $limit;`, map[string]any{
 		"after": after, "limit": scanLimit,
-	})
+	}, storeRead())
 	if err != nil {
 		return CatalogLifecycleSweep{}, fmt.Errorf("scan catalog lifecycle: %w", err)
 	}
@@ -97,7 +95,7 @@ func (s *Surreal) collectCatalogGeneration(
 	candidate catalogLifecycleCandidate,
 	retained int,
 ) (int, error) {
-	results, err := surrealdb.Query[[]catalogLifecycleDelete](ctx, s.db, `
+	results, err := storeQuery[[]catalogLifecycleDelete](ctx, s.accounting, s.db, `
 BEGIN;
 LET $candidate = (SELECT generation_digest, repository, recorded_at
 	FROM service_catalog_generation WHERE generation_digest = $digest LIMIT 1)[0];
@@ -121,7 +119,7 @@ RETURN [{ deleted: array::len($deleted) }];
 COMMIT;`, map[string]any{
 		"digest": candidate.GenerationDigest, "repository": candidate.Repository,
 		"prior_retained": retained - 1,
-	})
+	}, storeUnsupported())
 	if err != nil {
 		return 0, fmt.Errorf("collect catalog lifecycle: %w", err)
 	}

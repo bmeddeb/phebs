@@ -374,7 +374,7 @@ func (s *Surreal) beginExtractionRun(
 		return nil, err
 	}
 	now := time.Now().UTC()
-	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
+	results, err := storeQuery[[]extractionRunRec](ctx, s.accounting, s.db,
 		`BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $evidence_migration_version LIMIT 1) = 1;
@@ -435,7 +435,7 @@ COMMIT;`,
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_format_version":    evidenceFormatVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
-		})
+		}, storeWrite(2))
 	if err != nil {
 		return nil, fmt.Errorf("begin extraction run: %w", err)
 	}
@@ -499,7 +499,7 @@ func (s *Surreal) getRun(ctx context.Context, runID string) (*ExtractionRun, err
 		"evidence_format_version": evidenceFormatVersion,
 	}
 	addProbeVars(vars, runID)
-	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
+	results, err := storeQuery[[]extractionRunRec](ctx, s.accounting, s.db,
 		`SELECT * FROM $rid
 			WHERE store_schema_version = $store_schema_version
 				  AND evidence_format_version = $evidence_format_version
@@ -508,7 +508,7 @@ func (s *Surreal) getRun(ctx context.Context, runID string) (*ExtractionRun, err
 				  AND run_id = record::id(id)
 				  AND `+evidenceRunProbeHasNoClaimantSQL+`
 				  AND ((status = 'published' AND published_key != NONE)
-				OR (status != 'published' AND published_key = NONE))`, vars)
+				OR (status != 'published' AND published_key = NONE))`, vars, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("get extraction run: %w", err)
 	}
@@ -2004,8 +2004,8 @@ func (s *Surreal) LatestExtractionDomainOutcome(
 	if err := validateExtractionScope(scope); err != nil {
 		return nil, fmt.Errorf("latest extraction domain outcome: %w", err)
 	}
-	results, err := surrealdb.Query[[]extractionDomainOutcomeRec](
-		ctx, s.db,
+	results, err := storeQuery[[]extractionDomainOutcomeRec](
+		ctx, s.accounting, s.db,
 		`SELECT * FROM $rid WHERE repo = $repo AND commit = $commit
 			AND unit_digest = $unit_digest AND domain = $domain
 			AND store_schema_version = $store_schema_version
@@ -2017,7 +2017,7 @@ func (s *Surreal) LatestExtractionDomainOutcome(
 			"unit_digest": scope.UnitDigest, "domain": scope.Domain,
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("latest extraction domain outcome: %w", err)
@@ -2052,9 +2052,9 @@ func (s *Surreal) CandidateControlRepairNeeded(
 	if err := validateCandidateManifestPublication(publication, true); err != nil {
 		return false, fmt.Errorf("candidate control repair: %w", err)
 	}
-	results, err := surrealdb.Query[[]struct {
+	results, err := storeQuery[[]struct {
 		Count int `json:"count"`
-	}](ctx, s.db,
+	}](ctx, s.accounting, s.db,
 		`SELECT count() AS count FROM extraction_domain_outcome
 			WHERE repo = $repo
 				AND commit = $commit
@@ -2077,7 +2077,7 @@ func (s *Surreal) CandidateControlRepairNeeded(
 			"terminal":                   string(DomainOutcomeTerminalGenerationRefusal),
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
-		})
+		}, storeRead())
 	if err != nil {
 		return false, fmt.Errorf("candidate control repair: %w", err)
 	}
@@ -2109,7 +2109,7 @@ func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 			"evidence_migration_version": evidenceMigrationVersion,
 		}
 		addProbeVars(vars, runID)
-		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
+		results, err := storeQuery[[]extractionRunRec](ctx, s.accounting, s.db,
 			`BEGIN;
 LET $aborted = UPDATE $rid SET status = 'aborted', published_key = NONE,
 				partition_active = false
@@ -2133,7 +2133,7 @@ LET $attempt = IF array::len($aborted) = 1 THEN
 		  AND evidence_migration_version = $evidence_migration_version RETURN AFTER)
 	ELSE [] END;
 RETURN $aborted;
-COMMIT;`, vars)
+COMMIT;`, vars, storeWrite(2))
 		if err != nil {
 			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
@@ -3038,7 +3038,7 @@ func (s *Surreal) nextEvidenceSweepCandidate(
 			  AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
 			ORDER BY started_at, run_id LIMIT $limit`,
 	} {
-		results, err := surrealdb.Query[[]evidenceSweepCandidateRec](ctx, s.db, candidateSQL, baseVars)
+		results, err := storeQuery[[]evidenceSweepCandidateRec](ctx, s.accounting, s.db, candidateSQL, baseVars, storeRead())
 		if err != nil {
 			return nil, err
 		}
@@ -3128,8 +3128,20 @@ func (s *Surreal) SweepEvidence(
 			"evidence_migration_version": evidenceMigrationVersion,
 		}
 		addProbeVars(vars, runID)
+		recipe := storeUnsupported()
+		switch candidate.Status {
+		case "aborted", "superseded", "staged":
+			// The run and attempt RIDs are both supplied, including when the
+			// native prior-status guard does not update the attempt.
+			recipe = storeWrite(2)
+		case "deleting":
+			if candidate.Phase == "finalize" {
+				// The same supplied run RID occurs in two mutation statements.
+				recipe = storeWrite(2)
+			}
+		}
 		for attempt := 0; ; attempt++ {
-			results, queryErr := surrealdb.Query[[]EvidenceSweepProgress](ctx, s.db, stepSQL, vars)
+			results, queryErr := storeQuery[[]EvidenceSweepProgress](ctx, s.accounting, s.db, stepSQL, vars, recipe)
 			if queryErr != nil {
 				if isRetryable(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 					continue

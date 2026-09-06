@@ -48,6 +48,7 @@ type Client struct {
 	owners                        *Owners
 	ownerRequestsOpen             bool
 	ownerRequestSequence          uint64
+	storeLifetime                 *ProductionLifetime // installed before the PC receiver; owner publication uses storeMu
 	fenced                        bool
 	checkpoint                    bool
 	closed                        bool
@@ -458,6 +459,11 @@ func (c *Client) checkpointOrClose(ctx context.Context, closeAll bool) error {
 			return c.fail(ErrCanceled)
 		}
 	}
+	if !closeAll && c.storeLifetime != nil {
+		if err := c.storeLifetime.checkpointStore(ctx); err != nil {
+			return c.fail(errors.Join(ErrIncomplete, err))
+		}
+	}
 	release, err := c.acquire(ctx)
 	if err != nil {
 		return err
@@ -512,6 +518,14 @@ func (c *Client) Resume(phase uint32) error {
 	if !c.checkpoint || c.closed || phase == 0 || phase == c.phase {
 		c.mu.Unlock()
 		return c.fail(ErrProtocol)
+	}
+	if c.storeLifetime != nil {
+		// Resume is local state only: neither SDKOwner.Resume nor SA Resume
+		// performs I/O. Semantic owners and request admission remain fenced.
+		if err := c.storeLifetime.resumeStore(phase); err != nil {
+			c.mu.Unlock()
+			return c.fail(errors.Join(ErrIncomplete, err))
+		}
 	}
 	c.phase = phase
 	c.controlCheckpointAcknowledged = false

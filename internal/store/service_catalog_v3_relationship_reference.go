@@ -7,7 +7,6 @@ import (
 	"sort"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
@@ -155,9 +154,9 @@ func (s *Surreal) migrateServiceCatalogV3RelationshipReferenceSchema(
 	ctx context.Context,
 ) error {
 	marker := serviceCatalogV3RelationshipReferenceSchemaMigrationID()
-	markerResults, err := surrealdb.Query[[]struct {
+	markerResults, err := storeQuery[[]struct {
 		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker})
+	}](ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker}, storeRead())
 	if err != nil {
 		return fmt.Errorf(
 			"migrate service catalog v3 relationship reference schema: marker: %w", err,
@@ -179,8 +178,8 @@ func (s *Surreal) migrateServiceCatalogV3RelationshipReferenceSchema(
 			"migrate service catalog v3 relationship reference schema: duplicate marker",
 		)
 	}
-	preflight, err := surrealdb.Query[any](ctx, s.db, `
-DEFINE TABLE IF NOT EXISTS service_catalog_v3_relationship_reference SCHEMALESS;`, nil)
+	preflight, err := storeQuery[any](ctx, s.accounting, s.db, `
+DEFINE TABLE IF NOT EXISTS service_catalog_v3_relationship_reference SCHEMALESS;`, nil, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf(
 			"migrate service catalog v3 relationship reference schema: preflight schema: %w",
@@ -195,11 +194,11 @@ DEFINE TABLE IF NOT EXISTS service_catalog_v3_relationship_reference SCHEMALESS;
 			)
 		}
 	}
-	probe, err := surrealdb.Query[[]struct {
+	probe, err := storeQuery[[]struct {
 		Count int `json:"count"`
-	}](ctx, s.db, `RETURN [{ count: array::len(
+	}](ctx, s.accounting, s.db, `RETURN [{ count: array::len(
 		SELECT id FROM service_catalog_v3_relationship_reference LIMIT 1
-	) }];`, nil)
+	) }];`, nil, storeRead())
 	if err != nil {
 		return fmt.Errorf(
 			"migrate service catalog v3 relationship reference schema: preflight: %w", err,
@@ -211,23 +210,12 @@ DEFINE TABLE IF NOT EXISTS service_catalog_v3_relationship_reference SCHEMALESS;
 			"migrate service catalog v3 relationship reference schema: unowned pre-migration rows",
 		)
 	}
-	results, err := surrealdb.Query[any](
-		ctx, s.db, serviceCatalogV3RelationshipReferenceSchema, nil,
-	)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, serviceCatalogV3RelationshipReferenceSchema, "migrate service catalog v3 relationship reference schema "); err != nil {
 		return fmt.Errorf(
 			"migrate service catalog v3 relationship reference schema: define: %w", err,
 		)
 	}
-	for index, result := range *results {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"migrate service catalog v3 relationship reference schema statement %d: %s",
-				index, result.Error.Message,
-			)
-		}
-	}
-	written, err := surrealdb.Query[any](ctx, s.db, `
+	written, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $rid LIMIT 1)[0].version;
 IF $current != NONE AND $current != $wanted {
@@ -240,7 +228,7 @@ UPSERT $rid SET
 COMMIT;`, map[string]any{
 		"rid":    marker,
 		"wanted": serviceCatalogV3RelationshipReferenceSchemaMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf(
 			"migrate service catalog v3 relationship reference schema: marker write: %w",
@@ -255,9 +243,9 @@ COMMIT;`, map[string]any{
 			)
 		}
 	}
-	verified, err := surrealdb.Query[[]struct {
+	verified, err := storeQuery[[]struct {
 		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker})
+	}](ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker}, storeRead())
 	if err != nil {
 		return fmt.Errorf(
 			"migrate service catalog v3 relationship reference schema: verify: %w", err,
@@ -343,8 +331,8 @@ func (s *Surreal) writeServiceCatalogV3RelationshipReference(
 	reference ServiceCatalogV3RelationshipReference,
 	requireCurrent bool,
 ) ([]serviceCatalogV3RelationshipReferenceRec, error) {
-	results, err := surrealdb.Query[[]serviceCatalogV3RelationshipReferenceRec](
-		ctx, s.db, `
+	results, err := storeQuery[[]serviceCatalogV3RelationshipReferenceRec](
+		ctx, s.accounting, s.db, `
 BEGIN;
 LET $existing = (SELECT * FROM $reference_rid LIMIT 1)[0];
 LET $catalog_root = (SELECT root_digest, repository FROM $catalog_root_rid LIMIT 1)[0];
@@ -407,7 +395,7 @@ COMMIT;`, map[string]any{
 			"state_control_revision":         reference.StateControlRevision,
 			"state_summary_digest":           reference.StateSummaryDigest,
 			"require_current":                requireCurrent,
-		},
+		}, storeWrite(1),
 	)
 	if err != nil {
 		return nil, err
@@ -501,14 +489,14 @@ func (s *Surreal) ReconcileServiceCatalogV3RelationshipReferences(
 			)
 		}
 	}
-	inventory, err := surrealdb.Query[[]struct {
+	inventory, err := storeQuery[[]struct {
 		Generation string `json:"relationship_generation_digest"`
-	}](ctx, s.db, `
+	}](ctx, s.accounting, s.db, `
 SELECT relationship_generation_digest
 	FROM service_catalog_v3_relationship_reference
 	ORDER BY relationship_generation_digest LIMIT $limit`, map[string]any{
 		"limit": MaxServiceCatalogV3RelationshipReferences + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return fmt.Errorf(
 			"reconcile service catalog v3 relationship references: inventory: %w", err,
@@ -523,16 +511,63 @@ SELECT relationship_generation_digest
 	for index, reference := range ordered {
 		generations[index] = reference.RelationshipGenerationDigest
 	}
-	if _, err := surrealdb.Query[[]serviceCatalogV3RelationshipReferenceRec](
-		ctx, s.db, `DELETE service_catalog_v3_relationship_reference
-			WHERE relationship_generation_digest NOT IN $generations RETURN BEFORE`,
-		map[string]any{"generations": generations},
-	); err != nil {
+	if err := s.deleteStaleServiceCatalogV3RelationshipReferences(ctx, generations); err != nil {
 		return fmt.Errorf(
 			"reconcile service catalog v3 relationship references: remove stale: %w", err,
 		)
 	}
 	return nil
+}
+
+const serviceCatalogV3RelationshipCleanupSelection = `SELECT VALUE id FROM service_catalog_v3_relationship_reference
+	WHERE relationship_generation_digest NOT IN $generations ORDER BY id LIMIT $limit`
+
+const serviceCatalogV3RelationshipCleanupWrite = `BEGIN;
+LET $actual = ` + serviceCatalogV3RelationshipCleanupSelection + `;
+IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
+	THROW 'phebs-permanent: relationship reference cleanup page changed';
+};
+FOR $rid IN $ids { DELETE $rid RETURN NONE; };
+COMMIT;`
+
+// RecoverAll owns exclusive startup mutation custody. This bounded cleanup may
+// retain committed pages on failure; startup must fail and a later recovery
+// must repeat its census. It is not an online all-reference atomic deletion.
+func (s *Surreal) deleteStaleServiceCatalogV3RelationshipReferences(ctx context.Context, generations []string) error {
+	const table = "service_catalog_v3_relationship_reference"
+	vars := map[string]any{"generations": generations, "limit": restoreClearRows}
+	const maxPages = (MaxServiceCatalogV3RelationshipReferences + restoreClearRows - 1) / restoreClearRows
+	for page := 0; ; page++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		delete(vars, "ids")
+		results, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, serviceCatalogV3RelationshipCleanupSelection, vars, storeRead())
+		if err != nil {
+			return err
+		}
+		if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" ||
+			(*results)[0].Error != nil || (*results)[0].Result == nil {
+			return ErrInvalidServiceCatalogV3Lifecycle
+		}
+		ids := (*results)[0].Result
+		if err := validateRestoreClearIDs(ids, table, restoreClearRows); err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if len(ids) == 0 {
+			return nil
+		}
+		if page == maxPages {
+			return errors.New("reconcile service catalog v3 relationship references: stale inventory exceeds bound")
+		}
+		vars["ids"] = ids
+		if _, err := storeQuery[any](ctx, s.accounting, s.db, serviceCatalogV3RelationshipCleanupWrite, vars, storeWrite(uint64(len(ids)))); err != nil {
+			return err
+		}
+	}
 }
 
 // UnpinServiceCatalogV3RelationshipReference removes exactly one collected
@@ -548,8 +583,8 @@ func (s *Surreal) UnpinServiceCatalogV3RelationshipReference(
 	if err := validateServiceCatalogV3RelationshipReference(reference); err != nil {
 		return fmt.Errorf("unpin service catalog v3 relationship reference: %w", err)
 	}
-	results, err := surrealdb.Query[[]serviceCatalogV3RelationshipUnpinResult](
-		ctx, s.db, `
+	results, err := storeQuery[[]serviceCatalogV3RelationshipUnpinResult](
+		ctx, s.accounting, s.db, `
 BEGIN;
 LET $existing = (SELECT * FROM $rid LIMIT 1)[0];
 LET $same = $existing != NONE
@@ -576,7 +611,7 @@ COMMIT;`, map[string]any{
 			"catalog_control_revision":       reference.CatalogControlRevision,
 			"state_control_revision":         reference.StateControlRevision,
 			"state_summary_digest":           reference.StateSummaryDigest,
-		},
+		}, storeWrite(1),
 	)
 	if err != nil {
 		return fmt.Errorf("unpin service catalog v3 relationship reference: %w", err)

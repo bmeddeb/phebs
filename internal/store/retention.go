@@ -476,9 +476,9 @@ func (s *Surreal) retentionReadiness(
 	default:
 		return false, errors.New("unknown retention readiness fence")
 	}
-	rows, err := surrealdb.Query[[]retentionMarkerState](ctx, s.db,
+	rows, err := storeQuery[[]retentionMarkerState](ctx, s.accounting, s.db,
 		"SELECT version FROM $rid WHERE version = $version LIMIT 1",
-		map[string]any{"rid": rid, "version": version})
+		map[string]any{"rid": rid, "version": version}, storeRead())
 	if err != nil {
 		return false, fmt.Errorf("retention readiness %d: %w", readiness, err)
 	}
@@ -498,8 +498,8 @@ func (s *Surreal) requireRetentionIndex(
 	index, table string,
 ) error {
 	// Both identifiers come exclusively from the closed query-plan registry.
-	results, err := surrealdb.Query[any](ctx, s.db,
-		"INFO FOR INDEX "+index+" ON TABLE "+table, nil)
+	results, err := storeQuery[any](ctx, s.accounting, s.db,
+		"INFO FOR INDEX "+index+" ON TABLE "+table, nil, storeRead())
 	if err != nil {
 		return fmt.Errorf("inspect retention index %s: %w", index, err)
 	}
@@ -510,7 +510,7 @@ func (s *Surreal) requireRetentionIndex(
 }
 
 func (s *Surreal) retentionCatalogTables(ctx context.Context) (map[string]struct{}, error) {
-	results, err := surrealdb.Query[[]string](ctx, s.db, investigationRetentionCatalogSQL, nil)
+	results, err := storeQuery[[]string](ctx, s.accounting, s.db, investigationRetentionCatalogSQL, nil, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("inspect retention database catalog: %w", err)
 	}
@@ -555,8 +555,8 @@ func (s *Surreal) retentionRows(
 	}
 	statement := "SELECT " + fields +
 		" FROM type::table($table) ORDER BY id LIMIT $scan_limit"
-	queryResults, err := surrealdb.Query[[]retentionRow](ctx, s.db, statement,
-		map[string]any{"table": plan.table, "scan_limit": scanLimit})
+	queryResults, err := storeQuery[[]retentionRow](ctx, s.accounting, s.db, statement,
+		map[string]any{"table": plan.table, "scan_limit": scanLimit}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("retention component %s: %w", plan.table, err)
 	}
@@ -626,9 +626,9 @@ func (s *Surreal) retentionPinRows(
 		default:
 			return nil, errors.New("unbounded retention pin range")
 		}
-		queryResults, err := surrealdb.Query[[]retentionRow](ctx, s.db,
+		queryResults, err := storeQuery[[]retentionRow](ctx, s.accounting, s.db,
 			"SELECT id FROM evidence_pin WITH INDEX evidence_pin_kind WHERE "+where+" LIMIT $scan_limit",
-			vars)
+			vars, storeRead())
 		if err != nil {
 			return nil, fmt.Errorf("retention evidence-pin partition %d: %w", partition, err)
 		}

@@ -11,7 +11,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/readaccounting"
@@ -92,7 +91,40 @@ func resolverCatalogMigrationID() models.RecordID {
 
 func (s *Surreal) migrateResolverCatalogWriter(ctx context.Context) error {
 	marker := resolverCatalogMigrationID()
-	results, err := surrealdb.Query[any](ctx, s.db, `
+	current, err := s.startupWriterMarker(ctx, marker)
+	if err != nil {
+		return fmt.Errorf("migrate resolver catalog writer: %w", err)
+	}
+	if current != "" && current != resolverCatalogWriterMigrationVersion && current != resolverCatalogPriorMigration {
+		return errors.New("migrate resolver catalog writer: phebs-permanent: unsupported resolver catalog writer generation")
+	}
+	priorEmpty, err := s.migrationTableEmpty(ctx, "resolver_catalog_publication", "writer_schema = '"+resolverCatalogPriorWriterSchema+"'")
+	if err != nil {
+		return err
+	}
+	unsupportedEmpty, err := s.migrationTableEmpty(ctx, "resolver_catalog_publication", "writer_schema NOT IN ['"+resolverCatalogPriorWriterSchema+"', '"+resolverCatalogWriterSchema+"']")
+	if err != nil {
+		return err
+	}
+	if !unsupportedEmpty {
+		return errors.New("migrate resolver catalog writer: phebs-permanent: unsupported resolver catalog publication generation")
+	}
+	if current == resolverCatalogWriterMigrationVersion && !priorEmpty {
+		return errors.New("migrate resolver catalog writer: phebs-permanent: mixed resolver catalog publication generations")
+	}
+	if current == resolverCatalogWriterMigrationVersion {
+		return nil
+	}
+	if current == resolverCatalogPriorMigration || !priorEmpty {
+		wantedEmpty, err := s.migrationTableEmpty(ctx, "resolver_catalog_publication", "writer_schema = '"+resolverCatalogWriterSchema+"'")
+		if err != nil {
+			return err
+		}
+		if !wantedEmpty {
+			return errors.New("migrate resolver catalog writer: phebs-permanent: mixed resolver catalog publication generations")
+		}
+	}
+	statement := `
 BEGIN;
 LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
 IF $current != NONE AND $current != $wanted AND $current != $prior {
@@ -130,16 +162,29 @@ UPSERT $marker SET
 	version = IF $current = $wanted THEN $current ELSE $wanted END,
 	completed_at = IF $current = $wanted THEN completed_at ELSE time::now() END
 	RETURN NONE;
-COMMIT;`, map[string]any{
+COMMIT;`
+	recipe := storeUnsupported()
+	if priorEmpty {
+		statement = resolverCatalogEmptyMigration
+		recipe = storeWrite(1)
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, map[string]any{
 		"marker": marker, "prior": resolverCatalogPriorMigration,
+		"expected":            startupWriterExpected(current),
 		"wanted":              resolverCatalogWriterMigrationVersion,
 		"writer_schema":       resolverCatalogWriterSchema,
 		"prior_writer_schema": resolverCatalogPriorWriterSchema,
-	})
+	}, recipe)
 	if err != nil {
 		return fmt.Errorf("migrate resolver catalog writer: %w", err)
 	}
+	if results == nil || len(*results) == 0 {
+		return errors.New("migrate resolver catalog writer: missing transaction result")
+	}
 	for index, result := range *results {
+		if result.Status != "OK" && result.Error == nil {
+			return errors.New("migrate resolver catalog writer: invalid transaction status")
+		}
 		if result.Error != nil {
 			return fmt.Errorf(
 				"migrate resolver catalog writer statement %d: %s",
@@ -147,8 +192,20 @@ COMMIT;`, map[string]any{
 			)
 		}
 	}
-	return nil
+	return s.verifyStartupWriterMarker(ctx, marker, resolverCatalogWriterMigrationVersion)
 }
+
+const resolverCatalogEmptyMigration = `
+BEGIN;
+LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
+IF $current != $expected
+ OR array::len(SELECT VALUE id FROM resolver_catalog_publication WHERE writer_schema = $prior_writer_schema LIMIT 1) != 0
+ OR array::len(SELECT VALUE id FROM resolver_catalog_publication WHERE writer_schema NOT IN [$prior_writer_schema, $writer_schema] LIMIT 1) != 0
+ OR ($current = $prior AND array::len(SELECT VALUE id FROM resolver_catalog_publication WHERE writer_schema = $writer_schema LIMIT 1) != 0) {
+ THROW 'phebs-conflict: resolver writer migration preimage changed';
+};
+UPSERT $marker SET version = $wanted, completed_at = time::now() RETURN NONE;
+COMMIT;`
 
 func validateResolverCatalogPublication(
 	publication ResolverCatalogPublication,
@@ -298,8 +355,7 @@ func validResolverCatalogGenerationDigest(value string) bool {
 		hex.EncodeToString(decoded) == strings.TrimPrefix(value, prefix)
 }
 
-const publishResolverCatalogSQL = `
-BEGIN;
+const resolverCatalogPublicationPreimageSQL = `
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
 LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
@@ -377,6 +433,9 @@ LET $acceptable = $writer_ok AND $caller_writer_ok AND $evidence_writer_ok
 LET $next_revision = IF $current = NONE THEN 1
 	ELSE IF $same_publication THEN $current_revision
 	ELSE $current_revision + 1 END;
+`
+
+const resolverCatalogPublicationBodySQL = `
 LET $published = IF $acceptable = false THEN []
 	ELSE IF $same_publication THEN [$current]
 	ELSE (UPSERT $publication_rid SET
@@ -399,6 +458,9 @@ LET $published = IF $acceptable = false THEN []
 		published_at = time::now()
 		RETURN AFTER)
 	END;
+`
+
+const resolverCatalogPublicationLegacyTailSQL = `
 LET $retired_caller = IF array::len($published) = 1
 		AND $same_publication = false THEN
 	(DELETE caller_generation_publication
@@ -436,6 +498,104 @@ RETURN IF array::len($caller_fanout) = 1
 	THEN $published ELSE [] END;
 COMMIT;`
 
+// Preserve the ordinary whole-native recipe if its actual submitted deletion
+// vector cannot fit one selected transaction. The fallback never truncates it.
+const publishResolverCatalogSQL = `
+BEGIN;` + resolverCatalogPublicationPreimageSQL + resolverCatalogPublicationBodySQL + resolverCatalogPublicationLegacyTailSQL
+
+// Twenty original read-only controls, one retirement branch, one exact ID
+// array, then the final one-row result. This arity is source-owned, not inferred.
+const resolverCatalogPublicationCensusSQL = resolverCatalogPublicationPreimageSQL + `
+LET $retire = $acceptable AND $same_publication = false;
+LET $ids = SELECT VALUE id FROM caller_generation_publication
+	WHERE repository = $repository AND $retire ORDER BY id LIMIT 513;
+RETURN [{retire: $retire, ids: $ids}];`
+
+type resolverCatalogRetirementRec struct {
+	Retire *bool             `json:"retire"`
+	IDs    []models.RecordID `json:"ids"`
+}
+
+const resolverCatalogPublicationCensusFenceSQL = `
+IF [$acceptable AND $same_publication = false] != [$retire]
+ OR (SELECT VALUE id FROM caller_generation_publication
+	WHERE repository = $repository AND $retire ORDER BY id LIMIT 513) != $retired_ids {
+	THROW 'phebs-conflict: resolver publication retirement census changed'
+};`
+
+const resolverCallerRetirementEmptySQL = `
+LET $retired_caller = [];
+LET $caller_revision = [];`
+
+const resolverCallerRetirementDeleteSQL = `
+LET $retired_caller = DELETE caller_generation_publication
+	WHERE repository = $repository AND id IN $retired_ids RETURN BEFORE;`
+
+const resolverCallerRetirementManySQL = resolverCallerRetirementDeleteSQL + `
+LET $caller_revision = [];`
+
+const resolverPublishedCallerRetirementDeleteSQL = `
+LET $retired_caller = IF array::len($published) = 1 THEN
+	(DELETE caller_generation_publication
+		WHERE repository = $repository AND id IN $retired_ids RETURN BEFORE)
+	ELSE [] END;`
+
+const resolverPublishedCallerRetirementOneSQL = resolverPublishedCallerRetirementDeleteSQL + `
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;`
+
+const resolverPublishedCallerRetirementManySQL = resolverPublishedCallerRetirementDeleteSQL + `
+LET $caller_revision = [];`
+
+func validateResolverRetirementIDs(ctx context.Context, ids []models.RecordID) error {
+	if ids == nil || len(ids) > 513 {
+		return errors.New("resolver retirement census array is absent or overflows")
+	}
+	// Reuse the native-ID validator for the bounded page and its one overflow
+	// sentinel without admitting a 513-row mutation or narrowing raw ID types.
+	if err := validateRestoreClearIDs(ids[:min(len(ids), 512)], "caller_generation_publication", 512); err != nil {
+		return err
+	}
+	if len(ids) == 513 {
+		if err := validateRestoreClearIDs(ids[512:], "caller_generation_publication", 1); err != nil {
+			return err
+		}
+	}
+	return ctx.Err()
+}
+
+const resolverCallerFanoutPrefixSQL = `
+LET $caller_force = $same_publication = false;
+LET $actual_pending_caller = IF array::len($published) = 1 THEN
+	(SELECT id, created_at FROM caller_leaf_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+IF array::len($published) = 1 AND [$actual_pending_caller] != [$pending_ids[0]] {
+	THROW 'phebs-conflict: resolver caller pending census changed'
+};
+LET $pending_caller = $pending_ids[0];
+LET $caller_fanout = IF array::len($published) != 1 THEN [] ELSE (`
+
+const resolverCallerFanoutUpdateSQL = `UPDATE $pending_caller SET
+	force = IF $caller_force THEN true ELSE force END,
+	recovery_lease = NONE RETURN AFTER`
+
+const resolverCallerFanoutCreateSQL = `CREATE caller_leaf_job CONTENT {
+	target: $repository, status: 'pending', attempts: 0,
+	created_at: time::now(), pending_key: $repository, force: $caller_force
+} RETURN AFTER`
+
+const resolverCallerFanoutSuffixSQL = `) END;
+LET $caller_projected = IF array::len($published) = 1 AND array::len($caller_fanout) = 1
+	THEN $caller_fanout[0] ELSE NONE END;` + projectCallerJobSQL + `
+RETURN IF array::len($caller_fanout) = 1
+	AND (array::len($retired_caller) = 0 OR array::len($caller_revision) = 1)
+	THEN $published ELSE [] END;
+COMMIT;`
+
 // PublishResolverCatalog also atomically ensures the repository-keyed
 // caller-leaf successor. A new semantic catalog generation forces execution;
 // an exact accepted retry repairs a missing non-forced successor without ever
@@ -449,37 +609,76 @@ func (s *Surreal) PublishResolverCatalog(
 	if err := validateResolverCatalogPublication(publication, false); err != nil {
 		return fmt.Errorf("publish resolver catalog: %w", err)
 	}
-	results, err := surrealdb.Query[[]resolverCatalogPublicationRec](
-		ctx, s.db, publishResolverCatalogSQL, map[string]any{
-			"migration_rid":              resolverCatalogMigrationID(),
-			"migration_version":          resolverCatalogWriterMigrationVersion,
-			"caller_migration_rid":       callerGenerationPublicationMigrationID(),
-			"caller_migration_version":   callerGenerationPublicationMigrationVersion,
-			"evidence_migration_rid":     evidenceMigrationStateID(),
-			"evidence_migration_version": evidenceMigrationVersion,
-			"evidence_store_schema":      evidenceStoreSchemaVersion,
-			"repo_rid":                   repoID(publication.Repository),
-			"candidate_rid":              candidateManifestPublicationID(publication.Repository),
-			"publication_rid":            resolverCatalogPublicationID(publication.Repository),
-			"repository":                 publication.Repository,
-			"head_commit":                publication.HeadCommit,
-			"unit_digest":                publication.UnitDigest,
-			"declarations":               publication.Declarations,
-			"declaration_set_digest":     publication.DeclarationSetDigest,
-			"candidate_manifest_digest":  publication.CandidateManifestDigest,
-			"source_lane_policy":         publication.SourceLanePolicy,
-			"resolver_packs":             publication.ResolverPacks,
-			"resolver_pack_set_digest":   publication.ResolverPackSetDigest,
-			"catalog_policy_digest":      publication.CatalogPolicyDigest,
-			"generation_digest":          publication.GenerationDigest,
-			"manifest_digest":            publication.ManifestDigest,
-			"authority_digest":           publication.AuthorityDigest,
-			"manifest_path":              publication.ManifestPath,
-			"requested_revision":         publication.ControlRevision,
-			"writer_schema":              resolverCatalogWriterSchema,
-			"partitioned_schema":         PartitionedExtractionDomainSchema,
-		},
-	)
+	vars := map[string]any{
+		"migration_rid":              resolverCatalogMigrationID(),
+		"migration_version":          resolverCatalogWriterMigrationVersion,
+		"caller_migration_rid":       callerGenerationPublicationMigrationID(),
+		"caller_migration_version":   callerGenerationPublicationMigrationVersion,
+		"evidence_migration_rid":     evidenceMigrationStateID(),
+		"evidence_migration_version": evidenceMigrationVersion,
+		"evidence_store_schema":      evidenceStoreSchemaVersion,
+		"repo_rid":                   repoID(publication.Repository),
+		"candidate_rid":              candidateManifestPublicationID(publication.Repository),
+		"publication_rid":            resolverCatalogPublicationID(publication.Repository),
+		"repository":                 publication.Repository,
+		"head_commit":                publication.HeadCommit,
+		"unit_digest":                publication.UnitDigest,
+		"declarations":               publication.Declarations,
+		"declaration_set_digest":     publication.DeclarationSetDigest,
+		"candidate_manifest_digest":  publication.CandidateManifestDigest,
+		"source_lane_policy":         publication.SourceLanePolicy,
+		"resolver_packs":             publication.ResolverPacks,
+		"resolver_pack_set_digest":   publication.ResolverPackSetDigest,
+		"catalog_policy_digest":      publication.CatalogPolicyDigest,
+		"generation_digest":          publication.GenerationDigest,
+		"manifest_digest":            publication.ManifestDigest,
+		"authority_digest":           publication.AuthorityDigest,
+		"manifest_path":              publication.ManifestPath,
+		"requested_revision":         publication.ControlRevision,
+		"writer_schema":              resolverCatalogWriterSchema,
+		"partitioned_schema":         PartitionedExtractionDomainSchema,
+	}
+	census, err := storeQuery[[]resolverCatalogRetirementRec](ctx, s.accounting, s.db,
+		resolverCatalogPublicationCensusSQL, vars, storeRead())
+	if err != nil {
+		return fmt.Errorf("publish resolver catalog retirement census: %w", err)
+	}
+	retirements, err := generationCensusRows(ctx, census, 22)
+	if err != nil || len(retirements) != 1 || retirements[0].Retire == nil {
+		return fmt.Errorf("publish resolver catalog: invalid retirement census: %w", errors.Join(ErrInvalidResolverCatalogPublication, err))
+	}
+	retirement := retirements[0]
+	if err := validateResolverRetirementIDs(ctx, retirement.IDs); err != nil {
+		return fmt.Errorf("publish resolver catalog retirement IDs: %w", err)
+	}
+	if !*retirement.Retire && len(retirement.IDs) != 0 {
+		return errors.New("publish resolver catalog: inactive retirement has targets")
+	}
+	retirementSQL, retirementRows := resolverCallerRetirementEmptySQL, uint64(len(retirement.IDs))
+	switch len(retirement.IDs) {
+	case 0:
+	case 1:
+		retirementSQL = resolverPublishedCallerRetirementOneSQL
+		retirementRows++
+	default:
+		retirementSQL = resolverPublishedCallerRetirementManySQL
+	}
+	statement, recipe := publishResolverCatalogSQL, storeUnsupported()
+	if retirementRows+3 <= 512 {
+		pending, err := s.queuePendingIDs(ctx, JobCallerLeaf, publication.Repository, "")
+		if err != nil {
+			return fmt.Errorf("publish resolver catalog pending census: %w", err)
+		}
+		fanout := resolverCallerFanoutCreateSQL
+		if len(pending) == 1 {
+			fanout = resolverCallerFanoutUpdateSQL
+		}
+		vars["retire"], vars["retired_ids"], vars["pending_ids"] = *retirement.Retire, retirement.IDs, pending
+		statement = "BEGIN;" + resolverCatalogPublicationPreimageSQL + resolverCatalogPublicationCensusFenceSQL +
+			resolverCatalogPublicationBodySQL + retirementSQL + resolverCallerFanoutPrefixSQL + fanout + resolverCallerFanoutSuffixSQL
+		recipe = storeWrite(retirementRows + 3)
+	}
+	results, err := storeQuery[[]resolverCatalogPublicationRec](ctx, s.accounting, s.db, statement, vars, recipe)
 	if err != nil {
 		return fmt.Errorf("publish resolver catalog: %w", err)
 	}
@@ -505,9 +704,9 @@ func (s *Surreal) GetResolverCatalogPublication(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, fmt.Errorf("get resolver catalog: %w", err)
 	}
-	results, err := surrealdb.Query[[]resolverCatalogPublicationRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": resolverCatalogPublicationID(repository)},
+	results, err := storeQuery[[]resolverCatalogPublicationRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": resolverCatalogPublicationID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get resolver catalog: %w", err)
@@ -533,9 +732,9 @@ func (s *Surreal) GetResolverCatalogPublication(
 func (s *Surreal) ListResolverCatalogPublications(
 	ctx context.Context,
 ) ([]ResolverCatalogPublication, error) {
-	results, err := surrealdb.Query[[]resolverCatalogPublicationRec](
-		ctx, s.db,
-		"SELECT * FROM resolver_catalog_publication ORDER BY repository", nil,
+	results, err := storeQuery[[]resolverCatalogPublicationRec](
+		ctx, s.accounting, s.db,
+		"SELECT * FROM resolver_catalog_publication ORDER BY repository", nil, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list resolver catalogs: %w", err)
@@ -570,8 +769,8 @@ func (s *Surreal) ResolverCatalogPublicationCurrent(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return false, fmt.Errorf("check resolver catalog authority: %w", err)
 	}
-	results, err := surrealdb.Query[[]resolverCatalogCurrentResult](
-		ctx, s.db, `
+	results, err := storeQuery[[]resolverCatalogCurrentResult](
+		ctx, s.accounting, s.db, `
 LET $repo = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
 	FROM $repo_rid)[0];
 LET $candidate = (SELECT manifest_digest, policy_digest, control_revision
@@ -633,7 +832,7 @@ RETURN [{
 			"evidence_store_schema":      evidenceStoreSchemaVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
 			"partitioned_schema":         PartitionedExtractionDomainSchema,
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return false, fmt.Errorf("check resolver catalog authority: %w", err)
@@ -645,14 +844,7 @@ RETURN [{
 	return rows[0].Current, nil
 }
 
-func (s *Surreal) ClearResolverCatalogPublication(
-	ctx context.Context,
-	repository string,
-) error {
-	if err := reponame.Validate(repository); err != nil {
-		return fmt.Errorf("clear resolver catalog: %w", err)
-	}
-	results, err := surrealdb.Query[any](ctx, s.db, `
+const clearResolverCatalogPrefixSQL = `
 BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
@@ -661,6 +853,9 @@ LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
 IF $writer_ok = false OR $caller_writer_ok = false {
 	THROW 'phebs-permanent: resolver catalog writer generation is not active'
 };
+`
+
+const clearResolverCatalogSQL = clearResolverCatalogPrefixSQL + `
 DELETE $rid RETURN NONE;
 LET $retired_caller = DELETE caller_generation_publication
 	WHERE repository = $repository RETURN BEFORE;
@@ -668,17 +863,67 @@ IF array::len($retired_caller) = 1 {
 	UPDATE $repo_rid SET caller_publication_revision =
 		(caller_publication_revision ?? 0) + 1 RETURN NONE;
 };
-COMMIT;`,
-		map[string]any{
-			"rid":                      resolverCatalogPublicationID(repository),
-			"migration_rid":            resolverCatalogMigrationID(),
-			"migration_version":        resolverCatalogWriterMigrationVersion,
-			"repository":               repository,
-			"repo_rid":                 repoID(repository),
-			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
-			"caller_migration_version": callerGenerationPublicationMigrationVersion,
-		},
-	)
+COMMIT;`
+
+const clearResolverCatalogCensusSQL = `SELECT VALUE id FROM caller_generation_publication
+	WHERE repository = $repository ORDER BY id LIMIT 513;`
+
+const clearResolverCatalogCensusFenceSQL = `
+IF (SELECT VALUE id FROM caller_generation_publication
+	WHERE repository = $repository ORDER BY id LIMIT 513) != $retired_ids {
+	THROW 'phebs-conflict: resolver clear retirement census changed'
+};
+DELETE $rid RETURN NONE;`
+
+const clearResolverCallerRetirementOneSQL = resolverCallerRetirementDeleteSQL + `
+IF array::len($retired_caller) = 1 {
+	UPDATE $repo_rid SET caller_publication_revision =
+	(caller_publication_revision ?? 0) + 1 RETURN NONE;
+};`
+
+func (s *Surreal) ClearResolverCatalogPublication(
+	ctx context.Context,
+	repository string,
+) error {
+	if err := reponame.Validate(repository); err != nil {
+		return fmt.Errorf("clear resolver catalog: %w", err)
+	}
+	vars := map[string]any{
+		"rid":                      resolverCatalogPublicationID(repository),
+		"migration_rid":            resolverCatalogMigrationID(),
+		"migration_version":        resolverCatalogWriterMigrationVersion,
+		"repository":               repository,
+		"repo_rid":                 repoID(repository),
+		"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+		"caller_migration_version": callerGenerationPublicationMigrationVersion,
+	}
+	census, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, clearResolverCatalogCensusSQL, vars, storeRead())
+	if err != nil {
+		return fmt.Errorf("clear resolver catalog retirement census: %w", err)
+	}
+	ids, err := generationCensusRows(ctx, census, 0)
+	if err != nil {
+		return fmt.Errorf("clear resolver catalog retirement census: %w", err)
+	}
+	if err := validateResolverRetirementIDs(ctx, ids); err != nil {
+		return fmt.Errorf("clear resolver catalog retirement IDs: %w", err)
+	}
+	retirementSQL, retirementRows := resolverCallerRetirementEmptySQL, uint64(len(ids))
+	switch len(ids) {
+	case 0:
+	case 1:
+		retirementSQL = clearResolverCallerRetirementOneSQL
+		retirementRows++
+	default:
+		retirementSQL = resolverCallerRetirementManySQL
+	}
+	statement, recipe := clearResolverCatalogSQL, storeUnsupported()
+	if retirementRows+1 <= 512 {
+		vars["retired_ids"] = ids
+		statement = clearResolverCatalogPrefixSQL + clearResolverCatalogCensusFenceSQL + retirementSQL + "COMMIT;"
+		recipe = storeWrite(retirementRows + 1)
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, vars, recipe)
 	if err != nil {
 		return fmt.Errorf("clear resolver catalog: %w", err)
 	}

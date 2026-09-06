@@ -10,7 +10,6 @@ import (
 	"slices"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
@@ -305,7 +304,29 @@ func validatePersistedCallerGenerationPublicationSummary(
 // supported pre-T30.6i pointer, so all prototype rows are retired on the first
 // install instead of being promoted into visibility.
 func (s *Surreal) migrateCallerGenerationPublications(ctx context.Context) error {
-	results, err := surrealdb.Query[any](ctx, s.db, `
+	marker := callerGenerationPublicationMigrationID()
+	current, err := s.startupWriterMarker(ctx, marker)
+	if err != nil {
+		return fmt.Errorf("migrate caller-generation publications: %w", err)
+	}
+	if current == callerGenerationPublicationMigrationVersion {
+		return nil
+	}
+	if current != "" && current != callerGenerationPublicationPriorMigration {
+		return errors.New("migrate caller-generation publications: phebs-permanent: unsupported caller-generation publication writer generation")
+	}
+	publicationsEmpty, err := s.migrationTableEmpty(ctx, "caller_generation_publication", "true")
+	if err != nil {
+		return err
+	}
+	repositoriesEmpty := true
+	if current == "" {
+		repositoriesEmpty, err = s.migrationTableEmpty(ctx, "repo", "caller_publication_revision = NONE OR caller_publication_revision < 0")
+		if err != nil {
+			return err
+		}
+	}
+	statement := `
 BEGIN;
 LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
 IF $current != NONE AND $current != $wanted AND $current != $prior {
@@ -338,15 +359,28 @@ UPSERT $marker SET
 	version = IF $current = $wanted THEN $current ELSE $wanted END,
 	completed_at = IF $current = $wanted THEN completed_at ELSE time::now() END
 	RETURN NONE;
-COMMIT;`, map[string]any{
-		"marker": callerGenerationPublicationMigrationID(),
-		"prior":  callerGenerationPublicationPriorMigration,
-		"wanted": callerGenerationPublicationMigrationVersion,
-	})
+COMMIT;`
+	recipe := storeUnsupported()
+	if publicationsEmpty && repositoriesEmpty {
+		statement = callerPublicationEmptyMigration
+		recipe = storeWrite(1)
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, map[string]any{
+		"marker":   marker,
+		"expected": startupWriterExpected(current),
+		"prior":    callerGenerationPublicationPriorMigration,
+		"wanted":   callerGenerationPublicationMigrationVersion,
+	}, recipe)
 	if err != nil {
 		return fmt.Errorf("migrate caller-generation publications: %w", err)
 	}
+	if results == nil || len(*results) == 0 {
+		return errors.New("migrate caller-generation publications: missing transaction result")
+	}
 	for index, result := range *results {
+		if result.Status != "OK" && result.Error == nil {
+			return errors.New("migrate caller-generation publications: invalid transaction status")
+		}
 		if result.Error != nil {
 			return fmt.Errorf(
 				"migrate caller-generation publications statement %d: %s",
@@ -354,28 +388,19 @@ COMMIT;`, map[string]any{
 			)
 		}
 	}
-	check, err := surrealdb.Query[[]struct {
-		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $marker", map[string]any{
-		"marker": callerGenerationPublicationMigrationID(),
-	})
-	if err != nil {
-		return fmt.Errorf("migrate caller-generation publications: verify: %w", err)
-	}
-	rows := firstDomainRows(check)
-	if len(rows) == 1 && rows[0].Version == callerGenerationPublicationMigrationVersion {
-		return nil
-	}
-	if len(rows) == 1 && rows[0].Version != "" {
-		return fmt.Errorf(
-			"migrate caller-generation publications: unsupported marker %q",
-			rows[0].Version,
-		)
-	}
-	return errors.New(
-		"migrate caller-generation publications: completion marker missing",
-	)
+	return s.verifyStartupWriterMarker(ctx, marker, callerGenerationPublicationMigrationVersion)
 }
+
+const callerPublicationEmptyMigration = `
+BEGIN;
+LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
+IF $current != $expected
+ OR array::len(SELECT VALUE id FROM caller_generation_publication LIMIT 1) != 0
+ OR ($current = NONE AND array::len(SELECT VALUE id FROM repo WHERE caller_publication_revision = NONE OR caller_publication_revision < 0 LIMIT 1) != 0) {
+ THROW 'phebs-conflict: caller publication migration preimage changed';
+};
+UPSERT $marker SET version = $wanted, completed_at = time::now() RETURN NONE;
+COMMIT;`
 
 func prepareCallerGenerationPublication(
 	publication CallerGenerationPublication,
@@ -835,8 +860,10 @@ func (s *Surreal) PublishCallerGeneration(
 		"max_pair_payload":             maxCallerGenerationPairs,
 	}
 	for attempt := 0; ; attempt++ {
-		results, queryErr := surrealdb.Query[[]callerGenerationPublicationRec](
-			ctx, s.db, publishCallerGenerationSQL, vars,
+		// The publication body and repository revision RID are the two fixed
+		// submitted operands, including native guard-false and replay attempts.
+		results, queryErr := storeQuery[[]callerGenerationPublicationRec](
+			ctx, s.accounting, s.db, publishCallerGenerationSQL, vars, storeWrite(2),
 		)
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
@@ -876,11 +903,11 @@ func (s *Surreal) GetCallerGenerationPublication(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, fmt.Errorf("get caller generation: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerGenerationPublicationRec](
-		ctx, s.db, "SELECT *, ("+callerGenerationPairPayloadDigestSQL+") = "+
+	results, err := storeQuery[[]callerGenerationPublicationRec](
+		ctx, s.accounting, s.db, "SELECT *, ("+callerGenerationPairPayloadDigestSQL+") = "+
 			"pair_payload_digest AS pair_payload_valid FROM $rid", map[string]any{
 			"rid": callerGenerationPublicationID(repository),
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get caller generation: %w", err)
@@ -912,10 +939,10 @@ func (s *Surreal) GetCallerGenerationPublicationSummary(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, fmt.Errorf("get caller generation summary: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerGenerationPublicationSummaryRec](
-		ctx, s.db,
+	results, err := storeQuery[[]callerGenerationPublicationSummaryRec](
+		ctx, s.accounting, s.db,
 		"SELECT "+callerGenerationPublicationSummaryProjection+" FROM $rid",
-		map[string]any{"rid": callerGenerationPublicationID(repository)},
+		map[string]any{"rid": callerGenerationPublicationID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get caller generation summary: %w", err)
@@ -942,10 +969,10 @@ func (s *Surreal) GetCallerGenerationPublicationSummary(
 func (s *Surreal) ListCallerGenerationPublicationSummaries(
 	ctx context.Context,
 ) ([]CallerGenerationPublicationSummary, error) {
-	results, err := surrealdb.Query[[]callerGenerationPublicationSummaryRec](
-		ctx, s.db, "SELECT "+callerGenerationPublicationSummaryProjection+`
+	results, err := storeQuery[[]callerGenerationPublicationSummaryRec](
+		ctx, s.accounting, s.db, "SELECT "+callerGenerationPublicationSummaryProjection+`
 		FROM caller_generation_publication ORDER BY repository LIMIT $limit`,
-		map[string]any{"limit": MaxCallerPublicationRepositories + 1},
+		map[string]any{"limit": MaxCallerPublicationRepositories + 1}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list caller generation summaries: %w", err)
@@ -994,14 +1021,14 @@ func (s *Surreal) ListCallerPublicationRepositoriesPage(
 			MaxCallerPublicationRepositoryPage,
 		)
 	}
-	results, err := surrealdb.Query[[]callerPublicationRepositoryRec](
-		ctx, s.db, `SELECT id, name FROM repo
+	results, err := storeQuery[[]callerPublicationRepositoryRec](
+		ctx, s.accounting, s.db, `SELECT id, name FROM repo
 			WHERE name > $after
 				AND (indexed_commit_hash ?? '') != ''
 				AND (deleting = NONE OR deleting = false)
 			ORDER BY name LIMIT $limit`, map[string]any{
 			"after": after, "limit": limit,
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list caller publication repository page: %w", err)
@@ -1044,8 +1071,8 @@ func (s *Surreal) CallerPublicationRepositoryEligible(
 	if err := reponame.Validate(repository); err != nil {
 		return false, fmt.Errorf("check caller publication repository: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerPublicationRepositoryEligibleResult](
-		ctx, s.db, `
+	results, err := storeQuery[[]callerPublicationRepositoryEligibleResult](
+		ctx, s.accounting, s.db, `
 		LET $repository = (SELECT name, indexed_commit_hash, deleting
 			FROM $rid LIMIT 1)[0];
 		RETURN [{
@@ -1055,7 +1082,7 @@ func (s *Surreal) CallerPublicationRepositoryEligible(
 				AND ($repository.deleting = NONE OR $repository.deleting = false)
 		}];`, map[string]any{
 			"rid": repoID(repository), "name": repository,
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return false, fmt.Errorf("check caller publication repository: %w", err)
@@ -1308,14 +1335,15 @@ func (s *Surreal) CallerGenerationPublicationSummariesAuthorityCurrent(
 			Summary:        validated,
 		})
 	}
-	results, err := surrealdb.Query[[]callerGenerationCurrentResult](
-		ctx, s.db, callerGenerationPublicationSummariesAuthorityCurrentSQL,
+	// This source owns an explicit BEGIN/COMMIT despite submitting no rows.
+	results, err := storeQuery[[]callerGenerationCurrentResult](
+		ctx, s.accounting, s.db, callerGenerationPublicationSummariesAuthorityCurrentSQL,
 		map[string]any{
 			"migration_rid":     callerGenerationPublicationMigrationID(),
 			"migration_version": callerGenerationPublicationMigrationVersion,
 			"bindings":          bindings,
 			"writer_schema":     CallerGenerationPublicationWriterSchema,
-		},
+		}, storeWrite(0),
 	)
 	if err != nil {
 		return false, fmt.Errorf(
@@ -1355,8 +1383,9 @@ func (s *Surreal) callerGenerationPublicationSummaryCurrent(
 			"check caller generation summary authority: %w", err,
 		)
 	}
-	results, err := surrealdb.Query[[]callerGenerationCurrentResult](
-		ctx, s.db, callerGenerationPublicationSummaryCurrentSQL,
+	// This source owns an explicit BEGIN/COMMIT despite submitting no rows.
+	results, err := storeQuery[[]callerGenerationCurrentResult](
+		ctx, s.accounting, s.db, callerGenerationPublicationSummaryCurrentSQL,
 		map[string]any{
 			"migration_rid":              callerGenerationPublicationMigrationID(),
 			"migration_version":          callerGenerationPublicationMigrationVersion,
@@ -1395,7 +1424,7 @@ func (s *Surreal) callerGenerationPublicationSummaryCurrent(
 			"publication_incarnation":    validated.PublicationIncarnation,
 			"writer_schema":              CallerGenerationPublicationWriterSchema,
 			"verify_pair_payload":        verifyPairPayload,
-		},
+		}, storeWrite(0),
 	)
 	if err != nil {
 		return false, fmt.Errorf(
@@ -1492,7 +1521,7 @@ func (s *Surreal) CallerGenerationPublicationCurrent(
 	if err != nil {
 		return false, fmt.Errorf("check caller generation authority: %w", err)
 	}
-	results, err := surrealdb.Query[[]callerGenerationCurrentResult](ctx, s.db,
+	results, err := storeQuery[[]callerGenerationCurrentResult](ctx, s.accounting, s.db,
 		callerGenerationPublicationCurrentSQL, map[string]any{
 			"migration_rid":              callerGenerationPublicationMigrationID(),
 			"migration_version":          callerGenerationPublicationMigrationVersion,
@@ -1531,7 +1560,7 @@ func (s *Surreal) CallerGenerationPublicationCurrent(
 			"publication_revision":       validated.PublicationRevision,
 			"publication_incarnation":    validated.PublicationIncarnation,
 			"writer_schema":              CallerGenerationPublicationWriterSchema,
-		})
+		}, storeRead())
 	if err != nil {
 		return false, fmt.Errorf("check caller generation authority: %w", err)
 	}
@@ -1550,7 +1579,9 @@ func (s *Surreal) ClearCallerGenerationPublication(
 		return fmt.Errorf("clear caller generation: %w", err)
 	}
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[any](ctx, s.db, `
+		// Both fixed write operands are submitted regardless of native pointer
+		// presence: its DELETE RID and the conditional repository UPDATE RID.
+		results, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
@@ -1567,7 +1598,7 @@ COMMIT;`, map[string]any{
 			"migration_version": callerGenerationPublicationMigrationVersion,
 			"rid":               callerGenerationPublicationID(repository),
 			"repo_rid":          repoID(repository),
-		})
+		}, storeWrite(2))
 		if err != nil {
 			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue

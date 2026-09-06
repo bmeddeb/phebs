@@ -12,7 +12,6 @@ import (
 	"slices"
 	"sync"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/readaccounting"
@@ -808,11 +807,11 @@ func (s *Surreal) GetServiceStateV3SummarySnapshot(
 			"get service state v3 summary snapshot: %w", err,
 		)
 	}
-	currentResults, err := surrealdb.Query[[]serviceRepositoryStateRec](
-		ctx,
+	currentResults, err := storeQuery[[]serviceRepositoryStateRec](
+		ctx, s.accounting,
 		s.db,
 		"SELECT * FROM $rid",
-		map[string]any{"rid": serviceStateV3RepositoryID(repository)},
+		map[string]any{"rid": serviceStateV3RepositoryID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return servicecatalog.RepositoryState{}, err
@@ -840,13 +839,13 @@ func (s *Surreal) GetServiceStateV3SummarySnapshot(
 			"get service state v3 summary snapshot: %w", err,
 		)
 	}
-	preimageResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, s.db, `
+	preimageResults, err := storeQuery[[]serviceRepositoryStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_repository_preimage
 	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
 		AND snapshot_digest = $snapshot_digest LIMIT 2`, map[string]any{
 		"repository": repository, "snapshot_revision": snapshotRevision,
 		"snapshot_digest": snapshotDigest,
-	})
+	}, storeRead())
 	if err != nil {
 		return servicecatalog.RepositoryState{}, err
 	}
@@ -877,9 +876,9 @@ func (s *Surreal) GetServiceStateV3Point(
 	if validateCandidateRepository(repository) != nil || serviceKey == "" {
 		return servicecatalog.ServiceState{}, ErrInvalidServiceStateV3
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceStateV3ID(repository, serviceKey)},
+	results, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceStateV3ID(repository, serviceKey)}, storeRead(),
 	)
 	if err != nil {
 		return servicecatalog.ServiceState{}, err
@@ -920,11 +919,11 @@ func (s *Surreal) GetServiceStateV3PointSnapshot(
 			"get service state v3 point snapshot: %w", err,
 		)
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](
-		ctx,
+	results, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting,
 		s.db,
 		"SELECT * FROM $rid",
-		map[string]any{"rid": serviceStateV3ID(repository, serviceKey)},
+		map[string]any{"rid": serviceStateV3ID(repository, serviceKey)}, storeRead(),
 	)
 	if err != nil {
 		return servicecatalog.ServiceState{}, err
@@ -952,14 +951,14 @@ func (s *Surreal) GetServiceStateV3PointSnapshot(
 			"get service state v3 point snapshot: %w", err,
 		)
 	}
-	preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	preimageResults, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_preimage
 	WHERE repository = $repository AND service_key = $service_key
 		AND snapshot_revision = $snapshot_revision
 		AND snapshot_digest = $snapshot_digest LIMIT 2`, map[string]any{
 		"repository": repository, "service_key": serviceKey,
 		"snapshot_revision": snapshotRevision, "snapshot_digest": snapshotDigest,
-	})
+	}, storeRead())
 	if err != nil {
 		return servicecatalog.ServiceState{}, err
 	}
@@ -992,12 +991,12 @@ func (s *Surreal) ListServiceStateV3Rows(
 		limit > maxServiceStateScanPage+1 {
 		return nil, ErrInvalidServiceStateV3
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_current
 	WHERE repository = $repository AND service_key > $after
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": repository, "after": after, "limit": limit,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -1018,14 +1017,14 @@ func (s *Surreal) ListServiceStateV3RowsSnapshot(
 		snapshotRevision > math.MaxInt64 || !validSHA256Digest(snapshotDigest) {
 		return nil, ErrInvalidServiceStateV3
 	}
-	currentResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	currentResults, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_current
 	WHERE repository = $repository AND service_key > $after
 		AND visible_from <= $snapshot_revision
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": repository, "after": after, "limit": limit,
 		"snapshot_revision": snapshotRevision,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -1037,7 +1036,7 @@ SELECT * FROM service_state_v3_current
 	if err != nil {
 		return nil, err
 	}
-	preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	preimageResults, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_preimage
 	WHERE repository = $repository AND service_key > $after
 		AND snapshot_revision = $snapshot_revision
@@ -1045,7 +1044,7 @@ SELECT * FROM service_state_v3_preimage
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": repository, "after": after, "limit": limit,
 		"snapshot_revision": snapshotRevision, "snapshot_digest": snapshotDigest,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -1071,13 +1070,13 @@ func (s *Surreal) ListAcceptedServiceStateV3Rows(
 		limit > servicecatalogv3.MaxTotalServices+1 {
 		return nil, ErrInvalidServiceStateV3
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_current
 	WHERE repository = $repository AND removed = false AND disposition = $accepted
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": repository, "accepted": servicecatalog.DispositionAccepted,
 		"limit": limit,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, err
 	}

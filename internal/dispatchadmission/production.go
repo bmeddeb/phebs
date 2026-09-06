@@ -80,6 +80,7 @@ type ProductionLifetime struct {
 	closeErr     error
 	storeMu      sync.Mutex
 	storeClient  *storeaccounting.Client
+	storeOwner   *storeaccounting.SDKOwner
 	cancelStore  context.CancelFunc
 	storeTaken   bool
 	storeClosed  bool
@@ -253,7 +254,12 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		}
 		closeCtx, cancel := context.WithTimeout(ctx, lifetime.client.limits.AckTimeout)
 		defer cancel()
-		lifetime.closeErr = errors.Join(lifetime.closeErr, lifetime.closeStore(closeCtx))
+		storeErr := lifetime.closeStore(closeCtx)
+		lifetime.closeErr = errors.Join(lifetime.closeErr, storeErr)
+		if storeErr != nil {
+			// A failed SDK/SA close cannot acknowledge clean dispatch closure.
+			_ = lifetime.client.fail(ErrIncomplete)
+		}
 		lifetime.closeErr = errors.Join(lifetime.closeErr, lifetime.client.Close(closeCtx))
 		if lifetime.closeErr != nil {
 			// Release both transports even when accounting cannot close. The

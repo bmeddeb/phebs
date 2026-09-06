@@ -39,6 +39,14 @@ func TestAuthAccountingFixedRecipes(t *testing.T) {
 			_, err := s.CreateUser(ctx, User{ID: "user", CreatedAt: now})
 			return err
 		}, []any{userRows}, userRID, true, nil},
+		{"first_user", func(ctx context.Context, s *Surreal) error {
+			_, err := s.CreateFirstUser(ctx, User{ID: "user", CreatedAt: now})
+			return err
+		}, []any{userRows}, userRID, true, nil},
+		{"first_user_existing", func(ctx context.Context, s *Surreal) error {
+			_, err := s.CreateFirstUser(ctx, User{ID: "user", CreatedAt: now})
+			return err
+		}, []any{[]userRec{}}, userRID, true, ErrConflict},
 		{"user_id", func(ctx context.Context, s *Surreal) error { _, err := s.GetUserByID(ctx, "user"); return err }, []any{userRows}, userRID, false, nil},
 		{"user_email", func(ctx context.Context, s *Surreal) error {
 			_, err := s.GetUserByEmail(ctx, "user@example.com")
@@ -102,6 +110,10 @@ func TestAuthAccountingFixedRecipes(t *testing.T) {
 							if !reflect.DeepEqual(vars["rid"], test.rid) {
 								return nil, errors.New("auth submission changed its actual record operand")
 							}
+							if (test.name == "first_user" || test.name == "first_user_existing") &&
+								!reflect.DeepEqual(vars["guard"], models.NewRecordID("auth_setup", "first")) {
+								return nil, errors.New("first-user submission lost its actual guard operand")
+							}
 						}
 						if selected {
 							// The actual SA01 ACK must precede this native boundary.
@@ -110,7 +122,11 @@ func TestAuthAccountingFixedRecipes(t *testing.T) {
 							if test.write {
 								want = 1
 							}
-							if err != nil || prefix.Transactions != want || prefix.Rows != want || prefix.MaximumRows != want {
+							wantRows := want
+							if test.name == "first_user" || test.name == "first_user_existing" {
+								wantRows = 2
+							}
+							if err != nil || prefix.Transactions != want || prefix.Rows != wantRows || prefix.MaximumRows != wantRows {
 								return nil, errors.New("auth forwarded before exact submitted-target accounting")
 							}
 						}
@@ -136,7 +152,7 @@ func TestAuthAccountingFixedRecipes(t *testing.T) {
 }
 
 func TestAuthAccountingUnsupportedRecipes(t *testing.T) {
-	for _, name := range []string{"first_user", "oidc", "positive_expiry"} {
+	for _, name := range []string{"oidc", "positive_expiry"} {
 		t.Run(name, func(t *testing.T) {
 			for _, selected := range []bool{false, true} {
 				t.Run(map[bool]string{false: "ordinary", true: "selected"}[selected], func(t *testing.T) {
@@ -166,8 +182,6 @@ func TestAuthAccountingUnsupportedRecipes(t *testing.T) {
 					}
 					var err error
 					switch name {
-					case "first_user":
-						_, err = s.CreateFirstUser(ctx, User{ID: "created"})
 					case "oidc":
 						_, err = s.UpsertOIDCUser(ctx, "issuer", "subject", "email", "email", "display", true)
 					case "positive_expiry":
@@ -213,7 +227,7 @@ func TestAuthAccountingSourceCoverage(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string][]string{
-		"AuthStats": {"storeRead", "storeRead"}, "CreateFirstUser": {"storeUnsupported"},
+		"AuthStats": {"storeRead", "storeRead"}, "CreateFirstUser": {"storeWrite"},
 		"CreateUser": {"storeWrite"}, "GetUserByID": {"storeRead"}, "GetUserByEmail": {"storeRead"},
 		"UpsertOIDCUser": {"storeUnsupported"}, "MarkUserLogin": {"storeWrite"}, "CreateAPIKey": {"storeWrite"},
 		"GetAPIKey": {"storeRead"}, "ListAPIKeys": {"storeRead"}, "RevokeAPIKey": {"storeWrite"},
@@ -286,8 +300,12 @@ func TestAuthAccountingSourceCoverage(t *testing.T) {
 					t.Fatal("auth fixed-target write lost its row count")
 				}
 				rows, ok := recipe.Args[0].(*ast.BasicLit)
-				if !ok || rows.Kind != token.INT || rows.Value != "1" {
-					t.Fatal("auth fixed-target write guessed a non-one count")
+				wantRows := "1"
+				if function.Name.Name == "CreateFirstUser" {
+					wantRows = "2" // fixed setup guard plus supplied user RID/body
+				}
+				if !ok || rows.Kind != token.INT || rows.Value != wantRows {
+					t.Fatal("auth fixed-target write changed its actual operand count")
 				}
 			} else if len(recipe.Args) != 0 {
 				t.Fatal("auth read/unsupported recipe gained a caller argument")

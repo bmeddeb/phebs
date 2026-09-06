@@ -4614,6 +4614,47 @@ terminal command to run.
 
 ### T42.2k private dispatch bootstrap
 
+The prospective `parent-bound-store-v1` selector additionally requires the
+authenticated FD5 store channel. Main claims its concrete SDK owner once;
+store initialization, background queries and phase control share that owner.
+A store checkpoint must acknowledge before dispatch checkpoint. Resume does
+not reopen ordinary workers, and store-close errors now fail shutdown. These
+implementation paths are not yet a freeze or ceremony command.
+
+Fresh/current startup uses exact submitted definition/record counts. Empty
+candidate-control and API-capability migrations recheck their empty census
+transactionally; unsupported positive legacy bulk migrations refuse selected
+mode without changing ordinary migration behavior. Relationship-reference
+startup cleanup is bounded to 32 positive 512-ID pages. A failure may leave a
+committed cleanup prefix: startup fails, and a later exclusive recovery repeats
+its census. Do not treat a partial prefix as complete recovery or an online
+atomic replacement.
+
+Connection membership changes remain atomic. Bounded replacement/pruning now
+rechecks an actual ID census in the transaction; a concurrent change refuses
+without deleting a partial set. Larger ordinary sets retain the existing
+atomic behavior, while selected ceremony accounting refuses more than 512
+submitted deletion/creation operands. This is not a new ordinary repository
+limit or evidence that the complete ceremony fits its phase budget.
+
+Repository deletion/reactivation now binds its prior state, retired caller
+IDs and pending successor to the same transaction. Concurrent changes refuse
+before visibility changes; reactivation still coalesces one forced successor,
+and refreshing an already-active repository stays queue-neutral. Queue and
+generation writes likewise use actual selected IDs. Generation lifecycle
+scans at most five candidates per owner turn, down from eleven, to keep its
+extra census calls inside the existing twelve-query ceiling. The unchanged
+cadence can therefore need more owner turns; this is not a lifecycle-deadline
+or complete ceremony pass.
+
+Final repository cleanup still commits its store changes atomically after
+artifact removal. Bounded cleanup rechecks actual native ID vectors before
+writing; it never splits the deletion into online pages to fit accounting.
+Oversized ordinary cleanup retains its original atomic behavior; selected
+accounting refuses. A failed store transaction does not recreate artifacts
+already removed by the caller, so the repository remains unavailable for
+safe cleanup retry.
+
 The implementation-only `PHEBS_T422_DISPATCH=parent-bound-v1` selector requires
 two exact inherited parent-owned endpoints; setting the variable yourself is
 not admission and refuses without them. The selected Phebs lifetime binds its

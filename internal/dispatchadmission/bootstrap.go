@@ -433,7 +433,7 @@ func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, 
 			}
 			_ = client.fail(ErrProductionBootstrap)
 			_ = client.conn.Close()
-			if lifetime != nil {
+			if lifetime != nil && lifetime.controlDone != nil {
 				<-lifetime.controlDone
 			}
 		}
@@ -444,6 +444,14 @@ func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, 
 			return nil, ErrProductionBootstrap
 		}
 	}
+	lifetime = &ProductionLifetime{program: program, semanticMode: record.SemanticMode, producerID: record.Producer.ID,
+		inputSHA256: record.InputSHA256, client: client, tools: make(map[string]ProductionToolBinding, len(record.Tools)),
+		storeClient: storeClient, cancelStore: cancelStore}
+	if storeClient != nil {
+		client.mu.Lock()
+		client.storeLifetime = lifetime
+		client.mu.Unlock()
+	}
 	controlFile, err = control.File()
 	if err != nil {
 		return nil, ErrProductionBootstrap
@@ -452,9 +460,7 @@ func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, 
 	if err != nil {
 		return nil, ErrProductionBootstrap
 	}
-	lifetime = &ProductionLifetime{program: program, semanticMode: record.SemanticMode, producerID: record.Producer.ID,
-		inputSHA256: record.InputSHA256, client: client, controlDone: done, tools: make(map[string]ProductionToolBinding, len(record.Tools)),
-		storeClient: storeClient, cancelStore: cancelStore}
+	lifetime.controlDone = done
 	for _, tool := range record.Tools {
 		tool.Environment = slices.Clone(tool.Environment)
 		lifetime.tools[tool.Role] = tool

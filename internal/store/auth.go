@@ -131,7 +131,7 @@ LET $existing = (SELECT id FROM user LIMIT 1);
 RETURN IF array::len($existing) = 0 THEN
     (CREATE $rid SET `+createUserFields+` RETURN AFTER)
 ELSE [] END;
-COMMIT;`, vars, storeUnsupported())
+COMMIT;`, vars, storeWrite(2))
 	if err != nil {
 		return nil, wrapAuthConflict(err)
 	}

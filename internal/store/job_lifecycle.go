@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
@@ -48,7 +47,7 @@ func (s *Surreal) ScanJobLifecycle(
 		statement = `RETURN SELECT id, status, finished_at FROM ` + cursor.String() + `>..
 			ORDER BY id LIMIT $limit;`
 	}
-	results, err := surrealdb.Query[[]jobLifecycleRec](ctx, s.db, statement, variables)
+	results, err := storeQuery[[]jobLifecycleRec](ctx, s.accounting, s.db, statement, variables, storeRead())
 	if err != nil {
 		return JobLifecyclePage{}, fmt.Errorf("scan job lifecycle: %w", err)
 	}
@@ -84,19 +83,31 @@ func (s *Surreal) DeleteOldestTerminalJobs(
 	if !validJobKind(kind) || limit < 1 || limit > 16 {
 		return 0, errors.New("delete terminal jobs: scope is invalid")
 	}
-	results, err := surrealdb.Query[[]jobLifecycleDelete](ctx, s.db, `
-BEGIN;
-LET $ids = SELECT VALUE id FROM type::table($table)
+	const selection = `SELECT VALUE id FROM type::table($table)
 	WHERE status IN ['done', 'failed', 'canceled'] AND finished_at != NONE
 		AND ($before = NONE OR finished_at < $before)
-	ORDER BY finished_at, id LIMIT $limit;
+	ORDER BY finished_at, id LIMIT $limit`
+	vars := map[string]any{"table": string(kind), "before": before, "limit": limit}
+	selected, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, selection+";", vars, storeRead())
+	if err != nil {
+		return 0, fmt.Errorf("select terminal jobs: %w", err)
+	}
+	ids, err := generationMutationIDs(ctx, selected, string(kind), limit, 0)
+	if err != nil || len(ids) == 0 {
+		return 0, err
+	}
+	vars["ids"] = ids
+	results, err := storeQuery[[]jobLifecycleDelete](ctx, s.accounting, s.db, `
+BEGIN;
+LET $actual = `+selection+`;
+IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
+	THROW 'phebs-permanent: terminal job selection changed';
+};
 LET $deleted = DELETE $ids WHERE status IN ['done', 'failed', 'canceled']
 	AND finished_at != NONE AND ($before = NONE OR finished_at < $before)
 	RETURN BEFORE;
 RETURN [{ deleted: array::len($deleted) }];
-COMMIT;`, map[string]any{
-		"table": string(kind), "before": before, "limit": limit,
-	})
+COMMIT;`, vars, storeWrite(uint64(len(ids))))
 	if err != nil {
 		return 0, fmt.Errorf("delete terminal jobs: %w", err)
 	}

@@ -334,9 +334,9 @@ func (s *Surreal) getServiceStateV3Plan(
 	if !validSHA256Digest(digest) {
 		return nil, ErrInvalidServiceStateV3
 	}
-	results, err := surrealdb.Query[[]serviceStateV3PlanRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceStateV3PlanID(digest)},
+	results, err := storeQuery[[]serviceStateV3PlanRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceStateV3PlanID(digest)}, storeRead(),
 	)
 	if err != nil {
 		return nil, err
@@ -375,7 +375,7 @@ func (s *Surreal) ReadServiceStateV3ActivationAuthority(
 			"read service state v3 activation plan: %w", err,
 		)
 	}
-	planResults, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
+	planResults, err := storeQuery[[]serviceStateV3PlanRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_plan
 	WHERE repository = $repository AND phase = 'activate' AND state = 'activated'
 		AND catalog_root = $catalog_root
@@ -389,7 +389,7 @@ SELECT * FROM service_state_v3_plan
 		"search":           selector.SearchGenerationDigest,
 		"summary_revision": selector.StateControlRevision,
 		"summary_digest":   selector.StateSummaryDigest,
-	})
+	}, storeRead())
 	if err != nil {
 		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
 			"read service state v3 activation plan: %w", err,
@@ -436,7 +436,7 @@ SELECT * FROM service_state_v3_plan
 			"read service state v3 activation unit: %w", err,
 		)
 	}
-	unitResults, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
+	unitResults, err := storeQuery[[]generationChunkRec](ctx, s.accounting, s.db, `
 SELECT * FROM generation_schedule_chunk
 	WHERE schedule_digest = $schedule AND repository = $repository
 		AND stage = $stage AND generation = $generation AND offset = $offset
@@ -444,7 +444,7 @@ SELECT * FROM generation_schedule_chunk
 		"schedule": schedule.Digest, "repository": selector.Repository,
 		"stage": ServiceStateV3ActivateStage, "generation": plan.Digest,
 		"offset": ServiceStateV3ActivationTransitionTargetOffset,
-	})
+	}, storeRead())
 	if err != nil {
 		return ServiceStateV3ActivationAuthority{}, fmt.Errorf(
 			"read service state v3 activation unit: %w", err,
@@ -543,7 +543,7 @@ func (s *Surreal) ReadServiceStateV3ActivationTransition(
 			"read service state v3 activation transition unit: %w", err,
 		)
 	}
-	unitResults, err := surrealdb.Query[[]generationChunkRec](ctx, s.db, `
+	unitResults, err := storeQuery[[]generationChunkRec](ctx, s.accounting, s.db, `
 SELECT * FROM generation_schedule_chunk
 	WHERE schedule_digest = $schedule AND repository = $repository
 		AND stage = $stage AND generation = $generation AND offset = $offset
@@ -551,7 +551,7 @@ SELECT * FROM generation_schedule_chunk
 		"schedule": schedule.Digest, "repository": plan.Repository,
 		"stage": ServiceStateV3ActivateStage, "generation": plan.Digest,
 		"offset": ServiceStateV3ActivationTransitionTargetOffset,
-	})
+	}, storeRead())
 	if err != nil {
 		return ServiceStateV3ActivationTransition{}, fmt.Errorf(
 			"read service state v3 activation transition unit: %w", err,
@@ -646,9 +646,9 @@ func (s *Surreal) getRawServiceStateV3Summary(
 	ctx context.Context,
 	repository string,
 ) (*servicecatalog.RepositoryState, error) {
-	results, err := surrealdb.Query[[]serviceRepositoryStateRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceStateV3RepositoryID(repository)},
+	results, err := storeQuery[[]serviceRepositoryStateRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceStateV3RepositoryID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return nil, err
@@ -816,7 +816,7 @@ func (s *Surreal) completedServiceStateV3Activation(
 	searchGeneration string,
 	summary servicecatalog.RepositoryState,
 ) (bool, error) {
-	results, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateV3PlanRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_plan
 	WHERE repository = $repository AND phase = 'activate'
 		AND catalog_root = $root AND catalog_control_revision = $revision
@@ -824,7 +824,7 @@ SELECT * FROM service_state_v3_plan
 	ORDER BY updated_at DESC LIMIT 1`, map[string]any{
 		"repository": repository, "root": root, "revision": revision,
 		"search": searchGeneration,
-	})
+	}, storeRead())
 	if err != nil {
 		return false, err
 	}
@@ -1079,13 +1079,13 @@ func (s *Surreal) proveServiceStateV3NoRemovals(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, err
 	}
-	results, err := surrealdb.Query[[]serviceStateV3LiveRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateV3LiveRec](ctx, s.accounting, s.db, `
 SELECT id, service_key, status, removed, control_revision, visible_from
 	FROM service_state_v3_current WHERE repository = $repository AND removed = false
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": candidate.Generation.Root.Binding.Repository,
 		"limit":      servicecatalogv3.MaxTotalServices*2 + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -1225,7 +1225,11 @@ func (s *Surreal) createServiceStateV3Plan(
 			summaryContent = serviceRepositoryStateContent(removalProof.summary)
 		}
 	}
-	results, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
+	submittedRows := uint64(1)
+	if priorDigest != "" {
+		submittedRows++
+	}
+	results, err := storeQuery[[]serviceStateV3PlanRec](ctx, s.accounting, s.db, `
 BEGIN;
 LET $candidate = (SELECT root_digest, control_revision FROM $candidate_rid LIMIT 1)[0];
 LET $current = (SELECT schedule_digest FROM $schedule_current LIMIT 1)[0].schedule_digest;
@@ -1274,7 +1278,7 @@ COMMIT;`, map[string]any{
 		"catalog_revision": plan.CatalogControlRevision,
 		"schedule_digest":  plan.ScheduleDigest, "digest": plan.Digest,
 		"content": serviceStateV3PlanContent(plan),
-	})
+	}, storeWrite(submittedRows))
 	if err != nil {
 		return err
 	}
@@ -1607,9 +1611,9 @@ func (s *Surreal) serviceCatalogV3MemberContent(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, fmt.Errorf("service catalog v3 member content: %w", err)
 	}
-	results, err := surrealdb.Query[[]serviceCatalogV3MemberRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogV3MemberID(descriptor.Digest)},
+	results, err := storeQuery[[]serviceCatalogV3MemberRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogV3MemberID(descriptor.Digest)}, storeRead(),
 	)
 	if err != nil {
 		return nil, err
@@ -1644,8 +1648,8 @@ func (s *Surreal) serviceStateV3RowsForProjections(
 	if len(rids) == 0 {
 		return map[string]servicecatalog.ServiceState{}, nil
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](
-		ctx, s.db, "SELECT * FROM $rids", map[string]any{"rids": rids},
+	results, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rids", map[string]any{"rids": rids}, storeRead(),
 	)
 	if err != nil {
 		return nil, err
@@ -1675,13 +1679,13 @@ func (s *Surreal) nextServiceStateV3RemovalRows(
 	ctx context.Context,
 	plan ServiceStateV3Plan,
 ) ([]servicecatalog.ServiceState, error) {
-	results, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_current
 	WHERE repository = $repository AND removed = false AND service_key > $after
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": plan.Repository, "after": plan.RemovalCursor,
 		"limit": MaxServiceStateV3ChunkRows + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -2095,7 +2099,7 @@ func (s *Surreal) serviceStateV3WriteTargetCensus(
 		keys = append(keys, key)
 		rids = append(rids, serviceStateV3ID(plan.Repository, key))
 	}
-	results, err := surrealdb.Query[[]serviceStateV3TargetRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateV3TargetRec](ctx, s.accounting, s.db, `
 SELECT id, service_key, control_revision, state_digest, visible_from FROM $rids;
 SELECT service_key, control_revision, state_digest, snapshot_digest
 	FROM service_state_v3_preimage WHERE repository = $repository
@@ -2106,7 +2110,7 @@ SELECT summary_digest, snapshot_digest FROM service_state_v3_repository_preimage
 		"rids": rids, "keys": keys, "repository": plan.Repository,
 		"snapshot": selector.StateControlRevision, "limit": len(updates) + 1,
 		"summary_rid": serviceStateV3RepositoryID(plan.Repository),
-	})
+	}, storeRead())
 	if err != nil {
 		return targets, err
 	}
@@ -2386,7 +2390,7 @@ func (s *Surreal) commitServiceStateV3TargetChunk(
 		}
 		summaryContent = serviceRepositoryStateContent(*nextSummary)
 	}
-	results, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateV3PlanRec](ctx, s.accounting, s.db, `
 BEGIN;
 LET $repository_state = (SELECT deleting FROM $repository_rid LIMIT 1)[0];
 LET $candidate = (SELECT root_digest, control_revision FROM $candidate_rid LIMIT 1)[0];
@@ -2661,7 +2665,7 @@ COMMIT;`, map[string]any{
 		"payload_records":         payloadRecords,
 		"summary_content":         summaryContent,
 		"plan_content":            serviceStateV3PlanContent(nextPlan),
-	})
+	}, storeWrite(uint64(actualRecords)))
 	if err != nil {
 		if strings.Contains(err.Error(), serviceStateV3PreimageBacklogMarker) {
 			return WithDeferral(fmt.Errorf(
@@ -2775,11 +2779,11 @@ DEFINE INDEX OVERWRITE service_state_v3_plan_target ON service_state_v3_plan FIE
 `
 
 func (s *Surreal) migrateServiceStateV3Schema(ctx context.Context) error {
-	markerResults, err := surrealdb.Query[[]struct {
+	markerResults, err := storeQuery[[]struct {
 		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $rid", map[string]any{
+	}](ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{
 		"rid": serviceStateV3SchemaMigrationID(),
-	})
+	}, storeRead())
 	if err != nil {
 		return fmt.Errorf("migrate service state v3 schema: marker: %w", err)
 	}
@@ -2796,13 +2800,13 @@ func (s *Surreal) migrateServiceStateV3Schema(ctx context.Context) error {
 	if err := s.applySchemaBatch(ctx, serviceStateV3PreflightSchema, "migrate service state v3 preflight "); err != nil {
 		return fmt.Errorf("migrate service state v3 schema: preflight schema: %w", err)
 	}
-	probe, err := surrealdb.Query[[]struct {
+	probe, err := storeQuery[[]struct {
 		Count int `json:"count"`
-	}](ctx, s.db, `RETURN [{ count:
+	}](ctx, s.accounting, s.db, `RETURN [{ count:
 		array::len(SELECT id FROM service_state_v3_current LIMIT 1) +
 		array::len(SELECT id FROM service_state_v3_repository LIMIT 1) +
 		array::len(SELECT id FROM service_state_v3_plan LIMIT 1)
-	}];`, nil)
+	}];`, nil, storeRead())
 	if err != nil {
 		return fmt.Errorf("migrate service state v3 schema: preflight: %w", err)
 	}
@@ -2813,7 +2817,7 @@ func (s *Surreal) migrateServiceStateV3Schema(ctx context.Context) error {
 	if err := s.applySchemaBatch(ctx, serviceStateV3Schema, "migrate service state v3 schema "); err != nil {
 		return fmt.Errorf("migrate service state v3 schema: define: %w", err)
 	}
-	marker, err := surrealdb.Query[any](ctx, s.db, `
+	marker, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $rid LIMIT 1)[0].version;
 IF $current != NONE AND $current != $version {
@@ -2823,7 +2827,7 @@ UPSERT $rid SET version = IF $current = NONE THEN $version ELSE $current END,
 	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END RETURN NONE;
 COMMIT;`, map[string]any{
 		"rid": serviceStateV3SchemaMigrationID(), "version": serviceStateV3SchemaMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate service state v3 schema: marker write: %w", err)
 	}
@@ -2915,9 +2919,9 @@ func (s *Surreal) migrateServiceStateV3SnapshotSchemaWithDefinition(
 	definition string,
 ) error {
 	marker := serviceStateV3SnapshotSchemaMigrationID()
-	results, err := surrealdb.Query[[]struct {
+	results, err := storeQuery[[]struct {
 		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker})
+	}](ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker}, storeRead())
 	if err != nil {
 		return fmt.Errorf("migrate service state v3 snapshot schema: marker: %w", err)
 	}
@@ -2933,7 +2937,7 @@ func (s *Surreal) migrateServiceStateV3SnapshotSchemaWithDefinition(
 	if len(rows) > 1 {
 		return errors.New("migrate service state v3 snapshot schema: duplicate marker")
 	}
-	latched, err := surrealdb.Query[any](ctx, s.db, `
+	latched, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $versions = SELECT version FROM $rid LIMIT 2;
 IF array::len($versions) != 1 OR
@@ -2951,7 +2955,7 @@ COMMIT;`, map[string]any{
 		"selector":          serviceRuntimeSelectorCompatibilityMigrationVersion,
 		"snapshot":          serviceStateV3SnapshotCompatibilityMigrationVersion,
 		"source_generation": serviceCatalogV3SourceGenerationCompatibilityMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate service state v3 snapshot schema: compatibility latch: %w", err)
 	}
@@ -2972,7 +2976,7 @@ COMMIT;`, map[string]any{
 	if err := s.applySchemaBatch(ctx, definition, "migrate service state v3 snapshot schema "); err != nil {
 		return fmt.Errorf("migrate service state v3 snapshot schema: define: %w", err)
 	}
-	written, err := surrealdb.Query[any](ctx, s.db, `
+	written, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $rid LIMIT 1)[0].version;
 IF $current != NONE AND $current != $version {
@@ -2982,7 +2986,7 @@ UPSERT $rid SET version = IF $current = NONE THEN $version ELSE $current END,
 	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END RETURN NONE;
 COMMIT;`, map[string]any{
 		"rid": marker, "version": serviceStateV3SnapshotSchemaMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate service state v3 snapshot schema: marker write: %w", err)
 	}
@@ -3018,7 +3022,7 @@ func (s *Surreal) backfillServiceStateV3VisibleFrom(ctx context.Context) error {
 			return err
 		}
 		delete(vars, "ids")
-		results, err := surrealdb.Query[[]models.RecordID](ctx, s.db, serviceStateV3VisibleFromSelection, vars)
+		results, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, serviceStateV3VisibleFromSelection, vars, storeRead())
 		if err != nil {
 			return fmt.Errorf("read visible revision page: %w", err)
 		}
@@ -3037,7 +3041,7 @@ func (s *Surreal) backfillServiceStateV3VisibleFrom(ctx context.Context) error {
 			return nil
 		}
 		vars["ids"] = ids
-		written, err := surrealdb.Query[any](ctx, s.db, serviceStateV3VisibleFromWrite, vars)
+		written, err := storeQuery[any](ctx, s.accounting, s.db, serviceStateV3VisibleFromWrite, vars, storeWrite(uint64(len(ids))))
 		if err != nil {
 			return fmt.Errorf("write visible revision page: %w", err)
 		}
@@ -3058,7 +3062,7 @@ func (s *Surreal) backfillServiceStateV3VisibleFrom(ctx context.Context) error {
 func (s *Surreal) migrateServiceSourceGenerationCompatibility(
 	ctx context.Context,
 ) error {
-	results, err := surrealdb.Query[any](ctx, s.db, `
+	results, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $versions = SELECT version FROM $rid LIMIT 2;
 IF array::len($versions) != 1 OR
@@ -3071,7 +3075,7 @@ COMMIT;`, map[string]any{
 		"rid":               candidateControlRevisionMigrationID(),
 		"snapshot":          serviceStateV3SnapshotCompatibilityMigrationVersion,
 		"source_generation": serviceCatalogV3SourceGenerationCompatibilityMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate service catalog v3 source generation compatibility: %w", err)
 	}
@@ -3091,7 +3095,7 @@ type serviceStateV3SchedulePointerRec struct {
 	ScheduleDigest string `json:"schedule_digest"`
 }
 
-func fenceServiceStateV3CandidateAdvance(
+func (s *Surreal) fenceServiceStateV3CandidateAdvance(
 	ctx context.Context,
 	tx *surrealdb.Transaction,
 	repository, priorRoot, nextRoot string,
@@ -3099,7 +3103,7 @@ func fenceServiceStateV3CandidateAdvance(
 	if priorRoot == "" || priorRoot == nextRoot {
 		return nil
 	}
-	reconcilePlan, reconcileSchedule, err := serviceStateV3PlanInTransaction(
+	reconcilePlan, reconcileSchedule, err := s.serviceStateV3PlanInTransaction(
 		ctx, tx, repository, serviceStateV3Reconcile,
 	)
 	if err != nil {
@@ -3111,7 +3115,7 @@ func fenceServiceStateV3CandidateAdvance(
 	if reconcileSchedule != nil && reconcilePlan == nil {
 		return ErrInvalidServiceStateV3
 	}
-	activationPlan, activationSchedule, err := serviceStateV3PlanInTransaction(
+	activationPlan, activationSchedule, err := s.serviceStateV3PlanInTransaction(
 		ctx, tx, repository, serviceStateV3Activate,
 	)
 	if err != nil {
@@ -3123,7 +3127,7 @@ func fenceServiceStateV3CandidateAdvance(
 	if activationPlan == nil {
 		return ErrInvalidServiceStateV3
 	}
-	results, err := surrealdb.Query[any](ctx, tx, `
+	results, err := storeQuery[any](ctx, s.accounting, tx, `
 UPDATE $plan_rid SET state = IF state = 'running' THEN 'superseded' ELSE state END,
 	updated_at = time::now() WHERE digest = $plan_digest RETURN NONE;
 UPDATE $schedule_rid SET status = IF status = 'active' THEN 'superseded' ELSE status END,
@@ -3139,7 +3143,7 @@ DELETE $current_rid WHERE schedule_digest = $schedule_digest RETURN NONE;`, map[
 			"generation_schedule_current",
 			strings.TrimPrefix(generationCurrentID(repository, ServiceStateV3ActivateStage), "sha256:"),
 		),
-	})
+	}, storeWrite(3))
 	if err != nil {
 		return err
 	}
@@ -3151,17 +3155,17 @@ DELETE $current_rid WHERE schedule_digest = $schedule_digest RETURN NONE;`, map[
 	return nil
 }
 
-func serviceStateV3PlanInTransaction(
+func (s *Surreal) serviceStateV3PlanInTransaction(
 	ctx context.Context,
 	tx *surrealdb.Transaction,
 	repository, phase string,
 ) (*ServiceStateV3Plan, *GenerationSchedule, error) {
-	pointerResults, err := surrealdb.Query[[]serviceStateV3SchedulePointerRec](
-		ctx, tx, "SELECT schedule_digest FROM $rid",
+	pointerResults, err := storeQuery[[]serviceStateV3SchedulePointerRec](
+		ctx, s.accounting, tx, "SELECT schedule_digest FROM $rid",
 		map[string]any{"rid": models.NewRecordID(
 			"generation_schedule_current",
 			strings.TrimPrefix(generationCurrentID(repository, serviceStateV3Stage(phase)), "sha256:"),
-		)},
+		)}, storeRead(),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -3173,11 +3177,11 @@ func serviceStateV3PlanInTransaction(
 	if len(pointers) != 1 || !validSHA256Digest(pointers[0].ScheduleDigest) {
 		return nil, nil, ErrInvalidServiceStateV3
 	}
-	scheduleResults, err := surrealdb.Query[[]generationScheduleRec](
-		ctx, tx, "SELECT * FROM $rid",
+	scheduleResults, err := storeQuery[[]generationScheduleRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid",
 		map[string]any{"rid": models.NewRecordID(
 			"generation_schedule", strings.TrimPrefix(pointers[0].ScheduleDigest, "sha256:"),
-		)},
+		)}, storeRead(),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -3192,9 +3196,9 @@ func serviceStateV3PlanInTransaction(
 		schedule.Digest != pointers[0].ScheduleDigest {
 		return nil, nil, ErrInvalidServiceStateV3
 	}
-	planResults, err := surrealdb.Query[[]serviceStateV3PlanRec](
-		ctx, tx, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceStateV3PlanID(schedule.Generation)},
+	planResults, err := storeQuery[[]serviceStateV3PlanRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceStateV3PlanID(schedule.Generation)}, storeRead(),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -3224,11 +3228,11 @@ func (s *Surreal) serviceStateV3CountsForRepository(
 	ctx context.Context,
 	repository string,
 ) (serviceStateV3Counts, error) {
-	results, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_current
 	WHERE repository = $repository ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": repository, "limit": servicecatalogv3.MaxTotalServices*2 + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return serviceStateV3Counts{}, err
 	}
@@ -3292,10 +3296,10 @@ func (s *Surreal) validateServiceStateV3Precious(
 	candidateRoots map[string]string,
 ) (int, int, int, error) {
 	const maxStateRows = servicecatalogv3.MaxTotalServices * 2
-	rowResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	rowResults, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_current ORDER BY id LIMIT $limit`, map[string]any{
 		"limit": maxStateRows + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -3347,10 +3351,10 @@ SELECT * FROM service_state_v3_current ORDER BY id LIMIT $limit`, map[string]any
 		}
 		counts[state.Repository] = current
 	}
-	summaryResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, s.db, `
+	summaryResults, err := storeQuery[[]serviceRepositoryStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_repository ORDER BY repository LIMIT $limit`, map[string]any{
 		"limit": MaxServiceCatalogV3LifecycleRoots + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -3386,11 +3390,11 @@ SELECT * FROM service_state_v3_repository ORDER BY repository LIMIT $limit`, map
 			summary.SummaryDigest,
 		)] = summary
 	}
-	preimageSummaryResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, s.db, `
+	preimageSummaryResults, err := storeQuery[[]serviceRepositoryStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_repository_preimage
 	ORDER BY repository, snapshot_revision LIMIT $limit`, map[string]any{
 		"limit": maxPreimageSummaries + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -3426,11 +3430,11 @@ SELECT * FROM service_state_v3_repository_preimage
 		preimageSummaryOwners[key] = struct{}{}
 		preimageSummaries[key] = *summary
 	}
-	preimageRowResults, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	preimageRowResults, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_preimage
 	ORDER BY repository, snapshot_revision, service_key LIMIT $limit`, map[string]any{
 		"limit": maxStateRows + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -3537,10 +3541,10 @@ SELECT * FROM service_state_v3_preimage
 		}
 	}
 	const maxPlans = MaxServiceCatalogV3LifecycleRoots * 6
-	planResults, err := surrealdb.Query[[]serviceStateV3PlanRec](ctx, s.db, `
+	planResults, err := storeQuery[[]serviceStateV3PlanRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_v3_plan ORDER BY digest LIMIT $limit`, map[string]any{
 		"limit": maxPlans + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -3548,12 +3552,12 @@ SELECT * FROM service_state_v3_plan ORDER BY digest LIMIT $limit`, map[string]an
 	if len(planRows) > maxPlans {
 		return 0, 0, 0, ErrInvalidServiceStateV3
 	}
-	scheduleResults, err := surrealdb.Query[[]generationScheduleRec](ctx, s.db, `
+	scheduleResults, err := storeQuery[[]generationScheduleRec](ctx, s.accounting, s.db, `
 SELECT * FROM generation_schedule
 	WHERE stage = $reconcile OR stage = $activate ORDER BY digest LIMIT $limit`, map[string]any{
 		"reconcile": ServiceStateV3ReconcileStage,
 		"activate":  ServiceStateV3ActivateStage, "limit": maxPlans + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -3569,13 +3573,13 @@ SELECT * FROM generation_schedule
 		}
 		schedules[schedule.Digest] = schedule
 	}
-	currentResults, err := surrealdb.Query[[]serviceStateV3CurrentScheduleRec](ctx, s.db, `
+	currentResults, err := storeQuery[[]serviceStateV3CurrentScheduleRec](ctx, s.accounting, s.db, `
 SELECT repository, stage, schedule_digest FROM generation_schedule_current
 	WHERE stage = $reconcile OR stage = $activate ORDER BY repository, stage LIMIT $limit`, map[string]any{
 		"reconcile": ServiceStateV3ReconcileStage,
 		"activate":  ServiceStateV3ActivateStage,
 		"limit":     MaxServiceCatalogV3LifecycleRoots*2 + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
 	}

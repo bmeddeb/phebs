@@ -303,9 +303,9 @@ func (s *Surreal) GetServiceRuntimeSelector(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("get service runtime selector: %w", err)
 	}
-	results, err := surrealdb.Query[[]serviceRuntimeSelectorRec](
-		ctx, s.db, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceRuntimeSelectorID(repository)},
+	results, err := storeQuery[[]serviceRuntimeSelectorRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceRuntimeSelectorID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("get service runtime selector: %w", err)
@@ -344,11 +344,11 @@ func (s *Surreal) ConfirmServiceRuntimeSelector(
 func (s *Surreal) ListServiceRuntimeSelectors(
 	ctx context.Context,
 ) ([]ServiceRuntimeSelector, error) {
-	results, err := surrealdb.Query[[]serviceRuntimeSelectorRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceRuntimeSelectorRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_runtime_selector
 	ORDER BY repository LIMIT $limit`, map[string]any{
 		"limit": MaxServiceRuntimeSelectors + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("list service runtime selectors: %w", err)
 	}
@@ -387,7 +387,7 @@ func (s *Surreal) RetireServiceRuntimeSelectorForRepositoryDeletion(
 		)
 	}
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]bool](ctx, s.db, `
+		results, err := storeQuery[[]bool](ctx, s.accounting, s.db, `
 BEGIN;
 LET $repository = (SELECT deleting FROM $repo_rid)[0];
 LET $ready = $repository != NONE AND ($repository.deleting ?? false) = true;
@@ -400,7 +400,7 @@ COMMIT;`, map[string]any{
 			"repo_rid":      repoID(repository),
 			"selector_rid":  serviceRuntimeSelectorID(repository),
 			"reference_rid": serviceRuntimeCurrentCatalogReferenceID(repository),
-		})
+		}, storeWrite(2))
 		if err != nil && isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 			continue
 		}
@@ -453,25 +453,25 @@ func (s *Surreal) ValidateServiceRuntimeDatabaseTarget(
 			backend, ErrInvalidServiceRuntimeSelector,
 		)
 	}
-	tx, err := s.db.Begin(ctx)
+	tx, err := storeBegin(ctx, s.accounting, s.db)
 	if err != nil {
 		return fmt.Errorf("validate service runtime %s database target: begin: %w", backend, err)
 	}
 	defer func() {
 		cancelCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = tx.Cancel(cancelCtx)
+		_ = storeCancel(cancelCtx, s.accounting, tx)
 	}()
-	if err := verifyServiceRuntimeRepository(ctx, tx, repository); err != nil {
+	if err := verifyServiceRuntimeRepository(ctx, s.accounting, tx, repository); err != nil {
 		return fmt.Errorf(
 			"validate service runtime %s database target: repository: %w",
 			backend, err,
 		)
 	}
 	if backend == ServiceRuntimeV2 {
-		err = verifyServiceRuntimeV2Target(ctx, tx, repository, target)
+		err = verifyServiceRuntimeV2Target(ctx, s.accounting, tx, repository, target)
 	} else {
-		err = verifyServiceRuntimeV3Target(ctx, tx, repository, target, false)
+		err = verifyServiceRuntimeV3Target(ctx, s.accounting, tx, repository, target, false)
 	}
 	if err != nil {
 		return fmt.Errorf("validate service runtime %s database target: %w", backend, err)
@@ -496,19 +496,19 @@ func (s *Surreal) selectServiceRuntime(
 			"select service runtime %s: %w", backend, ErrInvalidServiceRuntimeSelector,
 		)
 	}
-	tx, err := s.db.Begin(ctx)
+	tx, err := storeBegin(ctx, s.accounting, s.db)
 	if err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: begin: %w", backend, err)
 	}
 	defer func() {
 		cancelCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = tx.Cancel(cancelCtx)
+		_ = storeCancel(cancelCtx, s.accounting, tx)
 	}()
 
-	currentResults, err := surrealdb.Query[[]serviceRuntimeSelectorRec](
-		ctx, tx, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceRuntimeSelectorID(request.Repository)},
+	currentResults, err := storeQuery[[]serviceRuntimeSelectorRec](
+		ctx, s.accounting, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceRuntimeSelectorID(request.Repository)}, storeRead(),
 	)
 	if err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: current: %w", backend, err)
@@ -531,13 +531,13 @@ func (s *Surreal) selectServiceRuntime(
 			return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: stale selector: %w", backend, ErrConflict)
 		}
 	}
-	if err := verifyServiceRuntimeRepository(ctx, tx, request.Repository); err != nil {
+	if err := verifyServiceRuntimeRepository(ctx, s.accounting, tx, request.Repository); err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf(
 			"select service runtime %s: repository: %w", backend, err,
 		)
 	}
 
-	compatibility, err := serviceRuntimeCompatibilityVersion(ctx, tx)
+	compatibility, err := serviceRuntimeCompatibilityVersion(ctx, s.accounting, tx)
 	if err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: compatibility marker: %w", backend, err)
 	}
@@ -548,9 +548,9 @@ func (s *Surreal) selectServiceRuntime(
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: unsupported compatibility marker %q", backend, compatibility)
 	}
 	if backend == ServiceRuntimeV2 {
-		err = verifyServiceRuntimeV2Target(ctx, tx, request.Repository, request.Target)
+		err = verifyServiceRuntimeV2Target(ctx, s.accounting, tx, request.Repository, request.Target)
 	} else {
-		err = verifyServiceRuntimeV3Target(ctx, tx, request.Repository, request.Target, true)
+		err = verifyServiceRuntimeV3Target(ctx, s.accounting, tx, request.Repository, request.Target, true)
 	}
 	if err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: target: %w", backend, err)
@@ -576,11 +576,11 @@ func (s *Surreal) selectServiceRuntime(
 	}
 
 	if compatibility != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
-		updated, updateErr := surrealdb.Query[any](ctx, tx, `
+		updated, updateErr := storeQuery[any](ctx, s.accounting, tx, `
 UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
 			"rid":     candidateControlRevisionMigrationID(),
 			"version": serviceCatalogV3SourceGenerationCompatibilityMigrationVersion,
-		})
+		}, storeWrite(1))
 		if updateErr != nil {
 			return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: latch compatibility: %w", backend, updateErr)
 		}
@@ -590,14 +590,14 @@ UPDATE $rid SET version = $version RETURN NONE`, map[string]any{
 			}
 		}
 	}
-	if err := updateServiceRuntimeCurrentCatalogReference(ctx, tx, next); err != nil {
+	if err := updateServiceRuntimeCurrentCatalogReference(ctx, s.accounting, tx, next); err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: catalog pin: %w", backend, err)
 	}
-	written, err := surrealdb.Query[[]serviceRuntimeSelectorRec](ctx, tx, `
+	written, err := storeQuery[[]serviceRuntimeSelectorRec](ctx, s.accounting, tx, `
 UPSERT $rid CONTENT $content RETURN AFTER`, map[string]any{
 		"rid":     serviceRuntimeSelectorID(next.Repository),
 		"content": serviceRuntimeSelectorContent(next),
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: write: %w", backend, err)
 	}
@@ -610,7 +610,7 @@ UPSERT $rid CONTENT $content RETURN AFTER`, map[string]any{
 		return ServiceRuntimeSelector{}, fmt.Errorf("select service runtime %s: write validation: %w", backend, ErrConflict)
 	}
 	return s.reconcileServiceRuntimeSelection(
-		ctx, backend, next, tx.Commit(ctx),
+		ctx, backend, next, storeCommit(ctx, s.accounting, tx),
 	)
 }
 
@@ -648,15 +648,16 @@ func (s *Surreal) reconcileServiceRuntimeSelection(
 
 func verifyServiceRuntimeRepository(
 	ctx context.Context,
+	owner *storeCallOwner,
 	tx *surrealdb.Transaction,
 	repository string,
 ) error {
-	results, err := surrealdb.Query[[]struct {
+	results, err := storeQuery[[]struct {
 		Name     string `json:"name"`
 		Deleting bool   `json:"deleting"`
-	}](ctx, tx, "SELECT name, deleting FROM $rid", map[string]any{
+	}](ctx, owner, tx, "SELECT name, deleting FROM $rid", map[string]any{
 		"rid": repoID(repository),
-	})
+	}, storeRead())
 	if err != nil {
 		return err
 	}
@@ -669,11 +670,12 @@ func verifyServiceRuntimeRepository(
 
 func serviceRuntimeCompatibilityVersion(
 	ctx context.Context,
+	owner *storeCallOwner,
 	db *surrealdb.Transaction,
 ) (string, error) {
-	results, err := surrealdb.Query[[]serviceRuntimeMigrationRec](
-		ctx, db, "SELECT version FROM $rid",
-		map[string]any{"rid": candidateControlRevisionMigrationID()},
+	results, err := storeQuery[[]serviceRuntimeMigrationRec](
+		ctx, owner, db, "SELECT version FROM $rid",
+		map[string]any{"rid": candidateControlRevisionMigrationID()}, storeRead(),
 	)
 	if err != nil {
 		return "", err
@@ -688,13 +690,14 @@ func serviceRuntimeCompatibilityVersion(
 
 func verifyServiceRuntimeV2Target(
 	ctx context.Context,
+	owner *storeCallOwner,
 	tx *surrealdb.Transaction,
 	repository string,
 	target ServiceRuntimeTarget,
 ) error {
-	catalogResults, err := surrealdb.Query[[]serviceCatalogCurrentRec](
-		ctx, tx, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogCurrentID(repository)},
+	catalogResults, err := storeQuery[[]serviceCatalogCurrentRec](
+		ctx, owner, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogCurrentID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -706,9 +709,9 @@ func verifyServiceRuntimeV2Target(
 		catalogRows[0].PublishedAt.IsZero() {
 		return ErrConflict
 	}
-	summaryResults, err := surrealdb.Query[[]serviceRepositoryStateRec](
-		ctx, tx, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceRepositoryStateID(repository)},
+	summaryResults, err := storeQuery[[]serviceRepositoryStateRec](
+		ctx, owner, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceRepositoryStateID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -727,21 +730,22 @@ func verifyServiceRuntimeV2Target(
 		return ErrConflict
 	}
 	return verifyServiceRuntimeActiveSearch(
-		ctx, tx, "service_state_current", repository, target.SearchGenerationDigest,
+		ctx, owner, tx, "service_state_current", repository, target.SearchGenerationDigest,
 	)
 }
 
 func verifyServiceRuntimeV3Target(
 	ctx context.Context,
+	owner *storeCallOwner,
 	tx *surrealdb.Transaction,
 	repository string,
 	target ServiceRuntimeTarget,
 	requireCurrentCandidate bool,
 ) error {
 	if requireCurrentCandidate {
-		candidateResults, err := surrealdb.Query[[]serviceCatalogV3CandidateRec](
-			ctx, tx, "SELECT * FROM $rid",
-			map[string]any{"rid": serviceCatalogV3CandidateID(repository)},
+		candidateResults, err := storeQuery[[]serviceCatalogV3CandidateRec](
+			ctx, owner, tx, "SELECT * FROM $rid",
+			map[string]any{"rid": serviceCatalogV3CandidateID(repository)}, storeRead(),
 		)
 		if err != nil {
 			return err
@@ -755,7 +759,7 @@ func verifyServiceRuntimeV3Target(
 		}
 	}
 	summary, err := getServiceStateV3SummarySnapshotTx(
-		ctx,
+		ctx, owner,
 		tx,
 		repository,
 		target.StateControlRevision,
@@ -783,9 +787,9 @@ func verifyServiceRuntimeV3Target(
 		StateControlRevision:         target.StateControlRevision,
 		StateSummaryDigest:           target.StateSummaryDigest,
 	}
-	referenceResults, err := surrealdb.Query[[]serviceCatalogV3RelationshipReferenceRec](
-		ctx, tx, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogV3RelationshipReferenceID(target.RelationshipGenerationDigest)},
+	referenceResults, err := storeQuery[[]serviceCatalogV3RelationshipReferenceRec](
+		ctx, owner, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogV3RelationshipReferenceID(target.RelationshipGenerationDigest)}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -795,16 +799,16 @@ func verifyServiceRuntimeV3Target(
 		return ErrConflict
 	}
 	if err := verifyServiceRuntimeV3ActiveSearchSnapshot(
-		ctx,
+		ctx, owner,
 		tx,
 		summary,
 		target.SearchGenerationDigest,
 	); err != nil {
 		return err
 	}
-	lifecycleResults, err := surrealdb.Query[[]serviceCatalogV3LifecycleRec](
-		ctx, tx, "SELECT * FROM $rid",
-		map[string]any{"rid": serviceCatalogV3LifecycleID(target.CatalogRootDigest)},
+	lifecycleResults, err := storeQuery[[]serviceCatalogV3LifecycleRec](
+		ctx, owner, tx, "SELECT * FROM $rid",
+		map[string]any{"rid": serviceCatalogV3LifecycleID(target.CatalogRootDigest)}, storeRead(),
 	)
 	if err != nil {
 		return err
@@ -820,16 +824,17 @@ func verifyServiceRuntimeV3Target(
 
 func getServiceStateV3SummarySnapshotTx(
 	ctx context.Context,
+	owner *storeCallOwner,
 	tx *surrealdb.Transaction,
 	repository string,
 	snapshotRevision uint64,
 	snapshotDigest string,
 ) (servicecatalog.RepositoryState, error) {
-	currentResults, err := surrealdb.Query[[]serviceRepositoryStateRec](
-		ctx,
+	currentResults, err := storeQuery[[]serviceRepositoryStateRec](
+		ctx, owner,
 		tx,
 		"SELECT * FROM $rid",
-		map[string]any{"rid": serviceStateV3RepositoryID(repository)},
+		map[string]any{"rid": serviceStateV3RepositoryID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return servicecatalog.RepositoryState{}, err
@@ -852,13 +857,13 @@ func getServiceStateV3SummarySnapshotTx(
 		}
 		return *summary, nil
 	}
-	preimageResults, err := surrealdb.Query[[]serviceRepositoryStateRec](ctx, tx, `
+	preimageResults, err := storeQuery[[]serviceRepositoryStateRec](ctx, owner, tx, `
 SELECT * FROM service_state_v3_repository_preimage
 	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
 		AND snapshot_digest = $snapshot_digest LIMIT 2`, map[string]any{
 		"repository": repository, "snapshot_revision": snapshotRevision,
 		"snapshot_digest": snapshotDigest,
-	})
+	}, storeRead())
 	if err != nil {
 		return servicecatalog.RepositoryState{}, err
 	}
@@ -883,19 +888,20 @@ SELECT * FROM service_state_v3_repository_preimage
 
 func verifyServiceRuntimeV3ActiveSearchSnapshot(
 	ctx context.Context,
+	owner *storeCallOwner,
 	tx *surrealdb.Transaction,
 	summary servicecatalog.RepositoryState,
 	searchGeneration string,
 ) error {
 	const maxSnapshotRows = servicecatalogv3.MaxTotalServices * 2
-	currentResults, err := surrealdb.Query[[]serviceStateRec](ctx, tx, `
+	currentResults, err := storeQuery[[]serviceStateRec](ctx, owner, tx, `
 SELECT * FROM service_state_v3_current
 	WHERE repository = $repository AND visible_from <= $snapshot_revision
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository":        summary.Repository,
 		"snapshot_revision": summary.ControlRevision,
 		"limit":             maxSnapshotRows + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return err
 	}
@@ -903,7 +909,7 @@ SELECT * FROM service_state_v3_current
 	if len(currentRows) > maxSnapshotRows {
 		return ErrConflict
 	}
-	preimageResults, err := surrealdb.Query[[]serviceStateRec](ctx, tx, `
+	preimageResults, err := storeQuery[[]serviceStateRec](ctx, owner, tx, `
 SELECT * FROM service_state_v3_preimage
 	WHERE repository = $repository AND snapshot_revision = $snapshot_revision
 		AND snapshot_digest = $snapshot_digest
@@ -912,7 +918,7 @@ SELECT * FROM service_state_v3_preimage
 		"snapshot_revision": summary.ControlRevision,
 		"snapshot_digest":   summary.SummaryDigest,
 		"limit":             maxSnapshotRows + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return err
 	}
@@ -982,6 +988,7 @@ SELECT * FROM service_state_v3_preimage
 
 func verifyServiceRuntimeActiveSearch(
 	ctx context.Context,
+	owner *storeCallOwner,
 	tx *surrealdb.Transaction,
 	table string,
 	repository string,
@@ -992,12 +999,12 @@ func verifyServiceRuntimeActiveSearch(
 		AND disposition = $accepted
 		AND (status != $current OR (active_search_generation ?? '') != $search)
 	LIMIT 1`, table)
-	results, err := surrealdb.Query[[]struct {
+	results, err := storeQuery[[]struct {
 		RecID *models.RecordID `json:"id"`
-	}](ctx, tx, statement, map[string]any{
+	}](ctx, owner, tx, statement, map[string]any{
 		"repository": repository, "accepted": servicecatalog.DispositionAccepted,
 		"current": servicecatalog.StatusCurrent, "search": searchGeneration,
-	})
+	}, storeRead())
 	if err != nil {
 		return err
 	}
@@ -1009,15 +1016,16 @@ func verifyServiceRuntimeActiveSearch(
 
 func updateServiceRuntimeCurrentCatalogReference(
 	ctx context.Context,
+	owner *storeCallOwner,
 	tx *surrealdb.Transaction,
 	selector ServiceRuntimeSelector,
 ) error {
 	rid := serviceRuntimeCurrentCatalogReferenceID(selector.Repository)
-	results, err := surrealdb.Query[[]serviceCatalogV3StateReferenceRec](ctx, tx, `
+	results, err := storeQuery[[]serviceCatalogV3StateReferenceRec](ctx, owner, tx, `
 SELECT * FROM service_catalog_v3_state_reference
 	WHERE repository = $repository AND kind = 'current' LIMIT 2`, map[string]any{
 		"repository": selector.Repository,
-	})
+	}, storeRead())
 	if err != nil {
 		return err
 	}
@@ -1040,8 +1048,8 @@ SELECT * FROM service_catalog_v3_state_reference
 		}
 	}
 	if selector.Backend == ServiceRuntimeV2 {
-		deleted, deleteErr := surrealdb.Query[any](
-			ctx, tx, "DELETE $rid RETURN NONE", map[string]any{"rid": rid},
+		deleted, deleteErr := storeQuery[any](
+			ctx, owner, tx, "DELETE $rid RETURN NONE", map[string]any{"rid": rid}, storeWrite(1),
 		)
 		if deleteErr != nil {
 			return deleteErr
@@ -1053,7 +1061,7 @@ SELECT * FROM service_catalog_v3_state_reference
 		}
 		return nil
 	}
-	created, err := surrealdb.Query[any](ctx, tx, `
+	created, err := storeQuery[any](ctx, owner, tx, `
 UPSERT $rid CONTENT {
 	repository: $repository,
 	root_digest: $root_digest,
@@ -1064,7 +1072,7 @@ UPSERT $rid CONTENT {
 } RETURN NONE`, map[string]any{
 		"rid": rid, "repository": selector.Repository,
 		"root_digest": selector.CatalogRootDigest, "recorded_at": selector.ChangedAt,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return err
 	}
@@ -1097,8 +1105,8 @@ DEFINE INDEX OVERWRITE service_runtime_selector_repository ON service_runtime_se
 
 func (s *Surreal) migrateServiceRuntimeSelectorSchema(ctx context.Context) error {
 	marker := serviceRuntimeSelectorSchemaMigrationID()
-	markerResults, err := surrealdb.Query[[]serviceRuntimeMigrationRec](
-		ctx, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker},
+	markerResults, err := storeQuery[[]serviceRuntimeMigrationRec](
+		ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{"rid": marker}, storeRead(),
 	)
 	if err != nil {
 		return fmt.Errorf("migrate service runtime selector schema: marker: %w", err)
@@ -1113,8 +1121,8 @@ func (s *Surreal) migrateServiceRuntimeSelectorSchema(ctx context.Context) error
 	if len(markerRows) > 1 {
 		return errors.New("migrate service runtime selector schema: duplicate marker")
 	}
-	preflight, err := surrealdb.Query[any](ctx, s.db, `
-DEFINE TABLE IF NOT EXISTS service_runtime_selector SCHEMALESS;`, nil)
+	preflight, err := storeQuery[any](ctx, s.accounting, s.db, `
+DEFINE TABLE IF NOT EXISTS service_runtime_selector SCHEMALESS;`, nil, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate service runtime selector schema: preflight schema: %w", err)
 	}
@@ -1123,11 +1131,11 @@ DEFINE TABLE IF NOT EXISTS service_runtime_selector SCHEMALESS;`, nil)
 			return fmt.Errorf("migrate service runtime selector schema preflight statement %d: %s", index, result.Error.Message)
 		}
 	}
-	probe, err := surrealdb.Query[[]struct {
+	probe, err := storeQuery[[]struct {
 		Count int `json:"count"`
-	}](ctx, s.db, `RETURN [{ count: array::len(
+	}](ctx, s.accounting, s.db, `RETURN [{ count: array::len(
 		SELECT id FROM service_runtime_selector LIMIT 1
-	) }];`, nil)
+	) }];`, nil, storeRead())
 	if err != nil {
 		return fmt.Errorf("migrate service runtime selector schema: preflight: %w", err)
 	}
@@ -1138,7 +1146,7 @@ DEFINE TABLE IF NOT EXISTS service_runtime_selector SCHEMALESS;`, nil)
 	if err := s.applySchemaBatch(ctx, serviceRuntimeSelectorSchema, "migrate service runtime selector schema "); err != nil {
 		return fmt.Errorf("migrate service runtime selector schema: define: %w", err)
 	}
-	written, err := surrealdb.Query[any](ctx, s.db, `
+	written, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $rid LIMIT 1)[0].version;
 IF $current != NONE AND $current != $version {
@@ -1150,7 +1158,7 @@ UPSERT $rid SET
 	RETURN NONE;
 COMMIT;`, map[string]any{
 		"rid": marker, "version": serviceRuntimeSelectorSchemaMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate service runtime selector schema: marker write: %w", err)
 	}
@@ -1167,10 +1175,10 @@ func (s *Surreal) validateServiceRuntimeSelectorStore(ctx context.Context) error
 	if err != nil {
 		return err
 	}
-	markerResults, err := surrealdb.Query[[]serviceRuntimeMigrationRec](
-		ctx, s.db, "SELECT version FROM $rid", map[string]any{
+	markerResults, err := storeQuery[[]serviceRuntimeMigrationRec](
+		ctx, s.accounting, s.db, "SELECT version FROM $rid", map[string]any{
 			"rid": candidateControlRevisionMigrationID(),
-		},
+		}, storeRead(),
 	)
 	if err != nil {
 		return fmt.Errorf("validate service runtime selector store: compatibility marker: %w", err)
@@ -1182,11 +1190,11 @@ func (s *Surreal) validateServiceRuntimeSelectorStore(ctx context.Context) error
 	if markerRows[0].Version != serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
 		return fmt.Errorf("validate service runtime selector store: unsupported compatibility latch: %w", ErrInvalidServiceRuntimeSelector)
 	}
-	referenceResults, err := surrealdb.Query[[]serviceCatalogV3StateReferenceRec](ctx, s.db, `
+	referenceResults, err := storeQuery[[]serviceCatalogV3StateReferenceRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_catalog_v3_state_reference
 	WHERE kind = 'current' ORDER BY repository LIMIT $limit`, map[string]any{
 		"limit": MaxServiceRuntimeSelectors + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return fmt.Errorf("validate service runtime selector store: current references: %w", err)
 	}

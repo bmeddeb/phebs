@@ -93,11 +93,10 @@ func bootstrapStoreClient(ctx, lifetime context.Context, conn *net.UnixConn, con
 	return client, cancel, nil
 }
 
-// TakeStoreClient transfers the authenticated opaque client exactly once. It
-// accepts no caller client, descriptor, verified flag or replacement lifetime.
-// The actual store owner must drain ALL SDK calls and close this client before
-// ProductionLifetime.Close. This handoff alone is not a phase-drain bridge.
-func (lifetime *ProductionLifetime) TakeStoreClient() (*storeaccounting.Client, error) {
+// TakeStoreOwner constructs and transfers the concrete ALL-call owner exactly
+// once from this lifetime's authenticated client. No caller supplies a client,
+// replacement owner, callback, or claimed drainage summary.
+func (lifetime *ProductionLifetime) TakeStoreOwner() (*storeaccounting.SDKOwner, error) {
 	if lifetime == nil || lifetime.storeClient == nil {
 		return nil, nil
 	}
@@ -106,8 +105,57 @@ func (lifetime *ProductionLifetime) TakeStoreClient() (*storeaccounting.Client, 
 	if lifetime.storeTaken || lifetime.storeClosed || lifetime.client.Context().Err() != nil || lifetime.storeClient.Context().Err() != nil {
 		return nil, ErrProductionBootstrap
 	}
-	lifetime.storeTaken = true
-	return lifetime.storeClient, nil
+	owner, err := storeaccounting.NewSDKOwner(lifetime.storeClient)
+	if err != nil {
+		return nil, errors.Join(ErrProductionBootstrap, err)
+	}
+	lifetime.storeOwner, lifetime.storeTaken = owner, true
+	return owner, nil
+}
+
+// ProcessStoreOwner returns only the owner already taken from authenticated
+// bootstrap. Factories may wrap this exact pointer but cannot install or replace
+// it. Ordinary and legacy process lifetimes retain their nil-owner path.
+func ProcessStoreOwner() (*storeaccounting.SDKOwner, error) {
+	lifetime := productionRuntime.Load()
+	if lifetime == nil || lifetime.storeClient == nil {
+		return nil, nil
+	}
+	lifetime.storeMu.Lock()
+	owner := lifetime.storeOwner
+	available := lifetime.storeTaken && !lifetime.storeClosed && owner != nil
+	lifetime.storeMu.Unlock()
+	if !available || lifetime.client == nil || lifetime.storeClient.Context().Err() != nil {
+		return nil, ErrProductionBootstrap
+	}
+	lifetime.client.mu.Lock()
+	available = !lifetime.client.closed && lifetime.client.err == nil && lifetime.client.ctx.Err() == nil
+	lifetime.client.mu.Unlock()
+	if !available {
+		return nil, ErrProductionBootstrap
+	}
+	return owner, nil
+}
+
+func (lifetime *ProductionLifetime) checkpointStore(ctx context.Context) error {
+	lifetime.storeMu.Lock()
+	owner, closed := lifetime.storeOwner, lifetime.storeClosed
+	lifetime.storeMu.Unlock()
+	if owner == nil || closed {
+		return ErrProductionBootstrap
+	}
+	// Do not hold the dispatch or lifetime state mutex over SA01 I/O.
+	return owner.Checkpoint(ctx)
+}
+
+func (lifetime *ProductionLifetime) resumeStore(phase uint32) error {
+	lifetime.storeMu.Lock()
+	owner, closed := lifetime.storeOwner, lifetime.storeClosed
+	lifetime.storeMu.Unlock()
+	if owner == nil || closed {
+		return ErrProductionBootstrap
+	}
+	return owner.Resume(phase)
 }
 
 func (lifetime *ProductionLifetime) closeStore(ctx context.Context) error {
@@ -116,13 +164,13 @@ func (lifetime *ProductionLifetime) closeStore(ctx context.Context) error {
 	}
 	lifetime.storeMu.Lock()
 	lifetime.storeClosed = true
-	client, taken := lifetime.storeClient, lifetime.storeTaken
+	client, owner := lifetime.storeClient, lifetime.storeOwner
 	lifetime.storeMu.Unlock()
 	defer lifetime.cancelStore()
-	// Never turn write-slot emptiness into a claim of ALL-call/read-tail drain.
-	// The real owner must already have completed its own terminal Close.
-	if !taken || client.Context().Err() == nil {
+	// Main must return from joined service/store cleanup before this point.
+	// This actual ALL-call close is not proof of native connection/engine join.
+	if owner == nil {
 		return errors.Join(ErrProductionBootstrap, client.Fail(ctx, storeaccounting.ErrIncomplete))
 	}
-	return client.Close(ctx)
+	return owner.Close(ctx)
 }

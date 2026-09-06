@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -17,11 +19,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
+	"github.com/fxamacker/cbor/v2"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/connection"
 	"github.com/surrealdb/surrealdb.go/pkg/connection/gorillaws"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
-	"github.com/surrealdb/surrealdb.go/surrealcbor"
 )
 
 //go:embed schema.surql
@@ -100,6 +102,17 @@ func openLocal(ctx context.Context, dataDir, configSHA256 string, memory bool) (
 // Open connects to a running SurrealDB, selects ns/db, and applies the
 // schema idempotently. Server-mode path for the fleet profile.
 func Open(ctx context.Context, endpoint, user, pass, namespace, database string) (*Surreal, error) {
+	owner, err := processStoreCallOwner()
+	if err != nil {
+		return nil, err
+	}
+	return openWithOwner(ctx, endpoint, user, pass, namespace, database, owner)
+}
+
+func openWithOwner(ctx context.Context, endpoint, user, pass, namespace, database string, owner *storeCallOwner) (*Surreal, error) {
+	if owner != nil {
+		return openExistingLocalWithOwner(ctx, endpoint, user, pass, namespace, database, owner)
+	}
 	db, err := surrealdb.FromEndpointURLString(ctx, endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
@@ -107,29 +120,54 @@ func Open(ctx context.Context, endpoint, user, pass, namespace, database string)
 	return openConnected(ctx, db, user, pass, namespace, database)
 }
 
+// The selected backup path consumes only the already-validated local runtime.
+// It does not widen the generic remote Open API or create missing metadata.
+func openExistingLocalWithOwner(ctx context.Context, endpoint, user, pass, namespace, database string, owner *storeCallOwner) (*Surreal, error) {
+	if err := owner.Check(ctx); err != nil {
+		return nil, err
+	}
+	u, err := url.ParseRequestURI(endpoint)
+	if err != nil || user != "root" || pass != "root" || namespace != "phebs" || database != "phebs" ||
+		u.Scheme != "ws" || u.User != nil || u.Opaque != "" || u.Path != "" || u.RawPath != "" ||
+		u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.RawFragment != "" {
+		return nil, storeaccounting.ErrConfig
+	}
+	host, port, err := net.SplitHostPort(u.Host)
+	number, portErr := strconv.ParseUint(port, 10, 16)
+	if err != nil || host != "127.0.0.1" || portErr != nil || number == 0 ||
+		strconv.FormatUint(number, 10) != port || endpoint != "ws://127.0.0.1:"+port {
+		return nil, storeaccounting.ErrConfig
+	}
+	config := connection.NewConfig(u)
+	if err := config.Validate(); err != nil {
+		return nil, storeaccounting.ErrConfig
+	}
+	selected, err := storeaccounting.NewExistingLocalSDKConnection(ctx, owner.SDKOwner, config)
+	if err != nil {
+		return nil, err
+	}
+	db, err := surrealdb.FromConnection(ctx, selected)
+	if err != nil {
+		return nil, err
+	}
+	return openStoreConnection(ctx, db, nil, selected, owner, true, user, pass, namespace, database)
+}
+
 // openLocalRoot retains the same concrete SDK connection used by DB so that
 // namespace-only selection sends a real null database. It is called only after
 // starting our own local engine; generic remote Open keeps its existing scope
 // selection and permissions requirements.
 func openLocalRoot(ctx context.Context, endpoint string) (*Surreal, error) {
-	return openLocalRootWithOwner(ctx, endpoint, nil)
+	owner, err := processStoreCallOwner()
+	if err != nil {
+		return nil, err
+	}
+	return openLocalRootWithOwner(ctx, endpoint, owner)
 }
 
 func openLocalRootWithOwner(ctx context.Context, endpoint string, owner *storeCallOwner) (*Surreal, error) {
 	if owner != nil {
-		if owner.client == nil {
-			return nil, storeaccounting.ErrConfig
-		}
-		owner.mu.Lock()
-		err := owner.err
-		if err == nil && (ctx == nil || ctx.Err() != nil || owner.client.Context().Err() != nil) {
-			err = context.Canceled
-		}
-		if err == nil && owner.fenced {
-			err = storeaccounting.ErrFenced
-		}
-		owner.mu.Unlock()
-		if err != nil {
+		if err := owner.Check(ctx); err != nil {
 			return nil, err
 		}
 	}
@@ -144,28 +182,27 @@ func openLocalRootWithOwner(ctx context.Context, endpoint string, owner *storeCa
 	if u.Scheme != "ws" {
 		return nil, errors.New("connect local store: expected supervised WebSocket endpoint")
 	}
+	var conn *gorillaws.Connection
+	var selected *storeaccounting.SDKConnection
+	var sdk connection.Connection
 	if owner != nil {
-		config.Unmarshaler = storeLocalReplyDecoder{Codec: surrealcbor.New()}
-	}
-	conn := gorillaws.New(config)
-	var selected *storeAccountingConnection
-	var sdk connection.Connection = conn
-	if owner != nil {
-		selected, err = newStoreAccountingConnection(owner, conn)
+		selected, err = storeaccounting.NewLocalSDKConnection(ctx, owner.SDKOwner, config)
 		if err != nil {
 			return nil, err
 		}
-		selected.localStep = storeLocalSignIn
 		sdk = selected
+	} else {
+		conn = gorillaws.New(config)
+		sdk = conn
 	}
 	db, err := surrealdb.FromConnection(ctx, sdk)
 	if err != nil {
 		if selected != nil {
-			return nil, selected.owner.fail(ctx, storeaccounting.ErrTransport)
+			return nil, err
 		}
 		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
 	}
-	return openStoreConnection(ctx, db, conn, selected, "root", "root", "phebs", "phebs")
+	return openStoreConnection(ctx, db, conn, selected, owner, false, "root", "root", "phebs", "phebs")
 }
 
 func openConnected(
@@ -173,14 +210,16 @@ func openConnected(
 	db *surrealdb.DB,
 	user, pass, namespace, database string,
 ) (*Surreal, error) {
-	return openStoreConnection(ctx, db, nil, nil, user, pass, namespace, database)
+	return openStoreConnection(ctx, db, nil, nil, nil, false, user, pass, namespace, database)
 }
 
 func openStoreConnection(
 	ctx context.Context,
 	db *surrealdb.DB,
 	local *gorillaws.Connection,
-	selected *storeAccountingConnection,
+	selected *storeaccounting.SDKConnection,
+	owner *storeCallOwner,
+	existingLocal bool,
 	user, pass, namespace, database string,
 ) (_ *Surreal, retErr error) {
 	failed := true
@@ -193,7 +232,13 @@ func openStoreConnection(
 		}
 	}()
 	if selected != nil {
-		if err := initializeAccountedLocalScope(ctx, db, selected); err != nil {
+		var err error
+		if existingLocal {
+			err = storeaccounting.InitializeExistingLocalScope(ctx, db, selected)
+		} else {
+			err = storeaccounting.InitializeLocalScope(ctx, db, selected)
+		}
+		if err != nil {
 			return nil, err
 		}
 	} else {
@@ -211,7 +256,7 @@ func openStoreConnection(
 	}
 	s := &Surreal{db: db}
 	if selected != nil {
-		s.accounting = selected.owner
+		s.accounting = owner
 	}
 	if err := s.applySchema(ctx); err != nil {
 		return nil, fmt.Errorf("apply schema: %w", err)
@@ -225,8 +270,8 @@ func openStoreConnection(
 // classify the engine's internal KV work or replace submission accounting.
 func initializeLocalScope(ctx context.Context, db *surrealdb.DB, conn *gorillaws.Connection) error {
 	for i, definition := range [...]struct{ kind, query string }{
-		{"namespace", storeLocalNamespaceSQL},
-		{"database", storeLocalDatabaseSQL},
+		{"namespace", "DEFINE NAMESPACE IF NOT EXISTS phebs;"},
+		{"database", "DEFINE DATABASE IF NOT EXISTS phebs;"},
 	} {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -321,14 +366,15 @@ func (s *Surreal) applySchemaBatch(ctx context.Context, definitions, statementLa
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if _, err := schemaBatchDefinitionCount(definitions); err != nil {
+	count, err := schemaBatchDefinitionCount(definitions)
+	if err != nil {
 		return fmt.Errorf("%sdefinition batch: %w", statementLabel, err)
 	}
 	query := "BEGIN;\n" + definitions + "\nCOMMIT;"
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	results, err := surrealdb.Query[any](ctx, s.db, query, nil)
+	results, err := storeQuery[any](ctx, s.accounting, s.db, query, nil, storeWrite(uint64(count)))
 	if err != nil {
 		return err
 	}
@@ -340,8 +386,8 @@ func (s *Surreal) applySchemaBatch(ctx context.Context, definitions, statementLa
 	return nil
 }
 
-// schemaBatchDefinitionCount checks only our trusted literal source format, not
-// arbitrary SurrealQL semantics or submitted-row accounting. Definitions start
+// schemaBatchDefinitionCount counts our trusted literal definition operands,
+// not arbitrary SurrealQL, data rows or engine KV writes. Definitions start
 // at column zero, continuations are indented, and their sole semicolon ends the
 // statement. A new source format requires review instead of silent rewriting.
 func schemaBatchDefinitionCount(definitions string) (int, error) {
@@ -398,12 +444,32 @@ func candidateControlRevisionMigrationID() models.RecordID {
 	return models.NewRecordID("store_migration", "candidate_control_revision")
 }
 
+const candidateControlEmptyMigration = `
+BEGIN;
+LET $version = (SELECT version FROM $marker LIMIT 1)[0].version;
+IF $version = NONE AND array::len(SELECT VALUE id FROM candidate_manifest_publication
+ WHERE control_revision = NONE OR control_revision < 1 LIMIT 1) != 0 {
+ THROW 'phebs-conflict: candidate control migration is no longer empty';
+};
+UPSERT $marker SET
+ version = IF $version = NONE THEN $wanted ELSE $version END,
+ completed_at = IF $version = NONE THEN time::now() ELSE completed_at END RETURN NONE;
+COMMIT;`
+
 // migrateCandidateControlRevisions gives pre-T30.6b derived pointers their
 // initial durable control identity. The fixed completion row keeps steady-state
 // startup off the publication table.
 func (s *Surreal) migrateCandidateControlRevisions(ctx context.Context) error {
+	complete, err := s.candidateControlRevisionMigrationComplete(ctx)
+	if err != nil || complete {
+		return err
+	}
+	empty, err := s.migrationTableEmpty(ctx, "candidate_manifest_publication", "control_revision = NONE OR control_revision < 1")
+	if err != nil {
+		return fmt.Errorf("migrate candidate control revisions: preflight: %w", err)
+	}
 	marker := candidateControlRevisionMigrationID()
-	results, err := surrealdb.Query[any](ctx, s.db, `
+	statement := `
 BEGIN;
 LET $version = (SELECT version FROM $marker LIMIT 1)[0].version;
 UPDATE candidate_manifest_publication SET control_revision = 1
@@ -414,10 +480,16 @@ UPSERT $marker SET
 	version = IF $version = NONE THEN $wanted ELSE $version END,
 	completed_at = IF $version = NONE THEN time::now() ELSE completed_at END
 	RETURN NONE;
-COMMIT;`, map[string]any{
+COMMIT;`
+	recipe := storeUnsupported()
+	if empty {
+		statement = candidateControlEmptyMigration
+		recipe = storeWrite(1)
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, map[string]any{
 		"marker": marker,
 		"wanted": candidateControlRevisionMigrationVersion,
-	})
+	}, recipe)
 	if err != nil {
 		return fmt.Errorf("migrate candidate control revisions: %w", err)
 	}
@@ -429,11 +501,25 @@ COMMIT;`, map[string]any{
 			)
 		}
 	}
-	check, err := surrealdb.Query[[]struct {
-		Version string `json:"version"`
-	}](ctx, s.db, "SELECT version FROM $marker", map[string]any{"marker": marker})
+	complete, err = s.candidateControlRevisionMigrationComplete(ctx)
 	if err != nil {
-		return fmt.Errorf("migrate candidate control revisions: verify: %w", err)
+		return err
+	}
+	if !complete {
+		return errors.New("migrate candidate control revisions: completion marker missing")
+	}
+	return nil
+}
+
+func (s *Surreal) candidateControlRevisionMigrationComplete(ctx context.Context) (bool, error) {
+	check, err := storeQuery[[]struct {
+		Version string `json:"version"`
+	}](ctx, s.accounting, s.db, "SELECT version FROM $marker", map[string]any{"marker": candidateControlRevisionMigrationID()}, storeRead())
+	if err != nil {
+		return false, fmt.Errorf("migrate candidate control revisions: verify: %w", err)
+	}
+	if check == nil || len(*check) != 1 || (*check)[0].Status != "OK" || (*check)[0].Error != nil || (*check)[0].Result == nil || len((*check)[0].Result) > 1 {
+		return false, errors.New("migrate candidate control revisions: invalid marker result")
 	}
 	var markerVersion string
 	for _, result := range *check {
@@ -445,16 +531,39 @@ COMMIT;`, map[string]any{
 		markerVersion == serviceRuntimeSelectorCompatibilityMigrationVersion ||
 		markerVersion == serviceStateV3SnapshotCompatibilityMigrationVersion ||
 		markerVersion == serviceCatalogV3SourceGenerationCompatibilityMigrationVersion {
-		return nil
+		return true, nil
 	}
 	if markerVersion != "" {
-		return fmt.Errorf(
+		return false, fmt.Errorf(
 			"migrate candidate control revisions: unsupported marker %q",
 			markerVersion,
 		)
 	}
-	return errors.New(
-		"migrate candidate control revisions: completion marker missing")
+	return false, nil
+}
+
+// Only source-owned startup recipes call this probe. An empty observation
+// authorizes no write by itself: each marker transaction repeats the predicate.
+func (s *Surreal) migrationTableEmpty(ctx context.Context, table, predicate string) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	results, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db,
+		"SELECT VALUE id FROM "+table+" WHERE "+predicate+" LIMIT 1", nil, storeRead())
+	if err != nil {
+		return false, err
+	}
+	if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" || (*results)[0].Error != nil || (*results)[0].Result == nil {
+		return false, errors.New("invalid migration empty-table probe")
+	}
+	ids := (*results)[0].Result
+	if err := validateRestoreClearIDs(ids, table, 1); err != nil {
+		return false, err
+	}
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	return len(ids) == 0, nil
 }
 
 const apiKeyCapabilityMigrationVersion = "t21.12-api-key-capabilities-v1"
@@ -466,6 +575,18 @@ type apiKeyCapabilityMigrationStateRec struct {
 func apiKeyCapabilityMigrationStateID() models.RecordID {
 	return models.NewRecordID("store_migration", "api_key_capabilities")
 }
+
+const apiKeyCapabilityEmptyMigration = `
+BEGIN;
+LET $marker_version = (SELECT version FROM $marker LIMIT 1)[0].version;
+IF $marker_version = NONE AND array::len(SELECT VALUE id FROM api_key
+ WHERE capabilities = NONE LIMIT 1) != 0 {
+ THROW 'phebs-conflict: API key capability migration is no longer empty';
+};
+UPSERT $marker SET
+ version = IF $marker_version = NONE THEN $version ELSE $marker_version END,
+ completed_at = IF $marker_version = NONE THEN time::now() ELSE completed_at END RETURN NONE;
+COMMIT;`
 
 const apiKeyCapabilityPreMigrationSchema = `
 DEFINE FIELD IF NOT EXISTS capabilities ON api_key TYPE option<array<string>>;`
@@ -493,8 +614,11 @@ func (s *Surreal) migrateAPIKeyCapabilities(ctx context.Context) error {
 	if complete {
 		return nil
 	}
-
-	results, err := surrealdb.Query[any](ctx, s.db, `
+	empty, err := s.migrationTableEmpty(ctx, "api_key", "capabilities = NONE")
+	if err != nil {
+		return fmt.Errorf("migrate API key capabilities: preflight: %w", err)
+	}
+	statement := `
 BEGIN;
 LET $marker_version = (SELECT version FROM $marker LIMIT 1)[0].version;
 UPDATE api_key SET capabilities = []
@@ -504,10 +628,16 @@ UPSERT $marker SET
 	completed_at = IF $marker_version = NONE
 		THEN time::now() ELSE completed_at END
 	RETURN NONE;
-COMMIT;`, map[string]any{
+COMMIT;`
+	recipe := storeUnsupported()
+	if empty {
+		statement = apiKeyCapabilityEmptyMigration
+		recipe = storeWrite(1)
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, map[string]any{
 		"marker":  apiKeyCapabilityMigrationStateID(),
 		"version": apiKeyCapabilityMigrationVersion,
-	})
+	}, recipe)
 	if err != nil {
 		return fmt.Errorf("migrate API key capabilities: %w", err)
 	}
@@ -533,14 +663,19 @@ COMMIT;`, map[string]any{
 func (s *Surreal) apiKeyCapabilityMigrationComplete(
 	ctx context.Context,
 ) (bool, error) {
-	results, err := surrealdb.Query[[]apiKeyCapabilityMigrationStateRec](
+	results, err := storeQuery[[]apiKeyCapabilityMigrationStateRec](
 		ctx,
+		s.accounting,
 		s.db,
 		"SELECT version FROM $rid",
 		map[string]any{"rid": apiKeyCapabilityMigrationStateID()},
+		storeRead(),
 	)
 	if err != nil {
 		return false, err
+	}
+	if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" || (*results)[0].Error != nil || (*results)[0].Result == nil || len((*results)[0].Result) > 1 {
+		return false, errors.New("invalid API key capability migration marker result")
 	}
 	for index, result := range *results {
 		if result.Error != nil {
@@ -754,21 +889,11 @@ func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
 		}
 	}
 
-	results, err := surrealdb.Query[any](ctx, s.db, pendingJobIndexes, nil)
-	if err != nil {
+	if err := s.applySchemaBatch(ctx, pendingJobIndexes, "pending job index "); err != nil {
 		return fmt.Errorf("migrate active jobs: install pending indexes: %w", err)
 	}
-	for index, result := range *results {
-		if result.Error != nil {
-			return fmt.Errorf(
-				"migrate active jobs: pending index statement %d: %s",
-				index,
-				result.Error.Message,
-			)
-		}
-	}
 
-	results, err = surrealdb.Query[any](ctx, s.db, `
+	results, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
 IF $current != NONE AND $current != $wanted {
@@ -780,7 +905,7 @@ UPSERT $marker SET
 	RETURN NONE;
 COMMIT;`, map[string]any{
 		"marker": jobActiveMigrationID(), "wanted": jobActiveMigrationVersion,
-	})
+	}, storeWrite(1))
 	if err != nil {
 		return fmt.Errorf("migrate active jobs: record completion: %w", err)
 	}
@@ -804,9 +929,9 @@ COMMIT;`, map[string]any{
 }
 
 func (s *Surreal) jobActiveMigrationComplete(ctx context.Context) (bool, error) {
-	results, err := surrealdb.Query[[]jobActiveMigrationState](ctx, s.db,
+	results, err := storeQuery[[]jobActiveMigrationState](ctx, s.accounting, s.db,
 		"SELECT version FROM $marker LIMIT 1",
-		map[string]any{"marker": jobActiveMigrationID()})
+		map[string]any{"marker": jobActiveMigrationID()}, storeRead())
 	if err != nil {
 		return false, err
 	}
@@ -837,8 +962,8 @@ func (s *Surreal) listActiveJobsForMigration(
 		FROM %s WITH INDEX %s_status
 		WHERE status IN ['pending', 'claimed', 'running']
 		LIMIT $limit`, kind, kind)
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db, statement,
-		map[string]any{"limit": maxJobActiveMigrationRows + 1})
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, statement,
+		map[string]any{"limit": maxJobActiveMigrationRows + 1}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -869,7 +994,7 @@ func (s *Surreal) missingPendingJobIndexes(ctx context.Context) ([]JobKind, erro
 	missing := make([]JobKind, 0, len(durableJobKinds))
 	for _, kind := range durableJobKinds {
 		statement := fmt.Sprintf("INFO FOR TABLE %s", kind)
-		results, err := surrealdb.Query[map[string]any](ctx, s.db, statement, nil)
+		results, err := storeQuery[map[string]any](ctx, s.accounting, s.db, statement, nil, storeRead())
 		if err != nil {
 			return nil, err
 		}
@@ -892,9 +1017,9 @@ func (s *Surreal) jobTableNonempty(ctx context.Context, kind JobKind) (bool, err
 	if !validJobKind(kind) {
 		return false, fmt.Errorf("invalid job kind %q", kind)
 	}
-	results, err := surrealdb.Query[[]struct {
+	results, err := storeQuery[[]struct {
 		RecID *models.RecordID `json:"id"`
-	}](ctx, s.db, fmt.Sprintf("SELECT id FROM %s LIMIT 1", kind), nil)
+	}](ctx, s.accounting, s.db, fmt.Sprintf("SELECT id FROM %s LIMIT 1", kind), nil, storeRead())
 	if err != nil {
 		return false, err
 	}
@@ -961,13 +1086,13 @@ type evidenceAttemptMigrationRec struct {
 const retiredAttemptSchema = "t12-store-retired-attempt"
 
 func (s *Surreal) retireEvidenceAttempt(ctx context.Context, rid models.RecordID) error {
-	if _, err := surrealdb.Query[any](ctx, s.db,
+	if _, err := storeQuery[any](ctx, s.accounting, s.db,
 		`UPDATE $rid SET store_schema_version = $retired_schema,
 			evidence_migration_version = $migration RETURN NONE`,
 		map[string]any{
 			"rid": rid, "retired_schema": retiredAttemptSchema,
 			"migration": evidenceMigrationVersion,
-		}); err != nil {
+		}, storeWrite(1)); err != nil {
 		return fmt.Errorf("retire malformed attempt: %w", err)
 	}
 	return nil
@@ -1017,7 +1142,7 @@ func (s *Surreal) migrateEvidenceAttempts(ctx context.Context) error {
 // idempotent across a crash.
 func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 	for {
-		results, err := surrealdb.Query[[]evidenceAttemptMigrationRec](ctx, s.db,
+		results, err := storeQuery[[]evidenceAttemptMigrationRec](ctx, s.accounting, s.db,
 			`SELECT id, run_id, repo, commit, unit_digest, domain, extractor, status,
 				started_at, store_schema_version, evidence_format_version
 			FROM extraction_attempt
@@ -1028,7 +1153,7 @@ func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 					evidenceLegacyUpgradableStoreSchemaVersion,
 				},
 				"limit": evidenceMigrationBatchSize,
-			})
+			}, storeRead())
 		if err != nil {
 			return err
 		}
@@ -1053,7 +1178,7 @@ func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 				}
 				continue
 			}
-			if _, err := surrealdb.Query[any](ctx, s.db,
+			if _, err := storeQuery[any](ctx, s.accounting, s.db,
 				`UPDATE $rid SET store_schema_version = $store_schema_version,
 					evidence_migration_version = $evidence_migration_version
 					WHERE store_schema_version IN $previous_schemas RETURN NONE`,
@@ -1065,7 +1190,7 @@ func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 					},
 					"store_schema_version":       evidenceStoreSchemaVersion,
 					"evidence_migration_version": evidenceMigrationVersion,
-				}); err != nil {
+				}, storeWrite(1)); err != nil {
 				return fmt.Errorf("stamp attempt %s: %w", row.RecID, err)
 			}
 		}
@@ -1079,7 +1204,7 @@ func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 // "previous", because the reshape describes that writer's shape and nothing else.
 func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 	for {
-		results, err := surrealdb.Query[[]evidenceAttemptMigrationRec](ctx, s.db,
+		results, err := storeQuery[[]evidenceAttemptMigrationRec](ctx, s.accounting, s.db,
 			`SELECT id, run_id, repo, commit, domain, extractor, status, started_at,
 				store_schema_version, evidence_format_version
 			FROM extraction_attempt
@@ -1087,7 +1212,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 			ORDER BY id LIMIT $limit`, map[string]any{
 				"legacy_schema": evidencePreUnitUpgradableStoreSchemaVersion,
 				"limit":         evidenceMigrationBatchSize,
-			})
+			}, storeRead())
 		if err != nil {
 			return err
 		}
@@ -1118,7 +1243,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 				UnitDigest: "",
 				Domain:     domain,
 			}
-			moved, err := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
+			moved, err := storeQuery[[]extractionRunIdentityRec](ctx, s.accounting, s.db,
 				`BEGIN;
 				LET $ready = array::len(SELECT id FROM $old_rid
 					WHERE store_schema_version = $legacy_schema LIMIT 1) = 1
@@ -1142,7 +1267,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 					"store_schema_version":       evidenceStoreSchemaVersion,
 					"evidence_format_version":    evidenceFormatVersion,
 					"evidence_migration_version": evidenceMigrationVersion,
-				})
+				}, storeWrite(2))
 			if err != nil {
 				return fmt.Errorf("move attempt for %s: %w", repo, err)
 			}
@@ -1157,8 +1282,8 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 				// failing Open. The retirement is itself guarded by both facts:
 				// a source that changed after our read is never overwritten, and
 				// a missing destination is not mislabeled as a collision.
-				retired, retireErr := surrealdb.Query[[]extractionRunIdentityRec](
-					ctx, s.db,
+				retired, retireErr := storeQuery[[]extractionRunIdentityRec](
+					ctx, s.accounting, s.db,
 					`LET $retired = UPDATE $old_rid SET
 						store_schema_version = $retired_schema,
 						evidence_migration_version = $migration
@@ -1172,7 +1297,7 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 						"retired_schema": retiredAttemptSchema,
 						"migration":      evidenceMigrationVersion,
 						"legacy_schema":  evidencePreUnitUpgradableStoreSchemaVersion,
-					},
+					}, storeWrite(1),
 				)
 				if retireErr != nil {
 					return fmt.Errorf(
@@ -1185,15 +1310,15 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 				if retiredRow {
 					continue
 				}
-				stillLegacy, checkErr := surrealdb.Query[[]struct {
+				stillLegacy, checkErr := storeQuery[[]struct {
 					StoreSchema string `json:"store_schema_version"`
-				}](ctx, s.db,
+				}](ctx, s.accounting, s.db,
 					`SELECT store_schema_version FROM $rid
 						WHERE store_schema_version = $legacy_schema LIMIT 1`,
 					map[string]any{
 						"rid":           *row.RecID,
 						"legacy_schema": evidencePreUnitUpgradableStoreSchemaVersion,
-					},
+					}, storeRead(),
 				)
 				if checkErr != nil {
 					return fmt.Errorf(
@@ -1214,11 +1339,11 @@ func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
 
 func (s *Surreal) migrateEvidencePins(ctx context.Context, oldRunID, runID string) error {
 	for {
-		results, err := surrealdb.Query[[]evidencePinMigrationRec](ctx, s.db,
+		results, err := storeQuery[[]evidencePinMigrationRec](ctx, s.accounting, s.db,
 			`SELECT id, kind FROM evidence_pin WHERE run_id = $old_run_id
 				ORDER BY id LIMIT $limit`, map[string]any{
 				"old_run_id": oldRunID, "limit": evidenceMigrationBatchSize,
-			})
+			}, storeRead())
 		if err != nil {
 			return err
 		}
@@ -1248,7 +1373,7 @@ func (s *Surreal) migrateEvidencePins(ctx context.Context, oldRunID, runID strin
 			})
 		}
 
-		migrationResults, err := surrealdb.Query[any](ctx, s.db,
+		migrationResults, err := storeQuery[any](ctx, s.accounting, s.db,
 			`BEGIN;
 			FOR $p IN $canonical {
 				LET $old_created_at = (SELECT VALUE created_at FROM $p.old_rid LIMIT 1)[0];
@@ -1262,7 +1387,7 @@ func (s *Surreal) migrateEvidencePins(ctx context.Context, oldRunID, runID strin
 			};
 			COMMIT;`, map[string]any{
 				"canonical": canonical, "raw": raw, "run_id": runID,
-			})
+			}, storeWrite(2*uint64(len(canonical))+uint64(len(raw))))
 		if err != nil {
 			return err
 		}
@@ -1289,8 +1414,8 @@ func evidenceMigrationStateID() models.RecordID {
 }
 
 func (s *Surreal) evidenceMigrationComplete(ctx context.Context) (bool, error) {
-	results, err := surrealdb.Query[[]evidenceMigrationStateRec](ctx, s.db,
-		"SELECT id, version FROM $rid", map[string]any{"rid": evidenceMigrationStateID()})
+	results, err := storeQuery[[]evidenceMigrationStateRec](ctx, s.accounting, s.db,
+		"SELECT id, version FROM $rid", map[string]any{"rid": evidenceMigrationStateID()}, storeRead())
 	if err != nil {
 		return false, err
 	}
@@ -1366,7 +1491,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 	}
 
 	for {
-		results, err := surrealdb.Query[[]evidenceRunMigrationRec](ctx, s.db,
+		results, err := storeQuery[[]evidenceRunMigrationRec](ctx, s.accounting, s.db,
 			`SELECT id, run_id, repo, commit, unit_digest, domain, status, store_schema_version,
 				evidence_format_version, evidence_migration_ambiguous_run_id,
 				retention_quarantined, retention_phase
@@ -1418,7 +1543,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				"legacy_schemas": retiredEvidenceStoreSchemas,
 				"format":         evidenceFormatVersion,
 				"migration":      evidenceMigrationVersion,
-			})
+			}, storeRead())
 		if err != nil {
 			return fmt.Errorf("migrate evidence runs: list: %w", err)
 		}
@@ -1430,9 +1555,9 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			if err := s.migrateEvidenceAttempts(ctx); err != nil {
 				return fmt.Errorf("migrate evidence runs: attempts: %w", err)
 			}
-			if _, err := surrealdb.Query[any](ctx, s.db,
+			if _, err := storeQuery[any](ctx, s.accounting, s.db,
 				`UPSERT $rid SET version = $version, completed_at = time::now() RETURN NONE`,
-				map[string]any{"rid": evidenceMigrationStateID(), "version": evidenceMigrationVersion}); err != nil {
+				map[string]any{"rid": evidenceMigrationStateID(), "version": evidenceMigrationVersion}, storeWrite(1)); err != nil {
 				return fmt.Errorf("migrate evidence runs: write completion marker: %w", err)
 			}
 			return nil
@@ -1526,14 +1651,14 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 
 			ambiguousOwnership := false
 			if rewriteRunID && !quarantined {
-				owners, ownerErr := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
+				owners, ownerErr := storeQuery[[]extractionRunIdentityRec](ctx, s.accounting, s.db,
 					`SELECT id FROM extraction_run
 						WHERE id != $rid AND (
 							id = $old_rid OR run_id = $old_run_id
 							OR evidence_migration_ambiguous_run_id = $old_run_id)
 						LIMIT 1`, map[string]any{
 						"rid": rid, "old_rid": extractionRunID(oldRunID), "old_run_id": oldRunID,
-					})
+					}, storeRead())
 				if ownerErr != nil {
 					return fmt.Errorf("migrate evidence run %s: ownership lookup: %w", runID, ownerErr)
 				}
@@ -1575,11 +1700,11 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 						UnitDigest: unitDigest,
 						Domain:     domain,
 					})
-					owners, lookupErr := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
+					owners, lookupErr := storeQuery[[]extractionRunIdentityRec](ctx, s.accounting, s.db,
 						`SELECT id FROM extraction_run
 							WHERE published_key = $published_key AND id != $rid LIMIT 1`, map[string]any{
 							"rid": rid, "published_key": canonicalKey,
-						})
+						}, storeRead())
 					if lookupErr != nil {
 						return fmt.Errorf("migrate evidence run %s: publication lookup: %w", runID, lookupErr)
 					}
@@ -1640,7 +1765,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				"has_retention_phase":  status == "deleting" && retentionPhase != "",
 				"retention_phase":      retentionPhase,
 			}
-			updated, updateErr := surrealdb.Query[[]evidenceMigrationStateRec](ctx, s.db,
+			updated, updateErr := storeQuery[[]evidenceMigrationStateRec](ctx, s.accounting, s.db,
 				`BEGIN;
 				LET $updated = UPDATE $rid SET run_id = $run_id, status = $status,
 					unit_digest = $unit_digest,
@@ -1665,7 +1790,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				UPDATE evidence_chunk SET run_id = $run_id
 					WHERE $rewrite_run_id AND run_id = $old_run_id RETURN NONE;
 				RETURN $updated;
-				COMMIT;`, vars)
+				COMMIT;`, vars, storeUnsupported())
 			if updateErr != nil {
 				return fmt.Errorf("migrate evidence run %s: %w", runID, updateErr)
 			}
@@ -1685,8 +1810,8 @@ func (s *Surreal) updateLegacyJob(ctx context.Context, id, set string, expected 
 	for i := 0; i < len(pairs); i += 2 {
 		vars[pairs[i].(string)] = pairs[i+1]
 	}
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
-		"UPDATE type::record($id) SET "+set+" WHERE status = $expected RETURN AFTER", vars)
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db,
+		"UPDATE type::record($id) SET "+set+" WHERE status = $expected RETURN AFTER", vars, storeWrite(1))
 	if err != nil {
 		return err
 	}
@@ -1711,7 +1836,7 @@ func (s *Surreal) Close(ctx context.Context) error {
 func repoID(name string) models.RecordID { return models.NewRecordID("repo", name) }
 
 func (s *Surreal) UpsertRepo(ctx context.Context, r Repo) error {
-	_, err := surrealdb.Query[any](ctx, s.db,
+	_, err := storeQuery[any](ctx, s.accounting, s.db,
 		`UPSERT $rid SET
 			name = $name,
 			display_name = $display_name,
@@ -1741,7 +1866,7 @@ func (s *Surreal) UpsertRepo(ctx context.Context, r Repo) error {
 			"external_id":        r.ExternalID,
 			"external_host_type": r.ExternalHostType,
 			"external_host_url":  r.ExternalHostURL,
-		})
+		}, storeWrite(1))
 	return err
 }
 
@@ -1749,9 +1874,9 @@ func (s *Surreal) GetRepo(ctx context.Context, name string) (*Repo, error) {
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, err
 	}
-	results, err := surrealdb.Query[[]Repo](ctx, s.db,
+	results, err := storeQuery[[]Repo](ctx, s.accounting, s.db,
 		"SELECT * FROM $rid",
-		map[string]any{"rid": repoID(name)})
+		map[string]any{"rid": repoID(name)}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -1769,7 +1894,7 @@ func (s *Surreal) ListRepos(ctx context.Context) ([]Repo, error) {
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, err
 	}
-	results, err := surrealdb.Query[[]Repo](ctx, s.db, "SELECT * FROM repo ORDER BY name", nil)
+	results, err := storeQuery[[]Repo](ctx, s.accounting, s.db, "SELECT * FROM repo ORDER BY name", nil, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -1801,8 +1926,31 @@ func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
 	// its mirror and shards are gone. Retry like every other multi-statement
 	// writer in this store.
 	for attempt := 0; ; attempt++ {
-		_, err := surrealdb.Query[any](ctx, s.db,
-			`BEGIN;
+		vars := map[string]any{
+			"rid": repoID(name), "name": name,
+			"state_reconcile_stage": ServiceStateV3ReconcileStage,
+			"state_activate_stage":  ServiceStateV3ActivateStage,
+			"relationship_v3_stage": ServiceRelationshipV3ScheduleStage,
+		}
+		observed, rows, err := s.deleteRepoCensus(ctx, vars)
+		if err == nil {
+			statement, recipe := deleteRepoLegacySQL, storeUnsupported()
+			if rows <= restoreClearRows {
+				vars["deletion"] = observed
+				statement, recipe = deleteRepoSelectedSQL, storeWrite(rows)
+			}
+			_, err = storeQuery[any](ctx, s.accounting, s.db, statement, vars, recipe)
+		}
+		if err != nil && isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+			continue
+		}
+		return err
+	}
+}
+
+// Overflow keeps the original ordinary atomic writer. A bounded observation
+// does not justify paging this online cleanup after its disk artifacts are gone.
+const deleteRepoLegacySQL = `BEGIN;
 UPDATE extraction_run SET status = 'superseded', published_key = NONE
     WHERE repo = $name AND status = 'published' RETURN NONE;
 UPDATE extraction_run SET status = 'aborted', published_key = NONE
@@ -1839,17 +1987,149 @@ DELETE caller_generation_admission WHERE repository = $name RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
 DELETE repo_connection WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
-COMMIT;`, map[string]any{
-				"rid": repoID(name), "name": name,
-				"state_reconcile_stage": ServiceStateV3ReconcileStage,
-				"state_activate_stage":  ServiceStateV3ActivateStage,
-				"relationship_v3_stage": ServiceRelationshipV3ScheduleStage,
-			})
-		if err != nil && isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
-			continue
-		}
-		return err
+COMMIT;`
+
+// Each field is the complete bounded identity vector for exactly one original
+// mutation predicate. The same source expression is evaluated before the read
+// returns and inside the original atomic mutation boundary.
+const deleteRepoCensusSQL = `
+LET $delete_repo_census = {
+ published_runs: (SELECT VALUE id FROM extraction_run WHERE repo = $name AND status = 'published' ORDER BY id LIMIT 513),
+ staged_runs: (SELECT VALUE id FROM extraction_run WHERE repo = $name AND status = 'staged' ORDER BY id LIMIT 513),
+ attempts: (SELECT VALUE id FROM extraction_attempt WHERE repo = $name ORDER BY id LIMIT 513),
+ outcomes: (SELECT VALUE id FROM extraction_domain_outcome WHERE repo = $name ORDER BY id LIMIT 513),
+ extraction_jobs: (SELECT VALUE id FROM extraction_job WHERE target = $name AND status = 'pending' ORDER BY id LIMIT 513),
+ candidate_jobs: (SELECT VALUE id FROM candidate_manifest_job WHERE target = $name AND status = 'pending' ORDER BY id LIMIT 513),
+ resolver_jobs: (SELECT VALUE id FROM resolver_catalog_job WHERE target = $name AND status = 'pending' ORDER BY id LIMIT 513),
+ caller_jobs: (SELECT VALUE id FROM caller_leaf_job WHERE target = $name AND status = 'pending' ORDER BY id LIMIT 513),
+ schedules: (SELECT VALUE id FROM generation_schedule WHERE repository = $name AND status = 'active'
+  AND stage IN [$state_reconcile_stage, $state_activate_stage, $relationship_v3_stage] ORDER BY id LIMIT 513),
+ plans: (SELECT VALUE id FROM service_state_v3_plan WHERE repository = $name AND state = 'running'
+  AND phase IN ['reconcile', 'activate'] ORDER BY id LIMIT 513),
+ currents: (SELECT VALUE id FROM generation_schedule_current WHERE repository = $name
+  AND stage IN [$state_reconcile_stage, $state_activate_stage, $relationship_v3_stage] ORDER BY id LIMIT 513),
+ candidates: (SELECT VALUE id FROM candidate_manifest_publication WHERE repository = $name ORDER BY id LIMIT 513),
+ resolvers: (SELECT VALUE id FROM resolver_catalog_publication WHERE repository = $name ORDER BY id LIMIT 513),
+ callers: (SELECT VALUE id FROM caller_generation_publication WHERE repository = $name ORDER BY id LIMIT 513),
+ caller_outcomes: (SELECT VALUE id FROM caller_leaf_outcome WHERE repository = $name ORDER BY id LIMIT 513),
+ caller_admissions: (SELECT VALUE id FROM caller_generation_admission WHERE repository = $name ORDER BY id LIMIT 513),
+ permissions: (SELECT VALUE id FROM repo_permission WHERE repo = $name ORDER BY id LIMIT 513),
+ connections: (SELECT VALUE id FROM repo_connection WHERE repo = $name ORDER BY id LIMIT 513)
+};
+`
+
+const deleteRepoSelectedSQL = "BEGIN;\n" + deleteRepoCensusSQL + `
+IF $delete_repo_census != $deletion {
+ THROW 'phebs-conflict: repository deletion census changed';
+};
+UPDATE $deletion.published_runs SET status = 'superseded', published_key = NONE
+    WHERE repo = $name AND status = 'published' RETURN NONE;
+UPDATE $deletion.staged_runs SET status = 'aborted', published_key = NONE
+    WHERE repo = $name AND status = 'staged' RETURN NONE;
+DELETE $deletion.attempts WHERE repo = $name RETURN NONE;
+DELETE $deletion.outcomes WHERE repo = $name RETURN NONE;
+UPDATE $deletion.extraction_jobs SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE $deletion.candidate_jobs SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE $deletion.resolver_jobs SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE $deletion.caller_jobs SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE $deletion.schedules SET status = 'superseded', updated_at = time::now()
+    WHERE repository = $name AND status = 'active'
+        AND stage IN [$state_reconcile_stage, $state_activate_stage,
+            $relationship_v3_stage] RETURN NONE;
+UPDATE $deletion.plans SET state = 'superseded', updated_at = time::now()
+    WHERE repository = $name AND state = 'running'
+        AND phase IN ['reconcile', 'activate'] RETURN NONE;
+DELETE $deletion.currents WHERE repository = $name
+    AND stage IN [$state_reconcile_stage, $state_activate_stage,
+        $relationship_v3_stage] RETURN NONE;
+DELETE $deletion.candidates WHERE repository = $name RETURN NONE;
+DELETE $deletion.resolvers WHERE repository = $name RETURN NONE;
+DELETE $deletion.callers WHERE repository = $name RETURN NONE;
+DELETE $deletion.caller_outcomes WHERE repository = $name RETURN NONE;
+DELETE $deletion.caller_admissions WHERE repository = $name RETURN NONE;
+DELETE $deletion.permissions WHERE repo = $name RETURN NONE;
+DELETE $deletion.connections WHERE repo = $name RETURN NONE;
+DELETE $rid RETURN NONE;
+COMMIT;`
+
+type deleteRepoObservation struct {
+	PublishedRuns    []models.RecordID `json:"published_runs" cbor:"published_runs"`
+	StagedRuns       []models.RecordID `json:"staged_runs" cbor:"staged_runs"`
+	Attempts         []models.RecordID `json:"attempts" cbor:"attempts"`
+	Outcomes         []models.RecordID `json:"outcomes" cbor:"outcomes"`
+	ExtractionJobs   []models.RecordID `json:"extraction_jobs" cbor:"extraction_jobs"`
+	CandidateJobs    []models.RecordID `json:"candidate_jobs" cbor:"candidate_jobs"`
+	ResolverJobs     []models.RecordID `json:"resolver_jobs" cbor:"resolver_jobs"`
+	CallerJobs       []models.RecordID `json:"caller_jobs" cbor:"caller_jobs"`
+	Schedules        []models.RecordID `json:"schedules" cbor:"schedules"`
+	Plans            []models.RecordID `json:"plans" cbor:"plans"`
+	Currents         []models.RecordID `json:"currents" cbor:"currents"`
+	Candidates       []models.RecordID `json:"candidates" cbor:"candidates"`
+	Resolvers        []models.RecordID `json:"resolvers" cbor:"resolvers"`
+	Callers          []models.RecordID `json:"callers" cbor:"callers"`
+	CallerOutcomes   []models.RecordID `json:"caller_outcomes" cbor:"caller_outcomes"`
+	CallerAdmissions []models.RecordID `json:"caller_admissions" cbor:"caller_admissions"`
+	Permissions      []models.RecordID `json:"permissions" cbor:"permissions"`
+	Connections      []models.RecordID `json:"connections" cbor:"connections"`
+}
+
+func (s *Surreal) deleteRepoCensus(ctx context.Context, vars map[string]any) (deleteRepoObservation, uint64, error) {
+	if err := ctx.Err(); err != nil {
+		return deleteRepoObservation{}, 0, err
 	}
+	results, err := storeQuery[[]deleteRepoObservation](ctx, s.accounting, s.db,
+		deleteRepoCensusSQL+"RETURN [$delete_repo_census];", vars, storeRead())
+	if err != nil {
+		return deleteRepoObservation{}, 0, err
+	}
+	observations, err := generationCensusRows(ctx, results, 1)
+	if err != nil {
+		return deleteRepoObservation{}, 0, err
+	}
+	if len(observations) != 1 {
+		return deleteRepoObservation{}, 0, errors.New("repository deletion census: invalid observation count")
+	}
+	observed := observations[0]
+	rows := uint64(1) // the final supplied repo RID, even if its row is absent
+	for _, field := range [...]struct {
+		ids   []models.RecordID
+		table string
+	}{
+		{observed.PublishedRuns, "extraction_run"}, {observed.StagedRuns, "extraction_run"},
+		{observed.Attempts, "extraction_attempt"}, {observed.Outcomes, "extraction_domain_outcome"},
+		{observed.ExtractionJobs, "extraction_job"}, {observed.CandidateJobs, "candidate_manifest_job"},
+		{observed.ResolverJobs, "resolver_catalog_job"}, {observed.CallerJobs, "caller_leaf_job"},
+		{observed.Schedules, "generation_schedule"}, {observed.Plans, "service_state_v3_plan"},
+		{observed.Currents, "generation_schedule_current"}, {observed.Candidates, "candidate_manifest_publication"},
+		{observed.Resolvers, "resolver_catalog_publication"}, {observed.Callers, "caller_generation_publication"},
+		{observed.CallerOutcomes, "caller_leaf_outcome"}, {observed.CallerAdmissions, "caller_generation_admission"},
+		{observed.Permissions, "repo_permission"}, {observed.Connections, "repo_connection"},
+	} {
+		if field.ids == nil || len(field.ids) > restoreClearRows+1 {
+			return deleteRepoObservation{}, 0, errors.New("repository deletion census: invalid identity array")
+		}
+		if err := validateRestoreClearIDs(field.ids[:min(len(field.ids), restoreClearRows)], field.table, restoreClearRows); err != nil {
+			return deleteRepoObservation{}, 0, err
+		}
+		if len(field.ids) > restoreClearRows {
+			if err := validateRestoreClearIDs(field.ids[restoreClearRows:], field.table, 1); err != nil {
+				return deleteRepoObservation{}, 0, err
+			}
+		}
+		rows += uint64(len(field.ids))
+	}
+	if err := ctx.Err(); err != nil {
+		return deleteRepoObservation{}, 0, err
+	}
+	return observed, rows, nil
 }
 
 // SetRepoDeleting retires complete caller authority when deletion begins. A
@@ -1857,8 +2137,74 @@ COMMIT;`, map[string]any{
 // a failed cleanup cannot make the repository live between state and queue
 // commits; an already-active false-to-false refresh remains queue-neutral.
 func (s *Surreal) SetRepoDeleting(ctx context.Context, name string, deleting bool) error {
-	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		`BEGIN;
+	vars := map[string]any{
+		"rid": repoID(name), "repository": name, "deleting": deleting,
+		"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+		"caller_migration_version": callerGenerationPublicationMigrationVersion,
+	}
+	census, err := s.repoDeletingCensus(ctx, vars)
+	if err != nil {
+		return err
+	}
+	rows := uint64(1 + len(census.Callers)) // explicit repo UPDATE plus selected caller IDs
+	reactivated := !deleting && len(census.Before) == 1 && *census.Before[0]
+	if len(census.Callers) == 1 {
+		rows++ // explicit repo revision UPDATE
+	}
+	if reactivated {
+		rows += 2 // one caller successor body/ID and its explicit repo projection
+	}
+	descriptor := storeWrite(rows)
+	prefix := "BEGIN;\n"
+	retirement := "DELETE caller_generation_publication WHERE repository = $repository RETURN BEFORE"
+	pending := `(SELECT id, created_at FROM caller_leaf_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id`
+	callerRevision := `(UPDATE $rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)`
+	callerUpdate := `(UPDATE $pending_caller SET force = true,
+		recovery_lease = NONE RETURN AFTER)`
+	callerCreate := `(CREATE caller_leaf_job CONTENT {
+		target: $repository,
+		status: 'pending',
+		attempts: 0,
+		created_at: time::now(),
+		pending_key: $repository,
+		force: true
+	} RETURN AFTER)`
+	callerFanout := "IF $reactivated = false THEN [] ELSE IF $pending_caller != NONE THEN " + callerUpdate + " ELSE " + callerCreate + " END"
+	projection := projectCallerJobSQL
+	if rows > restoreClearRows {
+		// Preserve ordinary atomic retirement; the selected lane cannot submit
+		// an unbounded native predicate as an invented 512-row operand vector.
+		descriptor = storeUnsupported()
+	} else {
+		vars["deleting_census"] = census
+		vars["retiring_callers"] = census.Callers
+		prefix += repoDeletingCensusSQL + `
+IF $current_deleting_census != $deleting_census {
+	THROW 'phebs-conflict: repository deletion census changed'
+};
+`
+		retirement = "DELETE $retiring_callers RETURN BEFORE"
+		pending = "$current_deleting_census.pending[0]"
+		// The accepted source submission contains only its observed write
+		// operands. An omitted branch cannot leave a fixed UPDATE/CREATE in
+		// the submitted SQL while claiming that operand was never submitted.
+		if len(census.Callers) != 1 {
+			callerRevision = "[]"
+		}
+		switch {
+		case !reactivated:
+			callerFanout, projection = "[]", ""
+		case len(census.Pending) == 1:
+			callerFanout = "IF $reactivated THEN " + callerUpdate + " ELSE [] END"
+		default:
+			callerFanout = "IF $reactivated THEN " + callerCreate + " ELSE [] END"
+		}
+	}
+	results, err := storeQuery[[]Repo](ctx, s.accounting, s.db,
+		prefix+`
 LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
 	WHERE version = $caller_migration_version LIMIT 1) = 1;
 IF $caller_writer_ok = false {
@@ -1867,49 +2213,28 @@ IF $caller_writer_ok = false {
 LET $before = (SELECT deleting FROM $rid)[0];
 LET $updated = UPDATE $rid SET deleting = $deleting RETURN AFTER;
 LET $retired_caller = IF $deleting AND array::len($updated) = 1 THEN
-	(DELETE caller_generation_publication
-		WHERE repository = $repository RETURN BEFORE)
+	(`+retirement+`)
 	ELSE [] END;
 LET $caller_revision = IF array::len($retired_caller) = 1 THEN
-	(UPDATE $rid SET caller_publication_revision =
-		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	`+callerRevision+`
 	ELSE [] END;
 LET $final = IF array::len($retired_caller) = 1 THEN
 	$caller_revision ELSE $updated END;
 LET $reactivated = array::len($updated) = 1 AND $deleting = false
 	AND ($before.deleting ?? false) = true;
 LET $pending_caller = IF $reactivated THEN
-	(SELECT id, created_at FROM caller_leaf_job
-		WHERE pending_key = $repository AND status = 'pending'
-		ORDER BY created_at LIMIT 1)[0].id
+	`+pending+`
 	ELSE NONE END;
-LET $caller_fanout = IF $reactivated = false THEN []
-	ELSE IF $pending_caller != NONE THEN
-		(UPDATE $pending_caller SET force = true,
-			recovery_lease = NONE RETURN AFTER)
-	ELSE
-		(CREATE caller_leaf_job CONTENT {
-			target: $repository,
-			status: 'pending',
-			attempts: 0,
-			created_at: time::now(),
-			pending_key: $repository,
-			force: true
-		} RETURN AFTER)
-	END;
+LET $caller_fanout = `+callerFanout+`;
 LET $caller_projected = IF $reactivated AND array::len($caller_fanout) = 1
-	THEN $caller_fanout[0] ELSE NONE END;`+projectCallerJobSQL+`
+	THEN $caller_fanout[0] ELSE NONE END;`+projection+`
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_caller) = 0
 		OR array::len($caller_revision) = 1)
 	AND ($reactivated = false OR array::len($caller_fanout) = 1)
 	THEN $final ELSE [] END;
 COMMIT;`,
-		map[string]any{
-			"rid": repoID(name), "repository": name, "deleting": deleting,
-			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
-			"caller_migration_version": callerGenerationPublicationMigrationVersion,
-		})
+		vars, descriptor)
 	if err != nil {
 		return err
 	}
@@ -1917,6 +2242,58 @@ COMMIT;`,
 		return fmt.Errorf("repo %q: %w", name, ErrNotFound)
 	}
 	return nil
+}
+
+// The identical native observation is repeated before the mutation. Only the
+// deleting flag affects the branch: unrelated repo fields need no echo.
+const repoDeletingCensusSQL = `
+LET $deleting_before = SELECT VALUE (deleting ?? false) FROM $rid;
+LET $current_deleting_census = {
+	before: $deleting_before,
+	callers: (SELECT VALUE id FROM caller_generation_publication
+		WHERE $deleting AND array::len($deleting_before) = 1
+			AND repository = $repository ORDER BY id LIMIT 513),
+	pending: (SELECT VALUE id FROM (SELECT id, created_at FROM caller_leaf_job
+		WHERE $deleting = false AND array::len($deleting_before) = 1
+			AND $deleting_before[0] = true
+			AND pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1))
+};
+`
+
+type repoDeletingObservation struct {
+	Before  []*bool           `json:"before" cbor:"before"`
+	Callers []models.RecordID `json:"callers" cbor:"callers"`
+	Pending []models.RecordID `json:"pending" cbor:"pending"`
+}
+
+func (s *Surreal) repoDeletingCensus(ctx context.Context, vars map[string]any) (repoDeletingObservation, error) {
+	results, err := storeQuery[[]repoDeletingObservation](ctx, s.accounting, s.db,
+		repoDeletingCensusSQL+"RETURN [$current_deleting_census];", vars, storeRead())
+	if err != nil {
+		return repoDeletingObservation{}, err
+	}
+	rows, err := generationCensusRows(ctx, results, 2)
+	if err != nil {
+		return repoDeletingObservation{}, err
+	}
+	if len(rows) != 1 || rows[0].Before == nil || len(rows[0].Before) > 1 ||
+		len(rows[0].Before) == 1 && rows[0].Before[0] == nil ||
+		rows[0].Callers == nil || len(rows[0].Callers) > restoreClearRows+1 || rows[0].Pending == nil {
+		return repoDeletingObservation{}, errors.New("repository deletion census: invalid observation")
+	}
+	if len(rows[0].Callers) <= restoreClearRows {
+		if err := validateRestoreClearIDs(rows[0].Callers, "caller_generation_publication", restoreClearRows); err != nil {
+			return repoDeletingObservation{}, err
+		}
+	}
+	if err := validateRestoreClearIDs(rows[0].Pending, string(JobCallerLeaf), 1); err != nil {
+		return repoDeletingObservation{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return repoDeletingObservation{}, err
+	}
+	return rows[0], nil
 }
 
 func (s *Surreal) SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error {
@@ -1940,95 +2317,6 @@ func (s *Surreal) SetRepoIndexedState(
 	if err := unit.Validate(name); err != nil {
 		return fmt.Errorf("repo %q: analysis unit: %w", name, err)
 	}
-	statement := `BEGIN;
-LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
-	WHERE version = $caller_migration_version LIMIT 1) = 1;
-IF $caller_writer_ok = false {
-	THROW 'phebs-permanent: caller-generation publication writer is not active'
-};
-LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
-LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
-	indexed_revisions = $revisions, indexed_analysis_unit = NONE,
-	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
-LET $scope_unchanged = ($before.indexed_commit_hash ?? '') = $hash
-	AND ($before.indexed_analysis_unit.digest ?? '') = $unit_digest;
-LET $same_scope_state_changed = array::len($updated) = 1
-	AND $scope_unchanged
-	AND $before.indexed_analysis_unit != NONE;
-LET $identity_changed = array::len($updated) = 1
-	AND ($scope_unchanged = false OR $same_scope_state_changed);
-LET $retired_catalog = IF $identity_changed THEN
-	(DELETE resolver_catalog_publication
-		WHERE repository = $name RETURN BEFORE)
-	ELSE [] END;
-LET $retired_caller = IF $identity_changed THEN
-	(DELETE caller_generation_publication
-		WHERE repository = $name RETURN BEFORE)
-	ELSE [] END;
-IF $identity_changed {
-	DELETE $publication_rid RETURN NONE
-};
-IF $same_scope_state_changed {
-	UPDATE extraction_run SET status = 'superseded', published_key = NONE
-		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
-			AND status = 'published'
-			AND store_schema_version = $evidence_store_schema
-			AND evidence_format_version = $evidence_format
-			AND retention_quarantined = false
-			AND run_id = record::id(id)
-			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
-	UPDATE extraction_run SET status = 'aborted', published_key = NONE
-		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
-			AND status = 'staged'
-			AND store_schema_version = $evidence_store_schema
-			AND evidence_format_version = $evidence_format
-			AND retention_quarantined = false
-			AND run_id = record::id(id)
-			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
-	DELETE extraction_attempt
-		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
-			AND store_schema_version = $evidence_store_schema
-			AND evidence_format_version = $evidence_format
-			AND evidence_migration_version = $evidence_migration
-		RETURN NONE
-	;
-	DELETE extraction_domain_outcome
-		WHERE repo = $name RETURN NONE
-};
-LET $final = IF $identity_changed THEN
-	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
-		RETURN AFTER)
-	ELSE $updated END;
-LET $caller_revision = IF array::len($retired_caller) = 1 THEN
-	(UPDATE $rid SET caller_publication_revision =
-		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
-	ELSE [] END;
-LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
-	(SELECT id, created_at FROM resolver_catalog_job
-		WHERE pending_key = $name AND status = 'pending'
-		ORDER BY created_at LIMIT 1)[0].id
-	ELSE NONE END;
-LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
-	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true,
-			recovery_lease = NONE RETURN AFTER)
-	ELSE
-		(CREATE resolver_catalog_job CONTENT {
-			target: $name,
-			status: 'pending',
-			attempts: 0,
-			created_at: time::now(),
-			pending_key: $name,
-			force: true
-		} RETURN AFTER)
-	END;` + projectResolverJobSQL + `
-RETURN IF array::len($final) = 1
-	AND (array::len($retired_catalog) = 0
-		OR array::len($catalog_fanout) = 1)
-	AND (array::len($retired_caller) = 0
-		OR array::len($caller_revision) = 1)
-	THEN $final ELSE [] END;
-COMMIT;`
 	vars := map[string]any{
 		"rid": repoID(name), "name": name, "hash": defaultCommit,
 		"revisions": revisions, "at": at, "unit_digest": "",
@@ -2041,36 +2329,74 @@ COMMIT;`
 		"caller_migration_version":    callerGenerationPublicationMigrationVersion,
 	}
 	if unit != nil {
-		statement = `BEGIN;
+		vars["unit"] = analysisunit.CloneState(unit)
+		vars["unit_digest"] = unit.Digest
+	}
+	census, censusSQL, err := s.repoIndexCensus(ctx, vars, false)
+	if err != nil {
+		return err
+	}
+	rows := census.writeRows()
+	descriptor := storeWrite(rows)
+	fence := ""
+	catalogDelete := "DELETE resolver_catalog_publication WHERE repository = $name"
+	callerDelete := "DELETE caller_generation_publication WHERE repository = $name"
+	candidateWrite := "IF $identity_changed { DELETE $publication_rid RETURN NONE };"
+	publishedTarget, stagedTarget := "extraction_run", "extraction_run"
+	attemptTarget, outcomeTarget := "extraction_attempt", "extraction_domain_outcome"
+	evidenceWrite := repoIndexEvidenceWriteSQL
+	callerWrite := repoIndexCallerWriteSQL
+	if rows > restoreClearRows {
+		// The ordinary lane keeps its original atomic predicates. Selected
+		// accounting refuses before submitting an unknown/oversize target set.
+		descriptor = storeUnsupported()
+	} else {
+		vars["index_census"] = census
+		fence = censusSQL + repoIndexCensusFenceSQL
+		catalogDelete, callerDelete = "DELETE $index_census.catalogs", "DELETE $index_census.callers"
+		publishedTarget, stagedTarget = "$index_census.published", "$index_census.staged"
+		attemptTarget, outcomeTarget = "$index_census.attempts", "$index_census.outcomes"
+		if !*census.Branches.Retire {
+			candidateWrite = ""
+		}
+		if !*census.Branches.Revision {
+			evidenceWrite = "$updated"
+		}
+		if len(census.Callers) != 1 {
+			callerWrite = "[]"
+		}
+	}
+	unitValue := "NONE"
+	if unit != nil {
+		unitValue = "$unit"
+	}
+	fanout := repoIndexFanoutSQL(census, rows <= restoreClearRows)
+	statement := `BEGIN;
 LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
 	WHERE version = $caller_migration_version LIMIT 1) = 1;
 IF $caller_writer_ok = false {
 	THROW 'phebs-permanent: caller-generation publication writer is not active'
-};
+};` + fence + `
 LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
 LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
-	indexed_revisions = $revisions, indexed_analysis_unit = $unit,
+	indexed_revisions = $revisions, indexed_analysis_unit = ` + unitValue + `,
 	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
 LET $scope_unchanged = ($before.indexed_commit_hash ?? '') = $hash
 	AND ($before.indexed_analysis_unit.digest ?? '') = $unit_digest;
 LET $same_scope_state_changed = array::len($updated) = 1
 	AND $scope_unchanged
-	AND $before.indexed_analysis_unit != $unit;
+	AND $before.indexed_analysis_unit != ` + unitValue + `;
 LET $identity_changed = array::len($updated) = 1
 	AND ($scope_unchanged = false OR $same_scope_state_changed);
 LET $retired_catalog = IF $identity_changed THEN
-	(DELETE resolver_catalog_publication
-		WHERE repository = $name RETURN BEFORE)
+	(` + catalogDelete + ` RETURN BEFORE)
 	ELSE [] END;
 LET $retired_caller = IF $identity_changed THEN
-	(DELETE caller_generation_publication
-		WHERE repository = $name RETURN BEFORE)
+	(` + callerDelete + ` RETURN BEFORE)
 	ELSE [] END;
-IF $identity_changed {
-	DELETE $publication_rid RETURN NONE
-};
+` + candidateWrite + `
 IF $same_scope_state_changed {
-	UPDATE extraction_run SET status = 'superseded', published_key = NONE
+	UPDATE ` + publishedTarget + ` SET status = 'superseded', published_key = NONE
 		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
 			AND status = 'published'
 			AND store_schema_version = $evidence_store_schema
@@ -2078,7 +2404,7 @@ IF $same_scope_state_changed {
 			AND retention_quarantined = false
 			AND run_id = record::id(id)
 			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
-	UPDATE extraction_run SET status = 'aborted', published_key = NONE
+	UPDATE ` + stagedTarget + ` SET status = 'aborted', published_key = NONE
 		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
 			AND status = 'staged'
 			AND store_schema_version = $evidence_store_schema
@@ -2086,43 +2412,23 @@ IF $same_scope_state_changed {
 			AND retention_quarantined = false
 			AND run_id = record::id(id)
 			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
-	DELETE extraction_attempt
+	DELETE ` + attemptTarget + `
 		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
 			AND store_schema_version = $evidence_store_schema
 			AND evidence_format_version = $evidence_format
 			AND evidence_migration_version = $evidence_migration
 		RETURN NONE
 	;
-	DELETE extraction_domain_outcome
+	DELETE ` + outcomeTarget + `
 		WHERE repo = $name RETURN NONE
 };
 LET $final = IF $identity_changed THEN
-	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
-		RETURN AFTER)
+	` + evidenceWrite + `
 	ELSE $updated END;
 LET $caller_revision = IF array::len($retired_caller) = 1 THEN
-	(UPDATE $rid SET caller_publication_revision =
-		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	` + callerWrite + `
 	ELSE [] END;
-LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
-	(SELECT id, created_at FROM resolver_catalog_job
-		WHERE pending_key = $name AND status = 'pending'
-		ORDER BY created_at LIMIT 1)[0].id
-	ELSE NONE END;
-LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
-	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true,
-			recovery_lease = NONE RETURN AFTER)
-	ELSE
-		(CREATE resolver_catalog_job CONTENT {
-			target: $name,
-			status: 'pending',
-			attempts: 0,
-			created_at: time::now(),
-			pending_key: $name,
-			force: true
-		} RETURN AFTER)
-	END;` + projectResolverJobSQL + `
+` + fanout + `
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_catalog) = 0
 		OR array::len($catalog_fanout) = 1)
@@ -2130,32 +2436,69 @@ RETURN IF array::len($final) = 1
 		OR array::len($caller_revision) = 1)
 	THEN $final ELSE [] END;
 COMMIT;`
-		vars["unit"] = analysisunit.CloneState(unit)
-		vars["unit_digest"] = unit.Digest
-	}
-	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		statement, vars)
+	results, err := storeQuery[[]Repo](ctx, s.accounting, s.db,
+		statement, vars, descriptor)
 	if err != nil {
 		return err
 	}
-	rows := firstDomainRows(results)
-	if len(rows) == 0 {
+	updated := firstDomainRows(results)
+	if len(updated) == 0 {
 		return fmt.Errorf("repo %q: %w", name, ErrNotFound)
 	}
-	if err := validateRepoAnalysisUnit(&rows[0]); err != nil {
+	if err := validateRepoAnalysisUnit(&updated[0]); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
-	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		`BEGIN;
+	vars := map[string]any{
+		"rid":                      repoID(name),
+		"publication_rid":          candidateManifestPublicationID(name),
+		"catalog_rid":              resolverCatalogPublicationID(name),
+		"caller_rid":               callerGenerationPublicationID(name),
+		"name":                     name,
+		"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+		"caller_migration_version": callerGenerationPublicationMigrationVersion,
+	}
+
+	census, censusSQL, err := s.repoIndexCensus(ctx, vars, true)
+	if err != nil {
+		return err
+	}
+	rows := census.writeRows()
+	descriptor := storeWrite(rows)
+	fence := ""
+	catalogDelete := "DELETE resolver_catalog_publication WHERE repository = $name"
+	callerDelete := "DELETE caller_generation_publication WHERE repository = $name"
+	candidateWrite := "IF array::len($updated) = 1 { DELETE $publication_rid RETURN NONE };"
+	outcomeDelete := "DELETE extraction_domain_outcome WHERE repo = $name"
+	evidenceWrite := repoIndexEvidenceWriteSQL
+	callerWrite := repoIndexCallerWriteSQL
+	if rows > restoreClearRows {
+		descriptor = storeUnsupported()
+	} else {
+		vars["index_census"] = census
+		fence = censusSQL + repoIndexCensusFenceSQL
+		catalogDelete, callerDelete = "DELETE $index_census.catalogs", "DELETE $index_census.callers"
+		outcomeDelete = "DELETE $index_census.outcomes"
+		if !*census.Branches.Retire {
+			candidateWrite = ""
+		}
+		if !*census.Branches.Revision {
+			evidenceWrite = "$updated"
+		}
+		if len(census.Callers) != 1 {
+			callerWrite = "[]"
+		}
+	}
+	fanout := repoIndexFanoutSQL(census, rows <= restoreClearRows)
+	statement := `BEGIN;
 LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
 	WHERE version = $caller_migration_version LIMIT 1) = 1;
 IF $caller_writer_ok = false {
 	THROW 'phebs-permanent: caller-generation publication writer is not active'
-};
+};` + fence + `
 LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
 LET $publication = (SELECT id FROM $publication_rid)[0];
 LET $catalog = (SELECT id FROM $catalog_rid)[0];
@@ -2167,60 +2510,30 @@ LET $visibility_changed = ($before != NONE
 LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
 	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
 LET $retired_catalog = IF array::len($updated) = 1 THEN
-	(DELETE resolver_catalog_publication
-		WHERE repository = $name RETURN BEFORE)
+	(` + catalogDelete + ` RETURN BEFORE)
 	ELSE [] END;
 LET $retired_caller = IF array::len($updated) = 1 THEN
-	(DELETE caller_generation_publication
-		WHERE repository = $name RETURN BEFORE)
+	(` + callerDelete + ` RETURN BEFORE)
 	ELSE [] END;
+` + candidateWrite + `
 IF array::len($updated) = 1 {
-	DELETE $publication_rid RETURN NONE;
-	DELETE extraction_domain_outcome WHERE repo = $name RETURN NONE
+	` + outcomeDelete + ` RETURN NONE
 };
 LET $final = IF array::len($updated) = 1 AND $visibility_changed THEN
-	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
-		RETURN AFTER)
+	` + evidenceWrite + `
 	ELSE $updated END;
 LET $caller_revision = IF array::len($retired_caller) = 1 THEN
-	(UPDATE $rid SET caller_publication_revision =
-		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	` + callerWrite + `
 	ELSE [] END;
-LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
-	(SELECT id, created_at FROM resolver_catalog_job
-		WHERE pending_key = $name AND status = 'pending'
-		ORDER BY created_at LIMIT 1)[0].id
-	ELSE NONE END;
-LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
-	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true,
-			recovery_lease = NONE RETURN AFTER)
-	ELSE
-		(CREATE resolver_catalog_job CONTENT {
-			target: $name,
-			status: 'pending',
-			attempts: 0,
-			created_at: time::now(),
-			pending_key: $name,
-			force: true
-		} RETURN AFTER)
-	END;`+projectResolverJobSQL+`
+` + fanout + `
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_catalog) = 0
 		OR array::len($catalog_fanout) = 1)
 	AND (array::len($retired_caller) = 0
 		OR array::len($caller_revision) = 1)
 	THEN $final ELSE [] END;
-COMMIT;`,
-		map[string]any{
-			"rid":                      repoID(name),
-			"publication_rid":          candidateManifestPublicationID(name),
-			"catalog_rid":              resolverCatalogPublicationID(name),
-			"caller_rid":               callerGenerationPublicationID(name),
-			"name":                     name,
-			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
-			"caller_migration_version": callerGenerationPublicationMigrationVersion,
-		})
+COMMIT;`
+	results, err := storeQuery[[]Repo](ctx, s.accounting, s.db, statement, vars, descriptor)
 	if err != nil {
 		return err
 	}
@@ -2230,30 +2543,356 @@ COMMIT;`,
 	return nil
 }
 
+// The concrete census keeps native branch/value semantics. The
+// prior scope stays raw CBOR so an ordinary imported value is never coerced.
+// Six ID arrays accept one overflow sentinel apiece, not a response-byte or
+// scan bound. In particular the inherited ambiguous-run predicates still scan
+// their actual claimant sets.
+type repoIndexObservation struct {
+	Before    []cbor.RawMessage  `json:"before" cbor:"before"`
+	Branches  repoIndexBranches  `json:"branches" cbor:"branches"`
+	Catalogs  []models.RecordID  `json:"catalogs" cbor:"catalogs"`
+	Callers   []models.RecordID  `json:"callers" cbor:"callers"`
+	Published []models.RecordID  `json:"published" cbor:"published"`
+	Staged    []models.RecordID  `json:"staged" cbor:"staged"`
+	Attempts  []models.RecordID  `json:"attempts" cbor:"attempts"`
+	Outcomes  []models.RecordID  `json:"outcomes" cbor:"outcomes"`
+	Pending   []repoIndexPending `json:"pending" cbor:"pending"`
+}
+
+type repoIndexBranches struct {
+	Retire   *bool `json:"retire" cbor:"retire"`
+	Repair   *bool `json:"repair" cbor:"repair"`
+	Revision *bool `json:"revision" cbor:"revision"`
+	Outcomes *bool `json:"outcomes" cbor:"outcomes"`
+}
+
+type repoIndexPending struct {
+	ID         models.RecordID `json:"id" cbor:"id"`
+	Projection models.RecordID `json:"projection" cbor:"projection"`
+}
+
+func (c repoIndexObservation) writeRows() uint64 {
+	rows := uint64(1 + len(c.Catalogs) + len(c.Callers) + len(c.Published) +
+		len(c.Staged) + len(c.Attempts) + len(c.Outcomes))
+	if *c.Branches.Retire {
+		rows++ // supplied candidate-publication pointer
+	}
+	if *c.Branches.Revision {
+		rows++ // supplied repo evidence-revision UPDATE
+	}
+	if len(c.Callers) == 1 {
+		rows++ // supplied repo caller-revision UPDATE
+	}
+	if len(c.Catalogs) == 1 {
+		rows += 2 // actual pending ID or CREATE body, plus its supplied repo RID
+	}
+	return rows
+}
+
+const repoIndexPendingTargetSQL = `(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $name AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id`
+
+const repoIndexEvidenceWriteSQL = `(UPDATE $rid
+	SET evidence_revision = (evidence_revision ?? 0) + 1 RETURN AFTER)`
+
+const repoIndexCallerWriteSQL = `(UPDATE $rid
+	SET caller_publication_revision = (caller_publication_revision ?? 0) + 1 RETURN AFTER)`
+
+// Bounded mutations submit only the actual echoed branch operands. In
+// particular a pending UPDATE never carries an unused CREATE body, and an
+// inactive fanout carries neither a job nor a projection write.
+func repoIndexFanoutSQL(census repoIndexObservation, bounded bool) string {
+	const update = `(UPDATE $pending_catalog SET force = true, recovery_lease = NONE RETURN AFTER)`
+	const create = `(CREATE resolver_catalog_job CONTENT {
+		target: $name, status: 'pending', attempts: 0,
+		created_at: time::now(), pending_key: $name, force: true
+	} RETURN AFTER)`
+	if !bounded {
+		return `
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN ` + repoIndexPendingTargetSQL + ` ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN ` + update + ` ELSE ` + create + ` END;
+` + projectResolverJobSQL
+	}
+	if len(census.Catalogs) != 1 {
+		return "LET $pending_catalog = NONE; LET $catalog_fanout = [];"
+	}
+	write := create
+	if len(census.Pending) == 1 {
+		write = update
+	}
+	return `
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN $index_census.pending[0].id ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN [] ELSE ` + write + ` END;
+` + repoIndexResolverProjectionSQL
+}
+
+const repoIndexCensusFenceSQL = `
+IF $current_index_census != $index_census
+	OR array::len(array::distinct($index_census.catalogs)) != array::len($index_census.catalogs)
+	OR array::len(array::distinct($index_census.callers)) != array::len($index_census.callers)
+	OR array::len(array::distinct($index_census.published)) != array::len($index_census.published)
+	OR array::len(array::distinct($index_census.staged)) != array::len($index_census.staged)
+	OR array::len(array::distinct($index_census.attempts)) != array::len($index_census.attempts)
+	OR array::len(array::distinct($index_census.outcomes)) != array::len($index_census.outcomes) {
+	THROW 'phebs-conflict: repository index census changed'
+};
+`
+
+// Only the target expression differs from the shared domain projection. A
+// coalesced legacy pending row can name a repo other than its pending_key.
+const repoIndexResolverProjectionSQL = `
+LET $resolver_projected = IF array::len($catalog_fanout) = 1
+	THEN $catalog_fanout[0] ELSE NONE END;
+IF $resolver_projected != NONE {
+	UPDATE $index_projection
+	SET latest_resolver_job = $resolver_projected.id,
+		latest_resolver_job_created_at = $resolver_projected.created_at,
+		latest_resolver_job_projection_version = 't40r1-resolver-job-latest-v1'
+	WHERE latest_resolver_job_created_at = NONE
+		OR latest_resolver_job_created_at < $resolver_projected.created_at
+		OR (latest_resolver_job_created_at = $resolver_projected.created_at
+			AND latest_resolver_job < $resolver_projected.id)
+	RETURN NONE;
+};`
+
+func (s *Surreal) repoIndexCensus(ctx context.Context, vars map[string]any, clearing bool) (repoIndexObservation, string, error) {
+	unitValue := "NONE"
+	if _, ok := vars["unit"]; ok {
+		unitValue = "$unit"
+	}
+	branches := `
+LET $index_scope = ($index_before[0].indexed_commit_hash ?? '') = $hash
+	AND ($index_before[0].indexed_analysis_unit.digest ?? '') = $unit_digest;
+LET $index_repair = array::len($index_before) = 1 AND $index_scope
+	AND $index_before[0].indexed_analysis_unit != ` + unitValue + `;
+LET $index_branches = {
+	retire: array::len($index_before) = 1 AND (!$index_scope OR $index_repair),
+	repair: $index_repair,
+	revision: array::len($index_before) = 1 AND (!$index_scope OR $index_repair),
+	outcomes: $index_repair
+};
+`
+	if clearing {
+		branches = `
+LET $index_scope = false;
+LET $index_repair = false;
+LET $index_branches = {
+	retire: array::len($index_before) = 1,
+	repair: false,
+	revision: array::len($index_before) = 1 AND (
+		($index_before[0].indexed_commit_hash ?? '') != ''
+		OR $index_before[0].indexed_analysis_unit != NONE
+		OR array::len(SELECT id FROM $publication_rid) != 0
+		OR array::len(SELECT id FROM $catalog_rid) != 0
+		OR array::len(SELECT id FROM $caller_rid) != 0),
+	outcomes: array::len($index_before) = 1
+};
+`
+	}
+	evidenceSelections := `
+	published: (SELECT VALUE id FROM extraction_run
+		WHERE $index_branches.repair AND repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'published' AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format AND retention_quarantined = false
+			AND run_id = record::id(id) AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		ORDER BY id LIMIT 513),
+	staged: (SELECT VALUE id FROM extraction_run
+		WHERE $index_branches.repair AND repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'staged' AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format AND retention_quarantined = false
+			AND run_id = record::id(id) AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		ORDER BY id LIMIT 513),
+	attempts: (SELECT VALUE id FROM extraction_attempt
+		WHERE $index_branches.repair AND repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND store_schema_version = $evidence_store_schema AND evidence_format_version = $evidence_format
+			AND evidence_migration_version = $evidence_migration ORDER BY id LIMIT 513),
+`
+	if clearing {
+		evidenceSelections = "published: [], staged: [], attempts: [],"
+	}
+	sql := `
+LET $index_before = SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid;
+` + branches + `
+LET $index_catalogs = SELECT VALUE id FROM resolver_catalog_publication
+	WHERE $index_branches.retire AND repository = $name ORDER BY id LIMIT 513;
+LET $index_pending = SELECT id, type::record('repo', target) AS projection
+	FROM (SELECT id, created_at, target FROM resolver_catalog_job
+		WHERE array::len($index_catalogs) = 1 AND pending_key = $name AND status = 'pending'
+		ORDER BY created_at LIMIT 1);
+LET $current_index_census = {
+	before: $index_before,
+	branches: $index_branches,
+	catalogs: $index_catalogs,
+	callers: (SELECT VALUE id FROM caller_generation_publication
+		WHERE $index_branches.retire AND repository = $name ORDER BY id LIMIT 513),
+` + evidenceSelections + `
+	outcomes: (SELECT VALUE id FROM extraction_domain_outcome
+		WHERE $index_branches.outcomes AND repo = $name ORDER BY id LIMIT 513),
+	pending: $index_pending
+};
+`
+	results, err := storeQuery[[]repoIndexObservation](ctx, s.accounting, s.db,
+		sql+"RETURN [$current_index_census];", vars, storeRead())
+	if err != nil {
+		return repoIndexObservation{}, "", err
+	}
+	rows, err := generationCensusRows(ctx, results, 7)
+	if err != nil {
+		return repoIndexObservation{}, "", err
+	}
+	if len(rows) != 1 || rows[0].Before == nil || len(rows[0].Before) > 1 ||
+		rows[0].Branches.Retire == nil || rows[0].Branches.Repair == nil ||
+		rows[0].Branches.Revision == nil || rows[0].Branches.Outcomes == nil ||
+		rows[0].Pending == nil || len(rows[0].Pending) > 1 {
+		return repoIndexObservation{}, "", errors.New("repository index census: invalid observation")
+	}
+	census := rows[0]
+	if len(census.Before) == 1 && (len(census.Before[0]) == 0 || census.Before[0][0]>>5 != 5) ||
+		len(census.Before) == 0 && (*census.Branches.Retire || *census.Branches.Repair ||
+			*census.Branches.Revision || *census.Branches.Outcomes) ||
+		!*census.Branches.Retire && (len(census.Catalogs) != 0 || len(census.Callers) != 0) ||
+		!*census.Branches.Repair && (len(census.Published) != 0 || len(census.Staged) != 0 || len(census.Attempts) != 0) ||
+		!*census.Branches.Outcomes && len(census.Outcomes) != 0 ||
+		len(census.Catalogs) != 1 && len(census.Pending) != 0 ||
+		clearing && (*census.Branches.Repair || *census.Branches.Retire != (len(census.Before) == 1) ||
+			*census.Branches.Outcomes != *census.Branches.Retire) ||
+		!clearing && (*census.Branches.Revision != *census.Branches.Retire ||
+			*census.Branches.Outcomes != *census.Branches.Repair ||
+			*census.Branches.Repair && !*census.Branches.Retire) {
+		return repoIndexObservation{}, "", errors.New("repository index census: inconsistent branch")
+	}
+	for _, selection := range []struct {
+		ids   []models.RecordID
+		table string
+	}{
+		{census.Catalogs, "resolver_catalog_publication"},
+		{census.Callers, "caller_generation_publication"},
+		{census.Published, "extraction_run"}, {census.Staged, "extraction_run"},
+		{census.Attempts, "extraction_attempt"}, {census.Outcomes, "extraction_domain_outcome"},
+	} {
+		if selection.ids == nil || len(selection.ids) > restoreClearRows+1 {
+			return repoIndexObservation{}, "", errors.New("repository index census: invalid target array")
+		}
+		accepted := min(len(selection.ids), restoreClearRows)
+		if err := validateRestoreClearIDs(selection.ids[:accepted], selection.table, restoreClearRows); err != nil {
+			return repoIndexObservation{}, "", err
+		}
+		if accepted < len(selection.ids) {
+			if err := validateRestoreClearIDs(selection.ids[accepted:], selection.table, 1); err != nil {
+				return repoIndexObservation{}, "", err
+			}
+		}
+	}
+	vars["index_projection"] = vars["rid"] // a newly created successor uses the supplied name
+	if len(census.Pending) == 1 {
+		pending := census.Pending[0]
+		if err := validateRestoreClearIDs([]models.RecordID{pending.ID}, string(JobResolverCatalog), 1); err != nil {
+			return repoIndexObservation{}, "", err
+		}
+		if err := validateRestoreClearIDs([]models.RecordID{pending.Projection}, "repo", 1); err != nil {
+			return repoIndexObservation{}, "", err
+		}
+		vars["index_projection"] = pending.Projection
+	}
+	if err := ctx.Err(); err != nil {
+		return repoIndexObservation{}, "", err
+	}
+	return census, sql, nil
+}
+
 // --- connection membership + status ---
 
+const repoConnectionSelection = "SELECT VALUE id FROM repo_connection WHERE connection = $conn ORDER BY id LIMIT 513"
+const staleRepoConnectionSelection = "SELECT VALUE id FROM repo_connection WHERE connection NOT IN $keep ORDER BY id LIMIT 513"
+
+// Membership replacement stays atomic. The extra read supplies real deletion
+// operands; the transaction repeats it before deleting. Larger ordinary sets
+// retain the legacy transaction, while selected mode cannot guess their size.
+func (s *Surreal) repoConnectionCensus(ctx context.Context, selection string, vars map[string]any) ([]models.RecordID, error) {
+	results, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, selection, vars, storeRead())
+	if err != nil {
+		return nil, err
+	}
+	if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" ||
+		(*results)[0].Error != nil || (*results)[0].Result == nil {
+		return nil, errors.New("connection membership census is unavailable")
+	}
+	ids := (*results)[0].Result
+	if len(ids) > restoreClearRows+1 {
+		return nil, errors.New("connection membership census exceeds sentinel")
+	}
+	if len(ids) <= restoreClearRows {
+		if err := validateRestoreClearIDs(ids, "repo_connection", restoreClearRows); err != nil {
+			return nil, err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 func (s *Surreal) SetRepoConnections(ctx context.Context, conn string, repos []string) error {
-	_, err := surrealdb.Query[any](ctx, s.db, `
+	vars := map[string]any{"conn": conn, "repos": repos}
+	ids, err := s.repoConnectionCensus(ctx, repoConnectionSelection, vars)
+	if err != nil {
+		return err
+	}
+	if len(ids) == 0 && len(repos) == 0 {
+		return nil
+	}
+	statement := `
 BEGIN;
 DELETE repo_connection WHERE connection = $conn;
 FOR $r IN $repos { CREATE repo_connection CONTENT { connection: $conn, repo: $r } };
-COMMIT;`,
-		map[string]any{"conn": conn, "repos": repos})
+COMMIT;`
+	recipe := storeUnsupported()
+	if len(ids) <= restoreClearRows && len(repos) <= restoreClearRows-len(ids) {
+		vars["ids"] = ids
+		statement = `BEGIN;
+LET $actual = ` + repoConnectionSelection + `;
+IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
+ THROW 'phebs-conflict: connection membership census changed';
+};
+FOR $rid IN $ids { DELETE $rid RETURN NONE; };
+FOR $r IN $repos { CREATE repo_connection CONTENT { connection: $conn, repo: $r } };
+COMMIT;`
+		recipe = storeWrite(uint64(len(ids) + len(repos)))
+	}
+	_, err = storeQuery[any](ctx, s.accounting, s.db, statement, vars, recipe)
 	return err
 }
 
 func (s *Surreal) PruneConnections(ctx context.Context, keep []string) error {
-	_, err := surrealdb.Query[any](ctx, s.db,
-		"DELETE repo_connection WHERE connection NOT IN $keep",
-		map[string]any{"keep": keep})
+	vars := map[string]any{"keep": keep}
+	ids, err := s.repoConnectionCensus(ctx, staleRepoConnectionSelection, vars)
+	if err != nil || len(ids) == 0 {
+		return err
+	}
+	statement, recipe := "DELETE repo_connection WHERE connection NOT IN $keep", storeUnsupported()
+	if len(ids) <= restoreClearRows {
+		vars["ids"] = ids
+		statement = `BEGIN;
+LET $actual = ` + staleRepoConnectionSelection + `;
+IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
+ THROW 'phebs-conflict: connection prune census changed';
+};
+FOR $rid IN $ids { DELETE $rid RETURN NONE; };
+COMMIT;`
+		recipe = storeWrite(uint64(len(ids)))
+	}
+	_, err = storeQuery[any](ctx, s.accounting, s.db, statement, vars, recipe)
 	return err
 }
 
 func (s *Surreal) GetRepoConnections(ctx context.Context, repo string) ([]string, error) {
-	memb, err := surrealdb.Query[[]struct {
+	memb, err := storeQuery[[]struct {
 		Connection string `json:"connection"`
-	}](ctx, s.db, "SELECT connection FROM repo_connection WHERE repo = $repo",
-		map[string]any{"repo": repo})
+	}](ctx, s.accounting, s.db, "SELECT connection FROM repo_connection WHERE repo = $repo",
+		map[string]any{"repo": repo}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -2318,7 +2957,7 @@ func (s *Surreal) GetResolverJobProjection(
 	ctx context.Context,
 	repository string,
 ) (JobProjectionState, *ResolverJobProjection, error) {
-	results, err := surrealdb.Query[[]repoStatusRec](ctx, s.db, `
+	results, err := storeQuery[[]repoStatusRec](ctx, s.accounting, s.db, `
 		SELECT name, latest_resolver_job_projection_version, {
 			id: latest_resolver_job,
 			target: IF type::is_string(latest_resolver_job.target)
@@ -2333,7 +2972,7 @@ func (s *Surreal) GetResolverJobProjection(
 		} AS projected_resolver_job FROM $repository`, map[string]any{
 		"repository":            repoID(repository),
 		"max_target_characters": MaxJobHistoryTargetCharacters,
-	})
+	}, storeRead())
 	if err != nil {
 		return JobProjectionUnavailable, nil, fmt.Errorf(
 			"get resolver job projection: %w", err,
@@ -2360,7 +2999,7 @@ func (s *Surreal) GetCallerJobProjection(
 	ctx context.Context,
 	repository string,
 ) (JobProjectionState, *CallerJobProjection, error) {
-	results, err := surrealdb.Query[[]repoStatusRec](ctx, s.db, `
+	results, err := storeQuery[[]repoStatusRec](ctx, s.accounting, s.db, `
 		SELECT name, latest_caller_job_projection_version, {
 			id: latest_caller_job,
 			target: IF type::is_string(latest_caller_job.target)
@@ -2375,7 +3014,7 @@ func (s *Surreal) GetCallerJobProjection(
 		} AS projected_caller_job FROM $repository`, map[string]any{
 		"repository":            repoID(repository),
 		"max_target_characters": MaxJobHistoryTargetCharacters,
-	})
+	}, storeRead())
 	if err != nil {
 		return JobProjectionUnavailable, nil, fmt.Errorf(
 			"get caller job projection: %w", err,
@@ -2401,7 +3040,7 @@ func (s *Surreal) GetCallerJobProjection(
 // without this writer generation's CREATE projection is explicitly unavailable
 // until a new indexing job establishes current authority.
 func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
-	repoResults, err := surrealdb.Query[[]repoStatusRec](ctx, s.db,
+	repoResults, err := storeQuery[[]repoStatusRec](ctx, s.accounting, s.db,
 		`SELECT *, {
 			id: latest_index_job,
 			target: IF type::is_string(latest_index_job.target)
@@ -2474,7 +3113,7 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			"max_target_characters":     MaxJobHistoryTargetCharacters,
 			"max_error_characters":      MaxJobHistoryErrorCharacters,
 			"max_claimed_by_characters": MaxJobHistoryClaimedByCharacters,
-		})
+		}, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -2484,10 +3123,10 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			return nil, err
 		}
 	}
-	memb, err := surrealdb.Query[[]struct {
+	memb, err := storeQuery[[]struct {
 		Connection string `json:"connection"`
 		Repo       string `json:"repo"`
-	}](ctx, s.db, "SELECT connection, repo FROM repo_connection", nil)
+	}](ctx, s.accounting, s.db, "SELECT connection, repo FROM repo_connection", nil, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -2558,57 +3197,6 @@ func (j jobRec) toJob(kind JobKind) Job {
 	return out
 }
 
-// projectLatestIndexJobSQL is embedded in every generic queue transaction that
-// can create a job. Keeping the projection in those writer transactions avoids
-// replaying a table event for every retained job during a database restore.
-// Coalesced downstream rows are repaired separately below; an existing index
-// row deliberately does not establish current writer authority.
-const projectLatestIndexJobSQL = `
-IF $table = 'indexing_job' AND $created_job != NONE {
-	UPDATE type::record('repo', $target)
-	SET latest_index_job = $created_job.id,
-		latest_index_job_created_at = $created_job.created_at,
-		latest_index_job_projection_version = 't30.6n-indexing-job-latest-v1'
-	WHERE latest_index_job_created_at = NONE
-		OR latest_index_job_created_at < $created_job.created_at
-		OR (latest_index_job_created_at = $created_job.created_at
-			AND latest_index_job < $created_job.id)
-	RETURN NONE;
-};
-IF $table = 'extraction_job' AND $created_job != NONE {
-	UPDATE type::record('repo', $target)
-	SET latest_extraction_job = $created_job.id,
-		latest_extraction_job_created_at = $created_job.created_at,
-		latest_extraction_job_projection_version = 't40r1-extraction-job-latest-v1'
-	WHERE latest_extraction_job_created_at = NONE
-		OR latest_extraction_job_created_at < $created_job.created_at
-		OR (latest_extraction_job_created_at = $created_job.created_at
-			AND latest_extraction_job < $created_job.id)
-	RETURN NONE;
-};
-IF $table = 'caller_leaf_job' AND $created_job != NONE {
-	UPDATE type::record('repo', $target)
-	SET latest_caller_job = $created_job.id,
-		latest_caller_job_created_at = $created_job.created_at,
-		latest_caller_job_projection_version = 't40r1-caller-job-latest-v1'
-	WHERE latest_caller_job_created_at = NONE
-		OR latest_caller_job_created_at < $created_job.created_at
-		OR (latest_caller_job_created_at = $created_job.created_at
-			AND latest_caller_job < $created_job.id)
-	RETURN NONE;
-};
-IF $table = 'resolver_catalog_job' AND $created_job != NONE {
-	UPDATE type::record('repo', $target)
-	SET latest_resolver_job = $created_job.id,
-		latest_resolver_job_created_at = $created_job.created_at,
-		latest_resolver_job_projection_version = 't40r1-resolver-job-latest-v1'
-	WHERE latest_resolver_job_created_at = NONE
-		OR latest_resolver_job_created_at < $created_job.created_at
-		OR (latest_resolver_job_created_at = $created_job.created_at
-			AND latest_resolver_job < $created_job.id)
-	RETURN NONE;
-};`
-
 // projectExtractionJobSQL projects the exact extraction successor returned by
 // candidate publication. That transaction can create or coalesce the row, so
 // the returned row rather than job-table history is the current writer proof.
@@ -2627,8 +3215,8 @@ IF $extraction_projected != NONE {
 	RETURN NONE;
 };`
 
-// projectCallerJobSQL mirrors the caller_leaf_job arm of
-// projectLatestIndexJobSQL for domain transactions that create or coalesce a
+// projectCallerJobSQL mirrors the generic caller projection for domain
+// transactions that create or coalesce a
 // caller successor outside the generic queue. Projecting the exact returned
 // pending row also repairs a pre-projection job after an upgrade.
 const projectCallerJobSQL = `
@@ -2641,45 +3229,6 @@ IF $caller_projected != NONE {
 		OR latest_caller_job_created_at < $caller_projected.created_at
 		OR (latest_caller_job_created_at = $caller_projected.created_at
 			AND latest_caller_job < $caller_projected.id)
-	RETURN NONE;
-};`
-
-// projectExistingJobProjectionSQL is appended only where $job may be a
-// coalesced pending downstream row. Newly created jobs are already handled by
-// projectLatestIndexJobSQL; these arms establish the current writer marker for
-// the exact returned row without scanning job history.
-const projectExistingJobProjectionSQL = `
-IF $table = 'extraction_job' AND $created_job = NONE AND array::len($job) = 1 {
-	UPDATE type::record('repo', $target)
-	SET latest_extraction_job = $job[0].id,
-		latest_extraction_job_created_at = $job[0].created_at,
-		latest_extraction_job_projection_version = 't40r1-extraction-job-latest-v1'
-	WHERE latest_extraction_job_created_at = NONE
-		OR latest_extraction_job_created_at < $job[0].created_at
-		OR (latest_extraction_job_created_at = $job[0].created_at
-			AND latest_extraction_job < $job[0].id)
-	RETURN NONE;
-};
-IF $table = 'caller_leaf_job' AND $created_job = NONE AND array::len($job) = 1 {
-	UPDATE type::record('repo', $target)
-	SET latest_caller_job = $job[0].id,
-		latest_caller_job_created_at = $job[0].created_at,
-		latest_caller_job_projection_version = 't40r1-caller-job-latest-v1'
-	WHERE latest_caller_job_created_at = NONE
-		OR latest_caller_job_created_at < $job[0].created_at
-		OR (latest_caller_job_created_at = $job[0].created_at
-			AND latest_caller_job < $job[0].id)
-	RETURN NONE;
-};
-IF $table = 'resolver_catalog_job' AND $created_job = NONE AND array::len($job) = 1 {
-	UPDATE type::record('repo', $target)
-	SET latest_resolver_job = $job[0].id,
-		latest_resolver_job_created_at = $job[0].created_at,
-		latest_resolver_job_projection_version = 't40r1-resolver-job-latest-v1'
-	WHERE latest_resolver_job_created_at = NONE
-		OR latest_resolver_job_created_at < $job[0].created_at
-		OR (latest_resolver_job_created_at = $job[0].created_at
-			AND latest_resolver_job < $job[0].id)
 	RETURN NONE;
 };`
 
@@ -2707,15 +3256,15 @@ IF $resolver_projected != NONE {
 
 func (s *Surreal) CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error) {
 	created := time.Now().UTC()
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db,
 		`BEGIN;
 LET $created_job = (CREATE type::table($table) CONTENT {
 			target: $target, status: 'pending', attempts: 0,
 			created_at: $created, pending_key: $target, force: false
-		} RETURN AFTER)[0];`+projectLatestIndexJobSQL+`
+		} RETURN AFTER)[0];`+queueProjectionSQL(kind, false)+`
 RETURN [$created_job];
 COMMIT;`,
-		map[string]any{"table": string(kind), "target": target, "created": created})
+		map[string]any{"table": string(kind), "target": target, "created": created}, storeWrite(queueJobWriteRows(kind, false)))
 	if err != nil {
 		return nil, err
 	}
@@ -2727,28 +3276,116 @@ COMMIT;`,
 	return &out, nil
 }
 
-const enqueuePendingSQL = `
-BEGIN;
-LET $pending = (SELECT id, created_at FROM type::table($table)
+// The kind and observed branch are source-owned. Emit exactly one applicable
+// repo projection, never the other kinds' inactive UPDATE operands.
+func queueProjectionSQL(kind JobKind, pending bool) string {
+	field, version := "", ""
+	switch kind {
+	case JobIndex:
+		if pending {
+			return ""
+		}
+		field, version = "latest_index_job", "t30.6n-indexing-job-latest-v1"
+	case JobExtract:
+		field, version = "latest_extraction_job", "t40r1-extraction-job-latest-v1"
+	case JobCallerLeaf:
+		field, version = "latest_caller_job", "t40r1-caller-job-latest-v1"
+	case JobResolverCatalog:
+		field, version = "latest_resolver_job", "t40r1-resolver-job-latest-v1"
+	default:
+		return ""
+	}
+	row, guard := "$created_job", "$created_job != NONE"
+	if pending {
+		row, guard = "$job[0]", "$created_job = NONE AND array::len($job) = 1"
+	}
+	return fmt.Sprintf(`
+IF $table = '%s' AND %s {
+	UPDATE type::record('repo', $target)
+	SET %s = %s.id,
+		%s_created_at = %s.created_at,
+		%s_projection_version = '%s'
+	WHERE %s_created_at = NONE
+		OR %s_created_at < %s.created_at
+		OR (%s_created_at = %s.created_at
+			AND %s < %s.id)
+	RETURN NONE;
+};`, kind, guard, field, row, field, row, field, version,
+		field, field, row, field, row, field, row)
+}
+
+const queuePendingSelection = `SELECT id, created_at FROM type::table($table)
     WHERE pending_key = $target AND status = 'pending'
-    ORDER BY created_at LIMIT 1)[0].id;
-LET $job = IF $pending != NONE THEN
-    (UPDATE $pending SET force = IF $force THEN true ELSE force END,
-		recovery_lease = NONE, not_before = NONE RETURN AFTER)
-ELSE
-    (CREATE type::table($table) CONTENT {
+    ORDER BY created_at LIMIT 1`
+
+const queueRecoverySelection = `SELECT id, created_at FROM type::table($table)
+    WHERE pending_key = $target AND status = 'pending' AND recovery_lease = $lease
+    ORDER BY created_at LIMIT 1`
+
+// The generic projection recipes use the supplied $target, not a returned
+// job's target. Existing index jobs deliberately do not establish a projection.
+func queueJobWriteRows(kind JobKind, pending bool) uint64 {
+	rows := uint64(1) // supplied pending RID or the single CREATE body
+	if kind == JobExtract || kind == JobCallerLeaf || kind == JobResolverCatalog || kind == JobIndex && !pending {
+		rows++
+	}
+	return rows
+}
+
+func (s *Surreal) queuePendingIDs(ctx context.Context, kind JobKind, target, recoveryLease string) ([]models.RecordID, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	query := queuePendingSelection
+	if recoveryLease != "" {
+		query = queueRecoverySelection
+	}
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, query,
+		map[string]any{"table": string(kind), "target": target, "lease": recoveryLease}, storeRead())
+	if err != nil {
+		return nil, err
+	}
+	if results == nil || len(*results) != 1 || (*results)[0].Status != "OK" || (*results)[0].Error != nil || (*results)[0].Result == nil || len((*results)[0].Result) > 1 {
+		return nil, errors.New("invalid pending job census")
+	}
+	ids := make([]models.RecordID, 0, len((*results)[0].Result))
+	for _, row := range (*results)[0].Result {
+		if row.RecID == nil {
+			return nil, errors.New("pending job census has no record ID")
+		}
+		ids = append(ids, *row.RecID)
+	}
+	if err := validateRestoreClearIDs(ids, string(kind), 1); err != nil {
+		return nil, err
+	}
+	return ids, ctx.Err()
+}
+
+func enqueuePendingSQL(kind JobKind, pending bool) string {
+	write := `IF $pending = NONE THEN (CREATE type::table($table) CONTENT {
         target: $target,
         status: 'pending',
         attempts: 0,
         created_at: time::now(),
         pending_key: $target,
         force: $force
-    } RETURN AFTER)
-END;
-LET $created_job = IF $pending = NONE THEN $job[0] ELSE NONE END;` +
-	projectLatestIndexJobSQL + projectExistingJobProjectionSQL + `
+    } RETURN AFTER) ELSE [] END`
+	if pending {
+		write = `IF $pending != NONE THEN (UPDATE $pending SET force = IF $force THEN true ELSE force END,
+		recovery_lease = NONE, not_before = NONE RETURN AFTER) ELSE [] END`
+	}
+	return `
+BEGIN;
+LET $actual_pending = (` + queuePendingSelection + `)[0].id;
+IF $actual_pending != $pending_ids[0] {
+    THROW 'phebs-conflict: pending job census changed';
+};
+LET $pending = $pending_ids[0];
+LET $job = ` + write + `;
+LET $created_job = IF $pending = NONE THEN $job[0] ELSE NONE END;` + queueProjectionSQL(kind, pending) + `
 RETURN $job;
 COMMIT;`
+}
 
 const maxQueueRetries = 64
 
@@ -2759,8 +3396,15 @@ const maxQueueRetries = 64
 // the worker took its snapshot.
 func (s *Surreal) EnqueuePending(ctx context.Context, kind JobKind, target string, force bool) (*Job, error) {
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]jobRec](ctx, s.db, enqueuePendingSQL,
-			map[string]any{"table": string(kind), "target": target, "force": force})
+		ids, err := s.queuePendingIDs(ctx, kind, target, "")
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return nil, err
+		}
+		results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, enqueuePendingSQL(kind, len(ids) != 0),
+			map[string]any{"table": string(kind), "target": target, "force": force, "pending_ids": ids}, storeWrite(queueJobWriteRows(kind, len(ids) != 0)))
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
@@ -2776,18 +3420,8 @@ func (s *Surreal) EnqueuePending(ctx context.Context, kind JobKind, target strin
 	}
 }
 
-const ensureJobSuccessorSQL = `
-BEGIN;
-LET $owned = (SELECT id FROM type::record($id)
-    WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who)[0].id;
-LET $pending = (SELECT id, created_at FROM type::table($table)
-    WHERE pending_key = $target AND status = 'pending'
-    ORDER BY created_at LIMIT 1)[0].id;
-LET $job = IF $owned = NONE THEN []
-ELSE IF $pending != NONE THEN
-    (UPDATE $pending SET force = IF $force THEN true ELSE force END RETURN AFTER)
-ELSE
-    (CREATE type::table($table) CONTENT {
+func ensureJobSuccessorSQL(kind JobKind, pending bool) string {
+	write := `IF $owned != NONE AND $pending = NONE THEN (CREATE type::table($table) CONTENT {
         target: $target,
         status: 'pending',
         attempts: 0,
@@ -2795,12 +3429,24 @@ ELSE
         pending_key: $target,
         force: $force,
         recovery_lease: $lease
-    } RETURN AFTER)
-END;
-LET $created_job = IF $owned != NONE AND $pending = NONE THEN $job[0] ELSE NONE END;` +
-	projectLatestIndexJobSQL + projectExistingJobProjectionSQL + `
+    } RETURN AFTER) ELSE [] END`
+	if pending {
+		write = `IF $owned != NONE AND $pending != NONE THEN (UPDATE $pending SET force = IF $force THEN true ELSE force END RETURN AFTER) ELSE [] END`
+	}
+	return `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who)[0].id;
+LET $actual_pending = (` + queuePendingSelection + `)[0].id;
+IF $owned != NONE AND $actual_pending != $pending_ids[0] {
+    THROW 'phebs-conflict: pending job census changed';
+};
+LET $pending = $pending_ids[0];
+LET $job = ` + write + `;
+LET $created_job = IF $owned != NONE AND $pending = NONE THEN $job[0] ELSE NONE END;` + queueProjectionSQL(kind, pending) + `
 RETURN $job;
 COMMIT;`
+}
 
 // EnsureJobSuccessor creates a crash-recovery successor owned by this active
 // lease. It deliberately does not claim an already-pending event as recovery
@@ -2826,8 +3472,16 @@ func (s *Surreal) EnsureJobSuccessor(
 		"lease": job.LeaseToken, "who": job.ClaimedBy, "force": force,
 	}
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]jobRec](
-			ctx, s.db, ensureJobSuccessorSQL, vars,
+		ids, err := s.queuePendingIDs(ctx, job.Kind, job.Target, "")
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return nil, WithSuccessorRetry(err)
+		}
+		vars["pending_ids"] = ids
+		results, err := storeQuery[[]jobRec](
+			ctx, s.accounting, s.db, ensureJobSuccessorSQL(job.Kind, len(ids) != 0), vars, storeWrite(queueJobWriteRows(job.Kind, len(ids) != 0)),
 		)
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil &&
@@ -2912,7 +3566,7 @@ func (s *Surreal) ListJobsPage(ctx context.Context, query JobPageQuery) (*JobPag
 			FROM ` + cursorRecord.String() + `>..
 			ORDER BY id LIMIT $scan_limit`
 	}
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db, statement, vars)
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, statement, vars, storeRead())
 	if err != nil {
 		return nil, err
 	}
@@ -3046,8 +3700,8 @@ func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job,
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		res, err := surrealdb.Query[[]jobRec](ctx, s.db, claimCandidateSQL,
-			map[string]any{"table": string(kind)})
+		res, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, claimCandidateSQL,
+			map[string]any{"table": string(kind)}, storeRead())
 		if err != nil {
 			if isRetryable(err) {
 				continue
@@ -3074,8 +3728,8 @@ func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job,
 		if err != nil {
 			return nil, err
 		}
-		res, err = surrealdb.Query[[]jobRec](ctx, s.db, claimSelectedJobSQL,
-			map[string]any{"cand": *rows[0].RecID, "who": who, "lease": lease})
+		res, err = storeQuery[[]jobRec](ctx, s.accounting, s.db, claimSelectedJobSQL,
+			map[string]any{"cand": *rows[0].RecID, "who": who, "lease": lease}, storeWrite(1))
 		if err != nil {
 			if isRetryable(err) {
 				continue
@@ -3132,11 +3786,11 @@ func isRetryableEnqueue(err error) bool {
 }
 
 func (s *Surreal) countPending(ctx context.Context, kind JobKind) (int, error) {
-	res, err := surrealdb.Query[[]struct {
+	res, err := storeQuery[[]struct {
 		Count int `json:"count"`
-	}](ctx, s.db,
+	}](ctx, s.accounting, s.db,
 		"SELECT count() AS count FROM type::table($table) WHERE status = 'pending' AND (not_before = NONE OR not_before <= time::now()) GROUP ALL",
-		map[string]any{"table": string(kind)})
+		map[string]any{"table": string(kind)}, storeRead())
 	if err != nil {
 		return 0, err
 	}
@@ -3161,33 +3815,38 @@ func (s *Surreal) RequeueJob(ctx context.Context, job Job, errMsg string, notBef
 	return s.returnToPending(ctx, job, errMsg, notBefore, true, nil)
 }
 
-const failJobWithSuccessorSQL = `
-BEGIN;
-LET $owned = (SELECT id FROM type::record($id)
-    WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who)[0].id;
-LET $successor = (SELECT id, created_at FROM type::table($table)
-    WHERE pending_key = $target AND status = 'pending'
-    AND recovery_lease = $lease
-    ORDER BY created_at LIMIT 1)[0].id;
-LET $failed_successor = IF $owned != NONE AND $successor != NONE THEN
+func failJobWithSuccessorSQL(pending bool) string {
+	successor := "LET $failed_successor = [];"
+	write := `IF $owned != NONE AND $successor = NONE THEN (UPDATE type::record($id) SET status = 'failed', attempts = $attempts,
+        error = $err, not_before = NONE, finished_at = time::now(),
+        lease_token = NONE, pending_key = NONE
+     WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who
+     RETURN AFTER) ELSE [] END`
+	if pending {
+		successor = `LET $failed_successor = IF $owned != NONE AND $successor != NONE THEN
     (UPDATE $successor SET status = 'failed', attempts = $attempts,
         error = $err, not_before = NONE, finished_at = time::now(),
         pending_key = NONE RETURN AFTER)
 ELSE [] END;
-RETURN IF $owned = NONE THEN []
-ELSE IF $successor != NONE THEN
-    (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
+`
+		write = `IF $owned != NONE AND $successor != NONE THEN (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
         finished_at = time::now(), lease_token = NONE, pending_key = NONE
      WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who
-     RETURN AFTER)
-ELSE
-    (UPDATE type::record($id) SET status = 'failed', attempts = $attempts,
-        error = $err, not_before = NONE, finished_at = time::now(),
-        lease_token = NONE, pending_key = NONE
-     WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who
-     RETURN AFTER)
-END;
+     RETURN AFTER) ELSE [] END`
+	}
+	return `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who)[0].id;
+LET $actual_successor = (` + queueRecoverySelection + `)[0].id;
+IF $owned != NONE AND $actual_successor != $pending_ids[0] {
+    THROW 'phebs-conflict: pending job census changed';
+};
+LET $successor = $pending_ids[0];
+` + successor + `
+RETURN ` + write + `;
 COMMIT;`
+}
 
 // FailJobWithSuccessor exhausts an error returned after the handler created a
 // pending successor. It may consume only a row still carrying this exact
@@ -3209,8 +3868,16 @@ func (s *Surreal) FailJobWithSuccessor(
 		"superseded": "attempts exhausted by pending successor: " + errMsg,
 	}
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]jobRec](
-			ctx, s.db, failJobWithSuccessorSQL, vars,
+		ids, err := s.queuePendingIDs(ctx, job.Kind, job.Target, job.LeaseToken)
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return err
+		}
+		vars["pending_ids"] = ids
+		results, err := storeQuery[[]jobRec](
+			ctx, s.accounting, s.db, failJobWithSuccessorSQL(len(ids) != 0), vars, storeWrite(1+uint64(len(ids))),
 		)
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil &&
@@ -3232,31 +3899,37 @@ func (s *Surreal) ReleaseJob(ctx context.Context, job Job, errMsg string) error 
 	return s.returnToPending(ctx, job, errMsg, time.Time{}, false, nil)
 }
 
-const deferJobSQL = `
-BEGIN;
-LET $owned = (SELECT id FROM type::record($id)
-    WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who)[0].id;
-LET $successor = (SELECT id, created_at FROM type::table($table)
-    WHERE pending_key = $target AND status = 'pending'
-    ORDER BY created_at LIMIT 1)[0].id;
-LET $preserved_successor = IF $owned != NONE AND $successor != NONE THEN
-    (UPDATE $successor SET force = IF $force THEN true ELSE force END RETURN AFTER)
-ELSE [] END;
-RETURN IF $owned = NONE THEN []
-ELSE IF $successor != NONE THEN
-    (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
-        finished_at = time::now(), lease_token = NONE, pending_key = NONE
-     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
-     RETURN AFTER)
-ELSE
-	(UPDATE type::record($id) SET status = 'pending', error = $err,
+func deferJobSQL(pending bool) string {
+	successor := "LET $preserved_successor = [];"
+	write := `IF $owned != NONE AND $successor = NONE THEN (UPDATE type::record($id) SET status = 'pending', error = $err,
 		not_before = $nb, created_at = time::now(), claimed_by = NONE, claimed_at = NONE,
         heartbeat_at = NONE, lease_token = NONE, recovery_lease = NONE,
         finished_at = NONE, pending_key = $target
      WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
-     RETURN AFTER)
-END;
+     RETURN AFTER) ELSE [] END`
+	if pending {
+		successor = `LET $preserved_successor = IF $owned != NONE AND $successor != NONE THEN
+    (UPDATE $successor SET force = IF $force THEN true ELSE force END RETURN AFTER)
+ELSE [] END;
+`
+		write = `IF $owned != NONE AND $successor != NONE THEN (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
+        finished_at = time::now(), lease_token = NONE, pending_key = NONE
+     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+     RETURN AFTER) ELSE [] END`
+	}
+	return `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who)[0].id;
+LET $actual_successor = (` + queuePendingSelection + `)[0].id;
+IF $owned != NONE AND $actual_successor != $pending_ids[0] {
+    THROW 'phebs-conflict: pending job census changed';
+};
+LET $successor = $pending_ids[0];
+` + successor + `
+RETURN ` + write + `;
 COMMIT;`
+}
 
 // DeferJob returns an upstream-blocked active lease to pending without
 // consuming an attempt. If a real freshness event arrived while the handler
@@ -3283,7 +3956,15 @@ func (s *Surreal) DeferJob(
 			"err": errMsg, "nb": notBefore,
 			"superseded": "superseded by pending freshness event: " + errMsg,
 		}
-		results, err := surrealdb.Query[[]jobRec](ctx, s.db, deferJobSQL, vars)
+		ids, err := s.queuePendingIDs(ctx, job.Kind, job.Target, "")
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return time.Time{}, err
+		}
+		vars["pending_ids"] = ids
+		results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, deferJobSQL(len(ids) != 0), vars, storeWrite(1+uint64(len(ids))))
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil &&
 				attempt+1 < maxQueueRetries {
@@ -3328,15 +4009,18 @@ type heartbeatFence struct {
 
 // Compare heartbeat instants as epoch nanoseconds. Plain time.Time query
 // parameters do not round-trip as Surreal datetime values for equality.
-const returnToPendingSQL = `
-BEGIN;
-LET $owned = (SELECT id FROM type::record($id)
-    WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
-    AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff)))[0].id;
-LET $successor = (SELECT id, created_at FROM type::table($table)
-    WHERE pending_key = $target AND status = 'pending'
-    ORDER BY created_at LIMIT 1)[0].id;
-LET $merged = IF $owned != NONE AND $successor != NONE THEN
+func returnToPendingSQL(pending bool) string {
+	successor := "LET $merged = [];"
+	write := `IF $owned != NONE AND $successor = NONE THEN (UPDATE type::record($id) SET status = 'pending', attempts = $attempts, error = $err,
+        not_before = IF $increment THEN $nb ELSE NONE END,
+        claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE,
+        lease_token = NONE, recovery_lease = NONE,
+        finished_at = NONE, pending_key = $target
+     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+     AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff))
+     RETURN AFTER) ELSE [] END`
+	if pending {
+		successor = `LET $merged = IF $owned != NONE AND $successor != NONE THEN
     (UPDATE $successor SET
         force = IF $force THEN true ELSE force END,
         attempts = IF $increment THEN $attempts ELSE attempts END,
@@ -3345,24 +4029,27 @@ LET $merged = IF $owned != NONE AND $successor != NONE THEN
         recovery_lease = NONE
      RETURN AFTER)
 ELSE [] END;
-RETURN IF $owned = NONE THEN []
-ELSE IF $successor != NONE THEN
-    (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
+`
+		write = `IF $owned != NONE AND $successor != NONE THEN (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
         finished_at = time::now(), lease_token = NONE, pending_key = NONE
      WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
      AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff))
-     RETURN AFTER)
-ELSE
-    (UPDATE type::record($id) SET status = 'pending', attempts = $attempts, error = $err,
-        not_before = IF $increment THEN $nb ELSE NONE END,
-        claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE,
-        lease_token = NONE, recovery_lease = NONE,
-        finished_at = NONE, pending_key = $target
-     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
-     AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff))
-     RETURN AFTER)
-END;
+     RETURN AFTER) ELSE [] END`
+	}
+	return `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+    AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff)))[0].id;
+LET $actual_successor = (` + queuePendingSelection + `)[0].id;
+IF $owned != NONE AND $actual_successor != $pending_ids[0] {
+    THROW 'phebs-conflict: pending job census changed';
+};
+LET $successor = $pending_ids[0];
+` + successor + `
+RETURN ` + write + `;
 COMMIT;`
+}
 
 func (s *Surreal) returnToPending(ctx context.Context, job Job, errMsg string, notBefore time.Time, increment bool, fence *heartbeatFence) error {
 	if job.ID == "" || job.LeaseToken == "" || job.ClaimedBy == "" {
@@ -3389,7 +4076,15 @@ func (s *Surreal) returnToPending(ctx context.Context, job Job, errMsg string, n
 		vars["cutoff"] = fence.cutoff
 	}
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]jobRec](ctx, s.db, returnToPendingSQL, vars)
+		ids, err := s.queuePendingIDs(ctx, job.Kind, job.Target, "")
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return err
+		}
+		vars["pending_ids"] = ids
+		results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, returnToPendingSQL(len(ids) != 0), vars, storeWrite(1+uint64(len(ids))))
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
@@ -3422,11 +4117,42 @@ func btoi(value bool) int {
 }
 
 func (s *Surreal) CancelPendingJobs(ctx context.Context, kind JobKind, target string) (int, error) {
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
-		`UPDATE type::table($table) SET status = 'canceled', error = 'repository deleting',
+	vars := map[string]any{"table": string(kind), "target": target, "limit": restoreClearRows + 1}
+	selected, err := storeQuery[[]models.RecordID](ctx, s.accounting, s.db, cancelPendingJobSelection, vars, storeRead())
+	if err != nil {
+		return 0, err
+	}
+	if selected == nil || len(*selected) != 1 || (*selected)[0].Status != "OK" || (*selected)[0].Error != nil || (*selected)[0].Result == nil {
+		return 0, errors.New("invalid pending cancellation census")
+	}
+	ids := (*selected)[0].Result
+	if len(ids) > restoreClearRows+1 {
+		return 0, errors.New("pending cancellation census exceeds its bound")
+	}
+	if err := validateRestoreClearIDs(ids[:min(len(ids), restoreClearRows)], string(kind), restoreClearRows); err != nil {
+		return 0, err
+	}
+	if len(ids) > restoreClearRows {
+		if err := validateRestoreClearIDs(ids[restoreClearRows:], string(kind), 1); err != nil {
+			return 0, err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	statement := `UPDATE type::table($table) SET status = 'canceled', error = 'repository deleting',
 		 finished_at = time::now(), not_before = NONE, pending_key = NONE
-		 WHERE target = $target AND status = 'pending' RETURN AFTER`,
-		map[string]any{"table": string(kind), "target": target})
+		 WHERE target = $target AND status = 'pending' RETURN AFTER`
+	recipe := storeUnsupported()
+	if len(ids) <= restoreClearRows {
+		statement = cancelPendingJobsSelectedSQL
+		vars["ids"] = ids
+		recipe = storeWrite(uint64(len(ids)))
+	}
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, statement, vars, recipe)
 	if err != nil {
 		return 0, err
 	}
@@ -3436,6 +4162,19 @@ func (s *Surreal) CancelPendingJobs(ctx context.Context, kind JobKind, target st
 	}
 	return n, nil
 }
+
+const cancelPendingJobSelection = `SELECT VALUE id FROM type::table($table)
+    WHERE target = $target AND status = 'pending' ORDER BY id LIMIT $limit`
+
+const cancelPendingJobsSelectedSQL = `BEGIN;
+LET $actual = ` + cancelPendingJobSelection + `;
+IF $actual != $ids OR array::len(array::distinct($ids)) != array::len($ids) {
+    THROW 'phebs-conflict: pending cancellation census changed';
+};
+UPDATE $ids SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $target AND status = 'pending' RETURN AFTER;
+COMMIT;`
 
 const maxJobReapRows = 256
 
@@ -3459,8 +4198,8 @@ func (s *Surreal) ReapStale(ctx context.Context, kind JobKind, staleAfter time.D
 		WHERE status IN ['claimed', 'running']
 			AND heartbeat_at != NONE AND heartbeat_at < $cutoff
 		LIMIT $limit`, kind, kind)
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
-		statement, map[string]any{"cutoff": cutoff, "limit": maxJobReapRows})
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db,
+		statement, map[string]any{"cutoff": cutoff, "limit": maxJobReapRows}, storeRead())
 	if err != nil {
 		return 0, err
 	}
@@ -3526,7 +4265,7 @@ func (s *Surreal) updateLease(ctx context.Context, job Job, sql string, extra ma
 	for key, value := range extra {
 		vars[key] = value
 	}
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db, sql, vars)
+	results, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, sql, vars, storeWrite(1))
 	if err != nil {
 		return err
 	}

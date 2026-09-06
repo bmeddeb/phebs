@@ -38,8 +38,10 @@ func (owner GenerationOwner) Sweep(
 	}
 	defer release()
 	scanLimit := limits.Candidates
-	if scanLimit > MaxOwnerQueriesPerTick-1 {
-		scanLimit = MaxOwnerQueriesPerTick - 1
+	// Each candidate has a read-only eligibility/ID census and at most one
+	// guarded mutation. Keep the complete scan within the existing call cap.
+	if scanLimit > (MaxOwnerQueriesPerTick-1)/2 {
+		scanLimit = (MaxOwnerQueriesPerTick - 1) / 2
 	}
 	sweep, err := owner.Store.SweepGenerationScheduleLifecycle(
 		ctx, cursor, scanLimit, limits.Deletes, GenerationScheduleRetained,

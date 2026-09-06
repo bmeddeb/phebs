@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/fxamacker/cbor/v2"
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 	"github.com/surrealdb/surrealdb.go/surrealcbor"
 
@@ -60,11 +59,11 @@ func (s *Surreal) discardUnselectedServiceStateV3ForRestore(
 		ServiceKey string `json:"service_key"`
 	}
 	const maxRows = servicecatalogv3.MaxTotalServices * 2
-	rowResults, err := surrealdb.Query[[]stateKey](ctx, s.db, `
+	rowResults, err := storeQuery[[]stateKey](ctx, s.accounting, s.db, `
 SELECT repository, service_key FROM service_state_v3_current
 	ORDER BY repository, service_key LIMIT $limit`, map[string]any{
 		"limit": maxRows + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return fmt.Errorf("discard unselected service state v3: rows: %w", err)
 	}
@@ -75,11 +74,11 @@ SELECT repository, service_key FROM service_state_v3_current
 	type summaryKey struct {
 		Repository string `json:"repository"`
 	}
-	summaryResults, err := surrealdb.Query[[]summaryKey](ctx, s.db, `
+	summaryResults, err := storeQuery[[]summaryKey](ctx, s.accounting, s.db, `
 SELECT repository FROM service_state_v3_repository
 	ORDER BY repository LIMIT $limit`, map[string]any{
 		"limit": MaxServiceCatalogV3LifecycleRoots + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return fmt.Errorf("discard unselected service state v3: summaries: %w", err)
 	}
@@ -251,21 +250,23 @@ func (s *Surreal) restoreSelectedServiceStateV3Snapshot(
 	// imported native preimages are echoed without re-encoding their values.
 	for start := 0; start < len(future); start += restoreClearRows {
 		end := min(start+restoreClearRows, len(future))
-		vars["future_ids"], vars["expected_future"] = futureIDs[start:end], future[start:end]
-		if err := s.restoreClearWrite(ctx, restoreStateV3DeleteFutureSQL, vars); err != nil {
+		ids := futureIDs[start:end]
+		vars["future_ids"], vars["expected_future"] = ids, future[start:end]
+		if err := s.restoreClearWrite(ctx, restoreStateV3DeleteFutureSQL, vars, uint64(len(ids))); err != nil {
 			return err
 		}
 	}
 	delete(vars, "future_ids")
 	delete(vars, "expected_future")
 	for start := 0; start < len(updates); start += restoreClearRows / 2 {
-		vars["updates"] = updates[start:min(start+restoreClearRows/2, len(updates))]
-		if err := s.restoreClearWrite(ctx, restoreStateV3PairsSQL, vars); err != nil {
+		pairs := updates[start:min(start+restoreClearRows/2, len(updates))]
+		vars["updates"] = pairs
+		if err := s.restoreClearWrite(ctx, restoreStateV3PairsSQL, vars, uint64(2*len(pairs))); err != nil {
 			return err
 		}
 	}
 	delete(vars, "updates")
-	return s.restoreClearWrite(ctx, restoreStateV3SummarySQL, vars)
+	return s.restoreClearWrite(ctx, restoreStateV3SummarySQL, vars, uint64(1+len(summaryIDs)))
 }
 
 // Native raw values are kept for exact per-page comparison, not treated as new
@@ -274,7 +275,7 @@ func (s *Surreal) restoreStateV3RawRows(ctx context.Context, query string, vars 
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	results, err := surrealdb.Query[[]cbor.RawMessage](ctx, s.db, query, vars)
+	results, err := storeQuery[[]cbor.RawMessage](ctx, s.accounting, s.db, query, vars, storeRead())
 	if err != nil {
 		return nil, err
 	}
