@@ -13,14 +13,17 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
 const (
-	ProductionEnvironment = "PHEBS_T422_DISPATCH"
-	ProductionSelector    = "parent-bound-v1"
-	ProgramPhebs          = "phebs"
-	ProgramCorpusAuthor   = "t422-author"
-	ProductionSemanticV3  = "t422-phase-control-v3"
+	ProductionEnvironment   = "PHEBS_T422_DISPATCH"
+	ProductionSelector      = "parent-bound-v1"
+	ProductionStoreSelector = "parent-bound-store-v1"
+	ProgramPhebs            = "phebs"
+	ProgramCorpusAuthor     = "t422-author"
+	ProductionSemanticV3    = "t422-phase-control-v3"
 	// These are bootstrap construction ceilings, not frozen ceremony limits.
 	MaximumProductionBootstrapBytes = 64 << 10
 	ProductionBootstrapTimeout      = 10 * time.Second
@@ -37,7 +40,7 @@ type ProductionToolBinding struct {
 	Environment []string
 }
 
-// ProductionBootstrap binds both inherited endpoints to one producer lifetime.
+// ProductionBootstrap binds inherited endpoints to one producer lifetime.
 // Its complete canonical digest is acknowledged before ordinary DA01/PC01 use.
 // The caller supplies already-derived bounds; this value issues no freeze or
 // private tool/configuration admission and must come from the owning launcher.
@@ -50,9 +53,15 @@ type ProductionBootstrap struct {
 	Limits       Limits
 	Control      PhaseControlConfig
 	Tools        []ProductionToolBinding
+	// Omission preserves legacy canonical bytes. Only the store selector may
+	// carry the exact mechanical view returned with Transport.Open's endpoint.
+	Store *storeaccounting.ClientConfig `json:",omitempty"`
 }
 
 func (record ProductionBootstrap) validate() error {
+	if record.validateStore() != nil {
+		return ErrProductionBootstrap
+	}
 	sites, roles := ProductionSites(), []string{"git", "surreal", "zoekt-git-index"}
 	minimumRoles := 4
 	switch record.Program {
@@ -223,6 +232,8 @@ func bootstrapHeader(raw []byte, binding [32]byte) [productionBootstrapHeaderByt
 // endpoints. One bounded record and the two digest ACKs are bootstrap traffic,
 // not dispatches or DA01/PC01 frames.
 // The caller must already own the verified child image, inputs and both sockets.
+// If Store is present, its independently owned receiver must already be live:
+// the child completes SA01 Attach before either bootstrap ACK is sent.
 func SendProductionBootstrap(ctx context.Context, file, controlFile *os.File, record ProductionBootstrap) (retErr error) {
 	defer func() {
 		if retErr != nil {
@@ -295,8 +306,9 @@ func SendProductionBootstrap(ctx context.Context, file, controlFile *os.File, re
 
 // BootstrapProduction is called synchronously by early main, before any child
 // or worker starts. Missing selector performs one lookup and creates no state.
-// Exact mode consumes only FD3/FD4; both are adopted CLOEXEC before reading or
-// acknowledging a record. An invalid/failed selected bootstrap never falls back.
+// Legacy exact mode consumes FD3/FD4; the distinct store selector requires FD5
+// too. All selected endpoints are adopted CLOEXEC before reading or ACKing a
+// record. An invalid/failed selected bootstrap never falls back.
 // The private socket's trusted parent supplies authority; selector/record bytes
 // alone cannot issue any private admission or prove verified input provenance.
 func BootstrapProduction(ctx context.Context) (*ProductionLifetime, error) {
@@ -317,13 +329,18 @@ func bootstrapSelectedProgram(ctx context.Context, program string, required bool
 		}
 		return nil, nil
 	}
-	if selector != ProductionSelector || ctx == nil || ctx.Err() != nil || !productionBootstrapStarted.CompareAndSwap(false, true) {
+	storeSelected := selector == ProductionStoreSelector
+	if selector != ProductionSelector && !storeSelected || storeSelected && program != ProgramPhebs || ctx == nil || ctx.Err() != nil || !productionBootstrapStarted.CompareAndSwap(false, true) {
 		return nil, ErrProductionBootstrap
 	}
-	if !inheritedProductionSocket(3) || !inheritedProductionSocket(4) {
+	if !inheritedProductionSocket(3) || !inheritedProductionSocket(4) || storeSelected && !inheritedProductionSocket(5) {
 		return nil, ErrProductionBootstrap
 	}
-	return bootstrapProgram(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), program)
+	var storeFile *os.File
+	if storeSelected {
+		storeFile = os.NewFile(5, "production-store")
+	}
+	return bootstrapProgramWithStore(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), storeFile, program)
 }
 
 func bootstrapProduction(ctx context.Context, admissionFile, controlFile *os.File) (_ *ProductionLifetime, retErr error) {
@@ -331,11 +348,23 @@ func bootstrapProduction(ctx context.Context, admissionFile, controlFile *os.Fil
 }
 
 func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, program string) (_ *ProductionLifetime, retErr error) {
-	// Protect both original inherited handles before either can be handed to a
+	return bootstrapProgramWithStore(ctx, admissionFile, controlFile, nil, program)
+}
+
+func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, storeFile *os.File, program string) (_ *ProductionLifetime, retErr error) {
+	// Protect all selected inherited handles before any can be handed to a
 	// goroutine. No native launch occurs during this synchronous adoption.
 	admission, admissionErr := adopt(admissionFile)
 	control, controlErr := adopt(controlFile)
-	if admissionErr != nil || controlErr != nil {
+	var storeConn *net.UnixConn
+	var storeErr error
+	if storeFile != nil {
+		storeConn, storeErr = adopt(storeFile)
+	}
+	if storeConn != nil {
+		defer func() { _ = storeConn.Close() }()
+	}
+	if admissionErr != nil || controlErr != nil || storeErr != nil {
 		if admission != nil {
 			_ = admission.Close()
 		}
@@ -368,7 +397,7 @@ func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, 
 	var record ProductionBootstrap
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&record); err != nil || record.validate() != nil || record.Program != program {
+	if err := decoder.Decode(&record); err != nil || record.validate() != nil || record.Program != program || (record.Store != nil) != (storeConn != nil) {
 		return nil, ErrProductionBootstrap
 	}
 	canonical, err := json.Marshal(record)
@@ -392,8 +421,16 @@ func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, 
 		return nil, ErrProductionBootstrap
 	}
 	var lifetime *ProductionLifetime
+	var storeClient *storeaccounting.Client
+	var cancelStore context.CancelFunc
 	defer func() {
 		if retErr != nil {
+			if cancelStore != nil {
+				cancelStore()
+			}
+			if storeClient != nil {
+				_ = storeClient.Close(opCtx)
+			}
 			_ = client.fail(ErrProductionBootstrap)
 			_ = client.conn.Close()
 			if lifetime != nil {
@@ -401,6 +438,12 @@ func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, 
 			}
 		}
 	}()
+	if storeConn != nil {
+		storeClient, cancelStore, err = bootstrapStoreClient(opCtx, client.Context(), storeConn, *record.Store)
+		if err != nil {
+			return nil, ErrProductionBootstrap
+		}
+	}
 	controlFile, err = control.File()
 	if err != nil {
 		return nil, ErrProductionBootstrap
@@ -410,7 +453,8 @@ func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, 
 		return nil, ErrProductionBootstrap
 	}
 	lifetime = &ProductionLifetime{program: program, semanticMode: record.SemanticMode, producerID: record.Producer.ID,
-		inputSHA256: record.InputSHA256, client: client, controlDone: done, tools: make(map[string]ProductionToolBinding, len(record.Tools))}
+		inputSHA256: record.InputSHA256, client: client, controlDone: done, tools: make(map[string]ProductionToolBinding, len(record.Tools)),
+		storeClient: storeClient, cancelStore: cancelStore}
 	for _, tool := range record.Tools {
 		tool.Environment = slices.Clone(tool.Environment)
 		lifetime.tools[tool.Role] = tool

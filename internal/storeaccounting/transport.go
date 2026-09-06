@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/ownedpipe"
 )
 
 type wirePeer struct {
@@ -105,7 +105,7 @@ func (t *Transport) Open(producer uint32) (*os.File, ClientConfig, error) {
 	p.opened, p.done, p.config.Phase = true, make(chan struct{}), phase
 	config := p.config
 	t.mu.Unlock()
-	parent, child, err := dispatchadmission.NewPipe()
+	parent, child, err := ownedpipe.New()
 	if err == nil {
 		p.conn, err = adopt(parent)
 	}

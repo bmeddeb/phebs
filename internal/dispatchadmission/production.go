@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
 const (
@@ -76,6 +78,11 @@ type ProductionLifetime struct {
 	tools        map[string]ProductionToolBinding
 	closeOnce    sync.Once
 	closeErr     error
+	storeMu      sync.Mutex
+	storeClient  *storeaccounting.Client
+	cancelStore  context.CancelFunc
+	storeTaken   bool
+	storeClosed  bool
 }
 
 // ProductionSemanticSnapshot contains copied parent-bound launch identity and
@@ -246,6 +253,7 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		}
 		closeCtx, cancel := context.WithTimeout(ctx, lifetime.client.limits.AckTimeout)
 		defer cancel()
+		lifetime.closeErr = errors.Join(lifetime.closeErr, lifetime.closeStore(closeCtx))
 		lifetime.closeErr = errors.Join(lifetime.closeErr, lifetime.client.Close(closeCtx))
 		if lifetime.closeErr != nil {
 			// Release both transports even when accounting cannot close. The

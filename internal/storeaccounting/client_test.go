@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/ownedpipe"
 )
 
 func TestClientStrictACKAndCloseEOF(t *testing.T) {
 	for _, name := range []string{"op", "binding", "phase", "sequence", "kind", "rows", "token-zero", "lost-submit", "close-extra", "close-timeout", "close-eof", "cancel-in-ack"} {
 		t.Run(name, func(t *testing.T) {
-			parentFile, child, err := dispatchadmission.NewPipe()
+			parentFile, child, err := ownedpipe.New()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -154,7 +154,7 @@ func TestClientConstructorConsumesWrongFileAndInvalidConfig(t *testing.T) {
 	if _, err := regular.Stat(); err == nil {
 		t.Fatal("wrong file was not closed")
 	}
-	parent, child, err := dispatchadmission.NewPipe()
+	parent, child, err := ownedpipe.New()
 	if err != nil {
 		t.Fatal(err)
 	}

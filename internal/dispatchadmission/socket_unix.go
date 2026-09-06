@@ -5,6 +5,8 @@ package dispatchadmission
 import (
 	"os"
 	"syscall"
+
+	"github.com/bmeddeb/phebs/internal/ownedpipe"
 )
 
 // NewPipe creates an unnamed private bidirectional socket pair. Both ends are
@@ -12,18 +14,11 @@ import (
 // then close its copy immediately after successful Start. No path or listener
 // is created, and no ambient descriptor/environment is consulted.
 func NewPipe() (parent, child *os.File, err error) {
-	// Protect the non-atomic Darwin CLOEXEC setup against concurrent Go forks.
-	syscall.ForkLock.RLock()
-	fds, socketErr := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
-	if socketErr == nil {
-		syscall.CloseOnExec(fds[0])
-		syscall.CloseOnExec(fds[1])
-	}
-	syscall.ForkLock.RUnlock()
-	if socketErr != nil {
+	parent, child, err = ownedpipe.New()
+	if err != nil {
 		return nil, nil, ErrTransport
 	}
-	return os.NewFile(uintptr(fds[0]), "dispatch-parent"), os.NewFile(uintptr(fds[1]), "dispatch-child"), nil
+	return parent, child, nil
 }
 
 func protectInheritance(file *os.File) error {

@@ -5085,6 +5085,36 @@ reported all severity counts zero; documentation (0.635s), glossary and whitespa
 passed. Immutable-tree gates remain pending; PLAN records the added
 census/transaction costs and limitations.
 
+Exact migration commit `3bfeba4f23a193858add42aafc5461368eeb3ca5`
+passed detached-clean pure normal/race three-repeat in 0.671s/1.773s and its
+three native schema/backfill selectors in 2.193s/3.192s. Vet, pinned lint (zero
+findings), documentation (0.566s), glossary and whitespace passed; no engine
+survived and the checkout remained clean. This closes the source prerequisite's
+scoped immutable gates, not actual selected accounting or complete phase fit.
+
+The mechanical inherited store-channel bootstrap is independently reviewed with
+all severity counts zero. Its distinct selector requires FD5 and the exact
+parent-returned store record beside existing FD3/FD4, completes real SA01 Attach
+before either PB01 ACK, retains CLOEXEC descriptor ownership and the dispatch
+lifetime, and permits one opaque handoff. Live/unclaimed store closure refuses;
+it does not assert that SDK reads are drained. The existing socket-pair primitive
+is shared through one leaf package to avoid a store/dispatch import cycle.
+Whole dispatch/store-transport normal three-repeat passed in 9.767s/1.197s,
+race three-repeat in 14.720s/2.198s; focused withheld-Attach cancellation passed
+three repeats in 0.348s. Vet, pinned lint and whitespace passed. The first
+complete normal/race dispatch runs failed in 10.190s/13.855s only because the
+new test attempted a deadline on an unsupported raw os.File; adopting its
+diagnostic socket as the production net.UnixConn corrected the fixture.
+That failure changed no production code or native engine. Independent review
+also verified the unchanged legacy canonical omission and maximal 284-byte
+record increment. No helper remains. Owning-doc review found one low lifetime
+wording gap: the store cancellation context is retained, while only the
+bootstrap callback/channel is temporary. PLAN now distinguishes them.
+Documentation (0.606s), glossary and whitespace passed. Corrected owning-doc
+re-review reported all severity counts zero; documentation (0.546s), glossary
+and whitespace passed again. Immutable gates, genuine issuer/SDK-owner phase
+linkage and full execution proof remain pending.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
