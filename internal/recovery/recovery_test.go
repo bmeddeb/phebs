@@ -804,6 +804,9 @@ connections:
 	}); err != nil {
 		t.Fatalf("verify: %v", err)
 	}
+	// Recognized, digest-bound input plus Restore's source routing establishes
+	// this fixture's replay coverage, not an independent runtime branch trace.
+	recovery.AssertRestoreReplaySupportedForTest(ctx, t, backupDir, manifest)
 	if _, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{DataDir: dataDir, Config: configBytes, PhebsVersion: "test-version"},
 		Output:  backupDir,
@@ -829,6 +832,7 @@ connections:
 	}); err != nil {
 		t.Fatalf("restore: %v", err)
 	}
+	assertManifestDigests(t, backupDir, manifest, dataDir, origin, "SURREAL_PASS", `"root"`)
 	restored, err := store.OpenLocal(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)

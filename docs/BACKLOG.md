@@ -4636,6 +4636,54 @@ owning PLAN/BACKLOG/manual cost and scope record reported all severities zero;
 documentation (0.677s), glossary and whitespace passed. Exact immutable-commit
 attribution and complete Restore remain the next gates.
 
+Exact clear commit `4e2291350e07bf756ff74c6a624ee8dc7d3ca576` then passed
+the clean detached focused normal/race selectors (2.618s/4.181s), eight
+production-schema selectors (48.378s), nested resolver restore-clear (1.240s),
+store vet, pinned lint (zero issues), documentation (0.561s), glossary and
+whitespace. The checkout remained clean and every owned native process and
+connection joined. This closes those exact clear gates only.
+
+The following `codex/t42.2l-bounded-native-replay` slice implements ordinary
+same-format protected restore replay for the proven 3.2.0 export subset.
+Native feasibility first disproved two assumptions: aborted imports return
+HTTP 200 with failed statement/COMMIT results, and a fresh import engine needs
+namespace/database definitions before the first table. The implementation now
+strictly validates every native result and submits those two real metadata
+transactions explicitly. A fresh-scope proof passed in 1.443s. The corrected
+native transaction gate passed in 1.514s, preserving all 513 values across
+512/1-record units, ordinary guard behavior and rollback after a failed write.
+Native completed counters are diagnostic, not attempted-prefix evidence.
+
+The first full-owned replay failed before its first table on missing namespace;
+the corrected complete owned-schema replay passed in 22.756s, submitting
+716 definitions and 15 records in 718 archive units after the two metadata
+transactions. It checked all 82 tables before repair and retained the neutral
+repository after actual reopen. Both engines and all SDK connections joined.
+Final source-only time-field parsing, terminal no-op and duplicate cleanup
+corrections then passed pure normal and race selectors three times (2.558s and
+8.312s), vet, repository-pinned lint and whitespace. The native result predates
+those explicitly bounded corrections; independent final source/cost review,
+actual complete six-artifact Restore and exact committed gates remain open.
+Unsupported ordinary exports still use native fallback before submission;
+passing an older Restore test alone therefore does not establish protected-path
+coverage. Full exact-mode admission must refuse unsupported forms before target
+creation and still needs genuine parent-retained SDK/HTTP attempted-prefix
+accounting. No freeze, phase-wide ceiling pass or new archive format is claimed.
+
+Final replay source/test/cost/documentation review reported zero findings at
+all severities. A test-only bridge now makes the existing complete six-artifact
+test recognize and hash its actual Create-produced database artifact before
+ordinary Restore on the exact supported version/platform, closes that descriptor,
+and repeats the existing six-artifact digest assertion afterward. This proves
+recognized input plus deterministic source routing, not an independent runtime
+branch trace; other versions/platforms explicitly log that replay is unselected.
+Its small exact test diff passed independent review with all severities zero
+and compile-only testing (0.488s). It adds one database parse/hash and one
+six-artifact read/hash assertion to that test, no production work.
+Documentation (0.630s), glossary and whitespace also passed. Complete immutable
+candidate native/Restore gates remain pending; these review results do not
+supersede them.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

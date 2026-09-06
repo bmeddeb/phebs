@@ -106,6 +106,24 @@ committed page prefixes in its partial target. Keep that target offline and
 follow the existing quarantine/removal procedure before another restore;
 partial progress is never successful restored authority.
 
+For the recognized SurrealDB 3.2.0 export subset on Unix, restore preflights the
+complete database artifact, then replays unchanged native definitions and
+literal records through the same supervised engine in explicit transactions
+of one definition or at most 512 records. Fresh namespace/database setup adds
+two real definition transactions. The backup format and six artifacts do not
+change. Unsupported ordinary syntax, other engine versions and other platforms
+retain the existing native import path; cancellation, I/O or identity failure
+never selects fallback, and no fallback occurs after replay starts.
+
+Protected replay adds two streaming database parse/hash passes beyond Verify
+and a private one-unit scratch file. A large record or intervening trivia can
+make that scratch file large, up to the existing artifact limit; 512 records
+is not a byte or disk-space bound. HTTP/native errors, incomplete results,
+source drift or cancellation retain the failed target for inspection. Even
+HTTP 200 is not sufficient: every expected statement and COMMIT must succeed.
+The source archive must remain unchanged throughout restore; descriptor checks
+and hashes detect observed drift, not immutable custody against another writer.
+
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
 

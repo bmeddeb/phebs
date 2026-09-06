@@ -693,6 +693,27 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	// The native response/normalized-export subset is proven for this exact
+	// engine version. Other versions and unsupported ordinary exports retain
+	// the native CLI path. All recognized input is preflighted before target
+	// creation; I/O, cancellation, or identity errors never choose fallback.
+	var replay *preparedRestoreReplay
+	if restoreReplayNonblockingAvailable && manifest.Surreal.Version == "3.2.0" {
+		for _, artifact := range manifest.Inventory {
+			if artifact.Path != DatabaseName {
+				continue
+			}
+			replay, err = prepareRestoreReplay(ctx, filepath.Join(backup, DatabaseName), artifact)
+			var unsupported *restoreReplayUnsupported
+			if err != nil && !errors.As(err, &unsupported) {
+				return Manifest{}, fmt.Errorf("preflight SurrealDB replay: %w", err)
+			}
+			break
+		}
+	}
+	if replay != nil {
+		defer func() { _ = replay.close() }()
+	}
 	// Close the validation/use race before creating the target. Once import
 	// begins, any failure intentionally leaves a partial target that subsequent
 	// restores refuse until the operator explicitly quarantines or removes it.
@@ -724,12 +745,17 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if runtime.Surreal.Version != manifest.Surreal.Version || runtime.Surreal.SHA256 != manifest.Surreal.SHA256 {
 		return Manifest{}, errors.New("restore SurrealDB identity differs from verified manifest")
 	}
-	args := []string{
-		"import", "--endpoint", cliEndpoint(runtime.Endpoint),
-		"--namespace", manifest.Database.Namespace, "--database", manifest.Database.Database,
-		"--log", "none", filepath.Join(backup, DatabaseName),
+	if replay != nil {
+		err = executeRestoreReplay(ctx, replay, target, runtime.Endpoint, manifest.Database)
+	} else {
+		args := []string{
+			"import", "--endpoint", cliEndpoint(runtime.Endpoint),
+			"--namespace", manifest.Database.Namespace, "--database", manifest.Database.Database,
+			"--log", "none", filepath.Join(backup, DatabaseName),
+		}
+		err = runSurreal(ctx, runtime.Surreal.Path, args)
 	}
-	if err := runSurreal(ctx, runtime.Surreal.Path, args); err != nil {
+	if err != nil {
 		return Manifest{}, fmt.Errorf("import SurrealDB: %w", err)
 	}
 	stop()
@@ -1303,7 +1329,7 @@ func readManifest(path string) (Manifest, error) {
 	if err != nil || !info.Mode().IsRegular() || info.Size() > maxManifestBytes {
 		return Manifest{}, errors.New("backup manifest is missing, special, or exceeds its limit")
 	}
-	file, err := os.Open(path)
+	file, err := openRecoveryRegular(path)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("open backup manifest: %w", err)
 	}
@@ -1373,7 +1399,7 @@ func digestFile(ctx context.Context, path string, maxBytes int64) (string, error
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	file, err := os.Open(path)
+	file, err := openRecoveryRegular(path)
 	if err != nil {
 		return "", err
 	}
