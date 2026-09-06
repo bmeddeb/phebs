@@ -4853,6 +4853,30 @@ the diagnostic's distinct completed-KV semantics. Final owning documentation
 and immutable-tree gates remain pending; the real store collector and freeze
 are not established by these prerequisites.
 
+Exact local-scope commit `930b7b1817514fd0fd204f9eae73e627a3568fb6`
+then passed detached-clean local initialization and native handshake/Begin
+selectors in normal (2.093s) and race (4.513s) modes, vet, pinned lint,
+documentation (0.553s), glossary and whitespace. The checkout remained clean;
+all owned engines and selector processes joined. Independent owning
+documentation review closed all severity counts at zero. These close only
+the local-scope and diagnostic gates, not the full store accounting boundary.
+
+The bounded store-submission reducer is implemented independently of its
+forthcoming transport/SDK integration. It retains only fixed per-phase counts
+and live slots, preserves every accepted source attempt on failure, counts
+zero-row explicit Begin, enforces cumulative 512 rows per transaction and
+refuses live transaction carry across phases. Rejected descriptors and budgets
+add no invented counters. Global numeric tokens distinguish producer lifetimes;
+uncertain native completion retains reservations and latches incomplete.
+Independent source/test/cost review at
+`857f6a0f9c6a2ffde804f02f4096cdc38953e417b30abfb9c3c7814cfc161b85`
+and `e4ccd4a62cdfa5e0547e3b9b231d304a9cc1c31b83b2bd9138066247d46802ed`
+reported all severity counts zero. Normal twenty-repeat/race five-repeat gates
+passed (0.238s/1.248s), with a second root run (0.360s/1.298s), vet, pinned
+lint and whitespace clean. Its policy inputs are not genuine frozen admission;
+the parent channel, whole SDK-call drain, complete source descriptors, runtime
+work collectors, exact-tree gates and freeze remain open.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
