@@ -4713,6 +4713,15 @@ The owning digit-ID PLAN/backlog/manual record then passed independent review
 with all severity counts zero; documentation (0.628s), glossary and whitespace
 also passed. Corrected immutable-commit gates remain next.
 
+Exact corrected replay commit `2801f55d2923e9823bdcdd492df2622217dfc0ee`
+then passed the complete recovery package with native import probes enabled:
+normal 82.330s and race 87.837s. These include actual six-artifact backup,
+recognized replay, ordinary Restore, startup exact-search recovery, focused
+publication-byte preservation and refusal tests. Vet, pinned lint (zero issues),
+documentation (0.561s), glossary and whitespace passed in the clean detached
+checkout. This closes the corrected scoped recovery regression gates, not
+whole-phase accounting or complete executor/launcher readiness.
+
 The next `codex/t42.2l-store-failure-truth` slice selects the existing V3
 failure surface for an atomic incomplete-store metric family and a closed
 typed store-submission refusal. PLAN owns the exact linearization decision:
@@ -4747,6 +4756,32 @@ then passed clean detached focused normal/race selectors three times
 (0.592s/2.216s), vet, pinned lint (zero issues), documentation (0.526s),
 glossary and whitespace. The checkout remained clean. This closes the scoped
 immutable V3 failure-vocabulary gates, not the actual store submission channel.
+
+The same immutable store-failure commit separately passed retained V1/V2
+canonical-byte/validation selectors (11.247s) and the updated unsealed V3
+canonical contract selector (0.495s). The retained plan digests remain exact.
+
+The isolated SDK-control diagnostic first refused real native metric labels
+before any operation (1.145s). After admitting those observed labels, its
+BasicAuth scrape-only read control changed 9 to 10 with writes fixed at 14
+(1.352s); actual bearer authentication reproduced that read contamination
+(0.982s). Neither run reached causal SignIn/Use measurement. All owned engines
+and connections joined. The next explicit write-only probe preserves those
+failures, reports read attribution unavailable, requires unchanged writes on
+both sides of each operation and checks target existence independently before
+target SQL. Independent source/cost review of corrected test hash
+`c8edd9e658dd19e5e93740df5ab279ff5b639c691d4fc677c6db844a10f77eac`
+reported all severities zero. Its pure normal/race selectors passed three
+times (0.474s/1.575s), with pinned lint and whitespace clean. A prior low
+cleanup-reserve finding was corrected to one minute and independently closed.
+Owning documentation review and one immutable-source native diagnostic remain
+pending; no write-free SDK control classification or complete meter is claimed.
+
+Independent owning documentation review also closed all severities at zero.
+The eleven windows and 46 GETs count explicit diagnostic work only; native
+startup/version/readiness and SDK connection-bootstrap traffic still occur
+outside those windows. No native diagnostic result is established by this
+review.
 
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
