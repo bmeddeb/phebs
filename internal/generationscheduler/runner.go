@@ -45,6 +45,10 @@ type Class struct {
 	OnExhausted            ExhaustedHandler
 	BeforeLeaseHeartbeat   func(context.Context, store.GenerationChunk) error
 	OnStaleLeaseTransition store.GenerationStaleLeaseTransitionObserver
+	// ControlledRelease recognizes only a source-owned deliberate interruption.
+	// It runs after heartbeat join; refusal retains the unresolved lease and
+	// latches exact reporting rather than guessing a retry or completion.
+	ControlledRelease func(context.Context, store.GenerationChunk, error) (bool, error)
 }
 
 type Scheduler struct {
@@ -495,9 +499,29 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		}
 		return
 	}
-	if ctx.Err() != nil {
+	releaseCause := ctx.Err()
+	controlledRelease := false
+	if releaseCause == nil && handleErr != nil && configuration.ControlledRelease != nil {
+		release, err := configuration.ControlledRelease(ctx, chunk, handleErr)
+		if err != nil {
+			if scheduler.ChunkReportFailure != nil {
+				scheduler.ChunkReportFailure(err)
+			}
+			scheduler.report(fmt.Errorf("refuse controlled generation release: %w", err))
+			return
+		}
+		if release {
+			releaseCause = handleErr
+			controlledRelease = true
+		}
+	}
+	if releaseCause != nil {
 		outcome = "released"
-		if err := scheduler.Store.ReleaseGenerationChunk(writeCtx, chunk, ctx.Err().Error()); err != nil &&
+		err := scheduler.Store.ReleaseGenerationChunk(writeCtx, chunk, releaseCause.Error())
+		if controlledRelease && err != nil && scheduler.ChunkReportFailure != nil {
+			scheduler.ChunkReportFailure(err)
+		}
+		if err != nil &&
 			!errors.Is(err, store.ErrGenerationLeaseLost) && !errors.Is(err, store.ErrGenerationStale) {
 			if scheduler.ChunkReportFailure != nil {
 				outcome = "release_failed"

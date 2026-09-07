@@ -308,7 +308,8 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	switch path {
 	case api.ExtractionProgressPath, api.LifecycleStatusPath, t421ExactFinalAuthorityPath,
 		t421ExactTailReadinessPath, api.SearchPath, t421ProductServicePath, t421ProductRelationshipsPath,
-		t422MarkerHitPath, t422MarkerRecoveredPath, t422RetentionReadPath:
+		t422MarkerHitPath, t422MarkerRecoveredPath, t422RetentionReadPath,
+		t422ActivationHitPath, t422ActivationRecoveredPath:
 		return true
 	default:
 		return t422LifecycleRead(path)

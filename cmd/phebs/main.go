@@ -1117,6 +1117,15 @@ func serve(args []string) (retErr error) {
 		relationshipCache, relationshipV3Cache,
 	)
 	var markerControl *t422MarkerControl
+	var activationControl *t422ActivationControl
+	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 2 {
+		activationControl, err = newT422ActivationControl(ctx, semanticLaunch, serviceRuntime)
+		if err != nil {
+			return err
+		}
+		defer activationControl.cancel()
+		exactReadState.activation = activationControl
+	}
 	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 3 {
 		markerControl, err = newT422MarkerControl(ctx, semanticLaunch, relationshipRuntime, serviceRuntime, acquireObservationTransition)
 		if err != nil {
@@ -1369,6 +1378,11 @@ func serve(args []string) (retErr error) {
 		},
 	}
 	bindT422ExactChunkReports(exactReads, failExactRead, observationScheduler)
+	if activationControl != nil {
+		class := observationScheduler.Classes[store.GenerationResourceCPU]
+		class.ControlledRelease = activationControl.controlledRelease
+		observationScheduler.Classes[store.GenerationResourceCPU] = class
+	}
 	runBackground(func() {
 		if err := observationScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 			diagnostics.Logf("observation scheduler stopped: %v", err)

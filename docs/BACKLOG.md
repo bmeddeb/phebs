@@ -4586,6 +4586,27 @@ custody remains. The exact detached source stayed clean and the terminal log is
 retained outside it at `/private/tmp/phebs-t422-physical.78vVnJ/physical.log`,
 SHA-256 `ebafa21a10c8d713d6248d69a2a9d1b080ddeac19774f2b29e8a4c55b395eee9`.
 
+**T42.2l executor track — native logical activation control (2026-09-07).**
+Implement the selected producer-three/phase-five committed member-nine hook,
+authenticated exact hit/recovered reads and source-owned same-attempt scheduler
+release after heartbeat join. The hit must retain its native lease until its
+read/report tail joins; never drain its held owner first. Preserve ordinary
+nil-hook behavior, native release/reclaim semantics, unchanged attempt zero,
+target and four-hour deadline, with two five-read R observations. AC: exact
+target/phase refusal, cancellation and joined hit delivery, heartbeat/lease
+precedence, no retry/deferral substitution, native recovered shape, focused
+normal/race and independent OCR/cost review. Actual epoch-two handoff and
+logical-phase execution remain separate; no implementation or native pass is
+claimed by this prospective record.
+
+The implementation's focused command/scheduler checks passed normal (0.609s /
+0.782s) and three race repetitions (2.123s / 1.455s), plus changed-package vet,
+pinned lint (zero issues) and whitespace. The native committed-transition test
+now checks actual same-attempt release/reclaim and replay after the committed
+hook returns; it has not yet run on this candidate. Independent immutable-source
+OCR and that serial native gate remain open. This does not claim a selected
+bootstrap/HTTP/scheduler composition or completed logical phase.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

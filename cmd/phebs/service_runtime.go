@@ -62,7 +62,7 @@ type serviceRuntimeController struct {
 	// afterActivationTransitionCommit is installed only by the prospective
 	// exact-control path. It owns any reporting failure because the state chunk
 	// is already durable when this callback runs.
-	afterActivationTransitionCommit func(context.Context, store.GenerationChunk)
+	afterActivationTransitionCommit func(context.Context, store.GenerationChunk) error
 }
 
 func newServiceRuntimeController(
@@ -177,8 +177,7 @@ func (controller *serviceRuntimeController) ProcessServiceStateV3Chunk(
 		return result, err
 	}
 	if !result.Settled {
-		controller.reportActivationTransitionCommit(ctx, chunk, result)
-		return result, nil
+		return result, controller.reportActivationTransitionCommit(ctx, chunk, result)
 	}
 	err = controller.advanceLocked(ctx, chunk.Repository)
 	if errors.Is(err, errServiceRuntimeContinuation) {
@@ -193,15 +192,15 @@ func (controller *serviceRuntimeController) reportActivationTransitionCommit(
 	ctx context.Context,
 	chunk store.GenerationChunk,
 	result store.ServiceStateV3ChunkResult,
-) {
+) error {
 	if controller.afterActivationTransitionCommit == nil ||
 		chunk.Stage != store.ServiceStateV3ActivateStage ||
 		chunk.Offset != store.ServiceStateV3ActivationTransitionTargetOffset ||
 		chunk.Attempt != 0 || result.Read != store.MaxServiceStateV3ChunkRows ||
 		result.Applied != 1 {
-		return
+		return nil
 	}
-	controller.afterActivationTransitionCommit(ctx, chunk)
+	return controller.afterActivationTransitionCommit(ctx, chunk)
 }
 
 func advanceV2WithHolding(

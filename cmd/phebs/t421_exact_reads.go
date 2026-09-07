@@ -82,14 +82,15 @@ type t421ExactReadAccountingHandler struct {
 }
 
 type t421ExactReadAccountingState struct {
-	report    func([]byte) error
-	fail      func(error)
-	final     t421ExactFinalAuthorityRead
-	tail      t421ExactFinalAuthorityRead
-	semantic  *t422SemanticLaunch
-	marker    *t422MarkerControl
-	lifecycle *t422LifecycleControl
-	retention *t422RetentionControl
+	report     func([]byte) error
+	fail       func(error)
+	final      t421ExactFinalAuthorityRead
+	tail       t421ExactFinalAuthorityRead
+	semantic   *t422SemanticLaunch
+	marker     *t422MarkerControl
+	lifecycle  *t422LifecycleControl
+	retention  *t422RetentionControl
+	activation *t422ActivationControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -220,6 +221,11 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	nativeFailureStatus, nativeFailure := "marker_observation_refused", errT422MarkerControl
 	if nativeRead != nil {
 		limits, target = readaccounting.Counts{ControlFileReads: 5}, true
+	}
+	if activationRead := handler.state.activationRead(request); activationRead != nil {
+		nativeRead = activationRead
+		limits, target = readaccounting.Counts{StoreReadAttempts: store.ServiceStateV3ActivationTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "activation_observation_refused", errT422ActivationControl
 	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleRead(request.URL.Path) {
 		nativeRead = handler.state.lifecycle.read(request)

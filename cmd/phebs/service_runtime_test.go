@@ -146,19 +146,22 @@ func TestServiceStateV3ChunkWaitsForMutationFence(t *testing.T) {
 func TestServiceRuntimeReportsOnlyFreshActivationTransitionCommit(t *testing.T) {
 	var reported []store.GenerationChunk
 	controller := &serviceRuntimeController{
-		afterActivationTransitionCommit: func(_ context.Context, chunk store.GenerationChunk) {
+		afterActivationTransitionCommit: func(_ context.Context, chunk store.GenerationChunk) error {
 			reported = append(reported, chunk)
+			return nil
 		},
 	}
 	target := store.GenerationChunk{
 		Stage:  store.ServiceStateV3ActivateStage,
 		Offset: store.ServiceStateV3ActivationTransitionTargetOffset,
 	}
-	controller.reportActivationTransitionCommit(
+	if err := controller.reportActivationTransitionCommit(
 		t.Context(), target, store.ServiceStateV3ChunkResult{
 			Applied: 1, Read: store.MaxServiceStateV3ChunkRows,
 		},
-	)
+	); err != nil {
+		t.Fatal(err)
+	}
 	exact := store.ServiceStateV3ChunkResult{Applied: 1, Read: store.MaxServiceStateV3ChunkRows}
 	for _, changed := range []struct {
 		chunk  store.GenerationChunk
@@ -172,10 +175,17 @@ func TestServiceRuntimeReportsOnlyFreshActivationTransitionCommit(t *testing.T) 
 		{chunk: target, result: store.ServiceStateV3ChunkResult{Applied: 2, Read: store.MaxServiceStateV3ChunkRows}},
 		{chunk: target, result: store.ServiceStateV3ChunkResult{Applied: 1, Read: store.MaxServiceStateV3ChunkRows - 1}},
 	} {
-		controller.reportActivationTransitionCommit(t.Context(), changed.chunk, changed.result)
+		if err := controller.reportActivationTransitionCommit(t.Context(), changed.chunk, changed.result); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if len(reported) != 1 || reported[0] != target {
 		t.Fatalf("activation transition reports = %+v", reported)
+	}
+	owned := errors.New("private controlled interruption")
+	controller.afterActivationTransitionCommit = func(context.Context, store.GenerationChunk) error { return owned }
+	if err := controller.reportActivationTransitionCommit(t.Context(), target, exact); err != owned {
+		t.Fatal("committed callback lost exact owned error", err)
 	}
 }
 
@@ -320,6 +330,7 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 
 	locked := false
 	reports := 0
+	controlledStop := errors.New("native activation committed before controlled stop")
 	controller := &serviceRuntimeController{
 		store: st, selections: map[string]config.ServiceCatalog{},
 		acquire: func(context.Context) (func(), error) {
@@ -329,7 +340,7 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 			locked = true
 			return func() { locked = false }, nil
 		},
-		afterActivationTransitionCommit: func(callbackCtx context.Context, chunk store.GenerationChunk) {
+		afterActivationTransitionCommit: func(callbackCtx context.Context, chunk store.GenerationChunk) error {
 			reports++
 			if !locked || chunk.Identity != target.Identity {
 				t.Fatalf("activation callback lost commit lock or target: locked=%t chunk=%+v", locked, chunk)
@@ -341,10 +352,11 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 				point.ActiveCatalogGeneration != generationB.Root.Digest {
 				t.Fatalf("activation callback preceded durable member commit: %+v, %v", point, pointErr)
 			}
+			return controlledStop
 		},
 	}
 	result, err := controller.ProcessServiceStateV3Chunk(ctx, *target)
-	if err != nil || result.Settled || result.Read != store.MaxServiceStateV3ChunkRows ||
+	if err != controlledStop || result.Settled || result.Read != store.MaxServiceStateV3ChunkRows ||
 		result.Applied != 1 || reports != 1 || locked {
 		t.Fatalf("activation target = %+v, reports=%d, locked=%t, err=%v", result, reports, locked, err)
 	}
@@ -352,6 +364,23 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 	if err != nil || replay.Settled || replay.Read != 0 || replay.Applied != 0 ||
 		reports != 1 || locked {
 		t.Fatalf("activation replay = %+v, reports=%d, locked=%t, err=%v", replay, reports, locked, err)
+	}
+	// Exercise the same existing native settlement used by ControlledRelease:
+	// release/reclaim keeps offset and attempt zero, then the durable plan's
+	// point-read replay applies no member row and cannot hit the hook again.
+	if err := st.ReleaseGenerationChunk(ctx, *target, controlledStop.Error()); err != nil {
+		t.Fatal(err)
+	}
+	reclaimed, err := st.ClaimGenerationChunk(ctx, store.GenerationResourceCPU, "activation-resume")
+	if err != nil || reclaimed == nil || reclaimed.Identity != target.Identity || reclaimed.Attempt != 0 || reclaimed.Priority != store.GenerationPriorityStale || reclaimed.LeaseToken == target.LeaseToken {
+		t.Fatal("native controlled release did not reclaim the same attempt", reclaimed, err)
+	}
+	replay, err = controller.ProcessServiceStateV3Chunk(ctx, *reclaimed)
+	if err != nil || replay.Applied != 0 || replay.Read != 0 || reports != 1 {
+		t.Fatal("reclaimed activation replay rewrote or reported the committed member", replay, err)
+	}
+	if err := st.CompleteGenerationChunk(ctx, *reclaimed); err != nil {
+		t.Fatal(err)
 	}
 }
 
