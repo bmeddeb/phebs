@@ -4625,6 +4625,15 @@ and zero-write replay assertions. This is a test-only correction; production
 scheduler/release semantics and the selected hit/recovered contract are unchanged.
 The corrected immutable native gate remains pending.
 
+The first correction `2eb4d51b6fe3571b80d688eaa138676a2dcb6eba` still assumed
+only one remaining unit; its native run stopped in 12.47s (package 13.080s) when
+the finalization unit at offset eleven correctly won the next claim. The next
+test correction follows the actual returned schedule's TotalItems, processing
+each remaining untouched unit including finalization before the stale target.
+It validates each offset, schedule identity and priority and retains all original
+same-attempt/replay assertions. No production change or native pass is claimed
+by either failed test run.
+
 Its attempt-report prerequisite `5bddcc48b894ba7fdc06b8358288fff6d11ff75c`
 also passed independent OCR across all eight changed files, with all severity
 counts zero and its post-join/output-prefix cost pass complete. Combined
