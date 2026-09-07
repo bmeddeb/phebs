@@ -5814,7 +5814,14 @@ retry/exhaustion, cancellation, exact-512 and over-limit, and receipt-read
 checks passed normally in 0.648s and under race three times in 3.277s;
 unchanged fact-chunk identity and T20.2 production-ceiling checks passed in
 0.492s. Store vet, pinned lint (zero issues), docs (0.538s), glossary and
-whitespace passed. Immutable independent review remains open. These are
+whitespace passed. Independent review of exact source
+`e79f43389df897b8f1381bbc97837379efa40af1` covered all five files with zero
+critical/high/medium and one low documentation finding: ACK waits extend the
+sink mutex and logical accounting reservation, not this single-query native
+transaction. The owning ADR wording is corrected without changing source;
+the independent reviewer verified closure with no outstanding findings.
+Correction-tree docs (0.665s), glossary and whitespace passed.
+Exact-source docs (0.599s), glossary and whitespace also passed. These are
 scoped gates, not a full-store run or a cold/whole-phase acceptance result.
 
 The independent grouping audit found two reasons not to change 256 to 169
