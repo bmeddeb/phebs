@@ -24,18 +24,19 @@ type wirePeer struct {
 // Transport owns at most seven authenticated socket receivers. The caller
 // still owns genuine child launch/Wait and all SDK/read-tail drain. Do not copy.
 type Transport struct {
-	mu             sync.Mutex // short fixed-array state only; never held across socket I/O
-	controller     *Controller
-	ctx            context.Context
-	cancel         context.CancelFunc
-	stopController func() bool
-	controllerDone chan struct{}
-	peers          [MaximumProducers]wirePeer
-	count          int
-	bytes, limit   uint64
-	closing        bool
-	err            error
-	closeOnce      sync.Once
+	mu                sync.Mutex // short fixed-array state only; never held across socket I/O
+	controller        *Controller
+	ctx               context.Context
+	cancel            context.CancelFunc
+	stopController    func() bool
+	controllerDone    chan struct{}
+	peers             [MaximumProducers]wirePeer
+	count             int
+	bytes, limit      uint64
+	closing           bool
+	terminalSuccessor uint32 // One same-phase terminal cutover; guarded by mu.
+	err               error
+	closeOnce         sync.Once
 }
 
 type WireSnapshot struct {

@@ -5202,6 +5202,37 @@ claim, not just successful terminal targets. Native checkpoint/report-tail,
 phase binding, SDK/PC and owned-death composition remain unimplemented;
 immutable attribution and native phase-eight confirmation remain required.
 
+Exact EOF commit `c0e160d4afc497005efbf8148dff343ecb16f9aa` and heartbeat
+commit `101ce15798f073e0927ae71cffc2c6434162b33e` each received independent
+OCR coverage 5/5 including owning records, zero skipped and all severities zero.
+Root EOF regression passed 1.495s; root full scheduler passed 0.476s. Owning
+docs passed 0.574s/0.458s, with glossary and whitespace clean. The allocation
+probe remains author-reported, not an independent reviewer rerun.
+
+**T42.2l same-phase successor admission prerequisite (2026-09-07).**
+The actual local DA producer and SA transport can each reopen once after their
+proper terminal retirement, preserving the current phase and every accepted
+count. The local launcher must itself be checkpointed and empty; successor
+state must be unused, other attached lifetimes closed, and all reservations
+empty. Ordinary Resume and Advance are not weakened. SA still needs actual
+terminal receiver join, DA still needs exact native Wait/EOF retirement.
+
+AC: same-phase accumulation after cutover; preserved old producer, ordinals,
+digest and wire/row/transaction prefixes; wrong identity/phase, used successor,
+failure/cancellation and replay refusal. Tests use real tiny inherited DA
+checkpoint/owned kill/Wait and actual SA sockets; they do not prove a Phebs
+session, genuine SDK health or cross-controller atomicity. Initial focused
+normal DA/SA passed 0.347s/0.362s; SA race three times passed 1.320s, vet and
+pinned lint clean. Full DA and SA packages subsequently passed 3.706s/1.579s;
+DA focused race repeated three times passed 1.491s, with vet and pinned lint
+clean. Independent source review covered six files, zero skipped in scope and
+all severity counts zero. The APIs reopen global admission, not an exclusive
+successor reservation; no other producer may race the serialized outer flow.
+Owning-doc and immutable attribution remain required.
+The parent must prove whole-session emptiness, serialize both cutovers and
+latch any partial failure before starting epoch four. Full phase-eight launch
+and recovery remain separate work.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
