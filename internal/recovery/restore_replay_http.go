@@ -14,13 +14,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
 // executeRestoreReplay is the ordinary offline restore path for the proven
 // native export subset. There is no native CLI fallback after this boundary.
-// Its census is not a durable attempted-work meter: parent-owned attempt ACKs
-// remain a separate prerequisite for phase-wide hard-death evidence.
-func executeRestoreReplay(ctx context.Context, prepared *preparedRestoreReplay, target, endpoint string, database DatabaseIdentity) (resultErr error) {
+// Selected restore uses the authenticated store owner for parent-acknowledged
+// whole-request attempts; ordinary restore retains its nil-owner path.
+func executeRestoreReplay(ctx context.Context, prepared *preparedRestoreReplay, target, endpoint string, database DatabaseIdentity, owner *storeaccounting.SDKOwner) (resultErr error) {
 	if prepared == nil {
 		return errors.New("native replay preparation is required")
 	}
@@ -59,7 +61,7 @@ func executeRestoreReplay(ctx context.Context, prepared *preparedRestoreReplay, 
 	client := &http.Client{Transport: transport,
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	address.Path = "/sql"
-	if err := bootstrapRestoreReplay(ctx, client, address.String()); err != nil {
+	if err := bootstrapRestoreReplay(ctx, client, address.String(), owner); err != nil {
 		return err
 	}
 	address.Path = "/import"
@@ -71,7 +73,7 @@ func executeRestoreReplay(ctx context.Context, prepared *preparedRestoreReplay, 
 		if err != nil {
 			return fmt.Errorf("prepare native import unit: %w", err)
 		}
-		err = submitRestoreReplayUnit(ctx, client, address.String(), database, file, unit)
+		err = submitRestoreReplayUnit(ctx, client, address.String(), database, file, unit, owner)
 		if err := errors.Join(err, file.Close()); err != nil {
 			return fmt.Errorf("native import unit %d: %w", prepared.seen.Units, err)
 		}
@@ -81,21 +83,21 @@ func executeRestoreReplay(ctx context.Context, prepared *preparedRestoreReplay, 
 // Both source-owned metadata definitions are real writes, each in its own
 // explicit transaction with one submitted definition. They are not setup-
 // exempt work. No application tables or records are created by this bootstrap.
-func bootstrapRestoreReplay(ctx context.Context, client *http.Client, endpoint string) error {
+func bootstrapRestoreReplay(ctx context.Context, client *http.Client, endpoint string, owner *storeaccounting.SDKOwner) error {
 	for _, kind := range [...]string{"NAMESPACE", "DATABASE"} {
 		database := DatabaseIdentity{}
 		if kind == "DATABASE" {
 			database.Namespace = "phebs"
 		}
 		body := "BEGIN;\nDEFINE " + kind + " IF NOT EXISTS phebs;\nCOMMIT;"
-		if err := submitRestoreReplayRequest(ctx, client, endpoint, database, strings.NewReader(body), int64(len(body)), true, true); err != nil {
+		if err := submitRestoreReplayRequest(ctx, client, endpoint, database, strings.NewReader(body), int64(len(body)), true, true, 1, owner); err != nil {
 			return fmt.Errorf("native import %s bootstrap: %w", kind, err)
 		}
 	}
 	return nil
 }
 
-func submitRestoreReplayUnit(ctx context.Context, client *http.Client, endpoint string, database DatabaseIdentity, file *os.File, unit restoreReplayUnit) error {
+func submitRestoreReplayUnit(ctx context.Context, client *http.Client, endpoint string, database DatabaseIdentity, file *os.File, unit restoreReplayUnit, owner *storeaccounting.SDKOwner) error {
 	prefix, suffix := "OPTION IMPORT; BEGIN;\n", "\nCOMMIT;"
 	if !unit.Definition {
 		prefix += "INSERT ["
@@ -105,10 +107,14 @@ func submitRestoreReplayUnit(ctx context.Context, client *http.Client, endpoint 
 		strings.NewReader(prefix), io.NewSectionReader(file, unit.Span.Start, unit.Span.End-unit.Span.Start), strings.NewReader(suffix),
 	)
 	size := int64(len(prefix)+len(suffix)) + unit.Span.End - unit.Span.Start
-	return submitRestoreReplayRequest(ctx, client, endpoint, database, body, size, unit.Definition, false)
+	rows := uint64(unit.Count)
+	if unit.Definition {
+		rows = 1
+	}
+	return submitRestoreReplayRequest(ctx, client, endpoint, database, body, size, unit.Definition, false, rows, owner)
 }
 
-func submitRestoreReplayRequest(ctx context.Context, client *http.Client, endpoint string, database DatabaseIdentity, source io.Reader, size int64, definition, bootstrap bool) error {
+func submitRestoreReplayRequest(ctx context.Context, client *http.Client, endpoint string, database DatabaseIdentity, source io.Reader, size int64, definition, bootstrap bool, rows uint64, owner *storeaccounting.SDKOwner) error {
 	body := &restoreReplayRequestBody{reader: contextReader{ctx: ctx, reader: source}, done: make(chan struct{})}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, body)
 	if err != nil {
@@ -125,17 +131,26 @@ func submitRestoreReplayRequest(ctx context.Context, client *http.Client, endpoi
 	request.Header.Set("Accept", "application/json")
 	// POST has no GetBody or idempotency header. No application replay or
 	// redirect is permitted after an ambiguous HTTP failure.
-	response, err := client.Do(request)
-	if err == nil {
-		err = readRestoreReplayResponse(response, definition, bootstrap)
+	submit := func(ctx context.Context) error {
+		if owner != nil {
+			request = request.WithContext(ctx)
+		}
+		response, err := client.Do(request)
+		if err == nil {
+			err = readRestoreReplayResponse(response, definition, bootstrap)
+		}
+		// Transport owns Close even on error. Join its current body read before
+		// the caller closes the readonly spool, including early HTTP refusals.
+		<-body.done
+		if err != nil {
+			return fmt.Errorf("submit native import unit: %w", err)
+		}
+		return nil
 	}
-	// Transport owns Close even on error. Join its current body read before
-	// the caller closes the readonly spool, including early HTTP refusals.
-	<-body.done
-	if err != nil {
-		return fmt.Errorf("submit native import unit: %w", err)
+	if owner != nil {
+		return owner.RestoreReplayWrite(ctx, rows, submit)
 	}
-	return nil
+	return submit(ctx)
 }
 
 type restoreReplayRequestBody struct {

@@ -678,6 +678,10 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err := ctx.Err(); err != nil {
 		return Manifest{}, err
 	}
+	owner, err := dispatchadmission.ProcessStoreOwner()
+	if err != nil {
+		return Manifest{}, fmt.Errorf("admit restore store accounting: %w", err)
+	}
 	target, err := absoluteCleanPath("data directory", opts.DataDir)
 	if err != nil {
 		return Manifest{}, err
@@ -697,19 +701,9 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	// engine version. Other versions and unsupported ordinary exports retain
 	// the native CLI path. All recognized input is preflighted before target
 	// creation; I/O, cancellation, or identity errors never choose fallback.
-	var replay *preparedRestoreReplay
-	if restoreReplayNonblockingAvailable && manifest.Surreal.Version == "3.2.0" {
-		for _, artifact := range manifest.Inventory {
-			if artifact.Path != DatabaseName {
-				continue
-			}
-			replay, err = prepareRestoreReplay(ctx, filepath.Join(backup, DatabaseName), artifact)
-			var unsupported *restoreReplayUnsupported
-			if err != nil && !errors.As(err, &unsupported) {
-				return Manifest{}, fmt.Errorf("preflight SurrealDB replay: %w", err)
-			}
-			break
-		}
+	replay, err := prepareRestoreReplayForManifest(ctx, backup, manifest, owner)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("preflight SurrealDB replay: %w", err)
 	}
 	if replay != nil {
 		defer func() { _ = replay.close() }()
@@ -746,7 +740,7 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 		return Manifest{}, errors.New("restore SurrealDB identity differs from verified manifest")
 	}
 	if replay != nil {
-		err = executeRestoreReplay(ctx, replay, target, runtime.Endpoint, manifest.Database)
+		err = executeRestoreReplay(ctx, replay, target, runtime.Endpoint, manifest.Database, owner)
 	} else {
 		args := []string{
 			"import", "--endpoint", cliEndpoint(runtime.Endpoint),

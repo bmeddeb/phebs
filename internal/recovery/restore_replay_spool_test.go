@@ -129,7 +129,7 @@ func TestRestoreReplayHTTPTransport(t *testing.T) {
 			if err := os.WriteFile(retained, []byte("owned database prefix"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			err = executeRestoreReplay(t.Context(), prepared, target, strings.Replace(server.URL, "http://", "ws://", 1), DatabaseIdentity{Namespace: "phebs", Database: "phebs"})
+			err = executeRestoreReplay(t.Context(), prepared, target, strings.Replace(server.URL, "http://", "ws://", 1), DatabaseIdentity{Namespace: "phebs", Database: "phebs"}, nil)
 			wantCalls := int32(3)
 			if mode == "success" {
 				wantCalls = 5
@@ -244,7 +244,7 @@ func TestRestoreReplayHTTPCanceledAndEarlyRefusal(t *testing.T) {
 			if canceled {
 				cancel()
 			}
-			err = submitRestoreReplayUnit(ctx, &http.Client{Transport: transport}, server.URL, DatabaseIdentity{Namespace: "neutral", Database: "neutral"}, file, unit)
+			err = submitRestoreReplayUnit(ctx, &http.Client{Transport: transport}, server.URL, DatabaseIdentity{Namespace: "neutral", Database: "neutral"}, file, unit, nil)
 			if err == nil || (canceled && (!errors.Is(err, context.Canceled) || calls.Load() != 0)) {
 				t.Fatalf("canceled=%t error=%v calls=%d", canceled, err, calls.Load())
 			}
@@ -267,7 +267,7 @@ func TestRestoreReplayBootstrapFailureIsTerminal(t *testing.T) {
 	defer server.Close()
 	target := t.TempDir()
 	for range 2 {
-		if err := executeRestoreReplay(t.Context(), prepared, target, strings.Replace(server.URL, "http://", "ws://", 1), DatabaseIdentity{Namespace: "phebs", Database: "phebs"}); err == nil {
+		if err := executeRestoreReplay(t.Context(), prepared, target, strings.Replace(server.URL, "http://", "ws://", 1), DatabaseIdentity{Namespace: "phebs", Database: "phebs"}, nil); err == nil {
 			t.Fatal("failed namespace bootstrap was accepted")
 		}
 	}

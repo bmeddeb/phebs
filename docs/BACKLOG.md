@@ -4456,6 +4456,28 @@ owns the design and dependency order. Execution remains excluded.
   retained V1/V2 unchanged, exact invocation and custody/expiry handoff; no
   ceremony execution, Epic closure, release or scale claim.
 
+**T42.2l measurement track — restore attempted-prefix closure (2026-09-07).**
+Under Ben's two-track freeze orchestration, reuse the authenticated SDK owner
+and SA01 protocol for the existing native replay's two bootstrap SQL writes
+and each definition/INSERT import transaction. AC: submission acknowledged
+before HTTP; exact one-definition or bounded vector operand count; response
+and body-close validation before settlement; no retry after uncertainty;
+positive prefixes retained across cancellation/lost ACK/malformed or failed
+COMMIT; one-call restore capacity shared with SDK work; unsupported selected
+replay refuses before creating its target; ordinary nil-owner behavior stays
+exact. Existing archive format, 512-row maximum and phase ceilings remain
+unchanged. Focused normal/race, serial native replay, independent OCR/source/
+cost review and exact-source records are required. This slice does not launch
+restore producer eleven, complete whole-phase metrics or establish freeze.
+
+The implementation's focused store-accounting/recovery selectors passed normal
+(0.267s/1.063s) and three race repetitions (1.227s/5.618s), with scoped vet and
+whitespace green. The added opt-in selected-native replay test compiles but has
+not yet run. It requires five actual acknowledged transactions, 516 submitted
+rows, a 512-row maximum, drained owner and an independent 513-row native read.
+Immutable-source OCR, native replay and complete recovery regressions remain
+pending; these focused results do not claim producer-eleven admission.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

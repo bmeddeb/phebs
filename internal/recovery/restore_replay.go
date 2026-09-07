@@ -10,7 +10,10 @@ import (
 	"hash"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
 const (
@@ -73,6 +76,33 @@ type preparedRestoreReplay struct {
 	seen        restoreReplayCensus
 	terminal    error
 	spoolWriter *bufio.Writer
+}
+
+// A selected producer has no unaccounted native CLI fallback. Resolve support
+// and the complete source census before Restore creates any target or child.
+func prepareRestoreReplayForManifest(ctx context.Context, backup string, manifest Manifest, owner *storeaccounting.SDKOwner) (*preparedRestoreReplay, error) {
+	if owner != nil {
+		if err := owner.Check(ctx); err != nil {
+			return nil, err
+		}
+	}
+	if restoreReplayNonblockingAvailable && manifest.Surreal.Version == "3.2.0" {
+		for _, artifact := range manifest.Inventory {
+			if artifact.Path != DatabaseName {
+				continue
+			}
+			prepared, err := prepareRestoreReplay(ctx, filepath.Join(backup, DatabaseName), artifact)
+			var unsupported *restoreReplayUnsupported
+			if err != nil && errors.As(err, &unsupported) && owner == nil {
+				return nil, nil
+			}
+			return prepared, err
+		}
+	}
+	if owner != nil {
+		return nil, errors.New("selected restore requires supported bounded native replay")
+	}
+	return nil, nil
 }
 
 // prepareRestoreReplay fully scans and hashes the artifact before returning any

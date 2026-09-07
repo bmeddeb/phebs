@@ -157,6 +157,13 @@ exact original bytes. Unsupported ordinary syntax, other engine versions and oth
 retain the existing native import path; cancellation, I/O or identity failure
 never selects fallback, and no fallback occurs after replay starts.
 
+An authenticated selected-accounting restore refuses unsupported replay before
+creating the target. Each bootstrap or replay transaction is acknowledged by
+the existing parent-owned store ledger before HTTP submission and settles only
+after strict native results and joined body closure. A failed or uncertain
+submission retains its attempted prefix and cannot be retried on that owner.
+Ordinary restore retains its existing fallback and requires no accounting parent.
+
 Protected replay adds two streaming database parse/hash passes beyond Verify
 and a private one-unit scratch file. A large record or intervening trivia can
 make that scratch file large, up to the existing artifact limit; 512 records

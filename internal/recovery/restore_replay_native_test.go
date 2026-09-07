@@ -128,7 +128,7 @@ func TestRestoreReplayNativeOwnedExport(t *testing.T) {
 	if runtime.Surreal.Version != "3.2.0" {
 		t.Fatal("unproven native replay engine")
 	}
-	if err := executeRestoreReplay(ctx, prepared, target, runtime.Endpoint, DatabaseIdentity{Namespace: "phebs", Database: "phebs"}); err != nil {
+	if err := executeRestoreReplay(ctx, prepared, target, runtime.Endpoint, DatabaseIdentity{Namespace: "phebs", Database: "phebs"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	db, err := surrealdb.FromEndpointURLString(ctx, runtime.Endpoint)
