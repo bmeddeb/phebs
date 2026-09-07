@@ -5275,6 +5275,11 @@ so all fourteen previewed paths are accounted for. Final focused
 checkpoint/stale/semantic normal passed 1.125s, race three times 4.034s;
 vet, pinned lint, formatting and whitespace passed. Owning cost record charges
 native preparation locks/mutations and every enabled claim, not just the hit.
+Exact `791252efd6b6d01f5cf524e5c4fe76d7f08851d6` received independent
+OCR 9/9, critical/high/medium zero and one low cost-wording correction: only
+the new control-state mutex avoids native I/O/waits; existing preparation
+locks still span that work. The owning row is clarified without source change.
+Root regression passed 1.090s, docs 0.555s, glossary/whitespace clean.
 Epoch-four immutable target handoff and recovered R, parent owned death and
 same-phase launch, full native phase and immutable review remain required.
 
