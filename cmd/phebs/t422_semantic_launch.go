@@ -37,12 +37,13 @@ var errT422SemanticLaunch = errors.New("T42.2 semantic launch admission refused"
 // retains protected plan/config custody. No path, arbitrary phase list, prior
 // authority or restart claim is accepted before its native operation exists.
 type t422SemanticLaunchRequest struct {
-	Schema       string `json:"schema"`
-	Recipe       string `json:"recipe"`
-	PlanSHA256   string `json:"plan_sha256"`
-	ConfigSHA256 string `json:"config_sha256"`
-	ServerEpoch  uint64 `json:"server_epoch"`
-	Repository   string `json:"repository"`
+	Schema             string                       `json:"schema"`
+	Recipe             string                       `json:"recipe"`
+	PlanSHA256         string                       `json:"plan_sha256"`
+	ConfigSHA256       string                       `json:"config_sha256"`
+	ServerEpoch        uint64                       `json:"server_epoch"`
+	Repository         string                       `json:"repository"`
+	CheckpointRecovery *t422CheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -94,6 +95,10 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 		!t422SemanticDigest(request.PlanSHA256) || !t422SemanticDigest(request.ConfigSHA256) ||
 		!t422SemanticEpochPhase(request.ServerEpoch, snapshot.Phase, true) ||
 		request.Repository == "" || len(request.Repository) > 256 || strings.ContainsAny(request.Repository, "\x00\r\n") {
+		return nil, errT422SemanticLaunch
+	}
+	if request.CheckpointRecovery != nil && (request.ServerEpoch != 4 || snapshot.ProducerID != 5 || snapshot.Phase != 8 ||
+		!validT422CheckpointRecoveryInput(*request.CheckpointRecovery)) {
 		return nil, errT422SemanticLaunch
 	}
 	canonical, err := json.Marshal(request)
@@ -309,7 +314,7 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	case api.ExtractionProgressPath, api.LifecycleStatusPath, t421ExactFinalAuthorityPath,
 		t421ExactTailReadinessPath, api.SearchPath, t421ProductServicePath, t421ProductRelationshipsPath,
 		t422MarkerHitPath, t422MarkerRecoveredPath, t422RetentionReadPath,
-		t422ActivationHitPath, t422ActivationRecoveredPath, t422StaleHitPath, t422StaleRecoveredPath, t422CheckpointHitPath:
+		t422ActivationHitPath, t422ActivationRecoveredPath, t422StaleHitPath, t422StaleRecoveredPath, t422CheckpointHitPath, t422CheckpointRecoveredPath:
 		return true
 	default:
 		return t422LifecycleRead(path)

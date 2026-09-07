@@ -1126,6 +1126,7 @@ func serve(args []string) (retErr error) {
 	var activationControl *t422ActivationControl
 	var staleControl *t422StaleControl
 	var checkpointControl *t422CheckpointControl
+	var checkpointRecovery *t422CheckpointRecoveryControl
 	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 2 {
 		activationControl, err = newT422ActivationControl(ctx, semanticLaunch, serviceRuntime)
 		if err != nil {
@@ -1656,6 +1657,14 @@ func serve(args []string) (retErr error) {
 				}
 			}
 		}
+		if semanticLaunch != nil && semanticLaunch.request.CheckpointRecovery != nil {
+			checkpointRecovery, err = newT422CheckpointRecoveryControl(ctx, semanticLaunch, partitionReconciler)
+			if err != nil {
+				return err
+			}
+			defer checkpointRecovery.cancel()
+			exactReadState.checkpointRecovery = checkpointRecovery
+		}
 		candidateWorker.Diagnostics = cfg.Diagnostics.Candidates
 		if err := enqueueCandidateBackfillWithReadiness(
 			ctx, st, candidateWorker.PolicyDigest(), func(repository string) bool {
@@ -1806,6 +1815,11 @@ func serve(args []string) (retErr error) {
 			partitionScheduler.Classes[store.GenerationResourceExtraction] = class
 		}
 		bindT422ExactChunkReports(exactReads, failExactRead, partitionScheduler)
+		if checkpointRecovery != nil {
+			class := partitionScheduler.Classes[store.GenerationResourceExtraction]
+			class.OnStaleLeaseTransition = checkpointRecovery.transition
+			partitionScheduler.Classes[store.GenerationResourceExtraction] = class
+		}
 		attemptReports.bindChunk(partitionScheduler)
 		runBackground(func() {
 			if err := partitionScheduler.Run(ctx); err != nil && ctx.Err() == nil {
@@ -2200,6 +2214,7 @@ func serve(args []string) (retErr error) {
 		}
 		reader.stale = staleControl
 		reader.checkpoint = checkpointControl
+		reader.checkpointRecovery = checkpointRecovery
 		tailReadiness = t421ExactFinalAuthorityRead{
 			Limits: t421TailReadinessLimits(), Read: reader.ReadTailReadiness,
 		}

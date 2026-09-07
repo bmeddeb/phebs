@@ -82,17 +82,18 @@ type t421ExactReadAccountingHandler struct {
 }
 
 type t421ExactReadAccountingState struct {
-	report     func([]byte) error
-	fail       func(error)
-	final      t421ExactFinalAuthorityRead
-	tail       t421ExactFinalAuthorityRead
-	semantic   *t422SemanticLaunch
-	marker     *t422MarkerControl
-	lifecycle  *t422LifecycleControl
-	retention  *t422RetentionControl
-	activation *t422ActivationControl
-	stale      *t422StaleControl
-	checkpoint *t422CheckpointControl
+	report             func([]byte) error
+	fail               func(error)
+	final              t421ExactFinalAuthorityRead
+	tail               t421ExactFinalAuthorityRead
+	semantic           *t422SemanticLaunch
+	marker             *t422MarkerControl
+	lifecycle          *t422LifecycleControl
+	retention          *t422RetentionControl
+	activation         *t422ActivationControl
+	stale              *t422StaleControl
+	checkpoint         *t422CheckpointControl
+	checkpointRecovery *t422CheckpointRecoveryControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -248,6 +249,12 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.CheckpointRestartTransitionControlFileReads,
 			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
 		nativeFailureStatus, nativeFailure = "checkpoint_observation_refused", errT422StaleControl
+	}
+	if recoveredRead := handler.state.checkpointRecoveredRead(request); recoveredRead != nil {
+		nativeRead = recoveredRead
+		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.CheckpointRestartTransitionControlFileReads,
+			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "checkpoint_recovery_refused", errT422StaleControl
 	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleRead(request.URL.Path) {
 		nativeRead = handler.state.lifecycle.read(request)

@@ -5307,6 +5307,36 @@ tests establish neither Phebs checkpoint/SDK health nor lossless output,
 accounting closure, successor launch or full phase. Immutable attribution and
 the owning parent composition remain required.
 
+Exact owned-process commit `ecbda85b3c5e381b34ef809b33d9c647ea138060`
+received independent OCR 6/6, zero skipped and all severities zero. Root
+terminal/session regression passed 1.384s, docs 0.535s, glossary/whitespace
+clean. Exact-tree `make ci-static` passed repository-wide vet, pinned lint
+(zero issues), compile-only package checks and glossary verification.
+Complete race packages passed dispatchadmission 6.074s, generationscheduler
+1.432s and storeaccounting 3.107s. These are not full Go/native merge gates.
+
+**T42.2l checkpoint recovery child prerequisite (2026-09-07).** Epoch four
+accepts only the canonical optional prior-F/nine-root/offset/public-hit input
+bound to its actual producer-five phase-eight bootstrap. Native callbacks
+retain old/new private lease identity, wait for the actual committed requeue
+callback and release the completed worker only after recovered R's report
+tail. The actual reader still requires all 56 chunks settled successfully;
+no polling, inferred requeue or extended five-second callback is introduced.
+Final native F compares the full carried authority and ordered roots.
+
+AC: omitted-input byte preservation, strict canonical/binding/shape refusals,
+maximum-shaped 14,299/16,384-byte input, every recovered-value field mutation,
+and inherited callback-before-requeue/cancellation/lease/sink/final mismatch
+checks. Supplied native-shaped events and R values prove mechanics only.
+Author focused checkpoint/stale/semantic normal passed 1.150s and race three
+times 4.999s; vet, pinned lint, formatting and whitespace passed. Root copied
+the same source bytes: focused normal passed 1.235s, the complete command
+package 82.850s and the independent maximum-input gate 0.586s. Docs passed
+0.612s, glossary/whitespace clean. Independent OCR covered all seven authored
+files (including both excluded tests), zero skipped and all severity counts
+zero. Immutable attribution, parent restart composition, actual native
+all-success recovery and full metrics remain open.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
