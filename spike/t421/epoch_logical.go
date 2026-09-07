@@ -12,6 +12,9 @@ func (run *ExecutionEpochOneRun) producer() uint32 {
 	if run.epoch.Epoch == 2 {
 		return 3
 	}
+	if run.epoch.Epoch == 3 {
+		return 4
+	}
 	return 2
 }
 

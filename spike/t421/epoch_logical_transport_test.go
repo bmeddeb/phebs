@@ -42,6 +42,14 @@ func TestExecutionEpochLogicalTransportHelper(t *testing.T) {
 }
 
 func TestExecutionEpochLogicalInheritedSuccessor(t *testing.T) {
+	testExecutionEpochInheritedSuccessor(t, false)
+}
+
+func TestExecutionEpochReturnInheritedSuccessor(t *testing.T) {
+	testExecutionEpochInheritedSuccessor(t, true)
+}
+
+func testExecutionEpochInheritedSuccessor(t *testing.T, returning bool) {
 	for _, mode := range []string{"joined", "canceled_handoff"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 25*time.Second)
@@ -49,9 +57,15 @@ func TestExecutionEpochLogicalInheritedSuccessor(t *testing.T) {
 			site := dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}
 			root := dispatchadmission.Producer{ID: 1, Binding: [32]byte{1}, Sites: []dispatchadmission.Site{site}}
 			servers := []dispatchadmission.Producer{{ID: 2, Binding: [32]byte{2}, Sites: dispatchadmission.ProductionSites()}, {ID: 3, Binding: [32]byte{3}, Sites: dispatchadmission.ProductionSites()}}
+			phaseIDs := []uint32{2, 3, 4, 5}
+			firstPhase := uint32(4)
+			if returning {
+				servers[0].ID, servers[1].ID = 3, 4
+				phaseIDs, firstPhase = []uint32{5, 6, 7, 8}, 5
+			}
 			limits := dispatchadmission.Limits{Producers: 3, Sites: 33, Roles: 5, Phases: 4, ActivePerProducer: 1, Attempts: 2, WireBytes: 8192, AckTimeout: 5 * time.Second}
 			phases := []dispatchadmission.Phase{}
-			for _, id := range []uint32{2, 3, 4, 5} {
+			for _, id := range phaseIDs {
 				phases = append(phases, dispatchadmission.Phase{ID: id, Roles: []dispatchadmission.RoleBudget{{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}, {Role: executionRolePhebs, Attempts: 1}}})
 			}
 			da, err := dispatchadmission.New(ctx, dispatchadmission.Config{Limits: limits, Producers: append([]dispatchadmission.Producer{root}, servers...), Phases: phases})
@@ -63,23 +77,31 @@ func TestExecutionEpochLogicalInheritedSuccessor(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = parent.Close(context.Background()) }()
-			sa, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: []storeaccounting.Producer{{ID: 2, Calls: 40, Transactions: 2}, {ID: 3, Calls: 40, Transactions: 2}}, Phases: []storeaccounting.Phase{{ID: 2}, {ID: 3}, {ID: 4}, {ID: 5}}})
+			saPhases := []storeaccounting.Phase{}
+			for _, id := range phaseIDs {
+				saPhases = append(saPhases, storeaccounting.Phase{ID: id})
+			}
+			sa, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: []storeaccounting.Producer{{ID: servers[0].ID, Calls: 40, Transactions: 2}, {ID: servers[1].ID, Calls: 40, Transactions: 2}}, Phases: saPhases})
 			if err != nil {
 				t.Fatal(err)
 			}
-			transport, err := storeaccounting.NewTransport(ctx, sa, storeaccounting.WireConfig{Producers: []storeaccounting.WireProducer{{ID: 2, Binding: servers[0].Binding, Phases: 14}, {ID: 3, Binding: servers[1].Binding, Phases: 1 << 4}}, AckTimeout: 5 * time.Second})
+			masks := []uint16{14, 1 << 4}
+			if returning {
+				masks = []uint16{1 << 4, 1<<5 | 1<<6 | 1<<7}
+			}
+			transport, err := storeaccounting.NewTransport(ctx, sa, storeaccounting.WireConfig{Producers: []storeaccounting.WireProducer{{ID: servers[0].ID, Binding: servers[0].Binding, Phases: masks[0]}, {ID: servers[1].ID, Binding: servers[1].Binding, Phases: masks[1]}}, AckTimeout: 5 * time.Second})
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer func() { _ = transport.Close() }()
 			flow := &ExecutionEpochOne{controller: da, parent: parent, store: transport}
-			for phase := uint32(2); phase < 4; phase++ {
+			for phase := phaseIDs[0]; phase < firstPhase; phase++ {
 				if parent.Pause(ctx) != nil || da.Fence() != nil || parent.Checkpoint(ctx) != nil || transport.Fence() != nil || da.Advance() != nil || transport.Advance() != nil || parent.Resume(phase+1) != nil {
 					t.Fatal("empty fixture phase advance")
 				}
 			}
 			for index, server := range servers {
-				phase := uint32(index + 4)
+				phase := uint32(index) + firstPhase
 				childSA, saConfig, err := transport.Open(server.ID)
 				if err != nil {
 					t.Fatal(err)
@@ -127,6 +149,12 @@ func TestExecutionEpochLogicalInheritedSuccessor(t *testing.T) {
 				if index == 0 {
 					pc.Phases, pc.MaximumPhases = []uint32{2, 3, 4}, 3
 				}
+				if returning {
+					pc.Phases, pc.MaximumPhases = []uint32{5}, 1
+					if index == 1 {
+						pc.Phases, pc.MaximumPhases = []uint32{6, 7, 8}, 3
+					}
+				}
 				bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3, InputSHA256: [32]byte{byte(phase)}, Producer: server, Phase: phase, Limits: limits, Control: pc, Store: &saConfig, Tools: []dispatchadmission.ProductionToolBinding{{Role: "git", Path: "/bin/sh", Environment: git}, {Role: "surreal", Path: "/bin/sh", Environment: base}, {Role: "zoekt-git-index", Path: "/bin/sh", Environment: git}}}
 				if dispatchadmission.SendProductionBootstrap(ctx, daParent, pcParent, bootstrap) != nil {
 					t.Fatal("bootstrap")
@@ -168,7 +196,12 @@ func TestExecutionEpochLogicalInheritedSuccessor(t *testing.T) {
 						handoffCtx, stop = context.WithCancel(ctx)
 						stop()
 					}
-					err := (&ExecutionEpochOneRun{flow: flow}).advanceLogical(handoffCtx)
+					var err error
+					if returning {
+						err = (&ExecutionEpochOneRun{flow: flow}).advanceReturn(handoffCtx)
+					} else {
+						err = (&ExecutionEpochOneRun{flow: flow}).advanceLogical(handoffCtx)
+					}
 					if mode == "canceled_handoff" {
 						if err == nil {
 							t.Fatal("canceled handoff advanced")
@@ -178,8 +211,8 @@ func TestExecutionEpochLogicalInheritedSuccessor(t *testing.T) {
 					if err != nil {
 						t.Fatal("retained parent advance", err)
 					}
-					view, err := da.ProducerLaunch(3)
-					if err != nil || view.Phase != 5 {
+					view, err := da.ProducerLaunch(servers[1].ID)
+					if err != nil || view.Phase != firstPhase+1 {
 						t.Fatal("wrong successor phase", view, err)
 					}
 					prefix, _ := da.Snapshot()

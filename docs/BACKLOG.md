@@ -4812,6 +4812,35 @@ three times in 3.134s. Vet, pinned lint (zero issues), docs (0.455s), glossary,
 whitespace and unchanged retained V1/V2 plan checks passed. The first sandboxed
 lint invocation could not load Go packages; the unchanged command with cache
 access passed. These are parser and static gates, not a native handoff pass.
+Independent OCR then confirmed exact source
+`b157f70578aa5b25debb418a2ebb71e6ae2eb90a`: four of four files reviewed, none
+skipped, critical/high/medium/low all zero. The native-stage finding is closed
+in that source; the host-space hold and fresh logical rehearsal remain open.
+
+**T42.2l executor track — retained return-A marker epoch (2026-09-07).**
+Compose the genuine joined logical predecessor, actual author nine and third
+server under one uninterrupted source borrow and the existing phase-six
+deadline. AC: predecessor native/DA/SA EOF before checkpoint/advance, immutable
+borrow across the authoring gap, canceled/failed author joins before cleanup,
+active-author and reserved-gap Close refusal, full producer-four 6/7/8 bootstrap
+identity, actual marker hit/recovered before convergence or owner drain,
+protected return-A final authority continuity, and no inferred future-phase
+pass. PLAN owns ordering and bounded per-operation costs.
+
+The eight-file source slice implements this terminal phase-six composition.
+Focused tests exercise genuine inherited DA/PC/SA handoff, native-shaped marker
+identity negatives, a deadline expiring before predecessor join, and author
+guard/cancellation paths. Broad lightweight epoch/inspection/attempt normal
+passed in 2.438s; targeted return/marker/logical/author race repeated three times
+passed in 6.496s; vet, repository-pinned lint 2.12.2 (zero issues), formatting
+and whitespace passed. An earlier ambient lint 2.13.1 run was supplemental
+only and led to four style simplifications before the pinned gate. These are
+transport and source gates, not real Phebs/Surreal or native author execution.
+The opt-in `PHEBS_T422_RETURN_A_REHEARSAL=1` additionally requires the logical
+selector and extends only the test harness allowance by four hours; phase,
+health and admission bounds remain unchanged. Independent immutable OCR and
+exact integrated native confirmation remain required. This does not close
+phases seven/eight, complete measurement or T42.2l.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.

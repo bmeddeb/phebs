@@ -39,6 +39,7 @@ type ExecutionEpochOne struct {
 	closeErr               error
 	retained               *ExecutionEpochOneRun
 	logicalUsed            bool
+	returnUsed             bool
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -135,8 +136,8 @@ func (flow *ExecutionEpochOne) Close() error {
 	if flow.used {
 		flow.epochs.author.mu.Lock()
 		flow.epochs.mu.Lock()
-		active := flow.epochs.active
-		if active && flow.retained != nil && flow.epochs.author.borrowedBy == flow.retained && flow.retained.joinedEmpty() {
+		active := flow.epochs.active || flow.epochs.author.active
+		if active && !flow.epochs.author.active && flow.retained != nil && !flow.retained.returnStarting && flow.epochs.author.borrowedBy == flow.retained && flow.retained.joinedEmpty() {
 			flow.epochs.author.borrowedBy, flow.epochs.active = nil, false
 			active = false
 		}
@@ -225,6 +226,13 @@ type ExecutionEpochOneRun struct {
 	logicalCancel         context.CancelFunc
 	logicalDone           chan struct{}
 	priorPhysical         *epochLogicalPrior // Detached actual authorities; never retains old output.
+	returnStarting        bool               // Protected by flow.mu; retained source cannot be abandoned during authoring.
+	returnStartCancel     context.CancelFunc
+	returnStartDone       chan struct{}
+	returnUsed            bool
+	returnCancel          context.CancelFunc
+	returnDone            chan struct{}
+	priorLogical          *epochReturnPrior
 }
 
 func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -314,21 +322,24 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	return launched, err
 }
 
-// Both callers hold flow.mu and select one of the two implemented epochs.
+// Callers hold flow.mu and select one of the three implemented epochs.
 func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, cancel context.CancelFunc, run *ExecutionEpochOneRun, bounds epochOneLimits, number uint64) (_ *ExecutionEpochOneRun, retErr error) {
-	if number != 1 && number != 2 {
+	if number < 1 || number > 3 {
 		return nil, ErrExecutionEpochOne
 	}
 	producer, phase := uint32(number+1), uint32(2)
-	if number == 2 {
+	switch number {
+	case 2:
 		phase = 5
+	case 3:
+		phase = 6
 	}
 	started := false
 	author, epochs := flow.epochs.author, flow.epochs
 	author.mu.Lock()
 	epochs.mu.Lock()
 	borrowOK := author.borrowedBy == nil && !epochs.active
-	if number == 2 {
+	if number > 1 {
 		borrowOK = flow.retained != nil && author.borrowedBy == flow.retained && epochs.active && flow.retained.joinedEmpty()
 	}
 	if author.active || !borrowOK || author.next != int(number) || epochs.checkLocked(launchCtx, number) != nil || author.checkSource(launchCtx, author.previous) != nil {
@@ -347,7 +358,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		epochs.released = number
 		epochs.active = true
 		author.borrowedBy = run
-		if number == 2 {
+		if number > 1 {
 			flow.retained = nil
 		}
 	}
@@ -433,8 +444,11 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		retErr = ErrExecutionEpochOne
 	}
 	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
-	if number == 2 {
+	switch number {
+	case 2:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{5}, 5, 1
+	case 3:
+		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{6, 7, 8}, 6, 3
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
@@ -593,6 +607,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	warmCancel, warmDone := run.warmCancel, run.warmDone
 	physicalCancel, physicalDone := run.physicalCancel, run.physicalDone
 	logicalCancel, logicalDone := run.logicalCancel, run.logicalDone
+	returnCancel, returnDone := run.returnCancel, run.returnDone
 	run.mu.Unlock()
 	if healthCancel != nil {
 		healthCancel()
@@ -613,6 +628,10 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if logicalCancel != nil {
 		logicalCancel()
 		<-logicalDone
+	}
+	if returnCancel != nil {
+		returnCancel()
+		<-returnDone
 	}
 	run.stopPhaseDeadline()
 	run.mu.Lock()
@@ -689,7 +708,11 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	epochs.mu.Unlock()
 	author.mu.Unlock()
 	run.mu.Lock()
-	if run.err != nil || !epochClosedPrefix(ctx, result, run.physicalUsed, run.retainParent, run.epoch.Epoch == 2) {
+	prefixOK := epochClosedPrefix(ctx, result, run.physicalUsed, run.retainParent, run.epoch.Epoch == 2)
+	if run.epoch.Epoch == 3 {
+		prefixOK = epochReturnClosedPrefix(ctx, result)
+	}
+	if run.err != nil || !prefixOK {
 		failure = ErrExecutionEpochOne
 	}
 	if run.finishAttemptObservation(&result, failure) != nil {
@@ -705,6 +728,19 @@ func (run *ExecutionEpochOneRun) Stop(ctx context.Context) (ExecutionEpochOneRes
 		return ExecutionEpochOneResult{}, ErrExecutionEpochOne
 	}
 	run.stopOnce.Do(func() { close(run.stop) })
+	// StartReturnA has already joined the old server before its author runs.
+	// Its separate join keeps Stop from releasing that retained source early.
+	run.flow.mu.Lock()
+	cancel, done := run.returnStartCancel, run.returnStartDone
+	run.flow.mu.Unlock()
+	if cancel != nil {
+		cancel()
+		select {
+		case <-done:
+		case <-ctx.Done():
+			return ExecutionEpochOneResult{RootStarted: true}, ErrExecutionEpochOne
+		}
+	}
 	return run.Wait(ctx)
 }
 
