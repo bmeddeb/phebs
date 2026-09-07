@@ -5906,6 +5906,24 @@ Final combined grouping, exact policy-digest, retained-byte, V3 contract and
 fixture-routing selectors passed normal in 0.821s and race in 5.676s, with
 spike vet and pinned lint clean. These do not invoke the full native fixture.
 
+Exact source `91b7955f102c31177a1d6dd8e1b67131b0642417` received independent
+review of all 25 files with all severity counts zero. Complete affected-package
+race also passed: candidate 33.742s, extract 99.073s,
+extractionpublication 41.875s and command 405.801s. Exact-source docs (0.521s),
+glossary and whitespace passed. The later isolated full V3 constructor test
+then found a test-fixture guard mismatch in 40.382s: it compared the generated
+test-source plan against retained-plan input bytes before beginning native
+extraction. This is a real failed gate, not covered by the earlier review or
+cheap input test. The correction must keep the genuine V3 plan and compare
+against the corresponding exact generated input, never return V2 roots.
+Corrected immutable review and the full constructor test remain required.
+The two-file guard correction reuses the complete generated-plan comparison
+and preserves the supplied V3 plan. The regression now constructs the same
+generated source-bound input as the full caller and explicitly rejects the
+retained-plan alias; a field-by-field check confirmed SourceCommit was the
+only mismatch. This regression and the changed-input matrix passed in 13.699s
+without invoking the native constructor graph.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

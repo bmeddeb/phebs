@@ -2048,14 +2048,14 @@ func productionFixtureInputPlan(t *testing.T, plan Plan) Plan {
 	if plan.Schema != PlanV3Schema {
 		return plan
 	}
-	if !reflect.DeepEqual(plan, accountingTestPlan(t)) {
+	if !productionFixturePlanMatches(plan, correctedTestPlan(t)) {
 		t.Fatal("V3 native fixture inputs differ from the exact prospective plan")
 	}
 	return plan
 }
 
 func productionFixturePlanMatches(plan, prior Plan) bool {
-	// The correction mutates nested slices/pointers, so detach the retained
+	// The correction mutates nested slices/pointers, so detach the prior
 	// plan before deriving the only V3 plan this constructor cache can serve.
 	raw, err := json.Marshal(prior)
 	if err != nil {

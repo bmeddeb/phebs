@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -55,15 +54,23 @@ func productionIdentityCacheFor(t *testing.T, plan Plan) *productionIdentityCach
 }
 
 func TestProductionFixtureVersionedInputRouting(t *testing.T) {
-	raw, err := os.ReadFile("plan-v2.json")
-	if err != nil || SHA256(raw) != retainedPlanV2SHA256 {
-		t.Fatalf("retained V2 input: %v", err)
-	}
-	var prior Plan
-	if err := json.Unmarshal(raw, &prior); err != nil {
+	// Use the same generated source-bound plan as the full fixture caller,
+	// not the differently source-bound retained plan used by wire-only tests.
+	prior := correctedTestPlan(t)
+	prospective := clonePlan(t, prior)
+	if err := applyProcessAccountingCorrection(&prospective); err != nil {
 		t.Fatal(err)
 	}
-	prospective := accountingTestPlan(t)
+	retained := accountingTestPlan(t)
+	generatedValue, retainedValue := reflect.ValueOf(prospective), reflect.ValueOf(retained)
+	for index := range generatedValue.NumField() {
+		if !reflect.DeepEqual(generatedValue.Field(index).Interface(), retainedValue.Field(index).Interface()) {
+			t.Logf("generated/retained prospective input differs at %s", generatedValue.Type().Field(index).Name)
+		}
+	}
+	if productionFixturePlanMatches(retained, prior) {
+		t.Fatal("source-bound constructor cache accepted the retained plan instead of its generated input")
+	}
 	var caches [2]*productionIdentityCache
 	for index, plan := range []Plan{prior, prospective} {
 		input := productionFixtureInputPlan(t, plan)
