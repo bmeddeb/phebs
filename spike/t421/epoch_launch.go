@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
+	"github.com/bmeddeb/phebs/spike/t4013"
 )
 
 var ErrExecutionEpochOne = errors.New("execution epoch-one launch unavailable or incomplete")
@@ -238,6 +239,15 @@ type ExecutionEpochOneRun struct {
 	staleCancel           context.CancelFunc
 	staleDone             chan struct{}
 	priorLogical          *epochReturnPrior
+	checkpointAllowed     bool
+	checkpointUsed        bool
+	checkpointCancel      context.CancelFunc
+	checkpointDone        chan struct{}
+	terminalRequested     bool
+	terminalEntered       bool            // Irreversible PC attempted; ordinary shutdown is no longer valid.
+	terminalContext       context.Context // Actual operation lifetime, not an asserted health flag.
+	checkpointRecovery    *epochCheckpointRecoveryInput
+	checkpointPrior       *AuthorityPhaseResult
 }
 
 func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -328,9 +338,9 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	return launched, err
 }
 
-// Callers hold flow.mu and select one of the three implemented epochs.
+// Callers hold flow.mu and select one of the four implemented epochs.
 func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, cancel context.CancelFunc, run *ExecutionEpochOneRun, bounds epochOneLimits, number uint64) (_ *ExecutionEpochOneRun, retErr error) {
-	if number < 1 || number > 3 {
+	if number < 1 || number > 4 || number == 4 && (run.checkpointRecovery == nil || run.checkpointPrior == nil) {
 		return nil, ErrExecutionEpochOne
 	}
 	producer, phase := uint32(number+1), uint32(2)
@@ -339,6 +349,8 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		phase = 5
 	case 3:
 		phase = 6
+	case 4:
+		phase = 8
 	}
 	started := false
 	author, epochs := flow.epochs.author, flow.epochs
@@ -348,7 +360,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if number > 1 {
 		borrowOK = flow.retained != nil && author.borrowedBy == flow.retained && epochs.active && flow.retained.joinedEmpty()
 	}
-	if author.active || !borrowOK || author.next != int(number) || epochs.checkLocked(launchCtx, number) != nil || author.checkSource(launchCtx, author.previous) != nil {
+	if author.active || !borrowOK || author.next != min(int(number), 3) || epochs.checkLocked(launchCtx, number) != nil || author.checkSource(launchCtx, author.previous) != nil {
 		epochs.mu.Unlock()
 		author.mu.Unlock()
 		return nil, ErrExecutionEpochOne
@@ -386,18 +398,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if err != nil || view.Phase != phase {
 		return nil, ErrExecutionEpochOne
 	}
-	raw, err := json.Marshal(struct {
-		Schema       string `json:"schema"`
-		Recipe       string `json:"recipe"`
-		PlanSHA256   string `json:"plan_sha256"`
-		ConfigSHA256 string `json:"config_sha256"`
-		ServerEpoch  uint64 `json:"server_epoch"`
-		Repository   string `json:"repository"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", author.planSHA256, epoch.ConfigSHA256, number, epoch.Repository})
+	raw, err := epochSemanticInput(author.planSHA256, epoch, run.checkpointRecovery)
 	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
-	raw = append(raw, '\n')
 	var files [6]*os.File
 	defer func() {
 		for _, file := range files {
@@ -455,6 +459,11 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{5}, 5, 1
 	case 3:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{6, 7, 8}, 6, 3
+		if run.checkpointAllowed {
+			controlConfig.TerminalPhase = 8
+		}
+	case 4:
+		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{8, 9, 10, 11}, 8, 4
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
@@ -615,6 +624,8 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	logicalCancel, logicalDone := run.logicalCancel, run.logicalDone
 	returnCancel, returnDone := run.returnCancel, run.returnDone
 	staleCancel, staleDone := run.staleCancel, run.staleDone
+	checkpointCancel, checkpointDone := run.checkpointCancel, run.checkpointDone
+	terminal, terminalRequested := run.terminalEntered, run.terminalRequested
 	run.mu.Unlock()
 	if healthCancel != nil {
 		healthCancel()
@@ -644,6 +655,12 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		staleCancel()
 		<-staleDone
 	}
+	if checkpointCancel != nil && !terminalRequested {
+		checkpointCancel()
+	}
+	if checkpointDone != nil {
+		<-checkpointDone
+	}
 	run.stopPhaseDeadline()
 	run.mu.Lock()
 	warm := run.warm
@@ -653,19 +670,38 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	run.mu.Unlock()
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer stopCancel()
-	if !joined && failure == nil && (!warm && run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
+	if !terminal && !joined && failure == nil && (!warm && run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
 		failure = ErrExecutionEpochOne
 	}
-	if run.flow.parent.Pause(stopCtx) != nil || run.flow.controller.Fence() != nil {
+	if !terminal && (run.flow.parent.Pause(stopCtx) != nil || run.flow.controller.Fence() != nil) {
 		failure = ErrExecutionEpochOne
 	}
-	if !joined {
+	if !terminal && !joined {
 		if signalProductionStop(run.command.Process) != nil {
 			failure = ErrExecutionEpochOne
 		}
 	}
 	stopDeadline, _ := stopCtx.Deadline()
-	joined, sessionEmpty, nativeStopErr := finishExecutionProcessSession(run.command.Process.Pid, waited, joined, waitErr, stopDeadline)
+	var sessionEmpty bool
+	var nativeStopErr error
+	var death executionProcessDeath
+	if terminal && terminalRequested && !joined && failure == nil {
+		death, nativeStopErr = killExecutionProcessSession(run.terminalContext, run.command, waited)
+		joined, sessionEmpty, waitErr = death.RootJoined, death.SessionEmpty, death.WaitErr
+		// Invalid/dead operation contexts refuse before Kill; still own cleanup.
+		if !joined || !sessionEmpty {
+			joined, sessionEmpty, _ = finishExecutionProcessSession(run.command.Process.Pid, waited, joined, waitErr, stopDeadline)
+		}
+	} else if terminal {
+		// Partial terminal setup cannot return to ordinary PC or SIGTERM.
+		// Force cleanup only; no terminal admission/closure is fabricated.
+		failure = ErrExecutionEpochOne
+		killErr := t4013.KillPrivateProcessSession(run.command.Process.Pid)
+		joined, sessionEmpty, nativeStopErr = finishExecutionProcessSession(run.command.Process.Pid, waited, joined, waitErr, stopDeadline)
+		nativeStopErr = errors.Join(ErrExecutionEpochOne, killErr, nativeStopErr)
+	} else {
+		joined, sessionEmpty, nativeStopErr = finishExecutionProcessSession(run.command.Process.Pid, waited, joined, waitErr, stopDeadline)
+	}
 	if nativeStopErr != nil {
 		failure = ErrExecutionEpochOne
 	}
@@ -682,6 +718,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 			<-served
 		}
 		joinCancel()
+	}
+	if terminal && (!terminalRequested || nativeStopErr != nil || death.ProcessState == nil || run.flow.controller.CloseHardDeath(run.producer(), death.ProcessState) != nil) {
+		failure = ErrExecutionEpochOne
 	}
 	joinCtx, joinCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if run.flow.store.Wait(joinCtx, run.producer()) != nil {
@@ -723,11 +762,21 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if run.epoch.Epoch == 3 {
 		prefixOK = epochReturnClosedPrefix(ctx, result)
 	}
+	if terminal || run.epoch.Epoch == 4 {
+		prefixOK = epochCheckpointClosedPrefix(ctx, result, terminal)
+	}
+	if ctx.Err() != nil || terminal && (run.terminalContext == nil || run.terminalContext.Err() != nil) {
+		failure = ErrExecutionEpochOne
+	}
 	if run.err != nil || !prefixOK {
 		failure = ErrExecutionEpochOne
 	}
 	if run.finishAttemptObservation(&result, failure) != nil {
 		failure = ErrExecutionEpochOne
+	}
+	if terminal {
+		// SIGKILL supplies mechanical custody, never lossless log EOF evidence.
+		result.Attempts.Complete, result.IndexOffers.Complete = false, false
 	}
 	run.result, run.err = result, failure
 	run.nativeStopErr = nativeStopErr

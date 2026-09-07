@@ -27,10 +27,10 @@ func returnEpochBounds(plan Plan) (epochOneLimits, error) {
 // logical server, actual author nine, and atomic epoch-three transfer. Its one
 // phase-six deadline begins before that handoff, not after authoring.
 func (run *ExecutionEpochOneRun) StartReturnA(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
-	return run.startReturnA(ctx, false)
+	return run.startReturnA(ctx, false, false)
 }
 
-func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale bool) (_ *ExecutionEpochOneRun, retErr error) {
+func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale, checkpoint bool) (_ *ExecutionEpochOneRun, retErr error) {
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.epoch.Epoch != 2 {
 		return nil, ErrExecutionEpochOne
 	}
@@ -40,6 +40,9 @@ func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale bool) (
 	phaseDuration := bounds.lifetime
 	if stale {
 		bounds, err = returnStaleEpochBounds(flow.plan)
+	}
+	if checkpoint {
+		bounds, err = returnCheckpointEpochBounds(flow.plan)
 	}
 	if err != nil || flow.closed || flow.returnUsed || flow.retained != nil {
 		flow.mu.Unlock()
@@ -110,7 +113,7 @@ func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale bool) (
 		return nil, ErrExecutionEpochOne
 	}
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
-		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel, staleAllowed: stale,
+		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel, staleAllowed: stale, checkpointAllowed: checkpoint,
 		priorLogical: &epochReturnPrior{cold: prior.cold, warm: prior.warmAuthority, physical: prior.physicalAuthority, logical: prior.logicalAuthority}}
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, phaseContext, cancel, next, bounds, 3)

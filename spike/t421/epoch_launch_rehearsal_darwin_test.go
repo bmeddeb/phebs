@@ -18,6 +18,32 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if os.Getenv("PHEBS_T422_EPOCH_ONE_REHEARSAL") != "1" {
 		t.Skip("requires explicit serial protected epoch-one startup rehearsal")
 	}
+	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
+	warm := os.Getenv("PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL") == "1"
+	physical := os.Getenv("PHEBS_T422_EPOCH_ONE_PHYSICAL_REHEARSAL") == "1"
+	logical := os.Getenv("PHEBS_T422_LOGICAL_REHEARSAL") == "1"
+	returnA := os.Getenv("PHEBS_T422_RETURN_A_REHEARSAL") == "1"
+	stale := os.Getenv("PHEBS_T422_STALE_LEASE_REHEARSAL") == "1"
+	checkpoint := os.Getenv("PHEBS_T422_CHECKPOINT_RESTART_REHEARSAL") == "1"
+	// Selector dependencies refuse before any host/tool/custody allocation.
+	if checkpoint && !stale {
+		t.Fatal("checkpoint selector requires explicit stale-lease selector")
+	}
+	if stale && !returnA {
+		t.Fatal("stale-lease selector requires explicit return-A selector")
+	}
+	if returnA && !logical {
+		t.Fatal("return-A selector requires explicit logical selector")
+	}
+	if logical && !physical {
+		t.Fatal("logical selector requires explicit physical selector")
+	}
+	if physical && !warm {
+		t.Fatal("physical selector requires explicit warm selector")
+	}
+	if warm && !cold {
+		t.Fatal("warm selector requires explicit cold selector")
+	}
 	requireExternalToolFrozenHost(t)
 	repository := os.Getenv("PHEBS_T422_PRODUCTION_REPOSITORY")
 	commit := os.Getenv("PHEBS_T422_PRODUCTION_COMMIT")
@@ -56,27 +82,6 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
-	warm := os.Getenv("PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL") == "1"
-	physical := os.Getenv("PHEBS_T422_EPOCH_ONE_PHYSICAL_REHEARSAL") == "1"
-	logical := os.Getenv("PHEBS_T422_LOGICAL_REHEARSAL") == "1"
-	returnA := os.Getenv("PHEBS_T422_RETURN_A_REHEARSAL") == "1"
-	stale := os.Getenv("PHEBS_T422_STALE_LEASE_REHEARSAL") == "1"
-	if stale && !returnA {
-		t.Fatal("stale-lease selector requires explicit return-A selector")
-	}
-	if returnA && !logical {
-		t.Fatal("return-A selector requires explicit logical selector")
-	}
-	if logical && !physical {
-		t.Fatal("logical selector requires explicit physical selector")
-	}
-	if physical && !warm {
-		t.Fatal("physical selector requires explicit warm selector")
-	}
-	if warm && !cold {
-		t.Fatal("warm selector requires explicit cold selector")
-	}
 	allowance := time.Hour
 	if cold {
 		allowance = 5 * time.Hour // Includes protected builds; phase bounds remain separate.
@@ -92,6 +97,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if stale {
 		allowance += 4 * time.Hour // Same server; phase seven starts before its handoff.
+	}
+	if checkpoint {
+		allowance += 4 * time.Hour // Original phase-eight deadline spans owned death and epoch four.
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
@@ -330,6 +338,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		if stale {
 			startReturn = prior.StartReturnAStale
 		}
+		if checkpoint {
+			startReturn = prior.StartReturnACheckpoint
+		}
 		next, err := startReturn(ctx)
 		if next != nil {
 			run = next // Cleanup always follows the actual successor first.
@@ -356,6 +367,28 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 		t.Logf("actual stale-lease native preparation: %+v; R hit=%+v recovered=%+v; cumulative epoch-three exact-read totals (phases six/seven)=%+v; no full RecoveryPreparationResult, phase metrics or freeze claim",
 			run.inspection.stalePreparation, run.inspection.staleHit, run.inspection.staleRecovered, run.inspection.totals)
+	}
+	if checkpoint {
+		prior := run
+		next, err := prior.CheckpointRestart(ctx)
+		if next != nil {
+			run = next // Even a refused bootstrap remains this cleanup's owner.
+			prefix, priorErr := prior.Wait(context.Background())
+			t.Logf("owned terminal predecessor: %+v; %v; metric prefixes deliberately incomplete", prefix, priorErr)
+			if priorErr != nil {
+				t.Fatal("checkpoint successor lost terminal predecessor", priorErr)
+			}
+		}
+		if err != nil {
+			t.Fatal("actual held checkpoint/owned kill/same-phase restart", err)
+		}
+		if err := run.Health(ctx); err != nil {
+			t.Fatal("actual epoch-four health", err)
+		}
+		if err := run.RecoverCheckpoint(ctx); err != nil {
+			t.Fatal("actual checkpoint recovered R/X/T/F", err)
+		}
+		t.Log("actual checkpoint restart and unchanged full native authority returned; no complete work-metrics, phase receipt, or freeze claim")
 	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()

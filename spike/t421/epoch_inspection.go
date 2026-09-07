@@ -80,6 +80,9 @@ type executionEpochInspection struct {
 	stalePreparation                   epochStalePreparation
 	stalePrepared                      bool
 	staleHit, staleRecovered           extractionpublication.StaleLeaseTransition
+	checkpointPreparation              epochStalePreparation
+	checkpointPrepared                 bool
+	checkpointHit, checkpointRecovered extractionpublication.CheckpointRestartTransition
 	err                                error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
 	// the already bounded body (at most the response cap plus one sentinel).
@@ -495,7 +498,7 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" {
+	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" {
 		return authority, projection, errEpochInspection
 	}
 	authority.Phase, authority.Outcome = phase, "passed"
@@ -507,6 +510,12 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 	if !reflect.DeepEqual(projection, reader.projection) || authority.RelationshipGenerationSHA256 != reader.tail.RelationshipGenerationSHA256 ||
 		authority.RelationshipRootSHA256 != reader.tail.RelationshipRootSHA256 || authority.CallerGenerationSHA256 != reader.tail.CallerGenerationSHA256 || authority.CallerRootSHA256 != reader.tail.CallerRootSHA256 {
 		return authority, projection, errEpochInspection
+	}
+	if phase == "process_restart" {
+		if !reader.checkpointFinalMatches(authority) {
+			return authority, projection, errEpochInspection
+		}
+		return authority, projection, nil
 	}
 	if phase == "stale_lease" {
 		// The actual return-A value already passed the full native/protected

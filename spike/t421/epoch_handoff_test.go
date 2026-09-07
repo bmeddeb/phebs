@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -45,6 +46,19 @@ func TestExecutionEpochHandoffHelper(t *testing.T) {
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatalf("actual owner control: %v", err)
 	}
+	checkpoint := os.Getenv("PHEBS_EPOCH_HANDOFF_CHECKPOINT") == "1"
+	var terminalTurn dispatchadmission.OwnerTurn
+	terminalReady := make(chan struct{})
+	if checkpoint && dispatchadmission.BindProductionTerminalQuiescence(func(ctx context.Context) error {
+		select {
+		case <-terminalReady:
+			return terminalTurn.FenceTerminal(ctx)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}) != nil {
+		t.Fatal("fixture terminal capability binding")
+	}
 	epochHandoffByte(t, os.Stdout, 'R')
 	epochHandoffRead(t, os.Stdin, 'V')
 	state, err := dispatchadmission.ProductionSemanticState()
@@ -59,6 +73,17 @@ func TestExecutionEpochHandoffHelper(t *testing.T) {
 		t.Fatal("resume reopened requests")
 	}
 	epochHandoffByte(t, os.Stdout, 'W')
+	if checkpoint {
+		epochHandoffRead(t, os.Stdin, 'H')
+		terminalTurn, err = owners.Enter(ctx)
+		if err != nil {
+			t.Fatal("genuine held fixture owner", err)
+		}
+		close(terminalReady)
+		epochHandoffByte(t, os.Stdout, 'h')
+		<-ctx.Done() // Owned kill, never an ordinary End/Close claim.
+		return
+	}
 	if os.Getenv("PHEBS_EPOCH_HANDOFF_WARM") == "1" {
 		epochHandoffRead(t, os.Stdin, 'O')
 		state, err := dispatchadmission.ProductionSemanticState()
@@ -173,10 +198,20 @@ func TestExecutionEpochStaleInheritedHandoff(t *testing.T) {
 	}
 }
 
+func TestExecutionEpochCheckpointInheritedTerminal(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("owned terminal session helper is Darwin-only")
+	}
+	for _, mode := range []string{"stale_checkpoint", "stale_checkpoint_partial"} {
+		t.Run(mode, func(t *testing.T) { testEpochInheritedHandoff(t, mode) })
+	}
+}
+
 func testEpochInheritedHandoff(t *testing.T, mode string) {
 	canceled, warm := mode == "canceled", strings.HasPrefix(mode, "warm")
 	physical := strings.HasPrefix(mode, "warm_physical")
 	stale := strings.HasPrefix(mode, "stale")
+	checkpoint := strings.HasPrefix(mode, "stale_checkpoint")
 	phaseIDs, serverID := []uint32{2, 3, 4}, uint32(2)
 	if stale {
 		phaseIDs, serverID = []uint32{6, 7, 8}, 4
@@ -257,6 +292,10 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if stale {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_STALE=1")
 	}
+	if checkpoint {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_CHECKPOINT=1")
+		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	}
 	if mode == "warm_physical_stop_join" || mode == "stale_stop_join" {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_STOP_JOIN=1")
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
@@ -300,8 +339,14 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if mode == "stale_observe" {
 		pairs = 14
 	}
+	if checkpoint {
+		pairs = 21
+	}
 	pcConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: phaseIDs, InitialPhase: initialPhase,
 		MaximumPhases: len(phaseIDs), MaximumWireBytes: pairs * 2 * dispatchadmission.FrameBytes, Timeout: 5 * time.Second}
+	if checkpoint {
+		pcConfig.TerminalPhase = 8
+	}
 	record := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs,
 		SemanticMode: dispatchadmission.ProductionSemanticV3, InputSHA256: [32]byte{3}, Producer: server, Phase: initialPhase,
 		Limits: limits, Control: pcConfig, Store: &storeConfig,
@@ -366,6 +411,77 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	}
 	epochHandoffByte(t, input, 'V')
 	epochHandoffRead(t, output, 'W')
+	if checkpoint {
+		// Exercise actual PC/DA/SDK socket transitions and process cleanup,
+		// not a source/author/HTTP F claim. The absent prior authors therefore
+		// deliberately keep finish's full epoch prefix unavailable.
+		if control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil || control.ReopenOwners(ctx) != nil ||
+			control.DrainOwners(ctx) != nil || control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil ||
+			run.advanceReturnPhase(ctx, 8) != nil || control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil || control.ReopenOwners(ctx) != nil {
+			t.Fatal("phase8 inherited preparation sequence")
+		}
+		epochHandoffByte(t, input, 'H')
+		epochHandoffRead(t, output, 'h')
+		op, stopOperation := context.WithCancel(ctx)
+		defer stopOperation()
+		run.stop, run.done, run.checkpointDone = make(chan struct{}), make(chan struct{}), make(chan struct{})
+		run.checkpointAllowed, run.checkpointUsed, run.checkpointCancel, run.phaseDeadline = true, true, stopOperation, time.Now().Add(10*time.Second)
+		if run.enterTerminal(op) != nil || control.TerminalQuiesce(op) != nil {
+			t.Fatal("actual terminal owner ACK")
+		}
+		if mode == "stale_checkpoint" {
+			if parent.Pause(op) != nil || dispatch.Fence() != nil || transport.Fence() != nil || control.Checkpoint(op) != nil || transport.ArmTerminalEOF(4, 8) != nil || dispatch.ExpectHardDeath(4) != nil {
+				t.Fatal("actual terminal SDK checkpoint/arm")
+			}
+			run.terminalRequested, run.terminalContext, run.retainParent = true, op, true
+		} else {
+			stopOperation()
+		}
+		operationCanceled := make(chan struct{})
+		if mode == "stale_checkpoint_partial" {
+			run.checkpointCancel = func() { stopOperation(); close(operationCanceled) }
+		} else {
+			close(run.checkpointDone)
+		}
+		custody := &ExecutionAuthorCustody{borrowedBy: run}
+		run.flow.epochs = &ExecutionEpochConfigCustody{author: custody, active: true}
+		run.flow.release = cancel
+		run.command = command
+		waited := make(chan error, 1)
+		go func() { waited <- handle.Wait() }()
+		joined = true // finish, not fixture defer, owns the sole Wait.
+		run.stopOnce.Do(func() { close(run.stop) })
+		go run.finish(ctx, func() {}, waited, served, nil)
+		if mode == "stale_checkpoint_partial" {
+			<-operationCanceled
+			select {
+			case <-run.done:
+				t.Fatal("terminal failure skipped its operation join")
+			default:
+			}
+			close(run.checkpointDone)
+		}
+		<-run.done
+		serverJoined = true
+		if run.err == nil || !run.result.RootJoined || !run.result.SessionEmpty {
+			t.Fatal("terminal fixture cleanup or absent-author refusal", run.err, run.result)
+		}
+		wantPairs := uint64(20)
+		if mode == "stale_checkpoint_partial" {
+			wantPairs = 19
+		}
+		if control.ReservedWireBytes() != wantPairs*128 {
+			t.Fatal("terminal cleanup issued an ordinary PC operation")
+		}
+		if mode == "stale_checkpoint" {
+			if run.nativeStopErr != nil || !run.result.Store.Store.Producers[0].TerminalFencedEOF || run.result.Store.Store.Producers[0].Closed || !run.result.Accounting.Producers[1].Closed {
+				t.Fatal("actual terminal EOF/native join lost", run.nativeStopErr, run.result)
+			}
+		} else if run.nativeStopErr == nil || run.result.Store.Store.Producers[0].TerminalFencedEOF {
+			t.Fatal("partial terminal failure fabricated closure")
+		}
+		return
+	}
 	if mode == "stale_stop_join" {
 		custody := &ExecutionAuthorCustody{borrowedBy: run}
 		run.flow.epochs = &ExecutionEpochConfigCustody{author: custody, active: true}

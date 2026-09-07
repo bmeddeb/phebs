@@ -31,7 +31,7 @@ func returnStaleEpochBounds(plan Plan) (epochOneLimits, error) {
 // StartReturnAStale explicitly reserves the unchanged phase-six and phase-seven
 // windows on the same retained epoch-three server. StartReturnA stays smaller.
 func (run *ExecutionEpochOneRun) StartReturnAStale(ctx context.Context) (*ExecutionEpochOneRun, error) {
-	return run.startReturnA(ctx, true)
+	return run.startReturnA(ctx, true, false)
 }
 
 // StaleLease observes actual preparation, held native hit/recovery and unchanged
@@ -132,10 +132,14 @@ func (run *ExecutionEpochOneRun) StaleLease(ctx context.Context) (retErr error) 
 }
 
 func (run *ExecutionEpochOneRun) advanceStale(ctx context.Context) error {
+	return run.advanceReturnPhase(ctx, 7)
+}
+
+func (run *ExecutionEpochOneRun) advanceReturnPhase(ctx context.Context, phase uint32) error {
 	flow := run.flow
 	if run.control.Pause(ctx) != nil || flow.parent.Pause(ctx) != nil || flow.controller.Fence() != nil || flow.store.Fence() != nil ||
 		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil || flow.controller.Advance() != nil || flow.store.Advance() != nil ||
-		flow.parent.Resume(7) != nil || run.control.Resume(ctx) != nil {
+		flow.parent.Resume(phase) != nil || run.control.Resume(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
 	return nil
@@ -180,13 +184,21 @@ type epochStalePreparation struct {
 }
 
 func (reader *executionEpochInspection) prepareStale(ctx context.Context) (retErr error) {
+	return reader.prepareRecovery(ctx, false)
+}
+
+func (reader *executionEpochInspection) prepareRecovery(ctx context.Context, checkpoint bool) (retErr error) {
 	reader.mu.Lock()
 	defer reader.mu.Unlock()
 	defer func() { reader.fail(retErr) }()
-	if ctx.Err() != nil || reader.err != nil || reader.projection.Phase != "stale_lease" || reader.stalePrepared || reader.progressCalls != 0 || reader.run.control.RequestToken() == "" {
+	phase, path, prepared := "stale_lease", "/api/t422/stale-lease/prepare", reader.stalePrepared
+	if checkpoint {
+		phase, path, prepared = "process_restart", "/api/t422/checkpoint/prepare", reader.checkpointPrepared
+	}
+	if ctx.Err() != nil || reader.err != nil || reader.projection.Phase != phase || prepared || reader.progressCalls != 0 || reader.run.control.RequestToken() == "" {
 		return errEpochInspection
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://"+reader.run.epoch.Listen+"/api/t422/stale-lease/prepare", nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://"+reader.run.epoch.Listen+path, nil)
 	if err != nil {
 		return errEpochInspection
 	}
@@ -209,17 +221,34 @@ func (reader *executionEpochInspection) prepareStale(ctx context.Context) (retEr
 		return errEpochInspection
 	}
 	// Retain actual bounded response counters even if its target later refuses.
-	reader.stalePreparation = value
-	if reader.validateStalePreparation(value) != nil {
+	if checkpoint {
+		reader.checkpointPreparation = value
+	} else {
+		reader.stalePreparation = value
+	}
+	if reader.validateRecoveryPreparation(value, checkpoint) != nil {
 		return errEpochInspection
 	}
-	reader.stalePrepared = true
+	if checkpoint {
+		reader.checkpointPrepared = true
+	} else {
+		reader.stalePrepared = true
+	}
 	return nil
 }
 
 func (reader *executionEpochInspection) validateStalePreparation(value epochStalePreparation) error {
+	return reader.validateRecoveryPreparation(value, false)
+}
+
+func (reader *executionEpochInspection) validateRecoveryPreparation(value epochStalePreparation, checkpoint bool) error {
 	prior := reader.returnAuthority
-	if value.Schema != "t422-stale-preparation-observation-v1" || prior.Phase != "return_a" || value.Domain != "grpc-caller" || value.Ordinal != 6 || value.Offset < 0 {
+	phase, priorPhase, schema, domain, ordinal := "stale_lease", "return_a", "t422-stale-preparation-observation-v1", "grpc-caller", 6
+	if checkpoint {
+		prior = reader.staleAuthority
+		phase, priorPhase, schema, domain, ordinal = "process_restart", "stale_lease", "t422-checkpoint-preparation-observation-v1", "proto-contract", 2
+	}
+	if value.Schema != schema || prior.Phase != priorPhase || value.Domain != domain || value.Ordinal != ordinal || value.Offset < 0 {
 		return errEpochInspection
 	}
 	var state epochFinalAuthority
@@ -242,7 +271,7 @@ func (reader *executionEpochInspection) validateStalePreparation(value epochStal
 		value.ResultIdentity != selected.PartitionResults[value.Ordinal].ResultIdentitySHA256 || !validDigest(value.PriorSchedule) {
 		return errEpochInspection
 	}
-	pointIndex := slices.IndexFunc(reader.plan.FailurePoints, func(point FailurePoint) bool { return point.Phase == "stale_lease" })
+	pointIndex := slices.IndexFunc(reader.plan.FailurePoints, func(point FailurePoint) bool { return point.Phase == phase })
 	if pointIndex < 0 {
 		return errEpochInspection
 	}
@@ -253,7 +282,7 @@ func (reader *executionEpochInspection) validateStalePreparation(value epochStal
 		return errEpochInspection
 	}
 	rows := correctedRecoveryPreparations()
-	index := slices.IndexFunc(rows, func(row RecoveryPreparation) bool { return row.Phase == "stale_lease" })
+	index := slices.IndexFunc(rows, func(row RecoveryPreparation) bool { return row.Phase == phase })
 	if index < 0 {
 		return errEpochInspection
 	}

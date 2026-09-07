@@ -5337,6 +5337,45 @@ files (including both excluded tests), zero skipped and all severity counts
 zero. Immutable attribution, parent restart composition, actual native
 all-success recovery and full metrics remain open.
 
+Exact checkpoint-child commit `9a7a8ae784ada011c99e9fcf4f07c55cbc905bd9`
+received independent OCR 9/9, zero skipped and all severities zero; its seven
+source files byte-match the reviewed author tree. Final docs passed 0.551s,
+glossary/whitespace clean. Actual native recovery remains open.
+
+**T42.2l checkpoint parent composition prerequisite (2026-09-07).**
+The explicit checkpoint selector composes phase-six/seven/eight and actual
+terminal ACK/EOF/owned-death mechanics, then retains source custody into
+epoch-four producer five in the same phase eight. No fourth author, phase
+advance or refreshed phase deadline is admitted. Recovered R precedes X/T;
+drained F compares every actual prior authority field and all 56 results.
+
+AC: fixed 21/5-pair budgets, old canonical omission bytes, exact preparation,
+hit/recovery/full-F identity, lifetime/source call-site binding, deadline and
+single-use refusals, inherited SDK/PC/SA/DA plus actual owned SIGKILL, and
+partial terminal cancellation/operation join without ordinary PC/SIGTERM.
+Root review caught and closed the intermediate terminal-failure cleanup gap
+before freezing the source. Inherited tests deliberately lack genuine author
+and source custody and therefore refuse a full epoch-prefix claim.
+Author final normal passed 2.194s, race three times 29.818s, vet/pinned lint/
+format/whitespace clean; author observed no helper process surviving.
+Independent OCR covered all nine files, including three excluded tests, with
+zero skipped and all severity counts zero. Root copied source bytes exactly;
+focused integrated epoch/process regression passed 1.472s.
+
+Failed native cleanup may spend the helper's thirty seconds plus six-second
+forced extension and a further six-second outer fallback (about 42 seconds),
+before separate DA/SA joins; partial terminal setup uses thirty plus six.
+These are failed cleanup only, never fresh phase time or successful evidence.
+The frozen teardown rule contains no numeric aggregate cleanup allowance;
+synchronous native scans and lock acquisition remain cooperative.
+
+The optional PHEBS_T422_CHECKPOINT_RESTART_REHEARSAL selector requires all
+earlier selectors before host/custody allocation. It is wired but unexecuted:
+the full native rehearsal still lacks disk headroom. Terminal predecessor
+attempt/index metric prefixes remain explicitly incomplete; source-footer
+and parent-prefix validation are separate prerequisites. Immutable attribution,
+full native phase, complete metrics and freeze remain open.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
