@@ -428,6 +428,9 @@ func bindT4013ExactReports(
 			continue
 		}
 		runner.LifecycleReports = t4013ExactReportSink("job lifecycle: ")
+		if dispatchadmission.ProductionSemanticSelected() {
+			runner.LifecycleReports = t422AttemptReportSink("job")
+		}
 		runner.LifecycleReportFailure = fail
 	}
 }
@@ -451,6 +454,9 @@ func bindT422ExactChunkReports(enabled bool, fail func(error), scheduler *genera
 		panic("T42.2 exact chunk reporting lacks its failure latch or scheduler")
 	}
 	scheduler.ChunkReports = t4013ExactReportSink("generation chunk lifecycle: ")
+	if dispatchadmission.ProductionSemanticSelected() {
+		scheduler.ChunkReports = t422AttemptReportSink("chunk")
+	}
 	scheduler.ChunkReportFailure = fail
 }
 

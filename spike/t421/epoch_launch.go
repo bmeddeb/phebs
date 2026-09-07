@@ -166,6 +166,7 @@ type ExecutionEpochOneResult struct {
 	RootStarted, RootJoined, SessionEmpty bool
 	Accounting                            dispatchadmission.Snapshot
 	Store                                 storeaccounting.WireSnapshot
+	Attempts                              ExecutionAttemptObservation
 }
 
 type ExecutionEpochOneRun struct {
@@ -175,6 +176,7 @@ type ExecutionEpochOneRun struct {
 	control               *dispatchadmission.PhaseControl
 	command               *exec.Cmd
 	output                *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
+	attemptInput          [32]byte
 	stop, done            chan struct{}
 	stopOnce              sync.Once
 	healthUsed            bool
@@ -402,6 +404,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: 2, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
+	run.attemptInput = bootstrap.InputSHA256
 	var served <-chan error
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(launchCtx, files[0], files[2], bootstrap) != nil {
 		retErr = ErrExecutionEpochOne
@@ -646,6 +649,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	author.mu.Unlock()
 	run.mu.Lock()
 	if run.err != nil || !epochOneClosedPrefixForMode(ctx, result, run.physicalUsed) {
+		failure = ErrExecutionEpochOne
+	}
+	if run.finishAttemptObservation(&result, failure) != nil {
 		failure = ErrExecutionEpochOne
 	}
 	run.result, run.err = result, failure

@@ -4456,6 +4456,29 @@ owns the design and dependency order. Execution remains excluded.
   retained V1/V2 unchanged, exact invocation and custody/expiry handoff; no
   ceremony execution, Epic closure, release or scale claim.
 
+**T42.2l measurement track — phase-bound attempt reports (2026-09-07).**
+Replace selected job/chunk report writes with genuine producer/input/phase-bound
+envelopes, preserving ordinary/T40 behavior. Consume only joined native output,
+not live buffer lengths or assumed pipe drainage at control acknowledgments.
+AC: repeated same-depth starts count separately; resumed starts invent no
+historical retries; only successful retry transitions increment retry counters;
+exact event/depth/phase checks, overflow and malformed/truncated failed prefixes;
+fixed fifteen-phase aggregation without per-job history; existing owner-turn
+phase attribution and failure latch; focused normal/race, independent OCR and
+actual epoch consumption. This is a subset of whole-phase work measurement,
+not a live ceiling or full receipt pass. PLAN owns the source-event meanings.
+
+Selected source sinks and the actual epoch post-Wait consumer are now wired.
+Focused normal passed in command/T42.1 packages (1.255s/0.632s), with three
+race repetitions (2.071s/3.574s) and whitespace green. The inherited phase-owner
+test invokes genuine selected sinks using native-shaped supplied reports; it
+is not an actual queue workload or protected production-image rehearsal.
+Tests cover V3 reconcile/activation stages, unwrapped legacy reports, split
+markers, truncated prefixes, unknown bindings and a real output-buffer overflow
+ending at a complete newline. Joined failed output retains accepted counters
+but cannot be marked complete. Immutable OCR and combined native queue/epoch
+verification remain pending; whole-phase work accounting remains open.
+
 **T42.2l measurement track — restore attempted-prefix closure (2026-09-07).**
 Under Ben's two-track freeze orchestration, reuse the authenticated SDK owner
 and SA01 protocol for the existing native replay's two bootstrap SQL writes
