@@ -5184,6 +5184,24 @@ passed 1.644s and race repeated three times 5.684s; vet, pinned lint, formatting
 and whitespace passed. These are component gates, not native phase-eight proof.
 Independent immutable attribution and driver integration remain required.
 
+**T42.2l selected terminal heartbeat prerequisite (2026-09-07).** Genuine
+scheduler-owned claims may opt into an opaque shared one-shot capability.
+Quiesce joins other owners/request tails with heartbeat live, then naturally
+joins its last heartbeat without canceling the parked handler. Used-capability
+cleanup retains the started prefix and owner/lease, emits no settlement and
+latches exact reporting. Unused selection retains ordinary behavior.
+
+AC: owner/request drain ordering, natural in-flight heartbeat join, shorter
+quiesce deadline without native-call cancellation, uncertain/prior errors,
+copy/replay/forgery refusal, concurrent handler cleanup, unused ordinary
+settlement and transient/definitive heartbeat precedence. Frozen three-file
+workspace passed independent OCR 3/3, zero skipped and all severities zero.
+Full scheduler normal passed 0.473s, race three times 1.669s, vet and pinned
+lint passed, formatting/whitespace clean. The owning ADR charges every enabled
+claim, not just successful terminal targets. Native checkpoint/report-tail,
+phase binding, SDK/PC and owned-death composition remain unimplemented;
+immutable attribution and native phase-eight confirmation remain required.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

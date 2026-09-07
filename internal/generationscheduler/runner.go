@@ -49,6 +49,9 @@ type Class struct {
 	// It runs after heartbeat join; refusal retains the unresolved lease and
 	// latches exact reporting rather than guessing a retry or completion.
 	ControlledRelease func(context.Context, store.GenerationChunk, error) (bool, error)
+	// TerminalHeartbeat supplies an opaque terminal capability only to the
+	// actual claimed handler. It requires genuine scheduler owner turns.
+	TerminalHeartbeat bool
 }
 
 type Scheduler struct {
@@ -230,6 +233,9 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 				class,
 			)
 		}
+		if configuration.TerminalHeartbeat && (scheduler.Owners == nil || scheduler.ChunkReports == nil || scheduler.ChunkReportFailure == nil) {
+			return nil, fmt.Errorf("generation scheduler class %q terminal heartbeat requires owners and exact reporting", class)
+		}
 		if configuration.OnStaleLeaseTransition != nil {
 			if _, ok := scheduler.Store.(store.GenerationStaleLeaseTransitionReaper); !ok {
 				return nil, fmt.Errorf(
@@ -374,7 +380,9 @@ func (scheduler *Scheduler) work(
 		chunk, err := scheduler.Store.ClaimGenerationChunk(callCtx, class, worker)
 		cancel()
 		if err == nil {
-			scheduler.execute(ctx, configuration, *chunk)
+			if scheduler.executeOwned(ctx, configuration, *chunk, turn) {
+				return // Irreversible retained owner; no second claim or End.
+			}
 			turn.End()
 			continue
 		}
@@ -391,6 +399,10 @@ func (scheduler *Scheduler) work(
 }
 
 func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, chunk store.GenerationChunk) {
+	scheduler.executeOwned(ctx, configuration, chunk, dispatchadmission.OwnerTurn{})
+}
+
+func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Class, chunk store.GenerationChunk, turn dispatchadmission.OwnerTurn) (retained bool) {
 	if scheduler.ChunkReportFailure != nil && ctx.Err() != nil {
 		return
 	}
@@ -434,57 +446,85 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		return
 	}
 	handleCtx, cancel := context.WithCancel(ctx)
-	heartbeat := make(chan error, 1)
-	go func() {
-		ticker := time.NewTicker(scheduler.HeartbeatEvery)
-		defer ticker.Stop()
-		// The claimed row carries the store's durable heartbeat time. Keep a
-		// conservative lower bound after each successful beat so a sequence of
-		// client-side errors can never outlive the reaper's stale cutoff.
-		lastConfirmed := time.Now()
-		if chunk.HeartbeatAt != nil && chunk.HeartbeatAt.Before(lastConfirmed) {
-			lastConfirmed = *chunk.HeartbeatAt
+	handlerContext := handleCtx
+	var heartbeat chan error
+	var terminal *terminalHeartbeat
+	if configuration.TerminalHeartbeat {
+		var err error
+		terminal, err = newTerminalHeartbeat(handleCtx, turn, chunk)
+		if err != nil {
+			cancel()
+			outcome = ""
+			_ = scheduler.failChunkReport(err)
+			return
 		}
-		for {
-			select {
-			case <-handleCtx.Done():
-				heartbeat <- nil
-				return
-			case <-ticker.C:
-				beatStarted := time.Now()
-				callCtx, callCancel := context.WithTimeout(
-					handleCtx, scheduler.storeCallTimeout(),
-				)
-				err := scheduler.Store.HeartbeatGenerationChunk(callCtx, chunk)
-				callCancel()
-				if err == nil {
-					// The durable write occurred no earlier than beatStarted.
-					lastConfirmed = beatStarted
-					continue
-				}
-				if handleCtx.Err() != nil {
-					// The handler finished (or the scheduler stopped) while
-					// this beat was in flight; not a heartbeat failure.
+		go terminal.beat(scheduler, cancel, chunk)
+		handlerContext = context.WithValue(handleCtx, terminalHeartbeatKey{}, &terminal.cap)
+	} else {
+		heartbeat = make(chan error, 1)
+		go func() {
+			ticker := time.NewTicker(scheduler.HeartbeatEvery)
+			defer ticker.Stop()
+			// The claimed row carries the store's durable heartbeat time. Keep a
+			// conservative lower bound after each successful beat so a sequence of
+			// client-side errors can never outlive the reaper's stale cutoff.
+			lastConfirmed := time.Now()
+			if chunk.HeartbeatAt != nil && chunk.HeartbeatAt.Before(lastConfirmed) {
+				lastConfirmed = *chunk.HeartbeatAt
+			}
+			for {
+				select {
+				case <-handleCtx.Done():
 					heartbeat <- nil
 					return
-				}
-				// A lease fence is definitive. A transient store error is
-				// tolerated until the lease could actually have gone stale;
-				// killing a healthy handler for one slow beat wastes the
-				// whole chunk.
-				if errors.Is(err, store.ErrGenerationLeaseLost) ||
-					errors.Is(err, store.ErrGenerationStale) ||
-					time.Since(lastConfirmed) >= scheduler.StaleAfter {
-					cancel()
-					heartbeat <- err
-					return
+				case <-ticker.C:
+					beatStarted := time.Now()
+					callCtx, callCancel := context.WithTimeout(
+						handleCtx, scheduler.storeCallTimeout(),
+					)
+					err := scheduler.Store.HeartbeatGenerationChunk(callCtx, chunk)
+					callCancel()
+					if err == nil {
+						// The durable write occurred no earlier than beatStarted.
+						lastConfirmed = beatStarted
+						continue
+					}
+					if handleCtx.Err() != nil {
+						// The handler finished (or the scheduler stopped) while
+						// this beat was in flight; not a heartbeat failure.
+						heartbeat <- nil
+						return
+					}
+					// A lease fence is definitive. A transient store error is
+					// tolerated until the lease could actually have gone stale;
+					// killing a healthy handler for one slow beat wastes the
+					// whole chunk.
+					if errors.Is(err, store.ErrGenerationLeaseLost) ||
+						errors.Is(err, store.ErrGenerationStale) ||
+						time.Since(lastConfirmed) >= scheduler.StaleAfter {
+						cancel()
+						heartbeat <- err
+						return
+					}
 				}
 			}
+		}()
+	}
+	handleErr := configuration.Handle(handlerContext, chunk, configuration.Budget)
+	var heartbeatErr error
+	if terminal == nil {
+		cancel()
+		heartbeatErr = <-heartbeat
+	} else {
+		retained, heartbeatErr = terminal.finish(cancel)
+		if retained {
+			// An acquired terminal target has no ordinary completion/release or
+			// settled report. Its actual started prefix and owner remain held.
+			outcome = ""
+			_ = scheduler.failChunkReport(errors.Join(ErrTerminalHeartbeat, heartbeatErr, handleErr))
+			return
 		}
-	}()
-	handleErr := configuration.Handle(handleCtx, chunk, configuration.Budget)
-	cancel()
-	heartbeatErr := <-heartbeat
+	}
 	writeCtx, writeCancel := context.WithTimeout(
 		context.WithoutCancel(ctx), scheduler.storeCallTimeout(),
 	)
@@ -630,6 +670,7 @@ func (scheduler *Scheduler) execute(ctx context.Context, configuration Class, ch
 		!errors.Is(err, store.ErrGenerationStale) {
 		scheduler.report(fmt.Errorf("retry generation chunk: %w", err))
 	}
+	return
 }
 
 func (scheduler *Scheduler) emitChunkLifecycle(event string, chunk store.GenerationChunk, outcome string) error {
