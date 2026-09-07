@@ -25,13 +25,15 @@ var errExecutionAttempts = errors.New("execution attempt observation incomplete"
 
 type ExecutionAttemptCount struct {
 	JobAttempts, Retries, MaxRetriesUnit uint64
+	SourceBlobAttempts                   uint64
 }
 
 // Complete refers only to this post-join report subset. It proves no live
 // ceiling enforcement, handler invocation, complete phase work, or admission.
 type ExecutionAttemptObservation struct {
-	Phases   [15]ExecutionAttemptCount
-	Complete bool
+	Phases      [15]ExecutionAttemptCount
+	Complete    bool
+	SourceBound bool
 }
 
 type executionAttemptReport struct {
@@ -65,6 +67,9 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		line, readErr := reader.ReadSlice('\n')
 		consumed += len(line)
 		if len(line) == 0 && errors.Is(readErr, io.EOF) {
+			if !out.SourceBound {
+				return out, errExecutionAttempts
+			}
 			for _, phase := range out.Phases {
 				if phase.Retries > phase.JobAttempts {
 					return out, errExecutionAttempts
@@ -72,6 +77,12 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			}
 			out.Complete = true
 			return out, nil
+		}
+		if source, err := observeSourceAttempt(line, plan, producer, wantInput, &out); source {
+			if err != nil || readErr != nil {
+				return out, errExecutionAttempts
+			}
+			continue
 		}
 		index := bytes.Index(line, []byte(executionAttemptPrefix))
 		if bytes.Contains(line, []byte("job lifecycle: ")) || bytes.Contains(line, []byte("generation chunk lifecycle: ")) {
@@ -111,7 +122,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (bytes.Contains(raw[start:consumed], []byte(executionAttemptPrefix)) || bytes.Contains(raw[start:consumed], []byte("job lifecycle: ")) || bytes.Contains(raw[start:consumed], []byte("generation chunk lifecycle: "))) {
+		if long && (reservedSourceAttempt(raw[start:consumed]) || bytes.Contains(raw[start:consumed], []byte(executionAttemptPrefix)) || bytes.Contains(raw[start:consumed], []byte("job lifecycle: ")) || bytes.Contains(raw[start:consumed], []byte("generation chunk lifecycle: "))) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {

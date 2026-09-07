@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -11,6 +12,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+func observeBoundExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool) (ExecutionAttemptObservation, error) {
+	header := []byte(fmt.Sprintf("SRB1:%d:sha256:%s\n", producer, hex.EncodeToString(input[:])))
+	return observeExecutionAttempts(append(header, raw...), plan, producer, input, joined)
+}
 
 func attemptTestLine(t *testing.T, phase uint32, report any) []byte {
 	t.Helper()
@@ -59,7 +65,7 @@ func TestExecutionAttemptObservedTransitions(t *testing.T) {
 	// starts count once, despite native depths inherited from earlier work.
 	raw = append(raw, attemptTestLine(t, 3, attemptTestJob("started", 3))...)
 	raw = append(raw, attemptTestLine(t, 3, attemptTestChunk("started", "running", 4))...)
-	got, err := observeExecutionAttempts(raw, plan, 2, [32]byte{1}, true)
+	got, err := observeBoundExecutionAttempts(raw, plan, 2, [32]byte{1}, true)
 	if err != nil || !got.Complete || got.Phases[1] != (ExecutionAttemptCount{JobAttempts: 7, Retries: 2, MaxRetriesUnit: 1}) ||
 		got.Phases[2] != (ExecutionAttemptCount{JobAttempts: 2}) {
 		t.Fatalf("observed transition counts: %+v %v", got, err)
@@ -108,7 +114,7 @@ func TestExecutionAttemptFailedPrefix(t *testing.T) {
 			case "ceiling":
 				candidate.WorkEnvelope.Phases[1].JobAttempts.Maximum = 0
 			}
-			got, err := observeExecutionAttempts(append(append([]byte(nil), first...), tail...), candidate, 2, [32]byte{1}, joined)
+			got, err := observeBoundExecutionAttempts(append(append([]byte(nil), first...), tail...), candidate, 2, [32]byte{1}, joined)
 			wantOK := mode == "success" || mode == "long unrelated"
 			want := uint64(1)
 			if !joined {
@@ -126,21 +132,21 @@ func TestExecutionAttemptNativeVocabulary(t *testing.T) {
 	for _, report := range []any{attemptTestJob("started", 0), attemptTestJob("started", 4), attemptTestJob("requeued", 3),
 		attemptTestJob("unknown", 1), attemptTestChunk("started", "running", -1), attemptTestChunk("started", "running", 5),
 		attemptTestChunk("settled", "retried", 4), attemptTestChunk("settled", "unknown", 0)} {
-		if got, err := observeExecutionAttempts(attemptTestLine(t, 2, report), plan, 2, [32]byte{1}, true); err == nil || got.Complete {
+		if got, err := observeBoundExecutionAttempts(attemptTestLine(t, 2, report), plan, 2, [32]byte{1}, true); err == nil || got.Complete {
 			t.Fatalf("invalid native report accepted: %+v", report)
 		}
 	}
 	for _, outcome := range []string{"handler_failed", "heartbeat_failed", "stale_fenced", "released", "release_failed", "pre_heartbeat_failed", "completed", "completion_failed", "terminal", "terminal_record_failed", "deferred", "deferral_failed", "exhausted"} {
 		raw := attemptTestLine(t, 2, attemptTestChunk("started", "running", 0))
 		raw = append(raw, attemptTestLine(t, 2, attemptTestChunk("settled", outcome, 0))...)
-		if got, err := observeExecutionAttempts(raw, plan, 2, [32]byte{1}, true); err != nil || got.Phases[1] != (ExecutionAttemptCount{JobAttempts: 1}) {
+		if got, err := observeBoundExecutionAttempts(raw, plan, 2, [32]byte{1}, true); err != nil || got.Phases[1] != (ExecutionAttemptCount{JobAttempts: 1}) {
 			t.Fatalf("native non-retry %s: %+v %v", outcome, got, err)
 		}
 	}
 	for _, stage := range []string{store.ServiceStateV3ReconcileStage, store.ServiceStateV3ActivateStage} {
 		report := attemptTestChunk("started", "running", 0)
 		report.Stage = stage
-		got, err := observeExecutionAttempts(attemptTestLine(t, 2, report), plan, 2, [32]byte{1}, true)
+		got, err := observeBoundExecutionAttempts(attemptTestLine(t, 2, report), plan, 2, [32]byte{1}, true)
 		if err != nil || !got.Complete || got.Phases[1].JobAttempts != 1 {
 			t.Fatalf("reachable service stage %s refused: %+v %v", stage, got, err)
 		}
@@ -154,7 +160,11 @@ func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			output := &checkoutCommandOutput{remaining: int64(len(line)), cancel: cancel}
+			header := []byte("SRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n")
+			output := &checkoutCommandOutput{remaining: int64(len(line) + len(header)), cancel: cancel}
+			if _, err := output.Write(header); err != nil {
+				t.Fatal(err)
+			}
 			if mode != "empty" {
 				if _, err := output.Write(line); err != nil {
 					t.Fatal(err)

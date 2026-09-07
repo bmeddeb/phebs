@@ -4677,6 +4677,44 @@ The logical reader permits at most 5,765 inspections, including the two five-rea
 R calls. Immutable OCR and genuine selected logical rehearsal remain required;
 these tests establish neither whole-phase metrics nor freeze.
 
+**T42.2l measurement track — compact native blob attempts (2026-09-07).**
+Observe actual immutable-content submissions at all three shared reader sites,
+not Git child launches or successful returned bytes. AC: selected genuine
+producer/input/phase binding, ordinary and metadata preservation, pre-forward
+failure/cancellation refusal, repeated and partial-batch attempts, compact
+fixed records within the unchanged output cap, strict post-join attribution and
+honest incomplete failed prefixes, focused normal/race and independent OCR/cost
+review. Full JSON per blob exceeds the frozen diagnostic ceiling and is not
+selected. Native integration, parser/cache/member work and complete phase fit
+remain separate; this prospective row claims no implementation or gate pass.
+
+Independent acceptance inventory keeps three measurement groups after this
+slice: (1) native pipeline/index/parse/publication and reuse decisions, including
+actual byte/population observations; (2) phase-wide catalog/cache/read attribution
+without double-counting existing request ledgers; (3) complete lifecycle event
+totals, native wall/RSS/disk gauges and final phase/receipt composition. Existing
+successful observation OperationReceipt and final authority are not failed-work
+counters. Reuse the existing operation reports, readaccounting/cache statistics,
+lifecycle events and native samplers; no parallel metrics framework or expected
+profile values may substitute for observed work. DA/SA and report-derived
+job/retry counters still require complete fifteen-phase/five-epoch composition.
+
+The blob slice now uses one 79-byte binding and exactly eight bytes per offered
+content attempt on the existing logger's native file writer, sharing its write
+serialization without timestamps, global logger mutation or a new descriptor.
+At both epoch-one maxima this adds 16,462,223 bytes, leaving 50,646,641 bytes
+shared with other output; that is not proof that all simultaneous maxima fit.
+Selected missing/sink/panic failures latch the existing client. Cancellation
+during the synchronous report preserves its accepted event but refuses content
+forwarding afterward. Negative/overflowing single-blob limits now refuse before
+an event/child; valid ordinary and metadata paths are preserved.
+Focused normal checks passed readaccounting/dispatch/gitobj/sourcepartition/
+command/epoch in 0.229s / 0.268s / 0.595s / 0.621s / 0.745s / 0.964s; three race
+repetitions passed in 1.233s / 1.294s / 2.299s / 2.315s / 1.998s / 3.439s.
+Vet, pinned lint (zero issues) and whitespace passed. These are lightweight
+native Git and inherited-helper tests, not a complete selected workload.
+Immutable independent OCR and integrated measurement remain open.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

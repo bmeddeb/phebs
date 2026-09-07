@@ -637,6 +637,10 @@ func serve(args []string) (retErr error) {
 		}
 	}
 	var exactReadFailed chan error
+	ctx, err = bindT422SourceReports(ctx, failExactReport)
+	if err != nil {
+		return err
+	}
 	var failExactRead func(error)
 	var exactReadState *t421ExactReadAccountingState
 	if exactReads {

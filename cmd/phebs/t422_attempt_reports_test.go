@@ -198,6 +198,9 @@ func TestT422AttemptInheritedPhase(t *testing.T) {
 	if err := command.Wait(); err != nil {
 		t.Fatal(err, diagnostic.String())
 	}
+	if !strings.Contains(diagnostic.String(), "SRB1:5:sha256:") || strings.Count(diagnostic.String(), "SR1:5:8\n") != 1 || strings.Count(diagnostic.String(), "SR1:5:9\n") != 1 {
+		t.Fatal("actual selected compact source binding/phase missing", diagnostic.String())
+	}
 }
 
 func TestT422AttemptInheritedHelper(t *testing.T) {
@@ -213,6 +216,10 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 1})
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatal("actual owner binding failed", err)
+	}
+	ctx, err = bindT422SourceReports(ctx, func(error) { cancel() })
+	if err != nil {
+		t.Fatal("actual source binding failed", err)
 	}
 	var captured bytes.Buffer
 	old := log.Writer()
@@ -231,6 +238,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
+		t.Fatal(err)
+	}
 	job, _ := json.Marshal(store.JobLifecycleReport{Schema: store.JobLifecycleSchema, Event: "started", JobID: "job:neutral", Kind: store.JobCandidate, Target: "neutral", Attempt: 1, Outcome: "running"})
 	if err := runner.LifecycleReports(job); err != nil {
 		t.Fatal(err)
@@ -241,6 +251,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	read()
 	turn, err = owners.Enter(ctx)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
 		t.Fatal(err)
 	}
 	chunk, _ := json.Marshal(generationscheduler.ChunkLifecycleReport{Schema: generationscheduler.ChunkLifecycleSchema, Event: "started",

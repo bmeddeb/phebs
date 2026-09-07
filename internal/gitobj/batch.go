@@ -85,6 +85,9 @@ func (reader *BatchBlobReader) ReadBlob(
 	if err := reader.ctx.Err(); err != nil {
 		return nil, err
 	}
+	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
+		return nil, err
+	}
 	if _, err := io.WriteString(reader.stdin, oid+"\n"); err != nil {
 		return nil, reader.failLocked(err)
 	}
