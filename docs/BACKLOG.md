@@ -6114,6 +6114,27 @@ not established by this run. No ceremony was executed. The source-identical
 gate-record change requires documentation checks and independent review;
 integration readiness is assessed separately against the bounded slice's ACs.
 
+The one affected full V3 receipt constructor was then rerun from the same
+clean exact `37da952b` source with a thirty-minute package allowance and passed:
+889.88s test time, 890.608s package time. A, B and return-A each settled all
+56 extraction chunks and nine current domain roots. Both native recovery
+preparations reused 56 results with zero source acquisitions/evidence appends;
+neither injects a stale lease or process death. The passed,
+positive-incomplete-prefix and RSS-overshoot/native-unavailable receipt cases
+all passed strict round-trip validation at 330,515, 311,547 and 311,540 bytes,
+respectively, within the unchanged 524,288-byte cap. Measurements and search
+leaf remain modeled fixture evidence, not additional cold or ceremony proof.
+The retained log is
+`/private/tmp/phebs-t422-corrected-cold.WDOjgg/receipt-full-v3.log`, SHA-256
+`38e7f49981da100de9196e4656d12384edac3b39aefced7828afb6092750d7a8`.
+No matching test, Phebs or SurrealDB process survived; the exact source
+checkout remains clean. This supersedes the pending affected-constructor gate
+above, not the failed or interrupted historical runs. Independent integration
+audit identified this as the sole remaining affected gate for the bounded
+cold/handoff slice; all-fifteen-phase execution, T42.2m/n/o and freeze remain
+separate. Subsequent gate-record edits change BACKLOG only, with no compiled,
+embedded, fixture or harness input changed. Merge/push is not claimed here.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
