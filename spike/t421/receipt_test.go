@@ -1540,7 +1540,7 @@ func completeTestReceipt(t *testing.T, plan Plan, binding ExecutionFreezeBinding
 			AuthorityBeforeSHA256: productAuthority, AuthorityAfterSHA256: productAuthority,
 			RelationshipRootReads: 1, RelationshipGenerationReads: 1,
 			Results: relationships, Caller: ptr(testCallerPublication(t, plan, authorities[len(authorities)-1])),
-			Product: ptr(expectedProductRelationshipResult(plan.Oracle.ProductRelationships)),
+			Product: ptr(expectedProductRelationshipResult(plan)),
 		},
 		RevisionResults: revisions,
 		Seal: ReceiptSeal{
@@ -1852,6 +1852,26 @@ func testObservedPhaseState(
 	}
 }
 
+func TestProductRelationshipKafkaPairsAreVersioned(t *testing.T) {
+	plan := accountingTestPlan(t)
+	for _, test := range []struct {
+		schema string
+		pairs  uint64
+	}{{PlanSchema, 0}, {PlanV2Schema, 0}, {PlanV3Schema, 9_500}} {
+		t.Run(test.schema, func(t *testing.T) {
+			plan.Schema = test.schema
+			product := expectedProductRelationshipResult(plan)
+			if product.KafkaPairRows != test.pairs {
+				t.Fatalf("Kafka pairs = %d, want %d", product.KafkaPairRows, test.pairs)
+			}
+			projection, err := expectedStateProjectionForPhase(plan, "cold")
+			if err != nil || projection.ProductRelationship != product {
+				t.Fatalf("state and product expectations differ: %v", err)
+			}
+		})
+	}
+}
+
 func testPhaseStateProjection(plan Plan, phase string) PhaseStateProjection {
 	stateIndex := slices.IndexFunc(plan.PhaseStates, func(value PhaseState) bool { return value.Phase == phase })
 	state := plan.PhaseStates[stateIndex]
@@ -1883,7 +1903,7 @@ func testPhaseStateProjection(plan Plan, phase string) PhaseStateProjection {
 		SearchInventory:           physical.ExpectedTreeInventory,
 		ObservationInputInventory: physical.ExpectedObservationInputInventory,
 		ExtractionRoots:           rootProjections, RelationshipResults: relationships,
-		ProductRelationship: expectedProductRelationshipResult(plan.Oracle.ProductRelationships),
+		ProductRelationship: expectedProductRelationshipResult(plan),
 	}
 }
 

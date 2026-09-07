@@ -375,6 +375,9 @@ func epochTestFinal(t *testing.T) (*executionEpochInspection, epochFinalResponse
 
 func TestEpochInspectionFinalFullOracleAndWire(t *testing.T) {
 	reader, value := epochTestFinal(t)
+	// The production semantic projector reports 9,500 hotspot pairs. Pin the
+	// wire independently of the expected-projection fixture above.
+	value.Projection.ProductRelationship.KafkaPairRows = 9_500
 	raw := epochTestJSON(t, value, true)
 	t.Logf("full frozen-oracle F wire fixture: %d bytes; modeled runtime digests, not native evidence", len(raw))
 	if len(raw) > epochFinalResponseBytes {
@@ -392,6 +395,8 @@ func TestEpochInspectionFinalFullOracleAndWire(t *testing.T) {
 		{"not current", func(v *epochFinalResponse) { v.Authority.Current = false }},
 		{"tail mismatch", func(v *epochFinalResponse) { v.Authority.CallerRootSHA256 = testDigest("other") }},
 		{"projection", func(v *epochFinalResponse) { v.Projection.Catalog.Records++ }},
+		{"missing Kafka pairs", func(v *epochFinalResponse) { v.Projection.ProductRelationship.KafkaPairRows = 0 }},
+		{"wrong Kafka pairs", func(v *epochFinalResponse) { v.Projection.ProductRelationship.KafkaPairRows++ }},
 		{"extraction missing", func(v *epochFinalResponse) { v.ExtractionRoots = nil }},
 		{"extraction result", func(v *epochFinalResponse) { v.ExtractionRoots[0].Totals.Rows++ }},
 	} {

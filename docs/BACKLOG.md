@@ -6031,6 +6031,54 @@ review-time focused race rerun passed `internal/store` in 1.841s and
 `internal/storeaccounting` in 1.857s. Exact-commit confirmation, the full
 named race gate and native cold/handoff evidence remain pending.
 
+The legacy slice was committed as `fe6704b7431fa2164738b0b1e58e5565f04cee1d`.
+Independent exact-commit confirmation closed the low finding with all severity
+counts zero. At that commit, `ci-static` passed with zero lint issues, and the
+complete named `ci-race` set passed: store 1,144.662s, sync 49.084s, indexer
+37.403s, search 53.222s, extract 108.998s, callerpublication 12.747s and
+observationpublication 55.529s. Full storeaccounting race passed in 1.755s;
+bounded cold/deadline/handoff/inspection regressions passed in 0.919s.
+Compile-all is a build gate, not an additional complete normal-test pass.
+
+One clean detached exact-source native cold/handoff rehearsal at `fe6704b7`
+then ran with Go 1.26.5, SurrealDB 3.2.0 and protected Apple Git 2.50.1.
+The unchanged 120-GiB backing-space floor was met before launch. It reached
+current extraction X, ready T and one HTTP-200 F (105,994 bytes), but stopped
+before handoff on final projection validation: 1,420.33s test time and
+1,421.049s package time. It retained 80 X and 17 T calls, one F, and 98
+accepted inspection reports. Cleanup proved root joined and session empty;
+every attached dispatch producer closed, and the store producer closed with
+zero open calls/transactions and one terminal EOF. No matching native process
+survived. Private response, server log, exact source and diagnostic custody
+remain retained; this is a failed cold/handoff gate, not a freeze or ceremony.
+
+Independent read-only diagnosis plus strict typed offline decoding isolated
+the mismatch to `ProductRelationship.KafkaPairRows`: native F truthfully
+reports the frozen 9,500 semantic hotspot pairs, while the expected builder
+left zero. The response is canonical, authored commit/tree match the plan,
+and its authority validation passes; every other projection field matches.
+The prospective V3 correction derives the count from the existing frozen
+hotspot family through the shared expectation builder for both phase state
+and relationship receipts. V1/V2 retain zero and their plan bytes; production
+output and strict equality remain unchanged. The independently pinned F-wire
+regression accepts 9,500 and rejects zero or changed counts. Offline replay
+of the retained response after correction has no projection mismatch; this
+does not reconstruct or pass the live handoff. Scoped corrected-tree gates,
+independent review and a later exact-source native confirmation remain open.
+No unchanged native retry was attempted. Retained failure custody reduced
+available space below the launch floor; any later launch must re-establish
+headroom without silently deleting that custody or lowering the floor.
+
+The Kafka expectation correction then passed all epoch-inspection, versioned
+pair-count and retained V1/V2 canonical-byte tests normally (0.945s) and under
+race (4.417s), plus repository `ci-static` with zero lint issues, documentation
+(0.577s), glossary and whitespace checks. Independent review covered all five
+changed files with critical/high/medium/low zero. An over-broad receipt-test
+selector was manually stopped at 43.911s after identifying its expensive
+constructor coverage; it is not counted as a passing gate. The scoped checks
+above do not replace a complete receipt-constructor or corrected native
+cold/handoff run. No native process survived the scoped checks.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

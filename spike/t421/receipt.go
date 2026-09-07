@@ -3850,7 +3850,7 @@ func validateRelationshipEvidence(
 	}
 	if len(value.Results) != len(plan.Oracle.Relationships) || value.Caller == nil || value.Product == nil ||
 		validateCallerPublication(*value.Caller, authority, plan.Oracle.ProductRelationships) != nil ||
-		*value.Product != expectedProductRelationshipResult(plan.Oracle.ProductRelationships) ||
+		*value.Product != expectedProductRelationshipResult(plan) ||
 		value.AuthorityBeforeSHA256 != authoritySHA256 || value.AuthorityAfterSHA256 != authoritySHA256 ||
 		value.RelationshipRootReads != 1 || value.RelationshipGenerationReads != 1 {
 		return errors.New("T42.2 passed relationship results differ from the frozen oracle")
@@ -4032,8 +4032,9 @@ func expectedRelationshipResult(value RelationshipFamily) RelationshipResult {
 	}
 }
 
-func expectedProductRelationshipResult(value ProductRelationships) ProductRelationshipResult {
-	return ProductRelationshipResult{
+func expectedProductRelationshipResult(plan Plan) ProductRelationshipResult {
+	value := plan.Oracle.ProductRelationships
+	result := ProductRelationshipResult{
 		RPCProjections:           value.RPCProjections,
 		KafkaProducerProjections: value.KafkaProducerProjections,
 		KafkaConsumerProjections: value.KafkaConsumerProjections,
@@ -4044,6 +4045,17 @@ func expectedProductRelationshipResult(value ProductRelationships) ProductRelati
 		ProjectionFramedBytes:    value.ExpectedProjections.FramedBytes,
 		ProjectionSHA256:         value.ExpectedProjections.SHA256,
 	}
+	// V1/V2 retain their historical zero. V3 reports the frozen semantic
+	// hotspot pairs, not a product-side cooccurrence expansion.
+	if plan.Schema == PlanV3Schema {
+		for _, family := range plan.Oracle.Relationships {
+			if family.Name == "hotspot" {
+				result.KafkaPairRows = family.SemanticPairEdges
+				break
+			}
+		}
+	}
+	return result
 }
 
 func validateReceiptTeardown(
@@ -4787,7 +4799,7 @@ func expectedStateProjection(plan Plan, state PhaseState) (PhaseStateProjection,
 		SearchInventory:           physical.ExpectedTreeInventory,
 		ObservationInputInventory: physical.ExpectedObservationInputInventory,
 		ExtractionRoots:           rootProjections, RelationshipResults: relationships,
-		ProductRelationship: expectedProductRelationshipResult(plan.Oracle.ProductRelationships),
+		ProductRelationship: expectedProductRelationshipResult(plan),
 	}, nil
 }
 
