@@ -4729,6 +4729,22 @@ Vet, pinned lint (zero issues) and whitespace passed. These are lightweight
 native Git and inherited-helper tests, not a complete selected workload.
 Immutable independent OCR and integrated measurement remain open.
 
+Independent OCR of blob source `d8bda44b2cb600b26f06b2820ac17d0a5e133275`
+covered all nineteen files (nine production, eight tests, two owning docs) with
+all severity counts zero. The A3 comparison correction
+`d58a9d28f15ee63737fe1a9397824cec94e89989` independently closed its medium:
+five files covered, all severity counts zero. Combined candidate
+`e2d139f003217b32c70635f3c298851216ec52aa` preserves both source deltas; only
+owning BACKLOG insertions required conflict resolution. Its seven-package
+bounded normal selector passed, and affected epoch race passed in 20.497s;
+the preceding combined seven-package race passed with epoch at 21.531s and
+no race failure. Changed static gates, pinned lint (zero issues), docs (0.497s),
+glossary, whitespace and retained V1/V2 checks passed. The exact detached
+combined cold/warm/physical/logical rehearsal was then started under unchanged
+per-phase bounds; no result or integration readiness is claimed before it
+finishes. This native run also requires genuine report and blob-prefix parsing,
+not just the previously established authority observations.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
