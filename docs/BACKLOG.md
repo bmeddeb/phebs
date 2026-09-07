@@ -5082,6 +5082,26 @@ The correction reuses the existing Git/Go-build/tool exact-descriptor cleanup
 helpers only on native success. It changes no production image or assertion.
 Fresh full-gate confirmation remains required; the failed result is not renamed
 green and its remaining custody is not automatically deleted.
+Exact cleanup correction `c4808ec7a701d250113c4257b808fc2953be1d85` received
+independent OCR review of all three files, zero skipped and all severity counts
+zero. The reviewer independently rehashed the failed log and checked the
+success-only, exact-descriptor cleanup order. The focused retained-protection
+gate passed 0.614s; docs passed 0.524s with glossary/whitespace clean.
+
+One fresh clean detached confirmation of that exact commit then **passed**:
+611.90s test / 612.576s package. Supplied native build took 38.988s; independent
+complete images retained the same SHA-256 above. Healthy exit zero counted
+exactly three native offers; corrupt-second exit one counted exactly two with
+the unreached third unchanged. All normal protected-copy cleanup completed,
+the detached source stayed clean, and no matching native test/build process
+remained. Terminal record:
+`/private/tmp/phebs-t422-native-index-confirm.uFiZdf/native.log`, SHA-256
+`b8f2c5bf6b416b43369493be6eda54c73cfafafe15222fa55cf0131874065660`.
+This closes independent native image reproduction and the healthy/failed-prefix
+offer component gate, not server forwarding, full output fit, whole-phase
+metrics, logical/return/stale native execution or freeze. Earlier failed
+custody remains preserved; the successful confirmation removed only its own
+generated scratch through the reviewed fixture cleanup.
 
 **T42.2l same-server phase-seven parent (2026-09-07).** Explicit
 `StartReturnAStale` reserves the same producer-four server for phases six/seven;
@@ -5111,6 +5131,12 @@ contexts for both modes passed normal twenty times 0.636s, race three times
 1.797s and the broader normal selector 1.443s; pinned lint and whitespace pass.
 These tests explicitly do not claim a successful native StartReturnA launch.
 Corrected immutable review and full native confirmation remain required.
+Corrected exact `a4efdcf1a725a063dfdf1443a94748897b4d9a60` then received
+independent OCR coverage of all eleven files, zero skipped and all severity
+counts zero. All nine source/test files matched the corrected frozen workspace.
+Root composition normal passed 1.442s; docs passed 0.510s with glossary and
+whitespace clean. This closes the draft launch-context high, not native
+phase-seven execution or full-work acceptance.
 
 The separate stale-control correction
 `d21201c62c862b405c044d561fdae2130dea4cff` received independent OCR coverage
@@ -5135,6 +5161,11 @@ and its tests changed; no scheduler, heartbeat, SDK, PC, native execution or
 phase-eight completion claim follows. The owning ADR records one extra
 eight-byte mask and reuse of existing bounded waits. Independent immutable
 review and actual selected integration remain required.
+Exact `bce82e7496ef4dccc8038da7d820921017dff54e` then received independent
+OCR coverage of all four files, zero skipped and all severity counts zero.
+Root owner regression passed 0.403s, docs passed 0.638s and glossary/whitespace
+were clean. Selected heartbeat, terminal PC/SDK, EOF and owned-death integration
+remain separate work; no native process was stopped by this primitive's tests.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
