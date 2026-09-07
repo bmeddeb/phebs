@@ -2,195 +2,93 @@ package t421
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
+	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/bmeddeb/phebs/internal/extractionpublication"
-	"github.com/bmeddeb/phebs/internal/generationscheduler"
-	"github.com/bmeddeb/phebs/internal/observationpublication"
-	"github.com/bmeddeb/phebs/internal/relationshippublication"
-	"github.com/bmeddeb/phebs/internal/store"
 )
-
-func observeBoundExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool) (ExecutionAttemptObservation, error) {
-	header := []byte(fmt.Sprintf("SRB1:%d:sha256:%s\n", producer, hex.EncodeToString(input[:])))
-	return observeExecutionAttempts(append(header, raw...), plan, producer, input, joined)
-}
-
-func attemptTestLine(t *testing.T, phase uint32, report any) []byte {
-	t.Helper()
-	raw, err := json.Marshal(report)
-	if err != nil {
-		t.Fatal(err)
-	}
-	input := [32]byte{1}
-	kind := "job"
-	if _, ok := report.(generationscheduler.ChunkLifecycleReport); ok {
-		kind = "chunk"
-	}
-	encoded, err := json.Marshal(executionAttemptReport{Schema: executionAttemptSchema, Producer: 2, Phase: phase,
-		InputSHA256: "sha256:" + hex.EncodeToString(input[:]), Kind: kind, Report: raw})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return append(append([]byte("2026/09/07 10:00:00 "+executionAttemptPrefix), encoded...), '\n')
-}
-
-func attemptTestJob(event string, attempt int) store.JobLifecycleReport {
-	return store.JobLifecycleReport{Schema: store.JobLifecycleSchema, Event: event, JobID: "job:neutral",
-		Kind: store.JobCandidate, Target: "example.test/neutral", Attempt: attempt, Outcome: executionJobOutcome(event)}
-}
-
-func attemptTestChunk(event, outcome string, attempt int) generationscheduler.ChunkLifecycleReport {
-	return generationscheduler.ChunkLifecycleReport{Schema: generationscheduler.ChunkLifecycleSchema, Event: event,
-		Identity: "sha256:" + strings.Repeat("1", 64), Stage: extractionpublication.ScheduleStage,
-		Generation: "sha256:" + strings.Repeat("2", 64), Attempt: attempt, Outcome: outcome}
-}
 
 func TestExecutionAttemptObservedTransitions(t *testing.T) {
 	plan := accountingTestPlan(t)
-	var raw []byte
-	for _, report := range []any{
-		attemptTestJob("claimed", 1), attemptTestJob("started", 1), attemptTestJob("deferred", 1),
-		attemptTestJob("started", 1), attemptTestJob("yielded", 1), attemptTestJob("started", 1), attemptTestJob("requeued", 1),
-		attemptTestJob("started", 2), attemptTestJob("done", 2),
-		attemptTestChunk("started", "running", 0), attemptTestChunk("settled", "retried", 0),
-		attemptTestChunk("started", "running", 1), attemptTestChunk("settled", "deferred", 1),
-		attemptTestChunk("started", "running", 1), attemptTestChunk("settled", "completed", 1),
-	} {
-		raw = append(raw, attemptTestLine(t, 2, report)...)
-	}
-	// Resumed retry depth is not a history of events in this phase. These
-	// starts count once, despite native depths inherited from earlier work.
-	raw = append(raw, attemptTestLine(t, 3, attemptTestJob("started", 3))...)
-	raw = append(raw, attemptTestLine(t, 3, attemptTestChunk("started", "running", 4))...)
-	got, err := observeBoundExecutionAttempts(raw, plan, 2, [32]byte{1}, true)
-	if err != nil || !got.Complete || got.Phases[1] != (ExecutionAttemptCount{JobAttempts: 7, Retries: 2, MaxRetriesUnit: 1}) ||
-		got.Phases[2] != (ExecutionAttemptCount{JobAttempts: 2}) {
-		t.Fatalf("observed transition counts: %+v %v", got, err)
+	raw := "A2j1\nA2j1\nA2j1\nA2r1\nA2j2\nA2c0\nA2t1\nA2c1\nA2c1\nA3j3\nA3c4\n"
+	got, err := observeExecutionAttempts([]byte(attemptTestBindings()+raw), plan, 2, [32]byte{1}, true)
+	if err != nil || !got.Complete || got.Phases[1] != (ExecutionAttemptCount{JobAttempts: 7, Retries: 2, MaxRetriesUnit: 1}) || got.Phases[2] != (ExecutionAttemptCount{JobAttempts: 2}) {
+		t.Fatal(got, err)
 	}
 }
-
+func attemptTestBindings() string {
+	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
+}
 func TestExecutionAttemptFailedPrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
-	first := attemptTestLine(t, 2, attemptTestJob("started", 1))
-	second := attemptTestLine(t, 2, attemptTestJob("done", 1))
-	for _, mode := range []string{"success", "not joined", "wrong producer", "wrong input", "wrong phase", "unknown kind", "unknown field", "duplicate field", "truncated", "trailing", "untagged", "untagged chunk", "split marker", "long unrelated", "partial unrelated", "ceiling"} {
-		t.Run(mode, func(t *testing.T) {
-			candidate := plan
-			candidate.WorkEnvelope.Phases = append([]PhaseWorkBounds(nil), plan.WorkEnvelope.Phases...)
-			tail := string(second)
-			joined := true
-			switch mode {
-			case "not joined":
-				joined = false
-			case "wrong producer":
-				tail = strings.Replace(tail, `"producer":2`, `"producer":3`, 1)
-			case "wrong input":
-				tail = strings.Replace(tail, `"input_sha256":"sha256:01`, `"input_sha256":"sha256:02`, 1)
-			case "wrong phase":
-				tail = strings.Replace(tail, `"phase":2`, `"phase":5`, 1)
-			case "unknown kind":
-				tail = strings.Replace(tail, `"kind":"job"`, `"kind":"other"`, 1)
-			case "unknown field":
-				tail = strings.Replace(tail, `"producer":2`, `"unknown":2,"producer":2`, 1)
-			case "duplicate field":
-				tail = strings.Replace(tail, `"producer":2`, `"producer":2,"producer":2`, 1)
-			case "truncated":
-				tail = strings.TrimSuffix(tail, "\n")
-			case "trailing":
-				tail = strings.TrimSuffix(tail, "\n") + "{}\n"
-			case "untagged":
-				tail = "job lifecycle: {}\n"
-			case "untagged chunk":
-				tail = "generation chunk lifecycle: {}\n"
-			case "split marker":
-				tail = strings.Repeat("z", maxExecutionAttemptLine-4) + "job lifecycle: {}\n"
-			case "long unrelated":
-				tail = strings.Repeat("z", maxExecutionAttemptLine*3) + "\n" + tail
-			case "partial unrelated":
-				tail = "unclosed diagnostic"
-			case "ceiling":
-				candidate.WorkEnvelope.Phases[1].JobAttempts.Maximum = 0
-			}
-			got, err := observeBoundExecutionAttempts(append(append([]byte(nil), first...), tail...), candidate, 2, [32]byte{1}, joined)
-			wantOK := mode == "success" || mode == "long unrelated"
-			want := uint64(1)
-			if !joined {
-				want = 0
-			}
-			if (err == nil) != wantOK || got.Complete != wantOK || got.Phases[1].JobAttempts != want {
-				t.Fatalf("prefix %+v error=%v", got, err)
-			}
-		})
-	}
-}
-
-func TestExecutionAttemptNativeVocabulary(t *testing.T) {
-	plan := accountingTestPlan(t)
-	for _, report := range []any{attemptTestJob("started", 0), attemptTestJob("started", 4), attemptTestJob("requeued", 3),
-		attemptTestJob("unknown", 1), attemptTestChunk("started", "running", -1), attemptTestChunk("started", "running", 5),
-		attemptTestChunk("settled", "retried", 4), attemptTestChunk("settled", "unknown", 0)} {
-		if got, err := observeBoundExecutionAttempts(attemptTestLine(t, 2, report), plan, 2, [32]byte{1}, true); err == nil || got.Complete {
-			t.Fatalf("invalid native report accepted: %+v", report)
-		}
-	}
-	for _, outcome := range []string{"handler_failed", "heartbeat_failed", "stale_fenced", "released", "release_failed", "pre_heartbeat_failed", "completed", "completion_failed", "terminal", "terminal_record_failed", "deferred", "deferral_failed", "exhausted"} {
-		raw := attemptTestLine(t, 2, attemptTestChunk("started", "running", 0))
-		raw = append(raw, attemptTestLine(t, 2, attemptTestChunk("settled", outcome, 0))...)
-		if got, err := observeBoundExecutionAttempts(raw, plan, 2, [32]byte{1}, true); err != nil || got.Phases[1] != (ExecutionAttemptCount{JobAttempts: 1}) {
-			t.Fatalf("native non-retry %s: %+v %v", outcome, got, err)
-		}
-	}
-}
-
-func TestExecutionAttemptNativeStageCompleteness(t *testing.T) {
-	plan := accountingTestPlan(t)
-	// The ordinary native scheduler registrations include both relationship
-	// stages. Selected V3 cold startup genuinely emits ScheduleStageV3; it is
-	// not a different event class or an additional attempt allowance.
-	for _, stage := range []string{
-		observationpublication.PlanningScheduleStage,
-		observationpublication.InventoryScheduleStageV2,
-		observationpublication.ScheduleStage,
-		extractionpublication.ScheduleStage,
-		relationshippublication.ScheduleStage,
-		relationshippublication.ScheduleStageV3,
-		store.ServiceStateV3ReconcileStage,
-		store.ServiceStateV3ActivateStage,
-		"unknown", "service-relationship-v3-shadow-extra", "",
+	for _, test := range []struct {
+		name, tail string
+		complete   bool
+		starts     uint64
+	}{
+		{"zero", "", true, 1}, {"repeat", "A2j1\n", true, 2}, {"retry", "A2r1\n", true, 1},
+		{"chunk retry", "A2t4\n", true, 1}, {"unknown opcode", "A2x1\n", false, 1},
+		{"unknown phase", "AZj1\n", false, 1}, {"other producer phase", "A5j1\n", false, 1},
+		{"job zero", "A2j0\n", false, 1}, {"job max", "A2j4\n", false, 1}, {"retry max", "A2r3\n", false, 1},
+		{"chunk max", "A2c5\n", false, 1}, {"chunk retry zero", "A2t0\n", false, 1}, {"chunk retry max", "A2t5\n", false, 1},
+		{"partial", "A2j", false, 1}, {"partial marker", "A", false, 1}, {"embedded", "junkA2j1\n", false, 1},
+		{"duplicate binding", attemptTestBindings(), false, 1}, {"unknown version", "ATB2:2:sha256:01\n", false, 1},
+		{"old envelope", "exact attempt: {}\n", false, 1}, {"old job", "job lifecycle: {}\n", false, 1},
+		{"old chunk", "generation chunk lifecycle: {}\n", false, 1}, {"partial unrelated", "unclosed diagnostic", false, 1},
+		{"long unrelated", strings.Repeat("z", maxExecutionAttemptLine*3) + "\n", true, 1},
+		{"ordinary digest name", "2026/09/07 checksum SHA256\n", true, 1},
+		{"split marker", strings.Repeat("z", maxExecutionAttemptLine-2) + "A2j1\n", false, 1},
 	} {
-		t.Run(stage, func(t *testing.T) {
-			started := attemptTestChunk("started", "running", 0)
-			started.Stage = stage
-			settled := attemptTestChunk("settled", "completed", 0)
-			settled.Stage = stage
-			raw := attemptTestLine(t, 2, started)
-			raw = append(raw, attemptTestLine(t, 2, settled)...)
-			got, err := observeBoundExecutionAttempts(raw, plan, 2, [32]byte{1}, true)
-			wantOK := stage != "unknown" && stage != "service-relationship-v3-shadow-extra" && stage != ""
-			wantCount := ExecutionAttemptCount{}
-			if wantOK {
-				wantCount.JobAttempts = 1
-			}
-			if (err == nil) != wantOK || got.Complete != wantOK || got.Phases[1] != wantCount {
-				t.Fatalf("native stage %q: %+v %v", stage, got, err)
+		t.Run(test.name, func(t *testing.T) {
+			got, err := observeExecutionAttempts([]byte(attemptTestBindings()+"A2j1\n"+test.tail), plan, 2, [32]byte{1}, true)
+			if (err == nil) != test.complete || got.Complete != test.complete || got.Phases[1].JobAttempts != test.starts {
+				t.Fatal(got, err)
 			}
 		})
 	}
+	for _, raw := range []string{"", "A2j1\n", strings.Replace(attemptTestBindings(), "ATB1:2:", "ATB1:3:", 1), strings.Replace(attemptTestBindings(), "ATB1:2:sha256:01", "ATB1:2:sha256:02", 1), strings.Replace(attemptTestBindings(), "ATB1:", "ATB0:", 1)} {
+		if got, err := observeExecutionAttempts([]byte(raw), plan, 2, [32]byte{1}, true); err == nil || got.Complete {
+			t.Fatal(got, err)
+		}
+	}
+	plan.WorkEnvelope.Phases[1].JobAttempts.Maximum = 0
+	got, err := observeExecutionAttempts([]byte(attemptTestBindings()+"A2j1\n"), plan, 2, [32]byte{1}, true)
+	if err == nil || got.Phases[1].JobAttempts != 1 {
+		t.Fatal(got, err)
+	}
 }
-
+func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
+	plan := accountingTestPlan(t)
+	expected := []uint64{31827801, 600237, 19074719, 1583087, 8950119}
+	for producer := uint32(2); producer <= 6; producer++ {
+		var starts, source, index uint64
+		for _, phase := range executionProducerPhases(producer) {
+			row := plan.WorkEnvelope.Phases[phase-1]
+			starts += row.JobAttempts.Maximum
+			source += 8 * row.GitReads.Maximum
+			index += 3 * row.IndexFiles.Maximum
+			for _, role := range row.ControlledDispatchRoles {
+				if role.Name == "zoekt-git-index" {
+					index += role.Maximum * uint64(9+len(strconv.FormatUint(row.IndexFiles.Maximum, 10)))
+				}
+			}
+		}
+		total := source + index + 10*starts + 3*79
+		if total != expected[producer-2] || total >= 64<<20 {
+			t.Fatalf("producer %d total %d", producer, total)
+		}
+		t.Logf("producer=%d starts=%d combined=%d remaining=%d", producer, starts, total, (64<<20)-total)
+	}
+	// At most one retry per emitted start in the same held owner turn. This
+	// proves only source/index/attempt fit; candidate/ordinary/future logs remain.
+}
 func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
-	line := attemptTestLine(t, 2, attemptTestJob("started", 1))
+	line := []byte("A2j1\n")
 	for _, mode := range []string{"healthy", "empty", "process failed", "overflow at newline", "truncated", "not joined", "unbound"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			header := []byte("SRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n" + "IXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n")
+			header := []byte("ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n" + "IXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n")
 			output := &checkoutCommandOutput{remaining: int64(len(line) + len(header)), cancel: cancel}
 			if _, err := output.Write(header); err != nil {
 				t.Fatal(err)

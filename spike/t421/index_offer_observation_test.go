@@ -76,7 +76,7 @@ func TestIndexOfferOutputHeadroom(t *testing.T) {
 
 func TestIndexOfferFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
-	header := "SRB1:2:sha256:01" + strings.Repeat("00", 31) + "\nIXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
+	header := attemptTestBindings() + "IXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
 	raw := []byte(header + "Ib2\nI2\nIe2:1\n")
 	for _, mode := range []string{"healthy", "process failed", "overflow", "unjoined"} {
 		t.Run(mode, func(t *testing.T) {

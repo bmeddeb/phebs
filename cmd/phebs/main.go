@@ -428,9 +428,6 @@ func bindT4013ExactReports(
 			continue
 		}
 		runner.LifecycleReports = t4013ExactReportSink("job lifecycle: ")
-		if dispatchadmission.ProductionSemanticSelected() {
-			runner.LifecycleReports = t422AttemptReportSink("job")
-		}
 		runner.LifecycleReportFailure = fail
 	}
 }
@@ -454,9 +451,6 @@ func bindT422ExactChunkReports(enabled bool, fail func(error), scheduler *genera
 		panic("T42.2 exact chunk reporting lacks its failure latch or scheduler")
 	}
 	scheduler.ChunkReports = t4013ExactReportSink("generation chunk lifecycle: ")
-	if dispatchadmission.ProductionSemanticSelected() {
-		scheduler.ChunkReports = t422AttemptReportSink("chunk")
-	}
 	scheduler.ChunkReportFailure = fail
 }
 
@@ -637,6 +631,10 @@ func serve(args []string) (retErr error) {
 		}
 	}
 	var exactReadFailed chan error
+	attemptReports, err := newT422AttemptSinks(failExactReport)
+	if err != nil {
+		return err
+	}
 	ctx, err = bindT422SourceReports(ctx, failExactReport)
 	if err != nil {
 		return err
@@ -1271,6 +1269,7 @@ func serve(args []string) (retErr error) {
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st), Owners: owners,
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 	bindT4013ExactReports(exactReports, failExactReport, nil, runner, fetchRunner)
+	attemptReports.bindJobs(runner, fetchRunner)
 	runBackground(func() { runner.Run(ctx) })
 	runBackground(func() { fetchRunner.Run(ctx) })
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
@@ -1386,6 +1385,7 @@ func serve(args []string) (retErr error) {
 		},
 	}
 	bindT422ExactChunkReports(exactReads, failExactRead, observationScheduler)
+	attemptReports.bindChunk(observationScheduler)
 	if activationControl != nil {
 		class := observationScheduler.Classes[store.GenerationResourceCPU]
 		class.ControlledRelease = activationControl.controlledRelease
@@ -1428,6 +1428,7 @@ func serve(args []string) (retErr error) {
 			},
 		}
 		bindT422ExactChunkReports(exactReads, failExactRead, relationshipScheduler)
+		attemptReports.bindChunk(relationshipScheduler)
 		runBackground(func() {
 			if err := relationshipScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 				diagnostics.Logf("relationship scheduler stopped: %v", err)
@@ -1744,6 +1745,7 @@ func serve(args []string) (retErr error) {
 			exactReports, failExactReport, candidateWorker,
 			candidateRunner, exRunner, resolverRunner, callerRunner,
 		)
+		attemptReports.bindJobs(candidateRunner, exRunner, resolverRunner, callerRunner)
 		runBackground(func() { candidateRunner.Run(ctx) })
 		runBackground(func() { exRunner.Run(ctx) })
 		partitionScheduler := &generationscheduler.Scheduler{
@@ -1772,6 +1774,7 @@ func serve(args []string) (retErr error) {
 			},
 		}
 		bindT422ExactChunkReports(exactReads, failExactRead, partitionScheduler)
+		attemptReports.bindChunk(partitionScheduler)
 		runBackground(func() {
 			if err := partitionScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 				diagnostics.Logf("partitioned extraction scheduler stopped: %v", err)
@@ -1844,6 +1847,7 @@ func serve(args []string) (retErr error) {
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle, Owners: owners,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		bindT4013ExactReports(exactReports, failExactReport, nil, ixRunner)
+		attemptReports.bindJobs(ixRunner)
 		runBackground(func() { ixRunner.Run(ctx) })
 	}
 

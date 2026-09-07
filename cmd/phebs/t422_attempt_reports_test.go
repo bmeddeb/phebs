@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,43 +22,6 @@ import (
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/store"
 )
-
-func TestT422AttemptEnvelope(t *testing.T) {
-	state := dispatchadmission.ProductionSemanticSnapshot{Mode: dispatchadmission.ProductionSemanticV3,
-		ProducerID: 2, Phase: 2, InputSHA256: [32]byte{1}}
-	for _, mode := range []string{"job", "chunk", "unknown", "ordinary", "producer", "phase", "input", "oversized", "invalid JSON"} {
-		t.Run(mode, func(t *testing.T) {
-			selected, kind, raw := state, "job", []byte(`{"native":"retained"}`)
-			switch mode {
-			case "chunk", "unknown":
-				kind = mode
-			case "ordinary":
-				selected.Mode = ""
-			case "producer":
-				selected.ProducerID = 1
-			case "phase":
-				selected.Phase = 5
-			case "input":
-				selected.InputSHA256 = [32]byte{}
-			case "oversized":
-				raw = bytes.Repeat([]byte{'x'}, store.MaxJobLifecycleReportSize+1)
-			case "invalid JSON":
-				raw = []byte("{")
-			}
-			encoded, err := t422EncodeAttemptReport(selected, kind, raw)
-			if (err == nil) != (mode == "job" || mode == "chunk") {
-				t.Fatalf("envelope result %v", err)
-			}
-			if err == nil {
-				var event t422AttemptReport
-				if json.Unmarshal(encoded, &event) != nil || event.Producer != 2 || event.Phase != 2 || !bytes.Equal(event.Report, raw) ||
-					event.InputSHA256 != "sha256:"+hex.EncodeToString(state.InputSHA256[:]) {
-					t.Fatal("native report or authenticated binding changed")
-				}
-			}
-		})
-	}
-}
 
 func TestT422AttemptOrdinaryBindings(t *testing.T) {
 	var output bytes.Buffer
@@ -81,12 +43,12 @@ func TestT422AttemptOrdinaryBindings(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if failures != 0 || strings.Contains(output.String(), t422AttemptReportPrefix) ||
+	if failures != 0 || strings.Contains(output.String(), "ATB1:") ||
 		!strings.Contains(output.String(), "job lifecycle: {}") || !strings.Contains(output.String(), "generation chunk lifecycle: {}") || !strings.Contains(output.String(), "candidate operation: {}") {
 		t.Fatal("T40/candidate report bytes or selection changed", output.String())
 	}
-	if t422AttemptReportSink("job")([]byte(`{}`)) == nil {
-		t.Fatal("unselected process invented phase authority")
+	if sinks, err := newT422AttemptSinks(fail); err != nil || sinks != nil {
+		t.Fatal("ordinary path created selected sinks", err)
 	}
 }
 
@@ -201,6 +163,9 @@ func TestT422AttemptInheritedPhase(t *testing.T) {
 	if !strings.Contains(diagnostic.String(), "SRB1:5:sha256:") || strings.Count(diagnostic.String(), "SR1:5:8\n") != 1 || strings.Count(diagnostic.String(), "SR1:5:9\n") != 1 {
 		t.Fatal("actual selected compact source binding/phase missing", diagnostic.String())
 	}
+	if strings.Count(diagnostic.String(), "ATB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "A8j1\n") != 1 || strings.Count(diagnostic.String(), "A9c0\n") != 1 {
+		t.Fatal("actual compact attempt binding/phase missing", diagnostic.String())
+	}
 	if !strings.Contains(diagnostic.String(), "IXB1:5:sha256:") {
 		t.Fatal("actual selected index binding missing", diagnostic.String())
 	}
@@ -228,10 +193,10 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	if err != nil {
 		t.Fatal("actual index binding failed", err)
 	}
-	var captured bytes.Buffer
-	old := log.Writer()
-	log.SetOutput(&captured)
-	defer log.SetOutput(old)
+	sinks, err := newT422AttemptSinks(func(error) { cancel() })
+	if err != nil {
+		t.Fatal(err)
+	}
 	read := func() {
 		var raw [1]byte
 		if _, err := io.ReadFull(os.Stdin, raw[:]); err != nil {
@@ -241,6 +206,8 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	runner, scheduler := &store.Runner{}, &generationscheduler.Scheduler{}
 	bindT4013ExactReports(true, func(error) { cancel() }, nil, runner)
 	bindT422ExactChunkReports(true, func(error) { cancel() }, scheduler)
+	sinks.bindJobs(runner)
+	sinks.bindChunk(scheduler)
 	turn, err := owners.Enter(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -269,18 +236,6 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	turn.End()
-	lines := strings.Split(strings.TrimSpace(captured.String()), "\n")
-	if len(lines) != 2 {
-		t.Fatal("selected sink duplicated or lost reports")
-	}
-	record, _ := t422LifecycleBootstrapRecord(t)
-	for index, line := range lines {
-		var report t422AttemptReport
-		_, raw, ok := strings.Cut(line, t422AttemptReportPrefix)
-		if !ok || json.Unmarshal([]byte(raw), &report) != nil || report.Producer != 5 || report.Phase != uint32(8+index) || report.InputSHA256 != "sha256:"+hex.EncodeToString(record.InputSHA256[:]) {
-			t.Fatal("sink did not bind actual native phase", line)
-		}
-	}
 	fmt.Println("reported")
 	read()
 	if err := lifetime.Close(ctx); err != nil {

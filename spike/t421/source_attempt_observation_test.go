@@ -22,7 +22,7 @@ func TestSourceAttemptCompactParser(t *testing.T) {
 		{"prefix", header + "junkSR1:2:2\n", 0, false}, {"long split", header + strings.Repeat("x", maxExecutionAttemptLine-2) + "SR1:2:2\n", 0, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := observeExecutionAttempts([]byte(test.raw), plan, 2, [32]byte{1}, true)
+			got, err := observeExecutionAttempts([]byte("ATB1:2:sha256:01"+strings.Repeat("00", 31)+"\n"+test.raw), plan, 2, [32]byte{1}, true)
 			if (err == nil) != test.complete || got.Complete != test.complete || got.Phases[1].SourceBlobAttempts != test.count {
 				t.Fatal(got, err)
 			}

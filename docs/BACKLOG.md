@@ -4950,6 +4950,33 @@ selected clang without its SDK link path (`library resolv not found`); restoring
 the established compiler PATH resolved that command configuration error.
 These are native preparation component gates, not phase-seven server evidence.
 
+**T42.2l compact report fit (2026-09-07).** One ATB1 producer/input binding
+precedes the native selected workers; four five-byte opcodes retain job/chunk
+starts and reported successful retries with actual phase and depth. The strict
+bounded native JSON validator moves to the sender and still checks zero-delta
+events. No per-job deduplication, sequence registry or additional mutex is added.
+Every emitted retry follows one same-phase start under the existing owner turn,
+so records are at most twice actual starts. Claims may lack starts and are not
+given an invented multiplier. Existing repeated/deferred/yielded starts count.
+
+The five source/index/attempt subset maxima are 31,827,801 / 600,237 /
+19,074,719 / 1,583,087 / 8,950,119 bytes for producers two through six.
+The largest leaves 35,281,063 bytes of the unchanged 67,108,864-byte buffer;
+this is not a full candidate/ordinary/future-census report-fit proof. Producer
+four's conservative phase-eight reservation does not duplicate the shared
+phase receipt allowance. The existing scheduler can suppress a retried report
+after a stale handle even when its retry call returned nil; this preserves the
+owning reported-successful-retry unit, not all durable mutation coverage.
+
+AC: real inherited binding/phase, all eight stages and seven job kinds,
+zero-delta validation, unknown/duplicate binding/partial/depth/input refusal,
+positive prefix and unchanged bounds, ordinary/T40 preservation, exact fit
+arithmetic and independent cost/source review. Nine source/test files passed
+focused normal cmd/T42.1 at 0.764s/1.234s and race repeated three times at
+2.115s/4.067s, plus vet, pinned lint (zero issues) and whitespace. No full native
+epoch or receipt was run. Native index build remains blocked by the separately
+recorded unsupported cache overlay; this transport does not close that gate.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
