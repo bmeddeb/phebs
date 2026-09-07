@@ -5283,6 +5283,30 @@ Root regression passed 1.090s, docs 0.555s, glossary/whitespace clean.
 Epoch-four immutable target handoff and recovered R, parent owned death and
 same-phase launch, full native phase and immutable review remain required.
 
+Documentation-only `efe6313ad2acc9ffe4b08ae8037d505719156465` closed the
+checkpoint-control low wording finding with independent OCR 2/2 and all
+severity counts zero. Docs passed 0.755s, glossary/whitespace clean; source
+remained unchanged.
+
+**T42.2l owned terminal process prerequisite (2026-09-07).** The Darwin
+helper performs actual root Kill then existing session-wide signaling and
+consumes only the caller's sole Handle.Wait. It accepts exact native SIGKILL
+state/error with no accounting sibling, rejects prejoined/natural exit, and
+retains real join/session facts on failure. ProcessState is never read before
+Wait synchronization. Unsupported hosts refuse; forced cleanup stays failed.
+
+AC: real DA Handle.Wait, private Setsid root and separate-group descendant,
+owned kill, prejoined natural/SIGKILL refusal, real DA settlement-error sibling,
+pre-cancel and cancellation after Wait, strict error tree and closed-channel
+refusal. Four new files received independent OCR 4/4, all severities zero.
+Combined terminal/process-session normal passed 1.418s and race three times
+5.574s; vet/pinned lint/format/whitespace passed. Author observed no surviving
+helper process. Cost review corrected an uncommitted author estimate to the
+actual existing Darwin 8,192 host-PID bound; no source bound changed. These tiny
+tests establish neither Phebs checkpoint/SDK health nor lossless output,
+accounting closure, successor launch or full phase. Immutable attribution and
+the owning parent composition remain required.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
