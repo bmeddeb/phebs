@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"debug/buildinfo"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -93,7 +94,7 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 		return identity, ErrExecutionGoBuildCustody
 	}
 	supplied, err := buildinfo.ReadFile(binary)
-	if err != nil || validateReferenceBuildInfo(supplied, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, nil) != nil {
+	if err != nil || validateReferenceBuildInfoForSchema(supplied, role, schema, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, nil) != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
 	environment := referenceBuildEnvironment(request, workspace)
@@ -103,15 +104,18 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 		}
 	}
 	environment = append(environment, "GIT_EXEC_PATH="+custody.git.Directory(), "GIT_ALLOW_PROTOCOL=file", "GIT_TEMPLATE_DIR="+os.DevNull)
-	run := func(limit int64, args ...string) ([]byte, error) {
+	runFrom := func(root string, limit int64, args ...string) ([]byte, error) {
 		if custody.check(ctx) != nil {
 			return nil, ErrExecutionGoBuildCustody
 		}
-		output, runErr := runReferenceGo(ctx, custody.reference.root.root, goBinary, environment, limit, args...)
+		output, runErr := runReferenceGo(ctx, root, goBinary, environment, limit, args...)
 		if custody.check(ctx) != nil || runErr != nil {
 			return nil, ErrExecutionGoBuildCustody
 		}
 		return output, nil
+	}
+	run := func(limit int64, args ...string) ([]byte, error) {
+		return runFrom(custody.reference.root.root, limit, args...)
 	}
 	version, err := run(256, "version")
 	if err != nil || string(version) != "go version "+runtime.Version()+" "+runtime.GOOS+"/"+runtime.GOARCH+"\n" {
@@ -126,25 +130,38 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 		return identity, ErrExecutionGoBuildCustody
 	}
 	modules, err := verifyExecutionModuleGraph(ctx, custody.reference.root.root, request.ModuleCache, graph)
-	if err != nil || validateReferenceBuildInfo(supplied, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, modules) != nil {
+	if err != nil || validateReferenceBuildInfoForSchema(supplied, role, schema, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, modules) != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
 	if _, err := run(64<<10, "mod", "verify"); err != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
 	output := filepath.Join(workspace, "reference")
-	buildArgs, checkOverlay, err := referenceToolBuildArgs(role, schema, request.ModuleCache, workspace, output, packagePath)
+	buildRoot, buildArgs, checkOverlay, err := referenceToolBuildArgs(ctx, role, schema, custody.reference.root.root, request.ModuleCache, workspace, output, packagePath)
 	if err != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
-	if _, err := run(64<<10, buildArgs...); err != nil {
+	checkGraph := func() error {
+		if buildRoot == custody.reference.root.root {
+			return nil
+		}
+		native, err := runFrom(buildRoot, maxReferenceModuleGraphBytes, "list", "-modfile=v3.mod", "-m", "-json", "all")
+		if err != nil {
+			return err
+		}
+		return verifyZoektOfferGraph(graph, native, custody.reference.root.root, buildRoot)
+	}
+	if err := checkGraph(); err != nil {
+		return identity, err
+	}
+	if _, err := runFrom(buildRoot, 64<<10, buildArgs...); err != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
-	if err := checkOverlay(); err != nil {
+	if err := errors.Join(checkOverlay(), checkGraph()); err != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
 	actual, err := buildinfo.ReadFile(output)
-	if err != nil || validateReferenceBuildInfo(actual, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, modules) != nil ||
+	if err != nil || validateReferenceBuildInfoForSchema(actual, role, schema, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, modules) != nil ||
 		!reflect.DeepEqual(supplied, actual) || executableidentity.Verify(output, suppliedDigest) != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}

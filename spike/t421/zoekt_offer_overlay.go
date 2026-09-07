@@ -2,6 +2,7 @@ package t421
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"go/format"
@@ -12,8 +13,8 @@ import (
 
 const zoektOfferSourceSHA256 = "sha256:5862b33dc67ce468b50fb81938c8b63abe7602dbf7945202eda0034d9a60954d"
 const zoektOfferSourceBytes = 40449
-const zoektOfferBuildRecipe = "go-build-trimpath-exact-module-graph-private-overlay-v1:github.com/sourcegraph/zoekt/cmd/zoekt-git-index;gitindex/index.go;native-go-git-input-offers-v1"
-const zoektOfferProvenance = "go-module-overlay-build-v1"
+const zoektOfferBuildRecipe = "go-build-trimpath-exact-module-graph-private-versioned-replacement-overlay-v2:github.com/sourcegraph/zoekt/cmd/zoekt-git-index;exact-pinned-module-copy;v3.mod-version-qualified-replace-to-./zoekt;gitindex/index.go;native-go-git-input-offers-v1"
+const zoektOfferProvenance = "go-module-private-replacement-overlay-build-v2"
 
 const zoektOfferEntry = `
 	t422Offer, t422Finish, t422Err := t422IndexOffers(opts)
@@ -83,23 +84,23 @@ func transformZoektOffers(source []byte) ([]byte, error) {
 }
 
 // Prepared only inside fresh, private build scratch. Protected source/modules
-// stay byte-exact; no module replacement, cache mutation or external patch tool.
-func referenceToolBuildArgs(role, schema, moduleCache, workspace, output, packagePath string) ([]string, func() error, error) {
+// stay byte-exact; V3 alone derives a scratch-local versioned replacement.
+func referenceToolBuildArgs(ctx context.Context, role, schema, sourceRoot, moduleCache, workspace, output, packagePath string) (string, []string, func() error, error) {
 	args := []string{"build", "-trimpath", "-pgo=off", "-buildvcs=true", "-p=1"}
 	check := func() error { return nil }
 	if role == "zoekt-git-index" && schema == PlanV3Schema {
-		path, verify, err := prepareZoektOfferOverlay(moduleCache, workspace)
+		directory, path, verify, err := prepareZoektOfferBuild(ctx, sourceRoot, moduleCache, workspace)
 		if err != nil {
-			return nil, nil, err
+			return "", nil, nil, err
 		}
-		args, check = append(args, "-overlay="+path), verify
+		args, check = append(args, "-modfile=v3.mod", "-overlay="+path), verify
+		sourceRoot = directory
 	}
-	return append(args, "-o", output, packagePath), check, check()
+	return sourceRoot, append(args, "-o", output, packagePath), check, nil
 }
 
-func prepareZoektOfferOverlay(moduleCache, workspace string) (string, func() error, error) {
-	policy := frozenToolPolicy()
-	original := filepath.Join(moduleCache, policy.ZoektModulePath+"@"+policy.ZoektModuleVersion, "gitindex", "index.go")
+func prepareZoektOfferOverlay(moduleDirectory, workspace string) (string, func() error, error) {
+	original := filepath.Join(moduleDirectory, "gitindex", "index.go")
 	source, err := readZoektOverlayFile(original, zoektOfferSourceBytes)
 	if err != nil {
 		return "", nil, err

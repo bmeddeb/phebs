@@ -21,8 +21,8 @@ func TestZoektOfferOverlayRecipe(t *testing.T) {
 		if err != nil || got != legacy {
 			t.Fatal(schema, got, err)
 		}
-		args, check, err := referenceToolBuildArgs("zoekt-git-index", schema, "/not-read", "/not-read", "image", "package")
-		if err != nil || check() != nil || !reflect.DeepEqual(args, []string{"build", "-trimpath", "-pgo=off", "-buildvcs=true", "-p=1", "-o", "image", "package"}) {
+		root, args, check, err := referenceToolBuildArgs(t.Context(), "zoekt-git-index", schema, "/not-read", "/not-read", "/not-read", "image", "package")
+		if err != nil || root != "/not-read" || check() != nil || !reflect.DeepEqual(args, []string{"build", "-trimpath", "-pgo=off", "-buildvcs=true", "-p=1", "-o", "image", "package"}) {
 			t.Fatal(args, err)
 		}
 	}
@@ -107,7 +107,7 @@ func TestZoektOfferOverlayPinnedSource(t *testing.T) {
 	if _, err := transformZoektOffers(patched); err == nil {
 		t.Fatal("double overlay admitted")
 	}
-	path, check, err := prepareZoektOfferOverlay(cache, t.TempDir())
+	path, check, err := prepareZoektOfferOverlay(filepath.Join(cache, policy.ZoektModulePath+"@"+policy.ZoektModuleVersion), t.TempDir())
 	if err != nil || check() != nil {
 		t.Fatal(path, err)
 	}

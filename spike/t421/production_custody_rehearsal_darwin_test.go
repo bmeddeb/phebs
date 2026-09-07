@@ -234,12 +234,17 @@ func productionRehearsalBuildSchema(t *testing.T, ctx context.Context, inputs *E
 		t.Fatal("protected inputs drifted before supplied build")
 	}
 	started := time.Now()
-	args, checkOverlay, err := referenceToolBuildArgs(role, schema, request.ModuleCache, workspace, selected, packagePath)
+	buildRoot, args, checkOverlay, err := referenceToolBuildArgs(ctx, role, schema, inputs.reference.root.root, request.ModuleCache, workspace, selected, packagePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := runReferenceGo(ctx, inputs.reference.root.root, filepath.Join(request.GoRoot, "bin", "go"), environment, 64<<10,
-		args...); err != nil || inputs.Check(ctx) != nil || checkOverlay() != nil {
+	raw, buildErr := runReferenceGo(ctx, buildRoot, filepath.Join(request.GoRoot, "bin", "go"), environment, 64<<10, args...)
+	if buildErr != nil {
+		if err := os.WriteFile(filepath.Join(workspace, "build-failure.log"), raw, 0o600); err != nil {
+			t.Fatal("cannot retain private bounded build diagnostic")
+		}
+	}
+	if err := buildErr; err != nil || inputs.Check(ctx) != nil || checkOverlay() != nil {
 		t.Fatalf("protected supplied %s build: %v", role, err)
 	}
 	t.Logf("protected supplied %s build: %s", role, time.Since(started))

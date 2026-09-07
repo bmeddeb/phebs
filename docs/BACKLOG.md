@@ -5018,6 +5018,30 @@ these read-ledger counters. No polling or new stale timeout is introduced.
 Parent deadline/handoff/PC orchestration, complete work metrics and native
 phase-seven proof remain separate; independent exact-source review is pending.
 
+**T42.2l supported native index build correction (2026-09-07).** The prior
+module-cache overlay refusal is corrected prospectively using a fresh private
+copy of the exact pinned module and a version-qualified `./zoekt` replacement
+in alternate Phebs descriptors. The upstream module language remains 1.25.9;
+original descriptors/notices and V1/V2 stay exact. Native Go1.26.5 reports
+`(devel)` for BuildInfo replacement version but an empty Go-list replacement
+version; both are checked in their own representations, without fabricating
+BuildInfo. Baseline and actual private graphs retain the same exact identities;
+only the specific verified location/replacement metadata differences are
+admitted. Whole-module h1 and overlay/descriptor checks run around the build.
+Both reference entrypoints still compare independently built complete images.
+
+AC: native replacement metadata and pinned package/overlay resolution; strict
+graph, descriptor, module-copy and replacement refusal; unchanged legacy
+recipe; full native independently located image reproduction and healthy/
+failed-prefix offer gate. Seven files passed focused normal 5.943s, race
+repeated three times 17.670s, vet, pinned lint (zero issues) and whitespace in
+the author worktree. Independent OCR covered all seven frozen workspace files,
+zero skipped and all severity counts zero. Immutable attribution and the full
+native image/offer gate remain open; no full workload retry was attempted.
+The owning ADR records per-build copy/hash/sync/Go-list cost and unchanged
+production costs and numerical bounds. Failed supplied builds now retain
+their bounded stderr privately rather than losing the diagnostic.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
