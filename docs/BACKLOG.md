@@ -5924,6 +5924,30 @@ retained-plan alias; a field-by-field check confirmed SourceCommit was the
 only mismatch. This regression and the changed-input matrix passed in 13.699s
 without invoking the native constructor graph.
 
+Corrected exact commit `f42d5b71bc54b0e8f761f03f8cd3fbcaa9bc0240` passed
+independent review of all three correction files with all severity counts
+zero; the prior 25-file production review remains applicable. The generated
+fixture-input guard passed race in 159.640s, with spike vet and pinned lint
+clean; exact-source docs (0.512s), glossary and whitespace passed. The V3 plan
+is 165,790 canonical bytes under the unchanged 196,608-byte author limit.
+
+The one corrected-source isolated full V3 constructor/receipt test then passed
+in 837.987s (837.40s test time), under its explicit thirty-minute package
+allowance and unchanged internal construction deadlines. Actual A, B and
+return-A each settled all 56 extraction partitions and nine current domain
+roots against the versioned 169-fact byte oracle. Both native recovery
+preparations reused 56 results with zero source acquisitions and zero evidence
+appends; these checks inject neither a stale lease nor process death.
+The passed, positive-incomplete-prefix and RSS-overshoot/native-unavailable
+modeled receipt cases all validated at 330,512, 311,547 and 311,540 bytes,
+respectively, under the unchanged 524,288-byte limit. The constructor uses
+real extraction/store authority but modeled measurements and search leaf;
+it is not selected-SA01 whole-phase fit, a cold/handoff rehearsal or ceremony
+evidence. No matching test or SurrealDB process survived completion.
+This closes the versioned grouping, replay-isolation, prospective byte-oracle
+and full constructor prerequisites only. Native exact-source cold/handoff,
+whole-phase accounting, integration and freeze remain unestablished.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
