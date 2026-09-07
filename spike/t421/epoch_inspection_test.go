@@ -16,11 +16,65 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 )
+
+type epochProgressRepoStore struct {
+	store.Store
+	store.GenerationSchedulerStore
+	repository               store.Repo
+	repoReads, scheduleReads int
+}
+
+func (*epochProgressRepoStore) RetireCurrentGenerationSchedule(context.Context, store.GenerationSchedule) error {
+	panic("unexpected schedule mutation in read-only progress test")
+}
+
+func (state *epochProgressRepoStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
+	state.repoReads++
+	if name != state.repository.Name {
+		return nil, store.ErrNotFound
+	}
+	value := state.repository
+	return &value, nil
+}
+
+func (state *epochProgressRepoStore) GetGenerationSchedule(context.Context, string, string) (*store.GenerationSchedule, error) {
+	state.scheduleReads++
+	return nil, store.ErrNotFound
+}
+
+type epochUnavailableProgress struct{}
+
+func (epochUnavailableProgress) Read(context.Context, string) (observationpublication.Progress, error) {
+	return observationpublication.Progress{}, nil
+}
+
+func TestEpochInspectionProgressAcceptsCompleteAPIUnavailable(t *testing.T) {
+	now := time.Now()
+	state := &epochProgressRepoStore{repository: store.Repo{Name: "example.com/mono", IndexedCommitHash: strings.Repeat("a", 40), IndexedAt: &now}}
+	opts := api.Options{Version: "test", Store: state}
+	opts.ExtractionProgress = api.NewExtractionProgressService(opts, &extractionpublication.Runtime{Store: state})
+	opts.ObservationProgress = api.NewObservationProgressService(opts, epochUnavailableProgress{})
+	handler := api.New(opts)
+	base := "http://127.0.0.1:12345"
+	request := httptest.NewRequest(http.MethodGet, base+api.ExtractionProgressPath+"?repository="+state.repository.Name, nil)
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	value, err := decodeEpochProgress(recorder.Body.Bytes(), recorder.Code, base)
+	if err != nil || value == nil || value.State != "unavailable" {
+		t.Fatalf("complete API progress status=%d body=%q value=%+v error=%v", recorder.Code, recorder.Body.Bytes(), value, err)
+	}
+	if state.repoReads != 2 || state.scheduleReads != 1 {
+		t.Fatalf("indexed/no-schedule reads = repo %d schedule %d", state.repoReads, state.scheduleReads)
+	}
+}
 
 func epochTestJSON(t *testing.T, value any, indent bool) []byte {
 	t.Helper()
@@ -121,7 +175,7 @@ func epochTestHTTPReader(t *testing.T, handler http.Handler) *executionEpochInsp
 }
 
 func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
-	for _, mode := range []string{"complete", "missing", "header-only", "duplicate", "redirect", "truncated", "wrong-ordinal", "write", "body-invalid", "overflow"} {
+	for _, mode := range []string{"complete", "missing", "header-only", "duplicate", "redirect", "truncated", "wrong-ordinal", "write", "body-invalid", "body-oversize", "overflow"} {
 		t.Run(mode, func(t *testing.T) {
 			var calls atomic.Int32
 			var reader *executionEpochInspection
@@ -156,6 +210,9 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 					state = "not-a-state"
 				}
 				_, _ = fmt.Fprintf(w, `{"$schema":%q,"state":%q,"total_partitions":0,"materialized":0,"pending":0,"running":0,"succeeded":0,"failed":0,"domains":0,"current_domains":0}`+"\n", "http://"+r.Host+"/schemas/ExtractionProgress.json", state)
+				if mode == "body-oversize" {
+					_, _ = w.Write(bytes.Repeat([]byte{' '}, api.ExtractionProgressResponseLimit))
+				}
 				if mode != "missing" && mode != "header-only" {
 					w.Header().Set(epochReadTrailer, encoded)
 					if mode == "duplicate" {
@@ -169,6 +226,16 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 			result, report, err := reader.Progress(t.Context())
 			if (err == nil) != (mode == "complete") {
 				t.Fatal(mode, result, report, err)
+			}
+			if mode == "complete" {
+				if reader.failureStatus != 0 || reader.failureBody != nil {
+					t.Fatal("successful response retained as failed diagnostic")
+				}
+			} else if reader.failureStatus != result.HTTPStatus || len(reader.failureBody) == 0 || len(reader.failureBody) > api.ExtractionProgressResponseLimit+1 {
+				t.Fatal("failed bounded response diagnostic missing", reader.failureStatus, len(reader.failureBody))
+			}
+			if mode == "body-oversize" && len(reader.failureBody) != api.ExtractionProgressResponseLimit+1 {
+				t.Fatal("overflow diagnostic did not retain exactly one sentinel")
 			}
 			if reader.next != 2 || calls.Load() != 1 {
 				t.Fatal("request ordinal/calls differs", reader.next, calls.Load())
@@ -185,6 +252,13 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 			}
 			if mode == "overflow" && (reader.totals.StoreReadAttempts != math.MaxUint64 || reader.reports != 0) {
 				t.Fatal("overflow changed prior exact prefix", reader.totals, reader.reports)
+			}
+			if mode == "complete" {
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				if _, _, err := reader.Progress(ctx); err == nil || reader.failureStatus != 0 || reader.failureBody != nil || calls.Load() != 1 {
+					t.Fatal("pre-request failure inherited successful response")
+				}
 			}
 		})
 	}

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
-	"github.com/bmeddeb/phebs/spike/t4013"
 )
 
 // ExecutionAuthorResult retains the actual validated child response beside
@@ -398,25 +397,11 @@ func finishAuthorCustody(command *exec.Cmd, controller *dispatchadmission.Contro
 	if served == nil {
 		_ = controller.CancelUnused(result.ProducerID)
 	}
-	joinTimer := time.NewTimer(30 * time.Second)
-	select {
-	case err := <-waited:
-		result.RootJoined = true
-		if err != nil {
-			failure = ErrExecutionAuthorCustody
-		}
-	case <-joinTimer.C:
+	joined, sessionEmpty, sessionErr := finishExecutionProcessSession(command.Process.Pid, waited, false, nil, time.Now().Add(30*time.Second))
+	result.RootJoined, result.SessionEmpty = joined, sessionEmpty
+	if sessionErr != nil {
 		failure = ErrExecutionAuthorCustody
-		_ = command.Process.Kill()
-		killTimer := time.NewTimer(6 * time.Second)
-		select {
-		case <-waited:
-			result.RootJoined = true
-		case <-killTimer.C:
-		}
-		killTimer.Stop()
 	}
-	joinTimer.Stop()
 	if served != nil {
 		timer := time.NewTimer(5 * time.Second)
 		select {
@@ -435,10 +420,6 @@ func finishAuthorCustody(command *exec.Cmd, controller *dispatchadmission.Contro
 	}
 	if control != nil && control.Close() != nil {
 		failure = ErrExecutionAuthorCustody
-	}
-	if result.RootJoined {
-		members, err := t4013.PrivateProcessSessionMembers(command.Process.Pid)
-		result.SessionEmpty = err == nil && members == 0
 	}
 	var snapshotErr error
 	result.Accounting, snapshotErr = controller.Snapshot()

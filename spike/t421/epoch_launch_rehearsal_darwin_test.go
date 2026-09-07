@@ -205,17 +205,32 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			result, err := run.Stop(stopCtx)
 			if err != nil || !result.RootJoined || !result.SessionEmpty {
 				t.Errorf("retained epoch-one stopped prefix: %+v; %v", result, err)
+				run.mu.Lock()
+				t.Logf("private native stop diagnostic: %v", run.nativeStopErr)
+				run.mu.Unlock()
 			}
 			if t.Failed() && result.RootJoined && run.output != nil {
 				// Native Wait has also joined the combined-output copier. This
 				// bounded private diagnostic is not returned public evidence.
-				file, err := os.OpenFile(filepath.Join(parent, "server.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-				if err != nil {
-					t.Error("private joined-server diagnostic could not be retained", err)
-				} else {
-					_, writeErr := file.Write(run.output.buffer.Bytes())
-					if closeErr := file.Close(); writeErr != nil || closeErr != nil {
-						t.Error("private joined-server diagnostic was not completely retained")
+				diagnostics := map[string][]byte{"server.log": run.output.buffer.Bytes()}
+				if reader := run.inspection; reader != nil {
+					reader.mu.Lock()
+					t.Logf("private inspection prefix: X=%d T=%d F_used=%t accepted_reports=%d reads=%+v failed_HTTP=%d failed_body_bytes=%d",
+						reader.progressCalls, reader.tailCalls, reader.finalUsed, reader.reports, reader.totals, reader.failureStatus, len(reader.failureBody))
+					if reader.failureBody != nil {
+						diagnostics["inspection-response.body"] = reader.failureBody
+					}
+					reader.mu.Unlock()
+				}
+				for name, raw := range diagnostics {
+					file, err := os.OpenFile(filepath.Join(parent, name), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+					if err != nil {
+						t.Error("private joined-server diagnostic could not be retained", err)
+					} else {
+						_, writeErr := file.Write(raw)
+						if closeErr := file.Close(); writeErr != nil || closeErr != nil {
+							t.Error("private joined-server diagnostic was not completely retained")
+						}
 					}
 				}
 			}

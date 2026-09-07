@@ -71,6 +71,10 @@ type executionEpochInspection struct {
 	tail                           epochTailReadiness
 	finalUsed                      bool
 	err                            error
+	// Private failed-response diagnostic only, never receipt evidence. Retain
+	// the already bounded body (at most the response cap plus one sentinel).
+	failureStatus int
+	failureBody   []byte
 }
 
 func (run *ExecutionEpochOneRun) newEpochInspection(ctx context.Context) (*executionEpochInspection, error) {
@@ -195,6 +199,7 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, limit+1))
+	reader.failureStatus, reader.failureBody = response.StatusCode, raw
 	closeErr := response.Body.Close()
 	report, reportErr := decodeEpochReport(response.Trailer.Values(epochReadTrailer), ordinal, maximum)
 	// Preserve every accepted positive ledger before interpreting HTTP/body
@@ -219,6 +224,7 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 
 func (reader *executionEpochInspection) fail(err error) {
 	if err == nil {
+		reader.failureStatus, reader.failureBody = 0, nil
 		return
 	}
 	reader.err = errEpochInspection

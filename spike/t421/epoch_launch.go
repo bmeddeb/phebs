@@ -18,7 +18,6 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
-	"github.com/bmeddeb/phebs/spike/t4013"
 )
 
 var ErrExecutionEpochOne = errors.New("execution epoch-one launch unavailable or incomplete")
@@ -198,6 +197,7 @@ type ExecutionEpochOneRun struct {
 	stopping         bool
 	result           ExecutionEpochOneResult
 	err              error
+	nativeStopErr    error // Private diagnostic, never a public evidence classification.
 }
 
 func (flow *ExecutionEpochOne) checkTools(ctx context.Context) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -568,22 +568,10 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		if signalProductionStop(run.command.Process) != nil {
 			failure = ErrExecutionEpochOne
 		}
-		select {
-		case waitErr = <-waited:
-			joined = true
-		case <-stopCtx.Done():
-			failure = ErrExecutionEpochOne
-			_ = run.command.Process.Kill()
-			timer := time.NewTimer(6 * time.Second)
-			select {
-			case waitErr = <-waited:
-				joined = true
-			case <-timer.C:
-			}
-			timer.Stop()
-		}
 	}
-	if !joined || waitErr != nil {
+	stopDeadline, _ := stopCtx.Deadline()
+	joined, sessionEmpty, nativeStopErr := finishExecutionProcessSession(run.command.Process.Pid, waited, joined, waitErr, stopDeadline)
+	if nativeStopErr != nil {
 		failure = ErrExecutionEpochOne
 	}
 	if served != nil {
@@ -611,11 +599,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if run.flow.parent.Close(context.Background()) != nil {
 		failure = ErrExecutionEpochOne
 	}
-	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined}
-	if joined {
-		members, err := t4013.PrivateProcessSessionMembers(run.command.Process.Pid)
-		result.SessionEmpty = err == nil && members == 0
-	}
+	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty}
 	if !result.SessionEmpty {
 		failure = ErrExecutionEpochOne
 	}
@@ -639,6 +623,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	run.result, run.err = result, failure
+	run.nativeStopErr = nativeStopErr
 	run.mu.Unlock()
 }
 

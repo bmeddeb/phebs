@@ -5638,6 +5638,41 @@ Deterministic virtual-time checks cover idle expiry without inspection, the
 real health wait, expiry refusal, timer retirement and the total-lifetime cap.
 Corrected immutable gates/re-review and native cold/handoff evidence remain open.
 
+Correction `6851bafda5e3a0fb5edf0bb6443e514c41116919` passed the complete
+focused selector (normal 0.726s, race three repetitions 7.584s), vet, pinned
+lint and documentation gates. Independent review covered all nine slice files
+with critical/high/medium/low all zero. An extra broad `Test.*Epoch` normal
+run passed in 72.819s; its three-repeat race command hit the chosen three-minute
+package allowance in unchanged `TestPressureFixtureUsesAdmittedEpochs/v1` and
+is recorded as incomplete, not green or an assertion failure. The required
+focused selector includes the inspector and inherited handoff tests.
+
+The one clean detached exact-source cold rehearsal then failed in 1,042.020s
+(1,041.34s test time). Protected source/SDK/module custody passed in 369.559s
+with 67,634 entries, 55,915 files and 1,354,731,588 bytes; all three protected
+reference tools passed. Actual server/index execution reached 27 complete X
+read reports, the last C=0/S=3, and the index job reported success. No cold
+authority or phase-three handoff passed. Its stopped prefix retained
+RootJoined=true, SessionEmpty=false, DA active handles and one open SA call
+without terminal EOF. The exact surviving SurrealDB child was independently
+identity-checked and sent TERM; it subsequently disappeared and the recorded
+Phebs listener was absent. This manual cleanup does not amend the failed result.
+The exact `t422-epoch-one-rehearsal-1941975116` custody, private server log and
+unmerged validation checkout remain retained; no automatic rerun or integration
+followed. The initial HTTP body and native exit cause were not retained, so
+X27 does not identify the triggering refusal. Subsequent correction reuses
+session-wide cleanup on all three affected custody paths and adds bounded
+private diagnostics without loosening acceptance. Corrected exact-source
+gates/review and a successful native cold/handoff run remain required.
+
+The session/diagnostic correction content passed focused normal (1.179s) and
+three-repeat race (9.270s), vet and pinned lint on both changed spike packages,
+documentation/glossary and whitespace checks. Shared session regressions also
+passed normal three repetitions (1.670s) and race three repetitions (3.253s);
+existing author refusal/join tests passed normal (1.107s) and race (2.284s), and
+the inherited T4013 session-stop test passed (0.803s). These are mechanism
+checks only; immutable correction review and native cold evidence remain open.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
