@@ -4543,6 +4543,26 @@ twenty normal repetitions (0.739s) and three race repetitions (1.759s).
 Combined owning-doc resolution passes docs (0.622s), glossary and whitespace.
 Corrected immutable attribution and native confirmation remain open.
 
+The corrected exact source `c267602f774bf8af5284ea5c7286e30fe9c6c42b`
+then passed independent OCR of its two-file clarification/record delta with all
+severities zero. Combined owning epoch/author normal and race regressions passed
+in 2.342s and 19.528s; vet, pinned lint (zero issues), docs (0.622s), glossary,
+whitespace and retained V1/V2 preservation checks passed. Its clean detached
+native rehearsal completed actual cold X/T/F, joined warm equality, physical-B
+X/T/F and current/prior retention R, then exact stop in 2,294.63s (package
+2,295.306s; native epoch 22m17.526513417s). RootStarted, RootJoined and SessionEmpty
+are true. DA retained 43,772 attempts with root ordinal three and the actual B
+author closed; SA retained 8,003 transactions / 428,980 rows, maximum 512 rows.
+Phase four contributed 5,326 transactions / 220,478 rows; warm contributed four
+transactions / zero rows. All opened producer calls/handles are settled and
+closed, and the single SA receiver supplied terminal EOF. Unopened later
+producers truthfully leave the whole-flow Complete flags false. This proves the
+physical authority/retention slice, not full work metrics, later epochs or freeze.
+The successful harness removed its private native custody; no process from that
+custody remains. The exact detached source stayed clean and the terminal log is
+retained outside it at `/private/tmp/phebs-t422-physical.78vVnJ/physical.log`,
+SHA-256 `ebafa21a10c8d713d6248d69a2a9d1b080ddeac19774f2b29e8a4c55b395eee9`.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
