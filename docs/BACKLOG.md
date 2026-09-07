@@ -4745,6 +4745,20 @@ per-phase bounds; no result or integration readiness is claimed before it
 finishes. This native run also requires genuine report and blob-prefix parsing,
 not just the previously established authority observations.
 
+**Freeze blocker — native index-offer tool boundary (2026-09-07).** The
+measurement agent, lead and independent OCR confirmed the pinned upstream
+`gitindex/index.go` planned-total log precedes the go-git createDocument/Add
+loop, which can fail between offers and exposes no observer; completed shard
+logs do not recover that prefix. `referenceToolRole` fixes the upstream CLI
+package/module recipe and verifies its exact reference bytes. V3 requires actual
+IndexFiles but does not admit `index_files` in its unavailable-metric vocabulary.
+No successful-count inference closes failed-prefix acceptance. Ben's narrow
+authorization is required before selecting a prospective V3-only instrumented
+native hook/build identity; all measurement units, ceilings, direct-upstream
+constraints and retained V1/V2 bytes remain protected. No module/tool/recipe
+change, evidence waiver or upstream message was made. The already-started exact
+logical rehearsal may finish; its result cannot remove this freeze blocker.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
