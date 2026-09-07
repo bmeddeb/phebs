@@ -92,6 +92,7 @@ type t421ExactReadAccountingState struct {
 	retention  *t422RetentionControl
 	activation *t422ActivationControl
 	stale      *t422StaleControl
+	checkpoint *t422CheckpointControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -217,6 +218,10 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		handler.state.stale.command(writer, request)
 		return
 	}
+	if handler.state.checkpoint != nil && request.URL != nil && request.URL.Path == t422CheckpointPreparePath {
+		handler.state.checkpoint.command(writer, request)
+		return
+	}
 	if !t421ExactReadAttempt(request) {
 		handler.next.ServeHTTP(writer, request)
 		return
@@ -237,6 +242,12 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.StaleLeaseTransitionControlFileReads,
 			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
 		nativeFailureStatus, nativeFailure = "stale_observation_refused", errT422StaleControl
+	}
+	if checkpointRead := handler.state.checkpointRead(request); checkpointRead != nil {
+		nativeRead = checkpointRead
+		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.CheckpointRestartTransitionControlFileReads,
+			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "checkpoint_observation_refused", errT422StaleControl
 	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleRead(request.URL.Path) {
 		nativeRead = handler.state.lifecycle.read(request)
@@ -294,6 +305,9 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 			}
 			if readErr == nil && handler.state.stale != nil && request.URL.Path == t421ExactFinalAuthorityPath {
 				afterReport, readErr = handler.state.stale.finalTail(ctx)
+			}
+			if readErr == nil && handler.state.checkpoint != nil && request.URL.Path == t421ExactFinalAuthorityPath {
+				afterReport, readErr = handler.state.checkpoint.finalTail(ctx, afterReport)
 			}
 		}
 		if readErr != nil || !json.Valid(canonical) {

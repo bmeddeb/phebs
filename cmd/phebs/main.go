@@ -1125,6 +1125,7 @@ func serve(args []string) (retErr error) {
 	var markerControl *t422MarkerControl
 	var activationControl *t422ActivationControl
 	var staleControl *t422StaleControl
+	var checkpointControl *t422CheckpointControl
 	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 2 {
 		activationControl, err = newT422ActivationControl(ctx, semanticLaunch, serviceRuntime)
 		if err != nil {
@@ -1638,6 +1639,22 @@ func serve(args []string) (retErr error) {
 			}
 			defer staleControl.cancel()
 			exactReadState.stale = staleControl
+			terminalPhase, terminalErr := dispatchadmission.ProductionTerminalPhase()
+			if terminalErr != nil {
+				return terminalErr
+			}
+			if terminalPhase != 0 {
+				checkpointControl, err = newT422CheckpointControl(ctx, staleControl)
+				if err != nil {
+					return err
+				}
+				defer checkpointControl.cancel()
+				exactReadState.checkpoint = checkpointControl
+				partitionRuntime.OnPartitionCheckpoint = checkpointControl.checkpoint
+				if err := dispatchadmission.BindProductionTerminalQuiescence(checkpointControl.quiesce); err != nil {
+					return err
+				}
+			}
 		}
 		candidateWorker.Diagnostics = cfg.Diagnostics.Candidates
 		if err := enqueueCandidateBackfillWithReadiness(
@@ -1785,6 +1802,7 @@ func serve(args []string) (retErr error) {
 		if staleControl != nil {
 			class := partitionScheduler.Classes[store.GenerationResourceExtraction]
 			class.BeforeLeaseHeartbeat, class.OnStaleLeaseTransition = staleControl.beforeHeartbeat, staleControl.transition
+			class.TerminalHeartbeat = checkpointControl != nil
 			partitionScheduler.Classes[store.GenerationResourceExtraction] = class
 		}
 		bindT422ExactChunkReports(exactReads, failExactRead, partitionScheduler)
@@ -2181,6 +2199,7 @@ func serve(args []string) (retErr error) {
 			Limits: t421FinalAuthorityReadLimits(), Read: reader.Read,
 		}
 		reader.stale = staleControl
+		reader.checkpoint = checkpointControl
 		tailReadiness = t421ExactFinalAuthorityRead{
 			Limits: t421TailReadinessLimits(), Read: reader.ReadTailReadiness,
 		}

@@ -96,6 +96,7 @@ type t421FinalAuthorityReader struct {
 	identities []candidate.PolicyIdentity
 	policy     string
 	stale      *t422StaleControl
+	checkpoint *t422CheckpointControl
 
 	candidateState func(context.Context) (candidate.State, error)
 	openDomain     func(context.Context, candidate.DomainResultPlan) (*candidate.SparseDomain, error)
@@ -332,6 +333,11 @@ func (reader *t421FinalAuthorityReader) Read(
 	}
 	if reader.stale != nil {
 		if err := reader.stale.captureFinal(ctx, candidateState, response); err != nil {
+			return nil, nil, err
+		}
+	}
+	if reader.checkpoint != nil {
+		if err := reader.checkpoint.captureFinal(ctx, candidateState, response); err != nil {
 			return nil, nil, err
 		}
 	}

@@ -5253,6 +5253,31 @@ passed 0.713s/1.794s. Vet, pinned lint, format and whitespace passed. These are
 mechanical socket/SDK-wrapper tests, not native held-claim or hard-death proof.
 Cmd callback integration, immutable attribution and full runner remain open.
 
+Terminal PC commit `5bc90a6571974da6daae2b3ff143497196806e5a` received
+independent OCR 9/9, zero skipped and all severities zero. Root combined
+phase/store/bootstrap/successor regression passed 0.731s, docs 0.530s,
+glossary/whitespace clean. No native phase pass is implied.
+
+**T42.2l native checkpoint-hit child prerequisite (2026-09-07).**
+Authenticated terminal mode alone installs fixed proto-contract/local-two
+checkpoint preparation, phase-seven F capture/report confirmation and the
+actual reused-result hook. The hook matches its genuine scheduler capability
+and prepared native identities and stays parked after hit R. Terminal PC waits
+the joined R continuation, then genuine owner/request/heartbeat quiescence.
+
+AC: native hook/claim/target bindings, report/body/ledger/sink/cancellation
+refusals, strict routes, counters and a real inherited DA/PC/SA bootstrap plus
+Scheduler.Run capability fixture. Supplied preparation/event/R test values are
+explicitly mechanics, not durable preparation or native HTTP/SDK/kill proof.
+Seven authored cmd files received independent OCR 7/7, all severities zero;
+the seven copied PC prerequisites independently byte-match reviewed 5bc90a65,
+so all fourteen previewed paths are accounted for. Final focused
+checkpoint/stale/semantic normal passed 1.125s, race three times 4.034s;
+vet, pinned lint, formatting and whitespace passed. Owning cost record charges
+native preparation locks/mutations and every enabled claim, not just the hit.
+Epoch-four immutable target handoff and recovered R, parent owned death and
+same-phase launch, full native phase and immutable review remain required.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
