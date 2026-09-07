@@ -99,6 +99,10 @@ type ProducerCount struct {
 	Checkpoint   uint32
 	Attached     bool
 	Closed       bool
+	// TerminalFencedEOF is distinct from the ordinary Close path and proves
+	// no native process death. TerminalPhase also exposes an unfulfilled arm.
+	TerminalPhase     uint32
+	TerminalFencedEOF bool
 }
 
 // Complete means reducer closure only: the final phase is fenced and every
@@ -112,6 +116,10 @@ type Snapshot struct {
 	Phases       []PhaseCount
 	Producers    []ProducerCount
 	Complete     bool
+	// PrefixesClosed permits explicit terminal-fenced EOF retirement. Complete
+	// deliberately remains false for that path; an outer owner must separately
+	// prove the required SDK/PC and owned-termination evidence before acceptance.
+	PrefixesClosed bool
 }
 
 type transaction struct {
@@ -127,14 +135,16 @@ type call struct {
 }
 
 type producerState struct {
-	config       Producer
-	ordinal      uint64
-	calls        [MaximumCalls]call
-	transactions [MaximumTransactions]transaction
-	checkpoint   uint32
-	lastPhase    uint32 // Set only by successful wire configuration; zero for a standalone reducer.
-	attached     bool
-	closed       bool
+	config        Producer
+	ordinal       uint64
+	calls         [MaximumCalls]call
+	transactions  [MaximumTransactions]transaction
+	checkpoint    uint32
+	lastPhase     uint32 // Set only by successful wire configuration; zero for a standalone reducer.
+	attached      bool
+	closed        bool
+	terminalPhase uint32
+	terminalEOF   bool
 }
 
 // Controller retains only configured rows and live slots, never outcome or
@@ -247,7 +257,7 @@ func (c *Controller) Submit(request Request) (Submission, error) {
 		return Submission{}, err
 	}
 	p := c.producerLocked(request.Producer)
-	if p == nil || !p.attached || p.closed || request.Phase != c.phases[c.phase].ID || p.checkpoint == request.Phase {
+	if p == nil || !p.attached || p.closed || p.terminalPhase != 0 || request.Phase != c.phases[c.phase].ID || p.checkpoint == request.Phase {
 		return Submission{}, c.failLocked(ErrProtocol)
 	}
 	if request.Kind < ImplicitWrite || request.Kind > Cancel ||
@@ -419,7 +429,7 @@ func (c *Controller) Checkpoint(producer, phase uint32) error {
 		return err
 	}
 	p := c.producerLocked(producer)
-	if !c.fenced || phase != c.phases[c.phase].ID || p == nil || !p.attached || p.closed || p.checkpoint == phase {
+	if !c.fenced || phase != c.phases[c.phase].ID || p == nil || !p.attached || p.closed || p.terminalPhase != 0 || p.checkpoint == phase {
 		return c.failLocked(ErrProtocol)
 	}
 	if p.busy() {
@@ -443,7 +453,7 @@ func (c *Controller) Advance() error {
 	}
 	for i := 0; i < c.producerCount; i++ {
 		p := &c.producers[i]
-		if p.attached && !p.closed && (p.checkpoint != c.phases[c.phase].ID || p.lastPhase == c.phases[c.phase].ID) {
+		if p.attached && !p.closed && !p.terminalEOF && (p.checkpoint != c.phases[c.phase].ID || p.lastPhase == c.phases[c.phase].ID) {
 			return ErrBusy
 		}
 	}
@@ -464,13 +474,60 @@ func (c *Controller) Close(producer uint32) error {
 		return err
 	}
 	p := c.producerLocked(producer)
-	if p == nil || !p.attached || p.closed {
+	if p == nil || !p.attached || p.closed || p.terminalPhase != 0 {
 		return c.failLocked(ErrProtocol)
 	}
 	if p.busy() {
 		return ErrBusy
 	}
 	p.closed = true
+	return nil
+}
+
+// Called only by the actual transport owner. The genuine child SDK checkpoint
+// and its consumed ACK are owning-driver prerequisites, not caller booleans.
+// The reducer checkpoint commits before ACK; the serial receiver must still
+// reject any ACK-write failure before it can observe a subsequent clean EOF.
+func (c *Controller) armTerminalEOF(producer, phase uint32) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.checkLocked(); err != nil {
+		return err
+	}
+	p := c.producerLocked(producer)
+	if !c.fenced || phase != c.phases[c.phase].ID || p == nil || !p.attached || p.closed ||
+		p.terminalPhase != 0 || p.lastPhase != phase || p.checkpoint != phase {
+		return c.failLocked(ErrProtocol)
+	}
+	for i := 0; i < c.producerCount; i++ {
+		if c.producers[i].busy() {
+			return c.failLocked(ErrProtocol)
+		}
+	}
+	p.terminalPhase = phase
+	return nil
+}
+
+// Only the receiver's real remote EOF branch may call this. No slot is cleared
+// and no CloseACK, native Wait, kill or session-empty evidence is manufactured.
+func (c *Controller) acceptTerminalEOF(producer uint32) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.checkLocked(); err != nil {
+		return err
+	}
+	p := c.producerLocked(producer)
+	phase := c.phases[c.phase].ID
+	if !c.fenced || p == nil || !p.attached || p.closed || p.terminalEOF || p.terminalPhase != phase ||
+		p.lastPhase != phase || p.checkpoint != phase {
+		return c.failLocked(ErrIncomplete)
+	}
+	for i := 0; i < c.producerCount; i++ {
+		if c.producers[i].busy() {
+			return c.failLocked(ErrIncomplete)
+		}
+	}
+	p.terminalEOF = true
 	return nil
 }
 
@@ -485,9 +542,11 @@ func (c *Controller) Snapshot() (Snapshot, error) {
 		Phase: c.phases[c.phase].ID, Complete: err == nil && c.fenced && c.phase+1 == c.phaseCount,
 		Phases:    append([]PhaseCount(nil), c.counts[:c.phaseCount]...),
 		Producers: make([]ProducerCount, 0, c.producerCount)}
+	out.PrefixesClosed = out.Complete
 	for i := 0; i < c.producerCount; i++ {
 		p := &c.producers[i]
-		row := ProducerCount{Producer: p.config.ID, Ordinal: p.ordinal, Checkpoint: p.checkpoint, Attached: p.attached, Closed: p.closed}
+		row := ProducerCount{Producer: p.config.ID, Ordinal: p.ordinal, Checkpoint: p.checkpoint, Attached: p.attached, Closed: p.closed,
+			TerminalPhase: p.terminalPhase, TerminalFencedEOF: p.terminalEOF}
 		for j := 0; j < p.config.Calls; j++ {
 			if p.calls[j].ordinal != 0 {
 				row.Calls++
@@ -500,6 +559,7 @@ func (c *Controller) Snapshot() (Snapshot, error) {
 		}
 		out.Producers = append(out.Producers, row)
 		out.Complete = out.Complete && p.closed
+		out.PrefixesClosed = out.PrefixesClosed && (p.closed || p.terminalEOF)
 	}
 	return out, err
 }

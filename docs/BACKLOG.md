@@ -5167,6 +5167,23 @@ Root owner regression passed 0.403s, docs passed 0.638s and glossary/whitespace
 were clean. Selected heartbeat, terminal PC/SDK, EOF and owned-death integration
 remain separate work; no native process was stopped by this primitive's tests.
 
+**T42.2l terminal-fenced store EOF prerequisite (2026-09-07).** A one-shot
+real-transport arm requires the current final admitted producer phase, actual
+reducer checkpoint, healthy fence and globally empty tracked calls/UUIDs.
+Only genuine remote frame-boundary EOF retires it. Ordinary Complete remains
+false; separate PrefixesClosed proves only mechanical prefix closure, not
+child SDK health, consumed PC ACK or owned kill/Wait/session-empty evidence.
+Those driver prerequisites and same-phase successor admission remain open.
+
+AC: actual socket EOF versus local close/cancel, partial/error/late frames,
+wrong binding/phase, busy target or other producer, concurrent submit/failure,
+mixed ordinary retirement and ACK-write failure after arm, with all accepted
+counters/reservations retained. Three-file frozen workspace received independent
+OCR coverage 3/3, zero skipped and all severity counts zero. Full package normal
+passed 1.644s and race repeated three times 5.684s; vet, pinned lint, formatting
+and whitespace passed. These are component gates, not native phase-eight proof.
+Independent immutable attribution and driver integration remain required.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

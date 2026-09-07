@@ -45,6 +45,9 @@ type WireSnapshot struct {
 	// Complete is protocol closure, NOT proof that a child consumed its final
 	// ACK, exited, or drained every SDK call. Genuine Handle.Wait is separate.
 	Complete bool
+	// PrefixesClosed includes explicitly armed terminal-fenced remote EOF.
+	// It is not ordinary Complete or evidence of an owned native termination.
+	PrefixesClosed bool
 }
 
 func NewTransport(ctx context.Context, controller *Controller, config WireConfig) (*Transport, error) {
@@ -165,7 +168,14 @@ func (t *Transport) serve(p *wirePeer) {
 			return
 		}
 		var raw [FrameBytes]byte
-		if _, err := io.ReadFull(p.conn, raw[:1]); err != nil {
+		if n, err := io.ReadFull(p.conn, raw[:1]); err != nil {
+			if n == 0 && err == io.EOF {
+				// Local Close/cancellation returns a closed-connection error,
+				// never permission to substitute EOF or skip pending opFail.
+				terminal = t.acceptTerminalEOF(p)
+				eof = terminal == nil
+				return
+			}
 			terminal = ErrIncomplete
 			return
 		}
@@ -253,6 +263,46 @@ func (t *Transport) serve(p *wirePeer) {
 	}
 }
 
+// ArmTerminalEOF is a one-shot mechanical exception to normal CloseACK/EOF.
+// The owner must first obtain the genuine child terminal-quiescence and SDK
+// checkpoint PC ACK, then arm before initiating owned termination. A later
+// native Wait/session-empty proof remains outside this package. No normal
+// EOF, SDK failure or caller-supplied healthy/dead assertion arms this path.
+func (t *Transport) ArmTerminalEOF(producer, phase uint32) error {
+	if t == nil {
+		return ErrConfig
+	}
+	t.mu.Lock()
+	p := t.peerLocked(producer)
+	var err error
+	if t.err != nil {
+		err = t.err
+	} else if t.ctx.Err() != nil || t.closing {
+		err = ErrCanceled
+	} else if p == nil || !p.opened || p.closed || p.eof || p.err != nil {
+		err = ErrProtocol
+	} else {
+		err = t.controller.armTerminalEOF(producer, phase)
+	}
+	t.mu.Unlock()
+	if err != nil {
+		return t.failure(err)
+	}
+	return nil
+}
+
+func (t *Transport) acceptTerminalEOF(p *wirePeer) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.err != nil {
+		return t.err
+	}
+	if t.closing || t.ctx.Err() != nil {
+		return ErrCanceled
+	}
+	return t.controller.acceptTerminalEOF(p.config.Producer)
+}
+
 // Fence must follow genuine semantic-owner and ALL-SDK-call drain. This method
 // cannot establish either precondition and does not stop native work itself.
 func (t *Transport) Fence() error {
@@ -288,7 +338,8 @@ func (t *Transport) Snapshot() (WireSnapshot, error) {
 	if err == nil && t.ctx.Err() != nil && !t.closing {
 		err = ErrCanceled
 	}
-	out := WireSnapshot{Store: store, ReservedBytes: t.bytes, MaximumBytes: t.limit, Complete: store.Complete && err == nil}
+	out := WireSnapshot{Store: store, ReservedBytes: t.bytes, MaximumBytes: t.limit, Complete: store.Complete && err == nil,
+		PrefixesClosed: store.PrefixesClosed && err == nil}
 	for i := 0; i < t.count; i++ {
 		p := &t.peers[i]
 		if p.opened {
@@ -298,6 +349,7 @@ func (t *Transport) Snapshot() (WireSnapshot, error) {
 			out.TerminalEOF++
 		}
 		out.Complete = out.Complete && p.eof
+		out.PrefixesClosed = out.PrefixesClosed && p.eof
 	}
 	return out, err
 }
