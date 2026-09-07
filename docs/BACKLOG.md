@@ -5119,6 +5119,23 @@ earlier reclaimed-worker ordering medium. Root broad command regression was
 1.042s, vet/pinned lint were clean and docs passed 0.447s with glossary and
 whitespace clean. Native stale-reaper/R evidence remains unrun.
 
+**T42.2l phase-eight retained-owner prerequisite (2026-09-07).**
+`OwnerTurn.FenceTerminal` is a genuine generation-bound terminal fence, not an
+active-count assertion. It keeps the exact target turn active while stopping
+new entry and joining other owners and all request tails. It never claims
+ordinary owner drainage or permits resume; held-End, replay, stale authority,
+cancel/deadline and normal-control misuse preserve failure and the retained bit.
+
+AC: first/last slots under the existing 64-owner cap; request-tail join;
+parked-new-owner cancellation; stale/copied/request/nil/unbounded authority
+refusal; irreversible normal-control refusal; retained prefix after failed
+drain. Author focused normal passed 0.311s and race three times 1.288s, with
+vet, pinned lint (zero issues) and whitespace clean. Only the owner primitive
+and its tests changed; no scheduler, heartbeat, SDK, PC, native execution or
+phase-eight completion claim follows. The owning ADR records one extra
+eight-byte mask and reuse of existing bounded waits. Independent immutable
+review and actual selected integration remain required.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

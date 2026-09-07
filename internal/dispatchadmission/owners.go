@@ -35,6 +35,7 @@ type Owners struct {
 	requestsFenced     bool
 	pausedReady        bool
 	requestsReady      bool
+	terminal           uint64 // Exact retained owner bit; never a normal drain.
 	changed            chan struct{}
 	err                error
 }
@@ -201,9 +202,67 @@ func (turn OwnerTurn) End() {
 		_ = owners.failLocked(ErrProtocol)
 		return
 	}
+	if !turn.request && owners.terminal == mask {
+		// Ending even a copied held turn invalidates terminal acquisition; it
+		// must never manufacture ordinary drainage or clear the retained bit.
+		_ = owners.failLocked(ErrProtocol)
+		return
+	}
 	*active &^= mask
-	if *active == 0 && (turn.request && owners.requestsFenced || !turn.request && owners.paused) {
+	if *active == 0 && (turn.request && owners.requestsFenced || !turn.request && owners.paused) ||
+		!turn.request && owners.terminal != 0 && owners.active == owners.terminal {
 		owners.notifyLocked()
+	}
+}
+
+// FenceTerminal closes new owner/request entry and joins every complete turn
+// except this exact live owner. Only an actual non-request OwnerTurn carries
+// that authority: no active-count assertion or caller-authored slot is accepted.
+// The retained turn must remain held until owned process death, including on
+// failure. This irreversible fence proves neither heartbeat/SDK quiescence nor
+// native death, and never sets the normal paused/request-drained readiness.
+func (turn OwnerTurn) FenceTerminal(ctx context.Context) error {
+	owners := turn.owners
+	if owners == nil {
+		return ErrConfig
+	}
+	owners.mu.Lock()
+	defer owners.mu.Unlock()
+	if owners.err != nil {
+		return owners.err
+	}
+	if ctx == nil || ctx.Err() != nil || owners.ctx.Err() != nil {
+		return owners.failLocked(ErrCanceled)
+	}
+	if _, bounded := ctx.Deadline(); !bounded {
+		return owners.failLocked(ErrConfig)
+	}
+	mask := uint64(1) << turn.slot
+	if turn.request || turn.generation == 0 || turn.slot >= uint8(owners.limits.Owners) ||
+		owners.active&mask == 0 || owners.generations[turn.slot] != turn.generation ||
+		owners.terminal != 0 || owners.paused || owners.requestsFenced || owners.pausedReady || owners.requestsReady {
+		return owners.failLocked(ErrProtocol)
+	}
+	owners.terminal, owners.paused, owners.requestsFenced = mask, true, true
+	owners.notifyLocked()
+	for {
+		if owners.err != nil {
+			return owners.err
+		}
+		if ctx.Err() != nil || owners.ctx.Err() != nil {
+			return owners.failLocked(ErrCanceled)
+		}
+		if owners.active == mask && owners.requests == 0 {
+			return nil
+		}
+		changed := owners.changed
+		owners.mu.Unlock()
+		select {
+		case <-ctx.Done():
+		case <-owners.ctx.Done():
+		case <-changed:
+		}
+		owners.mu.Lock()
 	}
 }
 
@@ -221,6 +280,9 @@ func (owners *Owners) fence(ctx context.Context, request bool) error {
 	}
 	owners.mu.Lock()
 	defer owners.mu.Unlock()
+	if owners.terminal != 0 {
+		return owners.failLocked(ErrProtocol)
+	}
 	if ctx == nil {
 		return owners.failLocked(ErrCanceled)
 	}
@@ -267,6 +329,9 @@ func (owners *Owners) reopen(request bool) error {
 	}
 	owners.mu.Lock()
 	defer owners.mu.Unlock()
+	if owners.terminal != 0 {
+		return owners.failLocked(ErrProtocol)
+	}
 	if owners.err != nil {
 		return owners.err
 	}
