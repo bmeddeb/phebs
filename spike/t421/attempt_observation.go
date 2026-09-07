@@ -128,7 +128,7 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(result *ExecutionEpoch
 		return ErrExecutionEpochOne // Do not inspect a possibly live buffer.
 	}
 	var err error
-	result.Attempts, err = observeExecutionAttempts(run.output.buffer.Bytes(), run.flow.plan, 2, run.attemptInput, true)
+	result.Attempts, err = observeExecutionAttempts(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true)
 	if err != nil || failure != nil {
 		result.Attempts.Complete = false
 		return ErrExecutionEpochOne

@@ -4651,6 +4651,32 @@ vet, pinned lint (zero issues), docs (0.726s), glossary, whitespace and unchange
 retained V1/V2 plan checks passed. Genuine queue/epoch report consumption remains
 required; native-shaped report fixtures do not establish it or whole-work fit.
 
+**T42.2l executor track — retained-parent logical epoch (2026-09-07).**
+Compose physical-B stop and producer-three startup using the existing shared
+DA/SA parent, preserving source borrow throughout the gap. AC: genuine joined
+first-server/session/EOF prefix, paused open root, exact advance to phase five,
+atomic borrow transfer, no successor on failed continuation, native hit before
+X/T readiness, drained recovered R and logical F continuity, joined final tails,
+unchanged old Stop behavior, focused inherited-transport/custody/deadline
+normal/race gates and independent OCR/cost review. Five epoch-two PC pairs and
+the unchanged four-hour phase/fifteen-minute health deadlines are derived before
+launch. Actual selected logical execution and whole-work fit remain required;
+this prospective entry claims neither implementation nor a native pass.
+
+The logical parent implementation passed focused preservation normal tests
+(1.652s), three race repetitions (15.135s), vet, pinned lint (zero issues) and
+whitespace. Inherited two-child DA/SA/PC tests exercise a genuine phase-four
+terminal EOF and phase-five successor on the same controller; model fixtures
+cover logical authority/R identity and custody failure paths. Initial fixtures
+were corrected for exact response framing and the required earlier SA phase
+mask; no native engine ran. One new server uses existing protected tool/input
+checks and launch resources. Detached prior authorities retain bounded decoded
+inventories without retaining the old reader/run/output graph; a caller retaining
+both diagnostic results can still hold two independently capped 64-MiB outputs.
+The logical reader permits at most 5,765 inspections, including the two five-read
+R calls. Immutable OCR and genuine selected logical rehearsal remain required;
+these tests establish neither whole-phase metrics nor freeze.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

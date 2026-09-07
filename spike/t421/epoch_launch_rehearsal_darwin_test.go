@@ -59,6 +59,10 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
 	warm := os.Getenv("PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL") == "1"
 	physical := os.Getenv("PHEBS_T422_EPOCH_ONE_PHYSICAL_REHEARSAL") == "1"
+	logical := os.Getenv("PHEBS_T422_LOGICAL_REHEARSAL") == "1"
+	if logical && !physical {
+		t.Fatal("logical selector requires explicit physical selector")
+	}
 	if physical && !warm {
 		t.Fatal("physical selector requires explicit warm selector")
 	}
@@ -71,6 +75,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if physical {
 		allowance = 9 * time.Hour // Protected builds plus unchanged cold/warm/B phase deadlines.
+	}
+	if logical {
+		allowance += 4 * time.Hour // Separate unchanged phase-five deadline includes handoff.
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
@@ -277,6 +284,22 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			t.Fatal("actual epoch-one physical B/current-prior observation", err)
 		}
 		t.Log("actual physical B X/T/F and current/prior retention read returned; no full phase metrics or later-epoch claim")
+	}
+	if logical {
+		next, err := run.StartLogicalB(ctx)
+		if next != nil {
+			run = next // Existing cleanup follows the actual successor, including failed bootstrap.
+		}
+		if err != nil {
+			t.Fatal("retained physical parent/logical successor", err)
+		}
+		if err := run.Health(ctx); err != nil {
+			t.Fatal("actual logical health", err)
+		}
+		if err := run.LogicalB(ctx); err != nil {
+			t.Fatal("actual logical hit/X/T/recovered/F", err)
+		}
+		t.Log("actual logical hit/recovery and physical-authority continuity returned; no full work metrics or freeze claim")
 	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()

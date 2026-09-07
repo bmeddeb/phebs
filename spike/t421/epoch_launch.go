@@ -37,6 +37,8 @@ type ExecutionEpochOne struct {
 	release                context.CancelFunc
 	used, authored, closed bool
 	closeErr               error
+	retained               *ExecutionEpochOneRun
+	logicalUsed            bool
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -131,9 +133,15 @@ func (flow *ExecutionEpochOne) Close() error {
 	// Constructor failures already hold the input locks; only a used flow can
 	// own a launched child and require this check.
 	if flow.used {
+		flow.epochs.author.mu.Lock()
 		flow.epochs.mu.Lock()
 		active := flow.epochs.active
+		if active && flow.retained != nil && flow.epochs.author.borrowedBy == flow.retained && flow.retained.joinedEmpty() {
+			flow.epochs.author.borrowedBy, flow.epochs.active = nil, false
+			active = false
+		}
 		flow.epochs.mu.Unlock()
+		flow.epochs.author.mu.Unlock()
 		if active {
 			return ErrExecutionEpochOne
 		}
@@ -212,11 +220,16 @@ type ExecutionEpochOneRun struct {
 	result                ExecutionEpochOneResult
 	err                   error
 	nativeStopErr         error // Private diagnostic, never a public evidence classification.
+	retainParent          bool
+	logicalUsed           bool
+	logicalCancel         context.CancelFunc
+	logicalDone           chan struct{}
+	priorPhysical         *epochLogicalPrior // Detached actual authorities; never retains old output.
 }
 
-func (flow *ExecutionEpochOne) checkTools(ctx context.Context) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
+func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
 	author := flow.epochs.author
-	epoch := flow.epochs.epochs[0]
+	epoch := flow.epochs.epochs[number-1]
 	phebs, path, err := flow.phebs.Check(ctx, "phebs")
 	zoekt, zoektPath, zoektErr := flow.zoekt.Check(ctx, "zoekt-git-index")
 	surreal, surrealPath, surrealErr := flow.surreal.Check(ctx, "surreal")
@@ -284,13 +297,6 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		healthLimit: bounds.health, coldDeadline: coldDeadline, lifetimeDeadline: deadline,
 		warmLimit: bounds.lifetime - bounds.cold - bounds.physical, physicalLimit: bounds.physical,
 		cancelRun: cancel, warmAllowed: mode == epochOneColdWarm || mode == epochOnePhysicalB, physicalAllowed: mode == epochOnePhysicalB}
-	started := false
-	defer func() {
-		if !started {
-			run.stopPhaseDeadline()
-			cancel()
-		}
-	}()
 	launchCtx := runCtx
 	if bounds.cold != 0 {
 		run.mu.Lock()
@@ -300,25 +306,50 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		launchCtx, launchCancel = context.WithDeadline(runCtx, coldDeadline)
 		defer launchCancel()
 	}
+	launched, err := flow.launchEpoch(runCtx, launchCtx, cancel, run, bounds, 1)
+	if launched == nil {
+		run.stopPhaseDeadline()
+		cancel()
+	}
+	return launched, err
+}
+
+// Both callers hold flow.mu and select one of the two implemented epochs.
+func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, cancel context.CancelFunc, run *ExecutionEpochOneRun, bounds epochOneLimits, number uint64) (_ *ExecutionEpochOneRun, retErr error) {
+	if number != 1 && number != 2 {
+		return nil, ErrExecutionEpochOne
+	}
+	producer, phase := uint32(number+1), uint32(2)
+	if number == 2 {
+		phase = 5
+	}
+	started := false
 	author, epochs := flow.epochs.author, flow.epochs
 	author.mu.Lock()
 	epochs.mu.Lock()
-	if author.active || author.borrowedBy != nil || epochs.active || author.next != 1 || epochs.checkLocked(launchCtx, 1) != nil || author.checkSource(launchCtx, author.previous) != nil {
+	borrowOK := author.borrowedBy == nil && !epochs.active
+	if number == 2 {
+		borrowOK = flow.retained != nil && author.borrowedBy == flow.retained && epochs.active && flow.retained.joinedEmpty()
+	}
+	if author.active || !borrowOK || author.next != int(number) || epochs.checkLocked(launchCtx, number) != nil || author.checkSource(launchCtx, author.previous) != nil {
 		epochs.mu.Unlock()
 		author.mu.Unlock()
 		return nil, ErrExecutionEpochOne
 	}
-	path, tools, environment, err := flow.checkTools(launchCtx)
-	epoch := epochs.epochs[0]
+	path, tools, environment, err := flow.checkEpochTools(launchCtx, number)
+	epoch := epochs.epochs[number-1]
 	run.epoch = epoch
-	if err == nil && (epochs.released != 0 || epochs.listeners[0].Close() != nil) {
+	if err == nil && (epochs.released != number-1 || epochs.listeners[number-1].Close() != nil) {
 		err = ErrExecutionEpochOne
 	}
 	if err == nil {
-		epochs.listeners[0] = nil
-		epochs.released = 1
+		epochs.listeners[number-1] = nil
+		epochs.released = number
 		epochs.active = true
 		author.borrowedBy = run
+		if number == 2 {
+			flow.retained = nil
+		}
 	}
 	epochs.mu.Unlock()
 	author.mu.Unlock()
@@ -334,8 +365,8 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 			author.mu.Unlock()
 		}
 	}()
-	view, err := flow.controller.ProducerLaunch(2)
-	if err != nil || view.Phase != 2 {
+	view, err := flow.controller.ProducerLaunch(producer)
+	if err != nil || view.Phase != phase {
 		return nil, ErrExecutionEpochOne
 	}
 	raw, err := json.Marshal(struct {
@@ -345,7 +376,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		ConfigSHA256 string `json:"config_sha256"`
 		ServerEpoch  uint64 `json:"server_epoch"`
 		Repository   string `json:"repository"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", author.planSHA256, epoch.ConfigSHA256, 1, epoch.Repository})
+	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", author.planSHA256, epoch.ConfigSHA256, number, epoch.Repository})
 	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -370,7 +401,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		return nil, ErrExecutionEpochOne
 	}
 	defer func() { _ = input.Close() }() // Explicit success-path close is checked below.
-	storeFile, storeConfig, err := flow.store.Open(2)
+	storeFile, storeConfig, err := flow.store.Open(producer)
 	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -384,7 +415,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
 	run.command = command
-	handle, err := flow.parent.StartInPhase(launchCtx, 2, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
+	handle, err := flow.parent.StartInPhase(launchCtx, phase, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
 	if err != nil {
 		cancel()
 		return nil, ErrExecutionEpochOne
@@ -402,8 +433,11 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		retErr = ErrExecutionEpochOne
 	}
 	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+	if number == 2 {
+		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{5}, 5, 1
+	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
-		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: 2, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
+		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
 	run.attemptInput = bootstrap.InputSHA256
 	var served <-chan error
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(launchCtx, files[0], files[2], bootstrap) != nil {
@@ -419,15 +453,15 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 			file := files[0]
 			files[0] = nil
 			go func() {
-				completion <- flow.controller.ServeChecked(flow.controller.Context(), 2, command.Process.Pid, file, func(checkCtx context.Context, _ dispatchadmission.Site) error {
+				completion <- flow.controller.ServeChecked(flow.controller.Context(), producer, command.Process.Pid, file, func(checkCtx context.Context, _ dispatchadmission.Site) error {
 					author.mu.Lock()
 					defer author.mu.Unlock()
 					epochs.mu.Lock()
 					defer epochs.mu.Unlock()
-					if epochs.checkLocked(checkCtx, 1) != nil {
+					if epochs.checkLocked(checkCtx, number) != nil {
 						return ErrExecutionEpochOne
 					}
-					_, _, _, err := flow.checkTools(checkCtx)
+					_, _, _, err := flow.checkEpochTools(checkCtx, number)
 					return err
 				})
 			}()
@@ -558,6 +592,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	coldCancel, coldDone := run.coldCancel, run.coldDone
 	warmCancel, warmDone := run.warmCancel, run.warmDone
 	physicalCancel, physicalDone := run.physicalCancel, run.physicalDone
+	logicalCancel, logicalDone := run.logicalCancel, run.logicalDone
 	run.mu.Unlock()
 	if healthCancel != nil {
 		healthCancel()
@@ -574,6 +609,10 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if physicalCancel != nil {
 		physicalCancel()
 		<-physicalDone
+	}
+	if logicalCancel != nil {
+		logicalCancel()
+		<-logicalDone
 	}
 	run.stopPhaseDeadline()
 	run.mu.Lock()
@@ -615,14 +654,14 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		joinCancel()
 	}
 	joinCtx, joinCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	if run.flow.store.Wait(joinCtx, 2) != nil {
+	if run.flow.store.Wait(joinCtx, run.producer()) != nil {
 		failure = ErrExecutionEpochOne
 	}
 	joinCancel()
 	if run.control != nil && run.control.Close() != nil {
 		failure = ErrExecutionEpochOne
 	}
-	if run.flow.parent.Close(context.Background()) != nil {
+	if !run.retainParent && run.flow.parent.Close(context.Background()) != nil {
 		failure = ErrExecutionEpochOne
 	}
 	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty}
@@ -641,14 +680,16 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	author, epochs := run.flow.epochs.author, run.flow.epochs
 	author.mu.Lock()
 	epochs.mu.Lock()
-	epochs.active = !joined || !result.SessionEmpty
+	// A retained physical run keeps its existing borrow through the gap. The
+	// one-shot successor or an explicit joined abandonment owns its release.
+	epochs.active = !joined || !result.SessionEmpty || run.retainParent
 	if !epochs.active {
 		author.borrowedBy = nil
 	}
 	epochs.mu.Unlock()
 	author.mu.Unlock()
 	run.mu.Lock()
-	if run.err != nil || !epochOneClosedPrefixForMode(ctx, result, run.physicalUsed) {
+	if run.err != nil || !epochClosedPrefix(ctx, result, run.physicalUsed, run.retainParent, run.epoch.Epoch == 2) {
 		failure = ErrExecutionEpochOne
 	}
 	if run.finishAttemptObservation(&result, failure) != nil {
@@ -694,7 +735,15 @@ func epochOneClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) b
 }
 
 func epochOneClosedPrefixForMode(ctx context.Context, result ExecutionEpochOneResult, physical bool) bool {
-	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Opened != 1 || result.Store.TerminalEOF != 1 {
+	return epochClosedPrefix(ctx, result, physical, false, false)
+}
+
+func epochClosedPrefix(ctx context.Context, result ExecutionEpochOneResult, physical, retained, logical bool) bool {
+	opened := 1
+	if logical {
+		opened = 2
+	}
+	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Opened != opened || result.Store.TerminalEOF != opened {
 		return false
 	}
 	root, server, store, author := false, false, false, !physical
@@ -702,21 +751,31 @@ func epochOneClosedPrefixForMode(ctx context.Context, result ExecutionEpochOneRe
 	if physical {
 		rootAttempts++
 	}
+	if logical {
+		rootAttempts, author = 4, false
+	}
+	second, secondStore := !logical, !logical
 	for _, producer := range result.Accounting.Producers {
 		if producer.Producer == executionRootProducer {
-			root = producer.Attached && producer.Closed && producer.Active == 0 && producer.Ordinal == rootAttempts
+			root = producer.Attached && producer.Closed != retained && producer.Active == 0 && producer.Ordinal == rootAttempts
 		}
 		if producer.Producer == 2 {
 			server = producer.Attached && producer.Closed && producer.Active == 0
 		}
-		if physical && producer.Producer == 8 {
+		if producer.Producer == 3 && logical {
+			second = producer.Attached && producer.Closed && producer.Active == 0
+		}
+		if (physical || logical) && producer.Producer == 8 {
 			author = producer.Attached && producer.Closed && producer.Active == 0 && producer.Ordinal == 3
 		}
 	}
 	for _, producer := range result.Store.Store.Producers {
+		if producer.Producer == 3 && logical {
+			secondStore = producer.Attached && producer.Closed && producer.Calls == 0 && producer.Transactions == 0
+		}
 		if producer.Producer == 2 {
 			store = producer.Attached && producer.Closed && producer.Calls == 0 && producer.Transactions == 0
 		}
 	}
-	return root && server && store && author
+	return root && server && store && author && second && secondStore
 }
