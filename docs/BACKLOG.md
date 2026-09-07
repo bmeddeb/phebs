@@ -4892,6 +4892,16 @@ second blob; it does not manufacture server phase binding. Its disabled compile
 and pinned lint passed; native execution is not yet recorded. Independent
 immutable OCR and native gates remain pending.
 
+Independent OCR of exact `ba9f8153541d6c21ba11c3a5d91a86371b954a60`
+covered all 28 files, including excluded tests and owning documentation, with
+zero skipped: critical/high/medium 0, low 1. Production source, cost,
+environment replacement and provenance were clean. The low was a circular
+test oracle: expected cooperative-exit acceptance called the same production
+classifier being tested. The correction uses explicit exit-one/exit-two/joined
+exit acceptance versus mixed transport refusal, and asserts exactly one failed
+terminal only for accepted cases. Focused race repeated three times passed in
+7.548s; source-identical native reproduction is running, not yet passed.
+
 **T42.2l phase-seven prerequisite — native current predecessor (2026-09-07).**
 `PrepareCurrentRecovery` reuses the existing preparation implementation and
 captures the actual settled operational predecessor during the first locked
@@ -4906,7 +4916,8 @@ AC: predecessor-derived lineage, changed-current/late-authority refusal,
 zero usable result after failure, preserved committed mutations, cancellation,
 strict old API and unchanged native read/mutation/lock costs. The four-file
 source passed focused normal 10.358s, race 12.435s, vet, pinned lint (zero issues)
-and whitespace. The cancellation double ignores context and can return the
+and whitespace. Root composition passed the same focused normal selector in
+16.728s and docs/glossary/whitespace (docs 0.611s). The cancellation double ignores context and can return the
 second read; its test asserts refusal before mutation rather than claiming that
 fake read was prevented. The new tiny real-store test must still prove two
 successive completed predecessor-derived schedules and C13/S10/W1 per call.

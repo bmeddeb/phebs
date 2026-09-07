@@ -125,11 +125,20 @@ func TestIndexOfferOutputCooperativeFailurePreservesRetry(t *testing.T) {
 	if exitTwo == nil {
 		t.Fatal("expected exit two")
 	}
-	for _, runErr := range []error{exitErr, exitTwo, errors.Join(exitErr), errors.Join(exitErr, io.ErrUnexpectedEOF)} {
-		var failed uint64
+	for _, test := range []struct {
+		err      error
+		accepted bool
+	}{
+		{exitErr, true},
+		{exitTwo, true},
+		{errors.Join(exitErr), true},
+		{errors.Join(exitErr, io.ErrUnexpectedEOF), false},
+	} {
+		var failed, terminals uint64
 		ctx, err := WithIndexOfferObserver(t.Context(), func(event IndexOfferEvent) error {
 			if event.Kind == 'f' {
 				failed += event.Count
+				terminals++
 			}
 			return nil
 		})
@@ -143,10 +152,11 @@ func TestIndexOfferOutputCooperativeFailurePreservesRetry(t *testing.T) {
 		if _, err := out.Write([]byte("ZIB1\nZI1\nZIE1:1\n")); err != nil {
 			t.Fatal(err)
 		}
-		err = out.finish(runErr)
-		want := indexOfferExitFailure(runErr)
-		if (err == nil) != want || (failed == 1) != want {
-			t.Fatal(failed, err)
+		err = out.finish(test.err)
+		if (err == nil) != test.accepted ||
+			(test.accepted && (failed != 1 || terminals != 1)) ||
+			(!test.accepted && (failed != 0 || terminals != 0)) {
+			t.Fatal(failed, terminals, err)
 		}
 	}
 }
