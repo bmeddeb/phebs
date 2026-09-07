@@ -24,25 +24,30 @@ import (
 // These are mechanical two-phase fixtures, not frozen producer/epoch issuers.
 func storePhaseLifetime(t *testing.T, client *Client) (*ProductionLifetime, *storeaccounting.Controller, *storeaccounting.Transport) {
 	t.Helper()
+	return storePhaseLifetimeFor(t, client, 2, []storeaccounting.Phase{{ID: 1, Transactions: 10, Rows: 20}, {ID: 2, Transactions: 10, Rows: 20}}, 3)
+}
+
+func storePhaseLifetimeFor(t *testing.T, client *Client, producer uint32, phases []storeaccounting.Phase, mask uint16) (*ProductionLifetime, *storeaccounting.Controller, *storeaccounting.Transport) {
+	t.Helper()
 	parentCtx, cancelParent := context.WithCancel(t.Context())
 	t.Cleanup(cancelParent)
 	ctx, cancel := context.WithCancel(client.Context())
 	controller, err := storeaccounting.New(parentCtx, storeaccounting.Config{
-		Producers: []storeaccounting.Producer{{ID: 2, Calls: 1, Transactions: 1}},
-		Phases:    []storeaccounting.Phase{{ID: 1, Transactions: 10, Rows: 20}, {ID: 2, Transactions: 10, Rows: 20}},
+		Producers: []storeaccounting.Producer{{ID: producer, Calls: 1, Transactions: 1}},
+		Phases:    phases,
 	})
 	if err != nil {
 		cancel()
 		t.Fatal(err)
 	}
 	transport, err := storeaccounting.NewTransport(parentCtx, controller, storeaccounting.WireConfig{
-		Producers: []storeaccounting.WireProducer{{ID: 2, Binding: [32]byte{3}, Phases: 3}}, AckTimeout: time.Second,
+		Producers: []storeaccounting.WireProducer{{ID: producer, Binding: [32]byte{3}, Phases: mask}}, AckTimeout: time.Second,
 	})
 	if err != nil {
 		cancel()
 		t.Fatal(err)
 	}
-	file, config, err := transport.Open(2)
+	file, config, err := transport.Open(producer)
 	if err != nil {
 		cancel()
 		_ = transport.Close()

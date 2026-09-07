@@ -20,14 +20,16 @@ const (
 	phaseRequestsOpen
 	phaseRequestsFence
 	phaseOwnersReopen
+	phaseTerminalQuiesce
 )
 
 // PhaseControlConfig bounds an explicitly inherited control endpoint. These
 // caller-owned limits are not frozen ceremony limits or tool/input admission.
 // The separate control socket preserves DA01's single-request echo protocol.
 type PhaseControlConfig struct {
-	// Omitted when false to preserve existing canonical bootstrap bytes.
-	TerminalAuthor   bool `json:",omitempty"`
+	// Zero values are omitted to preserve existing canonical bootstrap bytes.
+	TerminalAuthor   bool   `json:",omitempty"`
+	TerminalPhase    uint32 `json:",omitempty"`
 	OwnerControl     bool
 	Phases           []uint32
 	InitialPhase     uint32
@@ -37,6 +39,10 @@ type PhaseControlConfig struct {
 }
 
 func (config PhaseControlConfig) validate() (int, error) {
+	if config.TerminalPhase != 0 && (config.TerminalPhase != 8 || !config.OwnerControl || config.TerminalAuthor ||
+		config.InitialPhase != 6 || config.MaximumPhases != 3 || !slices.Equal(config.Phases, []uint32{6, 7, 8})) {
+		return 0, ErrConfig
+	}
 	if config.TerminalAuthor && (config.OwnerControl || len(config.Phases) != 1 || config.MaximumPhases != 1) {
 		return 0, ErrConfig
 	}
@@ -78,7 +84,7 @@ func decodePhaseControl(raw [FrameBytes]byte) (phaseControlFrame, error) {
 	frame := phaseControlFrame{op: raw[4], phase: binary.BigEndian.Uint32(raw[8:12]),
 		sequence: binary.BigEndian.Uint64(raw[16:24])}
 	copy(frame.binding[:], raw[32:])
-	if frame.op < phasePause || frame.op > phaseOwnersReopen || frame.encode() != raw {
+	if frame.op < phasePause || frame.op > phaseTerminalQuiesce || frame.encode() != raw {
 		return phaseControlFrame{}, ErrProtocol
 	}
 	return frame, nil
@@ -313,6 +319,7 @@ func StartPhaseControl(ctx context.Context, file *os.File, client *Client, confi
 	if valid {
 		client.controlAttached = true
 		client.controlTerminalAuthor = config.TerminalAuthor
+		client.controlTerminalPhase = config.TerminalPhase
 		client.ownersRequired = config.OwnerControl
 		if config.OwnerControl {
 			client.ownersReady = make(chan struct{})
@@ -398,6 +405,8 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 			err = client.Resume(frame.phase)
 		case phaseOwnerDrain, phaseRequestsOpen, phaseRequestsFence, phaseOwnersReopen:
 			err = client.controlOwners(opCtx, frame)
+		case phaseTerminalQuiesce:
+			err = client.quiesceTerminal(opCtx, frame.phase)
 		}
 		if err == nil && opCtx.Err() != nil {
 			err = ErrCanceled

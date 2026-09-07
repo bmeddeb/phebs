@@ -5233,6 +5233,26 @@ The parent must prove whole-session emptiness, serialize both cutovers and
 latch any partial failure before starting epoch four. Full phase-eight launch
 and recovery remain separate work.
 
+Same-phase successor commit `a6763fecd69c0f2e69363917b660937761c4b488`
+then received independent OCR 8/8, zero skipped and all severities zero,
+including owning records; docs passed 0.615s, glossary/whitespace clean.
+
+**T42.2l terminal PC prerequisite (2026-09-07).** Optional authenticated
+terminal mode is closed to V3 Phebs producer four and phases six/seven/eight.
+One selected main-owned callback joins native quiescence before dispatch Pause;
+the next and only permitted control is the existing genuine SDK/SA then DA
+Checkpoint. It neither claims ordinary drainage nor enables reopening.
+
+AC: strict bootstrap/legacy omission, phase-six/seven handoffs, held-owner and
+request-tail ordering, genuine SDK checkpoint/counter retention, read/decode
+uncertainty, UUID, callback/panic/deadline, missing/duplicate/wrong-mode binder,
+malformed frames and lost ACK refusal. Seven-file frozen workspace received
+independent OCR 7/7, zero skipped and all severities zero. Focused normal passed
+0.427s and race three times 1.566s; broader phase/store/bootstrap normal/race
+passed 0.713s/1.794s. Vet, pinned lint, format and whitespace passed. These are
+mechanical socket/SDK-wrapper tests, not native held-claim or hard-death proof.
+Cmd callback integration, immutable attribution and full runner remain open.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
