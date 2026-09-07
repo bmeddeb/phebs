@@ -371,6 +371,18 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 	if err := st.ReleaseGenerationChunk(ctx, *target, controlledStop.Error()); err != nil {
 		t.Fatal(err)
 	}
+	// Untouched work has priority over a released stale unit. Let the actual
+	// remaining member finish before expecting the released target's replay.
+	future, err := st.ClaimGenerationChunk(ctx, store.GenerationResourceCPU, "activation-future")
+	if err != nil || future == nil || future.Offset != target.Offset+1 || future.Priority != store.GenerationPriorityNeverRun {
+		t.Fatal("native claim did not preserve untouched-member priority", future, err)
+	}
+	if _, err := controller.ProcessServiceStateV3Chunk(ctx, *future); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.CompleteGenerationChunk(ctx, *future); err != nil {
+		t.Fatal(err)
+	}
 	reclaimed, err := st.ClaimGenerationChunk(ctx, store.GenerationResourceCPU, "activation-resume")
 	if err != nil || reclaimed == nil || reclaimed.Identity != target.Identity || reclaimed.Attempt != 0 || reclaimed.Priority != store.GenerationPriorityStale || reclaimed.LeaseToken == target.LeaseToken {
 		t.Fatal("native controlled release did not reclaim the same attempt", reclaimed, err)

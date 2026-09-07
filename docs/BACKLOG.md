@@ -4616,6 +4616,15 @@ vet, pinned lint (zero issues), docs (0.529s), glossary and whitespace passed.
 The actual native committed-transition release/reclaim gate is serialized after
 the physical-B rehearsal and remains pending.
 
+That first native gate stopped in 12.60s (package 13.296s) because its added
+fixture expected the released stale-priority member nine to be reclaimed before
+the untouched priority-zero final member ten. Native claim ordering was correct.
+The test now processes and completes that actual final member before claiming
+the released target, then retains the same identity, attempt-zero, fresh-lease
+and zero-write replay assertions. This is a test-only correction; production
+scheduler/release semantics and the selected hit/recovered contract are unchanged.
+The corrected immutable native gate remains pending.
+
 Its attempt-report prerequisite `5bddcc48b894ba7fdc06b8358288fff6d11ff75c`
 also passed independent OCR across all eight changed files, with all severity
 counts zero and its post-join/output-prefix cost pass complete. Combined
