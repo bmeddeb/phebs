@@ -233,6 +233,10 @@ type ExecutionEpochOneRun struct {
 	returnUsed            bool
 	returnCancel          context.CancelFunc
 	returnDone            chan struct{}
+	staleAllowed          bool
+	staleUsed             bool
+	staleCancel           context.CancelFunc
+	staleDone             chan struct{}
 	priorLogical          *epochReturnPrior
 }
 
@@ -610,6 +614,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	physicalCancel, physicalDone := run.physicalCancel, run.physicalDone
 	logicalCancel, logicalDone := run.logicalCancel, run.logicalDone
 	returnCancel, returnDone := run.returnCancel, run.returnDone
+	staleCancel, staleDone := run.staleCancel, run.staleDone
 	run.mu.Unlock()
 	if healthCancel != nil {
 		healthCancel()
@@ -634,6 +639,10 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if returnCancel != nil {
 		returnCancel()
 		<-returnDone
+	}
+	if staleCancel != nil {
+		staleCancel()
+		<-staleDone
 	}
 	run.stopPhaseDeadline()
 	run.mu.Lock()

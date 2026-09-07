@@ -5083,6 +5083,42 @@ helpers only on native success. It changes no production image or assertion.
 Fresh full-gate confirmation remains required; the failed result is not renamed
 green and its remaining custody is not automatically deleted.
 
+**T42.2l same-server phase-seven parent (2026-09-07).** Explicit
+`StartReturnAStale` reserves the same producer-four server for phases six/seven;
+`StartReturnA` retains four hours and five PC pairs. The extended lifetime is
+eight hours from before predecessor stop/author nine, but each phase remains
+four hours and health remains fifteen minutes inside phase six. Phase-seven
+deadline installation precedes its actual checkpoint/advance handoff. Stop
+cancels and joins the stale operation before releasing source custody.
+
+AC: genuine inherited DA/SA/PC handoff including actual SDK checkpoint; one
+drained preparation POST and joined tail; reopen; one blocking R-hit then one
+blocking R-recovered before X/T; drained F equal to complete actual return-A
+authority including nine roots/56 results; shared read ordinals/counter prefixes;
+timer/Stop cancellation and no phase-six borrowing of phase-seven time. The
+two-phase path uses exactly fourteen PC pairs/1,792 bytes. Preparation is a
+bounded native observation, not a manufactured RecoveryPreparationResult.
+Existing scoped R is C8/S8/M0/W0 for the pair; complete work metrics remain open.
+
+The first nine-file draft passed focused normal 1.501s, race repeated three
+times 23.951s and the final changed negative-header test under race three times
+3.687s, plus vet and pinned lint. Independent OCR nevertheless found one high
+and no other severity findings across all nine files: the two launch contexts
+were reversed, so deferred bootstrap-context cancellation would kill the new
+server immediately. The correction passes persistent lifetime first and
+phase-six launch context second. Source-binding assertions and actual synctest
+contexts for both modes passed normal twenty times 0.636s, race three times
+1.797s and the broader normal selector 1.443s; pinned lint and whitespace pass.
+These tests explicitly do not claim a successful native StartReturnA launch.
+Corrected immutable review and full native confirmation remain required.
+
+The separate stale-control correction
+`d21201c62c862b405c044d561fdae2130dea4cff` received independent OCR coverage
+of all four files, zero skipped and all severity counts zero, closing the
+earlier reclaimed-worker ordering medium. Root broad command regression was
+1.042s, vet/pinned lint were clean and docs passed 0.447s with glossary and
+whitespace clean. Native stale-reaper/R evidence remains unrun.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

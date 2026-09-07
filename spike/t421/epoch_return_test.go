@@ -1,9 +1,14 @@
 package t421
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"go/ast"
+	"go/format"
+	"go/parser"
+	"go/token"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -16,6 +21,132 @@ import (
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
+
+// Source binding plus actual context behavior, not a successful native
+// StartReturnA proof: admitted author/tool custody remains a separate gate.
+func TestExecutionEpochReturnLaunchContextBinding(t *testing.T) {
+	fset := token.NewFileSet()
+	load := func(path, name string) *ast.FuncDecl {
+		t.Helper()
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, declaration := range file.Decls {
+			if function, ok := declaration.(*ast.FuncDecl); ok && function.Name.Name == name {
+				return function
+			}
+		}
+		t.Fatalf("missing actual function %s", name)
+		return nil
+	}
+	render := func(node ast.Node) string {
+		t.Helper()
+		var value bytes.Buffer
+		if err := format.Node(&value, fset, node); err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(strings.Fields(value.String()), " ")
+	}
+	start := load("epoch_return.go", "startReturnA")
+	// Ordered statements bind the tested contexts to the actual constructor,
+	// including the phase-six duration captured before the extended bounds.
+	want := []string{
+		"bounds, err := returnEpochBounds(flow.plan)",
+		"phaseDuration := bounds.lifetime",
+		"if stale { bounds, err = returnStaleEpochBounds(flow.plan) }",
+		"started := time.Now()",
+		"deadline, lifetimeDeadline := started.Add(phaseDuration), started.Add(bounds.lifetime)",
+		"lifetime, cancel := context.WithDeadline(ctx, lifetimeDeadline)",
+		"phaseContext, phaseCancel := context.WithDeadline(lifetime, deadline)",
+		"defer phaseCancel()",
+		"result, err := flow.launchEpoch(lifetime, phaseContext, cancel, next, bounds, 3)",
+	}
+	index := 0
+	for _, statement := range start.Body.List {
+		if index < len(want) && render(statement) == want[index] {
+			index++
+		}
+	}
+	if index != len(want) {
+		t.Fatalf("return launch lifetime/phase binding missing or reordered at %q", want[index])
+	}
+	launch := load("epoch_launch.go", "launchEpoch")
+	parameters := launch.Type.Params.List
+	if len(parameters) == 0 || len(parameters[0].Names) != 2 || parameters[0].Names[0].Name != "runCtx" || parameters[0].Names[1].Name != "launchCtx" {
+		t.Fatal("actual launch signature changed its runtime/bootstrap context order")
+	}
+	seen := map[string]int{}
+	ast.Inspect(launch.Body, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		for name, argument := range map[string]string{"run.finish": "runCtx", "dispatchadmission.SendProductionBootstrap": "launchCtx", "flow.parent.StartInPhase": "launchCtx", "writeAuthorCustodyRequest": "launchCtx"} {
+			if render(call.Fun) == name {
+				if len(call.Args) == 0 || render(call.Args[0]) != argument {
+					t.Errorf("%s must use %s", name, argument)
+				}
+				seen[name]++
+			}
+		}
+		return true
+	})
+	for _, name := range []string{"run.finish", "dispatchadmission.SendProductionBootstrap", "flow.parent.StartInPhase", "writeAuthorCustodyRequest"} {
+		if seen[name] != 1 {
+			t.Fatalf("actual %s call not uniquely covered", name)
+		}
+	}
+}
+
+func TestExecutionEpochReturnLaunchContextLifetime(t *testing.T) {
+	for _, mode := range []string{"return_only", "return_stale"} {
+		for _, point := range []string{"successful_return", "bootstrap_deadline"} {
+			t.Run(mode+"/"+point, func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					plan := Plan{Schema: PlanV3Schema, PhaseDeadlines: frozenPhaseDeadlines(), SafetyEnvelope: frozenSafetyEnvelope()}
+					bounds, err := returnEpochBounds(plan)
+					phaseDuration := bounds.lifetime
+					if mode == "return_stale" {
+						bounds, err = returnStaleEpochBounds(plan)
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					started := time.Now()
+					deadline, lifetimeDeadline := started.Add(phaseDuration), started.Add(bounds.lifetime)
+					lifetime, cancel := context.WithDeadline(t.Context(), lifetimeDeadline)
+					defer cancel()
+					phaseContext, phaseCancel := context.WithDeadline(lifetime, deadline)
+					defer phaseCancel()
+					launchDeadline, _ := phaseContext.Deadline()
+					runDeadline, _ := lifetime.Deadline()
+					if launchDeadline.Sub(started) != 4*time.Hour || runDeadline.Sub(started) != bounds.lifetime {
+						t.Fatal("bootstrap borrowed stale-phase time")
+					}
+					if point == "successful_return" {
+						// Model startReturnA's successful return defer, after the
+						// source-bound launch has selected its independent runCtx.
+						func() { defer phaseCancel() }()
+						if phaseContext.Err() != context.Canceled || lifetime.Err() != nil {
+							t.Fatal("successful launch-context release canceled server lifetime")
+						}
+					} else {
+						<-phaseContext.Done()
+						synctest.Wait() // Join same-deadline parent and child timer callbacks.
+						if time.Since(started) != 4*time.Hour || phaseContext.Err() != context.DeadlineExceeded || mode == "return_stale" && lifetime.Err() != nil || mode == "return_only" && lifetime.Err() != context.DeadlineExceeded {
+							t.Fatal("bootstrap/runtime deadline relation changed")
+						}
+					}
+					cancel()
+					if lifetime.Err() == nil {
+						t.Fatal("explicit server stop lost lifetime cancellation")
+					}
+				})
+			})
+		}
+	}
+}
 
 func TestExecutionEpochReturnBounds(t *testing.T) {
 	for _, mode := range []string{"valid", "v2", "deadline", "health", "missing"} {
@@ -274,7 +405,8 @@ func TestEpochReturnMarkerNativeWire(t *testing.T) {
 	}
 }
 
-func TestEpochReturnFinalContinuity(t *testing.T) {
+func epochReturnTestFinal(t *testing.T) (*executionEpochInspection, epochFinalResponse) {
+	t.Helper()
 	reader, value := epochPhysicalTestFinal(t)
 	physical, _, err := reader.decodeFinal(epochTestJSON(t, value, true))
 	if err != nil {
@@ -324,6 +456,12 @@ func TestEpochReturnFinalContinuity(t *testing.T) {
 	reader.tail = epochTailReadiness{Status: "ready", RelationshipGenerationSHA256: state.RelationshipGenerationSHA256, RelationshipRootSHA256: state.RelationshipRootSHA256,
 		CallerGenerationSHA256: state.CallerGenerationSHA256, CallerRootSHA256: state.CallerRootSHA256}
 	reader.markerRecovered = epochMarkerObservation{Schema: "t422-relationship-marker-observation-v3", TargetGenerationDigest: state.RelationshipGenerationSHA256, TargetRootDigest: state.RelationshipRootSHA256}
+	return reader, value
+}
+
+func TestEpochReturnFinalContinuity(t *testing.T) {
+	reader, value := epochReturnTestFinal(t)
+	logical := reader.logicalAuthority
 	if _, _, err := reader.decodeFinal(epochTestJSON(t, value, true)); err != nil {
 		t.Fatal("valid return model", err)
 	}

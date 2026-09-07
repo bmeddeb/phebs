@@ -61,6 +61,10 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	physical := os.Getenv("PHEBS_T422_EPOCH_ONE_PHYSICAL_REHEARSAL") == "1"
 	logical := os.Getenv("PHEBS_T422_LOGICAL_REHEARSAL") == "1"
 	returnA := os.Getenv("PHEBS_T422_RETURN_A_REHEARSAL") == "1"
+	stale := os.Getenv("PHEBS_T422_STALE_LEASE_REHEARSAL") == "1"
+	if stale && !returnA {
+		t.Fatal("stale-lease selector requires explicit return-A selector")
+	}
 	if returnA && !logical {
 		t.Fatal("return-A selector requires explicit logical selector")
 	}
@@ -85,6 +89,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if returnA {
 		allowance += 4 * time.Hour // Phase six includes predecessor join and actual author nine.
+	}
+	if stale {
+		allowance += 4 * time.Hour // Same server; phase seven starts before its handoff.
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
@@ -319,7 +326,11 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if returnA {
 		prior := run
-		next, err := prior.StartReturnA(ctx)
+		startReturn := prior.StartReturnA
+		if stale {
+			startReturn = prior.StartReturnAStale
+		}
+		next, err := startReturn(ctx)
 		if next != nil {
 			run = next // Cleanup always follows the actual successor first.
 			prefix, priorErr := prior.Wait(context.Background())
@@ -338,6 +349,13 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			t.Fatal("actual return-A marker hit/recovered/X/T/F", err)
 		}
 		t.Log("actual return-A marker continuation and authority observation returned; no full metrics, phases seven/eight, or freeze claim")
+	}
+	if stale {
+		if err := run.StaleLease(ctx); err != nil {
+			t.Fatal("actual stale preparation/hit/recovered/X/T/F", err)
+		}
+		t.Logf("actual stale-lease native preparation: %+v; R hit=%+v recovered=%+v; cumulative epoch-three exact-read totals (phases six/seven)=%+v; no full RecoveryPreparationResult, phase metrics or freeze claim",
+			run.inspection.stalePreparation, run.inspection.staleHit, run.inspection.staleRecovered, run.inspection.totals)
 	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()

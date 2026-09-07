@@ -27,12 +27,20 @@ func returnEpochBounds(plan Plan) (epochOneLimits, error) {
 // logical server, actual author nine, and atomic epoch-three transfer. Its one
 // phase-six deadline begins before that handoff, not after authoring.
 func (run *ExecutionEpochOneRun) StartReturnA(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
+	return run.startReturnA(ctx, false)
+}
+
+func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale bool) (_ *ExecutionEpochOneRun, retErr error) {
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.epoch.Epoch != 2 {
 		return nil, ErrExecutionEpochOne
 	}
 	flow := run.flow
 	flow.mu.Lock()
 	bounds, err := returnEpochBounds(flow.plan)
+	phaseDuration := bounds.lifetime
+	if stale {
+		bounds, err = returnStaleEpochBounds(flow.plan)
+	}
 	if err != nil || flow.closed || flow.returnUsed || flow.retained != nil {
 		flow.mu.Unlock()
 		return nil, ErrExecutionEpochOne
@@ -56,8 +64,11 @@ func (run *ExecutionEpochOneRun) StartReturnA(ctx context.Context) (_ *Execution
 		flow.mu.Unlock()
 		return nil, ErrExecutionEpochOne
 	}
-	deadline := time.Now().Add(bounds.lifetime)
-	lifetime, cancel := context.WithDeadline(ctx, deadline)
+	started := time.Now()
+	deadline, lifetimeDeadline := started.Add(phaseDuration), started.Add(bounds.lifetime)
+	lifetime, cancel := context.WithDeadline(ctx, lifetimeDeadline)
+	phaseContext, phaseCancel := context.WithDeadline(lifetime, deadline)
+	defer phaseCancel()
 	run.retainParent, flow.returnUsed, flow.retained = true, true, run
 	run.returnStarting, run.returnStartCancel, run.returnStartDone = true, cancel, make(chan struct{})
 	run.mu.Unlock()
@@ -79,30 +90,30 @@ func (run *ExecutionEpochOneRun) StartReturnA(ctx context.Context) (_ *Execution
 	}()
 	// Do not call public Stop: it cancels and joins this authoring operation.
 	run.stopOnce.Do(func() { close(run.stop) })
-	if _, err := run.Wait(lifetime); err != nil {
+	if _, err := run.Wait(phaseContext); err != nil {
 		return nil, ErrExecutionEpochOne
 	}
 	prior := run.inspection
 	if prior.err != nil || !prior.finalUsed || prior.logicalAuthority.Phase != "logical_delta_b" {
 		return nil, ErrExecutionEpochOne
 	}
-	if run.advanceReturn(lifetime) != nil {
+	if run.advanceReturn(phaseContext) != nil {
 		return nil, ErrExecutionEpochOne
 	}
-	authored, err := flow.epochs.author.authorNext(lifetime, flow.controller, flow.parent, 9, run)
+	authored, err := flow.epochs.author.authorNext(phaseContext, flow.controller, flow.parent, 9, run)
 	if err != nil || !authored.Completed || authored.Response == nil || authored.Revision != "a-return" {
 		return nil, ErrExecutionEpochOne
 	}
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
-	if flow.closed || flow.retained != run || lifetime.Err() != nil {
+	if flow.closed || flow.retained != run || phaseContext.Err() != nil {
 		return nil, ErrExecutionEpochOne
 	}
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
-		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: deadline, cancelRun: cancel,
+		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel, staleAllowed: stale,
 		priorLogical: &epochReturnPrior{cold: prior.cold, warm: prior.warmAuthority, physical: prior.physicalAuthority, logical: prior.logicalAuthority}}
 	next.setPhaseDeadlineLocked(deadline)
-	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 3)
+	result, err := flow.launchEpoch(lifetime, phaseContext, cancel, next, bounds, 3)
 	if result == nil {
 		next.stopPhaseDeadline()
 	}

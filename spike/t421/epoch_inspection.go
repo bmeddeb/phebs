@@ -76,6 +76,10 @@ type executionEpochInspection struct {
 	logicalAuthority                   AuthorityPhaseResult
 	activationHit, activationRecovered epochActivationObservation
 	markerHit, markerRecovered         epochMarkerObservation
+	returnAuthority, staleAuthority    AuthorityPhaseResult
+	stalePreparation                   epochStalePreparation
+	stalePrepared                      bool
+	staleHit, staleRecovered           extractionpublication.StaleLeaseTransition
 	err                                error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
 	// the already bounded body (at most the response cap plus one sentinel).
@@ -190,7 +194,10 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.control == nil || reader.next == 0 || reader.next > 11531 {
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
-	if (reader.run.epoch.Epoch == 2 || reader.run.epoch.Epoch == 3) && reader.next > 5765 {
+	if (reader.run.epoch.Epoch == 2 || reader.run.epoch.Epoch == 3 && !reader.run.staleAllowed) && reader.next > 5765 {
+		return nil, 0, epochInspectionReport{}, errEpochInspection
+	}
+	if reader.run.epoch.Epoch == 3 && reader.run.staleAllowed && reader.next > 11530 {
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
 	run := reader.run
@@ -463,6 +470,12 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	if err == nil && authority.Phase == "logical_delta_b" {
 		reader.logicalAuthority = authority
 	}
+	if err == nil && authority.Phase == "return_a" {
+		reader.returnAuthority = authority
+	}
+	if err == nil && authority.Phase == "stale_lease" {
+		reader.staleAuthority = authority
+	}
 	return authority, projection, report, err
 }
 
@@ -482,7 +495,7 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" {
+	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" {
 		return authority, projection, errEpochInspection
 	}
 	authority.Phase, authority.Outcome = phase, "passed"
@@ -494,6 +507,18 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 	if !reflect.DeepEqual(projection, reader.projection) || authority.RelationshipGenerationSHA256 != reader.tail.RelationshipGenerationSHA256 ||
 		authority.RelationshipRootSHA256 != reader.tail.RelationshipRootSHA256 || authority.CallerGenerationSHA256 != reader.tail.CallerGenerationSHA256 || authority.CallerRootSHA256 != reader.tail.CallerRootSHA256 {
 		return authority, projection, errEpochInspection
+	}
+	if phase == "stale_lease" {
+		// The actual return-A value already passed the full native/protected
+		// projection validator. Reuse requires equality of every authority and
+		// detailed root field, not a regenerated or partial expectation.
+		prior := reader.returnAuthority
+		prior.Phase = phase
+		if reader.returnAuthority.Phase != "return_a" || !reader.stalePrepared || reader.staleRecovered.Point != store.GenerationStaleLeaseTransitionRecovered ||
+			!reflect.DeepEqual(authority, prior) {
+			return authority, projection, errEpochInspection
+		}
+		return authority, projection, nil
 	}
 	revisions := []RevisionResult{{Name: "a", PhysicalOutcome: "passed", LogicalOutcome: "passed", PhysicalCommit: reader.authored.Commit, PhysicalTree: reader.authored.Tree}}
 	values, phases := []AuthorityPhaseResult{authority}, []string{phase}
