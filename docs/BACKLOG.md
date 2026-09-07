@@ -5948,6 +5948,89 @@ This closes the versioned grouping, replay-isolation, prospective byte-oracle
 and full constructor prerequisites only. Native exact-source cold/handoff,
 whole-phase accounting, integration and freeze remain unestablished.
 
+The legacy raw-SDK closure slice then routed the remaining twenty-three
+`surrealdb.Query` sites in `evidence.go`, `service_state.go` and
+`service_catalog.go` through the captured store owner. Eighteen readers take
+the shared read recipe with unchanged SQL, variables, retry loops and result
+handling; the five legacy writers — whole-run publication, analysis-unit
+outcome recording, run pinning, the v2 service-state transition and v2 catalog
+publication — are explicitly unsupported in selected mode and refuse before
+native write submission instead of receiving guessed operand counts. Their
+existing read preflights remain: one run lookup for whole-run publication;
+catalog pointer, summary and live-state census plus a desired-tombstone query
+when needed for service-state reconciliation (three or four reads). Both
+service files drop the raw SDK import; evidence keeps `QueryResult` for its
+typed row helpers. Outside the experimental investigation annex and the
+config-gated proof maintenance, the only remaining raw site is the
+ordinary-only local initializer that the selected factory already bypasses.
+
+The reachability verdict for the frozen epoch configuration (one V3 catalog,
+no analysis units, zero proof retention, an X/T/F-only parent) is that none of
+the twenty-three sites is on the cold/handoff path. The extraction runner
+dispatches to the partitioned reconciler unless an analysis unit is
+configured, so the legacy worker's whole-run publication, outcome recording,
+attempt and published-run reads are unreached; run pinning has no production
+caller at all; assertion, reverse-assertion and evidence-resolution readers
+serve product routes and coverage certificates. The v2 catalog
+pointer/generation/version openers, the summary, point, page and census reads
+and both v2 writers serve the legacy ingest reconciler, whose selections
+exclude V3 repositories, the runtime controller's V2 branch, recovery's V2
+target validation and the compatibility fallback of product reads;
+`v3HoldingGeneration` is reached only from the explicit-V2 holding path, not
+from `advanceV3Locked`. This is exact-path evidence for the configured cold
+parent, not a claim for the later product-query phases, whose selected reads
+must charge exact-read attempts or prove their converged V3 selector before
+reaching these readers.
+
+Selected-mode declared refusals now share the first-failure private
+diagnostic: the SDK query recipe refusal records method, 120-byte SQL prefix
+and six caller PCs through the same descriptor-failure path as a bare call,
+so an explicitly unsupported production site is attributable in the private
+log. The bare-call frame origin is unchanged, and later refusals of either
+kind never replace the first record.
+
+New scripted tests drive every closed site in ordinary and selected mode
+against the real SDK WebSocket fixture: substring-pinned statements and exact
+record, limit and key operands at the native marshaler; zero write prefix and
+released call slots for reads; refusal before write submission, latched later reads
+and a site-naming diagnostic for the five writers; and per-file AST closure
+that pins each function's recipes and rejects any raw SDK escape or
+re-imported SDK. The storeaccounting refusal regression additionally checks
+the declared-recipe diagnostic and its single first record. These are
+container-authored, uncommitted working-tree changes handed over for Ben's
+gates and independent review; they remain outside any merge, seal, freeze or
+cold-rehearsal claim.
+
+Ben then ran the working-tree gates on 2026-09-07 with Go 1.26.5, SurrealDB
+3.2.0 and the pinned 2.12.2 linter: repository build (16s) and store/
+storeaccounting vet; the six new legacy selectors three times normally
+(0.739s; 234 subtests, no failures, fifteen private declared-refusal log
+records — one per selected writer case) and three times under race (1.998s);
+the neighbouring evidence-runtime/chunk, auth, candidate-manifest,
+service-catalog, service-state and store-accounting selectors (79.364s); the
+complete storeaccounting package normally (0.770s) and three-repeat race
+(2.706s); the existing real-engine service-catalog, service-state, extraction,
+evidence, pin, assertion, reverse-assertion and evidence-resolution selectors
+in ordinary mode (103.547s), exercising the unchanged legacy SQL against the
+pinned engine; the repository-pinned static gate — vet, lint with zero issues
+and compile-all — in 37s; and documentation, glossary and whitespace checks
+including untracked files. No SurrealDB process or port-65499 listener
+remained. The complete `internal/store` package then passed normally in
+962.537s on the same working tree with no failing test and no leftover
+engine process. These are working-tree results on the still-uncommitted
+slice: the store package race run, the named ci-race set, independent review,
+commit and the native cold/handoff rehearsal remain pending; nothing was
+committed, merged or pushed.
+
+Independent review of all nine legacy-closure files against `e1051887`
+found critical/high/medium zero and one low wording/cost issue: native write
+refusal must not erase the existing publication and state-reconciliation
+read preflights. The owning ADR, record and test comments now distinguish
+those reads from the refused write; no executable logic changed. The
+review-time focused race rerun passed `internal/store` in 1.841s and
+`internal/storeaccounting` in 1.857s. Exact-commit confirmation, the full
+named race gate and native cold/handoff evidence remain pending.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

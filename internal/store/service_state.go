@@ -8,7 +8,6 @@ import (
 	"slices"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -57,8 +56,8 @@ func (s *Surreal) ServiceGenerationActivationNeeded(
 		wantSource != sourceGeneration {
 		return false, fmt.Errorf("service generation activation check: generation changed: %w", ErrConflict)
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](
-		ctx, s.db,
+	results, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting, s.db,
 		`SELECT * FROM service_state_current
 			WHERE repository = $repository
 				AND removed = false
@@ -71,6 +70,7 @@ func (s *Surreal) ServiceGenerationActivationNeeded(
 			"current":    servicecatalog.StatusCurrent,
 			"search":     searchGeneration,
 		},
+		storeRead(),
 	)
 	if err != nil {
 		return false, fmt.Errorf("service generation activation check: %w", err)
@@ -315,10 +315,11 @@ func (s *Surreal) serviceCatalogPointer(
 	ctx context.Context,
 	repository string,
 ) (string, uint64, error) {
-	results, err := surrealdb.Query[[]serviceCatalogCurrentRec](
-		ctx, s.db,
+	results, err := storeQuery[[]serviceCatalogCurrentRec](
+		ctx, s.accounting, s.db,
 		"SELECT generation_digest, control_revision FROM $rid",
 		map[string]any{"rid": serviceCatalogCurrentID(repository)},
+		storeRead(),
 	)
 	if err != nil {
 		return "", 0, err
@@ -662,13 +663,13 @@ func (s *Surreal) GetAcceptedServiceStateSnapshot(
 	if err != nil {
 		return nil, fmt.Errorf("get accepted service states: %w", err)
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](ctx, s.db, `
+	results, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
 SELECT * FROM service_state_current
 	WHERE repository = $repository AND removed = false AND disposition = $accepted
 	ORDER BY service_key LIMIT $limit`, map[string]any{
 		"repository": repository, "accepted": servicecatalog.DispositionAccepted,
 		"limit": limit + 1,
-	})
+	}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("get accepted service states: %w", err)
 	}
@@ -726,9 +727,10 @@ func (s *Surreal) getServiceStateEntryAtSnapshot(
 	repository, serviceKey string,
 	verified servicecatalog.VerifiedPublication,
 ) (*ServiceStateEntry, error) {
-	results, err := surrealdb.Query[[]serviceStateRec](
-		ctx, s.db, "SELECT * FROM $rid",
+	results, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceStateID(repository, serviceKey)},
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get service state: %w", err)
@@ -786,8 +788,8 @@ func (s *Surreal) ListServiceStates(
 			return nil, fmt.Errorf("list service states: seek position changed: %w", ErrConflict)
 		}
 	}
-	results, err := surrealdb.Query[[]serviceStateRec](
-		ctx, s.db,
+	results, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting, s.db,
 		`SELECT * FROM service_state_current
 			WHERE repository = $repository
 				AND service_key > $after
@@ -796,6 +798,7 @@ func (s *Surreal) ListServiceStates(
 			"repository": repository, "after": after.ServiceKey,
 			"limit": maxServiceStateScanPage + 1,
 		},
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list service states: %w", err)
@@ -955,9 +958,12 @@ func (s *Surreal) commitServiceStateTransition(
 		"summary_content":           serviceRepositoryStateContent(summary),
 		"updates":                   encodedUpdates,
 	}
+	// The v2 transition upserts one summary plus every planned row inside one
+	// FOR loop; V3 repositories advance through the separately accounted v3
+	// writers, so this legacy writer is explicitly unsupported in selected mode.
 	for attempt := 0; ; attempt++ {
-		results, queryErr := surrealdb.Query[[]serviceRepositoryStateRec](
-			ctx, s.db, reconcileServiceStatesSQL, vars,
+		results, queryErr := storeQuery[[]serviceRepositoryStateRec](
+			ctx, s.accounting, s.db, reconcileServiceStatesSQL, vars, storeUnsupported(),
 		)
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
@@ -980,9 +986,10 @@ func (s *Surreal) getRawServiceStateSummary(
 	if err := validateCandidateRepository(repository); err != nil {
 		return nil, fmt.Errorf("get service state summary: repository: %w", err)
 	}
-	results, err := surrealdb.Query[[]serviceRepositoryStateRec](
-		ctx, s.db, "SELECT * FROM $rid",
+	results, err := storeQuery[[]serviceRepositoryStateRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceRepositoryStateID(repository)},
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get service state summary: %w", err)
@@ -1006,10 +1013,11 @@ func (s *Surreal) serviceStatesForTransition(
 	repository string,
 	projections []servicecatalog.ServiceProjection,
 ) (map[string]servicecatalog.ServiceState, error) {
-	results, err := surrealdb.Query[[]serviceStateRec](
-		ctx, s.db,
+	results, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting, s.db,
 		"SELECT * FROM service_state_current WHERE repository = $repository AND removed = false LIMIT $limit",
 		map[string]any{"repository": repository, "limit": servicecatalog.MaxServices + 1},
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("reconcile service states: read live rows: %w", err)
@@ -1041,8 +1049,8 @@ func (s *Surreal) serviceStatesForTransition(
 	if len(rids) == 0 {
 		return states, nil
 	}
-	pointResults, err := surrealdb.Query[[]serviceStateRec](
-		ctx, s.db, "SELECT * FROM $rids", map[string]any{"rids": rids},
+	pointResults, err := storeQuery[[]serviceStateRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rids", map[string]any{"rids": rids}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("reconcile service states: read desired tombstones: %w", err)

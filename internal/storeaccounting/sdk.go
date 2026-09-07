@@ -76,6 +76,7 @@ type SDKOwner struct {
 }
 
 // SDKPrivateRefusal is a single failure diagnostic, not accounting evidence.
+// It covers both a bare native call and a source-declared unsupported recipe.
 // Method and SQLPrefix are copied with 32/120-byte caps; no bound variables,
 // RPC IDs, native UUIDs or non-query arguments are captured. Inline SQL literals
 // can be sensitive: this record and its log must stay private. PCs belong to
@@ -98,20 +99,37 @@ func (owner *SDKOwner) PrivateRefusal() (SDKPrivateRefusal, bool) {
 // Capture before failure delivery can cancel the process. This branch is not
 // reached by valid calls; the owner keeps only its first actual failure.
 func (owner *SDKOwner) failCall(ctx context.Context, request *connection.RPCRequest) error {
+	method, sql := "", ""
+	if request != nil {
+		method = request.Method
+		if request.Method == "query" && len(request.Params) > 0 {
+			sql, _ = request.Params[0].(string)
+		}
+	}
+	return owner.failDescriptor(ctx, method, sql)
+}
+
+// failRecipe is the source-declared counterpart of failCall: an unsupported or
+// malformed recipe refuses before any native submission, but the same bounded
+// private diagnostic names its query and call sites so an explicitly
+// unsupported production site is as attributable as a bare native call.
+func (owner *SDKOwner) failRecipe(ctx context.Context, sql string) error {
+	return owner.failDescriptor(ctx, "query", sql)
+}
+
+func (owner *SDKOwner) failDescriptor(ctx context.Context, method, sql string) error {
 	owner.mu.Lock()
 	first := owner.err == nil
 	var diagnostic SDKPrivateRefusal
 	if first {
 		owner.err = ErrDescriptor
-		if request != nil {
-			diagnostic.Method = strings.Clone(request.Method[:min(len(request.Method), 32)])
-			if request.Method == "query" && len(request.Params) > 0 {
-				if sql, ok := request.Params[0].(string); ok {
-					diagnostic.SQLPrefix = strings.Clone(sql[:min(len(sql), 120)])
-				}
-			}
+		diagnostic.Method = strings.Clone(method[:min(len(method), 32)])
+		if method == "query" {
+			diagnostic.SQLPrefix = strings.Clone(sql[:min(len(sql), 120)])
 		}
-		runtime.Callers(2, diagnostic.Callers[:])
+		// Skip Callers, this helper and its failCall/failRecipe entry so the
+		// bounded stack starts at the refusing connection or recipe caller.
+		runtime.Callers(3, diagnostic.Callers[:])
 		owner.privateRefusal = &diagnostic
 	}
 	err := owner.err
@@ -423,7 +441,7 @@ func SDKQuery[T any, S sdkSender](ctx context.Context, owner *SDKOwner, sender S
 		return surrealdb.Query[T](ctx, sender, sql, vars)
 	}
 	if !recipe.supported || recipe.rows > MaximumRows || recipe.read && recipe.rows != 0 || sql == "" {
-		return nil, owner.fail(ctx, ErrDescriptor)
+		return nil, owner.failRecipe(ctx, sql)
 	}
 	tx, _ := any(sender).(*surrealdb.Transaction)
 	kind := Kind(0)

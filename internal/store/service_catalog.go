@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -251,9 +250,13 @@ func (s *Surreal) PublishServiceCatalog(
 		"recorded_at":          now,
 		"published_at":         now,
 	}
+	// The v2 publication is guarded by four point reads inside its own
+	// transaction and conditionally creates up to three rows; V3 repositories
+	// publish through the accounted v3 writers, so it stays explicitly
+	// unsupported in selected mode rather than an uncounted write.
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]serviceCatalogCurrentRec](
-			ctx, s.db, publishServiceCatalogSQL, vars,
+		results, err := storeQuery[[]serviceCatalogCurrentRec](
+			ctx, s.accounting, s.db, publishServiceCatalogSQL, vars, storeUnsupported(),
 		)
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
@@ -323,9 +326,10 @@ func (s *Surreal) getVerifiedServiceCatalog(
 	if err := validateCandidateRepository(repository); err != nil {
 		return nil, fmt.Errorf("get service catalog: repository: %w", err)
 	}
-	currentResults, err := surrealdb.Query[[]serviceCatalogCurrentRec](
-		ctx, s.db, "SELECT * FROM $rid",
+	currentResults, err := storeQuery[[]serviceCatalogCurrentRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceCatalogCurrentID(repository)},
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get service catalog: current pointer: %w", err)
@@ -355,9 +359,10 @@ func (s *Surreal) getVerifiedServiceCatalogGeneration(
 	publishedAt time.Time,
 	persisted bool,
 ) (*verifiedServiceCatalog, error) {
-	generationResults, err := surrealdb.Query[[]serviceCatalogGenerationRec](
-		ctx, s.db, "SELECT * FROM $rid",
+	generationResults, err := storeQuery[[]serviceCatalogGenerationRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceCatalogGenerationID(generationDigest)},
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get service catalog: generation: %w", err)
@@ -408,9 +413,10 @@ func (s *Surreal) getVerifiedServiceCatalogGeneration(
 			ErrInvalidServiceCatalogPublication, err,
 		)
 	}
-	versionResults, err := surrealdb.Query[[]serviceCatalogAuthorityVersionRec](
-		ctx, s.db, "SELECT * FROM $rid",
+	versionResults, err := storeQuery[[]serviceCatalogAuthorityVersionRec](
+		ctx, s.accounting, s.db, "SELECT * FROM $rid",
 		map[string]any{"rid": serviceCatalogAuthorityVersionID(publication)},
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get service catalog: authority version: %w", err)

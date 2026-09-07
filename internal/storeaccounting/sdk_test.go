@@ -300,6 +300,33 @@ func TestStoreAccountingRefusalsRetainPrefix(t *testing.T) {
 					t.Fatal("later refusal replaced first private diagnostic")
 				}
 			}
+			if kind == "unsupported" || kind == "over_rows" {
+				// A source-declared refusal never reaches the connection, yet it
+				// keeps the same bounded private diagnostic as a bare call.
+				diagnostic, ok := owner.PrivateRefusal()
+				wantSQL := map[string]string{"unsupported": "unknown", "over_rows": "write"}[kind]
+				if !ok || diagnostic.Method != "query" || diagnostic.SQLPrefix != wantSQL || !errors.Is(err, ErrDescriptor) || native.calls != 0 {
+					t.Fatalf("missing private recipe diagnostic: %+v, %v", diagnostic, err)
+				}
+				found := false
+				frames := runtime.CallersFrames(diagnostic.Callers[:])
+				for {
+					frame, more := frames.Next()
+					found = found || strings.Contains(frame.Function, "TestStoreAccountingRefusalsRetainPrefix")
+					if !more {
+						break
+					}
+				}
+				if !found {
+					t.Fatal("recipe caller is absent from bounded stack")
+				}
+				if _, err := SDKQuery[[]int](ctx, owner, db, "later unsupported", nil, SDKUnsupported()); !errors.Is(err, ErrDescriptor) {
+					t.Fatalf("later declared refusal changed classification: %v", err)
+				}
+				if later, _ := owner.PrivateRefusal(); later != diagnostic {
+					t.Fatal("later declared refusal replaced first private diagnostic")
+				}
+			}
 			// Parent failure delivery can race this read, but its accepted prefix
 			// is already committed before the exact ACK admitted the native call.
 			snapshot, _ := controller.Snapshot()

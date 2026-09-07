@@ -528,8 +528,8 @@ type extractionRunIdentityRec struct {
 // used to distinguish a hidden incompatible/quarantined row from a missing
 // row without decoding legacy or future payload fields.
 func (s *Surreal) extractionRunExists(ctx context.Context, runID string) (bool, error) {
-	results, err := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
-		"SELECT id FROM $rid", map[string]any{"rid": extractionRunID(runID)})
+	results, err := storeQuery[[]extractionRunIdentityRec](ctx, s.accounting, s.db,
+		"SELECT id FROM $rid", map[string]any{"rid": extractionRunID(runID)}, storeRead())
 	if err != nil {
 		return false, err
 	}
@@ -1752,8 +1752,11 @@ func (s *Surreal) publishExtractionRun(
 			outcome.Generation.CandidateControlRevision
 	}
 	addProbeVars(vars, runID)
+	// The legacy whole-run publication retires unbounded prior rows and has no
+	// census; it is explicitly unsupported in selected mode. The partitioned
+	// worker publishes through PublishPartitionedExtractionDomain instead.
 	for attempt := 0; ; attempt++ {
-		results, queryErr := surrealdb.Query[[]extractionRunRec](ctx, s.db, publishExtractionRunSQL, vars)
+		results, queryErr := storeQuery[[]extractionRunRec](ctx, s.accounting, s.db, publishExtractionRunSQL, vars, storeUnsupported())
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
@@ -1963,9 +1966,11 @@ func (s *Surreal) RecordExtractionDomainOutcome(
 		"caller_migration_rid":       callerGenerationPublicationMigrationID(),
 		"caller_migration_version":   callerGenerationPublicationMigrationVersion,
 	}
+	// Only the legacy analysis-unit worker records outcomes here; its
+	// conditional job fan-out has no census and is unsupported in selected mode.
 	for attempt := 0; ; attempt++ {
-		results, queryErr := surrealdb.Query[[]extractionDomainOutcomeRec](
-			ctx, s.db, recordExtractionDomainOutcomeSQL, vars,
+		results, queryErr := storeQuery[[]extractionDomainOutcomeRec](
+			ctx, s.accounting, s.db, recordExtractionDomainOutcomeSQL, vars, storeUnsupported(),
 		)
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil &&
@@ -2166,7 +2171,7 @@ func (s *Surreal) LatestExtractionAttempt(
 	if err := validateExtractionScope(scope); err != nil {
 		return nil, fmt.Errorf("latest extraction attempt: %w", err)
 	}
-	results, err := surrealdb.Query[[]extractionAttemptRec](ctx, s.db,
+	results, err := storeQuery[[]extractionAttemptRec](ctx, s.accounting, s.db,
 		`SELECT * FROM $rid WHERE repo = $repo AND commit = $commit
 			AND unit_digest = $unit_digest AND domain = $domain
 			AND store_schema_version = $store_schema_version
@@ -2179,7 +2184,7 @@ func (s *Surreal) LatestExtractionAttempt(
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_format_version":    evidenceFormatVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
-		})
+		}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("latest extraction attempt: %w", err)
 	}
@@ -2207,7 +2212,7 @@ func (s *Surreal) LatestPublishedRun(
 	if err := validateExtractionScope(scope); err != nil {
 		return nil, fmt.Errorf("latest published run: %w", err)
 	}
-	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
+	results, err := storeQuery[[]extractionRunRec](ctx, s.accounting, s.db,
 		`SELECT * FROM extraction_run WHERE repo = $repo AND commit = $commit
 			AND unit_digest = $unit_digest AND domain = $domain
 			AND status = 'published'
@@ -2226,7 +2231,7 @@ func (s *Surreal) LatestPublishedRun(
 			"evidence_format_version":     evidenceFormatVersion,
 			"published_key":               publishedKey(scope),
 			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
-		})
+		}, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("latest published run: %w", err)
 	}
@@ -2426,9 +2431,9 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 		vars["after_id"] = q.After.ID
 		vars["after_run_id"] = q.After.RunID
 	}
-	results, err := surrealdb.Query[[]assertionRec](ctx, s.db,
+	results, err := storeQuery[[]assertionRec](ctx, s.accounting, s.db,
 		"SELECT * FROM assertion WHERE "+where+
-			" ORDER BY predicate, subject, object, assertion_id, run_id LIMIT $limit", vars)
+			" ORDER BY predicate, subject, object, assertion_id, run_id LIMIT $limit", vars, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("list assertions: %w", err)
 	}
@@ -2574,11 +2579,13 @@ func reverseAssertionQueryVars(q ReverseAssertionQuery, limit int) map[string]an
 }
 
 func (s *Surreal) requireReverseAssertionIndex(ctx context.Context) error {
-	results, err := surrealdb.Query[any](
+	results, err := storeQuery[any](
 		ctx,
+		s.accounting,
 		s.db,
 		"INFO FOR INDEX "+reverseAssertionIndexName+" ON TABLE assertion",
 		nil,
+		storeRead(),
 	)
 	if err != nil {
 		return fmt.Errorf("inspect required reverse assertion index: %w", err)
@@ -2613,11 +2620,13 @@ func (s *Surreal) ListReverseAssertions(
 	if err := s.requireReverseAssertionIndex(ctx); err != nil {
 		return nil, fmt.Errorf("list reverse assertions: %w", err)
 	}
-	results, err := surrealdb.Query[[]assertionRec](
+	results, err := storeQuery[[]assertionRec](
 		ctx,
+		s.accounting,
 		s.db,
 		reverseAssertionQuerySQL(q.Lineage != "", q.After != nil, false),
 		reverseAssertionQueryVars(q, limit),
+		storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list reverse assertions: %w", err)
@@ -2681,7 +2690,7 @@ func (s *Surreal) ResolveEvidence(ctx context.Context, repo, runID, atomID strin
 		"evidence_format_version": evidenceFormatVersion,
 	}
 	addProbeVars(vars, runID)
-	results, err := surrealdb.Query[[]evidenceResolutionRec](ctx, s.db,
+	results, err := storeQuery[[]evidenceResolutionRec](ctx, s.accounting, s.db,
 		`SELECT * FROM snapshot_evidence
             WHERE repo = $repo AND run_id = $run AND atom_id = $atom
 	              AND commit IN (SELECT VALUE commit FROM extraction_run
@@ -2697,7 +2706,7 @@ func (s *Surreal) ResolveEvidence(ctx context.Context, repo, runID, atomID strin
 					AND ((status = 'published' AND published_key != NONE) OR
 						(status = 'superseded' AND published_key = NONE AND run_id IN
 							(SELECT VALUE run_id FROM evidence_pin WHERE run_id = $run))))
-            ORDER BY occurrence_id LIMIT $limit FETCH atom_record`, vars)
+            ORDER BY occurrence_id LIMIT $limit FETCH atom_record`, vars, storeRead())
 	if err != nil {
 		return nil, fmt.Errorf("resolve evidence: %w", err)
 	}
@@ -2763,8 +2772,10 @@ func (s *Surreal) PinRun(ctx context.Context, runID, kind string) error {
 		"evidence_format_version": evidenceFormatVersion,
 	}
 	addProbeVars(vars, runID)
+	// Pinning has no production caller; the operator transition stays an
+	// explicit selected-mode refusal rather than an uncounted two-row write.
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]evidencePinRec](ctx, s.db, pinRunSQL, vars)
+		results, err := storeQuery[[]evidencePinRec](ctx, s.accounting, s.db, pinRunSQL, vars, storeUnsupported())
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
