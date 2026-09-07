@@ -22,6 +22,16 @@ import (
 // Scratch home/cache/tmp/output are fresh siblings under the same explicit
 // parent as input custody and are removed only after the bounded runner joins.
 func (custody *ExecutionGoBuildCustody) ProtectReferenceTool(ctx context.Context, parent, role, binary string) (*ExecutionToolCustody, error) {
+	return custody.protectReferenceTool(ctx, parent, role, binary, "")
+}
+
+// ProtectReferenceToolV3 selects the prospective index-offer overlay without
+// changing the retained V1/V2 entry point or any other tool recipe.
+func (custody *ExecutionGoBuildCustody) ProtectReferenceToolV3(ctx context.Context, parent, role, binary string) (*ExecutionToolCustody, error) {
+	return custody.protectReferenceTool(ctx, parent, role, binary, PlanV3Schema)
+}
+
+func (custody *ExecutionGoBuildCustody) protectReferenceTool(ctx context.Context, parent, role, binary, schema string) (*ExecutionToolCustody, error) {
 	if _, _, _, _, _, err := referenceToolRole(role); err != nil || custody == nil ||
 		ctx == nil || ctx.Err() != nil || parent != filepath.Dir(custody.directory) {
 		return nil, ErrExecutionToolCustody
@@ -35,7 +45,7 @@ func (custody *ExecutionGoBuildCustody) ProtectReferenceTool(ctx context.Context
 	if err != nil {
 		return tool, err
 	}
-	identity, err := custody.verifyReferenceTool(ctx, parent, role, selection.Path)
+	identity, err := custody.verifyReferenceTool(ctx, parent, role, selection.Path, schema)
 	tool, err = finishExecutionToolCopy(ctx, tool, selection, identity, err)
 	if err == nil {
 		// Only this measured protected-input issuer binds a source/resource
@@ -45,10 +55,10 @@ func (custody *ExecutionGoBuildCustody) ProtectReferenceTool(ctx context.Context
 	return tool, err
 }
 
-func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context, parent, role, binary string) (identity ExecutionToolIdentity, retErr error) {
+func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context, parent, role, binary, schema string) (identity ExecutionToolIdentity, retErr error) {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
-	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRole(role)
+	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRoleForSchema(role, schema, custody.reference.source)
 	if err != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
@@ -123,7 +133,14 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 		return identity, ErrExecutionGoBuildCustody
 	}
 	output := filepath.Join(workspace, "reference")
-	if _, err := run(64<<10, "build", "-trimpath", "-pgo=off", "-buildvcs=true", "-p=1", "-o", output, packagePath); err != nil {
+	buildArgs, checkOverlay, err := referenceToolBuildArgs(role, schema, request.ModuleCache, workspace, output, packagePath)
+	if err != nil {
+		return identity, ErrExecutionGoBuildCustody
+	}
+	if _, err := run(64<<10, buildArgs...); err != nil {
+		return identity, ErrExecutionGoBuildCustody
+	}
+	if err := checkOverlay(); err != nil {
 		return identity, ErrExecutionGoBuildCustody
 	}
 	actual, err := buildinfo.ReadFile(output)
@@ -147,6 +164,9 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 	if modulePath != "" {
 		identity.Version, identity.Provenance, identity.BuildVCSRevision = moduleVersion, "go-module-build-v1", ""
 		identity.ModulePath, identity.ModuleVersion, identity.ModuleSum, identity.BuildRecipeSHA256 = modulePath, moduleVersion, moduleSum, recipe
+		if role == "zoekt-git-index" && schema == PlanV3Schema {
+			identity.Provenance = zoektOfferProvenance
+		}
 	}
 	return identity, nil
 }

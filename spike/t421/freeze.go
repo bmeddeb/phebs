@@ -308,6 +308,11 @@ func validateExecutionTools(tools []ExecutionToolIdentity, policy ToolPolicy, so
 			"t422-zoekt-build-recipe-v1", policy.ZoektModulePath, policy.ZoektModuleVersion,
 			policy.ZoektModuleSum, policy.ZoektBuildRecipe,
 		)
+		wantZoektProvenance := "go-module-build-v1"
+		if policy.ZoektBuildRecipe == zoektOfferBuildRecipe {
+			wantZoektRecipe = zoektOfferRecipe(policy, sourceCommit)
+			wantZoektProvenance = zoektOfferProvenance
+		}
 		if repositoryBuilt && (tool.Provenance != "go-build-info-vcs-v1" ||
 			tool.BuildVCSRevision != sourceCommit || tool.BuildVCSModified || tool.ModulePath != "" ||
 			tool.ModuleVersion != "" || tool.ModuleSum != "" || tool.BuildRecipeSHA256 != "") ||
@@ -315,7 +320,7 @@ func validateExecutionTools(tools []ExecutionToolIdentity, policy ToolPolicy, so
 				tool.BuildVCSModified || tool.ModulePath != policy.BufModulePath ||
 				tool.ModuleVersion != policy.BufModuleVersion || tool.ModuleSum != policy.BufModuleSum ||
 				tool.BuildRecipeSHA256 != wantBufRecipe) ||
-			zoekt && (tool.Provenance != "go-module-build-v1" || tool.BuildVCSRevision != "" ||
+			zoekt && (tool.Provenance != wantZoektProvenance || tool.BuildVCSRevision != "" ||
 				tool.BuildVCSModified || tool.ModulePath != policy.ZoektModulePath ||
 				tool.ModuleVersion != policy.ZoektModuleVersion || tool.ModuleSum != policy.ZoektModuleSum ||
 				tool.BuildRecipeSHA256 != wantZoektRecipe) ||

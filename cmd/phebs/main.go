@@ -641,6 +641,10 @@ func serve(args []string) (retErr error) {
 	if err != nil {
 		return err
 	}
+	ctx, err = bindT422IndexReports(ctx, failExactReport)
+	if err != nil {
+		return err
+	}
 	var failExactRead func(error)
 	var exactReadState *t421ExactReadAccountingState
 	if exactReads {

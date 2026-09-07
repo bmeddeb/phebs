@@ -201,6 +201,9 @@ func TestT422AttemptInheritedPhase(t *testing.T) {
 	if !strings.Contains(diagnostic.String(), "SRB1:5:sha256:") || strings.Count(diagnostic.String(), "SR1:5:8\n") != 1 || strings.Count(diagnostic.String(), "SR1:5:9\n") != 1 {
 		t.Fatal("actual selected compact source binding/phase missing", diagnostic.String())
 	}
+	if !strings.Contains(diagnostic.String(), "IXB1:5:sha256:") {
+		t.Fatal("actual selected index binding missing", diagnostic.String())
+	}
 }
 
 func TestT422AttemptInheritedHelper(t *testing.T) {
@@ -220,6 +223,10 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	ctx, err = bindT422SourceReports(ctx, func(error) { cancel() })
 	if err != nil {
 		t.Fatal("actual source binding failed", err)
+	}
+	ctx, err = bindT422IndexReports(ctx, func(error) { cancel() })
+	if err != nil {
+		t.Fatal("actual index binding failed", err)
 	}
 	var captured bytes.Buffer
 	old := log.Writer()

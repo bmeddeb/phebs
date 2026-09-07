@@ -176,6 +176,7 @@ type ExecutionEpochOneResult struct {
 	Accounting                            dispatchadmission.Snapshot
 	Store                                 storeaccounting.WireSnapshot
 	Attempts                              ExecutionAttemptObservation
+	IndexOffers                           ExecutionIndexObservation
 }
 
 type ExecutionEpochOneRun struct {
@@ -242,7 +243,8 @@ func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint6
 	zoekt, zoektPath, zoektErr := flow.zoekt.Check(ctx, "zoekt-git-index")
 	surreal, surrealPath, surrealErr := flow.surreal.Check(ctx, "surreal")
 	gitEnv, gitErr := author.request.Git.Environment(ctx, epoch.Home, epoch.Temporary)
-	if err != nil || zoektErr != nil || surrealErr != nil || gitErr != nil || phebs.BuildVCSRevision != author.request.Builds.reference.source {
+	if err != nil || zoektErr != nil || surrealErr != nil || gitErr != nil || phebs.BuildVCSRevision != author.request.Builds.reference.source ||
+		zoekt.Provenance != zoektOfferProvenance || zoekt.BuildRecipeSHA256 != zoektOfferRecipe(flow.plan.ToolPolicy, author.request.Builds.reference.source) {
 		return "", nil, nil, ErrExecutionEpochOne
 	}
 	environment := externalToolEnvironment(epoch.Temporary)
@@ -257,7 +259,7 @@ func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint6
 	tools := []dispatchadmission.ProductionToolBinding{
 		{Role: "git", Path: author.gitPath, Environment: gitEnv},
 		{Role: "surreal", Path: surrealPath, Environment: environment},
-		{Role: "zoekt-git-index", Path: zoektPath, Environment: gitEnv},
+		{Role: "zoekt-git-index", Path: zoektPath, Environment: append(slices.Clone(gitEnv), dispatchadmission.IndexOfferEnvironment+"=v1", "ZOEKT_DISABLE_CATFILE_BATCH=true")},
 	}
 	environment = append(environment, dispatchadmission.ProductionEnvironment+"="+dispatchadmission.ProductionStoreSelector,
 		"PHEBS_SURREAL="+surrealPath, "PHEBS_SURREAL_SHA256="+surreal.SHA256,

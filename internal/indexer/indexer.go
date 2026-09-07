@@ -404,6 +404,15 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	start := time.Now()
 	out := newChildOutput(ix.logger(), fmt.Sprintf("index %s: %s: ", repo.Name, childName), ix.Verbose)
 	cmd.Stdout, cmd.Stderr = out, out
+	var offers *indexOfferOutput
+	if dispatchadmission.ProductionSemanticSelected() {
+		offers, err = selectedIndexOfferOutput(ctx, out, unit != nil)
+		if err != nil {
+			return fmt.Errorf("index %s: native offer coverage: %w", repo.Name, err)
+		}
+		cmd.Env = append(cmd.Env, IndexOfferEnvironment+"=v1")
+		cmd.Stdout, cmd.Stderr = offers, offers
+	}
 	expectedSHA256 := os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256")
 	if unit != nil {
 		expectedSHA256 = os.Getenv("PHEBS_FOCUSED_INDEX_SHA256")
@@ -414,6 +423,9 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		return fmt.Errorf("index %s: verify %s identity before launch: %w", repo.Name, childName, err)
 	}
 	runErr := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteIndexBuild, cmd)
+	if offers != nil {
+		runErr = errors.Join(runErr, offers.finish(runErr))
+	}
 	out.Flush()
 	if runErr != nil {
 		err := runErr
@@ -617,7 +629,7 @@ func goGitChildEnvironment(environment []string) []string {
 	result := make([]string, 0, len(environment)+1)
 	for _, value := range environment {
 		key, _, _ := strings.Cut(value, "=")
-		if key == "ZOEKT_DISABLE_CATFILE_BATCH" {
+		if key == "ZOEKT_DISABLE_CATFILE_BATCH" || key == IndexOfferEnvironment {
 			continue
 		}
 		result = append(result, value)

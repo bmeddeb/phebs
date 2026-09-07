@@ -109,7 +109,7 @@ func (record ProductionBootstrap) validate() error {
 	textBytes := len(record.Program) + len(record.SemanticMode)
 	for index, role := range roles {
 		tool := record.Tools[index]
-		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionEnvironment(tool.Environment, role != "surreal") {
+		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionToolEnvironment(tool.Environment, role, record.SemanticMode) {
 			return ErrProductionBootstrap
 		}
 		textBytes += len(tool.Role) + len(tool.Path)

@@ -4842,6 +4842,56 @@ health and admission bounds remain unchanged. Independent immutable OCR and
 exact integrated native confirmation remain required. This does not close
 phases seven/eight, complete measurement or T42.2l.
 
+Independent OCR of exact source
+`a1e2732ffc2f025533e64fbc59ce4892b1a18e59` covered all ten files, including
+excluded tests and both owning documents, with no skipped file and all severity
+counts zero. The root's exact committed broad lightweight selector separately
+passed in 2.445s; root docs (0.589s), glossary and whitespace passed. These
+close this slice's source-review/static gates, not the retained host-space hold
+or actual logical/return-A native confirmation.
+
+**T42.2l measurement track — approved V3 native index offers (2026-09-07).**
+The implementation adds an exact private source overlay, version-specific
+reference/provenance validation, admitted hook environment, pre-lossy-output
+child token/tally parsing, genuine phase-bound forwarding and post-Wait offer
+observation. V1/V2 build selection and canonical bytes remain unchanged. Early
+review caught and corrected two integration hazards before native execution:
+dispatch replaces cmd.Env, and latching every native error would suppress
+ordinary index retries. The admitted environment now carries the exact paired
+flags; a complete neutral terminal plus a closed normal nonzero-exit error tree
+preserves the original retry classification. Mixed accounting/transport errors,
+missing terminal, hard death or uncertain forwarding retain positive evidence
+but refuse completeness. No unknown IndexFiles count is assigned zero.
+
+AC: exact upstream/source/overlay identity and bounded before/after custody;
+independent private-path byte-identical rebuild; tiny real indexing with healthy
+offers and a corrupt later blob proving the failed positive prefix while an
+unreached file is uncounted; split/coalesced/unknown/duplicate/partial/tally and
+mixed-error refusal; phase/input binding and owner-tail join; ordinary and
+V1/V2 preservation; combined transport fit and eventual stopped/completed
+receipt binding; independent source/cost review. Those native and full-receipt
+ACs remain open, regardless of component test success.
+
+The 25-file source slice passed focused normal in dispatch/indexer/command/T42.1
+at 0.366s/4.417s/0.670s/0.766s and race repeated three times at
+1.298s/6.058s/1.998s/3.441s. Vet, pinned lint (zero issues), whitespace and retained
+canonical/cross-version/provenance tests passed. After composition with the
+reviewed return-A source, the root's expanded selector passed at
+0.373s/7.685s/0.653s/3.450s; complete dispatch/indexer/command packages passed at
+4.173s/30.427s/89.856s. These ran no full corpus or independently reproduced
+instrumented image. The replacement is 41,938 bytes,
+`sha256:0e8aff78ce797ab62072d94b891ab5a132ad3a71e9a3d1cd076ad0514de09a00`.
+Epoch-one index framing plus its 4,063,208 maximum offers requires at most
+12,189,799 parent bytes under the admitted six-child ceiling. Combined with
+the existing source-attempt stream this is 28,652,022 bytes, leaving 38,456,842
+of the unchanged shared cap before B2, candidate/ordinary output and future
+census events. This is partial headroom arithmetic, not a simultaneous full
+report-fit proof. A separate opt-in tiny native gate builds independently in
+private paths and checks three healthy offers versus two before a corrupted
+second blob; it does not manufacture server phase binding. Its disabled compile
+and pinned lint passed; native execution is not yet recorded. Independent
+immutable OCR and native gates remain pending.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

@@ -140,8 +140,11 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(result *ExecutionEpoch
 	}
 	var err error
 	result.Attempts, err = observeExecutionAttempts(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true)
-	if err != nil || failure != nil {
+	var indexErr error
+	result.IndexOffers, indexErr = observeExecutionIndexOffers(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, err == nil && failure == nil)
+	if err != nil || indexErr != nil || failure != nil {
 		result.Attempts.Complete = false
+		result.IndexOffers.Complete = false
 		return ErrExecutionEpochOne
 	}
 	return nil

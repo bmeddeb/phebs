@@ -147,9 +147,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 	}()
 	for _, role := range []string{"t422-author", "phebs", "zoekt-git-index"} {
-		selected := productionRehearsalBuild(t, ctx, inputs, workspace, role)
+		selected := productionRehearsalBuildSchema(t, ctx, inputs, workspace, role, PlanV3Schema)
 		started = time.Now()
-		tool, err := inputs.ProtectReferenceTool(ctx, parent, role, selected)
+		tool, err := inputs.ProtectReferenceToolV3(ctx, parent, role, selected)
 		if tool != nil {
 			tools = append(tools, tool)
 		}

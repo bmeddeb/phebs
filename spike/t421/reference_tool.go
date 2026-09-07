@@ -32,6 +32,8 @@ type ReferenceToolRequest struct {
 	IntegratedMainCommit string
 	SourceCommit         string
 	Role                 string
+	// Empty preserves the retained V1/V2 upstream recipe.
+	PlanSchema string
 }
 
 // VerifyExecutionReferenceTool rebuilds one implemented Go tool from a private
@@ -39,7 +41,7 @@ type ReferenceToolRequest struct {
 // It neither runs the supplied binary nor issues a CheckoutAdmissionBinding.
 // The executor role remains unavailable until its real command exists.
 func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequest) (identity ExecutionToolIdentity, retErr error) {
-	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRole(request.Role)
+	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRoleForSchema(request.Role, request.PlanSchema, request.SourceCommit)
 	if err != nil {
 		return identity, err
 	}
@@ -146,7 +148,14 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 		return identity, err
 	}
 	output := filepath.Join(workspace, "reference")
-	if _, err := run(64<<10, "build", "-trimpath", "-pgo=off", "-buildvcs=true", "-p=1", "-o", output, packagePath); err != nil {
+	buildArgs, checkOverlay, err := referenceToolBuildArgs(request.Role, request.PlanSchema, request.ModuleCache, workspace, output, packagePath)
+	if err != nil {
+		return identity, err
+	}
+	if _, err := run(64<<10, buildArgs...); err != nil {
+		return identity, err
+	}
+	if err := checkOverlay(); err != nil {
 		return identity, err
 	}
 	actual, err := buildinfo.ReadFile(output)
@@ -182,8 +191,29 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 	if modulePath != "" {
 		identity.Version, identity.Provenance, identity.BuildVCSRevision = moduleVersion, "go-module-build-v1", ""
 		identity.ModulePath, identity.ModuleVersion, identity.ModuleSum, identity.BuildRecipeSHA256 = modulePath, moduleVersion, moduleSum, recipe
+		if request.Role == "zoekt-git-index" && request.PlanSchema == PlanV3Schema {
+			identity.Provenance = zoektOfferProvenance
+		}
 	}
 	return identity, nil
+}
+
+func referenceToolRoleForSchema(role, schema, sourceCommit string) (packagePath, modulePath, version, sum, recipe string, err error) {
+	if schema != "" && !knownPlanSchema(schema) {
+		err = errors.New("reference build plan schema is unavailable")
+		return
+	}
+	packagePath, modulePath, version, sum, recipe, err = referenceToolRole(role)
+	if err == nil && role == "zoekt-git-index" && schema == PlanV3Schema {
+		if !validCommit(sourceCommit) {
+			err = errors.New("reference overlay requires exact source commit")
+			return
+		}
+		policy := frozenToolPolicy()
+		policy.ZoektBuildRecipe = zoektOfferBuildRecipe
+		recipe = zoektOfferRecipe(policy, sourceCommit)
+	}
+	return
 }
 
 func referenceToolRole(role string) (packagePath, modulePath, version, sum, recipe string, err error) {

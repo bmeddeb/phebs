@@ -190,7 +190,7 @@ func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			header := []byte("SRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n")
+			header := []byte("SRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n" + "IXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n")
 			output := &checkoutCommandOutput{remaining: int64(len(line) + len(header)), cancel: cancel}
 			if _, err := output.Write(header); err != nil {
 				t.Fatal(err)

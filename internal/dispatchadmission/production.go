@@ -324,6 +324,9 @@ func startProductionCommand(ctx context.Context, runtime *ProductionLifetime, si
 		return Handle{}, runtime.client.fail(ErrProductionBootstrap)
 	}
 	command.Env = slices.Clone(tool.Environment)
+	if runtime.semanticMode == ProductionSemanticV3 && role == "zoekt-git-index" && !hasProductionIndexMode(command.Env) {
+		return Handle{}, runtime.client.fail(ErrProductionBootstrap)
+	}
 	if site == SiteRecoverySurreal {
 		command.Env = append(command.Env, "SURREAL_USER=root", "SURREAL_PASS=root")
 	}
