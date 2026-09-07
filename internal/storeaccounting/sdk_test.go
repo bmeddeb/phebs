@@ -6,7 +6,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log"
 	"net/url"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -275,6 +278,28 @@ func TestStoreAccountingRefusalsRetainPrefix(t *testing.T) {
 			if err == nil {
 				t.Fatal("unsafe forwarding succeeded")
 			}
+			if kind == "bare_query" {
+				diagnostic, ok := owner.PrivateRefusal()
+				if !ok || diagnostic.Method != "query" || diagnostic.SQLPrefix != "bare" || !errors.Is(err, ErrDescriptor) || native.calls != 0 {
+					t.Fatalf("missing private raw-call diagnostic: %+v, %v", diagnostic, err)
+				}
+				found := false
+				frames := runtime.CallersFrames(diagnostic.Callers[:])
+				for {
+					frame, more := frames.Next()
+					found = found || strings.Contains(frame.Function, "TestStoreAccountingRefusalsRetainPrefix")
+					if !more {
+						break
+					}
+				}
+				if !found {
+					t.Fatal("raw caller is absent from bounded stack")
+				}
+				_, _ = surrealdb.Query[[]int](ctx, db, "later raw query", nil)
+				if later, _ := owner.PrivateRefusal(); later != diagnostic {
+					t.Fatal("later refusal replaced first private diagnostic")
+				}
+			}
 			// Parent failure delivery can race this read, but its accepted prefix
 			// is already committed before the exact ACK admitted the native call.
 			snapshot, _ := controller.Snapshot()
@@ -292,6 +317,52 @@ func TestStoreAccountingRefusalsRetainPrefix(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStoreAccountingPrivateRefusalBounds(t *testing.T) {
+	previous := log.Writer()
+	t.Cleanup(func() { log.SetOutput(previous) })
+	for _, method := range []string{"query", strings.Repeat("m", 100)} {
+		t.Run(method[:1], func(t *testing.T) {
+			var output bytes.Buffer
+			log.SetOutput(&output)
+			ctx, owner, _ := storeAccountingFixture(t, 40, 2)
+			if _, ok := owner.PrivateRefusal(); ok {
+				t.Fatal("new owner invented refusal")
+			}
+			sql := "SELECT\n" + strings.Repeat("x", 200)
+			request := &connection.RPCRequest{Method: method, Params: []any{sql, map[string]any{"password": "private-bind-value"}}}
+			if !errors.Is(owner.failCall(ctx, request), ErrDescriptor) {
+				t.Fatal("diagnostic changed error classification")
+			}
+			diagnostic, ok := owner.PrivateRefusal()
+			if !ok || diagnostic.Method != method[:min(len(method), 32)] ||
+				method == "query" && diagnostic.SQLPrefix != sql[:120] || method != "query" && diagnostic.SQLPrefix != "" {
+				t.Fatalf("unbounded or unexpected diagnostic: %+v", diagnostic)
+			}
+			diagnostic.Callers[0] = 0
+			if retained, _ := owner.PrivateRefusal(); retained.Callers[0] == 0 {
+				t.Fatal("private diagnostic accessor exposed mutable owner state")
+			}
+			_ = owner.failCall(ctx, request)
+			if strings.Count(output.String(), "\n") != 1 || strings.Contains(output.String(), "private-bind-value") ||
+				method == "query" && !strings.Contains(output.String(), `SELECT\n`) {
+				t.Fatalf("private refusal log was repeated, unescaped or included variables: %q", output.String())
+			}
+		})
+	}
+	t.Run("prior_failure", func(t *testing.T) {
+		var output bytes.Buffer
+		log.SetOutput(&output)
+		ctx, owner, _ := storeAccountingFixture(t, 40, 2)
+		_ = owner.fail(ctx, ErrCanceled)
+		if !errors.Is(owner.failCall(ctx, nil), ErrCanceled) {
+			t.Fatal("descriptor refusal replaced prior failure")
+		}
+		if _, ok := owner.PrivateRefusal(); ok || output.Len() != 0 {
+			t.Fatal("later descriptor refusal invented first-failure diagnostics")
+		}
+	})
 }
 
 type storeDecodeTestGate struct {

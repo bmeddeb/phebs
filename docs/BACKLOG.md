@@ -5681,8 +5681,59 @@ native Wait ownership, session-wide escalation, retained failure semantics,
 bounded private diagnostics and the phase deadlines. The Linux exports retain
 their existing process-list helper; the no-helper-child cost statement applies
 to the supported Darwin path only. No corrected native retry, integration,
-push, seal or freeze has occurred. The next gate is one bounded exact-source
-cold/handoff diagnostic run; success remains required before integration.
+push, seal or freeze has occurred. A successful bounded exact-source
+cold/handoff diagnostic run remains required before integration, but the
+following SDK coverage prerequisites now precede that run.
+
+The independent raw-SDK reachability audit at `0f4cf79a` counted 101 non-test
+`surrealdb.Query` invocation sites in `internal/store`: candidate manifest 4,
+evidence 12, legacy service catalog/state 13, proof 4, investigation 67 and
+local initialization 1. Separately it counted four SignIn/Use calls, one
+connection Send, four Close calls and four constructors; these 13 sites are
+not 13 additional missing query recipes. Candidate preflight reads the raw
+publication pointer (`candidatejob.go` GetCandidateManifestPublication), before
+tree work or PublishCandidateManifest; the partition provider reads it too.
+Production partition extraction reaches AddEvidenceChunk and
+GetEvidenceChunkAccounting on each nonempty emitted chunk. These are confirmed
+cold-path seams, not attribution of the earlier native failure. The retained
+log reports candidate preflight failure with no tree/spool/publication work,
+then a descriptor-invalid stale-job reap; it does not name the first raw caller.
+
+The exact epoch configuration selects V3 and disables provisional Workbench.
+Startup/index callbacks dispatch to the V3 service runtime; legacy catalog
+reconciliation excludes V3 repositories, V3 publication callbacks suppress the
+old relationship reconciler, and V3 scheduled work calls HandleV3. Thus the
+three old loadServiceSnapshot callers and legacy search reconcile are not the
+intended cold path. This is not a blanket exclusion: OpenSelectedRuntimeScope
+falls back to the legacy OpenRuntimeScope/GetServiceStateRead when the durable
+selector is absent. Required product reads must establish their converged V3
+selector prerequisite, or account/refuse that fallback before reaching raw SDK;
+configuration alone is insufficient. The cold parent itself invokes X/T/F,
+not those product requests.
+
+Proof retention is omitted (zero), so its positive-lifetime maintenance worker
+does not start. Exact HTTP ingress and the three admitted MCP tools exclude
+proof/investigation operations; SweepRunArtifacts has no non-test caller, and
+investigation retention-status uses the separately accounted collector.
+Selected local construction uses the fixed initializer, bypassing ordinary
+initializeLocalScope and its raw auth/use operations. The older local chunk
+reader's raw connection is used by the T4013 harness, not this epoch parent.
+These are exact-path exclusions, not general accounting coverage claims.
+
+Next sequence: close candidate publish/clear/read recipes and the cold-path
+evidence recipes with their ADR operands, script tests and native fences;
+retain the legacy missing-selector verdict and demonstrate the required V3
+product prerequisite; then run the bounded exact-source cold/handoff gate.
+The shared SDK refusal now retains a first-failure-only private method/query
+prefix and six caller PCs and emits a quoted bounded diagnostic. Bound
+variables are excluded, but inline SQL can be sensitive; keep raw logs private.
+The unchanged ErrDescriptor and SA01 failure remain controlling. No raw call is
+newly admitted, no ceiling changes, and no native rerun is authorized by the
+diagnostic alone. Full store-accounting normal (0.832s), three-repeat race
+(2.751s), vet, pinned lint (zero issues), documentation/glossary and whitespace
+pass. Tests cover the real raw-query refusal, caller retention, bounded copies,
+single escaped log output, variable exclusion and preservation of a prior
+non-descriptor failure. Immutable independent review remains pending.
 
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
