@@ -4759,6 +4759,60 @@ constraints and retained V1/V2 bytes remain protected. No module/tool/recipe
 change, evidence waiver or upstream message was made. The already-started exact
 logical rehearsal may finish; its result cannot remove this freeze blocker.
 
+**Index-offer authorization received (2026-09-07).** Ben's subsequent
+interactive “approved proceed” approves the requested V3-only native indexer
+instrumentation and corresponding build-recipe change. The historical blocker
+above records the earlier hold; permission is no longer missing. Actual offer
+evidence, exact reference provenance, unchanged numerical bounds and V1/V2,
+combined transport fit, independent source/cost review and native gates remain
+required. No implementation or acceptance pass is implied by this approval.
+
+**Combined logical rehearsal stopped (2026-09-07).** Exact detached source
+`e2d139f003217b32c70635f3c298851216ec52aa` passed native cold, warm and physical-B
+authority observations, including physical retention, but refused the
+retained-parent logical handoff before launching producer three. The first
+epoch's joined attempt parser retained a cold prefix of 625 job attempts and
+233,741 source-blob attempts, with SourceBound true and Complete false; the
+cause remains under source/log investigation, not classified as a pipeline or
+logical-control failure. Test/package times were 2237.98s/2238.757s. Native stop
+reported RootJoined and SessionEmpty true; an unsandboxed exact-custody process
+check found no remaining match. Retained terminal log
+`/private/tmp/phebs-t422-logical-measured.tIHnDF/logical.log` hashes to
+`sha256:7562dded3fe5d612b817e46b9ce9c290e450e9ffe2f70b5a573986ea63655b79`;
+private runtime custody `t422-epoch-one-rehearsal-4208304872` is preserved.
+No automatic retry, logical phase pass, integration or freeze is claimed.
+
+Independent retained-log diagnosis then located the first refused native event
+at server-log line 235,709: chunk start 626 uses
+`relationshippublication.ScheduleStageV3` (`service-relationship-v3-shadow`),
+which the B2 parser's stage vocabulary omitted. Its preceding 625 starts and
+233,741 blob events exactly match the returned prefix. Raw log aggregation
+finds cold 637 starts and physical 1,517, below the unchanged 158,285 maximum
+for each; this aggregation is not a successful strict parse or a rerun gate.
+Counting both actual queue and chunk starts agrees with frozen recovery work
+semantics. Independent diagnosis reports one medium, no other severities;
+the earlier all-zero B2 review missed this reachable stage and remains a
+historical record, not retrospectively corrected coverage. The smallest fix is
+the native stage constant plus sibling-vocabulary regression coverage, not a
+budget increase or metric reinterpretation.
+
+The corrected combined parser then consumed the complete retained native log
+with SourceBound and Complete true: cold 637 starts / 236,017 blob attempts,
+physical 1,517 starts / 251,026 blob attempts, warm zero for both, and no reported
+retry transition. This was a bounded read-only diagnostic using the actual
+private input binding, not a new native run or retrospective handoff pass; its
+temporary test was removed after the 0.829s selector passed. Source regression
+tests remain independent of private custody. Fresh native confirmation is held
+by host disk admission: approximately 91 GiB available versus the unchanged
+120-GiB minimum. The failed private runtime custody occupies about 40 GiB and
+remains retained; no archive/deletion decision is inferred.
+
+The corrected root-tree attempt selector passed normal in 0.657s and race
+three times in 3.134s. Vet, pinned lint (zero issues), docs (0.455s), glossary,
+whitespace and unchanged retained V1/V2 plan checks passed. The first sandboxed
+lint invocation could not load Go packages; the unchanged command with cache
+access passed. These are parser and static gates, not a native handoff pass.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

@@ -10,6 +10,8 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/observationpublication"
+	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -143,13 +145,41 @@ func TestExecutionAttemptNativeVocabulary(t *testing.T) {
 			t.Fatalf("native non-retry %s: %+v %v", outcome, got, err)
 		}
 	}
-	for _, stage := range []string{store.ServiceStateV3ReconcileStage, store.ServiceStateV3ActivateStage} {
-		report := attemptTestChunk("started", "running", 0)
-		report.Stage = stage
-		got, err := observeBoundExecutionAttempts(attemptTestLine(t, 2, report), plan, 2, [32]byte{1}, true)
-		if err != nil || !got.Complete || got.Phases[1].JobAttempts != 1 {
-			t.Fatalf("reachable service stage %s refused: %+v %v", stage, got, err)
-		}
+}
+
+func TestExecutionAttemptNativeStageCompleteness(t *testing.T) {
+	plan := accountingTestPlan(t)
+	// The ordinary native scheduler registrations include both relationship
+	// stages. Selected V3 cold startup genuinely emits ScheduleStageV3; it is
+	// not a different event class or an additional attempt allowance.
+	for _, stage := range []string{
+		observationpublication.PlanningScheduleStage,
+		observationpublication.InventoryScheduleStageV2,
+		observationpublication.ScheduleStage,
+		extractionpublication.ScheduleStage,
+		relationshippublication.ScheduleStage,
+		relationshippublication.ScheduleStageV3,
+		store.ServiceStateV3ReconcileStage,
+		store.ServiceStateV3ActivateStage,
+		"unknown", "service-relationship-v3-shadow-extra", "",
+	} {
+		t.Run(stage, func(t *testing.T) {
+			started := attemptTestChunk("started", "running", 0)
+			started.Stage = stage
+			settled := attemptTestChunk("settled", "completed", 0)
+			settled.Stage = stage
+			raw := attemptTestLine(t, 2, started)
+			raw = append(raw, attemptTestLine(t, 2, settled)...)
+			got, err := observeBoundExecutionAttempts(raw, plan, 2, [32]byte{1}, true)
+			wantOK := stage != "unknown" && stage != "service-relationship-v3-shadow-extra" && stage != ""
+			wantCount := ExecutionAttemptCount{}
+			if wantOK {
+				wantCount.JobAttempts = 1
+			}
+			if (err == nil) != wantOK || got.Complete != wantOK || got.Phases[1] != wantCount {
+				t.Fatalf("native stage %q: %+v %v", stage, got, err)
+			}
+		})
 	}
 }
 

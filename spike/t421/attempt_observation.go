@@ -237,7 +237,8 @@ func executionJobOutcome(event string) string {
 func executionAttemptStage(stage string) bool {
 	switch stage {
 	case observationpublication.PlanningScheduleStage, observationpublication.InventoryScheduleStageV2, observationpublication.ScheduleStage,
-		extractionpublication.ScheduleStage, relationshippublication.ScheduleStage, store.ServiceStateV3ReconcileStage, store.ServiceStateV3ActivateStage:
+		extractionpublication.ScheduleStage, relationshippublication.ScheduleStage, relationshippublication.ScheduleStageV3,
+		store.ServiceStateV3ReconcileStage, store.ServiceStateV3ActivateStage:
 		return true
 	}
 	return false
