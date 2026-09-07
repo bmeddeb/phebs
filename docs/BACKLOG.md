@@ -4976,6 +4976,47 @@ focused normal cmd/T42.1 at 0.764s/1.234s and race repeated three times at
 2.115s/4.067s, plus vet, pinned lint (zero issues) and whitespace. No full native
 epoch or receipt was run. Native index build remains blocked by the separately
 recorded unsupported cache overlay; this transport does not close that gate.
+Root composition passed cmd/T42.1 at 0.663s/1.105s and documentation at 0.746s,
+with glossary/whitespace clean. Independent OCR of exact
+`c0ae04dd32287f745343f932eb66eac42b45a7b5` covered all eleven files, zero
+skipped and all severity counts zero. A separate read-only audit confirmed that
+a nil native retry creates a real successor; it is not a no-op. A generic
+service-state schedule with length two can retain its lease after a handler
+shape refusal and expose suppressed retry reporting, but the admitted
+service-state constructors use length one. Observation's legitimate length-eight
+stage uses its own handler. Current selected extraction/observation fences
+propagate native heartbeat results, old CurrentGenerationRunningChunk inspection
+errors are not handler inputs, and selected marker failures latch cancellation
+before retry. No selected-path omission or retained-run undercount was
+established; generic API reporting completeness remains unclaimed. Phase-seven
+hooks must return lease loss only after actual native requeue/fencing.
+
+**T42.2l phase-seven server controls (2026-09-07).** Seven command files
+compose the fixed authenticated preparation, before-heartbeat hold, native
+hit/requeue/recovered observer rendezvous and two exact R routes. Phase-six F
+captures only actual bounded authority/root identities after the normal native
+confirmation, then admits them only after its body/cache/report tail. A later F
+must match those complete identities. No arbitrary repository/domain/ordinal or
+handler-supplied completion endpoint is exposed.
+
+AC: genuine producer-four/phase-six-to-seven custody, fixed target and one-shot
+preparation, actual predecessor, original observer deadline intersection,
+body/ledger/report-tail release, sticky failures, old lease fenced before
+lease-lost, and unchanged final authority. Scripted/inherited mechanics passed
+focused normal 1.269s and race repeated three times 2.378s; marker/activation/
+semantic compatibility selector passed 0.932s. Vet, pinned lint (zero issues)
+and whitespace passed. The preliminary no-matching-tests compile is not a
+behavior gate. Inherited tests supply target/events and do not establish a real
+reaper, actual native R or complete phase-seven execution.
+
+Preparation returns observed C/S/M/W, not a full RecoveryPreparationResult or
+phase receipt. Its C maximum is 118 including one cold manifest, S maximum339,
+M maximum353296640 and W maximum64. Every R is C4/S4/M0/W0, separately SA2
+transactions/zero rows; the pair is C8/S8 and SA4/zero. Real enqueue/requeue
+submissions remain separately charged per native attempt, not inferred from
+these read-ledger counters. No polling or new stale timeout is introduced.
+Parent deadline/handoff/PC orchestration, complete work metrics and native
+phase-seven proof remain separate; independent exact-source review is pending.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.

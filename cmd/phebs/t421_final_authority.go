@@ -95,6 +95,7 @@ type t421FinalAuthorityReader struct {
 	policies   []candidate.Policy
 	identities []candidate.PolicyIdentity
 	policy     string
+	stale      *t422StaleControl
 
 	candidateState func(context.Context) (candidate.State, error)
 	openDomain     func(context.Context, candidate.DomainResultPlan) (*candidate.SparseDomain, error)
@@ -328,6 +329,11 @@ func (reader *t421FinalAuthorityReader) Read(
 	}
 	if err := caller.Release(); err != nil {
 		return nil, nil, errors.Join(err, errors.New("release caller authority"))
+	}
+	if reader.stale != nil {
+		if err := reader.stale.captureFinal(ctx, candidateState, response); err != nil {
+			return nil, nil, err
+		}
 	}
 	commit := func() error {
 		return t421FinalCommitCaches(ctx, sourcePending, catalogPending)

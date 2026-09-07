@@ -91,6 +91,7 @@ type t421ExactReadAccountingState struct {
 	lifecycle  *t422LifecycleControl
 	retention  *t422RetentionControl
 	activation *t422ActivationControl
+	stale      *t422StaleControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -212,6 +213,10 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		handler.state.lifecycle.command(writer, request)
 		return
 	}
+	if handler.state.stale != nil && request.URL != nil && request.URL.Path == t422StalePreparePath {
+		handler.state.stale.command(writer, request)
+		return
+	}
 	if !t421ExactReadAttempt(request) {
 		handler.next.ServeHTTP(writer, request)
 		return
@@ -226,6 +231,12 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		nativeRead = activationRead
 		limits, target = readaccounting.Counts{StoreReadAttempts: store.ServiceStateV3ActivationTransitionStoreReadAttempts}, true
 		nativeFailureStatus, nativeFailure = "activation_observation_refused", errT422ActivationControl
+	}
+	if staleRead := handler.state.staleRead(request); staleRead != nil {
+		nativeRead = staleRead
+		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.StaleLeaseTransitionControlFileReads,
+			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "stale_observation_refused", errT422StaleControl
 	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleRead(request.URL.Path) {
 		nativeRead = handler.state.lifecycle.read(request)
@@ -280,6 +291,9 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 			canonical, pendingCommit, readErr = read.Read(ctx)
 			if readErr == nil && handler.state.retention != nil && request.URL.Path == t421ExactFinalAuthorityPath {
 				afterReport, readErr = handler.state.retention.finalTail(ctx, canonical)
+			}
+			if readErr == nil && handler.state.stale != nil && request.URL.Path == t421ExactFinalAuthorityPath {
+				afterReport, readErr = handler.state.stale.finalTail(ctx)
 			}
 		}
 		if readErr != nil || !json.Valid(canonical) {

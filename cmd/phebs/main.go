@@ -1124,6 +1124,7 @@ func serve(args []string) (retErr error) {
 	)
 	var markerControl *t422MarkerControl
 	var activationControl *t422ActivationControl
+	var staleControl *t422StaleControl
 	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 2 {
 		activationControl, err = newT422ActivationControl(ctx, semanticLaunch, serviceRuntime)
 		if err != nil {
@@ -1630,6 +1631,14 @@ func serve(args []string) (retErr error) {
 				return nil
 			},
 		}
+		if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 3 {
+			staleControl, err = newT422StaleControl(ctx, semanticLaunch, partitionReconciler)
+			if err != nil {
+				return err
+			}
+			defer staleControl.cancel()
+			exactReadState.stale = staleControl
+		}
 		candidateWorker.Diagnostics = cfg.Diagnostics.Candidates
 		if err := enqueueCandidateBackfillWithReadiness(
 			ctx, st, candidateWorker.PolicyDigest(), func(repository string) bool {
@@ -1772,6 +1781,11 @@ func serve(args []string) (retErr error) {
 			Report: func(err error) {
 				diagnostics.Logf("partitioned extraction scheduler unavailable: %v", err)
 			},
+		}
+		if staleControl != nil {
+			class := partitionScheduler.Classes[store.GenerationResourceExtraction]
+			class.BeforeLeaseHeartbeat, class.OnStaleLeaseTransition = staleControl.beforeHeartbeat, staleControl.transition
+			partitionScheduler.Classes[store.GenerationResourceExtraction] = class
 		}
 		bindT422ExactChunkReports(exactReads, failExactRead, partitionScheduler)
 		attemptReports.bindChunk(partitionScheduler)
@@ -2166,6 +2180,7 @@ func serve(args []string) (retErr error) {
 		finalAuthority = t421ExactFinalAuthorityRead{
 			Limits: t421FinalAuthorityReadLimits(), Read: reader.Read,
 		}
+		reader.stale = staleControl
 		tailReadiness = t421ExactFinalAuthorityRead{
 			Limits: t421TailReadinessLimits(), Read: reader.ReadTailReadiness,
 		}

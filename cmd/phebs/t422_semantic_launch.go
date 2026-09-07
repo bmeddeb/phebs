@@ -286,7 +286,7 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	path := request.URL.Path
 	activation := request.Header.Values(t421ExactReadActivationHeader)
 	ordinals := request.Header.Values(t421ExactReadOrdinalHeader)
-	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath {
+	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath || path == t422StalePreparePath {
 		method := http.MethodPost
 		if path == "/api/health" {
 			method = http.MethodGet
@@ -309,7 +309,7 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	case api.ExtractionProgressPath, api.LifecycleStatusPath, t421ExactFinalAuthorityPath,
 		t421ExactTailReadinessPath, api.SearchPath, t421ProductServicePath, t421ProductRelationshipsPath,
 		t422MarkerHitPath, t422MarkerRecoveredPath, t422RetentionReadPath,
-		t422ActivationHitPath, t422ActivationRecoveredPath:
+		t422ActivationHitPath, t422ActivationRecoveredPath, t422StaleHitPath, t422StaleRecoveredPath:
 		return true
 	default:
 		return t422LifecycleRead(path)
