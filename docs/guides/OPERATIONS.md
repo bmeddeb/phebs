@@ -4662,6 +4662,14 @@ mutations are omitted from the submitted SQL. Generation retry counts all four
 supplied mutation operands even when exhaustion or stale ownership prevents
 their effects; affected-row counts are not the ceremony accounting unit.
 
+Candidate-manifest publication and clearing now observe their retirement IDs
+and pending successors before the atomic write and reject a changed census
+inside that transaction. Publication retries under its existing bounded policy;
+clear returns the conflict to its caller. Selected accounting refuses a
+transaction above 512 submitted operands; ordinary mode retains its atomic
+unbounded fallback. This preserves exact-pointer reuse, control-repair and
+successor behavior, but is not proof that cold convergence fits its phase.
+
 Final repository cleanup still commits its store changes atomically after
 artifact removal. Bounded cleanup rechecks actual native ID vectors before
 writing; it never splits the deletion into online pages to fit accounting.

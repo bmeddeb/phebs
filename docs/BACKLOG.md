@@ -5745,6 +5745,56 @@ private-log caveats and conditional legacy exclusions. These close this small
 diagnostic slice's review gate, not the missing recipe coverage or native cold
 gate. No native retry, integration, push, seal or freeze followed.
 
+The next candidate-manifest coverage slice reuses the retained rewrite only
+after fresh source review: get/list carry read recipes; publish/clear derive
+actual native ID vectors and pending-job/projection operands, echo the census
+inside the atomic transaction, and omit inactive fixed bodies. Selected
+overflow refuses before write; ordinary overflow preserves the original
+unbounded transaction. Exact replay, stale authority, typed-unit invalidation,
+clear/list, resolver projection, same-digest control repair and active-partition
+retirement native compatibility tests passed together in 4.602s. New scripted
+operand/CBOR, native race-fence and immutable review gates remain pending; the
+candidate rewrite is not yet an accepted cold-run prerequisite.
+
+The completed candidate content then passed its combined new accounting and
+existing native compatibility selectors: normal 4.562s and three-repeat race
+15.487s. The new tests cover exact supplied SQL/CBOR operands, inactive bodies,
+zero-row clear, 512/513 refusal, ordinary overflow fallback, malformed census,
+per-attempt refresh/charging and known versus uncertain replies; one real engine
+also proves changed ID, writer-authority and pending-target fences before any
+candidate/caller/repository mutation. Full candidate-worker normal/race passed
+in 5.082s/5.987s; store vet, repository-pinned lint (zero issues), command
+compilation, documentation/glossary and whitespace passed. Immutable
+independent review remains the candidate slice's final acceptance check;
+these bounded gates do not replace full-store or native cold/phase-fit evidence.
+
+The independent legacy-selector trace closes the source-ordering question for
+the currently implemented cold parent, not the future full product runner.
+F reads GetServiceRuntimeSelector and returns on absence, selectedState requires
+BackendV3, and final confirmation rechecks that same durable selector.
+ColdToWarm drains owners, requires successful F, joins/fences its request tail
+and advances with ordinary owners/requests still fenced. This parent issues
+only X/T/F, never product queries, so it cannot take OpenSelectedRuntimeScope's
+missing-selector compatibility fallback. The route allowlist alone does not
+enforce this ordering; future product-window acceptance must prove its own
+fresh F and fenced sequencing. The existing real-server final-authority
+regression tests selector supersession refusal; this audit did not rerun it
+or establish a native cold pass. No speculative production guard is added.
+
+Independent evidence planning identifies another unchanged-bound prerequisite:
+the worker emits 256-fact chunks, whose distinct normalized atom, association
+and assertion vectors plus two run UPDATEs and one receipt CREATE can submit
+771 operands. The correct append count is `atoms + associations + assertions
++ 3`, including replay and false native guards, not RowDelta. At most 169
+distinct facts fit (510 operands); 170 need 513. Smaller deterministic chunks
+must be formed before their identities, never by splitting an already-identified
+atomic receipt, and require replay and whole-phase transaction-fit checks.
+No chunk-size or 512-operand ceiling change is made by the candidate slice.
+Receipt reads need only the shared read recipe. The whole-repository cold
+worker bypasses legacy run/outcome publication; those are not silently admitted
+by this narrower chunk finding. Cold rehearsal remains held for evidence and
+legacy-selector prerequisites after candidate gates pass.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
 	"github.com/bmeddeb/phebs/internal/candidateid"
@@ -116,8 +116,351 @@ func validGitObjectID(value string) bool {
 	return err == nil && hex.EncodeToString(decoded) == value
 }
 
-const publishCandidateManifestSQL = `
-BEGIN;
+type candidateManifestObservation struct {
+	Before     []cbor.RawMessage  `json:"before" cbor:"before"`
+	Active     *bool              `json:"active" cbor:"active"`
+	Revision   *bool              `json:"revision" cbor:"revision"`
+	Catalogs   []models.RecordID  `json:"catalogs" cbor:"catalogs"`
+	Callers    []models.RecordID  `json:"callers" cbor:"callers"`
+	Published  []models.RecordID  `json:"published" cbor:"published"`
+	Staged     []models.RecordID  `json:"staged" cbor:"staged"`
+	Attempts   []models.RecordID  `json:"attempts" cbor:"attempts"`
+	Outcomes   []models.RecordID  `json:"outcomes" cbor:"outcomes"`
+	Extraction []repoIndexPending `json:"extraction" cbor:"extraction"`
+	Resolver   []repoIndexPending `json:"resolver" cbor:"resolver"`
+}
+
+func (c candidateManifestObservation) writeRows(clear bool) uint64 {
+	rows := uint64(len(c.Catalogs) + len(c.Callers) + len(c.Published) + len(c.Staged) + len(c.Attempts) + len(c.Outcomes))
+	if !clear {
+		rows++ // The candidate UPSERT is supplied even when its native guard is false.
+		if *c.Active {
+			rows += 4 // Two selected job bodies and two projected repository RIDs.
+		}
+	} else if *c.Active {
+		rows++ // The selected candidate DELETE.
+	}
+	if *c.Revision {
+		rows++
+	}
+	if len(c.Callers) == 1 {
+		rows++
+	}
+	if clear && len(c.Catalogs) == 1 {
+		rows += 2
+	}
+	return rows
+}
+
+func (s *Surreal) candidateManifestCensus(ctx context.Context, sql string, controls int, vars map[string]any) (candidateManifestObservation, error) {
+	results, err := storeQuery[[]candidateManifestObservation](ctx, s.accounting, s.db, sql+"RETURN [$candidate_census];", vars, storeRead())
+	if err != nil {
+		return candidateManifestObservation{}, err
+	}
+	rows, err := generationCensusRows(ctx, results, controls)
+	if err != nil || len(rows) != 1 {
+		return candidateManifestObservation{}, errors.Join(err, errors.New("invalid candidate mutation census"))
+	}
+	c := rows[0]
+	if len(c.Before) != 2 || c.Active == nil || c.Revision == nil {
+		return candidateManifestObservation{}, errors.New("invalid candidate mutation preimage")
+	}
+	for _, vector := range []struct {
+		ids   []models.RecordID
+		table string
+	}{
+		{c.Catalogs, "resolver_catalog_publication"}, {c.Callers, "caller_generation_publication"},
+		{c.Published, "extraction_run"}, {c.Staged, "extraction_run"},
+		{c.Attempts, "extraction_attempt"}, {c.Outcomes, "extraction_domain_outcome"},
+	} {
+		if vector.ids == nil {
+			return candidateManifestObservation{}, errors.New("null candidate mutation vector")
+		}
+		if len(vector.ids) > restoreClearRows+1 {
+			return candidateManifestObservation{}, errors.New("candidate mutation vector overflow")
+		}
+		prefix := min(len(vector.ids), restoreClearRows)
+		if err := validateRestoreClearIDs(vector.ids[:prefix], vector.table, restoreClearRows); err != nil {
+			return candidateManifestObservation{}, err
+		}
+		if len(vector.ids) > prefix {
+			if err := validateRestoreClearIDs(vector.ids[prefix:], vector.table, 1); err != nil {
+				return candidateManifestObservation{}, err
+			}
+		}
+	}
+	for _, pair := range []struct {
+		values []repoIndexPending
+		table  string
+	}{
+		{c.Extraction, string(JobExtract)}, {c.Resolver, string(JobResolverCatalog)},
+	} {
+		if pair.values == nil || len(pair.values) > 1 {
+			return candidateManifestObservation{}, errors.New("invalid candidate successor census")
+		}
+		for _, value := range pair.values {
+			if err := validateRestoreClearIDs([]models.RecordID{value.ID}, pair.table, 1); err != nil {
+				return candidateManifestObservation{}, err
+			}
+			if err := validateRestoreClearIDs([]models.RecordID{value.Projection}, "repo", 1); err != nil {
+				return candidateManifestObservation{}, err
+			}
+		}
+	}
+	return c, ctx.Err()
+}
+
+// The exact native observation is repeated in the write transaction. Returned
+// identity counts are bounded; the original predicate scans and scalar values
+// are not a response-byte, physical-scan, or engine-memory bound.
+const candidateManifestCensusFenceSQL = `
+IF $candidate_census != $candidate_expected
+ OR array::len($candidate_expected.catalogs) != array::len(array::distinct($candidate_expected.catalogs))
+ OR array::len($candidate_expected.callers) != array::len(array::distinct($candidate_expected.callers))
+ OR array::len($candidate_expected.published) != array::len(array::distinct($candidate_expected.published))
+ OR array::len($candidate_expected.staged) != array::len(array::distinct($candidate_expected.staged))
+ OR array::len($candidate_expected.attempts) != array::len(array::distinct($candidate_expected.attempts))
+ OR array::len($candidate_expected.outcomes) != array::len(array::distinct($candidate_expected.outcomes)) {
+ THROW 'phebs-conflict: candidate mutation census changed';
+};
+`
+
+const candidatePublishCensusControls = 28
+
+const candidatePublishCensusSQL = `
+LET $cm_caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+LET $cm_repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
+	FROM $repo_rid)[0];
+LET $cm_current = (SELECT * FROM $publication_rid)[0];
+LET $cm_repo_ok = $cm_repo_state != NONE
+	AND ($cm_repo_state.deleting = NONE OR $cm_repo_state.deleting = false)
+	AND $cm_repo_state.indexed_commit_hash = $head_commit
+	AND ($cm_repo_state.indexed_analysis_unit.digest ?? '') = $unit_digest;
+LET $cm_same_scope = $cm_current != NONE
+	AND $cm_current.repository = $repository
+	AND $cm_current.head_commit = $head_commit
+	AND $cm_current.unit_digest = $unit_digest
+	AND $cm_current.policy_digest = $policy_digest;
+LET $cm_same_publication = $cm_same_scope
+	AND $cm_current.manifest_digest = $manifest_digest
+	AND $cm_current.generation_digest = $generation_digest
+	AND $cm_current.manifest_path = $manifest_path;
+LET $cm_current_control_revision = $cm_current.control_revision ?? 0;
+LET $cm_control_advanced = $cm_same_publication
+	AND $requested_control_revision = $cm_current_control_revision + 1;
+LET $cm_control_ok = IF $cm_current = NONE THEN
+		$requested_control_revision IN [0, 1]
+	ELSE IF $cm_same_publication THEN
+		$requested_control_revision = 0
+			OR $requested_control_revision = $cm_current_control_revision
+			OR $cm_control_advanced
+	ELSE
+		$requested_control_revision = 0
+			OR $requested_control_revision = $cm_current_control_revision + 1
+	END;
+LET $cm_next_control_revision = IF $cm_current = NONE THEN 1
+	ELSE IF $cm_same_publication AND $cm_control_advanced = false
+		THEN $cm_current_control_revision
+	ELSE $cm_current_control_revision + 1 END;
+LET $cm_acceptable = $cm_caller_writer_ok AND $cm_repo_ok
+	AND ($cm_same_scope = false OR $cm_same_publication = true)
+	AND $cm_control_ok;
+LET $cm_published = IF $cm_acceptable THEN [$cm_current] ELSE [] END;
+LET $cm_invalidated_runs = (IF array::len($cm_published) = 1 THEN
+	(SELECT id, run_id, domain FROM extraction_run
+		WHERE repo = $repository AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND status IN ['published', 'staged']
+			AND (status = 'published' OR $cm_same_publication = false)
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND (
+				(((partition_plan_digest ?? '') = '')
+					AND ((partition_active ?? false) = false)
+					AND ((partition_sealed ?? false) = false)
+					AND (coverage.candidate_manifest_digest ?? '') != $manifest_digest)
+				OR (((partition_active ?? false) = true)
+					AND ((partition_sealed ?? false) = false)
+					AND (partition_candidate_digest ?? '') != $manifest_digest)
+			))
+	ELSE [] END) ?? [];
+LET $cm_invalidated_run_rids = $cm_invalidated_runs.map(|$run| $run.id);
+LET $cm_invalidated_run_ids = $cm_invalidated_runs.map(|$run| $run.run_id);
+LET $cm_invalidated_domains = $cm_invalidated_runs.map(|$run| $run.domain);
+LET $cm_invalidated_attempts = (IF array::len($cm_invalidated_runs) > 0 THEN
+	(SELECT id, run_id, domain FROM extraction_attempt
+		WHERE repo = $repository AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND domain IN $cm_invalidated_domains
+			AND run_id IN $cm_invalidated_run_ids
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND evidence_migration_version = $evidence_migration)
+	ELSE [] END) ?? [];
+LET $cm_invalidated_attempt_rids = $cm_invalidated_attempts.map(|$attempt| $attempt.id);
+LET $cm_retire = array::len($cm_published) = 1 AND ($cm_same_publication = false OR $cm_control_advanced);
+LET $cm_catalogs = SELECT VALUE id FROM resolver_catalog_publication
+ WHERE $cm_retire AND repository = $repository ORDER BY id LIMIT $candidate_limit;
+LET $cm_callers = SELECT VALUE id FROM caller_generation_publication
+ WHERE $cm_retire AND repository = $repository ORDER BY id LIMIT $candidate_limit;
+LET $cm_published_ids = SELECT VALUE id FROM extraction_run
+ WHERE id IN $cm_invalidated_run_rids AND status = 'published'
+ AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` ORDER BY id LIMIT $candidate_limit;
+LET $cm_staged_ids = SELECT VALUE id FROM extraction_run
+ WHERE id IN $cm_invalidated_run_rids AND status = 'staged'
+ AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` ORDER BY id LIMIT $candidate_limit;
+LET $cm_attempt_ids = SELECT VALUE id FROM extraction_attempt
+ WHERE id IN $cm_invalidated_attempt_rids ORDER BY id LIMIT $candidate_limit;
+LET $cm_outcome_ids = SELECT VALUE id FROM extraction_domain_outcome
+ WHERE array::len($cm_published) = 1 AND $cm_control_advanced
+ AND repo = $repository AND commit = $head_commit AND unit_digest = $unit_digest
+ AND candidate_control_failure = true
+ AND generation.candidate_manifest_digest = $manifest_digest
+ AND generation.candidate_policy_digest = $policy_digest
+ AND generation.candidate_control_revision = $cm_current_control_revision
+ AND store_schema_version = $evidence_store_schema
+ AND evidence_migration_version = $evidence_migration ORDER BY id LIMIT $candidate_limit;
+LET $cm_extraction = SELECT id, type::record('repo', target) AS projection FROM
+ (SELECT id, created_at, target FROM extraction_job
+ WHERE array::len($cm_published) = 1 AND pending_key = $repository AND status = 'pending' ORDER BY created_at LIMIT 1);
+LET $cm_resolver = SELECT id, type::record('repo', target) AS projection FROM
+ (SELECT id, created_at, target FROM resolver_catalog_job
+ WHERE array::len($cm_published) = 1 AND pending_key = $repository AND status = 'pending' ORDER BY created_at LIMIT 1);
+LET $candidate_census = {
+ before: [$cm_repo_state, $cm_current], active: $cm_acceptable,
+ revision: array::len($cm_published_ids) > 0 OR array::len($cm_staged_ids) > 0
+   OR array::len($cm_attempt_ids) > 0 OR (array::len($cm_published) = 1 AND $cm_same_publication = false),
+ catalogs: $cm_catalogs, callers: $cm_callers, published: $cm_published_ids, staged: $cm_staged_ids,
+ attempts: $cm_attempt_ids, outcomes: $cm_outcome_ids, extraction: $cm_extraction, resolver: $cm_resolver
+};
+`
+
+const candidatePublishLegacyFanoutSQL = `LET $pending = IF array::len($published) = 1 THEN
+	(SELECT id, created_at FROM extraction_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+	LET $fanout = IF array::len($published) != 1 THEN []
+	ELSE IF $pending != NONE THEN
+		(UPDATE $pending SET force = force,
+			recovery_lease = NONE RETURN AFTER)
+	ELSE
+		(CREATE extraction_job CONTENT {
+			target: $repository,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repository,
+			force: false
+		} RETURN AFTER)
+	END;
+LET $pending_catalog = IF array::len($published) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_force = ($same_publication = false) OR $control_advanced;
+LET $catalog_fanout = IF array::len($published) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET
+			force = IF $catalog_force THEN true ELSE force END,
+			recovery_lease = NONE
+			RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $repository,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repository,
+			force: $catalog_force
+		} RETURN AFTER)
+	END;` + projectExtractionJobSQL + projectResolverJobSQL + `
+`
+
+const candidateExtractionProjectionSQL = `
+LET $extraction_projected = IF array::len($fanout) = 1
+	THEN $fanout[0] ELSE NONE END;
+IF $extraction_projected != NONE {
+	UPDATE $candidate_extraction_projection
+	SET latest_extraction_job = $extraction_projected.id,
+		latest_extraction_job_created_at = $extraction_projected.created_at,
+		latest_extraction_job_projection_version = 't40r1-extraction-job-latest-v1'
+	WHERE latest_extraction_job_created_at = NONE
+		OR latest_extraction_job_created_at < $extraction_projected.created_at
+		OR (latest_extraction_job_created_at = $extraction_projected.created_at
+			AND latest_extraction_job < $extraction_projected.id)
+	RETURN NONE;
+};`
+const candidateResolverProjectionSQL = `
+LET $resolver_projected = IF array::len($catalog_fanout) = 1
+	THEN $catalog_fanout[0] ELSE NONE END;
+IF $resolver_projected != NONE {
+	UPDATE $candidate_resolver_projection
+	SET latest_resolver_job = $resolver_projected.id,
+		latest_resolver_job_created_at = $resolver_projected.created_at,
+		latest_resolver_job_projection_version = 't40r1-resolver-job-latest-v1'
+	WHERE latest_resolver_job_created_at = NONE
+		OR latest_resolver_job_created_at < $resolver_projected.created_at
+		OR (latest_resolver_job_created_at = $resolver_projected.created_at
+			AND latest_resolver_job < $resolver_projected.id)
+	RETURN NONE;
+};`
+
+func candidatePublishFanoutSQL(c *candidateManifestObservation) string {
+	if c == nil {
+		return candidatePublishLegacyFanoutSQL
+	}
+	if !*c.Active {
+		return "LET $fanout = []; LET $catalog_fanout = [];\n"
+	}
+	extraction := `(CREATE extraction_job CONTENT {
+			target: $repository, status: 'pending', attempts: 0,
+			created_at: time::now(), pending_key: $repository, force: false
+		} RETURN AFTER)`
+	if len(c.Extraction) == 1 {
+		extraction = "(UPDATE $pending SET force = force, recovery_lease = NONE RETURN AFTER)"
+	}
+	resolver := `(CREATE resolver_catalog_job CONTENT {
+			target: $repository, status: 'pending', attempts: 0,
+			created_at: time::now(), pending_key: $repository, force: $catalog_force
+		} RETURN AFTER)`
+	if len(c.Resolver) == 1 {
+		resolver = `(UPDATE $pending_catalog SET force = IF $catalog_force THEN true ELSE force END,
+			recovery_lease = NONE RETURN AFTER)`
+	}
+	return `
+LET $pending = IF array::len($published) = 1 THEN $candidate_expected.extraction[0].id ELSE NONE END;
+LET $fanout = IF array::len($published) != 1 THEN [] ELSE ` + extraction + ` END;
+LET $pending_catalog = IF array::len($published) = 1 THEN $candidate_expected.resolver[0].id ELSE NONE END;
+LET $catalog_force = ($same_publication = false) OR $control_advanced;
+LET $catalog_fanout = IF array::len($published) != 1 THEN [] ELSE ` + resolver + ` END;` +
+		candidateExtractionProjectionSQL + candidateResolverProjectionSQL + "\n"
+}
+
+func candidatePublishSQL(c *candidateManifestObservation) string {
+	fence := ""
+	catalogs, callers := "resolver_catalog_publication", "caller_generation_publication"
+	published, staged, attempts, outcomes := "extraction_run", "extraction_run", "extraction_attempt", "extraction_domain_outcome"
+	callerRevision := "(UPDATE $repo_rid SET caller_publication_revision =\n\t\t(caller_publication_revision ?? 0) + 1 RETURN AFTER)"
+	evidenceRevision := "(UPDATE $repo_rid SET evidence_revision = (evidence_revision ?? 0) + 1\n\t\tRETURN AFTER)"
+	if c != nil {
+		fence = candidatePublishCensusSQL + candidateManifestCensusFenceSQL
+		catalogs, callers = "$candidate_expected.catalogs", "$candidate_expected.callers"
+		published, staged = "$candidate_expected.published", "$candidate_expected.staged"
+		attempts, outcomes = "$candidate_expected.attempts", "$candidate_expected.outcomes"
+		if len(c.Callers) != 1 {
+			callerRevision = "[]"
+		}
+		if !*c.Revision {
+			evidenceRevision = "[]"
+		}
+	}
+	return `
+BEGIN;` + fence + `
 LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
 	WHERE version = $caller_migration_version LIMIT 1) = 1;
 LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
@@ -174,17 +517,16 @@ LET $published = IF $acceptable = false THEN []
 	END;
 LET $retired_catalog = IF array::len($published) = 1
 		AND ($same_publication = false OR $control_advanced) THEN
-	(DELETE resolver_catalog_publication
+	(DELETE ` + catalogs + `
 		WHERE repository = $repository RETURN BEFORE)
 	ELSE [] END;
 LET $retired_caller = IF array::len($published) = 1
 		AND ($same_publication = false OR $control_advanced) THEN
-	(DELETE caller_generation_publication
+	(DELETE ` + callers + `
 		WHERE repository = $repository RETURN BEFORE)
 	ELSE [] END;
 LET $caller_revision = IF array::len($retired_caller) = 1 THEN
-	(UPDATE $repo_rid SET caller_publication_revision =
-		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	` + callerRevision + `
 	ELSE [] END;
 LET $invalidated_runs = (IF array::len($published) = 1 THEN
 	(SELECT id, run_id, domain FROM extraction_run
@@ -221,7 +563,7 @@ LET $invalidated_attempts = (IF array::len($invalidated_runs) > 0 THEN
 	ELSE [] END) ?? [];
 LET $invalidated_attempt_rids = $invalidated_attempts.map(|$attempt| $attempt.id);
 LET $retired = IF array::len($invalidated_runs) > 0 THEN
-	(UPDATE extraction_run SET status = 'superseded', published_key = NONE
+	(UPDATE ` + published + ` SET status = 'superseded', published_key = NONE
 		WHERE id IN $invalidated_run_rids
 			AND repo = $repository AND commit = $head_commit
 			AND unit_digest = $unit_digest
@@ -236,7 +578,7 @@ LET $retired = IF array::len($invalidated_runs) > 0 THEN
 		RETURN AFTER)
 	ELSE [] END;
 LET $aborted = IF array::len($invalidated_runs) > 0 THEN
-	(UPDATE extraction_run SET status = 'aborted', published_key = NONE,
+	(UPDATE ` + staged + ` SET status = 'aborted', published_key = NONE,
 			partition_active = false
 		WHERE id IN $invalidated_run_rids
 			AND repo = $repository AND commit = $head_commit
@@ -252,7 +594,7 @@ LET $aborted = IF array::len($invalidated_runs) > 0 THEN
 		RETURN AFTER)
 	ELSE [] END;
 LET $cleared_attempts = IF array::len($invalidated_attempt_rids) > 0 THEN
-	(DELETE extraction_attempt
+	(DELETE ` + attempts + `
 		WHERE id IN $invalidated_attempt_rids
 			AND repo = $repository AND commit = $head_commit
 			AND unit_digest = $unit_digest
@@ -265,7 +607,7 @@ LET $cleared_attempts = IF array::len($invalidated_attempt_rids) > 0 THEN
 	ELSE [] END;
 LET $cleared_control_outcomes = IF array::len($published) = 1
 		AND $control_advanced THEN
-	(DELETE extraction_domain_outcome
+	(DELETE ` + outcomes + `
 		WHERE repo = $repository
 			AND commit = $head_commit
 			AND unit_digest = $unit_digest
@@ -283,56 +625,16 @@ LET $evidence_changed = array::len($retired) > 0
 	OR array::len($cleared_attempts) > 0
 	OR (array::len($published) = 1 AND $same_publication = false);
 LET $evidence_revision = IF $evidence_changed THEN
-	(UPDATE $repo_rid SET evidence_revision = (evidence_revision ?? 0) + 1
-		RETURN AFTER)
+	` + evidenceRevision + `
 	ELSE [] END;
-LET $pending = IF array::len($published) = 1 THEN
-	(SELECT id, created_at FROM extraction_job
-		WHERE pending_key = $repository AND status = 'pending'
-		ORDER BY created_at LIMIT 1)[0].id
-	ELSE NONE END;
-	LET $fanout = IF array::len($published) != 1 THEN []
-	ELSE IF $pending != NONE THEN
-		(UPDATE $pending SET force = force,
-			recovery_lease = NONE RETURN AFTER)
-	ELSE
-		(CREATE extraction_job CONTENT {
-			target: $repository,
-			status: 'pending',
-			attempts: 0,
-			created_at: time::now(),
-			pending_key: $repository,
-			force: false
-		} RETURN AFTER)
-	END;
-LET $pending_catalog = IF array::len($published) = 1 THEN
-	(SELECT id, created_at FROM resolver_catalog_job
-		WHERE pending_key = $repository AND status = 'pending'
-		ORDER BY created_at LIMIT 1)[0].id
-	ELSE NONE END;
-LET $catalog_force = ($same_publication = false) OR $control_advanced;
-LET $catalog_fanout = IF array::len($published) != 1 THEN []
-	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET
-			force = IF $catalog_force THEN true ELSE force END,
-			recovery_lease = NONE
-			RETURN AFTER)
-	ELSE
-		(CREATE resolver_catalog_job CONTENT {
-			target: $repository,
-			status: 'pending',
-			attempts: 0,
-			created_at: time::now(),
-			pending_key: $repository,
-			force: $catalog_force
-		} RETURN AFTER)
-	END;` + projectExtractionJobSQL + projectResolverJobSQL + `
+` + candidatePublishFanoutSQL(c) + `
 RETURN IF array::len($fanout) = 1
 	AND array::len($catalog_fanout) = 1
 	AND (array::len($retired_caller) = 0
 		OR array::len($caller_revision) = 1)
 	THEN $published ELSE [] END;
 COMMIT;`
+}
 
 // PublishCandidateManifest atomically guards publication against the current
 // authoritative indexed HEAD and committed unit, advances the pointer, and
@@ -373,10 +675,35 @@ func (s *Surreal) PublishCandidateManifest(
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 		"caller_migration_rid":        callerGenerationPublicationMigrationID(),
 		"caller_migration_version":    callerGenerationPublicationMigrationVersion,
+		"candidate_limit":             restoreClearRows + 1,
 	}
 	for attempt := 0; ; attempt++ {
-		results, err := surrealdb.Query[[]candidateManifestPublicationRec](
-			ctx, s.db, publishCandidateManifestSQL, vars,
+		census, err := s.candidateManifestCensus(ctx, candidatePublishCensusSQL, candidatePublishCensusControls, vars)
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return fmt.Errorf("publish candidate manifest census: %w", err)
+		}
+		rows := census.writeRows(false)
+		recipe := storeWrite(rows)
+		var bounded *candidateManifestObservation
+		if rows > restoreClearRows {
+			recipe = storeUnsupported()
+		} else {
+			bounded = &census
+			vars["candidate_expected"] = census
+			vars["candidate_extraction_projection"] = repoID(publication.Repository)
+			vars["candidate_resolver_projection"] = repoID(publication.Repository)
+			if len(census.Extraction) == 1 {
+				vars["candidate_extraction_projection"] = census.Extraction[0].Projection
+			}
+			if len(census.Resolver) == 1 {
+				vars["candidate_resolver_projection"] = census.Resolver[0].Projection
+			}
+		}
+		results, err := storeQuery[[]candidateManifestPublicationRec](
+			ctx, s.accounting, s.db, candidatePublishSQL(bounded), vars, recipe,
 		)
 		if err != nil {
 			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
@@ -384,10 +711,10 @@ func (s *Surreal) PublishCandidateManifest(
 			}
 			return fmt.Errorf("publish candidate manifest: %w", err)
 		}
-		rows := firstDomainRows(results)
-		if len(rows) == 1 {
+		publishedRows := firstDomainRows(results)
+		if len(publishedRows) == 1 {
 			if err := validateCandidateManifestPublication(
-				rows[0].CandidateManifestPublication, true,
+				publishedRows[0].CandidateManifestPublication, true,
 			); err != nil {
 				return fmt.Errorf("publish candidate manifest: persisted pointer: %w", err)
 			}
@@ -410,11 +737,10 @@ func (s *Surreal) GetCandidateManifestPublication(
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return nil, fmt.Errorf("get candidate manifest: %w", err)
 	}
-	results, err := surrealdb.Query[[]candidateManifestPublicationRec](
-		ctx,
-		s.db,
+	results, err := storeQuery[[]candidateManifestPublicationRec](
+		ctx, s.accounting, s.db,
 		"SELECT * FROM $rid",
-		map[string]any{"rid": candidateManifestPublicationID(repository)},
+		map[string]any{"rid": candidateManifestPublicationID(repository)}, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get candidate manifest: %w", err)
@@ -443,10 +769,10 @@ func (s *Surreal) GetCandidateManifestPublication(
 func (s *Surreal) ListCandidateManifestPublications(
 	ctx context.Context,
 ) ([]CandidateManifestPublication, error) {
-	results, err := surrealdb.Query[[]candidateManifestPublicationRec](
-		ctx, s.db,
+	results, err := storeQuery[[]candidateManifestPublicationRec](
+		ctx, s.accounting, s.db,
 		"SELECT * FROM candidate_manifest_publication ORDER BY repository",
-		nil,
+		nil, storeRead(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list candidate manifests: %w", err)
@@ -467,43 +793,36 @@ func (s *Surreal) ListCandidateManifestPublications(
 	return publications, nil
 }
 
-func (s *Surreal) ClearCandidateManifestPublication(
-	ctx context.Context,
-	repository string,
-) error {
-	if err := validateCandidateRepository(repository); err != nil {
-		return fmt.Errorf("clear candidate manifest: repository: %w", err)
-	}
-	_, err := surrealdb.Query[any](
-		ctx,
-		s.db,
-		`BEGIN;
-		LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
-			WHERE version = $caller_migration_version LIMIT 1) = 1;
-		IF $caller_writer_ok = false {
-			THROW 'phebs-permanent: caller-generation publication writer is not active'
-		};
-		LET $current = SELECT id FROM $rid;
-		LET $retired_catalog = IF array::len($current) = 1 THEN
-			(DELETE resolver_catalog_publication
-				WHERE repository = $repository RETURN BEFORE)
-			ELSE [] END;
-		LET $retired_caller = DELETE caller_generation_publication
-			WHERE repository = $repository RETURN BEFORE;
-		IF array::len($current) = 1 {
-			DELETE $rid RETURN NONE;
-			DELETE extraction_domain_outcome
-				WHERE repo = $repository RETURN NONE;
-			UPDATE $repo_rid
-				SET evidence_revision = (evidence_revision ?? 0) + 1
-				WHERE name = $repository
-				RETURN NONE;
-		};
-		IF array::len($retired_caller) = 1 {
+const candidateClearCensusControls = 7
+const candidateClearCensusSQL = `
+LET $cm_caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+ WHERE version = $caller_migration_version LIMIT 1) = 1;
+LET $cm_current = SELECT id FROM $rid;
+LET $cm_catalogs = SELECT VALUE id FROM resolver_catalog_publication
+ WHERE array::len($cm_current) = 1 AND repository = $repository ORDER BY id LIMIT $candidate_limit;
+LET $cm_callers = SELECT VALUE id FROM caller_generation_publication
+ WHERE repository = $repository ORDER BY id LIMIT $candidate_limit;
+LET $cm_outcomes = SELECT VALUE id FROM extraction_domain_outcome
+ WHERE array::len($cm_current) = 1 AND repo = $repository ORDER BY id LIMIT $candidate_limit;
+LET $cm_resolver = SELECT id, type::record('repo', target) AS projection FROM
+ (SELECT id, created_at, target FROM resolver_catalog_job
+ WHERE array::len($cm_catalogs) = 1 AND pending_key = $repository AND status = 'pending' ORDER BY created_at LIMIT 1);
+LET $candidate_census = {
+ before: [$cm_caller_writer_ok, $cm_current], active: array::len($cm_current) = 1,
+ revision: array::len($cm_current) = 1, catalogs: $cm_catalogs, callers: $cm_callers,
+ published: [], staged: [], attempts: [], outcomes: $cm_outcomes, extraction: [], resolver: $cm_resolver
+};
+`
+
+func candidateClearSQL(c *candidateManifestObservation) string {
+	fence := ""
+	catalogs, callers, outcomes := "resolver_catalog_publication", "caller_generation_publication", "extraction_domain_outcome"
+	callerRevision := `		IF array::len($retired_caller) = 1 {
 			UPDATE $repo_rid SET caller_publication_revision =
 				(caller_publication_revision ?? 0) + 1 RETURN NONE;
 		};
-		LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+`
+	fanout := `		LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
 			(SELECT id, created_at FROM resolver_catalog_job
 				WHERE pending_key = $repository AND status = 'pending'
 				ORDER BY created_at LIMIT 1)[0].id
@@ -521,20 +840,95 @@ func (s *Surreal) ClearCandidateManifestPublication(
 					pending_key: $repository,
 					force: true
 				} RETURN AFTER)
-			END;`+projectResolverJobSQL+`
+			END;` + projectResolverJobSQL
+	if c != nil {
+		fence = candidateClearCensusSQL + candidateManifestCensusFenceSQL
+		catalogs, callers, outcomes = "$candidate_expected.catalogs", "$candidate_expected.callers", "$candidate_expected.outcomes"
+		if len(c.Callers) != 1 {
+			callerRevision = ""
+		}
+		fanout = "LET $catalog_fanout = [];"
+		if len(c.Catalogs) == 1 {
+			successor := `(CREATE resolver_catalog_job CONTENT {
+    target: $repository, status: 'pending', attempts: 0, created_at: time::now(),
+    pending_key: $repository, force: true
+   } RETURN AFTER)`
+			if len(c.Resolver) == 1 {
+				successor = "(UPDATE $pending_catalog SET force = true, recovery_lease = NONE RETURN AFTER)"
+			}
+			fanout = `LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN $candidate_expected.resolver[0].id ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN [] ELSE ` + successor + ` END;` + candidateResolverProjectionSQL
+		}
+	}
+	clearCurrent := `		IF array::len($current) = 1 {
+			DELETE $rid RETURN NONE;
+			DELETE ` + outcomes + `
+				WHERE repo = $repository RETURN NONE;
+			UPDATE $repo_rid
+				SET evidence_revision = (evidence_revision ?? 0) + 1
+				WHERE name = $repository
+				RETURN NONE;
+		};
+`
+	if c != nil && !*c.Active {
+		clearCurrent = ""
+	}
+	return `BEGIN;` + fence + `
+		LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+			WHERE version = $caller_migration_version LIMIT 1) = 1;
+		IF $caller_writer_ok = false {
+			THROW 'phebs-permanent: caller-generation publication writer is not active'
+		};
+		LET $current = SELECT id FROM $rid;
+		LET $retired_catalog = IF array::len($current) = 1 THEN
+			(DELETE ` + catalogs + `
+				WHERE repository = $repository RETURN BEFORE)
+			ELSE [] END;
+		LET $retired_caller = DELETE ` + callers + `
+			WHERE repository = $repository RETURN BEFORE;
+` + clearCurrent + callerRevision + fanout + `
 		IF array::len($retired_catalog) = 1
 			AND array::len($catalog_fanout) != 1 {
 			THROW 'phebs-retryable: resolver catalog successor was not persisted'
 		};
-		COMMIT;`,
-		map[string]any{
-			"rid":                      candidateManifestPublicationID(repository),
-			"repo_rid":                 repoID(repository),
-			"repository":               repository,
-			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
-			"caller_migration_version": callerGenerationPublicationMigrationVersion,
-		},
-	)
+		COMMIT;`
+}
+
+func (s *Surreal) ClearCandidateManifestPublication(
+	ctx context.Context,
+	repository string,
+) error {
+	if err := validateCandidateRepository(repository); err != nil {
+		return fmt.Errorf("clear candidate manifest: repository: %w", err)
+	}
+	vars := map[string]any{
+		"rid":                      candidateManifestPublicationID(repository),
+		"repo_rid":                 repoID(repository),
+		"repository":               repository,
+		"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+		"caller_migration_version": callerGenerationPublicationMigrationVersion,
+		"candidate_limit":          restoreClearRows + 1,
+	}
+	census, err := s.candidateManifestCensus(ctx, candidateClearCensusSQL, candidateClearCensusControls, vars)
+	if err != nil {
+		return fmt.Errorf("clear candidate manifest census: %w", err)
+	}
+	rows := census.writeRows(true)
+	recipe := storeWrite(rows)
+	var bounded *candidateManifestObservation
+	if rows > restoreClearRows {
+		recipe = storeUnsupported()
+	} else {
+		bounded = &census
+		vars["candidate_expected"] = census
+		if len(census.Catalogs) == 1 {
+			vars["candidate_resolver_projection"] = repoID(repository)
+			if len(census.Resolver) == 1 {
+				vars["candidate_resolver_projection"] = census.Resolver[0].Projection
+			}
+		}
+	}
+	_, err = storeQuery[any](ctx, s.accounting, s.db, candidateClearSQL(bounded), vars, recipe)
 	if err != nil {
 		return fmt.Errorf("clear candidate manifest: %w", err)
 	}
