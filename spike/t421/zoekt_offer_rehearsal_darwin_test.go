@@ -144,6 +144,11 @@ func TestZoektOfferOptionalNativeRehearsal(t *testing.T) {
 	if err := inputs.Check(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// Register exact-descriptor fixture cleanup only after both native attempts
+	// and independent reproduction pass. Close itself deliberately never thaws.
+	gitCustodyTestCleanup(t, git)
+	goBuildTestCleanup(t, inputs)
+	inputCustodyTestCleanup(t, tool.input, []ExecutionInputCopy{{Name: "zoekt-git-index"}})
 	completed = true
 }
 

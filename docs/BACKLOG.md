@@ -5061,6 +5061,27 @@ of all nine files, zero skipped and all severity counts zero; all seven
 source/test files matched the frozen reviewed workspace byte-for-byte.
 One fresh exact-source native component gate is running; no result is yet
 claimed, and the earlier failed custody remains preserved.
+That exact native component gate then reproduced independently located images
+byte-for-byte at
+`sha256:12b5310b61f014acfc16c5fe7fd56510bbcdf51ed62a244fd6aed855d0d24682`.
+The healthy native child exited zero with exactly three offers and terminal
+count three; corrupting the second loose blob produced exit one with exactly
+two offers and terminal count two, leaving the third unread. Supplied build
+time was 39.264s. The overall test is nevertheless **failed** (552.83s test /
+553.411s package): generic cleanup could not unlink the protected Git helper.
+Close intentionally retains immutable bits; the new test omitted the existing
+exact-descriptor fixture cleanup registrations. No native gate process remains.
+
+Terminal record:
+`/private/tmp/phebs-t422-native-index-fixed.htlgNc/native.log`, SHA-256
+`d1107f0ceda156c9e5a5383995e193f1436d9c90aa52eb5e62a08b4deeb07c94`.
+Generic removal partially removed unprotected generated scratch before failing;
+remaining protected custody is at
+`/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/t422-zoekt-offer-rehearsal-3855397878`.
+The correction reuses the existing Git/Go-build/tool exact-descriptor cleanup
+helpers only on native success. It changes no production image or assertion.
+Fresh full-gate confirmation remains required; the failed result is not renamed
+green and its remaining custody is not automatically deleted.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
