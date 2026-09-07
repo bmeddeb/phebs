@@ -5768,6 +5768,14 @@ compilation, documentation/glossary and whitespace passed. Immutable
 independent review remains the candidate slice's final acceptance check;
 these bounded gates do not replace full-store or native cold/phase-fit evidence.
 
+Exact candidate source `9be9ce30df0ccb606f6b9a921e394107b1b41e7e` then
+passed its complete new accounting/native-fence selector again, normal 1.307s
+and race 2.626s. Fresh independent review covered all five slice files,
+including the tests and cost/operator records, with critical/high/medium/low
+all zero. This closes the candidate recipe slice's scoped acceptance gate;
+evidence chunk sizing/accounting and full native cold/phase fit remain open.
+No cold rehearsal, integration, push, seal or freeze followed.
+
 The independent legacy-selector trace closes the source-ordering question for
 the currently implemented cold parent, not the future full product runner.
 F reads GetServiceRuntimeSelector and returns on absence, selectedState requires
