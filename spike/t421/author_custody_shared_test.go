@@ -39,7 +39,8 @@ func TestExecutionAuthorLiveServerBorrowCannotBeBypassed(t *testing.T) {
 			}
 			defer func() { _ = parent.Close(context.Background()) }()
 			run := &ExecutionEpochOneRun{}
-			custody := &ExecutionAuthorCustody{borrowedBy: run, next: 1}
+			custody := &ExecutionAuthorCustody{borrowedBy: run, next: 1,
+				expected: [3]AuthoredExecutionRevision{{Name: "a"}, {Name: "b"}, {Name: "a-return"}}}
 			borrower, producer := run, uint32(8)
 			switch mode {
 			case "borrowed":
@@ -55,12 +56,17 @@ func TestExecutionAuthorLiveServerBorrowCannotBeBypassed(t *testing.T) {
 			case "wrong_producer":
 				producer = 7
 			}
+			if custody.next >= len(custody.expected) {
+				t.Fatal("guard fixture must not refuse on exhausted revision inventory")
+			}
+			wasActive := custody.active
 			if custody.Close() == nil || custody.closed {
 				t.Fatal("Close released live source custody")
 			}
 			// Refusal must occur before source/roots validation: this minimal
 			// custody has none, and must not become poisoned by touching them.
-			if _, err := custody.authorNext(ctx, controller, parent, producer, borrower); err == nil || custody.err != nil {
+			if _, err := custody.authorNext(ctx, controller, parent, producer, borrower); err == nil || custody.err != nil ||
+				custody.active != wasActive || len(custody.results) != 0 {
 				t.Fatal("borrow/author guard touched or admitted source", err)
 			}
 			count, err := parent.Count()

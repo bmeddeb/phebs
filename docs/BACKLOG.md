@@ -4533,6 +4533,16 @@ authorities plus one R observation. Stop joins the complete physical operation
 before releasing server/source custody, independently retaining author-survivor
 activity. Exact committed OCR and native confirmation remain pending.
 
+Independent OCR reviewed exact `597dd95b78947c9647923179a540f70e689e93dc`
+across all thirteen source/test/documentation files and the cost pass. The
+reviewer's initial test-vacuity allegation was withdrawn after verifying that
+the expected revision inventory is a fixed three-element array, not a nil
+slice; the original guard test was effective. Final severity counts are all
+zero. Explicit fixture/in-range/activity assertions add clarity only and pass
+twenty normal repetitions (0.739s) and three race repetitions (1.759s).
+Combined owning-doc resolution passes docs (0.622s), glossary and whitespace.
+Corrected immutable attribution and native confirmation remain open.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
