@@ -6152,6 +6152,23 @@ warm observation are required; these gates are pending, and fixture authority
 must not be described as native evidence. The existing optional rehearsal adds
 `PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL=1` only alongside its cold selector.
 
+Implementation `7899848a4d1912283551310a84bfeaaa2e6385c2` passed independent
+review of all nine changed files: critical/high/medium/low all zero. The
+affected epoch/inspector plus retained V1/V2 canonical checks passed normally
+in 10.703s and under race in 120.714s. The final six-case inherited-control
+test (healthy, canceled handoff, warm, pending X, pending T, canceled read)
+passed in 0.917s; that test plus warm admission/continuity checks passed three
+race repetitions in 5.116s. Admission/continuity also passed twenty normal
+repetitions in 0.965s. Final `make ci-static` passed vet, pinned lint with zero
+issues, glossary and repository compilation; `make docs-check` passed in
+0.426s, and whitespace checks passed. These are content-identical pre-commit
+gates, not a new native run. No test child survives. The inherited child proves
+real control/owner mechanics with modeled HTTP bodies and authority only.
+This gate record changes BACKLOG alone; no compiled, embedded, fixture or
+harness input changes. Exact-source opted-in native cold-plus-warm observation
+is the next gate before integration; full warm work metrics, later epochs,
+receipt, admission fit and freeze remain open. Nothing was merged or pushed.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
