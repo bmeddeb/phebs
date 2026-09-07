@@ -280,8 +280,10 @@ func TestRestoreAccountingNativeReplay(t *testing.T) {
 	if err := db.Use(ctx, "phebs", "phebs"); err != nil {
 		t.Fatal(err)
 	}
-	count, err := surrealdb.Query[[]uint64](ctx, db, "SELECT VALUE count() FROM repo GROUP ALL;", nil)
-	if err != nil || count == nil || len(*count) != 1 || len((*count)[0].Result) != 1 || (*count)[0].Result[0] != 513 {
+	count, err := surrealdb.Query[[]struct {
+		Count uint64 `json:"count"`
+	}](ctx, db, "SELECT count() AS count FROM repo GROUP ALL;", nil)
+	if err != nil || count == nil || len(*count) != 1 || len((*count)[0].Result) != 1 || (*count)[0].Result[0].Count != 513 {
 		t.Fatalf("neutral native row count differs: %v %v", count, err)
 	}
 	if err := db.Close(context.Background()); err != nil {

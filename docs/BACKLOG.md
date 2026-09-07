@@ -4478,6 +4478,15 @@ rows, a 512-row maximum, drained owner and an independent 513-row native read.
 Immutable-source OCR, native replay and complete recovery regressions remain
 pending; these focused results do not claim producer-eleven admission.
 
+Exact implementation `50f720238207903c313504fce57f6e34d503d86c` passed
+independent OCR review with all four severity counts zero and 11/11 files
+reviewed, including tests/docs and the steady-state cost pass. Its native
+test completed the acknowledged replay and owner drain, then failed only the
+independent count readback decoder (map into uint64; 1.19s test/1.695s package).
+That test-only oracle now uses an explicit count field; the original failure
+is retained, not called a pass. Complete store-accounting passed in 0.636s.
+Corrected exact-source native/recovery gates and re-review remain pending.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
