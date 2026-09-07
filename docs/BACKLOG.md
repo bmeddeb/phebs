@@ -4634,6 +4634,15 @@ It validates each offset, schedule identity and priority and retains all origina
 same-attempt/replay assertions. No production change or native pass is claimed
 by either failed test run.
 
+Independent OCR identified the omitted finalization unit as one medium in the
+first correction, then closed it on exact
+`bced657e2ce4bc1cbdec182898c08e77cf79eb50`: both changed files covered, all
+severity counts zero. That exact corrected native gate passed in 12.37s
+(package 12.956s), and its native race gate passed in 27.624s. Vet, pinned lint
+(zero issues), docs (0.544s), glossary and whitespace passed. These establish
+actual committed-hook release, native ordered suffix/reclaim and unchanged
+attempt-zero replay; they are not a selected HTTP/bootstrap/full-epoch pass.
+
 Its attempt-report prerequisite `5bddcc48b894ba7fdc06b8358288fff6d11ff75c`
 also passed independent OCR across all eight changed files, with all severity
 counts zero and its post-join/output-prefix cost pass complete. Combined
