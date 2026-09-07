@@ -4607,6 +4607,23 @@ hook returns; it has not yet run on this candidate. Independent immutable-source
 OCR and that serial native gate remain open. This does not claim a selected
 bootstrap/HTTP/scheduler composition or completed logical phase.
 
+Independent OCR reviewed exact logical-control source
+`2e8b6e97c886b32c6e3b513ac5479fae08c5b099`, all eleven changed source, test and
+owning-documentation files, with critical/high/medium/low all zero and a complete
+cost pass. Combined command/scheduler/epoch normal regressions passed in
+1.545s / 0.931s / 2.216s and race in 1.963s / 2.726s / 21.969s. Changed-package
+vet, pinned lint (zero issues), docs (0.529s), glossary and whitespace passed.
+The actual native committed-transition release/reclaim gate is serialized after
+the physical-B rehearsal and remains pending.
+
+Its attempt-report prerequisite `5bddcc48b894ba7fdc06b8358288fff6d11ff75c`
+also passed independent OCR across all eight changed files, with all severity
+counts zero and its post-join/output-prefix cost pass complete. Combined
+command/epoch normal tests passed in 2.027s / 3.737s and race in 2.555s / 21.240s;
+vet, pinned lint (zero issues), docs (0.726s), glossary, whitespace and unchanged
+retained V1/V2 plan checks passed. Genuine queue/epoch report consumption remains
+required; native-shaped report fixtures do not establish it or whole-work fit.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
