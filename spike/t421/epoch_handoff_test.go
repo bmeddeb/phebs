@@ -3,15 +3,24 @@
 package t421
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
@@ -45,6 +54,40 @@ func TestExecutionEpochHandoffHelper(t *testing.T) {
 		t.Fatal("resume reopened requests")
 	}
 	epochHandoffByte(t, os.Stdout, 'W')
+	if os.Getenv("PHEBS_EPOCH_HANDOFF_WARM") == "1" {
+		epochHandoffRead(t, os.Stdin, 'O')
+		state, err := dispatchadmission.ProductionSemanticState()
+		if err != nil || state.Phase != 3 || state.OrdinaryOwnersDrained || owner.Check(ctx) != nil {
+			t.Fatalf("warm reopen lost phase/SDK/live-owner state: %+v / %v", state, err)
+		}
+		turn, err := owners.Enter(ctx)
+		if err != nil {
+			t.Fatalf("warm reopen did not admit actual owner entry: %v", err)
+		}
+		turn.End()
+		request, err := owners.EnterRequest(ctx)
+		if err != nil {
+			t.Fatalf("ordinary owner reopen did not reopen request entry: %v", err)
+		}
+		request.End()
+		epochHandoffByte(t, os.Stdout, 'o')
+		epochHandoffRead(t, os.Stdin, 'Q')
+		state, err = dispatchadmission.ProductionSemanticState()
+		if err != nil || state.Phase != 3 || !state.OrdinaryOwnersDrained {
+			t.Fatalf("warm request window lost owner drain: %+v / %v", state, err)
+		}
+		request, err = owners.EnterRequest(ctx)
+		if err != nil {
+			t.Fatalf("warm request window did not admit actual request entry: %v", err)
+		}
+		request.End()
+		epochHandoffByte(t, os.Stdout, 'q')
+		epochHandoffRead(t, os.Stdin, 'F')
+		if _, err := owners.EnterRequest(ctx); err == nil {
+			t.Fatal("warm request fence left request entry open")
+		}
+		epochHandoffByte(t, os.Stdout, 'f')
+	}
 	epochHandoffRead(t, os.Stdin, 'C')
 	if err := lifetime.Close(ctx); err != nil {
 		t.Fatalf("joined fixture close: %v", err)
@@ -67,12 +110,13 @@ func epochHandoffRead(t *testing.T, reader io.Reader, want byte) {
 }
 
 func TestExecutionEpochAdvanceColdInheritedHandoff(t *testing.T) {
-	for _, mode := range []string{"healthy", "canceled"} {
-		t.Run(mode, func(t *testing.T) { testEpochInheritedHandoff(t, mode == "canceled") })
+	for _, mode := range []string{"healthy", "canceled", "warm", "warm_pending_x", "warm_pending_t", "warm_canceled_read"} {
+		t.Run(mode, func(t *testing.T) { testEpochInheritedHandoff(t, mode) })
 	}
 }
 
-func testEpochInheritedHandoff(t *testing.T, canceled bool) {
+func testEpochInheritedHandoff(t *testing.T, mode string) {
+	canceled, warm := mode == "canceled", strings.HasPrefix(mode, "warm")
 	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Second)
 	defer cancel()
 	rootSite := dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}
@@ -132,6 +176,9 @@ func testEpochInheritedHandoff(t *testing.T, canceled bool) {
 	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestExecutionEpochHandoffHelper$")
 	command.Env = []string{"PHEBS_EPOCH_HANDOFF_HELPER=1", "GORACE=atexit_sleep_ms=0",
 		dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector}
+	if warm {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_WARM=1")
+	}
 	command.ExtraFiles, command.Stderr, command.WaitDelay = []*os.File{daChild, pcChild, storeChild}, os.Stderr, time.Second
 	input, err := command.StdinPipe()
 	if err != nil {
@@ -161,8 +208,12 @@ func testEpochInheritedHandoff(t *testing.T, canceled bool) {
 	git := append(slices.Clone(base), "GIT_EXEC_PATH=/tmp", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_ATTR_NOSYSTEM=1",
 		"GIT_NO_REPLACE_OBJECTS=1", "GIT_NO_LAZY_FETCH=1", "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0", "GIT_ALLOW_PROTOCOL=file", "GIT_TEMPLATE_DIR=/dev/null", "GIT_CONFIG_COUNT=3",
 		"GIT_CONFIG_KEY_0=core.fsmonitor", "GIT_CONFIG_KEY_1=core.untrackedCache", "GIT_CONFIG_KEY_2=core.hooksPath", "GIT_CONFIG_VALUE_0=false", "GIT_CONFIG_VALUE_1=false", "GIT_CONFIG_VALUE_2=/dev/null")
+	pairs := uint64(8)
+	if warm {
+		pairs = 12
+	}
 	pcConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2,
-		MaximumPhases: 3, MaximumWireBytes: 8 * 2 * dispatchadmission.FrameBytes, Timeout: 5 * time.Second}
+		MaximumPhases: 3, MaximumWireBytes: pairs * 2 * dispatchadmission.FrameBytes, Timeout: 5 * time.Second}
 	record := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs,
 		SemanticMode: dispatchadmission.ProductionSemanticV3, InputSHA256: [32]byte{3}, Producer: server, Phase: 2,
 		Limits: limits, Control: pcConfig, Store: &storeConfig,
@@ -216,11 +267,19 @@ func testEpochInheritedHandoff(t *testing.T, canceled bool) {
 	}
 	epochHandoffByte(t, input, 'V')
 	epochHandoffRead(t, output, 'W')
+	if warm {
+		testEpochInheritedWarmObservation(t, ctx, run, input, output, mode)
+		if mode != "warm" {
+			return // Joined fixture kill/receiver cleanup; no successful stop claim.
+		}
+		epochHandoffByte(t, input, 'F')
+		epochHandoffRead(t, output, 'f')
+	}
 	// Resume kept the owners fenced: a second DrainOwners would be invalid.
 	if control.Pause(ctx) != nil || parent.Pause(ctx) != nil || dispatch.Fence() != nil {
 		t.Fatal("quiet resumed-phase stop failed")
 	}
-	if control.ReservedWireBytes() != 7*2*dispatchadmission.FrameBytes {
+	if control.ReservedWireBytes() != (pairs-1)*2*dispatchadmission.FrameBytes {
 		t.Fatal("handoff added a PC01 operation")
 	}
 	epochHandoffByte(t, input, 'C')
@@ -228,6 +287,11 @@ func testEpochInheritedHandoff(t *testing.T, canceled bool) {
 	joined = true
 	if err != nil || transport.Wait(ctx, 2) != nil || control.Close() != nil || parent.Close(ctx) != nil {
 		t.Fatalf("fixture native/protocol join failed: %v", err)
+	}
+	// Eleven warm exchanges plus the receiver's terminal EOF reservation fit
+	// exactly twelve pairs; the unchanged healthy path uses seven plus one.
+	if control.ReservedWireBytes()+2*dispatchadmission.FrameBytes != pcConfig.MaximumWireBytes {
+		t.Fatal("terminal EOF did not retain its exact PC01 pair budget")
 	}
 	err = <-served
 	serverJoined = true
@@ -240,5 +304,111 @@ func testEpochInheritedHandoff(t *testing.T, canceled bool) {
 	}
 	if err := transport.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// The inherited endpoints and owner/request entry are real; HTTP bodies,
+// authority digests and read reports are explicit source-free test models.
+// This proves ObserveWarm choreography, not a production-image/native pass.
+func testEpochInheritedWarmObservation(t *testing.T, ctx context.Context, run *ExecutionEpochOneRun, input io.Writer, output io.Reader, mode string) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	inspection, final := epochTestFinal(t)
+	finalBytes := epochTestJSON(t, final, true)
+	cold, _, err := inspection.decodeFinal(finalBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inspection.cold, inspection.finalUsed, inspection.next = cold, true, 4
+	inspection.run = run
+	tail := inspection.tail
+	tail.Schema, tail.SelectedRuntimeSHA256 = "t421-tail-readiness-source-free-v1", testDigest("warm-selected-runtime")
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		count := requests.Add(1)
+		ordinal, err := strconv.ParseUint(request.Header.Get("X-Phebs-T421-Exact-Read-Ordinal"), 10, 64)
+		if err != nil || ordinal != uint64(count+3) || request.Header.Get("Authorization") != "Bearer private-key" ||
+			request.Header.Get(dispatchadmission.ProductionRequestHeader) != run.control.RequestToken() {
+			t.Error("warm request lost ordinal/auth/control binding")
+		}
+		report := epochInspectionReport{Schema: "t421-source-free-read-accounting-v1", Status: "complete", RequestOrdinal: ordinal}
+		var body []byte
+		switch request.URL.Path {
+		case api.ExtractionProgressPath:
+			epochHandoffByte(t, input, 'O')
+			epochHandoffRead(t, output, 'o')
+			if mode == "warm_canceled_read" {
+				cancel()
+				<-request.Context().Done()
+				return
+			}
+			total, domains := int(inspection.plan.Profile.Physical.CombinedModeledPartitions), len(inspection.plan.Profile.Pipeline.ExtractionDomains)
+			value := struct {
+				Schema string `json:"$schema"`
+				extractionpublication.Progress
+			}{Schema: "http://" + run.epoch.Listen + "/schemas/ExtractionProgress.json",
+				Progress: extractionpublication.Progress{State: "current", Total: total, Materialized: total, Succeeded: total, Domains: domains, CurrentDomains: domains}}
+			if mode == "warm_pending_x" {
+				value.Progress = extractionpublication.Progress{State: "unavailable"}
+			}
+			body = epochTestJSON(t, value, false)
+			report.ControlFileReads, report.StoreReadAttempts = 2+uint64(domains), 4
+		case "/api/t421/tail-readiness":
+			value := tail
+			if mode == "warm_pending_t" {
+				value = epochTailReadiness{Schema: tail.Schema, Status: "pending"}
+			}
+			body = epochTestJSON(t, value, false)
+			report.ControlFileReads, report.StoreReadAttempts = 4, 4
+		case "/api/t421/final-authority":
+			epochHandoffByte(t, input, 'Q')
+			epochHandoffRead(t, output, 'q')
+			body = finalBytes
+			report.ControlFileReads, report.StoreReadAttempts, report.MemberVisits = correctedFinalAuthorityControlReadMaximum, correctedFinalAuthorityStoreReadMaximum, correctedFinalAuthorityMemberReadMaximum
+		default:
+			t.Error("unexpected warm route")
+		}
+		w.Header().Set("Trailer", epochReadTrailer)
+		if _, err := w.Write(body); err != nil {
+			t.Error(err)
+		}
+		w.Header().Set(epochReadTrailer, base64.RawURLEncoding.EncodeToString(bytes.TrimSuffix(epochTestJSON(t, report, false), []byte{'\n'})))
+	}))
+	defer server.Close()
+	run.epoch = ExecutionEpochConfig{Listen: strings.TrimPrefix(server.URL, "http://"), APIKey: "private-key", Repository: "example.com/mono"}
+	run.stop, run.done, run.coldDone = make(chan struct{}), make(chan struct{}), make(chan struct{})
+	close(run.coldDone)
+	run.inspection, run.warm, run.warmAllowed = inspection, true, true
+	run.phaseDeadline = time.Now().Add(10 * time.Second)
+	err = run.ObserveWarm(ctx)
+	if mode != "warm" {
+		want := int32(1)
+		if mode == "warm_pending_t" {
+			want = 2
+		}
+		if err == nil || run.err != ErrExecutionEpochOne || !run.warmUsed || inspection.finalUsed || requests.Load() != want {
+			t.Fatal("pending/canceled warm read continued or lost its sticky prefix", err, requests.Load())
+		}
+		select {
+		case <-run.warmDone:
+		default:
+			t.Fatal("failed warm operation not joined")
+		}
+		if run.ObserveWarm(t.Context()) == nil || requests.Load() != want {
+			t.Fatal("failed warm observation retried")
+		}
+		return
+	}
+	if err != nil {
+		t.Fatalf("actual inherited-control warm observation: %v", err)
+	}
+	if requests.Load() != 3 || inspection.reports != 3 || inspection.next != 7 || !run.warmUsed || run.control.RequestToken() != "" {
+		t.Fatal("warm observation lost one-shot X/T/F or final request fence")
+	}
+	select {
+	case <-run.warmDone:
+	default:
+		t.Fatal("warm observation returned before its operation joined")
 	}
 }

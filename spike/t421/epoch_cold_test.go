@@ -21,6 +21,14 @@ func TestExecutionEpochOneColdBoundsPreserveStartupAndPlan(t *testing.T) {
 		cold.outputBytes != 64<<20 || cold.controlPairs != 8 {
 		t.Fatalf("cold limits not plan-bound: %+v %v", cold, err)
 	}
+	warm, err := epochOneBounds(plan, epochOneColdWarm)
+	if err != nil || warm.controlPairs != 12 {
+		t.Fatalf("warm control allowance: %+v %v", warm, err)
+	}
+	warm.controlPairs = cold.controlPairs
+	if warm != cold {
+		t.Fatal("warm changed inherited non-control limits")
+	}
 	for _, change := range []func(*Plan){
 		func(p *Plan) { p.Schema = PlanV2Schema },
 		func(p *Plan) { p.PhaseDeadlines = nil },
@@ -32,6 +40,9 @@ func TestExecutionEpochOneColdBoundsPreserveStartupAndPlan(t *testing.T) {
 		change(&plan)
 		if _, err := epochOneBounds(plan, epochOneCold); err == nil {
 			t.Fatal("changed phase/health contract admitted")
+		}
+		if _, err := epochOneBounds(plan, epochOneColdWarm); err == nil {
+			t.Fatal("warm admitted changed phase/health contract")
 		}
 	}
 	if _, err := epochOneBounds(plan, 0); err == nil {
@@ -122,11 +133,17 @@ func TestExecutionEpochOneColdRefusesWithoutLiveHealthyColdOwner(t *testing.T) {
 		if run, err := flow.StartCold(t.Context()); run != nil || err == nil {
 			t.Fatal("missing cold ownership admitted")
 		}
+		if run, err := flow.StartColdWarm(t.Context()); run != nil || err == nil {
+			t.Fatal("missing warm ownership admitted")
+		}
 	}
 	for _, run := range []*ExecutionEpochOneRun{nil, {}} {
 		for _, ctx := range []context.Context{nil, t.Context()} {
 			if run.ColdToWarm(ctx) == nil {
 				t.Fatal("missing cold run admitted")
+			}
+			if run.ObserveWarm(ctx) == nil {
+				t.Fatal("missing warm run admitted")
 			}
 		}
 	}
@@ -134,5 +151,47 @@ func TestExecutionEpochOneColdRefusesWithoutLiveHealthyColdOwner(t *testing.T) {
 	cancel()
 	if epochInspectionDelay(ctx) == nil {
 		t.Fatal("canceled poll delay continued")
+	}
+}
+
+func TestExecutionEpochOneWarmAdmissionRefusal(t *testing.T) {
+	for _, mode := range []string{"not_opted_in", "no_handoff", "cold_active", "already_used", "stopping", "stopped", "canceled"} {
+		t.Run(mode, func(t *testing.T) {
+			done := make(chan struct{})
+			if mode != "cold_active" {
+				close(done)
+			}
+			run := &ExecutionEpochOneRun{control: &dispatchadmission.PhaseControl{}, stop: make(chan struct{}), done: make(chan struct{}),
+				warmAllowed: true, warm: true, coldDone: done, inspection: &executionEpochInspection{}, phaseDeadline: time.Now().Add(time.Minute)}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			switch mode {
+			case "not_opted_in":
+				run.warmAllowed = false
+			case "no_handoff":
+				run.warm = false
+			case "already_used":
+				run.warmUsed = true
+			case "stopping":
+				run.stopping = true
+			case "stopped":
+				close(run.stop)
+			case "canceled":
+				cancel()
+			}
+			if run.ObserveWarm(ctx) == nil || run.control.ReservedWireBytes() != 0 {
+				t.Fatal("invalid warm admission reached phase control")
+			}
+			if mode == "canceled" {
+				if run.err != ErrExecutionEpochOne || !run.warmUsed {
+					t.Fatal("admitted cancellation lost sticky failure")
+				}
+				select {
+				case <-run.warmDone:
+				default:
+					t.Fatal("canceled operation not joined")
+				}
+			}
+		})
 	}
 }

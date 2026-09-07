@@ -70,6 +70,7 @@ type executionEpochInspection struct {
 	progressReady                  bool
 	tail                           epochTailReadiness
 	finalUsed                      bool
+	cold                           AuthorityPhaseResult
 	err                            error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
 	// the already bounded body (at most the response cap plus one sentinel).
@@ -121,6 +122,25 @@ func (run *ExecutionEpochOneRun) newEpochInspection(ctx context.Context) (*execu
 	}
 	reader.plan, reader.authored, reader.projection, reader.bounds, reader.next, reader.err = plan, author.previous.Result, projection, rows[1], 1, nil
 	return reader, nil
+}
+
+// Keep the epoch ordinal and positive accounting prefix; only phase-local
+// readiness/call counters reset. The parent calls this after joined handoff.
+func (reader *executionEpochInspection) beginWarm() error {
+	reader.mu.Lock()
+	defer reader.mu.Unlock()
+	if reader.err != nil || !reader.finalUsed || reader.projection.Phase != "cold" || reader.cold.Phase != "cold" {
+		return errEpochInspection
+	}
+	projection, err := expectedStateProjectionForPhase(reader.plan, "warm_noop")
+	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	if err != nil || inventoryErr != nil || len(rows) < 3 || rows[2].Phase != "warm_noop" || rows[2].ServerEpoch != 1 {
+		return errEpochInspection
+	}
+	reader.projection, reader.bounds = projection, rows[2]
+	reader.progressCalls, reader.tailCalls, reader.progressReady = 0, 0, false
+	reader.tail, reader.finalUsed = epochTailReadiness{}, false
+	return nil
 }
 
 // canonical decoding also rejects duplicate fields, omitted mandatory zeros,
@@ -403,6 +423,9 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 		return authority, projection, report, errEpochInspection
 	}
 	authority, projection, err = reader.decodeFinal(raw)
+	if err == nil && authority.Phase == "cold" {
+		reader.cold = authority
+	}
 	return authority, projection, report, err
 }
 
@@ -421,16 +444,27 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 	if json.Unmarshal(encoded, &projection) != nil {
 		return authority, projection, errEpochInspection
 	}
-	authority.Phase, authority.Outcome = "cold", "passed"
+	phase := reader.projection.Phase
+	if phase != "cold" && phase != "warm_noop" {
+		return authority, projection, errEpochInspection
+	}
+	authority.Phase, authority.Outcome = phase, "passed"
 	authority.PhysicalRevision, authority.LogicalRevision = "a", "a"
 	authority.ExtractionRoots = value.ExtractionRoots
-	projection.Schema, projection.Phase, projection.PhysicalRevision, projection.LogicalRevision = reader.projection.Schema, "cold", "a", "a"
+	projection.Schema, projection.Phase, projection.PhysicalRevision, projection.LogicalRevision = reader.projection.Schema, phase, "a", "a"
 	if !reflect.DeepEqual(projection, reader.projection) || authority.RelationshipGenerationSHA256 != reader.tail.RelationshipGenerationSHA256 ||
 		authority.RelationshipRootSHA256 != reader.tail.RelationshipRootSHA256 || authority.CallerGenerationSHA256 != reader.tail.CallerGenerationSHA256 || authority.CallerRootSHA256 != reader.tail.CallerRootSHA256 {
 		return authority, projection, errEpochInspection
 	}
 	revisions := []RevisionResult{{Name: "a", PhysicalOutcome: "passed", LogicalOutcome: "passed", PhysicalCommit: reader.authored.Commit, PhysicalTree: reader.authored.Tree}}
-	if validateAuthorityResults([]AuthorityPhaseResult{authority}, []string{"cold"}, map[string]string{"cold": "passed"}, map[string]authorityState{"cold": {PhysicalRevision: "a", LogicalRevision: "a"}}, revisions, reader.plan) != nil {
+	values, phases := []AuthorityPhaseResult{authority}, []string{phase}
+	outcomes := map[string]string{phase: "passed"}
+	states := map[string]authorityState{phase: {PhysicalRevision: "a", LogicalRevision: "a"}}
+	if phase == "warm_noop" {
+		values, phases = append(values, reader.cold), append(phases, "cold")
+		outcomes["cold"], states["cold"] = "passed", authorityState{PhysicalRevision: "a", LogicalRevision: "a"}
+	}
+	if validateAuthorityResults(values, phases, outcomes, states, revisions, reader.plan) != nil {
 		return authority, projection, errEpochInspection
 	}
 	return authority, projection, nil

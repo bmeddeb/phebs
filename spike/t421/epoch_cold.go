@@ -10,6 +10,7 @@ type epochOneMode uint8
 const (
 	epochOneStartup epochOneMode = iota + 1
 	epochOneCold
+	epochOneColdWarm
 )
 
 type epochOneLimits struct {
@@ -22,7 +23,7 @@ func epochOneBounds(plan Plan, mode epochOneMode) (epochOneLimits, error) {
 	if mode == epochOneStartup {
 		return epochOneLimits{lifetime: 20 * time.Minute, health: 5 * time.Minute, outputBytes: 1 << 20, controlPairs: 3}, nil
 	}
-	if mode != epochOneCold || plan.Schema != PlanV3Schema {
+	if mode != epochOneCold && mode != epochOneColdWarm || plan.Schema != PlanV3Schema {
 		return epochOneLimits{}, ErrExecutionEpochOne
 	}
 	// The constructor already validates the private plan. Recheck the exact
@@ -34,8 +35,12 @@ func epochOneBounds(plan Plan, mode epochOneMode) (epochOneLimits, error) {
 	}
 	cold := time.Duration(deadlines[1].DeadlineMS) * time.Millisecond
 	warm := time.Duration(deadlines[2].DeadlineMS) * time.Millisecond
+	pairs := uint64(8)
+	if mode == epochOneColdWarm {
+		pairs += 4 // ReopenOwners, DrainOwners, OpenRequests, FenceRequests.
+	}
 	return epochOneLimits{lifetime: cold + warm, health: time.Duration(plan.SafetyEnvelope.ServerHealthDeadlineMS) * time.Millisecond,
-		cold: cold, outputBytes: 64 << 20, controlPairs: 8}, nil
+		cold: cold, outputBytes: 64 << 20, controlPairs: pairs}, nil
 }
 
 // StartCold opts into the cold-convergence/first-handoff slice. It preserves
@@ -44,6 +49,76 @@ func epochOneBounds(plan Plan, mode epochOneMode) (epochOneLimits, error) {
 // diagnostic refusal ceiling, not proof of full log fit or phase-work capture.
 func (flow *ExecutionEpochOne) StartCold(ctx context.Context) (*ExecutionEpochOneRun, error) {
 	return flow.start(ctx, epochOneCold)
+}
+
+// StartColdWarm additionally reserves one phase-three observation window.
+// It changes neither StartCold's allowance nor any frozen phase/work limit.
+func (flow *ExecutionEpochOne) StartColdWarm(ctx context.Context) (*ExecutionEpochOneRun, error) {
+	return flow.start(ctx, epochOneColdWarm)
+}
+
+// ObserveWarm reopens ordinary owners, takes exactly one current X and ready T,
+// then drains owners for one F equal to actual cold authority. There is no soak
+// or work-metrics claim. Success leaves owners/requests fenced in phase three;
+// Stop cancels and joins this one-shot operation before using phase control.
+func (run *ExecutionEpochOneRun) ObserveWarm(ctx context.Context) (retErr error) {
+	if run == nil || ctx == nil || run.control == nil || run.stop == nil || run.done == nil {
+		return ErrExecutionEpochOne
+	}
+	run.mu.Lock()
+	if run.stopping || run.err != nil || !run.warmAllowed || run.warmUsed || !run.warm ||
+		run.coldDone == nil || run.inspection == nil || run.phaseDeadline.IsZero() {
+		run.mu.Unlock()
+		return ErrExecutionEpochOne
+	}
+	select {
+	case <-run.coldDone:
+	default:
+		run.mu.Unlock()
+		return ErrExecutionEpochOne
+	}
+	select {
+	case <-run.stop:
+		run.mu.Unlock()
+		return ErrExecutionEpochOne
+	default:
+	}
+	ctx, cancel := context.WithDeadline(ctx, run.phaseDeadline)
+	done := make(chan struct{})
+	run.warmUsed, run.warmCancel, run.warmDone = true, cancel, done
+	inspection := run.inspection
+	run.mu.Unlock()
+	defer func() {
+		cancel()
+		if retErr != nil {
+			run.mu.Lock()
+			run.err = ErrExecutionEpochOne
+			run.mu.Unlock()
+			run.stopOnce.Do(func() { close(run.stop) })
+		}
+		close(done)
+	}()
+	if ctx.Err() != nil || inspection.beginWarm() != nil || run.control.ReopenOwners(ctx) != nil {
+		return ErrExecutionEpochOne
+	}
+	progress, _, err := inspection.Progress(ctx)
+	if err != nil || progress.Progress == nil || progress.Progress.State != "current" {
+		return ErrExecutionEpochOne
+	}
+	tail, _, err := inspection.Tail(ctx)
+	if err != nil || tail.Status != "ready" {
+		return ErrExecutionEpochOne
+	}
+	if run.control.DrainOwners(ctx) != nil || run.control.OpenRequests(ctx) != nil {
+		return ErrExecutionEpochOne
+	}
+	if _, _, _, err := inspection.Final(ctx); err != nil {
+		return ErrExecutionEpochOne
+	}
+	if run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+		return ErrExecutionEpochOne
+	}
+	return nil
 }
 
 // ColdToWarm performs X -> T -> drained F exactly once, then advances both

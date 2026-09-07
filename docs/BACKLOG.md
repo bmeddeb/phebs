@@ -6135,6 +6135,23 @@ cold/handoff slice; all-fifteen-phase execution, T42.2m/n/o and freeze remain
 separate. Subsequent gate-record edits change BACKLOG only, with no compiled,
 embedded, fixture or harness input changed. Merge/push is not claimed here.
 
+**T42.2l next bounded slice — ordinary-owner warm observation (2026-09-07).**
+Use the existing epoch-one parent and native X/T/F readers. AC: explicit
+`StartColdWarm` preserves startup/cold limits and reserves exactly twelve PC01
+pairs; after joined cold handoff, `ObserveWarm` reopens owners, requires a
+single current X and ready T, drains owners, validates one F against actual
+cold authority and the full frozen projection, then joins the fenced request
+tail. Preserve epoch ordinals and accumulated positive read evidence. Pending,
+drifting, canceled and repeated operations refuse; Stop joins active warm work
+before control shutdown. Successful return remains in phase three, with no
+minimum soak/tick, work-metrics, phase-four pin, full receipt or freeze claim.
+Cost and unchanged bounds are recorded in the owning PLAN row. Scoped normal,
+race, inherited-owner mechanics, retained V1/V2 bytes, static/documentation
+checks, independent review and one explicitly opted-in exact-source native
+warm observation are required; these gates are pending, and fixture authority
+must not be described as native evidence. The existing optional rehearsal adds
+`PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL=1` only alongside its cold selector.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

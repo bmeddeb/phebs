@@ -373,6 +373,46 @@ func epochTestFinal(t *testing.T) (*executionEpochInspection, epochFinalResponse
 	return reader, value
 }
 
+func TestEpochInspectionWarmKeepsColdAuthorityAndEpochPrefix(t *testing.T) {
+	reader, value := epochTestFinal(t)
+	raw := epochTestJSON(t, value, true)
+	cold, _, err := reader.decodeFinal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader.cold, reader.finalUsed = cold, true
+	reader.next, reader.reports, reader.totals.StoreReadAttempts = 42, 41, 123
+	reader.progressCalls, reader.tailCalls, reader.progressReady = 20, 20, true
+	if reader.beginWarm() != nil || reader.next != 42 || reader.reports != 41 || reader.totals.StoreReadAttempts != 123 ||
+		reader.progressCalls != 0 || reader.tailCalls != 0 || reader.progressReady || reader.finalUsed || reader.tail != (epochTailReadiness{}) ||
+		reader.bounds.ExtractionProgressCalls != exactInspectionCalls(1) || reader.bounds.TailReadinessCalls != exactInspectionCalls(1) || reader.bounds.FinalAuthorityPasses != exactInspectionCalls(1) {
+		t.Fatal("warm lost cumulative prefix or retained cold readiness", reader.bounds)
+	}
+	if reader.beginWarm() == nil {
+		t.Fatal("warm transition repeated")
+	}
+	reader.tail = epochTailReadiness{Status: "ready", RelationshipGenerationSHA256: cold.RelationshipGenerationSHA256,
+		RelationshipRootSHA256: cold.RelationshipRootSHA256, CallerGenerationSHA256: cold.CallerGenerationSHA256, CallerRootSHA256: cold.CallerRootSHA256}
+	warm, _, err := reader.decodeFinal(raw)
+	if err != nil || warm.Phase != "warm_noop" || !reflect.DeepEqual(warm, withPhase(cold, "warm_noop")) {
+		t.Fatal("unchanged full warm authority refused", err)
+	}
+	// Valid digest drift can pass the plan oracle, but not actual cold equality.
+	for _, field := range []string{"SourceGenerationSHA256", "SearchGenerationSHA256", "RelationshipProvenanceSHA256"} {
+		t.Run(field, func(t *testing.T) {
+			changed := value
+			reflect.ValueOf(&changed.Authority).Elem().FieldByName(field).SetString(testDigest("warm-drift", field))
+			if _, _, err := reader.decodeFinal(epochTestJSON(t, changed, true)); err == nil {
+				t.Fatal("actual cold authority drift admitted")
+			}
+		})
+	}
+	reader.cold = AuthorityPhaseResult{}
+	if _, _, err := reader.decodeFinal(raw); err == nil {
+		t.Fatal("warm without actual cold authority admitted")
+	}
+}
+
 func TestEpochInspectionFinalFullOracleAndWire(t *testing.T) {
 	reader, value := epochTestFinal(t)
 	// The production semantic projector reports 9,500 hotspot pairs. Pin the

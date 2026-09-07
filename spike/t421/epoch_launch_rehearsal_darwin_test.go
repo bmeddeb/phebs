@@ -57,6 +57,10 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 	})
 	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
+	warm := os.Getenv("PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL") == "1"
+	if warm && !cold {
+		t.Fatal("warm selector requires explicit cold selector")
+	}
 	allowance := time.Hour
 	if cold {
 		allowance = 5 * time.Hour // Includes protected builds; phase bounds remain separate.
@@ -193,7 +197,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)
 	}
 	started = time.Now()
-	if cold {
+	if warm {
+		run, err = flow.StartColdWarm(ctx)
+	} else if cold {
 		run, err = flow.StartCold(ctx)
 	} else {
 		run, err = flow.Start(ctx)
@@ -251,13 +257,19 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 		t.Log("actual cold X/T/F and phase-three handoff returned; warm remains unobserved")
 	}
+	if warm {
+		if err := run.ObserveWarm(ctx); err != nil {
+			t.Fatal("actual epoch-one ordinary-owner warm observation", err)
+		}
+		t.Log("actual warm single X/T/F matched cold authority; request/report tail joined; no full warm work-metrics claim")
+	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()
 	stopped, err := run.Stop(stopCtx)
 	if err != nil || !stopped.RootStarted || !stopped.RootJoined || !stopped.SessionEmpty {
 		t.Fatalf("actual epoch-one owner-drained stop: %+v; %v", stopped, err)
 	}
-	t.Logf("epoch-one startup/health/stop: %s; cold_handoff_selector=%t; %+v; no warm/receipt/freeze claim", time.Since(started), cold, stopped)
+	t.Logf("epoch-one startup/health/stop: %s; cold_handoff_selector=%t warm_observation_selector=%t; %+v; no full warm/receipt/freeze claim", time.Since(started), cold, warm, stopped)
 	if !canRelease() || flow.Close() != nil || epochs.Close() != nil || author.Close() != nil || planInput.Close() != nil {
 		t.Fatal("joined epoch-one owner/input closure failed; retaining custody")
 	}

@@ -186,6 +186,10 @@ type ExecutionEpochOneRun struct {
 	coldUsed         bool
 	coldCancel       context.CancelFunc
 	coldDone         chan struct{}
+	warmAllowed      bool
+	warmUsed         bool
+	warmCancel       context.CancelFunc
+	warmDone         chan struct{}
 	phaseTimer       *time.Timer
 	phaseDone        chan struct{}
 	phaseDeadline    time.Time
@@ -254,7 +258,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	}
 	deadline := time.Now().Add(bounds.lifetime)
 	var coldDeadline time.Time
-	if mode == epochOneCold {
+	if bounds.cold != 0 {
 		if flow.authorStarted.IsZero() {
 			return nil, ErrExecutionEpochOne
 		}
@@ -268,7 +272,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	runCtx, cancel := context.WithDeadline(ctx, deadline)
 	run := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: bounds.health, coldDeadline: coldDeadline, lifetimeDeadline: deadline,
-		warmLimit: bounds.lifetime - bounds.cold, cancelRun: cancel}
+		warmLimit: bounds.lifetime - bounds.cold, cancelRun: cancel, warmAllowed: mode == epochOneColdWarm}
 	started := false
 	defer func() {
 		if !started {
@@ -277,7 +281,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		}
 	}()
 	launchCtx := runCtx
-	if mode == epochOneCold {
+	if bounds.cold != 0 {
 		run.mu.Lock()
 		run.setPhaseDeadlineLocked(coldDeadline)
 		run.mu.Unlock()
@@ -540,6 +544,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	run.stopping = true
 	healthCancel, healthDone := run.healthCancel, run.healthDone
 	coldCancel, coldDone := run.coldCancel, run.coldDone
+	warmCancel, warmDone := run.warmCancel, run.warmDone
 	run.mu.Unlock()
 	if healthCancel != nil {
 		healthCancel()
@@ -548,6 +553,10 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if coldCancel != nil {
 		coldCancel()
 		<-coldDone
+	}
+	if warmCancel != nil {
+		warmCancel()
+		<-warmDone
 	}
 	run.stopPhaseDeadline()
 	run.mu.Lock()
