@@ -4670,6 +4670,14 @@ transaction above 512 submitted operands; ordinary mode retains its atomic
 unbounded fallback. This preserves exact-pointer reuse, control-repair and
 successor behavior, but is not proof that cold convergence fits its phase.
 
+Evidence chunk accounting now counts normalized atom, association and assertion
+operands plus two run updates and one receipt creation, even for exact replay.
+The ordinary 256-fact transport is unchanged. A selected chunk whose submitted
+count exceeds 512 refuses before writing; this known cold-path hold is not
+fixed by counting only newly affected rows. Smaller grouping must have a
+versioned replay/identity and prospective oracle decision before use; do not
+change the chunk-size constant or split an existing receipt to rerun the gate.
+
 Final repository cleanup still commits its store changes atomically after
 artifact removal. Bounded cleanup rechecks actual native ID vectors before
 writing; it never splits the deletion into online pages to fit accounting.

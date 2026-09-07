@@ -5803,6 +5803,41 @@ worker bypasses legacy run/outcome publication; those are not silently admitted
 by this narrower chunk finding. Cold rehearsal remains held for evidence and
 legacy-selector prerequisites after candidate gates pass.
 
+The evidence append/receipt slice now captures the normalized submitted
+vectors plus both fixed run UPDATEs and the receipt CREATE through the existing
+SDK owner, with no new census or changed SQL. Ordinary 256-fact appends remain
+supported; selected 771-operand submissions refuse before write. Normal native
+T40.7 replay, overlap, conflict/limit rollback, chunk-boundary and concurrent
+append regressions plus V3 partition-bound staging passed together in 3.673s.
+The same native selectors passed race in 5.209s. Scripted operand, replay,
+retry/exhaustion, cancellation, exact-512 and over-limit, and receipt-read
+checks passed normally in 0.648s and under race three times in 3.277s;
+unchanged fact-chunk identity and T20.2 production-ceiling checks passed in
+0.492s. Store vet, pinned lint (zero issues), docs (0.538s), glossary and
+whitespace passed. Immutable independent review remains open. These are
+scoped gates, not a full-store run or a cold/whole-phase acceptance result.
+
+The independent grouping audit found two reasons not to change 256 to 169
+without a versioned decision. Chunk IDs bind schema, sequence, ordered facts
+and partition namespace; ExistingPlans can reuse a previous RunID, so replay
+with new grouping can create new receipts and double-charge staged facts.
+Partition content digests and canonical/encoded totals also change, while
+frozenExtractionDomains and final-authority inspection require their exact
+retained values. Selected-only grouping does not remove the latter issue.
+
+For the frozen successful facts, summing each partition's ceiling division
+gives 248 appends at 256 facts and 375 at 169: grpc-caller 1/1, grpc-consumer
+43/69, kafka-consumer 40/59, kafka-producer 6/6 and proto-contract 158/240.
+The 61,215 total facts give a conservative distinct-operand sum of 184,770
+under 169 grouping, 381 above the analogous 256 calculation. Those 375
+appends alone fit the unchanged full-pass 100,000-transaction/51,200,000-row
+ceilings, but this is not whole-phase fit or retry admission. The corrected
+stale/restart protocol preserves canonical results and sealed evidence and
+therefore plans no new chunk append. No byte oracle, grouping policy, reused
+run, retained plan or phase ceiling is changed by this audit. A versioned
+grouping/compatibility and prospective oracle decision is required before
+implementation; the cold rehearsal remains held, not retried for diagnosis.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was

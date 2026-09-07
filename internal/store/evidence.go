@@ -1370,9 +1370,9 @@ func (s *Surreal) GetEvidenceChunkAccounting(
 	if strings.TrimSpace(runID) != runID || runID == "" || !validSHA256Digest(chunkID) {
 		return EvidenceChunkAccounting{}, errors.New("get evidence chunk accounting: invalid identity")
 	}
-	results, err := surrealdb.Query[[]evidenceChunkAccountingRec](ctx, s.db,
+	results, err := storeQuery[[]evidenceChunkAccountingRec](ctx, s.accounting, s.db,
 		`SELECT run_id, chunk_id, content_digest, fact_count, row_delta, reference_delta
-			FROM $rid LIMIT 1`, map[string]any{"rid": evidenceChunkRecordID(runID, chunkID)})
+			FROM $rid LIMIT 1`, map[string]any{"rid": evidenceChunkRecordID(runID, chunkID)}, storeRead())
 	if err != nil {
 		return EvidenceChunkAccounting{}, fmt.Errorf("get evidence chunk accounting: %w", err)
 	}
@@ -1455,8 +1455,11 @@ func (s *Surreal) addEvidenceChunk(
 		"evidence_migration_version": evidenceMigrationVersion,
 	}
 	addProbeVars(vars, runID)
+	// Submitted operands, not new rows: the unchanged SQL supplies both run
+	// UPDATEs and the receipt CREATE even on replay or a false native guard.
+	rows := uint64(len(batch.atoms) + len(batch.assocs) + len(batch.asserts) + 3)
 	for attempt := 0; ; attempt++ {
-		results, queryErr := surrealdb.Query[[]extractionRunRec](ctx, s.db, addEvidenceSQL, vars)
+		results, queryErr := storeQuery[[]extractionRunRec](ctx, s.accounting, s.db, addEvidenceSQL, vars, storeWrite(rows))
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
