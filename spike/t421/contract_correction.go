@@ -26,6 +26,7 @@ type ContractCorrection struct {
 	NativeGitAdmissionPolicy  string                    `json:"native_git_admission_policy"`
 	ProcessAccountingPolicy   string                    `json:"process_accounting_policy"`
 	ReadAccountingPolicy      string                    `json:"read_accounting_policy"`
+	EvidenceGroupingPolicy    string                    `json:"evidence_grouping_policy,omitempty"`
 	InspectionInventorySHA256 string                    `json:"inspection_inventory_sha256"`
 	RequiredReadiness         []string                  `json:"required_readiness"`
 }

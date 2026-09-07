@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -30,12 +31,61 @@ import (
 	"github.com/bmeddeb/phebs/spike/t401"
 )
 
-var (
-	productionAuthorityOnce       sync.Once
-	productionAuthorityCache      map[string]AuthorityPhaseResult
-	productionRecoveryCache       map[string]productionRecoverySchedule
-	productionAuthorityPlanSHA256 string
-)
+type productionIdentityCache struct {
+	once        sync.Once
+	planSHA256  string
+	authorities map[string]AuthorityPhaseResult
+	recoveries  map[string]productionRecoverySchedule
+}
+
+// Each grouping runs its own genuine constructor graph. Never relabel cached
+// 256-fact roots as V3's policy-bound 169-fact roots.
+var productionIdentityCaches = map[string]*productionIdentityCache{
+	PlanV2Schema: {},
+	PlanV3Schema: {},
+}
+
+func productionIdentityCacheFor(t *testing.T, plan Plan) *productionIdentityCache {
+	t.Helper()
+	cache := productionIdentityCaches[plan.Schema]
+	if cache == nil {
+		t.Fatal("unsupported production constructor fixture version")
+	}
+	return cache
+}
+
+func TestProductionFixtureVersionedInputRouting(t *testing.T) {
+	raw, err := os.ReadFile("plan-v2.json")
+	if err != nil || SHA256(raw) != retainedPlanV2SHA256 {
+		t.Fatalf("retained V2 input: %v", err)
+	}
+	var prior Plan
+	if err := json.Unmarshal(raw, &prior); err != nil {
+		t.Fatal(err)
+	}
+	prospective := accountingTestPlan(t)
+	var caches [2]*productionIdentityCache
+	for index, plan := range []Plan{prior, prospective} {
+		input := productionFixtureInputPlan(t, plan)
+		if !reflect.DeepEqual(input, plan) {
+			t.Fatalf("%s fixture relabeled its input plan", plan.Schema)
+		}
+		caches[index] = productionIdentityCacheFor(t, input)
+		if caches[index] != productionIdentityCacheFor(t, input) {
+			t.Fatal("same version lost its exact-plan cache")
+		}
+		policy, err := candidate.ExtractionPolicyDigest("sha256:"+strings.Repeat("a", 64), input.Schema == PlanV3Schema)
+		if err != nil || (policy == "sha256:"+strings.Repeat("a", 64)) != (index == 0) {
+			t.Fatalf("%s grouping route = %s, %v", input.Schema, policy, err)
+		}
+	}
+	if caches[0] == caches[1] {
+		t.Fatal("V2 and V3 share constructor/recovery cache state")
+	}
+	if reflect.DeepEqual(prior.Profile.Pipeline.ExtractionDomains, prospective.Profile.Pipeline.ExtractionDomains) {
+		t.Fatal("V3 constructor input lost its own evidence framing oracle")
+	}
+}
 
 type productionRecoverySchedule struct {
 	Target, Prior, RecoveryGeneration, RecoverySchedule string
@@ -44,7 +94,7 @@ type productionRecoverySchedule struct {
 func productionRecoveryScheduleFixture(t *testing.T, plan Plan, phase string) productionRecoverySchedule {
 	t.Helper()
 	productionAuthorityFixture(t, plan)
-	value, ok := productionRecoveryCache[phase]
+	value, ok := productionIdentityCacheFor(t, plan).recoveries[phase]
 	if !ok {
 		t.Fatalf("native recovery constructor fixture lacks %s", phase)
 	}
@@ -54,18 +104,20 @@ func productionRecoveryScheduleFixture(t *testing.T, plan Plan, phase string) pr
 func productionAuthorityFixture(t *testing.T, plan Plan) map[string]AuthorityPhaseResult {
 	t.Helper()
 	planSHA256 := mustReceiptSHA256(t, plan)
-	productionAuthorityOnce.Do(func() {
-		physical := productionPhysicalIdentities(t, plan)
-		productionAuthorityCache = productionLogicalAuthorities(t, plan, physical)
-		productionAuthorityPlanSHA256 = planSHA256
+	cache := productionIdentityCacheFor(t, plan)
+	cache.once.Do(func() {
+		physical, recoveries := productionPhysicalIdentities(t, plan)
+		cache.authorities = productionLogicalAuthorities(t, plan, physical)
+		cache.recoveries = recoveries
+		cache.planSHA256 = planSHA256
 	})
-	if productionAuthorityCache == nil {
+	if cache.authorities == nil || cache.recoveries == nil {
 		t.Fatal("native constructor fixture did not complete")
 	}
-	if productionAuthorityPlanSHA256 != planSHA256 {
+	if cache.planSHA256 != planSHA256 {
 		t.Fatal("native constructor fixture belongs to a different exact plan")
 	}
-	return productionAuthorityCache
+	return cache.authorities
 }
 
 // The accept side must admit identities constructed by the production graph.
@@ -562,18 +614,21 @@ func productionExtractionRoots(t *testing.T, frozen Plan, name string, value pro
 // partition-result, resolver and caller constructors over exact frozen Git
 // inputs. Only the search shard leaf is modeled: its bytes are a labeled test
 // artifact, never claimed to be a live index or measured ceremony evidence.
-func productionPhysicalIdentities(t *testing.T, plan Plan) map[string]productionIdentityState {
+func productionPhysicalIdentities(t *testing.T, plan Plan) (map[string]productionIdentityState, map[string]productionRecoverySchedule) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Minute)
 	defer cancel()
 	dataDir := t.TempDir()
 	repository := productionIdentityRepository(t, ctx, plan, dataDir)
-	native := newProductionRuntimeIdentity(t, ctx, dataDir)
+	native := newProductionRuntimeIdentity(t, ctx, dataDir, plan.Schema == PlanV3Schema)
 	defer native.close(t)
 	combined, err := BuildCombinedCorpus()
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Source/candidate facts stay exact; each version carries its own frozen
+	// evidence framing totals into the actual executor and all comparisons.
+	combined.Profile.Pipeline = plan.Profile.Pipeline
 	oracle, err := BuildIndependentOracle()
 	if err != nil {
 		t.Fatal(err)
@@ -598,6 +653,7 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) map[string]production
 		return gitobj.ReadBlob(ctx, directory, oid, limit)
 	}
 	result := make(map[string]productionIdentityState, 3)
+	var recoveries map[string]productionRecoverySchedule
 	for _, physical := range plan.Revisions.Physical {
 		t.Logf("native physical identity constructors: %s", physical.Name)
 		revisions := []store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: physical.ExpectedCommit}}
@@ -654,6 +710,7 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) map[string]production
 			ControlSuffix: "-" + physical.Name, SourceDigest: source.Digest,
 			ObservationDigest: observations.GenerationDigest, ReadBlob: readBlob,
 			SourceDirectory: sourceDir, ObservationDirectory: observationDir, Runtime: native,
+			StoreAccounting: plan.Schema == PlanV3Schema,
 		})
 		value := productionIdentityState{
 			Authority: AuthorityState{
@@ -669,10 +726,10 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) map[string]production
 		}
 		result[physical.Name] = productionExtractionRoots(t, plan, physical.Name, value, pipeline.Runtime)
 		if physical.Name == "a-return" {
-			native.prepareRecoveries(t, ctx, plan, pipeline.Runtime)
+			recoveries = native.prepareRecoveries(t, ctx, plan, pipeline.Runtime)
 		}
 	}
-	return result
+	return result, recoveries
 }
 
 func productionIdentityRepository(t *testing.T, ctx context.Context, plan Plan, dataDir string) string {

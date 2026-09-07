@@ -44,7 +44,7 @@ type productionRuntimeResult struct {
 	Domains      []candidate.DownstreamDomainAuthority
 }
 
-func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir string) *productionRuntimeIdentity {
+func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir string, storeAccounting bool) *productionRuntimeIdentity {
 	t.Helper()
 	stateDir := filepath.Join(dataDir, "extraction-state")
 	if err := os.Mkdir(stateDir, 0o700); err != nil {
@@ -71,7 +71,7 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 	fixture.evidence = &productionIdentityEvidence{Surreal: state}
 	fixture.runtime = &extractionpublication.Runtime{
 		Root: filepath.Join(dataDir, "extraction-publications"), Store: state,
-		Executor:  &extract.EvidencePartitionExecutor{Evidence: fixture.evidence, Extractors: extractors},
+		Executor:  &extract.EvidencePartitionExecutor{Evidence: fixture.evidence, Extractors: extractors, StoreAccounting: storeAccounting},
 		Publisher: extractionpublication.StorePublisher{Store: state},
 	}
 	fixture.reconciler = &extractionpublication.Reconciler{
@@ -86,6 +86,7 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 		Authority: fixture.readAuthority, AuthorityReference: fixture.readAuthority,
 		// Configure the explicit test-only owner before any worker invocation.
 		RecoveryPreparationEnabled: true,
+		StoreAccounting:            storeAccounting,
 	}
 	fixture.source = &productionIdentitySource{Source: extractionpublication.GitSparseSource{
 		DataDir: dataDir, OpenDomain: fixture.reconciler.OpenDomain,
@@ -102,6 +103,10 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 				return err
 			}
 			current := publication.State()
+			policy, policyErr := candidate.ExtractionPolicyDigest(current.PolicyDigest, storeAccounting)
+			if policyErr != nil || plan.ExtractionPolicyDigest != policy {
+				return errors.Join(policyErr, extractionpublication.ErrStale)
+			}
 			source, observation, err := fixture.readAuthority(ctx, plan.Repository)
 			if err != nil {
 				return err
@@ -157,6 +162,9 @@ func (fixture *productionRuntimeIdentity) readAuthority(ctx context.Context, rep
 
 func (fixture *productionRuntimeIdentity) publishCandidate(t *testing.T, ctx context.Context, input productionPipelineInput, selected candidate.State) {
 	t.Helper()
+	if input.StoreAccounting != fixture.reconciler.StoreAccounting {
+		t.Fatal("pipeline input and configured runtime disagree on extraction policy")
+	}
 	if err := fixture.state.SetRepoIndexed(ctx, input.Repository, input.Commit, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
@@ -294,9 +302,9 @@ func (fixture *productionRuntimeIdentity) snapshot(t *testing.T, ctx context.Con
 	return result
 }
 
-func (fixture *productionRuntimeIdentity) prepareRecoveries(t *testing.T, ctx context.Context, frozen Plan, baseline *productionRuntimeResult) {
+func (fixture *productionRuntimeIdentity) prepareRecoveries(t *testing.T, ctx context.Context, frozen Plan, baseline *productionRuntimeResult) map[string]productionRecoverySchedule {
 	t.Helper()
-	productionRecoveryCache = make(map[string]productionRecoverySchedule, 2)
+	recoveries := make(map[string]productionRecoverySchedule, 2)
 	beforeSource, beforeAppends := fixture.source.acquisitions, fixture.evidence.appends
 	resultFiles := fixture.resultFiles(t, ctx, baseline)
 	for _, step := range []struct{ phase, mode string }{
@@ -363,12 +371,13 @@ func (fixture *productionRuntimeIdentity) prepareRecoveries(t *testing.T, ctx co
 			fixture.source.acquisitions != beforeSource || fixture.evidence.appends != beforeAppends {
 			t.Fatal("recovery changed native result/run/root evidence or performed source work")
 		}
-		productionRecoveryCache[step.phase] = productionRecoverySchedule{
+		recoveries[step.phase] = productionRecoverySchedule{
 			Target: baseline.Generation, Prior: current.Schedule.Digest,
 			RecoveryGeneration: prepared.Generation, RecoverySchedule: prepared.Digest,
 		}
 		t.Logf("native %s preparation/recovery: completed %d result-reuse chunks, source acquisitions=0 evidence appends=0 (no stale-lease or process-death injection)", step.phase, prepared.TotalChunks)
 	}
+	return recoveries
 }
 
 // Inspect, never create, the runtime's observed immutable result files. This

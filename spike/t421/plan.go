@@ -149,7 +149,7 @@ func validatePlan(plan Plan, knownRevisions *RevisionHistory) error {
 	if !reflect.DeepEqual(plan.Inputs, frozenInputs()) {
 		return errors.New("T42.1 input bindings differ from the frozen authorities")
 	}
-	if err := validateCombinedProfile(plan.Profile); err != nil {
+	if err := validateCombinedProfile(plan.Profile, plan.Schema); err != nil {
 		return err
 	}
 	if err := validateOracle(plan.Oracle, plan.Profile, plan.Schema); err != nil {
@@ -252,7 +252,7 @@ func validSetIdentity(value SetIdentity) bool {
 	return value.Records > 0 && value.FramedBytes > 0 && validDigest(value.SHA256)
 }
 
-func validateCombinedProfile(profile CombinedProfile) error {
+func validateCombinedProfile(profile CombinedProfile, schema string) error {
 	physical, logical, overlay := profile.Physical, profile.Logical, profile.Overlay
 	mapping, typed, pipeline, bytes := profile.GeneratedMapping, profile.TypedIndex, profile.Pipeline, profile.Bytes
 	if (profile.Schema != combinedProfileSchema && profile.Schema != combinedProfileV2Schema) || profile.Name != "combined-2m-10k-v1" ||
@@ -322,6 +322,9 @@ func validateCombinedProfile(profile CombinedProfile) error {
 		ResolverBlobBytesPerBuild:  9_776_093,
 		CandidateRepositoryMembers: 8, CandidateCallerLeaves: 8, MaximumCallerLeafRecords: 2_773,
 		ExtractionDomains: frozenExtractionDomains(),
+	}
+	if schema == PlanV3Schema {
+		wantPipeline.ExtractionDomains = storeBoundExtractionDomains()
 	}
 	if !reflect.DeepEqual(pipeline, wantPipeline) {
 		return errors.New("T42.1 pipeline profile differs from the frozen shape")

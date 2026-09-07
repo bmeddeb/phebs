@@ -83,6 +83,8 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 		return errors.New("V3 dispatch budget phase inventory differs")
 	}
 	plan.Schema = PlanV3Schema
+	plan.Profile.Pipeline.ExtractionDomains = storeBoundExtractionDomains()
+	plan.Correction.EvidenceGroupingPolicy = storeBoundEvidenceGroupingPolicy
 	if err := applyCorrectedPhaseReadMaximums(&plan.WorkEnvelope, *plan); err != nil {
 		return err
 	}

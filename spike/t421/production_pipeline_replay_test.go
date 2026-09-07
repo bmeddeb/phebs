@@ -393,6 +393,7 @@ type productionPipelineInput struct {
 	ReadBlob                                   resolvermaterialize.BlobReader
 	SourceDirectory, ObservationDirectory      string
 	Runtime                                    *productionRuntimeIdentity
+	StoreAccounting                            bool
 }
 
 type productionPipelineResult struct {
@@ -490,7 +491,7 @@ func runProductionIdentityPipeline(
 		// The separately labeled standalone replay retains its strict model;
 		// the full constructor route above never consults that evidence store.
 		evidence = newT421ProductionReplayEvidence()
-		executor = &extract.EvidencePartitionExecutor{Evidence: evidence, Extractors: extractors}
+		executor = &extract.EvidencePartitionExecutor{Evidence: evidence, Extractors: extractors, StoreAccounting: input.StoreAccounting}
 		assertions = evidence
 	}
 	versions := make(map[string]string, len(identities))
@@ -499,6 +500,10 @@ func runProductionIdentityPipeline(
 	}
 	roots := make(map[string]candidate.DomainResultRoot, len(combined.Profile.Pipeline.ExtractionDomains))
 	plans := make(map[string]candidate.DomainResultPlan, len(combined.Profile.Pipeline.ExtractionDomains))
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(sparseRoot.PolicyDigest, input.StoreAccounting)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, expectedDomain := range combined.Profile.Pipeline.ExtractionDomains {
 		domain, openErr := sparse.OpenDomain(ctx, expectedDomain.Domain, versions[expectedDomain.Domain])
 		if openErr != nil {
@@ -508,7 +513,7 @@ func runProductionIdentityPipeline(
 			SourceGenerationDigest:      input.SourceDigest,
 			ObservationGenerationDigest: input.ObservationDigest,
 			ExtractorVersion:            versions[expectedDomain.Domain],
-			ExtractionPolicyDigest:      sparseRoot.PolicyDigest,
+			ExtractionPolicyDigest:      extractionPolicy,
 		})
 		if planErr != nil {
 			t.Fatalf("build reserved plan %s: %v", expectedDomain.Domain, planErr)

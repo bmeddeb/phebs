@@ -1455,6 +1455,7 @@ type runSink struct {
 	maxCanonical   int64
 	maxEncoded     int64
 	chunkNamespace string
+	chunkSize      int
 
 	mu               sync.Mutex
 	closed           bool
@@ -1483,6 +1484,17 @@ func newRunSink(
 	operation *domainOperationRecorder,
 	maxStagedRows int,
 ) *runSink {
+	return newRunSinkWithChunkSize(ctx, evidence, runID, repo, commit, version, corpus, operation, maxStagedRows, evidenceChunkSize)
+}
+
+func newRunSinkWithChunkSize(
+	ctx context.Context,
+	evidence store.EvidenceStore,
+	runID, repo, commit, version string,
+	corpus *verifiedCorpus,
+	operation *domainOperationRecorder,
+	maxStagedRows, chunkSize int,
+) *runSink {
 	return &runSink{
 		ctx: ctx, evidence: evidence, runID: runID, repo: repo, commit: commit, version: version, corpus: corpus,
 		operation:      operation,
@@ -1490,11 +1502,12 @@ func newRunSink(
 		maxFacts:       maxFactsPerRun,
 		maxCanonical:   math.MaxInt64,
 		maxEncoded:     math.MaxInt64,
-		facts:          make([]sdk.Fact, 0, evidenceChunkSize),
+		chunkSize:      chunkSize,
+		facts:          make([]sdk.Fact, 0, chunkSize),
 		stagedChunks:   make(map[string]struct{}),
 		atomIDs:        make(map[string]struct{}),
 		assertionIDs:   make(map[string]struct{}),
-		stagedChunkIDs: make([]string, 0, (maxFactsPerRun+evidenceChunkSize-1)/evidenceChunkSize),
+		stagedChunkIDs: make([]string, 0, (maxFactsPerRun+chunkSize-1)/chunkSize),
 	}
 }
 
@@ -1541,7 +1554,7 @@ func (s *runSink) Emit(fact sdk.Fact) error {
 
 	s.facts = append(s.facts, fact)
 	s.factCount++
-	if len(s.facts) == evidenceChunkSize {
+	if len(s.facts) == s.chunkSize {
 		s.err = s.flushLocked()
 	}
 	return s.err
@@ -2499,7 +2512,7 @@ func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
 	if chunk.Schema != evidenceChunkSchema {
 		return errors.New("fact chunk has unsupported schema")
 	}
-	if len(chunk.Facts) == 0 || len(chunk.Facts) > evidenceChunkSize {
+	if len(chunk.Facts) == 0 || len(chunk.Facts) > s.chunkSize {
 		return fmt.Errorf("fact chunk has invalid size %d", len(chunk.Facts))
 	}
 	if chunk.ID != computeFactChunkIDForNamespace(chunk, s.chunkNamespace) {

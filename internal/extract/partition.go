@@ -20,10 +20,12 @@ import (
 // supplied corpus is already restricted by the source owner to one T40.8
 // partition; this adapter independently inventories that capability, runs the
 // matching pure extractor, validates every emitted fact, and appends only
-// content-addressed 256-fact chunks under the caller's invisible run.
+// content-addressed, policy-bound 256- or 169-fact chunks under the caller's invisible run.
 type EvidencePartitionExecutor struct {
 	Evidence   store.EvidenceStore
 	Extractors []Extractor
+	// StoreAccounting selects only plans carrying the versioned 169-fact policy.
+	StoreAccounting bool
 }
 
 func (executor *EvidencePartitionExecutor) ExecutePartition(
@@ -60,6 +62,14 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 	}
 	if err := candidate.ValidateDomainResultPlanControl(plan); err != nil {
 		return candidate.PartitionResultSpec{}, err
+	}
+	policy, err := candidate.ExtractionPolicyDigest(plan.CandidatePolicyDigest, executor.StoreAccounting)
+	if err != nil || policy != plan.ExtractionPolicyDigest {
+		return candidate.PartitionResultSpec{}, errors.Join(err, extractionpublication.ErrStale)
+	}
+	chunkSize := evidenceChunkSize
+	if executor.StoreAccounting {
+		chunkSize = candidate.AccountedEvidenceChunkFacts
 	}
 	extractor, err := executor.extractor(plan.Domain, plan.ExtractorVersion)
 	if err != nil {
@@ -126,9 +136,9 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		reservation.Rows/2,
 		maxFactsPerRun,
 	)
-	sink := newRunSink(
+	sink := newRunSinkWithChunkSize(
 		ctx, executor.Evidence, runID, corpus.RepoName(), corpus.Commit(),
-		plan.ExtractorVersion, verified, operation, int(minInt64(reservation.Rows, math.MaxInt)),
+		plan.ExtractorVersion, verified, operation, int(minInt64(reservation.Rows, math.MaxInt)), chunkSize,
 	)
 	sink.accounting = accounting
 	sink.maxFacts = int(maxFacts)

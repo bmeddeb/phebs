@@ -212,7 +212,9 @@ func validatePlanningAuthority(authority PlanningAuthority) error {
 		!validDigest(authority.CandidateGenerationDigest) ||
 		!validDigest(authority.CandidatePolicyDigest) ||
 		!validDigest(authority.SourceGenerationDigest) ||
-		!validDigest(authority.ObservationGenerationDigest) {
+		!validDigest(authority.ObservationGenerationDigest) ||
+		(authority.ExtractionPolicyDigest != "" && (!validDigest(authority.ExtractionPolicyDigest) ||
+			authority.ExtractionPolicyDigest == authority.CandidatePolicyDigest)) {
 		return invalid("planning authority")
 	}
 	return nil
@@ -231,6 +233,9 @@ func authorityForPlans(repository string, domains []DomainPlan) (PlanningAuthori
 		SourceGenerationDigest:      first.SourceGenerationDigest,
 		ObservationGenerationDigest: first.ObservationGenerationDigest,
 	}
+	if first.ExtractionPolicyDigest != first.CandidatePolicyDigest {
+		authority.ExtractionPolicyDigest = first.ExtractionPolicyDigest
+	}
 	if validatePlanningAuthority(authority) != nil {
 		return PlanningAuthority{}, invalid("plan authority binding")
 	}
@@ -240,6 +245,7 @@ func authorityForPlans(repository string, domains []DomainPlan) (PlanningAuthori
 			plan.CandidateManifestDigest != authority.CandidateManifestDigest ||
 			plan.CandidateGenerationDigest != authority.CandidateGenerationDigest ||
 			plan.CandidatePolicyDigest != authority.CandidatePolicyDigest ||
+			plan.ExtractionPolicyDigest != first.ExtractionPolicyDigest ||
 			plan.SourceGenerationDigest != authority.SourceGenerationDigest ||
 			plan.ObservationGenerationDigest != authority.ObservationGenerationDigest {
 			return PlanningAuthority{}, invalid("mixed plan authority binding")

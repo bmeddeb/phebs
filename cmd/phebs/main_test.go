@@ -828,11 +828,13 @@ func TestAllPartitionDomainsMatchRequiresOneExactAuthority(t *testing.T) {
 			SourceGenerationDigest:      "source-a",
 			ObservationGenerationDigest: "observation-a",
 			Disposition:                 candidate.PartitionResultTerminalRefusal,
+			ExtractionPolicyDigest:      "policy-169",
 		},
 		"kafka-producer": {
 			Domain: "kafka-producer", CandidateManifestDigest: "candidate-a",
 			SourceGenerationDigest:      "source-a",
 			ObservationGenerationDigest: "observation-a",
+			ExtractionPolicyDigest:      "policy-169",
 		},
 	}
 	read := func(
@@ -846,17 +848,29 @@ func TestAllPartitionDomainsMatchRequiresOneExactAuthority(t *testing.T) {
 	}
 	domains := []string{"grpc-caller", "kafka-producer"}
 	if !allPartitionDomainsMatch(
-		t.Context(), domains, "candidate-a", "source-a", "observation-a", read,
+		t.Context(), domains, "candidate-a", "source-a", "observation-a", "policy-169", read,
 	) {
 		t.Fatal("exact terminal and successful domain authorities were not current")
 	}
+	for _, policy := range []string{"", "policy-256"} {
+		stale := current["grpc-caller"]
+		stale.ExtractionPolicyDigest = policy
+		current["grpc-caller"] = stale
+		if allPartitionDomainsMatch(t.Context(), domains, "candidate-a", "source-a", "observation-a", "policy-169", read) {
+			t.Fatal("old settled terminal authority bypassed selected extraction policy")
+		}
+	}
+	settled := current["grpc-caller"]
+	settled.ExtractionPolicyDigest = "policy-169"
+	current["grpc-caller"] = settled
 	current["kafka-producer"] = candidate.DownstreamDomainAuthority{
 		Domain: "kafka-producer", CandidateManifestDigest: "candidate-b",
 		SourceGenerationDigest:      "source-a",
 		ObservationGenerationDigest: "observation-a",
+		ExtractionPolicyDigest:      "policy-169",
 	}
 	if allPartitionDomainsMatch(
-		t.Context(), domains, "candidate-a", "source-a", "observation-a", read,
+		t.Context(), domains, "candidate-a", "source-a", "observation-a", "policy-169", read,
 	) {
 		t.Fatal("mixed candidate generations were accepted as current")
 	}

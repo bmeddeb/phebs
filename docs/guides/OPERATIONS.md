@@ -4672,11 +4672,18 @@ successor behavior, but is not proof that cold convergence fits its phase.
 
 Evidence chunk accounting now counts normalized atom, association and assertion
 operands plus two run updates and one receipt creation, even for exact replay.
-The ordinary 256-fact transport is unchanged. A selected chunk whose submitted
-count exceeds 512 refuses before writing; this known cold-path hold is not
-fixed by counting only newly affected rows. Smaller grouping must have a
-versioned replay/identity and prospective oracle decision before use; do not
-change the chunk-size constant or split an existing receipt to rerun the gate.
+The ordinary 256-fact transport is unchanged. Authenticated selected execution
+uses a distinct extraction policy with 169-fact chunks, at most 510 submitted
+operands. Its planning reuse identity and publication fence prevent old-policy
+results or unfinished runs from being reinterpreted. Same-policy restarts keep
+their exact chunk identities. V3 derives the corresponding byte expectations;
+retained V1/V2 bytes and all admission ceilings remain unchanged. A submission
+above 512 still refuses before writing; never split an existing receipt or
+count only newly affected rows to bypass that check. This correction alone
+does not establish whole-phase fit or authorize a cold rehearsal or ceremony.
+It does not migrate existing data automatically: unchanged candidate backfill
+may leave opposite-policy results unavailable until reconciliation is actually
+triggered. Neither old runs nor retained custody are silently rewritten or deleted.
 
 Final repository cleanup still commits its store changes atomically after
 artifact removal. Bounded cleanup rechecks actual native ID vectors before

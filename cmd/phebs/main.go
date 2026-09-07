@@ -209,11 +209,11 @@ func allPartitionDomainsCurrent(
 func allPartitionDomainsMatch(
 	ctx context.Context,
 	domains []string,
-	candidateManifest, sourceGeneration, observationGeneration string,
+	candidateManifest, sourceGeneration, observationGeneration, extractionPolicy string,
 	current func(context.Context, string) (candidate.DownstreamDomainAuthority, error),
 ) bool {
 	if current == nil || len(domains) == 0 || candidateManifest == "" ||
-		sourceGeneration == "" || observationGeneration == "" {
+		sourceGeneration == "" || observationGeneration == "" || extractionPolicy == "" {
 		return false
 	}
 	return allPartitionDomainsCurrent(ctx, domains, func(
@@ -225,6 +225,7 @@ func allPartitionDomainsMatch(
 		}
 		if authority.Domain != domain ||
 			authority.CandidateManifestDigest != candidateManifest ||
+			authority.ExtractionPolicyDigest != extractionPolicy ||
 			authority.SourceGenerationDigest != sourceGeneration ||
 			authority.ObservationGenerationDigest != observationGeneration {
 			return store.ErrGenerationStale
@@ -1499,7 +1500,9 @@ func serve(args []string) (retErr error) {
 		}
 		partitionRuntime = &extractionpublication.Runtime{
 			Root: partitionPublicationRoot, Store: st,
-			Executor:    &extract.EvidencePartitionExecutor{Evidence: st, Extractors: exs},
+			Executor: &extract.EvidencePartitionExecutor{
+				Evidence: st, Extractors: exs, StoreAccounting: semanticLaunch != nil,
+			},
 			Publisher:   extractionpublication.StorePublisher{Store: st},
 			Diagnostics: cfg.Diagnostics.Extraction,
 		}
@@ -1520,9 +1523,13 @@ func serve(args []string) (retErr error) {
 			if candidateErr != nil || authorityErr != nil {
 				return false
 			}
+			extractionPolicy, policyErr := candidate.ExtractionPolicyDigest(candidateState.PolicyDigest, semanticLaunch != nil)
+			if policyErr != nil {
+				return false
+			}
 			return allPartitionDomainsMatch(
 				currentCtx, partitionDomains, candidateState.ManifestDigest,
-				source, observation,
+				source, observation, extractionPolicy,
 				func(
 					domainCtx context.Context, domain string,
 				) (candidate.DownstreamDomainAuthority, error) {
@@ -1560,6 +1567,7 @@ func serve(args []string) (retErr error) {
 			OpenCandidate: openPartitionCandidate, Authority: readPartitionAuthority,
 			CandidateReference: readPartitionCandidateReference,
 			AuthorityReference: readPartitionFenceAuthority,
+			StoreAccounting:    semanticLaunch != nil,
 		}
 		openPartitionDomain = partitionReconciler.OpenDomain
 		partitionRuntime.Source = extractionpublication.GitSparseSource{
@@ -1573,6 +1581,10 @@ func serve(args []string) (retErr error) {
 					return fenceErr
 				}
 				state := publication.State()
+				policy, policyErr := candidate.ExtractionPolicyDigest(state.PolicyDigest, semanticLaunch != nil)
+				if policyErr != nil || policy != plan.ExtractionPolicyDigest {
+					return errors.Join(policyErr, extractionpublication.ErrStale)
+				}
 				if state.ManifestDigest != plan.CandidateManifestDigest ||
 					state.GenerationDigest != plan.CandidateGenerationDigest ||
 					state.PolicyDigest != plan.CandidatePolicyDigest {

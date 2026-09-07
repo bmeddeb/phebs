@@ -2041,19 +2041,17 @@ func testPhaseMeasurement(plan Plan, freeze ExecutionFreeze, index int) PhaseMea
 	return measurement
 }
 
-// V3 changes accounting, not the constructor graph. Reuse the exact V2 native
-// fixture only after comparing the complete expected prospective plan;
-// retain its existing exact-plan cache and avoid a second full corpus build.
+// V3 runs its own versioned extraction grouping. Validate the complete expected
+// prospective input, then preserve it; V2 constructor roots cannot stand in for V3.
 func productionFixtureInputPlan(t *testing.T, plan Plan) Plan {
 	t.Helper()
 	if plan.Schema != PlanV3Schema {
 		return plan
 	}
-	prior := correctedTestPlan(t)
-	if !productionFixturePlanMatches(plan, prior) {
-		t.Fatal("V3 native fixture inputs differ from the retained functional graph")
+	if !reflect.DeepEqual(plan, accountingTestPlan(t)) {
+		t.Fatal("V3 native fixture inputs differ from the exact prospective plan")
 	}
-	return prior
+	return plan
 }
 
 func productionFixturePlanMatches(plan, prior Plan) bool {

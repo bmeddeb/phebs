@@ -98,6 +98,7 @@ type PlanningAuthority struct {
 	CandidatePolicyDigest       string `json:"candidate_policy_digest"`
 	SourceGenerationDigest      string `json:"source_generation_digest"`
 	ObservationGenerationDigest string `json:"observation_generation_digest"`
+	ExtractionPolicyDigest      string `json:"extraction_policy_digest,omitempty"`
 }
 
 type authorityBinding struct {

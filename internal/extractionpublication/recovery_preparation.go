@@ -280,6 +280,16 @@ func (reconciler *Reconciler) confirmRecoveryReferences(ctx context.Context, aut
 		state.PolicyDigest != authority.CandidatePolicyDigest {
 		return errors.Join(err, ErrStale)
 	}
+	policy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, reconciler.StoreAccounting)
+	if err != nil {
+		return err
+	}
+	if policy == state.PolicyDigest {
+		policy = ""
+	}
+	if authority.ExtractionPolicyDigest != policy {
+		return ErrStale
+	}
 	source, observation, err := reconciler.AuthorityReference(ctx, authority.Repository)
 	if err != nil || source != authority.SourceGenerationDigest || observation != authority.ObservationGenerationDigest {
 		return errors.Join(err, ErrStale)

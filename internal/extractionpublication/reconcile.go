@@ -42,6 +42,8 @@ type Reconciler struct {
 	// RecoveryPreparationEnabled admits only explicit in-process ceremony
 	// preparation. Configure before workers start; ordinary servers leave it false.
 	RecoveryPreparationEnabled bool
+	// StoreAccounting selects the versioned 169-fact policy before workers start.
+	StoreAccounting bool
 
 	mu [64]sync.Mutex
 }
@@ -69,6 +71,14 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 	if err != nil {
 		return "", err
 	}
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, reconciler.StoreAccounting)
+	if err != nil {
+		return "", err
+	}
+	bindingPolicy := ""
+	if extractionPolicy != state.PolicyDigest {
+		bindingPolicy = extractionPolicy
+	}
 	if target, reused, err := reconciler.Runtime.ReuseAuthority(ctx, PlanningAuthority{
 		Repository:                  repository,
 		CandidateManifestDigest:     state.ManifestDigest,
@@ -76,6 +86,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 		CandidatePolicyDigest:       state.PolicyDigest,
 		SourceGenerationDigest:      sourceReference,
 		ObservationGenerationDigest: observationReference,
+		ExtractionPolicyDigest:      bindingPolicy,
 	}); err != nil {
 		return "", err
 	} else if reused {
@@ -101,6 +112,10 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 		return "", err
 	}
 	root := sparse.Root()
+	extractionPolicy, err = candidate.ExtractionPolicyDigest(root.PolicyDigest, reconciler.StoreAccounting)
+	if err != nil {
+		return "", err
+	}
 	plans := make([]candidate.DomainResultPlan, 0, len(root.Domains))
 	for _, descriptor := range root.Domains {
 		domain, err := sparse.OpenDomain(ctx, descriptor.Domain, descriptor.Version)
@@ -111,7 +126,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 			SourceGenerationDigest:      sourceDigest,
 			ObservationGenerationDigest: observationDigest,
 			ExtractorVersion:            descriptor.Version,
-			ExtractionPolicyDigest:      root.PolicyDigest,
+			ExtractionPolicyDigest:      extractionPolicy,
 		})
 		if err != nil {
 			return "", terminalPlanFailure(err)

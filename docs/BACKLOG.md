@@ -5845,6 +5845,67 @@ run, retained plan or phase ceiling is changed by this audit. A versioned
 grouping/compatibility and prospective oracle decision is required before
 implementation; the cold rehearsal remains held, not retried for diagnosis.
 
+The next prospective slice selects a versioned store-bound extraction policy
+for authenticated selected execution, including the durable reuse lookup and
+publication fence. It keeps ordinary 256-fact grouping and historical V1/V2
+bytes exact. New 169-fact grouping supplies at most 510 operands under the
+unchanged 512 ceiling; it may not reuse an incomplete old-policy run. The
+V3-only byte oracle derives each partition's delta from its unchanged ordered
+facts and JSON framing: 131 plus decimal sequence digits per nonempty chunk,
+after separating the per-fact comma contribution. The frozen totals add
+16,866 canonical and encoded bytes; all original result reservations remain
+unchanged. This is a versioned compatibility correction under the owning
+delegation, not an admission-bound expansion. Focused implementation, replay,
+byte-fit and review gates are pending; whole-phase fit, native cold/handoff,
+integration and freeze are not established by this derivation.
+
+The independent oracle audit checked both new files and all three owning
+integration files without finding a defect. Each profile correction/validation
+adds 623 bounded framing iterations (248 old plus 375 new chunks), fresh
+profile allocations and 56 partition shape rehashes, beyond the existing
+frozen-profile construction; no native, store or source work is added.
+An early broader race command reached its chosen three-minute timeout in
+`TestAccountingReceiptFullV3RoundTrip` while rebuilding the full frozen
+catalog (180.741s package time). It is incomplete, not an assertion failure
+or a receipt-byte-fit pass; no broad automatic retry follows that command.
+The concurrently started normal selector also reached its five-minute alarm
+inside that same full fixture, during production observation construction
+(330.644s package time). No test engine, Git helper or test process survived
+the stopped commands. Neither broad command is recorded green. Focused
+grouping/contract race checks passed separately in 5.042s; spike vet and
+pinned lint passed. The later explicit policy-digest binding is additionally
+covered by the final focused gates, not retroactively attributed to this run.
+
+Selected grouping adds 127 run reads as well as 127 append writes and 127
+receipt reads: 381 SDK calls before retries. At the existing 12,500-fact cap,
+chunk-ID capacity rises from 49 to 74 while the fact buffer shrinks from 256
+to 169. No automatic policy migration is added: unchanged candidate backfill
+does not itself trigger reconciliation, so opposite-policy data may remain
+fail-closed until a real reconciliation trigger. Old custody is not deleted.
+
+The full receipt fixture's former V3-to-V2 native-result shortcut is removed:
+V3 now passes its policy and expected pipeline totals through the genuine
+constructor graph. Two exact-plan, version-separated caches own authority and
+recovery results; neither relabels 256-fact results as 169. This test-only
+change permits two full constructor graphs per package process instead of one,
+each retaining its existing twenty-minute physical-construction context and
+store-close ownership. Cheap input/cache-routing checks passed normal in
+0.719s and race three times in 4.211s; the corrected full native constructor
+remains a required open gate, not replaced by those routing checks.
+
+Production focused normal and three-repeat race passed across candidate,
+extraction, publication and command packages. Complete normal packages passed:
+candidate 23.533s, extract 33.874s, extractionpublication 40.265s and command
+95.173s. Their vet and pinned lint passed. The scoped V3 contract, complete
+frozen-plan round trip, store-flow and non-fixture inspector selectors passed
+in 33.997s; documentation (0.698s), glossary and whitespace passed. Independent
+working-tree source and oracle reviews found no correctness defect; their one
+low cost-record omission (the extra run reads) is corrected above. Immutable
+review and corrected full constructor acceptance remain pending.
+Final combined grouping, exact policy-digest, retained-byte, V3 contract and
+fixture-routing selectors passed normal in 0.821s and race in 5.676s, with
+spike vet and pinned lint clean. These do not invoke the full native fixture.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
