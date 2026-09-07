@@ -3,6 +3,7 @@ package t421
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"os"
 	"os/exec"
 	"slices"
@@ -202,22 +203,10 @@ func (run *ExecutionProductionRun) finish(runCtx context.Context, cancelRun, rel
 		if signalProductionStop(run.command.Process) != nil {
 			failure = ErrExecutionProductionCustody
 		}
-		select {
-		case waitErr = <-waited:
-			joined = true
-		case <-stopCtx.Done():
-			failure = ErrExecutionProductionCustody
-			_ = run.command.Process.Kill()
-			joinTimer := time.NewTimer(6 * time.Second)
-			select {
-			case waitErr = <-waited:
-				joined = true
-			case <-joinTimer.C:
-			}
-			joinTimer.Stop()
-		}
 	}
-	if waitErr != nil || !joined {
+	deadline, _ := stopCtx.Deadline()
+	joined, sessionEmpty, sessionErr := finishExecutionProcessSession(run.command.Process.Pid, waited, joined, waitErr, deadline)
+	if sessionErr != nil {
 		failure = ErrExecutionProductionCustody
 	}
 	if served != nil {
@@ -239,14 +228,6 @@ func (run *ExecutionProductionRun) finish(runCtx context.Context, cancelRun, rel
 	if run.control != nil && run.control.Close() != nil {
 		failure = ErrExecutionProductionCustody
 	}
-	sessionEmpty := false
-	if joined {
-		members, err := t4013.PrivateProcessSessionMembers(run.command.Process.Pid)
-		sessionEmpty = err == nil && members == 0
-	}
-	if !sessionEmpty {
-		failure = ErrExecutionProductionCustody
-	}
 	prefix, err := run.controller.Snapshot()
 	if err != nil || !prefix.Complete {
 		failure = ErrExecutionProductionCustody
@@ -261,6 +242,52 @@ func (run *ExecutionProductionRun) finish(runCtx context.Context, cancelRun, rel
 		run.custody.err = ErrExecutionProductionCustody
 	}
 	run.custody.mu.Unlock()
+}
+
+// finishExecutionProcessSession owns no new Wait: it consumes the caller's
+// sole native wait result, including when the caller already joined the root.
+// Graceful root signaling stays at the caller. Root and session share its
+// existing grace deadline and one six-second forced-join allowance. A forced
+// cleanup always fails even when the resulting OS session is empty; it cannot
+// repair SDK/dispatch EOF or authorize removal of retained failed custody.
+func finishExecutionProcessSession(pid int, waited <-chan error, joined bool, waitErr error, deadline time.Time) (bool, bool, error) {
+	if pid <= 0 || !joined && waited == nil {
+		return joined, false, ErrExecutionProductionCustody
+	}
+	if !joined {
+		waitErr, joined = waitExecutionProcessRoot(waited, deadline)
+	}
+	sessionErr := t4013.WaitPrivateProcessSession(pid, deadline)
+	if joined && sessionErr == nil {
+		return true, true, waitErr
+	}
+	forcedDeadline := time.Now().Add(6 * time.Second)
+	killErr := t4013.KillPrivateProcessSession(pid)
+	if !joined {
+		waitErr, joined = waitExecutionProcessRoot(waited, forcedDeadline)
+	}
+	finalSessionErr := t4013.WaitPrivateProcessSession(pid, forcedDeadline)
+	return joined, finalSessionErr == nil, errors.Join(ErrExecutionProductionCustody, waitErr, sessionErr, killErr, finalSessionErr)
+}
+
+func waitExecutionProcessRoot(waited <-chan error, deadline time.Time) (error, bool) {
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		select {
+		case err := <-waited:
+			return err, true
+		default:
+			return nil, false
+		}
+	}
+	timer := time.NewTimer(remaining)
+	defer timer.Stop()
+	select {
+	case err := <-waited:
+		return err, true
+	case <-timer.C:
+		return nil, false
+	}
 }
 
 // Stop is idempotent. A caller deadline bounds only its wait: retained cleanup

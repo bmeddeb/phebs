@@ -3,6 +3,9 @@ package storeaccounting
 import (
 	"context"
 	"errors"
+	"log"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/fxamacker/cbor/v2"
@@ -55,18 +58,80 @@ type storeSDKCall struct {
 // SDKOwner retains every typed call and native transaction for one producer.
 // One genuine producer shares this owner across all its SDK connections. The
 // capacities come from the mechanically validated client, not a frozen issuer.
-// No native UUID, SQL, variable bytes or outcome history leaves this process.
+// No native UUID, variable bytes or outcome history leaves this process.
+// A refused native call may emit its bounded SQL prefix and call sites to
+// private operational logs, never to SA01 frames or public evidence.
 type SDKOwner struct {
 	// ponytail: <=40 calls and 2 UUIDs, one short mutex; never held over SDK or
 	// ACK I/O. Split only if measured contention warrants it.
-	mu           sync.Mutex
-	client       *Client
-	callLimit    int
-	txLimit      int
-	calls        [MaximumCalls]*storeSDKCall
-	transactions [MaximumTransactions]storeNativeTransaction
-	fenced       bool
-	err          error
+	mu             sync.Mutex
+	client         *Client
+	callLimit      int
+	txLimit        int
+	calls          [MaximumCalls]*storeSDKCall
+	transactions   [MaximumTransactions]storeNativeTransaction
+	fenced         bool
+	err            error
+	privateRefusal *SDKPrivateRefusal
+}
+
+// SDKPrivateRefusal is a single failure diagnostic, not accounting evidence.
+// Method and SQLPrefix are copied with 32/120-byte caps; no bound variables,
+// RPC IDs, native UUIDs or non-query arguments are captured. Inline SQL literals
+// can be sensitive: this record and its log must stay private. PCs belong to
+// this exact executable.
+type SDKPrivateRefusal struct {
+	Method    string
+	SQLPrefix string
+	Callers   [6]uintptr
+}
+
+func (owner *SDKOwner) PrivateRefusal() (SDKPrivateRefusal, bool) {
+	owner.mu.Lock()
+	defer owner.mu.Unlock()
+	if owner.privateRefusal == nil {
+		return SDKPrivateRefusal{}, false
+	}
+	return *owner.privateRefusal, true
+}
+
+// Capture before failure delivery can cancel the process. This branch is not
+// reached by valid calls; the owner keeps only its first actual failure.
+func (owner *SDKOwner) failCall(ctx context.Context, request *connection.RPCRequest) error {
+	owner.mu.Lock()
+	first := owner.err == nil
+	var diagnostic SDKPrivateRefusal
+	if first {
+		owner.err = ErrDescriptor
+		if request != nil {
+			diagnostic.Method = strings.Clone(request.Method[:min(len(request.Method), 32)])
+			if request.Method == "query" && len(request.Params) > 0 {
+				if sql, ok := request.Params[0].(string); ok {
+					diagnostic.SQLPrefix = strings.Clone(sql[:min(len(sql), 120)])
+				}
+			}
+		}
+		runtime.Callers(2, diagnostic.Callers[:])
+		owner.privateRefusal = &diagnostic
+	}
+	err := owner.err
+	owner.mu.Unlock()
+	if first {
+		_ = owner.client.Fail(ctx, ErrDescriptor)
+		// Source locations, not argument-bearing stacks. Quoting prevents SQL
+		// newlines from masquerading as another log or exact-report record.
+		var sites [6]string
+		frames := runtime.CallersFrames(diagnostic.Callers[:])
+		for index := range sites {
+			frame, more := frames.Next()
+			sites[index] = frame.Function[:min(len(frame.Function), 192)]
+			if !more {
+				break
+			}
+		}
+		log.Printf("private store SDK refusal: method=%q sql_prefix=%q callers=%q", diagnostic.Method, diagnostic.SQLPrefix, sites)
+	}
+	return err
 }
 
 // NewSDKOwner consumes the actual client's one-time SDK-owner claim.
@@ -479,11 +544,11 @@ func (conn *SDKConnection) Send(ctx context.Context, method string, params ...an
 
 func (conn *SDKConnection) Call(ctx context.Context, request *connection.RPCRequest) (*connection.RPCResponse[cbor.RawMessage], error) {
 	if ctx == nil || request == nil {
-		return nil, conn.owner.fail(ctx, ErrDescriptor)
+		return nil, conn.owner.failCall(ctx, request)
 	}
 	call, ok := ctx.Value(storeCallContextKey{}).(*storeSDKCall)
 	if !ok || call == nil || call.owner != conn.owner {
-		return nil, conn.owner.fail(ctx, ErrDescriptor)
+		return nil, conn.owner.failCall(ctx, request)
 	}
 	owner := conn.owner
 	owner.mu.Lock()
@@ -537,7 +602,7 @@ func (conn *SDKConnection) Call(ctx context.Context, request *connection.RPCRequ
 	}
 	if !valid {
 		owner.mu.Unlock()
-		return nil, owner.fail(ctx, ErrDescriptor)
+		return nil, owner.failCall(ctx, request)
 	}
 	call.consumed, call.connection = true, conn
 	if call.local != nil {

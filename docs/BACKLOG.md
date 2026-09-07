@@ -5597,6 +5597,154 @@ This closes the bounded first-epoch slice only: cold convergence, semantic
 phase handoffs, all five epochs, full executor/launcher admission, exact-tree
 acceptance and freeze remain open. No ceremony was executed.
 
+**Next bounded slice — cold convergence and first handoff.** Extend the same
+genuine epoch owner, not a replacement runner. `StartCold` preserves the small
+startup-only `Start` path and admits the unchanged cold/health deadlines;
+`ColdToWarm` consumes serial, bounded, gap-free X/T/F responses and read reports,
+binds the one final authority to actual authored A and the frozen oracle, then
+joins owner/request tails and coordinates both reducers into phase three.
+Ordinary owners and requests stay fenced there; no warm observation is claimed.
+The owning PLAN rows specify the eight PC01 pairs and separate 64-MiB private
+diagnostic refusal cap, which is not full log-fit or native measurement proof.
+AC: strict transport/response/report/oracle refusals, cancellation and one-shot
+ownership, actual inherited DA01/PC01/SA01 handoff mechanics and clean stop,
+focused normal/race/static/docs/retained-byte gates, independent exact-source
+and steady-state-cost review, then a separately opt-in full-population native
+cold/handoff rehearsal before integration. Full phase-work/log capture and
+executor/launcher/acceptance/freeze remain separate. Source-only tests must not
+be relabeled as a native cold or ceremony pass.
+
+The implementation now passes focused normal tests (0.619s), three-repeat
+focused race tests (6.309s), vet and pinned lint. The inherited test-binary
+fixture exercises the actual bootstrap, SDK owner, persistent parent handle,
+both reducers' checkpoints, phase-three owner/request fences and joined close;
+it executes no generic tool and supplies no native Phebs/F authority claim.
+Strict inspector tests include actual Huma serialization and a full modeled
+oracle F response (105,991 bytes), plus malformed/duplicate/truncated responses,
+report/ordinal/count refusals, authored-A/projection mismatches and accepted
+positive-prefix preservation. The modeled runtime digests are not live evidence.
+Documentation/glossary, whitespace and unchanged retained V1/V2 bytes pass.
+Exact immutable review and the opted-in native cold/handoff gate remain open;
+the earlier startup-only pass at `1bb06fb8` is not attributed to this source.
+
+Source `67f67738` passed exact focused normal (0.784s), three-repeat race
+(7.303s), vet, pinned lint and documentation gates. Its initial independent
+all-zero review was superseded by a targeted confirmed medium: the cold
+deadline was only enforced by `ColdToWarm`, leaving startup/health/idle without
+that operation able to consume the longer total lifetime. The correction moves
+enforcement into the run owner, joins timer callbacks at cleanup, and retires
+the cold deadline only after handoff before arming the bounded warm deadline.
+Deterministic virtual-time checks cover idle expiry without inspection, the
+real health wait, expiry refusal, timer retirement and the total-lifetime cap.
+Corrected immutable gates/re-review and native cold/handoff evidence remain open.
+
+Correction `6851bafda5e3a0fb5edf0bb6443e514c41116919` passed the complete
+focused selector (normal 0.726s, race three repetitions 7.584s), vet, pinned
+lint and documentation gates. Independent review covered all nine slice files
+with critical/high/medium/low all zero. An extra broad `Test.*Epoch` normal
+run passed in 72.819s; its three-repeat race command hit the chosen three-minute
+package allowance in unchanged `TestPressureFixtureUsesAdmittedEpochs/v1` and
+is recorded as incomplete, not green or an assertion failure. The required
+focused selector includes the inspector and inherited handoff tests.
+
+The one clean detached exact-source cold rehearsal then failed in 1,042.020s
+(1,041.34s test time). Protected source/SDK/module custody passed in 369.559s
+with 67,634 entries, 55,915 files and 1,354,731,588 bytes; all three protected
+reference tools passed. Actual server/index execution reached 27 complete X
+read reports, the last C=0/S=3, and the index job reported success. No cold
+authority or phase-three handoff passed. Its stopped prefix retained
+RootJoined=true, SessionEmpty=false, DA active handles and one open SA call
+without terminal EOF. The exact surviving SurrealDB child was independently
+identity-checked and sent TERM; it subsequently disappeared and the recorded
+Phebs listener was absent. This manual cleanup does not amend the failed result.
+The exact `t422-epoch-one-rehearsal-1941975116` custody, private server log and
+unmerged validation checkout remain retained; no automatic rerun or integration
+followed. The initial HTTP body and native exit cause were not retained, so
+X27 does not identify the triggering refusal. Subsequent correction reuses
+session-wide cleanup on all three affected custody paths and adds bounded
+private diagnostics without loosening acceptance. Corrected exact-source
+gates/review and a successful native cold/handoff run remain required.
+
+The session/diagnostic correction content passed focused normal (1.179s) and
+three-repeat race (9.270s), vet and pinned lint on both changed spike packages,
+documentation/glossary and whitespace checks. Shared session regressions also
+passed normal three repetitions (1.670s) and race three repetitions (3.253s);
+existing author refusal/join tests passed normal (1.107s) and race (2.284s), and
+the inherited T4013 session-stop test passed (0.803s). These are mechanism
+checks only; immutable correction review and native cold evidence remain open.
+
+Exact correction `20434884efd67de474b3fc9c9b210478713f8f37` then passed
+focused normal (1.170s), three-repeat race (9.293s), and documentation/glossary
+reruns. Independent review covered all eleven correction files and all fourteen
+combined slice files with critical/high/medium/low all zero. It confirmed sole
+native Wait ownership, session-wide escalation, retained failure semantics,
+bounded private diagnostics and the phase deadlines. The Linux exports retain
+their existing process-list helper; the no-helper-child cost statement applies
+to the supported Darwin path only. No corrected native retry, integration,
+push, seal or freeze has occurred. A successful bounded exact-source
+cold/handoff diagnostic run remains required before integration, but the
+following SDK coverage prerequisites now precede that run.
+
+The independent raw-SDK reachability audit at `0f4cf79a` counted 101 non-test
+`surrealdb.Query` invocation sites in `internal/store`: candidate manifest 4,
+evidence 12, legacy service catalog/state 13, proof 4, investigation 67 and
+local initialization 1. Separately it counted four SignIn/Use calls, one
+connection Send, four Close calls and four constructors; these 13 sites are
+not 13 additional missing query recipes. Candidate preflight reads the raw
+publication pointer (`candidatejob.go` GetCandidateManifestPublication), before
+tree work or PublishCandidateManifest; the partition provider reads it too.
+Production partition extraction reaches AddEvidenceChunk and
+GetEvidenceChunkAccounting on each nonempty emitted chunk. These are confirmed
+cold-path seams, not attribution of the earlier native failure. The retained
+log reports candidate preflight failure with no tree/spool/publication work,
+then a descriptor-invalid stale-job reap; it does not name the first raw caller.
+
+The exact epoch configuration selects V3 and disables provisional Workbench.
+Startup/index callbacks dispatch to the V3 service runtime; legacy catalog
+reconciliation excludes V3 repositories, V3 publication callbacks suppress the
+old relationship reconciler, and V3 scheduled work calls HandleV3. Thus the
+three old loadServiceSnapshot callers and legacy search reconcile are not the
+intended cold path. This is not a blanket exclusion: OpenSelectedRuntimeScope
+falls back to the legacy OpenRuntimeScope/GetServiceStateRead when the durable
+selector is absent. Required product reads must establish their converged V3
+selector prerequisite, or account/refuse that fallback before reaching raw SDK;
+configuration alone is insufficient. The cold parent itself invokes X/T/F,
+not those product requests.
+
+Proof retention is omitted (zero), so its positive-lifetime maintenance worker
+does not start. Exact HTTP ingress and the three admitted MCP tools exclude
+proof/investigation operations; SweepRunArtifacts has no non-test caller, and
+investigation retention-status uses the separately accounted collector.
+Selected local construction uses the fixed initializer, bypassing ordinary
+initializeLocalScope and its raw auth/use operations. The older local chunk
+reader's raw connection is used by the T4013 harness, not this epoch parent.
+These are exact-path exclusions, not general accounting coverage claims.
+
+Next sequence: close candidate publish/clear/read recipes and the cold-path
+evidence recipes with their ADR operands, script tests and native fences;
+retain the legacy missing-selector verdict and demonstrate the required V3
+product prerequisite; then run the bounded exact-source cold/handoff gate.
+The shared SDK refusal now retains a first-failure-only private method/query
+prefix and six caller PCs and emits a quoted bounded diagnostic. Bound
+variables are excluded, but inline SQL can be sensitive; keep raw logs private.
+The unchanged ErrDescriptor and SA01 failure remain controlling. No raw call is
+newly admitted, no ceiling changes, and no native rerun is authorized by the
+diagnostic alone. Full store-accounting normal (0.832s), three-repeat race
+(2.751s), vet, pinned lint (zero issues), documentation/glossary and whitespace
+pass. Tests cover the real raw-query refusal, caller retention, bounded copies,
+single escaped log output, variable exclusion and preservation of a prior
+non-descriptor failure. Immutable independent review remains pending.
+
+Exact diagnostic source `8fc23b4c5f369f61d9175996eee24e48b66a5a64` received
+independent review of all four slice files with critical/high/medium/low all
+zero. The scripted store SDK fixture/local-factory tests passed in 0.539s,
+the command package compiled in 0.643s, and existing V3 legacy-selection,
+relationship-callback exclusion and exact HTTP/config tests passed in 0.648s.
+Review confirmed bounded first-failure ownership, unchanged sticky refusal,
+private-log caveats and conditional legacy exclusions. These close this small
+diagnostic slice's review gate, not the missing recipe coverage or native cold
+gate. No native retry, integration, push, seal or freeze followed.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
