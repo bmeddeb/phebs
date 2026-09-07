@@ -6079,6 +6079,41 @@ constructor coverage; it is not counted as a passing gate. The scoped checks
 above do not replace a complete receipt-constructor or corrected native
 cold/handoff run. No native process survived the scoped checks.
 
+Ben's corrected native cold/handoff rehearsal then passed at exact clean
+`37da952b22ae962c5584bb47bb567f8fd4d703bc`: test 1,444.48s, package
+1,445.238s. The retained terminal log is
+`/private/tmp/phebs-t422-corrected-cold.WDOjgg/cold-handoff.2edpTK`, SHA-256
+`36f282b485908f5da41ce96aed3c896568ae89f39ff1a96d9cfce0e6f25ce5f4`.
+Protected source/SDK/modules admitted 67,656 entries, 55,937 files and
+1,354,979,258 bytes in 6m37.142s. Real cold X/T/F convergence and phase-three
+handoff returned; startup/health/stop took 8m15.164s. The root joined and its
+session was empty. All attached dispatch producers closed with no active
+children; the store producer closed with zero open calls/transactions and
+one terminal EOF. Observed cold dispatch attempts were 21,856; store work was
+2,693 transactions and 208,522 submitted rows, with maximum 512 per
+transaction. Store accounting advanced to phase three with no phase-three
+work. Unopened future lifetimes correctly leave aggregate `Complete=false`;
+that is not missing closure of this run's opened lifetimes. Successful test
+cleanup completed, and the post-run process check found no matching survivor.
+
+The earlier 0.56s attempt at the same source stopped before build-input custody:
+the supplied shell command set umask 077 before creating the worktree, leaving
+four Git-100755 scripts at 0700. Restoring only those tracked executable modes
+to 0755 corrected the checkout-admission refusal without changing source or
+weakening validation. That failed attempt and the earlier failed cold run
+remain retained. Additional authorized, independently reviewed cache cleanup
+removed 2,874 rebuildable Phebs scale archives (17,189,724,160 allocated bytes),
+preserving source, dependencies, UI, tools, worktrees and all failure custody;
+observed free space afterward was 123.9 GiB, above the unchanged 120-GiB floor.
+
+This closes the corrected native cold/handoff gate only and supersedes the
+earlier pending statements for that gate. Warm execution, later epochs,
+full-work accounting, the complete receipt-constructor confirmation after the
+Kafka correction, full T42.2l/m/n acceptance, integration, seal and freeze are
+not established by this run. No ceremony was executed. The source-identical
+gate-record change requires documentation checks and independent review;
+integration readiness is assessed separately against the bounded slice's ACs.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
