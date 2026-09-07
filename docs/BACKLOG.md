@@ -5421,6 +5421,30 @@ are component gates, not a full admitted native phase. OP parsing, combined
 log fit, full metrics and freeze remain open. Root's copied-source focused
 gate passed 0.976s; docs passed 0.536s, glossary and whitespace clean.
 
+Exact terminal-prefix commit `cb0098060d97ffa9ffebab425f305a112afc7179`
+received independent OCR 10/10, zero skipped and all severities zero; its eight
+source files byte-match the reviewed author tree.
+
+**T42.2l native successful-observation event prerequisite (2026-09-07).**
+The shared native ParsedBlobs boundary emits source-bound OP records without
+changing the frozen event unit or reconstructing work from final receipts.
+Legacy nil-metrics and selected inventory paths are covered. Reuse and
+unsupported parses emit zero; genuine discarded-segment rework emits again,
+and later segment publication failure retains the successful prefix.
+
+AC: native counter parity, nil metrics, unsupported/cache/prior-content reuse,
+root/member/completed-segment reuse, discarded retry and failed publication;
+actual selected startup binding including zero events, phase transition and
+closed-producer refusal; missing/error/panic/canceled observer sticky failure.
+Author focused readaccounting/dispatchadmission/observationpublication/command
+normal passed 0.308/0.381/1.855/0.587s; race three times passed
+1.245/1.372/6.273/2.290s. Vet, pinned lint, format and whitespace passed.
+Independent OCR reviewed all eleven files including six excluded tests,
+zero skipped and all severity counts zero. Parent OP parsing, combined log
+fit, full native phase, whole metrics and freeze remain open. Root's identical
+source passed the same four focused gates in 0.352/0.253/2.282/0.722s;
+docs passed 0.445s, glossary and whitespace clean.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

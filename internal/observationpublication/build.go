@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
@@ -278,6 +279,12 @@ func (stage *Stage) observe(ctx context.Context, blob sourcepartition.BlobRecord
 	if metrics != nil {
 		metrics.ParsedBlobs++
 		metrics.WrittenBytes += int64(len(raw))
+	}
+	// Preserve this native event boundary: failed/unsupported parses and reuse
+	// above are not ParsedBlobs, but a later member/publication failure must not
+	// erase a successful event. Legacy callers may have no metrics pointer.
+	if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
+		return Record{}, nil, err
 	}
 	return record, raw, nil
 }

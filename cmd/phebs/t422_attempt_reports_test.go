@@ -58,6 +58,13 @@ const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
 // real phase change. Reports are supplied native-shaped test inputs, not real
 // queue work, protected tool admission, or a phase measurement result.
 func TestT422AttemptInheritedPhase(t *testing.T) {
+	for _, mode := range []string{"events", "zero_observations"} {
+		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
+	}
+}
+
+func testT422AttemptInheritedPhase(t *testing.T, mode string) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	record, _ := t422LifecycleBootstrapRecord(t)
@@ -82,7 +89,7 @@ func TestT422AttemptInheritedPhase(t *testing.T) {
 	}
 	defer func() { _ = controlParent.Close(); _ = controlChild.Close() }()
 	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestT422AttemptInheritedHelper$")
-	command.Env = []string{t422AttemptHelperMode + "=1", dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionSelector, "GORACE=atexit_sleep_ms=0"}
+	command.Env = []string{t422AttemptHelperMode + "=" + mode, dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionSelector, "GORACE=atexit_sleep_ms=0"}
 	command.ExtraFiles = []*os.File{child, controlChild}
 	command.WaitDelay = time.Second
 	input, err := command.StdinPipe()
@@ -169,6 +176,13 @@ func TestT422AttemptInheritedPhase(t *testing.T) {
 	if !strings.Contains(diagnostic.String(), "IXB1:5:sha256:") {
 		t.Fatal("actual selected index binding missing", diagnostic.String())
 	}
+	wantEvents := 1
+	if mode == "zero_observations" {
+		wantEvents = 0
+	}
+	if strings.Count(diagnostic.String(), "OPB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "OP1:5:8\n") != wantEvents || strings.Count(diagnostic.String(), "OP1:5:9\n") != wantEvents {
+		t.Fatal("actual selected observation binding/phase missing", diagnostic.String())
+	}
 }
 
 func TestT422AttemptInheritedHelper(t *testing.T) {
@@ -193,6 +207,10 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	if err != nil {
 		t.Fatal("actual index binding failed", err)
 	}
+	ctx, err = bindT422ObservationReports(ctx, func(error) { cancel() })
+	if err != nil {
+		t.Fatal("actual observation binding failed", err)
+	}
 	sinks, err := newT422AttemptSinks(func(error) { cancel() })
 	if err != nil {
 		t.Fatal(err)
@@ -215,6 +233,12 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// Supplied event exercises the actual selected stream, not native parsing.
+	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
+		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
 	job, _ := json.Marshal(store.JobLifecycleReport{Schema: store.JobLifecycleSchema, Event: "started", JobID: "job:neutral", Kind: store.JobCandidate, Target: "neutral", Attempt: 1, Outcome: "running"})
 	if err := runner.LifecycleReports(job); err != nil {
 		t.Fatal(err)
@@ -230,6 +254,11 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
 		t.Fatal(err)
 	}
+	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
+		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
 	chunk, _ := json.Marshal(generationscheduler.ChunkLifecycleReport{Schema: generationscheduler.ChunkLifecycleSchema, Event: "started",
 		Identity: "sha256:" + strings.Repeat("1", 64), Generation: "sha256:" + strings.Repeat("2", 64), Stage: extractionpublication.ScheduleStage, Attempt: 0, Outcome: "running"})
 	if err := scheduler.ChunkReports(chunk); err != nil {
@@ -240,6 +269,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	read()
 	if err := lifetime.Close(ctx); err != nil {
 		t.Fatal(err)
+	}
+	if dispatchadmission.ObserveProductionParsedBlob(ctx) == nil {
+		t.Fatal("closed producer emitted guessed observation phase")
 	}
 	if runner.LifecycleReports(job) == nil {
 		t.Fatal("closed producer emitted guessed phase")
