@@ -4901,6 +4901,20 @@ classifier being tested. The correction uses explicit exit-one/exit-two/joined
 exit acceptance versus mixed transport refusal, and asserts exactly one failed
 terminal only for accepted cases. Focused race repeated three times passed in
 7.548s; source-identical native reproduction is running, not yet passed.
+Exact correction `e0ed7f7ba29f17571b56cff2326df8c407f05dcd` received
+independent OCR coverage of both files, zero skipped and all severity counts
+zero; the original low is closed without changing production source or cost.
+The actual tiny native gate at `ba9f8153` then stopped before indexing:
+394.06s test / 394.787s package, during the first protected build. The pinned
+Go help and a non-build `go list` validation of the retained overlay confirm
+that Go prohibits replacing files beneath GOMODCACHE. The earlier source review
+missed this native tool restriction. No index attempt or independent image
+comparison passed. The terminal log at
+`/private/tmp/phebs-t422-native-index.LZ1BOg/native.log` hashes to
+`sha256:8dd71c79c23eb6a8e5bb19259986fa87f29e540eabfe44f0985ec373650a16ba`;
+private `t422-zoekt-offer-rehearsal-398052420` custody remains retained and no
+matching gate/build process survives. A supported private build correction and
+fresh native proof are required; no automatic rehearsal retry occurred.
 
 **T42.2l phase-seven prerequisite — native current predecessor (2026-09-07).**
 `PrepareCurrentRecovery` reuses the existing preparation implementation and
@@ -4924,6 +4938,17 @@ successive completed predecessor-derived schedules and C13/S10/W1 per call.
 It is binary-availability gated and has not yet run. Independent immutable
 review, ordinary-server stale-worker controls and actual phase-seven evidence
 remain open; this adds no read, retry, lock acquisition or numerical allowance.
+Exact `0d92d7f8458073f90b630f58d50ab05cb99431c3` subsequently received
+independent OCR coverage of all six files, zero skipped and all severity counts
+zero. This closes source/cost review, not the outstanding native read-count or
+phase-seven gates.
+The tiny real-store test then passed normally (0.94s test / 1.552s package)
+and under race (1.01s / 2.733s), proving both successive native predecessor
+lineages and exact C13/S10/W1 on the same source. The first attempted command
+never reached the test because putting CommandLineTools ahead of `/usr/bin`
+selected clang without its SDK link path (`library resolv not found`); restoring
+the established compiler PATH resolved that command configuration error.
+These are native preparation component gates, not phase-seven server evidence.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
