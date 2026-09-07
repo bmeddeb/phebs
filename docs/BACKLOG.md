@@ -5673,6 +5673,17 @@ existing author refusal/join tests passed normal (1.107s) and race (2.284s), and
 the inherited T4013 session-stop test passed (0.803s). These are mechanism
 checks only; immutable correction review and native cold evidence remain open.
 
+Exact correction `20434884efd67de474b3fc9c9b210478713f8f37` then passed
+focused normal (1.170s), three-repeat race (9.293s), and documentation/glossary
+reruns. Independent review covered all eleven correction files and all fourteen
+combined slice files with critical/high/medium/low all zero. It confirmed sole
+native Wait ownership, session-wide escalation, retained failure semantics,
+bounded private diagnostics and the phase deadlines. The Linux exports retain
+their existing process-list helper; the no-helper-child cost statement applies
+to the supported Darwin path only. No corrected native retry, integration,
+push, seal or freeze has occurred. The next gate is one bounded exact-source
+cold/handoff diagnostic run; success remains required before integration.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
