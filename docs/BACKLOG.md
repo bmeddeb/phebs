@@ -4487,6 +4487,18 @@ That test-only oracle now uses an explicit count field; the original failure
 is retained, not called a pass. Complete store-accounting passed in 0.636s.
 Corrected exact-source native/recovery gates and re-review remain pending.
 
+Corrected immutable source `1144530cd0d674a26b42b7f643331b39dc3bf2fd` passed
+the actual selected native replay (1.09s test/1.472s package), complete recovery
+normal (73.606s), complete recovery race with native replay selected (85.765s),
+and complete store-accounting race (1.817s). The earlier 0.636s complete
+store-accounting normal result has identical package source/tests. The full
+repository compiles without running tests; module verification, changed-package
+vet, pinned lint (zero issues), docs (0.513s), glossary, whitespace and retained
+V1/V2 plan-byte comparisons pass. No SurrealDB process remains. Independent
+OCR re-review covered both correction files with all severity counts zero.
+These close the bounded replay-attempt slice; they do not establish genuine
+restore producer-eleven launch, complete phase-wide measurement or freeze.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
