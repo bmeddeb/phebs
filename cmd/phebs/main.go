@@ -1652,7 +1652,7 @@ func serve(args []string) (retErr error) {
 				defer checkpointControl.cancel()
 				exactReadState.checkpoint = checkpointControl
 				partitionRuntime.OnPartitionCheckpoint = checkpointControl.checkpoint
-				if err := dispatchadmission.BindProductionTerminalQuiescence(checkpointControl.quiesce); err != nil {
+				if err := dispatchadmission.BindProductionTerminalQuiescence(checkpointControl.quiesceAndReport); err != nil {
 					return err
 				}
 			}

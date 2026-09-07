@@ -5376,6 +5376,29 @@ attempt/index metric prefixes remain explicitly incomplete; source-footer
 and parent-prefix validation are separate prerequisites. Immutable attribution,
 full native phase, complete metrics and freeze remain open.
 
+Exact parent commit `176bd9a7fa8a9aef7fda7e4bf8a9a700c6aaa284` received
+independent OCR 11/11, zero skipped and all severities zero. Its nine source
+files byte-match the reviewed author tree; docs passed 0.630s and glossary/
+whitespace were clean. Full native and whole-metric evidence remain open.
+
+**T42.2l terminal metric footer prerequisite (2026-09-07).** One fixed
+81-byte producer/input/phase-bound footer is emitted on the same selected
+stderr stream only after genuine checkpoint quiescence, before its PC echo.
+No per-event counter, hash, shared flag or extra transport is introduced.
+Failure before quiescence emits no footer; incomplete writes and cancellation
+remain sticky failures even if some footer bytes reached the pipe.
+
+AC: exact binding/length, real pipe write, synchronous write join, short/error/
+full-error/canceled writes, and inherited successful/prior-failed/canceled/
+pre-hit terminal callbacks. Independent OCR covered all four files including
+both excluded tests, zero skipped and all severity counts zero. Author final
+normal passed 1.554s, race three times 5.509s, vet/pinned lint/format/whitespace
+clean. Root integrated regression passed 1.299s, docs 0.553s and glossary/
+whitespace were clean. These prove source/control mechanics, not a native full phase. Parent
+post-Wait footer/prefix validation and explicit output-error retention remain
+required before promoting the terminal attempt/index prefix to complete.
+No SDK/EOF/death, whole-metric, freeze or execution claim follows.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

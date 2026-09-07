@@ -38,6 +38,13 @@ func t422CheckpointBootstrapRecord(t *testing.T) (dispatchadmission.ProductionBo
 // prepared target and R values are supplied fixtures, not a durable checkpoint,
 // exact HTTP read, SDK-quiescence, owned-kill or recovery proof.
 func TestT422CheckpointInheritedHeldClaim(t *testing.T) {
+	for _, mode := range []string{"complete", "prior_failure", "canceled_control", "before_hit"} {
+		t.Run(mode, func(t *testing.T) { testT422CheckpointInheritedHeldClaim(t, mode) })
+	}
+}
+
+func testT422CheckpointInheritedHeldClaim(t *testing.T, mode string) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 	defer cancel()
 	record, _ := t422CheckpointBootstrapRecord(t)
@@ -76,7 +83,7 @@ func TestT422CheckpointInheritedHeldClaim(t *testing.T) {
 	}
 	defer func() { _ = controlParent.Close(); _ = controlChild.Close() }()
 	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestT422CheckpointBootstrapHelper$")
-	command.Env = []string{t422CheckpointBootstrapMode + "=1", dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector, "GORACE=atexit_sleep_ms=0"}
+	command.Env = []string{t422CheckpointBootstrapMode + "=" + mode, dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector, "GORACE=atexit_sleep_ms=0"}
 	command.ExtraFiles, command.WaitDelay = []*os.File{child, controlChild, storeChild}, time.Second
 	input, err := command.StdinPipe()
 	if err != nil {
@@ -134,6 +141,20 @@ func TestT422CheckpointInheritedHeldClaim(t *testing.T) {
 	if _, err := input.Write([]byte{'g'}); err != nil {
 		t.Fatal(err)
 	}
+	if mode != "complete" {
+		read("refusal_ready")
+		if err := phase.TerminalQuiesce(ctx); err == nil {
+			t.Fatal("terminal callback accepted", mode)
+		}
+		if _, err := input.Write([]byte{'q'}); err != nil {
+			t.Fatal(err)
+		}
+		read("refused_without_terminal")
+		if err := command.Wait(); err != nil || diagnostic.Len() != 0 {
+			t.Fatal("failed terminal callback emitted output", mode, diagnostic.String(), err)
+		}
+		return
+	}
 	read("reported_and_parked")
 	if err := phase.TerminalQuiesce(ctx); err != nil {
 		t.Fatal(err, diagnostic.String())
@@ -148,6 +169,13 @@ func TestT422CheckpointInheritedHeldClaim(t *testing.T) {
 	read("canceled_prefix_retained")
 	if err := command.Wait(); err != nil {
 		t.Fatal(err, diagnostic.String())
+	}
+	initial := dispatchadmission.ProductionSemanticSnapshot{Mode: record.SemanticMode, InputSHA256: record.InputSHA256, ProducerID: 4, Phase: 6}
+	current := initial
+	current.Phase = 8
+	footer, err := t422TerminalFooter(initial, current)
+	if err != nil || !bytes.Equal(diagnostic.Bytes(), footer) {
+		t.Fatal("terminal callback did not emit exactly one bound footer", diagnostic.String(), err)
 	}
 	// Cancellation is intentionally not an ordinary Close/EOF or phase pass.
 }
@@ -217,7 +245,7 @@ func TestT422CheckpointBootstrapHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer control.cancel()
-	if err := dispatchadmission.BindProductionTerminalQuiescence(control.quiesce); err != nil {
+	if err := dispatchadmission.BindProductionTerminalQuiescence(control.quiesceAndReport); err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("ready")
@@ -229,6 +257,32 @@ func TestT422CheckpointBootstrapHelper(t *testing.T) {
 		}
 	}
 	read('g')
+	if mode := os.Getenv(t422CheckpointBootstrapMode); mode != "complete" {
+		switch mode {
+		case "prior_failure":
+			if !errors.Is(control.stop(errT422AttemptReport), errT422AttemptReport) {
+				t.Fatal("prior failure was not retained")
+			}
+		case "canceled_control":
+			control.cancel()
+		case "before_hit":
+			control.mu.Lock()
+			control.phaseEnd = time.Now().Add(25 * time.Millisecond)
+			control.mu.Unlock()
+		default:
+			t.Fatal("unknown helper mode")
+		}
+		fmt.Println("refusal_ready")
+		read('q')
+		control.mu.Lock()
+		valid := control.err != nil && !control.terminal && !control.parked && !control.hit.reported
+		control.mu.Unlock()
+		if !valid || failures.Load() == 0 {
+			t.Fatal("refusal did not preserve failed pre-terminal state")
+		}
+		fmt.Println("refused_without_terminal")
+		return
+	}
 	_, event, target := t422CheckpointTestIdentities()
 	event.Repository, target.Schedule.Repository = launch.request.Repository, launch.request.Repository
 	control.armed, control.target, control.phaseEnd = true, target, time.Now().Add(10*time.Second)
