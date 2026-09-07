@@ -12,6 +12,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -22,6 +24,24 @@ import (
 )
 
 const t422StaleBootstrapMode = "PHEBS_T422_STALE_BOOTSTRAP_TEST"
+
+// Arm only after the hit callback has joined. Its next Done lookup proves the
+// reclaimed worker reached the observer-bound rendezvous before Requeued.
+// This affects this supplied-event fixture only, never production contexts.
+type t422StaleDoneRendezvous struct {
+	context.Context
+	gate atomic.Pointer[t422StaleDoneGate]
+}
+
+type t422StaleDoneGate struct{ entered, release chan struct{} }
+
+func (ctx *t422StaleDoneRendezvous) Done() <-chan struct{} {
+	if gate := ctx.gate.Swap(nil); gate != nil {
+		close(gate.entered)
+		<-gate.release
+	}
+	return ctx.Context.Done()
+}
 
 func t422StaleBootstrapRecord(t *testing.T) (dispatchadmission.ProductionBootstrap, []byte) {
 	t.Helper()
@@ -39,7 +59,7 @@ func t422StaleBootstrapRecord(t *testing.T) (dispatchadmission.ProductionBootstr
 // transition events are deliberately supplied protocol fixtures. This test
 // neither executes PrepareCurrentRecovery/native R nor proves actual reaping.
 func TestT422StaleInheritedWorkerOrdering(t *testing.T) {
-	for _, mode := range []string{"complete", "report-failure", "observer-cancel"} {
+	for _, mode := range []string{"complete", "report-failure", "observer-cancel", "reclaimed-before-callback", "reclaimed-cancel-before-callback", "reclaimed-callback-observer-cancel"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 			defer cancel()
@@ -217,8 +237,9 @@ func TestT422StaleBootstrapHelper(t *testing.T) {
 			t.Fatal("old claim absent")
 		}
 	}
-	observer, stopObserver := context.WithTimeout(ctx, 5*time.Second)
+	observerCtx, stopObserver := context.WithTimeout(ctx, 5*time.Second)
 	defer stopObserver()
+	observer := &t422StaleDoneRendezvous{Context: observerCtx}
 	event := store.GenerationStaleLeaseTransition{Point: store.GenerationStaleLeaseTransitionHit, Repository: chunk.Repository,
 		Stage: chunk.Stage, ResourceClass: chunk.ResourceClass, Generation: chunk.Generation, ScheduleDigest: chunk.ScheduleDigest,
 		ChunkIdentity: chunk.Identity, Offset: chunk.Offset, Length: 1, Priority: chunk.Priority, ChunkStatus: chunk.Status,
@@ -254,53 +275,106 @@ func TestT422StaleBootstrapHelper(t *testing.T) {
 	} else if err := control.finishReport(&control.hit); err != nil {
 		t.Fatal(err)
 	}
-	if err := <-observed; (err != nil) != (mode != "complete") {
+	hitFailed := mode == "report-failure" || mode == "observer-cancel"
+	if err := <-observed; (err != nil) != hitFailed {
 		t.Fatal("observer result", err)
 	}
-	if mode == "complete" {
+	if !hitFailed {
 		select {
 		case err := <-oldDone:
 			t.Fatal("hit report alone released old claim", err)
 		default:
 		}
 		event.Point, event.Priority, event.ChunkStatus, event.Leased = store.GenerationStaleLeaseTransitionRequeued, store.GenerationPriorityStale, store.GenerationChunkPending, false
-		if err := control.transition(observer, event); err != nil {
-			t.Fatal(err)
-		}
-		if err := <-oldDone; err != store.ErrGenerationLeaseLost {
-			t.Fatal("old worker did not return exact stale fence", err)
-		}
 		chunk.Priority, chunk.LeaseToken = store.GenerationPriorityStale, "new-lease"
 		recoveredOwner, err := owners.Enter(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := control.beforeHeartbeat(ctx, chunk); err != nil {
-			t.Fatal("reclaimed worker refused", err)
+		var reclaimedErr error
+		if strings.HasPrefix(mode, "reclaimed-") {
+			gate := &t422StaleDoneGate{entered: make(chan struct{}), release: make(chan struct{})}
+			var releaseOnce sync.Once
+			release := func() { releaseOnce.Do(func() { close(gate.release) }) }
+			defer release()
+			observer.gate.Store(gate)
+			reclaimedDone := make(chan error, 1)
+			go func() { reclaimedDone <- control.beforeHeartbeat(ctx, chunk) }()
+			select {
+			case <-gate.entered:
+			case err := <-reclaimedDone:
+				t.Fatal("reclaimed claim did not rendezvous before callback", err)
+			case <-ctx.Done():
+				t.Fatal("reclaimed rendezvous absent")
+			}
+			control.mu.Lock()
+			premature := control.requeueSeen || control.reclaimed || control.err != nil
+			control.mu.Unlock()
+			if premature {
+				t.Fatal("reclaimed worker advanced before supplied callback")
+			}
+			select {
+			case err := <-oldDone:
+				t.Fatal("early reclaimed claim released old worker", err)
+			default:
+			}
+			if mode != "reclaimed-cancel-before-callback" {
+				if err := control.transition(observer, event); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode != "reclaimed-before-callback" {
+				stopObserver()
+			}
+			release()
+			reclaimedErr = <-reclaimedDone
+		} else {
+			if err := control.transition(observer, event); err != nil {
+				t.Fatal(err)
+			}
+			reclaimedErr = control.beforeHeartbeat(ctx, chunk)
 		}
-		recoveryCtx, stopRecovery := context.WithTimeout(ctx, 5*time.Second)
-		defer stopRecovery()
-		event.Point, event.ChunkStatus = store.GenerationStaleLeaseTransitionRecovered, store.GenerationChunkDone
-		event.PrivateLeaseTokenDigest = store.GenerationLeaseTokenDigest(chunk.LeaseToken)
-		go func() { observed <- control.transition(recoveryCtx, event) }()
-		select {
-		case <-control.recovered.ready:
-		case <-ctx.Done():
-			t.Fatal("recovered absent")
-		}
-		control.mu.Lock()
-		control.recovered.reading = true
-		control.mu.Unlock()
-		if err := control.finishReport(&control.recovered); err != nil {
-			t.Fatal(err)
-		}
-		if err := <-observed; err != nil {
-			t.Fatal(err)
+		if mode == "reclaimed-cancel-before-callback" {
+			if reclaimedErr == nil || errors.Is(reclaimedErr, store.ErrGenerationLeaseLost) {
+				t.Fatal("canceled reclaimed worker invented lease loss", reclaimedErr)
+			}
+			if err := <-oldDone; err == nil || errors.Is(err, store.ErrGenerationLeaseLost) {
+				t.Fatal("canceled callback fabricated old lease requeue", err)
+			}
+			if failures.Load() != 1 || !control.hit.reported || control.requeueSeen || control.reclaimed {
+				t.Fatal("canceled pre-callback prefix advanced")
+			}
+		} else {
+			if reclaimedErr != nil {
+				t.Fatal("reclaimed worker refused", reclaimedErr)
+			}
+			if err := <-oldDone; err != store.ErrGenerationLeaseLost {
+				t.Fatal("old worker did not return exact stale fence", err)
+			}
+			recoveryCtx, stopRecovery := context.WithTimeout(ctx, 5*time.Second)
+			defer stopRecovery()
+			event.Point, event.ChunkStatus = store.GenerationStaleLeaseTransitionRecovered, store.GenerationChunkDone
+			event.PrivateLeaseTokenDigest = store.GenerationLeaseTokenDigest(chunk.LeaseToken)
+			go func() { observed <- control.transition(recoveryCtx, event) }()
+			select {
+			case <-control.recovered.ready:
+			case <-ctx.Done():
+				t.Fatal("recovered absent")
+			}
+			control.mu.Lock()
+			control.recovered.reading = true
+			control.mu.Unlock()
+			if err := control.finishReport(&control.recovered); err != nil {
+				t.Fatal(err)
+			}
+			if err := <-observed; err != nil {
+				t.Fatal(err)
+			}
+			if failures.Load() != 0 {
+				t.Fatal("legitimate ordering latched failure")
+			}
 		}
 		recoveredOwner.End()
-		if failures.Load() != 0 {
-			t.Fatal("legitimate ordering latched failure")
-		}
 	} else {
 		if err := <-oldDone; err == nil || err == store.ErrGenerationLeaseLost {
 			t.Fatal("failure fabricated old lease requeue", err)

@@ -293,12 +293,10 @@ func (control *t422StaleControl) beforeHeartbeat(ctx context.Context, chunk stor
 	control.mu.Lock()
 	valid := control.err == nil && t422StaleChunkMatches(chunk, target) && chunk.Status == store.GenerationChunkRunning && chunk.LeaseToken != ""
 	recovered := chunk.Priority == store.GenerationPriorityStale
+	observer := control.hit.observer
+	requeueSeen := control.requeueSeen
 	if recovered {
-		valid = valid && control.requeueSeen && !control.reclaimed && chunk.Identity == control.old.Identity && chunk.LeaseToken != control.old.LeaseToken
-		if valid {
-			control.reclaimed = true
-			control.reclaimedLease = store.GenerationLeaseTokenDigest(chunk.LeaseToken)
-		}
+		valid = valid && observer != nil && control.hit.reported && !control.reclaimed && chunk.Identity == control.old.Identity && chunk.LeaseToken != control.old.LeaseToken
 	} else {
 		valid = valid && chunk.Priority == store.GenerationPriorityNeverRun && control.old.Identity == ""
 		if valid {
@@ -310,6 +308,28 @@ func (control *t422StaleControl) beforeHeartbeat(ctx context.Context, chunk stor
 		return control.stop(errT422StaleControl)
 	}
 	if recovered {
+		// COMMIT makes the new claim visible before the reaper's callback.
+		// Rendezvous on that actual callback under its original turn deadline.
+		if !requeueSeen {
+			operation, finish := control.operationContext(ctx, observer)
+			defer finish()
+			select {
+			case <-control.requeued:
+			case <-operation.Done():
+			}
+		}
+		control.mu.Lock()
+		valid = control.err == nil && control.requeueSeen && !control.reclaimed
+		if valid {
+			control.reclaimed = true
+			control.reclaimedLease = store.GenerationLeaseTokenDigest(chunk.LeaseToken)
+		}
+		control.mu.Unlock()
+		// A completed reaper turn may cancel its context after the callback;
+		// the reclaimed worker now belongs to its own caller/phase lifetime.
+		if !valid || !control.current(ctx, 7, false, false) {
+			return control.stop(errT422StaleControl)
+		}
 		return nil
 	}
 	operation, finish := control.operationContext(ctx, nil)

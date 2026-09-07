@@ -5017,6 +5017,19 @@ submissions remain separately charged per native attempt, not inferred from
 these read-ledger counters. No polling or new stale timeout is introduced.
 Parent deadline/handoff/PC orchestration, complete work metrics and native
 phase-seven proof remain separate; independent exact-source review is pending.
+Exact `249bbd605d1850bf4857d7ee9a598bf8e34e1775` then received independent
+OCR coverage of all nine files, zero skipped, critical/high/low zero and one
+medium: a second extraction worker can reclaim the target after the native
+requeue COMMIT but before its Requeued observer. The correction rendezvous
+waits on the actual callback under the original reaper deadline; it never
+infers that callback or releases the old worker from the new claim alone.
+Once the callback succeeds, the reaper's normal completion cancellation does
+not invalidate the reclaimed worker's separate lifetime. Existing context and
+channel primitives suffice; no new database work or retry is introduced.
+The inherited six-mode test passed normal 0.759s and race repeated three times
+2.846s, including deterministic early-reclaim, before-callback cancellation
+and after-callback cancellation. These remain supplied protocol events, not
+native reaper evidence. Corrected immutable review remains required.
 
 **T42.2l supported native index build correction (2026-09-07).** The prior
 module-cache overlay refusal is corrected prospectively using a fresh private
@@ -5041,6 +5054,13 @@ native image/offer gate remain open; no full workload retry was attempted.
 The owning ADR records per-build copy/hash/sync/Go-list cost and unchanged
 production costs and numerical bounds. Failed supplied builds now retain
 their bounded stderr privately rather than losing the diagnostic.
+Root composition passed the focused selector in 6.018s and docs in 0.679s,
+with glossary/whitespace clean. Exact
+`7cd1408397712ff0b9f09318a74ed8da0ddf9d5b` received independent OCR coverage
+of all nine files, zero skipped and all severity counts zero; all seven
+source/test files matched the frozen reviewed workspace byte-for-byte.
+One fresh exact-source native component gate is running; no result is yet
+claimed, and the earlier failed custody remains preserved.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
