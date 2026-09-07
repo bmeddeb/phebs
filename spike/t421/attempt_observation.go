@@ -3,6 +3,7 @@ package t421
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -93,10 +94,10 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 	}
 }
 
-// Called once by first-epoch finish, after native Wait joined the output pump.
+// Called once by each native epoch's finish, after Wait joined the output pump.
 // A stable buffer still need not be lossless: overflow, sink refusal, native
 // failure and protocol failure all preserve counts but prevent completeness.
-func (run *ExecutionEpochOneRun) finishAttemptObservation(result *ExecutionEpochOneResult, failure error) error {
+func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, result *ExecutionEpochOneResult, death executionProcessDeath, failure error) error {
 	if !result.RootJoined || run.output == nil {
 		return ErrExecutionEpochOne // Do not inspect a possibly live buffer.
 	}
@@ -104,10 +105,80 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(result *ExecutionEpoch
 	result.Attempts, err = observeExecutionAttempts(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true)
 	var indexErr error
 	result.IndexOffers, indexErr = observeExecutionIndexOffers(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, err == nil && failure == nil)
-	if err != nil || indexErr != nil || failure != nil {
+	footer, footerErr := executionTerminalFooter(run.output.buffer.Bytes(), run.attemptInput)
+	if run.terminalEntered {
+		// Only finish owns these actual native facts and the preceding PC/SDK,
+		// DA/SA joins. A footer or a boolean assertion cannot replace them.
+		if !footer || !run.terminalRequested || !run.checkpointAllowed || run.epoch.Epoch != 3 || run.producer() != 4 ||
+			run.flow.controller == nil || run.flow.controller.Context().Err() != nil || run.terminalContext == nil || run.terminalContext.Err() != nil ||
+			!epochCheckpointClosedPrefix(ctx, *result, true) || !death.RootJoined || !death.SessionEmpty ||
+			run.command == nil || run.command.Process == nil || run.command.ProcessState != death.ProcessState ||
+			!executionProcessSIGKILL(death.WaitErr, death.ProcessState, run.command.Process.Pid) {
+			footerErr = errExecutionAttempts
+		}
+	} else if footer {
+		footerErr = errExecutionAttempts // No footer is valid in an ordinary close.
+	}
+	if err != nil || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
 		result.Attempts.Complete = false
 		result.IndexOffers.Complete = false
 		return ErrExecutionEpochOne
 	}
 	return nil
+}
+
+// One allocation-free line pass after Wait, in addition to the existing two
+// metric parsers. Complete ordinary diagnostics may follow the native fence;
+// partial final lines retain the existing refusal, even for ordinary output.
+// Future compact metric families must extend this reserved-family check too.
+func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) {
+	if len(raw) > 64<<20 || input == ([32]byte{}) {
+		return false, errExecutionAttempts
+	}
+	var want [81]byte
+	copy(want[:], "TFE1:4:8:sha256:")
+	hex.Encode(want[16:80], input[:])
+	want[80] = '\n'
+	for len(raw) != 0 {
+		end := bytes.IndexByte(raw, '\n')
+		if end < 0 {
+			return seen, errExecutionAttempts
+		}
+		line := raw[:end+1]
+		raw = raw[end+1:]
+		if bytes.Contains(line, []byte("TFE")) {
+			if seen || !bytes.Equal(line, want[:]) {
+				return seen, errExecutionAttempts
+			}
+			seen = true
+			continue
+		}
+		index := reservedTerminalIndex(line)
+		// OP records belong to the next successful-parse collector; this
+		// subset does not count them, but they cannot follow terminal fencing.
+		if seen && (reservedSourceAttempt(line) || reservedCompactAttempt(line) || index ||
+			bytes.Contains(line, []byte("OPB")) || bytes.Contains(line, []byte("OP1:"))) ||
+			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
+			return seen, errExecutionAttempts
+		}
+	}
+	return seen, nil
+}
+
+// Match the existing index parser's reserved lines, plus an embedded binding
+// or compact suffix hidden behind an ordinary/fragmented diagnostic line.
+func reservedTerminalIndex(line []byte) bool {
+	if bytes.HasPrefix(line, []byte("I")) || bytes.HasPrefix(line, []byte("ZI")) || bytes.Contains(line, []byte("IXB")) ||
+		bytes.Contains(line, []byte("ZIB")) || bytes.Contains(line, []byte("ZIE")) {
+		return true
+	}
+	index := bytes.LastIndexByte(line, 'I')
+	if index < 0 {
+		return false
+	}
+	suffix := line[index:]
+	if len(suffix) == 3 && bytes.IndexByte([]byte("0123456789ABCDEF"), suffix[1]) >= 0 {
+		return true
+	}
+	return len(suffix) >= 4 && bytes.IndexByte([]byte("bef"), suffix[1]) >= 0 && bytes.IndexByte([]byte("0123456789ABCDEF"), suffix[2]) >= 0
 }

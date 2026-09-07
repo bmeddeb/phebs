@@ -5399,6 +5399,28 @@ post-Wait footer/prefix validation and explicit output-error retention remain
 required before promoting the terminal attempt/index prefix to complete.
 No SDK/EOF/death, whole-metric, freeze or execution claim follows.
 
+Exact footer commit `9f0dc2dff1394953901afff9b3d0d2f0fb9e1083` received
+independent OCR 6/6, zero skipped and all severities zero. Its exact full
+ci-static passed: glossary, repository-wide vet, pinned lint (zero issues)
+and all-package compilation. No full native phase was run.
+
+**T42.2l joined terminal metric-prefix prerequisite (2026-09-07).**
+The sole finish owner now verifies the actual joined output against one exact
+terminal footer, actual native SIGKILL/session facts, healthy original contexts
+and terminal controller prefixes. Sticky writer refusal survives a masking
+native ExitError. Missing bindings, unmatched index tallies, partial/duplicate/
+embedded footer and any reserved post-footer metric deny completeness without
+erasing observed positive counts. Ordinary close accepts no terminal footer.
+
+AC: framing/order and failed-prefix cases, missing native/controller proof,
+sticky newline-ended overflow and a tiny actual inherited-pipe/Wait/SIGKILL
+counterexample. Author normal passed 0.900s, race three times 10.504s; vet,
+pinned lint and whitespace passed. Independent OCR reviewed all eight files,
+including four excluded tests, zero skipped and all severities zero. These
+are component gates, not a full admitted native phase. OP parsing, combined
+log fit, full metrics and freeze remain open. Root's copied-source focused
+gate passed 0.976s; docs passed 0.536s, glossary and whitespace clean.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

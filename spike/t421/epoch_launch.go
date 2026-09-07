@@ -771,12 +771,8 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if run.err != nil || !prefixOK {
 		failure = ErrExecutionEpochOne
 	}
-	if run.finishAttemptObservation(&result, failure) != nil {
+	if run.finishAttemptObservation(ctx, &result, death, failure) != nil {
 		failure = ErrExecutionEpochOne
-	}
-	if terminal {
-		// SIGKILL supplies mechanical custody, never lossless log EOF evidence.
-		result.Attempts.Complete, result.IndexOffers.Complete = false, false
 	}
 	run.result, run.err = result, failure
 	run.nativeStopErr = nativeStopErr

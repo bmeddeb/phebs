@@ -98,7 +98,7 @@ func TestIndexOfferFinishStablePrefix(t *testing.T) {
 			}
 			run := &ExecutionEpochOneRun{flow: &ExecutionEpochOne{plan: plan}, output: output, attemptInput: [32]byte{1}}
 			result := ExecutionEpochOneResult{RootJoined: mode != "unjoined"}
-			err := run.finishAttemptObservation(&result, failure)
+			err := run.finishAttemptObservation(ctx, &result, executionProcessDeath{}, failure)
 			want := uint64(1)
 			if mode == "unjoined" {
 				want = 0

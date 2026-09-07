@@ -58,7 +58,7 @@ func TestExecutionAttemptFailedPrefix(t *testing.T) {
 }
 func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 	plan := accountingTestPlan(t)
-	expected := []uint64{31827801, 600237, 19074719, 1583087, 8950119}
+	expected := []uint64{31827801, 600237, 19074800, 1583087, 8950119}
 	for producer := uint32(2); producer <= 6; producer++ {
 		var starts, source, index uint64
 		for _, phase := range executionProducerPhases(producer) {
@@ -73,6 +73,9 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 			}
 		}
 		total := source + index + 10*starts + 3*79
+		if producer == 4 {
+			total += 81 // One terminal phase-eight footer, no extra PC pair.
+		}
 		if total != expected[producer-2] || total >= 64<<20 {
 			t.Fatalf("producer %d total %d", producer, total)
 		}
@@ -114,7 +117,7 @@ func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 			case "unbound":
 				run.attemptInput = [32]byte{}
 			}
-			err := run.finishAttemptObservation(&result, failure)
+			err := run.finishAttemptObservation(ctx, &result, executionProcessDeath{}, failure)
 			wantComplete := mode == "healthy" || mode == "empty"
 			wantCount := uint64(1)
 			if mode == "empty" || mode == "unbound" || mode == "not joined" {
