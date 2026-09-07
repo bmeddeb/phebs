@@ -4892,6 +4892,28 @@ second blob; it does not manufacture server phase binding. Its disabled compile
 and pinned lint passed; native execution is not yet recorded. Independent
 immutable OCR and native gates remain pending.
 
+**T42.2l phase-seven prerequisite — native current predecessor (2026-09-07).**
+`PrepareCurrentRecovery` reuses the existing preparation implementation and
+captures the actual settled operational predecessor during the first locked
+native confirmation. An immutable generation digest cannot substitute for that
+predecessor after A/B/return-A. The second confirmation remains bound to the
+captured digest; the returned target carries only the native schedule and
+already-validated generation/domain/ordinal/offset/plan/result identities.
+The original explicit entrypoint still refuses an absent or stale prior digest.
+No HTTP route or fixed ceremony target is introduced in the internal package.
+
+AC: predecessor-derived lineage, changed-current/late-authority refusal,
+zero usable result after failure, preserved committed mutations, cancellation,
+strict old API and unchanged native read/mutation/lock costs. The four-file
+source passed focused normal 10.358s, race 12.435s, vet, pinned lint (zero issues)
+and whitespace. The cancellation double ignores context and can return the
+second read; its test asserts refusal before mutation rather than claiming that
+fake read was prevented. The new tiny real-store test must still prove two
+successive completed predecessor-derived schedules and C13/S10/W1 per call.
+It is binary-availability gated and has not yet run. Independent immutable
+review, ordinary-server stale-worker controls and actual phase-seven evidence
+remain open; this adds no read, retry, lock acquisition or numerical allowance.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
