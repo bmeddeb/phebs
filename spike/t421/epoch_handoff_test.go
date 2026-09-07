@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -88,6 +89,53 @@ func TestExecutionEpochHandoffHelper(t *testing.T) {
 		}
 		epochHandoffByte(t, os.Stdout, 'f')
 	}
+	if os.Getenv("PHEBS_EPOCH_HANDOFF_PHYSICAL") == "1" {
+		epochHandoffRead(t, os.Stdin, 'P')
+		state, err := dispatchadmission.ProductionSemanticState()
+		if err != nil || state.Phase != 4 || !state.OrdinaryOwnersDrained || owner.Check(ctx) != nil {
+			t.Fatal("phase-four pin lost actual phase/SDK/owner fence", state, err)
+		}
+		request, err := owners.EnterRequest(ctx)
+		if err != nil {
+			t.Fatal("phase-four pin window refused request", err)
+		}
+		request.End()
+		epochHandoffByte(t, os.Stdout, 'p')
+		epochHandoffRead(t, os.Stdin, 'J')
+		if _, err := owners.EnterRequest(ctx); err == nil {
+			t.Fatal("pin tail was not joined")
+		}
+		epochHandoffByte(t, os.Stdout, 'j')
+		if os.Getenv("PHEBS_EPOCH_HANDOFF_STOP_JOIN") != "1" {
+			epochHandoffRead(t, os.Stdin, 'B')
+			state, err = dispatchadmission.ProductionSemanticState()
+			if err != nil || state.Phase != 4 || state.OrdinaryOwnersDrained || owner.Check(ctx) != nil {
+				t.Fatal("phase-four reopen lost owners", state, err)
+			}
+			turn, err := owners.Enter(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			turn.End()
+			epochHandoffByte(t, os.Stdout, 'b')
+			epochHandoffRead(t, os.Stdin, 'D')
+			state, err = dispatchadmission.ProductionSemanticState()
+			if err != nil || state.Phase != 4 || !state.OrdinaryOwnersDrained {
+				t.Fatal("phase-four final lost owner fence", state, err)
+			}
+			request, err := owners.EnterRequest(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request.End()
+			epochHandoffByte(t, os.Stdout, 'd')
+			epochHandoffRead(t, os.Stdin, 'Z')
+			if _, err := owners.EnterRequest(ctx); err == nil {
+				t.Fatal("phase-four final request tail not joined")
+			}
+			epochHandoffByte(t, os.Stdout, 'z')
+		}
+	}
 	epochHandoffRead(t, os.Stdin, 'C')
 	if err := lifetime.Close(ctx); err != nil {
 		t.Fatalf("joined fixture close: %v", err)
@@ -110,13 +158,14 @@ func epochHandoffRead(t *testing.T, reader io.Reader, want byte) {
 }
 
 func TestExecutionEpochAdvanceColdInheritedHandoff(t *testing.T) {
-	for _, mode := range []string{"healthy", "canceled", "warm", "warm_pending_x", "warm_pending_t", "warm_canceled_read"} {
+	for _, mode := range []string{"healthy", "canceled", "warm", "warm_pending_x", "warm_pending_t", "warm_canceled_read", "warm_physical", "warm_physical_pin_refused", "warm_physical_stop_join"} {
 		t.Run(mode, func(t *testing.T) { testEpochInheritedHandoff(t, mode) })
 	}
 }
 
 func testEpochInheritedHandoff(t *testing.T, mode string) {
 	canceled, warm := mode == "canceled", strings.HasPrefix(mode, "warm")
+	physical := strings.HasPrefix(mode, "warm_physical")
 	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Second)
 	defer cancel()
 	rootSite := dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}
@@ -179,6 +228,13 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if warm {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_WARM=1")
 	}
+	if physical {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_PHYSICAL=1")
+	}
+	if mode == "warm_physical_stop_join" {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_STOP_JOIN=1")
+		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	}
 	command.ExtraFiles, command.Stderr, command.WaitDelay = []*os.File{daChild, pcChild, storeChild}, os.Stderr, time.Second
 	input, err := command.StdinPipe()
 	if err != nil {
@@ -211,6 +267,9 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	pairs := uint64(8)
 	if warm {
 		pairs = 12
+	}
+	if physical {
+		pairs = 21
 	}
 	pcConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2,
 		MaximumPhases: 3, MaximumWireBytes: pairs * 2 * dispatchadmission.FrameBytes, Timeout: 5 * time.Second}
@@ -268,12 +327,105 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	epochHandoffByte(t, input, 'V')
 	epochHandoffRead(t, output, 'W')
 	if warm {
-		testEpochInheritedWarmObservation(t, ctx, run, input, output, mode)
-		if mode != "warm" {
+		warmMode := mode
+		if physical {
+			warmMode = "warm"
+		}
+		testEpochInheritedWarmObservation(t, ctx, run, input, output, warmMode)
+		if warmMode != "warm" {
 			return // Joined fixture kill/receiver cleanup; no successful stop claim.
 		}
 		epochHandoffByte(t, input, 'F')
 		epochHandoffRead(t, output, 'f')
+	}
+	if physical {
+		if run.advancePhysical(ctx) != nil {
+			t.Fatal("actual phase-four DA/SA/PC handoff failed")
+		}
+		da, daErr := dispatch.Snapshot()
+		sa, saErr := transport.Snapshot()
+		if daErr != nil || saErr != nil || da.Producers[1].Checkpoint != 3 || sa.Store.Phase != 4 || sa.Store.Producers[0].Checkpoint != 3 || control.RequestToken() != "" {
+			t.Fatal("physical handoff lost exact checkpoint or reopened requests", da, sa)
+		}
+		pinServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+			if request.Method != http.MethodPost || request.URL.Path != "/api/t422/retention/pin" || request.Header.Get("Authorization") != "Bearer private-key" ||
+				request.Header.Get(dispatchadmission.ProductionRequestHeader) != control.RequestToken() || control.RequestToken() == "" || request.Header.Get("X-Phebs-T421-Exact-Reads") != "" {
+				t.Error("pin lost fixed authenticated owner-drained window")
+			}
+			epochHandoffByte(t, input, 'P')
+			epochHandoffRead(t, output, 'p')
+			body := `{"status":"complete"}`
+			if mode == "warm_physical_pin_refused" {
+				body += "\n"
+			}
+			_, _ = io.WriteString(w, body)
+		}))
+		defer pinServer.Close()
+		run.epoch.Listen = strings.TrimPrefix(pinServer.URL, "http://")
+		err := run.pinPhysical(ctx)
+		if mode == "warm_physical_pin_refused" {
+			if err == nil || run.physicalPinned || !run.pinStarted.IsZero() {
+				t.Fatal("bad pin body admitted author permission")
+			}
+			return // Forced fixture join, not a successful phase stop.
+		}
+		if err != nil || !run.physicalPinned || run.pinStarted.IsZero() || run.pinJoined.Before(run.pinStarted) || control.RequestToken() != "" {
+			t.Fatal("actual pin protocol did not join before author permission", err)
+		}
+		epochHandoffByte(t, input, 'J')
+		epochHandoffRead(t, output, 'j')
+		if mode == "warm_physical_stop_join" {
+			// The operation channel models outstanding author work, not an
+			// author process. Stop must join it before native/control cleanup.
+			custody := &ExecutionAuthorCustody{borrowedBy: run, active: true}
+			run.flow.epochs = &ExecutionEpochConfigCustody{author: custody, active: true}
+			run.command, run.done = command, make(chan struct{})
+			run.physicalDone = make(chan struct{})
+			operationCanceled := make(chan struct{})
+			run.physicalCancel = func() { close(operationCanceled) }
+			waited := make(chan error, 1)
+			go func() { waited <- handle.Wait() }()
+			go run.finish(ctx, func() {}, waited, served, ErrExecutionEpochOne)
+			<-operationCanceled
+			if custody.Close() == nil || custody.closed || !run.flow.epochs.active {
+				t.Fatal("Stop released custody before physical operation joined")
+			}
+			select {
+			case <-run.done:
+				t.Fatal("Stop skipped physical operation join")
+			default:
+			}
+			epochHandoffByte(t, input, 'C')
+			// Retain the modeled author survivor even after the server joins.
+			close(run.physicalDone)
+			<-run.done
+			joined, serverJoined = true, true // finish owns the sole Wait/Serve joins.
+			if run.err == nil || !run.result.RootJoined || !run.result.SessionEmpty || custody.borrowedBy != nil || !custody.active || custody.Close() == nil {
+				t.Fatal("failed stop weakened sticky failure or author survivor custody", run.result, run.err)
+			}
+			custody.active = false
+			if custody.Close() != nil {
+				t.Fatal("joined author fixture cannot release")
+			}
+			return
+		}
+		// No actual B author or semantic body is manufactured in this control
+		// fixture. It checks the precise post-author owner/request operations.
+		if control.ReopenOwners(ctx) != nil {
+			t.Fatal("physical reopen failed")
+		}
+		epochHandoffByte(t, input, 'B')
+		epochHandoffRead(t, output, 'b')
+		if control.DrainOwners(ctx) != nil || control.OpenRequests(ctx) != nil {
+			t.Fatal("physical final window failed")
+		}
+		epochHandoffByte(t, input, 'D')
+		epochHandoffRead(t, output, 'd')
+		if control.FenceRequests(ctx) != nil {
+			t.Fatal("physical final fence failed")
+		}
+		epochHandoffByte(t, input, 'Z')
+		epochHandoffRead(t, output, 'z')
 	}
 	// Resume kept the owners fenced: a second DrainOwners would be invalid.
 	if control.Pause(ctx) != nil || parent.Pause(ctx) != nil || dispatch.Fence() != nil {
@@ -299,7 +451,11 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		t.Fatalf("fixture dispatch receiver failed: %v", err)
 	}
 	sa, err = transport.Snapshot()
-	if err != nil || sa.Store.Phase != 3 || sa.Opened != 1 || sa.TerminalEOF != 1 || sa.Complete {
+	wantPhase := uint32(3)
+	if physical {
+		wantPhase = 4
+	}
+	if err != nil || sa.Store.Phase != wantPhase || sa.Opened != 1 || sa.TerminalEOF != 1 || !physical && sa.Complete {
 		t.Fatalf("early closed prefix invented phase-four completion: %+v / %v", sa, err)
 	}
 	if err := transport.Close(); err != nil {

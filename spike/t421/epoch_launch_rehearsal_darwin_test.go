@@ -58,12 +58,19 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	})
 	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
 	warm := os.Getenv("PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL") == "1"
+	physical := os.Getenv("PHEBS_T422_EPOCH_ONE_PHYSICAL_REHEARSAL") == "1"
+	if physical && !warm {
+		t.Fatal("physical selector requires explicit warm selector")
+	}
 	if warm && !cold {
 		t.Fatal("warm selector requires explicit cold selector")
 	}
 	allowance := time.Hour
 	if cold {
 		allowance = 5 * time.Hour // Includes protected builds; phase bounds remain separate.
+	}
+	if physical {
+		allowance = 9 * time.Hour // Protected builds plus unchanged cold/warm/B phase deadlines.
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
@@ -75,7 +82,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		if author != nil {
 			author.mu.Lock()
 			defer author.mu.Unlock()
-			if author.active {
+			if author.active || author.borrowedBy != nil {
 				return false
 			}
 		}
@@ -197,7 +204,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)
 	}
 	started = time.Now()
-	if warm {
+	if physical {
+		run, err = flow.StartPhysicalB(ctx)
+	} else if warm {
 		run, err = flow.StartColdWarm(ctx)
 	} else if cold {
 		run, err = flow.StartCold(ctx)
@@ -263,13 +272,19 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 		t.Log("actual warm single X/T/F matched cold authority; request/report tail joined; no full warm work-metrics claim")
 	}
+	if physical {
+		if err := run.PhysicalB(ctx); err != nil {
+			t.Fatal("actual epoch-one physical B/current-prior observation", err)
+		}
+		t.Log("actual physical B X/T/F and current/prior retention read returned; no full phase metrics or later-epoch claim")
+	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()
 	stopped, err := run.Stop(stopCtx)
 	if err != nil || !stopped.RootStarted || !stopped.RootJoined || !stopped.SessionEmpty {
 		t.Fatalf("actual epoch-one owner-drained stop: %+v; %v", stopped, err)
 	}
-	t.Logf("epoch-one startup/health/stop: %s; cold_handoff_selector=%t warm_observation_selector=%t; %+v; no full warm/receipt/freeze claim", time.Since(started), cold, warm, stopped)
+	t.Logf("epoch-one startup/health/stop: %s; cold_handoff_selector=%t warm_observation_selector=%t physical_b_selector=%t; %+v; no full warm/receipt/freeze claim", time.Since(started), cold, warm, physical, stopped)
 	if !canRelease() || flow.Close() != nil || epochs.Close() != nil || author.Close() != nil || planInput.Close() != nil {
 		t.Fatal("joined epoch-one owner/input closure failed; retaining custody")
 	}

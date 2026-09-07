@@ -4499,6 +4499,40 @@ OCR re-review covered both correction files with all severity counts zero.
 These close the bounded replay-attempt slice; they do not establish genuine
 restore producer-eleven launch, complete phase-wide measurement or freeze.
 
+**Two-track freeze execution (2026-09-07).** Ben reaffirmed the owning PLAN
+sequence with two isolated implementation tracks and non-authoring OCR review.
+Track A: physical-B/source custody, then logical-B, return-A/stale lease,
+hard-restart/pressure, and restore/lifecycle/product-query epoch composition.
+Track B: restore attempted-prefix accounting, then complete native work/resource
+collectors and their phase ownership/failed-prefix transfer. The lead alone
+owns shared spine/Git/integration and serial resource-heavy rehearsals. Their
+joint exit is a real measured fifteen-phase/five-epoch executor, not another
+authority-only pass. Real admission/launcher T42.2m, exact-source acceptance
+T42.2n and canonical seal/exact-main freeze T42.2o follow; execution remains
+excluded. One remaining usage reset may be consumed only near exhaustion.
+
+Track A's first AC is actual phase-four composition: successful warm and joined
+pin before B, protected author producer eight with no source-borrow gap,
+bounded current X/ready T, exact B F and current/prior R, and joined stop in
+phase four. Tests must reject wrong phase/producer/source, missing or unjoined
+pin, drift/pending/refused observations, cancellation and unsafe Close. Only
+the explicit new private mode reserves 21 PC01 pairs and an eight-hour-twenty-
+minute total allowance; retained modes and frozen phase/admission bounds stay
+exact. Independent OCR/source/cost review and an opted-in exact-source native
+confirmation remain required; no implementation or native pass is claimed here.
+
+The physical-B implementation now passes focused normal (3.937s), inherited
+control/physical/borrow race repetitions (three runs, 17.220s), and the final
+isolated-session Stop-join race selector (three runs, 2.450s), plus vet, pinned
+lint (zero issues) and whitespace. One new deadline test initially panicked
+on its unconstructed control fixture; the corrected test uses a genuinely
+constructed, closed control. No native attempt was made by those gates.
+The source adds one existing author-B launch with three Git dispatches, one
+pin POST, bounded X/T polling, one F and one R, and retains three bounded F
+authorities plus one R observation. Stop joins the complete physical operation
+before releasing server/source custody, independently retaining author-survivor
+activity. Exact committed OCR and native confirmation remain pending.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

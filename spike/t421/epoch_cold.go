@@ -11,19 +11,20 @@ const (
 	epochOneStartup epochOneMode = iota + 1
 	epochOneCold
 	epochOneColdWarm
+	epochOnePhysicalB
 )
 
 type epochOneLimits struct {
-	lifetime, health, cold time.Duration
-	outputBytes            int64
-	controlPairs           uint64
+	lifetime, health, cold, physical time.Duration
+	outputBytes                      int64
+	controlPairs                     uint64
 }
 
 func epochOneBounds(plan Plan, mode epochOneMode) (epochOneLimits, error) {
 	if mode == epochOneStartup {
 		return epochOneLimits{lifetime: 20 * time.Minute, health: 5 * time.Minute, outputBytes: 1 << 20, controlPairs: 3}, nil
 	}
-	if mode != epochOneCold && mode != epochOneColdWarm || plan.Schema != PlanV3Schema {
+	if mode != epochOneCold && mode != epochOneColdWarm && mode != epochOnePhysicalB || plan.Schema != PlanV3Schema {
 		return epochOneLimits{}, ErrExecutionEpochOne
 	}
 	// The constructor already validates the private plan. Recheck the exact
@@ -39,7 +40,14 @@ func epochOneBounds(plan Plan, mode epochOneMode) (epochOneLimits, error) {
 	if mode == epochOneColdWarm {
 		pairs += 4 // ReopenOwners, DrainOwners, OpenRequests, FenceRequests.
 	}
-	return epochOneLimits{lifetime: cold + warm, health: time.Duration(plan.SafetyEnvelope.ServerHealthDeadlineMS) * time.Millisecond,
+	var physical time.Duration
+	if mode == epochOnePhysicalB {
+		if plan.PhaseDeadlines[3] != deadlines[3] {
+			return epochOneLimits{}, ErrExecutionEpochOne
+		}
+		physical, pairs = time.Duration(deadlines[3].DeadlineMS)*time.Millisecond, 21
+	}
+	return epochOneLimits{lifetime: cold + warm + physical, physical: physical, health: time.Duration(plan.SafetyEnvelope.ServerHealthDeadlineMS) * time.Millisecond,
 		cold: cold, outputBytes: 64 << 20, controlPairs: pairs}, nil
 }
 

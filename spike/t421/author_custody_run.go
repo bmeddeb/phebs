@@ -57,7 +57,7 @@ func authorCustodyConfig(index int, binding [32]byte) (dispatchadmission.Config,
 // cooperative. Cleanup is separate failed work and never extends valid success.
 // No retry or future revision is authored after a failed operation.
 func (custody *ExecutionAuthorCustody) AuthorNext(ctx context.Context) (result ExecutionAuthorResult, retErr error) {
-	return custody.authorNext(ctx, nil, nil, 0)
+	return custody.authorNext(ctx, nil, nil, 0, nil)
 }
 
 // ExecutionParentAuthorSite is the fixed direct-author launch site in the
@@ -85,15 +85,16 @@ func (custody *ExecutionAuthorCustody) AuthorNextOn(ctx context.Context, control
 	if countErr != nil || count.Producer != executionRootProducer || !count.Attached || count.Closed {
 		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
 	}
-	return custody.authorNext(ctx, controller, parent, producerID)
+	return custody.authorNext(ctx, controller, parent, producerID, nil)
 }
 
-func (custody *ExecutionAuthorCustody) authorNext(ctx context.Context, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer, producerID uint32) (result ExecutionAuthorResult, retErr error) {
+func (custody *ExecutionAuthorCustody) authorNext(ctx context.Context, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer, producerID uint32, borrower *ExecutionEpochOneRun) (result ExecutionAuthorResult, retErr error) {
 	if custody == nil || ctx == nil || ctx.Err() != nil {
 		return result, ErrExecutionAuthorCustody
 	}
 	custody.mu.Lock()
-	if custody.active || custody.closed || custody.err != nil || custody.next >= len(custody.expected) {
+	if custody.active || custody.closed || custody.err != nil || custody.next >= len(custody.expected) ||
+		custody.borrowedBy != borrower || borrower != nil && (custody.next != 1 || producerID != 8) {
 		custody.mu.Unlock()
 		return result, ErrExecutionAuthorCustody
 	}

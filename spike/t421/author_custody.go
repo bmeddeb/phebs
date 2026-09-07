@@ -54,6 +54,7 @@ type ExecutionAuthorCustody struct {
 	results     []ExecutionAuthorResult
 	next        int
 	active      bool
+	borrowedBy  *ExecutionEpochOneRun // Live server custody is separate from author activity.
 	closed      bool
 	err         error
 }
@@ -331,7 +332,7 @@ func (custody *ExecutionAuthorCustody) Close() error {
 	}
 	custody.mu.Lock()
 	defer custody.mu.Unlock()
-	if custody.active {
+	if custody.active || custody.borrowedBy != nil {
 		return ErrExecutionAuthorCustody
 	}
 	if !custody.closed {

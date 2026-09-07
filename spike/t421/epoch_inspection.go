@@ -58,20 +58,22 @@ type epochTailReadiness struct {
 // serializes phase choreography and joins its context before native shutdown;
 // no method retries a transport failure or emits receipt/phase-success claims.
 type executionEpochInspection struct {
-	mu                             sync.Mutex
-	run                            *ExecutionEpochOneRun
-	plan                           Plan
-	authored                       AuthoredExecutionRevision
-	projection                     PhaseStateProjection
-	bounds                         phaseInspectionInventory
-	next, progressCalls, tailCalls uint64
-	reports                        uint64
-	totals                         readaccounting.Counts
-	progressReady                  bool
-	tail                           epochTailReadiness
-	finalUsed                      bool
-	cold                           AuthorityPhaseResult
-	err                            error
+	mu                               sync.Mutex
+	run                              *ExecutionEpochOneRun
+	plan                             Plan
+	authored                         AuthoredExecutionRevision
+	projection                       PhaseStateProjection
+	bounds                           phaseInspectionInventory
+	next, progressCalls, tailCalls   uint64
+	reports                          uint64
+	totals                           readaccounting.Counts
+	progressReady                    bool
+	tail                             epochTailReadiness
+	finalUsed                        bool
+	retentionUsed                    bool
+	cold                             AuthorityPhaseResult
+	warmAuthority, physicalAuthority AuthorityPhaseResult
+	err                              error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
 	// the already bounded body (at most the response cap plus one sentinel).
 	failureStatus int
@@ -107,7 +109,7 @@ func (run *ExecutionEpochOneRun) newEpochInspection(ctx context.Context) (*execu
 	author := run.flow.epochs.author
 	author.mu.Lock()
 	defer author.mu.Unlock()
-	if !author.active || author.next != 1 || author.previous == nil || author.previous.Result != author.expected[0] || author.check(ctx) != nil {
+	if author.borrowedBy != run || author.active || author.next != 1 || author.previous == nil || author.previous.Result != author.expected[0] || author.check(ctx) != nil {
 		return nil, errEpochInspection
 	}
 	plan := run.flow.plan
@@ -350,6 +352,20 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 				return result, report, errEpochInspection
 			}
 		}
+		if reader.projection.Phase == "physical_delta_b" {
+			prior := reader.warmAuthority
+			ready, err := correctedTailReadinessTransitionReady("physical_delta_b", &tailReadinessIdentity{
+				RelationshipGenerationSHA256: prior.RelationshipGenerationSHA256, RelationshipRootSHA256: prior.RelationshipRootSHA256,
+				CallerGenerationSHA256: prior.CallerGenerationSHA256, CallerRootSHA256: prior.CallerRootSHA256}, tailReadinessIdentity{
+				RelationshipGenerationSHA256: result.RelationshipGenerationSHA256, RelationshipRootSHA256: result.RelationshipRootSHA256,
+				CallerGenerationSHA256: result.CallerGenerationSHA256, CallerRootSHA256: result.CallerRootSHA256})
+			if err != nil {
+				return result, report, errEpochInspection
+			}
+			if !ready {
+				return epochTailReadiness{Schema: result.Schema, Status: "pending"}, report, nil
+			}
+		}
 	default:
 		return result, report, errEpochInspection
 	}
@@ -426,6 +442,12 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	if err == nil && authority.Phase == "cold" {
 		reader.cold = authority
 	}
+	if err == nil && authority.Phase == "warm_noop" {
+		reader.warmAuthority = authority
+	}
+	if err == nil && authority.Phase == "physical_delta_b" {
+		reader.physicalAuthority = authority
+	}
 	return authority, projection, report, err
 }
 
@@ -445,13 +467,14 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "cold" && phase != "warm_noop" {
+	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" {
 		return authority, projection, errEpochInspection
 	}
 	authority.Phase, authority.Outcome = phase, "passed"
-	authority.PhysicalRevision, authority.LogicalRevision = "a", "a"
+	physical := reader.projection.PhysicalRevision
+	authority.PhysicalRevision, authority.LogicalRevision = physical, "a"
 	authority.ExtractionRoots = value.ExtractionRoots
-	projection.Schema, projection.Phase, projection.PhysicalRevision, projection.LogicalRevision = reader.projection.Schema, phase, "a", "a"
+	projection.Schema, projection.Phase, projection.PhysicalRevision, projection.LogicalRevision = reader.projection.Schema, phase, physical, "a"
 	if !reflect.DeepEqual(projection, reader.projection) || authority.RelationshipGenerationSHA256 != reader.tail.RelationshipGenerationSHA256 ||
 		authority.RelationshipRootSHA256 != reader.tail.RelationshipRootSHA256 || authority.CallerGenerationSHA256 != reader.tail.CallerGenerationSHA256 || authority.CallerRootSHA256 != reader.tail.CallerRootSHA256 {
 		return authority, projection, errEpochInspection
@@ -459,10 +482,16 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 	revisions := []RevisionResult{{Name: "a", PhysicalOutcome: "passed", LogicalOutcome: "passed", PhysicalCommit: reader.authored.Commit, PhysicalTree: reader.authored.Tree}}
 	values, phases := []AuthorityPhaseResult{authority}, []string{phase}
 	outcomes := map[string]string{phase: "passed"}
-	states := map[string]authorityState{phase: {PhysicalRevision: "a", LogicalRevision: "a"}}
-	if phase == "warm_noop" {
+	states := map[string]authorityState{phase: {PhysicalRevision: physical, LogicalRevision: "a"}}
+	if phase == "warm_noop" || phase == "physical_delta_b" {
 		values, phases = append(values, reader.cold), append(phases, "cold")
 		outcomes["cold"], states["cold"] = "passed", authorityState{PhysicalRevision: "a", LogicalRevision: "a"}
+	}
+	if phase == "physical_delta_b" {
+		revisions[0].PhysicalCommit, revisions[0].PhysicalTree = reader.cold.PhysicalCommit, reader.cold.PhysicalTree
+		revisions = append(revisions, RevisionResult{Name: "b", PhysicalOutcome: "passed", LogicalOutcome: "not_run", PhysicalCommit: reader.authored.Commit, PhysicalTree: reader.authored.Tree})
+		values, phases = append(values, reader.warmAuthority), append(phases, "warm_noop")
+		outcomes["warm_noop"], states["warm_noop"] = "passed", authorityState{PhysicalRevision: "a", LogicalRevision: "a"}
 	}
 	if validateAuthorityResults(values, phases, outcomes, states, revisions, reader.plan) != nil {
 		return authority, projection, errEpochInspection

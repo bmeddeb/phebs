@@ -25,6 +25,56 @@ func authorSharedTestConfig(index int) dispatchadmission.Config {
 	}
 }
 
+func TestExecutionAuthorLiveServerBorrowCannotBeBypassed(t *testing.T) {
+	for _, mode := range []string{"borrowed", "author_active", "both", "wrong_run", "wrong_revision", "wrong_producer"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx := t.Context()
+			controller, err := dispatchadmission.New(ctx, authorSharedTestConfig(1))
+			if err != nil {
+				t.Fatal(err)
+			}
+			parent, err := controller.NewLocalProducer(ctx, executionRootProducer)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = parent.Close(context.Background()) }()
+			run := &ExecutionEpochOneRun{}
+			custody := &ExecutionAuthorCustody{borrowedBy: run, next: 1}
+			borrower, producer := run, uint32(8)
+			switch mode {
+			case "borrowed":
+				borrower = nil // Public AuthorNext/On has no borrowed-run authority.
+			case "author_active":
+				custody.borrowedBy, custody.active, borrower = nil, true, nil
+			case "both":
+				custody.active = true
+			case "wrong_run":
+				borrower = &ExecutionEpochOneRun{}
+			case "wrong_revision":
+				custody.next = 2
+			case "wrong_producer":
+				producer = 7
+			}
+			if custody.Close() == nil || custody.closed {
+				t.Fatal("Close released live source custody")
+			}
+			// Refusal must occur before source/roots validation: this minimal
+			// custody has none, and must not become poisoned by touching them.
+			if _, err := custody.authorNext(ctx, controller, parent, producer, borrower); err == nil || custody.err != nil {
+				t.Fatal("borrow/author guard touched or admitted source", err)
+			}
+			count, err := parent.Count()
+			if err != nil || count.Ordinal != 0 || count.Active != 0 || custody.borrowedBy != nil && custody.borrowedBy != run {
+				t.Fatal("refusal launched or changed the live server borrow")
+			}
+			custody.borrowedBy, custody.active = nil, false
+			if custody.Close() != nil || !custody.closed {
+				t.Fatal("joined source custody cannot close")
+			}
+		})
+	}
+}
+
 // The real scalar controller prefix, not a caller count or globally tiny Git
 // budget, must refuse the next author attempt and any overlapping active one.
 // Native true commands here are mechanical fixtures, not admitted author Git.

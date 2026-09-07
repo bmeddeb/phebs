@@ -52,7 +52,7 @@ func PrepareExecutionEpochOne(ctx context.Context, epochs *ExecutionEpochConfigC
 	defer author.mu.Unlock()
 	epochs.mu.Lock()
 	defer epochs.mu.Unlock()
-	if author.active || epochs.active || author.next != 0 || epochs.checkLocked(ctx, 1) != nil ||
+	if author.active || author.borrowedBy != nil || epochs.active || author.next != 0 || epochs.checkLocked(ctx, 1) != nil ||
 		phebs.referenceInputs != author.request.Builds || zoekt.referenceInputs != author.request.Builds {
 		return nil, ErrExecutionEpochOne
 	}
@@ -169,39 +169,47 @@ type ExecutionEpochOneResult struct {
 }
 
 type ExecutionEpochOneRun struct {
-	mu               sync.Mutex
-	flow             *ExecutionEpochOne
-	epoch            ExecutionEpochConfig
-	control          *dispatchadmission.PhaseControl
-	command          *exec.Cmd
-	output           *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
-	stop, done       chan struct{}
-	stopOnce         sync.Once
-	healthUsed       bool
-	healthCancel     context.CancelFunc
-	healthDone       chan struct{}
-	healthy          bool
-	healthLimit      time.Duration
-	coldDeadline     time.Time
-	coldUsed         bool
-	coldCancel       context.CancelFunc
-	coldDone         chan struct{}
-	warmAllowed      bool
-	warmUsed         bool
-	warmCancel       context.CancelFunc
-	warmDone         chan struct{}
-	phaseTimer       *time.Timer
-	phaseDone        chan struct{}
-	phaseDeadline    time.Time
-	lifetimeDeadline time.Time
-	warmLimit        time.Duration
-	cancelRun        context.CancelFunc
-	warm             bool // Only the completed coordinated handoff sets this.
-	inspection       *executionEpochInspection
-	stopping         bool
-	result           ExecutionEpochOneResult
-	err              error
-	nativeStopErr    error // Private diagnostic, never a public evidence classification.
+	mu                    sync.Mutex
+	flow                  *ExecutionEpochOne
+	epoch                 ExecutionEpochConfig
+	control               *dispatchadmission.PhaseControl
+	command               *exec.Cmd
+	output                *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
+	stop, done            chan struct{}
+	stopOnce              sync.Once
+	healthUsed            bool
+	healthCancel          context.CancelFunc
+	healthDone            chan struct{}
+	healthy               bool
+	healthLimit           time.Duration
+	coldDeadline          time.Time
+	coldUsed              bool
+	coldCancel            context.CancelFunc
+	coldDone              chan struct{}
+	warmAllowed           bool
+	warmUsed              bool
+	warmCancel            context.CancelFunc
+	warmDone              chan struct{}
+	physicalAllowed       bool
+	physicalUsed          bool
+	physicalPinned        bool // Only the successful pin response plus fenced request tail sets this.
+	physicalCancel        context.CancelFunc
+	physicalDone          chan struct{}
+	physicalLimit         time.Duration
+	pinStarted, pinJoined time.Time
+	physicalResult        epochRetentionObservation // Private native observation, not a measured receipt.
+	phaseTimer            *time.Timer
+	phaseDone             chan struct{}
+	phaseDeadline         time.Time
+	lifetimeDeadline      time.Time
+	warmLimit             time.Duration
+	cancelRun             context.CancelFunc
+	warm                  bool // Only the completed coordinated handoff sets this.
+	inspection            *executionEpochInspection
+	stopping              bool
+	result                ExecutionEpochOneResult
+	err                   error
+	nativeStopErr         error // Private diagnostic, never a public evidence classification.
 }
 
 func (flow *ExecutionEpochOne) checkTools(ctx context.Context) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -272,7 +280,8 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	runCtx, cancel := context.WithDeadline(ctx, deadline)
 	run := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: bounds.health, coldDeadline: coldDeadline, lifetimeDeadline: deadline,
-		warmLimit: bounds.lifetime - bounds.cold, cancelRun: cancel, warmAllowed: mode == epochOneColdWarm}
+		warmLimit: bounds.lifetime - bounds.cold - bounds.physical, physicalLimit: bounds.physical,
+		cancelRun: cancel, warmAllowed: mode == epochOneColdWarm || mode == epochOnePhysicalB, physicalAllowed: mode == epochOnePhysicalB}
 	started := false
 	defer func() {
 		if !started {
@@ -292,7 +301,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	author, epochs := flow.epochs.author, flow.epochs
 	author.mu.Lock()
 	epochs.mu.Lock()
-	if author.active || epochs.active || author.next != 1 || epochs.checkLocked(launchCtx, 1) != nil || author.checkSource(launchCtx, author.previous) != nil {
+	if author.active || author.borrowedBy != nil || epochs.active || author.next != 1 || epochs.checkLocked(launchCtx, 1) != nil || author.checkSource(launchCtx, author.previous) != nil {
 		epochs.mu.Unlock()
 		author.mu.Unlock()
 		return nil, ErrExecutionEpochOne
@@ -307,7 +316,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		epochs.listeners[0] = nil
 		epochs.released = 1
 		epochs.active = true
-		author.active = true
+		author.borrowedBy = run
 	}
 	epochs.mu.Unlock()
 	author.mu.Unlock()
@@ -318,7 +327,7 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 		if !started {
 			author.mu.Lock()
 			epochs.mu.Lock()
-			author.active, epochs.active = false, false
+			author.borrowedBy, epochs.active = nil, false
 			epochs.mu.Unlock()
 			author.mu.Unlock()
 		}
@@ -545,6 +554,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	healthCancel, healthDone := run.healthCancel, run.healthDone
 	coldCancel, coldDone := run.coldCancel, run.coldDone
 	warmCancel, warmDone := run.warmCancel, run.warmDone
+	physicalCancel, physicalDone := run.physicalCancel, run.physicalDone
 	run.mu.Unlock()
 	if healthCancel != nil {
 		healthCancel()
@@ -557,6 +567,10 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if warmCancel != nil {
 		warmCancel()
 		<-warmDone
+	}
+	if physicalCancel != nil {
+		physicalCancel()
+		<-physicalDone
 	}
 	run.stopPhaseDeadline()
 	run.mu.Lock()
@@ -624,11 +638,14 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	author, epochs := run.flow.epochs.author, run.flow.epochs
 	author.mu.Lock()
 	epochs.mu.Lock()
-	author.active, epochs.active = !joined || !result.SessionEmpty, !joined || !result.SessionEmpty
+	epochs.active = !joined || !result.SessionEmpty
+	if !epochs.active {
+		author.borrowedBy = nil
+	}
 	epochs.mu.Unlock()
 	author.mu.Unlock()
 	run.mu.Lock()
-	if run.err != nil || !epochOneClosedPrefix(ctx, result) {
+	if run.err != nil || !epochOneClosedPrefixForMode(ctx, result, run.physicalUsed) {
 		failure = ErrExecutionEpochOne
 	}
 	run.result, run.err = result, failure
@@ -667,16 +684,27 @@ func (run *ExecutionEpochOneRun) Wait(ctx context.Context) (ExecutionEpochOneRes
 }
 
 func epochOneClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) bool {
+	return epochOneClosedPrefixForMode(ctx, result, false)
+}
+
+func epochOneClosedPrefixForMode(ctx context.Context, result ExecutionEpochOneResult, physical bool) bool {
 	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Opened != 1 || result.Store.TerminalEOF != 1 {
 		return false
 	}
-	root, server, store := false, false, false
+	root, server, store, author := false, false, false, !physical
+	rootAttempts := uint64(2)
+	if physical {
+		rootAttempts++
+	}
 	for _, producer := range result.Accounting.Producers {
 		if producer.Producer == executionRootProducer {
-			root = producer.Attached && producer.Closed && producer.Active == 0 && producer.Ordinal == 2
+			root = producer.Attached && producer.Closed && producer.Active == 0 && producer.Ordinal == rootAttempts
 		}
 		if producer.Producer == 2 {
 			server = producer.Attached && producer.Closed && producer.Active == 0
+		}
+		if physical && producer.Producer == 8 {
+			author = producer.Attached && producer.Closed && producer.Active == 0 && producer.Ordinal == 3
 		}
 	}
 	for _, producer := range result.Store.Store.Producers {
@@ -684,5 +712,5 @@ func epochOneClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) b
 			store = producer.Attached && producer.Closed && producer.Calls == 0 && producer.Transactions == 0
 		}
 	}
-	return root && server && store
+	return root && server && store && author
 }

@@ -79,7 +79,7 @@ func PrepareExecutionEpochConfigs(ctx context.Context, author *ExecutionAuthorCu
 	// Setup is serialized with author starts; it performs no native child work.
 	author.mu.Lock()
 	defer author.mu.Unlock()
-	if author.active || author.check(ctx) != nil {
+	if author.active || author.borrowedBy != nil || author.check(ctx) != nil {
 		return nil, ErrExecutionEpochConfigs
 	}
 	_, raw, err := readAuthorCustodyPlan(ctx, author.request.Plan)
