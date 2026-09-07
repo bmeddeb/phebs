@@ -4677,6 +4677,20 @@ The logical reader permits at most 5,765 inspections, including the two five-rea
 R calls. Immutable OCR and genuine selected logical rehearsal remain required;
 these tests establish neither whole-phase metrics nor freeze.
 
+Independent OCR of exact `79e3ab03b0bbfb0116137534d4149763697fcd44` covered
+all nine files and reported critical/high/medium/low 0/0/1/0. The parent and its
+model fixture confused the native hit's target-plan catalog with the old active
+selector catalog. Native code and existing authority tests show both R points
+name the same B target while the selector advances. The comparison correction
+requires a changed target at hit, an unchanged target at recovery, and the strict
+final F binding to protected logical-B projection/plan/schedule/unit. Negatives
+reject old A, changed target, unchanged selector, changed physical search and
+R-to-F mismatch. Corrected normal (0.968s), production/test race three-repeat
+(5.336s), vet, pinned lint (zero issues) and whitespace pass. The later test-only
+rehearsal log compiles and records the already-joined first-epoch counters after
+assigning cleanup to the actual successor; it adds no request or PC operation.
+Immutable correction re-review and integrated native measurement remain open.
+
 **T42.2l measurement track — compact native blob attempts (2026-09-07).**
 Observe actual immutable-content submissions at all three shared reader sites,
 not Git child launches or successful returned bytes. AC: selected genuine

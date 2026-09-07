@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
@@ -181,7 +182,7 @@ func TestExecutionEpochLogicalCanceledAfterRetainedStop(t *testing.T) {
 }
 
 func TestEpochLogicalActivationHTTP(t *testing.T) {
-	for _, mode := range []string{"valid", "wrong_cost", "wrong_hit", "changed_unit", "duplicate", "recovered_first"} {
+	for _, mode := range []string{"valid", "wrong_cost", "old_catalog_hit", "changed_catalog", "unchanged_selector", "changed_search", "changed_unit", "duplicate", "recovered_first"} {
 		t.Run(mode, func(t *testing.T) {
 			calls := 0
 			search, oldCatalog := testDigest("search"), testDigest("old-catalog")
@@ -191,12 +192,26 @@ func TestEpochLogicalActivationHTTP(t *testing.T) {
 				if calls == 2 {
 					point = "recovered"
 				}
-				value := epochActivationObservation{Schema: "t422-activation-observation-v1", Point: point, SelectorDigest: testDigest(point), CatalogRootDigest: oldCatalog, SearchGenerationDigest: search, PlanDigest: testDigest("plan"), ScheduleDigest: testDigest("schedule"), UnitDigest: testDigest("unit")}
-				if point == "recovered" {
-					value.CatalogRootDigest = testDigest("new-catalog")
+				// Native service_state_v3.go returns plan.CatalogRoot at BOTH
+				// points. Its independent native authority regression pins B
+				// at hit and recovery (TestServiceStateV3ActivationAuthorityReadsSelectedNinthUnit),
+				// while the selected runtime advances.
+				native := store.ServiceStateV3ActivationTransition{Point: store.ServiceStateV3ActivationTransitionPoint(point), SelectorDigest: testDigest(point),
+					CatalogRootDigest: testDigest("logical-b-plan-catalog"), SearchGenerationDigest: search, PlanDigest: testDigest("plan"), ScheduleDigest: testDigest("schedule"), UnitDigest: testDigest("unit")}
+				value := epochActivationObservation{Schema: "t422-activation-observation-v1", Point: string(native.Point), SelectorDigest: native.SelectorDigest,
+					CatalogRootDigest: native.CatalogRootDigest, SearchGenerationDigest: native.SearchGenerationDigest,
+					PlanDigest: native.PlanDigest, ScheduleDigest: native.ScheduleDigest, UnitDigest: native.UnitDigest}
+				if mode == "old_catalog_hit" {
+					value.CatalogRootDigest = oldCatalog
 				}
-				if mode == "wrong_hit" {
-					value.CatalogRootDigest = testDigest("wrong")
+				if mode == "changed_catalog" && point == "recovered" {
+					value.CatalogRootDigest = testDigest("unexpected-third-catalog")
+				}
+				if mode == "unchanged_selector" && point == "recovered" {
+					value.SelectorDigest = testDigest("hit")
+				}
+				if mode == "changed_search" && point == "recovered" {
+					value.SearchGenerationDigest = testDigest("other-search")
 				}
 				if mode == "changed_unit" && point == "recovered" {
 					value.UnitDigest = testDigest("other-unit")
@@ -220,7 +235,7 @@ func TestEpochLogicalActivationHTTP(t *testing.T) {
 				return
 			}
 			err := reader.activation(t.Context(), "hit")
-			if mode == "wrong_hit" || mode == "wrong_cost" {
+			if mode == "old_catalog_hit" || mode == "wrong_cost" {
 				if err == nil {
 					t.Fatal("bad hit accepted")
 				}
@@ -236,6 +251,9 @@ func TestEpochLogicalActivationHTTP(t *testing.T) {
 				return
 			}
 			reader.tail = epochTailReadiness{Status: "ready", SelectedRuntimeSHA256: testDigest("recovered")}
+			if mode == "unchanged_selector" {
+				reader.tail.SelectedRuntimeSHA256 = testDigest("hit")
+			}
 			err = reader.activation(t.Context(), "recovered")
 			if (err == nil) != (mode == "valid") || calls != 2 {
 				t.Fatal("wrong recovered outcome", err, calls)
@@ -271,7 +289,7 @@ func TestEpochLogicalFinalContinuity(t *testing.T) {
 	if _, _, err := reader.decodeFinal(epochTestJSON(t, value, true)); err != nil {
 		t.Fatal("valid logical model", err)
 	}
-	for _, mode := range []string{"physical", "resolver", "caller", "extraction", "catalog", "activation"} {
+	for _, mode := range []string{"physical", "resolver", "caller", "extraction", "catalog", "r_to_f_target", "activation"} {
 		t.Run(mode, func(t *testing.T) {
 			bad := value
 			switch mode {
@@ -285,6 +303,8 @@ func TestEpochLogicalFinalContinuity(t *testing.T) {
 				bad.Authority.ExtractionRootsSHA256 = testDigest("bad")
 			case "catalog":
 				bad.Authority.CatalogRootSHA256 = physical.CatalogRootSHA256
+			case "r_to_f_target":
+				bad.Authority.CatalogRootSHA256 = testDigest("different-from-both-prior-and-recovered")
 			case "activation":
 				bad.Authority.CatalogActivationUnitSHA256 = testDigest("bad")
 			}

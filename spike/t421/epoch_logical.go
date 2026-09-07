@@ -260,13 +260,16 @@ func (reader *executionEpochInspection) activation(ctx context.Context, point st
 		return errEpochInspection
 	}
 	if point == "hit" {
-		if value.CatalogRootDigest != prior.CatalogRootSHA256 {
+		// The native wire names the activation plan's target catalog, not
+		// the prior selector's catalog. Both R points retain that target;
+		// the later full F binds it to the protected logical-B projection.
+		if value.CatalogRootDigest == prior.CatalogRootSHA256 {
 			return errEpochInspection
 		}
 		reader.activationHit = value
 	} else {
 		hit := reader.activationHit
-		if value.SelectorDigest != reader.tail.SelectedRuntimeSHA256 || value.SelectorDigest == hit.SelectorDigest || value.CatalogRootDigest == hit.CatalogRootDigest ||
+		if value.SelectorDigest != reader.tail.SelectedRuntimeSHA256 || value.SelectorDigest == hit.SelectorDigest || value.CatalogRootDigest != hit.CatalogRootDigest ||
 			value.PlanDigest != hit.PlanDigest || value.ScheduleDigest != hit.ScheduleDigest || value.UnitDigest != hit.UnitDigest {
 			return errEpochInspection
 		}

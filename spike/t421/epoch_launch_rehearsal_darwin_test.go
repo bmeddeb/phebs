@@ -286,9 +286,18 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Log("actual physical B X/T/F and current/prior retention read returned; no full phase metrics or later-epoch claim")
 	}
 	if logical {
-		next, err := run.StartLogicalB(ctx)
+		prior := run
+		next, err := prior.StartLogicalB(ctx)
 		if next != nil {
 			run = next // Existing cleanup follows the actual successor, including failed bootstrap.
+			// StartLogicalB already joined this run before starting next. Keep
+			// its accepted per-epoch counters without retaining its output in
+			// the successor or mislabeling this subset as full work metrics.
+			prefix, priorErr := prior.Wait(context.Background())
+			t.Logf("joined first-epoch retained-parent prefix before logical successor: %+v; %v; no full work-metrics claim", prefix, priorErr)
+			if priorErr != nil {
+				t.Fatal("successor lost joined first-epoch prefix", priorErr)
+			}
 		}
 		if err != nil {
 			t.Fatal("retained physical parent/logical successor", err)
