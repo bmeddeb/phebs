@@ -6169,6 +6169,29 @@ harness input changes. Exact-source opted-in native cold-plus-warm observation
 is the next gate before integration; full warm work metrics, later epochs,
 receipt, admission fit and freeze remain open. Nothing was merged or pushed.
 
+Ben's opted-in native cold-plus-warm rehearsal then passed on clean detached
+`7899848a4d1912283551310a84bfeaaa2e6385c2`: test 1,423.20s, package
+1,423.933s. Actual source/SDK/module custody admitted 67,656 entries, 55,937
+files and 1,355,010,195 bytes in 6m33.817s. Cold X/T/F and the phase-three
+handoff completed; the single warm X/T/F matched actual cold authority and
+joined its request/report tail. Startup/health/phase execution/stop together
+took 8m2.739s, not the whole protected-build rehearsal duration. The root
+started and joined with an empty session. Actual phase-three dispatch was two
+Git attempts; store accounting retained four transactions, zero submitted rows
+and zero maximum rows. Whole-run totals were 21,853 dispatch attempts and
+2,580 store transactions / 208,407 submitted rows / 512 maximum rows.
+All attached dispatch producers closed with zero active children; the one
+opened store lifetime supplied terminal EOF with zero outstanding calls or
+transactions. Future unopened epochs remain truthfully incomplete. No matching
+test/epoch process survives. The retained log is
+`/private/tmp/phebs-t422-cold-warm.8TpsRb/cold-warm.log`, SHA-256
+`dfc6b5900a499b346292a22626a387568ff46caac17f017a2de845f85c6f4b18`.
+This closes only the bounded native warm-observation gate. It proves neither
+zero hidden warm work nor complete phase metrics, phase-four pin/transition,
+later epochs, complete admission/launcher, freeze or ceremony execution. This
+record changes BACKLOG only; compiled, embedded, fixture and harness inputs
+remain exactly those of the reviewed native source. Integration review follows.
+
 The backing-space prerequisite separately reclaimed exactly 952 source-proven,
 rebuildable Phebs Go cache archives after independent cleanup-script review
 reported all severity counts zero. The fixed manifest digest was
