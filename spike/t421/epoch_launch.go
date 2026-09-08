@@ -408,6 +408,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if err != nil || view.Phase != phase {
 		return nil, ErrExecutionEpochOne
 	}
+	epoch.SelectorHandoffCleanup = ""
+	if flow.plan.SelectorHandoffCleanup != nil {
+		epoch.SelectorHandoffCleanup = flow.plan.SelectorHandoffCleanup.Schema
+	}
 	raw, err := epochSemanticInput(author.planSHA256, epoch, run.checkpointRecovery)
 	if err != nil {
 		return nil, ErrExecutionEpochOne

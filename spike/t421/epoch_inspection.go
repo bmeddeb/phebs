@@ -71,6 +71,8 @@ type executionEpochInspection struct {
 	tail                               epochTailReadiness
 	finalUsed                          bool
 	retentionUsed                      bool
+	selectorCleanupPhase               string
+	selectorCleanup                    epochSelectorCleanupObservation
 	cold                               AuthorityPhaseResult
 	warmAuthority, physicalAuthority   AuthorityPhaseResult
 	logicalAuthority                   AuthorityPhaseResult

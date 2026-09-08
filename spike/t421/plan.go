@@ -122,6 +122,9 @@ func ValidateFrozenPlan(plan Plan) error {
 		build = BuildPlan
 	case PlanV3Schema:
 		build = BuildPlanV3
+		if plan.SelectorHandoffCleanup != nil {
+			build = BuildPlanV3WithSelectorCleanup
+		}
 	default:
 		return errors.New("T42.1 plan schema is unknown")
 	}

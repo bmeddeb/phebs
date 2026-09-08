@@ -51,16 +51,20 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 	} else if epoch.ReturnSourceCommit != "" {
 		return nil, ErrExecutionEpochOne
 	}
+	if epoch.SelectorHandoffCleanup != "" && epoch.SelectorHandoffCleanup != SelectorHandoffCleanupSchema {
+		return nil, ErrExecutionEpochOne
+	}
 	raw, err := json.Marshal(struct {
-		Schema             string                        `json:"schema"`
-		Recipe             string                        `json:"recipe"`
-		PlanSHA256         string                        `json:"plan_sha256"`
-		ConfigSHA256       string                        `json:"config_sha256"`
-		ServerEpoch        uint64                        `json:"server_epoch"`
-		Repository         string                        `json:"repository"`
-		CheckpointRecovery *epochCheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
-		ReturnSourceCommit string                        `json:"return_source_commit,omitempty"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit})
+		Schema                 string                        `json:"schema"`
+		Recipe                 string                        `json:"recipe"`
+		PlanSHA256             string                        `json:"plan_sha256"`
+		ConfigSHA256           string                        `json:"config_sha256"`
+		ServerEpoch            uint64                        `json:"server_epoch"`
+		Repository             string                        `json:"repository"`
+		CheckpointRecovery     *epochCheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
+		ReturnSourceCommit     string                        `json:"return_source_commit,omitempty"`
+		SelectorHandoffCleanup string                        `json:"selector_handoff_cleanup,omitempty"`
+	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup})
 	if err != nil || len(raw)+1 > 16<<10 {
 		return nil, ErrExecutionEpochOne
 	}

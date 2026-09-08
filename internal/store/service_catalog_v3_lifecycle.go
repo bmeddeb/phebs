@@ -1268,8 +1268,6 @@ func (s *Surreal) drainServiceStateV3Preimages(
 	candidate serviceCatalogV3LifecycleRec,
 	deleteLimit int,
 ) (int, error) {
-	repository := candidate.Repository
-	catalogRoot := candidate.RootDigest
 	tx, err := storeBegin(ctx, s.accounting, s.db)
 	if err != nil {
 		return 0, fmt.Errorf("drain service state v3 preimages: begin: %w", err)
@@ -1279,19 +1277,36 @@ func (s *Surreal) drainServiceStateV3Preimages(
 		defer cancel()
 		_ = storeCancel(cancelCtx, s.accounting, tx)
 	}()
+	deleted, err := s.drainServiceStateV3PreimagesTx(ctx, tx, candidate, deleteLimit, false)
+	if err != nil || deleted == 0 {
+		return deleted, err
+	}
+	if err := storeCommit(ctx, s.accounting, tx); err != nil {
+		return 0, fmt.Errorf("drain service state v3 preimages: commit: %w", err)
+	}
+	return deleted, nil
+}
+
+// handoff charges the explicit handoff's private read/write-attempt ledger;
+// the ordinary lifecycle caller retains its historical accounting behavior.
+func (s *Surreal) drainServiceStateV3PreimagesTx(
+	ctx context.Context,
+	tx *surrealdb.Transaction,
+	candidate serviceCatalogV3LifecycleRec,
+	deleteLimit int,
+	handoff bool,
+) (int, error) {
+	repository := candidate.Repository
+	catalogRoot := candidate.RootDigest
 	type ownerScan struct {
 		Lifecycle serviceCatalogV3LifecycleRec `json:"lifecycle"`
 		Root      serviceCatalogV3RootRec      `json:"root"`
 		Summaries []serviceRepositoryStateRec  `json:"summaries"`
 	}
-	results, err := storeQuery[[]ownerScan](ctx, s.accounting, tx, `
-RETURN [{
-	lifecycle: (SELECT * FROM $lifecycle_rid LIMIT 1)[0],
-	root: (SELECT * FROM $root_rid LIMIT 1)[0],
-	summaries: (SELECT * FROM service_state_v3_repository_preimage
-		WHERE repository = $repository AND catalog_generation = $catalog_root
-		ORDER BY snapshot_revision, snapshot_digest LIMIT 2)
-}];`, map[string]any{
+	if err := chargeServiceStateV3HandoffRead(ctx, handoff); err != nil {
+		return 0, err
+	}
+	results, err := storeQuery[[]ownerScan](ctx, s.accounting, tx, serviceStateV3PreimageOwnerSQL(handoff), map[string]any{
 		"lifecycle_rid": serviceCatalogV3LifecycleID(catalogRoot),
 		"root_rid":      serviceCatalogV3RootID(catalogRoot),
 		"repository":    repository, "catalog_root": catalogRoot,
@@ -1331,6 +1346,9 @@ RETURN [{
 	summaries := scans[0].Summaries
 	if len(summaries) == 0 {
 		return 0, nil
+	}
+	if err := chargeServiceStateV3HandoffRead(ctx, handoff); err != nil {
+		return 0, err
 	}
 	selectorResults, err := storeQuery[[]serviceRuntimeSelectorRec](
 		ctx, s.accounting,
@@ -1378,6 +1396,9 @@ RETURN [{
 	if stale == nil {
 		return 0, nil
 	}
+	if err := chargeServiceStateV3HandoffRead(ctx, handoff); err != nil {
+		return 0, err
+	}
 	rowResults, err := storeQuery[[]struct {
 		ServiceKey string           `json:"service_key"`
 		RecID      *models.RecordID `json:"id"`
@@ -1408,6 +1429,9 @@ SELECT id, service_key FROM service_state_v3_preimage
 	}
 	var deletedRows []serviceStateRec
 	if len(rowIDs) != 0 {
+		if err := chargeServiceStateV3HandoffWrite(ctx, handoff); err != nil {
+			return 0, err
+		}
 		deletedResults, deleteErr := storeQuery[[]serviceStateRec](ctx, s.accounting, tx, `
 DELETE service_state_v3_preimage WHERE id IN $ids RETURN BEFORE`, map[string]any{
 			"ids": rowIDs,
@@ -1438,6 +1462,9 @@ DELETE service_state_v3_preimage WHERE id IN $ids RETURN BEFORE`, map[string]any
 	}
 	deletedSummary := false
 	if len(deletedRows) < deleteLimit {
+		if err := chargeServiceStateV3HandoffRead(ctx, handoff); err != nil {
+			return 0, err
+		}
 		remainingResults, remainingErr := storeQuery[[]struct {
 			RecID *models.RecordID `json:"id"`
 		}](ctx, s.accounting, tx, `
@@ -1451,6 +1478,9 @@ SELECT id FROM service_state_v3_preimage
 			return 0, fmt.Errorf("drain service state v3 preimages: remaining: %w", remainingErr)
 		}
 		if len(firstDomainRows(remainingResults)) == 0 {
+			if err := chargeServiceStateV3HandoffWrite(ctx, handoff); err != nil {
+				return 0, err
+			}
 			deleted, deleteErr := storeQuery[any](
 				ctx, s.accounting,
 				tx,
@@ -1471,14 +1501,28 @@ SELECT id FROM service_state_v3_preimage
 			deletedSummary = true
 		}
 	}
-	if err := storeCommit(ctx, s.accounting, tx); err != nil {
-		return 0, fmt.Errorf("drain service state v3 preimages: commit: %w", err)
-	}
 	deleted := len(deletedRows)
 	if deletedSummary {
 		deleted++
 	}
 	return deleted, nil
+}
+
+func serviceStateV3PreimageOwnerSQL(handoff bool) string {
+	const ordinary = `
+RETURN [{
+	lifecycle: (SELECT * FROM $lifecycle_rid LIMIT 1)[0],
+	root: (SELECT * FROM $root_rid LIMIT 1)[0],
+	summaries: (SELECT * FROM service_state_v3_repository_preimage
+		WHERE repository = $repository AND catalog_generation = $catalog_root
+		ORDER BY snapshot_revision, snapshot_digest LIMIT 2)
+}];`
+	if !handoff {
+		return ordinary
+	}
+	// The handoff needs immutable ownership metadata, not root_json. Keep the
+	// ordinary recipe exact and avoid a repeated <=256KiB root payload here.
+	return strings.Replace(ordinary, "SELECT * FROM $root_rid", "SELECT id, root_digest, repository, root_bytes, recorded_at FROM $root_rid", 1)
 }
 
 func (s *Surreal) retireServiceCatalogV3Generation(

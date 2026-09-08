@@ -98,6 +98,7 @@ type t421FinalAuthorityReader struct {
 	stale              *t422StaleControl
 	checkpoint         *t422CheckpointControl
 	checkpointRecovery *t422CheckpointRecoveryControl
+	selectorCleanup    *t422SelectorCleanupControl
 
 	candidateState func(context.Context) (candidate.State, error)
 	openDomain     func(context.Context, candidate.DomainResultPlan) (*candidate.SparseDomain, error)
@@ -344,6 +345,11 @@ func (reader *t421FinalAuthorityReader) Read(
 	}
 	if reader.checkpointRecovery != nil {
 		if err := reader.checkpointRecovery.captureFinal(ctx, candidateState, response); err != nil {
+			return nil, nil, err
+		}
+	}
+	if reader.selectorCleanup != nil {
+		if err := reader.selectorCleanup.captureFinal(ctx, selector); err != nil {
 			return nil, nil, err
 		}
 	}

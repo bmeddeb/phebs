@@ -31,7 +31,7 @@ func TestServiceCatalogV3AccountingSourceCoverage(t *testing.T) {
 		"migrateServiceCatalogV3LifecycleSchema":             {"storeWrite(1)"},
 		"RepairServiceCatalogV3Startup":                      {"storeWrite(1)"},
 		"deleteServiceCatalogV3Orphan":                       {"storeWrite(1)"},
-		"drainServiceStateV3Preimages":                       {"storeWrite(uint64(len(rowIDs)))", "storeWrite(1)"},
+		"drainServiceStateV3PreimagesTx":                     {"storeWrite(uint64(len(rowIDs)))", "storeWrite(1)"},
 		"retireServiceCatalogV3Generation":                   {"storeWrite(1)"},
 		"drainServiceCatalogV3Generation":                    {"storeWrite(3)"},
 		"finalizeServiceCatalogV3Generation":                 {"storeWrite(3)"},
@@ -49,6 +49,7 @@ func TestServiceCatalogV3AccountingSourceCoverage(t *testing.T) {
 	for path, want := range map[string]int{
 		"service_catalog_v3.go":                        19,
 		"service_catalog_v3_lifecycle.go":              42,
+		"service_state_v3_preimage_handoff.go":         4,
 		"service_runtime_selector.go":                  27,
 		"service_catalog_v3_relationship_reference.go": 10,
 	} {
@@ -124,7 +125,7 @@ func TestServiceCatalogV3AccountingSourceCoverage(t *testing.T) {
 	if !reflect.DeepEqual(seen, writes) {
 		t.Fatalf("source target recipes changed: %v", seen)
 	}
-	if !reflect.DeepEqual(terminals, map[string]int{"storeBegin": 5, "storeCommit": 4, "storeCancel": 5}) {
+	if !reflect.DeepEqual(terminals, map[string]int{"storeBegin": 6, "storeCommit": 5, "storeCancel": 6}) {
 		t.Fatalf("transaction coverage=%v", terminals)
 	}
 	if count, err := schemaBatchDefinitionCount(serviceCatalogV3RelationshipReferenceSchema); err != nil || count != 12 {

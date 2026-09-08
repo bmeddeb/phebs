@@ -199,7 +199,7 @@ func (run *ExecutionEpochOneRun) ReturnA(ctx context.Context) (retErr error) {
 	if run.control.DrainOwners(ctx) != nil || run.control.OpenRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
-	if _, _, _, err := reader.Final(ctx); err != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if _, _, _, err := reader.Final(ctx); err != nil || reader.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()

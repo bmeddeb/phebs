@@ -4810,6 +4810,24 @@ budget, manually delete database rows or repeat the same rehearsal. Preserve
 the original custody until the cleanup handoff and its accounting are approved,
 implemented and reviewed.
 
+Ben subsequently approved prospective selector-handoff cleanup. The new
+opt-in V3 policy runs one authenticated cleanup command after successful final
+authority and drained ordinary owners in cold, physical B, logical B and return
+A; physical B first completes its search-retention observation. It keeps the
+lifecycle runner parked and retains the sixteen-delete batch cap. Each batch
+holds the existing exclusive mutation lock through its exact-selector check
+and transaction; native reads/writes and
+turn results are reported separately from F's read-only ledger. Completion
+requires empty preimage inventory in the same transaction. A selected snapshot,
+orphan record, selector change, exhausted bound or report failure stops the run
+without retry. No catalog root, current state or retained plan is deleted.
+Omitted-policy plans keep their old behavior and are not silently upgraded.
+The optional native rehearsal now constructs the prospective policy explicitly;
+use a newly committed, reviewed source only after its focused gates pass.
+Retained failed custody must not be edited or reopened as a running database.
+This correction does not establish a full rehearsal, whole-work receipt or
+freeze.
+
 Prospective V3 receipts now keep incomplete store evidence explicit through
 the existing unavailable-metrics list: transaction count, submitted-row count
 and per-transaction row maximum are one all-or-none family. A retained positive
@@ -4817,8 +4835,10 @@ prefix is not reset to zero after transport loss or hard death. Refused work
 before actual submission does not invent an attempt or a cap-plus-one result.
 A separately observed resource crossing remains visible, but incomplete store
 evidence prevents a resource-only diagnosis. This failure vocabulary does not
-implement the complete store collector or make the launcher ready; the 512-row
-and 170-transaction limits and retained V1/V2 evidence stay unchanged.
+implement the complete store collector or make the launcher ready. The
+512-row per-transaction cap and retained V1/V2 evidence stay unchanged;
+170 logical-phase transactions remains the omitted-policy baseline. The
+explicit selector-cleanup policy adds one attempted transaction there, for 171.
 
 ## Developing phebs
 

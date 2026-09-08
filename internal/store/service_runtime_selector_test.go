@@ -39,6 +39,11 @@ func newServiceRuntimeSelectorFixture(t *testing.T) serviceRuntimeSelectorFixtur
 func newServiceRuntimeSelectorFixtureContext(ctx context.Context, t *testing.T) serviceRuntimeSelectorFixture {
 	t.Helper()
 	s := newServiceCatalogV3InternalStoreContext(ctx, t)
+	return newServiceRuntimeSelectorFixtureStore(ctx, t, s)
+}
+
+func newServiceRuntimeSelectorFixtureStore(ctx context.Context, t *testing.T, s *Surreal) serviceRuntimeSelectorFixture {
+	t.Helper()
 	repository := "example.com/acme/service-runtime-" + strings.ToLower(t.Name())
 	commit := strings.Repeat("7", 40)
 	seedServiceCatalogV3RepoContext(ctx, t, s, repository, commit)

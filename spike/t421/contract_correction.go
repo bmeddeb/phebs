@@ -239,6 +239,11 @@ func validatePlanExecutionContract(plan Plan) error {
 		if err := applyProcessAccountingCorrection(&want); err != nil {
 			return err
 		}
+		if plan.SelectorHandoffCleanup != nil {
+			if err := applySelectorHandoffCleanupCorrection(&want); err != nil {
+				return err
+			}
+		}
 	}
 	if !reflect.DeepEqual(plan.PhaseOrder, want.PhaseOrder) || !reflect.DeepEqual(plan.PhaseStates, want.PhaseStates) ||
 		!reflect.DeepEqual(plan.PhaseDeadlines, want.PhaseDeadlines) || !reflect.DeepEqual(plan.FailurePoints, want.FailurePoints) ||
@@ -247,7 +252,8 @@ func validatePlanExecutionContract(plan Plan) error {
 		!reflect.DeepEqual(plan.SealPolicy, want.SealPolicy) || !reflect.DeepEqual(plan.StopRules, want.StopRules) ||
 		plan.Teardown != want.Teardown || !reflect.DeepEqual(plan.ReceiptContract, want.ReceiptContract) ||
 		plan.Claims != want.Claims || !reflect.DeepEqual(plan.Correction, want.Correction) ||
-		!reflect.DeepEqual(plan.ProcessAccounting, want.ProcessAccounting) {
+		!reflect.DeepEqual(plan.ProcessAccounting, want.ProcessAccounting) ||
+		!reflect.DeepEqual(plan.SelectorHandoffCleanup, want.SelectorHandoffCleanup) {
 		return errors.New("T42.1 execution contract differs from the frozen plan")
 	}
 	return nil

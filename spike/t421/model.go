@@ -25,29 +25,30 @@ const (
 )
 
 type Plan struct {
-	Schema            string                     `json:"schema"`
-	FrozenOn          string                     `json:"frozen_on"`
-	SourceCommit      string                     `json:"source_commit"`
-	Inputs            []InputBinding             `json:"inputs"`
-	Profile           CombinedProfile            `json:"profile"`
-	Oracle            Oracle                     `json:"oracle"`
-	Revisions         RevisionHistory            `json:"revision_history"`
-	PhaseStates       []PhaseState               `json:"phase_states"`
-	PhaseOrder        []string                   `json:"phase_order"`
-	PhaseDeadlines    []PhaseDeadline            `json:"phase_deadlines"`
-	FailurePoints     []FailurePoint             `json:"failure_points"`
-	ReaderProbe       ReaderProbeProfile         `json:"reader_probe"`
-	SafetyEnvelope    SafetyEnvelope             `json:"safety_envelope"`
-	WorkEnvelope      WorkEnvelope               `json:"work_envelope"`
-	MeterPolicy       MeterPolicy                `json:"meter_policy"`
-	ToolPolicy        ToolPolicy                 `json:"tool_policy"`
-	SealPolicy        SealPolicy                 `json:"seal_policy"`
-	StopRules         []StopRule                 `json:"stop_rules"`
-	Teardown          TeardownRule               `json:"teardown_rule"`
-	ReceiptContract   ReceiptContract            `json:"receipt_contract"`
-	Claims            Claims                     `json:"claims"`
-	Correction        *ContractCorrection        `json:"correction,omitempty"`
-	ProcessAccounting *ProcessAccountingContract `json:"process_accounting,omitempty"`
+	Schema                 string                          `json:"schema"`
+	FrozenOn               string                          `json:"frozen_on"`
+	SourceCommit           string                          `json:"source_commit"`
+	Inputs                 []InputBinding                  `json:"inputs"`
+	Profile                CombinedProfile                 `json:"profile"`
+	Oracle                 Oracle                          `json:"oracle"`
+	Revisions              RevisionHistory                 `json:"revision_history"`
+	PhaseStates            []PhaseState                    `json:"phase_states"`
+	PhaseOrder             []string                        `json:"phase_order"`
+	PhaseDeadlines         []PhaseDeadline                 `json:"phase_deadlines"`
+	FailurePoints          []FailurePoint                  `json:"failure_points"`
+	ReaderProbe            ReaderProbeProfile              `json:"reader_probe"`
+	SafetyEnvelope         SafetyEnvelope                  `json:"safety_envelope"`
+	WorkEnvelope           WorkEnvelope                    `json:"work_envelope"`
+	MeterPolicy            MeterPolicy                     `json:"meter_policy"`
+	ToolPolicy             ToolPolicy                      `json:"tool_policy"`
+	SealPolicy             SealPolicy                      `json:"seal_policy"`
+	StopRules              []StopRule                      `json:"stop_rules"`
+	Teardown               TeardownRule                    `json:"teardown_rule"`
+	ReceiptContract        ReceiptContract                 `json:"receipt_contract"`
+	Claims                 Claims                          `json:"claims"`
+	Correction             *ContractCorrection             `json:"correction,omitempty"`
+	ProcessAccounting      *ProcessAccountingContract      `json:"process_accounting,omitempty"`
+	SelectorHandoffCleanup *SelectorHandoffCleanupContract `json:"selector_handoff_cleanup,omitempty"`
 }
 
 type InputBinding struct {

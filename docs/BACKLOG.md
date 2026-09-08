@@ -5707,6 +5707,64 @@ This does not implement the cleanup handoff or make another rehearsal ready.
 Its prospective lifecycle/phase-accounting decision remains an explicit
 admission hold in PLAN; no bound or retained plan changes.
 
+**2026-09-08 approved prospective selector-handoff cleanup.** Ben's subsequent
+approval closes the design/admission hold above for the explicitly accounted
+bounded handoff, not for ceremony execution. A separate opt-in V3 constructor
+keeps retained V1/V2 and omitted-policy V3 plans exact. Native F captures its
+already-confirmed full selector privately; only the successful report tail
+arms the separate command. Drained ordinary owners remain joined through
+cleanup and the existing request fence before phase/server handoff. Physical B
+first joins its existing search-retention observation. Return-A cleanup is a
+uniform prospective handoff, not a demonstrated prerequisite of stale/checkpoint
+recovery. The ordinary lifecycle runner stays parked.
+
+The store operation reuses the historical owner's preimage-only drain under
+the existing exclusive mutation lock, with an exact selector read/compare,
+no retry and
+at most sixteen deleted rows including the summary. `Done` proves the entire
+repository preimage inventory empty; a still-selected snapshot or orphan row
+refuses. One empty cold confirmation is still one transaction, with zero rows.
+Fixed-corpus cleanup maxima for cold/physical-B/logical-B/return-A are
+1/626/1/626 turns, 0/10,001/2/10,001 deletions and 0/10,001/2/10,001 submitted
+rows, respectively. Explicit native read/write attempt maxima are
+3/4,384/9/4,384 and 0/626/2/626. These are added owning-phase allowances,
+not measurements; actual native reports and independent SA acknowledgements
+remain necessary. The per-turn submitted-row maximum and deletion cap both
+remain sixteen. Deadlines, DA/PC control
+budgets and retained plans are unchanged.
+
+AC: native empty/protected/obsolete/orphan and changed-selector cases;
+multi-batch drain with exact native read charges; the existing exclusive lock
+blocks an admitted shared-lock selector CAS until cleanup commits/releases;
+continued real state plans preserve current authority
+and precious validation. Closed input/response, successful F callback composition,
+body/cache/report/cancellation refusal, one-shot parent HTTP and omitted-policy
+preservation must pass normal/race plus static/docs/glossary and independent
+non-OCR source/cost review. No full native rehearsal or freeze is recorded here.
+
+The initially proposed no-op selector UPDATE failed its native concurrency
+regression (package 1.639s): it did not invalidate the stale transaction. That
+approach was removed, not waived. The corrected existing-exclusive-lock/native
+store composition passed in 2.135s, including genuine selected SDK handoffs
+with observed transaction/row deltas of 1/16, 1/2 and 1/0 and native read/write
+attempt counts of 7/1, 9/2 and 3/0. The shared-lock CAS refuses while cleanup
+holds exclusive custody, then succeeds after commit/release. These use fresh
+test custody, not the retained failed database.
+
+The broader state/runtime-selector/catalog-lifecycle store selection passed
+normal in 66.250s and race in 157.813s. All T422 command neighbors plus focused
+parent/contract and actual lock tests passed normal in 5.972/1.434/0.515s and
+race in 15.402/9.601/2.457s, respectively. Final repository static checks
+(vet, pinned lint with zero issues, compile-only package checks), docs (0.444s),
+glossary, formatting and whitespace passed. Independent non-authoring
+production and contract/parent/docs/cost reviews closed with
+critical/high/medium/low all zero after qualifying the retained 170-transaction
+baseline versus the new opt-in 171. The staged Go-source/test diff against
+`42df6747a5a8c78b7a4e33c60ada736aee773422` has SHA-256
+`af5978697479f7c926144751b205bbddeca5889a74645ee9a109a4acef103692`.
+These are scoped working-tree gates, not full-store/full-repository test runs,
+complete native rehearsal, whole-work receipt, author/seal or freeze evidence.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

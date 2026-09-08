@@ -111,7 +111,7 @@ func (run *ExecutionEpochOneRun) PhysicalB(ctx context.Context) (retErr error) {
 		return ErrExecutionEpochOne
 	}
 	observation, err := reader.retention(ctx, run.pinStarted, run.pinJoined)
-	if err != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if err != nil || reader.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()

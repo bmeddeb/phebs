@@ -761,6 +761,13 @@ func serve(args []string) (retErr error) {
 		Pins:     searchGenerationPins, Acquire: acquireLifecycleMutation,
 	}
 	lifecycleOwners = append(lifecycleOwners, searchGenerationOwner)
+	if semanticLaunch != nil && semanticLaunch.request.SelectorHandoffCleanup != "" && semanticLaunch.request.ServerEpoch <= 3 {
+		cleanup, cleanupErr := newT422SelectorCleanupControl(ctx, semanticLaunch, st, acquireObservationTransition)
+		if cleanupErr != nil {
+			return cleanupErr
+		}
+		exactReadState.selectorCleanup = cleanup
+	}
 	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 1 {
 		retention, retentionErr := newT422RetentionControl(ctx, semanticLaunch, searchGenerationOwner, searchGenerationPins)
 		if retentionErr != nil {
@@ -2222,6 +2229,7 @@ func serve(args []string) (retErr error) {
 		reader.stale = staleControl
 		reader.checkpoint = checkpointControl
 		reader.checkpointRecovery = checkpointRecovery
+		reader.selectorCleanup = exactReadState.selectorCleanup
 		tailReadiness = t421ExactFinalAuthorityRead{
 			Limits: t421TailReadinessLimits(), Read: reader.ReadTailReadiness,
 		}

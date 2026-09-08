@@ -38,14 +38,15 @@ var errT422SemanticLaunch = errors.New("T42.2 semantic launch admission refused"
 // retains protected plan/config custody. No path, arbitrary phase list, prior
 // authority or restart claim is accepted before its native operation exists.
 type t422SemanticLaunchRequest struct {
-	Schema             string                       `json:"schema"`
-	Recipe             string                       `json:"recipe"`
-	PlanSHA256         string                       `json:"plan_sha256"`
-	ConfigSHA256       string                       `json:"config_sha256"`
-	ServerEpoch        uint64                       `json:"server_epoch"`
-	Repository         string                       `json:"repository"`
-	CheckpointRecovery *t422CheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
-	ReturnSourceCommit string                       `json:"return_source_commit,omitempty"`
+	Schema                 string                       `json:"schema"`
+	Recipe                 string                       `json:"recipe"`
+	PlanSHA256             string                       `json:"plan_sha256"`
+	ConfigSHA256           string                       `json:"config_sha256"`
+	ServerEpoch            uint64                       `json:"server_epoch"`
+	Repository             string                       `json:"repository"`
+	CheckpointRecovery     *t422CheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
+	ReturnSourceCommit     string                       `json:"return_source_commit,omitempty"`
+	SelectorHandoffCleanup string                       `json:"selector_handoff_cleanup,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -108,6 +109,9 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 			return nil, errT422SemanticLaunch
 		}
 	} else if request.ReturnSourceCommit != "" {
+		return nil, errT422SemanticLaunch
+	}
+	if request.SelectorHandoffCleanup != "" && request.SelectorHandoffCleanup != t422SelectorCleanupSchema {
 		return nil, errT422SemanticLaunch
 	}
 	canonical, err := json.Marshal(request)
@@ -276,7 +280,8 @@ func (launch *t422SemanticLaunch) matches(snapshot dispatchadmission.ProductionS
 
 func (launch *t422SemanticLaunch) admitRequest(request *http.Request) (*http.Request, error) {
 	snapshot, err := dispatchadmission.ProductionSemanticState()
-	if err != nil || !launch.matches(snapshot) || !t422SemanticRequestRoute(request) {
+	if err != nil || !launch.matches(snapshot) || !t422SemanticRequestRoute(request) ||
+		request.URL.Path == t422SelectorCleanupPath && (launch.request.SelectorHandoffCleanup != t422SelectorCleanupSchema || launch.request.ServerEpoch > 3) {
 		// A valid private request already owns its slot. A changed semantic
 		// producer/phase or unlisted route is terminal, unlike a bad token.
 		if launch.fail != nil {
@@ -300,7 +305,7 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	path := request.URL.Path
 	activation := request.Header.Values(t421ExactReadActivationHeader)
 	ordinals := request.Header.Values(t421ExactReadOrdinalHeader)
-	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath || path == t422StalePreparePath || path == t422CheckpointPreparePath {
+	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath || path == t422StalePreparePath || path == t422CheckpointPreparePath || path == t422SelectorCleanupPath {
 		method := http.MethodPost
 		if path == "/api/health" {
 			method = http.MethodGet

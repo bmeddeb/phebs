@@ -90,6 +90,7 @@ type t421ExactReadAccountingState struct {
 	marker             *t422MarkerControl
 	lifecycle          *t422LifecycleControl
 	retention          *t422RetentionControl
+	selectorCleanup    *t422SelectorCleanupControl
 	activation         *t422ActivationControl
 	stale              *t422StaleControl
 	checkpoint         *t422CheckpointControl
@@ -207,6 +208,10 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
+	if request.URL != nil && request.URL.Path == t422SelectorCleanupPath && handler.state.selectorCleanup != nil {
+		handler.state.selectorCleanup.command(writer, request)
+		return
+	}
 	if handler.state.retention != nil && request.URL != nil && request.URL.Path == t422RetentionPinPath {
 		handler.state.retention.command(writer, request)
 		return
@@ -315,6 +320,9 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 			}
 			if readErr == nil && handler.state.checkpoint != nil && request.URL.Path == t421ExactFinalAuthorityPath {
 				afterReport, readErr = handler.state.checkpoint.finalTail(ctx, afterReport)
+			}
+			if readErr == nil && handler.state.selectorCleanup != nil && request.URL.Path == t421ExactFinalAuthorityPath {
+				afterReport, readErr = handler.state.selectorCleanup.finalTail(ctx, afterReport)
 			}
 		}
 		if readErr != nil || !json.Valid(canonical) {
