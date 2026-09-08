@@ -13,9 +13,55 @@ import (
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogingest"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+// Any catalog read, publication or downstream runtime/store work would call
+// an uninitialized embedded store. Only the existing repository read is valid.
+type waitingIndexedCatalogStore struct {
+	*store.Surreal
+	repository store.Repo
+	reads      int
+}
+
+func (s *waitingIndexedCatalogStore) GetRepo(_ context.Context, _ string) (*store.Repo, error) {
+	s.reads++
+	value := s.repository
+	return &value, nil
+}
+
+func TestServiceRuntimeWaitsBeforeReturnCatalogPreparation(t *testing.T) {
+	const repository = "example.com/acme/return-startup"
+	for _, indexed := range []string{"", strings.Repeat("b", 40)} {
+		t.Run(indexed, func(t *testing.T) {
+			state := &waitingIndexedCatalogStore{repository: store.Repo{Name: repository, IndexedCommitHash: indexed}}
+			controller := &serviceRuntimeController{
+				// Deliberately no controller.store: ignoring NotReady must fail
+				// before old search/state/relationship preparation is possible.
+				v3Catalog: &servicecatalogingest.V3Reconciler{Store: state, RequiredIndexedCommit: strings.Repeat("a", 40)},
+				relationship: &relationshippublication.Runtime{AfterV3MarkerInstall: func(context.Context, relationshippublication.PublicationTransitionTargetV3) error {
+					t.Fatal("waiting startup reached marker publication")
+					return nil
+				}},
+				selections: map[string]config.ServiceCatalog{repository: {Runtime: config.ServiceCatalogRuntimeV3}},
+				acquire:    func(context.Context) (func(), error) { return func() {}, nil },
+			}
+			for range 3 {
+				if err := controller.Advance(t.Context(), repository); err != nil {
+					t.Fatal("pending startup/worker callback", err)
+				}
+			}
+			if state.reads != 3 {
+				t.Fatal("waiting changed repository read count")
+			}
+			if _, err := controller.prepareV3Locked(t.Context(), repository); !errors.Is(err, errServiceRuntimePending) {
+				t.Fatal("preparation did not stop at pending", err)
+			}
+		})
+	}
+}
 
 func TestServiceRuntimeRejectsV2TargetWithoutHoldingV3(t *testing.T) {
 	ctx := t.Context()

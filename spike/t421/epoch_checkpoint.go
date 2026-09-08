@@ -44,6 +44,13 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 	if epoch.Epoch < 1 || epoch.Epoch > 4 || (epoch.Epoch == 4) != (recovery != nil) {
 		return nil, ErrExecutionEpochOne
 	}
+	if epoch.Epoch == 3 {
+		if !validGitObjectID(epoch.ReturnSourceCommit, "sha1") {
+			return nil, ErrExecutionEpochOne
+		}
+	} else if epoch.ReturnSourceCommit != "" {
+		return nil, ErrExecutionEpochOne
+	}
 	raw, err := json.Marshal(struct {
 		Schema             string                        `json:"schema"`
 		Recipe             string                        `json:"recipe"`
@@ -52,7 +59,8 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 		ServerEpoch        uint64                        `json:"server_epoch"`
 		Repository         string                        `json:"repository"`
 		CheckpointRecovery *epochCheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery})
+		ReturnSourceCommit string                        `json:"return_source_commit,omitempty"`
+	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit})
 	if err != nil || len(raw)+1 > 16<<10 {
 		return nil, ErrExecutionEpochOne
 	}

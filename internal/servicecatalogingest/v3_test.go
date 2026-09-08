@@ -199,6 +199,79 @@ func TestV3ReconcilerOperatorAndCensusRefusal(t *testing.T) {
 	}
 }
 
+func TestV3ReconcilerWaitsForRequiredIndexedCommit(t *testing.T) {
+	const repository = "example.com/acme/return-startup"
+	dataDir, mirror, prior := testMirror(t, repository, map[string]string{
+		"README.md": "mono\n", "shared/schema.proto": "schema\n", "svc/main.go": "package main\n",
+	})
+	tree := strings.TrimSpace(testGit(t, mirror, "rev-parse", prior+"^{tree}"))
+	required := strings.TrimSpace(testGit(t, mirror, "-c", "user.name=Phebs Test", "-c", "user.email=test@example.com",
+		"commit-tree", tree, "-p", prior, "-m", "return source identity"))
+	path := filepath.Join(t.TempDir(), "catalog.json")
+	catalog := testCatalog(prior, "Orders")
+	catalog.Authority = servicecatalog.Authority{Kind: servicecatalog.AuthorityOperator, ID: "platform", Version: "b"}
+	writeCatalog(t, path, catalog)
+	state := &v3MemoryStore{memoryStore: memoryStore{repositories: map[string]store.Repo{
+		repository: {Name: repository, IndexedCommitHash: prior},
+	}}}
+	reconciler := V3Reconciler{DataDir: dataDir, Store: state, Selections: map[string]config.ServiceCatalog{
+		repository: {Kind: servicecatalog.AuthorityOperator, ID: "platform", Version: "b", Path: path},
+	}}
+	if outcome, err := reconciler.ReconcileRepository(t.Context(), repository); err != nil || outcome != OutcomePublished {
+		t.Fatal("prior publication", outcome, err)
+	}
+	old := state.current[repository]
+	catalog.Authority.Version = "a-return"
+	writeCatalog(t, path, catalog)
+	selection := reconciler.Selections[repository]
+	selection.Version = "a-return"
+	reconciler.Selections[repository] = selection
+	reconciler.RequiredIndexedCommit = required
+	if err := os.Rename(path, path+".hidden"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(mirror, mirror+".hidden"); err != nil {
+		t.Fatal(err)
+	}
+	// Both public entry points and repeated callbacks must wait without even
+	// opening the new catalog or source, while retaining the old authority.
+	for range 3 {
+		if outcome, err := reconciler.ReconcileRepository(t.Context(), repository); err != nil || outcome != OutcomeNotReady {
+			t.Fatal("old indexed source did not wait", outcome, err)
+		}
+		if report, err := reconciler.Reconcile(t.Context()); err != nil || report.NotReady != 1 || len(report.Failures) != 0 {
+			t.Fatal("bulk reconciliation escaped the guard", report, err)
+		}
+		if state.current[repository].Root.Digest != old.Root.Digest || state.revisions[repository] != 1 {
+			t.Fatal("waiting replaced prior authority")
+		}
+	}
+	if err := os.Rename(path+".hidden", path); err != nil {
+		t.Fatal(err)
+	}
+	state.repositories[repository] = store.Repo{Name: repository, IndexedCommitHash: required}
+	if _, err := reconciler.ReconcileRepository(t.Context(), repository); err == nil || state.revisions[repository] != 1 {
+		t.Fatal("matching commit skipped the actual census")
+	}
+	if err := os.Rename(mirror+".hidden", mirror); err != nil {
+		t.Fatal(err)
+	}
+	if outcome, err := reconciler.ReconcileRepository(t.Context(), repository); err != nil || outcome != OutcomePublished || state.revisions[repository] != 2 {
+		t.Fatal("single correct-source publication", outcome, err)
+	}
+	if root := state.current[repository].Root; root.Binding.Source.Commit != required || root.Binding.Authority.Version != "a-return" {
+		t.Fatal("publication did not bind the required source")
+	}
+	if err := os.Rename(mirror, mirror+".hidden"); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		if outcome, err := reconciler.ReconcileRepository(t.Context(), repository); err != nil || outcome != OutcomeCurrent || state.revisions[repository] != 2 {
+			t.Fatal("exact-current callback repeated census/publication", outcome, err)
+		}
+	}
+}
+
 type v3MemoryStore struct {
 	memoryStore
 	current   map[string]store.ServiceCatalogV3CandidateRoot

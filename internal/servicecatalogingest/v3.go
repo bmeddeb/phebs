@@ -24,6 +24,10 @@ type V3Reconciler struct {
 	Store         v3RepositoryStore
 	Selections    map[string]config.ServiceCatalog
 	BeforePublish func(context.Context, string) error
+	// RequiredIndexedCommit holds a selected launch at its prior authority
+	// until indexing reaches the authenticated source. Empty leaves ordinary
+	// reconciliation unchanged. The check uses the existing repository read.
+	RequiredIndexedCommit string
 }
 
 func (r *V3Reconciler) Reconcile(ctx context.Context) (Report, error) {
@@ -71,6 +75,9 @@ func (r *V3Reconciler) reconcile(
 	repository store.Repo,
 ) (Outcome, error) {
 	if repository.Deleting || repository.IndexedCommitHash == "" {
+		return OutcomeNotReady, nil
+	}
+	if r.RequiredIndexedCommit != "" && repository.IndexedCommitHash != r.RequiredIndexedCommit {
 		return OutcomeNotReady, nil
 	}
 	selection, selected := r.Selections[repository.Name]

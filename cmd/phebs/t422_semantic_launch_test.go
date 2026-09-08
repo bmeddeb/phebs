@@ -137,6 +137,48 @@ func TestT422SemanticLaunchClosedEnvelope(t *testing.T) {
 	}
 }
 
+func TestT422SemanticReturnSourceCommit(t *testing.T) {
+	for _, test := range []struct {
+		name, commit string
+		epoch        uint64
+		want         bool
+	}{
+		{"return", strings.Repeat("a", 40), 3, true},
+		{"missing", "", 3, false},
+		{"short", strings.Repeat("a", 39), 3, false},
+		{"sha256", strings.Repeat("a", 64), 3, false},
+		{"uppercase", strings.Repeat("A", 40), 3, false},
+		{"invalid", strings.Repeat("z", 40), 3, false},
+		{"other-epoch", strings.Repeat("a", 40), 1, false},
+		{"ordinary-omission", "", 1, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			raw, snapshot := t422SemanticTestRequest(t)
+			var request t422SemanticLaunchRequest
+			if err := json.Unmarshal(raw, &request); err != nil {
+				t.Fatal(err)
+			}
+			request.ServerEpoch, request.ReturnSourceCommit = test.epoch, test.commit
+			raw, err := json.Marshal(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw = append(raw, '\n')
+			if test.epoch == 3 {
+				snapshot.Phase, snapshot.ProducerID = 6, 4
+			}
+			snapshot.InputSHA256 = sha256.Sum256(raw)
+			launch, err := decodeT422SemanticLaunch(raw, snapshot)
+			if (err == nil) != test.want {
+				t.Fatal("return source admission", err)
+			}
+			if test.want && launch.request.ReturnSourceCommit != test.commit {
+				t.Fatal("source binding lost")
+			}
+		})
+	}
+}
+
 func TestT422SemanticEpochAndWindowIdentity(t *testing.T) {
 	for epoch := uint64(0); epoch <= 6; epoch++ {
 		for phase := uint32(0); phase <= 16; phase++ {

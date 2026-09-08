@@ -385,8 +385,12 @@ func (controller *serviceRuntimeController) prepareV3Locked(
 	if controller.v3Catalog == nil || controller.relationship == nil {
 		return store.ServiceRuntimeTarget{}, errServiceRuntimePending
 	}
-	if _, err := controller.v3Catalog.ReconcileRepository(ctx, repository); err != nil {
+	outcome, err := controller.v3Catalog.ReconcileRepository(ctx, repository)
+	if err != nil {
 		return store.ServiceRuntimeTarget{}, pendingServiceRuntime(err)
+	}
+	if outcome == servicecatalogingest.OutcomeNotReady && controller.v3Catalog.RequiredIndexedCommit != "" {
+		return store.ServiceRuntimeTarget{}, errServiceRuntimePending
 	}
 	search, err := controller.currentV3SearchGeneration(ctx, repository)
 	if err != nil {

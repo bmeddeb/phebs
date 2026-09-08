@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
@@ -59,10 +60,13 @@ func TestExecutionEpochOneHealthOneShotAndFailure(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			run := &ExecutionEpochOneRun{control: control, stop: make(chan struct{}), done: make(chan struct{}),
-				epoch: ExecutionEpochConfig{Listen: strings.TrimPrefix(server.URL, "http://"), APIKey: "private-key"}}
 			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
+			run := &ExecutionEpochOneRun{control: control, stop: make(chan struct{}), done: make(chan struct{}),
+				healthLimit: 3 * time.Second, cancelRun: cancel,
+				epoch: ExecutionEpochConfig{Listen: strings.TrimPrefix(server.URL, "http://"), APIKey: "private-key"}}
+			run.setHealthDeadlineLocked(ctx, time.Now())
+			defer run.stopHealthDeadline()
 			if mode == "canceled" {
 				cancel()
 			}
@@ -71,6 +75,9 @@ func TestExecutionEpochOneHealthOneShotAndFailure(t *testing.T) {
 				t.Fatalf("health result = %v", err)
 			}
 			if mode == "healthy" {
+				if !run.healthy || run.healthTimer != nil || run.healthTimerDone != nil {
+					t.Fatal("healthy response did not retire the launch deadline")
+				}
 				select {
 				case <-run.stop:
 					t.Fatal("healthy request stopped the native lifetime")
@@ -97,5 +104,104 @@ func TestExecutionEpochOneHealthOneShotAndFailure(t *testing.T) {
 				t.Fatalf("HTTP requests = %d, want %d", requests.Load(), want)
 			}
 		})
+	}
+}
+
+func TestExecutionEpochOneHealthLaunchDeadline(t *testing.T) {
+	for _, stage := range []string{"delayed_health", "bootstrap_delay", "no_health", "phase_deadline", "launch_context_deadline", "health_context_deadline", "ready", "ready_at_expiry", "stop_before_expiry"} {
+		t.Run(stage, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				started := time.Now()
+				run := &ExecutionEpochOneRun{stop: make(chan struct{}), done: make(chan struct{}), cancelRun: cancel,
+					healthLimit: 2 * time.Second, control: &dispatchadmission.PhaseControl{},
+					epoch: ExecutionEpochConfig{Listen: "invalid"}}
+				launchCtx := ctx
+				want := started.Add(2 * time.Second)
+				switch stage {
+				case "bootstrap_delay":
+					// Model time spent inside admitted Start before the shared
+					// launch path arms the timer. The original anchor survives.
+					time.Sleep(time.Second)
+				case "phase_deadline":
+					run.coldDeadline = started.Add(time.Second)
+					want = run.coldDeadline
+				case "launch_context_deadline":
+					var launchCancel context.CancelFunc
+					launchCtx, launchCancel = context.WithDeadline(ctx, started.Add(time.Second))
+					defer launchCancel()
+					want = started.Add(time.Second)
+				}
+				run.setHealthDeadlineLocked(launchCtx, started)
+				defer run.stopHealthDeadline()
+				if run.healthDeadline != want {
+					t.Fatalf("health deadline = %v, want launch-bound %v", run.healthDeadline, want)
+				}
+				switch stage {
+				case "ready", "stop_before_expiry":
+					time.Sleep(time.Second)
+					if stage == "ready" {
+						if run.completeHealth(ctx) != nil || !run.healthy {
+							t.Fatal("live readiness did not retire its timer")
+						}
+					} else {
+						run.stopHealthDeadline()
+					}
+					time.Sleep(2 * time.Second)
+					synctest.Wait()
+					if ctx.Err() != nil || run.err != nil || run.healthTimer != nil || run.healthTimerDone != nil {
+						t.Fatal("retired health deadline stopped the later lifetime")
+					}
+					select {
+					case <-run.stop:
+						t.Fatal("retired health timer requested stop")
+					default:
+					}
+					return
+				case "no_health", "ready_at_expiry":
+					time.Sleep(2 * time.Second)
+					synctest.Wait()
+					if run.healthUsed || ctx.Err() == nil {
+						t.Fatal("absent Health did not independently cancel the lifetime")
+					}
+					if stage == "ready_at_expiry" && (run.completeHealth(t.Context()) == nil || run.healthy) {
+						t.Fatal("expired health timer admitted readiness")
+					}
+				default:
+					healthCtx := t.Context()
+					switch stage {
+					case "delayed_health":
+						time.Sleep(time.Second)
+					case "health_context_deadline":
+						var healthCancel context.CancelFunc
+						want = started.Add(time.Second)
+						healthCtx, healthCancel = context.WithDeadline(healthCtx, want)
+						defer healthCancel()
+					}
+					// Exercise Health's actual TCP wait/context path, not a
+					// replacement timeout helper or a native-ready assertion.
+					if run.Health(healthCtx) == nil || time.Now() != want {
+						t.Fatal("Health renewed or widened its original deadline")
+					}
+					synctest.Wait()
+				}
+				if run.err != ErrExecutionEpochOne || run.healthy {
+					t.Fatal("expired health readiness was not a sticky refusal")
+				}
+				select {
+				case <-run.stop:
+				default:
+					t.Fatal("health deadline did not request existing stop/join")
+				}
+			})
+		})
+	}
+
+	// A fabricated run without an actual launch deadline is not a compatible
+	// replacement for a constructed epoch and must not invent a new allowance.
+	run := &ExecutionEpochOneRun{stop: make(chan struct{}), done: make(chan struct{}), control: &dispatchadmission.PhaseControl{}}
+	if run.Health(t.Context()) == nil || run.healthUsed || !run.healthDeadline.IsZero() {
+		t.Fatal("unlaunched run manufactured a health deadline")
 	}
 }

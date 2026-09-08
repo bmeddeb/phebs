@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
@@ -19,6 +20,7 @@ func t422MarkerRouteLaunch(t *testing.T) (*t422SemanticLaunch, dispatchadmission
 	t.Helper()
 	raw, current := t422SemanticTestRequest(t)
 	raw = bytes.Replace(raw, []byte(`"server_epoch":1`), []byte(`"server_epoch":3`), 1)
+	raw = bytes.Replace(raw, []byte("}\n"), []byte(`,"return_source_commit":"`+strings.Repeat("a", 40)+"\"}\n"), 1)
 	current.Phase, current.InputSHA256 = 6, sha256.Sum256(raw)
 	launch, err := decodeT422SemanticLaunch(raw, current)
 	if err != nil {

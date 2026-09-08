@@ -20,6 +20,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/gitobj"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
@@ -44,6 +45,7 @@ type t422SemanticLaunchRequest struct {
 	ServerEpoch        uint64                       `json:"server_epoch"`
 	Repository         string                       `json:"repository"`
 	CheckpointRecovery *t422CheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
+	ReturnSourceCommit string                       `json:"return_source_commit,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -99,6 +101,13 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 	}
 	if request.CheckpointRecovery != nil && (request.ServerEpoch != 4 || snapshot.ProducerID != 5 || snapshot.Phase != 8 ||
 		!validT422CheckpointRecoveryInput(*request.CheckpointRecovery)) {
+		return nil, errT422SemanticLaunch
+	}
+	if request.ServerEpoch == 3 {
+		if len(request.ReturnSourceCommit) != 40 || !gitobj.IsObjectID(request.ReturnSourceCommit) {
+			return nil, errT422SemanticLaunch
+		}
+	} else if request.ReturnSourceCommit != "" {
 		return nil, errT422SemanticLaunch
 	}
 	canonical, err := json.Marshal(request)

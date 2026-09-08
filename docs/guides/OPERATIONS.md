@@ -4784,6 +4784,21 @@ original private log rather than editing it to obtain a pass. Such logs can
 contain setup credentials and must not be published. A corrected parser replay
 does not establish later native phases or authorize freeze.
 
+Selected return-A startup now waits for the authenticated authored commit to
+become the indexed commit before preparing its new service catalog. It keeps
+the prior authority while waiting and does not perform an interim B-source
+census or publication. The same guard covers subsequent worker callbacks and
+stays in effect through that server's stale/checkpoint phases. A missing or
+malformed return-source binding refuses launch; do not reuse an older private
+wrapper/server combination or raise the one-census allowance.
+
+Each rehearsal server's health deadline is now anchored immediately before
+its admitted Start, including admission, bootstrap and stdin delivery time.
+Delaying or omitting the first health call does not grant another window.
+The timer is retired on successful health or joined cleanup; phase and native
+callback deadlines remain unchanged. Focused tests of these corrections do
+not replace a reviewed exact-source native rehearsal or establish freeze.
+
 Prospective V3 receipts now keep incomplete store evidence explicit through
 the existing unavailable-metrics list: transaction count, submitted-row count
 and per-transaction row maximum are one all-or-none family. A retained positive

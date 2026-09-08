@@ -47,6 +47,7 @@ func t422StaleBootstrapRecord(t *testing.T) (dispatchadmission.ProductionBootstr
 	t.Helper()
 	raw, _ := t422SemanticTestRequest(t)
 	raw = bytes.Replace(raw, []byte(`"server_epoch":1`), []byte(`"server_epoch":3`), 1)
+	raw = bytes.Replace(raw, []byte("}\n"), []byte(`,"return_source_commit":"`+strings.Repeat("a", 40)+"\"}\n"), 1)
 	record := t422ServeFlagsRecord()
 	record.SemanticMode, record.InputSHA256 = dispatchadmission.ProductionSemanticV3, sha256.Sum256(raw)
 	record.Producer.ID, record.Phase, record.Limits.Phases = 4, 6, 2

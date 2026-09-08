@@ -5612,6 +5612,51 @@ The earlier 5a3ec246 mid-phase failure remains separately unattributed. Logical
 B, return A, stale lease, checkpoint restart, whole metrics and freeze remain
 unestablished by these runs.
 
+**2026-09-08 end-to-end pre-rehearsal corrections.** The independent,
+non-OCR source review at `41ee990aa8b8891813a69636517449199110b137`
+found one high and one medium issue. Return-A startup advanced its new
+catalog before sync/index workers, binding it to stored indexed B. A private
+three-file real-Git/memory-store reproduction passed in 0.19s (package 0.727s),
+proving two required censuses across that interim binding and subsequent
+A-return indexing. This violates the one-census contract; consuming the
+one-shot marker on the interim relationship is an additional scheduling-
+dependent failure, not a reproduced native stop. The other finding starts
+Health's allowance at the first call rather than launch; it is not attributed
+to an earlier native failure.
+
+The correction carries the checked actual authored commit in epoch-three's
+authenticated input and gates every V3 reconcile on its existing repository
+read before catalog/census work. Selected not-ready stops runtime preparation;
+ordinary behavior and other-epoch input bytes remain unchanged. The marker
+constructor requires the same guard. The health allowance now has an absolute
+pre-Start anchor and one independently enforced timer, retired on readiness
+or joined cleanup. PLAN records all costs without raising any ceiling.
+
+AC: canonical required/forbidden source-input cases; old-index/new-catalog
+startup and repeated callbacks preserve prior authority without opening catalog
+or source; one correct-source census/publication and metadata-only repeats;
+actual runtime pending prevents downstream preparation; original unadmitted
+marker-constructor test retains its bootstrap check; delayed/absent health,
+deadline intersection and timer retirement; focused normal/race, static,
+documentation and independent source/cost review. Tiny corpus and runtime seam
+tests do not establish native marker concurrency, complete phase-eight recovery
+or whole-work accounting. No full rehearsal or freeze follows from these fixes
+alone; a new immutable reviewed candidate and regenerated exact-source operator
+wrapper remain required before the next attempt.
+
+The final correction content passed focused normal gates for catalog ingest,
+command (including all T422 neighbors), and parent in 0.900/5.963/1.203s.
+Affected selectors passed race three times in 4.404/11.527/17.629s. Repository
+vet, pinned lint (zero issues), repository-wide compilation, glossary,
+documentation (0.466s), format and whitespace passed. An initial static
+invocation refused the ambient linter version before running static checks;
+the existing retained pinned tool passed the rerun. Non-authoring source/cost
+reviews closed all findings after correcting one fixture that otherwise
+stopped before its original missing-bootstrap assertion. The private
+source-hashed record binds the reviewed working-tree correction to base
+`41ee990a`; it is not a commit or native acceptance record. No full rehearsal,
+push, seal or freeze was performed.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

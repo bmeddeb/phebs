@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -262,14 +263,14 @@ func TestT422MarkerConstructorRefusesWithoutLiveBinding(t *testing.T) {
 	state := &store.Surreal{} // no engine; it must never be queried
 	repository := "local/tmp/marker"
 	launch := &t422SemanticLaunch{
-		request: t422SemanticLaunchRequest{ServerEpoch: 3, Repository: repository},
+		request: t422SemanticLaunchRequest{ServerEpoch: 3, Repository: repository, ReturnSourceCommit: strings.Repeat("a", 40)},
 		initial: dispatchadmission.ProductionSemanticSnapshot{Phase: 6}, fail: func(error) {},
 	}
 	runtime := &relationshippublication.Runtime{DataDir: t.TempDir(), Store: state,
 		Acquire: func(context.Context) (func(), error) { t.Fatal("constructor took a native lock"); return nil, nil }}
 	services := &serviceRuntimeController{
 		dataDir: runtime.DataDir, store: state, relationship: runtime, acquire: runtime.Acquire,
-		v3Catalog:  &servicecatalogingest.V3Reconciler{},
+		v3Catalog:  &servicecatalogingest.V3Reconciler{RequiredIndexedCommit: launch.request.ReturnSourceCommit},
 		selections: map[string]config.ServiceCatalog{repository: {Runtime: config.ServiceCatalogRuntimeV3}},
 	}
 	for _, ctx := range []context.Context{nil, t.Context()} {

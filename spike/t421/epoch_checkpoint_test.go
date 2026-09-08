@@ -173,7 +173,7 @@ func TestExecutionEpochCheckpointSemanticInput(t *testing.T) {
 	if err != nil || len(raw) > 16<<10 || !bytes.Contains(raw, []byte(`"checkpoint_recovery":{"prior":`)) || bytes.Contains(raw, []byte("private_lease")) {
 		t.Fatal("canonical handoff", err, len(raw))
 	}
-	for _, number := range []uint64{1, 2, 3} {
+	for _, number := range []uint64{1, 2} {
 		epoch.Epoch = number
 		ordinary, err := epochSemanticInput(testDigest("plan"), epoch, nil)
 		want := struct {
@@ -191,7 +191,27 @@ func TestExecutionEpochCheckpointSemanticInput(t *testing.T) {
 			t.Fatal("wrong-epoch handoff")
 		}
 	}
+	epoch.Epoch = 3
+	if _, err := epochSemanticInput(testDigest("plan"), epoch, nil); err == nil {
+		t.Fatal("return epoch lacks actual authored source")
+	}
+	epoch.ReturnSourceCommit = strings.Repeat("a", 40)
+	if raw, err := epochSemanticInput(testDigest("plan"), epoch, nil); err != nil ||
+		!bytes.Contains(raw, []byte(`"return_source_commit":"`+epoch.ReturnSourceCommit+`"`)) {
+		t.Fatal("return source binding", err)
+	}
+	for _, invalid := range []string{strings.Repeat("A", 40), strings.Repeat("a", 64), "HEAD"} {
+		epoch.ReturnSourceCommit = invalid
+		if _, err := epochSemanticInput(testDigest("plan"), epoch, nil); err == nil {
+			t.Fatal("invalid return source")
+		}
+	}
 	epoch.Epoch = 4
+	epoch.ReturnSourceCommit = strings.Repeat("a", 40)
+	if _, err := epochSemanticInput(testDigest("plan"), epoch, handoff); err == nil {
+		t.Fatal("return binding crossed epoch")
+	}
+	epoch.ReturnSourceCommit = ""
 	if _, err := epochSemanticInput(testDigest("plan"), epoch, nil); err == nil {
 		t.Fatal("unbound recovery")
 	}

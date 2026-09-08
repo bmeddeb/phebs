@@ -196,6 +196,9 @@ type ExecutionEpochOneRun struct {
 	healthDone            chan struct{}
 	healthy               bool
 	healthLimit           time.Duration
+	healthDeadline        time.Time
+	healthTimer           *time.Timer
+	healthTimerDone       chan struct{}
 	coldDeadline          time.Time
 	coldUsed              bool
 	coldCancel            context.CancelFunc
@@ -363,13 +366,17 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if number > 1 {
 		borrowOK = flow.retained != nil && author.borrowedBy == flow.retained && epochs.active && flow.retained.joinedEmpty()
 	}
-	if author.active || !borrowOK || author.next != min(int(number), 3) || epochs.checkLocked(launchCtx, number) != nil || author.checkSource(launchCtx, author.previous) != nil {
+	if author.active || !borrowOK || author.next != min(int(number), 3) || number == 3 && author.previous == nil ||
+		epochs.checkLocked(launchCtx, number) != nil || author.checkSource(launchCtx, author.previous) != nil {
 		epochs.mu.Unlock()
 		author.mu.Unlock()
 		return nil, ErrExecutionEpochOne
 	}
 	path, tools, environment, err := flow.checkEpochTools(launchCtx, number)
 	epoch := epochs.epochs[number-1]
+	if number == 3 {
+		epoch.ReturnSourceCommit = author.previous.Result.Commit
+	}
 	run.epoch = epoch
 	if err == nil && (epochs.released != number-1 || epochs.listeners[number-1].Close() != nil) {
 		err = ErrExecutionEpochOne
@@ -439,12 +446,18 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
 	run.command = command
+	// Capture before admitted Start so its latency cannot extend readiness.
+	// Arm only after an actual launch, before any bootstrap or stdin delivery.
+	launchStarted := time.Now()
 	handle, err := flow.parent.StartInPhase(launchCtx, phase, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
 	if err != nil {
 		cancel()
 		return nil, ErrExecutionEpochOne
 	}
 	started, run.result.RootStarted = true, true
+	run.mu.Lock()
+	run.setHealthDeadlineLocked(launchCtx, launchStarted)
+	run.mu.Unlock()
 	waited := make(chan error, 1)
 	go func() { waited <- handle.Wait() }()
 	for _, index := range []int{1, 3, 5} {
@@ -516,15 +529,78 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	return run, retErr
 }
 
+// The caller holds run.mu. This one-shot timer also covers an absent Health
+// call; successful readiness or finish retires and joins it, like phaseTimer.
+func (run *ExecutionEpochOneRun) setHealthDeadlineLocked(ctx context.Context, started time.Time) {
+	deadline := started.Add(run.healthLimit)
+	if !run.coldDeadline.IsZero() && run.coldDeadline.Before(deadline) {
+		deadline = run.coldDeadline
+	}
+	if callerDeadline, ok := ctx.Deadline(); ok && callerDeadline.Before(deadline) {
+		deadline = callerDeadline
+	}
+	done := make(chan struct{})
+	run.healthDeadline, run.healthTimerDone = deadline, done
+	run.healthTimer = time.AfterFunc(time.Until(deadline), func() {
+		defer close(done)
+		run.mu.Lock()
+		run.err = ErrExecutionEpochOne
+		run.mu.Unlock()
+		run.cancelRun()
+		run.stopOnce.Do(func() { close(run.stop) })
+	})
+}
+
+// A started timeout callback wins even if it is still waiting for run.mu.
+func (run *ExecutionEpochOneRun) completeHealth(ctx context.Context) error {
+	run.mu.Lock()
+	defer run.mu.Unlock()
+	if ctx.Err() != nil || run.stopping || run.err != nil || run.healthTimer == nil ||
+		!time.Now().Before(run.healthDeadline) || !run.healthTimer.Stop() {
+		return ErrExecutionEpochOne
+	}
+	close(run.healthTimerDone) // Stop won: no callback owns this completion.
+	run.healthTimer, run.healthTimerDone = nil, nil
+	if !time.Now().Before(run.healthDeadline) {
+		return ErrExecutionEpochOne
+	}
+	select {
+	case <-run.stop:
+		return ErrExecutionEpochOne
+	default:
+	}
+	run.healthy = true
+	return nil
+}
+
+func (run *ExecutionEpochOneRun) stopHealthDeadline() {
+	run.mu.Lock()
+	timer, done := run.healthTimer, run.healthTimerDone
+	run.healthTimer, run.healthTimerDone = nil, nil
+	if timer != nil && !time.Now().Before(run.healthDeadline) {
+		run.err = ErrExecutionEpochOne
+	}
+	run.mu.Unlock()
+	if timer != nil {
+		if timer.Stop() {
+			close(done)
+		} else {
+			<-done
+		}
+	}
+}
+
 // Health waits only for TCP readiness (no repeated HTTP requests), then makes
 // one authenticated, parent-token-bound health request. It proves no index or
-// pipeline convergence. Any failure ends this one-shot run; no automatic retry.
+// pipeline convergence. Its launch-relative deadline is never renewed. Any
+// failure ends this one-shot run; no automatic retry.
 func (run *ExecutionEpochOneRun) Health(ctx context.Context) (retErr error) {
 	if run == nil || ctx == nil || run.stop == nil || run.done == nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()
-	if run.healthUsed || run.control == nil || run.stopping {
+	if run.healthUsed || run.control == nil || run.stopping || run.err != nil ||
+		run.healthDeadline.IsZero() || run.healthTimer == nil {
 		run.mu.Unlock()
 		return ErrExecutionEpochOne
 	}
@@ -534,15 +610,7 @@ func (run *ExecutionEpochOneRun) Health(ctx context.Context) (retErr error) {
 		return ErrExecutionEpochOne
 	default:
 	}
-	healthLimit := run.healthLimit
-	if healthLimit == 0 {
-		healthLimit = 5 * time.Minute
-	}
-	healthDeadline := time.Now().Add(healthLimit)
-	if !run.coldDeadline.IsZero() && run.coldDeadline.Before(healthDeadline) {
-		healthDeadline = run.coldDeadline
-	}
-	ctx, cancel := context.WithDeadline(ctx, healthDeadline)
+	ctx, cancel := context.WithDeadline(ctx, run.healthDeadline)
 	run.healthCancel, run.healthDone = cancel, make(chan struct{})
 	run.healthUsed = true
 	run.mu.Unlock()
@@ -594,10 +662,7 @@ func (run *ExecutionEpochOneRun) Health(ctx context.Context) (retErr error) {
 		run.stopOnce.Do(func() { close(run.stop) })
 		return ErrExecutionEpochOne
 	}
-	run.mu.Lock()
-	run.healthy = true
-	run.mu.Unlock()
-	return nil
+	return run.completeHealth(ctx)
 }
 
 func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.CancelFunc, waited, served <-chan error, failure error) {
@@ -643,6 +708,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	checkpointCancel, checkpointDone := run.checkpointCancel, run.checkpointDone
 	terminal, terminalRequested := run.terminalEntered, run.terminalRequested
 	run.mu.Unlock()
+	run.stopHealthDeadline()
 	if healthCancel != nil {
 		healthCancel()
 		<-healthDone

@@ -70,6 +70,9 @@ func TestExecutionEpochOnePhaseDeadline(t *testing.T) {
 					run.done = make(chan struct{})
 					run.control = &dispatchadmission.PhaseControl{}
 					run.epoch.Listen = "invalid"
+					run.healthLimit = 5 * time.Minute
+					run.setHealthDeadlineLocked(ctx, now)
+					defer run.stopHealthDeadline()
 					if run.Health(t.Context()) == nil || time.Since(now) != time.Second {
 						t.Fatal("health did not stop at the cold deadline")
 					}

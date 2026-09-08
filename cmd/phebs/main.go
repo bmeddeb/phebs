@@ -1121,6 +1121,9 @@ func serve(args []string) (retErr error) {
 		DataDir: cfg.Server.DataDir, Store: st,
 		Selections: cfg.ServiceCatalogs,
 	}
+	if semanticLaunch != nil {
+		v3CatalogReconciler.RequiredIndexedCommit = semanticLaunch.request.ReturnSourceCommit
+	}
 	serviceRuntime := newServiceRuntimeController(
 		cfg.Server.DataDir, st, cfg.ServiceCatalogs, v3CatalogReconciler,
 		relationshipRuntime, acquireLifecycleMutation, searchGenerationPins,
