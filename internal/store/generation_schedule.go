@@ -1553,14 +1553,22 @@ SELECT * FROM generation_schedule WHERE resource_class = $class
 
 const claimGenerationChunkSelectionSQL = `
 LET $current_digest = (SELECT schedule_digest FROM $current LIMIT 1)[0].schedule_digest;
-LET $schedule_ready = (SELECT digest FROM $schedule WHERE status = 'active'
-	AND digest = $digest AND pending > 0 LIMIT 1)[0].digest;
+LET $schedule_ready = (SELECT digest, failed FROM $schedule WHERE status = 'active'
+	AND digest = $digest AND pending > 0 LIMIT 1)[0];
 LET $repository_running = (SELECT running FROM $repository_state LIMIT 1)[0].running;
+LET $state_plan = IF $state_phase != '' THEN (
+	SELECT digest, schedule_digest, repository, phase, base_chunk, next_chunk
+	FROM $state_plan_rid LIMIT 1
+)[0] ELSE NONE END;
 LET $candidate = (SELECT id, priority, offset, attempt FROM generation_schedule_chunk
 	WHERE schedule_digest = $digest AND status = 'pending'
 		AND (not_before = NONE OR not_before <= time::now())
+		AND ($state_phase = '' OR ($state_plan != NONE
+			AND $state_plan.digest = $generation AND $state_plan.schedule_digest = $digest
+			AND $state_plan.repository = $repository AND $state_plan.phase = $state_phase
+			AND ($schedule_ready.failed > 0 OR offset <= $state_plan.next_chunk - $state_plan.base_chunk)))
 	ORDER BY priority, offset, attempt LIMIT 1)[0].id;
-LET $eligible = $current_digest = $digest AND $schedule_ready = $digest
+LET $eligible = $current_digest = $digest AND $schedule_ready.digest = $digest
 	AND $repository_running < $repository_tokens AND $candidate != NONE;
 `
 
@@ -1612,6 +1620,23 @@ SELECT * FROM generation_schedule WHERE resource_class = $class
 			"repository_state": models.NewRecordID("generation_schedule_repository", strings.TrimPrefix(generationRepositoryID(schedule.Repository), "sha256:")),
 			"digest":           schedule.Digest, "repository_tokens": schedule.RepositoryTokens,
 			"worker": worker, "lease": lease,
+			"state_phase": "", "state_plan_rid": nil,
+			"generation": schedule.Generation, "repository": schedule.Repository,
+		}
+		// These two stages apply a serial plan. Fence both the census and
+		// native claim on its applied prefix, so a delayed prerequisite cannot
+		// turn never-run later offsets into durable retries. Earlier applied
+		// chunks remain claimable for idempotent completion/release recovery.
+		// An actual terminal failure keeps the existing suffix-drain policy:
+		// its schedule must settle before BeginServiceStateV3 can repair it.
+		switch schedule.Stage {
+		case ServiceStateV3ReconcileStage:
+			variables["state_phase"] = serviceStateV3Reconcile
+		case ServiceStateV3ActivateStage:
+			variables["state_phase"] = serviceStateV3Activate
+		}
+		if variables["state_phase"] != "" {
+			variables["state_plan_rid"] = serviceStateV3PlanID(schedule.Generation)
 		}
 		for attempt := 0; ; attempt++ {
 			selected, selectErr := storeQuery[[]models.RecordID](ctx, s.accounting, s.db,
@@ -1622,7 +1647,7 @@ SELECT * FROM generation_schedule WHERE resource_class = $class
 				}
 				return nil, fmt.Errorf("select generation chunk: %w", selectErr)
 			}
-			ids, selectErr := generationMutationIDs(ctx, selected, "generation_schedule_chunk", 1, 5)
+			ids, selectErr := generationMutationIDs(ctx, selected, "generation_schedule_chunk", 1, 6)
 			if selectErr != nil {
 				return nil, selectErr
 			}

@@ -5657,6 +5657,56 @@ source-hashed record binds the reviewed working-tree correction to base
 `41ee990a`; it is not a commit or native acceptance record. No full rehearsal,
 push, seal or freeze was performed.
 
+**2026-09-08 logical-B preimage backlog and serial claim correction.** Ben's
+native rehearsal at `aab3a3b141aff7b2f1f7b4480ccf6233afec7e7a` stopped after
+2,287.87s (package 2,288.627s). Cold, warm and physical B returned their existing
+boundary checks; logical B failed before its first activation observation.
+Its accepted store prefix reached 170 transactions/1,001 rows, with maximum
+488 rows, and its generation reports counted 43 retries. The private retained
+database journal contains a preimage-backlog deferral whose identity matches
+logical offset zero/attempt zero, followed by out-of-order failures in that
+same schedule. This was read without opening or changing the retained database.
+The prefix does not retain the exact denied store operation. The final root and
+session joined; stop/transport errors do not replace the earlier store failure.
+
+Source review traced the composition gap: all selected lifecycle runners start
+parked; early epochs cannot drive catalog cleanup; the physical retention
+control sweeps search only. Obsolete selected-state preimages therefore block
+the next state plan. Generic claim priority then favored never-run successors
+over the deferred prerequisite, consuming durable retries for work that could
+not yet apply. The correction fences both claim selection and its native
+transaction to the exact state-plan prefix before terminal failure, preserving
+ordinary independent stages, already-applied completion retries, and existing
+terminal suffix-drain/settle/repair behavior. It introduces no new write
+transaction or operand; PLAN records the added plan point reads.
+
+AC: delayed/retried/running prerequisites cannot admit later unapplied state
+offsets before terminal failure; nonzero base chunks and already-applied retries
+remain valid; terminal failure still reaches settlement and repair; missing
+or mismatched plans and selection/claim races fail closed; independent stages
+retain priority; empty selection censuses remain read-only, while positive
+censuses retain their attempted native claim charges even after an empty
+recheck. Extend the real selected-state backlog regression through durable
+deferral, repeated blocked claims, existing
+owner cleanup and fresh-lease continuation; run focused native normal/race,
+accounting, static, docs/glossary and independent non-OCR source/cost review.
+The extended real-store regression reproduced the previous claim bug using a
+temporary Go overlay of HEAD's production file: it admitted offset one while
+offset zero was deferred (0.75s subtest, package 1.252s, expected failure).
+Final focused native/accounting checks passed in 21.459s, including the actual
+terminal-repair regression. The broader generation/state/selected suite passed
+normal in 157.143s before the final failed-plan identity tightening; its final
+race run passed in 252.837s. Pinned repository static (vet, zero lint issues,
+compile-only package checks), docs/glossary, formatting and whitespace passed.
+Independent non-OCR review caught and closed a terminal-repair regression in
+the initial guard and refined the identity and attempted-cost wording; no
+findings remain in the reviewed source/tests/docs. All owned test engines
+joined. These are scoped working-tree gates, not a full-store or rehearsal
+pass. The private source-hashed gate record retains exact attribution.
+This does not implement the cleanup handoff or make another rehearsal ready.
+Its prospective lifecycle/phase-accounting decision remains an explicit
+admission hold in PLAN; no bound or retained plan changes.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

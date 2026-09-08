@@ -346,7 +346,7 @@ func TestGenerationAccountingEnqueueAndClaimOperands(t *testing.T) {
 					if choice != "none" {
 						ids = append(ids, models.NewRecordID("generation_schedule_chunk", fmt.Sprintf("actual-choice-%d", selected)))
 					}
-					return generationAccountingCensusReply(5, ids), nil
+					return generationAccountingCensusReply(6, ids), nil
 				}
 				writes++
 				var payload struct {

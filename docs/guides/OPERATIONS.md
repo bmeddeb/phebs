@@ -4799,6 +4799,17 @@ The timer is retired on successful health or joined cleanup; phase and native
 callback deadlines remain unchanged. Focused tests of these corrections do
 not replace a reviewed exact-source native rehearsal or establish freeze.
 
+Service-state-v3 scheduling now checks the persisted plan before claiming a
+later chunk. Before a terminal schedule failure, a deferred prerequisite leaves
+later unapplied chunks unclaimed instead of consuming retries on out-of-order
+work. Existing terminal settlement/repair and independent-stage priority remain
+unchanged. This does not clean obsolete prior-state snapshots: the current
+early rehearsal epochs park that lifecycle owner. A
+preimage-backlog failure therefore remains a stop, not a reason to raise a
+budget, manually delete database rows or repeat the same rehearsal. Preserve
+the original custody until the cleanup handoff and its accounting are approved,
+implemented and reviewed.
+
 Prospective V3 receipts now keep incomplete store evidence explicit through
 the existing unavailable-metrics list: transaction count, submitted-row count
 and per-transaction row maximum are one all-or-none family. A retained positive
