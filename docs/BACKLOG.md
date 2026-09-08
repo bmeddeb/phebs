@@ -5546,6 +5546,36 @@ private correction record retains the gate attribution. Full server/index-job
 and native checkpoint rehearsal evidence, whole metrics, seal and freeze remain
 open. No commit, push or rehearsal was performed for this correction.
 
+**2026-09-07 native phase-four stop and private diagnostics.** Ben's subsequent
+exact `5a3ec24632feb39b52370c36bc67dc37f0afea2e` rehearsal passed cold and
+warm handoff and completed both A/B index jobs, then stopped during physical B
+after 2,288.38 seconds. Its retained positive prefix has 160 successful B tail
+responses before the refused 161st attempt, no failed HTTP status/body, and no
+complete B authority. The final root/session joined, but forced teardown and
+accounting did not establish successful closure. Neither the phase deadline nor
+the inspection cap explains this run; the initiating failure remains unknown.
+No native retry or functional correction is inferred from that prefix.
+
+The diagnostic correction now retains sequential pre-parent-teardown subsystem
+observations separately from cleanup errors, the first inspection refusal
+stage/ordinal/underlying cause, and the first failing custody callback's
+stage/site/context/deadline observation. HTTP request URLs are excluded from
+the new transport-error record. These private records cannot establish a global
+first-failure order, and an absent callback record cannot rule out deadline
+expiry after callback return. Stop observation adds one bounded store snapshot
+even for clean stop; PLAN records its locks/allocations and the small successful
+GET/callback bookkeeping cost. No limit, deadline, protocol, sealed evidence,
+ordinary runtime or rehearsal authorization changes. Final focused parent
+selectors passed normal (7.614s) and race three times (97.162s); complete
+dispatch/store-accounting package race passed (8.048s/3.091s). Pinned static
+(vet, zero lint issues and repository compilation), docs, glossary, format and
+whitespace passed. Independent OCR-guided review covered all four selected
+production files plus five affected tests and three owning docs, with no
+remaining findings after correcting semantic refusal ordinals and their
+documentation. Tests establish diagnostic retention, not the native trigger.
+The private source-hashed gate record retains attribution. No commit, push,
+seal or native rehearsal was performed for this slice.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

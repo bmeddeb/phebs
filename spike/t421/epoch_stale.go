@@ -213,6 +213,7 @@ func (reader *executionEpochInspection) prepareRecovery(ctx context.Context, che
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, (16<<10)+1))
 	reader.failureStatus, reader.failureBody = response.StatusCode, raw
+	reader.failureOrdinal = 0 // Preparation POST consumes no exact-read ordinal.
 	closeErr := response.Body.Close()
 	var value epochStalePreparation
 	if readErr != nil || closeErr != nil || len(raw) > 16<<10 || response.StatusCode != http.StatusOK || response.Uncompressed ||

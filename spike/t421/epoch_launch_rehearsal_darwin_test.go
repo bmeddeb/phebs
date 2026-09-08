@@ -251,6 +251,8 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 				t.Errorf("retained epoch-one stopped prefix: %+v; %v", result, err)
 				run.mu.Lock()
 				t.Logf("private native stop diagnostic: %v", run.nativeStopErr)
+				t.Logf("private stop observations (Before precedes teardown; not global first-cause ordering): %+v", run.stopDiagnostic)
+				t.Logf("private admission check: before_teardown=%+v after_join=%+v", run.stopDiagnostic.Before.Admission, run.stopDiagnostic.AdmissionAfterJoin)
 				run.mu.Unlock()
 			}
 			if t.Failed() && result.RootJoined && run.output != nil {
@@ -259,6 +261,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 				diagnostics := map[string][]byte{"server.log": run.output.buffer.Bytes()}
 				if reader := run.inspection; reader != nil {
 					reader.mu.Lock()
+					t.Logf("private first inspection refusal: %+v", reader.readFailure)
 					t.Logf("private inspection prefix: X=%d T=%d F_used=%t accepted_reports=%d reads=%+v failed_HTTP=%d failed_body_bytes=%d",
 						reader.progressCalls, reader.tailCalls, reader.finalUsed, reader.reports, reader.totals, reader.failureStatus, len(reader.failureBody))
 					if reader.failureBody != nil {

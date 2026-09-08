@@ -86,8 +86,18 @@ type executionEpochInspection struct {
 	err                                error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
 	// the already bounded body (at most the response cap plus one sentinel).
-	failureStatus int
-	failureBody   []byte
+	failureStatus  int
+	failureBody    []byte
+	failureOrdinal uint64
+	readFailure    epochReadFailure
+}
+
+// Fixed one-shot private record; URLs, headers and response bodies are not
+// copied into it. The already bounded failed-response retention stays separate.
+type epochReadFailure struct {
+	Stage   string
+	Ordinal uint64
+	Cause   error
 }
 
 func (run *ExecutionEpochOneRun) newEpochInspection(ctx context.Context) (*executionEpochInspection, error) {
@@ -193,7 +203,23 @@ func decodeEpochReport(values []string, ordinal uint64, maximum epochInspectionR
 // Each request uses one fresh non-proxy transport with redirects, compression
 // and connection reuse disabled. A consumed ordinal is never retried; actual
 // EOF must expose exactly one canonical accounting trailer before admission.
-func (reader *executionEpochInspection) read(ctx context.Context, path string, limit int64, maximum epochInspectionReport) ([]byte, int, epochInspectionReport, error) {
+func (reader *executionEpochInspection) read(ctx context.Context, path string, limit int64, maximum epochInspectionReport) (_ []byte, _ int, _ epochInspectionReport, retErr error) {
+	stage, ordinal := "preflight", reader.next
+	var cause error
+	defer func() {
+		if retErr != nil && reader.readFailure.Stage == "" {
+			if cause == nil && ctx != nil {
+				cause = context.Cause(ctx)
+			}
+			if cause == nil {
+				cause = retErr
+			}
+			if requestError, ok := cause.(*url.Error); ok {
+				cause = requestError.Err // Do not retain the request URL.
+			}
+			reader.readFailure = epochReadFailure{Stage: stage, Ordinal: ordinal, Cause: cause}
+		}
+	}()
 	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.control == nil || reader.next == 0 || reader.next > 11531 {
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
@@ -213,16 +239,18 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 	default:
 	}
 	if unavailable {
+		stage = "run_unavailable"
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
 	token := run.control.RequestToken()
 	if token == "" {
+		stage = "request_token"
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
-	ordinal := reader.next
 	reader.next++
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+run.epoch.Listen+path, nil)
 	if err != nil {
+		stage, cause = "request_construction", err
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
 	request.Header.Set("Authorization", "Bearer "+run.epoch.APIKey)
@@ -234,10 +262,12 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, err := client.Do(request)
 	if err != nil {
+		stage, cause = "http_exchange", err
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, limit+1))
 	reader.failureStatus, reader.failureBody = response.StatusCode, raw
+	reader.failureOrdinal = ordinal
 	closeErr := response.Body.Close()
 	report, reportErr := decodeEpochReport(response.Trailer.Values(epochReadTrailer), ordinal, maximum)
 	// Preserve every accepted positive ledger before interpreting HTTP/body
@@ -249,12 +279,14 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 		stores, storeErr := checkedInspectionReadSum(reader.totals.StoreReadAttempts, report.StoreReadAttempts)
 		members, memberErr := checkedInspectionReadSum(reader.totals.MemberVisits, report.MemberVisits)
 		if countErr != nil || controlErr != nil || storeErr != nil || memberErr != nil {
+			stage = "ledger_overflow"
 			return nil, response.StatusCode, report, errEpochInspection
 		}
 		reader.reports, reader.totals = count, readaccounting.Counts{ControlFileReads: controls, StoreReadAttempts: stores, MemberVisits: members}
 	}
 	if readErr != nil || closeErr != nil || int64(len(raw)) > limit || ctx.Err() != nil || reportErr != nil ||
 		len(response.Header.Values(epochReadTrailer)) != 0 || len(response.Trailer) != 1 || response.Uncompressed || response.Header.Get("Content-Encoding") != "" {
+		stage, cause = "response_read_or_accounting", errors.Join(readErr, closeErr, context.Cause(ctx), reportErr)
 		return nil, response.StatusCode, report, errEpochInspection
 	}
 	return raw, response.StatusCode, report, nil
@@ -263,9 +295,13 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 func (reader *executionEpochInspection) fail(err error) {
 	if err == nil {
 		reader.failureStatus, reader.failureBody = 0, nil
+		reader.failureOrdinal = 0
 		return
 	}
 	reader.err = errEpochInspection
+	if reader.readFailure.Stage == "" {
+		reader.readFailure = epochReadFailure{Stage: "inspection_state_or_semantics", Ordinal: reader.failureOrdinal, Cause: err}
+	}
 	if reader.run != nil {
 		reader.run.mu.Lock()
 		reader.run.err = ErrExecutionEpochOne

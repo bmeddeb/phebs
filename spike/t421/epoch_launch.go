@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
@@ -222,7 +223,9 @@ type ExecutionEpochOneRun struct {
 	stopping              bool
 	result                ExecutionEpochOneResult
 	err                   error
-	nativeStopErr         error // Private diagnostic, never a public evidence classification.
+	nativeStopErr         error               // Private diagnostic, never a public evidence classification.
+	stopDiagnostic        epochStopDiagnostic // Written only by finish; read after done.
+	admissionFailure      atomic.Pointer[epochAdmissionFailure]
 	retainParent          bool
 	logicalUsed           bool
 	logicalCancel         context.CancelFunc
@@ -482,15 +485,19 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 			file := files[0]
 			files[0] = nil
 			go func() {
-				completion <- flow.controller.ServeChecked(flow.controller.Context(), producer, command.Process.Pid, file, func(checkCtx context.Context, _ dispatchadmission.Site) error {
+				completion <- flow.controller.ServeChecked(flow.controller.Context(), producer, command.Process.Pid, file, func(checkCtx context.Context, site dispatchadmission.Site) error {
 					author.mu.Lock()
 					defer author.mu.Unlock()
 					epochs.mu.Lock()
 					defer epochs.mu.Unlock()
-					if epochs.checkLocked(checkCtx, number) != nil {
+					if err := epochs.checkLocked(checkCtx, number); err != nil {
+						run.recordAdmissionFailure(checkCtx, site.ID, "epoch_config", err)
 						return ErrExecutionEpochOne
 					}
 					_, _, _, err := flow.checkEpochTools(checkCtx, number)
+					if err != nil || checkCtx.Err() != nil {
+						run.recordAdmissionFailure(checkCtx, site.ID, "epoch_tools", err)
+					}
 					return err
 				})
 			}()
@@ -598,18 +605,27 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	defer cancel()
 	joined := false
 	var waitErr error
+	wake := "supplied_failure"
 	if failure == nil {
 		select {
 		case <-run.stop:
+			wake = "stop_requested"
 		case <-ctx.Done():
+			wake = "run_context"
 			failure = ErrExecutionEpochOne
 		case <-run.flow.controller.Context().Done():
+			wake = "dispatch_context"
 			failure = ErrExecutionEpochOne
 		case waitErr = <-waited:
+			wake = "native_wait"
 			joined = true
 			failure = ErrExecutionEpochOne
 		}
 	}
+	// Observe before canceling phase work, signaling children or closing peers.
+	// Concurrent failures can already coexist; the selected wake is not proof
+	// of which subsystem failed first. Never acquire the HTTP reader lock here.
+	diagnostic := run.observeStopDiagnostic(ctx, wake, failure, waitErr)
 	// Stop and the lifetime deadline may both be ready. Cleanup still owns the
 	// process, but whichever select arm won cannot turn expiry into success.
 	if ctx.Err() != nil {
@@ -709,13 +725,15 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		joinCtx, joinCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		select {
 		case err := <-served:
+			diagnostic.DispatchReceiver = err
 			if err != nil {
 				failure = ErrExecutionEpochOne
 			}
 		case <-joinCtx.Done():
+			diagnostic.DispatchJoin = joinCtx.Err()
 			failure = ErrExecutionEpochOne
 			run.flow.release()
-			<-served
+			diagnostic.DispatchReceiver = <-served
 		}
 		joinCancel()
 	}
@@ -723,7 +741,8 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	joinCtx, joinCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	if run.flow.store.Wait(joinCtx, run.producer()) != nil {
+	diagnostic.StoreJoin = run.flow.store.Wait(joinCtx, run.producer())
+	if diagnostic.StoreJoin != nil {
 		failure = ErrExecutionEpochOne
 	}
 	joinCancel()
@@ -739,10 +758,12 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	var err error
 	result.Accounting, err = run.flow.controller.Snapshot()
+	diagnostic.DispatchFinal = err
 	if err != nil {
 		failure = ErrExecutionEpochOne
 	}
 	result.Store, err = run.flow.store.Snapshot()
+	diagnostic.StoreFinal = err
 	if err != nil {
 		failure = ErrExecutionEpochOne
 	}
@@ -776,6 +797,12 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	run.result, run.err = result, failure
 	run.nativeStopErr = nativeStopErr
+	diagnostic.NativeStop = nativeStopErr
+	diagnostic.AdmissionAfterJoin = run.admissionFailure.Load()
+	if result.RootJoined && run.output != nil {
+		diagnostic.Output = run.output.err // The existing native join owns copier EOF.
+	}
+	run.stopDiagnostic = diagnostic
 	run.mu.Unlock()
 }
 

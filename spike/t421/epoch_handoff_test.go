@@ -583,6 +583,10 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 			close(run.physicalDone)
 			<-run.done
 			joined, serverJoined = true, true // finish owns the sole Wait/Serve joins.
+			if got := run.stopDiagnostic; got.Wake != "supplied_failure" || got.Before.WakeError != ErrExecutionEpochOne ||
+				got.Before.Dispatch != nil || got.Before.Store != nil || got.Before.Control != nil {
+				t.Fatal("actual finish lost healthy pre-cleanup accounting beside supplied stop failure", got)
+			}
 			if run.err == nil || !run.result.RootJoined || !run.result.SessionEmpty || custody.borrowedBy != nil || !custody.active || custody.Close() == nil {
 				t.Fatal("failed stop weakened sticky failure or author survivor custody", run.result, run.err)
 			}

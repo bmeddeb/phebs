@@ -4764,6 +4764,18 @@ The checkpoint hit retains its already-admitted final read ordinal; stale-only
 and return-only readers keep their smaller caps. These implementation fixes
 do not supply a full native rehearsal, freeze or ceremony command.
 
+Failed native rehearsals also log private pre-parent-teardown observations,
+first inspection refusal stage/ordinal/cause, custody-check failure details when
+observed, and separate cleanup errors. Preserve these with the retained server
+log; a generic stop error alone does not identify the trigger. The observations
+are sequential, not a global first-failure ordering. An absent callback record
+does not exclude a deadline expiring after its return; ordinal zero denotes no
+exact GET ordinal (including preparation POST). Request URLs are omitted from
+the new HTTP transport-error record. A nonzero attempted GET ordinal can be
+refused before HTTP dispatch; it does not prove ordinal consumption. These
+diagnostics do not authorize a retry or change public evidence classification,
+admission limits or deadlines.
+
 Prospective V3 receipts now keep incomplete store evidence explicit through
 the existing unavailable-metrics list: transaction count, submitted-row count
 and per-transaction row maximum are one all-or-none family. A retained positive

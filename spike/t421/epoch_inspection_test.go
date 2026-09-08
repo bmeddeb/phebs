@@ -228,12 +228,19 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 				t.Fatal(mode, result, report, err)
 			}
 			if mode == "complete" {
-				if reader.failureStatus != 0 || reader.failureBody != nil {
+				if reader.failureStatus != 0 || reader.failureBody != nil || reader.readFailure.Stage != "" {
 					t.Fatal("successful response retained as failed diagnostic")
 				}
 			} else if reader.failureStatus != result.HTTPStatus || len(reader.failureBody) == 0 || len(reader.failureBody) > api.ExtractionProgressResponseLimit+1 {
 				t.Fatal("failed bounded response diagnostic missing", reader.failureStatus, len(reader.failureBody))
 			}
+			if mode != "complete" && (reader.readFailure.Stage == "" || reader.readFailure.Cause == nil) {
+				t.Fatal("post-response refusal diagnostic missing")
+			}
+			if (mode == "body-invalid" || mode == "redirect") && (reader.readFailure.Stage != "inspection_state_or_semantics" || reader.readFailure.Ordinal != 1) {
+				t.Fatal("semantic refusal mislabeled as HTTP transport failure", reader.readFailure)
+			}
+			firstFailure := reader.readFailure
 			if mode == "body-oversize" && len(reader.failureBody) != api.ExtractionProgressResponseLimit+1 {
 				t.Fatal("overflow diagnostic did not retain exactly one sentinel")
 			}
@@ -243,6 +250,9 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 			if mode != "complete" {
 				if _, _, err := reader.Progress(t.Context()); err == nil || calls.Load() != 1 || reader.run.err != ErrExecutionEpochOne {
 					t.Fatal("uncertain request retried or failed latch lost")
+				}
+				if reader.readFailure != firstFailure {
+					t.Fatal("later refusal replaced initial diagnostic")
 				}
 			}
 			if mode == "complete" || mode == "redirect" || mode == "body-invalid" {

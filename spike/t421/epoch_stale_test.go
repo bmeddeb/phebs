@@ -235,6 +235,9 @@ func TestEpochStalePreparationHTTP(t *testing.T) {
 			if mode == "target" && reader.stalePreparation.StoreReadAttempts != good.StoreReadAttempts {
 				t.Fatal("actual preparation prefix lost")
 			}
+			if !want && (reader.readFailure.Stage == "" || reader.readFailure.Ordinal != 0) {
+				t.Fatal("preparation failure invented an exact-read ordinal", reader.readFailure)
+			}
 			if reader.prepareStale(t.Context()) == nil || calls != 1 {
 				t.Fatal("one-shot preparation retried")
 			}
