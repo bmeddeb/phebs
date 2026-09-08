@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
@@ -39,7 +40,7 @@ func t422CheckpointRecoveryRecord(t *testing.T) (dispatchadmission.ProductionBoo
 // controls, reaper/completion events and native R values are supplied fixtures,
 // not a native requeue, hard kill, all-success schedule or phase-eight proof.
 func TestT422CheckpointRecoveryInheritedCallbacks(t *testing.T) {
-	for _, mode := range []string{"complete", "recovered_before_requeue", "canceled_before_requeue", "same_lease", "report_failure", "wrong_final"} {
+	for _, mode := range []string{"complete", "reader_start", "recovered_before_requeue", "canceled_before_requeue", "same_lease", "report_failure", "wrong_final"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 			defer cancel()
@@ -128,6 +129,96 @@ func TestT422CheckpointRecoveryInheritedCallbacks(t *testing.T) {
 	}
 }
 
+// The real selected binding is inherited, but time and scheduler entry are
+// controlled here: no claim or five-second observer starts before the actual
+// R reader arrives. Native requeue/result data remain the separate gates.
+func testT422CheckpointReaderStart(t *testing.T, launch *t422SemanticLaunch) {
+	t.Helper()
+	for _, mode := range []string{"delayed_reader", "canceled_startup", "phase_expired", "invalid_reader", "canceled_reader", "duplicate_reader"} {
+		t.Run(mode, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				selected := *launch
+				var failures atomic.Int32
+				selected.fail = func(error) { failures.Add(1) }
+				reconciler := &extractionpublication.Reconciler{StoreAccounting: true, Runtime: &extractionpublication.Runtime{Fence: &extractionpublication.AuthorityFence{}}}
+				control, err := newT422CheckpointRecoveryControl(ctx, &selected, reconciler)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer control.cancel()
+				if mode == "phase_expired" {
+					control.phaseEnd = time.Now().Add(7 * time.Second)
+				}
+				started := make(chan error, 1)
+				if mode != "canceled_reader" && mode != "duplicate_reader" {
+					go func() { started <- control.waitForReader(ctx) }()
+				}
+				synctest.Wait()
+				time.Sleep(6 * time.Second) // Slow startup exceeds the callback budget.
+				select {
+				case err := <-started:
+					t.Fatalf("scheduler entered before the recovered reader: %v", err)
+				default:
+				}
+				if failures.Load() != 0 || control.recovered.observer != nil {
+					t.Fatal("startup consumed a recovery observer deadline")
+				}
+				if mode == "canceled_startup" || mode == "phase_expired" {
+					if mode == "canceled_startup" {
+						cancel()
+					} else {
+						time.Sleep(time.Second)
+					}
+					if err := <-started; err == nil || failures.Load() != 1 {
+						t.Fatal("unobserved scheduler did not refuse and join", err)
+					}
+					return
+				}
+				snapshot, err := dispatchadmission.ProductionSemanticState()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if mode == "invalid_reader" {
+					snapshot.ProducerID++
+				}
+				request, cancelRequest := context.WithCancel(context.WithValue(ctx, t422SemanticRequestKey{}, snapshot))
+				defer cancelRequest()
+				readDone := make(chan error, 1)
+				go func() { _, _, err := control.read(request); readDone <- err }()
+				synctest.Wait()
+				switch mode {
+				case "delayed_reader":
+					if err := <-started; err != nil || failures.Load() != 0 {
+						t.Fatal("valid recovered reader did not release scheduler", err)
+					}
+					// No native result is supplied here. Cancel its admitted wait;
+					// this must still latch failure, not manufacture recovered R.
+					cancelRequest()
+				case "duplicate_reader":
+					if _, _, err := control.read(request); err == nil {
+						t.Fatal("duplicate recovered reader admitted")
+					}
+				default:
+					cancelRequest()
+				}
+				if err := <-readDone; err == nil || failures.Load() != 1 || control.recovered.reported {
+					t.Fatal("failed reader supplied usable recovery", err)
+				}
+				if mode == "canceled_reader" || mode == "duplicate_reader" {
+					go func() { started <- control.waitForReader(ctx) }()
+				}
+				if mode != "delayed_reader" {
+					if err := <-started; err == nil {
+						t.Fatal("failed reader authorized scheduler entry")
+					}
+				}
+			})
+		})
+	}
+}
+
 func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 	mode := os.Getenv(t422CheckpointRecoveryHelperMode)
 	if mode == "" {
@@ -153,6 +244,10 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 3, Requests: 1})
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatal("owners", err)
+	}
+	if mode == "reader_start" {
+		testT422CheckpointReaderStart(t, launch)
+		mode = "complete" // Also retain the existing callback/report/close proof.
 	}
 	reconciler := &extractionpublication.Reconciler{StoreAccounting: true, Runtime: &extractionpublication.Runtime{Fence: &extractionpublication.AuthorityFence{}}}
 	control, err := newT422CheckpointRecoveryControl(ctx, launch, reconciler)

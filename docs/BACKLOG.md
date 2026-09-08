@@ -5445,6 +5445,107 @@ fit, full native phase, whole metrics and freeze remain open. Root's identical
 source passed the same four focused gates in 0.352/0.253/2.282/0.722s;
 docs passed 0.445s, glossary and whitespace clean.
 
+**T42.2l checkpoint-corrected rehearsal failure (2026-09-07).** The clean
+detached checkpoint-corrected native cold/handoff rehearsal failed after
+15,338.48s (package 15,339.188s). Protected source/SDK/module custody passed
+in 6m48.002s with 67,820 entries, 56,101 files and 1,356,069,707 bytes; the
+supplied t422-author, Phebs and zoekt-git-index builds took 47.571s, 8.601s
+and 14.916s, and their independent reference admissions 2m18.178s, 2m14.264s
+and 2m21.980s. The epoch-one launch then never reached cold authority: the
+retained stopped prefix shows the root started and joined with an empty
+session, 4,807 phase-two dispatch attempts (4,803 in role one, two in role two,
+one each in roles five and six) and 1,231,104 reserved wire bytes, one opened
+store lifetime at terminal EOF with 102 phase-two transactions, 811 rows and a
+488-row maximum, two phase-two job attempts, zero index offers, and a private
+inspection prefix of 2,872 accepted X read reports charging 2,872 store read
+attempts with T=0, no F use and no failed HTTP; the native stop diagnostic was
+nil. Teardown joined every process, no survivor remained and the exact
+`t422-epoch-one-rehearsal-1707133675` custody is retained; that commit is not
+to be rerun. Ben's diagnosis of the retained log: indexing was disabled at
+startup, not slow. The V3 instrumented index child reports module identity
+`./zoekt@(devel)`, the runtime pin checker expected the pinned upstream
+identity and refused it, and startup logged a warning but continued serving,
+so the rehearsal polled an impossible cold phase for four hours. This is an
+integration miss: the standalone private-build tests never exercised Phebs's
+own startup admission.
+
+The correction slice reconciles V3 build provenance with runtime admission
+without weakening identity checks, and makes selected startup fail closed.
+`indexer.FindBinary` now admits the private-module child only through the
+parent-supplied override, only under a dispatch-admitted selected V3 launch,
+and only with the parent-supplied image digest that Phebs already verifies
+before every child launch; the admitted shape mirrors the parent's reference
+verifier exactly — `cmd/zoekt-git-index` of the pinned version with an empty
+sum and the `./zoekt` `(devel)` replacement, this process's toolchain, CGO
+disabled, trimmed paths, host GOOS/GOARCH, no VCS revision, no replaced
+dependency — and every dependency shared with the linked reader must be the
+identical version and sum. Discovered binaries, PATH lookups and ordinary
+launches keep the unchanged direct module pin; ordinary replacement modules
+now receive the explicit private-admission diagnostic. Serve now
+resolves both index children through `admitStartupIndexer`: a selected launch
+that cannot admit `zoekt-git-index` (or `phebs-focused-index` with analysis
+units configured) logs one private refusal line and returns a startup error
+through existing worker/store/admitted-lifetime cleanup, so the parent observes
+root termination instead of polling an impossible cold phase; ordinary serving
+keeps the historical warning. Tests: a pure admission matrix over exact private, direct, devel,
+drifted-replacement, toolchain, settings, replaced- and shared-dependency
+shapes; a linked-graph check that replaced local dependencies are never
+comparable pins; an ordinary-process check that the private image stays
+unadmitted and serving continues; and a real inherited DA/PC V3 lifetime
+around the actual startup seam, using a real Go-toolchain build of a tiny
+executable carrying the exact admitted private replacement identity, which
+is admitted with its digest and refused without a digest, with a wrong digest
+and for an executable without Go module identity, each with the refusal
+diagnostic and an unchanged empty admission prefix. At handover these were
+container-authored, uncommitted working-tree changes on `50b65e98` with no
+build, test, race, pinned static, documentation or review gate run. They
+authorized no native rehearsal and claimed no merge, seal or freeze.
+
+**Lead review and corrections (2026-09-07).** The unchanged seven-file admission
+slice subsequently passed all 13 scoped script gates: full build, changed vet,
+focused indexer normal/race three times, startup normal/race twice for race,
+full indexer, T422/exact-parser neighbors, offer/overlay tests, pinned static,
+docs, glossary and whitespace. Formatting and shell syntax were clean, with
+no Phebs/Surreal survivor. Two independent reviews found no critical/high/medium
+implementation issue and two low wording errors. The owning PLAN row now
+states two process-metadata reads and dependency-map allocation per candidate
+verification, including ordinary candidates, and the changed replacement
+diagnostic. The startup comment now says before HTTP/index-worker startup,
+not before all workers. The tests exercise admission and a manually completed
+inherited lifetime; they do not establish actual serve failure-exit timing or
+an executed index job. The source-hashed private review/gate record preserves
+that narrower attribution.
+
+Ben then authorized the separate checkpoint readiness and ordinal corrections.
+Epoch-four extraction scheduling now waits, without claiming or holding an
+owner, for its actual authenticated recovered R reader. The parent can finish
+health and custody checks before native recovery starts its unchanged
+five-second callback deadline. The one-shot readiness carries the live reader
+context and refuses phase/process/control cancellation and invalid or duplicate
+readers. The inherited regression delays startup by six virtual seconds,
+checks no scheduler entry/observer deadline, then exercises release and failed
+reader/cancellation paths. Supplied callback completion remains a separate
+bounded test, not a native phase pass. Checkpoint-enabled epoch three now
+admits the existing ordinal 11,531 while stale-only remains 11,530. The real
+HTTP boundary test reproduced the original rejection before the one-condition
+fix; focused normal/race passed in 1.638/9.835s. The combined correction passed
+the full command and scheduler packages (85.100/0.477s), T422/exact-parser
+command neighbors under race three times (33.703s), scheduler race (1.398s),
+focused parent checkpoint/return/stale/handoff plus offer tests (6.236s), and
+the parent selectors under race three times (33.913s). Staticcheck then asked
+for a test-only tagged switch; after that equivalent edit, the inherited
+checkpoint regression passed normal (0.777s) and race three times (2.945s),
+and full pinned static, docs, glossary, format and whitespace passed. The
+production bytes are unchanged across that test-style edit. Independent
+readiness review and the lead's non-author ordinal review found no remaining
+findings; documentation review also closed the unsupported immediate-exit
+timing claim. OCR-guided coverage includes all five changed production files
+and manual review of the seven test/document files; unrelated private scratch
+is excluded, and this is not a whole-stack review. The final source-hashed
+private correction record retains the gate attribution. Full server/index-job
+and native checkpoint rehearsal evidence, whole metrics, seal and freeze remain
+open. No commit, push or rehearsal was performed for this correction.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

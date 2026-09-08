@@ -78,6 +78,7 @@ type t422CheckpointRecoveryControl struct {
 	input             t422CheckpointRecoveryInput
 	killed            store.GenerationStaleLeaseTransition
 	finalSeen         bool
+	readerReady       chan context.Context
 }
 
 func newT422CheckpointRecoveryControl(ctx context.Context, launch *t422SemanticLaunch, reconciler *extractionpublication.Reconciler) (*t422CheckpointRecoveryControl, error) {
@@ -92,7 +93,32 @@ func newT422CheckpointRecoveryControl(ctx context.Context, launch *t422SemanticL
 	base := &t422StaleControl{ctx: lifetime, cancel: cancel, launch: launch, reconciler: reconciler,
 		phaseEnd: time.Now().Add(t422StaleMaximum), requeued: make(chan struct{})}
 	base.recovered.ready, base.recovered.release = make(chan struct{}), make(chan struct{})
-	return &t422CheckpointRecoveryControl{t422StaleControl: base, input: *launch.request.CheckpointRecovery}, nil
+	return &t422CheckpointRecoveryControl{t422StaleControl: base, input: *launch.request.CheckpointRecovery, readerReady: make(chan context.Context, 1)}, nil
+}
+
+// Wait before starting the scheduler, without holding an owner, claim or lease.
+// HTTP readiness alone is insufficient: the parent still checks custody before
+// issuing R. Its admitted one-shot read must be waiting before native recovery
+// can complete and start the unchanged five-second report callback deadline.
+func (control *t422CheckpointRecoveryControl) waitForReader(ctx context.Context) error {
+	if !control.current(ctx, false, false) {
+		return control.stop(errT422StaleControl)
+	}
+	operation, finish := control.operationContext(ctx, nil)
+	defer finish()
+	var reader context.Context
+	select {
+	case <-operation.Done():
+		return control.stop(operation.Err())
+	case reader = <-control.readerReady:
+	}
+	control.mu.Lock()
+	valid := control.err == nil && control.recovered.reading
+	control.mu.Unlock()
+	if !valid || reader == nil || reader.Err() != nil || operation.Err() != nil || !control.current(ctx, false, false) {
+		return control.stop(errT422StaleControl)
+	}
+	return nil
 }
 
 func (control *t422CheckpointRecoveryControl) current(ctx context.Context, request, drained bool) bool {
@@ -218,6 +244,7 @@ func (control *t422CheckpointRecoveryControl) read(ctx context.Context) ([]byte,
 	valid := control.err == nil && !control.recovered.reading
 	if valid {
 		control.recovered.reading = true
+		control.readerReady <- ctx
 	}
 	control.mu.Unlock()
 	if !valid {

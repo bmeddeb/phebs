@@ -4746,6 +4746,24 @@ accidental compatibility launch to fall back to uncounted execution. The
 prospective V3 execution profile records this selection explicitly; manually
 setting an environment variable cannot select it without genuine bootstrap.
 
+Selected startup refuses an unavailable required index child before HTTP
+serving, instead of remaining healthy with indexing disabled. Some background
+workers may already have started; the refusal returns through their existing
+cancellation and joins. Ordinary startup keeps its warning-and-serve behavior.
+The private V3 index build is accepted only with genuine selected bootstrap,
+the parent-supplied image digest and the exact admitted replacement metadata;
+it is not an ordinary alternative to the direct module pin.
+
+In a selected checkpoint restart, epoch-four extraction scheduling waits for
+the parent's existing authenticated recovered-state request. Health does not
+prove recovery and does not release this wait by itself. This avoids spending
+the native callback's five-second report deadline while startup or the parent's
+custody checks are still running. The phase deadline continues to run, canceled
+or invalid readers fail closed, and no extra request or retry is introduced.
+The checkpoint hit retains its already-admitted final read ordinal; stale-only
+and return-only readers keep their smaller caps. These implementation fixes
+do not supply a full native rehearsal, freeze or ceremony command.
+
 Prospective V3 receipts now keep incomplete store evidence explicit through
 the existing unavailable-metrics list: transaction count, submitted-row count
 and per-transaction row maximum are one all-or-none family. A retained positive

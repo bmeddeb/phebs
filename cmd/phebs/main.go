@@ -1826,6 +1826,9 @@ func serve(args []string) (retErr error) {
 		}
 		attemptReports.bindChunk(partitionScheduler)
 		runBackground(func() {
+			if checkpointRecovery != nil && checkpointRecovery.waitForReader(ctx) != nil {
+				return
+			}
 			if err := partitionScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 				diagnostics.Logf("partitioned extraction scheduler stopped: %v", err)
 			}
@@ -1864,14 +1867,11 @@ func serve(args []string) (retErr error) {
 	})
 
 	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
-	if bin, err := indexer.FindBinary(); err != nil {
-		diagnostics.Logf("WARNING: zoekt-git-index unavailable — indexing disabled (make build provides the exact linked module pin; or set PHEBS_ZOEKT_GIT_INDEX): %v", err)
-	} else {
-		focusedBin, focusedErr := focusedindex.FindBinary()
-		if focusedErr != nil && len(analysisUnits) > 0 {
-			log.Print("WARNING: phebs-focused-index not found — indexing disabled for configured analysis units (make build provides it; or set PHEBS_FOCUSED_INDEX)")
-			focusedBin = ""
-		}
+	bin, focusedBin, err := admitStartupIndexer(len(analysisUnits) > 0)
+	if err != nil {
+		return err
+	}
+	if bin != "" {
 		ix := &indexer.Indexer{
 			DataDir:       cfg.Server.DataDir,
 			Bin:           bin,

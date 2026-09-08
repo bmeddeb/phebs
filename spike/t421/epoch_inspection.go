@@ -200,7 +200,7 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 	if (reader.run.epoch.Epoch == 2 || reader.run.epoch.Epoch == 3 && !reader.run.staleAllowed) && reader.next > 5765 {
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
-	if reader.run.epoch.Epoch == 3 && reader.run.staleAllowed && reader.next > 11530 {
+	if reader.run.epoch.Epoch == 3 && reader.run.staleAllowed && !reader.run.checkpointAllowed && reader.next > 11530 {
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
 	run := reader.run
