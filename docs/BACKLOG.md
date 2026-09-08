@@ -5576,6 +5576,42 @@ documentation. Tests establish diagnostic retention, not the native trigger.
 The private source-hashed gate record retains attribution. No commit, push,
 seal or native rehearsal was performed for this slice.
 
+**2026-09-08 setup-token collision correction.** At exact clean `29e5dc90`,
+Ben's physical-only rehearsal passed in 2,278.91s (package 2,279.620s). The
+subsequent full-checkpoint rehearsal again passed cold, warm and physical B,
+including current/prior retention and both index jobs, then failed after
+2,232.66s (package 2,233.445s) while stopping the retained physical parent before
+logical B. Root/session joined; recorded pre-stop/transport/native-stop/output
+errors were nil. Offline replay of the unchanged private server log accepted
+attempt and index metrics but reproduced the terminal-footer refusal at its
+first-run setup-token diagnostic. Replacing only that line in an in-memory
+diagnostic copy removed the parser refusal; no retained evidence was rewritten.
+
+The correction recognizes only the exact native timestamp/label/32-byte
+canonical-token/newline envelope in both affected passes. Its opaque payload
+may resemble any marker, but supplies no metrics or bindings. Broad marker
+relaxation is unnecessary; all generic corruption, embedding, truncation,
+post-footer and native-terminal-proof guards remain. Source-free regressions
+cover interior and suffix collisions, missing binding authority, canonical
+padding/alphabet/width, malformed envelopes and subsequent real records. PLAN
+records fixed per-line filtering and bounded candidate parsing in the existing
+joined-output passes. No startup log, token generation, admission, deadline,
+metric unit, sealed evidence or ordinary runtime changes. Collision regressions
+first reproduced the refusal. Final parser/terminal/epoch selectors passed
+normal (2.950s) and race three times (73.747s); source/index parser neighbors
+passed normal (0.614s) and race three times (2.547s). Offline replay of the
+unchanged retained log now passes all three parsers and the composed metric
+finish (2.846s package). Pinned static (vet, zero lint issues, repository
+compilation), docs, glossary, format and whitespace passed. Independent
+OCR-guided review covered the production file, test and three owning docs,
+closing two low findings with canonical timestamp round-trip validation and
+accurate bounded-allocation wording; no findings remain. The private
+source-hashed review record retains attribution. This slice remains uncommitted;
+no push, native rerun, seal or freeze was performed.
+The earlier 5a3ec246 mid-phase failure remains separately unattributed. Logical
+B, return A, stale lease, checkpoint restart, whole metrics and freeze remain
+unestablished by these runs.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

@@ -4776,6 +4776,14 @@ refused before HTTP dispatch; it does not prove ordinal consumption. These
 diagnostics do not authorize a retry or change public evidence classification,
 admission limits or deadlines.
 
+The joined-output reader treats the exact first-run setup-token diagnostic as
+ordinary payload, even when random token characters resemble telemetry. It
+still requires genuine bindings, complete records and native shutdown evidence;
+malformed/embedded telemetry and partial output remain failures. Preserve the
+original private log rather than editing it to obtain a pass. Such logs can
+contain setup credentials and must not be published. A corrected parser replay
+does not establish later native phases or authorize freeze.
+
 Prospective V3 receipts now keep incomplete store evidence explicit through
 the existing unavailable-metrics list: transaction count, submitted-row count
 and per-transaction row maximum are one all-or-none family. A retained positive

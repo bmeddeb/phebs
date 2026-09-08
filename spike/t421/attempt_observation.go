@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"io"
 	"slices"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -63,6 +65,9 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			}
 			out.Complete = true
 			return out, nil
+		}
+		if readErr == nil && executionSetupTokenDiagnostic(line) {
+			continue
 		}
 		if source, err := observeSourceAttempt(line, plan, producer, wantInput, &out); source {
 			if err != nil || readErr != nil {
@@ -127,8 +132,8 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	return nil
 }
 
-// One allocation-free line pass after Wait, in addition to the existing two
-// metric parsers. Complete ordinary diagnostics may follow the native fence;
+// One bounded line pass after Wait, in addition to the existing two metric
+// parsers. Complete ordinary diagnostics may follow the native fence;
 // partial final lines retain the existing refusal, even for ordinary output.
 // Future compact metric families must extend this reserved-family check too.
 func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) {
@@ -146,6 +151,9 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 		}
 		line := raw[:end+1]
 		raw = raw[end+1:]
+		if executionSetupTokenDiagnostic(line) {
+			continue
+		}
 		if bytes.Contains(line, []byte("TFE")) {
 			if seen || !bytes.Equal(line, want[:]) {
 				return seen, errExecutionAttempts
@@ -163,6 +171,26 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 		}
 	}
 	return seen, nil
+}
+
+// The standard logger's exact setup-token line is ordinary payload, even when
+// its opaque base64url text contains a reserved marker or ends in I4/Ib4.
+// Recognize the whole native envelope, never a prefix or arbitrary log text;
+// an appended/split telemetry record must still reach the strict matchers.
+func executionSetupTokenDiagnostic(line []byte) bool {
+	const timestamp = "2006/01/02 15:04:05 "
+	const label = "first-run setup token: "
+	const tokenStart = len(timestamp) + len(label)
+	if len(line) != tokenStart+43+1 || line[len(line)-1] != '\n' || !bytes.Equal(line[len(timestamp):tokenStart], []byte(label)) {
+		return false
+	}
+	stamp, err := time.Parse(timestamp, string(line[:len(timestamp)]))
+	if err != nil || stamp.Format(timestamp) != string(line[:len(timestamp)]) {
+		return false
+	}
+	var token [32]byte
+	n, err := base64.RawURLEncoding.Strict().Decode(token[:], line[tokenStart:len(line)-1])
+	return err == nil && n == len(token)
 }
 
 // Match the existing index parser's reserved lines, plus an embedded binding
