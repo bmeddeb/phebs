@@ -126,7 +126,7 @@ func (run *ExecutionEpochOneRun) ObserveWarm(ctx context.Context) (retErr error)
 	if run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
-	return nil
+	return inspection.acceptInspectionPhase(ctx)
 }
 
 // ColdToWarm performs X -> T -> drained F exactly once, then advances both
@@ -207,7 +207,10 @@ func (run *ExecutionEpochOneRun) ColdToWarm(ctx context.Context) (retErr error) 
 	if inspection.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || run.advanceCold(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
-	return run.completeCold(ctx)
+	if run.completeCold(ctx) != nil {
+		return ErrExecutionEpochOne
+	}
+	return inspection.acceptInspectionPhase(ctx)
 }
 
 // One phase timer covers bootstrap, health, inspection and idle time alike.

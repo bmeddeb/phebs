@@ -180,6 +180,7 @@ type ExecutionEpochOneResult struct {
 	Attempts                              ExecutionAttemptObservation
 	IndexOffers                           ExecutionIndexObservation
 	ServerProcesses                       ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
+	Inspection                            []ExecutionPhaseInspection
 }
 
 type ExecutionEpochOneRun struct {
@@ -864,6 +865,13 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses}
+	// Selectors have joined; inspection snapshot safety does not claim that
+	// native process/output teardown succeeded (RootJoined remains separate).
+	if run.inspection != nil {
+		run.inspection.mu.Lock()
+		result.Inspection = cloneInspectionEvidence(run.inspection.evidence.rows)
+		run.inspection.mu.Unlock()
+	}
 	if !result.SessionEmpty {
 		failure = ErrExecutionEpochOne
 	}
@@ -955,6 +963,7 @@ func (run *ExecutionEpochOneRun) Wait(ctx context.Context) (ExecutionEpochOneRes
 		result.Store.Store.Phases = slices.Clone(result.Store.Store.Phases)
 		result.Store.Store.Producers = slices.Clone(result.Store.Store.Producers)
 		result.ServerProcesses = cloneServerProcessObservation(result.ServerProcesses)
+		result.Inspection = cloneInspectionEvidence(result.Inspection)
 		return result, run.err
 	case <-ctx.Done():
 		return ExecutionEpochOneResult{RootStarted: true}, ErrExecutionEpochOne

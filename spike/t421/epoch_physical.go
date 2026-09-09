@@ -117,7 +117,7 @@ func (run *ExecutionEpochOneRun) PhysicalB(ctx context.Context) (retErr error) {
 	run.mu.Lock()
 	run.physicalResult = observation
 	run.mu.Unlock()
-	return nil
+	return reader.acceptInspectionPhase(ctx)
 }
 
 func (run *ExecutionEpochOneRun) advancePhysical(ctx context.Context) error {

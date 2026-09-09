@@ -112,7 +112,9 @@ func TestExecutionEpochHandoffHelper(t *testing.T) {
 		if err != nil {
 			t.Fatalf("warm request window did not admit actual request entry: %v", err)
 		}
-		request.End()
+		if os.Getenv("PHEBS_EPOCH_HANDOFF_HOLD_FINAL") != "1" {
+			request.End()
+		}
 		epochHandoffByte(t, os.Stdout, 'q')
 		epochHandoffRead(t, os.Stdin, 'F')
 		if _, err := owners.EnterRequest(ctx); err == nil {
@@ -189,7 +191,7 @@ func epochHandoffRead(t *testing.T, reader io.Reader, want byte) {
 }
 
 func TestExecutionEpochAdvanceColdInheritedHandoff(t *testing.T) {
-	for _, mode := range []string{"healthy", "canceled", "warm", "warm_pending_x", "warm_pending_t", "warm_canceled_read", "warm_physical", "warm_physical_pin_refused", "warm_physical_stop_join"} {
+	for _, mode := range []string{"healthy", "canceled", "warm", "warm_pending_x", "warm_pending_t", "warm_canceled_read", "warm_fence_refused", "warm_physical", "warm_physical_pin_refused", "warm_physical_stop_join"} {
 		t.Run(mode, func(t *testing.T) { testEpochInheritedHandoff(t, mode) })
 	}
 }
@@ -287,6 +289,9 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector}
 	if warm {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_WARM=1")
+	}
+	if mode == "warm_fence_refused" {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_HOLD_FINAL=1")
 	}
 	if physical {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_PHYSICAL=1")
@@ -436,6 +441,21 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		sa.Store.Producers[0].Checkpoint != initialPhase || da.Producers[0].Active != 1 || control.RequestToken() != "" ||
 		da.Attempts != 1 || sa.Store.Transactions != 0 || da.Complete || sa.Complete {
 		t.Fatalf("handoff lost actual carried/checkpoint/fenced prefix: %+v / %+v / %v / %v", da, sa, daErr, saErr)
+	}
+	if mode == "healthy" {
+		// Model only the already decoded F; the handoff and timer completion
+		// above/below are real. Advancing DA/SA must not relabel cold evidence.
+		reader, _ := epochTestFinal(t)
+		reader.run = run
+		reader.evidence.rows = []ExecutionPhaseInspection{{Phase: "cold", Final: &ExecutionInspectionFinal{}}}
+		run.stop, run.cancelRun = make(chan struct{}), cancel
+		run.coldDeadline, run.lifetimeDeadline = time.Now().Add(time.Minute), time.Now().Add(2*time.Minute)
+		run.warmLimit = time.Minute
+		run.setPhaseDeadlineLocked(run.coldDeadline)
+		defer run.stopPhaseDeadline()
+		if run.completeCold(ctx) != nil || reader.acceptInspectionPhase(ctx) != nil || reader.evidence.rows[0].Phase != "cold" || !reader.evidence.rows[0].SelectorAccepted {
+			t.Fatal("cold handoff lost its original accepted phase")
+		}
 	}
 	epochHandoffByte(t, input, 'V')
 	epochHandoffRead(t, output, 'W')
@@ -764,13 +784,22 @@ func testEpochInheritedWarmObservation(t *testing.T, ctx context.Context, run *E
 	run.inspection, run.warm, run.warmAllowed = inspection, true, true
 	run.phaseDeadline = time.Now().Add(10 * time.Second)
 	err = run.ObserveWarm(ctx)
+	if len(inspection.evidence.rows) != 1 || inspection.evidence.rows[0].SelectorAccepted != (mode == "warm") {
+		t.Fatal("selector acceptance differs from joined choreography", inspection.evidence.rows)
+	}
 	if mode != "warm" {
 		want := int32(1)
 		if mode == "warm_pending_t" {
 			want = 2
 		}
-		if err == nil || run.err != ErrExecutionEpochOne || !run.warmUsed || inspection.finalUsed || requests.Load() != want {
+		if mode == "warm_fence_refused" {
+			want = 3
+		}
+		if err == nil || run.err != ErrExecutionEpochOne || !run.warmUsed || inspection.finalUsed != (mode == "warm_fence_refused") || requests.Load() != want {
 			t.Fatal("pending/canceled warm read continued or lost its sticky prefix", err, requests.Load())
+		}
+		if mode == "warm_fence_refused" && inspection.evidence.rows[0].Final == nil {
+			t.Fatal("actual request-fence refusal erased the preceding valid F")
 		}
 		select {
 		case <-run.warmDone:
@@ -788,6 +817,30 @@ func testEpochInheritedWarmObservation(t *testing.T, ctx context.Context, run *E
 	if requests.Load() != 3 || inspection.reports != 3 || inspection.next != 7 || !run.warmUsed || run.control.RequestToken() != "" {
 		t.Fatal("warm observation lost one-shot X/T/F or final request fence")
 	}
+	row := inspection.evidence.rows[0]
+	if row.Phase != "warm_noop" || row.FirstOrdinal != 4 || row.NextOrdinal != 7 || row.AcceptedReports != 3 || row.Reads != inspection.totals || row.Final == nil || row.Final.Ordinal != 6 || row.Final.Projection.Phase != "warm_noop" {
+		t.Fatal("accepted selector lost actual F or exact phase read prefix", row)
+	}
+	// With a genuinely acknowledged fence, independently test each final
+	// acceptance guard. These are guard models, not native cleanup failures.
+	for _, guard := range []string{"canceled", "reader_failed", "run_failed", "duplicate"} {
+		guardCtx, guardCancel := context.WithCancel(ctx)
+		inspection.evidence.rows[0].SelectorAccepted = guard == "duplicate"
+		switch guard {
+		case "canceled":
+			guardCancel()
+		case "reader_failed":
+			inspection.err = errEpochInspection
+		case "run_failed":
+			run.err = ErrExecutionEpochOne
+		}
+		if inspection.acceptInspectionPhase(guardCtx) == nil {
+			t.Fatal("fenced acceptance guard omitted", guard)
+		}
+		guardCancel()
+		inspection.err, run.err = nil, nil
+	}
+	inspection.evidence.rows[0].SelectorAccepted = true
 	select {
 	case <-run.warmDone:
 	default:

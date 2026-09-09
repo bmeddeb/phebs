@@ -6659,6 +6659,38 @@ whole-custody gauge and successful tiny-ballast verification; filesystem used
 capacity is not a substitute gauge. Neither caller-supplied success flags nor
 an inert facade around unavailable measurement completes that native path.
 
+**Retained exact-inspection prefixes (2026-09-09).** The parent now returns
+phase-local accepted-trailer totals, consumed ordinal ranges and actual compact
+F authority/projection, separately from completed-selector acceptance. The
+existing real selector marks acceptance only after cleanup, request fencing and
+its immediate handoff. A valid F survives a later fence refusal without claiming
+selector success. Phase eight keeps distinct predecessor and recovered-epoch
+read owners; cumulative DA/SA and carried process samples are not summed again.
+Detailed extraction partitions remain with their existing authority owners.
+Retention and every Wait detach the two projection slices from callers.
+
+The exact twelve-file manifest
+`5f4719b27ec9b61117d79ddc2e054d7e348097aef6aeac6c89b4259affe7f20e`
+passed independent review with all severity counts zero. Tests include an actual
+inherited request-fence timeout after a valid warm F, native HTTP/trailer
+validation, phase/checkpoint read partitioning and detached returned snapshots;
+modeled acceptance-guard cases are explicitly labeled, not native cleanup
+failures. Author focused normal/race passed in 6.487s/24.482s; independent final
+normal/race in 5.903s/9.040s; full isolated static checks passed vet, zero lint
+findings and all-package compilation. Lead integration preserves all twelve
+files byte-for-byte. Combined lead normal/race checks passed in 7.474s/30.144s;
+lead static checks passed vet, zero lint findings and all-package compilation,
+with documentation (0.439s), glossary and whitespace green. Independent
+integration/documentation review found all severity counts zero.
+
+Each consumed read updates scalar deltas under the existing reader lock; phase
+entry allocates a row. Valid F copies two bounded slices. Acceptance uses the
+existing reader-to-run lock order, and finish/each Wait copy bounded rows and
+slices again. No additional native query, filesystem/hash scan, descriptor,
+child, timer, goroutine or ordinary-runtime work is introduced. This closes
+retained inspection evidence only, not whole metrics, pressure choreography,
+signed receipt issuance, full native rehearsal or freeze.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure

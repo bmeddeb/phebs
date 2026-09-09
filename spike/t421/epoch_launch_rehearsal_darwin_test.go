@@ -6,8 +6,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 // Default: startup, one authenticated health request and a joined stop only.
@@ -362,6 +365,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			// the successor or mislabeling this subset as full work metrics.
 			prefix, priorErr := prior.Wait(context.Background())
 			t.Logf("joined first-epoch retained-parent prefix before logical successor: %+v; %v; no full work-metrics claim", prefix, priorErr)
+			assertRehearsalInspection(t, prior, prefix, []string{"cold", "warm_noop", "physical_delta_b"})
 			if priorErr != nil {
 				t.Fatal("successor lost joined first-epoch prefix", priorErr)
 			}
@@ -391,6 +395,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			run = next // Cleanup always follows the actual successor first.
 			prefix, priorErr := prior.Wait(context.Background())
 			t.Logf("joined logical-epoch prefix before return-A successor: %+v; %v; no full work-metrics claim", prefix, priorErr)
+			assertRehearsalInspection(t, prior, prefix, []string{"logical_delta_b"})
 			if priorErr != nil {
 				t.Fatal("successor lost joined logical prefix", priorErr)
 			}
@@ -420,6 +425,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			run = next // Even a refused bootstrap remains this cleanup's owner.
 			prefix, priorErr := prior.Wait(context.Background())
 			t.Logf("owned terminal predecessor: %+v; %v; metric prefixes deliberately incomplete", prefix, priorErr)
+			assertRehearsalInspection(t, prior, prefix, []string{"return_a", "stale_lease"})
 			if priorErr != nil {
 				t.Fatal("checkpoint successor lost terminal predecessor", priorErr)
 			}
@@ -441,6 +447,24 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil || !stopped.RootStarted || !stopped.RootJoined || !stopped.SessionEmpty {
 		t.Fatalf("actual epoch-one owner-drained stop: %+v; %v", stopped, err)
 	}
+	var accepted []string
+	switch {
+	case checkpoint:
+		accepted = []string{"process_restart"}
+	case stale:
+		accepted = []string{"return_a", "stale_lease"}
+	case returnA:
+		accepted = []string{"return_a"}
+	case logical:
+		accepted = []string{"logical_delta_b"}
+	case physical:
+		accepted = []string{"cold", "warm_noop", "physical_delta_b"}
+	case warm:
+		accepted = []string{"cold", "warm_noop"}
+	case cold:
+		accepted = []string{"cold"}
+	}
+	assertRehearsalInspection(t, run, stopped, accepted)
 	t.Logf("epoch-one startup/health/stop: %s; cold_handoff_selector=%t warm_observation_selector=%t physical_b_selector=%t; %+v; no full warm/receipt/freeze claim", time.Since(started), cold, warm, physical, stopped)
 	if !canRelease() || flow.Close() != nil || epochs.Close() != nil || author.Close() != nil || planInput.Close() != nil {
 		t.Fatal("joined epoch-one owner/input closure failed; retaining custody")
@@ -470,4 +494,38 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	inputCustodyTestCleanup(t, epochs.catalogs, []ExecutionInputCopy{{Name: "catalog-a"}, {Name: "catalog-b"}, {Name: "catalog-a-return"}})
 	inputCustodyTestCleanup(t, epochs.configs, []ExecutionInputCopy{{Name: "config-1"}, {Name: "config-2"}, {Name: "config-3"}, {Name: "config-4"}, {Name: "config-5"}})
 	completed = true
+}
+
+// Compare only this joined epoch's exact-read prefix and accepted selectors.
+// DA/SA stay cumulative; successor phase-eight process samples already include
+// their predecessor. Neither stream is added into this inspection ledger.
+func assertRehearsalInspection(t *testing.T, run *ExecutionEpochOneRun, result ExecutionEpochOneResult, want []string) {
+	t.Helper()
+	var accepted []string
+	var counts readaccounting.Counts
+	var reports uint64
+	next := uint64(1)
+	for _, row := range result.Inspection {
+		if row.ServerEpoch != run.epoch.Epoch || row.FirstOrdinal != next || row.NextOrdinal <= row.FirstOrdinal || row.AcceptedReports > row.NextOrdinal-row.FirstOrdinal {
+			t.Fatal("inspection epoch/ordinal prefix changed", row)
+		}
+		next = row.NextOrdinal
+		reports += row.AcceptedReports
+		counts.ControlFileReads += row.Reads.ControlFileReads
+		counts.StoreReadAttempts += row.Reads.StoreReadAttempts
+		counts.MemberVisits += row.Reads.MemberVisits
+		counts.StoreWriteAttempts += row.Reads.StoreWriteAttempts
+		if row.SelectorAccepted {
+			if row.Final == nil || row.Final.Ordinal < row.FirstOrdinal || row.Final.Ordinal >= row.NextOrdinal || row.Final.Projection.Phase != row.Phase {
+				t.Fatal("accepted selector has no actual phase-bound F", row)
+			}
+			accepted = append(accepted, row.Phase)
+		}
+	}
+	if !slices.Equal(accepted, want) {
+		t.Fatal("accepted native selectors differ", accepted, want)
+	}
+	if run.inspection != nil && (run.inspection.next != next || run.inspection.reports != reports || run.inspection.totals != counts) {
+		t.Fatal("phase inspection deltas do not equal epoch prefix", counts, reports, next)
+	}
 }

@@ -87,6 +87,7 @@ type executionEpochInspection struct {
 	checkpointPrepared                 bool
 	checkpointHit, checkpointRecovered extractionpublication.CheckpointRestartTransition
 	pressure                           epochPressureObservations
+	evidence                           epochInspectionLedger
 	err                                error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
 	// the already bounded body (at most the response cap plus one sentinel).
@@ -258,6 +259,8 @@ func (reader *executionEpochInspection) readWithFence(ctx context.Context, path 
 		stage = "request_token"
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
+	reader.beginInspectionEvidence()
+	defer reader.finishInspectionEvidence()
 	reader.next++
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+run.epoch.Listen+path, nil)
 	if err != nil {
@@ -511,6 +514,10 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 		return authority, projection, report, errEpochInspection
 	}
 	authority, projection, err = reader.decodeFinal(raw)
+	if err == nil {
+		row := &reader.evidence.rows[len(reader.evidence.rows)-1]
+		row.Final = cloneInspectionFinal(ExecutionInspectionFinal{Ordinal: report.RequestOrdinal, Authority: authority.AuthorityState, Projection: projection})
+	}
 	if err == nil && authority.Phase == "cold" {
 		reader.cold = authority
 	}

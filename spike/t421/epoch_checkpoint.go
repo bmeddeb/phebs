@@ -421,7 +421,7 @@ func (run *ExecutionEpochOneRun) RecoverCheckpoint(ctx context.Context) (retErr 
 	run.mu.Lock()
 	run.warm = true
 	run.mu.Unlock()
-	return nil
+	return reader.acceptInspectionPhase(ctx)
 }
 
 func (run *ExecutionEpochOneRun) newCheckpointInspection(ctx context.Context) (*executionEpochInspection, error) {

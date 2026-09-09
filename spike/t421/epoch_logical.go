@@ -194,7 +194,7 @@ func (run *ExecutionEpochOneRun) LogicalB(ctx context.Context) (retErr error) {
 	run.mu.Lock()
 	run.warm = true // The actual owner drain/request fence above is joined.
 	run.mu.Unlock()
-	return nil
+	return reader.acceptInspectionPhase(ctx)
 }
 
 type epochLogicalPrior struct {

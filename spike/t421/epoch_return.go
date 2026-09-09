@@ -205,7 +205,7 @@ func (run *ExecutionEpochOneRun) ReturnA(ctx context.Context) (retErr error) {
 	run.mu.Lock()
 	run.warm = true
 	run.mu.Unlock()
-	return nil
+	return reader.acceptInspectionPhase(ctx)
 }
 
 func (run *ExecutionEpochOneRun) newReturnInspection(ctx context.Context) (*executionEpochInspection, error) {

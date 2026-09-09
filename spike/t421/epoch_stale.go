@@ -128,7 +128,7 @@ func (run *ExecutionEpochOneRun) StaleLease(ctx context.Context) (retErr error) 
 	if _, _, _, err := reader.Final(ctx); err != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
-	return nil
+	return reader.acceptInspectionPhase(ctx)
 }
 
 func (run *ExecutionEpochOneRun) advanceStale(ctx context.Context) error {
