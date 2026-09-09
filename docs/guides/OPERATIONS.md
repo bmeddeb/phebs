@@ -4893,10 +4893,23 @@ write/read is removed before the empty-only teardown. Non-forced detach must
 succeed before the exact image is removed; no recursive mounted cleanup is
 available. A failed or uncertain check retains its private root for explicit
 operator handling. Never force-detach or recursively remove that root to turn
-a failed check into a pass. This component does not yet admit operational
-borrowers, supply full launcher accounting or clean populated replay custody.
-Existing rehearsal selectors are unchanged; this is not a pressure-phase or
-freeze result.
+a failed check into a pass. This empty selector does not supply full launcher
+accounting or prove populated replay cleanup.
+
+The separate `PHEBS_T422_VOLUME_CUSTODY_REHEARSAL=1` developer test exercises
+only a tiny populated APFS fixture with protected input and retained native Git
+probe scratch. It requires non-forced detach without thawing that input; it
+does not manufacture successful epoch evidence. The optional epoch harness can
+separately select `PHEBS_T422_PRESSURE_VOLUME_REHEARSAL=1` to place its existing
+preparation and execution workspace on the owned mount. Volume removal then
+requires the bound latest successful joined run, closed input owners and the
+existing source lease; failure retains the image and root without recursive
+mounted cleanup. Go/Git preparation commands also join their complete owned
+sessions; marked probe/build scratch remains until detach. Bootstrap volume
+creation HOME/TMP remains outside the mount. Existing selectors are unchanged
+when the volume option is absent. Neither option adds ballast/pressure phases,
+complete launcher accounting or a freeze result; a full bound native rehearsal
+has not yet established this release path.
 
 ## Developing phebs
 

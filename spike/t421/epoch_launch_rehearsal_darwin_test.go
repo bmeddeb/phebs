@@ -12,8 +12,9 @@ import (
 
 // Default: startup, one authenticated health request and a joined stop only.
 // The additional COLD selector opts into actual A convergence and phase 2->3;
-// neither mode signs evidence, admits a host/profile, creates a pressure volume
-// or executes a ceremony. No warm phase or full-work accounting pass is claimed.
+// Neither mode signs evidence or admits a host/profile. The separate VOLUME
+// selector places writable preparation/execution custody on a fresh owned APFS
+// image; it performs no ballast mutation or pressure phase.
 func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if os.Getenv("PHEBS_T422_EPOCH_ONE_REHEARSAL") != "1" {
 		t.Skip("requires explicit serial protected epoch-one startup rehearsal")
@@ -25,6 +26,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	returnA := os.Getenv("PHEBS_T422_RETURN_A_REHEARSAL") == "1"
 	stale := os.Getenv("PHEBS_T422_STALE_LEASE_REHEARSAL") == "1"
 	checkpoint := os.Getenv("PHEBS_T422_CHECKPOINT_RESTART_REHEARSAL") == "1"
+	onVolume := os.Getenv("PHEBS_T422_PRESSURE_VOLUME_REHEARSAL") == "1"
 	// Selector dependencies refuse before any host/tool/custody allocation.
 	if checkpoint && !stale {
 		t.Fatal("checkpoint selector requires explicit stale-lease selector")
@@ -68,7 +70,24 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Fatal(err)
 	}
 	completed := false
+	hostParent := parent
+	var volume *executionPressureVolume
 	t.Cleanup(func() {
+		if volume != nil {
+			if !completed || t.Failed() || !volume.removed {
+				t.Logf("retained volume/image custody; no automatic retry or mounted cleanup: %s", hostParent)
+				return
+			}
+			current, err := os.Lstat(hostParent)
+			if err != nil || !os.SameFile(identity, current) || volume.Close() != nil {
+				t.Error("volume outer cleanup identity/closure refused")
+				return
+			}
+			if os.Remove(filepath.Join(hostParent, ".t4013-operation.lock")) != nil || os.Remove(hostParent) != nil {
+				t.Error("volume outer cleanup retained nonempty or changed controls")
+			}
+			return
+		}
 		if !completed || t.Failed() {
 			t.Logf("retained exact epoch-one custody; no automatic retry: %s", parent)
 			return
@@ -103,6 +122,20 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
+	if onVolume {
+		volume, err = prepareExecutionPressureVolume(ctx, hostParent)
+		if volume != nil {
+			defer func() { _ = volume.Close() }()
+		}
+		if err != nil {
+			t.Fatal("owned pressure-volume preparation", err)
+		}
+		ctx, parent, err = volume.borrowWorkspace(ctx)
+		if err != nil {
+			t.Fatal("owned mounted workspace borrow", err)
+		}
+		t.Logf("owned mounted preparation/execution workspace: %s; no ballast or full launcher admission", parent)
+	}
 	var author *ExecutionAuthorCustody
 	var epochs *ExecutionEpochConfigCustody
 	var flow *ExecutionEpochOne
@@ -228,6 +261,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if volume != nil && volume.bindRehearsal(ctx, flow) != nil {
+		t.Fatal("exact flow could not bind its mounted custody")
+	}
 	result, err := flow.AuthorA(ctx)
 	if err != nil || !result.Completed || !result.RootJoined || !result.SessionEmpty || result.Revision != "a" {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)
@@ -288,6 +324,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if epochs.Close() == nil || author.Close() == nil {
 		t.Fatal("active native server lost protected input/source custody")
+	}
+	if volume != nil && volume.Close() == nil {
+		t.Fatal("active native server lost its volume borrow")
 	}
 	if err := run.Health(ctx); err != nil {
 		t.Fatal("actual authenticated epoch-one health", err)
@@ -410,6 +449,14 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if inputs.Close() != nil || git.Close() != nil {
 		t.Fatal("joined protected build/Git closure failed")
+	}
+	if volume != nil {
+		if err := volume.finishRehearsal(stopCtx, run); err != nil {
+			t.Fatal("populated volume retained after joined rehearsal", err)
+		}
+		t.Log("bound populated volume detached without force and removed without thawing source")
+		completed = true
+		return // No mounted input thaw/delete or recursive cleanup.
 	}
 	gitCustodyTestCleanup(t, git)
 	goBuildTestCleanup(t, inputs)

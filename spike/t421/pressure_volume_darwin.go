@@ -22,9 +22,9 @@ import (
 
 var errPressureVolume = errors.New("execution pressure volume unavailable or retained")
 
-// This is the empty-volume prerequisite, not full launcher admission. In
-// particular it cannot destroy populated execution custody. The operational
-// borrower, durable lease and finite outer-stage accounting remain separate.
+// This is rehearsal-volume custody, not full launcher admission. Populated
+// release requires the bound successful rehearsal and closed input owners;
+// full outer-stage accounting and durable hard-death supervision remain open.
 type executionPressureVolume struct {
 	mu        sync.Mutex
 	parent    productionRoot
@@ -42,6 +42,8 @@ type executionPressureVolume struct {
 	closed    bool
 	removed   bool
 	unsettled bool
+	borrowed  bool
+	flow      *ExecutionEpochOne
 }
 
 // prepareExecutionPressureVolume owns a fresh sparse image, never a supplied
@@ -242,10 +244,16 @@ func (v *executionPressureVolume) removeEmpty(ctx context.Context) error {
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
+	return v.remove(ctx, true)
+}
+
+// remove is called under mu. Only successful bound rehearsal closure may
+// select populated removal; both routes retain the same detach/image barrier.
+func (v *executionPressureVolume) remove(ctx context.Context, emptyOnly bool) error {
 	if v.removed {
 		return nil
 	}
-	if !v.ready || v.check() != nil || !pressureDirectoryEmpty(v.workspace.path) ||
+	if !v.ready || v.borrowed || v.check() != nil || emptyOnly && !pressureDirectoryEmpty(v.workspace.path) ||
 		!pressureDirectoryEmpty(filepath.Join(v.root.path, "home")) || !pressureDirectoryEmpty(filepath.Join(v.root.path, "tmp")) {
 		return errPressureVolume
 	}
@@ -253,8 +261,8 @@ func (v *executionPressureVolume) removeEmpty(ctx context.Context) error {
 	if !pressureMountEmpty(v.mount.path) {
 		return errPressureVolume
 	}
-	// This empty-only gate has no operational borrowers. A surviving recorded
-	// preparation session is still not permission to detach under its writer.
+	// Populated callers have already closed their bound operational borrower.
+	// A surviving recorded preparation session still forbids detaching its writer.
 	for _, session := range v.sessions {
 		if err := t4013.WaitPrivateProcessSession(session, time.Now().Add(5*time.Second)); err != nil {
 			return errPressureVolume
@@ -346,7 +354,7 @@ func (v *executionPressureVolume) Close() error {
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	if v.unsettled {
+	if v.unsettled || v.borrowed {
 		return errPressureVolume
 	}
 	if v.closed {

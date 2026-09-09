@@ -156,11 +156,11 @@ func (inspection executionCheckoutInspector) runInput(ctx context.Context, input
 	command.WaitDelay = time.Second
 	output := checkoutCommandOutput{remaining: limit, cancel: cancel}
 	command.Stdout = &output
-	runErr := command.Run()
+	runErr := runReferenceCommand(ctx, command)
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("checkout admission Git deadline: %w", err)
 	}
-	if runErr != nil {
+	if runErr != nil || output.err != nil {
 		return nil, errors.New("checkout admission Git read failed or exceeded its bound")
 	}
 	return output.buffer.Bytes(), nil

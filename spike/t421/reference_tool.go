@@ -342,10 +342,7 @@ func runReferenceGo(ctx context.Context, root, binary string, environment []stri
 	command.Dir, command.Env = root, environment
 	command.Stdout, command.Stderr = &stdout, &stderr
 	command.WaitDelay = time.Second
-	if err := prepareReferenceCommand(command); err != nil {
-		return nil, err
-	}
-	if err := command.Run(); err != nil || ctx.Err() != nil {
+	if err := runReferenceCommand(ctx, command); err != nil || ctx.Err() != nil || stdout.err != nil || stderr.err != nil {
 		return stderr.buffer.Bytes(), errors.New("reference build Go command failed, expired, or exceeded output bound")
 	}
 	return stdout.buffer.Bytes(), nil

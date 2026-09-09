@@ -72,8 +72,10 @@ recurring stale-requeue mechanism gate; it does not complete full work metrics
 or the fifteen-phase executor. The joined parent successful-parse collector
 is now implemented and component-gated; full native metrics remain open.
 The owned empty APFS volume prerequisite passed its corrected-tree native race,
-static/documentation and independent zero-finding review gates. It does not yet
-own populated rehearsal custody or perform pressure mutations.
+static/documentation and independent zero-finding review gates. The next
+working-tree slice binds populated rehearsal custody to that owner and routes
+preparation scratch onto the mount; its tiny native detach fixture is not a
+bound epoch rehearsal or pressure-mutation pass.
 Next: remaining phase/epoch and whole-work wiring, T42.2m launcher/custody
 closure, T42.2n exact-tree acceptance and
 T42.2o seal/exact-main freeze. No further rehearsal or ceremony is started.

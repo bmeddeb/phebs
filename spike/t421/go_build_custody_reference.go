@@ -21,7 +21,8 @@ import (
 // build and makes Close wait until all children have joined. This is never a
 // production request path; no general-purpose runner or launch permission leaks.
 // Scratch home/cache/tmp/output are fresh siblings under the same explicit
-// parent as input custody and are removed only after the bounded runner joins.
+// parent as input custody. Ordinary preparation removes them after the bounded
+// runner joins; marked volume preparation retains them through non-forced detach.
 func (custody *ExecutionGoBuildCustody) ProtectReferenceTool(ctx context.Context, parent, role, binary string) (*ExecutionToolCustody, error) {
 	return custody.protectReferenceTool(ctx, parent, role, binary, "")
 }
@@ -68,7 +69,11 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 		return identity, ErrExecutionGoBuildCustody
 	}
 	defer func() {
-		if os.RemoveAll(workspace) != nil || retErr != nil {
+		var cleanupErr error
+		if executionPreparationParent(ctx) == "" {
+			cleanupErr = os.RemoveAll(workspace)
+		}
+		if cleanupErr != nil || retErr != nil {
 			identity = ExecutionToolIdentity{}
 			retErr = ErrExecutionGoBuildCustody
 		}

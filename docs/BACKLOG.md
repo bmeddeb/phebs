@@ -6206,6 +6206,46 @@ workspace; the whole launcher's writable-volume policy is not established.
 The existing checkpoint rehearsal is unchanged. Pressure mutation, phases
 9–11 and freeze remain open; no full rehearsal is started by this slice.
 
+**T42.2l borrowed populated rehearsal custody (2026-09-09).** The next bounded
+slice reuses the owned volume, actual flow/input owners and native source lease.
+Borrow before preparation; bind before AuthorA; refuse Close/removal while
+borrowed. Successful latest joined-run evidence and closed owners precede
+same-inode lease reacquisition, non-forced detach and exact image removal.
+The optional harness skips mounted thaw/recursive cleanup on this path.
+Preparation Go/Git commands now join their whole owned sessions and check
+sticky output errors, without changing operational nested Git groups. Marked
+external probes and reference-build scratch remain on the mounted workspace
+until detach. Full writable-volume policy, durable supervision and finite
+outer-stage accounting remain T42.2m work; bootstrap volume HOME/TMP and
+ordinary intermediate config/catalog staging retain their existing semantics.
+
+Working-tree pressure regressions passed normal in 0.709s. The separately
+selected tiny protected populated fixture and pressure regressions passed
+under race in 13.785s (native fixture 12.01s); the fixture retained a genuine
+Git probe and protected input, refused empty-only deletion, then detached
+without force and removed the exact image/root without thawing. No attached
+image remains. This exercises the mechanical detach barrier only, not a fake
+successful flow or full native epoch release. Preparation-session, marked
+probe, real checkout and output-bound gates passed normal/race in
+16.737/18.275s. Static passed glossary, vet, pinned lint with zero issues and
+all-package compilation; docs passed in 0.516s. Independent preparation review
+reported critical/high/medium/low zero; independent workspace review reported
+zero critical/high/medium and one low for two stale cleanup comments. Both
+comments are corrected without changing executable behavior. The cost record
+explicitly includes bounded host-wide process censuses, exceptional polling
+and the existing build mutex held across admission/session join. Record review
+found one further low cost omission: the eight author/epoch root checks also
+invoke the existing four-root volume/image checks; the ADR now states both.
+The corrected staged Go diff SHA-256 is
+`46a91e8abd719150b3788d41a46bd29e74c76abe23675b632aeb8b13c29fdcaf`.
+Combined epoch/pressure/preparation/checkout/output-bound regressions then
+passed under race in 40.407s; optional full native selectors were absent.
+Refreshed docs/glossary/whitespace passed (docs 0.509s). No corpus, ballast or
+full rehearsal was started, and the genuine bound epoch release remains
+unmeasured. Final non-authoring source/record rereview reports
+critical/high/medium/low zero; final record-only docs/glossary passed (0.515s).
+These are scoped component gates, not the full ceremony merge bar.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure
