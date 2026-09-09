@@ -4,7 +4,7 @@ import "slices"
 
 // These are observation coverage groups, not new work units or limits. A lost
 // shared output scan reports the union of its families; a zero prefix remains
-// explicitly incomplete. Separate scoped-read reports use the final pair.
+// explicitly incomplete. Scoped inspection reads have their own separate pair.
 var workUnavailableMetricGroups = [][]string{
 	{"job_attempts", "max_retries_on_any_unit", "retries"},
 	{"git_reads"},
@@ -16,6 +16,7 @@ var workUnavailableMetricGroups = [][]string{
 	{"relationship_build_attempts", "relationship_projections", "service_references"},
 	{"index_files"},
 	{"control_reads", "member_reads"},
+	{"source_logical_bytes", "source_unique_bytes"},
 }
 
 func workUnavailableMetric(name string) bool {

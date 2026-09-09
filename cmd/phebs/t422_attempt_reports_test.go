@@ -60,7 +60,7 @@ const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
 // real phase change. Reports are supplied native-shaped test inputs, not real
 // queue work, protected tool admission, or a phase measurement result.
 func TestT422AttemptInheritedPhase(t *testing.T) {
-	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled", "resolver_events", "resolver_canceled", "resolver_zero", "relationship_events", "relationship_canceled", "reference_events", "reference_canceled", "reference_zero"} {
+	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled", "resolver_events", "resolver_canceled", "resolver_zero", "relationship_events", "relationship_canceled", "reference_events", "reference_canceled", "reference_zero", "census_events", "census_zero"} {
 		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
 	}
 }
@@ -217,6 +217,26 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 		t.Fatal("actual selected relationship binding missing", diagnostic.String())
 	}
 	referenceEvents := 0
+	if strings.Count(diagnostic.String(), "SBB1:5:sha256:") != 1 {
+		t.Fatal("source-byte coverage binding missing", diagnostic.String())
+	}
+	for _, phase := range []uint32{8, 9} {
+		want := 0
+		if strings.HasPrefix(mode, "census_") {
+			want = 1
+		}
+		for _, event := range []byte{'B', 'E'} {
+			if strings.Count(diagnostic.String(), fmt.Sprintf("SB1:5:%X%c\n", phase, event)) != want {
+				t.Fatal("source census coverage missing", diagnostic.String())
+			}
+		}
+		if mode == "census_zero" {
+			want = 0
+		}
+		if strings.Count(diagnostic.String(), fmt.Sprintf("SB1:5:%XD:000000000000000a:0000000000000003\n", phase)) != want {
+			t.Fatal("source bytes missing", diagnostic.String())
+		}
+	}
 	if mode == "reference_events" || mode == "reference_canceled" {
 		referenceEvents = 1
 	}
@@ -407,6 +427,27 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		}
 	}
 	referenceEvents()
+	censusEvents := func() {
+		mode := os.Getenv(t422AttemptHelperMode)
+		if !strings.HasPrefix(mode, "census_") {
+			return
+		}
+		// Supplied census units cross the actual inherited phase-owned pipe;
+		// real source classification and error flushes have separate tests.
+		phase, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusBegin, 0, 0, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mode == "census_events" {
+			if _, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusBatch, phase, 10, 3); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusEnd, phase, 0, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	censusEvents()
 	// Supplied event exercises the actual selected stream, not native parsing.
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
@@ -433,6 +474,7 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	resolverEvents()
 	relationshipEvents()
 	referenceEvents()
+	censusEvents()
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
 			t.Fatal(err)
@@ -457,6 +499,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	}
 	if dispatchadmission.ObserveProductionResolverBlob(ctx, 10) == nil {
 		t.Fatal("closed producer emitted guessed resolver phase")
+	}
+	if _, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusBegin, 0, 0, 0); err == nil {
+		t.Fatal("closed producer emitted guessed census phase")
 	}
 	if dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild, 1) == nil {
 		t.Fatal("closed producer emitted guessed relationship phase")

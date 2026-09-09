@@ -51,9 +51,20 @@ func BuildSourceGeneration(
 	ctx context.Context,
 	repositoryDir, stageDir, repository string,
 	revisions []store.IndexedRevision,
-) (SourceManifest, error) {
+) (_ SourceManifest, retErr error) {
 	if err := validateRevisions(revisions); err != nil {
 		return SourceManifest{}, err
+	}
+	observation, err := startSourceCensusObservation(ctx)
+	if err != nil {
+		return SourceManifest{}, err
+	}
+	if observation != nil {
+		defer func() {
+			if err := observation.finish(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}()
 	}
 	if err := os.Mkdir(stageDir, 0o700); err != nil {
 		return SourceManifest{}, err
@@ -161,13 +172,22 @@ func BuildSourceGeneration(
 					return SourceManifest{}, invalidf("regular source bytes overflow")
 				}
 				manifest.RegularDeclaredBytes += record.DeclaredBytes
+				if err := observation.add(record); err != nil {
+					return SourceManifest{}, err
+				}
 			case "symlink":
 				manifest.SymlinkOwnerCount++
 			case "gitlink":
 				manifest.GitlinkOwnerCount++
 			}
+			priorMembers := len(writer.members)
 			if err := writer.add(record); err != nil {
 				return SourceManifest{}, err
+			}
+			if observation != nil && len(writer.members) != priorMembers {
+				if err := observation.flush(ctx); err != nil {
+					return SourceManifest{}, err
+				}
 			}
 		}
 	}

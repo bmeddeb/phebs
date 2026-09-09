@@ -6691,6 +6691,57 @@ child, timer, goroutine or ordinary-runtime work is introduced. This closes
 retained inspection evidence only, not whole metrics, pressure choreography,
 signed receipt issuance, full native rehearsal or freeze.
 
+**Actual source-census byte observations (2026-09-09).** The native
+`BuildSourceGeneration` regular-owner seam now observes each declared size and
+counts each distinct Git blob once per invocation. This is not blob-read payload,
+catalog CensusRecords/CensusChildren or a PhysicalCorpusPasses event. Genuine
+rebuild retries recount; retained-source reads/reactivation do not. Existing
+member boundaries and a final/error remainder flush carry actual positive
+prefixes. Begin/End describe complete observation, not successful publication.
+An invalid meter first preserves its valid pending bytes when possible, then
+latches the selected lifetime through the existing refusal boundary without an
+invalid wire event or End. Ordinary source/writer failure with healthy coverage
+may still flush and end its known work prefix.
+
+The isolated sixteen-file manifest
+`03a59aae14864c0042409d7e4e27189130c6de7fe4c9202a2bb58ee8b7b0df24`
+passed independent review with all severity counts zero and independent focused
+race across all five affected packages. Normal/race source-package and focused
+bridge/parser tests passed, including actual Git census of 4,097 owners across
+a member boundary, repeated/unique/empty bytes, failure prefixes and a real
+inherited phase-bound report pipe. Supplied quantities in the pipe fixture are
+explicitly modeled, not a native corpus measurement. Lead integration preserves
+those sixteen files exactly and adds the closed source-logical/source-unique
+unavailable pair to the previously separate receipt slice, including shared
+scan loss, partial-pair refusal and retained-version guards. The combined
+eighteen-file manifest is
+`c655e82950dc66a5d2dd1513ffcc906b418a96a939727b38f8672da1a05821b8`.
+Lead focused normal/race passed across readaccounting, dispatchadmission,
+repositoryindex, command and spike packages (normal 0.283/0.267/2.137/1.243/
+1.199s; race 1.257/1.289/3.160/3.575/2.981s). Lead static checks passed vet,
+zero lint findings and all-package compilation; documentation (0.512s),
+glossary and whitespace passed. Independent integration review found all
+severity counts zero after correcting the marker-byte maximum wording;
+its supplemental pair/parser/precedence race passed in 1.866s. These close
+the slice checks, not the whole merge bar.
+
+Ordinary census adds a selection/context lookup, per-regular-owner nil check
+and member-count bookkeeping, with no uniqueness map. Selected calls retain a
+compact `map[[33]byte]int64` per invocation, decode/lookup each regular OID and
+write bounded reports while existing mirror-lock/member-file custody remains
+held. The ten-million-owner bound permits 410,000,000 bytes of raw key/value
+payload before Go map alignment, growth and allocator overhead; neither exact
+peak memory nor the expected corpus cardinality is a new maximum. The current
+selected index runner is serial, but the API is not newly serialized. No new
+source read, content hash, child, descriptor, lock, worker or cache is added.
+
+One 79-byte binding and at most 704,573 report bytes per invocation reuse the
+existing bounded scan. Whole-epoch 64-MiB log fit remains unproved. The receipt
+availability inventory now has eleven groups/26 work names; no source-byte
+coverage is borrowed from scoped inspection reads. This does not implement
+whole-phase live limits, every remaining census metric, native receipt issuance
+or a new rehearsal/freeze pass.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure

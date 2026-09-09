@@ -40,7 +40,7 @@ func TestWorkFailureUnavailableGroups(t *testing.T) {
 			t.Fatalf("partial group %d admitted", index)
 		}
 	}
-	sharedScan := workTestUnavailable(0, 1, 2, 3, 4, 5, 6, 7, 8)
+	sharedScan := workTestUnavailable(0, 1, 2, 3, 4, 5, 6, 7, 8, 10)
 	if !validUnavailableMetricsForPlan(sharedScan, PlanV3Schema) || !validSecondaryUnavailableMetrics(sharedScan) {
 		t.Fatal("shared scan loss refused")
 	}
@@ -50,6 +50,8 @@ func TestWorkFailureUnavailableGroups(t *testing.T) {
 		{"resolver_blob_reads", "resolver_blob_bytes"},
 		{"cache_lookups"},
 		{"control_reads"},
+		{"source_logical_bytes"},
+		{"source_unique_bytes"},
 	} {
 		if validUnavailableMetricsForPlan(names, PlanV3Schema) {
 			t.Fatalf("invalid inventory admitted: %v", names)
