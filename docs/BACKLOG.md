@@ -6633,6 +6633,23 @@ completion. The candidate may be committed as an immutable reviewed bookmark;
 a fresh serial exact-source race confirmation remains required before this
 slice is integration-ready or the merge bar is called met.
 
+**Exact corrected-fixture confirmation (2026-09-09).** The complete serial
+race selector above passed at clean immutable
+`d36d023b77b3d5a55eab9b7eea181179940133fd` in 3,588.799s, command status zero,
+without a race diagnostic or further allowance change. The full V3 constructor
+and receipt round-trip passed in 2,887.60s, retained V1 canonical receipt in
+339.98s, and existing full work-failure cases in 7.07s. Both native engines
+closed; the owned process group and listeners were verified empty. The retained
+log digest is
+`cc6833f867bc7b3788aecc907b2e74633ac26caa94d5c6980b2b9a6a07b37754`.
+This closes that slice's outstanding receipt race confirmation, not the whole
+merge bar. The fixture constructs genuine identities but models measurements
+and external signature bindings; its recovery preparation injects neither a
+stale lease nor process death. It establishes no native fifteen-phase run,
+receipt issuer, or ceremony pass. The later logical-gauge composition at
+`cd3e0b2a3a86fce5cc9d355d753e3792ee4ae997` still needs its own complete receipt
+gates; this earlier source result is not attributed to those new cases.
+
 Two failure-composition cases remain outside
 this stopped-phase correction: logical-gauge/multiple-primary representation,
 and a missing cache-validation result during failed teardown (whose work
