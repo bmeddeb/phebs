@@ -20,6 +20,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -58,7 +59,7 @@ const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
 // real phase change. Reports are supplied native-shaped test inputs, not real
 // queue work, protected tool admission, or a phase measurement result.
 func TestT422AttemptInheritedPhase(t *testing.T) {
-	for _, mode := range []string{"events", "zero_observations"} {
+	for _, mode := range []string{"events", "zero_observations", "cache_events"} {
 		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
 	}
 }
@@ -183,6 +184,20 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 	if strings.Count(diagnostic.String(), "OPB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "OP1:5:8\n") != wantEvents || strings.Count(diagnostic.String(), "OP1:5:9\n") != wantEvents {
 		t.Fatal("actual selected observation binding/phase missing", diagnostic.String())
 	}
+	cacheEvents := 0
+	if mode == "cache_events" {
+		cacheEvents = 1
+	}
+	if strings.Count(diagnostic.String(), "CCB1:5:sha256:") != 1 {
+		t.Fatal("actual selected cache binding missing", diagnostic.String())
+	}
+	for _, phase := range []string{"8", "9"} {
+		for _, event := range []string{"R", "r", "M", "m", "H"} {
+			if strings.Count(diagnostic.String(), "CC1:5:"+phase+event+"\n") != cacheEvents {
+				t.Fatal("actual selected cache phase/event missing", diagnostic.String())
+			}
+		}
+	}
 }
 
 func TestT422AttemptInheritedHelper(t *testing.T) {
@@ -233,6 +248,30 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
 		t.Fatal(err)
 	}
+	cacheEvents := func() {
+		if os.Getenv(t422AttemptHelperMode) != "cache_events" {
+			return
+		}
+		// Supplied decisions exercise the real inherited native stream, not a
+		// catalog read or phase result. Native cache branches have separate tests.
+		for _, load := range []readaccounting.CacheEvent{readaccounting.CacheRootLoad, readaccounting.CacheMemberLoad} {
+			phase, err := dispatchadmission.ObserveProductionCache(ctx, load, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			validation := readaccounting.CacheRootValidation
+			if load == readaccounting.CacheMemberLoad {
+				validation = readaccounting.CacheMemberValidation
+			}
+			if _, err := dispatchadmission.ObserveProductionCache(ctx, validation, phase); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheHit, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cacheEvents()
 	// Supplied event exercises the actual selected stream, not native parsing.
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
@@ -254,6 +293,7 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
 		t.Fatal(err)
 	}
+	cacheEvents()
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
 			t.Fatal(err)

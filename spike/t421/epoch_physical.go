@@ -123,7 +123,7 @@ func (run *ExecutionEpochOneRun) PhysicalB(ctx context.Context) (retErr error) {
 func (run *ExecutionEpochOneRun) advancePhysical(ctx context.Context) error {
 	flow := run.flow
 	if run.control.Pause(ctx) != nil || flow.parent.Pause(ctx) != nil || flow.controller.Fence() != nil || flow.store.Fence() != nil ||
-		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil || flow.controller.Advance() != nil || flow.store.Advance() != nil ||
+		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil || run.processPhaseAdvance(ctx, 4) != nil ||
 		flow.parent.Resume(4) != nil || run.control.Resume(ctx) != nil {
 		return ErrExecutionEpochOne
 	}

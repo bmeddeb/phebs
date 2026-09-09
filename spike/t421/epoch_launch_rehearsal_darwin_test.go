@@ -290,6 +290,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 				t.Logf("private stop observations (Before precedes teardown; not global first-cause ordering): %+v", run.stopDiagnostic)
 				t.Logf("private admission check: before_teardown=%+v after_join=%+v", run.stopDiagnostic.Before.Admission, run.stopDiagnostic.AdmissionAfterJoin)
 				run.mu.Unlock()
+				if run.processObservation != nil {
+					t.Logf("private first server-process refusal: %q", run.processObservation.gauge.privateRefusal())
+				}
 			}
 			if t.Failed() && result.RootJoined && run.output != nil {
 				// Native Wait has also joined the combined-output copier. This

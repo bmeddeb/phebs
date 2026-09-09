@@ -18,7 +18,7 @@ func TestExecutionAttemptObservedTransitions(t *testing.T) {
 	}
 }
 func attemptTestBindings() string {
-	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\nOPB1:2:sha256:01" + strings.Repeat("00", 31) + "\nLCB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
+	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\nOPB1:2:sha256:01" + strings.Repeat("00", 31) + "\nLCB1:2:sha256:01" + strings.Repeat("00", 31) + "\nCCB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
 }
 func TestExecutionAttemptFailedPrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
@@ -62,13 +62,14 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 	plan := accountingTestPlan(t)
 	expected := []uint64{32864807, 600395, 19938998, 10012813, 13165061}
 	for producer := uint32(2); producer <= 6; producer++ {
-		var starts, source, index, observation uint64
+		var starts, source, index, observation, cache uint64
 		for _, phase := range executionProducerPhases(producer) {
 			row := plan.WorkEnvelope.Phases[phase-1]
 			starts += row.JobAttempts.Maximum
 			source += 8 * row.GitReads.Maximum
 			index += 3 * row.IndexFiles.Maximum
 			observation += 8 * row.ObservationParses.Maximum
+			cache += 9 * (row.CacheLookups.Maximum + row.CacheMisses.Maximum)
 			for _, role := range row.ControlledDispatchRoles {
 				if role.Name == "zoekt-git-index" {
 					index += role.Maximum * uint64(9+len(strconv.FormatUint(row.IndexFiles.Maximum, 10)))
@@ -92,10 +93,16 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 		if total != expected[producer-2] || total >= 64<<20 {
 			t.Fatalf("producer %d total %d", producer, total)
 		}
+		// The new cache stream adds one binding and at most one nine-byte
+		// decision per lookup plus one result admission per classified miss.
+		total += 79 + cache
+		if total >= 64<<20 {
+			t.Fatalf("cache stream exceeds shared output: producer %d total %d", producer, total)
+		}
 		t.Logf("producer=%d starts=%d combined=%d remaining=%d", producer, starts, total, (64<<20)-total)
 	}
 	// At most one retry per emitted start in the same held owner turn. This
-	// proves only source/index/attempt/parse/lifecycle fit; candidate/ordinary/future logs remain.
+	// proves only source/index/attempt/parse/lifecycle/cache fit; candidate/ordinary/future logs remain.
 }
 func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)

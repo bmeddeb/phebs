@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
@@ -24,6 +25,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
+	"github.com/bmeddeb/phebs/spike/t4013"
 )
 
 // This inherited test-binary child proves protocol mechanics only. Its generic
@@ -316,12 +318,38 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		t.Fatal(err)
 	}
 	joined := false
+	var processObservation *epochProcessObservation
 	defer func() {
+		if processObservation != nil {
+			_, _ = processObservation.close()
+			processObservation.armStop()
+		}
 		if !joined {
 			_ = command.Process.Kill()
 			_ = handle.Wait()
 		}
 	}()
+	// This is the actual admitted test child, not the production Phebs image.
+	// Bind its known executable basename before its sole Wait can reap the PID.
+	observedName := filepath.Base(command.Path)
+	if len(observedName) > 16 {
+		observedName = observedName[:16]
+	}
+	if runtime.GOOS == "darwin" {
+		processObservation, err = startEpochProcessObservation(ctx, command.Process.Pid, initialPhase, observedName, map[string]string{observedName: "controller"}, cancel)
+	} else {
+		// Preserve the inherited Linux PC/DA mechanics coverage without adding
+		// a production native backend. Only this test supplies synthetic sampler
+		// rows; these are not native observations or image-admission evidence.
+		processObservation, err = newEpochProcessObservation(ctx, command.Process.Pid, initialPhase, observedName, map[string]string{observedName: "controller"}, cancel,
+			func(context.Context, int) ([]t4013.NativeProcessRecord, error) {
+				return []t4013.NativeProcessRecord{{PID: command.Process.Pid, ParentPID: os.Getpid(), RSSBytes: 1,
+					StartIdentity: "synthetic-linux-handoff", ObservedName: observedName}}, nil
+			})
+	}
+	if err != nil {
+		t.Fatal("fixture root capture (native only on Darwin)", err)
+	}
 	if daChild.Close() != nil || pcChild.Close() != nil || storeChild.Close() != nil {
 		t.Fatal("fixture inherited descriptor release")
 	}
@@ -374,7 +402,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if control.DrainOwners(ctx) != nil || control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil {
 		t.Fatal("fixture owner/request fences failed")
 	}
-	run := &ExecutionEpochOneRun{flow: &ExecutionEpochOne{controller: dispatch, parent: parent, store: transport}, control: control}
+	run := &ExecutionEpochOneRun{flow: &ExecutionEpochOne{controller: dispatch, parent: parent, store: transport}, control: control, processObservation: processObservation}
 	if canceled {
 		canceledCtx, stop := context.WithCancel(ctx)
 		stop()
@@ -448,7 +476,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		run.flow.release = cancel
 		run.command = command
 		waited := make(chan error, 1)
-		go func() { waited <- handle.Wait() }()
+		go func() { err := handle.Wait(); processObservation.exited(); waited <- err }()
 		joined = true // finish, not fixture defer, owns the sole Wait.
 		run.stopOnce.Do(func() { close(run.stop) })
 		go run.finish(ctx, func() {}, waited, served, nil)
@@ -489,7 +517,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		operationCanceled := make(chan struct{})
 		run.staleCancel = func() { close(operationCanceled) }
 		waited := make(chan error, 1)
-		go func() { waited <- handle.Wait() }()
+		go func() { err := handle.Wait(); processObservation.exited(); waited <- err }()
 		go run.finish(ctx, func() {}, waited, served, ErrExecutionEpochOne)
 		<-operationCanceled
 		if custody.Close() == nil || custody.closed || !run.flow.epochs.active {
@@ -567,7 +595,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 			operationCanceled := make(chan struct{})
 			run.physicalCancel = func() { close(operationCanceled) }
 			waited := make(chan error, 1)
-			go func() { waited <- handle.Wait() }()
+			go func() { err := handle.Wait(); processObservation.exited(); waited <- err }()
 			go run.finish(ctx, func() {}, waited, served, ErrExecutionEpochOne)
 			<-operationCanceled
 			if custody.Close() == nil || custody.closed || !run.flow.epochs.active {
@@ -621,8 +649,19 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if control.ReservedWireBytes() != (pairs-1)*2*dispatchadmission.FrameBytes {
 		t.Fatal("handoff added a PC01 operation")
 	}
+	processes, err := processObservation.close()
+	if err != nil || !processes.Joined || len(processes.Phases) < 2 {
+		t.Fatal("fixture phase observations did not join (native only on Darwin)", processes, err)
+	}
+	for _, phase := range processes.Phases {
+		if validateNativeObservation(phase.Observation) != nil {
+			t.Fatal("invalid fixture sampled phase", phase)
+		}
+	}
+	processObservation.armStop()
 	epochHandoffByte(t, input, 'C')
 	err = handle.Wait()
+	processObservation.exited()
 	joined = true
 	if err != nil || transport.Wait(ctx, serverID) != nil || control.Close() != nil || parent.Close(ctx) != nil {
 		t.Fatalf("fixture native/protocol join failed: %v", err)

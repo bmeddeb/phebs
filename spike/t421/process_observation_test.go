@@ -71,6 +71,48 @@ func TestProcessObservationConstruction(t *testing.T) {
 	}
 }
 
+func TestProcessObservationPrivateRefusalBoundedAndNotSerialized(t *testing.T) {
+	for _, kind := range []string{"probe", "unknown-name", "invalid-name"} {
+		t.Run(kind, func(t *testing.T) {
+			gauge, rows := observationFixture(t)
+			gauge.probe = func(context.Context, int) ([]t4013.NativeProcessRecord, error) { return rows, nil }
+			if _, err := gauge.Sample(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			private := "private-denied-PID=919191 " + strings.Repeat("sensitive-native-error-", 100)
+			switch kind {
+			case "probe":
+				gauge.probe = func(context.Context, int) ([]t4013.NativeProcessRecord, error) { return nil, errors.New(private) }
+			case "unknown-name":
+				rows[1].PID, rows[1].ObservedName = 919191, "private-helper"
+			case "invalid-name":
+				rows[1].PID, rows[1].ObservedName = 919191, strings.Repeat("x", 10000)
+			}
+			value, err := gauge.Sample(t.Context())
+			detail := gauge.privateRefusal()
+			if err == nil || detail == "" || len(detail) > maxPrivateProcessRefusalBytes || !strings.Contains(detail, "919191") || value.CompletedCensuses != 1 {
+				t.Fatal("private refusal lost context or positive prefix", len(detail), detail, value, err)
+			}
+			if kind == "probe" && detail != private[:maxPrivateProcessRefusalBytes] {
+				t.Fatal("native error truncation changed")
+			}
+			if kind == "invalid-name" && strings.Contains(detail, strings.Repeat("x", 17)) {
+				t.Fatal("offending native name exceeded sixteen bytes")
+			}
+			gauge.mu.Lock()
+			_, _ = gauge.failDetail("measurement_unavailable", "later teardown")
+			gauge.mu.Unlock()
+			if gauge.privateRefusal() != detail {
+				t.Fatal("later cleanup overwrote first private refusal")
+			}
+			raw, err := json.Marshal(gauge.Observation())
+			if err != nil || strings.Contains(string(raw), "919191") || strings.Contains(string(raw), "private-helper") || strings.Contains(string(raw), "sensitive-native") || strings.Contains(string(raw), "later teardown") {
+				t.Fatal("private refusal leaked into source-free observation", string(raw), err)
+			}
+		})
+	}
+}
+
 func TestProcessObservationCompletedCensusHighWaterAndSourceFree(t *testing.T) {
 	gauge, rows := observationFixture(t)
 	gauge.probe = func(context.Context, int) ([]t4013.NativeProcessRecord, error) { return rows, nil }

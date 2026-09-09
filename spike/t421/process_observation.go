@@ -3,6 +3,7 @@ package t421
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"slices"
 	"strings"
@@ -13,6 +14,8 @@ import (
 
 // MaxProcessObservationNames bounds the private name-to-public-class table.
 const MaxProcessObservationNames = 32
+
+const maxPrivateProcessRefusalBytes = 512
 
 // ProcessObservation describes completed sequential native censuses, not
 // simultaneous resource bounds, executable digests or a complete process history.
@@ -52,6 +55,7 @@ type ProcessObservationGauge struct {
 	nameClasses               map[string]int
 	observation               ProcessObservation
 	probe                     func(context.Context, int) ([]t4013.NativeProcessRecord, error)
+	privateRefusalDetail      string // First bounded private failure only; never part of ProcessObservation or receipts.
 }
 
 // NewProcessObservationGauge binds a private root lifetime and a bounded table
@@ -63,8 +67,20 @@ func NewProcessObservationGauge(
 	expectedRootStartIdentity string,
 	observedNameClasses map[string]string,
 ) (*ProcessObservationGauge, error) {
-	if rootPID <= 0 || expectedRootStartIdentity == "" || len(expectedRootStartIdentity) > 64 ||
-		len(observedNameClasses) == 0 || len(observedNameClasses) > MaxProcessObservationNames {
+	if expectedRootStartIdentity == "" || len(expectedRootStartIdentity) > 64 {
+		return nil, errors.New("native observation scope is invalid")
+	}
+	gauge, err := newProcessObservationGauge(rootPID, observedNameClasses)
+	if err == nil {
+		gauge.expectedRootStartIdentity = expectedRootStartIdentity
+	}
+	return gauge, err
+}
+
+// Initial owned-root capture may fail before any start identity is available.
+// Such a gauge retains unavailable evidence, never an invented binding.
+func newProcessObservationGauge(rootPID int, observedNameClasses map[string]string) (*ProcessObservationGauge, error) {
+	if rootPID <= 0 || len(observedNameClasses) == 0 || len(observedNameClasses) > MaxProcessObservationNames {
 		return nil, errors.New("native observation scope is invalid")
 	}
 	classes := make([]string, 0, len(observedNameClasses))
@@ -77,7 +93,7 @@ func NewProcessObservationGauge(
 	slices.Sort(classes)
 	classes = slices.Compact(classes)
 	gauge := &ProcessObservationGauge{
-		rootPID: rootPID, expectedRootStartIdentity: expectedRootStartIdentity,
+		rootPID:     rootPID,
 		nameClasses: make(map[string]int, len(observedNameClasses)),
 		probe:       t4013.ObserveProcessTreeRecords,
 		observation: ProcessObservation{
@@ -104,18 +120,31 @@ func (gauge *ProcessObservationGauge) Sample(ctx context.Context) (ProcessObserv
 		return gauge.copyObservation(), errors.New("native observation is unavailable")
 	}
 	if ctx == nil || gauge.probe == nil || ctx.Err() != nil {
+		if ctx != nil && ctx.Err() != nil {
+			return gauge.failProbe(ctx.Err())
+		}
 		return gauge.fail("measurement_unavailable")
 	}
 	rows, err := gauge.probe(ctx, gauge.rootPID)
 	if err != nil || ctx.Err() != nil {
-		return gauge.fail("measurement_unavailable")
+		if err == nil {
+			err = ctx.Err()
+		}
+		return gauge.failProbe(err)
 	}
+	return gauge.acceptRows(rows)
+}
+
+// The caller holds mu. Startup uses the same validator for its initial native
+// census, captured before the owned child can be reaped; no second scan or
+// unvalidated seed is needed.
+func (gauge *ProcessObservationGauge) acceptRows(rows []t4013.NativeProcessRecord) (ProcessObservation, error) {
 	if len(rows) == 0 || len(rows) > t4013.MaxNativeProcessRecords || rows[0].PID != gauge.rootPID {
 		return gauge.fail("invalid_census")
 	}
 	if rows[0].StartIdentity != gauge.expectedRootStartIdentity ||
 		gauge.rootObservedName != "" && rows[0].ObservedName != gauge.rootObservedName {
-		return gauge.fail("root_identity_mismatch")
+		return gauge.failRow("root_identity_mismatch", rows[0])
 	}
 	seen := make(map[int]bool, len(rows))
 	counts := make([]uint64, len(gauge.observation.Classes))
@@ -125,11 +154,11 @@ func (gauge *ProcessObservationGauge) Sample(ctx context.Context) (ProcessObserv
 			row.RSSBytes < 0 || row.StartIdentity == "" || len(row.StartIdentity) > 64 ||
 			!validObservedProcessName(row.ObservedName) || index == 0 && row.RSSBytes == 0 ||
 			index != 0 && !seen[row.ParentPID] {
-			return gauge.fail("invalid_census")
+			return gauge.failRow("invalid_census", row)
 		}
 		class, known := gauge.nameClasses[row.ObservedName]
 		if !known {
-			return gauge.fail("unknown_classification")
+			return gauge.failRow("unknown_classification", row)
 		}
 		if uint64(row.RSSBytes) > math.MaxUint64-rss {
 			return gauge.fail("counter_overflow")
@@ -166,9 +195,34 @@ func (gauge *ProcessObservationGauge) Observation() ProcessObservation {
 }
 
 func (gauge *ProcessObservationGauge) fail(class string) (ProcessObservation, error) {
+	return gauge.failDetail(class, class)
+}
+
+func (gauge *ProcessObservationGauge) failProbe(err error) (ProcessObservation, error) {
+	detail := "native census unavailable"
+	if err != nil {
+		detail = err.Error()
+	}
+	return gauge.failDetail("measurement_unavailable", detail)
+}
+
+func (gauge *ProcessObservationGauge) failRow(class string, row t4013.NativeProcessRecord) (ProcessObservation, error) {
+	return gauge.failDetail(class, fmt.Sprintf("%s: PID=%d name=%q", class, row.PID, row.ObservedName[:min(len(row.ObservedName), 16)]))
+}
+
+func (gauge *ProcessObservationGauge) failDetail(class, detail string) (ProcessObservation, error) {
 	gauge.observation.Available = false
-	gauge.observation.FailureClass = class
+	if gauge.observation.FailureClass == "" {
+		gauge.observation.FailureClass = class
+		gauge.privateRefusalDetail = strings.Clone(detail[:min(len(detail), maxPrivateProcessRefusalBytes)])
+	}
 	return gauge.copyObservation(), errors.New("native observation is unavailable")
+}
+
+func (gauge *ProcessObservationGauge) privateRefusal() string {
+	gauge.mu.Lock()
+	defer gauge.mu.Unlock()
+	return gauge.privateRefusalDetail
 }
 
 func (gauge *ProcessObservationGauge) copyObservation() ProcessObservation {

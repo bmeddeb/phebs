@@ -288,7 +288,7 @@ func (run *ExecutionEpochOneRun) advanceCold(ctx context.Context) error {
 	if run.control.Pause(ctx) != nil || flow.parent.Pause(ctx) != nil ||
 		flow.controller.Fence() != nil || flow.store.Fence() != nil ||
 		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil ||
-		flow.controller.Advance() != nil || flow.store.Advance() != nil ||
+		run.processPhaseAdvance(ctx, 3) != nil ||
 		flow.parent.Resume(3) != nil || run.control.Resume(ctx) != nil {
 		return ErrExecutionEpochOne
 	}

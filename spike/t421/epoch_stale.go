@@ -138,7 +138,7 @@ func (run *ExecutionEpochOneRun) advanceStale(ctx context.Context) error {
 func (run *ExecutionEpochOneRun) advanceReturnPhase(ctx context.Context, phase uint32) error {
 	flow := run.flow
 	if run.control.Pause(ctx) != nil || flow.parent.Pause(ctx) != nil || flow.controller.Fence() != nil || flow.store.Fence() != nil ||
-		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil || flow.controller.Advance() != nil || flow.store.Advance() != nil ||
+		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil || run.processPhaseAdvance(ctx, phase) != nil ||
 		flow.parent.Resume(phase) != nil || run.control.Resume(ctx) != nil {
 		return ErrExecutionEpochOne
 	}

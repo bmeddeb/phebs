@@ -9,6 +9,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
 
@@ -188,6 +190,10 @@ func (cache *ReadCache) openRoot(
 	for {
 		cache.mu.Lock()
 		if entry := cache.roots[key]; entry != nil {
+			if _, err := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheHit, 0); err != nil {
+				cache.mu.Unlock()
+				return nil, err
+			}
 			cache.touchRootLocked(entry)
 			entry.refs++
 			cache.mu.Unlock()
@@ -211,6 +217,11 @@ func (cache *ReadCache) openRoot(
 			cache.mu.Unlock()
 			return nil, ErrReadCacheFull
 		}
+		phase, err := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheRootLoad, 0)
+		if err != nil {
+			cache.mu.Unlock()
+			return nil, err
+		}
 		loading := &readLoad{done: make(chan struct{})}
 		cache.rootLoads[key] = loading
 		cache.rootReads++
@@ -222,6 +233,10 @@ func (cache *ReadCache) openRoot(
 		cache.mu.Lock()
 		cache.rootValidations++
 		cache.mu.Unlock()
+		_, observationErr := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheRootValidation, phase)
+		if observationErr != nil {
+			err = errors.Join(err, observationErr)
+		}
 		if err == nil &&
 			(root.Digest != key.digest || root.Binding.Repository != key.repository) {
 			err = ErrInvalid
@@ -262,6 +277,10 @@ func (cache *ReadCache) openMember(
 	for {
 		cache.mu.Lock()
 		if entry := cache.members[key]; entry != nil {
+			if _, err := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheHit, 0); err != nil {
+				cache.mu.Unlock()
+				return nil, err
+			}
 			cache.touchMemberLocked(entry)
 			entry.refs++
 			cache.mu.Unlock()
@@ -285,6 +304,11 @@ func (cache *ReadCache) openMember(
 			cache.mu.Unlock()
 			return nil, ErrReadCacheFull
 		}
+		phase, err := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheMemberLoad, 0)
+		if err != nil {
+			cache.mu.Unlock()
+			return nil, err
+		}
 		loading := &readLoad{done: make(chan struct{})}
 		cache.memberLoads[key] = loading
 		cache.memberReads++
@@ -294,6 +318,10 @@ func (cache *ReadCache) openMember(
 		cache.mu.Lock()
 		cache.memberValidations++
 		cache.mu.Unlock()
+		_, observationErr := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheMemberValidation, phase)
+		if observationErr != nil {
+			err = errors.Join(err, observationErr)
+		}
 		var projections []servicecatalog.ServiceProjection
 		if err == nil {
 			projections, err = projectServiceMember(
@@ -401,6 +429,9 @@ func (lease *ReadLease) memberLocked(
 ) (*readMemberEntry, error) {
 	key := readMemberKey{root: lease.root.Digest, member: descriptor.Digest}
 	if entry := lease.members[key]; entry != nil {
+		if _, err := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheHit, 0); err != nil {
+			return nil, err
+		}
 		return entry, nil
 	}
 	entry, err := lease.cache.openMember(

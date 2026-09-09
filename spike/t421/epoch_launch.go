@@ -179,6 +179,7 @@ type ExecutionEpochOneResult struct {
 	Store                                 storeaccounting.WireSnapshot
 	Attempts                              ExecutionAttemptObservation
 	IndexOffers                           ExecutionIndexObservation
+	ServerProcesses                       ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
 }
 
 type ExecutionEpochOneRun struct {
@@ -189,6 +190,8 @@ type ExecutionEpochOneRun struct {
 	command               *exec.Cmd
 	output                *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
 	attemptInput          [32]byte
+	processObservation    *epochProcessObservation
+	processPrior          *ProcessObservation // Actual joined earlier root in checkpoint phase eight.
 	stop, done            chan struct{}
 	stopOnce              sync.Once
 	healthUsed            bool
@@ -455,6 +458,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
 	run.command = command
+	processNames, err := epochProcessNames(path, tools)
+	if err != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	// Capture before admitted Start so its latency cannot extend readiness.
 	// Arm only after an actual launch, before any bootstrap or stdin delivery.
 	launchStarted := time.Now()
@@ -467,8 +474,24 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	run.mu.Lock()
 	run.setHealthDeadlineLocked(launchCtx, launchStarted)
 	run.mu.Unlock()
+	// Capture the actual native birth before the sole Wait can reap this PID.
+	// Even capture failure retains the owned Start and follows normal cleanup.
+	run.processObservation, err = startEpochProcessObservation(launchCtx, command.Process.Pid, phase, "phebs", processNames,
+		func() { run.stopOnce.Do(func() { close(run.stop) }) })
+	if err != nil {
+		retErr = ErrExecutionEpochOne
+	}
+	if run.processObservation != nil && run.processPrior != nil {
+		run.processObservation.mu.Lock()
+		run.processObservation.prefix = run.processPrior
+		run.processObservation.mu.Unlock()
+	}
 	waited := make(chan error, 1)
-	go func() { waited <- handle.Wait() }()
+	go func() {
+		waitErr := handle.Wait()
+		run.processObservation.exited()
+		waited <- waitErr
+	}()
 	for _, index := range []int{1, 3, 5} {
 		if files[index].Close() != nil {
 			retErr = ErrExecutionEpochOne
@@ -767,6 +790,15 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if !terminal && (run.flow.parent.Pause(stopCtx) != nil || run.flow.controller.Fence() != nil) {
 		failure = ErrExecutionEpochOne
 	}
+	// No sampler survives the owned signal/kill. Its last required live census
+	// closes before intentional death, not after Wait has removed the root.
+	_, processErr := run.processObservation.close()
+	if processErr != nil {
+		failure = ErrExecutionEpochOne
+	}
+	if !joined {
+		run.processObservation.armStop()
+	}
 	if !terminal && !joined {
 		if signalProductionStop(run.command.Process) != nil {
 			failure = ErrExecutionEpochOne
@@ -827,7 +859,11 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if !run.retainParent && run.flow.parent.Close(context.Background()) != nil {
 		failure = ErrExecutionEpochOne
 	}
-	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty}
+	serverProcesses, processErr := run.processObservation.snapshot()
+	if processErr != nil {
+		failure = ErrExecutionEpochOne
+	}
+	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses}
 	if !result.SessionEmpty {
 		failure = ErrExecutionEpochOne
 	}
@@ -918,6 +954,7 @@ func (run *ExecutionEpochOneRun) Wait(ctx context.Context) (ExecutionEpochOneRes
 		result.Accounting.Producers = slices.Clone(result.Accounting.Producers)
 		result.Store.Store.Phases = slices.Clone(result.Store.Store.Phases)
 		result.Store.Store.Producers = slices.Clone(result.Store.Store.Producers)
+		result.ServerProcesses = cloneServerProcessObservation(result.ServerProcesses)
 		return result, run.err
 	case <-ctx.Done():
 		return ExecutionEpochOneResult{RootStarted: true}, ErrExecutionEpochOne

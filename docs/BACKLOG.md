@@ -6253,9 +6253,22 @@ safe housekeeping, then the exact ceremony command. The reviewed branch through
 `origin/codex/t42.2l-logical-measurement`; `main` is not advanced by that push.
 About 3.3 GiB of reproducible Go build cache was cleared to pass the existing
 120-GiB rehearsal guard; offline modules and failed-run evidence were retained.
-One exact clean detached phase-one-through-eight checkpoint rehearsal now uses
+One exact clean detached phase-one-through-eight checkpoint rehearsal used
 the owned pressure volume at that commit, with no ballast or automatic retry.
-Its result remains pending. Parallel bounded work covers native ballast,
+It passed cold and warm, then failed physical B after 3,349.94s (3,350.629s
+package time). The retained prefix reports root joined and session empty;
+the parent observed dispatch cancellation and the server's first private SDK
+refusal names `commitServiceStateV3TargetChunk`, transport classification with
+both caller and owner contexts active. The underlying native error was not
+retained, so this does not identify a network fault, timeout or SQL defect.
+The exact source frame is the pre-Settle native reply/type guard in
+`storeSDKCall.finish`, not the parent settlement ACK path; submission admission
+had succeeded. This admits a missing native reply or non-native/typed-decoding
+error as candidates, not an attribution. Whether the native write committed
+is unestablished. Advisory log ordering does not establish causal ordering.
+The owned volume and exact diagnostics remain retained; its post-stop capacity
+is 44 percent used, not a full-volume failure. No automatic retry is authorized.
+Parallel bounded work covers native ballast,
 pressure parent control/read composition and joined lifecycle measurement.
 
 A fresh phase-twelve source audit finds that ordinary backup requires epoch
@@ -6306,6 +6319,35 @@ implication. A bounded native replacement is not inherently a policy change,
 but its coherence, required-sample coverage and full-custody fit are unproven.
 Input-only traversal caps do not bound all mutable data/build scratch. No
 measurement meaning or limit changes without an explicit prospective decision.
+
+**Server-process and catalog-cache observation wiring (2026-09-09).** The
+actual server-root sampler now uses the existing bounded native census across
+launch, quiescent phase transitions and final live shutdown, with joined
+checkpoint-prefix transfer. Review caught an omitted sampled RSS refusal: the
+correction enforces the existing frozen 20-GiB threshold while retaining the
+entire available overshoot separately from unavailable measurement. First
+process refusal details are bounded and private; no public receipt field or
+measurement meaning changes. This is server-only coverage, not author,
+controller, offline or cleanup process accounting.
+
+Native catalog-cache classification now covers all three hit branches and
+actual load/result-admission events. The joined collector retains independent
+binding and positive incomplete prefixes. A preliminary CB framing name
+collided with existing LCB1; the new, unretained family is CC1/CCB1 instead,
+without relaxing historical framing or changing an existing wire family.
+Final independent process, cache-core and cache bridge/parser reviews report
+critical/high/medium/low zero after correction. The sole cache-core low cost
+omission (ordinary atomic/context lookups) is corrected in PLAN. Process normal/race gates passed
+in 3.659s/29.204s; final combined cache race selectors passed readaccounting
+1.340s, catalog 1.614s, dispatch 1.653s, command 2.904s and spike 32.989s.
+The genuine inherited phase-eight/nine cache-events fixture passed three race
+repetitions in 2.658s. Pinned package lint reported zero issues, and the lead's
+combined `ci-static` passed vet, zero lint issues and all-package compilation.
+The reviewed staged Go diff SHA-256 is
+`da2973c0a015c8eea344120bedfb5f0ef9a4bd52e4c11047737a0b74f1e6abd5`.
+The independent compact headroom check passed in 0.608s. These are scoped
+implementation gates, not the full ceremony merge bar. Neither this work nor
+the failed mounted checkpoint rehearsal supplies a full fifteen-phase result.
 
 The remaining native implementation is explicitly broader than rerunning gates:
 

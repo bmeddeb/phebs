@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -189,9 +190,15 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 	run.mu.Unlock()
 	flow.mu.Unlock()
 	run.stopOnce.Do(func() { close(run.stop) })
-	if _, err := run.Wait(operation); err != nil {
+	stopped, err := run.Wait(operation)
+	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
+	processIndex := slices.IndexFunc(stopped.ServerProcesses.Phases, func(value ExecutionServerProcessPhase) bool { return value.Phase == 8 })
+	if !stopped.ServerProcesses.Joined || processIndex < 0 || !stopped.ServerProcesses.Phases[processIndex].Observation.Available {
+		return nil, ErrExecutionEpochOne
+	}
+	processPrior := stopped.ServerProcesses.Phases[processIndex].Observation
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
 	if operation.Err() != nil || flow.closed || flow.retained != run || !run.joinedEmpty() ||
@@ -202,7 +209,7 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 	prior := reader.staleAuthority
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: run.healthLimit, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel,
-		checkpointRecovery: handoff, checkpointPrior: &prior, pressureAllowed: pressure}
+		checkpointRecovery: handoff, checkpointPrior: &prior, pressureAllowed: pressure, processPrior: &processPrior}
 	next.setPhaseDeadlineLocked(deadline)
 	bounds := epochOneLimits{health: run.healthLimit, outputBytes: 64 << 20, controlPairs: 5}
 	if pressure {
