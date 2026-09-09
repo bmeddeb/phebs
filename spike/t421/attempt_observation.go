@@ -23,6 +23,7 @@ type ExecutionAttemptCount struct {
 	JobAttempts, Retries, MaxRetriesUnit uint64
 	SourceBlobAttempts                   uint64
 	ObservationParses                    uint64
+	PublicationWrites                    uint64
 }
 
 // Complete refers only to this post-join report subset. It proves no live
@@ -35,6 +36,7 @@ type ExecutionAttemptObservation struct {
 	SourceBound      bool
 	AttemptBound     bool
 	ObservationBound bool
+	PublicationBound bool
 }
 
 // The genuine caller supplies only output whose native Wait joined the copy
@@ -59,7 +61,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		line, readErr := reader.ReadSlice('\n')
 		consumed += len(line)
 		if len(line) == 0 && errors.Is(readErr, io.EOF) {
-			if !out.SourceBound || !out.AttemptBound || !out.ObservationBound {
+			if !out.SourceBound || !out.AttemptBound || !out.ObservationBound || !out.PublicationBound {
 				return out, errExecutionAttempts
 			}
 			for _, phase := range out.Phases {
@@ -112,7 +114,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed])) {
+		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -187,7 +189,7 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 		}
 		index := reservedTerminalIndex(line)
 		if seen && (reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
-			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedLifecycleEvent(line) || reservedCacheEvent(line)) ||
+			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line)) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts
 		}

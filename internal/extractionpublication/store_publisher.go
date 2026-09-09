@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -22,6 +23,11 @@ func (publisher StorePublisher) PublishDomain(
 	root candidate.DomainResultRoot,
 	runID string,
 ) error {
+	// Count this invocation, including exact-current recounts and later
+	// validation/native failures, not only a changed authority or success.
+	if err := dispatchadmission.ObserveProductionPublication(ctx); err != nil {
+		return err
+	}
 	if publisher.Store == nil || runID == "" ||
 		candidate.ValidateDomainResultPlanControl(plan) != nil ||
 		candidate.ValidateDomainResultRoot(root, plan) != nil {

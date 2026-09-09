@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -59,7 +60,7 @@ const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
 // real phase change. Reports are supplied native-shaped test inputs, not real
 // queue work, protected tool admission, or a phase measurement result.
 func TestT422AttemptInheritedPhase(t *testing.T) {
-	for _, mode := range []string{"events", "zero_observations", "cache_events"} {
+	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled"} {
 		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
 	}
 }
@@ -191,6 +192,13 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 	if strings.Count(diagnostic.String(), "CCB1:5:sha256:") != 1 {
 		t.Fatal("actual selected cache binding missing", diagnostic.String())
 	}
+	publicationEvents := 0
+	if mode == "publication_events" || mode == "publication_canceled" {
+		publicationEvents = 1
+	}
+	if strings.Count(diagnostic.String(), "EPB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "EP1:5:8\n") != publicationEvents || strings.Count(diagnostic.String(), "EP1:5:9\n") != publicationEvents {
+		t.Fatal("actual selected publication binding/phase missing", diagnostic.String())
+	}
 	for _, phase := range []string{"8", "9"} {
 		for _, event := range []string{"R", "r", "M", "m", "H"} {
 			if strings.Count(diagnostic.String(), "CC1:5:"+phase+event+"\n") != cacheEvents {
@@ -272,6 +280,27 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		}
 	}
 	cacheEvents()
+	publicationEvents := func() {
+		if os.Getenv(t422AttemptHelperMode) == "publication_canceled" {
+			// Exercise the real native bridge with caller-only cancellation.
+			// The selected wrapper's terminal latch is tested separately; this
+			// direct observer check keeps the handoff fixture lifetime alive.
+			canceled, stop := context.WithCancel(ctx)
+			stop()
+			if err := readaccounting.ObservePublication(canceled, true); !errors.Is(err, context.Canceled) {
+				t.Fatal("canceled call lost native observation or cancellation", err)
+			}
+			return
+		}
+		if os.Getenv(t422AttemptHelperMode) == "publication_events" {
+			// Supplied call attempt exercises the genuine inherited native
+			// bridge, not publication success. Publisher entry has its own test.
+			if err := dispatchadmission.ObserveProductionPublication(ctx); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	publicationEvents()
 	// Supplied event exercises the actual selected stream, not native parsing.
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
@@ -294,6 +323,7 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	cacheEvents()
+	publicationEvents()
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
 			t.Fatal(err)
@@ -312,6 +342,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	}
 	if dispatchadmission.ObserveProductionParsedBlob(ctx) == nil {
 		t.Fatal("closed producer emitted guessed observation phase")
+	}
+	if dispatchadmission.ObserveProductionPublication(ctx) == nil {
+		t.Fatal("closed producer emitted guessed publication phase")
 	}
 	if runner.LifecycleReports(job) == nil {
 		t.Fatal("closed producer emitted guessed phase")

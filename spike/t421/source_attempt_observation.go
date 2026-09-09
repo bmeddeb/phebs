@@ -8,13 +8,17 @@ import (
 )
 
 // SR counts offered content attempts; OP counts successful native ParsedBlobs
-// events. Neither counts unique blobs. Both use the same eight-byte framing.
+// events. Neither counts unique blobs. EP counts actual PublishDomain calls,
+// not authority movement. All three use the same eight-byte framing.
 func observeBlobEvent(line []byte, plan Plan, producer uint32, input string, out *ExecutionAttemptObservation) (bool, error) {
 	family, binding, record := "SR", []byte("SRB1:"), []byte("SR1:")
 	bound := &out.SourceBound
 	if reservedBlobEvent(line, "OP") {
 		family, binding, record = "OP", []byte("OPB1:"), []byte("OP1:")
 		bound = &out.ObservationBound
+	} else if reservedBlobEvent(line, "EP") {
+		family, binding, record = "EP", []byte("EPB1:"), []byte("EP1:")
+		bound = &out.PublicationBound
 	}
 	if bytes.Contains(line, binding) {
 		if *bound || string(line) != fmt.Sprintf("%sB1:%d:%s\n", family, producer, input) {
@@ -38,9 +42,13 @@ func observeBlobEvent(line []byte, plan Plan, producer uint32, input string, out
 	}
 	count := &out.Phases[phase-1].SourceBlobAttempts
 	maximum := plan.WorkEnvelope.Phases[phase-1].GitReads.Maximum
-	if family == "OP" {
+	switch family {
+	case "OP":
 		count = &out.Phases[phase-1].ObservationParses
 		maximum = plan.WorkEnvelope.Phases[phase-1].ObservationParses.Maximum
+	case "EP":
+		count = &out.Phases[phase-1].PublicationWrites
+		maximum = plan.WorkEnvelope.Phases[phase-1].PublicationWrites.Maximum
 	}
 	if *count == math.MaxUint64 {
 		return true, errExecutionAttempts
@@ -53,7 +61,7 @@ func observeBlobEvent(line []byte, plan Plan, producer uint32, input string, out
 }
 
 func reservedBlobEvent(line []byte, family string) bool {
-	if family == "OP" && bytes.Contains(line, []byte("OPB")) {
+	if (family == "OP" || family == "EP") && bytes.Contains(line, []byte(family+"B")) {
 		return true
 	}
 	for len(line) > 3 {

@@ -57,8 +57,7 @@ func TestObservationParseCompactParser(t *testing.T) {
 func TestObservationParseProducerBinding(t *testing.T) {
 	plan := accountingTestPlan(t)
 	for producer := uint32(2); producer <= 6; producer++ {
-		input := "sha256:01" + strings.Repeat("00", 31) + "\n"
-		raw := fmt.Sprintf("ATB1:%d:%sSRB1:%d:%sOPB1:%d:%s", producer, input, producer, input, producer, input)
+		raw := lifecycleTestBindings(producer)
 		got, err := observeExecutionAttempts([]byte(raw), plan, producer, [32]byte{1}, true)
 		if err != nil || !got.Complete || !got.ObservationBound {
 			t.Fatal("bound zero refused", producer, got, err)

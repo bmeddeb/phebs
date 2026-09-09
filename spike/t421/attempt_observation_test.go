@@ -18,7 +18,7 @@ func TestExecutionAttemptObservedTransitions(t *testing.T) {
 	}
 }
 func attemptTestBindings() string {
-	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\nOPB1:2:sha256:01" + strings.Repeat("00", 31) + "\nLCB1:2:sha256:01" + strings.Repeat("00", 31) + "\nCCB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
+	return lifecycleTestBindings(2)
 }
 func TestExecutionAttemptFailedPrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
@@ -61,8 +61,9 @@ func TestExecutionAttemptFailedPrefix(t *testing.T) {
 func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 	plan := accountingTestPlan(t)
 	expected := []uint64{32864807, 600395, 19938998, 10012813, 13165061}
+	combined := []uint64{33946097, 961101, 21020672, 11453563, 13525767}
 	for producer := uint32(2); producer <= 6; producer++ {
-		var starts, source, index, observation, cache uint64
+		var starts, source, index, observation, cache, publication uint64
 		for _, phase := range executionProducerPhases(producer) {
 			row := plan.WorkEnvelope.Phases[phase-1]
 			starts += row.JobAttempts.Maximum
@@ -70,6 +71,7 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 			index += 3 * row.IndexFiles.Maximum
 			observation += 8 * row.ObservationParses.Maximum
 			cache += 9 * (row.CacheLookups.Maximum + row.CacheMisses.Maximum)
+			publication += 8 * row.PublicationWrites.Maximum
 			for _, role := range row.ControlledDispatchRoles {
 				if role.Name == "zoekt-git-index" {
 					index += role.Maximum * uint64(9+len(strconv.FormatUint(row.IndexFiles.Maximum, 10)))
@@ -96,17 +98,21 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 		// The new cache stream adds one binding and at most one nine-byte
 		// decision per lookup plus one result admission per classified miss.
 		total += 79 + cache
-		if total >= 64<<20 {
-			t.Fatalf("cache stream exceeds shared output: producer %d total %d", producer, total)
+		// One independent binding plus eight bytes per actual PublishDomain
+		// call, including failed and exact-current recount invocations.
+		total += 79 + publication
+		if total != combined[producer-2] || total >= 64<<20 {
+			t.Fatalf("seven-family output bound changed: producer %d total %d", producer, total)
 		}
 		t.Logf("producer=%d starts=%d combined=%d remaining=%d", producer, starts, total, (64<<20)-total)
 	}
 	// At most one retry per emitted start in the same held owner turn. This
-	// proves only source/index/attempt/parse/lifecycle/cache fit; candidate/ordinary/future logs remain.
+	// proves only source/index/attempt/parse/lifecycle/cache/publication fit;
+	// candidate/ordinary/future logs remain.
 }
 func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
-	line := []byte("A2j1\nOP1:2:2\n")
+	line := []byte("A2j1\nOP1:2:2\nEP1:2:2\n")
 	for _, mode := range []string{"healthy", "empty", "process failed", "overflow at newline", "truncated", "not joined", "unbound"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
@@ -143,7 +149,7 @@ func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 			if mode == "empty" || mode == "unbound" || mode == "not joined" {
 				wantCount = 0
 			}
-			if (err == nil) != wantComplete || result.Attempts.Complete != wantComplete || result.Attempts.Phases[1].JobAttempts != wantCount || result.Attempts.Phases[1].ObservationParses != wantCount {
+			if (err == nil) != wantComplete || result.Attempts.Complete != wantComplete || result.Attempts.Phases[1].JobAttempts != wantCount || result.Attempts.Phases[1].ObservationParses != wantCount || result.Attempts.Phases[1].PublicationWrites != wantCount {
 				t.Fatalf("joined/lossless distinction: %+v %v", result.Attempts, err)
 			}
 		})

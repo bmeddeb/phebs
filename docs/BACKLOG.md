@@ -6386,6 +6386,35 @@ The independent compact headroom check passed in 0.608s. These are scoped
 implementation gates, not the full ceremony merge bar. Neither this work nor
 the failed mounted checkpoint rehearsal supplies a full fifteen-phase result.
 
+**Native extraction publication-call observation (2026-09-09).** The next
+whole-work slice counts actual StorePublisher.PublishDomain entries. Both
+production runtime callers use that concrete publisher; the hook precedes
+validation and store work, so failed calls and exact-current recounts remain
+attempts. It does not count fake publishers, OnSettled callbacks, marker writes
+or successful authority movement as interchangeable units. The existing native
+report and post-Wait parser paths gain an independent EPB1/EP1 family, required
+even for zero calls. Scoped implementation, complete-prefix/phase/framing
+regressions, log headroom and independent review are complete; no native
+rehearsal, complete metrics or freeze pass is claimed by this slice. Review
+identified one medium entered-call prefix omission when the caller was already
+canceled; the observer now records that invocation before returning cancellation
+without native publication work. The initially proposed PUB marker was also
+replaced before retention because it could reserve ordinary PUBLIC diagnostics;
+existing wire families are unchanged.
+
+Final independent source and bridge/parser review reports
+critical/high/medium/low zero. Corrected source race gates passed
+readaccounting in 1.237s, dispatch admission in 6.190s and extraction publication
+in 24.943s; current-source command/spike focused normal passed in 1.349s/2.927s.
+The final exact-source broad report/parser/inherited race selectors passed in
+3.191s/26.622s. The first combined static check caught a tagged-switch style
+issue; after that style-only correction and independent delta review, pinned
+`ci-static` passed vet, zero lint issues and all-package compilation, with
+docs/glossary passing in 0.538s. Independent parser/headroom checks passed in
+0.522s and confirmed the seven-family totals in PLAN. The staged Go diff SHA-256
+is `83952a2e01bd61460ccb6ad3e04022c5ebe6122ee90c4c25d58396da97f700e8`.
+These exact scoped checks are not the full T42.2n acceptance gate.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure
