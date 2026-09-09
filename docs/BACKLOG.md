@@ -6357,6 +6357,30 @@ but its coherence, required-sample coverage and full-custody fit are unproven.
 Input-only traversal caps do not bound all mutable data/build scratch. No
 measurement meaning or limit changes without an explicit prospective decision.
 
+**Corrected tiny native ballast confirmation (2026-09-09).** After the
+explicitly approved older replay retirement restored host headroom, the single
+opt-in `TestExecutionPressureBallastOptionalNative` run passed at exact clean
+`c88c6ecbb42f23aacce9a65255d334f2cbd36608`: 12.03s test time, 12.701s package
+time, command status zero. The command selected
+`PHEBS_T422_BALLAST_NATIVE_REHEARSAL=1`, count one and a four-minute package
+timeout; the fixture retained its three-minute context. No retry or threshold
+change occurred. Actual allocated bytes progressed through zero, 524,288,
+1,048,576, 524,288 and zero. Native capacity-used deltas matched each 524,288-byte
+growth/shrink exactly under the unchanged 4,096-byte tolerance. Final inode
+unlink, non-forced empty detach and outer cleanup passed. The final reported
+delta spans the last truncation-to-zero and unlink, not unlink alone.
+
+The 1,283-byte retained log has SHA-256
+`1f53dea4f310d0df80c42bece98b2bfbd267bbef8f46a8881846282bf610f131`.
+Lead and independent read-only checks confirmed the exact source remained
+clean, this run's custody and mount were absent and no matching test/helper
+process survived. The older mounted and tiny-ballast failures remain intact.
+Independent source/evidence review reported no findings. This closes the
+corrected tiny native allocation/removal prerequisite, not a large pressure
+mutation, `nextTarget`, coherent whole-custody gauge, native pressure phase or
+full rehearsal. No conclusion about every future host sample or the missing
+private cause of an earlier failure is inferred from this one pass.
+
 **Server-process and catalog-cache observation wiring (2026-09-09).** The
 actual server-root sampler now uses the existing bounded native census across
 launch, quiescent phase transitions and final live shutdown, with joined
