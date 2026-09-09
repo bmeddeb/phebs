@@ -10,7 +10,7 @@ import (
 func TestExecutionSetupTokenDiagnosticCollision(t *testing.T) {
 	plan := accountingTestPlan(t)
 	header := attemptTestBindings() + "IXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
-	events := "A2j1\nSR1:2:2\nIb2\nI2\nIe2:1\nA4c0\nSR1:2:4\nIb4\nI4\nIe4:1\n"
+	events := "A2j1\nSR1:2:2\nOP1:2:2\nIb2\nI2\nIe2:1\nA4c0\nSR1:2:4\nOP1:2:4\nIb4\nI4\nIe4:1\n"
 	for _, marker := range []string{"Ib4opaque", "Ie4opaque", "If4opaque", "IXB", "ZIB", "ZIE", "TFE", "ATB", "OPB", "SRB1", "SR1", "I4", "Ib4", "A2c0"} {
 		t.Run(marker, func(t *testing.T) {
 			token := marker + strings.Repeat("A", 43-len(marker))
@@ -33,7 +33,7 @@ func TestExecutionSetupTokenDiagnosticCollision(t *testing.T) {
 				t.Fatal("ordinary setup payload refused joined metrics", err)
 			}
 			for _, phase := range []int{1, 3} {
-				if result.Attempts.Phases[phase] != (ExecutionAttemptCount{JobAttempts: 1, SourceBlobAttempts: 1}) ||
+				if result.Attempts.Phases[phase] != (ExecutionAttemptCount{JobAttempts: 1, SourceBlobAttempts: 1, ObservationParses: 1}) ||
 					result.IndexOffers.Phases[phase] != (ExecutionIndexOfferCount{Offers: 1, StartedChildren: 1, EndedChildren: 1, SettledOffers: 1}) {
 					t.Fatal("diagnostic payload changed counts")
 				}
@@ -96,8 +96,8 @@ func TestExecutionSetupTokenDiagnosticBoundary(t *testing.T) {
 
 func terminalPrefixTestBytes() (string, string) {
 	input := "sha256:01" + strings.Repeat("00", 31) + "\n"
-	return "ATB1:4:" + input + "SRB1:4:" + input + "IXB1:4:" + input +
-		"A6j1\nSR1:4:6\nIb6\nI6\nIe6:1\n", "TFE1:4:8:" + input
+	return "ATB1:4:" + input + "SRB1:4:" + input + "OPB1:4:" + input + "IXB1:4:" + input +
+		"A6j1\nSR1:4:6\nOP1:4:6\nIb6\nI6\nIe6:1\n", "TFE1:4:8:" + input
 }
 
 func TestExecutionTerminalFooterFraming(t *testing.T) {
@@ -167,7 +167,7 @@ func TestExecutionTerminalFooterCannotMintProof(t *testing.T) {
 			if err := run.finishAttemptObservation(t.Context(), &result, executionProcessDeath{}, nil); err == nil || result.Attempts.Complete || result.IndexOffers.Complete {
 				t.Fatal("source-free footer or flags manufactured terminal proof")
 			}
-			if mode != "unjoined" && mode != "missing binding" && (result.Attempts.Phases[5].JobAttempts != 1 || result.Attempts.Phases[5].SourceBlobAttempts != 1 || result.IndexOffers.Phases[5].Offers != 1) {
+			if mode != "unjoined" && mode != "missing binding" && (result.Attempts.Phases[5].JobAttempts != 1 || result.Attempts.Phases[5].SourceBlobAttempts != 1 || result.Attempts.Phases[5].ObservationParses != 1 || result.IndexOffers.Phases[5].Offers != 1) {
 				t.Fatal("failed terminal proof erased observed prefix", result.Attempts, result.IndexOffers)
 			}
 		})

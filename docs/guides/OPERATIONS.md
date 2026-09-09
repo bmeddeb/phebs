@@ -8,6 +8,12 @@ and contributor commands.
 
 ## Operations
 
+The private V3 executor counts successful native observation-parse events only
+from joined child output, separately from source-read attempts. Missing or
+malformed event bindings, exceeded phase maxima, failed output and incomplete
+terminal closure retain observed counts but cannot produce complete metrics.
+This partial collector is not a full-work receipt or live limit monitor.
+
 Index-state publication and clearing retry an explicitly rejected, stale
 database census up to 64 attempts while the caller context remains live.
 Each retry rereads the census; missing rows, other errors and uncertain

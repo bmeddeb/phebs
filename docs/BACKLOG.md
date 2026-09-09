@@ -6106,6 +6106,75 @@ Repository static checks passed: glossary verification, vet, pinned lint
 passed. These are scoped gates, not a full-store/full-suite, live controller
 cadence, full native rehearsal, seal or freeze pass. No rerun was started.
 
+**2026-09-09 exact checkpoint rehearsal pass.** Ben's complete optional
+checkpoint rehearsal passed at clean detached source
+`64af8fb6689cea7c27bed697716ff436321d07cb`: 3469.74s test time, 3470.443s
+package time. The retained outer log is
+`/private/tmp/phebs-t422-full-checkpoint-rehearsal.NVLdnp/rehearsal.log`, SHA-256
+`337970db45ab170dc9669882d19be3cd9e00a529a3894f2cd944cd1523c68cb6`.
+Protected source/SDK/module custody admitted 67,866 entries, 56,147 files and
+1,356,508,666 bytes in 5m56.592s. Cold, warm authority observation, physical B,
+logical hit/recovery, return-A marker continuation, stale HIT/recovery and
+checkpoint owned death/restart all returned. The checkpoint successor's
+recovered R/X/T/F preserved complete native authority. Final stop reports
+RootJoined/SessionEmpty true; the post-run process check found no matching
+Phebs, SurrealDB or test survivor. The source checkout remains clean.
+
+This supersedes pending native stale/checkpoint mechanism rehearsals at the
+earlier tips, not their failed records. Aggregate future-lifetime accounting
+remains deliberately incomplete; this is not fifteen-phase execution, complete
+whole-work metrics, a signed phase receipt, T42.2l/m/n closure, V3 seal or
+freeze. The independent remaining-gap audit confirms native parent wiring
+currently stops at phase eight. Next is the missing post-Wait OP successful-
+parse collector and combined compact-log headroom, followed by remaining
+native phase/epoch wiring, whole-work composition, launcher/custody closure,
+exact-tree acceptance, and canonical seal/exact-main freeze in ticket order.
+No new rehearsal or ceremony is started by this record.
+
+**T42.2l next bounded measurement slice — joined OP collector (2026-09-09).**
+Reuse the post-Wait source-attempt parser for the existing successful native
+ParsedBlobs wire family. Require independent OP input/producer binding even
+for zero, and retain fifteen phase counters distinct from source attempts.
+AC: actual repeated events, zero, binding/phase/format refusals, overflow and
+first excess, split/embedded/partial lines, failed positive prefixes, terminal
+fence ordering, joined native output and preserved source/index behavior.
+No new event emitter or live log consumer. The fixed four-family compact
+subset includes OP headroom without claiming that all ordinary output fits.
+Focused normal/race, inherited native output-pump refusal, historical plan
+bytes, static/docs/glossary and independent non-OCR source/cost review precede
+closure. The source at 64af8fb6 was rehearsed without this parent collector;
+its mechanism pass remains valid but is not OP collector evidence.
+
+Scoped working-tree gates against `64af8fb6` passed: compact collectors,
+terminal footer/native-pump refusal, setup-token collision and retained V1/V2
+bytes normal 1.244s and race three repetitions 31.928s; inherited epoch tests
+normal/race 10.550/42.992s. The optional full native selector was not enabled.
+Repository `ci-static` passed glossary, vet, pinned lint with zero issues and
+all-package compilation; docs passed in 0.510s, with gofmt/whitespace clean.
+Independent non-authoring, non-OCR implementation and steady-state-cost review
+reported critical/high/medium/low zero. The reviewed seven Go source/test files
+have staged-diff SHA-256
+`6a3b65844fc3ae48e572020a6ae3aed6cb90929ca1d05695fd45fdc5717d55d4`.
+This closes the bounded OP collector/component gate, not full native OP
+measurement, complete ordinary-log fit, all metrics, exact-tree merge-bar or
+freeze. Final gate-record changes are documentation only.
+Final record review found one low outdated ROADMAP next-step sentence; it was
+corrected to distinguish the completed OP component from remaining native
+phase/whole-work wiring. No Go source or test changed in that correction.
+
+The remaining native implementation is explicitly broader than rerunning gates:
+
+- Phases 9–11: owned pressure-volume/ballast custody and actual pressure
+  mutations, coordinated with the existing authenticated lifecycle controls.
+- Phase 12/fifth epoch: genuine backup/restore launches, custody transfer,
+  restored server admission and exact authority comparison; launch currently
+  admits only epochs one through four.
+- Phases 13–15: fresh lifecycle collection, authorized product queries and
+  final whole-flow teardown evidence, not the rehearsal fixture's cleanup.
+- Whole-work composition: remaining read/cache/reuse/publication/lifecycle
+  counters and resource gauges, complete phase metrics and receipts; existing
+  DA/SA and compact subsets do not fill these fields by implication.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

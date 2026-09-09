@@ -97,7 +97,7 @@ func TestExecutionTerminalPrefixNativePump(t *testing.T) {
 		epoch: ExecutionEpochConfig{Epoch: 3}, command: command, terminalEntered: true, terminalRequested: true, checkpointAllowed: true}
 	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: true, SessionEmpty: true}
 	if err := run.finishAttemptObservation(ctx, &result, death, nil); err == nil || result.Attempts.Complete || result.IndexOffers.Complete ||
-		result.Attempts.Phases[5].JobAttempts != 1 || result.IndexOffers.Phases[5].Offers != 1 {
+		result.Attempts.Phases[5].JobAttempts != 1 || result.Attempts.Phases[5].ObservationParses != 1 || result.IndexOffers.Phases[5].Offers != 1 {
 		t.Fatal("native footer/kill hid missing controller proof or writer refusal", result.Attempts, result.IndexOffers)
 	}
 }

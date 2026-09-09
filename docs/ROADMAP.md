@@ -64,6 +64,17 @@ sequence.
 
 ## Now
 
+**T42.2 update, 2026-09-09:** exact clean `64af8fb6` passed the complete
+optional checkpoint rehearsal in 57m49.74s. Cold, warm authority observation,
+physical B, logical recovery, return A, stale-lease recovery and checkpoint
+restart passed, with the root joined and session empty. This closes the
+recurring stale-requeue mechanism gate; it does not complete full work metrics
+or the fifteen-phase executor. The joined parent successful-parse collector
+is now implemented and component-gated; full native metrics remain open.
+Next: remaining phase/epoch and whole-work wiring, T42.2m launcher/custody
+closure, T42.2n exact-tree acceptance and
+T42.2o seal/exact-main freeze. No further rehearsal or ceremony is started.
+
 **T42.2 update, 2026-09-08:** the c5b91897 rehearsal passed through return A
 and stopped at stale RECOVERED R11 after a complete HIT. First-failure
 instrumentation is approved, with no limit or coordination-policy change.

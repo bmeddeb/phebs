@@ -16,7 +16,7 @@ func TestExecutionAttemptObservedTransitions(t *testing.T) {
 	}
 }
 func attemptTestBindings() string {
-	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
+	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\nOPB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
 }
 func TestExecutionAttemptFailedPrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
@@ -58,21 +58,22 @@ func TestExecutionAttemptFailedPrefix(t *testing.T) {
 }
 func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 	plan := accountingTestPlan(t)
-	expected := []uint64{31827801, 600237, 19074800, 1583087, 8950119}
+	expected := []uint64{32864728, 600316, 19938919, 1583166, 8950198}
 	for producer := uint32(2); producer <= 6; producer++ {
-		var starts, source, index uint64
+		var starts, source, index, observation uint64
 		for _, phase := range executionProducerPhases(producer) {
 			row := plan.WorkEnvelope.Phases[phase-1]
 			starts += row.JobAttempts.Maximum
 			source += 8 * row.GitReads.Maximum
 			index += 3 * row.IndexFiles.Maximum
+			observation += 8 * row.ObservationParses.Maximum
 			for _, role := range row.ControlledDispatchRoles {
 				if role.Name == "zoekt-git-index" {
 					index += role.Maximum * uint64(9+len(strconv.FormatUint(row.IndexFiles.Maximum, 10)))
 				}
 			}
 		}
-		total := source + index + 10*starts + 3*79
+		total := source + index + observation + 10*starts + 4*79
 		if producer == 4 {
 			total += 81 // One terminal phase-eight footer, no extra PC pair.
 		}
@@ -82,16 +83,16 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 		t.Logf("producer=%d starts=%d combined=%d remaining=%d", producer, starts, total, (64<<20)-total)
 	}
 	// At most one retry per emitted start in the same held owner turn. This
-	// proves only source/index/attempt fit; candidate/ordinary/future logs remain.
+	// proves only source/index/attempt/parse fit; candidate/ordinary/future logs remain.
 }
 func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
-	line := []byte("A2j1\n")
+	line := []byte("A2j1\nOP1:2:2\n")
 	for _, mode := range []string{"healthy", "empty", "process failed", "overflow at newline", "truncated", "not joined", "unbound"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			header := []byte("ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\n" + "IXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n")
+			header := []byte(attemptTestBindings() + "IXB1:2:sha256:01" + strings.Repeat("00", 31) + "\n")
 			output := &checkoutCommandOutput{remaining: int64(len(line) + len(header)), cancel: cancel}
 			if _, err := output.Write(header); err != nil {
 				t.Fatal(err)
@@ -123,7 +124,7 @@ func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 			if mode == "empty" || mode == "unbound" || mode == "not joined" {
 				wantCount = 0
 			}
-			if (err == nil) != wantComplete || result.Attempts.Complete != wantComplete || result.Attempts.Phases[1].JobAttempts != wantCount {
+			if (err == nil) != wantComplete || result.Attempts.Complete != wantComplete || result.Attempts.Phases[1].JobAttempts != wantCount || result.Attempts.Phases[1].ObservationParses != wantCount {
 				t.Fatalf("joined/lossless distinction: %+v %v", result.Attempts, err)
 			}
 		})

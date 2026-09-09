@@ -22,15 +22,17 @@ var errExecutionAttempts = errors.New("execution attempt observation incomplete"
 type ExecutionAttemptCount struct {
 	JobAttempts, Retries, MaxRetriesUnit uint64
 	SourceBlobAttempts                   uint64
+	ObservationParses                    uint64
 }
 
 // Complete refers only to this post-join report subset. It proves no live
 // ceiling enforcement, handler invocation, complete phase work, or admission.
 type ExecutionAttemptObservation struct {
-	Phases       [15]ExecutionAttemptCount
-	Complete     bool
-	SourceBound  bool
-	AttemptBound bool
+	Phases           [15]ExecutionAttemptCount
+	Complete         bool
+	SourceBound      bool
+	AttemptBound     bool
+	ObservationBound bool
 }
 
 // The genuine caller supplies only output whose native Wait joined the copy
@@ -55,7 +57,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		line, readErr := reader.ReadSlice('\n')
 		consumed += len(line)
 		if len(line) == 0 && errors.Is(readErr, io.EOF) {
-			if !out.SourceBound || !out.AttemptBound {
+			if !out.SourceBound || !out.AttemptBound || !out.ObservationBound {
 				return out, errExecutionAttempts
 			}
 			for _, phase := range out.Phases {
@@ -69,7 +71,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		if readErr == nil && executionSetupTokenDiagnostic(line) {
 			continue
 		}
-		if source, err := observeSourceAttempt(line, plan, producer, wantInput, &out); source {
+		if blob, err := observeBlobEvent(line, plan, producer, wantInput, &out); blob {
 			if err != nil || readErr != nil {
 				return out, errExecutionAttempts
 			}
@@ -90,7 +92,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (reservedSourceAttempt(raw[start:consumed]) || reservedCompactAttempt(raw[start:consumed])) {
+		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedCompactAttempt(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -162,10 +164,8 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 			continue
 		}
 		index := reservedTerminalIndex(line)
-		// OP records belong to the next successful-parse collector; this
-		// subset does not count them, but they cannot follow terminal fencing.
-		if seen && (reservedSourceAttempt(line) || reservedCompactAttempt(line) || index ||
-			bytes.Contains(line, []byte("OPB")) || bytes.Contains(line, []byte("OP1:"))) ||
+		if seen && (reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
+			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP")) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts
 		}
