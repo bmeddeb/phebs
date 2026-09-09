@@ -6554,6 +6554,111 @@ The existing restore comparator already permits replaced relationship identities
 when provenance changes while preserving semantics. No comparator relaxation,
 native archive pass, new freeze or further rehearsal is claimed.
 
+**Native failure-representation correction (2026-09-09).** Composition review at
+`1398502715004b551551b6628e9dbddc26cb37ef` found that
+`validatePhaseWorkMetrics` accepts an overbound counter only at exactly
+maximum plus one with a matching `counter_limit` observation. Actual resolver
+byte returns and installed-reference batches retain their full quantities and
+can exceed that value. The existing `counter_crossing` kind is reserved for
+materialized owner pairs. Switching to generic `internal_error` does not skip
+the unconditional work validator and cannot make an arbitrary overrun fit.
+
+V3's `validUnavailableMetricsForPlan` also has no closed names/groups for lost
+compact SR/OP/CC/LC/EP/RM/RL coverage. The existing store-submission trio is not
+a general native-work availability contract. Below-bound partial counts may
+numerically fit an internal-error record, but that does not identify which
+fields are incomplete; absent events must not be presented as measured zero.
+Lost cache validation is a further concrete case: lookup/miss/read is retained
+before a separate validation event, but the current validator requires equality
+even on stopped phases. A failure-only correction must explicitly identify that
+incomplete group, preserve validation counts no greater than reads and retain
+lookup/hit/miss arithmetic; complete/passed phases keep exact equality.
+
+The lead's initial blanket additional-approval hold was conservative, not a
+user restriction. Independent review of PLAN's existing freeze delegation
+confirms that truthful prospective V3 failed-prefix representation is an
+in-scope correctness prerequisite when it preserves actual positive counts,
+retained V1/V2 validation/bytes, metric units, passing limits and stop precedence.
+No new lifetime, admitted work, numerical bound or measurement meaning is
+selected. The correction reuses `counter_crossing` for stopped V3 work and
+declares complete unavailable groups for compact observations, index offers
+and scoped inspection reads. Retained positive crossings may coexist without
+asserting a global first-event order. Store/dispatch admission remains
+specialised. Resource evidence plus excess or incomplete work selects decision
+four; measured topology retains priority one. Complete/passed cache coherence
+and V1/V2 validation remain unchanged.
+
+The change runs only during receipt validation: bounded scans over the existing
+35 metric rows and ten groups containing 24 work names. It adds no production
+request, sync tick, startup/restart, retry/no-op or publication work, lock hold,
+filesystem/hash scan, child, cache or persistent state. The full receipt tests
+reuse the existing native identity constructor and modeled external signature
+bindings; they test canonical validation and returned-byte authentication, not
+native issuance, full executor readiness or ceremony signing. Independent review
+of the exact four-file manifest
+`05e0f4f63f8261e1e16cdc8916237e3822180cde96c8008dc9333ae98e3f8bac`
+found critical/high/medium/low all zero; independent pure race tests passed in
+1.881s. Author pure normal/race passed in 0.669s/1.957s, and pinned static checks
+passed vet, zero lint findings and all-package compilation. The broad normal
+`^Test(Accounting|Receipt|DecodeReceipt|WorkFailure)` selector passed in 903.166s,
+including the full V3 constructor (846.04s), retained canonical receipts and
+the new complete failed-prefix cases. A subsequent test-only six-case precedence
+table adds explicit resource-only, excess/incomplete-work and topology checks;
+supplemental final-test normal/race passed in 0.698s/1.957s and independent
+test-only re-review found no findings. The original full receipt fixture already
+hard-coded decision four; this adds localisation, not a defect correction.
+The final four-file manifest is
+`ee90f1c51ded4a90b2d7fdce93fae0f52ae39a1cc79c8571a530fe6d701ed1ee`;
+all three production files are byte-identical to the broad normal run. Its
+broad race selector failed `TestAccountingReceiptFullV3RoundTrip` after
+1,666.62s with `context deadline exceeded`: A and B each completed 56 extraction
+chunks and nine current domain roots, then A-return entered without an
+extraction-start report. The configured twenty-minute context belongs to the
+test-only `productionPhysicalIdentities` graph, not a frozen ceremony deadline.
+The logs do not timestamp context creation, isolate race overhead or rule out
+a local stall. No race report was emitted; that is not a race pass. After the
+first failure the lead stopped the remaining selector in its verified private
+process group (command status 130), verified that group, test/engine processes
+and listeners empty, and retained the log. Remaining cases are interrupted,
+not passed. No new native fixture root remained; an older unrelated fixture
+was untouched.
+
+Independent source/authority review confirmed that adjusting this `_test.go`
+allowance is delegated gate infrastructure, not additional admitted ceremony
+work. The corrected fixture uses one shared forty-minute context across the
+same three revisions, without resetting it per revision, changing assertions
+or retrying automatically. The enclosing sixty-minute package alarm and native
+close timeout remain exact. This is a bounded allowance, not a prediction of
+completion. The candidate may be committed as an immutable reviewed bookmark;
+a fresh serial exact-source race confirmation remains required before this
+slice is integration-ready or the merge bar is called met.
+
+Two failure-composition cases remain outside
+this stopped-phase correction: logical-gauge/multiple-primary representation,
+and a missing cache-validation result during failed teardown (whose work
+validation does not receive a stopped observation). This does not prove that
+teardown is free of cache activity or that the whole receipt path is complete.
+
+The first new constructor selector was mistakenly given a ten-minute outer
+timeout despite the recorded 957.727-second fixture precedent. The lead stopped
+it gracefully before that alarm, verified its exclusive test/engine process
+group and listener were gone, and records it as interrupted/incomplete, neither
+pass nor functional failure. Its 1,174,736-KiB generated test fixture was removed;
+it is reproducible scratch, not retained rehearsal evidence. The replacement
+serial normal/race selector uses the existing `ci-go` sixty-minute package
+allowance to cover versioned constructor graphs; that first replacement kept
+the native fixture's twenty-minute deadline. The later fixture-only correction
+above supersedes it. All ceremony limits remain unchanged.
+
+The same end-to-end trace confirms two pressure-reader prerequisites: final
+authority currently rejects phases 9–11, and no parent lifecycle-status L
+reader implements the required phase-9/11 calls. Those calls must share the
+existing exact ordinal and compare pressure F against actual recovered
+phase-8 authority. A large pressure operation still requires the coherent
+whole-custody gauge and successful tiny-ballast verification; filesystem used
+capacity is not a substitute gauge. Neither caller-supplied success flags nor
+an inert facade around unavailable measurement completes that native path.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure

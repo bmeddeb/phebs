@@ -193,14 +193,14 @@ func validUnavailableMetricsForPlan(values []string, schema string) bool {
 			"available_disk_bytes", "controlled_dispatch_attempts", "data_allocated_bytes", "data_logical_bytes",
 			"max_rows_in_any_transaction", "observed_rss_high_water_bytes", "store_rows", "store_transactions",
 			"total_disk_bytes", "wall_ms",
-		}, value) {
+		}, value) && !workUnavailableMetric(value) {
 			return false
 		}
 		if slices.Contains(storeUnavailableMetricNames, value) {
 			storeMetrics++
 		}
 	}
-	return storeMetrics == 0 || storeMetrics == len(storeUnavailableMetricNames)
+	return (storeMetrics == 0 || storeMetrics == len(storeUnavailableMetricNames)) && validWorkUnavailableGroups(values)
 }
 
 func validateAccountingMeasurement(value PhaseMeasurement, outcome string, stopped *ReceiptFailure, teardown ReceiptTeardown, plan Plan) error {

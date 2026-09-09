@@ -623,7 +623,10 @@ func productionExtractionRoots(t *testing.T, frozen Plan, name string, value pro
 // artifact, never claimed to be a live index or measured ceremony evidence.
 func productionPhysicalIdentities(t *testing.T, plan Plan) (map[string]productionIdentityState, map[string]productionRecoverySchedule) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Minute)
+	// One shared test-fixture allowance for A/B/A-return, including race
+	// instrumentation. This is not a ceremony deadline; ci-go still caps the
+	// enclosing package at sixty minutes and native close keeps its own bound.
+	ctx, cancel := context.WithTimeout(t.Context(), 40*time.Minute)
 	defer cancel()
 	dataDir := t.TempDir()
 	repository := productionIdentityRepository(t, ctx, plan, dataDir)

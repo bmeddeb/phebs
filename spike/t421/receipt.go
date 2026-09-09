@@ -1533,8 +1533,9 @@ func expectedStoppedDecision(
 			return "", 0, errors.New("T42.2 resource stop observation is not exact")
 		}
 		if plan.Schema == PlanV3Schema && (!metrics.NativeMeasurementAvailable || !metrics.DispatchMeasurementAvailable ||
-			hasUnavailableStoreMetrics(stopped.Observation.UnavailableMetrics)) {
-			// A retained crossing plus an independent accounting failure is not
+			hasUnavailableStoreMetrics(stopped.Observation.UnavailableMetrics) || hasUnavailableWorkMetrics(stopped.Observation.UnavailableMetrics) ||
+			measuredV3WorkCrossing(metrics, plan.WorkEnvelope.Phases[deadlineIndex], plan.WorkEnvelope)) {
+			// Incomplete accounting or another work crossing is not
 			// resource-only evidence for a topology/cohort recommendation.
 			return frozenDecision(plan, 4)
 		}
@@ -1575,7 +1576,7 @@ func validateStoppedFailureEvidence(
 			return errors.New("T42.2 stopped work envelope is absent")
 		}
 		for _, value := range boundedPhaseMetricValues(metrics, plan.WorkEnvelope.Phases[index]) {
-			if counterObservationMatches(observation, value.name, value.bound.Maximum, value.value) {
+			if workCounterObservationMatches(observation, value.name, value.bound.Maximum, value.value, plan.Schema == PlanV3Schema) {
 				return nil
 			}
 		}
@@ -1589,7 +1590,7 @@ func validateStoppedFailureEvidence(
 			{name: "max_retries_on_any_unit", limit: plan.WorkEnvelope.MaximumRetriesPerUnit, observed: uint64(metrics.MaxRetriesUnit)},
 			{name: "max_rows_in_any_transaction", limit: plan.WorkEnvelope.MaximumStoreRowsPerTransaction, observed: uint64(metrics.MaxRowsTransaction)},
 		} {
-			if counterObservationMatches(observation, value.name, value.limit, value.observed) {
+			if workCounterObservationMatches(observation, value.name, value.limit, value.observed, plan.Schema == PlanV3Schema) {
 				return nil
 			}
 		}
@@ -1679,7 +1680,7 @@ func validateFailureEvidenceProjection(receipt Receipt, stopped ReceiptFailure, 
 			return errors.New("T42.2 internal failure projection is invalid")
 		}
 		if plan.Schema == PlanV3Schema && value.Stage == "store_submission" &&
-			(!slices.Equal(stopped.Observation.UnavailableMetrics, storeUnavailableMetricNames) ||
+			(!hasUnavailableStoreMetrics(stopped.Observation.UnavailableMetrics) || !validSecondaryUnavailableMetrics(stopped.Observation.UnavailableMetrics) ||
 				!slices.Contains([]string{"budget_refused", "invalid_descriptor", "invalid_protocol", "transport_unavailable", "canceled", "incomplete"}, value.ErrorClass)) {
 			return errors.New("T42.2 store submission refusal lacks its closed incomplete-prefix evidence")
 		}
@@ -1952,12 +1953,16 @@ func validatePhaseWorkMetrics(
 	observation *FailureObservation,
 	envelope WorkEnvelope,
 ) error {
+	if envelope.Schema == WorkEnvelopeV3Schema && observation != nil && hasUnavailableWorkMetrics(observation.UnavailableMetrics) &&
+		(outcome != "stopped" || !validUnavailableMetricsForPlan(observation.UnavailableMetrics, PlanV3Schema)) {
+		return errors.New("incomplete work coverage requires an explicit stopped V3 phase")
+	}
 	values := boundedPhaseMetricValues(metrics, bounds)
 	for _, value := range values {
 		if outcome == "passed" && value.value < value.bound.Minimum {
 			return fmt.Errorf("%s is below its frozen minimum", value.name)
 		}
-		if value.value > value.bound.Maximum {
+		if value.value > value.bound.Maximum && !retainsV3WorkCrossing(value.name, outcome, observation, envelope) {
 			if outcome != "stopped" || observation == nil ||
 				observation.Kind != "counter_limit" || observation.Metric != value.name ||
 				observation.Limit != value.bound.Maximum || observation.Observed != value.value ||
@@ -1966,8 +1971,10 @@ func validatePhaseWorkMetrics(
 			}
 		}
 	}
-	if metrics.CacheRootReads != metrics.CacheRootValidations ||
-		metrics.CacheMemberReads != metrics.CacheMemberValidations ||
+	incompleteCache := envelope.Schema == WorkEnvelopeV3Schema && outcome == "stopped" && observation != nil &&
+		slices.Contains(observation.UnavailableMetrics, "cache_lookups")
+	if metrics.CacheRootValidations > metrics.CacheRootReads || metrics.CacheMemberValidations > metrics.CacheMemberReads ||
+		!incompleteCache && (metrics.CacheRootReads != metrics.CacheRootValidations || metrics.CacheMemberReads != metrics.CacheMemberValidations) ||
 		uint64(metrics.CacheRootReads) > math.MaxUint64-uint64(metrics.CacheMemberReads) ||
 		uint64(metrics.CacheMisses) != uint64(metrics.CacheRootReads)+uint64(metrics.CacheMemberReads) ||
 		uint64(metrics.CacheHits) > math.MaxUint64-uint64(metrics.CacheMisses) ||
@@ -2001,7 +2008,7 @@ func validatePhaseWorkMetrics(
 		}
 	}
 	if err := validateMeasuredMaximum("max_retries_on_any_unit", uint64(metrics.MaxRetriesUnit),
-		envelope.MaximumRetriesPerUnit, outcome, observation); err != nil {
+		envelope.MaximumRetriesPerUnit, outcome, observation); err != nil && !retainsV3WorkCrossing("max_retries_on_any_unit", outcome, observation, envelope) {
 		return err
 	}
 	if err := validateMeasuredMaximum("max_rows_in_any_transaction", uint64(metrics.MaxRowsTransaction),
@@ -2009,7 +2016,7 @@ func validatePhaseWorkMetrics(
 		return err
 	}
 	if err := validateMeasuredMaximum("max_lifecycle_deletes_in_any_turn", uint64(metrics.MaxLifecycleDeletesTurn),
-		envelope.MaximumLifecycleDeletesPerTurn, outcome, observation); err != nil {
+		envelope.MaximumLifecycleDeletesPerTurn, outcome, observation); err != nil && !retainsV3WorkCrossing("max_lifecycle_deletes_in_any_turn", outcome, observation, envelope) {
 		return err
 	}
 	if err := validateTotalAgainstMeasuredMaximum(
@@ -4865,6 +4872,9 @@ func validReceiptFailure(value ReceiptFailure, phase string, plan Plan) bool {
 	if plan.Schema == PlanV3Schema {
 		delete(want, "peak_rss_ceiling")
 		want["observed_rss_ceiling"] = "resource/gauge_limit"
+		if value.Observation.Kind == "counter_crossing" && v3WorkMetric(value.Observation.Metric) {
+			want["phase_work_limit"] = "resource/counter_crossing"
+		}
 	}
 	if want[value.Code] != value.Class+"/"+value.Observation.Kind {
 		return false
@@ -4872,9 +4882,9 @@ func validReceiptFailure(value ReceiptFailure, phase string, plan Plan) bool {
 	observation := value.Observation
 	if observation.Kind != "measurement_unavailable" && observation.UnavailableMetrics != nil {
 		// V3 may retain an independently substantiated primary stop beside an
-		// incomplete store prefix. The existing metric values remain the exact
+		// incomplete work/store prefix. The metric values remain the exact
 		// retained positive prefix; absence of completeness never means zero.
-		if plan.Schema != PlanV3Schema || !slices.Equal(observation.UnavailableMetrics, storeUnavailableMetricNames) {
+		if plan.Schema != PlanV3Schema || !validSecondaryUnavailableMetrics(observation.UnavailableMetrics) {
 			return false
 		}
 	}
@@ -4892,7 +4902,7 @@ func validReceiptFailure(value ReceiptFailure, phase string, plan Plan) bool {
 			observation.Observed == observation.Limit+1 && observation.ExpectedSHA256 == "" &&
 			observation.ObservedSHA256 == ""
 	case "counter_crossing":
-		return observation.Metric == "materialized_cartesian_owner_pairs" &&
+		return (observation.Metric == "materialized_cartesian_owner_pairs" || plan.Schema == PlanV3Schema && value.Code == "phase_work_limit" && v3WorkMetric(observation.Metric)) &&
 			observation.Observed > observation.Limit && observation.ExpectedSHA256 == "" &&
 			observation.ObservedSHA256 == ""
 	case "gauge_limit":
