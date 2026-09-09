@@ -448,6 +448,7 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 	handleCtx, cancel := context.WithCancel(ctx)
 	handlerContext := handleCtx
 	var heartbeat chan error
+	var stopHeartbeat chan struct{}
 	var terminal *terminalHeartbeat
 	if configuration.TerminalHeartbeat {
 		var err error
@@ -462,6 +463,7 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 		handlerContext = context.WithValue(handleCtx, terminalHeartbeatKey{}, &terminal.cap)
 	} else {
 		heartbeat = make(chan error, 1)
+		stopHeartbeat = make(chan struct{})
 		go func() {
 			ticker := time.NewTicker(scheduler.HeartbeatEvery)
 			defer ticker.Stop()
@@ -477,7 +479,23 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 				case <-handleCtx.Done():
 					heartbeat <- nil
 					return
+				case <-stopHeartbeat:
+					heartbeat <- nil
+					return
 				case <-ticker.C:
+					// A ready tick must not start another call after cleanup's
+					// stop. Passing this check admits one call which cleanup joins
+					// under its original timeout, without canceling it locally.
+					select {
+					case <-stopHeartbeat:
+						heartbeat <- nil
+						return
+					default:
+					}
+					if handleCtx.Err() != nil {
+						heartbeat <- nil
+						return
+					}
 					beatStarted := time.Now()
 					callCtx, callCancel := context.WithTimeout(
 						handleCtx, scheduler.storeCallTimeout(),
@@ -490,8 +508,8 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 						continue
 					}
 					if handleCtx.Err() != nil {
-						// The handler finished (or the scheduler stopped) while
-						// this beat was in flight; not a heartbeat failure.
+						// Outer cancellation still interrupts an in-flight beat;
+						// handler completion alone no longer cancels it.
 						heartbeat <- nil
 						return
 					}
@@ -513,8 +531,9 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 	handleErr := configuration.Handle(handlerContext, chunk, configuration.Budget)
 	var heartbeatErr error
 	if terminal == nil {
-		cancel()
+		close(stopHeartbeat)
 		heartbeatErr = <-heartbeat
+		cancel()
 	} else {
 		retained, heartbeatErr = terminal.finish(cancel)
 		if retained {

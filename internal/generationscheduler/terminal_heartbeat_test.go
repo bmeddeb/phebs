@@ -326,6 +326,88 @@ func TestTerminalHeartbeatUnusedPreservesSettlement(t *testing.T) {
 	}
 }
 
+// Both paths use the real claim/execute/heartbeat cleanup, with supplied store
+// replies under virtual time. No SDK, database or native lease is exercised.
+func TestHandlerCompletionJoinsInflightHeartbeat(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		for _, outcome := range []string{"success", "lease_lost", "stale", "deadline", "outer_cancel"} {
+			name := map[bool]string{false: "ordinary", true: "selected_unused"}[enabled] + "/" + outcome
+			t.Run(name, func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					entered, release := make(chan context.Context, 1), make(chan struct{})
+					run := terminalTestStart(t, enabled, func(ctx context.Context, _ store.GenerationChunk) error {
+						select {
+						case entered <- ctx:
+						default:
+						}
+						select {
+						case <-ctx.Done():
+							return ctx.Err()
+						case <-release:
+							switch outcome {
+							case "lease_lost":
+								return store.ErrGenerationLeaseLost
+							case "stale":
+								return store.ErrGenerationStale
+							default:
+								return nil
+							}
+						}
+					})
+					beatCtx := <-entered
+					deadline, bounded := beatCtx.Deadline()
+					if !bounded || time.Until(deadline) != 5*time.Second {
+						t.Fatal("existing store-call deadline changed", deadline)
+					}
+					if outcome == "outer_cancel" {
+						run.cancel()
+					} else {
+						close(run.finish)
+						synctest.Wait()
+						if beatCtx.Err() != nil || run.handlerCtx.Err() != nil {
+							t.Fatal("handler completion canceled the in-flight heartbeat before joining")
+						}
+						run.assertHeld(t)
+						// Multiple ticker events must not admit another heartbeat
+						// while cleanup waits for this already-admitted call.
+						time.Sleep(2 * time.Second)
+						synctest.Wait()
+						if beatCtx.Err() != nil || run.state.beats.Load() != 1 {
+							t.Fatal("cleanup shortened the deadline or admitted another heartbeat")
+						}
+						if outcome == "deadline" {
+							<-beatCtx.Done()
+							if beatCtx.Err() != context.DeadlineExceeded || !time.Now().Equal(deadline) {
+								t.Fatal("in-flight timeout changed", beatCtx.Err(), time.Now(), deadline)
+							}
+						} else {
+							close(release)
+						}
+					}
+					synctest.Wait()
+					if run.handlerCtx.Err() != context.Canceled || outcome == "outer_cancel" && beatCtx.Err() != context.Canceled {
+						t.Fatal("handler or outer cancellation was lost", run.handlerCtx.Err(), beatCtx.Err())
+					}
+					run.cancel()
+					<-run.done
+					wantOutcome, completed, released := "completed", 1, 0
+					switch outcome {
+					case "lease_lost", "stale":
+						wantOutcome, completed = "stale_fenced", 0
+					case "outer_cancel":
+						wantOutcome, completed, released = "released", 0, 1
+					}
+					if run.state.beats.Load() != 1 || run.state.completed != completed || run.state.released != released ||
+						run.state.retried+run.state.failed+run.state.deferred != 0 || len(run.reports) != 2 ||
+						run.reports[1].Outcome != wantOutcome || run.failures != 0 || run.owners.Err() != nil {
+						t.Fatal("cleanup changed settlement/error precedence", run.reports, run.state.completed, run.state.released)
+					}
+				})
+			})
+		}
+	}
+}
+
 func TestTerminalHeartbeatConfigurationAndClaimRefusal(t *testing.T) {
 	for _, mode := range []string{"valid", "owners", "sink", "failure"} {
 		t.Run(mode, func(t *testing.T) {

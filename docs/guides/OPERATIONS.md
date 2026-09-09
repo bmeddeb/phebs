@@ -18,6 +18,13 @@ read can fail the shared store producer, including when a search client
 disconnects. It prevents successful launch closure rather than remaining an
 isolated HTTP failure. Ordinary serving without that selected owner is unchanged.
 
+Job and generation handlers stop new heartbeats on completion and join an
+in-flight heartbeat before canceling their local context. That call retains its
+original deadline: `HeartbeatEvery` for ordinary jobs, `StoreCallTimeout` for
+generation work. Completion can therefore wait for its remaining allowance;
+external shutdown still cancels immediately. Real lease errors and selected
+SDK cancellation/deadline refusals remain failures, not successful cleanup.
+
 Selected SDK and stale-lease controls retain one component-local first-failure
 diagnostic with closed reason/context classes and bounded source locations.
 Stale transition refusals additionally name failed guard predicates. These

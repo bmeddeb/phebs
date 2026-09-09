@@ -39,18 +39,16 @@ func (state *runnerHeartbeatAdmissionStore) HeartbeatJob(ctx context.Context, jo
 	return err
 }
 
-// This diagnoses the existing cleanup ordering, not a proposed heartbeat
-// policy. The real runner and source heartbeat use the selected SDK/SA owner;
+// The real runner and source heartbeat use the selected SDK/SA owner;
 // ordinary status persistence and WebSocket engine replies are supplied by
 // existing fixtures. No database, native lease, or rehearsal is started.
 func TestRunnerSuccessfulHandlerHeartbeatAccountingBoundary(t *testing.T) {
-	for _, canceled := range []bool{false, true} {
-		name := "heartbeat_reply_before_handler_return"
-		if canceled {
-			name = "handler_return_before_heartbeat_submission"
-		}
+	for _, name := range []string{"heartbeat_reply_before_handler_return", "handler_return_before_heartbeat_submission", "outer_cancel_before_heartbeat_submission"} {
 		t.Run(name, func(t *testing.T) {
 			ctx, owner, controller := storeAccountingFixture(t, 40, 2)
+			runnerCtx, cancelRunner := context.WithCancel(ctx)
+			defer cancelRunner()
+			canceled := name == "outer_cancel_before_heartbeat_submission"
 			db, native := storeAccountingDB(t, ctx, owner)
 			native.call = func(context.Context, *connection.RPCRequest) (any, error) {
 				return []surrealdb.QueryResult[[]jobRec]{{Status: "OK", Result: []jobRec{{}}}}, nil
@@ -66,7 +64,7 @@ func TestRunnerSuccessfulHandlerHeartbeatAccountingBoundary(t *testing.T) {
 			job := Job{ID: "connection_sync_job:heartbeat-boundary", Kind: JobSync, Target: "local/heartbeat-boundary",
 				LeaseToken: "fixture-lease", ClaimedBy: "fixture-worker"}
 			done := make(chan struct{})
-			go func() { defer close(done); runner.execute(ctx, job) }()
+			go func() { defer close(done); runner.execute(runnerCtx, job) }()
 			t.Cleanup(func() {
 				releaseHandler.Do(func() { close(handlerReturn) })
 				releaseHeartbeat.Do(func() { close(state.submit) })
@@ -80,11 +78,23 @@ func TestRunnerSuccessfulHandlerHeartbeatAccountingBoundary(t *testing.T) {
 			case <-ctx.Done():
 				t.Fatal("heartbeat did not reach supplied pre-submission boundary")
 			}
-			if canceled {
+			if name != "heartbeat_reply_before_handler_return" {
 				releaseHandler.Do(func() { close(handlerReturn) })
-				runnerOwnerSignal(t, ctx, heartbeatCtx.Done())
-				if heartbeatCtx.Err() != context.Canceled || ctx.Err() != nil {
-					t.Fatal("handler cleanup was confused with heartbeat deadline or outer cancellation", heartbeatCtx.Err(), ctx.Err())
+				if canceled {
+					cancelRunner()
+					runnerOwnerSignal(t, ctx, heartbeatCtx.Done())
+					if heartbeatCtx.Err() != context.Canceled || ctx.Err() != nil {
+						t.Fatal("outer runner cancellation was confused with deadline or owner cancellation", heartbeatCtx.Err(), ctx.Err())
+					}
+				} else {
+					// The virtual-time Runner regression separately proves the cleanup
+					// boundary. Here retain a real transport scheduling window before
+					// forwarding into the actual selected source recipe.
+					select {
+					case <-heartbeatCtx.Done():
+						t.Fatal("successful handler canceled the selected heartbeat", heartbeatCtx.Err())
+					case <-time.After(50 * time.Millisecond):
+					}
 				}
 				select {
 				case <-done:

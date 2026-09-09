@@ -73,6 +73,13 @@ original rehearsal's cause. Its correction, reviewed diagnostic gates and a
 fresh immutable candidate precede any decision on another native run.
 Checkpoint restart, complete whole-work evidence, seal and freeze remain open.
 
+Ben subsequently approved repairing the reproduced heartbeat cleanup hazard.
+Ordinary job/generation completion and unused terminal-heartbeat cleanup now
+stop new beats and join the admitted call before cancellation, without extending
+its deadline or detaching external shutdown. Component gates and independent
+source review passed; the gate record and fresh immutable candidate precede
+any native-run decision. No new rehearsal or original-trigger attribution follows.
+
 T31.1 completed on 2026-08-04. Bounded, source-free, component-specific
 pipeline receipts now cover generic durable jobs, candidate planning,
 extraction scheduling/outcomes, and fixed extractor counters while remaining

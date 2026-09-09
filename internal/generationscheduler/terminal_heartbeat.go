@@ -168,14 +168,10 @@ func (terminal *terminalHeartbeat) finish(cancel context.CancelFunc) (bool, erro
 	terminal.mu.Lock()
 	terminal.ended = true
 	used, operation := terminal.used, terminal.operation
-	if used {
-		terminal.stopLocked()
-	} else {
-		cancel() // Unused opt-in preserves ordinary heartbeat cancellation.
-	}
+	terminal.stopLocked()
 	terminal.mu.Unlock()
 	<-terminal.done
-	cancel() // A terminal heartbeat has naturally joined before cancellation.
+	cancel() // Used and unused heartbeats join before local cancellation.
 	if operation != nil {
 		<-operation
 	}
@@ -225,7 +221,7 @@ func (terminal *terminalHeartbeat) beat(scheduler *Scheduler, cancel context.Can
 		}
 		terminal.mu.Unlock()
 		if terminal.ctx.Err() != nil {
-			return // Ordinary handler/outer cancellation precedence is retained.
+			return // Outer cancellation precedence is retained.
 		}
 		if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) || time.Since(lastConfirmed) >= scheduler.StaleAfter {
 			terminal.beatErr = err

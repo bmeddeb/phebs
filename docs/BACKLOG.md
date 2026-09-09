@@ -6021,6 +6021,60 @@ The reviewed staged Go source/test diff has SHA-256
 `c7c3824c10d38ed410f5f70b50734974526d0d1b7faa287ec49ab3954d0194e4`;
 the final record changes documentation only.
 
+**2026-09-08 approved heartbeat completion correction.** Following diagnostic
+commit `0ba0bc78660be36d6a404c8d95321ab4421529ba`, Ben approved the shared
+cleanup repair before another rehearsal. Ordinary job and generation handlers
+now stop new heartbeat admission, join the in-flight call within its existing
+context/deadline, then cancel. The unused terminal-heartbeat path reuses its
+existing stop/join mechanism. Parent cancellation, definitive lease/stale
+failures, transient-error tolerance and acquired terminal ownership remain
+intact. No SDK failure policy, callback deadline or admission ceiling changes.
+
+The ordinary runner's new virtual-time regression failed all five cases on
+unchanged production source, then passed with the correction. It checks held
+heartbeat completion, transient error, lost lease, external cancellation and
+the unchanged call deadline. The actual selected SDK/source-heartbeat fixture
+now closes complete when handler return precedes held heartbeat submission,
+as well as when the heartbeat replies first; explicit outer cancellation
+still refuses and leaves the incomplete parent signature. This is supplied
+scheduling/status persistence/native replies, not durable native lease or
+whole-rehearsal proof. The original c5b91897 trigger remains unattributed.
+
+AC: changed runner/scheduler normal and race tests, inherited stale/checkpoint
+and owner/terminal tests, repository static/docs/glossary, and independent
+non-OCR implementation/cost review. The generation ordinary/unused-terminal
+regression also failed eight cases on unchanged production source; its two
+external-cancellation controls passed. Both corrected paths retain the
+five-second fixture call deadline and lease/stale precedence, including
+multiple timer ticks while joining the held call.
+
+Scoped working-tree gates against `0ba0bc78` passed: all `TestRunner` tests,
+including fresh native databases and owner/terminal persistence, normal/race
+83.616/76.834s; the focused selected-SDK/order/error selection normal 3.581s
+and race three times 10.921s; generation scheduler's non-native package suite
+normal 0.442s and race three times 1.632s, explicitly excluding the opt-in
+`TestT40R1GenerationScheduleRecoveryDiagnostic`. T422/exact-read command
+selection passed normal/race 13.845/15.713s, and parent stale/checkpoint/shared
+inspection-ordinal selection passed normal/race 1.258/13.855s. The final
+ordinary virtual-time fixture notification was made nonblocking so an
+extra-beat regression fails its counter assertion rather than blocking test
+cleanup; ten repetitions passed normal/race 0.500/1.767s. That test-only
+correction changes no production bytes or assertions.
+
+Repository static checks passed (vet, pinned lint zero issues, compile-only
+packages and glossary); final test edits also passed changed-package vet/lint.
+Documentation, formatting and whitespace passed. Independent non-authoring,
+non-OCR source/test/cost reviews found no source issues; one low duration-metric
+wording issue was corrected to distinguish job handler-only duration from
+generation whole-execute duration. Final staged record re-review covered all
+ten files and closed with no outstanding findings at any severity. The reviewed
+staged Go source/test diff has SHA-256
+`90ad5e918b07999966cfc8bd40cffb58b887453ef1682d97fdb7cdbb2bbb43cc`;
+this final review attribution changes documentation only.
+Retained V1/V2 plan digests remain unchanged. These are not full-store/full-suite,
+immutable native rehearsal, merge bar, author/seal or freeze evidence. No
+rehearsal was started and failed custody remains preserved.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation
