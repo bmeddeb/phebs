@@ -10,8 +10,10 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/downstreamauthority"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/rpccallerposting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
@@ -39,6 +41,9 @@ type PreparedV3 struct {
 }
 
 func BuildV3(ctx context.Context, request BuildRequestV3) (*PreparedV3, error) {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild); err != nil {
+		return nil, err
+	}
 	if request.Root == "" || request.Resolver == nil || request.RPC == nil || request.Kafka == nil {
 		return nil, errors.New("relationship v3 publication inputs are incomplete")
 	}
@@ -119,7 +124,7 @@ func BuildV3(ctx context.Context, request BuildRequestV3) (*PreparedV3, error) {
 		residentLimit: MaxResidentChargeBytes,
 	}
 	if err := request.RPC.WalkPostings(ctx, func(posting rpccallerposting.Posting) error {
-		projection, projectErr := accumulator.projectRPCV3(posting)
+		projection, projectErr := accumulator.projectRPCV3(ctx, posting)
 		if projectErr != nil {
 			return projectErr
 		}
@@ -128,7 +133,7 @@ func BuildV3(ctx context.Context, request BuildRequestV3) (*PreparedV3, error) {
 		return nil, fmt.Errorf("walk RPC postings for v3: %w", err)
 	}
 	if err := request.Kafka.WalkPostings(ctx, func(posting kafkatopicposting.Posting) error {
-		projection, projectErr := accumulator.projectKafkaV3(posting)
+		projection, projectErr := accumulator.projectKafkaV3(ctx, posting)
 		if projectErr != nil {
 			return projectErr
 		}
@@ -350,8 +355,12 @@ func serviceStateSetDigestV3(services map[string]*serviceAccumulator) (string, e
 }
 
 func (accumulator *buildAccumulator) projectRPCV3(
+	ctx context.Context,
 	posting rpccallerposting.Posting,
 ) (Projection, error) {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection); err != nil {
+		return Projection{}, err
+	}
 	source, err := accumulator.placements.lookup(posting.Path)
 	if err != nil {
 		return Projection{}, err
@@ -372,8 +381,12 @@ func (accumulator *buildAccumulator) projectRPCV3(
 }
 
 func (accumulator *buildAccumulator) projectKafkaV3(
+	ctx context.Context,
 	posting kafkatopicposting.Posting,
 ) (Projection, error) {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection); err != nil {
+		return Projection{}, err
+	}
 	source, err := accumulator.placements.lookup(posting.Path)
 	if err != nil {
 		return Projection{}, err

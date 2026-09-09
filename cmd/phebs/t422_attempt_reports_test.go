@@ -60,7 +60,7 @@ const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
 // real phase change. Reports are supplied native-shaped test inputs, not real
 // queue work, protected tool admission, or a phase measurement result.
 func TestT422AttemptInheritedPhase(t *testing.T) {
-	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled", "resolver_events", "resolver_canceled", "resolver_zero"} {
+	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled", "resolver_events", "resolver_canceled", "resolver_zero", "relationship_events", "relationship_canceled"} {
 		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
 	}
 }
@@ -209,6 +209,20 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 	if strings.Count(diagnostic.String(), "RMB1:5:sha256:") != 1 {
 		t.Fatal("actual selected resolver binding missing", diagnostic.String())
 	}
+	relationshipEvents := 0
+	if mode == "relationship_events" || mode == "relationship_canceled" {
+		relationshipEvents = 1
+	}
+	if strings.Count(diagnostic.String(), "RLB1:5:sha256:") != 1 {
+		t.Fatal("actual selected relationship binding missing", diagnostic.String())
+	}
+	for _, phase := range []uint32{8, 9} {
+		for _, event := range []byte{'B', 'P'} {
+			if strings.Count(diagnostic.String(), fmt.Sprintf("RL1:5:%X%c\n", phase, event)) != relationshipEvents {
+				t.Fatal("actual selected relationship entry missing", diagnostic.String())
+			}
+		}
+	}
 	for _, phase := range []uint32{8, 9} {
 		if strings.Count(diagnostic.String(), fmt.Sprintf("RM1:5:%X:%016x\n", phase, resolverBytes)) != resolverEvents {
 			t.Fatal("actual selected resolver return missing", diagnostic.String())
@@ -340,6 +354,26 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		}
 	}
 	resolverEvents()
+	relationshipEvents := func() {
+		mode := os.Getenv(t422AttemptHelperMode)
+		if mode != "relationship_events" && mode != "relationship_canceled" {
+			return
+		}
+		// Supplied events exercise the actual phase-owned native pipe.
+		// Concrete build/projector entry has separate production tests.
+		for _, event := range []readaccounting.RelationshipEvent{readaccounting.RelationshipBuild, readaccounting.RelationshipProjection} {
+			if mode == "relationship_canceled" {
+				canceled, stop := context.WithCancel(ctx)
+				stop()
+				if err := readaccounting.ObserveRelationship(canceled, true, event); !errors.Is(err, context.Canceled) {
+					t.Fatal("canceled entry lost native observation", err)
+				}
+			} else if err := dispatchadmission.ObserveProductionRelationship(ctx, event); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	relationshipEvents()
 	// Supplied event exercises the actual selected stream, not native parsing.
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
@@ -364,6 +398,7 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	cacheEvents()
 	publicationEvents()
 	resolverEvents()
+	relationshipEvents()
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
 			t.Fatal(err)
@@ -388,6 +423,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	}
 	if dispatchadmission.ObserveProductionResolverBlob(ctx, 10) == nil {
 		t.Fatal("closed producer emitted guessed resolver phase")
+	}
+	if dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild) == nil {
+		t.Fatal("closed producer emitted guessed relationship phase")
 	}
 	if runner.LifecycleReports(job) == nil {
 		t.Fatal("closed producer emitted guessed phase")

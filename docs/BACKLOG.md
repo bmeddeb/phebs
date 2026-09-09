@@ -6457,6 +6457,61 @@ and all-package compilation; documentation, glossary and whitespace checks
 passed. Retained V1/V2 plan digests remain unchanged.
 These scoped gates do not supply full fifteen-phase metrics or close T42.2n.
 
+**Native relationship build/projector observation (2026-09-09).** Observe
+actual Build/BuildV2/BuildV3 entries before validation and each RPC/Kafka
+projector entry before lookup, finalization, deduplication or quota checks.
+This implements the existing posting-to-projector work requirement rather
+than substituting final unique root cardinality. Failed and repeated entries
+remain events. Handler/component-preparation failure before Build is not a
+builder call. Current-authority Reconcile can skip Build; a legacy Handle
+redelivery actually builds again before its unchanged-authority shortcut and
+must count that work. An initially incorrect zero-work test expectation was
+corrected after the genuine handler produced the second event; runtime behavior
+and limits were not changed to satisfy the test.
+
+The real V3 builder fixture uses supplied posting sources: three projector
+calls yield two unique root projections, an empty build emits only its build
+entry, and sink/lookup failures retain the entered prefix. It does not execute
+native source extraction. All three builder and four projector entry seams
+also have validation/cancellation coverage. Selected missing/error/panic
+coverage remains sticky. The independent parent RLB1 binding and nine-byte
+RL1 B/P frames preserve independent counts, first full excess, checked overflow
+and malformed/partial/terminal refusals in the existing joined scan. The native
+inherited pipe fixture supplies events separately from the real builder tests.
+No pairing, receipt substitution, live-limit proof or full rehearsal is implied.
+
+Independent source and bridge/parser review reports all severity counts zero.
+Corrected source focused normal passed readaccounting/dispatch/relationship in
+0.147s/0.230s/0.931s; full source race passed in 1.168s/5.890s/243.919s within
+the original five-minute package allowance, without a retry. Parent broad focused normal passed command/spike in
+1.297s/3.558s and matching race in 3.139s/28.976s. Independent source focused
+race passed in 1.226s/1.278s/2.388s; independent parent/parser and inherited
+race passed in 2.405s/3.021s. Scoped lint and whitespace checks passed. PLAN
+records the unchanged mutation-fence and posting-memory holds and the checked
+nine-family output maxima; complete-log fit remains open. The reviewed staged
+Go diff SHA-256 is
+`b0b06ecf1086f04b9997f54c914bde5386a3018de43767e5dcc4178711612070`.
+The lead's final combined report/parser/inherited race selectors passed
+command/spike in 5.444s/44.060s. Pinned `ci-static` passed vet, zero lint issues
+and all-package compilation. Documentation, glossary and whitespace checks
+passed. Retained V1/V2 bytes remain unchanged.
+
+**New acceptance hold — archive relationship budget (2026-09-09).** Independent
+source tracing confirms a real restore rebuild, not just the modeled provenance
+fixture. Restore recovers old relationship bytes, then clears extraction domain
+roots and restartable controls. Re-extraction creates fresh run IDs, changing
+downstream provenance; the current-root guard therefore schedules HandleV3 and
+BuildV3 with actual posting projection. The corrected archive envelope already
+admits candidate/extraction/resolver/caller reconstruction, but leaves both
+relationship counters at zero. The new collector preserves that refusal.
+Ben's prospective V3 disposition is requested for exactly one build and the
+frozen 20,999 projector calls, without retry slack or retained V1/V2 changes.
+Service-reference accounting still needs its own unit review before assigning
+a corresponding term; no attempt definition or numerical allowance is inferred.
+The existing restore comparator already permits replaced relationship identities
+when provenance changes while preserving semantics. No comparator relaxation,
+native archive pass, new freeze or further rehearsal is claimed.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure
@@ -6467,9 +6522,9 @@ The remaining native implementation is explicitly broader than rerunning gates:
   launch or the pending retired/fenced phase-twelve backup lifetime overlap.
 - Phases 13–15: fresh lifecycle collection, authorized product queries and
   final whole-flow teardown evidence, not the rehearsal fixture's cleanup.
-- Whole-work composition: remaining relationship/reuse events and
+- Whole-work composition: remaining reuse events and
   resource gauges, complete phase metrics and receipts; the implemented
-  read/cache/publication/resolver/lifecycle subsets and DA/SA do not fill the remaining
+  read/cache/publication/resolver/relationship/lifecycle subsets and DA/SA do not fill the remaining
   fields or prove live whole-phase limit enforcement by implication.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed

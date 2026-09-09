@@ -63,8 +63,9 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 	expected := []uint64{32864807, 600395, 19938998, 10012813, 13165061}
 	combined := []uint64{33946097, 961101, 21020672, 11453563, 13525767}
 	withResolver := []uint64{34446276, 961180, 21270801, 11453642, 13775896}
+	withRelationship := []uint64{34824355, 1150259, 21459880, 11453721, 13775975}
 	for producer := uint32(2); producer <= 6; producer++ {
-		var starts, source, index, observation, cache, publication, resolver uint64
+		var starts, source, index, observation, cache, publication, resolver, relationship uint64
 		for _, phase := range executionProducerPhases(producer) {
 			row := plan.WorkEnvelope.Phases[phase-1]
 			starts += row.JobAttempts.Maximum
@@ -74,6 +75,7 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 			cache += 9 * (row.CacheLookups.Maximum + row.CacheMisses.Maximum)
 			publication += 8 * row.PublicationWrites.Maximum
 			resolver += 25 * row.ResolverBlobReads.Maximum
+			relationship += 9 * (row.RelationshipBuildAttempts.Maximum + row.RelationshipProjections.Maximum)
 			for _, role := range row.ControlledDispatchRoles {
 				if role.Name == "zoekt-git-index" {
 					index += role.Maximum * uint64(9+len(strconv.FormatUint(row.IndexFiles.Maximum, 10)))
@@ -110,15 +112,19 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 		if total != withResolver[producer-2] || total >= 64<<20 {
 			t.Fatalf("eight-family output bound changed: producer %d total %d", producer, total)
 		}
+		total += 79 + relationship
+		if total != withRelationship[producer-2] || total >= 64<<20 {
+			t.Fatalf("nine-family output bound changed: producer %d total %d", producer, total)
+		}
 		t.Logf("producer=%d starts=%d combined=%d remaining=%d", producer, starts, total, (64<<20)-total)
 	}
 	// At most one retry per emitted start in the same held owner turn. This
-	// proves only source/index/attempt/parse/lifecycle/cache/publication/resolver fit;
+	// proves only source/index/attempt/parse/lifecycle/cache/publication/resolver/relationship fit;
 	// candidate/ordinary/future logs remain.
 }
 func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
-	line := []byte("A2j1\nOP1:2:2\nEP1:2:2\nRM1:2:2:000000000000000a\n")
+	line := []byte("A2j1\nOP1:2:2\nEP1:2:2\nRM1:2:2:000000000000000a\nRL1:2:2B\nRL1:2:2P\n")
 	for _, mode := range []string{"healthy", "empty", "process failed", "overflow at newline", "truncated", "not joined", "unbound"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
@@ -155,7 +161,7 @@ func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 			if mode == "empty" || mode == "unbound" || mode == "not joined" {
 				wantCount = 0
 			}
-			if (err == nil) != wantComplete || result.Attempts.Complete != wantComplete || result.Attempts.Phases[1].JobAttempts != wantCount || result.Attempts.Phases[1].ObservationParses != wantCount || result.Attempts.Phases[1].PublicationWrites != wantCount || result.Attempts.Phases[1].ResolverBlobReads != wantCount || result.Attempts.Phases[1].ResolverBlobBytes != 10*wantCount {
+			if (err == nil) != wantComplete || result.Attempts.Complete != wantComplete || result.Attempts.Phases[1].JobAttempts != wantCount || result.Attempts.Phases[1].ObservationParses != wantCount || result.Attempts.Phases[1].PublicationWrites != wantCount || result.Attempts.Phases[1].ResolverBlobReads != wantCount || result.Attempts.Phases[1].ResolverBlobBytes != 10*wantCount || result.Attempts.Phases[1].RelationshipBuildAttempts != wantCount || result.Attempts.Phases[1].RelationshipProjections != wantCount {
 				t.Fatalf("joined/lossless distinction: %+v %v", result.Attempts, err)
 			}
 		})
