@@ -80,6 +80,16 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 // then transfers its retained source to epoch four in the SAME phase eight.
 // Its result still requires Health and RecoverCheckpoint; no receipt is made.
 func (run *ExecutionEpochOneRun) CheckpointRestart(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
+	return run.checkpointRestart(ctx, false)
+}
+
+// CheckpointRestartPressure retains the fixed phase-eight deadline and reserves
+// the three later pressure windows. It does not run ballast or prove pressure.
+func (run *ExecutionEpochOneRun) CheckpointRestartPressure(ctx context.Context) (*ExecutionEpochOneRun, error) {
+	return run.checkpointRestart(ctx, true)
+}
+
+func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure bool) (_ *ExecutionEpochOneRun, retErr error) {
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.control == nil || run.epoch.Epoch != 3 {
 		return nil, ErrExecutionEpochOne
 	}
@@ -100,6 +110,10 @@ func (run *ExecutionEpochOneRun) CheckpointRestart(ctx context.Context) (_ *Exec
 	default:
 	}
 	_, boundsErr := returnCheckpointEpochBounds(flow.plan)
+	pressureBounds := epochOneLimits{}
+	if pressure {
+		pressureBounds, boundsErr = checkpointPressureEpochBounds(flow.plan)
+	}
 	if !valid || boundsErr != nil || !run.phaseTimer.Stop() {
 		run.mu.Unlock()
 		flow.mu.Unlock()
@@ -118,7 +132,13 @@ func (run *ExecutionEpochOneRun) CheckpointRestart(ctx context.Context) (_ *Exec
 		deadline = run.lifetimeDeadline
 	}
 	// Independent of the old server lifetime: finish cancels only that server.
-	lifetime, cancel := context.WithDeadline(ctx, deadline)
+	lifetimeDeadline := deadline
+	if pressure {
+		lifetimeDeadline = deadline.Add(pressureBounds.lifetime - 4*time.Hour)
+	}
+	lifetime, cancel := context.WithDeadline(ctx, lifetimeDeadline)
+	operation, finishOperation := context.WithDeadline(lifetime, deadline)
+	defer finishOperation()
 	run.setPhaseDeadlineLocked(deadline) // Before the first handoff/control I/O.
 	operationDone := make(chan struct{})
 	run.checkpointUsed, run.checkpointCancel, run.checkpointDone = true, cancel, operationDone
@@ -143,14 +163,14 @@ func (run *ExecutionEpochOneRun) CheckpointRestart(ctx context.Context) (_ *Exec
 		close(run.returnStartDone)
 		flow.mu.Unlock()
 	}()
-	if reader.beginCheckpoint() != nil || run.advanceReturnPhase(lifetime, 8) != nil || run.control.OpenRequests(lifetime) != nil ||
-		reader.prepareRecovery(lifetime, true) != nil || run.control.FenceRequests(lifetime) != nil || run.control.ReopenOwners(lifetime) != nil ||
-		reader.checkpoint(lifetime, false) != nil {
+	if reader.beginCheckpoint() != nil || run.advanceReturnPhase(operation, 8) != nil || run.control.OpenRequests(operation) != nil ||
+		reader.prepareRecovery(operation, true) != nil || run.control.FenceRequests(operation) != nil || run.control.ReopenOwners(operation) != nil ||
+		reader.checkpoint(operation, false) != nil {
 		return nil, ErrExecutionEpochOne
 	}
 	handoff, err := reader.checkpointHandoff()
-	if err != nil || run.enterTerminal(lifetime) != nil || run.control.TerminalQuiesce(lifetime) != nil || flow.parent.Pause(lifetime) != nil ||
-		flow.controller.Fence() != nil || flow.store.Fence() != nil || run.control.Checkpoint(lifetime) != nil ||
+	if err != nil || run.enterTerminal(operation) != nil || run.control.TerminalQuiesce(operation) != nil || flow.parent.Pause(operation) != nil ||
+		flow.controller.Fence() != nil || flow.store.Fence() != nil || run.control.Checkpoint(operation) != nil ||
 		flow.store.ArmTerminalEOF(4, 8) != nil || flow.controller.ExpectHardDeath(4) != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -161,7 +181,7 @@ func (run *ExecutionEpochOneRun) CheckpointRestart(ctx context.Context) (_ *Exec
 		flow.mu.Unlock()
 		return nil, ErrExecutionEpochOne
 	}
-	run.terminalRequested, run.terminalContext, run.retainParent = true, lifetime, true
+	run.terminalRequested, run.terminalContext, run.retainParent = true, operation, true
 	flow.retained = run
 	// finish must never join this method while it waits for finish itself.
 	close(operationDone)
@@ -169,23 +189,26 @@ func (run *ExecutionEpochOneRun) CheckpointRestart(ctx context.Context) (_ *Exec
 	run.mu.Unlock()
 	flow.mu.Unlock()
 	run.stopOnce.Do(func() { close(run.stop) })
-	if _, err := run.Wait(lifetime); err != nil {
+	if _, err := run.Wait(operation); err != nil {
 		return nil, ErrExecutionEpochOne
 	}
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
-	if lifetime.Err() != nil || flow.closed || flow.retained != run || !run.joinedEmpty() ||
-		flow.parent.Checkpoint(lifetime) != nil || flow.store.ReopenAfterTerminalEOF(4, 5, 8) != nil ||
-		flow.parent.ReopenAfterHardDeath(lifetime, 4, 5, 8) != nil {
+	if operation.Err() != nil || flow.closed || flow.retained != run || !run.joinedEmpty() ||
+		flow.parent.Checkpoint(operation) != nil || flow.store.ReopenAfterTerminalEOF(4, 5, 8) != nil ||
+		flow.parent.ReopenAfterHardDeath(operation, 4, 5, 8) != nil {
 		return nil, ErrExecutionEpochOne
 	}
 	prior := reader.staleAuthority
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
-		healthLimit: run.healthLimit, coldDeadline: deadline, lifetimeDeadline: deadline, cancelRun: cancel,
-		checkpointRecovery: handoff, checkpointPrior: &prior}
+		healthLimit: run.healthLimit, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel,
+		checkpointRecovery: handoff, checkpointPrior: &prior, pressureAllowed: pressure}
 	next.setPhaseDeadlineLocked(deadline)
 	bounds := epochOneLimits{health: run.healthLimit, outputBytes: 64 << 20, controlPairs: 5}
-	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 4)
+	if pressure {
+		bounds = pressureBounds
+	}
+	result, err := flow.launchEpoch(lifetime, operation, cancel, next, bounds, 4)
 	if result == nil {
 		next.stopPhaseDeadline()
 	}
@@ -378,6 +401,9 @@ func (run *ExecutionEpochOneRun) RecoverCheckpoint(ctx context.Context) (retErr 
 		if epochInspectionDelay(ctx) != nil {
 			return ErrExecutionEpochOne
 		}
+	}
+	if run.pressureAllowed && reader.pressureCommand(ctx, "park", time.Time{}) != nil {
+		return ErrExecutionEpochOne
 	}
 	if run.control.DrainOwners(ctx) != nil || run.control.OpenRequests(ctx) != nil {
 		return ErrExecutionEpochOne

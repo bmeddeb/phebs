@@ -99,6 +99,9 @@ func (v *executionPressureVolume) finishRehearsal(ctx context.Context, run *Exec
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
+	if v.ballast != nil && !v.ballast.removed {
+		return errPressureVolume
+	}
 	if !v.borrowed || v.flow == nil || run.flow != v.flow || v.check() != nil {
 		return errPressureVolume
 	}

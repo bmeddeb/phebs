@@ -64,6 +64,16 @@ sequence.
 
 ## Now
 
+**T42.2 completion run, 2026-09-09:** Ben authorizes the remaining implementation,
+reviews, rehearsals, commits/pushes and safe housekeeping through freeze, then
+the terminal ceremony command. The reviewed branch through `2e334505` is
+pushed, and its exact mounted checkpoint rehearsal is in progress without
+ballast. Native pressure custody, pressure control composition and lifecycle
+event collection proceed as bounded slices. A newly identified live-backup
+lifetime overlap is awaiting explicit V3 disposition; no existing admission
+guard or numeric limit is weakened. No ceremony command or freeze is issued
+until the complete fifteen-phase/whole-work/launcher gates pass.
+
 **T42.2 update, 2026-09-09:** exact clean `64af8fb6` passed the complete
 optional checkpoint rehearsal in 57m49.74s. Cold, warm authority observation,
 physical B, logical recovery, return A, stale-lease recovery and checkpoint
@@ -78,7 +88,9 @@ preparation scratch onto the mount; its tiny native detach fixture is not a
 bound epoch rehearsal or pressure-mutation pass.
 Next: remaining phase/epoch and whole-work wiring, T42.2m launcher/custody
 closure, T42.2n exact-tree acceptance and
-T42.2o seal/exact-main freeze. No further rehearsal or ceremony is started.
+T42.2o seal/exact-main freeze. That checkpoint record started no further run;
+the later completion request above authorizes the now-running mounted rehearsal,
+not ceremony execution.
 
 **T42.2 update, 2026-09-08:** the c5b91897 rehearsal passed through return A
 and stopped at stale RECOVERED R11 after a complete HIT. First-failure

@@ -6246,6 +6246,67 @@ unmeasured. Final non-authoring source/record rereview reports
 critical/high/medium/low zero; final record-only docs/glossary passed (0.515s).
 These are scoped component gates, not the full ceremony merge bar.
 
+**T42.2 completion-through-freeze request (2026-09-09).** Ben explicitly
+authorizes the necessary rehearsals, reviewed commits/pushes and subsequent
+safe housekeeping, then the exact ceremony command. The reviewed branch through
+`2e3345055e870abf11944d18662a61f52e54d6e5` is pushed to
+`origin/codex/t42.2l-logical-measurement`; `main` is not advanced by that push.
+About 3.3 GiB of reproducible Go build cache was cleared to pass the existing
+120-GiB rehearsal guard; offline modules and failed-run evidence were retained.
+One exact clean detached phase-one-through-eight checkpoint rehearsal now uses
+the owned pressure volume at that commit, with no ballast or automatic retry.
+Its result remains pending. Parallel bounded work covers native ballast,
+pressure parent control/read composition and joined lifecycle measurement.
+
+A fresh phase-twelve source audit finds that ordinary backup requires epoch
+four's live SDK/export endpoint, while its producer lifetime ends in phase
+eleven. Closing it first loses that endpoint; keeping it open prevents the
+store controller's last-phase advance. An explicitly retired carry into phase
+twelve, with no new dispatch/write permission, is submitted to Ben for
+prospective V3 disposition; it is not silently treated as existing wiring.
+Backup/restore must also use the same epoch-four config bytes before epoch
+five starts with its own listener config, and installation destruction must
+preserve the held data-root inode. Whole-work resource/read/cache/reuse and
+publication measurement remains broader than the joined event subsets.
+
+**Pressure/lifecycle prerequisite review (2026-09-09).** Three bounded slices
+are implemented: native fixed ballast custody, the explicitly selected pressure
+checkpoint/control/read prerequisites, and independently bound joined lifecycle
+returned-turn observations. No full pressure selector, allocated-custody gauge
+or pressure/receipt result is exposed. Non-authoring review found one medium
+in lifecycle collection (a genuine known-owner cursor-read failure was refused)
+and one low in the tiny ballast test (missing post-unlink capacity verification);
+both are corrected. Real `Controller.Tick` regression coverage preserves the
+failed returned tick without inventing an owner turn. Final source rereviews
+report critical/high/medium/low zero for all three slices. Separate record
+review's preparation/framing-cost omissions are corrected in the owning ADRs.
+
+Corrected scoped race gates passed: lifecycle/attempt collection 5.066s,
+lifecycle command tests 1.922s, ballast three repetitions 2.358s and pressure/
+checkpoint boundary coverage 4.717s. The broader inherited lifecycle gate first
+refused all four test modes because the old fixture combined epoch four/phase
+eight with producer two. The fixture now uses genuine producer five and checks
+the single exact native LCB1 binding after child Wait; lifecycle and inherited
+attempt race selectors then passed three repetitions in 5.235s. Production
+binding was not relaxed. Pinned static checking caught four lifecycle style/
+error-check issues and an untested pressure-boundary helper; those are corrected
+with meaningful boundary tests, not lint suppressions. A later static run
+reported zero lint issues, compiled all packages, and passed docs/glossary;
+The final fixture-corrected Go diff SHA-256 is
+`b8acce1953c5f24335221fdd09ff5550e59efce66788fc99a9ad504f2153ec19`;
+pinned `ci-static` passed again on those exact staged Go bytes (zero lint
+issues, all packages compile), with docs/glossary passing in 0.429s.
+The tiny ballast native fixture is still queued behind the running mounted
+checkpoint rehearsal; no allocation/removal native pass is claimed here.
+
+The byte-gauge audit keeps native filesystem used/available distinct from
+linked-inode allocation. Neither an endpoint statfs result nor a sequential
+file walk supplies the frozen coherent whole-custody phase high-water by
+implication. A bounded native replacement is not inherently a policy change,
+but its coherence, required-sample coverage and full-custody fit are unproven.
+Input-only traversal caps do not bound all mutable data/build scratch. No
+measurement meaning or limit changes without an explicit prospective decision.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure

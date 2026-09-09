@@ -84,8 +84,7 @@ func newT422LifecycleControl(ctx context.Context, launch *t422SemanticLaunch, ow
 		!launch.matches(current) || len(owners) != 16 {
 		return nil, errT422LifecycleControl
 	}
-	control := &t422LifecycleControl{ctx: ctx, launch: launch, runner: lifecycle.NewRunnerControl(),
-		sink: t4013ExactReportSink("exact lifecycle turn: ")}
+	control := &t422LifecycleControl{ctx: ctx, launch: launch, runner: lifecycle.NewRunnerControl()}
 	for _, owner := range owners {
 		if owner == nil {
 			return nil, errT422LifecycleControl
@@ -97,6 +96,10 @@ func newT422LifecycleControl(ctx context.Context, launch *t422SemanticLaunch, ow
 		if err != nil {
 			return nil, errT422LifecycleControl
 		}
+	}
+	control.sink, err = newT422LifecycleSink(current, launch.fail)
+	if err != nil {
+		return nil, err
 	}
 	return control, nil
 }

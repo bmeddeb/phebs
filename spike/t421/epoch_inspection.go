@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
@@ -85,6 +86,7 @@ type executionEpochInspection struct {
 	checkpointPreparation              epochStalePreparation
 	checkpointPrepared                 bool
 	checkpointHit, checkpointRecovered extractionpublication.CheckpointRestartTransition
+	pressure                           epochPressureObservations
 	err                                error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
 	// the already bounded body (at most the response cap plus one sentinel).
@@ -206,6 +208,10 @@ func decodeEpochReport(values []string, ordinal uint64, maximum epochInspectionR
 // and connection reuse disabled. A consumed ordinal is never retried; actual
 // EOF must expose exactly one canonical accounting trailer before admission.
 func (reader *executionEpochInspection) read(ctx context.Context, path string, limit int64, maximum epochInspectionReport) (_ []byte, _ int, _ epochInspectionReport, retErr error) {
+	return reader.readWithFence(ctx, path, limit, maximum, time.Time{})
+}
+
+func (reader *executionEpochInspection) readWithFence(ctx context.Context, path string, limit int64, maximum epochInspectionReport, fence time.Time) (_ []byte, _ int, _ epochInspectionReport, retErr error) {
 	stage, ordinal := "preflight", reader.next
 	var cause error
 	defer func() {
@@ -223,6 +229,9 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 		}
 	}()
 	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.control == nil || reader.next == 0 || reader.next > 11531 {
+		return nil, 0, epochInspectionReport{}, errEpochInspection
+	}
+	if !fence.IsZero() && (fence.UnixNano() <= 0 || path != "/api/t422/lifecycle/pressure-80" && path != "/api/t422/lifecycle/pressure-90" && path != "/api/t422/lifecycle/pressure-75") {
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
 	if (reader.run.epoch.Epoch == 2 || reader.run.epoch.Epoch == 3 && !reader.run.staleAllowed) && reader.next > 5765 {
@@ -259,6 +268,9 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
 	request.Header.Set("X-Phebs-T421-Exact-Reads", "source-free-v1")
 	request.Header.Set("X-Phebs-T421-Exact-Read-Ordinal", strconv.FormatUint(ordinal, 10))
+	if !fence.IsZero() {
+		request.Header.Set("X-Phebs-T422-Ballast-Unix-Nano", strconv.FormatInt(fence.UnixNano(), 10))
+	}
 	transport := &http.Transport{DisableKeepAlives: true, DisableCompression: true, MaxResponseHeaderBytes: 16 << 10}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}

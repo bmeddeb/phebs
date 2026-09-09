@@ -29,6 +29,7 @@ type ExecutionAttemptCount struct {
 // ceiling enforcement, handler invocation, complete phase work, or admission.
 type ExecutionAttemptObservation struct {
 	Phases           [15]ExecutionAttemptCount
+	Lifecycle        ExecutionLifecycleObservation
 	Complete         bool
 	SourceBound      bool
 	AttemptBound     bool
@@ -66,9 +67,16 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 				}
 			}
 			out.Complete = true
+			out.Lifecycle.Complete = out.Lifecycle.Bound
 			return out, nil
 		}
 		if readErr == nil && executionSetupTokenDiagnostic(line) {
+			continue
+		}
+		if observed, err := observeLifecycleEvent(line, plan, producer, wantInput, &out.Lifecycle); observed {
+			if err != nil || readErr != nil {
+				return out, errExecutionAttempts
+			}
 			continue
 		}
 		if blob, err := observeBlobEvent(line, plan, producer, wantInput, &out); blob {
@@ -92,7 +100,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedCompactAttempt(raw[start:consumed])) {
+		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -126,8 +134,9 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	} else if footer {
 		footerErr = errExecutionAttempts // No footer is valid in an ordinary close.
 	}
-	if err != nil || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
+	if err != nil || !result.Attempts.Lifecycle.Complete || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
 		result.Attempts.Complete = false
+		result.Attempts.Lifecycle.Complete = false
 		result.IndexOffers.Complete = false
 		return ErrExecutionEpochOne
 	}
@@ -165,7 +174,7 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 		}
 		index := reservedTerminalIndex(line)
 		if seen && (reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
-			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP")) ||
+			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedLifecycleEvent(line)) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts
 		}

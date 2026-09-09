@@ -254,6 +254,7 @@ type ExecutionEpochOneRun struct {
 	terminalContext       context.Context // Actual operation lifetime, not an asserted health flag.
 	checkpointRecovery    *epochCheckpointRecoveryInput
 	checkpointPrior       *AuthorityPhaseResult
+	pressureAllowed       bool
 }
 
 func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {

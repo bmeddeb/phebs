@@ -304,14 +304,14 @@ func TestExecutionEpochCheckpointSourceBinding(t *testing.T) {
 	}
 	var body *ast.BlockStmt
 	for _, d := range file.Decls {
-		if f, ok := d.(*ast.FuncDecl); ok && f.Name.Name == "CheckpointRestart" {
+		if f, ok := d.(*ast.FuncDecl); ok && f.Name.Name == "checkpointRestart" {
 			body = f.Body
 		}
 	}
 	if body == nil {
 		t.Fatal("missing actual method")
 	}
-	want := []string{"lifetime, cancel := context.WithDeadline(ctx, deadline)", "run.setPhaseDeadlineLocked(deadline)", "close(operationDone)", "result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 4)"}
+	want := []string{"lifetime, cancel := context.WithDeadline(ctx, lifetimeDeadline)", "operation, finishOperation := context.WithDeadline(lifetime, deadline)", "run.setPhaseDeadlineLocked(deadline)", "close(operationDone)", "result, err := flow.launchEpoch(lifetime, operation, cancel, next, bounds, 4)"}
 	index := 0
 	ast.Inspect(body, func(n ast.Node) bool {
 		if _, ok := n.(ast.Stmt); ok && index < len(want) && render(n) == want[index] {
@@ -332,6 +332,7 @@ func TestExecutionEpochCheckpointSourceBinding(t *testing.T) {
 	if calls["run.Wait"] != 1 || calls["flow.parent.Checkpoint"] != 1 || calls["flow.store.ReopenAfterTerminalEOF"] != 1 || calls["flow.parent.ReopenAfterHardDeath"] != 1 || calls["flow.controller.Advance"] != 0 || calls["flow.epochs.author.authorNext"] != 0 {
 		t.Fatal("same-phase successor changed native ordering", calls)
 	}
+	checkpointFile := file
 	file, err = parser.ParseFile(fset, "epoch_launch.go", nil, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -350,6 +351,17 @@ func TestExecutionEpochCheckpointSourceBinding(t *testing.T) {
 	})
 	if !reflect.DeepEqual([]int{calls["killExecutionProcessSession"], calls["run.flow.controller.CloseHardDeath"]}, []int{1, 1}) {
 		t.Fatal("actual sole-Wait terminal branch missing", calls)
+	}
+	for name, want := range map[string]string{"CheckpointRestart": "return run.checkpointRestart(ctx, false)", "CheckpointRestartPressure": "return run.checkpointRestart(ctx, true)"} {
+		found := false
+		for _, d := range checkpointFile.Decls {
+			if f, ok := d.(*ast.FuncDecl); ok && f.Name.Name == name {
+				found = len(f.Body.List) == 1 && render(f.Body.List[0]) == want
+			}
+		}
+		if !found {
+			t.Fatal("checkpoint selection changed", name)
+		}
 	}
 }
 

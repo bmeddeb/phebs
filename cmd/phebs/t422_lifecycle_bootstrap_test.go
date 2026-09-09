@@ -36,6 +36,7 @@ func t422LifecycleBootstrapRecord(t *testing.T) (dispatchadmission.ProductionBoo
 	raw, _ := t422SemanticTestRequest(t)
 	raw = bytes.Replace(raw, []byte(`"server_epoch":1`), []byte(`"server_epoch":4`), 1)
 	record := t422ServeFlagsRecord()
+	record.Producer.ID = 5 // The actual epoch-four producer starts in phase eight.
 	record.SemanticMode, record.InputSHA256 = dispatchadmission.ProductionSemanticV3, sha256.Sum256(raw)
 	record.Phase, record.Limits.Phases = 8, 2
 	record.Control.OwnerControl = true
@@ -241,6 +242,10 @@ func TestT422LifecycleInheritedMechanics(t *testing.T) {
 			}
 			if err := command.Wait(); err != nil {
 				t.Fatal("child did not join", err, diagnostic.String())
+			}
+			binding := fmt.Sprintf("LCB1:5:sha256:%x\n", record.InputSHA256)
+			if strings.Count(diagnostic.String(), binding) != 1 {
+				t.Fatal("actual lifecycle constructor did not emit its unique epoch-four input binding", diagnostic.String())
 			}
 			serveClean = true
 			snapshot, err := controller.Snapshot()

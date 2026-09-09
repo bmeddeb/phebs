@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 )
 
 func TestExecutionAttemptObservedTransitions(t *testing.T) {
@@ -16,7 +18,7 @@ func TestExecutionAttemptObservedTransitions(t *testing.T) {
 	}
 }
 func attemptTestBindings() string {
-	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\nOPB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
+	return "ATB1:2:sha256:01" + strings.Repeat("00", 31) + "\nSRB1:2:sha256:01" + strings.Repeat("00", 31) + "\nOPB1:2:sha256:01" + strings.Repeat("00", 31) + "\nLCB1:2:sha256:01" + strings.Repeat("00", 31) + "\n"
 }
 func TestExecutionAttemptFailedPrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
@@ -58,7 +60,7 @@ func TestExecutionAttemptFailedPrefix(t *testing.T) {
 }
 func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 	plan := accountingTestPlan(t)
-	expected := []uint64{32864728, 600316, 19938919, 1583166, 8950198}
+	expected := []uint64{32864807, 600395, 19938998, 10012813, 13165061}
 	for producer := uint32(2); producer <= 6; producer++ {
 		var starts, source, index, observation uint64
 		for _, phase := range executionProducerPhases(producer) {
@@ -73,7 +75,17 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 				}
 			}
 		}
-		total := source + index + observation + 10*starts + 4*79
+		total := source + index + observation + 10*starts + 5*79
+		// There are exactly two native drives in epoch four and one in
+		// epoch five; each emits at most 4096 bounded JSON returned ticks.
+		drives := uint64(0)
+		switch producer {
+		case 5:
+			drives = 2
+		case 6:
+			drives = 1
+		}
+		total += drives * uint64(lifecycle.MaxCycleObservationTurns) * (maxExecutionLifecycleEvent + 5)
 		if producer == 4 {
 			total += 81 // One terminal phase-eight footer, no extra PC pair.
 		}
@@ -83,7 +95,7 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 		t.Logf("producer=%d starts=%d combined=%d remaining=%d", producer, starts, total, (64<<20)-total)
 	}
 	// At most one retry per emitted start in the same held owner turn. This
-	// proves only source/index/attempt/parse fit; candidate/ordinary/future logs remain.
+	// proves only source/index/attempt/parse/lifecycle fit; candidate/ordinary/future logs remain.
 }
 func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)

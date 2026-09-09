@@ -44,6 +44,7 @@ type executionPressureVolume struct {
 	unsettled bool
 	borrowed  bool
 	flow      *ExecutionEpochOne
+	ballast   *executionPressureBallast
 }
 
 // prepareExecutionPressureVolume owns a fresh sparse image, never a supplied
@@ -253,7 +254,7 @@ func (v *executionPressureVolume) remove(ctx context.Context, emptyOnly bool) er
 	if v.removed {
 		return nil
 	}
-	if !v.ready || v.borrowed || v.check() != nil || emptyOnly && !pressureDirectoryEmpty(v.workspace.path) ||
+	if !v.ready || v.borrowed || v.ballast != nil && !v.ballast.removed || v.check() != nil || emptyOnly && !pressureDirectoryEmpty(v.workspace.path) ||
 		!pressureDirectoryEmpty(filepath.Join(v.root.path, "home")) || !pressureDirectoryEmpty(filepath.Join(v.root.path, "tmp")) {
 		return errPressureVolume
 	}
