@@ -8,6 +8,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -67,6 +68,15 @@ func prepareExecutionPressureVolume(ctx context.Context, parent string) (_ *exec
 			retErr = errPressureVolume
 		}
 	}()
+	// Check the actual backing descriptor before creating even the operation
+	// lock. A sparse image's available capacity may be capped by its backing
+	// filesystem. This is the existing pre-run floor, not a repeated runtime
+	// requirement after this run has allocated its own image contents.
+	var backing unix.Statfs_t
+	if unix.Fstatfs(int(v.parent.file.Fd()), &backing) != nil ||
+		!pressureBackingCapacity(backing, v.parent.volume) || ctx.Err() != nil {
+		return v, errPressureVolume
+	}
 	v.lock, err = t4013.LockRunRoot(parent)
 	if err != nil {
 		return v, errPressureVolume
@@ -146,6 +156,12 @@ func prepareExecutionPressureVolume(ctx context.Context, parent string) (_ *exec
 	}
 	v.ready = true
 	return v, nil
+}
+
+func pressureBackingCapacity(stat unix.Statfs_t, volume [2]int32) bool {
+	return volume != ([2]int32{}) && stat.Fsid.Val == volume && stat.Bsize != 0 && stat.Blocks != 0 &&
+		stat.Bavail <= stat.Blocks && stat.Blocks <= math.MaxUint64/uint64(stat.Bsize) &&
+		stat.Bavail*uint64(stat.Bsize) >= frozenSafetyEnvelope().MinimumAvailableDiskBytes
 }
 
 // command has a finite local recipe: create, attach, detach, with at most one

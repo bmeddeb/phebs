@@ -6309,8 +6309,45 @@ The final fixture-corrected Go diff SHA-256 is
 `b8acce1953c5f24335221fdd09ff5550e59efce66788fc99a9ad504f2153ec19`;
 pinned `ci-static` passed again on those exact staged Go bytes (zero lint
 issues, all packages compile), with docs/glossary passing in 0.429s.
-The tiny ballast native fixture is still queued behind the running mounted
-checkpoint rehearsal; no allocation/removal native pass is claimed here.
+The tiny ballast native fixture subsequently ran once at exact clean source
+`acb809de` after the mounted checkpoint stopped. It failed its first allocation
+in 1.28s (1.866s package time): requested and inode-allocated bytes were
+524,288, while observed capacity-used bytes increased by 552,960. The 28,672
+byte residual exceeds the unchanged 4,096-byte tolerance. No later allocation,
+removal or detach gate passed; its exact volume/image remains retained and no
+retry or tolerance adjustment was made. Post-stop `df` reports only 532 KiB
+used on that new volume, but available space is close to the backing host's
+available space and below the virtual 96 GiB total. The component computes
+used as total minus available; backing-availability coupling and fixture
+preconditions require diagnosis before attributing the residual to metadata
+or requesting a prospective policy correction.
+Read-only follow-up observed the tiny mount's available space tracking host
+availability with the same 564-KiB gap across two samples, while in-volume used
+space stayed 532 KiB. The actual production pressure probe also uses Bavail;
+substituting a volume-used field only in the ballast test is not an equivalent
+fix. The shared preparation entry now checks the existing frozen 120-GiB
+backing-space minimum before mutation. This is a missing preflight correction,
+not proof that restoring headroom will make the 4,096-byte delta gate pass.
+
+The SDK diagnostic correction retains closed finish/returned-error labels in
+the existing first-refusal record. The pinned typed-decode fixture returns a
+plain error, truthfully classified as `returned_non_native_error/other`, not
+an inferred CBOR class. Diagnostic type inspection handles the SDK's typed-nil
+unwrap behavior without replacing the original refusal. Healthy settlement,
+actual native QueryErrors, cancellation and generic first-failure records keep
+their original behavior; no raw reply/error/SQL data is added. Final independent
+review of both corrections and their records reports critical/high/medium/low
+zero. SDK full-package normal/race passed in 1.644s/2.825s; pressure selectors
+passed normal in 0.637s and three race repetitions in 1.862s. Independent focused
+SDK and preflight race checks passed in 1.357s and 1.681s. Pinned combined
+`ci-static` passed vet, zero lint issues and all-package compilation, with
+docs/glossary passing in 0.448s. The exact staged Go diff SHA-256 is
+`6f8b80e11eabbac15b3f45d727778d4f1dbd472aeb51e4c6caa7f51382d84f86`.
+These scoped corrections establish neither a native rerun nor a full pipeline
+pass. Rehearsal headroom remains below the existing minimum; retirement of the
+older 72dedf6f replay custody (about 58 GiB), after verified diagnostic archival,
+has been submitted to Ben explicitly because full replay would be lost. The
+latest mounted and tiny-ballast failures remain excluded from that request.
 
 The byte-gauge audit keeps native filesystem used/available distinct from
 linked-inode allocation. Neither an endpoint statfs result nor a sequential

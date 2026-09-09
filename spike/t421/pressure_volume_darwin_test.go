@@ -5,6 +5,7 @@ package t421
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -115,6 +116,72 @@ func TestExecutionPressureVolumeRefusesBeforeCreation(t *testing.T) {
 		if v != nil || !errors.Is(err, errPressureVolume) {
 			t.Fatalf("invalid input acquired custody: %v/%v", v, err)
 		}
+	}
+}
+
+func TestExecutionPressureBackingCapacity(t *testing.T) {
+	minimum := frozenSafetyEnvelope().MinimumAvailableDiskBytes
+	if minimum != 120<<30 {
+		t.Fatal("frozen backing floor changed", minimum)
+	}
+	volume := [2]int32{1, 2}
+	base := unix.Statfs_t{Bsize: 4096, Blocks: (512 << 30) / 4096, Bavail: minimum / 4096, Fsid: unix.Fsid{Val: volume}}
+	for _, test := range []struct {
+		name string
+		edit func(*unix.Statfs_t)
+		ok   bool
+	}{
+		{"equality", func(*unix.Statfs_t) {}, true},
+		{"above", func(s *unix.Statfs_t) { s.Bavail++ }, true},
+		{"below", func(s *unix.Statfs_t) { s.Bavail-- }, false},
+		{"zero_available", func(s *unix.Statfs_t) { s.Bavail = 0 }, false},
+		{"zero_block", func(s *unix.Statfs_t) { s.Bsize = 0 }, false},
+		{"zero_total", func(s *unix.Statfs_t) { s.Blocks = 0 }, false},
+		{"available_above_total", func(s *unix.Statfs_t) { s.Bavail = s.Blocks + 1 }, false},
+		{"total_overflow", func(s *unix.Statfs_t) { s.Blocks = math.MaxUint64 }, false},
+		{"available_overflow", func(s *unix.Statfs_t) { s.Blocks, s.Bavail = math.MaxUint64, math.MaxUint64 }, false},
+		{"wrong_volume", func(s *unix.Statfs_t) { s.Fsid.Val = [2]int32{3, 4} }, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stat := base
+			test.edit(&stat)
+			if got := pressureBackingCapacity(stat, volume); got != test.ok {
+				t.Fatal("backing capacity admitted", got)
+			}
+		})
+	}
+	if pressureBackingCapacity(unix.Statfs_t{}, [2]int32{}) {
+		t.Fatal("unbound backing admitted")
+	}
+}
+
+// Source-order regression: the below-floor branch must return before any
+// lock file, tool session or image/mount creation. No native mount is needed
+// to test refusal placement, including on a host with plenty of free space.
+func TestExecutionPressureBackingPrecedesMutation(t *testing.T) {
+	raw, err := os.ReadFile("pressure_volume_darwin.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	start := strings.Index(text, "func prepareExecutionPressureVolume(")
+	if start < 0 {
+		t.Fatal("preparation function unavailable")
+	}
+	end := strings.Index(text[start:], "func pressureBackingCapacity(")
+	if end < 0 {
+		t.Fatal("preparation function unavailable")
+	}
+	text = text[start : start+end]
+	previous := -1
+	for _, needle := range []string{"v.parent, err = openProductionRoot(parent)", "unix.Fstatfs(int(v.parent.file.Fd()), &backing)",
+		"!pressureBackingCapacity(backing, v.parent.volume)", "return v, errPressureVolume", "v.lock, err = t4013.LockRunRoot(parent)",
+		"v.tool, err = HoldExecutionSystemTool", "directory, err := os.MkdirTemp", "v.command(ctx, \"create\"", "v.command(ctx, \"attach\""} {
+		index := strings.Index(text[previous+1:], needle)
+		if index < 0 {
+			t.Fatal("backing refusal must precede mutation", needle)
+		}
+		previous += index + 1
 	}
 }
 

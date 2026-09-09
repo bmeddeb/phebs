@@ -87,9 +87,13 @@ type SDKPrivateRefusal struct {
 	Reason             string
 	ContextStatus      string
 	OwnerContextStatus string
-	Method             string
-	SQLPrefix          string
-	Callers            [6]uintptr
+	// FinishClass and ReturnedClass are closed, failure-only labels. Empty
+	// means the first refusal was not the finish native-reply guard.
+	FinishClass   string
+	ReturnedClass string
+	Method        string
+	SQLPrefix     string
+	Callers       [6]uintptr
 }
 
 func (owner *SDKOwner) PrivateRefusal() (SDKPrivateRefusal, bool) {
@@ -124,10 +128,10 @@ func (owner *SDKOwner) failRecipe(ctx context.Context, sql string) error {
 
 func (owner *SDKOwner) failDescriptor(ctx context.Context, method, sql string) error {
 	// Skip Callers, the common capture, this helper and failCall/failRecipe.
-	return owner.failWithDiagnostic(ctx, ErrDescriptor, method, sql, 4)
+	return owner.failWithDiagnostic(ctx, ErrDescriptor, method, sql, 4, "", "")
 }
 
-func (owner *SDKOwner) failWithDiagnostic(ctx context.Context, reason error, method, sql string, skip int) error {
+func (owner *SDKOwner) failWithDiagnostic(ctx context.Context, reason error, method, sql string, skip int, finishClass, returnedClass string) error {
 	owner.mu.Lock()
 	first := owner.err == nil
 	var diagnostic SDKPrivateRefusal
@@ -136,6 +140,8 @@ func (owner *SDKOwner) failWithDiagnostic(ctx context.Context, reason error, met
 		diagnostic.Reason = [...]string{"descriptor", "protocol", "limit", "transport", "canceled", "incomplete"}[failureKind(reason)-1]
 		diagnostic.ContextStatus = sdkPrivateContextStatus(ctx)
 		diagnostic.OwnerContextStatus = sdkPrivateContextStatus(owner.client.Context())
+		diagnostic.FinishClass = finishClass
+		diagnostic.ReturnedClass = returnedClass
 		diagnostic.Method = strings.Clone(method[:min(len(method), 32)])
 		if method == "query" {
 			diagnostic.SQLPrefix = strings.Clone(sql[:min(len(sql), 120)])
@@ -162,8 +168,8 @@ func (owner *SDKOwner) failWithDiagnostic(ctx context.Context, reason error, met
 				break
 			}
 		}
-		diagnostics.Logf("private store SDK refusal: reason=%q context=%q owner_context=%q method=%q sql_prefix=%q callers=%q caller_lines=%v",
-			diagnostic.Reason, diagnostic.ContextStatus, diagnostic.OwnerContextStatus, diagnostic.Method, diagnostic.SQLPrefix, sites, lines)
+		diagnostics.Logf("private store SDK refusal: reason=%q context=%q owner_context=%q finish_class=%q returned_class=%q method=%q sql_prefix=%q callers=%q caller_lines=%v",
+			diagnostic.Reason, diagnostic.ContextStatus, diagnostic.OwnerContextStatus, diagnostic.FinishClass, diagnostic.ReturnedClass, diagnostic.Method, diagnostic.SQLPrefix, sites, lines)
 	}
 	return err
 }
@@ -203,7 +209,38 @@ func NewSDKOwner(client *Client) (*SDKOwner, error) {
 func (owner *SDKOwner) fail(ctx context.Context, reason error) error {
 	// Generic failures retain no method, SQL, arguments or arbitrary error text.
 	// Skip Callers, the common capture and this entry point.
-	return owner.failWithDiagnostic(ctx, reason, "", "", 3)
+	return owner.failWithDiagnostic(ctx, reason, "", "", 3, "", "")
+}
+
+// This is deliberately not an error-text/type reporter. Unknown native or
+// decoding errors retain only "other"; even a CBOR type error may contain data.
+func sdkPrivateReturnedClass(err error) (class string) {
+	// Error implementations are outside this observer's control. Diagnostic
+	// classification must never replace the original fail-closed outcome.
+	defer func() {
+		if recover() != nil {
+			class = "other"
+		}
+	}()
+	var rpc *connection.ServerError
+	var query *surrealdb.QueryError
+	var decode *cbor.UnmarshalTypeError
+	switch {
+	case err == nil:
+		return "nil"
+	case errors.As(err, &rpc):
+		return "rpc"
+	case errors.As(err, &query):
+		return "query"
+	case errors.As(err, &decode):
+		return "cbor_type"
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "deadline_exceeded"
+	default:
+		return "other"
+	}
 }
 
 func (owner *SDKOwner) acquire(ctx context.Context, kind Kind, tx *surrealdb.Transaction) (*storeSDKCall, error) {
@@ -301,7 +338,15 @@ func (call *storeSDKCall) finish(ctx context.Context, returned error, tx *surrea
 	}
 	if !replied || !storeNativeReplyError(returned) ||
 		(call.kind == Begin || call.kind == Commit || call.kind == Cancel) && returned != nil {
-		return owner.fail(ctx, ErrTransport)
+		finishClass := "terminal_native_error"
+		if !replied {
+			finishClass = "no_native_reply"
+		} else if !storeNativeReplyError(returned) {
+			finishClass = "returned_non_native_error"
+		}
+		// Capture inside the existing first-failure lock before Fail can
+		// cancel siblings. No record is enriched after its first publication.
+		return owner.failWithDiagnostic(ctx, ErrTransport, "", "", 2, finishClass, sdkPrivateReturnedClass(returned))
 	}
 	if call.kind == Begin {
 		if tx == nil || tx.ID() == nil || tx.ID().IsNil() || tx.IsClosed() {
