@@ -6673,6 +6673,17 @@ bytes are unchanged. Three new full authenticated
 receipt cases are authored but not yet executed; the ongoing detached race
 at d36d023b predates this correction and cannot establish its full gate.
 
+The subsequent expanded normal receipt selector
+`^Test(Accounting|Receipt|DecodeReceipt|WorkFailure|FailureComposition)` passed
+at exact clean `cd3e0b2a3a86fce5cc9d355d753e3792ee4ae997` in 876.652s,
+command status zero. The full V3 fixture passed in 819.13s, V1 canonical
+round-trip in 29.14s, and full work-failure cases in 0.77s, including all three
+new logical-failure scenarios. The owned process group and listeners were
+verified empty. Retained log SHA-256 is
+`32909b2820929fa46ee09591abfc108cfdf8e9e33d5c66fd05510b0d03a0e2fe`.
+This closes the new scenarios' complete normal validation, not their remaining
+full corrected-source race gate, native receipt issuance or ceremony readiness.
+
 The teardown hypothesis above did not survive the runtime reachability trace:
 server cache producers two through six end by phases four/five/eight/eleven/
 fourteen, and the parser rejects events outside those lifetimes. Root producer
@@ -6831,6 +6842,66 @@ without an extra body buffer or native read. Existing output/inspection retentio
 is reused. No PC pair, lifecycle turn, worker, child, descriptor, admission bound
 or ordinary-runtime operation is added. The whole pressure operation, coherent
 whole-custody gauge, native ballast proof and complete receipt remain open.
+
+**Actual catalog-census observations (2026-09-09).** The common catalog
+census seam now observes actual started ls-tree children and the existing
+regular-record FileCount, retaining work completed before a later source
+authority failure. A fresh command's Process proves start even if the existing
+pipe helper then fails closing an end and joins the child. A refused child
+observation cancels and joins a successfully started child before returning;
+ordinary failed census still returns zero authority. Exact-current V3 reuse
+emits no invocation events. No source-byte or final-authority inference is used.
+
+The selected protocol binds the producer/input once, opens an invocation,
+observes its actual child if any, then closes it with positive records, an empty
+child, or no child. Fixed live-child coverage prevents a later no-start
+invocation borrowing a historical child's slot, without invocation IDs or
+serializing concurrent census calls. Positive over-bound work survives refusal;
+malformed, overflowing or incomplete output never becomes measured zero. The
+joined output collector and failed-receipt availability inventory require the
+new census_children/census_records pair; retained V1/V2 behavior stays exact.
+
+The ordered eighteen-file manifest is
+`335131b6cd530bbc19ed040084f1668ddd0f39f1eec02c26e1d3519ce3363f8c`.
+Author focused normal tests passed readaccounting, dispatchadmission,
+servicecatalogingest, cmd/phebs and spike/t421 in
+0.374s/0.277s/1.572s/1.352s/1.203s; race passed in
+1.244s/1.283s/2.175s/3.099s/3.342s. Scoped pinned lint and whitespace passed.
+Independent source/test/lifecycle/cost review found critical/high/medium/low
+all zero; its focused five-package race passed in
+1.354s/1.444s/2.199s/2.350s/2.020s. Lead integration preserves that exact manifest.
+Real tiny Git tests cover regular records, symlink exclusion, success, source
+failure, cancellation and missing start. A real V3 reconcile with a memory
+store proves exact-current reuse after removing the mirror. A test-only sleeping
+child proves refused-observer cancellation/join; inherited selected-lifetime
+tests supply events. These are not native full-store census or rehearsal
+results. The rare post-start pipe-close failure is source-traced, not injected.
+
+Ordinary invocation adds one selection/context lookup plus nil child/finish
+guards; the regular-record loop gains no hook, map, scan or counter. Selected
+startup adds one Stat, a 79-byte binding and an observer context. Positive
+invocations emit at most three writes/44 bytes, empty children 27 bytes and
+no-child invocations 18 bytes. Existing semantic snapshot locks are released
+before each serialized output write; the existing V3 mutation lease/controller
+lock spans the synchronous reports, and the child report can extend pipe
+backpressure. No hard write deadline is added. The parent adds fixed arrays
+containing 75 uint64 counters (600 raw bytes plus flags/alignment), reusing the
+joined bounded scan. There is no added corpus/hash scan, child, descriptor,
+invocation map or concurrent-invocation cap. Query and non-census sync/no-op
+paths are unchanged; each actual retry/rebuild repeats only its own observation.
+Whole-output fit, live whole-work limits, PhysicalCorpusPasses, complete native
+receipt issuance and ceremony readiness remain open. Lead integrated normal
+tests passed the same five packages in 0.401s/0.272s/1.302s/1.341s/1.201s;
+race passed in 1.398s/1.324s/3.089s/3.727s/2.858s. The selector is
+`^(TestCatalogCensus|TestExecutionCatalogCensus|TestT422CatalogCensus|TestWorkFailureUnavailableGroups|TestExecutionAttempt|TestExecutionLifecycle|TestExecutionSourceCensus|TestT422Attempt)`
+with count one and a four-minute package timeout. Pinned ci-static passed vet,
+zero lint findings and all-package compilation; docs passed in 0.578s, glossary
+and whitespace passed. The exact manifest and integration/cost records received
+independent review with all severity counts zero. Retained plan.json and
+plan-v2.json SHA-256 values remain
+`96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34` and
+`2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+The batched corrected-source receipt race remains required before integration.
 
 The remaining native implementation is explicitly broader than rerunning gates:
 

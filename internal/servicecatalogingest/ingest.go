@@ -363,7 +363,7 @@ func (r *Reconciler) censusValidated(
 	catalog servicecatalog.Catalog,
 	fillLegacyUnowned bool,
 	validate func(servicecatalog.Catalog) error,
-) (censusResult, error) {
+) (returned censusResult, returnErr error) {
 	if err := validate(catalog); err != nil {
 		return censusResult{}, fmt.Errorf("validate catalog before census: %w", err)
 	}
@@ -372,6 +372,19 @@ func (r *Reconciler) censusValidated(
 		return censusResult{}, err
 	}
 	placements := newPlacements(catalog)
+	observation, err := beginCatalogCensus(ctx)
+	if err != nil {
+		return censusResult{}, err
+	}
+	result := censusResult{LegacyUnowned: []servicecatalog.UnownedPlacement{}}
+	defer func() {
+		// FileCount advances after regular/path validation, immediately before
+		// infallible hashing and classification. Preserve it even when the
+		// ordinary error return deliberately discards the census authority.
+		if err := observation.finish(ctx, result.FileCount); err != nil {
+			returned, returnErr = censusResult{}, errors.Join(returnErr, err)
+		}
+	}()
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	cmd := gitobj.Command(childCtx, dir, "ls-tree", "-rz", "--full-tree", commit)
@@ -383,10 +396,20 @@ func (r *Reconciler) censusValidated(
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
 	handle, err := dispatchadmission.StartPipedProduction(childCtx, dispatchadmission.SiteServiceCatalogCensus, cmd, &pipes)
+	// A fresh command can start and then fail closing its inherited pipe.
+	// The native Process, not a successful helper return, proves this unit.
+	if cmd.Process != nil {
+		if observedErr := observation.child(ctx); observedErr != nil {
+			if err == nil {
+				cancel()
+				observedErr = errors.Join(observedErr, handle.Wait())
+			}
+			return censusResult{}, errors.Join(err, observedErr)
+		}
+	}
 	if err != nil {
 		return censusResult{}, fmt.Errorf("start source census: %w", err)
 	}
-	result := censusResult{LegacyUnowned: []servicecatalog.UnownedPlacement{}}
 	baseDistinctPaths := placements.distinctCount()
 	hash := sha256.New()
 	_, _ = hash.Write([]byte("phebs-service-source-census-v1\x00"))

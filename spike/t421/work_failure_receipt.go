@@ -17,6 +17,7 @@ var workUnavailableMetricGroups = [][]string{
 	{"index_files"},
 	{"control_reads", "member_reads"},
 	{"source_logical_bytes", "source_unique_bytes"},
+	{"census_children", "census_records"},
 }
 
 func workUnavailableMetric(name string) bool {

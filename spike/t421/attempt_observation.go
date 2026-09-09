@@ -28,6 +28,7 @@ type ExecutionAttemptCount struct {
 	RelationshipBuildAttempts, RelationshipProjections uint64
 	ServiceReferences                                  uint64
 	SourceLogicalBytes, SourceUniqueBytes              uint64
+	CensusChildren, CensusRecords                      uint64
 }
 
 // Complete refers only to this post-join report subset. It proves no live
@@ -37,6 +38,7 @@ type ExecutionAttemptObservation struct {
 	Lifecycle         ExecutionLifecycleObservation
 	Cache             ExecutionCacheObservation
 	SourceCensus      ExecutionSourceCensusObservation
+	CatalogCensus     ExecutionCatalogCensusObservation
 	Complete          bool
 	SourceBound       bool
 	AttemptBound      bool
@@ -80,8 +82,10 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			out.Lifecycle.Complete = out.Lifecycle.Bound
 			out.Cache.Complete = out.Cache.complete()
 			out.SourceCensus.Complete = out.SourceCensus.complete()
-			if out.Cache.Bound && !out.Cache.Complete || !out.SourceCensus.Complete {
+			out.CatalogCensus.Complete = out.CatalogCensus.complete()
+			if out.Cache.Bound && !out.Cache.Complete || !out.SourceCensus.Complete || !out.CatalogCensus.Complete {
 				out.Complete, out.Lifecycle.Complete, out.SourceCensus.Complete = false, false, false
+				out.CatalogCensus.Complete = false
 				return out, errExecutionAttempts
 			}
 			return out, nil
@@ -90,6 +94,12 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			continue
 		}
 		if observed, err := observeCensusEvent(line, plan, producer, wantInput, &out); observed {
+			if err != nil || readErr != nil {
+				return out, errExecutionAttempts
+			}
+			continue
+		}
+		if observed, err := observeCatalogCensusEvent(line, plan, producer, wantInput, &out); observed {
 			if err != nil || readErr != nil {
 				return out, errExecutionAttempts
 			}
@@ -140,7 +150,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed])) {
+		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed]) || reservedCatalogCensusEvent(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -174,11 +184,12 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	} else if footer {
 		footerErr = errExecutionAttempts // No footer is valid in an ordinary close.
 	}
-	if err != nil || !result.Attempts.Lifecycle.Complete || !result.Attempts.Cache.Complete || !result.Attempts.SourceCensus.Complete || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
+	if err != nil || !result.Attempts.Lifecycle.Complete || !result.Attempts.Cache.Complete || !result.Attempts.SourceCensus.Complete || !result.Attempts.CatalogCensus.Complete || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
 		result.Attempts.Complete = false
 		result.Attempts.Lifecycle.Complete = false
 		result.Attempts.Cache.Complete = false
 		result.Attempts.SourceCensus.Complete = false
+		result.Attempts.CatalogCensus.Complete = false
 		result.IndexOffers.Complete = false
 		return ErrExecutionEpochOne
 	}
@@ -216,7 +227,7 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 		}
 		index := reservedTerminalIndex(line)
 		if seen && (reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
-			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line) || reservedResolverEvent(line) || reservedRelationshipEvent(line) || reservedCensusEvent(line)) ||
+			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line) || reservedResolverEvent(line) || reservedRelationshipEvent(line) || reservedCensusEvent(line) || reservedCatalogCensusEvent(line)) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts
 		}

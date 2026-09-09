@@ -60,7 +60,7 @@ const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
 // real phase change. Reports are supplied native-shaped test inputs, not real
 // queue work, protected tool admission, or a phase measurement result.
 func TestT422AttemptInheritedPhase(t *testing.T) {
-	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled", "resolver_events", "resolver_canceled", "resolver_zero", "relationship_events", "relationship_canceled", "reference_events", "reference_canceled", "reference_zero", "census_events", "census_zero"} {
+	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled", "resolver_events", "resolver_canceled", "resolver_zero", "relationship_events", "relationship_canceled", "reference_events", "reference_canceled", "reference_zero", "census_events", "census_zero", "catalog_events", "catalog_zero"} {
 		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
 	}
 }
@@ -215,6 +215,29 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 	}
 	if strings.Count(diagnostic.String(), "RLB1:5:sha256:") != 1 {
 		t.Fatal("actual selected relationship binding missing", diagnostic.String())
+	}
+	if strings.Count(diagnostic.String(), "GCB1:5:sha256:") != 1 {
+		t.Fatal("catalog census binding missing", diagnostic.String())
+	}
+	for _, phase := range []uint32{8, 9} {
+		want := 0
+		if strings.HasPrefix(mode, "catalog_") {
+			want = 1
+		}
+		for _, event := range []byte{'B'} {
+			if strings.Count(diagnostic.String(), fmt.Sprintf("GC1:5:%X%c\n", phase, event)) != want {
+				t.Fatal("catalog coverage missing", diagnostic.String())
+			}
+		}
+		if mode == "catalog_zero" {
+			if strings.Count(diagnostic.String(), fmt.Sprintf("GC1:5:%XN\n", phase)) != 1 {
+				t.Fatal("no-child closure missing", diagnostic.String())
+			}
+			want = 0
+		}
+		if strings.Count(diagnostic.String(), fmt.Sprintf("GC1:5:%XS\n", phase)) != want || strings.Count(diagnostic.String(), fmt.Sprintf("GC1:5:%XD:000000000000000a\n", phase)) != want {
+			t.Fatal("catalog work missing", diagnostic.String())
+		}
 	}
 	referenceEvents := 0
 	if strings.Count(diagnostic.String(), "SBB1:5:sha256:") != 1 {
@@ -427,6 +450,30 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		}
 	}
 	referenceEvents()
+	catalogEvents := func() {
+		mode := os.Getenv(t422AttemptHelperMode)
+		if !strings.HasPrefix(mode, "catalog_") {
+			return
+		}
+		// Supplied units exercise the real inherited binding and phase-owned pipe.
+		phase, err := dispatchadmission.ObserveProductionCatalogCensus(ctx, readaccounting.CatalogCensusBegin, 0, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mode == "catalog_events" {
+			if _, err := dispatchadmission.ObserveProductionCatalogCensus(ctx, readaccounting.CatalogCensusChild, phase, 0); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := dispatchadmission.ObserveProductionCatalogCensus(ctx, readaccounting.CatalogCensusRecords, phase, 10); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if mode == "catalog_zero" {
+			if _, err := dispatchadmission.ObserveProductionCatalogCensus(ctx, readaccounting.CatalogCensusNoChild, phase, 0); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	censusEvents := func() {
 		mode := os.Getenv(t422AttemptHelperMode)
 		if !strings.HasPrefix(mode, "census_") {
@@ -448,6 +495,7 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		}
 	}
 	censusEvents()
+	catalogEvents()
 	// Supplied event exercises the actual selected stream, not native parsing.
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
@@ -475,6 +523,7 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	relationshipEvents()
 	referenceEvents()
 	censusEvents()
+	catalogEvents()
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
 			t.Fatal(err)
@@ -502,6 +551,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	}
 	if _, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusBegin, 0, 0, 0); err == nil {
 		t.Fatal("closed producer emitted guessed census phase")
+	}
+	if _, err := dispatchadmission.ObserveProductionCatalogCensus(ctx, readaccounting.CatalogCensusBegin, 0, 0); err == nil {
+		t.Fatal("closed producer emitted guessed catalog census phase")
 	}
 	if dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild, 1) == nil {
 		t.Fatal("closed producer emitted guessed relationship phase")
