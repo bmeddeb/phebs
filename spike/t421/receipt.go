@@ -1851,6 +1851,19 @@ func validateReceiptMeasurements(
 		_, rssBytes := receiptRSSMetric(value.Metrics, plan.Schema)
 		allocationUnavailable := unavailable("data_allocated_bytes") || teardownUnavailable("data_allocated_bytes")
 		logicalUnavailable := unavailable("data_logical_bytes") || teardownUnavailable("data_logical_bytes")
+		logicalCrossingValid := false
+		if value.Metrics.DataLogicalBytes > Bytes(plan.WorkEnvelope.MaximumDataLogicalBytes) && observation != nil {
+			logicalCrossingValid = stopped.Code == "data_logical_ceiling" &&
+				gaugeObservationMatches(*observation, "data_logical_bytes", plan.WorkEnvelope.MaximumDataLogicalBytes, uint64(value.Metrics.DataLogicalBytes))
+			if plan.Schema == PlanV3Schema && outcomes[phase] == "stopped" {
+				// The complete decision validator owns topology/work/resource
+				// precedence. A second measured gauge cannot replace that primary
+				// or force a logical-only attribution; work evidence is separately
+				// matched by validateStoppedFailureEvidence below.
+				_, _, decisionErr := expectedStoppedDecision(*stopped, values, plan)
+				logicalCrossingValid = decisionErr == nil
+			}
+		}
 		if (value.Metrics.WallMS == 0) != wallUnavailable ||
 			(value.Metrics.AvailableDiskBytes == 0) != availableUnavailable ||
 			totalDiskUnavailable && value.Metrics.TotalDiskBytes != 0 ||
@@ -1863,8 +1876,7 @@ func validateReceiptMeasurements(
 			value.Metrics.DataAllocatedBytes != 0 && allocationUnavailable ||
 			value.Metrics.DataLogicalBytes != 0 && logicalUnavailable ||
 			value.Metrics.DataLogicalBytes > Bytes(plan.WorkEnvelope.MaximumDataLogicalBytes) &&
-				(observation == nil || stopped.Code != "data_logical_ceiling" ||
-					!gaugeObservationMatches(*observation, "data_logical_bytes", plan.WorkEnvelope.MaximumDataLogicalBytes, uint64(value.Metrics.DataLogicalBytes))) {
+				!logicalCrossingValid {
 			return fmt.Errorf("T42.2 phase %q measurement is unavailable or invalid", phase)
 		}
 		coldIndex := slices.Index(plan.PhaseOrder, "cold")

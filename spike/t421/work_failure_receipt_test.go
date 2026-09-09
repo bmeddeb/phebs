@@ -127,6 +127,7 @@ func TestWorkFailureFullReceiptRoundTrip(t *testing.T) {
 		"resolver_atomic_crossings", "resolver_batch_with_cache_prefix", "lateral_crossings", "reference_batch", "scoped_read_batch", "cache_atomic_crossings",
 		"lifecycle_atomic_crossings", "shared_scan_positive_prefix", "shared_scan_zero_prefix",
 		"resource_with_work", "resource_with_work_and_unavailable", "typed_internal_scan_failure",
+		"logical_with_work", "logical_with_topology", "logical_multiple_resource",
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			value := cloneTestReceipt(t, base)
@@ -134,6 +135,21 @@ func TestWorkFailureFullReceiptRoundTrip(t *testing.T) {
 			metrics := &measurement.Metrics
 			failure := workTestFailure(t, plan, phase, "resolver_blob_bytes", bounds.ResolverBlobBytes.Maximum, bounds.ResolverBlobBytes.Maximum+73, nil)
 			switch scenario {
+			case "logical_with_work", "logical_with_topology", "logical_multiple_resource":
+				metrics.DataLogicalBytes = Bytes(plan.WorkEnvelope.MaximumDataLogicalBytes + 17)
+				switch scenario {
+				case "logical_with_work":
+					metrics.ResolverBlobBytes = Bytes(bounds.ResolverBlobBytes.Maximum + 73)
+				case "logical_with_topology":
+					metrics.MaterializedOwnerPairs = 1
+					failure.Class, failure.Code = "topology", "materialized_cartesian_owner_pairs_nonzero"
+					failure.Observation.Metric, failure.Observation.Limit, failure.Observation.Observed = "materialized_cartesian_owner_pairs", 0, 1
+				case "logical_multiple_resource":
+					metrics.ObservedRSSHighWaterBytes = Bytes(plan.SafetyEnvelope.MaximumPeakRSSBytes + 100)
+					measurement.NativeObservation.ObservedRSSHighWaterBytes = uint64(metrics.ObservedRSSHighWaterBytes)
+					failure.Code, failure.Observation.Kind, failure.Observation.Metric = "multiple_resource_ceilings", "gauge_limit", "multiple_resource_ceilings"
+					failure.Observation.Limit, failure.Observation.Observed = 0, 1
+				}
 			case "resolver_atomic_crossings", "resolver_batch_with_cache_prefix", "lateral_crossings":
 				metrics.ResolverBlobReads, metrics.ResolverBlobBytes = CountMetric(bounds.ResolverBlobReads.Maximum+1), Bytes(bounds.ResolverBlobBytes.Maximum+73)
 				if scenario == "resolver_batch_with_cache_prefix" {
@@ -194,6 +210,9 @@ func TestWorkFailureFullReceiptRoundTrip(t *testing.T) {
 			failure.Observation.EvidenceSHA256 = ""
 			failure.Observation.EvidenceSHA256 = mustReceiptSHA256(t, failure.Observation)
 			stopTestReceipt(t, &value, plan, phase, failure)
+			if scenario == "logical_with_topology" {
+				value.Decision.Selected, value.Decision.RulePriority = "p6_investigation", 1
+			}
 			returned := returnedPackageTestBinding(t, value, plan, binding)
 			if err := ValidateReceipt(value, plan, binding, returned); err != nil {
 				t.Fatal(err)

@@ -6639,6 +6639,41 @@ and a missing cache-validation result during failed teardown (whose work
 validation does not receive a stopped observation). This does not prove that
 teardown is free of cache activity or that the whole receipt path is complete.
 
+**T42.2l logical-gauge failure composition (2026-09-09).** The next narrow
+correction preserves an actual over-limit logical-byte gauge beside an exact
+work, topology or multiple-resource primary. It reuses the stopped-decision
+validator; complete stopped-evidence validation still matches the primary and
+its measured quantity. Passing/clean limits, V1/V2 behavior and bytes, metric
+units, precedence and specialised DA/SA admission remain exact. The three-file
+ordered manifest is
+`8e21a6741a8b80e563fbe101c04a38b8344c74cdf3db9e6930399a45cf7d12bb`.
+Author focused normal/race passed in 0.694s/2.575s. Lead integrated focused
+normal/race passed in 0.582s/3.251s. Independent source/test/cost review found
+critical/high/medium/low all zero, with its own focused race passing in 2.492s.
+Pinned static checks passed vet, zero lint findings and all-package compilation;
+docs passed in 0.511s, glossary and whitespace passed, and retained V1/V2 plan
+bytes are unchanged. Three new full authenticated
+receipt cases are authored but not yet executed; the ongoing detached race
+at d36d023b predates this correction and cannot establish its full gate.
+
+The teardown hypothesis above did not survive the runtime reachability trace:
+server cache producers two through six end by phases four/five/eight/eleven/
+fourteen, and the parser rejects events outside those lifetimes. Root producer
+one permits teardown but runs no catalog-cache binding; lease close releases
+references rather than loading roots or members. The present stop path joins
+workers in their existing phase rather than relabeling their work as phase
+fifteen. No teardown-cache exception, signature change or zero-bound relaxation
+is implemented. A future complete teardown composition still needs review;
+this is not a general proof that teardown can perform no cache activity.
+
+Cost is one receipt-validation branch and, only for this stopped V3 crossing,
+one additional bounded pass over existing at-most-fifteen measurements/deadlines
+and the fixed counter inventory. There is no new runtime request, startup,
+sync, retry/no-op, publication, cache, lock, file/hash scan, gauge sample, child
+or persistent state. A reviewed immutable bookmark may preserve this candidate,
+but full corrected-source receipt gates remain required before integration;
+this is neither a native receipt issuer nor a rehearsal/freeze pass.
+
 The first new constructor selector was mistakenly given a ten-minute outer
 timeout despite the recorded 957.727-second fixture precedent. The lead stopped
 it gracefully before that alarm, verified its exclusive test/engine process
