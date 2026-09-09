@@ -6075,6 +6075,37 @@ Retained V1/V2 plan digests remain unchanged. These are not full-store/full-suit
 immutable native rehearsal, merge bar, author/seal or freeze evidence. No
 rehearsal was started and failed custody remains preserved.
 
+**2026-09-08 fractional stale heartbeat correction.** The exact `72dedf6f`
+rehearsal failed after 3247.80s, after cold, warm, physical B, logical B and
+return A. HIT R10 completed; RECOVERED R11 refused. Its component-local stale
+diagnostic identifies a second HIT with the observer already installed and
+no requeue; the SDK diagnostic names canceled `ClaimGenerationChunk`, not a
+heartbeat. These records do not establish globally ordered first causes.
+Retained failed custody is preserved; phase eight and freeze remain unproved.
+
+A fresh native fixture seeded a fractional heartbeat independently of the SDK
+encoder and failed on unchanged production bytes in 9.328s package time:
+`reaped=0, error=nil, points=[hit]`. The exact reaper equality fence received a
+whole-second timestamp from the pinned SDK's plain `time.Time` encoding.
+The shared helper now uses the installed `CustomDateTime` pointer to preserve
+nanoseconds, without weakening the fence or accepting duplicate observations.
+Both ordinary and observed native fixtures cover fractional requeue/reclaim;
+the ordinary fixture additionally refuses a one-nanosecond renewal and a real
+heartbeat renewal. The observed fixture retains HIT/recovered exact point-read
+counts and callback-refusal checks. The selected SDK fixture checks the actual
+encoded heartbeat and unchanged one-transaction/three-operand charge; its
+scripted response is not durable engine evidence. The initial corrected native
+pair passed in 18.176s. The full generation-accounting plus focused native
+stale selection then passed normal/race in 18.037/27.381s. Independent
+non-authoring, non-OCR review covered all six changed files and reported
+critical/high/medium/low zero; it ran no tests. The reviewed Go diff has SHA-256
+`2fc8e87cd2e4b84d1158eae4a48c5d332ef0b855d1ef42ce750aaa5b822e227c`.
+Command stale/checkpoint selection passed normal/race in 2.132/2.874s.
+Repository static checks passed: glossary verification, vet, pinned lint
+(zero issues) and compile-only packages. Documentation, gofmt and whitespace
+passed. These are scoped gates, not a full-store/full-suite, live controller
+cadence, full native rehearsal, seal or freeze pass. No rerun was started.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

@@ -2259,7 +2259,8 @@ func (s *Surreal) releaseStaleGenerationChunk(
 				strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:"),
 			),
 			"digest": chunk.ScheduleDigest, "lease": chunk.LeaseToken,
-			"worker": chunk.ClaimedBy, "heartbeat": chunk.HeartbeatAt.UTC(),
+			// Plain time.Time loses fractional seconds in the pinned SDK codec.
+			"worker": chunk.ClaimedBy, "heartbeat": &models.CustomDateTime{Time: chunk.HeartbeatAt.UTC()},
 			"cutoff": cutoff.UTC(), "error": "stale worker lease reaped",
 		}, storeWrite(3),
 	)

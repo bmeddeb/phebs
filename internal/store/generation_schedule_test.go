@@ -962,15 +962,31 @@ func TestGenerationScheduleRepositoryFairnessAndStaleLeaseRecovery(t *testing.T)
 	if err := store.HeartbeatGenerationChunk(t.Context(), *second); err != nil {
 		t.Fatal(err)
 	}
+	oldHeartbeat := time.Now().UTC().Add(-time.Hour).Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	if _, err := surrealdb.Query[any](t.Context(), store.db,
-		"UPDATE $chunk SET heartbeat_at = $old RETURN NONE", map[string]any{
-			"chunk": generationChunkRecordID(*second), "old": time.Now().UTC().Add(-time.Hour),
+		"UPDATE $chunk SET heartbeat_at = <datetime>$old RETURN NONE", map[string]any{
+			"chunk": generationChunkRecordID(*second), "old": oldHeartbeat.Format(time.RFC3339Nano),
 		}); err != nil {
 		t.Fatal(err)
 	}
 	selected, err := store.generationChunkByIdentity(t.Context(), second.Identity)
 	if err != nil || selected.HeartbeatAt == nil {
 		t.Fatalf("selected stale candidate = %+v, %v", selected, err)
+	}
+	if !selected.HeartbeatAt.Equal(oldHeartbeat) {
+		t.Fatalf("native fractional heartbeat = %v, want %v", selected.HeartbeatAt, oldHeartbeat)
+	}
+	if _, err := surrealdb.Query[any](t.Context(), store.db,
+		"UPDATE $chunk SET heartbeat_at = <datetime>$renewed RETURN NONE", map[string]any{
+			"chunk":   generationChunkRecordID(*second),
+			"renewed": oldHeartbeat.Add(time.Nanosecond).Format(time.RFC3339Nano),
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.releaseStaleGenerationChunk(
+		t.Context(), *selected, time.Now().UTC().Add(-time.Minute),
+	); !errors.Is(err, ErrGenerationLeaseLost) {
+		t.Fatalf("reaper revoked a lease renewed by one nanosecond: %v", err)
 	}
 	if err := store.HeartbeatGenerationChunk(t.Context(), *second); err != nil {
 		t.Fatal(err)
@@ -985,8 +1001,8 @@ func TestGenerationScheduleRepositoryFairnessAndStaleLeaseRecovery(t *testing.T)
 		t.Fatalf("renewed chunk after stale reaper = %+v, %v", running, err)
 	}
 	if _, err := surrealdb.Query[any](t.Context(), store.db,
-		"UPDATE $chunk SET heartbeat_at = $old RETURN NONE", map[string]any{
-			"chunk": generationChunkRecordID(*second), "old": time.Now().UTC().Add(-time.Hour),
+		"UPDATE $chunk SET heartbeat_at = <datetime>$old RETURN NONE", map[string]any{
+			"chunk": generationChunkRecordID(*second), "old": oldHeartbeat.Format(time.RFC3339Nano),
 		}); err != nil {
 		t.Fatal(err)
 	}
@@ -1033,16 +1049,22 @@ func TestGenerationStaleLeaseTransitionObservationAndPointReader(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
+	// Seed native fractional precision independently of the SDK's time.Time
+	// encoder; production claims and heartbeats use the engine's time::now().
+	oldHeartbeat := now.Add(-time.Hour).Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	if _, err := surrealdb.Query[any](t.Context(), state.db,
-		"UPDATE $chunk SET claimed_at = $claim, heartbeat_at = $old RETURN NONE", map[string]any{
+		"UPDATE $chunk SET claimed_at = $claim, heartbeat_at = <datetime>$old RETURN NONE", map[string]any{
 			"chunk": generationChunkRecordID(*claimed),
-			"claim": now.Add(-2 * time.Hour), "old": now.Add(-time.Hour),
+			"claim": now.Add(-2 * time.Hour), "old": oldHeartbeat.Format(time.RFC3339Nano),
 		}); err != nil {
 		t.Fatal(err)
 	}
 	stale, err := state.generationChunkByIdentity(t.Context(), claimed.Identity)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if stale.HeartbeatAt == nil || !stale.HeartbeatAt.Equal(oldHeartbeat) {
+		t.Fatalf("native fractional heartbeat = %v, want %v", stale.HeartbeatAt, oldHeartbeat)
 	}
 
 	observerFailure := errors.New("hit reader refused")

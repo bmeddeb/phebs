@@ -25,6 +25,11 @@ generation work. Completion can therefore wait for its remaining allowance;
 external shutdown still cancels immediately. Real lease errors and selected
 SDK cancellation/deadline refusals remain failures, not successful cleanup.
 
+Generation stale-lease reaping preserves the native heartbeat's nanosecond
+precision at its exact database fence. A heartbeat renewed after selection,
+even within the same second, prevents release. Selected duplicate-HIT refusals,
+stale cutoffs and callback deadlines remain unchanged.
+
 Selected SDK and stale-lease controls retain one component-local first-failure
 diagnostic with closed reason/context classes and bounded source locations.
 Stale transition refusals additionally name failed guard predicates. These
