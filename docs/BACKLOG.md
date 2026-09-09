@@ -5941,6 +5941,86 @@ These are scoped working-tree checks against base
 `aa6938bae90e0d8d6708be057dc35d3bf00eb68a`, not a full-store/full-repository
 test run, immutable exact-source rehearsal, merge bar, author/seal or freeze.
 
+**2026-09-08 stale-frontier diagnosis and first-failure capture.** Ben's exact
+`c5b918979d97bdeb609d64684a80b0497a902ea5` rehearsal passed cold, warm,
+physical B, logical B and return A, then stopped in stale lease after
+3,314.63s (package 3,315.342s). R10 HIT reported complete with C4/S4; R11
+RECOVERED reported `stale_observation_refused` with zero charged reads.
+The retained parent store prefix was incomplete with zero open calls.
+Those records identify the failed boundary, not the initiating SDK call or a
+global first-failure order. An already failed exact-read latch would suppress
+the next report, so a synchronous failed HIT tail alone does not explain R11.
+Admission can race an independently progressing failure; runtime prevalidation
+can also refuse before its first charged read. The failed custody is preserved.
+
+Independent temporary diagnostics passed normal/race: SDK signature tests
+0.393/1.383s; inherited HTTP/report-tail classification 0.844/2.090s; fresh
+selected-native seven-unit stale requeue/reclaim/recovered store fixture
+3.145/4.494s, including a two-second HIT hold within the unchanged five-second
+callback deadline. These separate component fixtures do not compose into a
+whole phase, reproduce its concurrent workers or identify the original cause.
+
+Ben approved first-failure instrumentation and the bounded heartbeat test,
+not another rehearsal. The implementation captures component-local first
+failure before propagation, then formats/logs only after the original failure
+delivery. Stale transition refusal records the failed locked-guard predicates as
+fixed booleans and a closed point name; other stale stops retain caller PCs,
+source lines and closed context/cause classes without claiming predicate
+coverage. SDK cancellation/transport failures now reuse its bounded private
+refusal record; generic records contain no SQL, bound values or arbitrary
+error text. Historical descriptor SQL-prefix diagnostics remain private.
+
+The new test executes the real ordinary runner and source heartbeat through
+the selected SDK/SA stack, with supplied status persistence/native replies and
+one explicit pre-submission scheduling gate. Successful handler return cancels
+that heartbeat before joining it, poisoning the shared SDK owner and yielding
+parent incomplete with zero open calls/transactions and no native submission.
+The healthy reply-before-return control closes complete with one transaction/
+one row. This establishes a production cancellation hazard under the forced
+schedule, not durable completion, native lease behavior or attribution of the
+retained rehearsal. No heartbeat coordination fix is included in this slice.
+
+AC: component-local first-only capture under concurrent failures; actual
+inherited transition refusal names the failed lease predicate without
+publishing readiness; arbitrary error/context text is absent, fields bounded;
+blocked/panicking logger cannot delay or change failure delivery; successful
+SDK work emits no diagnostic; cancellation counters and healthy closure stay
+exact. Run focused normal/race, repository static/docs/glossary and independent
+non-OCR implementation/cost review. Resolve the demonstrated heartbeat hazard
+before considering another full rehearsal; immutable source, exact gates and
+explicit native-run authorization remain required.
+
+The first broader T422 command run exposed diagnostic output after the
+checkpoint's required terminal footer. Checkpoint/recovery controls embed the
+same base but are not this phase-seven diagnostic target. Capture/logging is
+now enabled only by the actual stale constructor; those embedded controls
+retain their original stop/output behavior. No footer assertion or parser was
+relaxed. Review also identified a possible extra-heartbeat notification blocking
+test cleanup; its correction is test-only. These preliminary failures and the
+earlier provisional reviews do not count as final gate closure.
+
+The corrected command T422/exact-read selection passed normal/race in
+11.961/19.205s, including the unchanged checkpoint terminal-footer assertion
+and new inherited failed-lease diagnostic. Full store-accounting normal/race
+passed in 1.630/2.722s; the focused runner diagnostic passed normal in 2.590s
+and race three times in 11.106s after its cleanup correction. The unchanged
+generation-scheduler package passed normal in 0.289s. Parent stale/checkpoint
+and shared-ordinal selections passed normal/race in 1.137/8.957s.
+Repository static passed (vet, pinned lint with zero issues, compile-only
+checks and glossary); final test edits additionally passed changed-package
+vet/lint. Documentation, formatting and whitespace passed. Independent
+non-authoring, non-OCR source/test/cost review closed with no remaining
+findings, including re-review of the footer correction and the heartbeat
+fixture. The retained V1/V2 plan digests remain
+`96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`
+and `2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+These are scoped working-tree gates against c5b91897, not full-store/full-suite,
+native-rehearsal, immutable seal or freeze evidence. The diagnostic findings
+do not authorize changing heartbeat semantics or executing another rehearsal.
+The reviewed staged Go source/test diff has SHA-256
+`c7c3824c10d38ed410f5f70b50734974526d0d1b7faa287ec49ab3954d0194e4`;
+the final record changes documentation only.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

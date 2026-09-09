@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
@@ -58,6 +60,8 @@ type t422StaleControl struct {
 	requeueSeen                           bool
 	hit, recovered                        t422StaleBarrier
 	err                                   error
+	diagnose                              bool // Stale component only; embedded checkpoint controls preserve terminal output.
+	privateFailure                        *t422StaleFailure
 }
 
 func newT422StaleControl(ctx context.Context, launch *t422SemanticLaunch, reconciler *extractionpublication.Reconciler) (*t422StaleControl, error) {
@@ -70,7 +74,7 @@ func newT422StaleControl(ctx context.Context, launch *t422SemanticLaunch, reconc
 	}
 	lifetime, cancel := context.WithCancel(ctx)
 	control := &t422StaleControl{ctx: lifetime, cancel: cancel, launch: launch, reconciler: reconciler,
-		sink: t4013ExactReportSink("exact stale preparation: "), requeued: make(chan struct{})}
+		sink: t4013ExactReportSink("exact stale preparation: "), requeued: make(chan struct{}), diagnose: true}
 	for _, barrier := range []*t422StaleBarrier{&control.hit, &control.recovered} {
 		barrier.ready, barrier.release = make(chan struct{}), make(chan struct{})
 	}
@@ -392,9 +396,14 @@ func (control *t422StaleControl) transition(ctx context.Context, event store.Gen
 		barrier.observer, barrier.transition = ctx, event
 		close(barrier.ready)
 	}
+	var checks t422StaleFailedChecks
+	if !valid {
+		// Inspect the same locked state as the refusal, without formatting or I/O.
+		checks = control.transitionFailedChecks(event)
+	}
 	control.mu.Unlock()
 	if !valid {
-		return control.stop(errT422StaleControl)
+		return control.stop(errT422StaleControl, checks)
 	}
 	if barrier == nil {
 		return nil
@@ -482,17 +491,43 @@ func (control *t422StaleControl) finishReport(barrier *t422StaleBarrier) error {
 	return nil
 }
 
-func (control *t422StaleControl) stop(cause error) error {
+func (control *t422StaleControl) stop(cause error, checks ...t422StaleFailedChecks) error {
 	control.mu.Lock()
 	first := control.err == nil
+	var diagnostic t422StaleFailure
 	if first {
 		control.err = errors.Join(errT422StaleControl, cause)
+	}
+	if first && control.diagnose {
+		diagnostic.Cause = t422StaleCause(cause)
+		diagnostic.Context = t422StaleCause(control.ctx.Err())
+		if len(checks) != 0 {
+			diagnostic.Checks = checks[0]
+		}
+		runtime.Callers(2, diagnostic.Callers[:])
+		control.privateFailure = &diagnostic
 	}
 	err := control.err
 	control.mu.Unlock()
 	control.cancel()
 	if first {
 		control.launch.fail(err)
+	}
+	if first && control.diagnose {
+		// Failure propagation precedes advisory output. A blocked destination
+		// can delay this returning goroutine, never the failure latch/cancel.
+		var sites [3]string
+		var lines [3]int
+		frames := runtime.CallersFrames(diagnostic.Callers[:])
+		for index := range sites {
+			frame, more := frames.Next()
+			sites[index] = frame.Function[:min(len(frame.Function), 192)]
+			lines[index] = frame.Line
+			if !more {
+				break
+			}
+		}
+		diagnostics.Logf("private selected stale first failure: cause=%q context=%q checks=%+v callers=%q lines=%v", diagnostic.Cause, diagnostic.Context, diagnostic.Checks, sites, lines)
 	}
 	return err
 }

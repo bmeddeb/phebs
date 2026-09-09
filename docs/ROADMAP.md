@@ -64,6 +64,15 @@ sequence.
 
 ## Now
 
+**T42.2 update, 2026-09-08:** the c5b91897 rehearsal passed through return A
+and stopped at stale RECOVERED R11 after a complete HIT. First-failure
+instrumentation is approved, with no limit or coordination-policy change.
+A focused real-runner/selected-SDK diagnostic establishes a successful-handler
+heartbeat-cancellation hazard under a supplied scheduling gate, not the
+original rehearsal's cause. Its correction, reviewed diagnostic gates and a
+fresh immutable candidate precede any decision on another native run.
+Checkpoint restart, complete whole-work evidence, seal and freeze remain open.
+
 T31.1 completed on 2026-08-04. Bounded, source-free, component-specific
 pipeline receipts now cover generic durable jobs, candidate planning,
 extraction scheduling/outcomes, and fixed extractor counters while remaining

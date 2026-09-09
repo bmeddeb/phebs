@@ -18,6 +18,19 @@ read can fail the shared store producer, including when a search client
 disconnects. It prevents successful launch closure rather than remaining an
 isolated HTTP failure. Ordinary serving without that selected owner is unchanged.
 
+Selected SDK and stale-lease controls retain one component-local first-failure
+diagnostic with closed reason/context classes and bounded source locations.
+Stale transition refusals additionally name failed guard predicates. These
+stale-control diagnostics exclude the checkpoint/recovery controls that reuse
+its implementation, preserving their terminal-output boundary. These
+private records are not globally ordered causes or public evidence: a stale
+stop can be downstream of an SDK failure. Generic failures omit SQL, raw error
+text and arguments; the existing descriptor-refusal SQL prefix can contain
+sensitive inline literals and must remain private. Failure propagation precedes
+logging. A blocked logger can still delay the returning failure goroutine, and
+a failed log destination does not guarantee retention. Keep it draining and
+preserve both parent and server logs when diagnosing a selected run.
+
 
 ### Data layout
 

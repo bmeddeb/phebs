@@ -60,7 +60,7 @@ func t422StaleBootstrapRecord(t *testing.T) (dispatchadmission.ProductionBootstr
 // transition events are deliberately supplied protocol fixtures. This test
 // neither executes PrepareCurrentRecovery/native R nor proves actual reaping.
 func TestT422StaleInheritedWorkerOrdering(t *testing.T) {
-	for _, mode := range []string{"complete", "report-failure", "observer-cancel", "reclaimed-before-callback", "reclaimed-cancel-before-callback", "reclaimed-callback-observer-cancel"} {
+	for _, mode := range []string{"complete", "report-failure", "observer-cancel", "reclaimed-before-callback", "reclaimed-cancel-before-callback", "reclaimed-callback-observer-cancel", "diagnostic-recovered-lease"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 			defer cancel()
@@ -356,23 +356,41 @@ func TestT422StaleBootstrapHelper(t *testing.T) {
 			defer stopRecovery()
 			event.Point, event.ChunkStatus = store.GenerationStaleLeaseTransitionRecovered, store.GenerationChunkDone
 			event.PrivateLeaseTokenDigest = store.GenerationLeaseTokenDigest(chunk.LeaseToken)
-			go func() { observed <- control.transition(recoveryCtx, event) }()
-			select {
-			case <-control.recovered.ready:
-			case <-ctx.Done():
-				t.Fatal("recovered absent")
-			}
-			control.mu.Lock()
-			control.recovered.reading = true
-			control.mu.Unlock()
-			if err := control.finishReport(&control.recovered); err != nil {
-				t.Fatal(err)
-			}
-			if err := <-observed; err != nil {
-				t.Fatal(err)
-			}
-			if failures.Load() != 0 {
-				t.Fatal("legitimate ordering latched failure")
+			if mode == "diagnostic-recovered-lease" {
+				event.PrivateLeaseTokenDigest = "wrong-private-digest"
+				if err := control.transition(recoveryCtx, event); err == nil {
+					t.Fatal("wrong recovered lease admitted")
+				}
+				control.mu.Lock()
+				diagnostic := control.privateFailure
+				control.mu.Unlock()
+				if failures.Load() != 1 || diagnostic == nil || diagnostic.Checks != (t422StaleFailedChecks{Transition: true, Point: "recovered", Lease: true}) {
+					t.Fatal("actual transition refusal did not retain exact failed predicate", diagnostic)
+				}
+				select {
+				case <-control.recovered.ready:
+					t.Fatal("refused transition published readiness")
+				default:
+				}
+			} else {
+				go func() { observed <- control.transition(recoveryCtx, event) }()
+				select {
+				case <-control.recovered.ready:
+				case <-ctx.Done():
+					t.Fatal("recovered absent")
+				}
+				control.mu.Lock()
+				control.recovered.reading = true
+				control.mu.Unlock()
+				if err := control.finishReport(&control.recovered); err != nil {
+					t.Fatal(err)
+				}
+				if err := <-observed; err != nil {
+					t.Fatal(err)
+				}
+				if failures.Load() != 0 {
+					t.Fatal("legitimate ordering latched failure")
+				}
 			}
 		}
 		recoveredOwner.End()
