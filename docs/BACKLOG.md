@@ -6554,6 +6554,52 @@ The existing restore comparator already permits replaced relationship identities
 when provenance changes while preserving semantics. No comparator relaxation,
 native archive pass, new freeze or further rehearsal is claimed.
 
+**Prospective archive disposition approved (2026-09-09).** Ben's subsequent
+`proceed` answers the pending approval list: one relationship build, 20,999
+projector calls and 31,998 installed-reference events in phase twelve, without
+retry slack. The prospective V3 constructor derives the latter two quantities
+from the frozen profile; retained V1/V2 bounds and sealed artifacts stay exact.
+Only those three phase-twelve work fields change. The accepted compact-output
+subtotal through the reference family for producer six grows by 1,020,948 bytes to
+14,796,923 bytes; other report families and ordinary logs still share the
+unchanged 64-MiB ceiling, so this is not a complete output-fit proof.
+
+The three-file implementation manifest is
+`8a3df772f70e2bc1a87ebc66ceaf2d0c28781a3fd56fe8447432bb1514037799`.
+Focused normal/race gates passed in 0.819s/5.124s, checking the exact three
+terms, refusal of zero or retry-slack mutations, retained canonical plans and
+the compact headroom calculation. The existing producer-binding regression
+passed normal/race in 0.540s/1.761s, exercising the newly admitted phase-twelve
+relationship observations. Scoped lint reported zero issues. Independent
+source/test/cost review reported critical/high/medium/low zero after correcting
+one cumulative-output wording issue. Lead pinned ci-static passed vet, zero
+lint issues and all-package compilation; docs passed in 0.471s, glossary and
+whitespace passed. Retained V1/V2 plan digests are unchanged. The earlier
+full receipt-race pass at e80b5705 predates these changed prospective V3 bounds
+and is not attributed to them; fresh combined receipt/native gates remain
+required before integration or freeze.
+
+The same answer approves backup-only carry of epoch four's retired/fenced
+producer-five endpoint from phase eleven to twelve, without new server
+dispatch/store/owner allowances and with actual stop/join before restore.
+Source review confirms that existing store phase advance requires owner close
+and dispatch currently rejects a late old-phase close. Therefore simply
+extending the server's phase mask would not implement the approved boundary.
+Explicit retirement, the native backup consumer and joined transfer remain
+integrated implementation requirements; neither the numerical correction nor
+this decision claims those gates passed. Byte-gauge semantics are unchanged.
+
+Approved housekeeping removed only the old failed 72dedf6f replay custody
+ending 470563563 after rechecking its private four-file diagnostic archive,
+member digests, source identity and absence of open handles or a mount. Its
+initial allocation was 61,290,144 KiB. Protected copies' user-immutable flags
+were cleared only within that approved target before final removal. The exact
+root is absent; source and wrapper log remain, and the private archive digest
+is unchanged. Full replay state is no longer recoverable from that diagnostic
+archive. Other failures and unmerged work remain intact. Post-removal free
+space was 141,225,148 KiB, above the existing 125,829,120-KiB preflight floor;
+this neither authorizes an automatic rerun nor proves the native ballast gate.
+
 **Native failure-representation correction (2026-09-09).** Composition review at
 `1398502715004b551551b6628e9dbddc26cb37ef` found that
 `validatePhaseWorkMetrics` accepts an overbound counter only at exactly

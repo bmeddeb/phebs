@@ -63,8 +63,8 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 	expected := []uint64{32864807, 600395, 19938998, 10012813, 13165061}
 	combined := []uint64{33946097, 961101, 21020672, 11453563, 13525767}
 	withResolver := []uint64{34446276, 961180, 21270801, 11453642, 13775896}
-	withRelationship := []uint64{34824355, 1150259, 21459880, 11453721, 13775975}
-	withReferences := []uint64{36488251, 1982207, 22291828, 11453721, 13775975}
+	withRelationship := []uint64{34824355, 1150259, 21459880, 11453721, 13964975}
+	withReferences := []uint64{36488251, 1982207, 22291828, 11453721, 14796923}
 	for producer := uint32(2); producer <= 6; producer++ {
 		var starts, source, index, observation, cache, publication, resolver, relationship, references uint64
 		for _, phase := range executionProducerPhases(producer) {

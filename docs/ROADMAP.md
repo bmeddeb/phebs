@@ -64,6 +64,17 @@ sequence.
 
 ## Now
 
+**T42.2 approved continuation, 2026-09-09:** the reviewed receipt work is
+pushed through `83a51590`; its exact-source expanded race gate passed in
+3,549.143s. Ben subsequently approved the three prospective phase-twelve
+relationship work terms and backup-only retired endpoint carry, with no new
+server work or retry slack. The approved older replay retirement is complete;
+verified private diagnostics remain, but its full replay state is gone. Disk
+headroom is restored above the existing preflight floor. Native retirement,
+backup/restore, coherent whole-custody measurement, remaining phases and final
+launcher/sealing gates still precede any ceremony command. The earlier holds
+below remain historical records, not new approval requests for these same terms.
+
 **T42.2 completion run, 2026-09-09:** Ben authorizes the remaining implementation,
 reviews, rehearsals, commits/pushes and safe housekeeping through freeze, then
 the terminal ceremony command. The reviewed branch through `bf77a65c` is

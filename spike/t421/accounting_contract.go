@@ -111,6 +111,16 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 		}
 		phase.ChildProcessRoles = nil
 		phase.ControlledDispatchRoles = slices.Clone(budget.Roles)
+		if phase.Phase == "archive_restore" {
+			// Restored run identities require one native relationship rebuild.
+			// Reuse the frozen corpus work quantities, with no retry allowance;
+			// V1/V2 keep their original zero relationship-work bounds.
+			phase.RelationshipBuildAttempts = CounterBound{Minimum: 1, Maximum: 1}
+			projections := plan.Profile.Pipeline.RelationshipProjections
+			phase.RelationshipProjections = CounterBound{Minimum: projections, Maximum: projections}
+			references := plan.Profile.Pipeline.ServiceReferences
+			phase.ServiceReferences = CounterBound{Minimum: references, Maximum: references}
+		}
 		plan.WorkEnvelope.MaximumControlledDispatchAttemptsPerPhase = max(
 			plan.WorkEnvelope.MaximumControlledDispatchAttemptsPerPhase, budget.MaximumAttempts,
 		)
