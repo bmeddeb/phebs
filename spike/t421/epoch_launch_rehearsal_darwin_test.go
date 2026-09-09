@@ -180,7 +180,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan, err := BuildPlanV3WithSelectorCleanup(commit)
+	plan, err := BuildPlanV3WithLogicalStoreWork(commit)
 	if err != nil || ctx.Err() != nil {
 		t.Fatal("private unsealed plan construction", err)
 	}

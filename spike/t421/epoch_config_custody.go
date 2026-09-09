@@ -44,6 +44,7 @@ type ExecutionEpochConfig struct {
 	ReturnSourceCommit string
 	// Filled at launch only from the admitted prospective plan policy.
 	SelectorHandoffCleanup string
+	LogicalStoreWork       string
 }
 
 // ExecutionEpochConfigCustody borrows the genuine author's protected inputs

@@ -49,6 +49,7 @@ type Plan struct {
 	Correction             *ContractCorrection             `json:"correction,omitempty"`
 	ProcessAccounting      *ProcessAccountingContract      `json:"process_accounting,omitempty"`
 	SelectorHandoffCleanup *SelectorHandoffCleanupContract `json:"selector_handoff_cleanup,omitempty"`
+	LogicalStoreWork       *LogicalStoreWorkContract       `json:"logical_store_work,omitempty"`
 }
 
 type InputBinding struct {

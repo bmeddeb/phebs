@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	t422SemanticLaunchSchema = "t422-semantic-launch-v3"
-	t422SemanticLaunchRecipe = "t422-fixed-phase-control-v3"
-	t422SemanticLaunchBytes  = 16 << 10
-	t422SemanticConfigBytes  = 64 << 10
+	t422SemanticLaunchSchema   = "t422-semantic-launch-v3"
+	t422SemanticLaunchRecipe   = "t422-fixed-phase-control-v3"
+	t422SemanticLaunchBytes    = 16 << 10
+	t422SemanticConfigBytes    = 64 << 10
+	t422LogicalStoreWorkSchema = "t422-logical-store-work-v1"
 )
 
 var errT422SemanticLaunch = errors.New("T42.2 semantic launch admission refused")
@@ -47,6 +48,7 @@ type t422SemanticLaunchRequest struct {
 	CheckpointRecovery     *t422CheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
 	ReturnSourceCommit     string                       `json:"return_source_commit,omitempty"`
 	SelectorHandoffCleanup string                       `json:"selector_handoff_cleanup,omitempty"`
+	LogicalStoreWork       string                       `json:"logical_store_work,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -112,6 +114,10 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 		return nil, errT422SemanticLaunch
 	}
 	if request.SelectorHandoffCleanup != "" && request.SelectorHandoffCleanup != t422SelectorCleanupSchema {
+		return nil, errT422SemanticLaunch
+	}
+	if request.LogicalStoreWork != "" && (request.LogicalStoreWork != t422LogicalStoreWorkSchema ||
+		request.ServerEpoch != 2 || snapshot.ProducerID != 3 || request.SelectorHandoffCleanup != t422SelectorCleanupSchema) {
 		return nil, errT422SemanticLaunch
 	}
 	canonical, err := json.Marshal(request)

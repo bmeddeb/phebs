@@ -4840,6 +4840,20 @@ implement the complete store collector or make the launcher ready. The
 170 logical-phase transactions remains the omitted-policy baseline. The
 explicit selector-cleanup policy adds one attempted transaction there, for 171.
 
+Ben approved a subsequent, separately versioned logical whole-store policy.
+New prospective plans use `BuildPlanV3WithLogicalStoreWork`; both prior V3
+constructors remain unchanged. Logical B then admits at most 100,001 actual
+transactions and 51,200,002 submitted rows, including its existing one-turn
+cleanup. This reuses the established whole-process refusal allowance; it is not
+a promise that every retry schedule completes within it. The 512-row
+transaction cap and other phase/read/dispatch limits remain unchanged.
+Only authenticated epoch-two input enables at most 64 selection iterations per
+ordinary job-claim call. Exhaustion returns the native error or `ErrConflict`
+to the existing runner's polling loop, without pretending the queue is empty.
+There is no operator environment/config override. An old sealed plan is not
+upgraded by running a newer binary; use newly reviewed exact-source preparation.
+Scoped test success does not establish a completed rehearsal or freeze.
+
 ## Developing phebs
 
 

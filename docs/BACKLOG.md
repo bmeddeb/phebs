@@ -5765,6 +5765,182 @@ baseline versus the new opt-in 171. The staged Go-source/test diff against
 These are scoped working-tree gates, not full-store/full-repository test runs,
 complete native rehearsal, whole-work receipt, author/seal or freeze evidence.
 
+**2026-09-08 logical-phase whole-work diagnosis.** The native rehearsal at
+`aa6938bae90e0d8d6708be057dc35d3bf00eb68a` stopped after 2,352.59s
+(package 2,353.351s), after cold/warm/physical-B returned. Logical B retained
+171 transactions/901 submitted rows, with maximum 488 rows, and refused its
+first activation observation with HTTP 409. Its generation report prefix has
+25 starts and no reported retries; ordinary jobs have 16 starts. The earlier
+preimage-retry loop is not the current signature. Physical-B's successful
+return requires its authenticated cleanup to finish, although the exact deleted
+count was not separately retained. Final root/session join completed. Neither
+the later teardown errors nor the generic store-limit error identifies the
+exact denied SQL operation; the transaction prefix has exhausted its cap.
+
+The source-derived operation-family ledger below is a prerequisite inventory,
+not a sufficient replacement ceiling. With M service members, the no-removal
+path still needs C=2(M+1) state units. Here M is at least twenty and C at least
+42. T41.10 counted each successful state processing call once, outside its
+separate schedule expansion, claim and completion; the selected whole-phase
+meter charges all write-capable transactions, including zero-row Begin/Cancel.
+
+| Logical-phase family | Transactions that the complete budget must cover |
+|---|---|
+| Current database reopen | Existing native gate: 7 transactions/499 rows; not complete server startup |
+| Startup recovery, backfill and reference repair | Actual recovered inventory and callbacks, including selected-target validation and exact-existing relationship-reference writes |
+| Catalog and state-plan admission | One catalog-publication attempt; two schedule enqueues and two plan creations before retries/repair |
+| State schedule expansion and execution | At least two expansion transactions and 3C claim/process/completion transactions; unchanged member processing still advances its plan |
+| Required activation interruption | One release and one fresh claim beyond 3C; already-applied replay does not repeat its state write |
+| Relationship authority | Schedule enqueue/expansion/claim/completion, catalog-reference publication and actual upstream extraction pins |
+| Selector cutover and retirement | Target-validation Begin/Cancel, selector transaction, and actual terminal-schedule retirements |
+| Seven ordinary job kinds | At least three per started attempt for claim/running/settlement, plus enqueues and each handler's store work |
+| Heartbeats, conflicts, deferrals and stale reaping | Timing- and state-dependent additional attempts; no complete numerical derivation yet |
+| Authority observations and terminal cleanup | Hit/recovered/X/T/F reads remain their own ledgers; successful logical cleanup costs one transaction and at most two submitted rows |
+
+A conservative fixed subset is 126 state-execution transactions plus seven
+database initialization, two controlled release/reclaim and one cleanup =136.
+Including this run's sixteen ordinary starts and their required durable
+settlements gives at least 184, before the other families above. This is a
+lower bound for completing this observed workload, not a universal ordinary-job
+count, an observed successful total, or a proposed admission number. Empty
+claims and fully expanded scheduler probes already return read-only.
+
+The existing 60,000 job-attempt ceiling does not bound every transaction:
+`ClaimJob` can repeat positive, charged claim writes on lost races or retryable
+errors before any job-start report, without a numeric retry cap. Heartbeats
+also sit outside those start counts. The current store ceiling still bounds
+accepted work by refusing excess; it is not a guarantee that every otherwise
+successful interleaving fits. A prospective numerical derivation must explicitly
+own those costs instead of treating absent start/retry reports as zero writes.
+
+The first watcher tick can enqueue a second sync/index/candidate chain beside
+boot sync and candidate backfill. Simply suppressing first observation can lose
+a source change; suppressing unchanged-index callbacks breaks successor repair.
+Capturing a pre-sync baseline instead adds startup Git children and requires its
+own dispatch/cost review. Exact-existing reference/schedule fast paths likewise
+need authority and repair proofs. None is selected as a production correction
+or claimed sufficient to fit 171.
+
+AC: an opt-in fresh-native 10,000-service state-path gate records per-family
+selected-SDK deltas, preserves the actual one-state member-nine target, executes
+claim/process/completion and controlled release/reclaim, and identifies its
+excluded server/relationship/heartbeat/HTTP work. Its larger diagnostic observer
+budget must not alter production admission. Independent non-OCR source/cost
+review and affected checks remain required. The complete phase budget and any
+prospective admission correction remain open; do not start another full
+rehearsal from this diagnostic subset.
+
+`TestServiceStateV3LogicalPhaseAccountingNative`, explicitly enabled with
+`PHEBS_TEST_LOGICAL_STATE_ACCOUNTING_NATIVE=1`, then completed its fresh-native
+path with 147 transactions/924 submitted rows and maximum 488 rows. The
+final-content normal run passed in 7.41s (package 7.996s). Its non-overlapping
+transaction breakdown is seven selected-connection initialization, one catalog
+publication, four plan/schedule admissions, two expansions, 43 claims, 42 state
+processing writes, 42 completions, one controlled release, two terminal
+schedule retirements, one relationship-reference pin, one selector publication
+and one two-row preimage cleanup. Nineteen unchanged members in each state stage
+still submitted one plan record each; those 38 transactions are subsets of the
+42 processing writes, not additional work. The reclaimed applied unit submitted
+no second state write. Both native authority-transition reads added zero write
+transactions, and the accounting producer closed with no outstanding calls.
+
+The relationship reference is a neutral fixture, not real relationship
+construction. The test drives store methods serially rather than the command
+controller and worker callbacks; it excludes their other startup/recovery,
+validation, job, handler, heartbeat and HTTP/control work. It therefore leaves
+only 24 transactions beneath 171 for work it does not measure and does not
+establish full-phase fit. The preserved failed-run/source lower bound above
+remains the decision-bearing full-work counterexample. No production source,
+admission bound, retained plan or rehearsal invocation was changed.
+
+The final-content native race gate passed in 40.19s (package 41.898s) with
+the same 147/924/488 counters. Package vet and repository-pinned package lint
+(zero issues), documentation, glossary, formatting and whitespace passed.
+Independent non-authoring, non-OCR test/source/cost review recorded all four
+severity counts zero at test-file SHA-256
+`b4e500ed948578df4cc06be0223281d3f2b4c610956439262e1258f3593019fd`;
+the diagnostic decision and family-ledger documentation also received a separate
+zero-finding review. All test-owned engines joined. These are scoped
+working-tree diagnostic gates, not a full-store, whole-phase, merge-bar or
+rehearsal result.
+
+**2026-09-08 approved prospective logical whole-store correction.** Ben approved
+the prospective V3 correction after housekeeping. Native Go/lint cache cleanup
+and removal of the sole clean/reproducible latest rehearsal checkout reclaimed
+about 1.65 GiB; its reachable Git commit, parent log and private failed custody
+remain. Dirty/unmerged worktrees, pinned tools, offline modules and evidence
+were preserved.
+
+The new optional `t422-logical-store-work-v1` policy reuses the established
+full-process admission class: 100,000 transactions/51,200,000 rows before the
+already-approved logical cleanup, totaling 100,001 transactions/51,200,002
+submitted rows. This is a chosen refusal budget, not a source-derived guarantee
+that every otherwise valid execution fits. The 147-transaction test remains
+only a measured state-path subset. All native work stays metered; no family is
+moved outside the phase or assigned a guessed zero.
+
+This approval supersedes the earlier numerical no-increase hold only for this
+new opt-in policy; archive, complete whole-work evidence and freeze acceptance
+holds are not waived, and retained/omitted-policy plans remain exact.
+
+The resulting global SA ceilings are 608,254 transactions, 310,804,004 rows
+and 79,877,256,704 wire bytes; epoch two's wire ceiling is 13,158,401,664 bytes.
+These are cumulative allowances, not allocations or observed traffic. The
+existing checked transport formula derives them from the final phase rows.
+
+Only authenticated epoch-two/producer-three input can select the new local
+store constructor. Its genuine SDK owner is checked before child startup; an
+immutable option caps each ordinary job-claim invocation at 64 complete
+selection iterations. Retryable reads, conflicted writes and zero-row lost races
+all consume the allowance, with fresh census/lease identity on each positive
+retry. The final actual error survives; a last lost race returns `ErrConflict`.
+The existing runner returns to polling without emitting a fabricated start.
+Ordinary and old-selected constructors still permit their historical retries.
+
+AC: selected SDK/SA01 first/last success, read/write/lost-race exhaustion,
+mixed iterations, cancellation, malformed/permanent refusal and per-attempt
+ACKs; historical paths succeed beyond 64 attempts; missing owner refuses before
+child/data creation; canonical prior builders and retained V1/V2 bytes stay
+exact; both validation paths reject policy/budget mutation, wrong schema and
+missing cleanup; epoch input is hash-bound only to its genuine logical launch;
+cleanup composes once; SA projection changes only phase-five maxima and invents
+no work/reservation. Keep the 512-row, 60,000-attempt, timing, topology and scoped
+read limits unchanged. Focused normal/race, native state regression, static,
+docs/glossary and independent non-OCR source/cost review are required. These do
+not replace complete exact-source native rehearsal, whole-work evidence or
+freeze acceptance.
+
+The correction's final focused normal command passed (`cmd/phebs` 0.595s,
+`spike/t421` 82.139s), including all three real V3 builders and their
+`ValidateFrozenPlan` replay, retained V1/V2 canonical-byte checks, prospective
+policy mutations, authenticated launch input and store projection. Focused
+race passed (1.804s/19.592s); the expensive full builder replay is covered by
+normal, not repeated in this race selector. The fresh-native state fixture plus
+bounded-claim and queue-accounting checks passed normal/race in 8.327s/48.906s.
+These do not live-prove native contention or the complete serve-to-new-opener
+route: scripted replies prove claim retry semantics, genuine SA01 proves
+charging, and source review covers the startup constructor selection.
+
+Two pre-final invocations are not counted as passes. The new transport test
+initially closed in `t.Cleanup` after `t.Context` cancellation; a function defer
+now checks its unchanged incomplete-close expectation before cancellation.
+The first contract race selector then hit its five-minute alarm while each
+policy mutation reconstructed the unchanged two-million-file source inventory.
+Those mutations now use the existing known-revision validation path; the
+separate full public-validator/builder checks remain intact. No production
+code, assertion, corpus identity or admission predicate was relaxed for either
+test correction.
+
+Repository-wide static gates passed (vet, pinned lint with zero issues,
+compile-only package checks and glossary); final test-setup edits also passed
+package vet/lint. Documentation, formatting and whitespace passed. Independent
+non-authoring, non-OCR implementation/cost reviews closed at critical/high/
+medium/low 0/0/0/0, including the final test correction. One documentation low
+was closed by explicitly limiting supersession of the previous numerical hold.
+These are scoped working-tree checks against base
+`aa6938bae90e0d8d6708be057dc35d3bf00eb68a`, not a full-store/full-repository
+test run, immutable exact-source rehearsal, merge bar, author/seal or freeze.
+
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.
 Before the isolated headroom correction, full changed reconciliation/activation

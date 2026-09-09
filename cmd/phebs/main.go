@@ -679,7 +679,11 @@ func serve(args []string) (retErr error) {
 			log.Printf("WARNING: %s", code)
 		},
 		func() (*store.Surreal, error) {
-			return store.OpenLocalWithConfig(
+			open := store.OpenLocalWithConfig
+			if semanticLaunch != nil && semanticLaunch.request.LogicalStoreWork != "" {
+				open = store.OpenLocalWithConfigAndBoundedJobClaims
+			}
+			return open(
 				ctx,
 				cfg.Server.DataDir,
 				recovery.ConfigDigest(rawConfig),

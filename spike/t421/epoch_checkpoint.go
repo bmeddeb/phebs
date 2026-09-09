@@ -54,6 +54,10 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 	if epoch.SelectorHandoffCleanup != "" && epoch.SelectorHandoffCleanup != SelectorHandoffCleanupSchema {
 		return nil, ErrExecutionEpochOne
 	}
+	if epoch.LogicalStoreWork != "" && (epoch.LogicalStoreWork != LogicalStoreWorkSchema || epoch.Epoch != 2 ||
+		epoch.SelectorHandoffCleanup != SelectorHandoffCleanupSchema) {
+		return nil, ErrExecutionEpochOne
+	}
 	raw, err := json.Marshal(struct {
 		Schema                 string                        `json:"schema"`
 		Recipe                 string                        `json:"recipe"`
@@ -64,7 +68,8 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 		CheckpointRecovery     *epochCheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
 		ReturnSourceCommit     string                        `json:"return_source_commit,omitempty"`
 		SelectorHandoffCleanup string                        `json:"selector_handoff_cleanup,omitempty"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup})
+		LogicalStoreWork       string                        `json:"logical_store_work,omitempty"`
+	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup, epoch.LogicalStoreWork})
 	if err != nil || len(raw)+1 > 16<<10 {
 		return nil, ErrExecutionEpochOne
 	}

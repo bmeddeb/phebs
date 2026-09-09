@@ -412,6 +412,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if flow.plan.SelectorHandoffCleanup != nil {
 		epoch.SelectorHandoffCleanup = flow.plan.SelectorHandoffCleanup.Schema
 	}
+	epoch.LogicalStoreWork = ""
+	if epoch.Epoch == 2 && flow.plan.LogicalStoreWork != nil {
+		epoch.LogicalStoreWork = flow.plan.LogicalStoreWork.Schema
+	}
 	raw, err := epochSemanticInput(author.planSHA256, epoch, run.checkpointRecovery)
 	if err != nil {
 		return nil, ErrExecutionEpochOne
