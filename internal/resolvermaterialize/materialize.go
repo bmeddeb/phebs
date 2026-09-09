@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/gitobj"
@@ -139,6 +140,11 @@ func (budget *blobBudget) load(
 	}
 	budget.reads++
 	budget.bytes += int64(len(content))
+	// The frozen resolver counters are successful reader returns, including
+	// content rejected by the subsequent declared-size check, not read attempts.
+	if err := dispatchadmission.ObserveProductionResolverBlob(ctx, uint64(len(content))); err != nil {
+		return nil, err
+	}
 	if int64(len(content)) != file.DeclaredBytes {
 		return nil, fmt.Errorf(
 			"resolver input %q length changed: candidate=%d blob=%d",

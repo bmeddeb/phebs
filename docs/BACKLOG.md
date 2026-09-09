@@ -6415,18 +6415,62 @@ docs/glossary passing in 0.538s. Independent parser/headroom checks passed in
 is `83952a2e01bd61460ccb6ad3e04022c5ebe6122ee90c4c25d58396da97f700e8`.
 These exact scoped checks are not the full T42.2n acceptance gate.
 
+**Native resolver successful-return observation (2026-09-09).** The frozen
+production replay counts successful resolver reader returns and their actual
+returned bytes, not failed attempts or final catalog cardinality. The shared
+materialization load now observes that same event before declared-size
+validation; repeated and zero-byte returns count, and cancellation after a
+successful read does not erase the event. Failed/partial-error reads keep their
+original result and add no resolver success. The separate source counter still
+records native read attempts. All three materialization read routes share the
+hook. A deterministic fixture drives the real Build and checks all six supplied
+blob-reader returns against each event; it does not launch native Git children.
+Selected missing/error/panic coverage
+latches the lifetime; ordinary unbound operation adds no output.
+
+The joined parent uses an independent RMB1 zero-event binding and fixed
+25-byte RM1 records. It retains actual successful reads/bytes together, the
+first full bound excess and positive prefixes before later refusal; unsigned
+overflow, malformed/partial/embedded records, wrong identity/phase and events
+after the terminal fence refuse completeness. The existing inherited native
+pipe fixture tests supplied return events separately from the genuine
+materialization Build test. Neither fixture is a complete native rehearsal.
+There is no new stream scan, read-attempt interpretation, inflight pairing,
+receipt field, limit or sealed-plan change. PLAN records the eight-family
+output maxima and the existing mirror-lock/member-FD/buffer lifetime extended
+by synchronous reporting; ordinary/candidate/future output still shares the
+64-MiB cap, and full-log fit and live whole-phase enforcement remain open.
+
+Independent source and bridge/parser review reports all severity counts zero.
+One low cost-record omission for the existing open member FD and buffered
+writer was corrected and independently closed. Source focused normal passed
+readaccounting/dispatch/resolver in 0.223s/0.267s/0.415s; full race passed in
+1.226s/6.005s/22.574s. Parent focused normal passed command/spike in
+1.266s/3.908s and race in 2.384s/27.698s. Independent source focused race
+passed in 1.237s/1.328s/1.412s, with independent parent/parser and inherited
+race passing in 2.236s/2.818s. Scoped lint reports zero issues. The reviewed
+staged Go diff SHA-256 is
+`a3cbed09682f1c75ef9b264f39c97459142b6536cdd9b96927729cdf403e06df`.
+The lead's final combined report/parser/inherited race selectors passed
+command/spike in 4.164s/39.286s. Pinned `ci-static` passed vet, zero lint issues
+and all-package compilation; documentation, glossary and whitespace checks
+passed. Retained V1/V2 plan digests remain unchanged.
+These scoped gates do not supply full fifteen-phase metrics or close T42.2n.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure
   mutations, coordinated with the existing authenticated lifecycle controls.
 - Phase 12/fifth epoch: genuine backup/restore launches, custody transfer,
-  restored server admission and exact authority comparison; launch currently
-  admits only epochs one through four.
+  restored server admission and exact authority comparison. The selected
+  bootstrap recognizes epoch five, but that does not complete its native
+  launch or the pending retired/fenced phase-twelve backup lifetime overlap.
 - Phases 13–15: fresh lifecycle collection, authorized product queries and
   final whole-flow teardown evidence, not the rehearsal fixture's cleanup.
-- Whole-work composition: remaining read/cache/reuse/publication/lifecycle
-  counters and resource gauges, complete phase metrics and receipts; existing
-  DA/SA and compact subsets do not fill these fields by implication.
+- Whole-work composition: remaining relationship/reuse events and
+  resource gauges, complete phase metrics and receipts; the implemented
+  read/cache/publication/resolver/lifecycle subsets and DA/SA do not fill the remaining
+  fields or prove live whole-phase limit enforcement by implication.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.

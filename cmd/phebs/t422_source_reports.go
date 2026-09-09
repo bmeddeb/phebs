@@ -65,6 +65,10 @@ func bindT422SourceReports(ctx context.Context, fail func(error)) (context.Conte
 	if err != nil {
 		return nil, err
 	}
+	ctx, err = bindT422ResolverReports(ctx, state, fail)
+	if err != nil {
+		return nil, err
+	}
 	return readaccounting.WithSourceObserver(ctx, func() error {
 		current, err := dispatchadmission.ProductionSemanticState()
 		if err == nil {

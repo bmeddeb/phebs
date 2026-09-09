@@ -14,7 +14,7 @@ import (
 
 func lifecycleTestBindings(producer uint32) string {
 	input := "sha256:01" + strings.Repeat("00", 31) + "\n"
-	return fmt.Sprintf("ATB1:%d:%sSRB1:%d:%sOPB1:%d:%sLCB1:%d:%sCCB1:%d:%sEPB1:%d:%s", producer, input, producer, input, producer, input, producer, input, producer, input, producer, input)
+	return fmt.Sprintf("ATB1:%d:%sSRB1:%d:%sOPB1:%d:%sLCB1:%d:%sCCB1:%d:%sEPB1:%d:%sRMB1:%d:%s", producer, input, producer, input, producer, input, producer, input, producer, input, producer, input, producer, input)
 }
 
 type lifecycleCursorReadFailure struct{}

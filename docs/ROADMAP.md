@@ -66,7 +66,7 @@ sequence.
 
 **T42.2 completion run, 2026-09-09:** Ben authorizes the remaining implementation,
 reviews, rehearsals, commits/pushes and safe housekeeping through freeze, then
-the terminal ceremony command. The reviewed branch through `35f62dd8` is
+the terminal ceremony command. The reviewed branch through `73842153` is
 pushed. The exact `2e334505` mounted rehearsal passed cold/warm, then stopped
 in physical B with a native SDK reply/decoding refusal whose underlying cause
 was not retained; root/session teardown completed and failure custody remains.
@@ -74,8 +74,9 @@ The separate tiny ballast check at `acb809de` exceeded its unchanged capacity
 delta tolerance on a host below the existing backing-space floor. Reviewed
 corrections now retain closed private SDK refusal classes and check that floor
 before volume creation; neither failure has been retried. Actual server-process,
-catalog-cache and joined lifecycle observations are implemented, but do not
-supply complete whole-work metrics. Diagnostic archival and retirement of one
+catalog-cache, extraction publication-call, resolver successful-return and joined
+lifecycle observations are implemented, but do not supply complete whole-work
+metrics. Diagnostic archival and retirement of one
 older 58-GiB replay is awaiting explicit approval to restore headroom.
 A newly identified live-backup
 lifetime overlap is awaiting explicit V3 disposition; no existing admission

@@ -60,7 +60,7 @@ const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
 // real phase change. Reports are supplied native-shaped test inputs, not real
 // queue work, protected tool admission, or a phase measurement result.
 func TestT422AttemptInheritedPhase(t *testing.T) {
-	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled"} {
+	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled", "resolver_events", "resolver_canceled", "resolver_zero"} {
 		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
 	}
 }
@@ -199,6 +199,21 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 	if strings.Count(diagnostic.String(), "EPB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "EP1:5:8\n") != publicationEvents || strings.Count(diagnostic.String(), "EP1:5:9\n") != publicationEvents {
 		t.Fatal("actual selected publication binding/phase missing", diagnostic.String())
 	}
+	resolverEvents, resolverBytes := 0, uint64(10)
+	if strings.HasPrefix(mode, "resolver_") {
+		resolverEvents = 1
+	}
+	if mode == "resolver_zero" {
+		resolverBytes = 0
+	}
+	if strings.Count(diagnostic.String(), "RMB1:5:sha256:") != 1 {
+		t.Fatal("actual selected resolver binding missing", diagnostic.String())
+	}
+	for _, phase := range []uint32{8, 9} {
+		if strings.Count(diagnostic.String(), fmt.Sprintf("RM1:5:%X:%016x\n", phase, resolverBytes)) != resolverEvents {
+			t.Fatal("actual selected resolver return missing", diagnostic.String())
+		}
+	}
 	for _, phase := range []string{"8", "9"} {
 		for _, event := range []string{"R", "r", "M", "m", "H"} {
 			if strings.Count(diagnostic.String(), "CC1:5:"+phase+event+"\n") != cacheEvents {
@@ -301,6 +316,30 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 		}
 	}
 	publicationEvents()
+	resolverEvents := func() {
+		mode := os.Getenv(t422AttemptHelperMode)
+		if !strings.HasPrefix(mode, "resolver_") {
+			return
+		}
+		// Supplied successful-return size tests the genuine native bridge;
+		// concrete materialization/source failure has separate source tests.
+		if mode == "resolver_canceled" {
+			canceled, stop := context.WithCancel(ctx)
+			stop()
+			if err := readaccounting.ObserveResolverBlob(canceled, true, 10); !errors.Is(err, context.Canceled) {
+				t.Fatal("canceled return lost native observation", err)
+			}
+			return
+		}
+		size := uint64(10)
+		if mode == "resolver_zero" {
+			size = 0
+		}
+		if err := dispatchadmission.ObserveProductionResolverBlob(ctx, size); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resolverEvents()
 	// Supplied event exercises the actual selected stream, not native parsing.
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
@@ -324,6 +363,7 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	}
 	cacheEvents()
 	publicationEvents()
+	resolverEvents()
 	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
 		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
 			t.Fatal(err)
@@ -345,6 +385,9 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 	}
 	if dispatchadmission.ObserveProductionPublication(ctx) == nil {
 		t.Fatal("closed producer emitted guessed publication phase")
+	}
+	if dispatchadmission.ObserveProductionResolverBlob(ctx, 10) == nil {
+		t.Fatal("closed producer emitted guessed resolver phase")
 	}
 	if runner.LifecycleReports(job) == nil {
 		t.Fatal("closed producer emitted guessed phase")

@@ -24,6 +24,7 @@ type ExecutionAttemptCount struct {
 	SourceBlobAttempts                   uint64
 	ObservationParses                    uint64
 	PublicationWrites                    uint64
+	ResolverBlobReads, ResolverBlobBytes uint64
 }
 
 // Complete refers only to this post-join report subset. It proves no live
@@ -37,6 +38,7 @@ type ExecutionAttemptObservation struct {
 	AttemptBound     bool
 	ObservationBound bool
 	PublicationBound bool
+	ResolverBound    bool
 }
 
 // The genuine caller supplies only output whose native Wait joined the copy
@@ -61,7 +63,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		line, readErr := reader.ReadSlice('\n')
 		consumed += len(line)
 		if len(line) == 0 && errors.Is(readErr, io.EOF) {
-			if !out.SourceBound || !out.AttemptBound || !out.ObservationBound || !out.PublicationBound {
+			if !out.SourceBound || !out.AttemptBound || !out.ObservationBound || !out.PublicationBound || !out.ResolverBound {
 				return out, errExecutionAttempts
 			}
 			for _, phase := range out.Phases {
@@ -79,6 +81,12 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			return out, nil
 		}
 		if readErr == nil && executionSetupTokenDiagnostic(line) {
+			continue
+		}
+		if observed, err := observeResolverEvent(line, plan, producer, wantInput, &out); observed {
+			if err != nil || readErr != nil {
+				return out, errExecutionAttempts
+			}
 			continue
 		}
 		if observed, err := observeCacheEvent(line, plan, producer, wantInput, &out.Cache); observed {
@@ -114,7 +122,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed])) {
+		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -189,7 +197,7 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 		}
 		index := reservedTerminalIndex(line)
 		if seen && (reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
-			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line)) ||
+			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line) || reservedResolverEvent(line)) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts
 		}
