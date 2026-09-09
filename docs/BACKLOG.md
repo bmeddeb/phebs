@@ -6903,6 +6903,34 @@ plan-v2.json SHA-256 values remain
 `2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
 The batched corrected-source receipt race remains required before integration.
 
+**Exact combined receipt-race confirmation (2026-09-09).** The expanded
+`^Test(Accounting|Receipt|DecodeReceipt|WorkFailure|FailureComposition)` selector
+passed with race checking at clean immutable
+`e80b570542575e0c85b15608648bb1d10e58c0bd` in 3,549.143s, command status zero.
+The full V3 receipt fixture passed in 2,875.03s, retained V1 canonical receipt
+in 340.01s, and complete work-failure cases in 8.52s, including
+logical_with_work, logical_with_topology and logical_multiple_resource. No
+race diagnostic occurred. The existing shared forty-minute fixture context and
+sixty-minute package alarm were unchanged; no retry was made. The owned process
+group, both engines and their listeners were verified absent, and the newly
+generated fixture roots were cleaned by the test. The retained 36,805-byte log
+has SHA-256
+`e6daac1ed4e30ce28bfe70bd862bf688fa9eca992a3384c23fa380f71bc327f8`.
+This closes the combined corrected-source receipt race, including the logical
+failure-composition scenarios; it does not establish native receipt issuance,
+live whole-work enforcement, a fifteen-phase rehearsal or the full merge bar.
+The native fixture supplies genuine identities but models measurements and
+external signature bindings; its recovery preparation injects neither a stale
+lease nor process death.
+
+The external main merge `e2eae11b10220f1a4e2c4c9c37c02a483ff83cc0` was
+incorporated into the ticket branch by ancestry-only merge
+`946aff1fc270194c341ecf2c9e60352013aa7627`. Its tree is byte-identical to
+`e80b5705` (`47601d72fbc2c058f51639113efbbf165b909247`); independent review
+verified both parents and the empty source diff. Gate attribution remains the
+exact tested `e80b5705`, not a new authenticated admission or freeze at the
+merge commit. This record adds no runtime behavior, work, bounds or authority.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure
