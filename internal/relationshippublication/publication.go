@@ -14,6 +14,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
@@ -233,6 +235,9 @@ func writePublicationStageVersioned(
 			value.CompleteServiceCount++
 		}
 		value.ServiceReferenceCount += len(service.refs)
+		if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipReferences, uint64(len(service.refs))); err != nil {
+			return nil, err
+		}
 		value.EncodedServiceBytes += int64(len(raw))
 		value.Services = append(value.Services, receipt)
 	}

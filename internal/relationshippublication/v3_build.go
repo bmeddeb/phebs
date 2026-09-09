@@ -41,7 +41,7 @@ type PreparedV3 struct {
 }
 
 func BuildV3(ctx context.Context, request BuildRequestV3) (*PreparedV3, error) {
-	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild); err != nil {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild, 1); err != nil {
 		return nil, err
 	}
 	if request.Root == "" || request.Resolver == nil || request.RPC == nil || request.Kafka == nil {
@@ -358,7 +358,7 @@ func (accumulator *buildAccumulator) projectRPCV3(
 	ctx context.Context,
 	posting rpccallerposting.Posting,
 ) (Projection, error) {
-	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection); err != nil {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection, 1); err != nil {
 		return Projection{}, err
 	}
 	source, err := accumulator.placements.lookup(posting.Path)
@@ -384,7 +384,7 @@ func (accumulator *buildAccumulator) projectKafkaV3(
 	ctx context.Context,
 	posting kafkatopicposting.Posting,
 ) (Projection, error) {
-	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection); err != nil {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection, 1); err != nil {
 		return Projection{}, err
 	}
 	source, err := accumulator.placements.lookup(posting.Path)

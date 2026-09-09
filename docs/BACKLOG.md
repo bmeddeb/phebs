@@ -6496,6 +6496,47 @@ command/spike in 5.444s/44.060s. Pinned `ci-static` passed vet, zero lint issues
 and all-package compilation. Documentation, glossary and whitespace checks
 passed. Retained V1/V2 bytes remain unchanged.
 
+**Installed service-reference observation (2026-09-09).** Independent unit
+review selects the existing successful member/range installation increments,
+after deduplication, quota and encoded-size rejection. The frozen
+`phase_local_unsigned_event_sum` retains repeated installations and successful
+prefixes before later root failure or cleanup; attempted appends and final
+published root cardinality cannot substitute for this event sum. Installation
+does not imply committed authority or crash durability. Zero-reference
+installations check selected coverage without emitting a quantity record.
+This extends the existing RL family and binding, preserving B/P frames and
+adding positive reference batches; no bound or retained plan is changed.
+The real inherited-pipe fixture supplies quantities to test transport and
+actual phase attribution, separately from the source installation fixtures.
+Checked batch sums preserve the full first excess and reject overflow;
+malformed, partial and terminal-fence violations retain prior counts but refuse
+completeness. Zero events validate observer/phase coverage without a write or
+metadata syscall, and do not claim contemporaneous pipe-peer liveness.
+Accepted compact output maxima for producers 2–6 are 36,488,251 / 1,982,207 /
+22,291,828 / 11,453,721 / 13,775,975 bytes. A first-excess refusal record and
+ordinary/candidate/future logs are outside that accepted-work calculation;
+full-log fit remains open.
+
+Independent parent review found zero findings at every severity. Broad normal
+command/spike selectors passed in 1.936s/3.469s, matching race selectors in
+3.402s/28.968s, and independent focused race in 3.456s/2.665s. Scoped lint
+reported zero issues. Independent source review also found zero findings at
+every severity. Its focused race passed readaccounting/dispatch/relationship
+in 1.251s/1.308s/2.189s; the author's focused normal passed in
+0.148s/0.231s/1.052s with zero lint issues. Shared-stage tests check an actual
+installed file at the observation point and retained counts after later
+failure/cleanup. V3 member-writer tests verify hardlink reuse with `os.SameFile`,
+and the real V3 builder fixture checks duplicate projections and post-install
+sink/cancellation prefixes using supplied posting sources. These are distinct
+from a complete native extraction or archive run. Full source race passed
+readaccounting/dispatch/relationship in 1.234s/5.925s/236.412s within the
+original five-minute package allowance, without retry. The reviewed staged Go
+diff SHA-256 is
+`5105af0ae5eda4930be55b88ec53f156d4200eb74bf7906e26dbfa1522aafd90`.
+Pinned `ci-static` passed vet, zero lint issues and all-package compilation.
+Documentation, glossary and whitespace checks passed; retained V1/V2 plan
+digests are unchanged. These scoped gates do not close full T42.2n acceptance.
+
 **New acceptance hold — archive relationship budget (2026-09-09).** Independent
 source tracing confirms a real restore rebuild, not just the modeled provenance
 fixture. Restore recovers old relationship bytes, then clears extraction domain
@@ -6506,8 +6547,9 @@ admits candidate/extraction/resolver/caller reconstruction, but leaves both
 relationship counters at zero. The new collector preserves that refusal.
 Ben's prospective V3 disposition is requested for exactly one build and the
 frozen 20,999 projector calls, without retry slack or retained V1/V2 changes.
-Service-reference accounting still needs its own unit review before assigning
-a corresponding term; no attempt definition or numerical allowance is inferred.
+Service-reference unit review now confirms installed retained-reference event
+sums, but assigning the corresponding 31,998 restore term still requires
+separate numerical authorization; no retry allowance is inferred.
 The existing restore comparator already permits replaced relationship identities
 when provenance changes while preserving semantics. No comparator relaxation,
 native archive pass, new freeze or further rehearsal is claimed.

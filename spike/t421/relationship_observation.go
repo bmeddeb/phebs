@@ -12,7 +12,8 @@ func reservedRelationshipEvent(line []byte) bool {
 }
 
 // Builds and projections are independent actual function-entry attempts.
-// Successful publication, distinct projections and job starts are other units.
+// R batches count the admitted references in successfully installed members,
+// including verified reuse, not append attempts or durable-current authority.
 func observeRelationshipEvent(line []byte, plan Plan, producer uint32, input string, out *ExecutionAttemptObservation) (bool, error) {
 	if !reservedRelationshipEvent(line) {
 		return false, nil
@@ -24,7 +25,7 @@ func observeRelationshipEvent(line []byte, plan Plan, producer uint32, input str
 		out.RelationshipBound = true
 		return true, nil
 	}
-	if !out.RelationshipBound || len(line) != 9 || !bytes.Equal(line[:4], []byte("RL1:")) || line[4] != byte('0'+producer) || line[5] != ':' || line[8] != '\n' {
+	if !out.RelationshipBound || len(line) != 9 && len(line) != 26 || !bytes.Equal(line[:4], []byte("RL1:")) || line[4] != byte('0'+producer) || line[5] != ':' || line[len(line)-1] != '\n' {
 		return true, errExecutionAttempts
 	}
 	phase := bytes.IndexByte([]byte("0123456789ABCDEF"), line[6])
@@ -35,18 +36,41 @@ func observeRelationshipEvent(line []byte, plan Plan, producer uint32, input str
 	bound := plan.WorkEnvelope.Phases[phase-1]
 	var count *uint64
 	var maximum uint64
+	quantity := uint64(1)
 	switch line[7] {
 	case 'B':
+		if len(line) != 9 {
+			return true, errExecutionAttempts
+		}
 		count, maximum = &row.RelationshipBuildAttempts, bound.RelationshipBuildAttempts.Maximum
 	case 'P':
+		if len(line) != 9 {
+			return true, errExecutionAttempts
+		}
 		count, maximum = &row.RelationshipProjections, bound.RelationshipProjections.Maximum
+	case 'R':
+		if len(line) != 26 || line[8] != ':' {
+			return true, errExecutionAttempts
+		}
+		quantity = 0
+		for _, digit := range line[9:25] {
+			value := bytes.IndexByte([]byte("0123456789abcdef"), digit)
+			if value < 0 {
+				return true, errExecutionAttempts
+			}
+			quantity = quantity<<4 | uint64(value)
+		}
+		if quantity == 0 {
+			return true, errExecutionAttempts
+		}
+		count, maximum = &row.ServiceReferences, bound.ServiceReferences.Maximum
 	default:
 		return true, errExecutionAttempts
 	}
-	if *count == math.MaxUint64 {
+	if quantity > math.MaxUint64-*count {
 		return true, errExecutionAttempts
 	}
-	*count++ // Preserve the full first excess without clamping.
+	*count += quantity // Preserve the full first excess batch without clamping.
 	if *count > maximum {
 		return true, errExecutionAttempts
 	}

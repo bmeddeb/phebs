@@ -24,7 +24,7 @@ func TestRelationshipBuildEntriesObserveBeforeValidation(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				defer cancel()
 				var events []readaccounting.RelationshipEvent
-				ctx, err := readaccounting.WithRelationshipObserver(ctx, func(event readaccounting.RelationshipEvent) error {
+				ctx, err := readaccounting.WithRelationshipObserver(ctx, func(event readaccounting.RelationshipEvent, quantity uint64) error {
 					events = append(events, event)
 					if mode == "sink" {
 						return readaccounting.ErrEvent
@@ -73,7 +73,7 @@ func TestRelationshipProjectorEntriesObserveBeforeLookup(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			var events []readaccounting.RelationshipEvent
-			ctx, err := readaccounting.WithRelationshipObserver(ctx, func(event readaccounting.RelationshipEvent) error {
+			ctx, err := readaccounting.WithRelationshipObserver(ctx, func(event readaccounting.RelationshipEvent, quantity uint64) error {
 				events = append(events, event)
 				return nil
 			})
@@ -92,7 +92,7 @@ func TestRelationshipProjectorEntriesObserveBeforeLookup(t *testing.T) {
 }
 
 func TestRelationshipV3ObservesDuplicateAndFailedProjectorWork(t *testing.T) {
-	for _, mode := range []string{"duplicates", "zero", "sink_prefix", "lookup_prefix", "ordinary"} {
+	for _, mode := range []string{"duplicates", "zero", "sink_prefix", "lookup_prefix", "installed_sink", "installed_canceled", "ordinary"} {
 		t.Run(mode, func(t *testing.T) {
 			repository := "example.com/acme/observed"
 			catalog, generation := relationshipCatalogV3Test(t, repository, 1)
@@ -110,12 +110,25 @@ func TestRelationshipV3ObservesDuplicateAndFailedProjectorWork(t *testing.T) {
 			if mode == "lookup_prefix" {
 				rpc.values[1].Path = "../invalid"
 			}
-			ctx := t.Context()
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
 			var events []readaccounting.RelationshipEvent
+			var references uint64
 			if mode != "ordinary" {
 				var err error
-				ctx, err = readaccounting.WithRelationshipObserver(ctx, func(event readaccounting.RelationshipEvent) error {
+				ctx, err = readaccounting.WithRelationshipObserver(ctx, func(event readaccounting.RelationshipEvent, quantity uint64) error {
 					events = append(events, event)
+					if event == readaccounting.RelationshipReferences {
+						references += quantity
+						switch mode {
+						case "installed_sink":
+							return readaccounting.ErrEvent
+						case "installed_canceled":
+							cancel()
+						}
+					} else if quantity != 1 {
+						t.Fatal(event, quantity)
+					}
 					if mode == "sink_prefix" && len(events) == 3 {
 						return readaccounting.ErrEvent
 					}
@@ -127,6 +140,12 @@ func TestRelationshipV3ObservesDuplicateAndFailedProjectorWork(t *testing.T) {
 			}
 			prepared, err := BuildV3(ctx, BuildRequestV3{Root: t.TempDir(), Catalog: generation, States: states,
 				ServiceSummary: summary, Resolver: resolver, RPC: rpc, Kafka: kafka, Upstream: upstream})
+			if mode == "installed_sink" || mode == "installed_canceled" {
+				if err == nil || prepared != nil || string(events) != "BPPPR" || references != 2 {
+					t.Fatal("installed prefix lost on later refusal", events, references, err)
+				}
+				return
+			}
 			if mode == "sink_prefix" || mode == "lookup_prefix" {
 				if err == nil || prepared != nil || string(events) != "BPP" {
 					t.Fatal("actual failed prefix changed", events, err)
@@ -137,15 +156,18 @@ func TestRelationshipV3ObservesDuplicateAndFailedProjectorWork(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = prepared.abort() }()
-			wantEvents, wantProjections := "BPPP", 2
+			wantEvents, wantProjections := "BPPPR", 2
 			switch mode {
 			case "zero":
-				wantEvents, wantProjections = "B", 0
+				wantEvents, wantProjections = "BR", 0
 			case "ordinary":
 				wantEvents = ""
 			}
 			if string(events) != wantEvents || prepared.Root().ProjectionCount != wantProjections {
 				t.Fatalf("invocations=%s root=%d; want %s/%d", events, prepared.Root().ProjectionCount, wantEvents, wantProjections)
+			}
+			if mode != "ordinary" && references != uint64(prepared.Root().ServiceReferenceCount) {
+				t.Fatal("installed quantities differ from retained deduplicated references", references, prepared.Root())
 			}
 		})
 	}
@@ -154,7 +176,7 @@ func TestRelationshipV3ObservesDuplicateAndFailedProjectorWork(t *testing.T) {
 func TestRelationshipRuntimeCurrentRedeliveryCountsActualRebuild(t *testing.T) {
 	fixture := newRuntimeHandleCleanupFixture(t)
 	var events []readaccounting.RelationshipEvent
-	ctx, err := readaccounting.WithRelationshipObserver(t.Context(), func(event readaccounting.RelationshipEvent) error {
+	ctx, err := readaccounting.WithRelationshipObserver(t.Context(), func(event readaccounting.RelationshipEvent, quantity uint64) error {
 		events = append(events, event)
 		return nil
 	})

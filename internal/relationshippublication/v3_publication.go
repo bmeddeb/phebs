@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/reponame"
 )
@@ -393,6 +394,9 @@ func writeServiceMembersV3(
 		root.ServiceMembers = append(root.ServiceMembers, receipt)
 		root.ServiceCount += receipt.ServiceCount
 		root.ServiceReferenceCount += receipt.ReferenceCount
+		if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipReferences, uint64(receipt.ReferenceCount)); err != nil {
+			return err
+		}
 		root.EncodedServiceBytes += receipt.ContentBytes
 	}
 	return nil

@@ -26,6 +26,7 @@ type ExecutionAttemptCount struct {
 	PublicationWrites                                  uint64
 	ResolverBlobReads, ResolverBlobBytes               uint64
 	RelationshipBuildAttempts, RelationshipProjections uint64
+	ServiceReferences                                  uint64
 }
 
 // Complete refers only to this post-join report subset. It proves no live

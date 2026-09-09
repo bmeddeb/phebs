@@ -88,7 +88,7 @@ type buildAccumulator struct {
 }
 
 func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
-	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild); err != nil {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild, 1); err != nil {
 		return nil, err
 	}
 	return buildSources(
@@ -98,7 +98,7 @@ func Build(ctx context.Context, request BuildRequest) (*Prepared, error) {
 }
 
 func BuildV2(ctx context.Context, request BuildRequestV2) (*Prepared, error) {
-	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild); err != nil {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipBuild, 1); err != nil {
 		return nil, err
 	}
 	if downstreamauthority.RequireUsable(request.Upstream) != nil {
@@ -330,7 +330,7 @@ func bindServiceStates(
 }
 
 func (accumulator *buildAccumulator) projectRPC(ctx context.Context, posting rpccallerposting.Posting) (Projection, error) {
-	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection); err != nil {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection, 1); err != nil {
 		return Projection{}, err
 	}
 	source, err := accumulator.placements.lookup(posting.Path)
@@ -353,7 +353,7 @@ func (accumulator *buildAccumulator) projectRPC(ctx context.Context, posting rpc
 }
 
 func (accumulator *buildAccumulator) projectKafka(ctx context.Context, posting kafkatopicposting.Posting) (Projection, error) {
-	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection); err != nil {
+	if err := dispatchadmission.ObserveProductionRelationship(ctx, readaccounting.RelationshipProjection, 1); err != nil {
 		return Projection{}, err
 	}
 	source, err := accumulator.placements.lookup(posting.Path)

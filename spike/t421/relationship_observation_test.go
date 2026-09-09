@@ -121,3 +121,68 @@ func TestRelationshipIndependentCounters(t *testing.T) {
 		}
 	}
 }
+
+func TestRelationshipReferenceBatches(t *testing.T) {
+	plan := accountingTestPlan(t)
+	first := "RL1:2:2R:0000000000000003\n"
+	for _, test := range []struct {
+		name, raw string
+		want      uint64
+		complete  bool
+	}{
+		{"zero", "", 0, true},
+		{"batch", first, 3, true},
+		{"repeat", first + first, 6, true},
+		{"zero frame", "RL1:2:2R:0000000000000000\n", 0, false},
+		{"uppercase", "RL1:2:2R:000000000000000A\n", 0, false},
+		{"short", "RL1:2:2R:000000000000001\n", 0, false},
+		{"wide", "RL1:2:2R:00000000000000001\n", 0, false},
+		{"nonhex", "RL1:2:2R:000000000000000g\n", 0, false},
+		{"missing colon", "RL1:2:2R00000000000000000\n", 0, false},
+		{"wide build", "RL1:2:2B:0000000000000001\n", 0, false},
+		{"short reference", "RL1:2:2R\n", 0, false},
+		{"partial", first + "RL1:2:2R:", 3, false},
+		{"embedded", "diagnostic " + first, 0, false},
+		{"split", strings.Repeat("x", maxExecutionAttemptLine-2) + first, 0, false},
+		{"later bad", first + "RLBbroken\n", 3, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := observeExecutionAttempts([]byte(attemptTestBindings()+test.raw), plan, 2, [32]byte{1}, true)
+			if (err == nil) != test.complete || got.Complete != test.complete || got.Phases[1].ServiceReferences != test.want || got.Phases[1].RelationshipBuildAttempts != 0 || got.Phases[1].RelationshipProjections != 0 {
+				t.Fatal(got, err)
+			}
+		})
+	}
+	for _, mode := range []string{"exact", "excess", "overflow"} {
+		t.Run(mode, func(t *testing.T) {
+			candidate := accountingTestPlan(t)
+			candidate.WorkEnvelope.Phases[1].ServiceReferences.Maximum = 6
+			out := ExecutionAttemptObservation{RelationshipBound: true}
+			out.Phases[1].ServiceReferences = 3
+			want := uint64(6)
+			if mode == "excess" {
+				out.Phases[1].ServiceReferences = 4
+				want = 7
+			}
+			if mode == "overflow" {
+				out.Phases[1].ServiceReferences = math.MaxUint64
+				want = math.MaxUint64
+			}
+			if seen, err := observeRelationshipEvent([]byte(first), candidate, 2, "unused", &out); !seen || (err == nil) != (mode == "exact") || out.Phases[1].ServiceReferences != want {
+				t.Fatal(out, err)
+			}
+		})
+	}
+	for producer := uint32(2); producer <= 6; producer++ {
+		for _, phase := range executionProducerPhases(producer) {
+			got, err := observeExecutionAttempts([]byte(lifecycleTestBindings(producer)+fmt.Sprintf("RL1:%d:%XR:0000000000000001\n", producer, phase)), plan, producer, [32]byte{1}, true)
+			if (err == nil) != (plan.WorkEnvelope.Phases[phase-1].ServiceReferences.Maximum > 0) || got.Phases[phase-1].ServiceReferences != 1 {
+				t.Fatal("reference phase or zero ceiling", producer, phase, got, err)
+			}
+		}
+	}
+	prefix, footer := terminalPrefixTestBytes()
+	if seen, err := executionTerminalFooter([]byte(prefix+footer+"RL1:4:8R:0000000000000001\n"), [32]byte{1}); err == nil || !seen {
+		t.Fatal("reference after terminal accepted", seen, err)
+	}
+}

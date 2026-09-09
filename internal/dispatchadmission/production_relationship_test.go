@@ -10,15 +10,15 @@ import (
 )
 
 func TestRelationshipProductionRefusalSticky(t *testing.T) {
-	for _, mode := range []string{"missing", "sink", "panic", "canceled", "invalid"} {
+	for _, mode := range []string{"missing", "sink", "panic", "canceled", "invalid", "quantity", "zero_missing"} {
 		t.Run(mode, func(t *testing.T) {
 			_, client, server := paired(t, testConfig())
 			setPipedTestRuntime(t, &ProductionLifetime{semanticMode: ProductionSemanticV3, client: client})
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
-			if mode != "missing" {
+			if mode != "missing" && mode != "zero_missing" {
 				var err error
-				ctx, err = readaccounting.WithRelationshipObserver(ctx, func(readaccounting.RelationshipEvent) error {
+				ctx, err = readaccounting.WithRelationshipObserver(ctx, func(readaccounting.RelationshipEvent, uint64) error {
 					if mode == "panic" {
 						panic("observer")
 					}
@@ -35,10 +35,17 @@ func TestRelationshipProductionRefusalSticky(t *testing.T) {
 				cancel()
 			}
 			event := readaccounting.RelationshipBuild
+			quantity := uint64(1)
 			if mode == "invalid" {
 				event = '?'
 			}
-			if err := ObserveProductionRelationship(ctx, event); err == nil {
+			if mode == "quantity" {
+				quantity = 2
+			}
+			if mode == "zero_missing" {
+				event, quantity = readaccounting.RelationshipReferences, 0
+			}
+			if err := ObserveProductionRelationship(ctx, event, quantity); err == nil {
 				t.Fatal("selected observer refusal accepted")
 			}
 			if client.Context().Err() == nil || !ProductionSemanticSelected() {
