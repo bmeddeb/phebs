@@ -159,6 +159,7 @@ func (r *Runner) execute(ctx context.Context, job Job) time.Time {
 	}
 
 	handleCtx, stopHandle := context.WithCancel(ctx)
+	hbStop := make(chan struct{})
 	hbDone := make(chan error, 1)
 	go func() {
 		t := time.NewTicker(r.HeartbeatEvery)
@@ -175,7 +176,21 @@ func (r *Runner) execute(ctx context.Context, job Job) time.Time {
 			case <-handleCtx.Done():
 				hbDone <- nil
 				return
+			case <-hbStop:
+				hbDone <- nil
+				return
 			case <-t.C:
+				// A queued tick must not start another beat after completion.
+				// A beat already past this boundary keeps its own deadline.
+				select {
+				case <-hbStop:
+					hbDone <- nil
+					return
+				case <-handleCtx.Done():
+					hbDone <- nil
+					return
+				default:
+				}
 				beatStarted := time.Now()
 				hbCtx, cancel := context.WithTimeout(handleCtx, r.HeartbeatEvery)
 				err := r.Store.HeartbeatJob(hbCtx, job)
@@ -216,8 +231,11 @@ func (r *Runner) execute(ctx context.Context, job Job) time.Time {
 	if !handleStarted.IsZero() {
 		handleDuration = time.Since(handleStarted)
 	}
-	stopHandle()
+	// Handler completion stops new beats without canceling an admitted store
+	// call. Outer cancellation still propagates through handleCtx immediately.
+	close(hbStop)
 	hbErr := <-hbDone
+	stopHandle()
 	if hbErr != nil {
 		if errors.Is(hbErr, ErrLeaseLost) {
 			log.Printf("runner %s: lease lost for %s %s", r.Who, job.Kind, job.Target)

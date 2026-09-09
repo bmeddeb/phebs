@@ -31,9 +31,10 @@ var schema string
 
 // Surreal implements Store over the official SDK (WebSocket RPC).
 type Surreal struct {
-	db         *surrealdb.DB
-	stop       func()          // non-nil when we supervise a local child
-	accounting *storeCallOwner // captured for selected background calls; ordinary opens leave nil
+	db               *surrealdb.DB
+	stop             func()          // non-nil when we supervise a local child
+	accounting       *storeCallOwner // captured for selected background calls; ordinary opens leave nil
+	boundedJobClaims bool            // immutable opt-in; captured before the store is exposed
 }
 
 var _ Store = (*Surreal)(nil)
@@ -63,6 +64,32 @@ func OpenLocalWithConfig(ctx context.Context, dataDir, configSHA256 string) (*Su
 		return nil, errors.New("open local store: config digest is invalid")
 	}
 	return openLocal(ctx, dataDir, configSHA256, false)
+}
+
+// OpenLocalWithConfigAndBoundedJobClaims is the prospective selected-server
+// constructor. Its caller must validate the admitted policy; a genuine SDK
+// owner is required before starting the child. Existing constructors retain
+// their historical claim behavior, including ordinary and earlier V3 runs.
+func OpenLocalWithConfigAndBoundedJobClaims(ctx context.Context, dataDir, configSHA256 string) (*Surreal, error) {
+	if !validSHA256(configSHA256) {
+		return nil, errors.New("open local store: config digest is invalid")
+	}
+	owner, err := processStoreCallOwner()
+	if err != nil {
+		return nil, err
+	}
+	if owner == nil {
+		return nil, storeaccounting.ErrConfig
+	}
+	if err := owner.Check(ctx); err != nil {
+		return nil, err
+	}
+	s, err := openLocal(ctx, dataDir, configSHA256, false)
+	if err != nil {
+		return nil, err
+	}
+	s.boundedJobClaims = true
+	return s, nil
 }
 
 func openLocal(ctx context.Context, dataDir, configSHA256 string, memory bool) (*Surreal, error) {
@@ -3747,18 +3774,25 @@ SET status = 'claimed', claimed_by = $who, lease_token = $lease, pending_key = N
     claimed_at = time::now(), heartbeat_at = time::now(), recovery_lease = NONE
 WHERE status = 'pending' RETURN AFTER`
 
+// MaxBoundedJobClaimAttempts caps complete selection iterations, including
+// read conflicts and positive selections whose one-row write loses a race.
+// Only the prospective bounded-claims constructor enables this ceiling.
+const MaxBoundedJobClaimAttempts = maxQueueRetries
+
 // ClaimJob atomically claims the oldest pending job of kind for who. It
 // retries internally on lost races and returns ErrNotFound when no eligible
 // candidate remains, before allocating a lease or submitting a write.
+// Opted-in exhaustion preserves the final query error, or returns ErrConflict
+// for a successful zero-row write; it does not invent an empty queue.
 func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) {
-	for {
+	for attempt := 0; ; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		res, err := storeQuery[[]jobRec](ctx, s.accounting, s.db, claimCandidateSQL,
 			map[string]any{"table": string(kind)}, storeRead())
 		if err != nil {
-			if isRetryable(err) {
+			if isRetryable(err) && (!s.boundedJobClaims || attempt+1 < MaxBoundedJobClaimAttempts) {
 				continue
 			}
 			return nil, err
@@ -3786,7 +3820,7 @@ func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job,
 		res, err = storeQuery[[]jobRec](ctx, s.accounting, s.db, claimSelectedJobSQL,
 			map[string]any{"cand": *rows[0].RecID, "who": who, "lease": lease}, storeWrite(1))
 		if err != nil {
-			if isRetryable(err) {
+			if isRetryable(err) && (!s.boundedJobClaims || attempt+1 < MaxBoundedJobClaimAttempts) {
 				continue
 			}
 			return nil, err
@@ -3795,6 +3829,9 @@ func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job,
 		if len(rows) > 0 {
 			j := rows[0].toJob(kind)
 			return &j, nil
+		}
+		if s.boundedJobClaims && attempt+1 >= MaxBoundedJobClaimAttempts {
+			return nil, fmt.Errorf("claim %s selection attempts exhausted: %w", kind, ErrConflict)
 		}
 	}
 }

@@ -8,6 +8,12 @@ and contributor commands.
 
 ## Operations
 
+The private V3 executor counts successful native observation-parse events only
+from joined child output, separately from source-read attempts. Missing or
+malformed event bindings, exceeded phase maxima, failed output and incomplete
+terminal closure retain observed counts but cannot produce complete metrics.
+This partial collector is not a full-work receipt or live limit monitor.
+
 Index-state publication and clearing retry an explicitly rejected, stale
 database census up to 64 attempts while the caller context remains live.
 Each retry rereads the census; missing rows, other errors and uncertain
@@ -17,6 +23,31 @@ In privately admitted V3 accounting mode, a canceled or transport-uncertain
 read can fail the shared store producer, including when a search client
 disconnects. It prevents successful launch closure rather than remaining an
 isolated HTTP failure. Ordinary serving without that selected owner is unchanged.
+
+Job and generation handlers stop new heartbeats on completion and join an
+in-flight heartbeat before canceling their local context. That call retains its
+original deadline: `HeartbeatEvery` for ordinary jobs, `StoreCallTimeout` for
+generation work. Completion can therefore wait for its remaining allowance;
+external shutdown still cancels immediately. Real lease errors and selected
+SDK cancellation/deadline refusals remain failures, not successful cleanup.
+
+Generation stale-lease reaping preserves the native heartbeat's nanosecond
+precision at its exact database fence. A heartbeat renewed after selection,
+even within the same second, prevents release. Selected duplicate-HIT refusals,
+stale cutoffs and callback deadlines remain unchanged.
+
+Selected SDK and stale-lease controls retain one component-local first-failure
+diagnostic with closed reason/context classes and bounded source locations.
+Stale transition refusals additionally name failed guard predicates. These
+stale-control diagnostics exclude the checkpoint/recovery controls that reuse
+its implementation, preserving their terminal-output boundary. These
+private records are not globally ordered causes or public evidence: a stale
+stop can be downstream of an SDK failure. Generic failures omit SQL, raw error
+text and arguments; the existing descriptor-refusal SQL prefix can contain
+sensitive inline literals and must remain private. Failure propagation precedes
+logging. A blocked logger can still delay the returning failure goroutine, and
+a failed log destination does not guarantee retention. Keep it draining and
+preserve both parent and server logs when diagnosing a selected run.
 
 
 ### Data layout
@@ -4746,6 +4777,88 @@ accidental compatibility launch to fall back to uncounted execution. The
 prospective V3 execution profile records this selection explicitly; manually
 setting an environment variable cannot select it without genuine bootstrap.
 
+Selected startup refuses an unavailable required index child before HTTP
+serving, instead of remaining healthy with indexing disabled. Some background
+workers may already have started; the refusal returns through their existing
+cancellation and joins. Ordinary startup keeps its warning-and-serve behavior.
+The private V3 index build is accepted only with genuine selected bootstrap,
+the parent-supplied image digest and the exact admitted replacement metadata;
+it is not an ordinary alternative to the direct module pin.
+
+In a selected checkpoint restart, epoch-four extraction scheduling waits for
+the parent's existing authenticated recovered-state request. Health does not
+prove recovery and does not release this wait by itself. This avoids spending
+the native callback's five-second report deadline while startup or the parent's
+custody checks are still running. The phase deadline continues to run, canceled
+or invalid readers fail closed, and no extra request or retry is introduced.
+The checkpoint hit retains its already-admitted final read ordinal; stale-only
+and return-only readers keep their smaller caps. These implementation fixes
+do not supply a full native rehearsal, freeze or ceremony command.
+
+Failed native rehearsals also log private pre-parent-teardown observations,
+first inspection refusal stage/ordinal/cause, custody-check failure details when
+observed, and separate cleanup errors. Preserve these with the retained server
+log; a generic stop error alone does not identify the trigger. The observations
+are sequential, not a global first-failure ordering. An absent callback record
+does not exclude a deadline expiring after its return; ordinal zero denotes no
+exact GET ordinal (including preparation POST). Request URLs are omitted from
+the new HTTP transport-error record. A nonzero attempted GET ordinal can be
+refused before HTTP dispatch; it does not prove ordinal consumption. These
+diagnostics do not authorize a retry or change public evidence classification,
+admission limits or deadlines.
+
+The joined-output reader treats the exact first-run setup-token diagnostic as
+ordinary payload, even when random token characters resemble telemetry. It
+still requires genuine bindings, complete records and native shutdown evidence;
+malformed/embedded telemetry and partial output remain failures. Preserve the
+original private log rather than editing it to obtain a pass. Such logs can
+contain setup credentials and must not be published. A corrected parser replay
+does not establish later native phases or authorize freeze.
+
+Selected return-A startup now waits for the authenticated authored commit to
+become the indexed commit before preparing its new service catalog. It keeps
+the prior authority while waiting and does not perform an interim B-source
+census or publication. The same guard covers subsequent worker callbacks and
+stays in effect through that server's stale/checkpoint phases. A missing or
+malformed return-source binding refuses launch; do not reuse an older private
+wrapper/server combination or raise the one-census allowance.
+
+Each rehearsal server's health deadline is now anchored immediately before
+its admitted Start, including admission, bootstrap and stdin delivery time.
+Delaying or omitting the first health call does not grant another window.
+The timer is retired on successful health or joined cleanup; phase and native
+callback deadlines remain unchanged. Focused tests of these corrections do
+not replace a reviewed exact-source native rehearsal or establish freeze.
+
+Service-state-v3 scheduling now checks the persisted plan before claiming a
+later chunk. Before a terminal schedule failure, a deferred prerequisite leaves
+later unapplied chunks unclaimed instead of consuming retries on out-of-order
+work. Existing terminal settlement/repair and independent-stage priority remain
+unchanged. This does not clean obsolete prior-state snapshots: the current
+early rehearsal epochs park that lifecycle owner. A
+preimage-backlog failure therefore remains a stop, not a reason to raise a
+budget, manually delete database rows or repeat the same rehearsal. Preserve
+the original custody until the cleanup handoff and its accounting are approved,
+implemented and reviewed.
+
+Ben subsequently approved prospective selector-handoff cleanup. The new
+opt-in V3 policy runs one authenticated cleanup command after successful final
+authority and drained ordinary owners in cold, physical B, logical B and return
+A; physical B first completes its search-retention observation. It keeps the
+lifecycle runner parked and retains the sixteen-delete batch cap. Each batch
+holds the existing exclusive mutation lock through its exact-selector check
+and transaction; native reads/writes and
+turn results are reported separately from F's read-only ledger. Completion
+requires empty preimage inventory in the same transaction. A selected snapshot,
+orphan record, selector change, exhausted bound or report failure stops the run
+without retry. No catalog root, current state or retained plan is deleted.
+Omitted-policy plans keep their old behavior and are not silently upgraded.
+The optional native rehearsal now constructs the prospective policy explicitly;
+use a newly committed, reviewed source only after its focused gates pass.
+Retained failed custody must not be edited or reopened as a running database.
+This correction does not establish a full rehearsal, whole-work receipt or
+freeze.
+
 Prospective V3 receipts now keep incomplete store evidence explicit through
 the existing unavailable-metrics list: transaction count, submitted-row count
 and per-transaction row maximum are one all-or-none family. A retained positive
@@ -4753,8 +4866,50 @@ prefix is not reset to zero after transport loss or hard death. Refused work
 before actual submission does not invent an attempt or a cap-plus-one result.
 A separately observed resource crossing remains visible, but incomplete store
 evidence prevents a resource-only diagnosis. This failure vocabulary does not
-implement the complete store collector or make the launcher ready; the 512-row
-and 170-transaction limits and retained V1/V2 evidence stay unchanged.
+implement the complete store collector or make the launcher ready. The
+512-row per-transaction cap and retained V1/V2 evidence stay unchanged;
+170 logical-phase transactions remains the omitted-policy baseline. The
+explicit selector-cleanup policy adds one attempted transaction there, for 171.
+
+Ben approved a subsequent, separately versioned logical whole-store policy.
+New prospective plans use `BuildPlanV3WithLogicalStoreWork`; both prior V3
+constructors remain unchanged. Logical B then admits at most 100,001 actual
+transactions and 51,200,002 submitted rows, including its existing one-turn
+cleanup. This reuses the established whole-process refusal allowance; it is not
+a promise that every retry schedule completes within it. The 512-row
+transaction cap and other phase/read/dispatch limits remain unchanged.
+Only authenticated epoch-two input enables at most 64 selection iterations per
+ordinary job-claim call. Exhaustion returns the native error or `ErrConflict`
+to the existing runner's polling loop, without pretending the queue is empty.
+There is no operator environment/config override. An old sealed plan is not
+upgraded by running a newer binary; use newly reviewed exact-source preparation.
+Scoped test success does not establish a completed rehearsal or freeze.
+
+The separate `PHEBS_T422_EMPTY_PRESSURE_VOLUME=1` developer test selects only
+an empty native APFS custody check, not the checkpoint rehearsal or ceremony.
+It uses a fresh sparse image with `-layout NONE`, verifies exactly 96 GiB of
+filesystem capacity and enables filesystem ownership. Its small workspace
+write/read is removed before the empty-only teardown. Non-forced detach must
+succeed before the exact image is removed; no recursive mounted cleanup is
+available. A failed or uncertain check retains its private root for explicit
+operator handling. Never force-detach or recursively remove that root to turn
+a failed check into a pass. This empty selector does not supply full launcher
+accounting or prove populated replay cleanup.
+
+The separate `PHEBS_T422_VOLUME_CUSTODY_REHEARSAL=1` developer test exercises
+only a tiny populated APFS fixture with protected input and retained native Git
+probe scratch. It requires non-forced detach without thawing that input; it
+does not manufacture successful epoch evidence. The optional epoch harness can
+separately select `PHEBS_T422_PRESSURE_VOLUME_REHEARSAL=1` to place its existing
+preparation and execution workspace on the owned mount. Volume removal then
+requires the bound latest successful joined run, closed input owners and the
+existing source lease; failure retains the image and root without recursive
+mounted cleanup. Go/Git preparation commands also join their complete owned
+sessions; marked probe/build scratch remains until detach. Bootstrap volume
+creation HOME/TMP remains outside the mount. Existing selectors are unchanged
+when the volume option is absent. Neither option adds ballast/pressure phases,
+complete launcher accounting or a freeze result; a full bound native rehearsal
+has not yet established this release path.
 
 ## Developing phebs
 

@@ -3,11 +3,32 @@
 package t421
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 )
+
+// runReferenceCommand owns preparation children, not an operational author's
+// nested Git dispatches. A successful root exit is insufficient: every recorded
+// session must be empty before the caller may release its preparation custody.
+func runReferenceCommand(ctx context.Context, command *exec.Cmd) error {
+	if ctx == nil || ctx.Err() != nil || command == nil {
+		return errors.New("reference preparation context unavailable")
+	}
+	if err := prepareReferenceCommand(command); err != nil {
+		return err
+	}
+	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := command.Start(); err != nil {
+		return err
+	}
+	waitErr := command.Wait() // Sole native Wait also joins the existing output pumps.
+	_, _, err := finishExecutionProcessSession(command.Process.Pid, nil, true, waitErr, time.Now().Add(5*time.Second))
+	return errors.Join(err, ctx.Err())
+}
 
 // Go's compiler/linker children inherit this private process group. Cooperative
 // cancellation kills that group before the parent is reaped and custody removed.

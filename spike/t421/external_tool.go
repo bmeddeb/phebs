@@ -66,12 +66,15 @@ func ObserveExecutionExternalTool(ctx context.Context, role, binary string) (ide
 	}
 	version := "bound executable"
 	if len(arguments) != 0 {
-		workspace, createErr := os.MkdirTemp("", "phebs-t422-external-")
+		preparationParent := executionPreparationParent(ctx)
+		workspace, createErr := os.MkdirTemp(preparationParent, "phebs-t422-external-")
 		if createErr != nil {
 			return identity, errors.New("external tool cannot create private probe directory")
 		}
 		defer func() {
-			if os.RemoveAll(workspace) != nil {
+			// A volume-owned preparation retains even failed probe scratch until
+			// the owner's non-forced detach. Ordinary observation stays unchanged.
+			if preparationParent == "" && os.RemoveAll(workspace) != nil {
 				retErr = errors.Join(retErr, errors.New("external tool private probe cleanup failed"))
 			}
 			if retErr != nil {
@@ -146,10 +149,7 @@ func runExternalToolProbe(ctx context.Context, root, binary string, environment 
 	command.Dir, command.Env = root, environment
 	command.Stdout, command.Stderr = &stdout, &stderr
 	command.WaitDelay = time.Second
-	if err := prepareReferenceCommand(command); err != nil {
-		return "", errors.New("external tool probe process custody is unavailable")
-	}
-	if err := command.Run(); err != nil || ctx.Err() != nil || stderr.buffer.Len() != 0 {
+	if err := runReferenceCommand(ctx, command); err != nil || ctx.Err() != nil || stdout.err != nil || stderr.err != nil || stderr.buffer.Len() != 0 {
 		return "", errors.New("external tool probe failed, expired, or exceeded output bound")
 	}
 	return strings.TrimSuffix(stdout.buffer.String(), "\n"), nil

@@ -250,6 +250,55 @@ func TestRecoveryPreparationRealStoreCompletedGeneration(t *testing.T) {
 	}
 }
 
+// This small native-store regression proves submitted read counts and actual
+// operational lineage, not phase-7 hook, ordinary-server, or ceremony evidence.
+func TestCurrentRecoveryPreparationRealStoreReadCounts(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
+	defer cancel()
+	fixture := newRecoveryPreparationFixture(t, ctx)
+	generation, err := fixture.reconciler.Reconcile(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.finishSchedule(t, ctx, fixture.schedule(t, ctx))
+	baseline := fixture.publication(t, ctx)
+	appends, acquisitions := fixture.evidence.appends, fixture.source.acquisitions
+	fixture.reconciler.RecoveryPreparationEnabled = true
+	request := extractionpublication.CurrentRecoveryPreparationRequest{
+		Authority: fixture.authority, GenerationDigest: generation,
+		Roots: []extractionpublication.RecoveryPreparationRoot{{
+			Domain: baseline.root.Domain, PlanDigest: baseline.root.PlanDigest, RootDigest: baseline.root.Digest,
+		}},
+		Mode: extractionpublication.RecoveryPreparationScheduleOnly, TargetDomain: baseline.root.Domain,
+	}
+	for range 2 {
+		prior := fixture.schedule(t, ctx)
+		want := readaccounting.Counts{ControlFileReads: 13, StoreReadAttempts: 10, StoreWriteAttempts: 1}
+		operationCtx, ledger, err := readaccounting.Start(ctx, want)
+		if err != nil {
+			t.Fatal(err)
+		}
+		target, prepareErr := fixture.reconciler.PrepareCurrentRecovery(operationCtx, request)
+		counts, accountingErr := ledger.Finish()
+		if prepareErr != nil || accountingErr != nil || counts != want {
+			t.Fatalf("native preparation=%v events=%+v accounting=%v", prepareErr, counts, accountingErr)
+		}
+		wantGeneration := recoveryPreparationDigest("phebs-extraction-recovery-schedule-v1\x00" + generation + "\x00" + prior.Digest)
+		if target.PriorScheduleDigest != prior.Digest || target.TargetGeneration != generation ||
+			target.Schedule.Generation != wantGeneration || target.PlanDigest != baseline.root.PlanDigest ||
+			target.ResultIdentity != baseline.root.Results[0].Identity || target.Domain != baseline.root.Domain || target.Ordinal != 0 || target.Offset != 0 {
+			t.Fatalf("native preparation target = %+v", target)
+		}
+		fixture.finishSchedule(t, ctx, target.Schedule)
+		if fixture.evidence.appends != appends || fixture.source.acquisitions != acquisitions || !reflect.DeepEqual(baseline, fixture.publication(t, ctx)) {
+			t.Fatal("current preparation changed evidence or reacquired source")
+		}
+	}
+}
+
 type recoveryPreparationFixture struct {
 	repository string
 	state      *store.Surreal

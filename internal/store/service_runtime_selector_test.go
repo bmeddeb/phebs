@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
@@ -38,6 +39,11 @@ func newServiceRuntimeSelectorFixture(t *testing.T) serviceRuntimeSelectorFixtur
 func newServiceRuntimeSelectorFixtureContext(ctx context.Context, t *testing.T) serviceRuntimeSelectorFixture {
 	t.Helper()
 	s := newServiceCatalogV3InternalStoreContext(ctx, t)
+	return newServiceRuntimeSelectorFixtureStore(ctx, t, s)
+}
+
+func newServiceRuntimeSelectorFixtureStore(ctx context.Context, t *testing.T, s *Surreal) serviceRuntimeSelectorFixture {
+	t.Helper()
 	repository := "example.com/acme/service-runtime-" + strings.ToLower(t.Name())
 	commit := strings.Repeat("7", 40)
 	seedServiceCatalogV3RepoContext(ctx, t, s, repository, commit)
@@ -651,12 +657,36 @@ func TestSelectedV3SuccessorDefersUntilPriorSnapshotDrains(t *testing.T) {
 			planBefore, planAfter, ordersAfterDeferral,
 		)
 	}
+	if reconcileC.Schedule.TotalChunks < 2 {
+		t.Fatal("backlog regression requires a later unready chunk")
+	}
+	if err := fixture.store.DeferGenerationChunk(ctx, *chunk, "preimage backlog", time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		if next, err := fixture.store.ClaimGenerationChunk(ctx, GenerationResourceCPU, "blocked-successor"); !errors.Is(err, ErrNotFound) || next != nil {
+			t.Fatalf("delayed state prerequisite admitted later work: %+v, %v", next, err)
+		}
+	}
 	candidateA := serviceCatalogV3LifecycleRecord(
 		t, fixture.store, fixture.v3.CatalogRootDigest,
 	)
 	deleted, err := fixture.store.drainServiceStateV3Preimages(ctx, candidateA, 1)
 	if err != nil || deleted != 1 {
 		t.Fatalf("drain A snapshot = %d, %v", deleted, err)
+	}
+	// Advance only the fixture's retry clock; the real drain above supplies
+	// cleanup, and the production claim must issue the new lease itself.
+	if _, err := surrealdb.Query[any](ctx, fixture.store.db,
+		"UPDATE $chunk SET not_before = time::now() - 1s RETURN NONE;",
+		map[string]any{"chunk": generationChunkRecordID(*chunk)}); err != nil {
+		t.Fatal(err)
+	}
+	priorChunk := *chunk
+	chunk, err = fixture.store.ClaimGenerationChunk(ctx, GenerationResourceCPU, "snapshot-c-resumed")
+	if err != nil || chunk == nil || chunk.Identity != priorChunk.Identity ||
+		chunk.Attempt != priorChunk.Attempt || chunk.LeaseToken == priorChunk.LeaseToken {
+		t.Fatalf("drained prerequisite did not resume with a fresh lease: %+v, %v", chunk, err)
 	}
 	result, err := fixture.store.ProcessServiceStateV3Chunk(ctx, *chunk)
 	if err != nil || result.Applied != 1 {

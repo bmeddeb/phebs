@@ -275,6 +275,9 @@ func TestRecoveryPreparationRefusesBeforeAnyMutation(t *testing.T) {
 		{"predecessor", func(_ *testing.T, fixture *recoveryPreparationFixture) {
 			fixture.request.PriorScheduleDigest = "sha256:" + strings.Repeat("8", 64)
 		}},
+		{"missing_predecessor", func(_ *testing.T, fixture *recoveryPreparationFixture) {
+			fixture.request.PriorScheduleDigest = ""
+		}},
 		{"root", func(_ *testing.T, fixture *recoveryPreparationFixture) {
 			fixture.request.Roots[0].RootDigest = "sha256:" + strings.Repeat("8", 64)
 		}},
@@ -543,10 +546,10 @@ func TestRecoveryPreparationRejectsCoherentlyRelabeledGenerationIdentity(t *test
 	directory := fixture.reconciler.Runtime.generationDirectory(fixture.request.Authority.Repository, fake)
 	// Both pre-existing fence checks accept these coherent mutable controls:
 	// refusal must come from the added producer-identity derivation itself.
-	if err := fixture.reconciler.confirmRecoveryAuthority(t.Context(), fixture.request, fixture.generation); err != nil {
+	if err := fixture.reconciler.confirmRecoveryAuthority(t.Context(), &fixture.request, fixture.generation); err != nil {
 		t.Fatalf("relabeled authority/schedule controls were not coherent: %v", err)
 	}
-	if err := fixture.reconciler.validateRecoveryDomain(t.Context(), directory, fixture.generation, fixture.domain, fixture.request.Roots[0]); err != nil {
+	if err := fixture.reconciler.validateRecoveryDomain(t.Context(), directory, fixture.generation, fixture.domain, fixture.request.Roots[0], nil); err != nil {
 		t.Fatalf("relabeled root/pointer/result controls were not coherent: %v", err)
 	}
 	fixture.schedules.reads.Store(0)

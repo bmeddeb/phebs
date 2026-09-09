@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,6 +103,10 @@ func WrapError(ctx context.Context, args []string, runErr error, stderr string) 
 // Exceeding the cap kills the child and returns an error wrapping
 // ErrTooLarge: object and metadata reads must never silently truncate.
 func Output(ctx context.Context, dir string, maxOutput int64, args ...string) ([]byte, error) {
+	return output(ctx, dir, maxOutput, false, args...)
+}
+
+func output(ctx context.Context, dir string, maxOutput int64, sourceBlob bool, args ...string) ([]byte, error) {
 	cmd := Command(ctx, dir, args...)
 	var pipes dispatchadmission.CommandPipes
 	stdout, err := pipes.StdoutPipe(cmd)
@@ -110,6 +115,12 @@ func Output(ctx context.Context, dir string, maxOutput int64, args ...string) ([
 	}
 	var stderr StderrBuffer
 	cmd.Stderr = &stderr
+	if sourceBlob {
+		if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
+			_ = pipes.Close()
+			return nil, err
+		}
+	}
 	handle, err := dispatchadmission.StartPipedProduction(ctx, dispatchadmission.SiteGitOutput, cmd, &pipes)
 	if err != nil {
 		return nil, err
@@ -214,5 +225,8 @@ func ReadBlob(ctx context.Context, dir, oid string, limit int64) ([]byte, error)
 	if !IsObjectID(oid) {
 		return nil, fmt.Errorf("read blob: invalid object id %q", oid)
 	}
-	return Output(ctx, dir, limit, "cat-file", "blob", oid)
+	if limit < 0 || limit == math.MaxInt64 {
+		return nil, fmt.Errorf("read blob: invalid output limit: %w", ErrTooLarge)
+	}
+	return output(ctx, dir, limit, true, "cat-file", "blob", oid)
 }

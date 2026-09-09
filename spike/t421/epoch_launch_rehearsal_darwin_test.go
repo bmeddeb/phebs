@@ -12,11 +12,39 @@ import (
 
 // Default: startup, one authenticated health request and a joined stop only.
 // The additional COLD selector opts into actual A convergence and phase 2->3;
-// neither mode signs evidence, admits a host/profile, creates a pressure volume
-// or executes a ceremony. No warm phase or full-work accounting pass is claimed.
+// Neither mode signs evidence or admits a host/profile. The separate VOLUME
+// selector places writable preparation/execution custody on a fresh owned APFS
+// image; it performs no ballast mutation or pressure phase.
 func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if os.Getenv("PHEBS_T422_EPOCH_ONE_REHEARSAL") != "1" {
 		t.Skip("requires explicit serial protected epoch-one startup rehearsal")
+	}
+	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
+	warm := os.Getenv("PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL") == "1"
+	physical := os.Getenv("PHEBS_T422_EPOCH_ONE_PHYSICAL_REHEARSAL") == "1"
+	logical := os.Getenv("PHEBS_T422_LOGICAL_REHEARSAL") == "1"
+	returnA := os.Getenv("PHEBS_T422_RETURN_A_REHEARSAL") == "1"
+	stale := os.Getenv("PHEBS_T422_STALE_LEASE_REHEARSAL") == "1"
+	checkpoint := os.Getenv("PHEBS_T422_CHECKPOINT_RESTART_REHEARSAL") == "1"
+	onVolume := os.Getenv("PHEBS_T422_PRESSURE_VOLUME_REHEARSAL") == "1"
+	// Selector dependencies refuse before any host/tool/custody allocation.
+	if checkpoint && !stale {
+		t.Fatal("checkpoint selector requires explicit stale-lease selector")
+	}
+	if stale && !returnA {
+		t.Fatal("stale-lease selector requires explicit return-A selector")
+	}
+	if returnA && !logical {
+		t.Fatal("return-A selector requires explicit logical selector")
+	}
+	if logical && !physical {
+		t.Fatal("logical selector requires explicit physical selector")
+	}
+	if physical && !warm {
+		t.Fatal("physical selector requires explicit warm selector")
+	}
+	if warm && !cold {
+		t.Fatal("warm selector requires explicit cold selector")
 	}
 	requireExternalToolFrozenHost(t)
 	repository := os.Getenv("PHEBS_T422_PRODUCTION_REPOSITORY")
@@ -42,7 +70,24 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Fatal(err)
 	}
 	completed := false
+	hostParent := parent
+	var volume *executionPressureVolume
 	t.Cleanup(func() {
+		if volume != nil {
+			if !completed || t.Failed() || !volume.removed {
+				t.Logf("retained volume/image custody; no automatic retry or mounted cleanup: %s", hostParent)
+				return
+			}
+			current, err := os.Lstat(hostParent)
+			if err != nil || !os.SameFile(identity, current) || volume.Close() != nil {
+				t.Error("volume outer cleanup identity/closure refused")
+				return
+			}
+			if os.Remove(filepath.Join(hostParent, ".t4013-operation.lock")) != nil || os.Remove(hostParent) != nil {
+				t.Error("volume outer cleanup retained nonempty or changed controls")
+			}
+			return
+		}
 		if !completed || t.Failed() {
 			t.Logf("retained exact epoch-one custody; no automatic retry: %s", parent)
 			return
@@ -56,15 +101,6 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	cold := os.Getenv("PHEBS_T422_EPOCH_ONE_COLD_REHEARSAL") == "1"
-	warm := os.Getenv("PHEBS_T422_EPOCH_ONE_WARM_REHEARSAL") == "1"
-	physical := os.Getenv("PHEBS_T422_EPOCH_ONE_PHYSICAL_REHEARSAL") == "1"
-	if physical && !warm {
-		t.Fatal("physical selector requires explicit warm selector")
-	}
-	if warm && !cold {
-		t.Fatal("warm selector requires explicit cold selector")
-	}
 	allowance := time.Hour
 	if cold {
 		allowance = 5 * time.Hour // Includes protected builds; phase bounds remain separate.
@@ -72,8 +108,34 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if physical {
 		allowance = 9 * time.Hour // Protected builds plus unchanged cold/warm/B phase deadlines.
 	}
+	if logical {
+		allowance += 4 * time.Hour // Separate unchanged phase-five deadline includes handoff.
+	}
+	if returnA {
+		allowance += 4 * time.Hour // Phase six includes predecessor join and actual author nine.
+	}
+	if stale {
+		allowance += 4 * time.Hour // Same server; phase seven starts before its handoff.
+	}
+	if checkpoint {
+		allowance += 4 * time.Hour // Original phase-eight deadline spans owned death and epoch four.
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
+	if onVolume {
+		volume, err = prepareExecutionPressureVolume(ctx, hostParent)
+		if volume != nil {
+			defer func() { _ = volume.Close() }()
+		}
+		if err != nil {
+			t.Fatal("owned pressure-volume preparation", err)
+		}
+		ctx, parent, err = volume.borrowWorkspace(ctx)
+		if err != nil {
+			t.Fatal("owned mounted workspace borrow", err)
+		}
+		t.Logf("owned mounted preparation/execution workspace: %s; no ballast or full launcher admission", parent)
+	}
 	var author *ExecutionAuthorCustody
 	var epochs *ExecutionEpochConfigCustody
 	var flow *ExecutionEpochOne
@@ -133,9 +195,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 	}()
 	for _, role := range []string{"t422-author", "phebs", "zoekt-git-index"} {
-		selected := productionRehearsalBuild(t, ctx, inputs, workspace, role)
+		selected := productionRehearsalBuildSchema(t, ctx, inputs, workspace, role, PlanV3Schema)
 		started = time.Now()
-		tool, err := inputs.ProtectReferenceTool(ctx, parent, role, selected)
+		tool, err := inputs.ProtectReferenceToolV3(ctx, parent, role, selected)
 		if tool != nil {
 			tools = append(tools, tool)
 		}
@@ -151,7 +213,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan, err := BuildPlanV3(commit)
+	plan, err := BuildPlanV3WithLogicalStoreWork(commit)
 	if err != nil || ctx.Err() != nil {
 		t.Fatal("private unsealed plan construction", err)
 	}
@@ -199,6 +261,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if volume != nil && volume.bindRehearsal(ctx, flow) != nil {
+		t.Fatal("exact flow could not bind its mounted custody")
+	}
 	result, err := flow.AuthorA(ctx)
 	if err != nil || !result.Completed || !result.RootJoined || !result.SessionEmpty || result.Revision != "a" {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)
@@ -222,7 +287,12 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 				t.Errorf("retained epoch-one stopped prefix: %+v; %v", result, err)
 				run.mu.Lock()
 				t.Logf("private native stop diagnostic: %v", run.nativeStopErr)
+				t.Logf("private stop observations (Before precedes teardown; not global first-cause ordering): %+v", run.stopDiagnostic)
+				t.Logf("private admission check: before_teardown=%+v after_join=%+v", run.stopDiagnostic.Before.Admission, run.stopDiagnostic.AdmissionAfterJoin)
 				run.mu.Unlock()
+				if run.processObservation != nil {
+					t.Logf("private first server-process refusal: %q", run.processObservation.gauge.privateRefusal())
+				}
 			}
 			if t.Failed() && result.RootJoined && run.output != nil {
 				// Native Wait has also joined the combined-output copier. This
@@ -230,6 +300,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 				diagnostics := map[string][]byte{"server.log": run.output.buffer.Bytes()}
 				if reader := run.inspection; reader != nil {
 					reader.mu.Lock()
+					t.Logf("private first inspection refusal: %+v", reader.readFailure)
 					t.Logf("private inspection prefix: X=%d T=%d F_used=%t accepted_reports=%d reads=%+v failed_HTTP=%d failed_body_bytes=%d",
 						reader.progressCalls, reader.tailCalls, reader.finalUsed, reader.reports, reader.totals, reader.failureStatus, len(reader.failureBody))
 					if reader.failureBody != nil {
@@ -257,6 +328,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if epochs.Close() == nil || author.Close() == nil {
 		t.Fatal("active native server lost protected input/source custody")
 	}
+	if volume != nil && volume.Close() == nil {
+		t.Fatal("active native server lost its volume borrow")
+	}
 	if err := run.Health(ctx); err != nil {
 		t.Fatal("actual authenticated epoch-one health", err)
 	}
@@ -278,6 +352,89 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 		t.Log("actual physical B X/T/F and current/prior retention read returned; no full phase metrics or later-epoch claim")
 	}
+	if logical {
+		prior := run
+		next, err := prior.StartLogicalB(ctx)
+		if next != nil {
+			run = next // Existing cleanup follows the actual successor, including failed bootstrap.
+			// StartLogicalB already joined this run before starting next. Keep
+			// its accepted per-epoch counters without retaining its output in
+			// the successor or mislabeling this subset as full work metrics.
+			prefix, priorErr := prior.Wait(context.Background())
+			t.Logf("joined first-epoch retained-parent prefix before logical successor: %+v; %v; no full work-metrics claim", prefix, priorErr)
+			if priorErr != nil {
+				t.Fatal("successor lost joined first-epoch prefix", priorErr)
+			}
+		}
+		if err != nil {
+			t.Fatal("retained physical parent/logical successor", err)
+		}
+		if err := run.Health(ctx); err != nil {
+			t.Fatal("actual logical health", err)
+		}
+		if err := run.LogicalB(ctx); err != nil {
+			t.Fatal("actual logical hit/X/T/recovered/F", err)
+		}
+		t.Log("actual logical hit/recovery and physical-authority continuity returned; no full work metrics or freeze claim")
+	}
+	if returnA {
+		prior := run
+		startReturn := prior.StartReturnA
+		if stale {
+			startReturn = prior.StartReturnAStale
+		}
+		if checkpoint {
+			startReturn = prior.StartReturnACheckpoint
+		}
+		next, err := startReturn(ctx)
+		if next != nil {
+			run = next // Cleanup always follows the actual successor first.
+			prefix, priorErr := prior.Wait(context.Background())
+			t.Logf("joined logical-epoch prefix before return-A successor: %+v; %v; no full work-metrics claim", prefix, priorErr)
+			if priorErr != nil {
+				t.Fatal("successor lost joined logical prefix", priorErr)
+			}
+		}
+		if err != nil {
+			t.Fatal("retained logical parent/return-A author and successor", err)
+		}
+		if err := run.Health(ctx); err != nil {
+			t.Fatal("actual return-A health", err)
+		}
+		if err := run.ReturnA(ctx); err != nil {
+			t.Fatal("actual return-A marker hit/recovered/X/T/F", err)
+		}
+		t.Log("actual return-A marker continuation and authority observation returned; no full metrics, phases seven/eight, or freeze claim")
+	}
+	if stale {
+		if err := run.StaleLease(ctx); err != nil {
+			t.Fatal("actual stale preparation/hit/recovered/X/T/F", err)
+		}
+		t.Logf("actual stale-lease native preparation: %+v; R hit=%+v recovered=%+v; cumulative epoch-three exact-read totals (phases six/seven)=%+v; no full RecoveryPreparationResult, phase metrics or freeze claim",
+			run.inspection.stalePreparation, run.inspection.staleHit, run.inspection.staleRecovered, run.inspection.totals)
+	}
+	if checkpoint {
+		prior := run
+		next, err := prior.CheckpointRestart(ctx)
+		if next != nil {
+			run = next // Even a refused bootstrap remains this cleanup's owner.
+			prefix, priorErr := prior.Wait(context.Background())
+			t.Logf("owned terminal predecessor: %+v; %v; metric prefixes deliberately incomplete", prefix, priorErr)
+			if priorErr != nil {
+				t.Fatal("checkpoint successor lost terminal predecessor", priorErr)
+			}
+		}
+		if err != nil {
+			t.Fatal("actual held checkpoint/owned kill/same-phase restart", err)
+		}
+		if err := run.Health(ctx); err != nil {
+			t.Fatal("actual epoch-four health", err)
+		}
+		if err := run.RecoverCheckpoint(ctx); err != nil {
+			t.Fatal("actual checkpoint recovered R/X/T/F", err)
+		}
+		t.Log("actual checkpoint restart and unchanged full native authority returned; no complete work-metrics, phase receipt, or freeze claim")
+	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()
 	stopped, err := run.Stop(stopCtx)
@@ -295,6 +452,14 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if inputs.Close() != nil || git.Close() != nil {
 		t.Fatal("joined protected build/Git closure failed")
+	}
+	if volume != nil {
+		if err := volume.finishRehearsal(stopCtx, run); err != nil {
+			t.Fatal("populated volume retained after joined rehearsal", err)
+		}
+		t.Log("bound populated volume detached without force and removed without thawing source")
+		completed = true
+		return // No mounted input thaw/delete or recursive cleanup.
 	}
 	gitCustodyTestCleanup(t, git)
 	goBuildTestCleanup(t, inputs)

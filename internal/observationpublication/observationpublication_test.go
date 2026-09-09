@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/sourceobservation"
 	"github.com/bmeddeb/phebs/internal/sourcepartition"
@@ -20,6 +21,11 @@ import (
 )
 
 func TestPublicationReusesOnlyExactContentAndReactivatesABA(t *testing.T) {
+	parsed := 0
+	ctx, err := readaccounting.WithParsedBlobObserver(t.Context(), func() error { parsed++; return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
 	repository, commitA := observationFixture(t, map[string][]byte{
 		"a.go": []byte("package demo\nconst A = 1\n"),
 		"b.go": []byte("package demo\nconst B = 1\n"),
@@ -27,11 +33,11 @@ func TestPublicationReusesOnlyExactContentAndReactivatesABA(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "observations")
 	planA := buildObservationPlan(t, repository, commitA, "example/observations", "a")
 	var metricsA Metrics
-	publicationA, err := Publish(t.Context(), root, repository, planA, &metricsA)
+	publicationA, err := Publish(ctx, root, repository, planA, &metricsA)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if metricsA.ParsedBlobs != 2 || metricsA.ReusedObservations != 0 || publicationA.manifest.ObservedCount != 2 {
+	if metricsA.ParsedBlobs != 2 || parsed != 2 || metricsA.ReusedObservations != 0 || publicationA.manifest.ObservedCount != 2 {
 		t.Fatalf("A metrics/publication = %+v %+v", metricsA, publicationA.manifest)
 	}
 	if receipt := publicationA.manifest.OperationReceipt; receipt == nil ||
@@ -64,11 +70,11 @@ func TestPublicationReusesOnlyExactContentAndReactivatesABA(t *testing.T) {
 	commitB := strings.TrimSpace(runObservationGit(t, repository, "rev-parse", "HEAD"))
 	planB := buildObservationPlan(t, repository, commitB, "example/observations", "b")
 	var metricsB Metrics
-	publicationB, err := Publish(t.Context(), root, repository, planB, &metricsB)
+	publicationB, err := Publish(ctx, root, repository, planB, &metricsB)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if metricsB.ParsedBlobs != 1 || metricsB.ReusedObservations != 1 || publicationB.manifest.GenerationDigest == publicationA.manifest.GenerationDigest {
+	if metricsB.ParsedBlobs != 1 || parsed != 3 || metricsB.ReusedObservations != 1 || publicationB.manifest.GenerationDigest == publicationA.manifest.GenerationDigest {
 		t.Fatalf("B metrics/publication = %+v %+v", metricsB, publicationB.manifest)
 	}
 	if receipt := publicationB.manifest.OperationReceipt; receipt == nil ||
@@ -95,11 +101,11 @@ func TestPublicationReusesOnlyExactContentAndReactivatesABA(t *testing.T) {
 	}
 
 	var aba Metrics
-	reactivated, err := Publish(t.Context(), root, repository, planA, &aba)
+	reactivated, err := Publish(ctx, root, repository, planA, &aba)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reactivated.manifest.Digest != publicationA.manifest.Digest || aba != (Metrics{}) {
+	if reactivated.manifest.Digest != publicationA.manifest.Digest || parsed != 3 || aba != (Metrics{}) {
 		t.Fatalf("A reactivation = %+v metrics=%+v", reactivated.manifest, aba)
 	}
 	current, err := CurrentGeneration(root, "example/observations")

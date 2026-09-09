@@ -41,6 +41,52 @@ type RecoveryPreparationRequest struct {
 	TargetOrdinal       int                       `json:"target_ordinal"`
 }
 
+// CurrentRecoveryPreparationRequest selects the same validated native target
+// as RecoveryPreparationRequest, but never guesses its operational predecessor.
+// An admitted owner must supply the complete current authority/root inventory
+// and bind the target; this type does not add a public control transport.
+type CurrentRecoveryPreparationRequest struct {
+	Authority        PlanningAuthority
+	GenerationDigest string
+	Roots            []RecoveryPreparationRoot
+	Mode             string
+	TargetDomain     string
+	TargetOrdinal    int
+}
+
+// RecoveryPreparationTarget retains the bounded native schedule and target
+// identities, not plans, result inventories, source data, or an authority graph.
+type RecoveryPreparationTarget struct {
+	Schedule            store.GenerationSchedule
+	TargetGeneration    string
+	PriorScheduleDigest string
+	Domain              string
+	Ordinal             int
+	Offset              int
+	PlanDigest          string
+	ResultIdentity      string
+}
+
+// PrepareCurrentRecovery captures the settled predecessor in the first
+// existing locked native confirmation. Later confirmations and enqueue remain
+// bound to it. Like PrepareRecovery, any failure is terminal, not retryable
+// permission: a successor or filesystem mutation may already have committed.
+func (reconciler *Reconciler) PrepareCurrentRecovery(
+	ctx context.Context,
+	request CurrentRecoveryPreparationRequest,
+) (RecoveryPreparationTarget, error) {
+	var target RecoveryPreparationTarget
+	_, err := reconciler.prepareRecovery(ctx, RecoveryPreparationRequest{
+		Schema: RecoveryPreparationSchema, Authority: request.Authority,
+		GenerationDigest: request.GenerationDigest, Roots: request.Roots,
+		Mode: request.Mode, TargetDomain: request.TargetDomain, TargetOrdinal: request.TargetOrdinal,
+	}, &target)
+	if err != nil {
+		return RecoveryPreparationTarget{}, err
+	}
+	return target, nil
+}
+
 // PrepareRecovery creates one native predecessor-bound operational schedule
 // for an actually completed generation. It never resets old jobs, publishes
 // evidence, or changes immutable results. Call only on the live Reconciler;
@@ -54,6 +100,14 @@ func (reconciler *Reconciler) PrepareRecovery(
 	ctx context.Context,
 	request RecoveryPreparationRequest,
 ) (*store.GenerationSchedule, error) {
+	return reconciler.prepareRecovery(ctx, request, nil)
+}
+
+func (reconciler *Reconciler) prepareRecovery(
+	ctx context.Context,
+	request RecoveryPreparationRequest,
+	selected *RecoveryPreparationTarget,
+) (*store.GenerationSchedule, error) {
 	if reconciler == nil || !reconciler.RecoveryPreparationEnabled {
 		return nil, ErrRecoveryPreparationDisabled
 	}
@@ -61,7 +115,9 @@ func (reconciler *Reconciler) PrepareRecovery(
 		reconciler.Root != reconciler.Runtime.Root || reconciler.Evidence == nil ||
 		reconciler.CandidateReference == nil || reconciler.AuthorityReference == nil ||
 		request.Schema != RecoveryPreparationSchema || validatePlanningAuthority(request.Authority) != nil ||
-		!validDigest(request.GenerationDigest) || !validDigest(request.PriorScheduleDigest) ||
+		!validDigest(request.GenerationDigest) ||
+		(selected == nil && !validDigest(request.PriorScheduleDigest)) ||
+		(selected != nil && request.PriorScheduleDigest != "") ||
 		len(request.Roots) == 0 || len(request.Roots) > MaxDomains ||
 		(request.Mode != RecoveryPreparationScheduleOnly && request.Mode != RecoveryPreparationCheckpoint) ||
 		!boundedIdentity(request.TargetDomain, 128) || request.TargetOrdinal < 0 {
@@ -134,6 +190,13 @@ func (reconciler *Reconciler) PrepareRecovery(
 	if err != nil || authority != request.Authority || request.TargetOrdinal >= len(targetDomain.Plan.Expected) {
 		return nil, errors.Join(err, ErrStale)
 	}
+	if selected != nil {
+		*selected = RecoveryPreparationTarget{
+			TargetGeneration: generation.Digest, Domain: targetDomain.Plan.Domain,
+			Ordinal: request.TargetOrdinal, Offset: generation.Domains[target].StartOrdinal + request.TargetOrdinal,
+			PlanDigest: targetDomain.Plan.Digest,
+		}
+	}
 	assembly := runtime.assemblyLock(targetDomain.Plan.Digest)
 	if err := lockRecoveryPreparation(ctx, assembly); err != nil {
 		return nil, err
@@ -150,7 +213,7 @@ func (reconciler *Reconciler) PrepareRecovery(
 		return nil, invalid("recovery preparation fence release")
 	}
 	defer release()
-	if err := reconciler.confirmRecoveryAuthority(ctx, request, generation); err != nil {
+	if err := reconciler.confirmRecoveryAuthority(ctx, &request, generation); err != nil {
 		return nil, err
 	}
 	for index, descriptor := range generation.Domains {
@@ -165,14 +228,14 @@ func (reconciler *Reconciler) PrepareRecovery(
 		if err != nil || authority != request.Authority {
 			return nil, errors.Join(err, ErrStale)
 		}
-		if err := reconciler.validateRecoveryDomain(ctx, directory, generation, domain, request.Roots[index]); err != nil {
+		if err := reconciler.validateRecoveryDomain(ctx, directory, generation, domain, request.Roots[index], selected); err != nil {
 			return nil, err
 		}
 	}
 	// The same live shard excludes reconciliation; the exclusive publication
 	// fence excludes lifecycle control/schedule collection. Enqueue is NOT a
 	// store-level predecessor CAS, so re-prove the predecessor before mutation.
-	if err := reconciler.confirmRecoveryAuthority(ctx, request, generation); err != nil {
+	if err := reconciler.confirmRecoveryAuthority(ctx, &request, generation); err != nil {
 		return nil, err
 	}
 	if request.Mode == RecoveryPreparationCheckpoint {
@@ -203,6 +266,9 @@ func (reconciler *Reconciler) PrepareRecovery(
 	// possibly active successor if the selected upstream authority moved.
 	if err := reconciler.confirmRecoveryReferences(ctx, request.Authority); err != nil {
 		return nil, err
+	}
+	if selected != nil {
+		selected.Schedule, selected.PriorScheduleDigest = *current, request.PriorScheduleDigest
 	}
 	// Workers may already have claimed the successor. Its counters need not be
 	// pristine; the exact operational identity and native binding are the result.
@@ -240,7 +306,7 @@ func recoveryScheduleMatches(schedule store.GenerationSchedule, generation Gener
 
 func (reconciler *Reconciler) confirmRecoveryAuthority(
 	ctx context.Context,
-	request RecoveryPreparationRequest,
+	request *RecoveryPreparationRequest,
 	generation Generation,
 ) error {
 	authority := request.Authority
@@ -259,13 +325,20 @@ func (reconciler *Reconciler) confirmRecoveryAuthority(
 	if err != nil {
 		return err
 	}
-	if current == nil || !recoveryScheduleMatches(*current, generation) || current.Digest != request.PriorScheduleDigest ||
+	if current == nil || !recoveryScheduleMatches(*current, generation) ||
+		(request.PriorScheduleDigest != "" && current.Digest != request.PriorScheduleDigest) ||
 		current.Status != store.GenerationScheduleSettled || current.Failed != 0 || current.Succeeded != current.TotalChunks {
 		return ErrStale
 	}
 	binding, err := runtime.readBindingContext(ctx, authority.Repository, current.Generation)
 	if err != nil || binding.TargetGeneration != generation.Digest {
 		return errors.Join(err, ErrStale)
+	}
+	// Only the current-predecessor entrypoint can reach this first confirmation
+	// without a digest. Capture after validating its actual binding, while all
+	// three existing locks remain held; the next confirmation cannot reselect.
+	if request.PriorScheduleDigest == "" {
+		request.PriorScheduleDigest = current.Digest
 	}
 	return nil
 }
@@ -303,6 +376,7 @@ func (reconciler *Reconciler) validateRecoveryDomain(
 	generation Generation,
 	domain DomainPlan,
 	expected RecoveryPreparationRoot,
+	selected *RecoveryPreparationTarget,
 ) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -329,6 +403,9 @@ func (reconciler *Reconciler) validateRecoveryDomain(
 		result, present, err := readPartitionResultContext(ctx, filepath.Join(resultDirectory, resultName(ordinal)), plan, ordinal)
 		if err != nil || !present || result != root.Results[ordinal] {
 			return errors.Join(err, ErrStale)
+		}
+		if selected != nil && selected.Domain == plan.Domain && selected.Ordinal == ordinal {
+			selected.ResultIdentity = result.Identity
 		}
 	}
 	publication, err := reconciler.Evidence.GetPartitionedExtractionDomain(ctx, plan.Repository, plan.Domain)

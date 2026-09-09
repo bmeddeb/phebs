@@ -156,11 +156,11 @@ func (inspection executionCheckoutInspector) runInput(ctx context.Context, input
 	command.WaitDelay = time.Second
 	output := checkoutCommandOutput{remaining: limit, cancel: cancel}
 	command.Stdout = &output
-	runErr := command.Run()
+	runErr := runReferenceCommand(ctx, command)
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("checkout admission Git deadline: %w", err)
 	}
-	if runErr != nil {
+	if runErr != nil || output.err != nil {
 		return nil, errors.New("checkout admission Git read failed or exceeded its bound")
 	}
 	return output.buffer.Bytes(), nil
@@ -172,15 +172,28 @@ type checkoutCommandOutput struct {
 	buffer    bytes.Buffer
 	remaining int64
 	cancel    context.CancelFunc
+	err       error // Sticky writer refusal; inspect only after native Wait joins its pump.
 }
 
 func (output *checkoutCommandOutput) Write(raw []byte) (int, error) {
+	if output.err != nil {
+		return 0, output.err
+	}
 	if int64(len(raw)) > output.remaining {
+		output.err = errors.New("checkout admission Git output exceeds its bound")
 		output.cancel()
-		return 0, errors.New("checkout admission Git output exceeds its bound")
+		return 0, output.err
 	}
 	output.remaining -= int64(len(raw))
-	return output.buffer.Write(raw)
+	n, err := output.buffer.Write(raw)
+	if err == nil && n != len(raw) {
+		err = io.ErrShortWrite
+	}
+	if err != nil {
+		output.err = err
+		output.cancel()
+	}
+	return n, err
 }
 
 func (inspection executionCheckoutInspector) authority(

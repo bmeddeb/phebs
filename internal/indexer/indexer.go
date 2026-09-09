@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"sort"
 	"strings"
@@ -59,7 +60,9 @@ func findBinary() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return candidate, VerifyBinaryPin(candidate)
+		// Only the parent-supplied override can carry the selected V3 private
+		// build; discovered binaries keep the unconditional module pin.
+		return candidate, verifyBinaryPin(candidate, currentPrivateIndexAdmission())
 	}
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
@@ -89,9 +92,52 @@ func findBinary() (string, error) {
 // the zoekt reader linked into this process. This turns the same-module build
 // convention into a runtime admission fence for overrides and PATH binaries.
 func VerifyBinaryPin(binary string) error {
+	return verifyBinaryPin(binary, privateIndexAdmission{})
+}
+
+// privateIndexAdmission says whether this process may accept the T42.2 V3
+// private-module index child instead of the direct module pin: only a
+// dispatch-admitted selected V3 launch, and only with the parent-supplied
+// digest of the image its reference build independently reproduced.
+type privateIndexAdmission struct {
+	selectedV3     bool
+	expectedDigest string
+}
+
+func currentPrivateIndexAdmission() privateIndexAdmission {
+	_, err := dispatchadmission.ProductionSemanticState()
+	return privateIndexAdmission{
+		selectedV3:     err == nil,
+		expectedDigest: os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256"),
+	}
+}
+
+func verifyBinaryPin(binary string, admission privateIndexAdmission) error {
 	candidate, err := buildinfo.ReadFile(binary)
 	if err != nil {
 		return fmt.Errorf("read zoekt-git-index build identity: %w", err)
+	}
+	linked, err := linkedZoektModuleIdentity()
+	if err != nil {
+		return err
+	}
+	graph, err := linkedModuleGraph()
+	if err != nil {
+		return err
+	}
+	return verifyPinnedBuild(candidate, linked, graph, admission)
+}
+
+// verifyPinnedBuild is the whole runtime identity decision. An ordinary child
+// must carry the exact pinned module identity linked into this process. The V3
+// private replacement build carries no module sum, so it is admitted only when
+// the selected parent verified its exact image: the shape must equal the
+// admitted `./zoekt@(devel)` replacement of the pinned version, the toolchain
+// and closed build settings must match this process, and every dependency it
+// shares with the linked reader must be the identical version and sum.
+func verifyPinnedBuild(candidate *debug.BuildInfo, linked string, graph map[string]debug.Module, admission privateIndexAdmission) error {
+	if candidate == nil {
+		return errors.New("zoekt-git-index build identity is absent")
 	}
 	if candidate.Path != "github.com/sourcegraph/zoekt/cmd/zoekt-git-index" ||
 		candidate.Main.Path != "github.com/sourcegraph/zoekt" {
@@ -102,14 +148,13 @@ func VerifyBinaryPin(binary string) error {
 	}
 	want := "github.com/sourcegraph/zoekt@" + zoektModuleVersion + " " +
 		zoektModuleSum
-	linked, err := linkedZoektModuleIdentity()
-	if err != nil {
-		return err
-	}
 	if linked != want {
 		return fmt.Errorf(
 			"embedded zoekt pin %s differs from linked reader %s", want, linked,
 		)
+	}
+	if candidate.Main.Replace != nil {
+		return verifyPrivateIndexBuild(candidate, graph, admission)
 	}
 	got := moduleIdentity(candidate.Main)
 	if got != want {
@@ -119,6 +164,72 @@ func VerifyBinaryPin(binary string) error {
 		)
 	}
 	return nil
+}
+
+func verifyPrivateIndexBuild(candidate *debug.BuildInfo, graph map[string]debug.Module, admission privateIndexAdmission) error {
+	got := moduleIdentity(candidate.Main)
+	if !admission.selectedV3 || admission.expectedDigest == "" {
+		return fmt.Errorf(
+			"zoekt-git-index private module replacement %s is admitted only for a selected V3 launch with a parent-verified image digest",
+			got,
+		)
+	}
+	replacement := debug.Module{Path: "./zoekt", Version: "(devel)"}
+	if candidate.Main.Version != zoektModuleVersion || candidate.Main.Sum != "" ||
+		*candidate.Main.Replace != replacement {
+		return fmt.Errorf(
+			"zoekt-git-index private replacement identity %s differs from the admitted V3 private build of %s",
+			got, zoektModuleVersion,
+		)
+	}
+	if candidate.GoVersion != runtime.Version() {
+		return fmt.Errorf(
+			"zoekt-git-index private build toolchain %s differs from this process %s",
+			candidate.GoVersion, runtime.Version(),
+		)
+	}
+	settings := make(map[string]string, len(candidate.Settings))
+	for _, setting := range candidate.Settings {
+		if _, duplicate := settings[setting.Key]; duplicate {
+			return errors.New("zoekt-git-index private build has duplicate build settings")
+		}
+		settings[setting.Key] = setting.Value
+	}
+	if settings["CGO_ENABLED"] != "0" || settings["-trimpath"] != "true" ||
+		settings["GOOS"] != runtime.GOOS || settings["GOARCH"] != runtime.GOARCH ||
+		settings["vcs.revision"] != "" {
+		return errors.New("zoekt-git-index private build is not the closed host-native module build")
+	}
+	for _, dependency := range candidate.Deps {
+		if dependency == nil || dependency.Replace != nil {
+			return errors.New("zoekt-git-index private build replaces a dependency")
+		}
+		pinned, shared := graph[dependency.Path]
+		if shared && (pinned.Version != dependency.Version || pinned.Sum != dependency.Sum) {
+			return fmt.Errorf(
+				"zoekt-git-index private build dependency %s@%s differs from the linked reader graph",
+				dependency.Path, dependency.Version,
+			)
+		}
+	}
+	return nil
+}
+
+// linkedModuleGraph is this process's own unreplaced dependency graph; a
+// replaced local dependency has no comparable identity and is left out.
+func linkedModuleGraph() (map[string]debug.Module, error) {
+	build, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil, errors.New("read linked module graph")
+	}
+	graph := make(map[string]debug.Module, len(build.Deps))
+	for _, dependency := range build.Deps {
+		if dependency == nil || dependency.Replace != nil {
+			continue
+		}
+		graph[dependency.Path] = debug.Module{Path: dependency.Path, Version: dependency.Version, Sum: dependency.Sum}
+	}
+	return graph, nil
 }
 
 func linkedZoektModuleIdentity() (string, error) {
@@ -404,6 +515,15 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	start := time.Now()
 	out := newChildOutput(ix.logger(), fmt.Sprintf("index %s: %s: ", repo.Name, childName), ix.Verbose)
 	cmd.Stdout, cmd.Stderr = out, out
+	var offers *indexOfferOutput
+	if dispatchadmission.ProductionSemanticSelected() {
+		offers, err = selectedIndexOfferOutput(ctx, out, unit != nil)
+		if err != nil {
+			return fmt.Errorf("index %s: native offer coverage: %w", repo.Name, err)
+		}
+		cmd.Env = append(cmd.Env, IndexOfferEnvironment+"=v1")
+		cmd.Stdout, cmd.Stderr = offers, offers
+	}
 	expectedSHA256 := os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256")
 	if unit != nil {
 		expectedSHA256 = os.Getenv("PHEBS_FOCUSED_INDEX_SHA256")
@@ -414,6 +534,9 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		return fmt.Errorf("index %s: verify %s identity before launch: %w", repo.Name, childName, err)
 	}
 	runErr := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteIndexBuild, cmd)
+	if offers != nil {
+		runErr = errors.Join(runErr, offers.finish(runErr))
+	}
 	out.Flush()
 	if runErr != nil {
 		err := runErr
@@ -617,7 +740,7 @@ func goGitChildEnvironment(environment []string) []string {
 	result := make([]string, 0, len(environment)+1)
 	for _, value := range environment {
 		key, _, _ := strings.Cut(value, "=")
-		if key == "ZOEKT_DISABLE_CATFILE_BATCH" {
+		if key == "ZOEKT_DISABLE_CATFILE_BATCH" || key == IndexOfferEnvironment {
 			continue
 		}
 		result = append(result, value)

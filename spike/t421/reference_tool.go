@@ -32,6 +32,8 @@ type ReferenceToolRequest struct {
 	IntegratedMainCommit string
 	SourceCommit         string
 	Role                 string
+	// Empty preserves the retained V1/V2 upstream recipe.
+	PlanSchema string
 }
 
 // VerifyExecutionReferenceTool rebuilds one implemented Go tool from a private
@@ -39,7 +41,7 @@ type ReferenceToolRequest struct {
 // It neither runs the supplied binary nor issues a CheckoutAdmissionBinding.
 // The executor role remains unavailable until its real command exists.
 func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequest) (identity ExecutionToolIdentity, retErr error) {
-	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRole(request.Role)
+	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRoleForSchema(request.Role, request.PlanSchema, request.SourceCommit)
 	if err != nil {
 		return identity, err
 	}
@@ -84,7 +86,7 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 		return identity, errors.New("reference build supplied image is unavailable")
 	}
 	supplied, err := buildinfo.ReadFile(request.Binary)
-	if err != nil || validateReferenceBuildInfo(supplied, packagePath, request.SourceCommit, modulePath, moduleVersion, moduleSum, nil) != nil {
+	if err != nil || validateReferenceBuildInfoForSchema(supplied, request.Role, request.PlanSchema, packagePath, request.SourceCommit, modulePath, moduleVersion, moduleSum, nil) != nil {
 		return identity, errors.New("reference build supplied Go identity is invalid")
 	}
 	sdkDigest, err := referenceSDKDigest(ctx, request.GoRoot)
@@ -121,12 +123,13 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 		return identity, err
 	}
 	environment := referenceBuildEnvironment(request, workspace)
-	run := func(limit int64, args ...string) ([]byte, error) {
+	runFrom := func(root string, limit int64, args ...string) ([]byte, error) {
 		if executableidentity.Verify(goBinary, goDigest) != nil || executableidentity.Verify(request.GitBinary, gitDigest) != nil {
 			return nil, errors.New("reference build tool image changed before launch")
 		}
-		return runReferenceGo(ctx, reference.root.root, goBinary, environment, limit, args...)
+		return runReferenceGo(ctx, root, goBinary, environment, limit, args...)
 	}
+	run := func(limit int64, args ...string) ([]byte, error) { return runFrom(reference.root.root, limit, args...) }
 	version, err := run(256, "version")
 	if err != nil || string(version) != "go version "+runtime.Version()+" "+runtime.GOOS+"/"+runtime.GOARCH+"\n" {
 		return identity, errors.New("reference build Go driver version differs")
@@ -139,18 +142,38 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 	if err != nil {
 		return identity, err
 	}
-	if err := validateReferenceBuildInfo(supplied, packagePath, request.SourceCommit, modulePath, moduleVersion, moduleSum, modules); err != nil {
+	if err := validateReferenceBuildInfoForSchema(supplied, request.Role, request.PlanSchema, packagePath, request.SourceCommit, modulePath, moduleVersion, moduleSum, modules); err != nil {
 		return identity, err
 	}
 	if _, err := run(64<<10, "mod", "verify"); err != nil {
 		return identity, err
 	}
 	output := filepath.Join(workspace, "reference")
-	if _, err := run(64<<10, "build", "-trimpath", "-pgo=off", "-buildvcs=true", "-p=1", "-o", output, packagePath); err != nil {
+	buildRoot, buildArgs, checkOverlay, err := referenceToolBuildArgs(ctx, request.Role, request.PlanSchema, reference.root.root, request.ModuleCache, workspace, output, packagePath)
+	if err != nil {
+		return identity, err
+	}
+	checkGraph := func() error {
+		if buildRoot == reference.root.root {
+			return nil
+		}
+		native, err := runFrom(buildRoot, maxReferenceModuleGraphBytes, "list", "-modfile=v3.mod", "-m", "-json", "all")
+		if err != nil {
+			return err
+		}
+		return verifyZoektOfferGraph(graph, native, reference.root.root, buildRoot)
+	}
+	if err := checkGraph(); err != nil {
+		return identity, err
+	}
+	if _, err := runFrom(buildRoot, 64<<10, buildArgs...); err != nil {
+		return identity, err
+	}
+	if err := errors.Join(checkOverlay(), checkGraph()); err != nil {
 		return identity, err
 	}
 	actual, err := buildinfo.ReadFile(output)
-	if err != nil || validateReferenceBuildInfo(actual, packagePath, request.SourceCommit, modulePath, moduleVersion, moduleSum, modules) != nil ||
+	if err != nil || validateReferenceBuildInfoForSchema(actual, request.Role, request.PlanSchema, packagePath, request.SourceCommit, modulePath, moduleVersion, moduleSum, modules) != nil ||
 		!reflect.DeepEqual(supplied, actual) || executableidentity.Verify(output, suppliedDigest) != nil {
 		return identity, errors.New("supplied executable differs from its exact reference build")
 	}
@@ -182,8 +205,29 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 	if modulePath != "" {
 		identity.Version, identity.Provenance, identity.BuildVCSRevision = moduleVersion, "go-module-build-v1", ""
 		identity.ModulePath, identity.ModuleVersion, identity.ModuleSum, identity.BuildRecipeSHA256 = modulePath, moduleVersion, moduleSum, recipe
+		if request.Role == "zoekt-git-index" && request.PlanSchema == PlanV3Schema {
+			identity.Provenance = zoektOfferProvenance
+		}
 	}
 	return identity, nil
+}
+
+func referenceToolRoleForSchema(role, schema, sourceCommit string) (packagePath, modulePath, version, sum, recipe string, err error) {
+	if schema != "" && !knownPlanSchema(schema) {
+		err = errors.New("reference build plan schema is unavailable")
+		return
+	}
+	packagePath, modulePath, version, sum, recipe, err = referenceToolRole(role)
+	if err == nil && role == "zoekt-git-index" && schema == PlanV3Schema {
+		if !validCommit(sourceCommit) {
+			err = errors.New("reference overlay requires exact source commit")
+			return
+		}
+		policy := frozenToolPolicy()
+		policy.ZoektBuildRecipe = zoektOfferBuildRecipe
+		recipe = zoektOfferRecipe(policy, sourceCommit)
+	}
+	return
 }
 
 func referenceToolRole(role string) (packagePath, modulePath, version, sum, recipe string, err error) {
@@ -207,8 +251,27 @@ func referenceToolRole(role string) (packagePath, modulePath, version, sum, reci
 	return
 }
 
+// Actual Go1.26 local replacement metadata is checked before the existing
+// module verifier. No caller supplies the replacement identity or a fake sum.
+func validateReferenceBuildInfoForSchema(info *debug.BuildInfo, role, schema, packagePath, commit, modulePath, version, sum string, modules map[string]string) error {
+	if role != "zoekt-git-index" || schema != PlanV3Schema {
+		return validateReferenceBuildInfo(info, packagePath, commit, modulePath, version, sum, modules)
+	}
+	policy := frozenToolPolicy()
+	if info == nil || modulePath != policy.ZoektModulePath || packagePath != modulePath+"/cmd/zoekt-git-index" ||
+		version != policy.ZoektModuleVersion || sum != policy.ZoektModuleSum || info.Main.Sum != "" ||
+		!reflect.DeepEqual(info.Main.Replace, &debug.Module{Path: "./zoekt", Version: "(devel)"}) {
+		return errors.New("reference build private replacement identity differs")
+	}
+	return validateReferenceBuildInfoChecked(info, packagePath, commit, modulePath, version, sum, modules, true)
+}
+
 func validateReferenceBuildInfo(info *debug.BuildInfo, packagePath, commit, modulePath, version, sum string, modules map[string]string) error {
-	if info == nil || info.Path != packagePath || info.GoVersion != runtime.Version() || info.Main.Replace != nil {
+	return validateReferenceBuildInfoChecked(info, packagePath, commit, modulePath, version, sum, modules, false)
+}
+
+func validateReferenceBuildInfoChecked(info *debug.BuildInfo, packagePath, commit, modulePath, version, sum string, modules map[string]string, privateZoekt bool) error {
+	if info == nil || info.Path != packagePath || info.GoVersion != runtime.Version() || !privateZoekt && info.Main.Replace != nil {
 		return errors.New("reference build package, toolchain, or main identity differs")
 	}
 	settings := make(map[string]string, len(info.Settings))
@@ -226,7 +289,7 @@ func validateReferenceBuildInfo(info *debug.BuildInfo, packagePath, commit, modu
 			settings["vcs.revision"] != commit || settings["vcs.modified"] != "false" {
 			return errors.New("reference build does not bind the exact clean source")
 		}
-	} else if info.Main.Path != modulePath || info.Main.Version != version || info.Main.Sum != sum || settings["vcs.revision"] != "" ||
+	} else if info.Main.Path != modulePath || info.Main.Version != version || !privateZoekt && info.Main.Sum != sum || settings["vcs.revision"] != "" ||
 		(modules != nil && modules[modulePath+"@"+version] != sum) {
 		return errors.New("reference build does not bind the frozen module")
 	}
@@ -279,11 +342,8 @@ func runReferenceGo(ctx context.Context, root, binary string, environment []stri
 	command.Dir, command.Env = root, environment
 	command.Stdout, command.Stderr = &stdout, &stderr
 	command.WaitDelay = time.Second
-	if err := prepareReferenceCommand(command); err != nil {
-		return nil, err
-	}
-	if err := command.Run(); err != nil || ctx.Err() != nil {
-		return nil, errors.New("reference build Go command failed, expired, or exceeded output bound")
+	if err := runReferenceCommand(ctx, command); err != nil || ctx.Err() != nil || stdout.err != nil || stderr.err != nil {
+		return stderr.buffer.Bytes(), errors.New("reference build Go command failed, expired, or exceeded output bound")
 	}
 	return stdout.buffer.Bytes(), nil
 }

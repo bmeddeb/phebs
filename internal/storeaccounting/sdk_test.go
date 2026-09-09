@@ -383,11 +383,16 @@ func TestStoreAccountingPrivateRefusalBounds(t *testing.T) {
 		log.SetOutput(&output)
 		ctx, owner, _ := storeAccountingFixture(t, 40, 2)
 		_ = owner.fail(ctx, ErrCanceled)
+		first, ok := owner.PrivateRefusal()
+		if !ok || first.Reason != "canceled" || first.ContextStatus != "active" || first.OwnerContextStatus != "active" ||
+			first.Method != "" || first.SQLPrefix != "" || first.Callers[0] == 0 {
+			t.Fatalf("missing generic first failure: %+v", first)
+		}
 		if !errors.Is(owner.failCall(ctx, nil), ErrCanceled) {
 			t.Fatal("descriptor refusal replaced prior failure")
 		}
-		if _, ok := owner.PrivateRefusal(); ok || output.Len() != 0 {
-			t.Fatal("later descriptor refusal invented first-failure diagnostics")
+		if later, _ := owner.PrivateRefusal(); later != first || strings.Count(output.String(), "\n") != 1 {
+			t.Fatal("later descriptor refusal replaced or repeated first-failure diagnostics")
 		}
 	})
 }

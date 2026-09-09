@@ -40,6 +40,11 @@ type ExecutionEpochConfig struct {
 	Repository, Listen, APIKey string
 	DataRoot, Home, Temporary  string
 	BackupRoot                 string
+	// Filled only at epoch-three launch from the checked actual author result.
+	ReturnSourceCommit string
+	// Filled at launch only from the admitted prospective plan policy.
+	SelectorHandoffCleanup string
+	LogicalStoreWork       string
 }
 
 // ExecutionEpochConfigCustody borrows the genuine author's protected inputs

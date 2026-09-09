@@ -375,6 +375,10 @@ func executionFreezeTestTools(plan Plan, commits ExecutionCommits) []ExecutionTo
 				"t422-zoekt-build-recipe-v1", tool.ModulePath, tool.ModuleVersion,
 				tool.ModuleSum, plan.ToolPolicy.ZoektBuildRecipe,
 			)
+			if plan.Schema == PlanV3Schema {
+				tool.Provenance = zoektOfferProvenance
+				tool.BuildRecipeSHA256 = zoektOfferRecipe(plan.ToolPolicy, commits.T422SourceCommit)
+			}
 		}
 		tools = append(tools, tool)
 	}

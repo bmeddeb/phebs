@@ -64,6 +64,58 @@ sequence.
 
 ## Now
 
+**T42.2 completion run, 2026-09-09:** Ben authorizes the remaining implementation,
+reviews, rehearsals, commits/pushes and safe housekeeping through freeze, then
+the terminal ceremony command. The reviewed branch through `35f62dd8` is
+pushed. The exact `2e334505` mounted rehearsal passed cold/warm, then stopped
+in physical B with a native SDK reply/decoding refusal whose underlying cause
+was not retained; root/session teardown completed and failure custody remains.
+The separate tiny ballast check at `acb809de` exceeded its unchanged capacity
+delta tolerance on a host below the existing backing-space floor. Reviewed
+corrections now retain closed private SDK refusal classes and check that floor
+before volume creation; neither failure has been retried. Actual server-process,
+catalog-cache and joined lifecycle observations are implemented, but do not
+supply complete whole-work metrics. Diagnostic archival and retirement of one
+older 58-GiB replay is awaiting explicit approval to restore headroom.
+A newly identified live-backup
+lifetime overlap is awaiting explicit V3 disposition; no existing admission
+guard or numeric limit is weakened. No ceremony command or freeze is issued
+until the complete fifteen-phase/whole-work/launcher gates pass.
+
+**T42.2 update, 2026-09-09:** exact clean `64af8fb6` passed the complete
+optional checkpoint rehearsal in 57m49.74s. Cold, warm authority observation,
+physical B, logical recovery, return A, stale-lease recovery and checkpoint
+restart passed, with the root joined and session empty. This closes the
+recurring stale-requeue mechanism gate; it does not complete full work metrics
+or the fifteen-phase executor. The joined parent successful-parse collector
+is now implemented and component-gated; full native metrics remain open.
+The owned empty APFS volume prerequisite passed its corrected-tree native race,
+static/documentation and independent zero-finding review gates. The next
+working-tree slice binds populated rehearsal custody to that owner and routes
+preparation scratch onto the mount; its tiny native detach fixture is not a
+bound epoch rehearsal or pressure-mutation pass.
+Next: remaining phase/epoch and whole-work wiring, T42.2m launcher/custody
+closure, T42.2n exact-tree acceptance and
+T42.2o seal/exact-main freeze. That checkpoint record started no further run;
+the later completion request above authorizes the now-running mounted rehearsal,
+not ceremony execution.
+
+**T42.2 update, 2026-09-08:** the c5b91897 rehearsal passed through return A
+and stopped at stale RECOVERED R11 after a complete HIT. First-failure
+instrumentation is approved, with no limit or coordination-policy change.
+A focused real-runner/selected-SDK diagnostic establishes a successful-handler
+heartbeat-cancellation hazard under a supplied scheduling gate, not the
+original rehearsal's cause. Its correction, reviewed diagnostic gates and a
+fresh immutable candidate precede any decision on another native run.
+Checkpoint restart, complete whole-work evidence, seal and freeze remain open.
+
+Ben subsequently approved repairing the reproduced heartbeat cleanup hazard.
+Ordinary job/generation completion and unused terminal-heartbeat cleanup now
+stop new beats and join the admitted call before cancellation, without extending
+its deadline or detaching external shutdown. Component gates and independent
+source review passed; the gate record and fresh immutable candidate precede
+any native-run decision. No new rehearsal or original-trigger attribution follows.
+
 T31.1 completed on 2026-08-04. Bounded, source-free, component-specific
 pipeline receipts now cover generic durable jobs, candidate planning,
 extraction scheduling/outcomes, and fixed extractor counters while remaining

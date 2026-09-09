@@ -41,6 +41,9 @@ type Client struct {
 	waiters                       int
 	controlAttached               bool
 	controlTerminalAuthor         bool
+	controlTerminalPhase          uint32
+	terminalState                 byte
+	terminalQuiesce               func(context.Context) error
 	controlPauseAcknowledged      bool
 	controlCheckpointAcknowledged bool
 	ownersRequired                bool
@@ -515,7 +518,7 @@ func (c *Client) Resume(phase uint32) error {
 		c.mu.Unlock()
 		return err
 	}
-	if !c.checkpoint || c.closed || phase == 0 || phase == c.phase {
+	if !c.checkpoint || c.closed || c.terminalState != 0 || phase == 0 || phase == c.phase {
 		c.mu.Unlock()
 		return c.fail(ErrProtocol)
 	}

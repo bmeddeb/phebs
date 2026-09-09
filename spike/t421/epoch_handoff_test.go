@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -23,6 +25,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
+	"github.com/bmeddeb/phebs/spike/t4013"
 )
 
 // This inherited test-binary child proves protocol mechanics only. Its generic
@@ -45,16 +48,44 @@ func TestExecutionEpochHandoffHelper(t *testing.T) {
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatalf("actual owner control: %v", err)
 	}
+	checkpoint := os.Getenv("PHEBS_EPOCH_HANDOFF_CHECKPOINT") == "1"
+	var terminalTurn dispatchadmission.OwnerTurn
+	terminalReady := make(chan struct{})
+	if checkpoint && dispatchadmission.BindProductionTerminalQuiescence(func(ctx context.Context) error {
+		select {
+		case <-terminalReady:
+			return terminalTurn.FenceTerminal(ctx)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}) != nil {
+		t.Fatal("fixture terminal capability binding")
+	}
 	epochHandoffByte(t, os.Stdout, 'R')
 	epochHandoffRead(t, os.Stdin, 'V')
 	state, err := dispatchadmission.ProductionSemanticState()
-	if err != nil || state.Phase != 3 || state.ProducerID != 2 || !state.OrdinaryOwnersDrained || owner.Check(ctx) != nil {
+	wantPhase, wantProducer := uint32(3), uint32(2)
+	if os.Getenv("PHEBS_EPOCH_HANDOFF_STALE") == "1" {
+		wantPhase, wantProducer = 7, 4
+	}
+	if err != nil || state.Phase != wantPhase || state.ProducerID != wantProducer || !state.OrdinaryOwnersDrained || owner.Check(ctx) != nil {
 		t.Fatalf("resume lost actual phase/SDK/owner fence: %+v / %v", state, err)
 	}
 	if _, err := owners.EnterRequest(ctx); err == nil {
 		t.Fatal("resume reopened requests")
 	}
 	epochHandoffByte(t, os.Stdout, 'W')
+	if checkpoint {
+		epochHandoffRead(t, os.Stdin, 'H')
+		terminalTurn, err = owners.Enter(ctx)
+		if err != nil {
+			t.Fatal("genuine held fixture owner", err)
+		}
+		close(terminalReady)
+		epochHandoffByte(t, os.Stdout, 'h')
+		<-ctx.Done() // Owned kill, never an ordinary End/Close claim.
+		return
+	}
 	if os.Getenv("PHEBS_EPOCH_HANDOFF_WARM") == "1" {
 		epochHandoffRead(t, os.Stdin, 'O')
 		state, err := dispatchadmission.ProductionSemanticState()
@@ -163,21 +194,43 @@ func TestExecutionEpochAdvanceColdInheritedHandoff(t *testing.T) {
 	}
 }
 
+func TestExecutionEpochStaleInheritedHandoff(t *testing.T) {
+	for _, mode := range []string{"stale", "stale_observe", "stale_stop_join"} {
+		t.Run(mode, func(t *testing.T) { testEpochInheritedHandoff(t, mode) })
+	}
+}
+
+func TestExecutionEpochCheckpointInheritedTerminal(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("owned terminal session helper is Darwin-only")
+	}
+	for _, mode := range []string{"stale_checkpoint", "stale_checkpoint_partial"} {
+		t.Run(mode, func(t *testing.T) { testEpochInheritedHandoff(t, mode) })
+	}
+}
+
 func testEpochInheritedHandoff(t *testing.T, mode string) {
 	canceled, warm := mode == "canceled", strings.HasPrefix(mode, "warm")
 	physical := strings.HasPrefix(mode, "warm_physical")
+	stale := strings.HasPrefix(mode, "stale")
+	checkpoint := strings.HasPrefix(mode, "stale_checkpoint")
+	phaseIDs, serverID := []uint32{2, 3, 4}, uint32(2)
+	if stale {
+		phaseIDs, serverID = []uint32{6, 7, 8}, 4
+	}
+	initialPhase, resumedPhase := phaseIDs[0], phaseIDs[1]
 	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Second)
 	defer cancel()
 	rootSite := dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}
 	root := dispatchadmission.Producer{ID: 1, Binding: [32]byte{1}, Sites: []dispatchadmission.Site{rootSite}}
-	server := dispatchadmission.Producer{ID: 2, Binding: [32]byte{2}, Sites: dispatchadmission.ProductionSites()}
-	limits := dispatchadmission.Limits{Producers: 2, Sites: 17, Roles: 5, Phases: 3,
+	server := dispatchadmission.Producer{ID: serverID, Binding: [32]byte{2}, Sites: dispatchadmission.ProductionSites()}
+	limits := dispatchadmission.Limits{Producers: 2, Sites: 17, Roles: 5, Phases: len(phaseIDs),
 		ActivePerProducer: 1, Attempts: 1, WireBytes: 4096, AckTimeout: 5 * time.Second}
 	var phases []dispatchadmission.Phase
-	for _, phase := range []uint32{2, 3, 4} {
+	for _, phase := range phaseIDs {
 		roles := []dispatchadmission.RoleBudget{{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal},
 			{Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}, {Role: executionRolePhebs}}
-		if phase == 2 {
+		if phase == initialPhase {
 			roles[4].Attempts = 1 // The actual fixture child, not a Phebs launch claim.
 		}
 		phases = append(phases, dispatchadmission.Phase{ID: phase, Roles: roles})
@@ -193,21 +246,28 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	defer func() { _ = parent.Close(context.Background()) }()
 	// Bootstrap requires the genuine fixed server capacity and phase mask;
 	// no store query/transaction or phase-four work is fabricated here.
+	var storePhases []storeaccounting.Phase
+	var phaseMask uint16
+	for _, id := range phaseIDs {
+		storePhases = append(storePhases, storeaccounting.Phase{ID: id})
+		phaseMask |= 1 << (id - 1)
+	}
+	storePhases[0].Transactions, storePhases[0].Rows = 1, 1
 	store, err := storeaccounting.New(ctx, storeaccounting.Config{
-		Producers: []storeaccounting.Producer{{ID: 2, Calls: 40, Transactions: 2}},
-		Phases:    []storeaccounting.Phase{{ID: 2, Transactions: 1, Rows: 1}, {ID: 3}, {ID: 4}},
+		Producers: []storeaccounting.Producer{{ID: serverID, Calls: 40, Transactions: 2}},
+		Phases:    storePhases,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	transport, err := storeaccounting.NewTransport(ctx, store, storeaccounting.WireConfig{
-		Producers: []storeaccounting.WireProducer{{ID: 2, Binding: server.Binding, Phases: 14}}, AckTimeout: 5 * time.Second,
+		Producers: []storeaccounting.WireProducer{{ID: serverID, Binding: server.Binding, Phases: phaseMask}}, AckTimeout: 5 * time.Second,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = transport.Close() }()
-	storeChild, storeConfig, err := transport.Open(2)
+	storeChild, storeConfig, err := transport.Open(serverID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +291,14 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if physical {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_PHYSICAL=1")
 	}
-	if mode == "warm_physical_stop_join" {
+	if stale {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_STALE=1")
+	}
+	if checkpoint {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_CHECKPOINT=1")
+		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	}
+	if mode == "warm_physical_stop_join" || mode == "stale_stop_join" {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_STOP_JOIN=1")
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	}
@@ -246,17 +313,43 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		t.Fatal(err)
 	}
 	defer func() { _ = output.Close() }()
-	handle, err := parent.StartInPhase(ctx, 2, rootSite, command)
+	handle, err := parent.StartInPhase(ctx, initialPhase, rootSite, command)
 	if err != nil {
 		t.Fatal(err)
 	}
 	joined := false
+	var processObservation *epochProcessObservation
 	defer func() {
+		if processObservation != nil {
+			_, _ = processObservation.close()
+			processObservation.armStop()
+		}
 		if !joined {
 			_ = command.Process.Kill()
 			_ = handle.Wait()
 		}
 	}()
+	// This is the actual admitted test child, not the production Phebs image.
+	// Bind its known executable basename before its sole Wait can reap the PID.
+	observedName := filepath.Base(command.Path)
+	if len(observedName) > 16 {
+		observedName = observedName[:16]
+	}
+	if runtime.GOOS == "darwin" {
+		processObservation, err = startEpochProcessObservation(ctx, command.Process.Pid, initialPhase, observedName, map[string]string{observedName: "controller"}, cancel)
+	} else {
+		// Preserve the inherited Linux PC/DA mechanics coverage without adding
+		// a production native backend. Only this test supplies synthetic sampler
+		// rows; these are not native observations or image-admission evidence.
+		processObservation, err = newEpochProcessObservation(ctx, command.Process.Pid, initialPhase, observedName, map[string]string{observedName: "controller"}, cancel,
+			func(context.Context, int) ([]t4013.NativeProcessRecord, error) {
+				return []t4013.NativeProcessRecord{{PID: command.Process.Pid, ParentPID: os.Getpid(), RSSBytes: 1,
+					StartIdentity: "synthetic-linux-handoff", ObservedName: observedName}}, nil
+			})
+	}
+	if err != nil {
+		t.Fatal("fixture root capture (native only on Darwin)", err)
+	}
 	if daChild.Close() != nil || pcChild.Close() != nil || storeChild.Close() != nil {
 		t.Fatal("fixture inherited descriptor release")
 	}
@@ -271,10 +364,19 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if physical {
 		pairs = 21
 	}
-	pcConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2,
-		MaximumPhases: 3, MaximumWireBytes: pairs * 2 * dispatchadmission.FrameBytes, Timeout: 5 * time.Second}
+	if mode == "stale_observe" {
+		pairs = 14
+	}
+	if checkpoint {
+		pairs = 21
+	}
+	pcConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: phaseIDs, InitialPhase: initialPhase,
+		MaximumPhases: len(phaseIDs), MaximumWireBytes: pairs * 2 * dispatchadmission.FrameBytes, Timeout: 5 * time.Second}
+	if checkpoint {
+		pcConfig.TerminalPhase = 8
+	}
 	record := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs,
-		SemanticMode: dispatchadmission.ProductionSemanticV3, InputSHA256: [32]byte{3}, Producer: server, Phase: 2,
+		SemanticMode: dispatchadmission.ProductionSemanticV3, InputSHA256: [32]byte{3}, Producer: server, Phase: initialPhase,
 		Limits: limits, Control: pcConfig, Store: &storeConfig,
 		Tools: []dispatchadmission.ProductionToolBinding{{Role: "git", Path: "/bin/sh", Environment: git},
 			{Role: "surreal", Path: "/bin/sh", Environment: base}, {Role: "zoekt-git-index", Path: "/bin/sh", Environment: git}},
@@ -288,7 +390,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	}
 	defer func() { _ = control.Close() }()
 	served := make(chan error, 1)
-	go func() { served <- dispatch.Serve(ctx, 2, command.Process.Pid, daParent) }()
+	go func() { served <- dispatch.Serve(ctx, serverID, command.Process.Pid, daParent) }()
 	serverJoined := false
 	defer func() {
 		cancel()
@@ -300,7 +402,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if control.DrainOwners(ctx) != nil || control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil {
 		t.Fatal("fixture owner/request fences failed")
 	}
-	run := &ExecutionEpochOneRun{flow: &ExecutionEpochOne{controller: dispatch, parent: parent, store: transport}, control: control}
+	run := &ExecutionEpochOneRun{flow: &ExecutionEpochOne{controller: dispatch, parent: parent, store: transport}, control: control, processObservation: processObservation}
 	if canceled {
 		canceledCtx, stop := context.WithCancel(ctx)
 		stop()
@@ -314,18 +416,127 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		}
 		return
 	}
-	if err := run.advanceCold(ctx); err != nil {
+	advance := run.advanceCold
+	if stale {
+		advance = run.advanceStale
+		run.epoch.Epoch = 3
+	}
+	if mode == "stale_observe" {
+		advance = func(ctx context.Context) error {
+			testEpochInheritedStaleObservation(t, ctx, run)
+			return nil
+		}
+	}
+	if err := advance(ctx); err != nil {
 		t.Fatalf("actual parent handoff: %v", err)
 	}
 	da, daErr := dispatch.Snapshot()
 	sa, saErr := transport.Snapshot()
-	if daErr != nil || saErr != nil || da.Producers[1].Checkpoint != 2 || sa.Store.Phase != 3 ||
-		sa.Store.Producers[0].Checkpoint != 2 || da.Producers[0].Active != 1 || control.RequestToken() != "" ||
+	if daErr != nil || saErr != nil || da.Producers[1].Checkpoint != initialPhase || sa.Store.Phase != resumedPhase ||
+		sa.Store.Producers[0].Checkpoint != initialPhase || da.Producers[0].Active != 1 || control.RequestToken() != "" ||
 		da.Attempts != 1 || sa.Store.Transactions != 0 || da.Complete || sa.Complete {
 		t.Fatalf("handoff lost actual carried/checkpoint/fenced prefix: %+v / %+v / %v / %v", da, sa, daErr, saErr)
 	}
 	epochHandoffByte(t, input, 'V')
 	epochHandoffRead(t, output, 'W')
+	if checkpoint {
+		// Exercise actual PC/DA/SDK socket transitions and process cleanup,
+		// not a source/author/HTTP F claim. The absent prior authors therefore
+		// deliberately keep finish's full epoch prefix unavailable.
+		if control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil || control.ReopenOwners(ctx) != nil ||
+			control.DrainOwners(ctx) != nil || control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil ||
+			run.advanceReturnPhase(ctx, 8) != nil || control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil || control.ReopenOwners(ctx) != nil {
+			t.Fatal("phase8 inherited preparation sequence")
+		}
+		epochHandoffByte(t, input, 'H')
+		epochHandoffRead(t, output, 'h')
+		op, stopOperation := context.WithCancel(ctx)
+		defer stopOperation()
+		run.stop, run.done, run.checkpointDone = make(chan struct{}), make(chan struct{}), make(chan struct{})
+		run.checkpointAllowed, run.checkpointUsed, run.checkpointCancel, run.phaseDeadline = true, true, stopOperation, time.Now().Add(10*time.Second)
+		if run.enterTerminal(op) != nil || control.TerminalQuiesce(op) != nil {
+			t.Fatal("actual terminal owner ACK")
+		}
+		if mode == "stale_checkpoint" {
+			if parent.Pause(op) != nil || dispatch.Fence() != nil || transport.Fence() != nil || control.Checkpoint(op) != nil || transport.ArmTerminalEOF(4, 8) != nil || dispatch.ExpectHardDeath(4) != nil {
+				t.Fatal("actual terminal SDK checkpoint/arm")
+			}
+			run.terminalRequested, run.terminalContext, run.retainParent = true, op, true
+		} else {
+			stopOperation()
+		}
+		operationCanceled := make(chan struct{})
+		if mode == "stale_checkpoint_partial" {
+			run.checkpointCancel = func() { stopOperation(); close(operationCanceled) }
+		} else {
+			close(run.checkpointDone)
+		}
+		custody := &ExecutionAuthorCustody{borrowedBy: run}
+		run.flow.epochs = &ExecutionEpochConfigCustody{author: custody, active: true}
+		run.flow.release = cancel
+		run.command = command
+		waited := make(chan error, 1)
+		go func() { err := handle.Wait(); processObservation.exited(); waited <- err }()
+		joined = true // finish, not fixture defer, owns the sole Wait.
+		run.stopOnce.Do(func() { close(run.stop) })
+		go run.finish(ctx, func() {}, waited, served, nil)
+		if mode == "stale_checkpoint_partial" {
+			<-operationCanceled
+			select {
+			case <-run.done:
+				t.Fatal("terminal failure skipped its operation join")
+			default:
+			}
+			close(run.checkpointDone)
+		}
+		<-run.done
+		serverJoined = true
+		if run.err == nil || !run.result.RootJoined || !run.result.SessionEmpty {
+			t.Fatal("terminal fixture cleanup or absent-author refusal", run.err, run.result)
+		}
+		wantPairs := uint64(20)
+		if mode == "stale_checkpoint_partial" {
+			wantPairs = 19
+		}
+		if control.ReservedWireBytes() != wantPairs*128 {
+			t.Fatal("terminal cleanup issued an ordinary PC operation")
+		}
+		if mode == "stale_checkpoint" {
+			if run.nativeStopErr != nil || !run.result.Store.Store.Producers[0].TerminalFencedEOF || run.result.Store.Store.Producers[0].Closed || !run.result.Accounting.Producers[1].Closed {
+				t.Fatal("actual terminal EOF/native join lost", run.nativeStopErr, run.result)
+			}
+		} else if run.nativeStopErr == nil || run.result.Store.Store.Producers[0].TerminalFencedEOF {
+			t.Fatal("partial terminal failure fabricated closure")
+		}
+		return
+	}
+	if mode == "stale_stop_join" {
+		custody := &ExecutionAuthorCustody{borrowedBy: run}
+		run.flow.epochs = &ExecutionEpochConfigCustody{author: custody, active: true}
+		run.command, run.done, run.staleDone = command, make(chan struct{}), make(chan struct{})
+		operationCanceled := make(chan struct{})
+		run.staleCancel = func() { close(operationCanceled) }
+		waited := make(chan error, 1)
+		go func() { err := handle.Wait(); processObservation.exited(); waited <- err }()
+		go run.finish(ctx, func() {}, waited, served, ErrExecutionEpochOne)
+		<-operationCanceled
+		if custody.Close() == nil || custody.closed || !run.flow.epochs.active {
+			t.Fatal("Stop released custody before stale operation joined")
+		}
+		select {
+		case <-run.done:
+			t.Fatal("Stop skipped stale operation join")
+		default:
+		}
+		epochHandoffByte(t, input, 'C')
+		close(run.staleDone)
+		<-run.done
+		joined, serverJoined = true, true
+		if run.err == nil || !run.result.RootJoined || !run.result.SessionEmpty || custody.borrowedBy != nil || custody.Close() != nil {
+			t.Fatal("stale stop lost sticky failure or joined source custody", run.result, run.err)
+		}
+		return
+	}
 	if warm {
 		warmMode := mode
 		if physical {
@@ -384,7 +595,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 			operationCanceled := make(chan struct{})
 			run.physicalCancel = func() { close(operationCanceled) }
 			waited := make(chan error, 1)
-			go func() { waited <- handle.Wait() }()
+			go func() { err := handle.Wait(); processObservation.exited(); waited <- err }()
 			go run.finish(ctx, func() {}, waited, served, ErrExecutionEpochOne)
 			<-operationCanceled
 			if custody.Close() == nil || custody.closed || !run.flow.epochs.active {
@@ -400,6 +611,10 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 			close(run.physicalDone)
 			<-run.done
 			joined, serverJoined = true, true // finish owns the sole Wait/Serve joins.
+			if got := run.stopDiagnostic; got.Wake != "supplied_failure" || got.Before.WakeError != ErrExecutionEpochOne ||
+				got.Before.Dispatch != nil || got.Before.Store != nil || got.Before.Control != nil {
+				t.Fatal("actual finish lost healthy pre-cleanup accounting beside supplied stop failure", got)
+			}
 			if run.err == nil || !run.result.RootJoined || !run.result.SessionEmpty || custody.borrowedBy != nil || !custody.active || custody.Close() == nil {
 				t.Fatal("failed stop weakened sticky failure or author survivor custody", run.result, run.err)
 			}
@@ -434,10 +649,21 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if control.ReservedWireBytes() != (pairs-1)*2*dispatchadmission.FrameBytes {
 		t.Fatal("handoff added a PC01 operation")
 	}
+	processes, err := processObservation.close()
+	if err != nil || !processes.Joined || len(processes.Phases) < 2 {
+		t.Fatal("fixture phase observations did not join (native only on Darwin)", processes, err)
+	}
+	for _, phase := range processes.Phases {
+		if validateNativeObservation(phase.Observation) != nil {
+			t.Fatal("invalid fixture sampled phase", phase)
+		}
+	}
+	processObservation.armStop()
 	epochHandoffByte(t, input, 'C')
 	err = handle.Wait()
+	processObservation.exited()
 	joined = true
-	if err != nil || transport.Wait(ctx, 2) != nil || control.Close() != nil || parent.Close(ctx) != nil {
+	if err != nil || transport.Wait(ctx, serverID) != nil || control.Close() != nil || parent.Close(ctx) != nil {
 		t.Fatalf("fixture native/protocol join failed: %v", err)
 	}
 	// Eleven warm exchanges plus the receiver's terminal EOF reservation fit
@@ -451,11 +677,11 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		t.Fatalf("fixture dispatch receiver failed: %v", err)
 	}
 	sa, err = transport.Snapshot()
-	wantPhase := uint32(3)
+	wantPhase := resumedPhase
 	if physical {
 		wantPhase = 4
 	}
-	if err != nil || sa.Store.Phase != wantPhase || sa.Opened != 1 || sa.TerminalEOF != 1 || !physical && sa.Complete {
+	if err != nil || sa.Store.Phase != wantPhase || sa.Opened != 1 || sa.TerminalEOF != 1 || !physical && !stale && sa.Complete {
 		t.Fatalf("early closed prefix invented phase-four completion: %+v / %v", sa, err)
 	}
 	if err := transport.Close(); err != nil {

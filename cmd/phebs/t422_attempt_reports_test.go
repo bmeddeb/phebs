@@ -1,0 +1,353 @@
+//go:build darwin || linux
+
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/bmeddeb/phebs/internal/candidatejob"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
+	"github.com/bmeddeb/phebs/internal/store"
+)
+
+func TestT422AttemptOrdinaryBindings(t *testing.T) {
+	var output bytes.Buffer
+	old := log.Writer()
+	log.SetOutput(&output)
+	defer log.SetOutput(old)
+	runner, scheduler, candidate := &store.Runner{}, &generationscheduler.Scheduler{}, &candidatejob.Worker{}
+	failures := 0
+	fail := func(error) { failures++ }
+	bindT4013ExactReports(false, fail, candidate, runner)
+	bindT422ExactChunkReports(false, fail, scheduler)
+	if runner.LifecycleReports != nil || scheduler.ChunkReports != nil || candidate.OperationReports != nil {
+		t.Fatal("ordinary disabled path allocated sinks")
+	}
+	bindT4013ExactReports(true, fail, candidate, runner)
+	bindT422ExactChunkReports(true, fail, scheduler)
+	for _, sink := range []func([]byte) error{runner.LifecycleReports, scheduler.ChunkReports, candidate.OperationReports} {
+		if err := sink([]byte(`{}`)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if failures != 0 || strings.Contains(output.String(), "ATB1:") ||
+		!strings.Contains(output.String(), "job lifecycle: {}") || !strings.Contains(output.String(), "generation chunk lifecycle: {}") || !strings.Contains(output.String(), "candidate operation: {}") {
+		t.Fatal("T40/candidate report bytes or selection changed", output.String())
+	}
+	if sinks, err := newT422AttemptSinks(fail); err != nil || sinks != nil {
+		t.Fatal("ordinary path created selected sinks", err)
+	}
+}
+
+const t422AttemptHelperMode = "PHEBS_T422_ATTEMPT_HELPER_TEST"
+
+// Actual inherited DA/PC and semantic owner turns bind the sink across a
+// real phase change. Reports are supplied native-shaped test inputs, not real
+// queue work, protected tool admission, or a phase measurement result.
+func TestT422AttemptInheritedPhase(t *testing.T) {
+	for _, mode := range []string{"events", "zero_observations", "cache_events", "publication_events", "publication_canceled"} {
+		t.Run(mode, func(t *testing.T) { testT422AttemptInheritedPhase(t, mode) })
+	}
+}
+
+func testT422AttemptInheritedPhase(t *testing.T, mode string) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	record, _ := t422LifecycleBootstrapRecord(t)
+	record.Producer.ID = 5
+	config := dispatchadmission.Config{Limits: record.Limits, Producers: []dispatchadmission.Producer{record.Producer}}
+	for _, phase := range record.Control.Phases {
+		config.Phases = append(config.Phases, dispatchadmission.Phase{ID: phase, Roles: []dispatchadmission.RoleBudget{
+			{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}}})
+	}
+	controller, err := dispatchadmission.New(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent, child, err := dispatchadmission.NewPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = parent.Close(); _ = child.Close() }()
+	controlParent, controlChild, err := dispatchadmission.NewPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = controlParent.Close(); _ = controlChild.Close() }()
+	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestT422AttemptInheritedHelper$")
+	command.Env = []string{t422AttemptHelperMode + "=" + mode, dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionSelector, "GORACE=atexit_sleep_ms=0"}
+	command.ExtraFiles = []*os.File{child, controlChild}
+	command.WaitDelay = time.Second
+	input, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = input.Close() }()
+	output, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diagnostic bytes.Buffer
+	command.Stderr = &diagnostic
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if command.ProcessState == nil {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+		}
+	}()
+	_ = child.Close()
+	_ = controlChild.Close()
+	if err := dispatchadmission.SendProductionBootstrap(ctx, parent, controlParent, record); err != nil {
+		t.Fatal(err)
+	}
+	served := make(chan error, 1)
+	go func() { served <- controller.Serve(ctx, 5, command.Process.Pid, parent) }()
+	defer func() { cancel(); <-served }()
+	phase, err := dispatchadmission.NewPhaseControl(ctx, controlParent, record.Producer.Binding, record.Control)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = phase.Close() }()
+	scanner := bufio.NewScanner(output)
+	read := func(want string) {
+		t.Helper()
+		if !scanner.Scan() || scanner.Text() != want {
+			t.Fatalf("helper %q: %q %v", want, scanner.Text(), scanner.Err())
+		}
+	}
+	read("held")
+	drained := make(chan error, 1)
+	go func() { drained <- phase.DrainOwners(ctx) }()
+	select {
+	case err := <-drained:
+		t.Fatal("phase crossed held reporting turn", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	if _, err := input.Write([]byte{'e'}); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-drained; err != nil {
+		t.Fatal(err)
+	}
+	for _, operation := range []func() error{func() error { return phase.Pause(ctx) }, controller.Fence, func() error { return phase.Checkpoint(ctx) }, controller.Advance, func() error { return phase.Resume(ctx) }, func() error { return phase.ReopenOwners(ctx) }} {
+		if err := operation(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := input.Write([]byte{'n'}); err != nil {
+		t.Fatal(err)
+	}
+	read("reported")
+	for _, operation := range []func() error{func() error { return phase.DrainOwners(ctx) }, func() error { return phase.Pause(ctx) }, controller.Fence, func() error { return phase.Checkpoint(ctx) }} {
+		if err := operation(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := input.Write([]byte{'c'}); err != nil {
+		t.Fatal(err)
+	}
+	read("joined")
+	if err := command.Wait(); err != nil {
+		t.Fatal(err, diagnostic.String())
+	}
+	if !strings.Contains(diagnostic.String(), "SRB1:5:sha256:") || strings.Count(diagnostic.String(), "SR1:5:8\n") != 1 || strings.Count(diagnostic.String(), "SR1:5:9\n") != 1 {
+		t.Fatal("actual selected compact source binding/phase missing", diagnostic.String())
+	}
+	if strings.Count(diagnostic.String(), "ATB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "A8j1\n") != 1 || strings.Count(diagnostic.String(), "A9c0\n") != 1 {
+		t.Fatal("actual compact attempt binding/phase missing", diagnostic.String())
+	}
+	if !strings.Contains(diagnostic.String(), "IXB1:5:sha256:") {
+		t.Fatal("actual selected index binding missing", diagnostic.String())
+	}
+	wantEvents := 1
+	if mode == "zero_observations" {
+		wantEvents = 0
+	}
+	if strings.Count(diagnostic.String(), "OPB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "OP1:5:8\n") != wantEvents || strings.Count(diagnostic.String(), "OP1:5:9\n") != wantEvents {
+		t.Fatal("actual selected observation binding/phase missing", diagnostic.String())
+	}
+	cacheEvents := 0
+	if mode == "cache_events" {
+		cacheEvents = 1
+	}
+	if strings.Count(diagnostic.String(), "CCB1:5:sha256:") != 1 {
+		t.Fatal("actual selected cache binding missing", diagnostic.String())
+	}
+	publicationEvents := 0
+	if mode == "publication_events" || mode == "publication_canceled" {
+		publicationEvents = 1
+	}
+	if strings.Count(diagnostic.String(), "EPB1:5:sha256:") != 1 || strings.Count(diagnostic.String(), "EP1:5:8\n") != publicationEvents || strings.Count(diagnostic.String(), "EP1:5:9\n") != publicationEvents {
+		t.Fatal("actual selected publication binding/phase missing", diagnostic.String())
+	}
+	for _, phase := range []string{"8", "9"} {
+		for _, event := range []string{"R", "r", "M", "m", "H"} {
+			if strings.Count(diagnostic.String(), "CC1:5:"+phase+event+"\n") != cacheEvents {
+				t.Fatal("actual selected cache phase/event missing", diagnostic.String())
+			}
+		}
+	}
+}
+
+func TestT422AttemptInheritedHelper(t *testing.T) {
+	if os.Getenv(t422AttemptHelperMode) == "" {
+		return
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
+	if err != nil || lifetime == nil {
+		t.Fatal(err)
+	}
+	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 1})
+	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
+		t.Fatal("actual owner binding failed", err)
+	}
+	ctx, err = bindT422SourceReports(ctx, func(error) { cancel() })
+	if err != nil {
+		t.Fatal("actual source binding failed", err)
+	}
+	ctx, err = bindT422IndexReports(ctx, func(error) { cancel() })
+	if err != nil {
+		t.Fatal("actual index binding failed", err)
+	}
+	ctx, err = bindT422ObservationReports(ctx, func(error) { cancel() })
+	if err != nil {
+		t.Fatal("actual observation binding failed", err)
+	}
+	sinks, err := newT422AttemptSinks(func(error) { cancel() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := func() {
+		var raw [1]byte
+		if _, err := io.ReadFull(os.Stdin, raw[:]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runner, scheduler := &store.Runner{}, &generationscheduler.Scheduler{}
+	bindT4013ExactReports(true, func(error) { cancel() }, nil, runner)
+	bindT422ExactChunkReports(true, func(error) { cancel() }, scheduler)
+	sinks.bindJobs(runner)
+	sinks.bindChunk(scheduler)
+	turn, err := owners.Enter(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
+		t.Fatal(err)
+	}
+	cacheEvents := func() {
+		if os.Getenv(t422AttemptHelperMode) != "cache_events" {
+			return
+		}
+		// Supplied decisions exercise the real inherited native stream, not a
+		// catalog read or phase result. Native cache branches have separate tests.
+		for _, load := range []readaccounting.CacheEvent{readaccounting.CacheRootLoad, readaccounting.CacheMemberLoad} {
+			phase, err := dispatchadmission.ObserveProductionCache(ctx, load, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			validation := readaccounting.CacheRootValidation
+			if load == readaccounting.CacheMemberLoad {
+				validation = readaccounting.CacheMemberValidation
+			}
+			if _, err := dispatchadmission.ObserveProductionCache(ctx, validation, phase); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := dispatchadmission.ObserveProductionCache(ctx, readaccounting.CacheHit, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cacheEvents()
+	publicationEvents := func() {
+		if os.Getenv(t422AttemptHelperMode) == "publication_canceled" {
+			// Exercise the real native bridge with caller-only cancellation.
+			// The selected wrapper's terminal latch is tested separately; this
+			// direct observer check keeps the handoff fixture lifetime alive.
+			canceled, stop := context.WithCancel(ctx)
+			stop()
+			if err := readaccounting.ObservePublication(canceled, true); !errors.Is(err, context.Canceled) {
+				t.Fatal("canceled call lost native observation or cancellation", err)
+			}
+			return
+		}
+		if os.Getenv(t422AttemptHelperMode) == "publication_events" {
+			// Supplied call attempt exercises the genuine inherited native
+			// bridge, not publication success. Publisher entry has its own test.
+			if err := dispatchadmission.ObserveProductionPublication(ctx); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	publicationEvents()
+	// Supplied event exercises the actual selected stream, not native parsing.
+	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
+		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	job, _ := json.Marshal(store.JobLifecycleReport{Schema: store.JobLifecycleSchema, Event: "started", JobID: "job:neutral", Kind: store.JobCandidate, Target: "neutral", Attempt: 1, Outcome: "running"})
+	if err := runner.LifecycleReports(job); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("held")
+	read()
+	turn.End()
+	read()
+	turn, err = owners.Enter(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dispatchadmission.ObserveProductionSourceRead(ctx); err != nil {
+		t.Fatal(err)
+	}
+	cacheEvents()
+	publicationEvents()
+	if os.Getenv(t422AttemptHelperMode) != "zero_observations" {
+		if err := dispatchadmission.ObserveProductionParsedBlob(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	chunk, _ := json.Marshal(generationscheduler.ChunkLifecycleReport{Schema: generationscheduler.ChunkLifecycleSchema, Event: "started",
+		Identity: "sha256:" + strings.Repeat("1", 64), Generation: "sha256:" + strings.Repeat("2", 64), Stage: extractionpublication.ScheduleStage, Attempt: 0, Outcome: "running"})
+	if err := scheduler.ChunkReports(chunk); err != nil {
+		t.Fatal(err)
+	}
+	turn.End()
+	fmt.Println("reported")
+	read()
+	if err := lifetime.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if dispatchadmission.ObserveProductionParsedBlob(ctx) == nil {
+		t.Fatal("closed producer emitted guessed observation phase")
+	}
+	if dispatchadmission.ObserveProductionPublication(ctx) == nil {
+		t.Fatal("closed producer emitted guessed publication phase")
+	}
+	if runner.LifecycleReports(job) == nil {
+		t.Fatal("closed producer emitted guessed phase")
+	}
+	fmt.Println("joined")
+}

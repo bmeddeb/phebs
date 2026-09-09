@@ -216,8 +216,18 @@ func correctedScopedPhaseReadMaximum(
 		preparationMembers = candidate.MaxWholeRepositoryStrictOpenMemberVisits()
 		break
 	}
+	var cleanupReads uint64
+	if cleanup, ok := SelectorHandoffCleanupForPhase(plan, row.Phase); ok {
+		var cleanupErr error
+		cleanupReads, cleanupErr = checkedInspectionReadSum(
+			cleanup.ControlFileReads.Maximum, cleanup.StoreReadAttempts.Maximum,
+		)
+		if cleanupErr != nil {
+			return 0, 0, cleanupErr
+		}
+	}
 	controls, err := checkedInspectionReadSum(
-		xReads, tailReads, finalReads, transitionReads, queryReads, preparationReads,
+		xReads, tailReads, finalReads, transitionReads, queryReads, preparationReads, cleanupReads,
 	)
 	if err != nil {
 		return 0, 0, errors.New("corrected scoped phase control read maximum overflows")

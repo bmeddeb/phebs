@@ -12,7 +12,10 @@ import (
 // The normal auth/session stack still runs inside the complete request owner.
 const ProductionRequestHeader = "X-Phebs-Execution-Request"
 
-const phasePreparingRequests byte = 8 // Local state, never a wire operation.
+const (
+	phasePreparingRequests  byte = 9 // Local states, never wire operations.
+	phaseTerminalCheckpoint byte = 10
+)
 
 // DrainOwners precedes Pause: admitted owners can still dispatch every child
 // needed to finish their durable/report tails. A timeout does not join them.
@@ -38,6 +41,17 @@ func (control *PhaseControl) ReopenOwners(ctx context.Context) error {
 }
 
 func nextConfiguredControlState(state byte, index int, op byte, config PhaseControlConfig) (byte, int, error) {
+	if op == phaseTerminalQuiesce || state == phaseTerminalQuiesce || state == phaseTerminalCheckpoint {
+		if config.TerminalPhase == 8 && config.OwnerControl && config.Phases[index] == config.TerminalPhase {
+			if state == 0 && op == phaseTerminalQuiesce {
+				return phaseTerminalQuiesce, index, nil
+			}
+			if state == phaseTerminalQuiesce && op == phaseCheckpoint {
+				return phaseTerminalCheckpoint, index, nil
+			}
+		}
+		return 0, 0, ErrProtocol
+	}
 	if config.TerminalAuthor {
 		if op == phasePause && state == 0 {
 			return phasePause, index, nil

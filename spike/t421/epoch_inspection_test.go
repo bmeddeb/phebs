@@ -228,12 +228,19 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 				t.Fatal(mode, result, report, err)
 			}
 			if mode == "complete" {
-				if reader.failureStatus != 0 || reader.failureBody != nil {
+				if reader.failureStatus != 0 || reader.failureBody != nil || reader.readFailure.Stage != "" {
 					t.Fatal("successful response retained as failed diagnostic")
 				}
 			} else if reader.failureStatus != result.HTTPStatus || len(reader.failureBody) == 0 || len(reader.failureBody) > api.ExtractionProgressResponseLimit+1 {
 				t.Fatal("failed bounded response diagnostic missing", reader.failureStatus, len(reader.failureBody))
 			}
+			if mode != "complete" && (reader.readFailure.Stage == "" || reader.readFailure.Cause == nil) {
+				t.Fatal("post-response refusal diagnostic missing")
+			}
+			if (mode == "body-invalid" || mode == "redirect") && (reader.readFailure.Stage != "inspection_state_or_semantics" || reader.readFailure.Ordinal != 1) {
+				t.Fatal("semantic refusal mislabeled as HTTP transport failure", reader.readFailure)
+			}
+			firstFailure := reader.readFailure
 			if mode == "body-oversize" && len(reader.failureBody) != api.ExtractionProgressResponseLimit+1 {
 				t.Fatal("overflow diagnostic did not retain exactly one sentinel")
 			}
@@ -243,6 +250,9 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 			if mode != "complete" {
 				if _, _, err := reader.Progress(t.Context()); err == nil || calls.Load() != 1 || reader.run.err != ErrExecutionEpochOne {
 					t.Fatal("uncertain request retried or failed latch lost")
+				}
+				if reader.readFailure != firstFailure {
+					t.Fatal("later refusal replaced initial diagnostic")
 				}
 			}
 			if mode == "complete" || mode == "redirect" || mode == "body-invalid" {
@@ -259,6 +269,52 @@ func TestEpochInspectionHTTPOrdinalAndTrailerRefusal(t *testing.T) {
 				if _, _, err := reader.Progress(ctx); err == nil || reader.failureStatus != 0 || reader.failureBody != nil || calls.Load() != 1 {
 					t.Fatal("pre-request failure inherited successful response")
 				}
+			}
+		})
+	}
+}
+
+func TestEpochInspectionHTTPOrdinalCeilings(t *testing.T) {
+	for _, test := range []struct {
+		name              string
+		epoch             uint64
+		stale, checkpoint bool
+		maximum           uint64
+	}{
+		{"epoch one", 1, false, false, 11531},
+		{"epoch two", 2, false, false, 5765},
+		{"return only", 3, false, false, 5765},
+		{"stale only", 3, true, false, 11530},
+		{"checkpoint", 3, true, true, 11531},
+		{"checkpoint without stale", 3, false, true, 5765},
+		{"epoch four", 4, false, false, 11531},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var calls atomic.Int32
+			var reader *executionEpochInspection
+			reader = epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				if r.Header.Get("X-Phebs-T421-Exact-Read-Ordinal") != strconv.FormatUint(test.maximum, 10) ||
+					r.Header.Get(dispatchadmission.ProductionRequestHeader) != reader.run.control.RequestToken() {
+					t.Error("boundary request binding differs")
+				}
+				report := epochInspectionReport{Schema: "t421-source-free-read-accounting-v1", Status: "complete", RequestOrdinal: test.maximum, StoreReadAttempts: 1}
+				w.Header().Set("Trailer", epochReadTrailer)
+				_, _ = w.Write([]byte("{}\n"))
+				w.Header().Set(epochReadTrailer, base64.RawURLEncoding.EncodeToString(bytes.TrimSuffix(epochTestJSON(t, report, false), []byte{'\n'})))
+			}))
+			reader.run.epoch.Epoch = test.epoch
+			reader.run.staleAllowed, reader.run.checkpointAllowed = test.stale, test.checkpoint
+			reader.next = test.maximum
+			maximum := epochInspectionReport{StoreReadAttempts: 1}
+			if _, status, report, err := reader.read(t.Context(), "/api/t422/checkpoint/hit", 4<<10, maximum); err != nil ||
+				status != http.StatusOK || report.RequestOrdinal != test.maximum || calls.Load() != 1 || reader.next != test.maximum+1 ||
+				reader.reports != 1 || reader.totals.StoreReadAttempts != 1 {
+				t.Fatalf("last admitted ordinal did not reach HTTP: status=%d report=%+v calls=%d next=%d error=%v", status, report, calls.Load(), reader.next, err)
+			}
+			if _, _, _, err := reader.read(t.Context(), "/api/t422/checkpoint/hit", 4<<10, maximum); err != errEpochInspection ||
+				calls.Load() != 1 || reader.next != test.maximum+1 || reader.reports != 1 || reader.totals.StoreReadAttempts != 1 {
+				t.Fatalf("over-limit ordinal dispatched or changed the prefix: calls=%d next=%d error=%v", calls.Load(), reader.next, err)
 			}
 		})
 	}

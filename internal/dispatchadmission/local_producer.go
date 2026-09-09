@@ -13,13 +13,14 @@ import (
 // an immutable tool/input or full profile issuer. Callers perform their actual
 // protected custody checks immediately before Start. Never copy this owner.
 type LocalProducer struct {
-	controller *Controller
-	client     *Client
-	producer   uint32
-	done       <-chan error
-	cancel     context.CancelFunc
-	closeOnce  sync.Once
-	closeErr   error
+	controller    *Controller
+	client        *Client
+	producer      uint32
+	done          <-chan error
+	cancel        context.CancelFunc
+	closeOnce     sync.Once
+	closeErr      error
+	reopenedDeath uint32 // One same-phase cutover; guarded by client.mu.
 }
 
 // NewLocalProducer derives all identity from this controller. Socket adoption

@@ -85,16 +85,20 @@ type t421FinalAuthorityResponse struct {
 }
 
 type t421FinalAuthorityReader struct {
-	repository string
-	dataDir    string
-	indexDir   string
-	store      *store.Surreal
-	pins       *focusedindex.SearchGenerationPins
-	catalog    *t421FinalCatalogCache
-	source     *t421FinalSourceCache
-	policies   []candidate.Policy
-	identities []candidate.PolicyIdentity
-	policy     string
+	repository         string
+	dataDir            string
+	indexDir           string
+	store              *store.Surreal
+	pins               *focusedindex.SearchGenerationPins
+	catalog            *t421FinalCatalogCache
+	source             *t421FinalSourceCache
+	policies           []candidate.Policy
+	identities         []candidate.PolicyIdentity
+	policy             string
+	stale              *t422StaleControl
+	checkpoint         *t422CheckpointControl
+	checkpointRecovery *t422CheckpointRecoveryControl
+	selectorCleanup    *t422SelectorCleanupControl
 
 	candidateState func(context.Context) (candidate.State, error)
 	openDomain     func(context.Context, candidate.DomainResultPlan) (*candidate.SparseDomain, error)
@@ -328,6 +332,26 @@ func (reader *t421FinalAuthorityReader) Read(
 	}
 	if err := caller.Release(); err != nil {
 		return nil, nil, errors.Join(err, errors.New("release caller authority"))
+	}
+	if reader.stale != nil {
+		if err := reader.stale.captureFinal(ctx, candidateState, response); err != nil {
+			return nil, nil, err
+		}
+	}
+	if reader.checkpoint != nil {
+		if err := reader.checkpoint.captureFinal(ctx, candidateState, response); err != nil {
+			return nil, nil, err
+		}
+	}
+	if reader.checkpointRecovery != nil {
+		if err := reader.checkpointRecovery.captureFinal(ctx, candidateState, response); err != nil {
+			return nil, nil, err
+		}
+	}
+	if reader.selectorCleanup != nil {
+		if err := reader.selectorCleanup.captureFinal(ctx, selector); err != nil {
+			return nil, nil, err
+		}
 	}
 	commit := func() error {
 		return t421FinalCommitCaches(ctx, sourcePending, catalogPending)

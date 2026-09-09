@@ -111,7 +111,7 @@ func (run *ExecutionEpochOneRun) PhysicalB(ctx context.Context) (retErr error) {
 		return ErrExecutionEpochOne
 	}
 	observation, err := reader.retention(ctx, run.pinStarted, run.pinJoined)
-	if err != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if err != nil || reader.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()
@@ -123,7 +123,7 @@ func (run *ExecutionEpochOneRun) PhysicalB(ctx context.Context) (retErr error) {
 func (run *ExecutionEpochOneRun) advancePhysical(ctx context.Context) error {
 	flow := run.flow
 	if run.control.Pause(ctx) != nil || flow.parent.Pause(ctx) != nil || flow.controller.Fence() != nil || flow.store.Fence() != nil ||
-		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil || flow.controller.Advance() != nil || flow.store.Advance() != nil ||
+		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil || run.processPhaseAdvance(ctx, 4) != nil ||
 		flow.parent.Resume(4) != nil || run.control.Resume(ctx) != nil {
 		return ErrExecutionEpochOne
 	}

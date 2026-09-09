@@ -346,7 +346,7 @@ func TestGenerationAccountingEnqueueAndClaimOperands(t *testing.T) {
 					if choice != "none" {
 						ids = append(ids, models.NewRecordID("generation_schedule_chunk", fmt.Sprintf("actual-choice-%d", selected)))
 					}
-					return generationAccountingCensusReply(5, ids), nil
+					return generationAccountingCensusReply(6, ids), nil
 				}
 				writes++
 				var payload struct {
@@ -386,7 +386,7 @@ func TestGenerationAccountingEnqueueAndClaimOperands(t *testing.T) {
 // These real SDK/SA01 boundary tests inspect the owned native payload before
 // its scripted response. Native scheduler semantics remain engine-test work.
 func TestGenerationAccountingLeaseTargets(t *testing.T) {
-	now := time.Now().UTC()
+	now := time.Now().UTC().Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	chunk := GenerationChunk{
 		ID: "actual-chunk", ScheduleDigest: "sha256:" + strings.Repeat("a", 64),
 		Repository: "example.com/acme/generation", Stage: "observation",
@@ -428,6 +428,12 @@ func TestGenerationAccountingLeaseTargets(t *testing.T) {
 				var payload map[string]cbor.RawMessage
 				if err := native.codec.Unmarshal(raw, &payload); err != nil {
 					return nil, err
+				}
+				if test.name == "reap" {
+					var heartbeat time.Time
+					if err := native.codec.Unmarshal(payload["heartbeat"], &heartbeat); err != nil || !heartbeat.Equal(now) {
+						return nil, errors.New("reap heartbeat lost native timestamp precision")
+					}
 				}
 				for _, field := range test.fields {
 					var id models.RecordID

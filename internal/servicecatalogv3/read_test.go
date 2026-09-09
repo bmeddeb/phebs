@@ -9,10 +9,253 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 )
+
+type observedCacheSource struct {
+	*readTestSource
+	rootGate <-chan struct{}
+	rootErr  error
+}
+
+func (source observedCacheSource) ReadServiceCatalogV3Root(ctx context.Context, repository, digest string) (Root, error) {
+	if source.rootGate != nil {
+		select {
+		case <-source.rootGate:
+		case <-ctx.Done():
+			return Root{}, ctx.Err()
+		}
+	}
+	if source.rootErr != nil {
+		return Root{}, source.rootErr
+	}
+	return source.readTestSource.ReadServiceCatalogV3Root(ctx, repository, digest)
+}
+
+func TestReadCacheNativeDecisionsAndLeaseHits(t *testing.T) {
+	generation := readTestGeneration(t, "events", 2)
+	source := newReadTestSource(generation)
+	var events []readaccounting.CacheEvent
+	ctx, err := readaccounting.WithCacheObserver(t.Context(), func(event readaccounting.CacheEvent, phase uint32) (uint32, error) {
+		if phase != 0 && phase != 2 {
+			t.Fatal("load phase changed", phase)
+		}
+		events = append(events, event)
+		return 2, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := NewDefaultReadCache()
+	first, err := cache.Open(ctx, source, generation.Root.Binding.Repository, generation.Root.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	for range 2 {
+		if _, err := first.Service(ctx, source, "service-00000"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	second, err := cache.Open(ctx, source, generation.Root.Binding.Repository, generation.Root.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	if _, err := second.Service(ctx, source, "service-00000"); err != nil {
+		t.Fatal(err)
+	}
+	if string(events) != "RrMmHHH" {
+		t.Fatal("native load, lease-local, root and shared-member decisions", string(events))
+	}
+	first.Close()
+	second.Close()
+	stats := cache.Stats()
+	if stats.RootReads != 1 || stats.MemberReads != 1 || stats.RootValidations != 1 || stats.MemberValidations != 1 || stats.RootLeases != 0 || stats.MemberLeases != 0 {
+		t.Fatal(stats)
+	}
+}
+
+func TestReadCacheNativeCoalescedResults(t *testing.T) {
+	for _, mode := range []string{"success", "source-error", "canceled-waiter", "canceled-load"} {
+		t.Run(mode, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				generation := readTestGeneration(t, "coalesced", 1)
+				gate := make(chan struct{})
+				source := observedCacheSource{readTestSource: newReadTestSource(generation), rootGate: gate}
+				if mode == "source-error" {
+					source.rootErr = ErrInvalid
+				}
+				var mu sync.Mutex
+				var events []readaccounting.CacheEvent
+				ctx, err := readaccounting.WithCacheObserver(t.Context(), func(event readaccounting.CacheEvent, phase uint32) (uint32, error) {
+					mu.Lock()
+					defer mu.Unlock()
+					events = append(events, event)
+					return 2, nil
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				loadCtx, cancelLoad := context.WithCancel(ctx)
+				defer cancelLoad()
+				waitCtx, cancelWaiter := context.WithCancel(ctx)
+				defer cancelWaiter()
+				cache := NewDefaultReadCache()
+				results := make(chan error, 2)
+				open := func(ctx context.Context) {
+					lease, err := cache.Open(ctx, source, generation.Root.Binding.Repository, generation.Root.Digest)
+					lease.Close()
+					results <- err
+				}
+				go open(loadCtx)
+				synctest.Wait()
+				go open(waitCtx)
+				synctest.Wait() // Both native load and coalesced waiter are blocked.
+				if mode == "canceled-waiter" {
+					cancelWaiter()
+					synctest.Wait()
+				}
+				if mode == "canceled-load" {
+					cancelLoad()
+					synctest.Wait()
+				}
+				close(gate)
+				synctest.Wait()
+				errorsSeen := 0
+				for range 2 {
+					if <-results != nil {
+						errorsSeen++
+					}
+				}
+				wantEvents, wantErrors := "Rr", 2
+				switch mode {
+				case "success":
+					wantEvents, wantErrors = "RrH", 0
+				case "canceled-waiter":
+					wantErrors = 1
+				}
+				if string(events) != wantEvents || errorsSeen != wantErrors || len(cache.rootLoads) != 0 || cache.Stats().RootLeases != 0 || cache.Stats().RootReads != 1 || cache.Stats().RootValidations != 1 {
+					t.Fatal(mode, string(events), errorsSeen, cache.Stats())
+				}
+			})
+		})
+	}
+}
+
+func TestReadCacheNativeSaturationAndMemberFailure(t *testing.T) {
+	for _, mode := range []string{"saturation", "member-error", "member-invalid", "lease-hit-error", "shared-hit-error"} {
+		t.Run(mode, func(t *testing.T) {
+			first := readTestGeneration(t, "first", 1)
+			second := readTestGeneration(t, "second", 1)
+			source := newReadTestSource(first, second)
+			cache, err := NewReadCache(1, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			lease, err := cache.Open(t.Context(), source, first.Root.Binding.Repository, first.Root.Digest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer lease.Close()
+			if mode == "lease-hit-error" || mode == "shared-hit-error" {
+				if _, err := lease.Service(t.Context(), source, "service-00000"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode == "shared-hit-error" {
+				lease.Close()
+				lease, err = cache.Open(t.Context(), source, first.Root.Binding.Repository, first.Root.Digest)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer lease.Close()
+			}
+			switch mode {
+			case "member-error":
+				delete(source.members, first.Root.ServiceMembers[0].Digest)
+			case "member-invalid":
+				source.members[first.Root.ServiceMembers[0].Digest] = []byte("bad")
+			}
+			var events []readaccounting.CacheEvent
+			ctx, err := readaccounting.WithCacheObserver(t.Context(), func(event readaccounting.CacheEvent, _ uint32) (uint32, error) {
+				events = append(events, event)
+				if event == readaccounting.CacheHit {
+					return 2, readaccounting.ErrEvent
+				}
+				return 2, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantEvents := "Mm"
+			if mode == "saturation" {
+				_, err = cache.Open(ctx, source, second.Root.Binding.Repository, second.Root.Digest)
+				wantEvents = ""
+				if !errors.Is(err, ErrReadCacheFull) {
+					t.Fatal(err)
+				}
+			} else {
+				_, err = lease.Service(ctx, source, "service-00000")
+				if mode == "lease-hit-error" || mode == "shared-hit-error" {
+					wantEvents = "H"
+				}
+			}
+			if err == nil || string(events) != wantEvents || len(cache.rootLoads) != 0 || len(cache.memberLoads) != 0 {
+				t.Fatal(mode, string(events), err)
+			}
+			lease.Close()
+			if stats := cache.Stats(); stats.RootLeases != 0 || stats.MemberLeases != 0 {
+				t.Fatal("refusal leaked a lease", stats)
+			}
+		})
+	}
+}
+
+func TestReadCacheNativeSinkRefusalsUnwind(t *testing.T) {
+	for _, refused := range []readaccounting.CacheEvent{readaccounting.CacheHit, readaccounting.CacheRootLoad, readaccounting.CacheRootValidation, readaccounting.CacheMemberLoad, readaccounting.CacheMemberValidation} {
+		t.Run(string(refused), func(t *testing.T) {
+			generation := readTestGeneration(t, "sink-refusal", 1)
+			source := newReadTestSource(generation)
+			cache := NewDefaultReadCache()
+			warm, err := cache.Open(t.Context(), source, generation.Root.Binding.Repository, generation.Root.Digest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer warm.Close()
+			ctx, err := readaccounting.WithCacheObserver(t.Context(), func(event readaccounting.CacheEvent, _ uint32) (uint32, error) {
+				if event == refused {
+					return 2, readaccounting.ErrEvent
+				}
+				return 2, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if refused == readaccounting.CacheRootLoad || refused == readaccounting.CacheRootValidation {
+				warm.Close()
+				cache = NewDefaultReadCache()
+			}
+			var lease *ReadLease
+			if refused == readaccounting.CacheMemberLoad || refused == readaccounting.CacheMemberValidation {
+				_, err = warm.Service(ctx, source, "service-00000")
+			} else {
+				lease, err = cache.Open(ctx, source, generation.Root.Binding.Repository, generation.Root.Digest)
+			}
+			lease.Close()
+			if !errors.Is(err, readaccounting.ErrEvent) || len(cache.rootLoads) != 0 || len(cache.memberLoads) != 0 || cache.Stats().MemberLeases != 0 {
+				t.Fatal(refused, cache.Stats(), err)
+			}
+			warm.Close()
+			if cache.Stats().RootLeases != 0 {
+				t.Fatal("sink refusal leaked root lease", cache.Stats())
+			}
+		})
+	}
+}
 
 type readTestSource struct {
 	mu sync.Mutex

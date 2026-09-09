@@ -62,6 +62,10 @@ func (record ProductionBootstrap) validate() error {
 	if record.validateStore() != nil {
 		return ErrProductionBootstrap
 	}
+	if record.Control.TerminalPhase != 0 && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 ||
+		record.Producer.ID != 4 || record.Phase != 6 || record.Store == nil) {
+		return ErrProductionBootstrap
+	}
 	sites, roles := ProductionSites(), []string{"git", "surreal", "zoekt-git-index"}
 	minimumRoles := 4
 	switch record.Program {
@@ -109,7 +113,7 @@ func (record ProductionBootstrap) validate() error {
 	textBytes := len(record.Program) + len(record.SemanticMode)
 	for index, role := range roles {
 		tool := record.Tools[index]
-		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionEnvironment(tool.Environment, role != "surreal") {
+		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionToolEnvironment(tool.Environment, role, record.SemanticMode) {
 			return ErrProductionBootstrap
 		}
 		textBytes += len(tool.Role) + len(tool.Path)

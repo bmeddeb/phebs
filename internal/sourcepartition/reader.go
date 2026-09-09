@@ -91,6 +91,9 @@ func (plan *Plan) ReadPartition(
 		if err := batchContext.Err(); err != nil {
 			return ReadStats{}, err
 		}
+		if err := dispatchadmission.ObserveProductionSourceRead(batchContext); err != nil {
+			return ReadStats{}, err
+		}
 		if _, err := writer.WriteString(record.ObjectID + "\n"); err != nil {
 			return ReadStats{}, batchFailure(batchContext, index, "write request", err)
 		}

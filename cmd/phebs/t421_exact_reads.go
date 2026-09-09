@@ -82,14 +82,19 @@ type t421ExactReadAccountingHandler struct {
 }
 
 type t421ExactReadAccountingState struct {
-	report    func([]byte) error
-	fail      func(error)
-	final     t421ExactFinalAuthorityRead
-	tail      t421ExactFinalAuthorityRead
-	semantic  *t422SemanticLaunch
-	marker    *t422MarkerControl
-	lifecycle *t422LifecycleControl
-	retention *t422RetentionControl
+	report             func([]byte) error
+	fail               func(error)
+	final              t421ExactFinalAuthorityRead
+	tail               t421ExactFinalAuthorityRead
+	semantic           *t422SemanticLaunch
+	marker             *t422MarkerControl
+	lifecycle          *t422LifecycleControl
+	retention          *t422RetentionControl
+	selectorCleanup    *t422SelectorCleanupControl
+	activation         *t422ActivationControl
+	stale              *t422StaleControl
+	checkpoint         *t422CheckpointControl
+	checkpointRecovery *t422CheckpointRecoveryControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -203,12 +208,24 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
+	if request.URL != nil && request.URL.Path == t422SelectorCleanupPath && handler.state.selectorCleanup != nil {
+		handler.state.selectorCleanup.command(writer, request)
+		return
+	}
 	if handler.state.retention != nil && request.URL != nil && request.URL.Path == t422RetentionPinPath {
 		handler.state.retention.command(writer, request)
 		return
 	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleCommand(request.URL.Path) {
 		handler.state.lifecycle.command(writer, request)
+		return
+	}
+	if handler.state.stale != nil && request.URL != nil && request.URL.Path == t422StalePreparePath {
+		handler.state.stale.command(writer, request)
+		return
+	}
+	if handler.state.checkpoint != nil && request.URL != nil && request.URL.Path == t422CheckpointPreparePath {
+		handler.state.checkpoint.command(writer, request)
 		return
 	}
 	if !t421ExactReadAttempt(request) {
@@ -220,6 +237,29 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	nativeFailureStatus, nativeFailure := "marker_observation_refused", errT422MarkerControl
 	if nativeRead != nil {
 		limits, target = readaccounting.Counts{ControlFileReads: 5}, true
+	}
+	if activationRead := handler.state.activationRead(request); activationRead != nil {
+		nativeRead = activationRead
+		limits, target = readaccounting.Counts{StoreReadAttempts: store.ServiceStateV3ActivationTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "activation_observation_refused", errT422ActivationControl
+	}
+	if staleRead := handler.state.staleRead(request); staleRead != nil {
+		nativeRead = staleRead
+		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.StaleLeaseTransitionControlFileReads,
+			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "stale_observation_refused", errT422StaleControl
+	}
+	if checkpointRead := handler.state.checkpointRead(request); checkpointRead != nil {
+		nativeRead = checkpointRead
+		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.CheckpointRestartTransitionControlFileReads,
+			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "checkpoint_observation_refused", errT422StaleControl
+	}
+	if recoveredRead := handler.state.checkpointRecoveredRead(request); recoveredRead != nil {
+		nativeRead = recoveredRead
+		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.CheckpointRestartTransitionControlFileReads,
+			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "checkpoint_recovery_refused", errT422StaleControl
 	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleRead(request.URL.Path) {
 		nativeRead = handler.state.lifecycle.read(request)
@@ -274,6 +314,15 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 			canonical, pendingCommit, readErr = read.Read(ctx)
 			if readErr == nil && handler.state.retention != nil && request.URL.Path == t421ExactFinalAuthorityPath {
 				afterReport, readErr = handler.state.retention.finalTail(ctx, canonical)
+			}
+			if readErr == nil && handler.state.stale != nil && request.URL.Path == t421ExactFinalAuthorityPath {
+				afterReport, readErr = handler.state.stale.finalTail(ctx)
+			}
+			if readErr == nil && handler.state.checkpoint != nil && request.URL.Path == t421ExactFinalAuthorityPath {
+				afterReport, readErr = handler.state.checkpoint.finalTail(ctx, afterReport)
+			}
+			if readErr == nil && handler.state.selectorCleanup != nil && request.URL.Path == t421ExactFinalAuthorityPath {
+				afterReport, readErr = handler.state.selectorCleanup.finalTail(ctx, afterReport)
 			}
 		}
 		if readErr != nil || !json.Valid(canonical) {

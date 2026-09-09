@@ -71,6 +71,7 @@ func newT422MarkerControl(
 		runtime == nil || runtime.Store == nil || runtime.Acquire == nil || runtime.AfterV3MarkerInstall != nil ||
 		services == nil || services.store == nil || runtime.Store != services.store || services.relationship != runtime ||
 		services.acquire == nil || services.v3Catalog == nil || exclusive == nil ||
+		launch.request.ReturnSourceCommit == "" || services.v3Catalog.RequiredIndexedCommit != launch.request.ReturnSourceCommit ||
 		!filepath.IsAbs(runtime.DataDir) || filepath.Clean(runtime.DataDir) != runtime.DataDir || services.dataDir != runtime.DataDir ||
 		services.selections[launch.request.Repository].RuntimeVersion() != config.ServiceCatalogRuntimeV3 {
 		return nil, errT422MarkerControl

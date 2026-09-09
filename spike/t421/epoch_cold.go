@@ -204,7 +204,7 @@ func (run *ExecutionEpochOneRun) ColdToWarm(ctx context.Context) (retErr error) 
 	}
 	// FenceRequests joins the exact request's report/commit tail; receiving
 	// the body and trailer alone does not establish synchronous sink success.
-	if run.control.FenceRequests(ctx) != nil || run.advanceCold(ctx) != nil || ctx.Err() != nil {
+	if inspection.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || run.advanceCold(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	return run.completeCold(ctx)
@@ -288,7 +288,7 @@ func (run *ExecutionEpochOneRun) advanceCold(ctx context.Context) error {
 	if run.control.Pause(ctx) != nil || flow.parent.Pause(ctx) != nil ||
 		flow.controller.Fence() != nil || flow.store.Fence() != nil ||
 		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil ||
-		flow.controller.Advance() != nil || flow.store.Advance() != nil ||
+		run.processPhaseAdvance(ctx, 3) != nil ||
 		flow.parent.Resume(3) != nil || run.control.Resume(ctx) != nil {
 		return ErrExecutionEpochOne
 	}

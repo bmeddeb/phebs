@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
@@ -756,6 +757,7 @@ type flakyRunnerStore struct {
 	successorFailures  []Job
 	heartbeatErr       error
 	heartbeatLeaseLost bool
+	heartbeatCall      func(context.Context, Job) error
 }
 
 func (s *flakyRunnerStore) SetJobStatus(_ context.Context, _ Job, status JobStatus, message string) error {
@@ -770,7 +772,10 @@ func (s *flakyRunnerStore) SetJobStatus(_ context.Context, _ Job, status JobStat
 	return nil
 }
 
-func (s *flakyRunnerStore) HeartbeatJob(context.Context, Job) error {
+func (s *flakyRunnerStore) HeartbeatJob(ctx context.Context, job Job) error {
+	if s.heartbeatCall != nil {
+		return s.heartbeatCall(ctx, job)
+	}
 	if s.heartbeatLeaseLost {
 		return ErrLeaseLost
 	}
@@ -1006,6 +1011,79 @@ func TestRunnerDependencyDeferralPreservesAttempt(t *testing.T) {
 	if len(reports) != 2 || reports[1].Event != "deferred" ||
 		reports[1].NextNotBefore != st.deferredUntil.Format(time.RFC3339Nano) {
 		t.Fatalf("deferral lifecycle = %+v, fence=%s", reports, st.deferredUntil)
+	}
+}
+
+func TestRunnerHeartbeatCompletionJoinsWithoutCancel(t *testing.T) {
+	for _, outcome := range []string{"success", "transient", "lease_lost", "outer_cancel", "deadline"} {
+		t.Run(outcome, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				entered := make(chan context.Context, 1)
+				reply, handlerReturn, done := make(chan struct{}), make(chan struct{}), make(chan struct{})
+				beats := 0
+				state := &flakyRunnerStore{heartbeatCall: func(ctx context.Context, _ Job) error {
+					beats++
+					select {
+					case entered <- ctx:
+					default:
+					}
+					select {
+					case <-reply:
+						if outcome == "lease_lost" {
+							return ErrLeaseLost
+						}
+						if outcome == "transient" {
+							return errors.New("temporary heartbeat failure")
+						}
+						return nil
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				}}
+				runner := Runner{Store: state, Kind: JobSync, HeartbeatEvery: time.Second, StaleAfter: 20 * time.Second,
+					Handle: func(ctx context.Context, _ Job) error {
+						<-handlerReturn
+						return ctx.Err()
+					}}
+				go func() { defer close(done); runner.execute(ctx, Job{Kind: JobSync}) }()
+				beatCtx := <-entered
+				close(handlerReturn)
+				synctest.Wait()
+				if beatCtx.Err() != nil {
+					t.Fatal("handler completion canceled the admitted heartbeat", beatCtx.Err())
+				}
+				select {
+				case <-done:
+					t.Fatal("completion did not join the in-flight heartbeat")
+				default:
+				}
+				switch outcome {
+				case "outer_cancel":
+					cancel()
+				case "deadline":
+					time.Sleep(time.Second)
+				default:
+					close(reply)
+				}
+				<-done
+				if beats != 1 {
+					t.Fatal("cleanup started another heartbeat", beats)
+				}
+				if outcome == "outer_cancel" && !errors.Is(beatCtx.Err(), context.Canceled) ||
+					outcome == "deadline" && !errors.Is(beatCtx.Err(), context.DeadlineExceeded) {
+					t.Fatal("cleanup detached or extended the heartbeat context", beatCtx.Err())
+				}
+				wantStatuses := 2
+				if outcome == "lease_lost" {
+					wantStatuses = 1
+				}
+				if len(state.statuses) != wantStatuses || wantStatuses == 2 && state.statuses[1] != StatusDone {
+					t.Fatal("heartbeat precedence or settlement changed", state.statuses)
+				}
+			})
+		})
 	}
 }
 

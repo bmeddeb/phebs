@@ -13,9 +13,55 @@ import (
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogingest"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+// Any catalog read, publication or downstream runtime/store work would call
+// an uninitialized embedded store. Only the existing repository read is valid.
+type waitingIndexedCatalogStore struct {
+	*store.Surreal
+	repository store.Repo
+	reads      int
+}
+
+func (s *waitingIndexedCatalogStore) GetRepo(_ context.Context, _ string) (*store.Repo, error) {
+	s.reads++
+	value := s.repository
+	return &value, nil
+}
+
+func TestServiceRuntimeWaitsBeforeReturnCatalogPreparation(t *testing.T) {
+	const repository = "example.com/acme/return-startup"
+	for _, indexed := range []string{"", strings.Repeat("b", 40)} {
+		t.Run(indexed, func(t *testing.T) {
+			state := &waitingIndexedCatalogStore{repository: store.Repo{Name: repository, IndexedCommitHash: indexed}}
+			controller := &serviceRuntimeController{
+				// Deliberately no controller.store: ignoring NotReady must fail
+				// before old search/state/relationship preparation is possible.
+				v3Catalog: &servicecatalogingest.V3Reconciler{Store: state, RequiredIndexedCommit: strings.Repeat("a", 40)},
+				relationship: &relationshippublication.Runtime{AfterV3MarkerInstall: func(context.Context, relationshippublication.PublicationTransitionTargetV3) error {
+					t.Fatal("waiting startup reached marker publication")
+					return nil
+				}},
+				selections: map[string]config.ServiceCatalog{repository: {Runtime: config.ServiceCatalogRuntimeV3}},
+				acquire:    func(context.Context) (func(), error) { return func() {}, nil },
+			}
+			for range 3 {
+				if err := controller.Advance(t.Context(), repository); err != nil {
+					t.Fatal("pending startup/worker callback", err)
+				}
+			}
+			if state.reads != 3 {
+				t.Fatal("waiting changed repository read count")
+			}
+			if _, err := controller.prepareV3Locked(t.Context(), repository); !errors.Is(err, errServiceRuntimePending) {
+				t.Fatal("preparation did not stop at pending", err)
+			}
+		})
+	}
+}
 
 func TestServiceRuntimeRejectsV2TargetWithoutHoldingV3(t *testing.T) {
 	ctx := t.Context()
@@ -146,19 +192,22 @@ func TestServiceStateV3ChunkWaitsForMutationFence(t *testing.T) {
 func TestServiceRuntimeReportsOnlyFreshActivationTransitionCommit(t *testing.T) {
 	var reported []store.GenerationChunk
 	controller := &serviceRuntimeController{
-		afterActivationTransitionCommit: func(_ context.Context, chunk store.GenerationChunk) {
+		afterActivationTransitionCommit: func(_ context.Context, chunk store.GenerationChunk) error {
 			reported = append(reported, chunk)
+			return nil
 		},
 	}
 	target := store.GenerationChunk{
 		Stage:  store.ServiceStateV3ActivateStage,
 		Offset: store.ServiceStateV3ActivationTransitionTargetOffset,
 	}
-	controller.reportActivationTransitionCommit(
+	if err := controller.reportActivationTransitionCommit(
 		t.Context(), target, store.ServiceStateV3ChunkResult{
 			Applied: 1, Read: store.MaxServiceStateV3ChunkRows,
 		},
-	)
+	); err != nil {
+		t.Fatal(err)
+	}
 	exact := store.ServiceStateV3ChunkResult{Applied: 1, Read: store.MaxServiceStateV3ChunkRows}
 	for _, changed := range []struct {
 		chunk  store.GenerationChunk
@@ -172,10 +221,17 @@ func TestServiceRuntimeReportsOnlyFreshActivationTransitionCommit(t *testing.T) 
 		{chunk: target, result: store.ServiceStateV3ChunkResult{Applied: 2, Read: store.MaxServiceStateV3ChunkRows}},
 		{chunk: target, result: store.ServiceStateV3ChunkResult{Applied: 1, Read: store.MaxServiceStateV3ChunkRows - 1}},
 	} {
-		controller.reportActivationTransitionCommit(t.Context(), changed.chunk, changed.result)
+		if err := controller.reportActivationTransitionCommit(t.Context(), changed.chunk, changed.result); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if len(reported) != 1 || reported[0] != target {
 		t.Fatalf("activation transition reports = %+v", reported)
+	}
+	owned := errors.New("private controlled interruption")
+	controller.afterActivationTransitionCommit = func(context.Context, store.GenerationChunk) error { return owned }
+	if err := controller.reportActivationTransitionCommit(t.Context(), target, exact); err != owned {
+		t.Fatal("committed callback lost exact owned error", err)
 	}
 }
 
@@ -320,6 +376,7 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 
 	locked := false
 	reports := 0
+	controlledStop := errors.New("native activation committed before controlled stop")
 	controller := &serviceRuntimeController{
 		store: st, selections: map[string]config.ServiceCatalog{},
 		acquire: func(context.Context) (func(), error) {
@@ -329,7 +386,7 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 			locked = true
 			return func() { locked = false }, nil
 		},
-		afterActivationTransitionCommit: func(callbackCtx context.Context, chunk store.GenerationChunk) {
+		afterActivationTransitionCommit: func(callbackCtx context.Context, chunk store.GenerationChunk) error {
 			reports++
 			if !locked || chunk.Identity != target.Identity {
 				t.Fatalf("activation callback lost commit lock or target: locked=%t chunk=%+v", locked, chunk)
@@ -341,10 +398,11 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 				point.ActiveCatalogGeneration != generationB.Root.Digest {
 				t.Fatalf("activation callback preceded durable member commit: %+v, %v", point, pointErr)
 			}
+			return controlledStop
 		},
 	}
 	result, err := controller.ProcessServiceStateV3Chunk(ctx, *target)
-	if err != nil || result.Settled || result.Read != store.MaxServiceStateV3ChunkRows ||
+	if err != controlledStop || result.Settled || result.Read != store.MaxServiceStateV3ChunkRows ||
 		result.Applied != 1 || reports != 1 || locked {
 		t.Fatalf("activation target = %+v, reports=%d, locked=%t, err=%v", result, reports, locked, err)
 	}
@@ -352,6 +410,37 @@ func TestServiceRuntimeReportsCommittedActivationTransition(t *testing.T) {
 	if err != nil || replay.Settled || replay.Read != 0 || replay.Applied != 0 ||
 		reports != 1 || locked {
 		t.Fatalf("activation replay = %+v, reports=%d, locked=%t, err=%v", replay, reports, locked, err)
+	}
+	// Exercise the same existing native settlement used by ControlledRelease:
+	// release/reclaim keeps offset and attempt zero, then the durable plan's
+	// point-read replay applies no member row and cannot hit the hook again.
+	if err := st.ReleaseGenerationChunk(ctx, *target, controlledStop.Error()); err != nil {
+		t.Fatal(err)
+	}
+	// Untouched work has priority over a released stale unit. Let the actual
+	// remaining members and the plan's finalization unit finish before replay.
+	for offset := target.Offset + 1; offset < activation.Schedule.TotalItems; offset++ {
+		future, err := st.ClaimGenerationChunk(ctx, store.GenerationResourceCPU, "activation-future")
+		if err != nil || future == nil || future.Offset != offset || future.ScheduleDigest != target.ScheduleDigest || future.Priority != store.GenerationPriorityNeverRun {
+			t.Fatal("native claim did not preserve untouched-unit priority", future, err)
+		}
+		if _, err := controller.ProcessServiceStateV3Chunk(ctx, *future); err != nil {
+			t.Fatal(err)
+		}
+		if err := st.CompleteGenerationChunk(ctx, *future); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reclaimed, err := st.ClaimGenerationChunk(ctx, store.GenerationResourceCPU, "activation-resume")
+	if err != nil || reclaimed == nil || reclaimed.Identity != target.Identity || reclaimed.Attempt != 0 || reclaimed.Priority != store.GenerationPriorityStale || reclaimed.LeaseToken == target.LeaseToken {
+		t.Fatal("native controlled release did not reclaim the same attempt", reclaimed, err)
+	}
+	replay, err = controller.ProcessServiceStateV3Chunk(ctx, *reclaimed)
+	if err != nil || replay.Applied != 0 || replay.Read != 0 || reports != 1 {
+		t.Fatal("reclaimed activation replay rewrote or reported the committed member", replay, err)
+	}
+	if err := st.CompleteGenerationChunk(ctx, *reclaimed); err != nil {
+		t.Fatal(err)
 	}
 }
 

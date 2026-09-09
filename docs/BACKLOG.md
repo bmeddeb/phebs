@@ -4456,6 +4456,29 @@ owns the design and dependency order. Execution remains excluded.
   retained V1/V2 unchanged, exact invocation and custody/expiry handoff; no
   ceremony execution, Epic closure, release or scale claim.
 
+**T42.2l measurement track — phase-bound attempt reports (2026-09-07).**
+Replace selected job/chunk report writes with genuine producer/input/phase-bound
+envelopes, preserving ordinary/T40 behavior. Consume only joined native output,
+not live buffer lengths or assumed pipe drainage at control acknowledgments.
+AC: repeated same-depth starts count separately; resumed starts invent no
+historical retries; only successful retry transitions increment retry counters;
+exact event/depth/phase checks, overflow and malformed/truncated failed prefixes;
+fixed fifteen-phase aggregation without per-job history; existing owner-turn
+phase attribution and failure latch; focused normal/race, independent OCR and
+actual epoch consumption. This is a subset of whole-phase work measurement,
+not a live ceiling or full receipt pass. PLAN owns the source-event meanings.
+
+Selected source sinks and the actual epoch post-Wait consumer are now wired.
+Focused normal passed in command/T42.1 packages (1.255s/0.632s), with three
+race repetitions (2.071s/3.574s) and whitespace green. The inherited phase-owner
+test invokes genuine selected sinks using native-shaped supplied reports; it
+is not an actual queue workload or protected production-image rehearsal.
+Tests cover V3 reconcile/activation stages, unwrapped legacy reports, split
+markers, truncated prefixes, unknown bindings and a real output-buffer overflow
+ending at a complete newline. Joined failed output retains accepted counters
+but cannot be marked complete. Immutable OCR and combined native queue/epoch
+verification remain pending; whole-phase work accounting remains open.
+
 **T42.2l measurement track — restore attempted-prefix closure (2026-09-07).**
 Under Ben's two-track freeze orchestration, reuse the authenticated SDK owner
 and SA01 protocol for the existing native replay's two bootstrap SQL writes
@@ -4562,6 +4585,1848 @@ The successful harness removed its private native custody; no process from that
 custody remains. The exact detached source stayed clean and the terminal log is
 retained outside it at `/private/tmp/phebs-t422-physical.78vVnJ/physical.log`,
 SHA-256 `ebafa21a10c8d713d6248d69a2a9d1b080ddeac19774f2b29e8a4c55b395eee9`.
+
+**T42.2l executor track — native logical activation control (2026-09-07).**
+Implement the selected producer-three/phase-five committed member-nine hook,
+authenticated exact hit/recovered reads and source-owned same-attempt scheduler
+release after heartbeat join. The hit must retain its native lease until its
+read/report tail joins; never drain its held owner first. Preserve ordinary
+nil-hook behavior, native release/reclaim semantics, unchanged attempt zero,
+target and four-hour deadline, with two five-read R observations. AC: exact
+target/phase refusal, cancellation and joined hit delivery, heartbeat/lease
+precedence, no retry/deferral substitution, native recovered shape, focused
+normal/race and independent OCR/cost review. Actual epoch-two handoff and
+logical-phase execution remain separate; no implementation or native pass is
+claimed by this prospective record.
+
+The implementation's focused command/scheduler checks passed normal (0.609s /
+0.782s) and three race repetitions (2.123s / 1.455s), plus changed-package vet,
+pinned lint (zero issues) and whitespace. The native committed-transition test
+now checks actual same-attempt release/reclaim and replay after the committed
+hook returns; it has not yet run on this candidate. Independent immutable-source
+OCR and that serial native gate remain open. This does not claim a selected
+bootstrap/HTTP/scheduler composition or completed logical phase.
+
+Independent OCR reviewed exact logical-control source
+`2e8b6e97c886b32c6e3b513ac5479fae08c5b099`, all eleven changed source, test and
+owning-documentation files, with critical/high/medium/low all zero and a complete
+cost pass. Combined command/scheduler/epoch normal regressions passed in
+1.545s / 0.931s / 2.216s and race in 1.963s / 2.726s / 21.969s. Changed-package
+vet, pinned lint (zero issues), docs (0.529s), glossary and whitespace passed.
+The actual native committed-transition release/reclaim gate is serialized after
+the physical-B rehearsal and remains pending.
+
+That first native gate stopped in 12.60s (package 13.296s) because its added
+fixture expected the released stale-priority member nine to be reclaimed before
+the untouched priority-zero final member ten. Native claim ordering was correct.
+The test now processes and completes that actual final member before claiming
+the released target, then retains the same identity, attempt-zero, fresh-lease
+and zero-write replay assertions. This is a test-only correction; production
+scheduler/release semantics and the selected hit/recovered contract are unchanged.
+The corrected immutable native gate remains pending.
+
+The first correction `2eb4d51b6fe3571b80d688eaa138676a2dcb6eba` still assumed
+only one remaining unit; its native run stopped in 12.47s (package 13.080s) when
+the finalization unit at offset eleven correctly won the next claim. The next
+test correction follows the actual returned schedule's TotalItems, processing
+each remaining untouched unit including finalization before the stale target.
+It validates each offset, schedule identity and priority and retains all original
+same-attempt/replay assertions. No production change or native pass is claimed
+by either failed test run.
+
+Independent OCR identified the omitted finalization unit as one medium in the
+first correction, then closed it on exact
+`bced657e2ce4bc1cbdec182898c08e77cf79eb50`: both changed files covered, all
+severity counts zero. That exact corrected native gate passed in 12.37s
+(package 12.956s), and its native race gate passed in 27.624s. Vet, pinned lint
+(zero issues), docs (0.544s), glossary and whitespace passed. These establish
+actual committed-hook release, native ordered suffix/reclaim and unchanged
+attempt-zero replay; they are not a selected HTTP/bootstrap/full-epoch pass.
+
+Its attempt-report prerequisite `5bddcc48b894ba7fdc06b8358288fff6d11ff75c`
+also passed independent OCR across all eight changed files, with all severity
+counts zero and its post-join/output-prefix cost pass complete. Combined
+command/epoch normal tests passed in 2.027s / 3.737s and race in 2.555s / 21.240s;
+vet, pinned lint (zero issues), docs (0.726s), glossary, whitespace and unchanged
+retained V1/V2 plan checks passed. Genuine queue/epoch report consumption remains
+required; native-shaped report fixtures do not establish it or whole-work fit.
+
+**T42.2l executor track — retained-parent logical epoch (2026-09-07).**
+Compose physical-B stop and producer-three startup using the existing shared
+DA/SA parent, preserving source borrow throughout the gap. AC: genuine joined
+first-server/session/EOF prefix, paused open root, exact advance to phase five,
+atomic borrow transfer, no successor on failed continuation, native hit before
+X/T readiness, drained recovered R and logical F continuity, joined final tails,
+unchanged old Stop behavior, focused inherited-transport/custody/deadline
+normal/race gates and independent OCR/cost review. Five epoch-two PC pairs and
+the unchanged four-hour phase/fifteen-minute health deadlines are derived before
+launch. Actual selected logical execution and whole-work fit remain required;
+this prospective entry claims neither implementation nor a native pass.
+
+The logical parent implementation passed focused preservation normal tests
+(1.652s), three race repetitions (15.135s), vet, pinned lint (zero issues) and
+whitespace. Inherited two-child DA/SA/PC tests exercise a genuine phase-four
+terminal EOF and phase-five successor on the same controller; model fixtures
+cover logical authority/R identity and custody failure paths. Initial fixtures
+were corrected for exact response framing and the required earlier SA phase
+mask; no native engine ran. One new server uses existing protected tool/input
+checks and launch resources. Detached prior authorities retain bounded decoded
+inventories without retaining the old reader/run/output graph; a caller retaining
+both diagnostic results can still hold two independently capped 64-MiB outputs.
+The logical reader permits at most 5,765 inspections, including the two five-read
+R calls. Immutable OCR and genuine selected logical rehearsal remain required;
+these tests establish neither whole-phase metrics nor freeze.
+
+Independent OCR of exact `79e3ab03b0bbfb0116137534d4149763697fcd44` covered
+all nine files and reported critical/high/medium/low 0/0/1/0. The parent and its
+model fixture confused the native hit's target-plan catalog with the old active
+selector catalog. Native code and existing authority tests show both R points
+name the same B target while the selector advances. The comparison correction
+requires a changed target at hit, an unchanged target at recovery, and the strict
+final F binding to protected logical-B projection/plan/schedule/unit. Negatives
+reject old A, changed target, unchanged selector, changed physical search and
+R-to-F mismatch. Corrected normal (0.968s), production/test race three-repeat
+(5.336s), vet, pinned lint (zero issues) and whitespace pass. The later test-only
+rehearsal log compiles and records the already-joined first-epoch counters after
+assigning cleanup to the actual successor; it adds no request or PC operation.
+Immutable correction re-review and integrated native measurement remain open.
+
+**T42.2l measurement track — compact native blob attempts (2026-09-07).**
+Observe actual immutable-content submissions at all three shared reader sites,
+not Git child launches or successful returned bytes. AC: selected genuine
+producer/input/phase binding, ordinary and metadata preservation, pre-forward
+failure/cancellation refusal, repeated and partial-batch attempts, compact
+fixed records within the unchanged output cap, strict post-join attribution and
+honest incomplete failed prefixes, focused normal/race and independent OCR/cost
+review. Full JSON per blob exceeds the frozen diagnostic ceiling and is not
+selected. Native integration, parser/cache/member work and complete phase fit
+remain separate; this prospective row claims no implementation or gate pass.
+
+Independent acceptance inventory keeps three measurement groups after this
+slice: (1) native pipeline/index/parse/publication and reuse decisions, including
+actual byte/population observations; (2) phase-wide catalog/cache/read attribution
+without double-counting existing request ledgers; (3) complete lifecycle event
+totals, native wall/RSS/disk gauges and final phase/receipt composition. Existing
+successful observation OperationReceipt and final authority are not failed-work
+counters. Reuse the existing operation reports, readaccounting/cache statistics,
+lifecycle events and native samplers; no parallel metrics framework or expected
+profile values may substitute for observed work. DA/SA and report-derived
+job/retry counters still require complete fifteen-phase/five-epoch composition.
+
+The blob slice now uses one 79-byte binding and exactly eight bytes per offered
+content attempt on the existing logger's native file writer, sharing its write
+serialization without timestamps, global logger mutation or a new descriptor.
+At both epoch-one maxima this adds 16,462,223 bytes, leaving 50,646,641 bytes
+shared with other output; that is not proof that all simultaneous maxima fit.
+Selected missing/sink/panic failures latch the existing client. Cancellation
+during the synchronous report preserves its accepted event but refuses content
+forwarding afterward. Negative/overflowing single-blob limits now refuse before
+an event/child; valid ordinary and metadata paths are preserved.
+Focused normal checks passed readaccounting/dispatch/gitobj/sourcepartition/
+command/epoch in 0.229s / 0.268s / 0.595s / 0.621s / 0.745s / 0.964s; three race
+repetitions passed in 1.233s / 1.294s / 2.299s / 2.315s / 1.998s / 3.439s.
+Vet, pinned lint (zero issues) and whitespace passed. These are lightweight
+native Git and inherited-helper tests, not a complete selected workload.
+Immutable independent OCR and integrated measurement remain open.
+
+Independent OCR of blob source `d8bda44b2cb600b26f06b2820ac17d0a5e133275`
+covered all nineteen files (nine production, eight tests, two owning docs) with
+all severity counts zero. The A3 comparison correction
+`d58a9d28f15ee63737fe1a9397824cec94e89989` independently closed its medium:
+five files covered, all severity counts zero. Combined candidate
+`e2d139f003217b32c70635f3c298851216ec52aa` preserves both source deltas; only
+owning BACKLOG insertions required conflict resolution. Its seven-package
+bounded normal selector passed, and affected epoch race passed in 20.497s;
+the preceding combined seven-package race passed with epoch at 21.531s and
+no race failure. Changed static gates, pinned lint (zero issues), docs (0.497s),
+glossary, whitespace and retained V1/V2 checks passed. The exact detached
+combined cold/warm/physical/logical rehearsal was then started under unchanged
+per-phase bounds; no result or integration readiness is claimed before it
+finishes. This native run also requires genuine report and blob-prefix parsing,
+not just the previously established authority observations.
+
+**Freeze blocker — native index-offer tool boundary (2026-09-07).** The
+measurement agent, lead and independent OCR confirmed the pinned upstream
+`gitindex/index.go` planned-total log precedes the go-git createDocument/Add
+loop, which can fail between offers and exposes no observer; completed shard
+logs do not recover that prefix. `referenceToolRole` fixes the upstream CLI
+package/module recipe and verifies its exact reference bytes. V3 requires actual
+IndexFiles but does not admit `index_files` in its unavailable-metric vocabulary.
+No successful-count inference closes failed-prefix acceptance. Ben's narrow
+authorization is required before selecting a prospective V3-only instrumented
+native hook/build identity; all measurement units, ceilings, direct-upstream
+constraints and retained V1/V2 bytes remain protected. No module/tool/recipe
+change, evidence waiver or upstream message was made. The already-started exact
+logical rehearsal may finish; its result cannot remove this freeze blocker.
+
+**Index-offer authorization received (2026-09-07).** Ben's subsequent
+interactive “approved proceed” approves the requested V3-only native indexer
+instrumentation and corresponding build-recipe change. The historical blocker
+above records the earlier hold; permission is no longer missing. Actual offer
+evidence, exact reference provenance, unchanged numerical bounds and V1/V2,
+combined transport fit, independent source/cost review and native gates remain
+required. No implementation or acceptance pass is implied by this approval.
+
+**Combined logical rehearsal stopped (2026-09-07).** Exact detached source
+`e2d139f003217b32c70635f3c298851216ec52aa` passed native cold, warm and physical-B
+authority observations, including physical retention, but refused the
+retained-parent logical handoff before launching producer three. The first
+epoch's joined attempt parser retained a cold prefix of 625 job attempts and
+233,741 source-blob attempts, with SourceBound true and Complete false; the
+cause remains under source/log investigation, not classified as a pipeline or
+logical-control failure. Test/package times were 2237.98s/2238.757s. Native stop
+reported RootJoined and SessionEmpty true; an unsandboxed exact-custody process
+check found no remaining match. Retained terminal log
+`/private/tmp/phebs-t422-logical-measured.tIHnDF/logical.log` hashes to
+`sha256:7562dded3fe5d612b817e46b9ce9c290e450e9ffe2f70b5a573986ea63655b79`;
+private runtime custody `t422-epoch-one-rehearsal-4208304872` is preserved.
+No automatic retry, logical phase pass, integration or freeze is claimed.
+
+Independent retained-log diagnosis then located the first refused native event
+at server-log line 235,709: chunk start 626 uses
+`relationshippublication.ScheduleStageV3` (`service-relationship-v3-shadow`),
+which the B2 parser's stage vocabulary omitted. Its preceding 625 starts and
+233,741 blob events exactly match the returned prefix. Raw log aggregation
+finds cold 637 starts and physical 1,517, below the unchanged 158,285 maximum
+for each; this aggregation is not a successful strict parse or a rerun gate.
+Counting both actual queue and chunk starts agrees with frozen recovery work
+semantics. Independent diagnosis reports one medium, no other severities;
+the earlier all-zero B2 review missed this reachable stage and remains a
+historical record, not retrospectively corrected coverage. The smallest fix is
+the native stage constant plus sibling-vocabulary regression coverage, not a
+budget increase or metric reinterpretation.
+
+The corrected combined parser then consumed the complete retained native log
+with SourceBound and Complete true: cold 637 starts / 236,017 blob attempts,
+physical 1,517 starts / 251,026 blob attempts, warm zero for both, and no reported
+retry transition. This was a bounded read-only diagnostic using the actual
+private input binding, not a new native run or retrospective handoff pass; its
+temporary test was removed after the 0.829s selector passed. Source regression
+tests remain independent of private custody. Fresh native confirmation is held
+by host disk admission: approximately 91 GiB available versus the unchanged
+120-GiB minimum. The failed private runtime custody occupies about 40 GiB and
+remains retained; no archive/deletion decision is inferred.
+
+The corrected root-tree attempt selector passed normal in 0.657s and race
+three times in 3.134s. Vet, pinned lint (zero issues), docs (0.455s), glossary,
+whitespace and unchanged retained V1/V2 plan checks passed. The first sandboxed
+lint invocation could not load Go packages; the unchanged command with cache
+access passed. These are parser and static gates, not a native handoff pass.
+Independent OCR then confirmed exact source
+`b157f70578aa5b25debb418a2ebb71e6ae2eb90a`: four of four files reviewed, none
+skipped, critical/high/medium/low all zero. The native-stage finding is closed
+in that source; the host-space hold and fresh logical rehearsal remain open.
+
+**T42.2l executor track — retained return-A marker epoch (2026-09-07).**
+Compose the genuine joined logical predecessor, actual author nine and third
+server under one uninterrupted source borrow and the existing phase-six
+deadline. AC: predecessor native/DA/SA EOF before checkpoint/advance, immutable
+borrow across the authoring gap, canceled/failed author joins before cleanup,
+active-author and reserved-gap Close refusal, full producer-four 6/7/8 bootstrap
+identity, actual marker hit/recovered before convergence or owner drain,
+protected return-A final authority continuity, and no inferred future-phase
+pass. PLAN owns ordering and bounded per-operation costs.
+
+The eight-file source slice implements this terminal phase-six composition.
+Focused tests exercise genuine inherited DA/PC/SA handoff, native-shaped marker
+identity negatives, a deadline expiring before predecessor join, and author
+guard/cancellation paths. Broad lightweight epoch/inspection/attempt normal
+passed in 2.438s; targeted return/marker/logical/author race repeated three times
+passed in 6.496s; vet, repository-pinned lint 2.12.2 (zero issues), formatting
+and whitespace passed. An earlier ambient lint 2.13.1 run was supplemental
+only and led to four style simplifications before the pinned gate. These are
+transport and source gates, not real Phebs/Surreal or native author execution.
+The opt-in `PHEBS_T422_RETURN_A_REHEARSAL=1` additionally requires the logical
+selector and extends only the test harness allowance by four hours; phase,
+health and admission bounds remain unchanged. Independent immutable OCR and
+exact integrated native confirmation remain required. This does not close
+phases seven/eight, complete measurement or T42.2l.
+
+Independent OCR of exact source
+`a1e2732ffc2f025533e64fbc59ce4892b1a18e59` covered all ten files, including
+excluded tests and both owning documents, with no skipped file and all severity
+counts zero. The root's exact committed broad lightweight selector separately
+passed in 2.445s; root docs (0.589s), glossary and whitespace passed. These
+close this slice's source-review/static gates, not the retained host-space hold
+or actual logical/return-A native confirmation.
+
+**T42.2l measurement track — approved V3 native index offers (2026-09-07).**
+The implementation adds an exact private source overlay, version-specific
+reference/provenance validation, admitted hook environment, pre-lossy-output
+child token/tally parsing, genuine phase-bound forwarding and post-Wait offer
+observation. V1/V2 build selection and canonical bytes remain unchanged. Early
+review caught and corrected two integration hazards before native execution:
+dispatch replaces cmd.Env, and latching every native error would suppress
+ordinary index retries. The admitted environment now carries the exact paired
+flags; a complete neutral terminal plus a closed normal nonzero-exit error tree
+preserves the original retry classification. Mixed accounting/transport errors,
+missing terminal, hard death or uncertain forwarding retain positive evidence
+but refuse completeness. No unknown IndexFiles count is assigned zero.
+
+AC: exact upstream/source/overlay identity and bounded before/after custody;
+independent private-path byte-identical rebuild; tiny real indexing with healthy
+offers and a corrupt later blob proving the failed positive prefix while an
+unreached file is uncounted; split/coalesced/unknown/duplicate/partial/tally and
+mixed-error refusal; phase/input binding and owner-tail join; ordinary and
+V1/V2 preservation; combined transport fit and eventual stopped/completed
+receipt binding; independent source/cost review. Those native and full-receipt
+ACs remain open, regardless of component test success.
+
+The 25-file source slice passed focused normal in dispatch/indexer/command/T42.1
+at 0.366s/4.417s/0.670s/0.766s and race repeated three times at
+1.298s/6.058s/1.998s/3.441s. Vet, pinned lint (zero issues), whitespace and retained
+canonical/cross-version/provenance tests passed. After composition with the
+reviewed return-A source, the root's expanded selector passed at
+0.373s/7.685s/0.653s/3.450s; complete dispatch/indexer/command packages passed at
+4.173s/30.427s/89.856s. These ran no full corpus or independently reproduced
+instrumented image. The replacement is 41,938 bytes,
+`sha256:0e8aff78ce797ab62072d94b891ab5a132ad3a71e9a3d1cd076ad0514de09a00`.
+Epoch-one index framing plus its 4,063,208 maximum offers requires at most
+12,189,799 parent bytes under the admitted six-child ceiling. Combined with
+the existing source-attempt stream this is 28,652,022 bytes, leaving 38,456,842
+of the unchanged shared cap before B2, candidate/ordinary output and future
+census events. This is partial headroom arithmetic, not a simultaneous full
+report-fit proof. A separate opt-in tiny native gate builds independently in
+private paths and checks three healthy offers versus two before a corrupted
+second blob; it does not manufacture server phase binding. Its disabled compile
+and pinned lint passed; native execution is not yet recorded. Independent
+immutable OCR and native gates remain pending.
+
+Independent OCR of exact `ba9f8153541d6c21ba11c3a5d91a86371b954a60`
+covered all 28 files, including excluded tests and owning documentation, with
+zero skipped: critical/high/medium 0, low 1. Production source, cost,
+environment replacement and provenance were clean. The low was a circular
+test oracle: expected cooperative-exit acceptance called the same production
+classifier being tested. The correction uses explicit exit-one/exit-two/joined
+exit acceptance versus mixed transport refusal, and asserts exactly one failed
+terminal only for accepted cases. Focused race repeated three times passed in
+7.548s; source-identical native reproduction is running, not yet passed.
+Exact correction `e0ed7f7ba29f17571b56cff2326df8c407f05dcd` received
+independent OCR coverage of both files, zero skipped and all severity counts
+zero; the original low is closed without changing production source or cost.
+The actual tiny native gate at `ba9f8153` then stopped before indexing:
+394.06s test / 394.787s package, during the first protected build. The pinned
+Go help and a non-build `go list` validation of the retained overlay confirm
+that Go prohibits replacing files beneath GOMODCACHE. The earlier source review
+missed this native tool restriction. No index attempt or independent image
+comparison passed. The terminal log at
+`/private/tmp/phebs-t422-native-index.LZ1BOg/native.log` hashes to
+`sha256:8dd71c79c23eb6a8e5bb19259986fa87f29e540eabfe44f0985ec373650a16ba`;
+private `t422-zoekt-offer-rehearsal-398052420` custody remains retained and no
+matching gate/build process survives. A supported private build correction and
+fresh native proof are required; no automatic rehearsal retry occurred.
+
+**T42.2l phase-seven prerequisite — native current predecessor (2026-09-07).**
+`PrepareCurrentRecovery` reuses the existing preparation implementation and
+captures the actual settled operational predecessor during the first locked
+native confirmation. An immutable generation digest cannot substitute for that
+predecessor after A/B/return-A. The second confirmation remains bound to the
+captured digest; the returned target carries only the native schedule and
+already-validated generation/domain/ordinal/offset/plan/result identities.
+The original explicit entrypoint still refuses an absent or stale prior digest.
+No HTTP route or fixed ceremony target is introduced in the internal package.
+
+AC: predecessor-derived lineage, changed-current/late-authority refusal,
+zero usable result after failure, preserved committed mutations, cancellation,
+strict old API and unchanged native read/mutation/lock costs. The four-file
+source passed focused normal 10.358s, race 12.435s, vet, pinned lint (zero issues)
+and whitespace. Root composition passed the same focused normal selector in
+16.728s and docs/glossary/whitespace (docs 0.611s). The cancellation double ignores context and can return the
+second read; its test asserts refusal before mutation rather than claiming that
+fake read was prevented. The new tiny real-store test must still prove two
+successive completed predecessor-derived schedules and C13/S10/W1 per call.
+It is binary-availability gated and has not yet run. Independent immutable
+review, ordinary-server stale-worker controls and actual phase-seven evidence
+remain open; this adds no read, retry, lock acquisition or numerical allowance.
+Exact `0d92d7f8458073f90b630f58d50ab05cb99431c3` subsequently received
+independent OCR coverage of all six files, zero skipped and all severity counts
+zero. This closes source/cost review, not the outstanding native read-count or
+phase-seven gates.
+The tiny real-store test then passed normally (0.94s test / 1.552s package)
+and under race (1.01s / 2.733s), proving both successive native predecessor
+lineages and exact C13/S10/W1 on the same source. The first attempted command
+never reached the test because putting CommandLineTools ahead of `/usr/bin`
+selected clang without its SDK link path (`library resolv not found`); restoring
+the established compiler PATH resolved that command configuration error.
+These are native preparation component gates, not phase-seven server evidence.
+
+**T42.2l compact report fit (2026-09-07).** One ATB1 producer/input binding
+precedes the native selected workers; four five-byte opcodes retain job/chunk
+starts and reported successful retries with actual phase and depth. The strict
+bounded native JSON validator moves to the sender and still checks zero-delta
+events. No per-job deduplication, sequence registry or additional mutex is added.
+Every emitted retry follows one same-phase start under the existing owner turn,
+so records are at most twice actual starts. Claims may lack starts and are not
+given an invented multiplier. Existing repeated/deferred/yielded starts count.
+
+The five source/index/attempt subset maxima are 31,827,801 / 600,237 /
+19,074,719 / 1,583,087 / 8,950,119 bytes for producers two through six.
+The largest leaves 35,281,063 bytes of the unchanged 67,108,864-byte buffer;
+this is not a full candidate/ordinary/future-census report-fit proof. Producer
+four's conservative phase-eight reservation does not duplicate the shared
+phase receipt allowance. The existing scheduler can suppress a retried report
+after a stale handle even when its retry call returned nil; this preserves the
+owning reported-successful-retry unit, not all durable mutation coverage.
+
+AC: real inherited binding/phase, all eight stages and seven job kinds,
+zero-delta validation, unknown/duplicate binding/partial/depth/input refusal,
+positive prefix and unchanged bounds, ordinary/T40 preservation, exact fit
+arithmetic and independent cost/source review. Nine source/test files passed
+focused normal cmd/T42.1 at 0.764s/1.234s and race repeated three times at
+2.115s/4.067s, plus vet, pinned lint (zero issues) and whitespace. No full native
+epoch or receipt was run. Native index build remains blocked by the separately
+recorded unsupported cache overlay; this transport does not close that gate.
+Root composition passed cmd/T42.1 at 0.663s/1.105s and documentation at 0.746s,
+with glossary/whitespace clean. Independent OCR of exact
+`c0ae04dd32287f745343f932eb66eac42b45a7b5` covered all eleven files, zero
+skipped and all severity counts zero. A separate read-only audit confirmed that
+a nil native retry creates a real successor; it is not a no-op. A generic
+service-state schedule with length two can retain its lease after a handler
+shape refusal and expose suppressed retry reporting, but the admitted
+service-state constructors use length one. Observation's legitimate length-eight
+stage uses its own handler. Current selected extraction/observation fences
+propagate native heartbeat results, old CurrentGenerationRunningChunk inspection
+errors are not handler inputs, and selected marker failures latch cancellation
+before retry. No selected-path omission or retained-run undercount was
+established; generic API reporting completeness remains unclaimed. Phase-seven
+hooks must return lease loss only after actual native requeue/fencing.
+
+**T42.2l phase-seven server controls (2026-09-07).** Seven command files
+compose the fixed authenticated preparation, before-heartbeat hold, native
+hit/requeue/recovered observer rendezvous and two exact R routes. Phase-six F
+captures only actual bounded authority/root identities after the normal native
+confirmation, then admits them only after its body/cache/report tail. A later F
+must match those complete identities. No arbitrary repository/domain/ordinal or
+handler-supplied completion endpoint is exposed.
+
+AC: genuine producer-four/phase-six-to-seven custody, fixed target and one-shot
+preparation, actual predecessor, original observer deadline intersection,
+body/ledger/report-tail release, sticky failures, old lease fenced before
+lease-lost, and unchanged final authority. Scripted/inherited mechanics passed
+focused normal 1.269s and race repeated three times 2.378s; marker/activation/
+semantic compatibility selector passed 0.932s. Vet, pinned lint (zero issues)
+and whitespace passed. The preliminary no-matching-tests compile is not a
+behavior gate. Inherited tests supply target/events and do not establish a real
+reaper, actual native R or complete phase-seven execution.
+
+Preparation returns observed C/S/M/W, not a full RecoveryPreparationResult or
+phase receipt. Its C maximum is 118 including one cold manifest, S maximum339,
+M maximum353296640 and W maximum64. Every R is C4/S4/M0/W0, separately SA2
+transactions/zero rows; the pair is C8/S8 and SA4/zero. Real enqueue/requeue
+submissions remain separately charged per native attempt, not inferred from
+these read-ledger counters. No polling or new stale timeout is introduced.
+Parent deadline/handoff/PC orchestration, complete work metrics and native
+phase-seven proof remain separate; independent exact-source review is pending.
+Exact `249bbd605d1850bf4857d7ee9a598bf8e34e1775` then received independent
+OCR coverage of all nine files, zero skipped, critical/high/low zero and one
+medium: a second extraction worker can reclaim the target after the native
+requeue COMMIT but before its Requeued observer. The correction rendezvous
+waits on the actual callback under the original reaper deadline; it never
+infers that callback or releases the old worker from the new claim alone.
+Once the callback succeeds, the reaper's normal completion cancellation does
+not invalidate the reclaimed worker's separate lifetime. Existing context and
+channel primitives suffice; no new database work or retry is introduced.
+The inherited six-mode test passed normal 0.759s and race repeated three times
+2.846s, including deterministic early-reclaim, before-callback cancellation
+and after-callback cancellation. These remain supplied protocol events, not
+native reaper evidence. Corrected immutable review remains required.
+
+**T42.2l supported native index build correction (2026-09-07).** The prior
+module-cache overlay refusal is corrected prospectively using a fresh private
+copy of the exact pinned module and a version-qualified `./zoekt` replacement
+in alternate Phebs descriptors. The upstream module language remains 1.25.9;
+original descriptors/notices and V1/V2 stay exact. Native Go1.26.5 reports
+`(devel)` for BuildInfo replacement version but an empty Go-list replacement
+version; both are checked in their own representations, without fabricating
+BuildInfo. Baseline and actual private graphs retain the same exact identities;
+only the specific verified location/replacement metadata differences are
+admitted. Whole-module h1 and overlay/descriptor checks run around the build.
+Both reference entrypoints still compare independently built complete images.
+
+AC: native replacement metadata and pinned package/overlay resolution; strict
+graph, descriptor, module-copy and replacement refusal; unchanged legacy
+recipe; full native independently located image reproduction and healthy/
+failed-prefix offer gate. Seven files passed focused normal 5.943s, race
+repeated three times 17.670s, vet, pinned lint (zero issues) and whitespace in
+the author worktree. Independent OCR covered all seven frozen workspace files,
+zero skipped and all severity counts zero. Immutable attribution and the full
+native image/offer gate remain open; no full workload retry was attempted.
+The owning ADR records per-build copy/hash/sync/Go-list cost and unchanged
+production costs and numerical bounds. Failed supplied builds now retain
+their bounded stderr privately rather than losing the diagnostic.
+Root composition passed the focused selector in 6.018s and docs in 0.679s,
+with glossary/whitespace clean. Exact
+`7cd1408397712ff0b9f09318a74ed8da0ddf9d5b` received independent OCR coverage
+of all nine files, zero skipped and all severity counts zero; all seven
+source/test files matched the frozen reviewed workspace byte-for-byte.
+One fresh exact-source native component gate is running; no result is yet
+claimed, and the earlier failed custody remains preserved.
+That exact native component gate then reproduced independently located images
+byte-for-byte at
+`sha256:12b5310b61f014acfc16c5fe7fd56510bbcdf51ed62a244fd6aed855d0d24682`.
+The healthy native child exited zero with exactly three offers and terminal
+count three; corrupting the second loose blob produced exit one with exactly
+two offers and terminal count two, leaving the third unread. Supplied build
+time was 39.264s. The overall test is nevertheless **failed** (552.83s test /
+553.411s package): generic cleanup could not unlink the protected Git helper.
+Close intentionally retains immutable bits; the new test omitted the existing
+exact-descriptor fixture cleanup registrations. No native gate process remains.
+
+Terminal record:
+`/private/tmp/phebs-t422-native-index-fixed.htlgNc/native.log`, SHA-256
+`d1107f0ceda156c9e5a5383995e193f1436d9c90aa52eb5e62a08b4deeb07c94`.
+Generic removal partially removed unprotected generated scratch before failing;
+remaining protected custody is at
+`/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/t422-zoekt-offer-rehearsal-3855397878`.
+The correction reuses the existing Git/Go-build/tool exact-descriptor cleanup
+helpers only on native success. It changes no production image or assertion.
+Fresh full-gate confirmation remains required; the failed result is not renamed
+green and its remaining custody is not automatically deleted.
+Exact cleanup correction `c4808ec7a701d250113c4257b808fc2953be1d85` received
+independent OCR review of all three files, zero skipped and all severity counts
+zero. The reviewer independently rehashed the failed log and checked the
+success-only, exact-descriptor cleanup order. The focused retained-protection
+gate passed 0.614s; docs passed 0.524s with glossary/whitespace clean.
+
+One fresh clean detached confirmation of that exact commit then **passed**:
+611.90s test / 612.576s package. Supplied native build took 38.988s; independent
+complete images retained the same SHA-256 above. Healthy exit zero counted
+exactly three native offers; corrupt-second exit one counted exactly two with
+the unreached third unchanged. All normal protected-copy cleanup completed,
+the detached source stayed clean, and no matching native test/build process
+remained. Terminal record:
+`/private/tmp/phebs-t422-native-index-confirm.uFiZdf/native.log`, SHA-256
+`b8f2c5bf6b416b43369493be6eda54c73cfafafe15222fa55cf0131874065660`.
+This closes independent native image reproduction and the healthy/failed-prefix
+offer component gate, not server forwarding, full output fit, whole-phase
+metrics, logical/return/stale native execution or freeze. Earlier failed
+custody remains preserved; the successful confirmation removed only its own
+generated scratch through the reviewed fixture cleanup.
+
+**T42.2l same-server phase-seven parent (2026-09-07).** Explicit
+`StartReturnAStale` reserves the same producer-four server for phases six/seven;
+`StartReturnA` retains four hours and five PC pairs. The extended lifetime is
+eight hours from before predecessor stop/author nine, but each phase remains
+four hours and health remains fifteen minutes inside phase six. Phase-seven
+deadline installation precedes its actual checkpoint/advance handoff. Stop
+cancels and joins the stale operation before releasing source custody.
+
+AC: genuine inherited DA/SA/PC handoff including actual SDK checkpoint; one
+drained preparation POST and joined tail; reopen; one blocking R-hit then one
+blocking R-recovered before X/T; drained F equal to complete actual return-A
+authority including nine roots/56 results; shared read ordinals/counter prefixes;
+timer/Stop cancellation and no phase-six borrowing of phase-seven time. The
+two-phase path uses exactly fourteen PC pairs/1,792 bytes. Preparation is a
+bounded native observation, not a manufactured RecoveryPreparationResult.
+Existing scoped R is C8/S8/M0/W0 for the pair; complete work metrics remain open.
+
+The first nine-file draft passed focused normal 1.501s, race repeated three
+times 23.951s and the final changed negative-header test under race three times
+3.687s, plus vet and pinned lint. Independent OCR nevertheless found one high
+and no other severity findings across all nine files: the two launch contexts
+were reversed, so deferred bootstrap-context cancellation would kill the new
+server immediately. The correction passes persistent lifetime first and
+phase-six launch context second. Source-binding assertions and actual synctest
+contexts for both modes passed normal twenty times 0.636s, race three times
+1.797s and the broader normal selector 1.443s; pinned lint and whitespace pass.
+These tests explicitly do not claim a successful native StartReturnA launch.
+Corrected immutable review and full native confirmation remain required.
+Corrected exact `a4efdcf1a725a063dfdf1443a94748897b4d9a60` then received
+independent OCR coverage of all eleven files, zero skipped and all severity
+counts zero. All nine source/test files matched the corrected frozen workspace.
+Root composition normal passed 1.442s; docs passed 0.510s with glossary and
+whitespace clean. This closes the draft launch-context high, not native
+phase-seven execution or full-work acceptance.
+
+The separate stale-control correction
+`d21201c62c862b405c044d561fdae2130dea4cff` received independent OCR coverage
+of all four files, zero skipped and all severity counts zero, closing the
+earlier reclaimed-worker ordering medium. Root broad command regression was
+1.042s, vet/pinned lint were clean and docs passed 0.447s with glossary and
+whitespace clean. Native stale-reaper/R evidence remains unrun.
+
+**T42.2l phase-eight retained-owner prerequisite (2026-09-07).**
+`OwnerTurn.FenceTerminal` is a genuine generation-bound terminal fence, not an
+active-count assertion. It keeps the exact target turn active while stopping
+new entry and joining other owners and all request tails. It never claims
+ordinary owner drainage or permits resume; held-End, replay, stale authority,
+cancel/deadline and normal-control misuse preserve failure and the retained bit.
+
+AC: first/last slots under the existing 64-owner cap; request-tail join;
+parked-new-owner cancellation; stale/copied/request/nil/unbounded authority
+refusal; irreversible normal-control refusal; retained prefix after failed
+drain. Author focused normal passed 0.311s and race three times 1.288s, with
+vet, pinned lint (zero issues) and whitespace clean. Only the owner primitive
+and its tests changed; no scheduler, heartbeat, SDK, PC, native execution or
+phase-eight completion claim follows. The owning ADR records one extra
+eight-byte mask and reuse of existing bounded waits. Independent immutable
+review and actual selected integration remain required.
+Exact `bce82e7496ef4dccc8038da7d820921017dff54e` then received independent
+OCR coverage of all four files, zero skipped and all severity counts zero.
+Root owner regression passed 0.403s, docs passed 0.638s and glossary/whitespace
+were clean. Selected heartbeat, terminal PC/SDK, EOF and owned-death integration
+remain separate work; no native process was stopped by this primitive's tests.
+
+**T42.2l terminal-fenced store EOF prerequisite (2026-09-07).** A one-shot
+real-transport arm requires the current final admitted producer phase, actual
+reducer checkpoint, healthy fence and globally empty tracked calls/UUIDs.
+Only genuine remote frame-boundary EOF retires it. Ordinary Complete remains
+false; separate PrefixesClosed proves only mechanical prefix closure, not
+child SDK health, consumed PC ACK or owned kill/Wait/session-empty evidence.
+Those driver prerequisites and same-phase successor admission remain open.
+
+AC: actual socket EOF versus local close/cancel, partial/error/late frames,
+wrong binding/phase, busy target or other producer, concurrent submit/failure,
+mixed ordinary retirement and ACK-write failure after arm, with all accepted
+counters/reservations retained. Three-file frozen workspace received independent
+OCR coverage 3/3, zero skipped and all severity counts zero. Full package normal
+passed 1.644s and race repeated three times 5.684s; vet, pinned lint, formatting
+and whitespace passed. These are component gates, not native phase-eight proof.
+Independent immutable attribution and driver integration remain required.
+
+**T42.2l selected terminal heartbeat prerequisite (2026-09-07).** Genuine
+scheduler-owned claims may opt into an opaque shared one-shot capability.
+Quiesce joins other owners/request tails with heartbeat live, then naturally
+joins its last heartbeat without canceling the parked handler. Used-capability
+cleanup retains the started prefix and owner/lease, emits no settlement and
+latches exact reporting. Unused selection retains ordinary behavior.
+
+AC: owner/request drain ordering, natural in-flight heartbeat join, shorter
+quiesce deadline without native-call cancellation, uncertain/prior errors,
+copy/replay/forgery refusal, concurrent handler cleanup, unused ordinary
+settlement and transient/definitive heartbeat precedence. Frozen three-file
+workspace passed independent OCR 3/3, zero skipped and all severities zero.
+Full scheduler normal passed 0.473s, race three times 1.669s, vet and pinned
+lint passed, formatting/whitespace clean. The owning ADR charges every enabled
+claim, not just successful terminal targets. Native checkpoint/report-tail,
+phase binding, SDK/PC and owned-death composition remain unimplemented;
+immutable attribution and native phase-eight confirmation remain required.
+
+Exact EOF commit `c0e160d4afc497005efbf8148dff343ecb16f9aa` and heartbeat
+commit `101ce15798f073e0927ae71cffc2c6434162b33e` each received independent
+OCR coverage 5/5 including owning records, zero skipped and all severities zero.
+Root EOF regression passed 1.495s; root full scheduler passed 0.476s. Owning
+docs passed 0.574s/0.458s, with glossary and whitespace clean. The allocation
+probe remains author-reported, not an independent reviewer rerun.
+
+**T42.2l same-phase successor admission prerequisite (2026-09-07).**
+The actual local DA producer and SA transport can each reopen once after their
+proper terminal retirement, preserving the current phase and every accepted
+count. The local launcher must itself be checkpointed and empty; successor
+state must be unused, other attached lifetimes closed, and all reservations
+empty. Ordinary Resume and Advance are not weakened. SA still needs actual
+terminal receiver join, DA still needs exact native Wait/EOF retirement.
+
+AC: same-phase accumulation after cutover; preserved old producer, ordinals,
+digest and wire/row/transaction prefixes; wrong identity/phase, used successor,
+failure/cancellation and replay refusal. Tests use real tiny inherited DA
+checkpoint/owned kill/Wait and actual SA sockets; they do not prove a Phebs
+session, genuine SDK health or cross-controller atomicity. Initial focused
+normal DA/SA passed 0.347s/0.362s; SA race three times passed 1.320s, vet and
+pinned lint clean. Full DA and SA packages subsequently passed 3.706s/1.579s;
+DA focused race repeated three times passed 1.491s, with vet and pinned lint
+clean. Independent source review covered six files, zero skipped in scope and
+all severity counts zero. The APIs reopen global admission, not an exclusive
+successor reservation; no other producer may race the serialized outer flow.
+Owning-doc and immutable attribution remain required.
+The parent must prove whole-session emptiness, serialize both cutovers and
+latch any partial failure before starting epoch four. Full phase-eight launch
+and recovery remain separate work.
+
+Same-phase successor commit `a6763fecd69c0f2e69363917b660937761c4b488`
+then received independent OCR 8/8, zero skipped and all severities zero,
+including owning records; docs passed 0.615s, glossary/whitespace clean.
+
+**T42.2l terminal PC prerequisite (2026-09-07).** Optional authenticated
+terminal mode is closed to V3 Phebs producer four and phases six/seven/eight.
+One selected main-owned callback joins native quiescence before dispatch Pause;
+the next and only permitted control is the existing genuine SDK/SA then DA
+Checkpoint. It neither claims ordinary drainage nor enables reopening.
+
+AC: strict bootstrap/legacy omission, phase-six/seven handoffs, held-owner and
+request-tail ordering, genuine SDK checkpoint/counter retention, read/decode
+uncertainty, UUID, callback/panic/deadline, missing/duplicate/wrong-mode binder,
+malformed frames and lost ACK refusal. Seven-file frozen workspace received
+independent OCR 7/7, zero skipped and all severities zero. Focused normal passed
+0.427s and race three times 1.566s; broader phase/store/bootstrap normal/race
+passed 0.713s/1.794s. Vet, pinned lint, format and whitespace passed. These are
+mechanical socket/SDK-wrapper tests, not native held-claim or hard-death proof.
+Cmd callback integration, immutable attribution and full runner remain open.
+
+Terminal PC commit `5bc90a6571974da6daae2b3ff143497196806e5a` received
+independent OCR 9/9, zero skipped and all severities zero. Root combined
+phase/store/bootstrap/successor regression passed 0.731s, docs 0.530s,
+glossary/whitespace clean. No native phase pass is implied.
+
+**T42.2l native checkpoint-hit child prerequisite (2026-09-07).**
+Authenticated terminal mode alone installs fixed proto-contract/local-two
+checkpoint preparation, phase-seven F capture/report confirmation and the
+actual reused-result hook. The hook matches its genuine scheduler capability
+and prepared native identities and stays parked after hit R. Terminal PC waits
+the joined R continuation, then genuine owner/request/heartbeat quiescence.
+
+AC: native hook/claim/target bindings, report/body/ledger/sink/cancellation
+refusals, strict routes, counters and a real inherited DA/PC/SA bootstrap plus
+Scheduler.Run capability fixture. Supplied preparation/event/R test values are
+explicitly mechanics, not durable preparation or native HTTP/SDK/kill proof.
+Seven authored cmd files received independent OCR 7/7, all severities zero;
+the seven copied PC prerequisites independently byte-match reviewed 5bc90a65,
+so all fourteen previewed paths are accounted for. Final focused
+checkpoint/stale/semantic normal passed 1.125s, race three times 4.034s;
+vet, pinned lint, formatting and whitespace passed. Owning cost record charges
+native preparation locks/mutations and every enabled claim, not just the hit.
+Exact `791252efd6b6d01f5cf524e5c4fe76d7f08851d6` received independent
+OCR 9/9, critical/high/medium zero and one low cost-wording correction: only
+the new control-state mutex avoids native I/O/waits; existing preparation
+locks still span that work. The owning row is clarified without source change.
+Root regression passed 1.090s, docs 0.555s, glossary/whitespace clean.
+Epoch-four immutable target handoff and recovered R, parent owned death and
+same-phase launch, full native phase and immutable review remain required.
+
+Documentation-only `efe6313ad2acc9ffe4b08ae8037d505719156465` closed the
+checkpoint-control low wording finding with independent OCR 2/2 and all
+severity counts zero. Docs passed 0.755s, glossary/whitespace clean; source
+remained unchanged.
+
+**T42.2l owned terminal process prerequisite (2026-09-07).** The Darwin
+helper performs actual root Kill then existing session-wide signaling and
+consumes only the caller's sole Handle.Wait. It accepts exact native SIGKILL
+state/error with no accounting sibling, rejects prejoined/natural exit, and
+retains real join/session facts on failure. ProcessState is never read before
+Wait synchronization. Unsupported hosts refuse; forced cleanup stays failed.
+
+AC: real DA Handle.Wait, private Setsid root and separate-group descendant,
+owned kill, prejoined natural/SIGKILL refusal, real DA settlement-error sibling,
+pre-cancel and cancellation after Wait, strict error tree and closed-channel
+refusal. Four new files received independent OCR 4/4, all severities zero.
+Combined terminal/process-session normal passed 1.418s and race three times
+5.574s; vet/pinned lint/format/whitespace passed. Author observed no surviving
+helper process. Cost review corrected an uncommitted author estimate to the
+actual existing Darwin 8,192 host-PID bound; no source bound changed. These tiny
+tests establish neither Phebs checkpoint/SDK health nor lossless output,
+accounting closure, successor launch or full phase. Immutable attribution and
+the owning parent composition remain required.
+
+Exact owned-process commit `ecbda85b3c5e381b34ef809b33d9c647ea138060`
+received independent OCR 6/6, zero skipped and all severities zero. Root
+terminal/session regression passed 1.384s, docs 0.535s, glossary/whitespace
+clean. Exact-tree `make ci-static` passed repository-wide vet, pinned lint
+(zero issues), compile-only package checks and glossary verification.
+Complete race packages passed dispatchadmission 6.074s, generationscheduler
+1.432s and storeaccounting 3.107s. These are not full Go/native merge gates.
+
+**T42.2l checkpoint recovery child prerequisite (2026-09-07).** Epoch four
+accepts only the canonical optional prior-F/nine-root/offset/public-hit input
+bound to its actual producer-five phase-eight bootstrap. Native callbacks
+retain old/new private lease identity, wait for the actual committed requeue
+callback and release the completed worker only after recovered R's report
+tail. The actual reader still requires all 56 chunks settled successfully;
+no polling, inferred requeue or extended five-second callback is introduced.
+Final native F compares the full carried authority and ordered roots.
+
+AC: omitted-input byte preservation, strict canonical/binding/shape refusals,
+maximum-shaped 14,299/16,384-byte input, every recovered-value field mutation,
+and inherited callback-before-requeue/cancellation/lease/sink/final mismatch
+checks. Supplied native-shaped events and R values prove mechanics only.
+Author focused checkpoint/stale/semantic normal passed 1.150s and race three
+times 4.999s; vet, pinned lint, formatting and whitespace passed. Root copied
+the same source bytes: focused normal passed 1.235s, the complete command
+package 82.850s and the independent maximum-input gate 0.586s. Docs passed
+0.612s, glossary/whitespace clean. Independent OCR covered all seven authored
+files (including both excluded tests), zero skipped and all severity counts
+zero. Immutable attribution, parent restart composition, actual native
+all-success recovery and full metrics remain open.
+
+Exact checkpoint-child commit `9a7a8ae784ada011c99e9fcf4f07c55cbc905bd9`
+received independent OCR 9/9, zero skipped and all severities zero; its seven
+source files byte-match the reviewed author tree. Final docs passed 0.551s,
+glossary/whitespace clean. Actual native recovery remains open.
+
+**T42.2l checkpoint parent composition prerequisite (2026-09-07).**
+The explicit checkpoint selector composes phase-six/seven/eight and actual
+terminal ACK/EOF/owned-death mechanics, then retains source custody into
+epoch-four producer five in the same phase eight. No fourth author, phase
+advance or refreshed phase deadline is admitted. Recovered R precedes X/T;
+drained F compares every actual prior authority field and all 56 results.
+
+AC: fixed 21/5-pair budgets, old canonical omission bytes, exact preparation,
+hit/recovery/full-F identity, lifetime/source call-site binding, deadline and
+single-use refusals, inherited SDK/PC/SA/DA plus actual owned SIGKILL, and
+partial terminal cancellation/operation join without ordinary PC/SIGTERM.
+Root review caught and closed the intermediate terminal-failure cleanup gap
+before freezing the source. Inherited tests deliberately lack genuine author
+and source custody and therefore refuse a full epoch-prefix claim.
+Author final normal passed 2.194s, race three times 29.818s, vet/pinned lint/
+format/whitespace clean; author observed no helper process surviving.
+Independent OCR covered all nine files, including three excluded tests, with
+zero skipped and all severity counts zero. Root copied source bytes exactly;
+focused integrated epoch/process regression passed 1.472s.
+
+Failed native cleanup may spend the helper's thirty seconds plus six-second
+forced extension and a further six-second outer fallback (about 42 seconds),
+before separate DA/SA joins; partial terminal setup uses thirty plus six.
+These are failed cleanup only, never fresh phase time or successful evidence.
+The frozen teardown rule contains no numeric aggregate cleanup allowance;
+synchronous native scans and lock acquisition remain cooperative.
+
+The optional PHEBS_T422_CHECKPOINT_RESTART_REHEARSAL selector requires all
+earlier selectors before host/custody allocation. It is wired but unexecuted:
+the full native rehearsal still lacks disk headroom. Terminal predecessor
+attempt/index metric prefixes remain explicitly incomplete; source-footer
+and parent-prefix validation are separate prerequisites. Immutable attribution,
+full native phase, complete metrics and freeze remain open.
+
+Exact parent commit `176bd9a7fa8a9aef7fda7e4bf8a9a700c6aaa284` received
+independent OCR 11/11, zero skipped and all severities zero. Its nine source
+files byte-match the reviewed author tree; docs passed 0.630s and glossary/
+whitespace were clean. Full native and whole-metric evidence remain open.
+
+**T42.2l terminal metric footer prerequisite (2026-09-07).** One fixed
+81-byte producer/input/phase-bound footer is emitted on the same selected
+stderr stream only after genuine checkpoint quiescence, before its PC echo.
+No per-event counter, hash, shared flag or extra transport is introduced.
+Failure before quiescence emits no footer; incomplete writes and cancellation
+remain sticky failures even if some footer bytes reached the pipe.
+
+AC: exact binding/length, real pipe write, synchronous write join, short/error/
+full-error/canceled writes, and inherited successful/prior-failed/canceled/
+pre-hit terminal callbacks. Independent OCR covered all four files including
+both excluded tests, zero skipped and all severity counts zero. Author final
+normal passed 1.554s, race three times 5.509s, vet/pinned lint/format/whitespace
+clean. Root integrated regression passed 1.299s, docs 0.553s and glossary/
+whitespace were clean. These prove source/control mechanics, not a native full phase. Parent
+post-Wait footer/prefix validation and explicit output-error retention remain
+required before promoting the terminal attempt/index prefix to complete.
+No SDK/EOF/death, whole-metric, freeze or execution claim follows.
+
+Exact footer commit `9f0dc2dff1394953901afff9b3d0d2f0fb9e1083` received
+independent OCR 6/6, zero skipped and all severities zero. Its exact full
+ci-static passed: glossary, repository-wide vet, pinned lint (zero issues)
+and all-package compilation. No full native phase was run.
+
+**T42.2l joined terminal metric-prefix prerequisite (2026-09-07).**
+The sole finish owner now verifies the actual joined output against one exact
+terminal footer, actual native SIGKILL/session facts, healthy original contexts
+and terminal controller prefixes. Sticky writer refusal survives a masking
+native ExitError. Missing bindings, unmatched index tallies, partial/duplicate/
+embedded footer and any reserved post-footer metric deny completeness without
+erasing observed positive counts. Ordinary close accepts no terminal footer.
+
+AC: framing/order and failed-prefix cases, missing native/controller proof,
+sticky newline-ended overflow and a tiny actual inherited-pipe/Wait/SIGKILL
+counterexample. Author normal passed 0.900s, race three times 10.504s; vet,
+pinned lint and whitespace passed. Independent OCR reviewed all eight files,
+including four excluded tests, zero skipped and all severities zero. These
+are component gates, not a full admitted native phase. OP parsing, combined
+log fit, full metrics and freeze remain open. Root's copied-source focused
+gate passed 0.976s; docs passed 0.536s, glossary and whitespace clean.
+
+Exact terminal-prefix commit `cb0098060d97ffa9ffebab425f305a112afc7179`
+received independent OCR 10/10, zero skipped and all severities zero; its eight
+source files byte-match the reviewed author tree.
+
+**T42.2l native successful-observation event prerequisite (2026-09-07).**
+The shared native ParsedBlobs boundary emits source-bound OP records without
+changing the frozen event unit or reconstructing work from final receipts.
+Legacy nil-metrics and selected inventory paths are covered. Reuse and
+unsupported parses emit zero; genuine discarded-segment rework emits again,
+and later segment publication failure retains the successful prefix.
+
+AC: native counter parity, nil metrics, unsupported/cache/prior-content reuse,
+root/member/completed-segment reuse, discarded retry and failed publication;
+actual selected startup binding including zero events, phase transition and
+closed-producer refusal; missing/error/panic/canceled observer sticky failure.
+Author focused readaccounting/dispatchadmission/observationpublication/command
+normal passed 0.308/0.381/1.855/0.587s; race three times passed
+1.245/1.372/6.273/2.290s. Vet, pinned lint, format and whitespace passed.
+Independent OCR reviewed all eleven files including six excluded tests,
+zero skipped and all severity counts zero. Parent OP parsing, combined log
+fit, full native phase, whole metrics and freeze remain open. Root's identical
+source passed the same four focused gates in 0.352/0.253/2.282/0.722s;
+docs passed 0.445s, glossary and whitespace clean.
+
+**T42.2l checkpoint-corrected rehearsal failure (2026-09-07).** The clean
+detached checkpoint-corrected native cold/handoff rehearsal failed after
+15,338.48s (package 15,339.188s). Protected source/SDK/module custody passed
+in 6m48.002s with 67,820 entries, 56,101 files and 1,356,069,707 bytes; the
+supplied t422-author, Phebs and zoekt-git-index builds took 47.571s, 8.601s
+and 14.916s, and their independent reference admissions 2m18.178s, 2m14.264s
+and 2m21.980s. The epoch-one launch then never reached cold authority: the
+retained stopped prefix shows the root started and joined with an empty
+session, 4,807 phase-two dispatch attempts (4,803 in role one, two in role two,
+one each in roles five and six) and 1,231,104 reserved wire bytes, one opened
+store lifetime at terminal EOF with 102 phase-two transactions, 811 rows and a
+488-row maximum, two phase-two job attempts, zero index offers, and a private
+inspection prefix of 2,872 accepted X read reports charging 2,872 store read
+attempts with T=0, no F use and no failed HTTP; the native stop diagnostic was
+nil. Teardown joined every process, no survivor remained and the exact
+`t422-epoch-one-rehearsal-1707133675` custody is retained; that commit is not
+to be rerun. Ben's diagnosis of the retained log: indexing was disabled at
+startup, not slow. The V3 instrumented index child reports module identity
+`./zoekt@(devel)`, the runtime pin checker expected the pinned upstream
+identity and refused it, and startup logged a warning but continued serving,
+so the rehearsal polled an impossible cold phase for four hours. This is an
+integration miss: the standalone private-build tests never exercised Phebs's
+own startup admission.
+
+The correction slice reconciles V3 build provenance with runtime admission
+without weakening identity checks, and makes selected startup fail closed.
+`indexer.FindBinary` now admits the private-module child only through the
+parent-supplied override, only under a dispatch-admitted selected V3 launch,
+and only with the parent-supplied image digest that Phebs already verifies
+before every child launch; the admitted shape mirrors the parent's reference
+verifier exactly — `cmd/zoekt-git-index` of the pinned version with an empty
+sum and the `./zoekt` `(devel)` replacement, this process's toolchain, CGO
+disabled, trimmed paths, host GOOS/GOARCH, no VCS revision, no replaced
+dependency — and every dependency shared with the linked reader must be the
+identical version and sum. Discovered binaries, PATH lookups and ordinary
+launches keep the unchanged direct module pin; ordinary replacement modules
+now receive the explicit private-admission diagnostic. Serve now
+resolves both index children through `admitStartupIndexer`: a selected launch
+that cannot admit `zoekt-git-index` (or `phebs-focused-index` with analysis
+units configured) logs one private refusal line and returns a startup error
+through existing worker/store/admitted-lifetime cleanup, so the parent observes
+root termination instead of polling an impossible cold phase; ordinary serving
+keeps the historical warning. Tests: a pure admission matrix over exact private, direct, devel,
+drifted-replacement, toolchain, settings, replaced- and shared-dependency
+shapes; a linked-graph check that replaced local dependencies are never
+comparable pins; an ordinary-process check that the private image stays
+unadmitted and serving continues; and a real inherited DA/PC V3 lifetime
+around the actual startup seam, using a real Go-toolchain build of a tiny
+executable carrying the exact admitted private replacement identity, which
+is admitted with its digest and refused without a digest, with a wrong digest
+and for an executable without Go module identity, each with the refusal
+diagnostic and an unchanged empty admission prefix. At handover these were
+container-authored, uncommitted working-tree changes on `50b65e98` with no
+build, test, race, pinned static, documentation or review gate run. They
+authorized no native rehearsal and claimed no merge, seal or freeze.
+
+**Lead review and corrections (2026-09-07).** The unchanged seven-file admission
+slice subsequently passed all 13 scoped script gates: full build, changed vet,
+focused indexer normal/race three times, startup normal/race twice for race,
+full indexer, T422/exact-parser neighbors, offer/overlay tests, pinned static,
+docs, glossary and whitespace. Formatting and shell syntax were clean, with
+no Phebs/Surreal survivor. Two independent reviews found no critical/high/medium
+implementation issue and two low wording errors. The owning PLAN row now
+states two process-metadata reads and dependency-map allocation per candidate
+verification, including ordinary candidates, and the changed replacement
+diagnostic. The startup comment now says before HTTP/index-worker startup,
+not before all workers. The tests exercise admission and a manually completed
+inherited lifetime; they do not establish actual serve failure-exit timing or
+an executed index job. The source-hashed private review/gate record preserves
+that narrower attribution.
+
+Ben then authorized the separate checkpoint readiness and ordinal corrections.
+Epoch-four extraction scheduling now waits, without claiming or holding an
+owner, for its actual authenticated recovered R reader. The parent can finish
+health and custody checks before native recovery starts its unchanged
+five-second callback deadline. The one-shot readiness carries the live reader
+context and refuses phase/process/control cancellation and invalid or duplicate
+readers. The inherited regression delays startup by six virtual seconds,
+checks no scheduler entry/observer deadline, then exercises release and failed
+reader/cancellation paths. Supplied callback completion remains a separate
+bounded test, not a native phase pass. Checkpoint-enabled epoch three now
+admits the existing ordinal 11,531 while stale-only remains 11,530. The real
+HTTP boundary test reproduced the original rejection before the one-condition
+fix; focused normal/race passed in 1.638/9.835s. The combined correction passed
+the full command and scheduler packages (85.100/0.477s), T422/exact-parser
+command neighbors under race three times (33.703s), scheduler race (1.398s),
+focused parent checkpoint/return/stale/handoff plus offer tests (6.236s), and
+the parent selectors under race three times (33.913s). Staticcheck then asked
+for a test-only tagged switch; after that equivalent edit, the inherited
+checkpoint regression passed normal (0.777s) and race three times (2.945s),
+and full pinned static, docs, glossary, format and whitespace passed. The
+production bytes are unchanged across that test-style edit. Independent
+readiness review and the lead's non-author ordinal review found no remaining
+findings; documentation review also closed the unsupported immediate-exit
+timing claim. OCR-guided coverage includes all five changed production files
+and manual review of the seven test/document files; unrelated private scratch
+is excluded, and this is not a whole-stack review. The final source-hashed
+private correction record retains the gate attribution. Full server/index-job
+and native checkpoint rehearsal evidence, whole metrics, seal and freeze remain
+open. No commit, push or rehearsal was performed for this correction.
+
+**2026-09-07 native phase-four stop and private diagnostics.** Ben's subsequent
+exact `5a3ec24632feb39b52370c36bc67dc37f0afea2e` rehearsal passed cold and
+warm handoff and completed both A/B index jobs, then stopped during physical B
+after 2,288.38 seconds. Its retained positive prefix has 160 successful B tail
+responses before the refused 161st attempt, no failed HTTP status/body, and no
+complete B authority. The final root/session joined, but forced teardown and
+accounting did not establish successful closure. Neither the phase deadline nor
+the inspection cap explains this run; the initiating failure remains unknown.
+No native retry or functional correction is inferred from that prefix.
+
+The diagnostic correction now retains sequential pre-parent-teardown subsystem
+observations separately from cleanup errors, the first inspection refusal
+stage/ordinal/underlying cause, and the first failing custody callback's
+stage/site/context/deadline observation. HTTP request URLs are excluded from
+the new transport-error record. These private records cannot establish a global
+first-failure order, and an absent callback record cannot rule out deadline
+expiry after callback return. Stop observation adds one bounded store snapshot
+even for clean stop; PLAN records its locks/allocations and the small successful
+GET/callback bookkeeping cost. No limit, deadline, protocol, sealed evidence,
+ordinary runtime or rehearsal authorization changes. Final focused parent
+selectors passed normal (7.614s) and race three times (97.162s); complete
+dispatch/store-accounting package race passed (8.048s/3.091s). Pinned static
+(vet, zero lint issues and repository compilation), docs, glossary, format and
+whitespace passed. Independent OCR-guided review covered all four selected
+production files plus five affected tests and three owning docs, with no
+remaining findings after correcting semantic refusal ordinals and their
+documentation. Tests establish diagnostic retention, not the native trigger.
+The private source-hashed gate record retains attribution. No commit, push,
+seal or native rehearsal was performed for this slice.
+
+**2026-09-08 setup-token collision correction.** At exact clean `29e5dc90`,
+Ben's physical-only rehearsal passed in 2,278.91s (package 2,279.620s). The
+subsequent full-checkpoint rehearsal again passed cold, warm and physical B,
+including current/prior retention and both index jobs, then failed after
+2,232.66s (package 2,233.445s) while stopping the retained physical parent before
+logical B. Root/session joined; recorded pre-stop/transport/native-stop/output
+errors were nil. Offline replay of the unchanged private server log accepted
+attempt and index metrics but reproduced the terminal-footer refusal at its
+first-run setup-token diagnostic. Replacing only that line in an in-memory
+diagnostic copy removed the parser refusal; no retained evidence was rewritten.
+
+The correction recognizes only the exact native timestamp/label/32-byte
+canonical-token/newline envelope in both affected passes. Its opaque payload
+may resemble any marker, but supplies no metrics or bindings. Broad marker
+relaxation is unnecessary; all generic corruption, embedding, truncation,
+post-footer and native-terminal-proof guards remain. Source-free regressions
+cover interior and suffix collisions, missing binding authority, canonical
+padding/alphabet/width, malformed envelopes and subsequent real records. PLAN
+records fixed per-line filtering and bounded candidate parsing in the existing
+joined-output passes. No startup log, token generation, admission, deadline,
+metric unit, sealed evidence or ordinary runtime changes. Collision regressions
+first reproduced the refusal. Final parser/terminal/epoch selectors passed
+normal (2.950s) and race three times (73.747s); source/index parser neighbors
+passed normal (0.614s) and race three times (2.547s). Offline replay of the
+unchanged retained log now passes all three parsers and the composed metric
+finish (2.846s package). Pinned static (vet, zero lint issues, repository
+compilation), docs, glossary, format and whitespace passed. Independent
+OCR-guided review covered the production file, test and three owning docs,
+closing two low findings with canonical timestamp round-trip validation and
+accurate bounded-allocation wording; no findings remain. The private
+source-hashed review record retains attribution. This slice remains uncommitted;
+no push, native rerun, seal or freeze was performed.
+The earlier 5a3ec246 mid-phase failure remains separately unattributed. Logical
+B, return A, stale lease, checkpoint restart, whole metrics and freeze remain
+unestablished by these runs.
+
+**2026-09-08 end-to-end pre-rehearsal corrections.** The independent,
+non-OCR source review at `41ee990aa8b8891813a69636517449199110b137`
+found one high and one medium issue. Return-A startup advanced its new
+catalog before sync/index workers, binding it to stored indexed B. A private
+three-file real-Git/memory-store reproduction passed in 0.19s (package 0.727s),
+proving two required censuses across that interim binding and subsequent
+A-return indexing. This violates the one-census contract; consuming the
+one-shot marker on the interim relationship is an additional scheduling-
+dependent failure, not a reproduced native stop. The other finding starts
+Health's allowance at the first call rather than launch; it is not attributed
+to an earlier native failure.
+
+The correction carries the checked actual authored commit in epoch-three's
+authenticated input and gates every V3 reconcile on its existing repository
+read before catalog/census work. Selected not-ready stops runtime preparation;
+ordinary behavior and other-epoch input bytes remain unchanged. The marker
+constructor requires the same guard. The health allowance now has an absolute
+pre-Start anchor and one independently enforced timer, retired on readiness
+or joined cleanup. PLAN records all costs without raising any ceiling.
+
+AC: canonical required/forbidden source-input cases; old-index/new-catalog
+startup and repeated callbacks preserve prior authority without opening catalog
+or source; one correct-source census/publication and metadata-only repeats;
+actual runtime pending prevents downstream preparation; original unadmitted
+marker-constructor test retains its bootstrap check; delayed/absent health,
+deadline intersection and timer retirement; focused normal/race, static,
+documentation and independent source/cost review. Tiny corpus and runtime seam
+tests do not establish native marker concurrency, complete phase-eight recovery
+or whole-work accounting. No full rehearsal or freeze follows from these fixes
+alone; a new immutable reviewed candidate and regenerated exact-source operator
+wrapper remain required before the next attempt.
+
+The final correction content passed focused normal gates for catalog ingest,
+command (including all T422 neighbors), and parent in 0.900/5.963/1.203s.
+Affected selectors passed race three times in 4.404/11.527/17.629s. Repository
+vet, pinned lint (zero issues), repository-wide compilation, glossary,
+documentation (0.466s), format and whitespace passed. An initial static
+invocation refused the ambient linter version before running static checks;
+the existing retained pinned tool passed the rerun. Non-authoring source/cost
+reviews closed all findings after correcting one fixture that otherwise
+stopped before its original missing-bootstrap assertion. The private
+source-hashed record binds the reviewed working-tree correction to base
+`41ee990a`; it is not a commit or native acceptance record. No full rehearsal,
+push, seal or freeze was performed.
+
+**2026-09-08 logical-B preimage backlog and serial claim correction.** Ben's
+native rehearsal at `aab3a3b141aff7b2f1f7b4480ccf6233afec7e7a` stopped after
+2,287.87s (package 2,288.627s). Cold, warm and physical B returned their existing
+boundary checks; logical B failed before its first activation observation.
+Its accepted store prefix reached 170 transactions/1,001 rows, with maximum
+488 rows, and its generation reports counted 43 retries. The private retained
+database journal contains a preimage-backlog deferral whose identity matches
+logical offset zero/attempt zero, followed by out-of-order failures in that
+same schedule. This was read without opening or changing the retained database.
+The prefix does not retain the exact denied store operation. The final root and
+session joined; stop/transport errors do not replace the earlier store failure.
+
+Source review traced the composition gap: all selected lifecycle runners start
+parked; early epochs cannot drive catalog cleanup; the physical retention
+control sweeps search only. Obsolete selected-state preimages therefore block
+the next state plan. Generic claim priority then favored never-run successors
+over the deferred prerequisite, consuming durable retries for work that could
+not yet apply. The correction fences both claim selection and its native
+transaction to the exact state-plan prefix before terminal failure, preserving
+ordinary independent stages, already-applied completion retries, and existing
+terminal suffix-drain/settle/repair behavior. It introduces no new write
+transaction or operand; PLAN records the added plan point reads.
+
+AC: delayed/retried/running prerequisites cannot admit later unapplied state
+offsets before terminal failure; nonzero base chunks and already-applied retries
+remain valid; terminal failure still reaches settlement and repair; missing
+or mismatched plans and selection/claim races fail closed; independent stages
+retain priority; empty selection censuses remain read-only, while positive
+censuses retain their attempted native claim charges even after an empty
+recheck. Extend the real selected-state backlog regression through durable
+deferral, repeated blocked claims, existing
+owner cleanup and fresh-lease continuation; run focused native normal/race,
+accounting, static, docs/glossary and independent non-OCR source/cost review.
+The extended real-store regression reproduced the previous claim bug using a
+temporary Go overlay of HEAD's production file: it admitted offset one while
+offset zero was deferred (0.75s subtest, package 1.252s, expected failure).
+Final focused native/accounting checks passed in 21.459s, including the actual
+terminal-repair regression. The broader generation/state/selected suite passed
+normal in 157.143s before the final failed-plan identity tightening; its final
+race run passed in 252.837s. Pinned repository static (vet, zero lint issues,
+compile-only package checks), docs/glossary, formatting and whitespace passed.
+Independent non-OCR review caught and closed a terminal-repair regression in
+the initial guard and refined the identity and attempted-cost wording; no
+findings remain in the reviewed source/tests/docs. All owned test engines
+joined. These are scoped working-tree gates, not a full-store or rehearsal
+pass. The private source-hashed gate record retains exact attribution.
+This does not implement the cleanup handoff or make another rehearsal ready.
+Its prospective lifecycle/phase-accounting decision remains an explicit
+admission hold in PLAN; no bound or retained plan changes.
+
+**2026-09-08 approved prospective selector-handoff cleanup.** Ben's subsequent
+approval closes the design/admission hold above for the explicitly accounted
+bounded handoff, not for ceremony execution. A separate opt-in V3 constructor
+keeps retained V1/V2 and omitted-policy V3 plans exact. Native F captures its
+already-confirmed full selector privately; only the successful report tail
+arms the separate command. Drained ordinary owners remain joined through
+cleanup and the existing request fence before phase/server handoff. Physical B
+first joins its existing search-retention observation. Return-A cleanup is a
+uniform prospective handoff, not a demonstrated prerequisite of stale/checkpoint
+recovery. The ordinary lifecycle runner stays parked.
+
+The store operation reuses the historical owner's preimage-only drain under
+the existing exclusive mutation lock, with an exact selector read/compare,
+no retry and
+at most sixteen deleted rows including the summary. `Done` proves the entire
+repository preimage inventory empty; a still-selected snapshot or orphan row
+refuses. One empty cold confirmation is still one transaction, with zero rows.
+Fixed-corpus cleanup maxima for cold/physical-B/logical-B/return-A are
+1/626/1/626 turns, 0/10,001/2/10,001 deletions and 0/10,001/2/10,001 submitted
+rows, respectively. Explicit native read/write attempt maxima are
+3/4,384/9/4,384 and 0/626/2/626. These are added owning-phase allowances,
+not measurements; actual native reports and independent SA acknowledgements
+remain necessary. The per-turn submitted-row maximum and deletion cap both
+remain sixteen. Deadlines, DA/PC control
+budgets and retained plans are unchanged.
+
+AC: native empty/protected/obsolete/orphan and changed-selector cases;
+multi-batch drain with exact native read charges; the existing exclusive lock
+blocks an admitted shared-lock selector CAS until cleanup commits/releases;
+continued real state plans preserve current authority
+and precious validation. Closed input/response, successful F callback composition,
+body/cache/report/cancellation refusal, one-shot parent HTTP and omitted-policy
+preservation must pass normal/race plus static/docs/glossary and independent
+non-OCR source/cost review. No full native rehearsal or freeze is recorded here.
+
+The initially proposed no-op selector UPDATE failed its native concurrency
+regression (package 1.639s): it did not invalidate the stale transaction. That
+approach was removed, not waived. The corrected existing-exclusive-lock/native
+store composition passed in 2.135s, including genuine selected SDK handoffs
+with observed transaction/row deltas of 1/16, 1/2 and 1/0 and native read/write
+attempt counts of 7/1, 9/2 and 3/0. The shared-lock CAS refuses while cleanup
+holds exclusive custody, then succeeds after commit/release. These use fresh
+test custody, not the retained failed database.
+
+The broader state/runtime-selector/catalog-lifecycle store selection passed
+normal in 66.250s and race in 157.813s. All T422 command neighbors plus focused
+parent/contract and actual lock tests passed normal in 5.972/1.434/0.515s and
+race in 15.402/9.601/2.457s, respectively. Final repository static checks
+(vet, pinned lint with zero issues, compile-only package checks), docs (0.444s),
+glossary, formatting and whitespace passed. Independent non-authoring
+production and contract/parent/docs/cost reviews closed with
+critical/high/medium/low all zero after qualifying the retained 170-transaction
+baseline versus the new opt-in 171. The staged Go-source/test diff against
+`42df6747a5a8c78b7a4e33c60ada736aee773422` has SHA-256
+`af5978697479f7c926144751b205bbddeca5889a74645ee9a109a4acef103692`.
+These are scoped working-tree gates, not full-store/full-repository test runs,
+complete native rehearsal, whole-work receipt, author/seal or freeze evidence.
+
+**2026-09-08 logical-phase whole-work diagnosis.** The native rehearsal at
+`aa6938bae90e0d8d6708be057dc35d3bf00eb68a` stopped after 2,352.59s
+(package 2,353.351s), after cold/warm/physical-B returned. Logical B retained
+171 transactions/901 submitted rows, with maximum 488 rows, and refused its
+first activation observation with HTTP 409. Its generation report prefix has
+25 starts and no reported retries; ordinary jobs have 16 starts. The earlier
+preimage-retry loop is not the current signature. Physical-B's successful
+return requires its authenticated cleanup to finish, although the exact deleted
+count was not separately retained. Final root/session join completed. Neither
+the later teardown errors nor the generic store-limit error identifies the
+exact denied SQL operation; the transaction prefix has exhausted its cap.
+
+The source-derived operation-family ledger below is a prerequisite inventory,
+not a sufficient replacement ceiling. With M service members, the no-removal
+path still needs C=2(M+1) state units. Here M is at least twenty and C at least
+42. T41.10 counted each successful state processing call once, outside its
+separate schedule expansion, claim and completion; the selected whole-phase
+meter charges all write-capable transactions, including zero-row Begin/Cancel.
+
+| Logical-phase family | Transactions that the complete budget must cover |
+|---|---|
+| Current database reopen | Existing native gate: 7 transactions/499 rows; not complete server startup |
+| Startup recovery, backfill and reference repair | Actual recovered inventory and callbacks, including selected-target validation and exact-existing relationship-reference writes |
+| Catalog and state-plan admission | One catalog-publication attempt; two schedule enqueues and two plan creations before retries/repair |
+| State schedule expansion and execution | At least two expansion transactions and 3C claim/process/completion transactions; unchanged member processing still advances its plan |
+| Required activation interruption | One release and one fresh claim beyond 3C; already-applied replay does not repeat its state write |
+| Relationship authority | Schedule enqueue/expansion/claim/completion, catalog-reference publication and actual upstream extraction pins |
+| Selector cutover and retirement | Target-validation Begin/Cancel, selector transaction, and actual terminal-schedule retirements |
+| Seven ordinary job kinds | At least three per started attempt for claim/running/settlement, plus enqueues and each handler's store work |
+| Heartbeats, conflicts, deferrals and stale reaping | Timing- and state-dependent additional attempts; no complete numerical derivation yet |
+| Authority observations and terminal cleanup | Hit/recovered/X/T/F reads remain their own ledgers; successful logical cleanup costs one transaction and at most two submitted rows |
+
+A conservative fixed subset is 126 state-execution transactions plus seven
+database initialization, two controlled release/reclaim and one cleanup =136.
+Including this run's sixteen ordinary starts and their required durable
+settlements gives at least 184, before the other families above. This is a
+lower bound for completing this observed workload, not a universal ordinary-job
+count, an observed successful total, or a proposed admission number. Empty
+claims and fully expanded scheduler probes already return read-only.
+
+The existing 60,000 job-attempt ceiling does not bound every transaction:
+`ClaimJob` can repeat positive, charged claim writes on lost races or retryable
+errors before any job-start report, without a numeric retry cap. Heartbeats
+also sit outside those start counts. The current store ceiling still bounds
+accepted work by refusing excess; it is not a guarantee that every otherwise
+successful interleaving fits. A prospective numerical derivation must explicitly
+own those costs instead of treating absent start/retry reports as zero writes.
+
+The first watcher tick can enqueue a second sync/index/candidate chain beside
+boot sync and candidate backfill. Simply suppressing first observation can lose
+a source change; suppressing unchanged-index callbacks breaks successor repair.
+Capturing a pre-sync baseline instead adds startup Git children and requires its
+own dispatch/cost review. Exact-existing reference/schedule fast paths likewise
+need authority and repair proofs. None is selected as a production correction
+or claimed sufficient to fit 171.
+
+AC: an opt-in fresh-native 10,000-service state-path gate records per-family
+selected-SDK deltas, preserves the actual one-state member-nine target, executes
+claim/process/completion and controlled release/reclaim, and identifies its
+excluded server/relationship/heartbeat/HTTP work. Its larger diagnostic observer
+budget must not alter production admission. Independent non-OCR source/cost
+review and affected checks remain required. The complete phase budget and any
+prospective admission correction remain open; do not start another full
+rehearsal from this diagnostic subset.
+
+`TestServiceStateV3LogicalPhaseAccountingNative`, explicitly enabled with
+`PHEBS_TEST_LOGICAL_STATE_ACCOUNTING_NATIVE=1`, then completed its fresh-native
+path with 147 transactions/924 submitted rows and maximum 488 rows. The
+final-content normal run passed in 7.41s (package 7.996s). Its non-overlapping
+transaction breakdown is seven selected-connection initialization, one catalog
+publication, four plan/schedule admissions, two expansions, 43 claims, 42 state
+processing writes, 42 completions, one controlled release, two terminal
+schedule retirements, one relationship-reference pin, one selector publication
+and one two-row preimage cleanup. Nineteen unchanged members in each state stage
+still submitted one plan record each; those 38 transactions are subsets of the
+42 processing writes, not additional work. The reclaimed applied unit submitted
+no second state write. Both native authority-transition reads added zero write
+transactions, and the accounting producer closed with no outstanding calls.
+
+The relationship reference is a neutral fixture, not real relationship
+construction. The test drives store methods serially rather than the command
+controller and worker callbacks; it excludes their other startup/recovery,
+validation, job, handler, heartbeat and HTTP/control work. It therefore leaves
+only 24 transactions beneath 171 for work it does not measure and does not
+establish full-phase fit. The preserved failed-run/source lower bound above
+remains the decision-bearing full-work counterexample. No production source,
+admission bound, retained plan or rehearsal invocation was changed.
+
+The final-content native race gate passed in 40.19s (package 41.898s) with
+the same 147/924/488 counters. Package vet and repository-pinned package lint
+(zero issues), documentation, glossary, formatting and whitespace passed.
+Independent non-authoring, non-OCR test/source/cost review recorded all four
+severity counts zero at test-file SHA-256
+`b4e500ed948578df4cc06be0223281d3f2b4c610956439262e1258f3593019fd`;
+the diagnostic decision and family-ledger documentation also received a separate
+zero-finding review. All test-owned engines joined. These are scoped
+working-tree diagnostic gates, not a full-store, whole-phase, merge-bar or
+rehearsal result.
+
+**2026-09-08 approved prospective logical whole-store correction.** Ben approved
+the prospective V3 correction after housekeeping. Native Go/lint cache cleanup
+and removal of the sole clean/reproducible latest rehearsal checkout reclaimed
+about 1.65 GiB; its reachable Git commit, parent log and private failed custody
+remain. Dirty/unmerged worktrees, pinned tools, offline modules and evidence
+were preserved.
+
+The new optional `t422-logical-store-work-v1` policy reuses the established
+full-process admission class: 100,000 transactions/51,200,000 rows before the
+already-approved logical cleanup, totaling 100,001 transactions/51,200,002
+submitted rows. This is a chosen refusal budget, not a source-derived guarantee
+that every otherwise valid execution fits. The 147-transaction test remains
+only a measured state-path subset. All native work stays metered; no family is
+moved outside the phase or assigned a guessed zero.
+
+This approval supersedes the earlier numerical no-increase hold only for this
+new opt-in policy; archive, complete whole-work evidence and freeze acceptance
+holds are not waived, and retained/omitted-policy plans remain exact.
+
+The resulting global SA ceilings are 608,254 transactions, 310,804,004 rows
+and 79,877,256,704 wire bytes; epoch two's wire ceiling is 13,158,401,664 bytes.
+These are cumulative allowances, not allocations or observed traffic. The
+existing checked transport formula derives them from the final phase rows.
+
+Only authenticated epoch-two/producer-three input can select the new local
+store constructor. Its genuine SDK owner is checked before child startup; an
+immutable option caps each ordinary job-claim invocation at 64 complete
+selection iterations. Retryable reads, conflicted writes and zero-row lost races
+all consume the allowance, with fresh census/lease identity on each positive
+retry. The final actual error survives; a last lost race returns `ErrConflict`.
+The existing runner returns to polling without emitting a fabricated start.
+Ordinary and old-selected constructors still permit their historical retries.
+
+AC: selected SDK/SA01 first/last success, read/write/lost-race exhaustion,
+mixed iterations, cancellation, malformed/permanent refusal and per-attempt
+ACKs; historical paths succeed beyond 64 attempts; missing owner refuses before
+child/data creation; canonical prior builders and retained V1/V2 bytes stay
+exact; both validation paths reject policy/budget mutation, wrong schema and
+missing cleanup; epoch input is hash-bound only to its genuine logical launch;
+cleanup composes once; SA projection changes only phase-five maxima and invents
+no work/reservation. Keep the 512-row, 60,000-attempt, timing, topology and scoped
+read limits unchanged. Focused normal/race, native state regression, static,
+docs/glossary and independent non-OCR source/cost review are required. These do
+not replace complete exact-source native rehearsal, whole-work evidence or
+freeze acceptance.
+
+The correction's final focused normal command passed (`cmd/phebs` 0.595s,
+`spike/t421` 82.139s), including all three real V3 builders and their
+`ValidateFrozenPlan` replay, retained V1/V2 canonical-byte checks, prospective
+policy mutations, authenticated launch input and store projection. Focused
+race passed (1.804s/19.592s); the expensive full builder replay is covered by
+normal, not repeated in this race selector. The fresh-native state fixture plus
+bounded-claim and queue-accounting checks passed normal/race in 8.327s/48.906s.
+These do not live-prove native contention or the complete serve-to-new-opener
+route: scripted replies prove claim retry semantics, genuine SA01 proves
+charging, and source review covers the startup constructor selection.
+
+Two pre-final invocations are not counted as passes. The new transport test
+initially closed in `t.Cleanup` after `t.Context` cancellation; a function defer
+now checks its unchanged incomplete-close expectation before cancellation.
+The first contract race selector then hit its five-minute alarm while each
+policy mutation reconstructed the unchanged two-million-file source inventory.
+Those mutations now use the existing known-revision validation path; the
+separate full public-validator/builder checks remain intact. No production
+code, assertion, corpus identity or admission predicate was relaxed for either
+test correction.
+
+Repository-wide static gates passed (vet, pinned lint with zero issues,
+compile-only package checks and glossary); final test-setup edits also passed
+package vet/lint. Documentation, formatting and whitespace passed. Independent
+non-authoring, non-OCR implementation/cost reviews closed at critical/high/
+medium/low 0/0/0/0, including the final test correction. One documentation low
+was closed by explicitly limiting supersession of the previous numerical hold.
+These are scoped working-tree checks against base
+`aa6938bae90e0d8d6708be057dc35d3bf00eb68a`, not a full-store/full-repository
+test run, immutable exact-source rehearsal, merge bar, author/seal or freeze.
+
+**2026-09-08 stale-frontier diagnosis and first-failure capture.** Ben's exact
+`c5b918979d97bdeb609d64684a80b0497a902ea5` rehearsal passed cold, warm,
+physical B, logical B and return A, then stopped in stale lease after
+3,314.63s (package 3,315.342s). R10 HIT reported complete with C4/S4; R11
+RECOVERED reported `stale_observation_refused` with zero charged reads.
+The retained parent store prefix was incomplete with zero open calls.
+Those records identify the failed boundary, not the initiating SDK call or a
+global first-failure order. An already failed exact-read latch would suppress
+the next report, so a synchronous failed HIT tail alone does not explain R11.
+Admission can race an independently progressing failure; runtime prevalidation
+can also refuse before its first charged read. The failed custody is preserved.
+
+Independent temporary diagnostics passed normal/race: SDK signature tests
+0.393/1.383s; inherited HTTP/report-tail classification 0.844/2.090s; fresh
+selected-native seven-unit stale requeue/reclaim/recovered store fixture
+3.145/4.494s, including a two-second HIT hold within the unchanged five-second
+callback deadline. These separate component fixtures do not compose into a
+whole phase, reproduce its concurrent workers or identify the original cause.
+
+Ben approved first-failure instrumentation and the bounded heartbeat test,
+not another rehearsal. The implementation captures component-local first
+failure before propagation, then formats/logs only after the original failure
+delivery. Stale transition refusal records the failed locked-guard predicates as
+fixed booleans and a closed point name; other stale stops retain caller PCs,
+source lines and closed context/cause classes without claiming predicate
+coverage. SDK cancellation/transport failures now reuse its bounded private
+refusal record; generic records contain no SQL, bound values or arbitrary
+error text. Historical descriptor SQL-prefix diagnostics remain private.
+
+The new test executes the real ordinary runner and source heartbeat through
+the selected SDK/SA stack, with supplied status persistence/native replies and
+one explicit pre-submission scheduling gate. Successful handler return cancels
+that heartbeat before joining it, poisoning the shared SDK owner and yielding
+parent incomplete with zero open calls/transactions and no native submission.
+The healthy reply-before-return control closes complete with one transaction/
+one row. This establishes a production cancellation hazard under the forced
+schedule, not durable completion, native lease behavior or attribution of the
+retained rehearsal. No heartbeat coordination fix is included in this slice.
+
+AC: component-local first-only capture under concurrent failures; actual
+inherited transition refusal names the failed lease predicate without
+publishing readiness; arbitrary error/context text is absent, fields bounded;
+blocked/panicking logger cannot delay or change failure delivery; successful
+SDK work emits no diagnostic; cancellation counters and healthy closure stay
+exact. Run focused normal/race, repository static/docs/glossary and independent
+non-OCR implementation/cost review. Resolve the demonstrated heartbeat hazard
+before considering another full rehearsal; immutable source, exact gates and
+explicit native-run authorization remain required.
+
+The first broader T422 command run exposed diagnostic output after the
+checkpoint's required terminal footer. Checkpoint/recovery controls embed the
+same base but are not this phase-seven diagnostic target. Capture/logging is
+now enabled only by the actual stale constructor; those embedded controls
+retain their original stop/output behavior. No footer assertion or parser was
+relaxed. Review also identified a possible extra-heartbeat notification blocking
+test cleanup; its correction is test-only. These preliminary failures and the
+earlier provisional reviews do not count as final gate closure.
+
+The corrected command T422/exact-read selection passed normal/race in
+11.961/19.205s, including the unchanged checkpoint terminal-footer assertion
+and new inherited failed-lease diagnostic. Full store-accounting normal/race
+passed in 1.630/2.722s; the focused runner diagnostic passed normal in 2.590s
+and race three times in 11.106s after its cleanup correction. The unchanged
+generation-scheduler package passed normal in 0.289s. Parent stale/checkpoint
+and shared-ordinal selections passed normal/race in 1.137/8.957s.
+Repository static passed (vet, pinned lint with zero issues, compile-only
+checks and glossary); final test edits additionally passed changed-package
+vet/lint. Documentation, formatting and whitespace passed. Independent
+non-authoring, non-OCR source/test/cost review closed with no remaining
+findings, including re-review of the footer correction and the heartbeat
+fixture. The retained V1/V2 plan digests remain
+`96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`
+and `2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+These are scoped working-tree gates against c5b91897, not full-store/full-suite,
+native-rehearsal, immutable seal or freeze evidence. The diagnostic findings
+do not authorize changing heartbeat semantics or executing another rehearsal.
+The reviewed staged Go source/test diff has SHA-256
+`c7c3824c10d38ed410f5f70b50734974526d0d1b7faa287ec49ab3954d0194e4`;
+the final record changes documentation only.
+
+**2026-09-08 approved heartbeat completion correction.** Following diagnostic
+commit `0ba0bc78660be36d6a404c8d95321ab4421529ba`, Ben approved the shared
+cleanup repair before another rehearsal. Ordinary job and generation handlers
+now stop new heartbeat admission, join the in-flight call within its existing
+context/deadline, then cancel. The unused terminal-heartbeat path reuses its
+existing stop/join mechanism. Parent cancellation, definitive lease/stale
+failures, transient-error tolerance and acquired terminal ownership remain
+intact. No SDK failure policy, callback deadline or admission ceiling changes.
+
+The ordinary runner's new virtual-time regression failed all five cases on
+unchanged production source, then passed with the correction. It checks held
+heartbeat completion, transient error, lost lease, external cancellation and
+the unchanged call deadline. The actual selected SDK/source-heartbeat fixture
+now closes complete when handler return precedes held heartbeat submission,
+as well as when the heartbeat replies first; explicit outer cancellation
+still refuses and leaves the incomplete parent signature. This is supplied
+scheduling/status persistence/native replies, not durable native lease or
+whole-rehearsal proof. The original c5b91897 trigger remains unattributed.
+
+AC: changed runner/scheduler normal and race tests, inherited stale/checkpoint
+and owner/terminal tests, repository static/docs/glossary, and independent
+non-OCR implementation/cost review. The generation ordinary/unused-terminal
+regression also failed eight cases on unchanged production source; its two
+external-cancellation controls passed. Both corrected paths retain the
+five-second fixture call deadline and lease/stale precedence, including
+multiple timer ticks while joining the held call.
+
+Scoped working-tree gates against `0ba0bc78` passed: all `TestRunner` tests,
+including fresh native databases and owner/terminal persistence, normal/race
+83.616/76.834s; the focused selected-SDK/order/error selection normal 3.581s
+and race three times 10.921s; generation scheduler's non-native package suite
+normal 0.442s and race three times 1.632s, explicitly excluding the opt-in
+`TestT40R1GenerationScheduleRecoveryDiagnostic`. T422/exact-read command
+selection passed normal/race 13.845/15.713s, and parent stale/checkpoint/shared
+inspection-ordinal selection passed normal/race 1.258/13.855s. The final
+ordinary virtual-time fixture notification was made nonblocking so an
+extra-beat regression fails its counter assertion rather than blocking test
+cleanup; ten repetitions passed normal/race 0.500/1.767s. That test-only
+correction changes no production bytes or assertions.
+
+Repository static checks passed (vet, pinned lint zero issues, compile-only
+packages and glossary); final test edits also passed changed-package vet/lint.
+Documentation, formatting and whitespace passed. Independent non-authoring,
+non-OCR source/test/cost reviews found no source issues; one low duration-metric
+wording issue was corrected to distinguish job handler-only duration from
+generation whole-execute duration. Final staged record re-review covered all
+ten files and closed with no outstanding findings at any severity. The reviewed
+staged Go source/test diff has SHA-256
+`90ad5e918b07999966cfc8bd40cffb58b887453ef1682d97fdb7cdbb2bbb43cc`;
+this final review attribution changes documentation only.
+Retained V1/V2 plan digests remain unchanged. These are not full-store/full-suite,
+immutable native rehearsal, merge bar, author/seal or freeze evidence. No
+rehearsal was started and failed custody remains preserved.
+
+**2026-09-08 fractional stale heartbeat correction.** The exact `72dedf6f`
+rehearsal failed after 3247.80s, after cold, warm, physical B, logical B and
+return A. HIT R10 completed; RECOVERED R11 refused. Its component-local stale
+diagnostic identifies a second HIT with the observer already installed and
+no requeue; the SDK diagnostic names canceled `ClaimGenerationChunk`, not a
+heartbeat. These records do not establish globally ordered first causes.
+Retained failed custody is preserved; phase eight and freeze remain unproved.
+
+A fresh native fixture seeded a fractional heartbeat independently of the SDK
+encoder and failed on unchanged production bytes in 9.328s package time:
+`reaped=0, error=nil, points=[hit]`. The exact reaper equality fence received a
+whole-second timestamp from the pinned SDK's plain `time.Time` encoding.
+The shared helper now uses the installed `CustomDateTime` pointer to preserve
+nanoseconds, without weakening the fence or accepting duplicate observations.
+Both ordinary and observed native fixtures cover fractional requeue/reclaim;
+the ordinary fixture additionally refuses a one-nanosecond renewal and a real
+heartbeat renewal. The observed fixture retains HIT/recovered exact point-read
+counts and callback-refusal checks. The selected SDK fixture checks the actual
+encoded heartbeat and unchanged one-transaction/three-operand charge; its
+scripted response is not durable engine evidence. The initial corrected native
+pair passed in 18.176s. The full generation-accounting plus focused native
+stale selection then passed normal/race in 18.037/27.381s. Independent
+non-authoring, non-OCR review covered all six changed files and reported
+critical/high/medium/low zero; it ran no tests. The reviewed Go diff has SHA-256
+`2fc8e87cd2e4b84d1158eae4a48c5d332ef0b855d1ef42ce750aaa5b822e227c`.
+Command stale/checkpoint selection passed normal/race in 2.132/2.874s.
+Repository static checks passed: glossary verification, vet, pinned lint
+(zero issues) and compile-only packages. Documentation, gofmt and whitespace
+passed. These are scoped gates, not a full-store/full-suite, live controller
+cadence, full native rehearsal, seal or freeze pass. No rerun was started.
+
+**2026-09-09 exact checkpoint rehearsal pass.** Ben's complete optional
+checkpoint rehearsal passed at clean detached source
+`64af8fb6689cea7c27bed697716ff436321d07cb`: 3469.74s test time, 3470.443s
+package time. The retained outer log is
+`/private/tmp/phebs-t422-full-checkpoint-rehearsal.NVLdnp/rehearsal.log`, SHA-256
+`337970db45ab170dc9669882d19be3cd9e00a529a3894f2cd944cd1523c68cb6`.
+Protected source/SDK/module custody admitted 67,866 entries, 56,147 files and
+1,356,508,666 bytes in 5m56.592s. Cold, warm authority observation, physical B,
+logical hit/recovery, return-A marker continuation, stale HIT/recovery and
+checkpoint owned death/restart all returned. The checkpoint successor's
+recovered R/X/T/F preserved complete native authority. Final stop reports
+RootJoined/SessionEmpty true; the post-run process check found no matching
+Phebs, SurrealDB or test survivor. The source checkout remains clean.
+
+This supersedes pending native stale/checkpoint mechanism rehearsals at the
+earlier tips, not their failed records. Aggregate future-lifetime accounting
+remains deliberately incomplete; this is not fifteen-phase execution, complete
+whole-work metrics, a signed phase receipt, T42.2l/m/n closure, V3 seal or
+freeze. The independent remaining-gap audit confirms native parent wiring
+currently stops at phase eight. Next is the missing post-Wait OP successful-
+parse collector and combined compact-log headroom, followed by remaining
+native phase/epoch wiring, whole-work composition, launcher/custody closure,
+exact-tree acceptance, and canonical seal/exact-main freeze in ticket order.
+No new rehearsal or ceremony is started by this record.
+
+**T42.2l next bounded measurement slice — joined OP collector (2026-09-09).**
+Reuse the post-Wait source-attempt parser for the existing successful native
+ParsedBlobs wire family. Require independent OP input/producer binding even
+for zero, and retain fifteen phase counters distinct from source attempts.
+AC: actual repeated events, zero, binding/phase/format refusals, overflow and
+first excess, split/embedded/partial lines, failed positive prefixes, terminal
+fence ordering, joined native output and preserved source/index behavior.
+No new event emitter or live log consumer. The fixed four-family compact
+subset includes OP headroom without claiming that all ordinary output fits.
+Focused normal/race, inherited native output-pump refusal, historical plan
+bytes, static/docs/glossary and independent non-OCR source/cost review precede
+closure. The source at 64af8fb6 was rehearsed without this parent collector;
+its mechanism pass remains valid but is not OP collector evidence.
+
+Scoped working-tree gates against `64af8fb6` passed: compact collectors,
+terminal footer/native-pump refusal, setup-token collision and retained V1/V2
+bytes normal 1.244s and race three repetitions 31.928s; inherited epoch tests
+normal/race 10.550/42.992s. The optional full native selector was not enabled.
+Repository `ci-static` passed glossary, vet, pinned lint with zero issues and
+all-package compilation; docs passed in 0.510s, with gofmt/whitespace clean.
+Independent non-authoring, non-OCR implementation and steady-state-cost review
+reported critical/high/medium/low zero. The reviewed seven Go source/test files
+have staged-diff SHA-256
+`6a3b65844fc3ae48e572020a6ae3aed6cb90929ca1d05695fd45fdc5717d55d4`.
+This closes the bounded OP collector/component gate, not full native OP
+measurement, complete ordinary-log fit, all metrics, exact-tree merge-bar or
+freeze. Final gate-record changes are documentation only.
+Final record review found one low outdated ROADMAP next-step sentence; it was
+corrected to distinguish the completed OP component from remaining native
+phase/whole-work wiring. No Go source or test changed in that correction.
+
+**T42.2l empty pressure-volume prerequisite (2026-09-09).** Ben approved the
+bounded native geometry diagnostic, then implementation of owned preparation
+and teardown before pressure phases. A nominal GPT 96-GiB image measured
+102,869,458,944 filesystem bytes; the partitionless APFS recipe measured exactly
+103,079,215,104. Both diagnostic images detached without force and were removed.
+No capacity or admission bound changes. The unexported component now holds the
+existing run-root mutation lock and fixed hdiutil image, creates/attaches only a
+new sparse image with owners enabled, and validates native geometry and bounded
+attachment output. It records its own successful native Start session IDs,
+joins each command, and retains unknown/unsettled custody. Empty-only teardown
+refuses application content; after non-forced detach it removes only its exact
+backing image and empty control directories. There is no recursive deletion.
+
+The first working-tree native empty-volume gate passed in 12.03s (12.551s
+package time), including an owned tiny write/read, populated-workspace refusal,
+non-forced detach, recorded-session zero and exact image/root absence. The
+read-only review then required a shared Close session check for post-command
+refusals; that correction adds explicit live/unavailable-session lock-retention
+tests. Rereview closed the three original medium findings; its one low
+sticky-state gap was corrected by rejecting unsettled custody at every check.
+The final corrected-tree empty native gate and all pressure component tests
+passed under race in 3.518s (native subtest 1.67s), including a supplied sticky
+state refusal on otherwise valid native custody. All created images/roots were
+removed after non-forced detach; `hdiutil info` reported no attached image.
+Earlier focused component normal/race-three-repetition gates passed in
+0.713/1.862s; system-tool/session/pressure neighbors normal passed in 0.909s,
+and the existing shared-lock regressions passed under race in 3.213s. Static
+checks passed vet, pinned lint with zero issues and all-package compilation;
+docs passed in 0.500s, with glossary, format and whitespace clean. V1/V2 plan
+digests remain `96ba2091...14faf34` / `2275b8ca...9b422`.
+Final independent non-authoring, non-OCR seven-path source/record/cost review
+reported critical/high/medium/low zero. Its exact staged Go diff SHA-256 is
+`5f30429271b67de0a704b5a3bb87d353c1819c2a5521e0d711529db0e466149c`.
+Refreshed corrected-tree static checks passed glossary, vet, pinned lint with
+zero issues and all-package compilation; docs passed in 0.396s. Subsequent
+gate-record edits change documentation only. These close this empty-component
+gate, not a full package/repository test run or exact-tree ceremony merge bar.
+This is not complete launcher admission, operational borrower/lease closure,
+finite V3 outer-stage accounting or populated replay cleanup. Preparation
+HOME/TMP controls remain explicit local diagnostic custody outside the mounted
+workspace; the whole launcher's writable-volume policy is not established.
+The existing checkpoint rehearsal is unchanged. Pressure mutation, phases
+9–11 and freeze remain open; no full rehearsal is started by this slice.
+
+**T42.2l borrowed populated rehearsal custody (2026-09-09).** The next bounded
+slice reuses the owned volume, actual flow/input owners and native source lease.
+Borrow before preparation; bind before AuthorA; refuse Close/removal while
+borrowed. Successful latest joined-run evidence and closed owners precede
+same-inode lease reacquisition, non-forced detach and exact image removal.
+The optional harness skips mounted thaw/recursive cleanup on this path.
+Preparation Go/Git commands now join their whole owned sessions and check
+sticky output errors, without changing operational nested Git groups. Marked
+external probes and reference-build scratch remain on the mounted workspace
+until detach. Full writable-volume policy, durable supervision and finite
+outer-stage accounting remain T42.2m work; bootstrap volume HOME/TMP and
+ordinary intermediate config/catalog staging retain their existing semantics.
+
+Working-tree pressure regressions passed normal in 0.709s. The separately
+selected tiny protected populated fixture and pressure regressions passed
+under race in 13.785s (native fixture 12.01s); the fixture retained a genuine
+Git probe and protected input, refused empty-only deletion, then detached
+without force and removed the exact image/root without thawing. No attached
+image remains. This exercises the mechanical detach barrier only, not a fake
+successful flow or full native epoch release. Preparation-session, marked
+probe, real checkout and output-bound gates passed normal/race in
+16.737/18.275s. Static passed glossary, vet, pinned lint with zero issues and
+all-package compilation; docs passed in 0.516s. Independent preparation review
+reported critical/high/medium/low zero; independent workspace review reported
+zero critical/high/medium and one low for two stale cleanup comments. Both
+comments are corrected without changing executable behavior. The cost record
+explicitly includes bounded host-wide process censuses, exceptional polling
+and the existing build mutex held across admission/session join. Record review
+found one further low cost omission: the eight author/epoch root checks also
+invoke the existing four-root volume/image checks; the ADR now states both.
+The corrected staged Go diff SHA-256 is
+`46a91e8abd719150b3788d41a46bd29e74c76abe23675b632aeb8b13c29fdcaf`.
+Combined epoch/pressure/preparation/checkout/output-bound regressions then
+passed under race in 40.407s; optional full native selectors were absent.
+Refreshed docs/glossary/whitespace passed (docs 0.509s). No corpus, ballast or
+full rehearsal was started, and the genuine bound epoch release remains
+unmeasured. Final non-authoring source/record rereview reports
+critical/high/medium/low zero; final record-only docs/glossary passed (0.515s).
+These are scoped component gates, not the full ceremony merge bar.
+
+**T42.2 completion-through-freeze request (2026-09-09).** Ben explicitly
+authorizes the necessary rehearsals, reviewed commits/pushes and subsequent
+safe housekeeping, then the exact ceremony command. The reviewed branch through
+`2e3345055e870abf11944d18662a61f52e54d6e5` is pushed to
+`origin/codex/t42.2l-logical-measurement`; `main` is not advanced by that push.
+About 3.3 GiB of reproducible Go build cache was cleared to pass the existing
+120-GiB rehearsal guard; offline modules and failed-run evidence were retained.
+One exact clean detached phase-one-through-eight checkpoint rehearsal used
+the owned pressure volume at that commit, with no ballast or automatic retry.
+It passed cold and warm, then failed physical B after 3,349.94s (3,350.629s
+package time). The retained prefix reports root joined and session empty;
+the parent observed dispatch cancellation and the server's first private SDK
+refusal names `commitServiceStateV3TargetChunk`, transport classification with
+both caller and owner contexts active. The underlying native error was not
+retained, so this does not identify a network fault, timeout or SQL defect.
+The exact source frame is the pre-Settle native reply/type guard in
+`storeSDKCall.finish`, not the parent settlement ACK path; submission admission
+had succeeded. This admits a missing native reply or non-native/typed-decoding
+error as candidates, not an attribution. Whether the native write committed
+is unestablished. Advisory log ordering does not establish causal ordering.
+The owned volume and exact diagnostics remain retained; its post-stop capacity
+is 44 percent used, not a full-volume failure. No automatic retry is authorized.
+Parallel bounded work covers native ballast,
+pressure parent control/read composition and joined lifecycle measurement.
+
+A fresh phase-twelve source audit finds that ordinary backup requires epoch
+four's live SDK/export endpoint, while its producer lifetime ends in phase
+eleven. Closing it first loses that endpoint; keeping it open prevents the
+store controller's last-phase advance. An explicitly retired carry into phase
+twelve, with no new dispatch/write permission, is submitted to Ben for
+prospective V3 disposition; it is not silently treated as existing wiring.
+Backup/restore must also use the same epoch-four config bytes before epoch
+five starts with its own listener config, and installation destruction must
+preserve the held data-root inode. Whole-work resource/read/cache/reuse and
+publication measurement remains broader than the joined event subsets.
+
+**Pressure/lifecycle prerequisite review (2026-09-09).** Three bounded slices
+are implemented: native fixed ballast custody, the explicitly selected pressure
+checkpoint/control/read prerequisites, and independently bound joined lifecycle
+returned-turn observations. No full pressure selector, allocated-custody gauge
+or pressure/receipt result is exposed. Non-authoring review found one medium
+in lifecycle collection (a genuine known-owner cursor-read failure was refused)
+and one low in the tiny ballast test (missing post-unlink capacity verification);
+both are corrected. Real `Controller.Tick` regression coverage preserves the
+failed returned tick without inventing an owner turn. Final source rereviews
+report critical/high/medium/low zero for all three slices. Separate record
+review's preparation/framing-cost omissions are corrected in the owning ADRs.
+
+Corrected scoped race gates passed: lifecycle/attempt collection 5.066s,
+lifecycle command tests 1.922s, ballast three repetitions 2.358s and pressure/
+checkpoint boundary coverage 4.717s. The broader inherited lifecycle gate first
+refused all four test modes because the old fixture combined epoch four/phase
+eight with producer two. The fixture now uses genuine producer five and checks
+the single exact native LCB1 binding after child Wait; lifecycle and inherited
+attempt race selectors then passed three repetitions in 5.235s. Production
+binding was not relaxed. Pinned static checking caught four lifecycle style/
+error-check issues and an untested pressure-boundary helper; those are corrected
+with meaningful boundary tests, not lint suppressions. A later static run
+reported zero lint issues, compiled all packages, and passed docs/glossary;
+The final fixture-corrected Go diff SHA-256 is
+`b8acce1953c5f24335221fdd09ff5550e59efce66788fc99a9ad504f2153ec19`;
+pinned `ci-static` passed again on those exact staged Go bytes (zero lint
+issues, all packages compile), with docs/glossary passing in 0.429s.
+The tiny ballast native fixture subsequently ran once at exact clean source
+`acb809de` after the mounted checkpoint stopped. It failed its first allocation
+in 1.28s (1.866s package time): requested and inode-allocated bytes were
+524,288, while observed capacity-used bytes increased by 552,960. The 28,672
+byte residual exceeds the unchanged 4,096-byte tolerance. No later allocation,
+removal or detach gate passed; its exact volume/image remains retained and no
+retry or tolerance adjustment was made. Post-stop `df` reports only 532 KiB
+used on that new volume, but available space is close to the backing host's
+available space and below the virtual 96 GiB total. The component computes
+used as total minus available; backing-availability coupling and fixture
+preconditions require diagnosis before attributing the residual to metadata
+or requesting a prospective policy correction.
+Read-only follow-up observed the tiny mount's available space tracking host
+availability with the same 564-KiB gap across two samples, while in-volume used
+space stayed 532 KiB. The actual production pressure probe also uses Bavail;
+substituting a volume-used field only in the ballast test is not an equivalent
+fix. The shared preparation entry now checks the existing frozen 120-GiB
+backing-space minimum before mutation. This is a missing preflight correction,
+not proof that restoring headroom will make the 4,096-byte delta gate pass.
+
+The SDK diagnostic correction retains closed finish/returned-error labels in
+the existing first-refusal record. The pinned typed-decode fixture returns a
+plain error, truthfully classified as `returned_non_native_error/other`, not
+an inferred CBOR class. Diagnostic type inspection handles the SDK's typed-nil
+unwrap behavior without replacing the original refusal. Healthy settlement,
+actual native QueryErrors, cancellation and generic first-failure records keep
+their original behavior; no raw reply/error/SQL data is added. Final independent
+review of both corrections and their records reports critical/high/medium/low
+zero. SDK full-package normal/race passed in 1.644s/2.825s; pressure selectors
+passed normal in 0.637s and three race repetitions in 1.862s. Independent focused
+SDK and preflight race checks passed in 1.357s and 1.681s. Pinned combined
+`ci-static` passed vet, zero lint issues and all-package compilation, with
+docs/glossary passing in 0.448s. The exact staged Go diff SHA-256 is
+`6f8b80e11eabbac15b3f45d727778d4f1dbd472aeb51e4c6caa7f51382d84f86`.
+These scoped corrections establish neither a native rerun nor a full pipeline
+pass. Rehearsal headroom remains below the existing minimum; retirement of the
+older 72dedf6f replay custody (about 58 GiB), after verified diagnostic archival,
+has been submitted to Ben explicitly because full replay would be lost. The
+latest mounted and tiny-ballast failures remain excluded from that request.
+
+The byte-gauge audit keeps native filesystem used/available distinct from
+linked-inode allocation. Neither an endpoint statfs result nor a sequential
+file walk supplies the frozen coherent whole-custody phase high-water by
+implication. A bounded native replacement is not inherently a policy change,
+but its coherence, required-sample coverage and full-custody fit are unproven.
+Input-only traversal caps do not bound all mutable data/build scratch. No
+measurement meaning or limit changes without an explicit prospective decision.
+
+**Server-process and catalog-cache observation wiring (2026-09-09).** The
+actual server-root sampler now uses the existing bounded native census across
+launch, quiescent phase transitions and final live shutdown, with joined
+checkpoint-prefix transfer. Review caught an omitted sampled RSS refusal: the
+correction enforces the existing frozen 20-GiB threshold while retaining the
+entire available overshoot separately from unavailable measurement. First
+process refusal details are bounded and private; no public receipt field or
+measurement meaning changes. This is server-only coverage, not author,
+controller, offline or cleanup process accounting.
+
+Native catalog-cache classification now covers all three hit branches and
+actual load/result-admission events. The joined collector retains independent
+binding and positive incomplete prefixes. A preliminary CB framing name
+collided with existing LCB1; the new, unretained family is CC1/CCB1 instead,
+without relaxing historical framing or changing an existing wire family.
+Final independent process, cache-core and cache bridge/parser reviews report
+critical/high/medium/low zero after correction. The sole cache-core low cost
+omission (ordinary atomic/context lookups) is corrected in PLAN. Process normal/race gates passed
+in 3.659s/29.204s; final combined cache race selectors passed readaccounting
+1.340s, catalog 1.614s, dispatch 1.653s, command 2.904s and spike 32.989s.
+The genuine inherited phase-eight/nine cache-events fixture passed three race
+repetitions in 2.658s. Pinned package lint reported zero issues, and the lead's
+combined `ci-static` passed vet, zero lint issues and all-package compilation.
+The reviewed staged Go diff SHA-256 is
+`da2973c0a015c8eea344120bedfb5f0ef9a4bd52e4c11047737a0b74f1e6abd5`.
+The independent compact headroom check passed in 0.608s. These are scoped
+implementation gates, not the full ceremony merge bar. Neither this work nor
+the failed mounted checkpoint rehearsal supplies a full fifteen-phase result.
+
+**Native extraction publication-call observation (2026-09-09).** The next
+whole-work slice counts actual StorePublisher.PublishDomain entries. Both
+production runtime callers use that concrete publisher; the hook precedes
+validation and store work, so failed calls and exact-current recounts remain
+attempts. It does not count fake publishers, OnSettled callbacks, marker writes
+or successful authority movement as interchangeable units. The existing native
+report and post-Wait parser paths gain an independent EPB1/EP1 family, required
+even for zero calls. Scoped implementation, complete-prefix/phase/framing
+regressions, log headroom and independent review are complete; no native
+rehearsal, complete metrics or freeze pass is claimed by this slice. Review
+identified one medium entered-call prefix omission when the caller was already
+canceled; the observer now records that invocation before returning cancellation
+without native publication work. The initially proposed PUB marker was also
+replaced before retention because it could reserve ordinary PUBLIC diagnostics;
+existing wire families are unchanged.
+
+Final independent source and bridge/parser review reports
+critical/high/medium/low zero. Corrected source race gates passed
+readaccounting in 1.237s, dispatch admission in 6.190s and extraction publication
+in 24.943s; current-source command/spike focused normal passed in 1.349s/2.927s.
+The final exact-source broad report/parser/inherited race selectors passed in
+3.191s/26.622s. The first combined static check caught a tagged-switch style
+issue; after that style-only correction and independent delta review, pinned
+`ci-static` passed vet, zero lint issues and all-package compilation, with
+docs/glossary passing in 0.538s. Independent parser/headroom checks passed in
+0.522s and confirmed the seven-family totals in PLAN. The staged Go diff SHA-256
+is `83952a2e01bd61460ccb6ad3e04022c5ebe6122ee90c4c25d58396da97f700e8`.
+These exact scoped checks are not the full T42.2n acceptance gate.
+
+The remaining native implementation is explicitly broader than rerunning gates:
+
+- Phases 9–11: owned pressure-volume/ballast custody and actual pressure
+  mutations, coordinated with the existing authenticated lifecycle controls.
+- Phase 12/fifth epoch: genuine backup/restore launches, custody transfer,
+  restored server admission and exact authority comparison; launch currently
+  admits only epochs one through four.
+- Phases 13–15: fresh lifecycle collection, authorized product queries and
+  final whole-flow teardown evidence, not the rehearsal fixture's cleanup.
+- Whole-work composition: remaining read/cache/reuse/publication/lifecycle
+  counters and resource gauges, complete phase metrics and receipts; existing
+  DA/SA and compact subsets do not fill these fields by implication.
 
 **Acceptance hold — whole-work accounting.** Two independent audits confirmed
 that the unchanged phase-wide store contract includes ordinary archive/import.

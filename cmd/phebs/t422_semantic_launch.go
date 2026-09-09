@@ -20,14 +20,16 @@ import (
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/gitobj"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
 const (
-	t422SemanticLaunchSchema = "t422-semantic-launch-v3"
-	t422SemanticLaunchRecipe = "t422-fixed-phase-control-v3"
-	t422SemanticLaunchBytes  = 16 << 10
-	t422SemanticConfigBytes  = 64 << 10
+	t422SemanticLaunchSchema   = "t422-semantic-launch-v3"
+	t422SemanticLaunchRecipe   = "t422-fixed-phase-control-v3"
+	t422SemanticLaunchBytes    = 16 << 10
+	t422SemanticConfigBytes    = 64 << 10
+	t422LogicalStoreWorkSchema = "t422-logical-store-work-v1"
 )
 
 var errT422SemanticLaunch = errors.New("T42.2 semantic launch admission refused")
@@ -37,12 +39,16 @@ var errT422SemanticLaunch = errors.New("T42.2 semantic launch admission refused"
 // retains protected plan/config custody. No path, arbitrary phase list, prior
 // authority or restart claim is accepted before its native operation exists.
 type t422SemanticLaunchRequest struct {
-	Schema       string `json:"schema"`
-	Recipe       string `json:"recipe"`
-	PlanSHA256   string `json:"plan_sha256"`
-	ConfigSHA256 string `json:"config_sha256"`
-	ServerEpoch  uint64 `json:"server_epoch"`
-	Repository   string `json:"repository"`
+	Schema                 string                       `json:"schema"`
+	Recipe                 string                       `json:"recipe"`
+	PlanSHA256             string                       `json:"plan_sha256"`
+	ConfigSHA256           string                       `json:"config_sha256"`
+	ServerEpoch            uint64                       `json:"server_epoch"`
+	Repository             string                       `json:"repository"`
+	CheckpointRecovery     *t422CheckpointRecoveryInput `json:"checkpoint_recovery,omitempty"`
+	ReturnSourceCommit     string                       `json:"return_source_commit,omitempty"`
+	SelectorHandoffCleanup string                       `json:"selector_handoff_cleanup,omitempty"`
+	LogicalStoreWork       string                       `json:"logical_store_work,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -94,6 +100,24 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 		!t422SemanticDigest(request.PlanSHA256) || !t422SemanticDigest(request.ConfigSHA256) ||
 		!t422SemanticEpochPhase(request.ServerEpoch, snapshot.Phase, true) ||
 		request.Repository == "" || len(request.Repository) > 256 || strings.ContainsAny(request.Repository, "\x00\r\n") {
+		return nil, errT422SemanticLaunch
+	}
+	if request.CheckpointRecovery != nil && (request.ServerEpoch != 4 || snapshot.ProducerID != 5 || snapshot.Phase != 8 ||
+		!validT422CheckpointRecoveryInput(*request.CheckpointRecovery)) {
+		return nil, errT422SemanticLaunch
+	}
+	if request.ServerEpoch == 3 {
+		if len(request.ReturnSourceCommit) != 40 || !gitobj.IsObjectID(request.ReturnSourceCommit) {
+			return nil, errT422SemanticLaunch
+		}
+	} else if request.ReturnSourceCommit != "" {
+		return nil, errT422SemanticLaunch
+	}
+	if request.SelectorHandoffCleanup != "" && request.SelectorHandoffCleanup != t422SelectorCleanupSchema {
+		return nil, errT422SemanticLaunch
+	}
+	if request.LogicalStoreWork != "" && (request.LogicalStoreWork != t422LogicalStoreWorkSchema ||
+		request.ServerEpoch != 2 || snapshot.ProducerID != 3 || request.SelectorHandoffCleanup != t422SelectorCleanupSchema) {
 		return nil, errT422SemanticLaunch
 	}
 	canonical, err := json.Marshal(request)
@@ -262,7 +286,8 @@ func (launch *t422SemanticLaunch) matches(snapshot dispatchadmission.ProductionS
 
 func (launch *t422SemanticLaunch) admitRequest(request *http.Request) (*http.Request, error) {
 	snapshot, err := dispatchadmission.ProductionSemanticState()
-	if err != nil || !launch.matches(snapshot) || !t422SemanticRequestRoute(request) {
+	if err != nil || !launch.matches(snapshot) || !t422SemanticRequestRoute(request) ||
+		request.URL.Path == t422SelectorCleanupPath && (launch.request.SelectorHandoffCleanup != t422SelectorCleanupSchema || launch.request.ServerEpoch > 3) {
 		// A valid private request already owns its slot. A changed semantic
 		// producer/phase or unlisted route is terminal, unlike a bad token.
 		if launch.fail != nil {
@@ -286,7 +311,7 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	path := request.URL.Path
 	activation := request.Header.Values(t421ExactReadActivationHeader)
 	ordinals := request.Header.Values(t421ExactReadOrdinalHeader)
-	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath {
+	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath || path == t422StalePreparePath || path == t422CheckpointPreparePath || path == t422SelectorCleanupPath {
 		method := http.MethodPost
 		if path == "/api/health" {
 			method = http.MethodGet
@@ -308,7 +333,8 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	switch path {
 	case api.ExtractionProgressPath, api.LifecycleStatusPath, t421ExactFinalAuthorityPath,
 		t421ExactTailReadinessPath, api.SearchPath, t421ProductServicePath, t421ProductRelationshipsPath,
-		t422MarkerHitPath, t422MarkerRecoveredPath, t422RetentionReadPath:
+		t422MarkerHitPath, t422MarkerRecoveredPath, t422RetentionReadPath,
+		t422ActivationHitPath, t422ActivationRecoveredPath, t422StaleHitPath, t422StaleRecoveredPath, t422CheckpointHitPath, t422CheckpointRecoveredPath:
 		return true
 	default:
 		return t422LifecycleRead(path)

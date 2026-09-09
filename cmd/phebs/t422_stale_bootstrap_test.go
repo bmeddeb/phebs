@@ -1,0 +1,413 @@
+//go:build darwin || linux
+
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/store"
+)
+
+const t422StaleBootstrapMode = "PHEBS_T422_STALE_BOOTSTRAP_TEST"
+
+// Arm only after the hit callback has joined. Its next Done lookup proves the
+// reclaimed worker reached the observer-bound rendezvous before Requeued.
+// This affects this supplied-event fixture only, never production contexts.
+type t422StaleDoneRendezvous struct {
+	context.Context
+	gate atomic.Pointer[t422StaleDoneGate]
+}
+
+type t422StaleDoneGate struct{ entered, release chan struct{} }
+
+func (ctx *t422StaleDoneRendezvous) Done() <-chan struct{} {
+	if gate := ctx.gate.Swap(nil); gate != nil {
+		close(gate.entered)
+		<-gate.release
+	}
+	return ctx.Context.Done()
+}
+
+func t422StaleBootstrapRecord(t *testing.T) (dispatchadmission.ProductionBootstrap, []byte) {
+	t.Helper()
+	raw, _ := t422SemanticTestRequest(t)
+	raw = bytes.Replace(raw, []byte(`"server_epoch":1`), []byte(`"server_epoch":3`), 1)
+	raw = bytes.Replace(raw, []byte("}\n"), []byte(`,"return_source_commit":"`+strings.Repeat("a", 40)+"\"}\n"), 1)
+	record := t422ServeFlagsRecord()
+	record.SemanticMode, record.InputSHA256 = dispatchadmission.ProductionSemanticV3, sha256.Sum256(raw)
+	record.Producer.ID, record.Phase, record.Limits.Phases = 4, 6, 2
+	record.Control.OwnerControl = true
+	record.Control.Phases, record.Control.InitialPhase, record.Control.MaximumPhases = []uint32{6, 7}, 6, 2
+	return record, raw
+}
+
+// Actual inherited DA/PC and owner lifetimes; the prepared target and native
+// transition events are deliberately supplied protocol fixtures. This test
+// neither executes PrepareCurrentRecovery/native R nor proves actual reaping.
+func TestT422StaleInheritedWorkerOrdering(t *testing.T) {
+	for _, mode := range []string{"complete", "report-failure", "observer-cancel", "reclaimed-before-callback", "reclaimed-cancel-before-callback", "reclaimed-callback-observer-cancel", "diagnostic-recovered-lease"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+			defer cancel()
+			record, _ := t422StaleBootstrapRecord(t)
+			configuration := dispatchadmission.Config{Limits: record.Limits, Producers: []dispatchadmission.Producer{record.Producer}}
+			for _, phase := range record.Control.Phases {
+				configuration.Phases = append(configuration.Phases, dispatchadmission.Phase{ID: phase, Roles: []dispatchadmission.RoleBudget{
+					{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility},
+				}})
+			}
+			controller, err := dispatchadmission.New(ctx, configuration)
+			if err != nil {
+				t.Fatal(err)
+			}
+			parent, child, err := dispatchadmission.NewPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = parent.Close(); _ = child.Close() }()
+			controlParent, controlChild, err := dispatchadmission.NewPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = controlParent.Close(); _ = controlChild.Close() }()
+			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestT422StaleBootstrapHelper$")
+			command.Env = []string{t422StaleBootstrapMode + "=" + mode, dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionSelector, "GORACE=atexit_sleep_ms=0"}
+			command.ExtraFiles, command.WaitDelay = []*os.File{child, controlChild}, time.Second
+			input, err := command.StdinPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = input.Close() }()
+			output, err := command.StdoutPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var diagnostic bytes.Buffer
+			command.Stderr = &diagnostic
+			if err := command.Start(); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if command.ProcessState == nil {
+					_ = command.Process.Kill()
+					_ = command.Wait()
+				}
+			}()
+			_ = child.Close()
+			_ = controlChild.Close()
+			if err := dispatchadmission.SendProductionBootstrap(ctx, parent, controlParent, record); err != nil {
+				t.Fatal(err)
+			}
+			served := make(chan error, 1)
+			go func() { served <- controller.Serve(ctx, record.Producer.ID, command.Process.Pid, parent) }()
+			defer func() {
+				cancel()
+				select {
+				case <-served:
+				case <-time.After(3 * time.Second):
+					t.Error("receiver not joined")
+				}
+			}()
+			phase, err := dispatchadmission.NewPhaseControl(ctx, controlParent, record.Producer.Binding, record.Control)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = phase.Close() }()
+			scanner := bufio.NewScanner(output)
+			read := func(want string) {
+				t.Helper()
+				if !scanner.Scan() || scanner.Text() != want {
+					t.Fatal("helper response", scanner.Text(), diagnostic.String())
+				}
+			}
+			read("ready")
+			for _, operation := range []func() error{func() error { return phase.DrainOwners(ctx) }, func() error { return phase.Pause(ctx) },
+				controller.Fence, func() error { return phase.Checkpoint(ctx) }, controller.Advance, func() error { return phase.Resume(ctx) }, func() error { return phase.ReopenOwners(ctx) }} {
+				if err := operation(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := input.Write([]byte{'g'}); err != nil {
+				t.Fatal(err)
+			}
+			read("workers_joined")
+			for _, operation := range []func() error{func() error { return phase.DrainOwners(ctx) }, func() error { return phase.Pause(ctx) },
+				controller.Fence, func() error { return phase.Checkpoint(ctx) }} {
+				if err := operation(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := input.Write([]byte{'c'}); err != nil {
+				t.Fatal(err)
+			}
+			read("closed")
+			if err := command.Wait(); err != nil {
+				t.Fatal(err, diagnostic.String())
+			}
+			if snapshot, err := controller.Snapshot(); err != nil || !snapshot.Complete || snapshot.Attempts != 0 {
+				t.Fatal("protocol fixture did not close exact empty dispatch", snapshot, err)
+			}
+		})
+	}
+}
+
+func TestT422StaleBootstrapHelper(t *testing.T) {
+	mode := os.Getenv(t422StaleBootstrapMode)
+	if mode == "" {
+		return
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
+	if err != nil || lifetime == nil {
+		t.Fatal(err)
+	}
+	_, raw := t422StaleBootstrapRecord(t)
+	snapshot, err := dispatchadmission.ProductionSemanticState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch, err := decodeT422SemanticLaunch(raw, snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var failures atomic.Int32
+	launch.fail = func(error) { failures.Add(1) }
+	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 3, Requests: 1})
+	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
+		t.Fatal("owner bootstrap", err)
+	}
+	// Constructor wiring only. No method on this incomplete Runtime is used.
+	reconciler := &extractionpublication.Reconciler{StoreAccounting: true, Runtime: &extractionpublication.Runtime{Fence: &extractionpublication.AuthorityFence{}}}
+	control, err := newT422StaleControl(ctx, launch, reconciler)
+	if err != nil || !reconciler.RecoveryPreparationEnabled {
+		t.Fatal("selected constructor", err)
+	}
+	defer control.cancel()
+	fmt.Println("ready")
+	var signal [1]byte
+	if _, err := io.ReadFull(os.Stdin, signal[:]); err != nil || signal[0] != 'g' {
+		t.Fatal(err)
+	}
+	const digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	control.armed, control.phaseEnd = true, time.Now().Add(time.Second*10)
+	control.target = extractionpublication.RecoveryPreparationTarget{Domain: "grpc-caller", Ordinal: 6, Offset: 6,
+		Schedule: store.GenerationSchedule{Repository: launch.request.Repository, Generation: digest, Digest: digest}}
+	chunk := store.GenerationChunk{Repository: launch.request.Repository, Stage: extractionpublication.ScheduleStage,
+		ResourceClass: store.GenerationResourceExtraction, Generation: digest, ScheduleDigest: digest, Identity: digest,
+		Offset: 6, Length: 1, Priority: store.GenerationPriorityNeverRun, Status: store.GenerationChunkRunning, LeaseToken: "old-lease"}
+	oldDone := make(chan error, 1)
+	go func() {
+		owner, err := owners.Enter(ctx)
+		if err != nil {
+			oldDone <- err
+			return
+		}
+		defer owner.End()
+		oldDone <- control.beforeHeartbeat(ctx, chunk)
+	}()
+	// Test-only rendezvous for the internal fixture claim; production uses the
+	// native reaper callback, never this loop or an eager reaper invocation.
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		control.mu.Lock()
+		captured := control.old.Identity != ""
+		control.mu.Unlock()
+		if captured {
+			break
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatal("old claim absent")
+		}
+	}
+	observerCtx, stopObserver := context.WithTimeout(ctx, 5*time.Second)
+	defer stopObserver()
+	observer := &t422StaleDoneRendezvous{Context: observerCtx}
+	event := store.GenerationStaleLeaseTransition{Point: store.GenerationStaleLeaseTransitionHit, Repository: chunk.Repository,
+		Stage: chunk.Stage, ResourceClass: chunk.ResourceClass, Generation: chunk.Generation, ScheduleDigest: chunk.ScheduleDigest,
+		ChunkIdentity: chunk.Identity, Offset: chunk.Offset, Length: 1, Priority: chunk.Priority, ChunkStatus: chunk.Status,
+		Leased: true, ScheduleStatus: store.GenerationScheduleActive, ChunkStateDigest: digest, StaleBefore: time.Now().Add(-20 * time.Second),
+		PrivateLeaseTokenDigest: store.GenerationLeaseTokenDigest(chunk.LeaseToken)}
+	observed := make(chan error, 1)
+	go func() {
+		owner, err := owners.Enter(ctx)
+		if err != nil {
+			observed <- err
+			return
+		}
+		defer owner.End()
+		observed <- control.transition(observer, event)
+	}()
+	select {
+	case <-control.hit.ready:
+	case <-ctx.Done():
+		t.Fatal("hit absent")
+	}
+	select {
+	case err := <-oldDone:
+		t.Fatal("old claim released before requeue", err)
+	default:
+	}
+	control.mu.Lock()
+	control.hit.reading = true
+	control.mu.Unlock()
+	if mode == "report-failure" {
+		_ = control.stop(errors.New("supplied report failure"))
+	} else if mode == "observer-cancel" {
+		stopObserver()
+	} else if err := control.finishReport(&control.hit); err != nil {
+		t.Fatal(err)
+	}
+	hitFailed := mode == "report-failure" || mode == "observer-cancel"
+	if err := <-observed; (err != nil) != hitFailed {
+		t.Fatal("observer result", err)
+	}
+	if !hitFailed {
+		select {
+		case err := <-oldDone:
+			t.Fatal("hit report alone released old claim", err)
+		default:
+		}
+		event.Point, event.Priority, event.ChunkStatus, event.Leased = store.GenerationStaleLeaseTransitionRequeued, store.GenerationPriorityStale, store.GenerationChunkPending, false
+		chunk.Priority, chunk.LeaseToken = store.GenerationPriorityStale, "new-lease"
+		recoveredOwner, err := owners.Enter(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var reclaimedErr error
+		if strings.HasPrefix(mode, "reclaimed-") {
+			gate := &t422StaleDoneGate{entered: make(chan struct{}), release: make(chan struct{})}
+			var releaseOnce sync.Once
+			release := func() { releaseOnce.Do(func() { close(gate.release) }) }
+			defer release()
+			observer.gate.Store(gate)
+			reclaimedDone := make(chan error, 1)
+			go func() { reclaimedDone <- control.beforeHeartbeat(ctx, chunk) }()
+			select {
+			case <-gate.entered:
+			case err := <-reclaimedDone:
+				t.Fatal("reclaimed claim did not rendezvous before callback", err)
+			case <-ctx.Done():
+				t.Fatal("reclaimed rendezvous absent")
+			}
+			control.mu.Lock()
+			premature := control.requeueSeen || control.reclaimed || control.err != nil
+			control.mu.Unlock()
+			if premature {
+				t.Fatal("reclaimed worker advanced before supplied callback")
+			}
+			select {
+			case err := <-oldDone:
+				t.Fatal("early reclaimed claim released old worker", err)
+			default:
+			}
+			if mode != "reclaimed-cancel-before-callback" {
+				if err := control.transition(observer, event); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode != "reclaimed-before-callback" {
+				stopObserver()
+			}
+			release()
+			reclaimedErr = <-reclaimedDone
+		} else {
+			if err := control.transition(observer, event); err != nil {
+				t.Fatal(err)
+			}
+			reclaimedErr = control.beforeHeartbeat(ctx, chunk)
+		}
+		if mode == "reclaimed-cancel-before-callback" {
+			if reclaimedErr == nil || errors.Is(reclaimedErr, store.ErrGenerationLeaseLost) {
+				t.Fatal("canceled reclaimed worker invented lease loss", reclaimedErr)
+			}
+			if err := <-oldDone; err == nil || errors.Is(err, store.ErrGenerationLeaseLost) {
+				t.Fatal("canceled callback fabricated old lease requeue", err)
+			}
+			if failures.Load() != 1 || !control.hit.reported || control.requeueSeen || control.reclaimed {
+				t.Fatal("canceled pre-callback prefix advanced")
+			}
+		} else {
+			if reclaimedErr != nil {
+				t.Fatal("reclaimed worker refused", reclaimedErr)
+			}
+			if err := <-oldDone; err != store.ErrGenerationLeaseLost {
+				t.Fatal("old worker did not return exact stale fence", err)
+			}
+			recoveryCtx, stopRecovery := context.WithTimeout(ctx, 5*time.Second)
+			defer stopRecovery()
+			event.Point, event.ChunkStatus = store.GenerationStaleLeaseTransitionRecovered, store.GenerationChunkDone
+			event.PrivateLeaseTokenDigest = store.GenerationLeaseTokenDigest(chunk.LeaseToken)
+			if mode == "diagnostic-recovered-lease" {
+				event.PrivateLeaseTokenDigest = "wrong-private-digest"
+				if err := control.transition(recoveryCtx, event); err == nil {
+					t.Fatal("wrong recovered lease admitted")
+				}
+				control.mu.Lock()
+				diagnostic := control.privateFailure
+				control.mu.Unlock()
+				if failures.Load() != 1 || diagnostic == nil || diagnostic.Checks != (t422StaleFailedChecks{Transition: true, Point: "recovered", Lease: true}) {
+					t.Fatal("actual transition refusal did not retain exact failed predicate", diagnostic)
+				}
+				select {
+				case <-control.recovered.ready:
+					t.Fatal("refused transition published readiness")
+				default:
+				}
+			} else {
+				go func() { observed <- control.transition(recoveryCtx, event) }()
+				select {
+				case <-control.recovered.ready:
+				case <-ctx.Done():
+					t.Fatal("recovered absent")
+				}
+				control.mu.Lock()
+				control.recovered.reading = true
+				control.mu.Unlock()
+				if err := control.finishReport(&control.recovered); err != nil {
+					t.Fatal(err)
+				}
+				if err := <-observed; err != nil {
+					t.Fatal(err)
+				}
+				if failures.Load() != 0 {
+					t.Fatal("legitimate ordering latched failure")
+				}
+			}
+		}
+		recoveredOwner.End()
+	} else {
+		if err := <-oldDone; err == nil || err == store.ErrGenerationLeaseLost {
+			t.Fatal("failure fabricated old lease requeue", err)
+		}
+		if failures.Load() != 1 || control.hit.reported || control.requeueSeen || control.reclaimed {
+			t.Fatal("failed prefix cleared or advanced")
+		}
+	}
+	fmt.Println("workers_joined")
+	if _, err := io.ReadFull(os.Stdin, signal[:]); err != nil || signal[0] != 'c' {
+		t.Fatal(err)
+	}
+	if err := lifetime.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("closed")
+}

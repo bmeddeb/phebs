@@ -631,6 +631,22 @@ func serve(args []string) (retErr error) {
 		}
 	}
 	var exactReadFailed chan error
+	attemptReports, err := newT422AttemptSinks(failExactReport)
+	if err != nil {
+		return err
+	}
+	ctx, err = bindT422SourceReports(ctx, failExactReport)
+	if err != nil {
+		return err
+	}
+	ctx, err = bindT422ObservationReports(ctx, failExactReport)
+	if err != nil {
+		return err
+	}
+	ctx, err = bindT422IndexReports(ctx, failExactReport)
+	if err != nil {
+		return err
+	}
 	var failExactRead func(error)
 	var exactReadState *t421ExactReadAccountingState
 	if exactReads {
@@ -663,7 +679,11 @@ func serve(args []string) (retErr error) {
 			log.Printf("WARNING: %s", code)
 		},
 		func() (*store.Surreal, error) {
-			return store.OpenLocalWithConfig(
+			open := store.OpenLocalWithConfig
+			if semanticLaunch != nil && semanticLaunch.request.LogicalStoreWork != "" {
+				open = store.OpenLocalWithConfigAndBoundedJobClaims
+			}
+			return open(
 				ctx,
 				cfg.Server.DataDir,
 				recovery.ConfigDigest(rawConfig),
@@ -745,6 +765,13 @@ func serve(args []string) (retErr error) {
 		Pins:     searchGenerationPins, Acquire: acquireLifecycleMutation,
 	}
 	lifecycleOwners = append(lifecycleOwners, searchGenerationOwner)
+	if semanticLaunch != nil && semanticLaunch.request.SelectorHandoffCleanup != "" && semanticLaunch.request.ServerEpoch <= 3 {
+		cleanup, cleanupErr := newT422SelectorCleanupControl(ctx, semanticLaunch, st, acquireObservationTransition)
+		if cleanupErr != nil {
+			return cleanupErr
+		}
+		exactReadState.selectorCleanup = cleanup
+	}
 	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 1 {
 		retention, retentionErr := newT422RetentionControl(ctx, semanticLaunch, searchGenerationOwner, searchGenerationPins)
 		if retentionErr != nil {
@@ -1105,12 +1132,27 @@ func serve(args []string) (retErr error) {
 		DataDir: cfg.Server.DataDir, Store: st,
 		Selections: cfg.ServiceCatalogs,
 	}
+	if semanticLaunch != nil {
+		v3CatalogReconciler.RequiredIndexedCommit = semanticLaunch.request.ReturnSourceCommit
+	}
 	serviceRuntime := newServiceRuntimeController(
 		cfg.Server.DataDir, st, cfg.ServiceCatalogs, v3CatalogReconciler,
 		relationshipRuntime, acquireLifecycleMutation, searchGenerationPins,
 		relationshipCache, relationshipV3Cache,
 	)
 	var markerControl *t422MarkerControl
+	var activationControl *t422ActivationControl
+	var staleControl *t422StaleControl
+	var checkpointControl *t422CheckpointControl
+	var checkpointRecovery *t422CheckpointRecoveryControl
+	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 2 {
+		activationControl, err = newT422ActivationControl(ctx, semanticLaunch, serviceRuntime)
+		if err != nil {
+			return err
+		}
+		defer activationControl.cancel()
+		exactReadState.activation = activationControl
+	}
 	if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 3 {
 		markerControl, err = newT422MarkerControl(ctx, semanticLaunch, relationshipRuntime, serviceRuntime, acquireObservationTransition)
 		if err != nil {
@@ -1248,6 +1290,7 @@ func serve(args []string) (retErr error) {
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st), Owners: owners,
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 	bindT4013ExactReports(exactReports, failExactReport, nil, runner, fetchRunner)
+	attemptReports.bindJobs(runner, fetchRunner)
 	runBackground(func() { runner.Run(ctx) })
 	runBackground(func() { fetchRunner.Run(ctx) })
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
@@ -1363,6 +1406,12 @@ func serve(args []string) (retErr error) {
 		},
 	}
 	bindT422ExactChunkReports(exactReads, failExactRead, observationScheduler)
+	attemptReports.bindChunk(observationScheduler)
+	if activationControl != nil {
+		class := observationScheduler.Classes[store.GenerationResourceCPU]
+		class.ControlledRelease = activationControl.controlledRelease
+		observationScheduler.Classes[store.GenerationResourceCPU] = class
+	}
 	runBackground(func() {
 		if err := observationScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 			diagnostics.Logf("observation scheduler stopped: %v", err)
@@ -1400,6 +1449,7 @@ func serve(args []string) (retErr error) {
 			},
 		}
 		bindT422ExactChunkReports(exactReads, failExactRead, relationshipScheduler)
+		attemptReports.bindChunk(relationshipScheduler)
 		runBackground(func() {
 			if err := relationshipScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 				diagnostics.Logf("relationship scheduler stopped: %v", err)
@@ -1601,6 +1651,38 @@ func serve(args []string) (retErr error) {
 				return nil
 			},
 		}
+		if semanticLaunch != nil && semanticLaunch.request.ServerEpoch == 3 {
+			staleControl, err = newT422StaleControl(ctx, semanticLaunch, partitionReconciler)
+			if err != nil {
+				return err
+			}
+			defer staleControl.cancel()
+			exactReadState.stale = staleControl
+			terminalPhase, terminalErr := dispatchadmission.ProductionTerminalPhase()
+			if terminalErr != nil {
+				return terminalErr
+			}
+			if terminalPhase != 0 {
+				checkpointControl, err = newT422CheckpointControl(ctx, staleControl)
+				if err != nil {
+					return err
+				}
+				defer checkpointControl.cancel()
+				exactReadState.checkpoint = checkpointControl
+				partitionRuntime.OnPartitionCheckpoint = checkpointControl.checkpoint
+				if err := dispatchadmission.BindProductionTerminalQuiescence(checkpointControl.quiesceAndReport); err != nil {
+					return err
+				}
+			}
+		}
+		if semanticLaunch != nil && semanticLaunch.request.CheckpointRecovery != nil {
+			checkpointRecovery, err = newT422CheckpointRecoveryControl(ctx, semanticLaunch, partitionReconciler)
+			if err != nil {
+				return err
+			}
+			defer checkpointRecovery.cancel()
+			exactReadState.checkpointRecovery = checkpointRecovery
+		}
 		candidateWorker.Diagnostics = cfg.Diagnostics.Candidates
 		if err := enqueueCandidateBackfillWithReadiness(
 			ctx, st, candidateWorker.PolicyDigest(), func(repository string) bool {
@@ -1716,6 +1798,7 @@ func serve(args []string) (retErr error) {
 			exactReports, failExactReport, candidateWorker,
 			candidateRunner, exRunner, resolverRunner, callerRunner,
 		)
+		attemptReports.bindJobs(candidateRunner, exRunner, resolverRunner, callerRunner)
 		runBackground(func() { candidateRunner.Run(ctx) })
 		runBackground(func() { exRunner.Run(ctx) })
 		partitionScheduler := &generationscheduler.Scheduler{
@@ -1743,8 +1826,23 @@ func serve(args []string) (retErr error) {
 				diagnostics.Logf("partitioned extraction scheduler unavailable: %v", err)
 			},
 		}
+		if staleControl != nil {
+			class := partitionScheduler.Classes[store.GenerationResourceExtraction]
+			class.BeforeLeaseHeartbeat, class.OnStaleLeaseTransition = staleControl.beforeHeartbeat, staleControl.transition
+			class.TerminalHeartbeat = checkpointControl != nil
+			partitionScheduler.Classes[store.GenerationResourceExtraction] = class
+		}
 		bindT422ExactChunkReports(exactReads, failExactRead, partitionScheduler)
+		if checkpointRecovery != nil {
+			class := partitionScheduler.Classes[store.GenerationResourceExtraction]
+			class.OnStaleLeaseTransition = checkpointRecovery.transition
+			partitionScheduler.Classes[store.GenerationResourceExtraction] = class
+		}
+		attemptReports.bindChunk(partitionScheduler)
 		runBackground(func() {
+			if checkpointRecovery != nil && checkpointRecovery.waitForReader(ctx) != nil {
+				return
+			}
 			if err := partitionScheduler.Run(ctx); err != nil && ctx.Err() == nil {
 				diagnostics.Logf("partitioned extraction scheduler stopped: %v", err)
 			}
@@ -1783,14 +1881,11 @@ func serve(args []string) (retErr error) {
 	})
 
 	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
-	if bin, err := indexer.FindBinary(); err != nil {
-		diagnostics.Logf("WARNING: zoekt-git-index unavailable — indexing disabled (make build provides the exact linked module pin; or set PHEBS_ZOEKT_GIT_INDEX): %v", err)
-	} else {
-		focusedBin, focusedErr := focusedindex.FindBinary()
-		if focusedErr != nil && len(analysisUnits) > 0 {
-			log.Print("WARNING: phebs-focused-index not found — indexing disabled for configured analysis units (make build provides it; or set PHEBS_FOCUSED_INDEX)")
-			focusedBin = ""
-		}
+	bin, focusedBin, err := admitStartupIndexer(len(analysisUnits) > 0)
+	if err != nil {
+		return err
+	}
+	if bin != "" {
 		ix := &indexer.Indexer{
 			DataDir:       cfg.Server.DataDir,
 			Bin:           bin,
@@ -1816,6 +1911,7 @@ func serve(args []string) (retErr error) {
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle, Owners: owners,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		bindT4013ExactReports(exactReports, failExactReport, nil, ixRunner)
+		attemptReports.bindJobs(ixRunner)
 		runBackground(func() { ixRunner.Run(ctx) })
 	}
 
@@ -2134,6 +2230,10 @@ func serve(args []string) (retErr error) {
 		finalAuthority = t421ExactFinalAuthorityRead{
 			Limits: t421FinalAuthorityReadLimits(), Read: reader.Read,
 		}
+		reader.stale = staleControl
+		reader.checkpoint = checkpointControl
+		reader.checkpointRecovery = checkpointRecovery
+		reader.selectorCleanup = exactReadState.selectorCleanup
 		tailReadiness = t421ExactFinalAuthorityRead{
 			Limits: t421TailReadinessLimits(), Read: reader.ReadTailReadiness,
 		}

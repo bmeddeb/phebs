@@ -93,8 +93,9 @@ func (custody *ExecutionAuthorCustody) authorNext(ctx context.Context, controlle
 		return result, ErrExecutionAuthorCustody
 	}
 	custody.mu.Lock()
+	borrowAllowed := borrower == nil || custody.next == 1 && producerID == 8 || custody.next == 2 && producerID == 9 && borrower.epoch.Epoch == 2
 	if custody.active || custody.closed || custody.err != nil || custody.next >= len(custody.expected) ||
-		custody.borrowedBy != borrower || borrower != nil && (custody.next != 1 || producerID != 8) {
+		custody.borrowedBy != borrower || !borrowAllowed {
 		custody.mu.Unlock()
 		return result, ErrExecutionAuthorCustody
 	}
