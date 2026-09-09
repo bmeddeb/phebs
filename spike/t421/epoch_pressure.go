@@ -115,7 +115,7 @@ func (reader *executionEpochInspection) pressureCommand(ctx context.Context, ope
 func (reader *executionEpochInspection) beginPressure(phase uint32) error {
 	reader.mu.Lock()
 	defer reader.mu.Unlock()
-	if reader.err != nil || reader.run == nil || !reader.run.pressureAllowed || reader.run.epoch.Epoch != 4 || !reader.finalUsed || phase < 9 || phase > 11 || len(reader.plan.PhaseOrder) < 11 {
+	if reader.err != nil || reader.run == nil || !reader.run.pressureAllowed || reader.run.epoch.Epoch != 4 || !reader.finalUsed || reader.pressureBaseline == nil || phase < 9 || phase > 11 || len(reader.plan.PhaseOrder) < 11 {
 		return errEpochInspection
 	}
 	wantStep := []uint8{1, 4, 5}[phase-9]
@@ -130,6 +130,7 @@ func (reader *executionEpochInspection) beginPressure(phase uint32) error {
 	}
 	reader.projection, reader.bounds = projection, rows[phase-1]
 	reader.progressCalls, reader.tailCalls, reader.progressReady = 0, 0, false
+	reader.lifecycleCalls = 0
 	reader.tail, reader.finalUsed = epochTailReadiness{}, false
 	return nil
 }

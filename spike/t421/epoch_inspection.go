@@ -3,6 +3,7 @@ package t421
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -87,6 +88,8 @@ type executionEpochInspection struct {
 	checkpointPrepared                 bool
 	checkpointHit, checkpointRecovered extractionpublication.CheckpointRestartTransition
 	pressure                           epochPressureObservations
+	lifecycleCalls                     uint64
+	pressureBaseline                   *[sha256.Size]byte
 	evidence                           epochInspectionLedger
 	err                                error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
@@ -508,12 +511,22 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	if reader.err != nil || !reader.progressReady || reader.tail.Status != "ready" || reader.finalUsed {
 		return authority, projection, report, errEpochInspection
 	}
+	if pressureInspectionPhase(reader.projection.Phase) && !reader.pressureFinalReady() {
+		return authority, projection, report, errEpochInspection
+	}
 	reader.finalUsed = true
 	raw, status, report, err := reader.read(ctx, "/api/t421/final-authority", epochFinalResponseBytes, epochInspectionReport{ControlFileReads: correctedFinalAuthorityControlReadMaximum, StoreReadAttempts: correctedFinalAuthorityStoreReadMaximum, MemberVisits: correctedFinalAuthorityMemberReadMaximum})
 	if err != nil || status != http.StatusOK {
 		return authority, projection, report, errEpochInspection
 	}
 	authority, projection, err = reader.decodeFinal(raw)
+	if err == nil && authority.Phase == "process_restart" && reader.run.pressureAllowed && reader.run.epoch.Epoch == 4 {
+		// decodeFinal has checked checkpoint recovery and byte equality with
+		// the canonical typed response. This commits the actual full F,
+		// including detailed roots, without copying its mutable return slices.
+		digest := sha256.Sum256(raw)
+		reader.pressureBaseline = &digest
+	}
 	if err == nil {
 		row := &reader.evidence.rows[len(reader.evidence.rows)-1]
 		row.Final = cloneInspectionFinal(ExecutionInspectionFinal{Ordinal: report.RequestOrdinal, Authority: authority.AuthorityState, Projection: projection})
@@ -555,7 +568,7 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" {
+	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && !pressureInspectionPhase(phase) {
 		return authority, projection, errEpochInspection
 	}
 	authority.Phase, authority.Outcome = phase, "passed"
@@ -570,6 +583,12 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 	}
 	if phase == "process_restart" {
 		if !reader.checkpointFinalMatches(authority) {
+			return authority, projection, errEpochInspection
+		}
+		return authority, projection, nil
+	}
+	if pressureInspectionPhase(phase) {
+		if reader.run == nil || !reader.run.pressureAllowed || reader.run.epoch.Epoch != 4 || reader.pressureBaseline == nil || sha256.Sum256(raw) != *reader.pressureBaseline {
 			return authority, projection, errEpochInspection
 		}
 		return authority, projection, nil

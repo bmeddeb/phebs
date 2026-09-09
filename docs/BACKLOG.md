@@ -6742,6 +6742,44 @@ coverage is borrowed from scoped inspection reads. This does not implement
 whole-phase live limits, every remaining census metric, native receipt issuance
 or a new rehearsal/freeze pass.
 
+**Pressure L/F reader closure (2026-09-09).** The exact parent reader now
+implements the existing lifecycle-status L route, with the frozen one-to-241
+range in phases nine/eleven and zero in phase ten. Each call consumes the same
+epoch ordinal and authenticates the zero-unit trailer. The bounded real Huma
+status envelope and sixteen selected owners are validated without promoting
+truthful pending/error/unavailable status into a completed cycle. Transition R
+remains the separate native proof. Final F requires the fixed completed R step
+and L range, then compares full authority, projection and detailed roots against
+the actual recovered epoch-four phase-eight F. The existing decoder already
+enforces canonical typed bytes, so one raw-body SHA-256 suffices; no additional
+canonical encoding or duplicate detailed-root retention was introduced.
+
+The isolated five-file manifest
+`85a8f640695823877ece365428a5361342c6c22c61b446d3397b28f0fb80797b`
+passed normal/race neighboring reader and inherited-handoff/checkpoint selectors
+in 2.189s/10.062s, pinned lint and whitespace. Independent review found all
+severity counts zero; its focused race passed in 7.847s. Tests use real Huma L
+serialization, actual exact HTTP trailers, four native-wire F responses and
+one shared ordinal sequence. Recovered checkpoint/R state is explicitly modeled,
+not evidence of pressure mutations or native lifecycle completion. Missing
+baseline/L/R, wrong epoch, changed detailed roots, noncanonical bytes and returned
+slice mutation are covered. Lead combines the already reviewed ledger additions
+with the pressure changes in epoch_inspection.go; the other four files remain
+byte-identical. The combined five-file manifest is
+`6c3218149794d5d5d30d6b4fe8c6f90fe0143540ad187a5fbb8b50cce8207e26`.
+Combined lead normal/race passed in 7.751s/29.559s. Lead static checks passed
+vet, zero lint findings and all-package compilation; documentation (0.428s),
+glossary and whitespace passed. Independent integration review found all severity
+counts zero, with its combined pressure/ledger race passing in 7.628s.
+
+Cost is one phase-local counter, one retained 32-byte digest, bounded eligible
+L HTTP/decode work and sixteen owner-name checks per L. Baseline plus three
+pressure comparisons hash at most one MiB each under the existing reader lock,
+without an extra body buffer or native read. Existing output/inspection retention
+is reused. No PC pair, lifecycle turn, worker, child, descriptor, admission bound
+or ordinary-runtime operation is added. The whole pressure operation, coherent
+whole-custody gauge, native ballast proof and complete receipt remain open.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure

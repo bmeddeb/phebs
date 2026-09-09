@@ -46,9 +46,10 @@ func TestExecutionEpochPressureReaderBoundary(t *testing.T) {
 	}
 	prefix := readaccounting.Counts{ControlFileReads: 2, StoreReadAttempts: 3, MemberVisits: 4}
 	for _, phase := range []uint32{9, 10, 11} {
-		for _, mode := range []string{"complete", "missing-final", "wrong-step", "wrong-prior", "unselected", "wrong-epoch", "wrong-catalog", "short-plan", "latched", "out-of-range"} {
+		for _, mode := range []string{"complete", "missing-final", "missing-baseline", "wrong-step", "wrong-prior", "unselected", "wrong-epoch", "wrong-catalog", "short-plan", "latched", "out-of-range"} {
 			t.Run(strconv.Itoa(int(phase))+"/"+mode, func(t *testing.T) {
 				reader := &executionEpochInspection{plan: plan, finalUsed: true, next: 77, reports: 5, totals: prefix,
+					pressureBaseline: &[32]byte{1}, lifecycleCalls: 7,
 					progressCalls: 6, tailCalls: 7, progressReady: true, tail: epochTailReadiness{Status: "complete"},
 					run: &ExecutionEpochOneRun{pressureAllowed: true, epoch: ExecutionEpochConfig{Epoch: 4, CatalogSHA256: projection.CatalogSource.SHA256}}}
 				reader.projection.Phase = []string{"process_restart", "pressure_80", "pressure_90"}[phase-9]
@@ -57,6 +58,8 @@ func TestExecutionEpochPressureReaderBoundary(t *testing.T) {
 				switch mode {
 				case "missing-final":
 					reader.finalUsed = false
+				case "missing-baseline":
+					reader.pressureBaseline = nil
 				case "wrong-step":
 					reader.pressure.step++
 				case "wrong-prior":
@@ -82,7 +85,7 @@ func TestExecutionEpochPressureReaderBoundary(t *testing.T) {
 					t.Fatal("epoch prefix or lifecycle step changed")
 				}
 				if mode == "complete" {
-					if reader.projection.Phase != plan.PhaseOrder[phase-1] || !reflect.DeepEqual(reader.bounds, rows[phase-1]) || reader.finalUsed || reader.progressCalls != 0 || reader.tailCalls != 0 || reader.progressReady || reader.tail != (epochTailReadiness{}) {
+					if reader.projection.Phase != plan.PhaseOrder[phase-1] || !reflect.DeepEqual(reader.bounds, rows[phase-1]) || reader.finalUsed || reader.progressCalls != 0 || reader.tailCalls != 0 || reader.lifecycleCalls != 0 || reader.progressReady || reader.tail != (epochTailReadiness{}) {
 						t.Fatal("phase-local boundary not reset")
 					}
 					if reader.beginPressure(phase) == nil {
