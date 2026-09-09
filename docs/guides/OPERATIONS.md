@@ -4885,6 +4885,19 @@ There is no operator environment/config override. An old sealed plan is not
 upgraded by running a newer binary; use newly reviewed exact-source preparation.
 Scoped test success does not establish a completed rehearsal or freeze.
 
+The separate `PHEBS_T422_EMPTY_PRESSURE_VOLUME=1` developer test selects only
+an empty native APFS custody check, not the checkpoint rehearsal or ceremony.
+It uses a fresh sparse image with `-layout NONE`, verifies exactly 96 GiB of
+filesystem capacity and enables filesystem ownership. Its small workspace
+write/read is removed before the empty-only teardown. Non-forced detach must
+succeed before the exact image is removed; no recursive mounted cleanup is
+available. A failed or uncertain check retains its private root for explicit
+operator handling. Never force-detach or recursively remove that root to turn
+a failed check into a pass. This component does not yet admit operational
+borrowers, supply full launcher accounting or clean populated replay custody.
+Existing rehearsal selectors are unchanged; this is not a pressure-phase or
+freeze result.
+
 ## Developing phebs
 
 

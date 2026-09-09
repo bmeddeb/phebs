@@ -6162,6 +6162,50 @@ Final record review found one low outdated ROADMAP next-step sentence; it was
 corrected to distinguish the completed OP component from remaining native
 phase/whole-work wiring. No Go source or test changed in that correction.
 
+**T42.2l empty pressure-volume prerequisite (2026-09-09).** Ben approved the
+bounded native geometry diagnostic, then implementation of owned preparation
+and teardown before pressure phases. A nominal GPT 96-GiB image measured
+102,869,458,944 filesystem bytes; the partitionless APFS recipe measured exactly
+103,079,215,104. Both diagnostic images detached without force and were removed.
+No capacity or admission bound changes. The unexported component now holds the
+existing run-root mutation lock and fixed hdiutil image, creates/attaches only a
+new sparse image with owners enabled, and validates native geometry and bounded
+attachment output. It records its own successful native Start session IDs,
+joins each command, and retains unknown/unsettled custody. Empty-only teardown
+refuses application content; after non-forced detach it removes only its exact
+backing image and empty control directories. There is no recursive deletion.
+
+The first working-tree native empty-volume gate passed in 12.03s (12.551s
+package time), including an owned tiny write/read, populated-workspace refusal,
+non-forced detach, recorded-session zero and exact image/root absence. The
+read-only review then required a shared Close session check for post-command
+refusals; that correction adds explicit live/unavailable-session lock-retention
+tests. Rereview closed the three original medium findings; its one low
+sticky-state gap was corrected by rejecting unsettled custody at every check.
+The final corrected-tree empty native gate and all pressure component tests
+passed under race in 3.518s (native subtest 1.67s), including a supplied sticky
+state refusal on otherwise valid native custody. All created images/roots were
+removed after non-forced detach; `hdiutil info` reported no attached image.
+Earlier focused component normal/race-three-repetition gates passed in
+0.713/1.862s; system-tool/session/pressure neighbors normal passed in 0.909s,
+and the existing shared-lock regressions passed under race in 3.213s. Static
+checks passed vet, pinned lint with zero issues and all-package compilation;
+docs passed in 0.500s, with glossary, format and whitespace clean. V1/V2 plan
+digests remain `96ba2091...14faf34` / `2275b8ca...9b422`.
+Final independent non-authoring, non-OCR seven-path source/record/cost review
+reported critical/high/medium/low zero. Its exact staged Go diff SHA-256 is
+`5f30429271b67de0a704b5a3bb87d353c1819c2a5521e0d711529db0e466149c`.
+Refreshed corrected-tree static checks passed glossary, vet, pinned lint with
+zero issues and all-package compilation; docs passed in 0.396s. Subsequent
+gate-record edits change documentation only. These close this empty-component
+gate, not a full package/repository test run or exact-tree ceremony merge bar.
+This is not complete launcher admission, operational borrower/lease closure,
+finite V3 outer-stage accounting or populated replay cleanup. Preparation
+HOME/TMP controls remain explicit local diagnostic custody outside the mounted
+workspace; the whole launcher's writable-volume policy is not established.
+The existing checkpoint rehearsal is unchanged. Pressure mutation, phases
+9–11 and freeze remain open; no full rehearsal is started by this slice.
+
 The remaining native implementation is explicitly broader than rerunning gates:
 
 - Phases 9–11: owned pressure-volume/ballast custody and actual pressure
