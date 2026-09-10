@@ -56,8 +56,8 @@ type epochProcessObservation struct {
 	fail         func()
 }
 
-// Names derive only from the already checked tool paths and closed native Git
-// aliases. Darwin PROC_PIDTASKALLINFO exposes a sixteen-byte command field;
+// Names derive from the checked tool paths and closed native Git/shell names.
+// Darwin PROC_PIDTASKALLINFO exposes a sixteen-byte command field;
 // aliases are truncated to that ABI width, never learned from sampled rows.
 // Classification does not attest the sampled row's executable image.
 func epochProcessNames(root string, tools []dispatchadmission.ProductionToolBinding) (map[string]string, error) {
@@ -91,8 +91,10 @@ func epochProcessNames(root string, tools []dispatchadmission.ProductionToolBind
 			return nil, ErrExecutionEpochOne
 		}
 	}
-	// /bin/sh is an existing separately admitted trusted-system Git resource.
-	if add("sh", "sh") != nil || len(names) > MaxProcessObservationNames {
+	// Darwin's /bin/sh dispatcher can exec /bin/bash through /var/select/sh.
+	// Classify that observed name only; this does not admit or bind the target
+	// image, prove helper closure, or learn arbitrary names from the host selector.
+	if add("sh", "sh") != nil || add("bash", "sh") != nil || len(names) > MaxProcessObservationNames {
 		return nil, ErrExecutionEpochOne
 	}
 	return names, nil

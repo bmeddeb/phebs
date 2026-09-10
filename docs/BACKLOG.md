@@ -6833,6 +6833,35 @@ matching helper, engine or gate. The two failed diagnostic custody roots remain
 private and retained, not replayed or deleted. Gate outputs are retained in the
 tool record, not separately archived native log files.
 
+**Darwin shell-name rehearsal refusal (2026-09-10).** A later operator run
+again selected old source `22c0268b`, not corrected tip `a1be5622`, and failed
+after 1,549.75 seconds just after cold HTTP readiness. The sampler retained
+`unknown_classification: PID=61630 name="bash"`; root/session teardown was
+clean, one inspection report was accepted, and pressure was not reached.
+The historical executable/parent chain was not retained and is not inferred
+as an established fact. A separate bounded host probe shows fixed `/bin/sh`
+executes `/bin/bash` and returns kernel command `bash` on this host, whose
+`/private/var/select/sh` points at `/bin/bash`.
+
+The correction adds only `bash` to the existing observed-name `sh` class:
+twelve fixed names, five classes, unchanged unknown-name refusal and numeric
+bounds. A native regression holds an actual `/bin/sh` on a builtin read after
+its readiness byte, samples its real row, checks classification and joins it.
+Pure tests exclude unlisted shells. This is not shell executable admission:
+target image/selector custody and full helper closure remain open before the
+launcher gate. Final focused normal/race passed in 1.305s/2.394s; the actual
+shell regression separately logged `bash` and passed in 0.01s (package0.681s).
+Vet and repository-pinned golangci-lint2.12.2 passed with zero issues;
+docs/glossary/whitespace passed. Initial lint found two unchecked test pipe-close
+returns, corrected before final gates. Independent source/cost review's one
+low startup-map cost wording issue was corrected; final re-review found all
+severity counts zero. Complete corrected `cmd/phebs` passed uncached in
+217.382s under its 15-minute package allowance, including the unchanged
+native workspace fixture with the pinned SurrealDB3.2.0 available. This closes
+the prior host-normal command-package prerequisite, not actual pressure or
+launcher admission. V1/V2 plan bytes remain unchanged. No fresh rehearsal or
+ceremony pass is claimed.
+
 **Mixed-generation rehearsal correction (2026-09-10).** The pressure run at
 `22c0268b229cd62ac855710d81b533dbf7766139` failed after 4,786.51 seconds,
 before pressure began. Functional cold/warm/physical/logical/return/stale

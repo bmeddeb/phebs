@@ -31,7 +31,8 @@ func TestEpochProcessNames(t *testing.T) {
 	tools := []dispatchadmission.ProductionToolBinding{{Role: "git", Path: "/private/tools/git"},
 		{Role: "surreal", Path: "/private/tools/surreal"}, {Role: "zoekt-git-index", Path: "/private/tools/zoekt-git-index"}}
 	names, err := epochProcessNames("/private/tools/phebs", tools)
-	if err != nil || len(names) != 11 || names["git-unpack-objects"] != "" || names["git-unpack-objec"] != "git" || names["sh"] != "sh" {
+	if err != nil || len(names) != 12 || names["git-unpack-objects"] != "" || names["git-unpack-objec"] != "git" ||
+		names["sh"] != "sh" || names["bash"] != "sh" || names["zsh"] != "" || names["dash"] != "" {
 		t.Fatal("native custody alias classification", names, err)
 	}
 	for _, test := range []struct {
