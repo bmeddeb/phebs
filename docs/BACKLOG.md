@@ -6790,6 +6790,49 @@ compilation; docs passed in 0.585s, glossary/whitespace passed and retained
 V1/V2 digests stayed unchanged. These are component gates, not the missing
 combined engine/FD6 or full-corpus proof.
 
+**Combined native workspace checkpoint fixture (2026-09-09).** The shared
+archive-retirement harness now has a workspace-only mode. Its actual selected
+subprocess owns the native SurrealDB engine and inherited authenticated FD6;
+real semantic decoding, request-token admission, Park, phase-nine DriveNormal,
+cursor SQL, capacity probes and the production workspace sampler compose in
+one run. It requires positive completed maxima, a later real SDK read and
+joined runner/store/lifetime/session/SA EOF. Sixteen sweeps and the bearer
+backend are explicitly modeled; host filesystem capacity is not a frozen
+pressure-volume observation. The one-MiB sibling lower bound alone does not
+isolate its contribution from database bytes. No protected-server constructor,
+network listener, real-owner deletion, cancellation-during-walk composition,
+parent byte collection or whole-corpus fit is established.
+
+The first attempt failed after 9.86s without retaining its child's complete
+failure detail. A bounded diagnostic-only run's tool output retained the actual 503
+request-admission refusal before any lifecycle turn: this fixture had omitted
+OpenRequests after Resume. The test now performs that actual control operation
+and FenceRequests before final Pause; no production code, gate predicate,
+deadline or numeric limit changed. The corrected native composition passed in
+85.12s (package 85.825s). A subsequent failure-only diagnostics correction
+drains bounded stdout after killing the session and before Wait closes its
+pipe, then reads stderr after Wait; both private streams are retained on
+failure.
+Ordered two-file manifest:
+`a2732c3f0c11d1e66170d098a9496bd107071ccdabb82dcd7c278633df25c3d2`
+for cmd/phebs/t422_backup_retirement_test.go, then
+cmd/phebs/t422_workspace_native_test.go. No runtime source changed from
+`e7e2c88c`.
+
+At those final test bytes, the three native selectors
+`TestT422(WorkspaceNativeComposition|BackupRetiredNativeEndpoint|RestoreRetiredNativeEndpoint)`
+passed uncached normal in 128.147s (backup 10.37s, restore 32.65s, workspace
+84.38s), then serial race in 130.434s (10.39s, 33.28s, 84.90s). Both commands
+used the pinned offline environment, count one and a five-minute package
+timeout. Independent source/cost/record review found critical/high/medium/low
+all zero. Pinned scoped lint and composed ci-static passed with zero findings,
+vet and all-package compilation; docs passed in 0.520s, glossary/whitespace
+passed and V1/V2 digests stayed unchanged. Successful runs confirmed native
+session emptiness and SA EOF before cleanup; the final process check found no
+matching helper, engine or gate. The two failed diagnostic custody roots remain
+private and retained, not replayed or deleted. Gate outputs are retained in the
+tool record, not separately archived native log files.
+
 **Parent-owned workspace sampling (2026-09-09).** The mounted workspace's
 actual held root now supplies byte observations across its source, protected
 inputs, home, temporary, data, backup and ballast siblings. Initial borrow and

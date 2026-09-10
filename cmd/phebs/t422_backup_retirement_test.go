@@ -33,14 +33,14 @@ const t422BackupFixture = "PHEBS_T422_BACKUP_RETIREMENT_TEST"
 // It does not reproduce protected executable custody, pressure/F, the frozen
 // corpus, BackupAndStop's author/epoch constructor or a whole phase receipt.
 func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
-	testT422ArchiveRetiredNativeEndpoint(t, false)
+	testT422ArchiveRetiredNativeEndpoint(t, false, false)
 }
 
 func TestT422RestoreRetiredNativeEndpoint(t *testing.T) {
-	testT422ArchiveRetiredNativeEndpoint(t, true)
+	testT422ArchiveRetiredNativeEndpoint(t, true, false)
 }
 
-func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
+func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool) {
 	surreal, err := exec.LookPath("surreal")
 	if err != nil {
 		t.Skip("surreal binary not installed")
@@ -84,6 +84,25 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 	record.Limits.Attempts, record.Limits.ActivePerProducer, record.Limits.WireBytes = 20, 2, 1<<20
 	record.Control = dispatchadmission.PhaseControlConfig{BackupEndpointCarry: true, OwnerControl: true,
 		Phases: []uint32{8, 9, 10, 11}, InitialPhase: 8, MaximumPhases: 4, MaximumWireBytes: 24 * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+	var workspaceFile *os.File
+	if workspace {
+		semantic, _ := t422LifecycleBootstrapRecord(t)
+		record.InputSHA256 = semantic.InputSHA256
+		root, err = filepath.EvalSymlinks(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		workspaceFile, err = os.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = workspaceFile.Close() })
+		binding, e := dispatchadmission.DescribeProductionWorkspace(workspaceFile, root)
+		if e != nil {
+			t.Fatal(e)
+		}
+		record.Workspace = &binding
+	}
 	for i := range record.Tools {
 		if record.Tools[i].Role == "surreal" {
 			record.Tools[i].Path = surreal
@@ -137,13 +156,20 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 			t.Fatal(e)
 		}
 		bootstrap.Store = &storeConfig
-		command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestT422BackupRetirementHelper$")
+		helper := "^TestT422BackupRetirementHelper$"
+		if workspace {
+			helper = "^TestT422WorkspaceNativeHelper$"
+		}
+		command := exec.CommandContext(ctx, os.Args[0], "-test.run="+helper)
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 		command.Cancel = func() error { return t4013.KillPrivateProcessSession(command.Process.Pid) }
 		command.Env = []string{t422BackupFixture + "=" + mode, "PHEBS_T422_BACKUP_FIXTURE_ROOT=" + root,
 			"PATH=" + filepath.Dir(surreal), "PHEBS_SURREAL=" + surreal, "PHEBS_SURREAL_SHA256=" + identity.SHA256,
 			dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector, "GORACE=atexit_sleep_ms=0"}
 		command.ExtraFiles = []*os.File{daChild, pcChild, storeChild}
+		if workspace {
+			command.ExtraFiles = append(command.ExtraFiles, workspaceFile)
+		}
 		command.WaitDelay = 5 * time.Second
 		input, e := command.StdinPipe()
 		if e != nil {
@@ -162,6 +188,11 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 			if command.ProcessState == nil {
 				_ = t4013.KillPrivateProcessSession(command.Process.Pid)
 				_ = command.Wait()
+			}
+			if t.Failed() {
+				if e := os.WriteFile(filepath.Join(root, mode+"-diagnostic.log"), diagnostic.Bytes(), 0o600); e != nil {
+					t.Error(e)
+				}
 			}
 			if err := t4013.WaitPrivateProcessSession(command.Process.Pid, time.Now().Add(5*time.Second)); err != nil {
 				_ = t4013.KillPrivateProcessSession(command.Process.Pid)
@@ -188,19 +219,33 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
 	server, output, input, served, control, diagnostic := start("server", record)
-	if !output.Scan() || !strings.HasPrefix(output.Text(), "endpoint=") {
+	failServer := func(stage string, cause error) {
+		t.Helper()
 		_ = t4013.KillPrivateProcessSession(server.Process.Pid)
-		_ = server.Wait()
 		lines := []string{output.Text()}
 		for len(lines) < 20 && output.Scan() {
 			lines = append(lines, output.Text())
 		}
-		t.Fatal("native startup", lines, diagnostic.String())
+		// Drain the killed pipe before Wait closes it; stderr's copier must
+		// instead join through Wait before its buffer can be read.
+		_ = server.Wait()
+		if e := os.WriteFile(filepath.Join(root, "server-output.log"), []byte(strings.Join(lines, "\n")), 0o600); e != nil {
+			t.Error(e)
+		}
+		t.Fatal(stage, cause, lines, output.Err(), diagnostic.String())
+	}
+	if !output.Scan() || !strings.HasPrefix(output.Text(), "endpoint=") {
+		failServer("native startup", nil)
 	}
 	endpoint := strings.TrimPrefix(output.Text(), "endpoint=")
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil || endpointURL.Host == "" {
 		t.Fatal("native endpoint", err)
+	}
+	if workspace {
+		if _, err = fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || output.Text() != "parked" {
+			failServer("native lifecycle park", err)
+		}
 	}
 	if err = control.DrainOwners(ctx); err != nil {
 		t.Fatal(err)
@@ -208,6 +253,45 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 	for phase := uint32(9); phase <= 11; phase++ {
 		if control.Pause(ctx) != nil || controller.Fence() != nil || transport.Fence() != nil || control.Checkpoint(ctx) != nil || controller.Advance() != nil || transport.Advance() != nil || control.Resume(ctx) != nil {
 			t.Fatal("phase transition", phase)
+		}
+		if workspace {
+			if err = control.OpenRequests(ctx); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || output.Text() != "measured_and_resumed" {
+				failServer("native lifecycle measurement", err)
+			}
+			if err = control.FenceRequests(ctx); err != nil {
+				t.Fatal(err)
+			}
+			if err = control.Pause(ctx); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = fmt.Fprintln(input, "close"); err != nil {
+				t.Fatal(err)
+			}
+			for output.Scan() {
+			}
+			if err = output.Err(); err != nil {
+				t.Fatal(err)
+			}
+			if err = server.Wait(); err != nil {
+				t.Fatal("native workspace helper", err, diagnostic.String())
+			}
+			if err = <-served; err != nil {
+				t.Fatal(err)
+			}
+			if err = transport.Wait(ctx, 5); err != nil {
+				t.Fatal(err)
+			}
+			if err = t4013.WaitPrivateProcessSession(server.Process.Pid, time.Now().Add(5*time.Second)); err != nil {
+				t.Fatal(err)
+			}
+			prefix, e := transport.Snapshot()
+			if e != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
+				t.Fatal("joined native store prefix", prefix, e)
+			}
+			return
 		}
 	}
 	if controller.Fence() != nil || transport.Fence() != nil || control.Pause(ctx) != nil || transport.Wait(ctx, 5) != nil || controller.RetireBackupEndpoint() != nil || controller.Advance() != nil || transport.Advance() != nil {
