@@ -39,6 +39,7 @@ type ExecutionAttemptObservation struct {
 	Cache             ExecutionCacheObservation
 	SourceCensus      ExecutionSourceCensusObservation
 	CatalogCensus     ExecutionCatalogCensusObservation
+	WorkspaceBytes    ExecutionWorkspaceByteObservation
 	Complete          bool
 	SourceBound       bool
 	AttemptBound      bool
@@ -52,6 +53,14 @@ type ExecutionAttemptObservation struct {
 // goroutines and its independently retained bootstrap input identity. Never
 // inspect a live checkoutCommandOutput or infer pipe EOF from a PC01 ACK.
 func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool) (out ExecutionAttemptObservation, err error) {
+	defer func() {
+		if err != nil {
+			out.WorkspaceBytes.Complete = false
+			if out.WorkspaceBytes.Bound && !out.WorkspaceBytes.LimitExceeded {
+				out.WorkspaceBytes.Unavailable = true
+			}
+		}
+	}()
 	if !joined || plan.Schema != PlanV3Schema || len(plan.PhaseOrder) != len(out.Phases) || len(plan.WorkEnvelope.Phases) != len(out.Phases) ||
 		executionWorkProducerByte(producer) == 0 || input == ([32]byte{}) || len(raw) > 64<<20 || plan.ProcessAccounting == nil ||
 		len(plan.ProcessAccounting.DispatchBudgets) != len(out.Phases) || !slices.Equal(plan.PhaseOrder, frozenPhaseOrder()) {
@@ -83,6 +92,10 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			out.Cache.Complete = out.Cache.complete()
 			out.SourceCensus.Complete = out.SourceCensus.complete()
 			out.CatalogCensus.Complete = out.CatalogCensus.complete()
+			if out.WorkspaceBytes.Bound && !out.WorkspaceBytes.finish() {
+				out.Complete = false
+				return out, errExecutionAttempts
+			}
 			if (out.Cache.Bound || producer >= 10) && !out.Cache.Complete || !out.SourceCensus.Complete || !out.CatalogCensus.Complete {
 				out.Complete, out.Lifecycle.Complete, out.SourceCensus.Complete = false, false, false
 				out.CatalogCensus.Complete = false
@@ -95,8 +108,14 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Offline archive commands install context observers, not server job or
 		// lifecycle sinks. A server-only stream cannot fill their measured zero.
-		if producer >= 10 && (reservedCompactAttempt(line) || reservedLifecycleEvent(line)) {
+		if producer >= 10 && (reservedCompactAttempt(line) || reservedLifecycleEvent(line) || reservedWorkspaceByteEvent(line)) {
 			return out, errExecutionAttempts
+		}
+		if observed, err := observeWorkspaceByteEvent(line, plan, producer, wantInput, &out.WorkspaceBytes); observed {
+			if err != nil || readErr != nil {
+				return out, errExecutionAttempts
+			}
+			continue
 		}
 		if observed, err := observeCensusEvent(line, plan, producer, wantInput, &out); observed {
 			if err != nil || readErr != nil {
@@ -155,7 +174,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed]) || reservedCatalogCensusEvent(raw[start:consumed])) {
+		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed]) || reservedCatalogCensusEvent(raw[start:consumed]) || reservedWorkspaceByteEvent(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -189,12 +208,17 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	} else if footer {
 		footerErr = errExecutionAttempts // No footer is valid in an ordinary close.
 	}
-	if err != nil || !result.Attempts.Lifecycle.Complete || !result.Attempts.Cache.Complete || !result.Attempts.SourceCensus.Complete || !result.Attempts.CatalogCensus.Complete || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
+	requireWorkspace := run.flow.workspace != nil && (run.producer() == 5 || run.producer() == 6)
+	if err != nil || !result.Attempts.Lifecycle.Complete || !result.Attempts.Cache.Complete || !result.Attempts.SourceCensus.Complete || !result.Attempts.CatalogCensus.Complete || requireWorkspace && !result.Attempts.WorkspaceBytes.Complete || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
 		result.Attempts.Complete = false
 		result.Attempts.Lifecycle.Complete = false
 		result.Attempts.Cache.Complete = false
 		result.Attempts.SourceCensus.Complete = false
 		result.Attempts.CatalogCensus.Complete = false
+		result.Attempts.WorkspaceBytes.Complete = false
+		if (requireWorkspace || result.Attempts.WorkspaceBytes.Bound) && !result.Attempts.WorkspaceBytes.LimitExceeded {
+			result.Attempts.WorkspaceBytes.Unavailable = true
+		}
 		result.IndexOffers.Complete = false
 		return ErrExecutionEpochOne
 	}
@@ -232,7 +256,7 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 		}
 		index := reservedTerminalIndex(line)
 		if seen && (reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
-			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line) || reservedResolverEvent(line) || reservedRelationshipEvent(line) || reservedCensusEvent(line) || reservedCatalogCensusEvent(line)) ||
+			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line) || reservedResolverEvent(line) || reservedRelationshipEvent(line) || reservedCensusEvent(line) || reservedCatalogCensusEvent(line) || reservedWorkspaceByteEvent(line)) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts
 		}

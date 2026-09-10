@@ -278,6 +278,7 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool)
 			if err = server.Wait(); err != nil {
 				t.Fatal("native workspace helper", err, diagnostic.String())
 			}
+			assertT422NativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256)
 			if err = <-served; err != nil {
 				t.Fatal(err)
 			}

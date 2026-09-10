@@ -6833,6 +6833,56 @@ matching helper, engine or gate. The two failed diagnostic custody roots remain
 private and retained, not replayed or deleted. Gate outputs are retained in the
 tool record, not separately archived native log files.
 
+**Joined child workspace-byte reporting (2026-09-09).** Actual FD6-enabled
+producers five/six bind their sampled-byte reporting to the existing private
+stderr stream and authenticated input. Fixed begin/success/failure records carry
+one gap-free producer-local sequence and monotonic phase. Success carries only
+the native SampleGuarded result after semantic confirmation, maximum commit
+and engine/SDK unlock. A later cancellation does not retroactively erase that
+completed result. Failed sampling emits no partial total; sink failure stops
+the control and keeps local earlier maxima.
+
+The parent collects the new family inside its existing immutable post-Wait
+attempt pass and retains per-phase attempted/completed counts and maxima.
+Missing, malformed, truncated, duplicate, gapped, foreign-producer, unsupported
+phase, unpaired and post-terminal records cannot supply successful evidence.
+Complete positive overshoots remain visible beside limit refusal; later native,
+output or other report failure cannot turn the subset into a complete receipt.
+Only actual workspace-enabled producer-five/six finishes require the binding;
+legacy absent bindings stay unbound, never fabricated zero observations.
+
+This closes joined reporting of existing lifecycle samples, not actual
+phase-start/parent-mutation/phase-finish coverage, live whole-phase limits,
+pressure orchestration or parent receipt issuance. Source-derived sample caps
+remain 4,097/1/4,098/4,096 for phases nine/ten/eleven/thirteen. The 79-byte
+bindings and 26+60-byte success pairs add at most 1,057,270 bytes across the two
+streams, within existing output accounting but not a proof of total log fit.
+No new scan, native work, numeric ceiling or ordinary runtime path is added.
+The owning PLAN row records framing, locking and fixed-state costs.
+
+Independent source/cost review without OCR found critical/high/medium/low all
+zero for child files `cmd/phebs/{t422_workspace_reports.go,
+t422_workspace_reports_test.go,t422_workspace_bytes.go,
+t422_backup_retirement_test.go}` in that order (ordered SHA-256 lines manifest
+`4a3c13de6195620a2fa8c68931a788861cc67542d3a3c459d08ab4aeeee5c1ec`)
+and parent files `spike/t421/{workspace_byte_observation.go,
+workspace_byte_observation_test.go,attempt_observation.go}` in that order
+(`e151a1069a31815121aae328fffc916fcdca22547195804f9bacc65c3f716aa4`).
+Separate owning-record review also found all severity counts zero. Failure
+maxima cover the validated prefix only, never an unparsed suffix. Focused child
+normal/race passed 0.615s/1.860s; parent workspace normal passed 0.647s, and
+the broader race selector `^TestExecution(WorkspaceBytes|Lifecycle|Attempt|Terminal)`
+passed 3.879s. Pinned ci-static passed vet, zero lint findings and all-package
+compilation; docs passed 0.596s, glossary and whitespace passed, and V1/V2
+digests remain unchanged. These are component gates, not the full merge bar.
+The actual inherited workspace/native engine fixture also passed normal in
+85.10s (package 85.742s) and race in 85.85s (package 87.704s), now asserting
+one genuine source-bound byte stream and sixteen actual completed native
+begin/success pairs. Its owner callbacks and bearer backend remain modeled,
+as recorded below; the assertion is not an independent parent-parser test,
+full pressure pass or all-phase byte coverage. Successful fixture teardown
+joined its native session and removed only its own temporary custody.
+
 **Parent-owned workspace sampling (2026-09-09).** The mounted workspace's
 actual held root now supplies byte observations across its source, protected
 inputs, home, temporary, data, backup and ballast siblings. Initial borrow and

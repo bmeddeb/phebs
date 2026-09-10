@@ -64,6 +64,15 @@ sequence.
 
 ## Now
 
+**T42.2 resumed completion, 2026-09-09:** the reviewed lifecycle workspace
+binding and combined native checkpoint fixture are pushed through `34bef2df`.
+The resumed measurement slice collects those actual child samples in the
+parent's joined output pass. Phase-boundary and parent-mutation samples, actual
+pressure progression, restored archive/query comparisons, whole-executor
+measurement, signed launcher and freeze gates remain open. No new rehearsal
+or ceremony is inferred from the component pass; the 2% usage-stop floor stays
+in force.
+
 **T42.2 byte-measurement approval, 2026-09-09:** Ben approves explicitly
 non-atomic sampled byte totals in prospective V3, with numerical limits and
 V1/V2 unchanged. Maxima refer to completed custody traversals, not point-in-time
