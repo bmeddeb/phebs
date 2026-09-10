@@ -111,17 +111,18 @@ type activeDispatch struct {
 }
 
 type producerState struct {
-	binding    [32]byte
-	sites      map[uint32]Site
-	ordinal    uint64
-	sequence   uint64
-	active     map[uint64]activeDispatch
-	checkpoint uint32
-	attached   bool
-	pid        int
-	eof        bool
-	closed     bool
-	hardDeath  bool
+	binding       [32]byte
+	sites         map[uint32]Site
+	ordinal       uint64
+	sequence      uint64
+	active        map[uint64]activeDispatch
+	checkpoint    uint32
+	attached      bool
+	pid           int
+	eof           bool
+	closed        bool
+	hardDeath     bool
+	backupRetired bool
 }
 
 // Controller retains only bounded configured rows and currently active tokens.
@@ -348,7 +349,8 @@ func (c *Controller) accept(producer uint32, frame frame) error {
 	}
 	// A carried handle may finish between global Advance and local Resume.
 	// Settlement changes no phase count and may use that producer's last fence.
-	if frame.phase != c.phases[c.phase].ID && (frame.op != opSettle || frame.phase != p.checkpoint) {
+	retiredClose := frame.op == opClose && producer == 5 && p.backupRetired && frame.phase == 11 && p.checkpoint == 11 && c.phases[c.phase].ID == 12
+	if frame.phase != c.phases[c.phase].ID && !retiredClose && (frame.op != opSettle || frame.phase != p.checkpoint) {
 		return c.failLocked(ErrProtocol)
 	}
 	p.sequence++

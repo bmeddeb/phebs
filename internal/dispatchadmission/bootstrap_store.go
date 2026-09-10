@@ -163,12 +163,17 @@ func (lifetime *ProductionLifetime) closeStore(ctx context.Context) error {
 		return nil
 	}
 	lifetime.storeMu.Lock()
+	if lifetime.storeRetired {
+		lifetime.storeMu.Unlock()
+		return nil
+	}
 	lifetime.storeClosed = true
 	client, owner := lifetime.storeClient, lifetime.storeOwner
 	lifetime.storeMu.Unlock()
 	defer lifetime.cancelStore()
-	// Main must return from joined service/store cleanup before this point.
-	// This actual ALL-call close is not proof of native connection/engine join.
+	// Ordinary close follows joined service/store cleanup. The separately
+	// authenticated retirement Pause closes only SDK/SA after owner drainage;
+	// this actual ALL-call close is not proof of native connection/engine join.
 	if owner == nil {
 		return errors.Join(ErrProductionBootstrap, client.Fail(ctx, storeaccounting.ErrIncomplete))
 	}

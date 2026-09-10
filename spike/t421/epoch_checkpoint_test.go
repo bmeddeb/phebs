@@ -352,7 +352,7 @@ func TestExecutionEpochCheckpointSourceBinding(t *testing.T) {
 	if !reflect.DeepEqual([]int{calls["killExecutionProcessSession"], calls["run.flow.controller.CloseHardDeath"]}, []int{1, 1}) {
 		t.Fatal("actual sole-Wait terminal branch missing", calls)
 	}
-	for name, want := range map[string]string{"CheckpointRestart": "return run.checkpointRestart(ctx, false)", "CheckpointRestartPressure": "return run.checkpointRestart(ctx, true)"} {
+	for name, want := range map[string]string{"CheckpointRestart": "return run.checkpointRestart(ctx, false, false)", "CheckpointRestartPressure": "return run.checkpointRestart(ctx, true, false)", "CheckpointRestartBackup": "return run.checkpointRestart(ctx, true, true)"} {
 		found := false
 		for _, d := range checkpointFile.Decls {
 			if f, ok := d.(*ast.FuncDecl); ok && f.Name.Name == name {

@@ -84,6 +84,7 @@ type ProductionLifetime struct {
 	cancelStore  context.CancelFunc
 	storeTaken   bool
 	storeClosed  bool
+	storeRetired bool
 }
 
 // ProductionSemanticSnapshot contains copied parent-bound launch identity and

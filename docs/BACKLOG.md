@@ -6624,6 +6624,43 @@ archive. Other failures and unmerged work remain intact. Post-removal free
 space was 141,225,148 KiB, above the existing 125,829,120-KiB preflight floor;
 this neither authorizes an automatic rerun nor proves the native ballast gate.
 
+**Retired endpoint backup component (2026-09-09).** The approved boundary now
+has a concrete parent command implementation and genuine selected SDK/SA/DA
+retirement. Producer five keeps its phase-eight-through-eleven mask; only its
+terminal close may follow the adjacent global advance. Producer ten owns the
+native backup. Successful return requires both native sessions joined; failures
+retain uncertain custody and fence further admission. Separate output streams
+share the existing 64-MiB allowance, preventing cross-process partial-frame
+interleaving without allocating a second allowance.
+
+The final sixteen-file source manifest is
+`4f1e8e2f1d05dd27ce8b119e4ad0e212476b893f932c4a333e7e683d6bc218ff`.
+Independent review reports critical/high/medium/low zero after correcting
+stream interleaving, unjoined-backup custody and late-failure fencing. Scoped
+normal tests passed command/dispatch/spike in 10.486s/0.846s/2.793s; matching
+race passed in 10.848s/1.663s/10.821s, with pinned lint reporting zero issues.
+The tiny native fixture uses an actual surrealkv engine, retires its SDK owner,
+runs the real backup CLI and verifies an emitted manifest, the backup's two
+native version/export attempts, live endpoint before shutdown and unavailable
+endpoint after joined shutdown. Successful fixture roots are removed only
+after session-empty checks; failed or uncertain roots remain. An earlier
+pre-engine fixture refusal was missing Surreal discovery in its private PATH,
+not a pipeline failure; the diagnostic is retained.
+
+This component test does not exercise the protected `BackupAndStop` author/
+epoch constructor, frozen corpus, preceding pressure/F or restore. The full
+runner/rehearsal caller, coherent whole-custody gauges, backup-tree process
+sampling, archive verification and later phases remain required. These scoped
+gates are not the complete merge bar or a freeze result.
+
+Lead integration preserves that exact sixteen-file manifest beside the already
+approved prospective restore counts. The combined focused race gate, including
+the native backup fixture and restore-count/retained-byte regressions, passed
+command/dispatch/spike in 10.942s/1.595s/11.717s. Pinned ci-static passed vet,
+zero lint issues and all-package compilation. Docs passed in 0.545s; glossary
+and whitespace passed. Independent source and record review found no remaining
+findings. Complete receipt/store/native phase gates remain separate.
+
 **Native failure-representation correction (2026-09-09).** Composition review at
 `1398502715004b551551b6628e9dbddc26cb37ef` found that
 `validatePhaseWorkMetrics` accepts an overbound counter only at exactly

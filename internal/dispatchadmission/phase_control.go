@@ -28,17 +28,21 @@ const (
 // The separate control socket preserves DA01's single-request echo protocol.
 type PhaseControlConfig struct {
 	// Zero values are omitted to preserve existing canonical bootstrap bytes.
-	TerminalAuthor   bool   `json:",omitempty"`
-	TerminalPhase    uint32 `json:",omitempty"`
-	OwnerControl     bool
-	Phases           []uint32
-	InitialPhase     uint32
-	MaximumPhases    int
-	MaximumWireBytes uint64
-	Timeout          time.Duration
+	TerminalAuthor      bool   `json:",omitempty"`
+	TerminalPhase       uint32 `json:",omitempty"`
+	BackupEndpointCarry bool   `json:",omitempty"`
+	OwnerControl        bool
+	Phases              []uint32
+	InitialPhase        uint32
+	MaximumPhases       int
+	MaximumWireBytes    uint64
+	Timeout             time.Duration
 }
 
 func (config PhaseControlConfig) validate() (int, error) {
+	if config.BackupEndpointCarry && (!config.OwnerControl || config.TerminalAuthor || config.TerminalPhase != 0 || config.InitialPhase != 8 || config.MaximumPhases != 4 || !slices.Equal(config.Phases, []uint32{8, 9, 10, 11})) {
+		return 0, ErrConfig
+	}
 	if config.TerminalPhase != 0 && (config.TerminalPhase != 8 || !config.OwnerControl || config.TerminalAuthor ||
 		config.InitialPhase != 6 || config.MaximumPhases != 3 || !slices.Equal(config.Phases, []uint32{6, 7, 8})) {
 		return 0, ErrConfig
@@ -320,6 +324,7 @@ func StartPhaseControl(ctx context.Context, file *os.File, client *Client, confi
 		client.controlAttached = true
 		client.controlTerminalAuthor = config.TerminalAuthor
 		client.controlTerminalPhase = config.TerminalPhase
+		client.backupEndpointCarry = config.BackupEndpointCarry
 		client.ownersRequired = config.OwnerControl
 		if config.OwnerControl {
 			client.ownersReady = make(chan struct{})
@@ -399,6 +404,9 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		switch frame.op {
 		case phasePause:
 			err = client.Pause(opCtx)
+			if err == nil && config.BackupEndpointCarry && frame.phase == 11 {
+				err = client.retireBackupEndpoint(opCtx)
+			}
 		case phaseCheckpoint:
 			err = client.Checkpoint(opCtx)
 		case phaseResume:

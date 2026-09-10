@@ -81,16 +81,22 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 // then transfers its retained source to epoch four in the SAME phase eight.
 // Its result still requires Health and RecoverCheckpoint; no receipt is made.
 func (run *ExecutionEpochOneRun) CheckpointRestart(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
-	return run.checkpointRestart(ctx, false)
+	return run.checkpointRestart(ctx, false, false)
 }
 
 // CheckpointRestartPressure retains the fixed phase-eight deadline and reserves
 // the three later pressure windows. It does not run ballast or prove pressure.
 func (run *ExecutionEpochOneRun) CheckpointRestartPressure(ctx context.Context) (*ExecutionEpochOneRun, error) {
-	return run.checkpointRestart(ctx, true)
+	return run.checkpointRestart(ctx, true, false)
 }
 
-func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure bool) (_ *ExecutionEpochOneRun, retErr error) {
+// CheckpointRestartBackup binds the endpoint-retirement capability to the
+// actual BackupAndStop consumer. It adds no server phase or lifetime time.
+func (run *ExecutionEpochOneRun) CheckpointRestartBackup(ctx context.Context) (*ExecutionEpochOneRun, error) {
+	return run.checkpointRestart(ctx, true, true)
+}
+
+func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure, backup bool) (_ *ExecutionEpochOneRun, retErr error) {
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.control == nil || run.epoch.Epoch != 3 {
 		return nil, ErrExecutionEpochOne
 	}
@@ -209,7 +215,7 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 	prior := reader.staleAuthority
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: run.healthLimit, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel,
-		checkpointRecovery: handoff, checkpointPrior: &prior, pressureAllowed: pressure, processPrior: &processPrior}
+		checkpointRecovery: handoff, checkpointPrior: &prior, pressureAllowed: pressure, processPrior: &processPrior, backupAllowed: backup}
 	next.setPhaseDeadlineLocked(deadline)
 	bounds := epochOneLimits{health: run.healthLimit, outputBytes: 64 << 20, controlPairs: 5}
 	if pressure {

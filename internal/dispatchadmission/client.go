@@ -42,6 +42,8 @@ type Client struct {
 	controlAttached               bool
 	controlTerminalAuthor         bool
 	controlTerminalPhase          uint32
+	backupEndpointCarry           bool
+	backupRetiring                bool
 	terminalState                 byte
 	terminalQuiesce               func(context.Context) error
 	controlPauseAcknowledged      bool
@@ -463,7 +465,7 @@ func (c *Client) checkpointOrClose(ctx context.Context, closeAll bool) error {
 		}
 	}
 	if !closeAll && c.storeLifetime != nil {
-		if err := c.storeLifetime.checkpointStore(ctx); err != nil {
+		if err := c.checkpointStoreForPhase(ctx); err != nil {
 			return c.fail(errors.Join(ErrIncomplete, err))
 		}
 	}

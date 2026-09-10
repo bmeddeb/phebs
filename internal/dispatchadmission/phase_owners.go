@@ -41,6 +41,9 @@ func (control *PhaseControl) ReopenOwners(ctx context.Context) error {
 }
 
 func nextConfiguredControlState(state byte, index int, op byte, config PhaseControlConfig) (byte, int, error) {
+	if config.BackupEndpointCarry && index == 3 && state == phasePause {
+		return 0, 0, ErrProtocol
+	}
 	if op == phaseTerminalQuiesce || state == phaseTerminalQuiesce || state == phaseTerminalCheckpoint {
 		if config.TerminalPhase == 8 && config.OwnerControl && config.Phases[index] == config.TerminalPhase {
 			if state == 0 && op == phaseTerminalQuiesce {

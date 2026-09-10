@@ -4911,6 +4911,14 @@ when the volume option is absent. Neither option adds ballast/pressure phases,
 complete launcher accounting or a freeze result; a full bound native rehearsal
 has not yet established this release path.
 
+The parent-bound V3 backup component can retire epoch four's store admission
+while retaining only its live native database endpoint for backup. The server
+cannot resume work in phase twelve; a separately admitted backup process owns
+the export, and the old server must join before restore. Failed or uncertain
+process joins retain custody. This is not an operator-selectable mode or a
+ceremony command: full pressure/backup/restore orchestration and freeze remain
+pending. Ordinary `phebs backup` behavior is unchanged.
+
 ## Developing phebs
 
 

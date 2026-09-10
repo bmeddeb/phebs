@@ -259,6 +259,16 @@ type ExecutionEpochOneRun struct {
 	checkpointRecovery    *epochCheckpointRecoveryInput
 	checkpointPrior       *AuthorityPhaseResult
 	pressureAllowed       bool
+	backupAllowed         bool
+	backupUsed            bool
+	backupRetired         bool
+	backupComplete        bool
+	backupStarted         bool
+	backupJoined          bool
+	backupSessionEmpty    bool
+	backupCancel          context.CancelFunc
+	backupDone            chan struct{}
+	backupOutput          *epochBackupOutput
 }
 
 func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -455,6 +465,11 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	command := exec.Command(path, "serve", "--config", epoch.ConfigPath)
 	command.Dir, command.Env = author.parent, environment
 	command.Stdin, command.Stdout, command.Stderr = files[5], output, output
+	if run.backupAllowed {
+		run.backupOutput = &epochBackupOutput{remaining: bounds.outputBytes, server: output,
+			backup: &checkoutCommandOutput{remaining: bounds.outputBytes, cancel: cancel}}
+		command.Stdout, command.Stderr = run.backupOutput, run.backupOutput
+	}
 	command.ExtraFiles = []*os.File{files[1], files[3], storeFile}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
@@ -513,6 +528,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		}
 	case 4:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{8, 9, 10, 11}, 8, 4
+		controlConfig.BackupEndpointCarry = run.backupAllowed
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
@@ -739,8 +755,15 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	returnCancel, returnDone := run.returnCancel, run.returnDone
 	staleCancel, staleDone := run.staleCancel, run.staleDone
 	checkpointCancel, checkpointDone := run.checkpointCancel, run.checkpointDone
+	backupCancel, backupDone := run.backupCancel, run.backupDone
 	terminal, terminalRequested := run.terminalEntered, run.terminalRequested
 	run.mu.Unlock()
+	if backupCancel != nil {
+		backupCancel()
+	}
+	if backupDone != nil {
+		<-backupDone
+	}
 	run.stopHealthDeadline()
 	if healthCancel != nil {
 		healthCancel()
@@ -785,10 +808,13 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	run.mu.Unlock()
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer stopCancel()
-	if !terminal && !joined && failure == nil && (!warm && run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
+	if !terminal && !joined && failure == nil && !run.backupRetired && (!warm && run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
 		failure = ErrExecutionEpochOne
 	}
-	if !terminal && (run.flow.parent.Pause(stopCtx) != nil || run.flow.controller.Fence() != nil) {
+	// A successful backup already joined producer ten while the retired server
+	// cannot admit work. Keep the parent active in twelve: same-phase Resume is
+	// forbidden, and a later restore may start only after this server join.
+	if !terminal && (!run.backupRetired || !run.backupComplete || failure != nil) && (run.flow.parent.Pause(stopCtx) != nil || run.flow.controller.Fence() != nil) {
 		failure = ErrExecutionEpochOne
 	}
 	// No sampler survives the owned signal/kill. Its last required live census
@@ -865,6 +891,12 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses}
+	// The retained installation also belongs to the separate backup session.
+	// A joined server alone cannot release that custody or expose shared output.
+	if run.backupStarted && (!run.backupJoined || !run.backupSessionEmpty) {
+		result.SessionEmpty = false
+		failure = ErrExecutionEpochOne
+	}
 	// Selectors have joined; inspection snapshot safety does not claim that
 	// native process/output teardown succeeded (RootJoined remains separate).
 	if run.inspection != nil {
@@ -905,6 +937,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if terminal || run.epoch.Epoch == 4 {
 		prefixOK = epochCheckpointClosedPrefix(ctx, result, terminal)
 	}
+	if run.backupRetired {
+		prefixOK = run.backupComplete && epochBackupClosedPrefix(ctx, result)
+	}
 	if ctx.Err() != nil || terminal && (run.terminalContext == nil || run.terminalContext.Err() != nil) {
 		failure = ErrExecutionEpochOne
 	}
@@ -914,11 +949,18 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if run.finishAttemptObservation(ctx, &result, death, failure) != nil {
 		failure = ErrExecutionEpochOne
 	}
+	if failure != nil && run.backupRetired && run.backupComplete {
+		// Final sampling, native/protocol joins and parsing can fail after the
+		// earlier successful-backup fence exemption. Never leave admission open.
+		run.mu.Unlock()
+		run.fenceFailedBackup(stopCtx)
+		run.mu.Lock()
+	}
 	run.result, run.err = result, failure
 	run.nativeStopErr = nativeStopErr
 	diagnostic.NativeStop = nativeStopErr
 	diagnostic.AdmissionAfterJoin = run.admissionFailure.Load()
-	if result.RootJoined && run.output != nil {
+	if result.RootJoined && (!run.backupStarted || run.backupJoined) && run.output != nil {
 		diagnostic.Output = run.output.err // The existing native join owns copier EOF.
 	}
 	run.stopDiagnostic = diagnostic

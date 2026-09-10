@@ -59,6 +59,9 @@ type ProductionBootstrap struct {
 }
 
 func (record ProductionBootstrap) validate() error {
+	if record.Control.BackupEndpointCarry && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 5 || record.Phase != 8 || record.Store == nil) {
+		return ErrProductionBootstrap
+	}
 	if record.validateStore() != nil {
 		return ErrProductionBootstrap
 	}

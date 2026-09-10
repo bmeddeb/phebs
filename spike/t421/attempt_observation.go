@@ -163,7 +163,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 // A stable buffer still need not be lossless: overflow, sink refusal, native
 // failure and protocol failure all preserve counts but prevent completeness.
 func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, result *ExecutionEpochOneResult, death executionProcessDeath, failure error) error {
-	if !result.RootJoined || run.output == nil {
+	if !result.RootJoined || run.backupStarted && !run.backupJoined || run.output == nil {
 		return ErrExecutionEpochOne // Do not inspect a possibly live buffer.
 	}
 	var err error
