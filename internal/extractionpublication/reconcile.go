@@ -19,7 +19,10 @@ import (
 
 type CandidateOpener func(context.Context, string) (*candidate.Publication, error)
 type CandidateReferenceReader func(context.Context, string) (candidate.State, error)
-type AuthorityReader func(context.Context, string) (source, observation string, err error)
+
+// AuthorityReader must bind the selected observation source to the supplied
+// candidate snapshot, not merely return whichever observation is current.
+type AuthorityReader func(context.Context, candidate.State) (source, observation string, err error)
 
 type extractionRunStore interface {
 	store.PartitionedExtractionRunStore
@@ -67,7 +70,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 	if err != nil || state.Repository != repository {
 		return "", errors.Join(err, ErrStale)
 	}
-	sourceReference, observationReference, err := reconciler.AuthorityReference(ctx, repository)
+	sourceReference, observationReference, err := reconciler.AuthorityReference(ctx, state)
 	if err != nil {
 		return "", err
 	}
@@ -91,11 +94,14 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 		return "", err
 	} else if reused {
 		confirmedState, candidateErr := reconciler.CandidateReference(ctx, repository)
+		if candidateErr != nil || confirmedState != state {
+			return "", errors.Join(candidateErr, ErrStale)
+		}
 		confirmedSource, confirmedObservation, authorityErr :=
-			reconciler.AuthorityReference(ctx, repository)
-		if candidateErr != nil || authorityErr != nil || confirmedState != state ||
+			reconciler.AuthorityReference(ctx, confirmedState)
+		if authorityErr != nil ||
 			confirmedSource != sourceReference || confirmedObservation != observationReference {
-			return "", errors.Join(candidateErr, authorityErr, ErrStale)
+			return "", errors.Join(authorityErr, ErrStale)
 		}
 		return target, nil
 	}
@@ -107,7 +113,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 	if err != nil {
 		return "", err
 	}
-	sourceDigest, observationDigest, err := reconciler.Authority(ctx, repository)
+	sourceDigest, observationDigest, err := reconciler.Authority(ctx, publication.State())
 	if err != nil {
 		return "", err
 	}

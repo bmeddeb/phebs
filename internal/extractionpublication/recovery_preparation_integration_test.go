@@ -397,7 +397,7 @@ func newRecoveryPreparationFixture(t *testing.T, ctx context.Context) *recoveryP
 		Executor:  &extract.EvidencePartitionExecutor{Evidence: fixture.evidence, Extractors: []extract.Extractor{extractor}},
 		Publisher: extractionpublication.StorePublisher{Store: state},
 	}
-	readAuthority := func(context.Context, string) (string, string, error) {
+	readAuthority := func(context.Context, candidate.State) (string, string, error) {
 		return fixture.authority.SourceGenerationDigest, fixture.authority.ObservationGenerationDigest, nil
 	}
 	readCandidate := func(ctx context.Context, repository string) (candidate.State, error) {

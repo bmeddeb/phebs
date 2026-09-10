@@ -7381,3 +7381,10 @@ This selector does not execute the ceremony or establish archive/query,
 whole-executor measurement, signed launcher, freeze or scale claims. The full
 pressure rehearsal is still a pending gate; no command is presented here as
 ready to run merely because the selector exists.
+
+Partitioned extraction waits when the indexed source, candidate commit and
+published observation source have not converged. This ordering mismatch is a
+dependency deferral, not a reason to widen work limits or rebuild against mixed
+inputs. Corrupt or missing installed controls remain errors. A successful
+phase response alone does not prove its work budget: joined-output validation
+can still refuse the epoch, as the retained `22c0268b` run did at checkpoint.

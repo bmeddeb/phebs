@@ -363,7 +363,7 @@ func (reconciler *Reconciler) confirmRecoveryReferences(ctx context.Context, aut
 	if authority.ExtractionPolicyDigest != policy {
 		return ErrStale
 	}
-	source, observation, err := reconciler.AuthorityReference(ctx, authority.Repository)
+	source, observation, err := reconciler.AuthorityReference(ctx, state)
 	if err != nil || source != authority.SourceGenerationDigest || observation != authority.ObservationGenerationDigest {
 		return errors.Join(err, ErrStale)
 	}

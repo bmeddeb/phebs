@@ -75,6 +75,33 @@ func TestCurrentInventoryAuthorityReferenceV2ReadAccounting(t *testing.T) {
 	}
 }
 
+func TestConfirmInventoryAuthorityReferenceV2RejectsUnconfirmedSelection(t *testing.T) {
+	root, repository, expected := readAccountingInventoryFixture(t)
+	selected, err := ReadInventoryPublicationRootV2(root, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*InventoryPublicationRootV2)
+		valid  bool
+	}{
+		{"exact", func(*InventoryPublicationRootV2) {}, true},
+		{"wrong repository", func(v *InventoryPublicationRootV2) { v.Repository = "example/wrong" }, false},
+		{"wrong source", func(v *InventoryPublicationRootV2) { v.Current.SourceRootDigest = v.Current.InventoryDigest }, false},
+		{"wrong inventory", func(v *InventoryPublicationRootV2) { v.Current.InventoryDigest = v.Current.SourceRootDigest }, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			value := selected
+			test.mutate(&value)
+			got, err := ConfirmInventoryAuthorityReferenceV2(t.Context(), root, repository, value)
+			if test.valid && (err != nil || got != expected) || !test.valid && (err == nil || got != (InventoryAuthorityV2{})) {
+				t.Fatalf("confirmation = %+v, %v", got, err)
+			}
+		})
+	}
+}
+
 func TestCurrentInventoryDownstreamAuthorityV2ReadAccounting(t *testing.T) {
 	root, repository, _ := readAccountingInventoryFixture(t)
 	want, err := CurrentInventoryDownstreamAuthorityV2(t.Context(), root, repository)

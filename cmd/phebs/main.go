@@ -59,6 +59,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/observationpublication"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
+	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
@@ -99,15 +100,33 @@ func deferPendingPartitionAuthority(err error) (error, bool) {
 	return err, false
 }
 
-func partitionFenceAuthority(ctx context.Context, root, repository string) (string, string, error) {
-	if _, err := observationpublication.ReadInventoryPublicationRootV2Context(ctx, root, repository); err != nil {
+func partitionFenceAuthority(ctx context.Context, root, indexRoot string, state candidate.State) (string, string, error) {
+	selected, err := observationpublication.ReadInventoryPublicationRootV2Context(ctx, root, state.Repository)
+	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "", "", fmt.Errorf("%w: %v", errPartitionAuthorityPending, err)
 		}
 		return "", "", err
 	}
-	authority, err := observationpublication.CurrentInventoryAuthorityReferenceV2(ctx, root, repository)
-	return authority.SourceGenerationDigest, authority.ObservationGenerationDigest, err
+	authority, err := observationpublication.ConfirmInventoryAuthorityReferenceV2(ctx, root, state.Repository, selected)
+	if err != nil {
+		return "", "", err
+	}
+	return partitionAuthorityForCandidate(ctx, indexRoot, state, authority)
+}
+
+// Bind both independently published inputs before planning, reuse or commit.
+// The source manifest is bounded control metadata, never a member/corpus scan.
+func partitionAuthorityForCandidate(ctx context.Context, indexRoot string, state candidate.State, authority observationpublication.InventoryAuthorityV2) (string, string, error) {
+	source, err := repositoryindex.ReadSourceManifestContext(ctx, indexRoot, state.Repository)
+	if err != nil {
+		return "", "", err
+	}
+	if len(source.Revisions) == 0 || source.Revisions[0].Selector != "HEAD" ||
+		source.Revisions[0].Commit != state.Commit || source.Digest != authority.SourceGenerationDigest {
+		return "", "", errors.Join(errPartitionAuthorityPending, extractionpublication.ErrStale)
+	}
+	return authority.SourceGenerationDigest, authority.ObservationGenerationDigest, nil
 }
 
 func afterResolverPublication(
@@ -1568,20 +1587,22 @@ func serve(args []string) (retErr error) {
 		}
 		readPartitionAuthority := func(
 			authorityCtx context.Context,
-			repository string,
+			state candidate.State,
 		) (string, string, error) {
 			authority, authorityErr := observationpublication.CurrentInventoryAuthorityV2(
-				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), repository,
+				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), state.Repository,
 			)
-			return authority.SourceGenerationDigest,
-				authority.ObservationGenerationDigest, authorityErr
+			if authorityErr != nil {
+				return "", "", authorityErr
+			}
+			return partitionAuthorityForCandidate(authorityCtx, filepath.Join(cfg.Server.DataDir, "index"), state, authority)
 		}
 		readPartitionFenceAuthority := func(
 			authorityCtx context.Context,
-			repository string,
+			state candidate.State,
 		) (string, string, error) {
 			return partitionFenceAuthority(
-				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), repository,
+				authorityCtx, filepath.Join(cfg.Server.DataDir, "observations"), filepath.Join(cfg.Server.DataDir, "index"), state,
 			)
 		}
 		partitionRuntime = &extractionpublication.Runtime{
@@ -1603,10 +1624,13 @@ func serve(args []string) (retErr error) {
 			candidateState, candidateErr := readPartitionCandidateReference(
 				currentCtx, repository,
 			)
+			if candidateErr != nil {
+				return false
+			}
 			source, observation, authorityErr := readPartitionFenceAuthority(
-				currentCtx, repository,
+				currentCtx, candidateState,
 			)
-			if candidateErr != nil || authorityErr != nil {
+			if authorityErr != nil {
 				return false
 			}
 			extractionPolicy, policyErr := candidate.ExtractionPolicyDigest(candidateState.PolicyDigest, semanticLaunch != nil)
@@ -1676,7 +1700,7 @@ func serve(args []string) (retErr error) {
 					state.PolicyDigest != plan.CandidatePolicyDigest {
 					return extractionpublication.ErrStale
 				}
-				source, observation, fenceErr := readPartitionFenceAuthority(fenceCtx, plan.Repository)
+				source, observation, fenceErr := readPartitionFenceAuthority(fenceCtx, state)
 				if fenceErr != nil {
 					return fenceErr
 				}

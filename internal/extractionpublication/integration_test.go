@@ -212,7 +212,7 @@ func TestReconcilerReservesBeforeContentAndReusesRunOnRestart(t *testing.T) {
 			fullCandidateReads++
 			return fixture.publication, nil
 		},
-		Authority: func(context.Context, string) (string, string, error) {
+		Authority: func(context.Context, candidate.State) (string, string, error) {
 			fullAuthorityReads++
 			return sourceDigest, observationDigest, nil
 		},
@@ -226,7 +226,7 @@ func TestReconcilerReservesBeforeContentAndReusesRunOnRestart(t *testing.T) {
 			}
 			return state, nil
 		},
-		AuthorityReference: func(context.Context, string) (string, string, error) {
+		AuthorityReference: func(context.Context, candidate.State) (string, string, error) {
 			if transitionAuthority {
 				transitionReferenceReads++
 				if transitionReferenceReads > 1 {
@@ -335,13 +335,13 @@ func TestReconcilerRestoresExcludedControlsFromCurrentStoreAuthority(t *testing.
 		OpenCandidate: func(context.Context, string) (*candidate.Publication, error) {
 			return fixture.publication, nil
 		},
-		Authority: func(context.Context, string) (string, string, error) {
+		Authority: func(context.Context, candidate.State) (string, string, error) {
 			return sourceDigest, observationDigest, nil
 		},
 		CandidateReference: func(context.Context, string) (candidate.State, error) {
 			return fixture.publication.State(), nil
 		},
-		AuthorityReference: func(context.Context, string) (string, string, error) {
+		AuthorityReference: func(context.Context, candidate.State) (string, string, error) {
 			return sourceDigest, observationDigest, nil
 		},
 	}

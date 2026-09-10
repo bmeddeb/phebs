@@ -83,7 +83,7 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 		CandidateReference: func(ctx context.Context, repository string) (candidate.State, error) {
 			return fixture.provider.CurrentPublicationState(ctx, repository, nil)
 		},
-		Authority: fixture.readAuthority, AuthorityReference: fixture.readAuthority,
+		Authority: fixture.readCandidateAuthority, AuthorityReference: fixture.readCandidateAuthority,
 		// Configure the explicit test-only owner before any worker invocation.
 		RecoveryPreparationEnabled: true,
 		StoreAccounting:            storeAccounting,
@@ -134,6 +134,13 @@ func (fixture *productionRuntimeIdentity) close(t *testing.T) {
 		t.Errorf("close native extraction constructor store: %v", err)
 	}
 	fixture.state = nil
+}
+
+func (fixture *productionRuntimeIdentity) readCandidateAuthority(ctx context.Context, state candidate.State) (string, string, error) {
+	if state.Commit != fixture.selected.Commit {
+		return "", "", extractionpublication.ErrStale
+	}
+	return fixture.readAuthority(ctx, state.Repository)
 }
 
 func (fixture *productionRuntimeIdentity) readAuthority(ctx context.Context, repository string) (string, string, error) {

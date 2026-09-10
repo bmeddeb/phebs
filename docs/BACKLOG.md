@@ -6833,6 +6833,48 @@ matching helper, engine or gate. The two failed diagnostic custody roots remain
 private and retained, not replayed or deleted. Gate outputs are retained in the
 tool record, not separately archived native log files.
 
+**Mixed-generation rehearsal correction (2026-09-10).** The pressure run at
+`22c0268b229cd62ac855710d81b533dbf7766139` failed after 4,786.51 seconds,
+before pressure began. Functional cold/warm/physical/logical/return/stale
+boundaries were reached, but return-A work was not within its envelope:
+20,004 resolver reads and 19,552,186 bytes doubled the exact one-build limits.
+Joined-log replay identifies the first excess at read 10,003; terminal fence
+and native join were clean. Retained extraction plans prove one A candidate
+was combined first with B source/observation, then with A source/observation.
+The mounted failure remains retained, not retried or cleaned up.
+
+Authority callbacks now receive the exact candidate snapshot. Production
+planning, reuse, recovery, settlement and final publication require indexed
+HEAD to match candidate commit and indexed source digest to match observation
+source. Mismatch keeps both pending and stale classifications, avoiding a
+retry-consuming fence failure. Missing installed controls remain errors.
+Four fast-reference control reads remain four; full planning adds one bounded
+source-manifest read. PLAN records its up-to-8-MiB/16,384-descriptor metadata
+validation and existing lock costs. No numerical limit or V1/V2 bytes change.
+Real tiny-Git fixtures cover three input-ordering mismatches and exact read
+charging; the reconciler regression refuses before content opens or mutation.
+Corrected-tree focused normal gates passed command/observation/extraction/spike
+in 1.933s/1.403s/0.880s/1.487s; corresponding broader race selectors (including
+real-store recovery preparation) passed in 3.352s/3.294s/17.826s/6.704s. Pinned
+ci-static passed vet, zero lint issues and all-package compilation; final docs
+passed in 0.542s, glossary and whitespace passed, and V1/V2 digests stayed exact.
+Independent corrected-root implementation and records review found all severity
+counts zero; the lead independently reviewed the delegated extraction API/test
+slice. The exact Go diff SHA-256 is
+`03f4735c5f034bed368a65ca90bf0042d8224be1af79578fddb58ea7c6791918`.
+
+The earlier full three-package command, started before the final error-class
+and reuse-short-circuit edits, passed observation/extraction in 47.269s/55.426s
+but failed command in 335.681s: TestT422WorkspaceNativeComposition reached its
+unchanged 180-second deadline while continuing pressure-mode owner turns.
+Its native fixture and logs remain retained. A subsequent read-only call to
+the actual Gate on that fixture returned 87% used, pressure=collect, with no
+probe error; the fixture requires an exact-normal cycle. No matching fixture
+process remained after join. This is not a full-package pass or an exact-final
+full run; host-normal native confirmation remains mandatory before rehearsal
+readiness. Neither a skip, waiver nor timeout increase was applied. This is not
+a native pressure pass, freeze, or ceremony authorization.
+
 **Pressure sampling and parent sequence (2026-09-10).** The parent now owns
 the fixed 80/90/75 progression on the actual recovered epoch-four endpoint and
 its prepared volume. A separate explicit rehearsal selector prepares the zero

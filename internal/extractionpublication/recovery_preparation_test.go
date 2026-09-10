@@ -95,11 +95,11 @@ func newRecoveryPreparationFixtureForRepository(t *testing.T, mode, repository s
 		OpenCandidate: func(context.Context, string) (*candidate.Publication, error) {
 			return candidateFixture.publication, nil
 		},
-		Authority: func(context.Context, string) (string, string, error) { return source, observation, nil },
+		Authority: func(context.Context, candidate.State) (string, string, error) { return source, observation, nil },
 		CandidateReference: func(context.Context, string) (candidate.State, error) {
 			return candidateFixture.publication.State(), nil
 		},
-		AuthorityReference: func(context.Context, string) (string, string, error) { return source, observation, nil },
+		AuthorityReference: func(context.Context, candidate.State) (string, string, error) { return source, observation, nil },
 	}
 	target, err := fixture.reconciler.Reconcile(t.Context(), repository)
 	if err != nil {

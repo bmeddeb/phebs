@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -35,12 +36,18 @@ func TestReconcilerExtractionPolicyIsolatesDurableRuns(t *testing.T) {
 	runtime, _, _, _, _, _, _ := newRuntimeFixture(t, buildTestPlan(t, source, true))
 	runtime.Root = t.TempDir()
 	evidence := &policyRunStore{}
+	readAuthority := func(_ context.Context, state candidate.State) (string, string, error) {
+		if state != fixture.publication.State() {
+			t.Fatalf("authority received a different candidate snapshot: %+v", state)
+		}
+		return source, observation, nil
+	}
 	reconciler := &Reconciler{
 		Root: runtime.Root, CandidateRoot: fixture.candidateDirectory, Runtime: runtime, Evidence: evidence,
 		OpenCandidate:      func(context.Context, string) (*candidate.Publication, error) { return fixture.publication, nil },
 		CandidateReference: func(context.Context, string) (candidate.State, error) { return fixture.publication.State(), nil },
-		Authority:          func(context.Context, string) (string, string, error) { return source, observation, nil },
-		AuthorityReference: func(context.Context, string) (string, string, error) { return source, observation, nil },
+		Authority:          readAuthority,
+		AuthorityReference: readAuthority,
 	}
 	var generations [2]string
 	var domains [2]DomainPlan
@@ -102,5 +109,42 @@ func TestReconcilerExtractionPolicyIsolatesDurableRuns(t *testing.T) {
 	}
 	if begins, _ := evidence.counts(); begins != 2 {
 		t.Fatalf("partial replay created %d runs", begins)
+	}
+}
+
+func TestReconcilerRefusesUnalignedCandidateBeforeOpeningContent(t *testing.T) {
+	state := candidate.State{
+		Repository: "example.invalid/unaligned", Commit: strings.Repeat("a", 40),
+		UnitDigest: "sha256:" + strings.Repeat("b", 64),
+	}
+	root := t.TempDir()
+	evidence := &testExtractionRunStore{}
+	checks := 0
+	reconciler := &Reconciler{
+		Root: root, CandidateRoot: root, Runtime: &Runtime{}, Evidence: evidence,
+		CandidateReference: func(context.Context, string) (candidate.State, error) { return state, nil },
+		AuthorityReference: func(_ context.Context, got candidate.State) (string, string, error) {
+			checks++
+			if got != state {
+				t.Fatalf("authority received %+v, want %+v", got, state)
+			}
+			return "", "", ErrStale
+		},
+		OpenCandidate: func(context.Context, string) (*candidate.Publication, error) {
+			t.Fatal("unaligned candidate opened before reference refusal")
+			return nil, nil
+		},
+		Authority: func(context.Context, candidate.State) (string, string, error) {
+			t.Fatal("unaligned candidate reached full authority inspection")
+			return "", "", nil
+		},
+	}
+	if target, err := reconciler.Reconcile(t.Context(), state.Repository); target != "" || !errors.Is(err, ErrStale) {
+		t.Fatalf("unaligned reconcile = %q, %v", target, err)
+	}
+	entries, err := os.ReadDir(root)
+	begins, aborts := evidence.counts()
+	if err != nil || len(entries) != 0 || checks != 1 || begins != 0 || aborts != 0 {
+		t.Fatalf("refusal did work: entries=%d checks=%d begins=%d aborts=%d err=%v", len(entries), checks, begins, aborts, err)
 	}
 }

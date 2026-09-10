@@ -33,6 +33,19 @@ func CurrentInventoryAuthorityReferenceV2(
 	if err != nil {
 		return InventoryAuthorityV2{}, err
 	}
+	return ConfirmInventoryAuthorityReferenceV2(ctx, root, repository, selected)
+}
+
+// ConfirmInventoryAuthorityReferenceV2 validates an already-read pointer's
+// source root and rereads the pointer. Callers must not use the supplied
+// selection as authority without this confirmation.
+func ConfirmInventoryAuthorityReferenceV2(ctx context.Context, root, repository string, selected InventoryPublicationRootV2) (InventoryAuthorityV2, error) {
+	if err := ctx.Err(); err != nil {
+		return InventoryAuthorityV2{}, err
+	}
+	if err := validateInventoryPublicationRootV2(selected, repository); err != nil {
+		return InventoryAuthorityV2{}, err
+	}
 	directory := inventoryGenerationDirectoryV2(root, repository, selected.Current.GenerationDigest)
 	sourceRoot, err := sourcepartition.ReadSuperRootContext(
 		ctx, filepath.Join(directory, InventoryPublicationSourceNameV2), repository,

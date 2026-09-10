@@ -32,6 +32,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -107,9 +108,9 @@ func TestPartitionFenceAuthorityReadAccounting(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			gotSource, gotObservation, readErr := partitionFenceAuthority(scoped, root, repository)
+			gotSource, gotObservation, readErr := partitionFenceAuthority(scoped, root, sourceDirectory, candidate.State{Repository: repository, Commit: commit})
 			counts, accountingErr := ledger.Finish()
-			wantReads := uint64(4) // precheck + selected pointer + source root + pointer confirmation
+			wantReads := uint64(4) // selected pointer + source root + confirmation + indexed source manifest
 			if limit < 4 {
 				wantReads = limit + 1 // denied-attempt sentinel, not an executed read
 				if readErr == nil || gotSource != "" || gotObservation != "" || !errors.Is(accountingErr, readaccounting.ErrLimit) {
@@ -127,10 +128,40 @@ func TestPartitionFenceAuthorityReadAccounting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = partitionFenceAuthority(scoped, t.TempDir(), repository)
+	_, _, err = partitionFenceAuthority(scoped, t.TempDir(), sourceDirectory, candidate.State{Repository: repository, Commit: commit})
 	counts, accountingErr := ledger.Finish()
 	if !errors.Is(err, errPartitionAuthorityPending) || accountingErr != nil || counts != (readaccounting.Counts{ControlFileReads: 1}) {
 		t.Fatalf("missing initial authority: %v; counts %+v, %v", err, counts, accountingErr)
+	}
+	// Both mismatch directions occur while the index, candidate and observation
+	// workers publish independently. Neither may create a mixed extraction plan.
+	if err := os.WriteFile(filepath.Join(directory, "a.go"), []byte("package demo\nconst A = 2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t307Git(t, directory, "add", "--", "a.go")
+	t307Git(t, directory, "-c", "user.name=Neutral", "-c", "user.email=neutral@example.invalid", "commit", "-q", "-m", "next generation")
+	nextCommit := strings.TrimSpace(t307Git(t, directory, "rev-parse", "HEAD"))
+	nextDirectory := filepath.Join(t.TempDir(), "source")
+	if _, err := repositoryindex.BuildSourceGeneration(ctx, directory, nextDirectory, repository,
+		[]store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: nextCommit}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct{ name, indexRoot, candidateCommit string }{
+		{"candidate ahead of source", sourceDirectory, nextCommit},
+		{"observation behind source and candidate", nextDirectory, nextCommit},
+		{"candidate behind source", nextDirectory, commit},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			scoped, ledger, err := readaccounting.Start(ctx, readaccounting.Counts{ControlFileReads: 4})
+			if err != nil {
+				t.Fatal(err)
+			}
+			source, observation, err := partitionFenceAuthority(scoped, root, test.indexRoot, candidate.State{Repository: repository, Commit: test.candidateCommit})
+			counts, accountingErr := ledger.Finish()
+			if !errors.Is(err, errPartitionAuthorityPending) || !errors.Is(err, extractionpublication.ErrStale) || source != "" || observation != "" || accountingErr != nil || counts != (readaccounting.Counts{ControlFileReads: 4}) {
+				t.Fatalf("mixed authority admitted or mischarged: %q %q %v; %+v %v", source, observation, err, counts, accountingErr)
+			}
+		})
 	}
 }
 

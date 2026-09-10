@@ -64,6 +64,14 @@ sequence.
 
 ## Now
 
+**T42.2 input-alignment correction, 2026-09-10:** the pressure rehearsal at
+`22c0268b` stopped before pressure during checkpoint's joined-output validation.
+Return-A rebuilt extraction/resolver work after first combining A candidates
+with B observation authority. The correction binds both inputs before planning,
+reuse and publication; resolver limits remain unchanged. Corrected-tree gates
+and review precede another native rehearsal. Mounted failure custody remains
+retained; no pressure pass or freeze is established.
+
 **T42.2 pressure sequence implementation, 2026-09-10:** authenticated actual
 workspace samples and the fixed 80/90/75 parent sequence now use the approved
 28 control pairs. Scoped native composition and source review do not establish
