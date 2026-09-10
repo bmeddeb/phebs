@@ -107,14 +107,14 @@ func TestT422WorkspaceReportDerivedLimits(t *testing.T) {
 	for _, row := range []struct {
 		producer, phase uint32
 		maximum         uint64
-	}{{5, 9, 4097}, {5, 10, 1}, {5, 11, 4098}, {6, 13, 4096}} {
+	}{{5, 9, 4101}, {5, 10, 4}, {5, 11, 4102}, {6, 13, 4096}} {
 		_, maximum := t422WorkspaceSampleSlot(row.producer, row.phase)
 		if maximum != row.maximum {
 			t.Fatal(row, maximum)
 		}
 		total += maximum
 	}
-	if total*86+2*79 != 1057270 {
+	if total*86+2*79 != 1058216 {
 		t.Fatal("derived successful pair headroom", total)
 	}
 }
@@ -189,7 +189,7 @@ func assertT422NativeWorkspaceReports(t *testing.T, raw string, input [32]byte) 
 		}
 		pending = false
 	}
-	if bindings != 1 || count != 16 || pending {
+	if bindings != 1 || count != 18 || pending {
 		t.Fatal("native workspace report coverage", bindings, count, pending)
 	}
 }

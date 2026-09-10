@@ -14,9 +14,9 @@ type ExecutionWorkspaceBytePhase struct {
 	Maximum             custodybytes.Sample
 }
 
-// These are joined child lifecycle-checkpoint observations, not coverage of
-// phase starts, parent mutations or phase finishes. Maxima are not sums and
-// never assert atomic or unique physical filesystem usage.
+// These are joined child native observations. The separate synchronous command
+// sequence proves pressure boundary positions; this stream alone does not.
+// Maxima are not sums and never assert atomic or unique physical usage.
 type ExecutionWorkspaceByteObservation struct {
 	Phases                       [15]ExecutionWorkspaceBytePhase
 	Bound, Complete, Unavailable bool
@@ -30,17 +30,17 @@ func reservedWorkspaceByteEvent(line []byte) bool {
 	return bytes.Contains(line, []byte("WBB")) || reservedBlobEvent(line, "WB")
 }
 
-// The limits derive only the five existing lifecycle capacity sites. They
-// authorize no extra native turn, pressure probe or whole-phase sample.
+// Five lifecycle capacity sites plus the fixed four/three/four pressure boundary
+// commands. The latter add no native lifecycle turn or capacity probe.
 func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
 	if producer == 5 {
 		switch phase {
 		case 9:
-			return uint64(lifecycle.MaxCycleObservationTurns) + 1
+			return uint64(lifecycle.MaxCycleObservationTurns) + 1 + 4
 		case 10:
-			return 1
+			return 1 + 3
 		case 11:
-			return uint64(lifecycle.MaxCycleObservationTurns) + 2
+			return uint64(lifecycle.MaxCycleObservationTurns) + 2 + 4
 		}
 	}
 	if producer == 6 && phase == 13 {

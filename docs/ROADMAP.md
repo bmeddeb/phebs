@@ -64,6 +64,12 @@ sequence.
 
 ## Now
 
+**T42.2 pressure sequence implementation, 2026-09-10:** authenticated actual
+workspace samples and the fixed 80/90/75 parent sequence now use the approved
+28 control pairs. Scoped native composition and source review do not establish
+full pressure progression; the opt-in full native pressure rehearsal remains
+pending, followed by archive/query, whole-executor, launcher and freeze gates.
+
 **T42.2 pressure-window approval, 2026-09-09:** Ben approved prospective V3
 epoch-four PC01 capacity 24→28 pairs for before-mutation phase-start sampling.
 The narrow correction retains all deadlines, data limits and historical plans;

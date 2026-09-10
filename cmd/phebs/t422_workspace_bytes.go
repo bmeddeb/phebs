@@ -28,17 +28,17 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 			return control.stop()
 		}
 	}
-	return control.collector.SetCapacityCheckpoint(func(ctx context.Context) error {
+	control.workspaceSample = func(ctx context.Context) (custodybytes.Sample, error) {
 		if control.workspaceBytes == nil || st == nil || !control.current(ctx, true) {
 			if control.workspaceBytes != nil {
 				_ = control.workspaceBytes.Fail()
 			}
-			return control.stop()
+			return custodybytes.Sample{}, control.stop()
 		}
 		admitted := ctx.Value(t422SemanticRequestKey{}).(dispatchadmission.ProductionSemanticSnapshot)
 		if err := reports.begin(admitted); err != nil {
 			_ = control.workspaceBytes.Fail()
-			return control.stop()
+			return custodybytes.Sample{}, control.stop()
 		}
 		value, err := control.workspaceBytes.SampleGuarded(ctx, admitted.Phase, st.WithQuiescentLocalEngine, func() bool {
 			return control.current(ctx, true)
@@ -46,13 +46,17 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 		// Semantic checks and failure reporting happen after engine/SDK unlock.
 		if err != nil {
 			_ = reports.failed()
-			return control.stop()
+			return custodybytes.Sample{}, control.stop()
 		}
 		if err := reports.complete(value); err != nil {
 			_ = control.workspaceBytes.Fail()
-			return control.stop()
+			return custodybytes.Sample{}, control.stop()
 		}
-		return nil
+		return value, nil
+	}
+	return control.collector.SetCapacityCheckpoint(func(ctx context.Context) error {
+		_, err := control.workspaceSample(ctx)
+		return err
 	})
 }
 

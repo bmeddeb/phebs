@@ -458,11 +458,15 @@ func (run *ExecutionEpochOneRun) newCheckpointInspection(ctx context.Context) (*
 }
 
 func epochCheckpointClosedPrefix(ctx context.Context, result ExecutionEpochOneResult, terminal bool) bool {
+	return epochCheckpointClosedPrefixAt(ctx, result, terminal, 8)
+}
+
+func epochCheckpointClosedPrefixAt(ctx context.Context, result ExecutionEpochOneResult, terminal bool, phase uint32) bool {
 	opened, ordinal := 4, uint64(7)
 	if terminal {
 		opened, ordinal = 3, 6
 	}
-	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Opened != opened || result.Store.TerminalEOF != opened || result.Store.Store.Phase != 8 || result.Store.Complete {
+	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Opened != opened || result.Store.TerminalEOF != opened || result.Store.Store.Phase != phase || result.Store.Complete {
 		return false
 	}
 	for _, id := range []uint32{1, 2, 3, 4, 5, 7, 8, 9} {

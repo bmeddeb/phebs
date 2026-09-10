@@ -17,7 +17,7 @@ import (
 // The additional COLD selector opts into actual A convergence and phase 2->3;
 // Neither mode signs evidence or admits a host/profile. The separate VOLUME
 // selector places writable preparation/execution custody on a fresh owned APFS
-// image; it performs no ballast mutation or pressure phase.
+// image. PRESSURE_SEQUENCE additionally opts into actual ballast and phases9–11.
 func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if os.Getenv("PHEBS_T422_EPOCH_ONE_REHEARSAL") != "1" {
 		t.Skip("requires explicit serial protected epoch-one startup rehearsal")
@@ -30,7 +30,11 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	stale := os.Getenv("PHEBS_T422_STALE_LEASE_REHEARSAL") == "1"
 	checkpoint := os.Getenv("PHEBS_T422_CHECKPOINT_RESTART_REHEARSAL") == "1"
 	onVolume := os.Getenv("PHEBS_T422_PRESSURE_VOLUME_REHEARSAL") == "1"
+	pressure := os.Getenv("PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL") == "1"
 	// Selector dependencies refuse before any host/tool/custody allocation.
+	if pressure && (!checkpoint || !onVolume) {
+		t.Fatal("pressure sequence requires checkpoint and mounted-volume selectors")
+	}
 	if checkpoint && !stale {
 		t.Fatal("checkpoint selector requires explicit stale-lease selector")
 	}
@@ -125,6 +129,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if checkpoint {
 		allowance += 4 * time.Hour // Original phase-eight deadline spans owned death and epoch four.
 	}
+	if pressure {
+		allowance += time.Hour
+	} // Three unchanged twenty-minute phases.
 	ctx, cancel := context.WithTimeout(t.Context(), allowance)
 	defer cancel()
 	if onVolume {
@@ -139,7 +146,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		if err != nil {
 			t.Fatal("owned mounted workspace borrow", err)
 		}
-		t.Logf("owned mounted preparation/execution workspace: %s; no ballast or full launcher admission", parent)
+		t.Logf("owned mounted preparation/execution workspace: %s; pressure_sequence=%t; no full launcher admission", parent, pressure)
 	}
 	var author *ExecutionAuthorCustody
 	var epochs *ExecutionEpochConfigCustody
@@ -267,6 +274,11 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Fatal(err)
 	}
 	if volume != nil {
+		if pressure {
+			if _, err := prepareExecutionPressureBallast(ctx, volume); err != nil {
+				t.Fatal("preparation-owned zero ballast inode", err)
+			}
+		}
 		if _, err := volume.samplePreparation(ctx); err != nil {
 			t.Fatal("actual whole-workspace preparation sample", err)
 		}
@@ -436,7 +448,11 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if checkpoint {
 		prior := run
-		next, err := prior.CheckpointRestart(ctx)
+		restart := prior.CheckpointRestart
+		if pressure {
+			restart = prior.CheckpointRestartPressure
+		}
+		next, err := restart(ctx)
 		if next != nil {
 			run = next // Even a refused bootstrap remains this cleanup's owner.
 			prefix, priorErr := prior.Wait(context.Background())
@@ -457,6 +473,12 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 		t.Log("actual checkpoint restart and unchanged full native authority returned; no complete work-metrics, phase receipt, or freeze claim")
 	}
+	if pressure {
+		if err := run.Pressure(ctx, volume); err != nil {
+			t.Fatal("actual pressure sequence and workspace samples", err)
+		}
+		t.Log("actual 80/90/75 sequence and boundary samples returned; whole-executor metrics, archive/query and freeze gates remain open")
+	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()
 	stopped, err := run.Stop(stopCtx)
@@ -465,6 +487,8 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	var accepted []string
 	switch {
+	case pressure:
+		accepted = []string{"process_restart", "pressure_80", "pressure_90", "pressure_75"}
 	case checkpoint:
 		accepted = []string{"process_restart"}
 	case stale:

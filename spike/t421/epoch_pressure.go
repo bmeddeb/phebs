@@ -21,6 +21,8 @@ type epochPressureObservations struct {
 	latched          lifecycle.Pressure75Observation
 	resumed          lifecycle.Pressure75RecoveryObservation
 	recoveryFence    time.Time
+	sampleOrdinal    uint8
+	samples          ExecutionPressureSamples
 }
 
 func checkpointPressureEpochBounds(plan Plan) (epochOneLimits, error) {

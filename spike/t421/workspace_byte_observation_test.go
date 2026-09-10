@@ -103,9 +103,9 @@ func TestExecutionWorkspaceBytesLimits(t *testing.T) {
 		producer, phase uint32
 		maximum         uint64
 	}{
-		{5, 9, uint64(lifecycle.MaxCycleObservationTurns) + 1},
-		{5, 10, 1},
-		{5, 11, uint64(lifecycle.MaxCycleObservationTurns) + 2},
+		{5, 9, uint64(lifecycle.MaxCycleObservationTurns) + 1 + 4},
+		{5, 10, 1 + 3},
+		{5, 11, uint64(lifecycle.MaxCycleObservationTurns) + 2 + 4},
 		{6, 13, uint64(lifecycle.MaxCycleObservationTurns)},
 	} {
 		out := ExecutionWorkspaceByteObservation{Bound: true, sequence: test.maximum - 1, phase: test.phase}

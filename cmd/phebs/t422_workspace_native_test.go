@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -114,7 +115,18 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { stopRunner(); authService.WaitCleanup() }()
-	handler := t422OwnerHTTPHandler(owners, authService.Require(http.HandlerFunc(control.command)), launch)
+	var readReports atomic.Uint64
+	readState := t421NewExactReadAccountingState(func(raw []byte) error {
+		var report t421ExactReadReport
+		if json.Unmarshal(raw, &report) != nil || report.Schema != t421ExactReadReportSchema || report.Status != "complete" ||
+			report.RequestOrdinal != 1 || report.ControlFileReads != 0 || report.StoreReadAttempts != 0 || report.MemberVisits != 0 || report.StoreWriteAttempts != 0 {
+			return errT422LifecycleControl
+		}
+		readReports.Add(1)
+		return nil
+	}, launch.fail)
+	readState.semantic, readState.lifecycle = launch, control
+	handler := t422OwnerHTTPHandler(owners, authService.Require(readState.wrap(http.NotFoundHandler())), launch)
 	runtime, err := store.ReadLocalRuntime(filepath.Join(root, "data"))
 	if err != nil {
 		t.Fatal(err)
@@ -124,6 +136,19 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	for index, path := range []string{t422LifecycleParkPath, t422LifecycleNormalDrive} {
 		if !input.Scan() {
 			t.Fatal("actual request token", input.Err())
+		}
+		if index == 1 {
+			request := httptest.NewRequest(http.MethodPost, t422WorkspaceSamplePath, nil).WithContext(runnerCtx)
+			request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+			request.Header.Set(dispatchadmission.ProductionRequestHeader, input.Text())
+			request.Header.Set(t422WorkspacePointHeader, "start")
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			var sample t422WorkspaceSampleResponse
+			if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &sample) != nil ||
+				sample.LogicalBytes < uint64(len(sibling)) || sample.AllocatedBytes == 0 || turns.Load() != 0 {
+				t.Fatal("actual standalone workspace sample", response.Code, response.Body.String(), turns.Load())
+			}
 		}
 		request := httptest.NewRequest(http.MethodPost, path, nil).WithContext(runnerCtx)
 		request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
@@ -136,6 +161,29 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		if index == 0 {
 			fmt.Println("parked")
 		}
+	}
+	// Close the real zero-read R report before requesting the normalized native
+	// sample; the child must not bypass the lifecycle step owned by that tail.
+	request := httptest.NewRequest(http.MethodGet, t422LifecycleNormalRead, nil).WithContext(runnerCtx)
+	request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+	request.Header.Set(dispatchadmission.ProductionRequestHeader, input.Text())
+	request.Header.Set(t421ExactReadActivationHeader, t421ExactReadsContract)
+	request.Header.Set(t421ExactReadOrdinalHeader, "1")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	var cycle lifecycle.CycleObservation
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &cycle) != nil || cycle.OwnerTurns != 16 || readReports.Load() != 1 {
+		t.Fatal("actual normal-cycle R", response.Code, response.Body.String(), readReports.Load())
+	}
+	request = httptest.NewRequest(http.MethodPost, t422WorkspaceSamplePath, nil).WithContext(runnerCtx)
+	request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+	request.Header.Set(dispatchadmission.ProductionRequestHeader, input.Text())
+	request.Header.Set(t422WorkspacePointHeader, "normalized")
+	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	var normalized t422WorkspaceSampleResponse
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &normalized) != nil || normalized.LogicalBytes < uint64(len(sibling)) || normalized.AllocatedBytes == 0 || turns.Load() != 16 {
+		t.Fatal("actual normalized workspace sample", response.Code, response.Body.String(), turns.Load())
 	}
 	bytes := control.workspaceByteSnapshot()
 	if failures.Load() != 0 || turns.Load() != 16 || bytes.Unavailable || !bytes.Phases[8].Completed ||

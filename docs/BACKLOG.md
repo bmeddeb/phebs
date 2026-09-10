@@ -6833,6 +6833,63 @@ matching helper, engine or gate. The two failed diagnostic custody roots remain
 private and retained, not replayed or deleted. Gate outputs are retained in the
 tool record, not separately archived native log files.
 
+**Pressure sampling and parent sequence (2026-09-10).** The parent now owns
+the fixed 80/90/75 progression on the actual recovered epoch-four endpoint and
+its prepared volume. A separate explicit rehearsal selector prepares the zero
+ballast inode before the existing preparation sample/AuthorA, selects pressure
+checkpoint restart, and calls the sequence after actual recovered R/X/T/F.
+The eleven authenticated sample positions (4/3/4) return actual completed
+native logical/allocated totals directly, without live-log scans or an expected
+value substituted for an observation. Normalized pre-growth allocation is
+checked against the existing 8–68-GiB window; later sampled overshoots remain
+visible and fail closed. Lifecycle checkpoint WB evidence stays distinct from
+the synchronous boundary evidence. Their combined WB bound is now
+4,101/4/4,102/4,096 samples across phases nine/ten/eleven/thirteen; eleven extra
+pairs cost 946 bytes, total report subtotal 1,058,216 bytes including bindings.
+
+Ordinary owners stay drained, lifecycle work stays controlled, ballast changes
+require fenced requests, and sample commands issue a real local Park ACK but
+no new capacity probe. The unchanged phase clocks start before their handoff.
+Stop cancels and joins the new pressure operation before native teardown.
+Source review found and closed one medium: successful pressure Stop must
+validate actual phase eleven, not the prior phase-eight-only checkpoint
+endpoint. The corrected validator requires all eleven completed samples and
+all four accepted phase records, then reuses the exact predecessor/producer
+closure checks; historical phase-eight validation is unchanged.
+
+This is not yet a full native pressure pass. In particular, the small native
+fixture has modeled sweep callbacks/auth and exercises start/normalized plus
+sixteen actual lifecycle samples, not the full 28-pair choreography or
+Stop-during-mutation path. Whole-executor measurement/live checkpoint ceilings,
+archive/query phases, signed launcher, final exact-tree gates and freeze remain
+open. No admission or deadline expansion beyond the already approved control
+windows is made. The PLAN row records all new scan/request/lock/report costs.
+
+Independent child source/cost review found all severities zero at seven-file
+manifest `d0e9a7d499dacb85cc34caef4d2ca40c3d160869a74af549bb5fad6cfc7572c9`
+(under cmd/phebs, in order: t422_lifecycle_control.go, t422_workspace_bytes.go,
+t422_workspace_command.go, t422_workspace_command_test.go,
+t422_workspace_reports.go, t422_workspace_reports_test.go,
+t422_workspace_native_test.go). Parent re-review closed the phase-eleven
+finding and found all severities zero at eleven-file manifest
+`22950af49fc6ef6129d875c4a6b74321bd178b1808a8aad5843054047684c4ce`
+(under spike/t421: epoch_pressure_samples.go, epoch_pressure_samples_test.go,
+epoch_pressure_run_darwin.go, epoch_pressure_run_darwin_test.go,
+epoch_pressure.go, epoch_launch.go, epoch_launch_rehearsal_darwin_test.go,
+workspace_byte_observation.go, workspace_byte_observation_test.go,
+epoch_checkpoint.go, epoch_checkpoint_test.go). No OCR was used.
+
+Child focused normal/race passed 0.849s/2.056s; root parent focused normal
+passed 1.185s and corrected parent race selector
+`^TestExecution(Pressure|Epoch(Pressure|Checkpoint)|WorkspaceBytes|Attempt)`
+passed 11.262s. The actual selected workspace/native-engine fixture passed
+normal 85.14s (package 85.826s) and race 85.03s (package 86.868s), including
+two real synchronous sample responses and eighteen actual WB begin/success
+pairs. Successful fixture custody was removed after native session join.
+Composed pinned ci-static passed vet, zero lint findings and all-package
+compilation; docs passed 0.601s, glossary/whitespace passed. No full native
+pressure run is included in these gates; V1/V2 remain byte-exact.
+
 **Approved pressure control-window correction (2026-09-09).** Ben approved
 prospective V3 epoch-four PC01 capacity 24→28 pairs. Phases ten and eleven each
 need an extra OpenRequests/FenceRequests window for the new-phase-start sample

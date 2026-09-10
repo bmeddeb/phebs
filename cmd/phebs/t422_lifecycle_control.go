@@ -40,21 +40,23 @@ var errT422LifecycleControl = errors.New("T42.2 lifecycle control refused")
 // pressure epoch retains one collector through 80/90/75; the restored epoch
 // has its own collector. No command reopens ordinary owners or resumes timers.
 type t422LifecycleControl struct {
-	ctx            context.Context
-	launch         *t422SemanticLaunch
-	runner         *lifecycle.RunnerControl
-	collector      *lifecycle.CycleCollector
-	mu             sync.Mutex
-	step           uint8
-	busy           bool
-	err            error
-	cycle          lifecycle.CycleObservation
-	names          []string
-	sink           func([]byte) error
-	operation      string
-	phase          uint32
-	prefix         [3]t422LifecyclePrefix
-	workspaceBytes *custodybytes.Observer // Local actual maxima; parent collection is separate.
+	ctx             context.Context
+	launch          *t422SemanticLaunch
+	runner          *lifecycle.RunnerControl
+	collector       *lifecycle.CycleCollector
+	mu              sync.Mutex
+	step            uint8
+	busy            bool
+	err             error
+	cycle           lifecycle.CycleObservation
+	names           []string
+	sink            func([]byte) error
+	operation       string
+	phase           uint32
+	prefix          [3]t422LifecyclePrefix
+	workspaceBytes  *custodybytes.Observer // Local actual maxima; parent collection is separate.
+	workspaceSample func(context.Context) (custodybytes.Sample, error)
+	workspacePoint  uint8
 }
 
 type t422LifecyclePrefix struct {
@@ -108,7 +110,7 @@ func newT422LifecycleControl(ctx context.Context, launch *t422SemanticLaunch, ow
 
 func t422LifecycleCommand(path string) bool {
 	return path == t422LifecycleParkPath || path == t422LifecycleNormalDrive ||
-		path == t422LifecycleRecoveryDrive || path == t422LifecycleFreshDrive
+		path == t422LifecycleRecoveryDrive || path == t422LifecycleFreshDrive || path == t422WorkspaceSamplePath
 }
 
 func t422LifecycleRead(path string) bool {
@@ -131,6 +133,9 @@ func t422LifecycleRequest(request *http.Request, command bool) (time.Time, error
 	}
 	path := request.URL.Path
 	if command && !t422LifecycleCommand(path) || !command && !t422LifecycleRead(path) {
+		return time.Time{}, errT422LifecycleControl
+	}
+	if path != t422WorkspaceSamplePath && len(request.Header.Values(t422WorkspacePointHeader)) != 0 {
 		return time.Time{}, errT422LifecycleControl
 	}
 	wantsFence := path == t422LifecycleCollectRead || path == t422LifecycleRefuseRead ||
@@ -157,6 +162,9 @@ func t422LifecycleRequest(request *http.Request, command bool) (time.Time, error
 }
 
 func (control *t422LifecycleControl) expected(path string, phase uint32) bool {
+	if control.workspaceBytes != nil && control.launch.request.ServerEpoch == 4 && !control.workspacePrecedes(path) {
+		return false
+	}
 	if control.step == 0 {
 		return path == t422LifecycleParkPath && phase == control.launch.initial.Phase
 	}
@@ -355,6 +363,10 @@ func (control *t422LifecycleControl) command(writer http.ResponseWriter, request
 	path := request.URL.Path
 	ctx, cancel := control.operationContext(request.Context(), path)
 	defer cancel()
+	if path == t422WorkspaceSamplePath {
+		control.sampleWorkspaceCommand(writer, request.WithContext(ctx))
+		return
+	}
 	completed := false
 	defer func() {
 		if !completed {

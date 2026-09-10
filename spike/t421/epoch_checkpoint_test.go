@@ -257,6 +257,35 @@ func TestExecutionEpochCheckpointClosedPrefixes(t *testing.T) {
 		if !epochCheckpointClosedPrefix(t.Context(), result, terminal) {
 			t.Fatal("exact partial closure refused")
 		}
+		if !terminal {
+			pressure := result
+			pressure.Store.Store.Phase = 11
+			pressure.PressureSamples.Complete = true
+			for i, count := range []uint64{4, 3, 4} {
+				pressure.PressureSamples.Phases[i].Attempts, pressure.PressureSamples.Phases[i].Completed = count, count
+			}
+			for _, phase := range []string{"process_restart", "pressure_80", "pressure_90", "pressure_75"} {
+				pressure.Inspection = append(pressure.Inspection, ExecutionPhaseInspection{ServerEpoch: 4, Phase: phase, Final: &ExecutionInspectionFinal{}, SelectorAccepted: true})
+			}
+			if !epochPressureClosedPrefix(t.Context(), pressure) || epochCheckpointClosedPrefix(t.Context(), pressure, false) {
+				t.Fatal("phase-eleven pressure closure")
+			}
+			for _, change := range []func(*ExecutionEpochOneResult){
+				func(v *ExecutionEpochOneResult) { v.PressureSamples.Complete = false },
+				func(v *ExecutionEpochOneResult) { v.PressureSamples.Unavailable = true },
+				func(v *ExecutionEpochOneResult) { v.PressureSamples.LimitExceeded = true },
+				func(v *ExecutionEpochOneResult) { v.PressureSamples.Phases[1].Completed-- },
+				func(v *ExecutionEpochOneResult) { v.Store.Store.Phase = 8 },
+				func(v *ExecutionEpochOneResult) { v.Inspection = v.Inspection[:3] },
+				func(v *ExecutionEpochOneResult) { v.SessionEmpty = false },
+			} {
+				bad := pressure
+				change(&bad)
+				if epochPressureClosedPrefix(t.Context(), bad) {
+					t.Fatal("incomplete pressure closure accepted")
+				}
+			}
+		}
 		for _, change := range []func(*ExecutionEpochOneResult){
 			func(v *ExecutionEpochOneResult) { v.SessionEmpty = false },
 			func(v *ExecutionEpochOneResult) { v.Store.Store.Producers[2].Closed = true },

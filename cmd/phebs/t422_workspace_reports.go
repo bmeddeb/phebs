@@ -28,11 +28,11 @@ type t422WorkspaceReports struct {
 func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
 	switch {
 	case producer == 5 && phase == 9:
-		return 0, uint64(lifecycle.MaxCycleObservationTurns) + 1
+		return 0, uint64(lifecycle.MaxCycleObservationTurns) + 1 + 4
 	case producer == 5 && phase == 10:
-		return 1, 1
+		return 1, 1 + 3
 	case producer == 5 && phase == 11:
-		return 2, uint64(lifecycle.MaxCycleObservationTurns) + 2
+		return 2, uint64(lifecycle.MaxCycleObservationTurns) + 2 + 4
 	case producer == 6 && phase == 13:
 		return 3, uint64(lifecycle.MaxCycleObservationTurns)
 	default:

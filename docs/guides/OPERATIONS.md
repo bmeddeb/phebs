@@ -7361,3 +7361,23 @@ Do not include older unrelated bootstrap records in that deletion.
 
 This disposition closes the replay lock only. It authorizes no new freeze,
 ceremony, release, scale/SLO claim, or Epic closure.
+
+### T42.2 pressure sequence rehearsal selector
+
+The private optional epoch-one rehearsal now recognizes
+`PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint
+restart and pressure-volume selectors, along with their existing predecessor
+selectors, before allocating custody. It prepares one empty ballast inode
+before AuthorA, then uses the owned 96-GiB volume for the fixed 80/90/75
+sequence after checkpoint recovery. Each pressure phase retains its original
+twenty-minute deadline; the test's total allowance adds one hour, without
+extending any phase deadline. Run only from a reviewed exact source and with
+the separately verified pinned environment and disk prerequisites.
+
+Success requires the complete terminal test result and joined cleanup, not a
+returned sample or final authority response alone. A failure retains the exact
+volume, ballast and diagnostics; do not automatically rerun or delete them.
+This selector does not execute the ceremony or establish archive/query,
+whole-executor measurement, signed launcher, freeze or scale claims. The full
+pressure rehearsal is still a pending gate; no command is presented here as
+ready to run merely because the selector exists.

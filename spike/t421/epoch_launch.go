@@ -185,6 +185,7 @@ type ExecutionEpochOneResult struct {
 	IndexOffers             ExecutionIndexObservation
 	ServerProcesses         ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
 	Inspection              []ExecutionPhaseInspection
+	PressureSamples         ExecutionPressureSamples
 }
 
 type ExecutionEpochOneRun struct {
@@ -263,6 +264,9 @@ type ExecutionEpochOneRun struct {
 	checkpointRecovery    *epochCheckpointRecoveryInput
 	checkpointPrior       *AuthorityPhaseResult
 	pressureAllowed       bool
+	pressureUsed          bool
+	pressureCancel        context.CancelFunc
+	pressureDone          chan struct{}
 	backupAllowed         bool
 	backupUsed            bool
 	backupRetired         bool
@@ -784,8 +788,13 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	staleCancel, staleDone := run.staleCancel, run.staleDone
 	checkpointCancel, checkpointDone := run.checkpointCancel, run.checkpointDone
 	backupCancel, backupDone := run.backupCancel, run.backupDone
+	pressureCancel, pressureDone := run.pressureCancel, run.pressureDone
 	terminal, terminalRequested := run.terminalEntered, run.terminalRequested
 	run.mu.Unlock()
+	if pressureCancel != nil {
+		pressureCancel()
+		<-pressureDone
+	}
 	if backupCancel != nil {
 		backupCancel()
 	}
@@ -931,6 +940,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if run.inspection != nil {
 		run.inspection.mu.Lock()
 		result.Inspection = cloneInspectionEvidence(run.inspection.evidence.rows)
+		result.PressureSamples = run.inspection.pressure.samples
 		run.inspection.mu.Unlock()
 	}
 	if !result.SessionEmpty {
@@ -966,6 +976,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if terminal || run.epoch.Epoch == 4 {
 		prefixOK = epochCheckpointClosedPrefix(ctx, result, terminal)
 	}
+	if run.epoch.Epoch == 4 && run.pressureUsed && !terminal {
+		prefixOK = epochPressureClosedPrefix(ctx, result)
+	}
 	if run.backupRetired {
 		prefixOK = run.backupComplete && epochBackupClosedPrefix(ctx, result)
 	}
@@ -980,6 +993,12 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	if run.finishAttemptObservation(ctx, &result, death, failure) != nil {
 		failure = ErrExecutionEpochOne
+	}
+	if failure != nil && run.pressureUsed {
+		result.PressureSamples.Complete = false
+		if !result.PressureSamples.LimitExceeded {
+			result.PressureSamples.Unavailable = true
+		}
 	}
 	if failure != nil && run.backupRetired && run.backupComplete {
 		// Final sampling, native/protocol joins and parsing can fail after the
