@@ -148,7 +148,7 @@ func (state *runnerState) turn(ctx context.Context, controller *Controller, gate
 	}
 	pressureAccelerated := false
 	if gate != nil {
-		capacity, capacityErr := gate.Check(ctx, 0)
+		capacity, capacityErr := collector.checkCapacity(ctx, gate)
 		if reportCapacity != nil {
 			reportCapacity(capacity, capacityErr)
 		}

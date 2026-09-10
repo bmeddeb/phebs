@@ -42,6 +42,7 @@ type ExecutionEpochOne struct {
 	retained               *ExecutionEpochOneRun
 	logicalUsed            bool
 	returnUsed             bool
+	workspace              *productionRoot // Borrowed only from a bound pressure volume.
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -485,6 +486,17 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		command.Stdout, command.Stderr = run.backupOutput, run.backupOutput
 	}
 	command.ExtraFiles = []*os.File{files[1], files[3], storeFile}
+	var workspaceBinding *dispatchadmission.ProductionWorkspaceBinding
+	if flow.workspace != nil && (number == 4 || number == 5) {
+		binding, workspaceErr := dispatchadmission.DescribeProductionWorkspace(flow.workspace.file, flow.workspace.path)
+		if workspaceErr != nil || binding.FSID != flow.workspace.volume {
+			return nil, ErrExecutionEpochOne
+		}
+		workspaceBinding = &binding
+		// The volume retains its original descriptor through joined cleanup;
+		// exec creates the child-owned FD6 copy, not a transfer of that original.
+		command.ExtraFiles = append(command.ExtraFiles, flow.workspace.file)
+	}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
 	run.command = command
@@ -547,7 +559,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{12, 13, 14}, 12, 3
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
-		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
+		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig, Workspace: workspaceBinding}
 	run.attemptInput = bootstrap.InputSHA256
 	var served <-chan error
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(launchCtx, files[0], files[2], bootstrap) != nil {

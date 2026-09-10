@@ -55,10 +55,14 @@ type ProductionBootstrap struct {
 	Tools        []ProductionToolBinding
 	// Omission preserves legacy canonical bytes. Only the store selector may
 	// carry the exact mechanical view returned with Transport.Open's endpoint.
-	Store *storeaccounting.ClientConfig `json:",omitempty"`
+	Store     *storeaccounting.ClientConfig `json:",omitempty"`
+	Workspace *ProductionWorkspaceBinding   `json:",omitempty"`
 }
 
 func (record ProductionBootstrap) validate() error {
+	if record.validateWorkspace() != nil {
+		return ErrProductionBootstrap
+	}
 	if record.Control.BackupEndpointCarry && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 5 || record.Phase != 8 || record.Store == nil) {
 		return ErrProductionBootstrap
 	}
@@ -119,6 +123,9 @@ func (record ProductionBootstrap) validate() error {
 		return ErrProductionBootstrap
 	}
 	textBytes := len(record.Program) + len(record.SemanticMode)
+	if record.Workspace != nil {
+		textBytes += len(record.Workspace.Path)
+	}
 	for index, role := range roles {
 		tool := record.Tools[index]
 		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionToolEnvironment(tool.Environment, role, record.SemanticMode) {
@@ -345,6 +352,9 @@ func bootstrapSelectedProgram(ctx context.Context, program string, required bool
 	if selector != ProductionSelector && !storeSelected || storeSelected && program != ProgramPhebs || ctx == nil || ctx.Err() != nil || !productionBootstrapStarted.CompareAndSwap(false, true) {
 		return nil, ErrProductionBootstrap
 	}
+	// Observe the original FD6 before socket adoption can allocate a duplicate
+	// at that number. Merely observing never adopts/closes an omitted handle.
+	workspace := captureInheritedProductionWorkspace()
 	if !inheritedProductionSocket(3) || !inheritedProductionSocket(4) || storeSelected && !inheritedProductionSocket(5) {
 		return nil, ErrProductionBootstrap
 	}
@@ -352,7 +362,7 @@ func bootstrapSelectedProgram(ctx context.Context, program string, required bool
 	if storeSelected {
 		storeFile = os.NewFile(5, "production-store")
 	}
-	return bootstrapProgramWithStore(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), storeFile, program)
+	return bootstrapProgramWithWorkspace(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), storeFile, program, nil, workspace)
 }
 
 func bootstrapProduction(ctx context.Context, admissionFile, controlFile *os.File) (_ *ProductionLifetime, retErr error) {
@@ -364,6 +374,21 @@ func bootstrapProgram(ctx context.Context, admissionFile, controlFile *os.File, 
 }
 
 func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, storeFile *os.File, program string) (_ *ProductionLifetime, retErr error) {
+	return bootstrapProgramWithWorkspace(ctx, admissionFile, controlFile, storeFile, program, nil, nil)
+}
+
+// Only the synchronous process bootstrap may adopt FD6. In-process callers
+// supply an explicitly owned descriptor; omitted records never touch FD6.
+func bootstrapProgramWithWorkspace(ctx context.Context, admissionFile, controlFile, storeFile *os.File, program string, workspaceFile *os.File, inheritedWorkspace *ProductionWorkspaceBinding) (_ *ProductionLifetime, retErr error) {
+	workspaceTransferred := false
+	defer func() {
+		if workspaceFile != nil && !workspaceTransferred {
+			_ = workspaceFile.Close()
+		}
+	}()
+	if workspaceFile != nil && inheritedWorkspace != nil {
+		return nil, ErrProductionBootstrap
+	}
 	// Protect all selected inherited handles before any can be handed to a
 	// goroutine. No native launch occurs during this synchronous adoption.
 	admission, admissionErr := adopt(admissionFile)
@@ -422,6 +447,22 @@ func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, 
 	if _, err := io.ReadFull(control, controlHeader[:]); err != nil || controlHeader != expectedControlHeader || opCtx.Err() != nil {
 		return nil, ErrProductionBootstrap
 	}
+	var workspace *productionWorkspace
+	if record.Workspace != nil {
+		if inheritedWorkspace != nil {
+			current := captureInheritedProductionWorkspace()
+			if current == nil || *current != *inheritedWorkspace || inheritedWorkspace.Device != record.Workspace.Device || inheritedWorkspace.Inode != record.Workspace.Inode || inheritedWorkspace.FSID != record.Workspace.FSID {
+				return nil, ErrProductionBootstrap
+			}
+			workspaceFile = os.NewFile(6, "production-workspace")
+		}
+		workspace, err = adoptProductionWorkspace(workspaceFile, *record.Workspace)
+		if err != nil {
+			return nil, ErrProductionBootstrap
+		}
+	} else if workspaceFile != nil {
+		return nil, ErrProductionBootstrap
+	}
 	// Stdlib File duplicates once during transfer to the existing constructors;
 	// their adopted descriptors stay CLOEXEC. No second custody implementation.
 	admissionFile, err = admission.File()
@@ -458,7 +499,7 @@ func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, 
 	}
 	lifetime = &ProductionLifetime{program: program, semanticMode: record.SemanticMode, producerID: record.Producer.ID,
 		inputSHA256: record.InputSHA256, client: client, tools: make(map[string]ProductionToolBinding, len(record.Tools)),
-		storeClient: storeClient, cancelStore: cancelStore}
+		storeClient: storeClient, cancelStore: cancelStore, workspace: workspace}
 	if storeClient != nil {
 		client.mu.Lock()
 		client.storeLifetime = lifetime
@@ -486,5 +527,6 @@ func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, 
 	if !productionRuntime.CompareAndSwap(nil, lifetime) {
 		return nil, ErrProductionBootstrap
 	}
+	workspaceTransferred = true
 	return lifetime, nil
 }

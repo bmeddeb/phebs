@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 )
@@ -39,20 +40,21 @@ var errT422LifecycleControl = errors.New("T42.2 lifecycle control refused")
 // pressure epoch retains one collector through 80/90/75; the restored epoch
 // has its own collector. No command reopens ordinary owners or resumes timers.
 type t422LifecycleControl struct {
-	ctx       context.Context
-	launch    *t422SemanticLaunch
-	runner    *lifecycle.RunnerControl
-	collector *lifecycle.CycleCollector
-	mu        sync.Mutex
-	step      uint8
-	busy      bool
-	err       error
-	cycle     lifecycle.CycleObservation
-	names     []string
-	sink      func([]byte) error
-	operation string
-	phase     uint32
-	prefix    [3]t422LifecyclePrefix
+	ctx            context.Context
+	launch         *t422SemanticLaunch
+	runner         *lifecycle.RunnerControl
+	collector      *lifecycle.CycleCollector
+	mu             sync.Mutex
+	step           uint8
+	busy           bool
+	err            error
+	cycle          lifecycle.CycleObservation
+	names          []string
+	sink           func([]byte) error
+	operation      string
+	phase          uint32
+	prefix         [3]t422LifecyclePrefix
+	workspaceBytes *custodybytes.Observer // Local actual maxima; parent collection is separate.
 }
 
 type t422LifecyclePrefix struct {

@@ -6732,6 +6732,64 @@ full rehearsal. Reused source/tool checks and launcher locks retain their
 existing costs, with bounded current-prefix scans and copied work snapshots;
 there is no ordinary runtime or frozen numerical-limit change.
 
+**Inherited workspace and lifecycle byte checkpoints (2026-09-09).** The
+existing actual native walker now lives in internal/custodybytes; the parent
+adapter preserves its ownership/boundary checks and fifteen-phase sticky
+maxima. Optional authenticated bootstrap identity borrows the genuine mounted
+workspace through parent join and child FD6 lifetime, restricted to selected
+producers five/six. Missing FD6 is captured before socket adoption and checked
+again before wrapping; a duplicated socket cannot become the workspace. Omitted
+bindings preserve canonical bytes and do not wrap or close FD6.
+
+Five actual lifecycle capacity sites invoke the shared walker: the runner's
+post-turn probe and four explicit pressure probes. Selected callbacks wrap
+exactly one native walk in existing engine quiescence; semantic checks and
+maximum commit follow engine/SDK unlock. No lifecycle/control lock spans the
+walk. Failed sampling becomes unavailable, not an accepted pressure refusal.
+Missing workspace is not a data-only or zero observation. Ordinary query, sync,
+retry and publication paths gain no traversal; the ordinary runner retains its
+one capacity probe and nil-collector branch. The owning ADR records native
+descriptor, stop/resume, polling, lock and traversal costs.
+
+The eight-file FD6 manifest is
+`925eb76b6dfe053d77378dcede845dcaff72045f0b58a19e6fbc5e335912cf0e`:
+bootstrap.go, production.go, bootstrap_workspace.go,
+bootstrap_workspace_darwin.go, bootstrap_workspace_other.go,
+bootstrap_workspace_darwin_test.go under internal/dispatchadmission, then
+epoch_launch.go and pressure_workspace_darwin.go under spike/t421.
+Focused normal passed dispatch 2.803s/spike 0.642s; dispatch race 3.857s and
+pinned scoped lint reported zero issues. The missing/valid inherited fixtures
+exercise real DA/PC/SA and native descriptor ownership, not full pressure.
+
+The fifteen-file measurement manifest is
+`6423be4627a25e5cae47f4dbb79a27ac9c65f41062b52d1f870d69dd1fbddab3`:
+internal/custodybytes/{observation.go,native_darwin.go,native_other.go,
+native_darwin_test.go,guard_darwin_test.go};
+spike/t421/{custody_byte_observation_darwin.go,
+custody_byte_observation_darwin_test.go};
+internal/lifecycle/{cycle_observation.go,runner.go,
+capacity_checkpoint_darwin_test.go,capacity_checkpoint_test.go};
+cmd/phebs/{main.go,t422_lifecycle_control.go,t422_workspace_bytes.go,
+t422_workspace_bytes_test.go}.
+Focused normal passed custodybytes/lifecycle/cmd/spike in
+0.367s/0.416s/0.610s/1.094s; matching race passed in
+1.268s/1.427s/1.768s/2.410s; four-package pinned lint reported zero issues.
+The native tiny-filesystem fixture makes seven actual walks across all five
+sites; its capacity transitions remain supplied fixture values. Initial
+test-only syntax/private-directory/style errors were corrected before these
+gates. No combined actual selected-engine/FD6 run or corpus timing fit is
+claimed. Local child maxima exist; parent collection, complete required sample
+coverage, live aggregate limits and complete receipts remain open.
+
+Independent FD6/native-observer/adapter source and cost review found
+critical/high/medium/low all zero; lead independently traced lifecycle context,
+lock ordering and consumer join before lifetime close. Complete package race
+passed custodybytes 1.387s, lifecycle 5.757s and dispatchadmission 6.022s.
+Composed pinned ci-static passed vet, zero lint findings and all-package
+compilation; docs passed in 0.585s, glossary/whitespace passed and retained
+V1/V2 digests stayed unchanged. These are component gates, not the missing
+combined engine/FD6 or full-corpus proof.
+
 **Parent-owned workspace sampling (2026-09-09).** The mounted workspace's
 actual held root now supplies byte observations across its source, protected
 inputs, home, temporary, data, backup and ballast siblings. Initial borrow and

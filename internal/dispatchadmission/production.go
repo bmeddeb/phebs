@@ -85,6 +85,8 @@ type ProductionLifetime struct {
 	storeTaken   bool
 	storeClosed  bool
 	storeRetired bool
+	workspaceMu  sync.Mutex
+	workspace    *productionWorkspace
 }
 
 // ProductionSemanticSnapshot contains copied parent-bound launch identity and
@@ -257,7 +259,12 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		defer cancel()
 		storeErr := lifetime.closeStore(closeCtx)
 		lifetime.closeErr = errors.Join(lifetime.closeErr, storeErr)
-		if storeErr != nil {
+		// Main joins lifecycle callbacks before closing its lifetime. The
+		// borrowed workspace cannot outlive that join or acknowledge a failed
+		// descriptor close as clean dispatch completion.
+		workspaceErr := lifetime.closeWorkspace()
+		lifetime.closeErr = errors.Join(lifetime.closeErr, workspaceErr)
+		if storeErr != nil || workspaceErr != nil {
 			// A failed SDK/SA close cannot acknowledge clean dispatch closure.
 			_ = lifetime.client.fail(ErrIncomplete)
 		}

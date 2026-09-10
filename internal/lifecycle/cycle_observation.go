@@ -99,10 +99,11 @@ type cycleObservationResult struct {
 // serial owner/capacity callbacks. It retains cumulative scalars and one final
 // bounded owner cycle; it performs no lifecycle or status read of its own.
 type CycleCollector struct {
-	mu       sync.Mutex
-	owners   []string
-	maxTurns uint64
-	now      func() time.Time
+	mu                 sync.Mutex
+	capacityCheckpoint func(context.Context) error
+	owners             []string
+	maxTurns           uint64
+	now                func() time.Time
 
 	started  bool
 	finished bool
@@ -135,6 +136,43 @@ type CycleCollector struct {
 	normalAttempted  bool
 	allowJobBacklog  bool
 	awaitingCapacity bool
+}
+
+// SetCapacityCheckpoint installs the selected caller's native measurement
+// before this collector starts. It cannot supply or replace capacity values.
+func (collector *CycleCollector) SetCapacityCheckpoint(checkpoint func(context.Context) error) error {
+	if collector == nil || checkpoint == nil {
+		return ErrCycleObservationPending
+	}
+	collector.mu.Lock()
+	defer collector.mu.Unlock()
+	if collector.started || collector.capacityCheckpoint != nil {
+		return ErrCycleObservationPending
+	}
+	collector.capacityCheckpoint = checkpoint
+	return nil
+}
+
+func (collector *CycleCollector) checkCapacity(ctx context.Context, gate *Gate) (Capacity, error) {
+	capacity, err := gate.Check(ctx, 0)
+	if collector == nil {
+		return capacity, err
+	}
+	collector.mu.Lock()
+	checkpoint := collector.capacityCheckpoint
+	collector.mu.Unlock()
+	if checkpoint == nil {
+		return capacity, err
+	}
+	if err != nil && !errors.Is(err, ErrPressureRefusal) {
+		return capacity, err
+	}
+	if sampleErr := checkpoint(ctx); sampleErr != nil {
+		// Pressure readers accept ErrPressureRefusal. Never retain that class
+		// beside failed measurement, or unavailable bytes would be admitted.
+		return Capacity{Pressure: PressureUnavailable}, errors.New("lifecycle capacity checkpoint unavailable")
+	}
+	return capacity, err
 }
 
 func NewCycleCollector(owners []Owner, maxTurns CycleTurnLimit) (*CycleCollector, error) {
@@ -410,7 +448,7 @@ func (collector *CycleCollector) ReadPressure80Collect(
 		ballastFence.Before(normal.Capacity.ObservedAt) {
 		return Pressure80Observation{}, ErrCycleObservationPending
 	}
-	capacity, err := gate.Check(ctx, 0)
+	capacity, err := collector.checkCapacity(ctx, gate)
 	if err != nil {
 		if contextErr := ctx.Err(); contextErr != nil {
 			return Pressure80Observation{}, contextErr
@@ -479,7 +517,7 @@ func (collector *CycleCollector) ReadPressure90Refusal(
 		ballastFence.IsZero() || ballastFence.Before(prior.Capacity.ObservedAt) {
 		return Pressure90Observation{}, errors.New("pressure 90 observation does not follow pressure 80")
 	}
-	capacity, err := gate.Check(ctx, 0)
+	capacity, err := collector.checkCapacity(ctx, gate)
 	if contextErr := ctx.Err(); contextErr != nil {
 		return Pressure90Observation{}, contextErr
 	}
@@ -544,7 +582,7 @@ func (collector *CycleCollector) ReadPressure75Refusal(
 		ballastFence.IsZero() || ballastFence.Before(prior.Capacity.ObservedAt) {
 		return Pressure75Observation{}, errors.New("pressure 75 observation does not follow pressure 90")
 	}
-	capacity, err := gate.Check(ctx, 0)
+	capacity, err := collector.checkCapacity(ctx, gate)
 	if contextErr := ctx.Err(); contextErr != nil {
 		return Pressure75Observation{}, contextErr
 	}
@@ -662,7 +700,7 @@ func (collector *CycleCollector) ReadPressure75Normal(
 	if !recoveryComplete || cycle.Schema != CycleObservationSchema || priorGate != gate {
 		return Pressure75RecoveryObservation{}, errors.New("pressure 75 normal observation does not follow recovery")
 	}
-	capacity, err := gate.Check(ctx, 0)
+	capacity, err := collector.checkCapacity(ctx, gate)
 	if contextErr := ctx.Err(); contextErr != nil {
 		return Pressure75RecoveryObservation{}, contextErr
 	}

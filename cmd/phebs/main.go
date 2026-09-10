@@ -976,6 +976,9 @@ func serve(args []string) (retErr error) {
 		if err != nil {
 			return err
 		}
+		if err = lifecycleControl.bindWorkspaceBytes(st); err != nil {
+			return err
+		}
 		lifecycleRunnerControl = lifecycleControl.runner
 		exactReadState.lifecycle = lifecycleControl
 	}

@@ -44,7 +44,7 @@ func (v *executionPressureVolume) bindRehearsal(ctx context.Context, flow *Execu
 	defer author.mu.Unlock()
 	epochs.mu.Lock()
 	defer epochs.mu.Unlock()
-	if !v.borrowed || v.flow != nil || !v.ready || v.check() != nil || v.bytes == nil || v.byteErr != nil || !v.preparationBytes.Completed || flow.closed || flow.used || flow.authored ||
+	if !v.borrowed || v.flow != nil || flow.workspace != nil || !v.ready || v.check() != nil || v.bytes == nil || v.byteErr != nil || !v.preparationBytes.Completed || flow.closed || flow.used || flow.authored ||
 		flow.controller == nil || flow.parent == nil || flow.store == nil || author.parent != v.workspace.path ||
 		author.active || author.borrowedBy != nil || author.closed || author.err != nil || epochs.active || epochs.closed || epochs.err != nil ||
 		len(author.roots) != 4 || len(epochs.roots) != 4 || author.request.Builds == nil || author.request.Git == nil {
@@ -80,6 +80,8 @@ func (v *executionPressureVolume) bindRehearsal(ctx context.Context, flow *Execu
 		return errPressureVolume
 	}
 	v.flow = flow
+	root := v.workspace
+	flow.workspace = &root
 	return nil
 }
 
