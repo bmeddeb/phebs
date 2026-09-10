@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
@@ -17,8 +18,20 @@ import (
 func TestExecutionEpochPressureBounds(t *testing.T) {
 	plan := Plan{Schema: PlanV3Schema, PhaseDeadlines: frozenPhaseDeadlines(), SafetyEnvelope: frozenSafetyEnvelope()}
 	bounds, err := checkpointPressureEpochBounds(plan)
-	if err != nil || bounds.lifetime != 5*time.Hour || bounds.controlPairs != 24 || bounds.health != 15*time.Minute || bounds.outputBytes != 64<<20 {
+	if err != nil || bounds.lifetime != 5*time.Hour || bounds.controlPairs != 28 || bounds.health != 15*time.Minute || bounds.outputBytes != 64<<20 {
 		t.Fatal(bounds, err)
+	}
+	// The launcher uses this same conversion for both authenticated endpoints.
+	// This is PC01 capacity, not a change to DA admission or store/read limits.
+	if wire := bounds.controlPairs * 2 * dispatchadmission.FrameBytes; wire != 3584 || wire-24*2*dispatchadmission.FrameBytes != 512 {
+		t.Fatal("pressure control wire allowance", wire)
+	}
+	for _, schema := range []string{PlanSchema, PlanV2Schema, ""} {
+		changed := plan
+		changed.Schema = schema
+		if _, err := checkpointPressureEpochBounds(changed); err == nil {
+			t.Fatal("prospective pressure bound admitted historical schema", schema)
+		}
 	}
 	for _, index := range []int{7, 8, 9, 10} {
 		plan.PhaseDeadlines[index].DeadlineMS++

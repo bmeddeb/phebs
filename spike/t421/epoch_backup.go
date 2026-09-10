@@ -126,7 +126,7 @@ func (run *ExecutionEpochOneRun) BackupAndStop(ctx context.Context) (result Exec
 		retErr = errors.Join(retErr, err)
 	}()
 	flow := run.flow
-	// The final server Pause is already reserved by the 24-pair pressure
+	// The final server Pause is already reserved by the 28-pair pressure
 	// budget. Its echo now follows SDK close and the final DA checkpoint.
 	if flow.parent.Pause(operation) != nil || flow.controller.Fence() != nil || flow.store.Fence() != nil || run.control.Pause(operation) != nil ||
 		flow.store.Wait(operation, 5) != nil || flow.controller.RetireBackupEndpoint() != nil {

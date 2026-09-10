@@ -64,6 +64,12 @@ sequence.
 
 ## Now
 
+**T42.2 pressure-window approval, 2026-09-09:** Ben approved prospective V3
+epoch-four PC01 capacity 24→28 pairs for before-mutation phase-start sampling.
+The narrow correction retains all deadlines, data limits and historical plans;
+actual sampling commands and pressure choreography remain the next gate, not
+an established rehearsal pass.
+
 **T42.2 resumed completion, 2026-09-09:** the reviewed lifecycle workspace
 binding and combined native checkpoint fixture are pushed through `34bef2df`.
 The resumed measurement slice collects those actual child samples in the

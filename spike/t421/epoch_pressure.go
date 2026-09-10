@@ -35,9 +35,12 @@ func checkpointPressureEpochBounds(plan Plan) (epochOneLimits, error) {
 		}
 		lifetime += time.Duration(deadlines[i].DeadlineMS) * time.Millisecond
 	}
-	// Existing recovered phase8 five pairs; phase9 handoff3 + two request
-	// windows4; phase10 handoff3 + one window2; phase11 handoff3 + two windows4.
-	return epochOneLimits{lifetime: lifetime, health: 15 * time.Minute, outputBytes: 64 << 20, controlPairs: 5 + 7 + 5 + 7}, nil
+	// Recovered phase8 five pairs; phase9 handoff3 + two request windows4;
+	// phase10 handoff3 + two windows4; phase11 handoff3 + three windows6.
+	// The extra phase10/11 windows sample the new phase before ballast changes,
+	// then fence requests again for the mutation. Final Pause and receiver
+	// idle/EOF remain included in the recovered-phase five-pair reservation.
+	return epochOneLimits{lifetime: lifetime, health: 15 * time.Minute, outputBytes: 64 << 20, controlPairs: 5 + 7 + 7 + 9}, nil
 }
 
 func pressureStep(phase string, step uint8, operation string) bool {

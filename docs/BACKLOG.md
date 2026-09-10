@@ -6833,6 +6833,32 @@ matching helper, engine or gate. The two failed diagnostic custody roots remain
 private and retained, not replayed or deleted. Gate outputs are retained in the
 tool record, not separately archived native log files.
 
+**Approved pressure control-window correction (2026-09-09).** Ben approved
+prospective V3 epoch-four PC01 capacity 24→28 pairs. Phases ten and eleven each
+need an extra OpenRequests/FenceRequests window for the new-phase-start sample
+before changing ballast; the mutation itself still requires an empty token.
+The endpoint allowance is now 3,584 bytes (+512), including the receiver's
+unused final idle/EOF reservation; the successful parent sequence uses 27
+pairs/3,456 bytes. The common launcher already derives both endpoint configs
+from this bound. DA admission, SA accounting, exact-read ordinals, output/data
+limits and all deadlines remain unchanged. The bound test pins the byte
+conversion and refuses historical schemas. Actual request/sampling/report
+counts and full pressure orchestration are still open, not proved by this
+capacity correction. No ordinary user-visible behavior changes.
+
+Independent source/cost/record review without OCR found critical/high/medium/low
+all zero. The source manifest, in order `spike/t421/epoch_pressure.go`,
+`spike/t421/epoch_pressure_test.go`, `spike/t421/epoch_backup.go`, is
+`f8e10e7ab160ed19e5a4ba46fb1ec828d5c0fc42b7ccb4014c0b160e35921435`.
+Normal selector `^TestExecutionEpoch(Pressure|Backup|Checkpoint|Return)` passed
+1.424s. Race selector
+`^(TestExecutionEpoch(Pressure|Backup|Checkpoint|Return)|TestPhaseControl)`
+passed for t421 in 9.593s and dispatchadmission in 1.520s. Existing transport
+tests cover wire exhaustion and EOF reservation; these gates do not run the
+new complete pressure choreography. Pinned ci-static passed vet, zero lint
+findings and all-package compilation; docs passed 0.532s, glossary/whitespace
+passed, and V1/V2 digests remain unchanged. No long native rehearsal was run.
+
 **Joined child workspace-byte reporting (2026-09-09).** Actual FD6-enabled
 producers five/six bind their sampled-byte reporting to the existing private
 stderr stream and authenticated input. Fixed begin/success/failure records carry
