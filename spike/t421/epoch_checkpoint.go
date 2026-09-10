@@ -42,7 +42,7 @@ type epochCheckpointRecoveryInput struct {
 }
 
 func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *epochCheckpointRecoveryInput) ([]byte, error) {
-	if epoch.Epoch < 1 || epoch.Epoch > 4 || (epoch.Epoch == 4) != (recovery != nil) {
+	if epoch.Epoch < 1 || epoch.Epoch > 5 || (epoch.Epoch == 4) != (recovery != nil) {
 		return nil, ErrExecutionEpochOne
 	}
 	if epoch.Epoch == 3 {

@@ -9,6 +9,96 @@ import (
 	"time"
 )
 
+// This startup-only prerequisite reserves DrainOwners/Pause/receiver EOF, not
+// future archive R/F, lifecycle collection or product-query choreography.
+func restoredStartupBounds(plan Plan) (epochOneLimits, error) {
+	deadlines := frozenPhaseDeadlines()
+	if plan.Schema != PlanV3Schema || len(plan.PhaseDeadlines) != len(deadlines) || plan.PhaseDeadlines[11] != deadlines[11] ||
+		plan.SafetyEnvelope.ServerHealthDeadlineMS != frozenSafetyEnvelope().ServerHealthDeadlineMS {
+		return epochOneLimits{}, ErrExecutionEpochOne
+	}
+	return epochOneLimits{lifetime: time.Duration(deadlines[11].DeadlineMS) * time.Millisecond,
+		health: time.Duration(plan.SafetyEnvelope.ServerHealthDeadlineMS) * time.Millisecond, outputBytes: 64 << 20, controlPairs: 3}, nil
+}
+
+// StartRestored consumes the successful joined archive handoff once and starts
+// the actual protected fifth server. Health and Stop use their existing native
+// paths. This startup-only lifetime ends at the original phase-twelve deadline;
+// neither launch nor HTTP readiness establishes archive R/F or phase acceptance.
+func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
+	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.done == nil || run.flow.epochs == nil ||
+		run.flow.epochs.author == nil || run.flow.controller == nil || run.flow.store == nil || run.flow.parent == nil {
+		return nil, ErrExecutionEpochOne
+	}
+	select {
+	case <-run.done:
+	default:
+		return nil, ErrExecutionEpochOne
+	}
+	flow := run.flow
+	flow.mu.Lock()
+	run.mu.Lock()
+	bounds, err := restoredStartupBounds(flow.plan)
+	now := time.Now()
+	valid := err == nil && !flow.closed && flow.retained == run && !run.returnStarting && !run.restoredStartUsed && run.err == nil && run.epoch.Epoch == 4 &&
+		run.backupComplete && run.backupStarted && run.backupJoined && run.backupSessionEmpty && run.backupRetired &&
+		run.restoreUsed && run.restoreComplete && run.restoreStarted && run.restoreJoined && run.restoreSessionEmpty &&
+		run.result.RootJoined && run.result.SessionEmpty && run.result.BackupWork.Complete && run.result.RestoreWork.Complete &&
+		validDigest(run.backupManifestSHA256) && run.restoreManifestSHA256 == run.backupManifestSHA256 &&
+		now.Before(run.phaseDeadline) && !run.phaseDeadline.After(run.lifetimeDeadline) && run.phaseDeadline.Sub(now) <= bounds.lifetime
+	if !valid {
+		run.mu.Unlock()
+		flow.mu.Unlock()
+		return nil, ErrExecutionEpochOne
+	}
+	deadline := run.phaseDeadline
+	prior := run.result
+	// The predecessor's finish has already canceled its own context. Borrow
+	// the caller independently, while retaining the established phase clock.
+	lifetime, cancel := context.WithDeadline(ctx, deadline)
+	done := make(chan struct{})
+	run.restoredStartUsed, run.returnStarting = true, true
+	run.returnStartCancel, run.returnStartDone = cancel, done
+	run.mu.Unlock()
+	flow.mu.Unlock()
+	defer func() {
+		if retErr != nil {
+			cancel()
+			run.mu.Lock()
+			run.err = ErrExecutionEpochOne
+			run.mu.Unlock()
+			cleanup, stop := context.WithTimeout(context.Background(), 5*time.Second)
+			run.fenceFailedBackup(cleanup)
+			stop()
+		}
+		flow.mu.Lock()
+		run.returnStarting, run.returnStartCancel = false, nil
+		close(done)
+		flow.mu.Unlock()
+	}()
+	flow.mu.Lock()
+	defer flow.mu.Unlock()
+	prior.Accounting, err = flow.controller.Snapshot()
+	if err != nil {
+		return nil, ErrExecutionEpochOne
+	}
+	prior.Store, err = flow.store.Snapshot()
+	view, launchErr := flow.controller.ProducerLaunch(6)
+	if err != nil || launchErr != nil || view.Phase != 12 || flow.closed || flow.retained != run || !epochRestoreClosedPrefix(lifetime, prior) {
+		return nil, ErrExecutionEpochOne
+	}
+	// No Advance/Resume: the same parent already owns the open phase twelve.
+	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}), healthLimit: bounds.health,
+		coldDeadline: deadline, lifetimeDeadline: deadline, cancelRun: cancel, backupWork: prior.BackupWork,
+		result: ExecutionEpochOneResult{RestoreWork: prior.RestoreWork}}
+	next.setPhaseDeadlineLocked(deadline)
+	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 5)
+	if result == nil {
+		next.stopPhaseDeadline()
+	}
+	return result, err
+}
+
 // RestoreBackup consumes the joined backup handoff once. It empties only the
 // held installation directory's children, preserves that root inode and runs
 // the real restore recipe with the SAME epoch-four config. Failed partial

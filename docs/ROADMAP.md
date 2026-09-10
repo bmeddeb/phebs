@@ -72,9 +72,10 @@ not mean unique physical/APFS clone-exclusive usage. Required sample failures
 still stop the run, retaining earlier completed maxima. Pressure geometry,
 delta/continuity checks and tolerances remain unchanged. Reviewed native
 restore and sampled-byte prerequisites are pushed at `f89cf6b1`; actual parent
-boundary sampling and offline archive-work bindings are the next integration
-slice. Full sample/checkpoint coverage and cost, remaining phases and
-launcher/sealing gates still precede a ceremony command.
+boundary sampling and offline archive-work bindings are pushed at `8ea09a4b`.
+The restored-server startup handoff is the next bounded prerequisite, not an
+archive-phase pass. Full sample/checkpoint coverage and cost, remaining phases
+and launcher/sealing gates still precede a ceremony command.
 
 **T42.2 approved continuation, 2026-09-09:** the reviewed receipt work is
 pushed through `83a51590`; its exact-source expanded race gate passed in

@@ -272,6 +272,7 @@ type ExecutionEpochOneRun struct {
 	backupManifestSHA256  string
 	backupWork            ExecutionAttemptObservation
 	restoreUsed           bool
+	restoredStartUsed     bool
 	restoreStarted        bool
 	restoreJoined         bool
 	restoreSessionEmpty   bool
@@ -370,9 +371,9 @@ func (flow *ExecutionEpochOne) start(ctx context.Context, mode epochOneMode) (_ 
 	return launched, err
 }
 
-// Callers hold flow.mu and select one of the four implemented epochs.
+// Callers hold flow.mu and select one of the five implemented epochs.
 func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, cancel context.CancelFunc, run *ExecutionEpochOneRun, bounds epochOneLimits, number uint64) (_ *ExecutionEpochOneRun, retErr error) {
-	if number < 1 || number > 4 || number == 4 && (run.checkpointRecovery == nil || run.checkpointPrior == nil) {
+	if number < 1 || number > 5 || number == 4 && (run.checkpointRecovery == nil || run.checkpointPrior == nil) {
 		return nil, ErrExecutionEpochOne
 	}
 	producer, phase := uint32(number+1), uint32(2)
@@ -383,6 +384,8 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		phase = 6
 	case 4:
 		phase = 8
+	case 5:
+		phase = 12
 	}
 	started := false
 	author, epochs := flow.epochs.author, flow.epochs
@@ -540,6 +543,8 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	case 4:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{8, 9, 10, 11}, 8, 4
 		controlConfig.BackupEndpointCarry = run.backupAllowed
+	case 5:
+		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{12, 13, 14}, 12, 3
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig}
@@ -901,7 +906,8 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if processErr != nil {
 		failure = ErrExecutionEpochOne
 	}
-	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses, BackupWork: run.backupWork}
+	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses,
+		BackupWork: run.backupWork, RestoreWork: run.result.RestoreWork}
 	// The retained installation also belongs to the separate backup session.
 	// A joined server alone cannot release that custody or expose shared output.
 	if run.backupStarted && (!run.backupJoined || !run.backupSessionEmpty) {
@@ -950,6 +956,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	if run.backupRetired {
 		prefixOK = run.backupComplete && epochBackupClosedPrefix(ctx, result)
+	}
+	if run.epoch.Epoch == 5 {
+		prefixOK = epochRestoredClosedPrefix(ctx, result)
 	}
 	if ctx.Err() != nil || terminal && (run.terminalContext == nil || run.terminalContext.Err() != nil) {
 		failure = ErrExecutionEpochOne

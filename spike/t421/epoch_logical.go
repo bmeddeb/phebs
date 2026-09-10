@@ -9,6 +9,9 @@ import (
 )
 
 func (run *ExecutionEpochOneRun) producer() uint32 {
+	if run.epoch.Epoch == 5 {
+		return 6
+	}
 	if run.epoch.Epoch == 4 {
 		return 5
 	}

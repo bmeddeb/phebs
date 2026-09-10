@@ -4925,6 +4925,12 @@ is distinct from missing coverage; later command/protocol failure keeps prior
 counts but refuses completeness. These per-command reports do not grant extra
 phase allowances or establish a complete archive/restore ceremony phase.
 
+The private restored-server startup handoff retains the deadline established
+before backup and transfers only successfully joined native archive custody.
+Its startup/Health/stop path does not establish restored authority, archive
+comparison, lifecycle completion or product-query acceptance. It is not an
+operator ceremony command; ordinary serving and restore commands are unchanged.
+
 Prospective V3 byte measurements use explicitly non-atomic custody traversals,
 not point-in-time filesystem snapshots. Logical totals sum regular-file
 apparent sizes; allocated totals sum linked entries' native 512-byte blocks,

@@ -6690,6 +6690,48 @@ that precise gap. The server-only process meter still does not cover the
 backup/restore process union. Aggregate whole-work integration remains required,
 not measured zero or a full phase-twelve pass.
 
+**Restored-server startup handoff (2026-09-09).** The next bounded prerequisite
+transfers the successful joined backup/restore custody once to the actual
+protected fifth-server launch. It rechecks current DA/SA prefixes, native
+manifest equality, complete prior offline work bindings and the original
+phase-twelve deadline before launch. It reuses config/listener five, producer
+six and the existing source borrow without another authoring, restore or
+phase-twelve Advance/Resume. The independent caller-derived context does not
+reuse the canceled predecessor context and cannot renew phase twelve.
+
+This startup/Health/stop slice configures a three-pair PC allowance: two actual
+drain/pause request pairs plus receiver idle/EOF headroom, while preserving the
+existing producer-six phases twelve through fourteen. Its joined-prefix check
+requires seven SA opens/EOFs and parent ordinal ten; backup and restore keep
+their existing closure rules. The successor retains actual prior offline work
+snapshots when finish constructs its new result. No aggregate work budget is
+multiplied. The ordered eight-file implementation manifest is
+`8661ecad90cded781f1da59187e605a372eaadedba355d2a7b19cf57b21b4f84`:
+epoch_restore.go, epoch_restore_test.go, epoch_launch.go, epoch_checkpoint.go,
+epoch_checkpoint_test.go, epoch_logical.go, epoch_backup.go and
+epoch_handoff_test.go, all under spike/t421.
+
+Focused normal/race passed in 6.391s/11.240s, including twenty-one modeled
+preflight refusals and the actual inherited producer-six stop. An initial
+test-only compile typo was corrected before those gates. Lead's broader epoch,
+native inherited handoff and parent-boundary race passed in 26.006s. Independent
+source/test/cost review found critical/high/medium/low all zero. Pinned static
+checks passed vet, zero lint findings and all-package compilation; docs passed
+in 0.562s, glossary and whitespace passed. Record-only final docs passed in
+0.542s with glossary/whitespace green and retained V1/V2 digests unchanged.
+The complete dispatchadmission race separately passed in 6.197s at the unchanged
+`8ea09a4b` package bytes; that is not a new native fifth-server constructor gate.
+
+The inherited fixture executes real producer-six DA/SA/PC and native signal/
+join cleanup. Its prior-work values and separate complete-history fixture are
+explicitly modeled; the inherited fixture must reject overall completeness
+because that history is absent. It is not successful protected StartRestored,
+actual HTTP Health, restored-data-to-server integration, archive R/F or a
+phase-twelve pass. Those native composition checks remain required before the
+full rehearsal. Reused source/tool checks and launcher locks retain their
+existing costs, with bounded current-prefix scans and copied work snapshots;
+there is no ordinary runtime or frozen numerical-limit change.
+
 **Parent-owned workspace sampling (2026-09-09).** The mounted workspace's
 actual held root now supplies byte observations across its source, protected
 inputs, home, temporary, data, backup and ballast siblings. Initial borrow and

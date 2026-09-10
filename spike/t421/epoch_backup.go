@@ -391,21 +391,33 @@ func epochArchiveCommandDigest(raw []byte, archive string, restore bool) (string
 }
 
 func epochBackupClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) bool {
-	return epochArchiveClosedPrefix(ctx, result, false)
+	return epochArchiveClosedPrefix(ctx, result, 10)
 }
 
 func epochRestoreClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) bool {
-	return epochArchiveClosedPrefix(ctx, result, true)
+	return epochArchiveClosedPrefix(ctx, result, 11)
 }
 
-func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResult, restore bool) bool {
+func epochRestoredClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) bool {
+	return epochArchiveClosedPrefix(ctx, result, 6)
+}
+
+func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResult, stage uint32) bool {
+	if stage != 10 && stage != 11 && stage != 6 {
+		return false
+	}
 	opened, ordinal := 5, uint64(8)
 	producers := []uint32{1, 2, 3, 4, 5, 7, 8, 9, 10}
 	storeProducers := []uint32{2, 3, 4, 5, 10}
-	if restore {
+	if stage == 11 || stage == 6 {
 		opened, ordinal = 6, 9
 		producers = append(producers, 11)
 		storeProducers = append(storeProducers, 11)
+	}
+	if stage == 6 {
+		opened, ordinal = 7, 10
+		producers = append(producers, 6)
+		storeProducers = append(storeProducers, 6)
 	}
 	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Store.Phase != 12 || result.Store.Opened != opened || result.Store.TerminalEOF != opened || result.Store.Complete {
 		return false
@@ -416,7 +428,7 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 			if p.Producer == id {
 				found = p.Attached && p.Active == 0 && p.Closed
 				if id == 1 {
-					found = p.Attached && p.Active == 0 && !p.Closed && p.Ordinal == ordinal
+					found = p.Attached && p.Active == 0 && p.Closed == (stage == 6) && p.Ordinal == ordinal
 				}
 				if id == 5 {
 					found = found && p.Checkpoint == 11

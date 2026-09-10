@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -47,6 +48,20 @@ func TestExecutionEpochHandoffHelper(t *testing.T) {
 	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 1})
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatalf("actual owner control: %v", err)
+	}
+	if os.Getenv("PHEBS_EPOCH_HANDOFF_RESTORED") == "1" {
+		state, stateErr := dispatchadmission.ProductionSemanticState()
+		if stateErr != nil || state.ProducerID != 6 || state.Phase != 12 {
+			t.Fatal("restored inherited identity", state, stateErr)
+		}
+		stopped, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		epochHandoffByte(t, os.Stdout, 'R')
+		<-stopped.Done()
+		if err := lifetime.Close(ctx); err != nil {
+			t.Fatal("restored inherited close", err)
+		}
+		return
 	}
 	checkpoint := os.Getenv("PHEBS_EPOCH_HANDOFF_CHECKPOINT") == "1"
 	var terminalTurn dispatchadmission.OwnerTurn
@@ -211,14 +226,25 @@ func TestExecutionEpochCheckpointInheritedTerminal(t *testing.T) {
 	}
 }
 
+func TestExecutionEpochRestoredInheritedStop(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("owned native session join is Darwin-only")
+	}
+	testEpochInheritedHandoff(t, "restored_stop")
+}
+
 func testEpochInheritedHandoff(t *testing.T, mode string) {
 	canceled, warm := mode == "canceled", strings.HasPrefix(mode, "warm")
 	physical := strings.HasPrefix(mode, "warm_physical")
 	stale := strings.HasPrefix(mode, "stale")
 	checkpoint := strings.HasPrefix(mode, "stale_checkpoint")
+	restored := mode == "restored_stop"
 	phaseIDs, serverID := []uint32{2, 3, 4}, uint32(2)
 	if stale {
 		phaseIDs, serverID = []uint32{6, 7, 8}, 4
+	}
+	if restored {
+		phaseIDs, serverID = []uint32{12, 13, 14}, 6
 	}
 	initialPhase, resumedPhase := phaseIDs[0], phaseIDs[1]
 	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Second)
@@ -303,6 +329,10 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_CHECKPOINT=1")
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	}
+	if restored {
+		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_RESTORED=1")
+		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	}
 	if mode == "warm_physical_stop_join" || mode == "stale_stop_join" {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_STOP_JOIN=1")
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
@@ -375,6 +405,9 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	if checkpoint {
 		pairs = 21
 	}
+	if restored {
+		pairs = 3
+	}
 	pcConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: phaseIDs, InitialPhase: initialPhase,
 		MaximumPhases: len(phaseIDs), MaximumWireBytes: pairs * 2 * dispatchadmission.FrameBytes, Timeout: 5 * time.Second}
 	if checkpoint {
@@ -404,6 +437,35 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		}
 	}()
 	epochHandoffRead(t, output, 'R')
+	if restored {
+		// Genuine producer-six transports and owned native stop, without a
+		// synthetic claim that this tiny child executed the prior archive or
+		// protected Phebs constructor/HTTP readiness.
+		run := &ExecutionEpochOneRun{flow: &ExecutionEpochOne{controller: dispatch, parent: parent, store: transport, release: cancel},
+			control: control, processObservation: processObservation, command: command, epoch: ExecutionEpochConfig{Epoch: 5},
+			stop: make(chan struct{}), done: make(chan struct{})}
+		custody := &ExecutionAuthorCustody{borrowedBy: run}
+		run.flow.epochs = &ExecutionEpochConfigCustody{author: custody, active: true}
+		// Positive prior producer-local observations must survive the fresh
+		// finish result even when complete-history validation correctly fails.
+		run.backupWork.Phases[11].PublicationWrites = 10
+		run.result.RestoreWork.Phases[11].PublicationWrites = 11
+		waited := make(chan error, 1)
+		go func() { err := handle.Wait(); processObservation.exited(); waited <- err }()
+		joined = true
+		go run.finish(ctx, func() {}, waited, served, nil)
+		result, stopErr := run.Stop(ctx)
+		serverJoined = true
+		if stopErr == nil || !result.RootJoined || !result.SessionEmpty || run.nativeStopErr != nil || custody.borrowedBy != nil {
+			t.Fatal("native restored cleanup/absent-history refusal", result, stopErr, run.nativeStopErr)
+		}
+		if result.Accounting.Attempts != 1 || !result.Accounting.Producers[1].Closed || result.Store.Store.Phase != 12 ||
+			!result.Store.Store.Producers[0].Closed || result.Store.Opened != 1 || result.Store.TerminalEOF != 1 ||
+			control.ReservedWireBytes() != 2*2*dispatchadmission.FrameBytes || result.BackupWork.Phases[11].PublicationWrites != 10 || result.RestoreWork.Phases[11].PublicationWrites != 11 {
+			t.Fatal("restored shutdown changed phase, lost closure/work or control bound", control.ReservedWireBytes(), result.Store.Opened, result.Store.TerminalEOF)
+		}
+		return
+	}
 	if control.DrainOwners(ctx) != nil || control.OpenRequests(ctx) != nil || control.FenceRequests(ctx) != nil {
 		t.Fatal("fixture owner/request fences failed")
 	}

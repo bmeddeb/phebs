@@ -173,7 +173,7 @@ func TestExecutionEpochCheckpointSemanticInput(t *testing.T) {
 	if err != nil || len(raw) > 16<<10 || !bytes.Contains(raw, []byte(`"checkpoint_recovery":{"prior":`)) || bytes.Contains(raw, []byte("private_lease")) {
 		t.Fatal("canonical handoff", err, len(raw))
 	}
-	for _, number := range []uint64{1, 2} {
+	for _, number := range []uint64{1, 2, 5} {
 		epoch.Epoch = number
 		ordinary, err := epochSemanticInput(testDigest("plan"), epoch, nil)
 		want := struct {
