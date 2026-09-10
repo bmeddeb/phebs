@@ -29,11 +29,69 @@ func TestExecutionPressureBorrowRefusals(t *testing.T) {
 			if test.v.bindRehearsal(t.Context(), &ExecutionEpochOne{}) == nil || test.v.finishRehearsal(t.Context(), &ExecutionEpochOneRun{}) == nil {
 				t.Fatal("unbound flow issued populated release")
 			}
+			if _, err := test.v.samplePreparation(t.Context()); err == nil {
+				t.Fatal("unavailable volume supplied preparation bytes")
+			}
+			if _, err := test.v.sampleFlow(t.Context()); err == nil {
+				t.Fatal("unbound flow supplied phase bytes")
+			}
+			if _, err := test.v.sampleJoined(t.Context(), &ExecutionEpochOneRun{}); err == nil {
+				t.Fatal("unjoined run supplied phase bytes")
+			}
 		})
 	}
 	v := &executionPressureVolume{borrowed: true}
 	if v.Close() == nil || v.closed || v.removeEmpty(t.Context()) == nil {
 		t.Fatal("outstanding borrow released volume")
+	}
+}
+
+// These are ownership-guard models, not measured bytes or native join proof.
+func TestExecutionPressureSampleBoundary(t *testing.T) {
+	for _, test := range []struct {
+		name             string
+		joined, retained bool
+		mutate           func(*ExecutionEpochOne, *ExecutionEpochOneRun)
+		want             bool
+	}{
+		{name: "post-author", want: true},
+		{name: "same-phase-start", mutate: func(f *ExecutionEpochOne, _ *ExecutionEpochOneRun) { f.used = true }},
+		{name: "author-active", mutate: func(f *ExecutionEpochOne, _ *ExecutionEpochOneRun) { f.epochs.author.active = true }},
+		{name: "author-anchor-changed", mutate: func(f *ExecutionEpochOne, _ *ExecutionEpochOneRun) {
+			f.authorStarted = f.authorStarted.Add(time.Second)
+		}},
+		{name: "latest-joined", joined: true, want: true},
+		{name: "latest-retained", joined: true, retained: true, want: true},
+		{name: "same-phase-successor", joined: true, mutate: func(f *ExecutionEpochOne, _ *ExecutionEpochOneRun) { f.epochs.released++ }},
+		{name: "live-successor", joined: true, retained: true, mutate: func(f *ExecutionEpochOne, _ *ExecutionEpochOneRun) {
+			f.epochs.author.borrowedBy = &ExecutionEpochOneRun{}
+		}},
+		{name: "retained-operation", joined: true, retained: true, mutate: func(_ *ExecutionEpochOne, r *ExecutionEpochOneRun) { r.returnStarting = true }},
+		{name: "joined-author-active", joined: true, mutate: func(f *ExecutionEpochOne, _ *ExecutionEpochOneRun) { f.epochs.author.active = true }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			started := time.Now()
+			flow := &ExecutionEpochOne{authored: true, authorStarted: started, epochs: &ExecutionEpochConfigCustody{author: &ExecutionAuthorCustody{}}}
+			v := &executionPressureVolume{flow: flow}
+			var run *ExecutionEpochOneRun
+			if test.joined {
+				flow.used = true
+				flow.epochs.released = 3
+				run = &ExecutionEpochOneRun{flow: flow, epoch: ExecutionEpochConfig{Epoch: 3}, result: ExecutionEpochOneResult{RootJoined: true, SessionEmpty: true}}
+				if test.retained {
+					flow.retained, flow.epochs.author.borrowedBy, flow.epochs.active = run, run, true
+				}
+			}
+			if !v.sampleBoundary(run, started) {
+				t.Fatal("valid initial boundary refused")
+			}
+			if test.mutate != nil {
+				test.mutate(flow, run)
+			}
+			if got := v.sampleBoundary(run, started); got != test.want {
+				t.Fatal("boundary", got, test.want)
+			}
+		})
 	}
 }
 
@@ -91,6 +149,33 @@ func TestExecutionPressureWorkspaceOptionalNative(t *testing.T) {
 	}
 	if v.removeEmpty(ctx) == nil {
 		t.Fatal("empty-only API erased populated custody")
+	}
+	// These are actual sibling files on the held private workspace, not
+	// supplied sample totals or a fictitious protected flow/phase binding.
+	for _, name := range []string{"fixture-data", "fixture-home", "fixture-tmp", "fixture-backup", "fixture-source"} {
+		directory := filepath.Join(v.workspace.path, name)
+		if err = os.Mkdir(directory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(filepath.Join(directory, "actual"), []byte("actual sibling bytes"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = os.WriteFile(filepath.Join(v.workspace.path, "fixture-ballast"), make([]byte, 512<<10), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	actual, err := v.samplePreparation(ctx)
+	if err != nil || actual != actualCustodyByteFixtureTotal(t, v.workspace.path) {
+		t.Fatal("whole native workspace sample", actual, err)
+	}
+	preparation, phases := v.byteSnapshot()
+	if !preparation.Completed || preparation.Maximum != actual || phases.Unavailable {
+		t.Fatal("preparation prefix", preparation, phases)
+	}
+	for _, phase := range phases.Phases {
+		if phase.Completed {
+			t.Fatal("preparation fabricated a phase sample")
+		}
 	}
 	// Mechanical populated-removal seam only: no fictitious run/lease evidence.
 	v.mu.Lock()

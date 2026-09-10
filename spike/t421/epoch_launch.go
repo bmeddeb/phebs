@@ -178,9 +178,12 @@ type ExecutionEpochOneResult struct {
 	Accounting                            dispatchadmission.Snapshot
 	Store                                 storeaccounting.WireSnapshot
 	Attempts                              ExecutionAttemptObservation
-	IndexOffers                           ExecutionIndexObservation
-	ServerProcesses                       ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
-	Inspection                            []ExecutionPhaseInspection
+	// Separate actual joined offline streams. Producer-local completeness is
+	// not aggregate phase acceptance; epoch five must also be composed.
+	BackupWork, RestoreWork ExecutionAttemptObservation
+	IndexOffers             ExecutionIndexObservation
+	ServerProcesses         ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
+	Inspection              []ExecutionPhaseInspection
 }
 
 type ExecutionEpochOneRun struct {
@@ -267,6 +270,7 @@ type ExecutionEpochOneRun struct {
 	backupJoined          bool
 	backupSessionEmpty    bool
 	backupManifestSHA256  string
+	backupWork            ExecutionAttemptObservation
 	restoreUsed           bool
 	restoreStarted        bool
 	restoreJoined         bool
@@ -897,7 +901,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if processErr != nil {
 		failure = ErrExecutionEpochOne
 	}
-	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses}
+	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses, BackupWork: run.backupWork}
 	// The retained installation also belongs to the separate backup session.
 	// A joined server alone cannot release that custody or expose shared output.
 	if run.backupStarted && (!run.backupJoined || !run.backupSessionEmpty) {

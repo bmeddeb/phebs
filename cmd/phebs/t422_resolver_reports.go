@@ -52,7 +52,7 @@ func bindT422ResolverReports(ctx context.Context, initial dispatchadmission.Prod
 		return nil, errT422AttemptReport
 	}
 	return readaccounting.WithResolverBlobObserver(ctx, func(size uint64) error {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			var record [25]byte
 			record, err = t422ResolverRecord(current, initial, size)

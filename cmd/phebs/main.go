@@ -271,8 +271,14 @@ func runPhebs(args []string) (code int, retErr error) {
 		}
 	}
 	if len(args) == 0 {
+		if err := dispatchadmission.RequireProductionWorkCommand(""); err != nil {
+			return 1, err
+		}
 		printUsage()
 		return 2, nil
+	}
+	if err := dispatchadmission.RequireProductionWorkCommand(args[0]); err != nil {
+		return 1, err
 	}
 	switch args[0] {
 	case "serve":
@@ -335,6 +341,10 @@ func backup(args []string) error {
 	}
 	ctx, cancel := signal.NotifyContext(dispatchadmission.ProcessContext(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx, err = bindT422ArchiveReports(ctx, cancel)
+	if err != nil {
+		return err
+	}
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
 			DataDir: cfg.Server.DataDir, Config: raw, PhebsVersion: version,
@@ -343,6 +353,9 @@ func backup(args []string) error {
 	})
 	if err != nil {
 		return err
+	}
+	if dispatchadmission.ProductionWorkSelected() && ctx.Err() != nil {
+		return ctx.Err()
 	}
 	fmt.Printf("backup published: %s (%s)\n", *output, manifest.ManifestSHA256)
 	return nil
@@ -364,6 +377,10 @@ func restore(args []string) error {
 	}
 	ctx, cancel := signal.NotifyContext(dispatchadmission.ProcessContext(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	ctx, err = bindT422ArchiveReports(ctx, cancel)
+	if err != nil {
+		return err
+	}
 	manifest, err := recovery.Restore(ctx, recovery.RestoreOptions{
 		Options: recovery.Options{
 			DataDir: cfg.Server.DataDir, Config: raw, PhebsVersion: version,
@@ -373,8 +390,24 @@ func restore(args []string) error {
 	if err != nil {
 		return err
 	}
+	if dispatchadmission.ProductionWorkSelected() && ctx.Err() != nil {
+		return ctx.Err()
+	}
 	fmt.Printf("restore verified and imported: %s\n", manifest.ManifestSHA256)
 	return nil
+}
+
+// Offline commands install only real context-based work observers. They do not
+// create server runners, lifecycle owners, index sinks or semantic request state.
+func bindT422ArchiveReports(ctx context.Context, cancel context.CancelFunc) (context.Context, error) {
+	if !dispatchadmission.ProductionWorkSelected() {
+		return ctx, nil
+	}
+	ctx, err := bindT422SourceReports(ctx, func(error) { cancel() })
+	if err != nil {
+		return nil, err
+	}
+	return bindT422ObservationReports(ctx, func(error) { cancel() })
 }
 
 func reportT4013Startup(stage string) {

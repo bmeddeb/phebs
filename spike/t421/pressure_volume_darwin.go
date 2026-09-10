@@ -27,25 +27,28 @@ var errPressureVolume = errors.New("execution pressure volume unavailable or ret
 // release requires the bound successful rehearsal and closed input owners;
 // full outer-stage accounting and durable hard-death supervision remain open.
 type executionPressureVolume struct {
-	mu        sync.Mutex
-	parent    productionRoot
-	root      productionRoot
-	mount     productionRoot
-	workspace productionRoot
-	image     *os.File
-	imageInfo os.FileInfo
-	underlay  os.FileInfo
-	tool      *ExecutionSystemToolCustody
-	lock      io.Closer
-	device    string
-	sessions  []int // Registered only by this owner's successful native Start.
-	ready     bool
-	closed    bool
-	removed   bool
-	unsettled bool
-	borrowed  bool
-	flow      *ExecutionEpochOne
-	ballast   *executionPressureBallast
+	mu               sync.Mutex
+	parent           productionRoot
+	root             productionRoot
+	mount            productionRoot
+	workspace        productionRoot
+	image            *os.File
+	imageInfo        os.FileInfo
+	underlay         os.FileInfo
+	tool             *ExecutionSystemToolCustody
+	lock             io.Closer
+	device           string
+	sessions         []int // Registered only by this owner's successful native Start.
+	ready            bool
+	closed           bool
+	removed          bool
+	unsettled        bool
+	borrowed         bool
+	flow             *ExecutionEpochOne
+	ballast          *executionPressureBallast
+	bytes            *custodyByteObservation
+	preparationBytes custodyBytePhase // Actual preparation samples, never phase-one evidence.
+	byteErr          error
 }
 
 // prepareExecutionPressureVolume owns a fresh sparse image, never a supplied

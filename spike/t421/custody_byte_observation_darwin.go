@@ -63,6 +63,12 @@ func (g *custodyByteObservation) fail() error {
 // Skipped phases remain incomplete; later parent integration must bind actual
 // required observation points. No default timeout extends the caller's budget.
 func (g *custodyByteObservation) Sample(ctx context.Context, phase uint32) (custodyByteSample, error) {
+	return g.sample(ctx, phase, nil)
+}
+
+// The volume's real controller recheck runs after walking but before committing
+// maxima. It holds no observer mutex and cannot supply replacement byte totals.
+func (g *custodyByteObservation) sample(ctx context.Context, phase uint32, confirm func() bool) (custodyByteSample, error) {
 	if g == nil {
 		return custodyByteSample{}, errCustodyByteObservation
 	}
@@ -89,13 +95,14 @@ func (g *custodyByteObservation) Sample(ctx context.Context, phase uint32) (cust
 		return custodyByteSample{}, g.fail()
 	}
 	value, err := walkCustodyBytes(ctx, g.owner)
-	if err != nil || ctx.Err() != nil {
+	if err != nil || ctx.Err() != nil || confirm != nil && !confirm() {
 		return custodyByteSample{}, g.fail()
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	// A concurrent canceled waiter may already have latched unavailable.
-	if g.err != nil {
+	if g.err != nil || ctx.Err() != nil {
+		g.err, g.result.Unavailable = errCustodyByteObservation, true
 		return custodyByteSample{}, g.err
 	}
 	row := &g.result.Phases[phase-1]

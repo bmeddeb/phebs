@@ -270,13 +270,31 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 				retErr = ErrExecutionEpochOne
 			}
 		}
+		// Native Wait joins this command's copier before the sole work scan.
+		// A failed native/protocol tail preserves real positive counters but
+		// cannot supply complete coverage. Never inspect an unjoined buffer.
+		stream := run.backupOutput.backup
+		if restore {
+			stream = run.backupOutput.restore
+		}
+		observed, observeErr := observeArchiveWork(stream, flow.plan, producer, run.attemptInput, joined, retErr == nil && ctx.Err() == nil)
+		if observeErr != nil {
+			retErr = ErrExecutionEpochOne
+		}
+		run.mu.Lock()
+		if restore {
+			run.result.RestoreWork = observed
+		} else {
+			run.backupWork = observed
+		}
+		run.mu.Unlock()
 	}()
 	if files[1].Close() != nil || files[3].Close() != nil || storeFile.Close() != nil {
 		return ErrExecutionEpochOne
 	}
 	files[1], files[3] = nil, nil
 	config := dispatchadmission.PhaseControlConfig{Phases: []uint32{12}, InitialPhase: 12, MaximumPhases: 1, MaximumWireBytes: 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
-	record := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, Producer: view.Producer, Phase: 12, Limits: view.Limits, Control: config, Tools: tools, Store: &storeConfig}
+	record := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, InputSHA256: run.attemptInput, Producer: view.Producer, Phase: 12, Limits: view.Limits, Control: config, Tools: tools, Store: &storeConfig}
 	if dispatchadmission.SendProductionBootstrap(ctx, files[0], files[2], record) != nil {
 		return ErrExecutionEpochOne
 	}

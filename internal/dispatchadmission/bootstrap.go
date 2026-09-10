@@ -78,7 +78,12 @@ func (record ProductionBootstrap) validate() error {
 		}
 		switch record.SemanticMode {
 		case "":
-			if record.InputSHA256 != ([32]byte{}) {
+			if record.Producer.ID == 10 || record.Producer.ID == 11 {
+				if record.InputSHA256 == ([32]byte{}) || record.Store == nil || record.Phase != 12 || record.Control.OwnerControl ||
+					!slices.Equal(record.Control.Phases, []uint32{12}) {
+					return ErrProductionBootstrap
+				}
+			} else if record.InputSHA256 != ([32]byte{}) {
 				return ErrProductionBootstrap
 			}
 		case ProductionSemanticV3:

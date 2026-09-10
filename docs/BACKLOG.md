@@ -6684,10 +6684,96 @@ the full protected parent constructor or frozen corpus.
 
 This slice does not establish the protected parent-constructor flow, pressure
 prerequisites, epoch five or archive R/authority comparison. Non-semantic offline
-bootstrap currently leaves compact relationship/source/cache work observations
-unbound, and the server-only process meter does not cover the backup/restore
-process union. Those omissions remain required whole-work integration, not
-measured zero or a full phase-twelve pass.
+bootstrap left compact relationship/source/cache work observations unbound at
+that component's gate; the later actual offline binding slice below closes
+that precise gap. The server-only process meter still does not cover the
+backup/restore process union. Aggregate whole-work integration remains required,
+not measured zero or a full phase-twelve pass.
+
+**Parent-owned workspace sampling (2026-09-09).** The mounted workspace's
+actual held root now supplies byte observations across its source, protected
+inputs, home, temporary, data, backup and ballast siblings. Initial borrow and
+completed preparation retain separate preparation maxima, not phase-one or
+cold-start measurements. Post-AuthorA and final-joined scans retain their
+original phase/lifetime clocks. Before/after ownership and store-phase checks
+reject changed boundaries, including successors in the same phase; no flow,
+run, author, epoch, SDK or lifecycle lock spans traversal. The volume lock
+excludes removal. A failed required boundary keeps previous completed maxima,
+latches unavailable and preserves custody.
+
+The tiny actual mounted-workspace fixture passed in 1.51s (2.107s package),
+including real sibling files and 512-KiB ballast. Its preparation-only samples
+remain distinct from authenticated phase coverage. The mechanical successful
+removal seam does not substitute for a full-flow release. Initial focused
+normal/race checks passed in 0.690s/1.778s. Independent review identified two
+latent same-phase attribution gaps in the original guards: an older joined
+checkpoint predecessor and a concurrent server start after AuthorA. The serial
+current caller does not demonstrate either failure. Both guards are corrected
+in the final ordered six-file manifest
+`dd58040e3765df024a4278ce8f6480b82ee283a42a93d787365b644f7866f63c`.
+Corrected focused normal/race passed in 0.798s/1.864s. Lead's combined native
+workspace, boundary, post-walk and sibling-process race passed in 3.582s,
+including the actual mounted fixture in 1.65s. Guard models are not native
+epoch-transition proof. Independent corrected-source and cost review found
+critical/high/medium/low all zero. Four successful
+rehearsal traversals do not cover all phase starts, mutations or capacity
+checkpoints. Complete byte coverage, its actual cost and full rehearsal remain
+open.
+
+**Actual offline archive-work binding (2026-09-09).** The thirty-four-file
+implementation manifest is
+`b46c20c790348c5f6b31cafedcbb1c68ec2b895c2d29bf2a298f54f9ac803f0c`.
+Backup ten and restore eleven keep non-semantic, no-owner bootstrap, but now
+require the actual retained input digest, exact phase-twelve store profile and
+matching command before configuration/native recovery work. Eight mandatory
+real observer bindings distinguish measured zero from absent coverage. Event
+producer digits A/B remain separate from decimal 10/11 binding lines; server
+2–6 bytes and semantic selection remain unchanged. Each joined native output
+gets one work pass and retains positive counters after later failure; server
+job/lifecycle reports cannot fill the offline profile.
+
+Focused normal command/dispatch/spike gates passed in 1.904s/0.352s/1.591s;
+final race passed in 3.904s/1.997s/5.026s. An initial test-only compile error
+named nonexistent cache-validation fields; the test was corrected to the
+existing cache lookup/miss formula before these gates. Independent source and
+cost review is critical/high/medium/low zero. Actual native backup/restore
+passed normal in 42.799s (10.03s/32.07s) and race in 45.916s
+(10.85s/33.27s). Their eight real bindings prove the tiny commands' zero-work
+coverage where no corresponding operation executes; no protected constructor
+or full corpus is substituted by this fixture. Final composed static checks
+passed vet, zero lint findings and all-package compilation; documentation
+passed in 0.542s, glossary and whitespace passed. Retained V1/V2 plan bytes
+are unchanged. The subsequent record-only documentation check passed in 0.617s
+with glossary and whitespace green, without new native attribution.
+
+Each producer adds 640 startup binding bytes. The modeled known compact
+subtotal is 8,639,182 bytes per offline producer and 28,732,243 bytes for epoch
+four plus both offline maxima under the same 64-MiB allowance; census body/
+invocation records and ordinary diagnostics are excluded, so this is not full
+log fit. Actual restore calls no relationship builder; no build is inserted
+to manufacture that event. The approved phase-twelve relationship work still
+belongs to the later restored-server path. Producer-local work snapshots do
+not multiply the shared phase allowance or complete whole-work coverage.
+
+**Native sibling-session census check (2026-09-09).** A tiny native test reuses
+the existing session helper and process gauge: one actual controller census
+contains both sibling session roots and its RSS equals the sum of that same
+returned row vector. Joining one child leaves the other visible and retains
+the earlier maximum without adding separate peaks. Race passed in 1.938s.
+This establishes the existing collector's topology support, not an admitted
+executor image, actual archive work, phase coverage or a whole-process receipt.
+No production sampler or numerical allowance changes.
+
+**Retained-workspace byte cost diagnostic (2026-09-09).** One read-only native
+traversal of the inactive retained `369047659` workspace used the exact
+`f89cf6b162d09d827d8de37e57b27c27e6655f2c` walker and a private test overlay,
+not a bound execution phase. It completed in 2.253426166s, observing
+63,780,472,190 logical bytes and 64,164,786,176 allocated bytes; package time
+was 2.922s. No custody was replayed or deleted. At that single observed rate,
+roughly 530 traversals alone consume twenty minutes. Actual future checkpoint
+count, changed-tree scan cost and lifecycle work remain unmeasured; this neither
+proves phase fit nor establishes a failure. Keep existing required samples and
+deadlines; validate their composed cost before the full rehearsal.
 
 **Approved prospective sampled byte semantics (2026-09-09).** Ben approved
 explicitly non-atomic sampled totals after the filesystem-coherence audit.

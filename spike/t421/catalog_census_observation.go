@@ -33,7 +33,7 @@ func observeCatalogCensusEvent(line []byte, plan Plan, producer uint32, input st
 		observation.Bound = true
 		return true, nil
 	}
-	if !observation.Bound || len(line) != 9 && len(line) != 26 || !bytes.Equal(line[:4], []byte("GC1:")) || line[4] != byte('0'+producer) || line[5] != ':' || line[len(line)-1] != '\n' {
+	if !observation.Bound || len(line) != 9 && len(line) != 26 || !bytes.Equal(line[:4], []byte("GC1:")) || line[4] != executionWorkProducerByte(producer) || line[5] != ':' || line[len(line)-1] != '\n' {
 		return true, errExecutionAttempts
 	}
 	phase := bytes.IndexByte([]byte("0123456789ABCDEF"), line[6])

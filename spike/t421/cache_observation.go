@@ -36,7 +36,7 @@ func observeCacheEvent(line []byte, plan Plan, producer uint32, input string, ou
 		out.Bound = true
 		return true, nil
 	}
-	if !out.Bound || len(line) != 9 || !bytes.Equal(line[:4], []byte("CC1:")) || line[4] != byte('0'+producer) || line[5] != ':' || line[8] != '\n' {
+	if !out.Bound || len(line) != 9 || !bytes.Equal(line[:4], []byte("CC1:")) || line[4] != executionWorkProducerByte(producer) || line[5] != ':' || line[8] != '\n' {
 		return true, errExecutionAttempts
 	}
 	phase := bytes.IndexByte([]byte("0123456789ABCDEF"), line[6])

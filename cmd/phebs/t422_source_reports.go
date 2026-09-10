@@ -12,29 +12,36 @@ import (
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
-// SR1:p:h\n is exactly eight bytes (phase is one uppercase hexadecimal digit).
-// The one startup binding is mandatory even when this producer reads nothing.
+// SR1:p:h\n is eight bytes: producer and phase are uppercase hexadecimal digits.
+// The mandatory startup binding spells the producer in decimal, even at zero work.
 func t422SourceBinding(state dispatchadmission.ProductionSemanticSnapshot) ([]byte, error) {
-	if state.Mode != dispatchadmission.ProductionSemanticV3 || state.ProducerID < 2 || state.ProducerID > 6 ||
-		state.InputSHA256 == ([32]byte{}) || !t422SemanticEpochPhase(uint64(state.ProducerID-1), state.Phase, true) {
+	if !t422WorkPhase(state, true) || state.InputSHA256 == ([32]byte{}) {
 		return nil, errT422AttemptReport
 	}
 	return []byte(fmt.Sprintf("SRB1:%d:sha256:%s\n", state.ProducerID, hex.EncodeToString(state.InputSHA256[:]))), nil
 }
 
 func t422SourceRecord(state, initial dispatchadmission.ProductionSemanticSnapshot) ([8]byte, error) {
-	if state.Mode != dispatchadmission.ProductionSemanticV3 || state.Mode != initial.Mode || state.ProducerID != initial.ProducerID || state.InputSHA256 != initial.InputSHA256 ||
-		!t422SemanticEpochPhase(uint64(state.ProducerID-1), state.Phase, false) {
+	if state.Mode != initial.Mode || state.ProducerID != initial.ProducerID || state.InputSHA256 != initial.InputSHA256 ||
+		initial.InputSHA256 == ([32]byte{}) || !t422WorkPhase(initial, true) || !t422WorkPhase(state, false) {
 		return [8]byte{}, errT422AttemptReport
 	}
-	return [8]byte{'S', 'R', '1', ':', byte('0' + state.ProducerID), ':', "0123456789ABCDEF"[state.Phase], '\n'}, nil
+	return [8]byte{'S', 'R', '1', ':', "0123456789ABCDEF"[state.ProducerID], ':', "0123456789ABCDEF"[state.Phase], '\n'}, nil
+}
+
+func t422WorkPhase(state dispatchadmission.ProductionSemanticSnapshot, initial bool) bool {
+	if state.Mode == "" {
+		return (state.ProducerID == 10 || state.ProducerID == 11) && state.Phase == 12
+	}
+	return state.Mode == dispatchadmission.ProductionSemanticV3 && state.ProducerID >= 2 && state.ProducerID <= 6 &&
+		t422SemanticEpochPhase(uint64(state.ProducerID-1), state.Phase, initial)
 }
 
 func bindT422SourceReports(ctx context.Context, fail func(error)) (context.Context, error) {
-	if !dispatchadmission.ProductionSemanticSelected() {
+	if !dispatchadmission.ProductionWorkSelected() {
 		return ctx, nil
 	}
-	state, err := dispatchadmission.ProductionSemanticState()
+	state, err := dispatchadmission.ProductionWorkState()
 	if err != nil || fail == nil {
 		return nil, errT422AttemptReport
 	}
@@ -82,7 +89,7 @@ func bindT422SourceReports(ctx context.Context, fail func(error)) (context.Conte
 		return nil, err
 	}
 	return readaccounting.WithSourceObserver(ctx, func() error {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			var record [8]byte
 			record, err = t422SourceRecord(current, state)

@@ -7,7 +7,7 @@ import (
 )
 
 func ObserveProductionRelationship(ctx context.Context, event readaccounting.RelationshipEvent, quantity uint64) error {
-	selected := ProductionSemanticSelected()
+	selected := ProductionWorkSelected()
 	err := readaccounting.ObserveRelationship(ctx, selected, event, quantity)
 	if err != nil && selected {
 		if lifetime := productionRuntime.Load(); lifetime != nil && lifetime.client != nil {

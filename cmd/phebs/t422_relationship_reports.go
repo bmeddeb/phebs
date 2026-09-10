@@ -92,7 +92,7 @@ func bindT422RelationshipReports(ctx context.Context, initial dispatchadmission.
 		return nil, errT422AttemptReport
 	}
 	return readaccounting.WithRelationshipObserver(ctx, func(event readaccounting.RelationshipEvent, quantity uint64) error {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			err = writeT422RelationshipRecord(writer, current, initial, event, quantity)
 		}

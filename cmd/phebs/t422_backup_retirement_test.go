@@ -220,7 +220,7 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 		t.Fatal("server SDK not retired", output.Text())
 	}
 	backupRecord := record
-	backupRecord.Producer, backupRecord.SemanticMode, backupRecord.InputSHA256, backupRecord.Phase = backupProducer, "", [32]byte{}, 12
+	backupRecord.Producer, backupRecord.SemanticMode, backupRecord.Phase = backupProducer, "", 12
 	backupRecord.Control = dispatchadmission.PhaseControlConfig{Phases: []uint32{12}, InitialPhase: 12, MaximumPhases: 1, MaximumWireBytes: 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	command, backupOutput, _, backupServed, _, backupDiagnostic := start("backup", backupRecord)
 	for backupOutput.Scan() {
@@ -230,6 +230,10 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 	}
 	if err = command.Wait(); err != nil {
 		t.Fatal("actual backup CLI", err, backupDiagnostic.String())
+	}
+	assertT422OfflineBindings(t, backupDiagnostic.String(), 10, "07")
+	if strings.Contains(backupDiagnostic.String(), "RL1:") {
+		t.Fatal("empty backup unexpectedly rebuilt relationships")
 	}
 	if err = <-backupServed; err != nil {
 		t.Fatal(err)
@@ -322,6 +326,13 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 		}
 		if e = restored.Wait(); e != nil {
 			t.Fatal("actual restore CLI", e, restoreDiagnostic.String())
+		}
+		assertT422OfflineBindings(t, restoreDiagnostic.String(), 11, "07")
+		// Real Restore installs archived members and recovers their authority;
+		// it does not invoke relationship Build/projectors. The later restored
+		// server is a separate lifetime, not invented positive work here.
+		if strings.Contains(restoreDiagnostic.String(), "RL1:") {
+			t.Fatal("empty native restore unexpectedly rebuilt relationships")
 		}
 		if e = <-restoreServed; e != nil {
 			t.Fatal(e)

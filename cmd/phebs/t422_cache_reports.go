@@ -38,7 +38,7 @@ func bindT422CacheReports(ctx context.Context, initial dispatchadmission.Product
 		return nil, errT422AttemptReport
 	}
 	return readaccounting.WithCacheObserver(ctx, func(event readaccounting.CacheEvent, phase uint32) (uint32, error) {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			var record [9]byte
 			record, err = t422CacheRecord(current, initial, event, phase)

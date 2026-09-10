@@ -7,6 +7,15 @@ import (
 	"slices"
 )
 
+// Producer identifiers use one uppercase hexadecimal digit in event frames;
+// mandatory binding lines retain their existing decimal identity spelling.
+func executionWorkProducerByte(producer uint32) byte {
+	if producer < 2 || producer > 6 && producer != 10 && producer != 11 {
+		return 0
+	}
+	return "0123456789ABCDEF"[producer]
+}
+
 // SR counts offered content attempts; OP counts successful native ParsedBlobs
 // events. Neither counts unique blobs. EP counts actual PublishDomain calls,
 // not authority movement. All three use the same eight-byte framing.
@@ -33,7 +42,7 @@ func observeBlobEvent(line []byte, plan Plan, producer uint32, input string, out
 		}
 		return false, nil
 	}
-	if !*bound || len(line) != 8 || !bytes.Equal(line[:4], record) || line[4] != byte('0'+producer) || line[5] != ':' || line[7] != '\n' {
+	if !*bound || len(line) != 8 || !bytes.Equal(line[:4], record) || line[4] != executionWorkProducerByte(producer) || line[5] != ':' || line[7] != '\n' {
 		return true, errExecutionAttempts
 	}
 	phase := bytes.IndexByte([]byte("0123456789ABCDEF"), line[6])

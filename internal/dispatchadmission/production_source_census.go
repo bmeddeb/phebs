@@ -6,7 +6,7 @@ import (
 )
 
 func ObserveProductionSourceCensus(ctx context.Context, event readaccounting.SourceCensusEvent, phase uint32, logical, unique uint64) (uint32, error) {
-	selected := ProductionSemanticSelected()
+	selected := ProductionWorkSelected()
 	observed, err := readaccounting.ObserveSourceCensus(ctx, selected, event, phase, logical, unique)
 	if err != nil && selected {
 		if lifetime := productionRuntime.Load(); lifetime != nil && lifetime.client != nil {

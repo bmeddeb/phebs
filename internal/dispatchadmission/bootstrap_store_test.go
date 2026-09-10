@@ -25,6 +25,7 @@ import (
 func productionStoreTestRecord() ProductionBootstrap {
 	record := productionTestRecord()
 	record.Producer.ID, record.Phase = 10, 12
+	record.InputSHA256 = [32]byte{7}
 	record.Control.Phases, record.Control.InitialPhase = []uint32{12}, 12
 	record.Store = &storeaccounting.ClientConfig{Producer: 10, Binding: [32]byte{9}, Phase: 12,
 		Phases: 2048, Calls: 1, Transactions: 1, WireBytes: 4096, AckTimeout: time.Second}
@@ -70,6 +71,8 @@ func TestProductionStoreRecord(t *testing.T) {
 		{"wire", func(r *ProductionBootstrap) { r.Store.WireBytes = 511 }},
 		{"deadline", func(r *ProductionBootstrap) { r.Store.AckTimeout = 0 }},
 		{"cli-owners", func(r *ProductionBootstrap) { r.Control.OwnerControl = true }},
+		{"offline-input", func(r *ProductionBootstrap) { r.InputSHA256 = [32]byte{} }},
+		{"offline-no-store", func(r *ProductionBootstrap) { r.Store = nil }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			record := productionStoreTestRecord()

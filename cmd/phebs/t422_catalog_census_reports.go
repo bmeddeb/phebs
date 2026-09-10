@@ -49,7 +49,7 @@ func bindT422CatalogCensusReports(ctx context.Context, initial dispatchadmission
 		return nil, errT422AttemptReport
 	}
 	return readaccounting.WithCatalogCensusObserver(ctx, func(event readaccounting.CatalogCensusEvent, phase uint32, records uint64) (uint32, error) {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			var record [26]byte
 			var size int

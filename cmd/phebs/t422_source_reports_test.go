@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -38,5 +39,34 @@ func TestT422SourceFraming(t *testing.T) {
 	ctx, err := bindT422SourceReports(t.Context(), nil)
 	if err != nil || ctx != t.Context() {
 		t.Fatal("ordinary observer binding changed", err)
+	}
+}
+
+func TestT422OfflineWorkFraming(t *testing.T) {
+	for _, producer := range []uint32{10, 11} {
+		initial := dispatchadmission.ProductionSemanticSnapshot{ProducerID: producer, Phase: 12, InputSHA256: [32]byte{1}}
+		binding, err := t422SourceBinding(initial)
+		if err != nil || len(binding) != 80 || string(binding) != fmt.Sprintf("SRB1:%d:sha256:01%s\n", producer, strings.Repeat("00", 31)) {
+			t.Fatal(string(binding), err)
+		}
+		for _, test := range []string{"valid", "producer", "phase", "mode", "input", "initial"} {
+			state, start := initial, initial
+			switch test {
+			case "producer":
+				state.ProducerID = 6
+			case "phase":
+				state.Phase = 13
+			case "mode":
+				state.Mode = dispatchadmission.ProductionSemanticV3
+			case "input":
+				state.InputSHA256 = [32]byte{2}
+			case "initial":
+				start.InputSHA256 = [32]byte{}
+			}
+			raw, err := t422SourceRecord(state, start)
+			if (err == nil) != (test == "valid") || err == nil && string(raw[:]) != fmt.Sprintf("SR1:%X:C\n", producer) {
+				t.Fatal(producer, test, raw, err)
+			}
+		}
 	}
 }

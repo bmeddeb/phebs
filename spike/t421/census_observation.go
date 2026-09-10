@@ -32,7 +32,7 @@ func observeCensusEvent(line []byte, plan Plan, producer uint32, input string, o
 		observation.Bound = true
 		return true, nil
 	}
-	if !observation.Bound || len(line) != 9 && len(line) != 43 || !bytes.Equal(line[:4], []byte("SB1:")) || line[4] != byte('0'+producer) || line[5] != ':' || line[len(line)-1] != '\n' {
+	if !observation.Bound || len(line) != 9 && len(line) != 43 || !bytes.Equal(line[:4], []byte("SB1:")) || line[4] != executionWorkProducerByte(producer) || line[5] != ':' || line[len(line)-1] != '\n' {
 		return true, errExecutionAttempts
 	}
 	phase := bytes.IndexByte([]byte("0123456789ABCDEF"), line[6])

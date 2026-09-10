@@ -31,10 +31,10 @@ func t422ObservationRecord(state, initial dispatchadmission.ProductionSemanticSn
 }
 
 func bindT422ObservationReports(ctx context.Context, fail func(error)) (context.Context, error) {
-	if !dispatchadmission.ProductionSemanticSelected() {
+	if !dispatchadmission.ProductionWorkSelected() {
 		return ctx, nil
 	}
-	state, err := dispatchadmission.ProductionSemanticState()
+	state, err := dispatchadmission.ProductionWorkState()
 	if err != nil || fail == nil {
 		return nil, errT422AttemptReport
 	}
@@ -55,7 +55,7 @@ func bindT422ObservationReports(ctx context.Context, fail func(error)) (context.
 		return nil, errT422AttemptReport
 	}
 	return readaccounting.WithParsedBlobObserver(ctx, func() error {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			var record [8]byte
 			record, err = t422ObservationRecord(current, state)

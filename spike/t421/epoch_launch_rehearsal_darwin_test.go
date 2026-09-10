@@ -78,6 +78,8 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	t.Cleanup(func() {
 		if volume != nil {
 			if !completed || t.Failed() || !volume.removed {
+				preparation, phases := volume.byteSnapshot()
+				t.Logf("retained actual workspace sample prefix: preparation=%+v phases=%+v; incomplete boundary coverage", preparation, phases)
 				t.Logf("retained volume/image custody; no automatic retry or mounted cleanup: %s", hostParent)
 				return
 			}
@@ -264,12 +266,26 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if volume != nil && volume.bindRehearsal(ctx, flow) != nil {
-		t.Fatal("exact flow could not bind its mounted custody")
+	if volume != nil {
+		if _, err := volume.samplePreparation(ctx); err != nil {
+			t.Fatal("actual whole-workspace preparation sample", err)
+		}
+		if volume.bindRehearsal(ctx, flow) != nil {
+			t.Fatal("exact flow could not bind its mounted custody")
+		}
+		// AuthorA has not anchored its cold deadline yet. This is preparation
+		// evidence only, never an invented phase-one or timed cold-start sample.
+		preparation, _ := volume.byteSnapshot()
+		t.Logf("actual whole-workspace preparation maximum: %+v; no phase-one/cold-start coverage", preparation)
 	}
 	result, err := flow.AuthorA(ctx)
 	if err != nil || !result.Completed || !result.RootJoined || !result.SessionEmpty || result.Revision != "a" {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)
+	}
+	if volume != nil {
+		if _, err := volume.sampleFlow(ctx); err != nil {
+			t.Fatal("actual post-author whole-workspace sample", err)
+		}
 	}
 	started = time.Now()
 	if physical {
@@ -465,6 +481,13 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		accepted = []string{"cold"}
 	}
 	assertRehearsalInspection(t, run, stopped, accepted)
+	if volume != nil {
+		if _, err := volume.sampleJoined(ctx, run); err != nil {
+			t.Fatal("actual joined whole-workspace sample", err)
+		}
+		preparation, phases := volume.byteSnapshot()
+		t.Logf("actual non-atomic whole-workspace boundary samples: preparation=%+v phases=%+v; missing phase-start/mutation/lifecycle samples remain incomplete", preparation, phases)
+	}
 	t.Logf("epoch-one startup/health/stop: %s; cold_handoff_selector=%t warm_observation_selector=%t physical_b_selector=%t; %+v; no full warm/receipt/freeze claim", time.Since(started), cold, warm, physical, stopped)
 	if !canRelease() || flow.Close() != nil || epochs.Close() != nil || author.Close() != nil || planInput.Close() != nil {
 		t.Fatal("joined epoch-one owner/input closure failed; retaining custody")

@@ -25,7 +25,7 @@ func observeResolverEvent(line []byte, plan Plan, producer uint32, input string,
 		out.ResolverBound = true
 		return true, nil
 	}
-	if !out.ResolverBound || len(line) != 25 || !bytes.Equal(line[:4], []byte("RM1:")) || line[4] != byte('0'+producer) || line[5] != ':' || line[7] != ':' || line[24] != '\n' {
+	if !out.ResolverBound || len(line) != 25 || !bytes.Equal(line[:4], []byte("RM1:")) || line[4] != executionWorkProducerByte(producer) || line[5] != ':' || line[7] != ':' || line[24] != '\n' {
 		return true, errExecutionAttempts
 	}
 	phase := bytes.IndexByte([]byte("0123456789ABCDEF"), line[6])

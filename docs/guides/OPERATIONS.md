@@ -4919,6 +4919,12 @@ process joins retain custody. This is not an operator-selectable mode or a
 ceremony command: full pressure/backup/restore orchestration and freeze remain
 pending. Ordinary `phebs backup` behavior is unchanged.
 
+Selected archive commands now bind their actual work reports separately from
+server owners and retain each joined command's observed prefix. A bound zero
+is distinct from missing coverage; later command/protocol failure keeps prior
+counts but refuses completeness. These per-command reports do not grant extra
+phase allowances or establish a complete archive/restore ceremony phase.
+
 Prospective V3 byte measurements use explicitly non-atomic custody traversals,
 not point-in-time filesystem snapshots. Logical totals sum regular-file
 apparent sizes; allocated totals sum linked entries' native 512-byte blocks,

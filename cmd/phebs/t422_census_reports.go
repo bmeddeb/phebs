@@ -49,7 +49,7 @@ func bindT422CensusReports(ctx context.Context, initial dispatchadmission.Produc
 		return nil, errT422AttemptReport
 	}
 	return readaccounting.WithSourceCensusObserver(ctx, func(event readaccounting.SourceCensusEvent, phase uint32, logical, unique uint64) (uint32, error) {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			var record [43]byte
 			var size int

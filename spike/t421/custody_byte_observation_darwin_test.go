@@ -322,3 +322,37 @@ func TestCustodyByteUnionFilesystemRefusal(t *testing.T) {
 		t.Fatal("union directory buffering accepted")
 	}
 }
+
+func TestCustodyBytePostWalkPhaseFenceRetainsPrior(t *testing.T) {
+	for _, mode := range []string{"phase_changed", "caller_canceled"} {
+		t.Run(mode, func(t *testing.T) {
+			owner, ctx := custodyByteFixture(t)
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			path := filepath.Join(owner.path, "actual")
+			if err := os.WriteFile(path, []byte("prior"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			g := newCustodyByteObservation(owner)
+			prior, err := g.Sample(ctx, 2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(path, []byte("larger actual completed walk in a changed phase"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			confirmed := false
+			value, err := g.sample(ctx, 2, func() bool {
+				confirmed = true
+				if mode == "caller_canceled" {
+					cancel()
+					return true
+				}
+				return false
+			})
+			if err == nil || !confirmed || value != (custodyByteSample{}) || g.Snapshot().Phases[1].Maximum != prior || !g.Snapshot().Unavailable {
+				t.Fatal("cross-phase walk published", value, err)
+			}
+		})
+	}
+}

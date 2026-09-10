@@ -46,7 +46,7 @@ func bindT422PublicationReports(ctx context.Context, initial dispatchadmission.P
 		return nil, errT422AttemptReport
 	}
 	return readaccounting.WithPublicationObserver(ctx, func() error {
-		current, err := dispatchadmission.ProductionSemanticState()
+		current, err := dispatchadmission.ProductionWorkState()
 		if err == nil {
 			var record [8]byte
 			record, err = t422PublicationRecord(current, initial)

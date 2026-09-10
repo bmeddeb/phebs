@@ -53,7 +53,7 @@ type ExecutionAttemptObservation struct {
 // inspect a live checkoutCommandOutput or infer pipe EOF from a PC01 ACK.
 func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool) (out ExecutionAttemptObservation, err error) {
 	if !joined || plan.Schema != PlanV3Schema || len(plan.PhaseOrder) != len(out.Phases) || len(plan.WorkEnvelope.Phases) != len(out.Phases) ||
-		producer < 2 || producer > 6 || input == ([32]byte{}) || len(raw) > 64<<20 || plan.ProcessAccounting == nil ||
+		executionWorkProducerByte(producer) == 0 || input == ([32]byte{}) || len(raw) > 64<<20 || plan.ProcessAccounting == nil ||
 		len(plan.ProcessAccounting.DispatchBudgets) != len(out.Phases) || !slices.Equal(plan.PhaseOrder, frozenPhaseOrder()) {
 		return out, errExecutionAttempts
 	}
@@ -70,7 +70,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		line, readErr := reader.ReadSlice('\n')
 		consumed += len(line)
 		if len(line) == 0 && errors.Is(readErr, io.EOF) {
-			if !out.SourceBound || !out.AttemptBound || !out.ObservationBound || !out.PublicationBound || !out.ResolverBound || !out.RelationshipBound {
+			if !out.SourceBound || producer <= 6 && !out.AttemptBound || !out.ObservationBound || !out.PublicationBound || !out.ResolverBound || !out.RelationshipBound {
 				return out, errExecutionAttempts
 			}
 			for _, phase := range out.Phases {
@@ -83,7 +83,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			out.Cache.Complete = out.Cache.complete()
 			out.SourceCensus.Complete = out.SourceCensus.complete()
 			out.CatalogCensus.Complete = out.CatalogCensus.complete()
-			if out.Cache.Bound && !out.Cache.Complete || !out.SourceCensus.Complete || !out.CatalogCensus.Complete {
+			if (out.Cache.Bound || producer >= 10) && !out.Cache.Complete || !out.SourceCensus.Complete || !out.CatalogCensus.Complete {
 				out.Complete, out.Lifecycle.Complete, out.SourceCensus.Complete = false, false, false
 				out.CatalogCensus.Complete = false
 				return out, errExecutionAttempts
@@ -92,6 +92,11 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		if readErr == nil && executionSetupTokenDiagnostic(line) {
 			continue
+		}
+		// Offline archive commands install context observers, not server job or
+		// lifecycle sinks. A server-only stream cannot fill their measured zero.
+		if producer >= 10 && (reservedCompactAttempt(line) || reservedLifecycleEvent(line)) {
+			return out, errExecutionAttempts
 		}
 		if observed, err := observeCensusEvent(line, plan, producer, wantInput, &out); observed {
 			if err != nil || readErr != nil {

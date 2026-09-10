@@ -70,9 +70,11 @@ V1/V2 unchanged. Maxima refer to completed custody traversals, not point-in-time
 usage or complete instantaneous high-water; linked-path allocated blocks do
 not mean unique physical/APFS clone-exclusive usage. Required sample failures
 still stop the run, retaining earlier completed maxima. Pressure geometry,
-delta/continuity checks and tolerances remain unchanged. Backup retirement is
-pushed at `3041fba8`; restore continuation, sampled gauge integration, remaining
-phases and launcher/sealing gates still precede a ceremony command.
+delta/continuity checks and tolerances remain unchanged. Reviewed native
+restore and sampled-byte prerequisites are pushed at `f89cf6b1`; actual parent
+boundary sampling and offline archive-work bindings are the next integration
+slice. Full sample/checkpoint coverage and cost, remaining phases and
+launcher/sealing gates still precede a ceremony command.
 
 **T42.2 approved continuation, 2026-09-09:** the reviewed receipt work is
 pushed through `83a51590`; its exact-source expanded race gate passed in
