@@ -4919,6 +4919,17 @@ process joins retain custody. This is not an operator-selectable mode or a
 ceremony command: full pressure/backup/restore orchestration and freeze remain
 pending. Ordinary `phebs backup` behavior is unchanged.
 
+Prospective V3 byte measurements use explicitly non-atomic custody traversals,
+not point-in-time filesystem snapshots. Logical totals sum regular-file
+apparent sizes; allocated totals sum linked entries' native 512-byte blocks,
+including directory/symlink metadata and each hard-link path without following
+symlinks. They are not unique physical or APFS clone-exclusive usage. Phase
+values retain the maximum completed traversal total; a later failed required
+sample retains that prior value but makes coverage unavailable and stops the
+run. Numerical limits and pressure geometry, delta checks and tolerances are
+unchanged. This approved prospective contract is not a completed sampler,
+rehearsal pass or ceremony freeze; V1/V2 remain exact.
+
 ## Developing phebs
 
 

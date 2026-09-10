@@ -1,6 +1,7 @@
 package t421
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -21,27 +22,37 @@ type epochBackupOutput struct {
 	remaining int64
 	server    *checkoutCommandOutput
 	backup    *checkoutCommandOutput
+	restore   *checkoutCommandOutput
 }
 
 func (output *epochBackupOutput) Write(raw []byte) (int, error) {
 	return output.write(output.server, raw)
 }
 
-type epochBackupCommandOutput struct{ shared *epochBackupOutput }
+type epochBackupCommandOutput struct {
+	shared  *epochBackupOutput
+	restore bool
+}
 
 func (output epochBackupCommandOutput) Write(raw []byte) (int, error) {
-	return output.shared.write(output.shared.backup, raw)
+	stream := output.shared.backup
+	if output.restore {
+		stream = output.shared.restore
+	}
+	return output.shared.write(stream, raw)
 }
 
 func (output *epochBackupOutput) write(stream *checkoutCommandOutput, raw []byte) (int, error) {
 	output.mu.Lock()
 	defer output.mu.Unlock()
 	if output.server.err != nil {
+		stream.cancel()
 		return 0, output.server.err
 	}
 	if int64(len(raw)) > output.remaining {
 		output.server.err = ErrExecutionEpochOne
 		output.server.cancel()
+		stream.cancel()
 		return 0, output.server.err
 	}
 	output.remaining -= int64(len(raw))
@@ -137,7 +148,7 @@ func (run *ExecutionEpochOneRun) BackupAndStop(ctx context.Context) (result Exec
 	if flow.parent.Checkpoint(operation) != nil || run.processPhaseAdvance(operation, 12) != nil || flow.parent.Resume(12) != nil {
 		return result, ErrExecutionEpochOne
 	}
-	if err := run.runNativeBackup(operation); err != nil {
+	if err := run.runNativeArchive(operation, false); err != nil {
 		return result, err
 	}
 	if operation.Err() != nil {
@@ -149,10 +160,10 @@ func (run *ExecutionEpochOneRun) BackupAndStop(ctx context.Context) (result Exec
 	return result, nil
 }
 
-// runNativeBackup uses the frozen Phebs command recipe and the existing epoch
-// configuration, native runtime endpoint and protected tool custody. Producer
-// ten owns all archive SDK/export work; producer five remains fenced in eleven.
-func (run *ExecutionEpochOneRun) runNativeBackup(ctx context.Context) (retErr error) {
+// runNativeArchive uses only the two frozen command recipes and the same epoch
+// four configuration/tool custody. Producer ten owns backup; eleven owns restore.
+// The restore caller separately owns prior server join and target emptying.
+func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore bool) (retErr error) {
 	flow := run.flow
 	author, epochs := flow.epochs.author, flow.epochs
 	author.mu.Lock()
@@ -177,7 +188,12 @@ func (run *ExecutionEpochOneRun) runNativeBackup(ctx context.Context) (retErr er
 			tools[index].Environment = filtered
 		}
 	}
-	view, err := flow.controller.ProducerLaunch(10)
+	producer, site := uint32(10), executionSiteBackup
+	verb, flag := "backup", "-output"
+	if restore {
+		producer, site, verb, flag = 11, executionSiteRestore, "restore", "-backup"
+	}
+	view, err := flow.controller.ProducerLaunch(producer)
 	if err != nil || view.Phase != 12 {
 		return ErrExecutionEpochOne
 	}
@@ -195,24 +211,28 @@ func (run *ExecutionEpochOneRun) runNativeBackup(ctx context.Context) (retErr er
 			return ErrExecutionEpochOne
 		}
 	}
-	storeFile, storeConfig, err := flow.store.Open(10)
+	storeFile, storeConfig, err := flow.store.Open(producer)
 	if err != nil {
 		return ErrExecutionEpochOne
 	}
 	defer func() { _ = storeFile.Close() }()
-	command := exec.Command(path, "backup", "-config", run.epoch.ConfigPath, "-output", filepath.Join(run.epoch.BackupRoot, "archive"))
+	command := exec.Command(path, verb, "-config", run.epoch.ConfigPath, flag, filepath.Join(run.epoch.BackupRoot, "archive"))
 	command.Dir, command.Env = author.parent, environment
-	backupOutput := epochBackupCommandOutput{shared: run.backupOutput}
+	backupOutput := epochBackupCommandOutput{shared: run.backupOutput, restore: restore}
 	command.Stdout, command.Stderr = backupOutput, backupOutput
 	command.ExtraFiles = []*os.File{files[1], files[3], storeFile}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
-	handle, err := flow.parent.StartInPhase(ctx, 12, dispatchadmission.Site{ID: executionSiteBackup, Role: executionRolePhebs}, command)
+	handle, err := flow.parent.StartInPhase(ctx, 12, dispatchadmission.Site{ID: site, Role: executionRolePhebs}, command)
 	if err != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()
-	run.backupStarted = true
+	if restore {
+		run.restoreStarted = true
+	} else {
+		run.backupStarted = true
+	}
 	run.mu.Unlock()
 	waited := make(chan error, 1)
 	go func() { waited <- handle.Wait() }()
@@ -227,7 +247,11 @@ func (run *ExecutionEpochOneRun) runNativeBackup(ctx context.Context) (retErr er
 		var stopErr error
 		joined, empty, stopErr = finishExecutionProcessSession(command.Process.Pid, waited, joined, waitErr, time.Now().Add(30*time.Second))
 		run.mu.Lock()
-		run.backupJoined, run.backupSessionEmpty = joined, empty
+		if restore {
+			run.restoreJoined, run.restoreSessionEmpty = joined, empty
+		} else {
+			run.backupJoined, run.backupSessionEmpty = joined, empty
+		}
 		run.mu.Unlock()
 		if !joined || !empty || stopErr != nil || waitErr != nil {
 			retErr = ErrExecutionEpochOne
@@ -260,7 +284,7 @@ func (run *ExecutionEpochOneRun) runNativeBackup(ctx context.Context) (retErr er
 	file := files[0]
 	files[0] = nil
 	go func() {
-		completion <- flow.controller.ServeChecked(flow.controller.Context(), 10, command.Process.Pid, file, func(checkCtx context.Context, _ dispatchadmission.Site) error {
+		completion <- flow.controller.ServeChecked(flow.controller.Context(), producer, command.Process.Pid, file, func(checkCtx context.Context, _ dispatchadmission.Site) error {
 			author.mu.Lock()
 			defer author.mu.Unlock()
 			epochs.mu.Lock()
@@ -279,23 +303,102 @@ func (run *ExecutionEpochOneRun) runNativeBackup(ctx context.Context) (retErr er
 	case <-ctx.Done():
 		return ErrExecutionEpochOne
 	}
-	if waitErr != nil || flow.store.Wait(ctx, 10) != nil {
+	if waitErr != nil || flow.store.Wait(ctx, producer) != nil {
 		return ErrExecutionEpochOne
 	}
+	stream := run.backupOutput.backup
+	if restore {
+		stream = run.backupOutput.restore
+	}
+	digest, err := epochArchiveCommandDigest(stream.buffer.Bytes(), filepath.Join(run.epoch.BackupRoot, "archive"), restore)
+	if err != nil || stream.err != nil {
+		return ErrExecutionEpochOne
+	}
+	run.mu.Lock()
+	if restore {
+		run.restoreManifestSHA256 = digest
+	} else {
+		run.backupManifestSHA256 = digest
+	}
+	run.mu.Unlock()
 	return nil
 }
 
+// Parse the actual owning command's joined output, not an expected-plan value
+// or another manifest read. Ordinary diagnostic lines remain private; exactly
+// one matching native success line and a complete stream are required.
+func epochArchiveCommandDigest(raw []byte, archive string, restore bool) (string, error) {
+	if len(raw) > 64<<20 {
+		return "", ErrExecutionEpochOne
+	}
+	prefix := []byte("backup published: " + archive + " (")
+	family := []byte("backup published:")
+	if restore {
+		prefix = []byte("restore verified and imported: ")
+		family = []byte("restore verified and imported:")
+	}
+	var digest string
+	for len(raw) > 0 {
+		end := bytes.IndexByte(raw, '\n')
+		if end < 0 {
+			return "", ErrExecutionEpochOne
+		}
+		line := raw[:end]
+		raw = raw[end+1:]
+		if !bytes.HasPrefix(line, family) {
+			continue
+		}
+		if digest != "" || !bytes.HasPrefix(line, prefix) {
+			return "", ErrExecutionEpochOne
+		}
+		value := line[len(prefix):]
+		if !restore {
+			if len(value) == 0 || value[len(value)-1] != ')' {
+				return "", ErrExecutionEpochOne
+			}
+			value = value[:len(value)-1]
+		}
+		if len(value) != 71 {
+			return "", ErrExecutionEpochOne
+		}
+		digest = string(value)
+		if !validDigest(digest) || strings.ToLower(digest) != digest {
+			return "", ErrExecutionEpochOne
+		}
+	}
+	if digest == "" {
+		return "", ErrExecutionEpochOne
+	}
+	return digest, nil
+}
+
 func epochBackupClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) bool {
-	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Store.Phase != 12 || result.Store.Opened != 5 || result.Store.TerminalEOF != 5 || result.Store.Complete {
+	return epochArchiveClosedPrefix(ctx, result, false)
+}
+
+func epochRestoreClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) bool {
+	return epochArchiveClosedPrefix(ctx, result, true)
+}
+
+func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResult, restore bool) bool {
+	opened, ordinal := 5, uint64(8)
+	producers := []uint32{1, 2, 3, 4, 5, 7, 8, 9, 10}
+	storeProducers := []uint32{2, 3, 4, 5, 10}
+	if restore {
+		opened, ordinal = 6, 9
+		producers = append(producers, 11)
+		storeProducers = append(storeProducers, 11)
+	}
+	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Store.Phase != 12 || result.Store.Opened != opened || result.Store.TerminalEOF != opened || result.Store.Complete {
 		return false
 	}
-	for _, id := range []uint32{1, 2, 3, 4, 5, 7, 8, 9, 10} {
+	for _, id := range producers {
 		found := false
 		for _, p := range result.Accounting.Producers {
 			if p.Producer == id {
 				found = p.Attached && p.Active == 0 && p.Closed
 				if id == 1 {
-					found = p.Attached && p.Active == 0 && !p.Closed && p.Ordinal == 8
+					found = p.Attached && p.Active == 0 && !p.Closed && p.Ordinal == ordinal
 				}
 				if id == 5 {
 					found = found && p.Checkpoint == 11
@@ -309,7 +412,7 @@ func epochBackupClosedPrefix(ctx context.Context, result ExecutionEpochOneResult
 			return false
 		}
 	}
-	for _, id := range []uint32{2, 3, 4, 5, 10} {
+	for _, id := range storeProducers {
 		found := false
 		for _, p := range result.Store.Store.Producers {
 			if p.Producer == id {

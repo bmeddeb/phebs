@@ -350,7 +350,7 @@ func verifyProductionSiteArguments(t *testing.T, path string, file *ast.File, in
 			return true
 		})
 		if found != 1 {
-			t.Fatalf("dispatch site %s:%s has %d controlled calls, want one", path, name, found)
+			t.Errorf("dispatch site %s:%s has %d controlled calls, want one", path, name, found)
 		}
 	}
 }

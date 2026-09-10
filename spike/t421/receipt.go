@@ -1534,6 +1534,7 @@ func expectedStoppedDecision(
 		}
 		if plan.Schema == PlanV3Schema && (!metrics.NativeMeasurementAvailable || !metrics.DispatchMeasurementAvailable ||
 			hasUnavailableStoreMetrics(stopped.Observation.UnavailableMetrics) || hasUnavailableWorkMetrics(stopped.Observation.UnavailableMetrics) ||
+			hasUnavailableByteMetrics(stopped.Observation.UnavailableMetrics) ||
 			measuredV3WorkCrossing(metrics, plan.WorkEnvelope.Phases[deadlineIndex], plan.WorkEnvelope)) {
 			// Incomplete accounting or another work crossing is not
 			// resource-only evidence for a topology/cohort recommendation.
@@ -1829,8 +1830,10 @@ func validateReceiptMeasurements(
 			observation = &stopped.Observation
 		}
 		unavailable := func(metric string) bool {
-			return observation != nil && stopped.Code == "measurement_unavailable" &&
-				observation.Kind == "measurement_unavailable" && slices.Contains(observation.UnavailableMetrics, metric)
+			return observation != nil && slices.Contains(observation.UnavailableMetrics, metric) &&
+				(stopped.Code == "measurement_unavailable" && observation.Kind == "measurement_unavailable" ||
+					plan.Schema == PlanV3Schema && outcomes[phase] == "stopped" && byteUnavailableMetric(metric) &&
+						validSecondaryUnavailableMetrics(observation.UnavailableMetrics))
 		}
 		teardownUnavailable := func(metric string) bool {
 			return phase == "teardown" && teardown.Outcome == "failed" &&
@@ -1851,6 +1854,11 @@ func validateReceiptMeasurements(
 		_, rssBytes := receiptRSSMetric(value.Metrics, plan.Schema)
 		allocationUnavailable := unavailable("data_allocated_bytes") || teardownUnavailable("data_allocated_bytes")
 		logicalUnavailable := unavailable("data_logical_bytes") || teardownUnavailable("data_logical_bytes")
+		// A later refused traversal invalidates coverage, not the completed
+		// maxima already observed. This exception never admits an incomplete
+		// passing phase and never substitutes a partial traversal's total.
+		retainBytePrefix := plan.Schema == PlanV3Schema &&
+			(outcomes[phase] == "stopped" || phase == "teardown" && teardown.Outcome == "failed")
 		logicalCrossingValid := false
 		if value.Metrics.DataLogicalBytes > Bytes(plan.WorkEnvelope.MaximumDataLogicalBytes) && observation != nil {
 			logicalCrossingValid = stopped.Code == "data_logical_ceiling" &&
@@ -1864,6 +1872,12 @@ func validateReceiptMeasurements(
 				logicalCrossingValid = decisionErr == nil
 			}
 		}
+		if plan.Schema == PlanV3Schema && phase == "teardown" && teardown.Outcome == "failed" && logicalUnavailable {
+			// Teardown has its own exact failure inventory, not a second
+			// stopped-phase primary. Preserve its earlier completed maximum
+			// when a later required traversal failed, including an overshoot.
+			logicalCrossingValid = true
+		}
 		if (value.Metrics.WallMS == 0) != wallUnavailable ||
 			(value.Metrics.AvailableDiskBytes == 0) != availableUnavailable ||
 			totalDiskUnavailable && value.Metrics.TotalDiskBytes != 0 ||
@@ -1873,16 +1887,19 @@ func validateReceiptMeasurements(
 			processInvalid ||
 			!value.Metrics.AllocationMeasurementAvailable && !allocationUnavailable ||
 			value.Metrics.AllocationMeasurementAvailable && allocationUnavailable ||
-			value.Metrics.DataAllocatedBytes != 0 && allocationUnavailable ||
-			value.Metrics.DataLogicalBytes != 0 && logicalUnavailable ||
+			!retainBytePrefix && (value.Metrics.DataAllocatedBytes != 0 && allocationUnavailable ||
+				value.Metrics.DataLogicalBytes != 0 && logicalUnavailable) ||
+			plan.Schema == PlanV3Schema && outcomes[phase] == "passed" && (allocationUnavailable || logicalUnavailable) ||
 			value.Metrics.DataLogicalBytes > Bytes(plan.WorkEnvelope.MaximumDataLogicalBytes) &&
 				!logicalCrossingValid {
 			return fmt.Errorf("T42.2 phase %q measurement is unavailable or invalid", phase)
 		}
 		coldIndex := slices.Index(plan.PhaseOrder, "cold")
 		if index >= coldIndex && phase != "teardown" &&
-			((value.Metrics.DataAllocatedBytes == 0) != allocationUnavailable ||
-				(value.Metrics.DataLogicalBytes == 0) != logicalUnavailable) {
+			(value.Metrics.DataAllocatedBytes == 0 && !allocationUnavailable ||
+				value.Metrics.DataLogicalBytes == 0 && !logicalUnavailable ||
+				!retainBytePrefix && (value.Metrics.DataAllocatedBytes != 0 && allocationUnavailable ||
+					value.Metrics.DataLogicalBytes != 0 && logicalUnavailable)) {
 			return fmt.Errorf("T42.2 phase %q lacks live data byte gauges", phase)
 		}
 		if outcomes[phase] == "passed" &&
@@ -3527,7 +3544,8 @@ func validatePressureTransitions(
 			value.BallastAllocatedBytesBefore != priorBallast ||
 			value.BallastAllocatedBytesAfter > freeze.Pressure.BallastCeilingBytes ||
 			value.DataAllocatedBytesAtTarget > plan.SafetyEnvelope.MaximumDataAllocatedBytes ||
-			value.DataAllocatedBytesAtTarget < value.BallastAllocatedBytesAfter {
+			value.DataAllocatedBytesAtTarget < value.BallastAllocatedBytesAfter ||
+			!pressurePhaseAllocationMatches(*value, metrics[phase], phase, plan.Schema) {
 			return fmt.Errorf("phase %q pressure facts are invalid", phase)
 		}
 		if index > 0 && (value.VolumeAvailableBytesBefore != priorAvailable ||
@@ -3581,7 +3599,6 @@ func validatePressureTransitions(
 					value.DataAllocatedBytesAtTarget, value.RecoveryDataAllocatedBytes,
 					target.ToleranceBytes,
 				) ||
-				value.DataAllocatedBytesBefore != uint64(metrics[phase].DataAllocatedBytes) ||
 				!orderedEventsWithin(transition.StartEventOrdinal, transition.FinishEventOrdinal,
 					value.BallastMutationEventOrdinal, value.GateEventOrdinal, value.RecoveryBallastEventOrdinal,
 					value.LifecycleFenceEventOrdinal, value.CapacityObservedEventOrdinal, value.RecoveryGateEventOrdinal,
@@ -3612,8 +3629,6 @@ func validatePressureTransitions(
 			value.RecoveryBallastAllocatedBytes != 0 || value.RecoveryBallastEventOrdinal != 0 ||
 			value.RecoveryGateEventOrdinal != 0) {
 			return errors.New("pressure 80 retained unrelated recovery evidence")
-		} else if phase != "pressure_75" && value.DataAllocatedBytesAtTarget != uint64(metrics[phase].DataAllocatedBytes) {
-			return fmt.Errorf("phase %q data allocation differs from its phase gauge", phase)
 		}
 		wantSequence, err := pressureSequenceSHA256(phase, *value)
 		if err != nil || value.GateSequenceSHA256 != wantSequence {
@@ -3628,6 +3643,20 @@ func validatePressureTransitions(
 		return errors.New("pressure recovery lifecycle cycle is not fresh")
 	}
 	return nil
+}
+
+// V3 records maxima over completed non-atomic traversals, so no designated
+// pressure endpoint must be the maximum. Every retained traversal must fit.
+// The separate mutation, continuity and frozen geometry predicates stay exact.
+func pressurePhaseAllocationMatches(value PressureTransition, metrics ReceiptMetrics, phase, schema string) bool {
+	if schema == PlanV3Schema {
+		return max(value.DataAllocatedBytesBefore, value.DataAllocatedBytesAtTarget,
+			value.PrePressureAllocatedBytes, value.RecoveryDataAllocatedBytes) <= uint64(metrics.DataAllocatedBytes)
+	}
+	if phase == "pressure_75" {
+		return value.DataAllocatedBytesBefore == uint64(metrics.DataAllocatedBytes)
+	}
+	return value.DataAllocatedBytesAtTarget == uint64(metrics.DataAllocatedBytes)
 }
 
 func pressureMutationMatches(
@@ -4894,7 +4923,7 @@ func validReceiptFailure(value ReceiptFailure, phase string, plan Plan) bool {
 	observation := value.Observation
 	if observation.Kind != "measurement_unavailable" && observation.UnavailableMetrics != nil {
 		// V3 may retain an independently substantiated primary stop beside an
-		// incomplete work/store prefix. The metric values remain the exact
+		// incomplete work/store prefix or byte-traversal coverage. Values remain the exact
 		// retained positive prefix; absence of completeness never means zero.
 		if plan.Schema != PlanV3Schema || !validSecondaryUnavailableMetrics(observation.UnavailableMetrics) {
 			return false

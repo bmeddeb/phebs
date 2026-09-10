@@ -1,0 +1,210 @@
+package t421
+
+import (
+	"context"
+	"errors"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
+)
+
+// RestoreBackup consumes the joined backup handoff once. It empties only the
+// held installation directory's children, preserves that root inode and runs
+// the real restore recipe with the SAME epoch-four config. Failed partial
+// installation/archive/source custody remains retained. No epoch-five launch,
+// archive R report, restored authority or complete phase receipt is claimed.
+func (run *ExecutionEpochOneRun) RestoreBackup(ctx context.Context) (result ExecutionEpochOneResult, retErr error) {
+	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.done == nil || run.flow.epochs == nil || run.flow.epochs.author == nil || run.flow.controller == nil || run.flow.store == nil || run.flow.parent == nil {
+		return result, ErrExecutionEpochOne
+	}
+	select {
+	case <-run.done:
+	default:
+		return result, ErrExecutionEpochOne
+	}
+	flow := run.flow
+	flow.mu.Lock()
+	run.mu.Lock()
+	valid := !flow.closed && flow.retained == run && !run.returnStarting && !run.restoreUsed && run.err == nil && run.epoch.Epoch == 4 &&
+		run.backupRetired && run.backupComplete && run.backupStarted && run.backupJoined && run.backupSessionEmpty && run.result.RootJoined && run.result.SessionEmpty &&
+		validDigest(run.backupManifestSHA256) && run.backupOutput != nil && run.backupOutput.server != nil && time.Now().Before(run.phaseDeadline) && time.Now().Before(run.lifetimeDeadline)
+	if !valid {
+		run.mu.Unlock()
+		flow.mu.Unlock()
+		return result, ErrExecutionEpochOne
+	}
+	deadline := run.phaseDeadline
+	if deadline.After(run.lifetimeDeadline) {
+		deadline = run.lifetimeDeadline
+	}
+	operation, cancel := context.WithDeadline(ctx, deadline)
+	done := make(chan struct{})
+	run.restoreUsed, run.returnStarting = true, true
+	run.returnStartCancel, run.returnStartDone = cancel, done
+	run.mu.Unlock()
+	flow.mu.Unlock()
+	defer cancel()
+	defer func() {
+		// The helper's native Wait/session/receiver joins precede this handoff.
+		accounting, dispatchErr := flow.controller.Snapshot()
+		store, storeErr := flow.store.Snapshot()
+		run.mu.Lock()
+		run.result.Accounting, run.result.Store = accounting, store
+		if run.restoreStarted && (!run.restoreJoined || !run.restoreSessionEmpty) {
+			run.result.SessionEmpty = false
+		}
+		if dispatchErr != nil || storeErr != nil || !run.restoreComplete || !epochRestoreClosedPrefix(operation, run.result) {
+			retErr = ErrExecutionEpochOne
+		}
+		if retErr != nil {
+			run.err = ErrExecutionEpochOne
+		}
+		run.mu.Unlock()
+		// Snapshot/prefix failures are late failures too; leave no open work.
+		if retErr != nil {
+			cleanup, stop := context.WithTimeout(context.Background(), 5*time.Second)
+			run.fenceFailedBackup(cleanup)
+			stop()
+		}
+		flow.mu.Lock()
+		run.returnStarting, run.returnStartCancel = false, nil
+		close(done)
+		flow.mu.Unlock()
+		result, _ = run.Wait(context.Background())
+	}()
+	// Establish the live phase and borrowed exact target before any removal.
+	view, err := flow.controller.ProducerLaunch(11)
+	if err != nil || view.Phase != 12 {
+		return result, ErrExecutionEpochOne
+	}
+	run.mu.Lock()
+	current := run.result
+	run.mu.Unlock()
+	current.Accounting, err = flow.controller.Snapshot()
+	if err != nil {
+		return result, ErrExecutionEpochOne
+	}
+	current.Store, err = flow.store.Snapshot()
+	if err != nil || !epochBackupClosedPrefix(operation, current) {
+		return result, ErrExecutionEpochOne
+	}
+	run.backupOutput.mu.Lock()
+	if run.backupOutput.server.err != nil {
+		run.backupOutput.mu.Unlock()
+		return result, ErrExecutionEpochOne
+	}
+	run.backupOutput.restore = &checkoutCommandOutput{remaining: run.backupOutput.remaining, cancel: cancel}
+	run.backupOutput.mu.Unlock()
+	author, epochs := flow.epochs.author, flow.epochs
+	author.mu.Lock()
+	epochs.mu.Lock()
+	valid = epochs.active && author.borrowedBy == run && epochs.checkLocked(operation, 4) == nil &&
+		run.epoch.DataRoot == epochs.roots[0].path && run.epoch.BackupRoot == epochs.roots[3].path && run.epoch.ConfigPath == epochs.epochs[3].ConfigPath
+	if valid {
+		err = emptyRetiredDataRoot(operation, epochs.roots[0])
+	} else {
+		err = ErrExecutionEpochOne
+	}
+	epochs.mu.Unlock()
+	author.mu.Unlock()
+	if err != nil {
+		return result, err
+	}
+	if err = run.runNativeArchive(operation, true); err != nil {
+		return result, err
+	}
+	if operation.Err() != nil {
+		return result, ErrExecutionEpochOne
+	}
+	// Restore must keep the admitted root rather than replacing its inode.
+	author.mu.Lock()
+	epochs.mu.Lock()
+	err = epochs.checkLocked(operation, 4)
+	epochs.mu.Unlock()
+	author.mu.Unlock()
+	if err != nil {
+		return result, ErrExecutionEpochOne
+	}
+	run.mu.Lock()
+	if run.restoreManifestSHA256 != run.backupManifestSHA256 {
+		run.mu.Unlock()
+		return result, ErrExecutionEpochOne
+	}
+	run.restoreComplete = true
+	run.mu.Unlock()
+	return result, nil
+}
+
+// Only the already-held data root reaches this helper. os.Root confines all
+// recursive removal to that directory, including raced symlinks. One name is
+// retained at a time; each subtree's stdlib removal is cooperative only at its
+// boundary, not an invented hard syscall deadline. The root itself is never
+// removed. Failures retain whatever native prefix was actually removed.
+func emptyRetiredDataRoot(ctx context.Context, held productionRoot) (retErr error) {
+	if ctx == nil || ctx.Err() != nil || held.file == nil || held.info == nil || held.path == "" || held.path == string(filepath.Separator) || !filepath.IsAbs(held.path) {
+		return ErrExecutionEpochOne
+	}
+	check := func() error {
+		if ctx.Err() != nil {
+			return ErrExecutionEpochOne
+		}
+		info, e := held.file.Stat()
+		current, pathErr := os.Lstat(held.path)
+		volume, volumeErr := inputCustodyVolume(held.file)
+		canonical, canonicalErr := filepath.EvalSymlinks(held.path)
+		if e != nil || pathErr != nil || volumeErr != nil || canonicalErr != nil || canonical != held.path || volume != held.volume || !os.SameFile(held.info, info) || !os.SameFile(info, current) || !current.IsDir() || !inputCustodyOwned(current) || current.Mode().Perm() != 0o700 {
+			return ErrExecutionEpochOne
+		}
+		return nil
+	}
+	if check() != nil {
+		return ErrExecutionEpochOne
+	}
+	root, err := os.OpenRoot(held.path)
+	if err != nil {
+		return ErrExecutionEpochOne
+	}
+	defer func() { retErr = errors.Join(retErr, root.Close()) }()
+	info, err := root.Stat(".")
+	if err != nil || !os.SameFile(held.info, info) || check() != nil {
+		return ErrExecutionEpochOne
+	}
+	entries, err := root.Open(".")
+	if err != nil {
+		return ErrExecutionEpochOne
+	}
+	defer func() { retErr = errors.Join(retErr, entries.Close()) }()
+	for {
+		if check() != nil {
+			return ErrExecutionEpochOne
+		}
+		names, readErr := entries.Readdirnames(1)
+		if readErr != nil && readErr != io.EOF {
+			return ErrExecutionEpochOne
+		}
+		if len(names) == 0 {
+			if readErr != io.EOF {
+				return ErrExecutionEpochOne
+			}
+			break
+		}
+		if names[0] == "." || names[0] == ".." || filepath.Base(names[0]) != names[0] || root.RemoveAll(names[0]) != nil {
+			return ErrExecutionEpochOne
+		}
+	}
+	if entries.Sync() != nil || check() != nil {
+		return ErrExecutionEpochOne
+	}
+	// A fresh cursor proves no child remained or appeared during the sweep.
+	verify, err := root.Open(".")
+	if err != nil {
+		return ErrExecutionEpochOne
+	}
+	names, readErr := verify.Readdirnames(1)
+	closeErr := verify.Close()
+	if len(names) != 0 || readErr != io.EOF || closeErr != nil || check() != nil {
+		return ErrExecutionEpochOne
+	}
+	return nil
+}

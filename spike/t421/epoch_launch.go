@@ -266,6 +266,13 @@ type ExecutionEpochOneRun struct {
 	backupStarted         bool
 	backupJoined          bool
 	backupSessionEmpty    bool
+	backupManifestSHA256  string
+	restoreUsed           bool
+	restoreStarted        bool
+	restoreJoined         bool
+	restoreSessionEmpty   bool
+	restoreComplete       bool
+	restoreManifestSHA256 string
 	backupCancel          context.CancelFunc
 	backupDone            chan struct{}
 	backupOutput          *epochBackupOutput

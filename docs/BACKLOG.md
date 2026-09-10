@@ -6661,6 +6661,166 @@ zero lint issues and all-package compilation. Docs passed in 0.545s; glossary
 and whitespace passed. Independent source and record review found no remaining
 findings. Complete receipt/store/native phase gates remain separate.
 
+**Joined native restore continuation (2026-09-09).** Five-file implementation
+manifest `5ccfba895e79acad613070a6e7de7ce1dd7001b5a9def7b7b0e134226b0f401a`
+reuses the backup launcher for producer eleven and the existing retained-operation
+guard. Actual closed server/backup prefixes precede child-only data-root removal;
+the root inode survives. Restore uses the same epoch-four config and its existing
+single archive verification/import/repair path. Actual joined backup and restore
+success-line digests must agree. Failed or uncertain child/session/receiver joins
+retain partial custody and refuse continuation; no automatic retry is added.
+
+Independent review found critical/high/medium/low zero. Compile-only command/
+spike gates passed in 1.949s/3.187s; pure restore/archive/backup normal and race
+passed in 1.441s/2.998s. Scoped lint reported zero issues; whitespace passed.
+An initial test fixture used the noncanonical temporary-directory alias and
+was correctly refused; the fixture now resolves that alias before constructing
+the held root, without changing the production guard. The lead's actual native
+backup/restore fixtures passed normal in 61.855s (9.65s backup, 51.65s restore)
+and race in 59.689s. They execute real selected SDK/dispatch/process-control
+retirement and backup/restore commands, preserve the data-root inode, compare
+actual command digests and join their native sessions. They do not exercise
+the full protected parent constructor or frozen corpus.
+
+This slice does not establish the protected parent-constructor flow, pressure
+prerequisites, epoch five or archive R/authority comparison. Non-semantic offline
+bootstrap currently leaves compact relationship/source/cache work observations
+unbound, and the server-only process meter does not cover the backup/restore
+process union. Those omissions remain required whole-work integration, not
+measured zero or a full phase-twelve pass.
+
+**Approved prospective sampled byte semantics (2026-09-09).** Ben approved
+explicitly non-atomic sampled totals after the filesystem-coherence audit.
+Only prospective V3 changes. The per-linked-path convention follows T41.10:
+regular-file apparent sizes, and native allocated 512-byte blocks for every
+linked entry, including directory/symlink metadata and repeated hard-link
+paths. Symlinks are not followed. These totals do not establish point-in-time
+usage, complete instantaneous phase high-water or unique physical/APFS
+clone-exclusive allocation. Numerical ceilings, required observation points,
+pressure geometry/tolerance and V1/V2 remain unchanged.
+
+The policy constructor now names maxima of completed whole-custody traversals
+including ballast, failed required samples and preservation of prior completed
+positive maxima. It does not implement the traversals or issue a native gauge.
+The separately reviewed receipt composition and native sampling components are
+recorded below; their full-custody integration points remain pending. No further
+long rehearsal or freeze is established by this approval. The earlier approval hold below is historical,
+not a request to approve these same semantics again.
+
+The two-file policy implementation manifest is
+`47715e82a0b3aa4ebdf4255a97847f36c08eb25f67b07cd07108dd6302af7586`.
+Focused normal/race passed in 2.108s/20.281s; scoped lint and whitespace passed.
+It adds 369 canonical policy bytes and no native sampling work. Retained V1/V2
+plan hashes remain `96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`
+and `2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+
+The accompanying three-file receipt correction manifest is
+`80b2fc1afcdecf6ace6cabce46fd4412f513ac68af99f0d6ec995eedb21882f5`.
+It preserves prior completed positive maxima after unavailable byte coverage,
+including failed-teardown overshoots, and composes secondary unavailable bytes
+with an independently validated primary. PASS/clean remain forbidden when
+coverage is incomplete. V3 pressure endpoints must fit under the phase maximum;
+V1/V2 retain their equality acceptance rules. Delta, continuity, geometry,
+tolerance and recovery checks are unchanged. Private pressure error text may
+now be reported earlier; no byte-identical refusal-message claim is made.
+
+Independent source/cost review found one medium failed-teardown overshoot
+representation gap and one low historical documentation contradiction; both
+are corrected, with final critical/high/medium/low zero. Focused normal passed
+in 2.598s and race in 10.118s, lint reported zero issues and whitespace passed.
+The lead's combined policy/receipt/restore-helper race passed in 20.973s;
+ci-static passed vet, zero lint issues and all-package compilation, and docs
+passed in 1.012s with glossary/whitespace green. These are modeled direct validators,
+not native samples or a complete authenticated receipt. An earlier pressure
+test setup unnecessarily invoked full modeled admission and passed in 106.959s;
+the final test uses directly derived frozen geometry/epochs without claiming
+admission, preserving the pressure subvalidator and legacy negative cases.
+
+**Native sampled custody-byte component (2026-09-09).** The two-file manifest
+is `7f21c8a29bcb69e4f34f33d7fbf2296234b0d72ddc37d007ef76229bc685b4e7`.
+Its actual borrowed-root traversal uses descriptor-relative no-follow reads,
+checked apparent-size/native-block accumulation and observed metadata/FSID
+stability checks. Failed current traversals add no partial value; fixed phase
+rows preserve earlier completed maxima with sticky unavailable coverage.
+Unsampled phase gaps remain visibly incomplete, not inferred successes.
+
+Actual small-filesystem tests cover sparse files, per-path hard links, outside
+and dangling symlinks, root/volume/mode/descriptor refusal, real metadata
+mutation and cancellation after traversal progress. A separate pure table
+checks arithmetic refusal, without claiming those supplied operands as native
+evidence. Final normal/race passed in 1.439s/2.449s; lint and whitespace passed.
+The lead's exact copied component race gate passed in 1.963s.
+Independent review is critical/high/medium/low zero after closing arithmetic
+coverage, Darwin descriptor/buffer cost and union-mount memory-scope findings.
+
+Name-only iteration avoids Go's directory-entry helper silently skipping a
+vanished entry. The existing path bound permits at most 2,048 DFS cursors;
+Darwin's duplicated iteration descriptors make the bound 4,096 traversal FDs
+plus anchor and borrowed owner, not 2,048 total FDs. libc storage and actual
+heap/FD peaks remain unmeasured. Union mounts refuse because their directory
+implementation can read the complete directory into memory. No host limit is
+raised. Full-workspace binding, server-local lifecycle sampling, all required
+observation points and a full-custody rehearsal remain separate prerequisites.
+
+**Owned-engine idle measurement prerequisite (2026-09-09).** The nine-file
+implementation manifest is
+`27c772e1f1fd0f4190b005594d49e2bfc73193bfc04c1fee8b85cd1eadf3e150`.
+The store retains its actual unreaped child, excludes selected SDK calls and
+transactions, observes the same Darwin birth in stopped status, and resumes
+through callback error, cancellation and panic. Actual connection close,
+runtime-file removal and child join use the same outer engine lock. The
+callback cannot call the SDK, Close or an owner-inspecting report sink.
+
+Independent source and cost review found critical/high/medium/low zero after
+the actual Close ordering correction. Author focused native store/SDK tests
+passed in 9.951s/0.383s and matching race in 11.012s/1.916s. Full
+storeaccounting passed normal/race in 1.687s/2.814s; pinned lint and whitespace
+passed. The lead's combined native-backup/engine-idle race gate passed command,
+store and storeaccounting in 11.564s/10.360s/1.355s. The native fixture checks
+same-birth stopped status, later SDK admission, error/cancel/panic resume and
+concurrent real Close waiting without removing its runtime file early.
+
+Stopped process status is not proof that already-issued kernel I/O or database
+background work has finished. This component provides no whole-custody writer
+fence, flush, byte traversal or pressure pass. Ben's subsequent sampled-byte
+approval above supersedes the former coherent-snapshot prerequisite, not the
+required custody scope, completed observations or pressure checks. Integration
+ci-static passed vet, zero lint issues and all-package compilation; docs passed
+in 1.525s, with glossary and whitespace green. The complete standalone store
+suite passed in 1,481.312s under its unchanged 60-minute command allowance;
+this gate includes the reviewed actual startup/Close synchronization changes.
+
+The lead's existing AST-backed dispatch-inventory test then correctly failed
+in 1.393s: the inventory still named `startEngine`, which now forwards to the
+actual `startOwnedEngine` controlled launch. Its one static callsite string is
+corrected, preserving site/role IDs and all budgets while updating the existing
+prospective V3 inventory digest. The rerun exposed an earlier stale Git wrapper
+name too: `Output` now forwards to the actual `output` controlled call. Reporting
+all boundary-count mismatches in one failing test produced the complete AST
+inventory in 1.518s and isolated these two names; the test still fails on every
+mismatch and preserves exact site-ID validation. Both names are corrected.
+Independent source/record review found critical/high/medium/low zero. The final
+combined production-dispatch inventory, byte-policy/receipt and restore/archive/
+backup-helper race gate passed in 11.219s. The earlier compile-only/static pass
+is not presented as having tested this inventory.
+
+Final composed-source ci-static passed vet, zero lint issues and all-package
+compilation. Documentation passed in 0.534s; glossary and whitespace passed.
+The five ordered component manifests above and retained V1/V2 hashes match
+their reviewed bytes. Independent native-sampler source/cost/record review
+has no remaining finding. These scoped gates close this prerequisite slice,
+not the complete fifteen-phase executor, broad receipt gate or ceremony freeze.
+
+The bounded native-API audit found no substantiated APFS I/O barrier under the
+current host authority. SurrealKV background compaction is independent of
+completed SDK calls; Darwin stopped status is not an outstanding-I/O drain.
+Volume sync does not exclude later mutation. Filesystem freeze has no verified
+APFS cancellation/thaw guarantee here, and native snapshots require additional
+host entitlement. No freeze, snapshot, entitlement change or long rehearsal was
+attempted to bypass that gap. A prospective change to non-atomic traversal
+totals would change measurement meaning and needs Ben's explicit approval;
+it is not selected by this implementation or review.
+
 **Native failure-representation correction (2026-09-09).** Composition review at
 `1398502715004b551551b6628e9dbddc26cb37ef` found that
 `validatePhaseWorkMetrics` accepts an overbound counter only at exactly

@@ -33,6 +33,14 @@ const t422BackupFixture = "PHEBS_T422_BACKUP_RETIREMENT_TEST"
 // It does not reproduce protected executable custody, pressure/F, the frozen
 // corpus, BackupAndStop's author/epoch constructor or a whole phase receipt.
 func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
+	testT422ArchiveRetiredNativeEndpoint(t, false)
+}
+
+func TestT422RestoreRetiredNativeEndpoint(t *testing.T) {
+	testT422ArchiveRetiredNativeEndpoint(t, true)
+}
+
+func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore bool) {
 	surreal, err := exec.LookPath("surreal")
 	if err != nil {
 		t.Skip("surreal binary not installed")
@@ -43,6 +51,13 @@ func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 	defer cancel()
+	identity, err := store.InspectSurrealBinaryContext(ctx, surreal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restore && identity.Version != "3.2.0" {
+		t.Skip("selected restore replay fixture requires SurrealDB 3.2.0")
+	}
 	root, err := os.MkdirTemp("", "t422-backup-retirement-")
 	if err != nil {
 		t.Fatal(err)
@@ -77,6 +92,17 @@ func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
 	backupProducer := record.Producer
 	backupProducer.ID, backupProducer.Binding = 10, [32]byte{10}
 	configuration := dispatchadmission.Config{Limits: record.Limits, Producers: []dispatchadmission.Producer{record.Producer, backupProducer}}
+	restoreProducer := record.Producer
+	restoreProducer.ID, restoreProducer.Binding = 11, [32]byte{11}
+	storeProducers := []storeaccounting.Producer{{ID: 5, Calls: 40, Transactions: 2}, {ID: 10, Calls: 1, Transactions: 1}}
+	wireProducers := []storeaccounting.WireProducer{{ID: 5, Binding: record.Producer.Binding, Phases: 1920}, {ID: 10, Binding: backupProducer.Binding, Phases: 2048}}
+	if restore {
+		record.Limits.Producers, record.Limits.Sites = 3, 48
+		configuration.Limits = record.Limits
+		configuration.Producers = append(configuration.Producers, restoreProducer)
+		storeProducers = append(storeProducers, storeaccounting.Producer{ID: 11, Calls: 1, Transactions: 1})
+		wireProducers = append(wireProducers, storeaccounting.WireProducer{ID: 11, Binding: restoreProducer.Binding, Phases: 2048})
+	}
 	var storePhases []storeaccounting.Phase
 	for phase := uint32(8); phase <= 12; phase++ {
 		configuration.Phases = append(configuration.Phases, dispatchadmission.Phase{ID: phase, Roles: []dispatchadmission.RoleBudget{
@@ -87,11 +113,11 @@ func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sa, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: []storeaccounting.Producer{{ID: 5, Calls: 40, Transactions: 2}, {ID: 10, Calls: 1, Transactions: 1}}, Phases: storePhases})
+	sa, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: storeProducers, Phases: storePhases})
 	if err != nil {
 		t.Fatal(err)
 	}
-	transport, err := storeaccounting.NewTransport(ctx, sa, storeaccounting.WireConfig{Producers: []storeaccounting.WireProducer{{ID: 5, Binding: record.Producer.Binding, Phases: 1920}, {ID: 10, Binding: backupProducer.Binding, Phases: 2048}}, AckTimeout: 5 * time.Second})
+	transport, err := storeaccounting.NewTransport(ctx, sa, storeaccounting.WireConfig{Producers: wireProducers, AckTimeout: 5 * time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +141,8 @@ func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 		command.Cancel = func() error { return t4013.KillPrivateProcessSession(command.Process.Pid) }
 		command.Env = []string{t422BackupFixture + "=" + mode, "PHEBS_T422_BACKUP_FIXTURE_ROOT=" + root,
-			"PATH=" + filepath.Dir(surreal), dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector, "GORACE=atexit_sleep_ms=0"}
+			"PATH=" + filepath.Dir(surreal), "PHEBS_SURREAL=" + surreal, "PHEBS_SURREAL_SHA256=" + identity.SHA256,
+			dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector, "GORACE=atexit_sleep_ms=0"}
 		command.ExtraFiles = []*os.File{daChild, pcChild, storeChild}
 		command.WaitDelay = 5 * time.Second
 		input, e := command.StdinPipe()
@@ -241,8 +268,83 @@ func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
 		_ = connection.Close()
 		t.Fatal("native endpoint survived joined server")
 	}
+	if err = t4013.WaitPrivateProcessSession(server.Process.Pid, time.Now().Add(5*time.Second)); err != nil {
+		t.Fatal("old server session before restore", err)
+	}
+	if err = t4013.WaitPrivateProcessSession(command.Process.Pid, time.Now().Add(5*time.Second)); err != nil {
+		t.Fatal("backup session before restore", err)
+	}
+	opened := 2
+	if restore {
+		dataPath := filepath.Join(root, "data")
+		dataInfo, e := os.Stat(dataPath)
+		if e != nil {
+			t.Fatal(e)
+		}
+		// This tiny fixture preserves the actual directory inode too. The
+		// production held-root safety seam has separate mutation/refusal tests.
+		data, e := os.OpenRoot(dataPath)
+		if e != nil {
+			t.Fatal(e)
+		}
+		entries, e := os.ReadDir(dataPath)
+		if e != nil {
+			_ = data.Close()
+			t.Fatal(e)
+		}
+		for _, entry := range entries {
+			if e = data.RemoveAll(entry.Name()); e != nil {
+				_ = data.Close()
+				t.Fatal(e)
+			}
+		}
+		if e = data.Close(); e != nil {
+			t.Fatal(e)
+		}
+		if entries, e = os.ReadDir(dataPath); e != nil || len(entries) != 0 {
+			t.Fatal("actual empty target", e)
+		}
+		restoreRecord := backupRecord
+		restoreRecord.Producer = restoreProducer
+		restored, restoreOutput, _, restoreServed, _, restoreDiagnostic := start("restore", restoreRecord)
+		var nativeDigest string
+		for restoreOutput.Scan() {
+			line := restoreOutput.Text()
+			if strings.HasPrefix(line, "restore verified and imported: ") {
+				if nativeDigest != "" {
+					t.Fatal("duplicate restore result")
+				}
+				nativeDigest = strings.TrimPrefix(line, "restore verified and imported: ")
+			}
+		}
+		if e = restoreOutput.Err(); e != nil {
+			t.Fatal(e)
+		}
+		if e = restored.Wait(); e != nil {
+			t.Fatal("actual restore CLI", e, restoreDiagnostic.String())
+		}
+		if e = <-restoreServed; e != nil {
+			t.Fatal(e)
+		}
+		if e = transport.Wait(ctx, 11); e != nil {
+			t.Fatal(e)
+		}
+		if e = t4013.WaitPrivateProcessSession(restored.Process.Pid, time.Now().Add(5*time.Second)); e != nil {
+			t.Fatal(e)
+		}
+		if nativeDigest != manifest.ManifestSHA256 {
+			t.Fatal("actual restored manifest changed", nativeDigest)
+		}
+		if info, e := os.Stat(dataPath); e != nil || !os.SameFile(info, dataInfo) {
+			t.Fatal("restore replaced data root", e)
+		}
+		if raw, e := os.ReadFile(configPath); e != nil || !bytes.Equal(raw, configRaw) {
+			t.Fatal("restore changed exact config", e)
+		}
+		opened = 3
+	}
 	prefix, err := transport.Snapshot()
-	if err != nil || prefix.Opened != 2 || prefix.TerminalEOF != 2 {
+	if err != nil || prefix.Opened != opened || prefix.TerminalEOF != opened {
 		t.Fatal(prefix, err)
 	}
 	for _, p := range prefix.Store.Producers {
@@ -258,6 +360,9 @@ func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
 		if p.Producer == 10 && (!p.Closed || p.Ordinal != 2) {
 			t.Fatal("backup must own actual version probe and export", p)
 		}
+		if restore && p.Producer == 11 && (!p.Closed || p.Ordinal != 5) {
+			t.Fatal("restore must own three version probes and two engine lifetimes", p)
+		}
 	}
 }
 
@@ -267,8 +372,12 @@ func TestT422BackupRetirementHelper(t *testing.T) {
 		return
 	}
 	root := os.Getenv("PHEBS_T422_BACKUP_FIXTURE_ROOT")
-	if mode == "backup" {
-		code, err := runPhebs([]string{"backup", "-config", filepath.Join(root, "phebs.yaml"), "-output", filepath.Join(root, "archive")})
+	if mode == "backup" || mode == "restore" {
+		flag := "-output"
+		if mode == "restore" {
+			flag = "-backup"
+		}
+		code, err := runPhebs([]string{mode, "-config", filepath.Join(root, "phebs.yaml"), flag, filepath.Join(root, "archive")})
 		if code != 0 || err != nil {
 			t.Fatal(code, err)
 		}

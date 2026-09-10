@@ -156,6 +156,9 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 	)
 	plan.MeterPolicy.Schema = "t422-combined-meter-policy-v3"
 	plan.MeterPolicy.Authority = ProcessAccountingSchema
+	// V3 uses T41.10's per-linked-path traversal units, not an atomic snapshot
+	// or unique physical allocation. Historical V1/V2 policies remain exact.
+	plan.MeterPolicy.ByteGaugeSemantics = "phase_sampled_traversal_v3:logical=max_completed_traversal_regular_file_apparent_byte_sum;allocated=max_completed_traversal_linked_entry_st_blocks_times_512_sum;scope=full_data_custody_including_ballast;allocated_includes_directories_and_symlinks;hardlink_aliases=count_each_linked_path;symlinks=not_followed;non_atomic_sequential_observations;not_point_in_time_usage_or_instantaneous_high_water;not_unique_physical_or_APFS_clone_exclusive_usage;sample_phase_start,after_each_custody_mutation,at_each_pressure_or_lifecycle_capacity_checkpoint,and_phase_finish;any_required_sample_unavailable_is_fail_closed;retain_prior_completed_positive_max_on_later_refusal;receipt_records_max_completed_observations_not_endpoint"
 	plan.MeterPolicy.ProcessGaugeSemantics = "controlled_dispatch_attempts=controller-committed-admissions;observed_rss_high_water_bytes=max_completed_sequential_census_RSS_sum;native_measurement_kind=sampled_observation;native_history=not_established;not-simultaneous-resource-bounds"
 	plan.ReceiptContract.Schema = ReceiptV3Schema
 	plan.ReceiptContract.FailureObservationSchema = "t422-failure-observation-v3"

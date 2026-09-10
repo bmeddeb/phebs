@@ -48,14 +48,23 @@ func validWorkUnavailableGroups(names []string) bool {
 	return true
 }
 
+func byteUnavailableMetric(name string) bool {
+	return name == "data_allocated_bytes" || name == "data_logical_bytes"
+}
+
+func hasUnavailableByteMetrics(names []string) bool {
+	return slices.ContainsFunc(names, byteUnavailableMetric)
+}
+
 // Primary resource/topology evidence may coexist with incomplete work/store
-// prefixes. Gauge and dispatch availability retain their separate contracts.
+// prefixes and prior completed byte-traversal maxima. Native process and
+// dispatch availability retain their separate contracts.
 func validSecondaryUnavailableMetrics(names []string) bool {
 	if len(names) == 0 || !validUnavailableMetricsForPlan(names, PlanV3Schema) {
 		return false
 	}
 	for _, name := range names {
-		if !workUnavailableMetric(name) && !slices.Contains(storeUnavailableMetricNames, name) {
+		if !workUnavailableMetric(name) && !byteUnavailableMetric(name) && !slices.Contains(storeUnavailableMetricNames, name) {
 			return false
 		}
 	}

@@ -247,6 +247,14 @@ func startLocal(ctx context.Context, dataDir string) (LocalRuntime, func(), erro
 // non-surrealkv caller is the OpenLocalMemory test seam; production servers
 // always run surrealkv under the data directory.
 func startEngine(ctx context.Context, engine string) (runtime LocalRuntime, stop func(), err error) {
+	runtime, owned, err := startOwnedEngine(ctx, engine)
+	if err != nil {
+		return LocalRuntime{}, nil, err
+	}
+	return runtime, owned.stop, nil
+}
+
+func startOwnedEngine(ctx context.Context, engine string) (runtime LocalRuntime, owned *localEngine, err error) {
 	identity, err := findSurrealBinary(true)
 	if err != nil {
 		return LocalRuntime{}, nil, err
@@ -278,31 +286,21 @@ func startEngine(ctx context.Context, engine string) (runtime LocalRuntime, stop
 	if err != nil {
 		return LocalRuntime{}, nil, fmt.Errorf("start surreal child: %w", err)
 	}
-	stop = func() {
-		_ = cmd.Process.Signal(os.Interrupt)
-		done := make(chan struct{})
-		go func() { _ = handle.Wait(); close(done) }()
-		select {
-		case <-done:
-		case <-time.After(5 * time.Second):
-			_ = cmd.Process.Kill()
-			<-done
-		}
-	}
+	owned = &localEngine{process: cmd.Process, handle: handle}
 
 	if err := waitHealthy(ctx, addr); err != nil {
-		stop()
+		owned.stop()
 		return LocalRuntime{}, nil, err
 	}
 	tokenBytes := make([]byte, 16)
 	if _, err := rand.Read(tokenBytes); err != nil {
-		stop()
+		owned.stop()
 		return LocalRuntime{}, nil, fmt.Errorf("create runtime token: %w", err)
 	}
 	return LocalRuntime{
 		Schema: localRuntimeSchema, Token: hex.EncodeToString(tokenBytes), PID: cmd.Process.Pid,
 		Endpoint: "ws://" + addr, Surreal: identity,
-	}, stop, nil
+	}, owned, nil
 }
 
 // StartLocalImport starts an isolated raw database child for restore. It does

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -33,6 +34,7 @@ var schema string
 type Surreal struct {
 	db               *surrealdb.DB
 	stop             func()          // non-nil when we supervise a local child
+	engine           *localEngine    // exact unreaped child, never recovered from a runtime file
 	accounting       *storeCallOwner // captured for selected background calls; ordinary opens leave nil
 	boundedJobClaims bool            // immutable opt-in; captured before the store is exposed
 }
@@ -97,16 +99,17 @@ func openLocal(ctx context.Context, dataDir, configSHA256 string, memory bool) (
 		return nil, err
 	}
 	var runtime LocalRuntime
-	var stop func()
+	var engine *localEngine
 	var err error
 	if memory {
-		runtime, stop, err = startEngine(ctx, "memory")
+		runtime, engine, err = startOwnedEngine(ctx, "memory")
 	} else {
-		runtime, stop, err = startLocal(ctx, dataDir)
+		runtime, engine, err = startOwnedEngine(ctx, "surrealkv:"+filepath.Join(dataDir, "db"))
 	}
 	if err != nil {
 		return nil, err
 	}
+	stop := engine.stop
 	runtime.ConfigSHA256 = configSHA256
 	s, err := openLocalRoot(ctx, runtime.Endpoint)
 	if err != nil {
@@ -119,10 +122,9 @@ func openLocal(ctx context.Context, dataDir, configSHA256 string, memory bool) (
 		stop()
 		return nil, err
 	}
-	s.stop = func() {
-		removeRuntime()
-		stop()
-	}
+	engine.removeRuntime = removeRuntime
+	s.engine = engine
+	s.stop = stop
 	return s, nil
 }
 
@@ -1849,6 +1851,13 @@ func (s *Surreal) updateLegacyJob(ctx context.Context, id, set string, expected 
 }
 
 func (s *Surreal) Close(ctx context.Context) error {
+	if s.engine != nil {
+		s.engine.mu.Lock()
+		defer s.engine.mu.Unlock()
+		err := s.db.Close(ctx)
+		s.engine.stopLocked()
+		return err
+	}
 	err := s.db.Close(ctx)
 	if s.stop != nil {
 		s.stop()

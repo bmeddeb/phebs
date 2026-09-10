@@ -63,8 +63,8 @@ type storeSDKCall struct {
 // A descriptor refusal may also emit its bounded SQL prefix, never to SA01
 // frames or public evidence.
 type SDKOwner struct {
-	// ponytail: <=40 calls and 2 UUIDs, one short mutex; never held over SDK or
-	// ACK I/O. Split only if measured contention warrants it.
+	// ponytail: <=40 calls and 2 UUIDs, one mutex; never held over SDK or ACK
+	// I/O. Selected WithIdle holds it over its synchronous local measurement.
 	mu             sync.Mutex
 	client         *Client
 	callLimit      int
@@ -248,6 +248,10 @@ func (owner *SDKOwner) acquire(ctx context.Context, kind Kind, tx *surrealdb.Tra
 		return nil, owner.fail(ctx, ErrCanceled)
 	}
 	owner.mu.Lock()
+	if err := ctx.Err(); err != nil {
+		owner.mu.Unlock()
+		return nil, owner.fail(ctx, ErrCanceled)
+	}
 	if owner.err != nil || owner.client.Context().Err() != nil || owner.fenced {
 		err, fenced := owner.err, owner.fenced
 		owner.mu.Unlock()
