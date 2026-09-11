@@ -18,13 +18,21 @@ func TestAccountingV3RestoreRelationshipWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacy := prior.WorkEnvelope
-	// Normalize only the pre-existing V3 read correction before comparing
-	// every phase's remaining work fields against the unchanged V2 recipe.
+	// Normalize the separately approved V3 read and cleanup corrections before
+	// comparing every remaining field against the unchanged V2 recipe.
 	if err := applyCorrectedPhaseReadMaximums(&legacy, plan); err != nil {
 		t.Fatal(err)
 	}
 	for index, got := range plan.WorkEnvelope.Phases {
 		want := legacy.Phases[index]
+		switch want.Phase {
+		case "pressure_80", "pressure_75", "lifecycle_collection":
+			// Independent expected arithmetic, not the production correction
+			// helper: unrelated fields must still compare exactly below.
+			want.StoreTransactions.Maximum += 4096 * (2 + 65)
+			want.StoreRows.Maximum += 4096 * (2 + 512)
+			want.LifecycleDeleted.Maximum = 4096 * 1024
+		}
 		got.ChildProcessRoles = want.ChildProcessRoles
 		got.ControlledDispatchRoles = want.ControlledDispatchRoles
 		if got.Phase == "archive_restore" {

@@ -6938,6 +6938,39 @@ by a test; that wrapper now passes Background, with no production caller change,
 and independent re-review found no issue. Whole command/native regression and
 broader exact-source receipt closure remain pending; no freeze is asserted.
 
+At immutable `4415470f9e66d0a94816e7f667f5eac4def70ca1`, the whole command
+package passed in 281.855s, with two explicit skips (the final-authority server
+helper and opt-in real-server regression). Its log digest is
+`09b5210616db00aea4ad258dc732845a2797d0909d73879778b5f2d3fd73c478`.
+The larger native cleanup passed again in 137.29s; the existing workspace
+composition passed in 13.67s. Full backend race passed for lifecycle 5.940s,
+focusedindex 11.934s and observationpublication 22.652s. Focused status API
+race passed in 1.736s. Command lifecycle/workspace race passed in 161.637s,
+including the cleanup fixture 144.94s and baseline native fixture 13.95s,
+without skips. Exact-commit independent review recorded zero findings.
+
+The first broader parent race group selected 61 of 86 relevant tests, with
+the remaining 25 constructor-sharing tests scheduled separately. It passed
+the complete V3 plan round-trip in 304.67s, then exposed the older
+`TestAccountingV3RestoreRelationshipWork` expectation that every non-archive
+work field still matched V2. That expectation omitted the approved cleanup
+reserves. The batch was deliberately interrupted (exit 130) after the known
+failure, during the later V1 pressure fixture; it is not a parent race pass.
+Its log digest is
+`64a34fd44ecda5950317a94970a81ee7f36f4abc0c328311ce8c41c4ab6c21b8`.
+All owned batch processes joined; the second group and subsequent checks did
+not start. The correction independently adds the approved literal reserves
+to only the three cleanup-phase expectations; minima, turns, unrelated
+fields and exact archive/no-slack checks remain. Independent review found
+zero findings. Fresh spike gates remain required; unchanged command/backend
+sources retain their separately completed 4415470f results. No production or
+native-fixture source changes in this test/documentation correction.
+
+The corrected restore-work, selected-cleanup and store-flow selectors passed
+normal in 1.037s and race in 9.205s; documentation/glossary passed in 0.642s
+and whitespace checks passed. These focused results do not replace the two
+fresh complete parent groups.
+
 **Counter-unit exact-source race continuation (2026-09-11).** At clean
 `52ef5e8ed98eb788acad95d7e81de4797e1d1742`, the broad 68-test selector
 `Test.*(Lifecycle|Pressure|Receipt|AccountingV3RetainsHistorical)` exceeded its
