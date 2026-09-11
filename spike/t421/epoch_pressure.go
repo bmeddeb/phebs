@@ -225,7 +225,7 @@ func pressureCycleValid(c lifecycle.CycleObservation, allowJobBacklog bool) bool
 			completeness = lifecycle.LowerBound
 		}
 		if owner.Name != names[i] || owner.State != "ok" || owner.Completeness != completeness || owner.Backlog && (owner.Name != lifecycle.JobOwner || !allowJobBacklog) || owner.AttemptedAt.Before(prior) || c.Capacity.ObservedAt.Before(owner.AttemptedAt) ||
-			owner.Scanned > uint64(lifecycle.MaxCandidatesPerTick) || owner.Deleted > uint64(lifecycle.MaxDeletesPerTick) || owner.Deleted > owner.Scanned {
+			owner.Scanned > uint64(lifecycle.MaxCandidatesPerTick) || owner.Deleted > uint64(lifecycle.MaxDeletesPerTick) {
 			return false
 		}
 		prior = owner.AttemptedAt
@@ -236,5 +236,5 @@ func pressureCycleValid(c lifecycle.CycleObservation, allowJobBacklog bool) bool
 	plan := Plan{Schema: PlanV3Schema, WorkEnvelope: WorkEnvelope{LifecycleOwners: names}}
 	final, err := validateLifecycleOwners(rows, plan, uint64(c.FenceAt.UnixMilli()), uint64(c.Capacity.ObservedAt.UnixMilli()))
 	total := lifecycleAggregate{scanned: c.Scanned, deleted: c.Deleted, logicalBytes: c.LogicalBytes, rootBytes: c.RootBytes, memberBytes: c.MemberBytes}
-	return err == nil && validateLifecycleTotals(total, final, c.OwnerTurns, uint64(len(rows))) == nil
+	return err == nil && validateLifecycleTotals(total, final, c.OwnerTurns, uint64(len(rows)), plan.Schema) == nil
 }

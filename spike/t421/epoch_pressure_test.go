@@ -129,10 +129,20 @@ func pressureTestCycle() lifecycle.CycleObservation {
 }
 
 func TestExecutionEpochPressureNativeReportChecks(t *testing.T) {
-	for _, mode := range []string{"valid", "total", "projected", "percent", "job-exact", "job-backlog", "unknown-owner", "future-owner", "owner-limit", "aggregate-under", "aggregate-over", "byte-under"} {
+	for _, mode := range []string{"valid", "multi-row", "delete-limit", "total", "projected", "percent", "job-exact", "job-backlog", "unknown-owner", "future-owner", "owner-limit", "aggregate-under", "aggregate-over", "byte-under"} {
 		t.Run(mode, func(t *testing.T) {
 			c := pressureTestCycle()
 			switch mode {
+			case "multi-row", "delete-limit":
+				c.Scanned, c.Deleted = 5, 15
+				if mode == "delete-limit" {
+					c.Deleted = 17
+				}
+				for i := range c.Owners {
+					if c.Owners[i].Name == lifecycle.GenerationScheduleOwner {
+						c.Owners[i].Scanned, c.Owners[i].Deleted = c.Scanned, c.Deleted
+					}
+				}
 			case "total":
 				c.Capacity.TotalBytes--
 			case "projected":
@@ -164,7 +174,7 @@ func TestExecutionEpochPressureNativeReportChecks(t *testing.T) {
 			case "byte-under":
 				c.Owners[0].RootBytes = 1
 			}
-			if pressureCycleValid(c, false) != (mode == "valid") {
+			if pressureCycleValid(c, false) != (mode == "valid" || mode == "multi-row") {
 				t.Fatal(mode)
 			}
 			if mode == "job-backlog" && !pressureCycleValid(c, true) {

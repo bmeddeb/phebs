@@ -294,9 +294,10 @@ func (collector *CycleCollector) ObserveOwner(result OwnerResult) {
 		collector.finishLocked(CycleObservation{}, errors.New("lifecycle cycle reported an unknown owner"))
 		return
 	}
+	// Scanned counts candidates; one candidate may delete multiple rows.
 	if result.Scanned < 0 || result.Scanned > MaxCandidatesPerTick ||
 		result.Deleted < 0 || result.Deleted > MaxDeletesPerTick ||
-		result.Deleted > result.Scanned || result.LogicalBytes < 0 ||
+		result.LogicalBytes < 0 ||
 		result.RootBytes < 0 || result.MemberBytes < 0 {
 		collector.finishLocked(CycleObservation{}, errors.New("lifecycle cycle owner result is invalid"))
 		return

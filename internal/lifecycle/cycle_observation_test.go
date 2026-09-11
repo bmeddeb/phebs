@@ -357,6 +357,52 @@ func TestCycleCollectorAwaitFreshAllowsDurableJobBacklog(t *testing.T) {
 	}
 }
 
+func TestCycleCollectorIndependentWorkUnits(t *testing.T) {
+	for _, test := range []struct {
+		name             string
+		scanned, deleted int
+		refuse           bool
+	}{
+		{"multi-row", 5, 15, false},
+		{"independent-limits", MaxCandidatesPerTick, MaxDeletesPerTick, false},
+		{"scan-overshoot", MaxCandidatesPerTick + 1, 0, true},
+		{"delete-overshoot", 5, MaxDeletesPerTick + 1, true},
+		{"negative-scan", -1, 0, true},
+		{"negative-delete", 0, -1, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			collector, err := NewCycleCollector([]Owner{StaticOwner{OwnerName: GenerationScheduleOwner, Completeness: Exact}}, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			done, err := collector.arm(false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			collector.ObserveOwner(OwnerResult{
+				Owner: GenerationScheduleOwner, AttemptedAt: time.Now().UTC(), Completeness: Exact,
+				Scanned: test.scanned, Deleted: test.deleted, CycleStart: true, CycleComplete: true,
+			})
+			collector.ObserveCapacity(Capacity{
+				TotalBytes: 1_000, AvailableBytes: 500, UsedBytes: 500,
+				ProjectedBytes: 500, UsedPercent: 50, Pressure: PressureNormal,
+			}, nil)
+			select {
+			case result := <-done:
+				if (result.err != nil) != test.refuse {
+					t.Fatalf("result = %+v, want refusal %v", result, test.refuse)
+				}
+				if !test.refuse && (result.value.Scanned != uint64(test.scanned) || result.value.Deleted != uint64(test.deleted) ||
+					len(result.value.Owners) != 1 || result.value.Owners[0].Scanned != uint64(test.scanned) || result.value.Owners[0].Deleted != uint64(test.deleted)) {
+					t.Fatalf("truthful counters changed: %+v", result.value)
+				}
+			default:
+				t.Fatal("complete cycle did not return a result")
+			}
+		})
+	}
+}
+
 func TestCycleCollectorCancellationWinsBufferedCompletion(t *testing.T) {
 	owners := []Owner{StaticOwner{OwnerName: "alpha", Completeness: Exact}}
 	collector, err := NewCycleCollector(owners, 1)

@@ -64,7 +64,7 @@ func TestT422LifecycleFixedRecipe(t *testing.T) {
 // production bootstrap. Every numeric prefix comes from the supplied result;
 // no fixture asserts an end-to-end phase pass.
 func TestT422LifecycleNativeReturnedPrefix(t *testing.T) {
-	for _, mode := range []string{"success", "native-error", "before-sweep", "sink-error", "sink-panic", "overshoot", "unknown-owner", "outside-drive"} {
+	for _, mode := range []string{"success", "multi-row", "independent-limits", "native-error", "before-sweep", "sink-error", "sink-panic", "overshoot", "scan-overshoot", "unknown-owner", "outside-drive"} {
 		t.Run(mode, func(t *testing.T) {
 			failures, calls := 0, 0
 			control := &t422LifecycleControl{ctx: t.Context(), names: []string{lifecycle.SearchOwner},
@@ -73,6 +73,15 @@ func TestT422LifecycleNativeReturnedPrefix(t *testing.T) {
 			control.launch.request.ServerEpoch = 4
 			result := lifecycle.OwnerResult{Owner: lifecycle.SearchOwner, AttemptedAt: time.Now().UTC(),
 				Completeness: lifecycle.Exact, Scanned: 3, Deleted: 2, LogicalBytes: 5, RootBytes: 2, MemberBytes: 3}
+			if mode == "multi-row" {
+				result.Scanned, result.Deleted = 5, 15
+			}
+			if mode == "independent-limits" {
+				result.Scanned, result.Deleted = lifecycle.MaxCandidatesPerTick, lifecycle.MaxDeletesPerTick
+			}
+			if mode == "scan-overshoot" {
+				result.Scanned = lifecycle.MaxCandidatesPerTick + 1
+			}
 			if mode == "native-error" || mode == "before-sweep" {
 				result.Err = errors.New("private native path and cursor must not appear")
 				result.Completeness = lifecycle.Unavailable
@@ -117,14 +126,14 @@ func TestT422LifecycleNativeReturnedPrefix(t *testing.T) {
 				}
 				return
 			}
-			if calls != 1 || (failures != 0) != (mode == "sink-error" || mode == "sink-panic" || mode == "overshoot") {
+			if calls != 1 || (failures != 0) != (mode == "sink-error" || mode == "sink-panic" || mode == "overshoot" || mode == "scan-overshoot") {
 				t.Fatal("event/sink completion changed", calls, failures)
 			}
 			if mode == "before-sweep" {
 				if event.ReturnedTick != 1 || event.OwnerTurns != 0 || event.TotalDeleted != 0 || event.Owner != "" || event.AttemptedAtNano != 0 {
 					t.Fatal("pre-sweep Tick refusal invented owner work")
 				}
-			} else if event.OwnerTurns != 1 || event.TotalDeleted != uint64(result.Deleted) || event.MaxDeleted != uint64(result.Deleted) {
+			} else if event.Scanned != result.Scanned || event.Deleted != result.Deleted || event.OwnerTurns != 1 || event.TotalDeleted != uint64(result.Deleted) || event.MaxDeleted != uint64(result.Deleted) {
 				t.Fatal("actual positive prefix was lost or clamped")
 			}
 		})

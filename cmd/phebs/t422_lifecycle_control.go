@@ -287,8 +287,9 @@ func (control *t422LifecycleControl) ObserveOwner(result lifecycle.OwnerResult) 
 		return
 	}
 	raw, err := json.Marshal(event)
+	// Candidate scans and deleted rows have independent per-turn caps.
 	if err != nil || len(raw) > t422LifecycleEventBytes || control.sink(raw) != nil ||
-		result.Scanned > lifecycle.MaxCandidatesPerTick || result.Deleted > lifecycle.MaxDeletesPerTick || result.Deleted > result.Scanned {
+		result.Scanned > lifecycle.MaxCandidatesPerTick || result.Deleted > lifecycle.MaxDeletesPerTick {
 		_ = control.stop()
 	}
 }

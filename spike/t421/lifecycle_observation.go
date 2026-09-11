@@ -104,7 +104,8 @@ func observeLifecycleEvent(line []byte, plan Plan, producer uint32, input string
 	*count = next // Retain genuine positive excess before refusing its bound.
 	bound := plan.WorkEnvelope.Phases[event.Phase-1]
 	if next.OwnerTurns > bound.LifecycleOwnerTurns.Maximum || next.Deleted > bound.LifecycleDeleted.Maximum ||
-		next.MaxDeleted > plan.WorkEnvelope.MaximumLifecycleDeletesPerTurn || event.Scanned > lifecycle.MaxCandidatesPerTick || event.Deleted > event.Scanned {
+		next.MaxDeleted > plan.WorkEnvelope.MaximumLifecycleDeletesPerTurn || event.Scanned > lifecycle.MaxCandidatesPerTick ||
+		plan.Schema != PlanV3Schema && event.Deleted > event.Scanned {
 		return true, errExecutionAttempts
 	}
 	return true, nil

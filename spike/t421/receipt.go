@@ -1698,7 +1698,8 @@ func lifecycleFailureMatches(value LifecycleFailureEvidence, plan Plan) bool {
 	ownerError := value.Owner.Name != "" && slices.Contains(plan.WorkEnvelope.LifecycleOwners, value.Owner.Name) &&
 		value.Owner.State == "error" && value.Owner.Completeness == string(lifecycle.Unavailable) &&
 		value.Owner.Scanned <= uint64(lifecycle.MaxCandidatesPerTick) &&
-		value.Owner.Deleted <= uint64(lifecycle.MaxDeletesPerTick) && value.Owner.Deleted <= value.Owner.Scanned &&
+		value.Owner.Deleted <= uint64(lifecycle.MaxDeletesPerTick) &&
+		(plan.Schema == PlanV3Schema || value.Owner.Deleted <= value.Owner.Scanned) &&
 		value.Owner.LogicalBytes <= uint64(servicecatalogv3.MaxLogicalBytes) &&
 		value.Owner.RootBytes <= uint64(servicecatalogv3.MaxRootBytes) &&
 		value.Owner.MemberBytes <= uint64(servicecatalogv3.MaxMemberBytes) &&
@@ -3403,7 +3404,7 @@ func validateLifecycleTransition(
 		rootBytes: value.RootBytes, memberBytes: value.MemberBytes,
 	}
 	if err := validateLifecycleTotals(
-		aggregate, finalRows, value.OwnerTurns, uint64(len(plan.WorkEnvelope.LifecycleOwners)),
+		aggregate, finalRows, value.OwnerTurns, uint64(len(plan.WorkEnvelope.LifecycleOwners)), plan.Schema,
 	); err != nil {
 		return err
 	}
@@ -3443,7 +3444,7 @@ func validateLifecycleOwners(
 		if value.Name != name || value.State != "ok" ||
 			lifecycleTimestampOutOfOrder(plan.Schema, value.AttemptedAtUnixMS, latestAttempt) ||
 			value.Scanned > uint64(lifecycle.MaxCandidatesPerTick) ||
-			value.Deleted > uint64(lifecycle.MaxDeletesPerTick) || value.Deleted > value.Scanned {
+			value.Deleted > uint64(lifecycle.MaxDeletesPerTick) || plan.Schema != PlanV3Schema && value.Deleted > value.Scanned {
 			return lifecycleAggregate{}, errors.New("lifecycle owner row is invalid")
 		}
 		latestAttempt = value.AttemptedAtUnixMS
@@ -3478,11 +3479,13 @@ func lifecycleTimestampOutOfOrder(planSchema string, current, previous uint64) b
 	return current < previous || !correctedPlanSemantics(planSchema) && current == previous
 }
 
-func validateLifecycleTotals(total, finalRows lifecycleAggregate, ownerTurns, minimumTurns uint64) error {
+// Scanned counts owner candidates; Deleted counts owner deletion units, which
+// can include multiple rows per candidate. Retained V1/V2 keep their old rule.
+func validateLifecycleTotals(total, finalRows lifecycleAggregate, ownerTurns, minimumTurns uint64, planSchema string) error {
 	if ownerTurns < minimumTurns || ownerTurns > math.MaxUint64/uint64(lifecycle.MaxCandidatesPerTick) ||
 		ownerTurns > math.MaxUint64/uint64(lifecycle.MaxDeletesPerTick) ||
 		total.scanned > ownerTurns*uint64(lifecycle.MaxCandidatesPerTick) ||
-		total.deleted > ownerTurns*uint64(lifecycle.MaxDeletesPerTick) || total.deleted > total.scanned ||
+		total.deleted > ownerTurns*uint64(lifecycle.MaxDeletesPerTick) || planSchema != PlanV3Schema && total.deleted > total.scanned ||
 		total.scanned < finalRows.scanned || total.deleted < finalRows.deleted ||
 		total.logicalBytes < finalRows.logicalBytes || total.rootBytes < finalRows.rootBytes ||
 		total.memberBytes < finalRows.memberBytes {
@@ -3699,7 +3702,7 @@ func validatePressureLifecycle(value PressureTransition, metrics ReceiptMetrics,
 		memberBytes: value.LifecycleMemberBytes,
 	}
 	if err := validateLifecycleTotals(
-		total, finalRows, value.LifecycleOwnerTurns, uint64(len(plan.WorkEnvelope.LifecycleOwners)),
+		total, finalRows, value.LifecycleOwnerTurns, uint64(len(plan.WorkEnvelope.LifecycleOwners)), plan.Schema,
 	); err != nil {
 		return err
 	}

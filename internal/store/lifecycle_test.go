@@ -106,6 +106,36 @@ UPDATE generation_schedule_chunk SET status = 'canceled', claimed_by = '',
 	}
 }
 
+func TestGenerationLifecycleCountsCandidatesAndDeletedRowsIndependently(t *testing.T) {
+	state := newRunnerStore(t)
+	var digests []string
+	for index := range 6 {
+		spec := generationSpec("example.invalid/multi-row-lifecycle", "sha256:"+fmt.Sprintf("%064d", index+300))
+		spec.TotalItems, spec.ChunkItems = 4, 1
+		if _, err := state.EnqueueGenerationSchedule(t.Context(), spec); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := state.ExpandGenerationSchedule(t.Context(), spec.Repository, spec.Stage, spec.Generation); err != nil {
+			t.Fatal(err)
+		}
+		digests = append(digests, generationScheduleDigest(spec))
+	}
+	// Five superseded candidates include two protected rollback generations.
+	// Each of the three eligible candidates deletes four chunks plus its schedule.
+	sweep, err := state.SweepGenerationScheduleLifecycle(t.Context(), "", 64, 16, 2)
+	if err != nil || sweep.Scanned != 5 || sweep.Deleted != 15 || sweep.More {
+		t.Fatalf("multi-row sweep = %+v, %v; want five candidates and fifteen deleted rows", sweep, err)
+	}
+	for index, digest := range digests {
+		if got, want := generationScheduleExists(t, state, digest), index >= 3; got != want {
+			t.Fatalf("schedule %d retained = %v, want %v", index, got, want)
+		}
+	}
+	if sweep, err := state.SweepGenerationScheduleLifecycle(t.Context(), "", 64, 16, 2); err != nil || sweep.Scanned != 2 || sweep.Deleted != 0 {
+		t.Fatalf("repeat sweep = %+v, %v; protected rollback candidates must remain", sweep, err)
+	}
+}
+
 func TestGenerationLifecycleCollectsUnexpandedSupersededSchedule(t *testing.T) {
 	state := newRunnerStore(t)
 	repository := "example.invalid/unexpanded-lifecycle"

@@ -76,6 +76,26 @@ func lifecycleTestTurn() executionLifecycleEvent {
 		Scanned: 2, Deleted: 1, Completeness: string(lifecycle.Exact), OwnerTurns: 1, TotalDeleted: 1, MaxDeleted: 1}
 }
 
+func TestExecutionLifecycleMultiRowDeletion(t *testing.T) {
+	for _, schema := range []string{PlanSchema, PlanV2Schema, PlanV3Schema} {
+		for _, deleted := range []int{15, 16, 17} {
+			t.Run(fmt.Sprintf("%s/%d", schema, deleted), func(t *testing.T) {
+				plan := accountingTestPlan(t)
+				plan.Schema = schema // Isolate this parser's historical-schema fence.
+				event := lifecycleTestTurn()
+				event.Owner, event.Scanned, event.Deleted = lifecycle.GenerationScheduleOwner, 5, deleted
+				event.TotalDeleted, event.MaxDeleted = uint64(deleted), uint64(deleted)
+				event.Completeness = string(lifecycle.LowerBound)
+				out := ExecutionLifecycleObservation{Bound: true}
+				_, err := observeLifecycleEvent([]byte(lifecycleTestEvent(t, event)), plan, 5, "", &out)
+				if (err == nil) != (schema == PlanV3Schema && deleted <= 16) || out.Phases[8].Deleted != uint64(deleted) {
+					t.Fatal("independent units or positive excess lost", out, err)
+				}
+			})
+		}
+	}
+}
+
 func TestExecutionLifecycleJoinedCollector(t *testing.T) {
 	plan := accountingTestPlan(t)
 	first := lifecycleTestTurn()

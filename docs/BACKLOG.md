@@ -6833,6 +6833,45 @@ matching helper, engine or gate. The two failed diagnostic custody roots remain
 private and retained, not replayed or deleted. Gate outputs are retained in the
 tool record, not separately archived native log files.
 
+**Lifecycle counter-unit correction (2026-09-10).** Exact source `749fe27b`
+reached cold/warm/physical/logical/return/stale/checkpoint boundaries, then
+failed after 4,742.29s in phase nine's normal-drive command. The fourth LC1
+event reports generation-schedules scanned 5 / deleted 15 / failed false. Store
+code counts schedule candidates separately from deleted chunk/plan/schedule
+rows. The live reporter emitted this truthful prefix then rejected 15 > 5;
+the collector and downstream validators repeated that invalid cross-unit rule.
+HTTP 409 `lifecycle control refused` precedes teardown's transport/join errors.
+Final session emptiness was true. Retained custody 2023163610 is unchanged.
+The first workspace sample was 78.54 GiB allocated; no normalized sample or
+pre-pressure 68 GiB check was reached, so no size-limit diagnosis is claimed.
+
+All seven cross-unit predicates are corrected across the live reporter,
+collector, joined parser, pressure-cycle validator and three receipt checks.
+Only V3 changes in the shared parser/receipt functions; historical V1/V2 rules
+remain exact. Independent 64/16 per-turn caps, phase totals, positive failed
+prefixes, nonnegative/overflow, order/freshness and authority rules remain.
+No production store or retention policy changes. A real SurrealDB fixture
+reproduces 5 scanned / 15 deleted while preserving current/rollback schedules and
+a repeat no-op; focused collector/reporter tests cover 5/15 and cap overshoots.
+Parent tests cover V3 acceptance and retained V1/V2 refusal, pressure-cycle
+totals, owner/failure evidence, and positive overshoot retention.
+Focused lifecycle/command normal gates passed in 0.601s/0.819s and race in
+1.500s/2.926s. Explicit real-store regression output records PASS (not SKIP)
+in normal 12.93s (package 13.464s) and race 13.09s (package 14.665s).
+Focused parent normal passed in 26.906s. Changed-package vet and pinned
+golangci-lint 2.12.2 passed with zero issues; docs/glossary/whitespace passed.
+Independent review found no code blocker; its record-spacing nits are corrected.
+Full command/lifecycle packages passed in 222.574s/5.531s. The broader parent
+race selector timed out at its 12-minute package alarm in
+`TestAccountingReceiptFullV3RoundTrip`, constructing production source-partition
+identities (`validateSourceMembers` via `BuildSuperRoot`), before receipt
+validation; package duration was 792.790s. This is an incomplete gate, not a
+pass or evidence of a counter-validation failure. The test's remaining
+in-memory engine subsequently exited without intervention. The focused parent
+race selector (lifecycle counters/parser, pressure checks/transport and versioned
+timestamps) passed in 276.604s. No fresh rehearsal executed. No source, replay
+custody, or caches were cleaned in this slice.
+
 **Darwin shell-name rehearsal refusal (2026-09-10).** A later operator run
 again selected old source `22c0268b`, not corrected tip `a1be5622`, and failed
 after 1,549.75 seconds just after cold HTTP readiness. The sampler retained

@@ -471,6 +471,37 @@ func TestPressure75LifecycleAllowsDurableJobBacklogButPressure80RequiresDrained(
 	}
 }
 
+func TestLifecycleCounterUnitsAreVersioned(t *testing.T) {
+	for _, plan := range []Plan{frozenTestPlan(t), correctedTestPlan(t), accountingTestPlan(t)} {
+		for _, counts := range []struct {
+			scanned, deleted uint64
+		}{{5, 15}, {64, 16}, {65, 15}, {5, 17}, {0, 0}} {
+			t.Run(fmt.Sprintf("%s/%d/%d", plan.Schema, counts.scanned, counts.deleted), func(t *testing.T) {
+				owners, capacity := testLifecycleOwners(plan, 1_000)
+				index := slices.IndexFunc(owners, func(owner LifecycleOwnerResult) bool { return owner.Name == lifecycle.GenerationScheduleOwner })
+				if index < 0 {
+					t.Fatal("generation owner missing")
+				}
+				owners[index].Scanned, owners[index].Deleted = counts.scanned, counts.deleted
+				want := counts.scanned <= 64 && counts.deleted <= 16 && (plan.Schema == PlanV3Schema || counts.deleted <= counts.scanned)
+				_, err := validateLifecycleOwners(owners, plan, 1_000, capacity)
+				if (err == nil) != want {
+					t.Fatal("owner units", err)
+				}
+				failure := LifecycleFailureEvidence{Owner: owners[index], CapacityCompleteness: "exact", CapacityPressure: "normal"}
+				failure.Owner.State, failure.Owner.Completeness = "error", string(lifecycle.Unavailable)
+				if lifecycleFailureMatches(failure, plan) != want {
+					t.Fatal("failure evidence units")
+				}
+				total := lifecycleAggregate{scanned: counts.scanned, deleted: counts.deleted}
+				if err := validateLifecycleTotals(total, total, 1, 1, plan.Schema); (err == nil) != want {
+					t.Fatal("cumulative units", err)
+				}
+			})
+		}
+	}
+}
+
 func TestLifecycleOwnerTimestampOrderingIsVersioned(t *testing.T) {
 	for _, test := range []struct {
 		name string
