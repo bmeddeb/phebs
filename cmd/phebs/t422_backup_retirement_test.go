@@ -40,7 +40,11 @@ func TestT422RestoreRetiredNativeEndpoint(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpoint(t, true, false)
 }
 
-func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool) {
+func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool, cleanup ...bool) {
+	cleanupWorkspace := len(cleanup) == 1 && cleanup[0]
+	if cleanupWorkspace && (!workspace || restore) {
+		t.Fatal("cleanup fixture requires workspace-only mode")
+	}
 	surreal, err := exec.LookPath("surreal")
 	if err != nil {
 		t.Skip("surreal binary not installed")
@@ -49,7 +53,11 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
+	fixtureLimit := 3 * time.Minute
+	if cleanupWorkspace {
+		fixtureLimit = 10 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), fixtureLimit)
 	defer cancel()
 	identity, err := store.InspectSurrealBinaryContext(ctx, surreal)
 	if err != nil {
@@ -218,7 +226,11 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool)
 		t.Cleanup(func() { _ = control.Close() })
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
-	server, output, input, served, control, diagnostic := start("server", record)
+	serverMode := "server"
+	if cleanupWorkspace {
+		serverMode = "workspace-cleanup"
+	}
+	server, output, input, served, control, diagnostic := start(serverMode, record)
 	failServer := func(stage string, cause error) {
 		t.Helper()
 		_ = t4013.KillPrivateProcessSession(server.Process.Pid)
@@ -278,7 +290,12 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool)
 			if err = server.Wait(); err != nil {
 				t.Fatal("native workspace helper", err, diagnostic.String())
 			}
-			assertT422NativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256)
+			wantSamples := 18
+			if cleanupWorkspace {
+				wantSamples = t422CleanupExpectedTurns + 2
+				assertT422CleanupNativeReports(t, diagnostic.String(), record.InputSHA256)
+			}
+			assertT422NativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256, wantSamples)
 			if err = <-served; err != nil {
 				t.Fatal(err)
 			}
@@ -291,6 +308,13 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool)
 			prefix, e := transport.Snapshot()
 			if e != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
 				t.Fatal("joined native store prefix", prefix, e)
+			}
+			if cleanupWorkspace {
+				counts, e := sa.Snapshot()
+				if e != nil || len(counts.Phases) != 5 || counts.Phases[1].Phase != 9 ||
+					counts.Phases[1].Transactions != 2*t422CleanupExpectedTurns || counts.Phases[1].Rows != 2*t422CleanupExpectedTurns {
+					t.Fatal("actual selected cleanup cursor transactions", counts, e)
+				}
 			}
 			return
 		}

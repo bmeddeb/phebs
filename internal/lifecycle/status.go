@@ -96,6 +96,17 @@ func NewStatusMonitor(enabled bool, owners []Owner) (*StatusMonitor, error) {
 	return &StatusMonitor{status: status, now: time.Now}, nil
 }
 
+// NewSelectedCleanupStatusMonitor truthfully retains the selected filesystem
+// maximum. Ordinary status construction and validation retain the 16 cap.
+func NewSelectedCleanupStatusMonitor(enabled bool, owners []Owner) (*StatusMonitor, error) {
+	monitor, err := NewStatusMonitor(enabled, owners)
+	if err != nil {
+		return nil, err
+	}
+	monitor.status.Policy.MaxDeletesPerTurn = SelectedCleanupObservationDeletes
+	return monitor, nil
+}
+
 func (monitor *StatusMonitor) ObserveOwner(result OwnerResult) {
 	if monitor == nil {
 		return
@@ -164,23 +175,41 @@ func (monitor *StatusMonitor) Snapshot() Status {
 }
 
 func ValidateStatus(status Status) error {
+	return validateStatus(status, false)
+}
+
+// ValidateSelectedCleanupStatus checks the closed owner-specific profile,
+// not a caller-supplied maximum.
+func ValidateSelectedCleanupStatus(status Status) error {
+	return validateStatus(status, true)
+}
+
+func validateStatus(status Status, selectedCleanup bool) error {
+	maximumDeletes := MaxDeletesPerTick
+	if selectedCleanup {
+		maximumDeletes = SelectedCleanupObservationDeletes
+	}
 	if status.SchemaVersion != StatusSchema || status.Policy.Owners < 1 ||
 		status.Policy.Owners != len(status.Owners) ||
 		status.Policy.SoftWatermarkPercent != SoftWatermarkPercent ||
 		status.Policy.HardWatermarkPercent != HardWatermarkPercent ||
 		status.Policy.ResumeWatermarkPercent != ResumeWatermarkPercent ||
 		status.Policy.MaxCandidatesPerTurn != MaxCandidatesPerTick ||
-		status.Policy.MaxDeletesPerTurn != MaxDeletesPerTick ||
+		status.Policy.MaxDeletesPerTurn != maximumDeletes ||
 		status.Policy.MaxQueriesPerTurn != MaxQueriesPerTick {
 		return errors.New("lifecycle status policy is invalid")
 	}
 	previous := ""
 	for _, owner := range status.Owners {
+		deleteLimit := MaxDeletesPerTick
+		if selectedCleanup {
+			deleteLimit = SelectedCleanupDeleteLimit(owner.Name)
+		}
 		if owner.Name == "" || owner.Name <= previous ||
 			(owner.State != "not_run" && owner.State != "ok" && owner.State != "error") ||
 			(owner.Completeness != Exact && owner.Completeness != LowerBound && owner.Completeness != Unavailable) ||
 			owner.Scanned < 0 || owner.Scanned > MaxCandidatesPerTick ||
-			owner.Deleted < 0 || owner.Deleted > MaxDeletesPerTick ||
+			owner.Deleted < 0 || owner.Deleted > deleteLimit ||
 			owner.LogicalBytes < 0 || owner.LogicalBytes > servicecatalogv3.MaxLogicalBytes ||
 			owner.RootBytes < 0 || owner.RootBytes > servicecatalogv3.MaxRootBytes ||
 			owner.MemberBytes < 0 || owner.MemberBytes > servicecatalogv3.MaxMemberBytes {

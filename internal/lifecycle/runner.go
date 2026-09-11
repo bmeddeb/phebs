@@ -13,6 +13,7 @@ const (
 	DefaultIdleInterval          = time.Hour
 	DefaultBacklogDelay          = 5 * time.Second
 	DefaultPressureRecoveryDelay = 250 * time.Millisecond
+	SelectedCleanupPendingDelay  = 250 * time.Millisecond
 )
 
 type Reporter func(OwnerResult)
@@ -117,7 +118,7 @@ type runnerState struct {
 func (state *runnerState) turn(ctx context.Context, controller *Controller, gate *Gate,
 	report Reporter, reportCapacity CapacityReporter, collector *CycleCollector,
 ) bool {
-	result := controller.Tick(ctx)
+	result := controller.tick(ctx, collector != nil && collector.selectedCleanup)
 	if ctx.Err() != nil && collector == nil {
 		return false
 	}

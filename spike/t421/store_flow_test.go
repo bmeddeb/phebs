@@ -2,6 +2,7 @@ package t421
 
 import (
 	"errors"
+	"math/bits"
 	"reflect"
 	"testing"
 	"time"
@@ -59,7 +60,16 @@ func TestExecutionStoreFlowExactBudgetsAndTopology(t *testing.T) {
 		snapshot.ReservedBytes != 0 || snapshot.MaximumBytes == 0 || snapshot.Store.Transactions != 0 || snapshot.Store.Rows != 0 {
 		t.Fatalf("construction invented work: %+v / %v", snapshot, err)
 	}
-	if totalTransactions != 507170 || totalRows != 259671040 || snapshot.MaximumBytes != 66735462912 {
+	const wantTransactions = uint64(507170 + 3*4096*(2+65))
+	const wantRows = uint64(259671040 + 3*4096*(2+512))
+	var checkpoints uint64
+	for _, mask := range wantMasks {
+		checkpoints += uint64(bits.OnesCount16(mask))
+	}
+	// SA01 wireBudget reserves Submit/Settle pairs and bounded lifecycle
+	// controls. This is a ceiling, not allocated memory or observed traffic.
+	wantWireBytes := (4*wantTransactions + 2*min(wantRows, 512*wantTransactions) + checkpoints + 4*uint64(len(wantIDs))) * 2 * storeaccounting.FrameBytes
+	if totalTransactions != wantTransactions || totalRows != wantRows || snapshot.MaximumBytes != wantWireBytes {
 		t.Fatalf("frozen store/wire ceilings changed: %d/%d/%d", totalTransactions, totalRows, snapshot.MaximumBytes)
 	}
 	t.Logf("store ceilings: transactions=%d rows=%d SA01 bytes=%d", totalTransactions, totalRows, snapshot.MaximumBytes)

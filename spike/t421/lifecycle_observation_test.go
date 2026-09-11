@@ -96,6 +96,35 @@ func TestExecutionLifecycleMultiRowDeletion(t *testing.T) {
 	}
 }
 
+func TestExecutionLifecycleSelectedCleanupOwnerLimits(t *testing.T) {
+	for _, schema := range []string{PlanSchema, PlanV2Schema, PlanV3Schema} {
+		for _, tc := range []struct {
+			owner   string
+			deleted int
+			v3      bool
+		}{
+			{lifecycle.ObservationV2Owner, 1024, true},
+			{lifecycle.ObservationV2Owner, 1025, false},
+			{lifecycle.SearchOwner, 64, true},
+			{lifecycle.SearchOwner, 65, false},
+			{lifecycle.GenerationScheduleOwner, 17, false},
+		} {
+			t.Run(fmt.Sprintf("%s/%s/%d", schema, tc.owner, tc.deleted), func(t *testing.T) {
+				plan := accountingTestPlan(t)
+				plan.Schema = schema
+				event := lifecycleTestTurn()
+				event.Owner, event.Deleted = tc.owner, tc.deleted
+				event.TotalDeleted, event.MaxDeleted = uint64(tc.deleted), uint64(tc.deleted)
+				out := ExecutionLifecycleObservation{Bound: true}
+				_, err := observeLifecycleEvent([]byte(lifecycleTestEvent(t, event)), plan, 5, "", &out)
+				if (err == nil) != (schema == PlanV3Schema && tc.v3) || out.Phases[8].Deleted != uint64(tc.deleted) {
+					t.Fatal("owner cap or positive-prefix retention", out, err)
+				}
+			})
+		}
+	}
+}
+
 func TestExecutionLifecycleJoinedCollector(t *testing.T) {
 	plan := accountingTestPlan(t)
 	first := lifecycleTestTurn()

@@ -96,7 +96,7 @@ func newT422LifecycleControl(ctx context.Context, launch *t422SemanticLaunch, ow
 		control.names = append(control.names, owner.Name())
 	}
 	if launch.request.ServerEpoch == 4 || launch.request.ServerEpoch == 5 {
-		control.collector, err = lifecycle.NewCycleCollector(owners, lifecycle.MaxCycleObservationTurns)
+		control.collector, err = lifecycle.NewSelectedCleanupCycleCollector(owners, lifecycle.MaxCycleObservationTurns)
 		if err != nil {
 			return nil, errT422LifecycleControl
 		}
@@ -289,7 +289,7 @@ func (control *t422LifecycleControl) ObserveOwner(result lifecycle.OwnerResult) 
 	raw, err := json.Marshal(event)
 	// Candidate scans and deleted rows have independent per-turn caps.
 	if err != nil || len(raw) > t422LifecycleEventBytes || control.sink(raw) != nil ||
-		result.Scanned > lifecycle.MaxCandidatesPerTick || result.Deleted > lifecycle.MaxDeletesPerTick {
+		result.Scanned > lifecycle.MaxCandidatesPerTick || result.Deleted > lifecycle.SelectedCleanupDeleteLimit(result.Owner) {
 		_ = control.stop()
 	}
 }

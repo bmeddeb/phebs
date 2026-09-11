@@ -306,7 +306,11 @@ func (state *runnerState) drive(ctx context.Context, command *runnerCommand, due
 			return cloneCycleObservation(result.value), result.err
 		default:
 		}
-		timer := time.NewTimer(min(state.delay, state.backlogDelay))
+		delay := min(state.delay, state.backlogDelay)
+		if collector.selectedCleanup {
+			delay = min(delay, SelectedCleanupPendingDelay)
+		}
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
 			timer.Stop()

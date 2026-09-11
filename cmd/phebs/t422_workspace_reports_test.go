@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +12,49 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 )
+
+const (
+	t422CleanupObservationFiles = 24_000
+	t422CleanupSearchFiles      = 600
+	// Inventory removes its objects, segment, inventory and collecting dirs;
+	// search removes its abandoned stage after its regular shards.
+	t422CleanupExpectedDeleted = t422CleanupObservationFiles + 4 + t422CleanupSearchFiles + 1
+	t422CleanupExpectedTurns   = 16 * ((t422CleanupObservationFiles + 4 + 1023) / 1024)
+)
+
+func assertT422CleanupNativeReports(t *testing.T, raw string, input [32]byte) {
+	t.Helper()
+	var count, deleted, maxDeleted uint64
+	bindings := 0
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "LCB") {
+			if line != fmt.Sprintf("LCB1:5:sha256:%x", input) {
+				t.Fatal("cleanup lifecycle binding", line)
+			}
+			bindings++
+		}
+		if !strings.HasPrefix(line, "LC1:") {
+			continue
+		}
+		var event t422LifecycleEvent
+		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "LC1:")), &event); err != nil ||
+			event.Epoch != 4 || event.Phase != 9 || event.Failed || event.ReturnedTick != count+1 || event.OwnerTurns != count+1 ||
+			event.Deleted < 0 || event.Deleted > lifecycle.SelectedCleanupDeleteLimit(event.Owner) {
+			t.Fatal("cleanup lifecycle event", line, err)
+		}
+		count++
+		deleted += uint64(event.Deleted)
+		maxDeleted = max(maxDeleted, uint64(event.Deleted))
+		if event.TotalDeleted != deleted || event.MaxDeleted != maxDeleted {
+			t.Fatal("cleanup lifecycle prefix", line)
+		}
+	}
+	if bindings != 1 || count != t422CleanupExpectedTurns || deleted != t422CleanupExpectedDeleted || maxDeleted != 1024 {
+		t.Fatal("joined cleanup observation", bindings, count, deleted, maxDeleted)
+	}
+}
 
 func workspaceReportFixture(producer uint32, writer io.Writer) (*t422WorkspaceReports, dispatchadmission.ProductionSemanticSnapshot) {
 	phase := uint32(8)
@@ -159,7 +202,7 @@ func TestT422WorkspaceReportSinkFailureKeepsPrefix(t *testing.T) {
 
 // Consume only the actual joined helper stderr. These assertions are not a
 // replacement for the independent parent parser or whole-phase completeness.
-func assertT422NativeWorkspaceReports(t *testing.T, raw string, input [32]byte) {
+func assertT422NativeWorkspaceReports(t *testing.T, raw string, input [32]byte, wantSamples int) {
 	t.Helper()
 	binding := fmt.Sprintf("WBB1:5:sha256:%x", input)
 	bindings, count := 0, 0
@@ -189,7 +232,7 @@ func assertT422NativeWorkspaceReports(t *testing.T, raw string, input [32]byte) 
 		}
 		pending = false
 	}
-	if bindings != 1 || count != 18 || pending {
+	if bindings != 1 || count != wantSamples || pending {
 		t.Fatal("native workspace report coverage", bindings, count, pending)
 	}
 }

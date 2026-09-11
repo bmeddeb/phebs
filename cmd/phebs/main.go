@@ -857,7 +857,11 @@ func serve(args []string) (retErr error) {
 		Root: partitionPublicationRoot, Acquire: acquireLifecycleMutation,
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
-	lifecycleStatus, lifecycleErr := lifecycle.NewStatusMonitor(
+	newLifecycleStatus := lifecycle.NewStatusMonitor
+	if semanticLaunch != nil && (semanticLaunch.request.ServerEpoch == 4 || semanticLaunch.request.ServerEpoch == 5) {
+		newLifecycleStatus = lifecycle.NewSelectedCleanupStatusMonitor
+	}
+	lifecycleStatus, lifecycleErr := newLifecycleStatus(
 		cfg.Lifecycle.EnabledFor(), lifecycleOwners,
 	)
 	if lifecycleErr != nil {
@@ -2115,6 +2119,7 @@ func serve(args []string) (retErr error) {
 		LifecycleStatusSource: func(context.Context) lifecycle.Status {
 			return lifecycleStatus.Snapshot()
 		},
+		SelectedLifecycleCleanup: semanticLaunch != nil && (semanticLaunch.request.ServerEpoch == 4 || semanticLaunch.request.ServerEpoch == 5),
 		IsAdmin: func(ctx context.Context) bool {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin

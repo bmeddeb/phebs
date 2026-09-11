@@ -96,8 +96,7 @@ func TestT422LifecycleNativeReturnedPrefix(t *testing.T) {
 				control.operation = t422LifecycleCollectRead
 			}
 			if mode == "overshoot" {
-				result.Deleted = lifecycle.MaxDeletesPerTick + 1
-				result.Scanned = result.Deleted
+				result.Deleted = lifecycle.SelectedCleanupDeleteLimit(result.Owner) + 1
 			}
 			var event t422LifecycleEvent
 			control.sink = func(raw []byte) error {

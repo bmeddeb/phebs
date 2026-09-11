@@ -54,3 +54,39 @@ func TestLifecycleStatusAuthorizesBeforeSourceAndReturnsBoundedSnapshot(t *testi
 		t.Fatalf("lifecycle response = %d bytes", response.Body.Len())
 	}
 }
+
+func TestLifecycleStatusSelectedCleanupRequiresTrustedProfile(t *testing.T) {
+	monitor, err := lifecycle.NewSelectedCleanupStatusMonitor(true, lifecycle.ClosedOwners())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name            string
+		selected, admin bool
+		want            int
+	}{
+		{"ordinary_refuses_selected_policy", false, true, http.StatusInternalServerError},
+		{"selected_admits", true, true, http.StatusOK},
+		{"authorization_first", true, false, http.StatusForbidden},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			handler := api.New(api.Options{
+				IsAdmin:                  func(context.Context) bool { return tc.admin },
+				SelectedLifecycleCleanup: tc.selected,
+				LifecycleStatusSource: func(context.Context) lifecycle.Status {
+					calls++
+					return monitor.Snapshot()
+				},
+			})
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, api.LifecycleStatusPath, nil))
+			if response.Code != tc.want || (!tc.admin && calls != 0) {
+				t.Fatalf("status=%d calls=%d body=%s", response.Code, calls, response.Body.String())
+			}
+			if tc.want == http.StatusOK && response.Body.Len() > api.LifecycleStatusResponseLimit {
+				t.Fatal("selected status exceeds response bound")
+			}
+		})
+	}
+}

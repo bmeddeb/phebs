@@ -33,7 +33,11 @@ func (owner ObservationInventoryOwnerV2) Sweep(
 		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
 	}
 	defer release()
-	result, err := observationpublication.SweepInventoryLifecycleV2(
+	sweep := observationpublication.SweepInventoryLifecycleV2
+	if limits.Deletes > MaxDeletesPerTick {
+		sweep = observationpublication.SweepInventoryLifecycleV2SelectedCleanup
+	}
+	result, err := sweep(
 		ctx, owner.Root, now, cursor, owner.Pins, limits.Candidates, limits.Deletes,
 	)
 	if err != nil {

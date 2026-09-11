@@ -66,6 +66,25 @@ func SweepInventoryLifecycleV2(
 	ctx context.Context, root string, now time.Time, cursor string,
 	pins InventoryPinCheckerV2, candidateLimit, deleteLimit int,
 ) (InventoryLifecycleResultV2, error) {
+	return sweepInventoryLifecycleV2(ctx, nil, root, now, cursor, pins, candidateLimit, deleteLimit)
+}
+
+// SweepInventoryLifecycleV2SelectedCleanup preserves the same eligibility
+// checks while making each deletion in a larger selected batch cancellable.
+func SweepInventoryLifecycleV2SelectedCleanup(
+	ctx context.Context, root string, now time.Time, cursor string,
+	pins InventoryPinCheckerV2, candidateLimit, deleteLimit int,
+) (InventoryLifecycleResultV2, error) {
+	if ctx == nil {
+		return InventoryLifecycleResultV2{}, invalid("inventory v2 cleanup context")
+	}
+	return sweepInventoryLifecycleV2(ctx, ctx, root, now, cursor, pins, candidateLimit, deleteLimit)
+}
+
+func sweepInventoryLifecycleV2(
+	ctx, deletionCtx context.Context, root string, now time.Time, cursor string,
+	pins InventoryPinCheckerV2, candidateLimit, deleteLimit int,
+) (InventoryLifecycleResultV2, error) {
 	var result InventoryLifecycleResultV2
 	if !filepath.IsAbs(root) || pins == nil || candidateLimit < 1 ||
 		candidateLimit > MaxInventoryLifecycleCandidatesV2 || deleteLimit < 1 {
@@ -181,8 +200,8 @@ func SweepInventoryLifecycleV2(
 	if len(collecting) > 0 {
 		sort.Slice(collecting, func(i, j int) bool { return collecting[i].name < collecting[j].name })
 		result.Scanned = 1
-		deleted, complete, err := deleteInventoryTreeStepV2(
-			filepath.Join(directory, collecting[0].name), deleteLimit, "",
+		deleted, complete, err := deleteInventoryTreeStepV2Context(
+			deletionCtx, filepath.Join(directory, collecting[0].name), deleteLimit, "",
 		)
 		result.Deleted = deleted
 		result.More = result.More || !complete || len(collecting) > 1
@@ -206,7 +225,7 @@ func SweepInventoryLifecycleV2(
 			if err := syncDirectory(directory); err != nil {
 				return result, err
 			}
-			deleted, complete, err := deleteInventoryTreeStepV2(destination, deleteLimit, "")
+			deleted, complete, err := deleteInventoryTreeStepV2Context(deletionCtx, destination, deleteLimit, "")
 			result.Deleted = deleted
 			result.More = result.More || !complete
 			return result, err
@@ -284,7 +303,7 @@ func SweepInventoryLifecycleV2(
 		if err := syncDirectory(directory); err != nil {
 			return result, err
 		}
-		deleted, complete, err := deleteInventoryTreeStepV2(destination, deleteLimit, "")
+		deleted, complete, err := deleteInventoryTreeStepV2Context(deletionCtx, destination, deleteLimit, "")
 		result.Deleted = deleted
 		result.More = result.More || !complete
 		return result, err
@@ -310,9 +329,12 @@ func readInventoryLifecycleMarkerV2(
 	return marker, true, nil
 }
 
-func deleteInventoryTreeStepV2(
-	directory string, budget int, relative string,
+func deleteInventoryTreeStepV2Context(
+	ctx context.Context, directory string, budget int, relative string,
 ) (deleted int, complete bool, err error) {
+	if ctx != nil && ctx.Err() != nil {
+		return 0, false, ctx.Err()
+	}
 	if budget < 1 {
 		return 0, false, invalid("inventory v2 lifecycle delete budget")
 	}
@@ -332,8 +354,8 @@ func deleteInventoryTreeStepV2(
 			return deleted, false, invalid("inventory v2 lifecycle unknown or special artifact")
 		}
 		if info.IsDir() {
-			childDeleted, childComplete, childErr := deleteInventoryTreeStepV2(
-				path, budget-deleted, childRelative,
+			childDeleted, childComplete, childErr := deleteInventoryTreeStepV2Context(
+				ctx, path, budget-deleted, childRelative,
 			)
 			deleted += childDeleted
 			if childErr != nil || !childComplete || deleted == budget {
@@ -343,6 +365,9 @@ func deleteInventoryTreeStepV2(
 		}
 		if !info.Mode().IsRegular() {
 			return deleted, false, invalid("inventory v2 lifecycle special artifact")
+		}
+		if ctx != nil && ctx.Err() != nil {
+			return deleted, false, ctx.Err()
 		}
 		if err := os.Remove(path); err != nil {
 			return deleted, false, err
@@ -358,6 +383,9 @@ func deleteInventoryTreeStepV2(
 	}
 	if len(remaining) != 0 {
 		return deleted, false, nil
+	}
+	if ctx != nil && ctx.Err() != nil {
+		return deleted, false, ctx.Err()
 	}
 	if err := os.Remove(directory); err != nil {
 		return deleted, false, err

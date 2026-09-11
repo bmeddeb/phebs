@@ -53,7 +53,7 @@ func (reader *executionEpochInspection) LifecycleStatus(ctx context.Context) (re
 		lifecycle.Status
 	}{}
 	if decodeEpochJSON(raw, &value, false) != nil || value.Schema != "http://"+reader.run.epoch.Listen+"/schemas/Status.json" ||
-		lifecycle.ValidateStatus(value.Status) != nil || !value.Policy.Enabled {
+		lifecycle.ValidateSelectedCleanupStatus(value.Status) != nil || !value.Policy.Enabled {
 		return result, report, errEpochInspection
 	}
 	names := correctedLifecycleOwners()

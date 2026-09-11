@@ -136,6 +136,7 @@ type CycleCollector struct {
 	normalAttempted  bool
 	allowJobBacklog  bool
 	awaitingCapacity bool
+	selectedCleanup  bool
 }
 
 // SetCapacityCheckpoint installs the selected caller's native measurement
@@ -201,6 +202,17 @@ func NewCycleCollector(owners []Owner, maxTurns CycleTurnLimit) (*CycleCollector
 		owners: names, maxTurns: uint64(maxTurns), now: time.Now,
 		cycle: make([]CycleOwnerObservation, 0, len(names)),
 	}, nil
+}
+
+// NewSelectedCleanupCycleCollector enables only the fixed filesystem batches
+// and controlled pending cadence; ordinary owner policy remains unchanged.
+func NewSelectedCleanupCycleCollector(owners []Owner, maxTurns CycleTurnLimit) (*CycleCollector, error) {
+	collector, err := NewCycleCollector(owners, maxTurns)
+	if err != nil {
+		return nil, err
+	}
+	collector.selectedCleanup = true
+	return collector, nil
 }
 
 // AwaitNormal arms one phase-local observation and waits for a complete clean
@@ -295,8 +307,12 @@ func (collector *CycleCollector) ObserveOwner(result OwnerResult) {
 		return
 	}
 	// Scanned counts candidates; one candidate may delete multiple rows.
+	deleteLimit := MaxDeletesPerTick
+	if collector.selectedCleanup {
+		deleteLimit = SelectedCleanupDeleteLimit(result.Owner)
+	}
 	if result.Scanned < 0 || result.Scanned > MaxCandidatesPerTick ||
-		result.Deleted < 0 || result.Deleted > MaxDeletesPerTick ||
+		result.Deleted < 0 || result.Deleted > deleteLimit ||
 		result.LogicalBytes < 0 ||
 		result.RootBytes < 0 || result.MemberBytes < 0 {
 		collector.finishLocked(CycleObservation{}, errors.New("lifecycle cycle owner result is invalid"))

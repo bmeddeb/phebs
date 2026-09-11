@@ -381,12 +381,20 @@ func TestInventoryV2LifecyclePreservesAllRootsAndResumesDrain(t *testing.T) {
 		proof: map[string]bool{}, investigation: map[string]bool{},
 	}
 	pins := InventoryPinsV2{Cache: cache, Durable: durablePins}
+	checkSelectedPins := func() {
+		t.Helper()
+		result, err := SweepInventoryLifecycleV2SelectedCleanup(t.Context(), root, time.Now().Add(30*24*time.Hour), "", pins, 64, 1024)
+		if err != nil || result.Deleted != 0 {
+			t.Fatalf("selected pinned sweep = %+v, %v", result, err)
+		}
+	}
 	result, err := SweepInventoryLifecycleV2(
 		t.Context(), root, time.Now().Add(30*24*time.Hour), "", pins, 64, 1,
 	)
 	if err != nil || result.Deleted != 0 {
 		t.Fatalf("leased sweep = %+v, %v", result, err)
 	}
+	checkSelectedPins()
 	lease.Release()
 	durablePins.proof[repository+"\x00"+old.GenerationDigest] = true
 	result, err = SweepInventoryLifecycleV2(
@@ -395,6 +403,7 @@ func TestInventoryV2LifecyclePreservesAllRootsAndResumesDrain(t *testing.T) {
 	if err != nil || result.Deleted != 0 {
 		t.Fatalf("durably pinned sweep = %+v, %v", result, err)
 	}
+	checkSelectedPins()
 	delete(durablePins.proof, repository+"\x00"+old.GenerationDigest)
 	durablePins.investigation[repository+"\x00"+old.GenerationDigest] = true
 	result, err = SweepInventoryLifecycleV2(
@@ -403,6 +412,7 @@ func TestInventoryV2LifecyclePreservesAllRootsAndResumesDrain(t *testing.T) {
 	if err != nil || result.Deleted != 0 {
 		t.Fatalf("investigation-pinned sweep = %+v, %v", result, err)
 	}
+	checkSelectedPins()
 	delete(durablePins.investigation, repository+"\x00"+old.GenerationDigest)
 	for turn := 0; turn < 100; turn++ {
 		result, err = SweepInventoryLifecycleV2(

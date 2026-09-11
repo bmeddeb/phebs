@@ -22,6 +22,7 @@ func pressureInspectionStatus() lifecycle.Status {
 	for _, name := range correctedLifecycleOwners() {
 		value.Owners = append(value.Owners, lifecycle.OwnerStatus{Name: name, State: "not_run", Completeness: lifecycle.Unavailable})
 	}
+	value.Policy.MaxDeletesPerTurn = lifecycle.SelectedCleanupObservationDeletes
 	return value
 }
 
@@ -48,7 +49,7 @@ func TestExecutionEpochPressureLifecycleStatusTransport(t *testing.T) {
 			}
 			// The real Huma endpoint supplies its actual schema envelope and
 			// serialization; no presumed body shape stands in for that route.
-			handler := api.New(api.Options{IsAdmin: func(context.Context) bool { return true }, LifecycleStatusSource: func(context.Context) lifecycle.Status { return status }})
+			handler := api.New(api.Options{IsAdmin: func(context.Context) bool { return true }, SelectedLifecycleCleanup: true, LifecycleStatusSource: func(context.Context) lifecycle.Status { return status }})
 			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				calls.Add(1)
 				if r.URL.Path != api.LifecycleStatusPath || r.URL.RawQuery != "" {
@@ -169,7 +170,7 @@ func TestExecutionEpochPressureFinalActualRecoveredAnchor(t *testing.T) {
 			}
 			var calls atomic.Int32
 			var lifecycleCalls atomic.Int32
-			lifecycleHandler := api.New(api.Options{IsAdmin: func(context.Context) bool { return true }, LifecycleStatusSource: func(context.Context) lifecycle.Status { return pressureInspectionStatus() }})
+			lifecycleHandler := api.New(api.Options{IsAdmin: func(context.Context) bool { return true }, SelectedLifecycleCleanup: true, LifecycleStatusSource: func(context.Context) lifecycle.Status { return pressureInspectionStatus() }})
 			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == api.LifecycleStatusPath {
 					lifecycleCalls.Add(1)

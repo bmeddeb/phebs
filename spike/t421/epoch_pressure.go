@@ -225,7 +225,7 @@ func pressureCycleValid(c lifecycle.CycleObservation, allowJobBacklog bool) bool
 			completeness = lifecycle.LowerBound
 		}
 		if owner.Name != names[i] || owner.State != "ok" || owner.Completeness != completeness || owner.Backlog && (owner.Name != lifecycle.JobOwner || !allowJobBacklog) || owner.AttemptedAt.Before(prior) || c.Capacity.ObservedAt.Before(owner.AttemptedAt) ||
-			owner.Scanned > uint64(lifecycle.MaxCandidatesPerTick) || owner.Deleted > uint64(lifecycle.MaxDeletesPerTick) {
+			owner.Scanned > uint64(lifecycle.MaxCandidatesPerTick) || owner.Deleted > lifecycleDeleteLimit(PlanV3Schema, owner.Name) {
 			return false
 		}
 		prior = owner.AttemptedAt

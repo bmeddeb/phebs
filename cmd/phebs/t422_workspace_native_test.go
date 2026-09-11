@@ -35,7 +35,11 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if os.Getenv(t422BackupFixture) == "" {
 		return
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
+	fixtureLimit := 3 * time.Minute
+	if os.Getenv(t422BackupFixture) == "workspace-cleanup" {
+		fixtureLimit = 10 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), fixtureLimit)
 	defer cancel()
 	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
 	if err != nil || lifetime == nil {
@@ -90,6 +94,12 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	var modeledOwners []lifecycle.Owner
 	for index := 0; index < 16; index++ {
 		modeledOwners = append(modeledOwners, t422LifecycleOwnerFixture{name: fmt.Sprintf("test-owner-%02d", index), turns: &turns})
+	}
+	wantTurns, wantDeleted := uint64(16), uint64(16)
+	verifyCleanup := func() {}
+	if os.Getenv(t422BackupFixture) == "workspace-cleanup" {
+		modeledOwners, verifyCleanup = seedT422CleanupNativeOwners(t, root, &turns)
+		wantTurns, wantDeleted = t422CleanupExpectedTurns, t422CleanupExpectedDeleted
 	}
 	control, err := newT422LifecycleControl(runnerCtx, launch, modeledOwners)
 	if err != nil || control.bindWorkspaceBytes(st) != nil {
@@ -172,7 +182,7 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	var cycle lifecycle.CycleObservation
-	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &cycle) != nil || cycle.OwnerTurns != 16 || readReports.Load() != 1 {
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &cycle) != nil || cycle.OwnerTurns != wantTurns || cycle.Deleted != wantDeleted || readReports.Load() != 1 {
 		t.Fatal("actual normal-cycle R", response.Code, response.Body.String(), readReports.Load())
 	}
 	request = httptest.NewRequest(http.MethodPost, t422WorkspaceSamplePath, nil).WithContext(runnerCtx)
@@ -182,14 +192,15 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	response = httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	var normalized t422WorkspaceSampleResponse
-	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &normalized) != nil || normalized.LogicalBytes < uint64(len(sibling)) || normalized.AllocatedBytes == 0 || turns.Load() != 16 {
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &normalized) != nil || normalized.LogicalBytes < uint64(len(sibling)) || normalized.AllocatedBytes == 0 || turns.Load() != wantTurns {
 		t.Fatal("actual normalized workspace sample", response.Code, response.Body.String(), turns.Load())
 	}
 	bytes := control.workspaceByteSnapshot()
-	if failures.Load() != 0 || turns.Load() != 16 || bytes.Unavailable || !bytes.Phases[8].Completed ||
+	if failures.Load() != 0 || turns.Load() != wantTurns || bytes.Unavailable || !bytes.Phases[8].Completed ||
 		bytes.Phases[8].Maximum.LogicalBytes < uint64(len(sibling)) || bytes.Phases[8].Maximum.AllocatedBytes == 0 {
 		t.Fatal("actual positive workspace checkpoint", failures.Load(), turns.Load(), bytes)
 	}
+	verifyCleanup()
 	if _, err = st.ListRepos(ctx); err != nil {
 		t.Fatal("real SDK did not resume after native quiescence", err)
 	}

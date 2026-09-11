@@ -6872,6 +6872,72 @@ race selector (lifecycle counters/parser, pressure checks/transport and versione
 timestamps) passed in 276.604s. No fresh rehearsal executed. No source, replay
 custody, or caches were cleaned in this slice.
 
+**Selected cleanup redesign approved (2026-09-11).** The subsequent exact
+`044116ec9b1842475cbf2b8bf98b0af4f8019f32` rehearsal failed after 5,835.40s;
+the phase-nine normal drive reported 188 owner turns, 694 deletions and zero
+owner failures without reaching normalization. Its log digest is
+`020c4b3a93f043cd766b2a4a5b4986176a6d491fca57eb0e52f9b4249dc9728b`.
+A bounded retained-tree census found 21,451 remaining observation deletion
+units. Even zero-duration fair rotation cannot remove them within 4,096 global
+turns at sixteen removals per observation visit. The final normalized byte
+condition was never evaluated; this is not evidence that its bound failed.
+
+Ben explicitly approved prospective V3 cleanup-budget/accounting changes.
+The correction uses selected observation/search batches of 1,024/64, keeps
+other owners and ordinary work at sixteen, and caps selected pending delay at
+250ms. One actual sweep/report/cursor pair/capacity-workspace sample remains
+one turn. Each of the three 4,096-turn cleanup phases adds 274,432 store
+transactions and 2,105,344 submitted rows to its existing surrounding reserve;
+512 rows per transaction, deadlines, watermarks, retention and current/pin
+protections remain unchanged. The PLAN rows record the derivation and
+incremental cost. The nominal query/stat fields are not evidence of an
+enforced whole-sweep meter. V1/V2 bytes and validation predicates stay exact.
+
+Focused backend normal/race checks explicitly passed without skips:
+lifecycle 1.670s/1.818s, observationpublication 1.811s/2.665s and focusedindex
+1.423s/3.106s. Actual filesystem fixtures drain 1,054 observation units and
+71 search units across multiple batches; selected pin/current/prior fixtures,
+cancellation after a completed unlink, positive overshoot retention, and
+ordinary-policy isolation pass. These are component checks, not a full corpus
+or native pressure pass. Full lifecycle/focusedindex/observationpublication
+packages passed in 4.655s/8.631s/21.207s. Focused API/command/parent normal
+checks passed in 0.637s/1.017s/25.248s, and race in
+1.804s/2.211s/283.483s. The additional final receipt owner-limit matrix passed
+normally in 25.275s. Independent implementation review reported all severity
+counts zero; its subsequent native-fixture/documentation review remains open.
+Docs/glossary/whitespace checks passed at this intermediate tree. These results
+are not exact-commit closure: realistic-size native composition, final review,
+remaining exact-tree gates and a fresh exact-source rehearsal remain open.
+Do not rerun 044116ec or treat the historical next-step paragraph below as
+current readiness.
+
+The new Darwin native cleanup composition explicitly passed, without skips,
+in 136.65s (137.364s package): 24,000 inert observation objects plus 600 inert
+search shards produced 24,605 real filesystem removals, 384 actual owner
+turns, 768 selected phase-nine cursor transactions/rows, and 386 completed
+workspace samples. The shared fixture uses actual selected lifecycle control,
+mutation locking, store cursor SDK calls, authenticated workspace-root custody,
+engine quiescence, joined LC/WB reports and final residue absence. Its fourteen
+other owners are explicitly modeled no-ops. It tests collecting/staging residue,
+not valid publication construction, pressure transitions, real corpus byte
+volume, current/pin protection or full twenty-minute phase fit; separate
+backend fixtures cover protected roots. Only this larger test variant has a
+ten-minute fixture context; production deadlines remain unchanged. Review found
+one medium test portability issue (Darwin-only constants referenced by the
+Linux-shared helper), corrected by moving shared assertions/constants into the
+existing untagged test helper; re-review found all severity counts zero.
+Linux arm64 CGO-disabled command-test cross-compilation passed; this is not a
+Linux execution result. Native log SHA-256 is
+`8cfc6ee691931589d9cc986ea80c764141281e19991c8d3cd297026a527c690b`.
+The successful fixture root was removed by its existing cleanup, all three
+owned test/helper/engine PIDs were absent, and its listener was closed. No
+retained rehearsal image was modified. Repository `ci-static` passed: glossary,
+whole-repository vet, pinned lint with zero issues and compile-only tests. Its
+first attempt stopped on a nil-context warning in the search helper used only
+by a test; that wrapper now passes Background, with no production caller change,
+and independent re-review found no issue. Whole command/native regression and
+broader exact-source receipt closure remain pending; no freeze is asserted.
+
 **Counter-unit exact-source race continuation (2026-09-11).** At clean
 `52ef5e8ed98eb788acad95d7e81de4797e1d1742`, the broad 68-test selector
 `Test.*(Lifecycle|Pressure|Receipt|AccountingV3RetainsHistorical)` exceeded its

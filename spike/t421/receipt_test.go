@@ -494,8 +494,43 @@ func TestLifecycleCounterUnitsAreVersioned(t *testing.T) {
 					t.Fatal("failure evidence units")
 				}
 				total := lifecycleAggregate{scanned: counts.scanned, deleted: counts.deleted}
-				if err := validateLifecycleTotals(total, total, 1, 1, plan.Schema); (err == nil) != want {
+				wantTotal := counts.scanned <= 64 && counts.deleted <= lifecycleMaximumDeleteLimit(plan.Schema) && (plan.Schema == PlanV3Schema || counts.deleted <= counts.scanned)
+				if err := validateLifecycleTotals(total, total, 1, 1, plan.Schema); (err == nil) != wantTotal {
 					t.Fatal("cumulative units", err)
+				}
+			})
+		}
+	}
+}
+
+func TestLifecycleReceiptSelectedCleanupOwnerLimits(t *testing.T) {
+	for _, plan := range []Plan{frozenTestPlan(t), correctedTestPlan(t), accountingTestPlan(t)} {
+		for _, tc := range []struct {
+			owner   string
+			deleted uint64
+			v3      bool
+		}{
+			{lifecycle.ObservationV2Owner, 1024, true},
+			{lifecycle.ObservationV2Owner, 1025, false},
+			{lifecycle.SearchOwner, 64, true},
+			{lifecycle.SearchOwner, 65, false},
+			{lifecycle.GenerationScheduleOwner, 17, false},
+		} {
+			t.Run(fmt.Sprintf("%s/%s/%d", plan.Schema, tc.owner, tc.deleted), func(t *testing.T) {
+				owners, capacity := testLifecycleOwners(plan, 1_000)
+				index := slices.IndexFunc(owners, func(owner LifecycleOwnerResult) bool { return owner.Name == tc.owner })
+				if index < 0 {
+					t.Fatal("owner missing")
+				}
+				owners[index].Scanned, owners[index].Deleted = 1, tc.deleted
+				want := plan.Schema == PlanV3Schema && tc.v3
+				if _, err := validateLifecycleOwners(owners, plan, 1_000, capacity); (err == nil) != want {
+					t.Fatal("receipt owner cap", err)
+				}
+				failure := LifecycleFailureEvidence{Owner: owners[index], CapacityCompleteness: "exact", CapacityPressure: "normal"}
+				failure.Owner.State, failure.Owner.Completeness = "error", string(lifecycle.Unavailable)
+				if lifecycleFailureMatches(failure, plan) != want {
+					t.Fatal("failure owner cap")
 				}
 			})
 		}

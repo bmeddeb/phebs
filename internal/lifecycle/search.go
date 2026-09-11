@@ -27,7 +27,11 @@ func (owner SearchGenerationOwnerImpl) Sweep(
 		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
 	}
 	defer release()
-	result, err := focusedindex.SweepSearchGenerationLifecycle(
+	sweep := focusedindex.SweepSearchGenerationLifecycle
+	if limits.Deletes > MaxDeletesPerTick {
+		sweep = focusedindex.SweepSearchGenerationLifecycleSelectedCleanup
+	}
+	result, err := sweep(
 		ctx, owner.IndexDir, now, cursor, owner.Pins, limits.Deletes,
 	)
 	if err != nil {

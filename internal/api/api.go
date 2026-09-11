@@ -71,6 +71,9 @@ type Options struct {
 	// LifecycleStatusSource supplies T35.4's fixed, source-free in-memory
 	// maintenance snapshot. The handler authorizes before invoking it.
 	LifecycleStatusSource func(context.Context) lifecycle.Status
+	// SelectedLifecycleCleanup is set only by the admitted V3 cleanup epochs.
+	// It selects the fixed owner limits, never limits supplied in the snapshot.
+	SelectedLifecycleCleanup bool
 
 	// T10.1 audit log. AuditRecord is called for every mutating huma operation
 	// (serve resolves the actor from the request context); nil disables

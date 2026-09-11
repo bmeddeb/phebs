@@ -29,7 +29,11 @@ func registerLifecycleStatus(api huma.API, opts Options) {
 			return nil, huma.Error503ServiceUnavailable("lifecycle status unavailable")
 		}
 		status := opts.LifecycleStatusSource(ctx)
-		if err := lifecycle.ValidateStatus(status); err != nil {
+		validate := lifecycle.ValidateStatus
+		if opts.SelectedLifecycleCleanup {
+			validate = lifecycle.ValidateSelectedCleanupStatus
+		}
+		if err := validate(status); err != nil {
 			return nil, huma.Error500InternalServerError("invalid lifecycle status", err)
 		}
 		encoded, err := json.Marshal(status)

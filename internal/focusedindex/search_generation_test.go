@@ -505,6 +505,9 @@ func TestSearchGenerationLifecycleProtectsCurrentPriorAndReaderLease(t *testing.
 	if _, err := os.Lstat(directoryA); err != nil {
 		t.Fatalf("pinned generation removed: %v", err)
 	}
+	if selected, err := SweepSearchGenerationLifecycleSelectedCleanup(t.Context(), indexDir, time.Now().Add(30*24*time.Hour), "", pins, 64); err != nil || selected.Deleted != 0 {
+		t.Fatalf("selected pinned generation = %+v, %v", selected, err)
+	}
 	lease.Release()
 	for turn := 0; turn < MaxSearchGenerationFiles+4; turn++ {
 		result, err = SweepSearchGenerationLifecycle(

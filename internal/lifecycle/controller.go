@@ -48,6 +48,10 @@ func NewController(store CursorStore, owners ...Owner) (*Controller, error) {
 // cursor-CAS failure is safe because owner deletion must be idempotent and
 // root-rechecked.
 func (controller *Controller) Tick(ctx context.Context) OwnerResult {
+	return controller.tick(ctx, false)
+}
+
+func (controller *Controller) tick(ctx context.Context, selectedCleanup bool) OwnerResult {
 	if err := ctx.Err(); err != nil {
 		return OwnerResult{Completeness: Unavailable, Err: err}
 	}
@@ -62,13 +66,19 @@ func (controller *Controller) Tick(ctx context.Context) OwnerResult {
 		return OwnerResult{Completeness: Unavailable, Err: fmt.Errorf("read lifecycle rotation: %w", err)}
 	}
 	owner := controller.nextOwner(rotation)
+	limits := controller.limits
+	if selectedCleanup {
+		// Only deletion work changes. Stats/MetadataBytes remain historical
+		// inputs, not an enforced whole-sweep filesystem preflight meter.
+		limits.Deletes = SelectedCleanupDeleteLimit(owner.name)
+	}
 	cursorKey := "owner:" + owner.name
 	cursor, cursorRevision, err := controller.store.GetLifecycleCursor(ctx, cursorKey)
 	if err != nil {
 		return OwnerResult{Owner: owner.name, Completeness: Unavailable, Err: fmt.Errorf("read lifecycle owner cursor: %w", err)}
 	}
 	attemptedAt := controller.now().UTC()
-	result := owner.owner.Sweep(ctx, attemptedAt, cursor, controller.limits)
+	result := owner.owner.Sweep(ctx, attemptedAt, cursor, limits)
 	result.Owner = owner.name
 	result.AttemptedAt = attemptedAt
 	result.CycleStart = owner.name == controller.owners[0].name
@@ -77,8 +87,8 @@ func (controller *Controller) Tick(ctx context.Context) OwnerResult {
 		if result.Completeness == "" {
 			result.Completeness = Exact
 		}
-		if result.Scanned < 0 || result.Scanned > controller.limits.Candidates ||
-			result.Deleted < 0 || result.Deleted > controller.limits.Deletes ||
+		if result.Scanned < 0 || result.Scanned > limits.Candidates ||
+			result.Deleted < 0 || result.Deleted > limits.Deletes ||
 			result.Cursor == cursor && result.More && result.Scanned == 0 && result.Deleted == 0 {
 			result.Err = errors.New("lifecycle owner returned an invalid bounded result")
 			result.Completeness = Unavailable

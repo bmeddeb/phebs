@@ -4,6 +4,8 @@ import (
 	"errors"
 	"slices"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 )
 
 const (
@@ -102,6 +104,7 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 		}
 	}
 	plan.WorkEnvelope.Schema = WorkEnvelopeV3Schema
+	applySelectedCleanupWorkCorrection(&plan.WorkEnvelope)
 	plan.WorkEnvelope.ChildProcessRoles = nil
 	plan.WorkEnvelope.MaximumChildProcessesPerPhase = 0
 	for index, budget := range budgets {
@@ -176,6 +179,33 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 		}
 	}
 	return nil
+}
+
+// The selected command sequence admits one bounded cleanup drive in each of
+// these phases. Do not divide by the sixteen owners: a failed rotation CAS can
+// repeat an owner. Every turn reserves both cursor writes, then the largest
+// admitted owner recipe independently for transactions and submitted operands.
+// Relationship V3 can unpin 64 domains plus its catalog reference; legacy
+// relationship cleanup can submit one 512-ID pin vector. Catalog V3's explicit
+// preimage Begin (even when canceled empty) is a transaction, so its eleven
+// candidates can cost 22 transactions, not the nominal twelve-query allowance.
+// Observation/search's larger selected batches are filesystem work only.
+func applySelectedCleanupWorkCorrection(envelope *WorkEnvelope) {
+	const turns = uint64(lifecycle.MaxCycleObservationTurns)
+	const cursorWrites = uint64(2)
+	const ownerTransactions = uint64(64 + 1)
+	const ownerRows = uint64(512)
+	envelope.MaximumLifecycleDeletesPerTurn = uint64(lifecycle.SelectedCleanupObservationDeletes)
+	for index := range envelope.Phases {
+		phase := &envelope.Phases[index]
+		switch phase.Phase {
+		case "pressure_80", "pressure_75", "lifecycle_collection":
+			// Preserve the surrounding-work reserve and all existing minima.
+			phase.StoreTransactions.Maximum += turns * (cursorWrites + ownerTransactions)
+			phase.StoreRows.Maximum += turns * (cursorWrites + ownerRows)
+			phase.LifecycleDeleted.Maximum = turns * envelope.MaximumLifecycleDeletesPerTurn
+		}
+	}
 }
 
 func accountingReceiptMetricNames() []string {

@@ -3299,6 +3299,17 @@ does not run a turn, probe the filesystem, acquire the mutation lock, or read
 the store; it copies the bounded in-memory monitor populated by normal
 maintenance and index admission.
 
+Only admitted prospective T42.2 V3 cleanup epochs use larger filesystem
+batches: up to 1,024 observation-v2 removals and 64 search removals per turn.
+Their status advertises a maximum of 1,024; every other owner still has its
+16-unit cap. Ordinary serving remains at sixteen. The selected pending delay
+is at most 250ms after each completed turn and checkpoint, not a throughput
+guarantee. Retention, current/rollback roots and pins remain protected.
+The reported query limit is a nominal scan-planning value, not an SDK-call
+meter; selected store accounting separately charges actual submissions.
+This profile is selected by authenticated launch wiring, not a user option or
+an authority granted by status data. It establishes no ceremony pass.
+
 Catalog-v3 lifecycle authority remains separate from v1/v2. Startup repairs
 lifecycle metadata only for a complete strict-valid pre-lifecycle inventory
 and refuses more than 64 such roots. Live backup validates every referenced

@@ -15,6 +15,11 @@ import (
 const (
 	Schema = "phebs-lifecycle-v1"
 
+	// These fixed filesystem batches are available only to an explicitly
+	// selected cleanup collector. Store-backed owners keep the ordinary cap.
+	SelectedCleanupObservationDeletes = 1_024
+	SelectedCleanupSearchDeletes      = 64
+
 	SoftWatermarkPercent   = 80
 	HardWatermarkPercent   = 90
 	ResumeWatermarkPercent = 75
@@ -23,9 +28,11 @@ const (
 	MaxCandidatesPerTick   = 64
 	MaxDeletesPerTick      = 16
 	MaxQueriesPerTick      = 16
-	// Four queries persist owner/rotation cursors; one owner scan plus at most
-	// eleven point/CAS collection attempts keeps the aggregate at sixteen.
-	MaxOwnerQueriesPerTick  = 12
+	// Nominal scan-planning allowance after four cursor operations; owners
+	// may perform nested reads/writes. This is not an enforced SDK-call cap.
+	MaxOwnerQueriesPerTick = 12
+	// Historical planning inputs, not whole-sweep filesystem meters. In
+	// particular inventory/search preflight and batch deletion are separate.
 	MaxStatsPerTick         = 256
 	MaxDescriptorsPerTick   = 8
 	MaxMetadataBytesPerTick = 1 << 20
@@ -38,6 +45,19 @@ const (
 	MaxPressureDependentAdmissionBytes int64 = 48 << 30
 	GenerationScheduleRetained               = 2
 )
+
+// SelectedCleanupDeleteLimit is the closed selected cleanup owner profile;
+// it does not change the ordinary production policy.
+func SelectedCleanupDeleteLimit(owner string) int {
+	switch owner {
+	case ObservationV2Owner:
+		return SelectedCleanupObservationDeletes
+	case SearchOwner:
+		return SelectedCleanupSearchDeletes
+	default:
+		return MaxDeletesPerTick
+	}
+}
 
 var (
 	ErrCapacityUnavailable = errors.New("lifecycle filesystem capacity is unavailable")

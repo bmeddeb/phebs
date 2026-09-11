@@ -12,6 +12,17 @@ import (
 
 const maxExecutionLifecycleEvent = 1 << 10
 
+func lifecycleDeleteLimit(schema, owner string) uint64 {
+	if schema == PlanV3Schema {
+		return uint64(lifecycle.SelectedCleanupDeleteLimit(owner))
+	}
+	return uint64(lifecycle.MaxDeletesPerTick)
+}
+
+func lifecycleMaximumDeleteLimit(schema string) uint64 {
+	return lifecycleDeleteLimit(schema, lifecycle.ObservationV2Owner)
+}
+
 type ExecutionLifecycleCount struct {
 	ReturnedTicks, OwnerTurns, Deleted, MaxDeleted, FailedTicks uint64
 }
@@ -105,6 +116,7 @@ func observeLifecycleEvent(line []byte, plan Plan, producer uint32, input string
 	bound := plan.WorkEnvelope.Phases[event.Phase-1]
 	if next.OwnerTurns > bound.LifecycleOwnerTurns.Maximum || next.Deleted > bound.LifecycleDeleted.Maximum ||
 		next.MaxDeleted > plan.WorkEnvelope.MaximumLifecycleDeletesPerTurn || event.Scanned > lifecycle.MaxCandidatesPerTick ||
+		uint64(event.Deleted) > lifecycleDeleteLimit(plan.Schema, event.Owner) ||
 		plan.Schema != PlanV3Schema && event.Deleted > event.Scanned {
 		return true, errExecutionAttempts
 	}
