@@ -6971,6 +6971,38 @@ normal in 1.037s and race in 9.205s; documentation/glossary passed in 0.642s
 and whitespace checks passed. These focused results do not replace the two
 fresh complete parent groups.
 
+At clean exact `1f2868d844e3c331b89964e52a11ebdb3e12d7e5`, both fresh
+fail-fast parent race groups completed successfully under their unchanged
+sixty-minute allowances. Group one selected 61 tests: 57 passed and four
+explicit opt-in tests skipped, in 1391.487s. The skips were the optional native
+pressure ballast, volume and workspace tests, plus external supplied-tool
+custody. Group two selected 25 tests: all 25 passed, no skips, in 3036.259s.
+The disjoint union of terminal test names exactly matches the retained
+86-name selector inventory. This is 82 passes and four skips, not an uncached
+whole-package pass or a native pressure rehearsal. Log SHA-256 digests are
+`efcadd919ac2f71c6770b4d3d7de42b99ef141c838354b566adc9ecbff5c35fb`
+and `513ebc9e12de053be280890243b083edb7471300076a964cf13d37b3e8f4505b`.
+
+The full V3 receipt round-trip passed its three scenarios in 3017.32s;
+the shared-constructor work-failure round-trip passed 22 cases in 8.55s.
+Actual A/B/A-return fixture construction each settled 56 extraction chunks
+and nine current domain roots. Both recovery-preparation paths reused 56
+results with zero source acquisitions and evidence appends, without live
+stale-lease or process-death injection. Receipt measurements, signatures and
+search-leaf evidence remain modeled; this does not establish all fifteen
+actual ceremony phases. Module verification, documentation (0.669s), glossary,
+whitespace and exact-clean source checks passed. The gate session joined,
+its process group is empty and its fixture listener is gone. Independent
+review of the exact follow-up and gate selections found zero findings; no
+production or steady-state-cost change was introduced by that follow-up.
+V1/V2 frozen bytes remain unchanged. Fresh actual pressure rehearsal, later
+archive/query/whole-executor/launcher gates, and freeze remain open.
+
+The source-identical final gate-record review found zero findings. The final
+record tree passed documentation (0.671s), glossary and whitespace checks;
+repository-pinned `ci-static` also passed, including vet, lint (zero issues)
+and compilation of all packages with tests disabled.
+
 **Counter-unit exact-source race continuation (2026-09-11).** At clean
 `52ef5e8ed98eb788acad95d7e81de4797e1d1742`, the broad 68-test selector
 `Test.*(Lifecycle|Pressure|Receipt|AccountingV3RetainsHistorical)` exceeded its
