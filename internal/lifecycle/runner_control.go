@@ -83,6 +83,9 @@ func (control *RunnerControl) Resume(ctx context.Context) error {
 // the selected native delay and the existing backlog delay, not hourly idle.
 // No turn exceeds the collector's admitted bound. Cancellation after handoff
 // joins the executing callback cooperatively before returning.
+// Selected cleanup uses truthful durable-job lower-bound evidence without
+// requiring its census backlog to align with every other owner's completion.
+// Ordinary DriveNormal remains strict; owner errors are never accepted.
 func (control *RunnerControl) DriveNormal(ctx context.Context, collector *CycleCollector) (CycleObservation, error) {
 	result := control.call(ctx, runnerDriveNormal, collector, time.Time{})
 	return result.cycle, result.err
@@ -275,7 +278,8 @@ func (state *runnerState) drive(ctx context.Context, command *runnerCommand, due
 	if command.operation == runnerDriveRecovery {
 		done, err = collector.armPressure75Recovery(gate, command.fence)
 	} else {
-		done, err = collector.arm(command.operation == runnerDriveFresh)
+		done, err = collector.arm(command.operation == runnerDriveFresh ||
+			(command.operation == runnerDriveNormal && collector.selectedCleanup))
 	}
 	if err != nil {
 		return CycleObservation{}, err

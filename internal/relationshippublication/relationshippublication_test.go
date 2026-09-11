@@ -1347,6 +1347,10 @@ func TestLifecycleRepairsCrashStageAndOverLimitGenerationInventory(t *testing.T)
 	if err != nil || result.Deleted == 0 {
 		t.Fatalf("stage repair = %+v, %v", result, err)
 	}
+	result, err = SweepLifecycle(t.Context(), dataDir, time.Now().UTC(), result.Cursor, &Cache{}, 8)
+	if err != nil || result.Deleted != 1 || !result.More {
+		t.Fatalf("stage repository confirmation = %+v, %v", result, err)
+	}
 	if _, err := os.Lstat(base); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("stage-only repository remains: %v", err)
 	}
@@ -1414,23 +1418,32 @@ func TestLifecycleRepairsCrashStageAndOverLimitGenerationInventory(t *testing.T)
 }
 
 func TestConfirmedCollectionRetainsMarkerAcrossOneDeleteTurns(t *testing.T) {
-	directory := t.TempDir()
+	parent := t.TempDir()
+	directory := filepath.Join(parent, "collecting-"+strings.Repeat("a", 64))
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(directory, "root.json"), []byte("{}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(directory, collectionUnpinnedName), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	deleted, complete, err := drainUnpinnedCollection(directory, 1)
+	deleted, complete, err := drainUnpinnedCollection(t.Context(), directory, 1)
 	if err != nil || deleted != 1 || complete {
 		t.Fatalf("first one-delete turn = deleted %d complete %t err %v", deleted, complete, err)
 	}
 	if unpinned, err := collectionUnpinned(directory); err != nil || !unpinned {
 		t.Fatalf("collection marker after partial drain = %t, %v", unpinned, err)
 	}
-	deleted, complete, err = drainUnpinnedCollection(directory, 1)
+	deleted, complete, err = drainUnpinnedCollection(t.Context(), directory, 1)
+	if err != nil || deleted != 1 || complete {
+		t.Fatalf("marker one-delete turn = deleted %d complete %t err %v", deleted, complete, err)
+	}
+	stage := filepath.Join(parent, ".stage-unpinned-"+strings.Repeat("a", 64))
+	deleted, complete, err = drainFlatGeneration(t.Context(), stage, 1)
 	if err != nil || deleted != 1 || !complete {
-		t.Fatalf("final one-delete turn = deleted %d complete %t err %v", deleted, complete, err)
+		t.Fatalf("final stage turn = %d/%t/%v", deleted, complete, err)
 	}
 }
 

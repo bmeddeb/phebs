@@ -3720,7 +3720,9 @@ func validatePressure80Lifecycle(value PressureTransition, metrics ReceiptMetric
 	if err := validatePressureLifecycle(value, metrics, plan); err != nil {
 		return err
 	}
-	if !correctedPlanSemantics(plan.Schema) {
+	// Only prospective V3 shares recovery/fresh's truthful durable-job
+	// lower-bound backlog rule. All owner, total and freshness checks above stay.
+	if plan.Schema == PlanV3Schema || !correctedPlanSemantics(plan.Schema) {
 		return nil
 	}
 	index := slices.IndexFunc(value.Owners, func(owner LifecycleOwnerResult) bool {

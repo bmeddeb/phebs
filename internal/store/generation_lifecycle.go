@@ -91,14 +91,16 @@ RETURN SELECT digest, repository, stage, generation, updated_at FROM generation_
 		if !validSHA256(candidate.Digest) || !validSHA256(candidate.Generation) ||
 			candidate.Repository == "" ||
 			!validGenerationToken(candidate.Stage) || candidate.UpdatedAt.IsZero() {
-			return GenerationLifecycleSweep{}, errors.New("scan generation lifecycle: candidate is malformed")
+			return sweep, errors.New("scan generation lifecycle: candidate is malformed")
 		}
 		sweep.Cursor = candidate.Digest
 		deleted, deleteErr := s.collectGenerationSchedule(
 			ctx, candidate, deleteLimit-sweep.Deleted, retained,
 		)
 		if deleteErr != nil {
-			return GenerationLifecycleSweep{}, deleteErr
+			// Earlier candidates have independently committed. Preserve their
+			// observed deletions without inventing this uncertain candidate's.
+			return sweep, deleteErr
 		}
 		sweep.Deleted += deleted
 		if sweep.Deleted >= deleteLimit {

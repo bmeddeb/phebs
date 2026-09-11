@@ -1191,6 +1191,7 @@ SELECT * FROM service_catalog_v3_lifecycle
 		}
 		return sweep, nil
 	}
+	resume := after
 	for _, candidate := range candidates {
 		if !validSHA256Digest(candidate.RootDigest) {
 			return sweep, ErrInvalidServiceCatalogV3Lifecycle
@@ -1208,6 +1209,7 @@ SELECT * FROM service_catalog_v3_lifecycle
 			}
 			if preimagesDeleted > 0 {
 				sweep.Deleted += preimagesDeleted
+				sweep.Cursor = resume
 				sweep.More = true
 				return sweep, nil
 			}
@@ -1232,6 +1234,7 @@ SELECT * FROM service_catalog_v3_lifecycle
 			}
 			if transitioned {
 				sweep.RetiredLogicalBytes = int64(candidate.LogicalBytes)
+				sweep.Cursor = resume
 				sweep.More = true
 				return sweep, nil
 			}
@@ -1245,12 +1248,19 @@ SELECT * FROM service_catalog_v3_lifecycle
 			sweep.DeletedRootBytes += rootBytes
 			sweep.DeletedMemberBytes += memberBytes
 			if more || deleted > 0 {
+				if more {
+					// The query resumes strictly after its cursor. Retain the
+					// predecessor until this bounded generation drain finishes,
+					// including shared-member advances that delete no object.
+					sweep.Cursor = resume
+				}
 				sweep.More = true
 				return sweep, nil
 			}
 		default:
 			return sweep, ErrInvalidServiceCatalogV3Lifecycle
 		}
+		resume = candidate.RootDigest
 	}
 	if len(candidates) == scanLimit {
 		sweep.More = true

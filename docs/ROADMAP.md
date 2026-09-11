@@ -64,6 +64,15 @@ sequence.
 
 ## Now
 
+**T42.2 cleanup and completion correction, 2026-09-11:** the second independent
+review corrected shared-component drainage, resumable cursor/marker handling
+and failed-prefix accounting. Ben subsequently approved prospective V3's
+selected phase-nine truthful durable-job backlog rule; all other owners remain
+exact/drained and capacity, normalized-byte and historical V1/V2 gates stay
+unchanged. Corrected source, skewed-cursor regressions and native composition
+must pass before another pressure rehearsal. Earlier failed custody remains
+retained; no pressure pass or freeze is established.
+
 **T42.2 input-alignment correction, 2026-09-10:** the pressure rehearsal at
 `22c0268b` stopped before pressure during checkpoint's joined-output validation.
 Return-A rebuilt extraction/resolver work after first combining A candidates

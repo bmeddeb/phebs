@@ -62,10 +62,19 @@ func SweepLifecycle(
 	cursor string,
 	pins PinChecker,
 	deleteLimit int,
-) (LifecycleResult, error) {
-	var result LifecycleResult
+) (result LifecycleResult, err error) {
+	defer func() {
+		// One completed deletion target does not prove later roots/components
+		// are drained. Require a subsequent actual zero-work confirmation.
+		if err == nil && result.Deleted > 0 {
+			result.More = true
+		}
+	}()
 	if !filepath.IsAbs(dataDir) || pins == nil || deleteLimit < 1 {
 		return result, invalidLifecycle("lifecycle input")
+	}
+	if err := ctx.Err(); err != nil {
+		return result, err
 	}
 	root := filepath.Join(dataDir, "relationships")
 	base := filepath.Join(root, "relationship-publications")
@@ -102,6 +111,22 @@ func SweepLifecycle(
 	if err != nil {
 		return result, err
 	}
+	if len(generations)+len(collecting)+len(stages) == 0 {
+		empty, err := lifecycleDirectoryEmpty(repositoryDirectory)
+		if err != nil {
+			return result, err
+		}
+		if empty {
+			references := newComponentReferenceSet()
+			deferred, err := addComponentReferencesV3(&references,
+				filepath.Join(root, RelationshipPublicationsV3Shadow, result.Cursor), result.Cursor)
+			if err != nil || deferred {
+				result.More = true
+				return result, err
+			}
+			return sweepEmptyLifecycleRepository(ctx, dataDir, repositoryDirectory, result, references, deleteLimit)
+		}
+	}
 	if len(stages) > 0 {
 		sort.Slice(stages, func(i, j int) bool {
 			if !stages[i].modified.Equal(stages[j].modified) {
@@ -111,19 +136,10 @@ func SweepLifecycle(
 		})
 		result.Scanned = 1
 		deleted, complete, drainErr := drainFlatGeneration(
-			filepath.Join(repositoryDirectory, stages[0].name), deleteLimit,
+			ctx, filepath.Join(repositoryDirectory, stages[0].name), deleteLimit,
 		)
 		result.Deleted = deleted
 		result.More = result.More || !complete || len(stages) > 1
-		if drainErr == nil && complete {
-			removed, removeErr := removeEmptyLifecycleDirectory(repositoryDirectory)
-			if removeErr != nil {
-				return result, removeErr
-			}
-			if removed {
-				result.Deleted++
-			}
-		}
 		return result, drainErr
 	}
 	var pointer Pointer
@@ -187,7 +203,7 @@ func SweepLifecycle(
 			return result, nil
 		}
 		deleted, complete, err := drainUnpinnedCollection(
-			filepath.Join(repositoryDirectory, collecting[0].name), deleteLimit,
+			ctx, filepath.Join(repositoryDirectory, collecting[0].name), deleteLimit,
 		)
 		result.Deleted = deleted
 		result.More = result.More || !complete
@@ -271,7 +287,7 @@ func SweepLifecycle(
 		return result, nil
 	}
 	deleted, more, scanned, err := sweepOrphanComponent(
-		dataDir, result.Cursor, references, deleteLimit,
+		ctx, dataDir, result.Cursor, references, deleteLimit,
 	)
 	result.Deleted += deleted
 	result.Scanned += scanned
@@ -317,6 +333,7 @@ func componentReferences(
 }
 
 func sweepOrphanComponent(
+	ctx context.Context,
 	dataDir, repositoryHashValue string,
 	references componentReferenceSet,
 	deleteLimit int,
@@ -342,6 +359,9 @@ func sweepOrphanComponent(
 		},
 	}
 	for _, current := range components {
+		if err := ctx.Err(); err != nil {
+			return 0, false, scanned, err
+		}
 		entries, readErr := boundedLifecycleDirectory(current.base, MaxRepositoryRepairEntries)
 		if errors.Is(readErr, os.ErrNotExist) {
 			continue
@@ -357,7 +377,7 @@ func sweepOrphanComponent(
 				return 0, false, scanned, invalidLifecycle("component stage")
 			}
 			deleted, complete, drainErr := drainFlatGeneration(
-				filepath.Join(current.base, entry.Name()), deleteLimit,
+				ctx, filepath.Join(current.base, entry.Name()), deleteLimit,
 			)
 			return deleted, !complete, scanned + 1, drainErr
 		}
@@ -376,7 +396,7 @@ func sweepOrphanComponent(
 				return 0, false, scanned, ErrLimit
 			}
 			deleted, complete, err := drainFlatGeneration(
-				filepath.Join(current.base, entry.Name()), deleteLimit,
+				ctx, filepath.Join(current.base, entry.Name()), deleteLimit,
 			)
 			return deleted, !complete, scanned + 1, err
 		}
@@ -426,10 +446,13 @@ func sweepOrphanComponent(
 			}
 			scanned++
 			collecting := filepath.Join(current.base, "collecting-"+entry.Name())
+			if err := ctx.Err(); err != nil {
+				return 0, false, scanned, err
+			}
 			if err := os.Rename(filepath.Join(current.base, entry.Name()), collecting); err != nil {
 				return 0, false, scanned, err
 			}
-			deleted, complete, err := drainFlatGeneration(collecting, deleteLimit)
+			deleted, complete, err := drainFlatGeneration(ctx, collecting, deleteLimit)
 			return deleted, !complete, scanned, err
 		}
 	}
@@ -489,13 +512,47 @@ func lifecycleGenerations(
 	return generations, collecting, stages, nil
 }
 
-func removeEmptyLifecycleDirectory(directory string) (bool, error) {
-	entries, err := boundedLifecycleDirectory(directory, MaxRepositoryRepairEntries)
+// An empty relationship namespace can be the only discovery key for shared
+// component residue. Keep it until the actual orphan collector confirms zero
+// work against the other namespace's retained authority union.
+func sweepEmptyLifecycleRepository(ctx context.Context, dataDir, directory string,
+	result LifecycleResult, references componentReferenceSet, deleteLimit int,
+) (LifecycleResult, error) {
+	deleted, more, scanned, err := sweepOrphanComponent(ctx, dataDir, result.Cursor, references, deleteLimit)
+	result.Deleted, result.Scanned = deleted, scanned
+	result.More = result.More || more || deleted > 0
+	if err != nil || more || deleted > 0 {
+		return result, err
+	}
+	removed, err := removeEmptyLifecycleRepository(ctx, directory)
+	if removed {
+		result.Deleted = 1
+	} else {
+		result.More = true
+	}
+	return result, err
+}
+
+func lifecycleDirectoryEmpty(directory string) (bool, error) {
+	// A single sentinel is enough to distinguish empty from nonempty; reaching
+	// that sentinel is ordinary remaining work, not an inventory refusal.
+	entries, err := boundedLifecycleDirectory(directory, 0)
+	if errors.Is(err, ErrLimit) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	if len(entries) != 0 {
-		return false, nil
+	return len(entries) == 0, nil
+}
+
+func removeEmptyLifecycleRepository(ctx context.Context, directory string) (bool, error) {
+	empty, err := lifecycleDirectoryEmpty(directory)
+	if err != nil || !empty {
+		return false, err
+	}
+	if err := ctx.Err(); err != nil {
+		return false, err
 	}
 	if err := os.Remove(directory); err != nil {
 		return false, err
@@ -503,22 +560,34 @@ func removeEmptyLifecycleDirectory(directory string) (bool, error) {
 	return true, nil
 }
 
-func drainFlatGeneration(directory string, budget int) (int, bool, error) {
-	entries, err := boundedLifecycleDirectory(directory, budget+1)
+func drainFlatGeneration(ctx context.Context, directory string, budget int) (int, bool, error) {
+	return drainFlatGenerationBounded(ctx, directory, budget, MaxStageRepairFiles)
+}
+
+// Inventory size is independent of the per-turn deletion budget. A legitimate
+// large flat generation must make bounded progress rather than fail at budget+2.
+func drainFlatGenerationBounded(ctx context.Context, directory string, budget, inventoryLimit int) (int, bool, error) {
+	if budget < 1 {
+		return 0, false, ErrLimit
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, false, err
+	}
+	entries, err := boundedLifecycleDirectory(directory, inventoryLimit)
 	if err != nil {
 		return 0, false, err
 	}
-	slices.SortFunc(entries, func(left, right os.DirEntry) int {
-		return strings.Compare(left.Name(), right.Name())
-	})
 	deleted := 0
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return deleted, false, err
+		}
 		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
 			return deleted, false, invalidLifecycle("lifecycle generation entry")
 		}
 		info, err := entry.Info()
 		if err != nil || !info.Mode().IsRegular() {
-			return deleted, false, invalidLifecycle("lifecycle generation file")
+			return deleted, false, errors.Join(err, invalidLifecycle("lifecycle generation file"))
 		}
 		if err := os.Remove(filepath.Join(directory, entry.Name())); err != nil {
 			return deleted, false, err
@@ -527,6 +596,9 @@ func drainFlatGeneration(directory string, budget int) (int, bool, error) {
 		if deleted == budget {
 			return deleted, false, nil
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return deleted, false, err
 	}
 	if err := os.Remove(directory); err != nil {
 		return deleted, false, err
@@ -640,13 +712,20 @@ func collectionUnpinned(directory string) (bool, error) {
 	return true, nil
 }
 
-func drainUnpinnedCollection(directory string, budget int) (int, bool, error) {
-	return drainUnpinnedCollectionBounded(directory, budget, MaxRepositoryRepairEntries)
+func drainUnpinnedCollection(ctx context.Context, directory string, budget int) (int, bool, error) {
+	return drainUnpinnedCollectionBounded(ctx, directory, budget, MaxRepositoryRepairEntries)
 }
 
 func drainUnpinnedCollectionBounded(
+	ctx context.Context,
 	directory string, budget, inventoryLimit int,
 ) (int, bool, error) {
+	if budget < 1 {
+		return 0, false, ErrLimit
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, false, err
+	}
 	entries, err := boundedLifecycleDirectory(directory, inventoryLimit)
 	if err != nil {
 		return 0, false, err
@@ -657,6 +736,9 @@ func drainUnpinnedCollectionBounded(
 	deleted := 0
 	remaining := false
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return deleted, false, err
+		}
 		if entry.Name() == collectionUnpinnedName {
 			continue
 		}
@@ -679,13 +761,43 @@ func drainUnpinnedCollectionBounded(
 	if remaining || budget-deleted < 1 {
 		return deleted, false, nil
 	}
-	if err := os.Remove(filepath.Join(directory, collectionUnpinnedName)); err != nil {
+	if err := ctx.Err(); err != nil {
 		return deleted, false, err
 	}
-	if err := os.Remove(directory); err != nil {
+	// Preserve durable unpin proof until the residue belongs to the existing
+	// never-authoritative stage namespace. A one-delete turn may then remove
+	// the marker alone; the next stage turn can safely remove its directory.
+	markerOnly, err := boundedLifecycleDirectory(directory, 1)
+	if err != nil {
 		return deleted, false, err
 	}
-	return deleted + 1, true, nil
+	if len(markerOnly) != 1 || markerOnly[0].Name() != collectionUnpinnedName {
+		return deleted, false, invalidLifecycle("collection terminal inventory")
+	}
+	unpinned, err := collectionUnpinned(directory)
+	if err != nil || !unpinned {
+		return deleted, false, errors.Join(err, invalidLifecycle("collection terminal marker"))
+	}
+	name := strings.TrimPrefix(filepath.Base(directory), "collecting-")
+	if len(name) != 64 || !validLowerHex(name) || filepath.Base(directory) != "collecting-"+name {
+		return deleted, false, invalidLifecycle("collection terminal name")
+	}
+	parent := filepath.Dir(directory)
+	stage := filepath.Join(parent, ".stage-unpinned-"+name)
+	if _, err := os.Lstat(stage); !errors.Is(err, os.ErrNotExist) {
+		return deleted, false, errors.Join(err, invalidLifecycle("collection terminal stage collision"))
+	}
+	if err := ctx.Err(); err != nil {
+		return deleted, false, err
+	}
+	if err := os.Rename(directory, stage); err != nil {
+		return deleted, false, err
+	}
+	if err := syncDirectory(parent); err != nil {
+		return deleted, false, err
+	}
+	terminalDeleted, complete, err := drainFlatGeneration(ctx, stage, budget-deleted)
+	return deleted + terminalDeleted, complete, err
 }
 
 func validLowerHex(value string) bool {

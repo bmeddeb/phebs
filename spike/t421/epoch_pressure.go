@@ -186,7 +186,7 @@ func (reader *executionEpochInspection) pressureRead(ctx context.Context, operat
 func (p epochPressureObservations) valid(operation string, fence time.Time) bool {
 	switch operation {
 	case "normal-cycle":
-		return pressureCycleValid(p.normal, false) && p.normal.Capacity.UsedPercent < 75
+		return pressureCycleValid(p.normal, true) && p.normal.Capacity.UsedPercent < 75
 	case "recovery-cycle":
 		return pressureCycleValid(p.recovery, true) && p.recovery.Capacity.UsedPercent < 75 && p.recovery.FenceAt.Equal(p.recoveryFence) && !p.recovery.FenceAt.Before(p.latched.Capacity.ObservedAt)
 	case "pressure-80":

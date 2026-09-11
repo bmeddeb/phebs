@@ -41,7 +41,8 @@ func TestT422RestoreRetiredNativeEndpoint(t *testing.T) {
 }
 
 func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool, cleanup ...bool) {
-	cleanupWorkspace := len(cleanup) == 1 && cleanup[0]
+	cleanupWorkspace := len(cleanup) > 0 && cleanup[0]
+	allOwners := len(cleanup) == 2 && cleanup[1]
 	if cleanupWorkspace && (!workspace || restore) {
 		t.Fatal("cleanup fixture requires workspace-only mode")
 	}
@@ -227,17 +228,17 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
 	serverMode := "server"
-	if cleanupWorkspace {
+	if allOwners {
+		serverMode = "workspace-all-owners"
+	} else if cleanupWorkspace {
 		serverMode = "workspace-cleanup"
 	}
 	server, output, input, served, control, diagnostic := start(serverMode, record)
 	failServer := func(stage string, cause error) {
 		t.Helper()
-		_ = t4013.KillPrivateProcessSession(server.Process.Pid)
-		lines := []string{output.Text()}
-		for len(lines) < 20 && output.Scan() {
-			lines = append(lines, output.Text())
-		}
+		lines := t422NativeFailurePrefix(output, func() {
+			_ = t4013.KillPrivateProcessSession(server.Process.Pid)
+		})
 		// Drain the killed pipe before Wait closes it; stderr's copier must
 		// instead join through Wait before its buffer can be read.
 		_ = server.Wait()
@@ -291,7 +292,9 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 				t.Fatal("native workspace helper", err, diagnostic.String())
 			}
 			wantSamples := 18
-			if cleanupWorkspace {
+			if allOwners {
+				wantSamples = int(assertT422AllOwnersNativeReports(t, diagnostic.String(), record.InputSHA256)) + 2
+			} else if cleanupWorkspace {
 				wantSamples = t422CleanupExpectedTurns + 2
 				assertT422CleanupNativeReports(t, diagnostic.String(), record.InputSHA256)
 			}
@@ -309,7 +312,16 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 			if e != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
 				t.Fatal("joined native store prefix", prefix, e)
 			}
-			if cleanupWorkspace {
+			if allOwners {
+				counts, e := sa.Snapshot()
+				turns := uint64(wantSamples - 2)
+				if e != nil || len(counts.Phases) != 5 || counts.Phases[1].Phase != 9 ||
+					counts.Phases[1].Transactions <= 2*turns || counts.Phases[1].Rows <= 2*turns ||
+					counts.Phases[1].Transactions > 67*turns || counts.Phases[1].Rows > 514*turns {
+					t.Fatal("actual full-owner cleanup store reserve", counts, e)
+				}
+				t.Logf("actual all-owner cleanup: turns=%d workspace_samples=%d store_transactions=%d store_rows=%d", turns, wantSamples, counts.Phases[1].Transactions, counts.Phases[1].Rows)
+			} else if cleanupWorkspace {
 				counts, e := sa.Snapshot()
 				if e != nil || len(counts.Phases) != 5 || counts.Phases[1].Phase != 9 ||
 					counts.Phases[1].Transactions != 2*t422CleanupExpectedTurns || counts.Phases[1].Rows != 2*t422CleanupExpectedTurns {
@@ -483,6 +495,67 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 		if restore && p.Producer == 11 && (!p.Closed || p.Ordinal != 5) {
 			t.Fatal("restore must own three version probes and two engine lifetimes", p)
 		}
+	}
+}
+
+// Go emits the failure summary before its buffered test details, after test
+// cleanup has returned. Preserve that bounded tail before killing its session;
+// unexpected live protocol output still requires stopping before pipe drainage.
+func t422NativeFailurePrefix(output *bufio.Scanner, stop func()) []string {
+	terminal := strings.HasPrefix(output.Text(), "--- FAIL: TestT422")
+	if !terminal {
+		stop()
+	}
+	lines := []string{output.Text()}
+	for len(lines) < 20 && output.Scan() {
+		lines = append(lines, output.Text())
+	}
+	if terminal {
+		stop()
+	}
+	return lines
+}
+
+func TestT422NativeFailurePrefix(t *testing.T) {
+	for _, test := range []struct {
+		name, first string
+		details     int
+		want        int
+	}{
+		{"terminal_details", "--- FAIL: TestT422WorkspaceNativeHelper (1.00s)", 1, 2},
+		{"live_protocol", "unexpected response", 1, 1},
+		{"bounded_details", "--- FAIL: TestT422WorkspaceNativeHelper (1.00s)", 30, 20},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reader, writer := io.Pipe()
+			defer func() { _ = reader.Close() }()
+			joined := make(chan struct{})
+			go func() {
+				defer close(joined)
+				defer func() { _ = writer.Close() }()
+				if _, err := fmt.Fprintln(writer, test.first); err != nil {
+					return
+				}
+				for range test.details {
+					if _, err := fmt.Fprintln(writer, "failure detail"); err != nil {
+						return
+					}
+				}
+			}()
+			output := bufio.NewScanner(reader)
+			if !output.Scan() {
+				t.Fatal(output.Err())
+			}
+			stops := 0
+			lines := t422NativeFailurePrefix(output, func() { stops++; _ = reader.Close() })
+			<-joined
+			if stops != 1 || len(lines) != test.want || lines[0] != test.first {
+				t.Fatal("failure prefix", stops, lines)
+			}
+			if test.want > 1 && lines[1] != "failure detail" {
+				t.Fatal("missing failure detail", lines)
+			}
+		})
 	}
 }
 

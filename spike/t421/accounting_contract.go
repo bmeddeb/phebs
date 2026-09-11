@@ -163,6 +163,7 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 	// or unique physical allocation. Historical V1/V2 policies remain exact.
 	plan.MeterPolicy.ByteGaugeSemantics = "phase_sampled_traversal_v3:logical=max_completed_traversal_regular_file_apparent_byte_sum;allocated=max_completed_traversal_linked_entry_st_blocks_times_512_sum;scope=full_data_custody_including_ballast;allocated_includes_directories_and_symlinks;hardlink_aliases=count_each_linked_path;symlinks=not_followed;non_atomic_sequential_observations;not_point_in_time_usage_or_instantaneous_high_water;not_unique_physical_or_APFS_clone_exclusive_usage;sample_phase_start,after_each_custody_mutation,at_each_pressure_or_lifecycle_capacity_checkpoint,and_phase_finish;any_required_sample_unavailable_is_fail_closed;retain_prior_completed_positive_max_on_later_refusal;receipt_records_max_completed_observations_not_endpoint"
 	plan.MeterPolicy.ProcessGaugeSemantics = "controlled_dispatch_attempts=controller-committed-admissions;observed_rss_high_water_bytes=max_completed_sequential_census_RSS_sum;native_measurement_kind=sampled_observation;native_history=not_established;not-simultaneous-resource-bounds"
+	plan.MeterPolicy.LifecycleSemantics = frozenMeterPolicy().LifecycleSemantics + ";selected_v3_pressure_80=one_fresh_sorted_error_free_cycle;durable_jobs=truthful_lower_bound_backlog_allowed;other_owners=exact_drained;capacity=exact_normal_after_latest_owner;required_byte_checkpoints_and_8_68_gib_normalization_unchanged"
 	plan.ReceiptContract.Schema = ReceiptV3Schema
 	plan.ReceiptContract.FailureObservationSchema = "t422-failure-observation-v3"
 	plan.ReceiptContract.TeardownFailureSchema = "t422-teardown-failure-v3"
@@ -189,7 +190,8 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 // relationship cleanup can submit one 512-ID pin vector. Catalog V3's explicit
 // preimage Begin (even when canceled empty) is a transaction, so its eleven
 // candidates can cost 22 transactions, not the nominal twelve-query allowance.
-// Observation/search's larger selected batches are filesystem work only.
+// The larger selected observation/search/relationship drains are filesystem
+// work only; relationship V3 still releases at most one root per turn.
 func applySelectedCleanupWorkCorrection(envelope *WorkEnvelope) {
 	const turns = uint64(lifecycle.MaxCycleObservationTurns)
 	const cursorWrites = uint64(2)

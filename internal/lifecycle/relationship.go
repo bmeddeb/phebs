@@ -38,21 +38,28 @@ func (owner RelationshipGenerationOwner) Sweep(
 	result, err := relationshippublication.SweepLifecycle(
 		ctx, owner.DataDir, now, cursor, owner.Pins, limits.Deletes,
 	)
+	observed := OwnerResult{
+		Cursor: cursor, Scanned: result.Scanned, Deleted: result.Deleted,
+		More: result.More, Completeness: Unavailable,
+	}
 	if err != nil {
-		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
+		observed.Err = err
+		return observed
 	}
 	if result.ReleasedPinOwner != "" {
 		if owner.Store == nil {
-			return OwnerResult{Cursor: cursor, Completeness: Unavailable,
-				Err: errors.New("relationship extraction pin owner is incomplete")}
+			observed.Err = errors.New("relationship extraction pin owner is incomplete")
+			return observed
 		}
 		if err := owner.Store.UnpinPartitionedExtractionOwner(ctx, result.ReleasedPinOwner); err != nil {
-			return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
+			observed.Err = err
+			return observed
 		}
 		if err := relationshippublication.ConfirmLifecycleUnpin(
 			ctx, owner.DataDir, result.Cursor, result.ReleasedPinOwner,
 		); err != nil {
-			return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
+			observed.Err = err
+			return observed
 		}
 	}
 	completeness := Exact

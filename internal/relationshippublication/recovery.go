@@ -742,7 +742,7 @@ func repairStageDirectories(
 			return false, work, ErrLimit
 		}
 		deleted, complete, drainErr := drainFlatGeneration(
-			filepath.Join(directory, entry.Name()), min(MaxStageRepairFiles+1, remaining),
+			ctx, filepath.Join(directory, entry.Name()), min(MaxStageRepairFiles+1, remaining),
 		)
 		work += deleted
 		if drainErr != nil {
@@ -797,7 +797,7 @@ func cleanupOrphanComponentNamespace(
 				return work, ErrLimit
 			}
 			deleted, complete, drainErr := drainFlatGeneration(
-				filepath.Join(directory, entry.Name()), min(MaxStageRepairFiles+1, remaining),
+				ctx, filepath.Join(directory, entry.Name()), min(MaxStageRepairFiles+1, remaining),
 			)
 			work += deleted
 			if drainErr != nil {

@@ -204,8 +204,9 @@ func NewCycleCollector(owners []Owner, maxTurns CycleTurnLimit) (*CycleCollector
 	}, nil
 }
 
-// NewSelectedCleanupCycleCollector enables only the fixed filesystem batches
-// and controlled pending cadence; ordinary owner policy remains unchanged.
+// NewSelectedCleanupCycleCollector enables fixed filesystem batches, controlled
+// pending cadence and truthful durable-job backlog in controlled normal drives.
+// AwaitNormal remains strict even on this collector; ordinary policy is unchanged.
 func NewSelectedCleanupCycleCollector(owners []Owner, maxTurns CycleTurnLimit) (*CycleCollector, error) {
 	collector, err := NewCycleCollector(owners, maxTurns)
 	if err != nil {

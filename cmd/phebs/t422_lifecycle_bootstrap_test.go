@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -288,6 +289,7 @@ type t422LifecycleOwnerFixture struct {
 // the test instead of silently manufacturing another backend capability.
 type t422LifecycleAuthFixture struct {
 	store.AuthStore
+	mu  sync.Mutex
 	key store.APIKey
 }
 
@@ -296,11 +298,15 @@ func (*t422LifecycleAuthFixture) AuthStats(context.Context) (store.AuthStats, er
 }
 
 func (fixture *t422LifecycleAuthFixture) SetLegacyAPIKey(_ context.Context, hash string, at time.Time) error {
+	fixture.mu.Lock()
+	defer fixture.mu.Unlock()
 	fixture.key = store.APIKey{ID: "legacy-config", Hash: hash, LastUsedAt: &at}
 	return nil
 }
 
 func (fixture *t422LifecycleAuthFixture) GetAPIKey(_ context.Context, id string) (*store.APIKey, error) {
+	fixture.mu.Lock()
+	defer fixture.mu.Unlock()
 	if id != fixture.key.ID {
 		return nil, store.ErrNotFound
 	}
@@ -308,8 +314,67 @@ func (fixture *t422LifecycleAuthFixture) GetAPIKey(_ context.Context, id string)
 	return &key, nil
 }
 
+func (fixture *t422LifecycleAuthFixture) TouchAPIKey(ctx context.Context, id string, at time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	fixture.mu.Lock()
+	defer fixture.mu.Unlock()
+	if id != fixture.key.ID {
+		return store.ErrNotFound
+	}
+	// Replace the timestamp pointer rather than mutate a returned key's value.
+	fixture.key.LastUsedAt = &at
+	return nil
+}
+
 func (*t422LifecycleAuthFixture) DeleteExpiredAuthSessions(context.Context, time.Time) (int, error) {
 	return 0, nil
+}
+
+func TestT422LifecycleAuthFixtureAgedBearer(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	now := time.Date(2026, time.September, 11, 12, 0, 0, 0, time.UTC)
+	fixture := &t422LifecycleAuthFixture{}
+	service, err := auth.New(ctx, auth.Options{Store: fixture,
+		Config: config.Auth{APIKey: t421ExactReadTestCredential}, Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { cancel(); service.WaitCleanup() }()
+	key, err := fixture.GetAPIKey(ctx, "legacy-config")
+	if err != nil || fixture.SetLegacyAPIKey(ctx, key.Hash, now.Add(-6*time.Minute)) != nil {
+		t.Fatal("age fixture bearer", err)
+	}
+	handler := service.Require(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		principal, ok := auth.PrincipalFromContext(request.Context())
+		if !ok || !t421ExactReadLegacyPrincipal(principal) {
+			t.Error("legacy principal changed")
+		}
+		writer.WriteHeader(http.StatusNoContent)
+	}))
+	// Concurrent real middleware requests cover the shared fixture's read/touch
+	// locking; no lifecycle command, SDK query or native engine is involved.
+	var requests sync.WaitGroup
+	for range 8 {
+		requests.Add(1)
+		go func() {
+			defer requests.Done()
+			request := httptest.NewRequestWithContext(ctx, http.MethodPost, t422WorkspaceSamplePath, nil)
+			request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusNoContent {
+				t.Errorf("aged bearer refused: %d", response.Code)
+			}
+		}()
+	}
+	requests.Wait()
+	key, err = fixture.GetAPIKey(ctx, "legacy-config")
+	if err != nil || key.LastUsedAt == nil || !key.LastUsedAt.Equal(now) {
+		t.Fatalf("actual auth touch missing: %+v / %v", key, err)
+	}
 }
 
 func (owner t422LifecycleOwnerFixture) Name() string { return owner.name }

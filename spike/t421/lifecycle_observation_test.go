@@ -107,6 +107,9 @@ func TestExecutionLifecycleSelectedCleanupOwnerLimits(t *testing.T) {
 			{lifecycle.ObservationV2Owner, 1025, false},
 			{lifecycle.SearchOwner, 64, true},
 			{lifecycle.SearchOwner, 65, false},
+			{lifecycle.RelationshipV3Owner, 1024, true},
+			{lifecycle.RelationshipV3Owner, 1025, false},
+			{lifecycle.RelationshipOwner, 17, false},
 			{lifecycle.GenerationScheduleOwner, 17, false},
 		} {
 			t.Run(fmt.Sprintf("%s/%s/%d", schema, tc.owner, tc.deleted), func(t *testing.T) {

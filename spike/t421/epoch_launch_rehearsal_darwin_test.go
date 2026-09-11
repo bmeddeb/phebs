@@ -525,7 +525,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		t.Fatal("joined protected build/Git closure failed")
 	}
 	if volume != nil {
-		if err := volume.finishRehearsal(stopCtx, run); err != nil {
+		// Detach has its own existing one-minute command allowance. The server
+		// stop context may have expired during the required joined byte scan.
+		if err := volume.finishRehearsal(ctx, run); err != nil {
 			t.Fatal("populated volume retained after joined rehearsal", err)
 		}
 		t.Log("bound populated volume detached without force and removed without thawing source")

@@ -20,9 +20,49 @@ const (
 	t422CleanupSearchFiles      = 600
 	// Inventory removes its objects, segment, inventory and collecting dirs;
 	// search removes its abandoned stage after its regular shards.
-	t422CleanupExpectedDeleted = t422CleanupObservationFiles + 4 + t422CleanupSearchFiles + 1
-	t422CleanupExpectedTurns   = 16 * ((t422CleanupObservationFiles + 4 + 1023) / 1024)
+	t422CleanupExpectedDeleted     = t422CleanupObservationFiles + 4 + t422CleanupSearchFiles + 1
+	t422CleanupExpectedTurns       = 16 * ((t422CleanupObservationFiles + 4 + 1023) / 1024)
+	t422AllOwnersRelationshipFiles = 10_001
+	t422AllOwnersMinimumDeleted    = t422CleanupExpectedDeleted + t422AllOwnersRelationshipFiles + 2 + 1 // stage, repository, one catalog root
 )
+
+func assertT422AllOwnersNativeReports(t *testing.T, raw string, input [32]byte) uint64 {
+	t.Helper()
+	var count, deleted uint64
+	names := map[string]bool{}
+	bindings := 0
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "LCB") {
+			if line != fmt.Sprintf("LCB1:5:sha256:%x", input) {
+				t.Fatal("real-owner binding", line)
+			}
+			bindings++
+		}
+		if !strings.HasPrefix(line, "LC1:") {
+			continue
+		}
+		var event t422LifecycleEvent
+		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "LC1:")), &event); err != nil || event.Epoch != 4 || event.Phase != 9 || event.Failed || event.ReturnedTick != count+1 || event.OwnerTurns != count+1 || event.Deleted < 0 || event.Deleted > lifecycle.SelectedCleanupDeleteLimit(event.Owner) {
+			t.Fatal("real-owner event", line, err)
+		}
+		count++
+		deleted += uint64(event.Deleted)
+		names[event.Owner] = true
+		if event.TotalDeleted != deleted {
+			t.Fatal("real-owner positive prefix", line)
+		}
+	}
+	want := []string{lifecycle.CatalogOwner, lifecycle.CatalogV3Owner, lifecycle.GenerationScheduleOwner, lifecycle.JobOwner, lifecycle.SearchOwner, lifecycle.ObservationOwner, lifecycle.ObservationV2Owner, lifecycle.RelationshipOwner, lifecycle.RelationshipV3Owner, lifecycle.PartialStageOwner, lifecycle.SourceOwner, lifecycle.ResolverOwner, lifecycle.ProofOwner, lifecycle.InvestigationOwner, lifecycle.ReaderOwner, lifecycle.TombstoneOwner}
+	if bindings != 1 || len(names) != len(want) || count < t422CleanupExpectedTurns || count > uint64(lifecycle.MaxCycleObservationTurns) || deleted != t422AllOwnersMinimumDeleted {
+		t.Fatal("real-owner coverage", bindings, names, count, deleted)
+	}
+	for _, name := range want {
+		if !names[name] {
+			t.Fatal("missing actual owner", name)
+		}
+	}
+	return count
+}
 
 func assertT422CleanupNativeReports(t *testing.T, raw string, input [32]byte) {
 	t.Helper()

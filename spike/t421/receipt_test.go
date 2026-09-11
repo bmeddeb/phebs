@@ -514,13 +514,24 @@ func TestLifecycleReceiptSelectedCleanupOwnerLimits(t *testing.T) {
 			{lifecycle.ObservationV2Owner, 1025, false},
 			{lifecycle.SearchOwner, 64, true},
 			{lifecycle.SearchOwner, 65, false},
+			{lifecycle.RelationshipV3Owner, 1024, true},
+			{lifecycle.RelationshipV3Owner, 1025, false},
+			{lifecycle.RelationshipOwner, 17, false},
 			{lifecycle.GenerationScheduleOwner, 17, false},
 		} {
 			t.Run(fmt.Sprintf("%s/%s/%d", plan.Schema, tc.owner, tc.deleted), func(t *testing.T) {
 				owners, capacity := testLifecycleOwners(plan, 1_000)
 				index := slices.IndexFunc(owners, func(owner LifecycleOwnerResult) bool { return owner.Name == tc.owner })
 				if index < 0 {
-					t.Fatal("owner missing")
+					if plan.Schema != PlanSchema || tc.owner != lifecycle.RelationshipV3Owner {
+						t.Fatal("owner missing")
+					}
+					// V1 has no V3 relationship owner. Inject the row to exercise
+					// historical refusal; this does not isolate its census check
+					// from the historical counter and timestamp predicates.
+					owners = append(owners, owners[0])
+					index = len(owners) - 1
+					owners[index].Name = tc.owner
 				}
 				owners[index].Scanned, owners[index].Deleted = 1, tc.deleted
 				want := plan.Schema == PlanV3Schema && tc.v3

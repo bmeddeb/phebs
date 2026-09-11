@@ -16,9 +16,11 @@ const (
 	Schema = "phebs-lifecycle-v1"
 
 	// These fixed filesystem batches are available only to an explicitly
-	// selected cleanup collector. Store-backed owners keep the ordinary cap.
-	SelectedCleanupObservationDeletes = 1_024
-	SelectedCleanupSearchDeletes      = 64
+	// selected cleanup collector. Relationship V3 still releases at most one
+	// root's store pins per turn; only its filesystem drain grows.
+	SelectedCleanupObservationDeletes  = 1_024
+	SelectedCleanupSearchDeletes       = 64
+	SelectedCleanupRelationshipDeletes = 1_024
 
 	SoftWatermarkPercent   = 80
 	HardWatermarkPercent   = 90
@@ -54,6 +56,8 @@ func SelectedCleanupDeleteLimit(owner string) int {
 		return SelectedCleanupObservationDeletes
 	case SearchOwner:
 		return SelectedCleanupSearchDeletes
+	case RelationshipV3Owner:
+		return SelectedCleanupRelationshipDeletes
 	default:
 		return MaxDeletesPerTick
 	}

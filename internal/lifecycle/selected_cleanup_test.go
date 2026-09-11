@@ -28,10 +28,14 @@ func TestSelectedCleanupOwnerLimits(t *testing.T) {
 		{"observation-overshoot", ObservationV2Owner, true, 1025, true},
 		{"search-bound", SearchOwner, true, 64, false},
 		{"search-overshoot", SearchOwner, true, 65, true},
+		{"relationship-bound", RelationshipV3Owner, true, 1024, false},
+		{"relationship-overshoot", RelationshipV3Owner, true, 1025, true},
 		{"store-bound", GenerationScheduleOwner, true, 16, false},
 		{"store-overshoot", GenerationScheduleOwner, true, 17, true},
 		{"ordinary-observation", ObservationV2Owner, false, 17, true},
 		{"ordinary-search", SearchOwner, false, 17, true},
+		{"ordinary-relationship", RelationshipV3Owner, false, 17, true},
+		{"legacy-relationship", RelationshipOwner, true, 17, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			owner := selectedCleanupTestOwner{name: test.owner, work: func(limits Limits) OwnerResult {
@@ -83,7 +87,7 @@ func TestSelectedCleanupOwnerLimits(t *testing.T) {
 }
 
 func TestSelectedCleanupStatusProfile(t *testing.T) {
-	owners := []Owner{StaticOwner{OwnerName: ObservationV2Owner}, StaticOwner{OwnerName: SearchOwner}, StaticOwner{OwnerName: GenerationScheduleOwner}}
+	owners := []Owner{StaticOwner{OwnerName: ObservationV2Owner}, StaticOwner{OwnerName: SearchOwner}, StaticOwner{OwnerName: RelationshipV3Owner}, StaticOwner{OwnerName: GenerationScheduleOwner}}
 	ordinary, err := NewStatusMonitor(true, owners)
 	if err != nil {
 		t.Fatal(err)

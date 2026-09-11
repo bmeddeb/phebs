@@ -47,7 +47,10 @@ func (owner GenerationOwner) Sweep(
 		ctx, cursor, scanLimit, limits.Deletes, GenerationScheduleRetained,
 	)
 	if err != nil {
-		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
+		return OwnerResult{
+			Cursor: cursor, Scanned: sweep.Scanned, Deleted: sweep.Deleted,
+			More: sweep.More, Completeness: Unavailable, Err: err,
+		}
 	}
 	completeness := Exact
 	if sweep.More {

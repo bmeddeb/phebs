@@ -243,7 +243,7 @@ func TestExecutionEpochPressureCapacitySequence(t *testing.T) {
 }
 
 func TestExecutionEpochPressureReadTransport(t *testing.T) {
-	for _, mode := range []string{"complete", "nonzero-report", "bad-cycle", "duplicate-body", "missing-trailer"} {
+	for _, mode := range []string{"complete", "job-backlog", "job-error", "job-exact", "other-backlog", "nonzero-report", "bad-cycle", "duplicate-body", "missing-trailer"} {
 		t.Run(mode, func(t *testing.T) {
 			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method != http.MethodGet || r.URL.Path != "/api/t422/lifecycle/normal-cycle" || r.Header.Get("X-Phebs-T422-Ballast-Unix-Nano") != "" {
@@ -259,6 +259,21 @@ func TestExecutionEpochPressureReadTransport(t *testing.T) {
 					w.Header().Set("Trailer", epochReadTrailer)
 				}
 				cycle := pressureTestCycle()
+				for i := range cycle.Owners {
+					owner := &cycle.Owners[i]
+					if owner.Name == lifecycle.JobOwner {
+						switch mode {
+						case "job-backlog":
+							owner.Backlog = true
+						case "job-error":
+							owner.State = "error"
+						case "job-exact":
+							owner.Completeness = lifecycle.Exact
+						}
+					} else if mode == "other-backlog" {
+						owner.Backlog = true
+					}
+				}
 				if mode == "bad-cycle" {
 					cycle.Capacity.ProjectedBytes = 0
 				}
@@ -274,7 +289,7 @@ func TestExecutionEpochPressureReadTransport(t *testing.T) {
 			reader.run.epoch.Epoch, reader.run.pressureAllowed = 4, true
 			reader.projection.Phase, reader.pressure.step = "pressure_80", 2
 			err := reader.pressureRead(t.Context(), "normal-cycle", time.Time{})
-			if (err == nil) != (mode == "complete") || reader.next != 2 {
+			if (err == nil) != (mode == "complete" || mode == "job-backlog") || reader.next != 2 {
 				t.Fatal(err, reader.next)
 			}
 			if err == nil && (reader.pressure.step != 3 || reader.reports != 1 || reader.pressure.normal.OwnerTurns != 16) {

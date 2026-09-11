@@ -36,7 +36,8 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		return
 	}
 	fixtureLimit := 3 * time.Minute
-	if os.Getenv(t422BackupFixture) == "workspace-cleanup" {
+	allOwners := os.Getenv(t422BackupFixture) == "workspace-all-owners"
+	if os.Getenv(t422BackupFixture) == "workspace-cleanup" || allOwners {
 		fixtureLimit = 10 * time.Minute
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), fixtureLimit)
@@ -100,6 +101,8 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if os.Getenv(t422BackupFixture) == "workspace-cleanup" {
 		modeledOwners, verifyCleanup = seedT422CleanupNativeOwners(t, root, &turns)
 		wantTurns, wantDeleted = t422CleanupExpectedTurns, t422CleanupExpectedDeleted
+	} else if allOwners {
+		modeledOwners, verifyCleanup = seedT422AllNativeOwners(t, st, root, &turns)
 	}
 	control, err := newT422LifecycleControl(runnerCtx, launch, modeledOwners)
 	if err != nil || control.bindWorkspaceBytes(st) != nil {
@@ -182,8 +185,27 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	var cycle lifecycle.CycleObservation
-	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &cycle) != nil || cycle.OwnerTurns != wantTurns || cycle.Deleted != wantDeleted || readReports.Load() != 1 {
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &cycle) != nil || readReports.Load() != 1 {
 		t.Fatal("actual normal-cycle R", response.Code, response.Body.String(), readReports.Load())
+	}
+	if allOwners {
+		if cycle.OwnerTurns < t422CleanupExpectedTurns || cycle.OwnerTurns > uint64(lifecycle.MaxCycleObservationTurns) || cycle.Deleted != t422AllOwnersMinimumDeleted {
+			t.Fatal("real-owner cycle did not drain its expected fixture", cycle)
+		}
+		jobBacklog := false
+		for _, owner := range cycle.Owners {
+			if owner.Name == lifecycle.JobOwner {
+				jobBacklog = owner.State == "ok" && owner.Completeness == lifecycle.LowerBound && owner.Backlog
+			} else if owner.State != "ok" || owner.Completeness != lifecycle.Exact || owner.Backlog {
+				t.Fatal("non-job owner did not drain", owner)
+			}
+		}
+		if !jobBacklog {
+			t.Fatal("resumed job census did not retain truthful backlog", cycle)
+		}
+		wantTurns = cycle.OwnerTurns
+	} else if cycle.OwnerTurns != wantTurns || cycle.Deleted != wantDeleted {
+		t.Fatal("actual normal-cycle counts", cycle)
 	}
 	request = httptest.NewRequest(http.MethodPost, t422WorkspaceSamplePath, nil).WithContext(runnerCtx)
 	request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)

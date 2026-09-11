@@ -72,7 +72,10 @@ func (owner ObservationGenerationOwner) Sweep(
 	defer release()
 	result, err := observationpublication.SweepLifecycle(ctx, owner.Root, now, cursor, owner.Pins, limits.Deletes)
 	if err != nil {
-		return OwnerResult{Cursor: cursor, Completeness: Unavailable, Err: err}
+		return OwnerResult{
+			Cursor: cursor, Scanned: result.Scanned, Deleted: result.Deleted,
+			More: result.More, Completeness: Unavailable, Err: err,
+		}
 	}
 	completeness := Exact
 	if result.More {

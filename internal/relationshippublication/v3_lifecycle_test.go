@@ -168,7 +168,11 @@ func TestLifecycleV3PreservesCurrentPriorAndCacheLease(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	for turn := 0; turn < 3; turn++ {
+	repositoryDirectory := filepath.Dir(mustGenerationPathV3(t, relationshipRoot, repository, roots[0].GenerationDigest))
+	retiredName := strings.TrimPrefix(roots[0].GenerationDigest, "sha256:")
+	collectingPath := filepath.Join(repositoryDirectory, "collecting-"+retiredName)
+	unpinnedStage := filepath.Join(repositoryDirectory, ".stage-unpinned-"+retiredName)
+	for turn := 0; turn < MaxGenerationFilesV3+2; turn++ {
 		result, err = SweepLifecycleV3(
 			t.Context(), dataDir, time.Now().UTC(), result.Cursor, cache, 1,
 		)
@@ -178,10 +182,15 @@ func TestLifecycleV3PreservesCurrentPriorAndCacheLease(t *testing.T) {
 		if result.Deleted > 1 {
 			t.Fatalf("v3 collection exceeded delete bound: %+v", result)
 		}
-		if _, statErr := os.Lstat(mustGenerationPathV3(
-			t, relationshipRoot, repository, roots[0].GenerationDigest,
-		)); errors.Is(statErr, os.ErrNotExist) {
+		_, collectingErr := os.Lstat(collectingPath)
+		_, stageErr := os.Lstat(unpinnedStage)
+		if errors.Is(collectingErr, os.ErrNotExist) && errors.Is(stageErr, os.ErrNotExist) {
 			break
+		}
+	}
+	for _, path := range []string{collectingPath, unpinnedStage} {
+		if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("retired cleanup custody remains: %s: %v", path, err)
 		}
 	}
 	if _, err := os.Lstat(mustGenerationPathV3(
@@ -275,13 +284,13 @@ func TestLifecycleV3StageDrainIsFlatAndDeleteBounded(t *testing.T) {
 		result, sweepErr := SweepLifecycleV3(
 			t.Context(), dataDir, time.Now().UTC(), "", &CacheV3{}, 1,
 		)
-		if sweepErr != nil || result.Deleted > 2 {
+		if sweepErr != nil || result.Deleted > 1 {
 			t.Fatalf("bounded v3 stage turn %d = %+v, %v", turn, result, sweepErr)
 		}
 		deletedByTurn = append(deletedByTurn, result.Deleted)
 		entries, readErr := os.ReadDir(stage)
 		if errors.Is(readErr, os.ErrNotExist) {
-			break
+			continue
 		}
 		if readErr != nil {
 			t.Fatal(readErr)
@@ -293,9 +302,8 @@ func TestLifecycleV3StageDrainIsFlatAndDeleteBounded(t *testing.T) {
 	if _, err := os.Lstat(stage); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("v3 stage remains: %v", err)
 	}
-	// Like the legacy collector, each flat-file turn consumes one delete;
-	// the final metadata-only turn counts both the stage and empty repository.
-	if !reflect.DeepEqual(deletedByTurn, []int{1, 1, 1, 2}) {
+	// Stage and empty repository removal each consume their own delete unit.
+	if !reflect.DeepEqual(deletedByTurn, []int{1, 1, 1, 1, 1}) {
 		t.Fatalf("v3 stage delete accounting = %v", deletedByTurn)
 	}
 }

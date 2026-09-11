@@ -7,7 +7,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -45,8 +44,12 @@ func SweepLifecycleV3(
 	cursor string,
 	pins PinChecker,
 	deleteLimit int,
-) (LifecycleResult, error) {
-	var result LifecycleResult
+) (result LifecycleResult, err error) {
+	defer func() {
+		if err == nil && result.Deleted > 0 {
+			result.More = true
+		}
+	}()
 	if !filepath.IsAbs(dataDir) || pins == nil || deleteLimit < 1 {
 		return result, invalidLifecycle("v3 lifecycle input")
 	}
@@ -119,6 +122,30 @@ func SweepLifecycleV3(
 	if err != nil {
 		return result, err
 	}
+	if len(generations)+len(collecting)+len(stages) == 0 {
+		empty, err := lifecycleDirectoryEmpty(repositoryDirectory)
+		if err != nil {
+			return result, err
+		}
+		if empty {
+			legacyPresent, err := legacyRelationshipRepositoryPresent(dataDir, result.Cursor)
+			if err != nil {
+				return result, err
+			}
+			if !legacyPresent {
+				return sweepEmptyLifecycleRepository(ctx, dataDir, repositoryDirectory, result, newComponentReferenceSet(), deleteLimit)
+			}
+			// The existing legacy repository remains the shared collector's
+			// discovery key and retains its complete cross-namespace union.
+			removed, err := removeEmptyLifecycleRepository(ctx, repositoryDirectory)
+			if removed {
+				result.Deleted = 1
+			} else {
+				result.More = true
+			}
+			return result, err
+		}
+	}
 	if len(stages) > 0 {
 		if err := ctx.Err(); err != nil {
 			return result, err
@@ -131,19 +158,10 @@ func SweepLifecycleV3(
 		})
 		result.Scanned = 1
 		deleted, complete, drainErr := drainFlatGenerationBounded(
-			filepath.Join(repositoryDirectory, stages[0].name), deleteLimit, MaxStageRepairFiles,
+			ctx, filepath.Join(repositoryDirectory, stages[0].name), deleteLimit, MaxStageRepairFiles,
 		)
 		result.Deleted = deleted
 		result.More = result.More || !complete || len(stages) > 1
-		if drainErr == nil && complete {
-			removed, removeErr := removeEmptyLifecycleDirectory(repositoryDirectory)
-			if removeErr != nil {
-				return result, removeErr
-			}
-			if removed {
-				result.Deleted++
-			}
-		}
 		return result, drainErr
 	}
 	controls, err := readLifecycleControlsV3(repositoryDirectory, result.Cursor)
@@ -173,7 +191,7 @@ func SweepLifecycleV3(
 			return result, nil
 		}
 		deleted, complete, drainErr := drainUnpinnedCollectionBounded(
-			collectingDirectory, deleteLimit, MaxGenerationFilesV3+1,
+			ctx, collectingDirectory, deleteLimit, MaxGenerationFilesV3+1,
 		)
 		result.Deleted = deleted
 		result.More = result.More || !complete
@@ -285,7 +303,7 @@ func SweepLifecycleV3(
 		return result, err
 	}
 	deleted, more, scanned, err := sweepOrphanComponent(
-		dataDir, result.Cursor, references, deleteLimit,
+		ctx, dataDir, result.Cursor, references, deleteLimit,
 	)
 	result.Deleted += deleted
 	result.Scanned += scanned
@@ -638,43 +656,4 @@ func legacyRelationshipRepositoryPresent(
 		return false, invalidLifecycle("legacy relationship repository")
 	}
 	return true, nil
-}
-
-func drainFlatGenerationBounded(
-	directory string,
-	budget, inventoryLimit int,
-) (int, bool, error) {
-	entries, err := boundedLifecycleDirectory(directory, inventoryLimit)
-	if err != nil {
-		return 0, false, err
-	}
-	slices.SortFunc(entries, func(left, right os.DirEntry) int {
-		return strings.Compare(left.Name(), right.Name())
-	})
-	deleted := 0
-	for _, entry := range entries {
-		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
-			return deleted, false, invalidLifecycle("v3 lifecycle generation entry")
-		}
-		info, infoErr := entry.Info()
-		if infoErr != nil || !info.Mode().IsRegular() {
-			return deleted, false, errors.Join(
-				infoErr, invalidLifecycle("v3 lifecycle generation file"),
-			)
-		}
-		if deleted == budget {
-			return deleted, false, nil
-		}
-		if err := os.Remove(filepath.Join(directory, entry.Name())); err != nil {
-			return deleted, false, err
-		}
-		deleted++
-		if deleted == budget {
-			return deleted, false, nil
-		}
-	}
-	if err := os.Remove(directory); err != nil {
-		return deleted, false, err
-	}
-	return deleted + 1, true, nil
 }

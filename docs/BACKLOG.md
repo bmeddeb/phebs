@@ -7003,6 +7003,163 @@ record tree passed documentation (0.671s), glossary and whitespace checks;
 repository-pinned `ci-static` also passed, including vet, lint (zero issues)
 and compilation of all packages with tests disabled.
 
+**Second deep cleanup review after 1b0acd1a (2026-09-11).** The actual
+rehearsal failed in phase nine after 5,778.58s. Cleanup returned 818 owner
+events and 23,058 removals; allocated workspace fell to 60.24 GiB, but the
+normal-cycle acknowledgment never completed, so the separate normalized-size
+gate was not evaluated. A retained orphan resolver directory contains 10,001
+regular files. Its flat drain incorrectly treated the 16-delete budget as a
+17-entry inventory limit and refused before any unlink. The first named
+relationship failure occurred at owner turn 620; later catalog cancellation
+does not identify an earlier accounting refusal. Latest custody remains
+preserved and this source must not be rerun unchanged.
+
+Ben approved the prospective relationship/shared-component correction and a
+second deep independent review without OCR. The correction separates the
+existing 20,000-entry flat inventory from deletion work, selects 1,024
+relationship-v3 removals within the existing aggregate reserves, charges
+empty-directory completion, preserves partial failure counts and requires a
+later zero-deletion relationship confirmation. Review additionally found
+catalog's unnecessary alternate EOF/reset visits, generation-schedule failed
+prefix loss, and reuse of an aging Stop context at final native detach; these
+receive scoped corrections without changing retention, deadlines or V1/V2.
+The new native test uses all ten concrete production owners and the six real
+closed owners, 24,000 observation files, 600 inert shards, 10,001 relationship
+stage files and four genuinely published 36-member shared catalog roots.
+It is not a full corpus publication/pressure-volume fixture. The separate
+shared-component fixture exercises resolver/RPC/Kafka orphan deletion and
+protected references/current siblings.
+
+Cross-review found two additional relationship closure defects: dropping an
+empty discovery directory could strand shared components, and removing the
+unpin marker plus directory charged only one removal and could lose resumable
+proof. Keep the discovery key until shared cleanup genuinely finishes; use the
+existing abandoned-stage namespace for already-unpinned marker-only closure so
+marker/directory removals remain separately charged and resumable. Legacy
+observation's adapter also retains its already-observed failed deletion prefix.
+These are scoped correctness repairs, not changes to retained authority.
+
+The first working-tree native full-owner fixture passed in 258.72s (package
+259.390s), with 768 actual turns, 770 workspace samples, 1,635 phase-nine
+store transactions and 1,678 submitted rows. Its exact 34,609 removals comprise
+24,004 observation units, 601 search units, 10,003 relationship stage/repository
+units and one catalog root. The helper/session/store joined. Log SHA-256 is
+`d009cee489fd00ac0b5f04a44bee48897878a6671b0e923eaf4a79777d00aa88`.
+This uses default cursors and precedes the final discovery/marker corrections;
+it does not prove skewed-cursor convergence or final exact-tree acceptance.
+Actual 36-shared-member catalog normal/race passed in 9.196s/87.489s, preserving
+candidate/two priors and completing a genuine zero-backlog pass. Scripted SDK
+generation-prefix and actual filesystem adapter checks passed normal/race;
+they are not native database rollback tests. Focused parent cap/work tests
+passed normal in 23.791s and race in 277.239s. Their first normal attempt failed
+because a new testcase assumed V1 had the V3 relationship owner; the corrected
+test explicitly exercises historical refusal without claiming to isolate its
+census predicate. Earlier relationship focused gates are superseded by the
+final discovery/marker changes. The final six-file relationship correction
+(`df46380752b9d9936ce0db8534f353fa3259559a76e39e1e3780cd6e14a5243f`,
+ordered per-file SHA-256 manifest) passed full normal/race package checks in
+54.532s/241.363s with the pinned native engine available. The separate optional
+Kafka diagnostic remained unrequested/skipped. Independent re-review closed
+both additional medium findings and reports all severity counts zero.
+The catalog/generation/legacy-observation correction and root-owned policy,
+adapter and fixture changes separately received independent zero-finding
+reviews; the lead independently reviewed the other author's detach-context
+change. Final lifecycle full race passed in 5.886s; affected five-package vet,
+pinned lint (zero issues), Linux arm64 command-test cross-compilation,
+documentation (1.015s), glossary and whitespace checks passed. Cross-compilation
+is not Linux execution. Final native composition and immutable exact-tree
+acceptance remain open.
+
+The final full-owner native race then **failed** in 393.06s (package 393.923s),
+after 768 error-free owner returns and all 34,609 expected deletions. Its 769
+successful workspace samples comprise the initial sample plus owner checkpoints;
+the normalized standalone sample and final catalog verification were not reached.
+Read-only retained filesystem checks confirm the seeded collecting/stage paths
+are gone; no retained database was opened. The log is retained with SHA-256
+`b121e7ea69556c4e65d8ddcbe7ad78add3a9a3e325a9f52df5ea882de6f3c587`;
+native fixture custody ends `3847329524`, and the known parent/helper/engine PIDs
+are gone. The helper's failure detail was lost because the parent killed it
+immediately after reading Go's failure-summary line. Do not call this a native
+race pass or infer successful final SDK/catalog verification.
+
+A fast real-authentication regression with a six-minute-old bearer key reproduces
+a nil embedded `TouchAPIKey` panic in the shared modeled auth store. The native
+race crossed authentication's five-minute refresh threshold, unlike the earlier
+258.72s normal run; this is a strongly supported historical explanation, not a
+recovered original error line. Correct the fixture's Get/Set/Touch synchronization
+and timestamp refresh, and preserve the bounded terminal failure tail before
+session termination. These alter neither production auth nor acceptance rules.
+The combined aged-key and pipe-backed failure-prefix regressions passed normal
+in 0.775s and race in 2.051s. Independent final reviews of both fixture-only
+corrections report zero findings; command lint reports zero issues and Linux
+arm64 command-test cross-compilation passes. The first tail lint found two
+unchecked test-pipe closes, explicitly corrected before the final pass. A later
+corrected native composition remains necessary; no long rerun is performed
+while the policy decision below is pending.
+
+**Normal-cycle liveness remains a blocker.** A deterministic private overlay
+using the real job and partial-stage owner state machines, an empty job-store
+fixture and actual empty filesystem exhausted all 4,096 controller turns in
+0.01s of test time. A valid persisted job cursor at kind seven/count completes
+on owner visits 1,17,33,...; the regular/sparse stage census completes only on
+even visits. Both repeatedly finish, but never in the same global cycle, so
+the current normal collector cannot accept. This is not repaired by additional
+time, larger deletion batches or the catalog cursor fix. A prospective
+completion-evidence decision and its skewed-cursor regression are required
+before another actual rehearsal. No completion predicate has been changed or
+waived in this correction slice. Scoped gates/review are being recorded;
+immutable exact-tree acceptance, full pressure and later ceremony gates remain
+open.
+
+Ben subsequently approved the prospective V3 phase-nine correction: reuse
+the existing truthful lower-bound durable-job backlog rule from phases eleven
+and thirteen, while keeping every other owner exact/drained and all capacity,
+normalized-byte, authority, error, timestamp, turn and deadline checks intact.
+The selected runner, parent normal-R validation, versioned pressure-80 receipt
+and existing V3 lifecycle policy string must agree; ordinary completion and
+V1/V2 remain exact. The fast regression drives the actual job/stage state
+machines from the valid skewed cursor through controlled-normal execution.
+The corrected full-owner native fixture also persists that cursor through an
+existing preparation CAS and requires the returned job backlog beside fifteen
+exact/drained rows. Its earlier failure remains retained, not reclassified;
+new focused gates, independent review and corrected native acceptance are in
+progress before any new rehearsal.
+
+The approved correction's scoped gates subsequently passed. Full lifecycle
+normal/race completed in 4.671s/5.858s; the selected skewed-census regression
+completed at 32 actual turns, while ordinary controlled-normal exhausted all
+4,096 turns and refused without timing out. Focused parent normal/race passed
+in 0.813s/3.674s. Broader parent compatibility passed all 18 selected tests with
+zero skips in 51.395s, including actual V3 plan construction/canonical round-trip
+and the unchanged V2 pressure-80 backlog refusal. This is not a full receipt
+constructor or entire-package run. Independent runner, parent, native-fixture
+and documentation review reports critical/high/medium/low all zero. Repository
+`ci-static` passed vet, pinned lint (zero issues) and every package's compilation;
+docs (1.471s), glossary, whitespace and retained V1/V2 digest checks passed.
+
+The corrected full-owner native race then **passed** in 299.00s (package
+303.071s), using the actual persisted skewed cursor: 640 actual owner turns,
+642 workspace samples, 1,331 phase-nine store transactions and 1,398 submitted
+rows. The exact 34,609 removals, a truthful backlogged lower-bound job row and
+fifteen exact/drained owners were required. Final normalized sampling, actual
+catalog/current preservation, resumed SDK read and joined session/store close
+all passed. The fixture still uses inert observation/search/relationship files
+and a modeled auth backend, with genuine catalog/store/owner/control/native
+workspace machinery; it is not a full pressure-volume or corpus rehearsal.
+The auth refresh correction is independently proved by its short aged-key real
+middleware test, not inferred from this faster native run. Earlier failures
+remain failed and retained. The native log SHA-256 is
+`5adb16bd41b20b5806b97c3c89df21df265e99e6496aa654fd61b4b726d78621`;
+the broader compatibility log SHA-256 is
+`3be17c89642ea2533d507f18d512c199c9fbd71b8c9fad83550b07a32ee056f2`.
+These working-tree checks bind the 35 changed/new Go paths through ordered
+per-file SHA-256 manifest
+`927f5b21540f9e2f85905e25f5be6193f71cd002863bfc07600d384c0ede9ef2`;
+they are not an immutable whole-executor acceptance record. The gate record
+passed documentation, glossary and whitespace checks.
+The full pressure, archive/query, complete executor,
+launcher and immutable T42.2n/T42.2o acceptance/freeze ladder remain open.
+
 **Counter-unit exact-source race continuation (2026-09-11).** At clean
 `52ef5e8ed98eb788acad95d7e81de4797e1d1742`, the broad 68-test selector
 `Test.*(Lifecycle|Pressure|Receipt|AccountingV3RetainsHistorical)` exceeded its

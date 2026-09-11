@@ -3099,6 +3099,23 @@ bounds, not capacity guidance.
 
 #### Frozen lifecycle policy
 
+Relationship cleanup separates its finite directory inventory from the number
+of removals allowed in a turn. A large valid flat directory can therefore drain
+over several turns; directories count as removals too. Current, rollback and
+pinned publications remain protected. A deletion is followed by another actual
+sweep before the owner reports fully drained, and errors retain any completed
+deletion count. Catalog cleanup resumes an unfinished member drain without an
+intervening empty cursor-reset turn. Ordinary deletion caps remain unchanged;
+larger selected V3 rehearsal batches are not an operator configuration option.
+
+Prospective V3's selected pressure-normalization check permits truthful
+`durable-jobs` backlog in its fresh lower-bound row, as its later recovery and
+restored checks already do. Every other owner must still be exact and drained;
+job errors, missing evidence, and failed capacity or normalized-byte checks
+still refuse completion. This avoids requiring independent resumable censuses
+to finish on the same cycle. Ordinary lifecycle completion rules, deadlines,
+deletion limits and the retained V1/V2 contracts do not change.
+
 T35.2 froze the policy and T35.3 now installs its bounded controller and
 `lifecycle.enabled` switch. Do not manually delete scheduler rows, catalogs,
 publications, pins, or partial stages to resolve pressure.
