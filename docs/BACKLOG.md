@@ -6872,6 +6872,51 @@ race selector (lifecycle counters/parser, pressure checks/transport and versione
 timestamps) passed in 276.604s. No fresh rehearsal executed. No source, replay
 custody, or caches were cleaned in this slice.
 
+**Counter-unit exact-source race continuation (2026-09-11).** At clean
+`52ef5e8ed98eb788acad95d7e81de4797e1d1742`, the broad 68-test selector
+`Test.*(Lifecycle|Pressure|Receipt|AccountingV3RetainsHistorical)` exceeded its
+60-minute package allowance after 24 top-level passes, including the full V3
+receipt round trip in 3,018.79s. The alarm occurred during the separate V2
+pressure fixture's frozen-tree construction; the command remains failed
+(3,601.040s), not a monolithic race pass. Its private log SHA-256 is
+`3ff90ff8e171886aa532c8d9c607b7943d29941088e8e4607350edf90b780504`.
+Two subsequent provisional groupings were deliberately interrupted before any
+top-level pass and remain interrupted, not gate evidence.
+
+The corrected partition runs 43 tests separately from the 25-test group
+containing both full V3 constructor-backed receipt tests, including
+`TestWorkFailureFullReceiptRoundTrip`. The groups
+are disjoint and cover all 68 compiled selector names. They retain the same
+60-minute package allowance, 40-minute constructor context, assertions and
+offline pinned inputs. The first group passed in 1,062.868s with 39 top-level
+passes and four explicit opt-in skips: `TestExecutionPressureBallastOptionalNative`,
+`TestExecutionPressureVolumeOptionalNative`,
+`TestExecutionPressureWorkspaceOptionalNative`, and
+`TestExecutionToolCustodyExternalLifecycleRefusalsAreSticky`. Its private log
+SHA-256 is `93b35c3aa86f9499558153e4dbad6b83fc21b8103b64402ac04c176f264fa8c5`.
+The second group passed in 3,033.188s with 25 top-level passes and no skips;
+its private log SHA-256 is
+`3f3b145096f54471e506efd62c083f78e0c4d8ff0ba88e7543f3991342ec34d7`.
+The full V3 round trip passed in 3,013.82s across its three scenarios, and all
+22 work-failure cases passed in 8.70s using the shared constructor. Actual
+A/B/A-return construction each settled 56 extraction chunks and nine current
+domain roots. Both recovery-preparation checks reused 56 results with zero
+source acquisitions and evidence appends; neither injected a stale lease or
+process death. Identities are production-derived; receipt measurements,
+signatures and search-leaf evidence remain modeled.
+
+Fresh two-batch focused race coverage therefore records 64 passes and four
+explicit skips, with no missing, duplicate or extra top-level selector names.
+Both commands exited zero with no race warning; no gate process, native engine
+or fixture-port listener remains. The detached tested source stayed clean and
+V1/V2 plan digests stayed exact. This is not a full-package or monolithic race
+pass and establishes no native pressure, launcher or ceremony readiness.
+The follow-up record changes only PLAN/BACKLOG; no compiled, embedded, fixture
+or harness input changes from the tested source.
+Independent final record review found critical/high/medium/low all zero;
+documentation (0.827s), glossary and whitespace checks passed. The next step is
+one fresh exact-source pressure rehearsal, not a ceremony or automatic retry.
+
 **Darwin shell-name rehearsal refusal (2026-09-10).** A later operator run
 again selected old source `22c0268b`, not corrected tip `a1be5622`, and failed
 after 1,549.75 seconds just after cold HTTP readiness. The sampler retained
