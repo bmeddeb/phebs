@@ -90,7 +90,7 @@ func (run *ExecutionEpochOneRun) StaleLease(ctx context.Context) (retErr error) 
 		close(done)
 	}()
 	if reader.beginStale() != nil || run.advanceStale(ctx) != nil || run.control.OpenRequests(ctx) != nil ||
-		reader.prepareStale(ctx) != nil || run.control.FenceRequests(ctx) != nil || run.control.ReopenOwners(ctx) != nil {
+		reader.sampleRecoveryWorkspace(ctx, 0) != nil || reader.prepareStale(ctx) != nil || run.control.FenceRequests(ctx) != nil || run.control.ReopenOwners(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
 	// Neither held native observer can wait for X/T or owner drainage. Each R
@@ -125,7 +125,7 @@ func (run *ExecutionEpochOneRun) StaleLease(ctx context.Context) (retErr error) 
 	if run.control.DrainOwners(ctx) != nil || run.control.OpenRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
-	if _, _, _, err := reader.Final(ctx); err != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if _, _, _, err := reader.Final(ctx); err != nil || reader.sampleRecoveryWorkspace(ctx, 2) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	return reader.acceptInspectionPhase(ctx)
@@ -166,21 +166,22 @@ func (reader *executionEpochInspection) beginStale() error {
 // Private actual native preparation fields, not a RecoveryPreparationResult:
 // no invented event ordinals, cold opens, completion writes or full-work counts.
 type epochStalePreparation struct {
-	Schema             string              `json:"schema"`
-	Authority          epochFinalAuthority `json:"authority"`
-	TargetGeneration   string              `json:"target_generation"`
-	PriorSchedule      string              `json:"prior_schedule"`
-	RecoveryGeneration string              `json:"recovery_generation"`
-	RecoverySchedule   string              `json:"recovery_schedule"`
-	Domain             string              `json:"domain"`
-	Ordinal            int                 `json:"ordinal"`
-	Offset             int                 `json:"offset"`
-	PlanDigest         string              `json:"plan_digest"`
-	ResultIdentity     string              `json:"result_identity"`
-	ControlFileReads   uint64              `json:"control_file_reads"`
-	StoreReadAttempts  uint64              `json:"store_read_attempts"`
-	MemberReads        uint64              `json:"member_reads"`
-	StoreWriteAttempts uint64              `json:"store_write_attempts"`
+	Schema             string                        `json:"schema"`
+	Authority          epochFinalAuthority           `json:"authority"`
+	TargetGeneration   string                        `json:"target_generation"`
+	PriorSchedule      string                        `json:"prior_schedule"`
+	RecoveryGeneration string                        `json:"recovery_generation"`
+	RecoverySchedule   string                        `json:"recovery_schedule"`
+	Domain             string                        `json:"domain"`
+	Ordinal            int                           `json:"ordinal"`
+	Offset             int                           `json:"offset"`
+	PlanDigest         string                        `json:"plan_digest"`
+	ResultIdentity     string                        `json:"result_identity"`
+	ControlFileReads   uint64                        `json:"control_file_reads"`
+	StoreReadAttempts  uint64                        `json:"store_read_attempts"`
+	MemberReads        uint64                        `json:"member_reads"`
+	StoreWriteAttempts uint64                        `json:"store_write_attempts"`
+	Workspace          *epochRecoveryWorkspaceSample `json:"workspace,omitempty"`
 }
 
 func (reader *executionEpochInspection) prepareStale(ctx context.Context) (retErr error) {
@@ -226,6 +227,9 @@ func (reader *executionEpochInspection) prepareRecovery(ctx context.Context, che
 		reader.checkpointPreparation = value
 	} else {
 		reader.stalePreparation = value
+	}
+	if err := reader.recordRecoveryPreparationWorkspace(value.Workspace, checkpoint); err != nil {
+		return err
 	}
 	if reader.validateRecoveryPreparation(value, checkpoint) != nil {
 		return errEpochInspection

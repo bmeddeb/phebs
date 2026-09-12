@@ -179,7 +179,7 @@ func TestT422WorkspaceReportGuards(t *testing.T) {
 				state.ProducerID = 6
 				err = reports.begin(state)
 			case "wrong_phase":
-				state.Phase = 8
+				state.Phase = 7
 				err = reports.begin(state)
 			case "backward_phase":
 				reports.phase = 11
@@ -339,14 +339,22 @@ func assertT422NativeWorkspaceReports(t *testing.T, raw string, input [32]byte, 
 		}
 		if !pending {
 			count++
-			if line != fmt.Sprintf("WB1:5:9B:%016x", count) {
+			phase := 9
+			if count == 1 {
+				phase = 8
+			}
+			if line != fmt.Sprintf("WB1:5:%dB:%016x", phase, count) {
 				t.Fatal("native begin", line)
 			}
 			pending = true
 			continue
 		}
 		var sequence, logical, allocated uint64
-		n, err := fmt.Sscanf(line, "WB1:5:9S:%016x:%016x:%016x", &sequence, &logical, &allocated)
+		phase := 9
+		if count == 1 {
+			phase = 8
+		}
+		n, err := fmt.Sscanf(line, fmt.Sprintf("WB1:5:%dS:%%016x:%%016x:%%016x", phase), &sequence, &logical, &allocated)
 		if n != 3 || err != nil || len(line) != 59 || sequence != uint64(count) || logical < 1<<20 || allocated == 0 {
 			t.Fatal("native sample", line, err)
 		}

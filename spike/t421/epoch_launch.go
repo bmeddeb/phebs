@@ -213,6 +213,7 @@ type ExecutionEpochOneResult struct {
 	Inspection               []ExecutionPhaseInspection
 	MidphaseSamples          ExecutionMidphaseSamples // Partial fixed HTTP points, not whole phases.
 	ParentMidphaseSamples    ExecutionMidphaseParentSamples
+	RecoverySamples          ExecutionRecoveryWorkspaceSamples
 	EarlyFinishSamples       ExecutionEarlyFinishSamples // Actual HTTP finishes plus the fixed post-Resume warm-start WB.
 	PressureSamples          ExecutionPressureSamples
 	RestoredSamples          ExecutionRestoredSamples
@@ -1000,7 +1001,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses,
-		BackupWork: run.backupWork, RestoreWork: run.result.RestoreWork, ParentMidphaseSamples: run.midphaseParentPrefix()}
+		BackupWork: run.backupWork, RestoreWork: run.result.RestoreWork, ParentMidphaseSamples: run.midphaseParentPrefix(), RecoverySamples: run.recoveryWorkspacePrefixSnapshot()}
 	// The retained installation also belongs to the separate backup session.
 	// A joined server alone cannot release that custody or expose shared output.
 	if run.backupStarted && (!run.backupJoined || !run.backupSessionEmpty) {
@@ -1016,6 +1017,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		result.RestoredSamples = run.inspection.restoredSamples
 		result.EarlyFinishSamples = run.inspection.earlyFinishSamples
 		result.MidphaseSamples = run.inspection.midphaseSamples
+		result.RecoverySamples = run.inspection.recoverySamples
 		result.ProductFinals = run.inspection.productFinalCalls
 		result.ProductQueries = slices.Clone(run.inspection.productQueries)
 		result.ProductFirstFinalOrdinal = run.inspection.productFirstFinalOrdinal

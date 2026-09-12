@@ -8266,6 +8266,49 @@ docs passed in 0.573s, glossary/whitespace clean and V1/V2 digests unchanged.
 Applied source and cost records passed independent re-review with all severity
 counts zero. The ordered source manifest remained unchanged across all gates.
 
+The stale/checkpoint measurement slice adds the seven actual positions named
+in the owning ADR: four drained HTTP samples, two internal post-mutation,
+pre-response samples and one joined hard-death parent sample. Exact per-point
+payload matching prevents a larger point masking a substituted smaller value;
+completed positive prefixes survive successor transfer and final reconstruction.
+Preparation sampling follows mutation lock release and ledger closure, not the
+five-second lease callbacks. Original phase deadlines and numerical limits are
+unchanged. Independent final draft review of
+`d6f47947907c801e7f2f7f85109f4983842bb0ff02d05c5c1c74985730b077a0`
+found all severity counts zero after the new native fixture's session join was
+kept on its original context deadline and import grouping was corrected.
+The applied serialization-test comment further clarifies that an empty
+authority does not prove maximum full-response fit. Ordered 21-path manifest
+is `de958fb5fb09ccae7f91045a09d9c9b4e8f46c5ff82d72ec7c2c20c334f769bb`
+(command main, backup-retirement test, checkpoint/stale controls, workspace
+bytes/command/midphase/native/recovery tests and reports/test; spike attempt,
+checkpoint, inspection, launch, recovery helper/Darwin test/test, stale,
+workspace observation/test). Native composition coverage is limited to actual
+epoch-four phase-eight FD6/engine/SDK/auth-handler/control sampling and joins;
+recovery authority is supplied and the handler uses an HTTP recorder, not a
+loopback network server. Actual preparation and whole hard-death composition,
+transient populations, representative fit and the full rehearsal remain open.
+Initial focused gates exposed three stale fixture assumptions: the new report
+test used phase seven as producer four's startup instead of six; the finish
+test omitted the now-required recovery prefix; and the report refusal test
+called newly supported phase eight invalid. Only tests changed: valid startup,
+explicit supplied predecessor rows with new missing/mismatched-prefix refusal
+cases, and unsupported phase seven for the producer-five refusal. The actual
+native recovery sample passed in 9.74s and 10.01s during those otherwise-red
+commands; no whole command pass is inferred. Static passed before these
+fixture corrections; corrected-source gates are recorded separately below.
+Corrected focused normal passed command/spike in 10.689s/1.366s and race in
+12.856s/11.100s; the actual native recovery race subtest passed in 9.94s.
+Expanded workspace/early/warm/midphase regressions passed normal in
+43.581s/1.042s and race in 45.228s/8.356s. The explicitly excluded standalone
+native pressure/cleanup/early/warm/physical/recovery composition selectors are
+not claimed by that expanded command; the recovery native selector is covered
+separately above. Corrected static passed vet, zero pinned-lint issues and
+whole-repository compilation; docs passed in 0.589s, glossary/whitespace clean
+and V1/V2 digests unchanged. Independent applied source/cost review found all
+severity counts zero after separating the preparation-body and new HTTP-body
+costs. The ordered source manifest is unchanged across corrected gates.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

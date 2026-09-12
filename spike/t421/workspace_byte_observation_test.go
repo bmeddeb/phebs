@@ -29,7 +29,7 @@ func workspaceTestPair(producer, phase uint32, sequence, logical, allocated uint
 // derived slots; unsupported early positions still refuse.
 func TestExecutionWorkspaceEarlyEventsRemainRefused(t *testing.T) {
 	plan := accountingTestPlan(t)
-	for _, row := range []struct{ producer, phase uint32 }{{2, 5}, {3, 4}, {3, 6}, {4, 7}, {4, 8}, {5, 8}} {
+	for _, row := range []struct{ producer, phase uint32 }{{2, 5}, {3, 4}, {3, 6}, {4, 9}, {5, 7}, {6, 8}} {
 		t.Run(fmt.Sprintf("%d/%d", row.producer, row.phase), func(t *testing.T) {
 			var out ExecutionWorkspaceByteObservation
 			input := "sha256:01" + strings.Repeat("00", 31)
@@ -240,13 +240,13 @@ func TestExecutionWorkspaceBytesV3ByteCeilings(t *testing.T) {
 
 func TestExecutionWorkspaceBytesFinishBindsActualWorkspace(t *testing.T) {
 	plan := accountingTestPlan(t)
-	for _, mode := range []string{"complete", "missing", "failed", "overflow", "unjoined", "legacy"} {
+	for _, mode := range []string{"complete", "missing", "missing_recovery", "mismatched_recovery", "failed", "overflow", "unjoined", "legacy"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			raw := lifecycleTestBindings(5) + "IXB1:5:sha256:01" + strings.Repeat("00", 31) + "\n"
 			if mode != "missing" && mode != "legacy" {
-				raw += workspaceTestBinding(5) + workspaceTestPair(5, 9, 1, 50, 100)
+				raw += workspaceTestBinding(5) + workspaceTestPair(5, 8, 1, 20, 40) + workspaceTestPair(5, 9, 2, 50, 100)
 			}
 			output := &checkoutCommandOutput{remaining: int64(len(raw)), cancel: cancel}
 			if _, err := output.Write([]byte(raw)); err != nil {
@@ -258,6 +258,18 @@ func TestExecutionWorkspaceBytesFinishBindsActualWorkspace(t *testing.T) {
 			}
 			run := &ExecutionEpochOneRun{flow: flow, epoch: ExecutionEpochConfig{Epoch: 4}, output: output, attemptInput: [32]byte{1}}
 			result := ExecutionEpochOneResult{RootJoined: mode != "unjoined"}
+			// Supplied predecessor rows test finish reconciliation, not native
+			// preparation or hard-death ownership. The current row must match S.
+			for index := range result.RecoverySamples.Points {
+				result.RecoverySamples.Points[index] = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1}
+			}
+			result.RecoverySamples.Points[6].Maximum = custodybytes.Sample{LogicalBytes: 20, AllocatedBytes: 40}
+			if mode == "missing_recovery" {
+				result.RecoverySamples.Points[5] = ExecutionWorkspaceBytePhase{}
+			}
+			if mode == "mismatched_recovery" {
+				result.RecoverySamples.Points[6].Maximum.LogicalBytes++
+			}
 			var failure error
 			if mode == "failed" {
 				failure = ErrExecutionEpochOne

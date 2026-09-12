@@ -38,10 +38,22 @@ func (control *t422LifecycleControl) workspacePointMatches(phase uint32, step ui
 		return step == 0 && (point == "finish" &&
 			(control.workspacePoint == 0 && phase == 2 || control.workspacePoint == 1 && phase == 3 || control.workspacePoint == 3 && phase == 4) ||
 			point == "start" && control.workspacePoint == 2 && phase == 4)
-	case 2, 3:
-		return step == 0 && control.workspacePoint == 0 && point == "finish" && phase == uint32(control.launch.request.ServerEpoch)+3
+	case 2:
+		return step == 0 && control.workspacePoint == 0 && point == "finish" && phase == 5
+	case 3:
+		sequence := [...]struct {
+			phase uint32
+			point string
+		}{
+			{6, "finish"}, {7, "start"}, {7, "prepared"}, {7, "finish"}, {8, "start"}, {8, "prepared"},
+		}
+		return step == 0 && int(control.workspacePoint) < len(sequence) &&
+			sequence[control.workspacePoint].phase == phase && sequence[control.workspacePoint].point == point
 	case 4:
-		return t422WorkspacePointMatches(control.workspacePoint, phase, step, point)
+		if phase == 8 {
+			return step <= 1 && control.workspacePoint == 0 && point == "finish"
+		}
+		return control.workspacePoint > 0 && t422WorkspacePointMatches(control.workspacePoint-1, phase, step, point)
 	case 5:
 		sequence := [...]struct {
 			phase uint32
@@ -63,17 +75,21 @@ func (control *t422LifecycleControl) workspacePrecedes(path string) bool {
 	if control.launch != nil && control.launch.request.ServerEpoch == 5 {
 		return path != t422LifecycleFreshDrive && path != t422LifecycleFreshRead || control.workspacePoint == 2
 	}
+	point := control.workspacePoint
+	if control.launch != nil && control.launch.request.ServerEpoch == 4 && point > 0 {
+		point--
+	}
 	switch path {
 	case t422LifecycleNormalDrive, t422LifecycleNormalRead:
-		return control.workspacePoint == 1
+		return point == 1
 	case t422LifecycleCollectRead:
-		return control.workspacePoint == 3
+		return point == 3
 	case t422LifecycleRefuseRead:
-		return control.workspacePoint == 6
+		return point == 6
 	case t422LifecycleLatchedRead:
-		return control.workspacePoint == 9
+		return point == 9
 	case t422LifecycleRecoveryDrive, t422LifecycleRecoveryRead, t422LifecycleResumedRead:
-		return control.workspacePoint == 10
+		return point == 10
 	default:
 		return true
 	}
@@ -91,7 +107,7 @@ func (control *t422LifecycleControl) sampleWorkspaceCommand(writer http.Response
 		}
 	}()
 	points := request.Header.Values(t422WorkspacePointHeader)
-	if len(points) != 1 || !control.current(ctx, true) || control.workspaceSample == nil || control.workspaceBytes == nil ||
+	if len(points) != 1 || points[0] == "prepared" || !control.current(ctx, true) || control.workspaceSample == nil || control.workspaceBytes == nil ||
 		(control.launch.request.ServerEpoch < 1 || control.launch.request.ServerEpoch > 5) {
 		http.Error(writer, "workspace sample refused", http.StatusConflict)
 		return

@@ -361,10 +361,11 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace, arch
 }
 
 func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspace, archiveWorkspace bool, failure string, cleanup ...bool) {
+	recoveryWorkspace := failure == "workspace-recovery"
 	physicalWorkspace := failure == "workspace-physical"
 	warmWorkspace := failure == "workspace-warm" || physicalWorkspace
 	earlyWorkspace := failure == "workspace-early" || warmWorkspace
-	if earlyWorkspace {
+	if earlyWorkspace || recoveryWorkspace {
 		if !workspace || restore || archiveWorkspace || len(cleanup) != 0 {
 			t.Fatal("invalid early workspace fixture")
 		}
@@ -746,7 +747,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
 	serverMode := "server"
-	if physicalWorkspace {
+	if recoveryWorkspace {
+		serverMode = "workspace-recovery"
+	} else if physicalWorkspace {
 		serverMode = "workspace-physical"
 	} else if warmWorkspace {
 		serverMode = "workspace-warm"
@@ -912,6 +915,49 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	if err = control.DrainOwners(ctx); err != nil {
 		t.Fatal(err)
 	}
+	if workspace {
+		// Actual phase-eight sample, not a seeded position. The extra two
+		// test-only Open/Fence pairs remain inside the existing fixture reserve.
+		if control.OpenRequests(ctx) != nil {
+			t.Fatal("recovered fixture request window")
+		}
+		if _, err := fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || output.Text() != "recovered_workspace_measured" {
+			failServer("actual recovered workspace sample", err)
+		}
+		if control.FenceRequests(ctx) != nil {
+			t.Fatal("recovered fixture request join")
+		}
+		if recoveryWorkspace {
+			if control.Pause(ctx) != nil {
+				t.Fatal("recovered fixture final pause")
+			}
+			if _, err := fmt.Fprintln(input, "close"); err != nil {
+				t.Fatal(err)
+			}
+			for output.Scan() {
+			}
+			if output.Err() != nil {
+				t.Fatal(output.Err())
+			}
+			if err := server.Wait(); err != nil {
+				t.Fatal("recovered helper join", err, diagnostic.String())
+			}
+			if err := <-served; err != nil {
+				t.Fatal(err)
+			}
+			deadline, bounded := ctx.Deadline()
+			if !bounded || ctx.Err() != nil || transport.Wait(ctx, 5) != nil ||
+				t4013.WaitPrivateProcessSession(server.Process.Pid, deadline) != nil || ctx.Err() != nil {
+				t.Fatal("recovered SDK/session join")
+			}
+			prefix, err := transport.Snapshot()
+			if err != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
+				t.Fatal(prefix, err)
+			}
+			assertT422NativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256, 1)
+			return
+		}
+	}
 	for phase := uint32(9); phase <= 11; phase++ {
 		if control.Pause(ctx) != nil || controller.Fence() != nil || transport.Fence() != nil || control.Checkpoint(ctx) != nil || controller.Advance() != nil || transport.Advance() != nil || control.Resume(ctx) != nil {
 			t.Fatal("phase transition", phase)
@@ -940,11 +986,11 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			if err = server.Wait(); err != nil {
 				t.Fatal("native workspace helper", err, diagnostic.String())
 			}
-			wantSamples := 18
+			wantSamples := 19
 			if allOwners {
-				wantSamples = int(assertT422AllOwnersNativeReports(t, diagnostic.String(), record.InputSHA256)) + 2
+				wantSamples = int(assertT422AllOwnersNativeReports(t, diagnostic.String(), record.InputSHA256)) + 3
 			} else if cleanupWorkspace {
-				wantSamples = t422CleanupExpectedTurns + 2
+				wantSamples = t422CleanupExpectedTurns + 3
 				assertT422CleanupNativeReports(t, diagnostic.String(), record.InputSHA256)
 			}
 			assertT422NativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256, wantSamples)
@@ -963,7 +1009,7 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			}
 			if allOwners {
 				counts, e := sa.Snapshot()
-				turns := uint64(wantSamples - 2)
+				turns := uint64(wantSamples - 3)
 				if e != nil || len(counts.Phases) != 5 || counts.Phases[1].Phase != 9 ||
 					counts.Phases[1].Transactions <= 2*turns || counts.Phases[1].Rows <= 2*turns ||
 					counts.Phases[1].Transactions > 67*turns || counts.Phases[1].Rows > 514*turns {

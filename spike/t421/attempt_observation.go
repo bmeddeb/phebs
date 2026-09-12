@@ -208,6 +208,12 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	} else if footer {
 		footerErr = errExecutionAttempts // No footer is valid in an ordinary close.
 	}
+	if run.recoveryWorkspaceSelected() && !recoveryWorkspaceJoinedPrefix(run.producer(), result.Attempts.WorkspaceBytes, result.RecoverySamples, run.checkpointAllowed) {
+		err = errExecutionAttempts
+		if !result.RecoverySamples.LimitExceeded && !recoveryWorkspacePointValuesMatch(run.producer(), result.Attempts.WorkspaceBytes, result.RecoverySamples, run.checkpointAllowed) {
+			result.RecoverySamples.Unavailable = true
+		}
+	}
 	requireEarly := run.flow.workspace != nil && run.producer() == 2 && run.physicalAllowed
 	requireMidphase := run.midphaseWorkspaceSelected()
 	requireWorkspace := run.flow.workspace != nil && (run.producer() == 5 || run.producer() == 6) || requireEarly || requireMidphase

@@ -157,3 +157,43 @@ func (control *t422LifecycleControl) workspaceByteSnapshot() custodybytes.Snapsh
 	}
 	return control.workspaceBytes.Snapshot()
 }
+
+// Only the native epoch-three preparation commands call this after their
+// mutation/ledger/current checks and before response construction. This is not
+// proof that their later response, report sink or arming tail succeeded.
+func (control *t422LifecycleControl) sampleRecoveryPreparation(ctx context.Context) (*t422WorkspaceSampleResponse, error) {
+	if control == nil || control.launch == nil || control.launch.request.ServerEpoch != 3 {
+		return nil, errT422LifecycleControl
+	}
+	if control.workspaceBytes == nil {
+		return nil, nil
+	} // Legacy omission; the bound parent requires presence.
+	if ctx == nil || !control.current(ctx, true) || control.workspaceSample == nil || control.runner == nil {
+		return nil, control.stop()
+	}
+	admitted := ctx.Value(t422SemanticRequestKey{}).(dispatchadmission.ProductionSemanticSnapshot)
+	control.mu.Lock()
+	valid := control.err == nil && !control.busy && control.workspacePointMatches(admitted.Phase, control.step, "prepared")
+	if valid {
+		control.busy = true
+	}
+	control.mu.Unlock()
+	if !valid || control.runner.Park(ctx) != nil {
+		return nil, control.stop()
+	}
+	value, err := control.workspaceSample(ctx)
+	if err != nil || !control.current(ctx, true) {
+		return nil, control.stop()
+	}
+	control.mu.Lock()
+	valid = control.err == nil && control.busy && control.workspacePointMatches(admitted.Phase, control.step, "prepared")
+	if valid {
+		control.workspacePoint++
+		control.busy = false
+	}
+	control.mu.Unlock()
+	if !valid {
+		return nil, control.stop()
+	}
+	return &t422WorkspaceSampleResponse{LogicalBytes: value.LogicalBytes, AllocatedBytes: value.AllocatedBytes}, nil
+}

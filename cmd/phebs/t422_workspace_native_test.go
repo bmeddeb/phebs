@@ -57,6 +57,13 @@ func TestT422WorkspacePhysicalNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-physical")
 }
 
+// Only the actual epoch-four/phase-eight finish sample, with real FD6,
+// engine/SDK guard, auth/PC and joins. Recovery/F/owner states are supplied;
+// no hard death, corpus recovery, normal-capacity cycle or full phase is proven.
+func TestT422WorkspaceRecoveryNativeComposition(t *testing.T) {
+	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-recovery")
+}
+
 func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if os.Getenv(t422BackupFixture) == "" {
 		return
@@ -312,6 +319,35 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		}
 		if index == 0 {
 			fmt.Println("parked")
+			if !input.Scan() {
+				t.Fatal("recovered sample token", input.Err())
+			}
+			request := httptest.NewRequest(http.MethodPost, t422WorkspaceSamplePath, nil).WithContext(runnerCtx)
+			request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+			request.Header.Set(dispatchadmission.ProductionRequestHeader, input.Text())
+			request.Header.Set(t422WorkspacePointHeader, "finish")
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			var sample t422WorkspaceSampleResponse
+			if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &sample) != nil ||
+				sample.LogicalBytes < uint64(len(sibling)) || sample.AllocatedBytes == 0 || turns.Load() != 0 || failures.Load() != 0 {
+				t.Fatal("actual recovered sample", response.Code, response.Body.String())
+			}
+			observed := control.workspaceByteSnapshot()
+			if observed.Unavailable || !observed.Phases[7].Completed || observed.Phases[7].Maximum.LogicalBytes != sample.LogicalBytes ||
+				observed.Phases[7].Maximum.AllocatedBytes != sample.AllocatedBytes {
+				t.Fatal("actual recovered byte prefix", observed)
+			}
+			if _, err := st.ListRepos(ctx); err != nil {
+				t.Fatal("actual recovered SDK resumption", err)
+			}
+			fmt.Println("recovered_workspace_measured")
+			if os.Getenv(t422BackupFixture) == "workspace-recovery" {
+				if !input.Scan() || input.Text() != "close" {
+					t.Fatal("recovered close", input.Err())
+				}
+				return
+			}
 		}
 	}
 	// Close the real zero-read R report before requesting the normalized native

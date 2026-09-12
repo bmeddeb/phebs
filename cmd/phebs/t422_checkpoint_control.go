@@ -39,7 +39,7 @@ func newT422CheckpointControl(ctx context.Context, stale *t422StaleControl) (*t4
 	}
 	lifetime, cancel := context.WithCancel(ctx)
 	base := &t422StaleControl{ctx: lifetime, cancel: cancel, launch: stale.launch, reconciler: stale.reconciler,
-		sink: t4013ExactReportSink("exact checkpoint preparation: ")}
+		sink: t4013ExactReportSink("exact checkpoint preparation: "), workspacePreparation: stale.workspacePreparation}
 	base.hit.ready, base.hit.release = make(chan struct{}), make(chan struct{})
 	return &t422CheckpointControl{t422StaleControl: base}, nil
 }
@@ -160,11 +160,18 @@ func (control *t422CheckpointControl) command(writer http.ResponseWriter, reques
 		http.Error(writer, "checkpoint preparation refused", http.StatusConflict)
 		return
 	}
+	var workspace *t422WorkspaceSampleResponse
+	if control.workspacePreparation != nil {
+		workspace, err = control.workspacePreparation(operation)
+		if err != nil {
+			return
+		}
+	}
 	body, err := json.Marshal(t422StalePreparationObservation{Schema: "t422-checkpoint-preparation-observation-v1", Authority: value.final,
 		TargetGeneration: target.TargetGeneration, PriorSchedule: target.PriorScheduleDigest,
 		RecoveryGeneration: target.Schedule.Generation, RecoverySchedule: target.Schedule.Digest,
 		Domain: target.Domain, Ordinal: target.Ordinal, Offset: target.Offset, PlanDigest: target.PlanDigest, ResultIdentity: target.ResultIdentity,
-		ControlFileReads: counts.ControlFileReads, StoreReadAttempts: counts.StoreReadAttempts, MemberReads: counts.MemberVisits, StoreWriteAttempts: counts.StoreWriteAttempts})
+		ControlFileReads: counts.ControlFileReads, StoreReadAttempts: counts.StoreReadAttempts, MemberReads: counts.MemberVisits, StoreWriteAttempts: counts.StoreWriteAttempts, Workspace: workspace})
 	if err != nil {
 		return
 	}

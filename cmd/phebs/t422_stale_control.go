@@ -48,6 +48,7 @@ type t422StaleControl struct {
 	launch                                *t422SemanticLaunch
 	reconciler                            *extractionpublication.Reconciler
 	sink                                  func([]byte) error
+	workspacePreparation                  func(context.Context) (*t422WorkspaceSampleResponse, error)
 	mu                                    sync.Mutex
 	final                                 t422StaleFinal
 	captured, confirmed, preparing, armed bool
@@ -199,21 +200,22 @@ func t422StalePreparationLimits() readaccounting.Counts {
 }
 
 type t422StalePreparationObservation struct {
-	Schema             string                  `json:"schema"`
-	Authority          t421FinalAuthorityState `json:"authority"`
-	TargetGeneration   string                  `json:"target_generation"`
-	PriorSchedule      string                  `json:"prior_schedule"`
-	RecoveryGeneration string                  `json:"recovery_generation"`
-	RecoverySchedule   string                  `json:"recovery_schedule"`
-	Domain             string                  `json:"domain"`
-	Ordinal            int                     `json:"ordinal"`
-	Offset             int                     `json:"offset"`
-	PlanDigest         string                  `json:"plan_digest"`
-	ResultIdentity     string                  `json:"result_identity"`
-	ControlFileReads   uint64                  `json:"control_file_reads"`
-	StoreReadAttempts  uint64                  `json:"store_read_attempts"`
-	MemberReads        uint64                  `json:"member_reads"`
-	StoreWriteAttempts uint64                  `json:"store_write_attempts"`
+	Schema             string                       `json:"schema"`
+	Authority          t421FinalAuthorityState      `json:"authority"`
+	TargetGeneration   string                       `json:"target_generation"`
+	PriorSchedule      string                       `json:"prior_schedule"`
+	RecoveryGeneration string                       `json:"recovery_generation"`
+	RecoverySchedule   string                       `json:"recovery_schedule"`
+	Domain             string                       `json:"domain"`
+	Ordinal            int                          `json:"ordinal"`
+	Offset             int                          `json:"offset"`
+	PlanDigest         string                       `json:"plan_digest"`
+	ResultIdentity     string                       `json:"result_identity"`
+	ControlFileReads   uint64                       `json:"control_file_reads"`
+	StoreReadAttempts  uint64                       `json:"store_read_attempts"`
+	MemberReads        uint64                       `json:"member_reads"`
+	StoreWriteAttempts uint64                       `json:"store_write_attempts"`
+	Workspace          *t422WorkspaceSampleResponse `json:"workspace,omitempty"`
 }
 
 func (control *t422StaleControl) command(writer http.ResponseWriter, request *http.Request) {
@@ -259,11 +261,18 @@ func (control *t422StaleControl) command(writer http.ResponseWriter, request *ht
 		http.Error(writer, "stale preparation refused", http.StatusConflict)
 		return
 	}
+	var workspace *t422WorkspaceSampleResponse
+	if control.workspacePreparation != nil {
+		workspace, err = control.workspacePreparation(operation)
+		if err != nil {
+			return
+		}
+	}
 	body, err := json.Marshal(t422StalePreparationObservation{Schema: "t422-stale-preparation-observation-v1", Authority: value.final,
 		TargetGeneration: target.TargetGeneration, PriorSchedule: target.PriorScheduleDigest,
 		RecoveryGeneration: target.Schedule.Generation, RecoverySchedule: target.Schedule.Digest,
 		Domain: target.Domain, Ordinal: target.Ordinal, Offset: target.Offset, PlanDigest: target.PlanDigest, ResultIdentity: target.ResultIdentity,
-		ControlFileReads: counts.ControlFileReads, StoreReadAttempts: counts.StoreReadAttempts, MemberReads: counts.MemberVisits, StoreWriteAttempts: counts.StoreWriteAttempts})
+		ControlFileReads: counts.ControlFileReads, StoreReadAttempts: counts.StoreReadAttempts, MemberReads: counts.MemberVisits, StoreWriteAttempts: counts.StoreWriteAttempts, Workspace: workspace})
 	if err != nil {
 		return
 	}

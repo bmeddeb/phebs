@@ -20,7 +20,7 @@ type t422WorkspaceReports struct {
 	initial        dispatchadmission.ProductionSemanticSnapshot
 	phase          uint32
 	sequence       uint64
-	counts         [12]uint64
+	counts         [15]uint64
 	archiveMaximum uint64
 	pending        bool
 	physicalReady  bool
@@ -29,6 +29,12 @@ type t422WorkspaceReports struct {
 
 func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
 	switch {
+	case producer == 4 && phase == 7:
+		return 12, 3
+	case producer == 4 && phase == 8:
+		return 13, 2
+	case producer == 5 && phase == 8:
+		return 14, 1
 	case producer == 2 && phase == 4:
 		return 9, 3
 	case producer == 3 && phase == 5:

@@ -1737,6 +1737,9 @@ func serve(args []string) (retErr error) {
 				return err
 			}
 			defer staleControl.cancel()
+			if lifecycleControl != nil {
+				staleControl.workspacePreparation = lifecycleControl.sampleRecoveryPreparation
+			}
 			exactReadState.stale = staleControl
 			terminalPhase, terminalErr := dispatchadmission.ProductionTerminalPhase()
 			if terminalErr != nil {

@@ -12,7 +12,8 @@ func TestT422WorkspaceMidphasePositions(t *testing.T) {
 			for phase := uint32(4); phase <= 8; phase++ {
 				for _, point := range []string{"start", "finish", "ballast"} {
 					want := epoch == 1 && phase == 4 && (ordinal == 2 && point == "start" || ordinal == 3 && point == "finish") ||
-						epoch > 1 && phase == uint32(epoch)+3 && ordinal == 0 && point == "finish"
+						epoch > 1 && phase == uint32(epoch)+3 && ordinal == 0 && point == "finish" ||
+						epoch == 3 && (phase == 7 && (ordinal == 1 && point == "start" || ordinal == 3 && point == "finish") || phase == 8 && ordinal == 4 && point == "start")
 					if control.workspacePointMatches(phase, 0, point) != want || control.workspacePointMatches(phase, 1, point) {
 						t.Fatal(epoch, ordinal, phase, point)
 					}

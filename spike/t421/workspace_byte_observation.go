@@ -31,6 +31,7 @@ type ExecutionWorkspaceByteObservation struct {
 	physicalReady      bool                   // Actual post-reopen record, separate from the completed walk.
 	physicalPostAuthor custodybytes.Sample    // Exact middle phase-four S.
 	midphaseSamples    [4]custodybytes.Sample // Exact fixed S payloads, not maxima or growing history.
+	recoverySamples    [6]custodybytes.Sample // Five epoch-three points and epoch-four finish.
 }
 
 func reservedWorkspaceByteEvent(line []byte) bool {
@@ -41,6 +42,15 @@ func reservedWorkspaceByteEvent(line []byte) bool {
 // one/two/two restored-server boundary commands. Boundary commands add no native
 // lifecycle turn or capacity probe.
 func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
+	if producer == 4 && phase == 7 {
+		return 3
+	}
+	if producer == 4 && phase == 8 {
+		return 2
+	}
+	if producer == 5 && phase == 8 {
+		return 1
+	}
 	if producer == 2 && phase == 4 {
 		return 3
 	}
@@ -198,6 +208,15 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 			out.midphaseSamples[2] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
 		} else if producer == 4 && phase == 6 {
 			out.midphaseSamples[3] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+		}
+		if producer == 4 && (phase == 7 || phase == 8) {
+			index := row.Completed
+			if phase == 8 {
+				index += 3
+			}
+			out.recoverySamples[index] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+		} else if producer == 5 && phase == 8 {
+			out.recoverySamples[5] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
 		}
 		row.Completed++
 		row.Maximum.LogicalBytes = max(row.Maximum.LogicalBytes, logical)

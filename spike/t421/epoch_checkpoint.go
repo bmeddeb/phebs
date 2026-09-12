@@ -197,7 +197,7 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 		flow.mu.Unlock()
 	}()
 	if reader.beginCheckpoint() != nil || run.advanceReturnPhase(operation, 8) != nil || run.control.OpenRequests(operation) != nil ||
-		reader.prepareRecovery(operation, true) != nil || run.control.FenceRequests(operation) != nil || run.control.ReopenOwners(operation) != nil ||
+		reader.sampleRecoveryWorkspace(operation, 3) != nil || reader.prepareRecovery(operation, true) != nil || run.control.FenceRequests(operation) != nil || run.control.ReopenOwners(operation) != nil ||
 		reader.checkpoint(operation, false) != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -235,13 +235,15 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 	defer flow.mu.Unlock()
 	if operation.Err() != nil || flow.closed || flow.retained != run || !run.joinedEmpty() ||
 		flow.parent.Checkpoint(operation) != nil || flow.store.ReopenAfterTerminalEOF(4, 5, 8) != nil ||
-		flow.parent.ReopenAfterHardDeath(operation, 4, 5, 8) != nil {
+		flow.parent.ReopenAfterHardDeath(operation, 4, 5, 8) != nil || run.sampleRecoveryParentLocked(operation) != nil {
 		return nil, ErrExecutionEpochOne
 	}
 	prior := reader.staleAuthority
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: run.healthLimit, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel,
 		checkpointRecovery: handoff, checkpointPrior: &prior, pressureAllowed: pressure, processPrior: &processPrior, backupAllowed: backup}
+	next.result.RecoverySamples = run.recoveryWorkspacePrefixSnapshot()
+	next.result.ParentMidphaseSamples = run.midphaseParentPrefix()
 	next.setPhaseDeadlineLocked(deadline)
 	bounds := epochOneLimits{health: run.healthLimit, outputBytes: 64 << 20, controlPairs: 5}
 	if pressure {
@@ -447,7 +449,7 @@ func (run *ExecutionEpochOneRun) RecoverCheckpoint(ctx context.Context) (retErr 
 	if run.control.DrainOwners(ctx) != nil || run.control.OpenRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
-	if _, _, _, err := reader.Final(ctx); err != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if _, _, _, err := reader.Final(ctx); err != nil || reader.sampleRecoveryWorkspace(ctx, 6) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()
@@ -479,6 +481,7 @@ func (run *ExecutionEpochOneRun) newCheckpointInspection(ctx context.Context) (*
 	if run.inspection != nil || run.stopping || run.err != nil {
 		return nil, errEpochInspection
 	}
+	reader.recoverySamples = run.result.RecoverySamples
 	run.inspection = reader
 	return reader, nil
 }
