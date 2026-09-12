@@ -7944,6 +7944,21 @@ the later missing live byte positions. Documentation (0.784s), glossary,
 whitespace and canonical V1/V2 digests passed; the author's records-only check
 found no factual/cost issue and is not counted as independent code review.
 
+Both actual T42.2 serve builders now match the existing frozen `-config`
+spelling instead of `--config`. Source-bound AST tests cover each actual
+exec.Command expression and its exact config-path operand; actual CLI tests
+confirm both spellings reach the requested missing config file before any
+database/worker/tool start. No successful native startup or complete profile
+admission is inferred. Focused normal passed in 1.255s (harness) and 0.714s
+(command); race passed in 2.440/1.796s. Full ci-static passed vet, zero-issue
+lint and all-package compilation. Ordered four-path manifest is
+`ccce0e61cbf0d5557770e21639c930199abffbf531dde4069db993d86a27391f`
+(launch, production-custody run, builder test, command test). Independent draft
+review reports all severity counts zero. Historical contracts and all limits
+are unchanged; this is two fixed argument literals, not a new command recipe.
+Applied-source/final-record independent review also reports all counts zero;
+documentation (0.638s), glossary and whitespace passed.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

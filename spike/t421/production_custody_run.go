@@ -111,7 +111,7 @@ func (custody *ExecutionProductionCustody) StartServe(ctx context.Context) (_ *E
 	runCtx, cancelRun := context.WithTimeout(ctx, 20*time.Minute)
 	run := &ExecutionProductionRun{custody: custody, controller: controller, stop: make(chan struct{}), done: make(chan struct{})}
 	run.output = &checkoutCommandOutput{remaining: 1 << 20, cancel: cancelRun}
-	run.command = exec.Command(custody.phebsPath, "serve", "--config", custody.configPath)
+	run.command = exec.Command(custody.phebsPath, "serve", "-config", custody.configPath)
 	run.command.Dir = custody.parent
 	run.command.Env = append([]string(nil), custody.environment...)
 	run.command.ExtraFiles = []*os.File{childAdmission, childPhase}

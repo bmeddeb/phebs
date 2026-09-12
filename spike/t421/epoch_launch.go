@@ -502,7 +502,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	defer func() { _ = storeFile.Close() }() // Explicit post-Start close is checked below.
 	output := &checkoutCommandOutput{remaining: bounds.outputBytes, cancel: cancel}
 	run.output = output
-	command := exec.Command(path, "serve", "--config", epoch.ConfigPath)
+	command := exec.Command(path, "serve", "-config", epoch.ConfigPath)
 	command.Dir, command.Env = author.parent, environment
 	command.Stdin, command.Stdout, command.Stderr = files[5], output, output
 	if run.backupAllowed {
