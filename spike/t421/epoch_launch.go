@@ -45,6 +45,7 @@ type ExecutionEpochOne struct {
 	returnUsed             bool
 	workspace              *productionRoot        // Borrowed only from a bound pressure volume.
 	workspaceBytes         *custodybytes.Observer // Same observer retained by the bound volume.
+	authorBytePoint        uint8                  // Two actual timed AuthorA boundaries; not preparation.
 	serverSessions         [5]int                 // Actual successful root Starts; never cleared by Wait or handoff. Protected by mu.
 	archiveSessions        [2]int                 // Backup and restore, in that order; the existing one-shot recipes own these slots.
 }
@@ -113,17 +114,38 @@ func PrepareExecutionEpochOne(ctx context.Context, epochs *ExecutionEpochConfigC
 }
 
 func (flow *ExecutionEpochOne) AuthorA(ctx context.Context) (ExecutionAuthorResult, error) {
-	if flow == nil || flow.epochs == nil || flow.controller == nil || flow.parent == nil {
+	if flow == nil || ctx == nil || ctx.Err() != nil || flow.epochs == nil || flow.controller == nil || flow.parent == nil {
 		return ExecutionAuthorResult{}, ErrExecutionEpochOne
 	}
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
-	if flow.closed || flow.used || flow.authored {
+	if flow.closed || flow.used || flow.authored || flow.workspace != nil && !flow.authorStarted.IsZero() {
 		return ExecutionAuthorResult{}, ErrExecutionEpochOne
 	}
 	flow.authorStarted = time.Now()
+	if flow.workspace != nil {
+		if flow.plan.Schema != PlanV3Schema || len(flow.plan.PhaseDeadlines) != 15 ||
+			flow.plan.PhaseDeadlines[1] != frozenPhaseDeadlines()[1] {
+			return ExecutionAuthorResult{}, ErrExecutionEpochOne
+		}
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, flow.authorStarted.Add(time.Duration(flow.plan.PhaseDeadlines[1].DeadlineMS)*time.Millisecond))
+		defer cancel()
+		if err := flow.sampleAuthorWorkspaceLocked(ctx, 0); err != nil {
+			return ExecutionAuthorResult{}, err
+		}
+	}
 	result, err := flow.epochs.author.AuthorNextOn(ctx, flow.controller, flow.parent, 7)
 	flow.authored = err == nil && result.Completed
+	if err != nil && flow.workspaceBytes != nil {
+		_ = flow.workspaceBytes.Fail()
+	}
+	if err == nil && flow.workspace != nil {
+		err = flow.sampleAuthorWorkspaceLocked(ctx, 1)
+		if err != nil {
+			flow.authored = false
+		}
+	}
 	return result, err
 }
 
@@ -189,6 +211,7 @@ type ExecutionEpochOneResult struct {
 	IndexOffers              ExecutionIndexObservation
 	ServerProcesses          ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
 	Inspection               []ExecutionPhaseInspection
+	EarlyFinishSamples       ExecutionEarlyFinishSamples // Only cold/warm finish; warm start remains absent.
 	PressureSamples          ExecutionPressureSamples
 	RestoredSamples          ExecutionRestoredSamples
 	ProductFinals            uint8 // Successfully validated actual phase14 F reads.
@@ -981,6 +1004,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		result.Inspection = cloneInspectionEvidence(run.inspection.evidence.rows)
 		result.PressureSamples = run.inspection.pressure.samples
 		result.RestoredSamples = run.inspection.restoredSamples
+		result.EarlyFinishSamples = run.inspection.earlyFinishSamples
 		result.ProductFinals = run.inspection.productFinalCalls
 		result.ProductQueries = slices.Clone(run.inspection.productQueries)
 		result.ProductFirstFinalOrdinal = run.inspection.productFirstFinalOrdinal
@@ -1043,6 +1067,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		if !result.PressureSamples.LimitExceeded {
 			result.PressureSamples.Unavailable = true
 		}
+	}
+	if failure != nil && run.epoch.Epoch == 1 && run.physicalAllowed && run.flow.workspace != nil {
+		result.EarlyFinishSamples.failIncomplete()
 	}
 	if failure != nil && run.archiveExecutionUsed {
 		result.RestoredSamples.ArchiveComplete, result.RestoredSamples.CollectionComplete = false, false

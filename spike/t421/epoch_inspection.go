@@ -90,6 +90,7 @@ type executionEpochInspection struct {
 	checkpointPreparation              epochStalePreparation
 	checkpointPrepared                 bool
 	checkpointHit, checkpointRecovered extractionpublication.CheckpointRestartTransition
+	earlyFinishSamples                 ExecutionEarlyFinishSamples
 	pressure                           epochPressureObservations
 	lifecycleCalls                     uint64
 	pressureBaseline                   *[sha256.Size]byte

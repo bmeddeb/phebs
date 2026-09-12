@@ -34,6 +34,9 @@ func t422WorkspacePointMatches(ordinal uint8, phase uint32, step uint8, point st
 
 func (control *t422LifecycleControl) workspacePointMatches(phase uint32, step uint8, point string) bool {
 	switch control.launch.request.ServerEpoch {
+	case 1:
+		return step == 0 && point == "finish" &&
+			(control.workspacePoint == 0 && phase == 2 || control.workspacePoint == 1 && phase == 3)
 	case 4:
 		return t422WorkspacePointMatches(control.workspacePoint, phase, step, point)
 	case 5:
@@ -86,7 +89,7 @@ func (control *t422LifecycleControl) sampleWorkspaceCommand(writer http.Response
 	}()
 	points := request.Header.Values(t422WorkspacePointHeader)
 	if len(points) != 1 || !control.current(ctx, true) || control.workspaceSample == nil || control.workspaceBytes == nil ||
-		(control.launch.request.ServerEpoch != 4 && control.launch.request.ServerEpoch != 5) {
+		(control.launch.request.ServerEpoch != 1 && control.launch.request.ServerEpoch != 4 && control.launch.request.ServerEpoch != 5) {
 		http.Error(writer, "workspace sample refused", http.StatusConflict)
 		return
 	}

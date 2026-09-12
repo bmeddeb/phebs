@@ -296,11 +296,8 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil || !result.Completed || !result.RootJoined || !result.SessionEmpty || result.Revision != "a" {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)
 	}
-	if volume != nil {
-		if _, err := volume.sampleFlow(ctx); err != nil {
-			t.Fatal("actual post-author whole-workspace sample", err)
-		}
-	}
+	// Bound AuthorA now owns both actual timed walks; do not repeat its
+	// completed post-author boundary or relabel the preparation sample.
 	started = time.Now()
 	if physical {
 		run, err = flow.StartPhysicalB(ctx)

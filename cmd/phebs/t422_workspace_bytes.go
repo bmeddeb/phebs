@@ -28,7 +28,7 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 	var reports *t422WorkspaceReports
 	if err == nil {
 		control.workspaceBytes = custodybytes.NewBorrowed(file, path, info, volume)
-		if control.collector != nil {
+		if control.collector != nil || control.launch.request.ServerEpoch == 1 {
 			initial, stateErr := dispatchadmission.ProductionSemanticState()
 			if stateErr == nil {
 				reports, stateErr = newT422WorkspaceReports(initial)
@@ -40,8 +40,8 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 		}
 	}
 	control.workspaceSample = func(ctx context.Context) (custodybytes.Sample, error) {
-		// Early descriptor borrowing alone admits no WB event or traversal.
-		// Its fixed positions and report counts remain a separate prerequisite.
+		// Only the closed epoch-one finish pair is newly enabled. Other early
+		// descriptor profiles still admit no WB event or traversal.
 		if reports == nil || control.workspaceBytes == nil || st == nil || !control.current(ctx, true) {
 			if control.workspaceBytes != nil {
 				_ = control.workspaceBytes.Fail()

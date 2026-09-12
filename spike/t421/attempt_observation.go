@@ -208,7 +208,11 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	} else if footer {
 		footerErr = errExecutionAttempts // No footer is valid in an ordinary close.
 	}
-	requireWorkspace := run.flow.workspace != nil && (run.producer() == 5 || run.producer() == 6)
+	requireEarly := run.flow.workspace != nil && run.producer() == 2 && run.physicalAllowed
+	requireWorkspace := run.flow.workspace != nil && (run.producer() == 5 || run.producer() == 6) || requireEarly
+	if requireEarly && !earlyWorkspaceFinishPrefix(result.Attempts.WorkspaceBytes, result.EarlyFinishSamples) {
+		err = errExecutionAttempts
+	}
 	if err != nil || !result.Attempts.Lifecycle.Complete || !result.Attempts.Cache.Complete || !result.Attempts.SourceCensus.Complete || !result.Attempts.CatalogCensus.Complete || requireWorkspace && !result.Attempts.WorkspaceBytes.Complete || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
 		result.Attempts.Complete = false
 		result.Attempts.Lifecycle.Complete = false

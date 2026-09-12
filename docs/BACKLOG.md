@@ -7988,6 +7988,44 @@ The runtime-environment slice's applied-source/final-record independent review
 also reports all severity counts zero at its recorded manifest. Documentation
 (0.671s), glossary, whitespace and canonical V1/V2 digests passed.
 
+The cold/warm byte-position subset adds actual held-root walks before and
+after Author A under its original cold anchor, plus actual guarded child
+finish samples after cold F/selector cleanup and warm F. The parent retains
+its existing flow lock across each author walk; no volume lock is acquired.
+Child commands reuse the existing drained request windows and final fences,
+native engine/SDK guard and bounded HTTP transport. One producer-two binding
+and two WB begin/success pairs add 251 bytes; there are two additional HTTP
+requests and two local runner Park ACKs, but no PC pair, capacity turn,
+store/control/member read allowance or child. Report counters add sixteen
+bytes; each parent boundary performs bounded DA/SA snapshot checks before
+and after walking. The old duplicate rehearsal post-author sample is removed
+(four actual walks here, net three additional). Failed
+walks retain prior actual maxima, and joined WB totals must match the actual
+HTTP values. Warm-start sampling is explicitly still absent; no complete
+early-phase byte coverage or native full-corpus fit is claimed. Tests separate
+real tiny held-root walks and actual empty DA/SA transitions from modeled
+author state, and actual bounded HTTP transport from supplied response totals.
+The first focused normal run passed command tests (38.635s) but found an old
+WB refusal test still listing producer two as wholly unsupported (harness
+7.193s). Its list now excludes the newly admitted producer; other phases
+remain explicitly refused. That corrected normal set passed in 38.847s
+(command) and 6.498s (harness). Independent review found one medium: a later
+physical failure would mark already completed cold/warm HTTP samples
+unavailable. The correction marks only missing required finish samples on
+failed termination and retains all completed values; run and joined-stream
+failure remain separate. A supplied terminal-prefix check exercises the
+actual classification seam, without claiming native outcome provenance.
+Correction-tree harness normal passed in 6.570s; command/harness race passed
+in 45.540/20.065s. Full ci-static passed vet, zero-issue lint and all-package
+compilation. Independent correction review closes the medium with all
+remaining severity counts zero. Ordered fourteen-path manifest is
+`23b2401c3bf9a3891f0d205b98197608f814996a060c3ed651dad05d1e1ae5eb`
+(command workspace bytes/command/early test/reports; attempt observation;
+cold; early workspace and its Darwin/general tests; inspection; launch;
+native rehearsal; WB parser/tests). Documentation (1.074s), glossary,
+whitespace and unchanged canonical V1/V2 digests pass. Actual early-server
+FD6/engine/HTTP composition remains a separate native gate.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

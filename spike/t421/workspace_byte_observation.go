@@ -35,6 +35,9 @@ func reservedWorkspaceByteEvent(line []byte) bool {
 // one/two/two restored-server boundary commands. Boundary commands add no native
 // lifecycle turn or capacity probe.
 func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
+	if producer == 2 && (phase == 2 || phase == 3) {
+		return 1 // Only the two actual finish commands, not early phase completeness.
+	}
 	if producer == 5 {
 		switch phase {
 		case 9:
@@ -104,7 +107,7 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 			}
 		}
 	}()
-	if plan.Schema != PlanV3Schema || producer != 5 && producer != 6 && producer != 10 && producer != 11 || out.Unavailable || out.LimitExceeded {
+	if plan.Schema != PlanV3Schema || producer != 2 && producer != 5 && producer != 6 && producer != 10 && producer != 11 || out.Unavailable || out.LimitExceeded {
 		return true, errExecutionAttempts
 	}
 	if bytes.Contains(line, []byte("WBB")) {
