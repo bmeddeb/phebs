@@ -39,24 +39,21 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 			}
 		}
 	}
-	control.workspaceSample = func(ctx context.Context) (custodybytes.Sample, error) {
-		// Only the closed epoch-one finish pair is newly enabled. Other early
-		// descriptor profiles still admit no WB event or traversal.
-		if reports == nil || control.workspaceBytes == nil || st == nil || !control.current(ctx, true) {
+	// Both callers use the same observer, reporter and real owned-engine/SDK
+	// guard. Only the HTTP caller uses request admission; the fixed warm-start
+	// callback has its own post-ACK fenced-state proof.
+	sample := func(ctx context.Context, admitted dispatchadmission.ProductionSemanticSnapshot, confirm func() bool) (custodybytes.Sample, error) {
+		if reports == nil || control.workspaceBytes == nil || st == nil || !confirm() {
 			if control.workspaceBytes != nil {
 				_ = control.workspaceBytes.Fail()
 			}
 			return custodybytes.Sample{}, control.stop()
 		}
-		admitted := ctx.Value(t422SemanticRequestKey{}).(dispatchadmission.ProductionSemanticSnapshot)
 		if err := reports.begin(admitted); err != nil {
 			_ = control.workspaceBytes.Fail()
 			return custodybytes.Sample{}, control.stop()
 		}
-		value, err := control.workspaceBytes.SampleGuarded(ctx, admitted.Phase, st.WithQuiescentLocalEngine, func() bool {
-			return control.current(ctx, true)
-		})
-		// Semantic checks and failure reporting happen after engine/SDK unlock.
+		value, err := control.workspaceBytes.SampleGuarded(ctx, admitted.Phase, st.WithQuiescentLocalEngine, confirm)
 		if err != nil {
 			_ = reports.failed()
 			return custodybytes.Sample{}, control.stop()
@@ -66,6 +63,42 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 			return custodybytes.Sample{}, control.stop()
 		}
 		return value, nil
+	}
+	control.workspaceSample = func(ctx context.Context) (custodybytes.Sample, error) {
+		if ctx == nil {
+			return custodybytes.Sample{}, control.stop()
+		}
+		admitted, ok := ctx.Value(t422SemanticRequestKey{}).(dispatchadmission.ProductionSemanticSnapshot)
+		return sample(ctx, admitted, func() bool { return ok && control.current(ctx, true) })
+	}
+	if err := dispatchadmission.BindWarmStartWorkspace(func(ctx context.Context) error {
+		admitted, err := dispatchadmission.ProductionWarmStartWorkspaceState(ctx)
+		control.mu.Lock()
+		valid := err == nil && control.err == nil && !control.busy && control.workspacePoint == 1 &&
+			control.step == 0 && control.launch.request.ServerEpoch == 1 && control.runner != nil
+		if valid {
+			control.busy = true
+		}
+		control.mu.Unlock()
+		if !valid || control.runner.Park(ctx) != nil {
+			return control.stop()
+		}
+		confirm := func() bool {
+			current, err := dispatchadmission.ProductionWarmStartWorkspaceState(ctx)
+			control.mu.Lock()
+			valid := control.err == nil && control.busy && control.workspacePoint == 1
+			control.mu.Unlock()
+			return valid && err == nil && current == admitted && ctx.Err() == nil && control.ctx.Err() == nil
+		}
+		if _, err := sample(ctx, admitted, confirm); err != nil || !confirm() {
+			return control.stop()
+		}
+		control.mu.Lock()
+		control.busy = false // HTTP warm finish retains its independent point1.
+		control.mu.Unlock()
+		return nil
+	}); err != nil {
+		return control.stop()
 	}
 	if control.collector == nil {
 		return nil

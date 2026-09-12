@@ -31,7 +31,7 @@ func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
 	case producer == 2 && phase == 2:
 		return 7, 1
 	case producer == 2 && phase == 3:
-		return 8, 1
+		return 8, 2
 	case producer == 5 && phase == 9:
 		return 0, uint64(lifecycle.MaxCycleObservationTurns) + 1 + 4
 	case producer == 5 && phase == 10:

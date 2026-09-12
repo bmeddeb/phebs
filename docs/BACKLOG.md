@@ -8053,6 +8053,40 @@ is retained; a host-normal broader native confirmation remains open. No timeout,
 capacity predicate, production source or canonical plan is changed by this test
 slice.
 
+The selected warm-start correction uses the existing Resume-three pair rather
+than two new request-window pairs. Its optional full-producer-two bootstrap
+flag and positive original deadline encoding are bound into prospective V3's
+phase-fence recipe; canonical V1/V2 and all numeric limits remain exact. The
+actual parent arms its warm timer before Resume, then waits for the source-bound
+WB completion from the actual combined output stream before reopening owners.
+The receiver's owned one-shot callback checks both drained admission classes,
+uses the existing guarded whole-workspace sampler and cannot outlive lifetime
+closure silently. Supplied stream/protocol/clock tests are distinct from the
+actual inherited FD6/DA/SA/PC callback test, which still does not traverse a
+native engine-backed workspace. Independent review found one medium in the
+first draft: maxima could conceal changed individual HTTP or warm-start values.
+Three fixed joined payload slots and independent endpoint comparisons close
+it, with explicit masked logical/allocation substitutions; corrected draft
+`bd54263deea765a3606987f8beab59c885067dd43cce6b2b312bd78cac1f8393`
+has all remaining severity counts zero. Applied ordered seventeen-path manifest
+is `2e2d4886e5763a23cc2c803a5ab3a110145ea8621462c89e0baead80830522f4`
+(command bytes/early test/reports; cold; early workspace/test; launch; WB parser;
+phase control; production; bootstrap; accounting contract; inherited workspace
+test; callback; live output tee; callback tests; tee tests). Focused normal
+passed in 0.793/0.658/1.211s for dispatch/command/harness; the same selected
+race gates passed in 1.936/1.810/7.325s. Full ci-static passed vet, zero-issue
+lint and all-package compilation; documentation (0.474s), glossary, whitespace
+and canonical V1/V2 digests pass. Applied source/record review has all severity
+counts zero. A separate canonical/profile race selector passed in 4.061s.
+Two overly broad additional normal selectors were deliberately terminated
+(status 143): both reached transitive full corpus regeneration, including via
+the modeled receipt's correctedTestPlan helper. Neither is a passing full
+roundtrip or merge-bar gate. Full regeneration remains in the later complete
+package gate with its existing longer allowance; the artifact-only canonical
+normal check passed in 0.783s. Documentation recheck passed in 0.553s. Actual
+native warm-start composition, other early
+boundary/transient positions, complete output fit and full rehearsal remain open.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

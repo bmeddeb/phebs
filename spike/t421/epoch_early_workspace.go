@@ -5,10 +5,12 @@ import (
 	"time"
 )
 
-// Only the two actually implemented finish positions. In particular, these
-// rows do not claim phase-three start or all early-phase byte coverage.
+// Actual HTTP finish observations and the separately associated post-Resume
+// warm-start WB. These rows still do not claim all early-phase coverage.
 type ExecutionEarlyFinishSamples struct {
 	Phases                     [2]ExecutionWorkspaceBytePhase
+	WarmStart                  ExecutionWorkspaceBytePhase
+	WarmStartUnavailable       bool
 	Unavailable, LimitExceeded bool
 }
 
@@ -120,12 +122,26 @@ func (reader *executionEpochInspection) sampleEarlyFinish(ctx context.Context) (
 }
 
 func earlyWorkspaceFinishPrefix(stream ExecutionWorkspaceByteObservation, samples ExecutionEarlyFinishSamples) bool {
-	if !stream.Bound || !stream.Complete || stream.Unavailable || stream.LimitExceeded || samples.Unavailable || samples.LimitExceeded {
+	if !stream.Bound || !stream.Complete || stream.Unavailable || stream.LimitExceeded || samples.Unavailable || samples.LimitExceeded || samples.WarmStartUnavailable {
+		return false
+	}
+	if samples.WarmStart.Attempts != 1 || samples.WarmStart.Completed != 1 ||
+		stream.earlySamples[0] != samples.Phases[0].Maximum || stream.earlySamples[1] != samples.WarmStart.Maximum ||
+		stream.earlySamples[2] != samples.Phases[1].Maximum {
 		return false
 	}
 	for index, sample := range samples.Phases {
 		actual := stream.Phases[index+1]
-		if sample.Attempts != 1 || sample.Completed != 1 || actual != sample {
+		if sample.Attempts != 1 || sample.Completed != 1 {
+			return false
+		}
+		if index == 1 {
+			sample.Attempts += samples.WarmStart.Attempts
+			sample.Completed += samples.WarmStart.Completed
+			sample.Maximum.LogicalBytes = max(sample.Maximum.LogicalBytes, samples.WarmStart.Maximum.LogicalBytes)
+			sample.Maximum.AllocatedBytes = max(sample.Maximum.AllocatedBytes, samples.WarmStart.Maximum.AllocatedBytes)
+		}
+		if actual != sample {
 			return false
 		}
 	}

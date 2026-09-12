@@ -25,6 +25,9 @@ type ExecutionWorkspaceByteObservation struct {
 	sequence                     uint64
 	phase                        uint32
 	pending                      bool
+	// Exact producer-two first three S payloads, not a history or maxima.
+	// The joined parser binds each endpoint independently before max folding.
+	earlySamples [3]custodybytes.Sample
 }
 
 func reservedWorkspaceByteEvent(line []byte) bool {
@@ -35,8 +38,13 @@ func reservedWorkspaceByteEvent(line []byte) bool {
 // one/two/two restored-server boundary commands. Boundary commands add no native
 // lifecycle turn or capacity probe.
 func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
-	if producer == 2 && (phase == 2 || phase == 3) {
-		return 1 // Only the two actual finish commands, not early phase completeness.
+	if producer == 2 {
+		if phase == 2 {
+			return 1
+		}
+		if phase == 3 {
+			return 2
+		} // Post-Resume start and HTTP finish, not extra control pairs.
 	}
 	if producer == 5 {
 		switch phase {
@@ -156,6 +164,9 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 		allocated, allocatedOK := workspaceHex64(line[43:59])
 		if !logicalOK || !allocatedOK {
 			return true, errExecutionAttempts
+		}
+		if producer == 2 && (phase == 2 && sequence == 1 || phase == 3 && (sequence == 2 || sequence == 3)) {
+			out.earlySamples[sequence-1] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
 		}
 		row.Completed++
 		row.Maximum.LogicalBytes = max(row.Maximum.LogicalBytes, logical)

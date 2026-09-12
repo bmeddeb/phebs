@@ -267,6 +267,20 @@ func TestProductionWorkspaceHelper(t *testing.T) {
 			t.Fatal("owner control fixture", err)
 		}
 	}
+	if mode == "warm" {
+		// Actual inherited DA/PC/SA/FD6 and one callback, not a native walk.
+		if err := BindWarmStartWorkspace(func(warm context.Context) error {
+			state, err := ProductionWarmStartWorkspaceState(warm)
+			deadline, bounded := warm.Deadline()
+			if err != nil || state.Phase != 3 || !state.OrdinaryOwnersDrained || !bounded {
+				return ErrProtocol
+			}
+			_, err = fmt.Fprintf(os.Stdout, "warm:%d\n", deadline.UnixNano())
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err := fmt.Fprintln(os.Stdout, ready); err != nil {
 		t.Fatal(err)
 	}
@@ -321,6 +335,10 @@ func TestProductionWorkspaceInherited(t *testing.T) {
 	}
 }
 
+func TestProductionWorkspaceWarmInherited(t *testing.T) {
+	testProductionWorkspaceInherited(t, "warm", 2)
+}
+
 func TestProductionWorkspaceEarlyInherited(t *testing.T) {
 	for _, producer := range []uint32{2, 3, 4} {
 		for _, mode := range []string{"valid", "missing", "wrong", "omitted"} {
@@ -351,6 +369,9 @@ func testProductionWorkspaceInherited(t *testing.T, mode string, earlyProducer u
 		r.ArchiveDeadlineUnixNano = deadline.UnixNano()
 	}
 	r.Workspace = &binding
+	if mode == "warm" {
+		r.Control.WarmStartWorkspace = true
+	}
 	if mode == "omitted" {
 		r.Workspace = nil
 	}
@@ -453,7 +474,8 @@ func testProductionWorkspaceInherited(t *testing.T, mode string, earlyProducer u
 	done := make(chan error, 1)
 	go func() { done <- dispatch.Serve(ctx, r.Producer.ID, command.Process.Pid, parent) }()
 	defer func() { cancel(); <-done }()
-	ready, err := bufio.NewReader(output).ReadString('\n')
+	reader := bufio.NewReader(output)
+	ready, err := reader.ReadString('\n')
 	wantReady := "ready\n"
 	if r.ArchiveDeadlineUnixNano != 0 {
 		wantReady = fmt.Sprintf("ready:%d\n", r.ArchiveDeadlineUnixNano)
@@ -467,6 +489,22 @@ func testProductionWorkspaceInherited(t *testing.T, mode string, earlyProducer u
 	if control.Pause(ctx) != nil || dispatch.Fence() != nil || transport.Fence() != nil {
 		t.Fatal("parent fence")
 	}
+	if mode == "warm" {
+		warmCtx, warmCancel := context.WithTimeout(ctx, time.Second)
+		defer warmCancel()
+		deadline, _ := warmCtx.Deadline()
+		if control.Checkpoint(ctx) != nil || dispatch.Advance() != nil || transport.Advance() != nil || control.Resume(warmCtx) != nil {
+			t.Fatal("actual inherited warm handoff")
+		}
+		line, err := reader.ReadString('\n')
+		if err != nil || line != fmt.Sprintf("warm:%d\n", deadline.UnixNano()) {
+			t.Fatal("original warm deadline/callback missing", err)
+		}
+		if control.ReopenOwners(ctx) != nil || control.DrainOwners(ctx) != nil ||
+			control.Pause(ctx) != nil || dispatch.Fence() != nil || transport.Fence() != nil {
+			t.Fatal("post-callback owner/request and terminal fences")
+		}
+	}
 	if _, err := input.Write([]byte{1}); err != nil {
 		t.Fatal(err)
 	}
@@ -478,5 +516,34 @@ func testProductionWorkspaceInherited(t *testing.T, mode string, earlyProducer u
 	}
 	if _, err := file.Stat(); err != nil {
 		t.Fatal("parent descriptor closed by child", err)
+	}
+}
+
+func TestProductionWorkspaceWarmProfile(t *testing.T) {
+	_, binding := workspaceTestRoot(t)
+	for _, mode := range []string{"selected", "omitted", "no_workspace", "no_store", "other_producer", "other_semantics", "short_profile"} {
+		t.Run(mode, func(t *testing.T) {
+			r := workspaceEarlyTestRecord(2)
+			r.Workspace, r.Control.WarmStartWorkspace = &binding, true
+			switch mode {
+			case "omitted":
+				r.Control.WarmStartWorkspace = false
+				r.Workspace = nil
+			case "no_workspace":
+				r.Workspace = nil
+			case "no_store":
+				r.Store = nil
+			case "other_producer":
+				r.Producer.ID = 3
+			case "other_semantics":
+				r.SemanticMode = ""
+			case "short_profile":
+				r.Control.Phases = []uint32{2, 3}
+				r.Control.MaximumPhases = 2
+			}
+			if (r.validate() == nil) != (mode == "selected" || mode == "omitted") {
+				t.Fatal(mode)
+			}
+		})
 	}
 }

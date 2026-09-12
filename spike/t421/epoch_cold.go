@@ -154,9 +154,18 @@ func (run *ExecutionEpochOneRun) ColdToWarm(ctx context.Context) (retErr error) 
 		return ErrExecutionEpochOne
 	default:
 	}
+	caller := ctx
+	var operationCancel context.CancelFunc
+	if run.warmWorkspace != nil {
+		caller, operationCancel = context.WithCancel(ctx)
+		ctx = caller
+	}
 	ctx, cancel := context.WithDeadline(ctx, run.coldDeadline)
 	done := make(chan struct{})
 	run.coldUsed, run.coldCancel, run.coldDone = true, cancel, done
+	if operationCancel != nil {
+		run.coldCancel = operationCancel
+	}
 	run.mu.Unlock()
 	defer func() {
 		cancel()
@@ -168,6 +177,9 @@ func (run *ExecutionEpochOneRun) ColdToWarm(ctx context.Context) (retErr error) 
 		}
 		close(done)
 	}()
+	if operationCancel != nil {
+		defer operationCancel()
+	}
 	inspection, err := run.newEpochInspection(ctx)
 	if err != nil {
 		return ErrExecutionEpochOne
@@ -204,8 +216,16 @@ func (run *ExecutionEpochOneRun) ColdToWarm(ctx context.Context) (retErr error) 
 	}
 	// FenceRequests joins the exact request's report/commit tail; receiving
 	// the body and trailer alone does not establish synchronous sink success.
-	if inspection.cleanupSelectorHandoff(ctx) != nil || inspection.sampleEarlyFinish(ctx) != nil || run.control.FenceRequests(ctx) != nil || run.advanceCold(ctx) != nil || ctx.Err() != nil {
+	if inspection.cleanupSelectorHandoff(ctx) != nil || inspection.sampleEarlyFinish(ctx) != nil || run.control.FenceRequests(ctx) != nil || run.advanceColdTo(ctx, caller) != nil {
 		return ErrExecutionEpochOne
+	}
+	if run.warmWorkspace != nil {
+		run.mu.Lock()
+		deadline := run.phaseDeadline
+		run.mu.Unlock()
+		warmCtx, warmCancel := context.WithDeadline(caller, deadline)
+		defer warmCancel()
+		return inspection.acceptInspectionPhase(warmCtx)
 	}
 	if run.completeCold(ctx) != nil {
 		return ErrExecutionEpochOne
@@ -231,6 +251,12 @@ func (run *ExecutionEpochOneRun) setPhaseDeadlineLocked(deadline time.Time) {
 // Retire the cold deadline only after the coordinated handoff succeeds. A
 // callback that has started wins the race, even if still waiting for run.mu.
 func (run *ExecutionEpochOneRun) completeCold(ctx context.Context) error {
+	return run.completeColdAtBoundary(ctx, false)
+}
+
+// Only the selected measured handoff calls this before Resume. The legacy
+// path still establishes its warm clock after the complete handoff.
+func (run *ExecutionEpochOneRun) completeColdAtBoundary(ctx context.Context, clipCaller bool) error {
 	run.mu.Lock()
 	defer run.mu.Unlock()
 	if ctx.Err() != nil || run.stopping || run.err != nil || run.phaseTimer == nil ||
@@ -250,6 +276,9 @@ func (run *ExecutionEpochOneRun) completeCold(ctx context.Context) error {
 	deadline := now.Add(run.warmLimit)
 	if deadline.After(run.lifetimeDeadline) {
 		deadline = run.lifetimeDeadline
+	}
+	if bound, ok := ctx.Deadline(); clipCaller && ok && bound.Before(deadline) {
+		deadline = bound
 	}
 	run.warm = true
 	run.setPhaseDeadlineLocked(deadline)
@@ -287,13 +316,20 @@ func epochInspectionDelay(ctx context.Context) error {
 // The caller has joined the final read and closed the observation window.
 // A checkpoint carries persistent handles only, never live store calls/UUIDs.
 func (run *ExecutionEpochOneRun) advanceCold(ctx context.Context) error {
+	return run.advanceColdTo(ctx, ctx)
+}
+
+func (run *ExecutionEpochOneRun) advanceColdTo(ctx, caller context.Context) error {
 	flow := run.flow
 	if run.control.Pause(ctx) != nil || flow.parent.Pause(ctx) != nil ||
 		flow.controller.Fence() != nil || flow.store.Fence() != nil ||
 		run.control.Checkpoint(ctx) != nil || flow.parent.Checkpoint(ctx) != nil ||
 		run.processPhaseAdvance(ctx, 3) != nil ||
-		flow.parent.Resume(3) != nil || run.control.Resume(ctx) != nil {
+		flow.parent.Resume(3) != nil {
 		return ErrExecutionEpochOne
 	}
-	return nil
+	if run.warmWorkspace != nil {
+		return run.resumeMeasuredWarm(caller)
+	}
+	return run.control.Resume(ctx)
 }

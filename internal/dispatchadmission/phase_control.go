@@ -30,6 +30,7 @@ const (
 // The separate control socket preserves DA01's single-request echo protocol.
 type PhaseControlConfig struct {
 	// Zero values are omitted to preserve existing canonical bootstrap bytes.
+	WarmStartWorkspace       bool   `json:",omitempty"`
 	TerminalAuthor           bool   `json:",omitempty"`
 	TerminalPhase            uint32 `json:",omitempty"`
 	BackupEndpointCarry      bool   `json:",omitempty"`
@@ -43,6 +44,9 @@ type PhaseControlConfig struct {
 }
 
 func (config PhaseControlConfig) validate() (int, error) {
+	if config.WarmStartWorkspace && (!config.OwnerControl || config.TerminalAuthor || config.TerminalPhase != 0 || config.BackupEndpointCarry || config.InitialPhase != 2 || config.MaximumPhases != 3 || !slices.Equal(config.Phases, []uint32{2, 3, 4})) {
+		return 0, ErrConfig
+	}
 	if config.BackupMeasurementMaximum != 0 && (!config.BackupEndpointCarry || config.MaximumWireBytes < uint64(config.BackupMeasurementMaximum)*4*FrameBytes+2*FrameBytes) {
 		return 0, ErrConfig
 	}
@@ -87,7 +91,7 @@ func (frame phaseControlFrame) encode() [FrameBytes]byte {
 	raw[4] = frame.op
 	binary.BigEndian.PutUint32(raw[8:12], frame.phase)
 	binary.BigEndian.PutUint64(raw[16:24], frame.sequence)
-	if frame.op == phaseBackupMeasurementHold || frame.op == phaseBackupMeasurementRelease {
+	if frame.op == phaseBackupMeasurementHold || frame.op == phaseBackupMeasurementRelease || frame.op == phaseResume && frame.phase == 3 {
 		binary.BigEndian.PutUint64(raw[24:32], uint64(frame.deadlineUnixNano))
 	}
 	copy(raw[32:], frame.binding[:])
@@ -98,6 +102,12 @@ func decodePhaseControl(raw [FrameBytes]byte) (phaseControlFrame, error) {
 	frame := phaseControlFrame{op: raw[4], phase: binary.BigEndian.Uint32(raw[8:12]),
 		sequence: binary.BigEndian.Uint64(raw[16:24])}
 	copy(frame.binding[:], raw[32:])
+	if frame.op == phaseResume && frame.phase == 3 {
+		frame.deadlineUnixNano = int64(binary.BigEndian.Uint64(raw[24:32]))
+		if frame.deadlineUnixNano < 0 {
+			return phaseControlFrame{}, ErrProtocol
+		}
+	}
 	if frame.op == phaseBackupMeasurementHold || frame.op == phaseBackupMeasurementRelease {
 		frame.deadlineUnixNano = int64(binary.BigEndian.Uint64(raw[24:32]))
 		if frame.deadlineUnixNano <= 0 {
@@ -235,9 +245,18 @@ func (control *PhaseControl) exchange(ctx context.Context, op byte) error {
 		control.mu.Unlock()
 		return control.fail(err)
 	}
+	var warmDeadline int64
+	if control.config.WarmStartWorkspace && op == phaseResume && control.config.Phases[index] == 3 {
+		deadline, bounded := ctx.Deadline()
+		if !bounded || !time.Now().Before(deadline) || deadline.UnixNano() <= 0 || !time.Unix(0, deadline.UnixNano()).Equal(deadline) {
+			control.mu.Unlock()
+			return control.fail(ErrProtocol)
+		}
+		warmDeadline = deadline.UnixNano() // Original warm deadline, not the exchange timeout.
+	}
 	control.sequence++
 	control.wireBytes += 2 * FrameBytes
-	frame := phaseControlFrame{op: op, phase: control.config.Phases[index], sequence: control.sequence, binding: control.binding}
+	frame := phaseControlFrame{op: op, phase: control.config.Phases[index], sequence: control.sequence, binding: control.binding, deadlineUnixNano: warmDeadline}
 	control.mu.Unlock()
 	deadline, _ := opCtx.Deadline()
 	if err := control.conn.SetDeadline(deadline); err != nil {
@@ -353,6 +372,13 @@ func StartPhaseControl(ctx context.Context, file *os.File, client *Client, confi
 	if !valid {
 		return nil, client.fail(ErrConfig)
 	}
+	if config.WarmStartWorkspace {
+		lifetime := client.storeLifetime
+		if lifetime == nil || lifetime.program != ProgramPhebs || lifetime.semanticMode != ProductionSemanticV3 || lifetime.producerID != 2 || lifetime.workspace == nil || lifetime.storeClient == nil {
+			return nil, client.fail(ErrConfig)
+		}
+		lifetime.warmWorkspace = &warmStartWorkspace{}
+	}
 	if config.BackupMeasurementMaximum != 0 {
 		if client.storeLifetime == nil {
 			return nil, client.fail(ErrConfig)
@@ -442,6 +468,10 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		if err != nil || frame.phase != config.Phases[nextIndex] {
 			return client.fail(ErrProtocol)
 		}
+		warm := config.WarmStartWorkspace && frame.op == phaseResume && frame.phase == 3
+		if frame.op == phaseResume && ((frame.deadlineUnixNano != 0) != warm || warm && !time.Now().Before(time.Unix(0, frame.deadlineUnixNano))) {
+			return client.fail(ErrProtocol)
+		}
 		sequence++
 		opCtx, stop := context.WithDeadline(ctx, deadline)
 		switch frame.op {
@@ -469,6 +499,13 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		state, index = nextState, nextIndex
 		if count, err := conn.Write(raw[:]); err != nil || count != len(raw) {
 			return client.fail(ErrTransport)
+		}
+		if warm {
+			// The fixed callback runs only after the complete Resume echo. It
+			// owns the receiver until return, so ReopenOwners cannot race it.
+			if err := client.storeLifetime.runWarmStartWorkspace(ctx, frame.deadlineUnixNano); err != nil {
+				return client.fail(err)
+			}
 		}
 		if frame.op == phaseCheckpoint || config.TerminalAuthor && frame.op == phasePause {
 			client.mu.Lock()

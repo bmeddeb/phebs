@@ -35,8 +35,11 @@ func TestT422WorkspaceEarlyFinishPositionsAndReports(t *testing.T) {
 		if reports.begin(state) != nil || reports.complete(custodybytes.Sample{LogicalBytes: 11, AllocatedBytes: 22}) != nil {
 			t.Fatal("fixed finish report refused")
 		}
+		if phase == 3 && (reports.begin(state) != nil || reports.complete(custodybytes.Sample{LogicalBytes: 9, AllocatedBytes: 12}) != nil) {
+			t.Fatal("supplied warm start/finish pair refused")
+		}
 	}
-	if output.Len() != 2*(26+60) || reports.begin(state) == nil || output.Len() != 172 {
+	if output.Len() != 3*(26+60) || reports.begin(state) == nil || output.Len() != 258 {
 		t.Fatal("repeated finish emitted or pair size changed", output.Len())
 	}
 }

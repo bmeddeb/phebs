@@ -211,7 +211,7 @@ type ExecutionEpochOneResult struct {
 	IndexOffers              ExecutionIndexObservation
 	ServerProcesses          ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
 	Inspection               []ExecutionPhaseInspection
-	EarlyFinishSamples       ExecutionEarlyFinishSamples // Only cold/warm finish; warm start remains absent.
+	EarlyFinishSamples       ExecutionEarlyFinishSamples // Actual HTTP finishes plus the fixed post-Resume warm-start WB.
 	PressureSamples          ExecutionPressureSamples
 	RestoredSamples          ExecutionRestoredSamples
 	ProductFinals            uint8 // Successfully validated actual phase14 F reads.
@@ -230,6 +230,7 @@ type ExecutionEpochOneRun struct {
 	command               *exec.Cmd
 	output                *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
 	attemptInput          [32]byte
+	warmWorkspace         *epochWarmWorkspaceOutput
 	processObservation    *epochProcessObservation
 	processPrior          *ProcessObservation // Actual joined earlier root in checkpoint phase eight.
 	stop, done            chan struct{}
@@ -549,6 +550,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		// exec creates the child-owned FD6 copy, not a transfer of that original.
 		command.ExtraFiles = append(command.ExtraFiles, flow.workspace.file)
 	}
+	if number == 1 && workspaceBinding != nil && run.physicalAllowed {
+		run.warmWorkspace = newEpochWarmWorkspaceOutput(output, flow.plan, sha256.Sum256(raw))
+		command.Stdout, command.Stderr = run.warmWorkspace, run.warmWorkspace
+	}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
 	run.command = command
@@ -597,6 +602,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		retErr = ErrExecutionEpochOne
 	}
 	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+	controlConfig.WarmStartWorkspace = run.warmWorkspace != nil
 	switch number {
 	case 2:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{5}, 5, 1
@@ -1010,6 +1016,11 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		result.ProductFirstFinalOrdinal = run.inspection.productFirstFinalOrdinal
 		result.QueryResults = cloneProductQueryEvidence(run.inspection.productQueryEvidence)
 		run.inspection.mu.Unlock()
+	}
+	if run.warmWorkspace != nil {
+		var limitExceeded bool
+		result.EarlyFinishSamples.WarmStart, result.EarlyFinishSamples.WarmStartUnavailable, limitExceeded = run.warmWorkspace.snapshot()
+		result.EarlyFinishSamples.LimitExceeded = result.EarlyFinishSamples.LimitExceeded || limitExceeded
 	}
 	if !result.SessionEmpty {
 		failure = ErrExecutionEpochOne

@@ -40,7 +40,7 @@ func TestEpochEarlyWorkspaceLaterFailureKeepsCompletedPrefix(t *testing.T) {
 func TestEpochEarlyWorkspaceFinishPrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
 	input := "sha256:01" + strings.Repeat("00", 31)
-	for _, mode := range []string{"valid", "missing", "gap", "duplicate", "wrong_phase", "changed_http", "failed_http"} {
+	for _, mode := range []string{"valid", "missing", "gap", "duplicate", "wrong_phase", "changed_http", "changed_http_allocated", "changed_start_logical", "changed_start_allocated", "failed_http"} {
 		t.Run(mode, func(t *testing.T) {
 			raw := workspaceTestBinding(2) + workspaceTestPair(2, 2, 1, 11, 22)
 			switch mode {
@@ -52,7 +52,7 @@ func TestEpochEarlyWorkspaceFinishPrefix(t *testing.T) {
 			case "wrong_phase":
 				raw += workspaceTestPair(2, 4, 2, 33, 44)
 			default:
-				raw += workspaceTestPair(2, 3, 2, 33, 44)
+				raw += workspaceTestPair(2, 3, 2, 55, 12) + workspaceTestPair(2, 3, 3, 33, 44)
 			}
 			var out ExecutionWorkspaceByteObservation
 			for _, line := range strings.SplitAfter(raw, "\n") {
@@ -69,8 +69,17 @@ func TestEpochEarlyWorkspaceFinishPrefix(t *testing.T) {
 				samples.Phases[i].Attempts, samples.Phases[i].Completed = 1, 1
 				samples.Phases[i].Maximum.LogicalBytes, samples.Phases[i].Maximum.AllocatedBytes = values[0], values[1]
 			}
-			if mode == "changed_http" {
-				samples.Phases[1].Maximum.LogicalBytes++
+			samples.WarmStart = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1}
+			samples.WarmStart.Maximum.LogicalBytes, samples.WarmStart.Maximum.AllocatedBytes = 55, 12
+			switch mode {
+			case "changed_http":
+				samples.Phases[1].Maximum.LogicalBytes++ // Still below actual start55: max equality must not hide it.
+			case "changed_http_allocated":
+				samples.Phases[1].Maximum.AllocatedBytes++
+			case "changed_start_logical":
+				samples.WarmStart.Maximum.LogicalBytes++
+			case "changed_start_allocated":
+				samples.WarmStart.Maximum.AllocatedBytes++ // Still below actual finish44.
 			}
 			if mode == "failed_http" {
 				samples.Unavailable = true
@@ -80,9 +89,9 @@ func TestEpochEarlyWorkspaceFinishPrefix(t *testing.T) {
 			}
 		})
 	}
-	if workspaceCheckpointMaximum(2, 2) != 1 || workspaceCheckpointMaximum(2, 3) != 1 ||
-		workspaceCheckpointMaximum(2, 4) != 0 || 79+2*(26+60) != 251 {
-		t.Fatal("only two actual child finish pairs admitted")
+	if workspaceCheckpointMaximum(2, 2) != 1 || workspaceCheckpointMaximum(2, 3) != 2 ||
+		workspaceCheckpointMaximum(2, 4) != 0 || 79+3*(26+60) != 337 {
+		t.Fatal("two finishes plus one fixed warm start admitted")
 	}
 }
 
