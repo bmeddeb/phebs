@@ -8211,6 +8211,31 @@ use real inherited controls with supplied callbacks; the tiny filesystem test
 uses a real traversal but modeled reopening. Actual engine/author composition,
 representative traversal/output fit and the full rehearsal remain unproved.
 
+The native physical composition fixture subsequently extends the same actual
+tiny helper/engine through phase four. Parent progress waits for source-bound
+S then genuine post-reopen R; the child then proves actual ordinary-owner and
+request entry plus SDK resumption, before an independent HTTP finish sample.
+All six walks and four HTTP calls use the original three-minute lifetime.
+Twenty actual PC pairs before terminal EOF fit the unchanged twenty-one-pair
+profile. Fourteen joined WB records total 621 bytes, with each actual phase-four
+value checked separately. Author B/pin/full PhysicalB are explicitly absent.
+Independent draft review of
+`e0417628e4dac855deb6cb097842ccff50ccbef68aecdfe59cc6397bb8827170`
+found all severity counts zero. Initial native normal passed early in 9.79s,
+warm in 9.44s and physical in 9.55s, package 29.376s. Pinned lint requested
+a tagged switch for the test helper's three phase branches; this mechanical
+change adds no behavior. Ordered two-test source manifest (backup-retirement,
+workspace-native) is
+`c124d203f85a44013ab38f83dd0078a34b253380e2364f66acb6bcb7e725efb6`.
+Corrected race passed early in 10.16s, warm in 9.79s and physical in 9.42s,
+package 31.228s; final normal physical reconfirmed in 9.56s, package 10.099s.
+Static passed vet, zero pinned-lint issues and whole-repository compilation;
+docs passed in 0.534s, glossary and whitespace clean. Applied independent
+review found no source issue and one low cost wording error, corrected to name
+all three added SDK probes: two per-HTTP checks plus dedicated post-reopen.
+The source manifest is unchanged. This is native
+callback/engine/admission composition, not source-author or full-epic evidence.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

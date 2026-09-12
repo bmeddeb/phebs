@@ -48,6 +48,15 @@ func TestT422WorkspaceWarmNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-warm")
 }
 
+// Native phase-four callback/reopen composition under the original three-minute
+// fixture deadline and full-profile 21 PC pairs. Compared with warm-only: three
+// more guarded walks, two HTTP calls and 284 WB bytes (621 total). No author B,
+// pin/authority/physical pipeline or representative workspace is executed;
+// auth/semantic inputs and sixteen unused owners remain supplied.
+func TestT422WorkspacePhysicalNativeComposition(t *testing.T) {
+	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-physical")
+}
+
 func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if os.Getenv(t422BackupFixture) == "" {
 		return
@@ -97,7 +106,8 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, semanticRaw := t422LifecycleBootstrapRecord(t)
-	warmWorkspace := os.Getenv(t422BackupFixture) == "workspace-warm"
+	physicalWorkspace := os.Getenv(t422BackupFixture) == "workspace-physical"
+	warmWorkspace := os.Getenv(t422BackupFixture) == "workspace-warm" || physicalWorkspace
 	earlyWorkspace := os.Getenv(t422BackupFixture) == "workspace-early" || warmWorkspace
 	if earlyWorkspace {
 		semanticRaw, _ = t422SemanticTestRequest(t)
@@ -178,19 +188,26 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		if warmWorkspace {
 			phases = append(phases, 3)
 		}
-		for _, phase := range phases {
+		if physicalWorkspace {
+			phases = append(phases, 4, 4)
+		}
+		for pointIndex, phase := range phases {
+			point := "finish"
+			if pointIndex == 2 {
+				point = "start"
+			}
 			if !input.Scan() {
 				t.Fatal("actual early request token", input.Err())
 			}
-			var warmStart t422WorkspaceSampleResponse
-			if phase == 3 {
+			var priorSample t422WorkspaceSampleResponse
+			if phase == 3 || phase == 4 && point == "finish" {
 				before := control.workspaceByteSnapshot()
-				if before.Unavailable || !before.Phases[2].Completed || turns.Load() != 0 || failures.Load() != 0 {
-					t.Fatal("warm callback did not complete before actual reopened request", before)
+				if before.Unavailable || !before.Phases[phase-1].Completed || turns.Load() != 0 || failures.Load() != 0 {
+					t.Fatal("callback did not complete before actual reopened request", before)
 				}
-				warmStart = t422WorkspaceSampleResponse{
-					LogicalBytes:   before.Phases[2].Maximum.LogicalBytes,
-					AllocatedBytes: before.Phases[2].Maximum.AllocatedBytes,
+				priorSample = t422WorkspaceSampleResponse{
+					LogicalBytes:   before.Phases[phase-1].Maximum.LogicalBytes,
+					AllocatedBytes: before.Phases[phase-1].Maximum.AllocatedBytes,
 				}
 			}
 			request, err := http.NewRequestWithContext(runnerCtx, http.MethodPost, server.URL+t422WorkspaceSamplePath, nil)
@@ -199,7 +216,7 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 			}
 			request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
 			request.Header.Set(dispatchadmission.ProductionRequestHeader, input.Text())
-			request.Header.Set(t422WorkspacePointHeader, "finish")
+			request.Header.Set(t422WorkspacePointHeader, point)
 			response, err := server.Client().Do(request)
 			if err != nil {
 				t.Fatal(err)
@@ -213,9 +230,9 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 			}
 			observed := control.workspaceByteSnapshot()
 			wantLogical, wantAllocated := sample.LogicalBytes, sample.AllocatedBytes
-			if phase == 3 {
-				wantLogical = max(wantLogical, warmStart.LogicalBytes)
-				wantAllocated = max(wantAllocated, warmStart.AllocatedBytes)
+			if phase == 3 || phase == 4 && point == "finish" {
+				wantLogical = max(wantLogical, priorSample.LogicalBytes)
+				wantAllocated = max(wantAllocated, priorSample.AllocatedBytes)
 			}
 			if observed.Unavailable || !observed.Phases[phase-1].Completed ||
 				observed.Phases[phase-1].Maximum.LogicalBytes != wantLogical ||
@@ -227,10 +244,40 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 			if _, err = st.ListRepos(ctx); err != nil {
 				t.Fatal("real early SDK did not resume after native quiescence", err)
 			}
-			if phase == 2 {
+			switch phase {
+			case 2:
 				fmt.Println("early_measured_and_resumed")
-			} else {
+			case 3:
 				fmt.Printf("warm_measured_and_resumed:%016x:%016x\n", sample.LogicalBytes, sample.AllocatedBytes)
+			default:
+				fmt.Printf("physical_%s_measured:%016x:%016x\n", point, sample.LogicalBytes, sample.AllocatedBytes)
+				if point == "start" {
+					if !input.Scan() || input.Text() != "probe_reopened" {
+						t.Fatal("parent did not observe physical R", input.Err())
+					}
+					state, err := dispatchadmission.ProductionSemanticState()
+					if err != nil || state.ProducerID != 2 || state.Phase != 4 || state.OrdinaryOwnersDrained {
+						t.Fatal("actual physical reopened state", state, err)
+					}
+					turn, err := owners.Enter(ctx)
+					if err != nil {
+						t.Fatal("actual physical ordinary admission", err)
+					}
+					turn.End()
+					request, err := owners.EnterRequest(ctx)
+					if err != nil {
+						t.Fatal("actual physical request admission", err)
+					}
+					request.End()
+					if _, err := st.ListRepos(ctx); err != nil {
+						t.Fatal("actual physical SDK resumption", err)
+					}
+					observed := control.workspaceByteSnapshot()
+					if observed.Unavailable || !observed.Phases[3].Completed || turns.Load() != 0 || failures.Load() != 0 {
+						t.Fatal("actual physical callback prefix", observed)
+					}
+					fmt.Println("physical_owners_sdk_reopened")
+				}
 			}
 		}
 		if !input.Scan() || input.Text() != "close" {
