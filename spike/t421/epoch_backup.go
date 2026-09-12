@@ -492,11 +492,14 @@ func epochRestoreClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 	return epochArchiveClosedPrefix(ctx, result, 11)
 }
 
-func epochRestoredClosedPrefix(ctx context.Context, result ExecutionEpochOneResult) bool {
-	return epochArchiveClosedPrefix(ctx, result, 6)
+func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResult, stage uint32) bool {
+	return epochArchiveClosedPrefixWithParent(ctx, result, stage, false)
 }
 
-func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResult, stage uint32) bool {
+func epochArchiveClosedPrefixWithParent(ctx context.Context, result ExecutionEpochOneResult, stage uint32, retained bool) bool {
+	if retained && (stage != 6 || result.Store.Store.Phase != 14 || !epochRestoredClosedEvidence(result, 14)) {
+		return false
+	}
 	if stage != 10 && stage != 11 && stage != 6 {
 		return false
 	}
@@ -526,7 +529,7 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 			if p.Producer == id {
 				found = p.Attached && p.Active == 0 && p.Closed
 				if id == 1 {
-					found = p.Attached && p.Active == 0 && p.Closed == (stage == 6) && p.Ordinal == ordinal
+					found = p.Attached && p.Active == 0 && p.Closed == (stage == 6 && !retained) && p.Ordinal == ordinal
 				}
 				if id == 5 {
 					found = found && p.Checkpoint == 11

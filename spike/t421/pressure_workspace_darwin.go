@@ -280,6 +280,10 @@ func (v *executionPressureVolume) byteSnapshot() (custodyBytePhase, custodyByteS
 // source lease. It never promotes a failed run into permission to delete it.
 // This scoped rehearsal release is not full launcher accounting/admission.
 func (v *executionPressureVolume) finishRehearsal(ctx context.Context, run *ExecutionEpochOneRun) error {
+	return v.finishWorkspace(ctx, run, false)
+}
+
+func (v *executionPressureVolume) finishWorkspace(ctx context.Context, run *ExecutionEpochOneRun, operational bool) error {
 	if v == nil || ctx == nil || ctx.Err() != nil || run == nil {
 		return errPressureVolume
 	}
@@ -305,7 +309,17 @@ func (v *executionPressureVolume) finishRehearsal(ctx context.Context, run *Exec
 	epochs.mu.Lock()
 	latest := epochs.released == run.epoch.Epoch
 	epochs.mu.Unlock()
-	if !latest || flow.Close() != nil || epochs.Close() != nil || author.Close() != nil || author.request.Plan.Close() != nil {
+	if !latest {
+		return errPressureVolume
+	}
+	if operational {
+		if v.teardownRun != run || v.releaseTeardownBorrow(run) != nil {
+			return errPressureVolume
+		}
+	} else if flow.Close() != nil {
+		return errPressureVolume
+	}
+	if epochs.Close() != nil || author.Close() != nil || author.request.Plan.Close() != nil {
 		return errPressureVolume
 	}
 	for _, tool := range []*ExecutionToolCustody{author.request.Author, flow.phebs, flow.zoekt, flow.surreal} {
@@ -324,6 +338,11 @@ func (v *executionPressureVolume) finishRehearsal(ctx context.Context, run *Exec
 	closeErr := lease.Close() // No mounted lease/owner descriptor may block detach.
 	if statErr != nil || closeErr != nil || !inputCustodySame(author.leaseInfo, info) || ctx.Err() != nil {
 		return errPressureVolume
+	}
+	if operational {
+		if _, err := v.sampleTeardownWorkspace(ctx); err != nil {
+			return err
+		}
 	}
 	v.borrowed = false
 	return v.remove(ctx, false)

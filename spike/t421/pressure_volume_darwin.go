@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/spike/t4013"
 	"golang.org/x/sys/unix"
 )
@@ -27,28 +28,32 @@ var errPressureVolume = errors.New("execution pressure volume unavailable or ret
 // release requires the bound successful rehearsal and closed input owners;
 // full outer-stage accounting and durable hard-death supervision remain open.
 type executionPressureVolume struct {
-	mu               sync.Mutex
-	parent           productionRoot
-	root             productionRoot
-	mount            productionRoot
-	workspace        productionRoot
-	image            *os.File
-	imageInfo        os.FileInfo
-	underlay         os.FileInfo
-	tool             *ExecutionSystemToolCustody
-	lock             io.Closer
-	device           string
-	sessions         []int // Registered only by this owner's successful native Start.
-	ready            bool
-	closed           bool
-	removed          bool
-	unsettled        bool
-	borrowed         bool
-	flow             *ExecutionEpochOne
-	ballast          *executionPressureBallast
-	bytes            *custodyByteObservation
-	preparationBytes custodyBytePhase // Actual preparation samples, never phase-one evidence.
-	byteErr          error
+	mu                                                                                sync.Mutex
+	parent                                                                            productionRoot
+	root                                                                              productionRoot
+	mount                                                                             productionRoot
+	workspace                                                                         productionRoot
+	image                                                                             *os.File
+	imageInfo                                                                         os.FileInfo
+	underlay                                                                          os.FileInfo
+	tool                                                                              *ExecutionSystemToolCustody
+	lock                                                                              io.Closer
+	device                                                                            string
+	sessions                                                                          []int // Registered only by this owner's successful native Start.
+	ready                                                                             bool
+	closed                                                                            bool
+	removed                                                                           bool
+	unsettled                                                                         bool
+	borrowed                                                                          bool
+	flow                                                                              *ExecutionEpochOne
+	ballast                                                                           *executionPressureBallast
+	bytes                                                                             *custodyByteObservation
+	preparationBytes                                                                  custodyBytePhase // Actual preparation samples, never phase-one evidence.
+	byteErr                                                                           error
+	teardownRun                                                                       *ExecutionEpochOneRun // Non-nil consumes the one operational cleanup attempt, including failure.
+	teardownInitial, teardownBefore, teardownPostDetach, teardownAfter, teardownClose SessionCensusEvidence // Actual samples; event ordinals unset.
+	teardownDetached, teardownImageRemoved                                            bool
+	teardownByteSamples                                                               uint32 // Only successful actual phase-15 parent walks; at most two call sites.
 }
 
 // prepareExecutionPressureVolume owns a fresh sparse image, never a supplied
@@ -189,13 +194,32 @@ func (v *executionPressureVolume) command(ctx context.Context, args ...string) (
 	command.Stdout, command.Stderr = output, output
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
-	if err := command.Start(); err != nil {
-		return nil, errPressureVolume
+	var wait func() error
+	if v.teardownRun != nil {
+		if len(args) != 2 || args[0] != "detach" || args[1] != v.device {
+			return nil, errPressureVolume
+		}
+		handle, err := v.flow.parent.StartInPhase(ctx, 15, dispatchadmission.Site{ID: executionSiteDetach, Role: executionRoleHdiutil}, command)
+		if err != nil {
+			return nil, errPressureVolume
+		}
+		wait = handle.Wait
+	} else {
+		if err := command.Start(); err != nil {
+			return nil, errPressureVolume
+		}
+		wait = command.Wait
 	}
 	v.sessions = append(v.sessions, command.Process.Pid)
-	waitErr := command.Wait()
+	waitErr := wait() // One native Wait; operational cleanup includes its actual DA settlement.
 	if waitErr != nil || output.err != nil || ctx.Err() != nil {
-		_, empty, _ := finishExecutionProcessSession(command.Process.Pid, nil, true, waitErr, time.Now().Add(5*time.Second))
+		deadline := time.Now().Add(5 * time.Second)
+		if v.teardownRun != nil {
+			if caller, ok := ctx.Deadline(); ok && caller.Before(deadline) {
+				deadline = caller
+			}
+		}
+		_, empty, _ := finishExecutionProcessSession(command.Process.Pid, nil, true, waitErr, deadline)
 		v.unsettled = !empty
 		return nil, errPressureVolume
 	}
@@ -284,9 +308,17 @@ func (v *executionPressureVolume) remove(ctx context.Context, emptyOnly bool) er
 	// Populated callers have already closed their bound operational borrower.
 	// Freshly inspect the nonshrinking preparation and operational scope;
 	// earlier RootJoined/SessionEmpty results do not replace this census.
-	for _, session := range v.recordedSessionsLocked() {
-		if err := t4013.WaitPrivateProcessSession(session, time.Now().Add(5*time.Second)); err != nil {
-			return errPressureVolume
+	if v.teardownRun != nil {
+		var err error
+		v.teardownBefore, err = v.censusTeardownSessions(ctx, true)
+		if err != nil {
+			return err
+		}
+	} else {
+		for _, session := range v.recordedSessionsLocked() {
+			if err := t4013.WaitPrivateProcessSession(session, time.Now().Add(5*time.Second)); err != nil {
+				return errPressureVolume
+			}
 		}
 	}
 	v.ready = false // One teardown attempt; a busy/uncertain detach retains all disk custody.
@@ -299,9 +331,20 @@ func (v *executionPressureVolume) remove(ctx context.Context, emptyOnly bool) er
 	if _, err := v.command(ctx, "detach", v.device); err != nil {
 		return errPressureVolume
 	}
-	for _, session := range v.recordedSessionsLocked() {
-		if err := t4013.WaitPrivateProcessSession(session, time.Now().Add(5*time.Second)); err != nil {
-			return errPressureVolume
+	if v.teardownRun != nil {
+		v.teardownDetached = true
+	}
+	if v.teardownRun != nil {
+		var err error
+		v.teardownPostDetach, err = v.censusTeardownSessions(ctx, true)
+		if err != nil {
+			return err
+		}
+	} else {
+		for _, session := range v.recordedSessionsLocked() {
+			if err := t4013.WaitPrivateProcessSession(session, time.Now().Add(5*time.Second)); err != nil {
+				return errPressureVolume
+			}
 		}
 	}
 	// Detach must reveal the original backing filesystem, never another mount.
@@ -323,17 +366,30 @@ func (v *executionPressureVolume) remove(ctx context.Context, emptyOnly bool) er
 	}
 	v.image = nil
 	for _, name := range []string{"pressure.sparseimage", "home", "tmp"} {
+		if v.teardownRun != nil && ctx.Err() != nil {
+			return errPressureVolume
+		}
 		if err := os.Remove(filepath.Join(v.root.path, name)); err != nil {
 			return errPressureVolume
 		}
+		if v.teardownRun != nil && name == "pressure.sparseimage" {
+			v.teardownImageRemoved = true
+		}
 	}
-	if v.root.file.Sync() != nil || os.Remove(v.root.path) != nil || v.parent.file.Sync() != nil {
+	if v.teardownRun != nil && ctx.Err() != nil || v.root.file.Sync() != nil || os.Remove(v.root.path) != nil || v.parent.file.Sync() != nil {
 		return errPressureVolume
 	}
 	if _, err := os.Lstat(v.root.path); !errors.Is(err, os.ErrNotExist) {
 		return errPressureVolume
 	}
 	v.removed = true
+	if v.teardownRun != nil {
+		var err error
+		v.teardownAfter, err = v.censusTeardownSessions(ctx, true)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -421,11 +477,20 @@ func (v *executionPressureVolume) Close() error {
 	}
 	// Cover every failure boundary, including a successful command followed by
 	// malformed output or mount refusal. Root Wait alone never releases custody.
-	for _, session := range v.recordedSessionsLocked() {
-		members, err := t4013.PrivateProcessSessionMembers(session)
-		if err != nil || members != 0 {
+	if v.teardownRun != nil {
+		var censusErr error
+		v.teardownClose, censusErr = v.censusTeardownSessions(v.teardownRun.teardownContext, false)
+		if censusErr != nil {
 			v.unsettled = true
-			return errPressureVolume
+			return censusErr
+		}
+	} else {
+		for _, session := range v.recordedSessionsLocked() {
+			members, err := t4013.PrivateProcessSessionMembers(session)
+			if err != nil || members != 0 {
+				v.unsettled = true
+				return errPressureVolume
+			}
 		}
 	}
 	v.closed = true

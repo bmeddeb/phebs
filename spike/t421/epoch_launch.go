@@ -292,6 +292,7 @@ type ExecutionEpochOneRun struct {
 	restoreStarted        bool
 	restoreJoined         bool
 	restoreSessionEmpty   bool
+	teardownContext       context.Context // Acceptance deadline; existing failure-only emergency join remains unchanged.
 	restoreComplete       bool
 	restoreManifestSHA256 string
 	backupCancel          context.CancelFunc
@@ -873,7 +874,11 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	run.mu.Unlock()
-	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	stopParent := context.Background()
+	if run.teardownContext != nil {
+		stopParent = run.teardownContext
+	}
+	stopCtx, stopCancel := context.WithTimeout(stopParent, 30*time.Second)
 	defer stopCancel()
 	if !terminal && !joined && failure == nil && !run.backupRetired && (!warm && run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
 		failure = ErrExecutionEpochOne
@@ -923,7 +928,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	if served != nil {
-		joinCtx, joinCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		joinCtx, joinCancel := context.WithTimeout(stopParent, 5*time.Second)
 		select {
 		case err := <-served:
 			diagnostic.DispatchReceiver = err
@@ -941,7 +946,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if terminal && (!terminalRequested || nativeStopErr != nil || death.ProcessState == nil || run.flow.controller.CloseHardDeath(run.producer(), death.ProcessState) != nil) {
 		failure = ErrExecutionEpochOne
 	}
-	joinCtx, joinCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	joinCtx, joinCancel := context.WithTimeout(stopParent, 5*time.Second)
 	diagnostic.StoreJoin = run.flow.store.Wait(joinCtx, run.producer())
 	if diagnostic.StoreJoin != nil {
 		failure = ErrExecutionEpochOne
@@ -1018,7 +1023,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		prefixOK = run.backupComplete && epochBackupClosedPrefix(ctx, result)
 	}
 	if run.epoch.Epoch == 5 {
-		prefixOK = epochRestoredClosedPrefix(ctx, result)
+		prefixOK = epochArchiveClosedPrefixWithParent(ctx, result, 6, run.teardownContext != nil)
 	}
 	if ctx.Err() != nil || terminal && (run.terminalContext == nil || run.terminalContext.Err() != nil) {
 		failure = ErrExecutionEpochOne

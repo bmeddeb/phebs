@@ -7858,6 +7858,47 @@ review and final correction/record re-review both report all severity counts
 zero. Documentation (0.559s), glossary and whitespace passed; canonical V1/V2
 plan digests remain unchanged.
 
+The operational phase-fifteen component now consumes only a successfully
+accepted owned phase-fourteen run, starts the fixed teardown clock before
+shutdown, and preserves parent admission through the final server's actual
+close. All seven actual SDK receivers must have terminal EOF, including the
+earlier explicitly terminal-fenced epoch-three receiver. It advances DA/SA to
+fifteen only after that join, samples the first writer-free workspace boundary,
+reuses exact input release/source-lease reacquisition, samples again before
+detach, admits the existing single site-1005 nonforced detach and requires
+actual final parent/DA/SA closure. It retains all five actual census prefixes,
+completed byte maxima, separate physical removal facts and error-bearing
+accounting snapshots before releasing controller lifetime. A later cleanup
+failure does not invent a failed byte observation or discard real earlier work.
+Prospective V3 wording distinguishes these two byte positions from ordinary
+phase start/finish, and terminal absence from a fictitious zero traversal.
+Every numerical allowance and canonical V1/V2 byte remains unchanged.
+
+The small protocol test starts actual inherited DA/SA test helpers in the frozen
+phase/producer slots: ten root admissions, all seven SDK attachments, an actual
+phase-eight producer kill/Wait/EOF/successor, and phase-fifteen detach admission.
+Its four cases require a live last SDK owner to block advancement, preserve
+canceled-admission prefixes, and distinguish a failed final command from closed
+accounting. Across the four cases there are 43 actual helper Starts; none is an
+engine, archive, author or hdiutil execution. Tiny real filesystem walks cover
+positive maxima, excess and later refusal; supplied removal flags in that unit
+test are not a mounted teardown. Independent draft review corrected a redundant
+parent Pause in the live-last-owner case before application. Global receipt
+events and whole-phase process/work composition are deliberately still absent;
+this component alone cannot issue a successful scoped teardown receipt.
+Initial focused normal/race passed in 2.122/11.577s, then pinned lint found the
+now-unused legacy restored-prefix wrapper. After deleting only that wrapper,
+the expanded teardown/policy/archive/workspace/closed-prefix set passed normal
+in 2.270s and race in 13.098s. Full ci-static passed vet, zero-issue lint and
+all-package compilation. Ordered nine-source/test manifest is
+`1b7b57725197d34a68e2191bd2611e19f1d1fefcf15249aec7870c1f55a54ee5`
+(accounting contract, byte policy tests, launch, archive, volume, workspace,
+teardown, teardown tests, protocol tests). Independent applied-source review
+reports all severity counts zero. These are actual small native protocol and
+filesystem tests, not execution of the mounted final teardown corridor.
+Documentation (0.693s), glossary, whitespace and canonical V1/V2 digests passed;
+independent final cost/provenance record review also reports all counts zero.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
