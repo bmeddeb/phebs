@@ -43,7 +43,7 @@ func TestT422WorkspacePreparationNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-preparation")
 }
 
-func seedT422PreparationNative(t *testing.T, ctx context.Context, data string, st *store.Surreal, launch *t422SemanticLaunch) (*extractionpublication.Reconciler, t422StaleFinal, store.GenerationSchedule) {
+func seedT422PreparationNative(t *testing.T, ctx context.Context, data string, st *store.Surreal, launch *t422SemanticLaunch, preindexed ...bool) (*extractionpublication.Reconciler, t422StaleFinal, store.GenerationSchedule) {
 	t.Helper()
 	repository, commit := launch.request.Repository, launch.request.ReturnSourceCommit
 	repoDir, err := phebssync.SafeRepoDir(data, repository)
@@ -95,10 +95,26 @@ func seedT422PreparationNative(t *testing.T, ctx context.Context, data string, s
 	// Build the real source and observation publications instead of the
 	// integration fixture's supplied source/observation digest strings.
 	indexRoot, observationRoot := filepath.Join(data, "index"), filepath.Join(data, "observations")
-	source, err := repositoryindex.BuildSourceGeneration(ctx, repoDir, indexRoot, repository,
-		[]store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: commit}})
-	if err != nil {
-		t.Fatal(err)
+	revisions := []store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: commit}}
+	var source repositoryindex.SourceManifest
+	if len(preindexed) != 0 {
+		if len(preindexed) != 1 || !preindexed[0] {
+			t.Fatal("invalid preindexed preparation fixture")
+		}
+		actual, checkErr := focusedindex.ValidateRepositorySearchGeneration(ctx, indexRoot, repository, revisions)
+		if checkErr != nil {
+			t.Fatal("actual setup-owned search publication", checkErr)
+		}
+		control, sourceValue, readErr := focusedindex.ReadRepositorySearchGenerationContext(ctx, indexRoot, repository, revisions)
+		if readErr != nil || control.Digest != actual.Digest {
+			t.Fatal("actual setup search/source identity", readErr)
+		}
+		source = sourceValue
+	} else {
+		source, err = repositoryindex.BuildSourceGeneration(ctx, repoDir, indexRoot, repository, revisions)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	transition, err := observationpublication.BeginInventoryPublicationV2(observationRoot, repository)
 	if err != nil {

@@ -8521,6 +8521,27 @@ survives. No speculative shutdown correction was applied. Actual marker
 publication composition and the host-dependent gates remain open; no fresh
 full rehearsal or freeze is established by this slice.
 
+The reduced native marker fixture reuses actual source/extraction/resolver
+preparation, adds a real two-service prior and target relationship publication,
+then drives one genuine scheduler claim across authenticated HIT, S/R,
+RECOVERED, activation and completion. Its setup-owned index precedes selected
+bootstrap; phase-six index permission stays zero. Independent draft review of
+`d94994189fcd5283eb2f85ed222db49b03835d0e900f59ade486baebb8e1857a`
+found all severities zero. Initial compilation exposed an invalid nil comparison
+on the value-returning runtime selector API; removing it preserves ErrNotFound,
+backend and digest checks. The supplied-output model then passed in 0.730s;
+it is not actual publication proof. Matching model race passed in 1.931s;
+static passed vet, zero pinned-lint issues and repository compilation; docs
+passed in 0.483s, glossary/whitespace clean. Applied independent scope/cost
+review found no material issue. Ordered five-test-path manifest is
+`a4ce0a01e61bb909bd25ef6c6033770001fc5474ad2f476035f7d90fbe0ff6ec`.
+The bookmark is for immutable native normal/race gating, not a native pass;
+its push is held until those gates join successfully. The original thirty-minute
+fixture deadline and all production limits are unchanged. Tiny catalog,
+manually prepared extraction work, supplied inactive lifecycle/auth callbacks
+and direct-only setup compiler joins do not establish a full pipeline or
+complete process/profile admission.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

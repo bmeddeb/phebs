@@ -367,7 +367,8 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace, arch
 }
 
 func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspace, archiveWorkspace bool, failure string, cleanup ...bool) {
-	preparationWorkspace := failure == "workspace-preparation"
+	markerWorkspace := failure == "workspace-marker"
+	preparationWorkspace := failure == "workspace-preparation" || markerWorkspace
 	recoveryWorkspace := failure == "workspace-recovery"
 	physicalWorkspace := failure == "workspace-physical"
 	warmWorkspace := failure == "workspace-warm" || physicalWorkspace
@@ -485,6 +486,11 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		// Explicit test-owned Git author; all production builders run inside
 		// inherited producer-four accounting, not an unmetered second store.
 		semantic.ReturnSourceCommit = t421BlackBoxRepository(t, ctx, repository, corpus.Profile.Pipeline.ExtractionDomains)
+		if markerWorkspace {
+			deadline, _ := ctx.Deadline()
+			semantic.MarkerDeadlineUnixNano = deadline.UnixNano()
+			t422MarkerNativeIndex(t, ctx, root, repository, semantic.Repository, semantic.ReturnSourceCommit)
+		}
 		raw, err = json.Marshal(semantic)
 		if err != nil {
 			t.Fatal(err)
@@ -507,6 +513,10 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 				record.Tools[index].Path = git
 			}
 		}
+	}
+	var markerOutput *t422MarkerNativeOutput
+	if markerWorkspace {
+		markerOutput = &t422MarkerNativeOutput{ready: make(chan t422WorkspaceSampleResponse, 1)}
 	}
 	var warmOutput *t422WarmNativeOutput
 	if warmWorkspace {
@@ -771,6 +781,10 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			backupDiagnosticDone = diagnosticDone
 		} else {
 			command.Stderr = diagnostic
+			if markerWorkspace {
+				markerOutput.sink, markerOutput.input = diagnostic, bootstrap.InputSHA256
+				command.Stderr = markerOutput
+			}
 			if warmWorkspace {
 				warmOutput.sink, warmOutput.input = diagnostic, bootstrap.InputSHA256
 				command.Stderr = warmOutput
@@ -849,7 +863,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
 	serverMode := "server"
-	if preparationWorkspace {
+	if markerWorkspace {
+		serverMode = "workspace-marker"
+	} else if preparationWorkspace {
 		serverMode = "workspace-preparation"
 	} else if recoveryWorkspace {
 		serverMode = "workspace-recovery"
@@ -886,6 +902,48 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil || endpointURL.Host == "" {
 		t.Fatal("native endpoint", err)
+	}
+
+	if markerWorkspace {
+		finish := t422MarkerNativeParent(t, ctx, endpoint, control, input, output, markerOutput)
+		for output.Scan() {
+		}
+		if err := output.Err(); err != nil {
+			t.Fatal(err)
+		}
+		if err := server.Wait(); err != nil {
+			t.Fatal("marker helper", err, diagnostic.String())
+		}
+		if err := <-served; err != nil {
+			t.Fatal(err)
+		}
+		deadline, bounded := ctx.Deadline()
+		if transport.Wait(ctx, 4) != nil || !bounded || ctx.Err() != nil ||
+			t4013.WaitPrivateProcessSession(server.Process.Pid, deadline) != nil || ctx.Err() != nil {
+			t.Fatal("actual marker SDK/session join")
+		}
+		preparationSessionJoined = true
+		prefix, err := transport.Snapshot()
+		if err != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
+			t.Fatal("marker SDK EOF", prefix, err)
+		}
+		counts, err := sa.Snapshot()
+		if err != nil || len(counts.Phases) != 3 || counts.Phases[0].Phase != 6 || counts.Phases[0].Transactions <= 2 ||
+			counts.Phases[1].Transactions != 0 || counts.Phases[2].Transactions != 0 || counts.MaximumRows > 512 ||
+			len(counts.Producers) != 1 || !counts.Producers[0].Closed || counts.Producers[0].Calls != 0 || counts.Producers[0].Transactions != 0 {
+			t.Fatal("actual marker store accounting/closure", counts, err)
+		}
+		dispatch, err := controller.Snapshot()
+		if err != nil || len(dispatch.Producers) != 1 || !dispatch.Producers[0].Closed ||
+			dispatch.Producers[0].Active != 0 || dispatch.Attempts <= 2 {
+			t.Fatal("actual marker dispatch closure", dispatch, err)
+		}
+		if control.ReservedWireBytes() != 4*2*dispatchadmission.FrameBytes {
+			t.Fatal("actual marker four PC requests plus EOF")
+		}
+		markerOutput.assertJoined(t, finish)
+		t.Logf("actual reduced marker: phase6=%+v dispatch_attempts=%d; two WB walks, one readiness R, five PC pairs including EOF", counts.Phases[0], dispatch.Attempts)
+		return
 	}
 
 	if preparationWorkspace {

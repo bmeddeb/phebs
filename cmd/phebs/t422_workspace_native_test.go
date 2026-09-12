@@ -69,7 +69,8 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if os.Getenv(t422BackupFixture) == "" {
 		return
 	}
-	preparationWorkspace := os.Getenv(t422BackupFixture) == "workspace-preparation"
+	markerWorkspace := os.Getenv(t422BackupFixture) == "workspace-marker"
+	preparationWorkspace := os.Getenv(t422BackupFixture) == "workspace-preparation" || markerWorkspace
 	fixtureLimit := 3 * time.Minute
 	allOwners := os.Getenv(t422BackupFixture) == "workspace-all-owners"
 	if os.Getenv(t422BackupFixture) == "workspace-cleanup" || allOwners {
@@ -106,7 +107,11 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if _, err = lifetime.TakeStoreOwner(); err != nil {
 		t.Fatal(err)
 	}
-	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 1})
+	ownerLimits := dispatchadmission.OwnerLimits{Owners: 1, Requests: 1}
+	if markerWorkspace {
+		ownerLimits = t422ServerOwnerLimits() // Real scheduler expansion/reap/claim plus auth and lifecycle owners.
+	}
+	owners, err := dispatchadmission.NewProductionOwners(ctx, ownerLimits)
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatal(err)
 	}
@@ -192,6 +197,10 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { stopRunner(); authService.WaitCleanup() }()
+	if markerWorkspace {
+		runT422MarkerNative(t, ctx, root, st, launch, control, owners, authService)
+		return
+	}
 	if preparationWorkspace {
 		runT422PreparationNative(t, ctx, root, st, launch, control, owners, authService)
 		return
