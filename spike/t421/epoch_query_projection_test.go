@@ -15,6 +15,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
+	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/servicequery"
 	"github.com/bmeddeb/phebs/internal/t421catalogprojection"
 	"github.com/bmeddeb/phebs/spike/t401"
@@ -24,9 +25,9 @@ import (
 // observed hash construction, not a native endpoint or the whole corpus.
 func epochQueryProjectionFixture(t *testing.T) (*epochQueryProjectionContext, servicecatalog.Catalog) {
 	t.Helper()
-	catalog := servicecatalog.Catalog{}
+	catalog := servicecatalog.Catalog{Schema: servicecatalog.Schema, Authority: servicecatalog.Authority{Kind: servicecatalog.AuthorityCommitted, ID: "catalog", Version: strings.Repeat("a", 40)}}
 	for i := range 101 {
-		catalog.Services = append(catalog.Services, servicecatalog.Service{Key: serviceKey(i), Disposition: "accepted"})
+		catalog.Services = append(catalog.Services, servicecatalog.Service{Key: serviceKey(i), DisplayName: serviceKey(i), Disposition: "accepted", Origin: servicecatalog.OriginBase})
 		catalog.Memberships = append(catalog.Memberships, independentMemberships(i)...)
 	}
 	catalog.Unowned = []servicecatalog.UnownedPlacement{{Path: "tools/unowned-0000.go", Origin: "base"}}
@@ -36,6 +37,20 @@ func epochQueryProjectionFixture(t *testing.T) (*epochQueryProjectionContext, se
 	}
 	f := epochFinalResponse{Authority: epochFinalAuthority{Current: true, PhysicalCommit: strings.Repeat("a", 40), SourceGenerationSHA256: testDigest("source"), SearchGenerationSHA256: testDigest("search"), CatalogRootSHA256: testDigest("catalog"), RelationshipGenerationSHA256: testDigest("relationship"), RelationshipRootSHA256: testDigest("relationship-root"), ResolverCatalogGenerationSHA256: testDigest("resolver"), ResolverCatalogRootSHA256: testDigest("resolver-root"), ObservationGenerationSHA256: testDigest("observation")}, Projection: epochFinalProjection{CatalogLogicalSHA256: testDigest("logical"), Catalog: SetIdentity(actual.Catalog), MembershipSet: SetIdentity(actual.Memberships), Placements: SetIdentity(actual.Placements), UnownedPrefixes: SetIdentity(actual.UnownedPrefixes), ServiceQueries: SetIdentity(actual.ServiceQueries)}}
 	f.Schema, f.Projection.Schema = "t421-final-authority-source-free-v1", "t421-final-state-projection-source-free-v1"
+	// Derive the catalog source namespace through its actual native constructor,
+	// independently of the repository source identity used by search/observation.
+	generation, err := servicecatalogv3.Build(servicecatalogv3.Binding{Repository: "github.com/t421/query", Authority: catalog.Authority,
+		Source: servicecatalogv3.Source{Kind: servicecatalog.SourceCommitted, Path: "/tmp/catalog.json", Commit: catalog.Authority.Version, CensusDigest: testDigest("fixture-census")}}, catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := servicecatalogv3.SourceGenerationDigest(generation.Root)
+	if err != nil || generation.Root.Schema != servicecatalogv3.RootSchemaV2 || source == f.Authority.SourceGenerationSHA256 {
+		t.Fatal("catalog/repository source namespaces not distinct")
+	}
+	f.Authority.CatalogRootSHA256 = generation.Root.Digest
+	f.Projection.CatalogLogicalSHA256 = generation.Root.LogicalDigest
+	f.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: source}
 	bound, err := newEpochQueryProjectionContext(t.Context(), "github.com/t421/query", f, catalog)
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +110,7 @@ func epochQuerySearchFixture(t *testing.T, bound *epochQueryProjectionContext, q
 	scope := search.ScopeReceipt{Schema: search.ScopeReceiptSchema, Kind: p["scope"], MembershipPolicy: "visible-indexed-repositories-v1", ExpressionDigest: SHA256([]byte("phebs-search-expression-v1\x00" + p["query"])), ResultFiles: len(value.Files), ResultMatches: value.Stats.MatchCount, Revisions: []search.ScopeRevision{}}
 	if scope.Kind == "service" {
 		scope.Repository, scope.ServiceKey, scope.ServiceStatus, scope.MembershipPolicy = bound.repository, p["service_key"], "current", "accepted-roles-union-shared-included-unowned-excluded-v1"
-		a := servicequery.Authority{Schema: servicequery.AuthoritySchema, PredicatePolicy: servicequery.PredicatePolicy, TopologyPolicy: repositoryindex.DirectTopologyPolicy, Repository: bound.repository, ServiceKey: scope.ServiceKey, Status: "current", Incarnation: 1, RevisionSelector: "HEAD", RevisionBranch: "main", RevisionCommit: f.PhysicalCommit, ExpressionDigest: testDigest("expression"), CurrentCatalogGeneration: f.CatalogRootSHA256, ActiveCatalogGeneration: f.CatalogRootSHA256, CatalogControlRevision: 1, ActiveSourceGeneration: f.SourceGenerationSHA256, ActiveDesiredGeneration: testDigest("desired"), ServiceStateDigest: testDigest("state"), ServiceStateRevision: 1, StateSummaryDigest: testDigest("summary"), StateSummaryRevision: 1, RepositorySourceGeneration: f.SourceGenerationSHA256, RepositorySearchGeneration: f.SearchGenerationSHA256, PathDigest: testDigest("paths"), PathCount: 1, PathBytes: 1, PredicateAtoms: 1, PredicateBytes: 20}
+		a := servicequery.Authority{Schema: servicequery.AuthoritySchema, PredicatePolicy: servicequery.PredicatePolicy, TopologyPolicy: repositoryindex.DirectTopologyPolicy, Repository: bound.repository, ServiceKey: scope.ServiceKey, Status: "current", Incarnation: 1, RevisionSelector: "HEAD", RevisionBranch: "main", RevisionCommit: f.PhysicalCommit, ExpressionDigest: testDigest("expression"), CurrentCatalogGeneration: f.CatalogRootSHA256, ActiveCatalogGeneration: f.CatalogRootSHA256, CatalogControlRevision: 1, ActiveSourceGeneration: bound.final.QueryAuthority.CatalogSourceGenerationSHA256, ActiveDesiredGeneration: testDigest("desired"), ServiceStateDigest: testDigest("state"), ServiceStateRevision: 1, StateSummaryDigest: testDigest("summary"), StateSummaryRevision: 1, RepositorySourceGeneration: f.SourceGenerationSHA256, RepositorySearchGeneration: f.SearchGenerationSHA256, PathDigest: testDigest("paths"), PathCount: 1, PathBytes: 1, PredicateAtoms: 1, PredicateBytes: 20}
 		a.Digest = SHA256(append([]byte("phebs-service-query-authority-v1\x00"), epochQueryMarshal(t, a)...))
 		if err := servicequery.ValidateAuthority(a); err != nil {
 			t.Fatal(err)
@@ -120,7 +135,7 @@ func epochQuerySearchFixture(t *testing.T, bound *epochQueryProjectionContext, q
 
 func epochQueryServiceFixture(bound *epochQueryProjectionContext) apiresponse.ServiceDetail {
 	f := bound.final.Authority
-	result := apiresponse.ServiceDetail{SchemaVersion: "phebs-service-detail-v1", Repository: apiresponse.ServiceRepository{Repository: bound.repository, SourceCommit: f.PhysicalCommit, CatalogGeneration: f.CatalogRootSHA256, CatalogDigest: bound.final.Projection.CatalogLogicalSHA256}, Service: apiresponse.Service{Repository: bound.repository, Key: serviceKey(0), Disposition: "accepted", Status: "current", ActiveCatalogGeneration: f.CatalogRootSHA256, ActiveSourceGeneration: f.SourceGenerationSHA256, Incarnation: 1, ControlRevision: 1, MembershipCount: 6, DistinctPathCount: 5}}
+	result := apiresponse.ServiceDetail{SchemaVersion: "phebs-service-detail-v1", Repository: apiresponse.ServiceRepository{Repository: bound.repository, SourceCommit: f.PhysicalCommit, CatalogGeneration: f.CatalogRootSHA256, CatalogDigest: bound.final.Projection.CatalogLogicalSHA256}, Service: apiresponse.Service{Repository: bound.repository, Key: serviceKey(0), Disposition: "accepted", Status: "current", ActiveCatalogGeneration: f.CatalogRootSHA256, ActiveSourceGeneration: bound.final.QueryAuthority.CatalogSourceGenerationSHA256, Incarnation: 1, ControlRevision: 1, MembershipCount: 6, DistinctPathCount: 5}}
 	for _, member := range independentMemberships(0) {
 		result.Memberships = append(result.Memberships, apiresponse.ServiceMembership{Path: member.Path, Role: member.Role, Origin: member.Origin})
 	}
@@ -135,7 +150,7 @@ func epochQueryRelationshipFixture(t *testing.T, bound *epochQueryProjectionCont
 	}
 	p, f := projection.parameters, bound.final.Authority
 	q := apiresponse.RelationshipQuery{Repositories: []string{bound.repository}, ServiceKey: p["service_key"], View: p["view"], Kind: p["kind"], Plane: p["plane"], LookupKey: p["lookup_key"]}
-	root := apiresponse.RelationshipRootReceipt{Repository: bound.repository, State: "complete", RootSchema: relationshippublication.RootSchemaV3, Generation: f.RelationshipGenerationSHA256, RootDigest: f.RelationshipRootSHA256, AuthorityDigest: testDigest("authority"), ServiceKey: q.ServiceKey, ServiceIncarnation: 1, ServiceGeneration: testDigest("desired"), RepositoryComplete: true, AllServicesComplete: true, Authority: &apiresponse.RelationshipAuthority{Repository: bound.repository, CatalogGenerationDigest: f.CatalogRootSHA256, CatalogDigest: bound.final.Projection.CatalogLogicalSHA256, CatalogSourceGeneration: f.SourceGenerationSHA256, ResolverGenerationDigest: f.ResolverCatalogGenerationSHA256, ResolverRootDigest: f.ResolverCatalogRootSHA256, Upstream: &apiresponse.RelationshipUpstreamAuthority{Repository: bound.repository, Observation: apiresponse.RelationshipObservationAuthority{SourceGenerationDigest: f.SourceGenerationSHA256, ObservationGenerationDigest: f.ObservationGenerationSHA256}}}}
+	root := apiresponse.RelationshipRootReceipt{Repository: bound.repository, State: "complete", RootSchema: relationshippublication.RootSchemaV3, Generation: f.RelationshipGenerationSHA256, RootDigest: f.RelationshipRootSHA256, AuthorityDigest: testDigest("authority"), ServiceKey: q.ServiceKey, ServiceIncarnation: 1, ServiceGeneration: testDigest("desired"), RepositoryComplete: true, AllServicesComplete: true, Authority: &apiresponse.RelationshipAuthority{Repository: bound.repository, CatalogGenerationDigest: f.CatalogRootSHA256, CatalogDigest: bound.final.Projection.CatalogLogicalSHA256, CatalogSourceGeneration: bound.final.QueryAuthority.CatalogSourceGenerationSHA256, ResolverGenerationDigest: f.ResolverCatalogGenerationSHA256, ResolverRootDigest: f.ResolverCatalogRootSHA256, Upstream: &apiresponse.RelationshipUpstreamAuthority{Repository: bound.repository, Observation: apiresponse.RelationshipObservationAuthority{SourceGenerationDigest: f.SourceGenerationSHA256, ObservationGenerationDigest: f.ObservationGenerationSHA256}}}}
 	var rows []apiresponse.RelationshipRow
 	for index := range int(query.ExpectedRecords) {
 		consumer := 1
@@ -270,6 +285,83 @@ func TestEpochQueryProjectionObservedNotExpected(t *testing.T) {
 	got, err := p.finish()
 	if err != nil || got.SHA256 == query.ProjectionSHA256 || !strings.Contains(string(got.Projection), `"returned_ordinals":[1]`) {
 		t.Fatal(got, err)
+	}
+}
+
+func TestEpochQueryProjectionSourceNamespaces(t *testing.T) {
+	bound, catalog := epochQueryProjectionFixture(t)
+	for _, name := range []string{"first_service", "shared_placement_service_scope", "chain_dependency"} {
+		for _, mode := range []string{"native_catalog_source", "physical_source", "changed_catalog_source", "physical_field_changed"} {
+			t.Run(name+"/"+mode, func(t *testing.T) {
+				var query QueryCase
+				for _, candidate := range correctedQueryCases() {
+					if candidate.Name == name {
+						query = candidate
+					}
+				}
+				source := bound.final.QueryAuthority.CatalogSourceGenerationSHA256
+				switch mode {
+				case "physical_source":
+					source = bound.final.Authority.SourceGenerationSHA256
+				case "changed_catalog_source":
+					source = testDigest("wrong-catalog-source")
+				}
+				var body []byte
+				switch query.Surface {
+				case "service_detail":
+					value := epochQueryServiceFixture(bound)
+					value.Service.ActiveSourceGeneration = source
+					if mode == "physical_field_changed" {
+						value.Repository.SourceCommit = strings.Repeat("b", 40)
+					}
+					body = epochQueryMarshal(t, value)
+				case "service_search":
+					value := epochQuerySearchFixture(t, bound, query, 0)
+					value.Scope.Authority.ActiveSourceGeneration = source
+					if mode == "physical_field_changed" {
+						value.Scope.Authority.RepositorySourceGeneration = source
+					}
+					value.Scope.Authority.Digest = ""
+					value.Scope.Authority.Digest = SHA256(append([]byte("phebs-service-query-authority-v1\x00"), epochQueryMarshal(t, value.Scope.Authority)...))
+					value.Scope.Digest = ""
+					value.Scope.Digest = SHA256(append([]byte("phebs-search-scope-v1\x00"), epochQueryMarshal(t, value.Scope)...))
+					body = epochQueryMarshal(t, value)
+				case "service_relationships":
+					value := epochQueryRelationshipFixture(t, bound, query)[0]
+					value.Roots[0].Authority.CatalogSourceGeneration = source
+					if mode == "physical_field_changed" {
+						value.Roots[0].Authority.Upstream.Observation.SourceGenerationDigest = source
+					}
+					body = epochQueryMarshal(t, value)
+				}
+				projection, err := bound.queryProjection(query)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = projection.addHTTP(200, body)
+				if (err == nil) != (mode == "native_catalog_source") {
+					t.Fatal("catalog/repository source namespaces conflated", err)
+				}
+			})
+		}
+	}
+	for _, authority := range []*epochQueryAuthority{nil, {}, {CatalogSourceGenerationSHA256: "malformed"}} {
+		final := bound.final
+		final.QueryAuthority = authority
+		if _, err := newEpochQueryProjectionContext(t.Context(), bound.repository, final, catalog); err == nil {
+			t.Fatal("missing/malformed actual F query authority accepted")
+		}
+	}
+	final := bound.final
+	copyAuthority := *final.QueryAuthority
+	final.QueryAuthority = &copyAuthority
+	retained, err := newEpochQueryProjectionContext(t.Context(), bound.repository, final, catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	copyAuthority.CatalogSourceGenerationSHA256 = testDigest("later-mutation")
+	if retained.final.QueryAuthority.CatalogSourceGenerationSHA256 != bound.final.QueryAuthority.CatalogSourceGenerationSHA256 {
+		t.Fatal("returned caller alias changed retained F authority")
 	}
 }
 

@@ -15,6 +15,17 @@ type ExecutionProductQuery struct {
 	Name, Transport, Code, ProjectionSHA256           string
 	Pages, Records, Paths, FirstOrdinal, LastOrdinal  uint64
 	ControlFileReads, StoreReadAttempts, MemberVisits uint64
+	VisibleRepositories                               uint64
+	VisibleRepositoriesObserved                       bool
+}
+
+// An optional report field is admitted only for the two fixed all-code calls.
+// Do not infer this enumeration result from the one returned search hit.
+func validEpochQueryRepositories(report epochInspectionReport, required bool) bool {
+	if !required {
+		return report.VisibleRepositories == nil
+	}
+	return report.VisibleRepositories != nil && *report.VisibleRepositories == 1
 }
 
 // QueryRestored runs the closed HTTP-then-MCP corridor between two actual F
@@ -96,10 +107,12 @@ func (run *ExecutionEpochOneRun) productQueryContext(ctx context.Context, author
 		return nil, ErrExecutionEpochOne
 	}
 	value.Projection.Schema = "t421-final-state-projection-source-free-v1"
-	raw, err = json.MarshalIndent(value, "", "  ")
-	raw = append(raw, '\n')
 	reader := run.inspection
 	reader.mu.Lock()
+	queryAuthority := reader.productQueryAuthority
+	value.QueryAuthority = &queryAuthority
+	raw, err = json.MarshalIndent(value, "", "  ")
+	raw = append(raw, '\n')
 	valid := err == nil && reader.productBaseline != nil && sha256.Sum256(raw) == *reader.productBaseline
 	reader.mu.Unlock()
 	if !valid {
@@ -150,9 +163,12 @@ func (reader *executionEpochInspection) productQuery(ctx context.Context, querie
 		if err != nil || limitErr != nil {
 			return errEpochInspection
 		}
-		raw, status, contentType, report, err := reader.readQueryRequest(ctx, path, payload, limit, maximum)
+		raw, status, contentType, report, err := reader.readQueryRequest(ctx, path, payload, limit, maximum, query.Name == "all_code_structural_marker")
 		if err != nil {
 			return err
+		}
+		if report.VisibleRepositories != nil {
+			result.VisibleRepositories, result.VisibleRepositoriesObserved = *report.VisibleRepositories, true
 		}
 		if transport == "http" {
 			result.Code = strconv.Itoa(status)
@@ -230,6 +246,7 @@ func validExecutionProductQueries(rows []ExecutionProductQuery) bool {
 			stores += 4
 		}
 		if row.Name != query.Name || row.Transport != transport || row.Code != code || row.Pages != pages || row.Records != query.ExpectedRecords ||
+			row.VisibleRepositoriesObserved != (query.Name == "all_code_structural_marker") || query.Name == "all_code_structural_marker" && row.VisibleRepositories != 1 || query.Name != "all_code_structural_marker" && row.VisibleRepositories != 0 ||
 			readsErr != nil || row.ControlFileReads != controls || row.StoreReadAttempts != stores ||
 			row.Paths != query.ExpectedPaths || row.ProjectionSHA256 != query.ProjectionSHA256 || row.FirstOrdinal == 0 || row.LastOrdinal < row.FirstOrdinal ||
 			row.LastOrdinal-row.FirstOrdinal != pages-1 || index > 0 && (rows[index-1].LastOrdinal == ^uint64(0) || row.FirstOrdinal != rows[index-1].LastOrdinal+1) ||

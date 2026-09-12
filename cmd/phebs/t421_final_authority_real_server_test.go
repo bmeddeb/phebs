@@ -333,7 +333,7 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 	ordinal := uint64(1)
 	request := func(path string) t421BlackBoxResponse {
 		result := t421BlackBoxExactRequest(
-			t, ctx, client, baseURL+path, credential, ordinal,
+			t, ctx, client, baseURL+path, credential, ordinal, nativeQueries && path == t421ExactFinalAuthorityPath,
 		)
 		ordinal++
 		return result
@@ -506,7 +506,7 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 	lateOrdinal := ordinal
 	go func() {
 		response, err := t421BlackBoxExactRequestRaw(
-			ctx, client, baseURL+t421ExactFinalAuthorityPath, credential, lateOrdinal,
+			ctx, client, baseURL+t421ExactFinalAuthorityPath, credential, lateOrdinal, nativeQueries,
 		)
 		late <- exactResult{response: response, err: err}
 	}()
@@ -2043,9 +2043,10 @@ func isT421BlackBoxExtractionRetry(status int, raw []byte) bool {
 func t421BlackBoxExactRequest(
 	t *testing.T, ctx context.Context, client *http.Client, target, credential string,
 	ordinal uint64,
+	queryEvidence ...bool,
 ) t421BlackBoxResponse {
 	t.Helper()
-	response, err := t421BlackBoxExactRequestRaw(ctx, client, target, credential, ordinal)
+	response, err := t421BlackBoxExactRequestRaw(ctx, client, target, credential, ordinal, queryEvidence...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2055,9 +2056,10 @@ func t421BlackBoxExactRequest(
 func t421BlackBoxExactRequestRaw(
 	ctx context.Context, client *http.Client, target, credential string,
 	ordinal uint64,
+	queryEvidence ...bool,
 ) (t421BlackBoxResponse, error) {
 	return t421BlackBoxHTTPRaw(
-		ctx, client, http.MethodGet, target, credential, nil, ordinal,
+		ctx, client, http.MethodGet, target, credential, nil, ordinal, queryEvidence...,
 	)
 }
 
@@ -2067,6 +2069,7 @@ func t421BlackBoxHTTPRaw(
 	method, target, credential string,
 	body []byte,
 	ordinal uint64,
+	queryEvidence ...bool,
 ) (t421BlackBoxResponse, error) {
 	var input io.Reader
 	if body != nil {
@@ -2077,6 +2080,9 @@ func t421BlackBoxHTTPRaw(
 		return t421BlackBoxResponse{}, err
 	}
 	request.Header.Set("Authorization", "Bearer "+credential)
+	if len(queryEvidence) == 1 && queryEvidence[0] {
+		request.Header.Set(t422QueryEvidenceHeader, t422QueryEvidenceValue)
+	}
 	if body != nil {
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Accept", "application/json, text/event-stream")

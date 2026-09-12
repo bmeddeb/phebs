@@ -143,6 +143,7 @@ func t422DecodeNativeQueryResult(raw []byte, ordinal uint64, queries []t421fixtu
 		}
 		pages := t421BlackBoxQueryPages(query)
 		if row.Name != query.Name || row.Transport != transport || row.Code != code || row.ProjectionSHA256 != query.ProjectionSHA256 ||
+			row.VisibleRepositoriesObserved != (query.Name == "all_code_structural_marker") || query.Name == "all_code_structural_marker" && row.VisibleRepositories != 1 || query.Name != "all_code_structural_marker" && row.VisibleRepositories != 0 ||
 			row.Records != query.ExpectedRecords || row.Paths != query.ExpectedPaths || row.Pages != pages || pages == 0 ||
 			row.FirstOrdinal != next || row.LastOrdinal < next || row.LastOrdinal-next != pages-1 || row.LastOrdinal >= result.NextOrdinal ||
 			row.ControlFileReads > 160-controls || row.StoreReadAttempts > 164-stores {
@@ -252,7 +253,7 @@ func TestT422NativeQueryResult(t *testing.T) {
 	}
 	// Modeled rows exercise only the closed parent-result boundary. The
 	// optional real-server fixture must obtain these facts from actual requests.
-	for _, mode := range []string{"valid", "schema", "missing", "reordered", "projection", "ordinal", "pages", "counts", "trailing", "unknown", "duplicate", "oversize"} {
+	for _, mode := range []string{"valid", "schema", "missing", "reordered", "projection", "ordinal", "pages", "counts", "repositories_absent", "repositories_zero", "repositories_two", "repositories_foreign", "trailing", "unknown", "duplicate", "oversize"} {
 		t.Run(mode, func(t *testing.T) {
 			rows := make([]t421fixture.ExecutionProductQuery, 0, 22)
 			next := uint64(2)
@@ -266,6 +267,9 @@ func TestT422NativeQueryResult(t *testing.T) {
 					rows = append(rows, t421fixture.ExecutionProductQuery{Name: query.Name, Transport: transport, Code: code,
 						ProjectionSHA256: query.ProjectionSHA256, Records: query.ExpectedRecords, Paths: query.ExpectedPaths,
 						Pages: pages, FirstOrdinal: next, LastOrdinal: next + pages - 1})
+					if query.Name == "all_code_structural_marker" {
+						rows[len(rows)-1].VisibleRepositories, rows[len(rows)-1].VisibleRepositoriesObserved = 1, true
+					}
 					next += pages
 				}
 			}
@@ -286,6 +290,14 @@ func TestT422NativeQueryResult(t *testing.T) {
 				rows[0].Pages++
 			case "counts":
 				rows[0].StoreReadAttempts++
+			case "repositories_absent":
+				rows[0].VisibleRepositoriesObserved = false
+			case "repositories_zero":
+				rows[0].VisibleRepositories = 0
+			case "repositories_two":
+				rows[11].VisibleRepositories = 2
+			case "repositories_foreign":
+				rows[1].VisibleRepositories, rows[1].VisibleRepositoriesObserved = 1, true
 			}
 			raw, err := json.Marshal(t422NativeQueryResult{Schema: schema, NextOrdinal: next, Rows: rows})
 			if err != nil {

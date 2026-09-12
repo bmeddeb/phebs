@@ -17,6 +17,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
@@ -34,6 +35,8 @@ const (
 	t421ExactReadOrdinalHeader    = "X-Phebs-T421-Exact-Read-Ordinal"
 	t421ExactReadTrailer          = "X-Phebs-T421-Exact-Read-Report"
 	t421ExactReadReportSchema     = "t421-source-free-read-accounting-v1"
+	t422QueryEvidenceHeader       = "X-Phebs-T422-Query-Evidence"
+	t422QueryEvidenceValue        = "bound-v1"
 	t421ExactFinalAuthorityPath   = "/api/t421/final-authority"
 	t421ExactTailReadinessPath    = "/api/t421/tail-readiness"
 	t421ExactMCPPath              = "/api/mcp"
@@ -67,13 +70,14 @@ type t421ExactFinalAuthorityRead struct {
 }
 
 type t421ExactReadReport struct {
-	Schema             string `json:"schema"`
-	RequestOrdinal     uint64 `json:"request_ordinal"`
-	Status             string `json:"status"`
-	ControlFileReads   uint64 `json:"control_file_reads"`
-	StoreReadAttempts  uint64 `json:"store_read_attempts"`
-	MemberVisits       uint64 `json:"member_visits"`
-	StoreWriteAttempts uint64 `json:"store_write_attempts"`
+	Schema              string  `json:"schema"`
+	RequestOrdinal      uint64  `json:"request_ordinal"`
+	Status              string  `json:"status"`
+	ControlFileReads    uint64  `json:"control_file_reads"`
+	StoreReadAttempts   uint64  `json:"store_read_attempts"`
+	MemberVisits        uint64  `json:"member_visits"`
+	StoreWriteAttempts  uint64  `json:"store_write_attempts"`
+	VisibleRepositories *uint64 `json:"visible_repositories,omitempty"`
 }
 
 type t421ExactReadAccountingHandler struct {
@@ -279,6 +283,17 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		}
 		nativeFailureStatus, nativeFailure = "retention_observation_refused", errT422RetentionControl
 	}
+	queryEvidence := len(request.Header.Values(t422QueryEvidenceHeader)) != 0
+	// Native route overrides above must not admit this opt-in on another route.
+	if queryEvidence && !t422QueryEvidenceRoute(request) {
+		target = false
+	}
+	if queryEvidence && handler.state.semantic != nil {
+		admitted, present := request.Context().Value(t422SemanticRequestKey{}).(dispatchadmission.ProductionSemanticSnapshot)
+		if !present || handler.state.semantic.request.ServerEpoch != 5 || admitted.Phase != 14 {
+			target = false
+		}
+	}
 	ordinal, ok := handler.state.admit(request, target)
 	if !ok {
 		handler.state.refuse(writer, 0, "admission_refused", errT421ExactReadAdmission)
@@ -286,6 +301,12 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	}
 
 	ctx, ledger, err := readaccounting.Start(request.Context(), limits)
+	if err == nil && queryEvidence && request.URL.Path != t421ExactFinalAuthorityPath {
+		ctx, err = readaccounting.WithSearchRepositories(ctx)
+	}
+	if err == nil && queryEvidence && request.URL.Path == t421ExactFinalAuthorityPath {
+		ctx = context.WithValue(ctx, t422QueryEvidenceKey{}, true)
+	}
 	if err != nil {
 		handler.state.refuse(
 			writer, ordinal, "accounting_refused", errT421ExactReadAccounting,
@@ -377,6 +398,7 @@ func (state *t421ExactReadAccountingState) finishRead(writer http.ResponseWriter
 		Schema: t421ExactReadReportSchema, RequestOrdinal: ordinal, Status: status,
 		ControlFileReads: counts.ControlFileReads, StoreReadAttempts: counts.StoreReadAttempts,
 		MemberVisits: counts.MemberVisits, StoreWriteAttempts: counts.StoreWriteAttempts,
+		VisibleRepositories: ledger.SearchRepositories(),
 	})
 	if reportErr != nil {
 		terminalErr = errors.Join(terminalErr, errT421ExactReadReport)
@@ -432,11 +454,27 @@ func t421ExactReadAttempt(request *http.Request) bool {
 		len(request.Header.Values(t421ExactReadOrdinalHeader)) != 0
 }
 
+type t422QueryEvidenceKey struct{}
+
+func t422QueryEvidenceRoute(request *http.Request) bool {
+	if request == nil || request.URL == nil {
+		return false
+	}
+	values := request.Header.Values(t422QueryEvidenceHeader)
+	return len(values) == 1 && values[0] == t422QueryEvidenceValue &&
+		(request.URL.Path == api.SearchPath || request.URL.Path == t421ExactMCPPath ||
+			request.URL.Path == t421ExactFinalAuthorityPath)
+}
+
 func t421ExactReadLimits(
 	request *http.Request,
 	final ...t421ExactFinalAuthorityRead,
 ) (readaccounting.Counts, bool) {
 	if request == nil || request.URL == nil || request.URL.Path != request.URL.EscapedPath() {
+		return readaccounting.Counts{}, false
+	}
+	proof := request.Header.Values(t422QueryEvidenceHeader)
+	if len(proof) != 0 && !t422QueryEvidenceRoute(request) {
 		return readaccounting.Counts{}, false
 	}
 	if request.URL.Path == t421ExactMCPPath {
@@ -465,6 +503,12 @@ func t421ExactReadLimits(
 		}
 		return final[1].Limits, true
 	case api.SearchPath:
+		if len(proof) != 0 {
+			parameters, ok := t421ExactProductQuery(request.URL.RawQuery, []string{"q", "scope", "max_matches", "context_lines"})
+			if !ok || parameters.Get("q") != "T401Fixture" || parameters.Get("scope") != "all_code" {
+				return readaccounting.Counts{}, false
+			}
+		}
 		return t421ExactSearchReadLimits(request.URL.RawQuery)
 	case t421ProductServicePath:
 		return t421ExactServiceReadLimits(request.URL.RawQuery)
@@ -574,6 +618,18 @@ func t421ExactMCPReadLimits(request *http.Request) (readaccounting.Counts, bool)
 	var name string
 	if !ok || !t421ExactJSONDecode(params["name"], &name) {
 		return readaccounting.Counts{}, false
+	}
+	if len(request.Header.Values(t422QueryEvidenceHeader)) != 0 {
+		var input struct {
+			Query        string `json:"query"`
+			Scope        string `json:"scope"`
+			MaxMatches   int    `json:"max_matches"`
+			ContextLines int    `json:"context_lines"`
+		}
+		if name != "search_code" || !t421ExactMCPArguments(params["arguments"], &input, "query", "scope", "max_matches", "context_lines") ||
+			input.Query != "T401Fixture" || input.Scope != "all_code" {
+			return readaccounting.Counts{}, false
+		}
 	}
 	return t421ExactMCPToolLimits(name, params["arguments"])
 }

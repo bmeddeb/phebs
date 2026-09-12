@@ -58,6 +58,9 @@ type Ledger struct {
 	limits Counts
 	closed bool
 	err    error
+
+	searchRepositoriesRequired bool
+	searchRepositories         *uint64
 }
 
 // Start attaches an independent ledger. Nested scopes refuse instead of
@@ -142,5 +145,8 @@ func (ledger *Ledger) Finish() (Counts, error) {
 	ledger.mu.Lock()
 	defer ledger.mu.Unlock()
 	ledger.closed = true
+	if ledger.searchRepositoriesRequired && ledger.searchRepositories == nil && ledger.err == nil {
+		ledger.err = ErrEvent
+	}
 	return ledger.counts, ledger.err
 }

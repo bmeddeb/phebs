@@ -168,6 +168,23 @@ func TestAccountingV3RecoveryCensusPhaseBounds(t *testing.T) {
 	}
 }
 
+func TestAccountingV3QueryResultUnits(t *testing.T) {
+	plan := accountingTestPlan(t)
+	if strings.Count(plan.Correction.ReadAccountingPolicy, queryResultUnitsV3) != 1 {
+		t.Fatal("V3 must define logical query-result units exactly once")
+	}
+	for _, path := range []string{"plan.json", "plan-v2.json"} {
+		raw, err := os.ReadFile(path)
+		if err != nil || bytes.Contains(raw, []byte("Q-result-units-v3")) {
+			t.Fatalf("query-result policy entered retained %s: %v", path, err)
+		}
+	}
+	plan.Correction.ReadAccountingPolicy = strings.TrimSuffix(plan.Correction.ReadAccountingPolicy, ";"+queryResultUnitsV3)
+	if err := validatePlanExecutionContract(plan); err == nil {
+		t.Fatal("V3 accepted an omitted query-result unit definition")
+	}
+}
+
 func TestAccountingV3FullFrozenRoundTrip(t *testing.T) {
 	plan, err := BuildPlanV3(testSourceCommit)
 	if err != nil {

@@ -34,7 +34,8 @@ type epochQueryProjectionContext struct {
 func newEpochQueryProjectionContext(ctx context.Context, repository string, final epochFinalResponse, catalog servicecatalog.Catalog) (*epochQueryProjectionContext, error) {
 	if ctx == nil || ctx.Err() != nil || repository == "" || final.Schema != "t421-final-authority-source-free-v1" || final.Projection.Schema != "t421-final-state-projection-source-free-v1" ||
 		!final.Authority.Current || !gitobj.IsObjectID(final.Authority.PhysicalCommit) || !validDigest(final.Authority.CatalogRootSHA256) ||
-		!validDigest(final.Authority.SourceGenerationSHA256) || !validDigest(final.Authority.SearchGenerationSHA256) || !validDigest(final.Projection.CatalogLogicalSHA256) {
+		!validDigest(final.Authority.SourceGenerationSHA256) || !validDigest(final.Authority.SearchGenerationSHA256) || !validDigest(final.Projection.CatalogLogicalSHA256) ||
+		final.QueryAuthority == nil || !validDigest(final.QueryAuthority.CatalogSourceGenerationSHA256) {
 		return nil, ErrExecutionEpochOne
 	}
 	actual, err := t421catalogprojection.Derive(ctx, catalog)
@@ -43,6 +44,8 @@ func newEpochQueryProjectionContext(ctx context.Context, repository string, fina
 		SetIdentity(actual.Placements) != p.Placements || SetIdentity(actual.UnownedPrefixes) != p.UnownedPrefixes || SetIdentity(actual.ServiceQueries) != p.ServiceQueries {
 		return nil, ErrExecutionEpochOne
 	}
+	queryAuthority := *final.QueryAuthority
+	final.QueryAuthority = &queryAuthority
 	result := &epochQueryProjectionContext{repository: repository, final: final, placements: make(map[string]oraclePlacement)}
 	dispositions := make(map[string]string, len(catalog.Services))
 	for _, service := range catalog.Services {
@@ -275,7 +278,7 @@ func (projection *epochQueryProjection) search(body []byte) error {
 		if a == nil || servicequery.ValidateAuthority(*a) != nil || scope.Repository != projection.context.repository || scope.ServiceKey != projection.parameters["service_key"] ||
 			scope.ServiceStatus != "current" || scope.MembershipPolicy != "accepted-roles-union-shared-included-unowned-excluded-v1" ||
 			a.Repository != scope.Repository || a.ServiceKey != scope.ServiceKey || a.Status != "current" || a.RevisionCommit != f.PhysicalCommit ||
-			a.CurrentCatalogGeneration != f.CatalogRootSHA256 || a.ActiveCatalogGeneration != f.CatalogRootSHA256 || a.ActiveSourceGeneration != f.SourceGenerationSHA256 ||
+			a.CurrentCatalogGeneration != f.CatalogRootSHA256 || a.ActiveCatalogGeneration != f.CatalogRootSHA256 || a.ActiveSourceGeneration != projection.context.final.QueryAuthority.CatalogSourceGenerationSHA256 ||
 			a.RepositorySourceGeneration != f.SourceGenerationSHA256 || a.RepositorySearchGeneration != f.SearchGenerationSHA256 {
 			return ErrExecutionEpochOne
 		}
@@ -379,7 +382,7 @@ func (projection *epochQueryProjection) service(body []byte) error {
 	if value.SchemaVersion != "phebs-service-detail-v1" || repository.Repository != projection.context.repository || repository.SourceCommit != f.PhysicalCommit ||
 		repository.CatalogGeneration != f.CatalogRootSHA256 || repository.CatalogDigest != projection.context.final.Projection.CatalogLogicalSHA256 ||
 		service.Repository != repository.Repository || service.Key != projection.parameters["service_key"] || service.Disposition != "accepted" || service.Status != "current" || service.Removed ||
-		service.ActiveCatalogGeneration != f.CatalogRootSHA256 || service.ActiveSourceGeneration != f.SourceGenerationSHA256 || service.Incarnation == 0 || service.ControlRevision == 0 ||
+		service.ActiveCatalogGeneration != f.CatalogRootSHA256 || service.ActiveSourceGeneration != projection.context.final.QueryAuthority.CatalogSourceGenerationSHA256 || service.Incarnation == 0 || service.ControlRevision == 0 ||
 		service.MembershipCount != len(value.Memberships) || len(value.Successors) != 0 {
 		return ErrExecutionEpochOne
 	}
@@ -426,7 +429,7 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 	if root.Repository != projection.context.repository || root.State != "complete" || root.Reason != "" || root.RootSchema != relationshippublication.RootSchemaV3 || root.Generation != f.RelationshipGenerationSHA256 || root.RootDigest != f.RelationshipRootSHA256 ||
 		root.ServiceKey != q.ServiceKey || root.ServiceIncarnation == 0 || !validDigest(root.ServiceGeneration) || !validDigest(root.AuthorityDigest) || root.Unavailable != nil ||
 		!root.RepositoryComplete || !root.AllServicesComplete || root.FailedServiceCount != 0 || a == nil || a.Repository != root.Repository ||
-		a.CatalogGenerationDigest != f.CatalogRootSHA256 || a.CatalogDigest != projection.context.final.Projection.CatalogLogicalSHA256 || a.CatalogSourceGeneration != f.SourceGenerationSHA256 ||
+		a.CatalogGenerationDigest != f.CatalogRootSHA256 || a.CatalogDigest != projection.context.final.Projection.CatalogLogicalSHA256 || a.CatalogSourceGeneration != projection.context.final.QueryAuthority.CatalogSourceGenerationSHA256 ||
 		a.ResolverGenerationDigest != f.ResolverCatalogGenerationSHA256 || a.ResolverRootDigest != f.ResolverCatalogRootSHA256 || a.Upstream == nil ||
 		a.Upstream.Repository != root.Repository || a.Upstream.Observation.ObservationGenerationDigest != f.ObservationGenerationSHA256 ||
 		a.Upstream.Observation.SourceGenerationDigest != f.SourceGenerationSHA256 {

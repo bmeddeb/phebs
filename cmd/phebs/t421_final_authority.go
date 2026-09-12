@@ -82,6 +82,22 @@ type t421FinalAuthorityResponse struct {
 	Authority       t421FinalAuthorityState               `json:"authority"`
 	Projection      t421FinalStateProjection              `json:"projection"`
 	ExtractionRoots []t421extractionprojection.RootResult `json:"extraction_roots"`
+	QueryAuthority  *t422QueryAuthority                   `json:"query_authority,omitempty"`
+}
+
+type t422QueryAuthority struct {
+	CatalogSourceGenerationSHA256 string `json:"catalog_source_generation_sha256"`
+}
+
+func t422FinalQueryAuthority(ctx context.Context, root servicecatalogv3.Root) (*t422QueryAuthority, error) {
+	if selected, _ := ctx.Value(t422QueryEvidenceKey{}).(bool); !selected {
+		return nil, nil
+	}
+	digest, err := servicecatalogv3.SourceGenerationDigest(root)
+	if err != nil {
+		return nil, err
+	}
+	return &t422QueryAuthority{CatalogSourceGenerationSHA256: digest}, nil
 }
 
 type t421FinalAuthorityReader struct {
@@ -313,6 +329,10 @@ func (reader *t421FinalAuthorityReader) Read(
 			RelationshipResults: semantic.Families, ProductRelationship: semantic.Product,
 		},
 		ExtractionRoots: extractionRoots,
+	}
+	response.QueryAuthority, err = t422FinalQueryAuthority(ctx, catalogRoot)
+	if err != nil {
+		return nil, nil, err
 	}
 	raw, err := t421FinalMarshal(response)
 	if err != nil {

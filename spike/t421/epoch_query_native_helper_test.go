@@ -32,9 +32,11 @@ type epochNativeQueryInput struct {
 }
 
 type epochNativeQueryOutput struct {
-	Schema      string                  `json:"schema"`
-	NextOrdinal uint64                  `json:"next_ordinal"`
-	Rows        []ExecutionProductQuery `json:"rows"`
+	Schema                  string                  `json:"schema"`
+	NextOrdinal             uint64                  `json:"next_ordinal"`
+	Rows                    []ExecutionProductQuery `json:"rows"`
+	query, transport, stage string
+	page                    uint64
 }
 
 // This opt-in test process has no execution-run or phase-control facsimile.
@@ -80,7 +82,7 @@ func TestEpochNativeQueryHelper(t *testing.T) {
 	}
 	result, err := runEpochNativeQueries(ctx, input, queries)
 	if err != nil {
-		t.Fatalf("native query corridor refused: completed_rows=%d next_ordinal=%d", len(result.Rows), result.NextOrdinal)
+		t.Fatalf("native query corridor refused: completed_rows=%d next_ordinal=%d query=%s transport=%s page=%d stage=%s", len(result.Rows), result.NextOrdinal, result.query, result.transport, result.page, result.stage)
 	}
 	raw, err := json.Marshal(result)
 	if err != nil || len(raw)+1 > 64<<10 || ctx.Err() != nil {
@@ -123,6 +125,7 @@ func runEpochNativeQueries(ctx context.Context, input epochNativeQueryInput, que
 	result := epochNativeQueryOutput{Schema: epochNativeQuerySchema, NextOrdinal: input.NextOrdinal}
 	for _, transport := range []string{"http", "mcp"} {
 		for _, query := range correctedQueryCases() {
+			result.query, result.transport, result.page, result.stage = query.Name, transport, 0, "project"
 			projection, err := queries.queryProjection(query)
 			maximum, maxErr := epochProductRemainingReads(result.Rows)
 			if err != nil || maxErr != nil {
@@ -131,6 +134,7 @@ func runEpochNativeQueries(ctx context.Context, input epochNativeQueryInput, que
 			row := ExecutionProductQuery{Name: query.Name, Transport: transport, FirstOrdinal: result.NextOrdinal}
 			cursor := ""
 			for page := uint64(0); page < correctedProductQueryPages(query); page++ {
+				result.page, result.stage = page+1, "request"
 				ordinal := result.NextOrdinal
 				result.NextOrdinal++ // Consumed requests are never retried.
 				raw, status, contentType, report, err := readEpochNativeQuery(ctx, input, query, transport, cursor, ordinal, maximum)
@@ -138,15 +142,18 @@ func runEpochNativeQueries(ctx context.Context, input epochNativeQueryInput, que
 					return result, errEpochInspection
 				}
 				if transport == "http" {
+					result.stage = "project"
 					row.Code = strconv.Itoa(status)
 					cursor, err = projection.addHTTP(status, raw)
 				} else {
+					result.stage = "decode"
 					var structured []byte
 					if status != http.StatusOK {
 						return result, errEpochInspection
 					}
 					structured, row.Code, err = decodeEpochQueryMCP(query, contentType, strconv.FormatUint(ordinal, 10), raw)
 					if err == nil {
+						result.stage = "project"
 						cursor, err = projection.addMCP(row.Code, structured)
 					}
 				}
@@ -159,8 +166,12 @@ func runEpochNativeQueries(ctx context.Context, input epochNativeQueryInput, que
 				row.ControlFileReads += report.ControlFileReads
 				row.StoreReadAttempts += report.StoreReadAttempts
 				row.MemberVisits += report.MemberVisits
+				if report.VisibleRepositories != nil {
+					row.VisibleRepositories, row.VisibleRepositoriesObserved = *report.VisibleRepositories, true
+				}
 				row.LastOrdinal = ordinal
 			}
+			result.stage = "finish"
 			actual, err := projection.finish()
 			controls, stores, countErr := correctedProductQueryControlReads(query)
 			transportIndex := 0
@@ -200,6 +211,9 @@ func readEpochNativeQuery(ctx context.Context, input epochNativeQueryInput, quer
 	request.Header.Set("Authorization", "Bearer "+input.APIKey)
 	request.Header.Set("X-Phebs-T421-Exact-Reads", "source-free-v1")
 	request.Header.Set("X-Phebs-T421-Exact-Read-Ordinal", id)
+	if query.Name == "all_code_structural_marker" {
+		request.Header.Set("X-Phebs-T422-Query-Evidence", "bound-v1")
+	}
 	if payload != nil {
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Accept", "application/json, text/event-stream")
@@ -214,7 +228,7 @@ func readEpochNativeQuery(ctx context.Context, input epochNativeQueryInput, quer
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, limit+1))
 	closeErr := response.Body.Close()
 	report, reportErr := decodeEpochReport(response.Trailer.Values(epochReadTrailer), ordinal, maximum)
-	if readErr != nil || closeErr != nil || reportErr != nil || int64(len(raw)) > limit || ctx.Err() != nil ||
+	if readErr != nil || closeErr != nil || reportErr != nil || !validEpochQueryRepositories(report, query.Name == "all_code_structural_marker") || int64(len(raw)) > limit || ctx.Err() != nil ||
 		len(response.Header.Values(epochReadTrailer)) != 0 || len(response.Trailer) != 1 || response.Uncompressed || response.Header.Get("Content-Encoding") != "" ||
 		payload != nil && len(response.Header.Values("Content-Type")) != 1 {
 		return nil, 0, "", report, errEpochInspection
@@ -276,5 +290,19 @@ func TestEpochNativeQueryInputRefusals(t *testing.T) {
 				t.Fatal("altered private input accepted")
 			}
 		})
+	}
+}
+
+func TestEpochNativeQueryFailureLocation(t *testing.T) {
+	queries, _ := epochQueryProjectionFixture(t)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	result, err := runEpochNativeQueries(ctx, epochNativeQueryInput{Listen: "127.0.0.1:1", NextOrdinal: 2}, queries)
+	if err != errEpochInspection || len(result.Rows) != 0 || result.NextOrdinal != 3 || result.query != "all_code_structural_marker" || result.transport != "http" || result.page != 1 || result.stage != "request" {
+		t.Fatal("closed failure location or consumed ordinal lost")
+	}
+	encoded := epochQueryMarshal(t, result)
+	if bytes.Contains(encoded, []byte("request")) || bytes.Contains(encoded, []byte("all_code")) {
+		t.Fatal("diagnostic leaked into result protocol")
 	}
 }

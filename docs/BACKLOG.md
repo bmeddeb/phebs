@@ -7533,16 +7533,113 @@ digests passed before dispatching the native fixture. Its retained gate root
 is the private `phebs-t422-native-query-gates.cIi7k1` directory. At this
 bookmark the native run is still pending; no native query pass is established.
 
-The next receipt/teardown implementation has two source-proven definition
-gaps, not measured native failures. A nine-page relationship result requires
+That native attempt subsequently failed in 550.65s (package 551.217s), with
+the exact three test-file hashes unchanged from the bookmark. Cold F passed;
+the query helper completed two rows, then refused with next ordinal five in
+2.36s. Actual ordinal-four accounting was complete C0/S11/M3584/W0, which fits
+the first-service detail recipe. No response body was retained, so the exact
+first failing predicate is not historical evidence. Two independent source
+reviews nevertheless found a guaranteed incompatible equality: the detail,
+service-search and relationship projectors compare catalog source-generation
+identity with the different repository/search source-generation identity.
+The synthetic projection fixtures assigned the same value to both and hid
+the defect. This is not a measured read-limit failure or a native query pass.
+The failed fixture and its logs remain private and intact; no matching
+Phebs/query-helper/Surreal process remained in the post-run process check.
+
+The correction must use actual catalog-source evidence from F's existing
+validated native root, not reconstruct a root from expected corpus data or
+relax the comparison to a syntactically valid digest. A private opt-in F
+extension and query scope observation will carry those missing facts without
+another read. Prospective V3 now explicitly defines query-result authorization
+and snapshot counts as distinct complete logical verdicts/authority values,
+not counts of native handler calls. Full corrected normal/race/native proof
+and receipt conversion remain pending.
+
+The native producer's nine-file implementation passed focused normal/race
+across readaccounting (0.224/1.325s), search (4.296/5.349s) and command
+(0.621/1.982s), with pinned scoped lint and whitespace clean. Its ordered
+source manifest is
+`6be140679739e5469d75f14e20754f227c09ed0653c11cf0b9eab63358e9083d`.
+The five-file catalog-source consumer correction passed normal/race in
+1.060/5.898s, pinned scoped lint and whitespace, and independent source/cost
+review with all four severity counts zero at ordered manifest
+`a0dab9546da06a62936c732b263e46924abbf2f785b22a0b880741ce6965a7fe`.
+These are focused gates, not the still-pending complete corrected/native gate.
+The namespace fixture now derives a real current-version catalog root and
+source digest, with that same root's actual root/logical identities in F;
+its physical identity and product payloads remain explicitly supplied.
+
+The native producer adds one absent-context lookup to ordinary completed
+non-streaming search. Existing exact-read ledgers gain two fixed fields and
+report completion adds a scalar-getter mutex hold; opted-in all-code queries
+add one context value, one locked scalar observation and a detached scalar in
+the report. There is no additional repository enumeration, per-repository
+pass, SDK/file read, child or cache. The F opt-in repeats existing bounded
+root validation (at most sixty-four descriptors and 256 KiB canonical root
+work) plus its source-generation tuple hash over the already loaded root;
+it adds 142 bytes to the actual indented F response (129 in compact JSON).
+The optional report field adds at most forty-four
+bytes. No-header serialization omits both fields. Query-context reconstruction
+now holds the reader mutex through the existing at-most-one-MiB F encoding
+and baseline comparison; it adds no encoding or native read. The existing
+fixed parent query lock still spans each request's pages and projections.
+Sync ticks, retries/no-ops, publication transitions and streaming search gain
+no new work. V3 authoring adds a bounded policy-string append/serialization;
+no numerical work, output or storage allowance changes.
+
+Final producer coverage also exercises real inherited DA/PC, owner/request
+admission and authentication: epoch-five phase fourteen accepts, while
+epoch-four phase eight and epoch-five phase thirteen refuse before the supplied
+F reader runs. Its body is explicitly supplied, not a native catalog proof;
+all three helpers join their actual PC/DA/auth lifetimes with zero dispatch
+attempts and create no engine. The final ten-path producer manifest is
+`01fbf5c17d3bfe51fb01776016ed63e81419c38b5d6f62602f44b3a6b6e30969`.
+Matching focused normal/race results are 0.163/1.248s for readaccounting,
+4.937/5.899s for search and 0.847/2.795s for command; lint and whitespace pass.
+The lead's independent producer/test/cost review closes the compact-versus-
+emitted-byte wording gap and has no remaining finding.
+
+The final eight-path namespace/cardinality consumer and helper manifest is
+`5f9729a4fd440144a3b094783b87608ada44eb6ed70ea15b95f96c6230b324c2`.
+Matching focused normal/race results are 1.347/10.432s for spike and
+1.302/4.241s for command, with pinned lint, whitespace and fresh independent
+review all clear. Both fixed `all_code_structural_marker` calls now require
+actual observed cardinality one; absence, zero, two or an unsolicited field
+refuses without losing already accepted native C/S/M totals. A negative test
+caught the author's initial shorthand case-name mismatch before any native
+run. Private helper failures now name only the fixed query, transport, page
+and request/decode/project/finish stage, never response bodies or raw errors.
+These diagnostic fields do not enter its result JSON.
+
+The complete readaccounting/search packages also passed normal in
+0.404/23.714s and race in 1.185/26.734s. V3 accounting and canonical-contract
+normal gates passed in 26.445s, including the full frozen round trip; the
+unsealed plan is 166,935 bytes and historical canonical bytes remain exact.
+The lead's overbroad three-minute race selector timed out in the unchanged
+full-corpus canonical-generation/validation path of
+`TestAccountingV3FullFrozenRoundTrip` (package 180.910s), without a race or
+assertion failure before the alarm. Its normal round trip had passed in
+25.37s. The matching race run with a ten-minute machine-test allowance then
+passed in 330.137s; this changed no ceremony or production deadline.
+Full ci-static (vet, zero-issue pinned lint and all-package compilation) has
+also passed on the corrected compiled inputs. Documentation/glossary passed
+in 0.686s and 0.545s before this final result append. Independent record review
+closed one stale present-tense definition-gap paragraph; no other record/cost
+finding remains. No corrected native query pass is claimed at this bookmark.
+
+At `ec014403`, the receipt/teardown trace identified two source-proven
+definition/evidence gaps, not measured native failures. A nine-page relationship result requires
 fresh authorization on each page, so the receipt's one authorization decision
 and one authority snapshot cannot mean raw handler/read invocation counts.
 Two byte-identical actual F values support one distinct authority value, but
-the logical-result units require an owning definition. Separately, an
+the logical-result units needed an owning definition. Separately, an
 unfiltered all-code search truncated to one hit does not establish one visible
 repository: neither a single configured source nor named-repository F checks
-exclude other stored repositories. Use actual already-executed native scope
-evidence, not expected query fields or another independent census.
+exclude other stored repositories. The correction above closes the unit
+definition and native evidence-producer gaps; full native proof and genuine
+receipt conversion remain pending. Neither expected query fields nor another
+independent census may substitute for actual already-executed scope evidence.
 
 Phase fifteen must retain the parent through the last server's genuine close,
 admit its existing single nonforced detach site, preserve the complete recorded

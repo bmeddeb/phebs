@@ -34,13 +34,14 @@ const (
 )
 
 type epochInspectionReport struct {
-	Schema             string `json:"schema"`
-	RequestOrdinal     uint64 `json:"request_ordinal"`
-	Status             string `json:"status"`
-	ControlFileReads   uint64 `json:"control_file_reads"`
-	StoreReadAttempts  uint64 `json:"store_read_attempts"`
-	MemberVisits       uint64 `json:"member_visits"`
-	StoreWriteAttempts uint64 `json:"store_write_attempts"`
+	Schema              string  `json:"schema"`
+	RequestOrdinal      uint64  `json:"request_ordinal"`
+	Status              string  `json:"status"`
+	ControlFileReads    uint64  `json:"control_file_reads"`
+	StoreReadAttempts   uint64  `json:"store_read_attempts"`
+	MemberVisits        uint64  `json:"member_visits"`
+	StoreWriteAttempts  uint64  `json:"store_write_attempts"`
+	VisibleRepositories *uint64 `json:"visible_repositories,omitempty"`
 }
 
 type epochProgressInspection struct {
@@ -102,6 +103,7 @@ type executionEpochInspection struct {
 	collectionAuthority                AuthorityPhaseResult
 	productAuthority                   AuthorityPhaseResult
 	productBaseline                    *[sha256.Size]byte
+	productQueryAuthority              epochQueryAuthority
 	productFinalCalls                  uint8
 	productFirstFinalOrdinal           uint64
 	productQueriesComplete             bool // Set only by the typed, complete query corridor.
@@ -233,22 +235,22 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 }
 
 func (reader *executionEpochInspection) readWithFence(ctx context.Context, path string, limit int64, maximum epochInspectionReport, fence time.Time) (_ []byte, _ int, _ epochInspectionReport, retErr error) {
-	raw, status, _, report, err := reader.readRequest(ctx, path, nil, limit, maximum, fence)
+	raw, status, _, report, err := reader.readRequest(ctx, path, nil, limit, maximum, fence, false)
 	return raw, status, report, err
 }
 
 // Caller holds reader.mu through the typed query decoder and owns the closed
 // tools/call encoding. A nil payload means GET; POST uses only /api/mcp.
 // Content-Type belongs to this response, never to shared/stale header state.
-func (reader *executionEpochInspection) readQueryRequest(ctx context.Context, path string, payload []byte, limit int64, maximum epochInspectionReport) ([]byte, int, string, epochInspectionReport, error) {
+func (reader *executionEpochInspection) readQueryRequest(ctx context.Context, path string, payload []byte, limit int64, maximum epochInspectionReport, repositories bool) ([]byte, int, string, epochInspectionReport, error) {
 	if reader.run == nil || reader.run.epoch.Epoch != 5 || reader.projection.Phase != "product_queries" ||
 		reader.productFinalCalls != 1 || reader.productQueriesComplete {
 		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
-	return reader.readRequest(ctx, path, payload, limit, maximum, time.Time{})
+	return reader.readRequest(ctx, path, payload, limit, maximum, time.Time{}, repositories)
 }
 
-func (reader *executionEpochInspection) readRequest(ctx context.Context, path string, payload []byte, limit int64, maximum epochInspectionReport, fence time.Time) (_ []byte, _ int, _ string, _ epochInspectionReport, retErr error) {
+func (reader *executionEpochInspection) readRequest(ctx context.Context, path string, payload []byte, limit int64, maximum epochInspectionReport, fence time.Time, repositories bool) (_ []byte, _ int, _ string, _ epochInspectionReport, retErr error) {
 	stage, ordinal := "preflight", reader.next
 	var cause error
 	defer func() {
@@ -323,6 +325,9 @@ func (reader *executionEpochInspection) readRequest(ctx context.Context, path st
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
 	request.Header.Set("X-Phebs-T421-Exact-Reads", "source-free-v1")
 	request.Header.Set("X-Phebs-T421-Exact-Read-Ordinal", strconv.FormatUint(ordinal, 10))
+	if repositories || path == "/api/t421/final-authority" && reader.plan.Schema == PlanV3Schema && run.epoch.Epoch == 5 && reader.projection.Phase == "product_queries" {
+		request.Header.Set("X-Phebs-T422-Query-Evidence", "bound-v1")
+	}
 	if !fence.IsZero() {
 		request.Header.Set("X-Phebs-T422-Ballast-Unix-Nano", strconv.FormatInt(fence.UnixNano(), 10))
 	}
@@ -353,7 +358,7 @@ func (reader *executionEpochInspection) readRequest(ctx context.Context, path st
 		}
 		reader.reports, reader.totals = count, readaccounting.Counts{ControlFileReads: controls, StoreReadAttempts: stores, MemberVisits: members}
 	}
-	if readErr != nil || closeErr != nil || int64(len(raw)) > limit || ctx.Err() != nil || reportErr != nil ||
+	if readErr != nil || closeErr != nil || int64(len(raw)) > limit || ctx.Err() != nil || reportErr != nil || !validEpochQueryRepositories(report, repositories) ||
 		len(response.Header.Values(epochReadTrailer)) != 0 || len(response.Trailer) != 1 || response.Uncompressed || response.Header.Get("Content-Encoding") != "" ||
 		payload != nil && len(response.Header.Values("Content-Type")) != 1 {
 		stage, cause = "response_read_or_accounting", errors.Join(readErr, closeErr, context.Cause(ctx), reportErr)
@@ -558,6 +563,11 @@ type epochFinalResponse struct {
 	Authority       epochFinalAuthority    `json:"authority"`
 	Projection      epochFinalProjection   `json:"projection"`
 	ExtractionRoots []ExtractionRootResult `json:"extraction_roots"`
+	QueryAuthority  *epochQueryAuthority   `json:"query_authority,omitempty"`
+}
+
+type epochQueryAuthority struct {
+	CatalogSourceGenerationSHA256 string `json:"catalog_source_generation_sha256"`
 }
 
 func (reader *executionEpochInspection) Final(ctx context.Context) (authority AuthorityPhaseResult, projection PhaseStateProjection, report epochInspectionReport, retErr error) {
@@ -663,6 +673,9 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
+	if phase != "product_queries" && value.QueryAuthority != nil || phase == "product_queries" && (value.QueryAuthority == nil || !validDigest(value.QueryAuthority.CatalogSourceGenerationSHA256)) {
+		return authority, projection, errEpochInspection
+	}
 	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && phase != "archive_restore" && phase != "lifecycle_collection" && phase != "product_queries" && !pressureInspectionPhase(phase) {
 		return authority, projection, errEpochInspection
 	}
@@ -708,6 +721,10 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 			reader.collectionAuthority.Phase != "lifecycle_collection" || !reflect.DeepEqual(authority, prior) {
 			return authority, projection, errEpochInspection
 		}
+		if reader.productFinalCalls > 0 && reader.productQueryAuthority != *value.QueryAuthority {
+			return authority, projection, errEpochInspection
+		}
+		reader.productQueryAuthority = *value.QueryAuthority // Detached scalar from the validated actual F.
 		return authority, projection, nil
 	}
 	if pressureInspectionPhase(phase) {

@@ -17,6 +17,7 @@ const (
 	ExecutionProfileV3Schema    = "t422-production-execution-profile-v3"
 	PhaseRuntimeBindingV3Schema = "t422-phase-runtime-binding-v3"
 	retainedPlanV2SHA256        = "sha256:2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422"
+	queryResultUnitsV3          = "Q-result-units-v3:authorization_decisions=distinct-consistent-logical-transport-verdicts-after-fresh-page-authorization;authority_snapshots=distinct-complete-F-authority-values-bracketing-all-pages;authorized_repositories=actual-query-admitted-repository-set-cardinality-not-returned-hit-count;not-native-authorization-or-snapshot-invocation-counts"
 )
 
 // ProcessAccountingContract distinguishes admitted dispatch permissions from
@@ -96,6 +97,7 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 	}
 	plan.Correction.ReadAccountingPolicy = strings.Replace(plan.Correction.ReadAccountingPolicy,
 		"prep-S=D+10+sum(A1..A4),Ai=[1,64]", "prep-S=D+10+sum(A1..A5),Ai=[1,64]", 1)
+	plan.Correction.ReadAccountingPolicy += ";" + queryResultUnitsV3
 	// Epoch three must already run the return-A configuration to produce its
 	// marker. Epoch four belongs to the later hard-death proof, so V3 recovers
 	// this marker in the same scheduler attempt after publication unwinds.

@@ -546,7 +546,7 @@ func TestEpochRestoredQueryTransport(t *testing.T) {
 			if mode == "canceled" {
 				cancel()
 			}
-			raw, status, contentType, _, err := reader.readQueryRequest(ctx, path, payload, limit, epochInspectionReport{ControlFileReads: 1})
+			raw, status, contentType, _, err := reader.readQueryRequest(ctx, path, payload, limit, epochInspectionReport{ControlFileReads: 1}, false)
 			valid := mode == "post" || mode == "get"
 			if (err == nil) != valid || valid && (status != http.StatusOK || contentType != "application/json" || string(raw) != `{"v":1}`) {
 				t.Fatal("query transport disposition", err, status, contentType, string(raw))
@@ -616,12 +616,16 @@ func TestEpochRestoredProductDeadline(t *testing.T) {
 }
 
 func TestEpochRestoredProductFinalBracket(t *testing.T) {
-	for _, mode := range []string{"valid", "relationship", "root_detail", "missing_queries", "missing_row", "before_gap", "after_gap", "returned_alias"} {
+	for _, mode := range []string{"valid", "relationship", "root_detail", "query_authority", "missing_query_authority", "missing_queries", "missing_row", "before_gap", "after_gap", "returned_alias"} {
 		t.Run(mode, func(t *testing.T) {
 			_, value := epochTestFinal(t)
+			value.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: testDigest("catalog-source")}
 			var calls atomic.Int32
 			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				calls.Add(1)
+				if r.Header.Get("X-Phebs-T422-Query-Evidence") != "bound-v1" {
+					t.Error("phase14 F omitted query authority request")
+				}
 				w.Header().Set("Trailer", epochReadTrailer)
 				_, _ = w.Write(epochTestJSON(t, value, true))
 				pressureInspectionTrailer(t, w, r, epochInspectionReport{})
@@ -654,6 +658,10 @@ func TestEpochRestoredProductFinalBracket(t *testing.T) {
 				value.Authority.RelationshipRootSHA256 = testDigest("different root")
 			case "root_detail":
 				value.ExtractionRoots[0].Totals.Rows++
+			case "query_authority":
+				value.QueryAuthority.CatalogSourceGenerationSHA256 = testDigest("changed-catalog-source")
+			case "missing_query_authority":
+				value.QueryAuthority = nil
 			case "missing_queries":
 				reader.productQueriesComplete = false
 			case "missing_row":
@@ -676,6 +684,19 @@ func TestEpochRestoredProductFinalBracket(t *testing.T) {
 			}
 			if (mode == "missing_queries" || mode == "missing_row" || mode == "before_gap" || mode == "after_gap") && before != 1 {
 				t.Fatal("incomplete corridor dispatched second F")
+			}
+		})
+	}
+}
+
+func TestEpochRestoredQueryAuthorityScope(t *testing.T) {
+	for _, schema := range []string{PlanSchema, PlanV2Schema, PlanV3Schema} {
+		t.Run(schema, func(t *testing.T) {
+			reader, value := epochTestFinal(t)
+			reader.plan.Schema = schema
+			value.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: testDigest("catalog-source")}
+			if _, _, err := reader.decodeFinal(epochTestJSON(t, value, true)); err == nil || reader.productQueryAuthority != (epochQueryAuthority{}) {
+				t.Fatal("non-phase14 extension changed the baseline")
 			}
 		})
 	}

@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -261,6 +262,9 @@ func (s *Searcher) Search(ctx context.Context, raw string, opts Options) (*Resul
 	filterResultVersions(res, compiled.versions)
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("search result validation: %w", err)
+	}
+	if err := readaccounting.ObserveSearchRepositories(ctx, uint64(len(compiled.versions))); err != nil {
+		return nil, fmt.Errorf("search repository observation: %w", err)
 	}
 	if maxFiles := clamp(opts.MaxMatches, 50, 500); len(res.Files) > maxFiles {
 		res.Files = res.Files[:maxFiles]

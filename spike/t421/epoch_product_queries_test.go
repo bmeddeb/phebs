@@ -38,6 +38,9 @@ func epochProductTestRows(t *testing.T) []ExecutionProductQuery {
 			rows = append(rows, ExecutionProductQuery{Name: query.Name, Transport: transport, Code: code,
 				ProjectionSHA256: query.ProjectionSHA256, Pages: pages, Records: query.ExpectedRecords, Paths: query.ExpectedPaths,
 				FirstOrdinal: ordinal, LastOrdinal: ordinal + pages - 1, ControlFileReads: controls, StoreReadAttempts: stores, MemberVisits: members})
+			if query.Name == "all_code_structural_marker" {
+				rows[len(rows)-1].VisibleRepositories, rows[len(rows)-1].VisibleRepositoriesObserved = 1, true
+			}
 			ordinal += pages
 		}
 	}
@@ -49,7 +52,7 @@ func TestEpochProductQueryPrefix(t *testing.T) {
 	if !validExecutionProductQueries(rows) || len(rows) != 22 || rows[len(rows)-1].LastOrdinal-rows[0].FirstOrdinal != 37 {
 		t.Fatal("closed modeled inventory refused")
 	}
-	for _, mode := range []string{"missing", "reordered", "duplicate", "hash", "pages", "ordinal", "overflow", "controls", "stores", "members", "hidden_reads"} {
+	for _, mode := range []string{"missing", "reordered", "duplicate", "hash", "pages", "ordinal", "overflow", "controls", "stores", "members", "hidden_reads", "repositories_absent", "repositories_zero", "repositories_two", "repositories_foreign"} {
 		t.Run(mode, func(t *testing.T) {
 			bad := slices.Clone(rows)
 			switch mode {
@@ -76,9 +79,71 @@ func TestEpochProductQueryPrefix(t *testing.T) {
 			case "hidden_reads":
 				bad[1].StoreReadAttempts++
 				bad[2].StoreReadAttempts-- // Preserve total: per-transport check still refuses.
+			case "repositories_absent":
+				bad[0].VisibleRepositoriesObserved = false
+			case "repositories_zero":
+				bad[0].VisibleRepositories = 0
+			case "repositories_two":
+				bad[11].VisibleRepositories = 2
+			case "repositories_foreign":
+				bad[1].VisibleRepositories, bad[1].VisibleRepositoriesObserved = 1, true
 			}
 			if validExecutionProductQueries(bad) {
 				t.Fatal("accepted altered execution prefix")
+			}
+		})
+	}
+}
+
+// Actual HTTP/trailer transport with supplied enumeration counts. This does not
+// replace the separate native search enumeration fixture.
+func TestEpochProductQueryRepositories(t *testing.T) {
+	for _, mode := range []string{"one", "absent", "zero", "two", "foreign", "canceled"} {
+		t.Run(mode, func(t *testing.T) {
+			var calls atomic.Int32
+			required := mode != "foreign"
+			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				if (r.Header.Get("X-Phebs-T422-Query-Evidence") == "bound-v1") != required {
+					t.Error("repository evidence header scope")
+				}
+				report := epochInspectionReport{ControlFileReads: 2, StoreReadAttempts: 2}
+				count := uint64(1)
+				switch mode {
+				case "zero":
+					count = 0
+				case "two":
+					count = 2
+				}
+				if mode != "absent" {
+					report.VisibleRepositories = &count
+				}
+				w.Header().Set("Trailer", epochReadTrailer)
+				_, _ = w.Write([]byte("{}"))
+				pressureInspectionTrailer(t, w, r, report)
+			}))
+			configureProductTestReader(t, reader)
+			reader.productFinalCalls = 1
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			if mode == "canceled" {
+				cancel()
+			}
+			_, _, _, report, err := reader.readQueryRequest(ctx, "/api/search", nil, 2, epochInspectionReport{ControlFileReads: 2, StoreReadAttempts: 2}, required)
+			if (err == nil) != (mode == "one") {
+				t.Fatal("repository evidence disposition", err)
+			}
+			if mode == "canceled" {
+				if calls.Load() != 0 || reader.next != 1 {
+					t.Fatal("canceled query dispatched")
+				}
+				return
+			}
+			if calls.Load() != 1 || reader.next != 2 || reader.reports != 1 || reader.totals.ControlFileReads != 2 || reader.totals.StoreReadAttempts != 2 {
+				t.Fatal("repository refusal lost actual positive accounting prefix")
+			}
+			if mode == "one" && (report.VisibleRepositories == nil || *report.VisibleRepositories != 1) {
+				t.Fatal("actual report value lost")
 			}
 		})
 	}
@@ -197,6 +262,10 @@ func TestEpochProductQueryCorridor(t *testing.T) {
 			ordinal := uint64(10 + len(pages))
 			report := epochInspectionReport{Schema: "t421-source-free-read-accounting-v1", RequestOrdinal: ordinal, Status: "complete",
 				ControlFileReads: row.ControlFileReads, StoreReadAttempts: row.StoreReadAttempts, MemberVisits: row.MemberVisits}
+			if row.VisibleRepositoriesObserved {
+				count := row.VisibleRepositories
+				report.VisibleRepositories = &count // Supplied enumeration evidence, not a native search.
+			}
 			if len(bodies) > 1 {
 				report.ControlFileReads, report.StoreReadAttempts = 2, 3
 				if i == 0 {
@@ -224,6 +293,9 @@ func TestEpochProductQueryCorridor(t *testing.T) {
 			return
 		}
 		page := pages[i]
+		if (r.Header.Get("X-Phebs-T422-Query-Evidence") == "bound-v1") != (page.query.Name == "all_code_structural_marker") {
+			t.Error("query evidence opt-in changed")
+		}
 		method, path, payload, err := epochQueryRequest(page.query, page.transport, bound.repository, page.cursor, strconv.FormatUint(page.report.RequestOrdinal, 10))
 		if err != nil || r.Method != method || r.URL.RequestURI() != path ||
 			r.Header.Get("X-Phebs-T421-Exact-Read-Ordinal") != strconv.FormatUint(page.report.RequestOrdinal, 10) {
