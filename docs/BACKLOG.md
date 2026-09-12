@@ -7160,6 +7160,32 @@ passed documentation, glossary and whitespace checks.
 The full pressure, archive/query, complete executor,
 launcher and immutable T42.2n/T42.2o acceptance/freeze ladder remain open.
 
+**Normal-policy exact-source gate closure (2026-09-11).** At clean detached
+`e41b48d5dee31b8f88a391b5b80be468df3541be`, both fail-fast parent race groups
+passed under their unchanged sixty-minute allowances. Group one selected 63
+tests: 59 passed and four explicit opt-in tests skipped, in 1,373.338s. The
+skips remain native pressure ballast, volume and workspace, plus external
+supplied-tool custody. Group two selected 25 tests: all passed without skips
+in 3,021.232s. The disjoint union of terminal names exactly matches all 88
+selected names, with no missing, duplicate or extra result. This is 84 passes
+and four skips, not a whole-package or full native pressure pass. Log SHA-256:
+`a74e8217c55006ebcd05a7bd028f0d5e0f91e3d96905be91bb51e8b7863747fc`
+and `930674081b8e544aa4217f1dacc65b51b4d8072566d2c0383010c5af442cf43c`.
+
+The full V3 receipt round-trip passed its three modeled receipt scenarios in
+3,001.98s; the shared-constructor work-failure test passed all 22 cases in
+8.49s. Actual A/B/A-return construction each settled 56 extraction chunks and
+nine current domain roots. Both recovery-preparation paths reused 56 results
+with zero source acquisitions and evidence appends; neither injects a live
+stale lease or process death. These receipts do not establish all fifteen
+actual phases. Module verification, docs (0.781s), glossary, whitespace and
+exact-clean source checks passed; the wrapper exited zero and no matching
+gate process remains. The previously reviewed scoped and native composition
+results remain attributable to the unchanged implementation bytes. This
+documentation-only record introduces no runtime, fixture or admission change.
+Next is one fresh exact-source pressure rehearsal after the unchanged host
+and tool preflight, not archive/query acceptance, a seal or ceremony execution.
+
 **Counter-unit exact-source race continuation (2026-09-11).** At clean
 `52ef5e8ed98eb788acad95d7e81de4797e1d1742`, the broad 68-test selector
 `Test.*(Lifecycle|Pressure|Receipt|AccountingV3RetainsHistorical)` exceeded its

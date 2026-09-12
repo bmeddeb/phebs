@@ -64,6 +64,14 @@ sequence.
 
 ## Now
 
+**T42.2 pressure-rehearsal preparation, 2026-09-11:** the corrected cleanup
+and normal-completion source at `e41b48d5` passed both exact-source parent race
+groups (84 passes, four explicit opt-in skips), alongside its reviewed scoped
+and native composition gates. Module, documentation and glossary checks passed.
+Next is the fresh pressure rehearsal under unchanged host/tool admission and
+disk guards. Actual pressure, archive/query, full executor/launcher acceptance
+and freeze remain open; the older failed results remain failed.
+
 **T42.2 cleanup and completion correction, 2026-09-11:** the second independent
 review corrected shared-component drainage, resumable cursor/marker handling
 and failed-prefix accounting. Ben subsequently approved prospective V3's
