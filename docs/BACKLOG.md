@@ -8641,6 +8641,22 @@ docs passed in 0.571s, glossary/whitespace clean, retained-version selectors in
 `0f72c009b4548c87f6cc85de1279a99c8d31920296dd84317a3eedf0156fb3e5`.
 Native composition remains pending; no full rehearsal or freeze follows.
 
+That reduced native composition then passed at exact clean source
+`8613d72fe320243acf2550a8914267e1de0a7191`: normal 425.91s (package 426.675s)
+and race 1577.05s (package 1578.999s), using the original 30-minute fixture
+context and 35-minute package alarm. Actual phase-six store totals were
+751/765 transactions and 186,315/186,329 rows respectively, maximum 510 in
+both; each recorded 10,080 dispatch attempts, two workspace walks, one native
+readiness R and five PC pairs including EOF. Both measured joined teardown;
+the detached source remained clean, and the final test/helper/engine PIDs no
+longer exist. Normal log SHA256 is
+`bbc2a4268ea8c0fe44ee3882fc7041fb6b4e80f5f4e05779277fc906b297e7cd`;
+race is `28470fda59ad6f72cfebb882ca344bd6f8d2a68a5a1d535ffa186fd47a7b2d78`.
+This closes the corrected reduced marker mechanism's native gate, not its
+full catalog/F, compiler-session custody, full rehearsal or freeze gates.
+Later SB2 and author-observation changes retain their separate scoped gates;
+these native results are not reattributed to those later source commits.
+
 The selected census stream now distinguishes a completed real source build
 from a failed invocation's closed byte-report prefix. SB2's successful terminal
 reuses the actual manifest regular-owner count after existing child joins,
