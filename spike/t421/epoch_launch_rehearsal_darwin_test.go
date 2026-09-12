@@ -605,6 +605,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			t.Fatal("actual restored joined query evidence missing", err)
 		}
 		assertRehearsalInspection(t, run, stopped, []string{"archive_restore", "lifecycle_collection", "product_queries"})
+		if !teardown.Work.complete() {
+			t.Fatal("actual seven joined producer work subsets incomplete; no whole-phase work claim")
+		}
 		t.Logf("actual pressure/archive/restored/query/teardown continuation returned after %s; complete all-phase metrics, output fit, signed receipt, launcher and freeze gates remain separate", time.Since(started))
 		completed = true
 		return // finishRestored already released inputs and removed custody; never sample an absent root.

@@ -24,7 +24,8 @@ type executionTeardownResult struct {
 	InitialJoined, BeforeDetach, AfterDetach, AfterCleanup, FinalClose SessionCensusEvidence
 	Accounting                                                         dispatchadmission.Snapshot
 	Store                                                              storeaccounting.WireSnapshot
-	AccountingError, StoreError                                        error // Private snapshot diagnostics; populated prefixes survive either error.
+	AccountingError, StoreError                                        error               // Private snapshot diagnostics; populated prefixes survive either error.
+	Work                                                               executionJoinedWork // Retained subset only; not teardown acceptance or whole-phase work.
 }
 
 // The wall clock starts before fencing/shutdown. The first byte observation is
@@ -91,6 +92,9 @@ func (v *executionPressureVolume) finishRestored(ctx context.Context, run *Execu
 		// Both snapshots return real accepted prefixes alongside any error.
 		// Capture before canceling the shared controller lifetime on release.
 		retErr = errors.Join(retErr, flow.teardownAccounting(&result))
+		// Reuse that one current DA/SA pair; do not resnapshot after release
+		// cancels the shared controller or sum snapshots from earlier epochs.
+		result.Work = flow.joinedWorkSnapshot()
 		v.mu.Lock()
 		v.teardownEvidence(&result)
 		v.mu.Unlock()

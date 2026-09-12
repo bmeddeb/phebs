@@ -8606,6 +8606,21 @@ custody selectors passed in 1.108s; pinned static vet/lint/compilation passed
 with zero lint issues, docs in 0.506s, glossary and whitespace clean. Actual
 non-volume startup and its final cleanup remain the next native proof.
 
+The next work-retention slice keeps seven actual joined producer-local records:
+server producers 2–6 and offline backup/restore 10/11. The actual finish/command
+defer publishes once, before its join becomes externally complete; later copied
+archive fields never publish a second record. Failed or missing observations
+remain incomplete without losing accepted positive prefixes. Phase eight's two
+producer streams remain separate, including at maximal counter values. Final
+teardown copies these records beside its existing pre-release current DA/SA
+snapshots, with no additional snapshot or arithmetic; full-tail success now
+checks seven subset closures. This is not a whole-phase metrics composer or
+receipt issuer. Independent patch review found critical/high/medium/low zero;
+supplied-record normal/race checks passed in 0.832s/1.800s. Pinned static
+vet/lint/compilation passed with zero lint issues, docs in 0.569s, glossary and
+whitespace clean. Native seven-producer coverage remains pending; these checks
+do not establish a full-tail or whole-work pass.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

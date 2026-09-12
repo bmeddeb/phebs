@@ -49,6 +49,7 @@ type ExecutionEpochOne struct {
 	authorBytePoint        uint8                  // Two actual timed AuthorA boundaries; not preparation.
 	serverSessions         [5]int                 // Actual successful root Starts; never cleared by Wait or handoff. Protected by mu.
 	archiveSessions        [2]int                 // Backup and restore, in that order; the existing one-shot recipes own these slots.
+	joinedWork             executionJoinedWork    // Fixed producer-local values, never cumulative DA/SA sums; protected by mu.
 
 	profileTools           [2]*ExecutionToolCustody // Optional Buf/focused protected copies; no dispatch permission.
 	profileEnvironment     *executionRuntimeEnvironmentObservation
@@ -1258,6 +1259,16 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	run.stopDiagnostic = diagnostic
 	run.mu.Unlock()
+	// Publish once before done closes, after the sole native Wait and final
+	// producer-local parsing. A failed join retains an explicitly incomplete slot.
+	if err := run.flow.retainJoinedWork(executionJoinedWorkRecord{
+		Producer: run.producer(), Input: run.attemptInput, Joined: result.RootJoined, SessionEmpty: sessionEmpty,
+		Attempts: result.Attempts, IndexOffers: result.IndexOffers,
+	}); err != nil {
+		run.mu.Lock()
+		run.err = errors.Join(run.err, err)
+		run.mu.Unlock()
+	}
 }
 
 func (run *ExecutionEpochOneRun) Stop(ctx context.Context) (ExecutionEpochOneResult, error) {

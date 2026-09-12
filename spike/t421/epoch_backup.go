@@ -344,6 +344,11 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 			run.backupWork = observed
 		}
 		run.mu.Unlock()
+		// Only this actual offline command owns its slot. The copies carried
+		// into later server results never create another archive observation.
+		retErr = errors.Join(retErr, flow.retainJoinedWork(executionJoinedWorkRecord{
+			Producer: producer, Input: run.attemptInput, Joined: joined, SessionEmpty: empty, Attempts: observed,
+		}))
 	}()
 	if files[1].Close() != nil || files[3].Close() != nil || storeFile.Close() != nil {
 		return ErrExecutionEpochOne
