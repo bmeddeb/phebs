@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 )
 
 const (
@@ -401,7 +402,7 @@ func CreateArchiveWithReport(root, output string) (ArchiveReport, error) {
 func CreateArchiveWithReportContext(
 	ctx context.Context,
 	root, output string,
-) (ArchiveReport, error) {
+) (_ ArchiveReport, retErr error) {
 	var report ArchiveReport
 	if ctx == nil {
 		return report, errors.New("caller publication archive context is required")
@@ -422,8 +423,16 @@ func CreateArchiveWithReportContext(
 	success := false
 	defer func() {
 		_ = file.Close()
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
 		if !success {
-			_ = os.Remove(output)
+			if err := os.Remove(output); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 	}()
 	boundedOutput := &boundedArchiveOutput{destination: file, remaining: MaxArchiveBytes}
@@ -727,7 +736,7 @@ func RestoreArchive(archivePath, target string) error {
 
 // RestoreArchiveContext is the cancellable restore boundary. Cancellation can
 // stop both the streaming semantic preflight and final staged extraction.
-func RestoreArchiveContext(ctx context.Context, archivePath, target string) error {
+func RestoreArchiveContext(ctx context.Context, archivePath, target string) (retErr error) {
 	if ctx == nil {
 		return errors.New("caller publication restore context is required")
 	}
@@ -776,26 +785,56 @@ func RestoreArchiveContext(ctx context.Context, archivePath, target string) erro
 	stageName := filepath.Base(stage)
 	stageInfo, err := parentAuthority.root.Lstat(stageName)
 	if err != nil || !stageInfo.IsDir() || stageInfo.Mode()&os.ModeSymlink != 0 {
-		_ = os.RemoveAll(stage)
-		return errors.New("caller publication restore stage changed during creation")
+		err = errors.New("caller publication restore stage changed during creation")
+		if sampleErr := custodybytes.Checkpoint(ctx); sampleErr != nil {
+			err = errors.Join(err, sampleErr)
+		}
+		if cleanupErr := os.RemoveAll(stage); cleanupErr != nil && custodybytes.CheckpointSelected(ctx) {
+			err = errors.Join(err, cleanupErr)
+		}
+		if sampleErr := custodybytes.Checkpoint(ctx); sampleErr != nil {
+			err = errors.Join(err, sampleErr)
+		}
+		return err
 	}
 	stageAuthority, err := openChildDirectoryAuthority(
 		parentAuthority, stageName, stageInfo,
 	)
 	if err != nil {
-		_ = os.RemoveAll(stage)
+		if sampleErr := custodybytes.Checkpoint(ctx); sampleErr != nil {
+			err = errors.Join(err, sampleErr)
+		}
+		if cleanupErr := os.RemoveAll(stage); cleanupErr != nil && custodybytes.CheckpointSelected(ctx) {
+			err = errors.Join(err, cleanupErr)
+		}
+		if sampleErr := custodybytes.Checkpoint(ctx); sampleErr != nil {
+			err = errors.Join(err, sampleErr)
+		}
 		return fmt.Errorf("open caller publication restore stage: %w", err)
 	}
 	defer stageAuthority.close()
 	published := false
+	measured := false
 	cleanupName := stageName
 	defer func() {
+		if !measured {
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}
 		if !published {
 			current, currentErr := parentAuthority.root.Lstat(cleanupName)
 			if currentErr == nil && sameDirectory(stageInfo, current) {
-				_ = parentAuthority.root.RemoveAll(cleanupName)
-				_ = syncRootDirectory(parentAuthority.root, ".")
+				if err := parentAuthority.root.RemoveAll(cleanupName); err != nil && custodybytes.CheckpointSelected(ctx) {
+					retErr = errors.Join(retErr, err)
+				}
+				if err := syncRootDirectory(parentAuthority.root, "."); err != nil && custodybytes.CheckpointSelected(ctx) {
+					retErr = errors.Join(retErr, err)
+				}
 			}
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
 		}
 	}()
 	extracted, err := scanArchive(
@@ -830,6 +869,10 @@ func RestoreArchiveContext(ctx context.Context, archivePath, target string) erro
 	if _, err := parentAuthority.root.Lstat(targetName); err == nil {
 		return errors.New("caller publication restore target appeared before installation")
 	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	measured = true
+	if err := custodybytes.Checkpoint(ctx); err != nil {
 		return err
 	}
 	if err := parentAuthority.root.Rename(stageName, targetName); err != nil {

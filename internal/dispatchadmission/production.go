@@ -69,24 +69,30 @@ func ProductionSites() []Site {
 // first, then Close, and propagate its terminal failure even if work returned nil.
 // A failed/closed lifetime is never replaced with the ordinary pass-through.
 type ProductionLifetime struct {
-	program      string
-	semanticMode string
-	producerID   uint32
-	inputSHA256  [32]byte
-	client       *Client
-	controlDone  <-chan error
-	tools        map[string]ProductionToolBinding
-	closeOnce    sync.Once
-	closeErr     error
-	storeMu      sync.Mutex
-	storeClient  *storeaccounting.Client
-	storeOwner   *storeaccounting.SDKOwner
-	cancelStore  context.CancelFunc
-	storeTaken   bool
-	storeClosed  bool
-	storeRetired bool
-	workspaceMu  sync.Mutex
-	workspace    *productionWorkspace
+	program                  string
+	semanticMode             string
+	producerID               uint32
+	inputSHA256              [32]byte
+	client                   *Client
+	controlDone              <-chan error
+	tools                    map[string]ProductionToolBinding
+	closeOnce                sync.Once
+	closeErr                 error
+	storeMu                  sync.Mutex
+	storeClient              *storeaccounting.Client
+	storeOwner               *storeaccounting.SDKOwner
+	cancelStore              context.CancelFunc
+	storeTaken               bool
+	storeClosed              bool
+	storeRetired             bool
+	workspaceMu              sync.Mutex
+	workspace                *productionWorkspace
+	cancelArchive            context.CancelFunc
+	archiveMeasurements      uint32
+	archiveMeasurement       *archiveMeasurementClient
+	backupMeasurementMu      sync.Mutex
+	backupMeasurementMaximum uint32
+	backupMeasurementGuard   func(context.Context, func(context.Context) error) error
 }
 
 // ProductionSemanticSnapshot contains copied parent-bound launch identity and
@@ -251,12 +257,17 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		return nil
 	}
 	lifetime.closeOnce.Do(func() {
+		if lifetime.cancelArchive != nil {
+			defer lifetime.cancelArchive()
+		}
 		if ctx == nil {
 			ctx = context.Background()
 			lifetime.closeErr = lifetime.client.fail(ErrCanceled)
 		}
 		closeCtx, cancel := context.WithTimeout(ctx, lifetime.client.limits.AckTimeout)
 		defer cancel()
+		archiveErr := lifetime.closeArchiveMeasurement(closeCtx)
+		lifetime.closeErr = errors.Join(lifetime.closeErr, archiveErr)
 		storeErr := lifetime.closeStore(closeCtx)
 		lifetime.closeErr = errors.Join(lifetime.closeErr, storeErr)
 		// Main joins lifecycle callbacks before closing its lifetime. The
@@ -264,7 +275,7 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		// descriptor close as clean dispatch completion.
 		workspaceErr := lifetime.closeWorkspace()
 		lifetime.closeErr = errors.Join(lifetime.closeErr, workspaceErr)
-		if storeErr != nil || workspaceErr != nil {
+		if storeErr != nil || workspaceErr != nil || archiveErr != nil {
 			// A failed SDK/SA close cannot acknowledge clean dispatch closure.
 			_ = lifetime.client.fail(ErrIncomplete)
 		}

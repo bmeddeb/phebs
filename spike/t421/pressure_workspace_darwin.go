@@ -82,6 +82,7 @@ func (v *executionPressureVolume) bindRehearsal(ctx context.Context, flow *Execu
 	v.flow = flow
 	root := v.workspace
 	flow.workspace = &root
+	flow.workspaceBytes = v.bytes.Observer
 	return nil
 }
 

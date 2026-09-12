@@ -187,9 +187,31 @@ func TestLocalEngineQuiescentMeasurementNative(t *testing.T) {
 			assertResumed(t)
 		})
 	}
+	t.Run("retired_owner", func(t *testing.T) {
+		if err := state.WithRetiredLocalEngine(ctx, func(context.Context) error {
+			t.Error("unclosed owner measured as retired")
+			return nil
+		}); !errors.Is(err, storeaccounting.ErrFenced) {
+			t.Fatal(err)
+		}
+		assertResumed(t)
+		if err := owner.Close(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if err := state.WithQuiescentLocalEngine(ctx, func(context.Context) error {
+			t.Error("closed owner measured as live")
+			return nil
+		}); err == nil {
+			t.Fatal("closed owner admitted by idle guard")
+		}
+		if err := state.WithRetiredLocalEngine(ctx, measure); err != nil {
+			t.Fatal(err)
+		}
+		assertResumed(t)
+	})
 	t.Run("stop_waits_for_resume", func(t *testing.T) {
 		stopStarted, stopDone := make(chan struct{}), make(chan error, 1)
-		if err := state.WithQuiescentLocalEngine(ctx, func(ctx context.Context) error {
+		if err := state.WithRetiredLocalEngine(ctx, func(ctx context.Context) error {
 			if err := measure(ctx); err != nil {
 				return err
 			}
@@ -217,7 +239,7 @@ func TestLocalEngineQuiescentMeasurementNative(t *testing.T) {
 		if _, err := os.Lstat(filepath.Join(root, localRuntimeName)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatal("runtime file survived completed shutdown", err)
 		}
-		if err := state.WithQuiescentLocalEngine(ctx, measure); err == nil {
+		if err := state.WithRetiredLocalEngine(ctx, measure); err == nil {
 			t.Fatal("stopped engine was reused")
 		}
 	})

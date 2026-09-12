@@ -108,7 +108,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Offline archive commands install context observers, not server job or
 		// lifecycle sinks. A server-only stream cannot fill their measured zero.
-		if producer >= 10 && (reservedCompactAttempt(line) || reservedLifecycleEvent(line) || reservedWorkspaceByteEvent(line)) {
+		if producer >= 10 && (reservedCompactAttempt(line) || reservedLifecycleEvent(line)) {
 			return out, errExecutionAttempts
 		}
 		if observed, err := observeWorkspaceByteEvent(line, plan, producer, wantInput, &out.WorkspaceBytes); observed {

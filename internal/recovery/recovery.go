@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/observationpublication"
@@ -306,7 +307,7 @@ func ReadArchiveTransitionManifest(
 
 // Create exports a running local instance into an atomically published,
 // private backup directory. Output must not already exist.
-func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
+func Create(ctx context.Context, opts BackupOptions) (_ Manifest, retErr error) {
 	if err := ctx.Err(); err != nil {
 		return Manifest{}, err
 	}
@@ -348,16 +349,26 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, fmt.Errorf("create backup staging directory: %w", err)
 	}
-	if err := os.Chmod(stage, 0o700); err != nil {
-		_ = os.RemoveAll(stage)
-		return Manifest{}, fmt.Errorf("protect backup staging directory: %w", err)
-	}
 	published := false
 	defer func() {
 		if !published {
-			_ = os.RemoveAll(stage)
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := os.RemoveAll(stage); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 	}()
+	if err := os.Chmod(stage, 0o700); err != nil {
+		return Manifest{}, fmt.Errorf("protect backup staging directory: %w", err)
+	}
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return Manifest{}, err
+	}
 	releaseBackup, err := focusedindex.AcquireBackupLock(
 		ctx, filepath.Join(dataDir, "index"),
 	)
@@ -412,6 +423,9 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return Manifest{}, err
+	}
 	searchSelections := make(
 		[]focusedindex.ArchiveSearchGeneration, 0, len(selectors),
 	)
@@ -464,8 +478,8 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		return Manifest{}, err
 	}
 	resolverPath := filepath.Join(stage, ResolverCatalogName)
-	resolverReport, err := resolvercatalog.CreateArchiveWithReport(
-		filepath.Join(dataDir, "resolver-catalogs"), resolverPath,
+	resolverReport, err := resolvercatalog.CreateArchiveWithReportContext(
+		ctx, filepath.Join(dataDir, "resolver-catalogs"), resolverPath,
 	)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("archive resolver catalog publications: %w", err)
@@ -657,6 +671,9 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err := syncDirectory(stage); err != nil {
 		return Manifest{}, err
 	}
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return Manifest{}, err
+	}
 	// Recheck for a useful error, then use the platform's exclusive atomic
 	// directory rename so a target created in this final window still wins.
 	if err := requireAbsent(output, "backup output"); err != nil {
@@ -669,12 +686,15 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err := syncDirectory(parent); err != nil {
 		return Manifest{}, err
 	}
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return Manifest{}, err
+	}
 	return manifest, nil
 }
 
 // Restore verifies the complete backup and all compatibility identities before
 // starting an exclusive import into an absent or empty data directory.
-func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
+func Restore(ctx context.Context, opts RestoreOptions) (_ Manifest, retErr error) {
 	if err := ctx.Err(); err != nil {
 		return Manifest{}, err
 	}
@@ -688,6 +708,11 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	}
 	if err := requireEmptyOrAbsent(target); err != nil {
 		return Manifest{}, err
+	}
+	if custodybytes.CheckpointSelected(ctx) {
+		if err := requireAbsent(target+".observation-restore", "selected observation restore stage"); err != nil {
+			return Manifest{}, err
+		}
 	}
 	backup, err := absoluteCleanPath("backup", opts.Backup)
 	if err != nil {
@@ -714,6 +739,11 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err := requireEmptyOrAbsent(target); err != nil {
 		return Manifest{}, err
 	}
+	if custodybytes.CheckpointSelected(ctx) {
+		if err := requireAbsent(target+".observation-restore", "selected observation restore stage"); err != nil {
+			return Manifest{}, err
+		}
+	}
 	if err := os.MkdirAll(target, 0o700); err != nil {
 		return Manifest{}, fmt.Errorf("create restore data directory: %w", err)
 	}
@@ -726,21 +756,41 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	); err != nil {
 		return Manifest{}, fmt.Errorf("restore observation publications: %w", err)
 	}
-	runtime, stop, err := store.StartLocalImport(ctx, target)
+	var runtime store.LocalRuntime
+	var stop func()
+	var guard func(context.Context, func(context.Context) error) error
+	if custodybytes.CheckpointSelected(ctx) {
+		runtime, stop, guard, err = store.StartLocalImportWithMeasurement(ctx, target, owner)
+	} else {
+		runtime, stop, err = store.StartLocalImport(ctx, target)
+	}
 	if err != nil {
 		return Manifest{}, fmt.Errorf("start restore database: %w", err)
 	}
+	importCtx := custodybytes.WithCheckpointGuard(ctx, guard)
 	stopped := false
+	importMeasured := false
 	defer func() {
 		if !stopped {
+			if !importMeasured {
+				if err := custodybytes.Checkpoint(importCtx); err != nil {
+					retErr = errors.Join(retErr, err)
+				}
+			}
 			stop()
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 	}()
+	if err := custodybytes.Checkpoint(importCtx); err != nil {
+		return Manifest{}, err
+	}
 	if runtime.Surreal.Version != manifest.Surreal.Version || runtime.Surreal.SHA256 != manifest.Surreal.SHA256 {
 		return Manifest{}, errors.New("restore SurrealDB identity differs from verified manifest")
 	}
 	if replay != nil {
-		err = executeRestoreReplay(ctx, replay, target, runtime.Endpoint, manifest.Database, owner)
+		err = executeRestoreReplay(importCtx, replay, target, runtime.Endpoint, manifest.Database, owner)
 	} else {
 		args := []string{
 			"import", "--endpoint", cliEndpoint(runtime.Endpoint),
@@ -752,16 +802,23 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, fmt.Errorf("import SurrealDB: %w", err)
 	}
+	importMeasured = true
+	if err := custodybytes.Checkpoint(importCtx); err != nil {
+		return Manifest{}, err
+	}
 	stop()
 	stopped = true
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return Manifest{}, err
+	}
 
-	if err := focusedindex.RestoreArchive(
-		filepath.Join(backup, FocusedIndexName), filepath.Join(target, "index"),
+	if err := focusedindex.RestoreArchiveContext(
+		ctx, filepath.Join(backup, FocusedIndexName), filepath.Join(target, "index"),
 	); err != nil {
 		return Manifest{}, fmt.Errorf("restore focused index publications: %w", err)
 	}
-	if err := resolvercatalog.RestoreArchive(
-		filepath.Join(backup, ResolverCatalogName),
+	if err := resolvercatalog.RestoreArchiveContext(
+		ctx, filepath.Join(backup, ResolverCatalogName),
 		filepath.Join(target, "resolver-catalogs"),
 	); err != nil {
 		return Manifest{}, fmt.Errorf("restore resolver catalog publications: %w", err)
@@ -785,28 +842,46 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, fmt.Errorf("validate restored store: %w", err)
 	}
+	repairCtx := ctx
+	if custodybytes.CheckpointSelected(ctx) {
+		repairCtx = custodybytes.WithCheckpointGuard(ctx, st.WithQuiescentLocalEngine)
+	}
+	repairMeasured, repairClosed := false, false
+	defer func() {
+		if !repairClosed {
+			if !repairMeasured {
+				if err := custodybytes.Checkpoint(repairCtx); err != nil {
+					retErr = errors.Join(retErr, err)
+				}
+			}
+			if err := st.Close(context.WithoutCancel(ctx)); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}
+	}()
+	if err := custodybytes.Checkpoint(repairCtx); err != nil {
+		return Manifest{}, err
+	}
 	if _, err := st.RepairServiceCatalogV3Startup(ctx); err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf("repair restored catalog v3 state: %w", err)
 	}
 	relationshipReport, err := relationshippublication.RecoverAll(ctx, target, st)
 	if err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf("repair restored relationship publications: %w", err)
 	}
 	if relationshipReport.Invalid != 0 {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf(
 			"repair restored relationship publications: %d invalid namespace(s)",
 			relationshipReport.Invalid,
 		)
 	}
 	if err := st.RestoreSelectedServiceStateV3ForRestore(ctx); err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf("restore selected catalog v3 state: %w", err)
 	}
 	if err := clearGenerationScheduleState(ctx, st); err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf(
 			"clear restartable generation schedules after restore: %w", err,
 		)
@@ -815,29 +890,34 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	// also invalidate caller authority; this dedicated raw transition must own
 	// the sole restore-time revision advance while the pointer still exists.
 	if err := clearCallerPublicationState(ctx, st); err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf(
 			"clear derived caller publication state after restore: %w", err,
 		)
 	}
 	if err := clearCandidateManifestPublications(ctx, st); err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf(
 			"clear derived candidate publications after restore: %w", err,
 		)
 	}
 	if err := clearResolverCatalogPublications(ctx, st); err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf(
 			"clear derived resolver catalog publications after restore: %w", err,
 		)
 	}
 	if err := ValidateServiceRuntimeSelections(ctx, target, st); err != nil {
-		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf("validate restored service runtime selections: %w", err)
 	}
-	if err := st.Close(context.WithoutCancel(ctx)); err != nil {
+	repairMeasured = true
+	if err := custodybytes.Checkpoint(repairCtx); err != nil {
+		return Manifest{}, err
+	}
+	err = st.Close(context.WithoutCancel(ctx))
+	repairClosed = true
+	if err != nil {
 		return Manifest{}, fmt.Errorf("close validated restored store: %w", err)
+	}
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return Manifest{}, err
 	}
 	return manifest, nil
 }
@@ -1012,8 +1092,8 @@ func VerifyContext(
 	if relationship != manifest.Inventory[5] {
 		return Manifest{}, errors.New("backup relationship-publication artifact differs from its manifest")
 	}
-	focusedReport, err := focusedindex.VerifyArchiveWithReport(
-		filepath.Join(backup, FocusedIndexName),
+	focusedReport, err := focusedindex.VerifyArchiveWithReportContext(
+		ctx, filepath.Join(backup, FocusedIndexName),
 	)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("verify focused-index artifact: %w", err)
@@ -1026,8 +1106,8 @@ func VerifyContext(
 	if err := ctx.Err(); err != nil {
 		return Manifest{}, err
 	}
-	resolverArchiveReport, err := resolvercatalog.VerifyArchiveWithReport(
-		filepath.Join(backup, ResolverCatalogName),
+	resolverArchiveReport, err := resolvercatalog.VerifyArchiveWithReportContext(
+		ctx, filepath.Join(backup, ResolverCatalogName),
 	)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("verify resolver-catalog artifact: %w", err)

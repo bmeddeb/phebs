@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 )
 
 const (
@@ -72,6 +74,10 @@ func (report *ArchiveReport) omit(name, reason string, publication bool) {
 // CreateArchiveWithReport writes a deterministic archive containing every and
 // only strictly valid, marker-free catalog publication.
 func CreateArchiveWithReport(root, output string) (ArchiveReport, error) {
+	return CreateArchiveWithReportContext(context.Background(), root, output)
+}
+
+func CreateArchiveWithReportContext(ctx context.Context, root, output string) (_ ArchiveReport, retErr error) {
 	var report ArchiveReport
 	if err := validateOptionalArchiveRoot(root); err != nil {
 		return report, err
@@ -86,8 +92,16 @@ func CreateArchiveWithReport(root, output string) (ArchiveReport, error) {
 	success := false
 	defer func() {
 		_ = file.Close()
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
 		if !success {
-			_ = os.Remove(output)
+			if err := os.Remove(output); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 	}()
 	boundedOutput := &boundedArchiveOutput{
@@ -310,6 +324,10 @@ func reserveResolverArchiveEntry(
 // RestoreArchive validates every header and publication in a private stage,
 // then renames the complete filesystem set into an absent target.
 func RestoreArchive(archivePath, target string) error {
+	return RestoreArchiveContext(context.Background(), archivePath, target)
+}
+
+func RestoreArchiveContext(ctx context.Context, archivePath, target string) (retErr error) {
 	if _, err := os.Lstat(target); err == nil {
 		return errors.New("resolver catalog restore target already exists")
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -349,9 +367,20 @@ func RestoreArchive(archivePath, target string) error {
 		return err
 	}
 	published := false
+	measured := false
 	defer func() {
+		if !measured {
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}
 		if !published {
-			_ = os.RemoveAll(stage)
+			if err := os.RemoveAll(stage); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
 		}
 	}()
 	extracted, err := scanResolverArchive(
@@ -389,6 +418,10 @@ func RestoreArchive(archivePath, target string) error {
 		}
 	}
 	if err := syncDirectory(stage); err != nil {
+		return err
+	}
+	measured = true
+	if err := custodybytes.Checkpoint(ctx); err != nil {
 		return err
 	}
 	if err := os.Rename(stage, target); err != nil {
@@ -517,13 +550,27 @@ func sameArchiveFileIdentity(left, right os.FileInfo) bool {
 // VerifyArchiveWithReport runs the exact restore validator in a disposable
 // directory and returns the independently observed publication count.
 func VerifyArchiveWithReport(archivePath string) (ArchiveReport, error) {
+	return VerifyArchiveWithReportContext(context.Background(), archivePath)
+}
+
+func VerifyArchiveWithReportContext(ctx context.Context, archivePath string) (_ ArchiveReport, retErr error) {
 	parent, err := os.MkdirTemp("", "phebs-resolver-catalog-verify-parent-")
 	if err != nil {
 		return ArchiveReport{}, err
 	}
-	defer func() { _ = os.RemoveAll(parent) }()
+	defer func() {
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := os.RemoveAll(parent); err != nil && custodybytes.CheckpointSelected(ctx) {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+	}()
 	target := filepath.Join(parent, "catalogs")
-	if err := RestoreArchive(archivePath, target); err != nil {
+	if err := RestoreArchiveContext(ctx, archivePath, target); err != nil {
 		return ArchiveReport{}, err
 	}
 	publications, report, err := discoverPublications(target)

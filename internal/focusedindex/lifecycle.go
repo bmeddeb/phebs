@@ -1,6 +1,7 @@
 package focusedindex
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -9,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 )
 
 const (
@@ -28,11 +31,15 @@ type LifecycleCleanupReport struct {
 	TemporaryMarkers int
 }
 
-func newRestoreWorkspace(indexDir string) (string, error) {
-	return newLifecycleWorkspace(indexDir, restoreWorkspacePrefix)
+func newRestoreWorkspace(ctx context.Context, indexDir string) (string, error) {
+	return newLifecycleWorkspaceContext(ctx, indexDir, restoreWorkspacePrefix)
 }
 
 func newLifecycleWorkspace(indexDir, prefix string) (string, error) {
+	return newLifecycleWorkspaceContext(context.Background(), indexDir, prefix)
+}
+
+func newLifecycleWorkspaceContext(ctx context.Context, indexDir, prefix string) (_ string, retErr error) {
 	if err := ensureRealDirectory(indexDir); err != nil {
 		return "", err
 	}
@@ -40,34 +47,43 @@ func newLifecycleWorkspace(indexDir, prefix string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	complete := false
+	defer func() {
+		if !complete {
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := os.RemoveAll(workspace); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}
+	}()
 	if err := os.Chmod(workspace, 0o700); err != nil {
-		_ = os.RemoveAll(workspace)
 		return "", err
 	}
 	ownerPath := filepath.Join(workspace, lifecycleOwnerFile)
 	owner, err := os.OpenFile(ownerPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
-		_ = os.RemoveAll(workspace)
 		return "", err
 	}
 	if _, err := owner.WriteString(lifecycleOwner + "\n"); err != nil {
 		_ = owner.Close()
-		_ = os.RemoveAll(workspace)
 		return "", err
 	}
 	if err := owner.Sync(); err != nil {
 		_ = owner.Close()
-		_ = os.RemoveAll(workspace)
 		return "", err
 	}
 	if err := owner.Close(); err != nil {
-		_ = os.RemoveAll(workspace)
 		return "", err
 	}
 	if err := syncDirectory(workspace); err != nil {
-		_ = os.RemoveAll(workspace)
 		return "", err
 	}
+	complete = true
 	return workspace, nil
 }
 

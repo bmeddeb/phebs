@@ -604,10 +604,158 @@ rehearsal as the next discovery step. This approval authorizes
 only the scoped capacity correction and its gates, not missing evidence,
 automatic reruns, author/seal, ceremony execution or Epic closure.
 
+### T42.2l phase-twelve measurement proposal (2026-09-12)
+
+**Approved by Ben on 2026-09-12 to proceed without further interruption.**
+This approves the scoped phase-twelve admission/coordination implementation
+and its derived finite transport limits below, not a gate result or a change
+to data, work, output or deadline ceilings.
+The source audit at `cfe87f51` confirms that the capacity correction does not
+close archive/restore byte coverage. Reuse the existing borrowed workspace,
+native traversal and joined WB parser; do not add a second telemetry system.
+At that audited tip offline producers ten/eleven inherit only FD3/4/5, have no workspace
+admission or phase-twelve WB slots, and inherit cancellation without the
+parent's deadline. Their existing thirty-second control timeout is not a
+measurement deadline.
+
+The required operation inventory is:
+
+| Owner | Required actual populations and boundaries |
+|---|---|
+| Parent | Phase start, joined backup/server, before and after complete held-root child removal, joined restore, and phase finish. The removal pass is one operation, not one sample per top-level child: that streamed child inventory has no numerical count limit. Preserve its failed/incomplete prefix. |
+| Backup | One Create call: staging, six completed artifact operations, manifest and publication; observe partial output before failure cleanup. A failed database export remains until outer stage cleanup, whereas each of the five tar builders can unlink its own partial output before Create returns. |
+| Verification | One VerifyContext call inside Restore, not a backup round trip. Focused, resolver, observation and relationship verification materialize four sequential temporary populations; caller verification streams. Observe live nested stages before their internal removal/rename and their enclosing temporary trees before cleanup, plus completed cleanup boundaries. Observation failure can retain a sibling restore stage. |
+| Installation | Five sequential component installations, with accumulated restored data and retained archive. Include post-materialization/pre-cleanup stages, focused hard-link aliases, completed installs, database import and repair. Do not sum nonconcurrent stages or move temporary bytes outside custody. |
+| Replay | One linked spool per actual preflight unit, sampled before its existing unlink, then the settled import/database boundary. Include the terminal EOF/failed preparation and partial cleanup paths; a unit spooled before rejected transaction admission is still attempted custody. Preserve the unnamed read-only handoff and synchronous HTTP body join. |
+
+These are ownership positions, not a final wire count. As with a lifecycle
+turn containing multiple deletions, operation sampling does not require a
+whole-workspace walk after every file syscall. It cannot coalesce away a
+temporary population that disappears inside the operation. Each selected
+callback must have a derived fixed slot or an actual-unit bound, including
+failure cleanup, before its transport allowance is selected. Missing required
+samples retain earlier completed positive maxima and refuse completion; they
+never become zero, a projected maximum or an extended deadline.
+
+**Engine ownership is a separate prerequisite.** Backup uses the original
+server's live native engine after its SDK owner has irrevocably closed. An
+external store connection does not own that engine, and the existing idle
+guard correctly refuses a fenced SDK owner. A bounded authenticated hold must
+remain in the original concrete engine owner, proving retired/quiescent SDK
+state without reopening producer-five admission. Raw restore import already
+creates that same private engine owner but returns only runtime metadata and
+a stop closure; expose its owned measurement capability rather than signalling
+a runtime PID or opening an extra schema-bearing connection. Later repair can
+use its actual OpenLocal store. Retain engine-before-SDK lock order, owned
+Wait/stop, unconditional resume and reporting after unlock. Carry the parent's
+original clipped phase-twelve deadline through the authenticated operation;
+never start a fresh four-hour clock or substitute an ACK timeout.
+
+**Cost/admission hold.** If N units are actually submitted, their two proposed
+sample pairs cost 2N full walks and 172N WB bytes, before bindings, fixed
+operations or failure paths. The shared 100,000 phase-twelve transaction limit
+minus two bootstrap writes bounds successful replay units by 99,998; other
+phase work reduces that number. This is not an import reservation, a bound on
+the complete spool-attempt inventory, or proof of successful output/time fit.
+At that loose maximum the pairs alone cost 17,199,656 bytes. Applying the older
+2.253-second inactive-workspace traversal as an illustration gives about 125
+hours, not a measured import duration or a prediction for the actual census.
+Thus a tiny functional fixture alone cannot close the cost gate. Measure the
+actual replay census and representative guarded traversal cost before a long
+rehearsal; do not hide spool peaks or change custody to evade the gauge.
+
+Approval is limited to closed phase-twelve FD6/deadline binding and
+engine-owned checkpoint coordination, with finite WB/control allowances
+derived and independently reviewed from the final call graph before landing.
+Data, physical volume, store/dispatch work, output and phase/lifetime ceilings,
+retirement restrictions, V1/V2 bytes and measurement semantics remain exact.
+Complete native success/failure/cancellation/report-loss composition, output
+accounting and the measured cost gate before advancing to a new rehearsal.
+Admission must still be implemented and independently gated; phase thirteen
+through fifteen, launcher acceptance and freeze remain open dependencies in
+the delegated goal, not completed work.
+
+**Implemented coordination scope (2026-09-12; final acceptance pending).**
+The source-derived backup allowance is sixteen attempted callbacks; success
+has fifteen: staging, database export, five archive terminals, manifest and
+publication (nine), plus observation's four and relationship's two nested
+verification samples. The sixteen bound includes late failure cleanup.
+Fresh Restore contributes fourteen verification samples, ten installation
+samples, three import and three repair boundaries, and four replay-directory
+and terminal-spool boundaries, plus two per submitted unit: `34 + 2N`.
+The existing phase transaction ceiling T supplies the conservative attempted
+callback maximum `34 + 2*(T-2)`; at T=100,000 it is 200,030. A final spool
+whose transaction admission fails replaces the terminal EOF pair and stops
+before subsequent installation/repair. Earlier operation failures stay within
+their successful scope allowance. These counts are not admitted store work or
+proof that the fixed phase deadline can accommodate all callbacks.
+
+Offline workspace-enabled producers ten/eleven receive the authenticated
+original absolute phase deadline, positive derived callback maximum and held
+FD6 root. Only producer ten receives fixed FD7: a 76-byte binding header and
+echo, four sixteen-byte frames per checkpoint, then byte-free terminal EOF.
+Backup's maximum therefore reserves 1,176 FD7 bytes. The parent serially
+relays each hold over the original retired server PC endpoint, adding four
+64-byte PC frames per callback (4,096 bytes maximum) while preserving the
+existing setup/terminal-EOF reservation and global sequence. Only those new
+closed PC opcodes carry the original deadline in previously reserved bytes;
+legacy frames and omitted bootstrap fields remain byte-exact. HOLD echoes
+only from inside the actual stopped-engine guard; RELEASE echoes only after
+resume and unlock. Callback panic, missing release, cancellation and malformed
+or escaped callbacks fail closed and unwind that ownership before joining.
+The five-second native resume cleanup bound is not a measurement extension.
+
+The actual server store binds its retired guard before application workers
+start. At measurement time SDK retirement must already have completed
+successfully, and neither its owner
+nor ordinary producer work reopens. Raw import retains its existing concrete
+engine and supplies its actual owner's idle guard; repair uses the actual
+OpenLocal engine. No external PID becomes signal authority, no extra database
+connection or schema open is introduced, and the import path still publishes
+no runtime descriptor. Selected Restore refuses a pre-existing observation
+sibling stage before target mutation and again at actual use; ordinary resume
+remains unchanged. Selected cleanup errors remain terminal even when a later
+walk can successfully observe the leftover population.
+
+Each offline stream adds one eighty-byte WB binding and a 26-byte begin plus
+60-byte success per completed sample, or a 26-byte failure after its begin.
+Reporting and semantic confirmation follow engine/SDK unlock; prior positive
+maxima survive a failed stream. The existing joined output pass parses these
+records without a second work scan, under the same shared 64-MiB server/backup/
+restore output allowance. Its byte-excess refusal is joined acceptance, **not
+live byte enforcement** or whole-executor enforcement. The owning archive
+success boundary requires fifteen backup samples or the fresh Restore
+`34 + 2N` shape; it does not infer N or whole-phase coverage from a binding.
+The parent reuses the volume's original observer before and after its complete
+held-root removal, outside author/epoch/controller locks, and preserves an
+incomplete removal prefix. Full parent phase-start/join/finish scheduling and
+later receipt composition remain separate open acceptance work.
+
+**Steady-state cost.** Ordinary requests, sync ticks and publications gain no
+new observer, child, scan or hash. Ordinary archive helpers and the shared
+focused-index build-workspace wrapper add fixed context lookups/defer branches;
+an absent checkpoint allocates no observer/guard state
+and performs no walk or report write. Selected bootstrap captures/rechecks the
+fixed inherited descriptor identities; backup alone adds one socket/client.
+The two archive command lifetimes each retain one native observer/report state
+with fixed counters. Every selected callback is one existing full-workspace
+linked-path traversal; existing backup/index or install authority locks can
+remain held through it. Owned engine then SDK mutexes span native quiescence
+and traversal; SDK idle/closed checks scan the existing forty call and two
+transaction slots. Successful selected SDK close adds one mutex update marking
+its actual completion. The backup protocol's serial mutex and finite joined
+cancellation callbacks span the hold; reporting holds no such lock. There is
+no extra native child, durable cache, per-file hook or per-statement repair
+sample. Failed operations can still spend cooperative cleanup time and retain
+temporary bytes. The actual-census/representative-cost and full-output gates
+above remain mandatory before a long rehearsal; tiny native success is not
+performance acceptance.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-12 — T42.2l approved archive measurement coordination | Ben explicitly approved the phase-twelve proposal and continuation through the goal. Add closed offline workspace/original-deadline binding and engine-owned checkpoint coordination, deriving finite report/control limits from actual success and failure paths before landing. Keep transient verification/staging/spool populations visible before cleanup; reuse the existing native traversal and joined reporting. | Retired SDK owners remain fenced, engine identity comes from its actual owner, and measurement never renews a phase deadline. Data/physical/work/output ceilings, V1/V2 bytes and sampled linked-path semantics remain exact. Native composition, output and measured traversal-cost acceptance remain required; approval is not a rehearsal, freeze or execution result. |
 | 2026-09-11 — T42.2l approved V3 linked-path capacity allowance | Ben explicitly approved prospective V3's sampled per-linked-path allocated-byte ceiling changing from 96 to 128 GiB, including the derived nominal `CustodyMarginBytes` value 45,183,055,954. Apply only the V3 construction/strict-validation correction. Preserve actual native values, both byte checks, completed positive excess, mandatory observations, early all-target headroom refusal and exact historical V1/V2 bytes/96-GiB limits. | The physical volume remains 96 GiB, logical ceiling 128 GiB, host prerequisite 120 GiB and every other bound unchanged. Nominal 42.08-GiB accounting difference is not the 10.08-GiB physical target slack or a guaranteed live reserve. One scalar assignment and existing comparisons add no query, scan, lock, cache, child or allocation reservation; acceptance changes, not measurement units or execution cost. No retrospective pass, new rehearsal, complete later-phase evidence, author/seal or freeze is established. |
 | 2026-09-11 — T42.2l pressure headroom uses both measured byte units | The exact `c7db1d21` rehearsal completed normal cleanup and pressure-80, then correctly refused pressure-90 at 111,690,625,024 linked-path allocated bytes against the unchanged 96-GiB ceiling. Filesystem-used ballast targets and per-linked-path workspace allocation are different quantities; intentional serving hard links contribute to the latter at each path. Before each native V3 ballast mutation, reuse that phase's successful start/normalized workspace sample and the existing fenced native ballast/capacity check. Subtract the current ballast from both measured logical and allocated totals, then project each remaining fixed target with checked arithmetic; reject any projected ceiling violation before allocating even the first target. | At most three scalar calculations under the existing volume/run locks; no additional HTTP/SDK call, workspace walk, inode map, hashing, cache, child, retry or concurrency. Ordinary query, sync, startup and publication costs are unchanged. The canonical custody margin remains target-only geometry, not guaranteed live linked-path headroom. The forecast is not a coherent future measurement: actual post-mutation sampling and refusal remain mandatory. A predicted refusal retains the completed actual prefix and a private path-free diagnostic, never projected maxima or a fabricated measured limit violation. V1/V2 bytes, 96-GiB volume/allocation ceiling, 128-GiB logical ceiling, 80/90/75 targets, eight-GiB nominal margin and deadlines remain exact. This early refusal does not make the measured footprint fit or authorize a rerun, bound change, freeze or ceremony. |
 | 2026-09-11 — T42.2l approved V3 normal-cycle job evidence | Ben approved aligning prospective V3 phase-nine normal completion with the existing phase-eleven/thirteen durable-job rule: a fresh, error-free `lower_bound` job row may truthfully retain backlog. Every other owner remains exact and drained, with the same sorted fresh cycle, post-cycle exact-normal capacity, actual normalized byte/authority checks and 4,096-turn deadline-bound execution. Select this only for controlled-normal execution with the selected cleanup collector; ordinary `AwaitNormal` and ordinary controlled-normal completion remain strict. Match the V3 parent normal-R validator and V3 pressure-80 receipt policy through the existing lifecycle policy string. | Reuse the existing job-backlog mode rather than aligning independent census cursors or retaining extra cross-cycle state. One fixed arm-time predicate and a schema check add no query, request, scan, hashing, cache, lock, child, concurrency or numerical allowance; the V3 plan carries a fixed policy string. V1/V2 policy and retained bytes remain exact. Fast real-owner tests cover the valid odd/even cursor skew and refusal matrix; the native composition seeds that cursor with one existing charged store CAS during preparation and requires a genuinely backlogged job row beside fifteen exact/drained owners. No full pressure, rehearsal, freeze or release claim follows from this acceptance-rule correction. |

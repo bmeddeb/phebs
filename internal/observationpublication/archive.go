@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 )
 
 const (
@@ -42,7 +44,7 @@ type archiveFile struct {
 // CreateArchive includes only fully validated current publications. A corrupt
 // or marker-covered derived generation is omitted rather than blocking backup
 // of precious state.
-func CreateArchive(ctx context.Context, root, output string) (ArchiveReport, error) {
+func CreateArchive(ctx context.Context, root, output string) (_ ArchiveReport, retErr error) {
 	var report ArchiveReport
 	if !filepath.IsAbs(root) || !filepath.IsAbs(output) {
 		return report, invalid("archive paths must be absolute")
@@ -115,8 +117,16 @@ func CreateArchive(ctx context.Context, root, output string) (ArchiveReport, err
 	complete := false
 	defer func() {
 		_ = file.Close()
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
 		if !complete {
-			_ = os.Remove(output)
+			if err := os.Remove(output); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 	}()
 	writer := tar.NewWriter(file)
@@ -303,7 +313,7 @@ func RestoreArchive(ctx context.Context, archivePath, root string) error {
 // recovery workflow uses a stage outside its data directory so interruption
 // leaves that directory empty and a subsequent invocation can resume. The
 // stage and destination must be disjoint.
-func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage string) error {
+func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage string) (retErr error) {
 	if !filepath.IsAbs(archivePath) || !filepath.IsAbs(root) || !filepath.IsAbs(stage) ||
 		filepath.Clean(archivePath) != archivePath || filepath.Clean(root) != root ||
 		filepath.Clean(stage) != stage || pathsOverlap(root, stage) {
@@ -326,7 +336,20 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 		return err
 	} else if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return invalid("restore stage is special")
+	} else if custodybytes.CheckpointSelected(ctx) {
+		// Check the actual existing-stage branch: selected measurement covers
+		// a fresh stage, while ordinary callers retain resumable partial files.
+		return invalid("selected restore requires an absent observation stage")
 	}
+	measured := false
+	defer func() {
+		// Failed observation stages intentionally remain resumable.
+		if !measured {
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}
+	}()
 	file, err := os.Open(archivePath)
 	if err != nil {
 		return err
@@ -517,6 +540,10 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 	if err := validateRestoreStageInventory(stage, seen, seenDirectories); err != nil {
 		return err
 	}
+	measured = true
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return err
+	}
 	if rootExists {
 		if err := os.Remove(root); err != nil {
 			return err
@@ -525,7 +552,7 @@ func RestoreArchiveWithStage(ctx context.Context, archivePath, root, stage strin
 	if err := os.Rename(stage, root); err != nil {
 		return err
 	}
-	return nil
+	return custodybytes.Checkpoint(ctx)
 }
 
 func restoreEmptyObservationObjectDirectory(
@@ -684,7 +711,7 @@ func ensureRestoreParent(stage, parent string) error {
 	return nil
 }
 
-func VerifyArchive(ctx context.Context, archivePath string) (ArchiveReport, error) {
+func VerifyArchive(ctx context.Context, archivePath string) (_ ArchiveReport, retErr error) {
 	root, err := os.MkdirTemp("", "phebs-observation-verify-")
 	if err != nil {
 		return ArchiveReport{}, err
@@ -692,7 +719,17 @@ func VerifyArchive(ctx context.Context, archivePath string) (ArchiveReport, erro
 	if err := os.Remove(root); err != nil {
 		return ArchiveReport{}, err
 	}
-	defer func() { _ = os.RemoveAll(root) }()
+	defer func() {
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := os.RemoveAll(root); err != nil && custodybytes.CheckpointSelected(ctx) {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+	}()
 	if err := RestoreArchive(ctx, archivePath, root); err != nil {
 		return ArchiveReport{}, err
 	}

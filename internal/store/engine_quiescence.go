@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
 var errLocalEngineQuiescence = errors.New("owned local engine quiescence unavailable")
@@ -63,8 +64,33 @@ func (engine *localEngine) stopLocked() {
 // are cooperative, and concurrent shutdown waits for them rather than claiming
 // a hard deadline. The separate cleanup timeout bounds resumed-state polling.
 func (s *Surreal) WithQuiescentLocalEngine(ctx context.Context, measure func(context.Context) error) error {
-	if s == nil || s.engine == nil || s.accounting == nil || s.accounting.SDKOwner == nil ||
-		ctx == nil || measure == nil {
+	if s == nil || s.accounting == nil {
+		return errLocalEngineQuiescence
+	}
+	return s.engine.withQuiescent(ctx, s.accounting.SDKOwner, measure)
+}
+
+func (engine *localEngine) withQuiescent(ctx context.Context, owner *storeaccounting.SDKOwner, measure func(context.Context) error) error {
+	if owner == nil {
+		return errLocalEngineQuiescence
+	}
+	return engine.withMeasurement(ctx, measure, owner.WithIdle)
+}
+
+// WithRetiredLocalEngine measures this still-owned engine after its selected
+// SDK owner has successfully closed. Its caller must separately prove the
+// retired producer and exclude every other custody writer. Callback, deadline,
+// process ownership and shutdown rules match WithQuiescentLocalEngine; this
+// does not reopen the SDK or republish a live-backup runtime descriptor.
+func (s *Surreal) WithRetiredLocalEngine(ctx context.Context, measure func(context.Context) error) error {
+	if s == nil || s.accounting == nil || s.accounting.SDKOwner == nil {
+		return errLocalEngineQuiescence
+	}
+	return s.engine.withMeasurement(ctx, measure, s.accounting.WithClosed)
+}
+
+func (engine *localEngine) withMeasurement(ctx context.Context, measure func(context.Context) error, withOwner func(context.Context, func() error) error) error {
+	if engine == nil || ctx == nil || measure == nil {
 		return errLocalEngineQuiescence
 	}
 	if _, bounded := ctx.Deadline(); !bounded {
@@ -72,12 +98,12 @@ func (s *Surreal) WithQuiescentLocalEngine(ctx context.Context, measure func(con
 	}
 	// Same lock order as Close: owned engine, then SDK owner. Runtime-file
 	// removal and connection shutdown cannot race the measurement interval.
-	s.engine.mu.Lock()
-	defer s.engine.mu.Unlock()
-	if s.engine.stopped || s.engine.paused || ctx.Err() != nil {
+	engine.mu.Lock()
+	defer engine.mu.Unlock()
+	if engine.stopped || engine.paused || ctx.Err() != nil {
 		return errors.Join(errLocalEngineQuiescence, ctx.Err())
 	}
-	return s.accounting.WithIdle(ctx, func() error {
-		return s.engine.measureStopped(ctx, measure)
+	return withOwner(ctx, func() error {
+		return engine.measureStopped(ctx, measure)
 	})
 }

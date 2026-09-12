@@ -7249,6 +7249,73 @@ physical and sampled ceilings. These are acceptance dependencies, not permission
 to move temporary files outside custody, raise another limit or infer unobserved
 peaks. A future exact-source rehearsal and full T42.2n/o acceptance remain open.
 
+**Phase-twelve measurement inventory (2026-09-12; subsequently approved).** Two
+source-inventory tracks and a separate policy/cost reviewer confirmed the
+[owning proposal](../PLAN.md#t422l-phase-twelve-measurement-proposal-2026-09-12).
+This is source evidence only: no native run, implementation or new allowance.
+The next ACs are closed offline FD6 and original-deadline binding; genuine
+retired-backup/import engine ownership; live-before-cleanup verification,
+installation and replay samples; held-root removal boundaries; and finite
+WB/control counts derived from every reachable success/failure path. Keep the
+shared output cap and all existing work/byte/deadline limits. The replay's
+two-walks-per-unit cost requires actual census and representative guarded-walk
+measurement; the loose transaction-derived maximum is not a performance or
+whole-output fit proof. Require independent source/cost review and native
+success, cancellation, cleanup failure and lost-report regressions before
+another long rehearsal. Ben's later explicit approval supplies this separate
+scoped admission decision; it does not reopen retired producer work or waive
+implementation, review or gate evidence.
+Non-authoring proposal review found zero critical, high, medium or low findings;
+documentation links, glossary and whitespace checks passed. These are draft
+checks, not implementation or native acceptance.
+
+**Approved archive coordination implementation (2026-09-12).** Implement the
+above closed admission slice, without changing work, data, physical-volume,
+output or deadline ceilings. Offline FD6/original-deadline binding, actual
+retired/import/repair engine ownership, live-before-cleanup archive checkpoints,
+FD7/retired-PC coordination and joined WB parsing now compose. Selected cleanup
+errors stay terminal; selected observation restore refuses older sibling stages
+at preflight and actual use. The parent adds only the two held-root removal
+walks in this slice. Full parent phase-start/join/finish acceptance remains open.
+The actual success/failure call graph derives backup success fifteen/maximum
+sixteen and fresh restore `34 + 2N`/maximum 200,030, not new store work. The
+same shared 64-MiB output cap admits a tested known compact subtotal of
+46,642,240 bytes including server and both offline WB streams; census bodies
+and ordinary logs remain outside that subtotal and require actual fit evidence.
+
+Non-authoring review covers all implementation groups and steady-state costs.
+Corrections preserve selected cleanup failures, reject a raced pre-existing
+observation stage, join canceled socket callbacks, contain escaped/panicking
+guards and refuse binding-only/incomplete archive WB success. The ordinary
+focused-index workspace cost branch is now recorded. Final reviewed source has
+no outstanding critical, high, medium or low finding; the native failure and
+static gates below were executed separately, not inferred from that review.
+With the pinned native engine available, full normal/race packages passed:
+custodybytes 0.341/1.350s, recovery 99.301/97.456s, focusedindex 18.560/19.598s,
+resolvercatalog 5.874/9.142s, callerpublication 8.742/11.407s,
+observationpublication 46.487/45.252s and relationshippublication 95.934/257.856s.
+Full dispatchadmission and storeaccounting normal/race passed in
+4.228/6.560s and 2.294/3.152s; focused command/parser normal/race passed in
+2.454/2.424s and 1.010/3.758s. Scoped actual import/SDK/retired-engine race
+checks passed in storeaccounting 1.341s and store 11.565s.
+Final actual tiny native archive composition and three failure cases passed
+normal/race in 72.739/72.181s for the package. Success emitted fifteen backup
+and 1,468 restore WB sample pairs. Lost release acknowledgment, relay-only
+cancellation and real stderr-pipe loss each reached two actual retired-engine
+holds, retained one positive sample and an incomplete second, returned a real
+healthy engine response after unwind, joined both process sessions and never
+started restore. The pipe-loss case proves only the retained prefix, not that
+no unobserved child measurement finished. These tests use real tiny archive,
+import and repair operations, not the protected full-parent corpus constructor.
+Final module verification, ci-static (vet, zero-issue pinned lint and all-package
+compilation), documentation (0.595s), glossary and whitespace passed; V1/V2
+digests remain unchanged. The first static attempt found only two intentional
+nil-context-test SA1012 warnings, corrected with explained line-local test
+annotations before the complete final static pass.
+These are implementation gates, not corpus-scale cost, full phase-twelve,
+later-phase, rehearsal, freeze or ceremony acceptance. Preserve the separate
+actual replay census/representative guarded-walk cost gate in PLAN.
+
 **Pressure headroom refusal after c7db1d21 (2026-09-11).** The exact-source
 rehearsal failed in 5,519.79s (package 5,520.627s), after 672 contiguous normal
 cleanup owner turns, 33,769 deletions, zero failed lifecycle turns and a

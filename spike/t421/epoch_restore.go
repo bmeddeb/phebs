@@ -191,13 +191,25 @@ func (run *ExecutionEpochOneRun) RestoreBackup(ctx context.Context) (result Exec
 	epochs.mu.Lock()
 	valid = epochs.active && author.borrowedBy == run && epochs.checkLocked(operation, 4) == nil &&
 		run.epoch.DataRoot == epochs.roots[0].path && run.epoch.BackupRoot == epochs.roots[3].path && run.epoch.ConfigPath == epochs.epochs[3].ConfigPath
-	if valid {
-		err = emptyRetiredDataRoot(operation, epochs.roots[0])
+	held := epochs.roots[0]
+	epochs.mu.Unlock()
+	author.mu.Unlock()
+	if !valid || run.sampleRetiredRemoval(operation) != nil {
+		return result, ErrExecutionEpochOne
+	}
+	author.mu.Lock()
+	epochs.mu.Lock()
+	if epochs.active && author.borrowedBy == run && epochs.checkLocked(operation, 4) == nil && os.SameFile(held.info, epochs.roots[0].info) {
+		err = emptyRetiredDataRoot(operation, held)
 	} else {
 		err = ErrExecutionEpochOne
 	}
 	epochs.mu.Unlock()
 	author.mu.Unlock()
+	// A failed removal still owns its required terminal sample. Cancellation
+	// refuses that traversal and retains prior completed maxima; no retry or
+	// per-child observation is hidden inside the recursive removal loop.
+	err = errors.Join(err, run.sampleRetiredRemoval(operation))
 	if err != nil {
 		return result, err
 	}
@@ -224,6 +236,68 @@ func (run *ExecutionEpochOneRun) RestoreBackup(ctx context.Context) (result Exec
 	run.restoreComplete = true
 	run.mu.Unlock()
 	return result, nil
+}
+
+// The retained restore operation, not a caller-supplied phase, owns these two
+// boundary walks. returnStarting prevents source release and successor launch;
+// the ordinary joined sampler intentionally refuses that active operation.
+func (run *ExecutionEpochOneRun) sampleRetiredRemoval(ctx context.Context) error {
+	flow := run.flow
+	if flow.workspace == nil {
+		return nil
+	}
+	if flow.workspaceBytes == nil {
+		return ErrExecutionEpochOne
+	}
+	confirm := func() bool {
+		if !run.retiredRemovalBoundary(ctx) {
+			return false
+		}
+		run.mu.Lock()
+		current := run.result
+		run.mu.Unlock()
+		var err error
+		current.Accounting, err = flow.controller.Snapshot()
+		if err != nil {
+			return false
+		}
+		current.Store, err = flow.store.Snapshot()
+		return err == nil && epochBackupClosedPrefix(ctx, current)
+	}
+	if !confirm() {
+		_ = flow.workspaceBytes.Fail()
+		return ErrExecutionEpochOne
+	}
+	// The confirmed SA snapshot is phase twelve; no authored zero phase row or
+	// data-only substitute is supplied. The descriptor's identity is rechecked
+	// by the existing native whole-workspace observer on this actual traversal.
+	value, err := flow.workspaceBytes.SampleConfirmed(ctx, 12, confirm)
+	if err != nil || value.LogicalBytes > flow.plan.WorkEnvelope.MaximumDataLogicalBytes || value.AllocatedBytes > flow.plan.SafetyEnvelope.MaximumDataAllocatedBytes {
+		return ErrExecutionEpochOne
+	}
+	return nil
+}
+
+// Called both before and after traversal. These locks protect ownership only;
+// the native walk and controller snapshots run after all have been released.
+func (run *ExecutionEpochOneRun) retiredRemovalBoundary(ctx context.Context) bool {
+	if ctx == nil || ctx.Err() != nil {
+		return false
+	}
+	flow := run.flow
+	flow.mu.Lock()
+	defer flow.mu.Unlock()
+	author, epochs := flow.epochs.author, flow.epochs
+	author.mu.Lock()
+	defer author.mu.Unlock()
+	epochs.mu.Lock()
+	defer epochs.mu.Unlock()
+	run.mu.Lock()
+	defer run.mu.Unlock()
+	return !flow.closed && flow.retained == run && run.returnStarting && run.restoreUsed && !run.restoreStarted && run.err == nil &&
+		run.epoch.Epoch == 4 && run.backupRetired && run.backupComplete && run.backupJoined && run.backupSessionEmpty &&
+		!author.closed && author.err == nil && !author.active && author.borrowedBy == run && epochs.active && !epochs.closed && epochs.err == nil && epochs.released == 4 &&
+		time.Now().Before(run.phaseDeadline) && !run.phaseDeadline.After(run.lifetimeDeadline)
 }
 
 // Only the already-held data root reaches this helper. os.Root confines all

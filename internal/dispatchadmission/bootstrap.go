@@ -57,10 +57,14 @@ type ProductionBootstrap struct {
 	// carry the exact mechanical view returned with Transport.Open's endpoint.
 	Store     *storeaccounting.ClientConfig `json:",omitempty"`
 	Workspace *ProductionWorkspaceBinding   `json:",omitempty"`
+	// Only workspace-enabled offline archive commands carry the parent's
+	// already-started phase deadline. Omission preserves legacy bytes.
+	ArchiveDeadlineUnixNano int64  `json:",omitempty"`
+	ArchiveMeasurements     uint32 `json:",omitempty"`
 }
 
 func (record ProductionBootstrap) validate() error {
-	if record.validateWorkspace() != nil {
+	if record.validateWorkspace() != nil || record.validateArchiveMeasurements() != nil {
 		return ErrProductionBootstrap
 	}
 	if record.Control.BackupEndpointCarry && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 5 || record.Phase != 8 || record.Store == nil) {
@@ -355,6 +359,7 @@ func bootstrapSelectedProgram(ctx context.Context, program string, required bool
 	// Observe the original FD6 before socket adoption can allocate a duplicate
 	// at that number. Merely observing never adopts/closes an omitted handle.
 	workspace := captureInheritedProductionWorkspace()
+	archive := captureInheritedArchiveMeasurement()
 	if !inheritedProductionSocket(3) || !inheritedProductionSocket(4) || storeSelected && !inheritedProductionSocket(5) {
 		return nil, ErrProductionBootstrap
 	}
@@ -362,7 +367,7 @@ func bootstrapSelectedProgram(ctx context.Context, program string, required bool
 	if storeSelected {
 		storeFile = os.NewFile(5, "production-store")
 	}
-	return bootstrapProgramWithWorkspace(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), storeFile, program, nil, workspace)
+	return bootstrapProgramWithArchive(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), storeFile, program, nil, workspace, nil, archive)
 }
 
 func bootstrapProduction(ctx context.Context, admissionFile, controlFile *os.File) (_ *ProductionLifetime, retErr error) {
@@ -380,13 +385,25 @@ func bootstrapProgramWithStore(ctx context.Context, admissionFile, controlFile, 
 // Only the synchronous process bootstrap may adopt FD6. In-process callers
 // supply an explicitly owned descriptor; omitted records never touch FD6.
 func bootstrapProgramWithWorkspace(ctx context.Context, admissionFile, controlFile, storeFile *os.File, program string, workspaceFile *os.File, inheritedWorkspace *ProductionWorkspaceBinding) (_ *ProductionLifetime, retErr error) {
+	return bootstrapProgramWithArchive(ctx, admissionFile, controlFile, storeFile, program, workspaceFile, inheritedWorkspace, nil, nil)
+}
+
+func bootstrapProgramWithArchive(ctx context.Context, admissionFile, controlFile, storeFile *os.File, program string, workspaceFile *os.File, inheritedWorkspace *ProductionWorkspaceBinding, archiveFile *os.File, inheritedArchive *archiveMeasurementIdentity) (_ *ProductionLifetime, retErr error) {
 	workspaceTransferred := false
+	archiveTransferred := false
+	var archiveConn *net.UnixConn
 	defer func() {
 		if workspaceFile != nil && !workspaceTransferred {
 			_ = workspaceFile.Close()
 		}
+		if archiveFile != nil {
+			_ = archiveFile.Close()
+		}
+		if archiveConn != nil && !archiveTransferred {
+			_ = archiveConn.Close()
+		}
 	}()
-	if workspaceFile != nil && inheritedWorkspace != nil {
+	if workspaceFile != nil && inheritedWorkspace != nil || archiveFile != nil && inheritedArchive != nil {
 		return nil, ErrProductionBootstrap
 	}
 	// Protect all selected inherited handles before any can be handed to a
@@ -463,13 +480,38 @@ func bootstrapProgramWithWorkspace(ctx context.Context, admissionFile, controlFi
 	} else if workspaceFile != nil {
 		return nil, ErrProductionBootstrap
 	}
+	operation, cancelOperation, err := record.archiveContext(ctx)
+	if err != nil {
+		return nil, ErrProductionBootstrap
+	}
+	defer func() {
+		if retErr != nil && cancelOperation != nil {
+			cancelOperation()
+		}
+	}()
+	if record.ArchiveMeasurements != 0 && record.Producer.ID == 10 {
+		if inheritedArchive != nil {
+			current := captureInheritedArchiveMeasurement()
+			if current == nil || *current != *inheritedArchive {
+				return nil, ErrProductionBootstrap
+			}
+			archiveFile = os.NewFile(7, "production-archive-measurement")
+		}
+		archiveConn, err = adopt(archiveFile)
+		archiveFile = nil // adopt consumes it on every path
+		if err != nil {
+			return nil, ErrProductionBootstrap
+		}
+	} else if archiveFile != nil {
+		return nil, ErrProductionBootstrap
+	}
 	// Stdlib File duplicates once during transfer to the existing constructors;
 	// their adopted descriptors stay CLOEXEC. No second custody implementation.
 	admissionFile, err = admission.File()
 	if err != nil {
 		return nil, ErrProductionBootstrap
 	}
-	client, err := NewClient(ctx, admissionFile, record.Producer, record.Phase, record.Limits)
+	client, err := NewClient(operation, admissionFile, record.Producer, record.Phase, record.Limits)
 	if err != nil {
 		return nil, ErrProductionBootstrap
 	}
@@ -499,7 +541,16 @@ func bootstrapProgramWithWorkspace(ctx context.Context, admissionFile, controlFi
 	}
 	lifetime = &ProductionLifetime{program: program, semanticMode: record.SemanticMode, producerID: record.Producer.ID,
 		inputSHA256: record.InputSHA256, client: client, tools: make(map[string]ProductionToolBinding, len(record.Tools)),
-		storeClient: storeClient, cancelStore: cancelStore, workspace: workspace}
+		storeClient: storeClient, cancelStore: cancelStore, workspace: workspace, cancelArchive: cancelOperation,
+		archiveMeasurements: record.ArchiveMeasurements}
+	if archiveConn != nil {
+		lifetime.archiveMeasurement, err = newArchiveMeasurementClient(opCtx, client.Context(), archiveConn, ArchiveMeasurementBinding{
+			ProducerID: record.Producer.ID, ProducerBinding: record.Producer.Binding, InputSHA256: record.InputSHA256,
+		}, record.ArchiveMeasurements)
+		if err != nil {
+			return nil, ErrProductionBootstrap
+		}
+	}
 	if storeClient != nil {
 		client.mu.Lock()
 		client.storeLifetime = lifetime
@@ -509,7 +560,7 @@ func bootstrapProgramWithWorkspace(ctx context.Context, admissionFile, controlFi
 	if err != nil {
 		return nil, ErrProductionBootstrap
 	}
-	done, err := StartPhaseControl(ctx, controlFile, client, record.Control)
+	done, err := StartPhaseControl(operation, controlFile, client, record.Control)
 	if err != nil {
 		return nil, ErrProductionBootstrap
 	}
@@ -528,5 +579,6 @@ func bootstrapProgramWithWorkspace(ctx context.Context, admissionFile, controlFi
 		return nil, ErrProductionBootstrap
 	}
 	workspaceTransferred = true
+	archiveTransferred = true
 	return lifetime, nil
 }

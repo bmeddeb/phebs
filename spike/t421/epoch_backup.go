@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -164,6 +165,8 @@ func (run *ExecutionEpochOneRun) BackupAndStop(ctx context.Context) (result Exec
 // four configuration/tool custody. Producer ten owns backup; eleven owns restore.
 // The restore caller separately owns prior server join and target emptying.
 func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore bool) (retErr error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	flow := run.flow
 	author, epochs := flow.epochs.author, flow.epochs
 	author.mu.Lock()
@@ -221,6 +224,37 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 	backupOutput := epochBackupCommandOutput{shared: run.backupOutput, restore: restore}
 	command.Stdout, command.Stderr = backupOutput, backupOutput
 	command.ExtraFiles = []*os.File{files[1], files[3], storeFile}
+	var workspaceBinding *dispatchadmission.ProductionWorkspaceBinding
+	var measurements uint32
+	var measurementSocket *net.UnixConn
+	var measurementChild *os.File
+	if flow.workspace != nil {
+		binding, bindErr := dispatchadmission.DescribeProductionWorkspace(flow.workspace.file, flow.workspace.path)
+		deadline, bounded := ctx.Deadline()
+		if bindErr != nil || binding.FSID != flow.workspace.volume || !bounded || deadline.UnixNano() <= 0 {
+			return ErrExecutionEpochOne
+		}
+		workspaceBinding = &binding
+		measurements, err = archiveCheckpointMaximum(flow.plan, producer)
+		if err != nil {
+			return err
+		}
+		command.ExtraFiles = append(command.ExtraFiles, flow.workspace.file)
+		if !restore {
+			var parent *os.File
+			parent, measurementChild, err = dispatchadmission.NewPipe()
+			if err != nil {
+				return ErrExecutionEpochOne
+			}
+			defer func() { _ = measurementChild.Close() }()
+			measurementSocket, err = adoptAuthorCustodySocket(parent)
+			if err != nil {
+				return ErrExecutionEpochOne
+			}
+			defer func() { _ = measurementSocket.Close() }()
+			command.ExtraFiles = append(command.ExtraFiles, measurementChild)
+		}
+	}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
 	handle, err := flow.parent.StartInPhase(ctx, 12, dispatchadmission.Site{ID: site, Role: executionRolePhebs}, command)
@@ -239,6 +273,7 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 	joined := false
 	var waitErr error
 	var served <-chan error
+	var measurementServed <-chan error
 	defer func() {
 		if !joined {
 			_ = t4013.KillPrivateProcessSession(command.Process.Pid)
@@ -255,6 +290,16 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 		run.mu.Unlock()
 		if !joined || !empty || stopErr != nil || waitErr != nil {
 			retErr = ErrExecutionEpochOne
+		}
+		// A failed or unjoined command cannot keep an owned engine suspended.
+		// Join the relay before inspecting output or releasing the source borrow.
+		if measurementServed != nil {
+			if !joined || retErr != nil {
+				cancel()
+			}
+			if err := <-measurementServed; err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 		if served != nil {
 			joinCtx, joinCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -281,6 +326,10 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 		if observeErr != nil {
 			retErr = ErrExecutionEpochOne
 		}
+		if workspaceBinding != nil && !epochArchiveWorkspaceComplete(observed.WorkspaceBytes, producer) {
+			observed.Complete = false
+			retErr = ErrExecutionEpochOne
+		}
 		run.mu.Lock()
 		if restore {
 			run.result.RestoreWork = observed
@@ -293,8 +342,28 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 		return ErrExecutionEpochOne
 	}
 	files[1], files[3] = nil, nil
+	if measurementChild != nil && measurementChild.Close() != nil {
+		return ErrExecutionEpochOne
+	}
 	config := dispatchadmission.PhaseControlConfig{Phases: []uint32{12}, InitialPhase: 12, MaximumPhases: 1, MaximumWireBytes: 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	record := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, InputSHA256: run.attemptInput, Producer: view.Producer, Phase: 12, Limits: view.Limits, Control: config, Tools: tools, Store: &storeConfig}
+	if workspaceBinding != nil {
+		deadline, _ := ctx.Deadline() // Required above, never renewed for bootstrap.
+		record.Workspace, record.ArchiveDeadlineUnixNano, record.ArchiveMeasurements = workspaceBinding, deadline.UnixNano(), measurements
+	}
+	if measurementSocket != nil {
+		completion := make(chan error, 1)
+		measurementServed = completion
+		go func() {
+			err := dispatchadmission.ServeArchiveMeasurement(ctx, measurementSocket,
+				dispatchadmission.ArchiveMeasurementBinding{ProducerID: producer, ProducerBinding: view.Producer.Binding, InputSHA256: run.attemptInput},
+				measurements, run.control.WithRetiredBackupMeasurement)
+			if err != nil {
+				cancel()
+			}
+			completion <- err
+		}()
+	}
 	if dispatchadmission.SendProductionBootstrap(ctx, files[0], files[2], record) != nil {
 		return ErrExecutionEpochOne
 	}
@@ -324,6 +393,13 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 	if waitErr != nil || flow.store.Wait(ctx, producer) != nil {
 		return ErrExecutionEpochOne
 	}
+	if measurementServed != nil {
+		measurementErr := <-measurementServed
+		measurementServed = nil
+		if measurementErr != nil {
+			return errors.Join(ErrExecutionEpochOne, measurementErr)
+		}
+	}
 	stream := run.backupOutput.backup
 	if restore {
 		stream = run.backupOutput.restore
@@ -340,6 +416,18 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 	}
 	run.mu.Unlock()
 	return nil
+}
+
+// Stream completion alone admits a binding-only stream. This actual measured
+// command requires the successful operation's fixed checkpoint shape. Restore
+// has 34 fixed checkpoints plus two per submitted replay unit; this checks the
+// shape without claiming an independently observed replay population.
+func epochArchiveWorkspaceComplete(out ExecutionWorkspaceByteObservation, producer uint32) bool {
+	if !out.Bound || !out.Complete || out.Unavailable || out.LimitExceeded {
+		return false
+	}
+	completed := out.Phases[11].Completed
+	return producer == 10 && completed == 15 || producer == 11 && completed >= 34 && (completed-34)%2 == 0
 }
 
 // Parse the actual owning command's joined output, not an expected-plan value

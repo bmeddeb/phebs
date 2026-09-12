@@ -64,7 +64,7 @@ type storeSDKCall struct {
 // frames or public evidence.
 type SDKOwner struct {
 	// ponytail: <=40 calls and 2 UUIDs, one mutex; never held over SDK or ACK
-	// I/O. Selected WithIdle holds it over its synchronous local measurement.
+	// I/O. Selected WithIdle/WithClosed hold it over local measurement.
 	mu             sync.Mutex
 	client         *Client
 	callLimit      int
@@ -72,6 +72,7 @@ type SDKOwner struct {
 	calls          [MaximumCalls]*storeSDKCall
 	transactions   [MaximumTransactions]storeNativeTransaction
 	fenced         bool
+	closed         bool // true only after the actual client close succeeds
 	err            error
 	privateRefusal *SDKPrivateRefusal
 }
@@ -502,6 +503,9 @@ func (owner *SDKOwner) Close(ctx context.Context) error {
 	if err := owner.client.Close(ctx); err != nil {
 		return owner.fail(ctx, err)
 	}
+	owner.mu.Lock()
+	owner.closed = true
+	owner.mu.Unlock()
 	return nil
 }
 

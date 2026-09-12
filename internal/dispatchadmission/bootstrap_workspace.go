@@ -1,8 +1,10 @@
 package dispatchadmission
 
 import (
+	"context"
 	"os"
 	"slices"
+	"time"
 )
 
 // ProductionWorkspaceBinding is private mechanical descriptor identity, not
@@ -23,11 +25,22 @@ type productionWorkspace struct {
 
 func (record ProductionBootstrap) validateWorkspace() error {
 	if record.Workspace == nil {
+		if record.ArchiveDeadlineUnixNano != 0 {
+			return ErrProductionBootstrap
+		}
 		return nil
 	}
 	w := record.Workspace
-	if record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.InputSHA256 == ([32]byte{}) ||
+	if record.Program != ProgramPhebs || record.InputSHA256 == ([32]byte{}) ||
 		record.Store == nil || !validProductionPath(w.Path) || w.Inode == 0 || w.FSID == ([2]int32{}) {
+		return ErrProductionBootstrap
+	}
+	if record.SemanticMode == "" && (record.Producer.ID == 10 || record.Producer.ID == 11) &&
+		record.Phase == 12 && record.Control.MaximumPhases == 1 && !record.Control.OwnerControl &&
+		slices.Equal(record.Control.Phases, []uint32{12}) && record.ArchiveDeadlineUnixNano > 0 {
+		return nil
+	}
+	if record.SemanticMode != ProductionSemanticV3 || record.ArchiveDeadlineUnixNano != 0 {
 		return ErrProductionBootstrap
 	}
 	if record.Producer.ID == 5 && record.Phase == 8 && record.Control.MaximumPhases == 4 && slices.Equal(record.Control.Phases, []uint32{8, 9, 10, 11}) ||
@@ -35,6 +48,24 @@ func (record ProductionBootstrap) validateWorkspace() error {
 		return nil
 	}
 	return ErrProductionBootstrap
+}
+
+// The parent remains the original monotonic deadline owner. The authenticated
+// wall-clock value transfers its deadline, not a duration to restart. A shorter
+// inherited context still wins, and transport loss still cancels the child.
+func (record ProductionBootstrap) archiveContext(ctx context.Context) (context.Context, context.CancelFunc, error) {
+	if ctx == nil || ctx.Err() != nil || record.validateWorkspace() != nil {
+		return nil, nil, ErrProductionBootstrap
+	}
+	if record.ArchiveDeadlineUnixNano == 0 {
+		return ctx, nil, nil
+	}
+	deadline := time.Unix(0, record.ArchiveDeadlineUnixNano)
+	if !time.Now().Before(deadline) {
+		return nil, nil, ErrProductionBootstrap
+	}
+	operation, cancel := context.WithDeadline(ctx, deadline)
+	return operation, cancel, nil
 }
 
 // ProductionWorkspace borrows the authenticated held root, never transfers

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 )
 
@@ -55,13 +56,27 @@ func VerifyArchive(archivePath string) error {
 // complete restore round trip; backup creation uses a cheaper construction
 // proof instead.
 func VerifyArchiveWithReport(archivePath string) (ArchiveReport, error) {
+	return VerifyArchiveWithReportContext(context.Background(), archivePath)
+}
+
+func VerifyArchiveWithReportContext(ctx context.Context, archivePath string) (_ ArchiveReport, retErr error) {
 	root, err := os.MkdirTemp("", "phebs-focused-archive-")
 	if err != nil {
 		return ArchiveReport{}, err
 	}
-	defer func() { _ = os.RemoveAll(root) }()
+	defer func() {
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := os.RemoveAll(root); err != nil && custodybytes.CheckpointSelected(ctx) {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+	}()
 	indexDir := filepath.Join(root, "index")
-	if err := RestoreArchive(archivePath, indexDir); err != nil {
+	if err := RestoreArchiveContext(ctx, archivePath, indexDir); err != nil {
 		return ArchiveReport{}, err
 	}
 	var report ArchiveReport
@@ -109,7 +124,7 @@ func CreateArchiveWithSelections(
 	ctx context.Context,
 	indexDir, destination string,
 	selections []ArchiveSearchGeneration,
-) (ArchiveReport, error) {
+) (_ ArchiveReport, retErr error) {
 	expectations, report, err := archivablePublications(ctx, indexDir, selections)
 	if err != nil {
 		return report, err
@@ -128,9 +143,17 @@ func CreateArchiveWithSelections(
 	}
 	complete := false
 	defer func() {
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
 		if !complete {
 			_ = file.Close()
-			_ = os.Remove(destination)
+			if err := os.Remove(destination); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 	}()
 	writer := tar.NewWriter(file)
@@ -344,6 +367,10 @@ func sameArchiveFileIdentity(left, right os.FileInfo) bool {
 // target or staging output. It then verifies all extracted bytes in a private
 // process-owned directory and installs shards and sidecars before manifests.
 func RestoreArchive(archivePath, indexDir string) error {
+	return RestoreArchiveContext(context.Background(), archivePath, indexDir)
+}
+
+func RestoreArchiveContext(ctx context.Context, archivePath, indexDir string) (retErr error) {
 	pathInfo, err := os.Lstat(archivePath)
 	if err != nil || !pathInfo.Mode().IsRegular() {
 		return errors.New("focused archive is missing or special")
@@ -375,11 +402,24 @@ func RestoreArchive(archivePath, indexDir string) error {
 	if err := ensureRealDirectory(indexDir); err != nil {
 		return err
 	}
-	stage, err := newRestoreWorkspace(indexDir)
+	stage, err := newRestoreWorkspace(ctx, indexDir)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = os.RemoveAll(stage) }()
+	measured := false
+	defer func() {
+		if !measured {
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}
+		if err := os.RemoveAll(stage); err != nil && custodybytes.CheckpointSelected(ctx) {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+	}()
 
 	extracted, err := scanArchive(archive, archiveInfo.Size(), stage)
 	if err != nil {
@@ -420,6 +460,10 @@ func RestoreArchive(archivePath, indexDir string) error {
 		}
 	}
 	searchGenerations := filepath.Join(stage, searchGenerationDirectoryName)
+	measured = true
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return err
+	}
 	if _, err := os.Lstat(searchGenerations); err == nil {
 		if _, err := os.Lstat(filepath.Join(indexDir, searchGenerationDirectoryName)); !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("focused restore target %q already exists", searchGenerationDirectoryName)

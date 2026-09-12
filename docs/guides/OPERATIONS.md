@@ -195,6 +195,16 @@ after strict native results and joined body closure. A failed or uncertain
 submission retains its attempted prefix and cannot be retried on that owner.
 Ordinary restore retains its existing fallback and requires no accounting parent.
 
+The private phase-twelve measurement profile additionally requires a fresh
+observation-restore sibling stage; it will not resume or delete an older
+`<data>.observation-restore` stage. Preserve that failed custody for disposition.
+Ordinary restore keeps its existing resumable observation workflow. Selected
+archive checkpoints measure the authenticated workspace before transient
+populations disappear, using the original phase deadline and actual owned
+engine quiescence. Missing reports, failed measurements or cleanup failures
+refuse completion; these private sampled maxima are not an instantaneous or
+unique-physical-space guarantee and do not establish a ceremony pass.
+
 Protected replay adds two streaming database parse/hash passes beyond Verify
 and a private one-unit scratch file. A large record or intervening trivia can
 make that scratch file large, up to the existing artifact limit; 512 records

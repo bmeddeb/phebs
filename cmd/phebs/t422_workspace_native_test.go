@@ -28,7 +28,7 @@ import (
 // the cursor store, filesystem capacity and SDK reads are real. This proves no
 // corpus deletion, pressure transition, frozen-volume capacity or whole phase.
 func TestT422WorkspaceNativeComposition(t *testing.T) {
-	testT422ArchiveRetiredNativeEndpoint(t, false, true)
+	testT422ArchiveRetiredNativeEndpoint(t, false, true, false)
 }
 
 func TestT422WorkspaceNativeHelper(t *testing.T) {

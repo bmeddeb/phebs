@@ -131,6 +131,32 @@ func TestT422WorkspaceReportPairs(t *testing.T) {
 	}
 }
 
+func TestT422ArchiveWorkspaceReportPairs(t *testing.T) {
+	for _, producer := range []uint32{10, 11} {
+		t.Run(fmt.Sprint(producer), func(t *testing.T) {
+			var output bytes.Buffer
+			state := dispatchadmission.ProductionSemanticSnapshot{ProducerID: producer, Phase: 12, InputSHA256: [32]byte{1}}
+			reports := &t422WorkspaceReports{writer: &output, initial: state, archiveMaximum: 2}
+			binding, err := t422SourceBinding(state)
+			if err != nil || len(binding) != 80 {
+				t.Fatal("decimal archive binding", len(binding), err)
+			}
+			for sequence := 1; sequence <= 2; sequence++ {
+				if reports.begin(state) != nil || reports.complete(custodybytes.Sample{LogicalBytes: 1, AllocatedBytes: 2}) != nil {
+					t.Fatal("admitted archive pair", sequence)
+				}
+				want := fmt.Sprintf("WB1:%X:CB:%016x\nWB1:%X:CS:%016x:0000000000000001:0000000000000002\n", producer, sequence, producer, sequence)
+				if !strings.HasSuffix(output.String(), want) {
+					t.Fatal("archive hexadecimal producer", output.String())
+				}
+			}
+			if output.Len() != 2*86 || reports.begin(state) == nil || reports.sequence != 2 {
+				t.Fatal("archive allowance or width", output.Len(), reports.sequence)
+			}
+		})
+	}
+}
+
 func TestT422WorkspaceReportGuards(t *testing.T) {
 	for _, mode := range []string{"missing_begin", "double_begin", "wrong_input", "wrong_producer", "wrong_phase", "backward_phase", "phase_limit", "short_sink", "failed_sink"} {
 		t.Run(mode, func(t *testing.T) {
@@ -275,4 +301,40 @@ func assertT422NativeWorkspaceReports(t *testing.T, raw string, input [32]byte, 
 	if bindings != 1 || count != wantSamples || pending {
 		t.Fatal("native workspace report coverage", bindings, count, pending)
 	}
+}
+
+func assertT422ArchiveNativeWorkspaceReports(t *testing.T, raw string, producer uint32, input [32]byte, minimum, maximum uint64) {
+	t.Helper()
+	bindings, count := 0, uint64(0)
+	pending := false
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "WBB") {
+			if line != fmt.Sprintf("WBB1:%d:sha256:%x", producer, input) {
+				t.Fatal("archive workspace identity", line)
+			}
+			bindings++
+		}
+		if !strings.HasPrefix(line, "WB1:") {
+			continue
+		}
+		if !pending {
+			count++
+			if line != fmt.Sprintf("WB1:%X:CB:%016x", producer, count) {
+				t.Fatal("archive checkpoint begin", line)
+			}
+			pending = true
+			continue
+		}
+		var sequence, logical, allocated uint64
+		format := fmt.Sprintf("WB1:%X:CS:%%016x:%%016x:%%016x", producer)
+		n, err := fmt.Sscanf(line, format, &sequence, &logical, &allocated)
+		if n != 3 || err != nil || len(line) != 59 || sequence != count || logical == 0 || allocated == 0 {
+			t.Fatal("archive native checkpoint", line, err)
+		}
+		pending = false
+	}
+	if bindings != 1 || pending || count < minimum || count > maximum {
+		t.Fatal("archive checkpoint coverage", producer, bindings, count, pending)
+	}
+	t.Logf("actual archive workspace samples: producer=%d count=%d", producer, count)
 }

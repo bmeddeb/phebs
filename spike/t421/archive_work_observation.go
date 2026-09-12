@@ -11,6 +11,10 @@ func observeArchiveWork(output *checkoutCommandOutput, plan Plan, producer uint3
 	if err != nil || !healthy || output.err != nil {
 		out.Complete, out.Cache.Complete = false, false
 		out.SourceCensus.Complete, out.CatalogCensus.Complete = false, false
+		out.WorkspaceBytes.Complete = false
+		if out.WorkspaceBytes.Bound && !out.WorkspaceBytes.LimitExceeded {
+			out.WorkspaceBytes.Unavailable = true
+		}
 		return out, errExecutionAttempts
 	}
 	return out, nil

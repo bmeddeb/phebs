@@ -17,7 +17,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 	"github.com/bmeddeb/phebs/spike/t4013"
 )
@@ -42,7 +44,8 @@ type ExecutionEpochOne struct {
 	retained               *ExecutionEpochOneRun
 	logicalUsed            bool
 	returnUsed             bool
-	workspace              *productionRoot // Borrowed only from a bound pressure volume.
+	workspace              *productionRoot        // Borrowed only from a bound pressure volume.
+	workspaceBytes         *custodybytes.Observer // Same observer retained by the bound volume.
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -559,6 +562,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	case 4:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{8, 9, 10, 11}, 8, 4
 		controlConfig.BackupEndpointCarry = run.backupAllowed
+		if run.backupAllowed && workspaceBinding != nil {
+			controlConfig.BackupMeasurementMaximum = recovery.BackupCheckpointMaximum()
+			controlConfig.MaximumWireBytes += uint64(controlConfig.BackupMeasurementMaximum) * 4 * dispatchadmission.FrameBytes
+		}
 	case 5:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{12, 13, 14}, 12, 3
 	}

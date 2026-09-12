@@ -28,7 +28,7 @@ import (
 // this does not build a corpus or establish current/pin publication semantics.
 func TestT422WorkspaceCleanupNativeComposition(t *testing.T) {
 	started := time.Now()
-	testT422ArchiveRetiredNativeEndpoint(t, false, true, true)
+	testT422ArchiveRetiredNativeEndpoint(t, false, true, false, true)
 	t.Logf("actual cleanup: objects=%d shards=%d deleted_units=%d turns=%d cursor_writes=%d workspace_samples=%d elapsed=%s",
 		t422CleanupObservationFiles, t422CleanupSearchFiles, t422CleanupExpectedDeleted,
 		t422CleanupExpectedTurns, 2*t422CleanupExpectedTurns, t422CleanupExpectedTurns+2, time.Since(started))
@@ -38,7 +38,7 @@ func TestT422WorkspaceCleanupNativeComposition(t *testing.T) {
 // owners and six explicit closed owners. Files are inert residue, not built
 // publications; the catalog is built and published through the real store.
 func TestT422WorkspaceAllOwnersNativeComposition(t *testing.T) {
-	testT422ArchiveRetiredNativeEndpoint(t, false, true, true, true)
+	testT422ArchiveRetiredNativeEndpoint(t, false, true, false, true, true)
 }
 
 func seedT422AllNativeOwners(t *testing.T, st *store.Surreal, root string, turns *atomic.Uint64) ([]lifecycle.Owner, func()) {

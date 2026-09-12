@@ -89,7 +89,7 @@ func TestExecutionWorkspaceBytesRefusedSuffixPreservesMaxima(t *testing.T) {
 			t.Fatal("unbound input", got.WorkspaceBytes, err)
 		}
 	}
-	for _, producer := range []uint32{2, 3, 4, 10, 11} {
+	for _, producer := range []uint32{2, 3, 4} {
 		var out ExecutionWorkspaceByteObservation
 		if seen, err := observeWorkspaceByteEvent([]byte(workspaceTestBinding(producer)), plan, producer, "sha256:01"+strings.Repeat("00", 31), &out); !seen || err == nil || out.Bound {
 			t.Fatal("unsupported producer", producer, out, err)

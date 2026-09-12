@@ -74,6 +74,55 @@ func TestArchiveWorkExcessAndCoverage(t *testing.T) {
 	}
 }
 
+func TestArchiveWorkspaceJoined(t *testing.T) {
+	plan := accountingTestPlan(t)
+	for _, producer := range []uint32{10, 11} {
+		for _, mode := range []string{"complete", "failed_native", "failed_walk", "missing_success", "wrong_phase", "over_limit"} {
+			t.Run(fmt.Sprintf("%d/%s", producer, mode), func(t *testing.T) {
+				raw := archiveWorkTestBindings(producer) + workspaceTestBinding(producer) + workspaceTestPair(producer, 12, 1, 4, 8)
+				switch mode {
+				case "failed_walk":
+					raw += workspaceTestEvent(producer, 12, 'B', 2, 0, 0) + workspaceTestEvent(producer, 12, 'F', 2, 0, 0)
+				case "missing_success":
+					raw += workspaceTestEvent(producer, 12, 'B', 2, 0, 0)
+				case "wrong_phase":
+					raw += workspaceTestPair(producer, 13, 2, 4, 8)
+				case "over_limit":
+					raw += workspaceTestPair(producer, 12, 2, 4, plan.SafetyEnvelope.MaximumDataAllocatedBytes+1)
+				}
+				output := &checkoutCommandOutput{}
+				output.buffer.WriteString(raw)
+				got, err := observeArchiveWork(output, plan, producer, [32]byte{1}, true, mode != "failed_native")
+				row := got.WorkspaceBytes.Phases[11]
+				if (err == nil) != (mode == "complete") || got.WorkspaceBytes.Complete != (mode == "complete") || !got.WorkspaceBytes.Bound || row.Completed == 0 || row.Maximum.LogicalBytes != 4 {
+					t.Fatal(mode, got.WorkspaceBytes, err)
+				}
+				if mode == "over_limit" {
+					if !got.WorkspaceBytes.LimitExceeded || got.WorkspaceBytes.Unavailable || row.Maximum.AllocatedBytes != plan.SafetyEnvelope.MaximumDataAllocatedBytes+1 {
+						t.Fatal("actual excess lost", got.WorkspaceBytes)
+					}
+				} else if row.Maximum.AllocatedBytes != 8 || got.WorkspaceBytes.Unavailable != (mode != "complete") {
+					t.Fatal("positive prefix lost", got.WorkspaceBytes)
+				}
+			})
+		}
+		maximum, err := archiveCheckpointMaximum(plan, producer)
+		if err != nil || maximum < 2 {
+			t.Fatal(maximum, err)
+		}
+		out := ExecutionWorkspaceByteObservation{Bound: true, phase: 12, sequence: uint64(maximum - 1)}
+		out.Phases[11].Attempts, out.Phases[11].Completed = uint64(maximum-1), uint64(maximum-1)
+		for _, line := range []string{workspaceTestEvent(producer, 12, 'B', uint64(maximum), 0, 0), workspaceTestEvent(producer, 12, 'S', uint64(maximum), 4, 8)} {
+			if _, err := observeWorkspaceByteEvent([]byte(line), plan, producer, "", &out); err != nil {
+				t.Fatal("last archive slot", out, err)
+			}
+		}
+		if _, err := observeWorkspaceByteEvent([]byte(workspaceTestEvent(producer, 12, 'B', uint64(maximum)+1, 0, 0)), plan, producer, "", &out); err == nil || out.Phases[11].Completed != uint64(maximum) {
+			t.Fatal("extra archive slot", out, err)
+		}
+	}
+}
+
 func TestArchiveWorkCompactHeadroom(t *testing.T) {
 	plan := accountingTestPlan(t)
 	row := plan.WorkEnvelope.Phases[11]
@@ -86,7 +135,19 @@ func TestArchiveWorkCompactHeadroom(t *testing.T) {
 	// Epoch four shares the one output allowance with both offline streams.
 	// The server reference-family subtotal is independently fixed in the
 	// existing simultaneous-headroom test, plus its two census bindings.
-	combined := uint64(11_453_721+2*79) + 2*perProducer
+	backupSamples, err := archiveCheckpointMaximum(plan, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restoreSamples, err := archiveCheckpointMaximum(plan, 11)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspaceReports := uint64(2*80) + 86*(uint64(backupSamples)+uint64(restoreSamples))
+	// The previously derived epoch-four WB stream has its own one binding;
+	// include it alongside both actual offline streams under the same cap.
+	workspaceReports += 79 + 86*(workspaceCheckpointMaximum(5, 9)+workspaceCheckpointMaximum(5, 10)+workspaceCheckpointMaximum(5, 11))
+	combined := uint64(11_453_721+2*79) + 2*perProducer + workspaceReports
 	if combined >= 64<<20 {
 		t.Fatal("known accepted compact subtotal exceeds shared cap", combined)
 	}

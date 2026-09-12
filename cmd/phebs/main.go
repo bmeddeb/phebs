@@ -426,7 +426,11 @@ func bindT422ArchiveReports(ctx context.Context, cancel context.CancelFunc) (con
 	if err != nil {
 		return nil, err
 	}
-	return bindT422ObservationReports(ctx, func(error) { cancel() })
+	ctx, err = bindT422ObservationReports(ctx, func(error) { cancel() })
+	if err != nil {
+		return nil, err
+	}
+	return bindT422ArchiveWorkspace(ctx, cancel)
 }
 
 func reportT4013Startup(stage string) {

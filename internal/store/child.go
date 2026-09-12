@@ -21,6 +21,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/executableidentity"
+	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
 const (
@@ -307,6 +308,43 @@ func startOwnedEngine(ctx context.Context, engine string) (runtime LocalRuntime,
 // not apply phebs schema and deliberately publishes no live-backup descriptor.
 func StartLocalImport(ctx context.Context, dataDir string) (LocalRuntime, func(), error) {
 	return startLocal(ctx, dataDir)
+}
+
+// StartLocalImportWithMeasurement retains the raw import child's concrete
+// ownership for synchronous measurements under the supplied SDK owner's idle
+// lock. Like StartLocalImport, it applies no schema and publishes no runtime
+// descriptor. The returned stop remains the sole process-wait owner.
+//
+// ctx must already have a deadline. Each guard call must have that deadline or
+// an earlier one; it cannot renew the import's budget. The measurement callback
+// has the same writer-exclusion, non-reentrancy and cooperative-cancellation
+// requirements as WithQuiescentLocalEngine. The guard takes no PID authority.
+func StartLocalImportWithMeasurement(ctx context.Context, dataDir string, owner *storeaccounting.SDKOwner) (LocalRuntime, func(), func(context.Context, func(context.Context) error) error, error) {
+	if ctx == nil {
+		return LocalRuntime{}, nil, nil, errLocalEngineQuiescence
+	}
+	deadline, bounded := ctx.Deadline()
+	if !bounded {
+		return LocalRuntime{}, nil, nil, errLocalEngineQuiescence
+	}
+	if err := owner.Check(ctx); err != nil {
+		return LocalRuntime{}, nil, nil, errors.Join(errLocalEngineQuiescence, err)
+	}
+	runtime, engine, err := startOwnedEngine(ctx, "surrealkv:"+filepath.Join(dataDir, "db"))
+	if err != nil {
+		return LocalRuntime{}, nil, nil, err
+	}
+	guard := func(operation context.Context, measure func(context.Context) error) error {
+		if operation == nil {
+			return errLocalEngineQuiescence
+		}
+		limit, bounded := operation.Deadline()
+		if !bounded || limit.After(deadline) || ctx.Err() != nil {
+			return errors.Join(errLocalEngineQuiescence, ctx.Err())
+		}
+		return engine.withQuiescent(operation, owner, measure)
+	}
+	return runtime, engine.stop, guard, nil
 }
 
 // PublishLocalRuntime makes a healthy, schema-ready child discoverable to a

@@ -21,6 +21,8 @@ const (
 	phaseRequestsFence
 	phaseOwnersReopen
 	phaseTerminalQuiesce
+	phaseBackupMeasurementHold
+	phaseBackupMeasurementRelease
 )
 
 // PhaseControlConfig bounds an explicitly inherited control endpoint. These
@@ -28,18 +30,22 @@ const (
 // The separate control socket preserves DA01's single-request echo protocol.
 type PhaseControlConfig struct {
 	// Zero values are omitted to preserve existing canonical bootstrap bytes.
-	TerminalAuthor      bool   `json:",omitempty"`
-	TerminalPhase       uint32 `json:",omitempty"`
-	BackupEndpointCarry bool   `json:",omitempty"`
-	OwnerControl        bool
-	Phases              []uint32
-	InitialPhase        uint32
-	MaximumPhases       int
-	MaximumWireBytes    uint64
-	Timeout             time.Duration
+	TerminalAuthor           bool   `json:",omitempty"`
+	TerminalPhase            uint32 `json:",omitempty"`
+	BackupEndpointCarry      bool   `json:",omitempty"`
+	BackupMeasurementMaximum uint32 `json:",omitempty"`
+	OwnerControl             bool
+	Phases                   []uint32
+	InitialPhase             uint32
+	MaximumPhases            int
+	MaximumWireBytes         uint64
+	Timeout                  time.Duration
 }
 
 func (config PhaseControlConfig) validate() (int, error) {
+	if config.BackupMeasurementMaximum != 0 && (!config.BackupEndpointCarry || config.MaximumWireBytes < uint64(config.BackupMeasurementMaximum)*4*FrameBytes+2*FrameBytes) {
+		return 0, ErrConfig
+	}
 	if config.BackupEndpointCarry && (!config.OwnerControl || config.TerminalAuthor || config.TerminalPhase != 0 || config.InitialPhase != 8 || config.MaximumPhases != 4 || !slices.Equal(config.Phases, []uint32{8, 9, 10, 11})) {
 		return 0, ErrConfig
 	}
@@ -68,10 +74,11 @@ func (config PhaseControlConfig) validate() (int, error) {
 }
 
 type phaseControlFrame struct {
-	op       byte
-	phase    uint32
-	sequence uint64
-	binding  [32]byte
+	op               byte
+	phase            uint32
+	sequence         uint64
+	binding          [32]byte
+	deadlineUnixNano int64
 }
 
 func (frame phaseControlFrame) encode() [FrameBytes]byte {
@@ -80,6 +87,9 @@ func (frame phaseControlFrame) encode() [FrameBytes]byte {
 	raw[4] = frame.op
 	binary.BigEndian.PutUint32(raw[8:12], frame.phase)
 	binary.BigEndian.PutUint64(raw[16:24], frame.sequence)
+	if frame.op == phaseBackupMeasurementHold || frame.op == phaseBackupMeasurementRelease {
+		binary.BigEndian.PutUint64(raw[24:32], uint64(frame.deadlineUnixNano))
+	}
 	copy(raw[32:], frame.binding[:])
 	return raw
 }
@@ -88,7 +98,13 @@ func decodePhaseControl(raw [FrameBytes]byte) (phaseControlFrame, error) {
 	frame := phaseControlFrame{op: raw[4], phase: binary.BigEndian.Uint32(raw[8:12]),
 		sequence: binary.BigEndian.Uint64(raw[16:24])}
 	copy(frame.binding[:], raw[32:])
-	if frame.op < phasePause || frame.op > phaseTerminalQuiesce || frame.encode() != raw {
+	if frame.op == phaseBackupMeasurementHold || frame.op == phaseBackupMeasurementRelease {
+		frame.deadlineUnixNano = int64(binary.BigEndian.Uint64(raw[24:32]))
+		if frame.deadlineUnixNano <= 0 {
+			return phaseControlFrame{}, ErrProtocol
+		}
+	}
+	if frame.op < phasePause || frame.op > phaseBackupMeasurementRelease || frame.encode() != raw {
 		return phaseControlFrame{}, ErrProtocol
 	}
 	return frame, nil
@@ -100,21 +116,23 @@ func decodePhaseControl(raw [FrameBytes]byte) (phaseControlFrame, error) {
 // also propagate a returned control failure to its execution failure latch.
 // No autonomous reader or heartbeat runs on the parent side.
 type PhaseControl struct {
-	mu              sync.Mutex
-	conn            *net.UnixConn
-	ctx             context.Context
-	cancel          context.CancelCauseFunc
-	stopContext     func() bool
-	gate            chan struct{}
-	config          PhaseControlConfig
-	binding         [32]byte
-	index           int
-	state           byte
-	sequence        uint64
-	wireBytes       uint64
-	requestSequence uint64
-	closed          bool
-	err             error
+	mu                        sync.Mutex
+	conn                      *net.UnixConn
+	ctx                       context.Context
+	cancel                    context.CancelCauseFunc
+	stopContext               func() bool
+	gate                      chan struct{}
+	config                    PhaseControlConfig
+	binding                   [32]byte
+	index                     int
+	state                     byte
+	sequence                  uint64
+	wireBytes                 uint64
+	requestSequence           uint64
+	closed                    bool
+	err                       error
+	backupMeasurements        uint32
+	backupMeasurementDeadline int64
 }
 
 // NewPhaseControl adopts file on every path. The owner must have bound both
@@ -335,6 +353,14 @@ func StartPhaseControl(ctx context.Context, file *os.File, client *Client, confi
 	if !valid {
 		return nil, client.fail(ErrConfig)
 	}
+	if config.BackupMeasurementMaximum != 0 {
+		if client.storeLifetime == nil {
+			return nil, client.fail(ErrConfig)
+		}
+		client.storeLifetime.backupMeasurementMu.Lock()
+		client.storeLifetime.backupMeasurementMaximum = config.BackupMeasurementMaximum
+		client.storeLifetime.backupMeasurementMu.Unlock()
+	}
 	var runCtx context.Context
 	runCtx, cancel = context.WithCancel(ctx)
 	stopContext = context.AfterFunc(runCtx, func() { _ = conn.Close() })
@@ -363,6 +389,8 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 	}()
 	var sequence, wireBytes uint64
 	var state byte
+	var backupMeasurements uint32
+	var backupDeadline int64
 	for {
 		if clientTerminalClosed(client) {
 			return nil
@@ -394,6 +422,21 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		frame, err := decodePhaseControl(raw)
 		if err != nil || frame.binding != binding || sequence == math.MaxUint64 || frame.sequence != sequence+1 {
 			return client.fail(ErrProtocol)
+		}
+		if frame.op == phaseBackupMeasurementHold {
+			if !config.BackupEndpointCarry || config.BackupMeasurementMaximum == 0 || state != phasePause || index != len(config.Phases)-1 || config.Phases[index] != 11 ||
+				frame.phase != 12 || backupMeasurements >= config.BackupMeasurementMaximum || sequence > math.MaxUint64-2 ||
+				config.MaximumWireBytes-wireBytes < 2*FrameBytes || backupDeadline != 0 && backupDeadline != frame.deadlineUnixNano {
+				return client.fail(ErrProtocol)
+			}
+			wireBytes += 2 * FrameBytes // RELEASE and its ACK, before holding the engine.
+			backupMeasurements++
+			backupDeadline = frame.deadlineUnixNano
+			if err := serveRetiredBackupMeasurement(ctx, conn, client, frame); err != nil {
+				return client.fail(err)
+			}
+			sequence += 2
+			continue
 		}
 		nextState, nextIndex, err := nextConfiguredControlState(state, index, frame.op, config)
 		if err != nil || frame.phase != config.Phases[nextIndex] {

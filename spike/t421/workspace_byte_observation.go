@@ -7,6 +7,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"github.com/bmeddeb/phebs/internal/recovery"
 )
 
 type ExecutionWorkspaceBytePhase struct {
@@ -49,6 +50,22 @@ func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
 	return 0
 }
 
+// The archive allowance is derived from the operation's closed call graph and
+// the existing phase-twelve store ceiling, never from a supplied byte total.
+func archiveCheckpointMaximum(plan Plan, producer uint32) (uint32, error) {
+	if plan.Schema != PlanV3Schema || len(plan.WorkEnvelope.Phases) != 15 || plan.WorkEnvelope.Phases[11].Phase != frozenPhaseOrder()[11] {
+		return 0, errExecutionAttempts
+	}
+	switch producer {
+	case 10:
+		return recovery.BackupCheckpointMaximum(), nil
+	case 11:
+		return recovery.RestoreCheckpointMaximum(plan.WorkEnvelope.Phases[11].StoreTransactions.Maximum)
+	default:
+		return 0, errExecutionAttempts
+	}
+}
+
 func workspaceHex64(raw []byte) (uint64, bool) {
 	if len(raw) != 16 {
 		return 0, false
@@ -79,7 +96,7 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 			}
 		}
 	}()
-	if plan.Schema != PlanV3Schema || producer != 5 && producer != 6 || out.Unavailable || out.LimitExceeded {
+	if plan.Schema != PlanV3Schema || producer != 5 && producer != 6 && producer != 10 && producer != 11 || out.Unavailable || out.LimitExceeded {
 		return true, errExecutionAttempts
 	}
 	if bytes.Contains(line, []byte("WBB")) {
@@ -95,6 +112,13 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 	}
 	phase := uint32(bytes.IndexByte([]byte("0123456789ABCDEF"), line[6]))
 	maximum := workspaceCheckpointMaximum(producer, phase)
+	if (producer == 10 || producer == 11) && phase == 12 {
+		derived, err := archiveCheckpointMaximum(plan, producer)
+		if err != nil {
+			return true, errExecutionAttempts
+		}
+		maximum = uint64(derived)
+	}
 	sequence, valid := workspaceHex64(line[9:25])
 	if maximum == 0 || phase < out.phase || !valid || sequence == 0 {
 		return true, errExecutionAttempts

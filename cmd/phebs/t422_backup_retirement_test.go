@@ -7,14 +7,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -33,14 +37,37 @@ const t422BackupFixture = "PHEBS_T422_BACKUP_RETIREMENT_TEST"
 // It does not reproduce protected executable custody, pressure/F, the frozen
 // corpus, BackupAndStop's author/epoch constructor or a whole phase receipt.
 func TestT422BackupRetiredNativeEndpoint(t *testing.T) {
-	testT422ArchiveRetiredNativeEndpoint(t, false, false)
+	testT422ArchiveRetiredNativeEndpoint(t, false, false, false)
 }
 
 func TestT422RestoreRetiredNativeEndpoint(t *testing.T) {
-	testT422ArchiveRetiredNativeEndpoint(t, true, false)
+	testT422ArchiveRetiredNativeEndpoint(t, true, false, false)
 }
 
-func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool, cleanup ...bool) {
+// Actual retired engine -> parent PC -> backup FD7 -> FD6 walk, followed by
+// actual import/repair engine scopes. Tiny native data, not a pressure-volume
+// or frozen-corpus deadline/whole-phase proof.
+func TestT422ArchiveWorkspaceNativeComposition(t *testing.T) {
+	testT422ArchiveRetiredNativeEndpoint(t, true, false, true)
+}
+
+func TestT422ArchiveWorkspaceNativeFailures(t *testing.T) {
+	for _, mode := range []string{"lost_release", "parent_cancel", "report_loss"} {
+		t.Run(mode, func(t *testing.T) {
+			testT422ArchiveRetiredNativeEndpointFailure(t, true, false, true, mode)
+		})
+	}
+}
+
+func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace, archiveWorkspace bool, cleanup ...bool) {
+	testT422ArchiveRetiredNativeEndpointFailure(t, restore, workspace, archiveWorkspace, "", cleanup...)
+}
+
+func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspace, archiveWorkspace bool, failure string, cleanup ...bool) {
+	if failure != "" && (!restore || workspace || !archiveWorkspace || len(cleanup) != 0 ||
+		failure != "lost_release" && failure != "parent_cancel" && failure != "report_loss") {
+		t.Fatal("invalid native archive failure fixture")
+	}
 	cleanupWorkspace := len(cleanup) > 0 && cleanup[0]
 	allOwners := len(cleanup) == 2 && cleanup[1]
 	if cleanupWorkspace && (!workspace || restore) {
@@ -94,9 +121,11 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 	record.Control = dispatchadmission.PhaseControlConfig{BackupEndpointCarry: true, OwnerControl: true,
 		Phases: []uint32{8, 9, 10, 11}, InitialPhase: 8, MaximumPhases: 4, MaximumWireBytes: 24 * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	var workspaceFile *os.File
-	if workspace {
-		semantic, _ := t422LifecycleBootstrapRecord(t)
-		record.InputSHA256 = semantic.InputSHA256
+	if workspace || archiveWorkspace {
+		if workspace {
+			semantic, _ := t422LifecycleBootstrapRecord(t)
+			record.InputSHA256 = semantic.InputSHA256
+		}
 		root, err = filepath.EvalSymlinks(root)
 		if err != nil {
 			t.Fatal(err)
@@ -111,6 +140,10 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 			t.Fatal(e)
 		}
 		record.Workspace = &binding
+	}
+	if archiveWorkspace {
+		record.Control.BackupMeasurementMaximum = recovery.BackupCheckpointMaximum()
+		record.Control.MaximumWireBytes += uint64(record.Control.BackupMeasurementMaximum) * 4 * dispatchadmission.FrameBytes
 	}
 	for i := range record.Tools {
 		if record.Tools[i].Role == "surreal" {
@@ -150,6 +183,11 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 		t.Fatal(err)
 	}
 	defer func() { _ = transport.Close() }()
+	var retiredControl *dispatchadmission.PhaseControl
+	var archiveMeasurementDone <-chan error
+	var archiveMeasurementJoined bool
+	var archiveHolds atomic.Uint32
+	var backupDiagnosticDone <-chan struct{}
 	start := func(mode string, bootstrap dispatchadmission.ProductionBootstrap) (*exec.Cmd, *bufio.Scanner, io.WriteCloser, <-chan error, *dispatchadmission.PhaseControl, *bytes.Buffer) {
 		t.Helper()
 		daParent, daChild, e := dispatchadmission.NewPipe()
@@ -165,6 +203,17 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 			t.Fatal(e)
 		}
 		bootstrap.Store = &storeConfig
+		if archiveWorkspace && bootstrap.Producer.ID >= 10 {
+			deadline, _ := ctx.Deadline()
+			bootstrap.ArchiveDeadlineUnixNano = deadline.UnixNano()
+			bootstrap.ArchiveMeasurements = recovery.BackupCheckpointMaximum()
+			if bootstrap.Producer.ID == 11 {
+				bootstrap.ArchiveMeasurements, e = recovery.RestoreCheckpointMaximum(10000)
+				if e != nil {
+					t.Fatal(e)
+				}
+			}
+		}
 		helper := "^TestT422BackupRetirementHelper$"
 		if workspace {
 			helper = "^TestT422WorkspaceNativeHelper$"
@@ -175,9 +224,65 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 		command.Env = []string{t422BackupFixture + "=" + mode, "PHEBS_T422_BACKUP_FIXTURE_ROOT=" + root,
 			"PATH=" + filepath.Dir(surreal), "PHEBS_SURREAL=" + surreal, "PHEBS_SURREAL_SHA256=" + identity.SHA256,
 			dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector, "GORACE=atexit_sleep_ms=0"}
+		if archiveWorkspace {
+			command.Env = append(command.Env, "TMPDIR="+root, "TMP="+root, "TEMP="+root)
+		}
 		command.ExtraFiles = []*os.File{daChild, pcChild, storeChild}
-		if workspace {
+		if workspace || archiveWorkspace {
 			command.ExtraFiles = append(command.ExtraFiles, workspaceFile)
+		}
+		var measurementChild *os.File
+		if archiveWorkspace && bootstrap.Producer.ID == 10 {
+			parent, child, err := dispatchadmission.NewPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn, err := net.FileConn(parent)
+			_ = parent.Close()
+			if err != nil {
+				_ = child.Close()
+				t.Fatal(err)
+			}
+			unix, ok := conn.(*net.UnixConn)
+			if !ok {
+				_ = conn.Close()
+				_ = child.Close()
+				t.Fatal("archive socket type")
+			}
+			measurementChild = child
+			command.ExtraFiles = append(command.ExtraFiles, child)
+			done := make(chan error, 1)
+			archiveMeasurementDone = done
+			relayContext, cancelRelay := context.WithCancel(ctx)
+			guard := func(operation context.Context, measure func(context.Context) error) error {
+				return retiredControl.WithRetiredBackupMeasurement(operation, func(held context.Context) error {
+					ordinal := archiveHolds.Add(1) // Actual native HOLD ACK already consumed.
+					if ordinal == 2 && failure == "parent_cancel" {
+						cancelRelay()
+						return held.Err()
+					}
+					err := measure(held)
+					if ordinal == 2 && failure == "lost_release" {
+						// Child RELEASE was read, but the parent cannot deliver
+						// its ACK. The real PC guard still resumes the engine.
+						_ = unix.Close()
+					}
+					return err
+				})
+			}
+			go func() {
+				done <- dispatchadmission.ServeArchiveMeasurement(relayContext, unix, dispatchadmission.ArchiveMeasurementBinding{
+					ProducerID: bootstrap.Producer.ID, ProducerBinding: bootstrap.Producer.Binding, InputSHA256: bootstrap.InputSHA256,
+				}, bootstrap.ArchiveMeasurements, guard)
+			}()
+			t.Cleanup(func() {
+				cancelRelay()
+				_ = unix.Close()
+				_ = child.Close()
+				if !archiveMeasurementJoined {
+					<-done
+				}
+			})
 		}
 		command.WaitDelay = 5 * time.Second
 		input, e := command.StdinPipe()
@@ -189,14 +294,43 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 			t.Fatal(e)
 		}
 		diagnostic := new(bytes.Buffer)
-		command.Stderr = diagnostic
+		var diagnosticPipe io.ReadCloser
+		var diagnosticDone chan struct{}
+		if bootstrap.Producer.ID == 10 && failure == "report_loss" {
+			diagnosticPipe, e = command.StderrPipe()
+			if e != nil {
+				t.Fatal(e)
+			}
+			diagnosticDone = make(chan struct{})
+			backupDiagnosticDone = diagnosticDone
+		} else {
+			command.Stderr = diagnostic
+		}
 		if e = command.Start(); e != nil {
 			t.Fatal(e)
+		}
+		if diagnosticPipe != nil {
+			go func() {
+				defer close(diagnosticDone)
+				defer func() { _ = diagnosticPipe.Close() }()
+				reader := bufio.NewReader(diagnosticPipe)
+				for {
+					line, err := reader.ReadString('\n')
+					_, _ = diagnostic.WriteString(line)
+					if err != nil || line == "WB1:A:CB:0000000000000002\n" {
+						return // Lose the actual pipe sink, not a replacement writer.
+					}
+				}
+			}()
 		}
 		t.Cleanup(func() {
 			if command.ProcessState == nil {
 				_ = t4013.KillPrivateProcessSession(command.Process.Pid)
 				_ = command.Wait()
+			}
+			if diagnosticPipe != nil {
+				_ = diagnosticPipe.Close()
+				<-diagnosticDone
 			}
 			if t.Failed() {
 				if e := os.WriteFile(filepath.Join(root, mode+"-diagnostic.log"), diagnostic.Bytes(), 0o600); e != nil {
@@ -215,6 +349,9 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 		_ = daChild.Close()
 		_ = pcChild.Close()
 		_ = storeChild.Close()
+		if measurementChild != nil {
+			_ = measurementChild.Close()
+		}
 		if e = dispatchadmission.SendProductionBootstrap(ctx, daParent, pcParent, bootstrap); e != nil {
 			t.Fatal(e)
 		}
@@ -234,6 +371,7 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 		serverMode = "workspace-cleanup"
 	}
 	server, output, input, served, control, diagnostic := start(serverMode, record)
+	retiredControl = control
 	failServer := func(stage string, cause error) {
 		t.Helper()
 		lines := t422NativeFailurePrefix(output, func() {
@@ -349,8 +487,84 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 	if err = backupOutput.Err(); err != nil {
 		t.Fatal("backup output", err)
 	}
-	if err = command.Wait(); err != nil {
-		t.Fatal("actual backup CLI", err, backupDiagnostic.String())
+	backupErr := command.Wait()
+	if backupDiagnosticDone != nil {
+		<-backupDiagnosticDone
+	}
+	if failure != "" {
+		if backupErr == nil {
+			t.Fatal("injected archive failure completed successfully")
+		}
+		relayErr := <-archiveMeasurementDone
+		archiveMeasurementJoined = true
+		if failure != "report_loss" && relayErr == nil {
+			t.Fatal("failed relay reported clean completion")
+		}
+		if archiveHolds.Load() < 2 {
+			t.Fatal("failure did not follow a second actual native hold", archiveHolds.Load())
+		}
+		assertT422FailedArchiveWorkspacePrefix(t, backupDiagnostic.String(), failure == "report_loss")
+		<-backupServed // A failed producer must still join its actual receiver.
+		_ = transport.Wait(ctx, 10)
+		// Listening alone is insufficient: a stopped engine can retain its
+		// socket. An actual response proves it resumed after the failed hold.
+		probe, stopProbe := context.WithTimeout(ctx, 2*time.Second)
+		request, e := http.NewRequestWithContext(probe, http.MethodGet, "http://"+endpointURL.Host+"/health", nil)
+		if e != nil {
+			stopProbe()
+			t.Fatal(e)
+		}
+		httpTransport := &http.Transport{DisableKeepAlives: true}
+		response, e := (&http.Client{Transport: httpTransport}).Do(request)
+		if e == nil {
+			_, e = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
+			e = errors.Join(e, response.Body.Close())
+		}
+		stopProbe()
+		httpTransport.CloseIdleConnections()
+		if e != nil || response.StatusCode != http.StatusOK {
+			t.Fatal("native engine did not resume after archive failure", e)
+		}
+		if _, err := input.Write([]byte{'c'}); err != nil {
+			t.Fatal(err)
+		}
+		for output.Scan() {
+		}
+		if err := output.Err(); err != nil {
+			t.Fatal(err)
+		}
+		serverErr := server.Wait() // Accounting refusal may make this nonzero.
+		<-served
+		for _, process := range []*exec.Cmd{server, command} {
+			if err := t4013.WaitPrivateProcessSession(process.Process.Pid, time.Now().Add(5*time.Second)); err != nil {
+				t.Fatal("failed native archive session survived", err)
+			}
+		}
+		prefix, _ := transport.Snapshot()
+		if prefix.Opened != 2 {
+			t.Fatal("failed backup launched another producer", prefix)
+		}
+		for _, producer := range prefix.Store.Producers {
+			if producer.Producer == 11 && producer.Attached {
+				t.Fatal("restore ran after failed backup", prefix)
+			}
+		}
+		if _, err := os.Lstat(filepath.Join(root, "archive", recovery.ManifestName)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatal("failed early backup left a completed manifest", err)
+		}
+		t.Logf("actual failed archive: mode=%s holds=%d backup_error=%v relay_error=%v server_error=%v; one positive WB sample retained, restore unstarted, both sessions joined", failure, archiveHolds.Load(), backupErr, relayErr, serverErr)
+		return
+	}
+	if backupErr != nil {
+		t.Fatal("actual backup CLI", backupErr, backupDiagnostic.String())
+	}
+	if archiveWorkspace {
+		err = <-archiveMeasurementDone
+		archiveMeasurementJoined = true
+		if err != nil {
+			t.Fatal("archive measurement join", err)
+		}
+		assertT422ArchiveNativeWorkspaceReports(t, backupDiagnostic.String(), 10, record.InputSHA256, 15, uint64(recovery.BackupCheckpointMaximum()))
 	}
 	assertT422OfflineBindings(t, backupDiagnostic.String(), 10, "07")
 	if strings.Contains(backupDiagnostic.String(), "RL1:") {
@@ -449,6 +663,13 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 			t.Fatal("actual restore CLI", e, restoreDiagnostic.String())
 		}
 		assertT422OfflineBindings(t, restoreDiagnostic.String(), 11, "07")
+		if archiveWorkspace {
+			maximum, err := recovery.RestoreCheckpointMaximum(10000)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertT422ArchiveNativeWorkspaceReports(t, restoreDiagnostic.String(), 11, record.InputSHA256, 34, uint64(maximum))
+		}
 		// Real Restore installs archived members and recovers their authority;
 		// it does not invoke relationship Build/projectors. The later restored
 		// server is a separate lifetime, not invented positive work here.
@@ -495,6 +716,59 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace bool,
 		if restore && p.Producer == 11 && (!p.Closed || p.Ordinal != 5) {
 			t.Fatal("restore must own three version probes and two engine lifetimes", p)
 		}
+	}
+}
+
+// The report-loss case retains only the bytes read before closing the actual
+// sink. It does not assert that no unobserved child sample completed later.
+func assertT422FailedArchiveWorkspacePrefix(t *testing.T, raw string, reportLost bool) {
+	t.Helper()
+	bindings, begins, successes, failures := 0, 0, 0, 0
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "WBB1:") {
+			if line != fmt.Sprintf("WBB1:10:sha256:%x", [32]byte{7}) {
+				t.Fatal("failed archive binding changed", line)
+			}
+			bindings++
+		}
+		if !strings.HasPrefix(line, "WB1:") {
+			continue
+		}
+		fields := strings.Split(line, ":")
+		if len(fields) < 4 || fields[1] != "A" || len(fields[2]) != 2 || fields[2][0] != 'C' {
+			t.Fatal("malformed failed archive report", line)
+		}
+		sequence, err := strconv.ParseUint(fields[3], 16, 64)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch fields[2][1] {
+		case 'B':
+			begins++
+			if sequence != uint64(begins) || begins > 2 || begins == 2 && successes != 1 {
+				t.Fatal("failed archive sequence changed", line)
+			}
+		case 'S':
+			successes++
+			if len(fields) != 6 || sequence != 1 || successes != 1 || begins != 1 {
+				t.Fatal("failed sample became complete", line)
+			}
+			logical, logicalErr := strconv.ParseUint(fields[4], 16, 64)
+			allocated, allocatedErr := strconv.ParseUint(fields[5], 16, 64)
+			if logicalErr != nil || allocatedErr != nil || logical == 0 || allocated == 0 {
+				t.Fatal("earlier positive native sample lost", line)
+			}
+		case 'F':
+			failures++
+			if sequence != 2 || failures != 1 || begins != 2 || successes != 1 {
+				t.Fatal("failed archive completion changed", line)
+			}
+		default:
+			t.Fatal("unexpected archive report", line)
+		}
+	}
+	if bindings != 1 || begins != 2 || successes != 1 || (!reportLost && failures != 1) || reportLost && failures != 0 {
+		t.Fatal("incomplete native WB prefix", bindings, begins, successes, failures)
 	}
 }
 
@@ -600,6 +874,9 @@ func TestT422BackupRetirementHelper(t *testing.T) {
 	}
 	st, err := store.OpenLocalWithConfig(ctx, filepath.Join(root, "data"), recovery.ConfigDigest(raw))
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err = dispatchadmission.BindRetiredBackupMeasurement(st.WithRetiredLocalEngine); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {

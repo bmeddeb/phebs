@@ -161,7 +161,11 @@ func TestProductionWorkspaceHelper(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
-	lifetime, err := BootstrapProduction(ctx)
+	bootstrapContext := ctx
+	if mode == "backup" || mode == "restore" {
+		bootstrapContext = context.Background() // Parent must supply the deadline.
+	}
+	lifetime, err := BootstrapProduction(bootstrapContext)
 	if mode == "missing" || mode == "wrong" {
 		if err == nil || lifetime != nil || productionRuntime.Load() != nil {
 			t.Fatal("missing original FD6 accepted")
@@ -198,11 +202,20 @@ func TestProductionWorkspaceHelper(t *testing.T) {
 	if _, err := lifetime.TakeStoreOwner(); err != nil {
 		t.Fatal(err)
 	}
-	owners, err := NewProductionOwners(ctx, OwnerLimits{Owners: 1, Requests: 1})
-	if err != nil || BindProductionOwners(owners) != nil {
-		t.Fatal("owner control fixture", err)
+	ready := "ready"
+	if mode == "backup" || mode == "restore" {
+		deadline, bounded := ProcessContext().Deadline()
+		if !bounded || ProductionSemanticSelected() || RequireProductionWorkCommand(mode) != nil {
+			t.Fatal("offline workspace/deadline binding lost")
+		}
+		ready = fmt.Sprintf("ready:%d", deadline.UnixNano())
+	} else {
+		owners, err := NewProductionOwners(ctx, OwnerLimits{Owners: 1, Requests: 1})
+		if err != nil || BindProductionOwners(owners) != nil {
+			t.Fatal("owner control fixture", err)
+		}
 	}
-	if _, err := fmt.Fprintln(os.Stdout, "ready"); err != nil {
+	if _, err := fmt.Fprintln(os.Stdout, ready); err != nil {
 		t.Fatal(err)
 	}
 	var stop [1]byte
@@ -251,7 +264,7 @@ func TestProductionWorkspaceFailedBootstrapClosesExplicitFile(t *testing.T) {
 }
 
 func TestProductionWorkspaceInherited(t *testing.T) {
-	for _, mode := range []string{"valid", "missing", "wrong", "omitted"} {
+	for _, mode := range []string{"valid", "missing", "wrong", "omitted", "backup", "restore"} {
 		t.Run(mode, func(t *testing.T) { testProductionWorkspaceInherited(t, mode) })
 	}
 }
@@ -263,20 +276,29 @@ func testProductionWorkspaceInherited(t *testing.T, mode string) {
 	defer cancel()
 	file, binding := workspaceTestRoot(t)
 	r := workspaceTestRecord()
+	if mode == "backup" || mode == "restore" {
+		r = productionStoreTestRecord()
+		if mode == "restore" {
+			r.Producer.ID, r.Store.Producer = 11, 11
+		}
+		r.Control.MaximumPhases, r.Limits.Phases = 1, 3
+		deadline, _ := ctx.Deadline()
+		r.ArchiveDeadlineUnixNano = deadline.UnixNano()
+	}
 	r.Workspace = &binding
 	if mode == "omitted" {
 		r.Workspace = nil
 	}
-	store, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: []storeaccounting.Producer{{ID: 6, Calls: 40, Transactions: 2}}, Phases: []storeaccounting.Phase{{ID: 12, Transactions: 1, Rows: 1}, {ID: 13}, {ID: 14}}})
+	store, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: []storeaccounting.Producer{{ID: r.Producer.ID, Calls: r.Store.Calls, Transactions: r.Store.Transactions}}, Phases: []storeaccounting.Phase{{ID: 12, Transactions: 1, Rows: 1}, {ID: 13}, {ID: 14}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	transport, err := storeaccounting.NewTransport(ctx, store, storeaccounting.WireConfig{Producers: []storeaccounting.WireProducer{{ID: 6, Binding: r.Store.Binding, Phases: 14336}}, AckTimeout: time.Second})
+	transport, err := storeaccounting.NewTransport(ctx, store, storeaccounting.WireConfig{Producers: []storeaccounting.WireProducer{{ID: r.Producer.ID, Binding: r.Store.Binding, Phases: r.Store.Phases}}, AckTimeout: time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = transport.Close() }()
-	storeChild, config, err := transport.Open(6)
+	storeChild, config, err := transport.Open(r.Producer.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,13 +374,20 @@ func testProductionWorkspaceInherited(t *testing.T, mode string) {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
-	go func() { done <- dispatch.Serve(ctx, 6, command.Process.Pid, parent) }()
+	go func() { done <- dispatch.Serve(ctx, r.Producer.ID, command.Process.Pid, parent) }()
 	defer func() { cancel(); <-done }()
 	ready, err := bufio.NewReader(output).ReadString('\n')
-	if err != nil || ready != "ready\n" {
+	wantReady := "ready\n"
+	if r.ArchiveDeadlineUnixNano != 0 {
+		wantReady = fmt.Sprintf("ready:%d\n", r.ArchiveDeadlineUnixNano)
+	}
+	if err != nil || ready != wantReady {
 		t.Fatal(ready, err)
 	}
-	if control.DrainOwners(ctx) != nil || control.Pause(ctx) != nil || dispatch.Fence() != nil || transport.Fence() != nil {
+	if r.Control.OwnerControl && control.DrainOwners(ctx) != nil {
+		t.Fatal("parent owner fence")
+	}
+	if control.Pause(ctx) != nil || dispatch.Fence() != nil || transport.Fence() != nil {
 		t.Fatal("parent fence")
 	}
 	if _, err := input.Write([]byte{1}); err != nil {
@@ -367,7 +396,7 @@ func testProductionWorkspaceInherited(t *testing.T, mode string) {
 	if err := command.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	if err := transport.Wait(ctx, 6); err != nil {
+	if err := transport.Wait(ctx, r.Producer.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := file.Stat(); err != nil {

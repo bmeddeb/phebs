@@ -45,3 +45,38 @@ func (owner *SDKOwner) WithIdle(ctx context.Context, measure func() error) error
 	}
 	return nil
 }
+
+// WithClosed measures only after this owner's actual client close has
+// succeeded. Unlike WithIdle, its client context is expected to be canceled.
+// It neither reopens the owner nor proves engine or whole-custody quiescence.
+// The callback must honor ctx and must not reenter this owner or the SDK.
+func (owner *SDKOwner) WithClosed(ctx context.Context, measure func() error) error {
+	if owner == nil || owner.client == nil || ctx == nil || measure == nil {
+		return ErrConfig
+	}
+	owner.mu.Lock()
+	defer owner.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if owner.err != nil {
+		return owner.err
+	}
+	if !owner.closed || !owner.fenced {
+		return ErrFenced
+	}
+	for _, call := range owner.calls {
+		if call != nil {
+			return ErrBusy
+		}
+	}
+	for _, tx := range owner.transactions {
+		if tx.used {
+			return ErrBusy
+		}
+	}
+	if err := measure(); err != nil {
+		return err
+	}
+	return ctx.Err()
+}

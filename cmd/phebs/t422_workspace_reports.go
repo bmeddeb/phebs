@@ -15,14 +15,15 @@ import (
 // framing/write, never the walk or engine/SDK locks. Counts are derived from the
 // fixed operation sequence, not new permission to execute capacity callbacks.
 type t422WorkspaceReports struct {
-	mu       sync.Mutex
-	writer   io.Writer
-	initial  dispatchadmission.ProductionSemanticSnapshot
-	phase    uint32
-	sequence uint64
-	counts   [4]uint64
-	pending  bool
-	err      error
+	mu             sync.Mutex
+	writer         io.Writer
+	initial        dispatchadmission.ProductionSemanticSnapshot
+	phase          uint32
+	sequence       uint64
+	counts         [5]uint64
+	archiveMaximum uint64
+	pending        bool
+	err            error
 }
 
 func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
@@ -41,7 +42,14 @@ func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
 }
 
 func newT422WorkspaceReports(initial dispatchadmission.ProductionSemanticSnapshot) (*t422WorkspaceReports, error) {
-	if initial.ProducerID != 5 && initial.ProducerID != 6 || initial.Mode != dispatchadmission.ProductionSemanticV3 {
+	var archiveMaximum uint32
+	if initial.Mode == "" && (initial.ProducerID == 10 || initial.ProducerID == 11) && initial.Phase == 12 {
+		var err error
+		archiveMaximum, err = dispatchadmission.ProductionArchiveMeasurements()
+		if err != nil || archiveMaximum == 0 {
+			return nil, errT422LifecycleControl
+		}
+	} else if initial.ProducerID != 5 && initial.ProducerID != 6 || initial.Mode != dispatchadmission.ProductionSemanticV3 {
 		return nil, errT422LifecycleControl
 	}
 	binding, err := t422SourceBinding(initial)
@@ -54,7 +62,7 @@ func newT422WorkspaceReports(initial dispatchadmission.ProductionSemanticSnapsho
 		return nil, errT422LifecycleControl
 	}
 	binding[0], binding[1] = 'W', 'B'
-	reports := &t422WorkspaceReports{writer: writer, initial: initial}
+	reports := &t422WorkspaceReports{writer: writer, initial: initial, archiveMaximum: uint64(archiveMaximum)}
 	if err := reports.write(binding); err != nil {
 		return nil, err
 	}
@@ -82,7 +90,7 @@ func t422WorkspaceHex(raw []byte, value uint64) {
 func (reports *t422WorkspaceReports) record(kind byte, sample custodybytes.Sample) error {
 	var raw [60]byte
 	copy(raw[:], "WB1:")
-	raw[4], raw[5], raw[6], raw[7], raw[8] = byte('0'+reports.initial.ProducerID), ':', "0123456789ABCDEF"[reports.phase], kind, ':'
+	raw[4], raw[5], raw[6], raw[7], raw[8] = "0123456789ABCDEF"[reports.initial.ProducerID], ':', "0123456789ABCDEF"[reports.phase], kind, ':'
 	t422WorkspaceHex(raw[9:25], reports.sequence)
 	if kind != 'S' {
 		raw[25] = '\n'
@@ -99,13 +107,17 @@ func (reports *t422WorkspaceReports) begin(current dispatchadmission.ProductionS
 	defer reports.mu.Unlock()
 	_, identityErr := t422SourceRecord(current, reports.initial)
 	slot, maximum := t422WorkspaceSampleSlot(current.ProducerID, current.Phase)
+	if current.Mode == "" && (current.ProducerID == 10 || current.ProducerID == 11) && current.Phase == 12 {
+		slot, maximum = 4, reports.archiveMaximum
+	}
 	if reports.err != nil || reports.pending || identityErr != nil || maximum == 0 || current.Phase < reports.phase || reports.counts[slot] >= maximum {
 		reports.err = errT422LifecycleControl
 		return reports.err
 	}
 	reports.phase, reports.pending = current.Phase, true
 	reports.counts[slot]++
-	// The sum of the four fixed slots bounds this counter well below overflow.
+	// The fixed lifecycle slots or the authenticated archive allowance bound
+	// this counter well below overflow; they grant no work permission.
 	reports.sequence++
 	return reports.record('B', custodybytes.Sample{})
 }

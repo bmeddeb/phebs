@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 )
 
 // spoolNext captures bytes consumed by this pass's recognizer, not a second
@@ -31,10 +33,24 @@ func (prepared *preparedRestoreReplay) spoolNext(ctx context.Context, directory 
 	}
 	name := file.Name()
 	adopted := false
+	measured := false
 	defer func() {
 		if !adopted {
+			if !measured {
+				if err := custodybytes.Checkpoint(ctx); err != nil {
+					resultErr = errors.Join(resultErr, err)
+					prepared.terminal = resultErr
+				}
+			}
 			_ = file.Close()
-			_ = os.Remove(name)
+			if err := os.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) && custodybytes.CheckpointSelected(ctx) {
+				resultErr = errors.Join(resultErr, err)
+				prepared.terminal = resultErr
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				resultErr = errors.Join(resultErr, err)
+				prepared.terminal = resultErr
+			}
 		}
 	}()
 	start := int64(0)
@@ -88,6 +104,10 @@ func (prepared *preparedRestoreReplay) spoolNext(ctx context.Context, directory 
 	}
 	if !os.SameFile(info, current) || current.Size() != info.Size() || current.Mode().Perm() != 0o400 {
 		return nil, restoreReplayUnit{}, errors.New("import unit spool identity changed")
+	}
+	measured = true
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return nil, restoreReplayUnit{}, err
 	}
 	if err := os.Remove(name); err != nil {
 		return nil, restoreReplayUnit{}, fmt.Errorf("unlink import unit spool: %w", err)

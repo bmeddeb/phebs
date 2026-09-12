@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/kafkatopicposting"
 	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/rpccallerposting"
@@ -81,7 +82,7 @@ func CreateArchiveWithSelections(
 	ctx context.Context,
 	dataDir, output string,
 	selections []ArchiveRelationshipGeneration,
-) (ArchiveReport, error) {
+) (_ ArchiveReport, retErr error) {
 	var report ArchiveReport
 	if !filepath.IsAbs(dataDir) || !filepath.IsAbs(output) {
 		return report, invalidLifecycle("archive paths")
@@ -169,8 +170,16 @@ func CreateArchiveWithSelections(
 	complete := false
 	defer func() {
 		_ = file.Close()
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
 		if !complete {
-			_ = os.Remove(output)
+			if err := os.Remove(output); err != nil && custodybytes.CheckpointSelected(ctx) {
+				retErr = errors.Join(retErr, err)
+			}
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
 		}
 	}()
 	writer := tar.NewWriter(file)
@@ -694,13 +703,23 @@ func kafkaGenerationDirectory(dataDir, repository, generation string) string {
 	)
 }
 
-func VerifyArchive(ctx context.Context, archivePath string) (ArchiveReport, error) {
+func VerifyArchive(ctx context.Context, archivePath string) (_ ArchiveReport, retErr error) {
 	var report ArchiveReport
 	stage, err := os.MkdirTemp(filepath.Dir(archivePath), ".relationship-verify-")
 	if err != nil {
 		return report, err
 	}
-	defer func() { _ = os.RemoveAll(stage) }()
+	defer func() {
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := os.RemoveAll(stage); err != nil && custodybytes.CheckpointSelected(ctx) {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+	}()
 	if report, err = extractArchive(ctx, archivePath, stage); err != nil {
 		return report, err
 	}
@@ -709,7 +728,7 @@ func VerifyArchive(ctx context.Context, archivePath string) (ArchiveReport, erro
 	return report, err
 }
 
-func RestoreArchive(ctx context.Context, archivePath, dataDir string) error {
+func RestoreArchive(ctx context.Context, archivePath, dataDir string) (retErr error) {
 	if !filepath.IsAbs(archivePath) || !filepath.IsAbs(dataDir) {
 		return invalidLifecycle("restore paths")
 	}
@@ -717,7 +736,20 @@ func RestoreArchive(ctx context.Context, archivePath, dataDir string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = os.RemoveAll(stage) }()
+	measured := false
+	defer func() {
+		if !measured {
+			if err := custodybytes.Checkpoint(ctx); err != nil {
+				retErr = errors.Join(retErr, err)
+			}
+		}
+		if err := os.RemoveAll(stage); err != nil && custodybytes.CheckpointSelected(ctx) {
+			retErr = errors.Join(retErr, err)
+		}
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			retErr = errors.Join(retErr, err)
+		}
+	}()
 	if _, err := extractArchive(ctx, archivePath, stage); err != nil {
 		return err
 	}
@@ -728,6 +760,10 @@ func RestoreArchive(ctx context.Context, archivePath, dataDir string) error {
 		return err
 	}
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		return err
+	}
+	measured = true
+	if err := custodybytes.Checkpoint(ctx); err != nil {
 		return err
 	}
 	for _, name := range archiveRoots {

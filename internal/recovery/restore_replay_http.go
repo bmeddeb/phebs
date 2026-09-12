@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
@@ -55,7 +56,15 @@ func executeRestoreReplay(ctx context.Context, prepared *preparedRestoreReplay, 
 	if err != nil {
 		return fmt.Errorf("create private import spool directory: %w", err)
 	}
-	defer func() { resultErr = errors.Join(resultErr, os.Remove(directory)) }()
+	defer func() {
+		resultErr = errors.Join(resultErr, os.Remove(directory))
+		if err := custodybytes.Checkpoint(ctx); err != nil {
+			resultErr = errors.Join(resultErr, err)
+		}
+	}()
+	if err := custodybytes.Checkpoint(ctx); err != nil {
+		return err
+	}
 	transport := &http.Transport{MaxConnsPerHost: 1, MaxIdleConnsPerHost: 1, DisableCompression: true}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport,
@@ -67,14 +76,20 @@ func executeRestoreReplay(ctx context.Context, prepared *preparedRestoreReplay, 
 	address.Path = "/import"
 	for {
 		file, unit, err := prepared.spoolNext(ctx, directory)
-		if errors.Is(err, io.EOF) {
+		// A terminal spool cleanup observation can fail beside EOF. Only the
+		// healthy EOF closes replay; a lost observation remains terminal.
+		if err == io.EOF {
 			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("prepare native import unit: %w", err)
 		}
 		err = submitRestoreReplayUnit(ctx, client, address.String(), database, file, unit, owner)
-		if err := errors.Join(err, file.Close()); err != nil {
+		err = errors.Join(err, file.Close())
+		if sampleErr := custodybytes.Checkpoint(ctx); sampleErr != nil {
+			err = errors.Join(err, sampleErr)
+		}
+		if err != nil {
 			return fmt.Errorf("native import unit %d: %w", prepared.seen.Units, err)
 		}
 	}

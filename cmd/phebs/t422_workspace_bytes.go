@@ -15,6 +15,13 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 	if control == nil || control.collector == nil {
 		return nil
 	}
+	var retiredGuard func(context.Context, func(context.Context) error) error
+	if st != nil {
+		retiredGuard = st.WithRetiredLocalEngine
+	}
+	if err := dispatchadmission.BindRetiredBackupMeasurement(retiredGuard); err != nil {
+		return err
+	}
 	file, path, info, volume, err := dispatchadmission.ProductionWorkspace()
 	var reports *t422WorkspaceReports
 	if err == nil {
