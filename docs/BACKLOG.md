@@ -7160,6 +7160,60 @@ passed documentation, glossary and whitespace checks.
 The full pressure, archive/query, complete executor,
 launcher and immutable T42.2n/T42.2o acceptance/freeze ladder remain open.
 
+**Capacity-policy correction approved (2026-09-11).** Ben explicitly approved
+the owning [PLAN policy](../PLAN.md#t422l-approved-v3-capacity-policy-2026-09-11):
+only prospective V3's sampled per-linked-path allocated ceiling changes
+96 → 128 GiB, preserving the 96-GiB physical volume and all other limits.
+The derived V3 nominal custody-margin value changes with that ceiling;
+neither it nor 128 GiB is physical headroom. This explicit approval follows
+the draft-only review; implementation gates remain required. Earlier source
+`196bc147` and the retained failed run's 96-GiB refusals remain correct.
+
+The approved scoped correction's ACs are: V3-only construction
+and closed validation; literal historical/current ceiling assertions with every
+other safety field equal; exact versioned freeze-margin and receipt binding;
+V3 WB/HTTP and all-version receipt equality and one-byte-over cases, preserving
+historical WB/HTTP omission/refusal rather than inventing legacy observations; both logical
+and allocated headroom checks, future-target refusal and retained positive
+excess; unchanged real-hard-link counting and V1/V2 canonical bytes. Run focused
+normal/race and independent cost review, then the full V3 completed/worst-stopped
+receipt groups, static, docs and glossary gates. Record actual skips and failed
+commands without replacing native evidence with modeled observations.
+
+The scoped implementation sets the one V3 field through the shared correction
+used by both construction and strict validation. Two historical comparison
+tests first assert literal 96/128-GiB ceilings, then compare every remaining
+safety field unchanged. New tests cover stale 96-GiB V3 contract refusal,
+versioned receipt equality/excess and margin binding, V3 HTTP/WB completed
+positive overshoot, unchanged hard-link counting and the still-refused
+145.920-GiB modeled projection. These are bounded validator/transport inputs
+plus the existing one-MiB native hard-link fixture, not a full pressure run.
+Early new receipt-fixture attempts exposed unready policy/default metric inputs;
+the fixture was corrected without changing production acceptance.
+
+The 25-test scoped normal/race commands passed with no skips in 1.336s and
+11.725s. Scoped vet, pinned lint (zero issues), docs (0.589s), glossary,
+whitespace and retained V1/V2 digests passed. Non-authoring implementation/test
+and cost review found no code issues; its two low documentation-unit/scope
+clarifications were corrected. The seven changed/new Go paths bind to ordered
+SHA-256 manifest `385bd8bfc3e935887a91b1078aa4f11ea8aff2348024ffb438b36dfc1408cafa`.
+Normal/race log SHA-256:
+`f567bf8b203f0a517fdbc904bcdd9215daaa8904b6c3f914ca262d0435f35a1d` /
+`e689a039c8416015679f1cdaf9cffbce7df3c14133e7c8f8d18cae62b12df59c`.
+Full exact-source acceptance remains pending: retain the previous disjoint
+63/25 parent/constructor race groups and add the eleven newly covered scoped
+names to the parent group, producing 74/25 names. Keep the full V3 completed
+and work-failure receipt tests together, the unchanged sixty-minute command
+allowances, pinned offline inputs and fail-fast behavior. These scoped passes
+do not replace that constructor-backed gate or the later native phase gates.
+
+Before another long rehearsal, separately close the existing bounded native
+archive/restore mutation-sampling and later-phase composition gaps identified
+in PLAN. Account for real data/archive/verification/staging overlap and both
+physical and sampled ceilings. These are acceptance dependencies, not permission
+to move temporary files outside custody, raise another limit or infer unobserved
+peaks. A future exact-source rehearsal and full T42.2n/o acceptance remain open.
+
 **Pressure headroom refusal after c7db1d21 (2026-09-11).** The exact-source
 rehearsal failed in 5,519.79s (package 5,520.627s), after 672 contiguous normal
 cleanup owner turns, 33,769 deletions, zero failed lifecycle turns and a

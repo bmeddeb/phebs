@@ -58,14 +58,46 @@ func TestAccountingV3SampledBytesPreserveHistoricalPolicyAndBounds(t *testing.T)
 			if err := json.Unmarshal(raw, &prior); err != nil {
 				t.Fatal(err)
 			}
+			if prior.SafetyEnvelope.MaximumDataAllocatedBytes != 96<<30 || current.SafetyEnvelope.MaximumDataAllocatedBytes != 128<<30 {
+				t.Fatal("versioned allocated ceiling changed")
+			}
+			remaining := current.SafetyEnvelope
+			remaining.MaximumDataAllocatedBytes = prior.SafetyEnvelope.MaximumDataAllocatedBytes
 			if prior.MeterPolicy.ByteGaugeSemantics != frozenMeterPolicy().ByteGaugeSemantics ||
-				!reflect.DeepEqual(prior.SafetyEnvelope, current.SafetyEnvelope) ||
+				!reflect.DeepEqual(prior.SafetyEnvelope, remaining) ||
 				prior.WorkEnvelope.MaximumDataLogicalBytes != current.WorkEnvelope.MaximumDataLogicalBytes {
-				t.Fatal("sampled policy changed historical semantics or numerical safety/byte bounds")
+				t.Fatal("sampled policy changed historical semantics or another safety/byte bound")
 			}
 			prior.MeterPolicy.ByteGaugeSemantics = current.MeterPolicy.ByteGaugeSemantics
 			if err := validatePlanExecutionContract(prior); err == nil {
 				t.Fatal("historical plan admitted V3 sampled semantics")
+			}
+		})
+	}
+}
+
+func TestAccountingV3AllocatedCapacityPolicy(t *testing.T) {
+	for _, plan := range lifecyclePolicyPlans(t) {
+		t.Run(plan.Schema, func(t *testing.T) {
+			want := uint64(96 << 30)
+			if plan.Schema == PlanV3Schema {
+				want = 128 << 30
+			}
+			if plan.SafetyEnvelope.MaximumDataAllocatedBytes != want || plan.SafetyEnvelope.PressureVolumeBytes != 96<<30 ||
+				plan.WorkEnvelope.MaximumDataLogicalBytes != 128<<30 || plan.SafetyEnvelope.MinimumAvailableDiskBytes != 120<<30 {
+				t.Fatal("allocated, physical, logical or host capacity differs")
+			}
+			for _, limit := range []uint64{0, 96 << 30, 128<<30 - 1, 128 << 30, 128<<30 + 1, ^uint64(0)} {
+				changed := plan
+				changed.SafetyEnvelope.MaximumDataAllocatedBytes = limit
+				if err := validatePlanExecutionContract(changed); (err == nil) != (limit == want) {
+					t.Fatalf("allocated ceiling %d: %v", limit, err)
+				}
+			}
+			changed := plan
+			changed.SafetyEnvelope.PressureVolumeBytes = 128 << 30
+			if validatePlanExecutionContract(changed) == nil {
+				t.Fatal("accounting allowance changed physical volume")
 			}
 		})
 	}

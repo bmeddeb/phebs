@@ -57,9 +57,14 @@ func TestAccountingV3NormalLifecyclePolicy(t *testing.T) {
 		})
 	}
 	for _, prior := range plans[:2] {
+		if prior.SafetyEnvelope.MaximumDataAllocatedBytes != 96<<30 || current.SafetyEnvelope.MaximumDataAllocatedBytes != 128<<30 {
+			t.Fatal("versioned allocated ceiling changed")
+		}
+		remaining := current.SafetyEnvelope
+		remaining.MaximumDataAllocatedBytes = prior.SafetyEnvelope.MaximumDataAllocatedBytes
 		if prior.MeterPolicy.LifecycleSemantics != frozenMeterPolicy().LifecycleSemantics ||
 			!strings.HasPrefix(current.MeterPolicy.LifecycleSemantics, prior.MeterPolicy.LifecycleSemantics+";") ||
-			!reflect.DeepEqual(prior.SafetyEnvelope, current.SafetyEnvelope) ||
+			!reflect.DeepEqual(prior.SafetyEnvelope, remaining) ||
 			!reflect.DeepEqual(prior.PhaseDeadlines, current.PhaseDeadlines) {
 			t.Fatal("historical policy, metric units, safety bounds or deadlines changed")
 		}

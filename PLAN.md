@@ -519,10 +519,96 @@ collector, protocol or numerical limit:
   Lifetime statistics, successful final returns and scoped R ledgers cannot
   reconstruct retries or an unexpected hard-death prefix.
 
+### T42.2l approved V3 capacity policy (2026-09-11)
+
+**Explicitly approved by Ben after independent draft review.** Following
+`196bc147`'s two-unit headroom prerequisite, Ben approved the V3-only 128-GiB
+allocated ceiling and its derived nominal margin. Implementation and acceptance
+gates remain separate from that approval; no rehearsal or freeze follows from it.
+
+The correction sets a **128-GiB maximum sampled per-linked-path allocation** for prospective
+V3, independent of its unchanged 96-GiB physical pressure volume. This is a
+chosen finite accounting allowance for linked-path multiplicity, not a physical
+space reservation, an inferred worst-case bound or a new production capacity
+claim. Apply the same ceiling wherever the existing V3 plan bound is consumed;
+do not make pressure-only exceptions or hide ballast/archive/staging bytes.
+
+| Quantity | Historical V1/V2 | Approved V3 |
+|---|---:|---:|
+| Physical pressure volume | 96 GiB | 96 GiB, unchanged |
+| Allocated-byte ceiling (version-specific measurement semantics) | 96 GiB | 128 GiB (137,438,953,472 bytes) |
+| Logical-byte ceiling | 128 GiB | 128 GiB, independently enforced |
+| Native filesystem-used targets | 80/90/75 percent bands | Unchanged |
+| Initial filesystem-used and allocated ranges | Each 8–68 GiB | Unchanged |
+| Maximum ballast / minimum nominal margin | 80 GiB / 8 GiB | Unchanged |
+| Minimum host free space before preparation | 120 GiB | Unchanged; still mandatory |
+
+The retained pressure-90 sample was 111,690,625,024 allocated bytes
+(104.020 GiB). A 128-GiB ceiling would leave 25,748,328,448 bytes (23.980 GiB)
+above that one historical sample; it does not prove the next run fits. The
+choice provides a 32-GiB difference between the two ceilings, not a claim that
+alias overhead is universally at most 32 GiB. Directory/symlink blocks and
+allocation rounding also mean the logical ceiling does not bound allocated
+bytes mathematically. Increasing the volume is not a substitute: percentage
+targets would demand more physical ballast. Removing intentional index aliases
+would require a serving/archive/retention redesign, while inode deduplication
+would change the approved measurement. Neither is part of this correction.
+
+The phase-90 target is 92,255,897,518 filesystem-used bytes (about 85.92 GiB).
+Its physical target slack stays 10,823,317,586 bytes (10.08 GiB). The existing
+serialized `CustodyMarginBytes` formula is allocated ceiling minus that target;
+its approved V3 value becomes 45,183,055,954 bytes (42.08 GiB), with
+the exact freeze/receipt comparison retained. This is a nominal accounting
+difference, **not** physical free space or actual linked-gauge headroom.
+Historical V1/V2 values and bytes remain exact.
+
+Keep `196bc147`'s latest-actual-sample forecast before every ballast mutation,
+including all remaining targets before the first one. With normalized
+allocated bytes at 68 GiB and filesystem-used bytes at 8 GiB, the existing
+rounded ballast formula can still project 156,680,404,992 allocated bytes
+(145.920 GiB) at pressure-90, even before other growth. Thus 128 GiB deliberately
+does not admit every combination in the individual normalization ranges.
+Both byte ceilings, native capacity checks and every required actual sample
+remain controlling; excess or unavailable measurements stop and retain the
+true completed prefix. There is no retry, clamp, deduplication or automatic
+ceiling escalation.
+
+The minimal implementation is a V3-only assignment in
+`applyProcessAccountingCorrection`, used by construction and strict contract
+validation; do not edit `frozenSafetyEnvelope` or add a generic override.
+Native samplers/reporters preserve actual values unchanged; parent HTTP/WB
+validation, the headroom guard and receipts consume the plan bound. Test the
+explicit V1/V2=96 and V3=128 distinction before
+comparing every other historical field unchanged. Preserve closed schema,
+policy text, sample counts, arithmetic checks and failure classification.
+Numeric acceptance adds no traversal, allocation reservation, I/O, SDK call,
+lock, child, cache or concurrency. Query, sync, startup, retry and publication
+work remain unchanged; the intentional difference is allowing previously
+refused completed samples to continue up to a higher finite counter ceiling.
+
+**Later-phase hold remains independent.** Backup overlaps retained data with
+its archive; explicit search verification extracts temporary files under owned
+TMPDIR. Restore retains the archive while replay/spool/staging and restored
+data appear. Epoch four is joined and its data-root children removed before
+restore; epoch five reuses that root, not a second server installation, but
+flat/generation aliases return. These populations must be measured at their
+actual lifetimes, not added as if all were simultaneous or omitted after they
+are deleted. No reviewed corpus-scale peak currently establishes either the
+96-GiB physical fit or the proposed 128-GiB sampled fit for those phases.
+Whole-phase archive/restore mutation sampling and acceptance, epoch-five
+lifetime/phase progression, later lifecycle/query and final receipt composition
+remain required. The current pressure rehearsal stops after phase eleven;
+`StartRestored` is still a phase-twelve startup-only lifetime. Complete their
+bounded native composition and measurement coverage before using another long
+rehearsal as the next discovery step. This approval authorizes
+only the scoped capacity correction and its gates, not missing evidence,
+automatic reruns, author/seal, ceremony execution or Epic closure.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-11 — T42.2l approved V3 linked-path capacity allowance | Ben explicitly approved prospective V3's sampled per-linked-path allocated-byte ceiling changing from 96 to 128 GiB, including the derived nominal `CustodyMarginBytes` value 45,183,055,954. Apply only the V3 construction/strict-validation correction. Preserve actual native values, both byte checks, completed positive excess, mandatory observations, early all-target headroom refusal and exact historical V1/V2 bytes/96-GiB limits. | The physical volume remains 96 GiB, logical ceiling 128 GiB, host prerequisite 120 GiB and every other bound unchanged. Nominal 42.08-GiB accounting difference is not the 10.08-GiB physical target slack or a guaranteed live reserve. One scalar assignment and existing comparisons add no query, scan, lock, cache, child or allocation reservation; acceptance changes, not measurement units or execution cost. No retrospective pass, new rehearsal, complete later-phase evidence, author/seal or freeze is established. |
 | 2026-09-11 — T42.2l pressure headroom uses both measured byte units | The exact `c7db1d21` rehearsal completed normal cleanup and pressure-80, then correctly refused pressure-90 at 111,690,625,024 linked-path allocated bytes against the unchanged 96-GiB ceiling. Filesystem-used ballast targets and per-linked-path workspace allocation are different quantities; intentional serving hard links contribute to the latter at each path. Before each native V3 ballast mutation, reuse that phase's successful start/normalized workspace sample and the existing fenced native ballast/capacity check. Subtract the current ballast from both measured logical and allocated totals, then project each remaining fixed target with checked arithmetic; reject any projected ceiling violation before allocating even the first target. | At most three scalar calculations under the existing volume/run locks; no additional HTTP/SDK call, workspace walk, inode map, hashing, cache, child, retry or concurrency. Ordinary query, sync, startup and publication costs are unchanged. The canonical custody margin remains target-only geometry, not guaranteed live linked-path headroom. The forecast is not a coherent future measurement: actual post-mutation sampling and refusal remain mandatory. A predicted refusal retains the completed actual prefix and a private path-free diagnostic, never projected maxima or a fabricated measured limit violation. V1/V2 bytes, 96-GiB volume/allocation ceiling, 128-GiB logical ceiling, 80/90/75 targets, eight-GiB nominal margin and deadlines remain exact. This early refusal does not make the measured footprint fit or authorize a rerun, bound change, freeze or ceremony. |
 | 2026-09-11 — T42.2l approved V3 normal-cycle job evidence | Ben approved aligning prospective V3 phase-nine normal completion with the existing phase-eleven/thirteen durable-job rule: a fresh, error-free `lower_bound` job row may truthfully retain backlog. Every other owner remains exact and drained, with the same sorted fresh cycle, post-cycle exact-normal capacity, actual normalized byte/authority checks and 4,096-turn deadline-bound execution. Select this only for controlled-normal execution with the selected cleanup collector; ordinary `AwaitNormal` and ordinary controlled-normal completion remain strict. Match the V3 parent normal-R validator and V3 pressure-80 receipt policy through the existing lifecycle policy string. | Reuse the existing job-backlog mode rather than aligning independent census cursors or retaining extra cross-cycle state. One fixed arm-time predicate and a schema check add no query, request, scan, hashing, cache, lock, child, concurrency or numerical allowance; the V3 plan carries a fixed policy string. V1/V2 policy and retained bytes remain exact. Fast real-owner tests cover the valid odd/even cursor skew and refusal matrix; the native composition seeds that cursor with one existing charged store CAS during preparation and requires a genuinely backlogged job row beside fifteen exact/drained owners. No full pressure, rehearsal, freeze or release claim follows from this acceptance-rule correction. |
 | 2026-09-11 — T42.2l long-native-fixture authentication and failure diagnostics | Supply the shared test bearer store's actual `TouchAPIKey` operation, reached by real authentication after five minutes; serialize its in-memory Get/Set/Touch and exercise aged-key concurrent requests through the real middleware. The first full-owner native race completed cleanup but stopped before the normalized sample, and its missing helper detail prevents exact historical attribution. A fast aged-key reproduction independently proves the nil embedded-method panic. Preserve the existing bounded twenty-line Go test failure tail before terminating a helper that has already emitted its terminal failure summary; unexpected live protocol output still requires termination first. | Fixture-only corrections: no production authentication, request policy, deadline, phase, owner or admission-bound change. The modeled bearer store adds a mutex and timestamp replacement; its lookup is still not a native authentication-store proof. Failure-only pipe drainage uses the original scanner/line limit and caller-bounded subprocess, then the same session kill/join. The failed native race remains failed and retained; no automatic rerun or teardown-success claim follows from fast regression tests. |

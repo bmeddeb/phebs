@@ -29,10 +29,15 @@ func TestExecutionPressureBallastHeadroom(t *testing.T) {
 	before := executionPressureBallastSample{Used: base, Available: 96<<30 - base}
 	workspace := custodyByteSample{LogicalBytes: residual, AllocatedBytes: residual}
 	maximum := custodyByteSample{LogicalBytes: residual + size[1], AllocatedBytes: residual + size[1]}
-	// Model the selected 128-GiB logical / 96-GiB allocated limits directly.
+	// Retain the historical 128-GiB logical / 96-GiB allocated counterexample.
 	frozenBefore := executionPressureBallastSample{Used: 42 << 30, Available: 54 << 30}
 	frozenWorkspace := custodyByteSample{LogicalBytes: 60 << 30, AllocatedBytes: 60 << 30}
 	frozenMaximum := custodyByteSample{LogicalBytes: 128 << 30, AllocatedBytes: 96 << 30}
+	plan := accountingTestPlan(t)
+	if plan.Schema != PlanV3Schema || plan.WorkEnvelope.MaximumDataLogicalBytes != 128<<30 || plan.SafetyEnvelope.MaximumDataAllocatedBytes != 128<<30 {
+		t.Fatal("prospective V3 byte ceilings changed")
+	}
+	prospectiveMaximum := custodyByteSample{LogicalBytes: plan.WorkEnvelope.MaximumDataLogicalBytes, AllocatedBytes: plan.SafetyEnvelope.MaximumDataAllocatedBytes}
 	badFuture := append([]PressureTargetGeometry(nil), geometry.Targets...)
 	badFuture[1].Action = "unknown"
 	for _, test := range []struct {
@@ -47,6 +52,10 @@ func TestExecutionPressureBallastHeadroom(t *testing.T) {
 	}{
 		{name: "frozen_ceiling_80_only_fits", before: frozenBefore, workspace: frozenWorkspace, targets: geometry.Targets[:1], maximum: frozenMaximum, want: (geometry.Targets[0].TargetUsedBytes - 42<<30) / 4096 * 4096},
 		{name: "frozen_ceiling_90_peak_refuses", before: frozenBefore, workspace: frozenWorkspace, targets: geometry.Targets, maximum: frozenMaximum, wantError: true, wantErrorText: "projected pressure-90 workspace headroom refused"},
+		{name: "prospective_128_ceiling_fits_same_geometry", before: frozenBefore, workspace: frozenWorkspace, targets: geometry.Targets, maximum: prospectiveMaximum, want: (geometry.Targets[0].TargetUsedBytes - 42<<30) / 4096 * 4096},
+		// With modeled native used=8 GiB and linked custody=68 GiB, the
+		// 90 target projects about 145.92 GiB. Even the first 80 target exceeds 128.
+		{name: "prospective_145_92_peak_refuses_before_80", before: before, workspace: custodyByteSample{LogicalBytes: 68 << 30, AllocatedBytes: 68 << 30}, targets: geometry.Targets, maximum: prospectiveMaximum, wantError: true, wantErrorText: "projected pressure-80 workspace headroom refused"},
 		{name: "both_equal_at_future_peak", before: before, workspace: workspace, targets: geometry.Targets, maximum: maximum, want: size[0]},
 		{name: "workspace_logical_already_over", before: before, workspace: custodyByteSample{LogicalBytes: maximum.LogicalBytes + 1, AllocatedBytes: residual}, targets: geometry.Targets, maximum: maximum, wantError: true},
 		{name: "workspace_allocated_already_over", before: before, workspace: custodyByteSample{LogicalBytes: residual, AllocatedBytes: maximum.AllocatedBytes + 1}, targets: geometry.Targets, maximum: maximum, wantError: true},

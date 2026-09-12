@@ -85,6 +85,9 @@ func applyProcessAccountingCorrection(plan *Plan) error {
 		return errors.New("V3 dispatch budget phase inventory differs")
 	}
 	plan.Schema = PlanV3Schema
+	// Linked-path allocation is an accounting ceiling, not physical capacity.
+	// The pressure volume stays 96 GiB; retained V1/V2 keep their 96-GiB ceiling.
+	plan.SafetyEnvelope.MaximumDataAllocatedBytes = 128 << 30
 	plan.ToolPolicy.ZoektBuildRecipe = zoektOfferBuildRecipe
 	plan.Profile.Pipeline.ExtractionDomains = storeBoundExtractionDomains()
 	plan.Correction.EvidenceGroupingPolicy = storeBoundEvidenceGroupingPolicy

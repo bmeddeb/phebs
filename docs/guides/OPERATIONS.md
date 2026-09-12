@@ -7413,6 +7413,14 @@ actual post-mutation measurements and the unchanged ceilings still apply.
 The private refusal identifies the projected target and byte operands. Preserve
 the actual prefix; do not raise limits or rerun merely to bypass the refusal.
 
+Prospective V3 now has an explicitly approved 128-GiB per-linked-path allocated
+ceiling, independently of its unchanged 96-GiB pressure volume and 128-GiB
+logical ceiling. Its derived 42.08-GiB nominal margin is not physical free
+space; physical target slack remains about 10.08 GiB. All actual samples and
+early headroom checks still apply, and the 120-GiB host-free-space prerequisite
+is unchanged. Historical V1/V2 retain their 96-GiB allocated ceiling. This policy
+does not establish archive/restore fit or authorize another rehearsal.
+
 Success requires the complete terminal test result and joined cleanup, not a
 returned sample or final authority response alone. A failure retains the exact
 volume, ballast and diagnostics; do not automatically rerun or delete them.

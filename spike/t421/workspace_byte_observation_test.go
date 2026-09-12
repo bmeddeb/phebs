@@ -136,6 +136,34 @@ func TestExecutionWorkspaceBytesLimits(t *testing.T) {
 	}
 }
 
+func TestExecutionWorkspaceBytesV3ByteCeilings(t *testing.T) {
+	plan := accountingTestPlan(t)
+	if plan.Schema != PlanV3Schema || plan.WorkEnvelope.MaximumDataLogicalBytes != 128<<30 || plan.SafetyEnvelope.MaximumDataAllocatedBytes != 128<<30 {
+		t.Fatal("prospective V3 byte ceilings changed")
+	}
+	for _, test := range []struct {
+		name   string
+		sample custodybytes.Sample
+		refuse bool
+	}{
+		{"above_historical_allocated", custodybytes.Sample{LogicalBytes: 64 << 30, AllocatedBytes: 96<<30 + 1}, false},
+		{"both_equal", custodybytes.Sample{LogicalBytes: 128 << 30, AllocatedBytes: 128 << 30}, false},
+		{"allocated_one_over", custodybytes.Sample{LogicalBytes: 64 << 30, AllocatedBytes: 128<<30 + 1}, true},
+		{"logical_one_over", custodybytes.Sample{LogicalBytes: 128<<30 + 1, AllocatedBytes: 64 << 30}, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			raw := lifecycleTestBindings(5) + workspaceTestBinding(5) + workspaceTestPair(5, 9, 1, 4, 8) +
+				workspaceTestPair(5, 9, 2, test.sample.LogicalBytes, test.sample.AllocatedBytes)
+			got, err := observeExecutionAttempts([]byte(raw), plan, 5, [32]byte{1}, true)
+			row := got.WorkspaceBytes.Phases[8]
+			if (err != nil) != test.refuse || got.WorkspaceBytes.Complete == test.refuse || got.WorkspaceBytes.LimitExceeded != test.refuse ||
+				got.WorkspaceBytes.Unavailable || row.Attempts != 2 || row.Completed != 2 || row.Maximum != test.sample {
+				t.Fatal("completed positive sample or limit classification changed", got.WorkspaceBytes, err)
+			}
+		})
+	}
+}
+
 func TestExecutionWorkspaceBytesFinishBindsActualWorkspace(t *testing.T) {
 	plan := accountingTestPlan(t)
 	for _, mode := range []string{"complete", "missing", "failed", "overflow", "unjoined", "legacy"} {

@@ -2,6 +2,8 @@ package t421
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -9,6 +11,50 @@ import (
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
+
+func TestExecutionPressureSampleV3ByteCeilings(t *testing.T) {
+	plan := accountingTestPlan(t)
+	if plan.Schema != PlanV3Schema || plan.WorkEnvelope.MaximumDataLogicalBytes != 128<<30 || plan.SafetyEnvelope.MaximumDataAllocatedBytes != 128<<30 {
+		t.Fatal("prospective V3 byte ceilings changed")
+	}
+	for _, test := range []struct {
+		name   string
+		sample custodybytes.Sample
+		refuse bool
+	}{
+		{"above_historical_allocated", custodybytes.Sample{LogicalBytes: 64 << 30, AllocatedBytes: 96<<30 + 1}, false},
+		{"both_equal", custodybytes.Sample{LogicalBytes: 128 << 30, AllocatedBytes: 128 << 30}, false},
+		{"allocated_one_over", custodybytes.Sample{LogicalBytes: 64 << 30, AllocatedBytes: 128<<30 + 1}, true},
+		{"logical_one_over", custodybytes.Sample{LogicalBytes: 128<<30 + 1, AllocatedBytes: 64 << 30}, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			calls := 0
+			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				_, _ = fmt.Fprintf(w, `{"logical_bytes":%d,"allocated_bytes":%d}`, test.sample.LogicalBytes, test.sample.AllocatedBytes)
+			}))
+			reader.plan = plan
+			reader.run.epoch.Epoch, reader.run.pressureAllowed = 4, true
+			reader.run.flow = &ExecutionEpochOne{workspace: &productionRoot{}}
+			reader.projection.Phase, reader.pressure.step = "pressure_80", 1
+			reader.pressure.samples.Phases[0].Maximum = custodybytes.Sample{LogicalBytes: 4, AllocatedBytes: 8}
+			value, err := reader.pressureSample(t.Context(), "start")
+			row := reader.pressure.samples.Phases[0]
+			if (err != nil) != test.refuse || value != test.sample || row.Attempts != 1 || row.Completed != 1 || row.Maximum != test.sample || calls != 1 ||
+				reader.pressure.samples.LimitExceeded != test.refuse || reader.pressure.samples.Unavailable {
+				t.Fatal("completed sample or limit classification changed", value, row, err)
+			}
+			if test.refuse {
+				if !errors.Is(err, errEpochInspection) || reader.err == nil || reader.pressure.sampleOrdinal != 0 {
+					t.Fatal("overshoot did not latch", err)
+				}
+				if _, err := reader.pressureSample(t.Context(), "start"); err == nil || calls != 1 || reader.pressure.samples.Phases[0] != row {
+					t.Fatal("retry changed the retained completed overshoot", err)
+				}
+			}
+		})
+	}
+}
 
 func TestExecutionPressureSampleSequence(t *testing.T) {
 	points := []string{"start", "normalized", "ballast", "finish", "start", "ballast", "finish", "start", "ballast", "removed", "finish"}
