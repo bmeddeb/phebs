@@ -102,7 +102,8 @@ func (run *ExecutionEpochOneRun) CheckpointRestartPressure(ctx context.Context) 
 }
 
 // CheckpointRestartBackup binds the endpoint-retirement capability to the
-// actual BackupAndStop consumer. It adds no server phase or lifetime time.
+// actual BackupAndStop consumer and reserves the existing phase-twelve window
+// in the fourth server's lifetime, clipped by the caller and global wall bound.
 func (run *ExecutionEpochOneRun) CheckpointRestartBackup(ctx context.Context) (*ExecutionEpochOneRun, error) {
 	return run.checkpointRestart(ctx, true, true)
 }
@@ -132,15 +133,10 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 	if pressure {
 		pressureBounds, boundsErr = checkpointPressureEpochBounds(flow.plan)
 	}
-	if !valid || boundsErr != nil || !run.phaseTimer.Stop() {
-		run.mu.Unlock()
-		flow.mu.Unlock()
-		return nil, ErrExecutionEpochOne
+	if backup {
+		pressureBounds, boundsErr = checkpointBackupEpochBounds(flow.plan)
 	}
-	close(run.phaseDone)
-	if !time.Now().Before(run.phaseDeadline) {
-		run.err = ErrExecutionEpochOne
-		run.stopOnce.Do(func() { close(run.stop) })
+	if !valid || boundsErr != nil {
 		run.mu.Unlock()
 		flow.mu.Unlock()
 		return nil, ErrExecutionEpochOne
@@ -152,7 +148,26 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 	// Independent of the old server lifetime: finish cancels only that server.
 	lifetimeDeadline := deadline
 	if pressure {
-		lifetimeDeadline = deadline.Add(pressureBounds.lifetime - 4*time.Hour)
+		lifetimeDeadline = deadline.Add(pressureBounds.lifetime - time.Duration(flow.plan.PhaseDeadlines[7].DeadlineMS)*time.Millisecond)
+	}
+	if backup {
+		lifetimeDeadline, boundsErr = archiveLifetimeDeadline(ctx, flow.plan, flow.authorStarted, lifetimeDeadline)
+		if lifetimeDeadline.Before(deadline) {
+			deadline = lifetimeDeadline
+		}
+	}
+	if boundsErr != nil || !run.phaseTimer.Stop() {
+		run.mu.Unlock()
+		flow.mu.Unlock()
+		return nil, ErrExecutionEpochOne
+	}
+	close(run.phaseDone)
+	if !time.Now().Before(run.phaseDeadline) {
+		run.err = ErrExecutionEpochOne
+		run.stopOnce.Do(func() { close(run.stop) })
+		run.mu.Unlock()
+		flow.mu.Unlock()
+		return nil, ErrExecutionEpochOne
 	}
 	lifetime, cancel := context.WithDeadline(ctx, lifetimeDeadline)
 	operation, finishOperation := context.WithDeadline(lifetime, deadline)

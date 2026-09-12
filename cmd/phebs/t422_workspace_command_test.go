@@ -54,6 +54,67 @@ func TestT422WorkspaceCommandRequiredBeforeLifecycle(t *testing.T) {
 	}
 }
 
+// Positions and prerequisites only: these supplied states do not assert native
+// samples, restored authority, a query, or a completed lifecycle cycle.
+func TestT422WorkspaceEpochFiveSequence(t *testing.T) {
+	rows := []struct {
+		phase uint32
+		step  uint8
+		point string
+	}{
+		{12, 1, "archive_finish"}, {13, 1, "start"}, {13, 3, "finish"}, {14, 3, "start"}, {14, 3, "finish"},
+	}
+	for ordinal := uint8(0); ordinal <= 5; ordinal++ {
+		control := &t422LifecycleControl{workspacePoint: ordinal, launch: &t422SemanticLaunch{request: t422SemanticLaunchRequest{ServerEpoch: 5}}}
+		for phase := uint32(1); phase <= 15; phase++ {
+			for step := uint8(0); step <= 4; step++ {
+				for _, point := range []string{"", "archive_finish", "start", "finish", "normalized", "ballast", "unknown"} {
+					want := int(ordinal) < len(rows) && rows[ordinal].phase == phase && rows[ordinal].step == step && rows[ordinal].point == point
+					if control.workspacePointMatches(phase, step, point) != want {
+						t.Fatal(ordinal, phase, step, point)
+					}
+				}
+			}
+		}
+	}
+	for _, epoch := range []uint64{0, 1, 2, 3, 6} {
+		control := &t422LifecycleControl{launch: &t422SemanticLaunch{request: t422SemanticLaunchRequest{ServerEpoch: epoch}}}
+		if control.workspacePointMatches(12, 1, "archive_finish") {
+			t.Fatal("unselected epoch admitted a boundary", epoch)
+		}
+	}
+}
+
+func TestT422WorkspaceEpochFiveLifecyclePrerequisites(t *testing.T) {
+	for _, bound := range []bool{false, true} {
+		for point := uint8(0); point <= 5; point++ {
+			control := &t422LifecycleControl{workspacePoint: point, launch: &t422SemanticLaunch{
+				request: t422SemanticLaunchRequest{ServerEpoch: 5}}}
+			control.launch.initial.Phase = 12
+			if bound {
+				control.workspaceBytes = &custodybytes.Observer{}
+			}
+			if !control.expected(t422LifecycleParkPath, 12) || control.expected(t422LifecycleParkPath, 13) || control.expected(t422LifecycleFreshDrive, 13) {
+				t.Fatal("initial phase12 Park must precede fresh drive")
+			}
+			for _, row := range []struct {
+				step uint8
+				path string
+			}{{1, t422LifecycleFreshDrive}, {2, t422LifecycleFreshRead}} {
+				control.step = row.step
+				want := !bound || point == 2
+				if control.expected(row.path, 13) != want || control.expected(row.path, 12) || control.expected(row.path, 14) {
+					t.Fatal(bound, point, row)
+				}
+			}
+			control.step = 3
+			if control.expected(t422LifecycleFreshDrive, 13) || control.expected(t422LifecycleFreshRead, 13) {
+				t.Fatal("completed fresh cycle repeated")
+			}
+		}
+	}
+}
+
 func TestT422WorkspaceCommandClosedRequestAndResponse(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, t422WorkspaceSamplePath, nil)
 	request.Header.Set(t422WorkspacePointHeader, "start")
@@ -90,6 +151,25 @@ func TestT422WorkspaceCommandUnadmittedDoesNotMeasure(t *testing.T) {
 		control.sampleWorkspaceCommand(response, request)
 		if response.Code != http.StatusConflict || calls != 0 || failures != 1 || control.err == nil {
 			t.Fatal("unadmitted measurement", points, response.Code, calls, failures)
+		}
+	}
+}
+
+func TestT422WorkspaceEpochFiveCanceledDoesNotMeasure(t *testing.T) {
+	for _, point := range []string{"archive_finish", "start", "finish"} {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		calls, failures := 0, 0
+		observer := &custodybytes.Observer{}
+		control := &t422LifecycleControl{ctx: ctx, step: 1, workspaceBytes: observer,
+			launch:          &t422SemanticLaunch{request: t422SemanticLaunchRequest{ServerEpoch: 5}, fail: func(error) { failures++ }},
+			workspaceSample: func(context.Context) (custodybytes.Sample, error) { calls++; return custodybytes.Sample{}, nil }}
+		request := httptest.NewRequest(http.MethodPost, t422WorkspaceSamplePath, nil).WithContext(ctx)
+		request.Header.Set(t422WorkspacePointHeader, point)
+		response := httptest.NewRecorder()
+		control.sampleWorkspaceCommand(response, request)
+		if response.Code != http.StatusConflict || calls != 0 || failures != 1 || control.err == nil || !observer.Snapshot().Unavailable || control.workspacePoint != 0 {
+			t.Fatal("canceled boundary changed state or sampled", point, response.Code, calls, failures)
 		}
 	}
 }

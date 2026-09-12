@@ -71,8 +71,7 @@ func (reader *executionEpochInspection) pressureSample(ctx context.Context, poin
 		(point == "finish") != reader.finalUsed {
 		return value, errEpochInspection
 	}
-	token := reader.run.control.RequestToken()
-	if token == "" {
+	if reader.run.control.RequestToken() == "" {
 		return value, errEpochInspection
 	}
 	phase := 0
@@ -84,6 +83,31 @@ func (reader *executionEpochInspection) pressureSample(ctx context.Context, poin
 	}
 	row := &reader.pressure.samples.Phases[phase]
 	row.Attempts++
+	value, err := reader.readWorkspaceSample(ctx, point)
+	if err != nil {
+		return value, err
+	}
+	row.Completed++
+	row.Maximum.LogicalBytes = max(row.Maximum.LogicalBytes, value.LogicalBytes)
+	row.Maximum.AllocatedBytes = max(row.Maximum.AllocatedBytes, value.AllocatedBytes)
+	if value.LogicalBytes > reader.plan.WorkEnvelope.MaximumDataLogicalBytes || value.AllocatedBytes > reader.plan.SafetyEnvelope.MaximumDataAllocatedBytes {
+		reader.pressure.samples.LimitExceeded = true
+		return value, errEpochInspection
+	}
+	if ctx.Err() != nil {
+		return value, errEpochInspection
+	}
+	reader.pressure.sampleOrdinal++
+	return value, nil
+}
+
+// Shared bounded transport only: callers hold reader.mu and retain their own
+// closed point sequence and actual completed maxima. No data-only fallback.
+func (reader *executionEpochInspection) readWorkspaceSample(ctx context.Context, point string) (value custodybytes.Sample, retErr error) {
+	token := reader.run.control.RequestToken()
+	if token == "" {
+		return value, errEpochInspection
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://"+reader.run.epoch.Listen+"/api/t422/lifecycle/sample-workspace", nil)
 	if err != nil {
 		return value, errEpochInspection
@@ -114,16 +138,5 @@ func (reader *executionEpochInspection) pressureSample(ctx context.Context, poin
 		return value, errEpochInspection
 	}
 	value = custodybytes.Sample{LogicalBytes: wire.LogicalBytes, AllocatedBytes: wire.AllocatedBytes}
-	row.Completed++
-	row.Maximum.LogicalBytes = max(row.Maximum.LogicalBytes, value.LogicalBytes)
-	row.Maximum.AllocatedBytes = max(row.Maximum.AllocatedBytes, value.AllocatedBytes)
-	if value.LogicalBytes > reader.plan.WorkEnvelope.MaximumDataLogicalBytes || value.AllocatedBytes > reader.plan.SafetyEnvelope.MaximumDataAllocatedBytes {
-		reader.pressure.samples.LimitExceeded = true
-		return value, errEpochInspection
-	}
-	if ctx.Err() != nil {
-		return value, errEpochInspection
-	}
-	reader.pressure.sampleOrdinal++
 	return value, nil
 }

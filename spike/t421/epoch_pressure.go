@@ -81,6 +81,19 @@ func (reader *executionEpochInspection) pressureCommand(ctx context.Context, ope
 		(operation == "drive-recovery") == fence.IsZero() || !fence.IsZero() && fence.UnixNano() <= 0 {
 		return errEpochInspection
 	}
+	if err := reader.lifecycleCommand(ctx, operation, fence); err != nil {
+		return err
+	}
+	reader.pressure.step++
+	if operation == "drive-recovery" {
+		reader.pressure.recoveryFence = fence
+	}
+	return nil
+}
+
+// Caller holds reader.mu and applies its closed phase/operation policy. The
+// transport neither consumes an exact-read ordinal nor supplies cycle evidence.
+func (reader *executionEpochInspection) lifecycleCommand(ctx context.Context, operation string, fence time.Time) error {
 	token := reader.run.control.RequestToken()
 	if token == "" {
 		return errEpochInspection
@@ -107,10 +120,6 @@ func (reader *executionEpochInspection) pressureCommand(ctx context.Context, ope
 	if readErr != nil || closeErr != nil || ctx.Err() != nil || response.StatusCode != http.StatusOK || string(raw) != "{\"status\":\"complete\"}" ||
 		response.Uncompressed || response.Header.Get("Content-Encoding") != "" || len(response.Trailer) != 0 || len(response.Header.Values(epochReadTrailer)) != 0 {
 		return errEpochInspection
-	}
-	reader.pressure.step++
-	if operation == "drive-recovery" {
-		reader.pressure.recoveryFence = fence
 	}
 	return nil
 }
@@ -213,7 +222,7 @@ func pressureCapacityValid(c lifecycle.TransitionCapacityObservation, pressure l
 
 func pressureCycleValid(c lifecycle.CycleObservation, allowJobBacklog bool) bool {
 	if c.Schema != lifecycle.CycleObservationSchema || c.FenceAt.UnixMilli() <= 0 || c.OwnerTurns == 0 || c.OwnerTurns > uint64(lifecycle.MaxCycleObservationTurns) || len(c.Owners) != 16 ||
-		!pressureCapacityValid(c.Capacity, lifecycle.PressureNormal, c.Capacity.UsedPercent, c.FenceAt) {
+		c.Capacity.UsedPercent >= lifecycle.SoftWatermarkPercent || !pressureCapacityValid(c.Capacity, lifecycle.PressureNormal, c.Capacity.UsedPercent, c.FenceAt) {
 		return false
 	}
 	names := correctedLifecycleOwners()

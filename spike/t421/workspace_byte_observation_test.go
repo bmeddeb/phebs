@@ -106,7 +106,9 @@ func TestExecutionWorkspaceBytesLimits(t *testing.T) {
 		{5, 9, uint64(lifecycle.MaxCycleObservationTurns) + 1 + 4},
 		{5, 10, 1 + 3},
 		{5, 11, uint64(lifecycle.MaxCycleObservationTurns) + 2 + 4},
-		{6, 13, uint64(lifecycle.MaxCycleObservationTurns)},
+		{6, 12, 1},
+		{6, 13, uint64(lifecycle.MaxCycleObservationTurns) + 2},
+		{6, 14, 2},
 	} {
 		out := ExecutionWorkspaceByteObservation{Bound: true, sequence: test.maximum - 1, phase: test.phase}
 		out.Phases[test.phase-1].Attempts = test.maximum - 1
@@ -134,6 +136,58 @@ func TestExecutionWorkspaceBytesLimits(t *testing.T) {
 	if seen, err := executionTerminalFooter([]byte(footer+workspaceTestBinding(5)), [32]byte{1}); !seen || err == nil {
 		t.Fatal("post-terminal byte record accepted", seen, err)
 	}
+}
+
+// Supplied report bytes prove the parser and finite accounting only. Actual
+// command ordering and native traversals are separate evidence.
+func TestExecutionWorkspaceBytesEpochFiveBoundaries(t *testing.T) {
+	plan := accountingTestPlan(t)
+	raw := lifecycleTestBindings(6) + workspaceTestBinding(6)
+	for index, phase := range []uint32{12, 13, 13, 14, 14} {
+		raw += workspaceTestPair(6, phase, uint64(index+1), uint64(index+1), 512)
+	}
+	got, err := observeExecutionAttempts([]byte(raw), plan, 6, [32]byte{1}, true)
+	if err != nil || !got.Complete || !got.WorkspaceBytes.Complete || got.WorkspaceBytes.Unavailable {
+		t.Fatal("restored boundary stream", got.WorkspaceBytes, err)
+	}
+	for _, row := range []struct {
+		phase          uint32
+		count, logical uint64
+	}{{12, 1, 1}, {13, 2, 3}, {14, 2, 5}} {
+		want := ExecutionWorkspaceBytePhase{Attempts: row.count, Completed: row.count, Maximum: custodybytes.Sample{LogicalBytes: row.logical, AllocatedBytes: 512}}
+		if got.WorkspaceBytes.Phases[row.phase-1] != want {
+			t.Fatal(row, got.WorkspaceBytes)
+		}
+	}
+	for _, suffix := range []string{
+		workspaceTestPair(6, 15, 6, 99, 99),
+		workspaceTestPair(6, 14, 6, 99, 99),
+		workspaceTestPair(6, 12, 6, 99, 99),
+	} {
+		got, err := observeExecutionAttempts([]byte(raw+suffix), plan, 6, [32]byte{1}, true)
+		if err == nil || got.WorkspaceBytes.Complete || !got.WorkspaceBytes.Unavailable || got.WorkspaceBytes.Phases[13].Completed != 2 || got.WorkspaceBytes.Phases[13].Maximum.LogicalBytes != 5 {
+			t.Fatal("unadmitted suffix lost completed boundary prefix", got.WorkspaceBytes, err)
+		}
+	}
+	prefix := lifecycleTestBindings(6) + workspaceTestBinding(6) + workspaceTestPair(6, 12, 1, 7, 512)
+	failure := workspaceTestEvent(6, 13, 'B', 2, 0, 0) + workspaceTestEvent(6, 13, 'F', 2, 0, 0)
+	got, err = observeExecutionAttempts([]byte(prefix+failure), plan, 6, [32]byte{1}, true)
+	if err == nil || got.WorkspaceBytes.Complete || !got.WorkspaceBytes.Unavailable || got.WorkspaceBytes.Phases[11].Completed != 1 || got.WorkspaceBytes.Phases[11].Maximum.LogicalBytes != 7 || got.WorkspaceBytes.Phases[12].Completed != 0 {
+		t.Fatal("failed start erased archive sample", got.WorkspaceBytes, err)
+	}
+}
+
+func TestExecutionWorkspaceBytesEpochFiveCompactHeadroom(t *testing.T) {
+	epochFive := workspaceCheckpointMaximum(6, 12) + workspaceCheckpointMaximum(6, 13) + workspaceCheckpointMaximum(6, 14)
+	if epochFive != uint64(lifecycle.MaxCycleObservationTurns)+5 || (epochFive-uint64(lifecycle.MaxCycleObservationTurns))*86 != 430 {
+		t.Fatal("fixed boundary byte delta", epochFive)
+	}
+	workspaceSubtotal := 2*uint64(79) + 86*(epochFive+workspaceCheckpointMaximum(5, 9)+workspaceCheckpointMaximum(5, 10)+workspaceCheckpointMaximum(5, 11))
+	if workspaceSubtotal != 1_058_646 || workspaceSubtotal >= 64<<20 {
+		t.Fatal("bounded server workspace subtotal", workspaceSubtotal)
+	}
+	// Other compact families, census bodies and ordinary diagnostics share the
+	// unchanged output allowance; this is not whole-output fit evidence.
 }
 
 func TestExecutionWorkspaceBytesV3ByteCeilings(t *testing.T) {

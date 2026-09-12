@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"slices"
+	"time"
 
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
 )
 
@@ -120,4 +122,62 @@ func cloneArchiveAuthority(value AuthorityPhaseResult) AuthorityPhaseResult {
 		value.ExtractionRoots[i].PartitionResults = slices.Clone(value.ExtractionRoots[i].PartitionResults)
 	}
 	return value
+}
+
+func (reader *executionEpochInspection) restoredCommand(ctx context.Context, operation string) (retErr error) {
+	reader.mu.Lock()
+	defer reader.mu.Unlock()
+	defer func() { reader.fail(retErr) }()
+	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.epoch.Epoch != 5 || reader.run.control == nil || reader.finalUsed {
+		return errEpochInspection
+	}
+	valid := operation == "park" && reader.restoredStep == 0 && reader.projection.Phase == "archive_restore" && reader.archiveManifest != nil && reader.progressReady && reader.tail.Status == "ready" ||
+		operation == "drive-fresh" && reader.restoredStep == 1 && reader.projection.Phase == "lifecycle_collection" &&
+			reader.restoredSamples.Phases[1].Completed == 1 && reader.restoredSamples.ArchiveComplete
+	if !valid || reader.lifecycleCommand(ctx, operation, time.Time{}) != nil {
+		return errEpochInspection
+	}
+	reader.restoredStep++
+	return nil
+}
+
+// Preserve the actual archive F and the epoch-wide exact ordinal. Only the
+// accepted, fenced prior phase can supply this phase13 baseline.
+func (reader *executionEpochInspection) beginCollection() error {
+	reader.mu.Lock()
+	defer reader.mu.Unlock()
+	if reader.err != nil || reader.run == nil || reader.run.epoch.Epoch != 5 || !reader.finalUsed || reader.restoredStep != 1 ||
+		reader.projection.Phase != "archive_restore" || reader.archiveAuthority.Phase != "archive_restore" ||
+		!reader.restoredSamples.ArchiveComplete || len(reader.evidence.rows) == 0 || !reader.evidence.rows[len(reader.evidence.rows)-1].SelectorAccepted {
+		return errEpochInspection
+	}
+	projection, err := expectedStateProjectionForPhase(reader.plan, "lifecycle_collection")
+	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	if err != nil || inventoryErr != nil || len(rows) != 15 || rows[12].Phase != "lifecycle_collection" || rows[12].ServerEpoch != 5 ||
+		projection.CatalogSource.SHA256 != reader.run.epoch.CatalogSHA256 {
+		return errEpochInspection
+	}
+	reader.projection, reader.bounds = projection, rows[12]
+	reader.progressCalls, reader.tailCalls, reader.lifecycleCalls, reader.progressReady = 0, 0, 0, false
+	reader.tail, reader.finalUsed = epochTailReadiness{}, false
+	return nil
+}
+
+func (reader *executionEpochInspection) freshCycle(ctx context.Context) (retErr error) {
+	reader.mu.Lock()
+	defer reader.mu.Unlock()
+	defer func() { reader.fail(retErr) }()
+	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.epoch.Epoch != 5 ||
+		reader.projection.Phase != "lifecycle_collection" || reader.restoredStep != 2 || reader.finalUsed || !reader.restoredSamples.ArchiveComplete {
+		return errEpochInspection
+	}
+	var cycle lifecycle.CycleObservation
+	raw, status, report, err := reader.read(ctx, "/api/t422/lifecycle/fresh-cycle", 16<<10, epochInspectionReport{})
+	if err != nil || status != http.StatusOK || report.ControlFileReads != 0 || report.StoreReadAttempts != 0 || report.MemberVisits != 0 ||
+		decodeEpochJSON(append(raw, '\n'), &cycle, false) != nil || !pressureCycleValid(cycle, true) {
+		return errEpochInspection
+	}
+	reader.collectionCycle = cycle // Native values; never synthesized from L.
+	reader.restoredStep++
+	return nil
 }

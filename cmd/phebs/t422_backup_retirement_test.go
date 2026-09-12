@@ -32,6 +32,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
@@ -57,6 +58,14 @@ func TestT422RestoreRetiredNativeEndpoint(t *testing.T) {
 // or frozen-corpus deadline/whole-phase proof.
 func TestT422ArchiveWorkspaceNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpoint(t, true, false, true)
+}
+
+// Actual restored store, FD6 walks, parked runner, cursor writes, authenticated
+// HTTP and WB reports. The sixteen owner callbacks and Gate capacity are
+// modeled; this is not real-owner collection, native capacity, archive R,
+// query replay or a whole-phase proof.
+func TestT422WorkspaceEpochFiveNativeComposition(t *testing.T) {
+	testT422ArchiveRetiredNativeEndpointFailure(t, true, false, true, "read-workspace")
 }
 
 func TestT422ArchiveWorkspaceNativeFailures(t *testing.T) {
@@ -86,7 +95,7 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		t.Skip("native workspace descriptor admission requires Darwin")
 	}
 	readMode := "empty"
-	if failure == "read-supplied" || failure == "read-report-loss" {
+	if failure == "read-supplied" || failure == "read-report-loss" || failure == "read-workspace" {
 		readMode, failure = failure, ""
 	}
 	if failure != "" && (!restore || workspace || !archiveWorkspace || len(cleanup) != 0 ||
@@ -789,7 +798,7 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		}
 		opened = 3
 		if archiveWorkspace {
-			if readMode != "empty" {
+			if readMode != "empty" && readMode != "read-workspace" {
 				manifest = t422SuppliedArchiveReadManifest(t, manifest)
 				raw, e := json.Marshal(manifest)
 				if e != nil {
@@ -829,87 +838,97 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			readRecord := record
 			readRecord.Producer, readRecord.Phase, readRecord.InputSHA256 = readProducer, 12, sha256.Sum256(launchRaw)
 			readRecord.Control = dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{12, 13, 14}, InitialPhase: 12, MaximumPhases: 3, MaximumWireBytes: 64 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+			if readMode == "read-workspace" {
+				readRecord.Control.MaximumWireBytes = 15 * 2 * dispatchadmission.FrameBytes
+			}
 			reader, readerOutput, readerInput, readerServed, readerControl, readerDiagnostic := start("archive-read-"+readMode, readRecord)
 			if !readerOutput.Scan() || !strings.HasPrefix(readerOutput.Text(), "http://127.0.0.1:") {
 				t.Fatal("native R listener", readerOutput.Text())
 			}
 			address := readerOutput.Text()
-			if e = readerControl.DrainOwners(ctx); e != nil {
-				t.Fatal(e)
-			}
-			if e = readerControl.OpenRequests(ctx); e != nil {
-				t.Fatal(e)
-			}
-			client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}, Timeout: 5 * time.Second}
-			defer client.CloseIdleConnections()
-			call := func(ordinal int) (int, []byte, t421ExactReadReport) {
-				t.Helper()
-				r, e := http.NewRequestWithContext(ctx, http.MethodGet, address+t422ArchiveTransitionPath, nil)
-				if e != nil {
-					t.Fatal(e)
-				}
-				r.Header.Set(dispatchadmission.ProductionRequestHeader, readerControl.RequestToken())
-				r.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
-				r.Header.Set(t421ExactReadActivationHeader, t421ExactReadsContract)
-				r.Header.Set(t421ExactReadOrdinalHeader, strconv.Itoa(ordinal))
-				response, e := client.Do(r)
-				if e != nil {
-					t.Fatal(e)
-				}
-				body, e := io.ReadAll(io.LimitReader(response.Body, t422ArchiveTransitionBytes+1))
-				if closeErr := response.Body.Close(); e != nil || closeErr != nil {
-					t.Fatal(e, closeErr)
-				}
-				if len(body) > t422ArchiveTransitionBytes {
-					t.Fatal("unbounded native R")
-				}
-				var report t421ExactReadReport
-				// The existing spine sets its trailer before sending the
-				// separate report sink. Sink loss must reject the native
-				// after-report commit, not invent retroactive HTTP loss.
-				encoded, e := base64.RawURLEncoding.DecodeString(response.Trailer.Get(t421ExactReadTrailer))
-				if e != nil {
-					t.Fatal(e)
-				}
-				if e = json.Unmarshal(encoded, &report); e != nil {
-					t.Fatal(e)
-				}
-				if report.RequestOrdinal != uint64(ordinal) || report.StoreReadAttempts != 0 || report.MemberVisits != 0 || report.StoreWriteAttempts != 0 {
-					t.Fatal("native R accounting", report)
-				}
-				return response.StatusCode, body, report
-			}
-			status, body, report := call(1)
-			if readMode == "empty" {
-				if status != 409 || report.Status != "archive_transition_refused" || report.ControlFileReads != 1 {
-					t.Fatal("actual empty archive R refusal", status, report)
+			if readMode == "read-workspace" {
+				t422DriveNativeEpochFiveWorkspace(t, ctx, address, readerControl, controller, transport)
+				if _, e = readerInput.Write([]byte{'v'}); e != nil || !readerOutput.Scan() || readerOutput.Text() != "workspace_measured_and_resumed" {
+					t.Fatal("native epoch-five workspace verification", e, readerOutput.Text())
 				}
 			} else {
-				var projection recovery.ArchiveTransitionManifest
-				if status != 200 || json.Unmarshal(body, &projection) != nil || !reflect.DeepEqual(projection, t422SuppliedArchiveProjection(manifest)) {
-					t.Fatal("supplied native R projection", status, string(body))
+				if e = readerControl.DrainOwners(ctx); e != nil {
+					t.Fatal(e)
 				}
-				if report.Status != "complete" || report.ControlFileReads != 1 {
-					t.Fatal("positive native R accounting", report)
+				if e = readerControl.OpenRequests(ctx); e != nil {
+					t.Fatal(e)
 				}
-			}
-			if _, e = readerInput.Write([]byte{'i'}); e != nil {
-				t.Fatal(e)
-			}
-			if !readerOutput.Scan() {
-				t.Fatal("native R post-report state", readerOutput.Err())
-			}
-			want := "archive_reported=false failed=true"
-			if readMode == "read-supplied" {
-				want = "archive_reported=true failed=false"
-			}
-			if readerOutput.Text() != want {
-				t.Fatal("native R after-report state", readerOutput.Text(), want)
-			}
-			if readMode == "read-supplied" {
-				status, _, report = call(2)
-				if status != 409 || report.ControlFileReads != 0 || report.Status != "archive_transition_refused" {
-					t.Fatal("one-shot native R reread", status, report)
+				client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}, Timeout: 5 * time.Second}
+				defer client.CloseIdleConnections()
+				call := func(ordinal int) (int, []byte, t421ExactReadReport) {
+					t.Helper()
+					r, e := http.NewRequestWithContext(ctx, http.MethodGet, address+t422ArchiveTransitionPath, nil)
+					if e != nil {
+						t.Fatal(e)
+					}
+					r.Header.Set(dispatchadmission.ProductionRequestHeader, readerControl.RequestToken())
+					r.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+					r.Header.Set(t421ExactReadActivationHeader, t421ExactReadsContract)
+					r.Header.Set(t421ExactReadOrdinalHeader, strconv.Itoa(ordinal))
+					response, e := client.Do(r)
+					if e != nil {
+						t.Fatal(e)
+					}
+					body, e := io.ReadAll(io.LimitReader(response.Body, t422ArchiveTransitionBytes+1))
+					if closeErr := response.Body.Close(); e != nil || closeErr != nil {
+						t.Fatal(e, closeErr)
+					}
+					if len(body) > t422ArchiveTransitionBytes {
+						t.Fatal("unbounded native R")
+					}
+					var report t421ExactReadReport
+					// The existing spine sets its trailer before sending the
+					// separate report sink. Sink loss must reject the native
+					// after-report commit, not invent retroactive HTTP loss.
+					encoded, e := base64.RawURLEncoding.DecodeString(response.Trailer.Get(t421ExactReadTrailer))
+					if e != nil {
+						t.Fatal(e)
+					}
+					if e = json.Unmarshal(encoded, &report); e != nil {
+						t.Fatal(e)
+					}
+					if report.RequestOrdinal != uint64(ordinal) || report.StoreReadAttempts != 0 || report.MemberVisits != 0 || report.StoreWriteAttempts != 0 {
+						t.Fatal("native R accounting", report)
+					}
+					return response.StatusCode, body, report
+				}
+				status, body, report := call(1)
+				if readMode == "empty" {
+					if status != 409 || report.Status != "archive_transition_refused" || report.ControlFileReads != 1 {
+						t.Fatal("actual empty archive R refusal", status, report)
+					}
+				} else {
+					var projection recovery.ArchiveTransitionManifest
+					if status != 200 || json.Unmarshal(body, &projection) != nil || !reflect.DeepEqual(projection, t422SuppliedArchiveProjection(manifest)) {
+						t.Fatal("supplied native R projection", status, string(body))
+					}
+					if report.Status != "complete" || report.ControlFileReads != 1 {
+						t.Fatal("positive native R accounting", report)
+					}
+				}
+				if _, e = readerInput.Write([]byte{'i'}); e != nil {
+					t.Fatal(e)
+				}
+				if !readerOutput.Scan() {
+					t.Fatal("native R post-report state", readerOutput.Err())
+				}
+				want := "archive_reported=false failed=true"
+				if readMode == "read-supplied" {
+					want = "archive_reported=true failed=false"
+				}
+				if readerOutput.Text() != want {
+					t.Fatal("native R after-report state", readerOutput.Text(), want)
+				}
+				if readMode == "read-supplied" {
+					status, _, report = call(2)
+					if status != 409 || report.ControlFileReads != 0 || report.Status != "archive_transition_refused" {
+						t.Fatal("one-shot native R reread", status, report)
+					}
 				}
 			}
 			if e = readerControl.FenceRequests(ctx); e != nil {
@@ -925,6 +944,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			}
 			if e = reader.Wait(); e != nil {
 				t.Fatal("native R helper join", e, readerDiagnostic.String())
+			}
+			if readMode == "read-workspace" {
+				assertT422EpochFiveNativeWorkspaceReports(t, readerDiagnostic.String(), readRecord.InputSHA256)
 			}
 			if e = <-readerServed; e != nil {
 				t.Fatal(e)
@@ -1216,6 +1238,10 @@ func t422NativeArchiveReadHelper(t *testing.T, root, mode string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if mode == "archive-read-read-workspace" {
+		t422NativeEpochFiveWorkspaceHelper(t, ctx, root, launch)
+		return
+	}
 	var failed atomic.Bool
 	// Observe the native control's failure latch without ending this small
 	// helper before it can report the post-tail state. Main's cancellation is
@@ -1271,4 +1297,233 @@ func t422NativeArchiveReadHelper(t *testing.T, root, mode string) {
 	if _, err = io.ReadFull(os.Stdin, command[:]); err != nil || command[0] != 'c' {
 		t.Fatal("native archive helper close", err)
 	}
+}
+
+func t422DriveNativeEpochFiveWorkspace(t *testing.T, ctx context.Context, address string, control *dispatchadmission.PhaseControl, dispatch *dispatchadmission.Controller, transport *storeaccounting.Transport) {
+	t.Helper()
+	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}, Timeout: 30 * time.Second}
+	defer client.CloseIdleConnections()
+	call := func(path, point string) {
+		t.Helper()
+		method := http.MethodPost
+		if path == t422LifecycleFreshRead {
+			method = http.MethodGet
+		}
+		request, err := http.NewRequestWithContext(ctx, method, address+path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+		request.Header.Set(dispatchadmission.ProductionRequestHeader, control.RequestToken())
+		if point != "" {
+			request.Header.Set(t422WorkspacePointHeader, point)
+		}
+		if method == http.MethodGet {
+			request.Header.Set(t421ExactReadActivationHeader, t421ExactReadsContract)
+			request.Header.Set(t421ExactReadOrdinalHeader, "1")
+		}
+		response, err := client.Do(request)
+		if err != nil {
+			t.Fatal(path, point, err)
+		}
+		body, err := io.ReadAll(io.LimitReader(response.Body, t422LifecycleReadBytes+1))
+		if closeErr := response.Body.Close(); err != nil || closeErr != nil || len(body) > t422LifecycleReadBytes || response.StatusCode != http.StatusOK {
+			t.Fatal(path, point, response.StatusCode, string(body), err, closeErr)
+		}
+		switch {
+		case point != "":
+			var sample t422WorkspaceSampleResponse
+			if json.Unmarshal(body, &sample) != nil || sample.LogicalBytes == 0 || sample.AllocatedBytes == 0 {
+				t.Fatal("actual epoch-five workspace sample", point, string(body))
+			}
+		case method == http.MethodGet:
+			var cycle lifecycle.CycleObservation
+			if json.Unmarshal(body, &cycle) != nil || cycle.OwnerTurns != 16 || cycle.Deleted != 16 || len(cycle.Owners) != 16 {
+				t.Fatal("modeled-owner fresh cycle", string(body))
+			}
+			raw, err := base64.RawURLEncoding.DecodeString(response.Trailer.Get(t421ExactReadTrailer))
+			var report t421ExactReadReport
+			if err != nil || json.Unmarshal(raw, &report) != nil || report.Status != "complete" || report.RequestOrdinal != 1 ||
+				report.ControlFileReads != 0 || report.StoreReadAttempts != 0 || report.StoreWriteAttempts != 0 || report.MemberVisits != 0 {
+				t.Fatal("native fresh-cycle accounting trailer", report, err)
+			}
+		default:
+			if string(body) != `{"status":"complete"}` {
+				t.Fatal("native lifecycle command", path, string(body))
+			}
+		}
+	}
+	advance := func() {
+		t.Helper()
+		for _, operation := range []func() error{
+			func() error { return control.FenceRequests(ctx) }, func() error { return control.Pause(ctx) },
+			dispatch.Fence, transport.Fence, func() error { return control.Checkpoint(ctx) }, dispatch.Advance, transport.Advance,
+			func() error { return control.Resume(ctx) }, func() error { return control.OpenRequests(ctx) },
+		} {
+			if err := operation(); err != nil {
+				t.Fatal("native epoch-five transition", err)
+			}
+		}
+	}
+	call(t422LifecycleParkPath, "")
+	if err := control.DrainOwners(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := control.OpenRequests(ctx); err != nil {
+		t.Fatal(err)
+	}
+	call(t422WorkspaceSamplePath, "archive_finish")
+	advance()
+	call(t422WorkspaceSamplePath, "start")
+	call(t422LifecycleFreshDrive, "")
+	call(t422LifecycleFreshRead, "")
+	call(t422WorkspaceSamplePath, "finish")
+	advance()
+	call(t422WorkspaceSamplePath, "start")
+	call(t422WorkspaceSamplePath, "finish")
+}
+
+func t422NativeEpochFiveWorkspaceHelper(t *testing.T, ctx context.Context, root string, launch *t422SemanticLaunch) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(root, "phebs.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := store.OpenLocalWithConfig(ctx, filepath.Join(root, "data"), recovery.ConfigDigest(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := st.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	}()
+	runnerCtx, stopRunner := context.WithCancel(ctx)
+	defer stopRunner()
+	var turns, failures, readReports atomic.Uint64
+	launch.fail = func(error) { failures.Add(1); stopRunner() }
+	var modeledOwners []lifecycle.Owner
+	for index := range 16 {
+		modeledOwners = append(modeledOwners, t422LifecycleOwnerFixture{name: fmt.Sprintf("test-owner-%02d", index), turns: &turns})
+	}
+	control, err := newT422LifecycleControl(runnerCtx, launch, modeledOwners)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := control.bindWorkspaceBytes(st); err != nil {
+		t.Fatal(err)
+	}
+	controller, err := lifecycle.NewController(st, modeledOwners...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 1})
+	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
+		t.Fatal(err)
+	}
+	runnerDone := make(chan struct{})
+	// The host may itself be under pressure. This fixture supplies only the
+	// Gate's capacity facts so it tests the closed route sequence independently
+	// of host fullness; guarded workspace byte observations remain native.
+	gate := lifecycle.NewGateWithProbe("supplied-epoch-five-capacity", func(ctx context.Context, _ string) (lifecycle.Capacity, error) {
+		if err := ctx.Err(); err != nil {
+			return lifecycle.Capacity{}, err
+		}
+		return lifecycle.Capacity{TotalBytes: 100 << 20, AvailableBytes: 90 << 20, UsedBytes: 10 << 20}, nil
+	})
+	go func() {
+		defer close(runnerDone)
+		lifecycle.RunWithControl(runnerCtx, controller, gate,
+			lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay, control.ObserveOwner, nil, owners, control.runner)
+	}()
+	defer func() { stopRunner(); <-runnerDone }()
+	state := t421NewExactReadAccountingState(func(raw []byte) error {
+		var report t421ExactReadReport
+		if json.Unmarshal(raw, &report) != nil || report.Status != "complete" || report.RequestOrdinal != 1 ||
+			report.ControlFileReads != 0 || report.StoreReadAttempts != 0 || report.MemberVisits != 0 || report.StoreWriteAttempts != 0 {
+			return errT422LifecycleControl
+		}
+		readReports.Add(1)
+		return nil
+	}, launch.fail)
+	state.semantic, state.lifecycle = launch, control
+	authCtx, stopAuth := context.WithCancel(ctx)
+	defer stopAuth()
+	authService, err := auth.New(authCtx, auth.Options{Store: &t422LifecycleAuthFixture{}, Owners: owners, Config: config.Auth{APIKey: t421ExactReadTestCredential}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { stopAuth(); authService.WaitCleanup() }()
+	server := httptest.NewUnstartedServer(t422OwnerHTTPHandler(owners, authService.Require(state.wrap(http.NotFoundHandler())), launch))
+	server.Config.BaseContext = func(net.Listener) context.Context { return runnerCtx }
+	server.Start()
+	defer server.Close()
+	fmt.Println(server.URL)
+	var command [1]byte
+	if _, err := io.ReadFull(os.Stdin, command[:]); err != nil || command[0] != 'v' {
+		t.Fatal("native epoch-five verification request", err)
+	}
+	if _, err := st.ListRepos(ctx); err != nil {
+		t.Fatal("real SDK did not resume after native workspace walks", err)
+	}
+	control.mu.Lock()
+	point, step := control.workspacePoint, control.step
+	control.mu.Unlock()
+	if failures.Load() != 0 || turns.Load() != 16 || readReports.Load() != 1 || point != 5 || step != 3 {
+		t.Fatal("native epoch-five final control state", failures.Load(), turns.Load(), readReports.Load(), point, step)
+	}
+	observed := control.workspaceByteSnapshot()
+	for _, phase := range []int{12, 13, 14} {
+		if observed.Unavailable || !observed.Phases[phase-1].Completed || observed.Phases[phase-1].Maximum.LogicalBytes == 0 || observed.Phases[phase-1].Maximum.AllocatedBytes == 0 {
+			t.Fatal("native epoch-five retained byte sample", phase, observed)
+		}
+	}
+	fmt.Println("workspace_measured_and_resumed")
+	if _, err := io.ReadFull(os.Stdin, command[:]); err != nil || command[0] != 'c' {
+		t.Fatal("native epoch-five close request", err)
+	}
+}
+
+func assertT422EpochFiveNativeWorkspaceReports(t *testing.T, raw string, input [32]byte) {
+	t.Helper()
+	counts := map[byte]int{'C': 0, 'D': 0, 'E': 0}
+	bindings, sequence, pending := 0, uint64(0), byte(0)
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "WBB1:") {
+			if line != fmt.Sprintf("WBB1:6:sha256:%x", input) {
+				t.Fatal("native epoch-five WB binding", line)
+			}
+			bindings++
+		}
+		if !strings.HasPrefix(line, "WB1:") {
+			continue
+		}
+		fields := strings.Split(line, ":")
+		if len(fields) < 4 || fields[1] != "6" || len(fields[2]) != 2 {
+			t.Fatal("native epoch-five WB frame", line)
+		}
+		phase, kind := fields[2][0], fields[2][1]
+		ordinal, err := strconv.ParseUint(fields[3], 16, 64)
+		if _, valid := counts[phase]; err != nil || !valid {
+			t.Fatal("native epoch-five WB phase/ordinal", line)
+		}
+		if kind == 'B' && len(fields) == 4 && pending == 0 && ordinal == sequence+1 {
+			pending, sequence = phase, ordinal
+			continue
+		}
+		if kind != 'S' || len(fields) != 6 || phase != pending || ordinal != sequence {
+			t.Fatal("native epoch-five WB pair", line)
+		}
+		logical, logicalErr := strconv.ParseUint(fields[4], 16, 64)
+		allocated, allocatedErr := strconv.ParseUint(fields[5], 16, 64)
+		if logicalErr != nil || allocatedErr != nil || logical == 0 || allocated == 0 {
+			t.Fatal("native epoch-five positive WB sample", line)
+		}
+		counts[phase]++
+		pending = 0
+	}
+	if bindings != 1 || sequence != 21 || pending != 0 || counts['C'] != 1 || counts['D'] != 18 || counts['E'] != 2 {
+		t.Fatal("native epoch-five WB coverage", bindings, sequence, pending, counts)
+	}
+	t.Log("21 actual native WB pairs: five fixed boundaries plus sixteen modeled-owner turn workspace walks; Gate capacity is modeled, PC has 15 pairs, no real-owner/native-capacity/whole-phase claim")
 }

@@ -497,6 +497,10 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 	if stage != 10 && stage != 11 && stage != 6 {
 		return false
 	}
+	phase := result.Store.Store.Phase
+	if phase != 12 && (stage != 6 || phase != 13 || !epochCollectionClosedEvidence(result)) {
+		return false
+	}
 	opened, ordinal := 5, uint64(8)
 	producers := []uint32{1, 2, 3, 4, 5, 7, 8, 9, 10}
 	storeProducers := []uint32{2, 3, 4, 5, 10}
@@ -510,7 +514,7 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 		producers = append(producers, 6)
 		storeProducers = append(storeProducers, 6)
 	}
-	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Store.Phase != 12 || result.Store.Opened != opened || result.Store.TerminalEOF != opened || result.Store.Complete {
+	if ctx == nil || ctx.Err() != nil || !result.RootStarted || !result.RootJoined || !result.SessionEmpty || result.Store.Opened != opened || result.Store.TerminalEOF != opened || result.Store.Complete {
 		return false
 	}
 	for _, id := range producers {
@@ -523,6 +527,9 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 				}
 				if id == 5 {
 					found = found && p.Checkpoint == 11
+				}
+				if id == 6 && phase == 13 {
+					found = found && p.Checkpoint == 12
 				}
 				if id >= 7 && id <= 9 {
 					found = found && p.Ordinal == authorCustodyAttempts(int(id-7))
@@ -540,6 +547,9 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 				found = p.Attached && p.Calls == 0 && p.Transactions == 0 && p.Closed
 				if id == 4 {
 					found = p.Attached && p.Calls == 0 && p.Transactions == 0 && !p.Closed && p.TerminalFencedEOF && p.TerminalPhase == 8 && p.Checkpoint == 8
+				}
+				if id == 6 && phase == 13 {
+					found = found && p.Checkpoint == 12
 				}
 			}
 		}

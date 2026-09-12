@@ -38,8 +38,11 @@ func (reader *executionEpochInspection) LifecycleStatus(ctx context.Context) (re
 	reader.mu.Lock()
 	defer reader.mu.Unlock()
 	defer func() { reader.fail(retErr) }()
-	if reader.err != nil || reader.run == nil || !reader.run.pressureAllowed || reader.run.epoch.Epoch != 4 || reader.finalUsed ||
-		(reader.projection.Phase != "pressure_80" && reader.projection.Phase != "pressure_75") ||
+	allowed := reader.run != nil && (reader.run.pressureAllowed && reader.run.epoch.Epoch == 4 &&
+		(reader.projection.Phase == "pressure_80" || reader.projection.Phase == "pressure_75") ||
+		reader.run.epoch.Epoch == 5 && reader.projection.Phase == "lifecycle_collection" && reader.restoredStep == 3 &&
+			reader.restoredSamples.ArchiveComplete && reader.archiveAuthority.Phase == "archive_restore")
+	if reader.err != nil || !allowed || reader.finalUsed ||
 		reader.lifecycleCalls >= reader.bounds.LifecycleStatusCalls.Maximum {
 		return result, report, errEpochInspection
 	}

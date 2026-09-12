@@ -20,7 +20,7 @@ type t422WorkspaceReports struct {
 	initial        dispatchadmission.ProductionSemanticSnapshot
 	phase          uint32
 	sequence       uint64
-	counts         [5]uint64
+	counts         [7]uint64
 	archiveMaximum uint64
 	pending        bool
 	err            error
@@ -35,7 +35,11 @@ func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
 	case producer == 5 && phase == 11:
 		return 2, uint64(lifecycle.MaxCycleObservationTurns) + 2 + 4
 	case producer == 6 && phase == 13:
-		return 3, uint64(lifecycle.MaxCycleObservationTurns)
+		return 3, uint64(lifecycle.MaxCycleObservationTurns) + 2
+	case producer == 6 && phase == 12:
+		return 5, 1
+	case producer == 6 && phase == 14:
+		return 6, 2
 	default:
 		return 0, 0
 	}

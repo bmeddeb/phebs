@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -95,6 +96,9 @@ type executionEpochInspection struct {
 	archivePrior, archiveAuthority     AuthorityPhaseResult
 	archiveManifest                    *recovery.ArchiveTransitionManifest
 	archiveUsed                        bool
+	restoredStep                       uint8
+	restoredSamples                    ExecutionRestoredSamples
+	collectionCycle                    lifecycle.CycleObservation
 	maximumReports                     uint64 // Epoch-five inventory, shared across its phases.
 	evidence                           epochInspectionLedger
 	err                                error
@@ -436,7 +440,7 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 				return result, report, errEpochInspection
 			}
 		}
-		if reader.projection.Phase == "physical_delta_b" || reader.projection.Phase == "logical_delta_b" || reader.projection.Phase == "return_a" || reader.projection.Phase == "archive_restore" {
+		if reader.projection.Phase == "physical_delta_b" || reader.projection.Phase == "logical_delta_b" || reader.projection.Phase == "return_a" || reader.projection.Phase == "archive_restore" || reader.projection.Phase == "lifecycle_collection" {
 			prior := reader.warmAuthority
 			switch reader.projection.Phase {
 			case "logical_delta_b":
@@ -445,6 +449,8 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 				prior = reader.logicalAuthority
 			case "archive_restore":
 				prior = reader.archivePrior
+			case "lifecycle_collection":
+				prior = reader.archiveAuthority
 			}
 			ready, err := correctedTailReadinessTransitionReady(reader.projection.Phase, &tailReadinessIdentity{
 				RelationshipGenerationSHA256: prior.RelationshipGenerationSHA256, RelationshipRootSHA256: prior.RelationshipRootSHA256,
@@ -531,6 +537,10 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	if pressureInspectionPhase(reader.projection.Phase) && !reader.pressureFinalReady() {
 		return authority, projection, report, errEpochInspection
 	}
+	if reader.projection.Phase == "lifecycle_collection" && (reader.restoredStep != 3 || reader.lifecycleCalls < reader.bounds.LifecycleStatusCalls.Minimum ||
+		reader.lifecycleCalls > reader.bounds.LifecycleStatusCalls.Maximum || !reader.restoredSamples.ArchiveComplete) {
+		return authority, projection, report, errEpochInspection
+	}
 	reader.finalUsed = true
 	raw, status, report, err := reader.read(ctx, "/api/t421/final-authority", epochFinalResponseBytes, epochInspectionReport{ControlFileReads: correctedFinalAuthorityControlReadMaximum, StoreReadAttempts: correctedFinalAuthorityStoreReadMaximum, MemberVisits: correctedFinalAuthorityMemberReadMaximum})
 	if err != nil || status != http.StatusOK {
@@ -588,7 +598,7 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && phase != "archive_restore" && !pressureInspectionPhase(phase) {
+	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && phase != "archive_restore" && phase != "lifecycle_collection" && !pressureInspectionPhase(phase) {
 		return authority, projection, errEpochInspection
 	}
 	authority.Phase, authority.Outcome = phase, "passed"
@@ -613,6 +623,15 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 			reader.archivePrior.Phase != "pressure_75" || reader.archivePrior.Outcome != "passed" || !ok ||
 			!validDigest(authority.RelationshipProvenanceSHA256) || validateAuthorityCoverage(authority, physicalPlan, reader.plan) != nil ||
 			validateArchiveAuthorityContinuity(authority, reader.archivePrior, reader.plan) != nil {
+			return authority, projection, errEpochInspection
+		}
+		return authority, projection, nil
+	}
+	if phase == "lifecycle_collection" {
+		prior := reader.archiveAuthority
+		prior.Phase = phase
+		if reader.run == nil || reader.run.epoch.Epoch != 5 || reader.plan.Schema != PlanV3Schema || !reader.restoredSamples.ArchiveComplete ||
+			reader.archiveAuthority.Phase != "archive_restore" || !reflect.DeepEqual(authority, prior) {
 			return authority, projection, errEpochInspection
 		}
 		return authority, projection, nil

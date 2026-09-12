@@ -7369,6 +7369,72 @@ passed on the corrected fixture/source. V1/V2 canonical digests are unchanged.
 This closes the scoped implementation gate only; no rehearsal, full archive
 phase, later-phase, cost, freeze or ceremony pass is inferred.
 
+**Restored coordination continuation (2026-09-12).** The next
+approved slice supplies parent archive convergence/fencing and fresh restored
+collection using the existing native control, lifecycle, exact-read and guarded
+workspace paths. The backup-capable epoch-four lifetime reserves phases eight
+through twelve up front; workspace-bound epoch five retains the original
+archive deadline and reserves only phases thirteen/fourteen afterward. Both
+are clipped by the actual caller and author-start eighteen-hour wall limit.
+The complete restored PC recipe derives fifteen pairs/1,920 bytes. Native
+epoch-five workspace positions derive five additional WB pairs/430 bytes;
+they add actual traversals, not new work or capacity probes. Existing ordinary
+and omitted-workspace paths, V1/V2 bytes and numerical ceilings remain exact.
+
+Non-authoring review found two medium integration/validation gaps: the old
+phase-twelve-only shutdown prefix would reject completed collection, and the
+new fresh-cycle reader reused a helper without the native normal-capacity
+classification check. The corrected phase-thirteen shutdown requires actual
+phase-thirteen store state, producer-six DA/SA checkpoint twelve, two accepted
+F rows and completed one/two boundary samples. Unsupported phases fourteen and
+fifteen still refuse. The shared cycle check now rejects capacity at or above
+eighty percent labeled normal, with matching 79/80 regressions; pressure's
+existing stricter below-75 acceptance remains exact. Late failure clears
+terminal completion flags while preserving completed byte maxima.
+
+Final implementation and steady-state-cost reviews found zero remaining
+critical, high, medium or low findings. Ordered lifetime, parent and native
+group SHA-256 manifests are
+`5b325a9d9edbc8b33b8608b3cee48732d371619053fc9be68efe0c86764f3036`,
+`1d4500cee18be4eaa969750597c2033db19bf1e9abfc40c509c4fa2959c0bdf2`, and
+`8d9af22006f0edc9b3153926401a572c94fe78e9ae8118b40f86bbbf7ade71d2`.
+The final native fixture SHA-256 is
+`3a4d11b383978bac1b7584f6c8d8c1582cd76f7cf68df1e06a69311f448735f6`.
+
+Final combined focused normal/race gates passed for spike/t421 in
+2.381/25.823s and cmd/phebs in 0.596/1.810s. Module verification, full ci-static
+(vet, zero-issue pinned lint and all-package compilation), documentation
+(0.562s), glossary, whitespace and unchanged canonical V1/V2 digests passed.
+One earlier race invocation collided with an incomplete shared authoring
+window and failed compilation before tests; the completed source reruns above
+supersede it, not an invented earlier pass.
+
+The native restored route fixture passed in 37.51/38.44s of test time and
+38.121/40.303s package time for normal/race, without skips. It uses actual
+backup/restore, inherited producer-six FD6, owned local engine and SDK,
+authenticated TCP/PC/DA/SA transitions, twenty-one native WB pairs
+(one/eighteen/two across phases twelve/thirteen/fourteen), post-walk SDK
+resumption and complete native/session joins. Five pairs are the new fixed
+boundaries; sixteen are guarded walks during explicitly modeled owner turns.
+Capacity and all sixteen owner behaviors are modeled through the existing
+test probe, not measured pressure or real retention cleanup. The exact
+fifteen-pair PC capacity is enforced. Existing archive-R fixtures are preserved.
+Final native normal/race log SHA-256 values are
+`dee507864c990b312b9a64429902b31fc8a1c51a4294b890c0e14b15a244040f` /
+`f42e5425c9b4c04e1c7fd1b86c3e0a8f169e37c0ab57864c350c03985dd120b7`.
+The first native attempt failed in 63.967s at its HTTP timeout after 113
+error-free modeled owner turns; race did not start. The nonconverging cycle
+was consistent with its real host-capacity probe and separate contemporaneous
+`df` checks showing 84-percent host usage; no per-turn capacity value was
+retained in that log. Its log/custody remain retained, all helpers joined, and
+no production capacity policy was changed to make the bounded route test pass.
+
+Full archive state/events, phase-fourteen query and phase-fifteen teardown
+composition, representative replay-census/guarded-walk cost and full-output
+fit are still required before another long rehearsal. Neither the new methods
+nor a modeled transport/owner fixture establishes a whole phase, rehearsal,
+freeze or ceremony pass.
+
 **Pressure headroom refusal after c7db1d21 (2026-09-11).** The exact-source
 rehearsal failed in 5,519.79s (package 5,520.627s), after 672 contiguous normal
 cleanup owner turns, 33,769 deletions, zero failed lifecycle turns and a

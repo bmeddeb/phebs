@@ -216,15 +216,69 @@ func TestT422WorkspaceReportDerivedLimits(t *testing.T) {
 	for _, row := range []struct {
 		producer, phase uint32
 		maximum         uint64
-	}{{5, 9, 4101}, {5, 10, 4}, {5, 11, 4102}, {6, 13, 4096}} {
+	}{{5, 9, 4101}, {5, 10, 4}, {5, 11, 4102}, {6, 12, 1}, {6, 13, 4098}, {6, 14, 2}} {
 		_, maximum := t422WorkspaceSampleSlot(row.producer, row.phase)
 		if maximum != row.maximum {
 			t.Fatal(row, maximum)
 		}
 		total += maximum
 	}
-	if total*86+2*79 != 1058216 {
+	if total*86+2*79 != 1058216+5*86 {
 		t.Fatal("derived successful pair headroom", total)
+	}
+}
+
+func TestT422WorkspaceReportEpochFiveBoundaryPairs(t *testing.T) {
+	var output bytes.Buffer
+	reports, state := workspaceReportFixture(6, &output)
+	for index, phase := range []uint32{12, 13, 13, 14, 14} {
+		state.Phase = phase
+		if reports.begin(state) != nil || reports.complete(custodybytes.Sample{LogicalBytes: uint64(index + 1), AllocatedBytes: 512}) != nil {
+			t.Fatal("fixed restored boundary report refused", index, phase)
+		}
+	}
+	if reports.sequence != 5 || reports.pending || reports.counts[5] != 1 || reports.counts[3] != 2 || reports.counts[6] != 2 || output.Len() != 5*86 {
+		t.Fatal("five source-owned boundary pairs changed", reports.sequence, reports.counts, output.Len())
+	}
+	prefix := output.String()
+	state.Phase = 15
+	if reports.begin(state) == nil || reports.sequence != 5 || output.String() != prefix {
+		t.Fatal("phase15 callback admitted or prefix lost")
+	}
+}
+
+func TestT422WorkspaceReportEpochFiveFailedPrefix(t *testing.T) {
+	var output bytes.Buffer
+	reports, state := workspaceReportFixture(6, &output)
+	state.Phase = 12
+	if reports.begin(state) != nil || reports.complete(custodybytes.Sample{LogicalBytes: 7, AllocatedBytes: 512}) != nil {
+		t.Fatal("archive boundary prefix")
+	}
+	prefix := output.String()
+	state.Phase = 13
+	if reports.begin(state) != nil || reports.failed() == nil || !strings.HasPrefix(output.String(), prefix) || reports.sequence != 2 || !reports.pending {
+		t.Fatal("failed restored-start sample erased completed archive prefix")
+	}
+	if reports.complete(custodybytes.Sample{LogicalBytes: 99}) == nil {
+		t.Fatal("failure became a completed sample")
+	}
+}
+
+func TestT422WorkspaceReportEpochFiveConcurrentBegin(t *testing.T) {
+	var output bytes.Buffer
+	reports, state := workspaceReportFixture(6, &output)
+	start := make(chan struct{})
+	results := make(chan error)
+	for range 2 {
+		go func() { <-start; results <- reports.begin(state) }()
+	}
+	close(start)
+	first, second := <-results, <-results
+	if (first == nil) == (second == nil) || reports.sequence != 1 || reports.counts[5] != 1 || !reports.pending || reports.err == nil || output.Len() != 26 {
+		t.Fatal("concurrent phase12 boundary begin did not retain one incomplete prefix", first, second, reports.sequence, reports.counts, output.String())
+	}
+	if reports.complete(custodybytes.Sample{LogicalBytes: 1}) == nil {
+		t.Fatal("concurrent refusal later completed")
 	}
 }
 

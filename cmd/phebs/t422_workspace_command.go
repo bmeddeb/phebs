@@ -32,8 +32,31 @@ func t422WorkspacePointMatches(ordinal uint8, phase uint32, step uint8, point st
 	return int(ordinal) < len(sequence) && sequence[ordinal].phase == phase && sequence[ordinal].step == step && sequence[ordinal].point == point
 }
 
+func (control *t422LifecycleControl) workspacePointMatches(phase uint32, step uint8, point string) bool {
+	switch control.launch.request.ServerEpoch {
+	case 4:
+		return t422WorkspacePointMatches(control.workspacePoint, phase, step, point)
+	case 5:
+		sequence := [...]struct {
+			phase uint32
+			step  uint8
+			point string
+		}{
+			{12, 1, "archive_finish"}, {13, 1, "start"}, {13, 3, "finish"},
+			{14, 3, "start"}, {14, 3, "finish"},
+		}
+		return int(control.workspacePoint) < len(sequence) && sequence[control.workspacePoint].phase == phase &&
+			sequence[control.workspacePoint].step == step && sequence[control.workspacePoint].point == point
+	default:
+		return false
+	}
+}
+
 // Called under the existing control mutex (or by immutable test fixtures).
 func (control *t422LifecycleControl) workspacePrecedes(path string) bool {
+	if control.launch != nil && control.launch.request.ServerEpoch == 5 {
+		return path != t422LifecycleFreshDrive && path != t422LifecycleFreshRead || control.workspacePoint == 2
+	}
 	switch path {
 	case t422LifecycleNormalDrive, t422LifecycleNormalRead:
 		return control.workspacePoint == 1
@@ -63,13 +86,13 @@ func (control *t422LifecycleControl) sampleWorkspaceCommand(writer http.Response
 	}()
 	points := request.Header.Values(t422WorkspacePointHeader)
 	if len(points) != 1 || !control.current(ctx, true) || control.workspaceSample == nil || control.workspaceBytes == nil ||
-		control.launch.request.ServerEpoch != 4 {
+		(control.launch.request.ServerEpoch != 4 && control.launch.request.ServerEpoch != 5) {
 		http.Error(writer, "workspace sample refused", http.StatusConflict)
 		return
 	}
 	admitted := ctx.Value(t422SemanticRequestKey{}).(dispatchadmission.ProductionSemanticSnapshot)
 	control.mu.Lock()
-	valid := control.err == nil && !control.busy && t422WorkspacePointMatches(control.workspacePoint, admitted.Phase, control.step, points[0])
+	valid := control.err == nil && !control.busy && control.workspacePointMatches(admitted.Phase, control.step, points[0])
 	if valid {
 		control.busy = true
 	}
@@ -94,7 +117,7 @@ func (control *t422LifecycleControl) sampleWorkspaceCommand(writer http.Response
 		return
 	}
 	control.mu.Lock()
-	valid = control.err == nil && control.busy && t422WorkspacePointMatches(control.workspacePoint, admitted.Phase, control.step, points[0])
+	valid = control.err == nil && control.busy && control.workspacePointMatches(admitted.Phase, control.step, points[0])
 	if valid {
 		control.workspacePoint++
 		control.busy = false

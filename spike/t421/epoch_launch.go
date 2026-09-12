@@ -188,6 +188,7 @@ type ExecutionEpochOneResult struct {
 	ServerProcesses         ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
 	Inspection              []ExecutionPhaseInspection
 	PressureSamples         ExecutionPressureSamples
+	RestoredSamples         ExecutionRestoredSamples
 }
 
 type ExecutionEpochOneRun struct {
@@ -291,6 +292,11 @@ type ExecutionEpochOneRun struct {
 	archiveInput          *epochArchiveInput
 	archivePrior          *AuthorityPhaseResult
 	backupOutput          *epochBackupOutput
+
+	restoredExecutionCancel context.CancelFunc
+	restoredExecutionDone   chan struct{}
+	archiveExecutionUsed    bool
+	collectionExecutionUsed bool
 }
 
 func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -798,8 +804,13 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	checkpointCancel, checkpointDone := run.checkpointCancel, run.checkpointDone
 	backupCancel, backupDone := run.backupCancel, run.backupDone
 	pressureCancel, pressureDone := run.pressureCancel, run.pressureDone
+	restoredCancel, restoredDone := run.restoredExecutionCancel, run.restoredExecutionDone
 	terminal, terminalRequested := run.terminalEntered, run.terminalRequested
 	run.mu.Unlock()
+	if restoredCancel != nil {
+		restoredCancel()
+		<-restoredDone
+	}
 	if pressureCancel != nil {
 		pressureCancel()
 		<-pressureDone
@@ -950,6 +961,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		run.inspection.mu.Lock()
 		result.Inspection = cloneInspectionEvidence(run.inspection.evidence.rows)
 		result.PressureSamples = run.inspection.pressure.samples
+		result.RestoredSamples = run.inspection.restoredSamples
 		run.inspection.mu.Unlock()
 	}
 	if !result.SessionEmpty {
@@ -1007,6 +1019,12 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		result.PressureSamples.Complete = false
 		if !result.PressureSamples.LimitExceeded {
 			result.PressureSamples.Unavailable = true
+		}
+	}
+	if failure != nil && run.archiveExecutionUsed {
+		result.RestoredSamples.ArchiveComplete, result.RestoredSamples.CollectionComplete = false, false
+		if !result.RestoredSamples.LimitExceeded {
+			result.RestoredSamples.Unavailable = true
 		}
 	}
 	if failure == nil && run.backupRetired && run.backupComplete {

@@ -162,7 +162,7 @@ func t422LifecycleRequest(request *http.Request, command bool) (time.Time, error
 }
 
 func (control *t422LifecycleControl) expected(path string, phase uint32) bool {
-	if control.workspaceBytes != nil && control.launch.request.ServerEpoch == 4 && !control.workspacePrecedes(path) {
+	if control.workspaceBytes != nil && !control.workspacePrecedes(path) {
 		return false
 	}
 	if control.step == 0 {

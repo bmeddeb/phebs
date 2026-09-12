@@ -31,8 +31,9 @@ func reservedWorkspaceByteEvent(line []byte) bool {
 	return bytes.Contains(line, []byte("WBB")) || reservedBlobEvent(line, "WB")
 }
 
-// Five lifecycle capacity sites plus the fixed four/three/four pressure boundary
-// commands. The latter add no native lifecycle turn or capacity probe.
+// Five lifecycle capacity sites plus the fixed four/three/four pressure and
+// one/two/two restored-server boundary commands. Boundary commands add no native
+// lifecycle turn or capacity probe.
 func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
 	if producer == 5 {
 		switch phase {
@@ -44,8 +45,15 @@ func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
 			return uint64(lifecycle.MaxCycleObservationTurns) + 2 + 4
 		}
 	}
-	if producer == 6 && phase == 13 {
-		return uint64(lifecycle.MaxCycleObservationTurns)
+	if producer == 6 {
+		switch phase {
+		case 12:
+			return 1
+		case 13:
+			return uint64(lifecycle.MaxCycleObservationTurns) + 2
+		case 14:
+			return 2
+		}
 	}
 	return 0
 }

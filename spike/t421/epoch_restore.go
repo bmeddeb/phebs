@@ -23,8 +23,9 @@ func restoredStartupBounds(plan Plan) (epochOneLimits, error) {
 
 // StartRestored consumes the successful joined archive handoff once and starts
 // the actual protected fifth server. Health and Stop use their existing native
-// paths. This startup-only lifetime ends at the original phase-twelve deadline;
-// neither launch nor HTTP readiness establishes archive R/F or phase acceptance.
+// paths. Workspace-bound execution also reserves the frozen phase13/14 windows;
+// startup still ends at the original phase-twelve deadline. Neither launch nor
+// HTTP readiness establishes archive R/F or phase acceptance.
 func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.done == nil || run.flow.epochs == nil ||
 		run.flow.epochs.author == nil || run.flow.controller == nil || run.flow.store == nil || run.flow.parent == nil {
@@ -52,10 +53,29 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 		return nil, ErrExecutionEpochOne
 	}
 	deadline := run.phaseDeadline
+	lifetimeDeadline := deadline
+	if flow.workspace != nil {
+		startupLifetime := bounds.lifetime
+		bounds, err = restoredExecutionBounds(flow.plan)
+		if err == nil {
+			// Anchor at the original archive deadline, never at this restart.
+			lifetimeDeadline, err = archiveLifetimeDeadline(ctx, flow.plan, flow.authorStarted, deadline.Add(bounds.lifetime-startupLifetime))
+		}
+		if err != nil {
+			run.mu.Unlock()
+			flow.mu.Unlock()
+			return nil, ErrExecutionEpochOne
+		}
+		if lifetimeDeadline.Before(deadline) {
+			deadline = lifetimeDeadline
+		}
+	}
 	prior := run.result
 	// The predecessor's finish has already canceled its own context. Borrow
 	// the caller independently, while retaining the established phase clock.
-	lifetime, cancel := context.WithDeadline(ctx, deadline)
+	lifetime, cancel := context.WithDeadline(ctx, lifetimeDeadline)
+	operation, finishOperation := context.WithDeadline(lifetime, deadline)
+	defer finishOperation()
 	done := make(chan struct{})
 	run.restoredStartUsed, run.returnStarting = true, true
 	run.returnStartCancel, run.returnStartDone = cancel, done
@@ -84,20 +104,20 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 	}
 	prior.Store, err = flow.store.Snapshot()
 	view, launchErr := flow.controller.ProducerLaunch(6)
-	if err != nil || launchErr != nil || view.Phase != 12 || flow.closed || flow.retained != run || !epochRestoreClosedPrefix(lifetime, prior) {
+	if err != nil || launchErr != nil || view.Phase != 12 || flow.closed || flow.retained != run || !epochRestoreClosedPrefix(operation, prior) {
 		return nil, ErrExecutionEpochOne
 	}
-	archive, authority, err := run.restoredArchiveBinding(lifetime)
+	archive, authority, err := run.restoredArchiveBinding(operation)
 	if err != nil {
 		return nil, err
 	}
 	// No Advance/Resume: the same parent already owns the open phase twelve.
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}), healthLimit: bounds.health,
-		coldDeadline: deadline, lifetimeDeadline: deadline, cancelRun: cancel, backupWork: prior.BackupWork,
+		coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel, backupWork: prior.BackupWork,
 		archiveInput: archive, archivePrior: authority,
 		result: ExecutionEpochOneResult{RestoreWork: prior.RestoreWork}}
 	next.setPhaseDeadlineLocked(deadline)
-	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 5)
+	result, err := flow.launchEpoch(lifetime, operation, cancel, next, bounds, 5)
 	if result == nil {
 		next.stopPhaseDeadline()
 	}

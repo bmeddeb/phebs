@@ -813,10 +813,56 @@ child work. Ordinary omitted archive input adds nil branches only. The actual
 replay-census, representative guarded-walk cost, full-output fit and genuine
 nonempty native archive composition gates remain open.
 
+**Restored execution coordination (2026-09-12).** The backup-capable fourth
+server now reserves the already-frozen phase-eight-through-twelve durations
+up front (nine hours maximum); it cannot renew an exhausted lifetime at backup.
+Workspace-bound server five reserves the original phase-twelve deadline plus
+the frozen phase-thirteen/fourteen durations (eight hours twenty minutes at
+most). Both are clipped by the actual caller deadline and the original
+author-start plus eighteen-hour total-wall ceiling. Startup and archive work
+still share the original phase-twelve deadline; the startup-only omitted
+workspace path retains its three-pair recipe. The complete restored control
+recipe derives fifteen pairs/1,920 bytes: initial Drain, three Open/Fence
+windows, two Pause/Checkpoint/Resume handoffs, final Pause and receiver EOF.
+These are authenticated implementation reservations, not new frozen work,
+phase, health, output or total-wall limits.
+
+The parent consumes actual archive R, bounded five-second X/T convergence,
+native lifecycle Park, owner drainage, F, a guarded archive-finish sample and
+the request/report fence before accepting that selector. The following
+collection starts its fixed clock before the real phase handoff, samples its
+start, drives one actual fresh native owner cycle, consumes its R and one
+truthful L, then exactly one X/T/F and a guarded finish sample before fencing.
+The existing sixteen-owner policy keeps fifteen owners exact/drained and
+permits truthful durable-job lower-bound backlog. The shared cycle validator
+also matches native normal-capacity classification below the eighty-percent
+soft watermark; the older pressure callers retain their stricter below-75
+checks. Cancellation joins the one
+serial restored operation before control/native teardown; completed byte
+prefixes remain visible on failure.
+
+The native workspace command admits only the closed epoch-five positions:
+phase twelve `archive_finish`, phase thirteen `start`/`finish`, and phase
+fourteen `start`/`finish`. Epoch four and absent-workspace behavior remain
+unchanged. The three implemented phase-twelve/thirteen points add actual
+linked-path walks under the existing parked-runner and engine/SDK guard; the
+two phase-fourteen positions have no parent query caller yet. Producer six's
+derived WB maxima are one, 4,098 and two, adding five pairs/430 output bytes
+and sixteen fixed reporter-counter bytes, not extra lifecycle turns or
+capacity probes. Deadline derivation uses fixed-size frozen-plan checks and
+deadline/context state, with no I/O. Selected parent inspection retains bounded
+HTTP bodies, existing authority hashes/copies and one operation completion
+channel; no ordinary
+request, sync, publication, cache, child or retry work changes. Full archive
+state/event composition, phase-fourteen queries, teardown, representative
+census/guarded-walk cost, full-output fit and exact native rehearsals remain
+required; these methods alone do not establish a complete phase receipt.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-12 — T42.2l restored execution coordination | Reserve existing phase windows before the backup-capable fourth server and workspace-bound fifth server start, clipping both by the actual caller and author-start global wall clock; retain the original archive deadline. Derive fifteen restored PC pairs from actual Drain, request windows, two handoffs and shutdown. Complete native archive inspection and fresh collection through joined owner/request boundaries and actual guarded workspace samples, with closed epoch-five command/report positions. | No new phase, work, data, physical-volume, output or eighteen-hour ceiling; V1/V2 bytes and the omitted-workspace startup path remain exact. Five additional native sample positions add 430 derived WB bytes, not capacity probes or lifecycle work. Complete archive events/state, product-query and teardown composition, representative cost and exact rehearsals remain separate required gates. |
 | 2026-09-12 — T42.2l parent archive boundaries and rooted manifest inspection | Add the actual start/joined-backup/joined-restore workspace observations, retaining the two removal observations, original deadline and the same borrowed observer. Derive the single extra parent hold in the existing PC allowance without changing child FD7. Bind epoch five to the held backup root and joined command digests; read only its no-follow rooted manifest through the existing authenticated exact-read protocol, and compare restored F with the retained actual prior using the unchanged receipt policy. | No artifact or database reopening for R, supplied path/PID/authority admission, independent ordinal stream, new output/work/data/deadline ceiling or V1/V2 mutation. Ordinary omission remains byte-exact. Phase-finish, full transition composition, later phases and measured representative cost remain required before a long rehearsal or freeze. |
 | 2026-09-12 — T42.2l approved archive measurement coordination | Ben explicitly approved the phase-twelve proposal and continuation through the goal. Add closed offline workspace/original-deadline binding and engine-owned checkpoint coordination, deriving finite report/control limits from actual success and failure paths before landing. Keep transient verification/staging/spool populations visible before cleanup; reuse the existing native traversal and joined reporting. | Retired SDK owners remain fenced, engine identity comes from its actual owner, and measurement never renews a phase deadline. Data/physical/work/output ceilings, V1/V2 bytes and sampled linked-path semantics remain exact. Native composition, output and measured traversal-cost acceptance remain required; approval is not a rehearsal, freeze or execution result. |
 | 2026-09-11 — T42.2l approved V3 linked-path capacity allowance | Ben explicitly approved prospective V3's sampled per-linked-path allocated-byte ceiling changing from 96 to 128 GiB, including the derived nominal `CustodyMarginBytes` value 45,183,055,954. Apply only the V3 construction/strict-validation correction. Preserve actual native values, both byte checks, completed positive excess, mandatory observations, early all-target headroom refusal and exact historical V1/V2 bytes/96-GiB limits. | The physical volume remains 96 GiB, logical ceiling 128 GiB, host prerequisite 120 GiB and every other bound unchanged. Nominal 42.08-GiB accounting difference is not the 10.08-GiB physical target slack or a guaranteed live reserve. One scalar assignment and existing comparisons add no query, scan, lock, cache, child or allocation reservation; acceptance changes, not measurement units or execution cost. No retrospective pass, new rehearsal, complete later-phase evidence, author/seal or freeze is established. |
