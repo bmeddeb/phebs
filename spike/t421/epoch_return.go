@@ -10,6 +10,7 @@ import (
 
 type epochReturnPrior struct {
 	cold, warm, physical, logical AuthorityPhaseResult
+	catalog                       *epochAcceptedCatalog
 }
 
 func returnEpochBounds(plan Plan) (epochOneLimits, error) {
@@ -101,6 +102,10 @@ func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale, checkp
 	if prior.err != nil || !prior.finalUsed || prior.logicalAuthority.Phase != "logical_delta_b" {
 		return nil, ErrExecutionEpochOne
 	}
+	catalogPrior, err := prior.acceptedCatalogPrefix(phaseContext, "logical_delta_b")
+	if err != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	if run.advanceReturn(phaseContext) != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -122,7 +127,7 @@ func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale, checkp
 	}
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel, staleAllowed: stale, checkpointAllowed: checkpoint,
-		priorLogical: &epochReturnPrior{cold: prior.cold, warm: prior.warmAuthority, physical: prior.physicalAuthority, logical: prior.logicalAuthority}}
+		priorLogical: &epochReturnPrior{cold: prior.cold, warm: prior.warmAuthority, physical: prior.physicalAuthority, logical: prior.logicalAuthority, catalog: catalogPrior}}
 	next.result.ParentMidphaseSamples = run.midphaseParentPrefix()
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, phaseContext, cancel, next, bounds, 3)

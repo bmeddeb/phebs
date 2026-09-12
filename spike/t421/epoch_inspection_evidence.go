@@ -17,6 +17,7 @@ type ExecutionPhaseInspection struct {
 	Reads                                      readaccounting.Counts
 	Final                                      *ExecutionInspectionFinal
 	SelectorAccepted                           bool
+	LogicalChanges                             ExecutionLogicalChangeObservation
 }
 
 // Compact native identities only: detailed extraction partition results remain
@@ -73,6 +74,11 @@ func (reader *executionEpochInspection) acceptInspectionPhase(ctx context.Contex
 	if reader.run.stopping || reader.run.err != nil {
 		return errEpochInspection
 	}
+	changes, err := reader.acceptedLogicalChanges(*row)
+	if err != nil {
+		return err
+	}
+	row.LogicalChanges = changes
 	row.SelectorAccepted = true
 	return nil
 }

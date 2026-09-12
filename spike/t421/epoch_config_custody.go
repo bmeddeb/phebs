@@ -73,6 +73,9 @@ type ExecutionEpochConfigCustody struct {
 	// Actual parsed values paired with epochs[index].ConfigSHA256 after protected-copy checks.
 	// Private only: these contain secrets/paths and do not establish argv/runtime/domain facts.
 	parsedConfigs [5]*config.Config
+
+	// Assigned only after protected-copy checks, then immutable for borrowed runs.
+	logicalChanges *epochPreparedLogicalChanges
 }
 
 // PrepareExecutionEpochConfigs uses only the actual author's already-admitted
@@ -113,7 +116,7 @@ func PrepareExecutionEpochConfigs(ctx context.Context, author *ExecutionAuthorCu
 			retErr = ErrExecutionEpochConfigs
 		}
 	}()
-	catalogs, err := epochCatalogInputs(ctx, plan)
+	catalogs, changes, err := epochCatalogInputsObserved(ctx, plan)
 	if err != nil {
 		return custody, ErrExecutionEpochConfigs
 	}
@@ -193,6 +196,7 @@ func PrepareExecutionEpochConfigs(ctx context.Context, author *ExecutionAuthorCu
 		return custody, ErrExecutionEpochConfigs
 	}
 	custody.parsedConfigs = parsedConfigs
+	custody.logicalChanges = &changes
 	return custody, nil
 }
 
@@ -202,40 +206,63 @@ type epochGeneratedInput struct {
 }
 
 func epochCatalogInputs(ctx context.Context, plan Plan) ([]epochGeneratedInput, error) {
+	inputs, _, err := epochCatalogInputsObserved(ctx, plan)
+	return inputs, err
+}
+
+func epochCatalogInputsObserved(ctx context.Context, plan Plan) ([]epochGeneratedInput, epochPreparedLogicalChanges, error) {
+	var changes epochPreparedLogicalChanges
 	if ctx == nil || ctx.Err() != nil || len(plan.Revisions.Logical) != 3 {
-		return nil, ErrExecutionEpochConfigs
+		return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
 	}
 	target, err := frozenTargetCorpus()
 	if err != nil || ctx.Err() != nil {
-		return nil, ErrExecutionEpochConfigs
+		return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
 	}
 	paths := make(map[string]string, len(target.Files))
 	if walkOverlayFiles(target.Files, func(original, transformed string, _, _ []byte, _ bool) error {
 		paths[original] = transformed
 		return ctx.Err()
 	}) != nil {
-		return nil, ErrExecutionEpochConfigs
+		return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
 	}
 	base, err := transformCatalog(target.Catalog, paths)
 	if err != nil {
-		return nil, ErrExecutionEpochConfigs
+		return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
 	}
 	inputs := make([]epochGeneratedInput, 0, 3)
+	var first, previous servicecatalog.Catalog
 	for index, revision := range []string{"a", "b", "a-return"} {
 		catalog, err := logicalCatalogForRevision(base, revision)
 		if err != nil || ctx.Err() != nil {
-			return nil, ErrExecutionEpochConfigs
+			return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
 		}
 		raw, err := json.Marshal(catalog)
 		actual := CatalogSourceProfile{Schema: catalogSourceSchema, Bytes: uint64(len(raw)), SHA256: SHA256(raw),
 			Records: uint64(len(catalog.Services) + len(catalog.Memberships) + len(catalog.Unowned))}
 		if err != nil || len(raw) == 0 || len(raw) > maxEpochCatalogBytes || plan.Revisions.Logical[index].Name != revision ||
 			plan.Revisions.Logical[index].CatalogSource != actual {
-			return nil, ErrExecutionEpochConfigs
+			return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
 		}
+		changes.Sources[index] = actual
+		if index == 0 {
+			first = catalog
+		} else {
+			changes.Counts[index-1], err = countEpochAcceptedDisplayChanges(ctx, previous, catalog)
+			if err != nil {
+				return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
+			}
+			if index == 2 {
+				returned, compareErr := countEpochAcceptedDisplayChanges(ctx, first, catalog)
+				if compareErr != nil || returned != 0 {
+					return nil, epochPreparedLogicalChanges{}, ErrExecutionEpochConfigs
+				}
+			}
+		}
+		previous = catalog
 		inputs = append(inputs, epochGeneratedInput{name: "catalog-" + revision, raw: raw})
 	}
-	return inputs, ctx.Err()
+	return inputs, changes, ctx.Err()
 }
 
 func epochConfigBytes(plan Plan, epoch ExecutionEpochConfig, source string) ([]byte, error) {

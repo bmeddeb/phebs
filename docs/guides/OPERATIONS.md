@@ -229,6 +229,11 @@ from its verified Git inventory. Its child-complete observation is not proof
 that the parent successfully joined the author or completed the phase; those
 checks remain mandatory. Historical author requests keep their original wire.
 
+Logical-content observations likewise require accepted prior/current native
+catalog evidence. Prepared catalog comparisons alone are not execution proof;
+the private observation covers only the frozen display-name transition recipe.
+An incomplete observation must not be read as zero changed services.
+
 Protected replay adds two streaming database parse/hash passes beyond Verify
 and a private one-unit scratch file. A large record or intervening trivia can
 make that scratch file large, up to the existing artifact limit; 512 records

@@ -100,6 +100,10 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 	if prior.err != nil || !prior.finalUsed || !prior.retentionUsed || prior.physicalAuthority.Phase != "physical_delta_b" {
 		return nil, ErrExecutionEpochOne
 	}
+	catalogPrior, err := prior.acceptedCatalogPrefix(lifetime, "physical_delta_b")
+	if err != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
 	if flow.closed || flow.retained != run || lifetime.Err() != nil || run.advanceLogical(lifetime) != nil {
@@ -110,7 +114,7 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 	}
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: deadline, cancelRun: cancel,
-		priorPhysical: &epochLogicalPrior{authored: prior.authored, cold: prior.cold, warmAuthority: prior.warmAuthority, physicalAuthority: prior.physicalAuthority}}
+		priorPhysical: &epochLogicalPrior{authored: prior.authored, cold: prior.cold, warmAuthority: prior.warmAuthority, physicalAuthority: prior.physicalAuthority, catalog: catalogPrior}}
 	next.result.ParentMidphaseSamples = run.midphaseParentPrefix()
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 2)
@@ -209,6 +213,7 @@ func (run *ExecutionEpochOneRun) LogicalB(ctx context.Context) (retErr error) {
 
 type epochLogicalPrior struct {
 	authored                               AuthoredExecutionRevision
+	catalog                                *epochAcceptedCatalog
 	cold, warmAuthority, physicalAuthority AuthorityPhaseResult
 }
 

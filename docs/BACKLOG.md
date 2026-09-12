@@ -8704,6 +8704,27 @@ the switch was the sole departure from the corrected private draft. Ordered
 source/test manifest: `f10385b24112dec056cb9901b69c33485a82dfdd1fa9dbfdad2bccbe82b6a2da`.
 Actual protected full-population author execution remains a separate gate.
 
+The next logical-content observation compares actual typed A/B/return catalogs
+already serialized and checked against protected input identities. Only accepted
+F boundaries with matching prior/current source and authority facts can promote
+prepared counts. Physical B records zero from actual equal catalog content;
+missing evidence stays incomplete. The comparison admits only the existing
+accepted-service display-name recipe, ignoring authority-version provenance;
+all other content changes refuse rather than acquire invented metric semantics.
+Actual fenced physical and logical acceptance records cross the existing joined
+handoffs as fixed detached source/authority values. Independent code/cost review
+of the six-path private draft found critical/high/medium/low zero. Its tests
+separate actual target generation/serialization from supplied F/authority
+fixtures using real request-fence exchanges. Three preparation comparisons
+retain existing typed populations longer; no new serialization, read, hash,
+child or HTTP request is added. Applied focused/neighbor normal and race gates
+passed in 4.758s and 55.124s; pinned static vet/lint/compilation passed with zero
+lint issues, docs in 0.574s, glossary and whitespace clean. The applied six-path
+content reverse-checks against the reviewed immutable draft; its ordered
+manifest is `871f1b5f6ad24e93a0f75ca33db5ecac389c5714a49f4f8b75abcbebef3a875f`.
+Neither a cold logical metric nor native phase completion or whole-work receipt
+is established.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
