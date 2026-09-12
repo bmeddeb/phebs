@@ -365,6 +365,72 @@ func TestEpochQueryProjectionSourceNamespaces(t *testing.T) {
 	}
 }
 
+func TestEpochQueryProjectionPrivateRefusal(t *testing.T) {
+	bound, _ := epochQueryProjectionFixture(t)
+	var query QueryCase
+	for _, candidate := range correctedQueryCases() {
+		if candidate.Name == "chain_dependency" {
+			query = candidate
+		}
+	}
+	for _, test := range []struct {
+		clause string
+		mutate func(*apiresponse.RelationshipPage)
+	}{
+		{"page_envelope", func(p *apiresponse.RelationshipPage) { p.Coverage.ScannedReferences++ }},
+		{"root_authority", func(p *apiresponse.RelationshipPage) { p.Roots[0].RootDigest = testDigest("changed") }},
+		{"row_evidence", func(p *apiresponse.RelationshipPage) { p.Rows[0].Evidence.Span.EndByte = 0 }},
+		{"placement", func(p *apiresponse.RelationshipPage) { p.Rows[0].Source.Claims[0].Roles[0].Origin = "override" }},
+		{"projection_digest", func(p *apiresponse.RelationshipPage) { p.Rows[0].ProjectionDigest = testDigest("changed") }},
+		{"citation", func(p *apiresponse.RelationshipPage) { p.Rows[0].Citation = "private-input-must-not-escape" }},
+		{"rpc_semantic", func(p *apiresponse.RelationshipPage) { p.Rows[0].Evidence.Operation = "private-input-must-not-escape" }},
+	} {
+		t.Run(test.clause, func(t *testing.T) {
+			page := epochQueryRelationshipFixture(t, bound, query)[0]
+			test.mutate(&page)
+			projection, err := bound.queryProjection(query)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := projection.addHTTP(200, epochQueryMarshal(t, page)); err != ErrExecutionEpochOne || projection.refusal != test.clause {
+				t.Fatal("private refusal missing or public error changed", projection.refusal, err)
+			}
+			if _, err := projection.addHTTP(200, []byte("private-input-must-not-escape")); err != ErrExecutionEpochOne || projection.refusal != test.clause {
+				t.Fatal("first refusal not retained", projection.refusal, err)
+			}
+		})
+	}
+	for _, clause := range []string{"transport_code", "transport_status", "page_sequence", "page_count_cursor"} {
+		t.Run(clause, func(t *testing.T) {
+			for _, candidate := range correctedQueryCases() {
+				if candidate.Name == "chain_callers" {
+					query = candidate
+				}
+			}
+			projection, err := bound.queryProjection(query)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch clause {
+			case "transport_code":
+				_, err = projection.addMCP("wrong", nil)
+			case "transport_status":
+				_, err = projection.addHTTP(500, nil)
+			case "page_sequence":
+				projection.pages = query.ExpectedRecords
+				_, err = projection.addHTTP(200, nil)
+			case "page_count_cursor":
+				page := epochQueryRelationshipFixture(t, bound, query)[0]
+				page.Pagination.NextCursor = ""
+				_, err = projection.addHTTP(200, epochQueryMarshal(t, page))
+			}
+			if err != ErrExecutionEpochOne || projection.refusal != clause {
+				t.Fatal("boundary refusal missing", projection.refusal, err)
+			}
+		})
+	}
+}
+
 func TestEpochQueryProjectionCatalogBinding(t *testing.T) {
 	bound, catalog := epochQueryProjectionFixture(t)
 	catalog.Memberships[0].Role = "shared"

@@ -115,6 +115,7 @@ type epochQueryProjection struct {
 	lastReference, binding, nextCursor string
 	root                               *apiresponse.RelationshipRootReceipt
 	err                                error
+	refusal                            string // Private fixed clause name; never response content.
 }
 
 type epochQueryProjectionResult struct {
@@ -145,6 +146,7 @@ func (context *epochQueryProjectionContext) queryProjection(query QueryCase) (*e
 // The transport has already authenticated the MCP envelope and error code.
 func (projection *epochQueryProjection) addMCP(code string, structured []byte) (string, error) {
 	if code != projection.query.ExpectedMCPCode || code != "ok" && len(structured) != 0 {
+		_ = projection.relationshipRefusal("transport_code")
 		return projection.refuse()
 	}
 	return projection.add(code == "ok", structured)
@@ -152,6 +154,7 @@ func (projection *epochQueryProjection) addMCP(code string, structured []byte) (
 
 func (projection *epochQueryProjection) addHTTP(status int, body []byte) (string, error) {
 	if status != int(projection.query.ExpectedStatus) {
+		_ = projection.relationshipRefusal("transport_status")
 		return projection.refuse()
 	}
 	if status != 200 {
@@ -184,6 +187,7 @@ func (projection *epochQueryProjection) add(success bool, body []byte) (string, 
 		maximum = max(uint64(1), (projection.query.ExpectedRecords+projection.query.PageSize-1)/projection.query.PageSize)
 	}
 	if projection.err != nil || projection.pages >= maximum || projection.pages > 0 && projection.nextCursor == "" {
+		_ = projection.relationshipRefusal("page_sequence")
 		return projection.refuse()
 	}
 	var err error
@@ -203,6 +207,9 @@ func (projection *epochQueryProjection) add(success bool, body []byte) (string, 
 		}
 	}
 	if err != nil || projection.pages+1 < maximum && projection.nextCursor == "" || projection.pages+1 == maximum && projection.nextCursor != "" {
+		if err == nil {
+			_ = projection.relationshipRefusal("page_count_cursor")
+		}
 		return projection.refuse()
 	}
 	projection.pages++
@@ -414,7 +421,7 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 		apiresponse.RelationshipPage
 	}
 	if decodeEpochQueryJSON(body, &page) != nil {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("decode")
 	}
 	parameters, f := projection.parameters, projection.context.final.Authority
 	q := apiresponse.RelationshipQuery{Repositories: []string{projection.context.repository}, ServiceKey: parameters["service_key"], View: parameters["view"], Kind: parameters["kind"], Plane: parameters["plane"], LookupKey: parameters["lookup_key"]}
@@ -422,7 +429,7 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 		len(page.Roots) != 1 || len(page.Rows) != 1 || page.Pagination.Order != "repository,reference_digest:asc" || page.Pagination.PageSize != 1 || page.Pagination.Returned != 1 ||
 		page.Coverage.AuthorizedRepositories != 1 || page.Coverage.CompleteRoots != 1 || page.Coverage.EmptyRoots != 0 || page.Coverage.FailedRoots != 0 || page.Coverage.UnavailableRoots != 0 ||
 		page.Coverage.Truncated || page.Coverage.ReturnedRows != 1 || page.Coverage.ScannedReferences != int(projection.query.ExpectedRecords) {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("page_envelope")
 	}
 	root := page.Roots[0]
 	a := root.Authority
@@ -433,10 +440,10 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 		a.ResolverGenerationDigest != f.ResolverCatalogGenerationSHA256 || a.ResolverRootDigest != f.ResolverCatalogRootSHA256 || a.Upstream == nil ||
 		a.Upstream.Repository != root.Repository || a.Upstream.Observation.ObservationGenerationDigest != f.ObservationGenerationSHA256 ||
 		a.Upstream.Observation.SourceGenerationDigest != f.SourceGenerationSHA256 {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("root_authority")
 	}
 	if projection.root != nil && !reflect.DeepEqual(*projection.root, root) {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("root_changed")
 	}
 	projection.root = &root
 	row := page.Rows[0]
@@ -450,33 +457,33 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 		row.Evidence.Kind != row.Kind || row.Evidence.Plane != row.Plane || row.Evidence.Class != row.Class || row.Evidence.Span.StartByte < 0 ||
 		row.Evidence.Span.EndByte <= row.Evidence.Span.StartByte || row.Evidence.Span.StartLine < 1 || row.Evidence.Span.EndLine < row.Evidence.Span.StartLine ||
 		!validDigest(row.Evidence.ContentDigest) || !gitobj.IsObjectID(row.Evidence.ObjectID) {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("row_evidence")
 	}
 	// Reconstruct the actual publication projection/reference bytes; these
 	// digests bind all returned claims rather than trusting semantic labels.
 	native := relationshippublication.Projection{Schema: relationshippublication.ProjectionSchema, Kind: row.Kind, PostingDigest: row.PostingDigest, Class: row.Class, Plane: row.Plane, LookupKey: row.LookupKey}
 	raw, _ := json.Marshal(row.Source)
 	if json.Unmarshal(raw, &native.Source) != nil {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("source_decode")
 	}
 	if row.Target != nil {
 		raw, _ = json.Marshal(row.Target)
 		if json.Unmarshal(raw, &native.Target) != nil {
-			return ErrExecutionEpochOne
+			return projection.relationshipRefusal("target_decode")
 		}
 	}
 	if !projection.context.placementMatches(row.Source) || row.Target != nil && !projection.context.placementMatches(*row.Target) {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("placement")
 	}
 	raw, _ = json.Marshal(native)
 	if SHA256(raw) != row.ProjectionDigest {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("projection_digest")
 	}
 	reference := relationshippublication.ServiceReference{Schema: relationshippublication.ServiceReferenceSchema, ProjectionDigest: row.ProjectionDigest, PostingDigest: row.PostingDigest, Kind: row.Kind, Plane: row.Plane, LookupKey: row.LookupKey, Participation: row.Participation}
 	raw, _ = json.Marshal(reference)
 	referenceDigest := SHA256(raw)
 	if referenceDigest <= projection.lastReference {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("reference_order")
 	}
 	projection.lastReference = referenceDigest
 	var citation struct {
@@ -487,10 +494,10 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 		Projection string `json:"projection"`
 	}
 	if decodeEpochQueryToken(row.Citation, &citation) != nil || citation.Schema != "phebs-service-relationship-citation-v1" || citation.Binding == "" || citation.Repository != root.Repository || citation.Source != 0 || citation.Projection != row.ProjectionDigest {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("citation")
 	}
 	if projection.binding != "" && projection.binding != citation.Binding {
-		return ErrExecutionEpochOne
+		return projection.relationshipRefusal("binding_changed")
 	}
 	projection.binding = citation.Binding
 	if page.Pagination.NextCursor != "" {
@@ -506,40 +513,40 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 			PageSize int                           `json:"page_size"`
 		}{"phebs-service-relationship-page-v1", q, 1})
 		if decodeEpochQueryToken(page.Pagination.NextCursor, &cursor) != nil || cursor.Schema != "phebs-service-relationship-cursor-v1" || cursor.Binding != projection.binding || cursor.Offset != int(projection.pages+1) || cursor.QueryDigest != SHA256(queryRaw) {
-			return ErrExecutionEpochOne
+			return projection.relationshipRefusal("cursor")
 		}
 	}
 	projection.nextCursor = page.Pagination.NextCursor
 	consumer, err := epochQueryClaimService(row.Source)
 	if err != nil {
-		return err
+		return projection.relationshipRefusal("source_claim")
 	}
 	projection.paths[row.Source.Path] = struct{}{}
 	projection.paths[row.Evidence.Path] = struct{}{}
 	if row.Kind == "kafka" {
 		if row.Target != nil || row.Class != "literal" || row.Evidence.TopicSpelling != q.LookupKey || row.Evidence.SourceRole != "production" || consumer != row.ServiceKey || len(row.CounterpartServices) != 0 {
-			return ErrExecutionEpochOne
+			return projection.relationshipRefusal("kafka_semantic")
 		}
 		projection.projection = semanticKafkaProjection{Schema: "t421-semantic-kafka-product-projection-v1", ServiceKey: row.ServiceKey, View: q.View, Kind: row.Kind, Plane: row.Plane, LookupKey: row.LookupKey, Participation: participation, ProductPairPosture: "independent_projection_not_product_cooccurrence"}
 	} else {
 		if row.Target == nil || row.Class != "resolved" || row.Evidence.SourceRole != "production" || row.Evidence.Operation != q.LookupKey || row.Evidence.DeclarationPath != row.Target.Path {
-			return ErrExecutionEpochOne
+			return projection.relationshipRefusal("rpc_semantic")
 		}
 		provider, err := epochQueryClaimService(*row.Target)
 		if err != nil {
-			return err
+			return projection.relationshipRefusal("target_claim")
 		}
 		counterpart, selected := provider, consumer
 		if participation == "target" {
 			counterpart, selected = consumer, provider
 		}
 		if selected != row.ServiceKey || !reflect.DeepEqual(row.CounterpartServices, []string{counterpart}) {
-			return ErrExecutionEpochOne
+			return projection.relationshipRefusal("counterpart")
 		}
 		providerIndex, err := strconv.Atoi(strings.TrimPrefix(provider, "svc.load-"))
 		consumerIndex, consumerErr := strconv.Atoi(strings.TrimPrefix(consumer, "svc.load-"))
 		if err != nil || consumerErr != nil || provider != serviceKey(providerIndex) || consumer != serviceKey(consumerIndex) {
-			return ErrExecutionEpochOne
+			return projection.relationshipRefusal("service_identity")
 		}
 		family := "bounded_fanout"
 		if strings.Contains(row.LookupKey, "/LayeredDagP") {
@@ -553,6 +560,13 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 	}
 	projection.records++
 	return nil
+}
+
+func (projection *epochQueryProjection) relationshipRefusal(clause string) error {
+	if projection.refusal == "" {
+		projection.refusal = clause
+	}
+	return ErrExecutionEpochOne
 }
 
 func (context *epochQueryProjectionContext) placementMatches(value apiresponse.RelationshipPlacement) bool {

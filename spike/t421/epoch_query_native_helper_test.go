@@ -3,6 +3,7 @@ package t421
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net"
@@ -36,13 +37,18 @@ type epochNativeQueryOutput struct {
 	NextOrdinal             uint64                  `json:"next_ordinal"`
 	Rows                    []ExecutionProductQuery `json:"rows"`
 	query, transport, stage string
+	clause                  string
 	page                    uint64
+	bodyPrefix              []byte
+	bodyBytes               int
+	bodySHA256              string
 }
 
 // This opt-in test process has no execution-run or phase-control facsimile.
 // Its parent owns the actual ordinary exact-control server and its lifetime.
 // Only private FD3 receives source-free completed rows; errors never print
-// input, credentials, HTTP bodies or URL-bearing transport errors.
+// input, credentials or URL-bearing transport errors. Only a failed relationship
+// projection after bounded transport validation retains a private response prefix.
 func TestEpochNativeQueryHelper(t *testing.T) {
 	if os.Getenv("PHEBS_T422_NATIVE_QUERY_HELPER") != "1" {
 		t.Skip("private native query helper")
@@ -82,7 +88,10 @@ func TestEpochNativeQueryHelper(t *testing.T) {
 	}
 	result, err := runEpochNativeQueries(ctx, input, queries)
 	if err != nil {
-		t.Fatalf("native query corridor refused: completed_rows=%d next_ordinal=%d query=%s transport=%s page=%d stage=%s", len(result.Rows), result.NextOrdinal, result.query, result.transport, result.page, result.stage)
+		if result.bodyBytes != 0 {
+			t.Logf("private relationship response: bytes=%d sha256=%s prefix_base64=%s", result.bodyBytes, result.bodySHA256, base64.StdEncoding.EncodeToString(result.bodyPrefix))
+		}
+		t.Fatalf("native query corridor refused: completed_rows=%d next_ordinal=%d query=%s transport=%s page=%d stage=%s clause=%s", len(result.Rows), result.NextOrdinal, result.query, result.transport, result.page, result.stage, result.clause)
 	}
 	raw, err := json.Marshal(result)
 	if err != nil || len(raw)+1 > 64<<10 || ctx.Err() != nil {
@@ -141,6 +150,7 @@ func runEpochNativeQueries(ctx context.Context, input epochNativeQueryInput, que
 				if err != nil {
 					return result, errEpochInspection
 				}
+				projectionBody := raw
 				if transport == "http" {
 					result.stage = "project"
 					row.Code = strconv.Itoa(status)
@@ -154,10 +164,15 @@ func runEpochNativeQueries(ctx context.Context, input epochNativeQueryInput, que
 					structured, row.Code, err = decodeEpochQueryMCP(query, contentType, strconv.FormatUint(ordinal, 10), raw)
 					if err == nil {
 						result.stage = "project"
+						projectionBody = structured
 						cursor, err = projection.addMCP(row.Code, structured)
 					}
 				}
 				if err != nil || (cursor == "") != (page+1 == correctedProductQueryPages(query)) {
+					result.clause = projection.refusal
+					if query.Surface == "service_relationships" && result.stage == "project" && status == http.StatusOK {
+						result.retainRelationshipResponse(projectionBody)
+					}
 					return result, errEpochInspection
 				}
 				maximum.ControlFileReads -= report.ControlFileReads
@@ -193,6 +208,11 @@ func runEpochNativeQueries(ctx context.Context, input epochNativeQueryInput, que
 		return result, errEpochInspection
 	}
 	return result, nil
+}
+
+func (result *epochNativeQueryOutput) retainRelationshipResponse(body []byte) {
+	result.bodyBytes, result.bodySHA256 = len(body), SHA256(body)
+	result.bodyPrefix = bytes.Clone(body[:min(len(body), 64<<10)])
 }
 
 // Same bounded transport/trailer rules as readQueryRequest, without constructing
@@ -301,8 +321,13 @@ func TestEpochNativeQueryFailureLocation(t *testing.T) {
 	if err != errEpochInspection || len(result.Rows) != 0 || result.NextOrdinal != 3 || result.query != "all_code_structural_marker" || result.transport != "http" || result.page != 1 || result.stage != "request" {
 		t.Fatal("closed failure location or consumed ordinal lost")
 	}
+	result.clause = "root_authority"
+	result.retainRelationshipResponse(bytes.Repeat([]byte("private-response"), 10_000))
+	if len(result.bodyPrefix) != 64<<10 || result.bodyBytes != 160_000 || !validDigest(result.bodySHA256) {
+		t.Fatal("private response diagnostic not bounded")
+	}
 	encoded := epochQueryMarshal(t, result)
-	if bytes.Contains(encoded, []byte("request")) || bytes.Contains(encoded, []byte("all_code")) {
+	if bytes.Contains(encoded, []byte("request")) || bytes.Contains(encoded, []byte("all_code")) || bytes.Contains(encoded, []byte("root_authority")) || bytes.Contains(encoded, []byte("private-response")) || bytes.Contains(encoded, []byte(result.bodySHA256)) {
 		t.Fatal("diagnostic leaked into result protocol")
 	}
 }

@@ -7628,6 +7628,49 @@ in 0.686s and 0.545s before this final result append. Independent record review
 closed one stale present-tense definition-gap paragraph; no other record/cost
 finding remains. No corrected native query pass is claimed at this bookmark.
 
+The corrected native attempt at `8a8eff8020351540a9adfb93be395cc6c508e82f`
+subsequently failed in 552.44s (package 553.083s). All twenty source/test
+manifest entries still matched after the failed command. Actual cold F and
+five query rows completed; the first relationship page (`chain_dependency`,
+HTTP, ordinal seven) reported complete C5/S4/M660/W0 before its projection
+refused. Detail and both service-search projections had passed, closing the
+previously reached source-namespace refusal on this ordinary native fixture.
+The helper retained `completed_rows=5`, `next_ordinal=8`, `page=1`,
+`stage=project`, not a response body or the exact failed predicate. Independent
+source review found no additional proved mismatch and must not supply a guessed
+cause. Custody `t422-native-query-regression-434233000` and gate records in
+`phebs-t422-native-query-gates.EgYGLy` remain private and intact. Post-run
+process checks found no matching server, query helper or Surreal process.
+
+The next diagnostic adds first-refusal fixed clause labels to the
+relationship projector and page boundaries. Only after successful bounded
+authenticated transport/trailer validation, the native test helper's first failed
+relationship projection also retains at most 64 KiB of response prefix, actual
+length and full-body hash in its existing 0600 private log. HTTP content may
+have failed JSON decoding; MCP content has passed its envelope decoder. All public errors,
+acceptance checks and result JSON remain unchanged. There is one zero-valued
+string per projector and fixed helper fields; failure alone adds a literal
+assignment, bounded body hash, at-most-64-KiB copy and at-most-87,384-byte
+base64 encoding beneath the existing one-MiB output cap. No request credential,
+raw transport error or F body is retained, and no successful query gains I/O,
+hashing, lock, native read, child or retry. Existing
+positive projection checks and negative first-refusal/wire-omission tests
+cover this seam; exact gates and independent review precede any diagnostic
+attempt. Rebuilding multiple component publications solely for a parallel
+API fixture was rejected as duplicating the existing native harness.
+
+The diagnostic slice passed focused normal/race and full ci-static (vet,
+zero-issue pinned lint and all-package compilation), docs (0.556s), glossary
+and whitespace. Its race selector completed in 3.122s. Independent source,
+privacy and cost review has critical/high/medium/low all zero at ordered
+three-path manifest
+`93a24f0aa15322f68b09881702933aeea381f495a2dd17756bd27f556a8347db`
+(projector, projector tests, native helper tests). Earlier static checking
+caught three unchecked diagnostic-helper returns; explicit intentional
+discards corrected them before the passing gate. Review also corrected the
+HTTP JSON-decoding wording without dropping malformed-response diagnostics.
+The next native attempt remains a diagnostic, not a passed query gate.
+
 At `ec014403`, the receipt/teardown trace identified two source-proven
 definition/evidence gaps, not measured native failures. A nine-page relationship result requires
 fresh authorization on each page, so the receipt's one authorization decision
