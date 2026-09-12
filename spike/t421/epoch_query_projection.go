@@ -35,7 +35,7 @@ func newEpochQueryProjectionContext(ctx context.Context, repository string, fina
 	if ctx == nil || ctx.Err() != nil || repository == "" || final.Schema != "t421-final-authority-source-free-v1" || final.Projection.Schema != "t421-final-state-projection-source-free-v1" ||
 		!final.Authority.Current || !gitobj.IsObjectID(final.Authority.PhysicalCommit) || !validDigest(final.Authority.CatalogRootSHA256) ||
 		!validDigest(final.Authority.SourceGenerationSHA256) || !validDigest(final.Authority.SearchGenerationSHA256) || !validDigest(final.Projection.CatalogLogicalSHA256) ||
-		final.QueryAuthority == nil || !validDigest(final.QueryAuthority.CatalogSourceGenerationSHA256) {
+		!final.QueryAuthority.valid() {
 		return nil, ErrExecutionEpochOne
 	}
 	actual, err := t421catalogprojection.Derive(ctx, catalog)
@@ -437,7 +437,8 @@ func (projection *epochQueryProjection) relationship(body []byte) error {
 		root.ServiceKey != q.ServiceKey || root.ServiceIncarnation == 0 || !validDigest(root.ServiceGeneration) || !validDigest(root.AuthorityDigest) || root.Unavailable != nil ||
 		!root.RepositoryComplete || !root.AllServicesComplete || root.FailedServiceCount != 0 || a == nil || a.Repository != root.Repository ||
 		a.CatalogGenerationDigest != f.CatalogRootSHA256 || a.CatalogDigest != projection.context.final.Projection.CatalogLogicalSHA256 || a.CatalogSourceGeneration != projection.context.final.QueryAuthority.CatalogSourceGenerationSHA256 ||
-		a.ResolverGenerationDigest != f.ResolverCatalogGenerationSHA256 || a.ResolverRootDigest != f.ResolverCatalogRootSHA256 || a.Upstream == nil ||
+		a.ResolverGenerationDigest != projection.context.final.QueryAuthority.ResolverNamespaceGenerationSHA256 ||
+		a.ResolverRootDigest != projection.context.final.QueryAuthority.ResolverNamespaceRootSHA256 || a.Upstream == nil ||
 		a.Upstream.Repository != root.Repository || a.Upstream.Observation.ObservationGenerationDigest != f.ObservationGenerationSHA256 ||
 		a.Upstream.Observation.SourceGenerationDigest != f.SourceGenerationSHA256 {
 		return projection.relationshipRefusal("root_authority")

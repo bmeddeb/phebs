@@ -616,10 +616,11 @@ func TestEpochRestoredProductDeadline(t *testing.T) {
 }
 
 func TestEpochRestoredProductFinalBracket(t *testing.T) {
-	for _, mode := range []string{"valid", "relationship", "root_detail", "query_authority", "missing_query_authority", "missing_queries", "missing_row", "before_gap", "after_gap", "returned_alias"} {
+	for _, mode := range []string{"valid", "relationship", "root_detail", "query_authority", "resolver_namespace_generation", "resolver_namespace_root", "missing_query_authority", "missing_queries", "missing_row", "before_gap", "after_gap", "returned_alias"} {
 		t.Run(mode, func(t *testing.T) {
 			_, value := epochTestFinal(t)
-			value.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: testDigest("catalog-source")}
+			value.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: testDigest("catalog-source"),
+				ResolverNamespaceGenerationSHA256: testDigest("namespace-generation"), ResolverNamespaceRootSHA256: testDigest("namespace-root")}
 			var calls atomic.Int32
 			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				calls.Add(1)
@@ -660,6 +661,10 @@ func TestEpochRestoredProductFinalBracket(t *testing.T) {
 				value.ExtractionRoots[0].Totals.Rows++
 			case "query_authority":
 				value.QueryAuthority.CatalogSourceGenerationSHA256 = testDigest("changed-catalog-source")
+			case "resolver_namespace_generation":
+				value.QueryAuthority.ResolverNamespaceGenerationSHA256 = testDigest("changed-namespace-generation")
+			case "resolver_namespace_root":
+				value.QueryAuthority.ResolverNamespaceRootSHA256 = testDigest("changed-namespace-root")
 			case "missing_query_authority":
 				value.QueryAuthority = nil
 			case "missing_queries":
@@ -694,7 +699,8 @@ func TestEpochRestoredQueryAuthorityScope(t *testing.T) {
 		t.Run(schema, func(t *testing.T) {
 			reader, value := epochTestFinal(t)
 			reader.plan.Schema = schema
-			value.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: testDigest("catalog-source")}
+			value.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: testDigest("catalog-source"),
+				ResolverNamespaceGenerationSHA256: testDigest("namespace-generation"), ResolverNamespaceRootSHA256: testDigest("namespace-root")}
 			if _, _, err := reader.decodeFinal(epochTestJSON(t, value, true)); err == nil || reader.productQueryAuthority != (epochQueryAuthority{}) {
 				t.Fatal("non-phase14 extension changed the baseline")
 			}

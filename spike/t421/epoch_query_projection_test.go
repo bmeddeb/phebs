@@ -50,7 +50,11 @@ func epochQueryProjectionFixture(t *testing.T) (*epochQueryProjectionContext, se
 	}
 	f.Authority.CatalogRootSHA256 = generation.Root.Digest
 	f.Projection.CatalogLogicalSHA256 = generation.Root.LogicalDigest
-	f.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: source}
+	// Namespace publication IDs are distinct from their upstream resolver
+	// catalog IDs in F. These namespace IDs are supplied, not native evidence.
+	f.QueryAuthority = &epochQueryAuthority{CatalogSourceGenerationSHA256: source,
+		ResolverNamespaceGenerationSHA256: testDigest("resolver-namespace-generation"),
+		ResolverNamespaceRootSHA256:       testDigest("resolver-namespace-root")}
 	bound, err := newEpochQueryProjectionContext(t.Context(), "github.com/t421/query", f, catalog)
 	if err != nil {
 		t.Fatal(err)
@@ -150,7 +154,7 @@ func epochQueryRelationshipFixture(t *testing.T, bound *epochQueryProjectionCont
 	}
 	p, f := projection.parameters, bound.final.Authority
 	q := apiresponse.RelationshipQuery{Repositories: []string{bound.repository}, ServiceKey: p["service_key"], View: p["view"], Kind: p["kind"], Plane: p["plane"], LookupKey: p["lookup_key"]}
-	root := apiresponse.RelationshipRootReceipt{Repository: bound.repository, State: "complete", RootSchema: relationshippublication.RootSchemaV3, Generation: f.RelationshipGenerationSHA256, RootDigest: f.RelationshipRootSHA256, AuthorityDigest: testDigest("authority"), ServiceKey: q.ServiceKey, ServiceIncarnation: 1, ServiceGeneration: testDigest("desired"), RepositoryComplete: true, AllServicesComplete: true, Authority: &apiresponse.RelationshipAuthority{Repository: bound.repository, CatalogGenerationDigest: f.CatalogRootSHA256, CatalogDigest: bound.final.Projection.CatalogLogicalSHA256, CatalogSourceGeneration: bound.final.QueryAuthority.CatalogSourceGenerationSHA256, ResolverGenerationDigest: f.ResolverCatalogGenerationSHA256, ResolverRootDigest: f.ResolverCatalogRootSHA256, Upstream: &apiresponse.RelationshipUpstreamAuthority{Repository: bound.repository, Observation: apiresponse.RelationshipObservationAuthority{SourceGenerationDigest: f.SourceGenerationSHA256, ObservationGenerationDigest: f.ObservationGenerationSHA256}}}}
+	root := apiresponse.RelationshipRootReceipt{Repository: bound.repository, State: "complete", RootSchema: relationshippublication.RootSchemaV3, Generation: f.RelationshipGenerationSHA256, RootDigest: f.RelationshipRootSHA256, AuthorityDigest: testDigest("authority"), ServiceKey: q.ServiceKey, ServiceIncarnation: 1, ServiceGeneration: testDigest("desired"), RepositoryComplete: true, AllServicesComplete: true, Authority: &apiresponse.RelationshipAuthority{Repository: bound.repository, CatalogGenerationDigest: f.CatalogRootSHA256, CatalogDigest: bound.final.Projection.CatalogLogicalSHA256, CatalogSourceGeneration: bound.final.QueryAuthority.CatalogSourceGenerationSHA256, ResolverGenerationDigest: bound.final.QueryAuthority.ResolverNamespaceGenerationSHA256, ResolverRootDigest: bound.final.QueryAuthority.ResolverNamespaceRootSHA256, Upstream: &apiresponse.RelationshipUpstreamAuthority{Repository: bound.repository, Observation: apiresponse.RelationshipObservationAuthority{SourceGenerationDigest: f.SourceGenerationSHA256, ObservationGenerationDigest: f.ObservationGenerationSHA256}}}}
 	var rows []apiresponse.RelationshipRow
 	for index := range int(query.ExpectedRecords) {
 		consumer := 1
@@ -428,6 +432,55 @@ func TestEpochQueryProjectionPrivateRefusal(t *testing.T) {
 				t.Fatal("boundary refusal missing", projection.refusal, err)
 			}
 		})
+	}
+}
+
+func TestEpochQueryProjectionResolverNamespaces(t *testing.T) {
+	bound, catalog := epochQueryProjectionFixture(t)
+	for _, query := range correctedQueryCases() {
+		if query.Surface != "service_relationships" {
+			continue
+		}
+		for _, mode := range []string{"namespace", "catalog_generation", "catalog_manifest", "changed_generation", "changed_root", "missing_generation", "missing_root"} {
+			t.Run(query.Name+"/"+mode, func(t *testing.T) {
+				page := epochQueryRelationshipFixture(t, bound, query)[0]
+				final := bound.final
+				proof := *final.QueryAuthority
+				final.QueryAuthority = &proof
+				switch mode {
+				case "catalog_generation":
+					page.Roots[0].Authority.ResolverGenerationDigest = final.Authority.ResolverCatalogGenerationSHA256
+				case "catalog_manifest":
+					page.Roots[0].Authority.ResolverRootDigest = final.Authority.ResolverCatalogRootSHA256
+				case "changed_generation":
+					proof.ResolverNamespaceGenerationSHA256 = testDigest("different-namespace")
+				case "changed_root":
+					proof.ResolverNamespaceRootSHA256 = testDigest("different-namespace")
+				case "missing_generation":
+					proof.ResolverNamespaceGenerationSHA256 = ""
+				case "missing_root":
+					proof.ResolverNamespaceRootSHA256 = ""
+				}
+				context, err := newEpochQueryProjectionContext(t.Context(), bound.repository, final, catalog)
+				if strings.HasPrefix(mode, "missing_") {
+					if err == nil {
+						t.Fatal("missing namespace proof accepted")
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				projection, err := context.queryProjection(query)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = projection.addHTTP(200, epochQueryMarshal(t, page))
+				if (err == nil) != (mode == "namespace") {
+					t.Fatal("resolver namespace and upstream catalog identities conflated", err)
+				}
+			})
+		}
 	}
 }
 

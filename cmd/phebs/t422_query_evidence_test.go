@@ -13,6 +13,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
+	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 )
 
@@ -131,7 +132,7 @@ func TestT422QueryEvidenceFinalOmission(t *testing.T) {
 		t.Fatal("omission changed old F wire")
 	}
 	generation, _, _ := t421FinalCatalogTestFixture(t)
-	value.QueryAuthority, err = t422FinalQueryAuthority(context.WithValue(t.Context(), t422QueryEvidenceKey{}, true), generation.Root)
+	value.QueryAuthority, err = t422FinalQueryAuthority(context.WithValue(t.Context(), t422QueryEvidenceKey{}, true), generation.Root, t422QueryNamespaceFixture())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,18 +140,22 @@ func TestT422QueryEvidenceFinalOmission(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantSuffix := `,"query_authority":{"catalog_source_generation_sha256":"` + value.QueryAuthority.CatalogSourceGenerationSHA256 + `"}}`
-	if !strings.HasSuffix(string(selected), wantSuffix) || !strings.HasPrefix(string(selected), string(raw[:len(raw)-1])) {
+	wantSuffix := `,"query_authority":{"catalog_source_generation_sha256":"` + value.QueryAuthority.CatalogSourceGenerationSHA256 +
+		`","resolver_namespace_generation_sha256":"` + value.QueryAuthority.ResolverNamespaceGenerationSHA256 +
+		`","resolver_namespace_root_sha256":"` + value.QueryAuthority.ResolverNamespaceRootSHA256 + `"}}`
+	if len(selected)-len(raw) != 349 || !strings.HasSuffix(string(selected), wantSuffix) || !strings.HasPrefix(string(selected), string(raw[:len(raw)-1])) {
 		t.Fatal("extension was not appended canonically")
 	}
 	selectedEmitted, err := t421FinalMarshal(value)
 	if err != nil {
 		t.Fatal(err)
 	}
-	emittedSuffix := ",\n  \"query_authority\": {\n    \"catalog_source_generation_sha256\": \"" + value.QueryAuthority.CatalogSourceGenerationSHA256 + "\"\n  }\n}\n"
-	if len(selectedEmitted)-len(emitted) != 142 || strings.Contains(string(emitted), "query_authority") ||
+	emittedSuffix := ",\n  \"query_authority\": {\n    \"catalog_source_generation_sha256\": \"" + value.QueryAuthority.CatalogSourceGenerationSHA256 +
+		"\",\n    \"resolver_namespace_generation_sha256\": \"" + value.QueryAuthority.ResolverNamespaceGenerationSHA256 +
+		"\",\n    \"resolver_namespace_root_sha256\": \"" + value.QueryAuthority.ResolverNamespaceRootSHA256 + "\"\n  }\n}\n"
+	if len(selectedEmitted)-len(emitted) != 374 || strings.Contains(string(emitted), "query_authority") ||
 		!strings.HasPrefix(string(selectedEmitted), string(emitted[:len(emitted)-3])) || !strings.HasSuffix(string(selectedEmitted), emittedSuffix) {
-		t.Fatal("actual indented F extension changed shape or 142-byte delta")
+		t.Fatal("actual indented F extension changed shape or 374-byte delta")
 	}
 }
 
@@ -161,16 +166,53 @@ func TestT422QueryEvidenceCatalogSource(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.WithValue(t.Context(), t422QueryEvidenceKey{}, true)
-	proof, err := t422FinalQueryAuthority(ctx, generation.Root)
+	proof, err := t422FinalQueryAuthority(ctx, generation.Root, t422QueryNamespaceFixture())
 	if err != nil || proof == nil || proof.CatalogSourceGenerationSHA256 != want || want == generation.Root.Digest {
 		t.Fatalf("actual source proof = %+v, %v", proof, err)
 	}
 	invalid := generation.Root
 	invalid.Binding.Source.Commit = strings.Repeat("f", 40)
-	if _, err := t422FinalQueryAuthority(ctx, invalid); err == nil {
+	if _, err := t422FinalQueryAuthority(ctx, invalid, t422QueryNamespaceFixture()); err == nil {
 		t.Fatal("accepted changed unvalidated source")
 	}
-	if value, err := t422FinalQueryAuthority(t.Context(), invalid); value != nil || err != nil {
+	if value, err := t422FinalQueryAuthority(t.Context(), invalid, resolvernamespace.Root{}); value != nil || err != nil {
 		t.Fatal("omission performed root validation")
+	}
+}
+
+// Only scalar provenance is modeled here. The real F caller owns the existing
+// OpenGeneration/ValidateComplete checks; this fixture claims neither.
+func t422QueryNamespaceFixture() resolvernamespace.Root {
+	return resolvernamespace.Root{
+		GenerationDigest: "sha256:" + strings.Repeat("a", 64),
+		Digest:           "sha256:" + strings.Repeat("b", 64),
+		Authority: resolvernamespace.Authority{
+			ResolverGenerationDigest: "sha256:" + strings.Repeat("c", 64),
+			ResolverManifestDigest:   "sha256:" + strings.Repeat("d", 64),
+		},
+	}
+}
+
+func TestT422QueryEvidenceResolverNamespace(t *testing.T) {
+	generation, _, _ := t421FinalCatalogTestFixture(t)
+	ctx := context.WithValue(t.Context(), t422QueryEvidenceKey{}, true)
+	for _, name := range []string{"distinct_catalog", "changed_namespace"} {
+		t.Run(name, func(t *testing.T) {
+			resolver := t422QueryNamespaceFixture()
+			if name == "changed_namespace" {
+				resolver.GenerationDigest = "sha256:" + strings.Repeat("e", 64)
+				resolver.Digest = "sha256:" + strings.Repeat("f", 64)
+			}
+			proof, err := t422FinalQueryAuthority(ctx, generation.Root, resolver)
+			if err != nil || proof == nil || proof.ResolverNamespaceGenerationSHA256 != resolver.GenerationDigest ||
+				proof.ResolverNamespaceRootSHA256 != resolver.Digest || proof.ResolverNamespaceGenerationSHA256 == resolver.Authority.ResolverGenerationDigest ||
+				proof.ResolverNamespaceRootSHA256 == resolver.Authority.ResolverManifestDigest {
+				t.Fatal("namespace identities replaced with upstream catalog", proof, err)
+			}
+			resolver.GenerationDigest, resolver.Digest = "", ""
+			if proof.ResolverNamespaceGenerationSHA256 == "" || proof.ResolverNamespaceRootSHA256 == "" {
+				t.Fatal("proof aliases caller root")
+			}
+		})
 	}
 }

@@ -567,7 +567,14 @@ type epochFinalResponse struct {
 }
 
 type epochQueryAuthority struct {
-	CatalogSourceGenerationSHA256 string `json:"catalog_source_generation_sha256"`
+	CatalogSourceGenerationSHA256     string `json:"catalog_source_generation_sha256"`
+	ResolverNamespaceGenerationSHA256 string `json:"resolver_namespace_generation_sha256"`
+	ResolverNamespaceRootSHA256       string `json:"resolver_namespace_root_sha256"`
+}
+
+func (value *epochQueryAuthority) valid() bool {
+	return value != nil && validDigest(value.CatalogSourceGenerationSHA256) &&
+		validDigest(value.ResolverNamespaceGenerationSHA256) && validDigest(value.ResolverNamespaceRootSHA256)
 }
 
 func (reader *executionEpochInspection) Final(ctx context.Context) (authority AuthorityPhaseResult, projection PhaseStateProjection, report epochInspectionReport, retErr error) {
@@ -673,7 +680,7 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "product_queries" && value.QueryAuthority != nil || phase == "product_queries" && (value.QueryAuthority == nil || !validDigest(value.QueryAuthority.CatalogSourceGenerationSHA256)) {
+	if phase != "product_queries" && value.QueryAuthority != nil || phase == "product_queries" && !value.QueryAuthority.valid() {
 		return authority, projection, errEpochInspection
 	}
 	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && phase != "archive_restore" && phase != "lifecycle_collection" && phase != "product_queries" && !pressureInspectionPhase(phase) {

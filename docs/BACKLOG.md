@@ -7578,7 +7578,10 @@ the report. There is no additional repository enumeration, per-repository
 pass, SDK/file read, child or cache. The F opt-in repeats existing bounded
 root validation (at most sixty-four descriptors and 256 KiB canonical root
 work) plus its source-generation tuple hash over the already loaded root;
-it adds 142 bytes to the actual indented F response (129 in compact JSON).
+Its original catalog-source-only form added 142 bytes to the actual indented
+F response (129 compact). The resolver-namespace correction below raises the
+whole optional extension to 374 indented/349 compact bytes without another
+read, validation or hash; it copies two already validated digest strings.
 The optional report field adds at most forty-four
 bytes. No-header serialization omits both fields. Query-context reconstruction
 now holds the reader mutex through the existing at-most-one-MiB F encoding
@@ -7670,6 +7673,48 @@ caught three unchecked diagnostic-helper returns; explicit intentional
 discards corrected them before the passing gate. Review also corrected the
 HTTP JSON-decoding wording without dropping malformed-response diagnostics.
 The next native attempt remains a diagnostic, not a passed query gate.
+
+That exact diagnostic at `427da65daa2ffed471a3b932338e1b03b753d6c0`
+failed in 516.96s (package 517.508s). It retained `clause=root_authority`
+at the same first relationship page, together with the complete 6,683-byte
+private response. Decoding the bounded prefix reproduced its full-body hash
+`sha256:acd2bfb26b83c97b2c6132391eb92817746976e99da372b126e34486b2297fa5`.
+The actual response and immutable resolver namespace root agree on namespace
+generation `7f54dbd3…` and root `f89b0d13…`; that root's upstream catalog fields
+are the distinct `9d7ba6d9…` and `dc6a2d01…` identities. F explicitly emits
+the latter into its existing resolver-catalog fields. Both namespace-to-catalog
+comparisons therefore necessarily refused. This is a proved identity-domain
+mismatch, not an inferred count, cache, timeout or authority-race failure.
+Independent review confirmed the retained bytes and traced every remaining
+root equality back to its actual F producer assignment without another domain
+mismatch. The previous source-only review missed this F assignment; its
+absence-of-finding statement was not native correctness proof.
+
+The correction appends actual namespace generation/root digests to the
+existing private F extension from the resolver root already opened and
+completely validated during that same F read. Existing upstream-catalog F
+fields remain unchanged. One shared consumer validity check requires all
+three extension digests, and relationship projections compare against the
+two namespace fields. Explicitly supplied projection fixtures now keep the
+two resolver namespaces distinct; all six relationship queries reject catalog
+substitutions and missing/changed namespace proof. Actual HTTP F-bracket tests
+also reject changes to either new field. These tests do not pretend the
+supplied namespace roots were native publications.
+
+The diagnostic custody `t422-native-query-regression-1254983175` and gate
+directory `phebs-t422-native-query-gates.6231Zg` remain private and intact.
+All twenty source/test manifest entries matched after failure, and post-run
+checks found no matching server/query-helper/Surreal process. No database was
+reopened, and no failed native attempt has been promoted to a pass.
+
+The six-path namespace correction passed focused command/spike normal in
+0.962/1.966s and race in 4.797/12.063s. Full ci-static passed vet, zero-issue
+pinned lint and all-package compilation; docs (0.913s), glossary and whitespace
+also passed. Independent producer/consumer/provenance/cost review reports all
+four severity counts zero at ordered manifest
+`963fcb9b6b07627093d4bd79e25460f30c72cc1760990d0f31339886fc23dbc1`
+(F producer, producer tests, inspection, projector, projector tests, restored
+tests). These gates permit a corrected native attempt, not a native pass.
 
 At `ec014403`, the receipt/teardown trace identified two source-proven
 definition/evidence gaps, not measured native failures. A nine-page relationship result requires

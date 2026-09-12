@@ -86,10 +86,12 @@ type t421FinalAuthorityResponse struct {
 }
 
 type t422QueryAuthority struct {
-	CatalogSourceGenerationSHA256 string `json:"catalog_source_generation_sha256"`
+	CatalogSourceGenerationSHA256     string `json:"catalog_source_generation_sha256"`
+	ResolverNamespaceGenerationSHA256 string `json:"resolver_namespace_generation_sha256"`
+	ResolverNamespaceRootSHA256       string `json:"resolver_namespace_root_sha256"`
 }
 
-func t422FinalQueryAuthority(ctx context.Context, root servicecatalogv3.Root) (*t422QueryAuthority, error) {
+func t422FinalQueryAuthority(ctx context.Context, root servicecatalogv3.Root, resolver resolvernamespace.Root) (*t422QueryAuthority, error) {
 	if selected, _ := ctx.Value(t422QueryEvidenceKey{}).(bool); !selected {
 		return nil, nil
 	}
@@ -97,7 +99,11 @@ func t422FinalQueryAuthority(ctx context.Context, root servicecatalogv3.Root) (*
 	if err != nil {
 		return nil, err
 	}
-	return &t422QueryAuthority{CatalogSourceGenerationSHA256: digest}, nil
+	// The F reader already opened and completely validated this namespace.
+	// Its own identities are distinct from the upstream resolver catalog.
+	return &t422QueryAuthority{CatalogSourceGenerationSHA256: digest,
+		ResolverNamespaceGenerationSHA256: resolver.GenerationDigest,
+		ResolverNamespaceRootSHA256:       resolver.Digest}, nil
 }
 
 type t421FinalAuthorityReader struct {
@@ -330,7 +336,7 @@ func (reader *t421FinalAuthorityReader) Read(
 		},
 		ExtractionRoots: extractionRoots,
 	}
-	response.QueryAuthority, err = t422FinalQueryAuthority(ctx, catalogRoot)
+	response.QueryAuthority, err = t422FinalQueryAuthority(ctx, catalogRoot, resolver)
 	if err != nil {
 		return nil, nil, err
 	}
