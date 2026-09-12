@@ -7836,6 +7836,28 @@ and cost review reports all severity counts zero at ordered manifest
 scope tests). Phase-fifteen operational admission and complete cleanup evidence
 remain separately gated work.
 
+The public QueryRestored regression now drives the actual inherited DA/SA/PC
+controls from phase thirteen into fourteen and through the public operation,
+using the existing supplied HTTP/F responder. The four cases cover acceptance,
+changed F2, a missing finish sample and a real control close after the finish
+response. The last is an unavailable final fence, not a specifically lost ACK.
+Tests assert actual phase advancement, the persistent parent handle, five new
+control pairs, contiguous requests, closed request window and one-shot capture;
+failed operations preserve completed prefixes but issue no QueryResults. Prior
+acceptance, HTTP bodies, byte samples and process census are explicitly modeled.
+The helper's native Wait and receiver/SDK joins are real; the canceled-control
+case expects the actual failed lifetime close. No engine or mounted volume is
+started, and no full execution receipt is claimed. Initial combined normal/race
+passed in 2.637/27.714s; pinned lint then requested a tagged switch in this test.
+After that test-only style correction, combined normal/race passed again in
+2.622/27.939s and full ci-static passed vet, zero-issue lint and all-package
+compilation. Ordered two-test manifest is
+`f4ad69ba59a045af743a23e3b77b2ed370970a534e20365142145d76c42b3916`
+(product-query fixture, public restored operation). Independent applied-source
+review and final correction/record re-review both report all severity counts
+zero. Documentation (0.559s), glossary and whitespace passed; canonical V1/V2
+plan digests remain unchanged.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

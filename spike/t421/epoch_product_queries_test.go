@@ -212,8 +212,9 @@ func TestEpochProductQueryActualHTTPRefusal(t *testing.T) {
 
 // Real HTTP/POST, ordinals, trailers, typed decoders and the complete driver
 // order; product authority and payloads remain explicitly supplied fixtures.
-func TestEpochProductQueryCorridor(t *testing.T) {
-	bound, _ := epochQueryProjectionFixture(t)
+// Shared supplied-response fixture: no native endpoint or authority claim.
+func epochProductQueryResponder(t *testing.T, bound *epochQueryProjectionContext) (http.HandlerFunc, *atomic.Int32) {
+	t.Helper()
 	type page struct {
 		query     QueryCase
 		transport string
@@ -285,7 +286,7 @@ func TestEpochProductQueryCorridor(t *testing.T) {
 		}
 	}
 	var count atomic.Int32
-	reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		i := int(count.Add(1)) - 1
 		if i >= len(pages) {
 			t.Error("extra query request")
@@ -312,7 +313,14 @@ func TestEpochProductQueryCorridor(t *testing.T) {
 		w.WriteHeader(page.status)
 		_, _ = w.Write(page.body)
 		w.Header().Set(epochReadTrailer, base64.RawURLEncoding.EncodeToString(epochQueryMarshal(t, page.report)))
-	}))
+	})
+	return handler, &count
+}
+
+func TestEpochProductQueryCorridor(t *testing.T) {
+	bound, _ := epochQueryProjectionFixture(t)
+	handler, count := epochProductQueryResponder(t, bound)
+	reader := epochTestHTTPReader(t, handler)
 	reader.run.epoch.Epoch, reader.run.epoch.Repository = 5, bound.repository
 	reader.projection.Phase, reader.productFinalCalls, reader.maximumReports, reader.next = "product_queries", 1, 8691, 10
 	for _, transport := range []string{"http", "mcp"} {
