@@ -58,6 +58,9 @@ type ExecutionEpochOne struct {
 	profileSystemTools  [2]*ExecutionSystemToolCustody // Borrowed outer-owned sh/signer; never mounted input owners.
 	profileSystemImages [2]executionProfileSystemImage
 	profileSystemUsed   bool
+
+	profileHost     *executionHostObservation
+	profileHostUsed bool
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted

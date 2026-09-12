@@ -259,6 +259,7 @@ func TestExecutionPressureVolumeOptionalNative(t *testing.T) {
 	if raw, err := os.ReadFile(probe); err != nil || string(raw) != "owned volume\n" {
 		t.Fatalf("probe read: %q/%v", raw, err)
 	}
+	checkExecutionHostNativeVolume(t, ctx, v, probe)
 	if v.removeEmpty(ctx) == nil || !v.ready || len(v.sessions) != 2 {
 		t.Fatal("populated workspace reached detach")
 	}

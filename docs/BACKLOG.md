@@ -8436,6 +8436,25 @@ passed in 0.554s, glossary and whitespace clean. Complete actual launch,
 profile admission and global event one remain unestablished; push remains held
 behind the exact-source native preparation gates.
 
+The private native host observer retains actual scalar/held-FD facts once
+before AuthorA, without manufacturing admission from the expected profile.
+Its explicit prospective eight-byte FSID encoding preserves component order
+and signed bit patterns; existing admission still rejects below-floor capacity.
+Independent draft review of
+`e99e912a3b83f1a074f0cd8ba5415232d45d129c106acdf5b782a43d3dc215ec`
+found all severities zero. Ordered seven-path source manifest (launch,
+rehearsal, host helper, Darwin helper/test, encoding test, pressure-volume test)
+is `65b3e5ed4e2c234aaa1c1f5234f82f8d2d7f77fdfa11cbc61ab649269f61d6a7`.
+Complete focused normal passed in 0.712s and race in 1.939s, including actual
+native scalar comparison and supplied geometry/owner refusal cases. The optional
+empty-volume native FD gate is deferred: read-only host free space was
+54,983,984 KiB, below its unchanged 120-GiB prerequisite. No volume was created
+or original replay image changed. Static passed vet, zero pinned-lint issues
+and repository compilation; docs passed in 0.492s, glossary and whitespace
+clean. Applied independent source/cost review found all severities zero and
+the retained-version selectors passed in 0.803s. Actual bound-flow root-role
+observation and complete admission remain unestablished.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

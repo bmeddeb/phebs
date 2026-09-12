@@ -317,6 +317,13 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		if volume.bindRehearsal(ctx, flow) != nil {
 			t.Fatal("exact flow could not bind its mounted custody")
 		}
+		if pressure {
+			if err := volume.observeProfileHost(ctx, flow); err != nil {
+				t.Fatal("actual pre-author host/root observation", err)
+			}
+			// Facts only: a below-floor available capacity remains observed.
+			// Existing freeze admission must validate it separately before use.
+		}
 		// AuthorA has not anchored its cold deadline yet. This is preparation
 		// evidence only, never an invented phase-one or timed cold-start sample.
 		preparation, _ := volume.byteSnapshot()
