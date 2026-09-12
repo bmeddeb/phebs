@@ -7899,6 +7899,28 @@ filesystem tests, not execution of the mounted final teardown corridor.
 Documentation (0.693s), glossary, whitespace and canonical V1/V2 digests passed;
 independent final cost/provenance record review also reports all counts zero.
 
+The existing explicit pressure-sequence native rehearsal is now wired through
+BackupAndStop, RestoreBackup, StartRestored, authenticated Health, CompleteArchive,
+CollectRestored, QueryRestored and finishRestored instead of ending at pressure.
+These are eight added calls to existing owned operations, not a supplied-success
+coordinator. Any nonnil successor becomes the deferred cleanup owner before
+checking launch failure. Success requires actual accepted epoch-four/five
+inspection, query receipt prefix, two teardown byte observations, final DA/SA
+closure and five complete zero-session censuses of 12/12/13/13/13 recorded IDs.
+The success path returns before legacy Stop/removal or an absent-root byte walk.
+After actual detach, failure diagnostics use the existing private host parent;
+they cannot recreate mounted custody. No selector or deadline is added. The
+changed native opt-in branch remains unrun: component tests and compilation
+cannot establish representative replay/walk cost, complete output fit, actual
+tail success, a signed receipt or freeze readiness. The applied test file hashes
+to `4be70c492489fc3237827b49768f3219f1cd36fcc3466fb6856fd86ce7e2828d`.
+Existing teardown/public-query/archive/restored-operation component selectors
+passed normal in 3.516s and race in 28.976s; full ci-static passed vet,
+zero-issue lint and all-package compilation. The opt-in native branch was not
+selected by these commands. Independent draft review and applied-source/final
+record review report all severity counts zero. Documentation (0.664s), glossary
+and whitespace passed.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

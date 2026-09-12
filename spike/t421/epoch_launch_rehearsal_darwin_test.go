@@ -17,7 +17,9 @@ import (
 // The additional COLD selector opts into actual A convergence and phase 2->3;
 // Neither mode signs evidence or admits a host/profile. The separate VOLUME
 // selector places writable preparation/execution custody on a fresh owned APFS
-// image. PRESSURE_SEQUENCE additionally opts into actual ballast and phases9–11.
+// image. PRESSURE_SEQUENCE continues actual ballast/phases9–11 through archive,
+// restored lifecycle/queries and admitted phase15 cleanup. Existing phase,
+// author-lifetime and caller deadlines remain unchanged; no receipt is issued.
 func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if os.Getenv("PHEBS_T422_EPOCH_ONE_REHEARSAL") != "1" {
 		t.Skip("requires explicit serial protected epoch-one startup rehearsal")
@@ -328,6 +330,15 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			if t.Failed() && result.RootJoined && run.output != nil {
 				// Native Wait has also joined the combined-output copier. This
 				// bounded private diagnostic is not returned public evidence.
+				diagnosticParent := parent
+				if volume != nil {
+					volume.mu.Lock()
+					if volume.teardownDetached {
+						// A late cleanup refusal must not recreate unmounted custody.
+						diagnosticParent = hostParent
+					}
+					volume.mu.Unlock()
+				}
 				diagnostics := map[string][]byte{"server.log": run.output.buffer.Bytes()}
 				if reader := run.inspection; reader != nil {
 					reader.mu.Lock()
@@ -340,7 +351,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 					reader.mu.Unlock()
 				}
 				for name, raw := range diagnostics {
-					file, err := os.OpenFile(filepath.Join(parent, name), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+					file, err := os.OpenFile(filepath.Join(diagnosticParent, name), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 					if err != nil {
 						t.Error("private joined-server diagnostic could not be retained", err)
 					} else {
@@ -477,7 +488,69 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		if err := run.Pressure(ctx, volume); err != nil {
 			t.Fatal("actual pressure sequence and workspace samples", err)
 		}
-		t.Log("actual 80/90/75 sequence and boundary samples returned; whole-executor metrics, archive/query and freeze gates remain open")
+		// Backup owns the real epoch-four shutdown; do not call the ordinary
+		// rehearsal Stop first or renew the phase-twelve deadline.
+		backedUp, err := run.BackupAndStop(ctx)
+		t.Logf("actual backup/joined epoch-four prefix: %+v; %v", backedUp, err)
+		if err != nil || !backedUp.RootJoined || !backedUp.SessionEmpty {
+			t.Fatal("actual pressure-to-backup handoff", err)
+		}
+		assertRehearsalInspection(t, run, backedUp, []string{"process_restart", "pressure_80", "pressure_90", "pressure_75"})
+		restored, err := run.RestoreBackup(ctx)
+		t.Logf("actual joined restore prefix: %+v; %v", restored, err)
+		if err != nil {
+			t.Fatal("actual archive restore in original phase-twelve window", err)
+		}
+		next, err := run.StartRestored(ctx)
+		if next != nil {
+			run = next // The deferred Stop owns even a failed successor bootstrap.
+		}
+		if err != nil || next == nil {
+			t.Fatal("actual restored successor launch", err)
+		}
+		if err := run.Health(ctx); err != nil {
+			t.Fatal("actual restored authenticated health", err)
+		}
+		if err := run.CompleteArchive(ctx); err != nil {
+			t.Fatal("actual restored archive R/X/T/F and finish sample", err)
+		}
+		if err := run.CollectRestored(ctx); err != nil {
+			t.Fatal("actual restored fresh-owner collection", err)
+		}
+		if err := run.QueryRestored(ctx); err != nil {
+			t.Fatal("actual restored HTTP/MCP query corridor", err)
+		}
+		// This starts the original clipped teardown clock before fencing and
+		// shutdown, then owns input release and the one nonforced detach.
+		teardown, err := volume.finishRestored(ctx, run)
+		t.Logf("actual phase-fifteen component evidence (no global event ordinals): %+v; %v", teardown, err)
+		if err != nil || !teardown.Joined || !teardown.CleanupClosed || !teardown.CustodyAbsent ||
+			!teardown.Detached || !teardown.ImageRemoved || !teardown.RootRemoved ||
+			teardown.ByteObservations != 2 || !teardown.Bytes.Completed || teardown.ByteUnavailable || teardown.ByteLimitExceeded ||
+			teardown.AccountingError != nil || teardown.StoreError != nil || !teardown.Accounting.Complete ||
+			teardown.Store.Opened != 7 || teardown.Store.TerminalEOF != 7 || !teardown.Store.PrefixesClosed || teardown.Store.Store.Phase != 15 {
+			t.Fatal("actual restored teardown or retained positive evidence incomplete", err)
+		}
+		// Actual successful root launches: five servers, three authors, two
+		// archive commands, create/attach, then the thirteenth root at detach.
+		for index, census := range []SessionCensusEvidence{teardown.InitialJoined, teardown.BeforeDetach, teardown.AfterDetach, teardown.AfterCleanup, teardown.FinalClose} {
+			want := uint64(12)
+			if index >= 2 {
+				want++
+			}
+			if census.RecordedSessions != want || census.CompletedCensuses != want || census.ObservedProcesses != 0 || census.Errors != 0 {
+				t.Fatalf("actual teardown session census %d: %+v", index, census)
+			}
+		}
+		stopped, err := run.Wait(ctx) // Cached joined result; no new read or stop allowance.
+		if err != nil || !stopped.RootStarted || !stopped.RootJoined || !stopped.SessionEmpty ||
+			stopped.QueryResults == nil || !validExecutionProductQueries(stopped.ProductQueries) {
+			t.Fatal("actual restored joined query evidence missing", err)
+		}
+		assertRehearsalInspection(t, run, stopped, []string{"archive_restore", "lifecycle_collection", "product_queries"})
+		t.Logf("actual pressure/archive/restored/query/teardown continuation returned after %s; complete all-phase metrics, output fit, signed receipt, launcher and freeze gates remain separate", time.Since(started))
+		completed = true
+		return // finishRestored already released inputs and removed custody; never sample an absent root.
 	}
 	stopCtx, stop := context.WithTimeout(context.Background(), time.Minute)
 	defer stop()
@@ -487,8 +560,6 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	var accepted []string
 	switch {
-	case pressure:
-		accepted = []string{"process_restart", "pressure_80", "pressure_90", "pressure_75"}
 	case checkpoint:
 		accepted = []string{"process_restart"}
 	case stale:
