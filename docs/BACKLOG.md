@@ -8235,6 +8235,10 @@ review found no source issue and one low cost wording error, corrected to name
 all three added SDK probes: two per-HTTP checks plus dedicated post-reopen.
 The source manifest is unchanged. This is native
 callback/engine/admission composition, not source-author or full-epic evidence.
+At exact clean source `8ab2b4c10f8c60ff1ad1fe711dc11895686c09b5`, the complete
+`internal/dispatchadmission` package then passed normal in 4.859s and race in
+7.381s, both uncached. This broadens protocol coverage beyond the focused
+selectors; it does not substitute for the complete repository merge bar.
 
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
