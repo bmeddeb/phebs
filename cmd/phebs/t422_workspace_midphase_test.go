@@ -25,7 +25,7 @@ func TestT422WorkspaceMidphasePositions(t *testing.T) {
 		producer, phase uint32
 		slot            int
 		maximum         uint64
-	}{{2, 4, 9, 3}, {3, 5, 10, 1}, {4, 6, 11, 1}} {
+	}{{2, 4, 9, 3}, {3, 5, 10, 1}, {4, 6, 11, 2}} {
 		slot, maximum := t422WorkspaceSampleSlot(row.producer, row.phase)
 		if slot != row.slot || maximum != row.maximum {
 			t.Fatal(row, slot, maximum)

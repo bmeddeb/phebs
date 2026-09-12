@@ -14,6 +14,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 )
 
@@ -56,6 +57,7 @@ type t422LifecycleControl struct {
 	prefix          [3]t422LifecyclePrefix
 	workspaceBytes  *custodybytes.Observer // Local actual maxima; parent collection is separate.
 	workspaceSample func(context.Context) (custodybytes.Sample, error)
+	markerWorkspace func(context.Context, *generationscheduler.MarkerMeasurement) error
 	workspacePoint  uint8
 }
 

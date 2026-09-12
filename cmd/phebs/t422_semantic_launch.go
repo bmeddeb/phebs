@@ -50,6 +50,7 @@ type t422SemanticLaunchRequest struct {
 	SelectorHandoffCleanup string                       `json:"selector_handoff_cleanup,omitempty"`
 	LogicalStoreWork       string                       `json:"logical_store_work,omitempty"`
 	Archive                *t422ArchiveInput            `json:"archive,omitempty"`
+	MarkerDeadlineUnixNano int64                        `json:"marker_deadline_unix_nano,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -108,6 +109,9 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 		return nil, errT422SemanticLaunch
 	}
 	if request.Archive != nil && (request.ServerEpoch != 5 || snapshot.ProducerID != 6 || snapshot.Phase != 12 || !validT422ArchiveInput(*request.Archive)) {
+		return nil, errT422SemanticLaunch
+	}
+	if request.MarkerDeadlineUnixNano != 0 && (request.MarkerDeadlineUnixNano < 0 || request.ServerEpoch != 3 || snapshot.ProducerID != 4 || snapshot.Phase != 6) {
 		return nil, errT422SemanticLaunch
 	}
 	if request.ServerEpoch == 3 {

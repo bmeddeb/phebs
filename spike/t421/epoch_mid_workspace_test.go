@@ -147,6 +147,7 @@ func TestEpochMidphaseWorkspacePrefix(t *testing.T) {
 	for _, producer := range []uint32{2, 3, 4} {
 		for _, mode := range []string{"valid", "missing", "changed", "masked_start_allocated", "masked_finish_logical", "failed", "later_failure"} {
 			var samples ExecutionMidphaseSamples
+			var marker ExecutionMarkerWorkspace
 			first, end, phase := 0, 2, uint32(4)
 			if producer == 3 {
 				first, end, phase = 2, 3, 5
@@ -159,6 +160,13 @@ func TestEpochMidphaseWorkspacePrefix(t *testing.T) {
 			if producer == 2 {
 				raw += workspaceTestPair(2, 2, 1, 1, 1) + workspaceTestPair(2, 3, 2, 2, 2) + workspaceTestPair(2, 3, 3, 3, 3)
 				offset = 3
+			}
+			if producer == 4 {
+				marker.Sample = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1}
+				marker.Sample.Maximum.LogicalBytes, marker.Sample.Maximum.AllocatedBytes = 55, 200
+				marker.Ready = true
+				raw += workspaceTestPair(4, 6, 1, 55, 200) + "WB1:4:6R:0000000000000001\n"
+				offset = 1
 			}
 			for i := first; i < end; i++ {
 				row := &samples.Points[i]
@@ -194,12 +202,12 @@ func TestEpochMidphaseWorkspacePrefix(t *testing.T) {
 			case "later_failure":
 				samples.failIncomplete(producer)
 			}
-			if midphaseWorkspacePrefix(producer, stream, samples) != (mode == "valid" || mode == "later_failure") {
+			if midphaseWorkspacePrefix(producer, stream, samples, marker) != (mode == "valid" || mode == "later_failure") {
 				t.Fatal(producer, mode, stream, samples)
 			}
 		}
 	}
-	if workspaceCheckpointMaximum(2, 4) != 3 || workspaceCheckpointMaximum(3, 5) != 1 || workspaceCheckpointMaximum(4, 6) != 1 ||
+	if workspaceCheckpointMaximum(2, 4) != 3 || workspaceCheckpointMaximum(3, 5) != 1 || workspaceCheckpointMaximum(4, 6) != 2 ||
 		5*(26+60)+26+2*79 != 614 {
 		t.Fatal("fixed added sample/report envelope")
 	}

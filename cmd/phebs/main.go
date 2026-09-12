@@ -1234,6 +1234,7 @@ func serve(args []string) (retErr error) {
 			return err
 		}
 		exactReadState.marker = markerControl
+		markerControl.workspace = lifecycleControl.markerWorkspace
 	}
 	catalogReconciler.WithMutation = serviceRuntime.withV2Mutation
 	defer func() {
@@ -1493,11 +1494,16 @@ func serve(args []string) (retErr error) {
 		}
 	})
 	if relationshipRuntime != nil {
+		var markerMeasurement func(context.Context, store.GenerationChunk) bool
+		if markerControl != nil && markerControl.workspace != nil {
+			markerMeasurement = markerControl.measurementSelected
+		}
 		relationshipScheduler := &generationscheduler.Scheduler{
 			Store: st, Owners: owners,
 			Classes: map[store.GenerationResourceClass]generationscheduler.Class{
 				store.GenerationResourceMemory: {
-					Concurrency: 1,
+					MarkerMeasurement: markerMeasurement,
+					Concurrency:       1,
 					Budget: generationscheduler.Budget{
 						MaxMemoryBytes: 1 << 30, MaxDescriptors: 32,
 					},

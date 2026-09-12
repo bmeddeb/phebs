@@ -315,6 +315,7 @@ type ExecutionEpochOneResult struct {
 	MidphaseSamples          ExecutionMidphaseSamples // Partial fixed HTTP points, not whole phases.
 	ParentMidphaseSamples    ExecutionMidphaseParentSamples
 	RecoverySamples          ExecutionRecoveryWorkspaceSamples
+	MarkerWorkspace          ExecutionMarkerWorkspace
 	EarlyFinishSamples       ExecutionEarlyFinishSamples // Actual HTTP finishes plus the fixed post-Resume warm-start WB.
 	PressureSamples          ExecutionPressureSamples
 	RestoredSamples          ExecutionRestoredSamples
@@ -335,6 +336,7 @@ type ExecutionEpochOneRun struct {
 	output                *checkoutCommandOutput // Read only after native Wait joins stdout/stderr copies.
 	attemptInput          [32]byte
 	warmWorkspace         *epochWarmWorkspaceOutput
+	markerWorkspace       *epochWarmWorkspaceOutput
 	processObservation    *epochProcessObservation
 	processPrior          *ProcessObservation // Actual joined earlier root in checkpoint phase eight.
 	stop, done            chan struct{}
@@ -600,6 +602,13 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if epoch.Epoch == 2 && flow.plan.LogicalStoreWork != nil {
 		epoch.LogicalStoreWork = flow.plan.LogicalStoreWork.Schema
 	}
+	epoch.MarkerDeadlineUnixNano = 0
+	if number == 3 && flow.workspace != nil && run.checkpointAllowed {
+		if !time.Now().Before(run.phaseDeadline) {
+			return nil, ErrExecutionEpochOne
+		}
+		epoch.MarkerDeadlineUnixNano = run.phaseDeadline.UnixNano()
+	}
 	raw, err := epochSemanticInput(author.planSHA256, epoch, run.checkpointRecovery, run.archiveInput)
 	if err != nil {
 		return nil, ErrExecutionEpochOne
@@ -658,6 +667,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if number == 1 && workspaceBinding != nil && run.physicalAllowed {
 		run.warmWorkspace = newEpochWarmWorkspaceOutput(output, flow.plan, sha256.Sum256(raw))
 		command.Stdout, command.Stderr = run.warmWorkspace, run.warmWorkspace
+	}
+	if number == 3 && workspaceBinding != nil && run.checkpointAllowed {
+		run.markerWorkspace = newEpochMarkerWorkspaceOutput(output, flow.plan, sha256.Sum256(raw))
+		command.Stdout, command.Stderr = run.markerWorkspace, run.markerWorkspace
 	}
 	command.WaitDelay = 5 * time.Second
 	prepareProductionSession(command)
@@ -1102,7 +1115,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses,
-		BackupWork: run.backupWork, RestoreWork: run.result.RestoreWork, ParentMidphaseSamples: run.midphaseParentPrefix(), RecoverySamples: run.recoveryWorkspacePrefixSnapshot()}
+		BackupWork: run.backupWork, RestoreWork: run.result.RestoreWork, ParentMidphaseSamples: run.midphaseParentPrefix(), RecoverySamples: run.recoveryWorkspacePrefixSnapshot(), MarkerWorkspace: run.markerWorkspaceSnapshot()}
 	// The retained installation also belongs to the separate backup session.
 	// A joined server alone cannot release that custody or expose shared output.
 	if run.backupStarted && (!run.backupJoined || !run.backupSessionEmpty) {
@@ -1196,6 +1209,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	if failure != nil && run.midphaseWorkspaceSelected() {
 		result.MidphaseSamples.failIncomplete(run.producer())
+		if run.producer() == 4 && result.MarkerWorkspace.Sample.Completed != 1 {
+			result.MarkerWorkspace.Unavailable = true
+		}
 	}
 	if failure != nil && run.archiveExecutionUsed {
 		result.RestoredSamples.ArchiveComplete, result.RestoredSamples.CollectionComplete = false, false

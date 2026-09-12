@@ -8474,6 +8474,53 @@ clean. Applied independent source/cost review found all severities zero and
 the retained-version selectors passed in 0.803s. Actual bound-flow root-role
 observation and complete admission remain unestablished.
 
+The pending retained-marker slice adds actual owner/heartbeat coordination
+and parent S/readiness joining without claiming native publication proof.
+Original draft `ebb89048` was rejected because its moving-base diff reversed
+unrelated profile work. The genuine immutable-base correction
+`54df777a849cb064fa343b00f3669037b243532ca5637a99004a59ef9428fa7b`
+was rebased without semantic change to
+`bac93b69ffa3a1678745a58af5086658eec46576af32e3205b6b1f5ab5324e4a`.
+Independent review closed a cancellation race at the actual durable release
+branch; its regression triggers real cancellation at that boundary and asserts
+no settlement mutation. A further lower-level compatibility check found that
+one generic phase-six sample could be misclassified as a missing full marker.
+Correction `c8ee0418d6e5ae344df7c2844c8e1236f65122c0fbfda8bc291bdedd5812afd2`
+leaves full parent S/R/finish requirements intact while preserving the optional
+generic stream. Original public shorter paths supply no epoch-three FD6.
+Initial focused four-package normal/race and full dispatch-admission/scheduler
+normal/race passed before this last parser correction. Corrected ordered
+27-path source manifest is
+`5d66ed671d1d1fd564d69f62b96996ddffd736d96e7460135ac616be2b6b2e19`.
+Focused normal passed dispatch admission in 0.421s, generation scheduler in
+0.302s, command in 39.230s and spike in 1.544s; matching race passed in
+1.448s, 1.760s, 41.457s and 8.986s. These include actual early, warm,
+physical and recovery workspace native helpers, not the pending marker
+publication composition. Independent applied source/cost review found all
+severities zero. Static first found an unchecked deferred cleanup return and
+a test-style diagnostic; normal completion already classifies that same
+cleanup return, while the panic-only defer now explicitly joins before
+propagating the original panic. The test uses an equivalent tagged switch.
+Final ordered manifest is
+`cd4d672b57f2b52db55b5e793794591b953cc7ca1a22ac4b3899628edd5db05e`.
+Changed scheduler/spike selectors passed normal in 0.446s/0.701s and race in
+1.362s/2.660s. Corrected static passed vet, zero pinned-lint issues and full
+repository compilation; documentation passed in 0.584s, glossary/whitespace
+clean, retained-version selectors passed in 1.000s and V1/V2 digests remain
+byte-identical. Native marker publication remains a separate gate.
+
+A separate overbroad workspace selector was invalidated by the lead's
+interruption: the active helper was the ten-minute cleanup fixture, not the
+three-minute normal-capacity fixture, and its deadline had not expired.
+Its retained diagnostic contains 1,229 lifecycle turns, zero failed turns and
+24,605 deletions over 347.849s before the explicit stop. No historical capacity
+percentage was retained and no timeout defect was proved. The following
+all-owner fixture was also interrupted when the invalid batch was joined;
+neither is a passing gate. Both diagnostic roots remain and no owned process
+survives. No speculative shutdown correction was applied. Actual marker
+publication composition and the host-dependent gates remain open; no fresh
+full rehearsal or freeze is established by this slice.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

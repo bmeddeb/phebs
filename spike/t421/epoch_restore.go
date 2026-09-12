@@ -115,7 +115,7 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}), healthLimit: bounds.health,
 		coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel, backupWork: prior.BackupWork,
 		archiveInput: archive, archivePrior: authority,
-		result: ExecutionEpochOneResult{RestoreWork: prior.RestoreWork}}
+		result: ExecutionEpochOneResult{RestoreWork: prior.RestoreWork, MarkerWorkspace: run.markerWorkspaceSnapshot()}}
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, operation, cancel, next, bounds, 5)
 	if result == nil {

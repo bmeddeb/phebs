@@ -174,7 +174,7 @@ func (reader *executionEpochInspection) sampleMidphaseWorkspace(ctx context.Cont
 	return ctx.Err()
 }
 
-func midphaseWorkspacePrefix(producer uint32, stream ExecutionWorkspaceByteObservation, samples ExecutionMidphaseSamples) bool {
+func midphaseWorkspacePrefix(producer uint32, stream ExecutionWorkspaceByteObservation, samples ExecutionMidphaseSamples, marker ExecutionMarkerWorkspace) bool {
 	if !stream.Bound || !stream.Complete || stream.Unavailable || stream.LimitExceeded || samples.Unavailable || samples.LimitExceeded {
 		return false
 	}
@@ -214,6 +214,18 @@ func midphaseWorkspacePrefix(producer uint32, stream ExecutionWorkspaceByteObser
 		joined.Maximum.LogicalBytes = max(joined.Maximum.LogicalBytes, row.Maximum.LogicalBytes)
 		joined.Maximum.AllocatedBytes = max(joined.Maximum.AllocatedBytes, row.Maximum.AllocatedBytes)
 	} else if samples.PostAuthor != (ExecutionWorkspaceBytePhase{}) {
+		return false
+	}
+	if producer == 4 {
+		if marker.Unavailable || marker.LimitExceeded || !marker.Ready || !stream.markerReady || marker.Sample.Attempts != 1 ||
+			marker.Sample.Completed != 1 || marker.Sample.Maximum != stream.markerSample {
+			return false
+		}
+		joined.Attempts++
+		joined.Completed++
+		joined.Maximum.LogicalBytes = max(joined.Maximum.LogicalBytes, marker.Sample.Maximum.LogicalBytes)
+		joined.Maximum.AllocatedBytes = max(joined.Maximum.AllocatedBytes, marker.Sample.Maximum.AllocatedBytes)
+	} else if marker != (ExecutionMarkerWorkspace{}) {
 		return false
 	}
 	return stream.Phases[phase-1] == joined

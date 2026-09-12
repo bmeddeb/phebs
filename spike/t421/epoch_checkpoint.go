@@ -55,6 +55,9 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 	if archiveInput != nil && (epoch.Epoch != 5 || !archiveInput.valid()) {
 		return nil, ErrExecutionEpochOne
 	}
+	if epoch.MarkerDeadlineUnixNano != 0 && (epoch.MarkerDeadlineUnixNano < 0 || epoch.Epoch != 3) {
+		return nil, ErrExecutionEpochOne
+	}
 	if epoch.Epoch == 3 {
 		if !validGitObjectID(epoch.ReturnSourceCommit, "sha1") {
 			return nil, ErrExecutionEpochOne
@@ -81,7 +84,8 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 		SelectorHandoffCleanup string                        `json:"selector_handoff_cleanup,omitempty"`
 		LogicalStoreWork       string                        `json:"logical_store_work,omitempty"`
 		Archive                *epochArchiveInput            `json:"archive,omitempty"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup, epoch.LogicalStoreWork, archiveInput})
+		MarkerDeadlineUnixNano int64                         `json:"marker_deadline_unix_nano,omitempty"`
+	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup, epoch.LogicalStoreWork, archiveInput, epoch.MarkerDeadlineUnixNano})
 	if err != nil || len(raw)+1 > 16<<10 {
 		return nil, ErrExecutionEpochOne
 	}
@@ -243,6 +247,7 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 		healthLimit: run.healthLimit, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel,
 		checkpointRecovery: handoff, checkpointPrior: &prior, pressureAllowed: pressure, processPrior: &processPrior, backupAllowed: backup}
 	next.result.RecoverySamples = run.recoveryWorkspacePrefixSnapshot()
+	next.result.MarkerWorkspace = run.markerWorkspaceSnapshot()
 	next.result.ParentMidphaseSamples = run.midphaseParentPrefix()
 	next.setPhaseDeadlineLocked(deadline)
 	bounds := epochOneLimits{health: run.healthLimit, outputBytes: 64 << 20, controlPairs: 5}

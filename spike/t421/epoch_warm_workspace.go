@@ -14,6 +14,7 @@ type epochWarmWorkspaceOutput struct {
 	output                                           *checkoutCommandOutput
 	plan                                             Plan
 	input                                            string
+	producer                                         uint32
 	line                                             [79]byte // Long unrelated logs are discarded here, not in retained output.
 	length                                           int
 	long, reserved                                   bool
@@ -27,10 +28,12 @@ type epochWarmWorkspaceOutput struct {
 	physicalSample                                   ExecutionWorkspaceBytePhase
 	physicalArmed, physicalSignaled, physicalInvalid bool
 	err                                              error
+	markerSample                                     ExecutionWorkspaceBytePhase
+	markerInvalid                                    bool
 }
 
 func newEpochWarmWorkspaceOutput(output *checkoutCommandOutput, plan Plan, input [32]byte) *epochWarmWorkspaceOutput {
-	return &epochWarmWorkspaceOutput{output: output, plan: plan, input: "sha256:" + hex.EncodeToString(input[:]), ready: make(chan struct{}), physicalReady: make(chan struct{})}
+	return &epochWarmWorkspaceOutput{output: output, plan: plan, input: "sha256:" + hex.EncodeToString(input[:]), producer: 2, ready: make(chan struct{}), physicalReady: make(chan struct{})}
 }
 
 func (out *epochWarmWorkspaceOutput) signalLocked() {
@@ -61,26 +64,39 @@ func (out *epochWarmWorkspaceOutput) Write(raw []byte) (int, error) {
 			if out.long {
 				out.err = errExecutionAttempts
 			} else {
-				_, out.err = observeWorkspaceByteEvent(out.line[:out.length], out.plan, 2, out.input, &out.observation)
-				row := out.observation.Phases[2]
-				if row.Attempts != 0 && !out.armed {
-					out.startInvalid = true
-					out.err = errExecutionAttempts
-				}
-				physical := out.observation.Phases[3]
-				if physical.Attempts >= 2 && !out.physicalArmed {
-					out.physicalInvalid = true
-					out.err = errExecutionAttempts
-				}
-				if physical.Completed == 2 && out.physicalSample.Completed == 0 {
-					out.physicalSample = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1, Maximum: out.observation.physicalPostAuthor}
-				}
-				if out.observation.physicalReady {
-					out.signalPhysicalLocked()
-				}
-				if row.Completed == 1 && out.sample.Completed == 0 {
-					out.sample = row // Retain positive excess even on this refusal.
-					out.signalLocked()
+				_, out.err = observeWorkspaceByteEvent(out.line[:out.length], out.plan, out.producer, out.input, &out.observation)
+				if out.producer == 4 {
+					row := out.observation.Phases[5]
+					if row.Attempts != 0 && !out.armed {
+						out.markerInvalid, out.err = true, errExecutionAttempts
+					}
+					if row.Completed != 0 && out.markerSample.Completed == 0 {
+						out.markerSample = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1, Maximum: out.observation.markerSample}
+					}
+					if out.observation.markerReady {
+						out.signalLocked()
+					}
+				} else {
+					row := out.observation.Phases[2]
+					if row.Attempts != 0 && !out.armed {
+						out.startInvalid = true
+						out.err = errExecutionAttempts
+					}
+					physical := out.observation.Phases[3]
+					if physical.Attempts >= 2 && !out.physicalArmed {
+						out.physicalInvalid = true
+						out.err = errExecutionAttempts
+					}
+					if physical.Completed == 2 && out.physicalSample.Completed == 0 {
+						out.physicalSample = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1, Maximum: out.observation.physicalPostAuthor}
+					}
+					if out.observation.physicalReady {
+						out.signalPhysicalLocked()
+					}
+					if row.Completed == 1 && out.sample.Completed == 0 {
+						out.sample = row // Retain positive excess even on this refusal.
+						out.signalLocked()
+					}
 				}
 			}
 		}

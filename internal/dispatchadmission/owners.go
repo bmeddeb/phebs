@@ -36,6 +36,8 @@ type Owners struct {
 	pausedReady        bool
 	requestsReady      bool
 	terminal           uint64 // Exact retained owner bit; never a normal drain.
+	measurement        uint64 // One reversible retained turn; never ordinary drainage.
+	measurementUsed    bool
 	changed            chan struct{}
 	err                error
 }
@@ -202,15 +204,15 @@ func (turn OwnerTurn) End() {
 		_ = owners.failLocked(ErrProtocol)
 		return
 	}
-	if !turn.request && owners.terminal == mask {
-		// Ending even a copied held turn invalidates terminal acquisition; it
-		// must never manufacture ordinary drainage or clear the retained bit.
+	if !turn.request && (owners.terminal == mask || owners.measurement == mask) {
+		// Ending even a copied held turn invalidates terminal or measurement
+		// acquisition; it must never manufacture ordinary drainage or clear the bit.
 		_ = owners.failLocked(ErrProtocol)
 		return
 	}
 	*active &^= mask
 	if *active == 0 && (turn.request && owners.requestsFenced || !turn.request && owners.paused) ||
-		!turn.request && owners.terminal != 0 && owners.active == owners.terminal {
+		!turn.request && (owners.terminal != 0 && owners.active == owners.terminal || owners.measurement != 0 && owners.active == owners.measurement) {
 		owners.notifyLocked()
 	}
 }
@@ -240,7 +242,7 @@ func (turn OwnerTurn) FenceTerminal(ctx context.Context) error {
 	mask := uint64(1) << turn.slot
 	if turn.request || turn.generation == 0 || turn.slot >= uint8(owners.limits.Owners) ||
 		owners.active&mask == 0 || owners.generations[turn.slot] != turn.generation ||
-		owners.terminal != 0 || owners.paused || owners.requestsFenced || owners.pausedReady || owners.requestsReady {
+		owners.terminal != 0 || owners.measurement != 0 || owners.paused || owners.requestsFenced || owners.pausedReady || owners.requestsReady {
 		return owners.failLocked(ErrProtocol)
 	}
 	owners.terminal, owners.paused, owners.requestsFenced = mask, true, true
@@ -280,7 +282,7 @@ func (owners *Owners) fence(ctx context.Context, request bool) error {
 	}
 	owners.mu.Lock()
 	defer owners.mu.Unlock()
-	if owners.terminal != 0 {
+	if owners.terminal != 0 || owners.measurement != 0 {
 		return owners.failLocked(ErrProtocol)
 	}
 	if ctx == nil {
@@ -329,7 +331,7 @@ func (owners *Owners) reopen(request bool) error {
 	}
 	owners.mu.Lock()
 	defer owners.mu.Unlock()
-	if owners.terminal != 0 {
+	if owners.terminal != 0 || owners.measurement != 0 {
 		return owners.failLocked(ErrProtocol)
 	}
 	if owners.err != nil {

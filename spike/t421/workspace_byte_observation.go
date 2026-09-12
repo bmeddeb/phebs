@@ -32,6 +32,8 @@ type ExecutionWorkspaceByteObservation struct {
 	physicalPostAuthor custodybytes.Sample    // Exact middle phase-four S.
 	midphaseSamples    [4]custodybytes.Sample // Exact fixed S payloads, not maxima or growing history.
 	recoverySamples    [6]custodybytes.Sample // Five epoch-three points and epoch-four finish.
+	markerSample       custodybytes.Sample
+	markerReady        bool
 }
 
 func reservedWorkspaceByteEvent(line []byte) bool {
@@ -54,7 +56,10 @@ func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
 	if producer == 2 && phase == 4 {
 		return 3
 	}
-	if producer == 3 && phase == 5 || producer == 4 && phase == 6 {
+	if producer == 4 && phase == 6 {
+		return 2
+	}
+	if producer == 3 && phase == 5 {
 		return 1
 	}
 	if producer == 2 {
@@ -164,12 +169,19 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 	row := &out.Phases[phase-1]
 	switch line[7] {
 	case 'B':
-		if len(line) != 26 || out.pending || out.sequence == math.MaxUint64 || sequence != out.sequence+1 || row.Attempts >= maximum || producer == 2 && phase == 4 && row.Attempts == 2 && !out.physicalReady {
+		if len(line) != 26 || out.pending || out.sequence == math.MaxUint64 || sequence != out.sequence+1 || row.Attempts >= maximum || producer == 2 && phase == 4 && row.Attempts == 2 && !out.physicalReady || producer == 4 && phase == 6 && row.Attempts == 1 && !out.markerReady {
 			return true, errExecutionAttempts
 		}
 		out.sequence, out.phase, out.pending = sequence, phase, true
 		row.Attempts++
 	case 'R':
+		if producer == 4 && phase == 6 {
+			if len(line) != 26 || sequence != 1 || out.sequence != 1 || out.pending || out.markerReady || row.Attempts != 1 || row.Completed != 1 {
+				return true, errExecutionAttempts
+			}
+			out.markerReady = true
+			break
+		}
 		if len(line) != 26 || producer != 2 || phase != 4 || sequence != 5 || sequence != out.sequence ||
 			out.pending || out.physicalReady || row.Attempts != 2 || row.Completed != 2 ||
 			out.Phases[1].Completed != 1 || out.Phases[2].Completed != 2 {
@@ -207,7 +219,12 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 		} else if producer == 3 && phase == 5 {
 			out.midphaseSamples[2] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
 		} else if producer == 4 && phase == 6 {
-			out.midphaseSamples[3] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+			value := custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+			if row.Completed == 0 {
+				out.markerSample = value
+			} else {
+				out.midphaseSamples[3] = value
+			}
 		}
 		if producer == 4 && (phase == 7 || phase == 8) {
 			index := row.Completed
@@ -236,6 +253,8 @@ func (out *ExecutionWorkspaceByteObservation) finish() bool {
 	if !out.Bound {
 		return false
 	}
+	// A lone phase-six pair may be an omitted-marker binding's finish. Only
+	// the full selected parent can require marker readiness and both positions.
 	if out.pending || out.Phases[3].Attempts >= 2 && !out.physicalReady {
 		out.Unavailable = true
 	}

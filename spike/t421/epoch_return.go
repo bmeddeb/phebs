@@ -178,7 +178,21 @@ func (run *ExecutionEpochOneRun) ReturnA(ctx context.Context) (retErr error) {
 		close(done)
 	}()
 	reader, err := run.newReturnInspection(ctx)
-	if err != nil || reader.marker(ctx, "hit") != nil || reader.marker(ctx, "recovered") != nil {
+	if err != nil {
+		return ErrExecutionEpochOne
+	}
+	// Arm before HIT. Its middleware tail may still own a request after the
+	// report callback; no RECOVERED request may enter until actual reopening.
+	if run.markerWorkspace != nil && run.markerWorkspace.armMarker() != nil {
+		return ErrExecutionEpochOne
+	}
+	if reader.marker(ctx, "hit") != nil {
+		return ErrExecutionEpochOne
+	}
+	if run.markerWorkspace != nil && run.markerWorkspace.waitMarker(ctx) != nil {
+		return ErrExecutionEpochOne
+	}
+	if reader.marker(ctx, "recovered") != nil {
 		return ErrExecutionEpochOne
 	}
 	for {

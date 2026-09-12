@@ -45,6 +45,7 @@ type ExecutionEpochConfig struct {
 	// Filled at launch only from the admitted prospective plan policy.
 	SelectorHandoffCleanup string
 	LogicalStoreWork       string
+	MarkerDeadlineUnixNano int64 // Actual original phase-six deadline, filled only for its full workspace recipe.
 }
 
 // ExecutionEpochConfigCustody borrows the genuine author's protected inputs

@@ -217,7 +217,7 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	requireEarly := run.flow.workspace != nil && run.producer() == 2 && run.physicalAllowed
 	requireMidphase := run.midphaseWorkspaceSelected()
 	requireWorkspace := run.flow.workspace != nil && (run.producer() == 5 || run.producer() == 6) || requireEarly || requireMidphase
-	if requireMidphase && !midphaseWorkspacePrefix(run.producer(), result.Attempts.WorkspaceBytes, result.MidphaseSamples) {
+	if requireMidphase && !midphaseWorkspacePrefix(run.producer(), result.Attempts.WorkspaceBytes, result.MidphaseSamples, result.MarkerWorkspace) {
 		err = errExecutionAttempts
 	}
 	if requireEarly && !earlyWorkspaceFinishPrefix(result.Attempts.WorkspaceBytes, result.EarlyFinishSamples) {

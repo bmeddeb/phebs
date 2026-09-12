@@ -10,6 +10,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -48,6 +49,7 @@ type t422MarkerControl struct {
 	services     *serviceRuntimeController
 	exclusive    func(context.Context) (func(), error)
 	continuation error
+	workspace    func(context.Context, *generationscheduler.MarkerMeasurement) error
 
 	mu                sync.Mutex
 	stage             t422MarkerStage
@@ -80,7 +82,17 @@ func newT422MarkerControl(
 	if err != nil || !launch.matches(current) || current.Phase != 6 {
 		return nil, errT422MarkerControl
 	}
-	lifetime, cancel := context.WithCancel(ctx)
+	var lifetime context.Context
+	var cancel context.CancelFunc
+	if launch.request.MarkerDeadlineUnixNano != 0 {
+		deadline := time.Unix(0, launch.request.MarkerDeadlineUnixNano)
+		if !time.Now().Before(deadline) || deadline.After(time.Now().Add(t422MarkerMaximum)) {
+			return nil, errT422MarkerControl
+		}
+		lifetime, cancel = context.WithDeadline(ctx, deadline)
+	} else {
+		lifetime, cancel = context.WithCancel(ctx)
+	}
 	control := &t422MarkerControl{
 		ctx: lifetime, cancel: cancel, launch: launch, runtime: runtime, services: services,
 		exclusive: exclusive, continuation: errors.New("private selected marker continuation"), stage: t422MarkerArmed,
@@ -126,6 +138,17 @@ func (control *t422MarkerControl) HandleV3(ctx context.Context, chunk store.Gene
 	}
 	if operation.Err() != nil || !control.current() {
 		return errT422MarkerControl
+	}
+	if control.workspace != nil {
+		capability := generationscheduler.MarkerMeasurementFromContext(ctx)
+		if !capability.Matches(chunk) {
+			return errT422MarkerControl
+		}
+		// HandleV3 has unwound its publication locks, but the exact claim and
+		// marker remain. This callback drains the actual HIT middleware tail.
+		if err := control.workspace(operation, capability); err != nil {
+			return err
+		}
 	}
 	control.mu.Lock()
 	if control.err != nil || control.stage != t422MarkerHit || !control.hit.reported {
@@ -351,6 +374,11 @@ func (control *t422MarkerControl) awaitReport(ctx context.Context, barrier *t422
 func (control *t422MarkerControl) current() bool {
 	current, err := dispatchadmission.ProductionSemanticState()
 	return control.ctx.Err() == nil && err == nil && control.launch.matches(current) && current.Phase == 6
+}
+
+func (control *t422MarkerControl) measurementSelected(ctx context.Context, chunk store.GenerationChunk) bool {
+	return control != nil && control.workspace != nil && ctx != nil && ctx.Err() == nil && control.current() &&
+		chunk.Repository == control.launch.request.Repository && chunk.Stage == relationshippublication.ScheduleStageV3
 }
 
 func (control *t422MarkerControl) stop(cause error) error {

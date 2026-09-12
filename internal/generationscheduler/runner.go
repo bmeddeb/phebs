@@ -52,6 +52,9 @@ type Class struct {
 	// TerminalHeartbeat supplies an opaque terminal capability only to the
 	// actual claimed handler. It requires genuine scheduler owner turns.
 	TerminalHeartbeat bool
+	// MarkerMeasurement retains the same selected claim across one writer-free
+	// marker observation. It never grants terminal or ordinary drainage.
+	MarkerMeasurement func(context.Context, store.GenerationChunk) bool
 }
 
 type Scheduler struct {
@@ -233,7 +236,7 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 				class,
 			)
 		}
-		if configuration.TerminalHeartbeat && (scheduler.Owners == nil || scheduler.ChunkReports == nil || scheduler.ChunkReportFailure == nil) {
+		if (configuration.TerminalHeartbeat || configuration.MarkerMeasurement != nil) && (scheduler.Owners == nil || scheduler.ChunkReports == nil || scheduler.ChunkReportFailure == nil) || configuration.TerminalHeartbeat && configuration.MarkerMeasurement != nil {
 			return nil, fmt.Errorf("generation scheduler class %q terminal heartbeat requires owners and exact reporting", class)
 		}
 		if configuration.OnStaleLeaseTransition != nil {
@@ -381,7 +384,7 @@ func (scheduler *Scheduler) work(
 		cancel()
 		if err == nil {
 			if scheduler.executeOwned(ctx, configuration, *chunk, turn) {
-				return // Irreversible retained owner; no second claim or End.
+				return // Failed or terminal retained owner; no second claim or End.
 			}
 			turn.End()
 			continue
@@ -450,7 +453,24 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 	var heartbeat chan error
 	var stopHeartbeat chan struct{}
 	var terminal *terminalHeartbeat
-	if configuration.TerminalHeartbeat {
+	var marker *MarkerMeasurement
+	if configuration.MarkerMeasurement != nil && configuration.MarkerMeasurement(handleCtx, chunk) {
+		var err error
+		marker, err = newMarkerMeasurement(handleCtx, turn, chunk)
+		if err != nil {
+			cancel()
+			outcome = ""
+			_ = scheduler.failChunkReport(err)
+			return true
+		}
+		go marker.beat(scheduler, cancel)
+		defer func() {
+			// Normal completion classifies this result below. On panic, still
+			// join the heartbeat before the original panic propagates.
+			_ = marker.finish(cancel)
+		}()
+		handlerContext = context.WithValue(handleCtx, markerMeasurementKey{}, marker)
+	} else if configuration.TerminalHeartbeat {
 		var err error
 		terminal, err = newTerminalHeartbeat(handleCtx, turn, chunk)
 		if err != nil {
@@ -530,7 +550,14 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 	}
 	handleErr := configuration.Handle(handlerContext, chunk, configuration.Budget)
 	var heartbeatErr error
-	if terminal == nil {
+	if marker != nil {
+		heartbeatErr = marker.finish(cancel)
+		if marker.failedContinuation(handleErr, ctx.Err()) {
+			outcome = ""
+			_ = scheduler.failChunkReport(errors.Join(ErrMarkerMeasurement, heartbeatErr, handleErr))
+			return true // No Release/Retry/Complete/End after a failed suspension.
+		}
+	} else if terminal == nil {
 		close(stopHeartbeat)
 		heartbeatErr = <-heartbeat
 		cancel()
@@ -575,6 +602,13 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 		}
 	}
 	if releaseCause != nil {
+		// Cancellation may arrive after the earlier continuation check. A used
+		// marker claim must not fall through to ordinary durable release here.
+		if marker != nil && marker.failedContinuation(handleErr, releaseCause) {
+			outcome = ""
+			_ = scheduler.failChunkReport(errors.Join(ErrMarkerMeasurement, releaseCause, handleErr))
+			return true
+		}
 		outcome = "released"
 		err := scheduler.Store.ReleaseGenerationChunk(writeCtx, chunk, releaseCause.Error())
 		if controlledRelease && err != nil && scheduler.ChunkReportFailure != nil {

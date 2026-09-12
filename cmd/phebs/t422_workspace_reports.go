@@ -24,6 +24,7 @@ type t422WorkspaceReports struct {
 	archiveMaximum uint64
 	pending        bool
 	physicalReady  bool
+	markerReady    bool
 	err            error
 }
 
@@ -40,7 +41,7 @@ func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
 	case producer == 3 && phase == 5:
 		return 10, 1
 	case producer == 4 && phase == 6:
-		return 11, 1
+		return 11, 2
 	case producer == 2 && phase == 2:
 		return 7, 1
 	case producer == 2 && phase == 3:
@@ -132,7 +133,8 @@ func (reports *t422WorkspaceReports) begin(current dispatchadmission.ProductionS
 		slot, maximum = 4, reports.archiveMaximum
 	}
 	if reports.err != nil || reports.pending || identityErr != nil || maximum == 0 || current.Phase < reports.phase || reports.counts[slot] >= maximum ||
-		current.ProducerID == 2 && current.Phase == 4 && reports.counts[slot] == 2 && !reports.physicalReady {
+		current.ProducerID == 2 && current.Phase == 4 && reports.counts[slot] == 2 && !reports.physicalReady ||
+		current.ProducerID == 4 && current.Phase == 6 && reports.counts[slot] == 1 && !reports.markerReady {
 		reports.err = errT422LifecycleControl
 		return reports.err
 	}
@@ -187,5 +189,20 @@ func (reports *t422WorkspaceReports) physicalReopenReady() error {
 		return err
 	}
 	reports.physicalReady = true
+	return nil
+}
+
+func (reports *t422WorkspaceReports) markerReopenReady() error {
+	reports.mu.Lock()
+	defer reports.mu.Unlock()
+	if reports.err != nil || reports.pending || reports.markerReady || reports.initial.ProducerID != 4 ||
+		reports.initial.Mode != dispatchadmission.ProductionSemanticV3 || reports.phase != 6 || reports.sequence != 1 || reports.counts[11] != 1 {
+		reports.err = errT422LifecycleControl
+		return reports.err
+	}
+	if err := reports.record('R', custodybytes.Sample{}); err != nil {
+		return err
+	}
+	reports.markerReady = true
 	return nil
 }

@@ -205,6 +205,14 @@ engine quiescence. Missing reports, failed measurements or cleanup failures
 refuse completion; these private sampled maxima are not an instantaneous or
 unique-physical-space guarantee and do not establish a ceremony pass.
 
+The full private epoch-three marker checkpoint likewise measures before its
+retained relationship claim continues. Other work drains; the selected
+heartbeat parks during measurement, then refreshes the same lease before
+work reopens. The parent requires both the sample and reopening report under
+the original phase deadline. A failed or canceled continuation retains the
+claim for diagnosis instead of releasing or retrying it. Ordinary serving and
+shorter rehearsal modes do not enable this checkpoint.
+
 Protected replay adds two streaming database parse/hash passes beyond Verify
 and a private one-unit scratch file. A large record or intervening trivia can
 make that scratch file large, up to the existing artifact limit; 512 records

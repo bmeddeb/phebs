@@ -5,6 +5,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -25,6 +26,9 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 		}
 	}
 	file, path, info, volume, err := dispatchadmission.ProductionWorkspace()
+	if control.launch != nil && control.launch.request.MarkerDeadlineUnixNano != 0 && (err != nil || control.launch.request.ServerEpoch != 3) {
+		return control.stop()
+	}
 	var reports *t422WorkspaceReports
 	if err == nil {
 		control.workspaceBytes = custodybytes.NewBorrowed(file, path, info, volume)
@@ -72,6 +76,43 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 		}
 		admitted, ok := ctx.Value(t422SemanticRequestKey{}).(dispatchadmission.ProductionSemanticSnapshot)
 		return sample(ctx, admitted, func() bool { return ok && control.current(ctx, true) })
+	}
+	if control.launch != nil && control.launch.request.ServerEpoch == 3 && control.workspaceBytes != nil && control.launch.request.MarkerDeadlineUnixNano != 0 {
+		control.markerWorkspace = func(ctx context.Context, capability *generationscheduler.MarkerMeasurement) error {
+			admitted, err := dispatchadmission.ProductionSemanticState()
+			control.mu.Lock()
+			valid := err == nil && admitted.Phase == 6 && admitted.ProducerID == 4 && !admitted.OrdinaryOwnersDrained &&
+				control.launch.matches(admitted) && control.err == nil && !control.busy && control.step == 0 && control.workspacePoint == 0
+			if valid {
+				control.busy = true
+			}
+			control.mu.Unlock()
+			if !valid {
+				return control.stop()
+			}
+			err = capability.Measure(ctx, func(ctx context.Context, retained func() bool) error {
+				if control.runner == nil || control.runner.Park(ctx) != nil {
+					return control.stop()
+				}
+				confirm := func() bool {
+					current, err := dispatchadmission.ProductionSemanticState()
+					control.mu.Lock()
+					valid := control.err == nil && control.busy && control.workspacePoint == 0 && control.step == 0
+					control.mu.Unlock()
+					return valid && err == nil && current == admitted && retained() && ctx.Err() == nil && control.ctx.Err() == nil
+				}
+				_, err := sample(ctx, admitted, confirm)
+				return err
+			}, reports.markerReopenReady)
+			if err != nil {
+				_ = control.workspaceBytes.Fail()
+				return control.stop()
+			}
+			control.mu.Lock()
+			control.busy = false // Existing return-finish HTTP retains point zero.
+			control.mu.Unlock()
+			return nil
+		}
 	}
 	if err := dispatchadmission.BindWarmStartWorkspace(func(ctx context.Context) error {
 		admitted, err := dispatchadmission.ProductionWarmStartWorkspaceState(ctx)

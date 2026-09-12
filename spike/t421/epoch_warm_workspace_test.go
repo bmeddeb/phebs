@@ -209,7 +209,7 @@ func TestEpochPhysicalWorkspaceReadyStream(t *testing.T) {
 				if mode == "masked_middle" {
 					samples.PostAuthor.Maximum.LogicalBytes++ // Still below phase maximum100.
 				}
-				if midphaseWorkspacePrefix(2, stream, samples) != (mode == "valid") {
+				if midphaseWorkspacePrefix(2, stream, samples, ExecutionMarkerWorkspace{}) != (mode == "valid") {
 					t.Fatal("individual middle not bound")
 				}
 			} else if mode == "missing_ready" {
