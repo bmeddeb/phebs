@@ -8026,6 +8026,33 @@ native rehearsal; WB parser/tests). Documentation (1.074s), glossary,
 whitespace and unchanged canonical V1/V2 digests pass. Actual early-server
 FD6/engine/HTTP composition remains a separate native gate.
 
+The early workspace native composition gate reuses the existing retired-backup
+fixture in a closed producer-two mode. It executes real Drain/Open, a loopback
+HTTP finish command through the actual auth/semantic/command stack, an FD6
+whole-workspace walk under the owned engine/SDK guard, a successful SDK read
+after native resumption, Fence/Pause and existing native/SDK joins. No cleanup
+collector, owner turn or exact-read report is manufactured. The expected
+165-byte WB binding/begin/success prefix is not a completed two-phase sequence.
+Semantic input, auth backend and unused owner fixtures remain supplied; no
+Author A, cold F, phase three, frozen-volume or full-corpus result is claimed.
+The unchanged three-minute fixture budget bounds this test-only composition.
+Applied ordered two-test manifest is
+`982cb98b1ae4c0947f3bf0357851e78d603aa986f7208d9a72ed5ec63bcd7c8a`
+(backup retirement, native workspace). The new actual native selector passed
+normal in 10.355s and race in 10.04s; independent applied review found all
+severity counts zero. Full ci-static passed vet, zero-issue lint and all-package
+compilation. The broader native race command was not green (236.250s): backup
+passed in 11.88s and restore in 33.25s, while the existing lifecycle workspace
+composition expired at its three-minute fixture deadline after continued owner
+turns. Its retained log contains 634 LC reports and 635 WB successes, not a
+normal-capacity completion. The subsequent host check reported 87% usage;
+the collector requires actual normal capacity below the existing 80% soft
+watermark. This is a source-supported host-pressure explanation, not a retained
+per-turn capacity measurement or a waived passing gate. The failed tiny fixture
+is retained; a host-normal broader native confirmation remains open. No timeout,
+capacity predicate, production source or canonical plan is changed by this test
+slice.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

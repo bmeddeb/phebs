@@ -41,6 +41,29 @@ import (
 
 const t422BackupFixture = "PHEBS_T422_BACKUP_RETIREMENT_TEST"
 
+// Joined real child output; a single positive phase-two pair is a prefix,
+// never completeness for the two-phase finish sequence.
+func assertT422EarlyNativeWorkspaceReports(t *testing.T, raw string, input [32]byte) {
+	t.Helper()
+	var records []string
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "WB") {
+			records = append(records, line)
+		}
+	}
+	if len(records) != 3 || records[0] != fmt.Sprintf("WBB1:2:sha256:%x", input) ||
+		records[1] != "WB1:2:2B:0000000000000001" {
+		t.Fatal("actual early WB framing", records)
+	}
+	var sequence, logical, allocated uint64
+	n, err := fmt.Sscanf(records[2], "WB1:2:2S:%016x:%016x:%016x", &sequence, &logical, &allocated)
+	if n != 3 || err != nil || sequence != 1 || logical < 1<<20 || allocated == 0 ||
+		records[2] != fmt.Sprintf("WB1:2:2S:%016x:%016x:%016x", sequence, logical, allocated) ||
+		len(strings.Join(records, "\n"))+1 != 79+26+60 {
+		t.Fatal("actual early WB positive prefix", records, err)
+	}
+}
+
 // This is actual selected SDK/DA/PC retirement, the real backup CLI function,
 // native surrealkv/export and joined shutdown on empty private fixture data.
 // It does not reproduce protected executable custody, pressure/F, the frozen
@@ -91,6 +114,13 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace, arch
 }
 
 func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspace, archiveWorkspace bool, failure string, cleanup ...bool) {
+	earlyWorkspace := failure == "workspace-early"
+	if earlyWorkspace {
+		if !workspace || restore || archiveWorkspace || len(cleanup) != 0 {
+			t.Fatal("invalid early workspace fixture")
+		}
+		failure = ""
+	}
 	if (workspace || archiveWorkspace) && runtime.GOOS != "darwin" {
 		t.Skip("native workspace descriptor admission requires Darwin")
 	}
@@ -154,6 +184,12 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	record.Limits.Attempts, record.Limits.ActivePerProducer, record.Limits.WireBytes = 20, 2, 1<<20
 	record.Control = dispatchadmission.PhaseControlConfig{BackupEndpointCarry: true, OwnerControl: true,
 		Phases: []uint32{8, 9, 10, 11}, InitialPhase: 8, MaximumPhases: 4, MaximumWireBytes: 24 * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+	if earlyWorkspace {
+		record.Producer.ID, record.Producer.Binding, record.Phase = 2, [32]byte{2}, 2
+		record.Limits.Phases = 3
+		record.Control.BackupEndpointCarry = false
+		record.Control.Phases, record.Control.InitialPhase, record.Control.MaximumPhases = []uint32{2, 3, 4}, 2, 3
+	}
 	var workspaceFile *os.File
 	var archiveObserver *custodybytes.Observer
 	var archiveParentSamples int
@@ -162,6 +198,10 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		if workspace {
 			semantic, _ := t422LifecycleBootstrapRecord(t)
 			record.InputSHA256 = semantic.InputSHA256
+			if earlyWorkspace {
+				raw, _ := t422SemanticTestRequest(t)
+				record.InputSHA256 = sha256.Sum256(raw)
+			}
 		}
 		root, err = filepath.EvalSymlinks(root)
 		if err != nil {
@@ -204,8 +244,14 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	configuration := dispatchadmission.Config{Limits: record.Limits, Producers: []dispatchadmission.Producer{record.Producer, backupProducer}}
 	restoreProducer := record.Producer
 	restoreProducer.ID, restoreProducer.Binding = 11, [32]byte{11}
-	storeProducers := []storeaccounting.Producer{{ID: 5, Calls: 40, Transactions: 2}, {ID: 10, Calls: 1, Transactions: 1}}
-	wireProducers := []storeaccounting.WireProducer{{ID: 5, Binding: record.Producer.Binding, Phases: 1920}, {ID: 10, Binding: backupProducer.Binding, Phases: 2048}}
+	storeProducers := []storeaccounting.Producer{{ID: record.Producer.ID, Calls: 40, Transactions: 2}, {ID: 10, Calls: 1, Transactions: 1}}
+	wireProducers := []storeaccounting.WireProducer{{ID: record.Producer.ID, Binding: record.Producer.Binding, Phases: 1920}, {ID: 10, Binding: backupProducer.Binding, Phases: 2048}}
+	if earlyWorkspace {
+		// Only the server participates; no archive producer or phase is fabricated.
+		configuration.Producers = configuration.Producers[:1]
+		storeProducers, wireProducers = storeProducers[:1], wireProducers[:1]
+		wireProducers[0].Phases = 14 // Phases two, three and four.
+	}
 	if restore {
 		record.Limits.Producers, record.Limits.Sites = 3, 48
 		configuration.Limits = record.Limits
@@ -228,7 +274,11 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	if archiveWorkspace && restore {
 		lastPhase = 14
 	}
-	for phase := uint32(8); phase <= lastPhase; phase++ {
+	firstPhase := uint32(8)
+	if earlyWorkspace {
+		firstPhase, lastPhase = 2, 4
+	}
+	for phase := firstPhase; phase <= lastPhase; phase++ {
 		configuration.Phases = append(configuration.Phases, dispatchadmission.Phase{ID: phase, Roles: []dispatchadmission.RoleBudget{
 			{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal, Attempts: 10}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}}})
 		storePhases = append(storePhases, storeaccounting.Phase{ID: phase, Transactions: 10000, Rows: 100000})
@@ -431,7 +481,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
 	serverMode := "server"
-	if allOwners {
+	if earlyWorkspace {
+		serverMode = "workspace-early"
+	} else if allOwners {
 		serverMode = "workspace-all-owners"
 	} else if cleanupWorkspace {
 		serverMode = "workspace-cleanup"
@@ -458,6 +510,46 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil || endpointURL.Host == "" {
 		t.Fatal("native endpoint", err)
+	}
+	if earlyWorkspace {
+		if err = control.DrainOwners(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if control.OpenRequests(ctx) != nil {
+			t.Fatal("actual early request window")
+		}
+		if _, err = fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || output.Text() != "early_measured_and_resumed" {
+			failServer("native early workspace measurement", err)
+		}
+		if control.FenceRequests(ctx) != nil {
+			t.Fatal("actual early request tail")
+		}
+		if control.Pause(ctx) != nil {
+			t.Fatal("actual early terminal pause")
+		}
+		if _, err = fmt.Fprintln(input, "close"); err != nil {
+			t.Fatal(err)
+		}
+		for output.Scan() {
+		}
+		if output.Err() != nil {
+			t.Fatal(output.Err())
+		}
+		if err = server.Wait(); err != nil {
+			t.Fatal("native early workspace helper", err, diagnostic.String())
+		}
+		if err = <-served; err != nil {
+			t.Fatal(err)
+		}
+		if transport.Wait(ctx, 2) != nil || t4013.WaitPrivateProcessSession(server.Process.Pid, time.Now().Add(5*time.Second)) != nil {
+			t.Fatal("native early SDK/session join")
+		}
+		prefix, err := transport.Snapshot()
+		if err != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
+			t.Fatal("native early store prefix", prefix, err)
+		}
+		assertT422EarlyNativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256)
+		return
 	}
 	if workspace {
 		if _, err = fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || output.Text() != "parked" {
