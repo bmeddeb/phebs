@@ -7747,6 +7747,22 @@ Independent code/provenance/cost and record review reports all severity counts
 zero at that manifest; final documentation checks passed in 0.541s. V1/V2
 canonical plan digests remain unchanged.
 
+The corrected native gate passed at exact clean
+`5b5f71bd0905d4068558a74c04231732df72a325`: 518.63s subtest, 519.250s
+package. The actual helper completed all 22 transport results/38 requests at
+C/S/M=160/164/13,456, next ordinal 40. Actual F accounting was cold
+C/S/M=11,040/126/886,568 and warm 11,037/90/251,021; the complete byte-identical
+F bracket and existing third-F supersession refusal passed. All 22 changed
+source/test manifest entries matched after the run. Its success path removed
+the small native custody, and a post-run check found no matching server,
+query-helper or Surreal process. The gate log remains in private
+`phebs-t422-native-query-gates.TG0WCX`. This was the ordinary authenticated
+exact-read server, with the separately race-instrumented query helper, not a
+race-instrumented server or a selected epoch-five/full-corpus rehearsal.
+Together with the focused normal/race and independent reviews above it closes
+the native wire/projection gate. Actual public restored-operation coordination,
+receipt conversion, final teardown and full representative gates remain open.
+
 At `ec014403`, the receipt/teardown trace identified two source-proven
 definition/evidence gaps, not measured native failures. A nine-page relationship result requires
 fresh authorization on each page, so the receipt's one authorization decision
