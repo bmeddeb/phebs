@@ -1123,3 +1123,95 @@ func leftPadDecimalV3(value, width int) string {
 	digits := strconv.Itoa(value)
 	return strings.Repeat("0", max(0, width-len(digits))) + digits
 }
+
+func TestProjectionBucketsV3PreserveCanonicalEmptyClaims(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		sourceClaims int
+		targetClaims int // -1 means no target, as in a Kafka projection.
+		buckets      int
+	}{
+		{"unowned source", 0, 1, 1},
+		{"unowned target", 1, 0, 1},
+		{"both unowned", 0, 0, 1},
+		{"unowned kafka source", 0, -1, 1},
+		{"both owned", 1, 1, 1},
+		{"unowned source multi bucket target", 0, MaxClaimsPerProjectionBucketV3 + 1, 2},
+		{"multi bucket source unowned target", MaxClaimsPerProjectionBucketV3 + 1, 0, 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// Exercise the real placement constructor, including its nonnil
+			// zero-claim slice. These are small catalog inputs, not a native
+			// publication/engine fixture or a supplied successful outcome.
+			lookup := func(path string, count int) Placement {
+				claims := make([]servicecatalog.PlacementClaim, count)
+				for index := range claims {
+					claims[index] = servicecatalog.PlacementClaim{
+						ServiceKey:  "service-" + leftPadDecimalV3(index, 4),
+						Disposition: servicecatalog.DispositionAccepted,
+						Roles:       []servicecatalog.PlacementRole{{Role: servicecatalog.RolePrimary, Origin: servicecatalog.OriginBase}},
+					}
+				}
+				placements := placementIndex{values: map[string]servicecatalog.PlacementAuthority{
+					path: {Path: path, Unowned: count == 0, Claims: claims},
+				}}
+				value, err := placements.lookup(path)
+				if err != nil || value.Claims == nil {
+					t.Fatal("actual placement lookup", err)
+				}
+				return value
+			}
+			value := Projection{
+				Schema: ProjectionSchema, Kind: "rpc", PostingDigest: fixedDigest("a"),
+				Class: "resolved", Plane: "grpc", LookupKey: "example.v1/Get",
+				Source: lookup("source/main.go", test.sourceClaims),
+			}
+			if test.targetClaims >= 0 {
+				target := lookup("target/api.proto", test.targetClaims)
+				value.Target = &target
+			} else {
+				value.Kind, value.Class, value.Plane, value.LookupKey = "kafka", "literal", "production", "example"
+			}
+			projection, err := finalizeProjectionV3(value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fragments, _, err := projectionBucketsV3(projection)
+			if err != nil || len(fragments) != test.buckets {
+				t.Fatal("actual fragment construction", len(fragments), err)
+			}
+			raw, err := json.Marshal(fragments)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded []ProjectionBucketV3
+			if err := json.Unmarshal(raw, &decoded); err != nil {
+				t.Fatal(err)
+			}
+			reconstructed, err := flattenProjectionBucketsV3(decoded)
+			if err != nil || !reflect.DeepEqual(reconstructed, projection) {
+				t.Fatal("canonical projection round trip", err)
+			}
+			member := RepositoryMemberV3{
+				Schema: RepositoryMemberSchemaV3, Bucket: projectionBucket(projection.Digest), Fragments: decoded,
+			}
+			member.Digest, err = digestValue(member)
+			if err != nil || validateRepositoryMemberV3(member) != nil {
+				t.Fatal("actual repository member reconstruction", err)
+			}
+			// Re-seal the fragments, not the semantic projection: header
+			// validity must not waive the original semantic digest equality.
+			for index := range decoded {
+				decoded[index].ProjectionDigest = fixedDigest("f")
+				decoded[index].Digest = ""
+				decoded[index].Digest, err = digestValue(decoded[index])
+				if err != nil || validateProjectionBucketV3(decoded[index]) != nil {
+					t.Fatal("validly sealed wrong semantic digest fixture", err)
+				}
+			}
+			if _, err := flattenProjectionBucketsV3(decoded); !errors.Is(err, ErrInvalid) {
+				t.Fatal("altered semantic projection digest accepted", err)
+			}
+		})
+	}
+}

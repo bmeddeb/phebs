@@ -8621,6 +8621,26 @@ vet/lint/compilation passed with zero lint issues, docs in 0.569s, glossary and
 whitespace clean. Native seven-producer coverage remains pending; these checks
 do not establish a full-tail or whole-work pass.
 
+The corrected native fixture at exact `21c4efeb89e55693681d0ac64e0b383385100f87`
+passed extraction and resolver setup, then failed before the marker while
+building its prior relationship root: `v3 projection reconstruction`.
+Normal took 397.48s (package 398.201s); race did not run. Retained regular
+catalog/RPC JSON identifies a genuine both-unowned posting. The production
+placement builder hashes empty claims as `[]`; the shared bucket flattener
+started nil and appended no entries, producing `null` and a different digest.
+Two initializations restore the builder's exact representation. Original
+logs/custody remain unchanged; the failed original session-boundary observation
+is not promoted by later PID absence. Independent code/cost review found
+critical/high/medium/low zero. The new real constructor/fragment/JSON round-trip
+regression failed six empty-claim cases on the old implementation while its
+owned control passed (package 0.576s). All seven corrected cases passed in
+0.621s, the complete relationship-publication package in 52.841s and its race
+run in 228.904s. Pinned static vet/lint/compilation passed with zero lint issues;
+docs passed in 0.571s, glossary/whitespace clean, retained-version selectors in
+0.737s and V1/V2 plan hashes unchanged. Corrected two-path manifest is
+`0f72c009b4548c87f6cc85de1279a99c8d31920296dd84317a3eedf0156fb3e5`.
+Native composition remains pending; no full rehearsal or freeze follows.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

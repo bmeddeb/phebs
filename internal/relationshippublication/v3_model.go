@@ -595,11 +595,13 @@ func flattenProjectionBucketsV3(values []ProjectionBucketV3) (Projection, error)
 	projection := Projection{
 		Schema: ProjectionSchema, Kind: first.Kind, PostingDigest: first.PostingDigest,
 		Class: first.Class, Plane: first.Plane, LookupKey: first.LookupKey,
-		Source: Placement{Path: first.Source.Path, Unowned: first.Source.Unowned},
+		// placementIndex.lookup binds even zero claims as [] in the semantic
+		// digest. append(nil, empty...) would instead reconstruct JSON null.
+		Source: Placement{Path: first.Source.Path, Unowned: first.Source.Unowned, Claims: []ServiceClaim{}},
 		Digest: first.ProjectionDigest,
 	}
 	if first.Target != nil {
-		projection.Target = &Placement{Path: first.Target.Path, Unowned: first.Target.Unowned}
+		projection.Target = &Placement{Path: first.Target.Path, Unowned: first.Target.Unowned, Claims: []ServiceClaim{}}
 	}
 	for ordinal, fragment := range values {
 		if validateProjectionBucketV3(fragment) != nil || fragment.Ordinal != ordinal ||
