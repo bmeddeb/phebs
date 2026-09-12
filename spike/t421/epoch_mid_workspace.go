@@ -6,10 +6,12 @@ import (
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 )
 
-// Fixed observations only: physical pre-pin and finish, logical finish,
-// return finish. Neither physical post-author nor transient marker coverage.
+// Fixed HTTP observations: physical pre-pin and finish, logical finish,
+// return finish. PostAuthor is the separately acknowledged native callback.
+// Transient marker coverage remains separate.
 type ExecutionMidphaseSamples struct {
 	Points                     [4]ExecutionWorkspaceBytePhase
+	PostAuthor                 ExecutionWorkspaceBytePhase
 	Unavailable, LimitExceeded bool
 }
 
@@ -132,7 +134,7 @@ func (reader *executionEpochInspection) sampleMidphaseWorkspace(ctx context.Cont
 	// already four after advancePhysical. The guarded child checks that phase.
 	if run.epoch.Epoch != expected[point].epoch || reader.projection.Phase != expected[point].phase || !reader.finalUsed ||
 		point == 0 && (reader.warmAuthority.Phase != "warm_noop" || reader.earlyFinishSamples.Phases[1].Completed != 1) ||
-		point == 1 && (reader.midphaseSamples.Points[0].Completed != 1 || !reader.retentionUsed) ||
+		point == 1 && (reader.midphaseSamples.Points[0].Completed != 1 || reader.midphaseSamples.PostAuthor.Completed != 1 || !reader.retentionUsed) ||
 		point != 0 && reader.plan.SelectorHandoffCleanup != nil && reader.selectorCleanupPhase != expected[point].phase {
 		return errEpochInspection
 	}
@@ -202,12 +204,27 @@ func midphaseWorkspacePrefix(producer uint32, stream ExecutionWorkspaceByteObser
 		joined.Maximum = custodybytes.Sample{LogicalBytes: max(joined.Maximum.LogicalBytes, row.Maximum.LogicalBytes),
 			AllocatedBytes: max(joined.Maximum.AllocatedBytes, row.Maximum.AllocatedBytes)}
 	}
+	if producer == 2 {
+		row := samples.PostAuthor
+		if row.Attempts != 1 || row.Completed != 1 || stream.physicalPostAuthor != row.Maximum || !stream.physicalReady {
+			return false
+		}
+		joined.Attempts++
+		joined.Completed++
+		joined.Maximum.LogicalBytes = max(joined.Maximum.LogicalBytes, row.Maximum.LogicalBytes)
+		joined.Maximum.AllocatedBytes = max(joined.Maximum.AllocatedBytes, row.Maximum.AllocatedBytes)
+	} else if samples.PostAuthor != (ExecutionWorkspaceBytePhase{}) {
+		return false
+	}
 	return stream.Phases[phase-1] == joined
 }
 
 func (samples *ExecutionMidphaseSamples) failIncomplete(producer uint32) {
 	if samples.Unavailable || samples.LimitExceeded {
 		return
+	}
+	if producer == 2 && (samples.PostAuthor.Attempts != 1 || samples.PostAuthor.Completed != 1) {
+		samples.Unavailable = true
 	}
 	first, end := 0, 2
 	switch producer {

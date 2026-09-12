@@ -606,6 +606,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	}
 	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	controlConfig.WarmStartWorkspace = run.warmWorkspace != nil
+	controlConfig.PhysicalPostAuthorWorkspace = run.warmWorkspace != nil
 	switch number {
 	case 2:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{5}, 5, 1
@@ -1025,6 +1026,10 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		var limitExceeded bool
 		result.EarlyFinishSamples.WarmStart, result.EarlyFinishSamples.WarmStartUnavailable, limitExceeded = run.warmWorkspace.snapshot()
 		result.EarlyFinishSamples.LimitExceeded = result.EarlyFinishSamples.LimitExceeded || limitExceeded
+		var physicalUnavailable bool
+		result.MidphaseSamples.PostAuthor, physicalUnavailable, limitExceeded = run.warmWorkspace.physicalSnapshot()
+		result.MidphaseSamples.Unavailable = result.MidphaseSamples.Unavailable || physicalUnavailable
+		result.MidphaseSamples.LimitExceeded = result.MidphaseSamples.LimitExceeded || limitExceeded
 	}
 	if !result.SessionEmpty {
 		failure = ErrExecutionEpochOne

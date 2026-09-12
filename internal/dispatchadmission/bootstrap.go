@@ -64,7 +64,7 @@ type ProductionBootstrap struct {
 }
 
 func (record ProductionBootstrap) validate() error {
-	if record.Control.WarmStartWorkspace && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 2 || record.Phase != 2 || record.Store == nil || record.Workspace == nil) {
+	if (record.Control.WarmStartWorkspace || record.Control.PhysicalPostAuthorWorkspace) && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 2 || record.Phase != 2 || record.Store == nil || record.Workspace == nil) {
 		return ErrProductionBootstrap
 	}
 	if record.validateWorkspace() != nil || record.validateArchiveMeasurements() != nil {

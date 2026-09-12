@@ -27,8 +27,10 @@ type ExecutionWorkspaceByteObservation struct {
 	pending                      bool
 	// Exact producer-two first three S payloads, not a history or maxima.
 	// The joined parser binds each endpoint independently before max folding.
-	earlySamples    [3]custodybytes.Sample
-	midphaseSamples [4]custodybytes.Sample // Exact fixed S payloads, not maxima or growing history.
+	earlySamples       [3]custodybytes.Sample
+	physicalReady      bool                   // Actual post-reopen record, separate from the completed walk.
+	physicalPostAuthor custodybytes.Sample    // Exact middle phase-four S.
+	midphaseSamples    [4]custodybytes.Sample // Exact fixed S payloads, not maxima or growing history.
 }
 
 func reservedWorkspaceByteEvent(line []byte) bool {
@@ -40,7 +42,7 @@ func reservedWorkspaceByteEvent(line []byte) bool {
 // lifecycle turn or capacity probe.
 func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
 	if producer == 2 && phase == 4 {
-		return 2
+		return 3
 	}
 	if producer == 3 && phase == 5 || producer == 4 && phase == 6 {
 		return 1
@@ -152,11 +154,18 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 	row := &out.Phases[phase-1]
 	switch line[7] {
 	case 'B':
-		if len(line) != 26 || out.pending || out.sequence == math.MaxUint64 || sequence != out.sequence+1 || row.Attempts >= maximum {
+		if len(line) != 26 || out.pending || out.sequence == math.MaxUint64 || sequence != out.sequence+1 || row.Attempts >= maximum || producer == 2 && phase == 4 && row.Attempts == 2 && !out.physicalReady {
 			return true, errExecutionAttempts
 		}
 		out.sequence, out.phase, out.pending = sequence, phase, true
 		row.Attempts++
+	case 'R':
+		if len(line) != 26 || producer != 2 || phase != 4 || sequence != 5 || sequence != out.sequence ||
+			out.pending || out.physicalReady || row.Attempts != 2 || row.Completed != 2 ||
+			out.Phases[1].Completed != 1 || out.Phases[2].Completed != 2 {
+			return true, errExecutionAttempts
+		}
+		out.physicalReady = true
 	case 'F':
 		if len(line) != 26 || !out.pending || sequence != out.sequence || phase != out.phase {
 			return true, errExecutionAttempts
@@ -175,8 +184,16 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 		if producer == 2 && (phase == 2 && sequence == 1 || phase == 3 && (sequence == 2 || sequence == 3)) {
 			out.earlySamples[sequence-1] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
 		}
-		if producer == 2 && phase == 4 && row.Completed < 2 {
-			out.midphaseSamples[row.Completed] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+		if producer == 2 && phase == 4 {
+			value := custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+			switch row.Completed {
+			case 0:
+				out.midphaseSamples[0] = value
+			case 1:
+				out.physicalPostAuthor = value
+			case 2:
+				out.midphaseSamples[1] = value
+			}
 		} else if producer == 3 && phase == 5 {
 			out.midphaseSamples[2] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
 		} else if producer == 4 && phase == 6 {
@@ -200,7 +217,7 @@ func (out *ExecutionWorkspaceByteObservation) finish() bool {
 	if !out.Bound {
 		return false
 	}
-	if out.pending {
+	if out.pending || out.Phases[3].Attempts >= 2 && !out.physicalReady {
 		out.Unavailable = true
 	}
 	out.Complete = !out.Unavailable && !out.LimitExceeded

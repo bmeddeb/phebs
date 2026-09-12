@@ -39,9 +39,9 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 			}
 		}
 	}
-	// Both callers use the same observer, reporter and real owned-engine/SDK
-	// guard. Only the HTTP caller uses request admission; the fixed warm-start
-	// callback has its own post-ACK fenced-state proof.
+	// The HTTP caller and two fixed callbacks share the observer, reporter and
+	// real engine/SDK guard. Only HTTP uses request admission; callbacks have
+	// their own post-ACK, genuinely fenced-state proof.
 	// Only explicitly closed early positions admit a traversal. Descriptor
 	// inheritance alone does not establish phase completeness.
 	sample := func(ctx context.Context, admitted dispatchadmission.ProductionSemanticSnapshot, confirm func() bool) (custodybytes.Sample, error) {
@@ -97,6 +97,46 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 		}
 		control.mu.Lock()
 		control.busy = false // HTTP warm finish retains its independent point1.
+		control.mu.Unlock()
+		return nil
+	}); err != nil {
+		return control.stop()
+	}
+	if err := dispatchadmission.BindPhysicalPostAuthorWorkspace(func(ctx context.Context, reopen func(context.Context) error) error {
+		admitted, err := dispatchadmission.ProductionPhysicalPostAuthorWorkspaceState(ctx)
+		control.mu.Lock()
+		valid := err == nil && control.err == nil && !control.busy && control.workspacePoint == 3 &&
+			control.step == 0 && control.launch.request.ServerEpoch == 1 && control.runner != nil
+		if valid {
+			control.busy = true
+		}
+		control.mu.Unlock()
+		if !valid || control.runner.Park(ctx) != nil {
+			return control.stop()
+		}
+		confirm := func() bool {
+			current, err := dispatchadmission.ProductionPhysicalPostAuthorWorkspaceState(ctx)
+			control.mu.Lock()
+			valid := control.err == nil && control.busy && control.workspacePoint == 3
+			control.mu.Unlock()
+			return valid && err == nil && current == admitted && ctx.Err() == nil && control.ctx.Err() == nil
+		}
+		// Retain S before reopening: the actual completed walk survives a
+		// later failure. Only the separate R can release the parent's wait.
+		if _, err := sample(ctx, admitted, confirm); err != nil {
+			return control.stop()
+		}
+		if err := reopen(ctx); err != nil || ctx.Err() != nil || control.ctx.Err() != nil {
+			_ = control.workspaceBytes.Fail()
+			_ = reports.failed()
+			return control.stop()
+		}
+		if err := reports.physicalReopenReady(); err != nil {
+			_ = control.workspaceBytes.Fail()
+			return control.stop()
+		}
+		control.mu.Lock()
+		control.busy = false // HTTP physical finish retains its own point3.
 		control.mu.Unlock()
 		return nil
 	}); err != nil {

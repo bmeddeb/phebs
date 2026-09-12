@@ -88,6 +88,7 @@ type ProductionLifetime struct {
 	workspaceMu              sync.Mutex
 	workspace                *productionWorkspace
 	warmWorkspace            *warmStartWorkspace
+	physicalWorkspace        *warmStartWorkspace
 	cancelArchive            context.CancelFunc
 	archiveMeasurements      uint32
 	archiveMeasurement       *archiveMeasurementClient
@@ -267,6 +268,10 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		}
 		closeCtx, cancel := context.WithTimeout(ctx, lifetime.client.limits.AckTimeout)
 		defer cancel()
+		if err := lifetime.closePhysicalPostAuthorWorkspace(closeCtx); err != nil {
+			lifetime.closeErr = errors.Join(lifetime.closeErr, lifetime.client.fail(err))
+			return
+		}
 		if err := lifetime.closeWarmStartWorkspace(closeCtx); err != nil {
 			// A still-running callback owns SDK/FD6. Fail closed without
 			// releasing those resources beneath its native walk.

@@ -8177,6 +8177,40 @@ executable statement changed, and the native selector reconfirmed in 0.673s.
 This proves neither a protected author
 invocation, production successor launch nor full terminal composition.
 
+The physical post-author continuation fills the distinct missing middle position
+after actual author B and reader reset, before reopening workers or issuing a
+progress query. Its selected Reopen-four ACK retains both actual fences. Under
+the unchanged original physical deadline, the callback makes a real guarded
+walk, emits S, invokes real reopening exactly once and only then emits R. The
+parent's existing bounded source-bound output tap requires S and R; S remains
+positive evidence if reopening or readiness fails. No extra PC pair or numeric
+allowance is introduced. One additional walk and 112 WB bytes bring this
+phase-four stream to 284 bytes and producer two's early total to 621 bytes.
+The prospective V3 phase policy binds the optional 35-byte bootstrap recipe;
+V1/V2 canonical bytes remain exact. Locks, cancellation, original deadlines and
+request/owner admission were independently reviewed at draft
+`102be3e107cf3358f97727502024db23312b32164c410be78e8290ab14908832`
+with all severity counts zero. The analogous later-global-excess attribution
+issue was then corrected prospectively in the middle snapshot, with four
+own/later logical/allocated cases. Revised draft
+`8ace92e7735883df5463b86e11d7690e6942385030fb4ea93ef6a7b2b23aea66`
+passed independent correction review with all severity counts zero.
+Applied nineteen-path source manifest is
+`8aa1009896d261c6fe1c0085fab1435c0492b86ec8ea8204b7bfb270898609f9`
+(command bytes/midphase test/physical Darwin test/reports; dispatch bootstrap,
+phase control, physical helper/test, production, warm helper; accounting
+contract; early test; launch; mid helper/test; physical; warm output/test;
+WB parser). Applied source/record independent re-review found all severity
+counts zero and confirmed the byte arithmetic. Targeted normal passed dispatch
+in 1.143s, command in 25.523s and spike in 8.317s; matching race passed in
+2.294s, 21.897s and 16.034s. Static passed vet, zero pinned-lint issues and
+whole-repository compilation. Canonical/version-routing selectors passed in
+0.661s, docs in 0.923s, glossary/whitespace clean and V1/V2 digests unchanged.
+The ordered manifest remained unchanged across these gates. Protocol tests
+use real inherited controls with supplied callbacks; the tiny filesystem test
+uses a real traversal but modeled reopening. Actual engine/author composition,
+representative traversal/output fit and the full rehearsal remain unproved.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

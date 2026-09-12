@@ -112,6 +112,7 @@ func TestEpochMidphaseWorkspaceHTTP(t *testing.T) {
 				reader.earlyFinishSamples.Phases[1].Completed = 1
 				if point == 1 {
 					reader.midphaseSamples.Points[0].Completed = 1
+					reader.midphaseSamples.PostAuthor.Completed = 1
 				}
 				switch mode {
 				case "missing_final":
@@ -154,12 +155,23 @@ func TestEpochMidphaseWorkspacePrefix(t *testing.T) {
 				first, end, phase = 3, 4, 6
 			}
 			raw := workspaceTestBinding(producer)
+			offset := uint64(0)
+			if producer == 2 {
+				raw += workspaceTestPair(2, 2, 1, 1, 1) + workspaceTestPair(2, 3, 2, 2, 2) + workspaceTestPair(2, 3, 3, 3, 3)
+				offset = 3
+			}
 			for i := first; i < end; i++ {
 				row := &samples.Points[i]
 				row.Attempts, row.Completed = 1, 1
 				row.Maximum.LogicalBytes, row.Maximum.AllocatedBytes = uint64(100-i), uint64(100+i)
 				if mode != "missing" || i != end-1 {
-					raw += workspaceTestPair(producer, phase, uint64(i-first+1), row.Maximum.LogicalBytes, row.Maximum.AllocatedBytes)
+					raw += workspaceTestPair(producer, phase, offset+uint64(i-first+1), row.Maximum.LogicalBytes, row.Maximum.AllocatedBytes)
+				}
+				if producer == 2 && i == 0 {
+					samples.PostAuthor = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1}
+					samples.PostAuthor.Maximum.LogicalBytes, samples.PostAuthor.Maximum.AllocatedBytes = 75, 80
+					raw += workspaceTestPair(2, 4, 5, 75, 80) + "WB1:2:4R:0000000000000005\n"
+					offset++
 				}
 			}
 			var stream ExecutionWorkspaceByteObservation
@@ -187,8 +199,8 @@ func TestEpochMidphaseWorkspacePrefix(t *testing.T) {
 			}
 		}
 	}
-	if workspaceCheckpointMaximum(2, 4) != 2 || workspaceCheckpointMaximum(3, 5) != 1 || workspaceCheckpointMaximum(4, 6) != 1 ||
-		4*(26+60)+2*79 != 502 {
+	if workspaceCheckpointMaximum(2, 4) != 3 || workspaceCheckpointMaximum(3, 5) != 1 || workspaceCheckpointMaximum(4, 6) != 1 ||
+		5*(26+60)+26+2*79 != 614 {
 		t.Fatal("fixed added sample/report envelope")
 	}
 }

@@ -10,24 +10,27 @@ import (
 // pointer is installed for both streams, preserving exec's single copier.
 // Never read checkoutCommandOutput's bytes.Buffer before the native join.
 type epochWarmWorkspaceOutput struct {
-	mu              sync.Mutex
-	output          *checkoutCommandOutput
-	plan            Plan
-	input           string
-	line            [79]byte // Long unrelated logs are discarded here, not in retained output.
-	length          int
-	long, reserved  bool
-	tail            [3]byte
-	observation     ExecutionWorkspaceByteObservation
-	sample          ExecutionWorkspaceBytePhase
-	armed, signaled bool
-	startInvalid    bool
-	ready           chan struct{}
-	err             error
+	mu                                               sync.Mutex
+	output                                           *checkoutCommandOutput
+	plan                                             Plan
+	input                                            string
+	line                                             [79]byte // Long unrelated logs are discarded here, not in retained output.
+	length                                           int
+	long, reserved                                   bool
+	tail                                             [3]byte
+	observation                                      ExecutionWorkspaceByteObservation
+	sample                                           ExecutionWorkspaceBytePhase
+	armed, signaled                                  bool
+	startInvalid                                     bool
+	ready                                            chan struct{}
+	physicalReady                                    chan struct{}
+	physicalSample                                   ExecutionWorkspaceBytePhase
+	physicalArmed, physicalSignaled, physicalInvalid bool
+	err                                              error
 }
 
 func newEpochWarmWorkspaceOutput(output *checkoutCommandOutput, plan Plan, input [32]byte) *epochWarmWorkspaceOutput {
-	return &epochWarmWorkspaceOutput{output: output, plan: plan, input: "sha256:" + hex.EncodeToString(input[:]), ready: make(chan struct{})}
+	return &epochWarmWorkspaceOutput{output: output, plan: plan, input: "sha256:" + hex.EncodeToString(input[:]), ready: make(chan struct{}), physicalReady: make(chan struct{})}
 }
 
 func (out *epochWarmWorkspaceOutput) signalLocked() {
@@ -64,6 +67,17 @@ func (out *epochWarmWorkspaceOutput) Write(raw []byte) (int, error) {
 					out.startInvalid = true
 					out.err = errExecutionAttempts
 				}
+				physical := out.observation.Phases[3]
+				if physical.Attempts >= 2 && !out.physicalArmed {
+					out.physicalInvalid = true
+					out.err = errExecutionAttempts
+				}
+				if physical.Completed == 2 && out.physicalSample.Completed == 0 {
+					out.physicalSample = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1, Maximum: out.observation.physicalPostAuthor}
+				}
+				if out.observation.physicalReady {
+					out.signalPhysicalLocked()
+				}
 				if row.Completed == 1 && out.sample.Completed == 0 {
 					out.sample = row // Retain positive excess even on this refusal.
 					out.signalLocked()
@@ -78,6 +92,7 @@ func (out *epochWarmWorkspaceOutput) Write(raw []byte) (int, error) {
 	err := out.err
 	if err != nil {
 		out.signalLocked()
+		out.signalPhysicalLocked()
 	}
 	out.mu.Unlock()
 	if err != nil {
@@ -135,5 +150,68 @@ func (run *ExecutionEpochOneRun) resumeMeasuredWarm(caller context.Context) erro
 	if run.warmWorkspace.arm() != nil || run.control.Resume(ctx) != nil || run.warmWorkspace.wait(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
+	return ctx.Err()
+}
+
+func (out *epochWarmWorkspaceOutput) signalPhysicalLocked() {
+	if !out.physicalSignaled {
+		out.physicalSignaled = true
+		close(out.physicalReady)
+	}
+}
+
+func (out *epochWarmWorkspaceOutput) armPhysical() error {
+	out.mu.Lock()
+	defer out.mu.Unlock()
+	if out.physicalArmed || out.err != nil || out.observation.Phases[2].Completed != 2 ||
+		out.observation.Phases[3].Attempts != 1 || out.observation.Phases[3].Completed != 1 {
+		return ErrExecutionEpochOne
+	}
+	out.physicalArmed = true
+	return nil
+}
+
+func (out *epochWarmWorkspaceOutput) waitPhysical(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ErrExecutionEpochOne
+	case <-out.physicalReady:
+	}
+	out.mu.Lock()
+	defer out.mu.Unlock()
+	if ctx.Err() != nil || out.err != nil || !out.physicalArmed ||
+		out.physicalSample.Attempts != 1 || out.physicalSample.Completed != 1 || !out.observation.physicalReady {
+		return ErrExecutionEpochOne
+	}
+	return nil
+}
+
+func (out *epochWarmWorkspaceOutput) physicalSnapshot() (ExecutionWorkspaceBytePhase, bool, bool) {
+	out.mu.Lock()
+	defer out.mu.Unlock()
+	excess := out.physicalSample.Completed != 0 &&
+		(out.physicalSample.Maximum.LogicalBytes > out.plan.WorkEnvelope.MaximumDataLogicalBytes ||
+			out.physicalSample.Maximum.AllocatedBytes > out.plan.SafetyEnvelope.MaximumDataAllocatedBytes)
+	return out.physicalSample, out.physicalInvalid || out.physicalSample.Completed != 1 &&
+		(out.err != nil || out.physicalArmed), excess
+}
+
+// Called only after authorPhysical and beginPhysical succeed, before any
+// progress query. Reopen's selected ACK is not completion: S retains the
+// middle walk, and only R after real owner/request reopening releases wait.
+func (run *ExecutionEpochOneRun) reopenMeasuredPhysical(ctx context.Context) error {
+	if run.warmWorkspace == nil {
+		return run.control.ReopenOwners(ctx)
+	}
+	if run.warmWorkspace.armPhysical() != nil || run.control.ReopenOwners(ctx) != nil ||
+		run.warmWorkspace.waitPhysical(ctx) != nil {
+		return ErrExecutionEpochOne
+	}
+	run.inspection.mu.Lock()
+	row, unavailable, excess := run.warmWorkspace.physicalSnapshot()
+	run.inspection.midphaseSamples.PostAuthor = row
+	run.inspection.midphaseSamples.Unavailable = run.inspection.midphaseSamples.Unavailable || unavailable
+	run.inspection.midphaseSamples.LimitExceeded = run.inspection.midphaseSamples.LimitExceeded || excess
+	run.inspection.mu.Unlock()
 	return ctx.Err()
 }

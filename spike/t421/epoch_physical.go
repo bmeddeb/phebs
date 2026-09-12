@@ -77,7 +77,7 @@ func (run *ExecutionEpochOneRun) PhysicalB(ctx context.Context) (retErr error) {
 		return ErrExecutionEpochOne
 	}
 	authored, err := run.authorPhysical(ctx)
-	if err != nil || !authored.Completed || authored.Response == nil || reader.beginPhysical(authored.Response.Result) != nil || run.control.ReopenOwners(ctx) != nil {
+	if err != nil || !authored.Completed || authored.Response == nil || reader.beginPhysical(authored.Response.Result) != nil || run.reopenMeasuredPhysical(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
 	for {

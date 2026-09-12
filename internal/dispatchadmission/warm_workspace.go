@@ -11,6 +11,7 @@ import (
 type warmStartWorkspace struct {
 	mu       sync.Mutex
 	callback func(context.Context) error
+	physical func(context.Context, func(context.Context) error) error
 	ctx      context.Context
 	cancel   context.CancelFunc
 	done     chan struct{}
@@ -49,10 +50,13 @@ func ProductionWarmStartWorkspaceState(ctx context.Context) (ProductionSemanticS
 }
 
 func (lifetime *ProductionLifetime) warmStartWorkspaceState(ctx context.Context) (ProductionSemanticSnapshot, error) {
-	if ctx == nil || ctx.Err() != nil || lifetime.warmWorkspace == nil {
+	return lifetime.fencedWorkspaceState(ctx, lifetime.warmWorkspace, 3)
+}
+
+func (lifetime *ProductionLifetime) fencedWorkspaceState(ctx context.Context, w *warmStartWorkspace, phase uint32) (ProductionSemanticSnapshot, error) {
+	if ctx == nil || ctx.Err() != nil || w == nil || phase != 3 && phase != 4 {
 		return ProductionSemanticSnapshot{}, ErrProductionBootstrap
 	}
-	w := lifetime.warmWorkspace
 	w.mu.Lock()
 	valid := !w.closed && w.ctx == ctx && w.done != nil
 	w.mu.Unlock()
@@ -60,7 +64,7 @@ func (lifetime *ProductionLifetime) warmStartWorkspaceState(ctx context.Context)
 	client.mu.Lock()
 	defer client.mu.Unlock()
 	valid = valid && lifetime.program == ProgramPhebs && lifetime.semanticMode == ProductionSemanticV3 &&
-		lifetime.producerID == 2 && client.phase == 3 && !client.closed && client.err == nil &&
+		lifetime.producerID == 2 && client.phase == phase && !client.closed && client.err == nil &&
 		client.ctx.Err() == nil && client.ownersRequired && !client.ownerRequestsOpen
 	owners := client.owners
 	if owners == nil {
@@ -74,7 +78,7 @@ func (lifetime *ProductionLifetime) warmStartWorkspaceState(ctx context.Context)
 		return ProductionSemanticSnapshot{}, ErrProductionBootstrap
 	}
 	return ProductionSemanticSnapshot{Mode: lifetime.semanticMode, InputSHA256: lifetime.inputSHA256,
-		ProducerID: 2, Phase: 3, RequestSequence: client.ownerRequestSequence, OrdinaryOwnersDrained: true}, nil
+		ProducerID: 2, Phase: phase, RequestSequence: client.ownerRequestSequence, OrdinaryOwnersDrained: true}, nil
 }
 
 func (lifetime *ProductionLifetime) runWarmStartWorkspace(ctx context.Context, nanos int64) (retErr error) {
@@ -113,7 +117,10 @@ func (lifetime *ProductionLifetime) runWarmStartWorkspace(ctx context.Context, n
 }
 
 func (lifetime *ProductionLifetime) closeWarmStartWorkspace(ctx context.Context) error {
-	w := lifetime.warmWorkspace
+	return lifetime.warmWorkspace.close(ctx)
+}
+
+func (w *warmStartWorkspace) close(ctx context.Context) error {
 	if w == nil {
 		return nil
 	}
