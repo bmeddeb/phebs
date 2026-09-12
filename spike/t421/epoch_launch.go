@@ -45,6 +45,8 @@ type ExecutionEpochOne struct {
 	returnUsed             bool
 	workspace              *productionRoot        // Borrowed only from a bound pressure volume.
 	workspaceBytes         *custodybytes.Observer // Same observer retained by the bound volume.
+	serverSessions         [5]int                 // Actual successful root Starts; never cleared by Wait or handoff. Protected by mu.
+	archiveSessions        [2]int                 // Backup and restore, in that order; the existing one-shot recipes own these slots.
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -535,6 +537,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		return nil, ErrExecutionEpochOne
 	}
 	started, run.result.RootStarted = true, true
+	flow.serverSessions[number-1] = command.Process.Pid // flow.mu is held; retain even if subsequent bootstrap fails.
 	run.mu.Lock()
 	run.setHealthDeadlineLocked(launchCtx, launchStarted)
 	run.mu.Unlock()

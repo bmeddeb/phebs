@@ -264,6 +264,9 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 	if err != nil {
 		return ErrExecutionEpochOne
 	}
+	flow.mu.Lock()
+	flow.archiveSessions[producer-10] = command.Process.Pid // Actual Start, not archive success or a joined-result assertion.
+	flow.mu.Unlock()
 	run.mu.Lock()
 	if restore {
 		run.restoreStarted = true

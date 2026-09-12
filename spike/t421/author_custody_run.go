@@ -251,6 +251,9 @@ func (custody *ExecutionAuthorCustody) runAuthorConfigured(ctx context.Context, 
 		return result, ErrExecutionAuthorCustody
 	}
 	result.RootStarted = true
+	custody.mu.Lock()
+	custody.sessions[index] = command.Process.Pid // Capture before Wait, including any later failure prefix.
+	custody.mu.Unlock()
 	waited := make(chan error, 1)
 	go func() {
 		if parent != nil {

@@ -282,8 +282,9 @@ func (v *executionPressureVolume) remove(ctx context.Context, emptyOnly bool) er
 		return errPressureVolume
 	}
 	// Populated callers have already closed their bound operational borrower.
-	// A surviving recorded preparation session still forbids detaching its writer.
-	for _, session := range v.sessions {
+	// Freshly inspect the nonshrinking preparation and operational scope;
+	// earlier RootJoined/SessionEmpty results do not replace this census.
+	for _, session := range v.recordedSessionsLocked() {
 		if err := t4013.WaitPrivateProcessSession(session, time.Now().Add(5*time.Second)); err != nil {
 			return errPressureVolume
 		}
@@ -298,7 +299,7 @@ func (v *executionPressureVolume) remove(ctx context.Context, emptyOnly bool) er
 	if _, err := v.command(ctx, "detach", v.device); err != nil {
 		return errPressureVolume
 	}
-	for _, session := range v.sessions {
+	for _, session := range v.recordedSessionsLocked() {
 		if err := t4013.WaitPrivateProcessSession(session, time.Now().Add(5*time.Second)); err != nil {
 			return errPressureVolume
 		}
@@ -366,6 +367,44 @@ func pressureDirectoryEmpty(path string) bool {
 	return file.Close() == nil && len(names) == 0 && errors.Is(readErr, io.EOF)
 }
 
+// recordedSessionsLocked snapshots only the closed launch recipe: three image
+// commands, five servers, three authors and two archive commands. Callers hold
+// volume.mu; brief flow→author locks copy actual Start IDs, never old emptiness
+// booleans. Those locks are released before any native census. IDs survive
+// joins, errors, input Close and epoch handoffs; zero unused operational slots
+// are omitted, while even an invalid recorded preparation ID remains fail-closed.
+func (v *executionPressureVolume) recordedSessionsLocked() []int {
+	sessions := make([]int, 0, 13)
+	sessions = append(sessions, v.sessions...)
+	if v.flow == nil {
+		return sessions
+	}
+	flow := v.flow
+	flow.mu.Lock()
+	defer flow.mu.Unlock()
+	for _, session := range flow.serverSessions {
+		if session != 0 {
+			sessions = append(sessions, session)
+		}
+	}
+	for _, session := range flow.archiveSessions {
+		if session != 0 {
+			sessions = append(sessions, session)
+		}
+	}
+	if flow.epochs != nil && flow.epochs.author != nil {
+		author := flow.epochs.author
+		author.mu.Lock()
+		for _, session := range author.sessions {
+			if session != 0 {
+				sessions = append(sessions, session)
+			}
+		}
+		author.mu.Unlock()
+	}
+	return sessions
+}
+
 // Close never unmounts or deletes; failures retain the exact path for an
 // explicit operator decision. It also releases the shared mutation lock.
 func (v *executionPressureVolume) Close() error {
@@ -382,7 +421,7 @@ func (v *executionPressureVolume) Close() error {
 	}
 	// Cover every failure boundary, including a successful command followed by
 	// malformed output or mount refusal. Root Wait alone never releases custody.
-	for _, session := range v.sessions {
+	for _, session := range v.recordedSessionsLocked() {
 		members, err := t4013.PrivateProcessSessionMembers(session)
 		if err != nil || members != 0 {
 			v.unsettled = true

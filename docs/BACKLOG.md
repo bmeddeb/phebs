@@ -7814,6 +7814,28 @@ rule requires explicit prospective V3 wording and must retain actual positive
 pre-detach maxima and every earlier unavailable/overshoot condition. No such
 rule or full teardown pass is established by this test slice.
 
+The recorded-session prerequisite now retains actual successful Starts for all
+five servers, three authors and two archive commands, alongside the existing
+three image-command slots. It captures before Wait and preserves post-Start
+failures, joined/closed owners and numeric duplicates. Existing before-detach,
+after-detach and Close checks inspect this nonshrinking recorded scope; they
+do not reuse prior empty-session booleans or claim PID birth identity. The
+actual wrong-program author test confirms that a native Start followed by
+bootstrap failure and Close retains its real session; modeled inventory tests
+cover all thirteen slots and detached copies, while invalid IDs exercise native
+refusal without probing arbitrary positive test IDs. Focused normal/race passed
+in 1.093/2.222s. An initial uncommitted patch application placed the archive
+capture at an ambiguous earlier context and failed compilation; the lead moved
+it immediately after the actual archive Start before these passing gates.
+No noncompiling commit or native teardown pass is asserted.
+Full ci-static passed vet, zero-issue lint and all-package compilation; docs
+(0.493s), glossary and whitespace passed. Independent applied-source, lifecycle
+and cost review reports all severity counts zero at ordered manifest
+`d6e9734990c3d4967bf197d1d4378d83b5f431d40e9c4719bbd98d9d51aa6c23`
+(launch, author custody, author run, archive, volume, author tests, session
+scope tests). Phase-fifteen operational admission and complete cleanup evidence
+remain separately gated work.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

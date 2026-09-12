@@ -52,6 +52,7 @@ type ExecutionAuthorCustody struct {
 	phases      [3]uint32
 	previous    *ExecutionCorpusAuthorResponse
 	results     []ExecutionAuthorResult
+	sessions    [3]int // Actual successful author Starts, retained across failed results and Close; protected by mu.
 	next        int
 	active      bool
 	borrowedBy  *ExecutionEpochOneRun // Live server custody is separate from author activity.

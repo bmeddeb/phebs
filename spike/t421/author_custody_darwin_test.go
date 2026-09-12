@@ -273,6 +273,24 @@ func TestExecutionAuthorCustodyActualWrongProgramJoined(t *testing.T) {
 	if _, err := os.Stat(custody.Directory()); err != nil {
 		t.Fatal("failed native start path discarded source custody")
 	}
+	// runAuthor took the real successful Start and then failed its bootstrap/
+	// continuation against the wrong program. Its already-joined failure must
+	// retain that actual session, including after input custody Close.
+	custody.mu.Lock()
+	sessions := custody.sessions
+	custody.mu.Unlock()
+	if sessions[0] <= 0 || sessions[1] != 0 || sessions[2] != 0 {
+		t.Fatal("post-Start failure lost its actual session slot")
+	}
+	if err := custody.Close(); err != nil {
+		t.Fatal(err)
+	}
+	custody.mu.Lock()
+	retained := custody.sessions
+	custody.mu.Unlock()
+	if retained != sessions {
+		t.Fatal("joined failed author Close erased session identity")
+	}
 }
 
 func TestExecutionAuthorCustodySocketAdoption(t *testing.T) {
