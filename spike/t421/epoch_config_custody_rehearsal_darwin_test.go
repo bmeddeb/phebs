@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -90,6 +91,9 @@ func rehearseExecutionEpochConfigs(t *testing.T, ctx context.Context, author *Ex
 			parsed.Auth.APIKey != epoch.APIKey || parsed.ServiceCatalogs[repository].Path != epoch.CatalogPath ||
 			validateEpochConfigBytes(plan, epoch, source, input) != nil {
 			t.Fatal("actual protected config bytes or source/catalog binding differ", index+1, err)
+		}
+		if !reflect.DeepEqual(parsed, custody.parsedConfigs[index]) {
+			t.Fatal("retained parsed observation differs from actual protected config")
 		}
 		configBytes += uint64(len(input))
 		t.Logf("actual protected epoch %d config: %d bytes", index+1, len(input))

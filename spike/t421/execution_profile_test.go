@@ -1,6 +1,7 @@
 package t421
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -183,4 +184,42 @@ func startupRuntimeTestInventory(t *testing.T, corrected bool) (ExecutionFreeze,
 		outcomes[phase] = "passed"
 	}
 	return freeze, states, phases, outcomes, measurements
+}
+
+// Supplied admission fixtures establish factoring/legacy preservation only;
+// no observed custody or successful private issuer is modeled here.
+func TestExecutionProfileAssemblyDoesNotIssueAdmission(t *testing.T) {
+	for _, plan := range lifecyclePolicyPlans(t) {
+		t.Run(plan.Schema, func(t *testing.T) {
+			tools := executionFreezeTestTools(plan, executionFreezeTestCommits())
+			host := executionFreezeTestHost()
+			admitted := executionProfileTestAdmission(t, plan, tools, host)
+			want, err := expectedExecutionProfile(plan, tools, host, admitted)
+			if err != nil {
+				t.Fatal(err)
+			}
+			inputs := admitted
+			inputs.profileSHA256, inputs.invocationSHA256 = "", ""
+			inputs.closedEnvironment, inputs.verifiedBeforeWork = false, false
+			got, commands, err := assembleExecutionProfile(plan, tools, host, inputs)
+			if err != nil || !reflect.DeepEqual(got, want) || commands != admitted.commandsSHA256 {
+				t.Fatal("factored shape changed existing profile bytes", err)
+			}
+			if _, err := expectedExecutionProfile(plan, tools, host, inputs); err == nil {
+				t.Fatal("unverified assembly issued admission")
+			}
+			for _, change := range []func(*ExecutionProfileAdmissionBinding){
+				func(v *ExecutionProfileAdmissionBinding) { v.profileSHA256 = "" },
+				func(v *ExecutionProfileAdmissionBinding) { v.invocationSHA256 = "" },
+				func(v *ExecutionProfileAdmissionBinding) { v.commandsSHA256 = "" },
+				func(v *ExecutionProfileAdmissionBinding) { v.configProjectionSHA256 = "" },
+			} {
+				bad := admitted
+				change(&bad)
+				if _, err := expectedExecutionProfile(plan, tools, host, bad); err == nil {
+					t.Fatal("factoring dropped a verified binding comparison")
+				}
+			}
+		})
+	}
 }

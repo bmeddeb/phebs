@@ -8335,6 +8335,30 @@ severity counts zero. The four-path source manifest is unchanged across these
 final gates; actual Buf/focused admission and mounted release still require
 the later complete native composition.
 
+The private profile-input slice factors expected assembly while preserving
+every existing external-admission check. It retains the actual parsed config
+values from the existing validation pass after protected-copy checks, and
+observes the real parent/serve environment builders once before AuthorA.
+Detached 28/29-entry values and framed hashes are private preparation facts,
+not argv/runtime/domain observations or a complete profile admission.
+Independent final draft review of
+`41b2b9363e96c284377c06889ec4a052ec165e51497c38ec36dcbd5840db10fa`
+found all severity counts zero. Root's pre-gate review corrected a missing
+test import and made refusal fixtures assert whether preparation was consumed.
+Ordered nine-path source manifest (profile/test, environment/test, epoch
+config/test, launch, launch rehearsal, config rehearsal) is
+`eea0eb0dacbd42aaa14f2bc0da4a233f8a288ce029308af11162914717b0611b`.
+Focused normal passed uncached in 1.740s, including historical canonical
+contracts. These supplied profile/environment tests and actual protected-input
+staging tests do not execute the full shared-author fixture. Its added parsed
+config assertion remains a later native composition gate; that fixture runs
+three full-population author CLIs, not a small config-only test.
+Matching race passed in 16.265s, uncached. Static passed vet, zero pinned-lint
+issues and whole-repository compilation; docs passed in 0.828s, glossary and
+whitespace clean, and V1/V2 canonical digests unchanged. The ordered source
+manifest is unchanged across these gates. Actual full configuration custody,
+complete profile issuance and native preparation fit remain open.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

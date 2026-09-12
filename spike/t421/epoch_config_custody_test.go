@@ -61,13 +61,16 @@ func TestExecutionEpochCatalogAndConfigExactBytes(t *testing.T) {
 	var configTotal int
 	for index := range 5 {
 		epoch, source := epochTestSelection(t, index)
-		raw, err := epochConfigBytes(plan, epoch, source)
+		raw, observed, err := epochConfigBytesParsed(plan, epoch, source)
 		if err != nil {
 			t.Fatal(err)
 		}
 		parsed, err := config.ParseLiteral(raw)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(parsed, observed) {
+			t.Fatal("retained config facts differ from parsing the actual bytes")
 		}
 		if parsed.ServiceCatalogs[epoch.Repository].Version != []string{combinedAuthorityA, combinedAuthorityB, combinedAuthorityAReturn, combinedAuthorityAReturn, combinedAuthorityAReturn}[index] ||
 			parsed.Sync.PollInterval != "250ms" || !parsed.Diagnostics.Jobs || !parsed.Diagnostics.Candidates || !parsed.Diagnostics.Extraction || parsed.Diagnostics.ExtractorDetails ||
@@ -161,7 +164,7 @@ func TestExecutionEpochConfigRefusesSemanticDrift(t *testing.T) {
 			if mode == "bytes" {
 				changed = bytes.Repeat([]byte{'x'}, maxEpochConfigBytes+1)
 			}
-			if validateEpochConfigBytes(plan, epoch, source, changed) == nil {
+			if observed, err := parseEpochConfigBytes(plan, epoch, source, changed); err == nil || observed != nil {
 				t.Fatal("changed semantic input admitted")
 			}
 		})

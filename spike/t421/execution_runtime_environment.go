@@ -1,6 +1,8 @@
 package t421
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"slices"
@@ -99,4 +101,34 @@ func (binding executionRuntimeEnvironmentBindings) normalize(actual []string, se
 		return nil, refused
 	}
 	return normalized, nil
+}
+
+// Private preparation evidence, not a profile/admission. The normalized slices
+// are detached from the builder and retained only by the pre-work flow owner.
+type executionRuntimeEnvironmentObservation struct {
+	Recovery, Server             []string
+	RecoverySHA256, ServerSHA256 string
+}
+
+func (binding executionRuntimeEnvironmentBindings) observe(parent []string) (executionRuntimeEnvironmentObservation, error) {
+	var observed executionRuntimeEnvironmentObservation
+	for index, actual := range [][]string{parent, executionServeEnvironment(parent)} {
+		normalized, err := binding.normalize(actual, index == 1)
+		if err != nil {
+			return executionRuntimeEnvironmentObservation{}, err
+		}
+		digest := sha256.New()
+		for _, entry := range normalized {
+			name, value, _ := strings.Cut(entry, "=") // normalize already validated each unique name.
+			writeFrame(digest, []byte(name))
+			writeFrame(digest, []byte(value))
+		}
+		value := "sha256:" + hex.EncodeToString(digest.Sum(nil))
+		if index == 0 {
+			observed.Recovery, observed.RecoverySHA256 = normalized, value
+		} else {
+			observed.Server, observed.ServerSHA256 = normalized, value
+		}
+	}
+	return observed, nil
 }

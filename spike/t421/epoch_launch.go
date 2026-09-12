@@ -50,7 +50,9 @@ type ExecutionEpochOne struct {
 	serverSessions         [5]int                 // Actual successful root Starts; never cleared by Wait or handoff. Protected by mu.
 	archiveSessions        [2]int                 // Backup and restore, in that order; the existing one-shot recipes own these slots.
 
-	profileTools [2]*ExecutionToolCustody // Optional Buf/focused protected copies; no dispatch permission.
+	profileTools           [2]*ExecutionToolCustody // Optional Buf/focused protected copies; no dispatch permission.
+	profileEnvironment     *executionRuntimeEnvironmentObservation
+	profileEnvironmentUsed bool // One preparation attempt, never per-dispatch hashing.
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -155,6 +157,48 @@ func (flow *ExecutionEpochOne) bindProfileTools(ctx context.Context, buf, focuse
 		}
 	}
 	flow.profileTools = selected
+	return nil
+}
+
+// prepareProfileEnvironment observes the existing actual epoch-one builder
+// once before AuthorA. It neither releases the listener nor creates a child,
+// verified profile, phase-one measurement or event ordinal.
+func (flow *ExecutionEpochOne) prepareProfileEnvironment(ctx context.Context) error {
+	if flow == nil || ctx == nil || ctx.Err() != nil || flow.epochs == nil || flow.epochs.author == nil {
+		return ErrExecutionEpochOne
+	}
+	flow.mu.Lock()
+	defer flow.mu.Unlock()
+	author, epochs := flow.epochs.author, flow.epochs
+	author.mu.Lock()
+	defer author.mu.Unlock()
+	epochs.mu.Lock()
+	defer epochs.mu.Unlock()
+	if flow.plan.Schema != PlanV3Schema || flow.closed || flow.used || flow.authored || !flow.authorStarted.IsZero() ||
+		flow.profileEnvironmentUsed || author.active || author.borrowedBy != nil || author.next != 0 ||
+		epochs.active || epochs.released != 0 || epochs.parsedConfigs[0] == nil ||
+		flow.phebs == nil || flow.zoekt == nil || flow.surreal == nil {
+		return ErrExecutionEpochOne
+	}
+	flow.profileEnvironmentUsed = true
+	if epochs.checkLocked(ctx, 1) != nil {
+		return ErrExecutionEpochOne
+	}
+	_, tools, parent, err := flow.checkEpochTools(ctx, 1)
+	if err != nil || len(tools) != 3 || tools[1].Role != "surreal" || tools[2].Role != "zoekt-git-index" {
+		return ErrExecutionEpochOne
+	}
+	epoch := epochs.epochs[0]
+	binding := executionRuntimeEnvironmentBindings{
+		Home: epoch.Home, Temporary: epoch.Temporary, GitDirectory: author.request.Git.Directory(),
+		SurrealPath: tools[1].Path, SurrealSHA256: flow.surreal.identity.SHA256,
+		ZoektPath: tools[2].Path, ZoektSHA256: flow.zoekt.identity.SHA256,
+	}
+	observed, err := binding.observe(parent)
+	if err != nil || ctx.Err() != nil {
+		return ErrExecutionEpochOne
+	}
+	flow.profileEnvironment = &observed
 	return nil
 }
 

@@ -1,9 +1,14 @@
 package t421
 
 import (
+	"context"
+	"encoding/binary"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/config"
 )
 
 func TestExecutionRuntimeEnvironment(t *testing.T) {
@@ -76,6 +81,39 @@ func TestExecutionRuntimeEnvironment(t *testing.T) {
 			}
 		})
 	}
+	observed, err := binding.observe(parent)
+	if err != nil || observed.RecoverySHA256 == observed.ServerSHA256 {
+		t.Fatal("actual environment classes did not produce distinct observations", err)
+	}
+	// Independently encode the specified BE64 name/value framing; production
+	// reuses writeFrame. These supplied paths still do not issue real admission.
+	framedDigest := func(entries []string) string {
+		var raw []byte
+		for _, entry := range entries {
+			name, value, _ := strings.Cut(entry, "=")
+			for _, field := range []string{name, value} {
+				raw = binary.BigEndian.AppendUint64(raw, uint64(len(field)))
+				raw = append(raw, field...)
+			}
+		}
+		return SHA256(raw)
+	}
+	if observed.RecoverySHA256 != framedDigest(observed.Recovery) || observed.ServerSHA256 != framedDigest(observed.Server) {
+		t.Fatal("environment observation changed the declared length framing")
+	}
+	reversed := slices.Clone(parent)
+	slices.Reverse(reversed)
+	again, err := binding.observe(reversed)
+	if err != nil || !reflect.DeepEqual(observed, again) {
+		t.Fatal("observed digest depends on input order")
+	}
+	again.Recovery[0] = "mutated"
+	if observed.Recovery[0] == again.Recovery[0] || !slices.Equal(parent, parentBefore) {
+		t.Fatal("environment observation aliases prior values or actual builder")
+	}
+	if bad, err := binding.observe(append(slices.Clone(parent), parent[0])); err == nil || !reflect.DeepEqual(bad, executionRuntimeEnvironmentObservation{}) {
+		t.Fatal("failed observation retained a partial or duplicate environment")
+	}
 	// The serve-only append must not mutate either the recovery or nested-tool
 	// environment, including when the caller's slice has spare capacity.
 	shared := make([]string, len(parent), len(parent)+2)
@@ -111,5 +149,46 @@ func TestExecutionRuntimeEnvironmentVersioning(t *testing.T) {
 	plan := accountingTestPlan(t)
 	if len(plan.ToolPolicy.RequiredTools) != 12 {
 		t.Fatal("runtime projection weakened independent tool inventory")
+	}
+}
+
+func TestExecutionProfileEnvironmentPreworkRefusals(t *testing.T) {
+	// Refusal-only config/tool placeholders bypass unrelated nil guards; they
+	// are not protected inputs or successful observed identities.
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	for _, mode := range []string{"nil", "canceled", "started", "used", "closed", "released", "repeat", "owned_check_failure"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx := t.Context()
+			flow := &ExecutionEpochOne{
+				plan: Plan{Schema: PlanV3Schema},
+				epochs: &ExecutionEpochConfigCustody{
+					author: &ExecutionAuthorCustody{}, parsedConfigs: [5]*config.Config{{}},
+				},
+				phebs: &ExecutionToolCustody{}, zoekt: &ExecutionToolCustody{}, surreal: &ExecutionToolCustody{},
+			}
+			switch mode {
+			case "nil":
+				flow = nil
+			case "canceled":
+				ctx = canceled
+			case "started":
+				flow.authored = true
+			case "used":
+				flow.used = true
+			case "closed":
+				flow.closed = true
+			case "released":
+				flow.epochs.released = 1
+			case "repeat":
+				flow.profileEnvironmentUsed = true
+			}
+			if err := flow.prepareProfileEnvironment(ctx); err == nil || flow != nil && flow.profileEnvironment != nil {
+				t.Fatal("non-prework owner issued environment observation")
+			}
+			if flow != nil && flow.profileEnvironmentUsed != (mode == "repeat" || mode == "owned_check_failure") {
+				t.Fatal("prework guard consumed preparation, or failed owned check did not consume it")
+			}
+		})
 	}
 }

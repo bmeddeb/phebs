@@ -297,6 +297,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		preparation, _ := volume.byteSnapshot()
 		t.Logf("actual whole-workspace preparation maximum: %+v; no phase-one/cold-start coverage", preparation)
 	}
+	if err := flow.prepareProfileEnvironment(ctx); err != nil {
+		t.Fatal("actual pre-author environment observation", err)
+	}
 	result, err := flow.AuthorA(ctx)
 	if err != nil || !result.Completed || !result.RootJoined || !result.SessionEmpty || result.Revision != "a" {
 		t.Fatalf("actual shared author A: %+v; %v", result, err)

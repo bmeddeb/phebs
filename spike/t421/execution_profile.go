@@ -221,33 +221,61 @@ func expectedExecutionProfile(
 		!admission.closedEnvironment || !admission.verifiedBeforeWork {
 		return ExecutionProfile{}, errors.New("T42.2 execution profile lacks external pre-work admission")
 	}
+	profile, commandsSHA256, err := assembleExecutionProfile(plan, tools, host, admission)
+	if err != nil {
+		return ExecutionProfile{}, err
+	}
+	profileSHA256, err := canonicalSHA256(profile)
+	if err != nil {
+		return ExecutionProfile{}, err
+	}
+	if admission.commandsSHA256 != commandsSHA256 ||
+		admission.configProjectionSHA256 != profile.Config.ProjectionSHA256 ||
+		admission.profileSHA256 != profileSHA256 ||
+		admission.invocationSHA256 != profile.InvocationSHA256 {
+		return ExecutionProfile{}, errors.New("T42.2 execution profile differs from its external admission")
+	}
+	return profile, nil
+}
+
+// assembleExecutionProfile constructs the expected shape from the supplied
+// input bindings, without requiring the final profile/invocation seals or
+// verified flags. It observes nothing and issues no admission. The actual
+// issuer must compare independently retained facts before setting those seals;
+// expectedExecutionProfile keeps every existing admission check.
+func assembleExecutionProfile(
+	plan Plan,
+	tools []ExecutionToolIdentity,
+	host ExecutionHost,
+	admission ExecutionProfileAdmissionBinding,
+) (ExecutionProfile, string, error) {
 	accountingSHA256 := ""
 	if plan.Schema == PlanV3Schema {
 		if plan.ProcessAccounting == nil {
-			return ExecutionProfile{}, errors.New("V3 execution profile lacks its process accounting contract")
+			return ExecutionProfile{}, "", errors.New("V3 execution profile lacks its process accounting contract")
 		}
 		var err error
 		accountingSHA256, err = canonicalSHA256(plan.ProcessAccounting)
 		if err != nil {
-			return ExecutionProfile{}, err
+			return ExecutionProfile{}, "", err
 		}
 	}
 	if admission.processAccountingSHA256 != accountingSHA256 {
-		return ExecutionProfile{}, errors.New("execution profile accounting differs from its private admission")
+		return ExecutionProfile{}, "", errors.New("execution profile accounting differs from its private admission")
 	}
 	commands := frozenExecutionCommands()
 	commandsSHA256, err := canonicalSHA256(commands)
 	if err != nil {
-		return ExecutionProfile{}, err
+		return ExecutionProfile{}, "", err
 	}
 	config := frozenExecutionConfig(plan, admission.configBytesSHA256)
 	config.ProjectionSHA256, err = executionConfigProjectionSHA256(config)
 	if err != nil {
-		return ExecutionProfile{}, err
+		return ExecutionProfile{}, "", err
 	}
 	epochs, err := admittedExecutionServerEpochs(plan, admission)
 	if err != nil {
-		return ExecutionProfile{}, err
+		return ExecutionProfile{}, "", err
 	}
 	profile := ExecutionProfile{
 		Schema:                   plan.ToolPolicy.ExecutionProfileSchema,
@@ -269,19 +297,9 @@ func expectedExecutionProfile(
 	}
 	profile.InvocationSHA256, err = executionInvocationSHA256(profile, tools)
 	if err != nil {
-		return ExecutionProfile{}, err
+		return ExecutionProfile{}, "", err
 	}
-	profileSHA256, err := canonicalSHA256(profile)
-	if err != nil {
-		return ExecutionProfile{}, err
-	}
-	if admission.commandsSHA256 != commandsSHA256 ||
-		admission.configProjectionSHA256 != config.ProjectionSHA256 ||
-		admission.profileSHA256 != profileSHA256 ||
-		admission.invocationSHA256 != profile.InvocationSHA256 {
-		return ExecutionProfile{}, errors.New("T42.2 execution profile differs from its external admission")
-	}
-	return profile, nil
+	return profile, commandsSHA256, nil
 }
 
 func applyV3ExecutionProfile(profile *ExecutionProfile) {
