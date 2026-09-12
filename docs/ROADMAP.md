@@ -67,8 +67,10 @@ sequence.
 **T42.2 V3 capacity correction approved, 2026-09-11:** Ben approved the
 128-GiB sampled per-linked-path allocation ceiling and derived nominal margin,
 with the physical pressure volume still 96 GiB and all other limits unchanged.
-The scoped implementation, versioned regression and receipt gates follow;
-native archive/restore sampling and later-phase composition remain required
+Exact implementation `b6f80e94` closed its selected acceptance gate on
+2026-09-12: the 74/25-name race groups produced 95 passes and four explicit
+native opt-in skips; module verification, full static, docs and glossary checks
+passed. Native archive/restore sampling and later-phase composition remain required
 before another long rehearsal. This is not a physical capacity increase,
 retroactive pass, full-fit guarantee or freeze.
 

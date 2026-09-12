@@ -7200,12 +7200,47 @@ SHA-256 manifest `385bd8bfc3e935887a91b1078aa4f11ea8aff2348024ffb438b36dfc1408ca
 Normal/race log SHA-256:
 `f567bf8b203f0a517fdbc904bcdd9215daaa8904b6c3f914ca262d0435f35a1d` /
 `e689a039c8416015679f1cdaf9cffbce7df3c14133e7c8f8d18cae62b12df59c`.
-Full exact-source acceptance remains pending: retain the previous disjoint
+At that scoped-gate boundary, full exact-source acceptance remained pending:
+retain the previous disjoint
 63/25 parent/constructor race groups and add the eleven newly covered scoped
 names to the parent group, producing 74/25 names. Keep the full V3 completed
 and work-failure receipt tests together, the unchanged sixty-minute command
 allowances, pinned offline inputs and fail-fast behavior. These scoped passes
 do not replace that constructor-backed gate or the later native phase gates.
+
+**Exact-source capacity gate closed (2026-09-12).** Clean detached implementation
+`b6f80e94275ac9879375770f5cf083fd762c55c2` passed both retained race groups:
+74 parent names produced 70 passes and four explicit opt-in skips in 1,378.976s;
+all 25 shared-constructor names passed without skips in 3,055.241s. All 99
+terminal names match the two disjoint selectors, preserving the previous 88
+and adding the eleven scoped names. No failure or race marker was recorded.
+The skipped tests were `TestExecutionPressureBallastOptionalNative`,
+`TestExecutionPressureVolumeOptionalNative`,
+`TestExecutionPressureWorkspaceOptionalNative`, and
+`TestExecutionToolCustodyExternalLifecycleRefusalsAreSticky`; their explicit
+native opt-ins were not supplied. These skips are not native capacity evidence.
+
+The full V3 receipt test passed in 3,035.84s with all three modeled completed,
+positive-incomplete and RSS-overshoot/native-unavailable scenarios. The shared
+work-failure receipt test passed all 22 cases in 8.56s. The native constructor
+fixtures settled A/B/return-A with 56 extraction chunks and nine current domain
+roots each; both preparation/recovery fixtures completed 56 reuse chunks with
+zero source acquisitions and evidence appends. They did not inject a live
+stale lease or process death and do not establish a full rehearsal pass.
+
+Module verification, full repository `ci-static` (vet, pinned lint with zero
+issues, and all-package compilation), docs (0.499s), glossary, whitespace and
+exact-clean checkout checks passed. The wrapper exited zero; its session joined
+and no matching test or SurrealDB process remained. Retained V1/V2 canonical
+bytes remain unchanged. Parent/constructor log SHA-256:
+`22e4a812852987c7c78064bdc27a0e29fdba89439a0c1dc6b22a20b4dd22786a` /
+`401cbf281f9be8bfdd79abe958d7304603b95801b60b3f8412ba516bea59d0be`.
+This closes only the approved capacity correction's selected acceptance gate,
+not the complete package, repository test suite or native ceremony ladder.
+Fresh non-authoring record review independently verified source identity,
+terminal inventories, hashes, timings and fixture scope and found zero critical,
+high, medium or low findings. Record-only documentation, glossary and whitespace
+checks also passed; the record changes no compiled, embedded or fixture input.
 
 Before another long rehearsal, separately close the existing bounded native
 archive/restore mutation-sampling and later-phase composition gaps identified
