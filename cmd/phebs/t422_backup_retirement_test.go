@@ -36,10 +36,16 @@ import (
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/spike/t4013"
+	t421fixture "github.com/bmeddeb/phebs/spike/t421"
 )
 
 const t422BackupFixture = "PHEBS_T422_BACKUP_RETIREMENT_TEST"
+
+// The opt-in real preparation seed includes all 56 partitions under -race.
+// This is one original fixture deadline, not a production phase allowance.
+const t422PreparationFixtureLimit = 30 * time.Minute
 
 // Joined real child output; a single positive phase-two pair is a prefix,
 // never completeness for the two-phase finish sequence.
@@ -361,11 +367,12 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace, arch
 }
 
 func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspace, archiveWorkspace bool, failure string, cleanup ...bool) {
+	preparationWorkspace := failure == "workspace-preparation"
 	recoveryWorkspace := failure == "workspace-recovery"
 	physicalWorkspace := failure == "workspace-physical"
 	warmWorkspace := failure == "workspace-warm" || physicalWorkspace
 	earlyWorkspace := failure == "workspace-early" || warmWorkspace
-	if earlyWorkspace || recoveryWorkspace {
+	if earlyWorkspace || recoveryWorkspace || preparationWorkspace {
 		if !workspace || restore || archiveWorkspace || len(cleanup) != 0 {
 			t.Fatal("invalid early workspace fixture")
 		}
@@ -398,6 +405,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	fixtureLimit := 3 * time.Minute
 	if cleanupWorkspace {
 		fixtureLimit = 10 * time.Minute
+	}
+	if preparationWorkspace {
+		fixtureLimit = t422PreparationFixtureLimit
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), fixtureLimit)
 	defer cancel()
@@ -445,6 +455,59 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		record.Control.PhysicalPostAuthorWorkspace = physicalWorkspace
 		record.Control.MaximumWireBytes = 21 * 2 * dispatchadmission.FrameBytes
 	}
+
+	if preparationWorkspace {
+		record.Producer.ID, record.Producer.Binding, record.Phase = 4, [32]byte{4}, 6
+		record.Limits.Phases = 3
+		record.Limits.Attempts = 151883 + 4801 + 4854
+		record.Limits.ActivePerProducer = 2*(29+1) + 1 // Existing V3 selected active ceiling.
+		// Existing DA derivation specialized to this one producer/three phases:
+		// admit+settle, three checkpoints, two possible engine carries, close/EOF.
+		record.Limits.WireBytes = (2*record.Limits.Attempts + 3 + 2 + 1 + 1) * 2 * dispatchadmission.FrameBytes
+		record.Control = dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{6, 7, 8},
+			InitialPhase: 6, MaximumPhases: 3, MaximumWireBytes: 14 * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+		corpus, err := t421fixture.BuildCombinedCorpus()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, raw := t422StaleBootstrapRecord(t)
+		var semantic t422SemanticLaunchRequest
+		if err := json.Unmarshal(raw, &semantic); err != nil {
+			t.Fatal(err)
+		}
+		repository, err := phebssync.SafeRepoDir(filepath.Join(root, "data"), semantic.Repository)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(repository), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		// Explicit test-owned Git author; all production builders run inside
+		// inherited producer-four accounting, not an unmetered second store.
+		semantic.ReturnSourceCommit = t421BlackBoxRepository(t, ctx, repository, corpus.Profile.Pipeline.ExtractionDomains)
+		raw, err = json.Marshal(semantic)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw = append(raw, '\n')
+		if err := os.WriteFile(filepath.Join(root, "preparation-semantic.json"), raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		record.InputSHA256 = sha256.Sum256(raw)
+		git, err := exec.LookPath("git")
+		if err != nil {
+			t.Fatal(err)
+		}
+		git, err = filepath.EvalSymlinks(git)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for index := range record.Tools {
+			if record.Tools[index].Role == "git" {
+				record.Tools[index].Path = git
+			}
+		}
+	}
 	var warmOutput *t422WarmNativeOutput
 	if warmWorkspace {
 		warmOutput = &t422WarmNativeOutput{ready: make(chan t422WorkspaceSampleResponse, 1)}
@@ -457,7 +520,7 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	var archiveParentSamples int
 	archivePath := filepath.Join(root, "archive")
 	if workspace || archiveWorkspace {
-		if workspace {
+		if workspace && !preparationWorkspace {
 			semantic, _ := t422LifecycleBootstrapRecord(t)
 			record.InputSHA256 = semantic.InputSHA256
 			if earlyWorkspace {
@@ -508,6 +571,12 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	restoreProducer.ID, restoreProducer.Binding = 11, [32]byte{11}
 	storeProducers := []storeaccounting.Producer{{ID: record.Producer.ID, Calls: 40, Transactions: 2}, {ID: 10, Calls: 1, Transactions: 1}}
 	wireProducers := []storeaccounting.WireProducer{{ID: record.Producer.ID, Binding: record.Producer.Binding, Phases: 1920}, {ID: 10, Binding: backupProducer.Binding, Phases: 2048}}
+
+	if preparationWorkspace {
+		configuration.Producers = configuration.Producers[:1]
+		storeProducers, wireProducers = storeProducers[:1], wireProducers[:1]
+		wireProducers[0].Phases = 224 // Existing producer-four phases six through eight.
+	}
 	if earlyWorkspace {
 		// Only the server participates; no archive producer or phase is fabricated.
 		configuration.Producers = configuration.Producers[:1]
@@ -540,10 +609,28 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	if earlyWorkspace {
 		firstPhase, lastPhase = 2, 4
 	}
+	if preparationWorkspace {
+		firstPhase, lastPhase = 6, 8
+	}
 	for phase := firstPhase; phase <= lastPhase; phase++ {
 		configuration.Phases = append(configuration.Phases, dispatchadmission.Phase{ID: phase, Roles: []dispatchadmission.RoleBudget{
 			{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal, Attempts: 10}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}}})
+
 		storePhases = append(storePhases, storeaccounting.Phase{ID: phase, Transactions: 10000, Rows: 100000})
+		if preparationWorkspace {
+			// Existing V3 per-phase ceilings, not new product allowances.
+			git, surreal, transactions := uint64(4801), uint64(0), uint64(1000)
+			if phase == 6 {
+				git, surreal, transactions = 151876, 2, 100000
+			}
+			if phase == 8 {
+				git, surreal = 4851, 2
+			}
+			configuration.Phases[len(configuration.Phases)-1].Roles = []dispatchadmission.RoleBudget{
+				{Role: dispatchadmission.RoleGit, Attempts: git}, {Role: dispatchadmission.RoleSurreal, Attempts: surreal},
+				{Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}}
+			storePhases[len(storePhases)-1] = storeaccounting.Phase{ID: phase, Transactions: transactions, Rows: transactions * 512}
+		}
 	}
 	controller, err := dispatchadmission.New(ctx, configuration)
 	if err != nil {
@@ -558,6 +645,7 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		t.Fatal(err)
 	}
 	defer func() { _ = transport.Close() }()
+	var preparationSessionJoined bool
 	var retiredControl *dispatchadmission.PhaseControl
 	var archiveMeasurementDone <-chan error
 	var archiveMeasurementJoined bool
@@ -719,6 +807,20 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 					t.Error(e)
 				}
 			}
+
+			if preparationWorkspace {
+				if preparationSessionJoined {
+					_ = input.Close()
+					return
+				}
+				deadline, bounded := ctx.Deadline()
+				if !bounded || ctx.Err() != nil || t4013.WaitPrivateProcessSession(command.Process.Pid, deadline) != nil || ctx.Err() != nil {
+					closedSessions = false
+					t.Error("original preparation fixture session boundary unavailable")
+				}
+				_ = input.Close()
+				return
+			}
 			if err := t4013.WaitPrivateProcessSession(command.Process.Pid, time.Now().Add(5*time.Second)); err != nil {
 				_ = t4013.KillPrivateProcessSession(command.Process.Pid)
 				if err = t4013.WaitPrivateProcessSession(command.Process.Pid, time.Now().Add(6*time.Second)); err != nil {
@@ -747,7 +849,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
 	serverMode := "server"
-	if recoveryWorkspace {
+	if preparationWorkspace {
+		serverMode = "workspace-preparation"
+	} else if recoveryWorkspace {
 		serverMode = "workspace-recovery"
 	} else if physicalWorkspace {
 		serverMode = "workspace-physical"
@@ -782,6 +886,113 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil || endpointURL.Host == "" {
 		t.Fatal("native endpoint", err)
+	}
+
+	if preparationWorkspace {
+		if control.DrainOwners(ctx) != nil || control.OpenRequests(ctx) != nil {
+			t.Fatal("preparation actual initial fences")
+		}
+		if _, err := fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || output.Text() != "preparation_finish_measured" {
+			failServer("actual phase-six preparation boundary", err)
+		}
+		if control.FenceRequests(ctx) != nil || control.Pause(ctx) != nil || controller.Fence() != nil || transport.Fence() != nil ||
+			control.Checkpoint(ctx) != nil || controller.Advance() != nil || transport.Advance() != nil || control.Resume(ctx) != nil || control.OpenRequests(ctx) != nil {
+			t.Fatal("actual preparation phase-seven handoff")
+		}
+		if _, err := fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || output.Text() != "preparation_start_measured" {
+			failServer("actual preparation start", err)
+		}
+		if _, err := fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || !strings.HasPrefix(output.Text(), "preparation_measured_armed:") {
+			failServer("actual preparation mutation/guard/body/arming", err)
+		}
+		if control.FenceRequests(ctx) != nil || control.Pause(ctx) != nil {
+			t.Fatal("actual preparation terminal fence")
+		}
+		if _, err := fmt.Fprintln(input, "close"); err != nil {
+			t.Fatal(err)
+		}
+		for output.Scan() {
+		}
+		if err := output.Err(); err != nil {
+			t.Fatal(err)
+		}
+		if err := server.Wait(); err != nil {
+			t.Fatal("preparation helper", err, diagnostic.String())
+		}
+		if err := <-served; err != nil {
+			t.Fatal(err)
+		}
+		deadline, bounded := ctx.Deadline()
+		if transport.Wait(ctx, 4) != nil || !bounded || ctx.Err() != nil || t4013.WaitPrivateProcessSession(server.Process.Pid, deadline) != nil || ctx.Err() != nil {
+			t.Fatal("actual preparation SDK/session join")
+		}
+		preparationSessionJoined = true
+		prefix, err := transport.Snapshot()
+		if err != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
+			t.Fatal("actual preparation store prefix", prefix, err)
+		}
+		counts, err := sa.Snapshot()
+		if err != nil || len(counts.Phases) != 3 || counts.Phases[0].Phase != 6 || counts.Phases[0].Transactions <= 2 ||
+			counts.Phases[1].Phase != 7 || counts.Phases[1].Transactions == 0 || counts.MaximumRows > 512 ||
+			len(counts.Producers) != 1 || !counts.Producers[0].Closed || counts.Producers[0].Calls != 0 || counts.Producers[0].Transactions != 0 {
+			t.Fatal("actual preparation accounting and closed SDK", counts, err)
+		}
+		dispatch, err := controller.Snapshot()
+		if err != nil || len(dispatch.Producers) != 1 || !dispatch.Producers[0].Closed ||
+			dispatch.Producers[0].Active != 0 || dispatch.Attempts <= 2 {
+			t.Fatal("actual preparation dispatch closure", dispatch, err)
+		}
+		t.Logf("actual setup/preparation accounting: phase6=%+v phase7=%+v dispatch_attempts=%d",
+			counts.Phases[0], counts.Phases[1], dispatch.Attempts)
+		for _, prefix := range []string{"SR", "OP", "EP"} {
+			binding := fmt.Sprintf("%sB1:4:sha256:%x\n", prefix, record.InputSHA256)
+			if strings.Count(diagnostic.String(), binding) != 1 {
+				t.Fatal("actual preparation work binding", prefix)
+			}
+			var events [2]uint64
+			for _, line := range strings.Split(diagnostic.String(), "\n") {
+				if !strings.HasPrefix(line, prefix+"1:") {
+					continue
+				}
+				switch line {
+				case prefix + "1:4:6":
+					events[0]++
+				case prefix + "1:4:7":
+					events[1]++
+				default:
+					t.Fatal("actual preparation work producer/phase", line)
+				}
+			}
+			if events[0] == 0 {
+				t.Fatal("binding alone did not prove native preparation work", prefix)
+			}
+			t.Logf("actual %s events: phase6=%d phase7=%d", prefix, events[0], events[1])
+		}
+		var records []string
+		for _, line := range strings.Split(diagnostic.String(), "\n") {
+			if strings.HasPrefix(line, "WB") {
+				records = append(records, line)
+			}
+		}
+		if len(records) != 7 || records[0] != fmt.Sprintf("WBB1:4:sha256:%x", record.InputSHA256) {
+			t.Fatal("actual preparation WB binding/count", records)
+		}
+		for index, phase := range []uint32{6, 7, 7} {
+			sequence := uint64(index + 1)
+			if records[1+index*2] != fmt.Sprintf("WB1:4:%XB:%016x", phase, sequence) {
+				t.Fatal("actual preparation B", records)
+			}
+			var seq, logical, allocated uint64
+			n, err := fmt.Sscanf(records[2+index*2], fmt.Sprintf("WB1:4:%XS:%%016x:%%016x:%%016x", phase), &seq, &logical, &allocated)
+			if n != 3 || err != nil || seq != sequence || logical == 0 || allocated == 0 || records[2+index*2] != fmt.Sprintf("WB1:4:%XS:%016x:%016x:%016x", phase, seq, logical, allocated) {
+				t.Fatal("actual preparation positive S", records, err)
+			}
+		}
+		if control.ReservedWireBytes() != 9*2*dispatchadmission.FrameBytes {
+			t.Fatal("actual preparation PC count")
+		}
+		t.Log("actual native preparation: 56 partitions, 3 WB traversals, 10 PC pairs including EOF")
+		return
 	}
 	var warmFinish, physicalStart, physicalFinish t422WorkspaceSampleResponse
 	if earlyWorkspace {

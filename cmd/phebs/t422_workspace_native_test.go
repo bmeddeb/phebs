@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -68,19 +69,37 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if os.Getenv(t422BackupFixture) == "" {
 		return
 	}
+	preparationWorkspace := os.Getenv(t422BackupFixture) == "workspace-preparation"
 	fixtureLimit := 3 * time.Minute
 	allOwners := os.Getenv(t422BackupFixture) == "workspace-all-owners"
 	if os.Getenv(t422BackupFixture) == "workspace-cleanup" || allOwners {
 		fixtureLimit = 10 * time.Minute
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), fixtureLimit)
+	if preparationWorkspace {
+		fixtureLimit = t422PreparationFixtureLimit
+	}
+	fixtureContext := t.Context()
+	if preparationWorkspace {
+		deadline, err := strconv.ParseInt(os.Getenv("PHEBS_T422_FIXTURE_DEADLINE"), 10, 64)
+		if err != nil || deadline <= 0 {
+			t.Fatal("original preparation fixture deadline", err)
+		}
+		var finish context.CancelFunc
+		fixtureContext, finish = context.WithDeadline(fixtureContext, time.Unix(0, deadline))
+		defer finish()
+	}
+	ctx, cancel := context.WithTimeout(fixtureContext, fixtureLimit)
 	defer cancel()
+	cleanupContext := context.Background()
+	if preparationWorkspace {
+		cleanupContext = ctx
+	}
 	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
 	if err != nil || lifetime == nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if e := lifetime.Close(context.Background()); e != nil {
+		if e := lifetime.Close(cleanupContext); e != nil {
 			t.Error(e)
 		}
 	}()
@@ -101,7 +120,7 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		if e := st.Close(context.Background()); e != nil {
+		if e := st.Close(cleanupContext); e != nil {
 			t.Error(e)
 		}
 	}()
@@ -116,6 +135,12 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	physicalWorkspace := os.Getenv(t422BackupFixture) == "workspace-physical"
 	warmWorkspace := os.Getenv(t422BackupFixture) == "workspace-warm" || physicalWorkspace
 	earlyWorkspace := os.Getenv(t422BackupFixture) == "workspace-early" || warmWorkspace
+	if preparationWorkspace {
+		semanticRaw, err = os.ReadFile(filepath.Join(root, "preparation-semantic.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	if earlyWorkspace {
 		semanticRaw, _ = t422SemanticTestRequest(t)
 	}
@@ -167,6 +192,10 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { stopRunner(); authService.WaitCleanup() }()
+	if preparationWorkspace {
+		runT422PreparationNative(t, ctx, root, st, launch, control, owners, authService)
+		return
+	}
 	var readReports atomic.Uint64
 	readState := t421NewExactReadAccountingState(func(raw []byte) error {
 		var report t421ExactReadReport

@@ -8359,6 +8359,48 @@ whitespace clean, and V1/V2 canonical digests unchanged. The ordered source
 manifest is unchanged across these gates. Actual full configuration custody,
 complete profile issuance and native preparation fit remain open.
 
+The actual stale-preparation native fixture uses 31,605 real Git files and
+nine domains, executes and durably completes all 56 first-attempt partitions,
+and derives the preparation target from the resulting real publications.
+Prior F routing and unused owners remain supplied; manual claim/handle/complete
+does not establish scheduler heartbeat or reaper behavior. The real authenticated
+handler uses an HTTP recorder. Independent draft review of
+`0e1171b941d0c044b851a356b962d84df4f18f1f9e34ac36d709ecce723f1a9b`
+found all severity counts zero. Its first actual gate failed in 22.857s during
+setup with selected dispatch protocol refusal: unlike serve, the fixture had
+not bound the native source/publication/census and parsed-blob observers needed
+by the newly real builders. No preparation or rehearsal pass is inferred.
+The correction uses the same existing source and observation bindings before
+setup; it neither synthesizes successful events nor bypasses selected coverage.
+The original ten-minute fixture deadline and production limits are unchanged.
+Corrected actual normal passed in 200.669s (subtest 199.94s): phase six
+charged 666 transactions and 186,075 rows, maximum 510 rows per transaction;
+phase seven charged one transaction and three rows; 77 actual dispatch attempts
+closed. All 56 partitions, three guarded walks, body/sink-before-arming and
+ten PC pairs including EOF passed with joined native/SDK/accounting closure.
+Root then added joined native SR/OP/EP binding, producer/phase and positive
+event assertions; EP events are publication attempts, not partition counts.
+The fixture's source observers additionally retain eight 79-byte bindings
+(632 bytes) plus actual event records beyond its 337 WB bytes. No complete
+production output or representative workspace fit follows from these values.
+The instrumented run then expired at its original 600-second fixture context
+(package 601.178s), before preparation. It reported no data race, which is not
+a race pass. Retained setup contains 22 partition result files; its actual
+stream has 98,694 source-read events, 21,601 parsed-blob events and four
+publication attempts. These nonuniform units do not prove remaining runtime.
+No owned helper or engine survives; failed custody remains diagnostic-only.
+The opt-in preparation fixture now uses one original thirty-minute parent
+deadline, forwarded to and clipping the child's same allowance. Other native
+fixtures remain at three/ten minutes; production phase clocks and all numeric
+DA/SA/PC/workspace limits stay unchanged. A 35-minute package watchdog grants
+no additional fixture acceptance time. Independent review found all severities
+zero on this test-only correction and rejected reducing the nine-root/56-partition
+proof. Ordered three-path source manifest (backup-retirement test, preparation
+test, workspace-native test) is
+`30cb74a155ad40168efdb97e018e45d71616231ffbd8bf287190a14ef5af3bfe`.
+The corrected exact-source normal/race gates remain pending; this is a local
+reviewed source bookmark, not push/merge readiness or a rehearsal pass.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
