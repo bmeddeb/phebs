@@ -208,7 +208,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			}
 		}
 	}()
-	for _, role := range []string{"t422-author", "phebs", "zoekt-git-index"} {
+	for _, role := range []string{"t422-author", "phebs", "zoekt-git-index", "buf", "phebs-focused-index"} {
 		selected := productionRehearsalBuildSchema(t, ctx, inputs, workspace, role, PlanV3Schema)
 		started = time.Now()
 		tool, err := inputs.ProtectReferenceToolV3(ctx, parent, role, selected)
@@ -274,6 +274,11 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Reuse the two required independent admissions above, not another build
+	// or a fake complete profile. Every nonnil failed copy is already retained.
+	if err := flow.bindProfileTools(ctx, tools[3], tools[4]); err != nil {
+		t.Fatal("protected Buf/focused holder binding", err)
 	}
 	if volume != nil {
 		if pressure {

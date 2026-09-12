@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -48,6 +49,8 @@ type ExecutionEpochOne struct {
 	authorBytePoint        uint8                  // Two actual timed AuthorA boundaries; not preparation.
 	serverSessions         [5]int                 // Actual successful root Starts; never cleared by Wait or handoff. Protected by mu.
 	archiveSessions        [2]int                 // Backup and restore, in that order; the existing one-shot recipes own these slots.
+
+	profileTools [2]*ExecutionToolCustody // Optional Buf/focused protected copies; no dispatch permission.
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -111,6 +114,48 @@ func PrepareExecutionEpochOne(ctx context.Context, epochs *ExecutionEpochConfigC
 		return nil, ErrExecutionEpochOne
 	}
 	return flow, nil
+}
+
+// bindProfileTools retains the two already reference-admitted, non-dispatched
+// images before AuthorA. Omitted holders preserve the scoped rehearsal API;
+// this pair alone does not issue a twelve-tool/profile admission.
+func (flow *ExecutionEpochOne) bindProfileTools(ctx context.Context, buf, focused *ExecutionToolCustody) error {
+	if flow == nil || ctx == nil || ctx.Err() != nil || flow.epochs == nil || flow.epochs.author == nil || buf == nil || focused == nil {
+		return ErrExecutionEpochOne
+	}
+	flow.mu.Lock()
+	defer flow.mu.Unlock()
+	author, epochs := flow.epochs.author, flow.epochs
+	author.mu.Lock()
+	defer author.mu.Unlock()
+	epochs.mu.Lock()
+	defer epochs.mu.Unlock()
+	if flow.plan.Schema != PlanV3Schema || flow.closed || flow.used || flow.authored || !flow.authorStarted.IsZero() ||
+		flow.workspace != nil || flow.profileTools != ([2]*ExecutionToolCustody{}) ||
+		author.closed || author.err != nil || author.active || author.borrowedBy != nil || author.next != 0 ||
+		epochs.closed || epochs.err != nil || epochs.active || epochs.released != 0 || author.request.Builds == nil {
+		return ErrExecutionEpochOne
+	}
+	builds := author.request.Builds
+	if !builds.mu.TryLock() {
+		return ErrExecutionEpochOne
+	}
+	defer builds.mu.Unlock()
+	if builds.closed || builds.err != nil {
+		return ErrExecutionEpochOne
+	}
+	selected := [2]*ExecutionToolCustody{buf, focused}
+	for index, role := range [2]string{"buf", "phebs-focused-index"} {
+		tool := selected[index]
+		if tool.referenceInputs != author.request.Builds || filepath.Dir(tool.Directory()) != author.parent {
+			return ErrExecutionEpochOne
+		}
+		if _, _, err := tool.Check(ctx, role); err != nil {
+			return err
+		}
+	}
+	flow.profileTools = selected
+	return nil
 }
 
 func (flow *ExecutionEpochOne) AuthorA(ctx context.Context) (ExecutionAuthorResult, error) {

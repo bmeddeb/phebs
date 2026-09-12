@@ -67,6 +67,17 @@ func (v *executionPressureVolume) bindRehearsal(ctx context.Context, flow *Execu
 		}
 		inputs = append(inputs, tool.input)
 	}
+	if (flow.profileTools[0] == nil) != (flow.profileTools[1] == nil) {
+		return errPressureVolume
+	}
+	for _, tool := range flow.profileTools {
+		if tool != nil {
+			if tool.input == nil || tool.referenceInputs != author.request.Builds {
+				return errPressureVolume
+			}
+			inputs = append(inputs, tool.input)
+		}
+	}
 	for _, input := range inputs {
 		if !v.inputOnWorkspace(input) {
 			return errPressureVolume
@@ -324,6 +335,13 @@ func (v *executionPressureVolume) finishWorkspace(ctx context.Context, run *Exec
 	}
 	for _, tool := range []*ExecutionToolCustody{author.request.Author, flow.phebs, flow.zoekt, flow.surreal} {
 		if tool.Close() != nil {
+			return errPressureVolume
+		}
+	}
+	// These protected copies are mounted inputs, even though neither role has
+	// an operational dispatch. Close them before the release sample and detach.
+	for _, tool := range flow.profileTools {
+		if tool != nil && tool.Close() != nil {
 			return errPressureVolume
 		}
 	}

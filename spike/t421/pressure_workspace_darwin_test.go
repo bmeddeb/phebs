@@ -195,3 +195,98 @@ func TestExecutionPressureWorkspaceOptionalNative(t *testing.T) {
 	}
 	t.Log("protected populated fixture detached and removed without thawing; full bound epoch release unmeasured")
 }
+
+// This uses real protected native-image copies and held filesystem roots, but
+// supplies the private reference-lineage linkage. It tests holder ownership,
+// not an actual Buf/focused reference build or a complete profile/epoch.
+func TestExecutionProfileToolHolders(t *testing.T) {
+	for _, mode := range []string{"bound", "other-build", "closed-build", "other-workspace", "closed", "partial", "late"} {
+		t.Run(mode, func(t *testing.T) {
+			parent, _ := inputCustodyTestFixture(t)
+			builds := &ExecutionGoBuildCustody{}
+			author := &ExecutionAuthorCustody{parent: parent, request: ExecutionAuthorRequest{Builds: builds}}
+			flow := &ExecutionEpochOne{plan: Plan{Schema: PlanV3Schema}, epochs: &ExecutionEpochConfigCustody{author: author}}
+			var tools [2]*ExecutionToolCustody
+			for index, role := range [2]string{"buf", "phebs-focused-index"} {
+				selectedParent := parent
+				if mode == "other-workspace" && index == 1 {
+					selectedParent, _ = inputCustodyTestFixture(t)
+				}
+				copy := inputCustodyTestSpec(t, role, "/usr/bin/true", true)
+				input, err := inputCustodyTestProtect(t, t.Context(), selectedParent, []ExecutionInputCopy{copy})
+				if err != nil {
+					t.Fatal(err)
+				}
+				tools[index] = &ExecutionToolCustody{input: input, referenceInputs: builds,
+					identity: ExecutionToolIdentity{Role: role, SHA256: copy.SHA256, FileType: regularFileType}}
+			}
+			root, err := openProductionRoot(parent)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := root.file.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			v := &executionPressureVolume{workspace: root}
+			if got := v.inputOnWorkspace(tools[1].input); got != (mode != "other-workspace") {
+				t.Fatal("actual held input accepted the wrong workspace")
+			}
+			switch mode {
+			case "other-build":
+				tools[1].referenceInputs = &ExecutionGoBuildCustody{}
+			case "closed-build":
+				builds.closed = true
+			case "closed":
+				if err := tools[1].Close(); err != nil {
+					t.Fatal(err)
+				}
+			case "partial":
+				tools[1] = nil
+			case "late":
+				flow.authored = true
+			}
+			err = flow.bindProfileTools(t.Context(), tools[0], tools[1])
+			if mode != "bound" {
+				if err == nil || flow.profileTools != ([2]*ExecutionToolCustody{}) {
+					t.Fatal("failed pair issued or partially retained holders")
+				}
+				return
+			}
+			if err != nil || flow.profileTools != tools {
+				t.Fatal("protected pair was not retained", err)
+			}
+			if flow.bindProfileTools(t.Context(), tools[0], tools[1]) == nil || flow.profileTools != tools {
+				t.Fatal("one-shot binding changed existing holders")
+			}
+		})
+	}
+}
+
+// Source-bound ordering check only: the opt-in whole-flow fixture owns actual
+// input release/detach. This test does not supply a successful native teardown.
+func TestExecutionProfileToolReleaseOrder(t *testing.T) {
+	raw, err := os.ReadFile("pressure_workspace_darwin.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, body, ok := strings.Cut(string(raw), "func (v *executionPressureVolume) finishWorkspace(")
+	if !ok {
+		t.Fatal("missing actual release implementation")
+	}
+	previous := -1
+	for _, point := range []string{
+		"for _, tool := range flow.profileTools",
+		"tool != nil && tool.Close() != nil",
+		"author.request.Builds.Close()",
+		"v.sampleTeardownWorkspace(ctx)",
+		"return v.remove(ctx, false)",
+	} {
+		position := strings.Index(body, point)
+		if position <= previous {
+			t.Fatal("profile tool descriptors must close before input-release sample and detach")
+		}
+		previous = position
+	}
+}

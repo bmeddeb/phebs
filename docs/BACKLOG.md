@@ -8309,6 +8309,32 @@ and V1/V2 digests unchanged. Independent applied source/cost review found all
 severity counts zero after separating the preparation-body and new HTTP-body
 costs. The ordered source manifest is unchanged across corrected gates.
 
+The Buf/focused ownership slice extends the actual existing pre-AuthorA
+supplied-build/reference-admission loop and retains both already-admitted
+protected copies as one pair bound to the same SDK/source custody and workspace.
+The volume binder includes them and final release closes both before input
+release sampling and nonforced detach. Two supplied builds and two reference
+admissions are additional preparation work, not aggregate fit evidence.
+Independent draft review of
+`87b641128ee1b57a552bae280867e4d4faf1cf34d6b99342d68eb840a2c5ea3c`
+found all severity counts zero. Compilation then caught the draft's missing
+`path/filepath` import; lint then caught an unchecked test-root close. The
+import was added and the test now checks its root close through cleanup.
+Ordered four-path
+manifest (epoch launch, rehearsal, pressure workspace, its Darwin test) is
+`59185597fd8a7abc75122bcb390eda9ead93ed02c027b879550275e87862ada5`.
+The small ownership tests protect actual `/usr/bin/true` copies and explicitly
+model reference lineage; they are not actual Buf/focused builds or complete
+tool-profile admission. The close-order check inspects source, not a successful
+mounted full-flow teardown. No runtime permission or numerical ceiling changes.
+Corrected focused normal passed in 0.799s and race in 2.222s, including the
+existing unavailable-owner and native/transport-prefix refusals. Static passed
+vet, zero pinned-lint issues and whole-repository compilation; docs passed in
+0.538s, glossary and whitespace clean. Applied source/cost re-review found all
+severity counts zero. The four-path source manifest is unchanged across these
+final gates; actual Buf/focused admission and mounted release still require
+the later complete native composition.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
