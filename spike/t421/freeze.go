@@ -424,6 +424,8 @@ func expectedExecutionPressureGeometry(
 	}
 	ceiling := plan.SafetyEnvelope.MaximumPressureBallastBytes
 	maximumTarget := targets[1].TargetUsedBytes
+	// This canonical margin is target-only geometry, not live linked-path
+	// headroom. The native V3 ballast path separately checks both byte gauges.
 	if maximumTarget > plan.SafetyEnvelope.MaximumDataAllocatedBytes ||
 		plan.SafetyEnvelope.MaximumDataAllocatedBytes-maximumTarget < plan.SafetyEnvelope.MinimumPressureMarginBytes {
 		return ExecutionPressureGeometry{}, errors.New("T42.2 pressure geometry is below its minimum ballast margin")

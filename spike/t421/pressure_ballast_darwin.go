@@ -5,6 +5,7 @@ package t421
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -69,7 +70,9 @@ func prepareExecutionPressureBallast(ctx context.Context, volume *executionPress
 // and the shared store controller in the corresponding phase 9, 10, or 11.
 // The owning phase operation must retain the ordinary-owner/lifecycle fences
 // across this call. This native helper does not manufacture those ACKs.
-func (b *executionPressureBallast) nextTarget(ctx context.Context, run *ExecutionEpochOneRun) (out executionPressureBallastMutation, retErr error) {
+// workspace is the owning phase's latest successful native HTTP sample, not
+// a filesystem-used estimate. Requests are fenced after that required sample.
+func (b *executionPressureBallast) nextTarget(ctx context.Context, run *ExecutionEpochOneRun, workspace custodyByteSample) (out executionPressureBallastMutation, retErr error) {
 	if b == nil || b.volume == nil || ctx == nil || ctx.Err() != nil || run == nil {
 		return out, errPressureVolume
 	}
@@ -94,8 +97,14 @@ func (b *executionPressureBallast) nextTarget(ctx context.Context, run *Executio
 		b.next == 0 && (out.Before.Used < geometry.MinimumPrePressureUsedBytes || out.Before.Used > geometry.MaximumPrePressureUsedBytes) {
 		return out, errPressureVolume
 	}
-	size, err := pressureBallastSize(out.Before, target)
-	if err != nil || resizeExecutionPressureBallast(ctx, b.file, out.Before.Allocated, size) != nil {
+	size, err := pressureBallastTargetSize(out.Before, workspace, geometry.Targets[b.next:], custodyByteSample{
+		LogicalBytes:   run.flow.plan.WorkEnvelope.MaximumDataLogicalBytes,
+		AllocatedBytes: run.flow.plan.SafetyEnvelope.MaximumDataAllocatedBytes,
+	})
+	if err != nil {
+		return out, err
+	}
+	if resizeExecutionPressureBallast(ctx, b.file, out.Before.Allocated, size) != nil {
 		return out, errPressureVolume
 	}
 	out.After, err = b.sample()
@@ -220,6 +229,36 @@ func pressureBallastSize(before executionPressureBallastSample, target PressureT
 		return 0, errPressureVolume
 	}
 	return size, nil
+}
+
+// Forecast only the known ballast change using both measured byte units. Linked
+// paths need not equal filesystem-used bytes. Check the remaining peak before
+// the first allocation, then refresh at each phase. This is not a coherent future
+// workspace measurement; the actual post-mutation samples remain mandatory.
+func pressureBallastTargetSize(before executionPressureBallastSample, workspace custodyByteSample, targets []PressureTargetGeometry, maximum custodyByteSample) (uint64, error) {
+	if len(targets) == 0 || len(targets) > 3 || workspace.LogicalBytes < before.Allocated || workspace.AllocatedBytes < before.Allocated ||
+		workspace.LogicalBytes > maximum.LogicalBytes || workspace.AllocatedBytes > maximum.AllocatedBytes {
+		return 0, errPressureVolume
+	}
+	logical, allocated := workspace.LogicalBytes-before.Allocated, workspace.AllocatedBytes-before.Allocated
+	var first uint64
+	for i, target := range targets {
+		size, err := pressureBallastSize(before, target)
+		if err != nil {
+			return 0, err
+		}
+		// Subtraction bounds the addition without overflowing either byte unit.
+		if size > maximum.LogicalBytes-logical || size > maximum.AllocatedBytes-allocated {
+			return 0, fmt.Errorf("%w: projected pressure-%d workspace headroom refused: non-ballast logical=%d allocated=%d ballast=%d limits=%d/%d",
+				errPressureVolume, target.TargetUsedPercent, logical, allocated, size, maximum.LogicalBytes, maximum.AllocatedBytes)
+		}
+		if i == 0 {
+			first = size
+		}
+		used := before.Used - before.Allocated + size // pressureBallastSize bounds this by the volume.
+		before = executionPressureBallastSample{Used: used, Available: 96<<30 - used, Allocated: size}
+	}
+	return first, nil
 }
 
 func pressureBallastDeltaMatches(action string, before, after executionPressureBallastSample) bool {

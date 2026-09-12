@@ -7160,6 +7160,58 @@ passed documentation, glossary and whitespace checks.
 The full pressure, archive/query, complete executor,
 launcher and immutable T42.2n/T42.2o acceptance/freeze ladder remain open.
 
+**Pressure headroom refusal after c7db1d21 (2026-09-11).** The exact-source
+rehearsal failed in 5,519.79s (package 5,520.627s), after 672 contiguous normal
+cleanup owner turns, 33,769 deletions, zero failed lifecycle turns and a
+completed accepted pressure-80 row. The normalized native allocated gauge was
+64,616,878,080 bytes, within the unchanged 8–68-GiB range. Pressure-90's actual
+post-ballast sample was 111,261,599,094 logical and 111,690,625,024 allocated
+bytes: logical remained below 128 GiB, but allocated exceeded 96 GiB by
+8,611,409,920 bytes. The sample completed and truthfully latched the allocated
+limit; pressure-90 R and pressure-75 were not reached. Root join and session
+empty were true, and the native stop diagnostic was nil. The outer log SHA-256
+is `fbe1acd2a5626b44f7e9bba559442f9420182b6c7691cb0dc3c2c97db9063132`;
+the exact failed custody remains retained and must not be rerun unchanged.
+
+Readonly post-stop metadata independently confirms intentional index serving
+hard links add 19,487,264,768 bytes (18.149 GiB) when counted per path rather
+than once per inode. This proves a material mechanism, not an exact historical
+allocation census. The ballast target uses filesystem-used bytes; the approved
+workspace gauge counts each linked path. The nominal target-only margin never
+bounded that difference. The correction reuses the required actual workspace
+sample, subtracts current ballast from both byte units and checks all remaining
+targets before each native mutation. It changes no measurement meaning or
+numerical limit and adds no sample or scan. A predicted excess is an early
+incomplete refusal, not an observed limit-exceeded sample. Making the current footprint fit
+still requires a separately reviewed retention-safe reduction or explicit
+prospective policy decision; no fresh rehearsal is ready from this guard alone.
+Ordinary serving and backup consume the flat index names, while selected
+readers, rollback and recovery depend on generation custody; simple alias
+deletion is not a safe housekeeping correction.
+
+The correction's 21 arithmetic cases include both byte ceilings, exact equality,
+one-byte excess, overflow/underflow, current ballast subtraction, later-target
+refusal and the unchanged 128/96-GiB pair. A real one-MiB allocated file and hard
+link exercise the actual shared walker; capacity and future ballast in that
+regression are explicitly modeled, not a native pressure-volume proof.
+The 22-name focused selector passed normal in 30.341s and race in 345.841s:
+19 passes and three explicit optional-native skips in each
+(`TestExecutionPressureBallastOptionalNative`,
+`TestExecutionPressureVolumeOptionalNative`, and
+`TestExecutionPressureWorkspaceOptionalNative`). Twenty race repetitions of
+both new tests passed in 2.189s; all eight custodybytes package tests passed
+under race in 2.155s. Scoped vet and pinned lint (zero issues), docs (1.747s),
+glossary, whitespace and retained V1/V2 digests passed. Independent non-authoring
+implementation/test/cost/documentation review found zero critical, high,
+medium or low issues. These working-tree gates bind the five changed/new Go
+paths through ordered per-file SHA-256 manifest
+`5d3e059bfa3a844ebca05c04fde5c0cc7a47c1eba86f8601360348a835781e9a`.
+Normal/race logs have SHA-256
+`72b3cbbbff1b1d22d9ecb17e25d87c5bf74b56b0d5ea585215f9cc239b3f8b48` /
+`48d0ac43fbf2efac9403d63221966308a2536bc043f011f83a90a02497578712`.
+No full rehearsal, immutable all-phase acceptance, cleanup of failed custody,
+bound change, integration or freeze is claimed by this prerequisite.
+
 **Normal-policy exact-source gate closure (2026-09-11).** At clean detached
 `e41b48d5dee31b8f88a391b5b80be468df3541be`, both fail-fast parent race groups
 passed under their unchanged sixty-minute allowances. Group one selected 63

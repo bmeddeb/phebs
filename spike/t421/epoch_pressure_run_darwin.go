@@ -4,6 +4,7 @@ package t421
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -97,24 +98,28 @@ func (run *ExecutionEpochOneRun) pressurePhase(ctx context.Context, ballast *exe
 	if run.advanceReturnPhase(ctx, phase) != nil || reader.beginPressure(phase) != nil || run.control.OpenRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
-	if _, err := reader.pressureSample(ctx, "start"); err != nil {
+	workspace, err := reader.pressureSample(ctx, "start")
+	if err != nil {
 		return ErrExecutionEpochOne
 	}
 	if phase == 9 {
 		if reader.pressureCommand(ctx, "drive-normal", time.Time{}) != nil || reader.pressureRead(ctx, "normal-cycle", time.Time{}) != nil {
 			return ErrExecutionEpochOne
 		}
-		value, err := reader.pressureSample(ctx, "normalized")
+		workspace, err = reader.pressureSample(ctx, "normalized")
 		limits := run.flow.plan.SafetyEnvelope
-		if err != nil || value.AllocatedBytes < limits.MinimumPrePressureBytes || value.AllocatedBytes > limits.MaximumPrePressureBytes {
+		if err != nil || workspace.AllocatedBytes < limits.MinimumPrePressureBytes || workspace.AllocatedBytes > limits.MaximumPrePressureBytes {
 			return ErrExecutionEpochOne
 		}
 	}
 	if run.control.FenceRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
-	mutation, err := ballast.nextTarget(ctx, run)
-	if err != nil || run.control.OpenRequests(ctx) != nil {
+	mutation, err := ballast.nextTarget(ctx, run, workspace)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrExecutionEpochOne, err)
+	}
+	if run.control.OpenRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
 	if _, err := reader.pressureSample(ctx, "ballast"); err != nil {

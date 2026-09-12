@@ -82,7 +82,7 @@ func TestExecutionPressureBallastRefusals(t *testing.T) {
 			}
 		}
 		for _, b := range []*executionPressureBallast{nil, {}, {volume: &executionPressureVolume{}}} {
-			if _, err := b.nextTarget(ctx, nil); err == nil {
+			if _, err := b.nextTarget(ctx, nil, custodyByteSample{}); err == nil {
 				t.Fatal("invalid run issued mutation")
 			}
 			if _, err := b.remove(ctx, &ExecutionEpochOneRun{}); err == nil {

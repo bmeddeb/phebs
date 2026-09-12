@@ -7402,6 +7402,17 @@ twenty-minute deadline; the test's total allowance adds one hour, without
 extending any phase deadline. Run only from a reviewed exact source and with
 the separately verified pinned environment and disk prerequisites.
 
+Before each ballast mutation, the parent reuses the phase's required native
+workspace sample to project both logical and per-linked-path allocated bytes
+through all remaining targets. It refuses known insufficient headroom before
+allocation, including a later pressure-90 excess discovered before pressure-80.
+Filesystem-used bytes are not interchangeable with that workspace gauge:
+hard-link aliases count at each path. The nominal geometry margin is not a
+live headroom guarantee. A forecast is not a measured sample or a pass; all
+actual post-mutation measurements and the unchanged ceilings still apply.
+The private refusal identifies the projected target and byte operands. Preserve
+the actual prefix; do not raise limits or rerun merely to bypass the refusal.
+
 Success requires the complete terminal test result and joined cleanup, not a
 returned sample or final authority response alone. A failure retains the exact
 volume, ballast and diagnostics; do not automatically rerun or delete them.

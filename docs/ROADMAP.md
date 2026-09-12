@@ -64,6 +64,17 @@ sequence.
 
 ## Now
 
+**T42.2 pressure headroom correction, 2026-09-11:** the subsequent exact
+`c7db1d21` rehearsal passed cleanup and pressure-80, then correctly refused
+pressure-90 at 104.020 GiB of per-linked-path allocation against 96 GiB.
+Filesystem-used ballast targets did not account for the gauge's intentional
+hard-link multiplicity. A prospective guard checks both actual byte gauges
+against every remaining ballast target before allocation, without changing
+limits or measurement meaning. Focused normal/race gates and independent
+review passed; the current footprint still needs a separate disposition before a
+new rehearsal. Archive/query, executor/launcher acceptance and freeze remain
+open. This supersedes the fresh-rehearsal next step in the prior record below.
+
 **T42.2 pressure-rehearsal preparation, 2026-09-11:** the corrected cleanup
 and normal-completion source at `e41b48d5` passed both exact-source parent race
 groups (84 passes, four explicit opt-in skips), alongside its reviewed scoped
