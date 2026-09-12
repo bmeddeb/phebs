@@ -7716,6 +7716,37 @@ four severity counts zero at ordered manifest
 (F producer, producer tests, inspection, projector, projector tests, restored
 tests). These gates permit a corrected native attempt, not a native pass.
 
+The corrected native attempt at `8898195c430174c397c80139057865d95c237def`
+failed in 511.06s (package 511.628s), after all eleven HTTP cases and the first
+MCP case completed. The helper stopped at `hidden_repository_denied`, MCP,
+page one, decode stage, with twelve completed rows and next ordinal 23.
+Server ordinal 22 completed at C/S/M/W=0/1/0/0. The denied response body was
+not retained; no exact executed decoder predicate is claimed from that log.
+Independent source tracing nevertheless proves a mismatch: GetRepo's wrapped
+not-found leaf passes through `service search: repository: %w` and then
+`search scope not found: %w`, while the fixed decoder string omitted the
+middle wrapper. Production MCP preserves this full chain. The correction
+keeps exact refusal matching and tests the actual search/MCP handler chain,
+with only the repository-store leaf injected. All twenty source/test hashes
+matched after failure; no matching server, query helper or Surreal process
+remained. Custody `t422-native-query-regression-3976129802` and gate directory
+`phebs-t422-native-query-gates.DWOGYc` remain private and intact. No database
+reopen, acceptance relaxation or native pass follows from this diagnosis.
+
+The two-path denial correction passed `TestEpochQueryWire` normal in 0.959s
+and race in 4.085s. The new regression executes two stateless production MCP
+requests through the actual search authorization/error path, asserting fresh
+visibility resolution before each modeled point read, no query enumeration,
+one S and zero C/M/W, and exact error-envelope decoding. Ordered wire/source
+test manifest is
+`54612ead0d625e900b2fb5a2b36236d24ec36e02776457f8e32a909e9f42b26c`.
+Full ci-static passed vet, zero-issue lint and all-package compilation; docs
+(0.563s), glossary and whitespace passed. These are bounded correction gates,
+not completed native MCP/query evidence.
+Independent code/provenance/cost and record review reports all severity counts
+zero at that manifest; final documentation checks passed in 0.541s. V1/V2
+canonical plan digests remain unchanged.
+
 At `ec014403`, the receipt/teardown trace identified two source-proven
 definition/evidence gaps, not measured native failures. A nine-page relationship result requires
 fresh authorization on each page, so the receipt's one authorization decision

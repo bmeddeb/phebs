@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -18,7 +19,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/search"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 func TestEpochQueryWireRequests(t *testing.T) {
@@ -267,6 +271,78 @@ func TestEpochQueryWireStatelessSDKTransport(t *testing.T) {
 				t.Fatal("native typed output changed", string(actual), err)
 			}
 		})
+	}
+}
+
+// Only the absent GetRepo leaf and its read charge are modeled. SearchScoped,
+// searchService, the production MCP tool and SDK framing all execute normally.
+// No database, populated index or selected-server authority is claimed.
+type epochQueryMissingRepositoryStore struct {
+	store.Store
+	visibility, reads, lists atomic.Int32
+}
+
+func (s *epochQueryMissingRepositoryStore) ListRepos(context.Context) ([]store.Repo, error) {
+	s.lists.Add(1)
+	return nil, nil
+}
+
+func (s *epochQueryMissingRepositoryStore) GetRepo(ctx context.Context, name string) (*store.Repo, error) {
+	if s.visibility.Load() != s.reads.Add(1) || name != epochQueryHiddenRepository {
+		return nil, errors.New("repository read preceded fresh visibility or named another repository")
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return nil, err
+	}
+	// This is only Surreal.GetRepo's absent-row leaf, not the full error text.
+	return nil, fmt.Errorf("repo %q: %w", name, store.ErrNotFound)
+}
+
+func TestEpochQueryWireProductionMCPNotFound(t *testing.T) {
+	st := &epochQueryMissingRepositoryStore{}
+	index, err := search.Open(t.TempDir(), st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer index.Close()
+	index.Visible = func(context.Context) func(store.Repo) bool {
+		st.visibility.Add(1)
+		return func(store.Repo) bool {
+			t.Error("absent repository must not reach the visibility predicate")
+			return false
+		}
+	}
+	initialLists := st.lists.Load()
+	server := phebsmcp.NewServer(phebsmcp.Options{Version: "test", Store: st, Search: index})
+	handler := mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server { return server }, &mcpsdk.StreamableHTTPOptions{Stateless: true})
+	query := correctedQueryCases()[1]
+	for attempt := range 2 {
+		id := strconv.Itoa(42 + attempt)
+		ctx, ledger, err := readaccounting.Start(t.Context(), readaccounting.Counts{StoreReadAttempts: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		method, path, payload, err := epochQueryRequest(query, "mcp", "example.com/actual/repository", "", id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		request := httptest.NewRequestWithContext(ctx, method, path, bytes.NewReader(payload))
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Accept", "application/json, text/event-stream")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		counts, finishErr := ledger.Finish()
+		if finishErr != nil || counts != (readaccounting.Counts{StoreReadAttempts: 1}) ||
+			st.visibility.Load() != int32(attempt+1) || st.reads.Load() != int32(attempt+1) || st.lists.Load() != initialLists {
+			t.Fatal("fresh visibility/one failed point read changed", counts, finishErr)
+		}
+		if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "text/event-stream" {
+			t.Fatal("production MCP transport failed", response.Code, response.Header(), response.Body.String())
+		}
+		structured, code, err := decodeEpochQueryMCP(query, response.Header().Get("Content-Type"), id, response.Body.Bytes())
+		if err != nil || code != "unknown_repository" || structured != nil {
+			t.Fatal("real wrapped search error refused", code, response.Body.String(), err)
+		}
 	}
 }
 

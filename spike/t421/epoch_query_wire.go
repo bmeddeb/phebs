@@ -30,8 +30,9 @@ const (
 	epochQuerySSESuffix         = "\n\n"
 	epochQueryHiddenRepository  = "github.com/t421/hidden"
 	// The fixed absent repository takes GetRepo's wrapped not-found path;
-	// SearchScoped adds its scope marker and MCP preserves the full error.
-	epochQueryNotFound = `search scope not found: repo "github.com/t421/hidden": not found`
+	// searchService adds its repository wrapper, SearchScoped adds the scope
+	// marker, and the real MCP tool preserves the complete error chain.
+	epochQueryNotFound = `search scope not found: service search: repository: repo "github.com/t421/hidden": not found`
 )
 
 func epochQueryKnown(query QueryCase) bool {
