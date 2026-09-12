@@ -7485,6 +7485,85 @@ teardown, representative replay census/guarded cost, complete output fit and
 exact rehearsals remain required. No full-phase, rehearsal or freeze pass is
 inferred from supplied-response or SDK transport fixtures.
 
+**Native product-query regression (2026-09-12).** The optional real-server
+final-authority fixture now has a production-projector branch. It preserves
+the actual cold/warm F equality, warm native read counts and third-F selector
+supersession refusal, but replaces the older independent query-accounting
+opens and MCP initialization/list sequence with a separately built private
+test helper. The helper executes the production fixed requests, bounded wire
+decoders, F/catalog-bound projectors and exact report checks against the real
+ordinary authenticated server: nineteen HTTP and nineteen direct MCP pages,
+twenty-two completed transport rows, C160/S164 and bounded actual M. Its
+parent consumes the result only after successful sole Wait and held-file
+identity, size, canonical JSON and contiguous-ordinal checks.
+
+This is the existing 31,602-file addition corpus plus three structural files,
+not the two-million-file plane or selected epoch-five lifecycle admission.
+The unchanged independent F-accounting oracle still opens the store and reads
+artifacts outside the new query loop. Test-only added costs are one serial
+race-instrumented helper build before server startup, one helper process,
+bounded private input of at most 17 MiB plus 64 KiB, one decoded catalog/F
+and derivation, thirty-eight serial transports with existing production
+body/projection limits, twenty-two compact rows and at most 64 KiB FD3 output.
+Each build/helper command retains at most one MiB aggregate diagnostics.
+The helper has a five-minute cooperative context and is bounded externally by
+the parent's existing thirty-minute deadline; stdin cancellation closes and
+joins its callback.
+The normal parent still runs a race-instrumented query helper. The gate must
+provide the same pinned Go SDK through GOROOT and PATH. No ordinary runtime,
+schema, cache, worker, production-query or numerical-bound change is added.
+Failed private custody is retained, including a later cleanup failure;
+successful removal follows owned process-group checks and the existing
+known engine exit check, not a claim about arbitrary escaped sessions.
+
+Independent non-authoring source/cost and record reviews have zero remaining
+critical, high, medium or low findings. Review corrected FD3 adoption before
+native descriptor validation, post-write deadline handling and native fixture
+cleanup error/nil-restart handling. The deliberately nonzero third-F refusal
+exit is accepted only after its exact response/accounting and joined-exit
+assertions pass. The two parent files' ordered SHA-256 manifest is
+`43a2bf092e61732236a774573b29958ddd38d181c0592d663777ec80e2cbac53`;
+the helper SHA-256 is
+`bb70ac4ca223bc319f534d17120da1602dd73931879d54585c156eb994a63ca5`.
+Final parent selectors passed normal/race in 7.730/84.736s, and final helper
+selectors in 0.833/3.685s, with pinned lint clean. Those are tool-session
+results, not claims of separately retained log files. Full ci-static,
+module verification, docs (0.568s), glossary, whitespace and unchanged V1/V2
+digests passed before dispatching the native fixture. Its retained gate root
+is the private `phebs-t422-native-query-gates.cIi7k1` directory. At this
+bookmark the native run is still pending; no native query pass is established.
+
+The next receipt/teardown implementation has two source-proven definition
+gaps, not measured native failures. A nine-page relationship result requires
+fresh authorization on each page, so the receipt's one authorization decision
+and one authority snapshot cannot mean raw handler/read invocation counts.
+Two byte-identical actual F values support one distinct authority value, but
+the logical-result units require an owning definition. Separately, an
+unfiltered all-code search truncated to one hit does not establish one visible
+repository: neither a single configured source nor named-repository F checks
+exclude other stored repositories. Use actual already-executed native scope
+evidence, not expected query fields or another independent census.
+
+Phase fifteen must retain the parent through the last server's genuine close,
+admit its existing single nonforced detach site, preserve the complete recorded
+operational session scope, and require real final DA/SA closure. The current
+rehearsal-only close deliberately accepts unopened future store lifetimes and
+cannot issue that proof. Its exact removal machinery is reusable, but a
+removed workspace is not a successful traversal: a terminal-absence completion
+rule requires explicit prospective V3 wording and must retain actual positive
+pre-detach maxima and every earlier unavailable/overshoot condition. No such
+rule or full teardown pass is established by this test slice.
+
+The output audit keeps scopes separate. Epoch four plus backup/restore has a
+46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
+of compact records and its own WB stream. The later five WB positions add
+430 bytes to epoch five, not to the former subtotal. HTTP/MCP/F bodies are
+transient responses, not retained stdout/stderr, so their wire-cap sum is not
+a log-overflow proof. Complete census frames, ordinary/error logs and native
+diagnostics still need coverage before complete output fit can be claimed.
+The focused existing output-bound selectors passed in 0.751s; this is neither
+a representative replay census nor a native traversal-cost measurement.
+
 **Pressure headroom refusal after c7db1d21 (2026-09-11).** The exact-source
 rehearsal failed in 5,519.79s (package 5,520.627s), after 672 contiguous normal
 cleanup owner turns, 33,769 deletions, zero failed lifecycle turns and a

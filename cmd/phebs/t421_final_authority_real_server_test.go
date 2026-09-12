@@ -222,7 +222,28 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	workspace := t.TempDir()
+	nativeQueries := os.Getenv("PHEBS_T422_NATIVE_QUERY_PROJECTION") == "1"
+	workspace := ""
+	if nativeQueries {
+		workspace, err = os.MkdirTemp("", "t422-native-query-regression-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("native query fixture custody: %s", workspace)
+		// Registered first, so server/SDK/helper cleanup runs before removal.
+		// Any cleanup failure keeps the exact failed private fixture intact.
+		t.Cleanup(func() {
+			if t.Failed() {
+				t.Logf("retained native query fixture: %s", workspace)
+				return
+			}
+			if err := os.RemoveAll(workspace); err != nil {
+				t.Errorf("remove joined native query fixture: %v", err)
+			}
+		})
+	} else {
+		workspace = t.TempDir()
+	}
 	repository := filepath.Join(workspace, "combined.git")
 	corpus, err := t421fixture.BuildCombinedCorpus()
 	if err != nil {
@@ -265,6 +286,9 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 	zoekt := filepath.Join(binDir, "zoekt-git-index")
 	t421BlackBoxBuild(t, ctx, moduleRoot, zoekt,
 		"github.com/sourcegraph/zoekt/cmd/zoekt-git-index")
+	if nativeQueries {
+		t422BuildNativeQueryProjection(t, ctx, moduleRoot, workspace)
+	}
 	helper, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -281,9 +305,19 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 		_ = logFile.Close()
 		t.Fatal(err)
 	}
+	terminalRefusalVerified := false
 	t.Cleanup(func() {
-		_ = server.stop(t)
-		_ = logFile.Close()
+		if stopErr := server.stop(t); nativeQueries && stopErr != nil && !terminalRefusalVerified {
+			t.Errorf("stop native query fixture server: %v", stopErr)
+		}
+		if nativeQueries && server != nil && server.command != nil && server.command.Process != nil {
+			if syscall.Kill(-server.command.Process.Pid, 0) != syscall.ESRCH {
+				t.Error("native query fixture server process group remains or is unavailable")
+			}
+		}
+		if err := logFile.Close(); err != nil && nativeQueries {
+			t.Errorf("close native query server log: %v", err)
+		}
 	})
 
 	client := &http.Client{Timeout: 10 * time.Minute}
@@ -356,6 +390,9 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 	if err := server.stop(t); err != nil {
 		t.Fatalf("stop publication helper: %v\n%s", err, t421BlackBoxLogTail(logPath))
 	}
+	if nativeQueries && syscall.Kill(-server.command.Process.Pid, 0) != syscall.ESRCH {
+		t.Fatal("publication helper process group remains or is unavailable")
+	}
 	server, err = t421BlackBoxStartServer(helper, moduleRoot, zoekt, configPath, logFile)
 	if err != nil {
 		t.Fatalf("restart exact witness helper: %v\n%s", err, t421BlackBoxLogTail(logPath))
@@ -425,13 +462,18 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	queryAccounting := t421BlackBoxOpenQueryAccounting(
-		t, ctx, state, dataDir, repositoryName, selected,
-	)
-	t421BlackBoxRunProductQueries(
-		t, ctx, client, baseURL, credential, &ordinal, plan.Oracle.QueryCases,
-		repositoryName, corpus.Catalog, queryAccounting,
-	)
+	if nativeQueries {
+		ordinal = t422RunNativeQueryProjection(t, ctx, moduleRoot, workspace, address, repositoryName, credential,
+			ordinal, catalog, cold.Body, plan.Oracle.QueryCases)
+	} else {
+		queryAccounting := t421BlackBoxOpenQueryAccounting(
+			t, ctx, state, dataDir, repositoryName, selected,
+		)
+		t421BlackBoxRunProductQueries(
+			t, ctx, client, baseURL, credential, &ordinal, plan.Oracle.QueryCases,
+			repositoryName, corpus.Catalog, queryAccounting,
+		)
+	}
 
 	warm := request(t421ExactFinalAuthorityPath)
 	t.Logf("F accounting: cold=%+v warm=%+v", cold.Report, warm.Report)
@@ -528,6 +570,9 @@ func TestT421FinalAuthorityRealServerRegression(t *testing.T) {
 		t.Fatalf("terminal exact-read refusal did not stop the server\n%s",
 			t421BlackBoxLogTail(logPath))
 	}
+	// The final negative F deliberately requires a joined nonzero server exit.
+	// No other stop error may authorize successful fixture custody removal.
+	terminalRefusalVerified = true
 }
 
 type t421BlackBoxFinalAccountingInput struct {
