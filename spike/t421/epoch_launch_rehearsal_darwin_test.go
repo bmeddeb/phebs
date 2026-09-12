@@ -81,6 +81,8 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	completed := false
 	hostParent := parent
 	var volume *executionPressureVolume
+	var systemTools [2]*ExecutionSystemToolCustody
+	var canRelease func() bool
 	t.Cleanup(func() {
 		if volume != nil {
 			if !completed || t.Failed() || !volume.removed {
@@ -110,6 +112,20 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 		if err := os.RemoveAll(parent); err != nil {
 			t.Error(err)
+		}
+	})
+	// All flow/input/volume defers below run before this outer release. Its
+	// errors precede the final directory cleanup above, preserving failed
+	// custody. Future actual signing must join first; no signer executes here.
+	t.Cleanup(func() {
+		if canRelease != nil && !canRelease() {
+			t.Error("fixed-host image handles retained beside unjoined rehearsal custody")
+			return
+		}
+		for _, tool := range systemTools {
+			if err := tool.Close(); err != nil {
+				t.Error("outer fixed-host image close", err)
+			}
 		}
 	})
 	allowance := time.Hour
@@ -154,7 +170,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	var epochs *ExecutionEpochConfigCustody
 	var flow *ExecutionEpochOne
 	var run *ExecutionEpochOneRun
-	canRelease := func() bool {
+	canRelease = func() bool {
 		if author != nil {
 			author.mu.Lock()
 			defer author.mu.Unlock()
@@ -168,6 +184,12 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 			return !epochs.active
 		}
 		return true
+	}
+	for i, role := range []string{"sh", "ssh-keygen"} {
+		systemTools[i], err = HoldExecutionSystemTool(ctx, role)
+		if err != nil {
+			t.Fatal("actual outer fixed-host image hold", role, err)
+		}
 	}
 	git, err := ProtectExecutionGit(ctx, parent, gitBinary)
 	if git != nil {
@@ -279,6 +301,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	// or a fake complete profile. Every nonnil failed copy is already retained.
 	if err := flow.bindProfileTools(ctx, tools[3], tools[4]); err != nil {
 		t.Fatal("protected Buf/focused holder binding", err)
+	}
+	if err := flow.prepareProfileSystemTools(ctx, systemTools[0], systemTools[1]); err != nil {
+		t.Fatal("actual outer fixed-host image observation", err)
 	}
 	if volume != nil {
 		if pressure {

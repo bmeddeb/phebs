@@ -53,6 +53,10 @@ type ExecutionEpochOne struct {
 	profileTools           [2]*ExecutionToolCustody // Optional Buf/focused protected copies; no dispatch permission.
 	profileEnvironment     *executionRuntimeEnvironmentObservation
 	profileEnvironmentUsed bool // One preparation attempt, never per-dispatch hashing.
+
+	profileSystemTools  [2]*ExecutionSystemToolCustody // Borrowed outer-owned sh/signer; never mounted input owners.
+	profileSystemImages [2]executionProfileSystemImage
+	profileSystemUsed   bool
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted

@@ -8401,6 +8401,25 @@ test, workspace-native test) is
 The corrected exact-source normal/race gates remain pending; this is a local
 reviewed source bookmark, not push/merge readiness or a rehearsal pass.
 
+The outer system-image slice borrows actual fixed shell/signer identities
+once before AuthorA, keeping their owner outside mounted input release.
+Close errors precede directory cleanup and unjoined work retains the handles.
+Independent draft review of
+`788d143cce978e019fc860333d64590583e3167ba5e8bb585de52bd8eee84e49`
+found all severity counts zero. Actual native images are held in the tests;
+flow bookkeeping remains modeled. No signing command, complete profile,
+mounted operational teardown or new numerical permission is claimed.
+Ordered four-path source manifest (launch, rehearsal, system-image helper,
+its Darwin test) is
+`77b2be62b65afaa2651f521696fc548a2207cff5cc59355a7cb2804942f0ff1b`.
+Actual fixed-image tests passed uncached normal in 0.626s and race in 1.894s.
+Static passed vet, zero pinned-lint issues and whole-repository compilation;
+docs passed in 0.860s, glossary and whitespace clean. Applied source/cost
+re-review found all severities zero. Late close errors preserve remaining
+custody/diagnostics, not mounted data already released. The source manifest
+is unchanged across these gates. Push remains held behind the preceding
+native preparation bookmark's pending exact-source normal/race gates.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
