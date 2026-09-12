@@ -25,6 +25,28 @@ func workspaceTestPair(producer, phase uint32, sequence, logical, allocated uint
 	return workspaceTestEvent(producer, phase, 'B', sequence, 0, 0) + workspaceTestEvent(producer, phase, 'S', sequence, logical, allocated)
 }
 
+// Borrowing FD6 is not numerical admission for an early sample stream. Actual
+// early positions and their derived finite report counts remain unwired.
+func TestExecutionWorkspaceEarlyEventsRemainRefused(t *testing.T) {
+	plan := accountingTestPlan(t)
+	for _, row := range []struct{ producer, phase uint32 }{{2, 2}, {2, 3}, {2, 4}, {3, 5}, {4, 6}, {4, 7}, {4, 8}, {5, 8}} {
+		t.Run(fmt.Sprintf("%d/%d", row.producer, row.phase), func(t *testing.T) {
+			var out ExecutionWorkspaceByteObservation
+			input := "sha256:01" + strings.Repeat("00", 31)
+			_, err := observeWorkspaceByteEvent([]byte(workspaceTestBinding(row.producer)), plan, row.producer, input, &out)
+			if row.producer == 5 {
+				if err != nil {
+					t.Fatal("existing binding refused", err)
+				}
+				_, err = observeWorkspaceByteEvent([]byte(workspaceTestEvent(row.producer, row.phase, 'B', 1, 0, 0)), plan, row.producer, input, &out)
+			}
+			if err == nil || !out.Unavailable || out.Complete || out.Phases != ([15]ExecutionWorkspaceBytePhase{}) || workspaceCheckpointMaximum(row.producer, row.phase) != 0 {
+				t.Fatal("descriptor prerequisite invented sample coverage", out, err)
+			}
+		})
+	}
+}
+
 func TestExecutionWorkspaceBytesJoined(t *testing.T) {
 	plan := accountingTestPlan(t)
 	for _, producer := range []uint32{5, 6} {

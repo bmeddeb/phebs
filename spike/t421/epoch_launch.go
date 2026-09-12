@@ -512,7 +512,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	}
 	command.ExtraFiles = []*os.File{files[1], files[3], storeFile}
 	var workspaceBinding *dispatchadmission.ProductionWorkspaceBinding
-	if flow.workspace != nil && (number == 4 || number == 5) {
+	// Only the closed full early profiles borrow FD6; shorter legacy rehearsal
+	// profiles keep omission. Descriptor custody is not byte-point coverage.
+	if flow.workspace != nil && (number == 4 || number == 5 || number == 1 && run.physicalAllowed || number == 2 || number == 3 && run.checkpointAllowed) {
 		binding, workspaceErr := dispatchadmission.DescribeProductionWorkspace(flow.workspace.file, flow.workspace.path)
 		if workspaceErr != nil || binding.FSID != flow.workspace.volume {
 			return nil, ErrExecutionEpochOne

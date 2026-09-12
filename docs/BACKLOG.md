@@ -7921,6 +7921,29 @@ selected by these commands. Independent draft review and applied-source/final
 record review report all severity counts zero. Documentation (0.664s), glossary
 and whitespace passed.
 
+The early workspace descriptor prerequisite now lends the existing FD6 to the
+closed full early profiles (producer two phases two–four, three phase five,
+four phases six–eight) and decouples borrowed observer construction from the
+later cleanup collector. Shorter rehearsal profiles and ordinary launches keep
+omission; retired-backup measurement stays on the existing five/six collector
+path. The existing production lifetime owns descriptor closure after application
+and store joins; the borrowed observer does not independently close it. Actual
+inherited valid/missing/wrong/omitted descriptor checks cover all three early
+producers. Parser tests explicitly keep all eight early producer/phase sample
+positions unavailable, including producer five phase eight. No early traversal,
+WB emission, capacity callback, timer or numerical allowance is introduced.
+Real sample positions and coverage are still missing, not inferred from FD6.
+The five-path draft and applied independent reviews report all severity counts
+zero; focused normal descriptor/command/workspace tests passed. Applied ordered
+manifest is `c167ab94697003117549a174e8325de7ec07d4dc93425f32450788fb01a912c7`
+(bootstrap workspace, inherited tests, command workspace, launch, WB tests).
+Focused race passed in 1.745s (dispatch), 1.755s (command) and 2.901s
+(workspace harness). Full ci-static passed vet, zero-issue lint and all-package
+compilation. These inherited descriptor and refusal gates do not establish
+the later missing live byte positions. Documentation (0.784s), glossary,
+whitespace and canonical V1/V2 digests passed; the author's records-only check
+found no factual/cost issue and is not counted as independent code review.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

@@ -49,6 +49,58 @@ func workspaceTestRoot(t *testing.T) (*os.File, ProductionWorkspaceBinding) {
 	return file, binding
 }
 
+func workspaceEarlyTestRecord(producer uint32) ProductionBootstrap {
+	r := workspaceTestRecord()
+	var phases []uint32
+	switch producer {
+	case 2:
+		phases = []uint32{2, 3, 4}
+	case 3:
+		phases = []uint32{5}
+	case 4:
+		phases = []uint32{6, 7, 8}
+	default:
+		return r
+	}
+	r.Producer.ID, r.Store.Producer = producer, producer
+	r.Phase, r.Store.Phase, r.Control.InitialPhase = phases[0], phases[0], phases[0]
+	r.Control.Phases = phases
+	r.Control.MaximumPhases, r.Limits.Phases = len(phases), len(phases)
+	r.Store.Phases = 0
+	for _, phase := range phases {
+		r.Store.Phases |= 1 << (phase - 1)
+	}
+	return r
+}
+
+// These are only exact descriptor profiles, not permission to emit early WB.
+func TestProductionWorkspaceEarlyProfiles(t *testing.T) {
+	_, binding := workspaceTestRoot(t)
+	for _, producer := range []uint32{2, 3, 4} {
+		for _, mode := range []string{"valid", "ordinary", "wrong_initial", "wrong_phases", "no_store", "omitted"} {
+			t.Run(fmt.Sprintf("%d/%s", producer, mode), func(t *testing.T) {
+				r := workspaceEarlyTestRecord(producer)
+				r.Workspace = &binding
+				switch mode {
+				case "ordinary":
+					r.SemanticMode = ""
+				case "wrong_initial":
+					r.Phase++
+				case "wrong_phases":
+					r.Control.Phases[len(r.Control.Phases)-1]++
+				case "no_store":
+					r.Store = nil
+				case "omitted":
+					r.Workspace = nil
+				}
+				if (r.validate() == nil) != (mode == "valid" || mode == "omitted") {
+					t.Fatal("early descriptor profile", mode)
+				}
+			})
+		}
+	}
+}
+
 func TestProductionWorkspaceRecordAndDescriptor(t *testing.T) {
 	file, binding := workspaceTestRoot(t)
 	for _, mode := range []string{"valid", "epoch4", "ordinary", "author", "offline", "no_store", "input", "phase", "phases", "path", "inode", "fsid"} {
@@ -265,17 +317,30 @@ func TestProductionWorkspaceFailedBootstrapClosesExplicitFile(t *testing.T) {
 
 func TestProductionWorkspaceInherited(t *testing.T) {
 	for _, mode := range []string{"valid", "missing", "wrong", "omitted", "backup", "restore"} {
-		t.Run(mode, func(t *testing.T) { testProductionWorkspaceInherited(t, mode) })
+		t.Run(mode, func(t *testing.T) { testProductionWorkspaceInherited(t, mode, 0) })
 	}
 }
 
-func testProductionWorkspaceInherited(t *testing.T, mode string) {
+func TestProductionWorkspaceEarlyInherited(t *testing.T) {
+	for _, producer := range []uint32{2, 3, 4} {
+		for _, mode := range []string{"valid", "missing", "wrong", "omitted"} {
+			t.Run(fmt.Sprintf("%d/%s", producer, mode), func(t *testing.T) {
+				testProductionWorkspaceInherited(t, mode, producer)
+			})
+		}
+	}
+}
+
+func testProductionWorkspaceInherited(t *testing.T, mode string, earlyProducer uint32) {
 	// Real inherited FD6 and DA/PC/SA mechanics, not a production-image or
 	// whole-workspace traversal/pressure proof. No native database is started.
 	ctx, cancel := context.WithTimeout(t.Context(), 8*time.Second)
 	defer cancel()
 	file, binding := workspaceTestRoot(t)
 	r := workspaceTestRecord()
+	if earlyProducer != 0 {
+		r = workspaceEarlyTestRecord(earlyProducer)
+	}
 	if mode == "backup" || mode == "restore" {
 		r = productionStoreTestRecord()
 		if mode == "restore" {
@@ -289,7 +354,21 @@ func testProductionWorkspaceInherited(t *testing.T, mode string) {
 	if mode == "omitted" {
 		r.Workspace = nil
 	}
-	store, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: []storeaccounting.Producer{{ID: r.Producer.ID, Calls: r.Store.Calls, Transactions: r.Store.Transactions}}, Phases: []storeaccounting.Phase{{ID: 12, Transactions: 1, Rows: 1}, {ID: 13}, {ID: 14}}})
+	phaseIDs := []uint32{12, 13, 14}
+	if earlyProducer != 0 {
+		phaseIDs = r.Control.Phases
+	}
+	var storePhases []storeaccounting.Phase
+	var dispatchPhases []Phase
+	for i, phase := range phaseIDs {
+		transactions := uint64(0)
+		if i == 0 {
+			transactions = 1
+		}
+		storePhases = append(storePhases, storeaccounting.Phase{ID: phase, Transactions: transactions, Rows: transactions})
+		dispatchPhases = append(dispatchPhases, Phase{ID: phase, Roles: []RoleBudget{{Role: RoleGit, Attempts: transactions}, {Role: RoleSurreal}, {Role: RoleZoekt}, {Role: RoleCompatibility}}})
+	}
+	store, err := storeaccounting.New(ctx, storeaccounting.Config{Producers: []storeaccounting.Producer{{ID: r.Producer.ID, Calls: r.Store.Calls, Transactions: r.Store.Transactions}}, Phases: storePhases})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -367,9 +446,7 @@ func testProductionWorkspaceInherited(t *testing.T, mode string) {
 		t.Fatal(err)
 	}
 	defer func() { _ = control.Close() }()
-	dispatch, err := New(ctx, Config{Limits: r.Limits, Producers: []Producer{r.Producer}, Phases: []Phase{{ID: 12, Roles: []RoleBudget{{Role: RoleGit, Attempts: 1}, {Role: RoleSurreal}, {Role: RoleZoekt}, {Role: RoleCompatibility}}},
-		{ID: 13, Roles: []RoleBudget{{Role: RoleGit}, {Role: RoleSurreal}, {Role: RoleZoekt}, {Role: RoleCompatibility}}},
-		{ID: 14, Roles: []RoleBudget{{Role: RoleGit}, {Role: RoleSurreal}, {Role: RoleZoekt}, {Role: RoleCompatibility}}}}})
+	dispatch, err := New(ctx, Config{Limits: r.Limits, Producers: []Producer{r.Producer}, Phases: dispatchPhases})
 	if err != nil {
 		t.Fatal(err)
 	}

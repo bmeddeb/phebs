@@ -43,7 +43,10 @@ func (record ProductionBootstrap) validateWorkspace() error {
 	if record.SemanticMode != ProductionSemanticV3 || record.ArchiveDeadlineUnixNano != 0 {
 		return ErrProductionBootstrap
 	}
-	if record.Producer.ID == 5 && record.Phase == 8 && record.Control.MaximumPhases == 4 && slices.Equal(record.Control.Phases, []uint32{8, 9, 10, 11}) ||
+	if record.Producer.ID == 2 && record.Phase == 2 && record.Control.MaximumPhases == 3 && slices.Equal(record.Control.Phases, []uint32{2, 3, 4}) ||
+		record.Producer.ID == 3 && record.Phase == 5 && record.Control.MaximumPhases == 1 && slices.Equal(record.Control.Phases, []uint32{5}) ||
+		record.Producer.ID == 4 && record.Phase == 6 && record.Control.MaximumPhases == 3 && slices.Equal(record.Control.Phases, []uint32{6, 7, 8}) ||
+		record.Producer.ID == 5 && record.Phase == 8 && record.Control.MaximumPhases == 4 && slices.Equal(record.Control.Phases, []uint32{8, 9, 10, 11}) ||
 		record.Producer.ID == 6 && record.Phase == 12 && record.Control.MaximumPhases == 3 && slices.Equal(record.Control.Phases, []uint32{12, 13, 14}) {
 		return nil
 	}

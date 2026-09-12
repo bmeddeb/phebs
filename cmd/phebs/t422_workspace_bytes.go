@@ -12,31 +12,37 @@ import (
 // workspace, but requesting a measured capacity checkpoint cannot fall back
 // to data-only bytes or a zero observation.
 func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error {
-	if control == nil || control.collector == nil {
+	if control == nil || control.collector == nil && (control.launch == nil || control.launch.request.ServerEpoch < 1 || control.launch.request.ServerEpoch > 3) {
 		return nil
 	}
-	var retiredGuard func(context.Context, func(context.Context) error) error
-	if st != nil {
-		retiredGuard = st.WithRetiredLocalEngine
-	}
-	if err := dispatchadmission.BindRetiredBackupMeasurement(retiredGuard); err != nil {
-		return err
+	if control.collector != nil {
+		var retiredGuard func(context.Context, func(context.Context) error) error
+		if st != nil {
+			retiredGuard = st.WithRetiredLocalEngine
+		}
+		if err := dispatchadmission.BindRetiredBackupMeasurement(retiredGuard); err != nil {
+			return err
+		}
 	}
 	file, path, info, volume, err := dispatchadmission.ProductionWorkspace()
 	var reports *t422WorkspaceReports
 	if err == nil {
 		control.workspaceBytes = custodybytes.NewBorrowed(file, path, info, volume)
-		initial, stateErr := dispatchadmission.ProductionSemanticState()
-		if stateErr == nil {
-			reports, stateErr = newT422WorkspaceReports(initial)
-		}
-		if stateErr != nil {
-			_ = control.workspaceBytes.Fail()
-			return control.stop()
+		if control.collector != nil {
+			initial, stateErr := dispatchadmission.ProductionSemanticState()
+			if stateErr == nil {
+				reports, stateErr = newT422WorkspaceReports(initial)
+			}
+			if stateErr != nil {
+				_ = control.workspaceBytes.Fail()
+				return control.stop()
+			}
 		}
 	}
 	control.workspaceSample = func(ctx context.Context) (custodybytes.Sample, error) {
-		if control.workspaceBytes == nil || st == nil || !control.current(ctx, true) {
+		// Early descriptor borrowing alone admits no WB event or traversal.
+		// Its fixed positions and report counts remain a separate prerequisite.
+		if reports == nil || control.workspaceBytes == nil || st == nil || !control.current(ctx, true) {
 			if control.workspaceBytes != nil {
 				_ = control.workspaceBytes.Fail()
 			}
@@ -60,6 +66,9 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 			return custodybytes.Sample{}, control.stop()
 		}
 		return value, nil
+	}
+	if control.collector == nil {
+		return nil
 	}
 	return control.collector.SetCapacityCheckpoint(func(ctx context.Context) error {
 		_, err := control.workspaceSample(ctx)
