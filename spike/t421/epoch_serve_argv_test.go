@@ -10,7 +10,8 @@ import (
 	"testing"
 )
 
-// Source binding to both actual builders, not native Start or profile admission
+// Source binding to actual shared callers and the unchanged ordinary builder,
+// not native Start or profile admission
 // evidence. The real CLI parser is exercised separately in cmd/phebs.
 func TestT422ServeBuildersMatchFrozenArgv(t *testing.T) {
 	var frozen []string
@@ -23,10 +24,12 @@ func TestT422ServeBuildersMatchFrozenArgv(t *testing.T) {
 		t.Fatal("frozen serve argv changed", frozen)
 	}
 	for _, test := range []struct {
-		path, function, executable, config string
+		path, function, builder string
+		arguments               []string
 	}{
-		{"epoch_launch.go", "launchEpoch", "path", "epoch.ConfigPath"},
-		{"production_custody_run.go", "StartServe", "custody.phebsPath", "custody.configPath"},
+		{"epoch_launch.go", "launchEpoch", "executionPhebsCommand", []string{"path", "author.parent", `"serve"`, "epoch", "environment"}},
+		{"epoch_backup.go", "runNativeArchive", "executionPhebsCommand", []string{"path", "author.parent", "verb", "run.epoch", "environment"}},
+		{"production_custody_run.go", "StartServe", "exec.Command", []string{"custody.phebsPath", `"serve"`, `"-config"`, "custody.configPath"}},
 	} {
 		t.Run(test.function, func(t *testing.T) {
 			fset := token.NewFileSet()
@@ -50,11 +53,11 @@ func TestT422ServeBuildersMatchFrozenArgv(t *testing.T) {
 				}
 				ast.Inspect(function.Body, func(node ast.Node) bool {
 					call, ok := node.(*ast.CallExpr)
-					if !ok || render(call.Fun) != "exec.Command" {
+					if !ok || render(call.Fun) != test.builder {
 						return true
 					}
 					seen++
-					want := []string{test.executable, `"serve"`, `"-config"`, test.config}
+					want := test.arguments
 					var got []string
 					for _, argument := range call.Args {
 						got = append(got, render(argument))

@@ -183,7 +183,7 @@ func TestExecutionProfileEnvironmentPreworkRefusals(t *testing.T) {
 			case "repeat":
 				flow.profileEnvironmentUsed = true
 			}
-			if err := flow.prepareProfileEnvironment(ctx); err == nil || flow != nil && flow.profileEnvironment != nil {
+			if err := flow.prepareProfileEnvironment(ctx); err == nil || flow != nil && (flow.profileEnvironment != nil || flow.profileCommands != nil) {
 				t.Fatal("non-prework owner issued environment observation")
 			}
 			if flow != nil && flow.profileEnvironmentUsed != (mode == "repeat" || mode == "owned_check_failure") {

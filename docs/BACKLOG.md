@@ -8420,6 +8420,22 @@ custody/diagnostics, not mounted data already released. The source manifest
 is unchanged across these gates. Push remains held behind the preceding
 native preparation bookmark's pending exact-source normal/race gates.
 
+Actual command-recipe observations now share the production epoch-launch and
+archive command builder. All five concrete serve recipes and epoch-four
+backup/restore are checked before retaining three detached normalized rows.
+No child is started by observation and no expected profile becomes evidence.
+Independent draft review of
+`65cd30dd39f9b12abb15eb05dc68a69fe7f2638770a5d8d09f7ca54b00c0dce6`
+found all severities zero. Ordered six-path source manifest (launch, backup,
+serve-argv test, command helper/test, environment test) is
+`9b052e0fbbaf63f54ba8ae23d391962eeae1c06c92f3953e1411a835a2cddeb0`.
+Focused uncached normal passed in 0.788s and race in 2.379s. Applied-source
+review found all severities zero, including shared call-site parity and costs.
+Static passed vet, zero pinned-lint issues and repository compilation; docs
+passed in 0.554s, glossary and whitespace clean. Complete actual launch,
+profile admission and global event one remain unestablished; push remains held
+behind the exact-source native preparation gates.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

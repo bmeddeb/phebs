@@ -52,7 +52,8 @@ type ExecutionEpochOne struct {
 
 	profileTools           [2]*ExecutionToolCustody // Optional Buf/focused protected copies; no dispatch permission.
 	profileEnvironment     *executionRuntimeEnvironmentObservation
-	profileEnvironmentUsed bool // One preparation attempt, never per-dispatch hashing.
+	profileEnvironmentUsed bool                      // One preparation attempt, never per-dispatch hashing.
+	profileCommands        []ExecutionCommandProfile // Actual normalized argv, separate from parsed YAML.
 
 	profileSystemTools  [2]*ExecutionSystemToolCustody // Borrowed outer-owned sh/signer; never mounted input owners.
 	profileSystemImages [2]executionProfileSystemImage
@@ -188,7 +189,7 @@ func (flow *ExecutionEpochOne) prepareProfileEnvironment(ctx context.Context) er
 	if epochs.checkLocked(ctx, 1) != nil {
 		return ErrExecutionEpochOne
 	}
-	_, tools, parent, err := flow.checkEpochTools(ctx, 1)
+	path, tools, parent, err := flow.checkEpochTools(ctx, 1)
 	if err != nil || len(tools) != 3 || tools[1].Role != "surreal" || tools[2].Role != "zoekt-git-index" {
 		return ErrExecutionEpochOne
 	}
@@ -202,7 +203,11 @@ func (flow *ExecutionEpochOne) prepareProfileEnvironment(ctx context.Context) er
 	if err != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
-	flow.profileEnvironment = &observed
+	commands, err := observeExecutionCommands(path, author.parent, epochs.epochs, parent)
+	if err != nil || ctx.Err() != nil {
+		return ErrExecutionEpochOne
+	}
+	flow.profileEnvironment, flow.profileCommands = &observed, commands
 	return nil
 }
 
@@ -623,10 +628,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	defer func() { _ = storeFile.Close() }() // Explicit post-Start close is checked below.
 	output := &checkoutCommandOutput{remaining: bounds.outputBytes, cancel: cancel}
 	run.output = output
-	command := exec.Command(path, "serve", "-config", epoch.ConfigPath)
-	// Serve alone enables the existing nine straight-line startup records.
-	// Offline archive commands retain the unchanged shared parent environment.
-	command.Dir, command.Env = author.parent, executionServeEnvironment(environment)
+	command, err := executionPhebsCommand(path, author.parent, "serve", epoch, environment)
+	if err != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	command.Stdin, command.Stdout, command.Stderr = files[5], output, output
 	if run.backupAllowed {
 		run.backupOutput = &epochBackupOutput{remaining: bounds.outputBytes, server: output,

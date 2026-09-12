@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -195,9 +194,9 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 		}
 	}
 	producer, site := uint32(10), executionSiteBackup
-	verb, flag := "backup", "-output"
+	verb := "backup"
 	if restore {
-		producer, site, verb, flag = 11, executionSiteRestore, "restore", "-backup"
+		producer, site, verb = 11, executionSiteRestore, "restore"
 	}
 	view, err := flow.controller.ProducerLaunch(producer)
 	if err != nil || view.Phase != 12 {
@@ -222,8 +221,10 @@ func (run *ExecutionEpochOneRun) runNativeArchive(ctx context.Context, restore b
 		return ErrExecutionEpochOne
 	}
 	defer func() { _ = storeFile.Close() }()
-	command := exec.Command(path, verb, "-config", run.epoch.ConfigPath, flag, filepath.Join(run.epoch.BackupRoot, "archive"))
-	command.Dir, command.Env = author.parent, environment
+	command, err := executionPhebsCommand(path, author.parent, verb, run.epoch, environment)
+	if err != nil {
+		return ErrExecutionEpochOne
+	}
 	backupOutput := epochBackupCommandOutput{shared: run.backupOutput, restore: restore}
 	command.Stdout, command.Stderr = backupOutput, backupOutput
 	command.ExtraFiles = []*os.File{files[1], files[3], storeFile}
