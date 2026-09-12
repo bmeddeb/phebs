@@ -8401,6 +8401,25 @@ test, workspace-native test) is
 The corrected exact-source normal/race gates remain pending; this is a local
 reviewed source bookmark, not push/merge readiness or a rehearsal pass.
 
+The revised-budget gate subsequently passed at exact clean source
+`df39cf7d512dd411edcd0205993d5c60ece3eacf`, in a detached checkout verified
+before and after both invocations. Preparation race passed in 1,100.42s
+(package 1,102.313s); normal preparation in 199.72s and recovery measurement
+in 9.52s (combined package 209.920s). Recovery was not selected by this race
+invocation. Both preparation runs recorded phase-six 666 transactions,
+186,075 rows, maximum 510; phase-seven 1 transaction/3 rows; 77 dispatch
+attempts; 214,414 SR, 21,601 OP and 9 EP reports; all 56 partitions, three
+workspace walks and ten PC exchanges including EOF. The counts are actual
+distinct units, not interchangeable partition/event measures. Race log SHA-256
+is `19e919f0db3d5c341b9946b133449d837aa13866cdc8a4ca1d021a4c6e84634f`;
+normal is `dccac446d8c08e4b2d56336ad6fbc8381b3138e70decd3b17ee7de869f2da654`.
+Their commit/race attribution additionally uses the retained launch/checkout
+record; the test logs do not print it themselves. Independent evidence/source
+review found all severities zero; no owned helper/engine remains. This closes
+the bookmark's native gate and its descendant push hold, not whole-phase,
+scheduler/reaper, full-F, complete-profile or ceremony readiness. Earlier red
+attempts remain red and are not replaced by these results.
+
 The outer system-image slice borrows actual fixed shell/signer identities
 once before AuthorA, keeping their owner outside mounted input release.
 Close errors precede directory cleanup and unjoined work retains the handles.
