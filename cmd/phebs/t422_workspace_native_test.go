@@ -40,6 +40,14 @@ func TestT422WorkspaceEarlyNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-early")
 }
 
+// Actual Resume-three callback plus independent cold/warm HTTP finish walks.
+// Semantic input, auth backend and sixteen unused owner callbacks are supplied;
+// native FD6, PC/DA/SA transitions, engine/SDK guards and joins are real.
+// No author/corpus, capacity-normal cycle or full ColdToWarm admission is claimed.
+func TestT422WorkspaceWarmNativeComposition(t *testing.T) {
+	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-warm")
+}
+
 func TestT422WorkspaceNativeHelper(t *testing.T) {
 	if os.Getenv(t422BackupFixture) == "" {
 		return
@@ -89,7 +97,8 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, semanticRaw := t422LifecycleBootstrapRecord(t)
-	earlyWorkspace := os.Getenv(t422BackupFixture) == "workspace-early"
+	warmWorkspace := os.Getenv(t422BackupFixture) == "workspace-warm"
+	earlyWorkspace := os.Getenv(t422BackupFixture) == "workspace-early" || warmWorkspace
 	if earlyWorkspace {
 		semanticRaw, _ = t422SemanticTestRequest(t)
 	}
@@ -165,37 +174,65 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		}
 		server := httptest.NewServer(handler)
 		defer server.Close()
-		if !input.Scan() {
-			t.Fatal("actual early request token", input.Err())
+		phases := []uint32{2}
+		if warmWorkspace {
+			phases = append(phases, 3)
 		}
-		request, err := http.NewRequestWithContext(runnerCtx, http.MethodPost, server.URL+t422WorkspaceSamplePath, nil)
-		if err != nil {
-			t.Fatal(err)
+		for _, phase := range phases {
+			if !input.Scan() {
+				t.Fatal("actual early request token", input.Err())
+			}
+			var warmStart t422WorkspaceSampleResponse
+			if phase == 3 {
+				before := control.workspaceByteSnapshot()
+				if before.Unavailable || !before.Phases[2].Completed || turns.Load() != 0 || failures.Load() != 0 {
+					t.Fatal("warm callback did not complete before actual reopened request", before)
+				}
+				warmStart = t422WorkspaceSampleResponse{
+					LogicalBytes:   before.Phases[2].Maximum.LogicalBytes,
+					AllocatedBytes: before.Phases[2].Maximum.AllocatedBytes,
+				}
+			}
+			request, err := http.NewRequestWithContext(runnerCtx, http.MethodPost, server.URL+t422WorkspaceSamplePath, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+			request.Header.Set(dispatchadmission.ProductionRequestHeader, input.Text())
+			request.Header.Set(t422WorkspacePointHeader, "finish")
+			response, err := server.Client().Do(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, readErr := io.ReadAll(io.LimitReader(response.Body, 257))
+			closeErr := response.Body.Close()
+			var sample t422WorkspaceSampleResponse
+			if readErr != nil || closeErr != nil || response.StatusCode != http.StatusOK || len(body) > 256 ||
+				json.Unmarshal(body, &sample) != nil || sample.LogicalBytes < uint64(len(sibling)) || sample.AllocatedBytes == 0 {
+				t.Fatal("actual early workspace response", response.StatusCode, readErr, closeErr, string(body))
+			}
+			observed := control.workspaceByteSnapshot()
+			wantLogical, wantAllocated := sample.LogicalBytes, sample.AllocatedBytes
+			if phase == 3 {
+				wantLogical = max(wantLogical, warmStart.LogicalBytes)
+				wantAllocated = max(wantAllocated, warmStart.AllocatedBytes)
+			}
+			if observed.Unavailable || !observed.Phases[phase-1].Completed ||
+				observed.Phases[phase-1].Maximum.LogicalBytes != wantLogical ||
+				observed.Phases[phase-1].Maximum.AllocatedBytes != wantAllocated ||
+				phase == 2 && observed.Phases[2].Completed ||
+				turns.Load() != 0 || readReports.Load() != 0 || failures.Load() != 0 {
+				t.Fatal("actual early positive prefix", observed, turns.Load(), readReports.Load(), failures.Load())
+			}
+			if _, err = st.ListRepos(ctx); err != nil {
+				t.Fatal("real early SDK did not resume after native quiescence", err)
+			}
+			if phase == 2 {
+				fmt.Println("early_measured_and_resumed")
+			} else {
+				fmt.Printf("warm_measured_and_resumed:%016x:%016x\n", sample.LogicalBytes, sample.AllocatedBytes)
+			}
 		}
-		request.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
-		request.Header.Set(dispatchadmission.ProductionRequestHeader, input.Text())
-		request.Header.Set(t422WorkspacePointHeader, "finish")
-		response, err := server.Client().Do(request)
-		if err != nil {
-			t.Fatal(err)
-		}
-		body, readErr := io.ReadAll(io.LimitReader(response.Body, 257))
-		closeErr := response.Body.Close()
-		var sample t422WorkspaceSampleResponse
-		if readErr != nil || closeErr != nil || response.StatusCode != http.StatusOK || len(body) > 256 ||
-			json.Unmarshal(body, &sample) != nil || sample.LogicalBytes < uint64(len(sibling)) || sample.AllocatedBytes == 0 {
-			t.Fatal("actual early workspace response", response.StatusCode, readErr, closeErr, string(body))
-		}
-		observed := control.workspaceByteSnapshot()
-		if observed.Unavailable || !observed.Phases[1].Completed || observed.Phases[1].Maximum.LogicalBytes != sample.LogicalBytes ||
-			observed.Phases[1].Maximum.AllocatedBytes != sample.AllocatedBytes || observed.Phases[2].Completed ||
-			turns.Load() != 0 || readReports.Load() != 0 || failures.Load() != 0 {
-			t.Fatal("actual early positive prefix", observed, turns.Load(), readReports.Load(), failures.Load())
-		}
-		if _, err = st.ListRepos(ctx); err != nil {
-			t.Fatal("real early SDK did not resume after native quiescence", err)
-		}
-		fmt.Println("early_measured_and_resumed")
 		if !input.Scan() || input.Text() != "close" {
 			t.Fatal("joined early close request", input.Text(), input.Err())
 		}

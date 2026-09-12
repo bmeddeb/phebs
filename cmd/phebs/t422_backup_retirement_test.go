@@ -64,6 +64,159 @@ func assertT422EarlyNativeWorkspaceReports(t *testing.T, raw string, input [32]b
 	}
 }
 
+// This test-only tap consumes the one exec stderr copier, never a live read of
+// its bytes.Buffer. It accepts exactly the first five source-bound WB records.
+// Other diagnostics use fixed line storage, not an unbounded line allocation.
+// Joined output remains independently checked after Wait, including warm finish.
+type t422WarmNativeOutput struct {
+	sink   io.Writer
+	input  [32]byte
+	line   [79]byte
+	length int
+	record int
+	ready  chan t422WorkspaceSampleResponse
+	sample t422WorkspaceSampleResponse
+}
+
+func (output *t422WarmNativeOutput) Write(raw []byte) (int, error) {
+	n, err := output.sink.Write(raw)
+	if err != nil {
+		return n, err
+	}
+	for _, b := range raw[:n] {
+		if output.record == 5 {
+			break
+		}
+		if b != '\n' {
+			if output.length < len(output.line) {
+				output.line[output.length] = b
+			}
+			if output.length <= len(output.line) {
+				output.length++
+			}
+			continue
+		}
+		length := output.length
+		output.length = 0
+		if length < 2 || output.line[0] != 'W' || output.line[1] != 'B' {
+			continue
+		}
+		valid := length < len(output.line)
+		line := string(output.line[:min(length, len(output.line))])
+		switch output.record {
+		case 0:
+			valid = valid && line == fmt.Sprintf("WBB1:2:sha256:%x", output.input)
+		case 1:
+			valid = valid && line == "WB1:2:2B:0000000000000001"
+		case 3:
+			valid = valid && line == "WB1:2:3B:0000000000000002"
+		case 2, 4:
+			phase, sequence := uint64(2), uint64(1)
+			if output.record == 4 {
+				phase, sequence = 3, 2
+			}
+			sample, ok := t422WarmNativeSample(line, phase, sequence)
+			valid = valid && ok
+			if valid && output.record == 4 {
+				output.sample = sample
+			}
+		}
+		if !valid {
+			output.ready <- t422WorkspaceSampleResponse{}
+			output.record = 5
+			return n, errors.New("native warm WB prefix refused")
+		}
+		output.record++
+		if output.record == 5 {
+			output.ready <- output.sample
+		}
+	}
+	return n, nil
+}
+
+func t422WarmNativeSample(line string, phase, sequence uint64) (t422WorkspaceSampleResponse, bool) {
+	var gotPhase, gotSequence, logical, allocated uint64
+	n, err := fmt.Sscanf(line, "WB1:2:%dS:%016x:%016x:%016x", &gotPhase, &gotSequence, &logical, &allocated)
+	return t422WorkspaceSampleResponse{LogicalBytes: logical, AllocatedBytes: allocated},
+		n == 4 && err == nil && gotPhase == phase && gotSequence == sequence && logical >= 1<<20 && allocated > 0 &&
+			line == fmt.Sprintf("WB1:2:%dS:%016x:%016x:%016x", phase, sequence, logical, allocated)
+}
+
+func assertT422WarmNativeWorkspaceReports(t *testing.T, raw string, input [32]byte, live, finish t422WorkspaceSampleResponse) {
+	t.Helper()
+	var records []string
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, "WB") {
+			records = append(records, line)
+		}
+	}
+	if len(records) != 7 || records[0] != fmt.Sprintf("WBB1:2:sha256:%x", input) ||
+		len(strings.Join(records, "\n"))+1 != 79+3*(26+60) {
+		t.Fatal("joined native warm WB framing", records)
+	}
+	for i, phase := range []uint64{2, 3, 3} {
+		sequence := uint64(i + 1)
+		if records[1+2*i] != fmt.Sprintf("WB1:2:%dB:%016x", phase, sequence) {
+			t.Fatal("joined native warm begin", records)
+		}
+		sample, ok := t422WarmNativeSample(records[2+2*i], phase, sequence)
+		if !ok || i == 1 && sample != live || i == 2 && sample != finish {
+			t.Fatal("joined native warm exact payload", records)
+		}
+	}
+}
+
+// Supplied framing only; the native selector below supplies real child bytes.
+func TestT422WarmNativeOutput(t *testing.T) {
+	input := [32]byte{9}
+	prefix := fmt.Sprintf("WBB1:2:sha256:%x\nWB1:2:2B:0000000000000001\nWB1:2:2S:0000000000000001:0000000000100000:0000000000000200\nWB1:2:3B:0000000000000002\nWB1:2:3S:0000000000000002:0000000000100001:0000000000000400\n", input)
+	// A begin without its actual completed payload must never release the parent.
+	incomplete := &t422WarmNativeOutput{sink: io.Discard, input: input, ready: make(chan t422WorkspaceSampleResponse, 1)}
+	if _, err := incomplete.Write([]byte(prefix[:strings.LastIndex(prefix, "WB1:2:3S:")])); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-incomplete.ready:
+		t.Fatal("incomplete warm observation released parent")
+	default:
+	}
+	for _, tc := range []struct {
+		name, raw string
+		refused   bool
+	}{
+		{"fragmented", prefix, false},
+		{"diagnostics", strings.Repeat("x", 4096) + "\n" + prefix, false},
+		{"wrong_binding", strings.Replace(prefix, "0900", "0800", 1), true},
+		{"wrong_sequence", strings.Replace(prefix, "3S:0000000000000002", "3S:0000000000000001", 1), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var sink bytes.Buffer
+			output := &t422WarmNativeOutput{sink: &sink, input: input, ready: make(chan t422WorkspaceSampleResponse, 1)}
+			var err error
+			for _, b := range []byte(tc.raw) {
+				_, err = output.Write([]byte{b})
+				if err != nil {
+					break
+				}
+			}
+			if (err != nil) != tc.refused {
+				t.Fatal(err)
+			}
+			select {
+			case sample := <-output.ready:
+				if tc.refused != (sample == (t422WorkspaceSampleResponse{})) {
+					t.Fatal(sample)
+				}
+			default:
+				t.Fatal("missing actual framing result")
+			}
+			if !tc.refused && sink.String() != tc.raw {
+				t.Fatal("diagnostic bytes changed")
+			}
+		})
+	}
+}
+
 // This is actual selected SDK/DA/PC retirement, the real backup CLI function,
 // native surrealkv/export and joined shutdown on empty private fixture data.
 // It does not reproduce protected executable custody, pressure/F, the frozen
@@ -114,7 +267,8 @@ func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace, arch
 }
 
 func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspace, archiveWorkspace bool, failure string, cleanup ...bool) {
-	earlyWorkspace := failure == "workspace-early"
+	warmWorkspace := failure == "workspace-warm"
+	earlyWorkspace := failure == "workspace-early" || warmWorkspace
 	if earlyWorkspace {
 		if !workspace || restore || archiveWorkspace || len(cleanup) != 0 {
 			t.Fatal("invalid early workspace fixture")
@@ -189,6 +343,14 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		record.Limits.Phases = 3
 		record.Control.BackupEndpointCarry = false
 		record.Control.Phases, record.Control.InitialPhase, record.Control.MaximumPhases = []uint32{2, 3, 4}, 2, 3
+	}
+	if warmWorkspace {
+		record.Control.WarmStartWorkspace = true
+		record.Control.MaximumWireBytes = 21 * 2 * dispatchadmission.FrameBytes
+	}
+	var warmOutput *t422WarmNativeOutput
+	if warmWorkspace {
+		warmOutput = &t422WarmNativeOutput{ready: make(chan t422WorkspaceSampleResponse, 1)}
 	}
 	var workspaceFile *os.File
 	var archiveObserver *custodybytes.Observer
@@ -421,6 +583,10 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			backupDiagnosticDone = diagnosticDone
 		} else {
 			command.Stderr = diagnostic
+			if warmWorkspace {
+				warmOutput.sink, warmOutput.input = diagnostic, bootstrap.InputSHA256
+				command.Stderr = warmOutput
+			}
 		}
 		if e = command.Start(); e != nil {
 			t.Fatal(e)
@@ -481,7 +647,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		return command, bufio.NewScanner(output), input, served, control, diagnostic
 	}
 	serverMode := "server"
-	if earlyWorkspace {
+	if warmWorkspace {
+		serverMode = "workspace-warm"
+	} else if earlyWorkspace {
 		serverMode = "workspace-early"
 	} else if allOwners {
 		serverMode = "workspace-all-owners"
@@ -511,6 +679,7 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	if err != nil || endpointURL.Host == "" {
 		t.Fatal("native endpoint", err)
 	}
+	var warmFinish t422WorkspaceSampleResponse
 	if earlyWorkspace {
 		if err = control.DrainOwners(ctx); err != nil {
 			t.Fatal(err)
@@ -524,7 +693,38 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		if control.FenceRequests(ctx) != nil {
 			t.Fatal("actual early request tail")
 		}
-		if control.Pause(ctx) != nil {
+		if warmWorkspace {
+			// Anchor before Resume, clipped by the unchanged original fixture lifetime.
+			warmCtx, cancelWarm := context.WithTimeout(ctx, 20*time.Minute)
+			defer cancelWarm()
+			if control.Pause(warmCtx) != nil || controller.Fence() != nil || transport.Fence() != nil ||
+				control.Checkpoint(warmCtx) != nil || controller.Advance() != nil || transport.Advance() != nil ||
+				control.Resume(warmCtx) != nil {
+				t.Fatal("actual warm Resume handoff")
+			}
+			select {
+			case sample := <-warmOutput.ready:
+				if sample.LogicalBytes < 1<<20 || sample.AllocatedBytes == 0 {
+					t.Fatal("actual warm-start report refused")
+				}
+			case <-warmCtx.Done():
+				failServer("actual warm-start report deadline", warmCtx.Err())
+			}
+			// Only the actual bound report permits reopening. The callback receiver
+			// also joins before it can ACK this next pair; no ready flag is supplied.
+			if control.ReopenOwners(warmCtx) != nil || control.DrainOwners(warmCtx) != nil || control.OpenRequests(warmCtx) != nil {
+				t.Fatal("actual warm owner/request handoff")
+			}
+			if _, err = fmt.Fprintln(input, control.RequestToken()); err != nil || !output.Scan() || !strings.HasPrefix(output.Text(), "warm_measured_and_resumed:") {
+				failServer("native warm finish measurement", err)
+			}
+			if n, scanErr := fmt.Sscanf(output.Text(), "warm_measured_and_resumed:%016x:%016x", &warmFinish.LogicalBytes, &warmFinish.AllocatedBytes); n != 2 || scanErr != nil || output.Text() != fmt.Sprintf("warm_measured_and_resumed:%016x:%016x", warmFinish.LogicalBytes, warmFinish.AllocatedBytes) {
+				t.Fatal("actual warm finish HTTP values")
+			}
+			if control.FenceRequests(warmCtx) != nil || control.Pause(warmCtx) != nil {
+				t.Fatal("actual warm terminal fence/pause")
+			}
+		} else if control.Pause(ctx) != nil {
 			t.Fatal("actual early terminal pause")
 		}
 		if _, err = fmt.Fprintln(input, "close"); err != nil {
@@ -548,7 +748,11 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		if err != nil || prefix.Opened != 1 || prefix.TerminalEOF != 1 {
 			t.Fatal("native early store prefix", prefix, err)
 		}
-		assertT422EarlyNativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256)
+		if warmWorkspace {
+			assertT422WarmNativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256, warmOutput.sample, warmFinish)
+		} else {
+			assertT422EarlyNativeWorkspaceReports(t, diagnostic.String(), record.InputSHA256)
+		}
 		return
 	}
 	if workspace {

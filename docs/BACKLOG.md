@@ -8087,6 +8087,27 @@ normal check passed in 0.783s. Documentation recheck passed in 0.553s. Actual
 native warm-start composition, other early
 boundary/transient positions, complete output fit and full rehearsal remain open.
 
+The native warm-start fixture extends the actual early helper through real
+Resume-three callback custody, requiring its live source-bound WB completion
+before reopening owners, then performing independent authenticated warm-finish
+HTTP. Three real whole-workspace walks share the actual engine/SDK guard; the
+joined seven-record, 337-byte WB sequence is checked against actual live start
+and HTTP finish values individually. It uses eleven PC pairs plus receiver EOF
+within twenty-one, the unchanged three-minute fixture deadline, and existing
+SDK/session cleanup. No real author/corpus, full ColdToWarm, host-normal cycle
+or native failure-injection result is claimed. The framing failure matrix uses
+supplied bytes. Independent draft review found all severity counts zero at
+`41404cddd2d015d7ff28bd43492fdddbd15d8dc074fb5f0659ad044e8e144dbe`.
+Applied two-test manifest (backup retirement, native workspace) is
+`4d8d02986922f80372d42d7baaeb4a2b3be337253f39774ba29a3fb10d61177f`.
+Native normal passed: early 9.64s, warm 8.70s, package 19.011s. Native race
+passed: early 9.66s, warm 9.01s, package 20.445s; all framing cases ran in both.
+Full ci-static passed vet, zero-issue lint and all-package compilation;
+documentation (0.607s), glossary, whitespace and canonical V1/V2 digests pass.
+Applied source/record re-review found all severity counts zero, with the
+ordered manifest unchanged after gates. This closes the tiny actual native
+warm-start composition check, not the host-normal lifecycle/full rehearsal gates.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
