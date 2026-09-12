@@ -319,6 +319,15 @@ func frozenExecutionCommands() []ExecutionCommandProfile {
 }
 
 func frozenExecutionEnvironment(plan Plan, admission ExecutionProfileAdmissionBinding) ExecutionEnvironmentProfile {
+	if plan.Schema == PlanV3Schema {
+		return ExecutionEnvironmentProfile{
+			Schema: "t422-closed-execution-environment-v3", Policy: "closed-exact-name-and-value-set-v1",
+			Canonicalization: "sort-by-name;role-tokenize-private-paths;sha256-length-framed-name-value-records-v1",
+			BaseVariables:    frozenV3RuntimeEnvironment(), ServerVariables: []string{executionStartupDiagnostics},
+			RecoverySHA256: admission.recoveryEnvironmentSHA256, ServerSHA256: admission.serverEnvironmentSHA256,
+			RejectUnlisted: true, RejectDemoVariables: true,
+		}
+	}
 	value := ExecutionEnvironmentProfile{
 		Schema:           "t422-closed-execution-environment-v1",
 		Policy:           "closed-exact-name-and-value-set-v1",

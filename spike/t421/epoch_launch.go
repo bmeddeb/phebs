@@ -334,11 +334,11 @@ func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint6
 		{Role: "surreal", Path: surrealPath, Environment: environment},
 		{Role: "zoekt-git-index", Path: zoektPath, Environment: append(slices.Clone(gitEnv), dispatchadmission.IndexOfferEnvironment+"=v1", "ZOEKT_DISABLE_CATFILE_BATCH=true")},
 	}
-	environment = append(environment, dispatchadmission.ProductionEnvironment+"="+dispatchadmission.ProductionStoreSelector,
-		"PHEBS_SURREAL="+surrealPath, "PHEBS_SURREAL_SHA256="+surreal.SHA256,
-		"PHEBS_ZOEKT_GIT_INDEX="+zoektPath, "PHEBS_ZOEKT_GIT_INDEX_SHA256="+zoekt.SHA256,
-		"PHEBS_T421_EXACT_READS=source-free-v1", "PHEBS_T4013_EXACT_REPORTS=source-free-v1")
-	return path, tools, environment, nil
+	binding := executionRuntimeEnvironmentBindings{
+		Home: epoch.Home, Temporary: epoch.Temporary, GitDirectory: author.request.Git.Directory(),
+		SurrealPath: surrealPath, SurrealSHA256: surreal.SHA256, ZoektPath: zoektPath, ZoektSHA256: zoekt.SHA256,
+	}
+	return path, tools, executionPhebsEnvironment(environment, binding), nil
 }
 
 // Start launches exactly producer two in phase two. The twenty-minute and
@@ -503,7 +503,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	output := &checkoutCommandOutput{remaining: bounds.outputBytes, cancel: cancel}
 	run.output = output
 	command := exec.Command(path, "serve", "-config", epoch.ConfigPath)
-	command.Dir, command.Env = author.parent, environment
+	// Serve alone enables the existing nine straight-line startup records.
+	// Offline archive commands retain the unchanged shared parent environment.
+	command.Dir, command.Env = author.parent, executionServeEnvironment(environment)
 	command.Stdin, command.Stdout, command.Stderr = files[5], output, output
 	if run.backupAllowed {
 		run.backupOutput = &epochBackupOutput{remaining: bounds.outputBytes, server: output,

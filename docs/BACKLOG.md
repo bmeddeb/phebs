@@ -7959,6 +7959,35 @@ are unchanged; this is two fixed argument literals, not a new command recipe.
 Applied-source/final-record independent review also reports all counts zero;
 documentation (0.638s), glossary and whitespace passed.
 
+The prospective V3 environment projection now describes the actual 28-key
+closed parent recipe, with selected dispatch included. Serve alone enables
+the existing startup-diagnostics flag and has 29 keys; offline archive keeps
+28. Previously those actual environments were identical despite the private
+profile's required distinct hashes. Eight build-only settings remain in
+reference builds, and absent XDG/unused Buf/focused runtime paths are not
+invented merely to match a declaration. All twelve independent tool identities,
+legacy V1/V2 profiles and nested tool recipes stay unchanged. The small
+normalizer consumes concrete environment entries and exact role-bound values,
+rejects missing/extra/duplicate/drifted inputs and returns a detached sorted
+actual projection. Tests supply modeled bindings and do not issue admission.
+The same actual parent builder feeds server and archive; serve's detached copy
+enables at most nine existing startup records each, 45 across five successful
+epochs, under the existing output cap. Full record-byte fit remains unproved.
+Ordered four-path manifest is
+`1f8bcf6a46477345c9c3ed413b70a4d8c335be446d997262362c0f787d011bad`
+(profile, launch, runtime environment, runtime tests). Independent draft review
+reports all severity counts zero. Focused normal passed in 0.740s and the
+runtime/startup/source-builder race set in 2.988s. Expanded version/profile
+normal, including the actual canonical V3 full frozen round trip and retained
+historical-byte checks, passed in 26.133s; focused compatibility/profile race
+passed in 1.908s. These frozen round-trip fixtures use supplied test admission,
+not the still-missing real issuer. Full ci-static passed vet, zero-issue lint
+and all-package compilation.
+
+The runtime-environment slice's applied-source/final-record independent review
+also reports all severity counts zero at its recorded manifest. Documentation
+(0.671s), glossary, whitespace and canonical V1/V2 digests passed.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
