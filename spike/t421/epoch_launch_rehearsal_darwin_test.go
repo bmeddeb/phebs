@@ -664,8 +664,8 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	gitCustodyTestCleanup(t, git)
 	goBuildTestCleanup(t, inputs)
-	for index, role := range []string{"t422-author", "phebs", "zoekt-git-index", "surreal"} {
-		inputCustodyTestCleanup(t, tools[index].input, []ExecutionInputCopy{{Name: role}})
+	for _, tool := range tools {
+		inputCustodyTestCleanup(t, tool.input, []ExecutionInputCopy{{Name: tool.identity.Role}})
 	}
 	inputCustodyTestCleanup(t, planInput, []ExecutionInputCopy{{Name: "plan"}})
 	inputCustodyTestCleanup(t, epochs.catalogs, []ExecutionInputCopy{{Name: "catalog-a"}, {Name: "catalog-b"}, {Name: "catalog-a-return"}})

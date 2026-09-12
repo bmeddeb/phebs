@@ -8594,6 +8594,18 @@ zero pinned-lint issues and compilation; docs passed in 0.507s,
 glossary/whitespace clean and retained-version selectors in 0.792s. The actual
 protected invocation remains pending.
 
+Pre-run source review found that ordinary startup rehearsal cleanup still
+paired four role names with the now-six protected tools: Buf was mislabeled
+as Surreal, leaving its protected root nonempty and two tools unregistered.
+Cleanup now uses each actual protected identity's role, eliminating the stale
+parallel inventory. Exact-owned helper checks and the separate mounted-volume
+path remain unchanged. The source-proven correction precedes the next actual
+startup gate; it is not a claim that such a gate passed.
+Independent review found critical/high/medium/low zero. Related runtime/tool
+custody selectors passed in 1.108s; pinned static vet/lint/compilation passed
+with zero lint issues, docs in 0.506s, glossary and whitespace clean. Actual
+non-volume startup and its final cleanup remain the next native proof.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
