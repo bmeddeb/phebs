@@ -61,6 +61,8 @@ type ExecutionEpochOne struct {
 
 	profileHost     *executionHostObservation
 	profileHostUsed bool
+
+	profileRuntime *executionRuntimeObservation // One actual prework process; never an operational producer.
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted
@@ -220,7 +222,8 @@ func (flow *ExecutionEpochOne) AuthorA(ctx context.Context) (ExecutionAuthorResu
 	}
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
-	if flow.closed || flow.used || flow.authored || flow.workspace != nil && !flow.authorStarted.IsZero() {
+	if flow.closed || flow.used || flow.authored || flow.workspace != nil && !flow.authorStarted.IsZero() ||
+		flow.profileRuntime != nil && (!flow.profileRuntime.Complete || !flow.profileRuntime.releasable() || flow.profileRuntime.err != nil) {
 		return ExecutionAuthorResult{}, ErrExecutionEpochOne
 	}
 	flow.authorStarted = time.Now()
@@ -261,8 +264,11 @@ func (flow *ExecutionEpochOne) Close() error {
 	if flow.closed {
 		return flow.closeErr
 	}
+	if !flow.profileRuntime.releasable() {
+		return ErrExecutionEpochOne // An unjoined prework root retains the same borrowed input owners.
+	}
 	// Constructor failures already hold the input locks; only a used flow can
-	// own a launched child and require this check.
+	// own an operational child and require this check.
 	if flow.used {
 		flow.epochs.author.mu.Lock()
 		flow.epochs.mu.Lock()
@@ -278,6 +284,9 @@ func (flow *ExecutionEpochOne) Close() error {
 		}
 	}
 	flow.closed = true
+	if flow.profileRuntime != nil {
+		flow.closeErr = errors.Join(flow.closeErr, flow.profileRuntime.err)
+	}
 	if flow.parent != nil {
 		if flow.parent.Close(context.Background()) != nil {
 			flow.closeErr = ErrExecutionEpochOne

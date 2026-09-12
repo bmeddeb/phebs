@@ -8576,6 +8576,24 @@ command-boundary test executable do not prove actual protected-Phebs execution,
 full profile admission or event one. The future parent observation must retain
 actual process/output/custody facts under its original deadline.
 
+The parent now invokes the actual protected Phebs runtime-facts command once
+before AuthorA, retaining its source/image/command binding, observed returned
+configuration and native Start/Wait/session prefix. Unjoined work retains its
+pumps/inputs and blocks authoring and release; neither a late exit nor forced
+cleanup becomes success. Independent draft review of
+`4d795c008cd2e9e719d3c904348ec6d93f029235af5ecfbe7392384a339395aa`
+found all severities zero. Focused normal/race passed in 0.662s/1.835s,
+including tiny real shell sessions with supplied stdout and modeled refusal
+ownership. These are not actual protected-Phebs execution or completed
+profile admission. The original caller deadline is required without renewal;
+the future separately bounded launcher admission stage remains open. Ordered
+five-path source manifest is
+`7465d21c0f5126261fa5a346783bb71728f9c74a3a162c837f82763fe8419b06`;
+applied content matches the independently reviewed draft. Static passed vet,
+zero pinned-lint issues and compilation; docs passed in 0.507s,
+glossary/whitespace clean and retained-version selectors in 0.792s. The actual
+protected invocation remains pending.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

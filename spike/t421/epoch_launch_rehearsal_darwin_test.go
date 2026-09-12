@@ -171,6 +171,13 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	var flow *ExecutionEpochOne
 	var run *ExecutionEpochOneRun
 	canRelease = func() bool {
+		if flow != nil {
+			flow.mu.Lock()
+			defer flow.mu.Unlock()
+			if !flow.profileRuntime.releasable() {
+				return false
+			}
+		}
 		if author != nil {
 			author.mu.Lock()
 			defer author.mu.Unlock()
@@ -285,7 +292,11 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	epochs, err = PrepareExecutionEpochConfigs(ctx, author)
 	if epochs != nil {
-		defer func() { _ = epochs.Close() }()
+		defer func() {
+			if canRelease() {
+				_ = epochs.Close()
+			}
+		}()
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -331,6 +342,15 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	}
 	if err := flow.prepareProfileEnvironment(ctx); err != nil {
 		t.Fatal("actual pre-author environment observation", err)
+	}
+	// Preparation-only: the original rehearsal deadline is not a separately
+	// bounded launcher admission stage, and these facts issue no profile.
+	if err := flow.prepareProfileRuntime(ctx); err != nil {
+		if observed := flow.profileRuntime; observed != nil {
+			t.Logf("runtime preparation prefix: pid=%d started=%t joined=%t session_empty=%t decoded=%t complete=%t deadline=%s",
+				observed.PID, observed.RootStarted, observed.RootJoined, observed.SessionEmpty, observed.Observed, observed.Complete, observed.Deadline)
+		}
+		t.Fatal("actual protected runtime facts", err)
 	}
 	result, err := flow.AuthorA(ctx)
 	if err != nil || !result.Completed || !result.RootJoined || !result.SessionEmpty || result.Revision != "a" {
