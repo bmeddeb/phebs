@@ -17,6 +17,8 @@ type sourceCensusObservation struct {
 	logical, unique uint64
 	failed          bool
 	invalid         bool
+	succeeded       bool
+	regularOwners   uint64
 }
 
 func startSourceCensusObservation(ctx context.Context) (*sourceCensusObservation, error) {
@@ -101,6 +103,10 @@ func (observation *sourceCensusObservation) finish(ctx context.Context) error {
 		_, err := dispatchadmission.ObserveProductionSourceCensus(ctx, 0, observation.phase, 0, 0)
 		return err
 	}
-	_, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusEnd, observation.phase, 0, 0)
+	event, owners := readaccounting.SourceCensusEnd, uint64(0)
+	if observation.succeeded {
+		event, owners = readaccounting.SourceCensusComplete, observation.regularOwners
+	}
+	_, err := dispatchadmission.ObserveProductionSourceCensus(ctx, event, observation.phase, owners, 0)
 	return err
 }

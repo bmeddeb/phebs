@@ -134,7 +134,7 @@ func TestExecutionAttemptSimultaneousHeadroom(t *testing.T) {
 }
 func TestExecutionAttemptFinishStablePrefix(t *testing.T) {
 	plan := accountingTestPlan(t)
-	line := []byte("A2j1\nOP1:2:2\nEP1:2:2\nRM1:2:2:000000000000000a\nRL1:2:2B\nRL1:2:2P\nRL1:2:2R:0000000000000003\nSB1:2:2B\nSB1:2:2D:000000000000000a:0000000000000003\nSB1:2:2E\nGC1:2:2B\nGC1:2:2S\nGC1:2:2D:000000000000000a\n")
+	line := []byte("A2j1\nOP1:2:2\nEP1:2:2\nRM1:2:2:000000000000000a\nRL1:2:2B\nRL1:2:2P\nRL1:2:2R:0000000000000003\nSB2:2:2B\nSB2:2:2D:000000000000000a:0000000000000003\nSB2:2:2E\nGC1:2:2B\nGC1:2:2S\nGC1:2:2D:000000000000000a\n")
 	for _, mode := range []string{"healthy", "empty", "process failed", "overflow at newline", "truncated", "not joined", "unbound"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())

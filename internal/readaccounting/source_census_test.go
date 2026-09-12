@@ -7,7 +7,7 @@ import (
 )
 
 func TestSourceCensusObserver(t *testing.T) {
-	for _, mode := range []string{"ordinary", "missing", "begin", "batch", "end", "canceled_begin", "canceled_batch", "phase", "invalid", "sink", "panic"} {
+	for _, mode := range []string{"ordinary", "missing", "begin", "batch", "end", "complete", "complete_zero", "complete_max", "complete_unique", "canceled_complete", "canceled_begin", "canceled_batch", "phase", "invalid", "sink", "panic"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
@@ -41,16 +41,28 @@ func TestSourceCensusObserver(t *testing.T) {
 			if mode == "end" {
 				event, logical, unique = SourceCensusEnd, 0, 0
 			}
+			if mode == "complete" || mode == "complete_zero" || mode == "complete_max" || mode == "complete_unique" || mode == "canceled_complete" {
+				event, logical, unique = SourceCensusComplete, 7, 0
+				if mode == "complete_zero" {
+					logical = 0
+				}
+				if mode == "complete_max" {
+					logical = ^uint64(0)
+				}
+				if mode == "complete_unique" {
+					unique = 1
+				}
+			}
 			if mode == "invalid" {
 				unique = 10
 			}
-			if mode == "canceled_begin" || mode == "canceled_batch" {
+			if mode == "canceled_begin" || mode == "canceled_batch" || mode == "canceled_complete" {
 				cancel()
 			}
 			_, err := ObserveSourceCensus(ctx, mode != "ordinary", event, phase, logical, unique)
-			wantOK := mode == "ordinary" || mode == "begin" || mode == "batch" || mode == "end"
+			wantOK := mode == "ordinary" || mode == "begin" || mode == "batch" || mode == "end" || mode == "complete" || mode == "complete_zero" || mode == "complete_max"
 			wantCalls := 1
-			if mode == "ordinary" || mode == "missing" || mode == "invalid" || mode == "canceled_begin" {
+			if mode == "ordinary" || mode == "missing" || mode == "invalid" || mode == "canceled_begin" || mode == "canceled_complete" || mode == "complete_unique" {
 				wantCalls = 0
 			}
 			if (err == nil) != wantOK || calls != wantCalls {

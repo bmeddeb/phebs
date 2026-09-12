@@ -228,6 +228,13 @@ func BuildSourceGeneration(
 		return SourceManifest{}, err
 	}
 	failed = false
+	if observation != nil {
+		// All existing children have joined and the validated manifest is
+		// written and directory-synced. The deferred flush owns the terminal
+		// report and still refuses cancellation or a failed observation sink.
+		observation.succeeded = true
+		observation.regularOwners = uint64(manifest.RegularOwnerCount)
+	}
 	return manifest, nil
 }
 

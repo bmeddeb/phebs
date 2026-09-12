@@ -9,7 +9,11 @@ import (
 func archiveWorkTestBindings(producer uint32) string {
 	var raw strings.Builder
 	for _, family := range []string{"SR", "CC", "EP", "RM", "RL", "SB", "GC", "OP"} {
-		fmt.Fprintf(&raw, "%sB1:%d:sha256:01%s\n", family, producer, strings.Repeat("00", 31))
+		version := 1
+		if family == "SB" {
+			version = 2
+		}
+		fmt.Fprintf(&raw, "%sB%d:%d:sha256:01%s\n", family, version, producer, strings.Repeat("00", 31))
 	}
 	return raw.String()
 }
@@ -48,7 +52,11 @@ func TestArchiveWorkJoinedProfile(t *testing.T) {
 			})
 		}
 		for _, family := range []string{"SR", "CC", "EP", "RM", "RL", "SB", "GC", "OP"} {
-			line := fmt.Sprintf("%sB1:%d:sha256:01%s\n", family, producer, strings.Repeat("00", 31))
+			version := 1
+			if family == "SB" {
+				version = 2
+			}
+			line := fmt.Sprintf("%sB%d:%d:sha256:01%s\n", family, version, producer, strings.Repeat("00", 31))
 			for _, raw := range []string{strings.Replace(binding, line, "", 1), strings.Replace(binding, line, strings.Replace(line, "sha256:01", "sha256:02", 1), 1)} {
 				if got, err := observeExecutionAttempts([]byte(raw), plan, producer, [32]byte{1}, true); err == nil || got.Complete {
 					t.Fatal("unbound zero accepted", producer, family, got, err)

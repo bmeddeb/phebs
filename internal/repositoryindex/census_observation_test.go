@@ -30,13 +30,14 @@ func TestSourceCensusActualOwnerBytes(t *testing.T) {
 	git(t, repo, "add", "a")
 	git(t, repo, "commit", "-m", "second")
 	revisions := []store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: git(t, repo, "rev-parse", "HEAD")}, {Selector: "before", Branch: "before", Commit: first}}
-	for _, mode := range []string{"success", "writer_error", "sink_error", "canceled"} {
+	for _, mode := range []string{"success", "writer_error", "sink_error", "canceled", "complete_sink_error", "complete_canceled"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			stage := filepath.Join(t.TempDir(), "source")
 			var logical, unique uint64
-			var began, ended, batches int
+			var began, ended, batches, completed int
+			var regularOwners uint64
 			ctx, err := readaccounting.WithSourceCensusObserver(ctx, func(event readaccounting.SourceCensusEvent, phase uint32, l, u uint64) (uint32, error) {
 				switch event {
 				case readaccounting.SourceCensusBegin:
@@ -58,6 +59,21 @@ func TestSourceCensusActualOwnerBytes(t *testing.T) {
 					}
 				case readaccounting.SourceCensusEnd:
 					ended++
+				case readaccounting.SourceCensusComplete:
+					completed++
+					regularOwners += l
+					if l != 4 || u != 0 {
+						t.Fatal("actual regular-owner count", l, u)
+					}
+					if _, err := os.Stat(filepath.Join(stage, SourceManifestName("example.com/test"))); err != nil {
+						t.Fatal("success preceded manifest write", err)
+					}
+					if mode == "complete_sink_error" {
+						return 0, readaccounting.ErrScope
+					}
+					if mode == "complete_canceled" {
+						cancel()
+					}
 				}
 				if event != readaccounting.SourceCensusBegin && phase != 2 {
 					t.Fatal(phase)
@@ -71,17 +87,27 @@ func TestSourceCensusActualOwnerBytes(t *testing.T) {
 			if (err == nil) != (mode == "success") || began != 1 {
 				t.Fatal(manifest, began, err)
 			}
+			if mode == "complete_sink_error" || mode == "complete_canceled" {
+				if completed != 1 || ended != 0 || regularOwners != 4 || logical != 11 || unique != 7 {
+					t.Fatal("completed work prefix lost on terminal failure", completed, ended, regularOwners, logical, unique, err)
+				}
+				return
+			}
 			if mode == "sink_error" || mode == "canceled" {
-				if ended != 0 || logical == 0 {
+				if ended != 0 || completed != 0 || logical == 0 {
 					t.Fatal(logical, unique, ended)
 				}
 				return
 			}
-			if logical != 11 || unique != 7 || ended != 1 {
+			wantEnd, wantComplete := 1, 0
+			if mode == "success" {
+				wantEnd, wantComplete = 0, 1
+			}
+			if logical != 11 || unique != 7 || ended != wantEnd || completed != wantComplete {
 				t.Fatal(logical, unique, ended, err)
 			}
 			if mode == "success" {
-				if manifest.RegularDeclaredBytes != 11 || manifest.SymlinkOwnerCount != 1 || manifest.GitlinkOwnerCount != 1 {
+				if manifest.RegularOwnerCount != 4 || regularOwners != 4 || manifest.RegularDeclaredBytes != 11 || manifest.SymlinkOwnerCount != 1 || manifest.GitlinkOwnerCount != 1 {
 					t.Fatal(manifest)
 				}
 				if _, err := WalkPublishedSource(ctx, stage, manifest.Repository, func(SourceRecord) error { return nil }); err != nil {
@@ -90,10 +116,11 @@ func TestSourceCensusActualOwnerBytes(t *testing.T) {
 				if began != 1 || logical != 11 {
 					t.Fatal("retained read counted census")
 				}
-				if _, err := BuildSourceGeneration(ctx, repo, filepath.Join(t.TempDir(), "repeat"), manifest.Repository, revisions); err != nil {
+				stage = filepath.Join(t.TempDir(), "repeat")
+				if _, err := BuildSourceGeneration(ctx, repo, stage, manifest.Repository, revisions); err != nil {
 					t.Fatal(err)
 				}
-				if logical != 22 || unique != 14 || began != 2 || ended != 2 {
+				if logical != 22 || unique != 14 || began != 2 || ended != 0 || completed != 2 || regularOwners != 8 {
 					t.Fatal(logical, unique, began, ended)
 				}
 			}
@@ -102,7 +129,7 @@ func TestSourceCensusActualOwnerBytes(t *testing.T) {
 }
 
 func TestSourceCensusMemberBatchesAndEmptyBytes(t *testing.T) {
-	for _, count := range []int{1, MaxRecordsPerMember + 1} {
+	for _, count := range []int{0, 1, MaxRecordsPerMember + 1} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			repo := t.TempDir()
 			git(t, repo, "init", "-b", "main")
@@ -114,15 +141,22 @@ func TestSourceCensusMemberBatchesAndEmptyBytes(t *testing.T) {
 				write(t, repo, fmt.Sprintf("f%05d", i), content, 0o644)
 			}
 			git(t, repo, "add", ".")
-			git(t, repo, "commit", "-m", "members")
+			git(t, repo, "commit", "--allow-empty", "-m", "members")
 			var logical, unique uint64
 			var begins, ends, batches int
+			var regularOwners uint64
 			ctx, err := readaccounting.WithSourceCensusObserver(t.Context(), func(event readaccounting.SourceCensusEvent, _ uint32, l, u uint64) (uint32, error) {
 				switch event {
 				case readaccounting.SourceCensusBegin:
 					begins++
 				case readaccounting.SourceCensusEnd:
+					t.Fatal("successful census emitted failed closure")
+				case readaccounting.SourceCensusComplete:
 					ends++
+					regularOwners += l
+					if u != 0 {
+						t.Fatal(u)
+					}
 				case readaccounting.SourceCensusBatch:
 					batches++
 					logical += l
@@ -134,10 +168,10 @@ func TestSourceCensusMemberBatchesAndEmptyBytes(t *testing.T) {
 				t.Fatal(err)
 			}
 			manifest, err := BuildSourceGeneration(ctx, repo, filepath.Join(t.TempDir(), "source"), "example.com/test", []store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: git(t, repo, "rev-parse", "HEAD")}})
-			if err != nil || begins != 1 || ends != 1 {
+			if err != nil || begins != 1 || ends != 1 || regularOwners != uint64(count) || manifest.RegularOwnerCount != count {
 				t.Fatal(manifest, begins, ends, err)
 			}
-			if count == 1 {
+			if count <= 1 {
 				if logical != 0 || unique != 0 || batches != 0 {
 					t.Fatal(logical, unique, batches)
 				}
@@ -194,5 +228,22 @@ func TestSourceCensusUniquenessAndFailurePrefix(t *testing.T) {
 	cancel()
 	if _, err := startSourceCensusObservation(ctx); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
+	}
+}
+
+func TestSourceCensusCompleteOriginalCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	calls := 0
+	ctx, err := readaccounting.WithSourceCensusObserver(ctx, func(readaccounting.SourceCensusEvent, uint32, uint64, uint64) (uint32, error) {
+		calls++
+		return 2, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation := &sourceCensusObservation{phase: 2, succeeded: true, regularOwners: 0}
+	cancel()
+	if err := observation.finish(ctx); !errors.Is(err, context.Canceled) || calls != 0 {
+		t.Fatal("canceled original context emitted successful terminal", calls, err)
 	}
 }

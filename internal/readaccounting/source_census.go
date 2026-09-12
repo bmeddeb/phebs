@@ -5,9 +5,10 @@ import "context"
 type SourceCensusEvent byte
 
 const (
-	SourceCensusBegin SourceCensusEvent = 'B'
-	SourceCensusBatch SourceCensusEvent = 'D'
-	SourceCensusEnd   SourceCensusEvent = 'E'
+	SourceCensusBegin    SourceCensusEvent = 'B'
+	SourceCensusBatch    SourceCensusEvent = 'D'
+	SourceCensusEnd      SourceCensusEvent = 'E'
+	SourceCensusComplete SourceCensusEvent = 'C'
 )
 
 type sourceCensusObserverKey struct{}
@@ -20,7 +21,10 @@ func WithSourceCensusObserver(ctx context.Context, observe func(SourceCensusEven
 }
 
 // Begin captures the native phase. Batches retain classified-owner bytes even
-// when later work fails; End closes coverage, not successful source authority.
+// when later work fails; End closes coverage without success. Complete replaces
+// End only after a successful source census; its first payload is the actual
+// regular-owner count (including zero), and its second payload must be zero.
+// This is not source publication or a whole-phase physical-pass verdict.
 func ObserveSourceCensus(ctx context.Context, required bool, event SourceCensusEvent, phase uint32, logical, unique uint64) (observed uint32, err error) {
 	var observe func(SourceCensusEvent, uint32, uint64, uint64) (uint32, error)
 	if ctx != nil {
@@ -32,11 +36,14 @@ func ObserveSourceCensus(ctx context.Context, required bool, event SourceCensusE
 		}
 		return 0, nil
 	}
-	if event != SourceCensusBegin && event != SourceCensusBatch && event != SourceCensusEnd ||
-		(event == SourceCensusBegin) != (phase == 0) || unique > logical || event != SourceCensusBatch && (logical != 0 || unique != 0) {
+	if event != SourceCensusBegin && event != SourceCensusBatch && event != SourceCensusEnd && event != SourceCensusComplete ||
+		(event == SourceCensusBegin) != (phase == 0) ||
+		event == SourceCensusBatch && unique > logical ||
+		event == SourceCensusComplete && unique != 0 ||
+		event != SourceCensusBatch && event != SourceCensusComplete && (logical != 0 || unique != 0) {
 		return 0, ErrEvent
 	}
-	if event == SourceCensusBegin && ctx.Err() != nil {
+	if (event == SourceCensusBegin || event == SourceCensusComplete) && ctx.Err() != nil {
 		return 0, ctx.Err()
 	}
 	defer func() {

@@ -219,6 +219,11 @@ an inherited operational lifetime and starts no workers or store. Its output
 does not attest to running registrations, selected target size or freeze
 admission; the launcher must separately protect and join the actual binary.
 
+Selected source-census reports distinguish a successfully completed build
+from an unsuccessful invocation's closed byte-report prefix. A successful
+regular-owner count does not by itself prove publication or whole-phase work;
+failed or missing coverage must not be treated as zero work.
+
 Protected replay adds two streaming database parse/hash passes beyond Verify
 and a private one-unit scratch file. A large record or intervening trivia can
 make that scratch file large, up to the existing artifact limit; 512 records

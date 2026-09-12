@@ -9,7 +9,10 @@ import (
 
 type ExecutionSourceCensusObservation struct {
 	Started, Finished [15]uint64
-	Bound, Complete   bool
+	// Successful census completions and actual regular owners, not receipt
+	// physical passes. Failed E closures retain bytes but add neither value.
+	Succeeded, RegularOwners [15]uint64
+	Bound, Complete          bool
 }
 
 func (observation ExecutionSourceCensusObservation) complete() bool {
@@ -26,13 +29,13 @@ func observeCensusEvent(line []byte, plan Plan, producer uint32, input string, o
 	}
 	observation := &out.SourceCensus
 	if bytes.Contains(line, []byte("SBB")) {
-		if observation.Bound || string(line) != fmt.Sprintf("SBB1:%d:%s\n", producer, input) {
+		if observation.Bound || string(line) != fmt.Sprintf("SBB2:%d:%s\n", producer, input) {
 			return true, errExecutionAttempts
 		}
 		observation.Bound = true
 		return true, nil
 	}
-	if !observation.Bound || len(line) != 9 && len(line) != 43 || !bytes.Equal(line[:4], []byte("SB1:")) || line[4] != executionWorkProducerByte(producer) || line[5] != ':' || line[len(line)-1] != '\n' {
+	if !observation.Bound || len(line) != 9 && len(line) != 26 && len(line) != 43 || !bytes.Equal(line[:4], []byte("SB2:")) || line[4] != executionWorkProducerByte(producer) || line[5] != ':' || line[len(line)-1] != '\n' {
 		return true, errExecutionAttempts
 	}
 	phase := bytes.IndexByte([]byte("0123456789ABCDEF"), line[6])
@@ -51,6 +54,24 @@ func observeCensusEvent(line []byte, plan Plan, producer uint32, input string, o
 			return true, errExecutionAttempts
 		}
 		observation.Finished[index]++
+	case 'C':
+		if len(line) != 26 || line[8] != ':' || observation.Finished[index] >= observation.Started[index] || observation.Succeeded[index] == math.MaxUint64 {
+			return true, errExecutionAttempts
+		}
+		var owners uint64
+		for _, digit := range line[9:25] {
+			value := bytes.IndexByte([]byte("0123456789abcdef"), digit)
+			if value < 0 {
+				return true, errExecutionAttempts
+			}
+			owners = owners<<4 | uint64(value)
+		}
+		if owners > math.MaxUint64-observation.RegularOwners[index] {
+			return true, errExecutionAttempts
+		}
+		observation.Finished[index]++
+		observation.Succeeded[index]++
+		observation.RegularOwners[index] += owners
 	case 'D':
 		if len(line) != 43 || line[8] != ':' || line[25] != ':' || observation.Finished[index] >= observation.Started[index] {
 			return true, errExecutionAttempts

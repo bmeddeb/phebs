@@ -240,7 +240,7 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 		}
 	}
 	referenceEvents := 0
-	if strings.Count(diagnostic.String(), "SBB1:5:sha256:") != 1 {
+	if strings.Count(diagnostic.String(), "SBB2:5:sha256:") != 1 {
 		t.Fatal("source-byte coverage binding missing", diagnostic.String())
 	}
 	for _, phase := range []uint32{8, 9} {
@@ -248,15 +248,20 @@ func testT422AttemptInheritedPhase(t *testing.T, mode string) {
 		if strings.HasPrefix(mode, "census_") {
 			want = 1
 		}
-		for _, event := range []byte{'B', 'E'} {
-			if strings.Count(diagnostic.String(), fmt.Sprintf("SB1:5:%X%c\n", phase, event)) != want {
-				t.Fatal("source census coverage missing", diagnostic.String())
-			}
+		if strings.Count(diagnostic.String(), fmt.Sprintf("SB2:5:%XB\n", phase)) != want {
+			t.Fatal("source census coverage missing", diagnostic.String())
+		}
+		owners := uint64(4)
+		if mode == "census_zero" {
+			owners = 0
+		}
+		if strings.Count(diagnostic.String(), fmt.Sprintf("SB2:5:%XC:%016x\n", phase, owners)) != want || strings.Contains(diagnostic.String(), fmt.Sprintf("SB2:5:%XE\n", phase)) {
+			t.Fatal("source census successful terminal missing", diagnostic.String())
 		}
 		if mode == "census_zero" {
 			want = 0
 		}
-		if strings.Count(diagnostic.String(), fmt.Sprintf("SB1:5:%XD:000000000000000a:0000000000000003\n", phase)) != want {
+		if strings.Count(diagnostic.String(), fmt.Sprintf("SB2:5:%XD:000000000000000a:0000000000000003\n", phase)) != want {
 			t.Fatal("source bytes missing", diagnostic.String())
 		}
 	}
@@ -490,7 +495,11 @@ func TestT422AttemptInheritedHelper(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if _, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusEnd, phase, 0, 0); err != nil {
+		owners := uint64(4)
+		if mode == "census_zero" {
+			owners = 0
+		}
+		if _, err := dispatchadmission.ObserveProductionSourceCensus(ctx, readaccounting.SourceCensusComplete, phase, owners, 0); err != nil {
 			t.Fatal(err)
 		}
 	}

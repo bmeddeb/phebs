@@ -8641,6 +8641,30 @@ docs passed in 0.571s, glossary/whitespace clean, retained-version selectors in
 `0f72c009b4548c87f6cc85de1279a99c8d31920296dd84317a3eedf0156fb3e5`.
 Native composition remains pending; no full rehearsal or freeze follows.
 
+The selected census stream now distinguishes a completed real source build
+from a failed invocation's closed byte-report prefix. SB2's successful terminal
+reuses the actual manifest regular-owner count after existing child joins,
+validated writes and directory sync; it replaces the failed E terminal and
+adds 17 bytes only for successful calls. Parent records keep success and owner
+counts separate, use checked arithmetic and preserve earlier positive bytes
+after a later refusal. Old-version, malformed, duplicate, post-footer and
+overflow records refuse. No physical-pass, publication or whole-work value is
+inferred. Independent source/cost review found critical/high/medium/low zero.
+Real tiny Git tests cover zero owners, empty files, multi-revision deduplication,
+repeat, write/sink/cancellation failures; inherited-wire/parser tests supply
+their events. Changed-tree normal/race and static gates remain pending.
+
+Changed-tree checks passed: readaccounting/repositoryindex normal in
+0.331s/7.663s and race in 1.237s/9.354s; inherited command/framing normal
+1.610s and race 3.743s; parent census/attempt/lifecycle/archive/joined-record
+selectors normal 0.871s and race 5.386s. Pinned static vet/lint/compilation
+passed with zero lint issues, docs in 0.539s, glossary/whitespace clean. The
+fourteen-path manifest is
+`a6102c069222bf1b9c519d1841d49b550b8444757100ef08657a3598a157fdd3`.
+The only post-review change removes a one-item test loop; the applied content
+matches the amended immutable-base patch. Actual whole-run SB2 coverage and
+full output fit remain pending.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

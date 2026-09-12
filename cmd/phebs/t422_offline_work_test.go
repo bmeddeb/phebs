@@ -22,7 +22,11 @@ const offlineWorkTestMode = "PHEBS_T422_OFFLINE_WORK_TEST"
 func assertT422OfflineBindings(t *testing.T, raw string, producer uint32, digestByte string) {
 	t.Helper()
 	for _, family := range []string{"SR", "CC", "EP", "RM", "RL", "SB", "GC", "OP"} {
-		want := fmt.Sprintf("%sB1:%d:sha256:%s%s\n", family, producer, digestByte, strings.Repeat("00", 31))
+		version := 1
+		if family == "SB" {
+			version = 2
+		}
+		want := fmt.Sprintf("%sB%d:%d:sha256:%s%s\n", family, version, producer, digestByte, strings.Repeat("00", 31))
 		if len(want) != 80 || strings.Count(raw, want) != 1 {
 			t.Fatal("missing/duplicate actual offline binding", family, raw)
 		}
@@ -124,7 +128,7 @@ func TestT422OfflineInheritedWork(t *testing.T) {
 					if mode == "events" {
 						want = 1
 					}
-					for _, record := range []string{"SR1:%X:C\n", "OP1:%X:C\n", "EP1:%X:C\n", "RM1:%X:C:000000000000002b\n", "RL1:%X:CP\n", "CC1:%X:CR\n", "CC1:%X:Cr\n", "SB1:%X:CB\n", "SB1:%X:CE\n", "GC1:%X:CB\n", "GC1:%X:CN\n"} {
+					for _, record := range []string{"SR1:%X:C\n", "OP1:%X:C\n", "EP1:%X:C\n", "RM1:%X:C:000000000000002b\n", "RL1:%X:CP\n", "CC1:%X:CR\n", "CC1:%X:Cr\n", "SB2:%X:CB\n", "SB2:%X:CE\n", "GC1:%X:CB\n", "GC1:%X:CN\n"} {
 						if strings.Count(output.String(), fmt.Sprintf(record, producer)) != want {
 							t.Fatal("offline event framing", record, output.String())
 						}

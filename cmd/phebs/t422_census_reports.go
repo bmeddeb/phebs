@@ -10,18 +10,21 @@ import (
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
-// SB carries classified source-owner byte batches, not catalog census reads or
-// physical passes. Begin/End prove observation coverage even for an empty call.
+// SB2 carries classified source-owner bytes, not catalog census reads or whole
+// physical passes. B/E close an unsuccessful invocation; B/C closes a successful
+// census with its actual regular-owner count, including zero. C replaces E.
 func t422CensusRecord(current, initial dispatchadmission.ProductionSemanticSnapshot, event readaccounting.SourceCensusEvent, phase uint32, logical, unique uint64) ([43]byte, int, error) {
 	var record [43]byte
 	raw, err := t422SourceRecord(current, initial)
-	if err != nil || event != readaccounting.SourceCensusBegin && event != readaccounting.SourceCensusBatch && event != readaccounting.SourceCensusEnd ||
+	if err != nil || event != readaccounting.SourceCensusBegin && event != readaccounting.SourceCensusBatch && event != readaccounting.SourceCensusEnd && event != readaccounting.SourceCensusComplete ||
 		event == readaccounting.SourceCensusBegin && phase != 0 || event != readaccounting.SourceCensusBegin && phase != current.Phase ||
-		unique > logical || event != readaccounting.SourceCensusBatch && (logical != 0 || unique != 0) || event == readaccounting.SourceCensusBatch && logical == 0 {
+		event == readaccounting.SourceCensusBatch && (logical == 0 || unique > logical) ||
+		event == readaccounting.SourceCensusComplete && unique != 0 ||
+		event != readaccounting.SourceCensusBatch && event != readaccounting.SourceCensusComplete && (logical != 0 || unique != 0) {
 		return record, 0, errT422AttemptReport
 	}
-	copy(record[:], []byte{'S', 'B', '1', ':', raw[4], ':', raw[6], byte(event), '\n'})
-	if event != readaccounting.SourceCensusBatch {
+	copy(record[:], []byte{'S', 'B', '2', ':', raw[4], ':', raw[6], byte(event), '\n'})
+	if event != readaccounting.SourceCensusBatch && event != readaccounting.SourceCensusComplete {
 		return record, 9, nil
 	}
 	record[8], record[25], record[42] = ':', ':', '\n'
@@ -29,6 +32,10 @@ func t422CensusRecord(current, initial dispatchadmission.ProductionSemanticSnaps
 	for i := 0; i < 16; i++ {
 		record[24-i], record[41-i] = digits[logical&15], digits[unique&15]
 		logical, unique = logical>>4, unique>>4
+	}
+	if event == readaccounting.SourceCensusComplete {
+		record[25] = '\n'
+		return record, 26, nil
 	}
 	return record, len(record), nil
 }
@@ -43,7 +50,7 @@ func bindT422CensusReports(ctx context.Context, initial dispatchadmission.Produc
 	if err != nil || info.Mode()&os.ModeNamedPipe == 0 {
 		return nil, errT422AttemptReport
 	}
-	raw[0], raw[1] = 'S', 'B'
+	raw[0], raw[1], raw[3] = 'S', 'B', '2'
 	if n, err := writer.Write(raw); err != nil || n != len(raw) {
 		fail(errT422AttemptReport)
 		return nil, errT422AttemptReport
