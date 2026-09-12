@@ -72,6 +72,9 @@ type ExecutionGoBuildCustody struct {
 	planSource string
 	closed     bool
 	err        error
+
+	goImage    goBuildEntry          // Actual protected sdk/bin/go entry; no second content read.
+	goIdentity ExecutionToolIdentity // Published only after joined reference verification.
 }
 
 // ProtectExecutionGoBuildInputs creates fresh copies without modifying the
@@ -165,6 +168,13 @@ func ProtectExecutionGoBuildInputs(ctx context.Context, parent string, request E
 		if err := custody.copyTree(ctx, request.GoRoot, selection, filepath.Join("sdk", selection)); err != nil {
 			return custody, err
 		}
+		if selection == "bin/go" {
+			entry := custody.entries[len(custody.entries)-1]
+			if entry.path != "sdk/bin/go" || entry.info == nil || !entry.info.Mode().IsRegular() || !validExecutionSHA256(entry.digest) {
+				return custody, ErrExecutionGoBuildCustody
+			}
+			custody.goImage = entry
+		}
 	}
 	if err := custody.prepareModules(ctx, request.ModuleCache); err != nil {
 		return custody, err
@@ -240,6 +250,23 @@ func (custody *ExecutionGoBuildCustody) check(ctx context.Context) error {
 		custody.err = ErrExecutionGoBuildCustody
 	}
 	return custody.err
+}
+
+// CheckGo returns the actually probed protected SDK image, never a caller-supplied
+// version or an admission binding. Before successful reference verification no
+// identity is available. Every successful lookup reuses Check's complete bounded
+// inventory metadata scan under mu; it adds no hash, content read or child.
+// Returned identity/path values are detached; the borrowed custody must outlive use.
+func (custody *ExecutionGoBuildCustody) CheckGo(ctx context.Context) (ExecutionToolIdentity, string, error) {
+	if custody == nil {
+		return ExecutionToolIdentity{}, "", ErrExecutionGoBuildCustody
+	}
+	custody.mu.Lock()
+	defer custody.mu.Unlock()
+	if custody.goIdentity.Role != "go" || custody.check(ctx) != nil {
+		return ExecutionToolIdentity{}, "", ErrExecutionGoBuildCustody
+	}
+	return custody.goIdentity, filepath.Join(custody.directory, custody.goImage.path), nil
 }
 
 // Close only closes the three retained read-only root descriptors. Protected

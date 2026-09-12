@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -104,6 +105,9 @@ func TestExecutionGoBuildCustodyRealOfflineReference(t *testing.T) {
 	}
 	t.Logf("protected actual SDK + tiny module/source in %s: %+v", time.Since(started), inputs.Inventory())
 	goBuildTestDescriptors(t, inputs)
+	if identity, path, err := inputs.CheckGo(t.Context()); err != ErrExecutionGoBuildCustody || identity != (ExecutionToolIdentity{}) || path != "" {
+		t.Fatal("copied SDK issued an identity before actual joined probes")
+	}
 	for _, entry := range inputs.entries {
 		if entry.info == nil || !inputCustodyProtected(entry.info) {
 			t.Fatal("a Go input was published before protection")
@@ -136,6 +140,23 @@ func TestExecutionGoBuildCustodyRealOfflineReference(t *testing.T) {
 	if err != nil || identity.BuildVCSRevision != fixture.source || identity.Role != request.Role || inputs.Check(t.Context()) != nil {
 		t.Fatal("exact protected build did not issue the expected reference identity")
 	}
+	// This reuses the real protected SDK/probe/reference build above. It is not
+	// a twelve-tool/profile admission or a synthetic successful Go observation.
+	goIdentity, goPath, err := inputs.CheckGo(t.Context())
+	if err != nil || goPath != filepath.Join(inputs.Directory(), "sdk/bin/go") ||
+		goIdentity.SHA256 != inputs.goImage.digest || goIdentity.Version != "go version "+runtime.Version()+" "+runtime.GOOS+"/"+runtime.GOARCH {
+		t.Fatal("Go identity did not bind the actual protected image and version")
+	}
+	policy := frozenToolPolicy()
+	policy.RequiredTools = []string{"go"} // Exercise the existing exact single-role predicate.
+	if validateExecutionTools([]ExecutionToolIdentity{goIdentity}, policy, fixture.source) != nil {
+		t.Fatal("observed Go identity differs from the existing role contract")
+	}
+	goIdentity.Version = "caller mutation"
+	again, againPath, err := inputs.CheckGo(t.Context())
+	if err != nil || again.Version == goIdentity.Version || againPath != goPath {
+		t.Fatal("returned Go identity aliases custody")
+	}
 	rows, err := os.ReadDir(parent)
 	if err != nil {
 		t.Fatal(err)
@@ -164,6 +185,40 @@ func TestExecutionGoBuildCustodyRealOfflineReference(t *testing.T) {
 		if inputs.Check(t.Context()) != ErrExecutionGoBuildCustody {
 			t.Fatal("resealed leaf drift was not sticky")
 		}
+		if identity, path, err := inputs.CheckGo(t.Context()); err != ErrExecutionGoBuildCustody || identity != (ExecutionToolIdentity{}) || path != "" {
+			t.Fatal("Go identity escaped sticky inventory drift")
+		}
+	}
+}
+
+func TestExecutionGoBuildIdentityUnavailable(t *testing.T) {
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	// Role alone is a refusal-only placeholder, not an observed identity. It
+	// bypasses the unprobed short circuit so check's context/closed/error guards
+	// actually run. Real successful probes and drift are exercised above.
+	modeled := ExecutionToolIdentity{Role: "go"}
+	for _, test := range []struct {
+		name    string
+		ctx     context.Context
+		custody *ExecutionGoBuildCustody
+	}{
+		{"nil custody", t.Context(), nil},
+		{"unprobed", t.Context(), &ExecutionGoBuildCustody{}},
+		{"closed", t.Context(), &ExecutionGoBuildCustody{goIdentity: modeled, closed: true}},
+		{"failed", t.Context(), &ExecutionGoBuildCustody{goIdentity: modeled, err: errors.New("modeled prior failure")}},
+		{"canceled", canceled, &ExecutionGoBuildCustody{goIdentity: modeled}},
+		{"nil context", nil, &ExecutionGoBuildCustody{goIdentity: modeled}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			identity, path, err := test.custody.CheckGo(test.ctx)
+			if err != ErrExecutionGoBuildCustody || identity != (ExecutionToolIdentity{}) || path != "" {
+				t.Fatal("unobserved or unavailable custody issued Go identity")
+			}
+			if test.custody != nil && test.custody.goIdentity.Role == "go" && test.custody.err != ErrExecutionGoBuildCustody {
+				t.Fatal("refusal skipped the actual sticky custody check")
+			}
+		})
 	}
 }
 

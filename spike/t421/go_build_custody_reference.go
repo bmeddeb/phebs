@@ -47,26 +47,27 @@ func (custody *ExecutionGoBuildCustody) protectReferenceTool(ctx context.Context
 	if err != nil {
 		return tool, err
 	}
-	identity, err := custody.verifyReferenceTool(ctx, parent, role, selection.Path, schema)
+	identity, goIdentity, err := custody.verifyReferenceTool(ctx, parent, role, selection.Path, schema)
 	tool, err = finishExecutionToolCopy(ctx, tool, selection, identity, err)
 	if err == nil {
 		// Only this measured protected-input issuer binds a source/resource
 		// lineage. A legacy observer or caller-authored identity cannot set it.
 		tool.referenceInputs = custody
+		custody.goIdentity = goIdentity
 	}
 	return tool, err
 }
 
-func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context, parent, role, binary, schema string) (identity ExecutionToolIdentity, retErr error) {
+func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context, parent, role, binary, schema string) (identity, goIdentity ExecutionToolIdentity, retErr error) {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRoleForSchema(role, schema, custody.reference.source)
 	if err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	workspace, err := os.MkdirTemp(parent, "t422-go-build-")
 	if err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	defer func() {
 		var cleanupErr error
@@ -74,33 +75,37 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 			cleanupErr = os.RemoveAll(workspace)
 		}
 		if cleanupErr != nil || retErr != nil {
-			identity = ExecutionToolIdentity{}
+			identity, goIdentity = ExecutionToolIdentity{}, ExecutionToolIdentity{}
 			retErr = ErrExecutionGoBuildCustody
 		}
 	}()
 	for _, name := range []string{"home", "tmp", "cache"} {
 		if os.Mkdir(filepath.Join(workspace, name), 0o700) != nil {
-			return identity, ErrExecutionGoBuildCustody
+			return identity, goIdentity, ErrExecutionGoBuildCustody
 		}
 	}
 	request := ReferenceToolRequest{GoRoot: filepath.Join(custody.directory, "sdk"), ModuleCache: filepath.Join(custody.directory, "modules")}
 	goBinary := filepath.Join(request.GoRoot, "bin", "go")
+	if custody.goImage.path != "sdk/bin/go" || custody.goImage.info == nil ||
+		!custody.goImage.info.Mode().IsRegular() || !validExecutionSHA256(custody.goImage.digest) {
+		return identity, goIdentity, ErrExecutionGoBuildCustody
+	}
 	images := []string{goBinary}
 	for _, name := range []string{"asm", "cgo", "compile", "cover", "fix", "link", "preprofile", "vet"} {
 		images = append(images, filepath.Join(request.GoRoot, "pkg", "tool", runtime.GOOS+"_"+runtime.GOARCH, name))
 	}
 	for _, path := range images {
 		if validateExternalToolImage(path) != nil {
-			return identity, ErrExecutionGoBuildCustody
+			return identity, goIdentity, ErrExecutionGoBuildCustody
 		}
 	}
 	suppliedDigest, err := executableidentity.Digest(binary)
 	if err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	supplied, err := buildinfo.ReadFile(binary)
 	if err != nil || validateReferenceBuildInfoForSchema(supplied, role, schema, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, nil) != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	environment := referenceBuildEnvironment(request, workspace)
 	for index, value := range environment {
@@ -124,27 +129,27 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 	}
 	version, err := run(256, "version")
 	if err != nil || string(version) != "go version "+runtime.Version()+" "+runtime.GOOS+"/"+runtime.GOARCH+"\n" {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	locations, err := run(2*maxInputCustodyPathBytes+2, "env", "GOROOT", "GOTOOLDIR")
 	if err != nil || string(locations) != request.GoRoot+"\n"+filepath.Join(request.GoRoot, "pkg", "tool", runtime.GOOS+"_"+runtime.GOARCH)+"\n" {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	graph, err := run(maxReferenceModuleGraphBytes, "list", "-m", "-json", "all")
 	if err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	modules, err := verifyExecutionModuleGraph(ctx, custody.reference.root.root, request.ModuleCache, graph)
 	if err != nil || validateReferenceBuildInfoForSchema(supplied, role, schema, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, modules) != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	if _, err := run(64<<10, "mod", "verify"); err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	output := filepath.Join(workspace, "reference")
 	buildRoot, buildArgs, checkOverlay, err := referenceToolBuildArgs(ctx, role, schema, custody.reference.root.root, request.ModuleCache, workspace, output, packagePath)
 	if err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	checkGraph := func() error {
 		if buildRoot == custody.reference.root.root {
@@ -157,29 +162,29 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 		return verifyZoektOfferGraph(graph, native, custody.reference.root.root, buildRoot)
 	}
 	if err := checkGraph(); err != nil {
-		return identity, err
+		return identity, goIdentity, err
 	}
 	if _, err := runFrom(buildRoot, 64<<10, buildArgs...); err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	if err := errors.Join(checkOverlay(), checkGraph()); err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	actual, err := buildinfo.ReadFile(output)
 	if err != nil || validateReferenceBuildInfoForSchema(actual, role, schema, packagePath, custody.reference.source, modulePath, moduleVersion, moduleSum, modules) != nil ||
 		!reflect.DeepEqual(supplied, actual) || executableidentity.Verify(output, suppliedDigest) != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	afterGraph, err := run(maxReferenceModuleGraphBytes, "list", "-m", "-json", "all")
 	if err != nil || !bytes.Equal(graph, afterGraph) {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	if _, err := verifyExecutionModuleGraph(ctx, custody.reference.root.root, request.ModuleCache, afterGraph); err != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	if _, err := run(64<<10, "mod", "verify"); err != nil || custody.reference.verify(ctx) != nil || custody.check(ctx) != nil ||
 		executableidentity.Verify(binary, suppliedDigest) != nil {
-		return identity, ErrExecutionGoBuildCustody
+		return identity, goIdentity, ErrExecutionGoBuildCustody
 	}
 	identity = ExecutionToolIdentity{Role: role, FileType: regularFileType, SHA256: suppliedDigest,
 		Version: "clean commit " + custody.reference.source, Provenance: "go-build-info-vcs-v1", BuildVCSRevision: custody.reference.source}
@@ -190,5 +195,11 @@ func (custody *ExecutionGoBuildCustody) verifyReferenceTool(ctx context.Context,
 			identity.Provenance = zoektOfferProvenance
 		}
 	}
-	return identity, nil
+	// The version is the actual joined probe output; the digest came from the
+	// protected copy, whose metadata all intervening command checks revalidated.
+	// The cleanup defer clears both results on failure. The caller publishes Go
+	// only after the final protected output check also succeeds.
+	goIdentity = ExecutionToolIdentity{Role: "go", FileType: regularFileType, SHA256: custody.goImage.digest,
+		Version: strings.TrimSuffix(string(version), "\n"), Provenance: "external-executed-file-v1"}
+	return identity, goIdentity, nil
 }

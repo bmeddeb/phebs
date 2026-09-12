@@ -8239,6 +8239,32 @@ At exact clean source `8ab2b4c10f8c60ff1ad1fe711dc11895686c09b5`, the complete
 `internal/dispatchadmission` package then passed normal in 4.859s and race in
 7.381s, both uncached. This broadens protocol coverage beyond the focused
 selectors; it does not substitute for the complete repository merge bar.
+At source-identical documentation tip
+`6cc951ac8ff12e759328327a1851399f5be19c85`, complete `internal/custodybytes`
+and `internal/storeaccounting` passed normal in 0.387s and 1.712s and race in
+1.493s and 2.885s, respectively, all uncached. No source changed during these
+commands; these remain package-scoped gates, not full-repository evidence.
+
+The protected Go-role identity now reuses the actual SDK entry and joined
+version/location/reference verification already performed by input custody.
+It is published only after successful final output checking and required
+cleanup; `CheckGo` returns detached values after the existing bounded metadata
+inventory/Git check under its existing lock. There is no added probe or build.
+Independent draft review of
+`40da3eb1516b68c30f293b06333cc0c57a55644259be092dc4e423ea54a860e1`
+closed the refusal-test coverage correction and found all severity counts zero.
+The ordered three-path source manifest (custody, reference, Darwin test) is
+`5bc8206b93d9c5702f7e8af5da8db0cfba3f7857222e60dee7f8fe38e1dcae8e`.
+The actual tiny offline build is distinct from the modeled refusal-only cases;
+neither establishes a complete tool profile, global admission event or freeze.
+Focused normal passed in 104.428s (actual offline fixture 103.69s) and race
+in 93.931s (actual fixture 92.10s), uncached. Each actual custody inventory
+contained 12,903 entries and 11,536 files; copied bytes were 208,496,523 normal
+and 208,496,527 race for their independently generated tiny source fixtures.
+Static passed vet, zero pinned-lint issues and whole-repository compilation;
+docs passed in 0.573s, glossary/whitespace clean and V1/V2 digests unchanged.
+Applied source and cost records passed independent re-review with all severity
+counts zero. The ordered source manifest remained unchanged across all gates.
 
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
