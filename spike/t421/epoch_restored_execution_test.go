@@ -2,6 +2,7 @@ package t421
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -647,9 +648,15 @@ func TestEpochRestoredProductFinalBracket(t *testing.T) {
 			reader.tail = epochTailReadiness{Status: "ready", RelationshipGenerationSHA256: value.Authority.RelationshipGenerationSHA256,
 				RelationshipRootSHA256: value.Authority.RelationshipRootSHA256, CallerGenerationSHA256: value.Authority.CallerGenerationSHA256, CallerRootSHA256: value.Authority.CallerRootSHA256}
 			reader.progressReady, reader.next = true, 9
+			// Hash the supplied bytes actually served by this HTTP fixture. This
+			// proves retained wire binding, not native authority construction.
+			firstDigest := sha256.Sum256(epochTestJSON(t, value, true))
 			authority, _, _, err := reader.Final(t.Context())
 			if err != nil || reader.productFinalCalls != 1 || reader.productFirstFinalOrdinal != 9 {
 				t.Fatal("first actual HTTP F refused", err)
+			}
+			if reader.productFinalDigests != ([2][sha256.Size]byte{firstDigest, {}}) {
+				t.Fatal("first F did not retain only its actual served-byte digest")
 			}
 			// The corridor is explicitly modeled here. The separate query driver
 			// must obtain these rows from actual typed HTTP/MCP responses.
@@ -682,6 +689,13 @@ func TestEpochRestoredProductFinalBracket(t *testing.T) {
 			valid := mode == "valid" || mode == "returned_alias"
 			if (err == nil) != valid || valid && (reader.productFinalCalls != 2 || reader.evidence.rows[len(reader.evidence.rows)-1].Final.Ordinal != 48) {
 				t.Fatal("second F did not enforce actual authority/ordinal bracket", err)
+			}
+			wantDigests := [2][sha256.Size]byte{firstDigest, {}}
+			if valid {
+				wantDigests[1] = sha256.Sum256(epochTestJSON(t, value, true))
+			}
+			if reader.productFinalDigests != wantDigests {
+				t.Fatal("failed F changed the retained prefix or successful F lost its wire digest")
 			}
 			before := calls.Load()
 			if _, _, _, err := reader.Final(t.Context()); err == nil || calls.Load() != before {

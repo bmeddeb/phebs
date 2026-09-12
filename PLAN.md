@@ -913,10 +913,29 @@ recipe are unchanged. Full native query composition, signed receipt fields,
 archive state/events, final teardown, representative cost/output gates and
 exact rehearsals still precede freeze.
 
+**Completed query receipt capture (2026-09-12).** After the public restored
+query operation has accepted its actual selector, workspace samples and final
+request fence, convert its twenty-two completed transport rows into the existing
+eleven-pair receipt shape. Require the original live operation and closed request
+window, prospective V3 result-unit policy, both identical actual raw F hashes,
+all three private query-authority digests, exact contiguous ordinals and completed
+byte/selector evidence. The existing validator checks the conversion against the
+actual phase inspection prefix; this is not whole-phase work measurement or a
+complete receipt. One logical verdict and F value use the already-recorded V3
+units; all-code cardinality comes from its native observation and named scopes
+from their validated actual envelopes. No expected plan result becomes evidence.
+The accepted query prefix survives a later teardown error. Capture, final result
+assembly and every Wait detach the fixed-size rows, including ProductQueries.
+Costs are one bounded authority-result hash, conversion and existing validation
+under the reader-then-run locks, two retained raw F digests and eleven receipt
+pairs plus detached copies. There is no additional HTTP, store/file read, native
+walk, child, retry, deadline or ordinary runtime work.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-12 — T42.2l owned query receipt capture | Convert only the owned phase-fourteen operation's accepted actual query/F/sample/fence prefix into the existing receipt transport schema. Require the complete private authority proof, two equal actual F digests, original operation and exact contiguous completed rows; preserve the resulting prefix through later teardown failure and detach every returned copy. | One bounded hash/conversion/validation under existing reader-to-run locking, fixed digest/row retention and bounded copies add no native read, query, child, retry or allowance. Modeled completion and actual fixture-served F tests are distinct from public operation choreography, selected native execution and full signed receipt proof. |
 | 2026-09-12 — T42.2l native MCP denial wrapper | Require the fixed hidden-repository denial's complete existing production error chain, including the shared service-search repository wrapper. Keep exact text, single error-content item, absent structured payload, authenticated accounting, JSON-RPC identity and closed framing checks; do not accept a substring or rewrite the production error. | One corrected fixed comparison adds no request, read, allocation class, lock, retry, child or numerical allowance. The small regression must traverse the real search and MCP handlers rather than supply the full error string; its injected repository-store leaf is not a native database proof. The retained native stop is consistent with this source-proven mismatch, but its denied body was not retained. |
 | 2026-09-12 — T42.2l resolver namespace query provenance | The retained diagnostic response proves that relationship authority names the resolver namespace publication, whereas F's existing resolver-catalog fields name that publication's upstream catalog. Preserve both existing catalog fields. Append the actual namespace generation/root digests from F's already opened and completely validated resolver root to the existing private query-authority extension; require all three extension digests and bind relationship projections to the namespace fields. | Two string-header copies add no read, validation, hash, lock, cache, child or ordinary omitted-response work. The whole optional extension is 349 compact or 374 actual indented bytes, respectively 220/232 more than its previous one-field form. Missing, changed or upstream-catalog-substituted namespace evidence refuses, and both actual F values must still match. No numerical allowance, historical V1/V2 byte, canonical catalog field or acceptance predicate is weakened. The failed native run remains failed; corrected native proof is required. |
 | 2026-09-12 — T42.2l private query refusal locator | Retain the first fixed relationship-projection or page-boundary clause name in private harness diagnostics, preserving the generic public refusal and every existing predicate. The corrected native query attempt passed detail and service search, then stopped while projecting the first relationship page; its exact failing predicate is unobserved because no response body survived. On the next small native test's first failed relationship projection after authenticated bounded transport/trailer validation only, retain at most 64 KiB of the response, its actual length and full-body hash in the existing private 0600 helper log. HTTP content may have failed JSON decoding; MCP content has passed its envelope decoder. | One zero-valued string per projector and fixed helper diagnostic fields add no successful-query scan, hashing, I/O, lock, child or retry. Failure-only hashing covers the already bounded body; the copied prefix is base64-encoded to at most 87,384 bytes under the existing one-MiB helper-output cap. No request credential, raw transport error, F body, result-JSON or signed-evidence extension is logged. Retain the failed run honestly and use one gated diagnostic attempt if read-only inspection cannot resolve it; this authorizes no acceptance relaxation or full rehearsal claim. |

@@ -108,6 +108,8 @@ type executionEpochInspection struct {
 	productFirstFinalOrdinal           uint64
 	productQueriesComplete             bool // Set only by the typed, complete query corridor.
 	productQueries                     []ExecutionProductQuery
+	productFinalDigests                [2][sha256.Size]byte
+	productQueryEvidence               *QueryEvidence
 	maximumReports                     uint64 // Epoch-five inventory, shared across its phases.
 	evidence                           epochInspectionLedger
 	err                                error
@@ -624,6 +626,7 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 		} else if reader.productBaseline == nil || digest != *reader.productBaseline {
 			return authority, projection, report, errEpochInspection
 		}
+		reader.productFinalDigests[reader.productFinalCalls] = digest
 		reader.productFinalCalls++
 	}
 	if err == nil && authority.Phase == "process_restart" && reader.run.pressureAllowed && reader.run.epoch.Epoch == 4 {

@@ -192,6 +192,9 @@ type ExecutionEpochOneResult struct {
 	ProductFinals            uint8 // Successfully validated actual phase14 F reads.
 	ProductQueries           []ExecutionProductQuery
 	ProductFirstFinalOrdinal uint64
+	// An accepted phase14 prefix survives later teardown failure. This does
+	// not imply overall receipt success or completed teardown.
+	QueryResults *QueryEvidence
 }
 
 type ExecutionEpochOneRun struct {
@@ -969,6 +972,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		result.ProductFinals = run.inspection.productFinalCalls
 		result.ProductQueries = slices.Clone(run.inspection.productQueries)
 		result.ProductFirstFinalOrdinal = run.inspection.productFirstFinalOrdinal
+		result.QueryResults = cloneProductQueryEvidence(run.inspection.productQueryEvidence)
 		run.inspection.mu.Unlock()
 	}
 	if !result.SessionEmpty {
@@ -1105,6 +1109,8 @@ func (run *ExecutionEpochOneRun) Wait(ctx context.Context) (ExecutionEpochOneRes
 		result.Store.Store.Producers = slices.Clone(result.Store.Store.Producers)
 		result.ServerProcesses = cloneServerProcessObservation(result.ServerProcesses)
 		result.Inspection = cloneInspectionEvidence(result.Inspection)
+		result.QueryResults = cloneProductQueryEvidence(result.QueryResults)
+		result.ProductQueries = slices.Clone(result.ProductQueries)
 		return result, run.err
 	case <-ctx.Done():
 		return ExecutionEpochOneResult{RootStarted: true}, ErrExecutionEpochOne

@@ -88,7 +88,10 @@ func (run *ExecutionEpochOneRun) QueryRestored(ctx context.Context) (retErr erro
 	if _, err := reader.restoredSample(op, "finish"); err != nil {
 		return err
 	}
-	return run.acceptRestoredExecution(op, 14)
+	if err := run.acceptRestoredExecution(op, 14); err != nil {
+		return err
+	}
+	return run.recordProductQueryEvidence(op)
 }
 
 func (run *ExecutionEpochOneRun) productQueryContext(ctx context.Context, authority AuthorityPhaseResult, projection PhaseStateProjection) (*epochQueryProjectionContext, error) {

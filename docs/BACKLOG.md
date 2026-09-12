@@ -7772,9 +7772,37 @@ the logical-result units needed an owning definition. Separately, an
 unfiltered all-code search truncated to one hit does not establish one visible
 repository: neither a single configured source nor named-repository F checks
 exclude other stored repositories. The correction above closes the unit
-definition and native evidence-producer gaps; full native proof and genuine
-receipt conversion remain pending. Neither expected query fields nor another
+definition and native evidence-producer gaps; selected/restored representative
+proof remains pending. Neither expected query fields nor another
 independent census may substitute for actual already-executed scope evidence.
+
+The owned receipt-capture continuation now runs only after QueryRestored's
+actual selector acceptance. It checks the original active operation, closed
+request token, complete V3 proof, exact two-F raw hashes and baseline, twenty-two
+contiguous completed transports, both workspace samples and accepted selector.
+Existing query-evidence validation uses the observed inspection prefix, not
+whole-phase work maxima. It preserves actual C+S and M, native all-code scope
+cardinality and validated named-scope envelopes under the recorded logical-result
+units. Returned query receipts and transport rows are detached at capture,
+finish and each Wait; a later teardown failure retains the accepted prefix.
+New completion/refusal tests are explicitly modeled; the existing HTTP F-bracket
+test additionally checks retained digests against the actual fixture-served
+bytes and refuses a second hash on failed F. Public operation choreography,
+selected full-corpus execution and complete receipt assembly remain distinct
+required gates. No new request, database/file read, child, retry or numerical
+limit is introduced; the owning PLAN row records bounded conversion/copy cost.
+
+The six-path capture slice passed focused receipt/product/restored-bracket
+normal in 1.230s and race in 7.400s. Full ci-static passed vet, zero-issue
+lint and all-package compilation; documentation (0.454s), glossary and
+whitespace passed. Ordered source/test manifest is
+`7cbcb6c26fd1962c5fb830be3af77507f1aed603991394bb79cd649489228073`
+(receipt, receipt tests, product queries, inspection, launch, restored tests).
+These small gates exercise conversion and actual fixture-served F digest
+retention, not the as-yet separately drafted public-operation protocol test.
+Independent applied-source/provenance/cost review reports all severity counts
+zero at that manifest. Final record documentation/glossary/whitespace checks
+passed (documentation 0.695s).
 
 Phase fifteen must retain the parent through the last server's genuine close,
 admit its existing single nonforced detach site, preserve the complete recorded
