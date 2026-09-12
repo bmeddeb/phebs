@@ -846,7 +846,8 @@ phase twelve `archive_finish`, phase thirteen `start`/`finish`, and phase
 fourteen `start`/`finish`. Epoch four and absent-workspace behavior remain
 unchanged. The three implemented phase-twelve/thirteen points add actual
 linked-path walks under the existing parked-runner and engine/SDK guard; the
-two phase-fourteen positions have no parent query caller yet. Producer six's
+two phase-fourteen positions had no parent query caller at that commit; the
+product-query continuation below supplies it. Producer six's
 derived WB maxima are one, 4,098 and two, adding five pairs/430 output bytes
 and sixteen fixed reporter-counter bytes, not extra lifecycle turns or
 capacity probes. Deadline derivation uses fixed-size frozen-plan checks and
@@ -854,14 +855,69 @@ deadline/context state, with no I/O. Selected parent inspection retains bounded
 HTTP bodies, existing authority hashes/copies and one operation completion
 channel; no ordinary
 request, sync, publication, cache, child or retry work changes. Full archive
-state/event composition, phase-fourteen queries, teardown, representative
+state/event composition, native phase-fourteen query proof, teardown, representative
 census/guarded-walk cost, full-output fit and exact native rehearsals remain
 required; these methods alone do not establish a complete phase receipt.
+
+**Restored product-query continuation (2026-09-12).** Phase fourteen now uses
+the same actual fifth server and ordinal stream after accepted collection.
+Its twenty-minute clock starts before the real handoff and remains clipped by
+the already-owned lifetime/global deadline. Actual start sampling, X/T and F
+precede the eleven fixed HTTP cases (nineteen pages), then the eleven fixed MCP
+cases (nineteen direct marked `tools/call` pages). The pinned stateless server
+needs no initialization or tool-list traffic. A second actual, byte-identical F
+must immediately bracket that contiguous query sequence before finish sampling
+and the request/report fence. Only then may the selector accept. Teardown
+recognizes this phase-fourteen prefix with producer-six checkpoint thirteen;
+phase fifteen remains separate.
+
+Query projections are computed from actual typed response rows, scope receipts,
+returned ordinals, service memberships and relationship claims. The protected
+actual a-return catalog is decoded once during existing input preparation and
+retained privately; phase fourteen derives its five logical sets once and
+compares them with actual F before retaining compact queried-path placements.
+No query rereads a catalog file or opens the database for a second accounting
+census. The shared native-control derivation is reused for exact per-transport
+checks and the unchanged 160 control-file/164 store-read subtotal; actual member
+visits stay bounded by the existing derivation. Accepted trailers
+remain authoritative even if later body validation fails. The completed
+transport prefix is not signed receipt evidence and invents no authorization
+decision or authority-snapshot counts.
+
+Transport uses fixed requests, bounded bodies, one canonical JSON-RPC response
+or SSE message, exact IDs and matching text/structured content. Detail and
+relationship payload limits reuse the native one/two-MiB caps plus actual
+Huma or SDK framing; the fixed searches derive caps from their one-file,
+one-chunk, one-match shape and existing structural/shared-file and service
+authority limits. Generic search has no equivalent encoded-response bound.
+Actual F and authenticated native responses bind the returned authority fields;
+the parent does not claim to recompute authority digests from omitted API
+fields or verify server-private citation HMACs. It checks their framing and
+returned query/root/cursor provenance instead.
+
+Costs are selected-runner only: one additional bounded catalog decode and
+retention during preparation; one phase-fourteen catalog clone/sort/hash with
+bounded maps plus one pass for compact queried-path ownership. Each of the
+thirty-eight serial pages retains bounded wire/JSON copies, regenerates and
+validates the fixed case inventory and hashes actual semantic fields under the
+existing reader mutex. Search-cap derivation also regenerates fixed structural
+profile metadata and serializes its bounded maximum-shape model; MCP decoding
+repeats that derivation for the inner payload. Neither is a corpus scan. The
+same no-reuse loopback transport and deadline govern each request; failed
+ordinals never retry. Twenty-two compact completed-transport rows and detached
+actual F state remain in the prefix. There is no additional ordinary query,
+sync tick, startup/restart, publication, retry/no-op, cache invalidation,
+database/file read, child process or concurrency beyond the selected corridor.
+The two already-admitted phase-fourteen workspace walks and fifteen-pair PC
+recipe are unchanged. Full native query composition, signed receipt fields,
+archive state/events, final teardown, representative cost/output gates and
+exact rehearsals still precede freeze.
 
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-12 — T42.2l actual restored product-query corridor | Complete the fixed phase-fourteen HTTP-then-MCP sequence between actual unchanged F fences, retaining exact ordinals, actual decoded projections and native accounting reports. Reuse protected actual catalog input for F-bound ownership and existing control/member derivations; use the pinned stateless MCP transport without setup traffic. | No expected result is copied into observed evidence; no invented authorization/snapshot count, independent database census, retry, numerical ceiling or V1/V2 change. Actual typed-prefix gates are distinct from genuine full native query execution, signed receipt composition, teardown, cost, rehearsal and freeze. |
 | 2026-09-12 — T42.2l restored execution coordination | Reserve existing phase windows before the backup-capable fourth server and workspace-bound fifth server start, clipping both by the actual caller and author-start global wall clock; retain the original archive deadline. Derive fifteen restored PC pairs from actual Drain, request windows, two handoffs and shutdown. Complete native archive inspection and fresh collection through joined owner/request boundaries and actual guarded workspace samples, with closed epoch-five command/report positions. | No new phase, work, data, physical-volume, output or eighteen-hour ceiling; V1/V2 bytes and the omitted-workspace startup path remain exact. Five additional native sample positions add 430 derived WB bytes, not capacity probes or lifecycle work. Complete archive events/state, product-query and teardown composition, representative cost and exact rehearsals remain separate required gates. |
 | 2026-09-12 — T42.2l parent archive boundaries and rooted manifest inspection | Add the actual start/joined-backup/joined-restore workspace observations, retaining the two removal observations, original deadline and the same borrowed observer. Derive the single extra parent hold in the existing PC allowance without changing child FD7. Bind epoch five to the held backup root and joined command digests; read only its no-follow rooted manifest through the existing authenticated exact-read protocol, and compare restored F with the retained actual prior using the unchanged receipt policy. | No artifact or database reopening for R, supplied path/PID/authority admission, independent ordinal stream, new output/work/data/deadline ceiling or V1/V2 mutation. Ordinary omission remains byte-exact. Phase-finish, full transition composition, later phases and measured representative cost remain required before a long rehearsal or freeze. |
 | 2026-09-12 — T42.2l approved archive measurement coordination | Ben explicitly approved the phase-twelve proposal and continuation through the goal. Add closed offline workspace/original-deadline binding and engine-owned checkpoint coordination, deriving finite report/control limits from actual success and failure paths before landing. Keep transient verification/staging/spool populations visible before cleanup; reuse the existing native traversal and joined reporting. | Retired SDK owners remain fenced, engine identity comes from its actual owner, and measurement never renews a phase deadline. Data/physical/work/output ceilings, V1/V2 bytes and sampled linked-path semantics remain exact. Native composition, output and measured traversal-cost acceptance remain required; approval is not a rehearsal, freeze or execution result. |

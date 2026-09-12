@@ -7435,6 +7435,56 @@ fit are still required before another long rehearsal. Neither the new methods
 nor a modeled transport/owner fixture establishes a whole phase, rehearsal,
 freeze or ceremony pass.
 
+**Restored product-query continuation (2026-09-12).** The approved phase-fourteen
+slice now supplies one real handoff/deadline, guarded start/finish samples,
+actual X/T, two byte-identical F reads and the contiguous nineteen HTTP plus
+nineteen direct stateless MCP tool-call pages. Actual response projections,
+exact per-transport C/S and bounded native member reports form twenty-two
+completed transport rows. The accepted prefix requires adjacent F/query/F
+ordinals and producer-six checkpoint thirteen; unsupported phase fifteen
+still refuses. Actual catalog input is retained from preparation and bound to
+F once, without additional query file/store reads. This is a private execution
+prefix, not invented signed authorization/snapshot evidence.
+
+Final non-authoring implementation/cost review has zero remaining critical,
+high, medium or low findings. Review closed one fixture-proof gap (the complete
+driver fixture now verifies actual method/path and complete JSON-RPC payload,
+including returned continuation cursors) and two cost/current-posture wording
+gaps. The fourteen-file source/test ordered SHA-256 manifest is
+`16cd9f24aea1dc1954ad330f70acc3e749c18426864e2a4df9cdeb49e7dfc41f`.
+Source tracing also corrected legitimate regex-anchor handling and the
+exact native MCP missing-repository error before final gates. The HTTP denial
+decoder now requires the native sanitized title/detail, not an arbitrary 404.
+
+The combined archive/restored/inspection/query/config-catalog/inventory
+selectors passed normal/race in 18.806/228.127s. That run preceded the final
+denial-fixture and request-verification edits; the complete corrected
+query/product/restored selectors then passed in 1.501/12.029s. Full ci-static
+(vet, zero-issue pinned lint and all-package compilation), docs (0.481s),
+glossary and whitespace passed on that final tree. Module verification and
+unchanged canonical V1/V2 digests passed in the combined run. Retained logs are
+under the private `phebs-t422-query-gates.Hf1Ezq` gate root.
+
+The wire's actual pinned stateless SDK test exercised direct tool calls,
+success and tool error, actual SSE serialization and IDs without initialization:
+its normal/race selectors passed in 0.903/4.002s. The full thirty-eight-request
+driver test exercises actual loopback GET/POST, exact requests, ordinal and
+trailer consumption with explicitly supplied product bodies/authority/member
+counts; it does not mark the phase complete. Eleven-case projection and
+adversarial supplied-payload tests passed normal/race in 0.640/2.158s. The final
+parent phase-support group passed in 2.282/18.238s before the final corrected
+selector rerun.
+Two earlier root denial-fixture attempts failed before any HTTP request because
+their modeled context omitted the accepted-service key; the corrected fixture
+supplies it without changing production validation. No native product engine
+or full rehearsal was launched by these gates.
+
+Full native positive product-query composition,
+archive state/events, signed receipt/executor/launcher composition, final
+teardown, representative replay census/guarded cost, complete output fit and
+exact rehearsals remain required. No full-phase, rehearsal or freeze pass is
+inferred from supplied-response or SDK transport fixtures.
+
 **Pressure headroom refusal after c7db1d21 (2026-09-11).** The exact-source
 rehearsal failed in 5,519.79s (package 5,520.627s), after 672 contiguous normal
 cleanup owner turns, 33,769 deletions, zero failed lifecycle turns and a

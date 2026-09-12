@@ -163,6 +163,29 @@ func (reader *executionEpochInspection) beginCollection() error {
 	return nil
 }
 
+// The real phase14 handoff reuses the sole epoch-five reader and the actual
+// accepted collection F. It creates no query result or renewed ordinal stream.
+func (reader *executionEpochInspection) beginProductInspection() error {
+	reader.mu.Lock()
+	defer reader.mu.Unlock()
+	if reader.err != nil || reader.run == nil || reader.run.epoch.Epoch != 5 || !reader.finalUsed || reader.restoredStep != 3 ||
+		reader.projection.Phase != "lifecycle_collection" || reader.collectionAuthority.Phase != "lifecycle_collection" ||
+		!reader.restoredSamples.CollectionComplete || len(reader.evidence.rows) == 0 || !reader.evidence.rows[len(reader.evidence.rows)-1].SelectorAccepted ||
+		reader.productFinalCalls != 0 || reader.productQueriesComplete || reader.productBaseline != nil {
+		return errEpochInspection
+	}
+	projection, err := expectedStateProjectionForPhase(reader.plan, "product_queries")
+	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	if err != nil || inventoryErr != nil || len(rows) != 15 || rows[13].Phase != "product_queries" || rows[13].ServerEpoch != 5 ||
+		rows[13].FinalAuthorityPasses != exactInspectionCalls(2) || projection.CatalogSource.SHA256 != reader.run.epoch.CatalogSHA256 {
+		return errEpochInspection
+	}
+	reader.projection, reader.bounds = projection, rows[13]
+	reader.progressCalls, reader.tailCalls, reader.lifecycleCalls, reader.progressReady = 0, 0, 0, false
+	reader.tail, reader.finalUsed = epochTailReadiness{}, false
+	return nil
+}
+
 func (reader *executionEpochInspection) freshCycle(ctx context.Context) (retErr error) {
 	reader.mu.Lock()
 	defer reader.mu.Unlock()

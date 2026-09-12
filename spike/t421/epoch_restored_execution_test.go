@@ -3,8 +3,10 @@ package t421
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -37,7 +39,7 @@ func configureRestoredTestReader(t *testing.T, reader *executionEpochInspection)
 }
 
 func TestEpochRestoredSampleWire(t *testing.T) {
-	for _, mode := range []string{"archive", "start", "finish", "over_limit", "malformed", "wrong_point", "wrong_epoch", "missing_start", "canceled"} {
+	for _, mode := range []string{"archive", "start", "finish", "product_start", "product_finish", "product_no_queries", "over_limit", "malformed", "wrong_point", "wrong_epoch", "missing_start", "canceled"} {
 		t.Run(mode, func(t *testing.T) {
 			var calls atomic.Int32
 			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +66,15 @@ func TestEpochRestoredSampleWire(t *testing.T) {
 					reader.restoredSamples.Phases[1] = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1, Maximum: custodybytes.Sample{LogicalBytes: 11, AllocatedBytes: 9}}
 				}
 			}
+			if strings.HasPrefix(mode, "product_") {
+				configureProductTestReader(t, reader)
+				index = 2
+				if mode != "product_start" {
+					point, reader.finalUsed, reader.productFinalCalls = "finish", true, 2
+					reader.productQueriesComplete = mode == "product_finish"
+					reader.restoredSamples.Phases[2] = ExecutionWorkspaceBytePhase{Attempts: 1, Completed: 1, Maximum: custodybytes.Sample{LogicalBytes: 11, AllocatedBytes: 9}}
+				}
+			}
 			if mode == "over_limit" {
 				reader.plan.SafetyEnvelope.MaximumDataAllocatedBytes = 19
 			}
@@ -79,7 +90,7 @@ func TestEpochRestoredSampleWire(t *testing.T) {
 				cancel()
 			}
 			_, err := reader.restoredSample(ctx, point)
-			valid := mode == "archive" || mode == "start" || mode == "finish"
+			valid := mode == "archive" || mode == "start" || mode == "finish" || mode == "product_start" || mode == "product_finish"
 			if (err == nil) != valid {
 				t.Fatal("sample disposition", err)
 			}
@@ -87,7 +98,7 @@ func TestEpochRestoredSampleWire(t *testing.T) {
 			if valid || mode == "over_limit" {
 				completed := uint64(1)
 				logical := uint64(10)
-				if mode == "finish" {
+				if mode == "finish" || mode == "product_finish" {
 					completed, logical = 2, 11
 				}
 				if row.Completed != completed || row.Attempts != completed || row.Maximum != (custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: 20}) {
@@ -241,7 +252,11 @@ func TestEpochRestoredOperationRefusalAndCancellation(t *testing.T) {
 			case "repeated":
 				run.archiveExecutionUsed = true
 			}
-			op, cancel, done, err := run.beginRestoredExecution(ctx, mode == "unaccepted_collection")
+			phase := uint32(12)
+			if mode == "unaccepted_collection" {
+				phase = 13
+			}
+			op, cancel, done, err := run.beginRestoredExecution(ctx, phase)
 			if mode != "canceled_http" {
 				if err == nil {
 					cancel()
@@ -429,7 +444,7 @@ func TestEpochRestoredCollectionDeadline(t *testing.T) {
 				cancel()
 			}
 			before := time.Now()
-			err := run.startCollectionDeadline(ctx)
+			err := run.startRestoredPhaseDeadline(ctx, 13)
 			valid := mode == "four_hours" || mode == "lifetime_clip"
 			if (err == nil) != valid {
 				t.Fatal("phase clock disposition", err)
@@ -448,6 +463,263 @@ func TestEpochRestoredCollectionDeadline(t *testing.T) {
 			if mode == "lifetime_clip" && run.phaseDeadline != run.lifetimeDeadline || mode == "four_hours" &&
 				(run.phaseDeadline.Before(before.Add(4*time.Hour)) || run.phaseDeadline.After(time.Now().Add(4*time.Hour))) {
 				t.Fatal("phase clock moved outside its unchanged bound")
+			}
+		})
+	}
+}
+
+func configureProductTestReader(t *testing.T, reader *executionEpochInspection) {
+	t.Helper()
+	configureRestoredTestReader(t, reader)
+	projection, err := expectedStateProjectionForPhase(reader.plan, "product_queries")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader.projection = projection
+	rows, _, _ := correctedInspectionInventory(reader.plan.Profile)
+	reader.bounds = rows[13]
+	reader.restoredStep = 3
+	reader.restoredSamples.CollectionComplete = true
+	reader.collectionAuthority.Phase = "lifecycle_collection"
+}
+
+func TestEpochRestoredQueryTransport(t *testing.T) {
+	for _, mode := range []string{"post", "get", "positive_oversize", "missing_trailer", "extra_read", "duplicate_content_type", "empty_post", "too_large_post", "foreign_post", "before_F", "after_queries", "phase13", "canceled"} {
+		t.Run(mode, func(t *testing.T) {
+			var calls atomic.Int32
+			payload := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_code","arguments":{}}}`)
+			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				if r.Header.Get("X-Phebs-T421-Exact-Read-Ordinal") != "1" || r.Header.Get(dispatchadmission.ProductionRequestHeader) == "" {
+					t.Error("query lost shared ordinal/request token")
+				}
+				if mode == "get" {
+					if r.Method != http.MethodGet || r.URL.Path != "/api/search" {
+						t.Error("GET query changed")
+					}
+				} else {
+					raw, err := io.ReadAll(r.Body)
+					if err != nil || r.Method != http.MethodPost || r.URL.Path != "/api/mcp" || string(raw) != string(payload) ||
+						r.Header.Get("Content-Type") != "application/json" || r.Header.Get("Accept") != "application/json, text/event-stream" {
+						t.Error("MCP POST body/header changed", err)
+					}
+				}
+				w.Header().Set("Content-Type", "application/json")
+				if mode == "duplicate_content_type" {
+					w.Header().Add("Content-Type", "text/event-stream")
+				}
+				if mode != "missing_trailer" {
+					w.Header().Set("Trailer", epochReadTrailer)
+				}
+				_, _ = w.Write([]byte(`{"v":1}`))
+				report := epochInspectionReport{ControlFileReads: 1}
+				if mode == "extra_read" {
+					report.ControlFileReads++
+				}
+				if mode != "missing_trailer" {
+					pressureInspectionTrailer(t, w, r, report)
+				}
+			}))
+			configureProductTestReader(t, reader)
+			reader.productFinalCalls = 1
+			path, limit := "/api/mcp", int64(7)
+			switch mode {
+			case "get":
+				path, payload = "/api/search?q=needle", nil
+			case "positive_oversize":
+				limit = 6
+			case "empty_post":
+				payload = []byte{}
+			case "too_large_post":
+				payload = []byte(strings.Repeat("x", 64<<10+1))
+			case "foreign_post":
+				path = "/api/search"
+			case "before_F":
+				reader.productFinalCalls = 0
+			case "after_queries":
+				reader.productQueriesComplete = true
+			case "phase13":
+				reader.projection.Phase = "lifecycle_collection"
+			}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			if mode == "canceled" {
+				cancel()
+			}
+			raw, status, contentType, _, err := reader.readQueryRequest(ctx, path, payload, limit, epochInspectionReport{ControlFileReads: 1})
+			valid := mode == "post" || mode == "get"
+			if (err == nil) != valid || valid && (status != http.StatusOK || contentType != "application/json" || string(raw) != `{"v":1}`) {
+				t.Fatal("query transport disposition", err, status, contentType, string(raw))
+			}
+			if mode == "positive_oversize" || mode == "duplicate_content_type" {
+				if reader.reports != 1 || reader.totals.ControlFileReads != 1 || reader.next != 2 {
+					t.Fatal("valid accounting prefix lost on response refusal")
+				}
+			}
+			noHTTP := mode == "empty_post" || mode == "too_large_post" || mode == "foreign_post" || mode == "before_F" || mode == "after_queries" || mode == "phase13" || mode == "canceled"
+			if noHTTP && (calls.Load() != 0 || reader.next != 1) {
+				t.Fatal("refusal dispatched a request")
+			}
+		})
+	}
+}
+
+func TestEpochRestoredProductBoundary(t *testing.T) {
+	for _, mode := range []string{"valid", "no_acceptance", "no_collection", "no_authority", "already_begun", "no_finish"} {
+		t.Run(mode, func(t *testing.T) {
+			reader := epochTestHTTPReader(t, http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Error("boundary issued HTTP") }))
+			configureProductTestReader(t, reader)
+			reader.projection.Phase, reader.finalUsed = "lifecycle_collection", true
+			reader.evidence.rows = []ExecutionPhaseInspection{{Phase: "lifecycle_collection", ServerEpoch: 5, SelectorAccepted: true}}
+			reader.next, reader.reports = 18, 17
+			switch mode {
+			case "no_acceptance":
+				reader.evidence.rows[0].SelectorAccepted = false
+			case "no_collection":
+				reader.restoredSamples.CollectionComplete = false
+			case "no_authority":
+				reader.collectionAuthority.Phase = "archive_restore"
+			case "already_begun":
+				reader.productFinalCalls = 1
+			case "no_finish":
+				reader.finalUsed = false
+			}
+			err := reader.beginProductInspection()
+			if (err == nil) != (mode == "valid") || reader.next != 18 || reader.reports != 17 {
+				t.Fatal("product boundary/ordinal changed", err)
+			}
+			if mode == "valid" && (reader.bounds.FinalAuthorityPasses != exactInspectionCalls(2) || reader.bounds.ExtractionProgressCalls != exactInspectionCalls(1) || reader.bounds.TailReadinessCalls != exactInspectionCalls(1) || reader.finalUsed) {
+				t.Fatal("product inventory changed")
+			}
+		})
+	}
+}
+
+func TestEpochRestoredProductDeadline(t *testing.T) {
+	reader := epochTestHTTPReader(t, http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Error("deadline issued HTTP") }))
+	configureProductTestReader(t, reader)
+	reader.projection.Phase, reader.finalUsed = "lifecycle_collection", true
+	reader.evidence.rows = []ExecutionPhaseInspection{{Phase: "lifecycle_collection", ServerEpoch: 5, SelectorAccepted: true}}
+	run := reader.run
+	run.lifetimeDeadline = time.Now().Add(time.Hour)
+	run.setPhaseDeadlineLocked(time.Now().Add(time.Minute))
+	defer run.stopPhaseDeadline()
+	before := time.Now()
+	if err := run.startRestoredPhaseDeadline(t.Context(), 14); err != nil ||
+		run.phaseDeadline.Before(before.Add(20*time.Minute)) || run.phaseDeadline.After(time.Now().Add(20*time.Minute)) {
+		t.Fatal("phase14 did not start the frozen20-minute clock", err)
+	}
+	deadline := run.phaseDeadline
+	if err := run.startRestoredPhaseDeadline(t.Context(), 15); err == nil || run.phaseDeadline != deadline {
+		t.Fatal("phase15 renewed a clock")
+	}
+}
+
+func TestEpochRestoredProductFinalBracket(t *testing.T) {
+	for _, mode := range []string{"valid", "relationship", "root_detail", "missing_queries", "missing_row", "before_gap", "after_gap", "returned_alias"} {
+		t.Run(mode, func(t *testing.T) {
+			_, value := epochTestFinal(t)
+			var calls atomic.Int32
+			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				w.Header().Set("Trailer", epochReadTrailer)
+				_, _ = w.Write(epochTestJSON(t, value, true))
+				pressureInspectionTrailer(t, w, r, epochInspectionReport{})
+			}))
+			configureProductTestReader(t, reader)
+			raw, err := json.Marshal(reader.projection)
+			if err != nil || json.Unmarshal(raw, &value.Projection) != nil {
+				t.Fatal("projection fixture", err)
+			}
+			value.Projection.Schema = "t421-final-state-projection-source-free-v1"
+			raw, err = json.Marshal(value.Authority)
+			if err != nil || json.Unmarshal(raw, &reader.collectionAuthority.AuthorityState) != nil {
+				t.Fatal("authority fixture", err)
+			}
+			reader.collectionAuthority.Outcome = "passed"
+			reader.collectionAuthority.PhysicalRevision, reader.collectionAuthority.LogicalRevision = "a-return", "a-return"
+			reader.collectionAuthority.ExtractionRoots = cloneArchiveAuthority(AuthorityPhaseResult{ExtractionRoots: value.ExtractionRoots}).ExtractionRoots
+			reader.tail = epochTailReadiness{Status: "ready", RelationshipGenerationSHA256: value.Authority.RelationshipGenerationSHA256,
+				RelationshipRootSHA256: value.Authority.RelationshipRootSHA256, CallerGenerationSHA256: value.Authority.CallerGenerationSHA256, CallerRootSHA256: value.Authority.CallerRootSHA256}
+			reader.progressReady, reader.next = true, 9
+			authority, _, _, err := reader.Final(t.Context())
+			if err != nil || reader.productFinalCalls != 1 || reader.productFirstFinalOrdinal != 9 {
+				t.Fatal("first actual HTTP F refused", err)
+			}
+			// The corridor is explicitly modeled here. The separate query driver
+			// must obtain these rows from actual typed HTTP/MCP responses.
+			reader.productQueries, reader.productQueriesComplete, reader.next = epochProductTestRows(t), true, 48
+			switch mode {
+			case "relationship":
+				value.Authority.RelationshipRootSHA256 = testDigest("different root")
+			case "root_detail":
+				value.ExtractionRoots[0].Totals.Rows++
+			case "missing_queries":
+				reader.productQueriesComplete = false
+			case "missing_row":
+				reader.productQueries = reader.productQueries[:21]
+			case "before_gap":
+				reader.productFirstFinalOrdinal--
+			case "after_gap":
+				reader.next++
+			case "returned_alias":
+				authority.ExtractionRoots[0].Totals.Rows++
+			}
+			_, _, _, err = reader.Final(t.Context())
+			valid := mode == "valid" || mode == "returned_alias"
+			if (err == nil) != valid || valid && (reader.productFinalCalls != 2 || reader.evidence.rows[len(reader.evidence.rows)-1].Final.Ordinal != 48) {
+				t.Fatal("second F did not enforce actual authority/ordinal bracket", err)
+			}
+			before := calls.Load()
+			if _, _, _, err := reader.Final(t.Context()); err == nil || calls.Load() != before {
+				t.Fatal("third/retried F dispatched")
+			}
+			if (mode == "missing_queries" || mode == "missing_row" || mode == "before_gap" || mode == "after_gap") && before != 1 {
+				t.Fatal("incomplete corridor dispatched second F")
+			}
+		})
+	}
+}
+
+func TestEpochRestoredProductClosedPrefix(t *testing.T) {
+	for _, mode := range []string{"valid", "phase15", "no_queries", "one_final", "no_completion", "before_gap", "after_gap", "missing_sample", "unaccepted", "no_DA_handoff", "no_SA_handoff"} {
+		t.Run(mode, func(t *testing.T) {
+			v := epochRestorePrefixFixture()
+			v.Store.Opened, v.Store.TerminalEOF, v.Store.Store.Phase = 7, 7, 14
+			v.Accounting.Producers[0].Closed, v.Accounting.Producers[0].Ordinal = true, 10
+			v.Accounting.Producers = append(v.Accounting.Producers, dispatchadmission.ProducerCount{Producer: 6, Attached: true, Closed: true, Checkpoint: 13})
+			v.Store.Store.Producers = append(v.Store.Store.Producers, storeaccounting.ProducerCount{Producer: 6, Attached: true, Closed: true, Checkpoint: 13})
+			v.RestoredSamples.ArchiveComplete, v.RestoredSamples.CollectionComplete, v.RestoredSamples.ProductComplete = true, true, true
+			v.ProductQueries, v.ProductFinals, v.ProductFirstFinalOrdinal = epochProductTestRows(t), 2, 9
+			for i, phase := range []string{"archive_restore", "lifecycle_collection", "product_queries"} {
+				count := min(uint64(i+1), 2)
+				v.RestoredSamples.Phases[i] = ExecutionWorkspaceBytePhase{Attempts: count, Completed: count}
+				v.Inspection = append(v.Inspection, ExecutionPhaseInspection{ServerEpoch: 5, Phase: phase, SelectorAccepted: true, Final: &ExecutionInspectionFinal{Ordinal: 48}})
+			}
+			switch mode {
+			case "phase15":
+				v.Store.Store.Phase = 15
+			case "no_queries":
+				v.ProductQueries = nil
+			case "one_final":
+				v.ProductFinals = 1
+			case "no_completion":
+				v.RestoredSamples.ProductComplete = false
+			case "before_gap":
+				v.ProductFirstFinalOrdinal--
+			case "after_gap":
+				v.Inspection[2].Final.Ordinal++
+			case "missing_sample":
+				v.RestoredSamples.Phases[2].Completed--
+			case "unaccepted":
+				v.Inspection[2].SelectorAccepted = false
+			case "no_DA_handoff":
+				v.Accounting.Producers[len(v.Accounting.Producers)-1].Checkpoint--
+			case "no_SA_handoff":
+				v.Store.Store.Producers[len(v.Store.Store.Producers)-1].Checkpoint--
+			}
+			if epochArchiveClosedPrefix(t.Context(), v, 6) != (mode == "valid") {
+				t.Fatal("incomplete product terminal prefix admitted")
 			}
 		})
 	}

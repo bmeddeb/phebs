@@ -733,33 +733,9 @@ func correctedProductQueryNativeControlReads() (uint64, uint64, error) {
 	var controls, stores uint64
 	catalogCold := true
 	for _, query := range correctedQueryCases() {
-		pages := correctedProductQueryPages(query)
-		var perTransportControls, perTransportStores uint64
-		switch query.Surface {
-		case "all_code_search":
-			perTransportControls, perTransportStores = 2, 2
-		case "service_detail":
-			perTransportStores = 7
-		case "service_search":
-			if query.ExpectedStatus == 404 {
-				perTransportStores = 1
-			} else {
-				perTransportControls, perTransportStores = 16, 11
-			}
-		case "service_relationships":
-			continuations := pages - 1
-			continuationControls, err := checkedMultiply(2, continuations)
-			if err != nil || continuationControls > math.MaxUint64-5 {
-				return 0, 0, errors.New("corrected relationship control reads overflow")
-			}
-			continuationStores, err := checkedMultiply(3, continuations)
-			if err != nil || continuationStores > math.MaxUint64-4 {
-				return 0, 0, errors.New("corrected relationship store reads overflow")
-			}
-			perTransportControls = 5 + continuationControls
-			perTransportStores = 4 + continuationStores
-		default:
-			return 0, 0, errors.New("corrected product query surface is unknown")
+		perTransportControls, perTransportStores, err := correctedProductQueryControlReads(query)
+		if err != nil {
+			return 0, 0, err
 		}
 		if perTransportControls > (math.MaxUint64-controls)/2 ||
 			perTransportStores > (math.MaxUint64-stores)/2 {
@@ -780,6 +756,36 @@ func correctedProductQueryNativeControlReads() (uint64, uint64, error) {
 		return 0, 0, errors.New("corrected product query inventory never opens the catalog")
 	}
 	return controls, stores, nil
+}
+
+// One transport's native controls, excluding the first catalog miss. Shared
+// with the actual runner so its per-transport checks cannot diverge from the
+// unchanged aggregate derivation above.
+func correctedProductQueryControlReads(query QueryCase) (uint64, uint64, error) {
+	switch query.Surface {
+	case "all_code_search":
+		return 2, 2, nil
+	case "service_detail":
+		return 0, 7, nil
+	case "service_search":
+		if query.ExpectedStatus == 404 {
+			return 0, 1, nil
+		}
+		return 16, 11, nil
+	case "service_relationships":
+		continuations := correctedProductQueryPages(query) - 1
+		controls, err := checkedMultiply(2, continuations)
+		if err != nil || controls > math.MaxUint64-5 {
+			return 0, 0, errors.New("corrected relationship control reads overflow")
+		}
+		stores, err := checkedMultiply(3, continuations)
+		if err != nil || stores > math.MaxUint64-4 {
+			return 0, 0, errors.New("corrected relationship store reads overflow")
+		}
+		return 5 + controls, 4 + stores, nil
+	default:
+		return 0, 0, errors.New("corrected product query surface is unknown")
+	}
 }
 
 // correctedProductQueryMemberReadMaximum follows the closed execution order:

@@ -53,18 +53,21 @@ type ExecutionEpochConfig struct {
 // Never copy it. The parent must retain it and Author through all joined uses;
 // this object neither owns a server nor proves that those uses have joined.
 type ExecutionEpochConfigCustody struct {
-	mu        sync.Mutex
-	author    *ExecutionAuthorCustody
-	roots     []productionRoot
-	catalogs  *ExecutionInputCustody
-	configs   *ExecutionInputCustody
-	epochs    [5]ExecutionEpochConfig
-	listeners [5]net.Listener
-	released  uint64
-	stages    []string
-	active    bool // A native epoch user must join before these inputs can close.
-	closed    bool
-	err       error
+	mu       sync.Mutex
+	author   *ExecutionAuthorCustody
+	roots    []productionRoot
+	catalogs *ExecutionInputCustody
+	configs  *ExecutionInputCustody
+	// Immutable actual a-return input, decoded once before protection. Phase14
+	// binds this catalog to actual F without rereading files or the store.
+	queryCatalog *servicecatalog.Catalog
+	epochs       [5]ExecutionEpochConfig
+	listeners    [5]net.Listener
+	released     uint64
+	stages       []string
+	active       bool // A native epoch user must join before these inputs can close.
+	closed       bool
+	err          error
 }
 
 // PrepareExecutionEpochConfigs uses only the actual author's already-admitted
@@ -107,6 +110,10 @@ func PrepareExecutionEpochConfigs(ctx context.Context, author *ExecutionAuthorCu
 	}()
 	catalogs, err := epochCatalogInputs(ctx, plan)
 	if err != nil {
+		return custody, ErrExecutionEpochConfigs
+	}
+	custody.queryCatalog = new(servicecatalog.Catalog)
+	if len(catalogs) != 3 || catalogs[2].name != "catalog-a-return" || json.Unmarshal(catalogs[2].raw, custody.queryCatalog) != nil {
 		return custody, ErrExecutionEpochConfigs
 	}
 	custody.catalogs, err = custody.protectInputs(ctx, catalogs)

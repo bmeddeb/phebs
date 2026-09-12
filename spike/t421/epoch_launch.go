@@ -183,12 +183,15 @@ type ExecutionEpochOneResult struct {
 	Attempts                              ExecutionAttemptObservation
 	// Separate actual joined offline streams. Producer-local completeness is
 	// not aggregate phase acceptance; epoch five must also be composed.
-	BackupWork, RestoreWork ExecutionAttemptObservation
-	IndexOffers             ExecutionIndexObservation
-	ServerProcesses         ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
-	Inspection              []ExecutionPhaseInspection
-	PressureSamples         ExecutionPressureSamples
-	RestoredSamples         ExecutionRestoredSamples
+	BackupWork, RestoreWork  ExecutionAttemptObservation
+	IndexOffers              ExecutionIndexObservation
+	ServerProcesses          ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
+	Inspection               []ExecutionPhaseInspection
+	PressureSamples          ExecutionPressureSamples
+	RestoredSamples          ExecutionRestoredSamples
+	ProductFinals            uint8 // Successfully validated actual phase14 F reads.
+	ProductQueries           []ExecutionProductQuery
+	ProductFirstFinalOrdinal uint64
 }
 
 type ExecutionEpochOneRun struct {
@@ -297,6 +300,7 @@ type ExecutionEpochOneRun struct {
 	restoredExecutionDone   chan struct{}
 	archiveExecutionUsed    bool
 	collectionExecutionUsed bool
+	productExecutionUsed    bool
 }
 
 func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
@@ -962,6 +966,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		result.Inspection = cloneInspectionEvidence(run.inspection.evidence.rows)
 		result.PressureSamples = run.inspection.pressure.samples
 		result.RestoredSamples = run.inspection.restoredSamples
+		result.ProductFinals = run.inspection.productFinalCalls
+		result.ProductQueries = slices.Clone(run.inspection.productQueries)
+		result.ProductFirstFinalOrdinal = run.inspection.productFirstFinalOrdinal
 		run.inspection.mu.Unlock()
 	}
 	if !result.SessionEmpty {
@@ -1023,6 +1030,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	if failure != nil && run.archiveExecutionUsed {
 		result.RestoredSamples.ArchiveComplete, result.RestoredSamples.CollectionComplete = false, false
+		result.RestoredSamples.ProductComplete = false
 		if !result.RestoredSamples.LimitExceeded {
 			result.RestoredSamples.Unavailable = true
 		}

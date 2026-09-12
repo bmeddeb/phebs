@@ -10,20 +10,28 @@ import (
 // Actual synchronous workspace boundaries, not complete archive-transition or
 // whole-work evidence. Unavailable suffixes retain every completed maximum.
 type ExecutionRestoredSamples struct {
-	Phases                              [2]ExecutionWorkspaceBytePhase
-	ArchiveComplete, CollectionComplete bool
-	Unavailable, LimitExceeded          bool
+	Phases                                               [3]ExecutionWorkspaceBytePhase
+	ArchiveComplete, CollectionComplete, ProductComplete bool
+	Unavailable, LimitExceeded                           bool
 }
 
-func epochCollectionClosedEvidence(result ExecutionEpochOneResult) bool {
+func epochRestoredClosedEvidence(result ExecutionEpochOneResult, phase uint32) bool {
 	samples := result.RestoredSamples
-	if !samples.ArchiveComplete || !samples.CollectionComplete || samples.Unavailable || samples.LimitExceeded || len(result.Inspection) != 2 {
+	if phase != 13 && phase != 14 || !samples.ArchiveComplete || !samples.CollectionComplete || samples.Unavailable || samples.LimitExceeded ||
+		len(result.Inspection) != int(phase-11) || phase == 14 && (!samples.ProductComplete || result.ProductFinals != 2 || !validExecutionProductQueries(result.ProductQueries)) {
 		return false
 	}
-	for i, phase := range []string{"archive_restore", "lifecycle_collection"} {
+	if phase == 14 && (result.ProductFirstFinalOrdinal == 0 || result.ProductFirstFinalOrdinal == ^uint64(0) ||
+		result.ProductQueries[0].FirstOrdinal != result.ProductFirstFinalOrdinal+1 || result.Inspection[2].Final == nil ||
+		result.ProductQueries[len(result.ProductQueries)-1].LastOrdinal == ^uint64(0) ||
+		result.Inspection[2].Final.Ordinal != result.ProductQueries[len(result.ProductQueries)-1].LastOrdinal+1) {
+		return false
+	}
+	for i, name := range []string{"archive_restore", "lifecycle_collection", "product_queries"}[:phase-11] {
 		row := result.Inspection[i]
-		if row.Phase != phase || row.ServerEpoch != 5 || row.Final == nil || !row.SelectorAccepted ||
-			samples.Phases[i].Attempts != uint64(i+1) || samples.Phases[i].Completed != uint64(i+1) {
+		count := min(uint64(i+1), 2)
+		if row.Phase != name || row.ServerEpoch != 5 || row.Final == nil || !row.SelectorAccepted ||
+			samples.Phases[i].Attempts != count || samples.Phases[i].Completed != count {
 			return false
 		}
 	}
@@ -34,7 +42,7 @@ func epochCollectionClosedEvidence(result ExecutionEpochOneResult) bool {
 // then joins ordinary owners and the final request/report tail. Health alone
 // cannot establish this boundary. No synthetic archive events are supplied.
 func (run *ExecutionEpochOneRun) CompleteArchive(ctx context.Context) (retErr error) {
-	op, cancel, done, err := run.beginRestoredExecution(ctx, false)
+	op, cancel, done, err := run.beginRestoredExecution(ctx, 12)
 	if err != nil {
 		return err
 	}
@@ -79,20 +87,20 @@ func (run *ExecutionEpochOneRun) CompleteArchive(ctx context.Context) (retErr er
 	if _, err := reader.restoredSample(op, "archive_finish"); err != nil {
 		return err
 	}
-	return run.acceptRestoredExecution(op, false)
+	return run.acceptRestoredExecution(op, 12)
 }
 
 // CollectRestored performs one genuine selected fresh-owner cycle in phase13.
 // Its fixed phase clock starts before the actual reducer/server handoff. The
 // following phase14 queries and final receipt composition remain separate.
 func (run *ExecutionEpochOneRun) CollectRestored(ctx context.Context) (retErr error) {
-	op, cancel, done, err := run.beginRestoredExecution(ctx, true)
+	op, cancel, done, err := run.beginRestoredExecution(ctx, 13)
 	if err != nil {
 		return err
 	}
 	defer func() { run.finishRestoredExecution(cancel, done, retErr) }()
 	reader := run.inspection
-	if err := run.startCollectionDeadline(op); err != nil {
+	if err := run.startRestoredPhaseDeadline(op, 13); err != nil {
 		return err
 	}
 	run.mu.Lock()
@@ -128,11 +136,11 @@ func (run *ExecutionEpochOneRun) CollectRestored(ctx context.Context) (retErr er
 	if _, err := reader.restoredSample(op, "finish"); err != nil {
 		return err
 	}
-	return run.acceptRestoredExecution(op, true)
+	return run.acceptRestoredExecution(op, 13)
 }
 
-func (run *ExecutionEpochOneRun) beginRestoredExecution(ctx context.Context, collection bool) (context.Context, context.CancelFunc, chan struct{}, error) {
-	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.flow.workspace == nil || run.control == nil || run.stop == nil || run.done == nil {
+func (run *ExecutionEpochOneRun) beginRestoredExecution(ctx context.Context, phase uint32) (context.Context, context.CancelFunc, chan struct{}, error) {
+	if phase < 12 || phase > 14 || run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.flow.workspace == nil || run.control == nil || run.stop == nil || run.done == nil {
 		return nil, nil, nil, ErrExecutionEpochOne
 	}
 	run.mu.Lock()
@@ -159,12 +167,17 @@ func (run *ExecutionEpochOneRun) beginRestoredExecution(ctx context.Context, col
 		}
 	}
 	deadline := run.phaseDeadline
-	if collection {
-		if !run.archiveExecutionUsed || run.collectionExecutionUsed || !run.warm || run.inspection == nil || run.control.RequestToken() != "" {
+	if phase != 12 {
+		if !run.archiveExecutionUsed || phase == 13 && run.collectionExecutionUsed || phase == 14 && (!run.collectionExecutionUsed || run.productExecutionUsed) ||
+			!run.warm || run.inspection == nil || run.control.RequestToken() != "" {
 			return nil, nil, nil, ErrExecutionEpochOne
 		}
 		deadline = run.lifetimeDeadline
-		run.collectionExecutionUsed = true
+		if phase == 13 {
+			run.collectionExecutionUsed = true
+		} else {
+			run.productExecutionUsed = true
+		}
 	} else {
 		if run.archiveExecutionUsed || run.inspection != nil || run.control.RequestToken() == "" {
 			return nil, nil, nil, ErrExecutionEpochOne
@@ -188,11 +201,15 @@ func (run *ExecutionEpochOneRun) finishRestoredExecution(cancel context.CancelFu
 	close(done) // finish may now own PC and native cleanup; never wait for it here.
 }
 
-func (run *ExecutionEpochOneRun) startCollectionDeadline(ctx context.Context) error {
+func (run *ExecutionEpochOneRun) startRestoredPhaseDeadline(ctx context.Context, phase uint32) error {
+	if ctx == nil || phase != 13 && phase != 14 {
+		return ErrExecutionEpochOne
+	}
 	reader := run.inspection
 	reader.mu.Lock()
-	valid := reader.err == nil && reader.projection.Phase == "archive_restore" && reader.finalUsed && reader.restoredSamples.ArchiveComplete &&
-		reader.archiveAuthority.Phase == "archive_restore" && len(reader.evidence.rows) > 0 && reader.evidence.rows[len(reader.evidence.rows)-1].SelectorAccepted
+	valid := reader.err == nil && reader.finalUsed && len(reader.evidence.rows) > 0 && reader.evidence.rows[len(reader.evidence.rows)-1].SelectorAccepted &&
+		(phase == 13 && reader.projection.Phase == "archive_restore" && reader.restoredSamples.ArchiveComplete && reader.archiveAuthority.Phase == "archive_restore" ||
+			phase == 14 && reader.projection.Phase == "lifecycle_collection" && reader.restoredSamples.CollectionComplete && reader.collectionAuthority.Phase == "lifecycle_collection")
 	reader.mu.Unlock()
 	if !valid || ctx.Err() != nil {
 		return ErrExecutionEpochOne
@@ -200,12 +217,12 @@ func (run *ExecutionEpochOneRun) startCollectionDeadline(ctx context.Context) er
 	run.mu.Lock()
 	defer run.mu.Unlock()
 	deadlines := frozenPhaseDeadlines()
-	if run.stopping || run.err != nil || len(run.flow.plan.PhaseDeadlines) != len(deadlines) || run.flow.plan.PhaseDeadlines[12] != deadlines[12] ||
+	if run.stopping || run.err != nil || len(run.flow.plan.PhaseDeadlines) != len(deadlines) || run.flow.plan.PhaseDeadlines[phase-1] != deadlines[phase-1] ||
 		run.phaseTimer == nil || !time.Now().Before(run.phaseDeadline) || !run.phaseTimer.Stop() {
 		return ErrExecutionEpochOne
 	}
 	close(run.phaseDone)
-	deadline := time.Now().Add(time.Duration(deadlines[12].DeadlineMS) * time.Millisecond)
+	deadline := time.Now().Add(time.Duration(deadlines[phase-1].DeadlineMS) * time.Millisecond)
 	if deadline.After(run.lifetimeDeadline) {
 		deadline = run.lifetimeDeadline
 	}
@@ -213,13 +230,15 @@ func (run *ExecutionEpochOneRun) startCollectionDeadline(ctx context.Context) er
 	return nil
 }
 
-func (run *ExecutionEpochOneRun) acceptRestoredExecution(ctx context.Context, collection bool) error {
+func (run *ExecutionEpochOneRun) acceptRestoredExecution(ctx context.Context, phase uint32) error {
 	reader := run.inspection
 	reader.mu.Lock()
 	samples := reader.restoredSamples
 	valid := reader.err == nil && reader.finalUsed && !samples.Unavailable && !samples.LimitExceeded &&
-		(!collection && reader.projection.Phase == "archive_restore" && reader.restoredStep == 1 && samples.Phases[0].Attempts == 1 && samples.Phases[0].Completed == 1 ||
-			collection && reader.projection.Phase == "lifecycle_collection" && reader.restoredStep == 3 && samples.ArchiveComplete && samples.Phases[1].Attempts == 2 && samples.Phases[1].Completed == 2)
+		(phase == 12 && reader.projection.Phase == "archive_restore" && reader.restoredStep == 1 && samples.Phases[0].Attempts == 1 && samples.Phases[0].Completed == 1 ||
+			phase == 13 && reader.projection.Phase == "lifecycle_collection" && reader.restoredStep == 3 && samples.ArchiveComplete && samples.Phases[1].Attempts == 2 && samples.Phases[1].Completed == 2 ||
+			phase == 14 && reader.projection.Phase == "product_queries" && reader.productFinalCalls == 2 && reader.productQueriesComplete &&
+				validExecutionProductQueries(reader.productQueries) && samples.CollectionComplete && samples.Phases[2].Attempts == 2 && samples.Phases[2].Completed == 2)
 	reader.mu.Unlock()
 	if !valid {
 		return ErrExecutionEpochOne
@@ -240,10 +259,13 @@ func (run *ExecutionEpochOneRun) acceptRestoredExecution(ctx context.Context, co
 		return err
 	}
 	reader.mu.Lock()
-	if collection {
+	switch phase {
+	case 13:
 		reader.restoredSamples.CollectionComplete = true
-	} else {
+	case 12:
 		reader.restoredSamples.ArchiveComplete = true
+	case 14:
+		reader.restoredSamples.ProductComplete = true
 	}
 	reader.mu.Unlock()
 	return nil
@@ -264,13 +286,18 @@ func (reader *executionEpochInspection) restoredSample(ctx context.Context, poin
 		return value, errEpochInspection
 	}
 	index := 0
-	if phase == "lifecycle_collection" {
+	switch phase {
+	case "lifecycle_collection":
 		index = 1
+	case "product_queries":
+		index = 2
 	}
 	row := &reader.restoredSamples.Phases[index]
 	valid := phase == "archive_restore" && point == "archive_finish" && reader.restoredStep == 1 && reader.finalUsed && row.Attempts == 0 ||
 		phase == "lifecycle_collection" && point == "start" && reader.restoredStep == 1 && !reader.finalUsed && row.Attempts == 0 ||
-		phase == "lifecycle_collection" && point == "finish" && reader.restoredStep == 3 && reader.finalUsed && row.Attempts == 1 && row.Completed == 1
+		phase == "lifecycle_collection" && point == "finish" && reader.restoredStep == 3 && reader.finalUsed && row.Attempts == 1 && row.Completed == 1 ||
+		phase == "product_queries" && point == "start" && reader.restoredStep == 3 && reader.productFinalCalls == 0 && !reader.finalUsed && row.Attempts == 0 ||
+		phase == "product_queries" && point == "finish" && reader.productFinalCalls == 2 && reader.productQueriesComplete && reader.finalUsed && row.Attempts == 1 && row.Completed == 1
 	if !valid {
 		return value, errEpochInspection
 	}

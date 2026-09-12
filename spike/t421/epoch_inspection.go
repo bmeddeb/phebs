@@ -99,6 +99,13 @@ type executionEpochInspection struct {
 	restoredStep                       uint8
 	restoredSamples                    ExecutionRestoredSamples
 	collectionCycle                    lifecycle.CycleObservation
+	collectionAuthority                AuthorityPhaseResult
+	productAuthority                   AuthorityPhaseResult
+	productBaseline                    *[sha256.Size]byte
+	productFinalCalls                  uint8
+	productFirstFinalOrdinal           uint64
+	productQueriesComplete             bool // Set only by the typed, complete query corridor.
+	productQueries                     []ExecutionProductQuery
 	maximumReports                     uint64 // Epoch-five inventory, shared across its phases.
 	evidence                           epochInspectionLedger
 	err                                error
@@ -226,6 +233,22 @@ func (reader *executionEpochInspection) read(ctx context.Context, path string, l
 }
 
 func (reader *executionEpochInspection) readWithFence(ctx context.Context, path string, limit int64, maximum epochInspectionReport, fence time.Time) (_ []byte, _ int, _ epochInspectionReport, retErr error) {
+	raw, status, _, report, err := reader.readRequest(ctx, path, nil, limit, maximum, fence)
+	return raw, status, report, err
+}
+
+// Caller holds reader.mu through the typed query decoder and owns the closed
+// tools/call encoding. A nil payload means GET; POST uses only /api/mcp.
+// Content-Type belongs to this response, never to shared/stale header state.
+func (reader *executionEpochInspection) readQueryRequest(ctx context.Context, path string, payload []byte, limit int64, maximum epochInspectionReport) ([]byte, int, string, epochInspectionReport, error) {
+	if reader.run == nil || reader.run.epoch.Epoch != 5 || reader.projection.Phase != "product_queries" ||
+		reader.productFinalCalls != 1 || reader.productQueriesComplete {
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
+	}
+	return reader.readRequest(ctx, path, payload, limit, maximum, time.Time{})
+}
+
+func (reader *executionEpochInspection) readRequest(ctx context.Context, path string, payload []byte, limit int64, maximum epochInspectionReport, fence time.Time) (_ []byte, _ int, _ string, _ epochInspectionReport, retErr error) {
 	stage, ordinal := "preflight", reader.next
 	var cause error
 	defer func() {
@@ -243,19 +266,23 @@ func (reader *executionEpochInspection) readWithFence(ctx context.Context, path 
 		}
 	}()
 	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.control == nil || reader.next == 0 || reader.next > 11531 {
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
+	}
+	if payload != nil && (path != "/api/mcp" || len(payload) == 0 || len(payload) > 64<<10 || !fence.IsZero() ||
+		reader.run.epoch.Epoch != 5 || reader.projection.Phase != "product_queries" || reader.productFinalCalls != 1 || reader.productQueriesComplete) {
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	if !fence.IsZero() && (fence.UnixNano() <= 0 || path != "/api/t422/lifecycle/pressure-80" && path != "/api/t422/lifecycle/pressure-90" && path != "/api/t422/lifecycle/pressure-75") {
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	if (reader.run.epoch.Epoch == 2 || reader.run.epoch.Epoch == 3 && !reader.run.staleAllowed) && reader.next > 5765 {
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	if reader.run.epoch.Epoch == 3 && reader.run.staleAllowed && !reader.run.checkpointAllowed && reader.next > 11530 {
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	if reader.run.epoch.Epoch == 5 && (reader.maximumReports == 0 || reader.next > reader.maximumReports) {
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	run := reader.run
 	run.mu.Lock()
@@ -268,20 +295,29 @@ func (reader *executionEpochInspection) readWithFence(ctx context.Context, path 
 	}
 	if unavailable {
 		stage = "run_unavailable"
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	token := run.control.RequestToken()
 	if token == "" {
 		stage = "request_token"
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	reader.beginInspectionEvidence()
 	defer reader.finishInspectionEvidence()
 	reader.next++
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+run.epoch.Listen+path, nil)
+	method := http.MethodGet
+	var body io.Reader
+	if payload != nil {
+		method, body = http.MethodPost, bytes.NewReader(payload)
+	}
+	request, err := http.NewRequestWithContext(ctx, method, "http://"+run.epoch.Listen+path, body)
 	if err != nil {
 		stage, cause = "request_construction", err
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
+	}
+	if payload != nil {
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Accept", "application/json, text/event-stream")
 	}
 	request.Header.Set("Authorization", "Bearer "+run.epoch.APIKey)
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
@@ -296,7 +332,7 @@ func (reader *executionEpochInspection) readWithFence(ctx context.Context, path 
 	response, err := client.Do(request)
 	if err != nil {
 		stage, cause = "http_exchange", err
-		return nil, 0, epochInspectionReport{}, errEpochInspection
+		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, limit+1))
 	reader.failureStatus, reader.failureBody = response.StatusCode, raw
@@ -313,16 +349,17 @@ func (reader *executionEpochInspection) readWithFence(ctx context.Context, path 
 		members, memberErr := checkedInspectionReadSum(reader.totals.MemberVisits, report.MemberVisits)
 		if countErr != nil || controlErr != nil || storeErr != nil || memberErr != nil {
 			stage = "ledger_overflow"
-			return nil, response.StatusCode, report, errEpochInspection
+			return nil, response.StatusCode, response.Header.Get("Content-Type"), report, errEpochInspection
 		}
 		reader.reports, reader.totals = count, readaccounting.Counts{ControlFileReads: controls, StoreReadAttempts: stores, MemberVisits: members}
 	}
 	if readErr != nil || closeErr != nil || int64(len(raw)) > limit || ctx.Err() != nil || reportErr != nil ||
-		len(response.Header.Values(epochReadTrailer)) != 0 || len(response.Trailer) != 1 || response.Uncompressed || response.Header.Get("Content-Encoding") != "" {
+		len(response.Header.Values(epochReadTrailer)) != 0 || len(response.Trailer) != 1 || response.Uncompressed || response.Header.Get("Content-Encoding") != "" ||
+		payload != nil && len(response.Header.Values("Content-Type")) != 1 {
 		stage, cause = "response_read_or_accounting", errors.Join(readErr, closeErr, context.Cause(ctx), reportErr)
-		return nil, response.StatusCode, report, errEpochInspection
+		return nil, response.StatusCode, response.Header.Get("Content-Type"), report, errEpochInspection
 	}
-	return raw, response.StatusCode, report, nil
+	return raw, response.StatusCode, response.Header.Get("Content-Type"), report, nil
 }
 
 func (reader *executionEpochInspection) fail(err error) {
@@ -440,7 +477,7 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 				return result, report, errEpochInspection
 			}
 		}
-		if reader.projection.Phase == "physical_delta_b" || reader.projection.Phase == "logical_delta_b" || reader.projection.Phase == "return_a" || reader.projection.Phase == "archive_restore" || reader.projection.Phase == "lifecycle_collection" {
+		if reader.projection.Phase == "physical_delta_b" || reader.projection.Phase == "logical_delta_b" || reader.projection.Phase == "return_a" || reader.projection.Phase == "archive_restore" || reader.projection.Phase == "lifecycle_collection" || reader.projection.Phase == "product_queries" {
 			prior := reader.warmAuthority
 			switch reader.projection.Phase {
 			case "logical_delta_b":
@@ -451,6 +488,8 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 				prior = reader.archivePrior
 			case "lifecycle_collection":
 				prior = reader.archiveAuthority
+			case "product_queries":
+				prior = reader.collectionAuthority
 			}
 			ready, err := correctedTailReadinessTransitionReady(reader.projection.Phase, &tailReadinessIdentity{
 				RelationshipGenerationSHA256: prior.RelationshipGenerationSHA256, RelationshipRootSHA256: prior.RelationshipRootSHA256,
@@ -528,7 +567,19 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	reader.mu.Lock()
 	defer reader.mu.Unlock()
 	defer func() { reader.fail(retErr) }()
-	if reader.err != nil || !reader.progressReady || reader.tail.Status != "ready" || reader.finalUsed {
+	product := reader.projection.Phase == "product_queries"
+	secondProductFinal := product && reader.productFinalCalls == 1 && reader.productQueriesComplete
+	if reader.err != nil || !reader.progressReady || reader.tail.Status != "ready" || reader.finalUsed && !secondProductFinal {
+		return authority, projection, report, errEpochInspection
+	}
+	if product && (reader.run == nil || reader.run.epoch.Epoch != 5 || !reader.restoredSamples.CollectionComplete ||
+		reader.bounds.FinalAuthorityPasses != exactInspectionCalls(2) || reader.productFinalCalls > 1 ||
+		reader.productFinalCalls == 0 && reader.productQueriesComplete || reader.productFinalCalls == 1 && (!reader.productQueriesComplete || !validExecutionProductQueries(reader.productQueries))) {
+		return authority, projection, report, errEpochInspection
+	}
+	if secondProductFinal && (reader.productFirstFinalOrdinal == 0 || reader.productFirstFinalOrdinal == ^uint64(0) ||
+		reader.productQueries[len(reader.productQueries)-1].LastOrdinal == ^uint64(0) || reader.productQueries[0].FirstOrdinal != reader.productFirstFinalOrdinal+1 ||
+		reader.productQueries[len(reader.productQueries)-1].LastOrdinal+1 != reader.next) {
 		return authority, projection, report, errEpochInspection
 	}
 	if reader.projection.Phase == "archive_restore" && reader.archiveManifest == nil {
@@ -547,6 +598,17 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 		return authority, projection, report, errEpochInspection
 	}
 	authority, projection, err = reader.decodeFinal(raw)
+	if err == nil && product {
+		digest := sha256.Sum256(raw)
+		if reader.productFinalCalls == 0 {
+			reader.productBaseline = &digest
+			reader.productFirstFinalOrdinal = report.RequestOrdinal
+			reader.productAuthority = cloneArchiveAuthority(authority)
+		} else if reader.productBaseline == nil || digest != *reader.productBaseline {
+			return authority, projection, report, errEpochInspection
+		}
+		reader.productFinalCalls++
+	}
 	if err == nil && authority.Phase == "process_restart" && reader.run.pressureAllowed && reader.run.epoch.Epoch == 4 {
 		// decodeFinal has checked checkpoint recovery and byte equality with
 		// the canonical typed response. This commits the actual full F,
@@ -579,6 +641,9 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	if err == nil && authority.Phase == "archive_restore" {
 		reader.archiveAuthority = cloneArchiveAuthority(authority)
 	}
+	if err == nil && authority.Phase == "lifecycle_collection" {
+		reader.collectionAuthority = cloneArchiveAuthority(authority)
+	}
 	return authority, projection, report, err
 }
 
@@ -598,7 +663,7 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && phase != "archive_restore" && phase != "lifecycle_collection" && !pressureInspectionPhase(phase) {
+	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && phase != "archive_restore" && phase != "lifecycle_collection" && phase != "product_queries" && !pressureInspectionPhase(phase) {
 		return authority, projection, errEpochInspection
 	}
 	authority.Phase, authority.Outcome = phase, "passed"
@@ -632,6 +697,15 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		prior.Phase = phase
 		if reader.run == nil || reader.run.epoch.Epoch != 5 || reader.plan.Schema != PlanV3Schema || !reader.restoredSamples.ArchiveComplete ||
 			reader.archiveAuthority.Phase != "archive_restore" || !reflect.DeepEqual(authority, prior) {
+			return authority, projection, errEpochInspection
+		}
+		return authority, projection, nil
+	}
+	if phase == "product_queries" {
+		prior := reader.collectionAuthority
+		prior.Phase = phase
+		if reader.run == nil || reader.run.epoch.Epoch != 5 || reader.plan.Schema != PlanV3Schema || !reader.restoredSamples.CollectionComplete ||
+			reader.collectionAuthority.Phase != "lifecycle_collection" || !reflect.DeepEqual(authority, prior) {
 			return authority, projection, errEpochInspection
 		}
 		return authority, projection, nil

@@ -498,7 +498,7 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 		return false
 	}
 	phase := result.Store.Store.Phase
-	if phase != 12 && (stage != 6 || phase != 13 || !epochCollectionClosedEvidence(result)) {
+	if phase != 12 && (stage != 6 || !epochRestoredClosedEvidence(result, phase)) {
 		return false
 	}
 	opened, ordinal := 5, uint64(8)
@@ -528,8 +528,8 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 				if id == 5 {
 					found = found && p.Checkpoint == 11
 				}
-				if id == 6 && phase == 13 {
-					found = found && p.Checkpoint == 12
+				if id == 6 && phase >= 13 {
+					found = found && p.Checkpoint == phase-1
 				}
 				if id >= 7 && id <= 9 {
 					found = found && p.Ordinal == authorCustodyAttempts(int(id-7))
@@ -548,8 +548,8 @@ func epochArchiveClosedPrefix(ctx context.Context, result ExecutionEpochOneResul
 				if id == 4 {
 					found = p.Attached && p.Calls == 0 && p.Transactions == 0 && !p.Closed && p.TerminalFencedEOF && p.TerminalPhase == 8 && p.Checkpoint == 8
 				}
-				if id == 6 && phase == 13 {
-					found = found && p.Checkpoint == 12
+				if id == 6 && phase >= 13 {
+					found = found && p.Checkpoint == phase-1
 				}
 			}
 		}
