@@ -211,6 +211,8 @@ type ExecutionEpochOneResult struct {
 	IndexOffers              ExecutionIndexObservation
 	ServerProcesses          ExecutionServerProcessObservation // Actual server roots only, not whole ceremony metrics.
 	Inspection               []ExecutionPhaseInspection
+	MidphaseSamples          ExecutionMidphaseSamples // Partial fixed HTTP points, not whole phases.
+	ParentMidphaseSamples    ExecutionMidphaseParentSamples
 	EarlyFinishSamples       ExecutionEarlyFinishSamples // Actual HTTP finishes plus the fixed post-Resume warm-start WB.
 	PressureSamples          ExecutionPressureSamples
 	RestoredSamples          ExecutionRestoredSamples
@@ -278,6 +280,7 @@ type ExecutionEpochOneRun struct {
 	logicalCancel         context.CancelFunc
 	logicalDone           chan struct{}
 	priorPhysical         *epochLogicalPrior // Detached actual authorities; never retains old output.
+	midphaseDeadline      time.Time          // Original retained handoff clock, never renewed by a walk.
 	returnStarting        bool               // Protected by flow.mu; retained source cannot be abandoned during authoring.
 	returnStartCancel     context.CancelFunc
 	returnStartDone       chan struct{}
@@ -996,7 +999,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		failure = ErrExecutionEpochOne
 	}
 	result := ExecutionEpochOneResult{RootStarted: true, RootJoined: joined, SessionEmpty: sessionEmpty, ServerProcesses: serverProcesses,
-		BackupWork: run.backupWork, RestoreWork: run.result.RestoreWork}
+		BackupWork: run.backupWork, RestoreWork: run.result.RestoreWork, ParentMidphaseSamples: run.midphaseParentPrefix()}
 	// The retained installation also belongs to the separate backup session.
 	// A joined server alone cannot release that custody or expose shared output.
 	if run.backupStarted && (!run.backupJoined || !run.backupSessionEmpty) {
@@ -1011,6 +1014,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		result.PressureSamples = run.inspection.pressure.samples
 		result.RestoredSamples = run.inspection.restoredSamples
 		result.EarlyFinishSamples = run.inspection.earlyFinishSamples
+		result.MidphaseSamples = run.inspection.midphaseSamples
 		result.ProductFinals = run.inspection.productFinalCalls
 		result.ProductQueries = slices.Clone(run.inspection.productQueries)
 		result.ProductFirstFinalOrdinal = run.inspection.productFirstFinalOrdinal
@@ -1081,6 +1085,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	if failure != nil && run.epoch.Epoch == 1 && run.physicalAllowed && run.flow.workspace != nil {
 		result.EarlyFinishSamples.failIncomplete()
+	}
+	if failure != nil && run.midphaseWorkspaceSelected() {
+		result.MidphaseSamples.failIncomplete(run.producer())
 	}
 	if failure != nil && run.archiveExecutionUsed {
 		result.RestoredSamples.ArchiveComplete, result.RestoredSamples.CollectionComplete = false, false

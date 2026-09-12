@@ -18,7 +18,8 @@ func TestT422WorkspaceEarlyFinishPositionsAndReports(t *testing.T) {
 		for phase := uint32(1); phase <= 4; phase++ {
 			for step := uint8(0); step < 2; step++ {
 				for _, point := range []string{"start", "finish", "archive_finish"} {
-					want := ordinal < 2 && phase == uint32(ordinal)+2 && step == 0 && point == "finish"
+					want := step == 0 && (ordinal < 2 && phase == uint32(ordinal)+2 && point == "finish" ||
+						ordinal == 2 && phase == 4 && point == "start")
 					if control.workspacePointMatches(phase, step, point) != want {
 						t.Fatal(ordinal, phase, step, point)
 					}

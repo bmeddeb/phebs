@@ -593,6 +593,17 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		return
 	}
 	if mode == "stale_stop_join" {
+		// Supplied byte rows model an earlier accepted parent prefix. Transfer
+		// uses the actual owned seam, then this existing real inherited child
+		// executes finish; no byte traversal or author success is fabricated.
+		predecessor := &ExecutionEpochOneRun{}
+		for i := range predecessor.result.ParentMidphaseSamples.Points {
+			row := &predecessor.result.ParentMidphaseSamples.Points[i]
+			row.Attempts, row.Completed = 1, 1
+			row.Maximum.LogicalBytes, row.Maximum.AllocatedBytes = uint64(i+1), uint64(i+11)
+		}
+		wantParent := predecessor.midphaseParentPrefix()
+		run.result.ParentMidphaseSamples = predecessor.midphaseParentPrefix()
 		custody := &ExecutionAuthorCustody{borrowedBy: run}
 		run.flow.epochs = &ExecutionEpochConfigCustody{author: custody, active: true}
 		run.command, run.done, run.staleDone = command, make(chan struct{}), make(chan struct{})
@@ -616,6 +627,15 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		joined, serverJoined = true, true
 		if run.err == nil || !run.result.RootJoined || !run.result.SessionEmpty || custody.borrowedBy != nil || custody.Close() != nil {
 			t.Fatal("stale stop lost sticky failure or joined source custody", run.result, run.err)
+		}
+		actual, waitErr := run.Wait(ctx)
+		if waitErr == nil || actual.ParentMidphaseSamples != wantParent {
+			t.Fatal("actual finish discarded earlier parent byte prefix", actual.ParentMidphaseSamples, wantParent)
+		}
+		actual.ParentMidphaseSamples.Points[0].Maximum.LogicalBytes++
+		again, _ := run.Wait(ctx)
+		if again.ParentMidphaseSamples != wantParent {
+			t.Fatal("returned parent byte prefix aliases the owned result")
 		}
 		return
 	}

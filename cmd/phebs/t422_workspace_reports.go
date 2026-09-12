@@ -20,7 +20,7 @@ type t422WorkspaceReports struct {
 	initial        dispatchadmission.ProductionSemanticSnapshot
 	phase          uint32
 	sequence       uint64
-	counts         [9]uint64
+	counts         [12]uint64
 	archiveMaximum uint64
 	pending        bool
 	err            error
@@ -28,6 +28,12 @@ type t422WorkspaceReports struct {
 
 func t422WorkspaceSampleSlot(producer, phase uint32) (int, uint64) {
 	switch {
+	case producer == 2 && phase == 4:
+		return 9, 2
+	case producer == 3 && phase == 5:
+		return 10, 1
+	case producer == 4 && phase == 6:
+		return 11, 1
 	case producer == 2 && phase == 2:
 		return 7, 1
 	case producer == 2 && phase == 3:
@@ -57,7 +63,7 @@ func newT422WorkspaceReports(initial dispatchadmission.ProductionSemanticSnapsho
 		if err != nil || archiveMaximum == 0 {
 			return nil, errT422LifecycleControl
 		}
-	} else if initial.ProducerID != 2 && initial.ProducerID != 5 && initial.ProducerID != 6 || initial.Mode != dispatchadmission.ProductionSemanticV3 {
+	} else if initial.ProducerID != 2 && initial.ProducerID != 3 && initial.ProducerID != 4 && initial.ProducerID != 5 && initial.ProducerID != 6 || initial.Mode != dispatchadmission.ProductionSemanticV3 {
 		return nil, errT422LifecycleControl
 	}
 	binding, err := t422SourceBinding(initial)

@@ -90,8 +90,8 @@ func TestEpochEarlyWorkspaceFinishPrefix(t *testing.T) {
 		})
 	}
 	if workspaceCheckpointMaximum(2, 2) != 1 || workspaceCheckpointMaximum(2, 3) != 2 ||
-		workspaceCheckpointMaximum(2, 4) != 0 || 79+3*(26+60) != 337 {
-		t.Fatal("two finishes plus one fixed warm start admitted")
+		workspaceCheckpointMaximum(2, 4) != 2 || 79+3*(26+60) != 337 {
+		t.Fatal("two finishes, fixed warm start, or separate physical slots changed")
 	}
 }
 

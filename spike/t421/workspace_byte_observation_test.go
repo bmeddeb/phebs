@@ -25,21 +25,19 @@ func workspaceTestPair(producer, phase uint32, sequence, logical, allocated uint
 	return workspaceTestEvent(producer, phase, 'B', sequence, 0, 0) + workspaceTestEvent(producer, phase, 'S', sequence, logical, allocated)
 }
 
-// Borrowing FD6 alone admits no event. Only the two explicitly wired
-// cold/warm finish positions have derived slots; other early positions refuse.
+// Borrowing FD6 alone admits no event. Only explicitly wired positions have
+// derived slots; unsupported early positions still refuse.
 func TestExecutionWorkspaceEarlyEventsRemainRefused(t *testing.T) {
 	plan := accountingTestPlan(t)
-	for _, row := range []struct{ producer, phase uint32 }{{2, 4}, {3, 5}, {4, 6}, {4, 7}, {4, 8}, {5, 8}} {
+	for _, row := range []struct{ producer, phase uint32 }{{2, 5}, {3, 4}, {3, 6}, {4, 7}, {4, 8}, {5, 8}} {
 		t.Run(fmt.Sprintf("%d/%d", row.producer, row.phase), func(t *testing.T) {
 			var out ExecutionWorkspaceByteObservation
 			input := "sha256:01" + strings.Repeat("00", 31)
 			_, err := observeWorkspaceByteEvent([]byte(workspaceTestBinding(row.producer)), plan, row.producer, input, &out)
-			if row.producer == 2 || row.producer == 5 {
-				if err != nil {
-					t.Fatal("existing binding refused", err)
-				}
-				_, err = observeWorkspaceByteEvent([]byte(workspaceTestEvent(row.producer, row.phase, 'B', 1, 0, 0)), plan, row.producer, input, &out)
+			if err != nil {
+				t.Fatal("existing binding refused", err)
 			}
+			_, err = observeWorkspaceByteEvent([]byte(workspaceTestEvent(row.producer, row.phase, 'B', 1, 0, 0)), plan, row.producer, input, &out)
 			if err == nil || !out.Unavailable || out.Complete || out.Phases != ([15]ExecutionWorkspaceBytePhase{}) || workspaceCheckpointMaximum(row.producer, row.phase) != 0 {
 				t.Fatal("descriptor prerequisite invented sample coverage", out, err)
 			}
@@ -111,7 +109,7 @@ func TestExecutionWorkspaceBytesRefusedSuffixPreservesMaxima(t *testing.T) {
 			t.Fatal("unbound input", got.WorkspaceBytes, err)
 		}
 	}
-	for _, producer := range []uint32{3, 4} {
+	for _, producer := range []uint32{1, 7, 8, 9} {
 		var out ExecutionWorkspaceByteObservation
 		if seen, err := observeWorkspaceByteEvent([]byte(workspaceTestBinding(producer)), plan, producer, "sha256:01"+strings.Repeat("00", 31), &out); !seen || err == nil || out.Bound {
 			t.Fatal("unsupported producer", producer, out, err)

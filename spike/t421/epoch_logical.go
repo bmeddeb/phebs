@@ -84,6 +84,9 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 	run.mu.Unlock()
 	flow.mu.Unlock()
 	deadline := time.Now().Add(bounds.lifetime)
+	run.mu.Lock()
+	run.midphaseDeadline = deadline
+	run.mu.Unlock()
 	lifetime, cancel := context.WithDeadline(ctx, deadline)
 	defer func() {
 		if retErr != nil {
@@ -102,9 +105,13 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 	if flow.closed || flow.retained != run || lifetime.Err() != nil || run.advanceLogical(lifetime) != nil {
 		return nil, ErrExecutionEpochOne
 	}
+	if run.sampleMidphaseParentLocked(lifetime, 0) != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: deadline, cancelRun: cancel,
 		priorPhysical: &epochLogicalPrior{authored: prior.authored, cold: prior.cold, warmAuthority: prior.warmAuthority, physicalAuthority: prior.physicalAuthority}}
+	next.result.ParentMidphaseSamples = run.midphaseParentPrefix()
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 2)
 	if result == nil {
@@ -191,7 +198,7 @@ func (run *ExecutionEpochOneRun) LogicalB(ctx context.Context) (retErr error) {
 	if run.control.DrainOwners(ctx) != nil || run.control.OpenRequests(ctx) != nil || reader.activation(ctx, "recovered") != nil {
 		return ErrExecutionEpochOne
 	}
-	if _, _, _, err := reader.Final(ctx); err != nil || reader.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if _, _, _, err := reader.Final(ctx); err != nil || reader.cleanupSelectorHandoff(ctx) != nil || reader.sampleMidphaseWorkspace(ctx, 2) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()

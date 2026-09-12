@@ -114,7 +114,9 @@ func (out *epochWarmWorkspaceOutput) wait(ctx context.Context) error {
 func (out *epochWarmWorkspaceOutput) snapshot() (ExecutionWorkspaceBytePhase, bool, bool) {
 	out.mu.Lock()
 	defer out.mu.Unlock()
-	return out.sample, out.startInvalid || out.sample.Completed != 1 && (out.err != nil || out.armed), out.observation.LimitExceeded
+	exceeded := out.sample.Completed == 1 && (out.sample.Maximum.LogicalBytes > out.plan.WorkEnvelope.MaximumDataLogicalBytes ||
+		out.sample.Maximum.AllocatedBytes > out.plan.SafetyEnvelope.MaximumDataAllocatedBytes)
+	return out.sample, out.startInvalid || out.sample.Completed != 1 && (out.err != nil || out.armed), exceeded
 }
 
 // This is called with the original caller context, never the retiring cold

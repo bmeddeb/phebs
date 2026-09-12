@@ -27,7 +27,8 @@ type ExecutionWorkspaceByteObservation struct {
 	pending                      bool
 	// Exact producer-two first three S payloads, not a history or maxima.
 	// The joined parser binds each endpoint independently before max folding.
-	earlySamples [3]custodybytes.Sample
+	earlySamples    [3]custodybytes.Sample
+	midphaseSamples [4]custodybytes.Sample // Exact fixed S payloads, not maxima or growing history.
 }
 
 func reservedWorkspaceByteEvent(line []byte) bool {
@@ -38,6 +39,12 @@ func reservedWorkspaceByteEvent(line []byte) bool {
 // one/two/two restored-server boundary commands. Boundary commands add no native
 // lifecycle turn or capacity probe.
 func workspaceCheckpointMaximum(producer, phase uint32) uint64 {
+	if producer == 2 && phase == 4 {
+		return 2
+	}
+	if producer == 3 && phase == 5 || producer == 4 && phase == 6 {
+		return 1
+	}
 	if producer == 2 {
 		if phase == 2 {
 			return 1
@@ -115,7 +122,7 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 			}
 		}
 	}()
-	if plan.Schema != PlanV3Schema || producer != 2 && producer != 5 && producer != 6 && producer != 10 && producer != 11 || out.Unavailable || out.LimitExceeded {
+	if plan.Schema != PlanV3Schema || producer != 2 && producer != 3 && producer != 4 && producer != 5 && producer != 6 && producer != 10 && producer != 11 || out.Unavailable || out.LimitExceeded {
 		return true, errExecutionAttempts
 	}
 	if bytes.Contains(line, []byte("WBB")) {
@@ -167,6 +174,13 @@ func observeWorkspaceByteEvent(line []byte, plan Plan, producer uint32, input st
 		}
 		if producer == 2 && (phase == 2 && sequence == 1 || phase == 3 && (sequence == 2 || sequence == 3)) {
 			out.earlySamples[sequence-1] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+		}
+		if producer == 2 && phase == 4 && row.Completed < 2 {
+			out.midphaseSamples[row.Completed] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+		} else if producer == 3 && phase == 5 {
+			out.midphaseSamples[2] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
+		} else if producer == 4 && phase == 6 {
+			out.midphaseSamples[3] = custodybytes.Sample{LogicalBytes: logical, AllocatedBytes: allocated}
 		}
 		row.Completed++
 		row.Maximum.LogicalBytes = max(row.Maximum.LogicalBytes, logical)

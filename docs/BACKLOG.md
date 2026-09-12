@@ -8108,6 +8108,52 @@ Applied source/record re-review found all severity counts zero, with the
 ordered manifest unchanged after gates. This closes the tiny actual native
 warm-start composition check, not the host-normal lifecycle/full rehearsal gates.
 
+The physical/logical/return workspace slice adds seven actual positions without
+changing the pin's final fence or the author's empty-token precondition. Four
+HTTP points run inside existing drained windows; the three parent walks require
+actual predecessor native/SDK closure and the correct phase/borrow under the
+original handoff clock. They add 502 WB bytes, 24 bytes of fixed report counters
+and 64 bytes of exact parser payload storage, not new PC or resource permission.
+Independent review of the first draft found two mediums: phase-four maxima
+could hide altered individual HTTP values, and terminal result reconstruction
+dropped the earlier parent prefix, making return-A impossible. Four exact S
+slots now compare each endpoint separately; both successor transfers and actual
+finish use the same locked value snapshot. The inherited stale-stop test drives
+real helper/DA/SDK joins through finish and repeated Wait, with explicitly
+supplied earlier byte rows, proving preservation and caller-mutation isolation,
+not native byte provenance or a successful source-author handoff.
+Corrected draft `ed5050707c63a2580ca6665709e63ba375eedb431e86e38b8cdd9638c445182f`
+closed both mediums with no remaining findings. Its context-only warm rebase
+`1e66cf9aff2a3db6fe2c8b339097e3a6365b1ee6bdeb0f9a9cc19f6a2f6652e4`
+preserves the warm callback and all three early exact samples. Initial normal
+and static compilation exposed an int/uint64 comparison against actual SDK
+snapshot counts; the closed predecessor constant now uses int. A shorter
+private deadline field name avoids unrelated struct-alignment churn. Applied
+independent review found no remaining findings before the gates exposed an
+obsolete test that still refused newly supported producers three/four; its
+unsupported matrix now covers genuinely unsupported producer/phase pairs.
+Root review then found one further medium: the live warm snapshot returned the
+parser-global limit flag, so a later phase-four excess relabeled an earlier
+nominal warm sample. The four-mode regression reproduced both later logical
+and allocated failures while own-point excess cases passed. Snapshot now
+compares its own completed sample with the unchanged plan limits; global stream
+refusal/cancellation and positive own-point excess remain intact. This adds only
+two bounded comparisons under the existing mutex, no I/O or allocation.
+Independent re-review closed this third medium with no remaining findings.
+The exact regression then passed in 0.774s. Ordered nineteen-path source
+manifest `ea4f27c9706d68378cc079d936f5fcbf71c6ccb3690855c3c9d4f845e1d659fa`
+(command bytes/command/early test/midphase test/reports; attempt observation;
+early test; inherited handoff; inspection; launch; logical; midphase helper and
+Darwin/general tests; physical; return; WB parser/tests; warm live output).
+Pinned lint required the new test's two-way mode branch to use a tagged switch;
+the final static gate passed vet, zero lint issues and whole-repository
+compilation. The changed-path race gate passed command in 22.311s and spike
+in 14.954s. Exact final normal passed command in 19.658s and spike in 6.503s;
+documentation passed in 0.550s with glossary and whitespace clean. V1/V2
+canonical digests remain unchanged. Post-author-B and transient
+marker byte coverage, actual full parent handoff composition and full rehearsal
+remain unestablished.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

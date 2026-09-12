@@ -69,6 +69,7 @@ func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale, checkp
 	}
 	started := time.Now()
 	deadline, lifetimeDeadline := started.Add(phaseDuration), started.Add(bounds.lifetime)
+	run.midphaseDeadline = deadline
 	lifetime, cancel := context.WithDeadline(ctx, lifetimeDeadline)
 	phaseContext, phaseCancel := context.WithDeadline(lifetime, deadline)
 	defer phaseCancel()
@@ -103,18 +104,26 @@ func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale, checkp
 	if run.advanceReturn(phaseContext) != nil {
 		return nil, ErrExecutionEpochOne
 	}
+	flow.mu.Lock()
+	beforeErr := run.sampleMidphaseParentLocked(phaseContext, 1)
+	flow.mu.Unlock()
+	if beforeErr != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	authored, err := flow.epochs.author.authorNext(phaseContext, flow.controller, flow.parent, 9, run)
 	if err != nil || !authored.Completed || authored.Response == nil || authored.Revision != "a-return" {
+		run.failMidphaseParent()
 		return nil, ErrExecutionEpochOne
 	}
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
-	if flow.closed || flow.retained != run || phaseContext.Err() != nil {
+	if flow.closed || flow.retained != run || phaseContext.Err() != nil || run.sampleMidphaseParentLocked(phaseContext, 2) != nil {
 		return nil, ErrExecutionEpochOne
 	}
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
 		healthLimit: bounds.health, coldDeadline: deadline, lifetimeDeadline: lifetimeDeadline, cancelRun: cancel, staleAllowed: stale, checkpointAllowed: checkpoint,
 		priorLogical: &epochReturnPrior{cold: prior.cold, warm: prior.warmAuthority, physical: prior.physicalAuthority, logical: prior.logicalAuthority}}
+	next.result.ParentMidphaseSamples = run.midphaseParentPrefix()
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, phaseContext, cancel, next, bounds, 3)
 	if result == nil {
@@ -199,7 +208,7 @@ func (run *ExecutionEpochOneRun) ReturnA(ctx context.Context) (retErr error) {
 	if run.control.DrainOwners(ctx) != nil || run.control.OpenRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
-	if _, _, _, err := reader.Final(ctx); err != nil || reader.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if _, _, _, err := reader.Final(ctx); err != nil || reader.cleanupSelectorHandoff(ctx) != nil || reader.sampleMidphaseWorkspace(ctx, 3) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()

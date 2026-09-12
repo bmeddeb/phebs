@@ -28,7 +28,7 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 	var reports *t422WorkspaceReports
 	if err == nil {
 		control.workspaceBytes = custodybytes.NewBorrowed(file, path, info, volume)
-		if control.collector != nil || control.launch.request.ServerEpoch == 1 {
+		if control.collector != nil || control.launch.request.ServerEpoch >= 1 && control.launch.request.ServerEpoch <= 3 {
 			initial, stateErr := dispatchadmission.ProductionSemanticState()
 			if stateErr == nil {
 				reports, stateErr = newT422WorkspaceReports(initial)
@@ -42,6 +42,8 @@ func (control *t422LifecycleControl) bindWorkspaceBytes(st *store.Surreal) error
 	// Both callers use the same observer, reporter and real owned-engine/SDK
 	// guard. Only the HTTP caller uses request admission; the fixed warm-start
 	// callback has its own post-ACK fenced-state proof.
+	// Only explicitly closed early positions admit a traversal. Descriptor
+	// inheritance alone does not establish phase completeness.
 	sample := func(ctx context.Context, admitted dispatchadmission.ProductionSemanticSnapshot, confirm func() bool) (custodybytes.Sample, error) {
 		if reports == nil || control.workspaceBytes == nil || st == nil || !confirm() {
 			if control.workspaceBytes != nil {

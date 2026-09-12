@@ -111,7 +111,7 @@ func (run *ExecutionEpochOneRun) PhysicalB(ctx context.Context) (retErr error) {
 		return ErrExecutionEpochOne
 	}
 	observation, err := reader.retention(ctx, run.pinStarted, run.pinJoined)
-	if err != nil || reader.cleanupSelectorHandoff(ctx) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
+	if err != nil || reader.cleanupSelectorHandoff(ctx) != nil || reader.sampleMidphaseWorkspace(ctx, 1) != nil || run.control.FenceRequests(ctx) != nil || ctx.Err() != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()
@@ -131,7 +131,7 @@ func (run *ExecutionEpochOneRun) advancePhysical(ctx context.Context) error {
 }
 
 func (run *ExecutionEpochOneRun) pinPhysical(ctx context.Context) error {
-	if run.control.OpenRequests(ctx) != nil {
+	if run.control.OpenRequests(ctx) != nil || run.inspection.sampleMidphaseWorkspace(ctx, 0) != nil {
 		return ErrExecutionEpochOne
 	}
 	started := time.Now()
