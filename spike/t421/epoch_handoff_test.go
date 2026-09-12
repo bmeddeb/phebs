@@ -233,7 +233,11 @@ func TestExecutionEpochRestoredInheritedStop(t *testing.T) {
 	testEpochInheritedHandoff(t, "restored_stop")
 }
 
-func testEpochInheritedHandoff(t *testing.T, mode string) {
+func testEpochInheritedHandoff(t *testing.T, mode string, afterJoined ...func(context.Context, *ExecutionEpochOneRun)) {
+	if len(afterJoined) > 1 || len(afterJoined) == 1 && (mode != "warm_physical" || runtime.GOOS != "darwin") {
+		t.Fatal("invalid native parent handoff hook")
+	}
+	parentSample := len(afterJoined) == 1
 	canceled, warm := mode == "canceled", strings.HasPrefix(mode, "warm")
 	physical := strings.HasPrefix(mode, "warm_physical")
 	stale := strings.HasPrefix(mode, "stale")
@@ -254,8 +258,17 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	server := dispatchadmission.Producer{ID: serverID, Binding: [32]byte{2}, Sites: dispatchadmission.ProductionSites()}
 	limits := dispatchadmission.Limits{Producers: 2, Sites: 17, Roles: 5, Phases: len(phaseIDs),
 		ActivePerProducer: 1, Attempts: 1, WireBytes: 4096, AckTimeout: 5 * time.Second}
+	controllerPhases := slices.Clone(phaseIDs)
+	producers := []dispatchadmission.Producer{root, server}
+	if parentSample {
+		// One known, unopened successor is necessary for the real phase-five
+		// ProducerLaunch check. No successor process or production tool claim.
+		controllerPhases = append(controllerPhases, 5)
+		producers = append(producers, dispatchadmission.Producer{ID: 3, Binding: [32]byte{3}, Sites: []dispatchadmission.Site{rootSite}})
+		limits.Producers, limits.Sites, limits.Phases = 3, 18, 4
+	}
 	var phases []dispatchadmission.Phase
-	for _, phase := range phaseIDs {
+	for _, phase := range controllerPhases {
 		roles := []dispatchadmission.RoleBudget{{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal},
 			{Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}, {Role: executionRolePhebs}}
 		if phase == initialPhase {
@@ -263,7 +276,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		}
 		phases = append(phases, dispatchadmission.Phase{ID: phase, Roles: roles})
 	}
-	dispatch, err := dispatchadmission.New(ctx, dispatchadmission.Config{Limits: limits, Producers: []dispatchadmission.Producer{root, server}, Phases: phases})
+	dispatch, err := dispatchadmission.New(ctx, dispatchadmission.Config{Limits: limits, Producers: producers, Phases: phases})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,6 +292,9 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	for _, id := range phaseIDs {
 		storePhases = append(storePhases, storeaccounting.Phase{ID: id})
 		phaseMask |= 1 << (id - 1)
+	}
+	if parentSample {
+		storePhases = append(storePhases, storeaccounting.Phase{ID: 5})
 	}
 	storePhases[0].Transactions, storePhases[0].Rows = 1, 1
 	store, err := storeaccounting.New(ctx, storeaccounting.Config{
@@ -335,6 +351,9 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	}
 	if mode == "warm_physical_stop_join" || mode == "stale_stop_join" {
 		command.Env = append(command.Env, "PHEBS_EPOCH_HANDOFF_STOP_JOIN=1")
+		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	}
+	if parentSample {
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	}
 	command.ExtraFiles, command.Stderr, command.WaitDelay = []*os.File{daChild, pcChild, storeChild}, os.Stderr, time.Second
@@ -744,6 +763,11 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 		epochHandoffByte(t, input, 'Z')
 		epochHandoffRead(t, output, 'z')
 	}
+	if parentSample {
+		// The original fixture context already bounds shutdown + phase-five
+		// observation. Do not create a new clock after the helper joins.
+		run.midphaseDeadline, _ = ctx.Deadline()
+	}
 	// Resume kept the owners fenced: a second DrainOwners would be invalid.
 	if control.Pause(ctx) != nil || parent.Pause(ctx) != nil || dispatch.Fence() != nil {
 		t.Fatal("quiet resumed-phase stop failed")
@@ -765,7 +789,7 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	err = handle.Wait()
 	processObservation.exited()
 	joined = true
-	if err != nil || transport.Wait(ctx, serverID) != nil || control.Close() != nil || parent.Close(ctx) != nil {
+	if err != nil || transport.Wait(ctx, serverID) != nil || control.Close() != nil || !parentSample && parent.Close(ctx) != nil {
 		t.Fatalf("fixture native/protocol join failed: %v", err)
 	}
 	// Eleven warm exchanges plus the receiver's terminal EOF reservation fit
@@ -785,6 +809,27 @@ func testEpochInheritedHandoff(t *testing.T, mode string) {
 	}
 	if err != nil || sa.Store.Phase != wantPhase || sa.Opened != 1 || sa.TerminalEOF != 1 || !physical && !stale && sa.Complete {
 		t.Fatalf("early closed prefix invented phase-four completion: %+v / %v", sa, err)
+	}
+	if parentSample {
+		deadline, _ := ctx.Deadline()
+		if err := t4013.WaitPrivateProcessSession(command.Process.Pid, deadline); err != nil {
+			t.Fatal("actual joined predecessor session census", err)
+		}
+		accounting, err := dispatch.Snapshot()
+		if err != nil {
+			t.Fatal(err)
+		}
+		// These facts come only from this admitted Start, sole successful Wait,
+		// actual native session-zero census and joined DA/SA endpoints above.
+		// We do not call full finish then erase its absent-author-history error.
+		run.command = command
+		run.result = ExecutionEpochOneResult{RootStarted: command.Process != nil,
+			RootJoined: command.ProcessState != nil && command.ProcessState.Success(), SessionEmpty: true,
+			Accounting: accounting, Store: sa, ServerProcesses: processes}
+		afterJoined[0](ctx, run)
+		if parent.Close(ctx) != nil {
+			t.Fatal("retained protocol parent close")
+		}
 	}
 	if err := transport.Close(); err != nil {
 		t.Fatal(err)

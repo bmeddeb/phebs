@@ -8154,6 +8154,29 @@ canonical digests remain unchanged. Post-author-B and transient
 marker byte coverage, actual full parent handoff composition and full rehearsal
 remain unestablished.
 
+The joined native parent regression subsequently supplies only author/config
+ownership and successor storage around a real test-binary predecessor Start,
+sole Wait, native session-zero census and DA/SDK closure. Actual controllers
+advance to phase five before a positive held-root traversal. Its original
+25-second fixture deadline is captured before the join, not renewed afterward.
+Independent draft review found one medium: manually closing a replacement done
+channel and asserting public Wait manufactured terminal completion. Both claims
+were removed; a follow-up low corrected a wrong first-match edit and restored the
+unrelated stop fixture exactly. Final draft
+`e399fff6f37d629873eb52f6b47351c7d57e29d1767ae32fe3f38136139ab1df`
+received all-zero re-review. Ordered two-test source manifest (handoff then
+mid-workspace Darwin) is
+`73056c37a1efbd00cd6ba92f2c1a10976937a6fef0e42f0835f8878150bd7206`.
+The actual native selector passed in 0.05s, package 0.776s. The expanded normal
+handoff/terminal selectors passed in 6.084s; the new native plus cold/stale
+handoff race selectors passed in 9.106s, with the new native subtest in 0.26s.
+Static passed vet, zero pinned-lint issues and whole-repository compilation;
+documentation passed in 0.468s, glossary and whitespace clean. Applied review
+closed one final low comment-only nil-versus-open channel wording error; no
+executable statement changed, and the native selector reconfirmed in 0.673s.
+This proves neither a protected author
+invocation, production successor launch nor full terminal composition.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add
