@@ -177,6 +177,11 @@ func runT422MarkerNative(t *testing.T, ctx context.Context, root string, st *sto
 	if err != nil || job == nil || job.Target != repository {
 		t.Fatal("actual resolver claim", job, err)
 	}
+	// Match Runner.execute's durable claimed-to-running transition before
+	// Handle; this manual setup does not exercise its heartbeat or reaper.
+	if err := st.SetJobStatus(work, *job, store.StatusRunning, ""); err != nil {
+		t.Fatal("actual resolver running transition", err)
+	}
 	if err := resolver.Handle(work, *job); err != nil {
 		t.Fatal("actual resolver materialization", err)
 	}

@@ -8542,6 +8542,23 @@ manually prepared extraction work, supplied inactive lifecycle/auth callbacks
 and direct-only setup compiler joins do not establish a full pipeline or
 complete process/profile admission.
 
+Exact clean bookmark `024191baf3f2f514879b1162044b74a96a7b009b`
+failed native normal in 348.31s (package 349.003s), before the marker endpoint;
+race was not started. Extraction completed all 56 partitions, but the manually
+claimed resolver job lacked the actual running transition that Runner.execute
+makes before Handle. The unchanged successor lease fence correctly refused
+publication recovery. Independent causal review confirmed the missing step
+and found no second manual-job site in this fixture family. Correction
+`d774bd0f517b6f483b633c2e414c18ed80ef5ada4e68df14199a9e0af6aa79ec`
+adds that checked real status write, not a fabricated lease or relaxed guard.
+The failed original session boundary remains failed despite later absence of
+owned processes. Original native root ending `697685370` and log SHA-256
+`47653168e3e1161cc6a005eef17fedecffbf967a0fdab2f9b53c579d255b4693`
+remain private and intact. Corrected model normal/race passed in 0.753s/1.773s;
+static passed vet, zero pinned-lint issues and compilation, docs in 0.584s,
+glossary/whitespace clean. These do not exercise the corrected durable write;
+a corrected immutable native gate is required.
+
 The private native-configuration command reports actual shared constructor,
 default and selected-validator values in one canonical 688-byte record. It
 refuses an operational lifetime and has no store/config/worker startup path.
