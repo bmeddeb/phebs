@@ -7316,6 +7316,59 @@ These are implementation gates, not corpus-scale cost, full phase-twelve,
 later-phase, rehearsal, freeze or ceremony acceptance. Preserve the separate
 actual replay census/representative guarded-walk cost gate in PLAN.
 
+**Parent archive boundaries and native R continuation (2026-09-12).** The
+approved follow-on adds actual guarded start and joined backup/server/restore
+samples on the same observer, alongside the two removal samples. Parent PC
+measurement maximum is seventeen/4,352 bytes; child FD7 stays sixteen/1,176.
+The actual successor launch now binds the held backup-root identity and joined
+command digests, and preserves pressure-75 authority through its retained
+canonical native-F hash and detached detailed roots. The native one-shot R
+uses authenticated FD6-relative no-follow opens and the existing exact-read
+ordinal/report tail, charging one bounded manifest read and no artifact/store
+read. The parent epoch-five R/X/T/F reader enforces the existing inventory and
+unchanged archive authority comparator. Phase-finish observation, positive
+archive choreography, complete transition state/events, later phases and
+representative census/cost acceptance remain open.
+
+Non-authoring implementation and steady-state-cost review found one medium
+late descriptor-close error propagation gap and two low cost-wording gaps.
+The server now joins the late error into its named return; the cost record
+names the remotely held engine/SDK locks and distinguishes the successful
+one-MiB F cap from refused pre-check marshaling allocation. Final re-review
+of all author groups found zero remaining critical, high, medium or low
+findings. The three-file parent reader manifest is
+`899aa13447cdbdc02e461601c5e1d5bd55cf6017615ba8482846605ecee60015`;
+the final native fixture SHA-256 is
+`be895abc07e9bef6435c94c8a0288c01e9c8517da07344b6906e8575f864aa9b`.
+
+Final focused parent, recovery-reader and command normal/race gates passed in
+2.206/15.014s, 1.779/1.694s and 0.746/2.761s respectively, without skips.
+The exact final native fixture passed normal/race in 127.551/134.578s, also
+without skips: real backup/restore emitted fifteen/1,468 child sample pairs
+and completed the three same-observer parent walks. The actual empty archive,
+bound to the actual joined command digests, was correctly refused by native
+R after one charged manifest read. The two positive HTTP/report variants
+explicitly supply a strict manifest and matching digest after restore; they
+prove authenticated projection, post-report completion, repeat refusal without
+a second read, and a failed/uncommitted callback on report-sink error, not a
+nonempty artifact pipeline. The existing protocol can retain a complete body
+and accounting trailer before the separate sink fails; that positive prefix
+does not establish successful native continuation.
+
+Three earlier native attempts remain failed: 32.954s on an incomplete test
+producer-six bootstrap, 33.112s on the fixture's missing initial Drain before
+Open, and 128.677s on an incorrect missing-trailer assertion. Their exact
+test-only corrections changed neither production protocol nor ceilings.
+Failed logs/custody remain retained; all helper sessions joined. Final native
+normal/race log SHA-256 values are
+`91c27d31b5c476084fc954d96b9a75957fb0bfa1ce73fe6497f619a69b348134` /
+`a0cac63430e5c277d43321826d2b757a9b6b110729cae5f5c5b9240d9fb99988`.
+Final module verification, full ci-static (vet, zero-issue pinned lint and
+all-package compilation), documentation (0.555s), glossary and whitespace
+passed on the corrected fixture/source. V1/V2 canonical digests are unchanged.
+This closes the scoped implementation gate only; no rehearsal, full archive
+phase, later-phase, cost, freeze or ceremony pass is inferred.
+
 **Pressure headroom refusal after c7db1d21 (2026-09-11).** The exact-source
 rehearsal failed in 5,519.79s (package 5,520.627s), after 672 contiguous normal
 cleanup owner turns, 33,769 deletions, zero failed lifecycle turns and a

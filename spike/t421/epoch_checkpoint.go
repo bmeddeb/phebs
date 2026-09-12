@@ -41,8 +41,18 @@ type epochCheckpointRecoveryInput struct {
 	Hit    extractionpublication.CheckpointRestartTransition `json:"hit"`
 }
 
-func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *epochCheckpointRecoveryInput) ([]byte, error) {
+func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *epochCheckpointRecoveryInput, archive ...*epochArchiveInput) ([]byte, error) {
 	if epoch.Epoch < 1 || epoch.Epoch > 5 || (epoch.Epoch == 4) != (recovery != nil) {
+		return nil, ErrExecutionEpochOne
+	}
+	if len(archive) > 1 {
+		return nil, ErrExecutionEpochOne
+	}
+	var archiveInput *epochArchiveInput
+	if len(archive) == 1 {
+		archiveInput = archive[0]
+	}
+	if archiveInput != nil && (epoch.Epoch != 5 || !archiveInput.valid()) {
 		return nil, ErrExecutionEpochOne
 	}
 	if epoch.Epoch == 3 {
@@ -70,7 +80,8 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 		ReturnSourceCommit     string                        `json:"return_source_commit,omitempty"`
 		SelectorHandoffCleanup string                        `json:"selector_handoff_cleanup,omitempty"`
 		LogicalStoreWork       string                        `json:"logical_store_work,omitempty"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup, epoch.LogicalStoreWork})
+		Archive                *epochArchiveInput            `json:"archive,omitempty"`
+	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup, epoch.LogicalStoreWork, archiveInput})
 	if err != nil || len(raw)+1 > 16<<10 {
 		return nil, ErrExecutionEpochOne
 	}

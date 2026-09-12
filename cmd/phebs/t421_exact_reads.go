@@ -95,6 +95,7 @@ type t421ExactReadAccountingState struct {
 	stale              *t422StaleControl
 	checkpoint         *t422CheckpointControl
 	checkpointRecovery *t422CheckpointRecoveryControl
+	archive            *t422ArchiveControl
 
 	mu           sync.Mutex
 	nextOrdinal  uint64
@@ -260,6 +261,11 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 		limits, target = readaccounting.Counts{ControlFileReads: extractionpublication.CheckpointRestartTransitionControlFileReads,
 			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
 		nativeFailureStatus, nativeFailure = "checkpoint_recovery_refused", errT422StaleControl
+	}
+	if archiveRead := handler.state.archiveRead(request); archiveRead != nil {
+		nativeRead = archiveRead
+		limits, target = readaccounting.Counts{ControlFileReads: 1}, true
+		nativeFailureStatus, nativeFailure = "archive_transition_refused", errT422ArchiveControl
 	}
 	if handler.state.lifecycle != nil && request.URL != nil && t422LifecycleRead(request.URL.Path) {
 		nativeRead = handler.state.lifecycle.read(request)

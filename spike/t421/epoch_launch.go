@@ -19,7 +19,6 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
-	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 	"github.com/bmeddeb/phebs/spike/t4013"
 )
@@ -288,6 +287,9 @@ type ExecutionEpochOneRun struct {
 	restoreManifestSHA256 string
 	backupCancel          context.CancelFunc
 	backupDone            chan struct{}
+	archiveWorkspacePoint archiveWorkspacePoint // Completed parent boundaries, not whole-phase coverage.
+	archiveInput          *epochArchiveInput
+	archivePrior          *AuthorityPhaseResult
 	backupOutput          *epochBackupOutput
 }
 
@@ -453,7 +455,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if epoch.Epoch == 2 && flow.plan.LogicalStoreWork != nil {
 		epoch.LogicalStoreWork = flow.plan.LogicalStoreWork.Schema
 	}
-	raw, err := epochSemanticInput(author.planSHA256, epoch, run.checkpointRecovery)
+	raw, err := epochSemanticInput(author.planSHA256, epoch, run.checkpointRecovery, run.archiveInput)
 	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -563,7 +565,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{8, 9, 10, 11}, 8, 4
 		controlConfig.BackupEndpointCarry = run.backupAllowed
 		if run.backupAllowed && workspaceBinding != nil {
-			controlConfig.BackupMeasurementMaximum = recovery.BackupCheckpointMaximum()
+			controlConfig.BackupMeasurementMaximum = epochBackupMeasurementMaximum()
 			controlConfig.MaximumWireBytes += uint64(controlConfig.BackupMeasurementMaximum) * 4 * dispatchadmission.FrameBytes
 		}
 	case 5:
@@ -1006,6 +1008,19 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		if !result.PressureSamples.LimitExceeded {
 			result.PressureSamples.Unavailable = true
 		}
+	}
+	if failure == nil && run.backupRetired && run.backupComplete {
+		// done remains unpublished: neither restore nor retained-custody release
+		// may race this sample after the genuine server and archive joins.
+		run.result = result
+		deadline := run.phaseDeadline
+		run.mu.Unlock()
+		sampleCtx, cancel := context.WithDeadline(ctx, deadline)
+		if run.sampleArchiveWorkspace(sampleCtx, archiveWorkspaceBackupJoined) != nil {
+			failure = ErrExecutionEpochOne
+		}
+		cancel()
+		run.mu.Lock()
 	}
 	if failure != nil && run.backupRetired && run.backupComplete {
 		// Final sampling, native/protocol joins and parsing can fail after the

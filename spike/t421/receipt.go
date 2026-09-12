@@ -4506,25 +4506,11 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 	}
 	if current, ok := values["archive_restore"]; ok {
 		prior, priorOK := values["pressure_75"]
-		if !priorOK || !sameAuthorityExceptRelationship(current, prior) {
+		if !priorOK {
 			return errors.New("archive restore did not preserve semantic authority")
 		}
-		if correctedPlanSemantics(plan.Schema) &&
-			(current.ResolverCatalogGenerationSHA256 != prior.ResolverCatalogGenerationSHA256 ||
-				current.ResolverCatalogRootSHA256 != prior.ResolverCatalogRootSHA256 ||
-				current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 ||
-				current.CallerRootSHA256 != prior.CallerRootSHA256) {
-			return errors.New("archive restore changed immutable resolver or caller authority")
-		}
-		if correctedPlanSemantics(plan.Schema) {
-			sameProvenance := current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256
-			sameRelationship := current.RelationshipGenerationSHA256 == prior.RelationshipGenerationSHA256 &&
-				current.RelationshipRootSHA256 == prior.RelationshipRootSHA256
-			changedRelationship := current.RelationshipGenerationSHA256 != prior.RelationshipGenerationSHA256 &&
-				current.RelationshipRootSHA256 != prior.RelationshipRootSHA256
-			if sameProvenance && !sameRelationship || !sameProvenance && !changedRelationship {
-				return errors.New("archive relationship identity does not follow extraction provenance")
-			}
+		if err := validateArchiveAuthorityContinuity(current, prior, plan); err != nil {
+			return err
 		}
 	}
 	for _, phase := range []string{"lifecycle_collection", "product_queries"} {
@@ -4536,6 +4522,32 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 			if _, priorOK := values[prior]; !priorOK || !equal(phase, prior) {
 				return fmt.Errorf("phase %q changed protected authority", phase)
 			}
+		}
+	}
+	return nil
+}
+
+// The native archive reader and final receipt use the same comparison; neither
+// can replace actual prior authority with a regenerated expected result.
+func validateArchiveAuthorityContinuity(current, prior AuthorityPhaseResult, plan Plan) error {
+	if !sameAuthorityExceptRelationship(current, prior) {
+		return errors.New("archive restore did not preserve semantic authority")
+	}
+	if correctedPlanSemantics(plan.Schema) &&
+		(current.ResolverCatalogGenerationSHA256 != prior.ResolverCatalogGenerationSHA256 ||
+			current.ResolverCatalogRootSHA256 != prior.ResolverCatalogRootSHA256 ||
+			current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 ||
+			current.CallerRootSHA256 != prior.CallerRootSHA256) {
+		return errors.New("archive restore changed immutable resolver or caller authority")
+	}
+	if correctedPlanSemantics(plan.Schema) {
+		sameProvenance := current.RelationshipProvenanceSHA256 == prior.RelationshipProvenanceSHA256
+		sameRelationship := current.RelationshipGenerationSHA256 == prior.RelationshipGenerationSHA256 &&
+			current.RelationshipRootSHA256 == prior.RelationshipRootSHA256
+		changedRelationship := current.RelationshipGenerationSHA256 != prior.RelationshipGenerationSHA256 &&
+			current.RelationshipRootSHA256 != prior.RelationshipRootSHA256
+		if sameProvenance && !sameRelationship || !sameProvenance && !changedRelationship {
+			return errors.New("archive relationship identity does not follow extraction provenance")
 		}
 	}
 	return nil

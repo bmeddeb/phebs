@@ -239,6 +239,10 @@ func ReadArchiveTransitionManifest(
 	if err != nil {
 		return ArchiveTransitionManifest{}, err
 	}
+	return projectArchiveTransitionManifest(ctx, manifest, backupCommandSHA256, restoreCommandSHA256)
+}
+
+func projectArchiveTransitionManifest(ctx context.Context, manifest Manifest, backupCommandSHA256, restoreCommandSHA256 string) (ArchiveTransitionManifest, error) {
 	if err := validateManifest(manifest); err != nil {
 		return ArchiveTransitionManifest{}, err
 	}
@@ -1408,7 +1412,11 @@ func readManifest(path string) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("open backup manifest: %w", err)
 	}
 	defer func() { _ = file.Close() }()
-	decoder := json.NewDecoder(io.LimitReader(file, maxManifestBytes+1))
+	return decodeArchiveManifest(file)
+}
+
+func decodeArchiveManifest(reader io.Reader) (Manifest, error) {
+	decoder := json.NewDecoder(io.LimitReader(reader, maxManifestBytes+1))
 	decoder.DisallowUnknownFields()
 	var manifest Manifest
 	if err := decoder.Decode(&manifest); err != nil {

@@ -149,6 +149,9 @@ func (run *ExecutionEpochOneRun) BackupAndStop(ctx context.Context) (result Exec
 	if flow.parent.Checkpoint(operation) != nil || run.processPhaseAdvance(operation, 12) != nil || flow.parent.Resume(12) != nil {
 		return result, ErrExecutionEpochOne
 	}
+	if err := run.sampleArchiveWorkspace(operation, archiveWorkspaceStart); err != nil {
+		return result, err
+	}
 	if err := run.runNativeArchive(operation, false); err != nil {
 		return result, err
 	}

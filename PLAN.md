@@ -751,10 +751,73 @@ temporary bytes. The actual-census/representative-cost and full-output gates
 above remain mandatory before a long rehearsal; tiny native success is not
 performance acceptance.
 
+**Parent archive boundaries and native manifest read (2026-09-12).**
+The follow-on adds three actual parent walks on the same borrowed observer:
+phase twelve's start under the retired server's engine hold, the combined
+joined server/backup boundary before publishing its handoff, and the joined
+restore boundary before releasing successor-start exclusion. The existing two
+removal walks remain separate. Start adds one four-frame PC exchange, making
+the measurement allowance seventeen/4,352 bytes; the child FD7 allowance stays
+sixteen/1,176 bytes. All walks retain the original phase deadline and preserve
+positive incomplete prefixes. Phase-finish observation is not supplied by
+these five parent points.
+
+Workspace-bound epoch five receives one optional canonical archive input after
+the existing semantic fields: the actual held backup-root leaf, device, inode,
+FSID, and the equal manifest digests returned by the joined commands. The leaf
+is limited to `t422-backup-` plus nonempty ASCII alphanumerics, at most 128
+bytes; it is not an operator path. Omission preserves earlier startup input
+bytes. Before handoff, reconstruct the existing bounded canonical pressure-75
+F and compare its retained hash, then detach its detailed roots. A mutated
+previously returned slice cannot become successor authority.
+
+The selected native server resolves only that leaf, `archive`, and
+`manifest.json` beneath authenticated FD6, with no-follow descriptor-relative
+opens and actual linked-identity/volume checks. It retains two directory
+descriptors, borrows FD6, and opens one transient regular manifest descriptor.
+The existing strict decoder/projection performs exactly one charged control
+content read, capped at one MiB; it reads no archived artifact and opens no
+database. GET `/api/t422/archive/transition` uses the existing authentication,
+shared exact-read ordinal, accounting trailer and post-report callback. It is
+one-shot, and request, custody, report or descriptor-close failure remains
+terminal. A late close error joins the named server return error rather than
+only canceling after terminal-result evaluation.
+
+The sole epoch-five parent reader derives its shared 8,691-report ceiling from
+the existing inventory, requires R before X, validates the exact six components
+and five positive omission-free report projections, and then uses the existing
+X/T/F response bounds and protected projection. Restored F retains complete
+prior source/search/extraction/caller/resolver authority; relationship generation
+and root are both equal or both changed consistently with provenance, using
+the unchanged receipt comparator. This is an inspection prerequisite, not
+positive phase choreography, phase finish, a complete archive transition with
+real operation ordinals/state inventory, or phase-thirteen-through-fifteen
+acceptance.
+
+Additional cost is three full native walks, one PC exchange and fixed pre/post
+ownership/accounting checks; no parent flow/author/epoch/run or reducer lock
+spans a walk. The actual engine and retired SDK-owner mutexes intentionally
+span the start walk. At successor handoff, JSON conversion, canonical F
+marshal/hash/decode and vector comparisons run once under the reader lock;
+successful canonical F is capped at one MiB after marshaling, not by a
+pre-marshal allocation bound on a refused mutated value;
+the enclosing flow lock also remains held. Existing epoch/source custody checks
+then run under author/epoch locks. The native R serializes its one bounded
+manifest read and metadata rechecks under its own mutex; F reuses the existing
+detailed-root validation/hashes and comparisons, with a detached root copy.
+The parent constructor derives the existing frozen projection/read inventory;
+its R adds canonical response decoding, fixed six-component/five-report
+inventory hashes and detached row copies, not another manifest content read.
+There is no new ordinary request, sync, publication, retry, cache, engine or
+child work. Ordinary omitted archive input adds nil branches only. The actual
+replay-census, representative guarded-walk cost, full-output fit and genuine
+nonempty native archive composition gates remain open.
+
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-09-12 — T42.2l parent archive boundaries and rooted manifest inspection | Add the actual start/joined-backup/joined-restore workspace observations, retaining the two removal observations, original deadline and the same borrowed observer. Derive the single extra parent hold in the existing PC allowance without changing child FD7. Bind epoch five to the held backup root and joined command digests; read only its no-follow rooted manifest through the existing authenticated exact-read protocol, and compare restored F with the retained actual prior using the unchanged receipt policy. | No artifact or database reopening for R, supplied path/PID/authority admission, independent ordinal stream, new output/work/data/deadline ceiling or V1/V2 mutation. Ordinary omission remains byte-exact. Phase-finish, full transition composition, later phases and measured representative cost remain required before a long rehearsal or freeze. |
 | 2026-09-12 — T42.2l approved archive measurement coordination | Ben explicitly approved the phase-twelve proposal and continuation through the goal. Add closed offline workspace/original-deadline binding and engine-owned checkpoint coordination, deriving finite report/control limits from actual success and failure paths before landing. Keep transient verification/staging/spool populations visible before cleanup; reuse the existing native traversal and joined reporting. | Retired SDK owners remain fenced, engine identity comes from its actual owner, and measurement never renews a phase deadline. Data/physical/work/output ceilings, V1/V2 bytes and sampled linked-path semantics remain exact. Native composition, output and measured traversal-cost acceptance remain required; approval is not a rehearsal, freeze or execution result. |
 | 2026-09-11 — T42.2l approved V3 linked-path capacity allowance | Ben explicitly approved prospective V3's sampled per-linked-path allocated-byte ceiling changing from 96 to 128 GiB, including the derived nominal `CustodyMarginBytes` value 45,183,055,954. Apply only the V3 construction/strict-validation correction. Preserve actual native values, both byte checks, completed positive excess, mandatory observations, early all-target headroom refusal and exact historical V1/V2 bytes/96-GiB limits. | The physical volume remains 96 GiB, logical ceiling 128 GiB, host prerequisite 120 GiB and every other bound unchanged. Nominal 42.08-GiB accounting difference is not the 10.08-GiB physical target slack or a guaranteed live reserve. One scalar assignment and existing comparisons add no query, scan, lock, cache, child or allocation reservation; acceptance changes, not measurement units or execution cost. No retrospective pass, new rehearsal, complete later-phase evidence, author/seal or freeze is established. |
 | 2026-09-11 — T42.2l pressure headroom uses both measured byte units | The exact `c7db1d21` rehearsal completed normal cleanup and pressure-80, then correctly refused pressure-90 at 111,690,625,024 linked-path allocated bytes against the unchanged 96-GiB ceiling. Filesystem-used ballast targets and per-linked-path workspace allocation are different quantities; intentional serving hard links contribute to the latter at each path. Before each native V3 ballast mutation, reuse that phase's successful start/normalized workspace sample and the existing fenced native ballast/capacity check. Subtract the current ballast from both measured logical and allocated totals, then project each remaining fixed target with checked arithmetic; reject any projected ceiling violation before allocating even the first target. | At most three scalar calculations under the existing volume/run locks; no additional HTTP/SDK call, workspace walk, inode map, hashing, cache, child, retry or concurrency. Ordinary query, sync, startup and publication costs are unchanged. The canonical custody margin remains target-only geometry, not guaranteed live linked-path headroom. The forecast is not a coherent future measurement: actual post-mutation sampling and refusal remain mandatory. A predicted refusal retains the completed actual prefix and a private path-free diagnostic, never projected maxima or a fabricated measured limit violation. V1/V2 bytes, 96-GiB volume/allocation ceiling, 128-GiB logical ceiling, 80/90/75 targets, eight-GiB nominal margin and deadlines remain exact. This early refusal does not make the measured footprint fit or authorize a rerun, bound change, freeze or ceremony. |

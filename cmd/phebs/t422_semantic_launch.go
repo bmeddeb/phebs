@@ -49,6 +49,7 @@ type t422SemanticLaunchRequest struct {
 	ReturnSourceCommit     string                       `json:"return_source_commit,omitempty"`
 	SelectorHandoffCleanup string                       `json:"selector_handoff_cleanup,omitempty"`
 	LogicalStoreWork       string                       `json:"logical_store_work,omitempty"`
+	Archive                *t422ArchiveInput            `json:"archive,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -104,6 +105,9 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 	}
 	if request.CheckpointRecovery != nil && (request.ServerEpoch != 4 || snapshot.ProducerID != 5 || snapshot.Phase != 8 ||
 		!validT422CheckpointRecoveryInput(*request.CheckpointRecovery)) {
+		return nil, errT422SemanticLaunch
+	}
+	if request.Archive != nil && (request.ServerEpoch != 5 || snapshot.ProducerID != 6 || snapshot.Phase != 12 || !validT422ArchiveInput(*request.Archive)) {
 		return nil, errT422SemanticLaunch
 	}
 	if request.ServerEpoch == 3 {
@@ -334,7 +338,7 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	case api.ExtractionProgressPath, api.LifecycleStatusPath, t421ExactFinalAuthorityPath,
 		t421ExactTailReadinessPath, api.SearchPath, t421ProductServicePath, t421ProductRelationshipsPath,
 		t422MarkerHitPath, t422MarkerRecoveredPath, t422RetentionReadPath,
-		t422ActivationHitPath, t422ActivationRecoveredPath, t422StaleHitPath, t422StaleRecoveredPath, t422CheckpointHitPath, t422CheckpointRecoveredPath:
+		t422ActivationHitPath, t422ActivationRecoveredPath, t422StaleHitPath, t422StaleRecoveredPath, t422CheckpointHitPath, t422CheckpointRecoveredPath, t422ArchiveTransitionPath:
 		return true
 	default:
 		return t422LifecycleRead(path)

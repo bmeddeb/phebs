@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
+	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -90,6 +91,11 @@ type executionEpochInspection struct {
 	pressure                           epochPressureObservations
 	lifecycleCalls                     uint64
 	pressureBaseline                   *[sha256.Size]byte
+	archiveInput                       epochArchiveInput
+	archivePrior, archiveAuthority     AuthorityPhaseResult
+	archiveManifest                    *recovery.ArchiveTransitionManifest
+	archiveUsed                        bool
+	maximumReports                     uint64 // Epoch-five inventory, shared across its phases.
 	evidence                           epochInspectionLedger
 	err                                error
 	// Private failed-response diagnostic only, never receipt evidence. Retain
@@ -244,6 +250,9 @@ func (reader *executionEpochInspection) readWithFence(ctx context.Context, path 
 	if reader.run.epoch.Epoch == 3 && reader.run.staleAllowed && !reader.run.checkpointAllowed && reader.next > 11530 {
 		return nil, 0, epochInspectionReport{}, errEpochInspection
 	}
+	if reader.run.epoch.Epoch == 5 && (reader.maximumReports == 0 || reader.next > reader.maximumReports) {
+		return nil, 0, epochInspectionReport{}, errEpochInspection
+	}
 	run := reader.run
 	run.mu.Lock()
 	unavailable := run.stopping || run.err != nil
@@ -342,6 +351,9 @@ func (reader *executionEpochInspection) Progress(ctx context.Context) (result ep
 	if reader.err != nil || reader.progressReady || reader.finalUsed || reader.progressCalls >= reader.bounds.ExtractionProgressCalls.Maximum {
 		return result, report, errEpochInspection
 	}
+	if reader.projection.Phase == "archive_restore" && reader.archiveManifest == nil {
+		return result, report, errEpochInspection
+	}
 	reader.progressCalls++
 	maximum := epochInspectionReport{ControlFileReads: 2 + uint64(len(reader.plan.Profile.Pipeline.ExtractionDomains)), StoreReadAttempts: 2 + 2*store.MaxGenerationScheduleReadAttempts}
 	raw, status, report, err := reader.read(ctx, api.ExtractionProgressPath+"?"+url.Values{"repository": {reader.run.epoch.Repository}}.Encode(), api.ExtractionProgressResponseLimit, maximum)
@@ -424,13 +436,15 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 				return result, report, errEpochInspection
 			}
 		}
-		if reader.projection.Phase == "physical_delta_b" || reader.projection.Phase == "logical_delta_b" || reader.projection.Phase == "return_a" {
+		if reader.projection.Phase == "physical_delta_b" || reader.projection.Phase == "logical_delta_b" || reader.projection.Phase == "return_a" || reader.projection.Phase == "archive_restore" {
 			prior := reader.warmAuthority
 			switch reader.projection.Phase {
 			case "logical_delta_b":
 				prior = reader.physicalAuthority
 			case "return_a":
 				prior = reader.logicalAuthority
+			case "archive_restore":
+				prior = reader.archivePrior
 			}
 			ready, err := correctedTailReadinessTransitionReady(reader.projection.Phase, &tailReadinessIdentity{
 				RelationshipGenerationSHA256: prior.RelationshipGenerationSHA256, RelationshipRootSHA256: prior.RelationshipRootSHA256,
@@ -511,6 +525,9 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	if reader.err != nil || !reader.progressReady || reader.tail.Status != "ready" || reader.finalUsed {
 		return authority, projection, report, errEpochInspection
 	}
+	if reader.projection.Phase == "archive_restore" && reader.archiveManifest == nil {
+		return authority, projection, report, errEpochInspection
+	}
 	if pressureInspectionPhase(reader.projection.Phase) && !reader.pressureFinalReady() {
 		return authority, projection, report, errEpochInspection
 	}
@@ -549,6 +566,9 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 	if err == nil && authority.Phase == "stale_lease" {
 		reader.staleAuthority = authority
 	}
+	if err == nil && authority.Phase == "archive_restore" {
+		reader.archiveAuthority = cloneArchiveAuthority(authority)
+	}
 	return authority, projection, report, err
 }
 
@@ -568,7 +588,7 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 		return authority, projection, errEpochInspection
 	}
 	phase := reader.projection.Phase
-	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && !pressureInspectionPhase(phase) {
+	if phase != "cold" && phase != "warm_noop" && phase != "physical_delta_b" && phase != "logical_delta_b" && phase != "return_a" && phase != "stale_lease" && phase != "process_restart" && phase != "archive_restore" && !pressureInspectionPhase(phase) {
 		return authority, projection, errEpochInspection
 	}
 	authority.Phase, authority.Outcome = phase, "passed"
@@ -583,6 +603,16 @@ func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority Autho
 	}
 	if phase == "process_restart" {
 		if !reader.checkpointFinalMatches(authority) {
+			return authority, projection, errEpochInspection
+		}
+		return authority, projection, nil
+	}
+	if phase == "archive_restore" {
+		physicalPlan, ok := namedPhysicalRevision(reader.plan.Revisions.Physical, physical)
+		if reader.run == nil || reader.run.epoch.Epoch != 5 || reader.plan.Schema != PlanV3Schema || reader.archiveManifest == nil ||
+			reader.archivePrior.Phase != "pressure_75" || reader.archivePrior.Outcome != "passed" || !ok ||
+			!validDigest(authority.RelationshipProvenanceSHA256) || validateAuthorityCoverage(authority, physicalPlan, reader.plan) != nil ||
+			validateArchiveAuthorityContinuity(authority, reader.archivePrior, reader.plan) != nil {
 			return authority, projection, errEpochInspection
 		}
 		return authority, projection, nil

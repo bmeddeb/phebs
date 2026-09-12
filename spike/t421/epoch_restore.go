@@ -87,9 +87,14 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 	if err != nil || launchErr != nil || view.Phase != 12 || flow.closed || flow.retained != run || !epochRestoreClosedPrefix(lifetime, prior) {
 		return nil, ErrExecutionEpochOne
 	}
+	archive, authority, err := run.restoredArchiveBinding(lifetime)
+	if err != nil {
+		return nil, err
+	}
 	// No Advance/Resume: the same parent already owns the open phase twelve.
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}), healthLimit: bounds.health,
 		coldDeadline: deadline, lifetimeDeadline: deadline, cancelRun: cancel, backupWork: prior.BackupWork,
+		archiveInput: archive, archivePrior: authority,
 		result: ExecutionEpochOneResult{RestoreWork: prior.RestoreWork}}
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 5)
@@ -235,6 +240,9 @@ func (run *ExecutionEpochOneRun) RestoreBackup(ctx context.Context) (result Exec
 	}
 	run.restoreComplete = true
 	run.mu.Unlock()
+	if err := run.sampleArchiveWorkspace(operation, archiveWorkspaceRestoreJoined); err != nil {
+		return result, err
+	}
 	return result, nil
 }
 

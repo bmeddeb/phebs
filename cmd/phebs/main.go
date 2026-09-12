@@ -723,6 +723,18 @@ func serve(args []string) (retErr error) {
 		exactReadState.semantic = semanticLaunch
 		if semanticLaunch != nil {
 			semanticLaunch.fail = failExactRead
+			if semanticLaunch.request.Archive != nil {
+				exactReadState.archive, err = newT422ArchiveControl(ctx, semanticLaunch)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					if closeErr := exactReadState.archive.close(); closeErr != nil {
+						failExactRead(closeErr)
+						retErr = errors.Join(retErr, closeErr)
+					}
+				}()
+			}
 		}
 	}
 

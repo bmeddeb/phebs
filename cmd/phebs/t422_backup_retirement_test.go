@@ -6,16 +6,21 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -23,6 +28,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/custodybytes"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -59,11 +67,28 @@ func TestT422ArchiveWorkspaceNativeFailures(t *testing.T) {
 	}
 }
 
+// The positive R input is a supplied strict manifest, not a claim that this
+// empty-data backup produced five positive artifact publications.
+func TestT422ArchiveReadNativeSuppliedManifest(t *testing.T) {
+	for _, mode := range []string{"read-supplied", "read-report-loss"} {
+		t.Run(mode, func(t *testing.T) {
+			testT422ArchiveRetiredNativeEndpointFailure(t, true, false, true, mode)
+		})
+	}
+}
+
 func testT422ArchiveRetiredNativeEndpoint(t *testing.T, restore, workspace, archiveWorkspace bool, cleanup ...bool) {
 	testT422ArchiveRetiredNativeEndpointFailure(t, restore, workspace, archiveWorkspace, "", cleanup...)
 }
 
 func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspace, archiveWorkspace bool, failure string, cleanup ...bool) {
+	if (workspace || archiveWorkspace) && runtime.GOOS != "darwin" {
+		t.Skip("native workspace descriptor admission requires Darwin")
+	}
+	readMode := "empty"
+	if failure == "read-supplied" || failure == "read-report-loss" {
+		readMode, failure = failure, ""
+	}
 	if failure != "" && (!restore || workspace || !archiveWorkspace || len(cleanup) != 0 ||
 		failure != "lost_release" && failure != "parent_cancel" && failure != "report_loss") {
 		t.Fatal("invalid native archive failure fixture")
@@ -121,6 +146,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	record.Control = dispatchadmission.PhaseControlConfig{BackupEndpointCarry: true, OwnerControl: true,
 		Phases: []uint32{8, 9, 10, 11}, InitialPhase: 8, MaximumPhases: 4, MaximumWireBytes: 24 * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	var workspaceFile *os.File
+	var archiveObserver *custodybytes.Observer
+	var archiveParentSamples int
+	archivePath := filepath.Join(root, "archive")
 	if workspace || archiveWorkspace {
 		if workspace {
 			semantic, _ := t422LifecycleBootstrapRecord(t)
@@ -140,9 +168,21 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			t.Fatal(e)
 		}
 		record.Workspace = &binding
+		if archiveWorkspace {
+			info, err := workspaceFile.Stat()
+			if err != nil {
+				t.Fatal(err)
+			}
+			archiveObserver = custodybytes.NewBorrowed(workspaceFile, root, info, binding.FSID)
+			backupRoot := filepath.Join(root, "t422-backup-1234")
+			if err := os.Mkdir(backupRoot, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			archivePath = filepath.Join(backupRoot, "archive")
+		}
 	}
 	if archiveWorkspace {
-		record.Control.BackupMeasurementMaximum = recovery.BackupCheckpointMaximum()
+		record.Control.BackupMeasurementMaximum = 1 + recovery.BackupCheckpointMaximum()
 		record.Control.MaximumWireBytes += uint64(record.Control.BackupMeasurementMaximum) * 4 * dispatchadmission.FrameBytes
 	}
 	for i := range record.Tools {
@@ -164,8 +204,22 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		storeProducers = append(storeProducers, storeaccounting.Producer{ID: 11, Calls: 1, Transactions: 1})
 		wireProducers = append(wireProducers, storeaccounting.WireProducer{ID: 11, Binding: restoreProducer.Binding, Phases: 2048})
 	}
+	readProducer := record.Producer
+	readProducer.ID, readProducer.Binding = 6, [32]byte{6}
+	if archiveWorkspace && restore {
+		record.Limits.Producers, record.Limits.Sites = 4, 64
+		record.Limits.Phases = 7 // Existing epoch-five bootstrap names phases 12–14.
+		configuration.Limits = record.Limits
+		configuration.Producers = append(configuration.Producers, readProducer)
+		storeProducers = append(storeProducers, storeaccounting.Producer{ID: 6, Calls: storeaccounting.MaximumCalls, Transactions: storeaccounting.MaximumTransactions})
+		wireProducers = append(wireProducers, storeaccounting.WireProducer{ID: 6, Binding: readProducer.Binding, Phases: 14336})
+	}
 	var storePhases []storeaccounting.Phase
-	for phase := uint32(8); phase <= 12; phase++ {
+	lastPhase := uint32(12)
+	if archiveWorkspace && restore {
+		lastPhase = 14
+	}
+	for phase := uint32(8); phase <= lastPhase; phase++ {
 		configuration.Phases = append(configuration.Phases, dispatchadmission.Phase{ID: phase, Roles: []dispatchadmission.RoleBudget{
 			{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal, Attempts: 10}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}}})
 		storePhases = append(storePhases, storeaccounting.Phase{ID: phase, Transactions: 10000, Rows: 100000})
@@ -222,8 +276,11 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 		command.Cancel = func() error { return t4013.KillPrivateProcessSession(command.Process.Pid) }
 		command.Env = []string{t422BackupFixture + "=" + mode, "PHEBS_T422_BACKUP_FIXTURE_ROOT=" + root,
+			"PHEBS_T422_BACKUP_FIXTURE_ARCHIVE=" + archivePath,
 			"PATH=" + filepath.Dir(surreal), "PHEBS_SURREAL=" + surreal, "PHEBS_SURREAL_SHA256=" + identity.SHA256,
 			dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionStoreSelector, "GORACE=atexit_sleep_ms=0"}
+		deadline, _ := ctx.Deadline()
+		command.Env = append(command.Env, "PHEBS_T422_FIXTURE_DEADLINE="+strconv.FormatInt(deadline.UnixNano(), 10))
 		if archiveWorkspace {
 			command.Env = append(command.Env, "TMPDIR="+root, "TMP="+root, "TEMP="+root)
 		}
@@ -478,11 +535,25 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	if !output.Scan() || output.Text() != "store_retired" {
 		t.Fatal("server SDK not retired", output.Text())
 	}
+	if archiveWorkspace {
+		if sample, err := archiveObserver.SampleGuarded(ctx, 12, control.WithRetiredBackupMeasurement, nil); err != nil || sample.LogicalBytes == 0 || sample.AllocatedBytes == 0 {
+			t.Fatal("actual phase-start retired-engine workspace sample", sample, err)
+		}
+		archiveParentSamples++
+	}
 	backupRecord := record
 	backupRecord.Producer, backupRecord.SemanticMode, backupRecord.Phase = backupProducer, "", 12
 	backupRecord.Control = dispatchadmission.PhaseControlConfig{Phases: []uint32{12}, InitialPhase: 12, MaximumPhases: 1, MaximumWireBytes: 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	command, backupOutput, _, backupServed, _, backupDiagnostic := start("backup", backupRecord)
+	var backupDigest string
 	for backupOutput.Scan() {
+		prefix := "backup published: " + archivePath + " ("
+		if strings.HasPrefix(backupOutput.Text(), prefix) && strings.HasSuffix(backupOutput.Text(), ")") {
+			if backupDigest != "" {
+				t.Fatal("duplicate native backup result")
+			}
+			backupDigest = strings.TrimSuffix(strings.TrimPrefix(backupOutput.Text(), prefix), ")")
+		}
 	} // Drain the actual helper stream before owned Wait.
 	if err = backupOutput.Err(); err != nil {
 		t.Fatal("backup output", err)
@@ -549,8 +620,11 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 				t.Fatal("restore ran after failed backup", prefix)
 			}
 		}
-		if _, err := os.Lstat(filepath.Join(root, "archive", recovery.ManifestName)); !errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Lstat(filepath.Join(archivePath, recovery.ManifestName)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatal("failed early backup left a completed manifest", err)
+		}
+		if archiveParentSamples != 1 || archiveObserver.Snapshot().Unavailable || !archiveObserver.Snapshot().Phases[11].Completed {
+			t.Fatal("failed backup lost its actual parent phase-start sample")
 		}
 		t.Logf("actual failed archive: mode=%s holds=%d backup_error=%v relay_error=%v server_error=%v; one positive WB sample retained, restore unstarted, both sessions joined", failure, archiveHolds.Load(), backupErr, relayErr, serverErr)
 		return
@@ -576,13 +650,16 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	if err = transport.Wait(ctx, 10); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := os.ReadFile(filepath.Join(root, "archive", recovery.ManifestName))
+	raw, err := os.ReadFile(filepath.Join(archivePath, recovery.ManifestName))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var manifest recovery.Manifest
 	if err = json.Unmarshal(raw, &manifest); err != nil || manifest.ManifestSHA256 == "" {
 		t.Fatal("actual manifest", err)
+	}
+	if backupDigest != manifest.ManifestSHA256 {
+		t.Fatal("actual backup output differs from manifest", backupDigest)
 	}
 	if connection, e := net.DialTimeout("tcp", endpointURL.Host, time.Second); e != nil {
 		t.Fatal("retired native endpoint lost before server join", e)
@@ -612,6 +689,12 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	}
 	if err = t4013.WaitPrivateProcessSession(command.Process.Pid, time.Now().Add(5*time.Second)); err != nil {
 		t.Fatal("backup session before restore", err)
+	}
+	if archiveWorkspace {
+		if sample, err := archiveObserver.Sample(ctx, 12); err != nil || sample.LogicalBytes == 0 || sample.AllocatedBytes == 0 {
+			t.Fatal("actual joined server/backup workspace sample", sample, err)
+		}
+		archiveParentSamples++
 	}
 	opened := 2
 	if restore {
@@ -685,6 +768,16 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 		if e = t4013.WaitPrivateProcessSession(restored.Process.Pid, time.Now().Add(5*time.Second)); e != nil {
 			t.Fatal(e)
 		}
+		if archiveWorkspace {
+			if sample, err := archiveObserver.Sample(ctx, 12); err != nil || sample.LogicalBytes == 0 || sample.AllocatedBytes == 0 {
+				t.Fatal("actual joined restore workspace sample", sample, err)
+			}
+			archiveParentSamples++
+			if archiveParentSamples != 3 || archiveObserver.Snapshot().Unavailable || !archiveObserver.Snapshot().Phases[11].Completed {
+				t.Fatal("actual parent archive boundary coverage")
+			}
+			t.Log("actual parent same-observer archive walks: retired phase start, joined server/backup, joined restore; 3 completed, not whole-phase high-water")
+		}
 		if nativeDigest != manifest.ManifestSHA256 {
 			t.Fatal("actual restored manifest changed", nativeDigest)
 		}
@@ -695,6 +788,155 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			t.Fatal("restore changed exact config", e)
 		}
 		opened = 3
+		if archiveWorkspace {
+			if readMode != "empty" {
+				manifest = t422SuppliedArchiveReadManifest(t, manifest)
+				raw, e := json.Marshal(manifest)
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = os.WriteFile(filepath.Join(archivePath, recovery.ManifestName), append(raw, '\n'), 0o600); e != nil {
+					t.Fatal(e)
+				}
+				// Explicitly supplied parser/HTTP evidence, not actual command outputs.
+				backupDigest, nativeDigest = manifest.ManifestSHA256, manifest.ManifestSHA256
+			}
+			leaf := filepath.Dir(archivePath)
+			held, e := os.Open(leaf)
+			if e != nil {
+				t.Fatal(e)
+			}
+			binding, e := dispatchadmission.DescribeProductionWorkspace(held, leaf)
+			if closeErr := held.Close(); e != nil || closeErr != nil {
+				t.Fatal(e, closeErr)
+			}
+			launchRaw, _ := t422SemanticTestRequest(t)
+			var request t422SemanticLaunchRequest
+			if e = json.Unmarshal(launchRaw, &request); e != nil {
+				t.Fatal(e)
+			}
+			request.ServerEpoch = 5
+			request.Archive = &t422ArchiveInput{BackupRoot: filepath.Base(leaf), Device: binding.Device, Inode: binding.Inode, FSID: binding.FSID,
+				BackupCommandSHA256: backupDigest, RestoreCommandSHA256: nativeDigest}
+			launchRaw, e = json.Marshal(request)
+			if e != nil {
+				t.Fatal(e)
+			}
+			launchRaw = append(launchRaw, '\n')
+			if e = os.WriteFile(filepath.Join(root, "archive-input.json"), launchRaw, 0o600); e != nil {
+				t.Fatal(e)
+			}
+			readRecord := record
+			readRecord.Producer, readRecord.Phase, readRecord.InputSHA256 = readProducer, 12, sha256.Sum256(launchRaw)
+			readRecord.Control = dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{12, 13, 14}, InitialPhase: 12, MaximumPhases: 3, MaximumWireBytes: 64 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
+			reader, readerOutput, readerInput, readerServed, readerControl, readerDiagnostic := start("archive-read-"+readMode, readRecord)
+			if !readerOutput.Scan() || !strings.HasPrefix(readerOutput.Text(), "http://127.0.0.1:") {
+				t.Fatal("native R listener", readerOutput.Text())
+			}
+			address := readerOutput.Text()
+			if e = readerControl.DrainOwners(ctx); e != nil {
+				t.Fatal(e)
+			}
+			if e = readerControl.OpenRequests(ctx); e != nil {
+				t.Fatal(e)
+			}
+			client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}, Timeout: 5 * time.Second}
+			defer client.CloseIdleConnections()
+			call := func(ordinal int) (int, []byte, t421ExactReadReport) {
+				t.Helper()
+				r, e := http.NewRequestWithContext(ctx, http.MethodGet, address+t422ArchiveTransitionPath, nil)
+				if e != nil {
+					t.Fatal(e)
+				}
+				r.Header.Set(dispatchadmission.ProductionRequestHeader, readerControl.RequestToken())
+				r.Header.Set("Authorization", "Bearer "+t421ExactReadTestCredential)
+				r.Header.Set(t421ExactReadActivationHeader, t421ExactReadsContract)
+				r.Header.Set(t421ExactReadOrdinalHeader, strconv.Itoa(ordinal))
+				response, e := client.Do(r)
+				if e != nil {
+					t.Fatal(e)
+				}
+				body, e := io.ReadAll(io.LimitReader(response.Body, t422ArchiveTransitionBytes+1))
+				if closeErr := response.Body.Close(); e != nil || closeErr != nil {
+					t.Fatal(e, closeErr)
+				}
+				if len(body) > t422ArchiveTransitionBytes {
+					t.Fatal("unbounded native R")
+				}
+				var report t421ExactReadReport
+				// The existing spine sets its trailer before sending the
+				// separate report sink. Sink loss must reject the native
+				// after-report commit, not invent retroactive HTTP loss.
+				encoded, e := base64.RawURLEncoding.DecodeString(response.Trailer.Get(t421ExactReadTrailer))
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = json.Unmarshal(encoded, &report); e != nil {
+					t.Fatal(e)
+				}
+				if report.RequestOrdinal != uint64(ordinal) || report.StoreReadAttempts != 0 || report.MemberVisits != 0 || report.StoreWriteAttempts != 0 {
+					t.Fatal("native R accounting", report)
+				}
+				return response.StatusCode, body, report
+			}
+			status, body, report := call(1)
+			if readMode == "empty" {
+				if status != 409 || report.Status != "archive_transition_refused" || report.ControlFileReads != 1 {
+					t.Fatal("actual empty archive R refusal", status, report)
+				}
+			} else {
+				var projection recovery.ArchiveTransitionManifest
+				if status != 200 || json.Unmarshal(body, &projection) != nil || !reflect.DeepEqual(projection, t422SuppliedArchiveProjection(manifest)) {
+					t.Fatal("supplied native R projection", status, string(body))
+				}
+				if report.Status != "complete" || report.ControlFileReads != 1 {
+					t.Fatal("positive native R accounting", report)
+				}
+			}
+			if _, e = readerInput.Write([]byte{'i'}); e != nil {
+				t.Fatal(e)
+			}
+			if !readerOutput.Scan() {
+				t.Fatal("native R post-report state", readerOutput.Err())
+			}
+			want := "archive_reported=false failed=true"
+			if readMode == "read-supplied" {
+				want = "archive_reported=true failed=false"
+			}
+			if readerOutput.Text() != want {
+				t.Fatal("native R after-report state", readerOutput.Text(), want)
+			}
+			if readMode == "read-supplied" {
+				status, _, report = call(2)
+				if status != 409 || report.ControlFileReads != 0 || report.Status != "archive_transition_refused" {
+					t.Fatal("one-shot native R reread", status, report)
+				}
+			}
+			if e = readerControl.FenceRequests(ctx); e != nil {
+				t.Fatal(e)
+			}
+			if e = readerControl.Pause(ctx); e != nil {
+				t.Fatal(e)
+			}
+			if _, e = readerInput.Write([]byte{'c'}); e != nil {
+				t.Fatal(e)
+			}
+			for readerOutput.Scan() {
+			}
+			if e = reader.Wait(); e != nil {
+				t.Fatal("native R helper join", e, readerDiagnostic.String())
+			}
+			if e = <-readerServed; e != nil {
+				t.Fatal(e)
+			}
+			if e = transport.Wait(ctx, 6); e != nil {
+				t.Fatal(e)
+			}
+			if e = t4013.WaitPrivateProcessSession(reader.Process.Pid, time.Now().Add(5*time.Second)); e != nil {
+				t.Fatal(e)
+			}
+			opened = 4
+		}
 	}
 	prefix, err := transport.Snapshot()
 	if err != nil || prefix.Opened != opened || prefix.TerminalEOF != opened {
@@ -839,12 +1081,16 @@ func TestT422BackupRetirementHelper(t *testing.T) {
 		return
 	}
 	root := os.Getenv("PHEBS_T422_BACKUP_FIXTURE_ROOT")
+	if strings.HasPrefix(mode, "archive-read-") {
+		t422NativeArchiveReadHelper(t, root, mode)
+		return
+	}
 	if mode == "backup" || mode == "restore" {
 		flag := "-output"
 		if mode == "restore" {
 			flag = "-backup"
 		}
-		code, err := runPhebs([]string{mode, "-config", filepath.Join(root, "phebs.yaml"), flag, filepath.Join(root, "archive")})
+		code, err := runPhebs([]string{mode, "-config", filepath.Join(root, "phebs.yaml"), flag, os.Getenv("PHEBS_T422_BACKUP_FIXTURE_ARCHIVE")})
 		if code != 0 || err != nil {
 			t.Fatal(code, err)
 		}
@@ -899,5 +1145,130 @@ func TestT422BackupRetirementHelper(t *testing.T) {
 	fmt.Println("store_retired")
 	if n, e := os.Stdin.Read(command[:]); e != nil || n != 1 || command[0] != 'c' {
 		t.Fatal("close request", e)
+	}
+}
+
+func t422SuppliedArchiveReadManifest(t *testing.T, manifest recovery.Manifest) recovery.Manifest {
+	t.Helper()
+	manifest.FocusedIndex.Publications = 1
+	manifest.ResolverCatalog.Publications = 1
+	manifest.CallerPublication.Publications = 1
+	manifest.Observation.Publications, manifest.Observation.V2Publications = 1, 1
+	manifest.Observation.Files, manifest.Observation.Bytes = 1, 1
+	manifest.Relationship.Publications, manifest.Relationship.Files, manifest.Relationship.Bytes = 1, 1, 1
+	manifest.ManifestSHA256 = ""
+	raw, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest.ManifestSHA256 = fmt.Sprintf("sha256:%x", sha256.Sum256(raw))
+	return manifest
+}
+
+func t422SuppliedArchiveProjection(manifest recovery.Manifest) recovery.ArchiveTransitionManifest {
+	value := recovery.ArchiveTransitionManifest{ManifestSchema: manifest.Schema, ManifestSHA256: manifest.ManifestSHA256}
+	for _, artifact := range manifest.Inventory {
+		value.Components = append(value.Components, recovery.ArchiveTransitionComponent{Name: artifact.Path, Classification: artifact.Classification,
+			MediaType: artifact.MediaType, Bytes: uint64(artifact.Size), SHA256: artifact.SHA256})
+	}
+	value.Reports = []recovery.ArchiveTransitionReport{
+		{Name: "focused_index", Schema: manifest.FocusedIndex.Schema, Publications: 1},
+		{Name: "resolver_catalog", Schema: manifest.ResolverCatalog.Schema, Publications: 1},
+		{Name: "caller_publication", Schema: manifest.CallerPublication.Schema, Publications: 1},
+		{Name: "observation", Schema: manifest.Observation.Schema, Publications: 1, V2Publications: 1, Files: 1, Bytes: 1},
+		{Name: "relationship", Schema: manifest.Relationship.Schema, Publications: 1, Files: 1, Bytes: 1},
+	}
+	return value
+}
+
+// Actual inherited DA/PC/FD6 and auth/HTTP/exact-read machinery. The launch
+// bytes use a private fixture file, not the production stdin socket reader.
+// The supplied-positive variants model the manifest only, not artifact owners.
+func t422NativeArchiveReadHelper(t *testing.T, root, mode string) {
+	t.Helper()
+	deadline, err := strconv.ParseInt(os.Getenv("PHEBS_T422_FIXTURE_DEADLINE"), 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithDeadline(t.Context(), time.Unix(0, deadline))
+	defer cancel()
+	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
+	if err != nil || lifetime == nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := lifetime.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	}()
+	if _, err = lifetime.TakeStoreOwner(); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := dispatchadmission.ProductionSemanticState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(root, "archive-input.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch, err := decodeT422SemanticLaunch(raw, snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var failed atomic.Bool
+	// Observe the native control's failure latch without ending this small
+	// helper before it can report the post-tail state. Main's cancellation is
+	// separate from this HTTP/report-order fixture.
+	launch.fail = func(error) { failed.Store(true) }
+	control, err := newT422ArchiveControl(ctx, launch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = control.close() }()
+	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 2})
+	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
+		t.Fatal(err)
+	}
+	state := t421NewExactReadAccountingState(func(raw []byte) error {
+		var report t421ExactReadReport
+		if json.Unmarshal(raw, &report) != nil || report.Schema != t421ExactReadReportSchema || report.RequestOrdinal < 1 || report.RequestOrdinal > 2 ||
+			report.StoreReadAttempts != 0 || report.StoreWriteAttempts != 0 || report.MemberVisits != 0 {
+			return errors.New("native archive R report malformed")
+		}
+		control.mu.Lock()
+		reported := control.reported
+		control.mu.Unlock()
+		if report.RequestOrdinal == 1 && (reported || report.ControlFileReads != 1) {
+			return errors.New("native archive R committed before report")
+		}
+		if mode == "archive-read-read-report-loss" {
+			return io.ErrClosedPipe
+		}
+		return nil
+	}, launch.fail)
+	state.semantic, state.archive = launch, control
+	authCtx, stopAuth := context.WithCancel(ctx)
+	defer stopAuth()
+	authService, err := auth.New(authCtx, auth.Options{Store: &t422LifecycleAuthFixture{}, Owners: owners, Config: config.Auth{APIKey: t421ExactReadTestCredential}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { stopAuth(); authService.WaitCleanup() }()
+	server := httptest.NewUnstartedServer(t422OwnerHTTPHandler(owners, authService.Require(state.wrap(http.NotFoundHandler())), launch))
+	server.Config.BaseContext = func(net.Listener) context.Context { return ctx }
+	server.Start()
+	defer server.Close()
+	fmt.Println(server.URL)
+	var command [1]byte
+	if _, err = io.ReadFull(os.Stdin, command[:]); err != nil || command[0] != 'i' {
+		t.Fatal("native archive report inspection", err)
+	}
+	control.mu.Lock()
+	reported := control.reported
+	control.mu.Unlock()
+	fmt.Printf("archive_reported=%t failed=%t\n", reported, failed.Load())
+	if _, err = io.ReadFull(os.Stdin, command[:]); err != nil || command[0] != 'c' {
+		t.Fatal("native archive helper close", err)
 	}
 }
