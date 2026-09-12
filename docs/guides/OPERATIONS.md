@@ -213,6 +213,12 @@ the original phase deadline. A failed or canceled continuation retains the
 claim for diagnosis instead of releasing or retrying it. Ordinary serving and
 shorter rehearsal modes do not enable this checkpoint.
 
+The private `t422-runtime-facts` command takes no arguments and reports only
+the binary's configured scheduler, retry and accounting values. It refuses
+an inherited operational lifetime and starts no workers or store. Its output
+does not attest to running registrations, selected target size or freeze
+admission; the launcher must separately protect and join the actual binary.
+
 Protected replay adds two streaming database parse/hash passes beyond Verify
 and a private one-unit scratch file. A large record or intervening trivia can
 make that scratch file large, up to the existing artifact limit; 512 records

@@ -18,6 +18,12 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
+// These accepted report limits are not the store's generation retry capacity.
+const (
+	t422JobAcceptedAttempts   = 3
+	t422ChunkAcceptedAttempts = 5
+)
+
 var errT422AttemptReport = errors.New("T42.2 phase attempt report unavailable")
 
 type t422AttemptSinks struct {
@@ -129,13 +135,13 @@ func strictT422AttemptJSON(raw []byte, value any) error {
 
 func t422NativeAttempt(kind string, raw []byte) (opcode, depth byte, err error) {
 	var out [2]byte
-	// These are the selected runtime's existing native 3/5 attempt limits,
-	// not the receipt's five-retry safety ceiling or newly admitted retries.
+	// These are the existing selected accepted-report limits, not the
+	// store's retry capacity or the receipt's five-retry safety ceiling.
 	switch kind {
 	case "job":
 		var report store.JobLifecycleReport
 		if len(raw) > store.MaxJobLifecycleReportSize || strictT422AttemptJSON(raw, &report) != nil ||
-			report.Schema != store.JobLifecycleSchema || report.JobID == "" || report.Target == "" || report.Attempt < 1 || uint64(report.Attempt) > 3 ||
+			report.Schema != store.JobLifecycleSchema || report.JobID == "" || report.Target == "" || report.Attempt < 1 || uint64(report.Attempt) > t422JobAcceptedAttempts ||
 			report.QueueWaitMS < 0 || report.HandleMS < 0 || !executionAttemptJobKind(report.Kind) {
 			return 0, 0, errT422AttemptReport
 		}
@@ -143,7 +149,7 @@ func t422NativeAttempt(kind string, raw []byte) (opcode, depth byte, err error) 
 		if report.Event == "failed" && (report.Outcome == "terminal" || report.Outcome == "attempts_exhausted") {
 			want = report.Outcome
 		}
-		if want == "" || want != report.Outcome || report.Event == "requeued" && uint64(report.Attempt) >= 3 {
+		if want == "" || want != report.Outcome || report.Event == "requeued" && uint64(report.Attempt) >= t422JobAcceptedAttempts {
 			return 0, 0, errT422AttemptReport
 		}
 		if report.Event == "started" {
@@ -155,7 +161,7 @@ func t422NativeAttempt(kind string, raw []byte) (opcode, depth byte, err error) 
 	case "chunk":
 		var report generationscheduler.ChunkLifecycleReport
 		if len(raw) > generationscheduler.MaxChunkLifecycleReportSize || strictT422AttemptJSON(raw, &report) != nil ||
-			report.Schema != generationscheduler.ChunkLifecycleSchema || !t422AttemptDigest(report.Identity) || !t422AttemptDigest(report.Generation) || report.Attempt < 0 || uint64(report.Attempt) >= 5 ||
+			report.Schema != generationscheduler.ChunkLifecycleSchema || !t422AttemptDigest(report.Identity) || !t422AttemptDigest(report.Generation) || report.Attempt < 0 || uint64(report.Attempt) >= t422ChunkAcceptedAttempts ||
 			report.DurationMS < 0 || !executionAttemptStage(report.Stage) {
 			return 0, 0, errT422AttemptReport
 		}
@@ -165,7 +171,7 @@ func t422NativeAttempt(kind string, raw []byte) (opcode, depth byte, err error) 
 			return 0, 0, errT422AttemptReport
 		}
 		if report.Outcome == "retried" {
-			if uint64(report.Attempt)+1 >= 5 {
+			if uint64(report.Attempt)+1 >= t422ChunkAcceptedAttempts {
 				return 0, 0, errT422AttemptReport
 			}
 			out = [2]byte{'t', byte(report.Attempt + 1)}

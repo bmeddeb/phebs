@@ -8542,6 +8542,23 @@ manually prepared extraction work, supplied inactive lifecycle/auth callbacks
 and direct-only setup compiler joins do not establish a full pipeline or
 complete process/profile admission.
 
+The private native-configuration command reports actual shared constructor,
+default and selected-validator values in one canonical 688-byte record. It
+refuses an operational lifetime and has no store/config/worker startup path.
+Store generation capacity eight, selected chunk acceptance five and the native
+aggregate limit 131,072 are distinct from target counts and registered work.
+Independent draft `5b43b0be7ecb133d3a968c51d9a85d2922891de8c69e7269ac07935e07329b2d`
+and applied source/cost reviews found all severities zero. Ordered seven-path
+manifest is `7b64da54eb82208f545ff857ca7841c8d4ba01c1cb11cf6aa0b4b701d8fc8477`.
+The manual main merge retains marker coordination; native limits and explicit
+store-runner overrides are unchanged. Command/default selectors passed normal
+in 1.406s/0.605s and matching race in 5.942s/1.609s. Static passed vet,
+zero pinned-lint issues and repository compilation; docs passed in 0.595s,
+glossary/whitespace clean and retained-version selectors in 0.792s. Supplied codec checks and the
+command-boundary test executable do not prove actual protected-Phebs execution,
+full profile admission or event one. The future parent observation must retain
+actual process/output/custody facts under its original deadline.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

@@ -25,6 +25,10 @@ func TestT422CommandBoundary(t *testing.T) {
 		{name: "usage", code: 2},
 		{name: "unknown", code: 2},
 		{name: "version"},
+		{name: "runtime-facts"},
+		{name: "runtime-facts-arguments", code: 1, failed: true},
+		{name: "runtime-facts-invalid-selector", selector: "not-a-contract", code: 1, failed: true},
+		{name: "runtime-facts-missing-endpoints", selector: dispatchadmission.ProductionSelector, code: 1, failed: true},
 		{name: "version-arguments", code: 1, failed: true},
 		{name: "serve-help"},
 		{name: "serve-invalid", code: 2},
@@ -56,6 +60,10 @@ func TestT422CommandBoundary(t *testing.T) {
 				}
 				code = exited.ExitCode()
 			}
+			if strings.HasPrefix(test.name, "runtime-facts") &&
+				strings.Contains(string(output), t422RuntimeFactsSchema) != (test.name == "runtime-facts") {
+				t.Fatal("runtime facts must be emitted only by the successful unbound command")
+			}
 			if ctx.Err() != nil || code != test.code || strings.Contains(string(output), "terminal_error") != test.failed {
 				t.Fatalf("boundary code=%d output=%q error=%v deadline=%v", code, output, err, ctx.Err())
 			}
@@ -77,6 +85,10 @@ func TestT422CommandBoundaryHelper(t *testing.T) {
 		args = []string{"unknown"}
 	case "version", "invalid-selector", "missing-endpoints":
 		args = []string{"version"}
+	case "runtime-facts", "runtime-facts-invalid-selector", "runtime-facts-missing-endpoints":
+		args = []string{t422RuntimeFactsCommand}
+	case "runtime-facts-arguments":
+		args = []string{t422RuntimeFactsCommand, "unexpected"}
 	case "version-arguments":
 		args = []string{"version", "unexpected"}
 	case "serve-help":

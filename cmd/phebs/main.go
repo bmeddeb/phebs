@@ -316,6 +316,8 @@ func runPhebs(args []string) (code int, retErr error) {
 		err = restore(args[1:])
 	case "version":
 		err = printVersion(args[1:], os.Stdout)
+	case t422RuntimeFactsCommand:
+		err = writeT422RuntimeFacts(context.Background(), args[1:], os.Stdout, lifetime)
 	default:
 		printUsage()
 		return 2, nil
@@ -1444,7 +1446,7 @@ func serve(args []string) (retErr error) {
 		Store: st, Owners: owners,
 		Classes: map[store.GenerationResourceClass]generationscheduler.Class{
 			store.GenerationResourceIO: {
-				Concurrency: 1,
+				Concurrency: observationIOConcurrency,
 				Budget: generationscheduler.Budget{
 					MaxMemoryBytes: 256 << 20, MaxDescriptors: 8,
 				},
@@ -1460,7 +1462,7 @@ func serve(args []string) (retErr error) {
 				},
 			},
 			store.GenerationResourceCPU: {
-				Concurrency: 2,
+				Concurrency: observationCPUConcurrency,
 				Budget: generationscheduler.Budget{
 					MaxMemoryBytes: 256 << 20, MaxDescriptors: 8,
 				},
@@ -1503,7 +1505,7 @@ func serve(args []string) (retErr error) {
 			Classes: map[store.GenerationResourceClass]generationscheduler.Class{
 				store.GenerationResourceMemory: {
 					MarkerMeasurement: markerMeasurement,
-					Concurrency:       1,
+					Concurrency:       relationshipConcurrency,
 					Budget: generationscheduler.Budget{
 						MaxMemoryBytes: 1 << 30, MaxDescriptors: 32,
 					},

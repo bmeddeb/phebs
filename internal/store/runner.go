@@ -12,6 +12,9 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
+// DefaultRunnerMaxAttempts is the existing zero-value runner retry configuration.
+const DefaultRunnerMaxAttempts = 3
+
 // Runner is a jittered polling worker over one job table (PLAN §1: polling,
 // never LIVE SELECT wakeups). Multiple runners — in one process or many —
 // coordinate purely through ClaimJob.
@@ -66,7 +69,7 @@ func (r *Runner) defaults() {
 		r.StaleAfter = 4 * r.HeartbeatEvery
 	}
 	if r.MaxAttempts == 0 {
-		r.MaxAttempts = 3
+		r.MaxAttempts = DefaultRunnerMaxAttempts
 	}
 	if r.Backoff == nil {
 		r.Backoff = DefaultBackoff
