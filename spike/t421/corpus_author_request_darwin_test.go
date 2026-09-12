@@ -92,6 +92,68 @@ func corpusAuthorRequestFixture(t *testing.T, parent, source string) ExecutionCo
 }
 
 func TestCorpusAuthorRequestThreeActualLifetimes(t *testing.T) {
+	testCorpusAuthorRequestThreeActualLifetimes(t, false)
+}
+
+func TestCorpusAuthorObservedRequestThreeActualLifetimes(t *testing.T) {
+	testCorpusAuthorRequestThreeActualLifetimes(t, true)
+}
+
+func TestCorpusAuthorObservedConcurrentRequests(t *testing.T) {
+	requireExternalToolFrozenHost(t)
+	fixture := newExecutionCheckoutFixture(t)
+	parent, _ := inputCustodyTestFixture(t)
+	git := gitCustodyTestProtect(t, t.Context(), parent, fixture.git)
+	author, transport := corpusAuthorTestNew(t, git, parent, corpusAuthorTestSource(t))
+	author.requestRevision, author.observeChanges = "a", true
+	// The tiny source and one-shot selector are supplied test setup; both
+	// concurrent calls use the actual AuthorNext/Git/snapshot implementation.
+	start := make(chan struct{})
+	type outcome struct {
+		raw []byte
+		err error
+	}
+	results := make(chan outcome, 2)
+	for range 2 {
+		go func() {
+			<-start
+			raw, err := author.AuthorRequested(t.Context())
+			results <- outcome{raw: raw, err: err}
+		}()
+	}
+	close(start)
+	successes := 0
+	for range 2 {
+		got := <-results
+		if got.err != nil {
+			if !errors.Is(got.err, ErrExecutionCorpusAuthor) || len(got.raw) != 0 {
+				t.Fatal("rejected concurrent request exposed response bytes", got.err)
+			}
+			continue
+		}
+		successes++
+		var response ExecutionCorpusAuthorResponse
+		if json.Unmarshal(got.raw, &response) != nil || response.Result.Name != "a" ||
+			!validChangedPhysicalFiles(response.ChangedPhysicalFiles, true) || response.ChangedPhysicalFiles.Count != 3 {
+			t.Fatal("concurrent replay replaced the first measured response")
+		}
+	}
+	if successes > 1 {
+		t.Fatal("one-shot author returned two successful responses")
+	}
+	// A replay that won the snapshot lock may conservatively refuse both.
+	// Once replay has finished, no stale complete value can be serialized.
+	if _, err := author.requestedResponse(t.Context(), author.previous); !errors.Is(err, ErrExecutionCorpusAuthor) {
+		t.Fatal("sticky replay failure exposed a later complete observation")
+	}
+	snapshot, err := transport.controller.Snapshot()
+	if err != nil || snapshot.Attempts != 4 || snapshot.Producers[0].Active != 0 {
+		t.Fatal("concurrent request changed the actual four-command recipe", err)
+	}
+}
+
+func testCorpusAuthorRequestThreeActualLifetimes(t *testing.T, observed bool) {
+	t.Helper()
 	requireExternalToolFrozenHost(t)
 	fixture := newExecutionCheckoutFixture(t)
 	parent, _ := inputCustodyTestFixture(t)
@@ -101,12 +163,22 @@ func TestCorpusAuthorRequestThreeActualLifetimes(t *testing.T) {
 		t.Fatal(err)
 	}
 	request := corpusAuthorRequestFixture(t, parent, source)
+	if observed {
+		request.Schema = ExecutionCorpusAuthorObservedRequestSchema
+	}
 	var previous ExecutionCorpusAuthorResponse
 	var total uint64
 	for index, revision := range []string{"a", "b", "a-return"} {
 		request.Revision = revision
 		if index != 0 {
 			request.Previous = &previous
+		}
+		if observed && index == 1 {
+			bad := request
+			wrong := cloneCorpusAuthorResponse(previous)
+			wrong.Result.Tree = strings.Repeat("0", 40)
+			bad.Previous = &wrong
+			corpusAuthorRequestRunChild(t, git, parent, bad, "wrong prior")
 		}
 		response, attempts := corpusAuthorRequestRunChild(t, git, parent, request, "")
 		want := uint64(3)
@@ -115,6 +187,18 @@ func TestCorpusAuthorRequestThreeActualLifetimes(t *testing.T) {
 		}
 		if attempts != want || json.Unmarshal(response, &previous) != nil || previous.Result.Name != revision {
 			t.Fatal("separate actual author lifetime did not return its measured current revision")
+		}
+		if !validChangedPhysicalFiles(previous.ChangedPhysicalFiles, observed) {
+			t.Fatal("response version changed observed-field presence")
+		}
+		if observed {
+			wantChanged := uint64(1)
+			if index == 0 {
+				wantChanged = 3 // This actual tiny source has three regular files.
+			}
+			if previous.ChangedPhysicalFiles.Count != wantChanged {
+				t.Fatal("actual A/B/A changed-file count disagrees with tiny source")
+			}
 		}
 		total += attempts
 		observation, err := ObserveExecutionCorpusSource(t.Context(), source)
@@ -348,9 +432,22 @@ func TestCorpusAuthorFrozenResponseByteBound(t *testing.T) {
 			PlanPath: "/" + strings.Repeat("p", 4095), PlanSHA256: SHA256(nil), SourcePath: "/" + strings.Repeat("s", 4095),
 			SourceIdentity: ExecutionCorpusSourceIdentity{Device: -1 << 31, Inode: ^uint64(0), Generation: ^uint32(0), Volume: [2]int32{-1 << 31, -1 << 31}},
 			Revision:       "b", Previous: &response}
-		if _, err := corpusAuthorCanonical(request, MaxExecutionCorpusAuthorRequestBytes); err != nil {
+		legacyRequest, err := corpusAuthorCanonical(request, MaxExecutionCorpusAuthorRequestBytes)
+		if err != nil {
 			t.Fatal("bounded private paths plus full manifest exceeded16KiB request bound")
 		}
+		// Supplied maximum-shape wire calculation, never an actual count.
+		response.ChangedPhysicalFiles = &ExecutionChangedPhysicalFiles{Count: maxCorpusAuthorRecords, Complete: true}
+		measured, err := corpusAuthorCanonical(response, MaxExecutionCorpusAuthorResponseBytes)
+		if err != nil || len(measured)-len(encoded) != 59 {
+			t.Fatal("v2 observation exceeded existing response bound or changed59-byte growth", err)
+		}
+		request.Schema = ExecutionCorpusAuthorObservedRequestSchema
+		measuredRequest, err := corpusAuthorCanonical(request, MaxExecutionCorpusAuthorRequestBytes)
+		if err != nil || len(measuredRequest)-len(legacyRequest) != 59 {
+			t.Fatal("v2 prior observation exceeded existing request bound", err)
+		}
+		t.Logf("modeled maximum v2 %s response=%d request=%d bytes", physical.Name, len(measured), len(measuredRequest))
 		parent = physical.ExpectedCommit
 	}
 }

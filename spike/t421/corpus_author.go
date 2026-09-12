@@ -50,6 +50,8 @@ type ExecutionCorpusAuthor struct {
 	start           func(context.Context, *exec.Cmd) (dispatchadmission.Handle, error)
 	requestRevision string
 	requestUsed     bool
+	observeChanges  bool
+	changedFiles    ExecutionChangedPhysicalFiles
 	planFile        *os.File
 	planInfo        os.FileInfo
 	planPath        string
@@ -142,6 +144,7 @@ func (author *ExecutionCorpusAuthor) AuthorNext(ctx context.Context, name string
 	}
 	author.mu.Lock()
 	defer author.mu.Unlock()
+	author.changedFiles = ExecutionChangedPhysicalFiles{}
 	if ctx != nil && author.lifetime != nil {
 		operation, cancel := context.WithCancel(ctx)
 		stop := context.AfterFunc(author.lifetime, cancel)
@@ -192,10 +195,16 @@ func (author *ExecutionCorpusAuthor) AuthorNext(ctx context.Context, name string
 	if err != nil || gitSHA1ObjectID("commit", commitBytes) != physical.ExpectedCommit {
 		return fail()
 	}
+	if author.observeChanges && ctx.Err() != nil {
+		return fail()
+	}
 	result := AuthoredExecutionRevision{Name: name, Commit: physical.ExpectedCommit, Tree: physical.ExpectedTree,
 		ParentCommit: author.previous.Commit, Manifest: author.source.manifest(physical, identity.Inventory, SHA256(commitBytes))}
 	author.previous = result
 	author.next++
+	if author.observeChanges {
+		author.changedFiles.Complete = true
+	}
 	return result, nil
 }
 
@@ -409,6 +418,19 @@ func (author *ExecutionCorpusAuthor) importRevision(ctx context.Context) error {
 }
 
 func (author *ExecutionCorpusAuthor) verifyInventory(ctx context.Context) (sourceTreeIdentity, error) {
+	var prior *sourceTreeRecord
+	if author.observeChanges && author.next > 0 {
+		// The authenticated previous response was checked against this exact
+		// recipe on resume; AuthorNext also verified its current loose ref.
+		if author.source.previousLeaf == nil || author.previous.Commit != author.source.revisions[author.next-1].ExpectedCommit {
+			return sourceTreeIdentity{}, ErrExecutionCorpusAuthor
+		}
+		value, err := author.source.previousLeaf(ctx, author.next)
+		if err != nil {
+			return sourceTreeIdentity{}, err
+		}
+		prior = &value
+	}
 	command, cancel, err := author.command(ctx, 3)
 	if err != nil {
 		return sourceTreeIdentity{}, err
@@ -430,7 +452,7 @@ func (author *ExecutionCorpusAuthor) verifyInventory(ctx context.Context) (sourc
 			_ = handle.Wait()
 		}
 	}()
-	identity, readErr := author.source.verifyInventory(ctx, output, author.next)
+	identity, changed, readErr := author.source.verifyInventoryChanges(ctx, output, author.next, author.observeChanges, prior)
 	if readErr != nil {
 		cancel()
 	}
@@ -438,6 +460,9 @@ func (author *ExecutionCorpusAuthor) verifyInventory(ctx context.Context) (sourc
 	joined = true
 	if readErr != nil || waitErr != nil || ctx.Err() != nil {
 		return sourceTreeIdentity{}, ErrExecutionCorpusAuthor
+	}
+	if author.observeChanges {
+		author.changedFiles.Count = changed
 	}
 	return identity, nil
 }

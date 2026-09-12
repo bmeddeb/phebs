@@ -8665,6 +8665,29 @@ The only post-review change removes a one-item test loop; the applied content
 matches the amended immutable-base patch. Actual whole-run SB2 coverage and
 full output fit remain pending.
 
+The authored changed-file observation uses the existing exact Git inventory
+pass and the authentic prior response already bound to the same immutable
+recipe. It counts actual accepted cold rows and actual target-OID differences
+for B/return; no expected changed-count field is copied. Closed request-v2
+requires a separate measured response value, while request-v1 forbids it,
+including inside Previous. Child completion requires inventory EOF, Git join
+and source continuity; parent operation completion still requires all actual
+native/protocol/custody gates. Optional values are cloned at prior/result
+boundaries. Original independent review found one medium response-snapshot
+race; the corrected code snapshots under the author mutex, associates the
+exact result, and refuses sticky replay failure. Re-review found
+critical/high/medium/low zero. The added two-call real-Git check exercises the
+one-shot race; tiny real A/B/A lifetimes, supplied malformed streams and strict
+version/byte-limit checks remain distinct from a full-population author run.
+The final applied nine-path content passed focused normal (3.198s) and race
+(15.635s), repository-pinned static checks, docs (0.579s), glossary and
+whitespace. An earlier normal/race pass was followed by a test-only lint
+refusal; the equivalent tagged-switch correction was then rerun above.
+Independent applied review found all severity counts zero and verified that
+the switch was the sole departure from the corrected private draft. Ordered
+source/test manifest: `f10385b24112dec056cb9901b69c33485a82dfdd1fa9dbfdad2bccbe82b6a2da`.
+Actual protected full-population author execution remains a separate gate.
+
 The output audit keeps scopes separate. Epoch four plus backup/restore has a
 46,642,240-byte compact subtotal; epoch five separately has 15,149,846 bytes
 of compact records and its own WB stream. The later five WB positions add

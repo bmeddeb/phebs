@@ -25,11 +25,12 @@ var ErrExecutionCorpusAuthor = errors.New("execution corpus author unavailable o
 // generators. Function fields are private streaming seams for tiny real-Git
 // tests, not caller-provided source, identities or admission assertions.
 type corpusAuthorSource struct {
-	recipe      SourceRecipe
-	profile     CombinedProfile
-	revisions   []PhysicalRevision
-	walkRecords func(context.Context, string, func(sourceTreeRecord) error) error
-	walkBlobs   func(context.Context, string, func(string, []byte) error) error
+	recipe       SourceRecipe
+	profile      CombinedProfile
+	revisions    []PhysicalRevision
+	walkRecords  func(context.Context, string, func(sourceTreeRecord) error) error
+	walkBlobs    func(context.Context, string, func(string, []byte) error) error
+	previousLeaf func(context.Context, int) (sourceTreeRecord, error)
 }
 
 func newCorpusAuthorSource(ctx context.Context, plan Plan) (*corpusAuthorSource, error) {
@@ -58,6 +59,32 @@ func newCorpusAuthorSource(ctx context.Context, plan Plan) (*corpusAuthorSource,
 		return nil, ErrExecutionCorpusAuthor
 	}
 	source := &corpusAuthorSource{recipe: plan.Revisions.SourceRecipe, profile: plan.Profile, revisions: plan.Revisions.Physical}
+	// The frozen structural recipe changes only its first Go leaf. Derive
+	// that predecessor leaf from the same recipe already bound by the prior
+	// actual tree; do not regenerate another full inventory or copy a count.
+	source.previousLeaf = func(ctx context.Context, index int) (sourceTreeRecord, error) {
+		if ctx == nil || ctx.Err() != nil || index < 1 || index > 2 {
+			return sourceTreeRecord{}, ErrExecutionCorpusAuthor
+		}
+		var result sourceTreeRecord
+		if index == 1 {
+			path, content, err := t401.FrozenStructuralGoFixture(structural, 0)
+			if err != nil || ctx.Err() != nil {
+				return result, ErrExecutionCorpusAuthor
+			}
+			return sourceTreeRecord{Path: path, Bytes: uint64(len(content)), BlobOID: gitSHA1ObjectID("blob", content)}, nil
+		}
+		count := 0
+		err := t401.WalkFrozenStructuralRevisionBlobs(structural, "b", func(path string, content []byte) error {
+			count++
+			result = sourceTreeRecord{Path: path, Bytes: uint64(len(content)), BlobOID: gitSHA1ObjectID("blob", content)}
+			return ctx.Err()
+		})
+		if err != nil || count != 1 || ctx.Err() != nil {
+			return sourceTreeRecord{}, ErrExecutionCorpusAuthor
+		}
+		return result, nil
+	}
 	source.walkRecords = func(ctx context.Context, revision string, visit func(sourceTreeRecord) error) error {
 		addition, ordinal := 0, uint64(0)
 		err := t401.WalkFrozenTreeRecords(structural, revision, func(value t401.FrozenTreeRecord) error {
@@ -198,13 +225,27 @@ func (source *corpusAuthorSource) writeRevision(ctx context.Context, writer *buf
 // report blob sizes in this frozen command; size is independently bound by the
 // expected blob OID/bytes recipe, never inferred from a file on the host.
 func (source *corpusAuthorSource) verifyInventory(ctx context.Context, input io.Reader, index int) (sourceTreeIdentity, error) {
+	identity, _, err := source.verifyInventoryChanges(ctx, input, index, false, nil)
+	return identity, err
+}
+
+// The owned author alone supplies the already authenticated predecessor
+// binding. All paths/modes are invariant in this closed recipe; only prior's
+// blob changes. This helper observes current Git tuples, not expected counts.
+func (source *corpusAuthorSource) verifyInventoryChanges(ctx context.Context, input io.Reader, index int, observe bool, prior *sourceTreeRecord) (sourceTreeIdentity, uint64, error) {
 	if ctx == nil || ctx.Err() != nil || index < 0 || index >= len(source.revisions) {
-		return sourceTreeIdentity{}, ErrExecutionCorpusAuthor
+		return sourceTreeIdentity{}, 0, ErrExecutionCorpusAuthor
+	}
+	if observe && index > 0 && (prior == nil || !corpusAuthorPath(prior.Path) || !validGitObjectID(prior.BlobOID, "sha1") || prior.Bytes > maxCorpusAuthorBlob) ||
+		(!observe || index == 0) && prior != nil {
+		return sourceTreeIdentity{}, 0, ErrExecutionCorpusAuthor
 	}
 	reader := bufio.NewReaderSize(input, maxCorpusAuthorPath+54)
 	accumulator := newTreeInventoryAccumulator(nil)
 	accumulator.goOnly = true
 	var count uint64
+	var changed uint64
+	priorSeen := false
 	err := source.walkRecords(ctx, source.revisions[index].Name, func(expected sourceTreeRecord) error {
 		if ctx.Err() != nil || count >= maxCorpusAuthorRecords || count >= source.profile.Physical.CombinedRegularFiles ||
 			!corpusAuthorPath(expected.Path) || expected.Bytes > maxCorpusAuthorBlob {
@@ -215,18 +256,30 @@ func (source *corpusAuthorSource) verifyInventory(ctx context.Context, input io.
 			return ErrExecutionCorpusAuthor
 		}
 		count++
+		if observe {
+			if index == 0 {
+				changed++ // Actual regular leaves against the proved empty root.
+			} else if expected.Path == prior.Path {
+				priorSeen = true
+				// Mode/path already match both immutable recipes. All other
+				// leaves match the prior recipe too; compare this actual OID.
+				if string(record[12:52]) != prior.BlobOID {
+					changed++
+				}
+			}
+		}
 		return accumulator.add(expected)
 	})
-	if err != nil || count != source.profile.Physical.CombinedRegularFiles || ctx.Err() != nil {
-		return sourceTreeIdentity{}, ErrExecutionCorpusAuthor
+	if err != nil || count != source.profile.Physical.CombinedRegularFiles || ctx.Err() != nil || observe && index > 0 && !priorSeen {
+		return sourceTreeIdentity{}, 0, ErrExecutionCorpusAuthor
 	}
 	if _, err := reader.ReadByte(); !errors.Is(err, io.EOF) {
-		return sourceTreeIdentity{}, ErrExecutionCorpusAuthor
+		return sourceTreeIdentity{}, 0, ErrExecutionCorpusAuthor
 	}
 	identity, err := accumulator.finish()
 	physical := source.revisions[index]
 	if err != nil || identity.TreeOID != physical.ExpectedTree || identity.Inventory != physical.ExpectedTreeInventory {
-		return sourceTreeIdentity{}, ErrExecutionCorpusAuthor
+		return sourceTreeIdentity{}, 0, ErrExecutionCorpusAuthor
 	}
-	return identity, nil
+	return identity, changed, nil
 }

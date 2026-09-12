@@ -112,9 +112,15 @@ func (custody *ExecutionAuthorCustody) authorNext(ctx context.Context, controlle
 		return result, ErrExecutionAuthorCustody
 	}
 	custody.active = true
-	request := ExecutionCorpusAuthorRequest{Schema: ExecutionCorpusAuthorRequestSchema,
+	// PrepareExecutionAuthor accepts only a protected PlanV3. Historical v1
+	// remains a separately decoded exact wire, not this measured route.
+	request := ExecutionCorpusAuthorRequest{Schema: ExecutionCorpusAuthorObservedRequestSchema,
 		PlanPath: custody.planPath, PlanSHA256: custody.planSHA256, SourcePath: custody.roots[1].path,
 		SourceIdentity: custody.identity, Revision: custody.expected[index].Name, Previous: custody.previous}
+	if request.Previous != nil {
+		previous := cloneCorpusAuthorResponse(*request.Previous)
+		request.Previous = &previous
+	}
 	custody.mu.Unlock()
 	result.Revision = request.Revision
 	defer func() {
@@ -126,7 +132,7 @@ func (custody *ExecutionAuthorCustody) authorNext(ctx context.Context, controlle
 			retErr = ErrExecutionAuthorCustody
 		} else {
 			// Copy the actual validated response, never a caller-provided previous.
-			previous := *result.Response
+			previous := cloneCorpusAuthorResponse(*result.Response)
 			custody.previous = &previous
 			custody.next++
 			result.Completed = true
@@ -318,7 +324,7 @@ func (custody *ExecutionAuthorCustody) runAuthorConfigured(ctx context.Context, 
 	}
 	if retErr == nil {
 		responseRaw, err := reader.ReadSlice('\n')
-		response, responseErr := authorCustodyCanonicalResponse(responseRaw, custody.expected[index])
+		response, responseErr := authorCustodyCanonicalResponseFor(responseRaw, custody.expected[index], true)
 		if err != nil || responseErr != nil || ctx.Err() != nil ||
 			custody.previous != nil && response.ConfigSHA256 != custody.previous.ConfigSHA256 {
 			retErr = ErrExecutionAuthorCustody
@@ -457,7 +463,7 @@ func authorCustodyProducerComplete(snapshot dispatchadmission.Snapshot, producer
 
 func cloneAuthorCustodyResult(result ExecutionAuthorResult) ExecutionAuthorResult {
 	if result.Response != nil {
-		response := *result.Response
+		response := cloneCorpusAuthorResponse(*result.Response)
 		result.Response = &response
 	}
 	result.Accounting.Phases = slices.Clone(result.Accounting.Phases)

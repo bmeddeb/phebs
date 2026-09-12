@@ -351,11 +351,15 @@ func (custody *ExecutionAuthorCustody) Close() error {
 }
 
 func authorCustodyCanonicalResponse(raw []byte, expected AuthoredExecutionRevision) (ExecutionCorpusAuthorResponse, error) {
+	return authorCustodyCanonicalResponseFor(raw, expected, false)
+}
+
+func authorCustodyCanonicalResponseFor(raw []byte, expected AuthoredExecutionRevision, observed bool) (ExecutionCorpusAuthorResponse, error) {
 	var response ExecutionCorpusAuthorResponse
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if len(raw) == 0 || len(raw) > MaxExecutionCorpusAuthorResponseBytes || decoder.Decode(&response) != nil || !corpusAuthorJSONEOF(decoder) ||
-		response.Result != expected || !validExecutionSHA256(response.ConfigSHA256) {
+		response.Result != expected || !validExecutionSHA256(response.ConfigSHA256) || !validChangedPhysicalFiles(response.ChangedPhysicalFiles, observed) {
 		return response, ErrExecutionAuthorCustody
 	}
 	canonical, err := corpusAuthorCanonical(response, MaxExecutionCorpusAuthorResponseBytes)

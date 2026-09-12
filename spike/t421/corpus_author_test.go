@@ -55,6 +55,17 @@ func corpusAuthorTestSource(t *testing.T) *corpusAuthorSource {
 		}
 		return nil
 	}
+	source.previousLeaf = func(ctx context.Context, index int) (sourceTreeRecord, error) {
+		if ctx == nil || ctx.Err() != nil || index < 1 || index > 2 {
+			return sourceTreeRecord{}, ErrExecutionCorpusAuthor
+		}
+		revision := "a"
+		if index == 2 {
+			revision = "b"
+		}
+		raw := content(revision, 2)
+		return sourceTreeRecord{Path: paths[2], Bytes: uint64(len(raw)), BlobOID: gitSHA1ObjectID("blob", raw)}, nil
+	}
 	parent := ""
 	for _, name := range []string{"a", "b", "a-return"} {
 		accumulator := newTreeInventoryAccumulator(nil)

@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	ExecutionCorpusAuthorRequestSchema    = "t422-author-request-v1"
-	MaxExecutionCorpusAuthorRequestBytes  = 16 << 10
-	MaxExecutionCorpusAuthorResponseBytes = 4 << 10
+	ExecutionCorpusAuthorRequestSchema         = "t422-author-request-v1"
+	ExecutionCorpusAuthorObservedRequestSchema = "t422-author-request-v2"
+	MaxExecutionCorpusAuthorRequestBytes       = 16 << 10
+	MaxExecutionCorpusAuthorResponseBytes      = 4 << 10
 )
 
 // ExecutionCorpusSourceIdentity is PRIVATE request/custody information, never
@@ -53,8 +54,31 @@ type ExecutionCorpusAuthorRequest struct {
 // response is not authority to resume: only the parent's authenticated next
 // request binds the response it actually received from its owned child.
 type ExecutionCorpusAuthorResponse struct {
-	Result       AuthoredExecutionRevision `json:"result"`
-	ConfigSHA256 string                    `json:"config_sha256"`
+	Result               AuthoredExecutionRevision      `json:"result"`
+	ConfigSHA256         string                         `json:"config_sha256"`
+	ChangedPhysicalFiles *ExecutionChangedPhysicalFiles `json:"changed_physical_files,omitempty"`
+}
+
+// Complete describes the child's joined Git inventory and continuity only.
+// The parent separately owns successful author-process/transport completion.
+type ExecutionChangedPhysicalFiles struct {
+	Count    uint64 `json:"count"`
+	Complete bool   `json:"complete"`
+}
+
+func validChangedPhysicalFiles(value *ExecutionChangedPhysicalFiles, observed bool) bool {
+	if !observed {
+		return value == nil
+	}
+	return value != nil && value.Complete && value.Count <= maxCorpusAuthorRecords
+}
+
+func cloneCorpusAuthorResponse(value ExecutionCorpusAuthorResponse) ExecutionCorpusAuthorResponse {
+	if value.ChangedPhysicalFiles != nil {
+		copyValue := *value.ChangedPhysicalFiles
+		value.ChangedPhysicalFiles = &copyValue
+	}
+	return value
 }
 
 func ObserveExecutionCorpusSource(ctx context.Context, path string) (_ ExecutionCorpusSourceObservation, retErr error) {
@@ -113,11 +137,14 @@ func decodeCorpusAuthorRequest(raw []byte, expected [32]byte) (ExecutionCorpusAu
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&request) != nil || !corpusAuthorJSONEOF(decoder) ||
-		request.Schema != ExecutionCorpusAuthorRequestSchema || !executionGitAbsolutePath(request.PlanPath) ||
+		(request.Schema != ExecutionCorpusAuthorRequestSchema && request.Schema != ExecutionCorpusAuthorObservedRequestSchema) || !executionGitAbsolutePath(request.PlanPath) ||
 		!executionGitAbsolutePath(request.SourcePath) || request.PlanPath == request.SourcePath ||
 		!validExecutionSHA256(request.PlanSHA256) || request.SourceIdentity.Inode == 0 ||
 		request.Revision != "a" && request.Revision != "b" && request.Revision != "a-return" ||
 		(request.Revision == "a") != (request.Previous == nil) {
+		return ExecutionCorpusAuthorRequest{}, ErrExecutionCorpusAuthor
+	}
+	if request.Previous != nil && !validChangedPhysicalFiles(request.Previous.ChangedPhysicalFiles, request.Schema == ExecutionCorpusAuthorObservedRequestSchema) {
 		return ExecutionCorpusAuthorRequest{}, ErrExecutionCorpusAuthor
 	}
 	want, err := corpusAuthorCanonical(request, MaxExecutionCorpusAuthorRequestBytes)
@@ -190,6 +217,10 @@ func OpenExecutionCorpusAuthorRequest(ctx context.Context, raw []byte) (*Executi
 func resumeCorpusAuthor(ctx context.Context, source *corpusAuthorSource, request ExecutionCorpusAuthorRequest,
 	gitPath string, start func(context.Context, *exec.Cmd) (dispatchadmission.Handle, error),
 ) (*ExecutionCorpusAuthor, error) {
+	if request.Schema != ExecutionCorpusAuthorRequestSchema && request.Schema != ExecutionCorpusAuthorObservedRequestSchema ||
+		request.Previous != nil && !validChangedPhysicalFiles(request.Previous.ChangedPhysicalFiles, request.Schema == ExecutionCorpusAuthorObservedRequestSchema) {
+		return nil, ErrExecutionCorpusAuthor
+	}
 	author, err := openCorpusAuthorRoot(ctx, request.SourcePath)
 	if err != nil {
 		return nil, err
@@ -200,6 +231,7 @@ func resumeCorpusAuthor(ctx context.Context, source *corpusAuthorSource, request
 		return fail()
 	}
 	author.source, author.gitPath, author.start, author.requestRevision = source, gitPath, start, request.Revision
+	author.observeChanges = request.Schema == ExecutionCorpusAuthorObservedRequestSchema
 	for author.next < len(source.revisions) && source.revisions[author.next].Name != request.Revision {
 		author.next++
 	}
@@ -297,5 +329,30 @@ func (author *ExecutionCorpusAuthor) AuthorRequested(ctx context.Context) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	return corpusAuthorCanonical(ExecutionCorpusAuthorResponse{Result: result, ConfigSHA256: author.config}, MaxExecutionCorpusAuthorResponseBytes)
+	response, err := author.requestedResponse(ctx, result)
+	if err != nil {
+		return nil, err
+	}
+	return corpusAuthorCanonical(response, MaxExecutionCorpusAuthorResponseBytes)
+}
+
+// Copy the measured value under the same mutex that owns AuthorNext. A
+// concurrent rejected replay may already have cleared it and latched failure.
+// No lock escapes into response encoding or the caller's output write.
+func (author *ExecutionCorpusAuthor) requestedResponse(ctx context.Context, result AuthoredExecutionRevision) (ExecutionCorpusAuthorResponse, error) {
+	author.mu.Lock()
+	defer author.mu.Unlock()
+	if ctx == nil || ctx.Err() != nil || author.closed || author.err != nil ||
+		!author.requestUsed || author.requestRevision != result.Name || author.previous != result {
+		return ExecutionCorpusAuthorResponse{}, ErrExecutionCorpusAuthor
+	}
+	response := ExecutionCorpusAuthorResponse{Result: result, ConfigSHA256: author.config}
+	if author.observeChanges {
+		value := author.changedFiles
+		if !validChangedPhysicalFiles(&value, true) {
+			return ExecutionCorpusAuthorResponse{}, ErrExecutionCorpusAuthor
+		}
+		response.ChangedPhysicalFiles = &value
+	}
+	return response, nil
 }

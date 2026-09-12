@@ -224,6 +224,11 @@ from an unsuccessful invocation's closed byte-report prefix. A successful
 regular-owner count does not by itself prove publication or whole-phase work;
 failed or missing coverage must not be treated as zero work.
 
+The prospective private author protocol also reports changed physical files
+from its verified Git inventory. Its child-complete observation is not proof
+that the parent successfully joined the author or completed the phase; those
+checks remain mandatory. Historical author requests keep their original wire.
+
 Protected replay adds two streaming database parse/hash passes beyond Verify
 and a private one-unit scratch file. A large record or intervening trivia can
 make that scratch file large, up to the existing artifact limit; 512 records

@@ -155,14 +155,24 @@ func TestExecutionCorpusAuthorRealCurrentRevisions(t *testing.T) {
 }
 
 func TestExecutionCorpusAuthorRealRefusalAndCancellation(t *testing.T) {
+	testExecutionCorpusAuthorRealRefusalAndCancellation(t, false)
+}
+
+func TestExecutionCorpusAuthorObservedRefusalAndCancellation(t *testing.T) {
+	testExecutionCorpusAuthorRealRefusalAndCancellation(t, true)
+}
+
+func testExecutionCorpusAuthorRealRefusalAndCancellation(t *testing.T, observed bool) {
+	t.Helper()
 	requireExternalToolFrozenHost(t)
 	fixture := newExecutionCheckoutFixture(t)
 	parent, _ := inputCustodyTestFixture(t)
 	git := gitCustodyTestProtect(t, t.Context(), parent, fixture.git)
-	for _, name := range []string{"out of order", "canceled before init", "stream failure", "stream cancellation", "ref drift", "config drift", "extra ref", "root replacement"} {
+	for _, name := range []string{"out of order", "canceled before init", "stream failure", "stream cancellation", "inventory truncation", "ref drift", "config drift", "extra ref", "root replacement"} {
 		t.Run(name, func(t *testing.T) {
 			source := corpusAuthorTestSource(t)
 			author, transport := corpusAuthorTestNew(t, git, parent, source)
+			author.observeChanges = observed
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			revision := "a"
@@ -179,6 +189,23 @@ func TestExecutionCorpusAuthorRealRefusalAndCancellation(t *testing.T) {
 						cancel()
 					}
 					return errors.New("private source detail must not escape")
+				}
+			case "inventory truncation":
+				// Real import and ls-tree still execute. A supplied shortened
+				// expectation cannot hide the actual extra native output leaf.
+				expectedAttempts = 4
+				original := source.walkRecords
+				calls := 0
+				source.walkRecords = func(ctx context.Context, revision string, visit func(sourceTreeRecord) error) error {
+					calls++
+					rows := 0
+					return original(ctx, revision, func(record sourceTreeRecord) error {
+						rows++
+						if calls > 1 && rows == 3 {
+							return nil
+						}
+						return visit(record)
+					})
 				}
 			case "ref drift", "config drift", "extra ref":
 				if _, err := author.AuthorNext(t.Context(), "a"); err != nil {
@@ -204,6 +231,9 @@ func TestExecutionCorpusAuthorRealRefusalAndCancellation(t *testing.T) {
 				}
 			}
 			result, err := author.AuthorNext(ctx, revision)
+			if author.changedFiles.Complete {
+				t.Fatal("failed actual author retained a complete changed-file observation")
+			}
 			if !errors.Is(err, ErrExecutionCorpusAuthor) || result != (AuthoredExecutionRevision{}) || strings.Contains(err.Error(), "private source detail") {
 				t.Fatalf("failed author returned evidence or raw cause: %+v, %v", result, err)
 			}
