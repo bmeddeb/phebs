@@ -8704,6 +8704,22 @@ the switch was the sole departure from the corrected private draft. Ordered
 source/test manifest: `f10385b24112dec056cb9901b69c33485a82dfdd1fa9dbfdad2bccbe82b6a2da`.
 Actual protected full-population author execution remains a separate gate.
 
+The exact-clean protected startup rehearsal at source
+`386c31d25548abd251d8f70917009aa93b95894d` passed in 1,289.71s (package
+1,290.461s). It admitted five independently rebuilt protected Go tools, ran
+the no-work runtime facts command, completed the actual observed Author A,
+then joined one startup/health/stop server session in 9.375s with an empty
+native session. Source/SDK/module custody retained 68,362 entries, 56,642
+files and 1,359,596,628 bytes. Phase two observed eight dispatch attempts and
+39 selected store transactions/746 rows/maximum 488; the startup-only result
+truthfully leaves full work and inspection evidence incomplete. Exact source
+remained clean and no matching process or port-65499 listener survived. The
+38,729-byte log SHA256 is
+`b1a8809474fc23c49105aa58ce55170fe1a728a9f0bfae217efab2ee28f790eb`.
+This is actual protected full-population Author A and startup proof for those
+source bytes, not proof of later logical-observation bytes, any later phase,
+complete profile issuance, receipt, freeze or ceremony.
+
 The next logical-content observation compares actual typed A/B/return catalogs
 already serialized and checked against protected input identities. Only accepted
 F boundaries with matching prior/current source and authority facts can promote
