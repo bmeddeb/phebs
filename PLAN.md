@@ -4710,3 +4710,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   readiness run that crosses a validated handoff and cleans exactly. Do not
   repeat all seven already-passed native outcomes for this diagnostic-only
   change.
+
+- **2026-09-21 — T42.2t exact-main readiness closure.** Exact integrated source
+  `69d82fc8b4e54941c64a5397a787a09fd592b292` passed the required disposable
+  signed `reject-authorization` readiness run in 2,680.348 seconds. The live
+  handoff bound canonical V4 plan source
+  `f0809ebbeee70c8a1fc8df67c7cb253224120c18` and protected executor
+  `sha256:e80803d921dd15b846c4ce6c80f31fe11cce95522b98535bc6b9a367c0011fb7`;
+  the intended ordinary native status-one authorization refusal was timely,
+  returned no operational package and was not treated as an executed stopped
+  receipt. The retained owner-only readiness root is
+  `/private/tmp/t422-signed-readiness-3649079615`; its freeze signature and
+  handoff cross-bind the source, plan and executor, and the owner-only wrapper
+  log is `sha256:30a34304fd6717bbb9e5ff38fce2ae94a4c128a16b5b370510af38badb6bae2c`.
+  Bootstrap custody is empty, operational root
+  `/private/tmp/phebs-t422-1160684315` is absent, and no matching process,
+  mount or port-65499 listener survives. Preserve the retained readiness
+  custody. This closes T42.2t's pre-identifier gate and permits fresh exact-main
+  V4 freeze preparation only; it is not a formal ceremony, authorization,
+  release or scale/SLO result. This documentation-only record changes no
+  compiled, embedded, fixture or harness input, so the readiness result remains
+  attributable to the exact executable bytes. A fresh protected executor and
+  controller must still be built from final exact main, independently reviewed,
+  and stopped before any new identifier is selected or burned.

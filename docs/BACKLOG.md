@@ -4595,6 +4595,18 @@ owns the design and dependency order. Execution remains excluded.
   identifier. Do not rerun the other six already-passed native outcomes for
   this diagnostic-only change.
 
+**T42.2t closure (2026-09-21).** Exact reviewed implementation
+`69d82fc8b4e54941c64a5397a787a09fd592b292` passed focused normal/race and
+transport gates, exact-source zero-finding review, and the required disposable
+signed `reject-authorization` readiness run in 2,680.348 seconds. The live
+handoff bound the exact source, canonical V4 plan and protected executor; the
+intended timely native status-one refusal returned no operational package.
+Retained owner-only signer evidence verifies, bootstrap custody is empty, the
+operational root is absent, and no matching process, mount or port-65499
+listener survives. Preserve the readiness custody. All T42.2t ACs are met;
+fresh exact-main V4 freeze preparation may proceed, but no formal identifier,
+ceremony execution, release or scale/SLO claim follows.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

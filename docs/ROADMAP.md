@@ -64,18 +64,19 @@ sequence.
 
 ## Now
 
-**T42.2t pre-claim attribution hold, 2026-09-21:** the attended controller
-permanently retired `t42r1-neutral-1`, but the outer launcher produced no
-authorization handoff and retained only its generic failure line. Signer
-control remained unchanged and exact cleanup completed, so no signer claim,
-freeze or ceremony occurred; the failed preparation predicate is not
-recoverably named. Preserve that controller root and do not retry unchanged.
-Next: land the closed source-free stage diagnostic after focused normal/race
-gates and exact review, rebuild the protected executor, then run one disposable
-exact-source `reject-authorization` readiness check through a validated handoff
-and clean teardown. A fresh formal identifier, freeze, execution, release and
-scale/SLO claim remain on hold. This supersedes the sequence in the earlier
-T42.2o paragraph below without changing its canonical V4 plan bytes.
+**T42.2t exact-main readiness closure, 2026-09-21:** exact integrated source
+`69d82fc8b4e54941c64a5397a787a09fd592b292` passed the disposable signed
+`reject-authorization` readiness gate in 2,680.348 seconds. Its validated live
+handoff bound the canonical V4 plan and protected executor; the intended timely
+native status-one refusal returned no operational package. Retained owner-only
+evidence verifies, bootstrap custody is empty, the operational root is absent,
+and no matching process, mount or port-65499 listener survives. Preserve both
+the retired `t42r1-neutral-1` controller root and the new readiness custody;
+never reuse that identifier. Next: record this source-identical documentation
+closure, rebuild a fresh protected executor and controller from final exact
+main, and independently review the new freeze preparation before selecting or
+burning another identifier. No formal ceremony, execution, release or scale/SLO
+claim follows.
 
 **T42.2o canonical V4 plan seal, 2026-09-21:** exact clean source
 `f0809ebbeee70c8a1fc8df67c7cb253224120c18` authored the 171,630-byte
