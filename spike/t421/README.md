@@ -2002,3 +2002,34 @@ supersedes the historical author/seal/local-merge holds above and adds no runtim
 cost. T42.2 runner implementation follows the authorized local integration;
 host/tool execution freeze follows implementation and review. Ceremony execution,
 remote push, release, and scale/SLO claims remain separately unauthorized.
+
+## T42.2o canonical V4 plan seal
+
+On 2026-09-21 Ben authorized exact-main V4 author/seal after reviewed
+integration. Two independent clean worktrees at exact source
+`f0809ebbeee70c8a1fc8df67c7cb253224120c18` ran the create-only author with
+the host compiler, SDK, and Apple Git selected explicitly:
+
+```text
+env SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk \
+  CC=/usr/bin/clang \
+  PATH=/Library/Developer/CommandLineTools/usr/bin:/usr/bin:/bin \
+  /opt/homebrew/opt/phebs-go-1.26.5/bin/go run ./spike/t421/cmd/author \
+  -schema v4 \
+  -repository-root <clean-f0809ebb-worktree> \
+  -source-commit f0809ebbeee70c8a1fc8df67c7cb253224120c18 \
+  -out <new-path>/plan-v4.json
+```
+
+Both produced byte-identical [plan-v4.json](./plan-v4.json): 171,630 bytes at
+`sha256:acfa4a98ba025d580ef1c3153e5929745b2807b2a9e8a4c6ae2ae819902daeb8`.
+The retained V1 plan remains 199,561 bytes at
+`sha256:96ba209147858c8f38b922fcaf8766dc6d796051d2e8b0999960ed2e114faf34`,
+and V2 remains 262,140 bytes at
+`sha256:2275b8cadca8f4e76a46db6d943380d1533a41da70a71c7009850e2c0229b422`.
+
+This artifact is the canonical source-free V4 plan, not a live execution
+freeze. It contains no admitted host/tool/execution-profile identity, freeze
+signature, selected ceremony ordinal, operational custody, or authorization to
+execute a ceremony. Those bindings belong to the post-integration authenticated
+freeze and its independent review.

@@ -13970,6 +13970,16 @@ force. A corrected immutable commit, complete gates, independent review and all
 seven exact-tip native outcomes remain required; disposal does not turn the
 failed run into a pass or authorize merge, seal or freeze.
 
+**T42.2o canonical V4 plan seal, 2026-09-21:** exact clean source
+`f0809ebbeee70c8a1fc8df67c7cb253224120c18` authored
+`spike/t421/plan-v4.json` at 171,630 bytes and
+`sha256:acfa4a98ba025d580ef1c3153e5929745b2807b2a9e8a4c6ae2ae819902daeb8`;
+a second clean worktree was byte-identical and retained V1/V2 artifacts remain
+exact. Canonical V4 plan author/seal is complete. Reviewed integration of this
+record, exact-main preflight, live host/tool/profile admission, authenticated
+freeze/signature replay, custody/expiry handoff, and frozen-plan review remain
+open. No execution, Epic closure, release or scale/SLO claim follows.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:

@@ -64,6 +64,15 @@ sequence.
 
 ## Now
 
+**T42.2o canonical V4 plan seal, 2026-09-21:** exact clean source
+`f0809ebbeee70c8a1fc8df67c7cb253224120c18` authored the 171,630-byte
+`spike/t421/plan-v4.json` at
+`sha256:acfa4a98ba025d580ef1c3153e5929745b2807b2a9e8a4c6ae2ae819902daeb8`;
+a second clean worktree was byte-identical and retained V1/V2 artifacts remain
+exact. Next: integrate this reviewed artifact record, run exact-main preflight,
+create the authenticated V4 freeze, and stop for independent freeze review.
+No ceremony execution, release or scale/SLO claim follows.
+
 **T42.2n pressure-continuation correction, 2026-09-17:** exact `03c26e90`
 passed prerequisite gates and exact review, then its signed readiness run
 passed through `pressure_90` and stopped before mutating the `pressure_75`
