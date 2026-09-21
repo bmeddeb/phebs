@@ -16,7 +16,7 @@ T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 
 .PHONY: dev dev-api build clean validate-version validate-release-version validate-release-target \
 	release verify-release smoke-release test ui-test ui-receipts ui-receipts-update lint ui db-server \
-	verify-go verify-node verify-golangci-lint verify-surreal verify-glossary t20-closure \
+	verify-go verify-node verify-golangci-lint verify-surreal verify-test-surreal verify-glossary t20-closure \
 	docs-check ci ci-static ci-go ci-race ci-ui
 
 bin:
@@ -31,13 +31,19 @@ bin/phebs-focused-index: go.mod go.sum $(shell find cmd/phebs-focused-index inte
 bin/buf: go.mod go.sum | bin ## compatibility child, pinned by the same go.mod as the server (T14.3)
 	CGO_ENABLED=0 go build -trimpath -o $@ github.com/bufbuild/buf/cmd/buf
 
+# Receipt runs pre-stage the neutral-demo bundles at the fixed fixture root
+# (scripts/stage-receipt-fixtures.sh, ui/receipts/fixtureRoot.ts) and export
+# the fixture paths; an explicitly set PHEBS_T307_NEUTRAL_SERVICE_REPO or
+# PHEBS_T344_SERVICE_SEARCH_REPO wins over the checkout default below so the
+# server derives the documented deterministic repository identities.
+# Unset, behavior is exactly the old checkout-relative default.
 dev: bin/zoekt-git-index bin/phebs-focused-index bin/buf ui ## boot phebs with embedded UI (ARGS="-config phebs.yaml" for flags)
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
-		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle) \
+		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(or $(PHEBS_T307_NEUTRAL_SERVICE_REPO),$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle)) \
 		PHEBS_T335_SERVICE_CATALOG=$(abspath docs/fixtures/t33.5-service-directory/t335-service-catalog.json) \
-		PHEBS_T344_SERVICE_SEARCH_REPO=$(abspath spike/t323/t323-neutral-corpus.bundle) \
+		PHEBS_T344_SERVICE_SEARCH_REPO=$(or $(PHEBS_T344_SERVICE_SEARCH_REPO),$(abspath spike/t323/t323-neutral-corpus.bundle)) \
 		PHEBS_T344_SERVICE_SEARCH_CATALOG=$(abspath docs/fixtures/t34.4-service-search/t344-service-catalog.json) \
 		PHEBS_INVESTIGATION_FIXTURES= \
 		PHEBS_CONTRACT_ATLAS_FIXTURE= \
@@ -50,9 +56,9 @@ dev-api: bin/zoekt-git-index bin/phebs-focused-index bin/buf ## backend-only loo
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
-		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle) \
+		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(or $(PHEBS_T307_NEUTRAL_SERVICE_REPO),$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle)) \
 		PHEBS_T335_SERVICE_CATALOG=$(abspath docs/fixtures/t33.5-service-directory/t335-service-catalog.json) \
-		PHEBS_T344_SERVICE_SEARCH_REPO=$(abspath spike/t323/t323-neutral-corpus.bundle) \
+		PHEBS_T344_SERVICE_SEARCH_REPO=$(or $(PHEBS_T344_SERVICE_SEARCH_REPO),$(abspath spike/t323/t323-neutral-corpus.bundle)) \
 		PHEBS_T344_SERVICE_SEARCH_CATALOG=$(abspath docs/fixtures/t34.4-service-search/t344-service-catalog.json) \
 		PHEBS_INVESTIGATION_FIXTURES= \
 		PHEBS_CONTRACT_ATLAS_FIXTURE= \
@@ -143,8 +149,26 @@ verify-release: ## verify RELEASE_BUNDLE bytes, modes, and canonical manifest
 smoke-release: verify-release verify-surreal ## empty-data sync/index/search and default-dark smoke
 	go run ./scripts/release-smoke -bundle "$(RELEASE_BUNDLE)" -timeout 2m
 
-test: verify-glossary
+# PHEBS_SKIP_SURREAL_TESTS=1 runs the suite without a SurrealDB binary; the
+# SurrealDB-backed tests keep their existing skip instead of failing this gate.
+# Tests discover `surreal` on PATH, so the runtime-only PHEBS_SURREAL override
+# cannot satisfy this guard.
+test: verify-test-surreal verify-glossary ## full suite; fails loudly without the surreal binary unless PHEBS_SKIP_SURREAL_TESTS=1
 	go test ./... -timeout=60m
+
+verify-test-surreal:
+	@if [ -n "$${PHEBS_SKIP_SURREAL_TESTS:-}" ] && [ "$$PHEBS_SKIP_SURREAL_TESTS" != 1 ]; then \
+		printf 'error: PHEBS_SKIP_SURREAL_TESTS must be exactly 1 when set\n' >&2; \
+		exit 2; \
+	fi
+	@if [ "$${PHEBS_SKIP_SURREAL_TESTS:-}" != 1 ] && \
+		! command -v surreal >/dev/null 2>&1; then \
+		printf 'error: `surreal` binary not found in PATH; SurrealDB-backed tests would silently skip\n' >&2; \
+		printf 'install SurrealDB %s (pinned in .surrealdb-version) and add it to PATH\n' "$(SURREALDB_VERSION)" >&2; \
+		printf '(in CI: sh scripts/install-surreal-ci.sh <work-dir>, then add <work-dir>/surreal-bin to PATH)\n' >&2; \
+		printf 'or set PHEBS_SKIP_SURREAL_TESTS=1 to run the suite without the SurrealDB-backed tests\n' >&2; \
+		exit 2; \
+	fi
 
 docs-check: ## resolve tracked docs, enforce map coverage, and verify sealed T11.1 bytes
 	go test ./scripts \
@@ -210,8 +234,16 @@ ci-static: verify-go verify-golangci-lint verify-glossary
 ci-go: verify-go verify-surreal
 	go test ./... -count=1 -timeout=60m
 
+# Race coverage starts with the most concurrent packages: dispatchadmission
+# spawns the most goroutines in the tree, then cmd/phebs, the store, and the
+# scheduler/lifecycle/ingest packages. Trims start from the tail of the list.
 ci-race: verify-go verify-surreal
-	go test -race ./internal/store ./internal/sync ./internal/indexer ./internal/search ./internal/extract ./internal/callerpublication ./internal/observationpublication -count=1 -timeout=40m
+	go test -race \
+		./internal/store ./internal/sync ./internal/indexer ./internal/search \
+		./internal/extract ./internal/callerpublication ./internal/observationpublication \
+		./cmd/phebs ./internal/api ./internal/dispatchadmission \
+		./internal/lifecycle ./internal/generationscheduler ./internal/storeaccounting ./internal/mcp \
+		-count=1 -timeout=60m
 
 ci-ui: verify-node verify-go
 	cd ui && npm ci

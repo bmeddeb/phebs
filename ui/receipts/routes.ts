@@ -1,14 +1,31 @@
+import {
+  T307_BUNDLE,
+  T323_BUNDLE,
+  receiptFixtureRepoName,
+} from './fixtureRoot'
+
 // The receipts manifest: every routed surface with a deterministic address
-// on the make-dev neutral cohorts. Baselines are environment-bound
-// engineering records: repository names embed this checkout's path and the
-// t307 bundle pin, and relative-time copy binds to the dev instance's index
-// generation — rebuild the instance, re-review, and refresh explicitly.
+// on the make-dev neutral cohorts. Neutral-demo repository identities are
+// receipt-environment-bound, not checkout-bound: receipt runs stage the
+// bundles at RECEIPT_FIXTURE_ROOT before booting the dev instance
+// (scripts/stage-receipt-fixtures.sh), and the identities below mirror the
+// server's local-path RepoName rule (internal/sync: `local/` + the absolute
+// bundle path without its leading slash) against that fixed root. The string
+// is identical on macOS and Linux, so the routes address repositories that
+// exist in the booted instance AND render the same unmasked names the
+// reviewed baselines pin — no developer-checkout literals, no per-checkout
+// baseline refresh. Baselines are produced in the Ubuntu CI rendering
+// environment; the regeneration procedure and per-platform policy live in
+// ui/receipts/README.md. The t307 bundle pin binds the content, and
+// relative-time copy binds to the dev instance's index generation.
 
 // Date.now() is fixed to this instant during capture so age copy cannot
 // drift within an instance generation.
 export const FROZEN_NOW = new Date('2026-08-07T20:00:00Z')
 
-const T307_REPO = 'local/Users/ben/phebs-ux/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle'
+// Fixed fixture root (ui/receipts/fixtureRoot.ts): identical on every
+// machine, so rendered repository names are baseline-stable.
+const T307_REPO = receiptFixtureRepoName(T307_BUNDLE)
 const T307_COMMIT = 'b7f443ed7e89dbaede855a6cfd30767bbe13dfbb'
 const T307_FILE = 'api/orders.proto'
 
@@ -57,7 +74,7 @@ export interface ReceiptRoute {
   scrollIntoView?: string
 }
 
-const T323_REPO = 'local/Users/ben/phebs-ux/spike/t323/t323-neutral-corpus.bundle'
+const T323_REPO = receiptFixtureRepoName(T323_BUNDLE)
 const WORKBENCH_CONFIRM_PATH = `/workbench?${q({
   source: 'atlas',
   step: 'what',

@@ -2,8 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 // T43.4 deterministic screenshot receipts. Runs against an already-running
 // dev instance (make dev ARGS="-config phebs-ux-dev.yaml" in the repo root);
-// point PHEBS_RECEIPTS_URL elsewhere to bind a different instance. Uses the
-// system Chrome channel so no browser download is required.
+// point PHEBS_RECEIPTS_URL elsewhere to bind a different instance. The
+// hosted comparison selects package-matched Chromium in the digest-pinned
+// Playwright image; local runs retain the existing system Chrome channel.
 export default defineConfig({
   testDir: './receipts',
   outputDir: './receipts/.artifacts',
@@ -28,7 +29,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.PHEBS_RECEIPTS_URL ?? 'http://127.0.0.1:3073',
     ...devices['Desktop Chrome'],
-    channel: 'chrome',
+    ...(process.env.PHEBS_RECEIPTS_BROWSER === 'chromium' ? {} : { channel: 'chrome' as const }),
     viewport: { width: 1280, height: 800 },
     deviceScaleFactor: 1,
     locale: 'en-US',

@@ -15,6 +15,38 @@ async function fulfillJSON(route: Route, value: unknown, status = 200) {
   })
 }
 
+// Receipt-only presentation identity. The setup project validates a real
+// authenticated session before any receipt runs; the harness pins the
+// displayed operator to this neutral identity on every captured page so
+// reviewed pixels never inherit a developer's personal email — or the CI
+// bootstrap operator's address. The shape matches the real session (the
+// bootstrap operator is the first user, hence an admin); only the
+// presentation fields are pinned.
+const PINNED_IDENTITY = {
+  authenticated: true,
+  auth_required: true,
+  setup_required: false,
+  oidc_enabled: false,
+  password_enabled: true,
+  user: {
+    id: 'receipt-operator',
+    email: 'ux-audit@localhost.test',
+    display_name: 'UX audit',
+    is_admin: true,
+  },
+}
+
+async function fulfillPinnedIdentity(route: Route) {
+  await fulfillJSON(route, PINNED_IDENTITY)
+}
+
+// Pin the presentation identity for every receipt capture, not just the
+// fixture-backed routes: the header renders the operator email on all
+// desktop viewports.
+export async function installIdentityFixture(page: Page) {
+  await page.route('**/api/auth/status', fulfillPinnedIdentity)
+}
+
 function isFixtureIdentity(url: URL): boolean {
   return url.searchParams.get('repo') === MARKDOWN_PREVIEW_FIXTURE.repository
 }
@@ -27,19 +59,7 @@ async function installMarkdownPreviewFixture(page: Page) {
     // receipt runs. Pin the presentation identity inside this one page-scoped
     // fixture so reviewed pixels never inherit a developer's personal email.
     if (url.pathname === '/api/auth/status') {
-      await fulfillJSON(route, {
-        authenticated: true,
-        auth_required: true,
-        setup_required: false,
-        oidc_enabled: false,
-        password_enabled: true,
-        user: {
-          id: 'receipt-operator',
-          email: 'ux-audit@localhost.test',
-          display_name: 'UX audit',
-          is_admin: true,
-        },
-      })
+      await fulfillPinnedIdentity(route)
       return
     }
 

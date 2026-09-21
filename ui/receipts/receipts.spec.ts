@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { DENSITIES, FROZEN_NOW, ROUTES, THEMES, type ReceiptRoute } from './routes'
 import { DEFAULT_PALETTE } from '../src/palette'
-import { installReceiptFixture } from './fixture'
+import { installIdentityFixture, installReceiptFixture } from './fixture'
 
 type ReceiptWindow = typeof window & { __phebsReceiptPending?: number }
 
@@ -40,6 +40,10 @@ async function waitForReceiptReady(page: Page) {
 async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[number], density: (typeof DENSITIES)[number], name: string) {
   const { path } = route
   if (route.viewport) await page.setViewportSize(route.viewport)
+  // Pin the neutral presentation identity on every captured page: the header
+  // renders the operator email on desktop viewports, and without this the
+  // bootstrap operator's address would reach the pixels.
+  await installIdentityFixture(page)
   await installReceiptFixture(page, route.fixture)
   // Fixed Date only — timers, rAF, and CodeMirror layout stay live; age copy
   // stops drifting between capture and check runs.
