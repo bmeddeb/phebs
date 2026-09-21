@@ -64,6 +64,19 @@ sequence.
 
 ## Now
 
+**T42.2t pre-claim attribution hold, 2026-09-21:** the attended controller
+permanently retired `t42r1-neutral-1`, but the outer launcher produced no
+authorization handoff and retained only its generic failure line. Signer
+control remained unchanged and exact cleanup completed, so no signer claim,
+freeze or ceremony occurred; the failed preparation predicate is not
+recoverably named. Preserve that controller root and do not retry unchanged.
+Next: land the closed source-free stage diagnostic after focused normal/race
+gates and exact review, rebuild the protected executor, then run one disposable
+exact-source `reject-authorization` readiness check through a validated handoff
+and clean teardown. A fresh formal identifier, freeze, execution, release and
+scale/SLO claim remain on hold. This supersedes the sequence in the earlier
+T42.2o paragraph below without changing its canonical V4 plan bytes.
+
 **T42.2o canonical V4 plan seal, 2026-09-21:** exact clean source
 `f0809ebbeee70c8a1fc8df67c7cb253224120c18` authored the 171,630-byte
 `spike/t421/plan-v4.json` at

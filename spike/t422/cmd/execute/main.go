@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,8 +14,14 @@ import (
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	if t421.RunExecutionCommand(ctx, os.Args, os.Environ()) != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "t422-execute: authenticated execution operation unavailable")
+	if err := t421.RunExecutionCommand(ctx, os.Args, os.Environ()); err != nil {
+		writeExecutionCommandFailure(os.Stderr, t421.ExecutionCommandFailureReported(err))
 		os.Exit(1)
+	}
+}
+
+func writeExecutionCommandFailure(stderr io.Writer, alreadyReported bool) {
+	if !alreadyReported {
+		_, _ = fmt.Fprintln(stderr, "t422-execute: authenticated execution operation unavailable")
 	}
 }

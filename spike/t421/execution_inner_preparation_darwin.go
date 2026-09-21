@@ -49,6 +49,7 @@ type executionInnerPreparation struct {
 	outerDeadline          time.Time
 	finalAdmissionDeadline time.Time
 	handoffUsed            bool
+	preclaimStage          executionPreclaimStage
 
 	closed         bool
 	abortAttempted bool
@@ -65,7 +66,7 @@ func prepareExecutionInnerPreparation(
 ) (*executionInnerPreparation, error) {
 	prepared := &executionInnerPreparation{
 		selection: selection, parent: parent, outerDeadline: outerDeadline,
-		ordinals: newExecutionEventOrdinals(),
+		ordinals: newExecutionEventOrdinals(), preclaimStage: executionPreclaimStagePreflight,
 	}
 	refuse := func() (*executionInnerPreparation, error) { return prepared, ErrExecutionLauncher }
 	if ctx == nil || ctx.Err() != nil || !validExecutionSelection(selection) || parent == nil || parent.alive == nil ||
@@ -74,26 +75,32 @@ func prepareExecutionInnerPreparation(
 	}
 
 	var err error
+	prepared.preclaimStage = executionPreclaimStageOperationalRoot
 	prepared.operational, err = createExecutionOperationalRoot(selection)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStagePressureVolume
 	prepared.volume, err = prepareExecutionPressureVolume(ctx, prepared.operational.path)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageWorkspace
 	ctx, workspace, err := prepared.volume.borrowWorkspace(ctx)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageSignerCustody
 	prepared.signer, err = HoldExecutionSystemTool(ctx, "ssh-keygen")
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageGitCustody
 	prepared.git, err = ProtectExecutionGit(ctx, workspace, selection.GitBinary)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageGoBuildInputs
 	prepared.builds, err = ProtectExecutionGoBuildInputs(ctx, workspace, ExecutionGoBuildRequest{
 		Git: prepared.git, RepositoryRoot: selection.RepositoryRoot,
 		PlanSourceCommit: selection.PlanSourceCommit, IntegratedMainCommit: selection.IntegratedMainCommit,
@@ -102,11 +109,13 @@ func prepareExecutionInnerPreparation(
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageReferenceCandidates
 	prepared.candidates, err = prepareExecutionReferenceCandidatesV3(ctx, prepared.builds, workspace)
 	if err != nil {
 		return refuse()
 	}
 	roles := executionReferenceCandidateRoles()
+	prepared.preclaimStage = executionPreclaimStageReferenceTools
 	for index, role := range roles {
 		path, pathErr := prepared.candidates.Path(ctx, role)
 		if pathErr != nil {
@@ -121,11 +130,13 @@ func prepareExecutionInnerPreparation(
 		return refuse()
 	}
 	prepared.candidates = nil
+	prepared.preclaimStage = executionPreclaimStageSurrealCustody
 	prepared.surreal, err = ProtectExecutionExternalTool(ctx, workspace, "surreal", selection.SurrealBinary)
 	if err != nil {
 		return refuse()
 	}
 
+	prepared.preclaimStage = executionPreclaimStagePlanConstruction
 	plan, err := BuildPlanV4(selection.PlanSourceCommit)
 	if err != nil {
 		return refuse()
@@ -138,57 +149,92 @@ func prepareExecutionInnerPreparation(
 	if err := writeExecutionInnerPlan(prepared.volume.workspace, planPath, raw); err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStagePlanInputCustody
 	prepared.planInput, err = ProtectExecutionInputs(ctx, workspace, []ExecutionInputCopy{{Name: "plan", Path: planPath, SHA256: SHA256(raw)}})
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageAuthorCustody
 	prepared.author, err = PrepareExecutionAuthor(ctx, workspace, ExecutionAuthorRequest{
 		Git: prepared.git, Builds: prepared.builds, Author: prepared.tools[0], Plan: prepared.planInput,
 	})
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageEpochConfigs
 	prepared.epochs, err = PrepareExecutionEpochConfigs(ctx, prepared.author)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageEpochOne
 	prepared.flow, err = PrepareExecutionEpochOne(ctx, prepared.epochs, prepared.tools[1], prepared.tools[2], prepared.surreal)
 	if err != nil {
 		return refuse()
 	}
-	if prepared.flow.bindProfileTools(ctx, prepared.tools[3], prepared.tools[4]) != nil ||
-		prepared.flow.prepareProfileSigner(ctx, prepared.signer) != nil ||
-		prepared.flow.bindProfileSignerNamespace(ctx, selection) != nil ||
-		prepared.flow.bindProfileExecutor(ctx, parent) != nil {
+	prepared.preclaimStage = executionPreclaimStageProfileTools
+	if prepared.flow.bindProfileTools(ctx, prepared.tools[3], prepared.tools[4]) != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageProfileSigner
+	if prepared.flow.prepareProfileSigner(ctx, prepared.signer) != nil {
+		return refuse()
+	}
+	prepared.preclaimStage = executionPreclaimStageProfileNamespace
+	if prepared.flow.bindProfileSignerNamespace(ctx, selection) != nil {
+		return refuse()
+	}
+	prepared.preclaimStage = executionPreclaimStageProfileExecutor
+	if prepared.flow.bindProfileExecutor(ctx, parent) != nil {
+		return refuse()
+	}
+	prepared.preclaimStage = executionPreclaimStagePressureBallast
 	prepared.ballast, err = prepareExecutionPressureBallast(ctx, prepared.volume)
 	if err != nil {
 		return refuse()
 	}
-	if _, err := prepared.volume.samplePreparation(ctx); err != nil || prepared.volume.bindRehearsal(ctx, prepared.flow) != nil ||
-		prepared.volume.observeProfileHost(ctx, prepared.flow) != nil || prepared.flow.prepareProfileEnvironment(ctx) != nil ||
-		prepared.flow.prepareProfileRuntime(ctx) != nil {
+	prepared.preclaimStage = executionPreclaimStagePressureSample
+	if _, err := prepared.volume.samplePreparation(ctx); err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageRehearsalBinding
+	if prepared.volume.bindRehearsal(ctx, prepared.flow) != nil {
+		return refuse()
+	}
+	prepared.preclaimStage = executionPreclaimStageProfileHost
+	if prepared.volume.observeProfileHost(ctx, prepared.flow) != nil {
+		return refuse()
+	}
+	prepared.preclaimStage = executionPreclaimStageProfileEnvironment
+	if prepared.flow.prepareProfileEnvironment(ctx) != nil {
+		return refuse()
+	}
+	prepared.preclaimStage = executionPreclaimStageProfileRuntime
+	if prepared.flow.prepareProfileRuntime(ctx) != nil {
+		return refuse()
+	}
+	prepared.preclaimStage = executionPreclaimStageProfileIssue
 	prepared.profile, prepared.admission, prepared.handoff, err = prepared.flow.issueExecutionProfile(ctx)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageParentImage
 	executePath, executeDigest, err := parent.image.observe(ctx)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageHandoffProjection
 	prepared.projection, err = projectExecutionAuthorizationHandoff(executePath,
 		filepath.Join(prepared.operational.path, executionAuthorizationSocketName), executeDigest,
 		outerDeadline.UnixNano())
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageSignerNamespace
 	namespace, err := prepared.flow.profileSignerNamespace.check(ctx)
 	if err != nil {
 		return refuse()
 	}
+	prepared.preclaimStage = executionPreclaimStageCeremonyClaim
 	prepared.claim, err = claimExecutionSignerCeremony(ctx, namespace, selection.CeremonyID, prepared.operational.path)
 	if err != nil {
 		return refuse()
@@ -202,6 +248,24 @@ func prepareExecutionInnerPreparation(
 		return refuse()
 	}
 	return prepared, nil
+}
+
+func (prepared *executionInnerPreparation) preclaimFailure(cleanupErr error) (executionPreclaimFailureV1, bool) {
+	if prepared == nil {
+		return executionPreclaimFailureV1{}, false
+	}
+	prepared.mu.Lock()
+	defer prepared.mu.Unlock()
+	if prepared.claim != nil || !validExecutionPreclaimStage(prepared.preclaimStage) {
+		return executionPreclaimFailureV1{}, false
+	}
+	cleanup := "retained_or_unavailable"
+	if cleanupErr == nil && prepared.closed {
+		cleanup = "clean"
+	}
+	return executionPreclaimFailureV1{
+		Schema: executionPreclaimFailureSchema, Stage: prepared.preclaimStage, Cleanup: cleanup,
+	}, true
 }
 
 // authorizeAndAuthorA performs the sole live signed handoff. It emits one

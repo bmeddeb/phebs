@@ -93,6 +93,25 @@ func TestMain(m *testing.M) {
 		if selected.CeremonyID == "t422-no-handoff-test" {
 			os.Exit(43)
 		}
+		if selected.CeremonyID == "t422-preclaim-diagnostic-test" || selected.CeremonyID == "t422-preclaim-diagnostic-extra-test" ||
+			selected.CeremonyID == "t422-preclaim-diagnostic-zero-test" {
+			raw, err := canonicalExecutionPreclaimFailure(executionPreclaimFailureV1{
+				Schema: executionPreclaimFailureSchema, Stage: executionPreclaimStageProfileRuntime, Cleanup: "clean",
+			})
+			if err != nil {
+				os.Exit(87)
+			}
+			if _, err := os.Stdout.Write(raw); err != nil {
+				os.Exit(88)
+			}
+			if selected.CeremonyID == "t422-preclaim-diagnostic-extra-test" {
+				_, _ = os.Stdout.Write([]byte("x"))
+			}
+			if selected.CeremonyID == "t422-preclaim-diagnostic-zero-test" {
+				os.Exit(0)
+			}
+			os.Exit(1)
+		}
 		if selected.CeremonyID == "t422-cancel-test" {
 			liveness, err := executionLiveness(os.Environ())
 			if err != nil {
@@ -211,6 +230,16 @@ func TestMain(m *testing.M) {
 			}
 			os.Exit(53)
 		}
+		if selected.CeremonyID == "t422-preclaim-diagnostic-test" || selected.CeremonyID == "t422-preclaim-diagnostic-extra-test" ||
+			selected.CeremonyID == "t422-preclaim-diagnostic-zero-test" {
+			reported := ExecutionCommandFailureReported(err)
+			if errors.Is(err, ErrExecutionLauncher) &&
+				(selected.CeremonyID == "t422-preclaim-diagnostic-test" && reported ||
+					selected.CeremonyID != "t422-preclaim-diagnostic-test" && !reported) {
+				os.Exit(85)
+			}
+			os.Exit(86)
+		}
 		var exit *exec.ExitError
 		if errors.Is(err, ErrExecutionLauncher) && errors.As(err, &exit) && exit.ExitCode() == 43 {
 			os.Exit(45)
@@ -234,6 +263,9 @@ func TestMain(m *testing.M) {
 	if len(os.Args) == 2 && os.Args[1] == "t422-session-row-test" {
 		time.Sleep(30 * time.Second)
 		os.Exit(0)
+	}
+	if len(os.Args) == 2 && os.Args[1] == "t422-exit-one-test" {
+		os.Exit(1)
 	}
 	os.Exit(m.Run())
 }
@@ -265,6 +297,27 @@ func TestExecutionAbortDeadlinePreservesCleanupAllowance(t *testing.T) {
 	outer := started.Add(time.Second)
 	if got := executionAbortDeadline(outer); !got.Equal(outer) {
 		t.Fatal("abort deadline renewed the outer lifetime", got)
+	}
+}
+
+func TestExecutionPreclaimStopPreservesConsumedWait(t *testing.T) {
+	command := exec.Command(os.Args[0], "t422-exit-one-test")
+	prepareProductionSession(command)
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waited := make(chan error, 1)
+	go func() { waited <- command.Wait() }()
+	waitErr := <-waited
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = reader.Close() }()
+	started := time.Now()
+	err = stopExecutionPreclaimFailure(command, waited, writer, true, waitErr, started.Add(5*time.Second))
+	if !errors.Is(err, ErrExecutionLauncher) || time.Since(started) >= time.Second {
+		t.Fatalf("consumed Wait was repeated or refusal lost: %v, elapsed %s", err, time.Since(started))
 	}
 }
 
@@ -311,6 +364,111 @@ func TestExecutionOuterRefusesInnerWithoutHandoff(t *testing.T) {
 		if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("pending launcher started selected authority at %q: %v", path, err)
 		}
+	}
+}
+
+func TestExecutionOuterRetainsOnlyExactPreclaimDiagnostic(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		ceremonyID string
+		wantRecord bool
+	}{
+		{name: "exact", ceremonyID: "t422-preclaim-diagnostic-test", wantRecord: true},
+		{name: "extra byte", ceremonyID: "t422-preclaim-diagnostic-extra-test"},
+		{name: "zero exit", ceremonyID: "t422-preclaim-diagnostic-zero-test"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			selection, _ := testExecutionSelection(t)
+			selection.CeremonyID = test.ceremonyID
+			executable := protectedExecutionTestImage(t)
+			command := exec.Command(executable, executionOuterMode, "--selection-base64url", encodeExecutionSelection(t, selection))
+			command.Env = []string{"AMBIENT_IGNORED=1"}
+			var stderr bytes.Buffer
+			command.Stderr = &stderr
+			output, err := runExecutionLauncherWithOutput(t, command)
+			if code := exitCode(t, err); code != 85 || len(output) != 0 {
+				t.Fatalf("preclaim bridge exit/output = %d/%d", code, len(output))
+			}
+			want, encodeErr := canonicalExecutionPreclaimFailure(executionPreclaimFailureV1{
+				Schema: executionPreclaimFailureSchema, Stage: executionPreclaimStageProfileRuntime, Cleanup: "clean",
+			})
+			if encodeErr != nil {
+				t.Fatal(encodeErr)
+			}
+			if test.wantRecord && !bytes.Equal(stderr.Bytes(), want) {
+				t.Fatalf("retained diagnostic = %q, want %q", stderr.Bytes(), want)
+			}
+			if !test.wantRecord && stderr.Len() != 0 {
+				t.Fatalf("invalid diagnostic escaped: %q", stderr.Bytes())
+			}
+		})
+	}
+}
+
+func TestExecutionPreclaimFailureIsClosedAndCanonical(t *testing.T) {
+	stages := []executionPreclaimStage{
+		executionPreclaimStagePreflight,
+		executionPreclaimStageOperationalRoot,
+		executionPreclaimStagePressureVolume,
+		executionPreclaimStageWorkspace,
+		executionPreclaimStageSignerCustody,
+		executionPreclaimStageGitCustody,
+		executionPreclaimStageGoBuildInputs,
+		executionPreclaimStageReferenceCandidates,
+		executionPreclaimStageReferenceTools,
+		executionPreclaimStageSurrealCustody,
+		executionPreclaimStagePlanConstruction,
+		executionPreclaimStagePlanInputCustody,
+		executionPreclaimStageAuthorCustody,
+		executionPreclaimStageEpochConfigs,
+		executionPreclaimStageEpochOne,
+		executionPreclaimStageProfileTools,
+		executionPreclaimStageProfileSigner,
+		executionPreclaimStageProfileNamespace,
+		executionPreclaimStageProfileExecutor,
+		executionPreclaimStagePressureBallast,
+		executionPreclaimStagePressureSample,
+		executionPreclaimStageRehearsalBinding,
+		executionPreclaimStageProfileHost,
+		executionPreclaimStageProfileEnvironment,
+		executionPreclaimStageProfileRuntime,
+		executionPreclaimStageProfileIssue,
+		executionPreclaimStageParentImage,
+		executionPreclaimStageHandoffProjection,
+		executionPreclaimStageSignerNamespace,
+		executionPreclaimStageCeremonyClaim,
+	}
+	for _, stage := range stages {
+		for _, cleanup := range []string{"clean", "retained_or_unavailable"} {
+			value := executionPreclaimFailureV1{Schema: executionPreclaimFailureSchema, Stage: stage, Cleanup: cleanup}
+			raw, err := canonicalExecutionPreclaimFailure(value)
+			decoded, decodeErr := decodeExecutionPreclaimFailure(raw)
+			if err != nil || decodeErr != nil || decoded != value || raw[len(raw)-1] != '\n' || len(raw) > maxExecutionPreclaimFailureBytes {
+				t.Fatalf("stage %q cleanup %q did not round trip: %v, %v", stage, cleanup, err, decodeErr)
+			}
+		}
+	}
+	for _, raw := range [][]byte{
+		[]byte(`{"schema":"t422-source-free-preclaim-failure-v1","stage":"unknown","cleanup":"clean"}` + "\n"),
+		[]byte(`{"schema":"t422-source-free-preclaim-failure-v1","stage":"preflight","cleanup":"unknown"}` + "\n"),
+		[]byte(`{"stage":"preflight","schema":"t422-source-free-preclaim-failure-v1","cleanup":"clean"}` + "\n"),
+		[]byte(`{"schema":"t422-source-free-preclaim-failure-v1","stage":"preflight","cleanup":"clean","extra":true}` + "\n"),
+		[]byte(`{"schema":"t422-source-free-preclaim-failure-v1","stage":"preflight","cleanup":"clean"}`),
+	} {
+		if _, err := decodeExecutionPreclaimFailure(raw); err == nil {
+			t.Fatalf("noncanonical preclaim diagnostic admitted: %q", raw)
+		}
+	}
+}
+
+func TestExecutionPreclaimFailureSuppressesClaimedCeremony(t *testing.T) {
+	prepared := &executionInnerPreparation{preclaimStage: executionPreclaimStageProfileIssue, closed: true}
+	if value, ok := prepared.preclaimFailure(nil); !ok || value.Cleanup != "clean" || value.Stage != executionPreclaimStageProfileIssue {
+		t.Fatal("clean preclaim failure was not classified")
+	}
+	prepared.claim = &executionSignerCeremonyClaimCustody{}
+	if _, ok := prepared.preclaimFailure(nil); ok {
+		t.Fatal("claimed ceremony emitted a preclaim diagnostic")
 	}
 }
 

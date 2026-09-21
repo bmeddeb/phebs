@@ -7798,6 +7798,25 @@ output. Receipt decision and process exit must agree: a verified stopped
 receipt accompanies a nonzero exit. Receiving an authorization line alone is
 not a completed run or returned package.
 
+Before a signer claim exists, a failed inner preparation may instead send one
+canonical JSON line on the private inner-to-outer pipe. Its schema is
+`t422-source-free-preclaim-failure-v1`, its `stage` is one closed last-attempted
+preparation stage, and `cleanup` is `clean` or
+`retained_or_unavailable`; the complete line is at most 256 bytes. The outer
+retains a freshly encoded copy as its only stderr line only after exact EOF,
+natural inner status one, an empty joined session, and unchanged pipe, held
+image, process identity and deadline. It publishes nothing on stdout. Unknown,
+noncanonical, trailing or zero-exit rows remain the ordinary generic failure,
+and a preparation with any signer-claim custody emits no pre-claim row.
+
+This row is unsigned private troubleshooting retained by the attended
+controller. The stage means only the operation being attempted when refusal
+returned; it does not identify the exact predicate or cause. Cleanup describes
+the bounded pre-admission abort only. Neither field is authorization, a freeze,
+a receipt, evidence, readiness, retry permission or a gate waiver. Preserve
+the controller root and never reuse or automatically retry its selected formal
+identifier.
+
 The outer launcher verifies all signatures, exact inventory and full receipt
 semantics before publishing the package. It accepts only an already nonblocking
 FIFO/socket as external stdout; ordinary shell redirection to a regular file,

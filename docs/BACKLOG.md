@@ -4572,6 +4572,29 @@ owns the design and dependency order. Execution remains excluded.
   added rehearsal minutes, and identifiers consumed per confirmed root cause;
   make no ceremony-success, calibration, release, or scale claim.
 
+- **T42.2t · Source-free pre-claim failure attribution** — close the
+  attribution gap exposed after the attended controller permanently retired
+  `t42r1-neutral-1` but received neither an authorization handoff nor a named
+  preparation refusal. The retained empty outer output, generic stderr,
+  unchanged signer namespace and clean process/volume teardown establish no
+  signer claim, freeze or ceremony and support no narrower SurrealDB, host or
+  exact-main cause. AC: preserve that controller root and never reuse its ID;
+  record only a closed last-attempted preparation stage and
+  `clean|retained_or_unavailable` cleanup after bounded pre-claim abort; emit a
+  canonical at-most-256-byte private frame over the existing inner pipe; accept
+  it only with exact EOF, natural status one, empty native session, unchanged
+  held image/pipe/process identity and no signer-claim custody; re-encode it to
+  the existing controller-retained stderr without forwarding it to stdout or
+  changing authorization/package bytes; suppress unknown, noncanonical,
+  trailing, wrong-exit and post-claim records; retain the generic refusal; and
+  document that the row is unsigned troubleshooting, not causal evidence,
+  retry authority, a gate waiver, freeze, receipt or ceremony result. Focused
+  normal/race, retained transport regressions, exact-source zero-finding review
+  and one disposable exact-source `reject-authorization` readiness run with a
+  validated handoff and exact clean teardown must pass before another formal
+  identifier. Do not rerun the other six already-passed native outcomes for
+  this diagnostic-only change.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

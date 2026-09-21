@@ -155,7 +155,17 @@ func runExecutionOuter(ctx context.Context, started time.Time, executable, selec
 	var freezeSHA256 string
 	select {
 	case captured := <-frames:
-		if captured.err != nil || len(captured.raw) == 0 || captured.value.clientArgvPath() != executable ||
+		if captured.err != nil || len(captured.raw) == 0 {
+			stoppedWriter := writer
+			writer = nil
+			return stopExecutionInner(command, waited, stoppedWriter, time.Unix(0, deadlineNano))
+		}
+		if captured.preclaim.Schema != "" {
+			ownedWriter := writer
+			writer = nil
+			return finishExecutionPreclaimFailure(ctx, command, waited, packages, ownedWriter, writeRow, image, startedInner, captured, time.Unix(0, deadlineNano))
+		}
+		if captured.value.clientArgvPath() != executable ||
 			captured.value.T422ExecuteImageSHA256 != image.digest || captured.value.OuterDeadlineUnixNano != deadlineNano {
 			stoppedWriter := writer
 			writer = nil
@@ -241,6 +251,65 @@ func runExecutionOuter(ctx context.Context, started time.Time, executable, selec
 	return nil
 }
 
+func finishExecutionPreclaimFailure(
+	ctx context.Context,
+	command *exec.Cmd,
+	waited <-chan error,
+	packages <-chan executionReturnedOutput,
+	writer *os.File,
+	writeRow executionPipeIdentity,
+	image *executionHeldImage,
+	startedInner t4013.NativeProcessRecord,
+	captured executionAuthorizationHandoffFrame,
+	outerDeadline time.Time,
+) error {
+	if command == nil || command.Process == nil || writer == nil || image == nil {
+		return errors.Join(ErrExecutionLauncher, closeExecutionFile(writer))
+	}
+	var waitErr error
+	var tail executionReturnedOutput
+	waitChannel, tailChannel := waited, packages
+	for waitChannel != nil || tailChannel != nil {
+		select {
+		case waitErr = <-waitChannel:
+			waitChannel = nil
+		case tail = <-tailChannel:
+			tailChannel = nil
+			if tail.err != nil {
+				return stopExecutionPreclaimFailure(command, waited, writer, waitChannel == nil, waitErr, outerDeadline)
+			}
+		case <-ctx.Done():
+			return stopExecutionPreclaimFailure(command, waited, writer, waitChannel == nil, waitErr, outerDeadline)
+		}
+	}
+	var exit *exec.ExitError
+	joined, empty, finishErr := finishExecutionProcessSession(command.Process.Pid, waited, true, nil, executionFinishDeadline(outerDeadline))
+	current, rowErr := executionPipeRow(writer, unix.O_WRONLY)
+	closeErr := closeExecutionFile(writer)
+	raw, encodeErr := canonicalExecutionPreclaimFailure(captured.preclaim)
+	if !errors.As(waitErr, &exit) || exit.ExitCode() != 1 || !joined || !empty || finishErr != nil ||
+		tail.err != nil || len(tail.raw) != 0 || ctx.Err() != nil || rowErr != nil || current != writeRow || closeErr != nil ||
+		image.Check(ctx) != nil || startedInner.PID != command.Process.Pid || startedInner.ParentPID != os.Getpid() ||
+		startedInner.StartIdentity == "" || encodeErr != nil || !bytes.Equal(raw, captured.raw) {
+		return ErrExecutionLauncher
+	}
+	written, err := os.Stderr.Write(raw)
+	if err != nil || written != len(raw) {
+		return ErrExecutionLauncher
+	}
+	return errors.Join(ErrExecutionLauncher, errExecutionPreclaimFailureReported)
+}
+
+func stopExecutionPreclaimFailure(command *exec.Cmd, waited <-chan error, writer *os.File, joined bool, waitErr error, outerDeadline time.Time) error {
+	if command == nil || command.Process == nil {
+		return errors.Join(ErrExecutionLauncher, closeExecutionFile(writer))
+	}
+	closeErr := closeExecutionFile(writer)
+	signalErr := signalProductionStop(command.Process)
+	_, _, finishErr := finishExecutionProcessSession(command.Process.Pid, waited, joined, waitErr, executionAbortDeadline(outerDeadline))
+	return errors.Join(ErrExecutionLauncher, closeErr, signalErr, finishErr)
+}
+
 func stopExecutionInner(command *exec.Cmd, waited <-chan error, writer *os.File, outerDeadline time.Time) error {
 	if command == nil || command.Process == nil {
 		return ErrExecutionLauncher
@@ -313,15 +382,29 @@ func runExecutionInner(ctx context.Context, entered time.Time, executable, selec
 		return ErrExecutionLauncher
 	}
 	prepared, err := prepareExecutionInnerPreparation(innerCtx, selected, parent, outerDeadline)
+	if err != nil || prepared == nil {
+		if prepared == nil {
+			return ErrExecutionLauncher
+		}
+		cleanupErr := prepared.abortBeforeAdmission(innerCtx)
+		failure, ok := prepared.preclaimFailure(cleanupErr)
+		retErr = errors.Join(ErrExecutionLauncher, cleanupErr)
+		if !ok || innerCtx.Err() != nil {
+			return retErr
+		}
+		output, outputErr := prepareExecutionInnerOutput(innerCtx, parent, os.Stdout)
+		if outputErr != nil {
+			return errors.Join(retErr, outputErr)
+		}
+		emitErr := emitExecutionPreclaimFailure(innerCtx, output, failure)
+		return errors.Join(retErr, emitErr, output.file.Close())
+	}
 	abortPreparation := true
 	defer func() {
 		if abortPreparation && prepared != nil {
 			retErr = errors.Join(retErr, prepared.abortBeforeAdmission(innerCtx))
 		}
 	}()
-	if err != nil || prepared == nil {
-		return ErrExecutionLauncher
-	}
 	output, err := prepareExecutionInnerOutput(innerCtx, parent, os.Stdout)
 	if err != nil {
 		return ErrExecutionLauncher

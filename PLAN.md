@@ -4669,3 +4669,44 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   used no force. That disposition is not a pass;
   exact corrected-source review, gates and all seven native outcomes remain
   required before integration, V4 author/seal, freeze or ceremony execution.
+
+- **2026-09-21 — T42.2t source-free pre-claim failure attribution.** The
+  attended controller permanently retired `t42r1-neutral-1` after its explicit
+  burn, then received no authorization handoff: outer stdout was empty,
+  stderr retained only the generic unavailable line, and the signer namespace
+  remained unchanged. No signer claim, key, freeze, authorization, executor
+  phase or ceremony was reached, and cleanup removed the operational volume
+  and process custody. The retained facts support only an unnamed pre-claim
+  predicate failure; they do not establish a SurrealDB-image, host-capacity or
+  exact-main regression. Keep that controller root and never reuse the retired
+  identifier.
+
+  A prospective correction records the last attempted preparation stage from
+  a closed 30-value vocabulary. Only a failure with no signer-claim custody may
+  emit canonical `t422-source-free-preclaim-failure-v1` containing that stage
+  and `clean` or `retained_or_unavailable` cleanup. It uses the existing private
+  inner-to-outer pipe after bounded abort. The outer retains the record only
+  after canonical decoding, exact EOF, natural status one, an empty native
+  session, unchanged held image/liveness pipe and healthy deadline; it writes a
+  freshly encoded record to its existing private stderr and never forwards it
+  to stdout. Unknown, noncanonical, trailing, wrong-exit or post-claim records
+  remain the generic refusal. This unsigned troubleshooting row is neither
+  authorization nor freeze, receipt, evidence, admission, retry, waiver or
+  causal proof; `stage` means only the operation being attempted when refusal
+  returned.
+
+  Ordinary product work is unchanged. One selected preparation retains one
+  string-valued field and performs at most 30 scalar stage writes, with no new
+  lock, FD, goroutine, child, filesystem/network operation or polling. Only a
+  failed no-claim path adds one inner at-most-256-byte JSON encoding, one short
+  output duplicate after abort, one write/close, one exact-EOF read, strict
+  decode with a canonical re-encode, one fresh outer re-encode, and one private
+  stderr write. Every failed `t422-execute` command adds one `errors.Is` check
+  before choosing the already-emitted record or generic line. A cleanup refusal
+  performs the same diagnostic work only while parent liveness and the original
+  deadline remain valid. Before another formal identifier, require focused
+  normal/race gates, exact-source zero-finding review, reviewed integration and
+  rebuilt protected executor, then one disposable `reject-authorization`
+  readiness run that crosses a validated handoff and cleans exactly. Do not
+  repeat all seven already-passed native outcomes for this diagnostic-only
+  change.

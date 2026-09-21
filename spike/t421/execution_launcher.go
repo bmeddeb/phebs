@@ -28,9 +28,16 @@ const (
 )
 
 var (
-	ErrExecutionLauncher = errors.New("T42.2 execution launcher unavailable")
-	executionCeremonyID  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+	ErrExecutionLauncher                = errors.New("T42.2 execution launcher unavailable")
+	errExecutionPreclaimFailureReported = errors.New("T42.2 preclaim failure reported")
+	executionCeremonyID                 = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 )
+
+// ExecutionCommandFailureReported identifies the one failure whose complete,
+// source-free diagnostic was already written by the outer launcher.
+func ExecutionCommandFailureReported(err error) bool {
+	return errors.Is(err, errExecutionPreclaimFailureReported)
+}
 
 type executionSelectionV1 struct {
 	Schema               string `json:"schema"`
