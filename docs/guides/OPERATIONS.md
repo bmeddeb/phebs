@@ -7499,6 +7499,16 @@ the rejected restored-start stage under the existing failure classification.
 Use the real pressure-sequence rehearsal and a fresh signed freeze after any
 cause correction; never reuse the neutral-4 identifier.
 
+The first T42.2v disposable pressure rehearsal stopped during its initial
+ballast transition under the historical V3 plan; it did not reach restore.
+Its source-free log and plan are retained at
+`/private/tmp/t422-pressure-rehearsal-failure.ZvbXep`, and its failed volume
+was normally detached after custody review. The next opt-in rehearsal uses
+the current V4 plan and matching protected build/reference-admission schema.
+Capture its full terminal output: the previous generic pressure-volume error
+and server log alone cannot isolate the refused native predicate. V4 does not
+relax the first ballast target or its 4,096-byte tolerance.
+
 The private optional epoch-one rehearsal now recognizes
 `PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint
 restart and pressure-volume selectors, along with their existing predecessor

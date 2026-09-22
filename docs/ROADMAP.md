@@ -76,6 +76,11 @@ handoff and public freeze records remain. T42.2v now adds bounded private
 launch-stage attribution, then requires a real restored-successor rehearsal,
 cause correction, review, exact gates, fresh freeze and complete ceremony.
 No scale pass or release claim follows from neutral-4.
+The first disposable V3 pressure rehearsal stopped at its initial ballast
+transition before restore; its exact failed image was reviewed and cleaned,
+with source-free log and plan retained at
+`/private/tmp/t422-pressure-rehearsal-failure.ZvbXep`. The next rehearsal
+uses V4 and must reach the restored successor before this gate advances.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

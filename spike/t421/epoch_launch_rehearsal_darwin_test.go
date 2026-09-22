@@ -236,9 +236,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		}
 	}()
 	for _, role := range []string{"t422-author", "phebs", "zoekt-git-index", "buf", "phebs-focused-index"} {
-		selected := productionRehearsalBuildSchema(t, ctx, inputs, workspace, role, PlanV3Schema)
+		selected := productionRehearsalBuildSchema(t, ctx, inputs, workspace, role, PlanV4Schema)
 		started = time.Now()
-		tool, err := inputs.ProtectReferenceToolV3(ctx, parent, role, selected)
+		tool, err := inputs.protectReferenceTool(ctx, parent, role, selected, PlanV4Schema)
 		if tool != nil {
 			tools = append(tools, tool)
 		}
@@ -254,7 +254,7 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan, err := BuildPlanV3WithLogicalStoreWork(commit)
+	plan, err := BuildPlanV4(commit)
 	if err != nil || ctx.Err() != nil {
 		t.Fatal("private unsealed plan construction", err)
 	}

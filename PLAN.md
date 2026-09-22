@@ -4755,3 +4755,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   string. The real restored-successor rehearsal must exercise the changed
   path before a fresh exact-source freeze. A reproduced cause needs its own
   minimal correction and full review; a stage label alone is not a gate pass.
+
+- **2026-09-22 — T42.2v rehearsal-plan alignment after a retained pressure stop.**
+  The first exact-commit disposable rehearsal used the historical V3 plan and
+  passed cold, warm, physical B, logical B, return A, stale lease and
+  checkpoint restart, then stopped at the first pressure ballast transition
+  before backup/restore. Its generic pressure-volume refusal and retained
+  server log do not establish which native predicate refused; the ballast
+  file was allocated, but post-stop filesystem capacity is not a causal
+  sample. The source-free server log and unsealed plan were copied with
+  verified hashes to `/private/tmp/t422-pressure-rehearsal-failure.ZvbXep`.
+  After independent custody review, the failed image was normally detached
+  and only its exact rehearsal root removed. This was not successful teardown.
+  The next disposable rehearsal must use the actual V4 plan and matching
+  protected build and reference-admission schema, and retain complete terminal
+  output before any further diagnosis. This three-line opt-in test change
+  makes no production request, sync, startup, retry, publication, lifecycle,
+  lock, child, corpus,
+  schema or limit change. V3 historical plan bytes and tests remain exact;
+  V4 still retains the original first-ballast 4,096-byte tolerance. A V4
+  rehearsal pass and the original fifth-server cause remain unestablished.

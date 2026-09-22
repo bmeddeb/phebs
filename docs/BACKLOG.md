@@ -4647,7 +4647,7 @@ ceremony execution, release or scale/SLO claim follows.
   startup guard refused. AC: preserve the stopped record and never reuse the
   identifier; retain the exact failed launch stage within the existing
   `ErrExecutionEpochOne` classification, including preflight and epoch-five
-  child launch; run focused normal/race and a real restored-successor rehearsal;
+  child launch; run focused normal/race and a real V4 restored-successor rehearsal;
   fix any reproduced cause at its owning guard; obtain exact-source review and
   complete machine gates; then integrate, rebuild the protected candidate,
   pass signed readiness, and create a fresh independently reviewed freeze
