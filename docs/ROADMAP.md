@@ -64,6 +64,26 @@ sequence.
 
 ## Now
 
+**T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
+`t42r1-neutral-2` is permanently retired. It stopped before a validated
+authorization handoff at source-free preparation stage `profile_executor` and
+cleanly removed operational process/volume custody; no signer claim, freeze or
+ceremony began. The deterministic cause is a complete-image mismatch: the
+formal full-cache build was stamped `v0.2.1-0.20260921224439-591afedc014e`,
+while the protected one-commit/tagless reference was stamped
+`v0.0.0-20260921224439-591afedc014e`. T42.2u closes the preparation gap by
+excluding ambient main-module cache naming, supplying one explicit protected
+candidate producer, and making disposable signed readiness verify that exact
+immutable controller candidate. The affected normal/race, static,
+documentation and independent uncommitted-tree reviews are green at every
+severity. A complete normal package was baseline-red only on the inherited
+launch-inventory assertion reproduced unchanged at exact base; no T42.2u path
+failed and no process survives. The immutable correction is now the
+exact-commit review candidate. Next: independently review and integrate it, build
+the candidate from final exact main, and pass one exact-candidate disposable
+`reject-authorization` readiness before any fresh identifier is selected. No
+retry, freeze, execution, release or scale/SLO claim is authorized.
+
 **T42.2t exact-main readiness closure, 2026-09-21:** exact integrated source
 `69d82fc8b4e54941c64a5397a787a09fd592b292` passed the disposable signed
 `reject-authorization` readiness gate in 2,680.348 seconds. Its validated live

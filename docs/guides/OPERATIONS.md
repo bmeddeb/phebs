@@ -7856,16 +7856,22 @@ After admitted work, the
 observed phase-15 teardown remains authoritative. A released operation lock is
 removed only after exact inode validation and an otherwise empty parent check.
 
-The pending signed readiness harness uses an explicitly selected rehearsal and fresh ephemeral
-signer namespace. It builds the real protected executor, consumes its actual
-live authorization and independently verifies the returned package. The plan,
-integrated-main and execution-source commits must be supplied in their correct
-roles. Healthy, authorization-refusal, wait-cancellation, signer-path replacement
-and native busy-detach checks remain distinct evidence. No selector automatically
-retries a failed run. An inner-session sweep alone does not prove separately
-sessioned children are gone after hard inner death; retain that custody for
-exact diagnosis and disposition. These checks do not authorize formal ceremony
-execution or establish V3 acceptance until their terminal gates pass.
+The signed readiness harness uses an explicitly selected rehearsal, fresh
+ephemeral signer namespace, and the exact formal executor candidate named by
+`PHEBS_T422_PRODUCTION_EXECUTOR`. That path must be canonical and absolute; its
+owner-only parent and executable must already be immutable modes 0700 and 0500.
+The harness copies that image, independently rebuilds and byte-compares it from
+protected source/SDK/module custody, launches the verified copy, and rechecks the
+original immutable identity and digest after clean teardown. It therefore tests the bytes
+later named by the attended controller, not a separately built lookalike. The
+plan, integrated-main and execution-source commits must be supplied in their
+correct roles. Healthy, authorization-refusal, wait-cancellation, signer-path
+replacement and native busy-detach checks remain distinct evidence. No selector
+automatically retries a failed run. An inner-session sweep alone does not prove
+separately sessioned children are gone after hard inner death; retain that
+custody for exact diagnosis and disposition. These checks do not authorize
+formal ceremony execution or establish V4 acceptance until their terminal gates
+pass.
 
 The signed-readiness harness is now implemented. Its explicit
 `PHEBS_T422_SIGNED_LAUNCHER_REHEARSAL` selector accepts `healthy`,
@@ -7875,6 +7881,82 @@ The signed-readiness harness is now implemented. Its explicit
 `PHEBS_T422_BUSY_DETACH_REHEARSAL=1`. Run each once, serially, with its exact
 source and private log retained. A timeout or signal termination cannot be
 reported as an intended ordinary refusal.
+
+Before selecting a ceremony identifier, run the sole opt-in producer from the
+clean exact-main checkout with the same explicit production inputs used by
+readiness (shown with placeholders that must be replaced by canonical absolute
+paths and the exact 40-hex commits):
+
+```sh
+source_checkout=/absolute/path/to/clean-exact-main-phebs.com
+plan_source=<plan-source-commit>
+exact_main=<exact-main-commit>
+go_root=/absolute/path/to/pinned-go
+module_cache=/absolute/path/to/module-cache
+production_git=/absolute/path/to/git
+candidate_path=/private/tmp/t422-executor-<unique-label>/t422-execute
+driver_root=$(/usr/bin/mktemp -d /private/tmp/t422-executor-driver.XXXXXX) || exit 1
+/bin/mkdir -m 700 "$driver_root/bin" "$driver_root/home" \
+  "$driver_root/tmp" "$driver_root/cache" || exit 1
+/bin/ln -s "$production_git" "$driver_root/bin/git" || exit 1
+(
+  cd -P "$source_checkout" || exit 1
+  /usr/bin/env -i \
+    CGO_ENABLED=0 GOENV=off GOWORK=off GOFLAGS=-mod=readonly GOTOOLCHAIN=local \
+    GOOS=darwin GOARCH=arm64 GO386=sse2 GOAMD64=v1 GOARM=7 GOARM64=v8.0 \
+    GOEXPERIMENT= GOFIPS140=off GOCACHEPROG= \
+    GOPROXY="file://$driver_root/proxy" GOSUMDB=off GOTELEMETRY=off \
+    GOROOT="$go_root" GOMODCACHE="$module_cache" GOCACHE="$driver_root/cache" \
+    GOPATH="$driver_root/home/go" GOMAXPROCS=2 HOME="$driver_root/home" \
+    TMPDIR="$driver_root/tmp" TMP="$driver_root/tmp" TEMP="$driver_root/tmp" \
+    PATH="$driver_root/bin" LANG=C LC_ALL=C TZ=UTC \
+    GIT_ALLOW_PROTOCOL=file GIT_NO_REPLACE_OBJECTS=1 \
+    GIT_NO_LAZY_FETCH=1 GIT_TERMINAL_PROMPT=0 GIT_OPTIONAL_LOCKS=0 \
+    GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_ATTR_NOSYSTEM=1 \
+    GIT_TEMPLATE_DIR=/dev/null GIT_CONFIG_COUNT=4 \
+    GIT_CONFIG_KEY_0=core.fsmonitor GIT_CONFIG_VALUE_0=false \
+    GIT_CONFIG_KEY_1=core.untrackedCache GIT_CONFIG_VALUE_1=false \
+    GIT_CONFIG_KEY_2=core.hooksPath GIT_CONFIG_VALUE_2=/dev/null \
+    GIT_CONFIG_KEY_3=core.commitGraph GIT_CONFIG_VALUE_3=false \
+    PHEBS_T422_PREPARE_EXECUTOR="$candidate_path" \
+    PHEBS_T422_PRODUCTION_REPOSITORY="$source_checkout" \
+    PHEBS_T422_PLAN_SOURCE_COMMIT="$plan_source" \
+    PHEBS_T422_INTEGRATED_MAIN_COMMIT="$exact_main" \
+    PHEBS_T422_PRODUCTION_COMMIT="$exact_main" \
+    PHEBS_T422_PRODUCTION_GOROOT="$go_root" \
+    PHEBS_T422_PRODUCTION_MODULE_CACHE="$module_cache" \
+    PHEBS_T422_PRODUCTION_GIT="$production_git" \
+    "$go_root/bin/go" test ./spike/t421 \
+      -run '^TestPrepareExecutionSignedReadinessExecutor$' \
+      -count=1 -p=1 -timeout=30m -v
+) || { echo "retain failed producer driver: $driver_root" >&2; exit 1; }
+case "$driver_root" in
+  /private/tmp/t422-executor-driver.*) /bin/rm -rf -- "$driver_root" ;;
+  *) exit 1 ;;
+esac
+```
+
+The closed outer invocation prevents ambient Go workspace, flag, toolchain,
+proxy, cache-program and user Git configuration from changing the producer.
+The producer admits the exact commits, makes its own protected one-commit,
+no-tags source and dependency custody, and uses the frozen serial Go recipe with
+a closed workspace-local `file://` proxy. Do not substitute a direct `go build`
+or literal `GOPROXY=off`: Go 1.26 may then name the main module from an ambient
+matching pseudo-version `.info` rather than the admitted tagless Git source. It
+creates the previously absent `/private/tmp/<name>` parent, publishes only
+`t422-execute`, syncs both, makes the executable and parent owner-immutable at
+modes 0500 and 0700, prints their exact path and digest, and removes its build
+scratch. Keep that output protected, run `reject-authorization` with its exact
+path in `PHEBS_T422_PRODUCTION_EXECUTOR`, and require a matching validated
+handoff plus clean teardown. Only that same unchanged path may then be embedded
+in the reviewed attended controller. A digest from another readiness-built
+executable, or a public verifier run against the same ambient cache, is not this
+gate. A producer failure after final-parent creation retains that exact path for
+inspection and forbids reuse. After a failed preparation is dispositioned, or
+after the controller and all retained evidence no longer require a successful
+one, clear `uchg` from the exact file and parent, remove the exact file with
+`rm`, then remove the now-empty parent with `rmdir`; never recursively delete or
+reuse that path.
 
 An outer stop, including cancellation after a live handoff, must leave the
 inner's existing pre-admission abort time to finish. Its cooperative wait is

@@ -21,6 +21,67 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// TestPrepareExecutionSignedReadinessExecutor is the sole opt-in producer for
+// the immutable executor consumed by signed readiness and the later controller.
+// Successful output deliberately survives the test; no ceremony ID is selected.
+func TestPrepareExecutionSignedReadinessExecutor(t *testing.T) {
+	output := os.Getenv("PHEBS_T422_PREPARE_EXECUTOR")
+	if output == "" {
+		t.Skip("requires an explicit executor preparation path")
+	}
+	parent := filepath.Dir(output)
+	if !executionSignedReadinessPreparationPath(output) {
+		t.Fatal("executor preparation path must be /private/tmp/<new-directory>/t422-execute")
+	}
+	if _, err := os.Lstat(parent); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("executor preparation parent must not exist", err)
+	}
+	t.Logf("executor preparation target; retain for disposition after any publication failure: %s", output)
+	root, err := os.MkdirTemp("/private/tmp", "t422-executor-preparation-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(root); err != nil {
+			t.Error("executor preparation scratch cleanup", err)
+		}
+	})
+	bootstrap := filepath.Join(root, "bootstrap")
+	workspace := filepath.Join(root, "build")
+	for _, path := range []string{bootstrap, workspace, filepath.Join(workspace, "home"), filepath.Join(workspace, "tmp"), filepath.Join(workspace, "cache")} {
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Minute)
+	defer cancel()
+	git, err := ProtectExecutionGit(ctx, bootstrap, os.Getenv("PHEBS_T422_PRODUCTION_GIT"))
+	gitCustodyTestCleanup(t, git)
+	if err != nil {
+		t.Fatal("executor preparation Git custody", err)
+	}
+	inputs, err := ProtectExecutionGoBuildInputs(ctx, bootstrap, ExecutionGoBuildRequest{
+		Git: git, RepositoryRoot: os.Getenv("PHEBS_T422_PRODUCTION_REPOSITORY"),
+		PlanSourceCommit:     os.Getenv("PHEBS_T422_PLAN_SOURCE_COMMIT"),
+		IntegratedMainCommit: os.Getenv("PHEBS_T422_INTEGRATED_MAIN_COMMIT"),
+		SourceCommit:         os.Getenv("PHEBS_T422_PRODUCTION_COMMIT"),
+		GoRoot:               os.Getenv("PHEBS_T422_PRODUCTION_GOROOT"), ModuleCache: os.Getenv("PHEBS_T422_PRODUCTION_MODULE_CACHE"),
+	})
+	goBuildTestCleanup(t, inputs)
+	if err != nil {
+		t.Fatal("executor preparation build-input custody", err)
+	}
+	candidate := productionRehearsalBuildSchema(t, ctx, inputs, workspace, "t422-execute", PlanV4Schema)
+	if ctx.Err() != nil || inputs.Check(ctx) != nil {
+		t.Fatal("executor preparation inputs changed or expired")
+	}
+	digest, err := publishExecutionSignedReadinessExecutor(ctx, candidate, output)
+	if err != nil {
+		t.Fatal("prepared executor publication retained for disposition", err)
+	}
+	t.Logf("prepared immutable executor: path=%s digest=%s", output, digest)
+}
+
 // This selector authorizes one rehearsal, including its ephemeral signature and
 // its exact live authorization message. It does not select or resume the later
 // formal T42.2o freeze. No selector is forwarded to the production process.
@@ -57,6 +118,11 @@ func TestExecutionSignedLauncherOptionalReadiness(t *testing.T) {
 	if !validExecutionSelection(selection) {
 		t.Fatal("explicit canonical repository, source/main commits and native tools required")
 	}
+	preparedExecutor := os.Getenv("PHEBS_T422_PRODUCTION_EXECUTOR")
+	preparedInfo, preparedParentInfo, err := executionSignedReadinessPreparedExecutor(preparedExecutor)
+	if err != nil {
+		t.Fatal("exact immutable prepared executor required", err)
+	}
 	root, err := os.MkdirTemp("/private/tmp", "t422-signed-readiness-")
 	if err != nil {
 		t.Fatal(err)
@@ -90,9 +156,9 @@ func TestExecutionSignedLauncherOptionalReadiness(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = namespace.Close() }()
-	// Bootstrap is outside the measured outer lifetime. Both the supplied
-	// executor and its independent reference rebuild use genuine protected
-	// source/SDK/module custody. The command is not this package's TestMain.
+	// Bootstrap is outside the measured outer lifetime. The exact immutable
+	// controller candidate is copied, then independently rebuilt from genuine
+	// protected source/SDK/module custody. The command is not this TestMain.
 	buildCtx, stopBuild := context.WithTimeout(t.Context(), 20*time.Minute)
 	defer stopBuild()
 	git, err := ProtectExecutionGit(buildCtx, bootstrap, selection.GitBinary)
@@ -107,14 +173,7 @@ func TestExecutionSignedLauncherOptionalReadiness(t *testing.T) {
 	if err != nil {
 		t.Fatal("retained bootstrap build inputs", err)
 	}
-	builds := filepath.Join(bootstrap, "supplied-builds")
-	for _, path := range []string{builds, filepath.Join(builds, "home"), filepath.Join(builds, "tmp"), filepath.Join(builds, "cache")} {
-		if err := os.Mkdir(path, 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	supplied := productionRehearsalBuildSchema(t, buildCtx, inputs, builds, "t422-execute", PlanV4Schema)
-	executor, err := inputs.protectReferenceTool(buildCtx, bootstrap, "t422-execute", supplied, PlanV4Schema)
+	executor, err := inputs.protectReferenceTool(buildCtx, bootstrap, "t422-execute", preparedExecutor, PlanV4Schema)
 	if err != nil {
 		t.Fatal("retained bootstrap executor", err)
 	}
@@ -123,7 +182,7 @@ func TestExecutionSignedLauncherOptionalReadiness(t *testing.T) {
 		t.Fatal(err)
 	}
 	stopBuild()
-	t.Logf("source=%s integrated-main=%s actual protected executor=%s", selection.SourceCommit, selection.IntegratedMainCommit, identity.SHA256)
+	t.Logf("source=%s integrated-main=%s exact prepared/protected executor=%s", selection.SourceCommit, selection.IntegratedMainCommit, identity.SHA256)
 
 	ctx, cancel := context.WithTimeout(t.Context(), executionMaximumWall)
 	defer cancel()
@@ -340,14 +399,17 @@ func TestExecutionSignedLauncherOptionalReadiness(t *testing.T) {
 	if _, err := os.Lstat(operational); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("operational custody remains; this is retained failure, not clean readiness", err)
 	}
+	currentPreparedInfo, currentPreparedParentInfo, err := executionSignedReadinessPreparedExecutor(preparedExecutor)
+	currentPreparedDigest, digestErr := t4013.DigestHostExecutable(ctx, preparedExecutor)
+	if err != nil || digestErr != nil || currentPreparedDigest != identity.SHA256 ||
+		!inputCustodySame(preparedInfo, currentPreparedInfo) || !inputCustodySame(preparedParentInfo, currentPreparedParentInfo) {
+		t.Fatal("prepared controller executor changed during readiness", err, digestErr)
+	}
 	// Only a joined, verified, removed operational run permits bootstrap copy
 	// cleanup. Namespace/key claims and source-free evidence remain deliberate.
 	gitCustodyTestCleanup(t, git)
 	goBuildTestCleanup(t, inputs)
 	inputCustodyTestCleanup(t, executor.input, []ExecutionInputCopy{{Name: "t422-execute"}})
-	if err := os.RemoveAll(builds); err != nil {
-		t.Fatal("joined bootstrap build cache cleanup", err)
-	}
 	t.Logf("rehearsal complete; retained ephemeral signer claims/evidence, with exact bootstrap copy cleanup registered: %s", root)
 }
 
@@ -362,6 +424,90 @@ func executionSignedReadinessMode(mode string) bool {
 	default:
 		return false
 	}
+}
+
+func executionSignedReadinessPreparationPath(path string) bool {
+	if len(path) > maxInputCustodyPathBytes || !filepath.IsAbs(path) || filepath.Clean(path) != path ||
+		filepath.Base(path) != "t422-execute" {
+		return false
+	}
+	return filepath.Dir(filepath.Dir(path)) == "/private/tmp"
+}
+
+// publishExecutionSignedReadinessExecutor is create-only. Once it creates the
+// final parent, any failure retains that exact path for reviewed disposition.
+func publishExecutionSignedReadinessExecutor(ctx context.Context, candidate, output string) (string, error) {
+	if ctx == nil || ctx.Err() != nil || !executionSignedReadinessPreparationPath(output) {
+		return "", ErrExecutionLauncher
+	}
+	parent := filepath.Dir(output)
+	if _, err := os.Lstat(parent); !errors.Is(err, os.ErrNotExist) {
+		return "", ErrExecutionLauncher
+	}
+	canonical, err := filepath.EvalSymlinks(candidate)
+	before, statErr := os.Lstat(candidate)
+	if err != nil || statErr != nil || canonical != candidate || !inputCustodyOwned(before) || !before.Mode().IsRegular() ||
+		before.Size() < 1 || before.Size() > maxInputCustodyFileBytes || before.Mode().Perm()&0o111 == 0 || before.Mode().Perm()&0o022 != 0 {
+		return "", ErrExecutionLauncher
+	}
+	if err := os.Chmod(candidate, 0o500); err != nil || ctx.Err() != nil {
+		return "", ErrExecutionLauncher
+	}
+	ready, err := os.Lstat(candidate)
+	if err != nil || !os.SameFile(before, ready) || ready.Mode().Perm() != 0o500 {
+		return "", ErrExecutionLauncher
+	}
+	if err := os.Mkdir(parent, 0o700); err != nil {
+		return "", ErrExecutionLauncher
+	}
+	parentFile, err := os.Open(parent)
+	if err != nil {
+		return "", ErrExecutionLauncher
+	}
+	parentInfo, parentStatErr := parentFile.Stat()
+	if parentStatErr != nil || !inputCustodyOwned(parentInfo) || !parentInfo.IsDir() || parentInfo.Mode().Perm() != 0o700 ||
+		os.Rename(candidate, output) != nil {
+		_ = parentFile.Close()
+		return "", ErrExecutionLauncher
+	}
+	file, err := t4013.OpenHostImage(output)
+	if err != nil {
+		_ = parentFile.Close()
+		return "", ErrExecutionLauncher
+	}
+	current, currentErr := file.Stat()
+	if currentErr != nil || !os.SameFile(ready, current) || ctx.Err() != nil || file.Sync() != nil || parentFile.Sync() != nil ||
+		inputCustodyFlag(file, true) != nil || inputCustodyFlag(parentFile, true) != nil {
+		_ = file.Close()
+		_ = parentFile.Close()
+		return "", ErrExecutionLauncher
+	}
+	if errors.Join(file.Close(), parentFile.Close()) != nil {
+		return "", ErrExecutionLauncher
+	}
+	if _, _, err := executionSignedReadinessPreparedExecutor(output); err != nil {
+		return "", ErrExecutionLauncher
+	}
+	digest, err := t4013.DigestHostExecutable(ctx, output)
+	if err != nil {
+		return "", ErrExecutionLauncher
+	}
+	return digest, nil
+}
+
+func executionSignedReadinessPreparedExecutor(path string) (os.FileInfo, os.FileInfo, error) {
+	if len(path) > maxInputCustodyPathBytes || !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return nil, nil, ErrExecutionLauncher
+	}
+	canonical, err := filepath.EvalSymlinks(path)
+	info, infoErr := os.Lstat(path)
+	parentInfo, parentErr := os.Lstat(filepath.Dir(path))
+	if err != nil || infoErr != nil || parentErr != nil || canonical != path || !info.Mode().IsRegular() ||
+		info.Mode().Perm() != 0o500 || info.Size() < 1 || info.Size() > maxInputCustodyFileBytes || !inputCustodyProtected(info) ||
+		!parentInfo.IsDir() || parentInfo.Mode().Perm() != 0o700 || !inputCustodyProtected(parentInfo) {
+		return nil, nil, ErrExecutionLauncher
+	}
+	return info, parentInfo, nil
 }
 
 func executionSignedReadinessPublic(ctx context.Context, namespace *executionSignerNamespaceCustody, name string) ([]byte, error) {
@@ -490,6 +636,134 @@ func TestExecutionSignedReadinessSelectors(t *testing.T) {
 				t.Fatal("selector authority expanded")
 			}
 		})
+	}
+}
+
+func TestExecutionSignedReadinessPreparedExecutor(t *testing.T) {
+	parent, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(parent, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(parent, "t422-execute")
+	if err := os.WriteFile(path, []byte("prepared executor fixture"), 0o500); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := executionSignedReadinessPreparedExecutor(path); err == nil {
+		t.Fatal("mutable prepared executor admitted")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentFile, err := os.Open(parent)
+	if err != nil {
+		_ = file.Close()
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := inputCustodyFlag(file, false); err != nil {
+			t.Error(err)
+		}
+		if err := inputCustodyFlag(parentFile, false); err != nil {
+			t.Error(err)
+		}
+		_ = file.Close()
+		_ = parentFile.Close()
+	})
+	if err := inputCustodyFlag(file, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := executionSignedReadinessPreparedExecutor(path); err == nil {
+		t.Fatal("prepared executor with mutable parent admitted")
+	}
+	if err := inputCustodyFlag(parentFile, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := inputCustodyFlag(file, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := executionSignedReadinessPreparedExecutor(path); err == nil {
+		t.Fatal("mutable prepared executor with protected parent admitted")
+	}
+	if err := inputCustodyFlag(file, true); err != nil {
+		t.Fatal(err)
+	}
+	info, parentInfo, err := executionSignedReadinessPreparedExecutor(path)
+	if err != nil || !inputCustodyProtected(info) || !inputCustodyProtected(parentInfo) {
+		t.Fatal("exact prepared executor refused", err)
+	}
+	for _, invalid := range []string{"", "relative/t422-execute", filepath.Join(filepath.Dir(parent), "missing-t422-execute")} {
+		if _, _, err := executionSignedReadinessPreparedExecutor(invalid); err == nil {
+			t.Fatalf("invalid prepared executor admitted: %q", invalid)
+		}
+	}
+}
+
+func TestPublishExecutionSignedReadinessExecutor(t *testing.T) {
+	source, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidate := filepath.Join(source, "candidate")
+	fixture := []byte("prepared executor fixture")
+	if err := os.WriteFile(candidate, fixture, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	parent, err := os.MkdirTemp("/private/tmp", "t422-executor-publication-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(parent); err != nil {
+		t.Fatal("reserve absent publication parent", err)
+	}
+	output := filepath.Join(parent, "t422-execute")
+	t.Cleanup(func() {
+		for _, path := range []string{output, parent} {
+			file, err := os.Open(path)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				t.Error("open prepared-executor test custody", err)
+				continue
+			}
+			if err := inputCustodyFlag(file, false); err != nil {
+				t.Error("clear prepared-executor test custody", err)
+			}
+			if err := file.Close(); err != nil {
+				t.Error("close prepared-executor test custody", err)
+			}
+		}
+		for _, path := range []string{output, parent} {
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				t.Error("remove prepared-executor test custody", err)
+			}
+		}
+	})
+	digest, err := publishExecutionSignedReadinessExecutor(t.Context(), candidate, output)
+	if err != nil || digest != SHA256(fixture) {
+		t.Fatal("publish prepared executor", err)
+	}
+	if _, _, err := executionSignedReadinessPreparedExecutor(output); err != nil {
+		t.Fatal("published executor is not protected", err)
+	}
+	refused := filepath.Join(source, "refused")
+	if err := os.WriteFile(refused, []byte("refused fixture"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := publishExecutionSignedReadinessExecutor(t.Context(), refused, output); err == nil {
+		t.Fatal("existing publication parent admitted")
+	}
+	if info, err := os.Lstat(refused); err != nil || info.Mode().Perm() != 0o700 {
+		t.Fatal("refused candidate was mutated", err)
+	}
+	for _, invalid := range []string{"", "/private/tmp/t422-execute", "/private/tmp/a/b/t422-execute", filepath.Join(parent, "other")} {
+		if executionSignedReadinessPreparationPath(invalid) {
+			t.Fatalf("invalid preparation path admitted: %q", invalid)
+		}
 	}
 }
 

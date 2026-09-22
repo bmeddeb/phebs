@@ -6,6 +6,7 @@ import (
 	"debug/buildinfo"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -314,10 +315,11 @@ func referenceSDKDigest(ctx context.Context, root string) (string, error) {
 }
 
 func referenceBuildEnvironment(request ReferenceToolRequest, workspace string) []string {
+	proxy := url.URL{Scheme: "file", Path: filepath.ToSlash(filepath.Join(workspace, "proxy"))}
 	return []string{
 		"CGO_ENABLED=0", "GOENV=off", "GOWORK=off", "GOFLAGS=-mod=readonly", "GOTOOLCHAIN=local",
 		"GOOS=" + runtime.GOOS, "GOARCH=" + runtime.GOARCH, "GO386=sse2", "GOAMD64=v1", "GOARM=7", "GOARM64=v8.0",
-		"GOEXPERIMENT=", "GOFIPS140=off", "GOCACHEPROG=", "GOPROXY=off", "GOSUMDB=off", "GOTELEMETRY=off",
+		"GOEXPERIMENT=", "GOFIPS140=off", "GOCACHEPROG=", "GOPROXY=" + proxy.String(), "GOSUMDB=off", "GOTELEMETRY=off",
 		"GOROOT=" + request.GoRoot, "GOMODCACHE=" + request.ModuleCache, "GOCACHE=" + filepath.Join(workspace, "cache"),
 		"GOPATH=" + filepath.Join(workspace, "home", "go"), "GOMAXPROCS=2",
 		"HOME=" + filepath.Join(workspace, "home"), "TMPDIR=" + filepath.Join(workspace, "tmp"),

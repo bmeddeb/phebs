@@ -48,6 +48,16 @@ func TestVerifyExecutionReferenceToolComparesExactBinaryBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	poisonVersion := "v0.2.1-0.20000101000000-" + fixture.source[:12]
+	poisonDirectory := filepath.Join(moduleCache, "cache", "download", "github.com", "bmeddeb", "phebs", "@v")
+	if err := os.MkdirAll(poisonDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	poisonPath := filepath.Join(poisonDirectory, poisonVersion+".info")
+	poison := `{"Version":"` + poisonVersion + `","Time":"2000-01-01T00:00:00Z","Origin":{"VCS":"git","Hash":"` + fixture.source + `"}}`
+	if err := os.WriteFile(poisonPath, []byte(poison), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	request := ReferenceToolRequest{
 		RepositoryRoot: fixture.root, GitBinary: fixture.git, GoRoot: goRoot, ModuleCache: moduleCache,
 		PlanSourceCommit: fixture.plan, IntegratedMainCommit: fixture.integration, SourceCommit: fixture.source,
@@ -60,10 +70,29 @@ func TestVerifyExecutionReferenceToolComparesExactBinaryBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if cleanInfo.Main.Version == poisonVersion {
+		t.Fatal("ambient main-module cache metadata selected the reference version")
+	}
 	cleanDigest, err := executableidentity.Digest(request.Binary)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Remove(poisonPath); err != nil {
+		t.Fatal(err)
+	}
+	unpoisonedWorkspace := newReferenceToolBuildWorkspace(t, request)
+	unpoisoned := filepath.Join(unpoisonedWorkspace, "supplied-clean")
+	request.Binary = unpoisoned
+	buildReferenceToolFixture(t, request, unpoisonedWorkspace)
+	unpoisonedInfo, err := buildinfo.ReadFile(unpoisoned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unpoisonedDigest, err := executableidentity.Digest(unpoisoned)
+	if err != nil || unpoisonedDigest != cleanDigest || !reflect.DeepEqual(unpoisonedInfo, cleanInfo) {
+		t.Fatalf("ambient main-module cache metadata changed the reference image: %v", err)
+	}
+	request.Binary = filepath.Join(workspace, "supplied-clean")
 	for name, value := range map[string]string{
 		"GOFLAGS": "-this-ambient-flag-must-not-be-read", "GOENV": filepath.Join(workspace, "missing-go-env"),
 		"GOWORK": filepath.Join(workspace, "missing-workspace"), "GIT_DIR": filepath.Join(workspace, "missing-git"),

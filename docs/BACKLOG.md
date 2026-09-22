@@ -4607,6 +4607,39 @@ listener survives. Preserve the readiness custody. All T42.2t ACs are met;
 fresh exact-main V4 freeze preparation may proceed, but no formal identifier,
 ceremony execution, release or scale/SLO claim follows.
 
+- **T42.2u · Exact formal-executor preparation binding** — retire
+  `t42r1-neutral-2` after its attended burn stopped before a validated handoff
+  with source-free stage `profile_executor` and clean teardown. The formal
+  candidate carried Go main version `v0.2.1-0.20260921224439-591afedc014e`,
+  while the protected one-commit/tagless rebuild carried
+  `v0.0.0-20260921224439-591afedc014e`; complete BuildInfo and bytes therefore
+  differed and the exact verifier correctly refused. AC: preserve both retired
+  controller roots and never reuse either identifier; prevent ambient
+  main-module pseudo-version lookup while keeping builds offline; provide one
+  closed opt-in producer with create-only tested publication for the exact-main
+  immutable candidate; make
+  signed readiness require and independently verify that same executable later
+  named by the controller; retain complete BuildInfo/digest equality and all
+  timeouts; cover ambient matching `.info`, missing/relative/mutable candidate
+  refusal, normal/race and documentation gates; obtain independent exact-source
+  review; integrate and run the producer from final exact main; then run one
+  disposable `reject-authorization` readiness with a validated handoff and exact
+  clean teardown before selecting another identifier. This correction authorizes
+  no identifier, burn, freeze, execution, release or scale/SLO claim.
+
+  Pre-commit correction gates passed: the ambient-version, prepared-candidate
+  and create-only publication set passed normal in 10.778 seconds and race in
+  12.968 seconds; scoped vet, pinned golangci-lint 2.12.2, documentation,
+  glossary, format and whitespace checks pass; independent code, security,
+  test-gap and documentation/cost reviews report all severity counts zero. One
+  complete normal package run finished in 3,507.328 seconds with only the
+  inherited `TestProductionDispatchSitesMatchActualBoundaries` inventory
+  mismatch. Its isolated output is identical at base `591afedc014e` and the
+  correction tree; T42.2u changes none of the reported `internal/` call sites,
+  and no test or SurrealDB process survives. The immutable correction is now
+  the exact-commit review candidate; review, integration and exact-main
+  readiness remain open.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four
