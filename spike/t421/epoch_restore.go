@@ -27,6 +27,12 @@ func restoredStartupBounds(plan Plan) (epochOneLimits, error) {
 // startup still ends at the original phase-twelve deadline. Neither launch nor
 // HTTP readiness establishes archive R/F or phase acceptance.
 func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
+	stage := "input"
+	defer func() {
+		if retErr != nil {
+			retErr = epochArchiveFailure(nil, "restored "+stage, retErr)
+		}
+	}()
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.done == nil || run.flow.epochs == nil ||
 		run.flow.epochs.author == nil || run.flow.controller == nil || run.flow.store == nil || run.flow.parent == nil {
 		return nil, ErrExecutionEpochOne
@@ -36,6 +42,7 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 	default:
 		return nil, ErrExecutionEpochOne
 	}
+	stage = "eligibility"
 	flow := run.flow
 	flow.mu.Lock()
 	run.mu.Lock()
@@ -52,6 +59,7 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 		flow.mu.Unlock()
 		return nil, ErrExecutionEpochOne
 	}
+	stage = "lifetime"
 	deadline := run.phaseDeadline
 	lifetimeDeadline := deadline
 	if flow.workspace != nil {
@@ -96,17 +104,32 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 		close(done)
 		flow.mu.Unlock()
 	}()
+	stage = "dispatch snapshot"
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
 	prior.Accounting, err = flow.controller.Snapshot()
 	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
+	stage = "store snapshot"
 	prior.Store, err = flow.store.Snapshot()
-	view, launchErr := flow.controller.ProducerLaunch(6)
-	if err != nil || launchErr != nil || view.Phase != 12 || flow.closed || flow.retained != run || !epochRestoreClosedPrefix(operation, prior) {
+	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
+	stage = "producer launch"
+	view, launchErr := flow.controller.ProducerLaunch(6)
+	if launchErr != nil || view.Phase != 12 {
+		return nil, ErrExecutionEpochOne
+	}
+	stage = "retained owner"
+	if flow.closed || flow.retained != run {
+		return nil, ErrExecutionEpochOne
+	}
+	stage = "closed prefix"
+	if !epochRestoreClosedPrefix(operation, prior) {
+		return nil, ErrExecutionEpochOne
+	}
+	stage = "archive binding"
 	archive, authority, err := run.restoredArchiveBinding(operation)
 	if err != nil {
 		return nil, err
@@ -117,6 +140,7 @@ func (run *ExecutionEpochOneRun) StartRestored(ctx context.Context) (_ *Executio
 		archiveInput: archive, archivePrior: authority,
 		result: ExecutionEpochOneResult{RestoreWork: prior.RestoreWork, MarkerWorkspace: run.markerWorkspaceSnapshot()}}
 	next.setPhaseDeadlineLocked(deadline)
+	stage = "epoch launch"
 	result, err := flow.launchEpoch(lifetime, operation, cancel, next, bounds, 5)
 	if result == nil {
 		next.stopPhaseDeadline()

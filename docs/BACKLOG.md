@@ -4640,6 +4640,20 @@ ceremony execution, release or scale/SLO claim follows.
   the exact-commit review candidate; review, integration and exact-main
   readiness remain open.
 
+- **T42.2v · Restored-launch failure attribution and correction** — the signed
+  `t42r1-neutral-4` run completed pressure 80/90/75 and verified the archive
+  import, then stopped before fifth-server health. Its retained private
+  diagnostic says only `archive restored launch`; it cannot identify which
+  startup guard refused. AC: preserve the stopped record and never reuse the
+  identifier; retain the exact failed launch stage within the existing
+  `ErrExecutionEpochOne` classification, including preflight and epoch-five
+  child launch; run focused normal/race and a real restored-successor rehearsal;
+  fix any reproduced cause at its owning guard; obtain exact-source review and
+  complete machine gates; then integrate, rebuild the protected candidate,
+  pass signed readiness, and create a fresh independently reviewed freeze
+  before another ceremony. A diagnostic-only rehearsal or another stopped run
+  is not a combined gate pass.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

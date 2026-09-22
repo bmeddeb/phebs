@@ -832,7 +832,13 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 }
 
 func epochLaunchError(number uint64, stage string, err error) error {
-	if number != 4 || err == nil {
+	if err == nil {
+		return err
+	}
+	if number == 5 {
+		return epochArchiveFailure(nil, "restored epoch-five "+stage, err)
+	}
+	if number != 4 {
 		return err
 	}
 	if err == ErrExecutionEpochOne {

@@ -7491,6 +7491,14 @@ ceremony, release, scale/SLO claim, or Epic closure.
 
 ### T42.2 pressure sequence rehearsal selector
 
+After the signed `t42r1-neutral-4` run stopped at the restored fifth-server
+launch, retain its private failure record and public freeze as a stopped run.
+The archive import completed; a later launch refusal does not turn that
+import into a complete phase or scale pass. T42.2v's private diagnostic names
+the rejected restored-start stage under the existing failure classification.
+Use the real pressure-sequence rehearsal and a fresh signed freeze after any
+cause correction; never reuse the neutral-4 identifier.
+
 The private optional epoch-one rehearsal now recognizes
 `PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint
 restart and pressure-volume selectors, along with their existing predecessor

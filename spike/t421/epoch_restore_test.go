@@ -2,6 +2,7 @@ package t421
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -208,8 +209,16 @@ func TestEpochRestoredStartPreflight(t *testing.T) {
 				cancel()
 			}
 			used, starting := run.restoredStartUsed, run.returnStarting
-			if next, err := run.StartRestored(ctx); err == nil || next != nil {
+			next, err := run.StartRestored(ctx)
+			if !errors.Is(err, ErrExecutionEpochOne) || next != nil {
 				t.Fatal("invalid start admitted")
+			}
+			want := "archive restored eligibility"
+			if mode == "canceled" {
+				want = "archive restored input"
+			}
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("missing refusal stage %q: %v", want, err)
 			}
 			if run.restoredStartUsed != used || run.returnStarting != starting || run.returnStartDone != nil || run.returnStartCancel != nil || run.err != nil {
 				t.Fatal("refusal consumed operation or touched its lifetime")

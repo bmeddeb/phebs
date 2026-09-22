@@ -64,6 +64,19 @@ sequence.
 
 ## Now
 
+**T42.2v restored-launch recovery, 2026-09-22:** signed
+`t42r1-neutral-4` completed the pressure sequence and verified its archive
+import, then stopped during the restored fifth-server launch. The private
+failure record names no finer guard. Phase twelve used about 92 minutes of its
+four-hour allowance; neither timeout nor archive corruption is established.
+The four failure logs were copied byte-identically to owner-only
+`/private/tmp/t422-neutral4-failure.Bbv9Lf`; the retained APFS image was
+normally detached and its exact operational root removed. The controller
+handoff and public freeze records remain. T42.2v now adds bounded private
+launch-stage attribution, then requires a real restored-successor rehearsal,
+cause correction, review, exact gates, fresh freeze and complete ceremony.
+No scale pass or release claim follows from neutral-4.
+
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated
 authorization handoff at source-free preparation stage `profile_executor` and

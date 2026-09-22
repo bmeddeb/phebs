@@ -4734,3 +4734,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   attributable to the exact executable bytes. A fresh protected executor and
   controller must still be built from final exact main, independently reviewed,
   and stopped before any new identifier is selected or burned.
+
+- **2026-09-22 — T42.2v restored-launch attribution after neutral-4.** The
+  signed `t42r1-neutral-4` run completed pressure 80/90/75 and a verified
+  archive import, then stopped at `StartRestored` before fifth-server health.
+  Its existing private diagnostic collapsed the failing preflight or launch
+  stage into one epoch-one sentinel, so it proves no narrower cause. Preserve
+  that stopped record and public freeze, and retire the identifier. The
+  failed image was normally detached and the exact operational root removed
+  after byte-identical owner-only copies of all four logs were verified;
+  the disposable signing key was removed without reading it. This is manual
+  custody disposition, not successful signed teardown.
+
+  Prospective T42.2v names the failing `StartRestored` stage and, only for
+  epoch five, the existing launch stage inside the same private
+  `ErrExecutionEpochOne` classification. It changes no admission predicate,
+  archive or authority byte, plan, deadline, retry, child, lock, request,
+  publication or steady-state product work. One restored launch performs a
+  handful of string assignments; only a failure formats a bounded stage
+  string. The real restored-successor rehearsal must exercise the changed
+  path before a fresh exact-source freeze. A reproduced cause needs its own
+  minimal correction and full review; a stage label alone is not a gate pass.

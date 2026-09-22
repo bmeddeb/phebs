@@ -22,7 +22,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 )
 
-func TestEpochLaunchErrorRetainsOnlyEpochFourStage(t *testing.T) {
+func TestEpochLaunchErrorRetainsEpochFourAndFiveStage(t *testing.T) {
 	base := errors.New("refused")
 	for _, test := range []struct {
 		name   string
@@ -34,6 +34,8 @@ func TestEpochLaunchErrorRetainsOnlyEpochFourStage(t *testing.T) {
 		{name: "other epoch", number: 3, err: base, same: true},
 		{name: "epoch four", number: 4, err: base, want: "execution epoch-one launch unavailable or incomplete: checkpoint restart epoch-four start: refused"},
 		{name: "epoch four sentinel", number: 4, err: ErrExecutionEpochOne, want: "execution epoch-one launch unavailable or incomplete: checkpoint restart epoch-four start"},
+		{name: "epoch five", number: 5, err: base, want: "execution epoch-one launch unavailable or incomplete: archive restored epoch-five start: refused"},
+		{name: "epoch five sentinel", number: 5, err: ErrExecutionEpochOne, want: "execution epoch-one launch unavailable or incomplete: archive restored epoch-five start"},
 		{name: "nil", number: 4},
 	} {
 		t.Run(test.name, func(t *testing.T) {
