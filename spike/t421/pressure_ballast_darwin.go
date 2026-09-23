@@ -67,7 +67,7 @@ func prepareExecutionPressureBallast(ctx context.Context, volume *executionPress
 // across this call. This native helper does not manufacture those ACKs.
 // workspace is the owning phase's latest successful native HTTP sample, not
 // a filesystem-used estimate. Requests are fenced after that required sample.
-func (b *executionPressureBallast) nextTarget(ctx context.Context, run *ExecutionEpochOneRun, workspace custodyByteSample) (out executionPressureBallastMutation, retErr error) {
+func (b *executionPressureBallast) nextTarget(ctx context.Context, run *ExecutionEpochOneRun, workspace custodyByteSample, quiet executionPressureBallastSample) (out executionPressureBallastMutation, retErr error) {
 	if b == nil || b.volume == nil || ctx == nil || ctx.Err() != nil || run == nil {
 		return out, errPressureVolume
 	}
@@ -88,7 +88,19 @@ func (b *executionPressureBallast) nextTarget(ctx context.Context, run *Executio
 		return out, errPressureVolume
 	}
 	target := geometry.Targets[b.next]
-	out.Before, err = b.sample()
+	if b.next == 0 {
+		// The quiet-window endpoint can move by a few APFS accounting blocks
+		// before the next syscall. Rejoin that accepted baseline before the
+		// one allocation; never widen the frozen target or delta tolerance.
+		run.mu.Unlock()
+		out.Before, out.Settlement, err = b.settleFirstTargetBaseline(ctx, run, quiet)
+		run.mu.Lock()
+		if err == nil {
+			err = b.authorize(ctx, run, 9)
+		}
+	} else {
+		out.Before, err = b.sample()
+	}
 	if err != nil || b.next > 0 && !pressureBallastAllocationUnchanged(b.last, out.Before) ||
 		b.next == 0 && (out.Before.Used < geometry.MinimumPrePressureUsedBytes || out.Before.Used > geometry.MaximumPrePressureUsedBytes) {
 		run.mu.Unlock()
@@ -133,6 +145,48 @@ func (b *executionPressureBallast) nextTarget(ctx context.Context, run *Executio
 	out.Fence = time.Now()
 	b.last, b.next = out.After, b.next+1
 	return out, nil
+}
+
+// Caller holds the volume mutex, but not run.mu, so Stop can win while the
+// first target waits at most the existing settlement interval. No mutation is
+// retried, and each sample repeats the exact inode and phase checks.
+func (b *executionPressureBallast) settleFirstTargetBaseline(ctx context.Context, run *ExecutionEpochOneRun, quiet executionPressureBallastSample) (executionPressureBallastSample, executionPressureBallastSettlement, error) {
+	return settleExecutionPressureBallastBaseline(ctx, quiet, func(current context.Context) (executionPressureBallastSample, error) {
+		value, err := b.sample()
+		run.mu.Lock()
+		authorizeErr := b.authorize(current, run, 9)
+		run.mu.Unlock()
+		if err != nil || authorizeErr != nil {
+			return value, errPressureVolume
+		}
+		return value, nil
+	})
+}
+
+func settleExecutionPressureBallastBaseline(ctx context.Context, quiet executionPressureBallastSample, observe func(context.Context) (executionPressureBallastSample, error)) (executionPressureBallastSample, executionPressureBallastSettlement, error) {
+	var observations executionPressureBallastSettlement
+	if ctx == nil || ctx.Err() != nil || quiet.Used == 0 || quiet.Allocated != 0 || observe == nil {
+		return executionPressureBallastSample{}, observations, errPressureVolume
+	}
+	settlement, cancel := context.WithTimeout(ctx, pressureBallastSettleLimit)
+	defer cancel()
+	ticker := time.NewTicker(pressureBallastSettleCadence)
+	defer ticker.Stop()
+	for {
+		value, err := observe(settlement)
+		if err != nil || settlement.Err() != nil || value.Allocated != quiet.Allocated {
+			return value, observations, errPressureVolume
+		}
+		observations.observe(value)
+		if withinTolerance(value.Used, quiet.Used, 4096) {
+			return value, observations, nil
+		}
+		select {
+		case <-settlement.Done():
+			return value, observations, errPressureVolume
+		case <-ticker.C:
+		}
+	}
 }
 
 // remove releases only this exact inode after the third target, never an

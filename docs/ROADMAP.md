@@ -81,6 +81,14 @@ transition before restore; its exact failed image was reviewed and cleaned,
 with source-free log and plan retained at
 `/private/tmp/t422-pressure-rehearsal-failure.ZvbXep`. The next rehearsal
 uses V4 and must reach the restored successor before this gate advances.
+That complete-output V4 rehearsal also stopped at the first ballast target:
+the immediate pre-allocation APFS Used sample was 8,192 bytes above the
+accepted quiet endpoint, then returned to it after exact allocation. The
+unchanged 4,096-byte target/delta check refused. Its exact failed image was
+normally detached after owner-only evidence retention at
+`/private/tmp/t422-v4-pressure-failure.Xvbfj6`. A bounded read-only rejoin of
+the quiet baseline before the sole mutation is under test; it is not a V4
+rehearsal pass or permission to freeze.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

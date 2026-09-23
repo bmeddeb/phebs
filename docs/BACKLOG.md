@@ -4652,7 +4652,13 @@ ceremony execution, release or scale/SLO claim follows.
   complete machine gates; then integrate, rebuild the protected candidate,
   pass signed readiness, and create a fresh independently reviewed freeze
   before another ceremony. A diagnostic-only rehearsal or another stopped run
-  is not a combined gate pass.
+  is not a combined gate pass. The first complete-output V4 rehearsal also
+  stopped before restore: its quiet endpoint was 8,192 bytes below a transient
+  pre-allocation capacity sample, and the first ballast target's unchanged
+  4,096-byte tolerance refused it. The prospective bounded read-only baseline
+  rejoin keeps the V4 target, delta and receipt predicates exact; its real
+  rerun and all downstream ACs remain open. Source-free stopped evidence is
+  retained at `/private/tmp/t422-v4-pressure-failure.Xvbfj6`.
 
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use

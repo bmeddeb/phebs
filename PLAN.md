@@ -4775,3 +4775,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   schema or limit change. V3 historical plan bytes and tests remain exact;
   V4 still retains the original first-ballast 4,096-byte tolerance. A V4
   rehearsal pass and the original fifth-server cause remain unestablished.
+
+- **2026-09-22 — T42.2v first-ballast baseline rejoin.** The complete-output
+  disposable V4 rehearsal passed cold, warm, physical B, logical B, return A,
+  stale lease and checkpoint restart, then stopped at the first 80% ballast
+  mutation. Its completed 150-second quiet window ended at volume Used
+  47,662,125,056 bytes; the immediate pre-mutation sample transiently rose
+  8,192 bytes, while the post-allocation sample returned to that quiet baseline
+  plus the exact 34,285,842,432-byte allocated ballast. The existing 4,096-byte
+  target and delta tolerances correctly refused that transition. This is a
+  sampled APFS accounting excursion, not a pressure, archive or restored-launch
+  pass. Source-free complete terminal, server and unsealed-plan evidence is
+  retained at `/private/tmp/t422-v4-pressure-failure.Xvbfj6`; after byte
+  verification and custody audit, only that failed image was normally detached
+  and its exact rehearsal root removed.
+
+  The correction reuses the existing 30-second/50-millisecond read-only
+  settlement interval before the *first* allocation to rejoin the accepted
+  quiet endpoint within 4,096 bytes. Every sample rechecks exact inode, mount,
+  authority and cancellation; the one native allocation, target, delta,
+  capacity and receipt predicates remain unchanged. A stable first sample adds
+  one existing-style inode/mount/phase snapshot; transient movement may add at
+  most roughly 600 such samples under the unchanged pressure-phase deadline.
+  The volume mutex spans that bounded wait, while the run mutex is released
+  between samples so Stop can win; no ordinary query, sync, retry, startup,
+  publication or product cost changes. This does not alter the signed V4
+  contract or historical bytes. Focused/race gates, independent exact-source
+  review, real V4 restored-successor rehearsal, integration, fresh protected
+  candidate, signed readiness, freeze and ceremony remain open.

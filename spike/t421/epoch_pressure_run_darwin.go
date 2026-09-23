@@ -156,14 +156,16 @@ func (run *ExecutionEpochOneRun) pressurePhase(ctx context.Context, ballast *exe
 	if run.control.FenceRequests(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
+	var quietAnchor executionPressureBallastSample
 	if phase == 9 {
 		quiet, quietErr := ballast.waitQuiet(ctx, run, phase)
 		reader.retainPressureQuiet(quiet, quietErr)
 		if quietErr != nil {
 			return fmt.Errorf("%w: %w", ErrExecutionEpochOne, quietErr)
 		}
+		quietAnchor = quiet.Last
 	}
-	mutation, err := ballast.nextTarget(ctx, run, workspace)
+	mutation, err := ballast.nextTarget(ctx, run, workspace, quietAnchor)
 	reader.retainPressureBallast(phase-9, mutation, err)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrExecutionEpochOne, err)

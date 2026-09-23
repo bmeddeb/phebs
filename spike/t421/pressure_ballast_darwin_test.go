@@ -89,6 +89,35 @@ func TestExecutionPressureBallastContinuation(t *testing.T) {
 	}
 }
 
+func TestExecutionPressureBallastFirstTargetRejoinsQuietBaseline(t *testing.T) {
+	quiet := executionPressureBallastSample{Used: 47662125056, Available: 96<<30 - 47662125056}
+	spike := quiet
+	spike.Used += 8192
+	spike.Available -= 8192
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	calls := 0
+	got, observations, err := settleExecutionPressureBallastBaseline(ctx, quiet, func(context.Context) (executionPressureBallastSample, error) {
+		calls++
+		if calls == 1 {
+			return spike, nil
+		}
+		return quiet, nil
+	})
+	if err != nil || got != quiet || calls != 2 || observations.Samples != 2 || observations.First != spike || observations.Last != quiet {
+		t.Fatalf("first target did not rejoin the accepted baseline: got=%+v observations=%+v calls=%d error=%v", got, observations, calls, err)
+	}
+	ctx, cancel = context.WithCancel(t.Context())
+	defer cancel()
+	_, observations, err = settleExecutionPressureBallastBaseline(ctx, quiet, func(context.Context) (executionPressureBallastSample, error) {
+		cancel()
+		return spike, nil
+	})
+	if !errors.Is(err, errPressureVolume) || observations.Samples != 0 {
+		t.Fatalf("canceled baseline settlement admitted a transient: observations=%+v error=%v", observations, err)
+	}
+}
+
 func TestExecutionPressureBallastSettlement(t *testing.T) {
 	if pressureBallastSettleCadence != 50*time.Millisecond || pressureBallastSettleLimit != 30*time.Second {
 		t.Fatal("unexpected pressure ballast settlement bounds")
@@ -294,7 +323,7 @@ func TestExecutionPressureBallastRefusals(t *testing.T) {
 			}
 		}
 		for _, b := range []*executionPressureBallast{nil, {}, {volume: &executionPressureVolume{}}} {
-			if _, err := b.nextTarget(ctx, nil, custodyByteSample{}); err == nil {
+			if _, err := b.nextTarget(ctx, nil, custodyByteSample{}, executionPressureBallastSample{}); err == nil {
 				t.Fatal("invalid run issued mutation")
 			}
 			if _, err := b.remove(ctx, &ExecutionEpochOneRun{}); err == nil {
