@@ -542,7 +542,9 @@ func TestExecutionEpochOneOptionalRealStartRehearsal(t *testing.T) {
 		prior := run
 		restart := prior.CheckpointRestart
 		if pressure {
-			restart = prior.CheckpointRestartPressure
+			// The pressure sequence continues through BackupAndStop, which
+			// requires the backup capability bound at this restart.
+			restart = prior.CheckpointRestartBackup
 		}
 		next, err := restart(ctx)
 		if next != nil {

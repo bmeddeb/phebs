@@ -92,8 +92,12 @@ rehearsal pass or permission to freeze. Its rerun passed the first target
 exactly and stopped at the second on an 8,192-byte excursion in the fresh
 pre-allocation sample. The correction extends bounded read-only baseline
 rejoin to each mutation while retaining fresh Before/After target, delta and
-receipt checks with unchanged tolerances. The failed image stays mounted for
-custody audit; no rerun has started.
+receipt checks with unchanged tolerances. A 2026-09-23 read-only audit found
+both earlier failed image paths absent and no matching mounts; the source-free
+rehearsal records remain retained. The next rerun passed the full pressure
+sequence and stopped at the backup entry guard because the rehearsal
+restarted epoch four without the backup capability production binds. The
+rehearsal now matches production; no further rerun has started.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

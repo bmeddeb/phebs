@@ -4836,3 +4836,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   audit. Exact-tree verification, independent review, the real V4 rerun,
   integration, protected candidate, signed readiness, freeze and ceremony
   remain open.
+
+- **2026-09-23 — T42.2v pressure passed; rehearsal backup capability.** The
+  rerun at `01bd0e23` (protected production `d817ee0f`) passed cold, warm,
+  physical B, logical B, return A, stale lease, checkpoint restart and the
+  complete 80/90/75 pressure sequence including exact ballast removal, then
+  stopped after 6,497.34 seconds at the pressure-to-backup handoff.
+  `BackupAndStop` returned the bare sentinel with an all-zero prefix one second
+  after the 21st accepted report: its entry guard refused because the epoch-four
+  server lacked the backup capability. Commit `851c0474` extended the rehearsal
+  through backup but still restarted epoch four with
+  `CheckpointRestartPressure` (backup false); the production sequence uses
+  `CheckpointRestartBackup`. No pause, fence or endpoint retirement ran.
+
+  The correction selects `CheckpointRestartBackup` whenever the rehearsal runs
+  the pressure sequence, matching production. It changes only the opt-in
+  rehearsal test; product behavior, plan and tolerances are unchanged, as are
+  steady-state query/request, sync, startup, retry/no-op and publication costs.
+  The opt-in rehearsal now reserves the existing phase-twelve backup window in
+  epoch four and can execute the already-written backup, restore and successor
+  steps, within the unchanged caller and global wall bounds. It adds no
+  production locks, corpus scans, hashing, cache invalidation, memory/disk
+  ownership or child-process work. Source-free terminal, server and
+  unsealed-plan evidence (SHA-256 `f691657a…`,
+  `9a2e5a66…`, `038ed963…`) is retained at
+  `/private/tmp/t422-v4-anchor-rehearsal.gV7ZJi`. A read-only 2026-09-23
+  audit found no `/private/tmp/t422-epoch-one-rehearsal-1468351755` path or
+  matching mount; it does not establish who removed them or when. Backup,
+  restore, restored successor, integration, protected candidate, signed
+  readiness, freeze and ceremony remain open.

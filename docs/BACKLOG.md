@@ -4666,7 +4666,13 @@ ceremony execution, release or scale/SLO claim follows.
   Before/After target, delta and receipt checks at unchanged tolerances. The
   three new rejoin sites add bounded native samples and phase/store checks;
   its real rerun and all downstream ACs remain open. Evidence is retained at
-  `/private/tmp/t422-v4-baseline-rehearsal.IpDDzd`.
+  `/private/tmp/t422-v4-baseline-rehearsal.IpDDzd`. The next rerun passed the
+  complete 80/90/75 pressure sequence and ballast removal, then stopped at
+  the backup entry guard: the rehearsal restarted epoch four without the
+  backup capability that production binds. The rehearsal now uses
+  `CheckpointRestartBackup`; backup, restore and the restored successor
+  remain open. Evidence is retained at
+  `/private/tmp/t422-v4-anchor-rehearsal.gV7ZJi`.
 
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
