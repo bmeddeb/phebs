@@ -4658,7 +4658,15 @@ ceremony execution, release or scale/SLO claim follows.
   4,096-byte tolerance refused it. The prospective bounded read-only baseline
   rejoin keeps the V4 target, delta and receipt predicates exact; its real
   rerun and all downstream ACs remain open. Source-free stopped evidence is
-  retained at `/private/tmp/t422-v4-pressure-failure.Xvbfj6`.
+  retained at `/private/tmp/t422-v4-pressure-failure.Xvbfj6`. The rerun
+  passed that first target exactly and stopped at the second: a two-block APFS
+  charge after the accepted first After left the fresh-Before delta 8,192 bytes
+  short. The correction now performs a bounded read-only rejoin to the last
+  accepted capacity before each of four mutations, then keeps the fresh
+  Before/After target, delta and receipt checks at unchanged tolerances. The
+  three new rejoin sites add bounded native samples and phase/store checks;
+  its real rerun and all downstream ACs remain open. Evidence is retained at
+  `/private/tmp/t422-v4-baseline-rehearsal.IpDDzd`.
 
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use

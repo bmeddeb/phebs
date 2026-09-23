@@ -118,6 +118,52 @@ func TestExecutionPressureBallastFirstTargetRejoinsQuietBaseline(t *testing.T) {
 	}
 }
 
+// The second-target rehearsal saw an 8 KiB transient between accepted After
+// and fresh Before. Wait for a fresh rejoined Before before sizing the only
+// allocation; both the frozen target and the fresh delta must then pass.
+func TestExecutionPressureBallastSecondTargetRejoinsAcceptedBaseline(t *testing.T) {
+	accepted := executionPressureBallastSample{Used: 81947975680, Available: 96<<30 - 81947975680, Allocated: 34257317888}
+	spike := executionPressureBallastSample{Used: accepted.Used + 8192, Available: accepted.Available - 8192, Allocated: accepted.Allocated}
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	calls := 0
+	before, observations, err := settleExecutionPressureBallastBaseline(ctx, accepted, func(context.Context) (executionPressureBallastSample, error) {
+		calls++
+		if calls == 1 {
+			return spike, nil
+		}
+		return accepted, nil
+	})
+	if err != nil || before != accepted || calls != 2 || observations.Samples != 2 {
+		t.Fatalf("second target did not rejoin: before=%+v observations=%+v calls=%d error=%v", before, observations, calls, err)
+	}
+	geometry, err := expectedExecutionPressureGeometry(Plan{SafetyEnvelope: frozenSafetyEnvelope()}, ExecutionHost{
+		PressureTotalDiskBytes: 96 << 30, PressureAllocationUnitBytes: 4096,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := geometry.Targets[1]
+	size, err := pressureBallastSize(before, target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after := executionPressureBallastSample{Used: before.Used + size - before.Allocated, Allocated: size}
+	if !withinTolerance(after.Used, target.TargetUsedBytes, target.ToleranceBytes) ||
+		!pressureBallastDeltaMatches(target.Action, before, after) {
+		t.Fatalf("fresh target or delta refused: before=%+v after=%+v target=%+v", before, after, target)
+	}
+	if pressureBallastDeltaMatches(target.Action, spike, after) {
+		t.Fatal("transient spike unexpectedly matched the fresh allocation")
+	}
+	_, _, err = settleExecutionPressureBallastBaseline(ctx, accepted, func(context.Context) (executionPressureBallastSample, error) {
+		return executionPressureBallastSample{Used: accepted.Used, Allocated: accepted.Allocated + 4096}, nil
+	})
+	if !errors.Is(err, errPressureVolume) {
+		t.Fatal("ballast allocation drift admitted")
+	}
+}
+
 func TestExecutionPressureBallastSettlement(t *testing.T) {
 	if pressureBallastSettleCadence != 50*time.Millisecond || pressureBallastSettleLimit != 30*time.Second {
 		t.Fatal("unexpected pressure ballast settlement bounds")

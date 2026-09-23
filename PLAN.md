@@ -4803,3 +4803,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   contract or historical bytes. Focused/race gates, independent exact-source
   review, real V4 restored-successor rehearsal, integration, fresh protected
   candidate, signed readiness, freeze and ceremony remain open.
+
+- **2026-09-22 — T42.2v per-mutation ballast baseline rejoin.** The rerun at
+  `fb8e017d` passed cold, warm, physical B, logical B, return A, stale lease,
+  checkpoint restart, the 3,001-sample quiet window and the first 80% target
+  exactly (Used and Allocated both +34,257,317,888 bytes), then stopped at the
+  second 90% target after 6,251.09 seconds. Between the accepted first After
+  (Used 81,947,975,680) and the second pre-allocation sample, APFS charged
+  8,192 bytes; the allocation then released them, so the fresh-Before delta was
+  8,192 bytes short of the 10,307,911,680-byte allocation and the unchanged
+  4,096-byte delta check refused. Cumulatively the final Used equals the quiet
+  endpoint 47,690,657,792 plus Allocated 44,565,229,568 exactly. Both stopped
+  runs therefore show a two-block excursion in one instantaneous Before
+  sample; they do not establish a changed ballast allocation.
+
+  The correction rejoins the last accepted capacity before each of the four
+  ballast mutations: the quiet endpoint for the first target, then the prior
+  accepted After. Each read-only sample checks exact inode, allocation and
+  phase custody; only a fresh sample within the unchanged 4,096-byte baseline
+  tolerance can become Before. Target sizing and the unchanged target, delta
+  and receipt predicates all use that fresh Before and the post-mutation After.
+  An unrejoined drift stops before mutation, with no allocation retry. The
+  existing 30-second/50-millisecond settler now runs for all four mutations
+  (three new bounded rejoin sites); it holds the volume mutex while releasing
+  the run mutex between samples, and may make up to about 600 extra native
+  samples and phase/store checks per site. No ordinary product, query, sync,
+  startup, publication, child-process or steady-state cost changes. Source-free
+  terminal evidence is retained at
+  `/private/tmp/t422-v4-baseline-rehearsal.IpDDzd` (terminal.log SHA-256
+  `72e8bb351959dd3d0cc0d437dc14e07382475b3dc48b57ebc850245c782ba3d5`); the failed image remains
+  mounted at `/private/tmp/t422-epoch-one-rehearsal-4033685819` for custody
+  audit. Exact-tree verification, independent review, the real V4 rerun,
+  integration, protected candidate, signed readiness, freeze and ceremony
+  remain open.

@@ -88,7 +88,12 @@ unchanged 4,096-byte target/delta check refused. Its exact failed image was
 normally detached after owner-only evidence retention at
 `/private/tmp/t422-v4-pressure-failure.Xvbfj6`. A bounded read-only rejoin of
 the quiet baseline before the sole mutation is under test; it is not a V4
-rehearsal pass or permission to freeze.
+rehearsal pass or permission to freeze. Its rerun passed the first target
+exactly and stopped at the second on an 8,192-byte excursion in the fresh
+pre-allocation sample. The correction extends bounded read-only baseline
+rejoin to each mutation while retaining fresh Before/After target, delta and
+receipt checks with unchanged tolerances. The failed image stays mounted for
+custody audit; no rerun has started.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated
