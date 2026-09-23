@@ -100,23 +100,14 @@ func (run *ExecutionEpochOneRun) productQueryContext(ctx context.Context, author
 	}
 	// Reconstitute only the already-validated actual F fields. Check its exact
 	// native bytes before deriving catalog identities; never substitute the plan.
-	value := epochFinalResponse{Schema: "t421-final-authority-source-free-v1", ExtractionRoots: authority.ExtractionRoots}
-	raw, err := json.Marshal(authority.AuthorityState)
-	if err != nil || json.Unmarshal(raw, &value.Authority) != nil {
-		return nil, ErrExecutionEpochOne
-	}
-	raw, err = json.Marshal(projection)
-	if err != nil || json.Unmarshal(raw, &value.Projection) != nil {
-		return nil, ErrExecutionEpochOne
-	}
-	value.Projection.Schema = "t421-final-state-projection-source-free-v1"
 	reader := run.inspection
 	reader.mu.Lock()
 	queryAuthority := reader.productQueryAuthority
-	value.QueryAuthority = &queryAuthority
-	raw, err = json.MarshalIndent(value, "", "  ")
-	raw = append(raw, '\n')
-	valid := err == nil && reader.productBaseline != nil && sha256.Sum256(raw) == *reader.productBaseline
+	raw, err := epochFinalBody(authority.AuthorityState, authority.ExtractionRoots, projection, ExecutionInspectionFinal{
+		CatalogPopulation: reader.finalCatalogPopulation, ResolverCatalogCounts: reader.finalResolverCatalogCounts,
+		CallerPublication: reader.finalCallerPublication, RPCPostings: reader.finalRPCPostings}, &queryAuthority)
+	var value epochFinalResponse
+	valid := err == nil && reader.productBaseline != nil && sha256.Sum256(raw) == *reader.productBaseline && json.Unmarshal(raw, &value) == nil
 	reader.mu.Unlock()
 	if !valid {
 		return nil, ErrExecutionEpochOne

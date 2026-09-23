@@ -5,6 +5,9 @@ import (
 	"crypto/sha256"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 func TestEpochArchiveSemanticBinding(t *testing.T) {
@@ -66,9 +69,21 @@ func TestEpochArchiveSemanticBinding(t *testing.T) {
 // This models the retained native wire/ledger handoff. It does not supply an
 // actual pressure-volume pass or exercise protected author construction.
 func TestEpochArchivePriorPressureBinding(t *testing.T) {
-	for _, mode := range []string{"valid", "nil", "error", "phase", "step", "no_final", "no_baseline", "no_rows", "unaccepted", "epoch", "missing_final", "changed_compact", "changed_projection", "changed_root", "changed_digest"} {
+	for _, mode := range []string{"valid", "nil", "error", "phase", "step", "no_final", "no_baseline", "no_rows", "unaccepted", "epoch", "missing_final", "changed_compact", "changed_projection", "changed_root", "changed_digest", "v4_fields", "v4_changed_field", "v4_changed_catalog", "v4_changed_resolver", "v4_changed_caller"} {
 		t.Run(mode, func(t *testing.T) {
 			reader, wire := epochTestFinal(t)
+			if strings.HasPrefix(mode, "v4_") {
+				// Model all four observations emitted with production work selected.
+				wire.CatalogPopulation = &ExecutionCatalogPopulation{}
+				wire.CallerPublication = &ExecutionCallerPublicationObservation{
+					RelationshipRootReads: 1, RelationshipGenerationReads: 1,
+					GenerationSHA256: wire.Authority.CallerGenerationSHA256, ManifestSHA256: wire.Authority.CallerRootSHA256,
+					Leaves: []callerpublication.LeafObservation{}, RPCProjection: SetIdentity{Records: 1, FramedBytes: 1, SHA256: testDigest("rpc")},
+				}
+				wire.RPCPostings = &ExecutionRPCPostingObservation{Resolved: 2, NameMatch: 1, Unresolved: 3}
+				wire.ResolverCatalogCounts = &readaccounting.ResolverCatalogCounts{GenerationSHA256: wire.Authority.ResolverCatalogGenerationSHA256,
+					ManifestSHA256: wire.Authority.ResolverCatalogRootSHA256, DeclarationRecords: 5, GeneratedDescriptors: 7}
+			}
 			authority, _, err := reader.decodeFinal(epochTestJSON(t, wire, true))
 			if err != nil {
 				t.Fatal(err)
@@ -79,7 +94,9 @@ func TestEpochArchivePriorPressureBinding(t *testing.T) {
 			digest := sha256.Sum256(epochTestJSON(t, wire, true))
 			reader.pressureBaseline = &digest
 			reader.evidence.rows = []ExecutionPhaseInspection{{ServerEpoch: 4, Phase: "pressure_75", SelectorAccepted: true,
-				Final: cloneInspectionFinal(ExecutionInspectionFinal{Authority: authority.AuthorityState, Projection: reader.projection})}}
+				Final: cloneInspectionFinal(ExecutionInspectionFinal{Authority: authority.AuthorityState, Projection: reader.projection,
+					CatalogPopulation: reader.finalCatalogPopulation, RPCPostings: reader.finalRPCPostings,
+					ResolverCatalogCounts: reader.finalResolverCatalogCounts, CallerPublication: reader.finalCallerPublication})}}
 			switch mode {
 			case "nil":
 				reader = nil
@@ -109,9 +126,17 @@ func TestEpochArchivePriorPressureBinding(t *testing.T) {
 				reader.staleAuthority.ExtractionRoots[0].RootSHA256 = testDigest("changed")
 			case "changed_digest":
 				reader.pressureBaseline[0] ^= 1
+			case "v4_changed_field":
+				reader.evidence.rows[0].Final.RPCPostings.Unresolved++
+			case "v4_changed_catalog":
+				reader.evidence.rows[0].Final.CatalogPopulation.AcceptedServices++
+			case "v4_changed_resolver":
+				reader.evidence.rows[0].Final.ResolverCatalogCounts.DeclarationRecords++
+			case "v4_changed_caller":
+				reader.evidence.rows[0].Final.CallerPublication.RelationshipRootReads++
 			}
 			prior, err := archivePriorFromPressure(reader)
-			if (err == nil) != (mode == "valid") {
+			if (err == nil) != (mode == "valid" || mode == "v4_fields") {
 				t.Fatal("pressure binding", err)
 			}
 			if err == nil {

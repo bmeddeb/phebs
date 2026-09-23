@@ -4672,7 +4672,15 @@ ceremony execution, release or scale/SLO claim follows.
   backup capability that production binds. The rehearsal now uses
   `CheckpointRestartBackup`; backup, restore and the restored successor
   remain open. Evidence is retained at
-  `/private/tmp/t422-v4-anchor-rehearsal.gV7ZJi`.
+  `/private/tmp/t422-v4-anchor-rehearsal.gV7ZJi`. The following rerun passed
+  backup and restore, then stopped at restored-successor `archive binding`:
+  the pressure-75 F rebuild omitted the V4 optional observations, so its
+  digest could not match the native baseline. Archive and product-query
+  rebuilds now share one canonical helper that includes them, and the client
+  final-body declaration matches production field order. Regressions cover
+  both handoffs and changed retained observations; restored successor and
+  later ACs remain open. Evidence is retained at
+  `/private/tmp/t422-v4-backup-rehearsal.5VnCh0`.
 
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use

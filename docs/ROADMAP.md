@@ -97,7 +97,11 @@ both earlier failed image paths absent and no matching mounts; the source-free
 rehearsal records remain retained. The next rerun passed the full pressure
 sequence and stopped at the backup entry guard because the rehearsal
 restarted epoch four without the backup capability production binds. The
-rehearsal now matches production; no further rerun has started.
+rehearsal now matches production. The next rerun passed backup and restore
+and stopped at restored-successor archive binding: the final-body rebuild
+omitted V4 optional observations. Both rebuild sites now include them and the
+client final-body declaration matches production field order; no further
+rerun has started.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

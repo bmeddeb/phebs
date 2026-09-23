@@ -93,18 +93,7 @@ func archivePriorFromPressure(reader *executionEpochInspection) (*AuthorityPhase
 		!reflect.DeepEqual(row.Final.Authority, reader.staleAuthority.AuthorityState) || !reflect.DeepEqual(row.Final.Projection, reader.projection) {
 		return nil, ErrExecutionEpochOne
 	}
-	value := epochFinalResponse{Schema: "t421-final-authority-source-free-v1", ExtractionRoots: reader.staleAuthority.ExtractionRoots}
-	raw, err := json.Marshal(reader.staleAuthority.AuthorityState)
-	if err != nil || json.Unmarshal(raw, &value.Authority) != nil {
-		return nil, ErrExecutionEpochOne
-	}
-	raw, err = json.Marshal(reader.projection)
-	if err != nil || json.Unmarshal(raw, &value.Projection) != nil {
-		return nil, ErrExecutionEpochOne
-	}
-	value.Projection.Schema = "t421-final-state-projection-source-free-v1"
-	raw, err = json.MarshalIndent(value, "", "  ")
-	raw = append(raw, '\n')
+	raw, err := epochFinalBody(reader.staleAuthority.AuthorityState, reader.staleAuthority.ExtractionRoots, reader.projection, *row.Final, nil)
 	var detached epochFinalResponse
 	if err != nil || len(raw) > epochFinalResponseBytes || sha256.Sum256(raw) != *reader.pressureBaseline || json.Unmarshal(raw, &detached) != nil {
 		return nil, ErrExecutionEpochOne
@@ -112,4 +101,27 @@ func archivePriorFromPressure(reader *executionEpochInspection) (*AuthorityPhase
 	prior := reader.staleAuthority
 	prior.Phase, prior.ExtractionRoots = "pressure_75", detached.ExtractionRoots
 	return &prior, nil
+}
+
+// epochFinalBody re-encodes an already-validated native F canonically. The
+// optional observations the native F carried must be supplied too, or the
+// bytes cannot match the recorded digest.
+func epochFinalBody(authority AuthorityState, roots []ExtractionRootResult, projection PhaseStateProjection, final ExecutionInspectionFinal, query *epochQueryAuthority) ([]byte, error) {
+	value := epochFinalResponse{Schema: "t421-final-authority-source-free-v1", ExtractionRoots: roots, QueryAuthority: query,
+		CatalogPopulation: final.CatalogPopulation, ResolverCatalogCounts: final.ResolverCatalogCounts,
+		CallerPublication: final.CallerPublication, RPCPostings: final.RPCPostings}
+	raw, err := json.Marshal(authority)
+	if err != nil || json.Unmarshal(raw, &value.Authority) != nil {
+		return nil, ErrExecutionEpochOne
+	}
+	raw, err = json.Marshal(projection)
+	if err != nil || json.Unmarshal(raw, &value.Projection) != nil {
+		return nil, ErrExecutionEpochOne
+	}
+	value.Projection.Schema = "t421-final-state-projection-source-free-v1"
+	raw, err = json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return nil, ErrExecutionEpochOne
+	}
+	return append(raw, '\n'), nil
 }

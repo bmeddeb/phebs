@@ -4865,3 +4865,49 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   matching mount; it does not establish who removed them or when. Backup,
   restore, restored successor, integration, protected candidate, signed
   readiness, freeze and ceremony remain open.
+
+- **2026-09-23 — T42.2v backup and restore passed; V4 final re-encoding.**
+  The rerun at `d9f7a581` (protected production `d817ee0f`) passed every
+  earlier phase, the full pressure sequence, backup and restore, then stopped
+  after 11,939.35 seconds at restored-successor stage `archive binding`.
+  `archivePriorFromPressure` rebuilds the pressure-75 native F from retained
+  fields and requires its SHA-256 to equal the process-restart baseline. The
+  V4 server always emits `rpc_postings` and `resolver_catalog_counts`, and
+  under production work `catalog_population` and `caller_publication`
+  (`cmd/phebs/t421_final_authority.go`); the rebuild omitted all four, so its
+  digest could never match and the binding refused before any successor
+  launch. The archive fixtures modeled only pre-V4 bodies. The product-query
+  context rebuild had the identical omission and would have refused later.
+
+  The correction moves both rebuilds onto one canonical helper that includes
+  the validated optional observations the native F carried: the retained
+  pressure-75 row for archive binding and the reader's last validated F for
+  product queries. The client wire declaration also matches the native order:
+  `caller_publication` precedes `resolver_catalog_counts`. Canonical decode
+  and both handoff hashes require that order; keyed-literal order is irrelevant.
+  Digest equality remains mandatory and no field is relaxed. Tests compare
+  top-level field order and tags directly with the production declaration,
+  rebuild all four observations with and without query authority, and exercise
+  archive and product-query handoffs with altered observations and custody.
+  Nested native/client serialization was independently source-reviewed.
+
+  Each handoff still performs one bounded final-body encoding and hash. The
+  product-query handoff now additionally decodes the hash-matched body into a
+  detached response, including extraction roots and caller leaves, under the
+  existing reader mutex; authority/projection conversion also moves under that
+  lock. Successful bodies equal the accepted native F, whose existing cap is
+  1 MiB. This adds one bounded decode and proportional transient allocations
+  once before the product-query sequence and extends that lock hold, without
+  adding a lock or concurrent worker. Archive detachment already existed.
+  No ordinary request/query, sync tick, startup/restart, retry/no-op or
+  publication work changes; there are no additional source/shard/store/control
+  reads, hashes of corpus data, cache invalidations, disk writes or children.
+  Plan, tolerance, admission and lifecycle predicates remain exact.
+  Source-free evidence (SHA-256 `efa3fc97…`, `b1bd1ef1…`, `038ed963…`) is
+  retained at `/private/tmp/t422-v4-backup-rehearsal.5VnCh0`. A read-only audit
+  at 2026-09-23 18:30:48 UTC reverified those hashes and found the failed root
+  `/private/tmp/t422-epoch-one-rehearsal-450123765` absent with no attached image
+  or matching mount. It does not establish who removed that custody or when.
+  Restored successor, archive completion, product queries,
+  teardown, integration, protected candidate, signed readiness, freeze and
+  ceremony remain open.

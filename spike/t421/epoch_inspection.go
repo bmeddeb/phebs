@@ -582,8 +582,8 @@ type epochFinalResponse struct {
 	Authority             epochFinalAuthority                    `json:"authority"`
 	Projection            epochFinalProjection                   `json:"projection"`
 	ExtractionRoots       []ExtractionRootResult                 `json:"extraction_roots"`
-	ResolverCatalogCounts *readaccounting.ResolverCatalogCounts  `json:"resolver_catalog_counts,omitempty"`
 	CallerPublication     *ExecutionCallerPublicationObservation `json:"caller_publication,omitempty"`
+	ResolverCatalogCounts *readaccounting.ResolverCatalogCounts  `json:"resolver_catalog_counts,omitempty"`
 	RPCPostings           *ExecutionRPCPostingObservation        `json:"rpc_postings,omitempty"`
 	QueryAuthority        *epochQueryAuthority                   `json:"query_authority,omitempty"`
 }
