@@ -5283,3 +5283,57 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   ceremony bound changes. Focused normal/race, static/documentation, exact
   source review, a clean 120-GiB preflight and a complete rehearsal must pass
   before this correction supports any readiness claim.
+
+- **2026-09-24 — T42.2v return-A service-state transaction correction.**
+  The clean reviewed selected-lease source `47ec81778e702a41361c9918286e28ff5d3710ce`
+  passed protected preparation, cold, warm and physical-B X/T/F, including
+  current/prior retention and both epoch joins. Its full disposable rehearsal
+  stopped after 6,358.95 seconds in return A before the first marker read
+  completed (X=0, T=0, no F or archive). The first typed failure was an active
+  `commitServiceStateV3TargetChunk` call with no native reply; the pinned
+  SurrealDB WebSocket client imposes its own 30-second RPC timeout, independent
+  of the still-active handler and store-owner contexts. Exact store accounting
+  refused the subsequent HTTP read; SurrealDB was signaled only during
+  controlled teardown. The two-million-line index receipt burst had ended
+  more than ten minutes earlier, and host logs showed no disk error, process
+  kill or prolonged APFS flush stall at refusal. Retain terminal
+  `/private/tmp/t422v-unlazy/rehearsal-selected-lease.log` SHA-256
+  `a260fa9aa1cd551225deebc211427614c5e842e03bb4a7c2e439534eeebaa55e`,
+  copied server log `rehearsal-selected-lease-failed-server.log` SHA-256
+  `36fb5baf0f85d1750e402da824aa9e96266b2bc705d663146b3d41f88970d95c`,
+  and copied 409 body `rehearsal-selected-lease-failed-response.body` SHA-256
+  `adf66eb6b763569d9821ce4e9c52baf2fa77212b20e089a0fc9b91e0757d5375`.
+  The failed image `t422-epoch-one-rehearsal-453320547` remains mounted only
+  for diagnosis; no rehearsal server or listener survives.
+
+  A separate 686-MiB copy of its stopped database retained one running
+  reconcile plan at member 17 of 21: 8,704 completed member reads and 8,959
+  committed state/preimage writes show that the first 255-row prefix of member
+  17 committed before the failed next prefix. A temporary native replay of
+  that exact running lease on a fresh copy reproduced the unchanged query's
+  30.211-second `deadline_exceeded`; the revised query completed on two fresh
+  copies in 15.959 and 16.488 seconds, applying the remaining 257 rows and
+  finishing the 512-row member. Retain source-free replay outputs
+  `/private/tmp/t422v-unlazy/return-a-baseline-replay.out` SHA-256
+  `4effd8034c9b6a847115d16e686a8471cea27c58618b2a6e89102249bdbdd198`
+  and `return-a-optimized-replay.out` SHA-256
+  `500331f651a49ec46f21eddaf8738da07e77121881158fdf8b474d6cfb9ee160`.
+  The isolated replay proves this stopped transaction fits the existing client
+  deadline without concurrent ceremony work; it is not a full-run pass.
+
+  Merge the target and content preimage checks into the existing final
+  per-update loop, still after the summary/payload guards and before every
+  CREATE/UPSERT. Keep its late revision/digest CAS, exact selected-preimage
+  existence/count, prior content/snapshot comparison, lease, selector,
+  candidate, schedule and progress fences. This removes one current-row point
+  read per changed state and one preimage point read per preserved state in
+  each selected service-state write transaction, with no extra query, row,
+  transaction, lock, cache, hash, child, disk allocation or concurrency.
+  The same reduction applies whenever the shared production service-state
+  writer runs; ordinary product requests and idle sync/startup/retry paths
+  perform no new work. The 512-record submission cap, immutable catalog
+  members, durable ordinals, historical schemas, selected job leases and V1–V5
+  evidence predicates remain unchanged. Uncertain native replies still fail
+  closed. Focused native/race, exact-tree static/documentation gates,
+  independent review, clean 120-GiB preflight and one fresh full rehearsal
+  remain required before any readiness, integration, freeze or ceremony claim.

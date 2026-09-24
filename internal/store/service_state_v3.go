@@ -2523,26 +2523,6 @@ IF $repository_state = NONE OR $repository_state.deleting = true OR
 	!$selector_ok OR !$plan_ok OR !$lease_ok OR !$summary_ok OR !$drained {
 	THROW 'phebs-permanent: service state v3 chunk fence changed';
 };
-FOR $update IN $updates {
-	LET $existing = (SELECT control_revision, state_digest, visible_from FROM $update.rid LIMIT 1)[0];
-	LET $revision = IF $existing = NONE THEN 0 ELSE $existing.control_revision END;
-	LET $digest = IF $existing = NONE THEN '' ELSE $existing.state_digest END;
-	IF $revision != $update.expected_revision OR $digest != $update.expected_digest {
-		THROW 'phebs-permanent: service state v3 row compare-and-swap conflict';
-	};
-	LET $preserve = $existing != NONE AND $selector != NONE
-		AND $selector.backend = 'v3'
-		AND ($existing.visible_from ?? 1) <= $selector.state_control_revision;
-	LET $prior_rows = IF $preserve THEN (
-		SELECT id FROM service_state_v3_preimage WHERE repository = $repository
-			AND snapshot_revision = $selector.state_control_revision
-			AND service_key = $update.content.service_key LIMIT 2
-	) ELSE [] END;
-	IF array::len($prior_rows) > 1 OR
-		($preserve AND array::len($prior_rows) = 0) != $update.create_preimage {
-		THROW 'phebs-permanent: service state v3 preimage target changed';
-	};
-};
 LET $preserved_rows = IF $selector = NONE THEN 0 ELSE array::len(
 	SELECT id FROM service_state_v3_preimage
 		WHERE repository = $repository
@@ -2572,21 +2552,22 @@ FOR $update IN $updates {
 	LET $preserve = $existing != NONE AND $selector != NONE
 		AND $selector.backend = 'v3'
 		AND ($existing.visible_from ?? 1) <= $selector.state_control_revision;
-	IF $preserve {
-		LET $prior_rows = SELECT state_digest, control_revision, snapshot_digest
+	LET $prior_rows = IF $preserve THEN (
+		SELECT state_digest, control_revision, snapshot_digest
 			FROM service_state_v3_preimage
 			WHERE repository = $repository
 				AND snapshot_revision = $selector.state_control_revision
-				AND service_key = $update.content.service_key LIMIT 2;
-		IF array::len($prior_rows) > 1 {
-			THROW 'phebs-permanent: duplicate service state v3 preimage';
-		};
-		LET $prior = $prior_rows[0];
-		IF $prior != NONE AND ($prior.state_digest != $existing.state_digest
+				AND service_key = $update.content.service_key LIMIT 2
+	) ELSE [] END;
+	IF array::len($prior_rows) > 1 OR
+		($preserve AND array::len($prior_rows) = 0) != $update.create_preimage {
+		THROW 'phebs-permanent: service state v3 preimage target changed';
+	};
+	LET $prior = $prior_rows[0];
+	IF $preserve AND $prior != NONE AND ($prior.state_digest != $existing.state_digest
 			OR $prior.control_revision != $existing.control_revision
 			OR $prior.snapshot_digest != $selector.state_summary_digest) {
-			THROW 'phebs-permanent: service state v3 preimage conflict';
-		};
+		THROW 'phebs-permanent: service state v3 preimage conflict';
 	};
 };
 FOR $rid IN $preimage_ids {
