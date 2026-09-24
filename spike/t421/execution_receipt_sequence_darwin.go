@@ -79,6 +79,9 @@ func composeExecutionSequenceReceipt(plan Plan, binding ExecutionFreezeBinding, 
 			return Receipt{}, fmt.Errorf("receipt stopped metrics: %w", joinErr)
 		}
 		metrics, unavailable = joined.Metrics, joined.Unavailable
+		if err := composeExecutionHandoffEvidence(plan, sequence.teardown.Work, inspections, false, &metrics); err != nil {
+			return Receipt{}, fmt.Errorf("receipt stopped handoff evidence: %w", err)
+		}
 	}
 	if outcomes["preflight"] == "passed" {
 		composeExecutionClosedPreflightMetrics(sequence.teardown.Accounting, sequence.teardown.Store, &metrics, &unavailable[0])
@@ -125,6 +128,9 @@ func composeExecutionSequenceReceipt(plan Plan, binding ExecutionFreezeBinding, 
 		wall := measurements[i].Metrics.WallMS
 		measurements[i].Metrics = metrics.Metrics[i]
 		measurements[i].Metrics.WallMS = wall
+		if outcomes[phase] == "passed" {
+			measurements[i].SelectorCleanup = metrics.SelectorCleanup[i]
+		}
 		native := resources.Native[i]
 		native.Classes = slices.Clone(native.Classes)
 		if err := validateNativeObservation(native); err != nil {

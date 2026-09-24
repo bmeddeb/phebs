@@ -517,7 +517,6 @@ func TestAccountingStoreUnavailableTeardownRetainsPrefix(t *testing.T) {
 
 func TestAccountingProductionFixtureRejectsChangedInputs(t *testing.T) {
 	// Use the retained fixture bytes, not another production corpus build.
-	prospective := accountingTestPlan(t)
 	raw, err := os.ReadFile("plan-v2.json")
 	if err != nil {
 		t.Fatal(err)
@@ -526,27 +525,113 @@ func TestAccountingProductionFixtureRejectsChangedInputs(t *testing.T) {
 	if err := json.Unmarshal(raw, &prior); err != nil {
 		t.Fatal(err)
 	}
-	if !productionFixturePlanMatches(prospective, prior) {
-		t.Fatal("exact V3 fixture input refused")
-	}
-	for _, test := range []struct {
-		name   string
-		mutate func(*Plan)
-	}{
-		{"source", func(p *Plan) { p.SourceCommit = testDigest("other-source") }},
-		{"input", func(p *Plan) { p.Inputs[0].Identity = testDigest("other-input") }},
-		{"oracle", func(p *Plan) { p.Oracle.ProductRelationships = ProductRelationships{} }},
-		{"failure_point", func(p *Plan) { p.FailurePoints[0].RecoveryDeadlineMS++ }},
-		{"profile", func(p *Plan) { p.Profile.Physical.CombinedRegularFiles++ }},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			changed := clonePlan(t, prospective)
-			test.mutate(&changed)
-			if productionFixturePlanMatches(changed, prior) {
-				t.Fatal("native constructor cache accepted changed functional input")
+	for _, schema := range []string{PlanV3Schema, PlanV4Schema, PlanV5Schema} {
+		t.Run(schema, func(t *testing.T) {
+			prospective := accountingTestPlan(t)
+			if pressureContinuityPlanSemantics(schema) {
+				for _, correct := range []func(*Plan) error{applyLogicalStoreWorkCorrection, applySelectorHandoffCleanupCorrection, applyPressureContinuityCorrection} {
+					if err := correct(&prospective); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if schema == PlanV5Schema {
+				if err := applyCallerRestoreContinuityCorrection(&prospective); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if !productionFixturePlanMatches(prospective, prior) {
+				t.Fatal("exact prospective fixture input refused")
+			}
+			for _, test := range []struct {
+				name   string
+				mutate func(*Plan)
+			}{
+				{"source", func(p *Plan) { p.SourceCommit = testDigest("other-source") }},
+				{"input", func(p *Plan) { p.Inputs[0].Identity = testDigest("other-input") }},
+				{"oracle", func(p *Plan) { p.Oracle.ProductRelationships = ProductRelationships{} }},
+				{"failure_point", func(p *Plan) { p.FailurePoints[0].RecoveryDeadlineMS++ }},
+				{"profile", func(p *Plan) { p.Profile.Physical.CombinedRegularFiles++ }},
+			} {
+				t.Run(test.name, func(t *testing.T) {
+					changed := clonePlan(t, prospective)
+					test.mutate(&changed)
+					if productionFixturePlanMatches(changed, prior) {
+						t.Fatal("native constructor cache accepted changed functional input")
+					}
+				})
 			}
 		})
 	}
+}
+
+func TestAccountingReceiptFixturePreservesFrozenWorkBounds(t *testing.T) {
+	for _, schema := range []string{PlanV3Schema, PlanV4Schema, PlanV5Schema} {
+		t.Run(schema, func(t *testing.T) {
+			plan := accountingTestPlan(t)
+			if pressureContinuityPlanSemantics(schema) {
+				for _, correct := range []func(*Plan) error{applyLogicalStoreWorkCorrection, applySelectorHandoffCleanupCorrection, applyPressureContinuityCorrection} {
+					if err := correct(&plan); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if schema == PlanV5Schema {
+				if err := applyCallerRestoreContinuityCorrection(&plan); err != nil {
+					t.Fatal(err)
+				}
+			}
+			measurements := accountingFixtureWorkProjection(t, plan)
+			outcomes := make(map[string]string, len(measurements))
+			for index, measurement := range measurements {
+				outcomes[measurement.Phase] = "passed"
+				t.Run(measurement.Phase, func(t *testing.T) {
+					if err := validatePhaseWorkMetrics(measurement.Metrics, measurement.DispatchAccounting.Roles,
+						plan.WorkEnvelope.Phases[index], "passed", nil, plan.WorkEnvelope); err != nil {
+						t.Fatal(err)
+					}
+				})
+				if err := validatePhaseSelectorCleanup(measurement, "passed", plan); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := validateFrozenMetricOracles(measurements, outcomes, plan); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// Only project the modeled work counters, not production authorities or a valid
+// complete receipt. Retained plans avoid rebuilding the corpus. The two native
+// recovery injections remain covered by completeTestReceipt; their helper adds
+// ControlReads rather than replacing any frozen minimum.
+func accountingFixtureWorkProjection(t *testing.T, plan Plan) []PhaseMeasurement {
+	t.Helper()
+	host := executionFreezeTestHost()
+	pressure, err := expectedExecutionPressureGeometry(plan, host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	freeze := ExecutionFreeze{Host: host, Pressure: pressure, Profile: ExecutionProfile{Epochs: correctedExecutionServerEpochs()}}
+	measurements := make([]PhaseMeasurement, len(plan.PhaseOrder))
+	authorities := make([]AuthorityPhaseResult, len(plan.PhaseOrder))
+	for index, phase := range plan.PhaseOrder {
+		measurements[index] = testPhaseMeasurement(plan, freeze, index)
+		authorities[index] = AuthorityPhaseResult{
+			Phase: phase, Outcome: "passed", AuthorityState: AuthorityState{Current: true,
+				SearchGenerationSHA256: testDigest("modeled-counter-authority", phase)},
+		}
+	}
+	points := make([]FailurePoint, 0, len(plan.FailurePoints))
+	for _, point := range plan.FailurePoints {
+		if point.Name != "stale_partition_lease" && point.Name != "checkpointed_hard_restart" {
+			points = append(points, point)
+		}
+	}
+	plan.FailurePoints = points
+	completeTestTransitions(t, plan, freeze, authorities, measurements)
+	return measurements
 }
 
 func accountingTestTeardown(plan Plan) (ReceiptTeardown, []PhaseMeasurement) {

@@ -37,6 +37,7 @@ type ExecutionAttemptCount struct {
 type ExecutionAttemptObservation struct {
 	Phases            [15]ExecutionAttemptCount
 	Lifecycle         ExecutionLifecycleObservation
+	Handoff           ExecutionHandoffObservation
 	Cache             ExecutionCacheObservation
 	SourceCensus      ExecutionSourceCensusObservation
 	CatalogCensus     ExecutionCatalogCensusObservation
@@ -87,6 +88,9 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		consumed += len(line)
 		if len(line) == 0 && errors.Is(readErr, io.EOF) {
 			out.ScanComplete = true
+			if plan.Schema == PlanV5Schema {
+				out.Handoff.ScanComplete = true
+			}
 			if !out.SourceBound || producer <= 6 && (!out.AttemptBound || !out.Reuse.Bound || !out.UnsupportedSource.Bound) || !out.ObservationBound || !out.PublicationBound || !out.ResolverBound || !out.RelationshipBound {
 				return out, errExecutionAttempts
 			}
@@ -101,6 +105,9 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 						return out, errExecutionAttempts
 					}
 				}
+			}
+			if !validExecutionHandoffRecord(plan, executionJoinedWorkRecord{Producer: producer, Input: input, Attempts: out}) {
+				return out, errExecutionAttempts
 			}
 			out.Complete = true
 			out.ArchiveArtifacts.Complete = out.ArchiveArtifacts.complete(producer)
@@ -124,6 +131,12 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			return out, nil
 		}
 		if readErr == nil && executionSetupTokenDiagnostic(line) {
+			continue
+		}
+		if observed, err := observeHandoffEvent(line, plan, producer, wantInput, out.SourceBound, &out.Handoff); observed {
+			if err != nil || readErr != nil {
+				return out, errExecutionAttempts
+			}
 			continue
 		}
 		if observed, err := observeArchiveArtifactEvent(line, producer, wantInput, &out.ArchiveArtifacts); observed {
@@ -212,7 +225,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed]) || reservedCatalogCensusEvent(raw[start:consumed]) || reservedWorkspaceByteEvent(raw[start:consumed]) || reservedReuseEvent(raw[start:consumed]) || reservedUnsupportedSourceEvent(raw[start:consumed]) || reservedArchiveArtifactEvent(raw[start:consumed])) {
+		if long && (plan.Schema == PlanV5Schema && reservedHandoffEvent(raw[start:consumed]) || reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed]) || reservedCatalogCensusEvent(raw[start:consumed]) || reservedWorkspaceByteEvent(raw[start:consumed]) || reservedReuseEvent(raw[start:consumed]) || reservedUnsupportedSourceEvent(raw[start:consumed]) || reservedArchiveArtifactEvent(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -232,7 +245,7 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	result.Attempts, err = observeExecutionAttempts(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true)
 	var indexErr error
 	result.IndexOffers, indexErr = observeExecutionIndexOffers(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, err == nil && failure == nil)
-	footer, footerErr := executionTerminalFooter(run.output.buffer.Bytes(), run.attemptInput)
+	footer, footerErr := executionTerminalFooterForPlan(run.output.buffer.Bytes(), run.attemptInput, run.flow.plan.Schema)
 	if run.terminalEntered {
 		// Only finish owns these actual native facts and the preceding PC/SDK,
 		// DA/SA joins. A footer or a boolean assertion cannot replace them.
@@ -265,6 +278,7 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 	}
 	if footerErr != nil || run.output.err != nil {
 		result.Attempts.ScanComplete = false
+		result.Attempts.Handoff.ScanComplete = false
 		result.IndexOffers.ScanComplete = false
 	}
 	if err != nil || !result.Attempts.Lifecycle.Complete || !result.Attempts.Cache.Complete || !result.Attempts.SourceCensus.Complete || !result.Attempts.CatalogCensus.Complete || !result.Attempts.UnsupportedSource.Complete || requireWorkspace && !result.Attempts.WorkspaceBytes.Complete || indexErr != nil || failure != nil || footerErr != nil || run.output.err != nil || ctx == nil || ctx.Err() != nil {
@@ -290,6 +304,10 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 // partial final lines retain the existing refusal, even for ordinary output.
 // Future compact metric families must extend this reserved-family check too.
 func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) {
+	return executionTerminalFooterForPlan(raw, input, "")
+}
+
+func executionTerminalFooterForPlan(raw []byte, input [32]byte, schema string) (seen bool, err error) {
 	if len(raw) > 64<<20 || input == ([32]byte{}) {
 		return false, errExecutionAttempts
 	}
@@ -315,7 +333,7 @@ func executionTerminalFooter(raw []byte, input [32]byte) (seen bool, err error) 
 			continue
 		}
 		index := reservedTerminalIndex(line)
-		if seen && (reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
+		if seen && (schema == PlanV5Schema && reservedHandoffEvent(line) || reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
 			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line) || reservedResolverEvent(line) || reservedRelationshipEvent(line) || reservedCensusEvent(line) || reservedCatalogCensusEvent(line) || reservedWorkspaceByteEvent(line) || reservedReuseEvent(line) || reservedUnsupportedSourceEvent(line) || reservedArchiveArtifactEvent(line)) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts

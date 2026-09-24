@@ -21,7 +21,7 @@ func addExecutionJoinedMetric[T ~uint64](target *T, value uint64) bool {
 
 func validExecutionJoinedWorkRecord(plan Plan, record executionJoinedWorkRecord) bool {
 	server := record.Producer <= 6
-	if !record.Attempts.Complete || !record.Attempts.SourceBound || !record.Attempts.ObservationBound ||
+	if !validExecutionHandoffRecord(plan, record) || !record.Attempts.Complete || !record.Attempts.SourceBound || !record.Attempts.ObservationBound ||
 		!record.Attempts.PublicationBound || !record.Attempts.ResolverBound || !record.Attempts.RelationshipBound ||
 		!record.Attempts.Cache.Complete || !record.Attempts.Cache.complete() ||
 		!record.Attempts.SourceCensus.Complete || !record.Attempts.SourceCensus.complete() ||
@@ -132,6 +132,7 @@ func addExecutionWorkRecordMetrics(metric *ReceiptMetrics, record executionJoine
 	cache := record.Attempts.Cache.Phases[index]
 	lifecycle := record.Attempts.Lifecycle.Phases[index]
 	indexOffer := record.IndexOffers.Phases[index]
+	cleanup := record.Attempts.Handoff.Cleanup[index]
 	values := []struct {
 		target *CountMetric
 		value  uint64
@@ -147,6 +148,8 @@ func addExecutionWorkRecordMetrics(metric *ReceiptMetrics, record executionJoine
 		{&metric.CacheRootReads, cache.RootReads}, {&metric.CacheMemberReads, cache.MemberReads},
 		{&metric.CacheRootValidations, cache.RootValidations}, {&metric.CacheMemberValidations, cache.MemberValidations},
 		{&metric.LifecycleOwnerTurns, lifecycle.OwnerTurns}, {&metric.LifecycleDeleted, lifecycle.Deleted},
+		{&metric.LifecycleOwnerTurns, cleanup.Turns}, {&metric.LifecycleDeleted, cleanup.Deleted},
+		{&metric.ControlReads, cleanup.StoreReadAttempts},
 		{&metric.UnsupportedSourceFiles, attempt.UnsupportedSourceFiles}, {&metric.IndexFiles, indexOffer.Offers},
 	}
 	for _, value := range values {
@@ -167,7 +170,19 @@ func addExecutionWorkRecordMetrics(metric *ReceiptMetrics, record executionJoine
 		}
 	}
 	metric.MaxRetriesUnit = max(metric.MaxRetriesUnit, CountMetric(attempt.MaxRetriesUnit))
-	metric.MaxLifecycleDeletesTurn = max(metric.MaxLifecycleDeletesTurn, CountMetric(lifecycle.MaxDeleted))
+	metric.MaxLifecycleDeletesTurn = max(metric.MaxLifecycleDeletesTurn, CountMetric(lifecycle.MaxDeleted), CountMetric(cleanup.MaxDeleted))
+	if index == 3 {
+		for _, sweep := range record.Attempts.Handoff.Retention {
+			if sweep.Attempt == 0 {
+				continue
+			}
+			if sweep.Deleted < 0 || !addExecutionJoinedMetric(&metric.LifecycleOwnerTurns, 1) ||
+				!addExecutionJoinedMetric(&metric.LifecycleDeleted, uint64(sweep.Deleted)) {
+				return false
+			}
+			metric.MaxLifecycleDeletesTurn = max(metric.MaxLifecycleDeletesTurn, CountMetric(sweep.Deleted))
+		}
+	}
 	if record.Producer <= 6 {
 		reuse := record.Attempts.Reuse.Phases[index]
 		lanes := []struct {

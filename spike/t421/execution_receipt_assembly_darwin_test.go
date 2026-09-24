@@ -3,11 +3,84 @@
 package t421
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
 	"slices"
 	"testing"
 )
+
+// Full V5 receipt acceptance over the existing source-bound constructor fixture.
+// Measurements, signatures and the provenance-only caller rebuild are modeled;
+// this is neither a native restored run nor cryptographic package verification.
+func TestAssembleExecutionReceiptV5RestoredContinuity(t *testing.T) {
+	plan := completeV5ReceiptTestPlan(t)
+	binding := frozenReceiptTestBinding(t, plan)
+	fixture := completeTestReceipt(t, plan, binding)
+	evidence := modeledReceiptEvidence(t, fixture, plan)
+	outcomes, _, err := validateReceiptPhases(evidence.Phases, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Exercise the real accepted-owner and deduplication adapters, not a
+	// hand-assembled snapshot table that could omit the new commitment.
+	evidence.Authorities, err = composeExecutionSequenceAuthorities(plan, outcomes, evidence.Authorities, evidence.Revisions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prior := evidence.Authorities[slices.Index(plan.PhaseOrder[1:14], "pressure_75")]
+	restored := evidence.Authorities[slices.Index(plan.PhaseOrder[1:14], "archive_restore")]
+	if prior.CallerRootSHA256 == restored.CallerRootSHA256 || prior.CallerGenerationSHA256 != restored.CallerGenerationSHA256 ||
+		!validDigest(prior.CallerContinuitySHA256) || prior.CallerContinuitySHA256 != restored.CallerContinuitySHA256 {
+		t.Fatal("fixture does not model a provenance-only caller rebuild")
+	}
+	value, err := assembleExecutionReceipt(plan, binding, evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value.Decision.Outcome != "passed" || value.Teardown.Outcome != "clean" || value.Schema != ReceiptV5Schema ||
+		len(value.Authority.Snapshots) >= len(evidence.Authorities) {
+		t.Fatal("V5 successful receipt lost its outcome, version or deduplication")
+	}
+	returned := returnedPackageTestBinding(t, value, plan, binding)
+	raw, err := MarshalCanonical(value)
+	if err != nil || len(raw) > MaxReceiptBytes || uint64(len(raw)) > plan.ReceiptContract.MaximumBytes || bytes.Count(raw, []byte{'\n'}) != 1 {
+		t.Fatalf("V5 receipt output size=%d error=%v", len(raw), err)
+	}
+	decoded, err := DecodeReceipt(raw, plan, binding, returned)
+	if err != nil || !reflect.DeepEqual(decoded, value) {
+		t.Fatal("V5 successful receipt strict roundtrip", err)
+	}
+	roundTrip := modeledReceiptEvidence(t, decoded, plan)
+	if !reflect.DeepEqual(roundTrip.Authorities, evidence.Authorities) ||
+		decoded.RelationshipResults.Caller.RootSHA256 != restored.CallerRootSHA256 {
+		t.Fatal("V5 deduplication lost actual roots or continuity evidence")
+	}
+	if err := ValidateReceipt(value, plan, binding, ReturnedPackageBinding{}); err == nil {
+		t.Fatal("modeled receipt authenticated itself without a package binding")
+	}
+	for _, mutation := range []struct {
+		name string
+		edit func([]AuthorityPhaseResult)
+	}{
+		{"missing commitment", func(rows []AuthorityPhaseResult) { rows[10].CallerContinuitySHA256 = "" }},
+		{"changed content", func(rows []AuthorityPhaseResult) {
+			for i := 10; i < len(rows); i++ {
+				rows[i].CallerContinuitySHA256 = testDigest("different-caller-content")
+			}
+		}},
+		{"downstream root movement", func(rows []AuthorityPhaseResult) { rows[11].CallerRootSHA256 = testDigest("unaccepted-root") }},
+	} {
+		t.Run(mutation.name, func(t *testing.T) {
+			changed := modeledReceiptEvidence(t, cloneTestReceipt(t, fixture), plan)
+			mutation.edit(changed.Authorities)
+			if _, err := assembleExecutionReceipt(plan, binding, changed); err == nil {
+				t.Fatal("V5 full assembly accepted invalid restored continuity")
+			}
+		})
+	}
+	t.Logf("modeled V5 receipt bytes=%d/%d", len(raw), plan.ReceiptContract.MaximumBytes)
+}
 
 // These fixtures use the existing native authority constructors with modeled
 // measurements and signatures. They test deterministic composition, never a

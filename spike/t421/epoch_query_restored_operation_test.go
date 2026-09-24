@@ -39,8 +39,32 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 	if len(inputs) != 3 || json.Unmarshal(inputs[2].raw, &catalog) != nil {
 		t.Fatal("actual generated a-return catalog fixture")
 	}
-	for _, mode := range []string{"success", "missing_prior", "changed_F2", "missing_finish_sample", "final_fence_unavailable"} {
-		t.Run(mode, func(t *testing.T) {
+	v5 := restoreContinuityTestPlan(t)
+	if err := applyCallerRestoreContinuityCorrection(&v5); err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		name, mode string
+		plan       Plan
+	}
+	for _, version := range []struct {
+		name string
+		plan Plan
+	}{{"v3", plan}, {"v5", v5}} {
+		modes := []string{"success", "missing_prior", "changed_F2", "missing_finish_sample", "final_fence_unavailable"}
+		if version.plan.Schema == PlanV5Schema {
+			modes = append(modes, "changed_continuity_F2", "missing_continuity_F2")
+		}
+		for _, mode := range modes {
+			cases = append(cases, struct {
+				name, mode string
+				plan       Plan
+			}{version.name + "/" + mode, mode, version.plan})
+		}
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			plan, mode := test.plan, test.mode
 			// Catalog construction precedes this bounded helper lifetime. No sleep
 			// or timer elision changes the public operation's original deadline.
 			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
@@ -53,6 +77,9 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 				}
 			})
 			_, value := epochTestFinal(t)
+			if plan.Schema == PlanV5Schema {
+				value.Authority.CallerContinuitySHA256 = testDigest("operation-caller-continuity")
+			}
 			projection, err := expectedStateProjectionForPhase(plan, "product_queries")
 			if err != nil {
 				t.Fatal(err)
@@ -75,6 +102,11 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 			var requests, samples, finals atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requests.Add(1)
+				continuity := r.Header.Values("X-Phebs-T422-Caller-Continuity")
+				wantContinuity := plan.Schema == PlanV5Schema && r.URL.Path == "/api/t421/final-authority"
+				if wantContinuity && !slices.Equal(continuity, []string{"manifest-v1"}) || !wantContinuity && len(continuity) != 0 {
+					t.Error("caller continuity request must be exact and V5 F-only")
+				}
 				if r.Header.Get("Authorization") != "Bearer private-key" ||
 					r.Header.Get(dispatchadmission.ProductionRequestHeader) == "" ||
 					r.Header.Get(dispatchadmission.ProductionRequestHeader) != run.control.RequestToken() {
@@ -119,7 +151,7 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 					_, _ = w.Write(epochTestJSON(t, tail, false))
 					pressureInspectionTrailer(t, w, r, epochInspectionReport{ControlFileReads: 4, StoreReadAttempts: 4})
 				case "/api/t421/final-authority":
-					if r.Header.Get("X-Phebs-T422-Query-Evidence") != "bound-v1" {
+					if !slices.Equal(r.Header.Values("X-Phebs-T422-Query-Evidence"), []string{"bound-v1"}) {
 						t.Error("F omitted actual query-proof request")
 					}
 					finalOrdinal := finals.Load() + 1
@@ -128,10 +160,17 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 						t.Error("query terminal did not distinguish the two F reads")
 					}
 					response := value
-					if finals.Add(1) == 2 && mode == "changed_F2" {
-						proof := *value.QueryAuthority
-						proof.ResolverNamespaceRootSHA256 = testDigest("changed-F2")
-						response.QueryAuthority = &proof
+					if finals.Add(1) == 2 {
+						switch mode {
+						case "changed_F2":
+							proof := *value.QueryAuthority
+							proof.ResolverNamespaceRootSHA256 = testDigest("changed-F2")
+							response.QueryAuthority = &proof
+						case "changed_continuity_F2":
+							response.Authority.CallerContinuitySHA256 = testDigest("changed-continuity-F2")
+						case "missing_continuity_F2":
+							response.Authority.CallerContinuitySHA256 = ""
+						}
 					}
 					_, _ = w.Write(epochTestJSON(t, response, true))
 					pressureInspectionTrailer(t, w, r, epochInspectionReport{ControlFileReads: 100, StoreReadAttempts: 10, MemberVisits: 1000})
@@ -228,7 +267,7 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 			}
 			wantSamples, completedSamples := int32(2), uint64(2)
 			switch mode {
-			case "changed_F2":
+			case "changed_F2", "changed_continuity_F2", "missing_continuity_F2":
 				wantSamples, completedSamples = 1, 1
 			case "missing_finish_sample":
 				completedSamples = 1
@@ -240,6 +279,10 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 			last := reader.evidence.rows[len(reader.evidence.rows)-1]
 			acceptedAuthorities := run.flow.acceptedAuthorityPrefix()
 			if wantSuccess {
+				if reader.productAuthority.CallerContinuitySHA256 != value.Authority.CallerContinuitySHA256 ||
+					reader.finalAuthority.CallerContinuitySHA256 != value.Authority.CallerContinuitySHA256 {
+					t.Fatal("accepted F pair lost caller continuity")
+				}
 				if len(acceptedAuthorities) != len(priorAuthorities)+1 ||
 					!reflect.DeepEqual(acceptedAuthorities[:len(priorAuthorities)], priorAuthorities) ||
 					!reflect.DeepEqual(acceptedAuthorities[len(priorAuthorities)], reader.finalAuthority) {

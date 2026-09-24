@@ -9,9 +9,9 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
-// These are actual native command counters, separate from F's read-only
-// ledger and from the independently acknowledged SA transaction/row stream.
-type epochSelectorCleanupObservation struct {
+// SelectorCleanupEvidence contains actual native command counters, separate
+// from F's read-only ledger and the independently acknowledged SA stream.
+type SelectorCleanupEvidence struct {
 	Schema                string `json:"schema"`
 	Phase                 uint32 `json:"phase"`
 	InputSHA256           string `json:"input_sha256"`
@@ -24,6 +24,8 @@ type epochSelectorCleanupObservation struct {
 	Done                  bool   `json:"done"`
 	Failed                bool   `json:"failed"`
 }
+
+type epochSelectorCleanupObservation = SelectorCleanupEvidence
 
 // The caller owns the existing phase deadline and drained/open request window.
 // There is one POST, no retry and no phase advance before its final fence joins
@@ -47,6 +49,17 @@ func (reader *executionEpochInspection) cleanupSelectorHandoff(ctx context.Conte
 		return errEpochInspection
 	}
 	reader.selectorCleanupPhase = reader.projection.Phase
+	var evidence *ExecutionPhaseInspection
+	if reader.plan.Schema == PlanV5Schema {
+		if len(reader.evidence.rows) == 0 {
+			return errEpochInspection
+		}
+		evidence = &reader.evidence.rows[len(reader.evidence.rows)-1]
+		if evidence.Phase != reader.projection.Phase || evidence.ServerEpoch != bound.ServerEpoch ||
+			evidence.Final == nil || evidence.SelectorAccepted || evidence.SelectorCleanup != nil {
+			return errEpochInspection
+		}
+	}
 	run := reader.run
 	run.mu.Lock()
 	valid := !run.stopping && run.err == nil && run.attemptInput != ([32]byte{})
@@ -81,23 +94,31 @@ func (reader *executionEpochInspection) cleanupSelectorHandoff(ctx context.Conte
 		return errEpochInspection
 	}
 	reader.selectorCleanup = value
+	if evidence != nil {
+		evidence.SelectorCleanup = &value
+	}
 	reader.failureStatus, reader.failureBody = 0, nil
 	return nil
 }
 
 func (reader *executionEpochInspection) validateSelectorCleanup(value epochSelectorCleanupObservation, bound SelectorHandoffCleanupPhase, input string) error {
+	return validateSelectorCleanupObservation(reader.plan, value, bound, input, reader.tail.SelectedRuntimeSHA256)
+}
+
+func validateSelectorCleanupObservation(plan Plan, value SelectorCleanupEvidence, bound SelectorHandoffCleanupPhase, input, selected string) error {
 	var phase uint32
-	for index, name := range reader.plan.PhaseOrder {
+	for index, name := range plan.PhaseOrder {
 		if name == bound.Phase {
 			phase = uint32(index + 1)
 		}
 	}
-	if phase == 0 || reader.plan.SelectorHandoffCleanup == nil || reader.plan.SelectorHandoffCleanup.MaximumDeletesPerTurn != 16 ||
+	maximumDeleted, boundErr := checkedInspectionReadSum(bound.PreimageRowsMaximum, bound.SummaryPreimagesMaximum)
+	if boundErr != nil || phase == 0 || plan.SelectorHandoffCleanup == nil || plan.SelectorHandoffCleanup.MaximumDeletesPerTurn != 16 ||
 		value.Schema != SelectorHandoffCleanupSchema || value.Phase != phase || value.InputSHA256 != input ||
-		value.SelectedRuntimeSHA256 != reader.tail.SelectedRuntimeSHA256 || !validDigest(value.SelectedRuntimeSHA256) ||
+		value.SelectedRuntimeSHA256 != selected || !validDigest(value.SelectedRuntimeSHA256) ||
 		!value.Done || value.Failed || value.Turns < bound.OwnerTurns.Minimum || value.Turns > bound.OwnerTurns.Maximum ||
-		value.Deleted > bound.PreimageRowsMaximum+bound.SummaryPreimagesMaximum ||
-		value.MaxDeleted > reader.plan.SelectorHandoffCleanup.MaximumDeletesPerTurn || value.MaxDeleted > value.Deleted ||
+		value.Deleted > maximumDeleted ||
+		value.MaxDeleted > plan.SelectorHandoffCleanup.MaximumDeletesPerTurn || value.MaxDeleted > value.Deleted ||
 		(value.Deleted == 0) != (value.MaxDeleted == 0) ||
 		value.StoreReadAttempts < bound.StoreReadAttempts.Minimum || value.StoreReadAttempts > bound.StoreReadAttempts.Maximum ||
 		value.StoreWriteAttempts < bound.StoreWriteAttempts.Minimum || value.StoreWriteAttempts > bound.StoreWriteAttempts.Maximum {
@@ -108,13 +129,22 @@ func (reader *executionEpochInspection) validateSelectorCleanup(value epochSelec
 	turns, reads, writes, maxDeleted := uint64(1), uint64(3), uint64(0), value.Deleted
 	if value.Deleted != 0 {
 		rows := value.Deleted - 1 // The final committed deletion owns the summary.
-		full := rows / reader.plan.SelectorHandoffCleanup.MaximumDeletesPerTurn
-		turns, reads, writes = full+1, 7*full+9, full+1
-		if rows%reader.plan.SelectorHandoffCleanup.MaximumDeletesPerTurn != 0 {
+		full := rows / plan.SelectorHandoffCleanup.MaximumDeletesPerTurn
+		turns, writes = full+1, full+1
+		var err error
+		reads, err = checkedMultiply(full, 7)
+		if err != nil {
+			return errEpochInspection
+		}
+		reads, err = checkedInspectionReadSum(reads, 9)
+		if err != nil {
+			return errEpochInspection
+		}
+		if rows%plan.SelectorHandoffCleanup.MaximumDeletesPerTurn != 0 {
 			writes++
 		}
 		if turns > 1 {
-			maxDeleted = reader.plan.SelectorHandoffCleanup.MaximumDeletesPerTurn
+			maxDeleted = plan.SelectorHandoffCleanup.MaximumDeletesPerTurn
 		}
 	}
 	if value.Turns != turns || value.StoreReadAttempts != reads || value.StoreWriteAttempts != writes || value.MaxDeleted != maxDeleted {

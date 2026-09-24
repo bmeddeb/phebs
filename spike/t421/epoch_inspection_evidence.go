@@ -19,6 +19,7 @@ type ExecutionPhaseInspection struct {
 	SelectorAccepted                           bool
 	LogicalChanges                             ExecutionLogicalChangeObservation
 	TransitionReads                            *TransitionReadSubtotal
+	SelectorCleanup                            *SelectorCleanupEvidence // V5: exact successful HTTP observation, not whole-phase accounting.
 }
 
 // Compact native identities only: detailed extraction partition results remain
@@ -145,6 +146,10 @@ func cloneExecutionAuthorityResults(values []AuthorityPhaseResult) []AuthorityPh
 func cloneInspectionEvidence(rows []ExecutionPhaseInspection) []ExecutionPhaseInspection {
 	result := slices.Clone(rows)
 	for i := range result {
+		if result[i].SelectorCleanup != nil {
+			value := *result[i].SelectorCleanup
+			result[i].SelectorCleanup = &value
+		}
 		if result[i].TransitionReads != nil {
 			value := *result[i].TransitionReads
 			result[i].TransitionReads = &value

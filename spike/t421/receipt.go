@@ -204,6 +204,7 @@ type PhaseMeasurement struct {
 	ChildProcessRoles  []Count                        `json:"child_process_roles"`
 	DispatchAccounting *DispatchAccountingMeasurement `json:"dispatch_accounting,omitempty"`
 	NativeObservation  *ProcessObservation            `json:"native_observation,omitempty"`
+	SelectorCleanup    *SelectorCleanupEvidence       `json:"selector_cleanup,omitempty"`
 }
 
 type ReceiptMetrics struct {
@@ -1865,6 +1866,9 @@ func validateReceiptMeasurements(
 			plan.WorkEnvelope.Phases[index].Phase != phase {
 			return errors.New("T42.2 measurements are not in phase order")
 		}
+		if err := validatePhaseSelectorCleanup(value, outcomes[phase], plan); err != nil {
+			return fmt.Errorf("T42.2 phase %q selector cleanup: %w", phase, err)
+		}
 		if outcomes[phase] == "not_run" {
 			if value.StartEventOrdinal != 0 || value.FinishEventOrdinal != 0 ||
 				value.Metrics != (ReceiptMetrics{}) || value.ChildProcessRoles != nil ||
@@ -2527,8 +2531,9 @@ func validateTransitionResults(
 		}
 		switch phase {
 		case "physical_delta_b":
-			if value.Reader == nil || validateReaderTransition(
-				*value.Reader, value.StartEventOrdinal, value.FinishEventOrdinal, authority, metrics[phase], plan,
+			readerMetrics, err := readerTransitionMetrics(measurement, plan)
+			if err != nil || value.Reader == nil || validateReaderTransition(
+				*value.Reader, value.StartEventOrdinal, value.FinishEventOrdinal, authority, readerMetrics, plan,
 			) != nil {
 				return errors.New("physical delta reader transition is invalid")
 			}

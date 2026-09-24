@@ -5,11 +5,32 @@ import (
 )
 
 func TestComposeExecutionReaderTransition(t *testing.T) {
-	plan := accountingTestPlan(t)
+	for _, schema := range []string{PlanV3Schema, PlanV5Schema} {
+		t.Run(schema, func(t *testing.T) {
+			plan := accountingTestPlan(t)
+			if schema == PlanV5Schema {
+				plan = receiptHandoffTestPlan(t)
+			}
+			testComposeExecutionReaderTransition(t, plan)
+		})
+	}
+}
+
+func testComposeExecutionReaderTransition(t *testing.T, plan Plan) {
+	t.Helper()
 	before := AuthorityPhaseResult{Phase: "warm_noop", Outcome: "passed", AuthorityState: AuthorityState{Current: true, SearchGenerationSHA256: testDigest("old-search")}}
 	after := AuthorityPhaseResult{Phase: "physical_delta_b", Outcome: "passed", AuthorityState: AuthorityState{Current: true, SearchGenerationSHA256: testDigest("new-search")}}
 	authority := map[string]AuthorityPhaseResult{before.Phase: before, after.Phase: after}
 	measurement := PhaseMeasurement{Phase: after.Phase, StartEventOrdinal: 1, FinishEventOrdinal: 20, Metrics: ReceiptMetrics{LifecycleOwnerTurns: 2}}
+	if plan.Schema == PlanV5Schema {
+		measurement.SelectorCleanup = &SelectorCleanupEvidence{
+			Schema: SelectorHandoffCleanupSchema, Phase: 4, InputSHA256: testDigest("input"), SelectedRuntimeSHA256: testDigest("selected"),
+			Turns: 2, Deleted: 17, MaxDeleted: 16, StoreReadAttempts: 16, StoreWriteAttempts: 2, Done: true,
+		}
+		measurement.Metrics.LifecycleOwnerTurns, measurement.Metrics.LifecycleDeleted, measurement.Metrics.MaxLifecycleDeletesTurn = 4, 17, 16
+		// Independently supplied accounting totals, not minted by composition.
+		measurement.Metrics.ControlReads, measurement.Metrics.StoreTransactions, measurement.Metrics.StoreRows = 16, 2, 17
+	}
 	observation := epochRetentionObservation{Schema: "t422-current-prior-observation-v1", OldSearchGenerationSHA256: before.SearchGenerationSHA256,
 		NewSearchGenerationSHA256: after.SearchGenerationSHA256, QuerySHA256: plan.ReaderProbe.QuerySHA256,
 		OldProjectionSHA256: plan.ReaderProbe.OldProjectionSHA256, NewProjectionSHA256: plan.ReaderProbe.NewProjectionSHA256,
@@ -41,6 +62,20 @@ func TestComposeExecutionReaderTransition(t *testing.T) {
 				t.Fatal("invalid reader evidence accepted")
 			}
 		})
+	}
+	if plan.Schema == PlanV5Schema {
+		for _, mutate := range []func(*PhaseMeasurement){
+			func(v *PhaseMeasurement) { v.SelectorCleanup = nil },
+			func(v *PhaseMeasurement) { v.Metrics.LifecycleOwnerTurns++ },
+			func(v *PhaseMeasurement) { v.Metrics.LifecycleDeleted++ },
+			func(v *PhaseMeasurement) { v.Metrics.MaxLifecycleDeletesTurn++ },
+		} {
+			changed := cloneAccountingMeasurement(t, measurement)
+			mutate(&changed)
+			if _, err := composeExecutionReaderTransition(plan, changed, authority, observation, events); err == nil {
+				t.Fatal("reader composition accepted absent or conflicting cleanup")
+			}
+		}
 	}
 }
 

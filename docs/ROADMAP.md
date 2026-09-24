@@ -110,8 +110,19 @@ and an equal full-manifest commitment excluding only run provenance and the
 self digest. V1–V4 remain exact; production manifest identity does not change.
 The correction is a review candidate, not a gate pass. The failed mounted
 image is under explicit preservation hold; no automatic cleanup or rerun is
-authorized by this change. Next: commit, independent review, then remaining
-machine and rehearsal gates before any new freeze.
+authorized by this change. The committed V5 candidate is undergoing downstream
+preflight coverage. Native fixture/query and the extended freeze race gates
+passed, but the new full V5 receipt tests exposed contradictory physical-delta
+lifecycle accounting: the cleanup-enabled phase requires at least three turns
+while its reader validator requires exactly two and no deletions. Native
+joined metrics also omit physical-retention and selector-cleanup observations.
+Ben authorized the prospective V5 accounting-composition correction. Native
+log/HTTP evidence now composes exact cleanup and reader subtotals, preserving
+V1–V4. Focused normal/race, independent source/cost review and selected full
+receipt/signing verification pass; the latter completed in 1160.990s with V3/V5
+test-signed package verification and refusal checks. These are modeled test
+receipts, not a ceremony pass. V5 launch activation, the integrated protected
+server build, remaining machine/rehearsal gates and any new freeze remain open.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

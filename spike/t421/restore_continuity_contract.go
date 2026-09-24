@@ -8,6 +8,8 @@ import (
 
 const callerRestoreContinuityPolicy = "caller-restore-continuity-v1:full-validated-current-manifest;equal-generation-and-normalized-manifest-sha256;normalize-only-manifest-self-digest,upstream-domain-run-ids,upstream-provenance-digest;preserve-all-pairs,receipts,aggregates,and-other-fields;retain-and-authenticate-each-actual-manifest-root;archive-only;no-transport-byte-relaxation"
 
+const handoffLifecycleAccountingPolicy = "handoff-lifecycle-accounting-v1:joined-native-retention-and-selector-cleanup-prefixes;phase-producer-input-bound;accepted-cleanup-HTTP-equals-native-terminal;physical-reader-exact-two-zero-delete-turns;whole-phase-exact-reader-plus-cleanup;cleanup-read-attempts-counted-once;independent-SA-store-counts;stopped-prefix-not-success;no-V1-V4-change"
+
 // This prospective correction does not modify any retained V1-V4 recipe.
 func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 	if plan == nil || plan.Schema != PlanV4Schema || plan.Correction == nil ||
@@ -25,7 +27,7 @@ func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 	correction := *plan.Correction
 	correction.IdentityDerivations = callerRestoreIdentityDerivations()
 	correction.InspectionInventorySHA256 = digest
-	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy)
+	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy, handoffLifecycleAccountingPolicy)
 	plan.Correction = &correction
 	plan.Schema = PlanV5Schema
 	plan.ToolPolicy.ExecutionFreezeSchema = ExecutionFreezeV5Schema

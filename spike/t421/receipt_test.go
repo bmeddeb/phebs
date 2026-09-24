@@ -1483,6 +1483,21 @@ func frozenReceiptTestBinding(t *testing.T, plan Plan) ExecutionFreezeBinding {
 	return admittedExecutionFreezeTestBinding(t, plan, executionFreezeTestCommits())
 }
 
+func completeV5ReceiptTestPlan(t *testing.T) Plan {
+	t.Helper()
+	plan := clonePlan(t, correctedTestPlan(t))
+	for _, correct := range []func(*Plan) error{
+		applyProcessAccountingCorrection, applyLogicalStoreWorkCorrection,
+		applySelectorHandoffCleanupCorrection, applyPressureContinuityCorrection,
+		applyCallerRestoreContinuityCorrection,
+	} {
+		if err := correct(&plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return plan
+}
+
 func executionFreezeTestAdmission(t *testing.T, plan Plan, freeze ExecutionFreeze, namespace ...executionSignerNamespaceBinding) ExecutionFreezeAdmissionBinding {
 	t.Helper()
 	freezeSHA256, err := receiptSHA256(freeze)
@@ -1514,7 +1529,7 @@ func executionFreezeTestAdmission(t *testing.T, plan Plan, freeze ExecutionFreez
 		signerFingerprint:  executionFreezeTestSigner(), signerNamespaceSHA256: freeze.SignerNamespaceSHA256,
 		admissionEventSHA256: admissionEventSHA256, admissionEventOrdinal: 1, signatureVerified: true,
 	}
-	if plan.Schema == PlanV3Schema {
+	if processAccountingPlanSemantics(plan.Schema) {
 		if len(namespace) != 1 || namespace[0].digest != freeze.SignerNamespaceSHA256 {
 			t.Fatal("missing exact signer namespace fixture")
 		}
@@ -1590,7 +1605,7 @@ func completeTestReceipt(t *testing.T, plan Plan, binding ExecutionFreezeBinding
 		PressureVolumeDetached: true, PressureImageRemoved: true,
 		BackingVolumeIdentity: freeze.Host.BackingVolumeIdentity, RetainedSourceFreeOnly: true,
 	}
-	if plan.Schema == PlanV3Schema {
+	if processAccountingPlanSemantics(plan.Schema) {
 		teardown, _ = accountingTestTeardown(plan)
 		teardown.BackingVolumeIdentity = freeze.Host.BackingVolumeIdentity
 	}
@@ -1829,6 +1844,15 @@ func completeTestAuthorities(
 			template.ExtractionRoots[index].PartitionResults = slices.Clone(template.ExtractionRoots[index].PartitionResults)
 		}
 		template.Phase, template.Outcome = phase, outcomes[phase]
+		if plan.Schema == PlanV5Schema {
+			// Modeled evidence only: V5 keeps the same production constructor
+			// graph, but this fixture exercises a provenance-only restored root.
+			// Native commitment normalization has its own manifest tests.
+			template.CallerContinuitySHA256 = testDigest("modeled-v5-caller-content", template.CallerGenerationSHA256)
+			if group == "archive" {
+				template.CallerRootSHA256 = testDigest("modeled-v5-restored-provenance", template.CallerRootSHA256)
+			}
+		}
 		results[index] = template
 	}
 	rootSnapshotByDigest := make(map[string]ExtractionRootSnapshot)
@@ -2134,7 +2158,16 @@ func testPhaseMeasurement(plan Plan, freeze ExecutionFreeze, index int) PhaseMea
 		Phase: phase, StartEventOrdinal: uint64(index*100 + 10), FinishEventOrdinal: uint64(index*100 + 99),
 		Metrics: metrics, ChildProcessRoles: children,
 	}
-	if plan.Schema == PlanV3Schema {
+	if _, cleanup := SelectorHandoffCleanupForPhase(plan, phase); plan.Schema == PlanV5Schema && cleanup {
+		// Model a completed empty cleanup, not a native deletion observation.
+		measurement.SelectorCleanup = &SelectorCleanupEvidence{
+			Schema: SelectorHandoffCleanupSchema, Phase: uint32(index + 1),
+			InputSHA256: testDigest("modeled-cleanup-input", phase), SelectedRuntimeSHA256: testDigest("modeled-cleanup-runtime", phase),
+			Turns: 1, StoreReadAttempts: 3, Done: true,
+		}
+		measurement.Metrics.ControlReads = max(measurement.Metrics.ControlReads, 3)
+	}
+	if processAccountingPlanSemantics(plan.Schema) {
 		accounting := accountingTestMeasurement(plan, phase)
 		measurement.ChildProcessRoles = nil
 		measurement.DispatchAccounting, measurement.NativeObservation = accounting.DispatchAccounting, accounting.NativeObservation
@@ -2153,15 +2186,23 @@ func testPhaseMeasurement(plan Plan, freeze ExecutionFreeze, index int) PhaseMea
 	return measurement
 }
 
-// V3 runs its own versioned extraction grouping. Validate the complete expected
-// prospective input, then preserve it; V2 constructor roots cannot stand in for V3.
+// V3 runs its own versioned extraction grouping. V4/V5 alter ceremony contracts,
+// not that production graph. Validate the entire prospective derivation before
+// reusing its exact source-bound V3 constructor input; never substitute V2 roots.
 func productionFixtureInputPlan(t *testing.T, plan Plan) Plan {
 	t.Helper()
-	if plan.Schema != PlanV3Schema {
+	if !processAccountingPlanSemantics(plan.Schema) {
 		return plan
 	}
 	if !productionFixturePlanMatches(plan, correctedTestPlan(t)) {
-		t.Fatal("V3 native fixture inputs differ from the exact prospective plan")
+		t.Fatal("native fixture inputs differ from the exact prospective plan")
+	}
+	if pressureContinuityPlanSemantics(plan.Schema) {
+		input := clonePlan(t, correctedTestPlan(t))
+		if err := applyProcessAccountingCorrection(&input); err != nil {
+			t.Fatal(err)
+		}
+		return input
 	}
 	return plan
 }
@@ -2176,6 +2217,15 @@ func productionFixturePlanMatches(plan, prior Plan) bool {
 	var expected Plan
 	if json.Unmarshal(raw, &expected) != nil || applyProcessAccountingCorrection(&expected) != nil {
 		return false
+	}
+	if pressureContinuityPlanSemantics(plan.Schema) {
+		if applyLogicalStoreWorkCorrection(&expected) != nil || applySelectorHandoffCleanupCorrection(&expected) != nil ||
+			applyPressureContinuityCorrection(&expected) != nil {
+			return false
+		}
+		if plan.Schema == PlanV5Schema && applyCallerRestoreContinuityCorrection(&expected) != nil {
+			return false
+		}
 	}
 	return reflect.DeepEqual(plan, expected)
 }
@@ -2209,7 +2259,9 @@ func completeTestTransitions(
 		}
 		switch phase {
 		case "physical_delta_b":
-			measurement.Metrics.LifecycleOwnerTurns = 2
+			// The two reader turns are not the whole phase when the frozen
+			// selector-cleanup policy also owns a lifecycle turn.
+			measurement.Metrics.LifecycleOwnerTurns = max(measurement.Metrics.LifecycleOwnerTurns, 2)
 			before, _ := authorityIdentitySHA256(authority["warm_noop"])
 			after, _ := authorityIdentitySHA256(authority[phase])
 			start := transition.StartEventOrdinal
@@ -2484,7 +2536,7 @@ func testInjectionTransition(
 			value.ProcessImageSHA256 = freeze.Tools[imageIndex].SHA256
 			value.ProcessIdentityBeforeSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, fmt.Sprint(value.ProcessEpochBefore))
 			value.ProcessIdentityAfterSHA256 = recipeDigest("t422-phebs-process-identity-v1", value.ProcessImageSHA256, fmt.Sprint(value.ProcessEpochAfter))
-			if plan.Schema == PlanV3Schema {
+			if processAccountingPlanSemantics(plan.Schema) {
 				value.ProcessIdentityBeforeSHA256 = recipeDigest("t422-phebs-process-identity-v3", value.ProcessImageSHA256, testDigest("modeled-native-server-lifetime", fmt.Sprint(value.ProcessEpochBefore)))
 				value.ProcessIdentityAfterSHA256 = recipeDigest("t422-phebs-process-identity-v3", value.ProcessImageSHA256, testDigest("modeled-native-server-lifetime", fmt.Sprint(value.ProcessEpochAfter)))
 			}
@@ -2848,6 +2900,7 @@ func stopTestReceipt(
 		}
 		receipt.PhaseResults[index].Outcome = outcome
 		receipt.PhaseResults[index].Failure = phaseFailure
+		receipt.Measurements[index].SelectorCleanup = nil
 		if index > stopIndex {
 			receipt.Measurements[index] = PhaseMeasurement{Phase: plan.PhaseOrder[index]}
 		}

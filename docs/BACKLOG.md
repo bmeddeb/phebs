@@ -4702,6 +4702,59 @@ ceremony execution, release or scale/SLO claim follows.
   consistently across their protected tools and plan is a pending reviewed
   prerequisite, not an available rehearsal selector in this candidate.
 
+  The additional downstream preflight review found a test-only startup gap:
+  the shared native archive fixture must create its owned data directory before
+  opening the store. The corrected fifth-server composition passed in 41.265s
+  with real backup/restore and control handoffs, but modeled lifecycle owners
+  and capacity. Existing full query-operation tests now cover V3 and V5,
+  including both final reads and changed/missing continuity refusal; normal
+  (4.305s) and race (54.931s) pass. Full V5 receipt assembly and actual
+  test-signed package verification are added alongside retained V3 coverage.
+  The native query regression passed in 557.291s: 38 HTTP/MCP requests,
+  22 projections and exact accounting, followed by successful fixture cleanup.
+  It proves ordinary native queries, not selected restored lifecycle execution.
+  The outstanding V5 constructor/freeze race test passed in 826.792s under a
+  30-minute test allowance, closing the earlier ten-minute test-timeout gap.
+  The retained-input routing rejection matrix also passed normal (1.245s) and
+  race (12.320s). The combined receipt/package command then failed after
+  1035.827s: V3 cases passed, but full V5 assembly exposed a physical-delta
+  contradiction between the cleanup-enabled frozen minimum of three lifecycle
+  turns and the reader validator's exact whole-phase total of two. Its zero
+  deletion predicates likewise exclude selector cleanup work. The V5 signed
+  package case also refused. Independent review confirms that fixing the
+  fixture's stale literal alone cannot fix the production validator. Native
+  joined lifecycle metrics also omit physical-retention and selector-cleanup
+  observations; the cleanup response is not retained in the returned epoch
+  transition snapshot. The correction must preserve and compose actual native
+  work, not just change validation. A retained-plan reproduction confirms the
+  contradiction in 0.930s without rebuilding the corpus; the fixture now keeps
+  its seeded minimum and has a separate cheap all-phase work-bound audit.
+  At that checkpoint the new acceptance tests remained red and required a
+  separately reviewed prospective accounting-composition correction before
+  another full run; V1–V4 must stay exact. Failure evidence is retained in
+  `/private/tmp/t422-v5-preflight.J7nNr4/receipt-package.log`. No runtime
+  contract, limit or launch selector is changed, and the retained failed image
+  is untouched.
+
+  Ben subsequently authorized the V5 accounting correction on 2026-09-24.
+  The candidate now joins actual retention/cleanup reports from the existing
+  native log pass, checks successful cleanup against its accepted HTTP terminal,
+  and validates exact whole-phase lifecycle composition before isolating the
+  unchanged two-turn reader subtotal. Cleanup read attempts are counted once;
+  SA still owns transaction/row counts and must cover the observed cleanup
+  subtotals. Stopped prefixes retain work without successful-cleanup proof.
+  A new V5 readiness-policy binding requires a fresh plan/freeze; V1–V4 remain
+  unchanged. Focused normal/race, vet, pinned lint, documentation, glossary and
+  independent source/cost review pass. Full selected receipt/signing verification
+  passed in 1160.990s, covering V3 passed/stopped receipts, V5 continuity
+  acceptance/refusal, V5 freeze round-trip and actual test-signed V3/V5 packages
+  with independent outer verification and corruption/failed-exit rejection.
+  Retained evidence is under `/private/tmp/t422-v5-accounting.EIUeQR`; the PLAN
+  ADR records the terminal-log digest and bounded package sizes. No owned test
+  process remained at 2026-09-24 02:38:17 UTC. This closes these two preflight
+  blockers, not remaining machine gates or a signed ceremony. No rehearsal,
+  integration, freeze, formal execution or retained-custody cleanup follows.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

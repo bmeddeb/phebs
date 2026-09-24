@@ -4988,3 +4988,107 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   passed in the 71.076s V5 suite; the race timeout emitted no race report but
   is not green and remains an open machine-gate item. No unchanged retry,
   runtime limit increase or fixture shortcut is included in this candidate.
+
+- **2026-09-23 — T42.2v downstream preflight coverage before another full run.**
+  Review of the unproven archive-completion, restored-collection, query and
+  teardown suffix found a native-test setup failure: the shared archive
+  fixture bypassed `serve` and opened the store without creating its data
+  directory. Create that one owner-only directory before launching the helper,
+  matching the production prerequisite; keep the fixture's original deadline,
+  admission and preservation rules. This adds one test-setup directory creation
+  and no production query, sync, startup, retry, publication, lock or cache work.
+  Extend existing modeled tests to V5 rather than introduce a second harness:
+  exercise both final reads around the full HTTP/MCP operation, exact optional
+  headers, continuity retention and changed/missing-commitment refusal; exercise
+  full successful receipt composition, strict validation and bounded returned
+  output with explicitly modeled provenance-only caller-root replacement.
+  Historical V3 cases remain covered. Native publication construction is reused
+  only after checking the complete prospective plan derivation; supplied
+  process, measurement and continuity bindings are not live ceremony evidence.
+  The existing signed-package test also covers V5 with disposable test signing,
+  independent outer verification and corruption/failed-exit rejection; actual
+  signatures over modeled evidence do not authenticate a ceremony run.
+  Short native handoff and query gates and the outstanding longer
+  constructor/freeze race gate precede any proposed full rehearsal. These tests
+  do not establish full-corpus collection headroom: each controlled owner turn
+  still performs its existing guarded workspace measurement. V5 launch
+  activation, protected production integration, full rehearsal, signed
+  readiness, fresh freeze and ceremony remain separate pending gates. The
+  retained failed image remains untouched.
+
+  The completed preflight run exposed a real receipt-contract conflict before
+  another rehearsal: selector cleanup adds at least one whole-phase lifecycle
+  turn to physical delta's two reader probes, so its frozen minimum is three,
+  but `validateReaderTransition` still requires the same whole-phase total to
+  equal two and forbids all deletions. The fixture also overwrote the correctly
+  seeded minimum with two. Fixing that fixture alone cannot make a completed
+  cleanup-enabled receipt satisfiable. Independent source review confirmed the
+  conflict. Review also found that joined lifecycle metrics consume only the
+  phase-9/11/13 lifecycle stream: native physical-retention and selector-cleanup
+  observations do not contribute to those totals, and the cleanup response is
+  not retained in the returned epoch transition snapshot. A validator-only
+  change would therefore still lack actual work provenance. Production
+  validation and measurement were unchanged at that checkpoint, pending a
+  separately reviewed prospective correction composing bound native cleanup
+  observations with the two exact reader probes without relaxing historical
+  V1–V4 acceptance. The new full V5 assembly and signed-package cases were red,
+  not waived or skipped.
+  The combined command returned nonzero after 1035.827s; retained log
+  `/private/tmp/t422-v5-preflight.J7nNr4/receipt-package.log` has SHA-256
+  `0e9f74bb14a9432f8ca8695f9499568b90f495bda2e3e7f118457d41f1c0484b`.
+  V3 full receipt and signed-package cases passed. The native fifth-server
+  composition (41.265s), native 38-request query replay (557.291s), V5 query
+  operation normal/race (4.305s/54.931s), and extended V5 constructor/freeze
+  race (826.792s under a 30-minute test allowance) passed. These results do not
+  establish complete machine gates, a V5 rehearsal or a formal receipt pass.
+  A separate retained-plan reproduction proved the incompatible physical-delta
+  bounds in 0.930s without constructing the corpus; its retained log is
+  `/private/tmp/t422-v5-preflight.J7nNr4/receipt-work-conflict.log`, SHA-256
+  `9f5af325dc47b8c8b85b53d2691e117cb546ba56f5a0aab838f0249e35db5ac8`.
+  The test fixture now preserves its seeded whole-phase minimum; a cheap
+  all-phase work-bound/oracle audit is retained separately from the still-red
+  complete receipt tests. It supplies modeled counters, not missing native
+  observations or a valid completed V5 receipt.
+
+- **2026-09-24 — T42.2v V5 native handoff accounting composition.** Ben
+  authorized correction of the two preflight blockers. Amend prospective V5's
+  frozen readiness policy; V1–V4 interpretation and omitted-field bytes remain
+  unchanged. Decode the existing synchronous retention and selector-cleanup
+  reports in the existing producer-joined log pass. Retain actual per-phase
+  prefixes, including failed work, with exact producer/input, phase, ordering
+  and cumulative-counter checks. A successful phase additionally requires its
+  accepted HTTP cleanup terminal to equal the joined native terminal; physical
+  reader observations must agree with the two native retention turns.
+  V5 measurements carry the bounded successful cleanup observation separately.
+  Require whole-phase lifecycle counts to equal actual cleanup plus the exact
+  two zero-delete physical-reader turns (cleanup alone in cold/logical/return).
+  Derive the reader subtotal only after this equality; do not relax its exact
+  protection predicates. Stopped rows retain actual counters and unavailable
+  coverage, never successful-cleanup proof. Cleanup read attempts join control
+  reads once; independent SA observations still own store transactions/rows.
+  Their coverage checks are lower bounds: control reads cover cleanup read
+  attempts, store transactions cover cleanup turns, and store rows cover cleanup
+  deletions. Exact cross-accounting equality is not claimed and would require a
+  separate prospective contract change.
+
+  This changes no server command, ordinary query/request, sync, startup,
+  publication, retry, cache, deadline or numerical allowance. The harness adds
+  bounded decoding of already-captured reports in its existing single pass,
+  fixed 15-phase snapshots per producer, at most four detached receipt
+  observations, and scalar comparison/addition at composition. Copying the
+  successful HTTP observation uses the already-held inspection lock; no new
+  lock, scan, filesystem/store read, hash, child, goroutine or request is added.
+  Focused normal and race checks (21.606s), vet, pinned lint, documentation,
+  glossary and independent source/cost review pass. The full selected
+  receipt/signing command passed in 1160.990s: retained V3 passed/stopped cases,
+  V5 receipt assembly and continuity refusal, V5 freeze round-trip, and actual
+  test-signed V3/V5 package verification including corruption/failed-exit
+  rejection. V5 receipt/package sizes are 332,448/97,300 bytes against the
+  unchanged 524,288/4,194,304-byte bounds. These signatures authenticate modeled
+  test evidence, not a ceremony. The retained log
+  `/private/tmp/t422-v5-accounting.EIUeQR/receipt-package.log` has SHA-256
+  `23cfe74b06bec4c4ea483b259acfc8cfc66b55adf973896be422a18cef272bc1`.
+  At 2026-09-24 02:38:17 UTC no owned test/outer process remained; protected
+  main was clean at `d817ee0f`, and the preserved failed image remained mounted.
+  V5 launch activation, integrated protected server build, remaining machine
+  gates, full rehearsal, freeze and formal execution remain separate gates.

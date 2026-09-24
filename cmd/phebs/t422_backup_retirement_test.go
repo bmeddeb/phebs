@@ -437,6 +437,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			t.Error(err)
 		}
 	})
+	if err := os.Mkdir(filepath.Join(root, "data"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	configPath := filepath.Join(root, "phebs.yaml")
 	configRaw := []byte(fmt.Sprintf("server:\n  data_dir: %s\n", filepath.Join(root, "data")))
 	if err := os.WriteFile(configPath, configRaw, 0o600); err != nil {

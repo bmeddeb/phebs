@@ -47,8 +47,12 @@ func composeExecutionReaderTransition(plan Plan, measurement PhaseMeasurement, a
 		PostReleaseLifecycleOrdinal: events["reader:post-release-lifecycle"], PostReleaseOldQueryOrdinal: events["reader:post-release-old-query"],
 		AuthorityBeforeSHA256: before, AuthorityAfterSHA256: after,
 	}
+	metrics, err := readerTransitionMetrics(measurement, plan)
+	if err != nil {
+		return ReaderTransition{}, errExecutionReceiptTransition
+	}
 	if err := validateReaderTransition(value, measurement.StartEventOrdinal, measurement.FinishEventOrdinal,
-		authority, measurement.Metrics, plan); err != nil {
+		authority, metrics, plan); err != nil {
 		return ReaderTransition{}, errExecutionReceiptTransition
 	}
 	return value, nil

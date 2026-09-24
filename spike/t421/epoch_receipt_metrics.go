@@ -26,7 +26,8 @@ type executionReceiptMetrics struct {
 	Coverage [15]executionReceiptMetricCoverage
 	// JoinedFamilies records only completeness of the six families this
 	// composer owns. It is not a complete ReceiptMetrics claim.
-	JoinedFamilies [15]bool
+	JoinedFamilies  [15]bool
+	SelectorCleanup [15]*SelectorCleanupEvidence
 }
 
 // composeExecutionReceiptMetrics combines only already-joined bounded streams.
@@ -57,6 +58,9 @@ func composeExecutionReceiptMetrics(
 		!composeExecutionInspectionMetrics(plan, inspection, &out) || !composeExecutionWorkspaceMetrics(plan, work, &out) ||
 		!composeExecutionNativeMetrics(plan, processes, &out) || !validateExecutionJoinedMetricBounds(plan, out) {
 		return executionReceiptMetrics{}, errExecutionReceiptMetrics
+	}
+	if err := composeExecutionHandoffEvidence(plan, work, inspection, true, &out); err != nil {
+		return executionReceiptMetrics{}, err
 	}
 	for index := range out.JoinedFamilies {
 		coverage := out.Coverage[index]

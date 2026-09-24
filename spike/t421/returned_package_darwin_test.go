@@ -10,10 +10,21 @@ import (
 )
 
 func TestBuildExecutionReturnedPackageAuthenticatesExactInventoryOnce(t *testing.T) {
-	plan := clonePlan(t, correctedTestPlan(t))
-	if err := applyProcessAccountingCorrection(&plan); err != nil {
-		t.Fatal(err)
+	for _, schema := range []string{PlanV3Schema, PlanV5Schema} {
+		t.Run(schema, func(t *testing.T) {
+			plan := clonePlan(t, correctedTestPlan(t))
+			if schema == PlanV5Schema {
+				plan = completeV5ReceiptTestPlan(t)
+			} else if err := applyProcessAccountingCorrection(&plan); err != nil {
+				t.Fatal(err)
+			}
+			testBuildExecutionReturnedPackage(t, plan)
+		})
 	}
+}
+
+func testBuildExecutionReturnedPackage(t *testing.T, plan Plan) {
+	t.Helper()
 	commits := executionFreezeTestCommits()
 	tools, host := executionFreezeTestTools(plan, commits), executionFreezeTestHost()
 	namespace := newExecutionSignerNamespaceTestBinding(t)
@@ -63,16 +74,21 @@ func TestBuildExecutionReturnedPackageAuthenticatesExactInventoryOnce(t *testing
 		t.Fatal(err)
 	}
 	receipt.Authority.SourceVerificationSHA256 = SHA256(sourceVerification)
+	if err := validateReceiptEvidence(receipt, plan, freezeBinding, receipt.Authority.SourceVerificationSHA256); err != nil {
+		t.Fatalf("%s modeled receipt before package signing: %v", plan.Schema, err)
+	}
 
 	packageRaw, packageBinding, err := buildExecutionReturnedPackage(t.Context(), plan, receipt, freezeBinding, seal)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s returned package creation: %v", plan.Schema, err)
 	}
 	files, err := inspectExecutionReturnedPackage(packageRaw, plan)
 	if err != nil || len(files) != 11 || packageBinding.packageSHA256 != SHA256(packageRaw) ||
 		!reflect.DeepEqual(packageBinding.exactInventory, plan.SealPolicy.ExactInventory) {
-		t.Fatal("returned package did not retain the exact authenticated V3 inventory", err)
+		t.Fatal("returned package did not retain the exact authenticated inventory", err)
 	}
+	t.Logf("%s signed fixture receipt bytes=%d/%d package bytes=%d/%d", plan.Schema,
+		len(files["results.json"]), plan.ReceiptContract.MaximumBytes, len(packageRaw), plan.SealPolicy.MaximumPackageBytes)
 	if _, _, err := buildExecutionReturnedPackage(t.Context(), plan, receipt, freezeBinding, seal); err == nil {
 		t.Fatal("returned-package authority was reusable")
 	}

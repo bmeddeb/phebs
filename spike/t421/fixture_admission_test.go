@@ -53,7 +53,7 @@ func (cache *executionFreezeTestCache) binding(t *testing.T, plan Plan, commits 
 	tools, host := executionFreezeTestTools(plan, commits), executionFreezeTestHost()
 	checkout := executionFreezeTestCheckout(t, commits, tools)
 	var namespaces []executionSignerNamespaceBinding
-	if plan.Schema == PlanV3Schema {
+	if processAccountingPlanSemantics(plan.Schema) {
 		namespaces = append(namespaces, newExecutionSignerNamespaceTestBinding(t))
 	}
 	var profile ExecutionProfileAdmissionBinding

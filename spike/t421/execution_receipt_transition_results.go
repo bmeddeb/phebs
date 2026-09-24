@@ -57,6 +57,11 @@ func composeExecutionReceiptTransitions(plan Plan, freeze ExecutionFreeze, phase
 		}
 		switch phase {
 		case "physical_delta_b":
+			if plan.Schema == PlanV5Schema && epochs[1].Attempts.Handoff.Retention != ([2]epochRetentionSweep{
+				epochs[1].transitionObservations.physical.Held, epochs[1].transitionObservations.physical.Released,
+			}) {
+				return nil, errExecutionReceiptTransition
+			}
 			observed, e := composeExecutionReaderTransition(plan, measurement, authority, epochs[1].transitionObservations.physical, events)
 			err = e
 			value.Reader = &observed

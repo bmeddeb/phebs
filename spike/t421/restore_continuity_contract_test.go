@@ -57,6 +57,9 @@ func TestCallerRestoreContinuityV5Derivation(t *testing.T) {
 		},
 		func(plan *Plan) { plan.Correction.IdentityDerivations = prior.Correction.IdentityDerivations },
 		func(plan *Plan) { plan.Correction.RequiredReadiness = prior.Correction.RequiredReadiness },
+		func(plan *Plan) {
+			plan.Correction.RequiredReadiness = plan.Correction.RequiredReadiness[:len(plan.Correction.RequiredReadiness)-1]
+		},
 	} {
 		bad := next
 		contract := *next.Correction
