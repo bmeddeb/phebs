@@ -4834,7 +4834,7 @@ ceremony execution, release or scale/SLO claim follows.
   Copied-store replay of the exact pending 512-row member reproduced the old
   query's 30.211-second failure. Merging its duplicate prewrite row/preimage
   checks into one late loop preserved every target and CAS fence, and the
-  replay passed twice at 15.959 and 16.488 seconds under the unchanged limit.
+  retained replay passed at 16.488 seconds under the unchanged limit.
   The owning PLAN ADR retains the stopped-run and replay hashes. Focused
   native/race, independent exact-source review, complete machine gates,
   clean 120-GiB preflight and a fresh full rehearsal remain open; copied

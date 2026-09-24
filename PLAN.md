@@ -5311,8 +5311,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   committed state/preimage writes show that the first 255-row prefix of member
   17 committed before the failed next prefix. A temporary native replay of
   that exact running lease on a fresh copy reproduced the unchanged query's
-  30.211-second `deadline_exceeded`; the revised query completed on two fresh
-  copies in 15.959 and 16.488 seconds, applying the remaining 257 rows and
+  30.211-second `deadline_exceeded`; the revised query completed on a fresh
+  copy in 16.488 seconds, applying the remaining 257 rows and
   finishing the 512-row member. Retain source-free replay outputs
   `/private/tmp/t422v-unlazy/return-a-baseline-replay.out` SHA-256
   `4effd8034c9b6a847115d16e686a8471cea27c58618b2a6e89102249bdbdd198`
