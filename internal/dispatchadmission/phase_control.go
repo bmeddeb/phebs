@@ -36,6 +36,7 @@ type PhaseControlConfig struct {
 	TerminalPhase               uint32 `json:",omitempty"`
 	BackupEndpointCarry         bool   `json:",omitempty"`
 	BackupMeasurementMaximum    uint32 `json:",omitempty"`
+	OwnerDrainDeadlineUnixNano  int64  `json:",omitempty"`
 	OwnerControl                bool
 	Phases                      []uint32
 	InitialPhase                uint32
@@ -67,6 +68,14 @@ func (config PhaseControlConfig) validate() (int, error) {
 	if config.MaximumPhases < 1 || len(config.Phases) == 0 || len(config.Phases) > config.MaximumPhases ||
 		config.MaximumWireBytes < 2*FrameBytes || config.Timeout <= 0 {
 		return 0, ErrConfig
+	}
+	if config.OwnerDrainDeadlineUnixNano != 0 {
+		now := time.Now()
+		deadline := time.Unix(0, config.OwnerDrainDeadlineUnixNano)
+		if !config.OwnerControl || config.InitialPhase != 12 || !slices.Equal(config.Phases, []uint32{12, 13, 14}) ||
+			config.Timeout > 30*time.Second || !deadline.After(now) || deadline.After(now.Add(4*time.Hour)) {
+			return 0, ErrConfig
+		}
 	}
 	// ponytail: O(P²) within MaximumPhases; use a set if the caller-owned cap grows.
 	for index, phase := range config.Phases {
@@ -238,6 +247,15 @@ func (control *PhaseControl) exchange(ctx context.Context, op byte) error {
 	}
 	control.mu.Lock()
 	state, index, err := nextConfiguredControlState(control.state, control.index, op, control.config)
+	// The gate still uses the ordinary timeout. The selected first owner drain
+	// uses the original phase deadline for its frame transfer, barrier and ACK.
+	if err == nil && opCtx.Err() == nil && op == phaseOwnerDrain && control.state == 0 && control.index == 0 &&
+		control.config.Phases[control.index] == 12 &&
+		control.config.OwnerDrainDeadlineUnixNano != 0 {
+		cancel()
+		opCtx, cancel = context.WithDeadline(ctx, time.Unix(0, control.config.OwnerDrainDeadlineUnixNano))
+		defer cancel()
+	}
 	if control.err != nil {
 		err = control.err
 	} else if control.closed || control.ctx.Err() != nil || opCtx.Err() != nil {
@@ -481,6 +499,18 @@ func servePhaseControl(ctx context.Context, conn *net.UnixConn, client *Client, 
 		if (frame.op == phaseResume || frame.op == phaseOwnersReopen) &&
 			((frame.deadlineUnixNano != 0) != (warm || physical) || (warm || physical) && !time.Now().Before(time.Unix(0, frame.deadlineUnixNano))) {
 			return client.fail(ErrProtocol)
+		}
+		// Partial-frame reads retain the ordinary timeout. Once this exact
+		// first request is validated, only its owner barrier uses the phase end.
+		if state == 0 && index == 0 && frame.op == phaseOwnerDrain && frame.phase == 12 &&
+			config.OwnerDrainDeadlineUnixNano != 0 {
+			deadline = time.Unix(0, config.OwnerDrainDeadlineUnixNano)
+			if !time.Now().Before(deadline) {
+				return client.fail(ErrCanceled)
+			}
+			if err := conn.SetDeadline(deadline); err != nil {
+				return client.fail(ErrTransport)
+			}
 		}
 		sequence++
 		opCtx, stop := context.WithDeadline(ctx, deadline)

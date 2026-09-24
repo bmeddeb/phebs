@@ -124,6 +124,13 @@ test-signed package verification and refusal checks. These are modeled test
 receipts, not a ceremony pass. V5 launch activation is implemented; the
 integrated protected server build, remaining machine/rehearsal gates and any
 new freeze remain open.
+The disposable V5 rehearsal from `e2c6ced6` passed backup and restore but
+stopped after 13,044 seconds at archive completion: tail was ready on poll six,
+then owner drainage refused before final F. Retained timing and active-owner
+evidence point to the ordinary 30-second control timeout; the exact ACK was
+not retained. A prospective V5-only original-phase-deadline correction is in
+progress. The failed image remains preserved; review, full rehearsal and any
+fresh freeze remain open.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

@@ -782,6 +782,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		}
 	case 5:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{12, 13, 14}, 12, 3
+		if flow.plan.Schema == PlanV5Schema {
+			controlConfig.OwnerDrainDeadlineUnixNano = run.phaseDeadline.UnixNano()
+		}
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig, Workspace: workspaceBinding}

@@ -10,6 +10,8 @@ const callerRestoreContinuityPolicy = "caller-restore-continuity-v1:full-validat
 
 const handoffLifecycleAccountingPolicy = "handoff-lifecycle-accounting-v1:joined-native-retention-and-selector-cleanup-prefixes;phase-producer-input-bound;accepted-cleanup-HTTP-equals-native-terminal;physical-reader-exact-two-zero-delete-turns;whole-phase-exact-reader-plus-cleanup;cleanup-read-attempts-counted-once;independent-SA-store-counts;stopped-prefix-not-success;no-V1-V4-change"
 
+const restoredOwnerDrainPolicy = "restored-owner-drain-v1:V5-epoch-five-initial-phase12-only;authenticated-original-phase-deadline;no-deadline-renewal;all-other-control-exchanges-30s;unchanged-PC01-wire-and-pair-count;fail-closed"
+
 // This prospective correction does not modify any retained V1-V4 recipe.
 func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 	if plan == nil || plan.Schema != PlanV4Schema || plan.Correction == nil ||
@@ -27,7 +29,7 @@ func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 	correction := *plan.Correction
 	correction.IdentityDerivations = callerRestoreIdentityDerivations()
 	correction.InspectionInventorySHA256 = digest
-	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy, handoffLifecycleAccountingPolicy)
+	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy, handoffLifecycleAccountingPolicy, restoredOwnerDrainPolicy)
 	plan.Correction = &correction
 	plan.Schema = PlanV5Schema
 	plan.ToolPolicy.ExecutionFreezeSchema = ExecutionFreezeV5Schema

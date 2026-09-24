@@ -2017,6 +2017,12 @@ protected production server that includes the caller-continuity final read.
 There is no sealed V5 artifact or authorization for formal ceremony execution.
 The owning PLAN ADR defines the contract and costs.
 
+The first disposable V5 rehearsal crossed restore and reached ready tail on
+poll six, then stopped during owner drainage before final F. Prospective V5
+epoch five now gives only the initial phase-twelve drain the remaining original
+phase deadline; every other control exchange retains 30 seconds. The stopped
+image remains preserved, and a fresh reviewed full rehearsal is still required.
+
 On 2026-09-21 Ben authorized exact-main V4 author/seal after reviewed
 integration. Two independent clean worktrees at exact source
 `f0809ebbeee70c8a1fc8df67c7cb253224120c18` ran the create-only author with

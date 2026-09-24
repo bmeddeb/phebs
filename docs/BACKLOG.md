@@ -4755,6 +4755,18 @@ ceremony execution, release or scale/SLO claim follows.
   blockers, not remaining machine gates or a signed ceremony. No rehearsal,
   integration, freeze, formal execution or retained-custody cleanup follows.
 
+  The first disposable V5 rehearsal from `e2c6ced6` passed backup and restore,
+  then stopped at archive completion after 13,044 seconds. V5 tail reached
+  ready on its sixth poll, but the owner drain refused before final F. The
+  retained logs and an active relationship owner at teardown strongly indicate
+  the ordinary 30-second phase-control exchange expired; no control ACK was
+  retained, so this is an inference. The prospective correction bounds only
+  V5 epoch five's initial phase-twelve owner drain by the original phase
+  deadline and names park/drain/request-open failures separately. The failed
+  image at `/private/tmp/t422-epoch-one-rehearsal-1981531382` remains preserved.
+  Focused gates, exact-source review and a new full
+  rehearsal remain open; no freeze or ceremony follows from this stop.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

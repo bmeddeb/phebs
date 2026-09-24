@@ -5111,3 +5111,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   caller manifests (`c78bca…`/`ccb16d…`), equal continuity commitments
   (`93f06385…`) and a changed commitment after one altered pair digest; the image
   holding those manifests has since been removed.
+
+- **2026-09-24 — T42.2v V5 restored owner-drain deadline after retained rehearsal.**
+  The disposable V5 rehearsal at source `e2c6ced64fddcf1242c96e82af4083042cc62338`
+  stopped after 13,044 seconds at archive completion. Backup, restore, archive
+  progress and tail all advanced; V5 tail became ready on its sixth poll.
+  No final F was issued. The last completed tail read preceded the control
+  refusal by 30 seconds, and teardown canceled an active relationship owner.
+  This strongly attributes the stop to the initial phase-twelve owner drain
+  exceeding its ordinary 30-second PC exchange timeout; no PC frame/ACK was
+  retained, so the missing ACK itself is inferred. The retained terminal/server
+  logs have SHA-256 `23fee6109da139cec73dd19055d706705ea48816f55e6507f3cf47b539c731f0`
+  and `570e5a812cba82fa971908b2d6e5d9af1cb5a13ab4fbfcb57887c8370093cc16`.
+  The failed mounted image at `/private/tmp/t422-epoch-one-rehearsal-1981531382`
+  remains under preservation hold.
+
+  Prospectively, only V5 epoch five's initial phase-twelve `DrainOwners` uses
+  the already-established absolute phase deadline. Its authenticated bootstrap
+  carries that timestamp without renewing the clock. Partial-frame transfer,
+  all other control exchanges and V1–V4 retain their existing 30-second bound;
+  PC01 frames, pair count and owner concurrency remain exact. An expired or
+  out-of-profile timestamp refuses. Archive park, owner drain and request-open
+  now retain distinct private failure stages under `ErrExecutionEpochOne`.
+  The V5 readiness policy binds this behavior, so any later V5 plan/freeze must
+  be fresh. Ordinary query/request, sync tick, startup/restart, retry/no-op and
+  publication work is unchanged. Selected epoch-five bootstrap gains one
+  scalar; a drain may keep its receiver and owner fence waiting for the
+  remaining original phase wall, with no new polling, store read, corpus scan,
+  hash, child, lock or persistent allocation. Focused tests, exact-source
+  review and a fresh full rehearsal remain required before freeze or ceremony.

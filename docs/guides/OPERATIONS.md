@@ -7503,11 +7503,19 @@ The first T42.2v disposable pressure rehearsal stopped during its initial
 ballast transition under the historical V3 plan; it did not reach restore.
 Its source-free log and plan are retained at
 `/private/tmp/t422-pressure-rehearsal-failure.ZvbXep`, and its failed volume
-was normally detached after custody review. The next opt-in rehearsal uses
-the current V4 plan and matching protected build/reference-admission schema.
+was normally detached after custody review. The following opt-in rehearsal
+used V4 and its matching protected build/reference-admission schema.
 Capture its full terminal output: the previous generic pressure-volume error
 and server log alone cannot isolate the refused native predicate. V4 does not
 relax the first ballast target or its 4,096-byte tolerance.
+
+The current reviewed candidate selects V5. Its first disposable rehearsal
+passed backup and restore, then stopped during owner drainage after the tail
+read became ready; final F was never issued. The prospective correction lets
+only epoch five's initial phase-twelve owner drain wait through the original
+deadline. All other control exchanges retain their 30-second bound. Preserve
+the failed image and repeat the full rehearsal only from reviewed exact source;
+this stopped prefix is no archive-completion or ceremony pass.
 
 The private optional epoch-one rehearsal now recognizes
 `PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint

@@ -78,8 +78,14 @@ func (run *ExecutionEpochOneRun) CompleteArchive(ctx context.Context) (retErr er
 			return err
 		}
 	}
-	if reader.restoredCommand(op, "park") != nil || run.control.DrainOwners(op) != nil || run.control.OpenRequests(op) != nil {
-		return ErrExecutionEpochOne
+	if err := reader.restoredCommand(op, "park"); err != nil {
+		return epochArchiveFailure(nil, "restored park", err)
+	}
+	if err := run.control.DrainOwners(op); err != nil {
+		return epochArchiveFailure(nil, "restored owner drain", err)
+	}
+	if err := run.control.OpenRequests(op); err != nil {
+		return epochArchiveFailure(nil, "restored request open", err)
 	}
 	if _, _, _, err := reader.Final(op); err != nil {
 		return err

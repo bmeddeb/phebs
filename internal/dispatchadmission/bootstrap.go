@@ -73,6 +73,10 @@ func (record ProductionBootstrap) validate() error {
 	if record.Control.BackupEndpointCarry && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 5 || record.Phase != 8 || record.Store == nil) {
 		return ErrProductionBootstrap
 	}
+	if record.Control.OwnerDrainDeadlineUnixNano != 0 && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 ||
+		record.Producer.ID != 6 || record.Phase != 12 || record.Store == nil) {
+		return ErrProductionBootstrap
+	}
 	if record.validateStore() != nil {
 		return ErrProductionBootstrap
 	}
