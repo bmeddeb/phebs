@@ -7526,6 +7526,12 @@ above bounds only the following join of all owners. Final F still verifies the
 full restored authority and caller-continuity commitment. This amendment
 requires fresh review and a full rehearsal before any freeze.
 
+For an authenticated T42.2 semantic launch, the seven job runners use a
+15-second lease heartbeat and a 60-second stale cutoff. This allows a slow
+native store reply during the disposable rehearsal while preserving the
+four-beat stale margin and exact accounting refusal. Ordinary serving and
+T40.13 exact-report launches retain their existing 5/20-second policy.
+
 The private optional epoch-one rehearsal now recognizes
 `PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint
 restart and pressure-volume selectors, along with their existing predecessor

@@ -5223,3 +5223,62 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   authorization, with its logs retained. Focused gates, exact-source review,
   120-GiB preflight and a new full rehearsal remain open. No integration,
   freeze, signed receipt or ceremony follows from this stopped run.
+
+- **2026-09-24 — T42.2v physical-B transport stop and same-source retry.**
+  The exact clean detached source `429741bb800b0c7b5fd60ea88caff0edca3445f0`
+  passed focused/race, real offline executor, static, documentation, module,
+  independent zero-finding review, and a fresh 120-GiB preflight. Its full
+  rehearsal passed protected preparation, cold X/T/F and warm X/T/F, then
+  stopped after 3,596.87 seconds in physical-B T at read ordinal 251:
+  X=1, T=24, no F or current/prior retention read. The exact 409 body was
+  `exact read request refused`. Two independent stale-job reapers reported
+  store-accounting transport loss at 18:20:33; an active job heartbeat's
+  native SDK call had no reply before its own deadline, and the T read
+  refused at 18:20:35. The outer test and phase contexts were still active;
+  SurrealDB received SIGINT only during teardown. The mechanism behind the
+  native reply stall is unproved. V5 archive-tail code was not reached, and
+  the same physical-B path passed in the previous full run. Make one bounded
+  same-source retry before changing production timeout policy. The retained
+  terminal log `/private/tmp/t422v-unlazy/rehearsal-resolver.log` has SHA-256
+  `f7d77e6845b5d28b84fe29981c363c33042969d4e7880ce8793e2237dd02a785`;
+  copied server log `rehearsal-resolver-failed-server.log` has SHA-256
+  `cc6b9d2c2cb0b81270b4b3af9852b0b4b1768259b84d98fab16aeab53547a0da`;
+  copied 409 body `rehearsal-resolver-failed-response.body` has SHA-256
+  `adf66eb6b763569d9821ce4e9c52baf2fa77212b20e089a0fc9b91e0757d5375`.
+  The failed image was normally detached and only its exact root removed
+  after those records were retained and no process or listener survived;
+  free space returned to 176,598,464 KiB. This stop adds no source change
+  or steady-state cost claim and establishes no full rehearsal, integration,
+  freeze, signed receipt or ceremony.
+
+- **2026-09-24 — T42.2v selected job-lease allowance after the same-source retry.**
+  The bounded retry at the same clean source `429741bb800b0c7b5fd60ea88caff0edca3445f0`
+  stopped during cold after 2,393.84 seconds (X=33, T=0, no F). The first
+  typed SDK failure was again an active `HeartbeatJob`/`updateLease` call
+  with no native reply inside its five-second deadline; exact store
+  accounting refused, and incomplete dispatch was downstream of teardown.
+  SurrealDB stayed alive until controlled SIGINT. The mounted APFS image had
+  ample free space; host logs show slower image transaction flushes before
+  both stops, but do not prove why the SDK reply stalled. Retain terminal
+  `/private/tmp/t422v-unlazy/rehearsal-resolver-retry.log` SHA-256
+  `e36d2b0807ac872bc776cdbdac660e7cee4963a86ac1a14a8ba575709565b13d`
+  and copied server log `rehearsal-resolver-retry-failed-server.log` SHA-256
+  `347ad0ba4ebc26b3a153fb967626bc1ee86351fa0742778677d13714158d6f90`.
+  After verifying those copies and no rehearsal process, the exact failed
+  image `t422-epoch-one-rehearsal-3329402175` was normally detached and its
+  root removed under Ben's standing approval. Its mount/root are absent and
+  host free space is 175,483,724 KiB.
+  Only an authenticated T42.2 semantic launch gives each of the seven
+  ordinary job runners a 15-second heartbeat interval/call deadline and a
+  60-second stale cutoff. The existing four-beat safety margin and exact
+  failure latch remain; a permanently stalled store still refuses. Ordinary
+  serving and T40.13 exact-report launches retain their default five-second
+  heartbeat and 20-second stale cutoff. This selected allowance changes no
+  request/query, sync, startup, retry/no-op, publication, lock, cache,
+  corpus/shard read, child, memory or disk cost. While a selected job runs,
+  heartbeat writes occur at most one-third as often in the no-stall case;
+  selected dead-worker recovery can take 40 seconds longer. No admission,
+  concurrency, authority, V1–V5 evidence schema, fixture, or frozen
+  ceremony bound changes. Focused normal/race, static/documentation, exact
+  source review, a clean 120-GiB preflight and a complete rehearsal must pass
+  before this correction supports any readiness claim.

@@ -4803,6 +4803,30 @@ ceremony execution, release or scale/SLO claim follows.
   120-GiB preflight and full rehearsal remain required. The earlier failed
   V5 image was removed after Ben's explicit authorization, with logs retained.
 
+  The clean reviewed correction source `429741bb800b0c7b5fd60ea88caff0edca3445f0`
+  passed focused/race, offline executor, static and 120-GiB preflight gates.
+  Its full rehearsal passed cold and warm, then stopped in physical-B T at
+  ordinal 251 (X=1, T=24, no F): a concurrent native job heartbeat lost its
+  SurrealDB reply, exact store accounting latched the transport failure, and
+  the T request returned HTTP 409. The outer context was still active; the
+  native stall mechanism is unproved. Terminal/server/response evidence is
+  retained with hashes in the owning PLAN ADR. The failed image was normally
+  detached and its exact root removed after evidence retention. One clean
+  same-source retry was launched; no full-rehearsal AC or ceremony claim is
+  established by the stopped prefix.
+
+  That retry also stopped, in cold after 2,393.84 seconds (X=33, T=0, no F),
+  at an active job heartbeat with no native SurrealDB reply inside five
+  seconds. The cause of the native stall remains unproved. Its retained
+  terminal and server hashes are in the owning PLAN ADR. The prospective
+  correction gives only authenticated T42.2 semantic launches 15-second job
+  heartbeats and a 60-second stale cutoff through the existing runner fields;
+  ordinary and T40.13 launches keep 5/20 seconds. It retains fail-closed
+  exact accounting, requires review and a fresh full rehearsal, and does not
+  claim the stopped prefix as an AC pass.
+  The retry image was normally detached and its exact root removed after
+  preserving the diagnostic copies; the root and mount are absent.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

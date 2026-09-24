@@ -34,6 +34,18 @@ import (
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
+func configureT422SelectedJobLeases(selected bool, runners ...*store.Runner) {
+	if !selected {
+		return
+	}
+	for _, runner := range runners {
+		if runner != nil {
+			runner.HeartbeatEvery = 15 * time.Second
+			runner.StaleAfter = 60 * time.Second
+		}
+	}
+}
+
 // newServeAuth wires the audit recorder, the auth service, and the audit/
 // analytics retention sweep.
 func newServeAuth(d *serveDeps) error {
@@ -423,6 +435,7 @@ func startServeSyncRunners(d *serveDeps) error {
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st), Owners: owners,
 		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 	bindT4013ExactReports(d.exactReports, d.exact.failReport, nil, runner, fetchRunner)
+	configureT422SelectedJobLeases(d.semanticLaunch != nil, runner, fetchRunner)
 	d.exact.attempts.bindJobs(runner, fetchRunner)
 	runStoreRunner(ctx, d.runBackground, runner)
 	runStoreRunner(ctx, d.runBackground, fetchRunner)
@@ -989,6 +1002,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		d.exactReports, d.exact.failReport, candidateWorker,
 		candidateRunner, exRunner, resolverRunner, callerRunner,
 	)
+	configureT422SelectedJobLeases(d.semanticLaunch != nil, candidateRunner, exRunner, resolverRunner, callerRunner)
 	d.exact.attempts.bindJobs(candidateRunner, exRunner, resolverRunner, callerRunner)
 	runStoreRunner(ctx, d.runBackground, candidateRunner)
 	runStoreRunner(ctx, d.runBackground, exRunner)
@@ -1127,6 +1141,7 @@ func startServeIndexPipeline(d *serveDeps) error {
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle, Owners: owners,
 			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		bindT4013ExactReports(d.exactReports, d.exact.failReport, nil, ixRunner)
+		configureT422SelectedJobLeases(d.semanticLaunch != nil, ixRunner)
 		d.exact.attempts.bindJobs(ixRunner)
 		runStoreRunner(ctx, d.runBackground, ixRunner)
 	}

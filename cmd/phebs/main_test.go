@@ -245,6 +245,20 @@ func TestBindT4013ExactReportsIsSynchronousAndOptional(t *testing.T) {
 	}
 }
 
+func TestConfigureT422SelectedJobLeases(t *testing.T) {
+	ordinary := &store.Runner{}
+	configureT422SelectedJobLeases(false, ordinary)
+	if ordinary.HeartbeatEvery != 0 || ordinary.StaleAfter != 0 {
+		t.Fatal("ordinary job lease policy changed")
+	}
+
+	selected := &store.Runner{}
+	configureT422SelectedJobLeases(true, selected, nil)
+	if selected.HeartbeatEvery != 15*time.Second || selected.StaleAfter != 60*time.Second {
+		t.Fatalf("selected job lease policy = %s/%s", selected.HeartbeatEvery, selected.StaleAfter)
+	}
+}
+
 func TestResolverPublicationImmediatelyQueuesCallerJob(t *testing.T) {
 	repository := "example.com/repository"
 	reconcileErr := errors.New("relationship authority pending")
