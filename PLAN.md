@@ -5273,11 +5273,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   60-second stale cutoff. The existing four-beat safety margin and exact
   failure latch remain; a permanently stalled store still refuses. Ordinary
   serving and T40.13 exact-report launches retain their default five-second
-  heartbeat and 20-second stale cutoff. This selected allowance changes no
-  request/query, sync, startup, retry/no-op, publication, lock, cache,
-  corpus/shard read, child, memory or disk cost. While a selected job runs,
-  heartbeat writes occur at most one-third as often in the no-stall case;
-  selected dead-worker recovery can take 40 seconds longer. No admission,
+  heartbeat and 20-second stale cutoff. Ordinary request, sync, startup,
+  retry/no-op and publication costs are unchanged. While a selected job runs,
+  heartbeat store queries/writes and their disk I/O occur at most one-third as
+  often in the no-stall case; no new lock, cache, corpus/shard read, child,
+  memory, disk allocation or concurrency is added. Selected dead-worker
+  recovery can take 40 seconds longer. No admission,
   concurrency, authority, V1–V5 evidence schema, fixture, or frozen
   ceremony bound changes. Focused normal/race, static/documentation, exact
   source review, a clean 120-GiB preflight and a complete rehearsal must pass
