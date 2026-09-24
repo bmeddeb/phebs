@@ -5140,3 +5140,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   remaining original phase wall, with no new polling, store read, corpus scan,
   hash, child, lock or persistent allocation. Focused tests, exact-source
   review and a fresh full rehearsal remain required before freeze or ceremony.
+
+- **2026-09-24 — T42.2v owner-drain correction gates.** Exact implementation
+  commit `1ebef8f1da21f960d9b515694079d7c95d58a1be` passed the paired
+  owner-drain normal/race tests (4.604s/5.478s), the complete dispatch-admission
+  package (9.013s), focused restored-execution/V5 derivation and freeze normal
+  tests (70.196s), and focused restored-execution/V5 derivation race tests
+  (167.951s). Module verification, changed-package vet, pinned lint with zero
+  issues, gofmt, whitespace, docs-check and glossary pass. Independent review
+  of that exact clean commit found critical/high/medium/low `0/0/0/0`, including
+  the steady-state cost pass. These gates establish the correction candidate,
+  not an archive-completion result. At 08:59 UTC the host had about 82 GiB free,
+  below the 120-GiB rehearsal preflight threshold, while the failed image
+  remained mounted and preserved. No cleanup, new full rehearsal, integration,
+  fresh freeze or ceremony was performed.

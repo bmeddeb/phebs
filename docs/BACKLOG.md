@@ -4767,6 +4767,15 @@ ceremony execution, release or scale/SLO claim follows.
   Focused gates, exact-source review and a new full
   rehearsal remain open; no freeze or ceremony follows from this stop.
 
+  Exact correction commit `1ebef8f1` passed the paired owner-drain normal/race,
+  full dispatch-admission, focused restored-execution/V5 derivation normal/race,
+  V5 freeze normal, vet,
+  pinned lint, module, docs, glossary, format and whitespace gates. Its clean
+  exact-source independent review found zero findings at every severity. The
+  full rehearsal remains open: the retained mounted image leaves about 82 GiB
+  free against the 120-GiB preflight requirement. Preserve that image until an
+  explicit disposition; no integration, freeze or ceremony has followed.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

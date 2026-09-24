@@ -128,9 +128,11 @@ The disposable V5 rehearsal from `e2c6ced6` passed backup and restore but
 stopped after 13,044 seconds at archive completion: tail was ready on poll six,
 then owner drainage refused before final F. Retained timing and active-owner
 evidence point to the ordinary 30-second control timeout; the exact ACK was
-not retained. A prospective V5-only original-phase-deadline correction is in
-progress. The failed image remains preserved; review, full rehearsal and any
-fresh freeze remain open.
+not retained. The V5-only original-phase-deadline correction at `1ebef8f1`
+passed focused normal/race, vet, lint, module, docs and glossary gates, and
+exact-source review found no issue. The failed image remains preserved; its
+mounted custody leaves about 82 GiB free against the 120-GiB preflight minimum.
+A new full rehearsal, integration and any fresh freeze remain open.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated
