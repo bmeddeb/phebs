@@ -5190,3 +5190,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   readiness policy bind these limits; no V5 plan is sealed. Focused native and
   contract tests, exact-tree gates, independent review and a fresh full
   rehearsal remain required before freeze or ceremony.
+
+- **2026-09-24 — T42.2v V5 resolver-authority tail correction.** The clean
+  detached-source rehearsal at `7f01e5f11659a91cfd858d298087f4742b5f2418`
+  stopped after 21,705.37 seconds in restored archive completion: X=73,
+  T=1,517 and F was never issued. The owner drain was never entered. Its
+  retained terminal and server logs are
+  `/private/tmp/t422v-unlazy/rehearsal.log` (SHA-256
+  `b509c2f8fc9d172e6b2b1f7e7f06d9a304afd9a33a7298788b54597948f93bfa`)
+  and `/private/tmp/t422v-unlazy/rehearsal-failed-server.log` (SHA-256
+  `0626080b83bf9f04eaa57cdb3e4dd4f6afa2880d4a3cc5122417f93f613af48b`).
+  A relationship build emitted 20,999 projection and 31,998 reference
+  attempts before the tail settled into 1,457 identical pending reads at
+  C6/S16. That accounting reached the resolver publication check after the
+  current observation and all nine extraction identities, before the
+  catalog/state and final-pointer reads. V5 T compared the resolver
+  publication's `ManifestDigest` with the resolver namespace's
+  `ResolverManifestDigest`, but the namespace builder binds the latter to
+  the publication's distinct `AuthorityDigest`. The retained export row
+  `/private/tmp/t422v-unlazy/rehearsal-failed-resolver-publication.surql`
+  (SHA-256 `30d5bddc95317fad94525f1e86d27405a46d50aba5f94e4a0c9eaa4e6dd92eef`)
+  has different manifest and authority digests; the selected resolver root
+  `/private/tmp/t422v-unlazy/rehearsal-failed-resolver-root.json`
+  (SHA-256 `863cc4af588acb00c429ef0c5c9ef1e4e1305e1735f7d7718eb417397c051e48`)
+  binds the authority digest, so the comparison cannot pass.
+  Correct only that V5 digest mapping; retain the independent
+  `ResolverCatalogPublicationCurrent` check, all current-input and schedule
+  fences, C7/S21–23 normal budgets, C7/S275 maximum, and the original phase
+  deadline. This adds no read, write, child, lock, allocation, corpus scan or
+  steady-state work. The failed image remains mounted for diagnosis; the
+  earlier V5 failed image was separately detached and removed after Ben's
+  authorization, with its logs retained. Focused gates, exact-source review,
+  120-GiB preflight and a new full rehearsal remain open. No integration,
+  freeze, signed receipt or ceremony follows from this stopped run.

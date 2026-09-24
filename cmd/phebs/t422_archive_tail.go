@@ -98,6 +98,12 @@ func t422ArchiveTailReady(
 	return current && afterIdle && t422ArchiveTailSameSchedule(before, after)
 }
 
+// The namespace's manifest field binds the catalog authority digest.
+func t422ArchiveTailResolverMatches(publication store.ResolverCatalogPublication, resolver resolvernamespace.Root) bool {
+	return publication.GenerationDigest == resolver.Authority.ResolverGenerationDigest &&
+		publication.AuthorityDigest == resolver.Authority.ResolverManifestDigest
+}
+
 type t422ArchiveTailCatalogStateSource interface {
 	GetServiceCatalogV3CandidatePointer(context.Context, string) (store.ServiceCatalogV3Pointer, error)
 	GetServiceStateV3SummaryPoint(context.Context, string) (servicecatalog.RepositoryState, error)
@@ -204,8 +210,7 @@ func (reader *t421FinalAuthorityReader) t422ArchiveTailCurrent(
 	if err != nil {
 		return false, err
 	}
-	if !current || publication.GenerationDigest != resolver.Authority.ResolverGenerationDigest ||
-		publication.ManifestDigest != resolver.Authority.ResolverManifestDigest {
+	if !current || !t422ArchiveTailResolverMatches(*publication, resolver) {
 		return false, nil
 	}
 	return t422ArchiveTailCatalogStateCurrent(ctx, reader.store, reader.repository, authority)

@@ -12,6 +12,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/relationshippublication"
+	"github.com/bmeddeb/phebs/internal/resolvernamespace"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogv3"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -104,6 +105,22 @@ func TestT422ArchiveTailReadBudget(t *testing.T) {
 		ControlFileReads: 4, StoreReadAttempts: 4,
 	}) {
 		t.Fatalf("legacy tail read ceiling changed: %+v", got)
+	}
+}
+
+func TestT422ArchiveTailResolverUsesAuthorityDigest(t *testing.T) {
+	publication := store.ResolverCatalogPublication{
+		GenerationDigest: "generation", ManifestDigest: "manifest", AuthorityDigest: "authority",
+	}
+	resolver := resolvernamespace.Root{Authority: resolvernamespace.Authority{
+		ResolverGenerationDigest: "generation", ResolverManifestDigest: "authority",
+	}}
+	if !t422ArchiveTailResolverMatches(publication, resolver) {
+		t.Fatal("distinct manifest and authority digests must match the resolver binding")
+	}
+	publication.AuthorityDigest = "stale-authority"
+	if t422ArchiveTailResolverMatches(publication, resolver) {
+		t.Fatal("stale resolver authority was accepted")
 	}
 }
 

@@ -4791,6 +4791,18 @@ ceremony execution, release or scale/SLO claim follows.
   independent review, clean protected source, 120 GiB preflight and a fresh
   full rehearsal are still open. The failed image remains preserved.
 
+  The exact-clean V5 rehearsal at `7f01e5f11659a91cfd858d298087f4742b5f2418`
+  stopped after 21,705.37 seconds in archive T (X=73, T=1,517, no F or owner
+  drain). Retained terminal/server logs have SHA-256 `b509c2f8…` and
+  `0626080b…`; the new failed image remains mounted. C6/S16 on 1,457
+  successive reads localizes the pending result to the resolver catalog
+  comparison. V5 T used the catalog manifest digest where the selected
+  resolver namespace binds the distinct catalog authority digest. Correct
+  that one V5 mapping while retaining the current-publication predicate and
+  all other fences; fresh exact-source gates, independent review, a clean
+  120-GiB preflight and full rehearsal remain required. The earlier failed
+  V5 image was removed after Ben's explicit authorization, with logs retained.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four
