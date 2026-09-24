@@ -2023,6 +2023,14 @@ epoch five now gives only the initial phase-twelve drain the remaining original
 phase deadline; every other control exchange retains 30 seconds. The stopped
 image remains preserved, and a fresh reviewed full rehearsal is still required.
 
+The unsealed V5 archive tail is being amended to prove that the selected
+relationship matches current restored inputs and that its V3 schedule has no
+active or failed work before the drain. A dangling or cross-scope current
+schedule pointer refuses. An old settled schedule by itself is
+insufficient. The phase deadline above bounds the later owner join; final F
+still proves the complete restored authority and caller continuity. V1–V4
+tail reads remain exact.
+
 On 2026-09-21 Ben authorized exact-main V4 author/seal after reviewed
 integration. Two independent clean worktrees at exact source
 `f0809ebbeee70c8a1fc8df67c7cb253224120c18` ran the create-only author with

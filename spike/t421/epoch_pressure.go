@@ -173,7 +173,7 @@ func (reader *executionEpochInspection) beginPressure(phase uint32) error {
 		return errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(reader.plan, reader.plan.PhaseOrder[phase-1])
-	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(reader.plan)
 	if err != nil || inventoryErr != nil || len(rows) < 11 || rows[phase-1].ServerEpoch != 4 || projection.CatalogSource.SHA256 != reader.run.epoch.CatalogSHA256 {
 		return errEpochInspection
 	}

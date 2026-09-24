@@ -211,7 +211,7 @@ func (reader *executionEpochInspection) beginPhysical(authored AuthoredExecution
 		return errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(reader.plan, "physical_delta_b")
-	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(reader.plan)
 	if err != nil || inventoryErr != nil || len(rows) < 4 || rows[3].Phase != "physical_delta_b" || rows[3].ServerEpoch != 1 {
 		return errEpochInspection
 	}

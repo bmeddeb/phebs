@@ -70,6 +70,20 @@ type PartitionedExtractionDomain struct {
 	PriorRootDigest   string `json:"prior_root_digest,omitempty"`
 }
 
+// PartitionedExtractionDomainReference is the bounded current identity needed
+// by exact readiness. It excludes the potentially multi-megabyte plan/root.
+type PartitionedExtractionDomainReference struct {
+	Schema            string `json:"schema"`
+	Repository        string `json:"repository"`
+	Domain            string `json:"domain"`
+	RunID             string `json:"run_id"`
+	PlanDigest        string `json:"plan_digest"`
+	RootDigest        string `json:"root_digest"`
+	CandidateDigest   string `json:"candidate_digest"`
+	SourceDigest      string `json:"source_digest"`
+	ObservationDigest string `json:"observation_digest"`
+}
+
 type PartitionedEvidenceStore interface {
 	PublishPartitionedExtractionDomain(context.Context, PartitionedExtractionDomain) error
 	GetPartitionedExtractionDomain(context.Context, string, string) (*PartitionedExtractionDomain, error)
@@ -453,6 +467,44 @@ func (s *Surreal) GetPartitionedExtractionDomain(
 		return nil, errors.New("get partitioned extraction domain: invalid stored authority")
 	}
 	return &publication, nil
+}
+
+// GetPartitionedExtractionDomainReference reads one exact current row without
+// transferring its large canonical plan and root. Final authority later
+// validates those complete bytes against these immutable digests.
+func (s *Surreal) GetPartitionedExtractionDomainReference(
+	ctx context.Context, repository, domain string,
+) (PartitionedExtractionDomainReference, error) {
+	if strings.TrimSpace(repository) != repository || repository == "" ||
+		strings.TrimSpace(domain) != domain || domain == "" {
+		return PartitionedExtractionDomainReference{}, errors.New("get partitioned extraction domain reference: invalid scope")
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return PartitionedExtractionDomainReference{}, fmt.Errorf("get partitioned extraction domain reference: %w", err)
+	}
+	results, err := storeQuery[[]PartitionedExtractionDomainReference](ctx, s.accounting, s.db,
+		`SELECT schema, repository, domain, run_id, plan_digest, root_digest,
+		candidate_digest, source_digest, observation_digest FROM $rid LIMIT 1`,
+		map[string]any{"rid": partitionedDomainID(repository, domain)}, storeRead())
+	if err != nil {
+		return PartitionedExtractionDomainReference{}, fmt.Errorf("get partitioned extraction domain reference: %w", err)
+	}
+	rows, err := archiveTailPointRows(results)
+	if err != nil {
+		return PartitionedExtractionDomainReference{}, fmt.Errorf("get partitioned extraction domain reference: %w", err)
+	}
+	if len(rows) == 1 {
+		value := rows[0]
+		if value.Schema != PartitionedExtractionDomainSchema || value.Repository != repository ||
+			value.Domain != domain || value.RunID == "" || len(value.RunID) > maxEvidenceIdentityBytes ||
+			!validSHA256Digest(value.PlanDigest) || !validSHA256Digest(value.RootDigest) ||
+			!validSHA256Digest(value.CandidateDigest) || !validSHA256Digest(value.SourceDigest) ||
+			!validSHA256Digest(value.ObservationDigest) {
+			return PartitionedExtractionDomainReference{}, errors.New("get partitioned extraction domain reference: invalid current row")
+		}
+		return value, nil
+	}
+	return PartitionedExtractionDomainReference{}, fmt.Errorf("get partitioned extraction domain reference: %w", ErrNotFound)
 }
 
 // ReleaseOneUnrootedPartitionRun transfers at most one sealed historical run

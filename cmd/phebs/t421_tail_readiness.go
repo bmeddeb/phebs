@@ -42,6 +42,18 @@ func (reader *t421FinalAuthorityReader) ReadTailReadiness(
 	if selector.Repository != reader.repository || selector.Backend != store.ServiceRuntimeV3 {
 		return nil, nil, errors.New("T42.1 tail-readiness selected runtime is invalid")
 	}
+	archiveTail, _ := ctx.Value(t422ArchiveTailKey{}).(bool)
+	var before *store.GenerationSchedule
+	if archiveTail {
+		var idle bool
+		before, idle, err = t422ArchiveTailSchedule(ctx, reader.store, reader.repository)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !idle {
+			return t421TailReadinessMarshal("pending", selector, relationshippublication.RootV3{}, nil)
+		}
+	}
 
 	root := filepath.Join(reader.dataDir, "relationships")
 	pointer, err := relationshippublication.ReadPointerV3(ctx, root, reader.repository)
@@ -81,6 +93,16 @@ func (reader *t421FinalAuthorityReader) ReadTailReadiness(
 	if !current || !t421TailCallerMatchesRelationship(*caller, relationship, resolver) {
 		return t421TailReadinessMarshal("pending", selector, relationship, nil)
 	}
+	archiveCurrent := true
+	if archiveTail {
+		archiveCurrent, err = reader.t422ArchiveTailCurrent(ctx, relationship, resolver)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !archiveCurrent {
+			return t421TailReadinessMarshal("pending", selector, relationship, nil)
+		}
+	}
 
 	confirmed, err := relationshippublication.ReadPointerV3(ctx, root, reader.repository)
 	if err != nil {
@@ -91,6 +113,15 @@ func (reader *t421FinalAuthorityReader) ReadTailReadiness(
 	}
 	if err := reader.store.ConfirmServiceRuntimeSelector(ctx, selector); err != nil {
 		return t421TailReadinessResult(err)
+	}
+	if archiveTail {
+		after, idle, err := t422ArchiveTailSchedule(ctx, reader.store, reader.repository)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !t422ArchiveTailReady(before, after, archiveCurrent, idle) {
+			return t421TailReadinessMarshal("pending", selector, relationship, nil)
+		}
 	}
 	return t421TailReadinessMarshal("ready", selector, relationship, caller)
 }

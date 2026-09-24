@@ -22,6 +22,9 @@ const (
 	correctedInspectionPollMS               = uint64(5_000)
 	correctedTailControlReads               = uint64(4)
 	correctedTailStoreReads                 = uint64(4)
+	v5ArchiveTailControlReads               = uint64(7)
+	v5ArchiveTailStoreReadsMinimum          = uint64(21)
+	v5ArchiveTailStoreReadsMaximum          = uint64(275)
 	correctedPhysicalTransitionControlReads = uint64(41)
 	correctedReturnTransitionControlReads   = uint64(5)
 	correctedPhysicalTransitionReadClass    = "search-reader-current-prior-retention"
@@ -105,7 +108,7 @@ func applyCorrectedPhaseReadMaximums(work *WorkEnvelope, plan Plan) error {
 }
 
 func correctedPhaseReadMaximums(plan Plan) ([]phaseReadMaximum, error) {
-	rows, _, err := correctedInspectionInventory(plan.Profile)
+	rows, _, err := planInspectionInventory(plan)
 	if err != nil {
 		return nil, err
 	}
@@ -697,6 +700,42 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 	return rows, epochRows, nil
 }
 
+// Only V5 archive T reads the current upstream and V3 relationship schedule
+// before and after the current-target read.
+// Retained inventories keep their original bytes and costs.
+func planInspectionInventory(plan Plan) ([]phaseInspectionInventory, []epochInspectionInventory, error) {
+	rows, epochs, err := correctedInspectionInventory(plan.Profile)
+	if err != nil || plan.Schema != PlanV5Schema {
+		return rows, epochs, err
+	}
+	if len(rows) != 15 || rows[11].Phase != "archive_restore" || len(epochs) != 5 || epochs[4].ServerEpoch != 5 {
+		return nil, nil, errors.New("V5 archive inspection inventory is incomplete")
+	}
+	archive := &rows[11]
+	calls := archive.TailReadinessCalls.Maximum
+	controlMaximum, err := checkedMultiply(v5ArchiveTailControlReads, calls)
+	if err != nil {
+		return nil, nil, err
+	}
+	storeMaximum, err := checkedMultiply(v5ArchiveTailStoreReadsMaximum, calls)
+	if err != nil {
+		return nil, nil, err
+	}
+	oldControlMaximum, oldStoreMaximum := archive.TailControlFileReads.Maximum, archive.TailStoreReadAttempts.Maximum
+	archive.TailControlFileReads = CounterBound{Minimum: v5ArchiveTailControlReads, Maximum: controlMaximum}
+	archive.TailStoreReadAttempts = CounterBound{Minimum: v5ArchiveTailStoreReadsMinimum, Maximum: storeMaximum}
+	epoch := &epochs[4]
+	epoch.TailControlFileReadsMaximum, err = checkedInspectionReadSum(epoch.TailControlFileReadsMaximum-oldControlMaximum, controlMaximum)
+	if err != nil {
+		return nil, nil, err
+	}
+	epoch.TailStoreReadAttemptsMaximum, err = checkedInspectionReadSum(epoch.TailStoreReadAttemptsMaximum-oldStoreMaximum, storeMaximum)
+	if err != nil {
+		return nil, nil, err
+	}
+	return rows, epochs, nil
+}
+
 func exactInspectionCalls(value uint64) CounterBound {
 	return CounterBound{Minimum: value, Maximum: value}
 }
@@ -882,11 +921,11 @@ func correctedProductQueryMemberReadMaximum(queries []QueryCase) (uint64, error)
 }
 
 func correctedInspectionInventorySHA256(profile CombinedProfile) (string, error) {
-	return inspectionInventorySHA256(profile, correctedTailReadinessTransitions())
+	return inspectionInventorySHA256(Plan{Profile: profile}, correctedTailReadinessTransitions())
 }
 
-func inspectionInventorySHA256(profile CombinedProfile, transitions []tailReadinessTransition) (string, error) {
-	phases, epochs, err := correctedInspectionInventory(profile)
+func inspectionInventorySHA256(plan Plan, transitions []tailReadinessTransition) (string, error) {
+	phases, epochs, err := planInspectionInventory(plan)
 	if err != nil {
 		return "", err
 	}

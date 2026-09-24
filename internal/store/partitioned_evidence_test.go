@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidateid"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
@@ -214,6 +215,21 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 	if err != nil || !samePartitionedDomain(*stored, publication) {
 		t.Fatalf("stored publication = %+v, %v", stored, err)
 	}
+	readCtx, ledger, err := readaccounting.Start(ctx, readaccounting.Counts{StoreReadAttempts: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reference, err := s.GetPartitionedExtractionDomainReference(readCtx, repository, domain)
+	counts, finishErr := ledger.Finish()
+	if err != nil || finishErr != nil || counts != (readaccounting.Counts{StoreReadAttempts: 1}) ||
+		reference != (PartitionedExtractionDomainReference{
+			Schema: publication.Schema, Repository: repository, Domain: domain, RunID: run.ID,
+			PlanDigest: publication.PlanDigest, RootDigest: publication.RootDigest,
+			CandidateDigest: publication.CandidateDigest, SourceDigest: publication.SourceDigest,
+			ObservationDigest: publication.ObservationDigest,
+		}) {
+		t.Fatalf("scalar current reference = %+v, counts=%+v, errors=%v/%v", reference, counts, err, finishErr)
+	}
 	secondChunk := "sha256:" + strings.Repeat("7", 64)
 	if err := s.AddEvidenceChunk(ctx, run.ID, secondChunk, 1, atoms, associations, assertions); !errors.Is(err, ErrConflict) {
 		t.Fatalf("append after partition seal = %v, want conflict", err)
@@ -246,6 +262,11 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 	if err != nil || storedB.PriorRunID != run.ID ||
 		storedB.PriorPlanDigest != publication.PlanDigest || storedB.PriorRootDigest != publication.RootDigest {
 		t.Fatalf("B rollback floor = %+v, %v", storedB, err)
+	}
+	newReference, err := s.GetPartitionedExtractionDomainReference(ctx, repository, domain)
+	if err != nil || newReference.RunID != runB.ID || newReference.PlanDigest != planDigestB ||
+		newReference.RootDigest != publicationB.RootDigest || newReference == reference {
+		t.Fatalf("scalar reference did not advance with current domain: %+v, %v", newReference, err)
 	}
 	if err := s.PublishPartitionedExtractionDomain(ctx, publication); err != nil {
 		t.Fatalf("reactivate A: %v", err)

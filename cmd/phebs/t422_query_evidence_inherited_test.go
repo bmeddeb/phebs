@@ -20,6 +20,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 )
 
 const t422QueryEvidenceInheritedMode = "PHEBS_T422_QUERY_EVIDENCE_INHERITED"
@@ -36,7 +37,7 @@ func t422QueryEvidenceInheritedRecord(t *testing.T, mode string) (dispatchadmiss
 		return record, raw
 	}
 	record, raw := t422LifecycleBootstrapRecord(t)
-	if mode != "wrong_epoch" {
+	if mode != "wrong_epoch" && mode != "archive_tail_wrong_epoch" {
 		raw = bytes.Replace(raw, []byte(`"server_epoch":4`), []byte(`"server_epoch":5`), 1)
 		record.Producer.ID, record.Phase, record.Limits.Phases = 6, 12, 3
 		record.Control.Phases, record.Control.InitialPhase, record.Control.MaximumPhases = []uint32{12, 13, 14}, 12, 3
@@ -46,9 +47,9 @@ func t422QueryEvidenceInheritedRecord(t *testing.T, mode string) (dispatchadmiss
 }
 
 // Real inherited DA/PC, owner/request admission and auth are exercised here.
-// Only the F body is supplied: this is not an engine/catalog or phase pass.
+// The F and archive-tail bodies are supplied: this is not an engine/catalog or phase pass.
 func TestT422QueryEvidenceInheritedRouting(t *testing.T) {
-	for _, mode := range []string{"complete", "wrong_phase", "wrong_epoch", "reuse_complete", "reuse_cancel", "reuse_write", "reuse_phase", "reuse_request", "reuse_prior", "continuity_complete", "continuity_duplicate", "continuity_no_semantic"} {
+	for _, mode := range []string{"complete", "wrong_phase", "wrong_epoch", "reuse_complete", "reuse_cancel", "reuse_write", "reuse_phase", "reuse_request", "reuse_prior", "continuity_complete", "continuity_duplicate", "continuity_no_semantic", "archive_tail_complete", "archive_tail_wrong_phase", "archive_tail_wrong_epoch"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 			defer cancel()
@@ -129,10 +130,10 @@ func TestT422QueryEvidenceInheritedRouting(t *testing.T) {
 				t.Fatal(err)
 			}
 			advances := 2
-			if mode == "wrong_phase" || mode == "reuse_phase" || mode == "reuse_prior" {
+			if mode == "wrong_phase" || mode == "reuse_phase" || mode == "reuse_prior" || mode == "archive_tail_wrong_phase" {
 				advances = 1
 			}
-			if mode == "wrong_epoch" {
+			if mode == "wrong_epoch" || mode == "archive_tail_complete" || mode == "archive_tail_wrong_epoch" {
 				advances = 0
 			}
 			for range advances {
@@ -214,6 +215,7 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 		return
 	}
 	continuity := strings.HasPrefix(mode, "continuity_")
+	archiveTail := strings.HasPrefix(mode, "archive_tail_")
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
@@ -233,7 +235,7 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatal("owners", err)
 	}
-	failures, calls := 0, 0
+	failures, calls, tailCalls := 0, 0, 0
 	launch.fail = func(error) { failures++ }
 	var report t421ExactReadReport
 	var reports int
@@ -261,6 +263,19 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 				t.Error("caller continuity opt-in context differs")
 			}
 			return finalBody, nil, nil
+		}},
+		t421ExactFinalAuthorityRead{Limits: t421TailReadinessLimits(), Read: func(ctx context.Context) ([]byte, func() error, error) {
+			tailCalls++
+			if selected, _ := ctx.Value(t422ArchiveTailKey{}).(bool); !selected {
+				t.Error("archive tail opt-in context absent")
+			}
+			if err := readaccounting.Charge(ctx, readaccounting.ControlFileRead, 7); err != nil {
+				return nil, nil, err
+			}
+			if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 23); err != nil {
+				return nil, nil, err
+			}
+			return []byte(`{"schema":"t421-tail-readiness-source-free-v1","status":"ready"}` + "\n"), nil, nil
 		}})
 	state.semantic = launch
 	if mode == "continuity_no_semantic" {
@@ -299,10 +314,17 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 		t.Fatal("request token missing", scanner.Err())
 	}
 	token := scanner.Text()
-	request := exactT421ReadRequest(http.MethodGet, t421ExactFinalAuthorityPath, 1).WithContext(ctx)
+	path := t421ExactFinalAuthorityPath
+	if archiveTail {
+		path = t421ExactTailReadinessPath
+	}
+	request := exactT421ReadRequest(http.MethodGet, path, 1).WithContext(ctx)
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
-	if mode != "reuse_prior" && !continuity {
+	if mode != "reuse_prior" && !continuity && !archiveTail {
 		request.Header.Set(t422QueryEvidenceHeader, t422QueryEvidenceValue)
+	}
+	if archiveTail {
+		request.Header.Set(t422ArchiveTailHeader, t422ArchiveTailValue)
 	}
 	if continuity {
 		request.Header.Set(t422CallerContinuityHeader, t422CallerContinuityValue)
@@ -354,6 +376,11 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 			reuseOutput.String() != "RU1:2:3:00000\n" || len(events) != 2 || events[0] != "report" || events[1] != "reuse_after_prior" {
 			t.Fatal("reuse did not follow prior/report", response.status, calls, failures, reports, reuseOutput.String(), events)
 		}
+	} else if mode == "archive_tail_complete" {
+		if response.status != http.StatusOK || calls != 0 || tailCalls != 1 || failures != 0 || reports != 1 ||
+			report.Status != "complete" || report.ControlFileReads != 7 || report.StoreReadAttempts != 23 {
+			t.Fatal("selected archive tail failed", response.status, calls, tailCalls, failures, reports, report)
+		}
 	} else if mode == "complete" || mode == "continuity_complete" {
 		if response.status != http.StatusOK || calls != 1 || failures != 0 || report.Status != "complete" || report.VisibleRepositories != nil {
 			t.Fatal("selected F failed", response.status, calls, failures, report)
@@ -362,7 +389,7 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 		if response.status != http.StatusConflict || calls != 0 || failures != 1 || reports != 1 || report.Status != "admission_refused" || reuseOutput.Len() != 0 {
 			t.Fatal("mismatched terminal reached reuse", response.status, calls, failures, reports, report, reuseOutput.String())
 		}
-	} else if response.status != http.StatusConflict || calls != 0 || failures != 1 || report.Status != "admission_refused" {
+	} else if response.status != http.StatusConflict || calls != 0 || tailCalls != 0 || failures != 1 || report.Status != "admission_refused" {
 		t.Fatal("wrong epoch/phase reached supplied reader", response.status, calls, failures, report)
 	}
 	fmt.Println("checked")

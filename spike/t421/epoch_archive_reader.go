@@ -50,7 +50,7 @@ func (run *ExecutionEpochOneRun) newArchiveInspection(ctx context.Context) (*exe
 	}
 	plan := run.flow.plan
 	projection, err := expectedStateProjectionForPhase(plan, "archive_restore")
-	rows, totals, inventoryErr := correctedInspectionInventory(plan.Profile)
+	rows, totals, inventoryErr := planInspectionInventory(plan)
 	if !processAccountingPlanSemantics(plan.Schema) || err != nil || inventoryErr != nil || len(rows) != 15 || rows[11].Phase != "archive_restore" || rows[11].ServerEpoch != 5 ||
 		projection.PhysicalRevision != "a-return" || projection.LogicalRevision != "a-return" || projection.CatalogSource.SHA256 != run.epoch.CatalogSHA256 {
 		return nil, errEpochInspection
@@ -152,7 +152,7 @@ func (reader *executionEpochInspection) beginCollection() error {
 		return errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(reader.plan, "lifecycle_collection")
-	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(reader.plan)
 	if err != nil || inventoryErr != nil || len(rows) != 15 || rows[12].Phase != "lifecycle_collection" || rows[12].ServerEpoch != 5 ||
 		projection.CatalogSource.SHA256 != reader.run.epoch.CatalogSHA256 {
 		return errEpochInspection
@@ -175,7 +175,7 @@ func (reader *executionEpochInspection) beginProductInspection() error {
 		return errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(reader.plan, "product_queries")
-	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(reader.plan)
 	if err != nil || inventoryErr != nil || len(rows) != 15 || rows[13].Phase != "product_queries" || rows[13].ServerEpoch != 5 ||
 		rows[13].FinalAuthorityPasses != exactInspectionCalls(2) || projection.CatalogSource.SHA256 != reader.run.epoch.CatalogSHA256 {
 		return errEpochInspection

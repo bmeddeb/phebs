@@ -174,7 +174,7 @@ func (run *ExecutionEpochOneRun) newEpochInspection(ctx context.Context) (*execu
 		return nil, errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(plan, "cold")
-	rows, _, inventoryErr := correctedInspectionInventory(plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(plan)
 	if err != nil || inventoryErr != nil || len(rows) < 2 || rows[1].Phase != "cold" || rows[1].ServerEpoch != 1 ||
 		projection.PhysicalRevision != "a" || projection.LogicalRevision != "a" || projection.CatalogSource.SHA256 != run.epoch.CatalogSHA256 {
 		return nil, errEpochInspection
@@ -192,7 +192,7 @@ func (reader *executionEpochInspection) beginWarm() error {
 		return errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(reader.plan, "warm_noop")
-	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(reader.plan)
 	if err != nil || inventoryErr != nil || len(rows) < 3 || rows[2].Phase != "warm_noop" || rows[2].ServerEpoch != 1 {
 		return errEpochInspection
 	}
@@ -335,6 +335,10 @@ func (reader *executionEpochInspection) readRequest(ctx context.Context, path st
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
 	request.Header.Set("X-Phebs-T421-Exact-Reads", "source-free-v1")
 	request.Header.Set("X-Phebs-T421-Exact-Read-Ordinal", strconv.FormatUint(ordinal, 10))
+	if path == "/api/t421/tail-readiness" && reader.plan.Schema == PlanV5Schema &&
+		run.epoch.Epoch == 5 && reader.projection.Phase == "archive_restore" {
+		request.Header.Set("X-Phebs-T422-Archive-Tail", "settled-v1")
+	}
 	if path == "/api/t421/final-authority" && reader.plan.Schema == PlanV5Schema {
 		request.Header.Set("X-Phebs-T422-Caller-Continuity", "manifest-v1")
 	}
@@ -485,7 +489,12 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 		return result, report, errEpochInspection
 	}
 	reader.tailCalls++
-	raw, status, report, err := reader.read(ctx, "/api/t421/tail-readiness", 4<<10, epochInspectionReport{ControlFileReads: 4, StoreReadAttempts: 4})
+	archiveV5 := reader.plan.Schema == PlanV5Schema && reader.run.epoch.Epoch == 5 && reader.projection.Phase == "archive_restore"
+	maximum := epochInspectionReport{ControlFileReads: correctedTailControlReads, StoreReadAttempts: correctedTailStoreReads}
+	if archiveV5 {
+		maximum = epochInspectionReport{ControlFileReads: v5ArchiveTailControlReads, StoreReadAttempts: v5ArchiveTailStoreReadsMaximum}
+	}
+	raw, status, report, err := reader.read(ctx, "/api/t421/tail-readiness", 4<<10, maximum)
 	if err != nil || status != http.StatusOK || decodeEpochJSON(raw, &result, false) != nil || result.Schema != "t421-tail-readiness-source-free-v1" {
 		return result, report, errEpochInspection
 	}
@@ -495,7 +504,8 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 			return result, report, errEpochInspection
 		}
 	case "ready":
-		if report.ControlFileReads != 4 || report.StoreReadAttempts != 4 {
+		if archiveV5 && (report.ControlFileReads != v5ArchiveTailControlReads || report.StoreReadAttempts < v5ArchiveTailStoreReadsMinimum) ||
+			!archiveV5 && (report.ControlFileReads != correctedTailControlReads || report.StoreReadAttempts != correctedTailStoreReads) {
 			return result, report, errEpochInspection
 		}
 		for _, digest := range []string{result.SelectedRuntimeSHA256, result.RelationshipGenerationSHA256, result.RelationshipRootSHA256, result.CallerGenerationSHA256, result.CallerRootSHA256} {

@@ -133,6 +133,16 @@ passed focused normal/race, vet, lint, module, docs and glossary gates, and
 exact-source review found no issue. The failed image remains preserved; its
 mounted custody leaves about 82 GiB free against the 120-GiB preflight minimum.
 A new full rehearsal, integration and any fresh freeze remain open.
+The unsealed V5 archive tail is being amended to require the selected
+relationship's current restored inputs and a V3 relationship schedule that is
+absent or successfully settled before owner drainage. An absent current
+pointer and an invalid or dangling pointer are distinct; the latter refuses.
+The reviewed phase
+deadline remains only a
+bounded owner join after readiness; V5 does not require relationship digest
+change. Its selected read adds bounded scalar authority checks and revised
+inspection accounting while V1–V4 stay exact. The failed image and all
+remaining gates retain the posture above.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

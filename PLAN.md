@@ -5154,3 +5154,39 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   below the 120-GiB rehearsal preflight threshold, while the failed image
   remained mounted and preserved. No cleanup, new full rehearsal, integration,
   fresh freeze or ceremony was performed.
+
+- **2026-09-24 — T42.2v V5 restored-tail settlement amendment.** The
+  deadline-only owner-drain correction above is insufficient as readiness:
+  V5's archive tail can accept an unchanged selected relationship while the
+  restored extraction authority has advanced and a relationship rebuild is
+  queued or running. An old settled schedule can also precede the new enqueue.
+  Amend only unsealed V5: an authenticated epoch-five `archive_restore` T
+  checks the selected relationship against the current bounded observation,
+  nine current extraction-domain identities, resolver catalog, V3 catalog
+  pointer and state summary, then requires the V3 relationship schedule to be
+  absent or settled without failures across its current-target read. The V5
+  schedule read proves exact current-pointer absence or resolves that pointer
+  to a valid schedule for the selected repository and V3 stage; dangling or
+  cross-scope pointers refuse. An absent schedule is valid when the
+  relationship already matches those current inputs;
+  V5 does not require its relationship digests to change. The final F retains
+  its full independent authority and caller-continuity proof. The previous
+  phase-deadline owner drain remains only a bounded join of all ordinary owners
+  after T, never readiness evidence. V1–V4 native T bytes and 4/4 read budget
+  remain exact. The selected V5 T projects only nine fixed small store
+  identities, not their full plan/root blobs: per poll it adds three bounded
+  observation control reads, nine scalar-domain reads, two resolver reads,
+  four catalog/state reads and two schedule pointer reads, plus two exact
+  schedule-row reads when those pointers exist. Schedule conflict retries
+  retain their existing at-most-64 attempts per point read, so V5 archive T is
+  C7/S21 with absent pointers, C7/S23 with settled rows, and at most C7/S275.
+  It holds only the existing reader
+  request boundary and bounded store calls, retains nine small references per
+  poll, and adds no full-corpus/shard read, write, hash of plan/root blobs,
+  child, persistent disk or cache invalidation. Ordinary query/request, sync
+  tick, startup/restart, retry/no-op and publication costs remain unchanged.
+  The 2,881-attempt archive ceiling and
+  original phase deadline remain. V5 inspection inventory, work envelope and
+  readiness policy bind these limits; no V5 plan is sealed. Focused native and
+  contract tests, exact-tree gates, independent review and a fresh full
+  rehearsal remain required before freeze or ceremony.

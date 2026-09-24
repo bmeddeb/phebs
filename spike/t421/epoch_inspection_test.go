@@ -357,6 +357,9 @@ func TestEpochInspectionTailClosedReadiness(t *testing.T) {
 				if r.URL.Path != "/api/t421/tail-readiness" || r.URL.RawQuery != "" {
 					t.Error("tail route changed")
 				}
+				if r.Header.Get("X-Phebs-T422-Archive-Tail") != "" {
+					t.Error("historical tail acquired V5 opt-in")
+				}
 				value := epochTailReadiness{Schema: "t421-tail-readiness-source-free-v1", Status: "ready", SelectedRuntimeSHA256: testDigest("runtime"), RelationshipGenerationSHA256: testDigest("relationship"), RelationshipRootSHA256: testDigest("relationship-root"), CallerGenerationSHA256: testDigest("caller"), CallerRootSHA256: testDigest("caller-root")}
 				if mode == "pending" || mode == "pending-with-digest" {
 					value = epochTailReadiness{Schema: value.Schema, Status: "pending"}
@@ -385,6 +388,60 @@ func TestEpochInspectionTailClosedReadiness(t *testing.T) {
 			value, _, err := reader.Tail(t.Context())
 			if (err == nil) != (mode == "pending" || mode == "ready") {
 				t.Fatal(mode, value, err)
+			}
+		})
+	}
+}
+
+func TestEpochInspectionV5ArchiveTailSettledReadAccounting(t *testing.T) {
+	for _, test := range []struct {
+		name             string
+		status           string
+		controls, stores uint64
+		accept           bool
+	}{
+		{"ready-absent", "ready", 7, 21, true},
+		{"ready-settled", "ready", 7, 23, true},
+		{"ready-maximum", "ready", 7, 275, true},
+		{"pending-prefix", "pending", 2, 1, true},
+		{"legacy-ready", "ready", 4, 4, false},
+		{"short-ready", "ready", 7, 20, false},
+		{"short-control", "ready", 6, 21, false},
+		{"over-maximum", "ready", 7, 276, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			value := epochTailReadiness{Schema: "t421-tail-readiness-source-free-v1", Status: test.status,
+				SelectedRuntimeSHA256: testDigest("runtime"), RelationshipGenerationSHA256: testDigest("relationship"),
+				RelationshipRootSHA256: testDigest("relationship-root"), CallerGenerationSHA256: testDigest("caller"),
+				CallerRootSHA256: testDigest("caller-root")}
+			if test.status == "pending" {
+				value = epochTailReadiness{Schema: value.Schema, Status: value.Status}
+			}
+			reader := epochTestHTTPReader(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/api/t421/tail-readiness" || r.Header.Get("X-Phebs-T422-Archive-Tail") != "settled-v1" {
+					t.Error("V5 archive tail opt-in differs")
+				}
+				w.Header().Set("Trailer", epochReadTrailer)
+				_, _ = w.Write(epochTestJSON(t, value, false))
+				report := epochInspectionReport{Schema: "t421-source-free-read-accounting-v1", Status: "complete", RequestOrdinal: 1,
+					ControlFileReads: test.controls, StoreReadAttempts: test.stores}
+				w.Header().Set(epochReadTrailer, base64.RawURLEncoding.EncodeToString(bytes.TrimSuffix(epochTestJSON(t, report, false), []byte{'\n'})))
+			}))
+			configureArchiveTestReader(t, reader)
+			reader.plan.Schema = PlanV5Schema
+			rows, _, err := planInspectionInventory(reader.plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reader.bounds = rows[11]
+			reader.archivePrior.AuthorityState = AuthorityState{
+				RelationshipGenerationSHA256: testDigest("relationship"), RelationshipRootSHA256: testDigest("relationship-root"),
+				CallerGenerationSHA256: testDigest("caller"), CallerRootSHA256: testDigest("caller-root"),
+			}
+			reader.progressReady = true
+			result, _, err := reader.Tail(t.Context())
+			if (err == nil) != test.accept || err == nil && result.Status != test.status {
+				t.Fatal("V5 archive tail result differs", result, err)
 			}
 		})
 	}

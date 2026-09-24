@@ -169,7 +169,7 @@ func (reader *executionEpochInspection) beginStale() error {
 		return errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(reader.plan, "stale_lease")
-	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(reader.plan)
 	if err != nil || inventoryErr != nil || len(rows) < 7 || rows[6].Phase != "stale_lease" || rows[6].ServerEpoch != 3 {
 		return errEpochInspection
 	}

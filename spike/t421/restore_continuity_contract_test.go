@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/recovery"
@@ -39,8 +40,10 @@ func TestCallerRestoreContinuityV5Derivation(t *testing.T) {
 	correction := *next.Correction
 	correction.IdentityDerivations = prior.Correction.IdentityDerivations
 	correction.InspectionInventorySHA256 = prior.Correction.InspectionInventorySHA256
+	correction.ReadAccountingPolicy = prior.Correction.ReadAccountingPolicy
 	correction.RequiredReadiness = prior.Correction.RequiredReadiness
 	restored.Correction = &correction
+	restored.WorkEnvelope = prior.WorkEnvelope
 	if !reflect.DeepEqual(restored, prior) {
 		t.Fatal("V5 changed an unrelated V4 plan field")
 	}
@@ -56,6 +59,7 @@ func TestCallerRestoreContinuityV5Derivation(t *testing.T) {
 			plan.Correction.InspectionInventorySHA256 = prior.Correction.InspectionInventorySHA256
 		},
 		func(plan *Plan) { plan.Correction.IdentityDerivations = prior.Correction.IdentityDerivations },
+		func(plan *Plan) { plan.Correction.ReadAccountingPolicy = prior.Correction.ReadAccountingPolicy },
 		func(plan *Plan) { plan.Correction.RequiredReadiness = prior.Correction.RequiredReadiness },
 		func(plan *Plan) {
 			plan.Correction.RequiredReadiness = plan.Correction.RequiredReadiness[:len(plan.Correction.RequiredReadiness)-1]
@@ -68,6 +72,78 @@ func TestCallerRestoreContinuityV5Derivation(t *testing.T) {
 		if err := validatePlanExecutionContract(bad); err == nil {
 			t.Fatal("V5 accepted a retained V4 continuity binding")
 		}
+	}
+}
+
+func TestCallerRestoreContinuityV5ArchiveInspectionInventory(t *testing.T) {
+	prior := restoreContinuityTestPlan(t)
+	oldRows, oldEpochs, err := planInspectionInventory(prior)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retainedRows, retainedEpochs, err := correctedInspectionInventory(prior.Profile)
+	if err != nil || !reflect.DeepEqual(oldRows, retainedRows) || !reflect.DeepEqual(oldEpochs, retainedEpochs) {
+		t.Fatal("V4 inspection inventory changed", err)
+	}
+	next := prior
+	if err := applyCallerRestoreContinuityCorrection(&next); err != nil {
+		t.Fatal(err)
+	}
+	rows, epochs, err := planInspectionInventory(next)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != len(oldRows) || len(epochs) != len(oldEpochs) {
+		t.Fatal("V5 inspection inventory changed its shape")
+	}
+	for index := range rows {
+		if index != 11 && !reflect.DeepEqual(rows[index], oldRows[index]) {
+			t.Fatalf("V5 changed %s inspection", rows[index].Phase)
+		}
+	}
+	archive, oldArchive := rows[11], oldRows[11]
+	if archive.Phase != "archive_restore" || archive.TailReadinessCalls.Maximum != 2_881 ||
+		archive.TailControlFileReads != (CounterBound{Minimum: 7, Maximum: 7 * 2_881}) ||
+		archive.TailStoreReadAttempts != (CounterBound{Minimum: 21, Maximum: 275 * 2_881}) {
+		t.Fatal("V5 archive T limits differ", archive)
+	}
+	if strings.Contains(next.Correction.ReadAccountingPolicy, ";T-C=4;T-S=4;") ||
+		!strings.Contains(next.Correction.ReadAccountingPolicy, ";T-default-C=4;T-default-S=4;T-archive-v5-C=7;T-archive-v5-S=[21,275];T-M=0;T-W=0;") {
+		t.Fatal("V5 read-accounting policy contradicts selected archive T")
+	}
+	archive.TailControlFileReads, archive.TailStoreReadAttempts = oldArchive.TailControlFileReads, oldArchive.TailStoreReadAttempts
+	if !reflect.DeepEqual(archive, oldArchive) {
+		t.Fatal("V5 archive changed an unrelated inspection bound")
+	}
+	for index := range epochs {
+		if index != 4 && !reflect.DeepEqual(epochs[index], oldEpochs[index]) {
+			t.Fatalf("V5 changed epoch %d inventory", index+1)
+		}
+	}
+	if epochs[4].TailControlFileReadsMaximum != oldEpochs[4].TailControlFileReadsMaximum+3*2_881 ||
+		epochs[4].TailStoreReadAttemptsMaximum != oldEpochs[4].TailStoreReadAttemptsMaximum+271*2_881 ||
+		epochs[4].AccountedServerRequestsMaximum != oldEpochs[4].AccountedServerRequestsMaximum {
+		t.Fatal("V5 epoch-five T or request maximum differs", epochs[4])
+	}
+	epochs[4].TailControlFileReadsMaximum = oldEpochs[4].TailControlFileReadsMaximum
+	epochs[4].TailStoreReadAttemptsMaximum = oldEpochs[4].TailStoreReadAttemptsMaximum
+	if !reflect.DeepEqual(epochs[4], oldEpochs[4]) {
+		t.Fatal("V5 epoch-five changed an unrelated inventory bound")
+	}
+	for index := range prior.WorkEnvelope.Phases {
+		got, want := next.WorkEnvelope.Phases[index], prior.WorkEnvelope.Phases[index]
+		if got.Phase == "archive_restore" {
+			if got.ControlReads.Maximum != want.ControlReads.Maximum+274*2_881 {
+				t.Fatal("V5 archive work ceiling did not include T", got.ControlReads.Maximum, want.ControlReads.Maximum)
+			}
+			got.ControlReads.Maximum = want.ControlReads.Maximum
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("V5 changed unrelated work bound in %s", got.Phase)
+		}
+	}
+	if err := validatePlanExecutionContract(next); err != nil {
+		t.Fatal(err)
 	}
 }
 

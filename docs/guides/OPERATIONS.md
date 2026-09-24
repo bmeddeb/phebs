@@ -7517,6 +7517,15 @@ deadline. All other control exchanges retain their 30-second bound. Preserve
 the failed image and repeat the full rehearsal only from reviewed exact source;
 this stopped prefix is no archive-completion or ceremony pass.
 
+The V5 archive tail now has a stronger prospective readiness condition: it
+checks the selected relationship against current restored inputs and waits for
+the V3 relationship schedule to be absent or successfully settled. A dangling
+or cross-scope current schedule pointer refuses. An old
+settled schedule alone cannot pass if its inputs are stale. The phase deadline
+above bounds only the following join of all owners. Final F still verifies the
+full restored authority and caller-continuity commitment. This amendment
+requires fresh review and a full rehearsal before any freeze.
+
 The private optional epoch-one rehearsal now recognizes
 `PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint
 restart and pressure-volume selectors, along with their existing predecessor

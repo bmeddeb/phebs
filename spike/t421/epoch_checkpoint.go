@@ -365,7 +365,7 @@ func (reader *executionEpochInspection) beginCheckpoint() error {
 		return errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(reader.plan, "process_restart")
-	rows, _, inventoryErr := correctedInspectionInventory(reader.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(reader.plan)
 	if err != nil || inventoryErr != nil || len(rows) < 8 || rows[7].Phase != "process_restart" || rows[7].ServerEpoch != 4 {
 		return errEpochInspection
 	}

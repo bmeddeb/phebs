@@ -260,7 +260,7 @@ func (run *ExecutionEpochOneRun) newReturnInspection(ctx context.Context) (*exec
 		return nil, errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(run.flow.plan, "return_a")
-	rows, _, inventoryErr := correctedInspectionInventory(run.flow.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(run.flow.plan)
 	if err != nil || inventoryErr != nil || len(rows) < 6 || rows[5].ServerEpoch != 3 || projection.CatalogSource.SHA256 != run.epoch.CatalogSHA256 {
 		return nil, errEpochInspection
 	}

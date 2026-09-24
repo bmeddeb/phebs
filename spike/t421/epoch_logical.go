@@ -241,7 +241,7 @@ func (run *ExecutionEpochOneRun) newLogicalInspection(ctx context.Context) (*exe
 		return nil, errEpochInspection
 	}
 	projection, err := expectedStateProjectionForPhase(run.flow.plan, "logical_delta_b")
-	rows, _, inventoryErr := correctedInspectionInventory(run.flow.plan.Profile)
+	rows, _, inventoryErr := planInspectionInventory(run.flow.plan)
 	if err != nil || inventoryErr != nil || len(rows) < 5 || rows[4].ServerEpoch != 2 || projection.CatalogSource.SHA256 != run.epoch.CatalogSHA256 {
 		return nil, errEpochInspection
 	}

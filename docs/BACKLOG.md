@@ -4776,6 +4776,21 @@ ceremony execution, release or scale/SLO claim follows.
   free against the 120-GiB preflight requirement. Preserve that image until an
   explicit disposition; no integration, freeze or ceremony has followed.
 
+  The V5 archive-tail amendment supersedes the deadline-only readiness
+  explanation: the selected relationship must match current restored inputs,
+  and its V3 schedule must be absent or settled without failures before owner
+  drainage. Current-pointer absence is distinguished from a dangling or
+  cross-scope schedule reference, which refuses. A pre-enqueue old settled
+  schedule cannot establish readiness.
+  V5 keeps the reviewed original-phase deadline only as a bounded join after
+  this predicate; it does not require relationship digests to change. The
+  authenticated V5-only T has C7/S21 for absent pointers, C7/S23 for settled
+  schedules, and maximum C7/S275 per call,
+  using nine scalar domain identities rather than full extraction roots; the
+  2,881-call ceiling, V1–V4 T contract and final F remain. Exact-tree gates,
+  independent review, clean protected source, 120 GiB preflight and a fresh
+  full rehearsal are still open. The failed image remains preserved.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

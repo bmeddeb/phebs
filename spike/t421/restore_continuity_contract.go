@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 const callerRestoreContinuityPolicy = "caller-restore-continuity-v1:full-validated-current-manifest;equal-generation-and-normalized-manifest-sha256;normalize-only-manifest-self-digest,upstream-domain-run-ids,upstream-provenance-digest;preserve-all-pairs,receipts,aggregates,and-other-fields;retain-and-authenticate-each-actual-manifest-root;archive-only;no-transport-byte-relaxation"
 
 const handoffLifecycleAccountingPolicy = "handoff-lifecycle-accounting-v1:joined-native-retention-and-selector-cleanup-prefixes;phase-producer-input-bound;accepted-cleanup-HTTP-equals-native-terminal;physical-reader-exact-two-zero-delete-turns;whole-phase-exact-reader-plus-cleanup;cleanup-read-attempts-counted-once;independent-SA-store-counts;stopped-prefix-not-success;no-V1-V4-change"
+
+const v5ArchiveTailReadinessPolicy = "archive-tail-readiness-v5:epoch-five-phase12-only;authenticated-settled-v1-opt-in;current-observation-and-extraction-upstream;current-resolver-and-catalog-state;V3-schedule-stable-absent-or-successfully-settled-across-current-target-read;ready-C7-S21-to-275;historical-T-exact"
 
 const restoredOwnerDrainPolicy = "restored-owner-drain-v1:V5-epoch-five-initial-phase12-only;authenticated-original-phase-deadline;no-deadline-renewal;all-other-control-exchanges-30s;unchanged-PC01-wire-and-pair-count;fail-closed"
 
@@ -21,7 +24,7 @@ func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 	if err := validatePlanExecutionContract(*plan); err != nil {
 		return fmt.Errorf("validate V4 caller-continuity preimage: %w", err)
 	}
-	digest, err := inspectionInventorySHA256(plan.Profile, planTailReadinessTransitions(PlanV5Schema))
+	digest, err := inspectionInventorySHA256(Plan{Schema: PlanV5Schema, Profile: plan.Profile}, planTailReadinessTransitions(PlanV5Schema))
 	if err != nil {
 		return err
 	}
@@ -29,12 +32,19 @@ func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 	correction := *plan.Correction
 	correction.IdentityDerivations = callerRestoreIdentityDerivations()
 	correction.InspectionInventorySHA256 = digest
-	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy, handoffLifecycleAccountingPolicy, restoredOwnerDrainPolicy)
+	const oldTailReads = ";T-C=4;T-S=4;T-M=0;T-W=0;"
+	const v5TailReads = ";T-default-C=4;T-default-S=4;T-archive-v5-C=7;T-archive-v5-S=[21,275];T-M=0;T-W=0;"
+	if strings.Count(correction.ReadAccountingPolicy, oldTailReads) != 1 {
+		return errors.New("V5 archive tail read-accounting preimage changed")
+	}
+	correction.ReadAccountingPolicy = strings.Replace(correction.ReadAccountingPolicy, oldTailReads, v5TailReads, 1)
+	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy, handoffLifecycleAccountingPolicy, v5ArchiveTailReadinessPolicy, restoredOwnerDrainPolicy)
 	plan.Correction = &correction
 	plan.Schema = PlanV5Schema
 	plan.ToolPolicy.ExecutionFreezeSchema = ExecutionFreezeV5Schema
 	plan.ReceiptContract.Schema = ReceiptV5Schema
-	return nil
+	plan.WorkEnvelope.Phases = slices.Clone(plan.WorkEnvelope.Phases)
+	return applyCorrectedPhaseReadMaximums(&plan.WorkEnvelope, *plan)
 }
 
 func planTailReadinessTransitions(schema string) []tailReadinessTransition {
