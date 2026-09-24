@@ -5337,3 +5337,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   closed. Focused native/race, exact-tree static/documentation gates,
   independent review, clean 120-GiB preflight and one fresh full rehearsal
   remain required before any readiness, integration, freeze or ceremony claim.
+
+- **2026-09-24 — T42.2v accounting-source inventory correction.** The complete
+  store gate found an inherited source-coverage assertion expecting ten
+  accounted calls in `partitioned_evidence.go`, although V5's
+  `GetPartitionedExtractionDomainReference` made the count eleven. The exact
+  targeted test fails the same way at clean base `47ec8177`; both involved
+  files have identical blobs at that base and the transaction-correction
+  commit. The diagnostic full package completed in 1,349.23 seconds with
+  2,241 passing, twelve skipped and this sole failing test; retain
+  `/private/tmp/t422v-unlazy/store-full-diagnostic.jsonl` SHA-256
+  `e681c8f7ae0dc720396e70b06041c956b16a62a386da535c90df9f92c16eaead`.
+  The added read already uses `storeQuery` with `s.accounting` and
+  `storeRead()`, and its native test requires one read attempt. Correct only
+  the expected inventory count. This changes no runtime query, request,
+  transaction, lock, cache, child, memory, disk or ceremony behavior. The
+  previously retained failed image was normally detached and its exact root
+  removed after the three logged artifact hashes were verified, under Ben's
+  standing approval; no rehearsal mount or port-65499 listener remains. The
+  corrected exact-tree full store gate and rehearsal still must pass.

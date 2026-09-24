@@ -126,7 +126,7 @@ func TestGenerationAccountingSourceCoverage(t *testing.T) {
 	unsupported := map[string]bool{}
 	for path, want := range map[string]int{
 		"generation_schedule.go": 26, "generation_lifecycle.go": 3,
-		"job_lifecycle.go": 3, "partitioned_evidence.go": 10, "partitioned_assertions.go": 3,
+		"job_lifecycle.go": 3, "partitioned_evidence.go": 11, "partitioned_assertions.go": 3,
 	} {
 		set := token.NewFileSet()
 		file, err := parser.ParseFile(set, path, nil, 0)

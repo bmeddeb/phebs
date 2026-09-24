@@ -4839,6 +4839,11 @@ ceremony execution, release or scale/SLO claim follows.
   native/race, independent exact-source review, complete machine gates,
   clean 120-GiB preflight and a fresh full rehearsal remain open; copied
   replay does not close the rehearsal AC.
+  The complete store gate also exposed an inherited stale source-coverage
+  count: V5 added an accounted partitioned-domain-reference read, bringing
+  the file's call inventory from ten to eleven. The same targeted test fails
+  at clean base `47ec8177`; its one-line expectation correction changes no
+  runtime behavior. The corrected full store gate remains required.
 
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
