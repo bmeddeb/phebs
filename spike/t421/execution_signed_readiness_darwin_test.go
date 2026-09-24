@@ -71,7 +71,7 @@ func TestPrepareExecutionSignedReadinessExecutor(t *testing.T) {
 	if err != nil {
 		t.Fatal("executor preparation build-input custody", err)
 	}
-	candidate := productionRehearsalBuildSchema(t, ctx, inputs, workspace, "t422-execute", PlanV4Schema)
+	candidate := productionRehearsalBuildSchema(t, ctx, inputs, workspace, "t422-execute", activeExecutionPlanSchema)
 	if ctx.Err() != nil || inputs.Check(ctx) != nil {
 		t.Fatal("executor preparation inputs changed or expired")
 	}
@@ -173,7 +173,7 @@ func TestExecutionSignedLauncherOptionalReadiness(t *testing.T) {
 	if err != nil {
 		t.Fatal("retained bootstrap build inputs", err)
 	}
-	executor, err := inputs.protectReferenceTool(buildCtx, bootstrap, "t422-execute", preparedExecutor, PlanV4Schema)
+	executor, err := inputs.protectReferenceTool(buildCtx, bootstrap, "t422-execute", preparedExecutor, activeExecutionPlanSchema)
 	if err != nil {
 		t.Fatal("retained bootstrap executor", err)
 	}

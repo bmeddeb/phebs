@@ -5092,3 +5092,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   main was clean at `d817ee0f`, and the preserved failed image remained mounted.
   V5 launch activation, integrated protected server build, remaining machine
   gates, full rehearsal, freeze and formal execution remain separate gates.
+
+- **2026-09-24 — T42.2v V5 activation.** Formal inner preparation, executor
+  verification, the disposable epoch rehearsal and signed readiness built V4
+  directly, so a rerun would have repeated the V4 caller-root refusal. They now
+  share one `activeExecutionPlanSchema` constant (V5) and `buildActiveExecutionPlan`;
+  a drift test requires the active constructor to produce that schema with its
+  V5 freeze and receipt schemas. V4 and V5 select the same reference-tool
+  recipes at a fixed source commit; a new protected source commit requires fresh
+  tool identities. Retained V1–V4 constructors, authoring and fixtures are
+  unchanged. Ordinary query, sync, startup, retry/no-op and publication costs
+  are unchanged. Formal preparation constructs and validates one V5 plan;
+  V5 final reads incur the opt-in bounded manifest hash cost recorded above.
+  A V5 rehearsal still needs a protected production
+  server containing the caller-continuity final read (`99ffe403`); against
+  `d817ee0f` the first V5 final read refuses for a missing commitment. The
+  retained 2026-09-23 restore evidence also showed, on real archived vs rebuilt
+  caller manifests (`c78bca…`/`ccb16d…`), equal continuity commitments
+  (`93f06385…`) and a changed commitment after one altered pair digest; the image
+  holding those manifests has since been removed.

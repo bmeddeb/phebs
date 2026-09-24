@@ -2009,11 +2009,13 @@ The prospective caller restore-continuity correction is available explicitly
 through `BuildPlanV5`, `AuthorV5`, and the author command's `-schema v5`.
 It requires equal caller semantic generation and a full-manifest continuity
 commitment that excludes only execution run provenance, while authenticating
-each actual manifest root. Historical V1–V4 artifacts remain exact. Default
-preparation/rehearsal/signed-readiness selections remain V4 and cannot yet
-exercise V5. Reviewed activation must bind their protected tools and plan to
-V5 before a V5 rehearsal. There is no sealed V5 artifact or authorization to
-launch. The owning PLAN ADR defines the contract and costs.
+each actual manifest root. Historical V1–V4 artifacts remain exact. Formal
+preparation, executor verification, the disposable rehearsal and signed
+readiness now select the single `activeExecutionPlanSchema` (V5) and build
+through `buildActiveExecutionPlan`. A V5 rehearsal additionally needs a
+protected production server that includes the caller-continuity final read.
+There is no sealed V5 artifact or authorization for formal ceremony execution.
+The owning PLAN ADR defines the contract and costs.
 
 On 2026-09-21 Ben authorized exact-main V4 author/seal after reviewed
 integration. Two independent clean worktrees at exact source

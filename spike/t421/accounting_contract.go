@@ -97,6 +97,15 @@ func BuildPlanV5(sourceCommit string) (Plan, error) {
 	return plan, nil
 }
 
+// activeExecutionPlanSchema is the one plan version formal preparation,
+// executor verification and the disposable rehearsals construct. Retained
+// V1-V4 evidence keeps its own constructors; change both lines together.
+const activeExecutionPlanSchema = PlanV5Schema
+
+func buildActiveExecutionPlan(sourceCommit string) (Plan, error) {
+	return BuildPlanV5(sourceCommit)
+}
+
 func knownPlanSchema(schema string) bool {
 	switch schema {
 	case PlanSchema, PlanV2Schema, PlanV3Schema, PlanV4Schema, PlanV5Schema:

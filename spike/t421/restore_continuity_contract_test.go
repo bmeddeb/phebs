@@ -318,3 +318,11 @@ func TestCallerRestoreContinuityV5FinalAndDownstream(t *testing.T) {
 		reader.restoredSamples.ArchiveComplete, reader.restoredSamples.CollectionComplete = true, true
 	}
 }
+
+func TestActiveExecutionPlanIsV5(t *testing.T) {
+	plan, err := buildActiveExecutionPlan(testSourceCommit)
+	if err != nil || plan.Schema != activeExecutionPlanSchema ||
+		plan.ToolPolicy.ExecutionFreezeSchema != ExecutionFreezeV5Schema || plan.ReceiptContract.Schema != ReceiptV5Schema {
+		t.Fatalf("active execution plan = %q/%q/%q, %v", plan.Schema, plan.ToolPolicy.ExecutionFreezeSchema, plan.ReceiptContract.Schema, err)
+	}
+}

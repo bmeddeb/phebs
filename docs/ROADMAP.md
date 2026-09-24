@@ -121,8 +121,9 @@ log/HTTP evidence now composes exact cleanup and reader subtotals, preserving
 V1–V4. Focused normal/race, independent source/cost review and selected full
 receipt/signing verification pass; the latter completed in 1160.990s with V3/V5
 test-signed package verification and refusal checks. These are modeled test
-receipts, not a ceremony pass. V5 launch activation, the integrated protected
-server build, remaining machine/rehearsal gates and any new freeze remain open.
+receipts, not a ceremony pass. V5 launch activation is implemented; the
+integrated protected server build, remaining machine/rehearsal gates and any
+new freeze remain open.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

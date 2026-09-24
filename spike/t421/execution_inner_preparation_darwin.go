@@ -121,7 +121,7 @@ func prepareExecutionInnerPreparation(
 		if pathErr != nil {
 			return refuse()
 		}
-		prepared.tools[index], err = prepared.builds.protectReferenceTool(ctx, workspace, role, path, PlanV4Schema)
+		prepared.tools[index], err = prepared.builds.protectReferenceTool(ctx, workspace, role, path, activeExecutionPlanSchema)
 		if err != nil {
 			return refuse()
 		}
@@ -137,7 +137,7 @@ func prepareExecutionInnerPreparation(
 	}
 
 	prepared.preclaimStage = executionPreclaimStagePlanConstruction
-	plan, err := BuildPlanV4(selection.PlanSourceCommit)
+	plan, err := buildActiveExecutionPlan(selection.PlanSourceCommit)
 	if err != nil {
 		return refuse()
 	}

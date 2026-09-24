@@ -116,7 +116,7 @@ func verifyExecutionProfileExecutor(ctx context.Context, builds *ExecutionGoBuil
 	if builds.check(ctx) != nil {
 		return ExecutionToolIdentity{}, ErrExecutionEpochOne
 	}
-	identity, goIdentity, err := builds.verifyReferenceTool(ctx, filepath.Dir(builds.directory), "t422-execute", path, PlanV4Schema)
+	identity, goIdentity, err := builds.verifyReferenceTool(ctx, filepath.Dir(builds.directory), "t422-execute", path, activeExecutionPlanSchema)
 	if err != nil || goIdentity != builds.goIdentity || identity.SHA256 != digest {
 		return ExecutionToolIdentity{}, ErrExecutionEpochOne
 	}
