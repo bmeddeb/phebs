@@ -102,6 +102,16 @@ and stopped at restored-successor archive binding: the final-body rebuild
 omitted V4 optional observations. Both rebuild sites now include them and the
 client final-body declaration matches production field order; no further
 rerun has started.
+The subsequent `cae2c9d8` rehearsal passed restored launch and health, then
+expired at archive completion: fresh extraction run provenance changed the
+caller manifest root despite equal semantic generation and pair content.
+Ben selected prospective V5 continuity, requiring authenticated actual roots
+and an equal full-manifest commitment excluding only run provenance and the
+self digest. V1–V4 remain exact; production manifest identity does not change.
+The correction is a review candidate, not a gate pass. The failed mounted
+image is under explicit preservation hold; no automatic cleanup or rerun is
+authorized by this change. Next: commit, independent review, then remaining
+machine and rehearsal gates before any new freeze.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

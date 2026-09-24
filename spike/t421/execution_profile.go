@@ -205,7 +205,7 @@ func phaseRuntimeBindingSchema(plan Plan) string {
 		return PhaseRuntimeBindingSchema
 	case PlanV2Schema:
 		return PhaseRuntimeBindingV2Schema
-	case PlanV3Schema, PlanV4Schema:
+	case PlanV3Schema, PlanV4Schema, PlanV5Schema:
 		return PhaseRuntimeBindingV3Schema
 	default:
 		return ""

@@ -1001,7 +1001,7 @@ func TestLogicalCatalogDeltaCannotReplaceRepositoryIdentities(t *testing.T) {
 }
 
 func TestIdentityDerivationTableIsComplete(t *testing.T) {
-	rows := frozenIdentityDerivations()
+	rows := callerRestoreIdentityDerivations()
 	seen := make(map[string]bool, len(rows))
 	for _, row := range rows {
 		expanded, err := row.ExpandedChangedInputs(frozenPhaseOrder())

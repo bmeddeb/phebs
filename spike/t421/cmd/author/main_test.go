@@ -24,6 +24,7 @@ func TestAuthorCommandSchemaSelection(t *testing.T) {
 		{"explicit_v2", []string{"-schema", "v2"}, t421.Author},
 		{"corrected_v3", []string{"-schema", "v3"}, t421.AuthorV3},
 		{"pressure_continuity_v4", []string{"-schema", "v4"}, t421.AuthorV4},
+		{"caller_restore_continuity_v5", []string{"-schema", "v5"}, t421.AuthorV5},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			args := append([]string{"-out", "plan-new.json", "-source-commit", "selected", "-repository-root", "."}, test.extra...)
@@ -44,7 +45,7 @@ func TestAuthorCommandRefusesBeforeAuthoring(t *testing.T) {
 	}{
 		{"missing_output", []string{"-source-commit", "selected"}},
 		{"missing_source", []string{"-out", "plan-new.json"}},
-		{"unknown_schema", []string{"-out", "plan-new.json", "-source-commit", "selected", "-schema", "v5"}},
+		{"unknown_schema", []string{"-out", "plan-new.json", "-source-commit", "selected", "-schema", "v6"}},
 		{"empty_schema", []string{"-out", "plan-new.json", "-source-commit", "selected", "-schema="}},
 		{"retired_v1", []string{"-out", "plan-new.json", "-source-commit", "selected", "-schema", "v1"}},
 		{"positional", []string{"-out", "plan-new.json", "-source-commit", "selected", "extra"}},

@@ -42,7 +42,7 @@ func parseAuthorOptions(args []string, output io.Writer) (authorOptions, error) 
 	flags.StringVar(&options.destination, "out", "", "new source-free plan path (must not exist)")
 	flags.StringVar(&options.repositoryRoot, "repository-root", ".", "exact clean Phebs checkout")
 	flags.StringVar(&options.sourceCommit, "source-commit", "", "exact clean implementation commit")
-	flags.StringVar(&schema, "schema", "v2", "plan schema: v2 (historical default), v3, or v4")
+	flags.StringVar(&schema, "schema", "v2", "plan schema: v2 (historical default), v3, v4, or v5")
 	if err := flags.Parse(args); err != nil {
 		return authorOptions{}, err
 	}
@@ -56,8 +56,10 @@ func parseAuthorOptions(args []string, output io.Writer) (authorOptions, error) 
 		options.author = t421.AuthorV3
 	case "v4":
 		options.author = t421.AuthorV4
+	case "v5":
+		options.author = t421.AuthorV5
 	default:
-		return authorOptions{}, errors.New("-schema must be v2, v3, or v4")
+		return authorOptions{}, errors.New("-schema must be v2, v3, v4, or v5")
 	}
 	root, err := filepath.Abs(options.repositoryRoot)
 	if err != nil {

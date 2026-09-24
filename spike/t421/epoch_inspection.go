@@ -335,6 +335,9 @@ func (reader *executionEpochInspection) readRequest(ctx context.Context, path st
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
 	request.Header.Set("X-Phebs-T421-Exact-Reads", "source-free-v1")
 	request.Header.Set("X-Phebs-T421-Exact-Read-Ordinal", strconv.FormatUint(ordinal, 10))
+	if path == "/api/t421/final-authority" && reader.plan.Schema == PlanV5Schema {
+		request.Header.Set("X-Phebs-T422-Caller-Continuity", "manifest-v1")
+	}
 	if repositories || path == "/api/t421/final-authority" && processAccountingPlanSemantics(reader.plan.Schema) && run.epoch.Epoch == 5 && reader.projection.Phase == "product_queries" {
 		request.Header.Set("X-Phebs-T422-Query-Evidence", "bound-v1")
 	}
@@ -514,7 +517,7 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 			case "product_queries":
 				prior = reader.collectionAuthority
 			}
-			ready, err := correctedTailReadinessTransitionReady(reader.projection.Phase, &tailReadinessIdentity{
+			ready, err := planTailReadinessTransitionReady(reader.plan.Schema, reader.projection.Phase, &tailReadinessIdentity{
 				RelationshipGenerationSHA256: prior.RelationshipGenerationSHA256, RelationshipRootSHA256: prior.RelationshipRootSHA256,
 				CallerGenerationSHA256: prior.CallerGenerationSHA256, CallerRootSHA256: prior.CallerRootSHA256}, tailReadinessIdentity{
 				RelationshipGenerationSHA256: result.RelationshipGenerationSHA256, RelationshipRootSHA256: result.RelationshipRootSHA256,
@@ -550,6 +553,7 @@ type epochFinalAuthority struct {
 	ResolverCatalogRootSHA256       string      `json:"resolver_catalog_root_sha256"`
 	CallerGenerationSHA256          string      `json:"caller_generation_sha256"`
 	CallerRootSHA256                string      `json:"caller_root_sha256"`
+	CallerContinuitySHA256          string      `json:"caller_continuity_sha256,omitempty"`
 	RelationshipGenerationSHA256    string      `json:"relationship_generation_sha256"`
 	RelationshipRootSHA256          string      `json:"relationship_root_sha256"`
 	RelationshipProvenanceSHA256    string      `json:"relationship_provenance_sha256"`
@@ -691,6 +695,9 @@ func (reader *executionEpochInspection) Final(ctx context.Context) (authority Au
 func (reader *executionEpochInspection) decodeFinal(raw []byte) (authority AuthorityPhaseResult, projection PhaseStateProjection, retErr error) {
 	var value epochFinalResponse
 	if len(raw) > epochFinalResponseBytes || decodeEpochJSON(raw, &value, true) != nil || value.Schema != "t421-final-authority-source-free-v1" || value.Projection.Schema != "t421-final-state-projection-source-free-v1" {
+		return authority, projection, errEpochInspection
+	}
+	if !validCallerContinuityObservation(reader.plan.Schema, value.Authority.CallerContinuitySHA256, true) {
 		return authority, projection, errEpochInspection
 	}
 	if value.ResolverCatalogCounts != nil && (!validDigest(value.ResolverCatalogCounts.GenerationSHA256) || !validDigest(value.ResolverCatalogCounts.ManifestSHA256) ||

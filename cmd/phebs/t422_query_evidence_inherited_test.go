@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,7 +48,7 @@ func t422QueryEvidenceInheritedRecord(t *testing.T, mode string) (dispatchadmiss
 // Real inherited DA/PC, owner/request admission and auth are exercised here.
 // Only the F body is supplied: this is not an engine/catalog or phase pass.
 func TestT422QueryEvidenceInheritedRouting(t *testing.T) {
-	for _, mode := range []string{"complete", "wrong_phase", "wrong_epoch", "reuse_complete", "reuse_cancel", "reuse_write", "reuse_phase", "reuse_request", "reuse_prior"} {
+	for _, mode := range []string{"complete", "wrong_phase", "wrong_epoch", "reuse_complete", "reuse_cancel", "reuse_write", "reuse_phase", "reuse_request", "reuse_prior", "continuity_complete", "continuity_duplicate", "continuity_no_semantic"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 			defer cancel()
@@ -212,6 +213,7 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 	if mode == "" {
 		return
 	}
+	continuity := strings.HasPrefix(mode, "continuity_")
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
@@ -252,12 +254,18 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 	state := t421NewExactReadAccountingState(reportSink, launch.fail,
 		t421ExactFinalAuthorityRead{Read: func(ctx context.Context) ([]byte, func() error, error) {
 			calls++
-			if selected, _ := ctx.Value(t422QueryEvidenceKey{}).(bool); !selected && mode != "reuse_prior" {
+			if selected, _ := ctx.Value(t422QueryEvidenceKey{}).(bool); !selected && mode != "reuse_prior" && !continuity {
 				t.Error("selected F extension context absent")
+			}
+			if selected, _ := ctx.Value(t422CallerContinuityKey{}).(bool); selected != continuity {
+				t.Error("caller continuity opt-in context differs")
 			}
 			return finalBody, nil, nil
 		}})
 	state.semantic = launch
+	if mode == "continuity_no_semantic" {
+		state.semantic = nil
+	}
 	var reuseOutput bytes.Buffer
 	var reuse *t422ReuseControl
 	if mode == "reuse_complete" || mode == "reuse_cancel" || mode == "reuse_write" || mode == "reuse_phase" || mode == "reuse_request" || mode == "reuse_prior" {
@@ -293,8 +301,14 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 	token := scanner.Text()
 	request := exactT421ReadRequest(http.MethodGet, t421ExactFinalAuthorityPath, 1).WithContext(ctx)
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
-	if mode != "reuse_prior" {
+	if mode != "reuse_prior" && !continuity {
 		request.Header.Set(t422QueryEvidenceHeader, t422QueryEvidenceValue)
+	}
+	if continuity {
+		request.Header.Set(t422CallerContinuityHeader, t422CallerContinuityValue)
+		if mode == "continuity_duplicate" {
+			request.Header.Add(t422CallerContinuityHeader, t422CallerContinuityValue)
+		}
 	}
 	if mode == "reuse_phase" {
 		request.Header.Set(t422QueryTerminalHeader, t422QueryTerminalValue)
@@ -340,7 +354,7 @@ func TestT422QueryEvidenceInheritedHelper(t *testing.T) {
 			reuseOutput.String() != "RU1:2:3:00000\n" || len(events) != 2 || events[0] != "report" || events[1] != "reuse_after_prior" {
 			t.Fatal("reuse did not follow prior/report", response.status, calls, failures, reports, reuseOutput.String(), events)
 		}
-	} else if mode == "complete" {
+	} else if mode == "complete" || mode == "continuity_complete" {
 		if response.status != http.StatusOK || calls != 1 || failures != 0 || report.Status != "complete" || report.VisibleRepositories != nil {
 			t.Fatal("selected F failed", response.status, calls, failures, report)
 		}

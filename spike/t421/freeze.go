@@ -162,7 +162,7 @@ func BuildExecutionFreeze(
 	return freeze, nil
 }
 
-// assembleExecutionFreezeCandidate is the checkout-free V3/V4 preparation seam.
+// assembleExecutionFreezeCandidate is the checkout-free process-accounting preparation seam.
 // Its profile must be the actual detached output of the private profile issuer;
 // expected shape is used only to validate it, never to replace it. The returned
 // canonical bytes carry no binding, signature, ordinal, or operational authority.
@@ -176,10 +176,7 @@ func assembleExecutionFreezeCandidate(
 	profile ExecutionProfile,
 	profileAdmission ExecutionProfileAdmissionBinding,
 ) ([]byte, error) {
-	wantFreezeSchema := ExecutionFreezeV3Schema
-	if plan.Schema == PlanV4Schema {
-		wantFreezeSchema = ExecutionFreezeV4Schema
-	}
+	wantFreezeSchema := processAccountingFreezeSchema(plan.Schema)
 	if !processAccountingPlanSemantics(plan.Schema) || plan.ToolPolicy.ExecutionFreezeSchema != wantFreezeSchema ||
 		plan.ToolPolicy.ExecutionProfileSchema != ExecutionProfileV3Schema {
 		return nil, errors.New("T42.2 candidate freeze requires a controlled-dispatch contract")
@@ -407,10 +404,7 @@ func validateExecutionFreezeCandidate(
 	profile ExecutionProfile,
 	profileAdmission ExecutionProfileAdmissionBinding,
 ) (ExecutionFreeze, error) {
-	wantFreezeSchema := ExecutionFreezeV3Schema
-	if plan.Schema == PlanV4Schema {
-		wantFreezeSchema = ExecutionFreezeV4Schema
-	}
+	wantFreezeSchema := processAccountingFreezeSchema(plan.Schema)
 	if !processAccountingPlanSemantics(plan.Schema) || plan.ToolPolicy.ExecutionFreezeSchema != wantFreezeSchema {
 		return ExecutionFreeze{}, errors.New("T42.2 candidate freeze requires a controlled-dispatch contract")
 	}
@@ -606,7 +600,7 @@ func expectedExecutionPressureGeometry(
 		policy = "collect_noncurrent_no_padding_then_require_150_second_sampled_nonballast_anchor_stability_before_first_target-v3"
 	}
 	driftTolerance := uint64(0)
-	if plan.Schema == PlanV4Schema {
+	if pressureContinuityPlanSemantics(plan.Schema) {
 		policy += ";" + pressureContinuityPolicyV4
 		driftTolerance = InterphaseDriftToleranceBytes
 	}

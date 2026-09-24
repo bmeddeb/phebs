@@ -430,7 +430,7 @@ func epochReturnTestFinal(t *testing.T) (*executionEpochInspection, epochFinalRe
 	state.SearchInventory, state.ObservationInputInventory = revision.ExpectedTreeInventory, revision.ExpectedObservationInputInventory
 	v, typ := reflect.ValueOf(&state).Elem(), reflect.TypeOf(state)
 	for index := 0; index < v.NumField(); index++ {
-		if v.Field(index).Kind() == reflect.String && strings.HasSuffix(typ.Field(index).Name, "SHA256") {
+		if v.Field(index).Kind() == reflect.String && strings.HasSuffix(typ.Field(index).Name, "SHA256") && typ.Field(index).Name != "CallerContinuitySHA256" {
 			v.Field(index).SetString(testDigest("return", typ.Field(index).Name))
 		}
 	}

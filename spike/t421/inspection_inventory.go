@@ -440,8 +440,16 @@ func correctedTailReadinessTransitionReady(
 	prior *tailReadinessIdentity,
 	current tailReadinessIdentity,
 ) (bool, error) {
+	return tailReadinessTransitionReady(phase, prior, current, correctedTailReadinessTransitions())
+}
+
+func planTailReadinessTransitionReady(schema, phase string, prior *tailReadinessIdentity, current tailReadinessIdentity) (bool, error) {
+	return tailReadinessTransitionReady(phase, prior, current, planTailReadinessTransitions(schema))
+}
+
+func tailReadinessTransitionReady(phase string, prior *tailReadinessIdentity, current tailReadinessIdentity, transitions []tailReadinessTransition) (bool, error) {
 	var rule *tailReadinessTransition
-	for _, candidate := range correctedTailReadinessTransitions() {
+	for _, candidate := range transitions {
 		if candidate.Phase == phase {
 			value := candidate
 			rule = &value
@@ -469,7 +477,8 @@ func correctedTailReadinessTransitionReady(
 		rule.Relationship == "both_differ" && relationshipDiffer ||
 		rule.Relationship == "equal_or_both_differ" && (relationshipEqual || relationshipDiffer)
 	callerReady := rule.Caller == "equal" && callerEqual ||
-		rule.Caller == "both_differ" && callerDiffer
+		rule.Caller == "both_differ" && callerDiffer ||
+		rule.Caller == "generation_equal_manifest_continuity_at_final" && current.CallerGenerationSHA256 == prior.CallerGenerationSHA256
 	return relationshipReady && callerReady, nil
 }
 
@@ -873,6 +882,10 @@ func correctedProductQueryMemberReadMaximum(queries []QueryCase) (uint64, error)
 }
 
 func correctedInspectionInventorySHA256(profile CombinedProfile) (string, error) {
+	return inspectionInventorySHA256(profile, correctedTailReadinessTransitions())
+}
+
+func inspectionInventorySHA256(profile CombinedProfile, transitions []tailReadinessTransition) (string, error) {
 	phases, epochs, err := correctedInspectionInventory(profile)
 	if err != nil {
 		return "", err
@@ -887,5 +900,5 @@ func correctedInspectionInventorySHA256(profile CombinedProfile) (string, error)
 		TailTransitions     []tailReadinessTransition  `json:"tail_transitions"`
 	}{correctedInspectionInventorySchema, correctedInspectionPolicy,
 		correctedHealthPollMS, correctedInspectionPollMS,
-		phases, epochs, correctedTailReadinessTransitions()})
+		phases, epochs, transitions})
 }

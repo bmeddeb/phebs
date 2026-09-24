@@ -60,13 +60,13 @@ type ScopedTeardownEvidence struct {
 	CleanupClosedEventOrdinal      uint64                `json:"cleanup_closed_event_ordinal"`
 }
 
-// Only the V3/V4 process-accounting wire projection suppresses historical
+// Only the V3-and-later process-accounting wire projection suppresses historical
 // fields. In particular, a not-run row must omit them even though every
 // measurement is zero. Aliases retain the exact original V1/V2 field order and
 // representation.
 func (value Receipt) MarshalJSON() ([]byte, error) {
 	type plain Receipt
-	if value.Schema != ReceiptV3Schema && value.Schema != ReceiptV4Schema {
+	if value.Schema != ReceiptV3Schema && value.Schema != ReceiptV4Schema && value.Schema != ReceiptV5Schema {
 		return json.Marshal(plain(value))
 	}
 	measurements := make([]json.RawMessage, len(value.Measurements))
@@ -127,10 +127,11 @@ func validateReceiptAccountingVersion(value Receipt, plan Plan) error {
 	wantSchema := map[string]string{
 		PlanSchema: ReceiptSchema, PlanV2Schema: "t422-combined-convergence-receipt-v2",
 		PlanV3Schema: ReceiptV3Schema, PlanV4Schema: ReceiptV4Schema,
+		PlanV5Schema: ReceiptV5Schema,
 	}[plan.Schema]
 	if wantSchema == "" || value.Schema != wantSchema || value.Schema != plan.ReceiptContract.Schema ||
 		processAccountingPlanSemantics(plan.Schema) && (plan.ProcessAccounting == nil || plan.WorkEnvelope.Schema != WorkEnvelopeV3Schema) ||
-		!processAccountingPlanSemantics(plan.Schema) && (value.Schema == ReceiptV3Schema || value.Schema == ReceiptV4Schema) {
+		!processAccountingPlanSemantics(plan.Schema) && (value.Schema == ReceiptV3Schema || value.Schema == ReceiptV4Schema || value.Schema == ReceiptV5Schema) {
 		return errors.New("receipt process-accounting version is invalid")
 	}
 	for _, measurement := range value.Measurements {

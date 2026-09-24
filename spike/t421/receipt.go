@@ -306,6 +306,7 @@ type AuthorityState struct {
 	ResolverCatalogRootSHA256       string      `json:"resolver_catalog_root_sha256,omitempty"`
 	CallerGenerationSHA256          string      `json:"caller_generation_sha256,omitempty"`
 	CallerRootSHA256                string      `json:"caller_root_sha256,omitempty"`
+	CallerContinuitySHA256          string      `json:"caller_continuity_sha256,omitempty"`
 	RelationshipGenerationSHA256    string      `json:"relationship_generation_sha256,omitempty"`
 	RelationshipRootSHA256          string      `json:"relationship_root_sha256,omitempty"`
 	RelationshipProvenanceSHA256    string      `json:"relationship_provenance_sha256,omitempty"`
@@ -3561,7 +3562,7 @@ func validatePressureTransitions(
 	start := SHA256([]byte("t422-pressure-sequence-start-v1"))
 	priorSequence, priorBallast, priorAvailable, priorDataAllocated := start, uint64(0), uint64(0), uint64(0)
 	interphaseTolerance := uint64(0)
-	if plan.Schema == PlanV4Schema {
+	if pressureContinuityPlanSemantics(plan.Schema) {
 		interphaseTolerance = freeze.Pressure.InterphaseDriftToleranceBytes
 	}
 	baseAllocated := uint64(0)
@@ -3645,7 +3646,7 @@ func validatePressureTransitions(
 		}
 		if phase == "pressure_75" {
 			recoveryTolerance := target.ToleranceBytes
-			if plan.Schema == PlanV4Schema {
+			if pressureContinuityPlanSemantics(plan.Schema) {
 				recoveryTolerance = interphaseTolerance
 			}
 			if value.RecoveryBallastAllocatedBytes != 0 || value.RecoveryUsedPercent > freeze.Pressure.Recovery.MaximumUsedPercent ||
@@ -4318,6 +4319,10 @@ func validateAuthorityResults(
 		if plan.Schema == PlanSchema && value.RelationshipProvenanceSHA256 != "" {
 			return fmt.Errorf("phase %q retained prospective provenance in a V1 receipt", phase)
 		}
+		if !validCallerContinuityObservation(plan.Schema, value.CallerContinuitySHA256, value.Outcome == "passed") ||
+			value.Outcome == "not_run" && value.CallerContinuitySHA256 != "" {
+			return fmt.Errorf("phase %q caller continuity observation is invalid", phase)
+		}
 		if value.Outcome == "not_run" {
 			if value.PhysicalRevision != "" || value.LogicalRevision != "" ||
 				value.PhysicalCommit != "" || value.PhysicalTree != "" ||
@@ -4602,6 +4607,10 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 // The native archive reader and final receipt use the same comparison; neither
 // can replace actual prior authority with a regenerated expected result.
 func validateArchiveAuthorityContinuity(current, prior AuthorityPhaseResult, plan Plan) error {
+	if plan.Schema == PlanV5Schema && (!current.Current || !prior.Current ||
+		!validDigest(current.CallerContinuitySHA256) || current.CallerContinuitySHA256 != prior.CallerContinuitySHA256) {
+		return errors.New("archive restore changed caller manifest semantic content")
+	}
 	if !sameAuthorityExceptRelationship(current, prior) {
 		return errors.New("archive restore did not preserve semantic authority")
 	}
@@ -4609,7 +4618,7 @@ func validateArchiveAuthorityContinuity(current, prior AuthorityPhaseResult, pla
 		(current.ResolverCatalogGenerationSHA256 != prior.ResolverCatalogGenerationSHA256 ||
 			current.ResolverCatalogRootSHA256 != prior.ResolverCatalogRootSHA256 ||
 			current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 ||
-			current.CallerRootSHA256 != prior.CallerRootSHA256) {
+			plan.Schema != PlanV5Schema && current.CallerRootSHA256 != prior.CallerRootSHA256) {
 		return errors.New("archive restore changed immutable resolver or caller authority")
 	}
 	if correctedPlanSemantics(plan.Schema) {

@@ -16,8 +16,10 @@ const (
 	WorkEnvelopeV3Schema          = "t422-phase-work-envelope-v3"
 	ReceiptV3Schema               = "t422-combined-convergence-receipt-v3"
 	ReceiptV4Schema               = "t422-combined-convergence-receipt-v4"
+	ReceiptV5Schema               = "t422-combined-convergence-receipt-v5"
 	ExecutionFreezeV3Schema       = "t422-combined-execution-freeze-v3"
 	ExecutionFreezeV4Schema       = "t422-combined-execution-freeze-v4"
+	ExecutionFreezeV5Schema       = "t422-combined-execution-freeze-v5"
 	ExecutionProfileV3Schema      = "t422-production-execution-profile-v3"
 	PhaseRuntimeBindingV3Schema   = "t422-phase-runtime-binding-v3"
 	InterphaseDriftToleranceBytes = uint64(65_536)
@@ -79,9 +81,25 @@ func BuildPlanV4(sourceCommit string) (Plan, error) {
 	return plan, nil
 }
 
+// BuildPlanV5 adds prospective caller restore continuity to the complete V4
+// contract. Historical constructors remain exact and no execution is admitted.
+func BuildPlanV5(sourceCommit string) (Plan, error) {
+	plan, err := BuildPlanV4(sourceCommit)
+	if err != nil {
+		return Plan{}, err
+	}
+	if err := applyCallerRestoreContinuityCorrection(&plan); err != nil {
+		return Plan{}, err
+	}
+	if err := validatePlan(plan, &plan.Revisions); err != nil {
+		return Plan{}, err
+	}
+	return plan, nil
+}
+
 func knownPlanSchema(schema string) bool {
 	switch schema {
-	case PlanSchema, PlanV2Schema, PlanV3Schema, PlanV4Schema:
+	case PlanSchema, PlanV2Schema, PlanV3Schema, PlanV4Schema, PlanV5Schema:
 		return true
 	default:
 		return false
@@ -89,13 +107,30 @@ func knownPlanSchema(schema string) bool {
 }
 
 // Callers validate the closed plan schema before interpreting its semantics.
-// V3 and V4 inherit V2's functional authority, never the superseded V1 behavior.
+// V3 and later inherit V2's functional authority, never the superseded V1 behavior.
 func correctedPlanSemantics(schema string) bool {
 	return schema == PlanV2Schema || processAccountingPlanSemantics(schema)
 }
 
 func processAccountingPlanSemantics(schema string) bool {
-	return schema == PlanV3Schema || schema == PlanV4Schema
+	return schema == PlanV3Schema || schema == PlanV4Schema || schema == PlanV5Schema
+}
+
+func pressureContinuityPlanSemantics(schema string) bool {
+	return schema == PlanV4Schema || schema == PlanV5Schema
+}
+
+func processAccountingFreezeSchema(schema string) string {
+	switch schema {
+	case PlanV3Schema:
+		return ExecutionFreezeV3Schema
+	case PlanV4Schema:
+		return ExecutionFreezeV4Schema
+	case PlanV5Schema:
+		return ExecutionFreezeV5Schema
+	default:
+		return ""
+	}
 }
 
 func applyPressureContinuityCorrection(plan *Plan) error {

@@ -4682,6 +4682,26 @@ ceremony execution, release or scale/SLO claim follows.
   later ACs remain open. Evidence is retained at
   `/private/tmp/t422-v4-backup-rehearsal.5VnCh0`.
 
+  The `cae2c9d8` rerun crossed restored launch and health, but expired during
+  archive completion after 21,101.78 seconds. The rebuilt caller's semantic
+  generation and exact pair receipts/aggregates were unchanged; fresh run
+  provenance changed its manifest root, which V4 requires equal. Ben chose
+  a prospective V5 continuity contract: authenticate both actual roots and
+  require equal generation plus equal full-manifest commitment excluding
+  only run provenance and the self digest. Tail, final authority, receipt,
+  inspection inventory and plan/freeze/receipt versions change together;
+  V1–V4 and production publication formats remain exact. Regression coverage
+  must reject any non-provenance manifest mutation, absent/malformed evidence,
+  historical-schema opt-in and downstream authority movement. The failed
+  image remains under explicit preservation hold at
+  `/private/tmp/t422-epoch-one-rehearsal-2409973241`; source-free evidence is
+  retained at `/private/tmp/t422-v4-restored-rehearsal.AMguSU`. No cleanup,
+  retry, V5 seal, integration or ceremony is included. Commit the candidate
+  and wait for independent review before advancing the remaining ACs. Formal
+  preparation, rehearsal and signed-readiness still select V4; activating V5
+  consistently across their protected tools and plan is a pending reviewed
+  prerequisite, not an available rehearsal selector in this candidate.
+
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use
 signed package builder, and independently verified framed delivery. The four

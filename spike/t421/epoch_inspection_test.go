@@ -402,7 +402,7 @@ func epochTestFinal(t *testing.T) (*executionEpochInspection, epochFinalResponse
 	v := reflect.ValueOf(&state).Elem()
 	typ := v.Type()
 	for index := 0; index < v.NumField(); index++ {
-		if v.Field(index).Kind() == reflect.String && strings.HasSuffix(typ.Field(index).Name, "SHA256") {
+		if v.Field(index).Kind() == reflect.String && strings.HasSuffix(typ.Field(index).Name, "SHA256") && typ.Field(index).Name != "CallerContinuitySHA256" {
 			v.Field(index).SetString(testDigest("epoch-fixture", typ.Field(index).Name))
 		}
 	}

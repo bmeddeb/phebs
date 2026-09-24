@@ -130,6 +130,8 @@ func ValidateFrozenPlan(plan Plan) error {
 		}
 	case PlanV4Schema:
 		build = BuildPlanV4
+	case PlanV5Schema:
+		build = BuildPlanV5
 	default:
 		return errors.New("T42.1 plan schema is unknown")
 	}

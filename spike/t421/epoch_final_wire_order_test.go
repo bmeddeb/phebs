@@ -18,10 +18,10 @@ func TestEpochFinalOptionalWireOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var want []string
+	want := make(map[string][]string)
 	ast.Inspect(native, func(node ast.Node) bool {
 		typ, ok := node.(*ast.TypeSpec)
-		if !ok || typ.Name.Name != "t421FinalAuthorityResponse" {
+		if !ok || typ.Name.Name != "t421FinalAuthorityResponse" && typ.Name.Name != "t421FinalAuthorityState" {
 			return true
 		}
 		for _, field := range typ.Type.(*ast.StructType).Fields.List {
@@ -29,17 +29,21 @@ func TestEpochFinalOptionalWireOrder(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want = append(want, reflect.StructTag(tag).Get("json"))
+			want[typ.Name.Name] = append(want[typ.Name.Name], reflect.StructTag(tag).Get("json"))
 		}
 		return false
 	})
-	var got []string
-	client := reflect.TypeFor[epochFinalResponse]()
-	for i := range client.NumField() {
-		got = append(got, client.Field(i).Tag.Get("json"))
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("F field order/tags = %v, production = %v", got, want)
+	for name, client := range map[string]reflect.Type{
+		"t421FinalAuthorityResponse": reflect.TypeFor[epochFinalResponse](),
+		"t421FinalAuthorityState":    reflect.TypeFor[epochFinalAuthority](),
+	} {
+		var got []string
+		for i := range client.NumField() {
+			got = append(got, client.Field(i).Tag.Get("json"))
+		}
+		if !reflect.DeepEqual(got, want[name]) {
+			t.Fatalf("%s field order/tags = %v, production = %v", name, got, want[name])
+		}
 	}
 }
 

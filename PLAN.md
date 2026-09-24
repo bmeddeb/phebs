@@ -4911,3 +4911,80 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Restored successor, archive completion, product queries,
   teardown, integration, protected candidate, signed readiness, freeze and
   ceremony remain open.
+
+- **2026-09-23 — T42.2v prospective V5 caller restore continuity.** Ben
+  selected option two: version the restore-continuity contract, without
+  changing production caller manifests or retroactively relaxing V1–V4.
+  The `cae2c9d8` rehearsal (protected production `d817ee0f`) crossed restored
+  launch and health, then stopped at the original archive deadline after
+  21,101.78 seconds. Startup intentionally cleared imported publication
+  pointers. The rebuilt caller retained semantic generation `22231f17…`, but
+  its manifest root changed from `c78bca15…` to `ccb16d46…`: only two upstream
+  extraction run IDs, their provenance digest and the resulting manifest
+  digest differ. Exact pair receipts, pair-set digest, aggregates and other
+  manifest fields agree. Of 1,661 tail polls, 1,649 passed native caller
+  current/matching checks. The harness could still rewrite native `ready`
+  to `pending` because both its tail and final archive comparators require
+  the old manifest root. No phase-12/13 caller-scheduling deadlock or path
+  mismatch is established. Evidence remains at
+  `/private/tmp/t422-v4-restored-rehearsal.AMguSU`; Ben requires preserving
+  the failed mounted root `/private/tmp/t422-epoch-one-rehearsal-2409973241`.
+
+  Prospective V5 adds `caller_continuity_sha256` to the authenticated final
+  authority and its signed receipt snapshots. It commits to the full already
+  validated caller manifest after clearing only the manifest's self digest,
+  upstream domain run IDs and upstream provenance digest. Every remaining
+  generation, policy, pair identity, receipt, content digest, pair-set digest
+  and aggregate field stays committed. The current known upstream schema is
+  mandatory; this is not a generic future-field or semantic-only projection.
+  Each actual original manifest root remains independently authenticated by
+  the native leased publication and fresh authority confirmation. Only V5
+  archive continuity permits different caller roots, and only with equal
+  caller generation and equal valid continuity commitments. Tail readiness
+  checks current native authority and equal caller generation; the single F
+  must prove complete continuity before archive acceptance. Later collection
+  and product phases preserve the newly accepted complete authority exactly.
+  Byte-exact archive transport, all other authority comparisons, admission,
+  work/read limits and deadlines remain unchanged. V5 has distinct plan,
+  freeze and receipt schemas and a new frozen inspection-inventory binding.
+  V1–V4 constructors, artifacts, hashes, output omission and rejection rules
+  remain exact. No V5 artifact is sealed. Formal preparation, real rehearsal
+  and signed-readiness entrypoints still select V4; they cannot exercise V5
+  until a separately reviewed activation binds their protected tools and plan
+  to V5. This candidate supplies contract/authoring/validation, not that launch
+  activation.
+
+  The extra evidence is selected only by the authenticated exact final-read
+  request header `X-Phebs-T422-Caller-Continuity: manifest-v1`; malformed,
+  duplicate, wrong-route and non-semantic requests refuse. An opted-in F
+  performs one detached bounded manifest normalization/encoding/hash while
+  holding its existing caller lease, before the existing fresh confirmation.
+  It adds no file/store/member read, mutation, query, child, goroutine, cache
+  or lock class. Transient work is linear in the existing manifest bound
+  (32 MiB, at most 16,384 pairs), plus its bounded upstream authority, and
+  extends the existing F lease/request duration. There is no repeated
+  per-pair validation or new steady-state query, sync, startup, retry/no-op or
+  publication cost; ordinary and V1–V4 final requests do not normalize.
+  Independent exact-commit review, complete machine gates, V5 rehearsal,
+  integration, protected candidate, readiness, fresh freeze and separately
+  authorized ceremony remain pending. This commit is a review candidate,
+  not a rehearsal pass or permission to execute.
+
+  Precommit checks passed: V5 constructor/plan/freeze round trip and refusal
+  matrix; pinned V1–V4 canonical plan/freeze replay and author selection;
+  epoch/inspection changed-path normal and race tests; native authenticated
+  request and manifest-normalization normal/race tests; full callerpublication
+  and authorityvalidate race packages; native/client nested field-order and
+  V5 final-body byte-for-byte rebuild regressions; changed-package vet, pinned
+  lint, docs, glossary and whitespace. The OCR implementation checklist covers
+  19/19 files (100%, zero skipped); the 15 excluded test/documentation files
+  were also read. Scoped independent precommit review reported no findings in
+  the 14 contract/decoder/version files; this is not an independent review of
+  the complete immutable commit and does not replace the pending gate.
+  The additional full V5 constructor/freeze race command timed out at
+  600.829s in `TestCallerRestoreContinuityV5FrozenRoundTrip`, while
+  `validateExecutionFreezeCandidate` rebuilt `BuildCombinedCorpus` and sorted
+  the catalog during `servicecatalogv3.normalize`. Its non-race round trip
+  passed in the 71.076s V5 suite; the race timeout emitted no race report but
+  is not green and remains an open machine-gate item. No unchanged retry,
+  runtime limit increase or fixture shortcut is included in this candidate.

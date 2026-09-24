@@ -7,7 +7,7 @@ import (
 
 func pressureTransitionSchema(plan Plan) string {
 	suffix := "/pressure-v1"
-	if plan.Schema == PlanV4Schema {
+	if pressureContinuityPlanSemantics(plan.Schema) {
 		suffix = "/pressure-v2"
 	}
 	return plan.ReceiptContract.TransitionSchema + suffix

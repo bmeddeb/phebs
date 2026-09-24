@@ -288,6 +288,10 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	}
 	queryEvidence := len(request.Header.Values(t422QueryEvidenceHeader)) != 0
 	queryTerminal := len(request.Header.Values(t422QueryTerminalHeader)) != 0
+	callerContinuity := len(request.Header.Values(t422CallerContinuityHeader)) != 0
+	if callerContinuity && !handler.state.callerContinuityRequest(request) {
+		target = false
+	}
 	// Native route overrides above must not admit this opt-in on another route.
 	if queryEvidence && !t422QueryEvidenceRoute(request) {
 		target = false
@@ -312,6 +316,9 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 	}
 
 	ctx, ledger, err := readaccounting.Start(request.Context(), limits)
+	if err == nil && callerContinuity {
+		ctx = context.WithValue(ctx, t422CallerContinuityKey{}, true)
+	}
 	if err == nil && queryEvidence && request.URL.Path != t421ExactFinalAuthorityPath {
 		ctx, err = readaccounting.WithSearchRepositories(ctx)
 	}
@@ -499,6 +506,9 @@ func t421ExactReadLimits(
 		return readaccounting.Counts{}, false
 	}
 	proof := request.Header.Values(t422QueryEvidenceHeader)
+	if len(request.Header.Values(t422CallerContinuityHeader)) != 0 && !t422CallerContinuityRoute(request) {
+		return readaccounting.Counts{}, false
+	}
 	if len(proof) != 0 && !t422QueryEvidenceRoute(request) {
 		return readaccounting.Counts{}, false
 	}

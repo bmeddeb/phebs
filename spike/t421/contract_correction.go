@@ -252,8 +252,13 @@ func validatePlanExecutionContract(plan Plan) error {
 				return err
 			}
 		}
-		if plan.Schema == PlanV4Schema {
+		if pressureContinuityPlanSemantics(plan.Schema) {
 			if err := applyPressureContinuityCorrection(&want); err != nil {
+				return err
+			}
+		}
+		if plan.Schema == PlanV5Schema {
+			if err := applyCallerRestoreContinuityCorrection(&want); err != nil {
 				return err
 			}
 		}

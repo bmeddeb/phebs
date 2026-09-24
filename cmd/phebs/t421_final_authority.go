@@ -53,6 +53,7 @@ type t421FinalAuthorityState struct {
 	ResolverCatalogRootSHA256       string               `json:"resolver_catalog_root_sha256"`
 	CallerGenerationSHA256          string               `json:"caller_generation_sha256"`
 	CallerRootSHA256                string               `json:"caller_root_sha256"`
+	CallerContinuitySHA256          string               `json:"caller_continuity_sha256,omitempty"`
 	RelationshipGenerationSHA256    string               `json:"relationship_generation_sha256"`
 	RelationshipRootSHA256          string               `json:"relationship_root_sha256"`
 	RelationshipProvenanceSHA256    string               `json:"relationship_provenance_sha256"`
@@ -372,6 +373,15 @@ func (reader *t421FinalAuthorityReader) Read(
 			GenerationSHA256: caller.State.Generation.Digest, ManifestSHA256: caller.State.ManifestDigest,
 			Leaves:        caller.Lease().Publication().LeafObservations(),
 			RPCProjection: t421FinalSetIdentity{Records: semantic.RPCRecords, FramedBytes: semantic.RPCFramedBytes, SHA256: semantic.RPCSHA256},
+		}
+	}
+	if selected, _ := ctx.Value(t422CallerContinuityKey{}).(bool); selected {
+		if !dispatchadmission.ProductionWorkSelected() || caller.Lease() == nil || caller.Lease().Publication() == nil {
+			return nil, nil, errors.New("caller continuity unavailable")
+		}
+		response.Authority.CallerContinuitySHA256, err = caller.Lease().Publication().RestoreContinuitySHA256()
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 	response.ResolverCatalogCounts, err = t422FinalResolverCatalogCounts(ctx, resolver.Authority.ResolverGenerationDigest, resolver.Authority.ResolverManifestDigest)

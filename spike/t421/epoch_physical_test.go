@@ -166,7 +166,7 @@ func epochPhysicalTestFinal(t *testing.T) (*executionEpochInspection, epochFinal
 	state.SearchInventory, state.ObservationInputInventory = physical.ExpectedTreeInventory, physical.ExpectedObservationInputInventory
 	v := reflect.ValueOf(&state).Elem()
 	for index := 0; index < v.NumField(); index++ {
-		if v.Field(index).Kind() == reflect.String && strings.HasSuffix(v.Type().Field(index).Name, "SHA256") {
+		if v.Field(index).Kind() == reflect.String && strings.HasSuffix(v.Type().Field(index).Name, "SHA256") && v.Type().Field(index).Name != "CallerContinuitySHA256" {
 			v.Field(index).SetString(testDigest("epoch-physical-fixture", v.Type().Field(index).Name))
 		}
 	}
