@@ -5468,11 +5468,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   corpus's 89 shards and 19.49 GB of index files until cache retirement.
   Resident RAM depends on OS paging; this is the existing exact-reader cache
   footprint moved before the queries. The command adds one control mutex for
-  single-use admission. The harness holds its
-  existing inspection mutex across this one native exchange; the server's
-  cache work has a 10-minute timeout and the client remains under phase 14's
-  20-minute deadline. No new cache kind, goroutine, child process or disk write
-  is added. Phase 14 keeps that 20-minute deadline: about
+  single-use admission. The harness holds its existing inspection mutex across
+  this one native exchange. Server cache work has a 10-minute timeout and the
+  client remains under phase 14's
+  20-minute deadline. Cold fills start the existing cache worker goroutines;
+  the command adds no new worker kind, load-concurrency capacity, child process
+  or managed index/store write, and emits one bounded source-free server log
+  line. Phase 14 keeps that 20-minute deadline: about
   one minute of warm plus the prior 557-second native query replay fits with
   margin.
   Focused normal/race tests, the modeled `QueryRestored` operation (warm order,
