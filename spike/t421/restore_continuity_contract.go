@@ -46,6 +46,11 @@ func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 	plan.ToolPolicy.ExecutionFreezeSchema = ExecutionFreezeV5Schema
 	plan.ReceiptContract.Schema = ReceiptV5Schema
 	plan.WorkEnvelope.Phases = slices.Clone(plan.WorkEnvelope.Phases)
+	owners := slices.DeleteFunc(slices.Clone(plan.WorkEnvelope.LifecycleOwners), func(owner string) bool { return owner == retiredInvestigationOwner })
+	if len(owners) != len(plan.WorkEnvelope.LifecycleOwners)-1 {
+		return errors.New("V5 retired Investigation owner preimage changed")
+	}
+	plan.WorkEnvelope.LifecycleOwners = owners
 	return applyCorrectedPhaseReadMaximums(&plan.WorkEnvelope, *plan)
 }
 

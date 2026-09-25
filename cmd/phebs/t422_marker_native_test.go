@@ -40,7 +40,7 @@ import (
 // HIT HTTP tail, guarded FD6 S/R, RecoverSelected, service Advance and one
 // target Complete. Source/search indexing is test setup before bootstrap.
 // Candidate/extraction/state/prior setup uses real manual claims, not ordinary
-// runners. Auth backend and sixteen unused lifecycle callbacks remain supplied.
+// runners. Auth backend and fifteen unused lifecycle callbacks remain supplied.
 // No author ReturnA, 10k catalog, selected Zoekt, full F or full phase claim.
 func TestT422WorkspaceMarkerNativeComposition(t *testing.T) {
 	if os.Getenv("PHEBS_T422_NATIVE_MARKER") != "1" {

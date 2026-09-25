@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
 )
 
@@ -400,5 +402,28 @@ func TestActiveExecutionPlanIsV5(t *testing.T) {
 	if err != nil || plan.Schema != activeExecutionPlanSchema ||
 		plan.ToolPolicy.ExecutionFreezeSchema != ExecutionFreezeV5Schema || plan.ReceiptContract.Schema != ReceiptV5Schema {
 		t.Fatalf("active execution plan = %q/%q/%q, %v", plan.Schema, plan.ToolPolicy.ExecutionFreezeSchema, plan.ReceiptContract.Schema, err)
+	}
+}
+
+// T46.1 removed the Investigation owner from the runtime. V5 alone observes the
+// fifteen registered owners; the frozen V4 envelope keeps its sixteen.
+func TestV5LifecycleOwnersRetireInvestigation(t *testing.T) {
+	v4, err := BuildPlanV4(testSourceCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v5, err := BuildPlanV5(testSourceCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := slices.DeleteFunc(correctedLifecycleOwners(), func(owner string) bool { return owner == retiredInvestigationOwner })
+	if !slices.Equal(v4.WorkEnvelope.LifecycleOwners, correctedLifecycleOwners()) || len(v4.WorkEnvelope.LifecycleOwners) != 16 ||
+		!slices.Equal(v5.WorkEnvelope.LifecycleOwners, want) || len(want) != 15 {
+		t.Fatalf("V4 owners = %q, V5 owners = %q", v4.WorkEnvelope.LifecycleOwners, v5.WorkEnvelope.LifecycleOwners)
+	}
+	cycle := pressureTestCycle()
+	cycle.Owners = slices.DeleteFunc(cycle.Owners, func(owner lifecycle.CycleOwnerObservation) bool { return owner.Name == retiredInvestigationOwner })
+	if !pressureCycleValid(cycle, v5.WorkEnvelope.LifecycleOwners, false) || pressureCycleValid(cycle, v4.WorkEnvelope.LifecycleOwners, false) {
+		t.Fatal("a fifteen-owner runtime cycle must satisfy V5 only")
 	}
 }

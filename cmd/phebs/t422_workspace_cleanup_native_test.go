@@ -24,7 +24,7 @@ import (
 
 // Real collecting-residue filesystem drains, selected controller/cursor SDK,
 // authenticated FD6/quiescent workspace sampling and joined LC/WB output. The
-// other fourteen owners are explicit no-ops. Shard/object contents are inert;
+// other thirteen owners are explicit no-ops. Shard/object contents are inert;
 // this does not build a corpus or establish current/pin publication semantics.
 func TestT422WorkspaceCleanupNativeComposition(t *testing.T) {
 	started := time.Now()
@@ -34,9 +34,8 @@ func TestT422WorkspaceCleanupNativeComposition(t *testing.T) {
 		t422CleanupExpectedTurns, 2*t422CleanupExpectedTurns, t422CleanupExpectedTurns+2, time.Since(started))
 }
 
-// Same native admission/checkpoint path with ten concrete owners, five current
-// closed owners, and one historical no-op to exercise the frozen 16-owner V4
-// fixture. Files are inert residue, not built publications; the catalog is
+// Same native admission/checkpoint path with the product's fifteen owners:
+// ten concrete and five closed, matching the active V5 plan. Files are inert residue, not built publications; the catalog is
 // built and published through the real store.
 func TestT422WorkspaceAllOwnersNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpoint(t, false, true, false, true, true)
@@ -86,9 +85,6 @@ func seedT422AllNativeOwners(t *testing.T, st *store.Surreal, root string, turns
 		lifecycle.ExtractionStageOwner{Root: filepath.Join(data, "extraction-publications"), Acquire: acquire},
 	}
 	owners = append(owners, lifecycle.ClosedOwners()...)
-	// The frozen V4 fixture has an Investigation owner slot. The active product
-	// does not register one; only this historical test supplies its no-op.
-	owners = append(owners, lifecycle.StaticOwner{OwnerName: "investigations", Completeness: lifecycle.Exact})
 	for index, owner := range owners {
 		owners[index] = t422CleanupCountOwner{Owner: owner, turns: turns}
 	}
@@ -188,7 +184,7 @@ func seedT422CleanupNativeOwners(t *testing.T, root string, turns *atomic.Uint64
 		lifecycle.ObservationInventoryOwnerV2{Root: observationRoot, Acquire: acquire, Pins: observationpublication.InventoryPinsV2{Cache: &observationpublication.InventoryCacheV2{}}},
 		lifecycle.SearchGenerationOwnerImpl{IndexDir: indexRoot, Acquire: acquire, Pins: &focusedindex.SearchGenerationPins{}},
 	}
-	for index := range 14 {
+	for index := range t422LifecycleOwners - 2 {
 		owners = append(owners, lifecycle.StaticOwner{OwnerName: fmt.Sprintf("test-noop-%02d", index), Completeness: lifecycle.Exact})
 	}
 	for index, owner := range owners {

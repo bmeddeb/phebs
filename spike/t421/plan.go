@@ -933,7 +933,7 @@ func frozenLifecycleOwners() []string {
 		lifecycle.CatalogOwner,
 		lifecycle.JobOwner,
 		lifecycle.GenerationScheduleOwner,
-		"investigations", // frozen ceremony owner; retired from runtime by T46.1
+		retiredInvestigationOwner,
 		lifecycle.ObservationOwner,
 		lifecycle.ObservationV2Owner,
 		lifecycle.PartialStageOwner,
@@ -946,6 +946,10 @@ func frozenLifecycleOwners() []string {
 		lifecycle.SourceOwner,
 	}
 }
+
+// retiredInvestigationOwner stays in the frozen V1-V4 owner sets; T46.1
+// removed it from the runtime, so V5 observes the fifteen registered owners.
+const retiredInvestigationOwner = "investigations"
 
 func correctedLifecycleOwners() []string {
 	owners := append(frozenLifecycleOwners(), lifecycle.CatalogV3Owner, lifecycle.RelationshipV3Owner)

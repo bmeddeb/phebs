@@ -21,7 +21,8 @@ const (
 	// Inventory removes its objects, segment, inventory and collecting dirs;
 	// search removes its abandoned stage after its regular shards.
 	t422CleanupExpectedDeleted     = t422CleanupObservationFiles + 4 + t422CleanupSearchFiles + 1
-	t422CleanupExpectedTurns       = 16 * ((t422CleanupObservationFiles + 4 + 1023) / 1024)
+	t422CleanupPages               = (t422CleanupObservationFiles + 4 + 1023) / 1024
+	t422CleanupExpectedTurns       = t422LifecycleOwners * t422CleanupPages
 	t422AllOwnersRelationshipFiles = 10_001
 	t422AllOwnersMinimumDeleted    = t422CleanupExpectedDeleted + t422AllOwnersRelationshipFiles + 2 + 1 // stage, repository, one catalog root
 )
@@ -52,8 +53,8 @@ func assertT422AllOwnersNativeReports(t *testing.T, raw string, input [32]byte) 
 			t.Fatal("real-owner positive prefix", line)
 		}
 	}
-	want := []string{lifecycle.CatalogOwner, lifecycle.CatalogV3Owner, lifecycle.GenerationScheduleOwner, lifecycle.JobOwner, lifecycle.SearchOwner, lifecycle.ObservationOwner, lifecycle.ObservationV2Owner, lifecycle.RelationshipOwner, lifecycle.RelationshipV3Owner, lifecycle.PartialStageOwner, lifecycle.SourceOwner, lifecycle.ResolverOwner, lifecycle.ProofOwner, "investigations", lifecycle.ReaderOwner, lifecycle.TombstoneOwner}
-	if bindings != 1 || len(names) != len(want) || count < t422CleanupExpectedTurns || count > uint64(lifecycle.MaxCycleObservationTurns) || deleted != t422AllOwnersMinimumDeleted {
+	want := []string{lifecycle.CatalogOwner, lifecycle.CatalogV3Owner, lifecycle.GenerationScheduleOwner, lifecycle.JobOwner, lifecycle.SearchOwner, lifecycle.ObservationOwner, lifecycle.ObservationV2Owner, lifecycle.RelationshipOwner, lifecycle.RelationshipV3Owner, lifecycle.PartialStageOwner, lifecycle.SourceOwner, lifecycle.ResolverOwner, lifecycle.ProofOwner, lifecycle.ReaderOwner, lifecycle.TombstoneOwner}
+	if bindings != 1 || len(names) != len(want) || count < uint64(len(want))*t422CleanupPages || count > uint64(lifecycle.MaxCycleObservationTurns) || deleted != t422AllOwnersMinimumDeleted {
 		t.Fatal("real-owner coverage", bindings, names, count, deleted)
 	}
 	for _, name := range want {

@@ -41,7 +41,7 @@ func composeExecutionPressureTransitions(plan Plan, freeze ExecutionFreeze, outc
 		prefix := "pressure:" + label + ":"
 		capacity := []lifecycle.TransitionCapacityObservation{observed.collect.Capacity, observed.refuse.Capacity, observed.latched.Capacity}[index]
 		fence := []time.Time{observed.collect.BallastFenceAt, observed.refuse.BallastFenceAt, observed.latched.BallastFenceAt}[index]
-		if !fence.Equal(mutation.Mutation.Fence) || !observed.valid([]string{"pressure-80", "pressure-90", "pressure-75"}[index], fence) || capacity.Completeness != lifecycle.Exact || capacity.UsedPercent < 0 {
+		if !fence.Equal(mutation.Mutation.Fence) || !observed.valid(plan.WorkEnvelope.LifecycleOwners, []string{"pressure-80", "pressure-90", "pressure-75"}[index], fence) || capacity.Completeness != lifecycle.Exact || capacity.UsedPercent < 0 {
 			return nil, errExecutionReceiptTransition
 		}
 		value := PressureTransition{Schema: pressureTransitionSchema(plan), TargetUsedPercent: target.TargetUsedPercent,
@@ -59,7 +59,7 @@ func composeExecutionPressureTransitions(plan Plan, freeze ExecutionFreeze, outc
 			if index == 2 {
 				cycle = observed.recovery
 			}
-			if !pressureCycleValid(cycle, true) || cycle.FenceAt.UnixMilli() <= 0 || cycle.Capacity.ObservedAt.UnixMilli() <= 0 {
+			if !pressureCycleValid(cycle, plan.WorkEnvelope.LifecycleOwners, true) || cycle.FenceAt.UnixMilli() <= 0 || cycle.Capacity.ObservedAt.UnixMilli() <= 0 {
 				return nil, errExecutionReceiptTransition
 			}
 			value.LifecycleFenceUnixMS, value.CapacityObservedUnixMS = uint64(cycle.FenceAt.UnixMilli()), uint64(cycle.Capacity.ObservedAt.UnixMilli())
@@ -91,7 +91,7 @@ func composeExecutionPressureTransitions(plan Plan, freeze ExecutionFreeze, outc
 			removed := observed.ballast[3]
 			if !removed.Attempted || !removed.Complete || !observed.samples.Points[10].Observed ||
 				observed.resumed.Capacity.UsedBytes < 0 || observed.resumed.Capacity.AvailableBytes < 0 || observed.resumed.Capacity.UsedPercent < 0 ||
-				observed.resumed.Capacity.Completeness != lifecycle.Exact || !observed.valid("recovered-normal", time.Time{}) {
+				observed.resumed.Capacity.Completeness != lifecycle.Exact || !observed.valid(plan.WorkEnvelope.LifecycleOwners, "recovered-normal", time.Time{}) {
 				return nil, errExecutionReceiptTransition
 			}
 			value.RecoveryUsedBytes, value.RecoveryAvailableBytes = uint64(observed.resumed.Capacity.UsedBytes), uint64(observed.resumed.Capacity.AvailableBytes)

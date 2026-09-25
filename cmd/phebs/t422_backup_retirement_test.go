@@ -337,7 +337,7 @@ func TestT422ArchiveWorkspaceNativeComposition(t *testing.T) {
 }
 
 // Actual restored store, FD6 walks, parked runner, cursor writes, authenticated
-// HTTP and WB reports. The sixteen owner callbacks and Gate capacity are
+// HTTP and WB reports. The fifteen owner callbacks and Gate capacity are
 // modeled; this is not real-owner collection, native capacity, archive R,
 // query replay or a whole-phase proof.
 func TestT422WorkspaceEpochFiveNativeComposition(t *testing.T) {
@@ -443,9 +443,6 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	configPath := filepath.Join(root, "phebs.yaml")
 	configRaw := []byte(fmt.Sprintf("server:\n  data_dir: %s\n", filepath.Join(root, "data")))
 	if err := os.WriteFile(configPath, configRaw, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(filepath.Join(root, "data"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	record := t422ServeFlagsRecord()
@@ -1265,7 +1262,7 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 			if err = server.Wait(); err != nil {
 				t.Fatal("native workspace helper", err, diagnostic.String())
 			}
-			wantSamples := 19
+			wantSamples := t422LifecycleOwners + 3
 			if allOwners {
 				wantSamples = int(assertT422AllOwnersNativeReports(t, diagnostic.String(), record.InputSHA256)) + 3
 			} else if cleanupWorkspace {
@@ -2113,7 +2110,7 @@ func t422DriveNativeEpochFiveWorkspace(t *testing.T, ctx context.Context, addres
 			}
 		case method == http.MethodGet:
 			var cycle lifecycle.CycleObservation
-			if json.Unmarshal(body, &cycle) != nil || cycle.OwnerTurns != 16 || cycle.Deleted != 16 || len(cycle.Owners) != 16 {
+			if json.Unmarshal(body, &cycle) != nil || cycle.OwnerTurns != t422LifecycleOwners || cycle.Deleted != t422LifecycleOwners || len(cycle.Owners) != t422LifecycleOwners {
 				t.Fatal("modeled-owner fresh cycle", string(body))
 			}
 			raw, err := base64.RawURLEncoding.DecodeString(response.Trailer.Get(t421ExactReadTrailer))
@@ -2178,7 +2175,7 @@ func t422NativeEpochFiveWorkspaceHelper(t *testing.T, ctx context.Context, root 
 	var turns, failures, readReports atomic.Uint64
 	launch.fail = func(error) { failures.Add(1); stopRunner() }
 	var modeledOwners []lifecycle.Owner
-	for index := range 16 {
+	for index := range t422LifecycleOwners {
 		modeledOwners = append(modeledOwners, t422LifecycleOwnerFixture{name: fmt.Sprintf("test-owner-%02d", index), turns: &turns})
 	}
 	control, err := newT422LifecycleControl(runnerCtx, launch, modeledOwners)
@@ -2244,7 +2241,7 @@ func t422NativeEpochFiveWorkspaceHelper(t *testing.T, ctx context.Context, root 
 	control.mu.Lock()
 	point, step := control.workspacePoint, control.step
 	control.mu.Unlock()
-	if failures.Load() != 0 || turns.Load() != 16 || readReports.Load() != 1 || point != 5 || step != 3 {
+	if failures.Load() != 0 || turns.Load() != t422LifecycleOwners || readReports.Load() != 1 || point != 5 || step != 3 {
 		t.Fatal("native epoch-five final control state", failures.Load(), turns.Load(), readReports.Load(), point, step)
 	}
 	observed := control.workspaceByteSnapshot()
@@ -2297,8 +2294,8 @@ func assertT422EpochFiveNativeWorkspaceReports(t *testing.T, raw string, input [
 		counts[phase]++
 		pending = 0
 	}
-	if bindings != 1 || sequence != 21 || pending != 0 || counts['C'] != 1 || counts['D'] != 18 || counts['E'] != 2 {
+	if bindings != 1 || sequence != 5+t422LifecycleOwners || pending != 0 || counts['C'] != 1 || counts['D'] != 2+t422LifecycleOwners || counts['E'] != 2 {
 		t.Fatal("native epoch-five WB coverage", bindings, sequence, pending, counts)
 	}
-	t.Log("21 actual native WB pairs: five fixed boundaries plus sixteen modeled-owner turn workspace walks; Gate capacity is modeled, PC has 15 pairs, no real-owner/native-capacity/whole-phase claim")
+	t.Log("20 actual native WB pairs: five fixed boundaries plus fifteen modeled-owner turn workspace walks; Gate capacity is modeled, PC has 15 pairs, no real-owner/native-capacity/whole-phase claim")
 }

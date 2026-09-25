@@ -5579,3 +5579,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lock costs are unchanged. A corrected exact source still needs focused
   and static gates, independent review, clean-source preflight, and a full
   rehearsal before any freeze or pass claim.
+- **2026-09-25 — T42.2v V5 fifteen-owner lifecycle set after T46.1.** T46.1
+  removed the Investigation lifecycle owner, so the product now registers
+  fifteen owners, but every V5 pressure, recovery, archive, and collection
+  cycle still required the sixteen-owner V4 rotation and would refuse at the
+  first normal cycle. Prospective V5 alone removes exactly the retired
+  `investigations` row from its sorted work-envelope owner set and refuses if
+  that V4 preimage changes. Pressure-cycle, lifecycle-status, and receipt
+  validators now read the plan's own owner set instead of a shared constant.
+  V1–V4 bytes, the sixteen-owner validators, and their historical fixtures
+  are unchanged. The epoch-four/five T42.2 lifecycle control now requires the
+  fifteen registered owners (`t422LifecycleOwners`) instead of sixteen, so an
+  old V4 launch still refuses there. Modeled-owner fixtures derive their turn
+  and sample counts from that constant, and the native all-owners composition
+  drives the fifteen product owners without a test-only Investigation slot. The
+  lifecycle R class keeps its historical `fresh-sixteen-owner-cycle` label
+  because it is part of the inspection-inventory bytes. This satisfies the T46.1
+  requirement for a prospective fifteen-owner plan, and it still needs review,
+  clean-source preflight, and a full rehearsal before any freeze. Cost: the
+  runtime does one fewer static owner turn per lifecycle cycle; validators
+  compare fifteen rows instead of sixteen. Query, sync, startup, publication,
+  retry, cache, schema, child, and lock costs are unchanged.

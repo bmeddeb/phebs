@@ -175,10 +175,10 @@ func TestExecutionEpochPressureNativeReportChecks(t *testing.T) {
 			case "byte-under":
 				c.Owners[0].RootBytes = 1
 			}
-			if pressureCycleValid(c, false) != (mode == "valid" || mode == "multi-row") {
+			if pressureCycleValid(c, correctedLifecycleOwners(), false) != (mode == "valid" || mode == "multi-row") {
 				t.Fatal(mode)
 			}
-			if mode == "job-backlog" && !pressureCycleValid(c, true) {
+			if mode == "job-backlog" && !pressureCycleValid(c, correctedLifecycleOwners(), true) {
 				t.Fatal("truthful recovery durable-job backlog refused")
 			}
 		})
@@ -224,21 +224,21 @@ func TestExecutionEpochPressureCapacitySequence(t *testing.T) {
 		operation string
 		fence     time.Time
 	}{{"pressure-80", fence80}, {"pressure-90", fence90}, {"pressure-75", fence75}} {
-		if !p.valid(tc.operation, tc.fence) {
+		if !p.valid(correctedLifecycleOwners(), tc.operation, tc.fence) {
 			t.Fatal("valid sequence refused", tc.operation)
 		}
-		if p.valid(tc.operation, tc.fence.Add(time.Nanosecond)) {
+		if p.valid(correctedLifecycleOwners(), tc.operation, tc.fence.Add(time.Nanosecond)) {
 			t.Fatal("wrong native fence accepted", tc.operation)
 		}
 	}
 	changed := p
 	changed.latched.Capacity.Pressure = lifecycle.PressureNormal
-	if changed.valid("pressure-75", fence75) {
+	if changed.valid(correctedLifecycleOwners(), "pressure-75", fence75) {
 		t.Fatal("unlatched 75 accepted")
 	}
 	changed = p
 	changed.refuse.PriorCapacityObservedAt = normal.Capacity.ObservedAt
-	if changed.valid("pressure-90", fence90) {
+	if changed.valid(correctedLifecycleOwners(), "pressure-90", fence90) {
 		t.Fatal("noncontiguous capacity accepted")
 	}
 }

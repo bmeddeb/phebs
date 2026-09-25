@@ -84,10 +84,15 @@ type t422LifecycleEvent struct {
 	MaxDeleted      uint64 `json:"max_deleted"`
 }
 
+// t422LifecycleOwners is the product's registered owner count, which the
+// active V5 plan observes. T46.1 retired the sixteenth (Investigation) owner,
+// so a V1-V4 sixteen-owner launch refuses here.
+const t422LifecycleOwners = 15
+
 func newT422LifecycleControl(ctx context.Context, launch *t422SemanticLaunch, owners []lifecycle.Owner) (*t422LifecycleControl, error) {
 	current, err := dispatchadmission.ProductionSemanticState()
 	if ctx == nil || ctx.Err() != nil || launch == nil || launch.fail == nil || err != nil ||
-		!launch.matches(current) || len(owners) != 16 {
+		!launch.matches(current) || len(owners) != t422LifecycleOwners {
 		return nil, errT422LifecycleControl
 	}
 	control := &t422LifecycleControl{ctx: ctx, launch: launch, runner: lifecycle.NewRunnerControl()}

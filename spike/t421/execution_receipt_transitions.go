@@ -61,7 +61,7 @@ func composeExecutionReaderTransition(plan Plan, measurement PhaseMeasurement, a
 func composeExecutionLifecycleTransition(plan Plan, measurement PhaseMeasurement, authority map[string]AuthorityPhaseResult,
 	cycle lifecycle.CycleObservation, events map[string]uint64,
 ) (LifecycleTransition, error) {
-	if !processAccountingPlanSemantics(plan.Schema) || measurement.Phase != "lifecycle_collection" || !pressureCycleValid(cycle, true) ||
+	if !processAccountingPlanSemantics(plan.Schema) || measurement.Phase != "lifecycle_collection" || !pressureCycleValid(cycle, plan.WorkEnvelope.LifecycleOwners, true) ||
 		cycle.FenceAt.UnixMilli() <= 0 || cycle.Capacity.ObservedAt.UnixMilli() <= 0 {
 		return LifecycleTransition{}, errExecutionReceiptTransition
 	}

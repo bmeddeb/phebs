@@ -26,7 +26,7 @@ import (
 )
 
 // Actual inherited FD6, selected command, real engine quiescence and whole-root
-// byte walks. The sixteen sweep callbacks and bearer auth backend are modeled;
+// byte walks. The fifteen sweep callbacks and bearer auth backend are modeled;
 // the cursor store, filesystem capacity and SDK reads are real. This proves no
 // corpus deletion, pressure transition, frozen-volume capacity or whole phase.
 func TestT422WorkspaceNativeComposition(t *testing.T) {
@@ -35,14 +35,14 @@ func TestT422WorkspaceNativeComposition(t *testing.T) {
 
 // Actual selected epoch-one FD6, engine/SDK quiescence, drained authenticated
 // HTTP finish command and source-bound WB prefix. Semantic input, auth backend
-// and sixteen unused owners are supplied. This starts no author or corpus
+// and fifteen unused owners are supplied. This starts no author or corpus
 // pipeline, proves only phase-two finish, and makes no warm/whole-phase claim.
 func TestT422WorkspaceEarlyNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-early")
 }
 
 // Actual Resume-three callback plus independent cold/warm HTTP finish walks.
-// Semantic input, auth backend and sixteen unused owner callbacks are supplied;
+// Semantic input, auth backend and fifteen unused owner callbacks are supplied;
 // native FD6, PC/DA/SA transitions, engine/SDK guards and joins are real.
 // No author/corpus, capacity-normal cycle or full ColdToWarm admission is claimed.
 func TestT422WorkspaceWarmNativeComposition(t *testing.T) {
@@ -53,7 +53,7 @@ func TestT422WorkspaceWarmNativeComposition(t *testing.T) {
 // fixture deadline and full-profile 21 PC pairs. Compared with warm-only: three
 // more guarded walks, two HTTP calls and 284 WB bytes (621 total). No author B,
 // pin/authority/physical pipeline or representative workspace is executed;
-// auth/semantic inputs and sixteen unused owners remain supplied.
+// auth/semantic inputs and fifteen unused owners remain supplied.
 func TestT422WorkspacePhysicalNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpointFailure(t, false, true, false, "workspace-physical")
 }
@@ -162,10 +162,10 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	var failures, turns atomic.Uint64
 	launch.fail = func(error) { failures.Add(1); stopRunner() }
 	var modeledOwners []lifecycle.Owner
-	for index := 0; index < 16; index++ {
+	for index := range t422LifecycleOwners {
 		modeledOwners = append(modeledOwners, t422LifecycleOwnerFixture{name: fmt.Sprintf("test-owner-%02d", index), turns: &turns})
 	}
-	wantTurns, wantDeleted := uint64(16), uint64(16)
+	wantTurns, wantDeleted := uint64(t422LifecycleOwners), uint64(t422LifecycleOwners)
 	verifyCleanup := func() {}
 	if os.Getenv(t422BackupFixture) == "workspace-cleanup" {
 		modeledOwners, verifyCleanup = seedT422CleanupNativeOwners(t, root, &turns)
@@ -402,7 +402,7 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 		t.Fatal("actual normal-cycle R", response.Code, response.Body.String(), readReports.Load())
 	}
 	if allOwners {
-		if cycle.OwnerTurns < t422CleanupExpectedTurns || cycle.OwnerTurns > uint64(lifecycle.MaxCycleObservationTurns) || cycle.Deleted != t422AllOwnersMinimumDeleted {
+		if cycle.OwnerTurns < uint64(len(cycle.Owners))*t422CleanupPages || len(cycle.Owners) != 15 || cycle.OwnerTurns > uint64(lifecycle.MaxCycleObservationTurns) || cycle.Deleted != t422AllOwnersMinimumDeleted {
 			t.Fatal("real-owner cycle did not drain its expected fixture", cycle)
 		}
 		jobBacklog := false

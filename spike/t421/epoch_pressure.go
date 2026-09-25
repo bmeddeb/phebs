@@ -220,19 +220,19 @@ func (reader *executionEpochInspection) pressureRead(ctx context.Context, operat
 		decodeEpochJSON(append(raw, '\n'), value, false) != nil {
 		return errEpochInspection
 	}
-	if !reader.pressure.valid(operation, fence) {
+	if !reader.pressure.valid(reader.plan.WorkEnvelope.LifecycleOwners, operation, fence) {
 		return errEpochInspection
 	}
 	reader.pressure.step++
 	return nil
 }
 
-func (p epochPressureObservations) valid(operation string, fence time.Time) bool {
+func (p epochPressureObservations) valid(owners []string, operation string, fence time.Time) bool {
 	switch operation {
 	case "normal-cycle":
-		return pressureCycleValid(p.normal, true) && p.normal.Capacity.UsedPercent < 75
+		return pressureCycleValid(p.normal, owners, true) && p.normal.Capacity.UsedPercent < 75
 	case "recovery-cycle":
-		return pressureCycleValid(p.recovery, true) && p.recovery.Capacity.UsedPercent < 75 && p.recovery.FenceAt.Equal(p.recoveryFence) && !p.recovery.FenceAt.Before(p.latched.Capacity.ObservedAt)
+		return pressureCycleValid(p.recovery, owners, true) && p.recovery.Capacity.UsedPercent < 75 && p.recovery.FenceAt.Equal(p.recoveryFence) && !p.recovery.FenceAt.Before(p.latched.Capacity.ObservedAt)
 	case "pressure-80":
 		return p.collect.Schema == lifecycle.Pressure80ObservationSchema && p.collect.BallastFenceAt.Equal(fence) &&
 			p.collect.PriorCapacityObservedAt.Equal(p.normal.Capacity.ObservedAt) && !fence.Before(p.normal.Capacity.ObservedAt) && p.collect.Capacity.UsedBytes > p.normal.Capacity.UsedBytes && pressureCapacityValid(p.collect.Capacity, lifecycle.PressureCollect, 80, fence)
@@ -255,12 +255,11 @@ func pressureCapacityValid(c lifecycle.TransitionCapacityObservation, pressure l
 		percent >= 0 && percent <= 100 && uint64(percent) == usedPercentCeiling(uint64(c.UsedBytes), uint64(c.TotalBytes)) && !fence.IsZero() && !c.ObservedAt.Before(fence)
 }
 
-func pressureCycleValid(c lifecycle.CycleObservation, allowJobBacklog bool) bool {
-	if c.Schema != lifecycle.CycleObservationSchema || c.FenceAt.UnixMilli() <= 0 || c.OwnerTurns == 0 || c.OwnerTurns > uint64(lifecycle.MaxCycleObservationTurns) || len(c.Owners) != 16 ||
+func pressureCycleValid(c lifecycle.CycleObservation, names []string, allowJobBacklog bool) bool {
+	if c.Schema != lifecycle.CycleObservationSchema || c.FenceAt.UnixMilli() <= 0 || c.OwnerTurns == 0 || c.OwnerTurns > uint64(lifecycle.MaxCycleObservationTurns) || len(names) == 0 || len(c.Owners) != len(names) ||
 		c.Capacity.UsedPercent >= lifecycle.SoftWatermarkPercent || !pressureCapacityValid(c.Capacity, lifecycle.PressureNormal, c.Capacity.UsedPercent, c.FenceAt) {
 		return false
 	}
-	names := correctedLifecycleOwners()
 	rows := make([]LifecycleOwnerResult, 0, len(c.Owners))
 	prior := c.FenceAt
 	for i, owner := range c.Owners {

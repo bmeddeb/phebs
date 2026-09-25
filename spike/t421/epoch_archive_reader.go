@@ -197,7 +197,7 @@ func (reader *executionEpochInspection) freshCycle(ctx context.Context) (retErr 
 	var cycle lifecycle.CycleObservation
 	raw, status, report, err := reader.read(ctx, "/api/t422/lifecycle/fresh-cycle", 16<<10, epochInspectionReport{})
 	if err != nil || status != http.StatusOK || report.ControlFileReads != 0 || report.StoreReadAttempts != 0 || report.MemberVisits != 0 ||
-		decodeEpochJSON(append(raw, '\n'), &cycle, false) != nil || !pressureCycleValid(cycle, true) {
+		decodeEpochJSON(append(raw, '\n'), &cycle, false) != nil || !pressureCycleValid(cycle, reader.plan.WorkEnvelope.LifecycleOwners, true) {
 		return errEpochInspection
 	}
 	reader.collectionCycle = cycle // Native values; never synthesized from L.

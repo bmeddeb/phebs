@@ -59,7 +59,7 @@ func (reader *executionEpochInspection) LifecycleStatus(ctx context.Context) (re
 		lifecycle.ValidateSelectedCleanupStatus(value.Status) != nil || !value.Policy.Enabled {
 		return result, report, errEpochInspection
 	}
-	names := correctedLifecycleOwners()
+	names := reader.plan.WorkEnvelope.LifecycleOwners
 	if len(value.Owners) != len(names) {
 		return result, report, errEpochInspection
 	}

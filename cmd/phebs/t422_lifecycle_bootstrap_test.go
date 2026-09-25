@@ -417,7 +417,7 @@ func TestT422LifecycleBootstrapHelper(t *testing.T) {
 	}
 	var turns, probes atomic.Uint64
 	var nativeOwners []lifecycle.Owner
-	for index := 0; index < 16; index++ {
+	for index := range t422LifecycleOwners {
 		owner := t422LifecycleOwnerFixture{name: "test-owner-" + strconv.Itoa(index), turns: &turns}
 		if mode == "cancel-result" {
 			owner.cancel = stopRunner
@@ -458,7 +458,7 @@ func TestT422LifecycleBootstrapHelper(t *testing.T) {
 		control.mu.Lock()
 		pending := control.step == 2 && control.busy
 		control.mu.Unlock()
-		if !pending || turns.Load() != 16 || probes.Load() != 16 {
+		if !pending || turns.Load() != t422LifecycleOwners || probes.Load() != t422LifecycleOwners {
 			return errors.New("R did not retain completed native cycle while pending")
 		}
 		fmt.Println("report_pending")
@@ -509,7 +509,7 @@ func TestT422LifecycleBootstrapHelper(t *testing.T) {
 	control.mu.Unlock()
 	switch mode {
 	case "complete":
-		if turns.Load() != 16 || probes.Load() != 16 || prefix.OwnerTurns != 16 || prefix.Deleted != 16 || failures.Load() != 0 || step != 3 {
+		if turns.Load() != t422LifecycleOwners || probes.Load() != t422LifecycleOwners || prefix.OwnerTurns != t422LifecycleOwners || prefix.Deleted != t422LifecycleOwners || failures.Load() != 0 || step != 3 {
 			t.Fatal("completed helper invented, repeated or lost actual work", turns.Load(), probes.Load(), prefix, step)
 		}
 	case "undrained":
