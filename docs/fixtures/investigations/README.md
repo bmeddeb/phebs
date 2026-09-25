@@ -1,7 +1,12 @@
 # Synthetic Investigation fixtures
 
-Nine canonical-valid envelope instances modeling the states that phebs UI,
-API, MCP, authorization, and conformance tests must handle. They target the
+T46.1 retired the persistent Investigations product. These synthetic fixtures
+remain conformance inputs for the shipped read-only MCP envelope. Their
+Investigation workflow scenarios are historical; they do not describe an
+active UI, HTTP workflow, or write tool.
+
+Nine canonical-valid envelope instances for the shipped read-only MCP schema
+and retained historical UI/API scenarios. They target the
 [MCP envelope](../../MCP_ENVELOPE.md) contract v0.2 with
 `envelope_version: "1.0"` and the Investigation domain contract v0.2.
 

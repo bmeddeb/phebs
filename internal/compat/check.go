@@ -124,7 +124,7 @@ type CompatibilityResult struct {
 }
 
 // Limits is the public, deterministic compatibility/preflight contract shown
-// beside Workbench proposal previews.
+// beside other evidence projections.
 type Limits struct {
 	Engine                string `json:"engine"`
 	Version               string `json:"version"`
@@ -154,7 +154,7 @@ func WireLimits() Limits {
 }
 
 // WirePolicyDigest binds the exact pinned engine, policy configuration, and
-// visible limits used by both proof-bundle and Workbench callers.
+// visible limits used by proof-bundle callers.
 func WirePolicyDigest() string {
 	encoded, _ := json.Marshal(struct {
 		Config string `json:"config"`

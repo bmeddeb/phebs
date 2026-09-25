@@ -84,10 +84,6 @@ describe('ScopeContextBar', () => {
     expect(explorerHref).toContain(`repository=${repository}`)
     expect(explorerHref).toContain('service_key=orders-api')
     expect(explorerHref).toContain('scope_generation=gen-r4')
-    // The Workbench consumes scope under its own param names.
-    const workbench = decodeURIComponent(screen.getByRole('link', { name: 'Workbench' }).getAttribute('href') ?? '')
-    expect(workbench).toContain(`service_repository=${repository}`)
-    expect(workbench).toContain('source_service=orders-api')
   })
   it('renders authority moved when the pinned generation no longer matches', async () => {
     api.fetchServiceDetail.mockResolvedValue(detail)

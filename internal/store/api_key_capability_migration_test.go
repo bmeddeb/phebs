@@ -140,22 +140,16 @@ CREATE $legacy SET user_id = '', name = 'Legacy config key',
 		}
 	}
 
-	writeKey, err := s.CreateAPIKey(ctx, APIKey{
+	if _, err := s.CreateAPIKey(ctx, APIKey{
 		ID: "write-capable", UserID: "migration-user",
 		Name: "Write-capable", Prefix: "phebs_write", Hash: "write-hash",
-		Capabilities: []APIKeyCapability{
-			APIKeyCapabilityInvestigationWrite,
-		},
-		CreatedAt: time.Now().UTC(),
-	})
-	if err != nil {
-		t.Fatal(err)
+		Capabilities: []APIKeyCapability{"investigation:write"},
+		CreatedAt:    time.Now().UTC(),
+	}); err == nil {
+		t.Fatal("retired Investigation write capability was issued")
 	}
-	assertAPIKeyCapabilityUpdateRejected(t, s, named.ID, []APIKeyCapability{
-		APIKeyCapabilityInvestigationWrite,
-	})
-	assertAPIKeyCapabilityUpdateRejected(t, s, writeKey.ID, []APIKeyCapability{})
-	if err := s.TouchAPIKey(ctx, writeKey.ID, time.Now().UTC()); err != nil {
+	assertAPIKeyCapabilityUpdateRejected(t, s, named.ID, []APIKeyCapability{"investigation:write"})
+	if err := s.TouchAPIKey(ctx, named.ID, time.Now().UTC()); err != nil {
 		t.Fatalf("ordinary immutable-key metadata update: %v", err)
 	}
 }
@@ -343,6 +337,49 @@ DEFINE EVENT api_key_capability_migration_scan_trap ON TABLE api_key
 	}
 }
 
+func TestRetiredInvestigationWriteCapabilityIsClearedOnUpgrade(t *testing.T) {
+	ctx := t.Context()
+	s, err := OpenLocalMemory(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close(context.Background()) })
+	created, err := s.CreateAPIKey(ctx, APIKey{
+		ID: "retired-write", UserID: "owner", Name: "Existing key",
+		Prefix: "phebs_existing", Hash: "retained-hash", CreatedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	results, err := surrealdb.Query[any](ctx, s.db, `
+REMOVE EVENT IF EXISTS api_key_capabilities_immutable ON TABLE api_key;
+DEFINE FIELD OVERWRITE capabilities ON api_key TYPE array<string> DEFAULT []
+	ASSERT $value = [] OR $value = ['investigation:write'];
+UPDATE $key SET capabilities = ['investigation:write'] RETURN NONE;
+DELETE $marker RETURN NONE;`, map[string]any{
+		"key":    apiKeyID(created.ID),
+		"marker": models.NewRecordID("store_migration", "retired_investigation_write"),
+	})
+	if err != nil || results == nil || len(*results) != 4 {
+		t.Fatalf("seed retired key: results=%v err=%v", results, err)
+	}
+	for index, result := range *results {
+		if result.Status != "OK" || result.Error != nil {
+			t.Fatalf("seed retired key statement %d: %+v", index, result)
+		}
+	}
+	for pass := 0; pass < 2; pass++ {
+		if err := s.applySchema(ctx); err != nil {
+			t.Fatalf("upgrade pass %d: %v", pass, err)
+		}
+		key, err := s.GetAPIKey(ctx, created.ID)
+		if err != nil || key.Hash != "retained-hash" || key.Capabilities == nil || len(key.Capabilities) != 0 {
+			t.Fatalf("upgraded key pass %d: key=%+v err=%v", pass, key, err)
+		}
+		assertAPIKeyCapabilityUpdateRejected(t, s, created.ID, []APIKeyCapability{"investigation:write"})
+	}
+}
+
 func readAPIKeyCapabilityMigrationMarker(
 	t *testing.T,
 	s *Surreal,
@@ -397,13 +434,6 @@ func assertAPIKeyCapabilityUpdateRejected(
 	key, getErr := s.GetAPIKey(context.Background(), id)
 	if getErr != nil {
 		t.Fatal(getErr)
-	}
-	if id == "write-capable" {
-		if len(key.Capabilities) != 1 ||
-			key.Capabilities[0] != APIKeyCapabilityInvestigationWrite {
-			t.Fatalf("failed update changed write key: %+v", key)
-		}
-		return
 	}
 	if len(key.Capabilities) != 0 {
 		t.Fatalf("failed update changed read key: %+v", key)

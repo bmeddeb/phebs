@@ -80,8 +80,8 @@ Being explicit about limits is part of the project:
 - **Revisions.** phebs treats HEAD as authoritative, with at most seven
   explicit branch/tag revisions per repository. If you need every branch of
   every repo indexed continuously, Sourcegraph fits better.
-- **Experimental evidence packs.** Contract Atlas, Caller Map, Impact, Topics,
-  and the Workbench are experimental and default-dark. They make no
+- **Experimental evidence packs.** Contract Atlas, Caller Map, Impact, and
+  Topics are experimental and default-dark. They make no
   completeness or accuracy claim, and the retained external Go/gRPC validation
   gate is `NOT_ESTABLISHED`. Evaluate them as a direction, not a guarantee.
 

@@ -67,7 +67,7 @@ func TestAuditEventsOnAuthSurface(t *testing.T) {
 		client,
 		http.MethodPost,
 		server.URL+"/api/auth/keys",
-		`{"name":"Investigation agent","capabilities":["investigation:write"]}`,
+		`{"name":"Build reader","capabilities":[]}`,
 		loggedIn.CSRFToken,
 		"",
 	)
@@ -106,7 +106,6 @@ func TestAuditEventsOnAuthSurface(t *testing.T) {
 		{"auth.login", http.StatusUnauthorized, false},
 		{"auth.login", http.StatusOK, true},
 		{"auth.key.create", http.StatusCreated, true},
-		{"auth.key.capability_selection", http.StatusCreated, true},
 		{"auth.key.revoke", http.StatusNoContent, true},
 		{"auth.logout", http.StatusNoContent, true},
 	}
@@ -132,13 +131,11 @@ func TestAuditEventsOnAuthSurface(t *testing.T) {
 		t.Errorf("failed login target = %q, want attempted email", events[1].Target)
 	}
 	if events[3].Target != created.Key.ID ||
-		events[4].Target != created.Key.ID+" capabilities=[investigation:write]" ||
-		events[5].Target != created.Key.ID {
+		events[4].Target != created.Key.ID {
 		t.Errorf(
-			"key lifecycle targets = %q/%q/%q, want id/capability/id for %q",
+			"key lifecycle targets = %q/%q, want id/id for %q",
 			events[3].Target,
 			events[4].Target,
-			events[5].Target,
 			created.Key.ID,
 		)
 	}

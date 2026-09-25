@@ -49,7 +49,6 @@ executed in production.
 | Caller Map | Find declaration-bound static callers, name matches, unresolved sites, and old-versus-replacement differences | Experimental, default-dark |
 | Contract impact | Inspect operation consumers, protobuf/Thrift field references, compatibility previews, proof bundles, and coverage | Experimental, default-dark |
 | Kafka topics | Find literal producers and consumers with a first-class unresolved-site census | Experimental, default-dark |
-| Change Workbench | Organize a change around Why, What, Where, and How with immutable evidence and human dispositions | Synthetic/development or explicitly capability-gated |
 
 Today a repository is either indexed whole or configured with one exact
 analysis unit. The focused path and repository-wide caller overlay are shipped
@@ -129,7 +128,7 @@ Open <http://127.0.0.1:3071>. The
 Jaeger/Thrift and Kafka demo configurations.
 
 For the retained neutral focused-service cohort—focused Search and local
-evidence beside repository-overlay callers and the store-derived Workbench:
+evidence beside repository-overlay callers:
 
 ```bash
 make dev
@@ -158,7 +157,7 @@ Architecture decisions live in the dated [PLAN.md](./PLAN.md) ledger.
 ## Evidence and safety posture
 
 The retained external Go/gRPC validation gate is `NOT_ESTABLISHED`. No Contract
-Atlas, Caller Map, Impact, Topics, Workbench, proof-bundle, or coverage result
+Atlas, Caller Map, Impact, Topics, proof-bundle, or coverage result
 establishes:
 
 - runtime use or complete caller coverage;

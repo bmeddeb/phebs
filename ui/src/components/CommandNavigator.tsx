@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
-import { recentScopes, scopeParams, workbenchScopeParams, type ActiveScope } from '../scope'
+import { recentScopes, scopeParams, type ActiveScope } from '../scope'
 
 // T43.9 global keyboard navigator (charter §3 keyboard-first). A command
 // palette over navigation only: its items are built from the instance's
@@ -64,7 +64,6 @@ export function CommandNavigator({ surfaces, scope, principal, onClose }: {
       if (scope.serviceKey) {
         result.push({ id: 'scope:search', label: `Search · ${name}`, detail: 'active scope', target: href('/search', { ...scopeParams(scope), scope: 'service', q: '' }) })
         result.push({ id: 'scope:explorer', label: `Explorer · ${name}`, detail: 'active scope', target: href('/relationships', scopeParams(scope)) })
-        result.push({ id: 'scope:workbench', label: `Workbench · ${name}`, detail: 'active scope', target: href('/workbench', workbenchScopeParams(scope)) })
       }
     }
     for (const recent of recentScopes(principal)) {

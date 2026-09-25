@@ -2,6 +2,10 @@
 
 *Draft v0.1 · pilot prerequisite item 3 · design phase only*
 
+T46.1 retired the Investigations product. Investigation-object cases below
+remain draft history and are not active product acceptance tests; the shipped
+read-only MCP evidence envelope retains its independent contract.
+
 This is a dependency-preview draft derived from
 [THREAT_MODEL.md](./THREAT_MODEL.md), [PILOT_CHARTER.md §5](./PILOT_CHARTER.md#5-roles-and-authority),
 the [Investigation domain contract](./INVESTIGATION_DOMAIN_CONTRACT.md), and

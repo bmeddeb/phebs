@@ -17,7 +17,6 @@ const (
 	RelationshipOwner   = "relationship-namespaces"
 	RelationshipV3Owner = "relationship-v3-namespaces"
 	ProofOwner          = "proof-bundles"
-	InvestigationOwner  = "investigations"
 	ReaderOwner         = "readers"
 	JobOwner            = "durable-jobs"
 	TombstoneOwner      = "service-tombstones"
@@ -58,7 +57,6 @@ func ClosedOwners() []Owner {
 		StaticOwner{OwnerName: SourceOwner, Completeness: Exact},
 		StaticOwner{OwnerName: ResolverOwner, Completeness: Exact},
 		StaticOwner{OwnerName: ProofOwner, Completeness: Exact},
-		StaticOwner{OwnerName: InvestigationOwner, Completeness: Exact},
 		StaticOwner{OwnerName: ReaderOwner, Completeness: Exact},
 		StaticOwner{OwnerName: TombstoneOwner, Completeness: Exact},
 	}

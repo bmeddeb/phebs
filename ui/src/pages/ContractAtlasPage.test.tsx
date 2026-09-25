@@ -336,7 +336,6 @@ const engine = new Client()
 function tree(
   params: URLSearchParams,
   callerMapAvailable: boolean,
-  workbenchAvailable: boolean,
 ) {
   return (
     <StyletronProvider value={engine}>
@@ -344,7 +343,6 @@ function tree(
         <ContractAtlasPage
           params={params}
           callerMapAvailable={callerMapAvailable}
-          workbenchAvailable={workbenchAvailable}
         />
       </BaseProvider>
     </StyletronProvider>
@@ -354,9 +352,8 @@ function tree(
 function page(
   params = new URLSearchParams(),
   callerMapAvailable = false,
-  workbenchAvailable = false,
 ) {
-  return render(tree(params, callerMapAvailable, workbenchAvailable))
+  return render(tree(params, callerMapAvailable))
 }
 
 function paramsFromHash() {
@@ -368,9 +365,8 @@ function paramsFromHash() {
 function rerenderFromHash(
   view: ReturnType<typeof page>,
   callerMapAvailable = false,
-  workbenchAvailable = false,
 ) {
-  view.rerender(tree(paramsFromHash(), callerMapAvailable, workbenchAvailable))
+  view.rerender(tree(paramsFromHash(), callerMapAvailable))
 }
 
 beforeEach(() => {
@@ -421,13 +417,13 @@ test('browses duplicate declarations through stable bounded pages', async () => 
 })
 
 test('renders bounded shapes, qualified relationships, and pinned source links', async () => {
-  const view = page(new URLSearchParams(), true, true)
+  const view = page(new URLSearchParams(), true)
   await screen.findByText('3 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
   expect(decodeURIComponent(window.location.hash)).toBe(
     '#/contracts?sel_repository=github.com/acme/contracts&sel_lineage=lineage-a&sel_operation=/demo.Catalog/Get&sel_protocol=protobuf',
   )
-  rerenderFromHash(view, true, true)
+  rerenderFromHash(view, true)
   await screen.findByTestId('contract-operation-detail')
 
   expect(api.fetchContractOperation).toHaveBeenCalledWith(
@@ -475,19 +471,6 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
     .toBe(
       '#/callers?protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage-a&operation=%2Fdemo.Catalog%2FGet',
     )
-  expect(screen.getByRole('link', { name: 'Start Workbench' }).getAttribute('href'))
-    .toBe(
-      '#/workbench?source=atlas&step=why&protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage-a&operation=%2Fdemo.Catalog%2FGet',
-    )
-})
-
-test('keeps the Workbench launch undiscoverable without its capability', async () => {
-  const view = page()
-  await screen.findByText('3 rows')
-  fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
-  rerenderFromHash(view)
-  await screen.findByTestId('contract-operation-detail')
-  expect(screen.queryByRole('link', { name: 'Start Workbench' })).toBeNull()
 })
 
 test('applies exact server filters and renders an honest bounded empty state', async () => {

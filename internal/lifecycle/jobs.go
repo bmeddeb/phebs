@@ -25,7 +25,6 @@ var lifecycleJobKinds = []store.JobKind{
 	store.JobExtract,
 	store.JobResolverCatalog,
 	store.JobCallerLeaf,
-	store.JobInvestigate,
 }
 
 type JobStore interface {

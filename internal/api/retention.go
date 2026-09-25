@@ -24,11 +24,10 @@ const (
 	RetentionStatusWarningHeader                     = "X-Phebs-Warning-Code"
 	RetentionStatusProofBundlePositiveLifetimeEffect = "deletes the expired bundle and exactly its proof-bundle:<bundle_id> evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible"
 
-	RetentionStatusOwnerCount                  = 12
-	RetentionStatusComponentCount              = 54
-	RetentionStatusCoreComponentCount          = 23
-	RetentionStatusInvestigationComponentCount = 24
-	RetentionStatusDerivedComponentCount       = 7
+	RetentionStatusOwnerCount            = 11
+	RetentionStatusComponentCount        = 28
+	RetentionStatusCoreComponentCount    = 21
+	RetentionStatusDerivedComponentCount = 7
 
 	// RetentionStatusReportedIdentityLimit is the most identities one summary
 	// may represent exactly. The scan limit owns one cap-plus-one sentinel so a
@@ -153,10 +152,6 @@ var coreRetentionOwnerIDs = map[string]struct{}{
 	"caller_rows":           {},
 }
 
-var investigationRetentionOwnerIDs = map[string]struct{}{
-	"investigation_workbench_rows": {},
-}
-
 var derivedRetentionOwnerIDs = map[string]struct{}{
 	"candidate_artifacts": {},
 	"focused_indexes":     {},
@@ -189,42 +184,12 @@ func NewCoreRetentionStatusSource(
 	)
 }
 
-// NewInvestigationRetentionStatusSource adapts the 24-table T30.6q collector
-// into the fixed response shell. It does not include investigation_run_job;
-// that table remains part of the core durable-job component.
-func NewInvestigationRetentionStatusSource(
-	source store.InvestigationRetentionStatusStore,
-	reportError RetentionStatusErrorReporter,
-) RetentionStatusSource {
-	if source == nil {
-		return func(context.Context, *RetentionStatus) error { return nil }
-	}
-	return newRetentionComponentStatusSource(
-		"investigation",
-		source.CollectInvestigationRetention,
-		investigationRetentionOwnerIDs,
-		RetentionStatusInvestigationComponentCount,
-		reportError,
-	)
-}
-
-// NewStoreRetentionStatusSource composes the independently bounded core and
-// Investigation collectors in fixed registry order.
+// NewStoreRetentionStatusSource adapts the bounded core collector.
 func NewStoreRetentionStatusSource(
-	source store.RetentionStatusStore,
+	source store.CoreRetentionStore,
 	reportError RetentionStatusErrorReporter,
 ) RetentionStatusSource {
-	if source == nil {
-		return func(context.Context, *RetentionStatus) error { return nil }
-	}
-	core := NewCoreRetentionStatusSource(source, reportError)
-	investigation := NewInvestigationRetentionStatusSource(source, reportError)
-	return func(ctx context.Context, status *RetentionStatus) error {
-		if err := core(ctx, status); err != nil {
-			return err
-		}
-		return investigation(ctx, status)
-	}
+	return NewCoreRetentionStatusSource(source, reportError)
 }
 
 // NewDerivedRetentionStatusSource adapts the metadata-only T30.6r store and
@@ -368,11 +333,10 @@ func NewDerivedRetentionStatusSource(
 	}
 }
 
-// NewCompleteRetentionStatusSource composes all three independently bounded
-// collector planes in registry order: core store rows, Investigation rows,
-// then derived store/filesystem state.
+// NewCompleteRetentionStatusSource composes the independently bounded core
+// store rows and derived store/filesystem state in registry order.
 func NewCompleteRetentionStatusSource(
-	database store.RetentionStatusStore,
+	database store.CoreRetentionStore,
 	derived derivedretention.Source,
 	reportError RetentionStatusErrorReporter,
 ) RetentionStatusSource {
@@ -667,7 +631,6 @@ var retentionStatusRegistry = [...]retentionOwnerDefinition{
 	}},
 	{id: "evidence_pins", scope: "run/kind", decisionRelation: "mixed_owner_lifecycles_not_selected_by_t306m", accumulating: true, components: []retentionComponentDefinition{
 		databaseRetentionComponent("evidence_pin[kind=proof-bundle:<bundle_id>]"),
-		databaseRetentionComponent("evidence_pin[kind=investigation-artifact:<artifact_id>]"),
 		databaseRetentionComponent("evidence_pin[kind=<other exact store-accepted value>]"),
 	}},
 	{id: "proof_bundles", scope: "immutable bundle", decisionRelation: "configured_owner_lifecycle_unchanged", proofRetention: true, retentionControl: &proofBundleRetentionControl, components: []retentionComponentDefinition{
@@ -685,33 +648,6 @@ var retentionStatusRegistry = [...]retentionOwnerDefinition{
 		databaseRetentionComponent(string(store.JobExtract)),
 		databaseRetentionComponent(string(store.JobResolverCatalog)),
 		databaseRetentionComponent(string(store.JobCallerLeaf)),
-		databaseRetentionComponent(string(store.JobInvestigate)),
-	}},
-	{id: "investigation_workbench_rows", scope: "investigation/revision/run/artifact/review/watch", decisionRelation: "incidental_growth_requires_separate_decision", accumulating: true, components: []retentionComponentDefinition{
-		databaseRetentionComponent(string(store.RetentionInvestigation)),
-		databaseRetentionComponent(string(store.RetentionInvestigationRevision)),
-		databaseRetentionComponent(string(store.RetentionInvestigationChangeBrief)),
-		databaseRetentionComponent(string(store.RetentionWorkbenchMutation)),
-		databaseRetentionComponent(string(store.RetentionWorkbenchDisposition)),
-		databaseRetentionComponent(string(store.RetentionInvestigationRun)),
-		databaseRetentionComponent(string(store.RetentionInvestigationRunEvent)),
-		databaseRetentionComponent(string(store.RetentionInvestigationRunArtifact)),
-		databaseRetentionComponent(string(store.RetentionInvestigationArtifactOwner)),
-		databaseRetentionComponent(string(store.RetentionInvestigationArtifactOwnerRelease)),
-		databaseRetentionComponent(string(store.RetentionInvestigationArtifactRetentionOverride)),
-		databaseRetentionComponent(string(store.RetentionInvestigationDecision)),
-		databaseRetentionComponent(string(store.RetentionInvestigationDisposition)),
-		databaseRetentionComponent(string(store.RetentionInvestigationBaselineDesignation)),
-		databaseRetentionComponent(string(store.RetentionInvestigationGrant)),
-		databaseRetentionComponent(string(store.RetentionInvestigationCursor)),
-		databaseRetentionComponent(string(store.RetentionInvestigationCreation)),
-		databaseRetentionComponent(string(store.RetentionInvestigationConsumerSnapshot)),
-		databaseRetentionComponent(string(store.RetentionInvestigationConsumerEdgeLedger)),
-		databaseRetentionComponent(string(store.RetentionInvestigationReviewProjection)),
-		databaseRetentionComponent(string(store.RetentionInvestigationReviewItem)),
-		databaseRetentionComponent(string(store.RetentionInvestigationDossier)),
-		databaseRetentionComponent(string(store.RetentionInvestigationWatch)),
-		databaseRetentionComponent(string(store.RetentionInvestigationWatchRevision)),
 	}},
 	{id: "candidate_artifacts", scope: "repository/generation", decisionRelation: "selected_t306m_unbounded_retention", accumulating: true, components: []retentionComponentDefinition{
 		databaseRetentionComponent("candidate_manifest_publication"),

@@ -98,7 +98,7 @@ func TestT306MIncidentalOwnerComponents(t *testing.T) {
 		string(store.JobExtract),
 		string(store.JobResolverCatalog),
 		string(store.JobCallerLeaf),
-		string(store.JobInvestigate),
+		"investigation_run_job", // frozen retained receipt, retired from runtime
 	}
 	if !slices.Equal(jobs.Components, wantJobs) ||
 		jobs.DecisionRelation != RelationIncidental || !jobs.Accumulating {
@@ -150,18 +150,23 @@ func TestT306MIncidentalOwnerComponents(t *testing.T) {
 	jobFound := false
 	for _, match := range tablePattern.FindAllSubmatch(schema, -1) {
 		name := string(match[1])
-		if name == string(store.JobInvestigate) {
+		if name == "investigation_run_job" {
 			jobFound = true
 			continue
 		}
 		schemaComponents = append(schemaComponents, name)
 	}
-	if !jobFound || len(schemaComponents) != 24 ||
-		!slices.Equal(schemaComponents, investigations.Components) {
-		t.Fatalf(
-			"schema Investigation components = %v (job=%t), want exact 24 %v",
-			schemaComponents, jobFound, investigations.Components,
-		)
+	if jobFound || len(schemaComponents) != 0 {
+		t.Fatalf("retired Investigation tables remain in current schema: %v (job=%t)", schemaComponents, jobFound)
+	}
+	migration, err := os.ReadFile("../../internal/store/surreal.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, table := range append(wantInvestigations, "investigation_run_job") {
+		if !strings.Contains(string(migration), "REMOVE TABLE IF EXISTS "+table+";") {
+			t.Fatalf("retired table %s is absent from upgrade deletion", table)
+		}
 	}
 }
 
@@ -362,10 +367,10 @@ func TestT306MStatusBoundAndWarning(t *testing.T) {
 		WarningCode != api.RetentionStatusWarningCode {
 		t.Fatalf("stable retained and production status limits disagree")
 	}
-	if api.RetentionStatusComponentCount < StatusComponentCount ||
+	if api.RetentionStatusComponentCount != 28 ||
 		api.RetentionStatusAggregateScanIdentityAllocation !=
 			api.RetentionStatusAggregateReportedIdentityAllocation+api.RetentionStatusComponentCount {
-		t.Fatalf("production registry does not extend the historical allocation safely")
+		t.Fatalf("production registry does not match T46.1 retirement against historical allocation")
 	}
 	if contract.ReportedIdentityLimitPerSummary != StatusReportedIdentityLimit ||
 		contract.ScanIdentityLimitPerSummary != StatusScanIdentityLimit ||

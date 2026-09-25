@@ -1,8 +1,7 @@
 {
-  "schema_version": "change-workbench-glossary-v1",
+  "schema_version": "phebs-evidence-glossary-v2",
   "capabilities": [
     "caller-map-exact-identity",
-    "change-workbench",
     "code-navigation",
     "contract-atlas",
     "contract-impact-report",
@@ -20,8 +19,7 @@
       "expanded_help": "This summary binds visible repositories and revisions to evidence domains, freshness, failures, inventory boundaries, unresolved counts, and unsupported planes. It qualifies the adjacent result and is not a completeness score.",
       "evidence_boundary": "It summarizes recorded processing and inventory state; it does not prove that unobserved callers, resources, or runtime uses do not exist.",
       "authority_boundary": "Only the requesting principal's authorized repository universe contributes rows, counts, or capability state.",
-      "modes": ["add", "migrate", "modify", "retire"],
-      "surfaces": ["caller_map", "impact", "manual", "mcp", "workbench"],
+      "surfaces": ["caller_map", "impact", "manual", "mcp"],
       "wire_aliases": ["coverage", "coverage_rows"],
       "availability": {
         "requires_all": [],
@@ -36,8 +34,7 @@
       "expanded_help": "This is an extractor abstention, not a confirmed caller and not a processing failure. The reason and cited source remain available for review when the evidence pack recorded them.",
       "evidence_boundary": "The row proves an observed construct and a refusal reason only; it makes no claim about the construct's runtime target.",
       "authority_boundary": "The label is derived from authorized published evidence and cannot be upgraded by presentation code.",
-      "modes": ["add", "migrate", "modify", "retire"],
-      "surfaces": ["caller_map", "impact", "manual", "mcp", "workbench"],
+      "surfaces": ["caller_map", "impact", "manual", "mcp"],
       "wire_aliases": ["unresolved_candidates"],
       "availability": {
         "requires_all": [],
@@ -52,8 +49,7 @@
       "expanded_help": "The certificate records the authorized repository universe, indexed revisions, published extraction runs, freshness, failures, counts, protocols, and inventory boundaries under one content digest.",
       "evidence_boundary": "It proves change detection over recorded extraction state, not extraction correctness, business completeness, or runtime absence.",
       "authority_boundary": "Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.",
-      "modes": ["add", "migrate", "modify", "retire"],
-      "surfaces": ["atlas", "impact", "manual", "mcp", "workbench"],
+      "surfaces": ["atlas", "impact", "manual", "mcp"],
       "wire_aliases": ["coverage-certificate-v1", "coverage-certificate-v2", "coverage-certificate-v3"],
       "availability": {
         "requires_all": ["coverage-certificate"],
@@ -68,7 +64,6 @@
       "expanded_help": "Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.",
       "evidence_boundary": "Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.",
       "authority_boundary": "Rows are selected only from authorized exact-current relationship roots. Citation loading reauthorizes repository access and preserves the selected row's immutable relationship-root and source identities; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
-      "modes": ["add", "migrate", "modify", "retire"],
       "surfaces": ["manual", "mcp", "relationship_explorer"],
       "wire_aliases": [],
       "availability": {
@@ -81,11 +76,10 @@
       "id": "implementation_evidence",
       "label": "Implementation evidence",
       "short_help": "Cited source or history that may inform how the change is implemented.",
-      "expanded_help": "Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Workbench citations may retain immutable repository, revision, path, span, and selection-rule provenance; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.",
+      "expanded_help": "Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Evidence citations retain the immutable repository, revision, path, span, and selection-rule provenance returned by their route; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.",
       "evidence_boundary": "Similarity or proximity is not a correctness ranking and does not authorize an edit.",
       "authority_boundary": "The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.",
-      "modes": ["add", "migrate", "modify", "retire"],
-      "surfaces": ["blame", "commit", "file", "history", "manual", "mcp", "workbench"],
+      "surfaces": ["blame", "commit", "file", "history", "manual", "mcp"],
       "wire_aliases": [],
       "availability": {
         "requires_all": [],
@@ -100,8 +94,7 @@
       "expanded_help": "The occurrence keeps its immutable citation and extraction tier. A matching operation object may not be joined to one declaration lineage, generated client, logical service, deployable, or runtime use.",
       "evidence_boundary": "This is source-level matching evidence, not a proven service roster or a resolved caller for one exact declaration.",
       "authority_boundary": "Presentation code may qualify or group the row but cannot promote its evidence tier or lineage.",
-      "modes": ["add", "migrate", "modify", "retire"],
-      "surfaces": ["atlas", "caller_map", "impact", "manual", "mcp", "workbench"],
+      "surfaces": ["atlas", "caller_map", "impact", "manual", "mcp"],
       "wire_aliases": ["known_consumers"],
       "availability": {
         "requires_all": [],
@@ -116,8 +109,7 @@
       "expanded_help": "The source citation and candidate operation remain reviewable, but missing or ambiguous generated-client and declaration provenance prevents exact caller attribution.",
       "evidence_boundary": "A shared method name is not contract identity and cannot establish blast radius for one declaration.",
       "authority_boundary": "Only a validated exact-identity join may promote the row to Resolved caller.",
-      "modes": ["migrate", "modify", "retire"],
-      "surfaces": ["caller_map", "manual", "mcp", "workbench"],
+      "surfaces": ["caller_map", "manual", "mcp"],
       "wire_aliases": ["unresolved_name_match"],
       "availability": {
         "requires_all": ["caller-map-exact-identity"],
@@ -132,8 +124,7 @@
       "expanded_help": "The row retains the call-site citation, generated symbol, wire operation, declaration lineage, and any separate unit attribution. Missing or ambiguous attribution never removes the source occurrence.",
       "evidence_boundary": "Static resolution does not prove runtime execution, traffic, ownership, or migration completion.",
       "authority_boundary": "Only the exact-identity Caller Map service may emit this label; legacy matching evidence cannot be renamed into it.",
-      "modes": ["migrate", "modify", "retire"],
-      "surfaces": ["caller_map", "manual", "mcp", "workbench"],
+      "surfaces": ["caller_map", "manual", "mcp"],
       "wire_aliases": ["resolved_caller"],
       "availability": {
         "requires_all": ["caller-map-exact-identity"],
@@ -148,29 +139,12 @@
       "expanded_help": "The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.",
       "evidence_boundary": "Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.",
       "authority_boundary": "Only immutable accepted catalog and store-committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
-      "modes": ["add", "migrate", "modify", "retire"],
       "surfaces": ["manual", "mcp", "service_directory"],
       "wire_aliases": [],
       "availability": {
         "requires_all": ["service-catalog-v2"],
         "requires_any": [],
         "unavailable_help": "Service catalog authority is unavailable because the service catalog capability is not enabled for this surface."
-      }
-    },
-    {
-      "id": "success_criterion",
-      "label": "Success criterion",
-      "short_help": "A human-authored condition used to judge whether the ticket achieved its intended outcome.",
-      "expanded_help": "Phebs may attach cited evidence and analysis gaps to the criterion, but it cannot invent the business condition or declare it satisfied.",
-      "evidence_boundary": "Code and contract evidence can inform review but cannot establish a business outcome by itself.",
-      "authority_boundary": "Only an explicit authorized human revision records or changes a success criterion.",
-      "modes": ["add", "migrate", "modify", "retire"],
-      "surfaces": ["manual", "mcp", "workbench"],
-      "wire_aliases": [],
-      "availability": {
-        "requires_all": ["change-workbench"],
-        "requires_any": [],
-        "unavailable_help": "Structured success criteria are unavailable until Change Workbench is enabled."
       }
     }
   ]

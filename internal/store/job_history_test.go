@@ -389,7 +389,7 @@ func TestListJobsPageCapKeysetAndScopeAllKinds(t *testing.T) {
 	ctx := context.Background()
 	kinds := []JobKind{
 		JobSync, JobIndex, JobFetch, JobCandidate, JobExtract,
-		JobResolverCatalog, JobCallerLeaf, JobInvestigate,
+		JobResolverCatalog, JobCallerLeaf,
 	}
 
 	for _, kind := range kinds {

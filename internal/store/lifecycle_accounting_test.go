@@ -69,7 +69,7 @@ func TestEvidenceSweepFixedAccounting(t *testing.T) {
 }
 
 func TestLifecycleAndRetentionAccounting(t *testing.T) {
-	for _, name := range []string{"cursor_read", "cursor_write", "cursor_conflict", "cursor_error", "cursor_lost", "readiness", "index", "catalog", "rows", "pin_ranges", "legacy_catalog_scan", "legacy_catalog_delete",
+	for _, name := range []string{"cursor_read", "cursor_write", "cursor_conflict", "cursor_error", "cursor_lost", "readiness", "index", "rows", "pin_ranges", "legacy_catalog_scan", "legacy_catalog_delete",
 		"derived_catalog", "derived_readiness", "derived_candidate", "derived_focused", "derived_resolver", "derived_caller", "derived_fence", "evidence_candidates"} {
 		t.Run(name, func(t *testing.T) {
 			ctx, owner, controller := storeAccountingFixture(t, 40, 2)
@@ -117,8 +117,6 @@ func TestLifecycleAndRetentionAccounting(t *testing.T) {
 				_, err = state.retentionReadiness(ctx, retentionEvidenceReady)
 			case "index":
 				err = state.requireRetentionIndex(ctx, "evidence_pin_kind", "evidence_pin")
-			case "catalog":
-				_, err = state.retentionCatalogTables(ctx)
 			case "rows":
 				_, err = state.retentionRows(ctx, coreRetentionPlans[RetentionExtractionRun], 2)
 			case "pin_ranges":
@@ -146,7 +144,7 @@ func TestLifecycleAndRetentionAccounting(t *testing.T) {
 			}
 			wantCalls := 1
 			if name == "pin_ranges" {
-				wantCalls = 3
+				wantCalls = 2
 			}
 			if name == "legacy_catalog_delete" {
 				wantCalls = 0

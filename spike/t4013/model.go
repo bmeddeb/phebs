@@ -323,7 +323,7 @@ var expectedCollectionOwners = []string{
 	lifecycle.CatalogOwner,
 	lifecycle.JobOwner,
 	lifecycle.GenerationScheduleOwner,
-	lifecycle.InvestigationOwner,
+	"investigations", // frozen V30 historical owner; retired from runtime by T46.1
 	lifecycle.ObservationOwner,
 	lifecycle.ObservationV2Owner,
 	lifecycle.PartialStageOwner,

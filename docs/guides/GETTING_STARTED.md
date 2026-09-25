@@ -28,11 +28,9 @@ reported SurrealDB version string and executable SHA-256 for backup/restore
 identity. The `make ci-*` targets fail early when the release toolchain does
 not match.
 
-Experimental evidence features are opt-in under `experimental:`. Enabling
-`provisional_workbench` exposes the Change Workbench over the same
-store-derived Contract Atlas evidence as the instance and therefore also
-requires either `provisional_proto_extraction` or
-`provisional_thrift_extraction`.
+Experimental evidence features are opt-in under `experimental:`. Contract
+Atlas requires `provisional_proto_extraction` or
+`provisional_thrift_extraction` for its corresponding declaration lane.
 
 
 

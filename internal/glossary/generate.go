@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	MCPProjectionSchemaVersion = "change-workbench-mcp-glossary-v1"
-	ManualBeginMarker          = "<!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->"
-	ManualEndMarker            = "<!-- END GENERATED CHANGE WORKBENCH GLOSSARY -->"
+	MCPProjectionSchemaVersion = "phebs-evidence-mcp-glossary-v2"
+	ManualBeginMarker          = "<!-- BEGIN GENERATED PHEBS EVIDENCE GLOSSARY -->"
+	ManualEndMarker            = "<!-- END GENERATED PHEBS EVIDENCE GLOSSARY -->"
 )
 
 // Artifacts contains every checked-in projection derived from glossary.json.
@@ -66,14 +66,9 @@ func projectGo(document Document, glossaryDigest string) ([]byte, error) {
 			goIdentifier(string(capability)), strconv.Quote(string(capability)))
 	}
 	output.WriteString(")\n\nconst (\n")
-	for _, mode := range []Mode{"add", "migrate", "modify", "retire"} {
-		fmt.Fprintf(&output, "\tMode%s Mode = %s\n",
-			goIdentifier(string(mode)), strconv.Quote(string(mode)))
-	}
-	output.WriteString(")\n\nconst (\n")
 	for _, surface := range []Surface{
 		"atlas", "blame", "caller_map", "commit", "file", "history", "impact",
-		"manual", "mcp", "relationship_explorer", "service_directory", "workbench",
+		"manual", "mcp", "relationship_explorer", "service_directory",
 	} {
 		fmt.Fprintf(&output, "\tSurface%s Surface = %s\n",
 			goIdentifier(string(surface)), strconv.Quote(string(surface)))
@@ -101,7 +96,6 @@ func projectGo(document Document, glossaryDigest string) ([]byte, error) {
 		writeGoString(&output, "ExpandedHelp", term.ExpandedHelp, "\t\t")
 		writeGoString(&output, "EvidenceBoundary", term.EvidenceBoundary, "\t\t")
 		writeGoString(&output, "AuthorityBoundary", term.AuthorityBoundary, "\t\t")
-		writeGoTypedSlice(&output, "Modes", "Mode", term.Modes, "\t\t")
 		writeGoTypedSlice(&output, "Surfaces", "Surface", term.Surfaces, "\t\t")
 		writeGoStringSlice(&output, "WireAliases", term.WireAliases, "\t\t")
 		output.WriteString("\t\tAvailability: CapabilityPredicate{\n")
@@ -139,7 +133,6 @@ func projectTypeScript(document Document, glossaryDigest string) ([]byte, error)
 		ExpandedHelp      string       `json:"expandedHelp"`
 		EvidenceBoundary  string       `json:"evidenceBoundary"`
 		AuthorityBoundary string       `json:"authorityBoundary"`
-		Modes             []Mode       `json:"modes"`
 		Surfaces          []Surface    `json:"surfaces"`
 		WireAliases       []string     `json:"wireAliases"`
 		Availability      availability `json:"availability"`
@@ -149,8 +142,8 @@ func projectTypeScript(document Document, glossaryDigest string) ([]byte, error)
 		terms[index] = termProjection{
 			ID: term.ID, Label: term.Label, ShortHelp: term.ShortHelp,
 			ExpandedHelp: term.ExpandedHelp, EvidenceBoundary: term.EvidenceBoundary,
-			AuthorityBoundary: term.AuthorityBoundary, Modes: term.Modes,
-			Surfaces: term.Surfaces, WireAliases: term.WireAliases,
+			AuthorityBoundary: term.AuthorityBoundary,
+			Surfaces:          term.Surfaces, WireAliases: term.WireAliases,
 			Availability: availability{
 				RequiresAll:     term.Availability.RequiresAll,
 				RequiresAny:     term.Availability.RequiresAny,
@@ -175,12 +168,11 @@ func projectTypeScript(document Document, glossaryDigest string) ([]byte, error)
 	output.Write(capabilities)
 	output.WriteString(" as const\n")
 	output.WriteString("export type GlossaryCapability = typeof glossaryCapabilities[number]\n")
-	output.WriteString("export type GlossaryMode = 'add' | 'migrate' | 'modify' | 'retire'\n")
-	output.WriteString("export type GlossarySurface = 'atlas' | 'blame' | 'caller_map' | 'commit' | 'file' | 'history' | 'impact' | 'manual' | 'mcp' | 'relationship_explorer' | 'service_directory' | 'workbench'\n\n")
+	output.WriteString("export type GlossarySurface = 'atlas' | 'blame' | 'caller_map' | 'commit' | 'file' | 'history' | 'impact' | 'manual' | 'mcp' | 'relationship_explorer' | 'service_directory'\n\n")
 	output.WriteString("export type GlossaryTerm = Readonly<{\n")
 	output.WriteString("  id: string\n  label: string\n  shortHelp: string\n  expandedHelp: string\n")
 	output.WriteString("  evidenceBoundary: string\n  authorityBoundary: string\n")
-	output.WriteString("  modes: readonly GlossaryMode[]\n  surfaces: readonly GlossarySurface[]\n")
+	output.WriteString("  surfaces: readonly GlossarySurface[]\n")
 	output.WriteString("  wireAliases: readonly string[]\n")
 	output.WriteString("  availability: Readonly<{\n")
 	output.WriteString("    requiresAll: readonly GlossaryCapability[]\n")
@@ -204,8 +196,8 @@ func projectSchema(document Document) ([]byte, error) {
 	}
 	schema := map[string]any{
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",
-		"$id":                  "urn:phebs:schema:change-workbench-glossary-v1",
-		"title":                "phebs Change Workbench glossary v1",
+		"$id":                  "urn:phebs:schema:phebs-evidence-glossary-v2",
+		"title":                "phebs evidence glossary v2",
 		"type":                 "object",
 		"additionalProperties": false,
 		"required":             []string{"schema_version", "capabilities", "terms"},
@@ -226,7 +218,7 @@ func projectSchema(document Document) ([]byte, error) {
 				"additionalProperties": false,
 				"required": []string{
 					"id", "label", "short_help", "expanded_help", "evidence_boundary",
-					"authority_boundary", "modes", "surfaces", "wire_aliases", "availability",
+					"authority_boundary", "surfaces", "wire_aliases", "availability",
 				},
 				"properties": map[string]any{
 					"id":                 map[string]any{"enum": termIDs},
@@ -235,12 +227,11 @@ func projectSchema(document Document) ([]byte, error) {
 					"expanded_help":      boundedStringSchema(maxTextBytes),
 					"evidence_boundary":  boundedStringSchema(maxTextBytes),
 					"authority_boundary": boundedStringSchema(maxTextBytes),
-					"modes":              enumArraySchema([]string{"add", "migrate", "modify", "retire"}, 1, 4),
 					"surfaces": enumArraySchema(
 						[]string{
 							"atlas", "blame", "caller_map", "commit", "file", "history", "impact",
-							"manual", "mcp", "relationship_explorer", "service_directory", "workbench",
-						}, 1, 12,
+							"manual", "mcp", "relationship_explorer", "service_directory",
+						}, 1, 11,
 					),
 					"wire_aliases": map[string]any{
 						"type": "array", "maxItems": maxArrayRows, "uniqueItems": true,
@@ -284,7 +275,6 @@ func projectMCP(document Document, glossaryDigest string) ([]byte, error) {
 		ID           TermID              `json:"id"`
 		Label        string              `json:"label"`
 		Description  string              `json:"description"`
-		Modes        []Mode              `json:"modes"`
 		Surfaces     []Surface           `json:"surfaces"`
 		Availability CapabilityPredicate `json:"availability"`
 	}
@@ -306,7 +296,7 @@ func projectMCP(document Document, glossaryDigest string) ([]byte, error) {
 				"Evidence boundary: " + term.EvidenceBoundary,
 				"Authority boundary: " + term.AuthorityBoundary,
 			}, " "),
-			Modes: term.Modes, Surfaces: term.Surfaces, Availability: term.Availability,
+			Surfaces: term.Surfaces, Availability: term.Availability,
 		}
 	}
 	return marshalIndented(projection, "encode MCP glossary projection")
@@ -314,7 +304,7 @@ func projectMCP(document Document, glossaryDigest string) ([]byte, error) {
 
 func projectManual(document Document, glossaryDigest string) []byte {
 	var output bytes.Buffer
-	output.WriteString("#### Canonical Change Workbench glossary\n\n")
+	output.WriteString("#### Canonical PHEBS evidence glossary\n\n")
 	output.WriteString("The following help is generated from the reviewed `" + document.SchemaVersion +
 		"` source. Glossary digest: `" + glossaryDigest + "`.\n\n")
 	for _, term := range document.Terms {
@@ -323,7 +313,6 @@ func projectManual(document Document, glossaryDigest string) []byte {
 		output.WriteString(term.ExpandedHelp + "\n\n")
 		output.WriteString("- Evidence boundary: " + term.EvidenceBoundary + "\n")
 		output.WriteString("- Authority boundary: " + term.AuthorityBoundary + "\n")
-		output.WriteString("- Applies to modes: " + joinStringers(term.Modes) + "\n")
 		output.WriteString("- Registered surfaces: " + joinStringers(term.Surfaces) + "\n")
 		output.WriteString("- Required capabilities (all): " +
 			joinStringersOrNone(term.Availability.RequiresAll) + "\n")

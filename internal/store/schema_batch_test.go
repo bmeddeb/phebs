@@ -21,7 +21,7 @@ func TestSchemaBatchTrustedRecipes(t *testing.T) {
 		definitions string
 		count       int
 	}{
-		{"base", schema, 488},
+		{"base", schema, 397},
 		{"API pre-migration", apiKeyCapabilityPreMigrationSchema, 1},
 		{"API capability", apiKeyCapabilitySchema, 3},
 		{"evidence pre-migration", evidencePreMigrationSchema, 2},
@@ -152,7 +152,7 @@ func TestSchemaBatchNativeAtomicityAndSelfHealing(t *testing.T) {
 	// The direct SDK check establishes the pinned server's complete result
 	// shape; the pure transport test binds applySchemaBatch to these exact bytes.
 	results, err := surrealdb.Query[any](ctx, s.db, "BEGIN;\n"+schema+"\nCOMMIT;", nil)
-	if err != nil || results == nil || len(*results) != 490 {
+	if err != nil || results == nil || len(*results) != 399 {
 		t.Fatalf("fresh complete schema batch: results=%v err=%v", results, err)
 	}
 	for index, result := range *results {
@@ -179,9 +179,9 @@ func TestSchemaBatchNativeAtomicityAndSelfHealing(t *testing.T) {
 REMOVE INDEX repo_name ON TABLE repo;
 DEFINE FIELD OVERWRITE kind ON evidence_pin TYPE any;
 REMOVE EVENT caller_leaf_outcome_writer_v1 ON TABLE caller_leaf_outcome;
-REMOVE INDEX investigation_watch_revision_identity ON TABLE investigation_watch_revision;
-CREATE investigation_watch_revision:one CONTENT { watch_id: 'duplicate', seq: 1 };
-CREATE investigation_watch_revision:two CONTENT { watch_id: 'duplicate', seq: 1 };
+REMOVE INDEX evidence_pin_identity ON TABLE evidence_pin;
+CREATE evidence_pin:one CONTENT { kind: 'proof-bundle:one', pin_key: 'duplicate', run_id: 'one' };
+CREATE evidence_pin:two CONTENT { kind: 'proof-bundle:two', pin_key: 'duplicate', run_id: 'two' };
 DELETE $marker;`, map[string]any{"marker": candidateControlRevisionMigrationID()})
 	beforeFailure := schemaBatchNativeMetadata(ctx, t, s)
 	assertUnchanged := func(current *Surreal) {
@@ -213,7 +213,7 @@ DELETE $marker;`, map[string]any{"marker": candidateControlRevisionMigrationID()
 	// Remove only the fixture's duplicate so every definition can succeed,
 	// then inject a server-side THROW after the complete body. This raw SQL is
 	// deliberately test-only: the production trusted-source guard refuses it.
-	schemaBatchNativeQuery(ctx, t, s, "DELETE investigation_watch_revision:two;", nil)
+	schemaBatchNativeQuery(ctx, t, s, "DELETE evidence_pin:two;", nil)
 	if _, err := surrealdb.Query[any](ctx, s.db,
 		"BEGIN;\n"+schema+"\nTHROW 'schema-batch-rollback-test';\nCOMMIT;", nil,
 	); err == nil || !strings.Contains(err.Error(), "schema-batch-rollback-test") {
@@ -297,9 +297,8 @@ func schemaBatchNativeMetadata(ctx context.Context, t *testing.T, s *Surreal) st
 INFO FOR TABLE repo;
 INFO FOR TABLE evidence_pin;
 INFO FOR TABLE caller_leaf_outcome;
-INFO FOR TABLE caller_generation_publication;
-INFO FOR TABLE investigation_watch_revision;`, nil)
-	if err != nil || results == nil || len(*results) != 5 {
+INFO FOR TABLE caller_generation_publication;`, nil)
+	if err != nil || results == nil || len(*results) != 4 {
 		t.Fatalf("schema metadata result: %v", err)
 	}
 	values := make([]any, 0, len(*results))

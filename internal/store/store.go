@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -55,10 +54,6 @@ const (
 	// The target remains the repository: pair identity lives in the durable
 	// outcome rows, while one pending successor is the lossless rescan signal.
 	JobCallerLeaf JobKind = "caller_leaf_job"
-	// JobInvestigate runs one preflighted Investigation Run (T16.4). Its
-	// generic queue lease and the Run's publication lease are independent:
-	// losing either fences the worker.
-	JobInvestigate JobKind = "investigation_run_job"
 )
 
 type JobStatus string
@@ -259,30 +254,16 @@ type User struct {
 	LastLoginAt     *time.Time `json:"last_login_at,omitempty"`
 }
 
-// APIKeyCapability is one reviewed immutable authority attached to a named
-// bearer key at creation time. The registry is deliberately closed.
+// APIKeyCapability remains in key metadata for wire and backup compatibility.
+// No capability can be issued after Investigation retirement.
 type APIKeyCapability string
 
-const APIKeyCapabilityInvestigationWrite APIKeyCapability = "investigation:write"
-
-// CanonicalAPIKeyCapabilities validates the closed registry, rejects duplicate
-// authority, and returns a deterministic non-nil list for persistence and
-// public metadata.
+// CanonicalAPIKeyCapabilities accepts only the explicit read-only set.
 func CanonicalAPIKeyCapabilities(values []APIKeyCapability) ([]APIKeyCapability, error) {
-	canonical := make([]APIKeyCapability, 0, len(values))
-	seen := make(map[APIKeyCapability]struct{}, len(values))
-	for _, value := range values {
-		if value != APIKeyCapabilityInvestigationWrite {
-			return nil, errors.New("unsupported API key capability")
-		}
-		if _, exists := seen[value]; exists {
-			return nil, errors.New("duplicate API key capability")
-		}
-		seen[value] = struct{}{}
-		canonical = append(canonical, value)
+	if len(values) != 0 {
+		return nil, errors.New("unsupported API key capability")
 	}
-	slices.Sort(canonical)
-	return canonical, nil
+	return []APIKeyCapability{}, nil
 }
 
 // APIKey stores only a SHA-256 digest of a generated high-entropy bearer key.

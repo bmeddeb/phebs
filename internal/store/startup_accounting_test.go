@@ -43,8 +43,8 @@ func TestActiveJobMigrationAccounting(t *testing.T) {
 				case sql == "BEGIN;\n"+pendingJobIndexes+"\nCOMMIT;":
 					writes++
 					prefix, err := controller.Snapshot()
-					if err != nil || prefix.Transactions != 1 || prefix.Rows != 8 || prefix.MaximumRows != 8 {
-						return nil, errors.New("eight actual definitions forwarded without their ACK")
+					if err != nil || prefix.Transactions != 1 || prefix.Rows != 7 || prefix.MaximumRows != 7 {
+						return nil, errors.New("seven actual definitions forwarded without their ACK")
 					}
 					if mode == "lost_indexes" {
 						return nil, context.DeadlineExceeded
@@ -57,7 +57,7 @@ func TestActiveJobMigrationAccounting(t *testing.T) {
 						return nil, errors.New("missing actual marker operand")
 					}
 					prefix, err := controller.Snapshot()
-					if err != nil || prefix.Transactions != 2 || prefix.Rows != 9 {
+					if err != nil || prefix.Transactions != 2 || prefix.Rows != 8 {
 						return nil, errors.New("marker forwarded without its ACK")
 					}
 					if mode == "marker_error" {
@@ -69,14 +69,14 @@ func TestActiveJobMigrationAccounting(t *testing.T) {
 				return []surrealdb.QueryResult[any]{{Status: "OK", Result: result}}, nil
 			}
 			err := s.migrateLegacyJobs(ctx)
-			wantCalls, wantTX, wantRows := 20, uint64(2), uint64(9)
+			wantCalls, wantTX, wantRows := 18, uint64(2), uint64(8)
 			switch mode {
 			case "marked":
 				wantCalls, wantTX, wantRows = 1, 0, 0
 			case "lost_indexes":
-				wantCalls, wantTX, wantRows = 18, 1, 8
+				wantCalls, wantTX, wantRows = 16, 1, 7
 			case "marker_error":
-				wantCalls = 19
+				wantCalls = 17
 			}
 			prefix, _ := controller.Snapshot()
 			if (err == nil) != (mode == "empty" || mode == "marked") || calls != wantCalls ||

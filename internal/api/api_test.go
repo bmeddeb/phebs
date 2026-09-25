@@ -47,6 +47,35 @@ type analysisUnitAPIStore struct {
 
 type faultSearchStore struct{ fakeStore }
 
+func TestWorkbenchAndInvestigationRoutesAreAbsent(t *testing.T) {
+	handler := api.New(api.Options{Version: "test"})
+	for _, route := range []struct {
+		method string
+		path   string
+	}{
+		{http.MethodPost, "/api/workbench_previews"},
+		{http.MethodPost, "/api/workbenches"},
+		{http.MethodGet, "/api/workbenches/inv"},
+		{http.MethodPost, "/api/workbenches/inv/revisions"},
+		{http.MethodGet, "/api/workbenches/inv/revisions/rev/impact"},
+		{http.MethodGet, "/api/workbenches/inv/revisions/rev/implementation"},
+		{http.MethodGet, "/api/workbenches/inv/revisions/rev/checklist"},
+		{http.MethodPost, "/api/workbenches/inv/revisions/rev/dispositions"},
+		{http.MethodPost, "/api/investigation_previews"},
+		{http.MethodPost, "/api/investigations"},
+		{http.MethodGet, "/api/investigation_runs/iru"},
+		{http.MethodPost, "/api/investigation_runs/iru/cancel"},
+		{http.MethodGet, "/api/investigation_views"},
+		{http.MethodGet, "/api/investigation_views/04"},
+	} {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(route.method, route.path, nil))
+		if recorder.Code != http.StatusNotFound {
+			t.Errorf("%s %s returned %d, want 404", route.method, route.path, recorder.Code)
+		}
+	}
+}
+
 func (faultSearchStore) GetRepo(context.Context, string) (*store.Repo, error) {
 	return nil, errors.New("store unavailable")
 }

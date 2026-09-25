@@ -37,7 +37,7 @@ func registerServiceDirectoryTools(s *sdk.Server, opts Options) {
 		Name: "list_services",
 		Annotations: &sdk.ToolAnnotations{
 			ReadOnlyHint:  true,
-			OpenWorldHint: workbenchBool(false),
+			OpenWorldHint: new(bool),
 		},
 		Description: "List one visible repository's exact catalog-backed service lifecycle rows. " +
 			"Returns the same bounded page and cursor as HTTP; removed rows are opt-in. " +
@@ -65,7 +65,7 @@ func registerServiceDirectoryTools(s *sdk.Server, opts Options) {
 		Name: "get_service",
 		Annotations: &sdk.ToolAnnotations{
 			ReadOnlyHint:  true,
-			OpenWorldHint: workbenchBool(false),
+			OpenWorldHint: new(bool),
 		},
 		Description: "Read one exact visible service with its lifecycle identities, " +
 			"successors, and bounded catalog membership paths. The result is evidence, " +

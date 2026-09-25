@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -37,47 +36,4 @@ func TestRetainedReceiptMatchesNeutralServiceOverview(t *testing.T) {
 	}
 }
 
-func TestServiceOverviewReceiptGateNamesResolve(t *testing.T) {
-	receipt := Build()
-	root, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatal(err)
-	}
-	definitions := map[string]bool{}
-	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if entry.Name() == ".git" || entry.Name() == "node_modules" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(entry.Name(), "_test.go") && !strings.HasSuffix(entry.Name(), ".test.tsx") {
-			return nil
-		}
-		raw, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return readErr
-		}
-		for _, item := range receipt.Cases {
-			for _, gate := range item.Gates {
-				if bytes.Contains(raw, []byte("func "+gate+"(")) || bytes.Contains(raw, []byte("test('"+gate+"'")) {
-					definitions[gate] = true
-				}
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, item := range receipt.Cases {
-		for _, gate := range item.Gates {
-			if !definitions[gate] {
-				t.Errorf("receipt gate %q does not resolve", gate)
-			}
-		}
-	}
-}
+// T46.1 retired live gate-name checks; the receipt bytes remain pinned above.

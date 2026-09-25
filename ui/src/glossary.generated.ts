@@ -1,10 +1,9 @@
 // Code generated from internal/glossary/glossary.json; DO NOT EDIT.
-export const glossarySchemaVersion = "change-workbench-glossary-v1" as const
-export const glossaryDigest = "sha256:4ac5da4281c2e06c07d06b20999d7c413742e54e73a9fbbb3606578e6586a50e" as const
+export const glossarySchemaVersion = "phebs-evidence-glossary-v2" as const
+export const glossaryDigest = "sha256:33c75aa4176fb0ec3aa934177b5b33c99b715363e83b3777786b992de9daac06" as const
 
 export const glossaryCapabilities = [
   "caller-map-exact-identity",
-  "change-workbench",
   "code-navigation",
   "contract-atlas",
   "contract-impact-report",
@@ -15,8 +14,7 @@ export const glossaryCapabilities = [
   "source-search"
 ] as const
 export type GlossaryCapability = typeof glossaryCapabilities[number]
-export type GlossaryMode = 'add' | 'migrate' | 'modify' | 'retire'
-export type GlossarySurface = 'atlas' | 'blame' | 'caller_map' | 'commit' | 'file' | 'history' | 'impact' | 'manual' | 'mcp' | 'relationship_explorer' | 'service_directory' | 'workbench'
+export type GlossarySurface = 'atlas' | 'blame' | 'caller_map' | 'commit' | 'file' | 'history' | 'impact' | 'manual' | 'mcp' | 'relationship_explorer' | 'service_directory'
 
 export type GlossaryTerm = Readonly<{
   id: string
@@ -25,7 +23,6 @@ export type GlossaryTerm = Readonly<{
   expandedHelp: string
   evidenceBoundary: string
   authorityBoundary: string
-  modes: readonly GlossaryMode[]
   surfaces: readonly GlossarySurface[]
   wireAliases: readonly string[]
   availability: Readonly<{
@@ -43,18 +40,11 @@ export const glossaryTerms = [
     "expandedHelp": "This summary binds visible repositories and revisions to evidence domains, freshness, failures, inventory boundaries, unresolved counts, and unsupported planes. It qualifies the adjacent result and is not a completeness score.",
     "evidenceBoundary": "It summarizes recorded processing and inventory state; it does not prove that unobserved callers, resources, or runtime uses do not exist.",
     "authorityBoundary": "Only the requesting principal's authorized repository universe contributes rows, counts, or capability state.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "caller_map",
       "impact",
       "manual",
-      "mcp",
-      "workbench"
+      "mcp"
     ],
     "wireAliases": [
       "coverage",
@@ -77,18 +67,11 @@ export const glossaryTerms = [
     "expandedHelp": "This is an extractor abstention, not a confirmed caller and not a processing failure. The reason and cited source remain available for review when the evidence pack recorded them.",
     "evidenceBoundary": "The row proves an observed construct and a refusal reason only; it makes no claim about the construct's runtime target.",
     "authorityBoundary": "The label is derived from authorized published evidence and cannot be upgraded by presentation code.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "caller_map",
       "impact",
       "manual",
-      "mcp",
-      "workbench"
+      "mcp"
     ],
     "wireAliases": [
       "unresolved_candidates"
@@ -109,18 +92,11 @@ export const glossaryTerms = [
     "expandedHelp": "The certificate records the authorized repository universe, indexed revisions, published extraction runs, freshness, failures, counts, protocols, and inventory boundaries under one content digest.",
     "evidenceBoundary": "It proves change detection over recorded extraction state, not extraction correctness, business completeness, or runtime absence.",
     "authorityBoundary": "Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "atlas",
       "impact",
       "manual",
-      "mcp",
-      "workbench"
+      "mcp"
     ],
     "wireAliases": [
       "coverage-certificate-v1",
@@ -142,12 +118,6 @@ export const glossaryTerms = [
     "expandedHelp": "Each row retains its repository, selected service key, incarnation, service generation, relationship root, evidence kind and plane, lookup key, attribution class, and immutable source citation. Missing or unavailable roots remain explicit gaps.",
     "evidenceBoundary": "Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.",
     "authorityBoundary": "Rows are selected only from authorized exact-current relationship roots. Citation loading reauthorizes repository access and preserves the selected row's immutable relationship-root and source identities; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "manual",
       "mcp",
@@ -166,23 +136,16 @@ export const glossaryTerms = [
     "id": "implementation_evidence",
     "label": "Implementation evidence",
     "shortHelp": "Cited source or history that may inform how the change is implemented.",
-    "expandedHelp": "Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Workbench citations may retain immutable repository, revision, path, span, and selection-rule provenance; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.",
+    "expandedHelp": "Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Evidence citations retain the immutable repository, revision, path, span, and selection-rule provenance returned by their route; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.",
     "evidenceBoundary": "Similarity or proximity is not a correctness ranking and does not authorize an edit.",
     "authorityBoundary": "The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "blame",
       "commit",
       "file",
       "history",
       "manual",
-      "mcp",
-      "workbench"
+      "mcp"
     ],
     "wireAliases": [],
     "availability": {
@@ -202,19 +165,12 @@ export const glossaryTerms = [
     "expandedHelp": "The occurrence keeps its immutable citation and extraction tier. A matching operation object may not be joined to one declaration lineage, generated client, logical service, deployable, or runtime use.",
     "evidenceBoundary": "This is source-level matching evidence, not a proven service roster or a resolved caller for one exact declaration.",
     "authorityBoundary": "Presentation code may qualify or group the row but cannot promote its evidence tier or lineage.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "atlas",
       "caller_map",
       "impact",
       "manual",
-      "mcp",
-      "workbench"
+      "mcp"
     ],
     "wireAliases": [
       "known_consumers"
@@ -235,16 +191,10 @@ export const glossaryTerms = [
     "expandedHelp": "The source citation and candidate operation remain reviewable, but missing or ambiguous generated-client and declaration provenance prevents exact caller attribution.",
     "evidenceBoundary": "A shared method name is not contract identity and cannot establish blast radius for one declaration.",
     "authorityBoundary": "Only a validated exact-identity join may promote the row to Resolved caller.",
-    "modes": [
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "caller_map",
       "manual",
-      "mcp",
-      "workbench"
+      "mcp"
     ],
     "wireAliases": [
       "unresolved_name_match"
@@ -264,16 +214,10 @@ export const glossaryTerms = [
     "expandedHelp": "The row retains the call-site citation, generated symbol, wire operation, declaration lineage, and any separate unit attribution. Missing or ambiguous attribution never removes the source occurrence.",
     "evidenceBoundary": "Static resolution does not prove runtime execution, traffic, ownership, or migration completion.",
     "authorityBoundary": "Only the exact-identity Caller Map service may emit this label; legacy matching evidence cannot be renamed into it.",
-    "modes": [
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "caller_map",
       "manual",
-      "mcp",
-      "workbench"
+      "mcp"
     ],
     "wireAliases": [
       "resolved_caller"
@@ -293,12 +237,6 @@ export const glossaryTerms = [
     "expandedHelp": "The directory binds each service key to its repository, authority source, desired and active generations, incarnation, disposition, membership roles, and retained tombstone or successor state.",
     "evidenceBoundary": "Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.",
     "authorityBoundary": "Only immutable accepted catalog and store-committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
     "surfaces": [
       "manual",
       "mcp",
@@ -311,33 +249,6 @@ export const glossaryTerms = [
       ],
       "requiresAny": [],
       "unavailableHelp": "Service catalog authority is unavailable because the service catalog capability is not enabled for this surface."
-    }
-  },
-  {
-    "id": "success_criterion",
-    "label": "Success criterion",
-    "shortHelp": "A human-authored condition used to judge whether the ticket achieved its intended outcome.",
-    "expandedHelp": "Phebs may attach cited evidence and analysis gaps to the criterion, but it cannot invent the business condition or declare it satisfied.",
-    "evidenceBoundary": "Code and contract evidence can inform review but cannot establish a business outcome by itself.",
-    "authorityBoundary": "Only an explicit authorized human revision records or changes a success criterion.",
-    "modes": [
-      "add",
-      "migrate",
-      "modify",
-      "retire"
-    ],
-    "surfaces": [
-      "manual",
-      "mcp",
-      "workbench"
-    ],
-    "wireAliases": [],
-    "availability": {
-      "requiresAll": [
-        "change-workbench"
-      ],
-      "requiresAny": [],
-      "unavailableHelp": "Structured success criteria are unavailable until Change Workbench is enabled."
     }
   }
 ] as const satisfies readonly GlossaryTerm[]

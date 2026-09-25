@@ -5,13 +5,13 @@ import { href, navigate } from '../router'
 import { focusRing, statusToneFor, usePhebsTokens } from '../theme'
 import { isAbortError, relTime } from '../util'
 import { IdentityText, StatusWord } from './kit'
-import { SCOPE_PARAM_KEYS, rememberScope, scopeParams, workbenchScopeParams, type ActiveScope } from '../scope'
+import { SCOPE_PARAM_KEYS, rememberScope, scopeParams, type ActiveScope } from '../scope'
 
 export type { ActiveScope }
 
 // T43.8 scope context bar (charter §2 deep-link discipline). One exact scope
 // — repository and service key, read from the URL — persists across
-// search → directory → explorer → Workbench. The bar renders the scope with
+// search → directory → explorer. The bar renders the scope with
 // its catalog authority; clearing it is an explicit action, never a side
 // effect of navigation. Authority is fetched fail-closed: a failed read
 // renders "unavailable", never an invented status.
@@ -126,7 +126,6 @@ export function ScopeContextBar({ scope, path, params, principal }: {
         {service && <BarLink href={jump('/search', { scope: 'service', q: '' })}>Search</BarLink>}
         <BarLink href={jump('/services')}>Directory</BarLink>
         {service && <BarLink href={jump('/relationships')}>Explorer</BarLink>}
-        <BarLink href={href('/workbench', workbenchScopeParams(carried))}>Workbench</BarLink>
       </nav>
       <button
         type="button"

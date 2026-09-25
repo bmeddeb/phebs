@@ -14883,6 +14883,42 @@ validation decision. The closure receipt uses the exact accepted-service and
 admitted-source-byte dimensions in `docs/SIZING_ASSUMPTIONS.md`; aggregate
 filesystem size or total catalog rows cannot substitute for them.
 
+## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
+
+PHEBS remains an evidence provider. Cortana owns change organization,
+investigation workflow, human dispositions, and decision authority. This retirement does not gate Cortana's
+use of the existing read-only MCP evidence contract or alter the Epic 42
+ceremony and release gates. The frozen V4 ceremony retains its historical
+16-owner evidence contract; the post-retirement 15-owner runtime refuses that
+selected launch until a prospective versioned ceremony contract is authored
+and reviewed.
+
+**T46.1 · Remove Investigations and Change Workbench from the active product** —
+delete their UI, HTTP routes, Workbench MCP read/write tools, feature flags,
+synthetic/provisional registration, services, workers, and workflow-only
+adapters. Preserve the existing read-only MCP evidence envelopes and Contract
+Atlas, Caller Map, comparison, Impact, proof, and coverage evidence contracts
+and their default-dark caveats. AC: ordinary and development startup register
+no Investigation or Workbench product route, capability, OpenAPI operation, or
+MCP mutation tool (including `create_change_workbench` and
+`record_change_disposition`); removed config and environment selectors cannot
+activate either product; authorized evidence MCP tools remain read-only; named
+API keys are read-only, issuance rejects nonempty capabilities, and upgrade
+clears retired `investigation:write` values while retaining the empty wire
+field; nine evidence glossary terms and their generated projections remain
+valid while Success criterion is removed; all 24 Investigation/change-planning
+schema tables, `investigation_run_job`, the Investigation artifact pin namespace,
+and their retention components are removed and upgrade deletes legacy rows,
+while dated
+records and fixture receipts remain archival; the README, configuration,
+workflow, operations, manual, documentation map, and dated PLAN decision agree;
+focused startup/MCP/restore tests, `make docs-check`, and
+`make verify-glossary` pass. Review includes steady-state cost by request,
+sync, startup/restart, retry/no-op, and publication transition, plus the
+retired-state migration/restore boundary. Retention status has 11 owners and 28
+components after removal. Integration into `main` requires a
+verified fast-forward and Ben's explicit authorization.
+
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
 Serve the repository's markdown documentation, rendered, from the phebs binary

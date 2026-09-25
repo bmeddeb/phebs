@@ -386,8 +386,8 @@ func TestSetupLoginSessionAPIKeyAndCSRF(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if readPrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
-		t.Fatal("default key gained Investigation write authority")
+	if readPrincipal.APIKeyID != created.Key.ID || readPrincipal.AuthMethod != "api_key" {
+		t.Fatalf("named bearer identity = %+v", readPrincipal)
 	}
 
 	for _, invalid := range []struct {
@@ -395,6 +395,7 @@ func TestSetupLoginSessionAPIKeyAndCSRF(t *testing.T) {
 		body string
 	}{
 		{"unknown", `{"name":"unknown","capabilities":["repository:admin"]}`},
+		{"retired", `{"name":"retired","capabilities":["investigation:write"]}`},
 		{"future", `{"name":"future","capabilities":["investigation:write:v2"]}`},
 		{"duplicate", `{"name":"duplicate","capabilities":["investigation:write","investigation:write"]}`},
 		{"malformed_member", `{"name":"malformed","capabilities":[1]}`},
@@ -435,28 +436,20 @@ func TestSetupLoginSessionAPIKeyAndCSRF(t *testing.T) {
 		client,
 		http.MethodPost,
 		server.URL+"/api/auth/keys",
-		`{"name":"Investigation agent","capabilities":["investigation:write"]}`,
+		`{"name":"Build reader","capabilities":[]}`,
 		loggedIn.CSRFToken,
 		"",
 	)
 	if response.StatusCode != http.StatusCreated {
-		t.Fatalf("create write-capable key = %d: %s", response.StatusCode, readBody(response))
+		t.Fatalf("create explicitly empty key = %d: %s", response.StatusCode, readBody(response))
 	}
-	var writeCreated struct {
+	var secondCreated struct {
 		Key   keyResponse `json:"key"`
 		Token string      `json:"token"`
 	}
-	decodeResponse(t, response, &writeCreated)
-	if len(writeCreated.Key.Capabilities) != 1 ||
-		writeCreated.Key.Capabilities[0] != store.APIKeyCapabilityInvestigationWrite {
-		t.Fatalf("explicit capability response = %+v", writeCreated)
-	}
-	writePrincipal, err := service.authenticateBearer(ctx, writeCreated.Token)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !writePrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
-		t.Fatal("explicit write capability was not bound to the authenticated principal")
+	decodeResponse(t, response, &secondCreated)
+	if secondCreated.Key.Capabilities == nil || len(secondCreated.Key.Capabilities) != 0 {
+		t.Fatalf("explicit empty capability response = %+v", secondCreated)
 	}
 	response = request(t, client, http.MethodGet, server.URL+"/api/auth/keys", "", "", "")
 	if response.StatusCode != http.StatusOK {
@@ -468,11 +461,11 @@ func TestSetupLoginSessionAPIKeyAndCSRF(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(listBody), created.Token) ||
-		strings.Contains(string(listBody), writeCreated.Token) ||
+		strings.Contains(string(listBody), secondCreated.Token) ||
 		strings.Contains(string(listBody), storedKey.Hash) ||
 		strings.Contains(string(listBody), `"hash"`) ||
-		!strings.Contains(string(listBody), `"capabilities":["investigation:write"]`) ||
-		!strings.Contains(string(listBody), `"capabilities":[]`) {
+		strings.Contains(string(listBody), `"investigation:write"`) ||
+		strings.Count(string(listBody), `"capabilities":[]`) != 2 {
 		t.Fatalf("unsafe or incomplete key list metadata: %s", listBody)
 	}
 
@@ -586,13 +579,12 @@ func TestLegacyBearerImportedAsHash(t *testing.T) {
 	if err != nil || !principal.IsAdmin || principal.User != nil {
 		t.Fatalf("legacy principal = %+v, %v", principal, err)
 	}
-	if principal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) ||
-		legacy.Capabilities == nil || len(legacy.Capabilities) != 0 {
+	if legacy.Capabilities == nil || len(legacy.Capabilities) != 0 {
 		t.Fatalf("legacy key gained capabilities: key=%+v principal=%+v", legacy, principal)
 	}
 }
 
-func TestNamedBearerCapabilitiesPreserveDisabledRevokedAndExpiryChecks(t *testing.T) {
+func TestNamedBearerPreservesDisabledRevokedAndExpiryChecks(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC)
 	st := newMemoryAuthStore()
@@ -619,28 +611,19 @@ func TestNamedBearerCapabilitiesPreserveDisabledRevokedAndExpiryChecks(t *testin
 	expiredAt := now.Add(-time.Second)
 	for _, fixture := range []struct {
 		id, userID, token string
-		capabilities      []store.APIKeyCapability
 		revokedAt         *time.Time
 		expiresAt         *time.Time
 	}{
-		{"read", "owner", "phebs_read.secret", nil, nil, nil},
-		{"write", "owner", "phebs_write.secret", []store.APIKeyCapability{
-			store.APIKeyCapabilityInvestigationWrite,
-		}, nil, nil},
-		{"revoked", "owner", "phebs_revoked.secret", []store.APIKeyCapability{
-			store.APIKeyCapabilityInvestigationWrite,
-		}, &revokedAt, nil},
-		{"expired", "owner", "phebs_expired.secret", []store.APIKeyCapability{
-			store.APIKeyCapabilityInvestigationWrite,
-		}, nil, &expiredAt},
-		{"disabled-key", "disabled", "phebs_disabled-key.secret", []store.APIKeyCapability{
-			store.APIKeyCapabilityInvestigationWrite,
-		}, nil, nil},
+		{"read", "owner", "phebs_read.secret", nil, nil},
+		{"second", "owner", "phebs_second.secret", nil, nil},
+		{"revoked", "owner", "phebs_revoked.secret", &revokedAt, nil},
+		{"expired", "owner", "phebs_expired.secret", nil, &expiredAt},
+		{"disabled-key", "disabled", "phebs_disabled-key.secret", nil, nil},
 	} {
 		st.keys[fixture.id] = store.APIKey{
 			ID: fixture.id, UserID: fixture.userID, Name: fixture.id,
 			Prefix: fixture.id, Hash: bearerHash(fixture.token),
-			Capabilities: fixture.capabilities,
+			Capabilities: []store.APIKeyCapability{},
 			CreatedAt:    now.Add(-time.Hour),
 			RevokedAt:    fixture.revokedAt,
 			ExpiresAt:    fixture.expiresAt,
@@ -652,15 +635,15 @@ func TestNamedBearerCapabilitiesPreserveDisabledRevokedAndExpiryChecks(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if readPrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
-		t.Fatal("read-only key gained write authority")
+	if readPrincipal.APIKeyID != "read" || readPrincipal.User == nil || readPrincipal.User.ID != "owner" {
+		t.Fatalf("read bearer identity = %+v", readPrincipal)
 	}
-	writePrincipal, err := service.authenticateBearer(ctx, "phebs_write.secret")
+	secondPrincipal, err := service.authenticateBearer(ctx, "phebs_second.secret")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !writePrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
-		t.Fatal("write-capable key lost reviewed authority")
+	if secondPrincipal.APIKeyID != "second" || secondPrincipal.User == nil || secondPrincipal.User.ID != "owner" {
+		t.Fatalf("second bearer identity = %+v", secondPrincipal)
 	}
 	for _, token := range []string{
 		"phebs_revoked.secret",

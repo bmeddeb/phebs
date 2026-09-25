@@ -38,10 +38,10 @@ when two pages appear to overlap.
   run, and administrator setup.
 - [Configuration and connections](./guides/CONFIGURATION.md) — authentication,
   connectors, synchronization, webhooks, watch mode, and cleanup.
-- [Product workflows](./guides/WORKFLOWS.md) — demos, Workbench, search, UI,
+- [Product workflows](./guides/WORKFLOWS.md) — demos, search, UI,
   SCIP/history, HTTP, and MCP.
 - [Microservice change workflow](./guides/MICROSERVICE_WORKFLOW.md) — standalone
-  neutral All code → service → relationship → Workbench → proof → MCP demo.
+  neutral All code → service → relationship → proof → MCP demo.
 - [Operations and development](./guides/OPERATIONS.md) — storage, backup,
   security, extraction operations, metrics, troubleshooting, and contributor
   commands.
@@ -56,12 +56,11 @@ replace the user manual.
 - [VISION.md](./VISION.md) — product direction and sequencing.
 - [DESIGN_CHARTER.md](./DESIGN_CHARTER.md) — interface philosophy, design
   discipline, and the shared design language for every product surface.
-- [INVESTIGATIONS.md](./INVESTIGATIONS.md) — Investigation product shape and UX.
-- [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) —
-  normative Investigation identities, lifecycle, authorization, and review
-  semantics.
-- [MCP_ENVELOPE.md](./MCP_ENVELOPE.md) — normative MCP projection of the
-  Investigation contract; generated schemas live in [`../schemas/`](../schemas/).
+- [MCP_ENVELOPE.md](./MCP_ENVELOPE.md) — shipped read-only evidence envelope;
+  generated schemas live in [`../schemas/`](../schemas/).
+- [INVESTIGATIONS.md](./INVESTIGATIONS.md) and
+  [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) —
+  retained historical product design; Investigations were retired under T46.1.
 - [PITCH.md](./PITCH.md) — bounded pilot proposal.
 
 ## Evidence-pack contracts

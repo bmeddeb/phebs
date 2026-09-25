@@ -5,7 +5,7 @@ import { Input } from 'baseui/input'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '../api'
-import type { APIKeyCapability, APIKeySummary, LifecycleStatus } from '../api'
+import type { APIKeySummary, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
 import { StatusWord, LoadingBlock, StatusChip } from '../components/kit'
 import { usePhebsTokens, useMode, usePalette, FONTS, TYPE, type Mode } from '../theme'
@@ -20,9 +20,7 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
   const [keys, setKeys] = useState<APIKeySummary[]>([])
   const [keysLoaded, setKeysLoaded] = useState(false)
   const [name, setName] = useState('')
-  const [investigationWrite, setInvestigationWrite] = useState(false)
   const [createdToken, setCreatedToken] = useState('')
-  const [createdCapabilities, setCreatedCapabilities] = useState<APIKeyCapability[]>([])
   const [copied, setCopied] = useState(false)
   const [pendingRevoke, setPendingRevoke] = useState('')
   const [busy, setBusy] = useState(false)
@@ -61,15 +59,10 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
     setBusy(true)
     setError('')
     try {
-      const capabilities: APIKeyCapability[] = investigationWrite
-        ? ['investigation:write']
-        : []
-      const result = await createAPIKey(trimmed, capabilities)
+      const result = await createAPIKey(trimmed)
       setKeys((current) => [result.key, ...current])
       setCreatedToken(result.token)
-      setCreatedCapabilities(result.key.capabilities)
       setName('')
-      setInvestigationWrite(false)
       setCopied(false)
     } catch (cause) {
       setError(String(cause))
@@ -152,9 +145,7 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
             New key
           </div>
           <div className={css({ fontSize: '12px', color: tok.textTertiary, marginBottom: '8px' })}>
-            {createdCapabilities.length > 0
-              ? 'Capability: investigation:write. This key can attempt durable Investigation mutations within your existing authority.'
-              : 'Read-only key. It cannot bind or perform Investigation mutations.'}
+            Read-only key for PHEBS evidence.
           </div>
           <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
             <code className={css({ flex: 1, minWidth: 0, fontFamily: FONTS.MONO, fontSize: '12px', overflowWrap: 'anywhere', color: tok.textPrimary })}>
@@ -183,33 +174,6 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
           </div>
           <Button type="submit" isLoading={busy}>Create key</Button>
         </div>
-        <label className={css({
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '10px',
-          marginTop: '14px',
-          padding: '12px',
-          border: `1px solid ${tok.cardBorder}`,
-          borderRadius: '8px',
-          color: tok.textSecondary,
-          cursor: 'pointer',
-        })}>
-          <input
-            type="checkbox"
-            checked={investigationWrite}
-            onChange={(event) => setInvestigationWrite(event.currentTarget.checked)}
-            className={css({ marginTop: '3px' })}
-          />
-          <span>
-            <span className={css({ display: 'block', color: tok.textPrimary, fontSize: '13px', fontWeight: 600 })}>
-              Allow Investigation writes
-            </span>
-            <span className={css({ display: 'block', marginTop: '3px', fontSize: '12px', lineHeight: '18px' })}>
-              Adds the immutable <code className={css({ fontFamily: FONTS.MONO })}>investigation:write</code> capability.
-              It does not expand repository access or ownership. Replace the key to change this authority.
-            </span>
-          </span>
-        </label>
       </form>
 
       <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
@@ -228,9 +192,7 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
                 {' · '}created {formatDate(key.created_at)}
                 {key.last_used_at ? ` · used ${formatDate(key.last_used_at)}` : ''}
                 {' · '}
-                {key.capabilities.length > 0
-                  ? key.capabilities.join(', ')
-                  : 'read only'}
+                read only
               </div>
             </div>
             {pendingRevoke === key.id ? (

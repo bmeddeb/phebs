@@ -71,23 +71,6 @@ type Options struct {
 	ObservationProgress ObservationProgressQueries
 	// Relationships is the same bounded T37.5 service supplied to Huma.
 	Relationships RelationshipQueries
-	// Workbench and WorkbenchChecklist enable T21.13's synthetic/dark MCP
-	// annex only when both real shared services are present. WorkbenchImpact
-	// adds T38.4's exact read-only impact projection when the same service is
-	// available to Huma. Principal is the same authenticated identity
-	// projection used by Huma.
-	Workbench          store.InvestigationWorkbench
-	WorkbenchImpact    WorkbenchImpactQueries
-	WorkbenchChecklist WorkbenchChecklistQueries
-	Principal          func(context.Context) string
-	// InvestigationMutation rechecks that the current MCP request carries a
-	// valid named API key with investigation:write. It never replaces the
-	// shared services' owner, revision, preview, snapshot, or idempotency
-	// checks. AdvertiseWorkbenchMutations is selected per authenticated
-	// stateless HTTP request so credentials that cannot invoke durable writes
-	// do not discover them.
-	InvestigationMutation       func(context.Context) bool
-	AdvertiseWorkbenchMutations bool
 	// Visible resolves the caller's repo visibility (T10.3); nil disables
 	// permission filtering. search_code is covered inside the searcher; this
 	// hook gates the tools that bypass it (read_file, list_repos, SCIP,
@@ -198,7 +181,6 @@ func NewServer(opts Options) *sdk.Server {
 	registerServiceDirectoryTools(s, opts)
 	registerObservationProgressTool(s, opts)
 	registerRelationshipTools(s, opts)
-	registerWorkbenchTools(s, opts)
 
 	return s
 }

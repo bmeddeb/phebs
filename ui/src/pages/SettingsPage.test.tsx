@@ -58,12 +58,12 @@ beforeEach(() => {
     ],
   })
   api.createAPIKey.mockReset().mockImplementation(
-    async (name: string, capabilities: string[]) => ({
+    async (name: string) => ({
       key: {
         id: 'new-key',
         name,
         prefix: 'phebs_new',
-        capabilities,
+        capabilities: [],
         created_at: '2026-07-27T13:00:00Z',
       },
       token: 'phebs_new.secret',
@@ -138,11 +138,11 @@ test('Appearance offers every curated palette and commits through the preference
   })
 })
 
-test('lists reviewed capability names without secret material', async () => {
+test('lists existing keys as read only without secret material', async () => {
   renderPage()
-  expect(await screen.findByText('Investigation agent')).toBeTruthy()
-  expect(screen.getByText('investigation:write')).toBeTruthy()
-  expect(screen.getByText(/read only/)).toBeTruthy()
+  expect((await screen.findByText('Investigation agent')).parentElement?.textContent).toContain('read only')
+  expect(screen.getByText('Read-only client').parentElement?.textContent).toContain('read only')
+  expect(screen.queryByText('investigation:write')).toBeNull()
   expect(screen.queryByText(/secret/)).toBeNull()
 })
 
@@ -156,40 +156,18 @@ test('managed code-navigation indexing boundary is administrator-only', async ()
   expect(await screen.findByRole('region', { name: 'Code navigation indexing' })).toBeTruthy()
 })
 
-test('key creation is read-only unless Investigation write is explicit', async () => {
-  const { unmount } = renderPage()
+test('key creation is read only', async () => {
+  renderPage()
   await screen.findByText('Read-only client')
   fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), {
     target: { value: 'Default client' },
   })
   fireEvent.click(screen.getByRole('button', { name: 'Create key' }))
   await waitFor(() => {
-    expect(api.createAPIKey).toHaveBeenCalledWith('Default client', [])
+    expect(api.createAPIKey).toHaveBeenCalledWith('Default client')
   })
   expect(await screen.findByText(/Read-only key/)).toBeTruthy()
-
-  unmount()
-  renderPage()
-  await screen.findByText('Read-only client')
-  fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), {
-    target: { value: 'Agent' },
-  })
-  fireEvent.click(
-    screen.getByRole('checkbox', { name: /Allow Investigation writes/ }),
-  )
-  fireEvent.click(screen.getByRole('button', { name: 'Create key' }))
-  await waitFor(() => {
-    expect(api.createAPIKey).toHaveBeenLastCalledWith(
-      'Agent',
-      ['investigation:write'],
-    )
-  })
-  expect(
-    await screen.findByText(/This key can attempt durable Investigation mutations/),
-  ).toBeTruthy()
-  expect(
-    screen.getByText(/Replace the key to change this authority/),
-  ).toBeTruthy()
+  expect(screen.queryByRole('checkbox', { name: /Allow Investigation writes/ })).toBeNull()
 })
 
 test('administrator sees bounded lifecycle pressure without owner content', async () => {

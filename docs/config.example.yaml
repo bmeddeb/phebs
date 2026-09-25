@@ -126,7 +126,7 @@ proof_bundles:
 
 # Owner-separated bounded lifecycle is enabled by default. False disables
 # automated age/count/byte and pressure collection, but hard-watermark safety
-# admission, live roots, proof/Investigation pins, active leases, tombstones,
+# admission, live roots, proof pins, active leases, tombstones,
 # and proof_bundles.retention remain in force.
 lifecycle:
   enabled: true
@@ -146,10 +146,6 @@ experimental:
   # provisional repo/path lineage posture; rule validation is the T23.1
   # spike, and the packs are abstention-dominant by design.
   provisional_kafka_extraction: false
-  # T21 Change Workbench over store-derived Contract Atlas evidence. Requires
-  # provisional_proto_extraction or provisional_thrift_extraction; conflicts
-  # with PHEBS_SYNTHETIC_WORKBENCH and synthetic Contract Atlas fixtures.
-  provisional_workbench: false
 
 # Permission-aware search (T10.3). PRESENCE of this block turns enforcement
 # on: non-administrators then see only public repos, repos their mapped

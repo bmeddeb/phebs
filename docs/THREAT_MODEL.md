@@ -2,11 +2,14 @@
 
 *Draft v0.1 · pilot prerequisite item 1 · design phase only*
 
+T46.1 retired the Investigations product. Investigation-specific services and
+test scenarios below are retained design history, not current PHEBS surfaces.
+
 This document models the bounded pilot described by
 [PILOT_CHARTER.md](./PILOT_CHARTER.md). It does not authorize an environment,
 source ingestion, verification activity, Gate 1, Gate 2, or Epic 16. The
-charter and the Investigation domain contract remain authoritative when this
-draft is incomplete or ambiguous.
+charter and the historical Investigation domain contract governed this draft
+when it was written; neither reactivates the retired product.
 
 ## Record status
 

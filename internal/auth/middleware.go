@@ -107,10 +107,6 @@ func (s *Service) authenticateBearer(ctx context.Context, token string) (Princip
 	}
 	return Principal{
 		User: user, APIKeyID: key.ID,
-		APIKeyCapabilities: append(
-			[]store.APIKeyCapability(nil),
-			key.Capabilities...,
-		),
 		AuthMethod: "api_key", IsAdmin: user.IsAdmin,
 	}, nil
 }

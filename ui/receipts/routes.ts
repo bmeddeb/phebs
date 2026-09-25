@@ -75,15 +75,6 @@ export interface ReceiptRoute {
 }
 
 const T323_REPO = receiptFixtureRepoName(T323_BUNDLE)
-const WORKBENCH_CONFIRM_PATH = `/workbench?${q({
-  source: 'atlas',
-  step: 'what',
-  protocol: 'protobuf',
-  repository: T307_REPO,
-  lineage: 'orders.v1.Orders',
-  operation: '/orders.v1.Orders/CreateOrder',
-})}`
-
 export const ROUTES: ReceiptRoute[] = [
   { name: 'search', path: '/' },
   // T43.9: the keyboard navigator, opened by its own chord.
@@ -141,21 +132,6 @@ export const ROUTES: ReceiptRoute[] = [
   { name: 'caller-comparison-required-identity', path: '/compare-callers' },
   { name: 'impact', path: '/impact' },
   { name: 'kafka-topics', path: '/topics' },
-  { name: 'investigations', path: '/investigations' },
-  { name: 'workbench', path: '/workbench' },
-  // T43R.3: an Atlas-seeded draft is dirty without a server write. Activating
-  // the primary Search link deterministically opens the house leave guard.
-  {
-    name: 'workbench-confirm-leave',
-    path: WORKBENCH_CONFIRM_PATH,
-    click: ['header nav a[href="#/"]'],
-  },
-  {
-    name: 'workbench-confirm-leave-390',
-    path: WORKBENCH_CONFIRM_PATH,
-    click: ['header nav a[href="#/"]'],
-    viewport: { width: 390, height: 844 },
-  },
   // Only the lifecycle VALUES are live host telemetry (disk pressure, owner
   // turns, the capacity badge); mask those precisely so the section's
   // heading, layout, policy sentence, and metric anatomy stay compared.

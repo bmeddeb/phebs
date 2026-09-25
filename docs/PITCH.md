@@ -46,7 +46,8 @@ The artifact must keep separate:
 - source occurrence → build target → deployable → service → owner hops;
 - analyzed, excluded, partial, failed, and inaccessible scope;
 - static evidence, declared metadata, and runtime observations; and
-- machine evidence, human dispositions, and authorized Decisions.
+- PHEBS machine evidence and any Cortana human dispositions or authorized
+  Decisions.
 
 ## What the artifact establishes
 
@@ -65,7 +66,7 @@ derivation, and quantified uncertainty—not proof of a universal negative.
 
 The shipped foundation provides repository sync, search, browsing, SCIP, Git
 history, authentication, permissions, audit, OpenAPI, MCP, backup, and restore.
-The contract-evidence, Caller Map, proof, and Workbench implementations exist
+The contract-evidence, Caller Map, and proof implementations exist
 but remain experimental/default-dark or fixture-bound.
 
 The long-term product direction now makes many services per repository

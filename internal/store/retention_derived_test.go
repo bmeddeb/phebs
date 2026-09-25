@@ -261,10 +261,10 @@ func derivedRetentionRequest(
 func TestDerivedRetentionEmptyReadyStoreIsExactZero(t *testing.T) {
 	store := newRetentionTestStore(t)
 	requests := []RetentionComponentRequest{
-		derivedRetentionRequest(RetentionCandidatePublication, 78),
-		derivedRetentionRequest(RetentionCallerArtifacts, 78),
-		derivedRetentionRequest(RetentionFocusedRepositoryState, 78),
-		derivedRetentionRequest(RetentionResolverPublication, 78),
+		derivedRetentionRequest(RetentionCandidatePublication, 80),
+		derivedRetentionRequest(RetentionCallerArtifacts, 80),
+		derivedRetentionRequest(RetentionFocusedRepositoryState, 80),
+		derivedRetentionRequest(RetentionResolverPublication, 80),
 	}
 	collection, err := store.CollectDerivedRetention(t.Context(), requests)
 	if err != nil {
@@ -375,23 +375,23 @@ func TestDerivedRetentionUnderCapExactCapAndSentinel(t *testing.T) {
 
 func TestDerivedRetentionFullCandidateAllocationExcludesSentinel(t *testing.T) {
 	store := newRetentionTestStore(t)
-	for index := 1; index <= 79; index++ {
+	for index := 1; index <= 81; index++ {
 		seedDerivedCandidate(t, store, index)
 	}
 	collection, err := store.CollectDerivedRetention(t.Context(), []RetentionComponentRequest{
-		derivedRetentionRequest(RetentionCandidatePublication, 78),
+		derivedRetentionRequest(RetentionCandidatePublication, 80),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(collection.Results) != 1 || collection.Results[0].Err != nil ||
-		collection.Results[0].Summary.ScannedIdentities != 79 ||
-		collection.Results[0].Summary.ReportedIdentities != 78 ||
+		collection.Results[0].Summary.ScannedIdentities != 81 ||
+		collection.Results[0].Summary.ReportedIdentities != 80 ||
 		!collection.Results[0].Summary.Truncated ||
-		len(collection.CandidateAuthorities) != 78 {
+		len(collection.CandidateAuthorities) != 80 {
 		t.Fatalf("full candidate allocation = %+v", collection)
 	}
-	sentinel := derivedRetentionRepository(79)
+	sentinel := derivedRetentionRepository(81)
 	for _, authority := range collection.CandidateAuthorities {
 		if authority.Repository == sentinel {
 			t.Fatalf("cap-plus-one sentinel %q crossed the authority boundary", sentinel)
@@ -722,18 +722,18 @@ func TestDerivedRetentionPlansPushPhysicalLimitsWithoutSorts(t *testing.T) {
 
 func TestDerivedRetentionRequestValidation(t *testing.T) {
 	valid := []RetentionComponentRequest{
-		derivedRetentionRequest(RetentionCandidatePublication, 78),
-		derivedRetentionRequest(RetentionFocusedRepositoryState, 78),
-		derivedRetentionRequest(RetentionResolverPublication, 78),
-		derivedRetentionRequest(RetentionCallerArtifacts, 78),
+		derivedRetentionRequest(RetentionCandidatePublication, 146),
+		derivedRetentionRequest(RetentionFocusedRepositoryState, 146),
+		derivedRetentionRequest(RetentionResolverPublication, 146),
+		derivedRetentionRequest(RetentionCallerArtifacts, 146),
 	}
 	if err := validateDerivedRetentionRequests(valid); err != nil {
 		t.Fatalf("exact max allocation: %v", err)
 	}
-	if gotReported := 4 * 78; gotReported != maxDerivedRetentionReportedIdentities {
+	if gotReported := 4 * 146; gotReported != maxDerivedRetentionReportedIdentities {
 		t.Fatalf("reported allocation = %d, want %d", gotReported, maxDerivedRetentionReportedIdentities)
 	}
-	if gotScan := 4 * 79; gotScan != maxDerivedRetentionScanIdentities {
+	if gotScan := 4 * 147; gotScan != maxDerivedRetentionScanIdentities {
 		t.Fatalf("scan allocation = %d, want %d", gotScan, maxDerivedRetentionScanIdentities)
 	}
 
@@ -748,7 +748,7 @@ func TestDerivedRetentionRequestValidation(t *testing.T) {
 		{name: "focused files", requests: []RetentionComponentRequest{derivedRetentionRequest(RetentionFocusedFiles, 1)}},
 		{name: "resolver files", requests: []RetentionComponentRequest{derivedRetentionRequest(RetentionResolverFiles, 1)}},
 		{name: "zero", requests: []RetentionComponentRequest{{Component: RetentionCandidatePublication, ScanIdentities: 1}}},
-		{name: "above max", requests: []RetentionComponentRequest{derivedRetentionRequest(RetentionCandidatePublication, 79)}},
+		{name: "above max", requests: []RetentionComponentRequest{derivedRetentionRequest(RetentionCandidatePublication, 147)}},
 		{name: "missing sentinel", requests: []RetentionComponentRequest{{Component: RetentionCandidatePublication, ReportedIdentities: 1, ScanIdentities: 1}}},
 	}
 	for _, test := range tests {

@@ -282,7 +282,7 @@ func epochConfigBytesParsed(plan Plan, epoch ExecutionEpochConfig, source string
 		"lifecycle":   map[string]bool{"enabled": true},
 		"diagnostics": map[string]bool{"jobs": true, "candidates": true, "extraction": true, "extractor_details": false},
 		"experimental": map[string]bool{"provisional_proto_extraction": true, "provisional_thrift_extraction": true,
-			"provisional_thrift_field_extraction": false, "provisional_kafka_extraction": true, "provisional_workbench": false},
+			"provisional_thrift_field_extraction": false, "provisional_kafka_extraction": true},
 		"connections": []map[string]any{{"name": "t422-local", "type": "git", "url": source, "watch": true}},
 		"service_catalogs": map[string]config.ServiceCatalog{epoch.Repository: {
 			Kind: servicecatalog.AuthorityOperator, ID: combinedAuthorityID, Version: versions[logical],
@@ -330,7 +330,7 @@ func parseEpochConfigBytes(plan Plan, epoch ExecutionEpochConfig, source string,
 		cfg.Diagnostics != (config.Diagnostics{Jobs: want.DiagnosticsJobs, Candidates: want.DiagnosticsCandidates, Extraction: want.DiagnosticsExtraction, ExtractorDetails: want.DiagnosticsExtractorDetails}) ||
 		cfg.Experimental != (config.Experimental{ProvisionalProtoExtraction: want.ProvisionalProtoExtraction,
 			ProvisionalThriftExtraction: want.ProvisionalThriftExtraction, ProvisionalThriftFieldExtraction: want.ProvisionalThriftFieldExtraction,
-			ProvisionalKafkaExtraction: want.ProvisionalKafkaExtraction, ProvisionalWorkbench: want.ProvisionalWorkbench}) ||
+			ProvisionalKafkaExtraction: want.ProvisionalKafkaExtraction}) ||
 		len(cfg.Connections) != 1 || !reflect.DeepEqual(cfg.Connections[0], config.Connection{Name: "t422-local", Type: "git", URL: source, Watch: true}) ||
 		len(cfg.ServiceCatalogs) != 1 || cfg.ServiceCatalogs[epoch.Repository] != (config.ServiceCatalog{
 		Kind: servicecatalog.AuthorityOperator, ID: combinedAuthorityID, Version: versions[logical], Path: epoch.CatalogPath, Runtime: config.ServiceCatalogRuntimeV3}) ||

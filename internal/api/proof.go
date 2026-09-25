@@ -476,9 +476,8 @@ func buildProofBundleWithCensus(ctx context.Context, opts Options, query ProofQu
 }
 
 // buildProofBundleValue is the side-effect-free proof evaluation engine.
-// Persistence is deliberately outside this function so read-only projections
-// such as the Workbench field inventory can reuse the exact authorization,
-// coverage, and evidence joins without minting an immutable proof bundle.
+// HTTP bundle creation and read-only MCP queries reuse its authorization,
+// coverage, and evidence joins; persistence stays with the caller.
 func buildProofBundleValue(
 	ctx context.Context,
 	opts Options,

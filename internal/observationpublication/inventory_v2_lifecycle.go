@@ -24,8 +24,8 @@ type InventoryLifecycleResultV2 struct {
 
 const MaxInventoryLifecycleCandidatesV2 = 64
 
-// InventoryPinCheckerV2 combines active reader leases with durable proof and
-// Investigation ownership. The lifecycle owner invokes it only after exact
+// InventoryPinCheckerV2 combines active reader leases with durable proof
+// ownership. The lifecycle owner invokes it only after exact
 // root/marker revalidation while holding the common mutation/backup lock.
 type InventoryPinCheckerV2 interface {
 	PinnedInventoryV2(context.Context, string, string) (bool, error)
@@ -33,7 +33,6 @@ type InventoryPinCheckerV2 interface {
 
 type InventoryDurablePinCheckerV2 interface {
 	PinnedInventoryProofV2(context.Context, string, string) (bool, error)
-	PinnedInventoryInvestigationV2(context.Context, string, string) (bool, error)
 }
 
 type InventoryPinsV2 struct {
@@ -50,16 +49,12 @@ func (pins InventoryPinsV2) PinnedInventoryV2(
 	if pins.Durable == nil {
 		return false, nil
 	}
-	pinned, err := pins.Durable.PinnedInventoryProofV2(ctx, repository, generation)
-	if err != nil || pinned {
-		return pinned, err
-	}
-	return pins.Durable.PinnedInventoryInvestigationV2(ctx, repository, generation)
+	return pins.Durable.PinnedInventoryProofV2(ctx, repository, generation)
 }
 
 // SweepInventoryLifecycleV2 examines one repository's joint source/
 // observation namespace. Current, rollback-floor, marker stage, active lease,
-// proof, and Investigation roots outrank collection. A candidate is renamed
+// and proof roots outrank collection. A candidate is renamed
 // out of the publication namespace before bounded deletion, and interrupted
 // collecting/stage drains resume on later fair turns.
 func SweepInventoryLifecycleV2(

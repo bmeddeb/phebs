@@ -933,7 +933,7 @@ func frozenLifecycleOwners() []string {
 		lifecycle.CatalogOwner,
 		lifecycle.JobOwner,
 		lifecycle.GenerationScheduleOwner,
-		lifecycle.InvestigationOwner,
+		"investigations", // frozen ceremony owner; retired from runtime by T46.1
 		lifecycle.ObservationOwner,
 		lifecycle.ObservationV2Owner,
 		lifecycle.PartialStageOwner,

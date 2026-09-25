@@ -6,7 +6,7 @@
 #
 # Isolated data dir, plain-HTTP localhost dev, watch mode on the corpus, and
 # every provisional evidence surface enabled so the corpus exercises Contract
-# Atlas, Caller Map, Impact/Workbench, Thrift field evidence, and Kafka
+# Atlas, Caller Map, Impact, Thrift field evidence, and Kafka
 # topic evidence against realistic code.
 
 server:
@@ -35,7 +35,7 @@ diagnostics:
   extractor_details: true
 
 # Validation-gated evidence surfaces — this corpus is the real-world workout
-# for exactly these. Workbench requires proto or thrift extraction (both on).
+# for exactly these.
 # Thrift-field extraction expects a committed root index.scip the corpus does
 # not have; its honest gap reporting is part of the test.
 experimental:
@@ -43,7 +43,6 @@ experimental:
   provisional_thrift_extraction: true
   provisional_thrift_field_extraction: true
   provisional_kafka_extraction: true
-  provisional_workbench: true
 
 # Whole-repository indexing: no analysis_units, no service_catalogs. The
 # corpus is the neutral whole-monorepo shape.

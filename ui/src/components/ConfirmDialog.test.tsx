@@ -155,7 +155,7 @@ describe('ConfirmDialog', () => {
   it('bounds the panel and scrollable detail for narrow viewports', () => {
     dialog({
       detail: 'A very long detail '.repeat(100),
-      cancelLabel: 'Keep editing on this investigation',
+      cancelLabel: 'Keep editing this draft',
       confirmLabel: 'Discard every unsaved edit and leave',
     })
     const alert = screen.getByRole('alertdialog')

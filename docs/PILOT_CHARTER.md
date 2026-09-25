@@ -4,7 +4,7 @@
 
 **Related documents:** [adoption pitch](./PITCH.md) ·
 [product vision](./VISION.md) ·
-[investigations](./INVESTIGATIONS.md) ·
+[historical Investigations design](./INVESTIGATIONS.md) ·
 [evidence-pack card template](./EVIDENCE_PACK_CARD.md)
 
 Version 0.2 changes only the disposition of the external Go/gRPC benchmark.

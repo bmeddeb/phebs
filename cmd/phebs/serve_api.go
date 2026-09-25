@@ -173,8 +173,7 @@ func openServeSearcher(d *serveDeps) error {
 }
 
 // newServeAPIOptions assembles the API options: search/code-navigation
-// services, fixture bindings, catalog/caller/relationship services, and the
-// provisional/synthetic Workbench binding.
+// services, fixture bindings, and catalog/caller/relationship services.
 func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 	cfg := d.cfg
 	st := d.st
@@ -224,18 +223,6 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 			}
 			return "authenticated:" + principal.AuthMethod
 		},
-		InvestigationMutation: func(ctx context.Context) bool {
-			principal, ok := auth.PrincipalFromContext(ctx)
-			if !ok {
-				return false
-			}
-			if principal.AuthMethod == "session" {
-				return true
-			}
-			return principal.HasAPIKeyCapability(
-				store.APIKeyCapabilityInvestigationWrite,
-			)
-		},
 		AuthorizationProvider: func() string {
 			if cfg.Permissions != nil {
 				return "phebs-permissions-v1"
@@ -243,14 +230,6 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 			return "unfiltered-v1"
 		}(),
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
-	}
-	if fixtureDir := strings.TrimSpace(os.Getenv("PHEBS_INVESTIGATION_FIXTURES")); fixtureDir != "" {
-		fixtureViews, err := api.NewInvestigationFixtureViews(fixtureDir)
-		if err != nil {
-			return api.Options{}, fmt.Errorf("load synthetic Investigation views: %w", err)
-		}
-		apiOpts.InvestigationViews = fixtureViews
-		log.Printf("WARNING: synthetic Investigation fixture views enabled from %s; not production evidence", fixtureDir)
 	}
 	if fixturePath := strings.TrimSpace(os.Getenv("PHEBS_CONTRACT_ATLAS_FIXTURE")); fixturePath != "" {
 		fixture, err := api.LoadContractCatalogFixture(fixturePath)
@@ -280,68 +259,6 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		)
 		if apiOpts.Relationships == nil {
 			return api.Options{}, errors.New("configure exact relationship readers")
-		}
-	}
-	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
-	workbenchMode := ""
-	if cfg.Experimental.ProvisionalWorkbench {
-		var provisionalWorkbench store.InvestigationWorkbench
-		if syntheticWorkbenchSetting == "" && apiOpts.ContractCatalogFixture == nil {
-			if resolver := api.NewWorkbenchTargetResolver(apiOpts); resolver != nil {
-				provisionalWorkbench = store.InvestigationWorkbenchService{
-					Store: st, Resolver: resolver, Compatibility: d.compatibility,
-				}
-			}
-		}
-		if err := bindProvisionalWorkbench(
-			&apiOpts,
-			cfg.Experimental.ProvisionalProtoExtraction ||
-				cfg.Experimental.ProvisionalThriftExtraction,
-			syntheticWorkbenchSetting,
-			provisionalWorkbench,
-		); err != nil {
-			return api.Options{}, err
-		}
-		workbenchMode = "provisional"
-	} else {
-		var syntheticWorkbench store.InvestigationWorkbench
-		if syntheticWorkbenchSetting != "" {
-			if resolver := api.NewWorkbenchTargetResolver(apiOpts); resolver != nil {
-				syntheticWorkbench = store.InvestigationWorkbenchService{
-					Store: st, Resolver: resolver, Compatibility: d.compatibility,
-				}
-			}
-		}
-		if err := bindSyntheticWorkbench(
-			&apiOpts,
-			syntheticWorkbenchSetting,
-			syntheticWorkbench,
-		); err != nil {
-			return api.Options{}, err
-		}
-		if apiOpts.Workbench != nil {
-			workbenchMode = "synthetic"
-		}
-	}
-	if apiOpts.Workbench != nil {
-		apiOpts.WorkbenchImpact = api.NewWorkbenchImpactService(apiOpts)
-		apiOpts.WorkbenchImplementation =
-			api.NewWorkbenchImplementationService(apiOpts)
-		apiOpts.WorkbenchChecklist =
-			api.NewWorkbenchChecklistService(apiOpts)
-		if apiOpts.WorkbenchImpact == nil ||
-			apiOpts.WorkbenchImplementation == nil ||
-			apiOpts.WorkbenchChecklist == nil {
-			return api.Options{}, fmt.Errorf(
-				"%s Workbench evidence services are unavailable",
-				workbenchMode,
-			)
-		}
-		switch workbenchMode {
-		case "provisional":
-			log.Printf("WARNING: provisional Change Workbench enabled over store-derived Contract Atlas evidence; not a production or continuation surface")
-		case "synthetic":
-			log.Printf("WARNING: synthetic Change Workbench enabled for make dev; not a production or continuation surface")
 		}
 	}
 	return apiOpts, nil
@@ -411,30 +328,20 @@ func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tai
 		apiOpts.ContractCatalog, apiOpts.CallerMap, apiOpts.CallerComparison,
 	)
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
-	// T21.13 builds two immutable registries over the same services. Stateless
-	// request authentication selects the write registry only for a current
-	// named key carrying investigation:write; handlers recheck that predicate
-	// before every preview-bound or durable mutation call.
+	// It advertises one read-only tool registry for every authenticated caller.
 	mcpOpts := phebsmcp.Options{
 		Version: version, Store: d.st, Search: d.searcher, ScopedSearch: d.runtimeScopedSearch,
 		DataDir: d.cfg.Server.DataDir,
 		CodeNav: d.codeNavigation, Visible: d.visibleFor, Proofs: mcpProofs,
-		Compatibility:         mcpCompatibility,
-		ContractCatalog:       catalogQueries,
-		CallerMap:             callerMapQueries,
-		CallerComparison:      comparisonQueries,
-		ServiceDirectory:      apiOpts.ServiceDirectory,
-		ObservationProgress:   apiOpts.ObservationProgress,
-		Relationships:         apiOpts.Relationships,
-		Workbench:             apiOpts.Workbench,
-		WorkbenchImpact:       apiOpts.WorkbenchImpact,
-		WorkbenchChecklist:    apiOpts.WorkbenchChecklist,
-		Principal:             apiOpts.Principal,
-		InvestigationMutation: mcpInvestigationMutation,
+		Compatibility:       mcpCompatibility,
+		ContractCatalog:     catalogQueries,
+		CallerMap:           callerMapQueries,
+		CallerComparison:    comparisonQueries,
+		ServiceDirectory:    apiOpts.ServiceDirectory,
+		ObservationProgress: apiOpts.ObservationProgress,
+		Relationships:       apiOpts.Relationships,
 	}
-	mcpReadServer := phebsmcp.NewServer(mcpOpts)
-	mcpOpts.AdvertiseWorkbenchMutations = true
-	mcpWriteServer := phebsmcp.NewServer(mcpOpts)
+	mcpServer := phebsmcp.NewServer(mcpOpts)
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their
 	// permissions onto whoever posts to it (the SDK's hijack guard is inert
@@ -442,12 +349,7 @@ func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tai
 	// authenticated principal; phebs tools are plain request/response, so
 	// nothing is lost.
 	var mcpHandler http.Handler = mcpsdk.NewStreamableHTTPHandler(
-		func(request *http.Request) *mcpsdk.Server {
-			if mcpInvestigationMutation(request.Context()) {
-				return mcpWriteServer
-			}
-			return mcpReadServer
-		},
+		func(*http.Request) *mcpsdk.Server { return mcpServer },
 		&mcpsdk.StreamableHTTPOptions{Stateless: true},
 	)
 	if d.exact.state != nil {

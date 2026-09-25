@@ -90,7 +90,7 @@ func TestCycleCollectorUsesSerialCallbacksForZeroReadPressureEvidence(t *testing
 	case <-time.After(time.Second):
 		t.Fatal("fresh lifecycle cycle was not observed")
 	}
-	if normal.Schema != CycleObservationSchema || normal.OwnerTurns != 37 ||
+	if normal.Schema != CycleObservationSchema || normal.OwnerTurns != 35 ||
 		len(normal.Owners) != len(owners) || normal.Capacity.Pressure != PressureNormal ||
 		normal.Capacity.UsedPercent != 70 {
 		t.Fatalf("normal cycle = %+v", normal)
@@ -660,7 +660,7 @@ func collectorRecoveryStarted(collector *CycleCollector) bool {
 func testCycleObservationOwners() []Owner {
 	names := []string{
 		CatalogOwner, CatalogV3Owner, JobOwner, GenerationScheduleOwner,
-		InvestigationOwner, ObservationOwner, ObservationV2Owner, PartialStageOwner,
+		ObservationOwner, ObservationV2Owner, PartialStageOwner,
 		ProofOwner, ReaderOwner, RelationshipOwner, RelationshipV3Owner,
 		ResolverOwner, SearchOwner, TombstoneOwner, SourceOwner,
 	}

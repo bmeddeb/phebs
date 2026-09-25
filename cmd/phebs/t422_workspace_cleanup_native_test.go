@@ -34,9 +34,10 @@ func TestT422WorkspaceCleanupNativeComposition(t *testing.T) {
 		t422CleanupExpectedTurns, 2*t422CleanupExpectedTurns, t422CleanupExpectedTurns+2, time.Since(started))
 }
 
-// Same native admission/checkpoint path with the production ten concrete
-// owners and six explicit closed owners. Files are inert residue, not built
-// publications; the catalog is built and published through the real store.
+// Same native admission/checkpoint path with ten concrete owners, five current
+// closed owners, and one historical no-op to exercise the frozen 16-owner V4
+// fixture. Files are inert residue, not built publications; the catalog is
+// built and published through the real store.
 func TestT422WorkspaceAllOwnersNativeComposition(t *testing.T) {
 	testT422ArchiveRetiredNativeEndpoint(t, false, true, false, true, true)
 }
@@ -63,7 +64,7 @@ func seedT422AllNativeOwners(t *testing.T, st *store.Surreal, root string, turns
 	// A valid resumed job census finishes on odd owner visits while the real
 	// regular/sparse stage census finishes on even visits. Persist that skew in
 	// the actual store so this composition cannot pass by cursor alignment.
-	if err := st.CompareAndSwapLifecycleCursor(t.Context(), "owner:"+lifecycle.JobOwner, 0, `{"kind":7,"phase":"count"}`); err != nil {
+	if err := st.CompareAndSwapLifecycleCursor(t.Context(), "owner:"+lifecycle.JobOwner, 0, `{"kind":6,"phase":"count"}`); err != nil {
 		t.Fatal("seed resumed job census", err)
 	}
 	acquire := func(ctx context.Context) (func(), error) {
@@ -85,6 +86,9 @@ func seedT422AllNativeOwners(t *testing.T, st *store.Surreal, root string, turns
 		lifecycle.ExtractionStageOwner{Root: filepath.Join(data, "extraction-publications"), Acquire: acquire},
 	}
 	owners = append(owners, lifecycle.ClosedOwners()...)
+	// The frozen V4 fixture has an Investigation owner slot. The active product
+	// does not register one; only this historical test supplies its no-op.
+	owners = append(owners, lifecycle.StaticOwner{OwnerName: "investigations", Completeness: lifecycle.Exact})
 	for index, owner := range owners {
 		owners[index] = t422CleanupCountOwner{Owner: owner, turns: turns}
 	}

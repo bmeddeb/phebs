@@ -1,5 +1,9 @@
 # Investigations product experience
 
+> **Historical contract.** T46.1 retired the Investigations product from
+> PHEBS. This document preserves its former design and is not a runnable
+> product guide. PHEBS continues to supply read-only evidence to Cortana.
+
 An **Investigation** is the persistent object around consequential engineering
 work. Search remains fast and stateless; users promote a recurring or
 decision-bearing question into an immutable, reviewable evidence history.
@@ -7,9 +11,9 @@ decision-bearing question into an immutable, reviewable evidence history.
 This document owns the user experience. Normative identities, lifecycle,
 authorization, eligibility, comparison, and dossier semantics live in the
 [Investigation domain contract](./INVESTIGATION_DOMAIN_CONTRACT.md). Agent
-projection lives in the [MCP envelope](./MCP_ENVELOPE.md). The implemented
-surface remains default-dark or fixture-bound as stated in the
-[roadmap](./ROADMAP.md).
+projection was specified in the [MCP envelope](./MCP_ENVELOPE.md). The former
+product surface was default-dark or fixture-bound before T46.1 retirement;
+the read-only evidence envelope remains shipped.
 
 ## Product model
 
@@ -146,7 +150,7 @@ eligibility, validation identities, redaction scope, integrity root, and
 validity statement. Offline verification proves integrity and authenticity,
 not current authorization or freshness.
 
-The Dossier is the handoff boundary to Workbench and external systems.
+The Dossier is the handoff boundary to external decision systems.
 
 ## Agents
 

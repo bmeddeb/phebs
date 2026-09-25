@@ -1,5 +1,10 @@
 # Investigation domain contract
 
+> **Historical product contract.** T46.1 retired the persistent Investigations
+> product from PHEBS. The read-only MCP evidence envelope remains shipped;
+> this document records the former Investigation domain, not current routes,
+> storage, or workflows.
+
 *Normative product-domain contract, v0.2 · governs the semantics exposed by
 storage, API, UI, MCP, Review, and export. `PLAN.md` remains the authority for
 architecture and implementation decisions; adopted implementation choices are

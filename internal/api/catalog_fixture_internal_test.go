@@ -107,7 +107,7 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 			IndexedCommitHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		},
 		{
-			Name: "local/workbench-closure", IndexedCommitHash: commit,
+			Name: "local/catalog-fixture", IndexedCommitHash: commit,
 		},
 	}}
 	opts := Options{
@@ -235,7 +235,7 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 			t.Fatalf("claim did not bind a visible pinned source: %+v", claim)
 		}
 	}
-	if second.Items[0].Repository != "local/workbench-closure" {
+	if second.Items[0].Repository != "local/catalog-fixture" {
 		t.Fatalf("fixture selected unrelated repository: %+v", second.Items[0])
 	}
 

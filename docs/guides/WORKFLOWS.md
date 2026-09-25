@@ -3,8 +3,8 @@
 [← User guide](../MANUAL.md)
 
 This guide covers public-corpus evaluations, the neutral focused-service demo,
-the retained synthetic Workbench fixtures, search, repository browsing, SCIP
-and Git history, HTTP, and MCP. Experimental evidence remains subject to the
+search, repository browsing, SCIP and Git history, HTTP, and MCP.
+Experimental evidence remains subject to the
 explicit coverage and validation caveats in each workflow.
 
 ## OpenTelemetry microservices evaluation
@@ -229,8 +229,7 @@ only its selected canonical records and never rematerializes the reverse index,
 but its reopen/final fences still perform bounded complete-publication file-
 identity sweeps without content reads or hashes; a
 restart or publication-registry cache miss can still perform the separately
-bounded cold complete-publication validation. The list creates no proof bundle
-or Investigation.
+bounded cold complete-publication validation. The list creates no proof bundle.
 
 Each exact row's citation can be opened through
 `GET /api/contract_callers/citation?citation=...`. The server reauthorizes the
@@ -291,9 +290,6 @@ pair, after it builds the page, the service checks both complete-generation
 summaries in one store transaction, both final publication descriptors, and
 both permissions. This is one jointly fenced read, not two independently timed
 Caller Map requests.
-T30.6l now composes this same exact authority through the current Workbench
-Revision; it does not reconstruct a second comparison or fall back to legacy
-caller evidence.
 
 The old and replacement panels each show `current`, `missing`, `failed`, or
 `stale`. Only two current generations produce comparison rows. If either side
@@ -337,8 +333,8 @@ first page; no cursor can continue against only the unchanged endpoint.
 
 An exact empty current/current result means no retained direct-syntax result or
 abstention matched the selected scope. Old-only evidence does not establish
-that migration is incomplete. The read creates no proof bundle or
-Investigation and establishes no runtime use, completeness, extraction
+that migration is incomplete. The read creates no proof bundle and establishes
+no runtime use, completeness, extraction
 accuracy, migration completion, decommissioning safety, or retention bound.
 
 The vocabulary is now explicit. `contract-atlas-v2` calls only a
@@ -348,8 +344,8 @@ abstention is `extractor_abstention`. `contract-impact-report-v2`, whose input
 is still a bare operation rather than a declaration identity, separates
 `resolved_evidence`, `matching_call_evidence`, and
 `extractor_abstentions`. It does not present an operation-object match as a
-known-caller roster. That legacy evidence reader remains at 1.2.0 for
-Workbench compatibility; public Caller Map and caller comparison now project
+known-caller roster. That legacy evidence reader remains at 1.2.0; public
+Caller Map and caller comparison project
 the separate direct-syntax complete caller generation. All surfaces remain
 behind their existing provisional protocol flags.
 
@@ -373,8 +369,8 @@ The older `find_operation_consumers` remains deliberately different: it
 requires a caller-supplied bare canonical operation and persists one bounded
 proof bundle of matching call evidence and extractor abstentions. It does not
 establish declaration identity or become a known-caller roster. Ordinary
-Caller Map discovery, detail, and paging persist no proof bundle or
-Investigation. `compare_operation_callers` projects the same exact two-sided
+Caller Map discovery, detail, and paging persist no proof bundle.
+`compare_operation_callers` projects the same exact two-sided
 comparison service as HTTP, accepts both complete endpoint identities and the
 shared filters, and returns bounded occurrence- or unit-level
 classifications, both exact generation states, an exact total only for a
@@ -392,51 +388,17 @@ in [OPERATIONS.md](./OPERATIONS.md#developing-phebs). Passing those gates
 changed neither the experimental-dark registration nor the external
 `NOT_ESTABLISHED` accuracy posture.
 
-There is no production Change Workbench in the current release. The available
-production pieces are separate: a human can browse a declaration in Contracts,
+Change Workbench is retired. A human can browse a declaration in Contracts,
 carry its operation to Impact, inspect cited matching/unresolved evidence and
 the coverage certificate, then use Search, SCIP navigation, and History
-independently. The rich Investigations page and the T21.10 Workbench shell
-described below are development fixture projections, not a production
-ticket-intake or checklist workflow.
-
-The internal T21.2 storage boundary now supports an immutable, canonical
-Change Brief as a child of one Investigation revision. It stores the ticket
-kind, human-authored Why fields, an inert external reference, and exact
-contract-selection or proposed-source commitments; changing any of them
-atomically appends a new parent revision and preserves the old brief. It reuses
-Investigation sharing, transfer, revocation, archive, audit, authorization,
-and signed-dossier behavior. This is production-unregistered/default-dark:
-the current release still registers no HTTP, UI, or MCP operation that creates
-or edits a Workbench.
-
-The internal T21.3 service can preview, create, revise, and read that brief
-without giving adapters a second evidence or authorization path. A preview
-commits to the current principal authorization, exact repository and
-declaration snapshots, requested evidence capability versions, parent
-revision, and proposed-file hashes, then returns blockers and a transparent
-count/byte estimate without writing. Submission re-runs the preview and uses an
-idempotency key plus expected Revision; any changed permission, commit,
-declaration, proposal, capability, or current Revision refuses the write.
-If the serialized authorized repository universe exceeds the Revision's
-64 KiB field ceiling, preview returns
-`DECLARED_UNIVERSE_TOO_LARGE`, never `Ready`. Nil and empty contract-selection
-sets canonicalize to one brief identity. Mutation receipts revalidate their
-principal and key on every read; after a write-side timeout, the service makes
-one bounded cancellation-independent receipt lookup so retrying that key can
-recover the committed result.
-Proposal source bytes are never returned or retained. A conditional Huma
-projection exists for tests and future registration, but it is absent from the
-normal production server's routes, OpenAPI, and advertised capabilities.
-The synthetic adapter also supplies the T21.13 MCP projection described in
-[Agents (MCP)](#agents-mcp). It calls this same service and the shared checklist mutation boundary;
-ordinary production startup still supplies neither service to MCP.
+independently. PHEBS provides evidence; Cortana owns change organization and
+human decisions. Historical Workbench fixture receipts remain archival only.
 
 ## Neutral focused-service development cohort
 
 `make dev` and `make dev-api` bind one retained neutral Git bundle through the
 ordinary sync, focused-index, candidate, extraction, resolver, caller-leaf,
-complete-publication, and store-derived Workbench paths. They also select the
+and complete-publication paths. They also select the
 companion T33.5 operator catalog through the ordinary catalog ingestion and
 service-state reconciliation paths; there is no directory response fixture.
 The repository's active `orders-service` analysis unit selects
@@ -456,9 +418,8 @@ indexing transition instead shows `search_revision_scope_not_projectable` (or
 `search_index_scope_unavailable` when no indexed revision is available) and
 does not attach the current analysis-unit digest or paths to those results.
 
-The recipes explicitly clear the Investigation, Contract Atlas, synthetic
-Workbench, retained Workbench-closure, and Thrift-field fixture bindings. The
-Contracts and Workbench surfaces therefore use the same store-derived evidence
+The recipes explicitly clear the Contract Atlas and Thrift-field fixture
+bindings. Contracts uses the same store-derived evidence
 and authorization fences as an ordinary provisional instance. Ordinary
 `phebs serve` remains unchanged and default-dark. The exact source and evidence
 demo steps are retained in the
@@ -539,12 +500,6 @@ the panel repeats its relationship generation/root and source object/content
 identities. It is evidence, not a runtime call, broker, deployment, or owner
 claim.
 
-**Assess change in Workbench** opens the Change Workbench with that exact
-repository and service key prefilled as the source service scope. This handoff
-does not create an Investigation or preview. The operator still chooses the
-contract change and explicitly previews/creates the revision through the
-ordinary Workbench flow.
-
 The page creates three first-page relationship bindings once per selected
 service and reuses them when switching summaries. **Next exact page** advances
 only the selected server-bound cursor; **First page** returns to its retained
@@ -606,314 +561,15 @@ transitive edge, or becomes authority. The table remains authoritative. A
 citation still reauthorizes and reads only its immutable source span while
 repeating the exact relationship root and source object/content identities.
 
-## Synthetic Change Workbench shell
+## Evidence terminology
 
-The retained synthetic adapter is available to tests and deliberately explicit
-developer invocations. T30.7 removed it from `make dev` and `make dev-api`;
-those targets now exercise the real store-derived Workbench over one neutral
-focused repository. The historical adapter requires
-`PHEBS_SYNTHETIC_WORKBENCH=1`, the documented Investigation and Contract Atlas
-fixtures, and the retained
-`docs/fixtures/change-workbench/t2114-workbench-closure.bundle`. The bundle has
-no `index.scip`; Kafka, Redis, document-store, SQL, and runtime readers are not
-enabled. Startup fails closed unless both fixture adapters and the Workbench
-service are available. The resulting authenticated `change-workbench`
-capability exposes the experimental `#/workbench` route and its conditional
-HTTP operations. Setting ordinary production configuration never enables it;
-this adapter does not satisfy the retained validation or pilot-continuation
-gate.
+The generated glossary below defines the nine terms that qualify PHEBS evidence.
+Change intent and success criteria belong in Cortana.
 
-The Workbench home offers two read/write-safe entry paths:
+<!-- BEGIN GENERATED PHEBS EVIDENCE GLOSSARY -->
+#### Canonical PHEBS evidence glossary
 
-- paste up to 16 KiB of ticket context, choose add, modify, migrate, or retire,
-  and shape an editable Why draft; or
-- open one exact Contract Atlas operation and choose **Start Workbench** to
-  seed its complete protocol, repository, declaration-lineage, and canonical
-  operation identity.
-
-An existing Investigation may be resumed by ID. Resume first performs an
-authorized read of its current revision and then places both the Investigation
-ID and exact Revision ID in the URL. Reload, deep links, and the persistent
-Why → What → Where → How rail preserve those IDs. If that link is no longer
-current, the shell refuses to retarget it silently and offers a separate link
-to the newly authorized current revision. Unknown and newly unauthorized IDs
-share the same non-disclosing unavailable view.
-
-Why keeps human-authored problem, desired outcome, success criteria,
-non-goals, assumptions, open questions, inert external reference, and the
-bounded analysis-contract fields editable. What keeps ticket mode, visible
-repository universe, exact endpoint roles and identities, and optional
-proposal source explicit. Add and modify accept proposed protobuf or Thrift
-source; migrate and retire do not. The browser checks the reviewed 256-file,
-4 MiB-per-file, and 32 MiB aggregate source ceilings before sending a preview.
-After a saved Workbench is reopened, only the retained proposal
-path/hash/size commitment is shown; source bytes must be supplied again for a
-new revision.
-
-Each endpoint row in What has **Discover**. It opens one bounded Contract
-Atlas page and explains that an operation name is not an identity. **Use
-endpoint** copies the complete protocol, repository, declaration lineage, and
-canonical operation together; it does not run a preview or promote name-only
-evidence. When operation spellings repeat, the accessible action name also
-includes protocol, repository, and lineage so keyboard and screen-reader users
-can distinguish the choices. Migrate/replace uses Discover once for the
-current row and once for the replacement row. **Next endpoints** replaces the current result rows;
-prior result pages are not retained in the DOM. Escape or the explicit close
-button dismisses and returns focus to Discover; an outside click dismisses
-without moving focus unexpectedly. The existing identity fields remain
-visible for deliberate correction and inspection, but the synthetic
-walkthrough requires no canonical-identifier typing after Atlas discovery.
-
-Opening a step and editing fields perform no preview or mutation. **Preview
-revision** is an explicit read-only operation. Only a ready preview with the
-same current draft digest enables **Create Workbench** or **Append revision**;
-any later edit marks the preview expired and requires **Refresh preview**.
-Compatibility `unavailable` remains visibly distinct from a compatible
-result. Permission loss, source refusal, stale revision or preview conflicts,
-and retry paths remain explicit; structured server problem responses render
-their bounded detail rather than raw JSON. Unsaved edits retain the browser's
-ordinary native tab/unload warning. An unmodified same-app link that would
-leave the Workbench or drop its exact Investigation/revision identity is
-stopped before navigation and opens the house confirmation `alertdialog`.
-**Keep editing** receives initial focus; Escape, backdrop dismissal, the close
-affordance, and **Keep editing** cancel without changing the URL or draft and
-return focus to the invoking link. Only explicit **Discard edits and leave**
-follows the captured exact hash. Opening or dismissing the dialog performs no
-request or mutation. Movement among the four steps for the same exact revision,
-clean links, and modified/new-tab activation remain uninterrupted. The guard
-does not claim to intercept browser Back/Forward or programmatic navigation.
-A failed create/append invalidates its preview so retry requires fresh
-evidence.
-General schema validation stays distinct from source-limit refusal, endpoint
-growth stops at three selections, and oversized UTF-8 ticket or proposal
-pastes remain visible with an explicit refusal instead of being silently
-truncated. The responsive rail becomes a horizontal step strip on
-narrow screens, while native labels, headings, navigation landmarks,
-current-step state, live status regions, visible focus, and native
-buttons/links preserve keyboard and screen-reader operation.
-
-The separate authenticated `change-workbench-evidence` capability lights up
-only when the synthetic adapter has bound the shared impact, implementation,
-and checklist services together. Without that capability, Where and How show
-an explicit unavailable state and issue no fallback evidence request.
-
-Where reads one current bounded impact page. Its **Analysis scope & gaps**
-panel stays adjacent to the source-first inventory and shows capability,
-**Focused-local coverage**, and typed gap state before the rows. Overlay caller
-generation state is deliberately not a coverage certificate. Atlas declarations,
-implementations, name matches, extractor abstentions, exact callers,
-unit-attribution ambiguity, migration comparison classes, retained
-compatibility findings, affected-field references, and resource planes keep
-their service-defined classifications. Source links name the exact repository,
-commit, path, and line span and navigate to that immutable commit. Migration
-comparison sides retain bounded old/replacement exact-range caller citations;
-affected-field rows retain every visible evidence occurrence; and an enabled
-resource-plane relationship retains its subject, object, classification, and
-cited sources. The header counts evidence groups rather than mixing unlike row
-types into a false exact total. Optional unit, owner, path, freshness,
-resolution, ordering, comparison-level, and compatibility-run inputs are
-explicit server filters. **Next page** replaces the mounted rows with the
-opaque-cursor page; **Previous page** returns through the retained cursor path.
-An empty page says that it does not establish absence or completeness, and
-stale cursors restart from the first exact page. The API accepts 1–100 rows;
-the UI requests 25, mounts only that server page, and retains at most 500
-cursor entries for this stream. Reaching that local history bound disables
-forward paging rather than retaining an unbounded session.
-The panel's help availability is derived from the capability and coverage rows
-returned for that exact projection; the UI does not assume that dark readers
-are enabled.
-
-Modify and retire show one exact `repository-overlay` caller generation;
-migrate shows the jointly fenced old and replacement generations; add has no
-caller stream. Each generation displays `current`, `missing`, `failed`, or
-`stale` plus its publication revision, commit, and generation digest. Only
-`current` can report `matching_rows_state: exact`, rows, and a numeric total.
-The other states report `unavailable`, add an explicit Analysis-scope gap, and
-show no partial rows, comparison classes, subordinate cursor, or numeric zero.
-An exact empty current page means only that no retained static row matched the
-filters. An unavailable page is not evidence of zero callers, completeness,
-migration completion, or retirement safety.
-
-Caller and comparison occurrences are visibly labeled
-`repository-overlay`. **Read exact cited bytes** invokes the same signed
-authorization-first citation used by Caller Map and returns only the immutable
-commit/object/digest-verified byte range. There is intentionally no whole-file
-fallback for an overlay occurrence; ordinary Atlas, focused-local, field, and
-implementation citations keep their own separately typed source links.
-
-The opaque outer cursor is HMAC-authenticated, including every subordinate
-stream's complete/next state; changing an unfinished stream into a completed
-one is rejected rather than skipping its remaining rows.
-
-When another evidence stream requires a later outer page after a caller stream
-has finished, Workbench confirms the finished exact publication through a
-hidden signed full-incarnation authority token. It does not fetch page one
-again, mint another citation, or consume another exact caller request binding.
-Any caller transition, including same-name `A → B → A`, permission change, or
-process restart conflicts and offers a restart from the first exact page. The
-Investigation and selected Revision are checked again after all evidence is
-composed, so a mid-read Revision change or authorization loss cannot serialize
-the assembled result.
-
-How reads related implementation/history evidence and the deterministic
-checklist in parallel. Up to 32 optional source anchors may be supplied as
-exact repository, commit, path, line, character, and UTF encoding identities.
-Related rows preserve selected versus review-candidate state, code role,
-selection rule, immutable source span, and bounded commit/diff detail.
-Capability failures and gaps stay visible rather than becoming guessed file
-recommendations. Only the current implementation page and current checklist
-page are mounted, and each navigation retains at most 500 cursor entries.
-
-Checklist suggestions are deterministic and never persisted. Their current or
-stale evidence state and immutable citations remain separate from the
-**Human-recorded** Disposition panel. A current suggestion accepts only the
-fixed categories `accepted`, `rejected`, `completed`, `reopened`, and
-`waived`; rejected, reopened, and waived require rationale. Correcting an
-existing record explicitly supersedes that record. A stale suggestion with no
-prior Disposition is disabled rather than silently retargeted. Snapshot or
-active-record conflict offers **Restart exact evidence** before another
-mutation is allowed to rely on the projection. The refreshed checklist
-supplies the current active Disposition, so a correction retry derives a new
-`supersedes` identity instead of replaying the stale request. Permission loss
-uses the same non-disclosing unavailable state. There is no comment,
-assignment, due date, priority, custom state, task, or implicit completion
-action.
-
-Opaque paging cursors and signed exact-caller citation tokens are transport
-capabilities, not checklist evidence identity. Checklist derivation removes
-them before hashing Impact pages, caller evidence, and suggestion IDs. The
-same exact publication therefore keeps the same suggestion and existing human
-Disposition current even when a request binding rotates. The checklist reads
-at most five 100-row Impact pages and five 100-row implementation pages,
-uses one deterministic top-1,000 suggestion accumulator with 32 evidence
-references per final suggestion, and pages at most 100 entries behind a
-64 KiB cursor.
-
-## Provisional Change Workbench over published evidence
-
-`experimental.provisional_workbench: true` is a separate development path from
-the synthetic shell above. It requires provisional protobuf or Thrift
-declaration extraction and reuses the instance's already-constructed
-store-derived Contract Atlas service. It does not load a Contract Atlas
-fixture, invent a second catalog authority, or independently expose the
-evidence store.
-
-After ordinary sync, indexing, and extraction publish a declaration run, open
-Contract Atlas, choose one exact protobuf or Thrift operation, and select
-**Start Workbench**. The existing Workbench resolver snapshots that operation
-at the visible indexed HEAD commit and preserves its protocol, repository,
-declaration lineage, and canonical operation identity. Impact,
-implementation, and checklist projections continue to use the same shared
-services and authorization checks as the fixture-backed shell.
-
-The two paths are deliberately distinct:
-
-| Path | Catalog authority | Evidence source | Intended use |
-|---|---|---|---|
-| Explicit historical synthetic adapter | Synthetic Contract Atlas fixture | Retained synthetic fixtures plus the normal closure-repository pipeline | Fixture conformance and regression tests |
-| `provisional_workbench` | Instance store-derived Contract Atlas | Ordinary repository sync/index/extraction publications | Bounded manual evaluation against real published evidence |
-
-Neither path satisfies production registration or the retained validation
-gate. A Workbench result does not prove runtime use, completeness,
-compatibility, migration completion, decommission safety, or extraction
-accuracy. Remote-HEAD observations from the provisional path are manual and
-must not become deterministic merge-bar fixtures or retained accuracy claims.
-
-## Retained four-story closure walkthrough
-
-This is a retained historical-fixture walkthrough, not the T30.7 `make dev`
-cohort. Run the synthetic adapter explicitly, sign in, open **Change
-Workbench**, and use the committed synthetic repository selected by Contract
-Atlas. The fixture source separates `idl/proto`, `idl/thrift`, and `src`; its
-protobuf and Thrift services deliberately share a Search operation name.
-
-For each story, complete Why with human-owned intent, then use What as follows:
-
-- **Add:** keep the discovered Search endpoint as `analogous`, author the
-  bounded proposed `Index` IDL, and preview explicitly.
-- **Modify:** discover Search as `current`, supply bounded replacement IDL,
-  and preview explicitly.
-- **Migrate:** discover Search as `current`, add a second selection, discover
-  SearchV2 as `replacement`, and preview explicitly.
-- **Retire:** discover LegacySearch as `current` and preview explicitly.
-
-After the explicit create/append action, Where keeps declaration,
-implementation, exact caller, name-only match, extractor abstention,
-unit-attribution ambiguity, failed/stale coverage, and unsupported resource
-planes separate. The adjacent **Analysis scope & gaps** help explains those
-states without requiring this manual. How keeps source/history evidence,
-missing SCIP/history gaps, deterministic unaccepted suggestions, citations,
-and immutable human Dispositions separate. Empty or exhausted pages do not
-mean that migration is complete or that retirement is safe.
-
-For MCP, call `search_contract_operations` first and carry the returned
-protocol, repository, declaration lineage, and operation fields unchanged
-into `preview_change_workbench`. Use the existing Contract Atlas, Caller Map
-and comparison, search, SCIP, history, and proof tools for evidence drill-down.
-`get_change_workbench_impact` returns the same bounded impact page and optional
-service scope as HTTP without adding Decision authority. A write-capable named
-key may then use the existing explicit create/Disposition tools under the
-capability and owner checks described in [Agents (MCP)](#agents-mcp).
-
-The complete neutral add/modify/migrate/retire journey across All code,
-service overview, dependency evidence, comparison, Workbench, proof, and MCP
-is documented in [Microservice change workflow](./MICROSERVICE_WORKFLOW.md).
-It is a standalone product/operator walkthrough; source-of-truth planning
-documents are not required to follow it.
-
-The retained receipt is
-`docs/fixtures/change-workbench/receipt.json`. It pins the two-commit bundle,
-the four scenario names, the protobuf/Thrift corpus, unsupported planes, and
-external `NOT_ESTABLISHED` posture. `closure-states.json` contains acceptance
-inputs, not observed production facts. Neither artifact establishes runtime
-use, completeness, migration completion or safety, retirement safety, or
-extraction accuracy.
-
-The retained repository also contains minimal generated gRPC and Thrift
-artifacts and `generated-from-snapshot.json`. Focused acceptance mirrors the
-committed bundle and requires the normal pure-reader declaration, consumer,
-and caller extractors to reproduce the protobuf and Thrift lineage joins and
-registration facts. The failed/stale coverage and unsupported-plane examples
-remain explicit `closure-states.json` composition inputs; they are not
-misrepresented as extractor observations.
-
-The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
-contains declaration-proven call rows or stable field-reference rows.
-`Matching call evidence` is an exact operation-object match from a
-bare-operation query, not a declaration-proven logical-service roster.
-`Extractor abstentions` are source sites the extractor deliberately could not
-assign, not confirmed callers or failed runs. `Coverage certificate` is the
-deterministic receipt of which visible repository revisions and extractor
-domains were covered, stale, failed, processing, unsupported, or bounded; it
-is not an accuracy or completeness score. Current
-`coverage-certificate-v3` rows also carry the latest durable disposition,
-validated full or explicit schema-only bounded receipt, exact focused
-base/`go_test` accounting, and typed-input gaps. Outcome timestamps are not
-certificate identity. Retained v1/v2 proof bundles preserve their original
-canonical certificate bytes; when live v3 coverage emits `candidate_scope`,
-that object includes all six candidate/exclusion counters, including exact
-zeroes. Epic 21 retains these semantics and
-adds the **Analysis scope & gaps** summary. Its generated **Matching static
-evidence** help qualifies the narrower Matching call evidence section, and
-**Could not resolve** qualifies Extractor abstentions; neither changes the
-mode-specific API categories. The deterministic Coverage certificate remains
-available as collapsed advanced detail beneath the scope/gaps summary.
-
-Each qualified heading has a generated help control. Hover or keyboard focus
-shows the short and expanded explanation; click or tap pins it. Escape, its
-close control, or an outside click dismisses it, with focus returned after
-explicit keyboard/button dismissal. A short hover bridge keeps the portaled
-dialog open while the pointer crosses the visual gap so its text and scroll
-area remain operable. The explanation includes the evidence and authority
-boundaries and shows the canonical unavailable message when its capability is
-dark. Canonical glossary text rejects Markdown/HTML control syntax before any
-MANUAL projection. If the interactive control cannot be used, the generated
-glossary below is the complete documentation fallback.
-
-<!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
-#### Canonical Change Workbench glossary
-
-The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:4ac5da4281c2e06c07d06b20999d7c413742e54e73a9fbbb3606578e6586a50e`.
+The following help is generated from the reviewed `phebs-evidence-glossary-v2` source. Glossary digest: `sha256:33c75aa4176fb0ec3aa934177b5b33c99b715363e83b3777786b992de9daac06`.
 
 ##### Analysis scope & gaps
 
@@ -923,8 +579,7 @@ This summary binds visible repositories and revisions to evidence domains, fresh
 
 - Evidence boundary: It summarizes recorded processing and inventory state; it does not prove that unobserved callers, resources, or runtime uses do not exist.
 - Authority boundary: Only the requesting principal's authorized repository universe contributes rows, counts, or capability state.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
-- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`
 - Required capabilities (all): none
 - Required capabilities (any): `contract-atlas`, `contract-impact-report`, `coverage-certificate`
 - When unavailable: Analysis scope & gaps is unavailable because no supporting contract or coverage capability is enabled.
@@ -937,8 +592,7 @@ This is an extractor abstention, not a confirmed caller and not a processing fai
 
 - Evidence boundary: The row proves an observed construct and a refusal reason only; it makes no claim about the construct's runtime target.
 - Authority boundary: The label is derived from authorized published evidence and cannot be upgraded by presentation code.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
-- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`
 - Required capabilities (all): none
 - Required capabilities (any): `caller-map-exact-identity`, `contract-impact-report`
 - When unavailable: Resolver abstentions are unavailable because no supporting caller or impact capability is enabled.
@@ -951,8 +605,7 @@ The certificate records the authorized repository universe, indexed revisions, p
 
 - Evidence boundary: It proves change detection over recorded extraction state, not extraction correctness, business completeness, or runtime absence.
 - Authority boundary: Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
-- Registered surfaces: `atlas`, `impact`, `manual`, `mcp`, `workbench`
+- Registered surfaces: `atlas`, `impact`, `manual`, `mcp`
 - Required capabilities (all): `coverage-certificate`
 - Required capabilities (any): none
 - When unavailable: The coverage certificate is unavailable because extraction coverage is not enabled for this surface.
@@ -965,7 +618,6 @@ Each row retains its repository, selected service key, incarnation, service gene
 
 - Evidence boundary: Static source evidence does not prove runtime execution, traffic, ownership, or completeness; an empty result is exact only when every authorized root is complete or empty.
 - Authority boundary: Rows are selected only from authorized exact-current relationship roots. Citation loading reauthorizes repository access and preserves the selected row's immutable relationship-root and source identities; presentation cannot promote ambiguous, shared, unowned, failed, or unavailable evidence into an exact runtime edge.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
 - Registered surfaces: `manual`, `mcp`, `relationship_explorer`
 - Required capabilities (all): `service-relationships-v1`
 - Required capabilities (any): none
@@ -975,12 +627,11 @@ Each row retains its repository, selected service key, incarnation, service gene
 
 Cited source or history that may inform how the change is implemented.
 
-Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Workbench citations may retain immutable repository, revision, path, span, and selection-rule provenance; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.
+Search matches, definitions, references, tests, mocks, documentation, file content, blame, commits, changed-file metadata, and diffs are different evidence shapes. Evidence citations retain the immutable repository, revision, path, span, and selection-rule provenance returned by their route; Git routes retain only their requested route context and the bounded fields returned by the reviewed file, history, blame, commit, or diff reader.
 
 - Evidence boundary: Similarity or proximity is not a correctness ranking and does not authorize an edit.
 - Authority boundary: The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
-- Registered surfaces: `blame`, `commit`, `file`, `history`, `manual`, `mcp`, `workbench`
+- Registered surfaces: `blame`, `commit`, `file`, `history`, `manual`, `mcp`
 - Required capabilities (all): none
 - Required capabilities (any): `code-navigation`, `history`, `source-search`
 - When unavailable: Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.
@@ -993,8 +644,7 @@ The occurrence keeps its immutable citation and extraction tier. A matching oper
 
 - Evidence boundary: This is source-level matching evidence, not a proven service roster or a resolved caller for one exact declaration.
 - Authority boundary: Presentation code may qualify or group the row but cannot promote its evidence tier or lineage.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
-- Registered surfaces: `atlas`, `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Registered surfaces: `atlas`, `caller_map`, `impact`, `manual`, `mcp`
 - Required capabilities (all): none
 - Required capabilities (any): `contract-atlas`, `contract-impact-report`
 - When unavailable: Matching static evidence is unavailable because contract evidence is not enabled.
@@ -1007,8 +657,7 @@ The source citation and candidate operation remain reviewable, but missing or am
 
 - Evidence boundary: A shared method name is not contract identity and cannot establish blast radius for one declaration.
 - Authority boundary: Only a validated exact-identity join may promote the row to Resolved caller.
-- Applies to modes: `migrate`, `modify`, `retire`
-- Registered surfaces: `caller_map`, `manual`, `mcp`, `workbench`
+- Registered surfaces: `caller_map`, `manual`, `mcp`
 - Required capabilities (all): `caller-map-exact-identity`
 - Required capabilities (any): none
 - When unavailable: Name-match review is unavailable until the exact-identity Caller Map capability is enabled.
@@ -1021,8 +670,7 @@ The row retains the call-site citation, generated symbol, wire operation, declar
 
 - Evidence boundary: Static resolution does not prove runtime execution, traffic, ownership, or migration completion.
 - Authority boundary: Only the exact-identity Caller Map service may emit this label; legacy matching evidence cannot be renamed into it.
-- Applies to modes: `migrate`, `modify`, `retire`
-- Registered surfaces: `caller_map`, `manual`, `mcp`, `workbench`
+- Registered surfaces: `caller_map`, `manual`, `mcp`
 - Required capabilities (all): `caller-map-exact-identity`
 - Required capabilities (any): none
 - When unavailable: Resolved callers are unavailable until declaration-proven caller identity is enabled; matching static evidence remains separate.
@@ -1035,121 +683,12 @@ The directory binds each service key to its repository, authority source, desire
 
 - Evidence boundary: Catalog acceptance and source-path attribution do not prove ownership, deployment, runtime traffic, or relationship completeness.
 - Authority boundary: Only immutable accepted catalog and store-committed service state for repositories visible to the requesting principal may supply this label; presentation cannot promote desired, stale, conflict, unavailable, or removed state into current authority.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
 - Registered surfaces: `manual`, `mcp`, `service_directory`
 - Required capabilities (all): `service-catalog-v2`
 - Required capabilities (any): none
 - When unavailable: Service catalog authority is unavailable because the service catalog capability is not enabled for this surface.
 
-##### Success criterion
-
-A human-authored condition used to judge whether the ticket achieved its intended outcome.
-
-Phebs may attach cited evidence and analysis gaps to the criterion, but it cannot invent the business condition or declare it satisfied.
-
-- Evidence boundary: Code and contract evidence can inform review but cannot establish a business outcome by itself.
-- Authority boundary: Only an explicit authorized human revision records or changes a success criterion.
-- Applies to modes: `add`, `migrate`, `modify`, `retire`
-- Registered surfaces: `manual`, `mcp`, `workbench`
-- Required capabilities (all): `change-workbench`
-- Required capabilities (any): none
-- When unavailable: Structured success criteria are unavailable until Change Workbench is enabled.
-
-<!-- END GENERATED CHANGE WORKBENCH GLOSSARY -->
-
-Epic 21 remains authorized for specifications, tests, synthetic
-demonstrations, and production-unregistered/default-dark implementation only;
-production registration inherits the still-unsatisfied validation and
-pilot-continuation gate in [ROADMAP.md](../ROADMAP.md). The storage, service,
-checklist, and reader design lives in [PLAN.md](../../PLAN.md) and the Epic 21
-tickets in [BACKLOG_COMPLETED.md](../BACKLOG_COMPLETED.md).
-
-What identifies an existing endpoint by the complete `(protocol, repository,
-declaration lineage, canonical operation)` tuple. Equal operation spellings in
-another protocol, repository, or lineage cannot satisfy that selection.
-Declaration links carry the selected repository HEAD commit plus exact path
-and byte/line spans. Add requires a proposal and no current/replacement
-endpoint; modify requires one current endpoint and a proposal; migrate
-requires distinct current and replacement identities and no proposal; retire
-requires one current endpoint and no proposal. Optional analogous selections
-remain context, not substitutes for required roles.
-
-Proposed protobuf and Thrift preview files inherit the production parser
-preflights: at most 256 files, 4 MiB per file, 32 MiB aggregate, 500,000 tokens
-per file, and 128 structural levels per file. Preview returns only sorted
-path/hash/size commitments, never source bytes; viewing or previewing creates
-no proof bundle, Investigation run, or repository evidence. Protobuf previews
-show the pinned Buf `WIRE` engine/policy and all relevant ceilings. Thrift has
-parsing preview support but no compatibility engine, so it renders
-`unavailable` rather than a compatible verdict.
-
-Retaining a protobuf modify analysis is a separate explicit mutation. Baseline
-bytes are re-read through the bounded Git layer from the currently authorized
-selected repository at its exact committed revision — caller-supplied `before`
-bytes are not baseline authority. One idempotency key yields one audited
-Investigation run/artifact containing input commitments and the compatibility
-result, never submitted source bytes or Buf stderr.
-
-Where composes the exact Workbench identities with the existing Contract
-Atlas, Caller Map, comparison, and field-reference services. Add shows
-analogous declarations and implementations and deliberately has no caller
-stream. Modify shows the current exact caller page plus an explicitly selected
-retained compatibility artifact and its affected stable fields. Migrate uses
-the one snapshot-consistent old-to-replacement comparison; it never zips two
-independently timed caller pages. Retire keeps callers, name matches,
-extractor abstentions, unsupported planes, and gaps adjacent and never derives
-a safe-to-decommission result.
-
-T38.3 adds an optional **Service change scope** above the existing evidence
-filters. **Source service**, **Target service**, and **Repository scope** are
-exact values recorded in the Workbench hash route and checklist evidence
-input, not durable service ownership or plan authority. A blank repository
-deliberately uses the authorization-first visible-repository fallback. Source
-maps to the current contract selection when present; target maps to the
-replacement selection when present. Both use the exact RPC operation and
-never fuzzy-match a contract or service.
-
-**Apply service scope** performs at most two sequential, citation-free
-relationship snapshots of 50 rows each. Every snapshot is authorization- and
-service-incarnation-fenced and releases its publication leases before the
-response returns, so Workbench consumes no retained relationship cursor or
-citation binding. The server then proves the combined root set again and
-rechecks that same root-set digest plus the current Investigation revision
-immediately before emission. A permission, revision, source-service,
-target-service, or relationship-root change refuses the whole preview.
-
-The **Exact affected services** table remains source first: immutable path and
-span, exact contract, selected-service route, accepted counterparts,
-shared/unowned/ambiguous classification, and root identity. **Open exact
-sources** hands the row to the dedicated relationship explorer, whose retained
-binding owns citations. Unresolved and unowned candidates remain a separate
-visible list. Exact-empty, failed/unavailable roots, and admission truncation
-stay distinct. The source/target route parameters survive step changes and
-exact-revision deep links; editing them does nothing until Apply.
-
-The existing checklist derives deterministic affected-service,
-unowned/unresolved-candidate, and truncation suggestions from these exact
-rows. Its evidence snapshot includes the complete service/root authority, so
-a later service or publication change makes prior human Dispositions stale.
-Only the existing explicit fixed-category Disposition mutation writes. A
-preview, affected row, accepted/rejected/completed/reopened/waived
-Disposition, or fully paged checklist creates no task, Investigation Decision,
-migration-complete result, or decommission-safe conclusion.
-
-How starts from the current Revision's exact selected contracts plus up to 32
-explicit user pins — each an exact visible repository, immutable indexed
-commit, safe path, and source position checked against the immutable bytes.
-Search matches, SCIP definitions and references, and selected history commits
-are always review candidates, not proposed or recommended edits; production,
-test, mock, generated, vendor, and documentation roles remain separate. An
-unavailable search, SCIP, or history capability is recorded as a typed gap,
-never a guessed path, and the whole composition is bounded.
-
-The protocol-neutral resource registry displays `enabled`, `unsupported`,
-`failed`, `stale`, and `human_asserted` planes. The built-in Kafka, Redis,
-document-store, SQL, and runtime Workbench planes currently remain
-unsupported, enabled packs are bounded and fail closed on malformed output,
-and none of these states is runtime truth or a completeness score.
+<!-- END GENERATED PHEBS EVIDENCE GLOSSARY -->
 
 ## Searching
 
@@ -1513,7 +1052,7 @@ not virtualize or remove the complete patch DOM.
 Served at `/` from the binary. After setup/login, the main views are
 deep-linkable hash routes:
 
-Search, Contracts, Topics, Caller Map, Impact, and Workbench share the
+Search, Contracts, Topics, Caller Map, and Impact share the
 scope-aware **Analysis scope & gaps** panel. Expand one repository to inspect
 its active unit name, exact primary/supporting paths, typed-index posture,
 fresh/stale domain publications, durable disposition, and bounded receipt.
@@ -1527,7 +1066,7 @@ unavailable. Queue/claim/lock detail stays in operational logs.
 
 Empty and degraded states remain explicit rather than removing the panel. A
 zero-repository certificate says that it contains zero repository rows;
-Workbench separately says when it has no capability rows, no focused-local
+The panel separately says when it has no capability rows, no focused-local
 coverage, or no gaps in the bounded projection. A retained failure class stays
 visible beside a newer durable outcome. Legal null/omitted supporting paths
 render as an empty list, and an explicit gap remains neutral/amber unless it
@@ -1540,7 +1079,7 @@ is a failure or terminal refusal.
   every routed surface the instance advertises (destinations whose
   capability read is still loading or failed are listed as *capability
   unknown* rather than hidden — a failed read never establishes absence),
-  the active scope's Search/Directory/Explorer/Workbench jumps, and up to
+  the active scope's Search/Directory/Explorer jumps, and up to
   five recently visited scopes. Recents are stored locally per signed-in
   user, contain only scope identities (repository, service key,
   generation), and are recorded only after an authorized authority read
@@ -1552,7 +1091,7 @@ is a failure or terminal refusal.
   match, `y` copies the selected path, `o` collapses or expands the
   selected repository group.
 - **Citation highlighting** (T44.1): relationship citations and exact caller
-  citations in Caller Map, Caller Comparison, and Workbench render cited
+  citations in Caller Map and Caller Comparison render cited
   source bytes through the same best-effort line tokenizer search results
   use, in both themes. Their authorization, immutable identity, and failure
   envelopes remain separate; only presentation is shared. The bytes are
@@ -1650,12 +1189,10 @@ navigation/extractors report the gap. Unconfigured repositories remain
 whole-repository. Every experimental local-evidence publication and coverage
 read uses the exact indexed commit plus unit digest, so a same-commit scope
 change cannot reuse the previous unit's evidence.
-- **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
-Administrators also see the static, non-actionable Bazel-first managed-indexing
-boundary described above; it is not a generation control. Named keys are
-read-only for Investigation mutations by default; the creation
-form can explicitly add the immutable `investigation:write` capability and
-listed metadata shows the reviewed capability name.
+- **Settings** (`#/settings`) — create, copy once, list, and revoke read-only
+  API keys. Administrators also see the static, non-actionable Bazel-first
+  managed-indexing boundary described above; it is not a generation control.
+  The retained `capabilities` metadata field is empty.
 - **Audit** (`#/audit`, administrators only) — the recorded action trail:
 logins (including failures), setup, logout, API-key lifecycle, and every
 mutating API operation, newest first with actor, target, status, and
@@ -1729,7 +1266,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/version`                                                      | GET             | server version                                                                                 |
 | `/api/auth/status`                                                  | GET             | authentication/setup/OIDC state and current user                                               |
 | `/api/auth/setup`, `/api/auth/login`, `/api/auth/logout`            | POST            | first administrator, local login, and session logout                                           |
-| `/api/auth/keys`                                                    | GET/POST        | list or create the browser-session user's keys; creation accepts a closed `capabilities` array |
+| `/api/auth/keys`                                                    | GET/POST        | list or create the browser-session user's read-only keys; the optional `capabilities` array must be empty |
 | `/api/auth/keys/{id}`                                               | DELETE          | revoke one API key (browser session only)                                                      |
 | `/api/auth/oidc/start`, `/api/auth/oidc/callback`                   | GET             | OIDC authorization-code flow                                                                   |
 | `/api/search?q=&max_matches=&context_lines=`                        | GET             | search, JSON in one shot                                                                       |
@@ -1739,7 +1276,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/services?repository=&status=&disposition=&include_removed=&page_size=&cursor=` | GET | authorization-first bounded service inventory for one repository; list rows omit membership paths |
 | `/api/service?repository=&service_key=`                             | GET             | one exact authorized service with lifecycle identities, successors, and bounded membership paths |
 | `/api/reindex`                                                      | POST            | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job           |
-| `/api/retention-status`                                             | GET             | administrator only: fixed twelve-owner/fifty-two-component retained-capacity status shell      |
+| `/api/retention-status`                                             | GET             | administrator only: fixed eleven-owner/twenty-eight-component retained-capacity status shell   |
 | `/api/lifecycle-status`                                             | GET             | administrator only: fixed 16-KiB source-free lifecycle owner/pressure snapshot, including exact dark catalog-v3 logical/root/member byte counters; no cursor, path, identity, content, raw error, or mutation |
 | `/api/audit?offset=&limit=`                                         | GET             | administrator only: audit events, newest first, `has_more` paging                              |
 | `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
@@ -1774,135 +1311,20 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/diff?repo=&head=&base=&path=&context_lines=`                  | GET             | bounded unified diff and file statistics; context defaults to 3 and accepts explicit 0         |
 | `/metrics`                                                          | GET             | Prometheus metrics                                                                             |
 
-Every response from the retention-status path—including authorization denial
-and internal error—carries
-`X-Phebs-Warning-Code: unbounded_historical_publication_retention`; every
-successful body repeats the code in `warning_code`, identifies schema
-`phebs-retention-status-v1`, and lists the complete ordered registry. T30.6p
-populates 21 core SurrealDB components: evidence graph rows, extraction
-attempts and outcomes, three evidence-pin namespaces, proof bundles, all eight
-durable job tables, and the three caller-row tables. T30.6q now adds one
-aggregate count for each of the exact 24 Investigation/Workbench tables.
-T30.6r completes the remaining seven components with bounded candidate,
-focused, resolver, and caller authority/filesystem reconciliation and
-populates installation total/available capacity where the operating system
-supports the descriptor-bound filesystem-capacity primitive. Unsupported
-platforms retain typed unavailable capacity with a localized cause. All 52
-registered components now have collectors. Every per-component `physical_database` byte metric
-remains `unavailable` with a null value. Byte
-kinds are `logical_encoded`,
-`canonical_content`, `canonical_receipt`, `apparent_file`, and
-`physical_database`; multiple kinds can describe one component and must never
-be summed. Do not interpret unavailable states as zero retained data.
-
-Each implemented component reports one aggregate per-table or per-namespace
-row count. Lifecycle classes and job statuses are neither computed nor separate
-fields in the v1 response; every retained physical row contributes. An
-exhausted scan under the component allocation is `exact`; consuming its private
-sentinel is a truncated `lower_bound`. Registry indices 0–17 receive 79 report
-slots and 80 scan slots, while the caller-row components at indices 48–50
-receive 78 and 79.
-T30.6p therefore scans at most 1,677 component identities per authorized
-request. The store does not freeze that API placement: it accepts any report
-allocation from 1 through 79 only with scan equal to report plus one and
-enforces the same 1,656/1,677 aggregate ceilings. It reports logical encoded
-bytes for outcome receipts, canonical content bytes for proof bundles, and
-canonical receipt bytes for caller rows.
-It derives those measurements from server-side byte lengths or stored scalar
-totals without materializing proof content, caller pair arrays, or job
-diagnostic payloads in the API process. The bounded proof-content work can
-still inspect as much as 5.00 GiB inside SurrealDB at 80 maximum-size bundles,
-including the later-excluded sentinel.
-
-The production collector produces 21 component summaries using at most 23
-bounded row-range queries; the `other` pin namespace uses up to three disjoint
-index ranges to complement the two reserved prefixes. Those queries follow four
-cached writer/migration-marker point checks plus one required pin-index catalog
-check. Each one-statement query must return exactly one result envelope; zero
-or multiple envelopes are failures, not empty collections. A failed point
-check or query leaves the affected group or component unavailable while
-successful siblings remain visible; it never turns incomplete collection into
-exact zero. The operational log event for each failed component uses only
-`not_ready` or `query_error`, with at most 21 events per request. Because those
-reads are separate, the response is a weakly consistent diagnostic rather than
-a frozen cross-table snapshot. The existing schema batch adds a scalar string
-definition for `evidence_pin.kind` and reuses the existing kind index, with no
-row backfill, writer-generation bump, or new query index. T30.6p adds no writer
-work, sync-tick work, or lifecycle mutation.
-
-T30.6q owns registry indices 18–41. The first 22 tables receive 79 report and
-80 scan slots; `investigation_watch` and `investigation_watch_revision` receive
-78 and 79. The fixed owner allocation is therefore 1,894 reported and at most
-1,918 scanned identities. One `INFO FOR DB` catalog preflight proves which of
-the 24 closed allowlisted tables exist, then up to 24 direct record-ID-ordered
-queries scan only through each table's limit. A missing table or failed row
-read leaves that component unavailable; a catalog-query failure leaves the
-fixed owner unavailable rather than inventing zero. Each one-statement query
-must return exactly one result envelope. One T30.6q request uses at most 25
-SurrealDB calls and retains at most 80 selected IDs for the active table plus
-24 summaries; the server-side catalog intersection returns at most the 24
-fixed allowlisted table names. It emits at most 24 localized `not_ready` or
-`query_error` events. Successful table summaries are weakly consistent and
-contain counts only; physical database bytes remain unavailable. No query index, schema
-backfill, startup reconstruction, writer, or lifecycle work is added.
-
-Together T30.6p and T30.6q remain within 3,550 reported identities, 3,595
-scanned identities, 53 SurrealDB calls, and 45 localized operational events per
-authorized request. T30.6r owns another 546 report/553 scan component slots.
-Its four bounded authority selections use at most nine further SurrealDB
-client calls, including the batched caller current-authority fence. That fence
-performs at most 312 bounded server-internal point reads—four for each of at
-most 78 authorities—plus its marker check. Its metadata-only filesystem plane
-reads 256-name directory batches under
-32,768/32,768/32,768/65,536 candidate/focused/resolver/caller entry ceilings,
-a 163,840-entry aggregate ceiling, 4,096 charged stats, 64 MiB of manifest
-metadata, 256 queued caller directories, and five
-simultaneous structural descriptors: at most three collector-retained handles
-plus up to two Go/platform directory-iterator duplicates or rooted traversal
-internals.
-The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
-conservative open-time `fstat` charges, and one conservative slot per name-batch
-(`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
-The 78-report/79-scan slots allocate the response envelope rather than promise
-universal exactness. The 4,096-stat ceiling covers the regression-gated lean
-maximum allocation; recognized residue, nested stages, or the independent
-64-MiB metadata limit may still localize a lower-bound or unavailable metric.
-Every returned raw name consumes the observation budget. Names are otherwise
-names-only; only recognized names receive explicit descriptor-rooted `Lstat`
-checks.
-The metadata allowance is aggregate I/O rather than a heap meter: serial
-caller parsing may retain 32 MiB of raw bytes beside its bounded decoded pair
-structure.
-Stable managed residue contributes apparent-file bytes; resolver canonical
-content and caller canonical receipts require matching store authority. The
-collector does not open or hash member, shard, or leaf payloads. A missing
-managed subroot under a verified data directory is exact zero, while invalid
-roots and partial work remain unavailable or lower-bound. At most nine
-localized T30.6r diagnostics bring the complete event ceiling to 54. Concurrent
-authorized requests independently multiply these per-request ceilings because
-this surface adds no retention-specific cache or concurrency gate.
-
-Resolver/caller canonical byte metrics additionally require the supported
-rooted nonblocking regular-file opener. Platforms without it retain typed
-unavailable canonical metrics while physical inventory continues. This is
-independent of the descriptor-bound filesystem-capacity primitive and its
-separate total/available-data-volume caveat.
-Canonical manifest lookup follows host filesystem path semantics: on a
-case-insensitive filesystem, a byte-case alias can validate canonical bytes
-while exact-spelling physical inventory ignores that alias. The metric kinds
-remain independent.
-
-The `proof_bundles` owner alone reports a non-null `retention_control`:
-`proof_bundles.retention`. Its `default_state` is derived from the effective
-configured lifetime and its `accumulating` flag is the inverse. A positive
-lifetime deletes the expired bundle and exactly its
-`proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the
-independent evidence sweep may later reclaim newly unpinned superseded
-evidence when otherwise eligible. Other owners report null. A
-non-administrator is rejected before the status source or any store,
-filesystem, or cache inventory work runs. The static startup warning is
-emitted before store open even if startup later fails; the populated T30.6p,
-T30.6q, and T30.6r collectors do not change that authorization boundary.
+Every response from the retention-status path, including authorization denial
+and internal error, carries
+`X-Phebs-Warning-Code: unbounded_historical_publication_retention`.
+Successful administrator responses identify `phebs-retention-status-v1` and
+list the current 28 components: 21 core and seven derived. T46.1 removed the
+Investigation and change-planning product tables, job-history component, and
+artifact-pin namespace from status.
+Each component has a bounded aggregate row count; `exact`, `lower_bound`, and
+`unavailable` are distinct states. Per-component `physical_database` bytes
+remain unavailable. The different byte kinds must never be summed. The
+`proof_bundles` owner alone reports its configured retention control.
+Non-administrators are denied before inventory work. The fixed budgets,
+platform caveats, and backup/restore boundaries are in
+[Operations](./OPERATIONS.md#historical-publication-retention).
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch
 (same JSON shape as `/api/search`), then a final `done` event with aggregate
@@ -1937,45 +1359,16 @@ go-sdk), guarded by the same DB-backed authentication as the rest of the API.
 Create a named key in **Settings** and use it as the bearer token; the legacy
 config key remains accepted only while it is configured.
 
-The production MCP tool set is read-only with respect to Investigations, so
-ordinary named keys need no capability. When and only when the documented
-synthetic Change Workbench adapter is enabled, MCP adds a default-dark
-Workbench annex over the same shared services as Huma. Read-capable
-credentials discover `preview_change_workbench`, `get_change_workbench`, and
-`get_change_workbench_impact`.
-Preview writes nothing, but invocation requires a named key carrying
-`investigation:write` because its digest can bind a later mutation.
-
-Only a currently valid named key carrying `investigation:write` discovers
-`create_change_workbench` and `record_change_disposition`. Browser sessions,
-ordinary/read-only named keys, the migration-only legacy key, revoked or
-expired keys, and keys owned by a disabled user cannot invoke those durable
-tools. Discovery is selected from the freshly authenticated stateless request,
-and each mutation handler rechecks the capability before calling the shared
-service. The capability is only the credential gate: repository visibility,
-Investigation ownership, current revision, preview and evidence snapshots,
-suggestion identity, supersession, and idempotency checks remain authoritative.
-
-Ten core tools are always present. The complete T38.4 microservice read
-configuration adds two service-directory tools, three relationship tools, two
-base Workbench reads, and one Workbench-impact read, for a pinned total of 18.
-Observation progress can add one independently. Enabling provisional proof
-packs adds five evidence-query tools; the complete Contract Atlas/Caller Map
-annex adds four; and a pinned Buf binary plus successful host-sandbox probe
-adds compatibility as one more tool. With every existing read annex enabled,
-the count is 29. A currently write-capable named key discovers the two explicit
-Workbench mutations as well, for 31; otherwise they remain undiscoverable.
-
-The agent workflow is explicit: discover an endpoint with
-`search_contract_operations`, preview a complete Workbench plan, submit that
-unchanged plan with its preview digest and idempotency key, read the resulting
-exact Investigation revision, and drill down through the existing Caller Map,
-comparison, proof, search, SCIP, and history tools. Recording a Disposition
-submits the exact evidence-bound suggestion, expected revision, category,
-rationale when required, optional predecessor, and its own idempotency key to
-the shared checklist service. There is no MCP revise or retained-compatibility
-action in T21.13, and the adapter does not synthesize suggestions or conclusions.
-
+PHEBS MCP exposes read-only evidence tools. It has no Change Workbench
+preview, read, creation, or disposition tools. Named API keys are read-only.
+The ten core tools are always present; the
+complete service-directory/relationship configuration adds five read tools.
+Observation progress can add one independently. Provisional proof packs add
+five evidence-query tools; Contract Atlas/Caller Map adds four; and a pinned
+Buf binary plus successful host-sandbox probe adds compatibility as one more.
+With every read annex enabled, discovery contains 26 tools. Agents should
+carry exact identities from `search_contract_operations` into the existing
+Caller Map, comparison, proof, search, SCIP, and history reads.
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1994,10 +1387,10 @@ action in T21.13, and the adapter does not synthesize suggestions or conclusions
 | `list_commits`     | paged history for `{repo,ref?,path?,limit?,offset?}`; maximum 200 commits per page                                                                                                                                                                          |
 | `get_commit`       | commit metadata, parents, and first-parent file changes                                                                                                                                                                                                     |
 | `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
-| `find_operation_consumers` | Investigation envelope v1.0 with matching static call evidence for one bare canonical `/package.Service/Method`; it does not establish declaration identity or a known-caller roster |
-| `find_proto_field_references` | Investigation envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
-| `find_field_references` | Investigation envelope v1.0 for one protocol-neutral `(lineage, message, field_number)`; facts retain `proto_field` or `thrift_field` identity and exact citations, and field 0 is valid |
-| `find_kafka_topic_usage` | Investigation envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
+| `find_operation_consumers` | MCP envelope v1.0 with matching static call evidence for one bare canonical `/package.Service/Method`; it does not establish declaration identity or a known-caller roster |
+| `find_proto_field_references` | MCP envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
+| `find_field_references` | MCP envelope v1.0 for one protocol-neutral `(lineage, message, field_number)`; facts retain `proto_field` or `thrift_field` identity and exact citations, and field 0 is valid |
+| `find_kafka_topic_usage` | MCP envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
 | `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
 | `search_contract_operations` | bounded Contract Atlas discovery page with complete selectable protocol/repository/declaration-lineage/operation identities, coverage, and continuation cursor |
@@ -2005,11 +1398,6 @@ action in T21.13, and the adapter does not synthesize suggestions or conclusions
 | `list_operation_callers` | one authorized repository's exact complete-generation Caller Map page with active focused/whole scope, repository-overlay plane, durable partition progress, base/`go_test` record counts when current, typed unavailable states, source/unit ordering, direct-syntax rows and abstentions, exact totals, opaque citations, and revision-bound cursor |
 | `read_operation_caller_citation` | reauthorize and return only one caller row's exact commit/object/digest-verified source byte range; grants no tree, directory, unrelated-path, or whole-file read |
 | `compare_operation_callers` | exact occurrence- or unit-level comparison of two authorized complete caller generations with typed whole-page gaps, evidence-qualified classifications, immutable exact-range citations, and a cursor bound to both full publication identities |
-| `preview_change_workbench` | side-effect-free shared-service preview of one plan; requires a named key with `investigation:write` because the returned digest can bind a later mutation |
-| `create_change_workbench` | explicit durable creation of one preview-bound Investigation and initial immutable revision; advertised only to a write-capable named key |
-| `get_change_workbench` | authorized read of one current Workbench revision and its human-authored brief; creates no evidence or durable state |
-| `get_change_workbench_impact` | exact shared Workbench impact page with optional source/target service scope, relationship authority, typed gaps, caveat, and continuation cursor; capped at 8 MiB and creates no write, task, Decision, completeness, or safety authority |
-| `record_change_disposition` | explicit durable append of one immutable fixed-category Disposition over an exact current suggestion; advertised only to a write-capable named key |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code

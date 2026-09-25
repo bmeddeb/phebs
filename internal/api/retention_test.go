@@ -9,8 +9,6 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -33,18 +31,6 @@ func (fn coreRetentionStoreFunc) CollectCoreRetention(
 	return fn(ctx, requests)
 }
 
-type investigationRetentionStoreFunc func(
-	context.Context,
-	[]store.RetentionComponentRequest,
-) ([]store.RetentionComponentResult, error)
-
-func (fn investigationRetentionStoreFunc) CollectInvestigationRetention(
-	ctx context.Context,
-	requests []store.RetentionComponentRequest,
-) ([]store.RetentionComponentResult, error) {
-	return fn(ctx, requests)
-}
-
 type derivedRetentionSourceFunc func(
 	context.Context,
 	[]store.RetentionComponentRequest,
@@ -58,8 +44,7 @@ func (fn derivedRetentionSourceFunc) CollectRetention(
 }
 
 type retentionStatusStoreFuncs struct {
-	core          coreRetentionStoreFunc
-	investigation investigationRetentionStoreFunc
+	core coreRetentionStoreFunc
 }
 
 func (storeFuncs retentionStatusStoreFuncs) CollectCoreRetention(
@@ -67,13 +52,6 @@ func (storeFuncs retentionStatusStoreFuncs) CollectCoreRetention(
 	requests []store.RetentionComponentRequest,
 ) ([]store.RetentionComponentResult, error) {
 	return storeFuncs.core(ctx, requests)
-}
-
-func (storeFuncs retentionStatusStoreFuncs) CollectInvestigationRetention(
-	ctx context.Context,
-	requests []store.RetentionComponentRequest,
-) ([]store.RetentionComponentResult, error) {
-	return storeFuncs.investigation(ctx, requests)
 }
 
 func exactRetentionResults(
@@ -203,16 +181,16 @@ func TestCoreRetentionStatusEmptyStorePopulatesOnlyCoreComponents(t *testing.T) 
 	for index, request := range captured {
 		reportedTotal += request.ReportedIdentities
 		scanTotal += request.ScanIdentities
-		wantReported, wantScan := 76, 77
-		if index >= 20 {
-			wantReported, wantScan = 75, 76
+		wantReported, wantScan := 147, 148
+		if index >= 8 {
+			wantReported, wantScan = 146, 147
 		}
 		if request.ReportedIdentities != wantReported || request.ScanIdentities != wantScan {
 			t.Fatalf("request %d %q allocation = %d/%d, want %d/%d", index, request.Component, request.ReportedIdentities, request.ScanIdentities, wantReported, wantScan)
 		}
 	}
-	if reportedTotal != 1_745 || scanTotal != 1_768 {
-		t.Fatalf("core allocation = %d/%d, want 1745/1768", reportedTotal, scanTotal)
+	if reportedTotal != 3_074 || scanTotal != 3_095 {
+		t.Fatalf("core allocation = %d/%d, want 3074/3095", reportedTotal, scanTotal)
 	}
 
 	populated, unavailable := 0, 0
@@ -250,10 +228,10 @@ func TestCoreRetentionStatusEmptyStorePopulatesOnlyCoreComponents(t *testing.T) 
 			}
 		}
 	}
-	if populated != 23 || unavailable != 31 {
-		t.Fatalf("component posture = %d populated/%d unavailable, want 23/31", populated, unavailable)
+	if populated != 21 || unavailable != 7 {
+		t.Fatalf("component posture = %d populated/%d unavailable, want 21/7", populated, unavailable)
 	}
-	const wantProductionEmptyCoreResponseBytes = 20_313
+	const wantProductionEmptyCoreResponseBytes = 11_995
 	if len(encoded) != wantProductionEmptyCoreResponseBytes {
 		t.Fatalf("production empty core response = %d bytes, want %d", len(encoded), wantProductionEmptyCoreResponseBytes)
 	}
@@ -401,133 +379,7 @@ func TestCoreRetentionStatusRejectsStructurallyIncompleteResults(t *testing.T) {
 	}
 }
 
-func TestInvestigationRetentionStatusPopulatesExactRegistryOrderAndAllocation(t *testing.T) {
-	wantComponents := []store.RetentionComponent{
-		store.RetentionInvestigation,
-		store.RetentionInvestigationRevision,
-		store.RetentionInvestigationChangeBrief,
-		store.RetentionWorkbenchMutation,
-		store.RetentionWorkbenchDisposition,
-		store.RetentionInvestigationRun,
-		store.RetentionInvestigationRunEvent,
-		store.RetentionInvestigationRunArtifact,
-		store.RetentionInvestigationArtifactOwner,
-		store.RetentionInvestigationArtifactOwnerRelease,
-		store.RetentionInvestigationArtifactRetentionOverride,
-		store.RetentionInvestigationDecision,
-		store.RetentionInvestigationDisposition,
-		store.RetentionInvestigationBaselineDesignation,
-		store.RetentionInvestigationGrant,
-		store.RetentionInvestigationCursor,
-		store.RetentionInvestigationCreation,
-		store.RetentionInvestigationConsumerSnapshot,
-		store.RetentionInvestigationConsumerEdgeLedger,
-		store.RetentionInvestigationReviewProjection,
-		store.RetentionInvestigationReviewItem,
-		store.RetentionInvestigationDossier,
-		store.RetentionInvestigationWatch,
-		store.RetentionInvestigationWatchRevision,
-	}
-	var captured []store.RetentionComponentRequest
-	source := api.NewInvestigationRetentionStatusSource(
-		investigationRetentionStoreFunc(func(
-			_ context.Context,
-			requests []store.RetentionComponentRequest,
-		) ([]store.RetentionComponentResult, error) {
-			captured = append([]store.RetentionComponentRequest(nil), requests...)
-			return exactRetentionResults(requests), nil
-		}),
-		nil,
-	)
-	status, _ := getRetentionStatus(t, source)
-
-	if len(captured) != api.RetentionStatusInvestigationComponentCount ||
-		len(captured) != len(wantComponents) {
-		t.Fatalf(
-			"Investigation requests = %d, want %d",
-			len(captured),
-			len(wantComponents),
-		)
-	}
-	reportedTotal, scanTotal := 0, 0
-	for index, request := range captured {
-		if request.Component != wantComponents[index] {
-			t.Fatalf(
-				"Investigation request %d = %q, want %q",
-				index,
-				request.Component,
-				wantComponents[index],
-			)
-		}
-		wantReported, wantScan := 76, 77
-		if request.ReportedIdentities != wantReported ||
-			request.ScanIdentities != wantScan {
-			t.Fatalf(
-				"Investigation request %d allocation = %d/%d, want %d/%d",
-				index,
-				request.ReportedIdentities,
-				request.ScanIdentities,
-				wantReported,
-				wantScan,
-			)
-		}
-		reportedTotal += request.ReportedIdentities
-		scanTotal += request.ScanIdentities
-	}
-	if reportedTotal != 1_824 || scanTotal != 1_848 {
-		t.Fatalf(
-			"Investigation allocation = %d/%d, want 1824/1848",
-			reportedTotal,
-			scanTotal,
-		)
-	}
-
-	populated, unavailable := 0, 0
-	for ownerIndex := range status.Owners {
-		owner := &status.Owners[ownerIndex]
-		for componentIndex := range owner.Components {
-			component := &owner.Components[componentIndex]
-			if owner.ID != "investigation_workbench_rows" {
-				unavailable++
-				if component.Count.Value != nil ||
-					component.Count.Completeness != api.RetentionStatusUnavailable {
-					t.Fatalf("non-Investigation component %q was populated: %+v", component.ID, component)
-				}
-				continue
-			}
-			populated++
-			if componentIndex >= len(wantComponents) ||
-				component.ID != string(wantComponents[componentIndex]) {
-				t.Fatalf(
-					"Investigation component %d = %q, want %q",
-					componentIndex,
-					component.ID,
-					wantComponents[componentIndex],
-				)
-			}
-			if component.ScannedIdentities != 0 || component.Truncated ||
-				component.Count.Value == nil || *component.Count.Value != 0 ||
-				component.Count.Completeness != api.RetentionStatusExact {
-				t.Fatalf("empty Investigation component %q = %+v", component.ID, component)
-			}
-			assertUnavailableRetentionByteMetrics(
-				t,
-				component.ID,
-				component.ByteMetrics,
-				[]api.RetentionStatusByteKind{api.RetentionStatusBytePhysicalDatabase},
-			)
-		}
-	}
-	if populated != 24 || unavailable != 30 {
-		t.Fatalf(
-			"Investigation-only posture = %d populated/%d unavailable, want 24/30",
-			populated,
-			unavailable,
-		)
-	}
-}
-
-func TestStoreRetentionStatusComposesCoreThenInvestigation(t *testing.T) {
+func TestStoreRetentionStatusPopulatesCore(t *testing.T) {
 	var calls []string
 	storeSource := retentionStatusStoreFuncs{
 		core: func(
@@ -549,20 +401,13 @@ func TestStoreRetentionStatusComposesCoreThenInvestigation(t *testing.T) {
 			}
 			return results, nil
 		},
-		investigation: func(
-			_ context.Context,
-			requests []store.RetentionComponentRequest,
-		) ([]store.RetentionComponentResult, error) {
-			calls = append(calls, "investigation")
-			return exactRetentionResults(requests), nil
-		},
 	}
 	status, encoded := getRetentionStatus(
 		t,
 		api.NewStoreRetentionStatusSource(storeSource, nil),
 	)
-	if !slices.Equal(calls, []string{"core", "investigation"}) {
-		t.Fatalf("store collector order = %v, want core then investigation", calls)
+	if !slices.Equal(calls, []string{"core"}) {
+		t.Fatalf("store collector calls = %v, want core", calls)
 	}
 	populated, unavailable := 0, 0
 	for _, owner := range status.Owners {
@@ -581,24 +426,16 @@ func TestStoreRetentionStatusComposesCoreThenInvestigation(t *testing.T) {
 			}
 		}
 	}
-	if populated != 47 || unavailable != 7 {
+	if populated != 21 || unavailable != 7 {
 		t.Fatalf(
-			"composed posture = %d populated/%d unavailable, want 47/7",
+			"store posture = %d populated/%d unavailable, want 21/7",
 			populated,
 			unavailable,
 		)
 	}
-	const wantProductionEmptyCoreAndInvestigationResponseBytes = 20_097
-	if len(encoded) != wantProductionEmptyCoreAndInvestigationResponseBytes {
-		t.Fatalf(
-			"production empty core-plus-Investigation response = %d bytes, want %d",
-			len(encoded),
-			wantProductionEmptyCoreAndInvestigationResponseBytes,
-		)
-	}
 	if len(encoded) > api.RetentionStatusResponseByteLimit {
 		t.Fatalf(
-			"production empty core-plus-Investigation response = %d bytes, limit %d",
+			"production empty core response = %d bytes, limit %d",
 			len(encoded),
 			api.RetentionStatusResponseByteLimit,
 		)
@@ -626,13 +463,6 @@ func TestCompleteRetentionStatusComposesAllCollectorsAndDataVolume(t *testing.T)
 				}
 			}
 			return results, nil
-		},
-		investigation: func(
-			_ context.Context,
-			requests []store.RetentionComponentRequest,
-		) ([]store.RetentionComponentResult, error) {
-			calls = append(calls, "investigation")
-			return exactRetentionResults(requests), nil
 		},
 	}
 	derived := derivedRetentionSourceFunc(func(
@@ -684,8 +514,8 @@ func TestCompleteRetentionStatusComposesAllCollectorsAndDataVolume(t *testing.T)
 
 	source := api.NewCompleteRetentionStatusSource(storeSource, derived, nil)
 	status, encoded := getRetentionStatus(t, source)
-	if !slices.Equal(calls, []string{"core", "investigation", "derived"}) {
-		t.Fatalf("collector order = %v, want core, Investigation, derived", calls)
+	if !slices.Equal(calls, []string{"core", "derived"}) {
+		t.Fatalf("collector order = %v, want core, derived", calls)
 	}
 	_, repeatedEncoded := getRetentionStatus(t, source)
 	if !bytes.Equal(encoded, repeatedEncoded) {
@@ -717,7 +547,7 @@ func TestCompleteRetentionStatusComposesAllCollectorsAndDataVolume(t *testing.T)
 	if len(encoded) > api.RetentionStatusResponseByteLimit {
 		t.Fatalf("complete response = %d bytes, limit %d", len(encoded), api.RetentionStatusResponseByteLimit)
 	}
-	const wantCompleteEncodedBytes = 19_973
+	const wantCompleteEncodedBytes = 11_871
 	if len(encoded) != wantCompleteEncodedBytes {
 		t.Fatalf("complete encoded bytes = %d, want frozen %d", len(encoded), wantCompleteEncodedBytes)
 	}
@@ -990,151 +820,14 @@ func retentionComponentByID(
 	return api.RetentionComponentStatus{}
 }
 
-func TestInvestigationRetentionStatusLocalizesAndClassifiesFailures(t *testing.T) {
-	type reportedFailure struct {
-		component store.RetentionComponent
-		err       error
-	}
-	var failures []reportedFailure
-	source := api.NewInvestigationRetentionStatusSource(
-		investigationRetentionStoreFunc(func(
-			_ context.Context,
-			requests []store.RetentionComponentRequest,
-		) ([]store.RetentionComponentResult, error) {
-			results := exactRetentionResults(requests)
-			results[0].Err = store.ErrRetentionComponentUnavailable
-			results[1].Err = errors.New("Investigation query failed")
-			results[2].Summary = store.RetentionComponentSummary{
-				ScannedIdentities:  requests[2].ScanIdentities,
-				ReportedIdentities: int64(requests[2].ReportedIdentities),
-				Truncated:          true,
-			}
-			return results, nil
-		}),
-		func(_ context.Context, component store.RetentionComponent, err error) {
-			failures = append(failures, reportedFailure{component: component, err: err})
-		},
-	)
-	status, _ := getRetentionStatus(t, source)
-	var owner *api.RetentionOwnerStatus
-	for ownerIndex := range status.Owners {
-		if status.Owners[ownerIndex].ID == "investigation_workbench_rows" {
-			owner = &status.Owners[ownerIndex]
-			break
-		}
-	}
-	if owner == nil {
-		t.Fatal("Investigation retention owner not found")
-	}
-	for index := range 2 {
-		component := owner.Components[index]
-		if component.Count.Value != nil ||
-			component.Count.Completeness != api.RetentionStatusUnavailable {
-			t.Fatalf("failed Investigation component %d = %+v", index, component)
-		}
-	}
-	truncated := owner.Components[2]
-	if !truncated.Truncated ||
-		truncated.ScannedIdentities != truncated.Allocation.ScanIdentities ||
-		truncated.Count.Value == nil ||
-		*truncated.Count.Value != int64(truncated.Allocation.ReportedIdentities) ||
-		truncated.Count.Completeness != api.RetentionStatusLowerBound {
-		t.Fatalf("truncated Investigation component = %+v", truncated)
-	}
-	if len(failures) != 2 ||
-		failures[0].component != store.RetentionInvestigation ||
-		!errors.Is(failures[0].err, store.ErrRetentionComponentUnavailable) ||
-		failures[1].component != store.RetentionInvestigationRevision ||
-		errors.Is(failures[1].err, store.ErrRetentionComponentUnavailable) {
-		t.Fatalf(
-			"reported Investigation failures = %+v, want not-ready then query-error",
-			failures,
-		)
-	}
-}
-
-func TestInvestigationRetentionStatusRejectsMalformedCollectorOutput(t *testing.T) {
-	tests := []struct {
-		name    string
-		results func([]store.RetentionComponentRequest) []store.RetentionComponentResult
-	}{
-		{
-			name: "omitted component",
-			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
-				results := exactRetentionResults(requests)
-				return results[:len(results)-1]
-			},
-		},
-		{
-			name: "duplicate component",
-			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
-				results := exactRetentionResults(requests)
-				results[len(results)-1].Component = requests[0].Component
-				return results
-			},
-		},
-		{
-			name: "unknown component",
-			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
-				results := exactRetentionResults(requests)
-				results[len(results)-1].Component = "unknown"
-				return results
-			},
-		},
-		{
-			name: "invalid summary",
-			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
-				results := exactRetentionResults(requests)
-				results[0].Summary = store.RetentionComponentSummary{
-					ScannedIdentities:  1,
-					ReportedIdentities: 0,
-				}
-				return results
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			handler := api.New(api.Options{
-				Version: "test",
-				IsAdmin: func(context.Context) bool { return true },
-				RetentionStatusSource: api.NewInvestigationRetentionStatusSource(
-					investigationRetentionStoreFunc(func(
-						_ context.Context,
-						requests []store.RetentionComponentRequest,
-					) ([]store.RetentionComponentResult, error) {
-						return test.results(requests), nil
-					}),
-					nil,
-				),
-			})
-			recorder := httptest.NewRecorder()
-			handler.ServeHTTP(
-				recorder,
-				httptest.NewRequest(http.MethodGet, api.RetentionStatusPath, nil),
-			)
-			if recorder.Code != http.StatusInternalServerError {
-				t.Fatalf("status = %d (%s), want 500", recorder.Code, recorder.Body)
-			}
-		})
-	}
-}
-
-func TestStoreRetentionStatusAuthorizationPrecedesBothCollectors(t *testing.T) {
-	coreCalls, investigationCalls := 0, 0
+func TestStoreRetentionStatusAuthorizationPrecedesCollector(t *testing.T) {
+	coreCalls := 0
 	storeSource := retentionStatusStoreFuncs{
 		core: func(
 			context.Context,
 			[]store.RetentionComponentRequest,
 		) ([]store.RetentionComponentResult, error) {
 			coreCalls++
-			return nil, nil
-		},
-		investigation: func(
-			context.Context,
-			[]store.RetentionComponentRequest,
-		) ([]store.RetentionComponentResult, error) {
-			investigationCalls++
 			return nil, nil
 		},
 	}
@@ -1151,30 +844,19 @@ func TestStoreRetentionStatusAuthorizationPrecedesBothCollectors(t *testing.T) {
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("status = %d (%s), want 403", recorder.Code, recorder.Body)
 	}
-	if coreCalls != 0 || investigationCalls != 0 {
-		t.Fatalf(
-			"denied collector calls = core:%d Investigation:%d, want zero",
-			coreCalls,
-			investigationCalls,
-		)
+	if coreCalls != 0 {
+		t.Fatalf("denied core collector calls = %d, want zero", coreCalls)
 	}
 }
 
 func TestCompleteRetentionStatusAuthorizationPrecedesEveryCollector(t *testing.T) {
-	coreCalls, investigationCalls, derivedCalls := 0, 0, 0
+	coreCalls, derivedCalls := 0, 0
 	storeSource := retentionStatusStoreFuncs{
 		core: func(
 			context.Context,
 			[]store.RetentionComponentRequest,
 		) ([]store.RetentionComponentResult, error) {
 			coreCalls++
-			return nil, nil
-		},
-		investigation: func(
-			context.Context,
-			[]store.RetentionComponentRequest,
-		) ([]store.RetentionComponentResult, error) {
-			investigationCalls++
 			return nil, nil
 		},
 	}
@@ -1200,10 +882,10 @@ func TestCompleteRetentionStatusAuthorizationPrecedesEveryCollector(t *testing.T
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("status = %d (%s), want 403", recorder.Code, recorder.Body)
 	}
-	if coreCalls != 0 || investigationCalls != 0 || derivedCalls != 0 {
+	if coreCalls != 0 || derivedCalls != 0 {
 		t.Fatalf(
-			"denied complete collector calls = core:%d Investigation:%d derived:%d, want zero",
-			coreCalls, investigationCalls, derivedCalls,
+			"denied complete collector calls = core:%d derived:%d, want zero",
+			coreCalls, derivedCalls,
 		)
 	}
 }
@@ -1235,26 +917,13 @@ func TestRetentionStatusEmptyInstallationFreezesRegistryAndUnavailableMetrics(t 
 		{"extraction_outcomes", "repository/domain", "existing_owner_lifecycle_unchanged", false, []string{"extraction_domain_outcome"}},
 		{"evidence_pins", "run/kind", "mixed_owner_lifecycles_not_selected_by_t306m", true, []string{
 			"evidence_pin[kind=proof-bundle:<bundle_id>]",
-			"evidence_pin[kind=investigation-artifact:<artifact_id>]",
 			"evidence_pin[kind=<other exact store-accepted value>]",
 		}},
 		{"proof_bundles", "immutable bundle", "configured_owner_lifecycle_unchanged", true, []string{"proof_bundle"}},
 		{"durable_job_history", "queue-table/target/auto-id", "incidental_growth_requires_separate_decision", true, []string{
 			"connection_sync_job", "indexing_job", "repo_fetch_job",
 			"candidate_manifest_job", "extraction_job", "resolver_catalog_job",
-			"caller_leaf_job", "investigation_run_job",
-		}},
-		{"investigation_workbench_rows", "investigation/revision/run/artifact/review/watch", "incidental_growth_requires_separate_decision", true, []string{
-			"investigation", "investigation_revision", "investigation_change_brief",
-			"investigation_workbench_mutation", "investigation_workbench_disposition",
-			"investigation_run", "investigation_run_event", "investigation_run_artifact",
-			"investigation_artifact_owner", "investigation_artifact_owner_release",
-			"investigation_artifact_retention_override", "investigation_decision",
-			"investigation_disposition", "investigation_baseline_designation",
-			"investigation_grant", "investigation_cursor", "investigation_creation",
-			"investigation_consumer_snapshot", "investigation_consumer_edge_ledger",
-			"investigation_review_projection", "investigation_review_item",
-			"investigation_dossier", "investigation_watch", "investigation_watch_revision",
+			"caller_leaf_job",
 		}},
 		{"candidate_artifacts", "repository/generation", "selected_t306m_unbounded_retention", true, []string{
 			"candidate_manifest_publication", "$DATA/candidates managed publication files",
@@ -1323,20 +992,18 @@ func TestRetentionStatusEmptyInstallationFreezesRegistryAndUnavailableMetrics(t 
 	if componentCount != api.RetentionStatusComponentCount {
 		t.Fatalf("components = %d, want %d", componentCount, api.RetentionStatusComponentCount)
 	}
-	coreComponents, investigationComponents, derivedComponents := 0, 0, 0
+	coreComponents, derivedComponents := 0, 0
 	for _, owner := range status.Owners {
 		switch owner.ID {
 		case "evidence_publications", "extraction_attempts", "extraction_outcomes",
 			"evidence_pins", "proof_bundles", "durable_job_history", "caller_rows":
 			coreComponents += len(owner.Components)
-		case "investigation_workbench_rows":
-			investigationComponents += len(owner.Components)
 		case "candidate_artifacts", "focused_indexes", "resolver_catalogs", "caller_artifacts":
 			derivedComponents += len(owner.Components)
 		}
 	}
-	if coreComponents != 23 || investigationComponents != 24 || derivedComponents != 7 {
-		t.Fatalf("collector split = %d/%d/%d, want 23/24/7", coreComponents, investigationComponents, derivedComponents)
+	if coreComponents != 21 || derivedComponents != 7 {
+		t.Fatalf("collector split = %d/%d, want 21/7", coreComponents, derivedComponents)
 	}
 	assertUnavailableRetentionMetric(t, "data volume total", status.DataVolume.TotalBytes, "bytes")
 	assertUnavailableRetentionMetric(t, "data volume available", status.DataVolume.AvailableBytes, "bytes")
@@ -1412,9 +1079,9 @@ func TestRetentionStatusAllocationIsAggregateBoundedAndCannotStarve(t *testing.T
 			if allocation.ScanIdentities != allocation.ReportedIdentities+1 {
 				t.Fatalf("component %q allocation = %+v, want one private sentinel", component.ID, allocation)
 			}
-			wantReported := 75
-			if componentIndex < 46 {
-				wantReported = 76
+			wantReported := 146
+			if componentIndex < 8 {
+				wantReported = 147
 			}
 			if allocation.ReportedIdentities != wantReported {
 				t.Fatalf("component %d %q report allocation = %d, want %d", componentIndex, component.ID, allocation.ReportedIdentities, wantReported)
@@ -1441,7 +1108,7 @@ func TestRetentionStatusEncodedResponseIsFixedAndBounded(t *testing.T) {
 	if !bytes.Equal(firstEncoded, secondEncoded) {
 		t.Fatal("empty retention status encoding is not deterministic")
 	}
-	const wantEmptyEncodedBytes = 20_565
+	const wantEmptyEncodedBytes = 12_229
 	if len(firstEncoded) != wantEmptyEncodedBytes {
 		t.Fatalf("empty encoded bytes = %d, want frozen %d", len(firstEncoded), wantEmptyEncodedBytes)
 	}
@@ -1467,7 +1134,7 @@ func TestRetentionStatusEncodedResponseIsFixedAndBounded(t *testing.T) {
 		*status = first
 		return nil
 	})
-	const wantMaximumEncodedBytes = 21_564
+	const wantMaximumEncodedBytes = 12_840
 	if len(maximumEncoded) != wantMaximumEncodedBytes {
 		t.Fatalf("maximum encoded bytes = %d, want frozen %d", len(maximumEncoded), wantMaximumEncodedBytes)
 	}
@@ -1515,7 +1182,7 @@ func TestRetentionStatusSchemaLinkAndBodyBoundIgnoreRequestHost(t *testing.T) {
 		t.Fatalf("status = %d (%s), want 200", recorder.Code, recorder.Body)
 	}
 	assertRetentionWarningHeader(t, recorder)
-	const wantEmptyEncodedBytes = 20_565
+	const wantEmptyEncodedBytes = 12_229
 	if recorder.Body.Len() != wantEmptyEncodedBytes {
 		t.Fatalf("host-varied body bytes = %d, want frozen %d", recorder.Body.Len(), wantEmptyEncodedBytes)
 	}
@@ -1705,41 +1372,6 @@ func TestRetentionStatusWarningWrapsOuterMiddlewareFailures(t *testing.T) {
 		t.Fatalf("status = %d (%s), want 500", recorder.Code, recorder.Body)
 	}
 	assertRetentionWarningHeader(t, recorder)
-}
-
-func TestRetentionStatusInvestigationRegistryMatchesStoreSchema(t *testing.T) {
-	status, _ := getRetentionStatus(t, nil)
-	var registered []string
-	for _, owner := range status.Owners {
-		if owner.ID == "investigation_workbench_rows" {
-			for _, component := range owner.Components {
-				registered = append(registered, component.ID)
-			}
-		}
-	}
-	schema, err := os.ReadFile("../store/schema.surql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	pattern := regexp.MustCompile(
-		`(?m)^DEFINE TABLE IF NOT EXISTS (investigation(?:_[a-z0-9]+)*) SCHEMALESS;$`,
-	)
-	var schemaComponents []string
-	jobFound := false
-	for _, match := range pattern.FindAllSubmatch(schema, -1) {
-		component := string(match[1])
-		if component == string(store.JobInvestigate) {
-			jobFound = true
-			continue
-		}
-		schemaComponents = append(schemaComponents, component)
-	}
-	if !jobFound {
-		t.Fatal("store schema omitted investigation_run_job")
-	}
-	if !slices.Equal(registered, schemaComponents) {
-		t.Fatalf("registered Investigation components = %v, schema = %v", registered, schemaComponents)
-	}
 }
 
 func getRetentionStatus(

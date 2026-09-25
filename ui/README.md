@@ -68,7 +68,7 @@ make ci-ui
 | `src/components/` | shared evidence and interaction components |
 | `src/theme.ts` | Base Web themes and phebs semantic tokens |
 | `src/highlight.ts` / `lang.ts` | source-language presentation |
-| `src/glossary.generated.ts` | generated Change Workbench vocabulary |
+| `src/glossary.generated.ts` | generated evidence vocabulary |
 
 Tests live beside the component or page they cover.
 
