@@ -7250,8 +7250,9 @@ phase, and the query corridor and its exact accounting are unchanged.
 
 T46.1 retired the Investigation lifecycle owner. V5 therefore expects the
 fifteen owners the product registers in every pressure, recovery, archive,
-and collection cycle and in lifecycle status. V1–V4 keep their frozen
-sixteen-owner sets as history, and an old V4 launch refuses its owner check.
+and collection cycle and in lifecycle status. V1 keeps its frozen fourteen-owner
+set and V2–V4 keep their sixteen-owner sets as history. The parent rejects an
+old V4 launch at its historical sixteen-owner validation.
 
 The private optional epoch-one rehearsal now recognizes
 `PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint

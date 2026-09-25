@@ -5589,8 +5589,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   validators now read the plan's own owner set instead of a shared constant.
   V1–V4 bytes, the sixteen-owner validators, and their historical fixtures
   are unchanged. The epoch-four/five T42.2 lifecycle control now requires the
-  fifteen registered owners (`t422LifecycleOwners`) instead of sixteen, so an
-  old V4 launch still refuses there. Modeled-owner fixtures derive their turn
+  fifteen registered owners (`t422LifecycleOwners`) instead of sixteen; the
+  parent's historical V4 sixteen-owner validation still refuses that runtime.
+  Modeled-owner fixtures derive their turn
   and sample counts from that constant, and the native all-owners composition
   drives the fifteen product owners without a test-only Investigation slot. The
   lifecycle R class keeps its historical `fresh-sixteen-owner-cycle` label
@@ -5600,3 +5601,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   runtime does one fewer static owner turn per lifecycle cycle; validators
   compare fifteen rows instead of sixteen. Query, sync, startup, publication,
   retry, cache, schema, child, and lock costs are unchanged.
+- **2026-09-25 — T46.1 requested checkpoint integration.** Ben requested
+  merging `phebs.com-t461-harness` into `main`. The branch includes the
+  user-directed cross-track Investigation/Workbench retirement, the T42.2v
+  prerequisite stack, and the prospective V5 fifteen-owner correction.
+  This is a code checkpoint, not completion of T42.2v's combined rehearsal
+  gate: the retained `49b9f109` rehearsal stopped at phase 14 after successful
+  search warming. Its broad `T401Fixture` query with `max_matches=1` returned
+  an indexed `.txt` fixture while the frozen semantic oracle required `.go`.
+  The stopped evidence and open correction/rehearsal gates remain authoritative;
+  this integration supplies no passing rehearsal, new retry authorization,
+  readiness, freeze, ceremony, release, or scale claim. The integration and
+  historical-owner wording corrections add no runtime work or cost.

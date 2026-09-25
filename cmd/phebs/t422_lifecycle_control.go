@@ -86,7 +86,7 @@ type t422LifecycleEvent struct {
 
 // t422LifecycleOwners is the product's registered owner count, which the
 // active V5 plan observes. T46.1 retired the sixteenth (Investigation) owner,
-// so a V1-V4 sixteen-owner launch refuses here.
+// so the parent's historical V4 sixteen-owner validation refuses this runtime.
 const t422LifecycleOwners = 15
 
 func newT422LifecycleControl(ctx context.Context, launch *t422SemanticLaunch, owners []lifecycle.Owner) (*t422LifecycleControl, error) {
