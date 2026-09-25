@@ -7538,7 +7538,8 @@ After phase-14 F and before the first product query, the harness POSTs
 search cache fills a first all-code and first selected service query would
 otherwise start inside their 10-second query wall (about a minute on the
 fixed corpus), bounded by the product's 10-minute warming timeout, and
-answers with source-free generation identities that must match F. Any
+answers with source-free generation identities; the selected digest must
+match F. Any
 refusal is terminal. The command is refused outside that opted-in launch and
 phase, and the query corridor and its exact accounting are unchanged.
 

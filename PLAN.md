@@ -5415,9 +5415,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   10-second wall (`internal/search/searcher.go`) expired while the
   cache-owned whole-repository fill was still running, so the search never
   recorded its required repository-count observation and the ledger ended
-  with `ErrEvent`. Retained evidence: terminal log SHA-256
-  `9d5e1080f29054f8...`, server log `3d5da300968c3377...` and plan
-  `e4e1fff52f009cd6...` in `/private/tmp/t422-v5-82b53044-rehearsal.P0qW44`.
+  with `ErrEvent`. Retained evidence in
+  `/private/tmp/t422-v5-82b53044-rehearsal.P0qW44`: terminal log SHA-256
+  `9d5e1080f29054f8871f344e8e6245c11ff59de611f66e0b87390277c3da77fe`,
+  server log `3d5da300968c33775a6c2c88d7622d81e0690d4809493c4ee9ee897e63ba9b26`,
+  plan `e4e1fff52f009cd62ada027945ed10be18e2b17ec4a6fa99998f264b73ce4e6a`,
+  and 140-byte refusal
+  `1614acb8148785af1db84ca007cd63589f8e428535d7322bc0c962be058e3800`.
   Measured on the retained restored 19.49-GB, 89-shard generation, shared
   whole-generation validation takes 16.5 s and a full exact-reader load
   (validation, shard materialization and listing) 42.2 s on sampled passes;
@@ -5447,22 +5451,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   control like `park` and consumes no exact-read ordinal. V5 readiness binds
   `phase14-search-warm-v1`; V1–V4 bytes and contracts are unchanged.
 
-  Steady-state cost: ordinary serving, queries, sync ticks, startup, retries
-  and publication do nothing new; the route exists only under an opted-in
-  epoch-five semantic launch and is otherwise refused as an unlisted
-  semantic route. The opted-in command adds one selector lookup, one repository
+  Steady-state cost: ordinary server setup adds one nil/field branch, and
+  semantic routing adds one constant-time path comparison. Ordinary requests,
+  sync ticks, retries/no-ops and publication add no reads, hashing, cache
+  fills or child work; the route exists only under an opted-in epoch-five
+  semantic launch and is otherwise refused as an unlisted route. The opted-in
+  command adds one selector lookup, one repository
   point read, immutable control reads, and cache identity checks. It moves the
   two expensive cache-owned fills before the query walls: about 59 s on this
   corpus (16.5 s shared validation plus 42.2 s selected reader, sequential).
   The corridor still performs its own authorization and bounded authority
   checks; while the generation stays unchanged, it reuses the completed fills
-  rather than repeating full member validation. The command uses the cache's
-  existing two load slots and leaves the selected exact reader resident. It
-  adds one control mutex for single-use admission. The harness holds its
+  rather than repeating full member validation. The two fills run sequentially
+  through the existing two-slot load admission; full hashing holds no cache
+  mutex. The selected exact reader retains mappings and descriptors over this
+  corpus's 89 shards and 19.49 GB of index files until cache retirement.
+  Resident RAM depends on OS paging; this is the existing exact-reader cache
+  footprint moved before the queries. The command adds one control mutex for
+  single-use admission. The harness holds its
   existing inspection mutex across this one native exchange; the server's
   cache work has a 10-minute timeout and the client remains under phase 14's
-  20-minute deadline. No new cache kind, goroutine, child process, persistent
-  memory or disk write is added. Phase 14 keeps that 20-minute deadline: about
+  20-minute deadline. No new cache kind, goroutine, child process or disk write
+  is added. Phase 14 keeps that 20-minute deadline: about
   one minute of warm plus the prior 557-second native query replay fits with
   margin.
   Focused normal/race tests, the modeled `QueryRestored` operation (warm order,
@@ -5473,11 +5483,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the exported warm in 57.246 s, then one all-code search in 1.676 s and a
   selected exact-reader query with the corridor's file filter in 0.057 s;
   that selected probe did not exercise the catalog-backed service API. Its
-  log SHA-256 is `e9814cf8dd1c4cf6...`. The failed image was detached and
+  log SHA-256 is
+  `e9814cf8dd1c4cf6630d4b929e52eaedc8e29742a5f10cbaa2f0b6e72a4e8568`.
+  The failed image was detached and
   removed after preserving the terminal/server/plan logs and the 140-byte
   HTTP refusal; free space rose from 91,039,188 to 183,236,888 KiB. The
   complete `cmd/phebs` G10 selection then passed in 671.017 s (retained log
-  SHA-256 `99156e3b3331d8d4...`), including
+  SHA-256 `99156e3b3331d8d4793908e55c5f3de2a373361387af6a0b78f977ed779d3049`), including
   `TestT422WorkspaceNativeComposition` in 13.41 s. The earlier failure is
   consistent with the host's former 82% used capacity exceeding the lifecycle
   collector's 80% soft watermark, but that failed fixture retained no
