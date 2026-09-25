@@ -184,9 +184,16 @@ func TestExecutionPressureBallastSettlement(t *testing.T) {
 	invalidAllocation.value.Allocated -= 4096
 	diagnosticOnly := exact
 	diagnosticOnly.value.FreeBlocks = ^uint64(0)
+	growBefore := executionPressureBallastSample{Used: 11 << 30, Available: 85 << 30, Allocated: 7 << 30}
+	growDeficit := exact
+	growDeficit.value.Used -= 8192
+	growDeficit.value.Available += 8192
+	growInvalidAllocation := exact
+	growInvalidAllocation.value.Allocated -= 4096
 	for _, test := range []struct {
 		name             string
 		observations     []observation
+		grow             bool
 		cancelAfterFirst bool
 		wantCalls        int
 		wantError        bool
@@ -200,12 +207,20 @@ func TestExecutionPressureBallastSettlement(t *testing.T) {
 		{name: "custody_error", observations: []observation{{value: exact.value, logical: exact.logical, err: errors.New("custody")}}, wantCalls: 1, wantError: true},
 		{name: "custody_error_after_valid_prefix", observations: []observation{staleCapacity, {err: errors.New("custody")}}, wantCalls: 2, wantError: true},
 		{name: "canceled", observations: []observation{staleCapacity}, cancelAfterFirst: true, wantCalls: 1, wantError: true},
+		{name: "growth_capacity_settles", observations: []observation{growDeficit, exact}, grow: true, wantCalls: 2},
+		{name: "growth_invalid_allocation", observations: []observation{growInvalidAllocation}, grow: true, wantCalls: 1, wantError: true},
+		{name: "growth_custody_error", observations: []observation{{value: exact.value, logical: exact.logical, err: errors.New("custody")}}, grow: true, wantCalls: 1, wantError: true},
+		{name: "growth_canceled", observations: []observation{growDeficit}, grow: true, cancelAfterFirst: true, wantCalls: 1, wantError: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 			defer cancel()
+			before := priorAllocated
+			if test.grow {
+				before = growBefore.Allocated
+			}
 			calls := 0
-			got, observations, err := settleExecutionPressureBallast(ctx, exact.logical, priorAllocated, func(context.Context) (executionPressureBallastSample, uint64, error) {
+			got, observations, err := settleExecutionPressureBallast(ctx, exact.logical, before, func(context.Context) (executionPressureBallastSample, uint64, error) {
 				index := min(calls, len(test.observations)-1)
 				calls++
 				if test.cancelAfterFirst && calls == 1 {
@@ -214,6 +229,10 @@ func TestExecutionPressureBallastSettlement(t *testing.T) {
 				value := test.observations[index]
 				return value.value, value.logical, value.err
 			}, func(value executionPressureBallastSample) bool {
+				if test.grow {
+					return value.Allocated == exact.logical && withinTolerance(value.Used, exact.value.Used, 4096) &&
+						pressureBallastDeltaMatches("add", growBefore, value)
+				}
 				return value.Used == exact.value.Used && value.Available == exact.value.Available && value.Allocated == exact.value.Allocated
 			})
 			if errors.Is(err, errPressureVolume) != test.wantError || calls != test.wantCalls {
@@ -223,7 +242,9 @@ func TestExecutionPressureBallastSettlement(t *testing.T) {
 				t.Fatalf("settled sample lost observed fields: %+v", got)
 			}
 			wantSamples := uint64(test.wantCalls)
-			if test.wantError && !test.cancelAfterFirst {
+			if test.grow && test.cancelAfterFirst {
+				wantSamples = 0 // A canceled growth observation cannot be accepted.
+			} else if test.wantError && !test.cancelAfterFirst {
 				wantSamples-- // Invalid final observations must not pollute extrema.
 			}
 			if observations.Samples != wantSamples || wantSamples > 0 &&
@@ -232,6 +253,22 @@ func TestExecutionPressureBallastSettlement(t *testing.T) {
 			}
 		})
 	}
+	t.Run("growth_persistent_deficit", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(t.Context(), 120*time.Millisecond)
+		defer cancel()
+		got, observations, err := settleExecutionPressureBallast(ctx, exact.logical, growBefore.Allocated,
+			func(context.Context) (executionPressureBallastSample, uint64, error) {
+				return growDeficit.value, exact.logical, nil
+			},
+			func(value executionPressureBallastSample) bool {
+				return value.Allocated == exact.logical && withinTolerance(value.Used, exact.value.Used, 4096) &&
+					pressureBallastDeltaMatches("add", growBefore, value)
+			})
+		if !errors.Is(err, errPressureVolume) || got != growDeficit.value || observations.Samples < 1 ||
+			observations.First != growDeficit.value || observations.Last != growDeficit.value {
+			t.Fatalf("persistent growth deficit accepted or lost: after=%+v observations=%+v error=%v", got, observations, err)
+		}
+	})
 }
 
 func TestExecutionPressureBallastAnchoredStability(t *testing.T) {
@@ -448,16 +485,11 @@ func TestExecutionPressureBallastOptionalNative(t *testing.T) {
 		if size < before {
 			action = "remove"
 		}
-		var capacityAfter executionPressureBallastSample
-		if action == "remove" {
-			capacityAfter, _, err = settleExecutionPressureBallast(ctx, size, before, func(context.Context) (executionPressureBallastSample, uint64, error) {
-				return ballast.observe()
-			}, func(value executionPressureBallastSample) bool {
-				return value.Allocated == size && pressureBallastDeltaMatches(action, capacityBefore, value)
-			})
-		} else {
-			capacityAfter, err = ballast.sample()
-		}
+		capacityAfter, _, err := settleExecutionPressureBallast(ctx, size, before, func(context.Context) (executionPressureBallastSample, uint64, error) {
+			return ballast.observe()
+		}, func(value executionPressureBallastSample) bool {
+			return value.Allocated == size && pressureBallastDeltaMatches(action, capacityBefore, value)
+		})
 		t.Logf("native %s %d to %d: before=%+v after=%+v", action, before, size, capacityBefore, capacityAfter)
 		if err != nil || !pressureBallastDeltaMatches(action, capacityBefore, capacityAfter) {
 			t.Fatalf("native capacity delta exceeds unchanged 4096-byte tolerance: %v", err)

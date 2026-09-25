@@ -5529,3 +5529,46 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   requires focused and static gates, independent review, a clean protected
   source, host preflight, and a new complete rehearsal; this stopped prefix
   is not a pass.
+
+- **2026-09-25 — T42.2v first pressure-ballast growth observation.** The
+  clean detached `eec12a64c61b277a6c97f8d8752aac264d8192ee` rehearsal
+  passed five protected builds/admissions, cold/warm/physical, logical,
+  return-A, stale lease, and checkpoint restart. It stopped in phase 9 before
+  any pressure HTTP gate: the sole native 80% ballast allocation reached its
+  exact 34,238,763,008-byte file allocation, but volume used rose 8,192
+  bytes less than that allocation. The measured 81,947,967,488-byte used
+  endpoint was 8,520 bytes below the frozen target, so both existing
+  4,096-byte target and delta predicates refused. The 150-second quiet
+  prefix recorded ten used changes with an 8,192-byte largest step; the
+  pre-add baseline rejoin recorded one 8,192-byte change in 121 samples.
+  No retained evidence
+  identifies the background mover or proves that the later shortfall would
+  settle. The terminal/status SHA-256 values are
+  `2abebea170bf6456bed8da843d9b17c223e6303a74f67750b7667065f6d67363`
+  and `a6145412f7190cbf2dd6e1b1121c4520409cb11e722a532485cf99a4c36852fa`;
+  copied server/plan/host/ballast observations are
+  `d9e0389d4e9173b3aa81a5d59923bc0edc6528b279e8aed648a657ba675b9ccb`,
+  `279cd25056d618754b5014b6ba49c567117ab889e2c5ce6f50c06d6e40cbee23`,
+  `dd0c40b789a0e6caf9e5c84ba6e13d4ab30dab653f967f779ab7bb5adf19b771`,
+  and `abed6aaa64deb68ecccd082f1308e3123318fd5b33a8bdb197271cbe18cb15a9`.
+  The failed image was detached normally and its exact root removed after
+  those bytes were verified; host free space returned above 170 GiB, with
+  no rehearsal child or port 65499 listener. The unrelated SurrealDB on
+  port 54899 was left running. This is a stopped prefix, not a pass.
+  Prospective V5 alone reuses the existing 30-second, 50-ms read-only ballast
+  settlement for each add after its one native resize; V1–V4 retain their
+  immediate post-add observation and accepted/rejected behavior. Every V5
+  observation must retain the exact inode, allocation, phase, cancellation,
+  and frozen 4,096-byte target/delta
+  checks; persistent drift still refuses, with no second mutation or new
+  deadline. The successful path replaces its one immediate sample with one
+  equivalent observation plus a final phase/custody recheck after reacquiring
+  the run mutex. A rejected add may perform at most 600 additional
+  observation turns inside its existing phase deadline, each repeating exact
+  inode/root and capacity checks plus an in-memory store snapshot while
+  holding the rehearsal-volume mutex; the run mutex is released between
+  observations, and no competing ballast mutation is admitted. Ordinary
+  server query, sync, startup, publication, retry, cache, schema, child, and
+  lock costs are unchanged. A corrected exact source still needs focused
+  and static gates, independent review, clean-source preflight, and a full
+  rehearsal before any freeze or pass claim.

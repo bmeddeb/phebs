@@ -163,14 +163,8 @@ func TestExecutionPressureReclaimLatencyOptionalNative(t *testing.T) {
 			return value.Allocated == size && withinTolerance(value.Used, target.TargetUsedBytes, target.ToleranceBytes) &&
 				pressureBallastDeltaMatches(target.Action, before, value)
 		}
-		var after executionPressureBallastSample
-		var settlement executionPressureBallastSettlement
-		if target.Action == "add" {
-			after, err = ballast.sample()
-		} else {
-			after, settlement, err = settleExecutionPressureBallast(ctx, size, before.Allocated,
-				func(context.Context) (executionPressureBallastSample, uint64, error) { return ballast.observe() }, accept)
-		}
+		after, settlement, err := settleExecutionPressureBallast(ctx, size, before.Allocated,
+			func(context.Context) (executionPressureBallastSample, uint64, error) { return ballast.observe() }, accept)
 		mutation := fmt.Sprintf(
 			"target_percent=%d action=%s size=%d before_used=%d before_allocated=%d after_used=%d after_allocated=%d after_free_blocks=%d accepted=%t settle_samples=%d settle_used_changes=%d settle_max_step=%d",
 			target.TargetUsedPercent, target.Action, size, before.Used, before.Allocated,

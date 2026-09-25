@@ -118,7 +118,7 @@ func (b *executionPressureBallast) nextTarget(ctx context.Context, run *Executio
 		return out, errPressureVolume
 	}
 	phase := uint32(9 + b.next)
-	if target.Action == "add" {
+	if target.Action == "add" && run.flow.plan.Schema != PlanV5Schema {
 		out.After, err = b.sample()
 		if err != nil || b.authorize(ctx, run, phase) != nil || out.After.Allocated != size ||
 			!withinTolerance(out.After.Used, target.TargetUsedBytes, target.ToleranceBytes) ||
@@ -132,7 +132,7 @@ func (b *executionPressureBallast) nextTarget(ctx context.Context, run *Executio
 		return out, nil
 	}
 	run.mu.Unlock()
-	out.After, out.Settlement, err = b.settleShrink(ctx, run, phase, size, out.Before.Allocated, func(value executionPressureBallastSample) bool {
+	out.After, out.Settlement, err = b.settleMutation(ctx, run, phase, size, out.Before.Allocated, func(value executionPressureBallastSample) bool {
 		return value.Allocated == size && withinTolerance(value.Used, target.TargetUsedBytes, target.ToleranceBytes) &&
 			pressureBallastDeltaMatches(target.Action, out.Before, value)
 	})
@@ -215,7 +215,7 @@ func (b *executionPressureBallast) remove(ctx context.Context, run *ExecutionEpo
 		return out, errPressureVolume
 	}
 	run.mu.Unlock()
-	out.After, out.Settlement, err = b.settleShrink(ctx, run, 11, 0, out.Before.Allocated, func(value executionPressureBallastSample) bool {
+	out.After, out.Settlement, err = b.settleMutation(ctx, run, 11, 0, out.Before.Allocated, func(value executionPressureBallastSample) bool {
 		return value.Allocated == 0 && usedPercentCeiling(value.Used, 96<<30) <= 74 &&
 			pressureBallastDeltaMatches("remove", out.Before, value)
 	})
@@ -301,7 +301,7 @@ func (b *executionPressureBallast) observe() (executionPressureBallastSample, ui
 
 // The caller holds the volume mutex and releases run.mu so stop and the phase
 // deadline can advance between observations.
-func (b *executionPressureBallast) settleShrink(
+func (b *executionPressureBallast) settleMutation(
 	ctx context.Context,
 	run *ExecutionEpochOneRun,
 	phase uint32,
@@ -323,7 +323,7 @@ func (b *executionPressureBallast) settleShrink(
 // waitQuiet requires one sampled stabilization interval after the real
 // pre-pressure cleanup. The owning phase deadline remains the hard wall. It
 // mutates nothing and retains the same custody and authority checks as a
-// shrink observation.
+// mutation observation.
 func (b *executionPressureBallast) waitQuiet(ctx context.Context, run *ExecutionEpochOneRun, phase uint32) (executionPressureBallastSettlement, error) {
 	if b == nil || b.volume == nil || run == nil || run.flow == nil || phase != 9 {
 		return executionPressureBallastSettlement{}, errPressureVolume
@@ -402,14 +402,15 @@ func settleExecutionPressureBallast(
 	accept func(executionPressureBallastSample) bool,
 ) (executionPressureBallastSample, executionPressureBallastSettlement, error) {
 	var observations executionPressureBallastSettlement
-	if ctx == nil || ctx.Err() != nil || expectedLogical >= priorAllocated || priorAllocated > 80<<30 ||
+	if ctx == nil || ctx.Err() != nil || expectedLogical == priorAllocated || expectedLogical > 80<<30 || priorAllocated > 80<<30 ||
 		expectedLogical%4096 != 0 || priorAllocated%4096 != 0 || observe == nil || accept == nil {
 		return executionPressureBallastSample{}, observations, errPressureVolume
 	}
 	check := func(current context.Context) (executionPressureBallastSample, bool, error) {
 		value, logical, err := observe(current)
-		if err != nil || logical != expectedLogical || value.Allocated < expectedLogical ||
-			value.Allocated > priorAllocated || value.Allocated%4096 != 0 {
+		if err != nil || expectedLogical > priorAllocated && current.Err() != nil || logical != expectedLogical || value.Allocated%4096 != 0 ||
+			expectedLogical > priorAllocated && value.Allocated != expectedLogical ||
+			expectedLogical < priorAllocated && (value.Allocated < expectedLogical || value.Allocated > priorAllocated) {
 			return value, false, errPressureVolume
 		}
 		observations.observe(value)

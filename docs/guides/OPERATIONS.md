@@ -7578,6 +7578,10 @@ live headroom guarantee. A forecast is not a measured sample or a pass; all
 actual post-mutation measurements and the unchanged ceilings still apply.
 The private refusal identifies the projected target and byte operands. Preserve
 the actual prefix; do not raise limits or rerun merely to bypass the refusal.
+For V5 only, a ballast add may take up to 30 seconds of read-only settlement
+after its sole allocation. It still requires the same 4,096-byte target and
+delta checks; persistent drift retains the failed volume. V1–V4 keep their
+immediate post-add observation.
 
 Prospective V3 now has an explicitly approved 128-GiB per-linked-path allocated
 ceiling, independently of its unchanged 96-GiB pressure volume and 128-GiB
@@ -8072,13 +8076,14 @@ A rounded 75-percent volume display does not prove agreement with the frozen
 byte target and its 4,096-byte tolerance. Post-stop filesystem observations
 must not be substituted for missing in-run values.
 
-For each shrink, `pressure_settlement_index` adds the count and first/last of
-samples that passed the existing custody/logical/allocation checks, Used
-minimum/maximum, Used-change count and largest adjacent Used difference. Raw
-`free_blocks` is `Fstatfs.Bfree` in the frozen 4,096-byte block units, copied
-from the same call that supplies `Bavail`; it is diagnostic only. Its extrema
-and before/after values are retained too. Zero samples means no valid settlement
-sample, not zero capacity, and emits no `pressure_settlement_endpoint_index`
+For each shrink and V5 add, `pressure_settlement_index` adds the count and
+first/last of samples that passed the existing custody, logical, and allocation
+checks, Used minimum/maximum, Used-change count and largest adjacent Used
+difference. Raw `free_blocks` is `Fstatfs.Bfree` in the frozen 4,096-byte
+block units. It is copied from the same call that supplies `Bavail` and is
+diagnostic only. Its extrema and before/after values are retained too. Zero
+samples means no valid settlement sample, not zero capacity, and emits no
+`pressure_settlement_endpoint_index`
 rows. An invalid terminal mutation After can differ from
 the last valid settlement sample. These summaries are updated in memory on
 successful and failed attempts but written only in the private failure summary.
