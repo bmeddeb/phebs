@@ -5498,3 +5498,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   time-aligned capacity sample. The outer zsh wrapper failed only after Go's
   `PASS`/`ok` because it assigned the reserved `status` variable; the retained
   full Go output has no failing test.
+
+- **2026-09-25 — T42.2v retain the finalized epoch-five warm opt-in in the parent.**
+  The first exact-source search-warm rehearsal at
+  `84f00e1aece83c7a66b63a112d89d61b5335a58b` passed custody in
+  16m40.662s, all five protected tools, cold/warm/physical and logical
+  continuations, stale lease, checkpoint restart, pressure, backup, restore,
+  archive completion and collection. Phase-14 F1 was accepted at exact-read
+  ordinal 81, then the parent refused before the warm HTTP call or any product
+  query. The retained inspection reported `ProductFinals:1`, no product query
+  rows, `failed_HTTP=0`, and `inspection_state_or_semantics` at ordinal zero;
+  the server had no search-warm log. The terminal log SHA-256 is
+  `b48b0dd532bbdd6f0634b863517bc42a393527e8cae6370289dd9b5834c9dd11`,
+  retained server log SHA-256 is
+  `9aec9c46317b3d8d43d1b94de0ba0a94ed7ef3fb64030e86f295969ad6c0a69a`,
+  and retained plan SHA-256 is
+  `3cfa8c6210e6d35f4c9a9691fe3adcfef3f2097d063b6618049ad543db55aec4`.
+  Host-state SHA-256 is
+  `1d69226949240e25eecbb2a470368964e5780176ae839979c1603d4f67a8b781`.
+  The failed image was detached normally and only its exact root removed
+  after those bytes were copied and checked; free space rose from about 86
+  to 174 GiB. The unrelated SurrealDB on port 54899 remained running.
+  `launchEpoch` copied the epoch into `run.epoch` before adding the V5
+  `SearchWarm` field to the semantic launch copy. The server received the
+  opt-in, while the parent preflight saw an empty field and refused. Retain
+  `run.epoch` only after the launch fields are finalized, before semantic
+  serialization. This changes no V1–V4 wire bytes or ordinary server path,
+  adds no request, read, hash, lock, child or allocation, and leaves the V5
+  single-use warm and all phase deadlines intact. The corrected tree still
+  requires focused and static gates, independent review, a clean protected
+  source, host preflight, and a new complete rehearsal; this stopped prefix
+  is not a pass.

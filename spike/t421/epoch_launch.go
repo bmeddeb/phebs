@@ -574,7 +574,6 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if number == 3 {
 		epoch.ReturnSourceCommit = author.previous.Result.Commit
 	}
-	run.epoch = epoch
 	if err == nil && (epochs.released != number-1 || epochs.listeners[number-1].Close() != nil) {
 		err = ErrExecutionEpochOne
 	}
@@ -622,6 +621,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		}
 		epoch.MarkerDeadlineUnixNano = run.phaseDeadline.UnixNano()
 	}
+	run.epoch = epoch
 	launchStage = "semantic input"
 	raw, err := epochSemanticInput(author.planSHA256, epoch, run.checkpointRecovery, run.archiveInput)
 	if err != nil {
