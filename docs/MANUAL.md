@@ -42,8 +42,8 @@ search and extraction. A focused repository may explicitly designate one
 supporting SCIP artifact as `unit-bound`; without that designation it never
 falls back to repository-root `index.scip`. The candidate planner gates
 experimental extraction on one current streamed HEAD manifest. Local evidence,
-coverage, source citations, and Workbench implementation views consume only
-the unit records and are keyed by the exact indexed commit plus unit digest.
+coverage, and source citations consume only the unit records and are keyed by
+the exact indexed commit plus unit digest.
 Repository-wide caller discovery remains a separately labeled overlay owned
 by the T30.6 caller-overlay sequence. T30.6a emits one bounded,
 non-authoritative extraction-operation report per repository job; T30.6b now
@@ -63,9 +63,9 @@ candidate-declared generated `base`-lane Go blob once during materialization;
 leaf execution never reopens that generated source. Direct caller-leaf
 execution now processes one exact `base`-lane domain/leaf pair at a time, opens
 no source outside that leaf, and durably retains results or per-record
-abstentions without making an incomplete generation visible. Atomic
-complete-generation publication, authorized Caller Map reads and comparison,
-and Workbench composition now consume that overlay; the shared scope panel
+abstentions without making an incomplete generation visible. Authorized Caller
+Map reads and comparison consume the atomically published complete generation;
+the shared scope panel
 labels it `repository-overlay` beside focused Search and local evidence.
 
 An optional `service_catalogs` entry can now ingest one explicit normalized
@@ -82,9 +82,9 @@ repository → Services directory renders that same source-free authority and
 lifecycle state, including conflicts, removed identities, roles, unowned and
 shared summaries, exact deep links, and explicit non-claims. When their
 reviewed experimental authorities are present, exact service-scoped search,
-static relationship lists and comparisons, citation reads, service-aware
-Workbench impact, and matching MCP reads are also available. They fail closed
-when authority is unavailable or changes: no service request falls back to
+static relationship lists and comparisons, citation reads, and matching MCP
+reads are also available. They fail closed when authority is unavailable or
+changes: no service request falls back to
 All code and no static evidence is relabeled as runtime topology. The
 administrator Settings view also exposes the bounded lifecycle controller's
 enabled state, allocated disk-pressure class, fixed per-turn limits, and
@@ -95,11 +95,15 @@ decision for these experimental surfaces.
 ## Evidence boundary
 
 Search, browsing, authentication, SCIP, and history are shipped product
-surfaces. Contract Atlas, Caller Map, Impact, Kafka evidence, and Change
-Workbench remain experimental/default-dark or fixture-bound as described in
+surfaces. Contract Atlas, Caller Map, Impact, and Kafka evidence remain
+experimental/default-dark or fixture-bound as described in
 the [workflow guide](./guides/WORKFLOWS.md). Static evidence does not establish
 runtime use, complete coverage, compatibility, migration completion,
 decommission safety, or extraction accuracy.
+
+Investigations and Change Workbench have been retired. PHEBS supplies
+read-only evidence through its MCP tools; Cortana owns change organization,
+investigation workflow, and human decisions.
 
 For the complete documentation inventory and authority map, see
 [docs/README.md](./README.md).

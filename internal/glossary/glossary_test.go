@@ -16,7 +16,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/glossary/genrepo"
 )
 
-const frozenDigest = "sha256:4ac5da4281c2e06c07d06b20999d7c413742e54e73a9fbbb3606578e6586a50e"
+const frozenDigest = "sha256:33c75aa4176fb0ec3aa934177b5b33c99b715363e83b3777786b992de9daac06"
 
 func TestEmbeddedGlossaryAndGeneratedGoStayCanonical(t *testing.T) {
 	document, canonical, digest, err := glossary.LoadEmbedded()
@@ -67,7 +67,6 @@ func TestCanonicalEqualInputProducesByteEqualArtifacts(t *testing.T) {
 	slices.Reverse(document.Terms)
 	for index := range document.Terms {
 		term := &document.Terms[index]
-		slices.Reverse(term.Modes)
 		slices.Reverse(term.Surfaces)
 		slices.Reverse(term.WireAliases)
 		slices.Reverse(term.Availability.RequiresAll)
@@ -144,10 +143,10 @@ func TestGlossaryRejectsUnsafeAmbiguousOrStaleInput(t *testing.T) {
 			},
 		},
 		{
-			name: "duplicate mode",
-			mutate: func(value glossary.Document) []byte {
-				value.Terms[0].Modes = append(value.Terms[0].Modes, value.Terms[0].Modes[0])
-				return mustJSON(t, value)
+			name: "retired modes field",
+			mutate: func(glossary.Document) []byte {
+				return bytes.Replace(raw, []byte(`"schema_version":`),
+					[]byte(`"modes":["workbench"],"schema_version":`), 1)
 			},
 		},
 		{
@@ -320,7 +319,6 @@ func TestQualifiedSurfaceRegistrations(t *testing.T) {
 			glossary.TermNameMatchNeedingReview,
 			glossary.TermResolvedCaller,
 			glossary.TermServiceCatalogAuthority,
-			glossary.TermSuccessCriterion,
 		},
 		glossary.SurfaceMCP: {
 			glossary.TermAnalysisScopeAndGaps,
@@ -332,23 +330,12 @@ func TestQualifiedSurfaceRegistrations(t *testing.T) {
 			glossary.TermNameMatchNeedingReview,
 			glossary.TermResolvedCaller,
 			glossary.TermServiceCatalogAuthority,
-			glossary.TermSuccessCriterion,
 		},
 		glossary.SurfaceRelationshipExplorer: {
 			glossary.TermExactStaticRelationship,
 		},
 		glossary.SurfaceServiceDirectory: {
 			glossary.TermServiceCatalogAuthority,
-		},
-		glossary.SurfaceWorkbench: {
-			glossary.TermAnalysisScopeAndGaps,
-			glossary.TermCouldNotResolve,
-			glossary.TermCoverageCertificate,
-			glossary.TermImplementationEvidence,
-			glossary.TermMatchingStaticEvidence,
-			glossary.TermNameMatchNeedingReview,
-			glossary.TermResolvedCaller,
-			glossary.TermSuccessCriterion,
 		},
 	}
 	got := make(map[glossary.Surface][]glossary.TermID)

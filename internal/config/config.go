@@ -117,11 +117,6 @@ type Experimental struct {
 	// T23.1 spike; the pack is abstention-dominant by design and the same
 	// provisional repo/path lineage limitation applies.
 	ProvisionalKafkaExtraction bool `yaml:"provisional_kafka_extraction"`
-	// ProvisionalWorkbench binds the T21 Change Workbench to the same
-	// provisional protobuf/Thrift evidence lane as Contract Atlas. It is an
-	// overlay only: startup refuses the flag unless protobuf or Thrift
-	// extraction is also enabled.
-	ProvisionalWorkbench bool `yaml:"provisional_workbench"`
 }
 
 type Sync struct {

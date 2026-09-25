@@ -23,7 +23,6 @@
           "items": {
             "enum": [
               "caller-map-exact-identity",
-              "change-workbench",
               "code-navigation",
               "contract-atlas",
               "contract-impact-report",
@@ -43,7 +42,6 @@
           "items": {
             "enum": [
               "caller-map-exact-identity",
-              "change-workbench",
               "code-navigation",
               "contract-atlas",
               "contract-impact-report",
@@ -103,28 +101,13 @@
             "matching_static_evidence",
             "name_match_needing_review",
             "resolved_caller",
-            "service_catalog_authority",
-            "success_criterion"
+            "service_catalog_authority"
           ]
         },
         "label": {
           "maxLength": 128,
           "minLength": 1,
           "type": "string"
-        },
-        "modes": {
-          "items": {
-            "enum": [
-              "add",
-              "migrate",
-              "modify",
-              "retire"
-            ]
-          },
-          "maxItems": 4,
-          "minItems": 1,
-          "type": "array",
-          "uniqueItems": true
         },
         "short_help": {
           "maxLength": 4096,
@@ -144,11 +127,10 @@
               "manual",
               "mcp",
               "relationship_explorer",
-              "service_directory",
-              "workbench"
+              "service_directory"
             ]
           },
-          "maxItems": 12,
+          "maxItems": 11,
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
@@ -172,7 +154,6 @@
         "expanded_help",
         "evidence_boundary",
         "authority_boundary",
-        "modes",
         "surfaces",
         "wire_aliases",
         "availability"
@@ -180,7 +161,7 @@
       "type": "object"
     }
   },
-  "$id": "urn:phebs:schema:change-workbench-glossary-v1",
+  "$id": "urn:phebs:schema:phebs-evidence-glossary-v2",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -188,7 +169,6 @@
       "items": {
         "enum": [
           "caller-map-exact-identity",
-          "change-workbench",
           "code-navigation",
           "contract-atlas",
           "contract-impact-report",
@@ -199,20 +179,20 @@
           "source-search"
         ]
       },
-      "maxItems": 10,
-      "minItems": 10,
+      "maxItems": 9,
+      "minItems": 9,
       "type": "array",
       "uniqueItems": true
     },
     "schema_version": {
-      "const": "change-workbench-glossary-v1"
+      "const": "phebs-evidence-glossary-v2"
     },
     "terms": {
       "items": {
         "$ref": "#/$defs/term"
       },
-      "maxItems": 10,
-      "minItems": 10,
+      "maxItems": 9,
+      "minItems": 9,
       "type": "array"
     }
   },
@@ -221,6 +201,6 @@
     "capabilities",
     "terms"
   ],
-  "title": "phebs Change Workbench glossary v1",
+  "title": "phebs evidence glossary v2",
   "type": "object"
 }

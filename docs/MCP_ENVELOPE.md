@@ -1,5 +1,10 @@
 # phebs MCP envelope schema
 
+T46.1 retired the persistent Investigations product while preserving this
+read-only evidence-query envelope and its checked-in schemas. References below
+to Investigation resources describe historical domain semantics; the shipped
+MCP tools do not create or mutate those resources.
+
 *Normative MCP product contract, v0.2 · every evidence-sensitive MCP tool
 returns this envelope through a versioned output schema. Semantics derive from
 [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) v0.2;

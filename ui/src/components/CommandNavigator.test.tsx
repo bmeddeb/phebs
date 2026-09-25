@@ -71,13 +71,13 @@ describe('CommandNavigator', () => {
     expect(onClose).toHaveBeenCalled()
     expect(window.location.hash).toBe('#/services')
   })
-  it('offers active-scope jumps including the Workbench vocabulary', () => {
+  it('offers active-scope jumps to the relationship explorer', () => {
     mount({ repository: 'repo-x', serviceKey: 'orders-api', generation: 'gen-r4' })
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'workbench' } })
-    const option = screen.getByRole('option', { name: /Workbench · orders-api/ })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'explorer' } })
+    const option = screen.getByRole('option', { name: /Explorer · orders-api/ })
     fireEvent.click(option)
-    expect(decodeURIComponent(window.location.hash)).toContain('service_repository=repo-x')
-    expect(decodeURIComponent(window.location.hash)).toContain('source_service=orders-api')
+    expect(decodeURIComponent(window.location.hash)).toContain('repository=repo-x')
+    expect(decodeURIComponent(window.location.hash)).toContain('service_key=orders-api')
     expect(decodeURIComponent(window.location.hash)).toContain('scope_generation=gen-r4')
   })
   it('lists recent scopes without duplicating the active one', () => {

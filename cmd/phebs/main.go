@@ -708,91 +708,6 @@ func openStoreAfterRetentionWarning(
 	return open()
 }
 
-func bindProvisionalWorkbench(
-	opts *api.Options,
-	hasProtocolEvidence bool,
-	syntheticSetting string,
-	workbench store.InvestigationWorkbench,
-) error {
-	if err := validateSyntheticWorkbenchSetting(syntheticSetting); err != nil {
-		return err
-	}
-	if opts == nil {
-		return errors.New("provisional Workbench options are required")
-	}
-	if syntheticSetting == "1" || opts.ContractCatalogFixture != nil {
-		return fmt.Errorf(
-			"%w: provisional Workbench cannot be combined with synthetic Workbench or Contract Atlas fixtures",
-			errWorkbenchAuthorityConflict,
-		)
-	}
-	if !hasProtocolEvidence || opts.Evidence == nil || opts.ContractCatalog == nil {
-		return fmt.Errorf(
-			"%w: provisional Workbench requires provisional protobuf or Thrift extraction",
-			errWorkbenchEvidencePrerequisite,
-		)
-	}
-	if workbench == nil {
-		return fmt.Errorf(
-			"%w: provisional Workbench service is unavailable",
-			errWorkbenchEvidencePrerequisite,
-		)
-	}
-	opts.Workbench = workbench
-	return nil
-}
-
-var (
-	errWorkbenchAuthorityConflict    = errors.New("workbench-authority-conflict")
-	errWorkbenchEvidencePrerequisite = errors.New(
-		"workbench-evidence-prerequisite",
-	)
-	errSyntheticWorkbenchSetting = errors.New(
-		"PHEBS_SYNTHETIC_WORKBENCH must be empty or 1",
-	)
-)
-
-func validateSyntheticWorkbenchSetting(setting string) error {
-	switch setting {
-	case "", "1":
-		return nil
-	default:
-		return errSyntheticWorkbenchSetting
-	}
-}
-
-// bindSyntheticWorkbench is the only pre-enablement registration path. It is
-// deliberately coupled to both synthetic fixture providers and the exact flag
-// set by make dev; ordinary serve startup leaves the Huma route and capability
-// absent.
-func bindSyntheticWorkbench(
-	opts *api.Options,
-	setting string,
-	workbench store.InvestigationWorkbench,
-) error {
-	if err := validateSyntheticWorkbenchSetting(setting); err != nil {
-		return err
-	}
-	if opts == nil {
-		return errors.New("synthetic Workbench options are required")
-	}
-	switch setting {
-	case "":
-		return nil
-	case "1":
-	}
-	if opts.InvestigationViews == nil || opts.ContractCatalogFixture == nil {
-		return errors.New(
-			"synthetic Workbench requires Investigation and Contract Atlas fixtures",
-		)
-	}
-	if workbench == nil {
-		return errors.New("synthetic Workbench service is unavailable")
-	}
-	opts.Workbench = workbench
-	return nil
-}
-
 func newHTTPHandler(authService *auth.Service, apiHandler, mcpHandler, metricsHandler, uiHandler http.Handler, serverCfg config.Server) http.Handler {
 	mux := http.NewServeMux()
 	protectedAPI := authService.Require(apiHandler)
@@ -923,65 +838,10 @@ func bindSyntheticThriftFieldDemo(cfg *config.Config, fixture string) error {
 	return nil
 }
 
-// bindSyntheticWorkbenchClosureDemo is the make-dev-only bridge from the
-// retained neutral monorepo into the ordinary sync, index, and extraction
-// pipeline. The repository deliberately has no SCIP index, and only the
-// reviewed provisional protobuf and Thrift packs are enabled. Resource and
-// runtime planes remain unsupported.
-func bindSyntheticWorkbenchClosureDemo(cfg *config.Config, fixture string) error {
-	if fixture == "" {
-		return nil
-	}
-	if cfg == nil {
-		return errors.New("synthetic Workbench closure demo requires server configuration")
-	}
-	if strings.TrimSpace(fixture) != fixture ||
-		!filepath.IsAbs(fixture) ||
-		filepath.Clean(fixture) != fixture ||
-		filepath.Base(fixture) != "t2114-workbench-closure.bundle" {
-		return errors.New(
-			"synthetic Workbench closure demo must name the absolute clean t2114-workbench-closure.bundle path",
-		)
-	}
-	info, err := os.Stat(fixture)
-	if err != nil {
-		return fmt.Errorf("inspect synthetic Workbench closure demo: %w", err)
-	}
-	if !info.Mode().IsRegular() {
-		return errors.New("synthetic Workbench closure demo must be a regular bundle file")
-	}
-
-	const connectionName = "t21-workbench-closure"
-	alreadyConnected := false
-	for _, connection := range cfg.Connections {
-		if connection.Name == connectionName && connection.URL != fixture {
-			return fmt.Errorf(
-				"synthetic Workbench closure demo connection %q already names another source",
-				connectionName,
-			)
-		}
-		if connection.URL == fixture {
-			alreadyConnected = true
-		}
-	}
-	if !alreadyConnected {
-		cfg.Connections = append(cfg.Connections, config.Connection{
-			Name: connectionName,
-			Type: "git",
-			URL:  fixture,
-		})
-	}
-	cfg.Experimental.ProvisionalProtoExtraction = true
-	cfg.Experimental.ProvisionalThriftExtraction = true
-	return nil
-}
-
 // bindT307NeutralServiceDemo is the make-dev-only bridge from one retained,
 // cloneable neutral repository into the ordinary focused-index, extraction,
-// resolver, caller-overlay, and store-derived Workbench pipelines. The bridge
-// is explicit so ordinary serve startup and production configuration remain
-// unchanged. Unlike the older demo bridges, it installs no projected API or
-// Workbench result fixture.
+// resolver, and caller-overlay pipelines. The bridge is explicit so ordinary
+// serve startup and production configuration remain unchanged.
 func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
 	if fixture == "" {
 		return nil
@@ -1067,7 +927,6 @@ func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
 	cfg.AnalysisUnits[repository] = desiredUnit
 	cfg.Experimental.ProvisionalProtoExtraction = true
 	cfg.Experimental.ProvisionalKafkaExtraction = true
-	cfg.Experimental.ProvisionalWorkbench = true
 	return nil
 }
 
@@ -1266,18 +1125,6 @@ func mcpCallerMapServices(
 		comparisonQueries = comparison
 	}
 	return catalogQueries, callerMapQueries, comparisonQueries
-}
-
-// mcpInvestigationMutation is deliberately narrower than the browser/Huma
-// mutation predicate: MCP writes require a named API key, never a browser
-// session or the migration-only legacy key. Authenticate has already checked
-// expiry, revocation, user existence, and disabled state before this context
-// exists.
-func mcpInvestigationMutation(ctx context.Context) bool {
-	principal, ok := auth.PrincipalFromContext(ctx)
-	return ok && principal.HasAPIKeyCapability(
-		store.APIKeyCapabilityInvestigationWrite,
-	)
 }
 
 // evidenceExtractors is the validation-gated registry. The provisional

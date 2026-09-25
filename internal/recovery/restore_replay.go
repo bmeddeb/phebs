@@ -895,6 +895,7 @@ func restoreReplayOwnedFieldTail(tail string) bool {
 		"array<object> ASSERT array::len($value) <= 16384",
 		"array<string>",
 		"array<string> ASSERT array::len($value) <= 4000",
+		"array<string> DEFAULT [] ASSERT $value = []",
 		"array<string> DEFAULT [] ASSERT $value = [] OR $value = ['investigation:write']",
 		"bool",
 		"bool DEFAULT false",

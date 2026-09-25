@@ -52,7 +52,7 @@ func assertT422AllOwnersNativeReports(t *testing.T, raw string, input [32]byte) 
 			t.Fatal("real-owner positive prefix", line)
 		}
 	}
-	want := []string{lifecycle.CatalogOwner, lifecycle.CatalogV3Owner, lifecycle.GenerationScheduleOwner, lifecycle.JobOwner, lifecycle.SearchOwner, lifecycle.ObservationOwner, lifecycle.ObservationV2Owner, lifecycle.RelationshipOwner, lifecycle.RelationshipV3Owner, lifecycle.PartialStageOwner, lifecycle.SourceOwner, lifecycle.ResolverOwner, lifecycle.ProofOwner, lifecycle.InvestigationOwner, lifecycle.ReaderOwner, lifecycle.TombstoneOwner}
+	want := []string{lifecycle.CatalogOwner, lifecycle.CatalogV3Owner, lifecycle.GenerationScheduleOwner, lifecycle.JobOwner, lifecycle.SearchOwner, lifecycle.ObservationOwner, lifecycle.ObservationV2Owner, lifecycle.RelationshipOwner, lifecycle.RelationshipV3Owner, lifecycle.PartialStageOwner, lifecycle.SourceOwner, lifecycle.ResolverOwner, lifecycle.ProofOwner, "investigations", lifecycle.ReaderOwner, lifecycle.TombstoneOwner}
 	if bindings != 1 || len(names) != len(want) || count < t422CleanupExpectedTurns || count > uint64(lifecycle.MaxCycleObservationTurns) || deleted != t422AllOwnersMinimumDeleted {
 		t.Fatal("real-owner coverage", bindings, names, count, deleted)
 	}

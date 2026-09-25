@@ -55,34 +55,35 @@ type ExecutionEnvironmentProfile struct {
 }
 
 type ExecutionConfigProfile struct {
-	Schema                           string   `json:"schema"`
-	Policy                           string   `json:"policy"`
-	BytesSHA256                      string   `json:"bytes_sha256"`
-	ProjectionSHA256                 string   `json:"projection_sha256"`
-	ListenSurface                    string   `json:"listen_surface"`
-	AddressOverride                  bool     `json:"address_override"`
-	StoreMode                        string   `json:"store_mode"`
-	Authentication                   string   `json:"authentication"`
-	ConnectionPosture                string   `json:"connection_posture"`
-	ConnectionCount                  uint64   `json:"connection_count"`
-	ServiceCatalogRuntime            string   `json:"service_catalog_runtime"`
-	ServiceCatalogCount              uint64   `json:"service_catalog_count"`
-	AnalysisUnitPosture              string   `json:"analysis_unit_posture"`
-	LifecycleEnabled                 bool     `json:"lifecycle_enabled"`
-	SyncPollMilliseconds             uint64   `json:"sync_poll_milliseconds"`
-	ResyncDisabled                   bool     `json:"resync_disabled"`
-	DiagnosticsJobs                  bool     `json:"diagnostics_jobs"`
-	DiagnosticsCandidates            bool     `json:"diagnostics_candidates"`
-	DiagnosticsExtraction            bool     `json:"diagnostics_extraction"`
-	DiagnosticsExtractorDetails      bool     `json:"diagnostics_extractor_details"`
-	ProvisionalProtoExtraction       bool     `json:"provisional_proto_extraction"`
-	ProvisionalThriftExtraction      bool     `json:"provisional_thrift_extraction"`
-	ProvisionalThriftFieldExtraction bool     `json:"provisional_thrift_field_extraction"`
-	ProvisionalKafkaExtraction       bool     `json:"provisional_kafka_extraction"`
-	ProvisionalWorkbench             bool     `json:"provisional_workbench"`
-	EnabledExtractorDomains          []string `json:"enabled_extractor_domains"`
-	AbsentOptionalConfiguration      []string `json:"absent_optional_configuration"`
-	CompatibilityPosture             string   `json:"compatibility_posture,omitempty"`
+	Schema                           string `json:"schema"`
+	Policy                           string `json:"policy"`
+	BytesSHA256                      string `json:"bytes_sha256"`
+	ProjectionSHA256                 string `json:"projection_sha256"`
+	ListenSurface                    string `json:"listen_surface"`
+	AddressOverride                  bool   `json:"address_override"`
+	StoreMode                        string `json:"store_mode"`
+	Authentication                   string `json:"authentication"`
+	ConnectionPosture                string `json:"connection_posture"`
+	ConnectionCount                  uint64 `json:"connection_count"`
+	ServiceCatalogRuntime            string `json:"service_catalog_runtime"`
+	ServiceCatalogCount              uint64 `json:"service_catalog_count"`
+	AnalysisUnitPosture              string `json:"analysis_unit_posture"`
+	LifecycleEnabled                 bool   `json:"lifecycle_enabled"`
+	SyncPollMilliseconds             uint64 `json:"sync_poll_milliseconds"`
+	ResyncDisabled                   bool   `json:"resync_disabled"`
+	DiagnosticsJobs                  bool   `json:"diagnostics_jobs"`
+	DiagnosticsCandidates            bool   `json:"diagnostics_candidates"`
+	DiagnosticsExtraction            bool   `json:"diagnostics_extraction"`
+	DiagnosticsExtractorDetails      bool   `json:"diagnostics_extractor_details"`
+	ProvisionalProtoExtraction       bool   `json:"provisional_proto_extraction"`
+	ProvisionalThriftExtraction      bool   `json:"provisional_thrift_extraction"`
+	ProvisionalThriftFieldExtraction bool   `json:"provisional_thrift_field_extraction"`
+	ProvisionalKafkaExtraction       bool   `json:"provisional_kafka_extraction"`
+	// Retained V1/V2 profile byte: always false; current config rejects this flag.
+	ProvisionalWorkbench        bool     `json:"provisional_workbench"`
+	EnabledExtractorDomains     []string `json:"enabled_extractor_domains"`
+	AbsentOptionalConfiguration []string `json:"absent_optional_configuration"`
+	CompatibilityPosture        string   `json:"compatibility_posture,omitempty"`
 }
 
 type ExecutionRuntimeProfile struct {

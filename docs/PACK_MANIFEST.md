@@ -1,5 +1,9 @@
 # phebs executable pack manifest
 
+T46.1 retired persistent Investigations. Investigation Review, Decision, and
+workflow projections below are retained design history, not active PHEBS
+resources. The shipped read-only MCP evidence envelope remains independent.
+
 *Normative contract, v0.2 · the machine-readable counterpart of the
 [evidence-pack card](./EVIDENCE_PACK_CARD.md). Semantics derive from the
 [domain contract](./INVESTIGATION_DOMAIN_CONTRACT.md) v0.2 and the

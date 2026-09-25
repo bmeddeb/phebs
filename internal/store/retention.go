@@ -17,52 +17,27 @@ import (
 type RetentionComponent string
 
 const (
-	RetentionExtractionRun                          RetentionComponent = "extraction_run"
-	RetentionEvidenceChunk                          RetentionComponent = "evidence_chunk"
-	RetentionExtractionDomainRoot                   RetentionComponent = "extraction_domain_root"
-	RetentionSnapshotEvidence                       RetentionComponent = "snapshot_evidence"
-	RetentionAssertion                              RetentionComponent = "assertion"
-	RetentionEvidenceAtom                           RetentionComponent = "evidence_atom"
-	RetentionExtractionAttempt                      RetentionComponent = "extraction_attempt"
-	RetentionExtractionOutcome                      RetentionComponent = "extraction_domain_outcome"
-	RetentionProofBundlePin                         RetentionComponent = "evidence_pin[kind=proof-bundle:<bundle_id>]"
-	RetentionInvestigationArtifactPin               RetentionComponent = "evidence_pin[kind=investigation-artifact:<artifact_id>]"
-	RetentionOtherEvidencePin                       RetentionComponent = "evidence_pin[kind=<other exact store-accepted value>]"
-	RetentionProofBundle                            RetentionComponent = "proof_bundle"
-	RetentionCallerPublication                      RetentionComponent = "caller_generation_publication"
-	RetentionCallerAdmission                        RetentionComponent = "caller_generation_admission"
-	RetentionCallerLeafOutcome                      RetentionComponent = "caller_leaf_outcome"
-	RetentionInvestigation                          RetentionComponent = "investigation"
-	RetentionInvestigationRevision                  RetentionComponent = "investigation_revision"
-	RetentionInvestigationChangeBrief               RetentionComponent = "investigation_change_brief"
-	RetentionWorkbenchMutation                      RetentionComponent = "investigation_workbench_mutation"
-	RetentionWorkbenchDisposition                   RetentionComponent = "investigation_workbench_disposition"
-	RetentionInvestigationRun                       RetentionComponent = "investigation_run"
-	RetentionInvestigationRunEvent                  RetentionComponent = "investigation_run_event"
-	RetentionInvestigationRunArtifact               RetentionComponent = "investigation_run_artifact"
-	RetentionInvestigationArtifactOwner             RetentionComponent = "investigation_artifact_owner"
-	RetentionInvestigationArtifactOwnerRelease      RetentionComponent = "investigation_artifact_owner_release"
-	RetentionInvestigationArtifactRetentionOverride RetentionComponent = "investigation_artifact_retention_override"
-	RetentionInvestigationDecision                  RetentionComponent = "investigation_decision"
-	RetentionInvestigationDisposition               RetentionComponent = "investigation_disposition"
-	RetentionInvestigationBaselineDesignation       RetentionComponent = "investigation_baseline_designation"
-	RetentionInvestigationGrant                     RetentionComponent = "investigation_grant"
-	RetentionInvestigationCursor                    RetentionComponent = "investigation_cursor"
-	RetentionInvestigationCreation                  RetentionComponent = "investigation_creation"
-	RetentionInvestigationConsumerSnapshot          RetentionComponent = "investigation_consumer_snapshot"
-	RetentionInvestigationConsumerEdgeLedger        RetentionComponent = "investigation_consumer_edge_ledger"
-	RetentionInvestigationReviewProjection          RetentionComponent = "investigation_review_projection"
-	RetentionInvestigationReviewItem                RetentionComponent = "investigation_review_item"
-	RetentionInvestigationDossier                   RetentionComponent = "investigation_dossier"
-	RetentionInvestigationWatch                     RetentionComponent = "investigation_watch"
-	RetentionInvestigationWatchRevision             RetentionComponent = "investigation_watch_revision"
-	RetentionCandidatePublication                   RetentionComponent = "candidate_manifest_publication"
-	RetentionCandidateFiles                         RetentionComponent = "$DATA/candidates managed publication files"
-	RetentionFocusedRepositoryState                 RetentionComponent = "repo indexed analysis-unit/revision state"
-	RetentionFocusedFiles                           RetentionComponent = "$DATA/index focused publication files"
-	RetentionResolverPublication                    RetentionComponent = "resolver_catalog_publication"
-	RetentionResolverFiles                          RetentionComponent = "$DATA/resolver-catalogs package-owned files"
-	RetentionCallerArtifacts                        RetentionComponent = "$DATA/caller-leaves managed manifests and leaf artifacts"
+	RetentionExtractionRun          RetentionComponent = "extraction_run"
+	RetentionEvidenceChunk          RetentionComponent = "evidence_chunk"
+	RetentionExtractionDomainRoot   RetentionComponent = "extraction_domain_root"
+	RetentionSnapshotEvidence       RetentionComponent = "snapshot_evidence"
+	RetentionAssertion              RetentionComponent = "assertion"
+	RetentionEvidenceAtom           RetentionComponent = "evidence_atom"
+	RetentionExtractionAttempt      RetentionComponent = "extraction_attempt"
+	RetentionExtractionOutcome      RetentionComponent = "extraction_domain_outcome"
+	RetentionProofBundlePin         RetentionComponent = "evidence_pin[kind=proof-bundle:<bundle_id>]"
+	RetentionOtherEvidencePin       RetentionComponent = "evidence_pin[kind=<other exact store-accepted value>]"
+	RetentionProofBundle            RetentionComponent = "proof_bundle"
+	RetentionCallerPublication      RetentionComponent = "caller_generation_publication"
+	RetentionCallerAdmission        RetentionComponent = "caller_generation_admission"
+	RetentionCallerLeafOutcome      RetentionComponent = "caller_leaf_outcome"
+	RetentionCandidatePublication   RetentionComponent = "candidate_manifest_publication"
+	RetentionCandidateFiles         RetentionComponent = "$DATA/candidates managed publication files"
+	RetentionFocusedRepositoryState RetentionComponent = "repo indexed analysis-unit/revision state"
+	RetentionFocusedFiles           RetentionComponent = "$DATA/index focused publication files"
+	RetentionResolverPublication    RetentionComponent = "resolver_catalog_publication"
+	RetentionResolverFiles          RetentionComponent = "$DATA/resolver-catalogs package-owned files"
+	RetentionCallerArtifacts        RetentionComponent = "$DATA/caller-leaves managed manifests and leaf artifacts"
 )
 
 // RetentionComponentRequest gives one component its non-transferable share of
@@ -100,22 +75,12 @@ type CoreRetentionStore interface {
 	CollectCoreRetention(context.Context, []RetentionComponentRequest) ([]RetentionComponentResult, error)
 }
 
-// InvestigationRetentionStatusStore is the T30.6q bounded Investigation/Workbench
-// inventory boundary. It deliberately excludes investigation_run_job, which
-// remains part of CoreRetentionStore's durable-job group.
-type InvestigationRetentionStatusStore interface {
-	CollectInvestigationRetention(context.Context, []RetentionComponentRequest) ([]RetentionComponentResult, error)
-}
-
-// RetentionStatusStore is the database-backed portion of the fixed retention
-// status surface shipped through T30.6q.
+// RetentionStatusStore is the database-backed portion of retention status.
 type RetentionStatusStore interface {
 	CoreRetentionStore
-	InvestigationRetentionStatusStore
 }
 
 var _ CoreRetentionStore = (*Surreal)(nil)
-var _ InvestigationRetentionStatusStore = (*Surreal)(nil)
 var _ RetentionStatusStore = (*Surreal)(nil)
 
 var ErrRetentionComponentUnavailable = errors.New("retention component unavailable")
@@ -136,7 +101,6 @@ type retentionPinPartition int
 const (
 	retentionNoPinPartition retentionPinPartition = iota
 	retentionProofPins
-	retentionInvestigationPins
 	retentionOtherPins
 )
 
@@ -178,9 +142,6 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 	RetentionProofBundlePin: {
 		table: "evidence_pin", readiness: retentionEvidencePinReady, pins: retentionProofPins,
 	},
-	RetentionInvestigationArtifactPin: {
-		table: "evidence_pin", readiness: retentionEvidencePinReady, pins: retentionInvestigationPins,
-	},
 	RetentionOtherEvidencePin: {
 		table: "evidence_pin", readiness: retentionEvidencePinReady, pins: retentionOtherPins,
 	},
@@ -195,7 +156,6 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 	RetentionComponent(JobExtract):         {table: string(JobExtract), readiness: retentionJobsReady},
 	RetentionComponent(JobResolverCatalog): {table: string(JobResolverCatalog), readiness: retentionJobsReady},
 	RetentionComponent(JobCallerLeaf):      {table: string(JobCallerLeaf), readiness: retentionJobsReady},
-	RetentionComponent(JobInvestigate):     {table: string(JobInvestigate), readiness: retentionJobsReady},
 	RetentionCallerPublication: {
 		table: "caller_generation_publication", readiness: retentionCallerPublicationReady,
 		byteExpression: retentionNonnegativeScalarBytesSQL,
@@ -210,76 +170,11 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 	},
 }
 
-var investigationRetentionPlans = map[RetentionComponent]retentionQueryPlan{
-	RetentionInvestigation:                     {table: "investigation"},
-	RetentionInvestigationRevision:             {table: "investigation_revision"},
-	RetentionInvestigationChangeBrief:          {table: "investigation_change_brief"},
-	RetentionWorkbenchMutation:                 {table: "investigation_workbench_mutation"},
-	RetentionWorkbenchDisposition:              {table: "investigation_workbench_disposition"},
-	RetentionInvestigationRun:                  {table: "investigation_run"},
-	RetentionInvestigationRunEvent:             {table: "investigation_run_event"},
-	RetentionInvestigationRunArtifact:          {table: "investigation_run_artifact"},
-	RetentionInvestigationArtifactOwner:        {table: "investigation_artifact_owner"},
-	RetentionInvestigationArtifactOwnerRelease: {table: "investigation_artifact_owner_release"},
-	RetentionInvestigationArtifactRetentionOverride: {
-		table: "investigation_artifact_retention_override",
-	},
-	RetentionInvestigationDecision:            {table: "investigation_decision"},
-	RetentionInvestigationDisposition:         {table: "investigation_disposition"},
-	RetentionInvestigationBaselineDesignation: {table: "investigation_baseline_designation"},
-	RetentionInvestigationGrant:               {table: "investigation_grant"},
-	RetentionInvestigationCursor:              {table: "investigation_cursor"},
-	RetentionInvestigationCreation:            {table: "investigation_creation"},
-	RetentionInvestigationConsumerSnapshot:    {table: "investigation_consumer_snapshot"},
-	RetentionInvestigationConsumerEdgeLedger:  {table: "investigation_consumer_edge_ledger"},
-	RetentionInvestigationReviewProjection:    {table: "investigation_review_projection"},
-	RetentionInvestigationReviewItem:          {table: "investigation_review_item"},
-	RetentionInvestigationDossier:             {table: "investigation_dossier"},
-	RetentionInvestigationWatch:               {table: "investigation_watch"},
-	RetentionInvestigationWatchRevision:       {table: "investigation_watch_revision"},
-}
-
-// Keep table definitions inside SurrealDB. Only names intersecting the fixed
-// T30.6q allowlist may cross the WebSocket boundary.
-const investigationRetentionCatalogSQL = `
-RETURN array::intersect(
-	object::keys((INFO FOR DB).tables),
-	[
-		'investigation',
-		'investigation_revision',
-		'investigation_change_brief',
-		'investigation_workbench_mutation',
-		'investigation_workbench_disposition',
-		'investigation_run',
-		'investigation_run_event',
-		'investigation_run_artifact',
-		'investigation_artifact_owner',
-		'investigation_artifact_owner_release',
-		'investigation_artifact_retention_override',
-		'investigation_decision',
-		'investigation_disposition',
-		'investigation_baseline_designation',
-		'investigation_grant',
-		'investigation_cursor',
-		'investigation_creation',
-		'investigation_consumer_snapshot',
-		'investigation_consumer_edge_ledger',
-		'investigation_review_projection',
-		'investigation_review_item',
-		'investigation_dossier',
-		'investigation_watch',
-		'investigation_watch_revision'
-	]
-)`
-
 const (
-	maxRetentionReportedPerComponent            = 79
-	maxCoreRetentionRequests                    = 23
-	maxCoreRetentionReportedIdentities          = 1_745
-	maxCoreRetentionScanIdentities              = 1_768
-	maxInvestigationRetentionRequests           = 24
-	maxInvestigationRetentionReportedIdentities = 1_848
-	maxInvestigationRetentionScanIdentities     = 1_872
+	maxRetentionReportedPerComponent   = 147
+	maxCoreRetentionRequests           = 21
+	maxCoreRetentionReportedIdentities = 3_074
+	maxCoreRetentionScanIdentities     = 3_095
 )
 
 type retentionRow struct {
@@ -400,64 +295,6 @@ func (s *Surreal) CollectCoreRetention(
 	return results, nil
 }
 
-func (s *Surreal) CollectInvestigationRetention(
-	ctx context.Context,
-	requests []RetentionComponentRequest,
-) ([]RetentionComponentResult, error) {
-	if err := validateRetentionRequests(
-		"investigation",
-		requests,
-		investigationRetentionPlans,
-		maxInvestigationRetentionRequests,
-		maxInvestigationRetentionReportedIdentities,
-		maxInvestigationRetentionScanIdentities,
-	); err != nil {
-		return nil, err
-	}
-	if len(requests) == 0 {
-		return []RetentionComponentResult{}, nil
-	}
-	tables, catalogErr := s.retentionCatalogTables(ctx)
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-
-	results := make([]RetentionComponentResult, 0, len(requests))
-	for _, request := range requests {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		result := RetentionComponentResult{Component: request.Component}
-		if catalogErr != nil {
-			result.Err = catalogErr
-			results = append(results, result)
-			continue
-		}
-		plan := investigationRetentionPlans[request.Component]
-		if _, present := tables[plan.table]; !present {
-			result.Err = fmt.Errorf(
-				"%w: table %s is absent from the database catalog",
-				ErrRetentionComponentUnavailable,
-				plan.table,
-			)
-			results = append(results, result)
-			continue
-		}
-		rows, err := s.retentionRows(ctx, plan, request.ScanIdentities)
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-			result.Err = err
-			results = append(results, result)
-			continue
-		}
-		result.Summary = summarizeRetentionRows(plan, request, rows)
-		results = append(results, result)
-	}
-	return results, nil
-}
-
 func (s *Surreal) retentionReadiness(
 	ctx context.Context,
 	readiness retentionReadiness,
@@ -509,38 +346,6 @@ func (s *Surreal) requireRetentionIndex(
 	return nil
 }
 
-func (s *Surreal) retentionCatalogTables(ctx context.Context) (map[string]struct{}, error) {
-	results, err := storeQuery[[]string](ctx, s.accounting, s.db, investigationRetentionCatalogSQL, nil, storeRead())
-	if err != nil {
-		return nil, fmt.Errorf("inspect retention database catalog: %w", err)
-	}
-	if err := retentionQueryResultsError(results); err != nil {
-		return nil, fmt.Errorf("inspect retention database catalog: %w", err)
-	}
-
-	names := (*results)[0].Result
-	if len(names) > len(investigationRetentionPlans) {
-		return nil, fmt.Errorf(
-			"inspect retention database catalog: %d tables exceed fixed projection of %d",
-			len(names),
-			len(investigationRetentionPlans),
-		)
-	}
-
-	tables := make(map[string]struct{}, len(names))
-	for _, name := range names {
-		plan, allowed := investigationRetentionPlans[RetentionComponent(name)]
-		if !allowed || plan.table != name {
-			return nil, fmt.Errorf("inspect retention database catalog: unexpected table %q", name)
-		}
-		if _, duplicate := tables[name]; duplicate {
-			return nil, fmt.Errorf("inspect retention database catalog: duplicate table %q", name)
-		}
-		tables[name] = struct{}{}
-	}
-	return tables, nil
-}
-
 func (s *Surreal) retentionRows(
 	ctx context.Context,
 	plan retentionQueryPlan,
@@ -579,10 +384,8 @@ func (s *Surreal) retentionPinRows(
 	scanLimit int,
 ) ([]retentionRow, error) {
 	const (
-		investigationStart = "investigation-artifact:"
-		investigationEnd   = "investigation-artifact;"
-		proofStart         = "proof-bundle:"
-		proofEnd           = "proof-bundle;"
+		proofStart = "proof-bundle:"
+		proofEnd   = "proof-bundle;"
 	)
 	type kindRange struct {
 		lower *string
@@ -593,12 +396,9 @@ func (s *Surreal) retentionPinRows(
 	switch partition {
 	case retentionProofPins:
 		ranges = []kindRange{{lower: value(proofStart), upper: value(proofEnd)}}
-	case retentionInvestigationPins:
-		ranges = []kindRange{{lower: value(investigationStart), upper: value(investigationEnd)}}
 	case retentionOtherPins:
 		ranges = []kindRange{
-			{upper: value(investigationStart)},
-			{lower: value(investigationEnd), upper: value(proofStart)},
+			{upper: value(proofStart)},
 			{lower: value(proofEnd)},
 		}
 	default:

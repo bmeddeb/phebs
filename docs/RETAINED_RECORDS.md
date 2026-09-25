@@ -233,6 +233,12 @@ and freezes no independent scale bound, accuracy result, or current behavior.
 - [T30.7 neutral focused-service cohort](./fixtures/t30.7-neutral-service/README.md)
 - [T34.4 neutral All code/service-search cohort](./fixtures/t34.4-service-search/README.md)
 
+The Change Workbench fixture is historical evidence only. The synthetic
+Investigation envelope fixtures remain conformance inputs for the shipped
+read-only MCP evidence schema, while their product-workflow scenarios are
+historical. T46.1 removed Investigation/Workbench application routes,
+activation, Workbench MCP tools, and product schema tables.
+
 Fixtures prove bounded software behavior. Synthetic or authored evidence is
 not public-corpus accuracy or completeness evidence.
 

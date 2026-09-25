@@ -1,5 +1,5 @@
 // Package glossary owns the canonical, versioned user-language contract used
-// by contract intelligence and the Change Workbench.
+// by contract intelligence and other evidence surfaces.
 package glossary
 
 import (
@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	SchemaVersion = "change-workbench-glossary-v1"
+	SchemaVersion = "phebs-evidence-glossary-v2"
 
 	maxGlossaryBytes = 256 << 10
 	maxTerms         = 64
@@ -34,7 +34,6 @@ var (
 
 	requiredCapabilityIDs = []string{
 		"caller-map-exact-identity",
-		"change-workbench",
 		"code-navigation",
 		"contract-atlas",
 		"contract-impact-report",
@@ -54,7 +53,6 @@ var (
 		"name_match_needing_review",
 		"resolved_caller",
 		"service_catalog_authority",
-		"success_criterion",
 	}
 )
 
@@ -69,9 +67,6 @@ type TermID string
 // Capability is an advertised or planned product capability used to decide
 // whether help is available on a given surface.
 type Capability string
-
-// Mode is one of the four reviewed Change Workbench ticket journeys.
-type Mode string
 
 // Surface is a UI, API-adjacent, agent, or documentation projection.
 type Surface string
@@ -91,7 +86,6 @@ type Term struct {
 	ExpandedHelp      string              `json:"expanded_help"`
 	EvidenceBoundary  string              `json:"evidence_boundary"`
 	AuthorityBoundary string              `json:"authority_boundary"`
-	Modes             []Mode              `json:"modes"`
 	Surfaces          []Surface           `json:"surfaces"`
 	WireAliases       []string            `json:"wire_aliases"`
 	Availability      CapabilityPredicate `json:"availability"`
@@ -173,7 +167,6 @@ func normalize(value *Document) {
 	slices.Sort(value.Capabilities)
 	for index := range value.Terms {
 		term := &value.Terms[index]
-		slices.Sort(term.Modes)
 		slices.Sort(term.Surfaces)
 		slices.Sort(term.WireAliases)
 		slices.Sort(term.Availability.RequiresAll)
@@ -238,9 +231,6 @@ func validate(value Document) error {
 		if len(term.Label) > 128 {
 			return fmt.Errorf("glossary term %s label exceeds 128 bytes", term.ID)
 		}
-		if err := validateModes(term); err != nil {
-			return err
-		}
 		if err := validateSurfaces(term); err != nil {
 			return err
 		}
@@ -271,26 +261,10 @@ func validate(value Document) error {
 	}
 	for _, surface := range []Surface{
 		"atlas", "blame", "caller_map", "commit", "file", "history", "impact",
-		"manual", "mcp", "relationship_explorer", "service_directory", "workbench",
+		"manual", "mcp", "relationship_explorer", "service_directory",
 	} {
 		if !coveredSurfaces[surface] {
 			return fmt.Errorf("glossary has no registered term for %s", surface)
-		}
-	}
-	return nil
-}
-
-func validateModes(term Term) error {
-	allowed := map[Mode]bool{"add": true, "migrate": true, "modify": true, "retire": true}
-	if len(term.Modes) == 0 || len(term.Modes) > 4 {
-		return fmt.Errorf("glossary term %s modes are outside the allowed range", term.ID)
-	}
-	for index, mode := range term.Modes {
-		if !allowed[mode] {
-			return fmt.Errorf("glossary term %s has invalid mode %q", term.ID, mode)
-		}
-		if index > 0 && mode == term.Modes[index-1] {
-			return fmt.Errorf("glossary term %s repeats mode %q", term.ID, mode)
 		}
 	}
 	return nil
@@ -301,7 +275,6 @@ func validateSurfaces(term Term) error {
 		"atlas": true, "blame": true, "caller_map": true, "commit": true,
 		"file": true, "history": true, "impact": true, "manual": true,
 		"mcp": true, "relationship_explorer": true, "service_directory": true,
-		"workbench": true,
 	}
 	if len(term.Surfaces) == 0 || len(term.Surfaces) > len(allowed) {
 		return fmt.Errorf("glossary term %s surfaces are outside the allowed range", term.ID)
@@ -358,7 +331,7 @@ func validateText(name, value string, limit int) error {
 
 func digest(canonical []byte) string {
 	hash := sha256.New()
-	hash.Write([]byte("phebs-change-workbench-glossary-v1"))
+	hash.Write([]byte("phebs-evidence-glossary-v2"))
 	hash.Write([]byte{0})
 	hash.Write(canonical)
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil))

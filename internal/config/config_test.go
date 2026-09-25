@@ -633,21 +633,9 @@ func TestProvisionalThriftFieldExtractionIsExplicitOptIn(t *testing.T) {
 	}
 }
 
-func TestProvisionalWorkbenchIsExplicitOptIn(t *testing.T) {
-	cfg, err := Parse([]byte("{}"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.Experimental.ProvisionalWorkbench {
-		t.Fatal("provisional Workbench enabled by default")
-	}
-
-	cfg, err = Parse([]byte("experimental:\n  provisional_workbench: true\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !cfg.Experimental.ProvisionalWorkbench {
-		t.Fatal("explicit provisional Workbench opt-in was ignored")
+func TestRemovedWorkbenchSettingIsRejected(t *testing.T) {
+	if _, err := Parse([]byte("experimental:\n  provisional_workbench: true\n")); err == nil {
+		t.Fatal("removed Workbench setting was accepted")
 	}
 }
 

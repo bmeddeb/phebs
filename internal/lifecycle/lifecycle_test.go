@@ -484,13 +484,12 @@ func TestRunnerCompletesAProcessObservedCycleBeforeIdle(t *testing.T) {
 	}
 }
 
-func TestRunnerCompletesSixteenOwnerCycleFromEveryDurableCursor(t *testing.T) {
+func TestRunnerCompletesFifteenOwnerCycleFromEveryDurableCursor(t *testing.T) {
 	names := []string{
 		CatalogOwner,
 		CatalogV3Owner,
 		JobOwner,
 		GenerationScheduleOwner,
-		InvestigationOwner,
 		ObservationOwner,
 		ObservationV2Owner,
 		PartialStageOwner,

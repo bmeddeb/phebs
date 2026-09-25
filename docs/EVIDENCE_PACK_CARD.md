@@ -3,7 +3,7 @@
 *Reusable capability and validation template · version 0.1*
 
 **Related documents:** [product vision](./VISION.md) ·
-[pilot charter](./PILOT_CHARTER.md) · [adoption pitch](./PITCH.md) · [investigations](./INVESTIGATIONS.md)
+[pilot charter](./PILOT_CHARTER.md) · [adoption pitch](./PITCH.md) · [historical Investigations design](./INVESTIGATIONS.md)
 
 ## How to use this card
 
@@ -317,9 +317,10 @@ For conformance-shaped packs, use three-valued conclusions:
 Absence of a matching fact must not silently become compliance.
 
 Human dispositions (`accepted`, `remediate`, `exempt`, `false positive`,
-`unknown`) are stored separately from evidence and never rewrite the source
-fact. Each disposition records its rationale, actor, accountable owner,
-timestamp, expiry/review date, applicable policy version, and referenced fact
+`unknown`) belong in Cortana. They are stored separately from PHEBS evidence
+and never rewrite the source fact. Each disposition records its rationale,
+actor, accountable owner, timestamp, expiry/review date, applicable policy
+version, and referenced fact
 and coverage identities. An expired disposition returns to the policy-defined
 default state.
 
@@ -334,8 +335,8 @@ cause, and failed or inaccessible units never render as "removed."
 
 ### Challenge intake and error ledger
 
-Evidence challenges (e.g. a `false attribution` disposition) enter the
-pack's quality review: intake with triage duty and owner, adjudication
+Evidence challenges (e.g. a `false attribution` disposition) enter Cortana's
+quality review: intake with triage duty and owner, adjudication
 against the frozen evidence, and an append-only error ledger recording
 confirmed errors by class. Challenges never modify facts; confirmed
 errors feed the suspension triggers below.
@@ -511,9 +512,9 @@ blank operating limit, or release-blocking open risk prevents `released`.
 ### Expiry semantics
 
 Expired validation suspends new claims, promotions, and release status; it
-does not delete history. Already-published facts and dossiers remain
-queryable with the expired-validation status surfaced; dossiers
-self-describe via their cited validation identity.
+does not delete history. Already-published facts remain queryable with the
+expired-validation status surfaced by their consumers; proof bundles retain
+their cited validation identity.
 
 ### Revalidation policy
 

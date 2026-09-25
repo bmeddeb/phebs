@@ -15,9 +15,9 @@ CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
 - `docs/MANUAL.md` — the user-guide index. Behavior changes update the owning
   task guide under `docs/guides/` in the same PR.
 - `docs/README.md` — documentation map; the adoption suite
-  (VISION/INVESTIGATIONS/PITCH/PILOT_CHARTER/EVIDENCE_PACK_CARD) lives in
-  docs/ and must stay mutually consistent: no doc expands the ask of the
-  one above it.
+  (VISION/PITCH/PILOT_CHARTER/EVIDENCE_PACK_CARD) lives in docs/ and must stay
+  mutually consistent: no doc expands the ask of the one above it. The former
+  Investigations product documents are retained historical contracts.
 
 ## Stack
 
@@ -101,15 +101,19 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 ## Current state
 
 **Single-node implementation is complete for Epics 0–24, provisional
-Workbench binding Epic 29, service-scope Epic 30, and bounded pipeline
+historical Workbench binding Epic 29, service-scope Epic 30, and bounded pipeline
 observability Epic 31 (2026-08-04); Epic 32's multi-service v2 contract and
 validation gate is also complete.** Search,
 repository browsing, authentication,
 permissions, audit/analytics, SCIP/history, stateless MCP, bounded `rev:`
 indexing, and backup/restore are shipped core behavior. Contract Atlas, Caller
-Map, Impact, Investigations/Workbench, Thrift-field, and Kafka evidence are
-implemented but remain experimental/default-dark; the Workbench's provisional
-store-derived binding creates no production registration. Epic 30's
+Map, Impact, Thrift-field, and Kafka evidence are implemented but remain
+experimental/default-dark. T46.1 retires Investigations and Change Workbench,
+including their HTTP/UI product surfaces, Workbench MCP tools, worker, and
+credential write capability; PHEBS provides read-only MCP evidence while
+Cortana owns change organization, investigation workflow, and human decisions.
+Their tables, job-history and artifact-pin components are removed; there is no
+production-instance migration. Epic 30's
 service-scope program is complete: T30.1 recorded a focused-index spike GO
 without production behavior changes; T30.2 added strict analysis-unit
 configuration and committed state; T30.3 shipped manifest-bound focused
@@ -137,10 +141,11 @@ authorization-first retention-status shell and capacity warning, and T30.6p's
 21 core SurrealDB retention collectors are also shipped. T30.6q's exact
 24-table Investigation/Workbench collector and T30.6r's bounded
 derived-publication store/filesystem collectors are shipped, completing the
-then-52-component retention-status surface; T40.7 adds the durable chunk
-ledger as the 53rd component. T30.7 closes the epic with scope-aware
-product surfaces, coverage-certificate v3 and durable domain receipts, exact
-caller record/progress summaries, HTTP/MCP scope parity, and a neutral
+then-52-component retention-status surface; T40.7 later added the durable chunk
+ledger as the then-53rd component. T46.1 retired the Investigation and
+change-planning components; the current registry has 28 components. T30.7 closed the epic
+with scope-aware product surfaces, coverage-certificate v3 and durable domain
+receipts, exact caller record/progress summaries, HTTP/MCP scope parity, and a neutral
 ordinary-worker `make dev` cohort. Its post-review closure preserves retained
 v1/v2 proof bytes, validates the real exact Caller Map envelope through MCP,
 and keeps failure, explicit-gap, and zero/empty states visible. T31.1 bounded

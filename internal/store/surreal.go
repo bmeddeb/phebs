@@ -328,6 +328,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.applySchemaBatch(ctx, schema, ""); err != nil {
 		return err
 	}
+	if err := s.removeRetiredInvestigationTables(ctx); err != nil {
+		return err
+	}
 	if err := s.migrateGenerationResourceClasses(ctx); err != nil {
 		return err
 	}
@@ -361,6 +364,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateAPIKeyCapabilities(ctx); err != nil {
 		return err
 	}
+	if err := s.retireInvestigationWriteCapability(ctx); err != nil {
+		return err
+	}
 	if err := s.validateServiceRuntimeSelectorStore(ctx); err != nil {
 		return err
 	}
@@ -389,6 +395,92 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+const retiredInvestigationTablesVersion = "t46.1-retire-investigation-tables-v1"
+
+// removeRetiredInvestigationTables drops the development-only Investigation
+// product on upgrade, including Workbench state and its derived pin namespace.
+func (s *Surreal) removeRetiredInvestigationTables(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	marker := models.NewRecordID("store_migration", "retired_investigation_tables")
+	rows, err := storeQuery[[]apiKeyCapabilityMigrationStateRec](ctx, s.accounting, s.db,
+		"SELECT version FROM $rid", map[string]any{"rid": marker}, storeRead())
+	if err != nil {
+		return fmt.Errorf("read retired investigation marker: %w", err)
+	}
+	if err := retentionQueryResultsError(rows); err != nil {
+		return fmt.Errorf("read retired investigation marker: %w", err)
+	}
+	if len((*rows)[0].Result) > 1 {
+		return errors.New("retired investigation marker is ambiguous")
+	}
+	if len((*rows)[0].Result) == 1 {
+		row := (*rows)[0].Result[0]
+		if row.Version != retiredInvestigationTablesVersion {
+			return fmt.Errorf("unsupported retired investigation marker %q", row.Version)
+		}
+		return nil
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, `
+BEGIN;
+DELETE evidence_pin WHERE kind >= 'investigation-artifact:'
+  AND kind < 'investigation-artifact;' RETURN NONE;
+DELETE lifecycle_cursor WHERE key IN ['owner:investigations', 'owner:durable-jobs'] RETURN NONE;
+REMOVE TABLE IF EXISTS investigation;
+REMOVE TABLE IF EXISTS investigation_revision;
+REMOVE TABLE IF EXISTS investigation_run;
+REMOVE TABLE IF EXISTS investigation_run_event;
+REMOVE TABLE IF EXISTS investigation_run_artifact;
+REMOVE TABLE IF EXISTS investigation_artifact_owner;
+REMOVE TABLE IF EXISTS investigation_artifact_owner_release;
+REMOVE TABLE IF EXISTS investigation_artifact_retention_override;
+REMOVE TABLE IF EXISTS investigation_decision;
+REMOVE TABLE IF EXISTS investigation_disposition;
+REMOVE TABLE IF EXISTS investigation_baseline_designation;
+REMOVE TABLE IF EXISTS investigation_grant;
+REMOVE TABLE IF EXISTS investigation_cursor;
+REMOVE TABLE IF EXISTS investigation_creation;
+REMOVE TABLE IF EXISTS investigation_consumer_snapshot;
+REMOVE TABLE IF EXISTS investigation_consumer_edge_ledger;
+REMOVE TABLE IF EXISTS investigation_review_projection;
+REMOVE TABLE IF EXISTS investigation_review_item;
+REMOVE TABLE IF EXISTS investigation_dossier;
+REMOVE TABLE IF EXISTS investigation_watch;
+REMOVE TABLE IF EXISTS investigation_watch_revision;
+REMOVE TABLE IF EXISTS investigation_workbench_mutation;
+REMOVE TABLE IF EXISTS investigation_workbench_disposition;
+REMOVE TABLE IF EXISTS investigation_change_brief;
+REMOVE TABLE IF EXISTS investigation_run_job;
+UPSERT $marker SET version = $version, completed_at = time::now() RETURN NONE;
+COMMIT;`, map[string]any{"marker": marker, "version": retiredInvestigationTablesVersion}, storeWrite(28))
+	if err != nil {
+		return fmt.Errorf("remove retired investigation tables: %w", err)
+	}
+	if results == nil || len(*results) == 0 {
+		return errors.New("remove retired investigation tables: missing transaction result")
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf("remove retired investigation statement %d: %s", index, result.Error.Message)
+		}
+	}
+	return nil
+}
+
+func firstDomainRows[T any](results *[]surrealdb.QueryResult[[]T]) []T {
+	for _, result := range *results {
+		if len(result.Result) > 0 {
+			return result.Result
+		}
+	}
+	return nil
+}
+
+func storeTimestamp(value time.Time) time.Time {
+	return value.UTC().Truncate(time.Second)
 }
 
 // applySchemaBatch groups one existing trusted definition recipe, never data
@@ -625,7 +717,7 @@ DEFINE FIELD IF NOT EXISTS capabilities ON api_key TYPE option<array<string>>;`
 
 const apiKeyCapabilitySchema = `
 DEFINE FIELD OVERWRITE capabilities ON api_key TYPE array<string> DEFAULT []
-	ASSERT $value = [] OR $value = ['investigation:write'];
+	ASSERT $value = [];
 DEFINE EVENT IF NOT EXISTS api_key_capabilities_immutable ON TABLE api_key
 	WHEN $event = 'UPDATE'
 	  AND $before.capabilities != NONE
@@ -737,6 +829,67 @@ func (s *Surreal) apiKeyCapabilityMigrationComplete(
 	return false, nil
 }
 
+const retiredInvestigationWriteCapabilityVersion = "t46.1-retire-investigation-write-v1"
+
+func (s *Surreal) retireInvestigationWriteCapability(ctx context.Context) error {
+	marker := models.NewRecordID("store_migration", "retired_investigation_write")
+	rows, err := storeQuery[[]apiKeyCapabilityMigrationStateRec](ctx, s.accounting, s.db,
+		"SELECT version FROM $rid", map[string]any{"rid": marker}, storeRead())
+	if err != nil {
+		return fmt.Errorf("retire Investigation write capability: %w", err)
+	}
+	if err := retentionQueryResultsError(rows); err != nil {
+		return fmt.Errorf("retire Investigation write capability marker: %w", err)
+	}
+	if len((*rows)[0].Result) > 1 {
+		return errors.New("retire Investigation write capability: ambiguous marker")
+	}
+	if len((*rows)[0].Result) == 1 {
+		row := (*rows)[0].Result[0]
+		if row.Version != retiredInvestigationWriteCapabilityVersion {
+			return fmt.Errorf("retire Investigation write capability: unsupported marker %q", row.Version)
+		}
+		return nil
+	}
+	empty, err := s.migrationTableEmpty(ctx, "api_key", "capabilities = ['investigation:write']")
+	if err != nil {
+		return fmt.Errorf("retire Investigation write capability: preflight: %w", err)
+	}
+	statement := `
+BEGIN;
+REMOVE EVENT IF EXISTS api_key_capabilities_immutable ON TABLE api_key;
+UPDATE api_key SET capabilities = [] WHERE capabilities = ['investigation:write'] RETURN NONE;
+UPSERT $marker SET version = $version, completed_at = time::now() RETURN NONE;
+COMMIT;`
+	recipe := storeUnsupported()
+	if empty {
+		statement = `
+BEGIN;
+IF array::len(SELECT VALUE id FROM api_key
+ WHERE capabilities = ['investigation:write'] LIMIT 1) != 0 {
+ THROW 'phebs-conflict: retired Investigation write capability appeared after preflight';
+};
+UPSERT $marker SET version = $version, completed_at = time::now() RETURN NONE;
+COMMIT;`
+		recipe = storeWrite(1)
+	}
+	results, err := storeQuery[any](ctx, s.accounting, s.db, statement, map[string]any{
+		"marker": marker, "version": retiredInvestigationWriteCapabilityVersion,
+	}, recipe)
+	if err != nil {
+		return fmt.Errorf("retire Investigation write capability: %w", err)
+	}
+	if results == nil {
+		return errors.New("retire Investigation write capability: missing transaction result")
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf("retire Investigation write capability statement %d: %s", index, result.Error.Message)
+		}
+	}
+	return nil
+}
+
 const pendingJobIndexes = `
 DEFINE INDEX IF NOT EXISTS connection_sync_job_pending_key ON connection_sync_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS indexing_job_pending_key ON indexing_job FIELDS pending_key UNIQUE;
@@ -745,7 +898,7 @@ DEFINE INDEX IF NOT EXISTS candidate_manifest_job_pending_key ON candidate_manif
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS resolver_catalog_job_pending_key ON resolver_catalog_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS caller_leaf_job_pending_key ON caller_leaf_job FIELDS pending_key UNIQUE;
-DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
+`
 
 // retiredEvidenceStoreSchemas are the writer generations this binary neither
 // writes nor upgrades: they are skipped/retracted generations or have aged
@@ -833,7 +986,7 @@ const (
 
 var durableJobKinds = [...]JobKind{
 	JobSync, JobIndex, JobFetch, JobCandidate, JobExtract,
-	JobResolverCatalog, JobCallerLeaf, JobInvestigate,
+	JobResolverCatalog, JobCallerLeaf,
 }
 
 func jobActiveMigrationID() models.RecordID {

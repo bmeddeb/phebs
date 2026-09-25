@@ -642,9 +642,6 @@ func startServeExtractionPipeline(d *serveDeps) error {
 	if cfg.Experimental.ProvisionalKafkaExtraction {
 		log.Print("WARNING: experimental provisional kafka extraction enabled; validation is the T23.1 rule-gate spike only and topic evidence is abstention-dominant by design")
 	}
-	if cfg.Experimental.ProvisionalWorkbench {
-		log.Print("WARNING: experimental provisional Change Workbench enabled; no runtime-use, completeness, migration-completion, decommission-safety, or extraction-accuracy claim is established")
-	}
 	evidenceView = st
 	proofBundles = st
 	selectedCompatibility, compatibilityErr := initializeCompatibilityForLaunch(ctx, semanticLaunch)

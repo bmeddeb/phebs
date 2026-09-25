@@ -90,7 +90,7 @@ func TestExecutionEpochConfigRefusesSemanticDrift(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, mode := range []string{"runtime", "catalog-version", "catalog-path", "poll", "watch", "details", "proto", "thrift", "thrift-field", "kafka", "workbench", "lifecycle", "permissions", "revisions", "analysis-unit", "contexts", "webhook", "audit", "cookie", "session", "source", "api-key", "address", "ambient-secret", "unknown", "bytes"} {
+	for _, mode := range []string{"runtime", "catalog-version", "catalog-path", "poll", "watch", "details", "proto", "thrift", "thrift-field", "kafka", "lifecycle", "permissions", "revisions", "analysis-unit", "contexts", "webhook", "audit", "cookie", "session", "source", "api-key", "address", "ambient-secret", "unknown", "bytes"} {
 		t.Run(mode, func(t *testing.T) {
 			cfg, err := config.ParseLiteral(raw)
 			if err != nil {
@@ -123,8 +123,6 @@ func TestExecutionEpochConfigRefusesSemanticDrift(t *testing.T) {
 				cfg.Experimental.ProvisionalThriftFieldExtraction = true
 			case "kafka":
 				cfg.Experimental.ProvisionalKafkaExtraction = false
-			case "workbench":
-				cfg.Experimental.ProvisionalWorkbench = true
 			case "lifecycle":
 				off := false
 				cfg.Lifecycle.Enabled = &off

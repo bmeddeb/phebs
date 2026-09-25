@@ -464,7 +464,7 @@ func (s *ContractCatalogService) Operation(
 }
 
 // OperationForProtocol resolves a complete endpoint identity for shared
-// callers such as MCP and Workbench. The legacy HTTP detail route does not
+// callers such as MCP. The legacy HTTP detail route does not
 // accept a protocol component, so Protocol remains internal state and does
 // not revise its v2 response schema.
 func (s *ContractCatalogService) OperationForProtocol(

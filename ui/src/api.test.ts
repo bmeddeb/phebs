@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  createWorkbench,
   createAPIKey,
   fetchCallerCitation,
   fetchCallerComparison,
@@ -17,17 +16,8 @@ import {
   fetchServiceDetail,
   fetchServiceInventory,
   fetchSource,
-  fetchWorkbenchChecklist,
-  fetchWorkbenchImpact,
-  fetchWorkbenchImplementation,
-  fetchWorkbench,
-  previewWorkbench,
-  recordWorkbenchDisposition,
   revokeAPIKey,
-  reviseWorkbench,
   streamSearch,
-  WorkbenchAPIError,
-  type WorkbenchPlan,
 } from './api'
 import { setCSRFToken } from './authSession'
 
@@ -393,42 +383,22 @@ describe('request helpers', () => {
         ok: true,
         json: async () => ({ key: { id: 'key1', capabilities: [] }, token: 'phebs_token' }),
       })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          key: { id: 'key2', capabilities: ['investigation:write'] },
-          token: 'phebs_write_token',
-        }),
-      })
       .mockResolvedValueOnce({ ok: true })
     vi.stubGlobal('fetch', fetchMock)
     await createAPIKey('CI')
-    await createAPIKey('Investigation agent', ['investigation:write'])
     await revokeAPIKey('key1')
-    expect(fetchMock.mock.calls.slice(0, 2)).toEqual([
+    expect(fetchMock.mock.calls[0]).toEqual(
       [
         '/api/auth/keys',
         {
           credentials: 'same-origin',
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-settings' },
-          body: JSON.stringify({ name: 'CI', capabilities: [] }),
+          body: JSON.stringify({ name: 'CI' }),
         },
       ],
-      [
-        '/api/auth/keys',
-        {
-          credentials: 'same-origin',
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-settings' },
-          body: JSON.stringify({
-            name: 'Investigation agent',
-            capabilities: ['investigation:write'],
-          }),
-        },
-      ],
-    ])
-    expect(fetchMock.mock.calls[2]).toEqual([
+    )
+    expect(fetchMock.mock.calls[1]).toEqual([
       '/api/auth/keys/key1',
       {
         credentials: 'same-origin',
@@ -438,220 +408,4 @@ describe('request helpers', () => {
     ])
   })
 
-  it('binds Workbench reads and explicit digest-backed mutations', async () => {
-    setCSRFToken('csrf-workbench')
-    const plan: WorkbenchPlan = {
-      referent: 'ticket:T21.10',
-      claim_family: 'change-workbench',
-      title: 'Retire old operation',
-      revision: {
-        normalized_question: 'What changes?',
-        decision_sought: 'Approve retirement.',
-        snapshot_policy: 'exact indexed commits',
-        build_configuration: 'repository default',
-        enumeration_method: 'exact selection',
-      },
-      brief: {
-        ticket_kind: 'retire',
-        problem: 'The operation is obsolete.',
-        desired_outcome: 'The operation is retired.',
-        success_criteria: ['The exact operation is selected.'],
-        non_goals: [],
-        assumptions: [],
-        open_questions: [],
-        what: { selections: [] },
-      },
-      repositories: ['github.com/acme/contracts'],
-      capabilities: ['contract-atlas'],
-    }
-    const mutation = {
-      plan,
-      preview_digest: `sha256:${'a'.repeat(64)}`,
-      idempotency_key: 'workbench-ui-test',
-    }
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    await previewWorkbench(plan)
-    await fetchWorkbench('01J A/B')
-    await createWorkbench(mutation)
-    await reviseWorkbench('01J A/B', mutation)
-
-    expect(fetchMock.mock.calls).toEqual([
-      [
-        '/api/workbench_previews',
-        {
-          credentials: 'same-origin',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': 'csrf-workbench',
-          },
-          body: JSON.stringify(plan),
-          signal: undefined,
-        },
-      ],
-      [
-        '/api/workbenches/01J%20A%2FB',
-        { credentials: 'same-origin', signal: undefined },
-      ],
-      [
-        '/api/workbenches',
-        {
-          credentials: 'same-origin',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': 'csrf-workbench',
-          },
-          body: JSON.stringify(mutation),
-          signal: undefined,
-        },
-      ],
-      [
-        '/api/workbenches/01J%20A%2FB/revisions',
-        {
-          credentials: 'same-origin',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': 'csrf-workbench',
-          },
-          body: JSON.stringify(mutation),
-          signal: undefined,
-        },
-      ],
-    ])
-  })
-
-  it('preserves Workbench HTTP status for permission and conflict handling', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      status: 409,
-      text: async () => JSON.stringify({
-        title: 'Conflict',
-        status: 409,
-        detail: 'preview digest changed',
-      }),
-    }))
-    const failure = await fetchWorkbench('01J').catch((cause) => cause)
-    expect(failure).toBeInstanceOf(WorkbenchAPIError)
-    expect(failure).toMatchObject({
-      status: 409,
-      message: 'preview digest changed',
-    })
-  })
-
-  it('binds exact Workbench evidence queries and CSRF-backed dispositions', async () => {
-    setCSRFToken('csrf-evidence')
-    const signal = new AbortController().signal
-    const evidence = {
-      compatibility_run_id: 'run +/one',
-      impact_filters: {
-        freshness: 'stale',
-        path_prefix: 'src/space here',
-      },
-      anchors: [{
-        repository: 'github.com/acme/contracts',
-        commit: 'a'.repeat(40),
-        path: 'src/catalog.ts',
-        line: 42,
-        character: 7,
-        encoding: 'utf-16' as const,
-      }],
-    }
-    const suggestion = {
-      schema_version: 'workbench-suggestion-v1',
-      suggestion_id: 'suggestion-1',
-      investigation_id: '01J A/B',
-      revision_id: 'rev one',
-      kind: 'review_implementation',
-      summary: 'Review the cited implementation.',
-      selection_rule: 'exact anchor',
-      evidence_snapshot_digest: `sha256:${'b'.repeat(64)}`,
-      evidence: [],
-      content_digest: `sha256:${'c'.repeat(64)}`,
-    }
-    const mutation = {
-      investigation_id: '01J A/B',
-      expected_revision_id: 'rev one',
-      idempotency_key: 'workbench-ui-evidence',
-      evidence,
-      suggestion,
-      category: 'rejected' as const,
-      rationale: 'Not in this change.',
-    }
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    await fetchWorkbenchImpact('01J A/B', 'rev one', {
-      compatibilityRun: 'run +/one',
-      filters: evidence.impact_filters,
-      pageSize: 25,
-      cursor: 'impact +/cursor',
-    }, signal)
-    await fetchWorkbenchImplementation('01J A/B', 'rev one', {
-      anchors: evidence.anchors,
-      pageSize: 25,
-      cursor: 'implementation +/cursor',
-    }, signal)
-    await fetchWorkbenchChecklist('01J A/B', 'rev one', {
-      evidence,
-      pageSize: 25,
-      cursor: 'checklist +/cursor',
-    }, signal)
-    await recordWorkbenchDisposition(
-      '01J A/B',
-      'rev one',
-      mutation,
-      signal,
-    )
-
-    const calls = fetchMock.mock.calls
-    const impactURL = new URL(calls[0][0], 'https://phebs.test')
-    expect(impactURL.pathname).toBe(
-      '/api/workbenches/01J%20A%2FB/revisions/rev%20one/impact',
-    )
-    expect(impactURL.searchParams.get('compatibility_run_id')).toBe('run +/one')
-    expect(JSON.parse(impactURL.searchParams.get('filters') ?? '{}'))
-      .toEqual(evidence.impact_filters)
-    expect(impactURL.searchParams.get('page_size')).toBe('25')
-    expect(impactURL.searchParams.get('cursor')).toBe('impact +/cursor')
-
-    const implementationURL = new URL(calls[1][0], 'https://phebs.test')
-    expect(JSON.parse(implementationURL.searchParams.get('anchors') ?? '[]'))
-      .toEqual(evidence.anchors)
-    expect(implementationURL.searchParams.get('cursor'))
-      .toBe('implementation +/cursor')
-
-    const checklistURL = new URL(calls[2][0], 'https://phebs.test')
-    expect(JSON.parse(checklistURL.searchParams.get('evidence') ?? '{}'))
-      .toEqual(evidence)
-    expect(checklistURL.searchParams.get('cursor')).toBe('checklist +/cursor')
-    expect(calls.slice(0, 3).map((call) => call[1])).toEqual([
-      { credentials: 'same-origin', signal },
-      { credentials: 'same-origin', signal },
-      { credentials: 'same-origin', signal },
-    ])
-
-    expect(calls[3]).toEqual([
-      '/api/workbenches/01J%20A%2FB/revisions/rev%20one/dispositions',
-      {
-        credentials: 'same-origin',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': 'csrf-evidence',
-        },
-        body: JSON.stringify(mutation),
-        signal,
-      },
-    ])
-  })
 })

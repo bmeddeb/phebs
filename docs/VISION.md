@@ -18,16 +18,16 @@ Teams repeatedly ask the same population question in different forms:
 
 Code search finds occurrences, build systems find possible dependencies,
 catalogs declare identity and ownership, and telemetry records recent
-execution. phebs joins those inputs into a versioned, permission-aware decision
+execution. phebs joins those inputs into a versioned, permission-aware evidence
 artifact while preserving uncertainty and source provenance.
 
 ### Microservices are the product boundary
 
 General code search is repository- and file-centered. phebs is intended to be
 service-centered: a repository is where source is stored and authorized, while
-a service is the unit engineers navigate, compare, change, and route to an
-owner. In a monorepo, one physical repository may contain thousands of
-services, shared libraries, generated trees, contracts, deployment
+a service is the unit engineers navigate and compare before routing a change
+to its accountable owner. In a monorepo, one physical repository may contain
+thousands of services, shared libraries, generated trees, contracts, deployment
 descriptors, and unowned source.
 
 phebs is purpose-built for massive, service-dense monorepositories. Its design
@@ -74,7 +74,7 @@ authority may place one logical service across multiple repositories without
 merging equal-looking names by guesswork.
 
 This is the core differentiation thesis: phebs combines code search with an
-evidence-backed service model and cross-service change workflows. A graph
+evidence-backed service model for cross-service change workflows. A graph
 visualization is optional; exact identity, citations, coverage, unresolved
 states, and bounded publication are the product foundation.
 
@@ -116,10 +116,10 @@ labels, estimator, expertise, and result.
 
 ## Product directions
 
-| Direction | Decision artifact | Value to measure |
+| Direction | Evidence artifact | Value to measure |
 |---|---|---|
 | Contract atlas and ownership reconciliation | providers, callers, implementations, shapes, owner conflicts, and gaps | time to an accepted owner; unmapped rate |
-| Migration and dependency ledger | first/last-seen relationships, replacement comparison, and dispositions | discovery latency; spreadsheet/outreach time |
+| Migration and dependency ledger | first/last-seen relationships and replacement comparison for Cortana's disposition workflow | discovery latency; spreadsheet/outreach time |
 | Change-impact review | base-versus-head relationship changes, affected deployables, owners, and unresolved impact | reviewer-routing precision; breakage discovery |
 | Incident scoping | direct, transitive, and unresolved candidates at deployed revisions with a separate runtime overlay | time to a reviewable blast radius |
 | Platform adoption | evidenced use or bypass of approved factories, SDKs, interceptors, and libraries | reliable denominator; outreach avoided |
@@ -141,8 +141,8 @@ be presented as a compliance certificate.
 | Source-to-unit/service/owner attribution | routing and reconciliation |
 | Snapshot comparison | migration ledgers, change impact, and regression archaeology |
 | Coverage and unresolved semantics | honest population and negative-result questions |
-| Human dispositions kept separate from evidence | review without mutating facts |
-| Dossiers and proof references | portable, independently inspectable decisions |
+| Evidence kept separate from Cortana's human dispositions | review without mutating facts |
+| Proof references and immutable bundles | portable, independently inspectable evidence |
 | Permission-aware API, UI, and MCP projections | human and agent consumers sharing one engine |
 | Runtime/deployment overlays with distinct provenance | incident and rollout context without rewriting source facts |
 
@@ -172,10 +172,10 @@ authoritative.
    project their resolved and unresolved results onto independently current
    services.
 4. Establish each evidence pack independently before promoting its claims.
-5. Productize recurring questions as
-   [Investigations](./INVESTIGATIONS.md), proof material, and comparable
-   snapshots.
-6. Add daily change-assurance and ownership-routing workflows.
+5. Supply proof material and comparable evidence snapshots for recurring
+   questions; Cortana owns the investigation workflow and human decisions.
+6. Expose bounded evidence for Cortana's daily change-assurance and
+   ownership-routing workflows.
 7. Add deployment/runtime overlays without merging their provenance into
    static evidence.
 8. Add new contract families only when a narrow pack and validation design

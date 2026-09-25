@@ -73,15 +73,6 @@ func loadServeConfig(semanticLaunch *t422SemanticLaunch, flags *serveFlags) (*co
 			"WARNING: neutral T34.4 whole-repository service-search demo enabled; scope receipts establish no evidence, accuracy, or release claim",
 		)
 	}
-	if fixture := os.Getenv("PHEBS_WORKBENCH_CLOSURE_REPO"); fixture != "" {
-		if err := bindSyntheticWorkbenchClosureDemo(cfg, fixture); err != nil {
-			return nil, nil, err
-		}
-		log.Printf(
-			"WARNING: synthetic Workbench closure repository enabled from %s; not production evidence",
-			fixture,
-		)
-	}
 	if fixture := os.Getenv("PHEBS_THRIFT_FIELD_DEMO_REPO"); fixture != "" {
 		if err := bindSyntheticThriftFieldDemo(cfg, fixture); err != nil {
 			return nil, nil, err

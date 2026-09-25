@@ -155,8 +155,8 @@ The selected historical-publication posture is unbounded in the live
 installation, but backup is not a live retention pin and does not promise the
 same history for every owner. The database export retains all evidence runs,
 shared atoms, associations, assertions, exact-scope attempts, latest domain
-outcomes, durable evidence pins, immutable proof bundles, all eight job tables,
-and all 24 Investigation/Workbench tables. Restore retains those rows; it
+outcomes, durable evidence pins, immutable proof bundles, and the seven
+remaining job tables. Restore retains those rows; it
 selectively clears candidate-control outcomes with candidate authority. The
 export also contains caller rows, but restore intentionally clears caller
 pointers, admissions, and outcomes. Filesystem-only archive
@@ -1136,9 +1136,8 @@ unrelated path, whole-file, focused-search, or local-evidence access.
 The exact reader exposes direct-syntax results and retained abstentions for one
 complete repository-overlay generation. It does not prove runtime use,
 completeness, extraction accuracy, migration completion, decommission safety,
-or a retention bound. Caller comparison now uses the same exact engine under
-the additional two-sided fences below. Workbench Impact now uses that shared
-single- or two-generation exact authority under the composition fences below.
+or a retention bound. Caller comparison uses the same exact engine under
+the additional two-sided fences below.
 
 #### Authorized exact caller comparison
 
@@ -1220,116 +1219,6 @@ Static comparison rows and the literal old-only/both/new-only/unresolved
 classifications establish no runtime use, completeness, extraction accuracy,
 migration completion, decommission safety, production validation, or
 bounded historical-retention claim.
-
-#### Exact Workbench caller composition
-
-T30.6l registers `workbench-impact-inventory-v2` only with the already shared
-exact Caller Map and comparison services. Production construction creates
-those services once and passes the same Caller Map instance into comparison
-and Workbench. Do not create a second exact reader for Workbench: a second
-instance would split the HMAC secret, reverse-index cache, request-binding
-registry, publication leases, citation reader, and concurrency gates and would
-invalidate the intended process bounds.
-
-Every Impact request first reads and validates one current authorized
-Investigation Revision and immutable Change Brief. Modify and retire call the
-single-generation exact reader; migrate calls the jointly fenced two-generation
-comparison; add has no caller stream. Each subordinate service keeps its own
-authorization-first repository access and final store/filesystem/permission
-fences. After Atlas, caller, comparison, compatibility, fields, and resource
-planes are assembled, Workbench rereads the Investigation as the last result
-fence. A revoked, hidden, or replaced current Revision returns the
-same non-disclosing not-found posture. A changed digest for the selected
-Revision/brief conflicts instead of serializing a mixed composition.
-
-Caller and comparison output carries its exact `repository-overlay`
-generation and `matching_rows_state`. `current` may expose rows and a numeric
-total. `missing`, `failed`, and `stale` are typed unavailable gaps and expose
-no partial rows, groups, classifications, subordinate cursor, or numeric zero.
-The generation gap is added to Analysis scope as a caller capability/gap. It
-is not added to the Coverage list: that list remains authority for
-focused-local extraction publications, not complete repository-overlay caller
-generations.
-
-The HMAC-authenticated v2 outer cursor retains each subordinate stream's
-semantic snapshot. For a
-caller or comparison stream that completed before the outer page, it also
-retains a signed transport-hidden authority token. The token uses the shared
-HMAC and at-most-16-KiB exact-token envelope and binds normalized query,
-visibility projection, repository revision, generation/manifest/pair-set and
-caller-publication revision, snapshot state, and the non-repeating publication
-incarnation for every bound publication across one or both sides. It is never
-serialized in the public Impact
-page as a distinct field; it exists only inside the opaque composite cursor
-and is not a source citation or subordinate pagination cursor.
-The outer signature covers every stream's complete/next state, so a client
-cannot skip remaining rows by rewriting an unfinished stream as complete.
-
-On a later outer page the exact service confirms that token directly. It
-reauthorizes, reopens, and applies its current/final publication fences, then
-returns only the bounded generation-state confirmation. It does not list page
-one, allocate or pressure-retire a request binding, rebuild a reverse index,
-hydrate caller rows, mint citations, or encode a duplicate caller response.
-Thus a long field-reference stream cannot exhaust the shared eight-binding
-limit merely by repeatedly confirming an already completed caller stream.
-Restart, permission change, token invalidity, or any generation,
-publication-revision, incarnation, or `A → B → A` transition conflicts and
-requires a fresh first Workbench page. If the shared publication registry was
-evicted, confirmation may still pay its already bounded cold manifest/leaf
-validation; it makes no stronger zero-hash promise across that boundary.
-
-Composition bounds are cumulative but finite:
-
-- the public request accepts 1–100 rows and the v2 composite cursor is at most
-  64 KiB in both encoded and decoded form;
-- the UI requests 25 rows, mounts one server page, and retains at most 500
-  cursor entries independently for Impact, implementation, and checklist. At
-  the 64 KiB token ceiling one history is below 32 MiB of encoded cursor text;
-  the How step can hold its implementation and checklist histories together
-  below 64 MiB before JavaScript string/array overhead, while the Where and
-  How steps unmount rather than retaining all three histories together;
-- exact caller/comparison work remains under the shared eight active reads,
-  two citation Git/blob phases, eight bindings, 200,000 retained positions,
-  eight indexes, 128 MiB counted identity per index, and documented cold
-  publication/index admissions;
-- a maximum exact caller response may still approach 100 MiB. The 100-row cap
-  is a finite transport bound, not a small-memory claim, and service-work slots
-  still end before response encoding;
-- checklist derivation reads no more than five 100-row Impact pages and five
-  100-row implementation pages, processes each Impact page before requesting
-  the next, and uses a deterministic top-1,000 accumulator rather than
-  retaining every raw candidate. Final suggestions retain at most 32 evidence
-  references each, and the response returns at most 100 entries behind a
-  64 KiB cursor. Its mutation body remains capped at 512 KiB.
-
-Checklist identity deliberately excludes transport authority. Before hashing
-an Impact page or caller evidence, the checklist projection removes the outer
-cursor, every subordinate cursor, and every signed caller citation. It retains
-page digests and compact suggestion evidence rather than five complete exact-
-caller pages. Rotating a binding, citation, or cursor for an unchanged exact
-publication therefore cannot change suggestion IDs or make an existing human
-Disposition stale. The five-page ceiling still emits an explicit truncation
-suggestion.
-
-Workbench caller source access is only the shared exact-range citation route.
-It reauthorizes and verifies immutable commit, path, Git object ID, complete
-blob digest, record, and byte range before returning those bytes. There is no
-whole-file fallback and no tree, directory, unrelated-path, focused-search, or
-focused-local evidence authority.
-
-Startup constructs empty shared exact caches and the Workbench composition
-only when its experimental capability is enabled. It adds no eager caller
-scan, publication open, reverse-index build, Git read, content hash, store
-write, mirror lock, or child process. Warm active streams inherit the exact
-readers' selected-record and bounded identity-sweep costs; completed streams
-use only the confirmation path above. Registry locks are not held across
-publication validation, authorization, Git citation work, final Investigation
-confirmation, or transport serialization.
-
-No row, exact empty page, typed gap, completed cursor, or fully dispositioned
-checklist establishes runtime use, completeness, extraction accuracy,
-compatibility, migration completion, decommission safety, production
-validation, or historical-retention safety.
 
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
@@ -1417,12 +1306,11 @@ administrator principal.
 - Browser sessions are ambient credentials, so unsafe requests require CSRF.
 Bearer clients must not put tokens in URLs, logs, or browser-local storage,
 and bearer credentials cannot access the API-key management endpoints.
-- Named bearer keys are read-only for Investigation mutations by default.
-`investigation:write` is an immutable, explicitly selected credential gate,
-not an authorization grant: all repository visibility, ownership, principal,
-Revision, preview, snapshot, and idempotency checks still apply. Use one
-least-privilege capable key per agent, replace rather than edit capabilities,
-and revoke immediately on suspected leakage.
+- Named bearer keys are read-only. Their `capabilities` metadata remains an
+empty compatibility array, and issuance rejects nonempty selections. Use one
+key per client where independent revocation is needed, and revoke immediately
+on suspected leakage. Browser-session mutations retain their existing CSRF,
+authorization, and ownership checks.
 - `/api/webhook` does not accept user auth; it verifies the configured HMAC
 over the exact request bytes and is absent when no secret is configured.
 - OIDC authorizes every verified identity admitted by the configured provider.
@@ -1466,8 +1354,7 @@ request is evaluated as its own authenticated caller.
 
 Every mutating action is appended to an audit trail in the local database
 (T10.1): local and OIDC logins (including failed local attempts), first-run
-setup, logout, API-key creation and its reviewed capability selection,
-revocation, and each mutating API
+setup, logout, API-key creation and revocation, and each mutating API
 operation (recorded by operation ID, e.g. `post-api-reindex` with the repo as
 target). Events carry the actor (user, or API key for bearer calls), the
 resolved client IP (trusted-proxy aware on the auth surface), and the
@@ -2023,7 +1910,7 @@ Before creating an extraction attempt, the worker refuses a publication
 marker, stale database pointer, HEAD/unit/policy disagreement, malformed or
 noncanonical JSON/NDJSON, partial/extra/duplicate member, digest mismatch,
 overlapping or unordered caller leaf, or special filesystem entry. Local
-contract, field, topic, consumer, attribution, and Workbench implementation
+contract, field, topic, consumer, attribution, and implementation
 domains consume only records whose manifest membership is inside the committed
 unit. Caller-plane domains remain visibly `repository-overlay` input. Their
 independently complete T30.6 caller generations may cite outside-unit callers,
@@ -2206,11 +2093,9 @@ scheduler, source-lane, resolver, caller-leaf, publication, exact-consumer,
 and retention/status seams through T30.6r. An admitted `*_test.go` file remains
 searchable and participates in candidate planning when an enabled domain
 policy enumerates it, while direct
-caller execution excludes its `go_test` lane. The public Caller Map now reads
-only the exact complete repository-overlay authority; caller comparison now
-uses that exact authority in one jointly fenced two-endpoint read, and
-Workbench Impact now composes the same exact single- or two-generation
-authority through its current Revision and final Investigation fence.
+caller execution excludes its `go_test` lane. The public Caller Map reads
+only the exact complete repository-overlay authority; caller comparison uses
+that exact authority in one jointly fenced two-endpoint read.
 Operators should not raise the global file, path-byte, read-byte, fact, or
 single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
@@ -2230,24 +2115,22 @@ gRPC/Thrift materialization, T30.6h supplies the independently durable direct
 caller-leaf artifacts, and T30.6i supplies the atomic complete publication and
 recovery lifecycle described above. T30.6j supplies the authorized exact Caller
 Map reader, revision-bound cursor, and exact-range citation path described
-above. T30.6k supplies the exact two-sided comparison described above. T30.6l
-supplies the exact Workbench composition, completed-stream confirmation, typed
-gaps, citation-only caller source access, and deterministic checklist identity
-described above. T30.6m explicitly selects unbounded historical-publication
+above. T30.6k supplies the exact two-sided comparison described above.
+T30.6l's Workbench composition is retired under T46.1. T30.6m explicitly
+selects unbounded historical-publication
 retention without changing cleanup. T30.6n bounds job-history reads and
 repairs startup migration without deleting history. T30.6o now supplies the
 authorization-first retention-status shell, fixed registry, budgets, and
-unconditional capacity warning. The core collector now populates 23 SurrealDB
-components, T30.6q now populates the 24 Investigation/Workbench table
-components, and T30.6r now adds the final seven derived filesystem/store
-collectors plus installation capacity. T40.7 adds `evidence_chunk` and T40.10
-adds `extraction_domain_root` beneath the evidence-publication owner, expanding
-the declared surface to 54 components.
+unconditional capacity warning. T40.7 added `evidence_chunk` and T40.10 added
+`extraction_domain_root` beneath the evidence-publication owner. T46.1 removes
+the Investigation product tables, run-job history, and artifact-pin namespace;
+the current core collector reports 21 components, and T30.6r's seven derived
+filesystem/store components bring the declared surface to 28.
 
 ##### Scope-aware result diagnostics
 
 T30.7 makes the existing authority visible next to product results. Search,
-Contracts, Topics, Caller Map, Impact, and Workbench now identify the active
+Contracts, Topics, Caller Map, and Impact identify the active
 unit by name and disclose its exact primary and supporting paths. A focused
 repository has two deliberately different planes:
 
@@ -2449,12 +2332,11 @@ database/filesystem owners.
 
 That decision also preserves the modeled candidate and caller publication
 residue without adding cleanup, but it must not be read as approving every
-other append-only or unreclaimed table. Durable terminal job history and the
-Investigation/Workbench domain are incidental operational/history owners whose
-growth was missing from the first T30.6m inventory. Immutable proof bundles are
-a separate configured lifecycle that defaults disabled. Adding those three
-groups to the inventory authorizes no deletion and does not weaken the
-historical-publication decision.
+other append-only or unreclaimed table. Durable terminal job history remains
+an incidental operational/history owner; immutable proof bundles have a
+separate configured lifecycle that defaults disabled. The former Investigation
+domain was included in T30.6m's inventory and retired under T46.1. Historical
+inventory decisions do not weaken the publication policy.
 
 Use these terms when diagnosing storage:
 
@@ -2464,7 +2346,7 @@ Use these terms when diagnosing storage:
 - current means equality with all live repository, unit, policy, candidate,
   pointer, and publication fences, not newest time or `status=published`;
 - a durable pin is any store-accepted `evidence_pin` retention owner—including
-  proof, checkpoint, and Investigation state—and is restored with the database;
+  proof and checkpoint state—and is restored with the database;
   proof pins are indefinite by default but have the separate configured
   lifecycle described below, while other pins follow their own owner lifecycle;
 - an active lease is a process-local caller-publication file-lifetime guard,
@@ -2481,8 +2363,7 @@ The owner behavior is intentionally asymmetric:
 | extraction outcomes | latest-only per repository/domain; each logical diagnostic receipt is capped at 8 KiB | restore imports outcomes, then selectively clears candidate-control outcomes with candidate authority |
 | evidence pins | pin rows and the superseded evidence they protect accumulate according to their owner lifecycle; proof pins are indefinite when `proof_bundles.retention` is omitted or `"0"` | restore retains every pin kind; only its owning lifecycle may release it |
 | proof bundles | content-derived `proof_bundle` rows have no count or aggregate-byte ceiling; each canonical content value is capped at 64 MiB and each repository/run-id list at 10,000 entries; omission or `"0"` retention keeps the row and exact proof pins indefinitely, while a positive lifetime makes them sweep-eligible by age from latest materialization | database export and restore retain bundle rows and pins; configured maintenance resumes after startup |
-| durable job history (8 tables) | `connection_sync_job`, `indexing_job`, `repo_fetch_job`, `extraction_job`, `candidate_manifest_job`, `resolver_catalog_job`, `caller_leaf_job`, and `investigation_run_job` retain terminal rows without a deletion path; pending-key coalescing bounds pending work only | database export and restore retain job history; repository removal does not delete terminal rows |
-| Investigation/Workbench domain (24 tables) | append-only or lifecycle-owned core, Revision/Brief, Workbench, Run/artifact, retention-owner, decision/disposition, access, review, Dossier, and Watch rows have no wired domain-wide sweep | database export and restore retain these rows and their evidence pins |
+| durable job history (7 tables) | `connection_sync_job`, `indexing_job`, `repo_fetch_job`, `extraction_job`, `candidate_manifest_job`, `resolver_catalog_job`, and `caller_leaf_job` retain terminal rows without a deletion path; pending-key coalescing bounds pending work only | database export and restore retain job history; repository removal does not delete terminal rows |
 | candidate artifacts | authority is current-only, but failed partial generation files can accumulate without a root entry/byte cap until a later successful cleanup or repository removal | excluded and rebuilt |
 | focused indexes | current and active-reader transition only | filesystem discovery may archive validated marker-free physical publications; restore re-fences authority, and whole indexes otherwise rebuild |
 | resolver catalogs | current and bounded replacement transition plus package-owned stages/residue; top-level installation-root inventory refuses after its enforced 32,768-entry operational scan threshold, but that is not a storage ceiling; the 1,034 MiB clean-replacement figure is only a design model that excludes prior-process stages and undeclared residue | filesystem discovery may archive validated marker-free physical publications, then authority is cleared and re-fenced |
@@ -2494,8 +2375,8 @@ inventing a failure horizon. With one healthy, continuously draining remote
 connection and the default one-hour interval, 100 repositories produce
 876,000 `indexing_job` rows per 365-day common year, plus 8,760
 `connection_sync_job` rows. Pending coalescing may reduce that rate when work
-does not drain; downstream candidate, extraction, resolver, caller, and
-Investigation job rates are intentionally not summed. No measurement
+does not drain; downstream candidate, extraction, resolver, and caller job rates
+are intentionally not summed. No measurement
 establishes a days-to-weeks degradation threshold.
 
 The latest failed-replacement diagnostic is owner-specific. Evidence retains
@@ -2506,20 +2387,10 @@ are archived history. Restore imports and migrates precious evidence and pins
 before normal server maintenance starts, then re-fences the derived candidate,
 resolver, and caller planes. T30.6m adds no restore-time sweep.
 
-For exact component accounting, the 24-table Investigation/Workbench group is
-`investigation`, `investigation_revision`, `investigation_change_brief`,
-`investigation_workbench_mutation`, `investigation_workbench_disposition`,
-`investigation_run`, `investigation_run_event`,
-`investigation_run_artifact`, `investigation_artifact_owner`,
-`investigation_artifact_owner_release`,
-`investigation_artifact_retention_override`, `investigation_decision`,
-`investigation_disposition`, `investigation_baseline_designation`,
-`investigation_grant`, `investigation_cursor`, `investigation_creation`,
-`investigation_consumer_snapshot`, `investigation_consumer_edge_ledger`,
-`investigation_review_projection`, `investigation_review_item`,
-`investigation_dossier`, `investigation_watch`, and
-`investigation_watch_revision`. Grouping these rows in operator output must not
-permit a component to disappear silently.
+T46.1 removes the former Investigation domain tables, its separate run-job
+history table, and its artifact-pin namespace on upgrade. Retained historical
+receipts still describe their earlier inventory; current status never reports
+those retired components.
 
 T30.6n bounds both job-history consumers without deleting or compacting a job
 row. Internal history reads are record-ID-keyset pages: one call returns and
@@ -2533,7 +2404,7 @@ Each returned row contains only the declared diagnostic fields. Target, error,
 and claimant are capped at 1,024, 2,048, and 256 Unicode characters and carry
 independent truncation flags; the lease token is authority, not a diagnostic,
 and is omitted. The durable row is not rewritten. This shape avoids adding
-eight historical compound indexes during upgrade. Pagination is weakly
+seven historical compound indexes during upgrade. Pagination is weakly
 consistent with concurrent random-ID inserts: it never rescans behind its
 physical cursor, so use it as a bounded diagnostic traversal rather than a
 frozen snapshot.
@@ -2554,7 +2425,7 @@ history backfill runs, and no table event replays projection work while retained
 job rows are restored.
 
 The first supported upgraded store open reads only `pending`, `claimed`, and
-`running` rows through each of the eight status indexes, with a 131,072-active-
+`running` rows through each of the seven status indexes, with a 131,072-active-
 row installation safety/refusal bound per table. That number is not a claimed
 queue-cardinality ceiling or retention bound. It preserves oldest-pending
 coalescing and active lease recovery, verifies the already-shipped pending-key
@@ -2573,151 +2444,63 @@ drain further batches. Its index scan is `O(current active jobs)`, not
 establishes no job-retention bound and adds no TTL, deletion, or retention
 configuration.
 
-T30.6o adds administrator-only `GET /api/retention-status` as an
-authorization-first shell. Authorization completes before any component store,
-filesystem, or cache touch; denial consumes none of the component-scan budget.
-The `phebs-retention-status-v1` shell exposes all twelve owner groups and all 53
-declared components in their exact order. T40.7 added `evidence_chunk` to the
-original 52-component registry because its durable receipts are a separately
-retained and separately swept physical population. The aggregate fixed-work allocation,
-at-most-4,096 reported identities after at most one 4,097th sentinel per
-summary, a 64 KiB encoded response, and independent `exact`, `lower_bound`, or
-`unavailable` labels for counts and typed byte metrics. Each component's
-ordered `byte_metrics` array declares one or more of `logical_encoded`,
-`canonical_content`, `canonical_receipt`, `apparent_file`, and
-`physical_database`. Those kinds describe different accounting planes, may
-coexist on one component, and must never be summed. Endpoint-wide
-work is not 4,097 multiplied by 53: 4,096 report slots are split fairly, with
-78 reserved for each of the first 15 components and 77 for each of the last 38,
-plus one private sentinel each for a 4,149-scan aggregate. The zero-inventory
-shell fixture is 20,256 bytes, and the maximum-shaped fixed envelope is
-21,239 bytes. The earlier fixtures were not maximal after the additive
-component: an
-unavailable count with its full scan allocation encodes three additional bytes
-per component. A live completed response is not fixed at the shell-fixture size:
-its observed counts, typed byte metrics, and data-volume digit widths vary, and
-the encoder independently enforces the 64-KiB ceiling. At the T30.6o boundary
-every metric was `unavailable` and the shell performed zero store, filesystem,
-or cache inventory scans. Registry presence therefore proves coverage of the
-declared model, not that T30.6o alone inventories retained capacity.
+`GET /api/retention-status` remains administrator-only and authorization-first:
+denial completes before component store, filesystem, or cache inventory work.
+Every response, including denial and internal error, carries
+`X-Phebs-Warning-Code: unbounded_historical_publication_retention`; successful
+bodies repeat the warning and identify `phebs-retention-status-v1`.
 
-For each component, an `exact` count must equal the identities scanned below
-its report allocation. A non-truncated `lower_bound` must equal a nonempty
-partial scan, while a full cap-plus-one scan is the sole shape that sets
-`truncated: true` and reports the allocation ceiling. An unavailable count may
-retain a partial scan counter but cannot claim truncation.
+The current registry has eleven owner groups and 28 components: 21 core
+SurrealDB tables or pin namespaces and seven derived store/filesystem
+components. T46.1 retired the Investigation owner, its 24 product tables, the
+separate `investigation_run_job` history component, and the Investigation
+artifact-pin namespace. At most 4,096 component identities are reported, with
+one private scan sentinel per component for a 4,124-scan aggregate. Registry
+indices 0–7 receive 147 report slots and 148 scan slots; indices 8–27 receive
+146 and 147. Core owns 3,074/3,095 report/scan slots; derived owns
+1,022/1,029. These allocations are not transferable between owners. The
+endpoint independently enforces a 64-KiB encoded response ceiling.
 
-Owner metadata makes the one existing scoped control explicit. Only
-`proof_bundles` carries a non-null `retention_control`:
-`proof_bundles.retention`. `default_state` is `disabled` when its effective
-lifetime is zero and `enabled` when positive; the owner `accumulating` flag is
-the inverse. A positive lifetime deletes the expired bundle and exactly its
-`proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the
-independent evidence sweep may later reclaim newly unpinned superseded
-evidence when otherwise eligible. Every other owner encodes null. This is
-disclosure of an existing lifecycle, not a new cross-owner retention control.
+Each component reports `exact`, `lower_bound`, or `unavailable` independently.
+A sentinel yields a truncated lower bound; unavailable is never zero. Counts
+are weakly consistent diagnostics, not a cross-table snapshot. Byte kinds
+`logical_encoded`, `canonical_content`, `canonical_receipt`, `apparent_file`,
+and `physical_database` describe different accounting planes and must never
+be summed. Per-component physical-database bytes remain unavailable. Only the
+`proof_bundles` owner has non-null `retention_control`: a positive configured
+lifetime deletes an expired bundle and exactly its proof-bundle evidence pins,
+while default zero retains both. Every other owner reports null.
 
-The core collector populates 22 SurrealDB components: five evidence-publication
-graph components—including `evidence_chunk` receipts—extraction attempts,
-extraction outcomes, three logical
-evidence-pin namespaces, proof bundles, all eight durable job tables, and the
-three caller-row tables. The v1 wire reports one aggregate bounded row count
-per table or pin namespace; it does not expose or compute lifecycle or
-job-status partitions. Every retained physical row contributes regardless of
-its state. The evidence collector counts shared `evidence_atom` rows directly
-instead of multiplying an atom by the number of associations that reference it.
-
-Each component keeps its non-transferable shell allocation. Registry indices
-0–14 receive 78 report slots plus one sentinel; every later component receives
-77 plus one. A complete core request can therefore scan at most 1,731 component
-identities. That 78/77 placement belongs to the API registry. The store accepts any report
-allocation from 1 through 79 only when scan is exactly report plus one and
-independently enforces the 1,709-report/1,731-scan aggregate ceilings.
-The implementation produces 22 component summaries using at most 24 bounded
-row-range queries: the `other` pin namespace is the complement of two reserved
-prefixes and therefore uses as many as three disjoint index ranges. Collection
-follows four cached writer/migration-marker point checks and one required
-pin-index catalog check. Every one-statement readiness, catalog, and component
-query must return exactly one SurrealDB result envelope; zero or multiple
-envelopes are failures rather than empty tables. The three pin namespaces use
-the existing kind index and fixed ranges without sharing or borrowing one
-another's allocations. The existing schema batch defines `evidence_pin.kind`
-as a scalar string, so an array-shaped value cannot undermine those ranges. A
-failed readiness check or component query leaves only the affected readiness
-group or component `unavailable`; successful later components remain visible.
-The production reporter emits one log event per failed component under only the
-`not_ready` or `query_error` class, so one request emits at most 22 such events.
-
-Counts become `exact` only when the bounded query exhausts its table or
-namespace. Consuming the private sentinel reports the component allocation as
-a truncated `lower_bound`. T30.6p publishes logical encoded receipt bytes for
-extraction outcomes, canonical content bytes for proof bundles, and canonical
-receipt bytes for the three caller-row components. It reads only server-side
-byte lengths or stored scalar totals, not proof content, caller pair arrays, or
-job diagnostics. Per-component `physical_database` metrics remain
-`unavailable`. At the T30.6p boundary, the other 31 components and both
-installation data-volume metrics were unavailable. Those unavailable values
-were not zeros.
-
-The retention collector adds no index or row bootstrap. It reuses the
-`evidence_chunk` table and indexes required by T40.7's accounting writer, with
-no additional retained-row scan, backfill, sort, writer-generation bump, or
-migration generation. It adds no sync-tick, retry, writer,
-publication-transition, or maintenance work.
-
-An authorized request performs at most five readiness queries and 24 bounded
-row-range queries. The resulting summaries are weakly consistent diagnostics,
-not one frozen cross-table snapshot; denial still precedes all of them.
-Computing an exact proof-bundle byte metric may inspect up to 80 bounded 64-MiB
-canonical content values, including the later-excluded sentinel, inside
-SurrealDB (5.00 GiB worst case), while only scalar byte lengths cross the
-WebSocket/API boundary. No request takes an owner lock, writes retained state,
-starts a child, scans the filesystem or corpus, or hashes content.
-
-T30.6q populates the exact 24 Investigation/Workbench component tables listed
-above and retains one independent aggregate summary for every table. The fixed
-v1 wire has no owner-lifecycle partition field, so it does not compute a hidden
-partition: every physical row contributes regardless of owner, release,
-override, access, review, or Watch state, and `investigation_run_job` remains
-only in durable-job history. All 24 Investigation components receive 77 report
-slots plus one sentinel. The q allocation is therefore 1,848 reported and at
-most 1,872 scanned identities.
-
-One `INFO FOR DB` catalog preflight must return exactly one result envelope and
-proves which of the closed 24-table allowlist is present. The collector then
-runs at most 24 direct record-ID-ordered table reads, each with physical limit
-pushdown and the same exact-one-envelope rule. A missing catalog entry leaves
-only that component unavailable; a row-query failure does the same, while a
-catalog-query failure leaves all 24 unavailable rather than inventing zero.
-Successful siblings remain visible and are weakly consistent rather than a
-frozen owner snapshot. One q request performs at most 25 SurrealDB calls,
-returns at most 1,872 identities, retains at most 78 selected IDs for the
-active table plus 24 summaries, and receives at most the 24 fixed allowlisted
-names from the server-side catalog intersection. It emits at most 24
-`not_ready` or `query_error` events. It reads no row payload or byte content,
-so every q `physical_database` byte metric remains unavailable.
-
-T30.6q uses the existing table record order and schema catalog. It adds no
-query index, schema backfill, migration marker, first-open reconstruction,
-writer, or owner-lifecycle work. Together the core and T30.6q collectors populate 46
-components within 3,557-report, 3,603-scan, 54-query, and 46-event ceilings.
-The deterministic empty core-plus-Investigation response is 19,797 bytes under
-the unchanged 64-KiB encoded-response cap.
+The core collector reports 21 bounded aggregate row counts. It uses four
+cached writer/migration-marker point checks, one pin-index catalog check, and
+at most 22 bounded record-ID range queries; the `other` pin namespace uses two
+disjoint ranges around the proof prefix. The derived collector uses at most
+nine further client calls, for a 36-call ceiling per authorized request. Each
+one-statement result must have exactly one
+SurrealDB envelope. A failed check or component query leaves the affected
+scope unavailable, while successful siblings remain visible. At most one
+`not_ready` or `query_error` event is emitted per failed core component. The
+collector adds no inventory index, row bootstrap, backfill, sync-tick,
+publication-transition, writer, or lifecycle work. An exact proof-bundle byte
+metric may inspect at most 148 canonical values capped at 64 MiB each inside
+SurrealDB (9.25 GiB conservative worst case), while only scalar byte lengths
+cross the WebSocket/API boundary. No request takes an owner lock, writes
+retained state, starts a child, scans the source corpus, or hashes content.
 
 These are per-request ceilings. The surface adds no retention-specific cache
 or concurrency gate, so concurrent authorized requests independently multiply
-the query, identity, and response-memory work; it supplies no additional
+query, identity, and response-memory work; it supplies no additional
 process-level bound.
 
 T30.6r populates the final seven derived components: candidate store authority
 and managed files, focused repository state and publication files, resolver
 store authority and package-owned files, and managed caller artifacts. The
-four authority selections accept at most 308 reported/312 scanned rows behind
+four authority selections accept at most 584 reported/588 scanned rows behind
 one four-name catalog query, three existing readiness point checks, four
 direct bounded row reads, and one batched caller current-authority fence—at
-most nine store client calls, or 63 across the complete collector path. The
-fence remains one client round trip but performs at most 308 bounded
-server-internal point reads—four for each of at most 77 caller authorities—
+most nine store client calls in addition to core collection. The
+fence remains one client round trip but performs at most 584 bounded
+server-internal point reads—four for each of at most 146 caller authorities—
 plus its marker check. The caller authority is bounded support for artifact
 reconciliation, not a second component. Focused state bounds the raw
 repository-ID prefix before applying the schemaless analysis-unit predicate;
@@ -2748,7 +2531,7 @@ Go/platform directory-iterator duplicates or rooted traversal internals.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
-The 77-report/78-scan slots allocate the response envelope rather than promise
+The 146-report/147-scan slots allocate the response envelope rather than promise
 universal exactness. The 4,096-stat ceiling covers the regression-gated lean
 maximum allocation; recognized residue, nested stages, or the independent
 64-MiB metadata limit may still localize a lower-bound or unavailable metric.
@@ -2756,7 +2539,7 @@ Every returned raw name consumes the observation budget. Names are otherwise
 names-only; only recognized names receive explicit descriptor-rooted `Lstat`
 checks.
 Foreign entries consume those physical budgets. Each file component still owns
-only its 77-report/78-scan summary allocation. A private sentinel is a
+only its 146-report/147-scan summary allocation. A private sentinel is a
 truncated lower bound; a positive prefix stopped by the observation, stat, or
 metadata budget is a non-truncated lower bound; zero observed before an
 incomplete stop is unavailable. A missing managed subroot under a verified data
@@ -2765,7 +2548,7 @@ is unreadable, symlinked, special, or otherwise invalid, all filesystem and
 data-volume metrics remain unavailable while independent store summaries stay
 visible. Check the service log for the localized cause; do not repair status by
 hand-deleting artifacts. T30.6r emits at most nine localized diagnostics per
-request; together with the core and q collectors, the complete event ceiling is 55.
+request; together with the core collector, the complete event ceiling is 30.
 
 The 64-MiB metadata allowance is aggregate I/O, not a Go-heap meter. Parsing is
 serial: one caller manifest may retain up to 32 MiB of raw bytes while
@@ -2773,19 +2556,11 @@ allocating its separately bounded decoded pair structure; resolver raw
 metadata is capped at 1 MiB. Concurrent administrator requests multiply that
 one-at-a-time raw-plus-decoded heap work.
 
-T30.6r completed collector coverage across the original 52-component registry;
-T40.7's `evidence_chunk` and T40.10's `extraction_domain_root` collectors make
-the current surface 54 components.
-The current 4,096-report allocation gives registry indices 0–45 76 report
-slots and the remaining eight 75, each with one private sentinel, for 4,150
-aggregate scans. Core owns 1,745/1,768 report/scan identities across 23
-components, Investigation owns 1,824/1,848 across 24, and derived owns 527/534
-across seven. The deterministic empty and maximum-shaped envelopes are 20,565
-and 21,564 bytes, respectively. The core collector performs at most 25 bounded
-row-range queries; the additional query inventories only
-`extraction_domain_root` record identities and adds no lifecycle mutation.
 The derived collector populates filesystem total/available capacity for the
-verified data directory.
+verified data directory. The current 28-component allocation and 64-KiB
+response ceiling are stated above; the additional core query for
+`extraction_domain_root` inventories record identities only and adds no
+lifecycle mutation.
 Resolver/caller canonical byte metrics require the supported rooted nonblocking
 regular-file opener. On a build without it, those canonical metrics remain
 typed unavailable while physical component inventory continues.
@@ -2807,7 +2582,7 @@ store, so a slow or failed store open/startup migration cannot hide it. Every
 response from `/api/retention-status`, including authorization denial and
 internal error, carries it in `X-Phebs-Warning-Code`; every successful body
 also repeats it as `warning_code`, including for an empty installation.
-T30.6p, T30.6q, and T30.6r query, readiness, catalog, or filesystem failures
+Core and derived query, readiness, catalog, or filesystem failures
 are localized as `unavailable`/`lower_bound` summaries rather than converted
 to exact zero or used to hide successful sibling components. Audit, analytics,
 authentication, and other installation state retain their separately
@@ -2815,13 +2590,16 @@ documented lifecycles; this
 endpoint is not a claim to
 inventory every database table. After ordinary authentication, a denied
 request performs only the administrator check. An authorized production
-request runs all three bounded collector planes, then validates and encodes one
-fixed `O(53)` structure with a sub-64-KiB body. Startup still adds only the
-existing warning log line plus T30.6p's scalar field definition inside the
-existing batched schema. T30.6r additionally allocates only its bounded
-collector and four-entry policy map; T30.6q and T30.6r add no startup retention
-I/O, query, scan, child, retained-row scan, backfill, sort, index installation,
-or migration generation. Sync ticks,
+request runs the two bounded collector planes, then validates and encodes one
+fixed `O(28)` structure with a sub-64-KiB body. T46.1 adds one startup retirement-marker read. The first upgrade runs one
+transaction with 28 mutation statements: 25 retired-table removals, one
+Investigation artifact-pin range deletion, one two-cursor deletion, and one
+marker upsert. Its deletion cost scales with legacy rows; repeated starts
+skip that transaction. A separate API-key retirement reads one marker each startup. Its first
+upgrade performs one at-most-one-row capability preflight; the empty path
+writes only its marker, while a nonempty development store clears matching
+key rows in one transaction. Retention inventory itself adds no startup scan, child,
+backfill, sort, or index installation. Sync ticks,
 retries, no-ops, and publication transitions add no work. The endpoint takes
 no lock, starts no child, and adds no retained-owner deletion, configuration,
 lifecycle mutation, corpus read, payload/member/shard/leaf content hash, or
@@ -3028,57 +2806,6 @@ protobuf-only and byte-stable; the protocol-neutral `find_field_references`
 route, impact report, and MCP tool fan out across every registered
 field-reference domain whose number rules admit the requested identity.
 
-#### Provisional Workbench startup and smoke
-
-The Change Workbench remains default-dark. To bind it to the same
-store-derived Contract Atlas used by the instance, enable it alongside at
-least one declaration lane:
-
-```yaml
-experimental:
-  provisional_proto_extraction: true
-  provisional_workbench: true
-```
-
-Startup refuses before serving when the declaration lane or shared evidence
-services are missing (`workbench-evidence-prerequisite`), or when a synthetic
-Workbench or Contract Atlas fixture would create a second catalog authority
-(`workbench-authority-conflict`). `PHEBS_SYNTHETIC_WORKBENCH` accepts only an
-empty value or exact `1`; malformed values retain that strict parsing error
-instead of being classified as an authority conflict. Successful startup logs
-one warning naming the provisional, non-production posture. The bound evidence
-service reuses the instance's exact Caller Map and comparison objects; startup
-does not populate their publication, index, binding, or citation caches merely
-because Workbench is enabled.
-
-For a bounded operator smoke over public, remote-HEAD evidence:
-
-1. Use the isolated `phebs-everything.yaml` configuration and a fresh or
-   disposable `~/.phebs-everything` data directory.
-2. Run `make build`, then `./phebs serve -config phebs-everything.yaml`.
-3. Wait for one configured public repository to finish sync, index, and
-   protobuf or Thrift declaration extraction. Confirm a published declaration
-   run in the extraction logs or Contract Atlas coverage. For a modify,
-   migrate, or retire observation, also wait for the applicable complete caller
-   generation, or deliberately retain its `missing`, `failed`, or `stale`
-   state as the typed gap under test.
-4. Sign in, open **Contract Atlas**, select one exact published operation, and
-   choose **Start Workbench**. Confirm the resulting Workbench retains the
-   repository, indexed HEAD commit, declaration lineage, and operation shown
-   by Contract Atlas. In Where, confirm focused-local coverage is separate from
-   the repository-overlay generation. A current generation may show exact rows
-   and **Read exact cited bytes**; an unavailable generation must show no
-   caller total or comparison classification.
-5. Stop the instance and remove the disposable data directory if the
-   observation does not need to be retained locally.
-
-This is a manual availability check only. Upstream HEADs and the resulting
-rows may drift; do not commit outputs, turn observations into an accuracy
-number, or use them as deterministic merge-bar input. `make dev` and
-`make dev-api` instead provide the retained neutral T30.7 focused-service
-cohort and T33.5 companion catalog through the same ordinary store-derived
-paths.
-
 ### Source-free service-directory walkthrough
 
 `make dev` and `make dev-api` select the exact retained
@@ -3210,8 +2937,8 @@ publications, pins, or partial stages to resolve pressure.
 
 Protection is evaluated before eligibility. Current repository, catalog,
 service, source/search, and scheduler pointers are live roots. A stale
-service's exact active generations remain rooted. Proof and Investigation
-ownership is transitive, active reader and worker leases protect their exact
+service's exact active generations remain rooted. Proof ownership is
+transitive, active reader and worker leases protect their exact
 generation, and current plus one prior complete generation forms the rollback
 floor. A backup does not pin live data. No age, count, byte, or watermark rule
 may override these protections.
@@ -3231,7 +2958,7 @@ may override these protections.
 | settled generation schedules/chunks | 7 days | 2 per repository/stage | row count only; no byte substitution |
 | terminal rows in each existing durable job table | 30 days | 100,000 per table | row count only; no database-byte claim |
 | current service tombstones | indefinite | disabled | precious incarnation/ABA fence |
-| proof bundles and Investigation/Workbench state | indefinite | disabled | released only by the explicit owner lifecycle |
+| proof bundles | indefinite | disabled | released only by the explicit owner lifecycle |
 | retired readers | final lease release | current replacement only | no age/count/byte policy |
 
 For an unrooted identity above the rollback floor, any enabled matching age,
@@ -3252,11 +2979,11 @@ refuses rather than deletes. Unknown capacity is reported unavailable and
 refuses only new pressure-dependent T35 workloads.
 
 A removed service must first commit its durable tombstone; only then may its
-prior generation leave the live-root set. Proof and Investigation pins and
+prior generation leave the live-root set. Proof pins and
 active leases always win, even if disk remains above 90%. T35.3 rechecks all
 roots immediately before collection and coordinates with backup.
 
-The installed controller has sixteen closed owners and advances one owner per
+The installed controller has fifteen owners, including five closed owners, and advances one owner per
 turn through durable CAS cursors. A successful turn uses at most sixteen store
 queries including four cursor operations, 64 candidate rows, sixteen deleted
 rows, 256 filesystem stats, eight descriptors, and 1 MiB of bounded metadata.
@@ -3291,7 +3018,7 @@ reuse this scheduler ownership; collecting a settled schedule removes its
 non-running plan in the same transaction. Its wrapped key cursor reconsiders a
 schedule after a lease releases.
 
-Job maintenance covers all eight durable job tables. It deletes at most
+Job maintenance covers all seven durable job tables. It deletes at most
 sixteen terminal rows older than 30 days, performs a restart-resumable 64-row
 physical census, and trims at most sixteen oldest terminal rows when the
 lower-bound census exceeds 100,000. Concurrent queue writes mean census status
@@ -3305,7 +3032,7 @@ generation. It first renames one eligible excess generation out of authority,
 then removes at most sixteen regular files/directories per turn; every resumed
 turn rechecks those roots and the lease before continuing. The relationship
 owner remains exact empty until that pipeline registers publications. Proofs,
-Investigations, tombstones, readers, and crash-stage recovery retain their
+tombstones, readers, and crash-stage recovery retain their
 explicit existing lifecycle and are never swept by analogy. A malformed owner
 is `unavailable`, not permission to widen another collector.
 
@@ -3313,7 +3040,7 @@ The separate `observation-v2-generations` owner walks the closed `v2/`
 namespace under the same backup/publication mutation lock. Its small root
 protects current plus one rollback floor; a publishing marker protects its
 exact stage and any sealed post-rename candidate. Exact cache leases and the
-explicit proof/Investigation pin providers outrank age, count, pressure, and
+explicit proof pin providers outrank age, count, pressure, and
 collection. One eligible generation or abandoned worker stage is renamed to a
 closed `collecting-*` name before deletion. Each turn removes at most sixteen
 known regular entries and resumes that collecting name after interruption;
@@ -3394,7 +3121,7 @@ Administrators can open Settings or request `GET /api/lifecycle-status` to see
 the fixed `phebs-lifecycle-status-v1` snapshot. Authorization runs before the
 source. The response is capped at 16 KiB and reports only enabled state, fixed
 turn/watermark limits, the latest allocated-capacity class, and one latest
-source-free result for each of the sixteen owners, including the real
+source-free result for each of the fifteen owners, including the real
 `search-generations` and dark `catalog-v3-generations` and
 `relationship-v3-namespaces` owners. The catalog-v3 owner adds
 exact latest-turn `logical_bytes`, `root_bytes`, and `member_bytes`; other
@@ -4164,7 +3891,7 @@ proof service. Operational state is also visible through the database and
 
 Each domain logs `inventory started`, inventory file/candidate counts,
 `extractor started`, emitted fact count, and either `published` or `aborted`
-with the refusal. Contract Atlas, Impact, Topics, and Workbench surfaces remain
+with the refusal. Contract Atlas, Impact, and Topics surfaces remain
 empty until their required domains have a published run; enabling their flags
 does not bypass candidate-manifest or extraction admission. A repository view
 beyond a planned-path, path-byte, candidate-read, aggregate-byte, fact, or
@@ -4191,37 +3918,20 @@ require exclusive startup: never operate rolling mixed-version writers against
 a remote endpoint — the supervised local deployment already provides the
 intended single-writer lifecycle.
 
-### Investigation storage and guided execution foundation
+### Retired Investigations product
 
-The Investigation, Revision, Run, Disposition, and Dossier storage plus the
-guided-execution, consumer-ledger, ReviewItem, and export services are
-implemented but production-unregistered: the normal binary registers no
-Investigation workflow, core-view, or export route, and those surfaces return
-404. Their immutability, authorization, and lifecycle guarantees live in
-[PLAN.md](../../PLAN.md) and the Epic 16 tickets in
-[BACKLOG_COMPLETED.md](../BACKLOG_COMPLETED.md).
-
-For retained fixture tests or an explicit historical-fixture invocation,
-`PHEBS_INVESTIGATION_FIXTURES` may name the five canonical synthetic files in
-`docs/fixtures/investigations/`, which binds the read-only
-`investigation-core-views` capability and the `#/investigations` page. T30.7
-`make dev` does not bind them. These fixtures exercise presentation and
-conformance states; they are not published evidence, a released pack executor,
-a valid accuracy gate, or authority for external claims.
-
-Verify an exported canonical dossier file without a running phebs service:
-
-```sh
-go run ./scripts/verify-dossier.go \
-  -trusted-key-id <key-id> \
-  -trusted-public-key <base64-ed25519-public-key> \
-  dossier.json
-```
-
-The trust flags are optional for digest/signature consistency checks, but use
-an independently distributed key for authenticity. Successful verification
-proves byte integrity and the signer only; it does not prove current
-authorization, freshness, evidence availability, or continuing validity.
+T46.1 removed persistent Investigation, Revision, Run, Review, Watch,
+Decision, Disposition, Dossier, and Change Workbench workflows from the
+running product. No Investigation fixture selector, product capability, UI
+page, HTTP route, worker, or export command remains. The former product design
+and synthetic receipts remain in
+[retained records](../RETAINED_RECORDS.md); they do not describe runnable
+operations. The read-only MCP evidence envelope remains available through its
+separately registered evidence tools.
+The frozen T42 V4 ceremony still expects the retired Investigation lifecycle
+owner and therefore refuses selected launch against this 15-owner runtime.
+Its historical plan and receipts stay exact; a future ceremony requires a
+reviewed versioned 15-owner contract. Ordinary startup is unaffected.
 
 ### Metrics
 
@@ -4285,8 +3995,8 @@ T37.2 adds classified RPC caller postings and T37.3 adds Kafka
 producer/consumer postings. T37.4 registers their bounded relationship
 workload when resolver adapters are enabled, adds atomic repository/service
 roots, migrates the relationship lifecycle owner, and adds exact composite
-backup/restore. T37.5 still owns HTTP, MCP, UI, comparison, proof, and
-Workbench consumers.
+backup/restore. T37.5 delivered HTTP, MCP, UI, comparison, and proof
+consumers; its historical Workbench consumer was retired under T46.1.
 
 The catalog admits Go gRPC and Thrift resolver symbols from one exact prior
 resolver generation. Identity is partitioned by language, protocol, and import
@@ -4624,20 +4334,15 @@ concurrently. Expiry is an expected bounded-state transition: rerun the list or
 comparison to mint a current citation.
 
 Proof bundles may carry an optional source-free relationship-root coverage
-annex; retained bundles without it keep byte-identical v1 content. Workbench
-Impact binds the same exact root-set digest into its continuation cursor. A
+annex; retained bundles without it keep byte-identical v1 content. A
 visible set above 32 produces an explicit relationship coverage gap rather
 than a partial root sample. These annexes read root controls only and do not
 walk members, source, shards, or Git objects. None of the reader, comparison,
-proof, or Workbench surfaces establishes relationship completeness, runtime
+or proof surfaces establishes relationship completeness, runtime
 topology, migration/decommission safety, an SLO, or release authority.
 
-T38.4 projects that same Workbench Impact reader through MCP as
-`get_change_workbench_impact`. The adapter performs no relationship join or
-classification: it forwards the exact HTTP request semantics, preserves the
-shared page, authority, gap and error types, and applies the same final 8 MiB
-encoded-response fence. Cancellation reaches the shared read. All six
-microservice MCP tools are read-only and closed-world; their evidence cannot
+The service-directory and relationship MCP tools are read-only and
+closed-world; their evidence cannot
 authorize an agent Decision, task completion, migration, decommission, or
 release action.
 
@@ -5074,7 +4779,7 @@ rehearsal pass or ceremony freeze; V1/V2 remain exact.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle and T33.5 service catalog through ordinary indexing, evidence, catalog, default-on bounded lifecycle, caller-overlay, and store-derived Workbench paths; expose administrator lifecycle pressure/owner status in Settings without seeding historical rows; explicitly disable synthetic response fixtures; run with embedded UI |
+| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle and T33.5 service catalog through ordinary indexing, evidence, catalog, default-on bounded lifecycle, and caller-overlay paths; expose administrator lifecycle pressure/owner status in Settings without seeding historical rows; explicitly disable synthetic response fixtures; run with embedded UI |
 | `make dev-api`       | backend-only loop over the same neutral focused-service/catalog cohort and real store-derived paths (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make clean`         | from a verified phebs checkout working directory, remove `phebs`, `coverage.out`, the three named `bin/` children, `ui/dist`, and reserved `dist/.build-*`, `dist/phebs-*`, and `dist/.phebs-*.tmp-*` outputs; preserve data, configuration, dependencies/caches, other `bin`/`dist` entries, and custom release roots outside those namespaces |
@@ -5118,8 +4823,8 @@ must link the run and checksum and state that Contract Atlas and proof
 features are default-dark, provisional, and do not establish the closed
 `NOT_ESTABLISHED` accuracy gate.
 
-The canonical Change Workbench vocabulary is
-`internal/glossary/glossary.json`. Run `go generate ./internal/glossary` after
+The canonical evidence vocabulary is `internal/glossary/glossary.json`.
+Run `go generate ./internal/glossary` after
 an approved source change; do not edit its generated Go, TypeScript, schema,
 MCP, or marked MANUAL projection directly. `make verify-glossary` is
 network-free and is also part of the ordinary test, lint, and static CI gates.

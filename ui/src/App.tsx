@@ -26,8 +26,6 @@ const CommitPage = lazy(() => import('./pages/CommitPage'))
 const AuditPage = lazy(() => import('./pages/AuditPage'))
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
 const ImpactPage = lazy(() => import('./pages/ImpactPage'))
-const InvestigationPage = lazy(() => import('./pages/InvestigationPage'))
-const WorkbenchPage = lazy(() => import('./pages/WorkbenchPage'))
 const ContractAtlasPage = lazy(() => import('./pages/ContractAtlasPage'))
 const CallerMapPage = lazy(() => import('./pages/CallerMapPage'))
 const CallerComparisonPage = lazy(() => import('./pages/CallerComparisonPage'))
@@ -35,8 +33,7 @@ const KafkaTopicsPage = lazy(() => import('./pages/KafkaTopicsPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
-  // T43.8: one exact scope, read from the URL on every route (including the
-  // Workbench's own param spelling). The bar persists it across surfaces;
+  // T43.8: one exact scope, read from the URL on every route. The bar persists it across surfaces;
   // clearing is an explicit bar action.
   const scope = scopeFromParams(params)
   const scopeServiceKey = scope?.serviceKey ?? ''
@@ -118,10 +115,6 @@ export default function App() {
   const callerMapAvailable = capabilities.includes('contract-caller-map')
   const callerComparisonAvailable = capabilities.includes('contract-caller-comparison')
   const compatibilityAvailable = capabilities.includes('contract-compatibility')
-  const investigationsAvailable = capabilities.includes('investigation-core-views')
-  const workbenchAvailable = capabilities.includes('change-workbench')
-  const workbenchEvidenceAvailable =
-    capabilities.includes('change-workbench-evidence')
   const topicsAvailable = capabilities.includes('kafka-topic-usage')
   const servicesAvailable = capabilities.includes('service-catalog-v2')
   const serviceRelationshipsAvailable = capabilities.includes('service-relationships-v1')
@@ -153,8 +146,6 @@ export default function App() {
     { label: 'Caller comparison', path: '/compare-callers', available: capability('contract-caller-comparison') },
     { label: 'Contract impact', path: '/impact', available: capability('contract-impact-report') },
     { label: 'Kafka topics', path: '/topics', available: capability('kafka-topic-usage') },
-    { label: 'Investigations', path: '/investigations', available: capability('investigation-core-views') },
-    { label: 'Change workbench', path: '/workbench', available: capability('change-workbench') },
     { label: 'Audit log', path: '/audit', available: status.user?.is_admin === true },
     { label: 'Analytics', path: '/analytics', available: status.user?.is_admin === true },
     { label: 'Settings', path: '/settings', available: true },
@@ -169,13 +160,11 @@ export default function App() {
   else if (path.startsWith('/relationships')) page = gate(serviceRelationshipsAvailable, 'The relationship explorer', () => <RelationshipExplorerPage params={params} />)
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
-  else if (path.startsWith('/contracts')) page = gate(contractsAvailable, 'The contract atlas', () => <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} workbenchAvailable={workbenchAvailable} />)
+  else if (path.startsWith('/contracts')) page = gate(contractsAvailable, 'The contract atlas', () => <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} />)
   else if (path.startsWith('/callers')) page = gate(callerMapAvailable, 'The caller map', () => <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} />)
   else if (path.startsWith('/compare-callers')) page = gate(callerComparisonAvailable, 'Caller comparison', () => <CallerComparisonPage params={params} />)
   else if (path.startsWith('/impact')) page = gate(impactAvailable, 'The impact report', () => <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />)
   else if (path.startsWith('/topics')) page = gate(topicsAvailable, 'Kafka topic usage', () => <KafkaTopicsPage params={params} />)
-  else if (path.startsWith('/investigations')) page = gate(investigationsAvailable, 'Investigations', () => <InvestigationPage params={params} />)
-  else if (path.startsWith('/workbench')) page = gate(workbenchAvailable, 'The change workbench', () => <WorkbenchPage params={params} evidenceAvailable={workbenchEvidenceAvailable} />)
   else if (path.startsWith('/settings')) page = <SettingsPage isAdmin={status.user?.is_admin === true} />
   else page = <SearchPage params={params} />
 
@@ -183,7 +172,7 @@ export default function App() {
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
-      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} investigationsAvailable={investigationsAvailable} workbenchAvailable={workbenchAvailable} onLogout={() => void logout().catch(() => {})} />
+      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} onLogout={() => void logout().catch(() => {})} />
       {scope && <ScopeContextBar scope={scope} path={path} params={params} principal={status.user?.email ?? ''} />}
       {navigatorOpen && (
         <CommandNavigator
@@ -235,8 +224,6 @@ function routeTitle(path: string): string {
   if (path.startsWith('/compare-callers')) return 'Caller comparison'
   if (path.startsWith('/impact')) return 'Contract impact'
   if (path.startsWith('/topics')) return 'Kafka topics'
-  if (path.startsWith('/investigations')) return 'Investigations'
-  if (path.startsWith('/workbench')) return 'Change workbench'
   if (path.startsWith('/audit')) return 'Audit log'
   if (path.startsWith('/analytics')) return 'Analytics'
   if (path.startsWith('/settings')) return 'Settings'
@@ -290,7 +277,7 @@ function CapabilityUnavailablePage({ label, path }: { label: string; path: strin
   )
 }
 
-export function Header({ path, email, isAdmin, contractsAvailable, impactAvailable, topicsAvailable, investigationsAvailable, workbenchAvailable, onLogout }: { path: string; email: string; isAdmin: boolean; contractsAvailable: boolean; impactAvailable: boolean; topicsAvailable: boolean; investigationsAvailable: boolean; workbenchAvailable: boolean; onLogout: () => void }) {
+export function Header({ path, email, isAdmin, contractsAvailable, impactAvailable, topicsAvailable, onLogout }: { path: string; email: string; isAdmin: boolean; contractsAvailable: boolean; impactAvailable: boolean; topicsAvailable: boolean; onLogout: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode, toggle } = useMode()
@@ -304,8 +291,6 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
     path.startsWith('/compare-callers')
   const isTopics = path.startsWith('/topics')
   const isContracts = path.startsWith('/contracts')
-  const isInvestigations = path.startsWith('/investigations')
-  const isWorkbench = path.startsWith('/workbench')
   const isSearch = path === '/' || path.startsWith('/search')
 
   return (
@@ -349,8 +334,6 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
         {contractsAvailable && <NavLink href="#/contracts" label="Contracts" active={isContracts} />}
         {impactAvailable && <NavLink href="#/impact" label="Impact" active={isImpact} />}
         {topicsAvailable && <NavLink href="#/topics" label="Topics" active={isTopics} />}
-        {investigationsAvailable && <NavLink href="#/investigations" label="Investigations" active={isInvestigations} />}
-        {workbenchAvailable && <NavLink href="#/workbench" label="Workbench" active={isWorkbench} />}
         {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
         {isAdmin && <NavLink href="#/analytics" label="Analytics" active={isAnalytics} />}
         <NavLink href="#/settings" label="Settings" active={isSettings} />

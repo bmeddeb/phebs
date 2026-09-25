@@ -16,11 +16,11 @@ phebs ships as a self-hosted, single-node Go application with:
 - supervised local SurrealDB state, bounded index-builder children, backup and
   restore, and deterministic release tooling.
 
-The contract-intelligence, Caller Map, Change Workbench, Thrift-field, and
-Kafka evidence stacks are implemented but remain experimental/default-dark.
-The Workbench can bind provisionally to real store-derived protobuf or Thrift
-evidence for development and pilot evaluation. The legacy synthetic cohort
-remains fixture-backed, while Epic 30's neutral service cohort flows through
+The contract-intelligence, Caller Map, Thrift-field, and Kafka evidence stacks
+are implemented but remain experimental/default-dark. Investigations and
+Change Workbench are retired under T46.1: PHEBS provides evidence; change
+organization, investigation workflow, human dispositions, and decisions belong
+in Cortana. MCP has no product write tools. Epic 30's neutral service cohort flows through
 ordinary sync, focused indexing, extraction, resolver, caller-leaf, and
 complete-publication workers. Their retained external validation result is
 `NOT_ESTABLISHED`; they do not establish runtime use, completeness,
@@ -1418,13 +1418,17 @@ simultaneous structural descriptors—at most three
 collector-retained handles plus up to two Go/platform directory-iterator
 duplicates or rooted traversal internals. Manifest parsing is serial, with at
 most 32 MiB of caller raw bytes live beside its bounded decoded
-pair structure. All 52 components now have collectors; runtime I/O failures
+pair structure. At T30.6r completion, all 52 components had collectors; runtime I/O failures
 remain explicitly unavailable or lower-bound, never exact zero, with at most
 nine localized T30.6r diagnostics and 54 events across the complete surface.
+T40.7 and T40.10 later added two components; T46.1 retired the full
+Investigation/Workbench owner, separate run-job component, and artifact-pin
+namespace, leaving 28 current components. Current allocation
+and operator guidance are in [Configuration](./guides/CONFIGURATION.md#historical-publication-retention).
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
-The 78-report/79-scan slots allocate the response envelope rather than promise
+The then-78-report/79-scan slots allocated the response envelope rather than promised
 universal exactness. The 4,096-stat ceiling covers the regression-gated lean
 maximum allocation; recognized residue, nested stages, or the independent
 64-MiB metadata limit may still localize a lower-bound or unavailable metric.
@@ -1593,15 +1597,17 @@ for migration comparison in one authorization-first, jointly fenced two-
 generation read. Either unavailable side makes the whole page a typed gap
 without classifications or a numeric total; a current pair uses one compact
 shared-registry binding and a cursor over both complete publication identities.
-T30.6l now composes those exact single- or two-generation caller snapshots
-through the current Workbench Revision, typed Analysis-scope gaps, and a final
-Investigation fence. Completed subordinate streams are confirmed through a
+T30.6l historically composed those exact single- or two-generation caller
+snapshots through the then-current Workbench Revision, typed Analysis-scope
+gaps, and a final Investigation fence. Completed subordinate streams were
+confirmed through a
 hidden signed full-incarnation authority token without relisting, minting
 citations, or creating a new request binding. Focused-local coverage remains a
 separate plane, and checklist identity excludes rotating cursors and citation
-tokens. Exact comparison and Workbench composition create no completeness,
-migration-completion, decommission-safety, or bounded historical-retention
-claim. T30.6m records the separate explicit unbounded capacity posture.
+tokens. That Workbench composition was retired under T46.1. Exact comparison
+creates no completeness, migration-completion, decommission-safety, or bounded
+historical-retention claim. T30.6m records the separate explicit unbounded
+capacity posture.
 A physical test-search overlay,
 test-source association, automatic unit discovery, SCIP generation,
 pack-specific recognizer expansion, and per-file parser degradation remain
@@ -1610,9 +1616,9 @@ retained source or merge-bar artifact; neutral generated fixtures reproduce
 only the accepted behavior classes.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
-browsing, related implementation, and the Workbench use one physically
-focused service unit with explicit declaration/generated/module/typed-index
-supporting paths. Caller Map and caller-backed Impact use a separate
+browsing, and related implementation use one physically focused service unit
+with explicit declaration/generated/module/typed-index supporting paths.
+Caller Map and caller-backed Impact use a separate
 target-bound, partitioned repository overlay over the same immutable commit.
 The focused shard therefore does not need to contain the whole monorepository
 to retain a bird's-eye caller view. Merely increasing current extraction
@@ -1703,14 +1709,14 @@ phebs recognizers without incorporating module code or metadata; script key
 lists and ACL patterns retain deliberately narrower semantics. The spike pins
 public Asynq and CloudWeGo go-redis/v9 corpora plus Redis ACL fixtures before
 execution, and drafts a neutral keyspace manifest only if the measured
-declaration gap justifies it. Completed Epic 29 now conditionally binds the
-existing Change Workbench to the store-derived Contract Atlas behind one
+declaration gap justifies it. Completed Epic 29 conditionally bound the
+former Change Workbench to the store-derived Contract Atlas behind one
 development-only flag alongside an already-enabled provisional protobuf or
-Thrift extraction lane. The flag does not independently expose the evidence
+Thrift extraction lane. That flag did not independently expose the evidence
 store, add a route or capability identifier, or permit a simultaneous
-synthetic/fixture catalog authority. It lets a pilot exercise Workbenches over
-real published evidence but changes no production registration, which stays
-behind the gates below. None of Epics 25–28 is an implicit next ticket; the
+synthetic/fixture catalog authority. It let a pilot exercise Workbenches over
+real published evidence but changed no production registration. T46.1 later
+retired that binding. None of Epics 25–28 is an implicit next ticket; the
 completed microservice sequence below is the foundation for the explicit
 Epics 40–42 scale program.
 
@@ -1744,7 +1750,7 @@ service count × repository bytes
 | T30 focused analysis unit | exact primary/supporting paths, unit identity, focused shards, backup/restore, and scope-aware results | more than one service per repository |
 | Streamed candidate manifest | one bounded HEAD census with deterministic repository, local, and caller partitions | a reusable catalog containing thousands of services |
 | Resolver and caller-leaf pipeline | exact declaration catalog, target-bound partition work, complete atomic caller generations, and authorized reads | parse-once source observations or one join shared by every service |
-| Coverage, outcomes, proofs, and Workbench | explicit failed/stale/unavailable states and immutable evidence authority | validated accuracy, complete relationships, or multi-service currentness |
+| Coverage, outcomes, and proofs | explicit failed/stale/unavailable states and immutable evidence authority | validated accuracy, complete relationships, or multi-service currentness |
 | Retention-status and T31 diagnostics | bounded visibility into accumulated state and pipeline cost without source leakage | bounded deletion/GC or a large-monorepo operating envelope |
 
 ### Required system capabilities
@@ -4118,7 +4124,7 @@ retained allocation; ordinary query, worker, sync, and publication paths are
 unchanged. No freeze, ceremony, release, topology/bound change, or scale/SLO
 claim is authorized.
 
-Production registration of the evidence and Workbench surfaces still requires:
+Production registration of the remaining evidence surfaces still requires:
 
 1. retained validation that satisfies the documented gate rather than an
    operator bypass; and

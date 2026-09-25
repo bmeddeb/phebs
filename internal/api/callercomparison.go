@@ -107,34 +107,16 @@ type CallerComparisonPage struct {
 	Pagination        CallerMapPagination          `json:"pagination"`
 	Coverage          *extract.CoverageCertificate `json:"coverage,omitempty"`
 	Caveat            string                       `json:"caveat"`
-	// exactSnapshot is the transport-hidden joint publication/authorization
-	// digest used by composed readers when a complete page has no cursor.
-	// Legacy comparison deliberately leaves it empty.
-	exactSnapshot string
-	// exactAuthority is the signed, transport-hidden confirmation input for
-	// the joint publication pair. It is not a pagination cursor and is never
-	// serialized by the public comparison transport.
-	exactAuthority string
 }
 
-// CallerComparisonExactSnapshot is the public exact endpoint and Workbench
-// composition contract. Historical legacy fixtures remain represented by
+// CallerComparisonExactSnapshot is the public exact endpoint contract.
+// Historical legacy fixtures remain represented by
 // CallerComparisonSnapshot without weakening the product schema.
 type CallerComparisonExactSnapshot struct {
 	Endpoint          CallerMapEndpoint     `json:"endpoint"`
 	Declaration       *ContractCatalogClaim `json:"declaration,omitempty"`
 	Generation        CallerMapGeneration   `json:"generation"`
 	MatchingRowsState string                `json:"matching_rows_state" enum:"exact,unavailable"`
-}
-
-// exactCallerComparisonSnapshotConfirmation is the bounded joint projection
-// returned only after both token-bound repositories, publications, and final
-// authorization views have been rechecked.
-type exactCallerComparisonSnapshotConfirmation struct {
-	Snapshot          string
-	MatchingRowsState string
-	Old               CallerComparisonExactSnapshot
-	Replacement       CallerComparisonExactSnapshot
 }
 
 // CallerComparisonExactPage excludes every legacy evidence-plane digest and
@@ -810,9 +792,8 @@ func registerCallerComparisonAPI(api huma.API, opts Options) {
 		}, in.PageSize, in.Cursor)
 	}
 	if service.exact == nil {
-		// Historical acceptance fixtures and Workbench's explicitly injected
-		// legacy reader keep their v1 schema. Production never registers this
-		// branch; T30.6l removes the final legacy consumer.
+		// Historical acceptance fixtures keep their v1 schema. Production
+		// never registers this branch; T30.6l removes the final legacy consumer.
 		type legacyComparisonOut struct {
 			Body CallerComparisonPage
 		}

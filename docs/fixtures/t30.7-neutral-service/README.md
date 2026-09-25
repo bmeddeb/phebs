@@ -3,11 +3,11 @@
 This retained development cohort is one small, neutral monorepo used by
 `make dev` and `make dev-api`. The Make recipes bind its cloneable Git bundle
 through the ordinary sync, focused indexing, candidate, evidence, resolver,
-caller-generation, and store-derived Workbench pipelines. They pair it with
+and caller-generation pipelines. They pair it with
 the retained [T33.5 service catalog](../t33.5-service-directory/README.md)
 through ordinary catalog ingestion and lifecycle reconciliation. They install
-no Contract Atlas or service-directory response fixture, Investigation view
-fixture, synthetic Workbench service, or authored Workbench answer.
+no Contract Atlas or service-directory response fixture or authored workflow
+answer.
 
 The configured `orders-service` analysis unit has:
 
@@ -49,9 +49,7 @@ After the repository's index and evidence jobs settle:
    cites `consumers/external/caller.go` and labels it as overlay evidence rather
    than focused local evidence.
 6. Confirm the scope diagnostics report the base and excluded `go_test`
-   partitions plus the deliberate typed-index gap. Workbench is the real
-   store-derived provisional service over the same catalog and caller
-   authority; it has no retained answer fixture.
+   partitions plus the deliberate typed-index gap.
 7. From Repos, open **Services** for the neutral repository and follow the
    companion catalog's directory walkthrough. Its catalog authority and
    lifecycle metadata remain distinct from the focused evidence scope above.

@@ -6,10 +6,9 @@ neutral development cohort supplied by `make dev`; you do not need PLAN,
 backlog, or architecture documents to follow it.
 
 The workflow is advisory. Service identities come from an explicit catalog;
-relationships come from static source observations; Workbench suggestions are
-evidence summaries; and human Dispositions are review annotations. None of
-them is runtime topology, a task, a deployment decision, or proof that a
-migration or retirement is safe.
+relationships come from static source observations. They are not runtime
+topology, a deployment decision, or proof that a migration or retirement is
+safe. Change organization and human decisions belong in Cortana.
 
 ## Start the neutral cohort
 
@@ -36,8 +35,8 @@ The development cohort deliberately keeps two authorities separate:
 
 Do not carry a service key or generation from one repository into the other.
 The T37.5 relationship receipt is a separate three-repository source-free
-envelope; `make dev` does not seed synthetic relationship or Workbench
-responses to make the walkthrough look complete.
+envelope; `make dev` does not seed synthetic relationship responses to make
+the walkthrough look complete.
 
 The workflow-state catalog contains five intentionally different identities:
 
@@ -75,24 +74,15 @@ The workflow-state catalog contains five intentionally different identities:
    compare them with both generation and root digests. Otherwise record the
    explicit unavailable/gap state; do not substitute current rows or infer an
    empty delta.
-5. **Workbench.** Start from the exact
-   `/demo.orders.v1.Orders/Create` contract identity. Fill the human-owned Why
-   fields, preserve the exact repository/lineage/operation selection, then use
-   the story table below. Preview before any creation. Where must preserve
-   service authority, affected/unowned rows, caller and comparison gaps, and
-   resource-plane states. How may record only an explicit human Disposition;
-   it creates no task or Decision.
-6. **Proof.** Open the proof/coverage views from the exact operation or topic.
+5. **Proof.** Open the proof/coverage views from the exact operation or topic.
    Keep supported facts, extractor abstentions, failed/processing domains,
    excluded `go_test` input, and unsupported planes separate. A zero row page
    is meaningful only inside its displayed eligible and completed scope.
-7. **MCP parity.** With a named API key, call `list_services`, `get_service`,
+6. **MCP parity.** With a named API key, call `list_services`, `get_service`,
    `list_service_relationships`, `compare_service_relationships`, and
-   `read_service_relationship_citation`. When the Workbench annex is present,
-   call `get_change_workbench_impact` with the exact Investigation/revision and
-   optional service filters. The tool result must carry the same authority,
-   gaps, cursor, errors, and caveat as HTTP. Agent output remains evidence,
-   never Decision authority.
+   `read_service_relationship_citation`. The tool results carry the same
+   authority, gaps, cursors, errors, and caveats as HTTP. Agent output remains
+   evidence, never Decision authority.
 
 ## Run the four change stories
 
@@ -104,11 +94,11 @@ The workflow-state catalog contains five intentionally different identities:
 | Retire | current `legacy-orders`; related `orders-api`/`orders-events` evidence | Which exact callers, topics, unresolved sites, and coverage gaps remain visible? | Evidence and gaps only; never a decommission-safe conclusion |
 
 For every story, reload the exact route and exercise browser back/forward.
-Service repository, source/target keys, Investigation, revision, step, filters,
-and cursor must remain reproducible. A stale revision, expired citation,
-changed root/incarnation, malformed authority, permission loss, interrupted
-publication, or restored-but-unrebuilt derived generation must fail closed
-with a bounded retry/restart path.
+Service repository, source/target keys, filters, and cursor must remain
+reproducible. An expired citation, changed root/incarnation, malformed
+authority, permission loss, interrupted publication, or
+restored-but-unrebuilt derived generation must fail closed with a bounded
+retry/restart path.
 
 ## Responsive and accessibility check
 
@@ -117,7 +107,7 @@ sizes:
 
 - the page title and primary heading identify the current surface;
 - keyboard focus reaches repository/service selectors, tabs, filters,
-  citations, Workbench steps, and retry controls in a sensible order;
+  citations, and retry controls in a sensible order;
 - controls have stable accessible names and visible focus;
 - exact tables may scroll locally but the document does not overflow;
 - gaps and state changes are conveyed by text, not color alone;
@@ -128,7 +118,9 @@ sizes:
 
 The retained T38.5 receipt binds the deterministic neutral story shape to the
 production-path tests for search, directory, relationships, comparison,
-Workbench, proof, MCP, failure, restart, responsive layout, and accessibility.
+proof, MCP, failure, restart, responsive layout, and accessibility.
+The Workbench portion of that receipt is retained history, not an active
+product step.
 It establishes those mechanics only. The surfaces remain experimental until
 Epic 39 separately evaluates correctness, scale, recovery, security,
 operations, and release posture. `GATE2-V2` remains `NOT_ESTABLISHED`.

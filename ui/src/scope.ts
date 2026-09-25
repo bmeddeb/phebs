@@ -11,17 +11,13 @@ export interface ActiveScope {
   generation: string
 }
 
-/**
- * Reads the active scope from any route's params. The Workbench consumes
- * scope under its own param names (service_repository / source_service);
- * both spellings are one scope.
- */
+/** Reads the active scope from any route's params. */
 export function scopeFromParams(params: URLSearchParams): ActiveScope | null {
-  const repository = params.get('repository') ?? params.get('service_repository') ?? ''
+  const repository = params.get('repository') ?? ''
   if (!repository) return null
   return {
     repository,
-    serviceKey: params.get('service_key') ?? params.get('source_service') ?? '',
+    serviceKey: params.get('service_key') ?? '',
     generation: params.get('scope_generation') ?? '',
   }
 }
@@ -36,23 +32,11 @@ export function scopeParams(scope: ActiveScope | null): Record<string, string> {
   return params
 }
 
-/** The same scope in the Workbench's own param vocabulary. */
-export function workbenchScopeParams(scope: ActiveScope | null): Record<string, string> {
-  if (!scope) return {}
-  const params: Record<string, string> = {}
-  if (scope.repository) params.service_repository = scope.repository
-  if (scope.serviceKey) params.source_service = scope.serviceKey
-  if (scope.generation) params.scope_generation = scope.generation
-  return params
-}
-
 /** Every param spelling that carries scope, for explicit clearing. */
 export const SCOPE_PARAM_KEYS = [
   'repository',
   'service_key',
   'scope_generation',
-  'service_repository',
-  'source_service',
   'scope',
 ] as const
 

@@ -30,7 +30,7 @@ func registerRelationshipTools(server *sdk.Server, opts Options) {
 	}
 	sdk.AddTool(server, &sdk.Tool{
 		Name:        "list_service_relationships",
-		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: workbenchBool(false)},
+		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: new(bool)},
 		Description: "Read permission-scoped exact service dependency, caller, and source-spelled Kafka topic rows. Returns explicit root authority, placement claims, coverage, gaps, truncation, and lease-pinned citations; this is evidence, not Decision or safety authority, and makes no runtime-topology or completeness claim.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, input listInput) (*sdk.CallToolResult, api.RelationshipPage, error) {
 		page, err := opts.Relationships.List(ctx, api.RelationshipQuery{
@@ -58,7 +58,7 @@ func registerRelationshipTools(server *sdk.Server, opts Options) {
 	}
 	sdk.AddTool(server, &sdk.Tool{
 		Name:        "compare_service_relationships",
-		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: workbenchBool(false)},
+		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: new(bool)},
 		Description: "Compare two exact lease-pinned relationship generations for one visible service. Added, removed, and unchanged rows remain occurrence-exact and carry both authorities; failed, empty, unavailable, and truncated states remain explicit. The comparison is evidence, not Decision or safety authority.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, input compareInput) (*sdk.CallToolResult, api.RelationshipComparisonPage, error) {
 		page, err := opts.Relationships.Compare(ctx, api.RelationshipComparisonQuery{
@@ -77,7 +77,7 @@ func registerRelationshipTools(server *sdk.Server, opts Options) {
 	}
 	sdk.AddTool(server, &sdk.Tool{
 		Name:        "read_service_relationship_citation",
-		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: workbenchBool(false)},
+		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: new(bool)},
 		Description: "Read only the immutable source byte span named by a lease-pinned service relationship citation. The result repeats exact relationship, projection, posting, blob, and span authority as evidence, not Decision or safety authority.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, input citationInput) (*sdk.CallToolResult, api.RelationshipCitation, error) {
 		citation, err := opts.Relationships.ReadCitation(ctx, input.Citation)

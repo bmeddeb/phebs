@@ -47,10 +47,10 @@ type DerivedRetentionStore interface {
 var _ DerivedRetentionStore = (*Surreal)(nil)
 
 const (
-	maxDerivedRetentionReportedPerComponent = 78
+	maxDerivedRetentionReportedPerComponent = 146
 	maxDerivedRetentionRequests             = 4
-	maxDerivedRetentionReportedIdentities   = 312
-	maxDerivedRetentionScanIdentities       = 316
+	maxDerivedRetentionReportedIdentities   = 584
+	maxDerivedRetentionScanIdentities       = 588
 )
 
 type derivedRetentionKind int

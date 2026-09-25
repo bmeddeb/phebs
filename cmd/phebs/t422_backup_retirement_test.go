@@ -442,6 +442,9 @@ func testT422ArchiveRetiredNativeEndpointFailure(t *testing.T, restore, workspac
 	if err := os.WriteFile(configPath, configRaw, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Mkdir(filepath.Join(root, "data"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	record := t422ServeFlagsRecord()
 	record.Producer.ID, record.Producer.Binding = 5, [32]byte{5}
 	record.SemanticMode, record.InputSHA256, record.Phase = dispatchadmission.ProductionSemanticV3, [32]byte{7}, 8

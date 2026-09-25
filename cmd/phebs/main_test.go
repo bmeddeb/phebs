@@ -919,12 +919,6 @@ func TestLegacyExtractionIsLimitedToConfiguredAnalysisUnits(t *testing.T) {
 	}
 }
 
-type authenticationWorkbenchFake struct{}
-
-type authenticationWorkbenchChecklistFake struct{}
-
-type authenticationWorkbenchImpactFake struct{}
-
 func TestCodeNavigationRepositoryErrorClassifiesNotFound(t *testing.T) {
 	wrapped := fmt.Errorf("lookup: %w", store.ErrNotFound)
 	if err := codeNavigationRepositoryError(
@@ -1125,59 +1119,6 @@ func TestObservationPlanningStartupIsFilteredAndSourceFree(t *testing.T) {
 	}
 }
 
-func (authenticationWorkbenchFake) Preview(
-	context.Context,
-	string,
-	store.WorkbenchPlan,
-) (*store.WorkbenchPreview, error) {
-	return &store.WorkbenchPreview{
-		SchemaVersion: store.WorkbenchPreviewSchemaVersion,
-		Operation:     "create",
-		Ready:         true,
-		PreviewDigest: "sha256:" + strings.Repeat("a", 64),
-	}, nil
-}
-
-func (authenticationWorkbenchFake) Create(
-	context.Context,
-	string,
-	store.WorkbenchMutationRequest,
-) (*store.WorkbenchView, error) {
-	return &store.WorkbenchView{}, nil
-}
-
-func (authenticationWorkbenchFake) Revise(
-	context.Context,
-	string,
-	store.WorkbenchMutationRequest,
-) (*store.WorkbenchView, error) {
-	return &store.WorkbenchView{}, nil
-}
-
-func (authenticationWorkbenchFake) Read(
-	context.Context,
-	string,
-	string,
-) (*store.WorkbenchView, error) {
-	return &store.WorkbenchView{}, nil
-}
-
-func (authenticationWorkbenchChecklistFake) RecordDisposition(
-	context.Context,
-	string,
-	api.WorkbenchDispositionMutation,
-) (*store.WorkbenchDisposition, error) {
-	return &store.WorkbenchDisposition{}, nil
-}
-
-func (authenticationWorkbenchImpactFake) Read(
-	context.Context,
-	string,
-	api.WorkbenchImpactRequest,
-) (*api.WorkbenchImpactPage, error) {
-	return &api.WorkbenchImpactPage{}, nil
-}
-
 func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -1216,43 +1157,10 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 			}
 			return ""
 		},
-		InvestigationMutation: func(ctx context.Context) bool {
-			principal, ok := auth.PrincipalFromContext(ctx)
-			if !ok {
-				return false
-			}
-			if principal.AuthMethod == "session" {
-				return true
-			}
-			return principal.HasAPIKeyCapability(
-				store.APIKeyCapabilityInvestigationWrite,
-			)
-		},
-		Workbench: authenticationWorkbenchFake{},
 	})
-	mcpOpts := phebsmcp.Options{
-		Version: "test", Workbench: authenticationWorkbenchFake{},
-		WorkbenchChecklist: authenticationWorkbenchChecklistFake{},
-		WorkbenchImpact:    authenticationWorkbenchImpactFake{},
-		Principal: func(ctx context.Context) string {
-			principal, ok := auth.PrincipalFromContext(ctx)
-			if !ok || principal.User == nil {
-				return ""
-			}
-			return "user:" + principal.User.ID
-		},
-		InvestigationMutation: mcpInvestigationMutation,
-	}
-	mcpReadServer := phebsmcp.NewServer(mcpOpts)
-	mcpOpts.AdvertiseWorkbenchMutations = true
-	mcpWriteServer := phebsmcp.NewServer(mcpOpts)
+	mcpServer := phebsmcp.NewServer(phebsmcp.Options{Version: "test"})
 	streamableMCPHandler := mcpsdk.NewStreamableHTTPHandler(
-		func(request *http.Request) *mcpsdk.Server {
-			if mcpInvestigationMutation(request.Context()) {
-				return mcpWriteServer
-			}
-			return mcpReadServer
-		},
+		func(*http.Request) *mcpsdk.Server { return mcpServer },
 		&mcpsdk.StreamableHTTPOptions{Stateless: true},
 	)
 	mcpHandler := http.HandlerFunc(func(
@@ -1300,14 +1208,7 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{
-		"create_change_workbench",
-		"record_change_disposition",
-	} {
-		if legacyTools[name] {
-			t.Fatalf("legacy key discovered %s: %v", name, legacyTools)
-		}
-	}
+	assertNoWorkbenchTools(t, legacyTools)
 
 	// The provider HMAC, not user auth, is the webhook trust boundary.
 	assertStatus(t, client, http.MethodPost, server.URL+"/api/webhook", `{}`, nil, http.StatusUnauthorized, "bad signature")
@@ -1333,14 +1234,7 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{
-		"create_change_workbench",
-		"record_change_disposition",
-	} {
-		if sessionTools[name] {
-			t.Fatalf("browser session discovered %s: %v", name, sessionTools)
-		}
-	}
+	assertNoWorkbenchTools(t, sessionTools)
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/repos", "", nil, http.StatusOK, "[]")
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/retention-status", "", nil,
 		http.StatusOK, `"warning_code":"`+api.RetentionStatusWarningCode+`"`)
@@ -1351,33 +1245,14 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	assertStatus(t, client, http.MethodPost, server.URL+"/api/reindex", `{"repo":"github.com/no/repo"}`,
 		http.Header{"Content-Type": []string{"application/json"}, "X-Csrf-Token": []string{loginResult.CSRFToken}},
 		http.StatusNotFound, "unknown repo")
-	workbenchPlan, err := json.Marshal(authenticationWorkbenchPlan())
-	if err != nil {
-		t.Fatal(err)
-	}
-	assertStatus(
-		t,
-		client,
-		http.MethodPost,
-		server.URL+"/api/workbench_previews",
-		string(workbenchPlan),
-		http.Header{"Content-Type": []string{"application/json"}},
-		http.StatusForbidden,
-		"CSRF",
-	)
-	assertStatus(
-		t,
-		client,
-		http.MethodPost,
-		server.URL+"/api/workbench_previews",
-		string(workbenchPlan),
-		http.Header{
-			"Content-Type": []string{"application/json"},
-			"X-Csrf-Token": []string{loginResult.CSRFToken},
-		},
-		http.StatusOK,
-		`"ready":true`,
-	)
+	assertStatus(t, client, http.MethodPost, server.URL+"/api/workbench_previews", `{}`,
+		http.Header{"Content-Type": []string{"application/json"}, "X-Csrf-Token": []string{loginResult.CSRFToken}},
+		http.StatusNotFound, "")
+	assertStatus(t, client, http.MethodPost, server.URL+"/api/investigation_previews", `{}`,
+		http.Header{"Content-Type": []string{"application/json"}, "X-Csrf-Token": []string{loginResult.CSRFToken}},
+		http.StatusNotFound, "")
+	assertStatus(t, client, http.MethodGet, server.URL+"/api/investigation_views", "", nil,
+		http.StatusNotFound, "")
 
 	keyHeaders := http.Header{"Content-Type": []string{"application/json"}, "X-Csrf-Token": []string{loginResult.CSRFToken}}
 	created := assertStatus(t, client, http.MethodPost, server.URL+"/api/auth/keys", `{"name":"integration"}`,
@@ -1400,117 +1275,26 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{
-		"preview_change_workbench",
-		"get_change_workbench",
-		"get_change_workbench_impact",
-	} {
-		if !readTools[name] {
-			t.Fatalf("read-only named key omitted %s: %v", name, readTools)
-		}
+	if len(readTools) == 0 {
+		t.Fatal("MCP returned no read tools")
 	}
-	for _, name := range []string{
-		"create_change_workbench",
-		"record_change_disposition",
-	} {
-		if readTools[name] {
-			t.Fatalf("read-only named key discovered %s: %v", name, readTools)
-		}
-	}
+	assertNoWorkbenchTools(t, readTools)
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/auth/keys", "", bearerHeaders, http.StatusForbidden, "browser session")
-	assertStatus(
-		t,
-		bearerClient,
-		http.MethodPost,
-		server.URL+"/api/workbench_previews",
-		string(workbenchPlan),
-		http.Header{
-			"Authorization": []string{"Bearer " + keyResult.Token},
-			"Content-Type":  []string{"application/json"},
-		},
-		http.StatusNotFound,
-		"workbench resource not found",
-	)
+	assertStatus(t, bearerClient, http.MethodPost, server.URL+"/api/workbench_previews", `{}`,
+		http.Header{"Authorization": []string{"Bearer " + keyResult.Token}, "Content-Type": []string{"application/json"}},
+		http.StatusNotFound, "")
 
-	writeCreated := assertStatus(
-		t,
-		client,
-		http.MethodPost,
-		server.URL+"/api/auth/keys",
-		`{"name":"investigation agent","capabilities":["investigation:write"]}`,
-		keyHeaders,
-		http.StatusCreated,
-		`"capabilities":["investigation:write"]`,
-	)
-	var writeKeyResult struct {
-		Key struct {
-			ID string `json:"id"`
-		} `json:"key"`
-		Token string `json:"token"`
-	}
-	if err := json.Unmarshal(writeCreated, &writeKeyResult); err != nil ||
-		writeKeyResult.Key.ID == "" || writeKeyResult.Token == "" {
-		t.Fatalf("write key response = %s, err %v", writeCreated, err)
-	}
-	writeBearerHeaders := http.Header{
-		"Authorization": []string{"Bearer " + writeKeyResult.Token},
-		"Content-Type":  []string{"application/json"},
-	}
-	writeTools, err := mcpToolNamesWithBearer(
-		t,
-		server.URL+"/api/mcp",
-		writeKeyResult.Token,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range []string{
-		"preview_change_workbench",
-		"create_change_workbench",
-		"get_change_workbench",
-		"get_change_workbench_impact",
-		"record_change_disposition",
-	} {
-		if !writeTools[name] {
-			t.Fatalf("write-capable named key omitted %s: %v", name, writeTools)
+	assertStatus(t, client, http.MethodPost, server.URL+"/api/auth/keys",
+		`{"name":"retired investigation agent","capabilities":["investigation:write"]}`,
+		keyHeaders, http.StatusBadRequest, "API key capabilities are retired")
+}
+
+func assertNoWorkbenchTools(t *testing.T, names map[string]bool) {
+	t.Helper()
+	for name := range names {
+		if strings.Contains(name, "workbench") || strings.Contains(name, "disposition") {
+			t.Fatalf("retired MCP tool %s remains advertised", name)
 		}
-	}
-	assertStatus(
-		t,
-		bearerClient,
-		http.MethodPost,
-		server.URL+"/api/workbench_previews",
-		string(workbenchPlan),
-		writeBearerHeaders,
-		http.StatusOK,
-		`"ready":true`,
-	)
-	assertStatus(
-		t,
-		client,
-		http.MethodDelete,
-		server.URL+"/api/auth/keys/"+writeKeyResult.Key.ID,
-		"",
-		keyHeaders,
-		http.StatusNoContent,
-		"",
-	)
-	assertStatus(
-		t,
-		bearerClient,
-		http.MethodPost,
-		server.URL+"/api/workbench_previews",
-		string(workbenchPlan),
-		writeBearerHeaders,
-		http.StatusUnauthorized,
-		"authentication required",
-	)
-	if _, err := mcpToolNamesWithBearer(
-		t,
-		server.URL+"/api/mcp",
-		writeKeyResult.Token,
-	); err == nil {
-		t.Fatal("revoked named key discovered MCP tools")
 	}
 }
 
@@ -1609,38 +1393,6 @@ func mcpToolNamesWithBrowserSession(
 	return names, nil
 }
 
-func authenticationWorkbenchPlan() store.WorkbenchPlan {
-	return store.WorkbenchPlan{
-		Referent:    "grpc:/shop.v1.Checkout/Submit",
-		ClaimFamily: "change-workbench",
-		Title:       "Checkout change",
-		Revision: store.WorkbenchRevisionDraft{
-			NormalizedQuestion: "what changes?",
-			DecisionSought:     "approve change",
-			SnapshotPolicy:     "exact commit",
-			BuildConfiguration: "linux/arm64",
-			EnumerationMethod:  "exact selection",
-		},
-		Brief: store.WorkbenchChangeBriefDraft{
-			TicketKind:      store.ChangeBriefModify,
-			Problem:         "Receipt identifiers are unstable.",
-			DesiredOutcome:  "Receipt identifiers are stable.",
-			SuccessCriteria: []string{"The identifier is stable."},
-			What: store.WorkbenchWhatDraft{
-				Selections: []store.ChangeBriefContractSelection{{
-					Role:               store.ChangeBriefCurrent,
-					Protocol:           "protobuf",
-					Repository:         "example/contracts",
-					DeclarationLineage: "proto/shop.proto:shop.Checkout",
-					CanonicalOperation: "/shop.Checkout/Submit",
-				}},
-			},
-		},
-		Repositories: []string{"example/contracts"},
-		Capabilities: []string{"contract-atlas"},
-	}
-}
-
 func TestVersionCapabilitiesRequireAuthenticatedPrincipal(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -1700,165 +1452,6 @@ func TestVersionCapabilitiesRequireAuthenticatedPrincipal(t *testing.T) {
 	if strings.Contains(string(invalid), "contract-impact-report") {
 		t.Fatalf("invalid credentials leaked capabilities: %s", invalid)
 	}
-}
-
-func TestBindSyntheticWorkbenchIsExplicitAndFixtureCoupled(t *testing.T) {
-	fixtureViews, err := api.NewInvestigationFixtureViews(
-		"../../docs/fixtures/investigations",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fixtures := func() api.Options {
-		return api.Options{
-			InvestigationViews:     fixtureViews,
-			ContractCatalogFixture: &api.ContractCatalogFixture{},
-		}
-	}
-	workbench := store.InvestigationWorkbenchService{}
-
-	t.Run("ordinary serve remains dark", func(t *testing.T) {
-		opts := fixtures()
-		if err := bindSyntheticWorkbench(&opts, "", workbench); err != nil {
-			t.Fatal(err)
-		}
-		if opts.Workbench != nil {
-			t.Fatal("empty synthetic setting registered the Workbench")
-		}
-	})
-
-	t.Run("exact setting and both fixtures register", func(t *testing.T) {
-		opts := fixtures()
-		if err := bindSyntheticWorkbench(&opts, "1", workbench); err != nil {
-			t.Fatal(err)
-		}
-		if opts.Workbench == nil {
-			t.Fatal("synthetic adapter did not register the Workbench")
-		}
-	})
-
-	t.Run("missing fixtures fail closed", func(t *testing.T) {
-		opts := api.Options{}
-		err := bindSyntheticWorkbench(&opts, "1", workbench)
-		if err == nil || !strings.Contains(err.Error(), "requires Investigation") {
-			t.Fatalf("missing fixture error = %v", err)
-		}
-		if opts.Workbench != nil {
-			t.Fatal("fixture refusal registered the Workbench")
-		}
-	})
-
-	t.Run("invalid setting and unavailable service fail closed", func(t *testing.T) {
-		opts := fixtures()
-		for _, setting := range []string{"true", " 1 "} {
-			if err := bindSyntheticWorkbench(
-				&opts,
-				setting,
-				workbench,
-			); err == nil {
-				t.Fatalf("invalid synthetic setting %q was accepted", setting)
-			}
-		}
-		if err := bindSyntheticWorkbench(&opts, "1", nil); err == nil {
-			t.Fatal("nil synthetic service was accepted")
-		}
-		if opts.Workbench != nil {
-			t.Fatal("failed registration changed Workbench options")
-		}
-	})
-}
-
-type provisionalWorkbenchEvidence struct {
-	store.EvidenceStore
-}
-
-func TestBindProvisionalWorkbenchRequiresRealEvidenceAuthority(t *testing.T) {
-	ready := func() api.Options {
-		return api.Options{
-			Evidence:        &provisionalWorkbenchEvidence{},
-			ContractCatalog: &api.ContractCatalogService{},
-		}
-	}
-	workbench := store.InvestigationWorkbenchService{}
-
-	t.Run("protocol evidence and store catalog register", func(t *testing.T) {
-		opts := ready()
-		if err := bindProvisionalWorkbench(&opts, true, "", workbench); err != nil {
-			t.Fatal(err)
-		}
-		if opts.Workbench == nil {
-			t.Fatal("provisional Workbench was not registered")
-		}
-	})
-
-	t.Run("flag alone fails prerequisite", func(t *testing.T) {
-		opts := ready()
-		err := bindProvisionalWorkbench(&opts, false, "", workbench)
-		if !errors.Is(err, errWorkbenchEvidencePrerequisite) {
-			t.Fatalf("missing evidence error = %v", err)
-		}
-		if opts.Workbench != nil {
-			t.Fatal("prerequisite refusal registered the Workbench")
-		}
-	})
-
-	t.Run("synthetic authorities conflict", func(t *testing.T) {
-		for _, row := range []struct {
-			name    string
-			setting string
-			fixture *api.ContractCatalogFixture
-		}{
-			{name: "synthetic setting", setting: "1"},
-			{name: "catalog fixture", fixture: &api.ContractCatalogFixture{}},
-		} {
-			t.Run(row.name, func(t *testing.T) {
-				opts := ready()
-				opts.ContractCatalogFixture = row.fixture
-				err := bindProvisionalWorkbench(
-					&opts,
-					true,
-					row.setting,
-					workbench,
-				)
-				if !errors.Is(err, errWorkbenchAuthorityConflict) {
-					t.Fatalf("authority conflict error = %v", err)
-				}
-				if opts.Workbench != nil {
-					t.Fatal("authority refusal registered the Workbench")
-				}
-			})
-		}
-	})
-
-	t.Run("invalid synthetic setting retains strict parsing precedence", func(t *testing.T) {
-		opts := ready()
-		err := bindProvisionalWorkbench(&opts, true, "0", workbench)
-		if !errors.Is(err, errSyntheticWorkbenchSetting) {
-			t.Fatalf("invalid setting error = %v", err)
-		}
-		if errors.Is(err, errWorkbenchAuthorityConflict) {
-			t.Fatalf("invalid setting was misclassified as authority conflict: %v", err)
-		}
-		if opts.Workbench != nil {
-			t.Fatal("invalid setting registered the Workbench")
-		}
-	})
-
-	t.Run("missing services fail prerequisite", func(t *testing.T) {
-		for _, opts := range []api.Options{
-			{},
-			{Evidence: &provisionalWorkbenchEvidence{}},
-			{ContractCatalog: &api.ContractCatalogService{}},
-		} {
-			err := bindProvisionalWorkbench(&opts, true, "", workbench)
-			if !errors.Is(err, errWorkbenchEvidencePrerequisite) {
-				t.Fatalf("missing service error = %v", err)
-			}
-			if opts.Workbench != nil {
-				t.Fatal("service refusal registered the Workbench")
-			}
-		}
-	})
 }
 
 func TestBindSyntheticThriftFieldDemoIsExplicitAndPipelineBacked(t *testing.T) {
@@ -1931,117 +1524,6 @@ func TestBindSyntheticThriftFieldDemoIsExplicitAndPipelineBacked(t *testing.T) {
 				}
 				if !reflect.DeepEqual(*row.cfg, before) {
 					t.Fatalf("failed binding changed config: before=%+v after=%+v", before, *row.cfg)
-				}
-			})
-		}
-	})
-}
-
-func TestBindSyntheticWorkbenchClosureDemoIsExplicitAndPipelineBacked(
-	t *testing.T,
-) {
-	fixture, err := filepath.Abs(filepath.Join(
-		"..", "..", "docs", "fixtures", "change-workbench",
-		"t2114-workbench-closure.bundle",
-	))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Run("ordinary serve remains dark", func(t *testing.T) {
-		cfg := &config.Config{}
-		if err := bindSyntheticWorkbenchClosureDemo(cfg, ""); err != nil {
-			t.Fatal(err)
-		}
-		if cfg.Experimental.ProvisionalProtoExtraction ||
-			cfg.Experimental.ProvisionalThriftExtraction ||
-			cfg.Experimental.ProvisionalKafkaExtraction ||
-			len(cfg.Connections) != 0 {
-			t.Fatalf("empty setting changed config: %+v", cfg)
-		}
-	})
-
-	t.Run("exact bundle registers only reviewed pipeline inputs", func(t *testing.T) {
-		cfg := &config.Config{}
-		if err := bindSyntheticWorkbenchClosureDemo(cfg, fixture); err != nil {
-			t.Fatal(err)
-		}
-		if !cfg.Experimental.ProvisionalProtoExtraction ||
-			!cfg.Experimental.ProvisionalThriftExtraction ||
-			cfg.Experimental.ProvisionalThriftFieldExtraction ||
-			cfg.Experimental.ProvisionalKafkaExtraction ||
-			len(cfg.Connections) != 1 ||
-			cfg.Connections[0].Name != "t21-workbench-closure" ||
-			cfg.Connections[0].Type != "git" ||
-			cfg.Connections[0].URL != fixture {
-			t.Fatalf("synthetic fixture config = %+v", cfg)
-		}
-	})
-
-	t.Run("existing exact source is not duplicated", func(t *testing.T) {
-		cfg := &config.Config{Connections: []config.Connection{{
-			Name: "already-present", Type: "git", URL: fixture,
-		}}}
-		if err := bindSyntheticWorkbenchClosureDemo(cfg, fixture); err != nil {
-			t.Fatal(err)
-		}
-		if len(cfg.Connections) != 1 ||
-			!cfg.Experimental.ProvisionalProtoExtraction ||
-			!cfg.Experimental.ProvisionalThriftExtraction {
-			t.Fatalf("existing fixture source changed unexpectedly: %+v", cfg)
-		}
-	})
-
-	t.Run("invalid or colliding settings fail before mutation", func(t *testing.T) {
-		rows := []struct {
-			name    string
-			fixture string
-			cfg     *config.Config
-		}{
-			{
-				name: "relative",
-				fixture: "docs/fixtures/change-workbench/" +
-					"t2114-workbench-closure.bundle",
-				cfg: &config.Config{},
-			},
-			{name: "surrounding space", fixture: fixture + " ", cfg: &config.Config{}},
-			{
-				name:    "wrong basename",
-				fixture: filepath.Join(filepath.Dir(fixture), "other.bundle"),
-				cfg:     &config.Config{},
-			},
-			{
-				name:    "missing",
-				fixture: filepath.Join(t.TempDir(), "t2114-workbench-closure.bundle"),
-				cfg:     &config.Config{},
-			},
-			{
-				name: "connection collision", fixture: fixture,
-				cfg: &config.Config{Connections: []config.Connection{{
-					Name: "t21-workbench-closure", Type: "git",
-					URL: "/different/source",
-				}}},
-			},
-		}
-		for _, row := range rows {
-			t.Run(row.name, func(t *testing.T) {
-				before := *row.cfg
-				before.Connections = append(
-					[]config.Connection(nil),
-					row.cfg.Connections...,
-				)
-				if err := bindSyntheticWorkbenchClosureDemo(
-					row.cfg,
-					row.fixture,
-				); err == nil {
-					t.Fatalf("invalid fixture setting %q succeeded", row.fixture)
-				}
-				if !reflect.DeepEqual(*row.cfg, before) {
-					t.Fatalf(
-						"failed binding changed config: before=%+v after=%+v",
-						before,
-						*row.cfg,
-					)
 				}
 			})
 		}

@@ -56,7 +56,6 @@ func TestBindT307NeutralServiceDemoIsExplicitAndPipelineBacked(t *testing.T) {
 		}
 		if !cfg.Experimental.ProvisionalProtoExtraction ||
 			!cfg.Experimental.ProvisionalKafkaExtraction ||
-			!cfg.Experimental.ProvisionalWorkbench ||
 			cfg.Experimental.ProvisionalThriftExtraction ||
 			cfg.Experimental.ProvisionalThriftFieldExtraction {
 			t.Fatalf("demo feature posture = %+v", cfg.Experimental)

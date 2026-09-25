@@ -114,7 +114,6 @@ func coreRetentionComponents() []RetentionComponent {
 		RetentionExtractionAttempt,
 		RetentionExtractionOutcome,
 		RetentionProofBundlePin,
-		RetentionInvestigationArtifactPin,
 		RetentionOtherEvidencePin,
 		RetentionProofBundle,
 		RetentionComponent(JobSync),
@@ -124,7 +123,6 @@ func coreRetentionComponents() []RetentionComponent {
 		RetentionComponent(JobExtract),
 		RetentionComponent(JobResolverCatalog),
 		RetentionComponent(JobCallerLeaf),
-		RetentionComponent(JobInvestigate),
 		RetentionCallerPublication,
 		RetentionCallerAdmission,
 		RetentionCallerLeafOutcome,
@@ -135,9 +133,9 @@ func coreRetentionRequests() []RetentionComponentRequest {
 	components := coreRetentionComponents()
 	requests := make([]RetentionComponentRequest, len(components))
 	for index, component := range components {
-		reported, scanned := 76, 77
-		if index >= 20 {
-			reported, scanned = 75, 76
+		reported, scanned := 147, 148
+		if index >= 8 {
+			reported, scanned = 146, 147
 		}
 		requests[index] = RetentionComponentRequest{
 			Component: component, ReportedIdentities: reported,
@@ -239,9 +237,6 @@ func TestCoreRetentionAllTwentyThreePlansAndJobStatuses(t *testing.T) {
 	seedRetentionRows(t, ctx, store, "evidence_pin", "proof-pin", 1, map[string]any{
 		"kind": "proof-bundle:pb_one", "run_id": "proof-run",
 	})
-	seedRetentionRows(t, ctx, store, "evidence_pin", "investigation-pin", 1, map[string]any{
-		"kind": "investigation-artifact:artifact-one", "run_id": "investigation-run",
-	})
 	seedRetentionRows(t, ctx, store, "evidence_pin", "other-pin", 1, map[string]any{
 		"kind": "checkpoint:one", "run_id": "checkpoint-run",
 	})
@@ -323,15 +318,15 @@ func TestCoreRetentionAllTwentyThreePlansAndJobStatuses(t *testing.T) {
 	})
 
 	requests := coreRetentionRequests()
-	if len(requests) != 23 {
-		t.Fatalf("core requests = %d, want 23", len(requests))
+	if len(requests) != 21 {
+		t.Fatalf("core requests = %d, want 21", len(requests))
 	}
 	totalScans := 0
 	for _, request := range requests {
 		totalScans += request.ScanIdentities
 	}
-	if totalScans != 1_768 {
-		t.Fatalf("core aggregate scan allocation = %d, want 1768", totalScans)
+	if totalScans != 3_095 {
+		t.Fatalf("core aggregate scan allocation = %d, want 3095", totalScans)
 	}
 	results, err := store.CollectCoreRetention(ctx, requests)
 	if err != nil {
@@ -456,9 +451,6 @@ func TestCoreRetentionPinPartitionsResistDominantNamespaces(t *testing.T) {
 	seedRetentionRows(t, ctx, store, "evidence_pin", "proof-dominant", 81, map[string]any{
 		"kind": "proof-bundle:dominant", "run_id": "proof-run",
 	})
-	seedRetentionRows(t, ctx, store, "evidence_pin", "investigation-sparse", 1, map[string]any{
-		"kind": "investigation-artifact:sparse", "run_id": "investigation-run",
-	})
 	seedRetentionRows(t, ctx, store, "evidence_pin", "other-low", 1, map[string]any{
 		"kind": "alpha-owner", "run_id": "low-string-kind",
 	})
@@ -471,15 +463,14 @@ func TestCoreRetentionPinPartitionsResistDominantNamespaces(t *testing.T) {
 
 	requests := []RetentionComponentRequest{
 		{Component: RetentionProofBundlePin, ReportedIdentities: 79, ScanIdentities: 80},
-		{Component: RetentionInvestigationArtifactPin, ReportedIdentities: 79, ScanIdentities: 80},
 		{Component: RetentionOtherEvidencePin, ReportedIdentities: 79, ScanIdentities: 80},
 	}
 	results, err := store.CollectCoreRetention(ctx, requests)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(results) != 3 {
-		t.Fatalf("results = %d, want 3", len(results))
+	if len(results) != 2 {
+		t.Fatalf("results = %d, want 2", len(results))
 	}
 	for _, result := range results {
 		if result.Err != nil {
@@ -490,13 +481,9 @@ func TestCoreRetentionPinPartitionsResistDominantNamespaces(t *testing.T) {
 		got.ReportedIdentities != 79 || !got.Truncated {
 		t.Fatalf("dominant proof partition = %+v", got)
 	}
-	if got := results[1].Summary; got.ScannedIdentities != 1 ||
-		got.ReportedIdentities != 1 || got.Truncated {
-		t.Fatalf("sparse investigation partition = %+v", got)
-	}
-	if got := results[2].Summary; got.ScannedIdentities != 3 ||
+	if got := results[1].Summary; got.ScannedIdentities != 3 ||
 		got.ReportedIdentities != 3 || got.Truncated {
-		t.Fatalf("other partition across all three index ranges = %+v", got)
+		t.Fatalf("other pin partition = %+v", got)
 	}
 }
 
@@ -765,16 +752,8 @@ func TestCoreRetentionPlansPushPhysicalLimitsWithoutSorts(t *testing.T) {
 			vars: map[string]any{"lower": "proof-bundle:", "upper": "proof-bundle;"},
 		},
 		{
-			name: "investigation prefix", where: "kind >= $lower AND kind < $upper",
-			vars: map[string]any{"lower": "investigation-artifact:", "upper": "investigation-artifact;"},
-		},
-		{
-			name: "other before investigation", where: "kind < $upper",
-			vars: map[string]any{"upper": "investigation-artifact:"},
-		},
-		{
-			name: "other between namespaces", where: "kind >= $lower AND kind < $upper",
-			vars: map[string]any{"lower": "investigation-artifact;", "upper": "proof-bundle:"},
+			name: "other before proof", where: "kind < $upper",
+			vars: map[string]any{"upper": "proof-bundle:"},
 		},
 		{
 			name: "other after proof", where: "kind >= $lower",
@@ -817,7 +796,7 @@ func TestCoreRetentionAllocationUsesSafetyBoundsNotAPISplit(t *testing.T) {
 		scan     int
 	}{
 		{name: "zero", reported: 0, scan: 1},
-		{name: "above component cap", reported: 80, scan: 81},
+		{name: "above component cap", reported: 148, scan: 149},
 		{name: "missing cap-plus-one sentinel", reported: 1, scan: 1},
 		{name: "extra scan work", reported: 1, scan: 3},
 	} {
@@ -836,11 +815,11 @@ func TestCoreRetentionAllocationUsesSafetyBoundsNotAPISplit(t *testing.T) {
 	overAggregate := make([]RetentionComponentRequest, len(coreRetentionComponents()))
 	for index, component := range coreRetentionComponents() {
 		overAggregate[index] = RetentionComponentRequest{
-			Component: component, ReportedIdentities: 79, ScanIdentities: 80,
+			Component: component, ReportedIdentities: 147, ScanIdentities: 148,
 		}
 	}
 	if _, err := store.CollectCoreRetention(ctx, overAggregate); err == nil {
-		t.Fatal("aggregate 1659/1680 allocation was accepted")
+		t.Fatal("aggregate 3087/3108 allocation was accepted")
 	}
 }
 

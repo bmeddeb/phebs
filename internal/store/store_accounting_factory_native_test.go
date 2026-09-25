@@ -203,6 +203,9 @@ func TestStoreAccountingNativeFullInitializationAndReopen(t *testing.T) {
 		current = nil
 	}
 	t.Cleanup(closeCurrent)
+	// The fresh epoch includes both T46.1 retirement marker transactions;
+	// reopen reads their markers without repeating either destructive migration.
+	startup := [...]struct{ transactions, rows uint64 }{{38, 681}, {7, 409}}
 	for phase := uint32(1); phase <= 2; phase++ {
 		if phase == 1 {
 			current, err = openLocalRootWithOwner(ctx, runtime, owner)
@@ -227,6 +230,10 @@ func TestStoreAccountingNativeFullInitializationAndReopen(t *testing.T) {
 			t.Fatal(err)
 		}
 		initial := beforeAuth.Phases[phase-1]
+		want := startup[phase-1]
+		if initial.Transactions != want.transactions || initial.Rows != want.rows || initial.MaximumRows != 397 {
+			t.Fatalf("selected initialization phase=%d prefix=%+v", phase, initial)
+		}
 		t.Logf("phase=%d pre_auth_transactions=%d pre_auth_rows=%d maximum_rows=%d tables=%d", phase,
 			initial.Transactions, initial.Rows, initial.MaximumRows, len((*results)[0].Result.Tables))
 		user, authErr := current.CreateFirstUser(ctx, User{
@@ -250,7 +257,8 @@ func TestStoreAccountingNativeFullInitializationAndReopen(t *testing.T) {
 			t.Fatal(err)
 		}
 		prefix, err := controller.Snapshot()
-		if err != nil || prefix.Phases[phase-1].Transactions == 0 || prefix.Phases[phase-1].MaximumRows != 488 {
+		if err != nil || prefix.Phases[phase-1].Transactions != want.transactions+1 ||
+			prefix.Phases[phase-1].Rows != want.rows+2 || prefix.Phases[phase-1].MaximumRows != 397 {
 			t.Fatalf("actual initialization prefix=%+v %v", prefix, err)
 		}
 		t.Logf("phase=%d transactions=%d rows=%d maximum_rows=%d tables=%d", phase,

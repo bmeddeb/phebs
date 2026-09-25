@@ -28,7 +28,7 @@ func TestRunnerControlSelectedNormalSkewedCensuses(t *testing.T) {
 				// Jobs finish on visits 1,17,33,...; the regular/sparse census
 				// finishes on even visits. They cannot finish in one cycle.
 				if err := runner.controller.store.CompareAndSwapLifecycleCursor(runner.ctx,
-					"owner:"+JobOwner, 0, `{"kind":7,"phase":"count"}`); err != nil {
+					"owner:"+JobOwner, 0, `{"kind":6,"phase":"count"}`); err != nil {
 					t.Fatal(err)
 				}
 				if err := runner.owners.Pause(runner.ctx); err != nil {

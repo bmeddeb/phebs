@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -121,8 +122,8 @@ type Options struct {
 	// reader. Nil leaves HTTP, MCP, proof annexes, and capability discovery
 	// absent without adding filesystem work to ordinary requests.
 	Relationships RelationshipQueries
-	// FieldReferences is the side-effect-free stable-field read shared by the
-	// proof endpoint and Workbench. It never persists a proof bundle itself.
+	// FieldReferences is the side-effect-free stable-field read used by the
+	// proof endpoint. It never persists a proof bundle itself.
 	FieldReferences *FieldReferenceService
 	// ContractCatalogFixture is an explicit development/demo adapter. It
 	// exposes only synthetic catalog rows projected onto a currently visible
@@ -142,40 +143,6 @@ type Options struct {
 	// AuthorizationProvider names the visibility policy generation.
 	Principal             func(context.Context) string
 	AuthorizationProvider string
-	// InvestigationMutation authorizes only the credential class for durable
-	// Workbench mutation boundaries. Serve permits CSRF-validated browser
-	// sessions or named keys carrying investigation:write. The shared service
-	// still independently enforces principal ownership, revision, preview,
-	// snapshot, and idempotency.
-	InvestigationMutation func(context.Context) bool
-
-	// Investigations enables the T16.4 guided-creation API. Nil leaves every
-	// route unregistered; the production binary keeps it nil until an exact
-	// released pack/executor is bound.
-	Investigations store.InvestigationWorkflowStore
-
-	// InvestigationViews enables the T16.5 read-only core-view API. The
-	// production binary leaves it nil unless an authorized projection source
-	// is explicitly bound; make dev supplies only the documented synthetic
-	// fixture provider.
-	InvestigationViews InvestigationViewSource
-
-	// Workbench enables the T21.3 shared preview/create/revise/read service.
-	// Production leaves it nil until the retained validation and explicit
-	// pilot-continuation gates are satisfied.
-	Workbench store.InvestigationWorkbench
-	// WorkbenchImpact, WorkbenchImplementation, and WorkbenchChecklist expose
-	// the shared T21.7-T21.9 projections only when an explicit adapter binds
-	// all three. Production leaves them nil; make dev supplies the synthetic
-	// fixture-coupled projection after binding Workbench.
-	WorkbenchImpact         WorkbenchImpactReader
-	WorkbenchImplementation WorkbenchImplementationReader
-	WorkbenchChecklist      WorkbenchChecklistReader
-	// ResourcePlanes is the protocol-neutral Workbench registry. Nil selects
-	// the built-in unsupported inventory; production registration remains
-	// blocked independently of this internal projection.
-	ResourcePlanes *ResourcePlaneRegistry
-
 	// Visible resolves the caller's repo visibility (T10.3): it returns this
 	// request's predicate, or nil when the caller may see everything. A nil
 	// field disables permission filtering (tests, permissions block absent).
@@ -186,6 +153,27 @@ type Options struct {
 	// repository-membership events.
 	WebhookSecret     string
 	ResyncConnections []string
+}
+
+func apiCapabilities(opts Options) []string {
+	capabilities := proofCapabilities(opts)
+	if opts.ServiceDirectory != nil || NewServiceDirectoryService(opts) != nil {
+		capabilities = append(capabilities, serviceDirectoryCapability)
+	}
+	if opts.Relationships != nil {
+		capabilities = append(capabilities, serviceRelationshipsCapability)
+	}
+	if NewContractCatalogService(opts) != nil {
+		capabilities = append(capabilities, contractCatalogCapability)
+	}
+	if opts.CallerMap != nil || NewCallerMapService(opts) != nil {
+		capabilities = append(capabilities, callerMapCapability)
+	}
+	if opts.CallerComparison != nil || NewCallerComparisonService(opts) != nil {
+		capabilities = append(capabilities, callerComparisonCapability)
+	}
+	slices.Sort(capabilities)
+	return capabilities
 }
 
 // New builds the /api/* handler: health, version, repos, plus the OpenAPI
@@ -472,10 +460,6 @@ func New(opts Options) http.Handler {
 	registerObservationProgressAPI(api, opts)
 	registerExtractionProgressAPI(api, opts)
 	registerRelationshipAPI(api, opts)
-	registerInvestigations(api, opts)
-	registerInvestigationViews(api, opts)
-	registerWorkbench(api, opts)
-	registerWorkbenchEvidence(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {
