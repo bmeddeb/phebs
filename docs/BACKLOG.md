@@ -4859,6 +4859,18 @@ ceremony execution, release or scale/SLO claim follows.
   records are missing/empty paths with only small Git metadata, and free disk
   remains ample. Host swap/FSEvents pressure is a stronger latency lead, not
   a proven past cause; the proposed deadline change supplies headroom only.
+  Exact `82b53044` then passed custody, every earlier epoch, pressure, backup,
+  restore, settled archive tail and F, and phase-13 collection, and stopped on
+  the first phase-14 product query: a cold 19.49-GB whole-repository cache
+  fill (16.5 s shared validation, 42.2 s exact reader, measured on the
+  retained generation) cannot finish inside search's 10-second query wall.
+  AC for the search warm correction: a V5 epoch-five-only opt-in launch field;
+  one authenticated, single-use `/api/t422/search/warm` parent command after
+  phase-14 F and before the corridor that completes both existing cache fills
+  under the product warming timeout; a selected generation equal to F;
+  terminal refusal on any mismatch or repeat; unchanged corridor queries,
+  ordinals and exact accounting; unchanged V1–V4 bytes; focused, modeled and
+  real-data gates, independent review and a full rehearsal before freeze.
 
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use

@@ -13,6 +13,8 @@ const handoffLifecycleAccountingPolicy = "handoff-lifecycle-accounting-v1:joined
 
 const v5ArchiveTailReadinessPolicy = "archive-tail-readiness-v5:epoch-five-phase12-only;authenticated-settled-v1-opt-in;current-observation-and-extraction-upstream;current-resolver-and-catalog-state;V3-schedule-stable-absent-or-successfully-settled-across-current-target-read;ready-C7-S21-to-275;historical-T-exact"
 
+const v5SearchWarmPolicy = "phase14-search-warm-v1:V5-epoch-five-opt-in;one-native-parent-command-after-F-before-corridor;shared-all-code-validation-and-selected-exact-reader;product-warming-timeout-bound;selected-generation-equals-F;corridor-queries-and-exact-accounting-unchanged;fail-closed"
+
 const restoredOwnerDrainPolicy = "restored-owner-drain-v1:V5-epoch-five-initial-phase12-only;authenticated-original-phase-deadline;no-deadline-renewal;all-other-control-exchanges-30s;unchanged-PC01-wire-and-pair-count;fail-closed"
 
 // This prospective correction does not modify any retained V1-V4 recipe.
@@ -38,7 +40,7 @@ func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 		return errors.New("V5 archive tail read-accounting preimage changed")
 	}
 	correction.ReadAccountingPolicy = strings.Replace(correction.ReadAccountingPolicy, oldTailReads, v5TailReads, 1)
-	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy, handoffLifecycleAccountingPolicy, v5ArchiveTailReadinessPolicy, restoredOwnerDrainPolicy)
+	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), callerRestoreContinuityPolicy, handoffLifecycleAccountingPolicy, v5ArchiveTailReadinessPolicy, restoredOwnerDrainPolicy, v5SearchWarmPolicy)
 	plan.Correction = &correction
 	plan.Schema = PlanV5Schema
 	plan.ToolPolicy.ExecutionFreezeSchema = ExecutionFreezeV5Schema

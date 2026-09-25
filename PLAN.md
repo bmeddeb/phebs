@@ -5403,3 +5403,84 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   stage or syscall timing, so the precise cause remains unproved. Thirty
   minutes is bounded headroom, not a latency fix; a later permitted run needs
   a healthy host and stage/host observations before attributing the drift.
+
+- **2026-09-24 — T42.2v phase-14 search warm before the V5 query corridor.**
+  The disposable V5 rehearsal at exact source
+  `82b5304464a3be1ed9f1671b92f584476ba108ba` passed custody (16m18s), every
+  prior epoch including return-A, the pressure sequence, backup, restore,
+  settled archive tail, owner drain, archive F with caller continuity, archive
+  finish and phase-13 collection, then stopped after 12,152.26 seconds on
+  phase-14 request 89, the first product query (`all_code` search). That
+  request ran 10.0 seconds and reported `accounting_refused`: search's fixed
+  10-second wall (`internal/search/searcher.go`) expired while the
+  cache-owned whole-repository fill was still running, so the search never
+  recorded its required repository-count observation and the ledger ended
+  with `ErrEvent`. Retained evidence: terminal log SHA-256
+  `9d5e1080f29054f8...`, server log `3d5da300968c3377...` and plan
+  `e4e1fff52f009cd6...` in `/private/tmp/t422-v5-82b53044-rehearsal.P0qW44`.
+  Measured on the retained restored 19.49-GB, 89-shard generation, shared
+  whole-generation validation takes 16.5 s and a full exact-reader load
+  (validation, shard materialization and listing) 42.2 s on sampled passes;
+  their similar times are consistent with substantial hashing work, though
+  host latency was not separately isolated. All-code search needs the first
+  (or its exact fallback); selected service search needs the second; neither
+  can complete inside a 10-second query wall on this corpus, and warming one
+  does not warm the other.
+
+  Add one V5-only parent command before the corridor instead of weakening the
+  search wall or adding retry accounting to the sealed corridor. An epoch-five
+  launch opts in with the final canonical field `search_warm` =
+  `t422-search-warm-v1` (refused on any other epoch or value; unset requests
+  keep their exact bytes). After phase-14 F and before the first query, the
+  harness POSTs `/api/t422/search/warm` once. The admitted, authenticated,
+  phase-14, owners-drained, single-use command calls
+  `Searcher.WarmSelectedWholeRepository`, which resolves the runtime
+  selector's search generation exactly as selected service search does and
+  completes both existing cache fills (`acquireIfStale` for all-code,
+  `acquireSelected` for the selected exact reader) under the product's own
+  10-minute `WholeGenerationWarmingTimeout`. It returns only source-free
+  identities and elapsed time; the harness requires the selected search
+  generation to equal phase-14 F's `SearchGenerationSHA256`, which F reads
+  from the same selector. Any refusal, mismatch, repeat or failure is terminal
+  for the launch. The corridor's 38 queries, their contiguous ordinals, exact
+  read accounting and the second F are unchanged; the warm is parent
+  control like `park` and consumes no exact-read ordinal. V5 readiness binds
+  `phase14-search-warm-v1`; V1–V4 bytes and contracts are unchanged.
+
+  Steady-state cost: ordinary serving, queries, sync ticks, startup, retries
+  and publication do nothing new; the route exists only under an opted-in
+  epoch-five semantic launch and is otherwise refused as an unlisted
+  semantic route. The opted-in command adds one selector lookup, one repository
+  point read, immutable control reads, and cache identity checks. It moves the
+  two expensive cache-owned fills before the query walls: about 59 s on this
+  corpus (16.5 s shared validation plus 42.2 s selected reader, sequential).
+  The corridor still performs its own authorization and bounded authority
+  checks; while the generation stays unchanged, it reuses the completed fills
+  rather than repeating full member validation. The command uses the cache's
+  existing two load slots and leaves the selected exact reader resident. It
+  adds one control mutex for single-use admission. The harness holds its
+  existing inspection mutex across this one native exchange; the server's
+  cache work has a 10-minute timeout and the client remains under phase 14's
+  20-minute deadline. No new cache kind, goroutine, child process, persistent
+  memory or disk write is added. Phase 14 keeps that 20-minute deadline: about
+  one minute of warm plus the prior 557-second native query replay fits with
+  margin.
+  Focused normal/race tests, the modeled `QueryRestored` operation (warm order,
+  refusal, mismatch and absent opt-in), a real-data warm on the retained
+  restored generation, static and documentation gates, independent review and
+  a full rehearsal remain the evidence required before any freeze. A later
+  read-only public-path smoke on the same retained 89-shard index completed
+  the exported warm in 57.246 s, then one all-code search in 1.676 s and a
+  selected exact-reader query with the corridor's file filter in 0.057 s;
+  that selected probe did not exercise the catalog-backed service API. Its
+  log SHA-256 is `e9814cf8dd1c4cf6...`. The failed image was detached and
+  removed after preserving the terminal/server/plan logs and the 140-byte
+  HTTP refusal; free space rose from 91,039,188 to 183,236,888 KiB. The
+  complete `cmd/phebs` G10 selection then passed in 671.017 s (retained log
+  SHA-256 `99156e3b3331d8d4...`), including
+  `TestT422WorkspaceNativeComposition` in 13.41 s. The earlier failure is
+  consistent with the host's former 82% used capacity exceeding the lifecycle
+  collector's 80% soft watermark, but that failed fixture retained no
+  time-aligned capacity sample. The outer zsh wrapper failed only after Go's
+  `PASS`/`ok` because it assigned the reserved `status` variable; the retained
+  full Go output has no failing test.

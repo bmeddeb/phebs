@@ -127,6 +127,10 @@ type executionEpochInspection struct {
 	failureBody    []byte
 	failureOrdinal uint64
 	readFailure    epochReadFailure
+
+	// One phase-14 native search warm, before the first corridor query.
+	searchWarmed          bool
+	searchWarmObservation epochSearchWarmObservation
 }
 
 // Fixed one-shot private record; URLs, headers and response bodies are not

@@ -143,6 +143,12 @@ bounded owner join after readiness; V5 does not require relationship digest
 change. Its selected read adds bounded scalar authority checks and revised
 inspection accounting while V1–V4 stay exact. The failed image and all
 remaining gates retain the posture above.
+The next V5 rehearsal (`82b53044`) passed all of that, including archive F
+and phase-13 collection, then stopped on the first phase-14 query: a cold
+whole-repository search cache takes 16.5–42 s to fill on the 19.49-GB
+generation, beyond search's 10-second query wall. A V5-only phase-14
+search warm now completes both cache fills once before the corridor; the
+corridor itself is unchanged. Review and a full rehearsal remain required.
 
 **T42.2u exact formal-executor binding, 2026-09-21:** attended identifier
 `t42r1-neutral-2` is permanently retired. It stopped before a validated

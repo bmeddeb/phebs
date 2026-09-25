@@ -70,6 +70,9 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 	if epoch.SelectorHandoffCleanup != "" && epoch.SelectorHandoffCleanup != SelectorHandoffCleanupSchema {
 		return nil, ErrExecutionEpochOne
 	}
+	if epoch.SearchWarm != "" && (epoch.SearchWarm != SearchWarmSchema || epoch.Epoch != 5) {
+		return nil, ErrExecutionEpochOne
+	}
 	if epoch.LogicalStoreWork != "" && (epoch.LogicalStoreWork != LogicalStoreWorkSchema || epoch.Epoch != 2 ||
 		epoch.SelectorHandoffCleanup != SelectorHandoffCleanupSchema) {
 		return nil, ErrExecutionEpochOne
@@ -87,7 +90,8 @@ func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *ep
 		LogicalStoreWork       string                        `json:"logical_store_work,omitempty"`
 		Archive                *epochArchiveInput            `json:"archive,omitempty"`
 		MarkerDeadlineUnixNano int64                         `json:"marker_deadline_unix_nano,omitempty"`
-	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup, epoch.LogicalStoreWork, archiveInput, epoch.MarkerDeadlineUnixNano})
+		SearchWarm             string                        `json:"search_warm,omitempty"`
+	}{"t422-semantic-launch-v3", "t422-fixed-phase-control-v3", planSHA, epoch.ConfigSHA256, epoch.Epoch, epoch.Repository, recovery, epoch.ReturnSourceCommit, epoch.SelectorHandoffCleanup, epoch.LogicalStoreWork, archiveInput, epoch.MarkerDeadlineUnixNano, epoch.SearchWarm})
 	if err != nil || len(raw)+1 > 16<<10 {
 		return nil, ErrExecutionEpochOne
 	}

@@ -614,6 +614,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if epoch.Epoch == 2 && flow.plan.LogicalStoreWork != nil {
 		epoch.LogicalStoreWork = flow.plan.LogicalStoreWork.Schema
 	}
+	epoch.SearchWarm = epochSearchWarmOptIn(epoch.Epoch, flow.plan.Schema)
 	epoch.MarkerDeadlineUnixNano = 0
 	if number == 3 && flow.workspace != nil && run.checkpointAllowed {
 		if !time.Now().Before(run.phaseDeadline) {

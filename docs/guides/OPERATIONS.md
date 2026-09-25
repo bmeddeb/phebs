@@ -7532,6 +7532,16 @@ native store reply during the disposable rehearsal while preserving the
 four-beat stale margin and exact accounting refusal. Ordinary serving and
 T40.13 exact-report launches retain their existing 5/20-second policy.
 
+A V5 restored (epoch-five) launch also opts into one phase-14 search warm.
+After phase-14 F and before the first product query, the harness POSTs
+`/api/t422/search/warm` once. The server completes the whole-repository
+search cache fills a first all-code and first selected service query would
+otherwise start inside their 10-second query wall (about a minute on the
+fixed corpus), bounded by the product's 10-minute warming timeout, and
+answers with source-free generation identities that must match F. Any
+refusal is terminal. The command is refused outside that opted-in launch and
+phase, and the query corridor and its exact accounting are unchanged.
+
 The private optional epoch-one rehearsal now recognizes
 `PHEBS_T422_PRESSURE_SEQUENCE_REHEARSAL=1`. It requires both the checkpoint
 restart and pressure-volume selectors, along with their existing predecessor

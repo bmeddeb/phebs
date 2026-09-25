@@ -53,7 +53,7 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 	}{{"v3", plan}, {"v5", v5}} {
 		modes := []string{"success", "missing_prior", "changed_F2", "missing_finish_sample", "final_fence_unavailable"}
 		if version.plan.Schema == PlanV5Schema {
-			modes = append(modes, "changed_continuity_F2", "missing_continuity_F2")
+			modes = append(modes, "changed_continuity_F2", "missing_continuity_F2", "warm_refused", "warm_mismatch", "warm_opt_in_absent")
 		}
 		for _, mode := range modes {
 			cases = append(cases, struct {
@@ -99,7 +99,8 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 				t.Fatal("catalog must match unchanged frozen projection", err)
 			}
 			queries, queryCount := epochProductQueryResponder(t, bound)
-			var requests, samples, finals atomic.Int32
+			var requests, samples, finals, warms atomic.Int32
+			warmFailure := mode == "warm_refused" || mode == "warm_mismatch" || mode == "warm_opt_in_absent"
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requests.Add(1)
 				continuity := r.Header.Values("X-Phebs-T422-Caller-Continuity")
@@ -112,6 +113,27 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 					r.Header.Get(dispatchadmission.ProductionRequestHeader) != run.control.RequestToken() {
 					t.Error("operation lost real PC request fence/token")
 					w.WriteHeader(http.StatusConflict)
+					return
+				}
+				if r.URL.Path == "/api/t422/search/warm" {
+					warms.Add(1)
+					if plan.Schema != PlanV5Schema || r.Method != http.MethodPost || r.URL.RawQuery != "" || r.ContentLength > 0 ||
+						r.Header.Get("X-Phebs-T421-Exact-Read-Ordinal") != "" || r.Header.Get("X-Phebs-T421-Exact-Reads") != "" {
+						t.Error("search warm must be one bare V5 parent POST outside exact reads")
+					}
+					if finals.Load() != 1 || queryCount.Load() != 0 {
+						t.Error("search warm must follow the first F and precede every corridor query")
+					}
+					if mode == "warm_refused" {
+						w.WriteHeader(http.StatusConflict)
+						return
+					}
+					selected := value.Authority.SearchGenerationSHA256
+					if mode == "warm_mismatch" {
+						selected = testDigest("other-search-generation")
+					}
+					_, _ = w.Write(epochTestJSON(t, epochSearchWarmObservation{Schema: SearchWarmSchema, Phase: 14,
+						SharedValidated: true, SelectedSearchGenerationSHA256: selected, ElapsedMS: 42000}, false))
 					return
 				}
 				if r.URL.Path == "/api/t422/lifecycle/sample-workspace" {
@@ -207,6 +229,9 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 			}
 			run.epoch = ExecutionEpochConfig{Epoch: 5, Listen: strings.TrimPrefix(server.URL, "http://"),
 				APIKey: "private-key", Repository: bound.repository, CatalogSHA256: projection.CatalogSource.SHA256}
+			if plan.Schema == PlanV5Schema && mode != "warm_opt_in_absent" {
+				run.epoch.SearchWarm = SearchWarmSchema // As epoch launch sets it for V5 epoch five.
+			}
 			run.inspection, run.flow.plan = reader, plan
 			// Earlier authorities are explicit modeled scaffolding, not claims
 			// that this helper executed the twelve predecessor phases. The
@@ -253,7 +278,19 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 			default:
 				t.Fatal("public operation returned before its cancellation/join boundary")
 			}
-			if run.phaseDeadline != run.lifetimeDeadline || queryCount.Load() != 38 || finals.Load() != 2 ||
+			wantWarms := int32(0)
+			if plan.Schema == PlanV5Schema && mode != "warm_opt_in_absent" {
+				wantWarms = 1
+			}
+			if warms.Load() != wantWarms || reader.searchWarmed != (wantWarms == 1 && mode != "warm_refused" && mode != "warm_mismatch") {
+				t.Fatalf("search warm calls = %d, warmed = %v", warms.Load(), reader.searchWarmed)
+			}
+			if warmFailure {
+				// No corridor query may start without the warm; F1 and start only.
+				if queryCount.Load() != 0 || finals.Load() != 1 || len(reader.productQueries) != 0 {
+					t.Fatalf("corridor started after a failed warm: queries=%d finals=%d", queryCount.Load(), finals.Load())
+				}
+			} else if run.phaseDeadline != run.lifetimeDeadline || queryCount.Load() != 38 || finals.Load() != 2 ||
 				len(reader.productQueries) != 22 || reader.next != 49 {
 				t.Fatal("deadline renewed or actual query/F prefix differs")
 			}
@@ -271,6 +308,8 @@ func TestEpochQueryRestoredModeledOperation(t *testing.T) {
 				wantSamples, completedSamples = 1, 1
 			case "missing_finish_sample":
 				completedSamples = 1
+			case "warm_refused", "warm_mismatch", "warm_opt_in_absent":
+				wantSamples, completedSamples = 1, 1
 			}
 			if samples.Load() != wantSamples || reader.restoredSamples.Phases[2].Completed != completedSamples ||
 				reader.restoredSamples.Phases[2].Maximum != (custodybytes.Sample{LogicalBytes: 10, AllocatedBytes: 20}) {

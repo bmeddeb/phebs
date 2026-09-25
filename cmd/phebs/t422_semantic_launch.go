@@ -51,6 +51,7 @@ type t422SemanticLaunchRequest struct {
 	LogicalStoreWork       string                       `json:"logical_store_work,omitempty"`
 	Archive                *t422ArchiveInput            `json:"archive,omitempty"`
 	MarkerDeadlineUnixNano int64                        `json:"marker_deadline_unix_nano,omitempty"`
+	SearchWarm             string                       `json:"search_warm,omitempty"`
 }
 
 type t422SemanticLaunch struct {
@@ -122,6 +123,9 @@ func decodeT422SemanticLaunch(raw []byte, snapshot dispatchadmission.ProductionS
 		return nil, errT422SemanticLaunch
 	}
 	if request.SelectorHandoffCleanup != "" && request.SelectorHandoffCleanup != t422SelectorCleanupSchema {
+		return nil, errT422SemanticLaunch
+	}
+	if request.SearchWarm != "" && (request.SearchWarm != t422SearchWarmSchema || request.ServerEpoch != 5) {
 		return nil, errT422SemanticLaunch
 	}
 	if request.LogicalStoreWork != "" && (request.LogicalStoreWork != t422LogicalStoreWorkSchema ||
@@ -303,7 +307,8 @@ func (launch *t422SemanticLaunch) matches(snapshot dispatchadmission.ProductionS
 func (launch *t422SemanticLaunch) admitRequest(request *http.Request) (*http.Request, error) {
 	snapshot, err := dispatchadmission.ProductionSemanticState()
 	if err != nil || !launch.matches(snapshot) || !t422SemanticRequestRoute(request) ||
-		request.URL.Path == t422SelectorCleanupPath && (launch.request.SelectorHandoffCleanup != t422SelectorCleanupSchema || launch.request.ServerEpoch > 3) {
+		request.URL.Path == t422SelectorCleanupPath && (launch.request.SelectorHandoffCleanup != t422SelectorCleanupSchema || launch.request.ServerEpoch > 3) ||
+		request.URL.Path == t422SearchWarmPath && (launch.request.SearchWarm != t422SearchWarmSchema || launch.request.ServerEpoch != 5) {
 		// A valid private request already owns its slot. A changed semantic
 		// producer/phase or unlisted route is terminal, unlike a bad token.
 		if launch.fail != nil {
@@ -327,7 +332,7 @@ func t422SemanticRequestRoute(request *http.Request) bool {
 	path := request.URL.Path
 	activation := request.Header.Values(t421ExactReadActivationHeader)
 	ordinals := request.Header.Values(t421ExactReadOrdinalHeader)
-	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath || path == t422StalePreparePath || path == t422CheckpointPreparePath || path == t422SelectorCleanupPath {
+	if path == "/api/health" || t422LifecycleCommand(path) || path == t422RetentionPinPath || path == t422StalePreparePath || path == t422CheckpointPreparePath || path == t422SelectorCleanupPath || path == t422SearchWarmPath {
 		method := http.MethodPost
 		if path == "/api/health" {
 			method = http.MethodGet

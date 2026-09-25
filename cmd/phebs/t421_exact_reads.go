@@ -97,6 +97,7 @@ type t421ExactReadAccountingState struct {
 	lifecycle          *t422LifecycleControl
 	retention          *t422RetentionControl
 	selectorCleanup    *t422SelectorCleanupControl
+	searchWarm         *t422SearchWarmControl
 	activation         *t422ActivationControl
 	stale              *t422StaleControl
 	checkpoint         *t422CheckpointControl
@@ -218,6 +219,10 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 ) {
 	if request.URL != nil && request.URL.Path == t422SelectorCleanupPath && handler.state.selectorCleanup != nil {
 		handler.state.selectorCleanup.command(writer, request)
+		return
+	}
+	if handler.state.searchWarm != nil && request.URL != nil && request.URL.Path == t422SearchWarmPath {
+		handler.state.searchWarm.command(writer, request)
 		return
 	}
 	if handler.state.retention != nil && request.URL != nil && request.URL.Path == t422RetentionPinPath {

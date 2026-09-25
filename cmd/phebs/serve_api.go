@@ -451,6 +451,13 @@ func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tai
 		&mcpsdk.StreamableHTTPOptions{Stateless: true},
 	)
 	if d.exact.state != nil {
+		if d.semanticLaunch != nil && d.semanticLaunch.request.SearchWarm != "" {
+			warm, warmErr := newT422SearchWarmControl(d.ctx, d.semanticLaunch, d.searcher)
+			if warmErr != nil {
+				return nil, warmErr
+			}
+			d.exact.state.searchWarm = warm
+		}
 		if err := d.exact.state.bindFinalReaders(finalAuthority, tailReadiness); err != nil {
 			return nil, err
 		}

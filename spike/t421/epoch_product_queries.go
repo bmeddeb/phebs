@@ -68,6 +68,13 @@ func (run *ExecutionEpochOneRun) QueryRestored(ctx context.Context) (retErr erro
 	if err != nil {
 		return err
 	}
+	// V5 completes the cache-owned whole-repository fills a cold first
+	// all-code or selected service query would otherwise hit inside its wall.
+	if reader.plan.Schema == PlanV5Schema {
+		if err := reader.searchWarm(op, authority); err != nil {
+			return err
+		}
+	}
 	for _, transport := range []string{"http", "mcp"} {
 		for _, query := range correctedQueryCases() {
 			if err := reader.productQuery(op, queries, query, transport); err != nil {
