@@ -4844,6 +4844,21 @@ ceremony execution, release or scale/SLO claim follows.
   the file's call inventory from ten to eleven. The same targeted test fails
   at clean base `47ec8177`; its one-line expectation correction changes no
   runtime behavior. The corrected full store gate remains required.
+  Exact `9c33ce3d` then passed those gates but its rehearsal stopped before
+  launch at the protected Go-input constructor's 20-minute allowance, while
+  reverse sealing of the copied module directories was incomplete. The owning
+  PLAN ADR retains the terminal and source-free inventory hashes and the
+  normally removed failed image. The prospective correction bounds only this
+  serial constructor at 30 minutes; reference builds and phase windows stay
+  unchanged. Affected custody normal/race, vet, lint, docs, glossary, module,
+  format and whitespace gates passed, as did pre-commit independent review;
+  exact-commit review remains. Ben has explicitly paused another rehearsal
+  launch until he directs it.
+  A read-only drift audit found the same 69,167-entry/57,389-file custody set
+  in four runs, including a 1m44s same-source timing swing. Prunable worktree
+  records are missing/empty paths with only small Git metadata, and free disk
+  remains ample. Host swap/FSEvents pressure is a stronger latency lead, not
+  a proven past cause; the proposed deadline change supplies headroom only.
 
 **T42.2n completion implementation (2026-09-13).** The launcher now connects
 real phase execution, observed success/stopped receipt assembly, the sole-use

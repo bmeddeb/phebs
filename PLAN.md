@@ -5356,3 +5356,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   removed after the three logged artifact hashes were verified, under Ben's
   standing approval; no rehearsal mount or port-65499 listener remains. The
   corrected exact-tree full store gate and rehearsal still must pass.
+
+- **2026-09-24 — T42.2v protected-input construction allowance.** The clean
+  reviewed `9c33ce3d54052c94fcca53223d2f0a7b67385afe` rehearsal passed all
+  prerequisite gates but stopped before any server or cold phase after
+  1,202.55 seconds in `ProtectExecutionGoBuildInputs`. Its private 20-minute
+  context expired during reverse directory sealing: the retained tree had
+  copied source, SDK and 40,513 module files, with 4,624 of 9,883 module
+  directories protected and 5,259 still unsealed. The previous successful
+  custody inventory took 19m27s, leaving only 33 seconds under that bound.
+  Retain terminal `/private/tmp/t422v-unlazy/rehearsal-return-a.log` SHA-256
+  `3e22cb293c1a35380bd3c2428fff6a1a9e45b69e1d97200f0f01647dde6021f9`
+  and source-free `/private/tmp/t422v-unlazy/prelaunch-custody-evidence.txt`
+  SHA-256 `6670d2f8e3eda2af76127530f165a6bb0e487c3a37e68b678036ab28e7f35c8d`.
+  No rehearsal process or port-65499 listener survived. The failed image was
+  normally detached and its exact root removed after evidence retention,
+  under Ben's earlier approval.
+
+  Extend only the cooperative serial Go-input constructor allowance from
+  20 to 30 minutes. It may spend up to ten more minutes copying, verifying or
+  sealing the same bounded inputs before refusal; successful work adds no
+  operation. The 100,000-entry, 2-GiB logical, per-file, path and module-pair
+  ceilings, source identity checks, immutable protection, per-reference-build
+  20-minute limits, phase deadlines and V1–V5 contracts remain exact. There
+  is no production query/request, sync tick, startup/restart, retry/no-op,
+  publication, lock, cache, schema, persistent memory/disk, concurrency or
+  child-process change. The affected custody selector passed normal
+  (126.727s) and race (145.588s); vet, pinned lint, docs, glossary, module,
+  format and whitespace passed. Independent pre-commit code, cost and evidence
+  review found no issue; exact-commit review remains. Ben has explicitly held
+  another rehearsal launch pending his
+  direction; this correction authorizes no launch, integration or freeze.
+
+  Read-only drift audit retains
+  `/private/tmp/t422v-unlazy/custody-drift-diagnostic.txt` SHA-256
+  `b37eeeab817ebb49a807bf8053fc451ccd58a7e86282f9ae0464b11309e8833e`.
+  The four completed V5 inventories all have 69,167 entries and 57,389 files,
+  with custody times 16m12s, 18m35s, 16m50s and 19m27s; the same-source pair
+  varied by 1m44s. Fourteen prunable Git worktree records have missing or
+  empty checkout paths, and all worktree administration metadata is 12 MiB;
+  `/private/tmp` is 5.34 GiB with about 164 GiB APFS free. These do not support
+  worktree/temporary-space growth as the direct cause. After the failed run,
+  the host showed high `fseventsd` activity, a 12-GiB memory compressor and
+  heavy swap traffic, while independent reference builds had also slowed.
+  This points to variable host I/O latency, but the runs retain no aligned
+  stage or syscall timing, so the precise cause remains unproved. Thirty
+  minutes is bounded headroom, not a latency fix; a later permitted run needs
+  a healthy host and stage/host observations before attributing the drift.

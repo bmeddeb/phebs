@@ -82,7 +82,7 @@ type ExecutionGoBuildCustody struct {
 // 2 GiB logical bytes, 256 MiB per file and 64 MiB of relative names; each path is
 // at most 4096 bytes. These are refusal ceilings, not frozen flow limits.
 //
-// Construction is serial and cooperatively bounded to twenty minutes. A failed
+// Construction is serial and cooperatively bounded to thirty minutes. A failed
 // constructor after Mkdir returns closed, retained custody. Close never thaws or
 // removes it; the owner must bound retries and dispose each exact retained root.
 // Writable build/cache outputs are separately owned and are never placed here.
@@ -105,7 +105,7 @@ func ProtectExecutionGoBuildInputs(ctx context.Context, parent string, request E
 			return nil, ErrExecutionGoBuildCustody
 		}
 	}
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 	identity, git, err := request.Git.Check(ctx)
 	if err != nil {
