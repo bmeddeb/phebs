@@ -14686,13 +14686,17 @@ execution authorization plus the reviewed launcher-compatibility prerequisite
 below; neutral PASS supplies none by itself. Driver equality covers only
 `//lib:alias` and its two-package closure; the other cohorts have planner/oracle
 proof, with the split configuration also refused before driver execution.
+The review correction at `7f3f34ede2150646740c8c062bebf8df4a9cfd09` passed
+fresh full native and normal/race/static/documentation gates plus independent
+implementation/cost review. `spike/t451a/review-results.json` binds the new
+853-byte response and correction evidence; all original evidence stays exact.
 
 **T45.1b · Target failure receipt and Bazel/scip-go feasibility gate** *(needs
 T45.1a PASS and reviewed launcher compatibility)* — reproduce the failed SCIP
-attempt without retaining private
-source, names, paths, commands, credentials, or raw errors in the repository;
-classify whether failure occurs during workspace/tool preflight, Bazel-native
-planning, package loading/type checking, global relationship construction,
+attempt without retaining private source, names, paths, commands, credentials,
+or raw errors in the repository; classify whether failure occurs during
+workspace/tool preflight, Bazel-native planning, package loading/type checking,
+global relationship construction,
 SCIP serialization, validation, or current Phebs admission. Through the merged
 T45.1a harness, first produce and seal the target repository's exact
 configured-target/package/document plan, then run the exact pinned
@@ -14722,9 +14726,9 @@ mode 31 with an empty request environment; scip-go's standard `go/packages`
 path sends its environment and needs type information, so that endpoint cannot
 run it. Pin scip-go and its actual x/tools dependency; retain the observed wire
 mode, argv, and full request shape, including null/empty encodings. Derive a
-bounded request-environment contract from the Phebs-owned scrubbed caller, retaining
-rejection of repository-controlled overrides, unsupported modes, build flags,
-overlays, and selectors. Prove real `packages.Load` and scip-go execution via
+bounded request-environment contract from the Phebs-owned scrubbed caller,
+retaining rejection of repository-controlled overrides, unsupported modes,
+build flags, overlays, and selectors. Prove real `packages.Load` and scip-go execution via
 actual `GOPACKAGESDRIVER` discovery on neutral fixtures, with sealed-plan parity
 and negative admission checks, then freeze/review the new launcher, profile,
 and tool digests. Protocol rejection is a harness admission STOP and cannot

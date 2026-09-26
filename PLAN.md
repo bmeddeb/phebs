@@ -5835,3 +5835,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lock, concurrency, or production request/query, sync, startup/restart,
   retry/no-op, publication, or lifecycle work. Exact correction validation
   and its evidence record follow separately from the preserved original PASS.
+- **2026-09-26 — T45.1a review correction validation.** Exact source
+  `7f3f34ede2150646740c8c062bebf8df4a9cfd09` (tree
+  `04054a33ca82bf8cb8009f05e2af3241ba3c89d9`) passed the full native gate in
+  450.020 seconds: controller hard-death recovery, all eight containment
+  probes, planner/oracle, direct alias driver equality, response-byte binding,
+  and clean teardown. The two-package response is 853 bytes with SHA-256
+  `78ece3d7b5007884a69f7946771052f04f561cc830fb7e73de052dbc662af469`.
+  Normal/race spike packages, host/Linux-arm64 vet and lint, documentation,
+  glossary, formatting, and whitespace passed; independent implementation,
+  documentation, and steady-state-cost review found zero findings at every
+  severity. `spike/t451a/review-results.json` binds the new receipt and log;
+  original evidence is byte-identical. No container or private input remains,
+  and the dedicated VM is stopped. This record changes no built/embedded
+  input and grants neither integration nor T45.1b target execution authority.

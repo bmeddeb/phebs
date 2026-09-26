@@ -7831,6 +7831,8 @@ disposition. Do not report those negative tests as clean full-launcher teardown.
 `spike/t451a` is an opt-in development harness. Its reviewed neutral acceptance
 record is [retained with the spike](../../spike/t451a/results.json), including
 complete native receipts and the SDK cold-build reproducibility limitation.
+The [review correction record](../../spike/t451a/review-results.json) separately
+binds the corrected source, fresh native receipt/log, and exact driver response.
 It runs only compiled-in neutral fixtures and fixed
 containment probes; it has no target-repository argument or server API.
 The owning decisions and limits are in `PLAN.md`, and acceptance criteria are

@@ -75,6 +75,10 @@ the exact planner/admission checks, and freeze fresh identities. A protocol
 refusal is harness failure, not target feasibility evidence. T45.1a driver
 equality covers only the ordinary alias's two-package closure; its other
 fixtures establish planner/oracle coverage, not broader driver equality.
+The correction at `7f3f34ede2150646740c8c062bebf8df4a9cfd09` passed fresh
+native and non-native gates plus independent review; its separate evidence in
+`spike/t451a/review-results.json` retains exact driver bytes and leaves the
+original acceptance artifacts unchanged.
 
 ## Now
 

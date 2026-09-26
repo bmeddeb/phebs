@@ -1,0 +1,171 @@
+{
+  "schema": "phebs-t451a-review-acceptance-v1",
+  "outcome": "PASS",
+  "scope": "neutral review corrections only; no go/packages discovery, SCIP or target execution",
+  "source_commit": "7f3f34ede2150646740c8c062bebf8df4a9cfd09",
+  "implementation_tree": "04054a33ca82bf8cb8009f05e2af3241ba3c89d9",
+  "completed_at_utc": "2026-09-26T10:24:17.076911+00:00",
+  "preserved_original_record": {
+    "path": "results.json",
+    "sha256": "sha256:25ef554730b529c0e495363b0da537072219808fffa48eae48e9b9eb64ffe642",
+    "all_original_artifacts_unchanged": true
+  },
+  "request": {
+    "schema": "phebs-t451a-request-v1",
+    "profile": "neutral-linux-arm64-v1",
+    "mode": "plan",
+    "probe": "",
+    "bundle_sha256": "sha256:252400dcf6d6564dcb5a905c7aa5fffffe7df4b9a832fea90da0b8ee9ca0ea8f",
+    "helper_sha256": "sha256:ac6c5f38ca110fdb4ec18b01ea12822295d5e674af21ab8040f2e2a819435177",
+    "planner_sha256": "sha256:ac6c5f38ca110fdb4ec18b01ea12822295d5e674af21ab8040f2e2a819435177",
+    "launcher_sha256": "sha256:ac6c5f38ca110fdb4ec18b01ea12822295d5e674af21ab8040f2e2a819435177",
+    "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+  },
+  "request_sha256": "sha256:b0444665f5ea98873e31a02bdea0c834c09c5f1311057dcb74be347386b4b734",
+  "native": {
+    "suite_seconds": 450.02,
+    "test_seconds": {
+      "TestNativeControllerDeath": 302.09,
+      "TestNativeBoundary": 3.46,
+      "TestNativePlan": 144.19
+    },
+    "controller_death": {
+      "controller_sigkill": true,
+      "detached_child_witnessed": true,
+      "watchdog_exit_code": 124,
+      "container_removed": true,
+      "inputs_removed": true,
+      "elapsed_milliseconds": 300710
+    },
+    "boundary_probes": [
+      {
+        "request_sha256": "sha256:089ff8553f210718b11a583b024cf1058dbe317e9830ae6dfda89de622d4c748",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "access"
+      },
+      {
+        "request_sha256": "sha256:74b782c138d0d6a7bfd092e763a91f966e5201b8634079f8f54eb7073ac61ca4",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "watchdog"
+      },
+      {
+        "request_sha256": "sha256:f94132b23c0498263e3e47419a27bc5a8d6dfe3b26ce1e0e391d4871e45a6630",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "descriptors"
+      },
+      {
+        "request_sha256": "sha256:fcca8bbe1a86e91bd098d8035ce891f6e189341b74cbfdb8c5c226cdb5d15272",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "scratch-bytes"
+      },
+      {
+        "request_sha256": "sha256:740df744585b7f1d55fefdf9fc66d06205ee285b2bba37a032037fc9ba9e02c3",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "scratch-inodes"
+      },
+      {
+        "request_sha256": "sha256:c89327d84e5542618c22edb2d678834092e0b408f511c37f01a7794c9449c928",
+        "outcome": "STOP",
+        "stop_reason": "process_limit",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "tasks"
+      },
+      {
+        "request_sha256": "sha256:f96c6a721c8a0ed12d464deca59dbbac196de072a296f6e9cf18cbbaeccaba8d",
+        "outcome": "STOP",
+        "stop_reason": "output_limit",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "output"
+      },
+      {
+        "request_sha256": "sha256:2297f0918bed60d6131276d4ef1d5ed0aa73b77d42ac3c1c4f05c679ff9da702",
+        "outcome": "STOP",
+        "stop_reason": "memory_limit",
+        "removed": true,
+        "inputs_removed": true,
+        "probe": "memory"
+      }
+    ],
+    "resource_observations": {
+      "memory_oom_events": 0,
+      "memory_oom_kills": 0,
+      "memory_limit_events": 0,
+      "task_limit_events": 0,
+      "sampling_unavailable": false,
+      "limits_verified": true,
+      "memory_peak_bytes": 2528862208,
+      "sampled_peak_rss_bytes": 706940928,
+      "sampled_peak_processes": 17,
+      "sampled_peak_scratch_bytes": 1669496832,
+      "sampled_peak_scratch_inodes": 59341,
+      "samples": 2772,
+      "per_process_descriptors": 128,
+      "aggregate_descriptor_ceiling": 32768
+    },
+    "container_removed": true,
+    "inputs_removed": true
+  },
+  "driver_equality": {
+    "selected_root": "//lib:alias",
+    "roots": [
+      "@@//lib:lib"
+    ],
+    "packages": 2,
+    "response_bytes": 853,
+    "response_sha256": "sha256:78ece3d7b5007884a69f7946771052f04f561cc830fb7e73de052dbc662af469",
+    "exact_wire_retained_and_verified": true,
+    "other_cohorts": "planner/oracle only; split configuration refused before driver execution",
+    "historical_digest_difference": "unattributed; original raw responses were not retained"
+  },
+  "worker_output": {
+    "bytes": 8063442,
+    "sha256": "sha256:55687343aae6d66e87228281c896fe7f7e0be2203bd0cca6c4d11ac9a8ab5de4",
+    "reconstructed_exactly_from_receipt": true
+  },
+  "gates": [
+    "normal and race spike packages",
+    "host and Linux arm64 vet and golangci-lint",
+    "make docs-check verify-glossary",
+    "gofmt and git diff --check"
+  ],
+  "independent_review": {
+    "source_commit": "7f3f34ede2150646740c8c062bebf8df4a9cfd09",
+    "scope": "correction implementation, documentation and steady-state cost",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "artifacts": [
+    {
+      "path": "review-receipt.json.gz",
+      "sha256": "sha256:cd9d0c8c7eda05ed0d9caf9a9fa7bebd78bdd048e8508e87dded2f41380b1b02",
+      "bytes": 677397,
+      "uncompressed_sha256": "sha256:f3766d4b07c4c78938af6a57533c1652a531d3e9808d2bde7edff84853cf4f25",
+      "uncompressed_bytes": 8064884
+    },
+    {
+      "path": "review-native-gates.txt",
+      "sha256": "sha256:a5a566b7ec103db68d4d89fe4239aabb361020bc75c8a2bc95f515268743e73d",
+      "bytes": 14031
+    }
+  ],
+  "next_gate": "Accepted integration and separately reviewed neutral launcher/scip-go compatibility prerequisite before separately authorized T45.1b target execution."
+}
