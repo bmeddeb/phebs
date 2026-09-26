@@ -1,0 +1,220 @@
+{
+  "schema": "phebs-t451a-acceptance-v1",
+  "outcome": "PASS",
+  "scope": "neutral fixture only; no target-repository execution or production behavior",
+  "source_commit": "f7faae99d20f19279bb52c9987045204fa0bb39f",
+  "implementation_tree": "9785f93795255c8612c71374eea0fbdca910a0b8",
+  "completed_at_utc": "2026-09-26T04:27:57.648229+00:00",
+  "request": {
+    "schema": "phebs-t451a-request-v1",
+    "profile": "neutral-linux-arm64-v1",
+    "mode": "plan",
+    "probe": "",
+    "bundle_sha256": "sha256:252400dcf6d6564dcb5a905c7aa5fffffe7df4b9a832fea90da0b8ee9ca0ea8f",
+    "helper_sha256": "sha256:06f3d9a5b299b9d348ed8a20fd6434b743c85ab7119f442e3ac5ec23b04c2bf6",
+    "planner_sha256": "sha256:06f3d9a5b299b9d348ed8a20fd6434b743c85ab7119f442e3ac5ec23b04c2bf6",
+    "launcher_sha256": "sha256:06f3d9a5b299b9d348ed8a20fd6434b743c85ab7119f442e3ac5ec23b04c2bf6",
+    "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+  },
+  "request_sha256": "sha256:9ca27190d4c79d4000b859f1a363f30465ae7df3c3e6edd932180e4d8f834381",
+  "tools": {
+    "helper_builder": "go1.26.5 darwin/arm64; GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath",
+    "bazel": {
+      "version": "9.2.0",
+      "linux_arm64_sha256": "049dd21f40ad979db11c3ee68c96a42ce75f1185e69ac61ab20de1501427a410"
+    },
+    "go_sdk": {
+      "version": "1.25.0",
+      "linux_arm64_archive_sha256": "05de75d6994a2783699815ee553bd5a9327d8b79991de36e38b66862782f54ae"
+    },
+    "rules_go": {
+      "version": "0.63.0",
+      "commit": "9792f1c079a7602347e0fd966542b6d6b35a6c64"
+    },
+    "driver": {
+      "sha256": "4e5526a4d9b15a4a1d790dd31419cabd0ee3ea8653f01a5961f24be526a2017c",
+      "go": "1.25.0",
+      "flags": [
+        "-mod=readonly",
+        "-buildvcs=false",
+        "-trimpath",
+        "-ldflags=-X=main.rulesGoRepositoryName=@rules_go"
+      ]
+    },
+    "protoc": {
+      "version": "33.4",
+      "linux_arm64_archive_sha256": "15aa988f4a6090636525ec236a8e4b3aab41eef402751bd5bb2df6afd9b7b5a5"
+    },
+    "compiler_zip": {
+      "sha256": "b5bc6148e85dc7f96e9a756f407aac10893cf8327668e4e22f5f4263454cb5c4",
+      "files": 2422,
+      "expanded_bytes": 282912654
+    }
+  },
+  "offline_bundle": {
+    "files": 15881,
+    "bytes": 496935968,
+    "manifest_bytes": 3435772,
+    "manifest_sha256": "sha256:252400dcf6d6564dcb5a905c7aa5fffffe7df4b9a832fea90da0b8ee9ca0ea8f"
+  },
+  "native": {
+    "suite_seconds": 451.99,
+    "controller_death_test_seconds": 302.38,
+    "controller_death": {
+      "controller_sigkill": true,
+      "detached_child_witnessed": true,
+      "watchdog_exit_code": 124,
+      "container_removed": true,
+      "inputs_removed": true,
+      "elapsed_milliseconds": 300845
+    },
+    "boundary_seconds": 3.94,
+    "boundary_probes": [
+      {
+        "probe": "access",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "request_sha256": "sha256:5cea65b67defcf43736d8f93845766b028b4dfa7143879f110a5e7fc5ec05d76"
+      },
+      {
+        "probe": "watchdog",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "request_sha256": "sha256:f9e9a33ad1ec216659512ea7f800c260727b416939e946fc44aff415b1d02884"
+      },
+      {
+        "probe": "descriptors",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "request_sha256": "sha256:c977466e37c745f33c72bb6270c4451faa990f53c22d22fc4f636780e584f3d1"
+      },
+      {
+        "probe": "scratch-bytes",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "request_sha256": "sha256:5f6fee6cef95da4186f5d7ff2363dc5bc2916338669f7bfbe0ff085c16b1d64a"
+      },
+      {
+        "probe": "scratch-inodes",
+        "outcome": "PROBE_OBSERVED",
+        "stop_reason": "",
+        "request_sha256": "sha256:be5c88016ba37487749a8b7556be89207d72e87264505624d132e7e3255cd353"
+      },
+      {
+        "probe": "tasks",
+        "outcome": "STOP",
+        "stop_reason": "process_limit",
+        "request_sha256": "sha256:b28cf48ffeb3d34a0050d04e2584c05616b8c252429428863c249eeec098be34"
+      },
+      {
+        "probe": "output",
+        "outcome": "STOP",
+        "stop_reason": "output_limit",
+        "request_sha256": "sha256:9f5b93a65da939a9b85cd8ff5b1e637b92be7ae8bae0f3116e901f79e1130168"
+      },
+      {
+        "probe": "memory",
+        "outcome": "STOP",
+        "stop_reason": "memory_limit",
+        "request_sha256": "sha256:3afd66e978e13ad0176c05b74112de2c8fdc0eb998d155316d211254828a7af0"
+      }
+    ],
+    "plan_seconds": 145.31,
+    "resource_observations": {
+      "memory_oom_events": 0,
+      "memory_oom_kills": 0,
+      "memory_limit_events": 0,
+      "task_limit_events": 0,
+      "sampling_unavailable": false,
+      "limits_verified": true,
+      "memory_peak_bytes": 2535014400,
+      "sampled_peak_rss_bytes": 711995392,
+      "sampled_peak_processes": 20,
+      "sampled_peak_scratch_bytes": 1670631424,
+      "sampled_peak_scratch_inodes": 59449,
+      "samples": 2793,
+      "per_process_descriptors": 128,
+      "aggregate_descriptor_ceiling": 32768
+    },
+    "container_removed": true,
+    "inputs_removed": true
+  },
+  "plan": {
+    "targets": 6244,
+    "configured_edges": 41604,
+    "units": 106,
+    "tool_units": 45,
+    "documents": 214,
+    "documents_by_kind": {
+      "source": 6,
+      "external": 202,
+      "generated": 6
+    },
+    "sdk_projections": 3,
+    "universe_sha256": "f457b87d41aa0529f46c12b8db5cb4932bda4de7aaa3ccc5b7c7c3010652007c",
+    "mapping_sha256": "14161882ffaee8601d7a307e7519935d7f3dbf81fe0a8fa46ecbc1dcc2554655",
+    "documents_sha256": "8ef2f2a37d38336d9e3821ffb8b39b17220873e3b89f017471446aeb50bbbba9",
+    "ordinary_driver_equality": true,
+    "repeated_configuration_refused_before_driver": true
+  },
+  "cross_run_comparison": {
+    "same_request_and_helper": true,
+    "configured_targets_equal": true,
+    "package_units_equal": true,
+    "repository_documents_equal": true,
+    "sdk_ids_equal": true,
+    "whole_seals_equal": false,
+    "limitation": "Canonical repository mapping is stable and encoding is deterministic for exact produced inputs. Upstream SDK cgo cache locators/content differ between cold runs; full seals retain those exact per-run bytes. Full SDK/cache/driver-response byte reproducibility is not claimed. Raw driver response bytes were not retained, so its differing digest has no attributed cause."
+  },
+  "non_native_gates": {
+    "normal": "go test ./spike/t451a/... -count=1",
+    "race": "go test -race ./spike/t451a/... -count=1",
+    "vet": "go vet ./spike/t451a/...; repeated for GOOS=linux GOARCH=arm64 CGO_ENABLED=0",
+    "lint": "golangci-lint 2.13.1 run ./spike/t451a/...; repeated for Linux arm64",
+    "documentation": "make docs-check verify-glossary",
+    "format_and_whitespace": "gofmt -l spike/t451a empty; git diff --check clean",
+    "status": "passed on identical implementation inputs"
+  },
+  "independent_reviews": [
+    {
+      "scope": "root, sandbox, command and steady-state cost",
+      "source_commit": "f7faae99d20f19279bb52c9987045204fa0bb39f",
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    {
+      "scope": "planner, launcher and steady-state cost",
+      "source_commit": "f7faae99d20f19279bb52c9987045204fa0bb39f",
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "native-receipt.json.gz",
+      "sha256": "sha256:7fd46663f00f7fd2fecc499622ad5366d1f05809c14a0d79bce8018865c5ba2a",
+      "bytes": 676733,
+      "uncompressed_sha256": "sha256:95b788917dfbd14966e16c20ec70107cc6fa197de5c9383763528f8b0f88e845",
+      "uncompressed_bytes": 8063725
+    },
+    {
+      "path": "preceding-receipt.json.gz",
+      "sha256": "sha256:5f3b889d389ab7b81615bc9230798cb4a525a25044f9fbeb84368fc409d2bafa",
+      "bytes": 676702,
+      "uncompressed_sha256": "sha256:44094a04dc298648ac980344a6b394296ff4cd78724318995a259f30ec151599",
+      "uncompressed_bytes": 8063725
+    },
+    {
+      "path": "native-gates.txt",
+      "sha256": "sha256:765cabaed6e8a412989ccb31eb9540a41d4b1c8c241aeaf6b030dd5893d115d1",
+      "bytes": 14032,
+      "uncompressed_sha256": "sha256:765cabaed6e8a412989ccb31eb9540a41d4b1c8c241aeaf6b030dd5893d115d1",
+      "uncompressed_bytes": 14032
+    }
+  ],
+  "next_gate": "Accepted merge of T45.1a and separate target-execution authorization before T45.1b."
+}

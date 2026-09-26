@@ -5613,3 +5613,239 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   this integration supplies no passing rehearsal, new retry authorization,
   readiness, freeze, ceremony, release, or scale claim. The integration and
   historical-owner wording corrections add no runtime work or cost.
+- **2026-09-25 — T45.1a neutral feasibility boundary and plan authority.**
+  The spike selects one Linux/arm64 container recipe over an explicitly named
+  local Docker Unix socket and immutable image ID. The daemon, kernel,
+  operator-prepared tool bundle, and host account are trusted; repository code
+  is not. This is a development dependency of the neutral spike, not a
+  production Docker dependency or permission to execute a target repository.
+  The request has no repository path, command, environment, rc, or arbitrary
+  package pattern. Its planner and launcher are the same digest-bound owned
+  executable, containing the neutral fixtures, aspect, and complete compiled-in
+  profile (limits, argument vectors, and environments); the helper digest binds
+  all three identities. Canonical wire
+  decoding rejects unknown, repeated, omitted, and alternate fields.
+  Before launch, the importer verifies at most 50,000 regular files, 20,000
+  directories, 2 GiB total file bytes, and 256 MiB per file, and copies them
+  behind a private host parent. It refuses undeclared entries and links.
+  A digest-bound C toolchain ZIP expands only inside Linux, preserving
+  case-distinct headers: at most 12,000 files, 512 MiB expanded bytes, and
+  128 MiB per file, before fixture execution. No maintainer script runs.
+  Each container has no external network, writable host mount, shared cache,
+  remote cache, daemon log, inherited image command, or uncontrolled
+  environment. Its root filesystem is read-only. Private scratch is executable
+  for Bazel's JDK and generated tools, with `nosuid,nodev`; actual mount flags
+  are checked. The fixed ceilings are one CPU, 3 GiB cgroup memory with no
+  swap, 256 tasks, 128 descriptors per process (32,768 aggregate conservative
+  ceiling), 2 GiB aggregate tmpfs data including 16 MiB shared memory, and
+  five minutes. Scratch admits 65,536 inodes; shared-memory inodes must be
+  bounded by 1,048,576. Tmpfs consumes the same memory allowance, so these
+  storage and memory maxima are not simultaneously guaranteed capacity.
+  The initial unsealed 1.5-GiB-memory/1-GiB-tmpfs development profile stopped
+  on a recorded OOM during required toolchain compilation, with exact cleanup.
+  The revised bounded profile is validated in a separate 4-GiB test VM; the
+  existing shared daemon and unrelated services are not resized or restarted.
+  Earlier smaller-profile probes do not establish the revised profile's gates.
+  A distinct UID-0 PID1 watchdog retains only SETUID/SETGID; fixture processes
+  run as UID/GID 65534 with no capabilities and no new privileges. PID1 is
+  non-dumpable and exits on its own deadline, terminating its PID namespace,
+  including detached descendants after controller death. Exact daemon/name/ID
+  custody is journaled before creation/start; failed identity or cleanup keeps
+  private custody. Recovery never enumerates or deletes unrelated containers.
+  Kernel memory peaks and resource-limit events are separate from sampled
+  process RSS/counts; 50-ms samples do not establish complete process history.
+  Process sampling preserves read-time errno so an already-exited process's
+  ENOENT/ESRCH has the same treatment as disappearance before open. Other
+  read/shape failures still stop. A closed first-failure stage accompanies an
+  unavailable resource sample without another read or raw path/error retention.
+  The earlier unattributed sampling STOP is not retrospectively classified.
+  The authoritative plan combines full-checksum `cquery` configured edges with
+  the owned GoArchive aspect projections. Cquery omits unused rule attributes
+  while preserving canonical names, rule kinds, and configured prerequisite
+  edges. The neutral plan bounds are 16,384 targets, 131,072 edges, 4,096
+  projections, 8,192 package units, and 65,536 documents; each source file is
+  at most 8 MiB. Filtered `aquery` is solely the
+  configuration/artifact locator. Canonical documents retain their declared
+  execution paths as locators, not configuration identities. Declared generated
+  artifacts and cgo-tree members are materialized before sealing. SDK packages
+  use a separate toolchain lane from the exact GoStdLib provider's declared
+  list/cache artifacts and GoSDK source inventory, plus 22 explicitly named
+  Bazel File inputs for pinned Go 1.25 helper sources omitted by GoSDK.srcs.
+  Every file must still belong to that exact SDK root; filesystem discovery
+  cannot add membership. They do not enter repository coverage.
+  This shares the pinned rules_go stdlib producer with the driver
+  and makes no independent-algorithm claim. Driver output cannot introduce or
+  amend either lane. Lossy configured-label mapping or any missing, extra, or
+  ambiguous package/document/edge refuses.
+  Non-Go file/toolchain aliases remain in the configured universe with empty
+  package mappings when their declared prerequisites supply no Go unit. Every
+  requested root and every required Go rule must still have a complete mapping;
+  aliases forward only the units of their configured prerequisites.
+  The neutral oracle fixes each ordinary, split, generated, proto, cgo, and
+  test variant's import path, package name, source/compiled membership, and
+  direct provider dependencies;
+  test imports must bind the exact internal/external variant and the test
+  target must bind only its main archive. Mutation gates cover omissions,
+  substitutions, extra edges, and wrong test-variant bindings.
+  The launcher permits only patterns derived from sealed configured roots.
+  Its executable endpoint accepts one canonical digest-bound plan at a fixed
+  path and only the closed mode-31 request: empty environment, build flags,
+  overlays, and `tests=false`. The neutral gate calls that endpoint directly;
+  it does not exercise `GOPACKAGESDRIVER` discovery, `packages.Load`, or SCIP.
+  Its owned Bazel wrapper returns those exact roots for the driver's query,
+  admits only the pinned info/build argument shapes, and never treats an
+  unconfigured query as coverage authority. The ordinary neutral library must
+  reconcile exactly; the split-configuration root must refuse before execution
+  because the pinned driver cannot represent repeated configured labels.
+  Driver and SDK use Go 1.25.0, with matching selected cgo/tag modes. The fixed
+  C-toolchain path and library environment is shared across planner, repository
+  evaluation, actions, and launcher. JVM virtual-thread carriers are capped at
+  eight; only the cgroup task ceiling bounds the whole process tree.
+  The shared profile disables Bazel 9.2's merged analysis/execution path: its
+  incremental symlink builder otherwise adds an unconfigurable 200-thread
+  pool. The selected traditional path completes analysis before execution and
+  traverses the exact package-root map synchronously when planting symlinks.
+  This preserves the target/platform/transition options, but may increase wall
+  time or retention of analysis memory; the oracle and resource gates still
+  apply without a claim of reduced total RSS.
+  After cquery and aquery return, the worker requires PID1 and itself to be
+  the only process leaders, then inventories and evicts exactly Gazelle's
+  private `go_repository_cache/gocache`. It admits at most 50,000 entries,
+  two directory levels, 4,096 queued directories, and 1 GiB of logical
+  regular-file bytes; links and deeper directories refuse before mutation.
+  Go 1.25's cached executables occupy the second directory level.
+  Repository sources, modules,
+  compiled Gazelle tools, `go.env`, and Bazel action outputs remain intact.
+  Logical removed bytes and the quiescent scratch statfs delta are retained.
+  The eviction makes room for upstream rules_go's required temporary SDK copy;
+  a later tools-repository invalidation may repeat compilation under the same
+  limits. It does not bypass or replace the upstream stdlib-list producer.
+  Cost: ordinary request/query, sync, startup/restart, retry/no-op, publication,
+  lifecycle, locks, schemas, and caches incur zero work because the server
+  imports none of this spike. An explicit neutral run rereads/hashes its helper
+  and complete bundle, creates one bounded private copy, imports its compiler,
+  runs three serial planner Bazel commands, validates bounded protobuf/JSON
+  projections, then runs one bounded driver whose sole real Bazel operation is
+  one additional build, and removes exact custody. The executable endpoint adds
+  one owned helper child, one canonical plan file of at most 64 MiB and its
+  digest, one at-most-4-KiB protocol request, and repeated bounded preparation
+  and response equality checks. The endpoint and driver each have a two-minute
+  deadline and 16-MiB output ceiling within the unchanged aggregate sandbox
+  limits. Configured-owner joins build one reverse index bounded by
+  `MaxEdges`, then memoize complete ancestor sets for each wanted provider.
+  Queries traverse consumers rather than repeatedly walking unrelated SDK
+  source leaves. Every lookup and queue insertion, including duplicate edges
+  and initial roots, is charged before allocation against one shared
+  `MaxEdges * 8` budget. The same charged work bounds all memoized membership;
+  incomplete sets are never published, and exhaustion cannot prove absence.
+  Generated producers, imports, SDK bindings, and forwarding share this path;
+  even a matching owner label must disambiguate every reachable configuration.
+  Both the index and memo exist only during one immutable plan assembly, with
+  no persistence or invalidation path. SDK joins also use an exact
+  owner/artifact index. Each projection helper hashes its declared source
+  bytes and parses selected Go headers with a private at-most-64-MiB source
+  cache; shared sources may be reread and rehashed across configured projections
+  or SDK modes. No cache is shared across actions. The launcher
+  hashes selected document bytes both before and after execution, at most
+  64 MiB per pass, and validates the returned package/document/import sets.
+  Retry repeats the import and cold workspace; there is no cross-request
+  cache or reuse. Bazel command output is capped at
+  16 MiB combined; supervisor worker output has a separate 16-MiB bound.
+  Host import memory is bounded by the manifest and path inventories, one
+  at-most-256-MiB helper image, and bounded output/receipt buffers; tool files
+  stream through the copy/hash pass. The worker's projection buffers and
+  decoded plans share its cgroup memory allowance. Output writers hold only
+  their local budget mutex while checking and copying one received chunk;
+  no production or cross-request lock is acquired.
+  Sampling reads bounded proc/cgroup records and two statfs records every
+  50 ms while the worker runs. One run owns one container; operator rehearsals
+  are serialized. Successful receipts retain the bounded neutral plan and
+  launcher invocation evidence alongside their identities. Ticket PASS requires
+  a clean immutable candidate, all containment probes, witnessed independent
+  controller-death termination and exact recovery, the complete native neutral
+  plan/oracle and ordinary driver equality, normal/race/static/documentation
+  gates, and independent implementation/cost review with no unresolved finding.
+  Any missing identity, resource observation, mapping, or custody proof records
+  STOP; one successful observation cannot substitute for the complete gate.
+  The complete development neutral plan/oracle and exact ordinary driver
+  equality passed in 151.08 seconds with no memory/task event or sampling
+  failure, and exact container/input cleanup. Its kernel memory peak was
+  2,540,277,760 bytes; sampled scratch peaked at 1,670,197,248 bytes and
+  59,353 inodes. Full normal/race, host/Linux vet and lint, documentation, and
+  glossary gates passed; independent precommit implementation/cost review has
+  no unresolved finding. Exact immutable implementation
+  `f7faae99d20f19279bb52c9987045204fa0bb39f` then passed the complete native
+  gate in 451.990 seconds: controller-death test 302.38 seconds, all eight
+  containment probes 3.94 seconds, and plan/oracle/driver equality 145.31
+  seconds. The independent witness observed controller SIGKILL and a detached
+  descendant, followed by watchdog exit 124 at 300,845 ms and exact recovery.
+  Final plan memory peaked at 2,535,014,400 bytes, with sampled scratch
+  1,670,631,424 bytes and 59,449 inodes; sampling stayed healthy, no plan
+  resource-limit event occurred, and all container/input custody was removed.
+  Independent exact-commit implementation/cost review records all severity
+  counts zero. `spike/t451a/results.json` retains this neutral PASS and its
+  complete receipts. Evidence/documentation additions change no implementation,
+  embedded fixture, profile, or native gate input.
+  Both successful runs used identical request, helper, and offline bundle
+  identities and reproduce all 6,244 configured targets, 106 package units,
+  and 214 canonical repository documents exactly. The three SDK IDs are also
+  stable, but upstream cgo-generated cache locators/content vary between cold
+  builds. The separate SDK lane retains these exact per-run bytes; the full
+  mapping/document and launcher seals correctly change with that evidence.
+  Encoding is deterministic for exact produced inputs; whole SDK/cache or
+  driver-response byte reproducibility is not established. The differing
+  response digest has no attributed cause because raw response bytes were not
+  retained. Neither receipt is normalized or weakened. Neutral PASS permits
+  an integration request; T45.1b execution still requires accepted integration
+  and separate target authorization. It establishes no provider, UI, release,
+  or scale claim.
+- **2026-09-26 — T45.1a review: direct endpoint and T45.1b compatibility gate.**
+  Keep the accepted neutral mode-31/empty-environment contract closed. It is
+  incompatible with scip-go through standard `go/packages`: that path sends
+  the caller's environment and requires type-loading mode bits absent from 31.
+  Before any T45.1b target command, a separately reviewed neutral prerequisite
+  must pin scip-go and its actual x/tools dependency, retain the observed wire
+  mode, argv, and full request shape, and admit a bounded environment derived
+  from the Phebs-owned scrubbed caller. It must exercise real
+  `packages.Load`/scip-go through actual `GOPACKAGESDRIVER` discovery. It must
+  retain exact planner equality, reject environment/flag/overlay/selector
+  overrides and unsupported modes, and freeze fresh launcher/profile/tool
+  identities before target authorization. A protocol refusal is a harness
+  admission STOP, not evidence of a target-repository failure. This prerequisite
+  does not follow from T45.1a PASS and is explicit in BACKLOG and ROADMAP.
+  Correct the earlier wrapper wording: the accepted gate invoked
+  `/inputs/t451a __gopackagesdriver` directly. Its unused shell wrapper and
+  unread `GOPACKAGESDRIVER` environment entry are removed. Ordinary driver
+  equality covers only `//lib:alias`, resolving to `//lib:lib` and its external
+  dependency: two packages and 853 response bytes in the retained original
+  runs. Generated, proto, cgo, and test fixtures have planner/oracle proof;
+  the split root additionally has pre-execution driver-refusal proof. None
+  establishes driver equality for those other cohorts or a scip-go invocation.
+  New neutral receipts retain the exact already-bounded driver response as
+  base64 `response_wire`; decoding must reproduce `response_sha256` and
+  `response_bytes`, preserving whitespace and member/array order. Original
+  receipts remain unchanged and their differing response digests remain
+  unattributed. Cost: removing the unused wrapper saves one private file write
+  and one environment entry, with no child-count change. Response retention
+  reuses the existing at-most-16-MiB response buffer and encodes
+  `4 * ceil(response_bytes / 3)` base64 bytes plus JSON framing. Encoding and
+  host receipt buffers add bounded copying within the unchanged 16-MiB worker
+  output ceiling and 3-GiB container limit; a larger total still refuses.
+  There is no new source read, hashing pass over files, persistent cache,
+  lock, concurrency, or production request/query, sync, startup/restart,
+  retry/no-op, publication, or lifecycle work. Exact correction validation
+  and its evidence record follow separately from the preserved original PASS.
+- **2026-09-26 — T45.1a review correction validation.** Exact source
+  `7f3f34ede2150646740c8c062bebf8df4a9cfd09` (tree
+  `04054a33ca82bf8cb8009f05e2af3241ba3c89d9`) passed the full native gate in
+  450.020 seconds: controller hard-death recovery, all eight containment
+  probes, planner/oracle, direct alias driver equality, response-byte binding,
+  and clean teardown. The two-package response is 853 bytes with SHA-256
+  `78ece3d7b5007884a69f7946771052f04f561cc830fb7e73de052dbc662af469`.
+  Normal/race spike packages, host/Linux-arm64 vet and lint, documentation,
+  glossary, formatting, and whitespace passed; independent implementation,
+  documentation, and steady-state-cost review found zero findings at every
+  severity. `spike/t451a/review-results.json` binds the new receipt and log;
+  original evidence is byte-identical. No container or private input remains,
+  and the dedicated VM is stopped. This record changes no built/embedded
+  input and grants neither integration nor T45.1b target execution authority.

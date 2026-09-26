@@ -1,0 +1,2 @@
+load("@rules_go//go:def.bzl", "go_library")
+go_library(name = "pkg", srcs = ["pkg.go"], importpath = "example.test/external/pkg", visibility = ["//visibility:public"])

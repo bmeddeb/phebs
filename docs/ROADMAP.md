@@ -61,6 +61,24 @@ closes. T45.8a may land one earlier static
 administrator Settings boundary with Bazel first and visibly unavailable; it
 performs no request or action and does not advance the provider/API/execution
 sequence.
+T45.1a's reviewed neutral harness gate is now PASS at source
+`f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
+controller-death recovery, planner/oracle, driver equality, and cleanup evidence
+in `spike/t451a/results.json`. This is a branch acceptance record; T45.1b
+remains gated on accepted integration and separate target execution authority.
+It also requires a reviewed neutral launcher-compatibility prerequisite before
+any target command: T45.1a directly tests only mode 31 with an empty request
+environment, which cannot serve scip-go's `go/packages` caller. The prerequisite
+must pin and admit the required type-loading mode and bounded scrubbed
+environment, test real `packages.Load`/scip-go through `GOPACKAGESDRIVER`, retain
+the exact planner/admission checks, and freeze fresh identities. A protocol
+refusal is harness failure, not target feasibility evidence. T45.1a driver
+equality covers only the ordinary alias's two-package closure; its other
+fixtures establish planner/oracle coverage, not broader driver equality.
+The correction at `7f3f34ede2150646740c8c062bebf8df4a9cfd09` passed fresh
+native and non-native gates plus independent review; its separate evidence in
+`spike/t451a/review-results.json` retains exact driver bytes and leaves the
+original acceptance artifacts unchanged.
 
 ## Now
 

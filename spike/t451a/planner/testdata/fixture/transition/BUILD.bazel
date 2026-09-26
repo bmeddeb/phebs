@@ -1,0 +1,3 @@
+load(":rules.bzl", "neutral_flag", "phebs_split")
+neutral_flag(name = "variant", build_setting_default = False, visibility = ["//visibility:public"])
+phebs_split(name = "split", deps = "//lib:lib")

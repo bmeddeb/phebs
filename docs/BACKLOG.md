@@ -14674,11 +14674,29 @@ missing/extra/ambiguous target, package, document, or edge refuses. T45.1b
 cannot begin until this ticket is merged and independently accepted; inability
 to produce the exact plan records `STOP`, not a best-effort fallback.
 
+The neutral T45.1a gate passed at reviewed source
+`f7faae99d20f19279bb52c9987045204fa0bb39f`; the acceptance record and complete
+native receipts are in `spike/t451a/results.json`. All eight containment probes,
+independent controller-death recovery, exact native plan/oracle and driver
+equality, and normal/race/static/documentation gates passed. Independent
+implementation/cost review has no open finding. Two runs reproduce the exact
+repository mapping; the separately sealed SDK cgo cache is not byte-reproducible
+across cold runs. T45.1b still requires accepted integration and separate target
+execution authorization plus the reviewed launcher-compatibility prerequisite
+below; neutral PASS supplies none by itself. Driver equality covers only
+`//lib:alias` and its two-package closure; the other cohorts have planner/oracle
+proof, with the split configuration also refused before driver execution.
+The review correction at `7f3f34ede2150646740c8c062bebf8df4a9cfd09` passed
+fresh full native and normal/race/static/documentation gates plus independent
+implementation/cost review. `spike/t451a/review-results.json` binds the new
+853-byte response and correction evidence; all original evidence stays exact.
+
 **T45.1b · Target failure receipt and Bazel/scip-go feasibility gate** *(needs
-T45.1a PASS)* — reproduce the failed SCIP attempt without retaining private
-source, names, paths, commands, credentials, or raw errors in the repository;
-classify whether failure occurs during workspace/tool preflight, Bazel-native
-planning, package loading/type checking, global relationship construction,
+T45.1a PASS and reviewed launcher compatibility)* — reproduce the failed SCIP
+attempt without retaining private source, names, paths, commands, credentials,
+or raw errors in the repository; classify whether failure occurs during
+workspace/tool preflight, Bazel-native planning, package loading/type checking,
+global relationship construction,
 SCIP serialization, validation, or current Phebs admission. Through the merged
 T45.1a harness, first produce and seal the target repository's exact
 configured-target/package/document plan, then run the exact pinned
@@ -14701,6 +14719,21 @@ that `--keep_going`, partial driver output, or one successful cohort cannot
 create a complete claim; and record one `GO`, `REDUCE`, or `STOP` decision for
 T45.2. The spike changes no runtime behavior, admission cap, UI, release
 posture, or current typed-index authority.
+
+**Before any target command:** implement and independently review a neutral
+launcher-compatibility prerequisite. The frozen T45.1a endpoint accepts only
+mode 31 with an empty request environment; scip-go's standard `go/packages`
+path sends its environment and needs type information, so that endpoint cannot
+run it. Pin scip-go and its actual x/tools dependency; retain the observed wire
+mode, argv, and full request shape, including null/empty encodings. Derive a
+bounded request-environment contract from the Phebs-owned scrubbed caller,
+retaining rejection of repository-controlled overrides, unsupported modes,
+build flags, overlays, and selectors. Prove real `packages.Load` and scip-go execution via
+actual `GOPACKAGESDRIVER` discovery on neutral fixtures, with sealed-plan parity
+and negative admission checks, then freeze/review the new launcher, profile,
+and tool digests. Protocol rejection is a harness admission STOP and cannot
+serve as target failure evidence. This prerequisite grants no target execution
+authority and does not widen T45.1a's frozen request.
 
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider
