@@ -5690,8 +5690,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The launcher permits only patterns derived from sealed configured roots.
   Its executable endpoint accepts one canonical digest-bound plan at a fixed
   path and only the closed mode-31 request: empty environment, build flags,
-  overlays, and `tests=false`. A fixed owned `GOPACKAGESDRIVER` wrapper calls
-  that endpoint; this is a package-loading spike, not SCIP integration.
+  overlays, and `tests=false`. The neutral gate calls that endpoint directly;
+  it does not exercise `GOPACKAGESDRIVER` discovery, `packages.Load`, or SCIP.
   Its owned Bazel wrapper returns those exact roots for the driver's query,
   admits only the pinned info/build argument shapes, and never treats an
   unconfigured query as coverage authority. The ordinary neutral library must
@@ -5799,3 +5799,39 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   an integration request; T45.1b execution still requires accepted integration
   and separate target authorization. It establishes no provider, UI, release,
   or scale claim.
+- **2026-09-26 — T45.1a review: direct endpoint and T45.1b compatibility gate.**
+  Keep the accepted neutral mode-31/empty-environment contract closed. It is
+  incompatible with scip-go through standard `go/packages`: that path sends
+  the caller's environment and requires type-loading mode bits absent from 31.
+  Before any T45.1b target command, a separately reviewed neutral prerequisite
+  must pin scip-go and its actual x/tools dependency, retain the observed wire
+  mode, argv, and full request shape, and admit a bounded environment derived
+  from the Phebs-owned scrubbed caller. It must exercise real
+  `packages.Load`/scip-go through actual `GOPACKAGESDRIVER` discovery. It must
+  retain exact planner equality, reject environment/flag/overlay/selector
+  overrides and unsupported modes, and freeze fresh launcher/profile/tool
+  identities before target authorization. A protocol refusal is a harness
+  admission STOP, not evidence of a target-repository failure. This prerequisite
+  does not follow from T45.1a PASS and is explicit in BACKLOG and ROADMAP.
+  Correct the earlier wrapper wording: the accepted gate invoked
+  `/inputs/t451a __gopackagesdriver` directly. Its unused shell wrapper and
+  unread `GOPACKAGESDRIVER` environment entry are removed. Ordinary driver
+  equality covers only `//lib:alias`, resolving to `//lib:lib` and its external
+  dependency: two packages and 853 response bytes in the retained original
+  runs. Generated, proto, cgo, and test fixtures have planner/oracle proof;
+  the split root additionally has pre-execution driver-refusal proof. None
+  establishes driver equality for those other cohorts or a scip-go invocation.
+  New neutral receipts retain the exact already-bounded driver response as
+  base64 `response_wire`; decoding must reproduce `response_sha256` and
+  `response_bytes`, preserving whitespace and member/array order. Original
+  receipts remain unchanged and their differing response digests remain
+  unattributed. Cost: removing the unused wrapper saves one private file write
+  and one environment entry, with no child-count change. Response retention
+  reuses the existing at-most-16-MiB response buffer and encodes
+  `4 * ceil(response_bytes / 3)` base64 bytes plus JSON framing. Encoding and
+  host receipt buffers add bounded copying within the unchanged 16-MiB worker
+  output ceiling and 3-GiB container limit; a larger total still refuses.
+  There is no new source read, hashing pass over files, persistent cache,
+  lock, concurrency, or production request/query, sync, startup/restart,
+  retry/no-op, publication, or lifecycle work. Exact correction validation
+  and its evidence record follow separately from the preserved original PASS.

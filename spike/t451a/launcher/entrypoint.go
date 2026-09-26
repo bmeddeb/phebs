@@ -14,13 +14,11 @@ import (
 )
 
 const (
-	EntrypointPath        = "/inputs/t451a"
-	EntrypointCommand     = "__gopackagesdriver"
-	EntrypointWrapperPath = "/scratch/phebs-gopackagesdriver"
-	EntrypointWrapper     = "#!/bin/sh\nexec /inputs/t451a __gopackagesdriver \"$@\"\n"
-	EntrypointPlanPath    = "/scratch/driver-plan.json"
-	EntrypointDigestEnv   = "PHEBS_DRIVER_PLAN_SHA256"
-	maxRequestBytes       = 4096
+	EntrypointPath      = "/inputs/t451a"
+	EntrypointCommand   = "__gopackagesdriver"
+	EntrypointPlanPath  = "/scratch/driver-plan.json"
+	EntrypointDigestEnv = "PHEBS_DRIVER_PLAN_SHA256"
+	maxRequestBytes     = 4096
 )
 
 type entrypointPlan struct {
@@ -29,9 +27,9 @@ type entrypointPlan struct {
 	Roots   []planner.Configured `json:"roots"`
 }
 
-// RunThroughEntrypoint exercises the actual owned GOPACKAGESDRIVER endpoint.
-// The imported runner image and its fixed wrapper supply executable identity;
-// the request and patterns come only from Prepare's sealed configured roots.
+// RunThroughEntrypoint directly exercises the owned endpoint with the neutral
+// request derived from the sealed roots. It does not exercise go/packages'
+// GOPACKAGESDRIVER discovery or the request contract needed by scip-go.
 func RunThroughEntrypoint(ctx context.Context, plan planner.Plan, roots []planner.Configured) ([]byte, error) {
 	p, err := Prepare(plan, roots)
 	if err != nil {
@@ -50,10 +48,7 @@ func RunThroughEntrypoint(ctx context.Context, plan planner.Plan, roots []planne
 	if err := writeClosedFile(EntrypointPlanPath, data, 0400); err != nil {
 		return nil, err
 	}
-	if err := writeClosedFile(EntrypointWrapperPath, []byte(EntrypointWrapper), 0500); err != nil {
-		return nil, err
-	}
-	environment := append(BazelEnvironment(), EntrypointDigestEnv+"="+hash(data), "GOPACKAGESDRIVER="+EntrypointWrapperPath)
+	environment := append(BazelEnvironment(), EntrypointDigestEnv+"="+hash(data))
 	output, err := runClosedChild(ctx, EntrypointPath, append([]string{EntrypointCommand}, p.patterns...), environment, p.request)
 	if err != nil {
 		return nil, err

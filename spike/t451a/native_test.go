@@ -117,10 +117,18 @@ func TestNativePlan(t *testing.T) {
 			t.Fatalf("retain receipt: %v, %v", encodeErr, closeErr)
 		}
 	}
+	payload := receipt.NeutralEvidence
 	receipt.NeutralEvidence = nil // Keep routine test logs small; the optional file retains it.
 	encoded, _ := json.Marshal(receipt)
 	t.Log(string(encoded))
 	if err != nil || receipt.Outcome != "NEUTRAL_PLAN_OBSERVED" || !receipt.Removed || !receipt.InputsRemoved {
 		t.Fatalf("neutral plan not established: %v", err)
+	}
+	var evidence neutralEvidence
+	if err := json.Unmarshal(payload, &evidence); err != nil {
+		t.Fatal(err)
+	}
+	if len(evidence.ResponseWire) == 0 || len(evidence.ResponseWire) != evidence.ResponseBytes || Digest(evidence.ResponseWire) != evidence.ResponseSHA256 {
+		t.Fatal("retained driver response does not match its byte/digest binding")
 	}
 }

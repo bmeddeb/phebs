@@ -7837,6 +7837,12 @@ The owning decisions and limits are in `PLAN.md`, and acceptance criteria are
 in `docs/BACKLOG.md`. A boundary probe is not a planner or target-feasibility
 pass.
 
+The native driver gate invokes the owned endpoint directly with its fixed
+mode-31, empty-environment request. It does not run `packages.Load`, exercise
+`GOPACKAGESDRIVER` discovery, or run scip-go. T45.1b first needs the independently
+reviewed neutral request-contract/discovery prerequisite in BACKLOG; the current
+endpoint would reject the standard caller's environment and type-loading mode.
+
 Ordinary tests need no container daemon:
 
 ```sh
@@ -7889,9 +7895,17 @@ the complete neutral plan and closed launcher invocation. Ordinary test logs
 omit that larger payload. To verify `output_sha256` and `output_bytes`, compact
 the retained `neutral_evidence` JSON without changing its string escapes, then
 append one newline; this reconstructs the worker's exact JSON output.
+New receipts also retain base64 `response_wire`. Decode it to recover the
+driver's exact response bytes and verify `response_sha256` and `response_bytes`;
+JSON reformatting would lose that byte identity. The original retained receipts
+predate this field and remain unchanged; their response-digest difference still
+has no established cause.
 Repeated configured labels must be represented in
 the plan and refused by the pinned driver before its execution; ordinary Go
 loading must exactly match the sealed package, document, and import sets.
+This driver-equality check selects only `//lib:alias`: two packages and an
+853-byte response in the original runs. Generated/proto/cgo/test cases are
+planner/oracle checks; the split root is refused before driver execution.
 The retained runs reproduce the canonical repository mapping exactly. SDK cgo
 cache artifacts may vary across cold builds and remain bound by each run's
 full seals; do not compare those seals as a byte-reproducible-build guarantee or

@@ -66,6 +66,15 @@ T45.1a's reviewed neutral harness gate is now PASS at source
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
 in `spike/t451a/results.json`. This is a branch acceptance record; T45.1b
 remains gated on accepted integration and separate target execution authority.
+It also requires a reviewed neutral launcher-compatibility prerequisite before
+any target command: T45.1a directly tests only mode 31 with an empty request
+environment, which cannot serve scip-go's `go/packages` caller. The prerequisite
+must pin and admit the required type-loading mode and bounded scrubbed
+environment, test real `packages.Load`/scip-go through `GOPACKAGESDRIVER`, retain
+the exact planner/admission checks, and freeze fresh identities. A protocol
+refusal is harness failure, not target feasibility evidence. T45.1a driver
+equality covers only the ordinary alias's two-package closure; its other
+fixtures establish planner/oracle coverage, not broader driver equality.
 
 ## Now
 

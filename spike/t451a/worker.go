@@ -20,6 +20,17 @@ import (
 	"github.com/bmeddeb/phebs/spike/t451a/sandbox"
 )
 
+type neutralEvidence struct {
+	Plan                       planner.Plan        `json:"plan"`
+	Launcher                   launcher.Invocation `json:"launcher"`
+	InvocationSHA256           string              `json:"invocation_sha256"`
+	ResponseSHA256             string              `json:"response_sha256"`
+	ResponseBytes              int                 `json:"response_bytes"`
+	ResponseWire               []byte              `json:"response_wire"` // Base64 preserves exact driver bytes.
+	RepeatedConfigurationStops bool                `json:"repeated_configuration_stops"`
+	CompilerCacheEviction      cacheEviction       `json:"compiler_cache_eviction"`
+}
+
 // WorkerPlan is called only after WorkerRequest validates the sandbox boundary.
 // Bazel receives the same closed startup/configuration on every invocation.
 func WorkerPlan(ctx context.Context) error {
@@ -163,15 +174,11 @@ exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/tool
 	if err != nil {
 		return err
 	}
-	return json.NewEncoder(os.Stdout).Encode(struct {
-		Plan                       planner.Plan        `json:"plan"`
-		Launcher                   launcher.Invocation `json:"launcher"`
-		InvocationSHA256           string              `json:"invocation_sha256"`
-		ResponseSHA256             string              `json:"response_sha256"`
-		ResponseBytes              int                 `json:"response_bytes"`
-		RepeatedConfigurationStops bool                `json:"repeated_configuration_stops"`
-		CompilerCacheEviction      cacheEviction       `json:"compiler_cache_eviction"`
-	}{plan, prepared.Invocation(), prepared.Digest(), Digest(response), len(response), true, evicted})
+	return json.NewEncoder(os.Stdout).Encode(neutralEvidence{
+		Plan: plan, Launcher: prepared.Invocation(), InvocationSHA256: prepared.Digest(),
+		ResponseSHA256: Digest(response), ResponseBytes: len(response), ResponseWire: response,
+		RepeatedConfigurationStops: true, CompilerCacheEviction: evicted,
+	})
 }
 
 type commandBudget struct {
