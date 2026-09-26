@@ -1,0 +1,13 @@
+module(name = "phebs_t451a")
+bazel_dep(name = "rules_go", version = "0.63.0")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "protobuf", version = "33.4")
+bazel_dep(name = "neutral_external", version = "0.0.0")
+local_path_override(module_name = "neutral_external", path = "external")
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+# The sandbox supplies only the digest-bound imported SDK through fixed
+# --repo_env=GOROOT=/inputs/tools/go. No host SDK discovery is admitted.
+go_sdk.host(version = "1.25.0")
+# The pinned extension's first root host SDK also exposes the exact extra File
+# labels needed by the owned SDK projection. It is the same selected SDK.
+use_repo(go_sdk, phebs_sdk = "main___host_0")

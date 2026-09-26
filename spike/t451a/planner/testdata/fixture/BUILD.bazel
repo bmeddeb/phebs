@@ -1,0 +1,1 @@
+# Deliberately no //... target: the broken package is outside the frozen roots.

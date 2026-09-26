@@ -1,0 +1,4 @@
+syntax = "proto3";
+package neutral;
+option go_package = "example.test/neutral/message";
+message Message { string value = 1; }

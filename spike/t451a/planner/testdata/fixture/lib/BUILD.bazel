@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+config_setting(name = "variant_b", flag_values = {"//transition:variant": "true"})
+go_library(
+    name = "lib",
+    srcs = ["lib.go"] + select({":variant_b": ["b.go"], "//conditions:default": ["a.go"]}),
+    importpath = "example.test/neutral/lib",
+    deps = ["@neutral_external//pkg:pkg"],
+    visibility = ["//visibility:public"],
+)
+alias(name = "alias", actual = ":lib", visibility = ["//visibility:public"])
+alias(name = "alias_two", actual = ":lib", visibility = ["//visibility:public"])
+go_test(name = "lib_test", srcs = ["lib_test.go", "external_test.go"], embed = [":lib"])

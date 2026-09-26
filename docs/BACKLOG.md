@@ -14674,6 +14674,13 @@ missing/extra/ambiguous target, package, document, or edge refuses. T45.1b
 cannot begin until this ticket is merged and independently accepted; inability
 to produce the exact plan records `STOP`, not a best-effort fallback.
 
+Implementation is in progress on the T45.1a ticket branch. The complete
+offline neutral Bazel plan and exact launcher reconciliation passed in
+151.08 seconds with healthy sampling and exact cleanup. Development
+containment and controller-death observations also passed; the final immutable
+candidate's complete native gates, review, and acceptance record remain open.
+These development observations are not T45.1a PASS or target authorization.
+
 **T45.1b · Target failure receipt and Bazel/scip-go feasibility gate** *(needs
 T45.1a PASS)* — reproduce the failed SCIP attempt without retaining private
 source, names, paths, commands, credentials, or raw errors in the repository;

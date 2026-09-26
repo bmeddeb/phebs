@@ -7825,3 +7825,75 @@ of that observed orphan. Missing the child is an unestablished rehearsal.
 Held-lease and busy-detach fixtures intentionally retain their mounted image
 after proving refusal; review and classify that exact custody before a later
 disposition. Do not report those negative tests as clean full-launcher teardown.
+
+## Neutral managed-index feasibility harness (T45.1a)
+
+`spike/t451a` is an opt-in development harness. Its native planner acceptance
+gate is still open. It runs only compiled-in neutral fixtures and fixed
+containment probes; it has no target-repository argument or server API.
+The owning decisions and limits are in `PLAN.md`, and acceptance criteria are
+in `docs/BACKLOG.md`. A boundary probe is not a planner or target-feasibility
+pass.
+
+Ordinary tests need no container daemon:
+
+```sh
+go test ./spike/t451a/...
+```
+
+Native tests require an explicitly named local Docker Unix socket, an already
+present immutable Linux/arm64 image, and a parent directory visible at the same
+absolute path to the host and daemon. A Colima VM may not expose the host's
+temporary directory; the harness refuses an absent daemon-side bind source.
+It never pulls an image, enables network, changes daemon configuration, or
+starts unrelated services. The daemon must support cgroup v2, the required
+kernel limits, seccomp, and AppArmor. Run rehearsals serially.
+The fixed neutral profile uses one CPU, 3 GiB memory without swap, and 2 GiB
+aggregate tmpfs data. Tmpfs consumes that same memory allowance. Provision a
+dedicated test daemon with headroom (the development VM has 4 GiB RAM); do not
+resize or restart a shared daemon to run the harness.
+
+The explicit native selectors are `TestNativeBoundary`,
+`TestNativeControllerDeath`, and `TestNativePlan`. Supply
+`-t451a-native-socket`, `-t451a-native-image`, and `-t451a-native-parent` after
+`go test ... -args`. The controller-death test takes five minutes: it first
+witnesses a detached descendant, kills only its controller, then requires the
+independent watchdog to stop the exact container before recovery cleanup.
+An unwitnessed child or missing terminal proof fails the test.
+
+The plan selector additionally requires `-t451a-native-bundle`,
+`-t451a-native-manifest`, and `-t451a-native-bundle-sha256`. Prepare the offline
+tool tree separately; the canonical manifest enumerates every regular file's
+relative path, byte count, SHA-256, and executable bit. The importer refuses
+missing, extra, linked, unsafe, oversized, or mismatched entries before starting
+a container. It copies the complete admitted tree for every run. Compiler
+headers remain in a digest-bound ZIP until bounded Linux extraction, since
+some legitimate Linux filenames collide on case-insensitive host filesystems.
+Do not substitute an online dependency fetch for a failed offline admission.
+The selected SDK and driver must both use Go 1.25.0. The closed launcher checks
+the frozen driver digest and build metadata; a different compiler can change
+Go release-tag selection even when the source version is unchanged.
+
+Receipts contain closed status, identities, resource facts, and cleanup state.
+They distinguish kernel memory peaks and limit events from sampled RSS/process
+counts. Deliberate memory/task/output probes must record their named refusal
+and successful exact cleanup; they do not emit a successful plan. Raw neutral
+Bazel diagnostics are for local debugging and are not receipt authority.
+An unavailable resource sample records its first closed failure stage; it
+remains STOP and must not be replaced by a later healthy observation.
+The plan test accepts `-t451a-native-receipt` to retain its full receipt in a new
+file; it refuses to overwrite an existing file. A successful receipt includes
+the complete neutral plan and closed launcher invocation. Ordinary test logs
+omit that larger payload. To verify `output_sha256` and `output_bytes`, compact
+the retained `neutral_evidence` JSON without changing its string escapes, then
+append one newline; this reconstructs the worker's exact JSON output.
+Repeated configured labels must be represented in
+the plan and refused by the pinned driver before its execution; ordinary Go
+loading must exactly match the sealed package, document, and import sets.
+
+Interrupted cleanup retains a private sibling `.t451a-container.json` owner
+record and its copied inputs. Use the spike command's `recover` operation with
+the exact socket, image, and `--inputs` directory from that owner. Recovery
+checks daemon and container identity, stops/removes only that exact owner,
+and confirms absence before clearing the journal. Preserve inputs when that
+proof fails; do not use daemon-wide pruning or container-name guesses.
