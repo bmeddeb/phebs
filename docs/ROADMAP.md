@@ -101,6 +101,16 @@ The extra allowance is consumed; further repair or execution needs Ben's
 approval. Public runs, current Phebs admission and T45.1b's feasibility decision
 remain open.
 
+The subsequent approved diagnostic-only attempt 5 also stopped: its neutral
+planning build reported exhausted space, while the observer captured a process
+named `process-wrapper` in zombie state during the diagnostic reads. The name
+does not authenticate an executable; sampled storage peaks do not distinguish
+byte from inode exhaustion. Final quiescence/cache inventory passed, but no
+sealed plan, typed client or SCIP result was retained. The source-free record is
+`spike/t451b/process-diagnostic-results.json`. The sole diagnostic allowance is
+consumed, cleanup is complete and the dedicated VM is stopped. Independent
+returned-evidence review found no issues; no rerun or public execution is authorized.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

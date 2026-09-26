@@ -6237,3 +6237,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   At most three small diagnostic records are retained by one native worker;
   they share the existing aggregate output cap. No production query/request,
   sync, startup/restart, retry/no-op, publication, lock or cache cost changes.
+
+- **2026-09-26 — T45.1b diagnostic attempt 5 terminal harness STOP.** Exact
+  source `126f77ea70da468646638898b6576b066541a1c8` passed affected normal/race,
+  host/Linux vet and pinned lint, documentation checks and independent review.
+  Config 5 changed only helper/bundle identities. Its sole authorized neutral
+  run stopped in planning after 109.110 seconds worker / 115.153 seconds host:
+  the Bazel `GoStdlibList` build reported `no space left on device`. Sampled
+  scratch peaks of 1,699,106,816 bytes and 63,309 inodes do not identify the
+  exhausted dimension or exclude an unsampled peak. Separately, the inner
+  observer retained descriptor-directory permission denial, 69 unexpected
+  errors and unavailable measurement. Its first captured offending lifetime
+  had `comm=process-wrapper`, state `Z`, parent 21, process group/session 1,
+  all four UID/GID values 65534, `NoNewPrivs=true`, and zero `CapPrm`. These
+  are the nine approved fields only. State `Z` describes the diagnostic reads,
+  not necessarily the earlier failed FD read; comm is process-controlled and
+  does not authenticate an executable. This neither identifies attempt 4's
+  offender nor establishes a common cause with the build failure.
+  Planning failed before its quiescence check/cache eviction; no sealed plan,
+  selected-SDK validation, typed client or SCIP result was retained. Final
+  quiescence passed and exact cache inventory completed. The final
+  `originals_unchanged=true` check does not re-seal the neutral planning lock;
+  absent a plan, `excluded_control_absent=false` establishes no control
+  violation or complete source/plan/lock proof. Outer sampling remained
+  available with verified limits and no OOM/memory/task-limit event; it cannot
+  cure the inner refusal or establish full resource fit.
+  `spike/t451b/process-diagnostic-results.json` preserves only allowlisted
+  source-free facts bound to the private receipt/config/log hashes. Earlier
+  evidence is unchanged. Container/private inputs were removed, dedicated
+  Docker inventory was empty and the dedicated VM stopped. Independent
+  returned-evidence review found no issues; the sole extra allowance is consumed
+  and no rerun, public cohort, merge, push or PR is authorized. Native-neutral
+  compatibility and T45.1b feasibility remain open. This record adds no runtime
+  work; the preceding bounded diagnostic cost decision remains controlling.

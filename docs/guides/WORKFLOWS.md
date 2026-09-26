@@ -954,6 +954,15 @@ managed generation command or supported scale claim from this work. Target
 gates remain open, and committed SCIP import remains the available compatibility
 path.
 
+A later approved diagnostic-only attempt 5 stopped during its neutral planning
+build on `no space left on device`. The observer captured `comm=process-wrapper`
+and zombie state during the diagnostic reads, without authenticating the
+executable. Final quiescence and cache inventory passed; no sealed plan, typed
+client or SCIP result was retained. The source-free record is
+`spike/t451b/process-diagnostic-results.json`. Its one-run allowance is consumed;
+cleanup is complete and the dedicated VM is stopped. Independent evidence
+review found no issues. Work stops here; no public run or further execution is authorized.
+
 Managed generation must be partitionable and resumable without requiring one
 whole-repository package/type graph or one monolithic in-memory navigation
 snapshot. The selected design publishes a Phebs-managed bundle of conforming

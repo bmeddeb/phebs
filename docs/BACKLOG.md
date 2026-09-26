@@ -14767,6 +14767,20 @@ further repair or execution needs Ben's approval. Native-neutral PASS, public
 cohorts, current Phebs admission and the final feasibility decision remain open.
 These harness STOPs establish neither target failure nor full resource fit.
 
+Ben subsequently authorized one diagnostic-only helper change and one neutral
+run with fixed tools, roots, HEAD and caps. Attempt 5 stopped during the Bazel
+planning build on `no space left on device`; sampled peaks cannot distinguish
+byte from inode exhaustion. The observer separately captured a process named
+`process-wrapper` in zombie state at the diagnostic reads, UID/GID 65534,
+`NoNewPrivs=true` and zero permitted capabilities. This is no executable-identity
+claim or attribution of attempt 4. Final quiescence and cache inventory passed,
+but no sealed plan, selected-SDK validation, typed client or SCIP result exists.
+Original-file verification does not establish the missing plan/lock/control
+proof. `spike/t451b/process-diagnostic-results.json` binds the source-free
+record. Cleanup is complete and the dedicated VM is stopped. The diagnostic
+allowance is consumed and independent returned-evidence review found no issues.
+Work stops here, with no further execution authorized. T45.1b remains open.
+
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider
 descriptors, operator-owned named
