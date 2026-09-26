@@ -219,6 +219,27 @@ func RunHelper(args []string) error {
 	return nil
 }
 
+// MatchGoFile applies the fixed Go 1.25.0 linux/arm64 constraint context to
+// supplied declared-source bytes. It performs no discovery or filesystem read.
+// Matching import "C" is deliberately separate from cgo compilation selection.
+func MatchGoFile(name string, data []byte, mode GoMode) (bool, error) {
+	if name == "" || filepath.Clean(name) != name || strings.ContainsAny(name, "\\\x00\r\n") || !strings.HasSuffix(name, ".go") || len(data) > MaxFileBytes || mode.GOOS != "linux" || mode.GOARCH != "arm64" || len(mode.Tags) > 64 {
+		return false, errors.New("unsupported source constraint input")
+	}
+	releaseTags := make([]string, 25)
+	for i := range releaseTags {
+		releaseTags[i] = fmt.Sprintf("go1.%d", i+1)
+	}
+	bctx := build.Context{GOOS: mode.GOOS, GOARCH: mode.GOARCH, CgoEnabled: mode.Cgo, Compiler: "gc", BuildTags: mode.Tags, ReleaseTags: releaseTags, ToolTags: []string{"arm64.v8.0", "goexperiment.regabiwrappers", "goexperiment.regabiargs", "goexperiment.aliastypeparams", "goexperiment.swissmap", "goexperiment.synchashtriemap", "goexperiment.dwarf5"}}
+	bctx.OpenFile = func(requested string) (io.ReadCloser, error) {
+		if requested != name {
+			return nil, errors.New("build constraint requested an undeclared source")
+		}
+		return io.NopCloser(bytes.NewReader(data)), nil
+	}
+	return bctx.MatchFile(filepath.Dir(name), filepath.Base(name))
+}
+
 func project(data []byte, read func(string, int) ([]byte, error)) ([]byte, error) {
 	var in helperInput
 	if err := strictJSON(data, &in); err != nil {
@@ -289,21 +310,6 @@ func project(data []byte, read func(string, int) ([]byte, error)) ([]byte, error
 		p := projectedArchive{Name: a.Name, Label: canonicalLabel(a.Label), Export: a.Export, ImportPath: a.ImportPath, ImportMap: a.ImportMap, GoFiles: []File{}, CompiledGoFiles: []File{}, Imports: a.Imports, Stdlib: a.Stdlib, SourceImports: []string{}}
 		p.Mode = GoMode{GOOS: a.GOOS, GOARCH: a.GOARCH, Cgo: a.Cgo, Tags: append([]string{}, a.Tags...)}
 		sort.Strings(p.Mode.Tags)
-		// Match the sealed Go 1.25.0 linux/arm64 SDK, independently of the
-		// version and architecture used to compile this helper. The profile
-		// does not expose GOEXPERIMENT or GOARM64 overrides.
-		releaseTags := make([]string, 25)
-		for i := range releaseTags {
-			releaseTags[i] = fmt.Sprintf("go1.%d", i+1)
-		}
-		bctx := build.Context{GOOS: a.GOOS, GOARCH: a.GOARCH, CgoEnabled: a.Cgo, Compiler: "gc", BuildTags: a.Tags, ReleaseTags: releaseTags, ToolTags: []string{"arm64.v8.0", "goexperiment.regabiwrappers", "goexperiment.regabiargs", "goexperiment.aliastypeparams", "goexperiment.swissmap", "goexperiment.synchashtriemap", "goexperiment.dwarf5"}}
-		bctx.OpenFile = func(name string) (io.ReadCloser, error) {
-			b, ok := contents[filepath.ToSlash(name)]
-			if !ok {
-				return nil, errors.New("build constraint requested an undeclared source")
-			}
-			return io.NopCloser(bytes.NewReader(b)), nil
-		}
 		var cgoSources []Artifact
 		seen := map[string]bool{}
 		for _, src := range a.Sources {
@@ -326,7 +332,7 @@ func project(data []byte, read func(string, int) ([]byte, error)) ([]byte, error
 			if (a.TestFilter == "only" && !isTest) || (a.TestFilter == "exclude" && isTest) {
 				continue
 			}
-			match, err := bctx.MatchFile(filepath.Dir(src.Path), filepath.Base(src.Path))
+			match, err := MatchGoFile(src.Path, b, p.Mode)
 			if err != nil {
 				return nil, fmt.Errorf("source build constraint: %w", err)
 			}

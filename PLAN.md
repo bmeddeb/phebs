@@ -5941,3 +5941,103 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   This closes only the neutral compatibility prerequisite. Public-target
   profile, offline closure, execution, current Phebs admission, three-cohort
   oracle and T45.2 GO/REDUCE/STOP remain open; T45.1b is not complete.
+
+- **2026-09-26 — T45.1b closed native profile preparation.** The public
+  `remote-apis-sdks` HEAD remains
+  `d5824b1a2286806b07efd030aa3a139c4f540157`. A separate spike-only profile
+  binds Bazel 9.0.0, rules_go 0.59.0, its independently built driver, scip-go
+  0.2.7/x-tools 0.45.0, and Go 1.25.0/Linux arm64. The owned aspect asserts
+  the configured SDK version/root and helper-source ownership; the worker
+  hashes the actually selected SDK executable. Upstream `MODULE.bazel`, lock,
+  BUILD files, go.mod, go.sum and rc bytes remain unchanged. In particular,
+  upstream's go.mod says Go 1.25.7; a native refusal is recorded, never repaired
+  by silently changing its SDK/module declaration. Ambient rc discovery stays
+  disabled. Four closed cohort names select an owned neutral control or the
+  ordinary, generated-proto and fan-out public roots. Each uses a fresh private
+  container. No arbitrary roots, command, environment, overlay or build flags
+  become request fields. The native neutral copy alone pins its external
+  fixture to rules_go 0.59.0, declares an inactive Windows source, and permits
+  lock creation during planning; the resulting at-most-8-MiB lock is then sealed
+  and subsequent driver calls use error mode.
+  Historical fixtures, schemas, receipts and the original profile stay exact.
+  An owned excluded broken genrule has an absolute sentinel checked outside the
+  selected plan; it does not establish first-party cgo or natural-failure
+  coverage in the public repository.
+  Native rules_go filters both GoFiles and CompiledGoFiles. A separate sealed
+  active-GoFiles inventory is derived from every declared source's exact bytes,
+  the existing Go 1.25 build context and upstream's cgo filename exceptions.
+  It supplements the unchanged declared-document plan. Runtime independently
+  rederives it before the driver; host validation proves structure/membership,
+  not source filtering without those bytes. Real packages.Load/scip-go use the
+  owned executable adapter and exact mode-8681 caller contract. Raw driver
+  equality precedes metadata adaptation. Raw generated SCIP paths, including
+  possible parent-relative paths, are retained for later current-Phebs
+  admission; they are never rewritten to manufacture acceptance. Partial STOP
+  evidence survives a failed worker when independently decodable. A later
+  measurement failure preserves the first failure phase and its separate
+  measurement status. Oversized evidence records only STOP with the omitted
+  byte count/digest, never a complete claim. A successful
+  cohort is explicitly not a complete three-cohort oracle or feasibility GO;
+  unlocalized indexer failure does not guess relationship versus serialization
+  attribution.
+  Public input preparation retained 812 digest-bound inputs, 509,786,808 bytes,
+  including all 384 lock registry records and their source archives, patches
+  and overlays. The immutable per-request HTTP cache contains 506 unique blobs,
+  255,455,739 bytes and 54 empty canonical-ID markers. Original HTTPS registry
+  identities and lock hashes remain enforced with `--lockfile_mode=error`;
+  the fixed `block *` downloader, disabled repository-contents cache, disabled
+  hardlinks and existing network denial refuse cache misses. A file registry
+  would discard that HTTPS lock enforcement and is not used. Go proxy data is
+  separately pinned. Twenty-six unneeded platform/tool URL specifications
+  remain deliberately unmaterialized: source inventory is not proof of the
+  executed dependency closure or resource fit. Required notices are retained.
+  `spike/t451b/public-oracle.json` freezes the independently reviewed pre-output
+  source identities, three definitions, eighteen cross-cohort references and
+  hover expectations; generated declaration coordinates remain open.
+  No downloaded target/tool code has executed under this new profile. Native
+  neutral proof, exact execution approval, public cohort receipts, independent
+  source oracle comparison, current Phebs admission and T45.2 GO/REDUCE/STOP
+  remain open.
+  Cost: existing full input verification/private copy, three serial bounded
+  planner commands, compiler extraction and compiler-cache eviction are reused.
+  Each worker reads/hashes the 249,496-byte public archive and decodes its 128
+  regular files / 1,079,184 bytes into bounded source maps before materializing
+  the selected public or owned-neutral workspace. Public originals are rechecked
+  after planning and again after quiescence on success or failure; each accepted
+  pass reads and compares at most that fixed 1,079,184-byte corpus. The same
+  snapshot also rereads owned aspect/helper/control bytes, including the
+  admitted helper (bounded by the existing tool-file cap) and the sealed
+  native-neutral lock after planning. Original-file type and excluded-control
+  checks accompany those reads. Stage timing/count
+  summaries and an oversized-evidence STOP retain no complete-coverage claim.
+  One initial source hash/filter pass seals active GoFiles. Each accepted native
+  client leg performs six full compatibility preparations inside the container;
+  host receipt validation performs one initial preparation plus one per leg.
+  The driver hashes its executable/build metadata, performs a source hash/filter
+  pass before execution, then a source and export pass; post-client verification
+  adds one source and one export pass. Each accepted pass remains bounded by
+  64 MiB and 8 MiB per file; inherited post-source verification may read one
+  further bounded file before overflow refusal. Two prepared graph maps may
+  coexist in native driver execution. Sidecar encodings remain bounded by
+  16 MiB, wrapper scopes by 1 MiB, individual responses by 16 MiB, and the entire
+  worker output by the unchanged 16-MiB ceiling. Source matching constructs
+  the fixed build context/release tags per evaluated file; declared-root
+  validation adds one bounded map pass, including the seven original roots.
+  Tool and selected-SDK hashing, caller-control serialization, raw/adapted
+  response decoding, member sorting and SCIP validation are repeated bounded
+  request work; no persistent cache or invalidation is added.
+  The new sampler uses one goroutine/ticker with initial/final and nominal
+  50-ms observations, at most 256 process leaders and 65,536 PID/starttime keys.
+  Each sampled same-UID leader incurs three at-most-8-KiB proc reads and one
+  128-descriptor-plus-sentinel directory read, with one temporary descriptor
+  open at a time. Child lifetimes are a sampled lower bound; descriptor sums
+  are sequential/non-atomic and are not an exact simultaneous peak. Existing
+  sandbox RSS, memory, process and scratch metrics remain separate. After
+  observer stop and joined direct commands, the existing bounded process census
+  refuses residual tool leaders before cache inventory. This is an observation,
+  not an atomic process-history fence. The six fixed cache roots permit at most
+  65,536 entries plus a sentinel, one directory descriptor at a time and no
+  content reads; device/inode deduplication measures logical/allocated bytes.
+  The read-only input cache is reported separately. Cold/retry runs repeat
+  private preparation; no production request/query, sync tick, startup/restart,
+  retry/no-op, publication, lock, concurrency, runtime cap or UI changes result.

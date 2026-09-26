@@ -61,57 +61,11 @@ func Run(ctx context.Context, o Options) (receipt Receipt, err error) {
 	if err = validateLayout(bundle, r); err != nil {
 		return receipt, err
 	}
-	parent, err := os.MkdirTemp(o.Parent, "t451b-run-")
-	if err != nil {
+	result, removed, stage, err := runImported(ctx, o.Socket, o.Parent, o.BundleRoot, r.BundleSHA256, r.ImageID, o.Manifest, raw, helper)
+	receipt.InputsRemoved, receipt.Stage = removed, stage
+	if stage != "sandbox" {
 		return receipt, err
 	}
-	inputs := ""
-	defer func() {
-		if inputs != "" {
-			if _, journalErr := os.Lstat(inputs + ".t451a-container.json"); !errors.Is(journalErr, os.ErrNotExist) {
-				receipt.Outcome = "STOP"
-				err = errors.Join(err, sandbox.ErrCustody)
-				return
-			}
-		}
-		cleanupErr := os.RemoveAll(parent)
-		receipt.InputsRemoved = cleanupErr == nil
-		err = errors.Join(err, cleanupErr)
-		if err != nil {
-			receipt.Outcome = "STOP"
-		}
-	}()
-	inputs, err = t451a.ImportBundle(ctx, o.BundleRoot, parent, o.Manifest, r.BundleSHA256)
-	if err != nil {
-		return receipt, err
-	}
-	if err = os.WriteFile(filepath.Join(inputs, "t451a"), helper, 0500); err != nil {
-		return receipt, err
-	}
-	if err = os.WriteFile(filepath.Join(inputs, "request.json"), raw, 0400); err != nil {
-		return receipt, err
-	}
-	if err = filepath.WalkDir(inputs, func(name string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		info, err := entry.Info()
-		if err != nil {
-			return err
-		}
-		mode := fs.FileMode(0444)
-		if info.Mode().Perm()&0100 != 0 {
-			mode = 0555
-		}
-		if entry.IsDir() {
-			mode = 0755
-		}
-		return os.Chmod(name, mode)
-	}); err != nil {
-		return receipt, err
-	}
-	receipt.Stage = "sandbox"
-	result, err := sandbox.Run(ctx, sandbox.Options{Socket: o.Socket, ImageID: r.ImageID, Inputs: inputs})
 	receipt.ContainerID, receipt.Removed, receipt.ExitCode, receipt.Resources = result.ContainerID, result.Removed, result.ExitCode, result.Resources
 	receipt.StopReason, receipt.OOMKilled = result.StopReason, result.OOMKilled
 	receipt.OutputBytes, receipt.OutputSHA256 = len(result.Stdout), t451a.Digest(result.Stdout)
@@ -147,4 +101,58 @@ func WorkerRequest() (Request, error) {
 		return Request{}, err
 	}
 	return DecodeRequest(data)
+}
+
+// runImported is the shared custody boundary for both closed request profiles.
+// Its caller validates the request and complete input layout before entry.
+func runImported(ctx context.Context, socket, parentPath, bundleRoot, bundleDigest, imageID string, manifest, raw, helper []byte) (result sandbox.Result, removed bool, stage string, err error) {
+	stage = "admission"
+	parent, err := os.MkdirTemp(parentPath, "t451b-run-")
+	if err != nil {
+		return result, removed, stage, err
+	}
+	inputs := ""
+	defer func() {
+		if inputs != "" {
+			if _, journalErr := os.Lstat(inputs + ".t451a-container.json"); !errors.Is(journalErr, os.ErrNotExist) {
+				err = errors.Join(err, sandbox.ErrCustody)
+				return
+			}
+		}
+		cleanupErr := os.RemoveAll(parent)
+		removed = cleanupErr == nil
+		err = errors.Join(err, cleanupErr)
+	}()
+	inputs, err = t451a.ImportBundle(ctx, bundleRoot, parent, manifest, bundleDigest)
+	if err != nil {
+		return result, removed, stage, err
+	}
+	if err = os.WriteFile(filepath.Join(inputs, "t451a"), helper, 0500); err != nil {
+		return result, removed, stage, err
+	}
+	if err = os.WriteFile(filepath.Join(inputs, "request.json"), raw, 0400); err != nil {
+		return result, removed, stage, err
+	}
+	if err = filepath.WalkDir(inputs, func(name string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		mode := fs.FileMode(0444)
+		if info.Mode().Perm()&0100 != 0 {
+			mode = 0555
+		}
+		if entry.IsDir() {
+			mode = 0755
+		}
+		return os.Chmod(name, mode)
+	}); err != nil {
+		return result, removed, stage, err
+	}
+	stage = "sandbox"
+	result, err = sandbox.Run(ctx, sandbox.Options{Socket: socket, ImageID: imageID, Inputs: inputs})
+	return result, removed, stage, err
 }

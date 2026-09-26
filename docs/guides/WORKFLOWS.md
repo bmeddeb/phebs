@@ -936,7 +936,9 @@ feasibility program.
 T45.1a is merged. T45.1b's separate neutral adapter passes real `go/packages`
 and scip-go discovery in two cold runs with independent review. A bounded
 public-corpus run using Apache-2.0 `bazelbuild/remote-apis-sdks` remains pending;
-its native toolchain still needs compatibility proof. There is no available
+its prepared native profile preserves the upstream lockfile and refuses missing
+offline inputs, but still needs compatibility proof. Raw generated SCIP paths
+must pass the existing committed-index admission rules. There is no available
 managed generation command or supported scale claim from this work. Target
 gates remain open, and committed SCIP import remains the available compatibility
 path.

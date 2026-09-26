@@ -84,7 +84,9 @@ func toolProfiles(r Request) []toolProfile {
 	}
 }
 func validateTools(r Request, tools []ToolIdentity) error {
-	expected := toolProfiles(r)
+	return validateToolProfiles(toolProfiles(r), tools)
+}
+func validateToolProfiles(expected []toolProfile, tools []ToolIdentity) error {
 	if len(tools) != len(expected) {
 		return errors.New("executed tool inventory count mismatch")
 	}
@@ -131,8 +133,11 @@ func validateTools(r Request, tools []ToolIdentity) error {
 	return nil
 }
 func toolIdentities(r Request) ([]ToolIdentity, error) {
+	return readToolProfiles(toolProfiles(r))
+}
+func readToolProfiles(profiles []toolProfile) ([]ToolIdentity, error) {
 	var result []ToolIdentity
-	for _, t := range toolProfiles(r) {
+	for _, t := range profiles {
 		b, err := readBounded(t.path, t451a.MaxFileBytes)
 		if err != nil {
 			return nil, err
@@ -143,7 +148,7 @@ func toolIdentities(r Request) ([]ToolIdentity, error) {
 		}
 		result = append(result, ToolIdentity{t.path, len(b), t451a.Digest(b), info})
 	}
-	if err := validateTools(r, result); err != nil {
+	if err := validateToolProfiles(profiles, result); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -288,14 +293,18 @@ func verifyCall(plan planner.Plan, roots []planner.Configured, slot string, call
 	if err != nil {
 		return err
 	}
+	return verifyPreparedCall(p, slot, call)
+}
+
+func verifyPreparedCall(p launcher.Prepared, slot string, call CallEvidence) error {
 	if call.Slot != slot || call.RequestSHA256 != t451a.Digest(call.Request) || call.LauncherSHA256 != p.Digest() || !reflect.DeepEqual(call.Launcher, p.Invocation()) || call.DriverResponseSHA256 != t451a.Digest(call.Result.DriverResponse) || call.ResponseSHA256 != t451a.Digest(call.Result.Response) {
 		return errors.New("client call evidence identity mismatch")
 	}
-	if err = launcher.Reconcile(p, call.Result.DriverResponse); err != nil {
+	if err := launcher.Reconcile(p, call.Result.DriverResponse); err != nil {
 		return err
 	}
 	var raw map[string]json.RawMessage
-	if err = json.Unmarshal(call.Result.DriverResponse, &raw); err != nil {
+	if err := json.Unmarshal(call.Result.DriverResponse, &raw); err != nil {
 		return err
 	}
 	raw["Compiler"], raw["Arch"], raw["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)

@@ -2,7 +2,9 @@ package planner
 
 import (
 	"embed"
+	"errors"
 	"io/fs"
+	"regexp"
 	"strings"
 )
 
@@ -38,7 +40,39 @@ func Roots() []string {
 // the pinned Bazel binary/startup arguments and appends the same closed
 // resource/cache/profile options to each. Stdout is bounded before buffering.
 func Commands() [][]string {
-	roots := Roots()
+	return commands(Roots())
+}
+
+var nativeRoot = regexp.MustCompile(`^//[A-Za-z0-9._+/-]*:[A-Za-z0-9._+/-]+$`)
+
+func validateRoots(roots []string) error {
+	if len(roots) == 0 || len(roots) > 64 {
+		return errors.New("native root count")
+	}
+	seen := make(map[string]bool, len(roots))
+	for _, root := range roots {
+		if !label(root) || !nativeRoot.MatchString(root) || seen[root] || strings.HasSuffix(root, ":all") {
+			return errors.New("native roots require unique exact main-repository labels")
+		}
+		seen[root] = true
+	}
+	return nil
+}
+
+// NativeCommands preserves the planner command shapes and adds only the public
+// target's explicit proto source-info flag. The caller owns its fixed roots.
+func NativeCommands(roots []string) ([][]string, error) {
+	if err := validateRoots(roots); err != nil {
+		return nil, err
+	}
+	result := commands(roots)
+	for i := range result {
+		result[i] = append(result[i], "--experimental_proto_descriptor_sets_include_source_info")
+	}
+	return result, nil
+}
+
+func commands(roots []string) [][]string {
 	expr := "deps(set(" + strings.Join(roots, " ") + "))"
 	common := []string{"--aspects=//phebs_plan:aspect.bzl%phebs_plan", "--@protobuf//bazel/toolchains:prefer_prebuilt_protoc"}
 	// Rule attributes are not authority: Bazel 9.2 emits configured_rule_input

@@ -87,7 +87,9 @@ cold real-client runs and independent review, with receipts bound by
 `bazelbuild/remote-apis-sdks`. That native toolchain differs from the neutral
 profile and still needs compatibility proof. Corpus selection is not target
 execution, a reproduction of the unavailable private failure receipt, or a
-scale pass. T45.1b remains open.
+scale pass. Its closed native profile and immutable offline inputs are prepared;
+native-neutral proof, public runs and current Phebs admission remain open.
+T45.1b remains open.
 
 ## Now
 

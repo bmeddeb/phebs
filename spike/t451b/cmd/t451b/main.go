@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	if os.Args[0] != t451b.AdapterPath && len(os.Args) == 2 && os.Args[1] == "__supervisor" {
+	if os.Args[0] != t451b.AdapterPath && os.Args[0] != t451b.NativeAdapterPath && len(os.Args) == 2 && os.Args[1] == "__supervisor" {
 		os.Exit(sandbox.Supervisor())
 	}
 	if err := run(); err != nil {
@@ -24,8 +24,17 @@ func main() {
 	}
 }
 func run() error {
+	if os.Args[0] == t451b.NativeAdapterPath {
+		return t451b.RunNativeAdapter(context.Background())
+	}
 	if os.Args[0] == t451b.AdapterPath {
 		return t451b.RunAdapter(context.Background())
+	}
+	if len(os.Args) > 3 && os.Args[1] == "__native_bazel" {
+		if os.Getuid() != 65534 || os.Getpid() == 1 {
+			return errors.New("native Bazel requires isolated worker")
+		}
+		return launcher.RunNativeCompatibilityBazel(context.Background(), os.Args[2], os.Args[3:])
 	}
 	if len(os.Args) > 3 && os.Args[1] == "__compat_bazel" {
 		if os.Getuid() != 65534 || os.Getpid() == 1 {
@@ -40,11 +49,24 @@ func run() error {
 		return planner.RunHelper(os.Args[2:])
 	}
 	if len(os.Args) == 2 && os.Args[1] == "__worker" {
-		r, err := t451b.WorkerRequest()
+		r, native, err := t451b.ReadWorkerProfile()
 		if err != nil {
 			return err
 		}
+		if native != nil {
+			return t451b.NativeWorker(context.Background(), *native)
+		}
 		return t451b.Worker(context.Background(), r)
+	}
+	if len(os.Args) == 3 && os.Args[1] == "native" {
+		c, err := t451b.ReadNativeConfig(os.Args[2])
+		if err != nil {
+			return err
+		}
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer cancel()
+		_, err = t451b.RunNativeConfig(ctx, c)
+		return err
 	}
 	if len(os.Args) != 3 || os.Args[1] != "compatibility" {
 		return errors.New("usage: t451b compatibility /absolute/closed-config.json")

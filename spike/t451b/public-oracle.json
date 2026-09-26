@@ -1,0 +1,329 @@
+{
+  "schema": "phebs-t451b-public-source-oracle-v1",
+  "module": "github.com/bazelbuild/remote-apis-sdks",
+  "commit": "d5824b1a2286806b07efd030aa3a139c4f540157",
+  "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+  "review_sha256": "sha256:f52ef0ea196003243488a9602f6ac1ecb07c6f249da873deef249e0665371a87",
+  "coordinate_encoding": "zero-based UTF-8 bytes; half-open identifier range",
+  "symbols": [
+    {
+      "package": "github.com/bazelbuild/remote-apis-sdks/go/pkg/outerr",
+      "name": "NewOutWriter",
+      "definition": {
+        "cohort": "ordinary",
+        "path": "go/pkg/outerr/outerr.go",
+        "range": [
+          74,
+          5,
+          17
+        ]
+      },
+      "references": [
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            413,
+            72,
+            84
+          ]
+        }
+      ],
+      "signature": "func NewOutWriter(oe OutErr) io.Writer",
+      "documentation": "NewOutWriter provides an io.Writer implementation for writing to the out stream of an OutErr."
+    },
+    {
+      "package": "github.com/bazelbuild/remote-apis-sdks/go/pkg/outerr",
+      "name": "NewErrWriter",
+      "definition": {
+        "cohort": "ordinary",
+        "path": "go/pkg/outerr/outerr.go",
+        "range": [
+          91,
+          5,
+          17
+        ]
+      },
+      "references": [
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            429,
+            72,
+            84
+          ]
+        }
+      ],
+      "signature": "func NewErrWriter(oe OutErr) io.Writer",
+      "documentation": "NewErrWriter provides an io.Writer implementation for writing to the err stream of an OutErr."
+    },
+    {
+      "package": "github.com/bazelbuild/remote-apis-sdks/go/pkg/command",
+      "name": "NewRemoteErrorResult",
+      "definition": {
+        "cohort": "proto",
+        "path": "go/pkg/command/command.go",
+        "range": [
+          460,
+          5,
+          25
+        ]
+      },
+      "references": [
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            147,
+            17,
+            37
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            150,
+            17,
+            37
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            163,
+            43,
+            63
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            281,
+            23,
+            43
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            343,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            359,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            379,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            445,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            451,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            457,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            475,
+            25,
+            45
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            480,
+            25,
+            45
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            501,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            505,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            539,
+            22,
+            42
+          ]
+        },
+        {
+          "cohort": "fanout",
+          "path": "go/pkg/rexec/rexec.go",
+          "range": [
+            556,
+            22,
+            42
+          ]
+        }
+      ],
+      "signature": "func NewRemoteErrorResult(err error) *Result",
+      "documentation": "NewRemoteErrorResult constructs a Result from a remote error."
+    }
+  ],
+  "source_files": [
+    {
+      "path": "LICENSE",
+      "bytes": 11358,
+      "sha256": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "MODULE.bazel",
+      "bytes": 1255,
+      "sha256": "sha256:d7fc8f12ae4fc8aa196a575559a1b61cae2026c30322131bbee7ac6ab164ae42"
+    },
+    {
+      "path": "MODULE.bazel.lock",
+      "bytes": 104011,
+      "sha256": "sha256:e97019c5794000cbb1281ac9aca28caa8a3e37fe3ecce318c1ae700a9fe912f3"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 1145,
+      "sha256": "sha256:10892ee7fe8e7fef5f6a4eecb90117f4b05b91976fc42320280e2bcc71f1192a"
+    },
+    {
+      "path": "go/api/command/BUILD.bazel",
+      "bytes": 736,
+      "sha256": "sha256:0d95c774d53bf6b059a7464a8d5c7f237e6505a23ecec3b788b4ee48b31147c0"
+    },
+    {
+      "path": "go/api/command/command.pb.go",
+      "bytes": 52298,
+      "sha256": "sha256:1f216ae96ca77eee24141e1b714ae5ae838da66a270e1730e5a24b3c6e671b73"
+    },
+    {
+      "path": "go/api/command/command.proto",
+      "bytes": 6731,
+      "sha256": "sha256:6ad070054336da4b1a1ef404164b4888af73853fd0d7bea7126af4b760e21749"
+    },
+    {
+      "path": "go/pkg/cache/BUILD.bazel",
+      "bytes": 344,
+      "sha256": "sha256:b8171e82a357d924002c29e2f87cc4207710ba3721537ef3b238b4e6cebbc201"
+    },
+    {
+      "path": "go/pkg/cache/singleflightcache.go",
+      "bytes": 2438,
+      "sha256": "sha256:53ee4916eb27755784fbb98d800c3eb1a4d48711ea1ea41fa9d634806cadb54f"
+    },
+    {
+      "path": "go/pkg/cas/BUILD.bazel",
+      "bytes": 1505,
+      "sha256": "sha256:15bd84ee128d1752572c7acd8468400fa0a996d280fded0e2dd2df0c3f3b6c91"
+    },
+    {
+      "path": "go/pkg/client/BUILD.bazel",
+      "bytes": 3423,
+      "sha256": "sha256:cb6be43842797679892eaa80bc8145ce335aba43d5c24f624e8606ff4e836dfd"
+    },
+    {
+      "path": "go/pkg/command/BUILD.bazel",
+      "bytes": 949,
+      "sha256": "sha256:da3d73defc9141017515c6b51c211970545557e12972e86ac46710fd8218afd7"
+    },
+    {
+      "path": "go/pkg/command/command.go",
+      "bytes": 30173,
+      "sha256": "sha256:b17d46bb1ccf2c4cbb84a911e73206988036fc7b7f0a4b52e0e97c7cb5df9c22"
+    },
+    {
+      "path": "go/pkg/digest/digest.go",
+      "bytes": 6535,
+      "sha256": "sha256:432beca1e614ddb4ac3e179e7214022374d419d76a69c7a32e7f4ffce894509f"
+    },
+    {
+      "path": "go/pkg/moreflag/BUILD.bazel",
+      "bytes": 385,
+      "sha256": "sha256:02bb40fc3e0db7a047809601aa68098555f9ff86775f11c1489a34ea15b4f7c9"
+    },
+    {
+      "path": "go/pkg/moreflag/moreflag.go",
+      "bytes": 5699,
+      "sha256": "sha256:00e846d5233e0b44fe7ec8c101bd4810bb59249e03b62aa7904f554c83ad793e"
+    },
+    {
+      "path": "go/pkg/outerr/BUILD.bazel",
+      "bytes": 373,
+      "sha256": "sha256:ee9e4c1c0fc8303c4a3473d21f7619fc75b17c996fc1c29ce750c1415cef31d8"
+    },
+    {
+      "path": "go/pkg/outerr/outerr.go",
+      "bytes": 2591,
+      "sha256": "sha256:5484371ad5b4af693a72f90333db863ee3d4c9d323a0f05e34a03a06eb43c5a0"
+    },
+    {
+      "path": "go/pkg/rexec/BUILD.bazel",
+      "bytes": 1393,
+      "sha256": "sha256:4b1f4f17a3ab6b5c5484cd5c549174438175ba99d5105217827fa1f94362b149"
+    },
+    {
+      "path": "go/pkg/rexec/rexec.go",
+      "bytes": 24572,
+      "sha256": "sha256:cdb75335140ad558e92cd697ed61685c47586a10b9638c51504958eb0e0dffef"
+    }
+  ],
+  "generated_oracle": "pending exact native generated bytes; checked-in convenience output is not a substitute",
+  "cross_cohort_check": "definition and every listed reference must have exactly equal full emitted symbol identity",
+  "reference_scope": "exact call set for these three functions within rexec.go; not repository-wide reference count",
+  "runtime_observed": false
+}

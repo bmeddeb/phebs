@@ -34,16 +34,7 @@ type neutralEvidence struct {
 // BuildNeutralPlan constructs only the closed embedded neutral fixture plan.
 // The caller must validate the sandbox boundary before invoking it.
 func BuildNeutralPlan(ctx context.Context) (planner.Plan, CacheEviction, error) {
-	if err := unpackCompiler("/inputs/tools/cc-sysroot.zip", "/scratch/toolchain"); err != nil {
-		return planner.Plan{}, CacheEviction{}, fmt.Errorf("offline compiler import: %w", err)
-	}
-	const compiler = `#!/bin/sh
-export GCC_EXEC_PREFIX=/scratch/toolchain/usr/lib/gcc/
-export LIBRARY_PATH=/scratch/toolchain/usr/lib/aarch64-linux-gnu:/scratch/toolchain/lib/aarch64-linux-gnu
-export LD_LIBRARY_PATH=/scratch/toolchain/usr/lib/aarch64-linux-gnu:/scratch/toolchain/lib/aarch64-linux-gnu
-exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/toolchain -B/scratch/toolchain/usr/bin/ -B/scratch/toolchain/usr/lib/gcc/aarch64-linux-gnu/12/ "$@"
-`
-	if err := os.WriteFile("/scratch/toolchain/cc", []byte(compiler), 0500); err != nil {
+	if err := SetupCompiler(); err != nil {
 		return planner.Plan{}, CacheEviction{}, err
 	}
 	const workspace = "/scratch/workspace"
@@ -75,16 +66,67 @@ exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/tool
 	if err := os.WriteFile(workspace+"/phebs_plan/t451a", helper, 0500); err != nil {
 		return planner.Plan{}, CacheEviction{}, err
 	}
-	startup, common := launcher.BazelStartup(), launcher.BazelCommon()
+	plan, evicted, err := buildDeclaredPlan(ctx, planner.Roots(), planner.Commands(), launcher.BazelCommon())
+	if err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	if err := planner.VerifyNeutral(plan); err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	return plan, evicted, nil
+}
+
+// EnsureQuiescentWorker refuses residual tool processes before cache inspection.
+func EnsureQuiescentWorker() error { return ensureQuiescentWorker() }
+
+// SetupCompiler imports only the admitted compiler archive into private scratch.
+// The caller must first validate the existing worker containment boundary.
+func SetupCompiler() error {
+	if err := unpackCompiler("/inputs/tools/cc-sysroot.zip", "/scratch/toolchain"); err != nil {
+		return fmt.Errorf("offline compiler import: %w", err)
+	}
+	const compiler = `#!/bin/sh
+export GCC_EXEC_PREFIX=/scratch/toolchain/usr/lib/gcc/
+export LIBRARY_PATH=/scratch/toolchain/usr/lib/aarch64-linux-gnu:/scratch/toolchain/lib/aarch64-linux-gnu
+export LD_LIBRARY_PATH=/scratch/toolchain/usr/lib/aarch64-linux-gnu:/scratch/toolchain/lib/aarch64-linux-gnu
+exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/toolchain -B/scratch/toolchain/usr/bin/ -B/scratch/toolchain/usr/lib/gcc/aarch64-linux-gnu/12/ "$@"
+`
+	if err := os.WriteFile("/scratch/toolchain/cc", []byte(compiler), 0500); err != nil {
+		return err
+	}
+	return nil
+}
+
+// BuildNativePlan reads an already materialized owned workspace using only the
+// fixed native planner commands. Roots must come from the caller's closed profile.
+func BuildNativePlan(ctx context.Context, roots []string, ownedNeutral bool) (planner.Plan, CacheEviction, error) {
+	commands, err := planner.NativeCommands(roots)
+	if err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	common := launcher.NativeBazelCommon()
+	if ownedNeutral {
+		for i, arg := range common {
+			if arg == "--lockfile_mode=error" {
+				common[i] = "--lockfile_mode=update"
+			}
+		}
+	}
+	return buildDeclaredPlan(ctx, roots, commands, common)
+}
+
+func buildDeclaredPlan(ctx context.Context, roots []string, commands [][]string, common []string) (planner.Plan, CacheEviction, error) {
+	startup := launcher.BazelStartup()
 	budget := commandBudget{remaining: sandbox.OutputBytes}
 	var outputs [][]byte
 	var evicted CacheEviction
-	for index, suffix := range planner.Commands() {
+	var err error
+	for index, suffix := range commands {
 		args := append(append(append([]string{}, startup...), suffix...), common...)
 		commandCtx, commandCancel := context.WithCancel(ctx)
 		budget.cancel = commandCancel
 		command := exec.CommandContext(commandCtx, "/inputs/tools/bin/bazel", args...)
-		command.Dir = workspace
+		command.Dir = launcher.Workspace
 		command.Env = launcher.BazelEnvironment()
 		stdout, stderr := commandOutput{budget: &budget}, commandOutput{budget: &budget}
 		command.Stdout, command.Stderr = &stdout, &stderr
@@ -144,11 +186,8 @@ exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/tool
 		}
 		projections[name] = data
 	}
-	plan, err := planner.Assemble(outputs[0], outputs[1], projections)
+	plan, err := planner.AssembleRoots(outputs[0], outputs[1], projections, roots)
 	if err != nil {
-		return planner.Plan{}, CacheEviction{}, err
-	}
-	if err := planner.VerifyNeutral(plan); err != nil {
 		return planner.Plan{}, CacheEviction{}, err
 	}
 	return plan, evicted, nil

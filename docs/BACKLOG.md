@@ -14745,7 +14745,11 @@ responses, probe/SCIP bytes and the preceding admission STOP are bound by
 `spike/t451b/neutral-results.json`. Target-native compatibility, exact offline
 admission, target execution and the feasibility decision remain open. Public
 corpus selection and the neutral proof do not establish target cgo or
-product-scale coverage.
+product-scale coverage. The separate native profile and immutable HTTP cache are
+prepared with strict lock preservation, active-GoFiles rederivation, sampled
+process/descriptor facts and a quiescent cache inventory. Native-neutral
+execution, public cohorts, current Phebs admission and the final decision remain
+unestablished; preparation is not offline-closure or resource-fit evidence.
 
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider
