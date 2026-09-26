@@ -33,6 +33,9 @@ func TestNativeCohort(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, err := RunNativeConfig(context.Background(), c)
+	if err != nil {
+		t.Logf("native cohort diagnostic: %v", err)
+	}
 	payload := r.NativeEvidence
 	r.NativeEvidence = nil
 	b, _ := json.Marshal(r)

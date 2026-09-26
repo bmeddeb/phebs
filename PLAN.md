@@ -6073,3 +6073,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   one hash over its already bounded stderr, at most 16 MiB, including the empty
   result. No extra tool execution, retry, persistent state, cache, lock or
   production request, sync, startup or publication work is added.
+
+- **2026-09-26 — T45.1b native-neutral planning STOP and diagnostic repair.**
+  The first approved native-neutral run at executable source `272a228d` stopped
+  during planning before any sealed plan or client leg, with verified limits,
+  no OOM or limit event, and complete container/private-input cleanup. This is
+  harness evidence only. Its source-free receipt retains stderr size/digest,
+  but the local gate runner's 480-character failure preview consumed the large
+  receipt log before reaching the error text; no exact planning cause survived
+  that preview. The opt-in native test now logs its existing diagnostic before
+  the receipt, and subsequent approved runs retain the complete bounded test
+  transcript in local task custody. This test-only reporting repair changes
+  no helper/fixture bytes, tools, request/environment contract, target roots,
+  resource limits or production behavior. Existing compiled artifacts remain
+  exact. A fresh numbered config/receipt is mandatory for the first of at most
+  two authorized harness-source repair/reruns at this stage. Each invocation
+  adds one test log line only on error; the existing bounded diagnostic is
+  repeated. The local transcript adds one host file and tee process; existing
+  gate-runner output/timeout refusal and all worker bounds remain unchanged.
+  No worker, lock, cache or steady-state work changes.
