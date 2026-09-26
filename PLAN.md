@@ -6172,3 +6172,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   startup/restart, retry/no-op or publication work. A successful cache hit may
   now reach existing archive extraction under the unchanged native limits;
   neither host proof nor this correction establishes full offline closure.
+
+- **2026-09-26 — T45.1b downloader repair attempt 4 terminal harness STOP.**
+  Exact source `346c0ebdf70fe914f912611dc25408b9c631cd62`, passing actual
+  pinned-Bazel-class host proof and clean independent source/artifact review
+  preceded the sole additional native-neutral run. Config 4 preserved protected
+  tools, registry/lock/cache identities, target HEAD/roots and all caps. The
+  downloader correction passed the former extraction boundary: planning
+  retained 6,143 configured targets, 96 units and the selected Go 1.25.0 SDK;
+  real `go/packages` and scip-go each returned 129 packages over three roots.
+  The neutral oracle retained 27,852 SCIP bytes, six documents and 195
+  occurrences. These are partial evidence: the worker ended at
+  `containment/measurement` after 134.307 seconds (139.022 seconds host wall).
+  Its inner observer reported procfs descriptor-directory permission denial,
+  301 unexpected errors and unavailable process measurement. Final quiescence
+  also refused, so final original-source/excluded-control revalidation and
+  exact private-cache accounting did not run. False source flags establish
+  neither mutation nor unchanged source; zero cache counters mean unavailable,
+  not empty. The denied process's executable identity is unestablished. The
+  separate outer resource sampler remained available and verified limits,
+  with zero OOM/memory/task-limit events; it cannot cure the inner failure or
+  establish full workload fit. Earlier planning compiler-cache eviction is
+  retained separately from the later final-quiescence refusal.
+  `spike/t451b/downloader-repair-results.json` is an allowlisted source-free
+  projection bound to the exact private raw receipt/config/log hashes; it
+  omits raw SCIP, plan/source paths, responses, traces and argv/environment.
+  Original neutral and attempts 1–3 evidence remain byte-identical. Container
+  and private inputs were removed, dedicated Docker inventory was empty and
+  the dedicated VM stopped. The extra one-run allowance is consumed; stop
+  after independent returned-evidence review, with no repair/rerun, public
+  cohort, merge, push or PR. Native-neutral PASS, target feasibility and current
+  Phebs admission remain open. This record adds no production request, sync,
+  startup/restart, retry/no-op, publication, lock, cache, memory/disk or child
+  work; the preceding repair cost record remains controlling.

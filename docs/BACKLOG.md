@@ -14753,11 +14753,19 @@ native-neutral attempts stopped in planning; source-free receipts are bound by
 module-graph mismatch; after its correction, the third exposed the blanket
 downloader block stripping the cached protobuf archive's inferred type. These
 are harness STOPs, with complete container/private-input cleanup and the
-dedicated VM stopped. Both authorized repair/reruns are consumed. A downloader
-contract change and further execution require Ben's approval. Native-neutral
-PASS, public cohorts, current Phebs admission and the final feasibility decision
-remain unestablished; these early failures prove neither target failure nor
-offline closure or resource fit.
+dedicated VM stopped. Both original repair/reruns are consumed. Ben then
+authorized one downloader repair and one fresh neutral attempt, stopping
+afterward regardless of outcome. The fixed download-disable flag and registry
+block passed actual pinned-class host proof and independent review. Attempt 4
+retained planning, both typed-client legs and neutral SCIP/oracle output, then
+stopped on process-observation permission denial and final quiescence refusal.
+`spike/t451b/downloader-repair-results.json` binds its source-free projection;
+the raw receipt remains in private review custody. Final source revalidation
+and exact cache inventory were not established. Container/private inputs are
+removed and the dedicated VM is stopped. The extra allowance is consumed;
+further repair or execution needs Ben's approval. Native-neutral PASS, public
+cohorts, current Phebs admission and the final feasibility decision remain open.
+These harness STOPs establish neither target failure nor full resource fit.
 
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider

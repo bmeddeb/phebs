@@ -90,10 +90,16 @@ execution, a reproduction of the unavailable private failure receipt, or a
 scale pass. Three native-neutral attempts stopped during planning, first on an
 owned-fixture dependency mismatch and then on cached-archive type loss caused
 by the blanket downloader block. `spike/t451b/native-neutral-results.json`
-binds these harness STOPs and cleanup; both authorized repair/reruns are used
-and the dedicated VM is stopped. A downloader contract change or another run
-needs Ben's approval. Native-neutral PASS, public runs, current Phebs admission
-and T45.1b's feasibility decision remain open.
+binds these harness STOPs and cleanup; both original repair/reruns are used.
+Ben's subsequent one-repair/one-run allowance produced attempt 4 after host
+proof and independent review. Planning, real typed clients and neutral SCIP
+output are retained, but process-observation permission denial and final
+quiescence refusal leave a harness STOP, not native-neutral PASS. Its source-free
+projection is `spike/t451b/downloader-repair-results.json`; final source/cache
+checks remain incomplete. Cleanup is complete and the dedicated VM is stopped.
+The extra allowance is consumed; further repair or execution needs Ben's
+approval. Public runs, current Phebs admission and T45.1b's feasibility decision
+remain open.
 
 ## Now
 
