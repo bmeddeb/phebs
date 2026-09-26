@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	NativeDriverSHA256   = "f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd"
-	nativeGoFilesVersion = "phebs-t451b-native-go-files-v1"
-	nativeScopeVersion   = "phebs-t451b-native-driver-scope-v1"
-	nativeDescriptorFlag = "--experimental_proto_descriptor_sets_include_source_info"
+	NativeDriverSHA256     = "f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd"
+	NativeDownloaderConfig = "block bcr.bazel.build\n"
+	nativeGoFilesVersion   = "phebs-t451b-native-go-files-v1"
+	nativeScopeVersion     = "phebs-t451b-native-driver-scope-v1"
+	nativeDescriptorFlag   = "--experimental_proto_descriptor_sets_include_source_info"
 )
 
 // NativeGoFiles supplements the unchanged declared-source plan with the exact
@@ -48,8 +49,9 @@ type nativeScope struct {
 }
 
 // NativeBazelCommon preserves the target's locked HTTPS registry identities.
-// All HTTP inputs come from the imported read-only cache; the sealed downloader
-// configuration blocks every cache miss. No cache is shared with the host.
+// Archive downloads are disabled after read-only cache lookup, preserving their
+// URL suffixes. Registry reads ignore that flag and remain blocked by the exact
+// downloader configuration. No cache is shared with the host.
 func NativeBazelCommon() []string {
 	args := BazelCommon()
 	for i, arg := range args {
@@ -60,7 +62,7 @@ func NativeBazelCommon() []string {
 			args[i] = "--registry=https://bcr.bazel.build"
 		}
 	}
-	return append(args, "--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false")
+	return append(args, "--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false")
 }
 
 func nativeCommandPrefix(command string) []string {

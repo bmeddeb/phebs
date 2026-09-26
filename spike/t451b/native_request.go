@@ -84,7 +84,7 @@ func nativeToolProfiles(r NativeRequest) []toolProfile {
 }
 
 func validateNativeLayout(bundle t451a.Bundle, r NativeRequest) error {
-	required := map[string]string{"tools/bin/bazel": NativeBazelDigest, "tools/bin/gopackagesdriver": r.DriverSHA256, "tools/cc-sysroot.zip": "", "tools/corpus/remote-apis-sdks.tar.gz": PublicArchiveDigest, "tools/cache/downloader.cfg": t451a.Digest([]byte("block *\n"))}
+	required := map[string]string{"tools/bin/bazel": NativeBazelDigest, "tools/bin/gopackagesdriver": r.DriverSHA256, "tools/cc-sysroot.zip": "", "tools/corpus/remote-apis-sdks.tar.gz": PublicArchiveDigest, "tools/cache/downloader.cfg": t451a.Digest([]byte(launcher.NativeDownloaderConfig))}
 	for _, tool := range nativeToolProfiles(r)[1:] {
 		required[strings.TrimPrefix(tool.path, "/inputs/")] = tool.sha
 	}

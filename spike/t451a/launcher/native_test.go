@@ -280,7 +280,7 @@ func testNativeScope(t *testing.T) {
 func testNativeCacheProfile(t *testing.T) {
 	old := BazelCommon()
 	native := NativeBazelCommon()
-	if len(native) != len(old)+4 || native[0] != "--repository_cache=/inputs/tools/cache/repository" || native[2] != "--registry=https://bcr.bazel.build" || !slices.Equal(native[len(old):], []string{"--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false"}) {
+	if len(native) != len(old)+5 || native[0] != "--repository_cache=/inputs/tools/cache/repository" || native[2] != "--registry=https://bcr.bazel.build" || !slices.Equal(native[len(old):], []string{"--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false"}) {
 		t.Fatal("native cache/registry/lock/downloader profile differs")
 	}
 	for i, arg := range old {
@@ -303,6 +303,8 @@ func testNativeCacheProfile(t *testing.T) {
 			{"lock update", "--lockfile_mode=error", "--lockfile_mode=update"},
 			{"missing block", "--downloader_config=/inputs/tools/cache/downloader.cfg", ""},
 			{"alternate block file", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--downloader_config=/scratch/downloader.cfg"},
+			{"missing download disable", "--repository_disable_download", ""},
+			{"downloads enabled", "--repository_disable_download", "--repository_disable_download=false"},
 			{"repo contents cache", "--repo_contents_cache=", "--repo_contents_cache=/scratch/repo-contents-cache"},
 			{"hardlinks enabled", "--experimental_repository_cache_hardlinks=false", "--experimental_repository_cache_hardlinks=true"},
 		} {
@@ -322,7 +324,7 @@ func testNativeCacheProfile(t *testing.T) {
 				}
 			})
 		}
-		for _, override := range []string{"--registry=file:///outside", "--repository_cache=/scratch/other", "--lockfile_mode=update", "--downloader_config=", "--repo_contents_cache=/scratch/other", "--experimental_repository_cache_hardlinks=true"} {
+		for _, override := range []string{"--registry=file:///outside", "--repository_cache=/scratch/other", "--lockfile_mode=update", "--downloader_config=", "--repository_disable_download=false", "--norepository_disable_download", "--experimental_repository_disable_download=false", "--repo_contents_cache=/scratch/other", "--experimental_repository_cache_hardlinks=true"} {
 			if _, _, err := inspectNativeBazel(s, append(slices.Clone(command), override)); err == nil {
 				t.Fatal("native duplicate flag override admitted")
 			}

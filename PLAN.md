@@ -6141,3 +6141,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and T45.2 GO remain unestablished. No production request, sync, startup,
   retry/no-op, publication, lock, cache or child-process cost changes in this
   evidence/documentation record; historical neutral evidence remains exact.
+
+- **2026-09-26 — T45.1b approved native downloader repair.** Ben authorized
+  one narrowly scoped correction and one fresh native-neutral attempt after
+  host proof and independent review. Native common flags now require
+  `--repository_disable_download`; exact bundle admission requires downloader
+  bytes `block bcr.bazel.build` followed by one LF. Original archive URLs retain
+  their basenames for checksum-cache hits, while archive/download cache misses
+  refuse before the downloader is called. Registry reads ignore that flag and
+  retain the exact host/subdomain block. Original HTTPS registry identities,
+  lock hashes, read-only caches, container network denial, protected tools,
+  target HEAD/cohort roots and caps remain unchanged. The driver wrapper and
+  caller environment accept only the full fixed flag vector; missing, alternate
+  or duplicate override flags/configuration refuse. Historical profiles and
+  evidence remain unchanged. Before the sole new run, host tests must exercise
+  the pinned Bazel binary's actual downloader classes for archive cache-hit
+  suffix/content, archive and plain-download misses before network callbacks,
+  registry miss denial and retained cache authority, with positive controls;
+  admission tests must reject flag/config removal and overrides. Exact source,
+  rebuilt artifacts and fresh numbered configuration require independent
+  review. After the run, retain returned evidence, complete cleanup and stop
+  regardless of outcome; no public cohort, merge, push or PR is authorized.
+  Cost: the native profile adds one fixed argv element and replaces one short
+  fixed config string. An archive cache miss can now reach the existence check
+  for inherited `/inputs/tools/cache/distdir`, which remains absent in the admitted
+  bundle, before download disablement refuses; no directory listing is needed.
+  It adds no child, retry, lock or persistent cache. Host-only opt-in proof
+  extracts the pinned server jar into temporary test custody and invokes the
+  existing host Java compiler/runtime; it adds no production request, sync,
+  startup/restart, retry/no-op or publication work. A successful cache hit may
+  now reach existing archive extraction under the unchanged native limits;
+  neither host proof nor this correction establishes full offline closure.

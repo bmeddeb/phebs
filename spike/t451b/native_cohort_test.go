@@ -95,13 +95,30 @@ func TestNativeCohortBoundary(t *testing.T) {
 			{Path: "tools/bin/gopackagesdriver", Bytes: 1, SHA256: r.DriverSHA256, Executable: true},
 			{Path: "tools/cc-sysroot.zip", Bytes: 1, SHA256: r.BundleSHA256},
 			{Path: "tools/corpus/remote-apis-sdks.tar.gz", Bytes: 249496, SHA256: PublicArchiveDigest},
-			{Path: "tools/cache/downloader.cfg", Bytes: 8, SHA256: t451a.Digest([]byte("block *\n"))},
+			{Path: "tools/cache/downloader.cfg", Bytes: int64(len(launcher.NativeDownloaderConfig)), SHA256: t451a.Digest([]byte(launcher.NativeDownloaderConfig))},
 		}}
 		for _, tool := range nativeToolProfiles(r)[1:] {
 			bundle.Files = append(bundle.Files, t451a.BundleFile{Path: strings.TrimPrefix(tool.path, "/inputs/"), Bytes: 1, SHA256: tool.sha, Executable: true})
 		}
 		if err := validateNativeLayout(bundle, r); err != nil {
 			t.Fatal(err)
+		}
+		if launcher.NativeDownloaderConfig != "block bcr.bazel.build\n" {
+			t.Fatal("native registry block differs from approved contract")
+		}
+		for _, config := range []string{"", "block *\n", "block another.example\n", "block bcr.bazel.build\nallow bcr.bazel.build\n", "block bcr.bazel.build\nrewrite (.*) file:///outside\n"} {
+			bad := bundle
+			bad.Files = slices.Clone(bundle.Files)
+			bad.Files[4].Bytes = int64(len(config))
+			bad.Files[4].SHA256 = t451a.Digest([]byte(config))
+			if err := validateNativeLayout(bad, r); err == nil {
+				t.Fatal("accepted altered downloader configuration")
+			}
+		}
+		withoutConfig := bundle
+		withoutConfig.Files = slices.Delete(slices.Clone(bundle.Files), 4, 5)
+		if err := validateNativeLayout(withoutConfig, r); err == nil {
+			t.Fatal("accepted absent downloader configuration")
 		}
 		for _, change := range []func(*t451a.Bundle){func(b *t451a.Bundle) { b.Files = b.Files[1:] }, func(b *t451a.Bundle) { b.Files[1].SHA256 = "sha256:" + launcher.DriverSHA256 }, func(b *t451a.Bundle) { b.Files[3].Executable = true }, func(b *t451a.Bundle) { b.Files[4].SHA256 = r.BundleSHA256 }, func(b *t451a.Bundle) {
 			b.Files = append(b.Files, t451a.BundleFile{Path: "tools/go/bin/git", Bytes: 1, Executable: true})
@@ -255,6 +272,18 @@ func testNativeCallerBoundary(t *testing.T) {
 		badEnv := append(slices.Clone(env), "GOFLAGS=-tags=other")
 		if _, _, err := inspectNativeCall(data, hash, argv, badEnv, launcher.Workspace, callerRequest(badEnv)); err == nil {
 			t.Fatal("accepted altered environment")
+		}
+		for _, replacement := range []string{"", "--repository_disable_download=false", "--norepository_disable_download", "--repository_disable_download --downloader_config=/scratch/other"} {
+			common := strings.Join(launcher.NativeBazelCommon(), " ")
+			if !strings.Contains(common, "--repository_disable_download") {
+				t.Fatal("ineffective downloader environment mutation")
+			}
+			// The adapter derives these flags internally; callers cannot
+			// inject them even with a matching go/packages request envelope.
+			changed := append(slices.Clone(env), "GOPACKAGESDRIVER_BAZEL_COMMON_FLAGS="+strings.Replace(common, "--repository_disable_download", replacement, 1))
+			if _, _, err := inspectNativeCall(data, hash, argv, changed, launcher.Workspace, callerRequest(changed)); err == nil {
+				t.Fatal("accepted altered downloader environment and matching wire")
+			}
 		}
 		badArgv := slices.Clone(argv)
 		badArgv[0] = AdapterPath
