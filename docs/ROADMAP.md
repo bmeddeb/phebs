@@ -87,9 +87,13 @@ cold real-client runs and independent review, with receipts bound by
 `bazelbuild/remote-apis-sdks`. That native toolchain differs from the neutral
 profile and still needs compatibility proof. Corpus selection is not target
 execution, a reproduction of the unavailable private failure receipt, or a
-scale pass. Its closed native profile and immutable offline inputs are prepared;
-native-neutral proof, public runs and current Phebs admission remain open.
-T45.1b remains open.
+scale pass. Three native-neutral attempts stopped during planning, first on an
+owned-fixture dependency mismatch and then on cached-archive type loss caused
+by the blanket downloader block. `spike/t451b/native-neutral-results.json`
+binds these harness STOPs and cleanup; both authorized repair/reruns are used
+and the dedicated VM is stopped. A downloader contract change or another run
+needs Ben's approval. Native-neutral PASS, public runs, current Phebs admission
+and T45.1b's feasibility decision remain open.
 
 ## Now
 

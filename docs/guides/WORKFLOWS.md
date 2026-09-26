@@ -937,8 +937,14 @@ T45.1a is merged. T45.1b's separate neutral adapter passes real `go/packages`
 and scip-go discovery in two cold runs with independent review. A bounded
 public-corpus run using Apache-2.0 `bazelbuild/remote-apis-sdks` remains pending;
 its prepared native profile preserves the upstream lockfile and refuses missing
-offline inputs, but still needs compatibility proof. Raw generated SCIP paths
-must pass the existing committed-index admission rules. There is no available
+offline inputs, but still needs compatibility proof. Three native-neutral
+attempts stopped on harness planning failures before any typed client or SCIP
+output; the latest cannot infer the cached protobuf archive's type after the
+blanket downloader block removes its URL. The source-free record is
+`spike/t451b/native-neutral-results.json`. Cleanup is complete, both authorized
+repair/reruns are used, and further contract changes or execution need Ben's
+approval. Public cohorts remain unrun. Raw generated SCIP paths must pass the
+existing committed-index admission rules. There is no available
 managed generation command or supported scale claim from this work. Target
 gates remain open, and committed SCIP import remains the available compatibility
 path.

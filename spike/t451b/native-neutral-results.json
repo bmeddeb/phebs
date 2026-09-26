@@ -1,0 +1,388 @@
+{
+  "schema": "phebs-t451b-native-neutral-results-v1",
+  "date": "2026-09-26",
+  "scope": "owned native-neutral compatibility prerequisite only",
+  "outcome": "HARNESS_STOP",
+  "target_execution": "NOT_RUN",
+  "t451b_feasibility_decision": null,
+  "public_cohorts_executed": [],
+  "authorized_native_neutral_repairs": 2,
+  "native_neutral_repairs_used": 2,
+  "next_execution_requires_new_authority": true,
+  "requested_roots": [
+    "//lib:alias",
+    "//proto:message_go",
+    "//cgo:cgo"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "source_commit": "69b742b8a0877450ffe13ca0612a21fc129efe02",
+      "helper_source_commit": "272a228d9e863b848b1541bc20e90cf71cc1cb24",
+      "config_sha256": "sha256:e21ec4a04519e6e9b573caedc4b8d297a53772566e70f9f8f4cc44783da6ecd2",
+      "receipt": "native-neutral-receipt-1.json.gz",
+      "receipt_bytes": 2827,
+      "receipt_sha256": "sha256:0f816104146ca807b2c6824a5ce228aa60111c11a00396ee37a97bb2afb766e4",
+      "uncompressed_receipt_bytes": 9924,
+      "uncompressed_receipt_sha256": "sha256:7f8b16c61f7962fc477fedf100a97d8dbe29c90c17a3fea9a24b9178815a94f7",
+      "request": {
+        "schema": "phebs-t451b-native-request-v1",
+        "profile": "native-linux-arm64-rules-go-059-v1",
+        "cohort": "neutral",
+        "bundle_sha256": "sha256:f25b60cb787526ed6836673684d8323b7a67781cf9567931be128b43bc650113",
+        "helper_sha256": "sha256:066cdfb65a8145cd4c8cc63f51116c6b5e9e71c911f84e46d95677c197b515ef",
+        "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+        "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+        "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+        "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+        "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+        "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+        "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+        "aspect_sha256": "sha256:5c594f2adc61b536cc377d76b21d1beb04745f793108731a7f887fd45161ae08",
+        "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+      },
+      "request_sha256": "sha256:25d401f3c9341f80ccc2e6d61b55c8dbfef49b1aacc0a32b2dfca6ad7fb69729",
+      "outcome": "HARNESS_STOP",
+      "stage": "planning",
+      "classification": "offline_registry_source_missing",
+      "host_wall_nanoseconds": 9456338791,
+      "worker_wall_nanoseconds": 3720357871,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 1355995468
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 2354636310
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 9725594
+        }
+      ],
+      "output_bytes": 7793,
+      "output_sha256": "sha256:cbd3fea30737914fe2f62aa50828b2f55477c86001313b3af6265dc1df40dc26",
+      "stderr_bytes": 870,
+      "stderr_sha256": "sha256:a9369c77d793372a7162b84af4c6efa36a1424631adb3f34dc4108213fc43cea",
+      "container_removed": true,
+      "inputs_removed": true,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 846503936,
+        "sampled_peak_rss_bytes": 199360512,
+        "sampled_peak_processes": 3,
+        "sampled_peak_scratch_bytes": 495190016,
+        "sampled_peak_scratch_inodes": 3205,
+        "samples": 77,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 32768
+      },
+      "observations": {
+        "version": "phebs-t451b-sampled-observations-v1",
+        "interval_nanoseconds": 50000000,
+        "duration_nanoseconds": 3710627190,
+        "samples": 75,
+        "sampled_child_lifetimes": 1,
+        "child_lifetimes_lower_bound": true,
+        "sampled_process_fd_peak": 12,
+        "sampled_aggregate_fd_peak": 22,
+        "fd_counts_non_atomic": true,
+        "vanished": 0,
+        "raced": 0,
+        "unexpected_errors": 0,
+        "unavailable": false
+      },
+      "private_cache": {
+        "version": "phebs-t451b-private-cache-v1",
+        "roots": [
+          "/scratch/bazel-user",
+          "/scratch/bazel-output",
+          "/scratch/repository-cache",
+          "/scratch/gocache",
+          "/scratch/gomodcache",
+          "/scratch/cache"
+        ],
+        "missing_roots": [
+          "/scratch/repository-cache",
+          "/scratch/gocache",
+          "/scratch/gomodcache"
+        ],
+        "entries": 575,
+        "regular_files": 438,
+        "directories": 132,
+        "symlinks": 5,
+        "unique_inodes": 575,
+        "logical_bytes": 189471369,
+        "allocated_bytes": 190554112,
+        "complete": true
+      },
+      "plan_established": false,
+      "selected_sdk_established": false,
+      "client_legs_completed": 0,
+      "scip_established": false,
+      "unit_success_failure_counts": null,
+      "diagnostic_custody": "Original preview omitted raw error; attempt2 reconstructs exact bytes matching this stderr digest."
+    },
+    {
+      "attempt": 2,
+      "source_commit": "2d8d83610b3699f5e1334655c1bcf9252ec752d1",
+      "helper_source_commit": "272a228d9e863b848b1541bc20e90cf71cc1cb24",
+      "config_sha256": "sha256:9fdba617cf7110599fe146c488c0db3f8ec93d282a9311e2e1c9304ab9e90918",
+      "receipt": "native-neutral-receipt-2.json.gz",
+      "receipt_bytes": 2824,
+      "receipt_sha256": "sha256:9fd778c7215d0e1cfacde33168e937a65a66c45078c76314385f9f5f4bfb2a75",
+      "uncompressed_receipt_bytes": 9924,
+      "uncompressed_receipt_sha256": "sha256:5f3f4e841f9a90cd1503e850ecb75c71d1cafffce27a6810d7fef2c291a7298c",
+      "request": {
+        "schema": "phebs-t451b-native-request-v1",
+        "profile": "native-linux-arm64-rules-go-059-v1",
+        "cohort": "neutral",
+        "bundle_sha256": "sha256:f25b60cb787526ed6836673684d8323b7a67781cf9567931be128b43bc650113",
+        "helper_sha256": "sha256:066cdfb65a8145cd4c8cc63f51116c6b5e9e71c911f84e46d95677c197b515ef",
+        "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+        "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+        "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+        "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+        "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+        "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+        "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+        "aspect_sha256": "sha256:5c594f2adc61b536cc377d76b21d1beb04745f793108731a7f887fd45161ae08",
+        "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+      },
+      "request_sha256": "sha256:25d401f3c9341f80ccc2e6d61b55c8dbfef49b1aacc0a32b2dfca6ad7fb69729",
+      "outcome": "HARNESS_STOP",
+      "stage": "planning",
+      "classification": "offline_registry_source_missing",
+      "host_wall_nanoseconds": 9082717167,
+      "worker_wall_nanoseconds": 3493208163,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 1334157998
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 2152589793
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 6459872
+        }
+      ],
+      "output_bytes": 7793,
+      "output_sha256": "sha256:502b842e7b3869353cf68b36a6f80cd8f2360514c199ef224be9b583900bde8c",
+      "stderr_bytes": 870,
+      "stderr_sha256": "sha256:a9369c77d793372a7162b84af4c6efa36a1424631adb3f34dc4108213fc43cea",
+      "container_removed": true,
+      "inputs_removed": true,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 838479872,
+        "sampled_peak_rss_bytes": 194314240,
+        "sampled_peak_processes": 3,
+        "sampled_peak_scratch_bytes": 495190016,
+        "sampled_peak_scratch_inodes": 3205,
+        "samples": 73,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 32768
+      },
+      "observations": {
+        "version": "phebs-t451b-sampled-observations-v1",
+        "interval_nanoseconds": 50000000,
+        "duration_nanoseconds": 3486740000,
+        "samples": 71,
+        "sampled_child_lifetimes": 1,
+        "child_lifetimes_lower_bound": true,
+        "sampled_process_fd_peak": 12,
+        "sampled_aggregate_fd_peak": 22,
+        "fd_counts_non_atomic": true,
+        "vanished": 0,
+        "raced": 0,
+        "unexpected_errors": 0,
+        "unavailable": false
+      },
+      "private_cache": {
+        "version": "phebs-t451b-private-cache-v1",
+        "roots": [
+          "/scratch/bazel-user",
+          "/scratch/bazel-output",
+          "/scratch/repository-cache",
+          "/scratch/gocache",
+          "/scratch/gomodcache",
+          "/scratch/cache"
+        ],
+        "missing_roots": [
+          "/scratch/repository-cache",
+          "/scratch/gocache",
+          "/scratch/gomodcache"
+        ],
+        "entries": 575,
+        "regular_files": 438,
+        "directories": 132,
+        "symlinks": 5,
+        "unique_inodes": 575,
+        "logical_bytes": 189471194,
+        "allocated_bytes": 190554112,
+        "complete": true
+      },
+      "plan_established": false,
+      "selected_sdk_established": false,
+      "client_legs_completed": 0,
+      "scip_established": false,
+      "unit_success_failure_counts": null,
+      "private_test_log": {
+        "bytes": 4373,
+        "sha256": "sha256:cd9d1245ada7bbd2af80d4bd79122260e69b29f3bfaa3d10b8e0993914cc7a3c",
+        "retained_in_repository": false
+      }
+    },
+    {
+      "attempt": 3,
+      "source_commit": "9ac5ae8ed8567cc7100c954ca9c8b031206cd652",
+      "helper_source_commit": "9ac5ae8ed8567cc7100c954ca9c8b031206cd652",
+      "config_sha256": "sha256:e6e6ce63ccfed662a60e74f2660ae1bf21b8cee7ebddc88637cc8bf7435c13e5",
+      "receipt": "native-neutral-receipt-3.json.gz",
+      "receipt_bytes": 2831,
+      "receipt_sha256": "sha256:7b4144b4304ba13f714b65f646ca545eaf3ed8b81c045dd36febff6f6ca3e49e",
+      "uncompressed_receipt_bytes": 9925,
+      "uncompressed_receipt_sha256": "sha256:917f210b66164360eddeae2c7b36e55b46e00f37895cc9537dccc84b028380aa",
+      "request": {
+        "schema": "phebs-t451b-native-request-v1",
+        "profile": "native-linux-arm64-rules-go-059-v1",
+        "cohort": "neutral",
+        "bundle_sha256": "sha256:ead921a59d1572c40074793fd6e85bf8fa8bd53b959f9b3291111314423fa82d",
+        "helper_sha256": "sha256:3131c3ea3e38f45b82c5cf60a59ebe36c418b1421f1d1b97833ab545b05fcf1e",
+        "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+        "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+        "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+        "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+        "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+        "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+        "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+        "aspect_sha256": "sha256:5c594f2adc61b536cc377d76b21d1beb04745f793108731a7f887fd45161ae08",
+        "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+      },
+      "request_sha256": "sha256:4f676c6977a527de9cb5ba8313d525f5e88dabce451dbbca7e7254c9cb474216",
+      "outcome": "HARNESS_STOP",
+      "stage": "planning",
+      "classification": "offline_cached_archive_type_unavailable",
+      "host_wall_nanoseconds": 8972844542,
+      "worker_wall_nanoseconds": 3608478842,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 1210853733
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 2388683594
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 8941139
+        }
+      ],
+      "output_bytes": 7793,
+      "output_sha256": "sha256:0a18a6cff9d4b3153bbfe7c900a066915f910b0d1560293897a56052aa5f1332",
+      "stderr_bytes": 1418,
+      "stderr_sha256": "sha256:fef8a95e712a913821653bcf4ec302bfce9520d4c4a012f6009fffbe25d82820",
+      "container_removed": true,
+      "inputs_removed": true,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 860721152,
+        "sampled_peak_rss_bytes": 200114176,
+        "sampled_peak_processes": 3,
+        "sampled_peak_scratch_bytes": 502063104,
+        "sampled_peak_scratch_inodes": 3207,
+        "samples": 75,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 32768
+      },
+      "observations": {
+        "version": "phebs-t451b-sampled-observations-v1",
+        "interval_nanoseconds": 50000000,
+        "duration_nanoseconds": 3599540258,
+        "samples": 71,
+        "sampled_child_lifetimes": 1,
+        "child_lifetimes_lower_bound": true,
+        "sampled_process_fd_peak": 17,
+        "sampled_aggregate_fd_peak": 27,
+        "fd_counts_non_atomic": true,
+        "vanished": 0,
+        "raced": 0,
+        "unexpected_errors": 0,
+        "unavailable": false
+      },
+      "private_cache": {
+        "version": "phebs-t451b-private-cache-v1",
+        "roots": [
+          "/scratch/bazel-user",
+          "/scratch/bazel-output",
+          "/scratch/repository-cache",
+          "/scratch/gocache",
+          "/scratch/gomodcache",
+          "/scratch/cache"
+        ],
+        "missing_roots": [
+          "/scratch/repository-cache",
+          "/scratch/gocache",
+          "/scratch/gomodcache"
+        ],
+        "entries": 576,
+        "regular_files": 439,
+        "directories": 132,
+        "symlinks": 5,
+        "unique_inodes": 576,
+        "logical_bytes": 189506465,
+        "allocated_bytes": 190590976,
+        "complete": true
+      },
+      "plan_established": false,
+      "selected_sdk_established": false,
+      "client_legs_completed": 0,
+      "scip_established": false,
+      "unit_success_failure_counts": null,
+      "private_test_log": {
+        "bytes": 5566,
+        "sha256": "sha256:a8cece41a620e6e08e8ee6bf5fc96b20e1fd6df356c31c8ca93082d4639bb85d",
+        "retained_in_repository": false
+      }
+    }
+  ],
+  "classification_basis": {
+    "attempts_1_and_2": "Owned-neutral direct module constraints omitted the admitted public grpc/googleapis constraints; cquery selected nlohmann_json3.6.1 and its missing source metadata was refused by the blocked downloader. The complete attempt2 diagnostic matches both recorded stderr digests.",
+    "attempt_3": "After exact fixture constraint alignment, cquery reached the cached protobuf33.5 archive. Bazel9 replaces an all-blocked URL list with extensionless cacheprobe when archive type is absent; extraction refused before any sealed plan or typed client. Retained upstream DownloadManager/http_archive source explains the observed failure.",
+    "go_version_refusal_observed": false
+  },
+  "cleanup": {
+    "all_attempt_containers_removed": true,
+    "all_attempt_private_inputs_removed": true,
+    "dedicated_docker_inventory_empty_after_attempt3": true,
+    "private_parent_empty_after_attempt3": true,
+    "dedicated_vm_stopped": true
+  },
+  "limitations": [
+    "Native-neutral PASS is not established; no public target command, exact target plan, current Phebs admission, cross-cohort oracle or T45.2 GO is established.",
+    "Counts and peaks describe three early harness failures only, not full workload fit. Sampled child lifetimes remain lower bounds and FD sums non-atomic.",
+    "No Go/Bazel/rules_go/driver/scip-go identity, launcher request/environment, public HEAD/cohort root or resource-cap change occurred.",
+    "Both authorized native-neutral repair/reruns are used. Further repair/execution or a downloader/launcher contract change requires Ben first.",
+    "Original neutral-results.json and its evidence remain unchanged."
+  ]
+}

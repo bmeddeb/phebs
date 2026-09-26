@@ -6112,3 +6112,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   rerun only when executed, with independent source/artifact review and fresh
   numbered config/receipt/log. No public execution or feasibility conclusion
   follows from the correction, and no production/steady-state cost changes.
+
+- **2026-09-26 — T45.1b native-neutral terminal harness STOP.** All three
+  approved native-neutral attempts stopped in `cquery` planning, before a
+  sealed plan, selected-SDK proof, client leg or SCIP output. Source-free
+  receipts and exact source/config/tool bindings are retained in
+  `spike/t451b/native-neutral-results.json`; independent returned-evidence
+  review confirms the harness attribution. The complete second diagnostic
+  reconstructs the same stderr bytes/digest as the first, substantiating both
+  earlier module-graph refusals. After the owned-root correction at `9ac5ae8e`,
+  attempt three reached the already admitted protobuf 33.5 archive but its
+  extraction failed: Bazel 9's blanket-blocked URL list produces `cacheprobe`
+  when no explicit archive type exists, losing the `.tar.gz` suffix before a
+  checksum-cache hit returns the file. Retained upstream source and exact
+  archive/registry hashes support this cause; no new download or Go-version
+  refusal is established. Limits were verified with zero OOM/memory/task-limit
+  events, every container/private-input directory was removed, dedicated
+  Docker inventory was empty, and the dedicated VM was stopped. Sampled
+  resource facts describe these early failures only, not full workload fit.
+  Both authorized harness-source repair/reruns are consumed; no further repair
+  or execution is authorized. A prospective fix would preserve archive URL
+  suffixes while disabling archive downloads and retaining registry/network
+  denial. Bazel's registry reader ignores `--repository_disable_download`, so
+  that flag alone cannot replace the current downloader policy. Changing the
+  fixed downloader/common-flags environment contract requires Ben's approval
+  and a fresh bounded run allowance before implementation. Public cohorts
+  remain unrun; target feasibility, current Phebs admission, semantic oracle
+  and T45.2 GO remain unestablished. No production request, sync, startup,
+  retry/no-op, publication, lock, cache or child-process cost changes in this
+  evidence/documentation record; historical neutral evidence remains exact.
