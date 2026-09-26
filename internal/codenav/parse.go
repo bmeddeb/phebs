@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/scip-code/scip/bindings/go/scip"
 )
@@ -118,7 +120,15 @@ func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snaps
 				return semanticLimit("documents", result.documentCount, limits.documents)
 			}
 			if err := validateRepoPath(doc.GetRelativePath()); err != nil {
-				return fmt.Errorf("SCIP document path: %w", err)
+				if !outsideRepository(doc.GetRelativePath()) {
+					return fmt.Errorf("SCIP document path: %w", err)
+				}
+				// Producers may index generated files outside the
+				// repository, such as Bazel's ../bazel-output/... outputs.
+				// Like an unsupported encoding, the document is omitted and
+				// never read, but its payload still consumes the limits.
+				result.unsupportedDocuments++
+				return result.accountUnsupportedDocument(doc, limits)
 			}
 			result.documentPaths[doc.GetRelativePath()] = struct{}{}
 			if err := result.addDocument(doc, limits); err != nil {
@@ -566,6 +576,15 @@ func symbolKey(docPath, symbol string) string {
 		return docPath + "\x00" + symbol
 	}
 	return symbol
+}
+
+// outsideRepository reports whether an otherwise well-formed SCIP document path
+// names a file outside the repository root. Every other malformed path stays
+// an index-wide error.
+func outsideRepository(value string) bool {
+	return (strings.HasPrefix(value, "../") || strings.HasPrefix(value, "/")) &&
+		utf8.ValidString(value) && path.Clean(value) == value &&
+		!strings.ContainsFunc(value, func(r rune) bool { return r == '\\' || r < 0x20 || r == 0x7f })
 }
 
 // producerEncoding names the position unit a known indexer uses when it omits

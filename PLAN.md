@@ -5862,3 +5862,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   local-reference queries. Cost: one tool-name comparison per index at
   metadata time and one stored encoding value per snapshot; query, sync,
   startup, retry, publication, lock, cache, and child costs are unchanged.
+- **2026-09-26 — Out-of-repository SCIP documents are omitted.** Phase 1's
+  uncapped proto cohort showed that scip-go names Bazel-generated files by
+  their path relative to the workspace, such as
+  `../bazel-output/.../command.pb.go`. codenav rejected the whole index on that
+  one path, so every Bazel repository with generated Go (protobuf, mocks) would
+  get no navigation. A document path that is otherwise well-formed but leaves
+  the repository (`../...` or absolute) is now omitted per document, exactly
+  like an unsupported position encoding: it is never read, its payload still
+  counts against the semantic limits, and every other malformed path stays an
+  index-wide error. On the Phase 1 proto SCIP the reader keeps `command.go`
+  with 241 of 241 definitions resolving to themselves. Navigation into
+  generated code remains unavailable until T45.3 carries generated files in the
+  bundle under a canonical generated path. Cost: one prefix and cleanliness
+  check per rejected document path; admitted paths, queries, sync, startup,
+  retry, publication, locks, caches, and children are unchanged.
