@@ -5887,10 +5887,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   count/byte/digest verification and private copy. Worker startup additionally
   hashes the helper, its identical adapter copy, probe, scip-go and SDK Go
   executable and reads their build metadata, bounded by the existing per-file
-  tool limit. Each typed driver call reconstructs its sealed
-  selection, hashes selected sources before and after the driver, and hashes
-  declared exports once. Verification after the complete client reconstructs
-  the selection again and adds one source and one export pass. Each accepted
+  tool limit. Each serial client leg performs five full sealed-selection
+  preparations inside the container: worker setup, adapter admission, driver
+  execution, returned-call verification, and post-client file verification.
+  Host evidence validation performs one further preparation per leg. The
+  caller control carries the full bounded plan: inside each leg its JSON is
+  encoded four times and decoded twice, including canonical re-encoding;
+  host validation adds two encodings and one decoding per leg. Each driver
+  call also rehashes the fixed driver executable, hashes selected sources
+  before and after the driver, and hashes declared exports once. Post-client
+  verification adds one source and one export pass. Each accepted source/export
   pass is bounded by 64 MiB and 8 MiB per file; the inherited source verifier
   may read one additional bounded file before rejecting aggregate overflow,
   while the new export reader checks the remaining aggregate budget first.
@@ -5898,9 +5904,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   each response remains capped at 16 MiB and the complete worker evidence
   retains the existing 16-MiB output ceiling. Each leg creates two exclusive
   launcher control files and separate caller plan/trace files. Legs are serial;
-  there is no new shared lock or persistent cache. Exact descendant counts,
-  observed memory/scratch use and wall time require the native receipt; a
-  sampled process peak is not a lifetime child count and a descriptor ceiling
-  is not an observed descriptor peak. This spike adds no production
+  there is no new shared lock or persistent cache. Client-leg wall times and
+  observed process/memory/scratch peaks require native evidence. This neutral
+  wrapper does not measure lifetime child counts or descriptor peaks; sampled
+  process peaks and enforced descriptor ceilings do not substitute for them.
+  This spike adds no production
   request/query, sync, startup/restart, retry/no-op, publication or lifecycle
   cost.
