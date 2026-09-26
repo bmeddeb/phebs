@@ -111,6 +111,12 @@ sealed plan, typed client or SCIP result was retained. The source-free record is
 consumed, cleanup is complete and the dedicated VM is stopped. Independent
 returned-evidence review found no issues; no rerun or public execution is authorized.
 
+A later approval permits one zombie-handling repair, failed-planning storage
+diagnostics and one native-neutral attempt 6. Native profile v2 alone raises
+scratch inodes to 262,144; all other caps and protected inputs remain fixed.
+Host proof and independent review precede execution; cleanup, returned-evidence
+review and stop follow. Public cohorts remain unauthorized.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

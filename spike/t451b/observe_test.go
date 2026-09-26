@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"testing/fstest"
 
@@ -45,6 +46,20 @@ type procOpenFS struct {
 }
 
 func (p procOpenFS) Open(name string) (fs.File, error) { return p.open(name) }
+
+type procErrorDirectory struct {
+	fs.File
+	entries           []fs.DirEntry
+	readErr, closeErr error
+	limit             *int
+}
+
+func (d procErrorDirectory) ReadDir(limit int) ([]fs.DirEntry, error) {
+	*d.limit = limit
+	return d.entries[:min(limit, len(d.entries))], d.readErr
+}
+
+func (d procErrorDirectory) Close() error { return errors.Join(d.File.Close(), d.closeErr) }
 
 func TestObservations(t *testing.T) {
 	t.Run("sample and PID reuse", func(t *testing.T) {
@@ -111,11 +126,25 @@ func TestObservations(t *testing.T) {
 		{name: "malformed stat", mutate: func(m fstest.MapFS, _ *processObserver) { m["3/stat"].Data = []byte("broken") }, unavailable: true},
 		{name: "malformed UID", mutate: func(m fstest.MapFS, _ *processObserver) { m["3/status"].Data = []byte("Uid: 1 2 3\n") }, unavailable: true},
 		{name: "worker UID changed", mutate: func(m fstest.MapFS, _ *processObserver) { addProc(m, 2, 100, 0, 2) }, unavailable: true},
+		{name: "zombie UID malformed", mutate: func(m fstest.MapFS, _ *processObserver) {
+			m["3/stat"].Data = []byte(strings.Replace(string(procStat(3, 101)), ") S ", ") Z ", 1))
+			m["3/status"].Data = []byte("Uid: broken\n")
+		}, unavailable: true},
+		{name: "zombie worker UID changed", mutate: func(m fstest.MapFS, _ *processObserver) {
+			addProc(m, 2, 100, 0, 2)
+			m["2/stat"].Data = []byte(strings.Replace(string(procStat(2, 100)), ") S ", ") Z ", 1))
+		}, unavailable: true},
 		{name: "oversized proc record", mutate: func(m fstest.MapFS, _ *processObserver) { m["3/status"].Data = []byte(strings.Repeat("x", 8193)) }, unavailable: true},
 		{name: "FD overflow", mutate: func(m fstest.MapFS, _ *processObserver) { addProc(m, 3, 101, 65534, sandbox.DescriptorLimit+1) }, unavailable: true},
 		{name: "process overflow", mutate: func(m fstest.MapFS, _ *processObserver) {
 			for pid := 5; pid <= sandbox.TaskLimit+1; pid++ {
 				addProc(m, pid, uint64(pid), 0, 0)
+			}
+		}, unavailable: true},
+		{name: "zombie process overflow", mutate: func(m fstest.MapFS, _ *processObserver) {
+			for pid := 5; pid <= sandbox.TaskLimit+1; pid++ {
+				addProc(m, pid, uint64(pid), 65534, 0)
+				m[fmt.Sprintf("%d/stat", pid)].Data = []byte(strings.Replace(string(procStat(pid, uint64(pid))), ") S ", ") Z ", 1))
 			}
 		}, unavailable: true},
 		{name: "root inventory overflow", mutate: func(m fstest.MapFS, _ *processObserver) {
@@ -229,17 +258,189 @@ func TestObservationsFailureDiagnostic(t *testing.T) {
 				if o.facts.FailureProcess != nil {
 					t.Fatal("attributed a replacement lifetime")
 				}
-			} else if o.facts.FailureProcess == nil || o.facts.FailureProcess.Comm != "child" || reads["3/stat"] != 3 || reads["3/status"] != 2 {
+			} else if o.facts.FailureProcess == nil || o.facts.FailureProcess.Comm != "child" || reads["3/stat"] != 4 || reads["3/status"] != 2 {
 				t.Fatalf("missing or unbounded capture: %+v %v", o.facts.FailureProcess, reads)
 			}
 			statReads, statusReads := reads["3/stat"], reads["3/status"]
 			firstError, firstDiagnostic := o.err, o.facts.FailureProcess
 			o.sample()
-			if o.err != firstError || o.facts.FailureProcess != firstDiagnostic || o.facts.UnexpectedErrors != 2 || reads["3/stat"] != statReads+1 || reads["3/status"] != statusReads+1 {
+			if o.err != firstError || o.facts.FailureProcess != firstDiagnostic || o.facts.UnexpectedErrors != 2 || reads["3/stat"] != statReads+2 || reads["3/status"] != statusReads+1 {
 				t.Fatal("sticky diagnostic/refusal changed or capture retried")
 			}
 		})
 	}
+}
+
+func TestObservationsZombieBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name                          string
+		initial, after                string
+		fdErr, statErr                error
+		reused, malformed             bool
+		wantErr, gone                 bool
+		fdReads, statReads, lifetimes uint64
+		fds                           uint64
+	}{
+		{name: "healthy live", initial: "S", after: "S", fdReads: 1, statReads: 2, lifetimes: 1, fds: 3},
+		{name: "initial zombie", initial: "Z", after: "Z", statReads: 2, lifetimes: 1},
+		{name: "successful FD read then zombie", initial: "S", after: "Z", fdReads: 1, statReads: 2, lifetimes: 1},
+		{name: "denied then zombie", initial: "S", after: "Z", fdErr: fs.ErrPermission, fdReads: 1, statReads: 2, lifetimes: 1},
+		{name: "denied then gone", initial: "S", fdErr: fs.ErrPermission, statErr: fs.ErrNotExist, fdReads: 1, statReads: 2, gone: true},
+		{name: "denied then ESRCH", initial: "S", fdErr: fs.ErrPermission, statErr: syscall.ESRCH, fdReads: 1, statReads: 2, gone: true},
+		{name: "denied then live", initial: "S", after: "S", fdErr: fs.ErrPermission, fdReads: 1, statReads: 2, wantErr: true},
+		{name: "denied then unreadable", initial: "S", fdErr: fs.ErrPermission, statErr: fs.ErrPermission, fdReads: 1, statReads: 2, wantErr: true},
+		{name: "denied then malformed", initial: "S", fdErr: fs.ErrPermission, malformed: true, fdReads: 1, statReads: 2, wantErr: true},
+		{name: "denied then unknown state", initial: "S", after: "?", fdErr: fs.ErrPermission, fdReads: 1, statReads: 2, wantErr: true},
+		{name: "denied then reused zombie", initial: "S", after: "Z", fdErr: fs.ErrPermission, reused: true, fdReads: 1, statReads: 2, wantErr: true},
+		{name: "mixed FD error", initial: "S", after: "Z", fdErr: errors.Join(fs.ErrPermission, syscall.EIO), fdReads: 1, statReads: 1, wantErr: true},
+		{name: "non-permission FD error", initial: "S", after: "Z", fdErr: syscall.EIO, fdReads: 1, statReads: 1, wantErr: true},
+		{name: "mixed gone error", initial: "S", fdErr: fs.ErrPermission, statErr: errors.Join(fs.ErrNotExist, syscall.EIO), fdReads: 1, statReads: 2, wantErr: true},
+		{name: "zombie changes to live", initial: "Z", after: "S", statReads: 2, wantErr: true},
+		{name: "zombie lifetime reused", initial: "Z", after: "Z", reused: true, statReads: 2, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := observationProc()
+			var fdReads, statReads uint64
+			proc := procOpenFS{FS: m, open: func(name string) (fs.File, error) {
+				if name == "3/stat" {
+					statReads++
+					state, start := tc.initial, uint64(101)
+					if statReads == 2 {
+						if tc.statErr != nil {
+							return nil, tc.statErr
+						}
+						if tc.malformed {
+							return fstest.MapFS{"stat": {Data: []byte("malformed")}}.Open("stat")
+						}
+						state = tc.after
+						if tc.reused {
+							start++
+						}
+					}
+					data := []byte(strings.Replace(string(procStat(3, start)), ") S ", ") "+state+" ", 1))
+					return fstest.MapFS{"stat": {Data: data}}.Open("stat")
+				}
+				if name == "3/fd" {
+					fdReads++
+					if tc.fdErr != nil {
+						return nil, tc.fdErr
+					}
+				}
+				return m.Open(name)
+			}}
+			o := newProcessObserver(proc, 2, 65534)
+			fds, start, err := o.process(3)
+			if vanished(err) != tc.gone || (err != nil && !vanished(err)) != tc.wantErr || fds != tc.fds || start != 101 || o.facts.SampledChildLifetimes != tc.lifetimes || fdReads != tc.fdReads || statReads != tc.statReads {
+				t.Fatalf("fds=%d start=%d err=%v facts=%+v reads=%d/%d", fds, start, err, o.facts, fdReads, statReads)
+			}
+			if tc.reused && o.facts.Raced != 1 {
+				t.Fatal("lost lifetime race count")
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name              string
+		entries           int
+		malformed         bool
+		readErr, closeErr error
+		wantErr           bool
+	}{
+		{name: "empty read denied", readErr: fs.ErrPermission},
+		{name: "empty close denied", closeErr: fs.ErrPermission, wantErr: true},
+		{name: "read and close denied", readErr: fs.ErrPermission, closeErr: fs.ErrPermission, wantErr: true},
+		{name: "close reports disappearance", closeErr: fs.ErrNotExist, wantErr: true},
+		{name: "partial read denied", entries: 1, readErr: fs.ErrPermission, wantErr: true},
+		{name: "partial close denied", entries: 1, closeErr: fs.ErrPermission, wantErr: true},
+		{name: "malformed partial read denied", entries: 1, malformed: true, readErr: fs.ErrPermission, wantErr: true},
+		{name: "malformed partial close denied", entries: 1, malformed: true, closeErr: fs.ErrPermission, wantErr: true},
+		{name: "overflow partial read denied", entries: sandbox.DescriptorLimit + 1, readErr: fs.ErrPermission, wantErr: true},
+		{name: "overflow partial close denied", entries: sandbox.DescriptorLimit + 1, closeErr: fs.ErrPermission, wantErr: true},
+		{name: "mixed read and close", readErr: fs.ErrPermission, closeErr: syscall.EIO, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := observationProc()
+			fdMap := fstest.MapFS{}
+			for fd := range tc.entries {
+				fdMap[strconv.Itoa(fd)] = &fstest.MapFile{}
+			}
+			if tc.malformed {
+				delete(fdMap, "0")
+				fdMap["invalid"] = &fstest.MapFile{}
+			}
+			entries, err := fs.ReadDir(fdMap, ".")
+			if err != nil {
+				t.Fatal(err)
+			}
+			statReads, readLimit := 0, 0
+			o := newProcessObserver(procOpenFS{FS: m, open: func(name string) (fs.File, error) {
+				if name == "3/stat" {
+					statReads++
+					if statReads == 2 {
+						data := strings.Replace(string(procStat(3, 101)), ") S ", ") Z ", 1)
+						return fstest.MapFS{"stat": {Data: []byte(data)}}.Open("stat")
+					}
+				}
+				file, err := m.Open(name)
+				if err == nil && name == "3/fd" {
+					return procErrorDirectory{File: file, entries: entries, readErr: tc.readErr, closeErr: tc.closeErr, limit: &readLimit}, nil
+				}
+				return file, err
+			}}, 2, 65534)
+			fds, start, err := o.process(3)
+			if (err != nil) != tc.wantErr || fds != 0 || start != 101 || readLimit != sandbox.DescriptorLimit+1 {
+				t.Fatalf("fds=%d start=%d err=%v read limit=%d", fds, start, err, readLimit)
+			}
+			if tc.wantErr && (statReads != 1 || o.facts.SampledChildLifetimes != 0) || !tc.wantErr && (statReads != 2 || o.facts.SampledChildLifetimes != 1) {
+				t.Fatalf("unexpected recovery: stats=%d facts=%+v", statReads, o.facts)
+			}
+		})
+	}
+	t.Run("healthy zombies preserve bounds and sticky errors", func(t *testing.T) {
+		m := observationProc()
+		m["3/stat"].Data = []byte(strings.Replace(string(procStat(3, 101)), ") S ", ") Z ", 1))
+		o := newProcessObserver(procOpenFS{FS: m, open: func(name string) (fs.File, error) {
+			if name == "3/fd" {
+				t.Fatal("read zombie FDs")
+			}
+			return m.Open(name)
+		}}, 2, 65534)
+		o.sample()
+		o.sample()
+		if o.err != nil || o.facts.SampledChildLifetimes != 1 || o.facts.SampledAggregateFDPeak != 2 || o.facts.SampledProcessFDPeak != 2 {
+			t.Fatalf("zombie sample: %+v %v", o.facts, o.err)
+		}
+		o.fail("prior", fs.ErrPermission)
+		prior := o.err
+		o.sample()
+		if o.err != prior || !o.facts.Unavailable || o.facts.Failure != "prior" || o.facts.UnexpectedErrors != 1 {
+			t.Fatal("zombie recovery cleared sticky failure")
+		}
+		for i := range maxObservedLifetimes {
+			o.seen[observedLifetime{3, uint64(i + 1000)}] = struct{}{}
+		}
+		delete(o.seen, observedLifetime{3, 101})
+		if _, _, err := o.process(3); err == nil {
+			t.Fatal("zombie bypassed lifetime bound")
+		}
+	})
+	t.Run("worker gone after FD denial remains fatal", func(t *testing.T) {
+		m := observationProc()
+		denied := false
+		o := newProcessObserver(procOpenFS{FS: m, open: func(name string) (fs.File, error) {
+			if name == "2/fd" {
+				denied = true
+				return nil, fs.ErrPermission
+			}
+			if denied && name == "2/stat" {
+				return nil, fs.ErrNotExist
+			}
+			return m.Open(name)
+		}}, 2, 65534)
+		o.sample()
+		if o.err == nil || !o.facts.Unavailable || o.facts.Vanished != 0 {
+			t.Fatal("missing worker became benign")
+		}
+	})
 }
 
 func TestObservationsPrivateCache(t *testing.T) {
@@ -302,13 +503,13 @@ func TestObservationsPrivateCache(t *testing.T) {
 	})
 	t.Run("entry overflow sentinel", func(t *testing.T) {
 		root := t.TempDir()
-		facts := PrivateCacheObservation{Entries: sandbox.ScratchInodes}
+		facts := PrivateCacheObservation{Entries: sandbox.NativeT451bScratchInodes}
 		err := walkCache(root, &facts, map[cacheInode]struct{}{})
-		if err == nil || facts.Entries != sandbox.ScratchInodes {
+		if err == nil || facts.Entries != sandbox.NativeT451bScratchInodes {
 			t.Fatal("entry overflow accepted")
 		}
 		facts.Entries--
-		if err := walkCache(root, &facts, map[cacheInode]struct{}{}); err != nil || facts.Entries != sandbox.ScratchInodes {
+		if err := walkCache(root, &facts, map[cacheInode]struct{}{}); err != nil || facts.Entries != sandbox.NativeT451bScratchInodes {
 			t.Fatalf("exact boundary refused: %v", err)
 		}
 	})

@@ -190,6 +190,47 @@ func TestNativeCohortBoundary(t *testing.T) {
 			}
 		}
 	})
+	t.Run("planning scratch diagnostic", func(t *testing.T) {
+		for _, snapshot := range []t451a.PlanningScratch{{}, {Available: true}, {Available: true, FreeBlocks: 12, FreeInodes: 34}} {
+			e := NativeEvidence{Version: "phebs-t451b-native-evidence-v1", Request: validNativeRequest(t), Decision: "STOP", Stage: "planning", WallNanoseconds: 1, PlanningScratch: &snapshot}
+			b, _ := json.Marshal(e)
+			got, err := DecodeNativeEvidence(append(b, '\n'))
+			if err != nil || got.PlanningScratch == nil || *got.PlanningScratch != snapshot {
+				t.Fatal("lost planning snapshot", err)
+			}
+			if validateNativeMeasurements(e) == nil {
+				t.Fatal("failure snapshot became completion proof")
+			}
+		}
+		for _, change := range []func(*NativeEvidence){
+			func(e *NativeEvidence) { e.PlanningScratch.FreeBlocks = 1 },
+			func(e *NativeEvidence) { e.PlanningScratch.FreeInodes = 1 },
+			func(e *NativeEvidence) { e.Stage = "containment/measurement" },
+			func(e *NativeEvidence) { e.Decision = "COHORT_OBSERVED" },
+		} {
+			e := NativeEvidence{Version: "phebs-t451b-native-evidence-v1", Request: validNativeRequest(t), Decision: "STOP", Stage: "planning", WallNanoseconds: 1, PlanningScratch: &t451a.PlanningScratch{}}
+			change(&e)
+			b, _ := json.Marshal(e)
+			if _, err := DecodeNativeEvidence(append(b, '\n')); err == nil {
+				t.Fatal("accepted invalid planning snapshot")
+			}
+		}
+	})
+	t.Run("native cache inode ceiling", func(t *testing.T) {
+		e := NativeEvidence{WallNanoseconds: 1, Observations: newProcessObserver(nil, 2, 65534).facts,
+			Cache: PrivateCacheObservation{Version: "phebs-t451b-private-cache-v1", Complete: true,
+				Roots: []string{"/scratch/bazel-user", "/scratch/bazel-output", "/scratch/repository-cache", "/scratch/gocache", "/scratch/gomodcache", "/scratch/cache"}}}
+		e.Observations.DurationNanoseconds = 1
+		for _, entries := range []uint64{65536, 65537, 262144, 262145} {
+			e.Cache.Entries, e.Cache.RegularFiles, e.Cache.UniqueInodes = entries, entries, entries
+			if err := validateNativeMeasurements(e); (err == nil) != (entries <= 262144) {
+				t.Fatalf("native entries=%d: %v", entries, err)
+			}
+		}
+		if sandbox.ScratchInodes != 65536 || sandbox.NativeT451bScratchInodes != 262144 {
+			t.Fatal("profile caps differ from approval")
+		}
+	})
 	t.Run("public archive data only", func(t *testing.T) {
 		if *publicArchiveTest == "" {
 			t.Skip("explicit retained public archive path required")

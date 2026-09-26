@@ -963,6 +963,11 @@ client or SCIP result was retained. The source-free record is
 cleanup is complete and the dedicated VM is stopped. Independent evidence
 review found no issues. Work stops here; no public run or further execution is authorized.
 
+The next bounded approval covers zombie-aware observation/quiescence,
+failed-planning free-space diagnostics, and a native-only 262,144-inode profile.
+One neutral attempt follows host tests and independent review, then cleanup,
+returned-evidence review and stop. It enables no product command or public run.
+
 Managed generation must be partitionable and resumable without requiring one
 whole-repository package/type graph or one monolithic in-memory navigation
 snapshot. The selected design publishes a Phebs-managed bundle of conforming

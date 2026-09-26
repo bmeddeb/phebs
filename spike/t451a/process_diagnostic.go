@@ -1,10 +1,12 @@
 package t451a
 
 import (
+	"errors"
 	"io"
 	"io/fs"
 	"strconv"
 	"strings"
+	"syscall"
 	"unicode/utf8"
 )
 
@@ -28,6 +30,50 @@ type diagnosticStat struct {
 	start           uint64
 }
 
+// ReadProcessState reads one bounded stat record and validates its PID, state
+// and lifetime. It does not read status, descriptors or diagnostic payloads.
+func ReadProcessState(proc fs.FS, pid uint32) (uint64, byte, error) {
+	if proc == nil || pid == 0 {
+		return 0, 0, errors.New("invalid proc PID")
+	}
+	data, err := readProcessRecord(proc, strconv.FormatUint(uint64(pid), 10)+"/stat")
+	if err != nil {
+		return 0, 0, err
+	}
+	raw := string(data)
+	begin, end := strings.Index(raw, " ("), strings.LastIndex(raw, ") ")
+	if begin < 1 || end < begin {
+		return 0, 0, errors.New("invalid proc stat framing")
+	}
+	got, err := strconv.ParseUint(raw[:begin], 10, 32)
+	fields := strings.Fields(raw[end+2:])
+	if err != nil || uint32(got) != pid || len(fields) < 20 || len(fields[0]) != 1 || !strings.ContainsAny(fields[0], "RSDZTtXxKWPI") {
+		return 0, 0, errors.New("invalid proc stat identity")
+	}
+	start, err := strconv.ParseUint(fields[19], 10, 64)
+	if err != nil || start == 0 {
+		return 0, 0, errors.New("invalid proc starttime")
+	}
+	return start, fields[0][0], nil
+}
+
+// ProcessGone accepts only disappearance errors, including every component of
+// a joined error. An unrelated read or close failure must remain a refusal.
+func ProcessGone(err error) bool {
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		for _, part := range joined.Unwrap() {
+			if !ProcessGone(part) {
+				return false
+			}
+		}
+		return len(joined.Unwrap()) > 0
+	}
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return ProcessGone(wrapped.Unwrap())
+	}
+	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ESRCH)
+}
+
 // ReadProcessDiagnostic makes one bounded stat/status/stat attempt. A nonzero
 // expectedStart binds an earlier observation; zero means that reference is
 // unavailable. Missing, malformed or changed identity yields no diagnostic and
@@ -49,23 +95,31 @@ func ReadProcessDiagnostic(proc fs.FS, pid uint32, expectedStart uint64) *Proces
 	if !ok || before != after {
 		return nil
 	}
-	diagnostic.Comm, diagnostic.State = before.comm, before.state
+	diagnostic.Comm, diagnostic.State = strings.Clone(before.comm), strings.Clone(before.state)
 	diagnostic.PPID, diagnostic.PGID, diagnostic.SID = before.ppid, before.pgid, before.sid
 	return diagnostic
 }
 
 func readDiagnosticFile(proc fs.FS, name string) []byte {
+	data, _ := readProcessRecord(proc, name)
+	return data
+}
+
+func readProcessRecord(proc fs.FS, name string) ([]byte, error) {
 	file, err := proc.Open(name)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	// One sentinel byte distinguishes an 8192-byte record from truncation.
 	data, readErr := io.ReadAll(io.LimitReader(file, 8193))
 	closeErr := file.Close()
-	if readErr != nil || closeErr != nil || len(data) > 8192 {
-		return nil
+	if err := errors.Join(readErr, closeErr); err != nil {
+		return nil, err
 	}
-	return data
+	if len(data) > 8192 {
+		return nil, errors.New("proc record byte bound")
+	}
+	return data, nil
 }
 
 func parseDiagnosticStat(data []byte, pid uint32) (diagnosticStat, bool) {
@@ -76,7 +130,7 @@ func parseDiagnosticStat(data []byte, pid uint32) (diagnosticStat, bool) {
 	if !strings.HasPrefix(raw, prefix) || end < len(prefix) {
 		return out, false
 	}
-	out.comm = strings.Clone(raw[len(prefix):end])
+	out.comm = raw[len(prefix):end]
 	if !utf8.ValidString(out.comm) || strings.ContainsRune(out.comm, 0) {
 		return diagnosticStat{}, false
 	}
@@ -84,7 +138,7 @@ func parseDiagnosticStat(data []byte, pid uint32) (diagnosticStat, bool) {
 	if len(fields) < 20 || len(fields[0]) != 1 || !strings.ContainsAny(fields[0], "RSDZTtXxKWPI") {
 		return diagnosticStat{}, false
 	}
-	out.state = strings.Clone(fields[0])
+	out.state = fields[0]
 	for i, destination := range []*uint32{&out.ppid, &out.pgid, &out.sid} {
 		value, ok := diagnosticUint(fields[i+1], 31)
 		if !ok {

@@ -107,6 +107,10 @@ func WorkerRequest() (Request, error) {
 // Its caller validates the request and complete input layout before entry.
 func runImported(ctx context.Context, socket, parentPath, bundleRoot, bundleDigest, imageID string, manifest, raw, helper []byte) (result sandbox.Result, removed bool, stage string, err error) {
 	stage = "admission"
+	native, err := nativeSandboxRequest(raw)
+	if err != nil {
+		return result, removed, stage, err
+	}
 	parent, err := os.MkdirTemp(parentPath, "t451b-run-")
 	if err != nil {
 		return result, removed, stage, err
@@ -153,6 +157,26 @@ func runImported(ctx context.Context, socket, parentPath, bundleRoot, bundleDige
 		return result, removed, stage, err
 	}
 	stage = "sandbox"
-	result, err = sandbox.Run(ctx, sandbox.Options{Socket: socket, ImageID: imageID, Inputs: inputs})
+	options := sandbox.Options{Socket: socket, ImageID: imageID, Inputs: inputs}
+	if native {
+		result, err = sandbox.RunNativeT451b(ctx, options)
+	} else {
+		result, err = sandbox.Run(ctx, options)
+	}
 	return result, removed, stage, err
+}
+
+// Selection is derived only from a fully validated closed request. An old,
+// malformed or unknown native profile cannot acquire the larger scratch cap.
+func nativeSandboxRequest(raw []byte) (bool, error) {
+	var header struct{ Schema string }
+	if err := json.Unmarshal(raw, &header); err != nil {
+		return false, err
+	}
+	if header.Schema == "phebs-t451b-native-request-v1" {
+		_, err := DecodeNativeRequest(raw)
+		return err == nil, err
+	}
+	_, err := DecodeRequest(raw)
+	return false, err
 }

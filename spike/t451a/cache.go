@@ -23,7 +23,8 @@ type QuiescenceError struct {
 func (*QuiescenceError) Error() string { return "tool process remains before cache eviction" }
 
 // Cache eviction runs only after every tool process has exited. Threads share
-// their process's directory; PID1 and this worker are the only allowed leaders.
+// their process's directory; PID1 and this worker are the only allowed live
+// leaders. A validated zombie has no descriptors or cache-writing capability.
 func ensureQuiescentWorker() error {
 	return ensureQuiescentWorkerAt("/proc", os.Getpid())
 }
@@ -42,8 +43,13 @@ func ensureQuiescentWorkerAt(procPath string, workerPID int) error {
 		pid, err := strconv.Atoi(name)
 		if err == nil && pid != 1 && pid != workerPID {
 			var diagnostic *ProcessDiagnostic
-			if pid > 0 && uint64(pid) <= 1<<32-1 {
-				diagnostic = ReadProcessDiagnostic(os.DirFS(procPath), uint32(pid), 0)
+			if pid > 0 && uint64(pid) <= 1<<32-1 && strconv.Itoa(pid) == name {
+				root := os.DirFS(procPath)
+				start, state, readErr := ReadProcessState(root, uint32(pid))
+				if ProcessGone(readErr) || readErr == nil && state == 'Z' {
+					continue
+				}
+				diagnostic = ReadProcessDiagnostic(root, uint32(pid), start)
 			}
 			return &QuiescenceError{Process: diagnostic}
 		}

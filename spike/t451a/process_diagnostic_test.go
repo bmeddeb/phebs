@@ -8,8 +8,83 @@ import (
 	"io/fs"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 )
+
+func TestQuiescenceProcessState(t *testing.T) {
+	for _, tc := range []struct {
+		name, comm, state, start string
+		valid                    bool
+	}{
+		{"live", "worker", "S", "123", true},
+		{"zombie", "worker", "Z", "123", true},
+		{"comm delimiters", "a) (b\nc)", "Z", "123", true},
+		{"opaque comm bytes", "bad\xff\x00name", "S", "123", true},
+		{"unknown state", "worker", "?", "123", false},
+		{"long state", "worker", "ZZ", "123", false},
+		{"zero lifetime", "worker", "Z", "0", false},
+		{"bad lifetime", "worker", "Z", "bad", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			proc := newDiagnosticFS(t)
+			// These fields are irrelevant to state/lifetime observation; only
+			// the separately requested diagnostic validates and retains them.
+			proc.reads[0].data = diagnosticStatFixture(tc.comm, map[int]string{0: tc.state, 1: "unused", 2: "unused", 3: "unused", 19: tc.start})
+			start, state, err := ReadProcessState(proc, 7)
+			if (err == nil) != tc.valid || tc.valid && (start != 123 || state != tc.state[0]) {
+				t.Fatalf("start=%d state=%q err=%v", start, state, err)
+			}
+			proc.verify(1)
+		})
+	}
+	for _, kind := range []string{"open", "read", "close", "oversized", "PID mismatch", "truncated"} {
+		t.Run(kind, func(t *testing.T) {
+			proc := newDiagnosticFS(t)
+			switch kind {
+			case "open":
+				proc.reads[0].openErr = fs.ErrNotExist
+			case "read":
+				proc.reads[0].readErr = fs.ErrNotExist
+			case "close":
+				proc.reads[0].readErr = fs.ErrNotExist
+				proc.reads[0].closeErr = fs.ErrPermission
+			case "oversized":
+				proc.reads[0].data += strings.Repeat(" ", 8193)
+			case "PID mismatch":
+				proc.reads[0].data = strings.Replace(proc.reads[0].data, "7 (", "8 (", 1)
+			case "truncated":
+				proc.reads[0].data = "7 (worker) Z"
+			}
+			if _, _, err := ReadProcessState(proc, 7); err == nil || ProcessGone(err) != (kind == "open" || kind == "read") {
+				t.Fatal("state read failure classification changed", err)
+			}
+			proc.verify(1)
+		})
+	}
+}
+
+func TestQuiescenceProcessGone(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+		gone bool
+	}{
+		{"nil", nil, false},
+		{"missing", fs.ErrNotExist, true},
+		{"exited", syscall.ESRCH, true},
+		{"wrapped", fmt.Errorf("read: %w", syscall.ESRCH), true},
+		{"joined missing", errors.Join(fs.ErrNotExist, syscall.ESRCH), true},
+		{"mixed error", errors.Join(fs.ErrNotExist, fs.ErrPermission), false},
+		{"nested mixed", fmt.Errorf("read: %w", errors.Join(syscall.ESRCH, errors.New("close"))), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if ProcessGone(tc.err) != tc.gone {
+				t.Fatal("unexpected disappearance classification")
+			}
+		})
+	}
+}
 
 const diagnosticStatusFixture = "Name:\tprivate-name\nPid:\t7\nUid:\t0\t1\t2\t4294967295\nGid:\t3\t4\t5\t6\nNoNewPrivs:\t1\nCapPrm:\t00000000000000c0\nIgnored:\tprivate-payload\n"
 

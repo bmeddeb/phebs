@@ -130,26 +130,20 @@ func finishNativeReceipt(r NativeReceipt, result sandbox.Result, runErr error) (
 	return r, nil
 }
 
-// ReadWorkerProfile validates containment before distinguishing two exact
-// request schemas. Unknown and malformed fields are rejected by their decoder.
+// ReadWorkerProfile retains the original worker boundary. Native work requires
+// its distinct entrypoint, inode boundary and request profile.
 func ReadWorkerProfile() (Request, *NativeRequest, error) {
-	if err := sandbox.ValidateWorker(); err != nil {
-		return Request{}, nil, err
+	r, err := WorkerRequest()
+	return r, nil, err
+}
+
+func NativeWorkerRequest() (NativeRequest, error) {
+	if err := sandbox.ValidateNativeT451bWorker(); err != nil {
+		return NativeRequest{}, err
 	}
 	b, err := readBounded("/inputs/request.json", maxRequestBytes)
 	if err != nil {
-		return Request{}, nil, err
+		return NativeRequest{}, err
 	}
-	var header struct {
-		Schema string `json:"schema"`
-	}
-	if err = json.Unmarshal(b, &header); err != nil {
-		return Request{}, nil, err
-	}
-	if header.Schema == "phebs-t451b-native-request-v1" {
-		r, err := DecodeNativeRequest(b)
-		return Request{}, &r, err
-	}
-	r, err := DecodeRequest(b)
-	return r, nil, err
+	return DecodeNativeRequest(b)
 }

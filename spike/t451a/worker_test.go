@@ -2,9 +2,12 @@ package t451a
 
 import (
 	"archive/zip"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestCompilerArchiveBoundary(t *testing.T) {
@@ -78,5 +81,47 @@ func TestCommandOutputSharesOneLimit(t *testing.T) {
 	}
 	if !cancelled {
 		t.Fatal("overflow did not cancel the child")
+	}
+}
+
+func TestPlanningFailureScratch(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		blocks      uint64
+		inodes      uint64
+		unavailable bool
+	}{
+		{name: "free space", blocks: 123, inodes: 456},
+		{name: "blocks exhausted", inodes: 456},
+		{name: "inodes exhausted", blocks: 123},
+		{name: "both exhausted"},
+		{name: "statfs unavailable", blocks: 123, inodes: 456, unavailable: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cause := errors.New("command failed")
+			calls := 0
+			err := planningCommandFailure(cause, func(path string, stat *unix.Statfs_t) error {
+				calls++
+				if path != "/scratch" {
+					t.Fatal("unfixed diagnostic path", path)
+				}
+				stat.Bfree, stat.Ffree = tc.blocks, tc.inodes
+				if tc.unavailable {
+					return os.ErrPermission
+				}
+				return nil
+			})
+			var failure *PlanningCommandError
+			if calls != 1 || !errors.Is(err, cause) || err.Error() != cause.Error() || !errors.As(err, &failure) {
+				t.Fatal("lost command error or repeated snapshot", err, calls)
+			}
+			want := PlanningScratch{}
+			if !tc.unavailable {
+				want = PlanningScratch{Available: true, FreeBlocks: tc.blocks, FreeInodes: tc.inodes}
+			}
+			if failure.Scratch != want {
+				t.Fatalf("scratch=%+v want=%+v", failure.Scratch, want)
+			}
+		})
 	}
 }

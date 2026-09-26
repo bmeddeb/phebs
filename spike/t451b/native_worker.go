@@ -48,6 +48,10 @@ func NativeWorker(ctx context.Context, r NativeRequest) (err error) {
 	defer func() {
 		setStage(e.Stage)
 		measurementStarted := time.Now()
+		var planningCommand *t451a.PlanningCommandError
+		if errors.As(err, &planningCommand) {
+			e.PlanningScratch = &planningCommand.Scratch
+		}
 		var planningRefusal *t451a.QuiescenceError
 		if errors.As(err, &planningRefusal) {
 			e.PlanningQuiescenceProcess = planningRefusal.Process

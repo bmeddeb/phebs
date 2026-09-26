@@ -14781,6 +14781,14 @@ record. Cleanup is complete and the dedicated VM is stopped. The diagnostic
 allowance is consumed and independent returned-evidence review found no issues.
 Work stops here, with no further execution authorized. T45.1b remains open.
 
+Ben's next bounded authorization permits verified zombies to hold zero FDs
+and be quiescent, while live or unprovable processes still refuse. Failed
+planning commands gain free-block/free-inode diagnostics. Only native profile
+v2 raises scratch inodes to 262,144; T45.1a keeps 65,536 and all other caps,
+tool identities, HEAD and roots remain fixed. Host tests and independent review
+precede one fresh neutral attempt 6, then returned-evidence review, cleanup and
+stop. This authorizes no public cohort, merge, push or PR.
+
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider
 descriptors, operator-owned named

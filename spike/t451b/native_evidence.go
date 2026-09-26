@@ -98,6 +98,7 @@ type NativeEvidence struct {
 	Observations              Observations             `json:"observations"`
 	PlanningQuiescenceProcess *t451a.ProcessDiagnostic `json:"planning_quiescence_process,omitempty"`
 	FinalQuiescenceProcess    *t451a.ProcessDiagnostic `json:"final_quiescence_process,omitempty"`
+	PlanningScratch           *t451a.PlanningScratch   `json:"planning_scratch,omitempty"`
 	Cache                     PrivateCacheObservation  `json:"cache"`
 	Legs                      []LegEvidence            `json:"legs"`
 	FailedLeg                 *NativeFailedLeg         `json:"failed_leg,omitempty"`
@@ -368,6 +369,11 @@ func DecodeNativeEvidence(data []byte) (NativeEvidence, error) {
 	if e.Version != "phebs-t451b-native-evidence-v1" || !nativeStage(e.Stage) || e.WallNanoseconds <= 0 || !slices.Contains([]string{"STOP", "COHORT_OBSERVED"}, e.Decision) || len(e.Legs) > 2 || len(e.SCIP) > maxClientBytes || len(e.SCIP) > 0 && e.SCIPSHA256 != t451a.Digest(e.SCIP) {
 		return e, errors.New("native evidence shape")
 	}
+	if s := e.PlanningScratch; s != nil {
+		if e.Decision != "STOP" || e.Stage != "planning" || e.Plan != nil || !s.Available && (s.FreeBlocks != 0 || s.FreeInodes != 0) {
+			return e, errors.New("native planning scratch diagnostic shape")
+		}
+	}
 	if e.OmittedEvidenceBytes != 0 || e.OmittedEvidenceSHA256 != "" {
 		if e.Decision != "STOP" || e.OmittedEvidenceBytes < sandbox.OutputBytes || !digest(e.OmittedEvidenceSHA256) || e.Plan != nil {
 			return e, errors.New("native omitted evidence identity")
@@ -516,14 +522,14 @@ func verifyNativeFailedLeg(e NativeEvidence) error {
 
 func validateNativeMeasurements(e NativeEvidence) error {
 	o, c := e.Observations, e.Cache
-	if o.FailureProcess != nil || e.PlanningQuiescenceProcess != nil || e.FinalQuiescenceProcess != nil {
+	if o.FailureProcess != nil || e.PlanningQuiescenceProcess != nil || e.FinalQuiescenceProcess != nil || e.PlanningScratch != nil {
 		return errors.New("native refusal diagnostics cannot establish completion")
 	}
 	if o.Version != "phebs-t451b-sampled-observations-v1" || o.IntervalNanoseconds != observationInterval.Nanoseconds() || o.DurationNanoseconds <= 0 || o.DurationNanoseconds > e.WallNanoseconds || !o.ChildLifetimesLowerBound || !o.FDCountsNonAtomic || o.Unavailable || o.UnexpectedErrors != 0 || o.Failure != "" || o.SampledChildLifetimes > maxObservedLifetimes || o.SampledProcessFDPeak > sandbox.DescriptorLimit || o.SampledAggregateFDPeak > sandbox.DescriptorLimit*sandbox.TaskLimit {
 		return errors.New("native observation contract")
 	}
 	roots := []string{"/scratch/bazel-user", "/scratch/bazel-output", "/scratch/repository-cache", "/scratch/gocache", "/scratch/gomodcache", "/scratch/cache"}
-	if c.Version != "phebs-t451b-private-cache-v1" || !c.Complete || !slices.Equal(c.Roots, roots) || c.Entries > sandbox.ScratchInodes || c.LogicalBytes > sandbox.ScratchBytes || c.AllocatedBytes > sandbox.ScratchBytes || c.RegularFiles > c.Entries || c.Directories > c.Entries-c.RegularFiles || c.Symlinks != c.Entries-c.RegularFiles-c.Directories || c.UniqueInodes > c.Entries {
+	if c.Version != "phebs-t451b-private-cache-v1" || !c.Complete || !slices.Equal(c.Roots, roots) || c.Entries > sandbox.NativeT451bScratchInodes || c.LogicalBytes > sandbox.ScratchBytes || c.AllocatedBytes > sandbox.ScratchBytes || c.RegularFiles > c.Entries || c.Directories > c.Entries-c.RegularFiles || c.Symlinks != c.Entries-c.RegularFiles-c.Directories || c.UniqueInodes > c.Entries {
 		return errors.New("native private cache contract")
 	}
 	missing := map[string]bool{}

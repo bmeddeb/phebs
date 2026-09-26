@@ -27,6 +27,7 @@ const maxObservedLifetimes = 65536
 // UIDs, and are sequential, non-atomic directory-entry observations. In
 // particular their aggregate is not an exact simultaneous peak or a guaranteed
 // lower bound on that peak. Unavailable is sticky; no field proves completeness.
+// Validated zombies contribute zero descriptors but retain lifetime accounting.
 type Observations struct {
 	Version                  string                   `json:"version"`
 	IntervalNanoseconds      int64                    `json:"interval_nanoseconds"`
@@ -76,18 +77,22 @@ func (o *processObserver) fail(stage string, err error) {
 }
 
 func vanished(err error) bool {
+	return t451a.ProcessGone(err)
+}
+
+func permissionDenied(err error) bool {
 	if joined, ok := err.(interface{ Unwrap() []error }); ok {
 		for _, part := range joined.Unwrap() {
-			if !vanished(part) {
+			if !permissionDenied(part) {
 				return false
 			}
 		}
 		return len(joined.Unwrap()) > 0
 	}
 	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
-		return vanished(wrapped.Unwrap())
+		return permissionDenied(wrapped.Unwrap())
 	}
-	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ESRCH)
+	return errors.Is(err, fs.ErrPermission)
 }
 
 func observationRead(proc fs.FS, name string) ([]byte, error) {
@@ -119,31 +124,18 @@ func observationDirectory(root fs.FS, name string, limit int) ([]fs.DirEntry, er
 	if readErr == io.EOF {
 		readErr = nil
 	}
-	if err = errors.Join(readErr, f.Close()); err != nil {
-		return nil, err
+	if closeErr := f.Close(); closeErr != nil {
+		// Close failures are independent of a denied read and cannot recover
+		// through a later zombie/disappearance observation.
+		return entries, errors.Join(readErr, closeErr, errors.New("directory close failure"))
+	}
+	if readErr != nil {
+		return entries, readErr
 	}
 	if len(entries) > limit {
 		return nil, errors.New("directory entry bound")
 	}
 	return entries, nil
-}
-
-func observationStart(raw []byte, pid uint32) (uint64, error) {
-	s := string(raw)
-	begin, end := strings.Index(s, " ("), strings.LastIndex(s, ") ")
-	if begin < 1 || end < begin {
-		return 0, errors.New("invalid proc stat framing")
-	}
-	got, err := strconv.ParseUint(s[:begin], 10, 32)
-	fields := strings.Fields(s[end+2:])
-	if err != nil || uint32(got) != pid || len(fields) < 20 || len(fields[0]) != 1 {
-		return 0, errors.New("invalid proc stat identity")
-	}
-	start, err := strconv.ParseUint(fields[19], 10, 64)
-	if err != nil || start == 0 {
-		return 0, errors.New("invalid proc starttime")
-	}
-	return start, nil
 }
 
 func observationUID(raw []byte) (uint32, error) {
@@ -176,11 +168,7 @@ func observationUID(raw []byte) (uint32, error) {
 
 func (o *processObserver) process(pid uint32) (fdsCount, start uint64, err error) {
 	base := strconv.FormatUint(uint64(pid), 10)
-	before, err := observationRead(o.proc, base+"/stat")
-	if err != nil {
-		return 0, start, err
-	}
-	start, err = observationStart(before, pid)
+	start, state, err := t451a.ReadProcessState(o.proc, pid)
 	if err != nil {
 		return 0, start, err
 	}
@@ -198,26 +186,41 @@ func (o *processObserver) process(pid uint32) (fdsCount, start uint64, err error
 		}
 		return 0, start, nil
 	}
-	fds, err := observationDirectory(o.proc, base+"/fd", sandbox.DescriptorLimit)
-	if err != nil {
-		return 0, start, err
+	var fds []fs.DirEntry
+	var fdErr error
+	if state != 'Z' {
+		fds, fdErr = observationDirectory(o.proc, base+"/fd", sandbox.DescriptorLimit)
+		if fdErr != nil && (len(fds) != 0 || !permissionDenied(fdErr)) {
+			return 0, start, fdErr
+		}
 	}
+	// A permission denial without partial entries gets one bounded lifetime/state
+	// recheck, never an FD retry. Partial data must not hide a bound/shape failure.
+	// Only the same zombie or a genuinely vanished process can recover a denial.
 	for _, fd := range fds {
 		if n, err := strconv.ParseUint(fd.Name(), 10, 32); err != nil || strconv.FormatUint(n, 10) != fd.Name() {
 			return 0, start, errors.New("invalid proc descriptor")
 		}
 	}
-	after, err := observationRead(o.proc, base+"/stat")
+	end, endState, err := t451a.ReadProcessState(o.proc, pid)
 	if err != nil {
-		return 0, start, err
-	}
-	end, err := observationStart(after, pid)
-	if err != nil {
+		if fdErr != nil && !vanished(err) {
+			return 0, start, errors.Join(fdErr, err)
+		}
 		return 0, start, err
 	}
 	if start != end {
 		o.facts.Raced++
-		return 0, start, errors.New("proc lifetime changed during descriptor observation")
+		return 0, start, errors.Join(fdErr, errors.New("proc lifetime changed during descriptor observation"))
+	}
+	if fdErr != nil && endState != 'Z' {
+		return 0, start, fdErr
+	}
+	if state == 'Z' && endState != 'Z' {
+		return 0, start, errors.New("proc zombie state changed during observation")
+	}
+	if endState == 'Z' {
+		fds = nil
 	}
 	if pid != o.pid {
 		key := observedLifetime{pid, start}
@@ -388,7 +391,7 @@ func walkCache(root string, result *PrivateCacheObservation, seen map[cacheInode
 		if err != nil {
 			return err
 		}
-		if result.Entries == sandbox.ScratchInodes {
+		if result.Entries == sandbox.NativeT451bScratchInodes {
 			return errors.New("private cache entry bound")
 		}
 		result.Entries++
@@ -428,14 +431,14 @@ func walkCache(root string, result *PrivateCacheObservation, seen map[cacheInode
 		if err != nil {
 			return err
 		}
-		entries, readErr := f.ReadDir(int(sandbox.ScratchInodes-result.Entries) + 1)
+		entries, readErr := f.ReadDir(int(sandbox.NativeT451bScratchInodes-result.Entries) + 1)
 		if readErr == io.EOF {
 			readErr = nil
 		}
 		if err = errors.Join(readErr, f.Close()); err != nil {
 			return err
 		}
-		if len(entries)+len(queue) > int(sandbox.ScratchInodes-result.Entries) {
+		if len(entries)+len(queue) > int(sandbox.NativeT451bScratchInodes-result.Entries) {
 			return errors.New("private cache pending entry bound")
 		}
 		for _, entry := range entries {

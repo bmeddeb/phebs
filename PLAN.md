@@ -6270,3 +6270,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and no rerun, public cohort, merge, push or PR is authorized. Native-neutral
   compatibility and T45.1b feasibility remain open. This record adds no runtime
   work; the preceding bounded diagnostic cost decision remains controlling.
+
+- **2026-09-26 — T45.1b approved zombie handling and native inode capacity.**
+  Ben authorized one repair, one native-only inode-cap change and one neutral
+  run, followed by independent review, cleanup and stop. A verified state-Z
+  process contributes zero descriptors and does not block the shared quiescence
+  census. A denied FD read is recoverable only when one bounded stat reread
+  proves the same lifetime is Z or the process has disappeared; a live,
+  malformed, unreadable or replaced lifetime still refuses. Prior sticky
+  observer failures remain sticky. Partial FD entries and directory-close
+  failures cannot use denied-read recovery. The census still refuses every live process
+  except PID 1 and the worker, including another UID. Existing census/task,
+  descriptor and lifetime bounds remain in force; no wait, reap or retry loop
+  is added. Failure diagnostics retain their existing nine-field allowlist.
+  Each failed planning command captures one immediate `/scratch` statfs
+  snapshot of free blocks and free inodes. Availability is explicit, so an
+  unreadable snapshot cannot be mistaken for zero free space. This snapshot is
+  after command return, not an authenticated observation at the failing write;
+  the original command error and STOP remain controlling.
+  The prospective native profile becomes
+  `native-linux-arm64-rules-go-059-v2`, binding its 262,144 scratch inode ceiling.
+  T45.1a and the original T45.1b compatibility profile keep 65,536. Distinct
+  fixed native dispatch and custody identities prevent profile mixing; the
+  Docker recipe, actual supervisor checks, worker dispatch and native cache
+  evidence agree on the selected profile. Scratch bytes (2,032 MiB), shared
+  memory, RAM, tasks, descriptors, wall/output bounds, network denial, launcher
+  request/environment shape, tools, target HEAD and cohort roots stay fixed.
+  Prior profiles, configs and evidence are historical and are not rerun or
+  rewritten. Config/receipt 6 is neutral only; no public cohort, merge, push or
+  PR follows, whatever the outcome.
+  Cost: healthy live observation keeps the existing stat/status/FD/stat cadence
+  and one open file at a time, adding two bounded PID string conversions for
+  shared stat-path construction; initial zombies skip FD enumeration. Pure
+  zero-entry permission denial adds at most one
+  bounded stat read before an existing refusal/diagnostic or safe disappearance
+  handling. Shared quiescence now reads bounded stat records for encountered
+  nonexempt entries, within the unchanged census ceiling, stopping at the first
+  live or unprovable entry. Failed planning adds one statfs syscall, three
+  fixed scalar evidence fields and no child, scan, retry, cache or lock.
+  Each spike worker admission adds one bounded scratch statfs check to reject
+  cross-profile dispatch; existing supervisor sampling reuses its statfs call.
+  Before importing custody, the host revalidates one bounded closed request to
+  select the exact profile; it adds no child or retained cache.
+  Native exact-cache inventory follows the approved inode ceiling: worst-case
+  entry work and retained inode/queue/directory-entry state grow from 65,536 to
+  262,144, while
+  scratch bytes and memory remain capped independently. No production query,
+  sync, startup/restart, retry/no-op, publication or lock cost changes.

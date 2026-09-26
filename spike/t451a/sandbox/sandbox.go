@@ -36,6 +36,10 @@ const (
 	ownerLabel        = "phebs.t451a.owner"
 )
 
+// NativeT451bScratchInodes belongs only to the explicitly selected native
+// T45.1b profile. Existing entrypoints keep ScratchInodes.
+const NativeT451bScratchInodes = 262144
+
 var (
 	ErrRefused   = errors.New("T45.1a container boundary unavailable or changed")
 	ErrExecution = errors.New("T45.1a container execution refused")
@@ -51,7 +55,52 @@ type StageError struct {
 func (e *StageError) Error() string { return "T45.1a " + e.Stage + ": " + e.Cause.Error() }
 func (e *StageError) Unwrap() error { return e.Cause }
 
-type Options struct{ Socket, ImageID, Inputs string }
+type Options struct {
+	Socket, ImageID, Inputs string
+	nativeT451b             bool
+}
+
+func scratchInodes(native bool) uint64 {
+	if native {
+		return NativeT451bScratchInodes
+	}
+	return ScratchInodes
+}
+
+func scratchInodesMatch(native bool, actual uint64) bool {
+	if native {
+		return actual == NativeT451bScratchInodes
+	}
+	return actual <= ScratchInodes
+}
+
+func supervisorCommand(native bool) string {
+	if native {
+		return "__native_supervisor"
+	}
+	return "__supervisor"
+}
+
+func workerCommand(native bool) string {
+	if native {
+		return "__native_worker"
+	}
+	return "__worker"
+}
+
+func ownerSchema(native bool) string {
+	if native {
+		return "t451b-native-container-owner-v1"
+	}
+	return "t451a-container-owner-v1"
+}
+
+func reportSchema(native bool) string {
+	if native {
+		return "t451b-native-supervisor-v1"
+	}
+	return "t451a-supervisor-v1"
+}
 
 // Resources distinguish kernel-enforced ceilings from sampled observations.
 // RSS sums may count shared pages more than once; no complete RSS/FD history is claimed.
@@ -189,13 +238,13 @@ func environment() []string {
 
 func recipe(options Options, name string) config {
 	c := config{Hostname: "phebs-t451a", Image: options.ImageID, User: "0:0", WorkingDir: "/scratch",
-		Entrypoint: []string{"/inputs/t451a"}, Cmd: []string{"__supervisor"}, Env: environment(),
+		Entrypoint: []string{"/inputs/t451a"}, Cmd: []string{supervisorCommand(options.nativeT451b)}, Env: environment(),
 		Labels: map[string]string{ownerLabel: name}, AttachStdout: true, AttachStderr: true}
 	c.Healthcheck.Test = []string{"NONE"}
 	c.HostConfig = hostConfig{NetworkMode: "none", IpcMode: "private", CgroupnsMode: "private", Runtime: "runc",
 		ReadonlyRootfs: true, CapDrop: []string{"ALL"}, CapAdd: []string{"SETUID", "SETGID"},
 		SecurityOpt: []string{"no-new-privileges", "apparmor=docker-default"},
-		Tmpfs:       map[string]string{"/scratch": fmt.Sprintf("rw,exec,nosuid,nodev,size=%d,nr_inodes=%d,mode=1777", ScratchBytes, ScratchInodes)},
+		Tmpfs:       map[string]string{"/scratch": fmt.Sprintf("rw,exec,nosuid,nodev,size=%d,nr_inodes=%d,mode=1777", ScratchBytes, scratchInodes(options.nativeT451b))},
 		Memory:      MemoryBytes, MemorySwap: MemoryBytes, NanoCpus: 1_000_000_000, PidsLimit: TaskLimit, ShmSize: SharedMemoryBytes,
 		Ulimits: []ulimit{{"nofile", DescriptorLimit, DescriptorLimit}, {"core", 0, 0}}}
 	c.HostConfig.RestartPolicy.Name = "no"
@@ -335,7 +384,7 @@ func (c *client) inspect(ctx context.Context, id string) (inspection, int, error
 
 func verify(got inspection, options Options, owner journal) error {
 	want := recipe(options, owner.Name)
-	if !containerID(got.ID) || got.Image != options.ImageID || got.Name != "/"+owner.Name || got.Config.Labels[ownerLabel] != owner.Name ||
+	if owner.Schema != ownerSchema(options.nativeT451b) || !containerID(got.ID) || got.Image != options.ImageID || got.Name != "/"+owner.Name || got.Config.Labels[ownerLabel] != owner.Name ||
 		owner.ContainerID != "" && got.ID != owner.ContainerID || got.AppArmorProfile != "docker-default" {
 		return ErrRefused
 	}
@@ -385,6 +434,17 @@ func wantWithoutHost(c config) config { c.HostConfig = hostConfig{}; return c }
 // Run never pulls images, builds Dockerfiles, discovers contexts, or accepts a
 // caller command. A durable sibling journal survives controller hard death.
 func Run(ctx context.Context, options Options) (result Result, retErr error) {
+	options.nativeT451b = false
+	return run(ctx, options)
+}
+
+// RunNativeT451b selects the single reviewed native profile, not a tunable cap.
+func RunNativeT451b(ctx context.Context, options Options) (Result, error) {
+	options.nativeT451b = true
+	return run(ctx, options)
+}
+
+func run(ctx context.Context, options Options) (result Result, retErr error) {
 	stage := "configuration"
 	defer func() {
 		if retErr != nil {
@@ -411,7 +471,7 @@ func Run(ctx context.Context, options Options) (result Result, retErr error) {
 	if _, err = rand.Read(token[:]); err != nil {
 		return result, ErrRefused
 	}
-	owner := journal{Schema: "t451a-container-owner-v1", Name: "phebs-t451a-" + hex.EncodeToString(token[:]), DaemonID: daemon, ImageID: options.ImageID, Socket: options.Socket, Inputs: options.Inputs}
+	owner := journal{Schema: ownerSchema(options.nativeT451b), Name: "phebs-t451a-" + hex.EncodeToString(token[:]), DaemonID: daemon, ImageID: options.ImageID, Socket: options.Socket, Inputs: options.Inputs}
 	stage = "journal"
 	if err = writeJournal(options, owner, true); err != nil {
 		return result, err
@@ -487,7 +547,7 @@ func Run(ctx context.Context, options Options) (result Result, retErr error) {
 	}
 	var report supervisorReport
 	stage = "supervisor_report"
-	if json.Unmarshal(wire.stdout, &report) != nil || len(wire.stderr) != 0 || report.Schema != "t451a-supervisor-v1" ||
+	if json.Unmarshal(wire.stdout, &report) != nil || len(wire.stderr) != 0 || report.Schema != reportSchema(options.nativeT451b) ||
 		len(report.Stdout)+len(report.Stderr) > OutputBytes {
 		return result, ErrExecution
 	}
@@ -505,6 +565,17 @@ func Run(ctx context.Context, options Options) (result Result, retErr error) {
 // Recover only addresses the exact durable owner. A lost create response is
 // resolved by its exact random name, never a daemon-wide list or label search.
 func Recover(ctx context.Context, options Options) (result Result, err error) {
+	options.nativeT451b = false
+	return recoverContainer(ctx, options)
+}
+
+// RecoverNativeT451b accepts only the matching native journal and recipe.
+func RecoverNativeT451b(ctx context.Context, options Options) (Result, error) {
+	options.nativeT451b = true
+	return recoverContainer(ctx, options)
+}
+
+func recoverContainer(ctx context.Context, options Options) (result Result, err error) {
 	result.ExitCode = -1
 	if ctx == nil {
 		return result, ErrRefused
@@ -525,6 +596,9 @@ func Recover(ctx context.Context, options Options) (result Result, err error) {
 }
 
 func (c *client) cleanup(ctx context.Context, options Options, owner journal) (bool, string, error) {
+	if owner.Schema != ownerSchema(options.nativeT451b) {
+		return false, owner.ContainerID, ErrCustody
+	}
 	var info struct{ ID string }
 	if _, err := c.request(ctx, "GET", "/info", nil, &info, 200); err != nil || info.ID != owner.DaemonID {
 		return false, owner.ContainerID, ErrCustody
@@ -613,7 +687,7 @@ func readJournal(options Options) (journal, error) {
 		return owner, ErrCustody
 	}
 	raw, err := io.ReadAll(io.LimitReader(file, 8193))
-	if err != nil || json.Unmarshal(raw, &owner) != nil || owner.Schema != "t451a-container-owner-v1" ||
+	if err != nil || json.Unmarshal(raw, &owner) != nil || owner.Schema != ownerSchema(options.nativeT451b) ||
 		owner.Socket != options.Socket || owner.Inputs != options.Inputs || owner.ImageID != options.ImageID || owner.DaemonID == "" ||
 		!strings.HasPrefix(owner.Name, "phebs-t451a-") || len(owner.Name) != 44 || owner.ContainerID != "" && !containerID(owner.ContainerID) {
 		return journal{}, ErrCustody

@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/spike/t451a/launcher"
 	"github.com/bmeddeb/phebs/spike/t451a/planner"
 	"github.com/bmeddeb/phebs/spike/t451a/sandbox"
+	"golang.org/x/sys/unix"
 )
 
 type neutralEvidence struct {
@@ -115,6 +116,32 @@ func BuildNativePlan(ctx context.Context, roots []string, ownedNeutral bool) (pl
 	return buildDeclaredPlan(ctx, roots, commands, common)
 }
 
+// PlanningScratch records one post-failure scratch snapshot. An unavailable
+// statfs is explicit; zero available counts can mean exhausted space.
+type PlanningScratch struct {
+	Available  bool   `json:"available"`
+	FreeBlocks uint64 `json:"free_blocks"`
+	FreeInodes uint64 `json:"free_inodes"`
+}
+
+// PlanningCommandError preserves the command failure with bounded storage facts.
+type PlanningCommandError struct {
+	Cause   error
+	Scratch PlanningScratch
+}
+
+func (e *PlanningCommandError) Error() string { return e.Cause.Error() }
+func (e *PlanningCommandError) Unwrap() error { return e.Cause }
+
+func planningCommandFailure(cause error, statfs func(string, *unix.Statfs_t) error) error {
+	e := &PlanningCommandError{Cause: cause}
+	var stat unix.Statfs_t
+	if statfs("/scratch", &stat) == nil {
+		e.Scratch = PlanningScratch{Available: true, FreeBlocks: stat.Bfree, FreeInodes: stat.Ffree}
+	}
+	return e
+}
+
 func buildDeclaredPlan(ctx context.Context, roots []string, commands [][]string, common []string) (planner.Plan, CacheEviction, error) {
 	startup := launcher.BazelStartup()
 	budget := commandBudget{remaining: sandbox.OutputBytes}
@@ -136,7 +163,8 @@ func buildDeclaredPlan(ctx context.Context, roots []string, commands [][]string,
 		if runErr != nil {
 			// These diagnostics contain only compiled-in neutral names and public
 			// tool material. Host receipts retain no raw command/error bytes.
-			return planner.Plan{}, CacheEviction{}, fmt.Errorf("neutral %s refused: %w: %.8192s", suffix[0], runErr, stderr.buffer.Bytes())
+			cause := fmt.Errorf("neutral %s refused: %w: %.8192s", suffix[0], runErr, stderr.buffer.Bytes())
+			return planner.Plan{}, CacheEviction{}, planningCommandFailure(cause, unix.Statfs)
 		}
 		outputs = append(outputs, stdout.buffer.Bytes())
 		if index == 1 {

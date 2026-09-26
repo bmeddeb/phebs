@@ -15,8 +15,13 @@ import (
 )
 
 func main() {
-	if os.Args[0] != t451b.AdapterPath && os.Args[0] != t451b.NativeAdapterPath && len(os.Args) == 2 && os.Args[1] == "__supervisor" {
-		os.Exit(sandbox.Supervisor())
+	if os.Args[0] != t451b.AdapterPath && os.Args[0] != t451b.NativeAdapterPath && len(os.Args) == 2 {
+		switch os.Args[1] {
+		case "__supervisor":
+			os.Exit(sandbox.Supervisor())
+		case "__native_supervisor":
+			os.Exit(sandbox.SupervisorNativeT451b())
+		}
 	}
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -49,14 +54,18 @@ func run() error {
 		return planner.RunHelper(os.Args[2:])
 	}
 	if len(os.Args) == 2 && os.Args[1] == "__worker" {
-		r, native, err := t451b.ReadWorkerProfile()
+		r, err := t451b.WorkerRequest()
 		if err != nil {
 			return err
 		}
-		if native != nil {
-			return t451b.NativeWorker(context.Background(), *native)
-		}
 		return t451b.Worker(context.Background(), r)
+	}
+	if len(os.Args) == 2 && os.Args[1] == "__native_worker" {
+		r, err := t451b.NativeWorkerRequest()
+		if err != nil {
+			return err
+		}
+		return t451b.NativeWorker(context.Background(), r)
 	}
 	if len(os.Args) == 3 && os.Args[1] == "native" {
 		c, err := t451b.ReadNativeConfig(os.Args[2])

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	NativeProfile       = "native-linux-arm64-rules-go-059-v1"
+	NativeProfile       = "native-linux-arm64-rules-go-059-v2"
 	NativeAdapterPath   = "/inputs/tools/bin/phebs-t451b-native-driver"
 	NativeProbePath     = "/inputs/tools/bin/t451b-native-probe"
 	NativeBazelDigest   = "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f"
