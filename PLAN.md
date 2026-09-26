@@ -5911,3 +5911,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   This spike adds no production
   request/query, sync, startup/restart, retry/no-op, publication or lifecycle
   cost.
+
+- **2026-09-26 — T45.1b neutral real-client compatibility proof.** Exact
+  implementation `c835c80ae22735ec40c2279df1eeabd31821917e`, with
+  source-identical cost correction `010cdce813a72d3fbe6ece4ff843634891a097b1`,
+  passed real `packages.Load` and scip-go discovery twice in the unchanged
+  isolated native boundary. `spike/t451b/neutral-results.json` binds three
+  retained receipts: the first was an operator-manifest ordering admission
+  STOP before any container; sorting the identical entries by full path fixed
+  preparation without changing source, helper, files or caps. Both subsequent
+  cold runs passed, removed containers/private inputs, and left the dedicated
+  VM stopped. Exact request mode 8681, full scrubbed environment, null flags
+  and overlay, tests=false, argv and both raw/adapted response bytes are
+  retained. Each selected alias leg loads two packages, verifies two export
+  files, and indexes two root documents. The 1,511-byte SCIP output has eight
+  occurrences, three symbol records, the two required definition/hovers,
+  cross-file and external references. Responses, exports, typed-probe output
+  and SCIP bytes match across both runs. All repository targets/units/documents
+  and the configured-target universe match; whole mapping/document seals
+  differ only with the retained cold SDK evidence: six cgo package compiled
+  lists and eleven generated cache-document locators in each of three SDK
+  lanes, plus the SDK list digests. Same-locator SDK documents are unchanged.
+  The larger observed kernel memory peak is 2,554,912,768 bytes; sampled scratch
+  peaks at 1,674,379,264 bytes and 59,426 inodes, under the unchanged limits.
+  These observations do not replace the unmeasured lifetime-child/descriptor
+  metrics required for the target run. Normal/race, combined regression,
+  host/Linux arm64 vet/lint, docs/glossary/format/whitespace, and independent
+  implementation/cost/native-evidence reviews pass with no open findings.
+  This closes only the neutral compatibility prerequisite. Public-target
+  profile, offline closure, execution, current Phebs admission, three-cohort
+  oracle and T45.2 GO/REDUCE/STOP remain open; T45.1b is not complete.

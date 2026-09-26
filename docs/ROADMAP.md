@@ -81,11 +81,13 @@ native and non-native gates plus independent review; its separate evidence in
 original acceptance artifacts unchanged.
 
 Ben merged PR #14 at `c4eac8e5fe3f3fe58e6991abd6ad1d94dad88051`.
-T45.1b now prepares the separately versioned neutral compatibility prerequisite
-and an authorized public corpus: Apache-2.0 `bazelbuild/remote-apis-sdks`.
-Its native toolchain differs from the neutral profile and remains a reviewed
-prerequisite. Corpus selection is not target execution, a reproduction of the
-unavailable private failure receipt, or a scale pass. T45.1b remains open.
+T45.1b's separately versioned neutral compatibility prerequisite passes two
+cold real-client runs and independent review, with receipts bound by
+`spike/t451b/neutral-results.json`. Its authorized public corpus is Apache-2.0
+`bazelbuild/remote-apis-sdks`. That native toolchain differs from the neutral
+profile and still needs compatibility proof. Corpus selection is not target
+execution, a reproduction of the unavailable private failure receipt, or a
+scale pass. T45.1b remains open.
 
 ## Now
 

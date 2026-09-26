@@ -1,0 +1,295 @@
+{
+  "schema": "phebs-t451b-neutral-results-v1",
+  "date": "2026-09-26",
+  "scope": "owned neutral compatibility prerequisite only",
+  "outcome": "NEUTRAL_COMPATIBILITY_PASS",
+  "target_execution": "NOT_RUN",
+  "t451b_feasibility_decision": null,
+  "base_commit": "c4eac8e5fe3f3fe58e6991abd6ad1d94dad88051",
+  "implementation_commit": "c835c80ae22735ec40c2279df1eeabd31821917e",
+  "implementation_tree": "6d8facde7b8e438fb6486315acce1e587f3db6d9",
+  "source_identical_cost_correction_commit": "010cdce813a72d3fbe6ece4ff843634891a097b1",
+  "request_contract": {
+    "mode": 8681,
+    "environment": "exact owned scrubbed full environment; observed wire retained per leg",
+    "build_flags": null,
+    "tests": false,
+    "overlay": null,
+    "adapter": "/inputs/tools/bin/phebs-t451b-driver",
+    "underlying_environment": "reconstructed; caller environment never forwarded"
+  },
+  "offline_bundle": {
+    "files": 15904,
+    "logical_bytes": 535919060,
+    "manifest_sha256": "sha256:0d8ba5c7d4d0d9c6baf551ce5a81002eee24d1c4516f73d3eb26d97fcd462b3b",
+    "ordering_correction": "Manifest1->2 reorders identical entries from path-component order to strict full-path lexical order; existing DecodeBundle rejects1 and accepts2; no source/helper/cap change."
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "receipt": "neutral-receipt-1.json.gz",
+      "receipt_sha256": "sha256:b86becd6038f269112790959125a73ca933422c7058605cee8680475c4523131",
+      "receipt_bytes": 720,
+      "outcome": "STOP",
+      "stage": "admission",
+      "request": {
+        "schema": "phebs-t451b-request-v1",
+        "profile": "neutral-linux-arm64-typed-v1",
+        "bundle_sha256": "sha256:0dd268e53628df2495ff48f4de7bcbfa2c09e5433640616a057e63c9cd96c4b7",
+        "helper_sha256": "sha256:2e2c57856624915a45952a28f435e3233b442316b4d43f95d80bc794a1c1a633",
+        "probe_sha256": "sha256:4c64c3c8c4e7d4ec54f1dcb8bf826a26b7d6979d111ef3d7babde3964ad05af5",
+        "probe_source_sha256": "sha256:a3feada6de2bc7cf872a06026408473227b911d62be479fc4e4ba40b29ceeab5",
+        "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+        "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+        "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+      },
+      "request_sha256": "sha256:782cca95bbec07046f9836e59254fa42e96af694515431a4c684e86b5fc183e4",
+      "output_sha256": "",
+      "output_bytes": 0,
+      "container_created": false,
+      "container_removed": false,
+      "inputs_removed": false,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": false,
+        "memory_peak_bytes": 0,
+        "sampled_peak_rss_bytes": 0,
+        "sampled_peak_processes": 0,
+        "sampled_peak_scratch_bytes": 0,
+        "sampled_peak_scratch_inodes": 0,
+        "samples": 0,
+        "per_process_descriptors": 0,
+        "aggregate_descriptor_ceiling": 0
+      },
+      "failure": "operator_manifest_full_path_ordering",
+      "attribution": "harness_admission; no container or target execution"
+    },
+    {
+      "attempt": 2,
+      "receipt": "neutral-receipt-2.json.gz",
+      "receipt_sha256": "sha256:e74c5ad0c2539a71a29923d588384c50f5d2d03ca4f13dc93d251b4dd94135d2",
+      "receipt_bytes": 681761,
+      "outcome": "NEUTRAL_COMPATIBILITY_OBSERVED",
+      "stage": "complete",
+      "request": {
+        "schema": "phebs-t451b-request-v1",
+        "profile": "neutral-linux-arm64-typed-v1",
+        "bundle_sha256": "sha256:0d8ba5c7d4d0d9c6baf551ce5a81002eee24d1c4516f73d3eb26d97fcd462b3b",
+        "helper_sha256": "sha256:2e2c57856624915a45952a28f435e3233b442316b4d43f95d80bc794a1c1a633",
+        "probe_sha256": "sha256:4c64c3c8c4e7d4ec54f1dcb8bf826a26b7d6979d111ef3d7babde3964ad05af5",
+        "probe_source_sha256": "sha256:a3feada6de2bc7cf872a06026408473227b911d62be479fc4e4ba40b29ceeab5",
+        "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+        "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+        "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+      },
+      "request_sha256": "sha256:ee7c0e5ae502c053c57c70769d2e7a1d38f308552eed29c557c743328cac16b9",
+      "output_sha256": "sha256:e9fa3129157ada465fd56ac5c1299fcf4cbe7f23cd6c771d92e5a57a819a1e0d",
+      "output_bytes": 8087071,
+      "container_created": true,
+      "container_removed": true,
+      "inputs_removed": true,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 2554912768,
+        "sampled_peak_rss_bytes": 715862016,
+        "sampled_peak_processes": 19,
+        "sampled_peak_scratch_bytes": 1674379264,
+        "sampled_peak_scratch_inodes": 59426,
+        "samples": 3073,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 32768
+      },
+      "plan_counts": {
+        "targets": 6244,
+        "units": 106,
+        "documents": 214,
+        "sdks": 3
+      },
+      "plan_seals": {
+        "universe_sha256": "f457b87d41aa0529f46c12b8db5cb4932bda4de7aaa3ccc5b7c7c3010652007c",
+        "mapping_sha256": "c09496a07aec9a5286a5792eeef194f75673a8f62f62a6004da25e0b8b0b9766",
+        "documents_sha256": "f774e95827a0b166ea7ad641353e693744349c2461efd35910a1e4211e2d8355"
+      },
+      "legs": [
+        {
+          "slot": "load",
+          "wall_nanoseconds": 10295914830,
+          "request_bytes": 968,
+          "request_sha256": "sha256:5c3be0312d3a1bfea93ca2fcbfdb347e89e949665dc7bffdb450e4058df9f264",
+          "raw_response_bytes": 853,
+          "raw_response_sha256": "sha256:78ece3d7b5007884a69f7946771052f04f561cc830fb7e73de052dbc662af469",
+          "adapted_response_bytes": 861,
+          "adapted_response_sha256": "sha256:960fe27dd989a2f60c8b8b3df6099fb5526a548498fc58649b04a4bb8a20ac3b",
+          "export_files": 2,
+          "export_bytes": 1454
+        },
+        {
+          "slot": "scip",
+          "wall_nanoseconds": 10049511886,
+          "request_bytes": 968,
+          "request_sha256": "sha256:77a013682b50742f6e0e2e4f4e949971ec5126c9b1d0e7498c2e4bcab2065e0e",
+          "raw_response_bytes": 853,
+          "raw_response_sha256": "sha256:78ece3d7b5007884a69f7946771052f04f561cc830fb7e73de052dbc662af469",
+          "adapted_response_bytes": 861,
+          "adapted_response_sha256": "sha256:960fe27dd989a2f60c8b8b3df6099fb5526a548498fc58649b04a4bb8a20ac3b",
+          "export_files": 2,
+          "export_bytes": 1454
+        }
+      ],
+      "scip": {
+        "bytes": 1511,
+        "sha256": "sha256:77a354a303b91bf9a9dbabdc0a751b5d89cadc9be7a6fd7d5ddb16cd519ddf3e",
+        "oracle": {
+          "documents": 2,
+          "occurrences": 8,
+          "symbols": 3,
+          "external_symbols": 0,
+          "definitions": 2,
+          "cross_file_references": 1,
+          "external_references": 1,
+          "hovers": 2
+        }
+      },
+      "compiler_cache_eviction": {
+        "files": 1955,
+        "logical_bytes": 142411520,
+        "scratch_bytes_freed": 149155840
+      },
+      "reported_test_wall_seconds_rounded": 159.6
+    },
+    {
+      "attempt": 3,
+      "receipt": "neutral-receipt-3.json.gz",
+      "receipt_sha256": "sha256:7fe70f73c5e9438d11f1479f33f916454007fa876412419294341a2156760b74",
+      "receipt_bytes": 681777,
+      "outcome": "NEUTRAL_COMPATIBILITY_OBSERVED",
+      "stage": "complete",
+      "request": {
+        "schema": "phebs-t451b-request-v1",
+        "profile": "neutral-linux-arm64-typed-v1",
+        "bundle_sha256": "sha256:0d8ba5c7d4d0d9c6baf551ce5a81002eee24d1c4516f73d3eb26d97fcd462b3b",
+        "helper_sha256": "sha256:2e2c57856624915a45952a28f435e3233b442316b4d43f95d80bc794a1c1a633",
+        "probe_sha256": "sha256:4c64c3c8c4e7d4ec54f1dcb8bf826a26b7d6979d111ef3d7babde3964ad05af5",
+        "probe_source_sha256": "sha256:a3feada6de2bc7cf872a06026408473227b911d62be479fc4e4ba40b29ceeab5",
+        "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+        "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+        "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+      },
+      "request_sha256": "sha256:ee7c0e5ae502c053c57c70769d2e7a1d38f308552eed29c557c743328cac16b9",
+      "output_sha256": "sha256:abd2ae25228c794a7f537e9f4dbda743b46aa7110028f3782b6084eb57727f3a",
+      "output_bytes": 8087069,
+      "container_created": true,
+      "container_removed": true,
+      "inputs_removed": true,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 2551570432,
+        "sampled_peak_rss_bytes": 671649792,
+        "sampled_peak_processes": 16,
+        "sampled_peak_scratch_bytes": 1674215424,
+        "sampled_peak_scratch_inodes": 59418,
+        "samples": 3041,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 32768
+      },
+      "plan_counts": {
+        "targets": 6244,
+        "units": 106,
+        "documents": 214,
+        "sdks": 3
+      },
+      "plan_seals": {
+        "universe_sha256": "f457b87d41aa0529f46c12b8db5cb4932bda4de7aaa3ccc5b7c7c3010652007c",
+        "mapping_sha256": "ad6ea6d0aad29e3dcbe05a80385d72b62b425f11e04b32205d86d38074bc6c65",
+        "documents_sha256": "ffb66271fb63607d551affa0ebbc02da0d0a44cbabd31f9dc75550b999f7a9eb"
+      },
+      "legs": [
+        {
+          "slot": "load",
+          "wall_nanoseconds": 9979248707,
+          "request_bytes": 968,
+          "request_sha256": "sha256:b4061b2bbfbacd6e388ffce57873a27bb43e6d0dc533f2d9f54989a5ba3200d1",
+          "raw_response_bytes": 853,
+          "raw_response_sha256": "sha256:78ece3d7b5007884a69f7946771052f04f561cc830fb7e73de052dbc662af469",
+          "adapted_response_bytes": 861,
+          "adapted_response_sha256": "sha256:960fe27dd989a2f60c8b8b3df6099fb5526a548498fc58649b04a4bb8a20ac3b",
+          "export_files": 2,
+          "export_bytes": 1454
+        },
+        {
+          "slot": "scip",
+          "wall_nanoseconds": 9533785245,
+          "request_bytes": 968,
+          "request_sha256": "sha256:90708fde024914fd306ffefdba604340dd920ab9f7c0eb3b43500139c74be94d",
+          "raw_response_bytes": 853,
+          "raw_response_sha256": "sha256:78ece3d7b5007884a69f7946771052f04f561cc830fb7e73de052dbc662af469",
+          "adapted_response_bytes": 861,
+          "adapted_response_sha256": "sha256:960fe27dd989a2f60c8b8b3df6099fb5526a548498fc58649b04a4bb8a20ac3b",
+          "export_files": 2,
+          "export_bytes": 1454
+        }
+      ],
+      "scip": {
+        "bytes": 1511,
+        "sha256": "sha256:77a354a303b91bf9a9dbabdc0a751b5d89cadc9be7a6fd7d5ddb16cd519ddf3e",
+        "oracle": {
+          "documents": 2,
+          "occurrences": 8,
+          "symbols": 3,
+          "external_symbols": 0,
+          "definitions": 2,
+          "cross_file_references": 1,
+          "external_references": 1,
+          "hovers": 2
+        }
+      },
+      "compiler_cache_eviction": {
+        "files": 1955,
+        "logical_bytes": 142411520,
+        "scratch_bytes_freed": 149155840
+      }
+    }
+  ],
+  "cold_comparison": {
+    "configured_target_universe_equal": true,
+    "repository_targets_units_documents_equal": true,
+    "selected_raw_adapted_driver_responses_equal": true,
+    "selected_export_inventory_equal": true,
+    "typed_probe_output_equal": true,
+    "scip_bytes_equal": true,
+    "whole_plan_mapping_and_document_seals_equal": false,
+    "difference_attribution": "In each of three SDK lanes, list_sha256 and compiled_go_files in exactly six cgo packages change; exactly eleven generated gocache document locators change per lane. Changed document sets exactly equal changed compiled-file references; same-locator SDK documents and all repository targets/units/documents are unchanged. Each run seals its own exact SDK evidence."
+  },
+  "validation": {
+    "local": "launcher and caller normal/race; combined t451a/t451b normal; host/Linux arm64 vet and lint; docs/glossary/format/whitespace passed",
+    "independent_review": "Exact implementation/cost correction and both native receipts/aggregate independently reviewed with critical/high/medium/low all zero.",
+    "native_gate_output_sha256": "sha256:70ed75d24f5089407ae77578b21ddb0bcf1d86ec9f9c31c63b22d7832f81d315"
+  },
+  "cleanup": {
+    "successful_attempts_removed_containers_and_private_inputs": true,
+    "dedicated_docker_inventory_empty_after_confirmation": true,
+    "private_parent_empty_after_confirmation": true,
+    "dedicated_vm_stopped": true
+  },
+  "limitations": [
+    "Neutral driver and SCIP proof covers alias root, two-package closure and two root documents; other neutral fixtures retain planner coverage only.",
+    "Sampled process/RSS/scratch peaks are observations; descriptor values are enforced ceilings. Exact lifetime child counts and observed descriptor peaks are not measured.",
+    "scip-go driver mode uses the configured module/version identity for dependencies; this proof does not establish independent external-module identities.",
+    "No public target, target-native toolchain, historical private failure reproduction, cgo target cohort, current Phebs admission, large-monorepo scale or T45.2 GO is established.",
+    "Native confirmation total test wall output was fingerprinted by the gate checker; only its retained per-client-leg wall values are reported numerically."
+  ]
+}
