@@ -6092,3 +6092,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   repeated. The local transcript adds one host file and tee process; existing
   gate-runner output/timeout refusal and all worker bounds remain unchanged.
   No worker, lock, cache or steady-state work changes.
+
+- **2026-09-26 — T45.1b owned-neutral module-graph correction.** The retained
+  diagnostic rerun reproduced the planning STOP: the offline public lock/cache
+  contains the selected nlohmann_json 3.11.3 source, while the smaller owned
+  neutral root selected 3.6.1 and its blocked source-manifest fetch failed.
+  The owned neutral root had omitted the public root's existing grpc 1.76.0.bcr.1
+  and googleapis 0.0.0-20260130-c0fcb356 constraints. It now carries those exact
+  constraints alongside its unchanged rules_go, Gazelle, rules_proto and
+  protobuf pins; a data-only check compares every public direct dependency
+  declaration against the owned root. This repairs the fixture's dependency
+  context without replacing dependency bytes or downloading missing inputs.
+  Public sources/lock, requested cohort roots, Go/Bazel/rules_go/driver/scip-go,
+  launcher request/environment and all admission/resource bounds remain exact.
+  Only helper/build-record bytes change in the fresh bundle. Module resolution
+  and repository preparation may do more bounded work inside the same serial
+  planner children; the next attempt must measure that work and may still STOP.
+  This consumes the second and final authorized native-neutral source-repair
+  rerun only when executed, with independent source/artifact review and fresh
+  numbered config/receipt/log. No public execution or feasibility conclusion
+  follows from the correction, and no production/steady-state cost changes.

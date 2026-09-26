@@ -159,6 +159,10 @@ func TestNativeCohortBoundary(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		public, err := publicSources(archive)
+		if err != nil {
+			t.Fatal(err)
+		}
 		for _, cohort := range []string{"neutral", "ordinary", "proto", "fanout"} {
 			original, owned, err := nativeWorkspaceFiles(cohort, archive, []byte("pinned helper"))
 			if err != nil {
@@ -168,11 +172,17 @@ func TestNativeCohortBoundary(t *testing.T) {
 				t.Fatal("owned profile incomplete")
 			}
 			if cohort != "neutral" {
-				public, _ := publicSources(archive)
 				if !reflect.DeepEqual(original, public) {
 					t.Fatal("public source changed")
 				}
 			} else {
+				// A smaller module graph can select versions absent from the
+				// public lock's offline cache, before any requested target loads.
+				for _, line := range strings.Split(string(public["MODULE.bazel"]), "\n") {
+					if strings.HasPrefix(line, "bazel_dep(") && !bytes.Contains(owned["MODULE.bazel"], []byte(line+"\n")) {
+						t.Fatal("native neutral omits public module constraint", line)
+					}
+				}
 				if bytes.Contains(owned["MODULE.bazel"], []byte("go_sdk.host")) || !bytes.Contains(owned["MODULE.bazel"], []byte(`version = "0.59.0"`)) || !bytes.Contains(owned["external/MODULE.bazel"], []byte(`version = "0.59.0"`)) {
 					t.Fatal("native dependency/SDK selection changed")
 				}

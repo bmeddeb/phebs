@@ -129,7 +129,7 @@ func nativeWorkspaceFiles(cohort string, archive []byte, helper []byte) (map[str
 		for name, b := range fixtures {
 			owned[name] = b
 		}
-		owned["MODULE.bazel"] = []byte("module(name = \"phebs_t451b_native\")\nbazel_dep(name = \"rules_go\", version = \"0.59.0\")\nbazel_dep(name = \"gazelle\", version = \"0.47.0\")\nbazel_dep(name = \"rules_proto\", version = \"7.1.0\")\nbazel_dep(name = \"protobuf\", version = \"33.5\")\nbazel_dep(name = \"neutral_external\", version = \"0.0.0\")\nlocal_path_override(module_name = \"neutral_external\", path = \"external\")\n")
+		owned["MODULE.bazel"] = []byte("module(name = \"phebs_t451b_native\")\nbazel_dep(name = \"rules_go\", version = \"0.59.0\")\nbazel_dep(name = \"gazelle\", version = \"0.47.0\")\nbazel_dep(name = \"rules_proto\", version = \"7.1.0\")\nbazel_dep(name = \"protobuf\", version = \"33.5\")\nbazel_dep(name = \"grpc\", version = \"1.76.0.bcr.1\")\nbazel_dep(name = \"googleapis\", version = \"0.0.0-20260130-c0fcb356\")\nbazel_dep(name = \"neutral_external\", version = \"0.0.0\")\nlocal_path_override(module_name = \"neutral_external\", path = \"external\")\n")
 		// Only the owned-neutral lock may update. Preserve upstream facts as the
 		// input to native SDK selection; the public lock is never changed.
 		owned["MODULE.bazel.lock"] = public["MODULE.bazel.lock"]
