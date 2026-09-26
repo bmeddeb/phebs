@@ -72,6 +72,42 @@ func TestUnsupportedDocumentEncodingDoesNotRejectSnapshot(t *testing.T) {
 	}
 }
 
+func TestProducerKnownUnspecifiedEncoding(t *testing.T) {
+	tests := []struct {
+		name     string
+		tool     string
+		encoding scip.PositionEncoding
+		want     PositionEncoding // empty: omitted as unsupported
+	}{
+		{"scip-go unspecified reads UTF-8", "scip-go", scip.PositionEncoding_UnspecifiedPositionEncoding, EncodingUTF8},
+		{"scip-go explicit encoding wins", "scip-go", scip.PositionEncoding_UTF16CodeUnitOffsetFromLineStart, EncodingUTF16},
+		{"scip-go unknown encoding stays unsupported", "scip-go", scip.PositionEncoding(99), ""},
+		{"other tool unspecified stays unsupported", "phebs-fixture-indexer", scip.PositionEncoding_UnspecifiedPositionEncoding, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			index := readFixtureIndex(t)
+			index.Metadata.ToolInfo.Name = tt.tool
+			for _, doc := range index.GetDocuments() {
+				doc.PositionEncoding = tt.encoding
+			}
+			snapshot, err := parseSnapshot(context.Background(), marshalFixtureIndex(t, index), newParseLimits(Options{}))
+			if err != nil {
+				t.Fatalf("parseSnapshot: %v", err)
+			}
+			for _, doc := range index.GetDocuments() {
+				got := snapshot.documents[doc.GetRelativePath()]
+				switch {
+				case tt.want == "" && got != nil:
+					t.Fatalf("%s retained with %q, want omitted", doc.GetRelativePath(), got.encoding)
+				case tt.want != "" && (got == nil || got.encoding != tt.want):
+					t.Fatalf("%s = %+v, want encoding %q", doc.GetRelativePath(), got, tt.want)
+				}
+			}
+		})
+	}
+}
+
 func TestQueriesSkipInvalidResultRanges(t *testing.T) {
 	fixture := newFixture(t, true)
 	index := readFixtureIndex(t)

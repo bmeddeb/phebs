@@ -27,6 +27,9 @@ type snapshot struct {
 	relationshipCount    int
 	unsupportedDocuments int
 	estimatedBytes       int64
+	// unspecifiedEncoding is the producer-known unit for documents that omit
+	// position_encoding; empty means such documents stay unsupported.
+	unspecifiedEncoding PositionEncoding
 }
 
 type parseLimits struct {
@@ -92,7 +95,7 @@ func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snaps
 	}
 	metadataSeen := false
 	visitor := scip.IndexVisitor{
-		VisitMetadata: func(ctx context.Context, _ *scip.Metadata) error {
+		VisitMetadata: func(ctx context.Context, metadata *scip.Metadata) error {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
@@ -100,6 +103,7 @@ func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snaps
 				return fmt.Errorf("SCIP metadata appears more than once")
 			}
 			metadataSeen = true
+			result.unspecifiedEncoding = producerEncoding(metadata)
 			return nil
 		},
 		VisitDocument: func(ctx context.Context, doc *scip.Document) error {
@@ -311,7 +315,7 @@ func (s *snapshot) addDocument(input *scip.Document, limits parseLimits) error {
 	if err := validateRepoPath(docPath); err != nil {
 		return fmt.Errorf("SCIP document path: %w", err)
 	}
-	encoding, err := fromSCIPEncoding(input.GetPositionEncoding())
+	encoding, err := fromSCIPEncoding(input.GetPositionEncoding(), s.unspecifiedEncoding)
 	if err != nil {
 		return fmt.Errorf("document %q: %w", docPath, err)
 	}
@@ -564,7 +568,18 @@ func symbolKey(docPath, symbol string) string {
 	return symbol
 }
 
-func fromSCIPEncoding(encoding scip.PositionEncoding) (PositionEncoding, error) {
+// producerEncoding names the position unit a known indexer uses when it omits
+// Document.position_encoding. scip-go (through at least 0.2.7) never sets the
+// field and reports go/token columns, which are UTF-8 byte offsets. The
+// metadata text encoding is not used: it describes source bytes, not ranges.
+func producerEncoding(metadata *scip.Metadata) PositionEncoding {
+	if metadata.GetToolInfo().GetName() == "scip-go" {
+		return EncodingUTF8
+	}
+	return ""
+}
+
+func fromSCIPEncoding(encoding scip.PositionEncoding, unspecified PositionEncoding) (PositionEncoding, error) {
 	switch encoding {
 	case scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart:
 		return EncodingUTF8, nil
@@ -572,8 +587,13 @@ func fromSCIPEncoding(encoding scip.PositionEncoding) (PositionEncoding, error) 
 		return EncodingUTF16, nil
 	case scip.PositionEncoding_UTF32CodeUnitOffsetFromLineStart:
 		return EncodingUTF32, nil
-	default:
+	case scip.PositionEncoding_UnspecifiedPositionEncoding:
+		if unspecified != "" {
+			return unspecified, nil
+		}
 		return "", fmt.Errorf("SCIP document has unspecified position encoding: %w", ErrUnsupportedEncoding)
+	default:
+		return "", fmt.Errorf("SCIP document has unknown position encoding %d: %w", encoding, ErrUnsupportedEncoding)
 	}
 }
 

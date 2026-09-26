@@ -874,9 +874,11 @@ making every valid document in the committed index unavailable. Its document,
 occurrence, symbol, and relationship payload still consumes the configured
 semantic limits, and queries into that omitted path return an available empty
 result. phebs does not substitute the metadata text encoding, because that
-field describes source-file bytes rather than SCIP range units. Other
-index-wide structural and boundedness failures remain hard errors and are
-negative-cached by immutable revision.
+field describes source-file bytes rather than SCIP range units. One producer
+exception applies: indexes whose metadata tool is `scip-go` never set the field
+and report Go byte-offset columns, so their unspecified documents are read as
+UTF-8. Other index-wide structural and boundedness failures remain hard errors
+and are negative-cached by immutable revision.
 
 In whole-repository mode, the extraction reader uses the same root-only
 boundary with its own trusted corpus ledger. The root path is fixed—nested
