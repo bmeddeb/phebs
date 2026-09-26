@@ -14789,6 +14789,18 @@ tool identities, HEAD and roots remain fixed. Host tests and independent review
 precede one fresh neutral attempt 6, then returned-evidence review, cleanup and
 stop. This authorizes no public cohort, merge, push or PR.
 
+Attempt 6 at source `6a499a74` is `HARNESS_STOP` at containment/measurement.
+Planning and both 129-package client legs completed, producing 27,852 SCIP
+bytes with six documents and 195 occurrences. The observer retained 18 errors;
+its first diagnostic records `comm=compile`, state `R`, not an authenticated
+executable or a proven cause. The live/unproven denial remains fatal. Planning
+and final quiescence, workspace/control checks and exact cache inventory passed,
+but cannot clear sticky unavailable observation. Planning succeeded, so the new
+failure-only scratch snapshot is absent. `spike/t451b/zombie-cap-results.json`
+binds this source-free terminal record. Cleanup is complete and the dedicated
+VM is stopped. The one-run allowance is consumed; no further repair/execution
+or public cohort is authorized. Native-neutral PASS and T45.1b remain open.
+
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider
 descriptors, operator-owned named

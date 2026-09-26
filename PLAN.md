@@ -6317,3 +6317,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   262,144, while
   scratch bytes and memory remain capped independently. No production query,
   sync, startup/restart, retry/no-op, publication or lock cost changes.
+
+- **2026-09-26 — T45.1b sole zombie/cap run stops on live process observation.**
+  Source `6a499a74190508225b0b4353e3d33b44da0346d8` passed complete normal/race,
+  host/Linux-arm64 vet and pinned lint, docs/glossary/format/whitespace, and exact
+  independent source/artifact review. Native profile v2 attempt 6 is
+  `HARNESS_STOP` at containment/measurement after 152.961 seconds host time.
+  The first observer denial is bound to a diagnostic with `comm=compile`,
+  state `R`, UID/GID 65534, `NoNewPrivs=true` and zero permitted capabilities;
+  18 unexpected observation errors make unavailability sticky. The name does
+  not authenticate the executable, and sequential diagnostic reads do not
+  establish the exact state at the denied FD read, its cause, or a connection
+  to prior attempts. The approved live/unproven refusal remains fatal.
+  Planning completed with 6,143 targets, 96 units, 212 documents and two SDK
+  rows. Both client legs returned 129 packages; the neutral SCIP is 27,852
+  bytes with six documents and 195 occurrences. These are partial evidence,
+  not native-neutral PASS, target evidence or a feasibility decision. Planning
+  commands succeeded, so no failure-only free-block/free-inode snapshot exists.
+  Planning and final quiescence, workspace/control revalidation and exact final
+  cache inventory passed; they do not clear the earlier observation failure.
+  The sampled scratch peak was 1,866,539,008 bytes and 73,718 inodes, with
+  outer limits verified and no OOM or task-limit event. The inode observation
+  exceeds the former cap but proves neither complete peaks nor the exhausted
+  dimension in attempt 5. No particular zombie-recovery branch is established
+  as executed by this receipt. `spike/t451b/zombie-cap-results.json` retains the
+  source-free projection; all ten previous evidence files remain byte-exact.
+  Container and private inputs were removed, the dedicated Docker inventory
+  was empty, and the dedicated VM stopped. The additional allowance is consumed
+  once; no repair, rerun, public cohort, merge, push or PR follows. T45.1b stays
+  open. This evidence/documentation record adds no runtime cost; the preceding
+  approved spike-only cost decision remains controlling.

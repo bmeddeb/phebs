@@ -968,6 +968,14 @@ failed-planning free-space diagnostics, and a native-only 262,144-inode profile.
 One neutral attempt follows host tests and independent review, then cleanup,
 returned-evidence review and stop. It enables no product command or public run.
 
+That sole attempt 6 completed planning and both clients but remains a harness
+STOP: the process observer refused a live/unproven FD denial and stayed
+unavailable. Its diagnostic name `compile` is not executable authentication.
+Quiescence, workspace/control checks and final cache inventory passed without
+clearing that failure. `spike/t451b/zombie-cap-results.json` records the bounded
+source-free evidence. Cleanup is complete and the dedicated VM is stopped;
+no further repair, rerun or public run is authorized. Product behavior is unchanged.
+
 Managed generation must be partitionable and resumable without requiring one
 whole-repository package/type graph or one monolithic in-memory navigation
 snapshot. The selected design publishes a Phebs-managed bundle of conforming

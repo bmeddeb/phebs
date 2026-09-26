@@ -117,6 +117,14 @@ scratch inodes to 262,144; all other caps and protected inputs remain fixed.
 Host proof and independent review precede execution; cleanup, returned-evidence
 review and stop follow. Public cohorts remain unauthorized.
 
+Attempt 6 returned `HARNESS_STOP` after planning and both clients completed.
+The observer's first refusal diagnostic records `comm=compile`, state `R`;
+18 errors leave observation unavailable. Final quiescence/workspace/cache
+checks passed, but the native-neutral gate did not. The source-free record is
+`spike/t451b/zombie-cap-results.json`. Cleanup is complete, the dedicated VM is
+stopped and the allowance is consumed. No rerun, repair or public execution is
+authorized; T45.1b feasibility remains open.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed
