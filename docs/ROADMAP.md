@@ -61,6 +61,11 @@ closes. T45.8a may land one earlier static
 administrator Settings boundary with Bazel first and visibly unavailable; it
 performs no request or action and does not advance the provider/API/execution
 sequence.
+T45.1a's reviewed neutral harness gate is now PASS at source
+`f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
+controller-death recovery, planner/oracle, driver equality, and cleanup evidence
+in `spike/t451a/results.json`. This is a branch acceptance record; T45.1b
+remains gated on accepted integration and separate target execution authority.
 
 ## Now
 

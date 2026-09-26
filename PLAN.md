@@ -5773,7 +5773,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   2,540,277,760 bytes; sampled scratch peaked at 1,670,197,248 bytes and
   59,353 inodes. Full normal/race, host/Linux vet and lint, documentation, and
   glossary gates passed; independent precommit implementation/cost review has
-  no unresolved finding. Exact immutable native gates and review remain open.
-  No T45.1a PASS,
-  T45.1b execution, merge, provider, UI,
-  release, or scale claim follows from the boundary probes alone.
+  no unresolved finding. Exact immutable implementation
+  `f7faae99d20f19279bb52c9987045204fa0bb39f` then passed the complete native
+  gate in 451.990 seconds: controller-death test 302.38 seconds, all eight
+  containment probes 3.94 seconds, and plan/oracle/driver equality 145.31
+  seconds. The independent witness observed controller SIGKILL and a detached
+  descendant, followed by watchdog exit 124 at 300,845 ms and exact recovery.
+  Final plan memory peaked at 2,535,014,400 bytes, with sampled scratch
+  1,670,631,424 bytes and 59,449 inodes; sampling stayed healthy, no plan
+  resource-limit event occurred, and all container/input custody was removed.
+  Independent exact-commit implementation/cost review records all severity
+  counts zero. `spike/t451a/results.json` retains this neutral PASS and its
+  complete receipts. Evidence/documentation additions change no implementation,
+  embedded fixture, profile, or native gate input.
+  Both successful runs used identical request, helper, and offline bundle
+  identities and reproduce all 6,244 configured targets, 106 package units,
+  and 214 canonical repository documents exactly. The three SDK IDs are also
+  stable, but upstream cgo-generated cache locators/content vary between cold
+  builds. The separate SDK lane retains these exact per-run bytes; the full
+  mapping/document and launcher seals correctly change with that evidence.
+  Encoding is deterministic for exact produced inputs; whole SDK/cache or
+  driver-response byte reproducibility is not established. The differing
+  response digest has no attributed cause because raw response bytes were not
+  retained. Neither receipt is normalized or weakened. Neutral PASS permits
+  an integration request; T45.1b execution still requires accepted integration
+  and separate target authorization. It establishes no provider, UI, release,
+  or scale claim.

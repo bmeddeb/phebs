@@ -14674,12 +14674,15 @@ missing/extra/ambiguous target, package, document, or edge refuses. T45.1b
 cannot begin until this ticket is merged and independently accepted; inability
 to produce the exact plan records `STOP`, not a best-effort fallback.
 
-Implementation is in progress on the T45.1a ticket branch. The complete
-offline neutral Bazel plan and exact launcher reconciliation passed in
-151.08 seconds with healthy sampling and exact cleanup. Development
-containment and controller-death observations also passed; the final immutable
-candidate's complete native gates, review, and acceptance record remain open.
-These development observations are not T45.1a PASS or target authorization.
+The neutral T45.1a gate passed at reviewed source
+`f7faae99d20f19279bb52c9987045204fa0bb39f`; the acceptance record and complete
+native receipts are in `spike/t451a/results.json`. All eight containment probes,
+independent controller-death recovery, exact native plan/oracle and driver
+equality, and normal/race/static/documentation gates passed. Independent
+implementation/cost review has no open finding. Two runs reproduce the exact
+repository mapping; the separately sealed SDK cgo cache is not byte-reproducible
+across cold runs. T45.1b still requires accepted integration and separate target
+execution authorization; neutral PASS provides neither by itself.
 
 **T45.1b · Target failure receipt and Bazel/scip-go feasibility gate** *(needs
 T45.1a PASS)* — reproduce the failed SCIP attempt without retaining private

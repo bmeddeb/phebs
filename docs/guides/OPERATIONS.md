@@ -7828,8 +7828,10 @@ disposition. Do not report those negative tests as clean full-launcher teardown.
 
 ## Neutral managed-index feasibility harness (T45.1a)
 
-`spike/t451a` is an opt-in development harness. Its native planner acceptance
-gate is still open. It runs only compiled-in neutral fixtures and fixed
+`spike/t451a` is an opt-in development harness. Its reviewed neutral acceptance
+record is [retained with the spike](../../spike/t451a/results.json), including
+complete native receipts and the SDK cold-build reproducibility limitation.
+It runs only compiled-in neutral fixtures and fixed
 containment probes; it has no target-repository argument or server API.
 The owning decisions and limits are in `PLAN.md`, and acceptance criteria are
 in `docs/BACKLOG.md`. A boundary probe is not a planner or target-feasibility
@@ -7890,6 +7892,10 @@ append one newline; this reconstructs the worker's exact JSON output.
 Repeated configured labels must be represented in
 the plan and refused by the pinned driver before its execution; ordinary Go
 loading must exactly match the sealed package, document, and import sets.
+The retained runs reproduce the canonical repository mapping exactly. SDK cgo
+cache artifacts may vary across cold builds and remain bound by each run's
+full seals; do not compare those seals as a byte-reproducible-build guarantee or
+discard SDK hashes to make two receipts match.
 
 Interrupted cleanup retains a private sibling `.t451a-container.json` owner
 record and its copied inputs. Use the spike command's `recover` operation with
