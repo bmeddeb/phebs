@@ -6055,8 +6055,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   An oversized receipt drops its trace and downgrades protocol evidence to
   unproven while retaining the omitted-evidence digest. The first failing phase
   remains controlling. Outer receipts additionally bind stderr bytes/digest;
-  raw diagnostic output stays local under the existing 8-KiB operator-display
-  ceiling, including the fallback incomplete-result path. Historical neutral
+  raw diagnostic output stays local with an 8,192-rune stderr excerpt,
+  including the fallback incomplete-result path. The excerpt can occupy up to
+  32 KiB of UTF-8; surrounding and wrapped error text is additional, so this is
+  not a whole-error byte ceiling. The existing 16-MiB aggregate worker-output
+  bound is unchanged. Historical neutral
   receipts and successful client checks remain unchanged. This correction
   requires exact local gates, independent re-review and rebuilt artifact/config
   bindings before requesting execution of the new profile.
