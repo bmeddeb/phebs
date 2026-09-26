@@ -18,7 +18,7 @@ follow the links.
 | Code navigation (go-to-def/refs) | Included (SCIP) | Included | Cross-reference engine | No | Limited |
 | Auth, permissions, audit | Included (sessions, OIDC, revocable keys) | Included | No | No | Via GitHub |
 | Agent surface | OpenAPI + MCP included | Enterprise tier only | No | No | REST/GraphQL API |
-| Change-impact / contract evidence | Experimental, default-dark, coverage certificates | No | No | No | No |
+| Change-impact / contract evidence | Included, with coverage certificates | No | No | No | No |
 | Price signal | Free, self-hosted | ~$59/user/mo; enterprise from ~$16K/yr | Free | Free | Included with GitHub |
 
 **The search is the same family. The invoice is not.**
@@ -28,21 +28,7 @@ follow the links.
 - Pure interactive regex speed over a fixed corpus → **livegrep**.
 - Everything already on GitHub, hosted is fine → **GitHub code search**.
 - Apache-2.0 search, navigation, auth, audit, and MCP in one Go binary, with
-  an experimental path from a match to bounded evidence → **phebs**.
-
-## Where phebs loses
-
-I wrote phebs, so read this section twice:
-
-- **Scale.** Single-node today; no horizontal-scale or very-large-fleet
-  claim yet (see the [roadmap](./ROADMAP.md)).
-- **Maturity.** Sourcegraph has a larger team and years of production
-  hardening.
-- **Revisions.** HEAD is authoritative, with at most seven explicit
-  branch/tag revisions per repository.
-- **Evidence packs.** Contract Atlas, Caller Map, Impact, and Kafka topics
-  are experimental, default-dark, and gate `NOT_ESTABLISHED`. A direction,
-  not a guarantee.
+  a path from a match to bounded evidence → **phebs**.
 
 Every tool on this page can find you a match. phebs is built for the next
 question: what is the match allowed to mean?
