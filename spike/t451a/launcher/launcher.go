@@ -62,7 +62,7 @@ type fileIdentity struct {
 }
 
 // Prepared has no caller-settable argv, environment, overlay, build flags or
-// response authority. Prepare is its only constructor.
+// response authority. Prepare and PrepareCompatibility are its closed constructors.
 type Prepared struct {
 	patterns, environment, roots []string
 	packages                     map[string]flatPackage

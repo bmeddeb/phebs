@@ -5849,3 +5849,58 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   original evidence is byte-identical. No container or private input remains,
   and the dedicated VM is stopped. This record changes no built/embedded
   input and grants neither integration nor T45.1b target execution authority.
+
+- **2026-09-26 — T45.1b typed compatibility and public corpus selection.**
+  Ben merged T45.1a in PR #14 at
+  `c4eac8e5fe3f3fe58e6991abd6ad1d94dad88051` and authorized proceeding
+  with a suitable public repository. The neutral compatibility prerequisite
+  pins Apache-2.0 scip-go v0.2.7 at
+  `2e9ff3c2603a85daabe125c9f20075ec52df0731`, its actual x/tools v0.45.0,
+  and Go 1.25.0/Linux arm64. A separate compiled owned driver accepts only the
+  exact scrubbed caller environment and type-loading mode 8681, with tests
+  disabled and null build flags/overlays. It reconstructs the underlying
+  driver's environment; inbound environment never becomes execution authority.
+  Two fixed private slots distinguish the real `packages.Load` and scip-go
+  calls. Raw driver equality precedes metadata adaptation, and selected source
+  bytes plus the exact declared export-file inventory remain bound through
+  completion of each client. The original mode-31 contract and all T45.1a
+  evidence stay exact. The neutral implementation is authored; this is not a
+  recorded compatibility PASS. Native wire evidence and independent review
+  remain mandatory before any target command.
+  The selected public candidate is Apache-2.0
+  `bazelbuild/remote-apis-sdks`, observed default HEAD
+  `d5824b1a2286806b07efd030aa3a139c4f540157`. Resolve current HEAD again
+  before freezing execution. Its ordinary libraries, generated protobufs and
+  shared-dependency consumers provide three proposed bounded cohorts. Its
+  native Bazel 9.0.0/rules_go 0.59.0 profile differs from the neutral profile
+  and needs its own reviewed compatibility evidence, exact resolved SDK and
+  complete immutable offline dependencies. Preserve upstream build files;
+  never silently upgrade them to fit the harness. First-party cgo, a natural
+  unrelated broken target, and large-monorepo scale are not established.
+  An owned excluded control must be separately identified. No prior private
+  failure receipt was supplied, so a public attempt cannot claim to reproduce
+  that unidentified failure. No target has run and no GO/REDUCE/STOP is yet
+  established. Existing resource limits and product/runtime authority remain
+  unchanged; exact prerequisite and target cost records follow their measured
+  runs, rather than being inferred from this source-selection decision.
+  Static cost accounting: bundle admission keeps the existing full manifest
+  count/byte/digest verification and private copy. Worker startup additionally
+  hashes the helper, its identical adapter copy, probe, scip-go and SDK Go
+  executable and reads their build metadata, bounded by the existing per-file
+  tool limit. Each typed driver call reconstructs its sealed
+  selection, hashes selected sources before and after the driver, and hashes
+  declared exports once. Verification after the complete client reconstructs
+  the selection again and adds one source and one export pass. Each accepted
+  pass is bounded by 64 MiB and 8 MiB per file; the inherited source verifier
+  may read one additional bounded file before rejecting aggregate overflow,
+  while the new export reader checks the remaining aggregate budget first.
+  Metadata adaptation adds bounded JSON buffers beside the raw response;
+  each response remains capped at 16 MiB and the complete worker evidence
+  retains the existing 16-MiB output ceiling. Each leg creates two exclusive
+  launcher control files and separate caller plan/trace files. Legs are serial;
+  there is no new shared lock or persistent cache. Exact descendant counts,
+  observed memory/scratch use and wall time require the native receipt; a
+  sampled process peak is not a lifetime child count and a descriptor ceiling
+  is not an observed descriptor peak. This spike adds no production
+  request/query, sync, startup/restart, retry/no-op, publication or lifecycle
+  cost.

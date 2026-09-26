@@ -933,6 +933,13 @@ and many-target-to-one-package edges must be deterministic. `scip-go`,
 cannot create or amend those authority layers; an inexact planner stops the
 feasibility program.
 
+T45.1a is merged. T45.1b is preparing a separate neutral adapter for real
+`go/packages` and scip-go, then a bounded public-corpus run using
+Apache-2.0 `bazelbuild/remote-apis-sdks`. Its native toolchain still requires
+compatibility review. There is no available managed generation command or
+supported scale claim from this work; the prerequisite and target gates remain
+open, and committed SCIP import remains the available compatibility path.
+
 Managed generation must be partitionable and resumable without requiring one
 whole-repository package/type graph or one monolithic in-memory navigation
 snapshot. The selected design publishes a Phebs-managed bundle of conforming

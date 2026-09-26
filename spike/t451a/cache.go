@@ -35,7 +35,8 @@ func ensureQuiescentWorker() error {
 	return nil
 }
 
-type cacheEviction struct {
+// CacheEviction records the bounded private compiler-cache reclamation.
+type CacheEviction struct {
 	Files             int    `json:"files"`
 	LogicalBytes      int64  `json:"logical_bytes"`
 	ScratchBytesFreed uint64 `json:"scratch_bytes_freed"`
@@ -44,8 +45,8 @@ type cacheEviction struct {
 // This fixed Go build cache is not a repository source or Bazel action output.
 // Go 1.25 uses hash-prefix directories and nested cached-executable directories.
 // Inventory completes before mutation; unfamiliar structure refuses.
-func evictCompilerCache(name string) (cacheEviction, error) {
-	var result cacheEviction
+func evictCompilerCache(name string) (CacheEviction, error) {
+	var result CacheEviction
 	canonical, err := filepath.EvalSymlinks(name)
 	if err != nil || canonical != name {
 		return result, errors.New("compiler cache path is not canonical")

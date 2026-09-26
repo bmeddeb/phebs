@@ -14735,6 +14735,15 @@ and tool digests. Protocol rejection is a harness admission STOP and cannot
 serve as target failure evidence. This prerequisite grants no target execution
 authority and does not widen T45.1a's frozen request.
 
+Current work starts from Ben's merged PR #14. The authorized public candidate
+is Apache-2.0 `bazelbuild/remote-apis-sdks`; its observed current HEAD, proposed
+ordinary/generated-proto/shared-dependency cohorts, native toolchain mismatch,
+and missing historical private failure receipt are recorded in the owning
+2026-09-26 PLAN decision. Neutral compatibility, target-native compatibility,
+exact offline admission, target execution and the feasibility decision remain
+open. Public corpus selection does not waive any gate above or establish cgo
+or product-scale coverage.
+
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider
 descriptors, operator-owned named

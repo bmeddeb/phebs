@@ -80,6 +80,13 @@ native and non-native gates plus independent review; its separate evidence in
 `spike/t451a/review-results.json` retains exact driver bytes and leaves the
 original acceptance artifacts unchanged.
 
+Ben merged PR #14 at `c4eac8e5fe3f3fe58e6991abd6ad1d94dad88051`.
+T45.1b now prepares the separately versioned neutral compatibility prerequisite
+and an authorized public corpus: Apache-2.0 `bazelbuild/remote-apis-sdks`.
+Its native toolchain differs from the neutral profile and remains a reviewed
+prerequisite. Corpus selection is not target execution, a reproduction of the
+unavailable private failure receipt, or a scale pass. T45.1b remains open.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

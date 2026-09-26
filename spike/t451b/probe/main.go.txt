@@ -1,0 +1,55 @@
+// Compile only in the operator's isolated scip-go v0.2.7 module graph.
+package main
+
+import (
+ "encoding/json"
+ "errors"
+ "fmt"
+ "os"
+ "sort"
+
+ "golang.org/x/tools/go/packages"
+)
+
+type fact struct {
+ ID string `json:"id"`
+ Path string `json:"path"`
+ Types bool `json:"types"`
+ Syntax int `json:"syntax"`
+ TypeInfo bool `json:"type_info"`
+ Errors int `json:"errors"`
+ IllTyped bool `json:"ill_typed"`
+}
+type report struct {
+ Mode int `json:"mode"`
+ Roots []fact `json:"roots"`
+ Packages []fact `json:"packages"`
+}
+func main() { if err := run(); err != nil { fmt.Fprintln(os.Stderr,err); os.Exit(1) } }
+func run() error {
+ if len(os.Args) != 2 || os.Args[1] != "example.test/neutral/lib" { return errors.New("closed neutral pattern required") }
+ const mode = packages.NeedName | packages.NeedImports | packages.NeedExportFile | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedModule
+ if int(mode) != 8681 { return errors.New("probe load mode changed") }
+ roots, err := packages.Load(&packages.Config{Mode:mode, Dir:"/scratch/workspace", Tests:false},os.Args[1:]...)
+ if err != nil { return err }
+ if len(roots) != 1 { return errors.New("neutral root count mismatch") }
+ r := report{Mode:int(mode),Roots:[]fact{},Packages:[]fact{}}
+ seen := map[string]*packages.Package{}
+ queue := append([]*packages.Package{},roots...)
+ for len(queue)>0 {
+  p := queue[len(queue)-1]; queue = queue[:len(queue)-1]
+  if p == nil || p.ID == "" { return errors.New("missing package identity") }
+  if old, ok := seen[p.ID]; ok { if old != p { return errors.New("ambiguous package identity") }; continue }
+  seen[p.ID] = p
+  if len(seen)>8192 || len(p.Errors)>0 || p.IllTyped || p.Types == nil || !p.Types.Complete() { return errors.New("incomplete or ill-typed dependency") }
+  for _, child := range p.Imports { queue = append(queue,child) }
+  r.Packages = append(r.Packages,fact{p.ID,p.PkgPath,true,len(p.Syntax),p.TypesInfo != nil,len(p.Errors),p.IllTyped})
+ }
+ for _, p := range roots {
+  if p.PkgPath != "example.test/neutral/lib" || len(p.Syntax)!=2 || p.TypesInfo==nil || len(p.TypesInfo.Defs)==0 || len(p.TypesInfo.Uses)==0 { return errors.New("root types/syntax/info absent") }
+  r.Roots = append(r.Roots,fact{p.ID,p.PkgPath,true,len(p.Syntax),true,len(p.Errors),p.IllTyped})
+ }
+ if len(r.Packages)!=2 { return errors.New("neutral dependency closure differs") }
+ sort.Slice(r.Packages,func(i,j int)bool{return r.Packages[i].ID<r.Packages[j].ID})
+ return json.NewEncoder(os.Stdout).Encode(r)
+}
