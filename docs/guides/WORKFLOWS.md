@@ -877,8 +877,12 @@ result. phebs does not substitute the metadata text encoding, because that
 field describes source-file bytes rather than SCIP range units. One producer
 exception applies: indexes whose metadata tool is `scip-go` never set the field
 and report Go byte-offset columns, so their unspecified documents are read as
-UTF-8. Other index-wide structural and boundedness failures remain hard errors
-and are negative-cached by immutable revision.
+UTF-8. A document whose path leaves the repository (`../...` or absolute), such
+as a Bazel-generated file under `../bazel-output/`, is likewise omitted and
+never read while its payload still counts against the limits, so navigation
+into generated code is unavailable. Every other malformed path and other
+index-wide structural and boundedness failures remain hard errors and are
+negative-cached by immutable revision.
 
 In whole-repository mode, the extraction reader uses the same root-only
 boundary with its own trusted corpus ledger. The root path is fixed—nested

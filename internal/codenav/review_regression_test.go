@@ -108,6 +108,55 @@ func TestProducerKnownUnspecifiedEncoding(t *testing.T) {
 	}
 }
 
+func TestOutOfRepositoryDocumentIsOmitted(t *testing.T) {
+	tests := []struct {
+		name       string
+		path       string
+		atOccLimit bool // cap occurrences at exactly the valid documents' count
+		omitted    bool // false: the whole index must refuse
+	}{
+		{"bazel generated output", "../bazel-output/execroot/_main/bazel-out/k8-fastbuild/bin/api/api.pb.go", false, true},
+		{"absolute path", "/generated/api.pb.go", false, true},
+		{"omitted payload still charged", "../bazel-output/api.pb.go", true, false},
+		{"non-canonical in-repo path", "lib/../use/use.go", false, false},
+		{"non-canonical outside path", "../a//api.pb.go", false, false},
+		{"backslash outside path", `../a\api.pb.go`, false, false},
+		{"control byte outside path", "../a/\x01api.pb.go", false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			index := readFixtureIndex(t)
+			valid, occurrences := len(index.GetDocuments()), 0
+			for _, doc := range index.GetDocuments() {
+				occurrences += len(doc.GetOccurrences())
+			}
+			var limits Options
+			if tt.atOccLimit {
+				limits.MaxOccurrences = occurrences
+			}
+			symbol := index.GetDocuments()[0].GetOccurrences()[0].GetSymbol()
+			index.Documents = append([]*scip.Document{{
+				RelativePath:     tt.path,
+				PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+				Occurrences:      []*scip.Occurrence{{Range: []int32{0, 0, 1}, Symbol: symbol}},
+			}}, index.Documents...)
+			snapshot, err := parseSnapshot(context.Background(), marshalFixtureIndex(t, index), newParseLimits(limits))
+			if !tt.omitted {
+				if err == nil {
+					t.Fatal("parseSnapshot accepted the index, want refusal")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseSnapshot: %v", err)
+			}
+			if _, retained := snapshot.documents[tt.path]; retained || len(snapshot.documents) != valid || snapshot.unsupportedDocuments != 1 {
+				t.Fatalf("documents = %d, unsupported = %d, want %d valid and 1 omitted", len(snapshot.documents), snapshot.unsupportedDocuments, valid)
+			}
+		})
+	}
+}
+
 func TestQueriesSkipInvalidResultRanges(t *testing.T) {
 	fixture := newFixture(t, true)
 	index := readFixtureIndex(t)
