@@ -11,10 +11,12 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/spike/t451a"
 	"github.com/bmeddeb/phebs/spike/t451a/launcher"
 	"github.com/bmeddeb/phebs/spike/t451a/planner"
+	"github.com/bmeddeb/phebs/spike/t451a/sandbox"
 	"github.com/scip-code/scip/bindings/go/scip"
 	"google.golang.org/protobuf/proto"
 )
@@ -187,7 +189,8 @@ func TestNativeCohortBoundary(t *testing.T) {
 	})
 }
 
-func testNativeCallerBoundary(t *testing.T) {
+func nativeTestPlan(t *testing.T) (planner.Plan, []planner.Configured) {
+	t.Helper()
 	// Three configured aliases of one unchanged package exercise the closed
 	// cohort selector independently of a new native driver execution.
 	p := retainedPlan(t)
@@ -212,6 +215,11 @@ func testNativeCallerBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return p, roots
+}
+
+func testNativeCallerBoundary(t *testing.T) {
+	p, roots := nativeTestPlan(t)
 	rows := launcher.NativeGoFiles{Version: "phebs-t451b-native-go-files-v1", MappingSHA256: p.MappingSHA256, DocumentsSHA256: p.DocumentsSHA256, Packages: []launcher.NativeGoFilesPackage{{ID: "@@//lib:lib", GoFiles: []string{}}, {ID: "@@neutral_external+//pkg:pkg", GoFiles: []string{}}}}
 	for _, slot := range []string{"load", "scip"} {
 		prepared, err := launcher.PrepareNativeCompatibility(p, roots, slot, rows)
@@ -264,6 +272,172 @@ func testNativeProbeBoundary(t *testing.T) {
 		raw, _ := json.Marshal(bad)
 		if err := verifyNativeProbe(append(raw, '\n'), response); err == nil {
 			t.Fatal("accepted incomplete typed closure")
+		}
+	}
+}
+
+func TestNativeFailureEvidence(t *testing.T) {
+	encode := func(v any) []byte {
+		b, err := json.Marshal(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return append(b, '\n')
+	}
+	plan, roots := nativeTestPlan(t)
+	_, _, original := retainedCall(t)
+	var response struct {
+		Packages []struct {
+			ID      string
+			GoFiles []string
+		}
+	}
+	if err := json.Unmarshal(original.Result.DriverResponse, &response); err != nil {
+		t.Fatal(err)
+	}
+	rows := launcher.NativeGoFiles{Version: "phebs-t451b-native-go-files-v1", MappingSHA256: plan.MappingSHA256, DocumentsSHA256: plan.DocumentsSHA256}
+	for _, p := range response.Packages {
+		slices.Sort(p.GoFiles)
+		rows.Packages = append(rows.Packages, launcher.NativeGoFilesPackage{ID: p.ID, GoFiles: p.GoFiles})
+	}
+	slices.SortFunc(rows.Packages, func(a, b launcher.NativeGoFilesPackage) int { return strings.Compare(a.ID, b.ID) })
+	var completed []LegEvidence
+	for _, slot := range []string{"load", "scip"} {
+		prepared, err := launcher.PrepareNativeCompatibility(plan, roots, slot, rows)
+		if err != nil {
+			t.Fatal(err)
+		}
+		control, err := nativeControlBytes(plan, roots, rows, "neutral", slot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		hash := t451a.Digest(control)
+		env := nativeCallerEnvironment(prepared, slot, hash)
+		wire := callerRequest(env)
+		call := CallEvidence{Slot: slot, PlanSHA256: hash, Argv: append([]string{NativeAdapterPath}, prepared.Invocation().Arguments...), Environment: env, Directory: launcher.Workspace, Request: wire, RequestSHA256: t451a.Digest(wire), Launcher: prepared.Invocation(), LauncherSHA256: prepared.Digest(), Result: original.Result, DriverResponseSHA256: original.DriverResponseSHA256, ResponseSHA256: original.ResponseSHA256}
+		if err = verifyNativeCall(plan, roots, rows, "neutral", slot, call); err != nil {
+			t.Fatal("positive trace control", err)
+		}
+		for _, point := range []string{"protocol", "files", "probe"} {
+			if slot == "scip" && point == "probe" {
+				continue
+			}
+			t.Run(slot+"/"+point+" validation failure", func(t *testing.T) {
+				trace := &call
+				if point == "protocol" {
+					trace = nil
+				}
+				failed := nativeLegFailure(slot, point, false, time.Now().Add(-time.Millisecond), nil, nil, trace)
+				stage := "package-load/typecheck"
+				if slot == "scip" {
+					stage = "indexer-unlocalized"
+				}
+				e := NativeEvidence{Version: "phebs-t451b-native-evidence-v1", Request: validNativeRequest(t), Decision: "STOP", Stage: stage, WallNanoseconds: failed.WallNanoseconds + 1, Plan: &plan, GoFiles: &rows, Legs: completed, FailedLeg: failed}
+				if _, err := DecodeNativeEvidence(encode(e)); err != nil {
+					t.Fatal("lost validation failure", err)
+				}
+				// Aggregate-output refusal removes bulky proof but preserves the
+				// diagnostic identities and primary phase without claiming proof.
+				e.OmittedEvidenceBytes, e.OmittedEvidenceSHA256 = sandbox.OutputBytes, t451a.Digest(encode(e))
+				e.Plan, e.GoFiles, e.Legs, e.FailedLeg.Call = nil, nil, nil, nil
+				e.FailedLeg.Protocol = "unproven"
+				if _, err := DecodeNativeEvidence(encode(e)); err != nil {
+					t.Fatal("lost bounded failure summary", err)
+				}
+			})
+		}
+		trace := encode(call)
+		invalid := call
+		invalid.ResponseSHA256 = t451a.Digest(nil)
+		invalidTrace := encode(invalid)
+		for _, tc := range []struct {
+			name    string
+			trace   []byte
+			readErr error
+			proved  bool
+		}{
+			{"completed driver call", trace, nil, true},
+			{"missing trace", nil, os.ErrNotExist, false},
+			{"empty trace", nil, nil, false},
+			{"malformed trace", []byte(`{"slot":`), nil, false},
+			{"invalid trace", invalidTrace, nil, false},
+		} {
+			t.Run(slot+"/"+tc.name, func(t *testing.T) {
+				retained, traceErr := nativeCallFromTrace(plan, roots, rows, "neutral", slot, tc.trace, tc.readErr)
+				if (traceErr == nil) != tc.proved || (retained != nil) != tc.proved {
+					t.Fatal("protocol proof mismatch", traceErr)
+				}
+				stdout, stderr := []byte("private failed stdout"), []byte("private failed stderr")
+				failed := nativeLegFailure(slot, "client", true, time.Now().Add(-time.Millisecond), stdout, stderr, retained)
+				if failed.StdoutBytes != len(stdout) || failed.StdoutSHA256 != t451a.Digest(stdout) || failed.StderrBytes != len(stderr) || failed.StderrSHA256 != t451a.Digest(stderr) || (failed.Protocol == "completed") != tc.proved {
+					t.Fatal("lost failed client identity")
+				}
+				stage := "package-load/typecheck"
+				if slot == "scip" {
+					stage = "indexer-unlocalized"
+				}
+				e := NativeEvidence{Version: "phebs-t451b-native-evidence-v1", Request: validNativeRequest(t), Decision: "STOP", Stage: stage, WallNanoseconds: failed.WallNanoseconds + 1, Plan: &plan, GoFiles: &rows, Legs: completed, FailedLeg: failed}
+				b := encode(e)
+				if bytes.Contains(b, stdout) || bytes.Contains(b, stderr) {
+					t.Fatal("raw failed diagnostics escaped into evidence")
+				}
+				decoded, err := DecodeNativeEvidence(b)
+				if err != nil || decoded.Decision != "STOP" || decoded.FailedLeg.Protocol != failed.Protocol || len(decoded.Legs) != len(completed) {
+					t.Fatal("lost partial STOP", err)
+				}
+				for _, mutate := range []func(*NativeEvidence){
+					func(e *NativeEvidence) { e.Decision = "COHORT_OBSERVED" },
+					func(e *NativeEvidence) { e.Stage = "validation" },
+					func(e *NativeEvidence) { e.FailedLeg.ClientError = false },
+					func(e *NativeEvidence) { e.FailedLeg.StdoutBytes = maxClientBytes + 1 },
+					func(e *NativeEvidence) { e.FailedLeg.StderrSHA256 = "unknown" },
+					func(e *NativeEvidence) { e.FailedLeg.Protocol = "target failure" },
+				} {
+					var bad NativeEvidence
+					_ = json.Unmarshal(b, &bad)
+					mutate(&bad)
+					wire := encode(bad)
+					if _, err = DecodeNativeEvidence(wire); err == nil {
+						t.Fatal("admitted unsubstantiated failure evidence")
+					}
+				}
+				// The sandbox-error and incomplete-result branches retain the same
+				// source-free STOP and expose only bounded private operator text.
+				outerStderr := []byte("operator diagnostic " + strings.Repeat("x", 8192) + "beyond-bound")
+				for _, runErr := range []error{errors.New("sandbox refused"), nil} {
+					r, err := finishNativeReceipt(NativeReceipt{Outcome: "STOP", Stage: "sandbox", Request: e.Request, InputsRemoved: true}, sandbox.Result{Stdout: b, Stderr: outerStderr, ExitCode: 1, Removed: true, Resources: sandbox.Resources{LimitsVerified: true}}, runErr)
+					if err == nil || runErr != nil && !errors.Is(err, runErr) || r.Outcome != "STOP" || r.Stage != stage || !bytes.Equal(r.NativeEvidence, b) || r.StderrBytes != len(outerStderr) || r.StderrSHA256 != t451a.Digest(outerStderr) || !strings.Contains(err.Error(), "operator diagnostic") || strings.Contains(err.Error(), "beyond-bound") {
+						t.Fatal("lost refusal or bounded outer diagnostics", err)
+					}
+				}
+				if tc.proved {
+					// The host repeats full validation; it does not trust the worker's
+					// completed marker or the earlier successful load invocation.
+					e.FailedLeg.Call.ResponseSHA256 = t451a.Digest(nil)
+					bad := encode(e)
+					if _, err = DecodeNativeEvidence(bad); err == nil {
+						t.Fatal("accepted a forged completed trace")
+					}
+				}
+			})
+		}
+		if slot == "load" {
+			var flat nativeFlat
+			_ = json.Unmarshal(call.Result.Response, &flat)
+			report := loadReport{Mode: launcher.CompatibilityMode}
+			for _, p := range flat.Packages {
+				fact := loadFact{ID: p.ID, Path: p.PkgPath, Types: true}
+				if slices.Contains(flat.Roots, p.ID) {
+					fact.Syntax, fact.TypeInfo = len(p.CompiledGoFiles), true
+					report.Roots = append(report.Roots, fact)
+				}
+				report.Packages = append(report.Packages, fact)
+			}
+			order := func(a, b loadFact) int { return strings.Compare(a.ID, b.ID) }
+			slices.SortFunc(report.Roots, order)
+			slices.SortFunc(report.Packages, order)
+			stdout := encode(report)
+			completed = []LegEvidence{{Slot: slot, ClientArgv: append([]string{NativeProbePath}, call.Launcher.Arguments...), Environment: env, WallNanoseconds: 1, Stdout: stdout, Call: call}}
 		}
 	}
 }

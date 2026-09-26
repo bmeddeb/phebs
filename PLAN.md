@@ -6041,3 +6041,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The read-only input cache is reported separately. Cold/retry runs repeat
   private preparation; no production request/query, sync tick, startup/restart,
   retry/no-op, publication, lock, concurrency, runtime cap or UI changes result.
+
+- **2026-09-26 — T45.1b failed-client evidence correction.** Independent
+  integration review of `ce091a18189a67e89aaffd456fed00bda15f47f9` found one
+  medium gap: a failed native client discarded any completed adapter trace,
+  leaving protocol refusal and later client failure indistinguishable in the
+  durable phase-only receipt. Native STOP evidence now retains the failed
+  slot, closed failure point, client-error fact, bounded output byte counts
+  and digests, and any independently validated complete adapter response.
+  Missing, empty, malformed or invalid trace remains `unproven`; a completed
+  driver protocol proves neither successful typing/indexing nor a target cause.
+  Failed legs cannot occupy the successful-leg list or satisfy cohort success.
+  An oversized receipt drops its trace and downgrades protocol evidence to
+  unproven while retaining the omitted-evidence digest. The first failing phase
+  remains controlling. Outer receipts additionally bind stderr bytes/digest;
+  raw diagnostic output stays local under the existing 8-KiB operator-display
+  ceiling, including the fallback incomplete-result path. Historical neutral
+  receipts and successful client checks remain unchanged. This correction
+  requires exact local gates, independent re-review and rebuilt artifact/config
+  bindings before requesting execution of the new profile.
+  Cost: only failed client legs hash their already bounded stdout/stderr,
+  totaling at most 1 MiB. A failed client now attempts the existing at-most-4-MiB
+  trace read/decode and one full compatibility preparation when that trace can
+  be validated; host validation repeats that preparation for a retained
+  completed call. The bounded trace remains in partial STOP evidence, within
+  the unchanged whole-worker output ceiling. Successful client preparation,
+  source/export checks and child count are unchanged. Every sandbox return adds
+  one hash over its already bounded stderr, at most 16 MiB, including the empty
+  result. No extra tool execution, retry, persistent state, cache, lock or
+  production request, sync, startup or publication work is added.

@@ -67,6 +67,21 @@ type NativeTiming struct {
 	Nanoseconds int64  `json:"nanoseconds"`
 }
 
+// NativeFailedLeg retains diagnostic identities, never raw failed output. A
+// completed protocol call does not establish successful typing or indexing.
+type NativeFailedLeg struct {
+	Slot            string        `json:"slot"`
+	Point           string        `json:"point"`
+	ClientError     bool          `json:"client_error"`
+	Protocol        string        `json:"protocol"`
+	WallNanoseconds int64         `json:"wall_nanoseconds"`
+	StdoutBytes     int           `json:"stdout_bytes"`
+	StdoutSHA256    string        `json:"stdout_sha256"`
+	StderrBytes     int           `json:"stderr_bytes"`
+	StderrSHA256    string        `json:"stderr_sha256"`
+	Call            *CallEvidence `json:"call,omitempty"`
+}
+
 type NativeEvidence struct {
 	Version               string                  `json:"version"`
 	Request               NativeRequest           `json:"request"`
@@ -83,6 +98,7 @@ type NativeEvidence struct {
 	Observations          Observations            `json:"observations"`
 	Cache                 PrivateCacheObservation `json:"cache"`
 	Legs                  []LegEvidence           `json:"legs"`
+	FailedLeg             *NativeFailedLeg        `json:"failed_leg,omitempty"`
 	SCIP                  []byte                  `json:"scip"`
 	SCIPSHA256            string                  `json:"scip_sha256"`
 	Oracle                *NativeSCIPFacts        `json:"oracle,omitempty"`
@@ -370,6 +386,11 @@ func DecodeNativeEvidence(data []byte) (NativeEvidence, error) {
 			return e, err
 		}
 	}
+	if e.FailedLeg != nil {
+		if err = verifyNativeFailedLeg(e); err != nil {
+			return e, err
+		}
+	}
 	if e.Plan == nil {
 		if e.GoFiles != nil || e.SelectedSDK != nil || len(e.Legs) != 0 || e.Oracle != nil || len(e.SCIP) != 0 {
 			return e, errors.New("native evidence without plan")
@@ -443,6 +464,52 @@ func DecodeNativeEvidence(data []byte) (NativeEvidence, error) {
 		}
 	}
 	return e, nil
+}
+
+func verifyNativeFailedLeg(e NativeEvidence) error {
+	f := e.FailedLeg
+	if e.Decision != "STOP" || f == nil || f.WallNanoseconds <= 0 || f.WallNanoseconds > e.WallNanoseconds || f.StdoutBytes < 0 || f.StderrBytes < 0 || f.StdoutBytes > maxClientBytes || f.StderrBytes > maxClientBytes-f.StdoutBytes || !digest(f.StdoutSHA256) || !digest(f.StderrSHA256) || f.StdoutBytes == 0 && f.StdoutSHA256 != t451a.Digest(nil) || f.StderrBytes == 0 && f.StderrSHA256 != t451a.Digest(nil) || !slices.Contains([]string{"client", "protocol", "files", "probe"}, f.Point) || (f.Point == "client") != f.ClientError || f.Point == "probe" && f.Slot != "load" {
+		return errors.New("native failed-leg identity")
+	}
+	if _, _, err := nativeSlotPaths(f.Slot); err != nil {
+		return err
+	}
+	stage := "package-load/typecheck"
+	if f.Slot == "scip" {
+		stage = "indexer-unlocalized"
+	}
+	if e.Stage != stage {
+		return errors.New("native failed leg stage mismatch")
+	}
+	if e.OmittedEvidenceBytes > 0 {
+		if f.Protocol != "unproven" || f.Call != nil {
+			return errors.New("omitted native protocol cannot be substantiated")
+		}
+		return nil
+	}
+	if e.Plan == nil || e.GoFiles == nil || len(e.Legs) > 1 || f.Slot != []string{"load", "scip"}[len(e.Legs)] {
+		return errors.New("native failed leg ordering")
+	}
+	switch f.Protocol {
+	case "unproven":
+		if f.Call != nil || f.Point != "client" && f.Point != "protocol" {
+			return errors.New("native unproven protocol shape")
+		}
+	case "completed":
+		if f.Call == nil || f.Point == "protocol" {
+			return errors.New("native completed protocol shape")
+		}
+		roots, err := nativeRoots(*e.Plan, e.Request.Cohort)
+		if err != nil {
+			return err
+		}
+		if err = verifyNativeCall(*e.Plan, roots, *e.GoFiles, e.Request.Cohort, f.Slot, *f.Call); err != nil {
+			return err
+		}
+	default:
+		return errors.New("unknown native protocol evidence")
+	}
+	return nil
 }
 
 func validateNativeMeasurements(e NativeEvidence) error {

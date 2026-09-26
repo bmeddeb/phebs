@@ -32,6 +32,8 @@ type NativeReceipt struct {
 	Stage               string            `json:"stage"`
 	OutputSHA256        string            `json:"output_sha256"`
 	OutputBytes         int               `json:"output_bytes"`
+	StderrBytes         int               `json:"stderr_bytes"`
+	StderrSHA256        string            `json:"stderr_sha256"`
 	ExitCode            int               `json:"exit_code"`
 	StopReason          string            `json:"stop_reason"`
 	OOMKilled           bool              `json:"oom_killed"`
@@ -100,13 +102,18 @@ func runNative(ctx context.Context, c NativeConfig, manifest []byte) (NativeRece
 	if stage != "sandbox" {
 		return r, runErr
 	}
+	return finishNativeReceipt(r, result, runErr)
+}
+
+func finishNativeReceipt(r NativeReceipt, result sandbox.Result, runErr error) (NativeReceipt, error) {
 	r.ContainerID, r.Removed, r.ExitCode, r.Resources = result.ContainerID, result.Removed, result.ExitCode, result.Resources
 	r.StopReason, r.OOMKilled = result.StopReason, result.OOMKilled
 	r.OutputBytes, r.OutputSHA256 = len(result.Stdout), t451a.Digest(result.Stdout)
+	r.StderrBytes, r.StderrSHA256 = len(result.Stderr), t451a.Digest(result.Stderr)
 	// Decode before examining execution failure: valid typed partial evidence
 	// enriches only STOP. Sandbox refusal, cleanup or exit cannot become success.
 	evidence, evidenceErr := DecodeNativeEvidence(result.Stdout)
-	if evidenceErr == nil && evidence.Request == request {
+	if evidenceErr == nil && evidence.Request == r.Request {
 		r.NativeEvidence = result.Stdout
 		r.Stage = evidence.Stage
 	} else {
@@ -115,8 +122,8 @@ func runNative(ctx context.Context, c NativeConfig, manifest []byte) (NativeRece
 	if runErr != nil {
 		return r, fmt.Errorf("native execution refused: %w: %.8192s", errors.Join(runErr, evidenceErr), result.Stderr)
 	}
-	if result.ExitCode != 0 || !result.Removed || !removed || !result.Resources.LimitsVerified || evidenceErr != nil || evidence.Decision != "COHORT_OBSERVED" {
-		return r, errors.Join(evidenceErr, errors.New("native execution incomplete"))
+	if result.ExitCode != 0 || !result.Removed || !r.InputsRemoved || !result.Resources.LimitsVerified || evidenceErr != nil || evidence.Decision != "COHORT_OBSERVED" {
+		return r, fmt.Errorf("native execution refused: %w: %.8192s", errors.Join(evidenceErr, errors.New("native execution incomplete")), result.Stderr)
 	}
 	r.Stage = "complete"
 	r.Outcome = "NATIVE_COHORT_OBSERVED"

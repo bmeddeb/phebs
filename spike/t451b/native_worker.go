@@ -81,6 +81,10 @@ func NativeWorker(ctx context.Context, r NativeRequest) (err error) {
 			e.OmittedEvidenceBytes, e.OmittedEvidenceSHA256 = len(data), t451a.Digest(data)
 			e.Decision = "STOP"
 			e.Plan, e.GoFiles, e.SelectedSDK, e.Legs, e.SCIP, e.SCIPSHA256, e.Oracle = nil, nil, nil, nil, nil, "", nil
+			if e.FailedLeg != nil {
+				e.FailedLeg.Call = nil
+				e.FailedLeg.Protocol = "unproven"
+			}
 			data, encodeErr = json.Marshal(e)
 			if len(data)+1 > sandbox.OutputBytes {
 				encodeErr = errors.New("native reduced evidence output limit")
@@ -157,8 +161,9 @@ func NativeWorker(ctx context.Context, r NativeRequest) (err error) {
 			stage = "indexer-unlocalized"
 		}
 		setStage(stage)
-		leg, err := runNativeLeg(ctx, plan, roots, matches, r.Cohort, slot)
+		leg, failed, err := runNativeLeg(ctx, plan, roots, matches, r.Cohort, slot)
 		if err != nil {
+			e.FailedLeg = failed
 			return err
 		}
 		e.Legs = append(e.Legs, leg)
@@ -228,59 +233,80 @@ func validateNativeNeutral(plan planner.Plan, matches launcher.NativeGoFiles) er
 	return nil
 }
 
-func runNativeLeg(ctx context.Context, plan planner.Plan, roots []planner.Configured, matches launcher.NativeGoFiles, cohort, slot string) (LegEvidence, error) {
+func runNativeLeg(ctx context.Context, plan planner.Plan, roots []planner.Configured, matches launcher.NativeGoFiles, cohort, slot string) (LegEvidence, *NativeFailedLeg, error) {
 	var leg LegEvidence
 	p, err := launcher.PrepareNativeCompatibility(plan, roots, slot, matches)
 	if err != nil {
-		return leg, err
+		return leg, nil, err
 	}
 	data, err := nativeControlBytes(plan, roots, matches, cohort, slot)
 	if err != nil {
-		return leg, err
+		return leg, nil, err
 	}
 	if len(data) > planner.MaxProtoBytes {
-		return leg, errors.New("native client control byte bound")
+		return leg, nil, errors.New("native client control byte bound")
 	}
 	planPath, tracePath, err := nativeSlotPaths(slot)
 	if err != nil {
-		return leg, err
+		return leg, nil, err
 	}
 	env := nativeCallerEnvironment(p, slot, t451a.Digest(data))
 	if len(callerRequest(env)) > maxRequestBytes {
-		return leg, errors.New("native client request ceiling")
+		return leg, nil, errors.New("native client request ceiling")
 	}
 	if err = closedFile(planPath, data); err != nil {
-		return leg, err
+		return leg, nil, err
 	}
 	executable, args := NativeProbePath, p.Invocation().Arguments
 	if slot == "scip" {
 		executable, args = SCIPPath, nativeSCIPArguments(cohort, args)
 	}
 	started := time.Now()
-	stdout, stderr, err := runClient(ctx, executable, args, env)
-	if err != nil {
-		return leg, fmt.Errorf("native %s client refused: %w: %.4096s", slot, err, stderr)
-	}
-	raw, err := readBounded(tracePath, maxTraceBytes)
-	if err != nil {
-		return leg, err
-	}
-	call, err := decode[CallEvidence](raw, maxTraceBytes, false)
-	if err != nil {
-		return leg, err
-	}
-	if err = verifyNativeCall(plan, roots, matches, cohort, slot, call); err != nil {
-		return leg, err
+	stdout, stderr, clientErr := runClient(ctx, executable, args, env)
+	// Even a failed client may have completed its own distinct driver call.
+	// Missing, partial or invalid trace bytes prove no protocol or target cause.
+	raw, readErr := readBounded(tracePath, maxTraceBytes)
+	call, traceErr := nativeCallFromTrace(plan, roots, matches, cohort, slot, raw, readErr)
+	if clientErr != nil || traceErr != nil {
+		point := "protocol"
+		if clientErr != nil {
+			point = "client"
+		}
+		failed := nativeLegFailure(slot, point, clientErr != nil, started, stdout, stderr, call)
+		return leg, failed, fmt.Errorf("native %s leg refused: %w: %.4096s", slot, errors.Join(clientErr, traceErr), stderr)
 	}
 	if err = launcher.VerifyNativeCompatibilityFiles(ctx, plan, roots, slot, matches, call.Result.Exports); err != nil {
-		return leg, err
+		return leg, nativeLegFailure(slot, "files", false, started, stdout, stderr, call), err
 	}
 	if slot == "load" {
 		if err = verifyNativeProbe(stdout, call.Result.Response); err != nil {
-			return leg, err
+			return leg, nativeLegFailure(slot, "probe", false, started, stdout, stderr, call), err
 		}
 	}
-	return LegEvidence{slot, append([]string{executable}, args...), env, time.Since(started).Nanoseconds(), stdout, stderr, call}, nil
+	return LegEvidence{slot, append([]string{executable}, args...), env, time.Since(started).Nanoseconds(), stdout, stderr, *call}, nil, nil
+}
+
+func nativeCallFromTrace(plan planner.Plan, roots []planner.Configured, matches launcher.NativeGoFiles, cohort, slot string, raw []byte, readErr error) (*CallEvidence, error) {
+	if readErr != nil {
+		return nil, readErr
+	}
+	call, err := decode[CallEvidence](raw, maxTraceBytes, false)
+	if err != nil {
+		return nil, err
+	}
+	if err = verifyNativeCall(plan, roots, matches, cohort, slot, call); err != nil {
+		return nil, err
+	}
+	return &call, nil
+}
+
+// Only failure paths hash client output; success keeps its existing raw evidence.
+func nativeLegFailure(slot, point string, clientError bool, started time.Time, stdout, stderr []byte, call *CallEvidence) *NativeFailedLeg {
+	protocol := "unproven"
+	if call != nil {
+		protocol = "completed"
+	}
+	return &NativeFailedLeg{Slot: slot, Point: point, ClientError: clientError, Protocol: protocol, WallNanoseconds: time.Since(started).Nanoseconds(), StdoutBytes: len(stdout), StdoutSHA256: t451a.Digest(stdout), StderrBytes: len(stderr), StderrSHA256: t451a.Digest(stderr), Call: call}
 }
 
 // Preserve the first substantiated failing phase; accounting still retains its
