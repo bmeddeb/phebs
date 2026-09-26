@@ -14,10 +14,22 @@ import (
 
 const gazelleCompilerCache = "/scratch/bazel-output/external/gazelle++non_module_deps+bazel_gazelle_go_repository_cache/gocache"
 
+// QuiescenceError retains only a best-effort diagnostic for the process that
+// caused the existing refusal. A missing diagnostic never changes that refusal.
+type QuiescenceError struct {
+	Process *ProcessDiagnostic
+}
+
+func (*QuiescenceError) Error() string { return "tool process remains before cache eviction" }
+
 // Cache eviction runs only after every tool process has exited. Threads share
 // their process's directory; PID1 and this worker are the only allowed leaders.
 func ensureQuiescentWorker() error {
-	proc, err := os.Open("/proc")
+	return ensureQuiescentWorkerAt("/proc", os.Getpid())
+}
+
+func ensureQuiescentWorkerAt(procPath string, workerPID int) error {
+	proc, err := os.Open(procPath)
 	if err != nil {
 		return err
 	}
@@ -28,8 +40,12 @@ func ensureQuiescentWorker() error {
 	}
 	for _, name := range names {
 		pid, err := strconv.Atoi(name)
-		if err == nil && pid != 1 && pid != os.Getpid() {
-			return errors.New("tool process remains before cache eviction")
+		if err == nil && pid != 1 && pid != workerPID {
+			var diagnostic *ProcessDiagnostic
+			if pid > 0 && uint64(pid) <= 1<<32-1 {
+				diagnostic = ReadProcessDiagnostic(os.DirFS(procPath), uint32(pid), 0)
+			}
+			return &QuiescenceError{Process: diagnostic}
 		}
 	}
 	return nil

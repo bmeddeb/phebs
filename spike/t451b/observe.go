@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bmeddeb/phebs/spike/t451a"
 	"github.com/bmeddeb/phebs/spike/t451a/sandbox"
 )
 
@@ -27,20 +28,21 @@ const maxObservedLifetimes = 65536
 // particular their aggregate is not an exact simultaneous peak or a guaranteed
 // lower bound on that peak. Unavailable is sticky; no field proves completeness.
 type Observations struct {
-	Version                  string `json:"version"`
-	IntervalNanoseconds      int64  `json:"interval_nanoseconds"`
-	DurationNanoseconds      int64  `json:"duration_nanoseconds"`
-	Samples                  uint64 `json:"samples"`
-	SampledChildLifetimes    uint64 `json:"sampled_child_lifetimes"`
-	ChildLifetimesLowerBound bool   `json:"child_lifetimes_lower_bound"`
-	SampledProcessFDPeak     uint64 `json:"sampled_process_fd_peak"`
-	SampledAggregateFDPeak   uint64 `json:"sampled_aggregate_fd_peak"`
-	FDCountsNonAtomic        bool   `json:"fd_counts_non_atomic"`
-	Vanished                 uint64 `json:"vanished"`
-	Raced                    uint64 `json:"raced"`
-	UnexpectedErrors         uint64 `json:"unexpected_errors"`
-	Unavailable              bool   `json:"unavailable"`
-	Failure                  string `json:"failure,omitempty"`
+	Version                  string                   `json:"version"`
+	IntervalNanoseconds      int64                    `json:"interval_nanoseconds"`
+	DurationNanoseconds      int64                    `json:"duration_nanoseconds"`
+	Samples                  uint64                   `json:"samples"`
+	SampledChildLifetimes    uint64                   `json:"sampled_child_lifetimes"`
+	ChildLifetimesLowerBound bool                     `json:"child_lifetimes_lower_bound"`
+	SampledProcessFDPeak     uint64                   `json:"sampled_process_fd_peak"`
+	SampledAggregateFDPeak   uint64                   `json:"sampled_aggregate_fd_peak"`
+	FDCountsNonAtomic        bool                     `json:"fd_counts_non_atomic"`
+	Vanished                 uint64                   `json:"vanished"`
+	Raced                    uint64                   `json:"raced"`
+	UnexpectedErrors         uint64                   `json:"unexpected_errors"`
+	Unavailable              bool                     `json:"unavailable"`
+	Failure                  string                   `json:"failure,omitempty"`
+	FailureProcess           *t451a.ProcessDiagnostic `json:"failure_process,omitempty"`
 }
 
 type observedLifetime struct {
@@ -172,62 +174,62 @@ func observationUID(raw []byte) (uint32, error) {
 	return uid, nil
 }
 
-func (o *processObserver) process(pid uint32) (uint64, error) {
+func (o *processObserver) process(pid uint32) (fdsCount, start uint64, err error) {
 	base := strconv.FormatUint(uint64(pid), 10)
 	before, err := observationRead(o.proc, base+"/stat")
 	if err != nil {
-		return 0, err
+		return 0, start, err
 	}
-	start, err := observationStart(before, pid)
+	start, err = observationStart(before, pid)
 	if err != nil {
-		return 0, err
+		return 0, start, err
 	}
 	status, err := observationRead(o.proc, base+"/status")
 	if err != nil {
-		return 0, err
+		return 0, start, err
 	}
 	uid, err := observationUID(status)
 	if err != nil {
-		return 0, err
+		return 0, start, err
 	}
 	if uid != o.uid {
 		if pid == o.pid {
-			return 0, errors.New("worker UID changed")
+			return 0, start, errors.New("worker UID changed")
 		}
-		return 0, nil
+		return 0, start, nil
 	}
 	fds, err := observationDirectory(o.proc, base+"/fd", sandbox.DescriptorLimit)
 	if err != nil {
-		return 0, err
+		return 0, start, err
 	}
 	for _, fd := range fds {
 		if n, err := strconv.ParseUint(fd.Name(), 10, 32); err != nil || strconv.FormatUint(n, 10) != fd.Name() {
-			return 0, errors.New("invalid proc descriptor")
+			return 0, start, errors.New("invalid proc descriptor")
 		}
 	}
 	after, err := observationRead(o.proc, base+"/stat")
 	if err != nil {
-		return 0, err
+		return 0, start, err
 	}
 	end, err := observationStart(after, pid)
 	if err != nil {
-		return 0, err
+		return 0, start, err
 	}
 	if start != end {
 		o.facts.Raced++
-		return 0, errors.New("proc lifetime changed during descriptor observation")
+		return 0, start, errors.New("proc lifetime changed during descriptor observation")
 	}
 	if pid != o.pid {
 		key := observedLifetime{pid, start}
 		if _, ok := o.seen[key]; !ok {
 			if len(o.seen) == maxObservedLifetimes {
-				return 0, errors.New("observed lifetime bound")
+				return 0, start, errors.New("observed lifetime bound")
 			}
 			o.seen[key] = struct{}{}
 			o.facts.SampledChildLifetimes++
 		}
 	}
-	return uint64(len(fds)), nil
+	return uint64(len(fds)), start, nil
 }
 
 func (o *processObserver) sample() {
@@ -261,12 +263,17 @@ func (o *processObserver) sample() {
 		}
 		pid := uint32(n)
 		worker = worker || pid == o.pid
-		fds, err := o.process(pid)
+		fds, start, err := o.process(pid)
 		if vanished(err) && pid != o.pid {
 			o.facts.Vanished++
 			continue
 		}
 		if err != nil {
+			// Capture once for the sticky offending lifetime, never retry the
+			// observer or replace its refusal if these diagnostic reads fail.
+			if o.err == nil && start != 0 {
+				o.facts.FailureProcess = t451a.ReadProcessDiagnostic(o.proc, pid, start)
+			}
 			o.fail("process", err)
 			continue
 		}

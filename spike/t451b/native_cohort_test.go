@@ -149,6 +149,28 @@ func TestNativeCohortBoundary(t *testing.T) {
 			}
 		}
 	})
+	t.Run("refusal diagnostics remain STOP only", func(t *testing.T) {
+		diagnostic := &t451a.ProcessDiagnostic{Comm: "child", State: "Z", PPID: 1, PGID: 3, SID: 3, NoNewPrivs: true, CapPrm: "0000000000000000"}
+		for _, attach := range []func(*NativeEvidence){
+			func(e *NativeEvidence) { e.Observations.FailureProcess = diagnostic },
+			func(e *NativeEvidence) { e.PlanningQuiescenceProcess = diagnostic },
+			func(e *NativeEvidence) { e.FinalQuiescenceProcess = diagnostic },
+		} {
+			e := NativeEvidence{Version: "phebs-t451b-native-evidence-v1", Request: validNativeRequest(t), Decision: "STOP", Stage: "containment/measurement", WallNanoseconds: 1}
+			attach(&e)
+			b, err := json.Marshal(e)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := DecodeNativeEvidence(append(b, '\n'))
+			if err != nil || got.Observations.FailureProcess == nil && got.PlanningQuiescenceProcess == nil && got.FinalQuiescenceProcess == nil {
+				t.Fatal("lost partial refusal diagnostic", err)
+			}
+			if err := validateNativeMeasurements(e); err == nil || err.Error() != "native refusal diagnostics cannot establish completion" {
+				t.Fatal("diagnostic admitted as healthy measurement", err)
+			}
+		}
+	})
 	t.Run("primary failure survives measurement", func(t *testing.T) {
 		first, second := errors.New("planning failure"), errors.New("sampling failure")
 		for _, prior := range []error{nil, first} {

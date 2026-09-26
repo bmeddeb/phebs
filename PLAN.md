@@ -6205,3 +6205,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Phebs admission remain open. This record adds no production request, sync,
   startup/restart, retry/no-op, publication, lock, cache, memory/disk or child
   work; the preceding repair cost record remains controlling.
+
+- **2026-09-26 — T45.1b approved process-refusal diagnostics.** Ben authorized
+  one diagnostic-only helper change and one fresh native-neutral run, followed
+  by independent returned-evidence review, cleanup and stop. The first sticky
+  observer process error with a known lifetime may retain only `comm`, `state`,
+  `ppid`, `pgid`, `sid`, all four `Uid`/`Gid` values, `NoNewPrivs` and `CapPrm`.
+  The shared quiescence refusal attaches the same fields, covering both its
+  planning and finalization callers with separate native receipt slots. It
+  retains its exact census, PID-1/self exemptions and error text; zombies and
+  other-UID entries still refuse. The observer's UID/vanished handling,
+  lifetime/descriptor/process bounds and sticky failure remain exact. A
+  bounded `stat`/`status`/`stat` capture checks PID, lifetime and stable stat
+  identity internally without retaining PID/starttime or raw records. If the
+  identity is unavailable, malformed or changes, the diagnostic is absent;
+  this does not clear the original refusal or authorize a diagnostic retry.
+  Neither cmdline, environment nor exe is read. Snapshots are sequential,
+  not an atomic process-state claim. Diagnostics cannot establish completion.
+  Only helper/bundle identities change; tools, target HEAD, roots, request/env,
+  downloader policy, container network denial and all caps stay fixed. Original
+  evidence is unchanged. No public cohort, merge, push or PR is authorized.
+  Cost: healthy observation adds no proc read or child. The first process
+  failure and each existing planning/final quiescence refusal add at most
+  three serial bounded proc reads/opens/closes, each accepting at most 8 KiB
+  plus one overflow sentinel, with no subprocess, retry or persistent cache.
+  The census descriptor remains open during capture, so quiescence adds at
+  most one concurrent descriptor. Observer capture may overlap the planning
+  capture, adding at most two diagnostic descriptors across both callers;
+  finalization joins the observer before its census. The quiescence snapshot does not identify
+  the lifetime seen by an earlier observer error or prove an executable name.
+  At most three small diagnostic records are retained by one native worker;
+  they share the existing aggregate output cap. No production query/request,
+  sync, startup/restart, retry/no-op, publication, lock or cache cost changes.

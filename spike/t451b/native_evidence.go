@@ -83,27 +83,29 @@ type NativeFailedLeg struct {
 }
 
 type NativeEvidence struct {
-	Version               string                  `json:"version"`
-	Request               NativeRequest           `json:"request"`
-	Decision              string                  `json:"decision"`
-	Stage                 string                  `json:"stage"`
-	WallNanoseconds       int64                   `json:"wall_nanoseconds"`
-	Timings               []NativeTiming          `json:"timings"`
-	Plan                  *planner.Plan           `json:"plan,omitempty"`
-	GoFiles               *launcher.NativeGoFiles `json:"go_files,omitempty"`
-	CompilerCacheEviction t451a.CacheEviction     `json:"compiler_cache_eviction"`
-	Tools                 []ToolIdentity          `json:"tools"`
-	SelectedSDK           *ToolIdentity           `json:"selected_sdk,omitempty"`
-	Materialization       Materialization         `json:"materialization"`
-	Observations          Observations            `json:"observations"`
-	Cache                 PrivateCacheObservation `json:"cache"`
-	Legs                  []LegEvidence           `json:"legs"`
-	FailedLeg             *NativeFailedLeg        `json:"failed_leg,omitempty"`
-	SCIP                  []byte                  `json:"scip"`
-	SCIPSHA256            string                  `json:"scip_sha256"`
-	Oracle                *NativeSCIPFacts        `json:"oracle,omitempty"`
-	OmittedEvidenceBytes  int                     `json:"omitted_evidence_bytes,omitempty"`
-	OmittedEvidenceSHA256 string                  `json:"omitted_evidence_sha256,omitempty"`
+	Version                   string                   `json:"version"`
+	Request                   NativeRequest            `json:"request"`
+	Decision                  string                   `json:"decision"`
+	Stage                     string                   `json:"stage"`
+	WallNanoseconds           int64                    `json:"wall_nanoseconds"`
+	Timings                   []NativeTiming           `json:"timings"`
+	Plan                      *planner.Plan            `json:"plan,omitempty"`
+	GoFiles                   *launcher.NativeGoFiles  `json:"go_files,omitempty"`
+	CompilerCacheEviction     t451a.CacheEviction      `json:"compiler_cache_eviction"`
+	Tools                     []ToolIdentity           `json:"tools"`
+	SelectedSDK               *ToolIdentity            `json:"selected_sdk,omitempty"`
+	Materialization           Materialization          `json:"materialization"`
+	Observations              Observations             `json:"observations"`
+	PlanningQuiescenceProcess *t451a.ProcessDiagnostic `json:"planning_quiescence_process,omitempty"`
+	FinalQuiescenceProcess    *t451a.ProcessDiagnostic `json:"final_quiescence_process,omitempty"`
+	Cache                     PrivateCacheObservation  `json:"cache"`
+	Legs                      []LegEvidence            `json:"legs"`
+	FailedLeg                 *NativeFailedLeg         `json:"failed_leg,omitempty"`
+	SCIP                      []byte                   `json:"scip"`
+	SCIPSHA256                string                   `json:"scip_sha256"`
+	Oracle                    *NativeSCIPFacts         `json:"oracle,omitempty"`
+	OmittedEvidenceBytes      int                      `json:"omitted_evidence_bytes,omitempty"`
+	OmittedEvidenceSHA256     string                   `json:"omitted_evidence_sha256,omitempty"`
 }
 
 func nativeSCIPArguments(cohort string, patterns []string) []string {
@@ -514,6 +516,9 @@ func verifyNativeFailedLeg(e NativeEvidence) error {
 
 func validateNativeMeasurements(e NativeEvidence) error {
 	o, c := e.Observations, e.Cache
+	if o.FailureProcess != nil || e.PlanningQuiescenceProcess != nil || e.FinalQuiescenceProcess != nil {
+		return errors.New("native refusal diagnostics cannot establish completion")
+	}
 	if o.Version != "phebs-t451b-sampled-observations-v1" || o.IntervalNanoseconds != observationInterval.Nanoseconds() || o.DurationNanoseconds <= 0 || o.DurationNanoseconds > e.WallNanoseconds || !o.ChildLifetimesLowerBound || !o.FDCountsNonAtomic || o.Unavailable || o.UnexpectedErrors != 0 || o.Failure != "" || o.SampledChildLifetimes > maxObservedLifetimes || o.SampledProcessFDPeak > sandbox.DescriptorLimit || o.SampledAggregateFDPeak > sandbox.DescriptorLimit*sandbox.TaskLimit {
 		return errors.New("native observation contract")
 	}

@@ -48,6 +48,10 @@ func NativeWorker(ctx context.Context, r NativeRequest) (err error) {
 	defer func() {
 		setStage(e.Stage)
 		measurementStarted := time.Now()
+		var planningRefusal *t451a.QuiescenceError
+		if errors.As(err, &planningRefusal) {
+			e.PlanningQuiescenceProcess = planningRefusal.Process
+		}
 		if stop != nil {
 			var observationErr error
 			e.Observations, observationErr = stop()
@@ -55,6 +59,10 @@ func NativeWorker(ctx context.Context, r NativeRequest) (err error) {
 		}
 		// Reuse the bounded private process census before exact cache accounting.
 		cacheErr := t451a.EnsureQuiescentWorker()
+		var finalRefusal *t451a.QuiescenceError
+		if errors.As(cacheErr, &finalRefusal) {
+			e.FinalQuiescenceProcess = finalRefusal.Process
+		}
 		if cacheErr == nil {
 			if originals != nil {
 				var finalPlan planner.Plan

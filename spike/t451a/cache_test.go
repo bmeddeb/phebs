@@ -1,10 +1,66 @@
 package t451a
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestQuiescenceRefusalDiagnostic(t *testing.T) {
+	for _, state := range []string{"S", "Z", "missing"} {
+		t.Run(state, func(t *testing.T) {
+			proc := t.TempDir()
+			for _, pid := range []string{"1", "2"} {
+				if err := os.Mkdir(filepath.Join(proc, pid), 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := ensureQuiescentWorkerAt(proc, 2); err != nil {
+				t.Fatal("healthy census changed", err)
+			}
+			child := filepath.Join(proc, "3")
+			if err := os.Mkdir(child, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if state != "missing" {
+				stat := fmt.Sprintf("3 (child) %s 2 3 3%s 101 0 0\n", state, strings.Repeat(" 0", 15))
+				status := "Pid:\t3\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nNoNewPrivs:\t1\nCapPrm:\t0000000000000000\n"
+				for name, data := range map[string]string{"stat": stat, "status": status} {
+					if err := os.WriteFile(filepath.Join(child, name), []byte(data), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			err := ensureQuiescentWorkerAt(proc, 2)
+			var refusal *QuiescenceError
+			if !errors.As(err, &refusal) || err.Error() != "tool process remains before cache eviction" {
+				t.Fatal("refusal changed", err)
+			}
+			if state == "missing" {
+				if refusal.Process != nil {
+					t.Fatal("invented missing process diagnostic")
+				}
+			} else if refusal.Process == nil || refusal.Process.State != state || refusal.Process.Comm != "child" || refusal.Process.PPID != 2 {
+				t.Fatalf("lost offending process: %+v", refusal.Process)
+			}
+		})
+	}
+	t.Run("census overflow still refuses without an offender", func(t *testing.T) {
+		proc := t.TempDir()
+		for i := range 385 {
+			if err := os.WriteFile(filepath.Join(proc, fmt.Sprintf("entry%d", i)), nil, 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		err := ensureQuiescentWorkerAt(proc, 2)
+		if err == nil || err.Error() != "process census refused before cache eviction" {
+			t.Fatal("census bound changed", err)
+		}
+	})
+}
 
 func TestCompilerCacheRefusesUnfamiliarTreeBeforeMutation(t *testing.T) {
 	for _, kind := range []string{"link", "parent link", "nested", "sparse"} {

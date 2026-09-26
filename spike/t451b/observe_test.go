@@ -191,6 +191,57 @@ func TestObservations(t *testing.T) {
 	})
 }
 
+func TestObservationsFailureDiagnostic(t *testing.T) {
+	t.Run("healthy observation has no diagnostic reads", func(t *testing.T) {
+		m := observationProc()
+		reads := map[string]int{}
+		o := newProcessObserver(procOpenFS{FS: m, open: func(name string) (fs.File, error) {
+			reads[name]++
+			return m.Open(name)
+		}}, 2, 65534)
+		o.sample()
+		if o.err != nil || o.facts.FailureProcess != nil || reads["3/stat"] != 2 || reads["3/status"] != 1 {
+			t.Fatalf("healthy cost changed: %+v %v", o.facts, reads)
+		}
+	})
+	for _, reused := range []bool{false, true} {
+		t.Run(fmt.Sprintf("lifetime_reused_%t", reused), func(t *testing.T) {
+			m := observationProc()
+			m["3/stat"].Data = []byte(strings.Replace(string(procStat(3, 101)), "name ) with spaces", "child", 1))
+			m["3/status"].Data = []byte("Pid:\t3\nUid:\t65534\t65534\t65534\t65534\nGid:\t65534\t65534\t65534\t65534\nNoNewPrivs:\t1\nCapPrm:\t0000000000000000\n")
+			reads := map[string]int{}
+			proc := procOpenFS{FS: m, open: func(name string) (fs.File, error) {
+				reads[name]++
+				if name == "3/fd" {
+					if reused {
+						m["3/stat"].Data = procStat(3, 999)
+					}
+					return nil, fs.ErrPermission
+				}
+				return m.Open(name)
+			}}
+			o := newProcessObserver(proc, 2, 65534)
+			o.sample()
+			if !errors.Is(o.err, fs.ErrPermission) || !o.facts.Unavailable || o.facts.UnexpectedErrors != 1 {
+				t.Fatal("diagnostic relaxed observer", o.err)
+			}
+			if reused {
+				if o.facts.FailureProcess != nil {
+					t.Fatal("attributed a replacement lifetime")
+				}
+			} else if o.facts.FailureProcess == nil || o.facts.FailureProcess.Comm != "child" || reads["3/stat"] != 3 || reads["3/status"] != 2 {
+				t.Fatalf("missing or unbounded capture: %+v %v", o.facts.FailureProcess, reads)
+			}
+			statReads, statusReads := reads["3/stat"], reads["3/status"]
+			firstError, firstDiagnostic := o.err, o.facts.FailureProcess
+			o.sample()
+			if o.err != firstError || o.facts.FailureProcess != firstDiagnostic || o.facts.UnexpectedErrors != 2 || reads["3/stat"] != statReads+1 || reads["3/status"] != statusReads+1 {
+				t.Fatal("sticky diagnostic/refusal changed or capture retried")
+			}
+		})
+	}
+}
+
 func TestObservationsPrivateCache(t *testing.T) {
 	t.Run("exact inventory excludes symlink targets and deduplicates hardlinks", func(t *testing.T) {
 		scratch := t.TempDir()
