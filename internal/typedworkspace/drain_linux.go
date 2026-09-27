@@ -43,6 +43,9 @@ func drainTopName(name string) bool {
 	case ownerManifest, ownerPending, "inventory.json", "input-receipt.json", "publication-receipt.json":
 		return true
 	}
+	if controlTreeName(name) {
+		return true
+	}
 	name = strings.TrimSuffix(name, ".stage")
 	return publishedName(name) || publicationName(name)
 }
@@ -160,7 +163,7 @@ func validDrainCursor(s string) bool {
 		return false
 	}
 	parts := strings.Split(s, "/")
-	if !drainTopName(parts[0]) || !publishedName(strings.TrimSuffix(parts[0], ".stage")) && !publicationName(strings.TrimSuffix(parts[0], ".stage")) {
+	if !drainTopName(parts[0]) || !publishedName(strings.TrimSuffix(parts[0], ".stage")) && !publicationName(strings.TrimSuffix(parts[0], ".stage")) && !controlTreeName(parts[0]) {
 		return false
 	}
 	if len(parts) > 1 && len(strings.Join(parts[1:], "/")) > 512 {
@@ -442,7 +445,7 @@ func (d *drainTurn) walk() error {
 		}
 		isDir := named.Mode&unix.S_IFMT == unix.S_IFDIR
 		if cursor == "." {
-			treeName := publishedName(strings.TrimSuffix(name, ".stage")) || publicationName(strings.TrimSuffix(name, ".stage"))
+			treeName := publishedName(strings.TrimSuffix(name, ".stage")) || publicationName(strings.TrimSuffix(name, ".stage")) || controlTreeName(name)
 			if isDir != treeName {
 				return ErrCustody
 			}

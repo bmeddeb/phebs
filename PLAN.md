@@ -7206,3 +7206,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   remain unchanged. Independent review is clean after correcting journal-read
   custody; host race, host/Linux normal, vet and lint pass. Linux filesystem race
   validation, shared split-phase allowance and native/controller proof remain open.
+
+- **2026-09-27 — T45.4 seal and pin immutable worker phase snapshots.**
+  Workspace custody installs one fixed planning snapshot and one execution
+  snapshot from admitted request/profile/plan and validated host-receipt bytes.
+  Exact canonical readonly files, device/inode identity and a bounded seal are
+  checked before consumer admission. A live handle retains the attempt reader
+  pin through joined execution; namespace locking is released after acquiring
+  that pin. Interrupted named stages remain held. The bounded drainer recognizes
+  only the four exact final/staging names; unknown double-stage names cannot be
+  deleted. Existing owner revisions and native-container journal custody remain
+  unchanged. Host receipt validation is not a native readiness assertion.
+
+  **Cost.** Encodings and plan validation occur before locks. Installation uses
+  namespace/attempt exclusive locks and bounded writes/fsync; their2s acquisition
+  limit is not a disk-latency bound. Open retains two descriptors and checks the
+  full bounded snapshot, including up to16MiB plan bytes. Across both snapshots,
+  encoded controls are at most16MiB+72KiB in12 file/directory nodes. Metadata-only
+  owner census reads at most two4KiB seals and bounded entries; publication budget
+  recomputation repeats this bounded work. At4KiB blocks the future owner budget
+  rises61,440 bytes and six inodes, without changing scratch/container caps.
+  Existing16-delete/48-step drainage bounds remain exact. Independent review
+  corrected an unknown-name deletion bug and is now clean; parent host/Linux
+  checks and host race/vet/lint pass. Linux filesystem race proof remains open.
+  No worker, reader or provider is registered by these custody primitives.

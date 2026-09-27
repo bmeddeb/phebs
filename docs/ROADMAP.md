@@ -205,6 +205,11 @@ without surviving input/control files; bounded nofollow journal reads and byte
 limits pass independent review and host/Linux checks. Runtime/native integration,
 Linux filesystem race validation and the shared split-phase allowance remain open.
 
+Workspace phase snapshots are now immutable, exact-authority checked and pinned
+for live consumers. Interrupted stages remain held and drainage recognizes only
+four closed names. Independent review and parent Linux checks pass; controller
+and worker wiring plus Linux filesystem race validation remain open.
+
 
 ## Now
 

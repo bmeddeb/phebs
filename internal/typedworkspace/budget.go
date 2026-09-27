@@ -79,13 +79,13 @@ func observeCapacity(ctx context.Context, base string, probe func(*os.File) (spa
 // metadata unit per node. Publication reserves its existing aggregate+plan+two
 // request ceilings, all allowed files' rounding slack and directory metadata.
 // Controls reserve inventory/input/publication receipts, owner main+pending,
-// collecting main+pending, container journal main+pending, one scratch authority,
-// and standalone planning/execution requests, profile and sealed plan. Those
-// standalone worker controls need a separate owned read-only control directory;
-// its concrete runtime layout is still an integration prerequisite. No control
+// collecting main+pending, container journal main+pending and both standalone
+// phase snapshots. Those occupy two fixed, create-only phase directories, with
+// parent/profile/scratch duplicated, one execution request/plan and two seals.
+// No control
 // may be injected into an already sealed copied inventory.
 //
-// Fixed metadata covers two lock files and request/attempt/control directories;
+// Fixed metadata covers two lock files and request/attempt/two-phase directories;
 // shared namespace entries may already exist, so this is a conservative future
 // ceiling, not an estimate of new actual usage. Copy/publication stage-to-final
 // renames do not duplicate their trees. Host image, host journal and loop inode
@@ -126,9 +126,12 @@ func DeriveOwnerBudget(ctx context.Context, inventory typedindex.Inventory, bloc
 		{Bytes: typedsandbox.MaxScratchAuthorityBytes},
 		{Bytes: typedindex.MaxRequestBytes}, {Bytes: typedindex.MaxRequestBytes},
 		{Bytes: typedindex.MaxProfileBytes}, {Bytes: typedindex.MaxPlanBytes},
+		// Second retained phase duplicates parent, profile and fresh scratch authority.
+		{Bytes: typedindex.MaxRequestBytes}, {Bytes: typedindex.MaxProfileBytes}, {Bytes: typedsandbox.MaxScratchAuthorityBytes},
+		{Bytes: MaxControlSealBytes}, {Bytes: MaxControlSealBytes},
 	}
-	// Fourteen controls, two empty lock files, three possible fresh directories.
-	controlNodes := uint64(len(controls) + 2 + 3)
+	// Nineteen controls, two lock files, request/attempt and two phase directories.
+	controlNodes := uint64(len(controls) + 2 + 4)
 	controlBytes, err := allocationBytes(controls, controlNodes, block)
 	if err != nil {
 		return OwnerBudget{}, err

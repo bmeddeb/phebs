@@ -418,7 +418,7 @@ func saveOwnerInputs(ctx context.Context, base string, id OwnerIdentity, expecte
 		if err := Verify(ctx, filepath.Join(base, id.RelativeName()), inv, r); err != nil {
 			return err
 		}
-		if err := ownerControlsBudget(*m, int64(len(inventoryRaw)+len(raw))); err != nil {
+		if err := ownerControlsBudget(ctx, dir, *m, int64(len(inventoryRaw)+len(raw))); err != nil {
 			return err
 		}
 		var err error
@@ -431,8 +431,12 @@ func saveOwnerInputs(ctx context.Context, base string, id OwnerIdentity, expecte
 		return err
 	})
 }
-func ownerControlsBudget(m OwnerManifest, extra int64) error {
-	total := int64(16 * MaxOwnerBytes)
+func ownerControlsBudget(ctx context.Context, dir *os.File, m OwnerManifest, extra int64) error {
+	installed, err := installedControlsBytes(ctx, dir, m.Identity)
+	if err != nil {
+		return err
+	}
+	total := int64(16*MaxOwnerBytes) + installed
 	for _, r := range []*OwnerControl{m.Inventory, m.Inputs, m.Publication} {
 		if r != nil {
 			total += r.Bytes
@@ -559,7 +563,7 @@ func SaveOwnerPublication(ctx context.Context, base string, id OwnerIdentity, ex
 		if err = p.Close(); err != nil {
 			return err
 		}
-		if err = ownerControlsBudget(*m, int64(len(raw))); err != nil {
+		if err = ownerControlsBudget(ctx, dir, *m, int64(len(raw))); err != nil {
 			return err
 		}
 		m.Publication, err = ownerInstallControl(ctx, dir, "publication-receipt.json", raw)
@@ -822,6 +826,17 @@ func ownerNames(ctx context.Context, dir *os.File, m OwnerManifest, growing bool
 				return ErrCustody
 			}
 		default:
+			if controlTreeName(name) {
+				control, seal, _, _, e := controlMetadata(ctx, dir, name)
+				if e != nil {
+					return e
+				}
+				e = control.Close()
+				if e != nil || seal.Identity.PlanningDigest != m.Identity.PlanningDigest || seal.Identity.AttemptDigest != m.Identity.AttemptDigest || seal.Identity.ProfileDigest != m.Identity.Request.ProfileDigest {
+					return ErrCustody
+				}
+				continue
+			}
 			if name == m.InputName {
 				seenInput = true
 			}

@@ -35,16 +35,16 @@ func TestDeriveOwnerBudgetKnownAllocations(t *testing.T) {
 	// Hand-counted input: two files, two directories. At 4 KiB, extents are
 	// 4 KiB + 8 KiB and metadata 16 KiB = 28672. The publication reserves 50348032
 	// payload bytes  + 20278 allocation units (20140 nodes  + 138 rounding slack).
-	// Fourteen control files round to 190074880 bytes; their 19 metadata nodes
-	// add 77824. Total=28672+133406720+190152704=323588096; inodes=4+20140+19.
+	// Nineteen control files round to 190111744 bytes; their 25 metadata nodes
+	// add 102400. Total=28672+133406720+190214144=323649536; inodes=4+20140+25.
 	for _, tc := range []struct {
 		block uint64
 		bytes int64
 	}{
-		{512, 250818048}, {4096, 323588096}, {1 << 20, 21541945344},
+		{512, 250857984}, {4096, 323649536}, {1 << 20, 21553479680},
 	} {
 		got, err := DeriveOwnerBudget(t.Context(), inv, tc.block)
-		if err != nil || got.Bytes != tc.bytes || got.Inodes != 20163 {
+		if err != nil || got.Bytes != tc.bytes || got.Inodes != 20169 {
 			t.Fatalf("block %d: %+v %v", tc.block, got, err)
 		}
 	}
@@ -58,7 +58,7 @@ func TestDeriveOwnerBudgetKnownAllocations(t *testing.T) {
 	first, _ := DeriveOwnerBudget(t.Context(), one, 4096)
 	boundary, _ := DeriveOwnerBudget(t.Context(), exact, 4096)
 	beyond, _ := DeriveOwnerBudget(t.Context(), next, 4096)
-	if zero.Inodes != 20161 || first.Bytes-zero.Bytes != 4096 || boundary != first || beyond.Bytes-boundary.Bytes != 4096 {
+	if zero.Inodes != 20167 || first.Bytes-zero.Bytes != 4096 || boundary != first || beyond.Bytes-boundary.Bytes != 4096 {
 		t.Fatalf("extent accounting: %+v %+v %+v %+v", zero, first, boundary, beyond)
 	}
 }
@@ -77,9 +77,9 @@ func TestDeriveOwnerBudgetMaximumInventory(t *testing.T) {
 	inventory := budgetInventory(t, files)
 	// Eight 256 MiB extents, 50000 file nodes, 20000 nested directories plus root:
 	// 2147483648+70001*4096=2434207744 input bytes. Add the independently
-	// counted 133406720 publication and 190152704 controls = 2757767168 bytes.
+	// counted 133406720 publication and 190214144 controls = 2757828608 bytes.
 	got, err := DeriveOwnerBudget(t.Context(), inventory, 4096)
-	if err != nil || got.Bytes != 2757767168 || got.Inodes != 90160 {
+	if err != nil || got.Bytes != 2757828608 || got.Inodes != 90166 {
 		t.Fatalf("maximum: %+v %v", got, err)
 	}
 	if _, err = DeriveOwnerBudget(t.Context(), inventory, 1<<20); err == nil {

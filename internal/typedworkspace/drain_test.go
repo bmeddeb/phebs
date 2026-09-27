@@ -483,3 +483,32 @@ func TestDrainFreshRootCensusBeforeTerminal(t *testing.T) {
 	}
 	finishDrain(t, base, a)
 }
+
+func TestDrainControlNamespaceClosed(t *testing.T) {
+	for _, name := range []string{"controls-plan", "controls-plan.stage", "controls-execute", "controls-execute.stage"} {
+		if !drainTopName(name) || !validDrainCursor(name) || !validDrainCursor(name+"/control-seal.json") {
+			t.Fatal("closed control tree refused", name)
+		}
+	}
+	for _, name := range []string{"controls-other", "controls-plan.stage.stage", "controls-execute.next", "controls-plan.typed-container.json"} {
+		if drainTopName(name) || validDrainCursor(name) {
+			t.Fatal("unowned control tree accepted", name)
+		}
+	}
+}
+
+func TestDrainUnknownDoubleStageControlIsHeld(t *testing.T) {
+	base, authority, attempt := drainFixture(t)
+	name := filepath.Join(attempt, "controls-plan.stage.stage")
+	if err := os.WriteFile(name, []byte("unowned"), 0444); err != nil {
+		t.Fatal(err)
+	}
+	report, err := DrainOwner(t.Context(), base, authority)
+	if !errors.Is(err, ErrCustody) || !report.Held || report.Deleted != 0 {
+		t.Fatal("unknown control residue was retired", report, err)
+	}
+	raw, e := os.ReadFile(name)
+	if e != nil || string(raw) != "unowned" {
+		t.Fatal("unknown bytes removed", string(raw), e)
+	}
+}
