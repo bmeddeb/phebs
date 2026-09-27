@@ -219,6 +219,12 @@ retain historical custody checks, while current and active desired pointers
 reject collecting parents. Actual database, race, vet and lint checks pass;
 this does not grant current admission, cleanup or native readiness.
 
+The unregistered preparation controller now reconciles store/workspace custody,
+binds actual capacity before durable growth, and records verified input custody.
+Independent review and actual Linux/database checks cover interrupted writes,
+obsolete authority, changed bases and refusal to repeat staging. Worker execution,
+recovery/lifecycle, native proof and Linux race remain open.
+
 
 ## Now
 

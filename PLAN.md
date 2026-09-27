@@ -7265,3 +7265,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   product requests gain no census. Independent review corrected the active
   pointer/collecting-parent gap. Corrected normal/race, host/Linux vet and lint
   pass; controller and native completion remain separate.
+
+- **2026-09-27 — T45.4 connect durable preparation to private custody.**
+  A concrete unregistered controller uses the existing shared lifecycle guard,
+  strict six-table census, bounded relation/quota inspection and bidirectional
+  workspace ownership checks before allowing preparation. Host residue remains
+  held until native recovery is implemented. First growth binds actual base
+  identity/geometry and summed same-device promises through persistent pressure
+  gates. Another lease's retained holder defers before creating an attempt.
+  Durable growth and revision1 custody precede input copy; exact source/profile/
+  lease fences and destination verification precede revision2 custody. Interrupted
+  prefixes remain held and never repeat random staging. Prepared inputs grant
+  neither native readiness nor an escaping reader pin.
+
+  **Cost.** Startup holds the shared lifecycle guard across a linear metadata
+  traversal, retaining one64-row database page and bounded filesystem levels
+  (4096 roots/64 attempts), with at most two persistent device gates. Relationship
+  reads repeat per control; each parent adds two quota reads, including up to64
+  repeated repository selections. Each attempt adds three inspector reads and
+  small owner loads in each census direction. Preparation holds the same guard
+  across bounded DB transitions and filesystem writes: each source byte is
+  copied/hashed once and each destination byte verified once. Exact replay adds
+  one full destination verification and no growth. Inventory16MiB, source2GiB/
+  50,000 files/20,000 directories and receipt bounds remain unchanged. There is
+  no query/sync registration, native child or scheduler callback. Sequential
+  statfs checks provide headroom, not an OS reservation.
+
+  Independent review and parent host/Linux real-database preparation checks pass,
+  including changed-base, obsolete-source, interrupted-write and no-regrowth
+  cases. The Linux fixture uses an explicitly started database and temporary
+  capacity observation; it proves neither local-engine version admission nor
+  native disk/daemon custody. Host race and host/Linux vet/lint pass. Linux race,
+  previous-current end-to-end preservation, worker execution, recovery/lifecycle
+  and runtime registration remain open.
