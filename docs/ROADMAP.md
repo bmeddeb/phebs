@@ -241,6 +241,13 @@ race, index/accounting and vet/lint gates pass. The collecting parent tombstone
 remains quota-accounted; physical drainage, obsolete-tombstone policy and runtime
 lifecycle integration are separate requirements.
 
+The sealed native launcher is now under production ownership, preserving the
+closed request/environment, driver reconciliation and source/export validation.
+Independent exact-source parity and code/cost review plus portable/race/vet/lint
+gates pass. Its opt-in native downloader proof remains unrun; actual owned
+worker dispatch and native/provider validation remain required.
+
+
 
 
 ## Now

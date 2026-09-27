@@ -15029,6 +15029,12 @@ race, index/accounting and vet/lint gates pass. The collecting parent tombstone
 remains quota-accounted; physical drainage, obsolete-tombstone policy and runtime
 lifecycle integration are separate requirements.
 
+The sealed native launcher is now under production ownership, preserving the
+closed request/environment, driver reconciliation and source/export validation.
+Independent exact-source parity and code/cost review plus portable/race/vet/lint
+gates pass. Its opt-in native downloader proof remains unrun; actual owned
+worker dispatch and native/provider validation remain required.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

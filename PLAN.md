@@ -7391,3 +7391,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Independent review, parent actual database tests, affected race, host/Linux
   vet and lint pass. Actual physical cleanup and full lifecycle registration
   remain open; the tests assert no native authority.
+
+- **2026-09-27 — T45.4 promote the sealed native launcher under ownership.**
+  The exact9ced49f4 launcher/compatibility source now imports the owned planner;
+  only its four helper placement literals change to the owned worker path.
+  Diagnostic escape APIs are excluded. Frozen mode8681, sanitized environment,
+  native tools, argv/offline restrictions, source/export/non-Go reconciliation
+  and old wire versions remain exact. This adds no actual dispatch or runtime
+  registration; retained structural APIs are not a production profile.
+
+  **Cost and boundary.** NativeRun prepares/seals source twice and verifies
+  sources/exports after the client. Accepted source/export aggregates remain
+ 64MiB, individual files8MiB; source refusal can read one extra bounded file.
+  Driver verification hashes at most128MiB then rereads build information.
+  Raw/adapted/decoded16MiB responses coexist. Closed children retain120s command
+  deadlines, process-group cancellation,1s WaitDelay and a shared16MiB output
+  lock/bound. These do not replace the owned sandbox's overall300s/aggregate
+  output or descendant containment. Fixed scope/wrapper creation is exclusive;
+  ordinary execution-root opens follow symlinks and belong only in the sandbox.
+  No registered query, sync, startup or publication cost is added.
+
+  Independent13-file parity, code/cost review, portable tests, race, host/Linux
+  vet and lint pass. Native downloader proof remains explicitly skipped.
+  Worker entrypoints, final plan mapping and native/provider proof remain open;
+  no historical receipt or selected tool identity changed.
