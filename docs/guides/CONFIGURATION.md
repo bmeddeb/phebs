@@ -892,6 +892,13 @@ any source, profile, tool, universe or idempotency field invalidates that link.
 Disabled contract admission returns before decoding, hashing or inventory;
 there is no default poller, startup scan, child or publication work.
 
+The prospective executor's bundle also binds its fixed executable
+`phebs-typed-worker` entry and non-executable `typed-host-tools.json` metadata
+(at most 1 KiB). The latter uses schema `phebs-typed-host-tools-v1` and a
+`mkfs_sha256` digest. It cannot select a host path or command; native preparation
+still verifies the compiled formatter path. These local contracts do not enable
+an executor or replace verification of the private input copy.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact

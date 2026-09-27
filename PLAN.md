@@ -7166,3 +7166,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   successor/stage and physical-query corrections. Actual store/race, accounting,
   host/Linux vet/lint and parent whole typed-store gates validate the changes;
   complete controller/ownership reconciliation remains open.
+
+- **2026-09-27 — T45.4 bind owned helper and formatter metadata.**
+  Reuse the admitted prehydration inventory instead of adding profile fields.
+  Its fixed nonempty executable `phebs-typed-worker` entry supplies expected
+  helper identity. Fixed non-executable `typed-host-tools.json` is at most1KiB,
+  exact canonical v1 JSON containing only schema and formatter digest; supplied
+  bytes must match that inventory's length/hash and the request's BundleDigest.
+  Formatter path and arguments remain compiled into the host owner. No tool
+  identity is selected or changed, and no profile/provider is installed.
+
+  **Cost.** Pure binding walks at most50,000 existing inventory records without
+  cloning them, keeps two file records, and hashes/decodes at most1KiB. It adds no
+  filesystem read, lock, database action, child, cache or registered runtime work.
+  This establishes expected identities only: the controller must verify/read
+  its private copy and retain its pin, while native preparation still hashes
+  the opened formatter. Independent review and whole package/race, host/Linux
+  vet/lint and documentation gates pass. Actual controller/tool custody remains
+  an integration gate.

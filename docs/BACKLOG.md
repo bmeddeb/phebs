@@ -14982,6 +14982,11 @@ stale admission. The corrected continuation query passes its limit into the
 pinned engine's storage scan. Independent review and actual store/accounting
 gates pass; controller bidirectional ownership reconciliation is still required.
 
+Pure helper/formatter binding now authenticates the fixed helper entry and a
+bounded canonical host-tool metadata file through the existing request inventory.
+Independent review and contract gates pass. It selects no new tool and proves no
+filesystem/native readiness; verified-copy and controller binding remain required.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

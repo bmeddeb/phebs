@@ -195,6 +195,10 @@ Six-table recovery census and coherent obsolete-attempt inspection are now
 reviewed, including actual bounded database query plans. They do not supply
 filesystem or native cleanup authority; controller reconciliation remains open.
 
+Expected helper/formatter identities now bind through the existing immutable
+inventory, without redundant profile fields or a new tool selection. Actual
+private-copy and native execution proof remain separate integration gates.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed
