@@ -34,7 +34,7 @@ def fixture_config():
         n.SCHEMA, 'neutral-prep-1', 'a' * 40,
         dict(repository=n.REPO, incarnation='fixture', generation=h, commit='b' * 40),
         n.REPO, n.REMOTE, n.ROOT,
-        h, h, h, h, h, h, h, h, h, 1]))
+        h, h, h, h, h, h, h, h]))
 
 
 class PreparationTests(unittest.TestCase):
@@ -42,7 +42,7 @@ class PreparationTests(unittest.TestCase):
         c = fixture_config()
         raw = n.canonical(c)
         self.assertEqual(n.config(raw, n.digest(raw)), c)
-        for key, bad in [('id', '../escape'), ('helper_sha256', ''), ('profile_epoch', True), ('source_commit', 'main')]:
+        for key, bad in [('id', '../escape'), ('helper_sha256', ''), ('source_commit', 'main')]:
             v = copy.deepcopy(c); v[key] = bad
             with self.subTest(key=key), self.assertRaises(ValueError):
                 n.config(n.canonical(v))
@@ -50,7 +50,9 @@ class PreparationTests(unittest.TestCase):
                        lambda v: v.update(root='//other:other'),
                        lambda v: v.update(module='example.invalid/other'),
                        lambda v: v.update(remote='https://example.invalid/other'),
-                       lambda v: v.update(command='sh')]:
+                       lambda v: v.update(command='sh'),
+                       lambda v: v.update(selection_sha256=n.digest(b'run-produced')),
+                       lambda v: v.update(profile_epoch=1)]:
             v = copy.deepcopy(c); mutate(v)
             with self.assertRaises(ValueError):
                 n.config(n.canonical(v))
