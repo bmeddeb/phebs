@@ -7330,3 +7330,39 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and lint pass. Worker dispatch, final plan conversion and native/provider
   validation remain open; historical evidence and frozen tool identities remain
   unchanged.
+
+- **2026-09-27 — T45.4 share one native wall/output allowance.**
+  Planning and execution bind one canonical300s absolute BOOTTIME deadline,
+  boot ID and time-namespace identity. The supervisor arms its timerfd from
+  bounded exact argv before any filesystem/proc validation; genuine timeout
+  reports124, timer failure125. Existing immutable controls become v2, container
+  journal v3, supervisor/watchdog reports v2. Aggregate worker16MiB and wire24MiB
+  allowances span both runs; only a private completion token from validated
+  successful planning plus joined cleanup and a final live check can advance
+  byte usage. Caller-supplied result fields cannot create that token. No cap,
+  file/inode budget or historical wire is changed.
+
+  Independent review caught cancellation discarding an available watchdog frame.
+  A separate stop-only transport now shares one existing20s teardown budget,
+  starting at the first observed cancellation or cleanup. It cannot authorize
+  creation/start/work. Exact stopped non-OOM exit124, removal and complete
+  invocation-bound framing are required to retain a partial report; cancellation
+  always remains failure. Native kill/transport races can still leave evidence
+  unavailable; this is not a guarantee of delivery after container removal.
+
+  **Cost.** Each allowance context adds one timerfd/waiter and at most20 polls/s,
+  joined on exit. An outer controller turn plus Run means two host timers and
+  the supervisor's third timer, all under unchanged descriptor/task budgets.
+  Snapshot updates add two BOOTTIME reads under the existing mutex; the timeout
+  writer remains atomic and nonblocking. Live checks read one bounded boot ID,
+  stat one namespace and read one clock. Each Run adds one joined stop-only
+  watcher and one lazily started teardown timer; bounded wire buffers may remain
+  through that interval. Allowance encoding stays1KiB, controls4KiB (largest
+  tested execution seal2201 bytes) and journal8KiB. No new persistent file, store
+  call, hash pass, native child, registered query/sync or publication work.
+
+  Parent host/Linux tests include an orphaned supervisor blocked before validation;
+  corrected transport regressions, host race, host/Linux vet/lint and independent
+  re-review pass. Native common-time-namespace proof is mandatory: a later
+  namespace check cannot repair an offset bootstrap timer. Two-cold-run feasibility,
+  Linux race and controller sequencing remain separate open integration gates.

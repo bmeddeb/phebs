@@ -9,15 +9,19 @@ import (
 )
 
 func TestWatchdogSnapshots(t *testing.T) {
-	s := newWatchdogSnapshots(WallLimit)
+	var observed int64
+	s := newWatchdogClock(WallLimit, func() (int64, error) { return observed, nil })
 	initial, err := decodeWatchdog(s.frame.Load().data, WallLimit)
 	if err != nil || initial.WorkerProgressAvailable || initial.ResourceSampleAvailable {
 		t.Fatal(initial, err)
 	}
 	r := Resources{Samples: 1, LimitsVerified: true, SampledPeakRSSBytes: 42}
 	s.resources(r)
-	if !s.progress(1, 0) || !s.progress(2, int64(time.Second)) || !s.progress(6, int64(2*time.Second)) {
-		t.Fatal("valid stages refused")
+	for i, id := range []byte{1, 2, 6} {
+		observed = int64(i) * int64(time.Second)
+		if !s.progress(id, observed) {
+			t.Fatal("valid stages refused")
+		}
 	}
 	frame := s.frame.Load()
 	got, err := decodeWatchdog(frame.data, WallLimit)
@@ -64,7 +68,7 @@ func TestWatchdogControllerPartialCannotPass(t *testing.T) {
 	for _, fault := range []string{"watchdog only", "watchdog mixed stdout"} {
 		t.Run(fault, func(t *testing.T) {
 			_, o := fakeDaemon(t, fault)
-			got, err := run(context.Background(), o)
+			got, err := runFake(context.Background(), o)
 			if err == nil || !got.Removed || got.ExitCode != 124 || got.Watchdog == nil || got.Watchdog.WorkerStage != "planning" || got.Resources.Samples != 1 || len(got.Stdout) != 0 || got.StopReason != "wall_limit" {
 				t.Fatal(got, err)
 			}
@@ -73,9 +77,12 @@ func TestWatchdogControllerPartialCannotPass(t *testing.T) {
 }
 
 func TestWatchdogMaximumFrame(t *testing.T) {
-	s := newWatchdogSnapshots(WallLimit)
+	var observed int64
+	s := newWatchdogClock(WallLimit, func() (int64, error) { return observed, nil })
+	s.invocation(testImage)
 	s.resources(Resources{MemoryOOMEvents: ^uint64(0), MemoryOOMKills: ^uint64(0), MemoryLimitEvents: ^uint64(0), TaskLimitEvents: ^uint64(0), SamplingUnavailable: true, SamplingFailureStage: "shared_memory_space", LimitsVerified: true, MemoryPeakBytes: ^uint64(0), SampledPeakRSSBytes: ^uint64(0), SampledPeakProcesses: ^uint64(0), SampledPeakScratchBytes: ^uint64(0), SampledPeakScratchInodes: ^uint64(0), Samples: ^uint64(0), PerProcessDescriptors: ^uint64(0), AggregateDescriptorCeiling: ^uint64(0)})
 	for i := 0; i < 16; i++ {
+		observed = int64(i) * int64(time.Second)
 		if !s.progress(6, int64(i)*int64(time.Second)) {
 			t.Fatal("bounded stage count refused")
 		}

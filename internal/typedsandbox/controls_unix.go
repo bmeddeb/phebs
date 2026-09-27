@@ -94,7 +94,7 @@ func verifyControls(ctx context.Context, options Options, root *os.File) error {
 		return err
 	}
 	seal, err := readControlFile(root, ControlSealFile, MaxControlSealBytes)
-	if err != nil || controlDigest(seal) != options.Control.SealDigest {
+	if err != nil || controlDigest(seal) != options.Control.SealDigest || checkSealAllowance(seal, options.Allowance, options.Control.Phase, options.Control.RequestDigest) != nil {
 		return ErrRefused
 	}
 	raw, err := readControlFile(root, ScratchAuthorityFile, MaxScratchAuthorityBytes)

@@ -29,21 +29,26 @@ func (c *client) attach(ctx context.Context, id string) (io.ReadCloser, error) {
 type wireResult struct {
 	stdout, stderr []byte
 	err            error
+	payloadBytes   int64
 }
 
-func readWire(reader io.Reader) wireResult {
+func readWire(reader io.Reader) wireResult { return readWireLimit(reader, maxWireBytes) }
+func readWireLimit(reader io.Reader, limit int64) wireResult {
+	if limit < 0 || limit > maxWireBytes {
+		return wireResult{err: ErrExecution}
+	}
 	var stdout, stderr bytes.Buffer
 	var header [8]byte
 	for {
 		_, err := io.ReadFull(reader, header[:])
 		if err == io.EOF {
-			return wireResult{stdout.Bytes(), stderr.Bytes(), nil}
+			return wireResult{stdout: stdout.Bytes(), stderr: stderr.Bytes(), payloadBytes: int64(stdout.Len() + stderr.Len())}
 		}
 		if err != nil || header[0] != 1 && header[0] != 2 || header[1] != 0 || header[2] != 0 || header[3] != 0 {
 			return wireResult{err: ErrExecution}
 		}
 		length := uint64(binary.BigEndian.Uint32(header[4:]))
-		if length == 0 || length > uint64(maxWireBytes-stdout.Len()-stderr.Len()) {
+		if length == 0 || length > uint64(limit-int64(stdout.Len())-int64(stderr.Len())) {
 			return wireResult{err: ErrExecution}
 		}
 		writer := &stdout

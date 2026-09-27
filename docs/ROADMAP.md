@@ -203,7 +203,7 @@ Immutable sandbox controls now bind a closed third readonly mount and exact
 phase/attempt seal. Retained-journal recovery can clean the original container
 without surviving input/control files; bounded nofollow journal reads and byte
 limits pass independent review and host/Linux checks. Runtime/native integration,
-Linux filesystem race validation and the shared split-phase allowance remain open.
+Linux filesystem race validation and native/controller integration remain open.
 
 Workspace phase snapshots are now immutable, exact-authority checked and pinned
 for live consumers. Interrupted stages remain held and drainage recognizes only
@@ -229,6 +229,11 @@ The sealed configured planner/helper now lives under production ownership with
 neutral fixtures/default roots confined to tests. Exact source parity and
 independent code/cost review pass; intermediate bounds do not replace final
 plan admission. Worker dispatch and native/provider validation remain open.
+
+Both native invocations now share one absolute wall and aggregate output
+allowance. Independent review corrected timeout-evidence loss; parent host/Linux
+checks and affected race/vet/lint pass. Native common-clock and cold-replay proof,
+Linux race and complete controller sequencing remain open.
 
 
 ## Now

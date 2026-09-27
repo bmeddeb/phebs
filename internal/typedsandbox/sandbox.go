@@ -61,6 +61,7 @@ func (e *StageError) Unwrap() error { return e.Cause }
 type Options struct {
 	Socket, ImageID, Inputs, Controls string
 	Control                           ControlIdentity
+	Allowance                         Allowance
 	scratch                           *ScratchAuthority
 }
 
@@ -68,8 +69,8 @@ const (
 	HelperPath        = "/inputs/" + typedindex.ManagedHelperFile
 	SupervisorCommand = "__typed_supervisor"
 	WorkerCommand     = "__typed_worker"
-	ownerSchema       = "phebs-typed-container-owner-v2"
-	reportSchema      = "phebs-typed-supervisor-v1"
+	ownerSchema       = "phebs-typed-container-owner-v3"
+	reportSchema      = "phebs-typed-supervisor-v2"
 )
 
 // Resources distinguish kernel-enforced ceilings from sampled observations.
@@ -101,6 +102,7 @@ type Result struct {
 	Removed        bool
 	Resources      Resources
 	Watchdog       *WatchdogReport
+	completed      *completion
 }
 
 func readSmall(path string, limit int64) ([]byte, error) {
@@ -120,13 +122,16 @@ func readSmall(path string, limit int64) ([]byte, error) {
 }
 
 type supervisorReport struct {
-	StopReason string    `json:"stop_reason,omitempty"`
-	Schema     string    `json:"schema"`
-	Stdout     []byte    `json:"stdout"`
-	Stderr     []byte    `json:"stderr"`
-	ExitCode   int       `json:"exit_code"`
-	Complete   bool      `json:"complete"`
-	Resources  Resources `json:"resources"`
+	Allowance     Allowance `json:"allowance"`
+	Phase         string    `json:"phase"`
+	RequestDigest string    `json:"request_digest"`
+	StopReason    string    `json:"stop_reason,omitempty"`
+	Schema        string    `json:"schema"`
+	Stdout        []byte    `json:"stdout"`
+	Stderr        []byte    `json:"stderr"`
+	ExitCode      int       `json:"exit_code"`
+	Complete      bool      `json:"complete"`
+	Resources     Resources `json:"resources"`
 }
 
 // MaxContainerJournalBytes bounds both durable and pending container journals.
@@ -135,6 +140,7 @@ const MaxContainerJournalBytes = 8192
 type journal struct {
 	Schema, Name, ContainerID, DaemonID, ImageID, Socket, Inputs, Controls string
 	Control                                                                ControlIdentity
+	Allowance                                                              Allowance
 	Scratch                                                                *ScratchAuthority `json:",omitempty"`
 }
 
@@ -214,7 +220,7 @@ func environment() []string {
 
 func recipe(options Options, name string) config {
 	c := config{Hostname: "phebs-typed-index", Image: options.ImageID, User: "0:0", WorkingDir: "/scratch",
-		Entrypoint: []string{HelperPath}, Cmd: []string{SupervisorCommand}, Env: environment(),
+		Entrypoint: []string{HelperPath}, Cmd: supervisorArgs(options), Env: environment(),
 		Labels: map[string]string{ownerLabel: name}, AttachStdout: true, AttachStderr: true}
 	c.Healthcheck.Test = []string{"NONE"}
 	c.HostConfig = hostConfig{NetworkMode: "none", IpcMode: "private", CgroupnsMode: "private", Runtime: "runc",
@@ -243,7 +249,7 @@ func recipe(options Options, name string) config {
 // newClient validates only trusted scalar configuration and the daemon socket.
 // Cleanup deliberately does not require input/control files to remain readable.
 func validOptions(options Options) bool {
-	return options.scratch != nil && options.scratch.Validate() == nil && validOptionPath(options.Socket) && validOptionPath(options.Inputs) && validOptionPath(options.Controls) && verifyControlPath(options) && imageID(options.ImageID)
+	return options.Allowance.invocation(options.Control.Phase, options.Control.RequestDigest) && options.Allowance.PlanningDigest == options.Control.PlanningDigest && options.Allowance.AttemptDigest == options.Control.AttemptDigest && options.scratch != nil && options.scratch.Validate() == nil && validOptionPath(options.Socket) && validOptionPath(options.Inputs) && validOptionPath(options.Controls) && verifyControlPath(options) && imageID(options.ImageID)
 }
 func newClient(options Options) (*client, error) {
 	if !validOptions(options) {
@@ -376,7 +382,7 @@ func (c *client) inspect(ctx context.Context, id string) (inspection, int, error
 
 func verify(got inspection, options Options, owner journal) error {
 	want := recipe(options, owner.Name)
-	if owner.Schema != ownerSchema || owner.Controls != options.Controls || owner.Control != options.Control || !reflect.DeepEqual(owner.Scratch, options.scratch) || !containerID(got.ID) || got.Image != options.ImageID || got.Name != "/"+owner.Name || got.Config.Labels[ownerLabel] != owner.Name ||
+	if owner.Schema != ownerSchema || owner.Controls != options.Controls || owner.Control != options.Control || owner.Allowance != options.Allowance || !reflect.DeepEqual(owner.Scratch, options.scratch) || !containerID(got.ID) || got.Image != options.ImageID || got.Name != "/"+owner.Name || got.Config.Labels[ownerLabel] != owner.Name ||
 		owner.ContainerID != "" && got.ID != owner.ContainerID || got.AppArmorProfile != "docker-default" {
 		return ErrRefused
 	}
@@ -438,7 +444,23 @@ func Run(ctx context.Context, options Options, authority ScratchAuthority) (Resu
 	return run(ctx, options)
 }
 
-func run(ctx context.Context, options Options) (result Result, retErr error) {
+func run(ctx context.Context, options Options) (Result, error) {
+	scoped, cancel, err := AllowanceContext(ctx, options.Allowance)
+	if err != nil {
+		return Result{ExitCode: -1}, err
+	}
+	defer cancel()
+	return runChecked(scoped, options, options.Allowance.CheckLive)
+}
+
+// Tests may supply a scalar-only check with a fake daemon; public Run always
+// enters run above and uses the real Linux absolute clock.
+func runChecked(ctx context.Context, options Options, check func(context.Context) error) (result Result, retErr error) {
+	var acceptedWire int64
+	var stream io.ReadCloser
+	var output chan wireResult
+	var outputDone chan struct{}
+	var observedWire *wireResult
 	stage := "configuration"
 	defer func() {
 		if retErr != nil {
@@ -449,8 +471,11 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 	if ctx == nil {
 		return result, ErrRefused
 	}
-	ctx, cancel := context.WithTimeout(ctx, WallLimit+15*time.Second)
+	turnContext := ctx
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	transport, beginTeardown, stopTransport := stopOnlyTransport(ctx)
+	defer stopTransport()
 	c, err := newClient(options)
 	if err != nil {
 		return result, err
@@ -464,6 +489,9 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 		return result, err
 	}
 	defer func() { _ = controls.Close() }()
+	if err = check(ctx); err != nil {
+		return result, err
+	}
 	stage = "preflight"
 	daemon, err := c.preflight(ctx, options)
 	if err != nil {
@@ -473,23 +501,57 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 	if _, err = rand.Read(token[:]); err != nil {
 		return result, ErrRefused
 	}
-	owner := journal{Schema: ownerSchema, Name: "phebs-typed-index-" + hex.EncodeToString(token[:]), DaemonID: daemon, ImageID: options.ImageID, Socket: options.Socket, Inputs: options.Inputs, Controls: options.Controls, Control: options.Control, Scratch: options.scratch}
+	owner := journal{Schema: ownerSchema, Name: "phebs-typed-index-" + hex.EncodeToString(token[:]), DaemonID: daemon, ImageID: options.ImageID, Socket: options.Socket, Inputs: options.Inputs, Controls: options.Controls, Control: options.Control, Allowance: options.Allowance, Scratch: options.scratch}
 	stage = "journal"
 	if err = verifyControls(ctx, options, controls); err != nil {
+		return result, err
+	}
+	if err = check(ctx); err != nil {
 		return result, err
 	}
 	if err = writeJournal(options, owner, true); err != nil {
 		return result, err
 	}
 	defer func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cleanupCancel()
-		removed, id, cleanupErr := c.cleanup(cleanupCtx, options, owner)
+		beginTeardown()
+		stoppedExit := -1
+		removed, id, cleanupErr := c.cleanupObserved(transport, options, owner, &stoppedExit)
+		// Attach uses only the stop-only transport. After exact stop/removal, consume
+		// an already-finished or bounded remaining frame before closing/joining it.
+		if outputDone != nil {
+			if cleanupErr == nil && removed && stoppedExit == 124 && observedWire == nil {
+				select {
+				case <-outputDone:
+				case <-transport.Done():
+				}
+			}
+			stopTransport()
+			_ = stream.Close()
+			<-outputDone
+			if observedWire == nil {
+				wire := <-output
+				observedWire = &wire
+			}
+		}
+		if retErr != nil && cleanupErr == nil && removed && stoppedExit == 124 && observedWire != nil && observedWire.err == nil {
+			if partial, e := decodeInvocationWatchdog(observedWire.stderr, options); e == nil {
+				result.ExitCode = 124
+				result.Watchdog = partial
+				result.Resources = partial.Resources
+				result.StopReason = "wall_limit"
+			}
+		}
 		result.Removed = removed
 		if result.ContainerID == "" {
 			result.ContainerID = id
 		}
 		retErr = errors.Join(retErr, cleanupErr)
+		if retErr == nil && removed {
+			retErr = check(turnContext)
+		}
+		if retErr == nil && removed && options.Control.Phase == ControlPlan {
+			result.completed = &completion{allowance: options.Allowance, worker: int64(len(result.Stdout) + len(result.Stderr)), wire: acceptedWire}
+		}
 	}()
 	var created struct {
 		ID       string `json:"Id"`
@@ -514,14 +576,19 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 		return result, ErrRefused
 	}
 	stage = "attach"
-	stream, err := c.attach(ctx, created.ID)
+	stream, err = c.attach(transport, created.ID)
 	if err != nil {
 		return result, err
 	}
-	output := make(chan wireResult, 1)
-	outputDone := make(chan struct{})
-	go func() { defer close(outputDone); output <- readWire(stream) }()
-	defer func() { cancel(); _ = stream.Close(); <-outputDone }()
+	output = make(chan wireResult, 1)
+	outputDone = make(chan struct{})
+	go func() {
+		defer close(outputDone)
+		output <- readWireLimit(stream, maxWireBytes-options.Allowance.WireBytesUsed)
+	}()
+	if err = check(ctx); err != nil {
+		return result, err
+	}
 	stage = "start"
 	if _, err = c.request(ctx, "POST", "/containers/"+created.ID+"/start", nil, nil, 204); err != nil {
 		return result, err
@@ -547,13 +614,14 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 	case <-ctx.Done():
 		return result, ErrExecution
 	}
+	observedWire = &wire
 	if wire.err != nil || waited.Error != nil {
 		return result, ErrExecution
 	}
 	var report supervisorReport
 	stage = "supervisor_report"
 	if waited.StatusCode == 124 {
-		partial, partialErr := decodeWatchdog(wire.stderr, WallLimit)
+		partial, partialErr := decodeInvocationWatchdog(wire.stderr, options)
 		if got.State.Running || got.State.Pid != 0 || got.State.ExitCode != waited.StatusCode {
 			return result, ErrExecution
 		}
@@ -564,10 +632,11 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 		}
 		return result, ErrExecution
 	}
-	if json.Unmarshal(wire.stdout, &report) != nil || len(wire.stderr) != 0 || report.Schema != reportSchema ||
-		len(report.Stdout)+len(report.Stderr) > OutputBytes {
+	if json.Unmarshal(wire.stdout, &report) != nil || len(wire.stderr) != 0 || report.Schema != reportSchema || report.Allowance != options.Allowance || report.Phase != options.Control.Phase || report.RequestDigest != options.Control.RequestDigest ||
+		int64(len(report.Stdout)+len(report.Stderr)) > OutputBytes-options.Allowance.WorkerBytesUsed {
 		return result, ErrExecution
 	}
+	acceptedWire = wire.payloadBytes
 	result.Stdout, result.Stderr, result.Resources = report.Stdout, report.Stderr, report.Resources
 	result.StopReason = report.StopReason
 	stage = "inspect_stopped"
@@ -619,6 +688,10 @@ func recoverSelected(ctx context.Context, options Options, owner journal) (resul
 }
 
 func (c *client) cleanup(ctx context.Context, options Options, owner journal) (bool, string, error) {
+	return c.cleanupObserved(ctx, options, owner, nil)
+}
+
+func (c *client) cleanupObserved(ctx context.Context, options Options, owner journal, stoppedExit *int) (bool, string, error) {
 	var err error
 	owner, err = cleanupOwner(options, owner)
 	if err != nil {
@@ -658,6 +731,9 @@ func (c *client) cleanup(ctx context.Context, options Options, owner journal) (b
 	got, _, err = c.inspect(ctx, id)
 	if err != nil || got.State.Running || got.State.Pid != 0 || verify(got, options, owner) != nil {
 		return false, id, ErrCustody
+	}
+	if stoppedExit != nil && !got.State.OOMKilled {
+		*stoppedExit = got.State.ExitCode
 	}
 	if _, err = c.request(ctx, "DELETE", "/containers/"+id+"?v=1", nil, nil, 204); err != nil {
 		return false, id, ErrCustody
@@ -709,7 +785,7 @@ func readJournal(options Options) (journal, error) {
 }
 
 func (owner journal) options() Options {
-	return Options{Socket: owner.Socket, ImageID: owner.ImageID, Inputs: owner.Inputs, Controls: owner.Controls, Control: owner.Control, scratch: owner.Scratch}
+	return Options{Socket: owner.Socket, ImageID: owner.ImageID, Inputs: owner.Inputs, Controls: owner.Controls, Control: owner.Control, Allowance: owner.Allowance, scratch: owner.Scratch}
 }
 func readJournalFile(options Options, name string) (journal, error) {
 	owner, err := readJournalMetadata(name)

@@ -21,7 +21,7 @@ import (
 
 const MaxControlSealBytes = 4096
 const ControlSealFile = "control-seal.json"
-const controlSealSchema = "phebs-typed-worker-controls-v1"
+const controlSealSchema = "phebs-typed-worker-controls-v2"
 
 type ControlPhase string
 
@@ -34,6 +34,7 @@ const (
 // VerifyHostScratch; its pure Validate method proves shape, not live custody.
 // Input verification and helper/formatter inventory admission remain separate.
 type ControlSpec struct {
+	Allowance typedsandbox.Allowance
 	Phase     ControlPhase
 	Parent    typedindex.Admission
 	Profile   typedindex.Profile
@@ -43,13 +44,14 @@ type ControlSpec struct {
 }
 
 type ControlIdentity struct {
-	Phase             ControlPhase `json:"phase"`
-	PlanningDigest    string       `json:"planning_digest"`
-	AttemptDigest     string       `json:"attempt_digest"`
-	RequestDigest     string       `json:"request_digest"`
-	ProfileDigest     string       `json:"profile_digest"`
-	PlanDigest        string       `json:"plan_digest"`
-	HostReceiptDigest string       `json:"host_receipt_digest"`
+	Phase             ControlPhase           `json:"phase"`
+	PlanningDigest    string                 `json:"planning_digest"`
+	AttemptDigest     string                 `json:"attempt_digest"`
+	RequestDigest     string                 `json:"request_digest"`
+	ProfileDigest     string                 `json:"profile_digest"`
+	PlanDigest        string                 `json:"plan_digest"`
+	HostReceiptDigest string                 `json:"host_receipt_digest"`
+	Allowance         typedsandbox.Allowance `json:"allowance"`
 }
 
 // ControlRef must be retained by the trusted controller. Filesystem contents
@@ -106,13 +108,13 @@ func controlLimit(name string) int {
 	return 0
 }
 func (i ControlIdentity) valid() bool {
-	if controlName(i.Phase) == "" || !publicationHash(i.PlanningDigest) || !publicationHash(i.AttemptDigest) || !publicationHash(i.RequestDigest) || !publicationHash(i.ProfileDigest) || !publicationHash(i.HostReceiptDigest) {
+	if i.Allowance.Validate() != nil || i.Allowance.PlanningDigest != i.PlanningDigest || i.Allowance.AttemptDigest != i.AttemptDigest || i.Phase == ControlsPlanning && (i.Allowance.WorkerBytesUsed != 0 || i.Allowance.WireBytesUsed != 0) || controlName(i.Phase) == "" || !publicationHash(i.PlanningDigest) || !publicationHash(i.AttemptDigest) || !publicationHash(i.RequestDigest) || !publicationHash(i.ProfileDigest) || !publicationHash(i.HostReceiptDigest) {
 		return false
 	}
 	if i.Phase == ControlsPlanning {
 		return i.PlanDigest == "" && i.RequestDigest == i.PlanningDigest
 	}
-	return publicationHash(i.PlanDigest)
+	return publicationHash(i.PlanDigest) && i.RequestDigest != i.PlanningDigest
 }
 func encodeControlSeal(s controlSeal) ([]byte, error) {
 	names := controlFiles(s.Identity.Phase)
@@ -150,7 +152,7 @@ func controlData(ctx context.Context, id OwnerIdentity, s ControlSpec) (ControlI
 	if err := ctx.Err(); err != nil {
 		return identity, nil, err
 	}
-	identity = ControlIdentity{Phase: s.Phase, PlanningDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest, RequestDigest: id.PlanningDigest, ProfileDigest: s.Profile.Digest()}
+	identity = ControlIdentity{Allowance: s.Allowance, Phase: s.Phase, PlanningDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest, RequestDigest: id.PlanningDigest, ProfileDigest: s.Profile.Digest()}
 	hostRaw, err := json.Marshal(s.Scratch)
 	if err != nil {
 		return identity, nil, err

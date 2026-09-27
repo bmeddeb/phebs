@@ -29,7 +29,8 @@ func testControlOptions(t *testing.T, o Options) Options {
 	if err := os.Mkdir(o.Controls, 0700); err != nil {
 		t.Fatal(err)
 	}
-	seal := []byte(`{"fixture":"trusted-seal"}`)
+	o.Allowance = testAllowance()
+	seal := testControlSeal(t, o.Allowance, testControlIdentity())
 	raw, err := EncodeScratchAuthority(*o.scratch)
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +153,7 @@ func TestRecoverRecordedWithoutControls(t *testing.T) {
 	for _, fault := range []string{"missing controls", "damaged seal", "missing inputs", "wrong planning", "wrong attempt", "wrong image", "wrong inputs", "journal phase", "journal seal", "pending phase", "legacy journal"} {
 		t.Run(fault, func(t *testing.T) {
 			d, o := fakeDaemon(t, "cleanup error")
-			if _, err := run(t.Context(), o); !errors.Is(err, ErrCustody) {
+			if _, err := runFake(t.Context(), o); !errors.Is(err, ErrCustody) {
 				t.Fatal(err)
 			}
 			owner, err := readJournal(o)
@@ -254,7 +255,7 @@ func TestJournalMetadataCustody(t *testing.T) {
 	for _, fault := range []string{"good", "symlink", "hardlink", "fifo", "writable", "replaced selection", "ancestor symlink"} {
 		t.Run(fault, func(t *testing.T) {
 			d, o := fakeDaemon(t, "cleanup error")
-			if _, err := run(t.Context(), o); !errors.Is(err, ErrCustody) {
+			if _, err := runFake(t.Context(), o); !errors.Is(err, ErrCustody) {
 				t.Fatal(err)
 			}
 			selected, err := readJournal(o)
@@ -317,7 +318,7 @@ func TestContainerJournalBoundBeforeGrowth(t *testing.T) {
 	for _, size := range []int{MaxContainerJournalBytes, MaxContainerJournalBytes + 1} {
 		t.Run(strconv.Itoa(size), func(t *testing.T) {
 			_, o := fakeDaemon(t, "")
-			owner := journal{Schema: ownerSchema, Name: "phebs-typed-index-" + strings.Repeat("a", 32), DaemonID: "d", ImageID: o.ImageID, Socket: o.Socket, Inputs: o.Inputs, Controls: o.Controls, Control: o.Control, Scratch: o.scratch}
+			owner := journal{Schema: ownerSchema, Name: "phebs-typed-index-" + strings.Repeat("a", 32), DaemonID: "d", ImageID: o.ImageID, Socket: o.Socket, Inputs: o.Inputs, Controls: o.Controls, Control: o.Control, Allowance: o.Allowance, Scratch: o.scratch}
 			raw, err := json.Marshal(owner)
 			if err != nil {
 				t.Fatal(err)

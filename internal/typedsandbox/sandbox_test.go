@@ -53,6 +53,7 @@ type daemon struct {
 	name, fault               string
 	created, removed, started bool
 	start                     chan struct{}
+	deadline                  chan struct{}
 	inspections               []string
 }
 
@@ -84,7 +85,7 @@ func fakeDaemon(t *testing.T, fault string) (*daemon, Options) {
 	options := Options{scratch: &a, Socket: filepath.Join(root, "docker.sock"), ImageID: testImage, Inputs: inputs}
 	options = testControlOptions(t, options)
 
-	d := &daemon{options: options, fault: fault, start: make(chan struct{})}
+	d := &daemon{options: options, fault: fault, start: make(chan struct{}), deadline: make(chan struct{})}
 	listener, err := net.Listen("unix", options.Socket)
 	if err != nil {
 		t.Fatal(err)
@@ -135,6 +136,9 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		d.name = r.URL.Query().Get("name")
 		d.created = true
+		if d.fault == "changed invocation" {
+			d.config.Cmd[3] += " "
+		}
 		if d.fault == "changed effective configuration" {
 			d.config.HostConfig.Privileged = true
 		}
@@ -189,13 +193,40 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		d.mu.Lock()
+		if strings.Contains(d.fault, "delayed") {
+			d.mu.Unlock()
+			select {
+			case <-d.deadline:
+			case <-r.Context().Done():
+				d.mu.Lock()
+				return
+			}
+			time.Sleep(30 * time.Millisecond)
+			d.mu.Lock()
+		}
+		if d.fault == "canceled normal report" {
+			d.mu.Unlock()
+			select {
+			case <-d.deadline:
+			case <-r.Context().Done():
+				d.mu.Lock()
+				return
+			}
+			d.mu.Lock()
+		}
 		if d.fault == "truncated stream" {
 			_, _ = w.Write([]byte{1, 0, 0})
 			return
 		}
-		report := supervisorReport{Schema: reportSchema, Stdout: []byte("fixture result"), Complete: true, Resources: Resources{LimitsVerified: true, Samples: 1}}
+		report := supervisorReport{Schema: reportSchema, Allowance: d.options.Allowance, Phase: d.options.Control.Phase, RequestDigest: d.options.Control.RequestDigest, Stdout: []byte("fixture result"), Complete: true, Resources: Resources{LimitsVerified: true, Samples: 1}}
 		if d.config.Cmd[0] == SupervisorCommand {
 			report.Schema = reportSchema
+		}
+		if d.fault == "wrong allowance report" {
+			report.Allowance.Deadline++
+		}
+		if d.fault == "wrong phase report" {
+			report.Phase = ControlExecute
 		}
 		if d.fault == "crossed supervisor report" {
 			report.Schema = "unknown-profile"
@@ -209,9 +240,20 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		raw, _ := json.Marshal(report)
 		if strings.HasPrefix(d.fault, "watchdog") {
 			snapshots := newWatchdogSnapshots(WallLimit)
+			snapshots.invocation(invocationDigest(d.options.Allowance, d.options.Control.Phase, d.options.Control.RequestDigest))
 			snapshots.resources(Resources{LimitsVerified: true, Samples: 1})
 			snapshots.progress(2, 0)
 			frame := snapshots.frame.Load().data
+			if strings.Contains(d.fault, "malformed") {
+				frame = []byte("bad frame")
+			}
+			if strings.Contains(d.fault, "wrong invocation") {
+				snapshots.invocation(testImage)
+				frame = snapshots.frame.Load().data
+			}
+			if strings.Contains(d.fault, "unavailable") {
+				return
+			}
 			var stderrHeader [8]byte
 			stderrHeader[0] = 2
 			binary.BigEndian.PutUint32(stderrHeader[4:], uint32(len(frame)))
@@ -236,6 +278,13 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		close(d.start)
 		write(204, nil)
 	case strings.HasSuffix(path, "/wait"):
+		if strings.Contains(d.fault, "deadline") || d.fault == "canceled normal report" {
+			d.mu.Unlock()
+			<-r.Context().Done()
+			close(d.deadline)
+			d.mu.Lock()
+			return
+		}
 		status := 0
 		if strings.HasPrefix(d.fault, "watchdog") {
 			status = 124
@@ -257,7 +306,7 @@ func TestRunFiniteContainerLifecycle(t *testing.T) {
 	d, options := fakeDaemon(t, "")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	result, err := run(ctx, options)
+	result, err := runFake(ctx, options)
 	if err != nil || !result.Removed || result.ContainerID != testContainer || result.ExitCode != 0 || string(result.Stdout) != "fixture result" || !result.Resources.LimitsVerified {
 		t.Fatalf("result=%+v error=%v", result, err)
 	}
@@ -284,7 +333,7 @@ func TestRunRefusesWithoutLosingCustody(t *testing.T) {
 			d, options := fakeDaemon(t, test.fault)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			result, err := run(ctx, options)
+			result, err := runFake(ctx, options)
 			if err == nil || strings.Contains(err.Error(), "private daemon") {
 				t.Fatalf("error=%v", err)
 			}
@@ -307,7 +356,7 @@ func TestRecoverOnlyRecordedOwner(t *testing.T) {
 	d, options := fakeDaemon(t, "cleanup error")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if _, err := run(ctx, options); !errors.Is(err, ErrCustody) {
+	if _, err := runFake(ctx, options); !errors.Is(err, ErrCustody) {
 		t.Fatalf("error=%v", err)
 	}
 	d.mu.Lock()
@@ -353,7 +402,7 @@ func TestRecoveryRefusesChangedOwnerAndResolvesLostCreate(t *testing.T) {
 	for _, test := range []string{"lost-create-response", "daemon", "image", "scratch", "schema"} {
 		t.Run(test, func(t *testing.T) {
 			d, o := fakeDaemon(t, "cleanup error")
-			if _, err := run(context.Background(), o); !errors.Is(err, ErrCustody) {
+			if _, err := runFake(context.Background(), o); !errors.Is(err, ErrCustody) {
 				t.Fatal(err)
 			}
 			before, err := os.ReadFile(journalPath(o))
@@ -414,12 +463,12 @@ func TestPublicAPIRefusesInvalidScratchAndNonLinux(t *testing.T) {
 		}
 	}
 	//nolint:staticcheck // Deliberately exercise invalid API input before any daemon operation.
-	if _, err := run(nil, o); !errors.Is(err, ErrRefused) {
+	if _, err := runFake(nil, o); !errors.Is(err, ErrRefused) {
 		t.Fatal("nil context", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := run(ctx, o); err == nil {
+	if _, err := runFake(ctx, o); err == nil {
 		t.Fatal("canceled dispatch")
 	}
 }
@@ -428,7 +477,7 @@ func TestPendingJournalCrashRecovery(t *testing.T) {
 	for _, scenario := range []string{"pending", "identical", "absent", "conflict", "malformed", "missing-fields", "cleanup-failure", "pending-removed-crash"} {
 		t.Run(scenario, func(t *testing.T) {
 			d, o := fakeDaemon(t, "cleanup error")
-			if _, err := run(context.Background(), o); !errors.Is(err, ErrCustody) {
+			if _, err := runFake(context.Background(), o); !errors.Is(err, ErrCustody) {
 				t.Fatal(err)
 			}
 			full, err := readJournal(o)
@@ -511,7 +560,7 @@ func TestPendingJournalCrashRecovery(t *testing.T) {
 			d.started = false
 			d.start = make(chan struct{})
 			d.mu.Unlock()
-			if result, err = run(context.Background(), o); err != nil || !result.Removed {
+			if result, err = runFake(context.Background(), o); err != nil || !result.Removed {
 				t.Fatal("fresh run after recovery", result, err)
 			}
 		})
@@ -523,7 +572,7 @@ func TestInitialJournalRefusesUnownedPending(t *testing.T) {
 	if err := os.WriteFile(journalPath(o)+".next", []byte("partial"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if result, err := run(context.Background(), o); !errors.Is(err, ErrCustody) || result.Removed {
+	if result, err := runFake(context.Background(), o); !errors.Is(err, ErrCustody) || result.Removed {
 		t.Fatal(result, err)
 	}
 	d.mu.Lock()

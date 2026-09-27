@@ -18,6 +18,7 @@ var progressStages = [...]string{"", "profile", "planning", "package-load/typech
 // not a claim about scheduler latency or the moment the kernel exits PID 1.
 // Resources are the last completed cumulative sample, never a partial sample.
 type WatchdogReport struct {
+	Invocation                       string           `json:"invocation,omitempty"`
 	Schema                           string           `json:"schema"`
 	ExitCode                         int              `json:"exit_code"`
 	WallNanoseconds                  int64            `json:"wall_nanoseconds"`
@@ -44,20 +45,39 @@ type watchdogSnapshots struct {
 	// Publication may block; the watchdog reads only the atomic encoded frame.
 	mu            sync.Mutex
 	frame         atomic.Pointer[watchdogFrame]
-	started       time.Time
+	elapsed       func() (int64, error)
+	failed        atomic.Bool
 	report        WatchdogReport
 	stageObserved int64
+	workerElapsed int64
 }
 
 func newWatchdogSnapshots(wall time.Duration) *watchdogSnapshots {
-	s := &watchdogSnapshots{started: time.Now(), report: WatchdogReport{Schema: "phebs-typed-watchdog-partial-v1", ExitCode: 124, WallNanoseconds: wall.Nanoseconds()}}
+	started := time.Now()
+	return newWatchdogClock(wall, func() (int64, error) { return time.Since(started).Nanoseconds(), nil })
+}
+func newWatchdogClock(wall time.Duration, elapsed func() (int64, error)) *watchdogSnapshots {
+	s := &watchdogSnapshots{elapsed: elapsed, report: WatchdogReport{Schema: "phebs-typed-watchdog-partial-v2", ExitCode: 124, WallNanoseconds: wall.Nanoseconds()}}
 	s.publish()
 	return s
+}
+func (s *watchdogSnapshots) now() (int64, bool) {
+	n, err := s.elapsed()
+	if s.failed.Load() || err != nil || n < 0 || n < s.report.SnapshotNanoseconds {
+		s.failed.Store(true)
+		s.frame.Store(nil)
+		return 0, false
+	}
+	return min(n, s.report.WallNanoseconds), true
 }
 
 // Caller owns mu after initialization. No caller mutates a published byte slice.
 func (s *watchdogSnapshots) publish() {
-	s.report.SnapshotNanoseconds = min(time.Since(s.started).Nanoseconds(), s.report.WallNanoseconds)
+	now, ok := s.now()
+	if !ok {
+		return
+	}
+	s.report.SnapshotNanoseconds = now
 	if s.report.ResourceSampleAvailable {
 		s.report.ResourceAgeAtDeadlineNanoseconds = s.report.WallNanoseconds - s.report.ResourceSampleNanoseconds
 	}
@@ -75,25 +95,34 @@ func (s *watchdogSnapshots) resources(r Resources) {
 	defer s.mu.Unlock()
 	s.report.Resources = r
 	s.report.ResourceSampleAvailable = true
-	s.report.ResourceSampleNanoseconds = min(time.Since(s.started).Nanoseconds(), s.report.WallNanoseconds)
+	now, ok := s.now()
+	if !ok {
+		return
+	}
+	s.report.ResourceSampleNanoseconds = now
 	s.publish()
 }
 
 func (s *watchdogSnapshots) progress(id byte, elapsed int64) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if id == 0 || int(id) >= len(progressStages) || elapsed < 0 || elapsed > s.report.WallNanoseconds || elapsed < s.report.WorkerStageStartedNanoseconds || len(s.report.CompletedStages) >= 15 {
+	if id == 0 || int(id) >= len(progressStages) || elapsed < 0 || elapsed > s.report.WallNanoseconds || elapsed < s.workerElapsed || len(s.report.CompletedStages) >= 15 {
 		s.report.WorkerProgressAvailable = false
 		s.publish()
 		return false
 	}
+	now, ok := s.now()
+	if !ok {
+		return false
+	}
 	if s.report.WorkerProgressAvailable {
-		s.report.CompletedStages = append(s.report.CompletedStages, WatchdogTiming{s.report.WorkerStage, elapsed - s.report.WorkerStageStartedNanoseconds})
+		s.report.CompletedStages = append(s.report.CompletedStages, WatchdogTiming{s.report.WorkerStage, now - s.report.WorkerStageStartedNanoseconds})
 	}
 	s.report.WorkerProgressAvailable = true
 	s.report.WorkerStage = progressStages[id]
-	s.report.WorkerStageStartedNanoseconds = elapsed
-	s.stageObserved = min(time.Since(s.started).Nanoseconds(), s.report.WallNanoseconds)
+	s.workerElapsed = elapsed
+	s.report.WorkerStageStartedNanoseconds = now
+	s.stageObserved = now
 	s.publish()
 	return true
 }
@@ -102,7 +131,7 @@ func decodeWatchdog(raw []byte, wall time.Duration) (*WatchdogReport, error) {
 	var r WatchdogReport
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.DisallowUnknownFields()
-	if len(raw) == 0 || len(raw) > watchdogBytes || d.Decode(&r) != nil || d.Decode(new(any)) != io.EOF || r.Schema != "phebs-typed-watchdog-partial-v1" || r.ExitCode != 124 || r.WallNanoseconds != wall.Nanoseconds() || r.SnapshotNanoseconds < 0 || r.SnapshotNanoseconds > r.WallNanoseconds || r.ResourceSampleNanoseconds < 0 || r.ResourceSampleNanoseconds > r.SnapshotNanoseconds || r.WorkerStageStartedNanoseconds < 0 || r.WorkerStageStartedNanoseconds > r.WallNanoseconds || len(r.CompletedStages) > 15 {
+	if len(raw) == 0 || len(raw) > watchdogBytes || d.Decode(&r) != nil || d.Decode(new(any)) != io.EOF || r.Schema != "phebs-typed-watchdog-partial-v2" || r.ExitCode != 124 || r.WallNanoseconds != wall.Nanoseconds() || r.SnapshotNanoseconds < 0 || r.SnapshotNanoseconds > r.WallNanoseconds || r.ResourceSampleNanoseconds < 0 || r.ResourceSampleNanoseconds > r.SnapshotNanoseconds || r.WorkerStageStartedNanoseconds < 0 || r.WorkerStageStartedNanoseconds > r.WallNanoseconds || len(r.CompletedStages) > 15 {
 		return nil, ErrExecution
 	}
 	if r.ResourceSampleAvailable {
@@ -132,4 +161,18 @@ func watchdogStage(stage string) bool {
 		}
 	}
 	return false
+}
+
+func (s *watchdogSnapshots) invocation(digest string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.report.Invocation = digest
+	s.publish()
+}
+func decodeInvocationWatchdog(raw []byte, o Options) (*WatchdogReport, error) {
+	var r WatchdogReport
+	if len(raw) > watchdogBytes || json.Unmarshal(raw, &r) != nil || r.Invocation != invocationDigest(o.Allowance, o.Control.Phase, o.Control.RequestDigest) || r.WallNanoseconds <= 0 || r.WallNanoseconds > int64(WallLimit) {
+		return nil, ErrExecution
+	}
+	return decodeWatchdog(raw, time.Duration(r.WallNanoseconds))
 }

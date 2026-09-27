@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -26,32 +27,59 @@ import (
 func Supervisor() int { return supervisorProfile() }
 
 func supervisorProfile() int {
-	wall := WallLimit
 	if os.Getpid() != 1 || os.Getuid() != 0 || os.Getgid() != 0 {
 		return 125
 	}
+	var published atomic.Pointer[watchdogSnapshots]
+	var reportReady atomic.Bool
+	allowance, phase, request, stop, err := bootstrapSupervisor(os.Args[1:], func(timerErr error) {
+		if timerErr != nil {
+			os.Exit(125)
+		}
+		if snapshots := published.Load(); snapshots != nil {
+			watchdogExit(snapshots, 2, reportReady.Load())
+		}
+		supervisorExpired()
+	})
+	if err != nil {
+		return 125
+	}
+	defer stop()
+	now, err := bootNow()
+	if err != nil {
+		return 125
+	}
+	remaining, err := allowance.remaining(now)
+	if err != nil {
+		return 124
+	}
+	snapshots := newWatchdogClock(time.Duration(remaining), func() (int64, error) {
+		current, e := bootNow()
+		if e != nil {
+			return 0, e
+		}
+		return current - now, nil
+	})
+	snapshots.invocation(invocationDigest(allowance, phase, request))
+	published.Store(snapshots)
+	reportReady.Store(nonblockingReportFD(2))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(signals)
-	snapshots := newWatchdogSnapshots(wall)
-	reportFD := nonblockingReportFD(2)
-	timer := time.NewTimer(wall)
-	defer timer.Stop()
 	finished := make(chan struct{})
 	defer close(finished)
-	// This watchdog never waits on a child, a pipe, a filesystem walk or the
-	// host controller. Non-root children cannot stop or signal their root PID 1.
 	go func() {
 		select {
-		case <-timer.C:
-			watchdogExit(snapshots, 2, reportFD)
 		case <-signals:
 			os.Exit(125)
 		case <-finished:
 		}
 	}()
+	if readSupervisorAllowance(allowance, phase, request) != nil {
+		return 125
+	}
 	if validateProcess(false) != nil || unix.Prctl(unix.PR_SET_DUMPABLE, 0, 0, 0, 0) != nil {
 		return 125
 	}
@@ -60,7 +88,8 @@ func supervisorProfile() int {
 		return 125
 	}
 	scratch := &authority
-	report := supervise(ctx, cancel, scratch, snapshots)
+	report := supervise(ctx, cancel, scratch, snapshots, allowance)
+	report.Allowance, report.Phase, report.RequestDigest = allowance, phase, request
 	if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
 		return 125
 	}
@@ -126,7 +155,7 @@ func validateProcess(worker bool) error {
 	return nil
 }
 
-func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchAuthority, snapshots *watchdogSnapshots) supervisorReport {
+func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchAuthority, snapshots *watchdogSnapshots, allowance Allowance) supervisorReport {
 	report := supervisorReport{Schema: reportSchema, ExitCode: 125, StopReason: "kernel_limits"}
 	if verifyKernelLimits() != nil || observeResources(&report.Resources, scratch) != nil {
 		return report
@@ -139,6 +168,9 @@ func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchA
 	report.Resources.PerProcessDescriptors = DescriptorLimit
 	report.Resources.AggregateDescriptorCeiling = TaskLimit * DescriptorLimit
 	snapshots.resources(report.Resources)
+	if snapshots.failed.Load() {
+		return report
+	}
 	for _, path := range []string{"/scratch/home", "/scratch/tmp", "/scratch/cache"} {
 		// These contain only untrusted worker state inside private scratch. The
 		// watchdog has no CHOWN capability and retains no controls here.
@@ -147,7 +179,7 @@ func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchA
 			return report
 		}
 	}
-	output := &childOutput{cancel: cancel}
+	output := &childOutput{cancel: cancel, limit: OutputBytes - allowance.WorkerBytesUsed}
 	command := exec.CommandContext(ctx, HelperPath, WorkerCommand)
 	command.Dir = "/scratch"
 	command.Env = environment()
@@ -181,6 +213,10 @@ running:
 			cancel()
 		} else {
 			snapshots.resources(report.Resources)
+			if snapshots.failed.Load() {
+				measurementFailed = true
+				cancel()
+			}
 		}
 		select {
 		case waitErr = <-wait:
@@ -198,6 +234,9 @@ running:
 	report.Stderr = bytes.Clone(output.stderr.Bytes())
 	overflow := output.overflow
 	output.mu.Unlock()
+	if snapshots.failed.Load() {
+		measurementFailed = true
+	}
 	if measurementFailed || overflow || ctx.Err() != nil || verifyKernelLimits() != nil {
 		report.Resources.SamplingUnavailable = measurementFailed
 		report.StopReason = "resource_observation"
@@ -235,6 +274,7 @@ running:
 
 type childOutput struct {
 	mu             sync.Mutex
+	limit          int64
 	stdout, stderr bytes.Buffer
 	overflow       bool
 	cancel         context.CancelFunc
@@ -248,8 +288,8 @@ func (stream childStream) Write(data []byte) (int, error) {
 	o := stream.output
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	remaining := OutputBytes - o.stdout.Len() - o.stderr.Len()
-	if len(data) > remaining {
+	remaining := o.limit - int64(o.stdout.Len()) - int64(o.stderr.Len())
+	if o.limit < 0 || o.limit > OutputBytes || int64(len(data)) > remaining {
 		o.overflow = true
 		o.cancel()
 		return 0, ErrExecution

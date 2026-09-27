@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +43,11 @@ func controlsFixture(t *testing.T) (publicationFixture, OwnerIdentity, OwnerMani
 	// Synthetic trusted receipt tests only binding. No formatter, mount or device
 	// has run; this is explicitly not a VerifyHostScratch/native proof.
 	host := typedsandbox.HostScratchReceipt{Schema: "phebs-typed-host-scratch-v3", Options: typedsandbox.HostScratchOptions{Base: typedsandbox.HostBaseIdentity{Device: m.Directory.Device, Inode: m.Directory.Inode, BlockSize: 4096}, RequestDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest, Socket: "/run/docker.sock", MkfsDigest: digest([]byte("formatter"))}, Authority: typedsandbox.ScratchAuthority{Source: typedsandbox.HostScratchBase + "/" + root + "/scratch", DeviceMajor: 7, DeviceMinor: 3, BlockSize: 4096, Blocks: 100, Inodes: typedsandbox.ScratchInodes, ImageBytes: typedsandbox.ScratchBytes / 4096 * 4096}, ObservedDirectIO: true}
-	return f, id, m, ControlSpec{Phase: ControlsPlanning, Parent: f.parent, Profile: profile, Scratch: host}, copied
+	allowance, err := typedsandbox.BeginAllowance(t.Context(), id.PlanningDigest, id.AttemptDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f, id, m, ControlSpec{Allowance: allowance, Phase: ControlsPlanning, Parent: f.parent, Profile: profile, Scratch: host}, copied
 }
 func executionControls(f publicationFixture, s ControlSpec) ControlSpec {
 	s.Phase = ControlsExecution
@@ -137,13 +142,19 @@ func TestControlsBothPhasesAndInputImmutability(t *testing.T) {
 
 func TestControlsTrustAndBoundsBeforeGrowth(t *testing.T) {
 	f, id, _, s, _ := controlsFixture(t)
-	for _, tc := range []string{"phase", "parent", "profile", "plan-in-planning", "execution-parent", "host-attempt", "host-base", "host-DIO", "host-source", "nil-gate", "cancel"} {
+	for _, tc := range []string{"phase", "parent", "profile", "plan-in-planning", "execution-parent", "host-attempt", "host-base", "host-DIO", "host-source", "nil-gate", "cancel", "allowance-attempt", "allowance-deadline", "allowance-planning-output"} {
 		t.Run(tc, func(t *testing.T) {
 			spec := s
 			gate := f.gate
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			switch tc {
+			case "allowance-attempt":
+				spec.Allowance.AttemptDigest = digest([]byte("other"))
+			case "allowance-deadline":
+				spec.Allowance.Deadline++
+			case "allowance-planning-output":
+				spec.Allowance.WorkerBytesUsed = 1
 			case "phase":
 				spec.Phase = "other"
 			case "parent":
@@ -181,7 +192,7 @@ func TestControlsTrustAndBoundsBeforeGrowth(t *testing.T) {
 }
 
 func TestControlsExactReopen(t *testing.T) {
-	for _, kind := range []string{"corrupt", "missing", "extra", "symlink", "hardlink", "inode", "mode", "directory", "seal", "ref", "phase", "fresh-host"} {
+	for _, kind := range []string{"corrupt", "missing", "extra", "symlink", "hardlink", "inode", "mode", "directory", "seal", "ref", "phase", "fresh-host", "allowance"} {
 		t.Run(kind, func(t *testing.T) {
 			f, id, _, s, _ := controlsFixture(t)
 			ref, err := InstallControls(t.Context(), f.dir, id, s, f.gate)
@@ -198,6 +209,9 @@ func TestControlsExactReopen(t *testing.T) {
 				t.Fatal(err)
 			}
 			switch kind {
+			case "allowance":
+				s.Allowance.Start++
+				s.Allowance.Deadline++
 			case "corrupt":
 				if err = os.Chmod(target, 0600); err == nil {
 					err = os.WriteFile(target, bytes.Repeat([]byte("x"), len(raw)), 0444)
@@ -367,4 +381,32 @@ func TestControlsCanonicalSealAndCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	finishDrain(t, f.dir, a)
+}
+
+func TestControlsAllowanceMaximumSeal(t *testing.T) {
+	f, id, _, spec, _ := controlsFixture(t)
+	spec = executionControls(f, spec)
+	spec.Allowance.Start = math.MaxInt64 - int64(typedsandbox.WallLimit)
+	spec.Allowance.Deadline = math.MaxInt64
+	spec.Allowance.TimeDevice = math.MaxUint64
+	spec.Allowance.TimeInode = math.MaxUint64
+	spec.Allowance.WorkerBytesUsed = typedsandbox.OutputBytes
+	spec.Allowance.WireBytesUsed = 24 << 20
+	identity, data, err := controlData(t.Context(), id, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seal := controlSeal{Schema: controlSealSchema, Identity: identity, Directory: Node{Path: "controls-execute", Device: math.MaxUint64, Inode: math.MaxUint64, Directory: true}}
+	for _, name := range controlFiles(ControlsExecution) {
+		seal.Files = append(seal.Files, controlFile{name, OwnerControl{Digest: digest(data[name]), Bytes: int64(controlLimit(name)), Device: math.MaxUint64, Inode: math.MaxUint64}})
+	}
+	raw, err := encodeControlSeal(seal)
+	if err != nil || len(raw) > MaxControlSealBytes {
+		t.Fatal("allowance grew seal bound", len(raw), err)
+	}
+	decoded, err := decodeControlSeal(raw)
+	if err != nil || decoded.Identity.Allowance != spec.Allowance {
+		t.Fatal("allowance round trip", err)
+	}
+	t.Logf("maximum-shaped execution seal: %d / %d bytes", len(raw), MaxControlSealBytes)
 }
