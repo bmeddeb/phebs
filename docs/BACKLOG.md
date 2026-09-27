@@ -14929,6 +14929,11 @@ DIO/formatter/crash proof and profile identity binding remain open.
 Immutable bundle install/reopen and cross-process reader leases now pass scoped
 review and real unprivileged Linux tests. Trusted receipt persistence, store
 pointer wiring, aggregate reservation and complete lifecycle are still open.
+Bounded global/root control census and irreversible collecting fences now
+protect current, desired and running work. Retirement also detaches only its
+exact canceled schedule, and every worker transition binds the complete stored
+lease descriptor. These store prerequisites do not reclaim physical custody;
+retained-control admission bounds and full lifecycle integration remain open.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that

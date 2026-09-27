@@ -1024,7 +1024,8 @@ func (s *Surreal) EnqueueGenerationSchedule(
 		for key, value := range authority.variables() {
 			variables[key] = value
 		}
-		statement = strings.Replace(statement, "BEGIN;", "BEGIN;\n"+typedSourceFenceSQL+typedIntentFenceSQL, 1)
+		variables["typed_root"] = typedID("typed_index_request", spec.Generation)
+		statement = strings.Replace(statement, "BEGIN;", "BEGIN;\n"+typedSourceFenceSQL+typedIntentFenceSQL+typedRootFenceSQL, 1)
 	}
 	for attempt := 0; ; attempt++ {
 		// Keep the existing preparation-write gate ahead of every SDK call.
@@ -1529,6 +1530,11 @@ func (s *Surreal) ExpandGenerationSchedule(
 	if schedule.Generation != generation || schedule.Status != GenerationScheduleActive {
 		return nil, ErrGenerationStale
 	}
+	if schedule.ResourceClass == GenerationResourceTypedIndex {
+		if err := s.typedLiveRoot(ctx, repository, generation); err != nil {
+			return nil, err
+		}
+	}
 	if schedule.NextOffset == schedule.TotalItems {
 		return schedule, nil
 	}
@@ -1543,8 +1549,14 @@ func (s *Surreal) ExpandGenerationSchedule(
 		"digest":   schedule.Digest, "next_offset": schedule.NextOffset,
 		"new_offset": newOffset, "chunk_count": len(chunks), "chunks": chunks,
 	}
+	statement := expandGenerationScheduleSQL
+	if schedule.ResourceClass == GenerationResourceTypedIndex {
+		variables["typed_root"] = typedID("typed_index_request", generation)
+		variables["repository"] = repository
+		statement = strings.Replace(statement, "BEGIN;", "BEGIN;"+typedRootFenceSQL, 1)
+	}
 	results, err := queryGenerationSchedule[[]generationScheduleRec](
-		ctx, s.accounting, s.db, "expand", expandGenerationScheduleSQL, variables, storeWrite(uint64(len(chunks)+1)),
+		ctx, s.accounting, s.db, "expand", statement, variables, storeWrite(uint64(len(chunks)+1)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("expand generation schedule: %w", err)
@@ -1669,16 +1681,27 @@ SELECT * FROM generation_schedule WHERE resource_class = $class
 		if variables["state_phase"] != "" {
 			variables["state_plan_rid"] = serviceStateV3PlanID(schedule.Generation)
 		}
+		selectionSQL, claimSQL := claimGenerationChunkSelectionSQL, claimGenerationChunkSQL
+		selectionControls := 6
+		if schedule.ResourceClass == GenerationResourceTypedIndex {
+			variables["typed_root"] = typedID("typed_index_request", schedule.Generation)
+			selectionSQL = typedRootFenceSQL + selectionSQL
+			selectionControls = 8 // one LET and one closed IF root fence precede the six selection controls
+			claimSQL = strings.Replace(claimSQL, "BEGIN;", "BEGIN;"+typedRootFenceSQL, 1)
+		}
 		for attempt := 0; ; attempt++ {
 			selected, selectErr := storeQuery[[]models.RecordID](ctx, s.accounting, s.db,
-				claimGenerationChunkSelectionSQL+`RETURN IF $eligible THEN [$candidate] ELSE [] END;`, variables, storeRead())
+				selectionSQL+`RETURN IF $eligible THEN [$candidate] ELSE [] END;`, variables, storeRead())
 			if selectErr != nil {
+				if schedule.ResourceClass == GenerationResourceTypedIndex && strings.Contains(selectErr.Error(), "typed-stale") {
+					break
+				}
 				if isRetryable(selectErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 					continue
 				}
 				return nil, fmt.Errorf("select generation chunk: %w", selectErr)
 			}
-			ids, selectErr := generationMutationIDs(ctx, selected, "generation_schedule_chunk", 1, 6)
+			ids, selectErr := generationMutationIDs(ctx, selected, "generation_schedule_chunk", 1, selectionControls)
 			if selectErr != nil {
 				return nil, selectErr
 			}
@@ -1686,7 +1709,7 @@ SELECT * FROM generation_schedule WHERE resource_class = $class
 				break
 			}
 			variables["chunk"] = ids[0]
-			claimedResults, claimErr := storeQuery[[]generationChunkRec](ctx, s.accounting, s.db, claimGenerationChunkSQL, variables, storeWrite(3))
+			claimedResults, claimErr := storeQuery[[]generationChunkRec](ctx, s.accounting, s.db, claimSQL, variables, storeWrite(3))
 			if claimErr != nil {
 				if isRetryable(claimErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 					continue
@@ -1769,11 +1792,11 @@ func (s *Surreal) HeartbeatGenerationChunk(ctx context.Context, chunk Generation
 	if err := validGenerationChunkLease(chunk); err != nil {
 		return err
 	}
-	results, err := queryGenerationSchedule[[]generationChunkRec](ctx, s.accounting, s.db, "heartbeat", `
+	results, err := queryGenerationSchedule[[]generationChunkRec](ctx, s.accounting, s.db, "heartbeat", typedChunkStatement(`
 UPDATE $chunk SET heartbeat_at = time::now()
 	WHERE status = 'running' AND lease_token = $lease AND claimed_by = $worker
-	RETURN AFTER`, map[string]any{
-		"chunk": generationChunkRecordID(chunk), "lease": chunk.LeaseToken,
+	RETURN AFTER`, chunk), map[string]any{
+		"chunk": generationChunkRecordID(chunk), "lease_scope": generationLeaseScope(chunk), "lease": chunk.LeaseToken,
 		"worker": chunk.ClaimedBy,
 	}, storeWrite(1))
 	if err != nil {
@@ -1825,8 +1848,8 @@ func (s *Surreal) CompleteGenerationChunk(ctx context.Context, chunk GenerationC
 	if err := validGenerationChunkLease(chunk); err != nil {
 		return err
 	}
-	results, err := queryGenerationSchedule[[]generationTransitionRec](ctx, s.accounting, s.db, "complete", completeGenerationChunkSQL, map[string]any{
-		"chunk":            generationChunkRecordID(chunk),
+	results, err := queryGenerationSchedule[[]generationTransitionRec](ctx, s.accounting, s.db, "complete", typedChunkStatement(completeGenerationChunkSQL, chunk), map[string]any{
+		"chunk": generationChunkRecordID(chunk), "lease_scope": generationLeaseScope(chunk),
 		"schedule":         models.NewRecordID("generation_schedule", strings.TrimPrefix(chunk.ScheduleDigest, "sha256:")),
 		"current":          models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(chunk.Repository, chunk.Stage), "sha256:")),
 		"repository_state": models.NewRecordID("generation_schedule_repository", strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:")),
@@ -1880,7 +1903,8 @@ func (s *Surreal) reconcileGenerationCompletion(
 	}
 	if current.ID != claimed.ID || current.ScheduleDigest != claimed.ScheduleDigest ||
 		current.Repository != claimed.Repository || current.Stage != claimed.Stage ||
-		current.Generation != claimed.Generation || current.Offset != claimed.Offset ||
+		current.Generation != claimed.Generation || current.ResourceClass != claimed.ResourceClass ||
+		current.Length != claimed.Length || current.Offset != claimed.Offset ||
 		current.Attempt != claimed.Attempt {
 		return false, ErrGenerationLeaseLost
 	}
@@ -1949,8 +1973,8 @@ func (s *Surreal) FailGenerationChunk(
 		return err
 	}
 	results, err := queryGenerationSchedule[[]generationTransitionRec](
-		ctx, s.accounting, s.db, "fail", failGenerationChunkSQL, map[string]any{
-			"chunk": generationChunkRecordID(chunk),
+		ctx, s.accounting, s.db, "fail", typedChunkStatement(failGenerationChunkSQL, chunk), map[string]any{
+			"chunk": generationChunkRecordID(chunk), "lease_scope": generationLeaseScope(chunk),
 			"schedule": models.NewRecordID(
 				"generation_schedule",
 				strings.TrimPrefix(chunk.ScheduleDigest, "sha256:"),
@@ -2039,7 +2063,7 @@ func (s *Surreal) RetryGenerationChunk(
 	}
 	successorIdentity := generationChunkID(chunk.ScheduleDigest, chunk.Offset, chunk.Attempt+1)
 	variables := map[string]any{
-		"chunk":            generationChunkRecordID(chunk),
+		"chunk": generationChunkRecordID(chunk), "lease_scope": generationLeaseScope(chunk),
 		"schedule":         models.NewRecordID("generation_schedule", strings.TrimPrefix(chunk.ScheduleDigest, "sha256:")),
 		"current":          models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(chunk.Repository, chunk.Stage), "sha256:")),
 		"repository_state": models.NewRecordID("generation_schedule_repository", strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:")),
@@ -2053,7 +2077,7 @@ func (s *Surreal) RetryGenerationChunk(
 	// The three UPDATE operands and successor CREATE body are supplied even
 	// when the native ownership/current/exhaustion guards affect no rows.
 	results, err := queryGenerationSchedule[[]generationTransitionRec](
-		ctx, s.accounting, s.db, "retry", retryGenerationChunkSQL, variables, storeWrite(4),
+		ctx, s.accounting, s.db, "retry", typedChunkStatement(retryGenerationChunkSQL, chunk), variables, storeWrite(4),
 	)
 	if err != nil {
 		if s.reconcileGenerationExhaustion(ctx, chunk, schedule.MaxAttempts, errMessage) {
@@ -2099,6 +2123,9 @@ func (s *Surreal) reconcileGenerationExhaustion(
 	current, err := s.generationChunkByIdentity(reconcileCtx, claimed.Identity)
 	return err == nil && current.ID == claimed.ID &&
 		current.ScheduleDigest == claimed.ScheduleDigest &&
+		current.Repository == claimed.Repository && current.Stage == claimed.Stage &&
+		current.Generation == claimed.Generation && current.ResourceClass == claimed.ResourceClass &&
+		current.Length == claimed.Length &&
 		current.Offset == claimed.Offset && current.Attempt == claimed.Attempt &&
 		current.ClaimedBy == claimed.ClaimedBy &&
 		current.Status == GenerationChunkFailed &&
@@ -2166,9 +2193,9 @@ func (s *Surreal) DeferGenerationChunk(
 			ctx,
 			s.accounting,
 			s.db,
-			deferGenerationChunkSQL,
+			typedChunkStatement(deferGenerationChunkSQL, chunk),
 			map[string]any{
-				"chunk": generationChunkRecordID(chunk),
+				"chunk": generationChunkRecordID(chunk), "lease_scope": generationLeaseScope(chunk),
 				"schedule": models.NewRecordID(
 					"generation_schedule",
 					strings.TrimPrefix(chunk.ScheduleDigest, "sha256:"),
@@ -2214,8 +2241,8 @@ func (s *Surreal) ReleaseGenerationChunk(ctx context.Context, chunk GenerationCh
 	if err := validGenerationChunkLease(chunk); err != nil {
 		return err
 	}
-	results, err := queryGenerationSchedule[[]generationTransitionRec](ctx, s.accounting, s.db, "release", releaseGenerationChunkSQL, map[string]any{
-		"chunk":            generationChunkRecordID(chunk),
+	results, err := queryGenerationSchedule[[]generationTransitionRec](ctx, s.accounting, s.db, "release", typedChunkStatement(releaseGenerationChunkSQL, chunk), map[string]any{
+		"chunk": generationChunkRecordID(chunk), "lease_scope": generationLeaseScope(chunk),
 		"schedule":         models.NewRecordID("generation_schedule", strings.TrimPrefix(chunk.ScheduleDigest, "sha256:")),
 		"current":          models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(chunk.Repository, chunk.Stage), "sha256:")),
 		"repository_state": models.NewRecordID("generation_schedule_repository", strings.TrimPrefix(generationRepositoryID(chunk.Repository), "sha256:")),

@@ -21,7 +21,7 @@ func TestSchemaBatchTrustedRecipes(t *testing.T) {
 		definitions string
 		count       int
 	}{
-		{"base", schema, 397},
+		{"base", schema, 440},
 		{"API pre-migration", apiKeyCapabilityPreMigrationSchema, 1},
 		{"API capability", apiKeyCapabilitySchema, 3},
 		{"evidence pre-migration", evidencePreMigrationSchema, 2},
@@ -152,7 +152,7 @@ func TestSchemaBatchNativeAtomicityAndSelfHealing(t *testing.T) {
 	// The direct SDK check establishes the pinned server's complete result
 	// shape; the pure transport test binds applySchemaBatch to these exact bytes.
 	results, err := surrealdb.Query[any](ctx, s.db, "BEGIN;\n"+schema+"\nCOMMIT;", nil)
-	if err != nil || results == nil || len(*results) != 399 {
+	if err != nil || results == nil || len(*results) != 442 {
 		t.Fatalf("fresh complete schema batch: results=%v err=%v", results, err)
 	}
 	for index, result := range *results {

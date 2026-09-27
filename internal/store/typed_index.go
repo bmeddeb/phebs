@@ -172,10 +172,10 @@ IF $source = NONE OR $source.deleting = true OR $source.typed_incarnation != $in
 const typedIntentFenceSQL = `
 IF (SELECT body FROM $intent LIMIT 1)[0].body != $intent_before { THROW 'typed-stale'; };
 `
-const typedChunkFenceSQL = `
+const typedChunkFenceSQL = typedRootFenceSQL + `
 LET $owned = (SELECT id FROM $chunk WHERE status = 'running' AND lease_token = $lease
  AND claimed_by = $worker AND repository = $repository AND generation = $root
- AND stage = 'typed-index' AND resource_class = 'typed-index' AND schedule_digest = $schedule_digest LIMIT 1)[0].id;
+ AND stage = 'typed-index' AND resource_class = 'typed-index' AND schedule_digest = $schedule_digest` + generationLeaseScopeSQL + ` LIMIT 1)[0].id;
 IF $owned = NONE OR (SELECT schedule_digest FROM $schedule_current LIMIT 1)[0].schedule_digest != $schedule_digest {
  THROW 'typed-stale';
 };
@@ -308,11 +308,14 @@ func (s *Surreal) EnqueueTypedIndex(ctx context.Context, repository string, raw 
 	}
 	raw = []byte(canonical)
 	digest := admission.Digest()
-	existing, err := s.typedRead(ctx, "typed_index_request", digest)
+	existing, err := s.typedReadControl(ctx, "typed_index_request", digest)
 	if err != nil {
 		return TypedIndexStatus{}, err
 	}
 	if existing != "" {
+		if err := s.typedLiveRoot(ctx, repository, digest); err != nil {
+			return TypedIndexStatus{}, err
+		}
 		var stored typedIndexRequest
 		if typedDecode(existing, typedindex.MaxRequestBytes+1024, &stored) != nil || stored.Raw != string(raw) || stored.Root != digest || stored.SourceEpoch != a.source.Epoch {
 			return TypedIndexStatus{}, typedindex.Invalid
@@ -320,7 +323,7 @@ func (s *Surreal) EnqueueTypedIndex(ctx context.Context, repository string, raw 
 		if a.intent.Canceled {
 			return TypedIndexStatus{}, typedindex.Canceled
 		}
-		desired, err := s.typedRead(ctx, "typed_index_request", a.intent.Desired)
+		desired, err := s.typedReadControl(ctx, "typed_index_request", a.intent.Desired)
 		if err != nil {
 			return TypedIndexStatus{}, err
 		}
@@ -348,9 +351,10 @@ func (s *Surreal) EnqueueTypedIndex(ctx context.Context, repository string, raw 
 	vars := a.variables()
 	vars["request"] = typedID("typed_index_request", digest)
 	vars["request_body"] = requestBody
+	vars["root"] = digest
 	vars["body"] = intentBody
 	vars["pending_ids"] = pending
-	write := `CREATE ONLY $request SET repository=$repository, body=$request_body RETURN NONE;
+	write := `CREATE ONLY $request SET repository=$repository, request_root=$root, control_key=$root, is_parent=true, custody_state='live', body=$request_body RETURN NONE;
 UPDATE $intent SET body=$body RETURN NONE;`
 	count := uint64(2)
 	if len(pending) == 0 {
@@ -385,7 +389,7 @@ func (s *Surreal) typedSchedule(ctx context.Context, repository string) (typedAu
 	if a.intent.Canceled || a.intent.RestoreRequired || a.intent.Desired == "" {
 		return typedAuthority{}, GenerationScheduleSpec{}, typedindex.Canceled
 	}
-	raw, err := s.typedRead(ctx, "typed_index_request", a.intent.Desired)
+	raw, err := s.typedReadControl(ctx, "typed_index_request", a.intent.Desired)
 	if err != nil {
 		return typedAuthority{}, GenerationScheduleSpec{}, err
 	}
@@ -393,7 +397,7 @@ func (s *Surreal) typedSchedule(ctx context.Context, repository string) (typedAu
 	if typedDecode(raw, typedindex.MaxRequestBytes+1024, &request) != nil {
 		return typedAuthority{}, GenerationScheduleSpec{}, typedindex.Invalid
 	}
-	parentRaw, err := s.typedRead(ctx, "typed_index_request", request.Root)
+	parentRaw, err := s.typedReadControl(ctx, "typed_index_request", request.Root)
 	if err != nil {
 		return typedAuthority{}, GenerationScheduleSpec{}, err
 	}
@@ -404,6 +408,9 @@ func (s *Surreal) typedSchedule(ctx context.Context, repository string) (typedAu
 	admission, err := a.admit(ctx, parent.Raw, typedIndexPlan{}, "")
 	if err != nil || admission.Digest() != request.Root {
 		return typedAuthority{}, GenerationScheduleSpec{}, typedindex.Stale
+	}
+	if err := s.typedLiveRoot(ctx, repository, request.Root); err != nil {
+		return typedAuthority{}, GenerationScheduleSpec{}, err
 	}
 	return a, GenerationScheduleSpec{Repository: repository, Stage: "typed-index", Generation: request.Root, ResourceClass: GenerationResourceTypedIndex, TotalItems: 1, ChunkItems: 1, MaxAttempts: 3, RepositoryTokens: 1}, nil
 }
@@ -435,14 +442,14 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 		return typedExecution{}, typedindex.Stale
 	}
 	x := typedExecution{authority: a, vars: a.variables()}
-	raw, err := s.typedRead(ctx, "typed_index_request", a.intent.Desired)
+	raw, err := s.typedReadControl(ctx, "typed_index_request", a.intent.Desired)
 	if err != nil {
 		return x, err
 	}
 	if typedDecode(raw, typedindex.MaxRequestBytes+1024, &x.request) != nil || x.request.Root != chunk.Generation || x.request.SourceEpoch != a.source.Epoch {
 		return x, typedindex.Stale
 	}
-	raw, err = s.typedRead(ctx, "typed_index_request", chunk.Generation)
+	raw, err = s.typedReadControl(ctx, "typed_index_request", chunk.Generation)
 	if err != nil {
 		return x, err
 	}
@@ -453,7 +460,7 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 	if err != nil || x.work.Parent.Digest() != chunk.Generation {
 		return x, typedindex.Stale
 	}
-	raw, err = s.typedRead(ctx, "typed_index_plan", chunk.Generation)
+	raw, err = s.typedReadControl(ctx, "typed_index_plan", chunk.Generation)
 	if err != nil {
 		return x, err
 	}
@@ -471,9 +478,11 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 	x.work.PlanDigest = x.plan.Digest
 	x.work.AttemptDigest = typedDigest([]byte(chunk.Identity + "\x00" + chunk.LeaseToken))
 	x.vars["chunk"] = generationChunkRecordID(chunk)
+	x.vars["lease_scope"] = generationLeaseScope(chunk)
 	x.vars["lease"] = chunk.LeaseToken
 	x.vars["worker"] = chunk.ClaimedBy
 	x.vars["root"] = chunk.Generation
+	x.vars["typed_root"] = typedID("typed_index_request", chunk.Generation)
 	x.vars["schedule_digest"] = chunk.ScheduleDigest
 	x.vars["schedule_current"] = typedID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(chunk.Repository, chunk.Stage), "sha256:"))
 	x.vars["attempt"] = typedID("typed_index_attempt", x.work.AttemptDigest)
@@ -486,7 +495,7 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 			return x, typedindex.Invalid
 		}
 	}
-	x.attemptRaw, err = s.typedRead(ctx, "typed_index_attempt", x.work.AttemptDigest)
+	x.attemptRaw, err = s.typedReadControl(ctx, "typed_index_attempt", x.work.AttemptDigest)
 	if err != nil {
 		return x, err
 	}
@@ -522,7 +531,7 @@ func (s *Surreal) BeginTypedIndex(ctx context.Context, chunk GenerationChunk) (T
 	x.vars["body"] = body
 	x.vars["state_body"] = stateBody
 	x.vars["state"] = typedID("typed_index_state", chunk.Repository)
-	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+`CREATE ONLY $attempt SET repository=$repository,body=$body RETURN NONE; UPSERT $state SET repository=$repository,body=$state_body RETURN NONE;`, x.vars, 2)
+	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+`CREATE ONLY $attempt SET repository=$repository,request_root=$root,control_key=record::id($attempt),body=$body RETURN NONE; UPSERT $state SET repository=$repository,body=$state_body RETURN NONE;`, x.vars, 2)
 	x.work.Resume = chunk.Attempt > 0 || x.activeAttempt != ""
 	x.work.Stage = x.attempt.Stage
 	x.work.States = x.attempt.States
@@ -580,7 +589,7 @@ func (s *Surreal) typedSaveAttempt(ctx context.Context, x typedExecution, next t
 	}
 	x.vars["body"] = body
 	x.vars["attempt_before"] = x.attemptRaw
-	return s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+`IF (SELECT body FROM $attempt LIMIT 1)[0].body != $attempt_before { THROW 'typed-stale'; }; UPDATE $attempt SET body=$body RETURN NONE;`+extra, x.vars, 1+extraRows)
+	return s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+`IF (SELECT body FROM $attempt WHERE request_root=$root LIMIT 1)[0].body != $attempt_before { THROW 'typed-stale'; }; UPDATE $attempt SET body=$body RETURN NONE;`+extra, x.vars, 1+extraRows)
 }
 func (s *Surreal) AdvanceTypedIndex(ctx context.Context, chunk GenerationChunk, expected TypedIndexStage) error {
 	x, err := s.typedExecution(ctx, chunk, true)
@@ -641,7 +650,7 @@ func (s *Surreal) SealTypedIndexPlan(ctx context.Context, chunk GenerationChunk,
 		x.vars["plan_body"], _ = typedEncode(binding, maxTypedControlBytes)
 		x.vars["successor"] = typedID("typed_index_request", admission.Digest())
 		x.vars["request_body"], _ = typedEncode(typedIndexRequest{Raw: successorRaw, Root: chunk.Generation, SourceEpoch: x.authority.source.Epoch}, typedindex.MaxRequestBytes+1024)
-		extra += `CREATE ONLY $plan SET repository=$repository,body=$plan_body RETURN NONE; CREATE ONLY $successor SET repository=$repository,body=$request_body RETURN NONE;`
+		extra += `CREATE ONLY $plan SET repository=$repository,request_root=$root,control_key=$root,body=$plan_body RETURN NONE; CREATE ONLY $successor SET repository=$repository,request_root=$root,control_key=record::id($successor),is_parent=false,custody_state='',body=$request_body RETURN NONE;`
 		rows += 2
 	}
 	err = s.typedSaveAttempt(ctx, x, next, extra, rows)
@@ -749,7 +758,7 @@ func (s *Surreal) resolveTypedIndexCurrent(ctx context.Context, a typedAuthority
 	if typedDecode(raw, maxTypedControlBytes, &pointer) != nil || pointer.Epoch < 1 || pointer.Epoch > math.MaxInt64 {
 		return pointer, typedindex.Invalid
 	}
-	requestRaw, err := s.typedRead(ctx, "typed_index_request", pointer.Binding.RequestDigest)
+	requestRaw, err := s.typedReadControl(ctx, "typed_index_request", pointer.Binding.RequestDigest)
 	if err != nil {
 		return pointer, err
 	}
@@ -794,7 +803,7 @@ func (s *Surreal) GetTypedIndexStatus(ctx context.Context, repository string) (T
 		return out, typedindex.Invalid
 	}
 	if activeAttempt != "" {
-		raw, err := s.typedRead(ctx, "typed_index_attempt", activeAttempt)
+		raw, err := s.typedReadControl(ctx, "typed_index_attempt", activeAttempt)
 		if err != nil {
 			return out, err
 		}

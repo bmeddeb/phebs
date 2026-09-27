@@ -6811,3 +6811,44 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Host refusal/race, Linux vet/lint and documentation checks pass. Durable
   receipt ownership, store publication wiring, complete lifecycle/reservation
   and native execution remain open; this prerequisite does not close T45.4.
+
+- **2026-09-27 — T45.4 irreversible request retirement and exact lease
+  descriptors (local, unregistered).** Planning requests carry a live/collecting
+  fence; request, plan and attempt rows expose bounded indexed root/key
+  projections. Global closed-table record-ID census validates every row before
+  root-indexed absence is usable, so missing projections cannot disappear from
+  recovery. Unknown historical projections refuse rather than being guessed.
+  Retirement protects the resolved current planning root, uncanceled desired
+  root and every running typed chunk. It repeats the exact observation in its
+  mutation transaction, marks collecting irreversibly, and supersedes/removes
+  only the matching typed schedule/current. Replacement schedules remain intact;
+  canceled pending work cannot obstruct the next repository. Parent tombstones
+  remain replay fences; there is no filesystem deletion or quiescence claim.
+
+  All typed scheduler, successor, stage and publication writes reject collecting
+  roots. Every shared worker lease mutation and typed stage transition also
+  binds all nine immutable stored descriptor fields: identity, schedule,
+  repository, stage, generation, resource class, offset, length and attempt.
+  Exact ID/token/worker alone cannot authorize relabeled classes, redirected
+  counters or a forged retry/attempt identity. Lost-response reconciliation uses
+  the same equality. Parameters are structured SDK values, not SQL literals.
+
+  **Cost.** One census page is one SDK read returning at most 65 bounded
+  controls, including the sentinel; request bodies are at most 9 KiB, other
+  bodies 4 KiB and repository names 512 UTF-8 bytes. JSON/SDK copies add bounded
+  transient memory. Retirement inspection uses four SDK reads; mutation repeats
+  the observation in one transaction with three supplied write operands and two
+  direct scheduler lookups. It changes no chunk/history rows or counters.
+  Typed scheduler/no-op admission adds a direct root check; transactional writer
+  fences add point reads inside existing transactions. Typed heartbeat now wraps
+  its write in a transaction. Generic lease scope comparisons add nine scalar
+  parameters/predicates without another SDK call or row mutation. No process
+  lock, child, file scan, hashing, cache or per-query work is added. Retained
+  control cardinality is still subject to the upcoming admission/cleanup gate;
+  a 64-row page is not a total retention bound.
+
+  The schema/accounting recipes track the actual new projections and indexes,
+  including UTF-8 byte bounds and the running-lease existence index. Independent
+  review and exact real-store regression gates are recorded with this commit.
+  Full filesystem ownership, reservation, lifecycle/runtime wiring and native
+  proof remain open; this prerequisite does not close T45.4.

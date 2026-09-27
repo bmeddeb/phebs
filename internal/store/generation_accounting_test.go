@@ -83,7 +83,8 @@ func TestGenerationAccountingRetrySubmittedOperands(t *testing.T) {
 				}}}}, nil
 			}
 			_, err := (&Surreal{db: db, accounting: owner}).RetryGenerationChunk(ctx, GenerationChunk{
-				ID: "actual", ScheduleDigest: digest, Repository: "example.com/acme/retry", Stage: "source-observation",
+				ID: "actual", Identity: generationChunkID(digest, 0, test.attempt), ScheduleDigest: digest, Repository: "example.com/acme/retry", Stage: "source-observation",
+				ResourceClass: GenerationResourceCPU, Generation: digest, Length: 1,
 				Status: GenerationChunkRunning, LeaseToken: "lease", ClaimedBy: "worker", Attempt: test.attempt,
 			}, "neutral failure", time.Now())
 			if !errors.Is(err, test.wantErr) {

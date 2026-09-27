@@ -165,6 +165,9 @@ regressions, while privileged native proof, exact formatter/profile binding
 and full lifecycle/reservation remain required.
 Immutable publication custody and cross-process reader pins have also passed
 scoped review; these primitives do not register a reader or generated source.
+Store retirement now has bounded global/root census, exact current/desired/live
+protection and irreversible worker fences, including full lease-descriptor
+binding. Physical custody reclamation and runtime registration remain open.
 
 ## Now
 

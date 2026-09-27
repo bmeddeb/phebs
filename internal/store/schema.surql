@@ -631,29 +631,43 @@ DEFINE FIELD OVERWRITE status ON typed_index_job TYPE string ASSERT $value INSID
 DEFINE INDEX IF NOT EXISTS typed_index_job_status ON typed_index_job FIELDS status;
 DEFINE INDEX IF NOT EXISTS typed_index_job_lifecycle ON typed_index_job FIELDS status, finished_at;
 DEFINE TABLE IF NOT EXISTS typed_index_intent SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS repository ON typed_index_intent TYPE string;
-DEFINE FIELD IF NOT EXISTS body ON typed_index_intent TYPE string ASSERT string::len($value) <= 24576;
+DEFINE FIELD OVERWRITE repository ON typed_index_intent TYPE string ASSERT bytes::len(<bytes>$value) <= 512;
+DEFINE FIELD OVERWRITE body ON typed_index_intent TYPE string ASSERT bytes::len(<bytes>$value) <= 24576;
 DEFINE INDEX IF NOT EXISTS typed_index_intent_repository ON typed_index_intent FIELDS repository;
 DEFINE TABLE IF NOT EXISTS typed_index_request SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS repository ON typed_index_request TYPE string;
-DEFINE FIELD IF NOT EXISTS body ON typed_index_request TYPE string ASSERT string::len($value) <= 9216;
+DEFINE FIELD OVERWRITE repository ON typed_index_request TYPE string ASSERT bytes::len(<bytes>$value) <= 512;
+DEFINE FIELD OVERWRITE body ON typed_index_request TYPE string ASSERT bytes::len(<bytes>$value) <= 9216;
 DEFINE INDEX IF NOT EXISTS typed_index_request_repository ON typed_index_request FIELDS repository;
 DEFINE TABLE IF NOT EXISTS typed_index_plan SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS repository ON typed_index_plan TYPE string;
-DEFINE FIELD IF NOT EXISTS body ON typed_index_plan TYPE string ASSERT string::len($value) <= 4096;
+DEFINE FIELD OVERWRITE repository ON typed_index_plan TYPE string ASSERT bytes::len(<bytes>$value) <= 512;
+DEFINE FIELD OVERWRITE body ON typed_index_plan TYPE string ASSERT bytes::len(<bytes>$value) <= 4096;
 DEFINE INDEX IF NOT EXISTS typed_index_plan_repository ON typed_index_plan FIELDS repository;
 DEFINE TABLE IF NOT EXISTS typed_index_attempt SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS repository ON typed_index_attempt TYPE string;
-DEFINE FIELD IF NOT EXISTS body ON typed_index_attempt TYPE string ASSERT string::len($value) <= 4096;
+DEFINE FIELD OVERWRITE repository ON typed_index_attempt TYPE string ASSERT bytes::len(<bytes>$value) <= 512;
+DEFINE FIELD OVERWRITE body ON typed_index_attempt TYPE string ASSERT bytes::len(<bytes>$value) <= 4096;
 DEFINE INDEX IF NOT EXISTS typed_index_attempt_repository ON typed_index_attempt FIELDS repository;
 DEFINE TABLE IF NOT EXISTS typed_index_current SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS repository ON typed_index_current TYPE string;
-DEFINE FIELD IF NOT EXISTS body ON typed_index_current TYPE string ASSERT string::len($value) <= 4096;
+DEFINE FIELD OVERWRITE repository ON typed_index_current TYPE string ASSERT bytes::len(<bytes>$value) <= 512;
+DEFINE FIELD OVERWRITE body ON typed_index_current TYPE string ASSERT bytes::len(<bytes>$value) <= 4096;
 DEFINE INDEX IF NOT EXISTS typed_index_current_repository ON typed_index_current FIELDS repository;
 DEFINE TABLE IF NOT EXISTS typed_index_state SCHEMAFULL;
-DEFINE FIELD IF NOT EXISTS repository ON typed_index_state TYPE string;
-DEFINE FIELD IF NOT EXISTS body ON typed_index_state TYPE string ASSERT string::len($value) <= 4096;
+DEFINE FIELD OVERWRITE repository ON typed_index_state TYPE string ASSERT bytes::len(<bytes>$value) <= 512;
+DEFINE FIELD OVERWRITE body ON typed_index_state TYPE string ASSERT bytes::len(<bytes>$value) <= 4096;
 DEFINE INDEX IF NOT EXISTS typed_index_state_repository ON typed_index_state FIELDS repository;
 -- New queue has no legacy rows; establish its uniqueness even when the generic
 -- pre-lease migration marker already exists on an upgraded installation.
 DEFINE INDEX IF NOT EXISTS typed_index_job_pending_key ON typed_index_job FIELDS pending_key UNIQUE;
+
+-- T45.4 lifecycle projections; missing old values deliberately fail closed.
+DEFINE FIELD IF NOT EXISTS request_root ON typed_index_request TYPE option<string> ASSERT $value = NONE OR bytes::len(<bytes>$value) = 71;
+DEFINE FIELD IF NOT EXISTS is_parent ON typed_index_request TYPE option<bool>;
+DEFINE FIELD IF NOT EXISTS custody_state ON typed_index_request TYPE option<string> ASSERT $value = NONE OR $value INSIDE ['live', 'collecting', ''];
+DEFINE FIELD IF NOT EXISTS control_key ON typed_index_request TYPE option<string> ASSERT $value = NONE OR bytes::len(<bytes>$value) = 71;
+DEFINE INDEX IF NOT EXISTS typed_index_request_root ON typed_index_request FIELDS request_root, control_key;
+DEFINE FIELD IF NOT EXISTS request_root ON typed_index_attempt TYPE option<string> ASSERT $value = NONE OR bytes::len(<bytes>$value) = 71;
+DEFINE FIELD IF NOT EXISTS control_key ON typed_index_attempt TYPE option<string> ASSERT $value = NONE OR bytes::len(<bytes>$value) = 71;
+DEFINE INDEX IF NOT EXISTS typed_index_attempt_root ON typed_index_attempt FIELDS request_root, control_key;
+DEFINE FIELD IF NOT EXISTS request_root ON typed_index_plan TYPE option<string> ASSERT $value = NONE OR bytes::len(<bytes>$value) = 71;
+DEFINE FIELD IF NOT EXISTS control_key ON typed_index_plan TYPE option<string> ASSERT $value = NONE OR bytes::len(<bytes>$value) = 71;
+DEFINE INDEX IF NOT EXISTS typed_index_plan_root ON typed_index_plan FIELDS request_root, control_key;
+DEFINE INDEX IF NOT EXISTS generation_chunk_typed_root ON generation_schedule_chunk FIELDS generation, stage, status;
