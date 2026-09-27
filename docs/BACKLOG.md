@@ -14948,6 +14948,8 @@ for bounded deep traversal, reader exclusion and every durable mutation prefix.
 It requires prior store retirement and native quiescence, retains ambiguous
 custody, and is not registered. Global reservation and lifecycle integration
 remain open before actual native validation or any runtime registration.
+Owner creation also checks its maximum later manifest encoding before any
+filesystem work, preserving the4KiB bound even for valid heavily escaped names.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that

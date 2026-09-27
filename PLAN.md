@@ -6961,3 +6961,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   held-custody regressions pass, with vet/lint and documentation gates. Durable
   aggregate reservation and integrated store/native/startup lifecycle authority
   remain separate gates; this primitive does not close T45.4.
+
+- **2026-09-27 — T45.4 owner envelope before growth.** Request admission permits
+  up to8KiB while the private owner manifest permits4KiB. A valid512-byte
+  repository name with JSON-escaped characters can therefore exceed the owner
+  envelope, initially or only after receipt references are added. Owner creation
+  now marshals its worst later revision before any filesystem operation: exact
+  admitted request/budget, maximum-width inode/device/control-size fields, all
+  three receipt references and both fixed-length child names. Oversize refuses
+  without namespace, lock or capacity-probe side effects. Every actual revision
+  still passes its original strict encoder. No request, owner or native cap is
+  raised and retained contracts are unchanged.
+
+  **Cost.** Creation adds one bounded metadata marshal/buffer plus the existing
+  relative-name validator's bounded request marshal/hash before I/O; no repeated member/file hashing,
+  query/tick cost, persistent state, child or lock is added. Real Linux tests
+  distinguish initial overflow, later receipt expansion and normal persistence,
+  proving no filesystem growth on either refusal. Independent review and exact
+  scoped gates accompany this correction; executor integration remains open.

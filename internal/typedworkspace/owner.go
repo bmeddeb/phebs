@@ -160,12 +160,34 @@ func decodeOwner(raw []byte) (OwnerManifest, error) {
 func CreateOwner(ctx context.Context, base string, id OwnerIdentity, budget OwnerBudget, gate *lifecycle.Gate) (OwnerManifest, error) {
 	return createOwner(ctx, base, id, budget, gate, capacity)
 }
+
+// Reserve the largest later metadata encoding before any namespace growth.
+// Receipt contents are separately budgeted; only their bounded references live
+// here. Marshal directly because this wire upper bound need not fit the actual
+// receipt-byte budget. Every admitted revision must still pass encodeOwner.
+func ownerEnvelopeFits(id OwnerIdentity, budget OwnerBudget) bool {
+	control := func(limit int) *OwnerControl {
+		return &OwnerControl{Digest: id.Request.BundleDigest, Bytes: int64(limit), Device: math.MaxUint64, Inode: math.MaxUint64}
+	}
+	m := OwnerManifest{
+		Schema: OwnerSchema, Identity: id, Budget: budget, Revision: 3,
+		Directory: Node{Path: id.RelativeName(), Device: math.MaxUint64, Inode: math.MaxUint64, Directory: true},
+		Inventory: control(typedindex.MaxInventoryBytes), Inputs: control(MaxInputReceiptBytes), Publication: control(MaxPublicationReceiptBytes),
+		InputName: "inputs-" + strings.Repeat("f", 32), PublicationName: "bundle-" + strings.Repeat("f", 32),
+	}
+	raw, err := json.Marshal(m)
+	return err == nil && len(raw) <= MaxOwnerBytes
+}
+
 func createOwner(ctx context.Context, base string, id OwnerIdentity, budget OwnerBudget, gate *lifecycle.Gate, probe func(*os.File) (space, error)) (m OwnerManifest, err error) {
 	if ctx == nil || !id.valid() || !budget.valid() {
 		return m, ErrCustody
 	}
 	if err = ctx.Err(); err != nil {
 		return m, err
+	}
+	if !ownerEnvelopeFits(id, budget) {
+		return m, ErrCustody
 	}
 	dir, err := openDirectory(base, true)
 	if err != nil {

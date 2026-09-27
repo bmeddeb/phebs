@@ -392,3 +392,68 @@ func TestOwnerUpdateChargesOnlyIncrementalControls(t *testing.T) {
 		})
 	}
 }
+
+func TestOwnerEnvelopeRefusesBeforeGrowth(t *testing.T) {
+	for _, tc := range []struct {
+		name                  string
+		escaped               int
+		initialFits, admitted bool
+	}{
+		{"ordinary", 0, true, true},
+		{"later-receipt-overflow", 300, true, false},
+		{"initial-overflow", 510, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, base, _, gate := fixture(t)
+			hash := digest([]byte("owner-envelope"))
+			tool := typedindex.Tool{Version: "1.0", Digest: hash}
+			profile, err := typedindex.DecodeProfile(t.Context(), publicationJSON(t, typedindex.ProfileDefinition{
+				Schema: typedindex.ProfileSchema, Name: strings.Repeat("p", 64), Provider: typedindex.ProviderID,
+				Tools:  typedindex.Tools{Bazel: tool, RulesGo: tool, Go: tool, Driver: tool, Indexer: tool, Planner: tool, Launcher: tool},
+				Config: typedindex.ReducedConfig(), Policy: typedindex.MeasuredPolicy(), BundleDigest: hash, ImageDigest: hash,
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			source := typedindex.Source{Repository: "x/" + strings.Repeat("<", tc.escaped) + strings.Repeat("a", 510-tc.escaped), Incarnation: strings.Repeat("i", 64), Generation: hash, Commit: strings.Repeat("a", 40)}
+			authority := typedindex.Authority{Enabled: true, Administrator: true, Source: source, Profile: typedindex.Epoch{Number: 1, Digest: profile.Digest()}, UniverseDigest: hash}
+			request := typedindex.NewRequest(source, profile, 1, hash, strings.Repeat("k", 64))
+			admission, err := typedindex.Admit(t.Context(), authority, profile, publicationJSON(t, request))
+			if err != nil {
+				t.Fatal("request itself must be valid", err)
+			}
+			id, err := NewOwnerIdentity(admission, hash, "lease")
+			if err != nil {
+				t.Fatal(err)
+			}
+			budget := OwnerBudget{Bytes: 1 << 20, Inodes: 128}
+			initial := OwnerManifest{Schema: OwnerSchema, Identity: id, Directory: Node{Path: id.RelativeName(), Device: 1, Inode: 1, Directory: true}, Budget: budget, Revision: 1}
+			if (initial.Digest() != "") != tc.initialFits {
+				t.Fatal("test must distinguish initial encoding from later receipt growth")
+			}
+			probed := false
+			probe := func(f *os.File) (space, error) { probed = true; return capacity(f) }
+			m, err := createOwner(t.Context(), base, id, budget, gate, probe)
+			if tc.admitted {
+				if err != nil || !probed || m.Digest() == "" {
+					t.Fatal("positive owner failed", err)
+				}
+				if got, err := LoadOwner(t.Context(), base, id); err != nil || got.Digest() != m.Digest() {
+					t.Fatal("positive reopen", err)
+				}
+				return
+			}
+			if !errors.Is(err, ErrCustody) || probed || m.RelativeName() != "" {
+				t.Fatal("late refusal or side effect", err, probed)
+			}
+			entries, err := os.ReadDir(base)
+			if err != nil || len(entries) != 0 {
+				t.Fatal("oversized owner grew namespace/lock", entries, err)
+			}
+			// No filesystem lookup is needed even when base cannot exist.
+			if _, err = CreateOwner(t.Context(), filepath.Join(base, "absent"), id, budget, gate); !errors.Is(err, ErrCustody) {
+				t.Fatal("filesystem checked before envelope", err)
+			}
+		})
+	}
+}
