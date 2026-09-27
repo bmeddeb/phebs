@@ -17,7 +17,7 @@ import (
 )
 
 func hostFixture() HostScratchOptions {
-	return HostScratchOptions{RequestDigest: "sha256:" + strings.Repeat("a", 64), Attempt: 1, Socket: "/run/docker.sock", MkfsDigest: "sha256:" + strings.Repeat("b", 64)}
+	return HostScratchOptions{RequestDigest: "sha256:" + strings.Repeat("a", 64), AttemptDigest: "sha256:" + strings.Repeat("d", 64), Socket: "/run/docker.sock", MkfsDigest: "sha256:" + strings.Repeat("b", 64)}
 }
 func TestHostAuthorityAndRecipe(t *testing.T) {
 	o := hostFixture()
@@ -25,7 +25,7 @@ func TestHostAuthorityAndRecipe(t *testing.T) {
 		t.Fatal("valid owner refused")
 	}
 	next := o
-	next.Attempt++
+	next.AttemptDigest = "sha256:" + strings.Repeat("e", 64)
 	if next.root() == o.root() {
 		t.Fatal("attempt aliases")
 	}
@@ -34,7 +34,7 @@ func TestHostAuthorityAndRecipe(t *testing.T) {
 	if next.root() == o.root() {
 		t.Fatal("request aliases")
 	}
-	for _, edit := range []func(*HostScratchOptions){func(o *HostScratchOptions) { o.Attempt = 0 }, func(o *HostScratchOptions) { o.Socket = "../daemon" }, func(o *HostScratchOptions) { o.RequestDigest = "sha256:" + strings.Repeat("A", 64) }, func(o *HostScratchOptions) { o.MkfsDigest = "latest" }} {
+	for _, edit := range []func(*HostScratchOptions){func(o *HostScratchOptions) { o.AttemptDigest = "" }, func(o *HostScratchOptions) { o.Socket = "../daemon" }, func(o *HostScratchOptions) { o.RequestDigest = "sha256:" + strings.Repeat("A", 64) }, func(o *HostScratchOptions) { o.MkfsDigest = "latest" }} {
 		bad := o
 		edit(&bad)
 		if bad.valid() {
@@ -281,5 +281,48 @@ func TestHostInterruptedFormattingAndPartialRetirement(t *testing.T) {
 	}
 	if hostImageAllocation(hostImageBytes+1, 0, false) || hostImageAllocation(0, -1, false) || hostImageAllocation(0, (hostImageBytes+65536)/512+1, false) {
 		t.Fatal("invalid allocation accepted")
+	}
+}
+
+func TestHostExactLeaseJournalIdentity(t *testing.T) {
+	first := hostFixture()
+	second := first
+	// Two leases of the same logical scheduler retry must never share scratch.
+	second.AttemptDigest = "sha256:" + strings.Repeat("e", 64)
+	if first.root() == second.root() {
+		t.Fatal("distinct lease custody aliases")
+	}
+	owner := hostOwner{Schema: hostOwnerSchema, Options: first, Phase: "new", Loop: -1}
+	raw, err := json.Marshal(owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = decodeHostOwner(raw, first); err != nil {
+		t.Fatal("positive exact owner", err)
+	}
+	if _, err = decodeHostOwner(raw, second); !errors.Is(err, ErrCustody) {
+		t.Fatal("borrowed old lease journal", err)
+	}
+	secondOwner := owner
+	secondOwner.Options = second
+	secondOwner.Phase = "image"
+	secondOwner.ImageInode = 1
+	if hostOwnerAdvance(owner, secondOwner) {
+		t.Fatal("journal advance changed lease")
+	}
+	for name, bad := range map[string]string{
+		"old-schema":         strings.Replace(string(raw), hostOwnerSchema, "phebs-typed-host-scratch-v1", 1),
+		"numeric-attempt":    strings.Replace(string(raw), `"attempt_digest":"`+first.AttemptDigest+`"`, `"attempt":1`, 1),
+		"numeric-and-digest": strings.Replace(string(raw), `"attempt_digest":`, `"attempt":1,"attempt_digest":`, 1),
+		"upper-case":         strings.Replace(string(raw), first.AttemptDigest, strings.ToUpper(first.AttemptDigest), 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if bad == string(raw) {
+				t.Fatal("ineffective mutation")
+			}
+			if _, err := decodeHostOwner([]byte(bad), first); !errors.Is(err, ErrCustody) {
+				t.Fatal("legacy/ambiguous authority accepted", err)
+			}
+		})
 	}
 }

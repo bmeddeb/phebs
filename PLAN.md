@@ -6986,3 +6986,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   closes host unused-symbol lint findings without suppressions or runtime changes.
   Host/Linux vet and lint verify the platform split; no cost or native authority
   changes.
+
+- **2026-09-27 — T45.4 exact per-lease host scratch identity (prospective).**
+  A scheduler retry ordinal can be reclaimed under a different lease. The unused
+  host scratch API now binds the original planning request and exact durable
+  attempt digest, matching workspace/store identity, rather than a numeric
+  attempt. The prospective host journal/receipt schema becomes v2; v1, numeric,
+  unknown and mismatched options refuse without implicit migration or cleanup.
+  Host roots hash both complete identities, and all main/pending recovery checks
+  retain exact options equality. Historical spike evidence is untouched.
+
+  Formatter identity/argv, direct I/O, geometry, native caps, daemon/loop/mount
+  checks and cleanup predicates are unchanged. Identity validation adds one fixed
+  71-byte scan; root marshaling/hash and journal fields use a bounded digest
+  string instead of an ordinal. The8KiB journal bound and64-hex root length stay
+  fixed. No new runtime request/tick/startup work, lock, cache, child or allocation
+  is registered. Independent Host regressions and Linux vet pass; parent Host,
+  host/Linux vet and lint gates pass. Native proof remains required.

@@ -20,15 +20,16 @@ import (
 const HostScratchBase = "/var/lib/phebs-typed-index"
 const HostMkfsPath = "/usr/sbin/mkfs.ext4"
 const hostImageBytes = ScratchBytes / 4096 * 4096
-const hostOwnerSchema = "phebs-typed-host-scratch-v1"
+const hostOwnerSchema = "phebs-typed-host-scratch-v2"
 const hostContainerLimit = 128
 
 // HostScratchOptions are trusted operator/request inputs, never browser options.
-// MkfsDigest must be bound into the prospective request/profile before use.
+// AttemptDigest is the exact durable per-lease attempt identity, never a retry
+// ordinal or a truncated hash. MkfsDigest must be bound into the prospective request/profile before use.
 // The base directory must already be provisioned root:root, mode 0700.
 type HostScratchOptions struct {
 	RequestDigest string `json:"request_digest"`
-	Attempt       uint64 `json:"attempt"`
+	AttemptDigest string `json:"attempt_digest"`
 	Socket        string `json:"socket"`
 	MkfsDigest    string `json:"mkfs_digest"`
 }
@@ -62,13 +63,13 @@ func hostDigest(s string) bool {
 	return true
 }
 func (o HostScratchOptions) valid() bool {
-	return hostDigest(o.RequestDigest) && o.Attempt > 0 && hostDigest(o.MkfsDigest) && filepath.IsAbs(o.Socket) && filepath.Clean(o.Socket) == o.Socket && len(o.Socket) <= 512 && !strings.ContainsAny(o.Socket, "\x00\r\n")
+	return hostDigest(o.RequestDigest) && hostDigest(o.AttemptDigest) && hostDigest(o.MkfsDigest) && filepath.IsAbs(o.Socket) && filepath.Clean(o.Socket) == o.Socket && len(o.Socket) <= 512 && !strings.ContainsAny(o.Socket, "\x00\r\n")
 }
 func (o HostScratchOptions) root() string {
 	raw, _ := json.Marshal(struct {
-		Request string
-		Attempt uint64
-	}{o.RequestDigest, o.Attempt})
+		Request       string
+		AttemptDigest string
+	}{o.RequestDigest, o.AttemptDigest})
 	sum := sha256.Sum256(raw)
 	return HostScratchBase + "/" + hex.EncodeToString(sum[:])
 }
