@@ -1,7 +1,8 @@
 // Typed root inventory has no registered runtime caller. Each page is one SDK
 // read of at most 65 bounded controls (requests <=9 KiB, others <=4 KiB).
 // Retirement inspection is four SDK reads: root, intent, current, then one
-// exact bounded observation with two direct request lookups and a running-lease
+// exact bounded observation with two direct request lookups, one direct current
+// owner-attempt lookup (including its bounded body/projections), and a running-lease
 // existence probe. Mutation repeats that observation in one transaction and
 // writes three supplied operands: parent scalar, exact schedule supersession,
 // and exact scheduler-current removal. Two additional direct scheduler lookups
@@ -73,7 +74,7 @@ func validateTypedControl(kind TypedIndexControlKind, row TypedIndexControl) err
 		}
 	case TypedIndexAttempts:
 		var a typedIndexAttempt
-		if typedDecode(row.Body, maxTypedControlBytes, &a) != nil || !validTypedAttempt(a) || a.Root != row.Root || row.Parent || row.State != "" {
+		if typedDecode(row.Body, maxTypedControlBytes, &a) != nil || !validTypedAttempt(a) || a.Custody != nil && a.Custody.AttemptDigest != row.ID || a.Root != row.Root || row.Parent || row.State != "" {
 			return typedindex.Invalid
 		}
 	case TypedIndexPlans:
@@ -207,35 +208,38 @@ func (r TypedIndexRetirement) Protection() (current, desired, running bool) {
 }
 
 type typedRetirementObservation struct {
-	RootBody          string `json:"root_body"`
-	RootRepository    string `json:"root_repository"`
-	RootProjection    string `json:"root_projection"`
-	RootKey           string `json:"root_key"`
-	Parent            bool   `json:"parent"`
-	State             string `json:"state"`
-	Intent            string `json:"intent"`
-	Current           string `json:"current"`
-	DesiredBody       string `json:"desired_body"`
-	DesiredRoot       string `json:"desired_root"`
-	DesiredRepository string `json:"desired_repository"`
-	DesiredKey        string `json:"desired_key"`
-	CurrentBody       string `json:"current_body"`
-	CurrentRoot       string `json:"current_root"`
-	CurrentRepository string `json:"current_repository"`
-	CurrentKey        string `json:"current_key"`
-	Running           bool   `json:"running"`
+	RootBody          string            `json:"root_body"`
+	RootRepository    string            `json:"root_repository"`
+	RootProjection    string            `json:"root_projection"`
+	RootKey           string            `json:"root_key"`
+	Parent            bool              `json:"parent"`
+	State             string            `json:"state"`
+	Intent            string            `json:"intent"`
+	Current           string            `json:"current"`
+	DesiredBody       string            `json:"desired_body"`
+	DesiredRoot       string            `json:"desired_root"`
+	DesiredRepository string            `json:"desired_repository"`
+	DesiredKey        string            `json:"desired_key"`
+	CurrentBody       string            `json:"current_body"`
+	CurrentRoot       string            `json:"current_root"`
+	CurrentRepository string            `json:"current_repository"`
+	CurrentKey        string            `json:"current_key"`
+	Running           bool              `json:"running"`
+	CurrentOwner      TypedIndexControl `json:"current_owner"`
 }
 
 const typedRetirementObservationSQL = `
 LET $r = (SELECT body, repository, request_root, control_key, is_parent, custody_state FROM $typed_root LIMIT 1)[0];
 LET $d = (SELECT body, request_root, control_key, repository FROM $desired_request LIMIT 1)[0];
 LET $c = (SELECT body, request_root, control_key, repository FROM $current_request LIMIT 1)[0];
+LET $o = (SELECT record::id(id) AS key, control_key, repository, request_root, body FROM $current_owner LIMIT 1)[0];
 LET $observation = {
  root_body:$r.body ?? '', root_repository:$r.repository ?? '', root_projection:$r.request_root ?? '', root_key:$r.control_key ?? '',
  parent:$r.is_parent ?? false, state:$r.custody_state ?? '',
  intent:(SELECT body FROM $intent LIMIT 1)[0].body ?? '',
  current:(SELECT body FROM $current LIMIT 1)[0].body ?? '',
  desired_body:$d.body ?? '', desired_root:$d.request_root ?? '', desired_repository:$d.repository ?? '', desired_key:$d.control_key ?? '',
+ current_owner:{key:$o.key ?? '',stored_key:$o.control_key ?? '',repository:$o.repository ?? '',request_root:$o.request_root ?? '',is_parent:false,custody_state:'',body:$o.body ?? ''},
  current_body:$c.body ?? '', current_root:$c.request_root ?? '', current_repository:$c.repository ?? '', current_key:$c.control_key ?? '',
  running:array::len(SELECT id FROM generation_schedule_chunk WHERE generation=$root
  AND stage='typed-index' AND status='running' LIMIT 1)>0
@@ -269,6 +273,7 @@ func (s *Surreal) InspectTypedIndexRetirement(ctx context.Context, root string) 
 	}
 	var intent TypedIndexIntent
 	var current typedindex.PublicationPointer
+	var currentAttempt string
 	if intentRaw != "" && (typedDecode(intentRaw, maxTypedIntentBytes, &intent) != nil || intent.Repository != row.Repository || intent.Desired != "" && !validSHA256(intent.Desired)) {
 		return out, typedindex.Invalid
 	}
@@ -278,10 +283,15 @@ func (s *Surreal) InspectTypedIndexRetirement(ctx context.Context, root string) 
 			return out, typedindex.Invalid
 		}
 	}
-	if currentRaw != "" && (typedDecode(currentRaw, maxTypedControlBytes, &current) != nil || !validSHA256(current.Binding.RequestDigest) || !validSHA256(current.RootDigest) || current.Epoch < 1) {
-		return out, typedindex.Invalid
+	if currentRaw != "" {
+		stored, e := decodeTypedIndexCurrent(currentRaw)
+		if e != nil {
+			return out, e
+		}
+		current = stored.Pointer
+		currentAttempt = stored.AttemptDigest
 	}
-	vars := typedRetirementVariables(root, row.Repository, intent.Desired, current.Binding.RequestDigest)
+	vars := typedRetirementVariables(root, row.Repository, intent.Desired, current.Binding.RequestDigest, currentAttempt)
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return out, err
 	}
@@ -320,6 +330,12 @@ func (s *Surreal) InspectTypedIndexRetirement(ctx context.Context, root string) 
 			return out, typedindex.Invalid
 		}
 	}
+	if currentRaw != "" {
+		var attempt typedIndexAttempt
+		if o.CurrentOwner.ID != currentAttempt || o.CurrentOwner.Repository != row.Repository || validateTypedControl(TypedIndexAttempts, o.CurrentOwner) != nil || typedDecode(o.CurrentOwner.Body, maxTypedControlBytes, &attempt) != nil || attempt.Stage != TypedComplete || attempt.Root != o.CurrentRoot || attempt.Request != current.Binding.RequestDigest || !typedCustodyMatches(attempt.Custody, current) {
+			return out, typedindex.Invalid
+		}
+	}
 	raw, _ := json.Marshal(o)
 	var expected map[string]any
 	if json.Unmarshal(raw, &expected) != nil {
@@ -328,7 +344,7 @@ func (s *Surreal) InspectTypedIndexRetirement(ctx context.Context, root string) 
 	out = TypedIndexRetirement{root: root, repository: row.Repository, expected: expected, current: currentRaw != "" && o.CurrentRoot == root, desired: !intent.Canceled && !intent.RestoreRequired && intent.Desired != "" && o.DesiredRoot == root, running: o.Running, collecting: o.State == "collecting"}
 	return out, nil
 }
-func typedRetirementVariables(root, repository, desired, current string) map[string]any {
+func typedRetirementVariables(root, repository, desired, current, currentAttempt string) map[string]any {
 	// Absent references use an impossible fixed key in the same closed table.
 	if desired == "" {
 		desired = "absent"
@@ -336,7 +352,10 @@ func typedRetirementVariables(root, repository, desired, current string) map[str
 	if current == "" {
 		current = "absent"
 	}
-	return map[string]any{"root": root, "repository": repository, "typed_root": typedID("typed_index_request", root), "intent": typedID("typed_index_intent", repository), "current": typedID("typed_index_current", repository), "desired_request": typedID("typed_index_request", desired), "current_request": typedID("typed_index_request", current)}
+	if currentAttempt == "" {
+		currentAttempt = "absent"
+	}
+	return map[string]any{"current_owner": typedID("typed_index_attempt", currentAttempt), "root": root, "repository": repository, "typed_root": typedID("typed_index_request", root), "intent": typedID("typed_index_intent", repository), "current": typedID("typed_index_current", repository), "desired_request": typedID("typed_index_request", desired), "current_request": typedID("typed_index_request", current)}
 }
 
 // BeginTypedIndexRetirement marks one parent irreversibly collecting. No rows
@@ -349,17 +368,21 @@ func (s *Surreal) BeginTypedIndexRetirement(ctx context.Context, selection Typed
 	}
 	var intent TypedIndexIntent
 	var current typedindex.PublicationPointer
+	var currentAttempt string
 	if raw, _ := selection.expected["intent"].(string); raw != "" {
 		if typedDecode(raw, maxTypedIntentBytes, &intent) != nil {
 			return typedindex.Invalid
 		}
 	}
 	if raw, _ := selection.expected["current"].(string); raw != "" {
-		if typedDecode(raw, maxTypedControlBytes, &current) != nil {
-			return typedindex.Invalid
+		stored, e := decodeTypedIndexCurrent(raw)
+		if e != nil {
+			return e
 		}
+		current = stored.Pointer
+		currentAttempt = stored.AttemptDigest
 	}
-	vars := typedRetirementVariables(selection.root, selection.repository, intent.Desired, current.Binding.RequestDigest)
+	vars := typedRetirementVariables(selection.root, selection.repository, intent.Desired, current.Binding.RequestDigest, currentAttempt)
 	vars["expected"] = selection.expected
 	digest := generationScheduleDigest(GenerationScheduleSpec{Repository: selection.repository, Stage: TypedIndexScheduleStage, Generation: selection.root, ResourceClass: GenerationResourceTypedIndex, TotalItems: 1, ChunkItems: 1, MaxAttempts: 3, RepositoryTokens: 1})
 	vars["schedule_digest"] = digest

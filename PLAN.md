@@ -6899,3 +6899,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   over-cap namespaces; Linux vet/lint and documentation checks pass. Store
   binding, durable physical reservation, bounded drainage, startup/host census
   and native validation remain open. This prerequisite does not close T45.4.
+
+- **2026-09-27 — T45.4 exact store custody binding prerequisite (local,
+  unregistered).** Existing per-lease attempt rows now bind bounded scalar owner
+  manifest revisions, directory inode/device and input/publication receipt
+  digests. Revision1/2 remain preflight, planning requires verified-input
+  revision2, and validation records revision3 before publication. Exact manifest
+  CAS retains source/profile/desired/root and full nine-field worker lease
+  fences. The controller must verify actual filesystem receipts first; stored
+  scalar references never establish readiness or quiescence by themselves.
+
+  The existing current table privately wraps its unchanged public pointer with
+  the completed attempt digest. Exact current resolution returns that completed
+  owner's planning/execution authority, chunk/lease identity and custody without
+  consulting the active replacement attempt or scanning history. Prior current
+  survives replacement cancellation/failure. Missing, mismatched or legacy
+  unregistered owner controls refuse. Retirement also validates this association
+  and rechecks owner body/projections in its existing collecting transaction.
+  No new table, schema version, public status field or backup payload is added;
+  manifest-v9 still retains only precious revalidation-blocked intent.
+
+  **Cost.** Custody save uses the existing eight bounded authority SDK reads and
+  one one-row transaction; three successful revisions add three bounded attempt
+  writes. Exact replay uses a read-only fence. Current resolution takes seven
+  SDK calls; status with an active attempt takes nine. Retirement inspection
+  stays four SDK calls, adding one direct owner lookup inside its observation
+  and at most4KiB body plus bounded projections. Begin retains three supplied
+  write operands. The attempt body stays4KiB (maximum-shaped regression1,318
+  bytes). These paths add no filesystem reads, children, process locks, cache,
+  member hashing or runtime registration. Independent real store and actual
+  export/restore tests, host/Linux vet and lint pass; exact parent store gates
+  pass. Physical reservation and lifecycle/native integration remain open.

@@ -147,12 +147,9 @@ func TestTypedIndexLifecycle(t *testing.T) {
 		root := typedDigest(raw)
 		chunk := f.claim(t)
 		admission, plan := f.seal(t, chunk)
-		for _, stage := range []TypedIndexStage{TypedExecution, TypedValidation} {
-			if err := s.AdvanceTypedIndex(ctx, chunk, stage); err != nil {
-				t.Fatal(err)
-			}
-		}
-		if _, err := s.PublishTypedIndex(ctx, chunk, typedindex.PublicationPointer{}, f.bundle(t, admission, plan)); err != nil {
+		bundle := f.bundle(t, admission, plan)
+		f.advancePublication(t, chunk, bundle)
+		if _, err := s.PublishTypedIndex(ctx, chunk, typedindex.PublicationPointer{}, bundle); err != nil {
 			t.Fatal(err)
 		}
 		if err := s.CompleteGenerationChunk(ctx, chunk); err != nil {
@@ -221,12 +218,7 @@ func TestTypedIndexLifecycle(t *testing.T) {
 		chunk := f.claim(t)
 		admission, plan := f.seal(t, chunk)
 		bundle := f.bundle(t, admission, plan)
-		if err := s.AdvanceTypedIndex(ctx, chunk, TypedExecution); err != nil {
-			t.Fatal(err)
-		}
-		if err := s.AdvanceTypedIndex(ctx, chunk, TypedValidation); err != nil {
-			t.Fatal(err)
-		}
+		f.advancePublication(t, chunk, bundle)
 		// Fault-inject the terminal fence beside an old exact lease: every writer
 		// must independently refuse. Normal retirement never permits this pairing.
 		if err := s.typedWrite(ctx, `UPDATE $rid SET custody_state='collecting' RETURN NONE;`, map[string]any{"rid": typedID("typed_index_request", root)}, 1); err != nil {

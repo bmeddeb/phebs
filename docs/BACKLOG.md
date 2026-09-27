@@ -14938,6 +14938,11 @@ Durable filesystem attempt manifests and immutable receipt persistence now pass
 independent review and Linux tests, including exact reopen and bounded held
 namespace census. Database binding, physical reservation and bounded drainage
 are still required before worker or reader registration.
+The existing attempt and current rows now bind exact filesystem custody and
+resolve the completed owner independently of replacement work. Publication
+requires matching persisted revision3 custody, while actual readiness remains
+an explicit controller filesystem check. Independent real store and actual
+backup/restore gates pass; no new table or public status field is introduced.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that

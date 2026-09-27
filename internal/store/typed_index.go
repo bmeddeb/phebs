@@ -55,12 +55,14 @@ type typedIndexPlan struct {
 	Successor string `json:"successor"`
 }
 type typedIndexAttempt struct {
-	Root    string             `json:"root"`
-	Request string             `json:"request"`
-	Lease   string             `json:"lease"`
-	Stage   TypedIndexStage    `json:"stage"`
-	States  [5]string          `json:"states"`
-	Reason  typedindex.Refusal `json:"reason"`
+	ChunkIdentity string             `json:"chunk_identity"`
+	Root          string             `json:"root"`
+	Request       string             `json:"request"`
+	Lease         string             `json:"lease"`
+	Stage         TypedIndexStage    `json:"stage"`
+	States        [5]string          `json:"states"`
+	Reason        typedindex.Refusal `json:"reason"`
+	Custody       *TypedIndexCustody `json:"custody,omitempty"`
 }
 
 // TypedIndexWork contains immutable authority and durable stage state. Resume
@@ -74,6 +76,7 @@ type TypedIndexWork struct {
 	Stage         TypedIndexStage
 	States        [5]string
 	Resume        bool
+	Custody       *TypedIndexCustody
 }
 type TypedIndexStatus struct {
 	Desired         string                         `json:"request_digest"`
@@ -500,8 +503,12 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 		return x, err
 	}
 	if x.attemptRaw != "" {
-		if typedDecode(x.attemptRaw, maxTypedControlBytes, &x.attempt) != nil || !validTypedAttempt(x.attempt) || x.attempt.Root != chunk.Generation || x.attempt.Request != a.intent.Desired || x.attempt.Lease != GenerationLeaseTokenDigest(chunk.LeaseToken) {
+		if typedDecode(x.attemptRaw, maxTypedControlBytes, &x.attempt) != nil || !validTypedAttempt(x.attempt) || x.attempt.ChunkIdentity != chunk.Identity || x.attempt.Root != chunk.Generation || x.attempt.Request != a.intent.Desired || x.attempt.Lease != GenerationLeaseTokenDigest(chunk.LeaseToken) || x.attempt.Custody != nil && x.attempt.Custody.AttemptDigest != x.work.AttemptDigest {
 			return x, typedindex.Stale
+		}
+		if x.attempt.Custody != nil {
+			c := *x.attempt.Custody
+			x.work.Custody = &c
 		}
 		x.work.Stage = x.attempt.Stage
 		x.work.States = x.attempt.States
@@ -525,7 +532,7 @@ func (s *Surreal) BeginTypedIndex(ctx context.Context, chunk GenerationChunk) (T
 		}
 		return x.work, nil
 	}
-	x.attempt = typedIndexAttempt{Root: chunk.Generation, Request: x.authority.intent.Desired, Lease: GenerationLeaseTokenDigest(chunk.LeaseToken), Stage: TypedPreflight, States: [5]string{"running", "pending", "pending", "pending", "pending"}}
+	x.attempt = typedIndexAttempt{ChunkIdentity: chunk.Identity, Root: chunk.Generation, Request: x.authority.intent.Desired, Lease: GenerationLeaseTokenDigest(chunk.LeaseToken), Stage: TypedPreflight, States: [5]string{"running", "pending", "pending", "pending", "pending"}}
 	body, _ := typedEncode(x.attempt, maxTypedControlBytes)
 	stateBody, _ := typedEncode(x.work.AttemptDigest, maxTypedControlBytes)
 	x.vars["body"] = body
@@ -546,7 +553,7 @@ func typedStageIndex(stage TypedIndexStage) int {
 	return -1
 }
 func validTypedAttempt(a typedIndexAttempt) bool {
-	if !validSHA256(a.Root) || !validSHA256(a.Request) || !validSHA256(a.Lease) {
+	if !validSHA256(a.ChunkIdentity) || !validSHA256(a.Root) || !validSHA256(a.Request) || !validSHA256(a.Lease) || !typedAttemptCustodyValid(a) {
 		return false
 	}
 	index := typedStageIndex(a.Stage)
@@ -602,6 +609,9 @@ func (s *Surreal) AdvanceTypedIndex(ctx context.Context, chunk GenerationChunk, 
 	}
 	if index >= 2 && x.work.Admission.Request().Action != typedindex.Execute {
 		return typedindex.Invalid
+	}
+	if expected == TypedPreflight && (x.attempt.Custody == nil || x.attempt.Custody.Revision != 2) || expected == TypedValidation && (x.attempt.Custody == nil || x.attempt.Custody.Revision != 3) {
+		return typedindex.Unprepared
 	}
 	next := x.attempt
 	next.States[index] = "complete"
@@ -670,16 +680,23 @@ func (s *Surreal) PublishTypedIndex(ctx context.Context, chunk GenerationChunk, 
 		return expected, err
 	}
 	var current typedindex.PublicationPointer
-	if currentRaw != "" && typedDecode(currentRaw, maxTypedControlBytes, &current) != nil {
-		return expected, typedindex.Invalid
+	if currentRaw != "" {
+		stored, e := decodeTypedIndexCurrent(currentRaw)
+		if e != nil {
+			return expected, e
+		}
+		current = stored.Pointer
 	}
 	nextPointer, err := typedindex.NextPublication(ctx, current, expected, x.work.Admission, bundle)
 	if err != nil {
 		return current, err
 	}
+	if !typedCustodyMatches(x.attempt.Custody, nextPointer) {
+		return current, typedindex.Unprepared
+	}
 	x.vars["current"] = typedID("typed_index_current", chunk.Repository)
 	x.vars["current_before"] = currentRaw
-	x.vars["current_body"], _ = typedEncode(nextPointer, maxTypedControlBytes)
+	x.vars["current_body"], _ = typedEncode(typedIndexCurrent{Pointer: nextPointer, AttemptDigest: x.work.AttemptDigest}, maxTypedControlBytes)
 	guard := `IF (SELECT body FROM $current LIMIT 1)[0].body != $current_before { THROW 'typed-stale'; };`
 	if currentRaw == "" {
 		guard = `IF (SELECT id FROM $current LIMIT 1)[0].id != NONE { THROW 'typed-stale'; };`
@@ -743,50 +760,81 @@ func (s *Surreal) ResolveTypedIndexCurrent(ctx context.Context, repository strin
 	return s.resolveTypedIndexCurrent(ctx, a)
 }
 func (s *Surreal) resolveTypedIndexCurrent(ctx context.Context, a typedAuthority) (typedindex.PublicationPointer, error) {
+	current, err := s.resolveTypedIndexCurrentCustody(ctx, a)
+	return current.Pointer, err
+}
+func (s *Surreal) resolveTypedIndexCurrentCustody(ctx context.Context, a typedAuthority) (TypedIndexCurrentCustody, error) {
 	repository := a.source.Name
 	if a.intent.RestoreRequired || a.intentRaw == "" {
-		return typedindex.PublicationPointer{}, ErrNotFound
+		return TypedIndexCurrentCustody{}, ErrNotFound
 	}
 	raw, err := s.typedRead(ctx, "typed_index_current", repository)
 	if err != nil {
-		return typedindex.PublicationPointer{}, err
+		return TypedIndexCurrentCustody{}, err
 	}
 	if raw == "" {
-		return typedindex.PublicationPointer{}, ErrNotFound
+		return TypedIndexCurrentCustody{}, ErrNotFound
 	}
-	var pointer typedindex.PublicationPointer
-	if typedDecode(raw, maxTypedControlBytes, &pointer) != nil || pointer.Epoch < 1 || pointer.Epoch > math.MaxInt64 {
-		return pointer, typedindex.Invalid
+	stored, err := decodeTypedIndexCurrent(raw)
+	if err != nil {
+		return TypedIndexCurrentCustody{}, err
 	}
+	pointer := stored.Pointer
 	requestRaw, err := s.typedReadControl(ctx, "typed_index_request", pointer.Binding.RequestDigest)
 	if err != nil {
-		return pointer, err
+		return TypedIndexCurrentCustody{}, err
 	}
 	var request typedIndexRequest
 	if typedDecode(requestRaw, typedindex.MaxRequestBytes+1024, &request) != nil {
-		return pointer, typedindex.Invalid
+		return TypedIndexCurrentCustody{}, typedindex.Invalid
 	}
 	var wire typedindex.Request
 	if json.Unmarshal([]byte(request.Raw), &wire) != nil || wire.Action != typedindex.Execute {
-		return pointer, typedindex.Invalid
+		return TypedIndexCurrentCustody{}, typedindex.Invalid
 	}
 	if request.SourceEpoch != a.source.Epoch {
-		return typedindex.PublicationPointer{}, typedindex.Stale
+		return TypedIndexCurrentCustody{}, typedindex.Stale
 	}
 	admission, err := a.admit(ctx, request.Raw, typedIndexPlan{Digest: wire.PlanDigest}, wire.ParentRequestDigest)
 	if err != nil {
-		return typedindex.PublicationPointer{}, err
+		return TypedIndexCurrentCustody{}, err
 	}
 	if admission.Digest() != pointer.Binding.RequestDigest || pointer.Binding.Source != admission.Request().Source || pointer.Binding.ProfileDigest != a.profile.Digest() || pointer.Binding.ToolsDigest != admission.Request().ToolsDigest || pointer.Binding.PlanDigest != wire.PlanDigest || !validSHA256(pointer.RootDigest) {
-		return typedindex.PublicationPointer{}, typedindex.Invalid
+		return TypedIndexCurrentCustody{}, typedindex.Invalid
+	}
+	attemptRaw, err := s.typedReadControl(ctx, TypedIndexAttempts, stored.AttemptDigest)
+	if err != nil {
+		return TypedIndexCurrentCustody{}, err
+	}
+	var attempt typedIndexAttempt
+	if typedDecode(attemptRaw, maxTypedControlBytes, &attempt) != nil || !validTypedAttempt(attempt) || attempt.Stage != TypedComplete || attempt.Custody == nil || attempt.Custody.AttemptDigest != stored.AttemptDigest || attempt.Root != request.Root || attempt.Request != admission.Digest() || !typedCustodyMatches(attempt.Custody, pointer) {
+		return TypedIndexCurrentCustody{}, typedindex.Invalid
+	}
+	// PlannedSuccessor changes exactly these three fields. Check the inverse
+	// against the persisted planning digest rather than inventing parent authority.
+	parentWire := wire
+	parentWire.Action = typedindex.Plan
+	parentWire.ParentRequestDigest = ""
+	parentWire.PlanDigest = ""
+	parentRaw, err := typedEncode(parentWire, typedindex.MaxRequestBytes)
+	if err != nil {
+		return TypedIndexCurrentCustody{}, err
+	}
+	parent, err := a.admit(ctx, parentRaw, typedIndexPlan{}, "")
+	if err != nil || parent.Digest() != attempt.Root {
+		return TypedIndexCurrentCustody{}, typedindex.Invalid
 	}
 	vars := a.variables()
+	vars["owner_attempt"] = typedID("typed_index_attempt", stored.AttemptDigest)
+	vars["owner_before"] = attemptRaw
+	vars["owner_root"] = attempt.Root
+	vars["owner_key"] = stored.AttemptDigest
 	vars["current"] = typedID("typed_index_current", repository)
 	vars["pointer_before"] = raw
-	if err := s.typedFence(ctx, typedSourceFenceSQL+typedIntentFenceSQL+`IF (SELECT body FROM $current LIMIT 1)[0].body != $pointer_before { THROW 'typed-stale'; };`, vars); err != nil {
-		return typedindex.PublicationPointer{}, err
+	if err := s.typedFence(ctx, typedSourceFenceSQL+typedIntentFenceSQL+`IF (SELECT body FROM $current LIMIT 1)[0].body != $pointer_before OR (SELECT body FROM $owner_attempt WHERE repository=$repository AND request_root=$owner_root AND control_key=$owner_key LIMIT 1)[0].body != $owner_before { THROW 'typed-stale'; };`, vars); err != nil {
+		return TypedIndexCurrentCustody{}, err
 	}
-	return pointer, nil
+	return TypedIndexCurrentCustody{Parent: parent, Admission: admission, ChunkIdentity: attempt.ChunkIdentity, LeaseDigest: attempt.Lease, Pointer: pointer, PlanningDigest: attempt.Root, AttemptDigest: stored.AttemptDigest, Custody: *attempt.Custody}, nil
 }
 func (s *Surreal) GetTypedIndexStatus(ctx context.Context, repository string) (TypedIndexStatus, error) {
 	a, err := s.typedAuthority(ctx, repository)

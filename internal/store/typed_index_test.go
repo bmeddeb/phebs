@@ -97,6 +97,7 @@ func (f *typedFixture) seal(t *testing.T, chunk GenerationChunk) (typedindex.Adm
 	if e != nil {
 		t.Fatal(e)
 	}
+	f.custodyInputs(t, chunk)
 	if e = f.s.AdvanceTypedIndex(t.Context(), chunk, TypedPreflight); e != nil {
 		t.Fatal(e)
 	}
@@ -146,12 +147,8 @@ func TestTypedIndexDurableFlow(t *testing.T) {
 	if e != nil || status.Desired != a.Digest() {
 		t.Fatalf("parent retry switched successor: %+v %v", status, e)
 	}
-	for _, stage := range []TypedIndexStage{TypedExecution, TypedValidation} {
-		if e = s.AdvanceTypedIndex(ctx, chunk, stage); e != nil {
-			t.Fatal(e)
-		}
-	}
 	bundle := f.bundle(t, a, p)
+	f.advancePublication(t, chunk, bundle)
 	if _, e = s.PublishTypedIndex(ctx, chunk, typedindex.PublicationPointer{Epoch: 9}, bundle); e == nil {
 		t.Fatal("pointer mismatch accepted")
 	}
@@ -236,6 +233,7 @@ func TestTypedIndexFencesAndResume(t *testing.T) {
 	if e != nil || !work.Resume || work.Admission.Digest() != a.Digest() {
 		t.Fatalf("resume: %+v %v", work, e)
 	}
+	f.custodyInputs(t, *next)
 	if e = s.AdvanceTypedIndex(ctx, *next, TypedPreflight); e != nil {
 		t.Fatal(e)
 	}
@@ -372,6 +370,7 @@ func TestTypedIndexCoalescingAndInputRefusal(t *testing.T) {
 	if _, err = s.BeginTypedIndex(ctx, chunk); err != nil {
 		t.Fatal(err)
 	}
+	f.custodyInputs(t, chunk)
 	if err = s.AdvanceTypedIndex(ctx, chunk, TypedPreflight); err != nil {
 		t.Fatal(err)
 	}

@@ -169,7 +169,8 @@ Store retirement now has bounded global/root census, exact current/desired/live
 protection and irreversible worker fences, including full lease-descriptor
 binding. Physical custody reclamation and runtime registration remain open.
 Durable private attempt manifests and receipt persistence are also reviewed;
-store binding, physical reservation and bounded cleanup remain in progress.
+store binding now passes independent real-store and backup/restore gates.
+Physical reservation, bounded cleanup integration and native proof remain open.
 
 ## Now
 
