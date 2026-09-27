@@ -163,6 +163,8 @@ managed worker or provider is registered; these are local prerequisites.
 The prospective host scratch owner now passes scoped review and safe process
 regressions, while privileged native proof, exact formatter/profile binding
 and full lifecycle/reservation remain required.
+Immutable publication custody and cross-process reader pins have also passed
+scoped review; these primitives do not register a reader or generated source.
 
 ## Now
 

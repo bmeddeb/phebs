@@ -6768,3 +6768,46 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   parent-death/residual-group behavior. They do not prove privileged formatter,
   loop DIO, ext4 geometry or native crash cleanup. Those gates, durable global
   reservation/census and runtime wiring remain open before registration.
+
+- **2026-09-27 — T45.4 immutable bundle filesystem custody prerequisite
+  (local, unregistered).** Linux-only publication install/reopen binds trusted
+  planning and execution admissions, sealed plan and complete bundle identities
+  to exact private file/directory inodes. Install rederives the bundle before
+  growth, writes a fresh exclusive stage, closes writable descriptors before
+  readonly sealing, syncs files/directories and publishes by no-replace rename.
+  Strict reopen refuses missing/extra/corrupt/unsafe/stale/inode-substituted
+  content. Failed operations return named custody without making a pointer.
+  A bounded canonical receipt is trusted service metadata, never client
+  authority; its durable persistence and store pointer CAS belong to the owner.
+
+  Shared kernel leases remain held from full reopen verification through the
+  last member read/Close. The matching exclusive mutation guard excludes those
+  readers and itself refuses an absent lock without growth. Only admitted
+  install creates the lock after destination pressure/inode checks, then
+  rechecks capacity after waiting. Per-handle member reads/Close serialize;
+  reads use declared content names and verify exact inode/size/mode/digest.
+
+  **Cost.** No provider, request path, timer or startup scan is registered.
+  Explicit install/open may validate at most 139 files, 20,001 directories and
+  48 MiB plus 16 KiB of combined publication/plan/request bytes. Revalidation
+  retains additional bounded plan graphs, protobuf objects and regenerated
+  bundle copies, so that byte ceiling is not a peak-RSS claim. Receipt wire
+  data has a separate 67,025,920-byte ceiling; a malformed JSON token can reach
+  that raw bound before semantic rejection, and canonical comparison adds a
+  bounded encoded copy. These costs must enter aggregate owner admission.
+  Install holds one parent-wide exclusive lease through writes, syncs and
+  publication; reopen holds a shared lease through two complete metadata
+  inventories, one full read/hash/verification and the handle lifetime.
+  Thereafter the handle retains root/lock descriptors and bounded maps, not all
+  member bytes. One declared member read allocates at most 8 MiB plus transfer
+  scratch and bounded path work. Callers bound open handles/cached returned
+  bytes; no cache invalidation or per-query full-bundle reopen is implied.
+  Capacity observations preserve the destination latch but are not reservations.
+
+  Independent review corrected an exported-guard growth bypass and narrowed
+  decoder allocation wording. Actual unprivileged Linux tests cover exact
+  install/read, hostile custody, pressure/cancellation, kind/aggregate bounds
+  and cross-process reader-versus-writer exclusion with a positive control.
+  Host refusal/race, Linux vet/lint and documentation checks pass. Durable
+  receipt ownership, store publication wiring, complete lifecycle/reservation
+  and native execution remain open; this prerequisite does not close T45.4.

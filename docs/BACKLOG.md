@@ -14926,6 +14926,9 @@ The prospective root-provisioned scratch owner also has a clean independent
 review after hard-death and mount-alias corrections. It requires an empty
 dedicated daemon for cleanup and retains ambiguous formatting; actual native
 DIO/formatter/crash proof and profile identity binding remain open.
+Immutable bundle install/reopen and cross-process reader leases now pass scoped
+review and real unprivileged Linux tests. Trusted receipt persistence, store
+pointer wiring, aggregate reservation and complete lifecycle are still open.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
