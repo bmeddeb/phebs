@@ -214,6 +214,11 @@ Startup now has an independently reviewed retained-quota check using the existin
 capped database indexes. Exact 64-row quotas remain valid while new growth keeps
 its stricter boundary; controller integration and native proof remain open.
 
+Coherent cross-control inspection is now independently reviewed: all six kinds
+retain historical custody checks, while current and active desired pointers
+reject collecting parents. Actual database, race, vet and lint checks pass;
+this does not grant current admission, cleanup or native readiness.
+
 
 ## Now
 

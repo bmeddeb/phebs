@@ -247,16 +247,32 @@ func (s *Surreal) inspectTypedIndexAttempt(ctx context.Context, digest string, b
 	if len(observed) != 1 || len(observed[0].Attempt) != 1 || observed[0].Attempt[0] != selected || len(observed[0].Plan) != len(initialPlan) || len(initialPlan) == 1 && observed[0].Plan[0] != initialPlan[0] {
 		return out, typedindex.Stale
 	}
-	o := observed[0]
+	out, err = inspectTypedRequestRelations(ctx, selected.Repository, attempt.Root, attempt.Request, observed[0])
+	if err != nil {
+		return out, err
+	}
+	if attempt.Custody != nil && attempt.Custody.Revision == 3 && (attempt.Custody.PublicationRequestDigest != attempt.Request || attempt.Custody.PublicationPlanDigest != out.PlanDigest) {
+		return TypedIndexAttemptInspection{}, typedindex.Invalid
+	}
+	out.AttemptDigest, out.ChunkIdentity, out.LeaseDigest = digest, attempt.ChunkIdentity, attempt.Lease
+	out.Stage, out.States, out.Reason = attempt.Stage, attempt.States, attempt.Reason
+	out.Custody, out.Growth = attempt.Custody, attempt.Growth
+	return out, nil
+}
+
+// inspectTypedRequestRelations validates only historical immutable relationships,
+// never current profile/source admission. The caller supplies one coherent read.
+func inspectTypedRequestRelations(ctx context.Context, repository, root, requestDigest string, o typedAttemptObservation) (TypedIndexAttemptInspection, error) {
+	var out TypedIndexAttemptInspection
 	if len(o.Parent) != 1 || len(o.Request) != 1 || len(o.Plan) > 1 {
 		return out, typedindex.Invalid
 	}
 	for _, row := range []TypedIndexControl{o.Parent[0], o.Request[0]} {
-		if validateTypedCensusControl(ctx, TypedIndexRequests, row) != nil || row.Repository != selected.Repository || row.Root != attempt.Root {
+		if validateTypedCensusControl(ctx, TypedIndexRequests, row) != nil || row.Repository != repository || row.Root != root {
 			return out, typedindex.Invalid
 		}
 	}
-	if !o.Parent[0].Parent || o.Parent[0].ID != attempt.Root || o.Request[0].ID != attempt.Request {
+	if !o.Parent[0].Parent || o.Parent[0].ID != root || o.Request[0].ID != requestDigest {
 		return out, typedindex.Invalid
 	}
 	var parent, request typedIndexRequest
@@ -266,7 +282,7 @@ func (s *Surreal) inspectTypedIndexAttempt(ctx context.Context, digest string, b
 	}
 	if len(o.Plan) == 1 {
 		row := o.Plan[0]
-		if validateTypedCensusControl(ctx, TypedIndexPlans, row) != nil || row.Repository != selected.Repository || row.Root != attempt.Root {
+		if validateTypedCensusControl(ctx, TypedIndexPlans, row) != nil || row.Repository != repository || row.Root != root {
 			return TypedIndexAttemptInspection{}, typedindex.Invalid
 		}
 		var plan typedIndexPlan
@@ -274,20 +290,20 @@ func (s *Surreal) inspectTypedIndexAttempt(ctx context.Context, digest string, b
 			return TypedIndexAttemptInspection{}, typedindex.Invalid
 		}
 		successor := out.Parent
-		successor.Action, successor.ParentRequestDigest, successor.PlanDigest = typedindex.Execute, attempt.Root, plan.Digest
+		successor.Action, successor.ParentRequestDigest, successor.PlanDigest = typedindex.Execute, root, plan.Digest
 		successorRaw, err := typedEncode(successor, typedindex.MaxRequestBytes)
 		if err != nil || typedDigest([]byte(successorRaw)) != plan.Successor || len(o.Successor) != 1 {
 			return TypedIndexAttemptInspection{}, typedindex.Invalid
 		}
 		sr := o.Successor[0]
 		var storedSuccessor typedIndexRequest
-		if validateTypedCensusControl(ctx, TypedIndexRequests, sr) != nil || sr.Repository != selected.Repository || sr.ID != plan.Successor || sr.Root != attempt.Root || typedDecode(sr.Body, typedindex.MaxRequestBytes+1024, &storedSuccessor) != nil || storedSuccessor.SourceEpoch != parent.SourceEpoch || storedSuccessor.Raw != successorRaw {
+		if validateTypedCensusControl(ctx, TypedIndexRequests, sr) != nil || sr.Repository != repository || sr.ID != plan.Successor || sr.Root != root || typedDecode(sr.Body, typedindex.MaxRequestBytes+1024, &storedSuccessor) != nil || storedSuccessor.SourceEpoch != parent.SourceEpoch || storedSuccessor.Raw != successorRaw {
 			return TypedIndexAttemptInspection{}, typedindex.Invalid
 		}
 	}
-	if attempt.Request != attempt.Root {
+	if requestDigest != root {
 		var plan typedIndexPlan
-		if len(o.Plan) != 1 || typedDecode(o.Plan[0].Body, maxTypedControlBytes, &plan) != nil || plan.Successor != attempt.Request || plan.Digest != wire.PlanDigest {
+		if len(o.Plan) != 1 || typedDecode(o.Plan[0].Body, maxTypedControlBytes, &plan) != nil || plan.Successor != requestDigest || plan.Digest != wire.PlanDigest {
 			return TypedIndexAttemptInspection{}, typedindex.Invalid
 		}
 		out.PlanDigest = plan.Digest
@@ -296,12 +312,6 @@ func (s *Surreal) inspectTypedIndexAttempt(ctx context.Context, digest string, b
 			return TypedIndexAttemptInspection{}, typedindex.Invalid
 		}
 	}
-	if attempt.Custody != nil && attempt.Custody.Revision == 3 && (attempt.Custody.PublicationRequestDigest != attempt.Request || attempt.Custody.PublicationPlanDigest != out.PlanDigest) {
-		return TypedIndexAttemptInspection{}, typedindex.Invalid
-	}
-	out.SourceEpoch, out.PlanningDigest, out.RequestDigest = parent.SourceEpoch, attempt.Root, attempt.Request
-	out.AttemptDigest, out.ChunkIdentity, out.LeaseDigest = digest, attempt.ChunkIdentity, attempt.Lease
-	out.Stage, out.States, out.Reason = attempt.Stage, attempt.States, attempt.Reason
-	out.Custody, out.Growth = attempt.Custody, attempt.Growth
+	out.SourceEpoch, out.PlanningDigest, out.RequestDigest = parent.SourceEpoch, root, requestDigest
 	return out, nil
 }

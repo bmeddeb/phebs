@@ -7248,3 +7248,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   count/map, mutation, new lock, file hash or child. Independent review is clean;
   actual 64/65 boundary and physical-index tests, old admission races, affected
   race, host/Linux vet and lint pass. Runtime integration remains separate.
+
+- **2026-09-27 — T45.4 inspect coherent historical control relations.**
+  Startup can validate all six typed control kinds against their original
+  immutable request, plan, attempt and custody without using current repository
+  admission. The final read-only transaction rechecks selected and dependent
+  bodies/projections. Current and active desired pointers refuse collecting
+  parents; canceled/restore-required desire and historical custody may retain
+  them. The shared validator preserves existing attempt-inspection semantics.
+  This grants no filesystem readiness, live admission or deletion authority.
+
+  **Cost.** Two SDK reads for empty intent/plan, three for request/attempt and
+  four for state/current/nonempty intent; at most nine point lookups and92KiB
+  valid body payload plus decoded/scalar overhead. No scans, mutations, schema,
+  process locks, hashes or children. Startup repeats this per selected control;
+  product requests gain no census. Independent review corrected the active
+  pointer/collecting-parent gap. Corrected normal/race, host/Linux vet and lint
+  pass; controller and native completion remain separate.
