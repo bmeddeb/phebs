@@ -82,3 +82,28 @@ type DrainReport struct {
 func DrainOwner(ctx context.Context, base string, a DrainAuthority) (DrainReport, error) {
 	return drainOwner(ctx, base, a, nil)
 }
+
+// DrainInspection is metadata-only. Resume is meaningful only with the caller's
+// irreversible collecting fence and exact original persisted DrainAuthority.
+// It never grants native quiescence to a live owner. Absent proves only this
+// attempt's absence, not the complete request namespace's absence.
+type DrainInspection struct {
+	Live   *OwnerManifest
+	Resume bool
+	Absent bool
+}
+
+// InspectDrainOwner authenticates live custody or an interrupted drain prefix
+// without changing files. The same bounded marker/inode grammar as DrainOwner
+// applies. Unknown top-level entries, conflicting pending markers and replaced
+// inodes refuse. No source or receipt payload is read or hashed.
+func InspectDrainOwner(ctx context.Context, base string, expected Node, authority DrainAuthority) (DrainInspection, error) {
+	return inspectDrainOwner(ctx, base, expected, authority)
+}
+
+// InspectDrainNamespace inventories at most64 attempts plus one overflow sentinel
+// beneath one exact request. Absent is true only when the request directory is
+// absent, never merely empty. Entry names are discovery, not deletion authority.
+func InspectDrainNamespace(ctx context.Context, base, planning string, expected Node) (entries []OwnerCensusEntry, absent bool, err error) {
+	return inspectDrainNamespace(ctx, base, planning, expected)
+}

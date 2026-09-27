@@ -7755,3 +7755,55 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   legacy refusal, final-current pin race and old-root retirement. Host/Linux
   vet and lint pass. Native/provider registration and generated evidence remain
   separately gated; these fixtures establish no production latency or scale.
+
+- **2026-09-27 — T45.4 compose scheduler settlement and bounded lifecycle.**
+  An unregistered runtime reuses the existing coordinator, one-slot typed
+  scheduler and5s heartbeat/20s stale threshold. A private root-history decision
+  blocks a new lease after any retained planning-or-later attempt; exact already
+  published current settles without another worker. Growth acquisition/reopen
+  atomically compares the opaque history/current/request/plan observation.
+  Held-slot deferral precedes that observation, preserving existing behavior.
+  Safe pre-native failures retain ordinary retry; no native clock is refreshed.
+
+  The optional post-settlement callback runs after heartbeat join with the old
+  lease and bounded uncanceled cleanup context, including uncertain writes and
+  heartbeat loss. Its failure preserves durable completion and reports separate
+  reconciliation failure. Nil adds no I/O, timer or goroutine to other classes.
+  Restart performs structural/ownership census before bounded stale reaping,
+  then exact recovery before readiness. Reaping alone grants no filesystem
+  authority; recovery verifies held base geometry before release/readiness.
+
+  Lifecycle performs one selected release, retirement, physical drain, control
+  batch or eligible tombstone expiry per turn. Read-only drain inspection shares
+  exact marker grammar and original inode/manifest authority with the drainer.
+  Only irreversible collecting/released custody admits authenticated partial,
+  terminal, exact-empty or absent prefixes. Unknown early handshakes remain held.
+  Fresh complete physical-root absence precedes every store batch; up to12 sorted
+  attempts plus at most4 fixed operands preserve references and the collecting
+  parent. Current, desired, running and reader-pinned custody remains protected.
+  Empty scan suffix retains backlog until a fresh first-page empty proof.
+
+  **Cost.** One fresh runtime turn adds33 bounded SDK reads for three history
+  decisions; each returns at most64 accepted4KiB attempt bodies plus a sentinel.
+  History is compared again inside existing atomic growth admission. Complete
+  current reuse adds its exact resolver,18 reads for that decision. No history
+  cache, corpus hash, new child or polling framework. Controller serial/transition
+  and attempt pins remain; startup holds existing guards for complete bounded-page
+  census, adding retirement/metadata checks for retained collecting attempts.
+  Selected lifecycle snapshots use the existing bounded462KiB body envelope plus
+  multiple SDK/JSON copies.64 attempts need six store batches and68 total operands,
+  each at most16. Physical drain retains16 mutations,48 traversal steps and216
+  traversal stats; guard/inspector/native-client costs are separate. Generic
+  Stats/Queries remain planning inputs, not whole-turn meters. Local drain has
+  an8-FD bound and100ms pin acquisition; native cleanup keeps its20s bound.
+  Protected roots and tombstones conservatively keep backlog cadence, not hourly
+  idle. No production query, sync, cache or registry registration is added.
+
+  Independent source/cost review and parent scheduler/store/workspace/lifecycle
+  race plus complete actual Linux workspace/sandbox/controller race pass on the
+  frozen21-file implementation. Tests cover real scheduler publication, cross-lease
+  replay refusal, stale-reap ordering, cancellation, every settlement path,
+  collecting restart prefixes, pins, unknown custody and concurrent control CAS.
+  Host/Linux vet, lint and documentation pass. Native containment/common-clock,
+  cold target feasibility and production registration remain open; neutral native
+  seams do not establish them.

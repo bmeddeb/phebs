@@ -14,14 +14,29 @@ import (
 // it never adopts owners, rewrites publication authority or hashes large receipts.
 // Failed startup clears readiness but preserves pressure latches and base identities.
 func (c *Controller) Startup(ctx context.Context) error {
+	return c.startup(ctx, nil)
+}
+
+// afterCensus is the runtime's bounded typed stale reaper. It runs under the same
+// guard only after complete structural/physical validation, before exact holder
+// release. Ordinary Startup passes nil; no second census is needed in this turn.
+func (c *Controller) startup(ctx context.Context, afterCensus func(context.Context) error) error {
 	release, err := c.enter(ctx)
 	if err != nil {
 		return err
 	}
 	defer release()
 	c.ready = false
+	if err = c.censusOwnership(ctx); err != nil {
+		return err
+	}
+	if afterCensus != nil {
+		if err = afterCensus(ctx); err != nil {
+			return err
+		}
+	}
 	if c.config.Socket != "" || c.config.Image != "" {
-		if err = c.recoverHeld(ctx, ""); err != nil {
+		if err = c.recoverCensusedHeld(ctx, ""); err != nil {
 			return err
 		}
 	}
@@ -34,11 +49,6 @@ func (c *Controller) Startup(ctx context.Context) error {
 	}
 	if e == nil && (!growthBase(growth.Spec.Workspace, c.workspace) || !growthBase(growth.Spec.Host, c.host)) {
 		return ErrHeld
-	}
-	if c.config.Socket == "" && c.config.Image == "" {
-		if err = c.censusOwnership(ctx); err != nil {
-			return err
-		}
 	}
 	if err = ctx.Err(); err != nil {
 		return err
@@ -75,7 +85,7 @@ func (c *Controller) censusOwnership(ctx context.Context) error {
 						return e
 					}
 					if a.Custody != nil {
-						if e = c.inspectOwner(ctx, a); e != nil {
+						if e = c.inspectRetainedOwner(ctx, a); e != nil {
 							return e
 						}
 					}
@@ -90,6 +100,10 @@ func (c *Controller) censusOwnership(ctx context.Context) error {
 			after = page.Next
 		}
 	}
+	base, err := typedworkspace.ObserveCapacity(ctx, c.config.Workspace)
+	if err != nil {
+		return err
+	}
 	roots, err := typedworkspace.CensusOwners(ctx, c.config.Workspace, "")
 	if err != nil {
 		return err
@@ -102,12 +116,15 @@ func (c *Controller) censusOwnership(ctx context.Context) error {
 		if err = c.config.Store.InspectTypedIndexControlRelations(ctx, store.TypedIndexRequests, planning); err != nil {
 			return err
 		}
-		attempts, e := typedworkspace.CensusOwners(ctx, c.config.Workspace, planning)
+		attempts, _, e := typedworkspace.InspectDrainNamespace(ctx, c.config.Workspace, planning, drainBase(base))
 		if e != nil {
 			return e
 		}
 		if len(attempts) == 0 {
-			return ErrHeld
+			retired, e := c.config.Store.InspectTypedIndexRetirement(ctx, planning)
+			if e != nil || !retired.Collecting() || retired.Protected() {
+				return errors.Join(ErrHeld, e)
+			}
 		}
 		for _, attempt := range attempts {
 			if attempt.Held || !attempt.Directory {
@@ -120,7 +137,7 @@ func (c *Controller) censusOwnership(ctx context.Context) error {
 			if a.PlanningDigest != planning || a.Custody == nil {
 				return ErrHeld
 			}
-			if e = c.inspectOwner(ctx, a); e != nil {
+			if e = c.inspectRetainedOwner(ctx, a); e != nil {
 				return e
 			}
 		}
@@ -147,4 +164,26 @@ func (c *Controller) inspectOwner(ctx context.Context, a store.TypedIndexAttempt
 		return ErrHeld
 	}
 	return nil
+}
+
+// A collecting root is irreversible and admits no new worker mutations. Only
+// its exact released custody may authenticate missing/terminal drain prefixes.
+func (c *Controller) inspectRetainedOwner(ctx context.Context, a store.TypedIndexAttemptInspection) error {
+	retirement, err := c.config.Store.InspectTypedIndexRetirement(ctx, a.PlanningDigest)
+	if err != nil {
+		return err
+	}
+	if !retirement.Collecting() {
+		return c.inspectOwner(ctx, a)
+	}
+	if retirement.Protected() || a.Custody == nil || a.Growth == nil || a.Growth.State != "released" {
+		return ErrHeld
+	}
+
+	observed, e := typedworkspace.ObserveCapacity(ctx, c.config.Workspace)
+	if e != nil || !growthBase(a.Growth.Spec.Workspace, observed) {
+		return errors.Join(ErrHeld, e)
+	}
+	_, err = typedworkspace.InspectDrainOwner(ctx, c.config.Workspace, drainBase(observed), drainAuthority(*a.Custody))
+	return err
 }

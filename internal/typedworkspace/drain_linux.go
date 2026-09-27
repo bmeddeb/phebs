@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -293,11 +294,7 @@ func (d *drainTurn) loadMarker() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !exists {
-		if next.Revision != 1 || next.Previous != "" || next.Terminal || next.Cursor != "." {
-			return false, ErrCustody
-		}
-	} else if next.Revision != d.marker.Revision+1 || next.Previous != publicationDigest(raw) || d.marker.Terminal && !next.Terminal {
+	if !validDrainSuccessor(exists, d.marker, raw, next) {
 		return false, ErrCustody
 	}
 	if err = d.renamePending(!exists); err != nil {
@@ -722,4 +719,225 @@ func (d *drainTurn) rootOnlyControls() (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+func inspectDrainOwner(ctx context.Context, base string, expected Node, a DrainAuthority) (out DrainInspection, err error) {
+	if ctx == nil || !a.valid() || expected.Device != a.DirectoryDevice {
+		return out, ErrCustody
+	}
+	if err = ctx.Err(); err != nil {
+		return out, err
+	}
+	lockCtx, cancel := context.WithTimeout(ctx, DrainLockWait)
+	defer cancel()
+	release, err := publicationLease(lockCtx, base, false, false)
+	if err != nil {
+		return out, err
+	}
+	defer release()
+	root, err := openDirectory(base, true)
+	if err != nil {
+		return out, err
+	}
+	defer func() { _ = root.Close() }()
+	var baseStat unix.Stat_t
+	if unix.Fstat(int(root.Fd()), &baseStat) != nil || expected.Inode == 0 || uint64(baseStat.Dev) != expected.Device || baseStat.Ino != expected.Inode {
+		return out, ErrCustody
+	}
+	d := &drainTurn{ctx: ctx, authority: a}
+	request, err := d.open(root, a.PlanningDigest[7:], true)
+	if errors.Is(err, unix.ENOENT) {
+		return DrainInspection{Absent: true}, nil
+	}
+	if err != nil {
+		return out, err
+	}
+	defer func() { _ = request.Close() }()
+	requestStat, e := d.stat(request)
+	if e != nil || !d.safe(requestStat, true) || requestStat.Mode&07777 != 0700 {
+		return out, ErrCustody
+	}
+
+	attempt, err := d.open(request, a.AttemptDigest[7:], true)
+	if errors.Is(err, unix.ENOENT) {
+		return DrainInspection{Absent: true}, nil
+	}
+	if err != nil {
+		return out, err
+	}
+	defer func() { _ = attempt.Close() }()
+	d.root = attempt
+	st, err := d.stat(attempt)
+	if err != nil || !d.safe(st, true) || st.Mode&07777 != 0700 || st.Ino != a.DirectoryInode {
+		return out, ErrCustody
+	}
+	entries, err := d.entries(attempt, 17)
+	if err != nil || len(entries) > 16 {
+		return out, ErrCustody
+	}
+	if len(entries) == 0 {
+		return DrainInspection{Resume: true}, nil
+	}
+	haveLock := false
+	for _, entry := range entries {
+		name := entry.Name()
+		if name != publicationLock && name != drainMarkerName && name != drainPendingName && !drainTopName(name) {
+			return out, ErrCustody
+		}
+		named, e := d.named(attempt, name)
+		if e != nil {
+			return out, e
+		}
+		directory := named.Mode&unix.S_IFMT == unix.S_IFDIR
+		if !d.safe(named, directory) {
+			return out, ErrCustody
+		}
+		tree := controlTreeName(name) || publishedName(strings.TrimSuffix(name, ".stage")) || publicationName(strings.TrimSuffix(name, ".stage"))
+		if directory != tree {
+			return out, ErrCustody
+		}
+		if name == publicationLock {
+			if named.Mode&07777 != 0600 || named.Size != 0 {
+				return out, ErrCustody
+			}
+			haveLock = true
+		}
+	}
+	if haveLock {
+		unlock, e := publicationLease(lockCtx, filepath.Join(base, a.relative()), false, false)
+		if e != nil {
+			return out, e
+		}
+		defer unlock()
+	}
+	var marker drainMarker
+	raw, e := d.read(drainMarkerName)
+	exists := e == nil
+	if e != nil && !errors.Is(e, unix.ENOENT) {
+		return out, e
+	}
+	if exists {
+		marker, e = decodeDrainMarker(raw, a)
+		if e != nil {
+			return out, e
+		}
+	}
+	pending, e := d.read(drainPendingName)
+	if e != nil && !errors.Is(e, unix.ENOENT) {
+		return out, e
+	}
+	if e == nil {
+		next, e := decodeDrainMarker(pending, a)
+		if e != nil {
+			return out, e
+		}
+		if !validDrainSuccessor(exists, marker, raw, next) {
+			return out, ErrCustody
+		}
+		marker = next
+		exists = true
+	}
+	if !exists {
+		if !haveLock {
+			return out, ErrCustody
+		}
+		if err = d.loadOwner(); err != nil {
+			return out, err
+		}
+		if err = ownerNames(ctx, attempt, d.owner, false); err != nil {
+			return out, err
+		}
+		if err = ownerReferences(attempt, d.owner); err != nil {
+			return out, err
+		}
+		return DrainInspection{Live: &d.owner}, ctx.Err()
+	}
+	if marker.Terminal {
+		for _, entry := range entries {
+			if entry.Name() != ownerManifest && entry.Name() != publicationLock && entry.Name() != drainMarkerName && entry.Name() != drainPendingName {
+				return out, ErrCustody
+			}
+		}
+		for _, entry := range entries {
+			if entry.Name() == ownerManifest {
+				if err = d.loadOwner(); err != nil {
+					return out, err
+				}
+			}
+		}
+	} else {
+		if !haveLock {
+			return out, ErrCustody
+		}
+		if err = d.loadOwner(); err != nil {
+			return out, err
+		}
+		cursor, e := d.open(attempt, marker.Cursor, true)
+		if e != nil {
+			return out, e
+		}
+		observed, e := d.stat(cursor)
+		_ = cursor.Close()
+		if e != nil || !d.safe(observed, true) || observed.Ino != marker.CursorInode {
+			return out, ErrCustody
+		}
+	}
+	return DrainInspection{Resume: true}, ctx.Err()
+}
+
+func inspectDrainNamespace(ctx context.Context, base, planning string, expected Node) ([]OwnerCensusEntry, bool, error) {
+	if ctx == nil || !publicationHash(planning) {
+		return nil, false, ErrCustody
+	}
+	lockCtx, cancel := context.WithTimeout(ctx, DrainLockWait)
+	defer cancel()
+	release, err := publicationLease(lockCtx, base, false, false)
+	if err != nil {
+		return nil, false, err
+	}
+	defer release()
+	root, err := openDirectory(base, true)
+	if err != nil {
+		return nil, false, err
+	}
+	defer func() { _ = root.Close() }()
+	var baseStat unix.Stat_t
+	if unix.Fstat(int(root.Fd()), &baseStat) != nil || expected.Inode == 0 || uint64(baseStat.Dev) != expected.Device || baseStat.Ino != expected.Inode {
+		return nil, false, ErrCustody
+	}
+	d := &drainTurn{ctx: ctx}
+	request, err := d.open(root, planning[7:], true)
+	if errors.Is(err, unix.ENOENT) {
+		return nil, true, ctx.Err()
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	defer func() { _ = request.Close() }()
+	st, err := d.stat(request)
+	if err != nil || st.Uid != uint32(os.Geteuid()) || st.Mode&07777 != 0700 {
+		return nil, false, ErrCustody
+	}
+	entries, err := d.entries(request, MaxOwnerAttempts+1)
+	if err != nil || len(entries) > MaxOwnerAttempts {
+		return nil, false, ErrCustody
+	}
+	out := make([]OwnerCensusEntry, 0, len(entries))
+	for _, entry := range entries {
+		named, e := d.named(request, entry.Name())
+		if e != nil {
+			return nil, false, e
+		}
+		held := !publicationHash("sha256:"+entry.Name()) || named.Mode&unix.S_IFMT != unix.S_IFDIR || named.Uid != uint32(os.Geteuid()) || named.Dev != st.Dev || named.Mode&07777 != 0700
+		out = append(out, OwnerCensusEntry{Name: entry.Name(), Directory: named.Mode&unix.S_IFMT == unix.S_IFDIR, Held: held})
+	}
+	slices.SortFunc(out, func(a, b OwnerCensusEntry) int { return strings.Compare(a.Name, b.Name) })
+	return out, false, ctx.Err()
+}
+
+func validDrainSuccessor(exists bool, current drainMarker, raw []byte, next drainMarker) bool {
+	if !exists {
+		return next.Revision == 1 && next.Previous == "" && !next.Terminal && next.Cursor == "."
+	}
+	return current.Revision != math.MaxUint64 && next.Revision == current.Revision+1 && next.Previous == publicationDigest(raw) && (!current.Terminal || next.Terminal)
 }

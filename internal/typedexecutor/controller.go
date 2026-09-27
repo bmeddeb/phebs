@@ -95,6 +95,13 @@ func (c *Controller) prepare(ctx context.Context, chunk store.GenerationChunk, s
 	if exists && (held.ChunkIdentity != chunk.Identity || held.LeaseDigest != store.GenerationLeaseTokenDigest(chunk.LeaseToken)) {
 		return Prepared{}, store.WithDeferral(ErrHeld)
 	}
+	disposition, err := c.config.Store.InspectTypedIndexDisposition(ctx, chunk)
+	if err != nil {
+		return Prepared{}, err
+	}
+	if disposition.State() != store.TypedIndexFresh {
+		return Prepared{}, ErrHeld
+	}
 	work, err := c.config.Store.BeginTypedIndex(ctx, chunk)
 	if err != nil {
 		return Prepared{}, err
@@ -107,7 +114,20 @@ func (c *Controller) prepare(ctx context.Context, chunk store.GenerationChunk, s
 	if err != nil {
 		return Prepared{}, err
 	}
+	disposition, err = c.config.Store.InspectTypedIndexDisposition(ctx, chunk)
+	if err != nil {
+		return Prepared{}, err
+	}
+	if disposition.State() != store.TypedIndexFresh {
+		return Prepared{}, ErrHeld
+	}
 	if exists || work.Growth != nil || work.Custody != nil {
+		if work.Growth == nil {
+			return Prepared{}, ErrHeld
+		}
+		if _, err = c.config.Store.AcquireFreshTypedIndexGrowth(ctx, chunk, work.Growth.Spec, disposition); err != nil {
+			return Prepared{}, err
+		}
 		return c.reopen(ctx, chunk, work, id)
 	}
 	if work.Stage != store.TypedPreflight {
@@ -129,7 +149,7 @@ func (c *Controller) prepare(ctx context.Context, chunk store.GenerationChunk, s
 	if err != nil {
 		return Prepared{}, store.WithDeferral(err)
 	}
-	if _, err = c.config.Store.AcquireTypedIndexGrowth(ctx, chunk, spec); err != nil {
+	if _, err = c.config.Store.AcquireFreshTypedIndexGrowth(ctx, chunk, spec, disposition); err != nil {
 		return Prepared{}, err
 	}
 	m, err := typedworkspace.CreateOwner(ctx, c.config.Workspace, workspace, id, budget, c.gates[workspace.Device])

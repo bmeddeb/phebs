@@ -274,17 +274,42 @@ func validateTypedCollection(ctx context.Context, c TypedIndexCollection) error 
 // operands (64 attempts, plan, successor, state, intent). A completely empty
 // replay uses a read-only fence. No file/hash/child/process lock is added.
 func (s *Surreal) CollectDrainedTypedIndexControls(ctx context.Context, c TypedIndexCollection, drainedAttempts []string) error {
+	_, err := s.collectDrainedTypedIndexControls(ctx, c, drainedAttempts, len(c.observation.Attempts))
+	return err
+}
+
+// TypedIndexCollectionBatch counts actual submitted mutation operands. Mutations
+// includes an inactive-intent rewrite, when present, as well as deleted rows.
+// More reports surviving attempts, not physical custody or tombstone eligibility.
+type TypedIndexCollectionBatch struct {
+	Mutations int
+	More      bool
+}
+
+// CollectDrainedTypedIndexControlsBatch has the same physical-proof and global
+// census prerequisites as CollectDrainedTypedIndexControls. The entire root must
+// be absent before the FIRST batch: deleting attempt rows must never discard the
+// last authority for surviving files. Each transaction retains the complete
+// snapshot fence, removes at most12 attempts and at most4 fixed controls, and
+// supplies no more than16 mutation operands. Reinspect before every subsequent
+// batch. State is removed only with its owner; plan/successor/intent survive until
+// the last attempt batch. A stale snapshot makes no progress.
+func (s *Surreal) CollectDrainedTypedIndexControlsBatch(ctx context.Context, c TypedIndexCollection, drainedAttempts []string) (TypedIndexCollectionBatch, error) {
+	return s.collectDrainedTypedIndexControls(ctx, c, drainedAttempts, min(12, len(c.observation.Attempts)))
+}
+
+func (s *Surreal) collectDrainedTypedIndexControls(ctx context.Context, c TypedIndexCollection, drainedAttempts []string, count int) (batch TypedIndexCollectionBatch, err error) {
 	if ctx == nil {
-		return typedindex.Invalid
+		return batch, typedindex.Invalid
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return batch, err
 	}
 	if err := validateTypedCollection(ctx, c); err != nil {
-		return err
+		return batch, err
 	}
 	if !slices.Equal(drainedAttempts, c.Attempts()) {
-		return typedindex.Invalid
+		return batch, typedindex.Invalid
 	}
 	stateID := "absent"
 	if len(c.observation.StateOwner) == 1 {
@@ -292,22 +317,24 @@ func (s *Surreal) CollectDrainedTypedIndexControls(ctx context.Context, c TypedI
 	}
 	vars, err := collectionVariables(c.retirement, stateID)
 	if err != nil {
-		return err
+		return batch, err
 	}
 	vars["expected"] = c.expected
 	ids := make([]models.RecordID, 0, len(drainedAttempts)+3)
-	for _, id := range drainedAttempts {
+	batch.More = count < len(drainedAttempts)
+	selected := drainedAttempts[:count]
+	for _, id := range selected {
 		ids = append(ids, typedID(string(TypedIndexAttempts), id))
 	}
-	if len(c.observation.Plan) == 1 {
+	if !batch.More && len(c.observation.Plan) == 1 {
 		ids = append(ids, typedID(string(TypedIndexPlans), c.retirement.root))
 	}
 	for _, row := range c.observation.Requests {
-		if !row.Parent {
+		if !batch.More && !row.Parent {
 			ids = append(ids, typedID(string(TypedIndexRequests), row.ID))
 		}
 	}
-	if len(c.observation.StateOwner) == 1 && c.observation.StateOwner[0].Root == c.retirement.root {
+	if len(c.observation.StateOwner) == 1 && c.observation.StateOwner[0].Root == c.retirement.root && slices.Contains(selected, c.observation.StateOwner[0].ID) {
 		ids = append(ids, typedID(string(TypedIndexStates), c.retirement.repository))
 	}
 	vars["ids"] = ids
@@ -317,16 +344,16 @@ func (s *Surreal) CollectDrainedTypedIndexControls(ctx context.Context, c TypedI
 	raw := c.observation.Retirement.Intent
 	if raw != "" {
 		if typedDecode(raw, maxTypedIntentBytes, &intent) != nil {
-			return typedindex.Invalid
+			return batch, typedindex.Invalid
 		}
-		if intent.Desired != "" && c.observation.Retirement.DesiredRoot == c.retirement.root {
+		if !batch.More && intent.Desired != "" && c.observation.Retirement.DesiredRoot == c.retirement.root {
 			if !intent.Canceled && !intent.RestoreRequired {
-				return typedindex.Stale
+				return batch, typedindex.Stale
 			}
 			intent.Desired = ""
 			body, e := typedEncode(intent, maxTypedIntentBytes)
 			if e != nil {
-				return e
+				return batch, e
 			}
 			vars["intent_body"] = body
 			statement += `UPDATE $intent SET body=$intent_body RETURN NONE;`
@@ -337,9 +364,13 @@ func (s *Surreal) CollectDrainedTypedIndexControls(ctx context.Context, c TypedI
 		statement += `FOR $rid IN $ids { DELETE $rid RETURN NONE; };`
 	}
 	if operands == 0 {
-		return s.typedFence(ctx, statement, vars)
+		return batch, s.typedFence(ctx, statement, vars)
 	}
-	return s.typedWrite(ctx, statement, vars, operands)
+	if err = s.typedWrite(ctx, statement, vars, operands); err != nil {
+		return TypedIndexCollectionBatch{}, err
+	}
+	batch.Mutations = int(operands)
+	return batch, nil
 }
 
 // TypedIndexTombstoneExpiry is a coherent database selection, not evidence that

@@ -78,6 +78,16 @@ func (c *Controller) recoverHeld(ctx context.Context, expectedAttempt string) er
 			return err
 		}
 	}
+	return c.recoverCensusedHeld(ctx, expectedAttempt)
+}
+
+// recoverCensusedHeld is only called under the serial/lifecycle guards after
+// a successful startup census (selected ready settlement), or after this
+// same turn completed the full bidirectional census (startup/recovery).
+func (c *Controller) recoverCensusedHeld(ctx context.Context, expectedAttempt string) error {
+	if c.config.Socket == "" || c.config.Image == "" {
+		return ErrUnavailable
+	}
 	holder, err := c.config.Store.GetTypedIndexGrowth(ctx)
 	if errors.Is(err, store.ErrNotFound) {
 		_, _, e := c.observe(ctx)

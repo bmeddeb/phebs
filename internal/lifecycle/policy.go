@@ -15,6 +15,9 @@ import (
 const (
 	Schema = "phebs-lifecycle-v1"
 
+	// TypedIndexOwner is available for explicit composition only; no default registry registration.
+	TypedIndexOwner = "typed-index-generations"
+
 	// These fixed filesystem batches are available only to an explicitly
 	// selected cleanup collector. Relationship V3 still releases at most one
 	// root's store pins per turn; only its filesystem drain grows.

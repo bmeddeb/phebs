@@ -53,6 +53,10 @@ type Handler func(context.Context, store.GenerationChunk, Budget) error
 type ExhaustedHandler func(context.Context, store.GenerationChunk, error) error
 
 type Class struct {
+	// AfterSettlement reconciles the exact old lease after heartbeat join and
+	// every attempted transition, including uncertain writes and heartbeat loss.
+	// It must not infer durable settlement from being called. Nil adds no work.
+	AfterSettlement        func(context.Context, store.GenerationChunk) error
 	Concurrency            int
 	Budget                 Budget
 	Handle                 Handler
@@ -464,6 +468,25 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 			_ = scheduler.emitChunkLifecycleDuration("settled", chunk, outcome, time.Since(started).Milliseconds())
 		}
 	}()
+	heartbeatJoined := true
+	if configuration.AfterSettlement != nil {
+		defer func() {
+			if !heartbeatJoined || retained {
+				return
+			}
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.WithoutCancel(ctx), scheduler.storeCallTimeout())
+			defer cleanupCancel()
+			if err := configuration.AfterSettlement(cleanupCtx, chunk); err != nil {
+				// A durable completion remains complete. Report the separate cleanup
+				// failure and suppress a misleading successful settled lifecycle report.
+				scheduler.report(fmt.Errorf("reconcile settled generation chunk: %w", err))
+				if scheduler.ChunkReportFailure != nil {
+					scheduler.ChunkReportFailure(err)
+				}
+				outcome += "_reconciliation_failed"
+			}
+		}()
+	}
 	if configuration.BeforeLeaseHeartbeat != nil {
 		if err := configuration.BeforeLeaseHeartbeat(ctx, chunk); err != nil {
 			if errors.Is(err, store.ErrGenerationLeaseLost) || errors.Is(err, store.ErrGenerationStale) {
@@ -483,6 +506,7 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 		outcome = ""
 		return
 	}
+	heartbeatJoined = false
 	handleCtx, cancel := context.WithCancel(ctx)
 	handlerContext := handleCtx
 	var heartbeat chan error
@@ -606,6 +630,7 @@ func (scheduler *Scheduler) executeOwned(ctx context.Context, configuration Clas
 			return
 		}
 	}
+	heartbeatJoined = true
 	writeCtx, writeCancel := context.WithTimeout(
 		context.WithoutCancel(ctx), scheduler.storeCallTimeout(),
 	)

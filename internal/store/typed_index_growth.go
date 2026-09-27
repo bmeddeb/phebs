@@ -80,6 +80,9 @@ func validTypedAttemptGrowth(a typedIndexAttempt) bool {
 // one holder exists installation-wide, enforced by a unique optional index. This
 // method never infers physical capacity or native quiescence from supplied data.
 func (s *Surreal) AcquireTypedIndexGrowth(ctx context.Context, chunk GenerationChunk, spec TypedIndexGrowthSpec) (TypedIndexGrowth, error) {
+	return s.acquireTypedIndexGrowth(ctx, chunk, spec, nil)
+}
+func (s *Surreal) acquireTypedIndexGrowth(ctx context.Context, chunk GenerationChunk, spec TypedIndexGrowthSpec, disposition *TypedIndexDisposition) (TypedIndexGrowth, error) {
 	if !validTypedGrowthSpec(spec) {
 		return TypedIndexGrowth{}, typedindex.Invalid
 	}
@@ -87,12 +90,19 @@ func (s *Surreal) AcquireTypedIndexGrowth(ctx context.Context, chunk GenerationC
 	if err != nil {
 		return TypedIndexGrowth{}, err
 	}
+	guard := ""
+	if disposition != nil {
+		guard, err = disposition.fence(x)
+		if err != nil {
+			return TypedIndexGrowth{}, err
+		}
+	}
 	if x.attempt.Growth != nil {
 		if x.attempt.Growth.State != "held" || x.attempt.Growth.Spec != spec {
 			return TypedIndexGrowth{}, typedindex.Stale
 		}
 		x.vars["attempt_before"] = x.attemptRaw
-		err = s.typedFence(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+`IF (SELECT body FROM $attempt WHERE growth_key='typed-index' LIMIT 1)[0].body != $attempt_before { THROW 'typed-stale'; };`, x.vars)
+		err = s.typedFence(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+guard+`IF (SELECT body FROM $attempt WHERE growth_key='typed-index' LIMIT 1)[0].body != $attempt_before { THROW 'typed-stale'; };`, x.vars)
 		return *x.attempt.Growth, err
 	}
 	if x.attempt.Stage != TypedPreflight || x.attempt.Custody != nil {
@@ -106,7 +116,7 @@ func (s *Surreal) AcquireTypedIndexGrowth(ctx context.Context, chunk GenerationC
 		return TypedIndexGrowth{}, err
 	}
 	x.vars["body"], x.vars["attempt_before"] = body, x.attemptRaw
-	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+`
+	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+guard+`
  IF array::len((SELECT id FROM typed_index_attempt WHERE growth_key='typed-index' LIMIT 2)) != 0 { THROW 'typed-capacity'; };
  IF (SELECT body FROM $attempt LIMIT 1)[0].body != $attempt_before { THROW 'typed-stale'; };
  UPDATE $attempt SET body=$body,growth_key='typed-index' RETURN NONE;`, x.vars, 1)

@@ -15074,6 +15074,15 @@ release. Startup performs coherent bidirectional custody checks; early ambiguous
 custody remains held. Scheduler/lifecycle registration, safe disposition of those
 early prefixes and actual native/common-clock/target validation remain open.
 
+The scheduler and bounded lifecycle compositions now pass independent source/cost
+review and parent host/store plus complete actual Linux race gates. Cross-lease
+history is fenced atomically before growth; settlement reconciles the old lease
+after heartbeat join. Restart recognizes exact collecting crash prefixes, and
+cleanup uses fresh physical-root absence with at most16 store mutation operands
+per batch. Unknown early custody stays held; retained roots preserve backlog
+cadence. No runtime registration occurs. Privileged native/common-clock/cold
+target validation and the remaining provider workflow still gate availability.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.
