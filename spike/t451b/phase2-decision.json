@@ -1,0 +1,174 @@
+{
+  "schema": "phebs-t451b-final-reduced-decision-v1",
+  "decision": "REDUCE",
+  "decision_scope": "Authorized sealed public feasibility investigation; not complete admission of the original required generated-document scope.",
+  "authorized_sealed_work_complete": true,
+  "original_ticket_acs_complete": false,
+  "t45_2_go": false,
+  "recommendation": "Proceed to T45.2 only after explicit acceptance of the reduced scope and integration of the two reviewed codenav fixes; existing GO-only dependency is not silently satisfied.",
+  "execution_source_commit": "9ced49f4dd70d97d193eb799b6a3af18a3453626",
+  "sealed_evidence_commit": "de07983d9269ef5f5fc4306f4010e15503ea5258",
+  "sealed_results": {
+    "path": "spike/t451b/phase2-direct-results.json",
+    "bytes": 20308,
+    "sha256": "sha256:371fe219b2d6734d59ab43305c97238eb6b874e8e9f010546278c8acc2163c13"
+  },
+  "target_head": "d5824b1a2286806b07efd030aa3a139c4f540157",
+  "claude_report": {
+    "delivery": "user-relayed exact report; private original retained",
+    "bytes": 5280,
+    "sha256": "sha256:c7d7d087392d6392cf165c4e574c06cb349c2aacc61c76e4da5e8490b1b50188",
+    "codenav_commit": "c1137529deed94826218a86261f1316e5662ea39",
+    "codenav_tree": "39cb5695c98be8840317b4280266ce621e01a0db",
+    "included_fix": "2949dae61d31d90fadb4831397e76ff75a4a19dc",
+    "candidate_admission_only": true,
+    "integrated_main_admission_established": false,
+    "method": "Claude reports codenav.Ingest and Definition/Hover/References on throwaway fixtures from the pinned public archive; raw SCIP hashes and retained/omitted occurrence and definition counts independently checked locally. No admission checker rerun by Codex.",
+    "method_limit": "Independent checker inspection supports Definition at all oracle points and Hover/References at oracle definition points, plus Hover at every definition; the report prose saying Hover/References at every oracle point is not established."
+  },
+  "admission": [
+    {
+      "cohort": "ordinary",
+      "scip": {
+        "bytes": 65044,
+        "sha256": "sha256:f4b6ff5131159826ead98ad3086d694384c84bb1623e02552612fbc8cd1df5e5"
+      },
+      "admission": "PASS",
+      "retained_documents": 3,
+      "retained_occurrences": 535,
+      "omitted_documents": 0,
+      "omitted_occurrences": 0,
+      "omitted_definitions": 0,
+      "all_definition_occurrences": 148,
+      "self_resolving_definitions": 146,
+      "retained_definition_hovers": 148,
+      "unclassified_exceptions": 0
+    },
+    {
+      "cohort": "proto",
+      "scip": {
+        "bytes": 491436,
+        "sha256": "sha256:59b6693822d3f66c885599f42454f7cbb24f0edf7acc5a949563911558c7b8f6"
+      },
+      "admission": "PASS",
+      "retained_documents": 1,
+      "retained_occurrences": 1309,
+      "omitted_documents": 1,
+      "omitted_occurrences": 1429,
+      "omitted_definitions": 401,
+      "all_definition_occurrences": 642,
+      "self_resolving_definitions": 241,
+      "retained_definition_hovers": 241,
+      "unclassified_exceptions": 0
+    },
+    {
+      "cohort": "fanout",
+      "scip": {
+        "bytes": 1523879,
+        "sha256": "sha256:621a7bd790180bb154a5f784fc12b63af70fdb7d1fce42acd4890d6e2e0bf71f"
+      },
+      "admission": "PASS",
+      "retained_documents": 13,
+      "retained_occurrences": 13278,
+      "omitted_documents": 0,
+      "omitted_occurrences": 0,
+      "omitted_definitions": 0,
+      "all_definition_occurrences": 2350,
+      "self_resolving_definitions": 2338,
+      "retained_definition_hovers": 2350,
+      "unclassified_exceptions": 0
+    }
+  ],
+  "exception_classes": {
+    "ordinary": {
+      "embedded_field_to_type": 2
+    },
+    "proto": {
+      "omitted_generated_definition": 401
+    },
+    "fanout": {
+      "package_clause_to_canonical_clause": 10,
+      "embedded_field_to_type": 2
+    }
+  },
+  "oracle": {
+    "source_oracle_sha256": "sha256:0620be2b4c5631e01626f6a27b18621908f045edbf73a00ceffd0b638bb616d1",
+    "source_definitions_matched": 3,
+    "scoped_reference_points_matched": 18,
+    "signatures_match": true,
+    "documentation_matches_after_whitespace_normalization": true,
+    "cross_cohort_symbol_identity_matches": true,
+    "generated_definitions_matched": 3,
+    "generated_scope": "Command, InputSpec and OutputSpec physical definition ranges and declaration kinds/names only; not full generated API or product admission."
+  },
+  "required_reductions": [
+    "skip-tests and skip-implementations only; no test-package or implementation relationship claim.",
+    "Use the reviewed direct-I/O disk-scratch posture and measured caps; no new execution or cap change authorized.",
+    "Integrate reviewed codenav encoding and out-of-repository omission fixes before relying on candidate admission.",
+    "Generated document remains required but omitted: 1429 occurrences and 401 definitions unavailable to product navigation. This is a coverage gap, not a retroactive frozen exclusion.",
+    "T45.3 must define canonical generated paths, exact-byte identities, canonical SCIP ordering and complete publication; T45.4 owns generated-byte custody and T45.5 routed reading before product navigation into generated code.",
+    "One pinned small public target only; no private failure reproduction, target cgo, scale, release or integrated-main admission claim."
+  ],
+  "remaining_work": [
+    {
+      "owner": "integration",
+      "task": "Separately authorized integration of reviewed codenav fixes; validate on the integrated tree."
+    },
+    {
+      "owner": "T45.2",
+      "task": "Explicitly accept reduced scope/dependency before starting provider/profile and execution-authority contract."
+    },
+    {
+      "owner": "T45.3",
+      "task": "Generated-document lane, canonical ordering and complete immutable bundle/publication contract; preserve required-unit completeness."
+    },
+    {
+      "owner": "T45.4",
+      "task": "Bounded executor/scheduling, generated-byte custody and partition resource evidence before larger targets; new runs need separate approval."
+    },
+    {
+      "owner": "T45.5",
+      "task": "Consume the generated-document lane through exact routed navigation readers; prove generated navigation before claiming coverage."
+    }
+  ],
+  "ordering_evidence": {
+    "source": "Claude report",
+    "claim": "Sealed ordinary versus Phase 1 differs only in occurrence and symbol ordering. Byte-stable output is not established; canonical ordering remains a successor requirement.",
+    "independently_recompared_by_codex": false
+  },
+  "resource_scope": {
+    "caps": {
+      "memory_bytes": 4533092352,
+      "scratch_bytes": 4573403136,
+      "tasks": 294,
+      "scratch_inodes": 262144,
+      "descriptors_per_process": 128,
+      "wall_seconds": 300,
+      "output_bytes": 16777216,
+      "scip_bytes": 2285819,
+      "cpus": 2,
+      "network": "none"
+    },
+    "fanout_memory_peak_bytes": 3902005248,
+    "fanout_host_wall_nanoseconds": 200543811886,
+    "attribution": "Planning dominates proto/fanout measured time; toolchain/dependency overhead is consistent with costs, not a scaling model or proven causal decomposition."
+  },
+  "cleanup": {
+    "custody_clear": true,
+    "dedicated_vm_stopped": true,
+    "vm_config_sha256": "sha256:83f790debe37f206ded7975febc6839b242870ad51ccb655186accfed8cc32fe",
+    "vm_memory_bytes": 8589934592,
+    "vm_cpus": 2,
+    "vm_disk_bytes": 10737418240
+  },
+  "no_additional_target_runs": true,
+  "production_behavior_changed": false,
+  "historical_evidence_files_preserved": 25,
+  "no_merge_push_or_pr": true,
+  "unestablished": {
+    "original_private_failure_reproduction": true,
+    "target_cgo": true,
+    "integrated_main_admission": true,
+    "required_generated_navigation": true
+  }
+}

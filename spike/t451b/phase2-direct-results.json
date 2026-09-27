@@ -1,0 +1,564 @@
+{
+  "schema": "phebs-t451b-phase2-direct-sealed-results-v1",
+  "source_commit": "9ced49f4dd70d97d193eb799b6a3af18a3453626",
+  "helper_source_commit": "5a7630cb8802621760c1483ab0ec2a8d029d21ec",
+  "helper_source_equivalence": "No Go or module changes between helper source and approved sealed source; helper/bundle reused byte-exact after independent review.",
+  "profile": "native-linux-arm64-rules-go-059-v3",
+  "target_head": "d5824b1a2286806b07efd030aa3a139c4f540157",
+  "decision": null,
+  "draft_decision": "REDUCE",
+  "draft_condition": "If exact-byte Claude admission still omits the required generated document, generation is proven but full profile admission is incomplete. Await that report before final classification.",
+  "decision_status": "awaiting Claude admission and final independent decision review",
+  "feasibility_gate_complete": false,
+  "t45_2_go": false,
+  "frozen_inputs": {
+    "bundle_sha256": "sha256:87d4c97d63ac1ef00eac9a5d7b860a51e8e1ca6a80e60e6dfbbe113602df7027",
+    "helper_sha256": "sha256:39136723d498ccd4b1b4e0c57eb00f89059360d469995615816dfd99f40a5563",
+    "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+    "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+    "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+    "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+    "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+    "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+    "aspect_sha256": "sha256:411e6fda3b1bc030af10b5a5f193aaa0b9dbb1253d1a643b101de84f4c68ad21",
+    "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+  },
+  "caps": {
+    "memory_bytes": 4533092352,
+    "scratch_bytes": 4573403136,
+    "tasks": 294,
+    "scratch_inodes": 262144,
+    "descriptors_per_process": 128,
+    "wall_seconds": 300,
+    "output_bytes": 16777216,
+    "scip_bytes": 2285819,
+    "cpus": 2,
+    "network": "none"
+  },
+  "direct_io_required": true,
+  "dispatch_ssh_timeout_seconds": 600,
+  "runs": [
+    {
+      "cohort": "ordinary",
+      "receipt_number": 16,
+      "sealed_dispatches": 1,
+      "config": {
+        "bytes": 1920,
+        "sha256": "sha256:8a52036e94653ea776abe7494b9d7044287dbdfe97bf8c9e46bb63140a40e735"
+      },
+      "receipt": {
+        "bytes": 3896642,
+        "sha256": "sha256:2eadb24cc6b8af2d2900eb5fd88454a10dd734a1056a4c9054b4410aaf4a270c"
+      },
+      "request_sha256": "sha256:fde5730bb8fe6bf40d5cb5fb6e51de06560202e8b32026134478b6c48fd2a499",
+      "scratch_sha256": "sha256:87265411f11a63f05d301abd6f88cff2f58dce558e0475f051193e32ff4460f8",
+      "direct_io_verified_at_prepare_and_cleanup": true,
+      "outcome": "NATIVE_COHORT_OBSERVED",
+      "stage": "complete",
+      "exit_code": 0,
+      "stop_reason": "",
+      "host_wall_nanoseconds": 105432803367,
+      "worker_wall_nanoseconds": 103476776622,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 1300517408
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 55109116529
+        },
+        {
+          "stage": "profile",
+          "nanoseconds": 56137067
+        },
+        {
+          "stage": "package-load/typecheck",
+          "nanoseconds": 38297616525
+        },
+        {
+          "stage": "indexer-unlocalized",
+          "nanoseconds": 8514081827
+        },
+        {
+          "stage": "validation",
+          "nanoseconds": 2418249
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 196860474
+        }
+      ],
+      "watchdog": null,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 2477658112,
+        "sampled_peak_rss_bytes": 777846784,
+        "sampled_peak_processes": 16,
+        "sampled_peak_scratch_bytes": 1656524800,
+        "sampled_peak_scratch_inodes": 59298,
+        "samples": 2044,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 37632
+      },
+      "process_observations": {
+        "version": "phebs-t451b-sampled-observations-v1",
+        "interval_nanoseconds": 50000000,
+        "duration_nanoseconds": 103279927593,
+        "samples": 2041,
+        "sampled_child_lifetimes": 924,
+        "child_lifetimes_lower_bound": true,
+        "sampled_process_fd_peak": 19,
+        "sampled_aggregate_fd_peak": 109,
+        "fd_counts_non_atomic": true,
+        "vanished": 18,
+        "exiting_unobserved_descriptors": 13,
+        "raced": 0,
+        "unexpected_errors": 0,
+        "unavailable": false
+      },
+      "private_cache": {
+        "version": "phebs-t451b-private-cache-v1",
+        "entries": 55271,
+        "regular_files": 48275,
+        "directories": 6909,
+        "symlinks": 87,
+        "unique_inodes": 55271,
+        "logical_bytes": 1181690950,
+        "allocated_bytes": 1342705664,
+        "complete": true
+      },
+      "coverage": {
+        "configured_targets": 5678,
+        "configured_units": 7,
+        "tool_units": 0,
+        "root_packages": 3,
+        "required_non_tool_packages": 6,
+        "sdk_packages": 79,
+        "root_documents": 3,
+        "member_edges": 3,
+        "excluded_controls": 1
+      },
+      "scip_counts": {
+        "documents": 3,
+        "occurrences": 535,
+        "symbols": 148,
+        "external_symbols": 0
+      },
+      "output_bytes": 3894224,
+      "output_sha256": "sha256:1c21077db0c64bf5bd08cde72c2b46be6ab3bc52ef07c92c183dc773f036806a",
+      "stderr_bytes": 0,
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scip": {
+        "bytes": 65044,
+        "sha256": "sha256:f4b6ff5131159826ead98ad3086d694384c84bb1623e02552612fbc8cd1df5e5"
+      },
+      "container_removed": true,
+      "inputs_removed": true,
+      "host_stage_removed": true,
+      "scratch_removed": true,
+      "cleanup_census": {
+        "namespace_empty": true,
+        "containers": 0,
+        "owned_mounts": 0,
+        "owned_loop_images": 0
+      },
+      "staging_free_bytes_after_scratch_reservation": 3377524736,
+      "staging_required_additional_bytes": 2099219234
+    },
+    {
+      "cohort": "proto",
+      "receipt_number": 17,
+      "sealed_dispatches": 1,
+      "config": {
+        "bytes": 1899,
+        "sha256": "sha256:28242cd0c90aaf04386b996a6a5bcbdd8b738d877a4442d90313090bb9d8e9dc"
+      },
+      "receipt": {
+        "bytes": 10077480,
+        "sha256": "sha256:414b2b445c67ef3c910752295c506cf7f463e00a0deba1b49274f4651472c366"
+      },
+      "request_sha256": "sha256:38e2896772eb1dbbd5172c3a5de3206c2414f382da8c85c4cd01e09dde5f24c2",
+      "scratch_sha256": "sha256:4b8c66509b14b79077657988f506ff763c74de36cce94e028964c4bd036098f2",
+      "direct_io_verified_at_prepare_and_cleanup": true,
+      "outcome": "NATIVE_COHORT_OBSERVED",
+      "stage": "complete",
+      "exit_code": 0,
+      "stop_reason": "",
+      "host_wall_nanoseconds": 178012149429,
+      "worker_wall_nanoseconds": 171731569488,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 3593182093
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 147942476634
+        },
+        {
+          "stage": "profile",
+          "nanoseconds": 85414075
+        },
+        {
+          "stage": "package-load/typecheck",
+          "nanoseconds": 12584622361
+        },
+        {
+          "stage": "indexer-unlocalized",
+          "nanoseconds": 7310592469
+        },
+        {
+          "stage": "validation",
+          "nanoseconds": 6789266
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 208476466
+        }
+      ],
+      "watchdog": null,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 2804162560,
+        "sampled_peak_rss_bytes": 924180480,
+        "sampled_peak_processes": 18,
+        "sampled_peak_scratch_bytes": 1997336576,
+        "sampled_peak_scratch_inodes": 71638,
+        "samples": 3353,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 37632
+      },
+      "process_observations": {
+        "version": "phebs-t451b-sampled-observations-v1",
+        "interval_nanoseconds": 50000000,
+        "duration_nanoseconds": 171522946966,
+        "samples": 3341,
+        "sampled_child_lifetimes": 1319,
+        "child_lifetimes_lower_bound": true,
+        "sampled_process_fd_peak": 23,
+        "sampled_aggregate_fd_peak": 87,
+        "fd_counts_non_atomic": true,
+        "vanished": 40,
+        "exiting_unobserved_descriptors": 27,
+        "raced": 0,
+        "unexpected_errors": 0,
+        "unavailable": false
+      },
+      "private_cache": {
+        "version": "phebs-t451b-private-cache-v1",
+        "entries": 68300,
+        "regular_files": 58369,
+        "directories": 9823,
+        "symlinks": 108,
+        "unique_inodes": 68300,
+        "logical_bytes": 1475423019,
+        "allocated_bytes": 1674072064,
+        "complete": true
+      },
+      "coverage": {
+        "configured_targets": 6791,
+        "configured_units": 179,
+        "tool_units": 45,
+        "root_packages": 2,
+        "required_non_tool_packages": 132,
+        "sdk_packages": 196,
+        "root_documents": 2,
+        "member_edges": 2,
+        "excluded_controls": 1
+      },
+      "scip_counts": {
+        "documents": 2,
+        "occurrences": 2738,
+        "symbols": 644,
+        "external_symbols": 0
+      },
+      "output_bytes": 10075067,
+      "output_sha256": "sha256:5b353e3c67db7beb65ecda080065f9796b6fb36a1ed90da4e86e53147e61f3f3",
+      "stderr_bytes": 0,
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scip": {
+        "bytes": 491436,
+        "sha256": "sha256:59b6693822d3f66c885599f42454f7cbb24f0edf7acc5a949563911558c7b8f6"
+      },
+      "container_removed": true,
+      "inputs_removed": true,
+      "host_stage_removed": true,
+      "scratch_removed": true,
+      "cleanup_census": {
+        "namespace_empty": true,
+        "containers": 0,
+        "owned_mounts": 0,
+        "owned_loop_images": 0
+      },
+      "staging_free_bytes_after_scratch_reservation": 3369017344,
+      "staging_required_additional_bytes": 2099219192
+    },
+    {
+      "cohort": "fanout",
+      "receipt_number": 18,
+      "sealed_dispatches": 1,
+      "config": {
+        "bytes": 1906,
+        "sha256": "sha256:93f3e8ddb11e8e80f5f8a259918f068a541bed65182e5cae0610510dbcb47071"
+      },
+      "receipt": {
+        "bytes": 12099912,
+        "sha256": "sha256:9854a09d0bd1352641757f03ee20f8bef878b76cd84b4d8f6ed6f79a1df60ef2"
+      },
+      "request_sha256": "sha256:095dd23071a32d409886c1a5e360251a66a1cf642ac85d19545150658c043682",
+      "scratch_sha256": "sha256:53f8f18eaec2adabc96b83087b546ca97f5ce32a003ddc41a244923ad72a8a8e",
+      "direct_io_verified_at_prepare_and_cleanup": true,
+      "outcome": "NATIVE_COHORT_OBSERVED",
+      "stage": "complete",
+      "exit_code": 0,
+      "stop_reason": "",
+      "host_wall_nanoseconds": 200543811886,
+      "worker_wall_nanoseconds": 196431830107,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 1291243883
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 124727875729
+        },
+        {
+          "stage": "profile",
+          "nanoseconds": 104419462
+        },
+        {
+          "stage": "package-load/typecheck",
+          "nanoseconds": 18110864079
+        },
+        {
+          "stage": "indexer-unlocalized",
+          "nanoseconds": 49861030788
+        },
+        {
+          "stage": "validation",
+          "nanoseconds": 27354911
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 2308759223
+        }
+      ],
+      "watchdog": null,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 3902005248,
+        "sampled_peak_rss_bytes": 811700224,
+        "sampled_peak_processes": 19,
+        "sampled_peak_scratch_bytes": 3065835520,
+        "sampled_peak_scratch_inodes": 83446,
+        "samples": 3805,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 37632
+      },
+      "process_observations": {
+        "version": "phebs-t451b-sampled-observations-v1",
+        "interval_nanoseconds": 50000000,
+        "duration_nanoseconds": 194123859705,
+        "samples": 3764,
+        "sampled_child_lifetimes": 1236,
+        "child_lifetimes_lower_bound": true,
+        "sampled_process_fd_peak": 22,
+        "sampled_aggregate_fd_peak": 109,
+        "fd_counts_non_atomic": true,
+        "vanished": 14,
+        "exiting_unobserved_descriptors": 12,
+        "raced": 0,
+        "unexpected_errors": 0,
+        "unavailable": false
+      },
+      "private_cache": {
+        "version": "phebs-t451b-private-cache-v1",
+        "entries": 79948,
+        "regular_files": 65917,
+        "directories": 13915,
+        "symlinks": 116,
+        "unique_inodes": 79948,
+        "logical_bytes": 2506996179,
+        "allocated_bytes": 2740584448,
+        "complete": true
+      },
+      "coverage": {
+        "configured_targets": 6994,
+        "configured_units": 219,
+        "tool_units": 45,
+        "root_packages": 3,
+        "required_non_tool_packages": 172,
+        "sdk_packages": 202,
+        "root_documents": 13,
+        "member_edges": 13,
+        "excluded_controls": 1
+      },
+      "scip_counts": {
+        "documents": 13,
+        "occurrences": 13278,
+        "symbols": 2342,
+        "external_symbols": 0
+      },
+      "output_bytes": 12097497,
+      "output_sha256": "sha256:a30144ba71cfbc5b71c0140b63e508cb23e3ca89361f5a34c430ab154ad6ba47",
+      "stderr_bytes": 0,
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scip": {
+        "bytes": 1523879,
+        "sha256": "sha256:621a7bd790180bb154a5f784fc12b63af70fdb7d1fce42acd4890d6e2e0bf71f"
+      },
+      "container_removed": true,
+      "inputs_removed": true,
+      "host_stage_removed": true,
+      "scratch_removed": true,
+      "cleanup_census": {
+        "namespace_empty": true,
+        "containers": 0,
+        "owned_mounts": 0,
+        "owned_loop_images": 0
+      },
+      "staging_free_bytes_after_scratch_reservation": 3365191680,
+      "staging_required_additional_bytes": 2099219206
+    }
+  ],
+  "oracle": {
+    "source": {
+      "schema": "phebs-t451b-sealed-source-oracle-comparison-v1",
+      "oracle_sha256": "sha256:0620be2b4c5631e01626f6a27b18621908f045edbf73a00ceffd0b638bb616d1",
+      "scips": {
+        "ordinary": {
+          "bytes": 65044,
+          "sha256": "sha256:f4b6ff5131159826ead98ad3086d694384c84bb1623e02552612fbc8cd1df5e5"
+        },
+        "proto": {
+          "bytes": 491436,
+          "sha256": "sha256:59b6693822d3f66c885599f42454f7cbb24f0edf7acc5a949563911558c7b8f6"
+        },
+        "fanout": {
+          "bytes": 1523879,
+          "sha256": "sha256:621a7bd790180bb154a5f784fc12b63af70fdb7d1fce42acd4890d6e2e0bf71f"
+        }
+      },
+      "symbols": [
+        {
+          "name": "NewOutWriter",
+          "definition_matches": true,
+          "signature_matches": true,
+          "documentation_matches_after_whitespace_normalization": true,
+          "references_matched": 1,
+          "cross_cohort_identity_equal": true,
+          "symbol_sha256": "sha256:d4e34267c4fae46c8110752575cc2346164488b8edc26a9b7d7c0a7e39ad477d"
+        },
+        {
+          "name": "NewErrWriter",
+          "definition_matches": true,
+          "signature_matches": true,
+          "documentation_matches_after_whitespace_normalization": true,
+          "references_matched": 1,
+          "cross_cohort_identity_equal": true,
+          "symbol_sha256": "sha256:532838af3b7b7a5f77fc11886edfa18d96f7c24798d5291e22423536a2028dde"
+        },
+        {
+          "name": "NewRemoteErrorResult",
+          "definition_matches": true,
+          "signature_matches": true,
+          "documentation_matches_after_whitespace_normalization": true,
+          "references_matched": 16,
+          "cross_cohort_identity_equal": true,
+          "symbol_sha256": "sha256:5880075b3ab9187ad5c7bdf0934394351c07752d9bf54c0aa549ca68060177ac"
+        }
+      ],
+      "definitions_matched": 3,
+      "reference_points_matched": 18,
+      "scope": "exact call set for these three functions within rexec.go; not repository-wide reference count",
+      "generated_oracle": "recorded separately in rerun-generated-oracle-comparison.json",
+      "admission": "separate Claude report required"
+    },
+    "generated": {
+      "schema": "phebs-t451b-sealed-generated-oracle-comparison-v1",
+      "receipt_sha256": "sha256:414b2b445c67ef3c910752295c506cf7f463e00a0deba1b49274f4651472c366",
+      "generated_source_sha256": "sha256:2db759decf2653c9d2ebdeb27f99dc0a755468b44d02af3650093d2b1d33dc1d",
+      "generated_source_bytes": 40814,
+      "oracle_sha256": "sha256:6e2f77219c1cb413a9534273236388a26b9291c5216bc48a4e53e0cba8e6ac94",
+      "scip_sha256": "sha256:59b6693822d3f66c885599f42454f7cbb24f0edf7acc5a949563911558c7b8f6",
+      "definitions": [
+        {
+          "name": "Command",
+          "definition_range_matches": true,
+          "declaration_kind_name_matches": true,
+          "source_documentation_present": true,
+          "documentation_matches": true
+        },
+        {
+          "name": "InputSpec",
+          "definition_range_matches": true,
+          "declaration_kind_name_matches": true,
+          "source_documentation_present": false,
+          "documentation_matches": null
+        },
+        {
+          "name": "OutputSpec",
+          "definition_range_matches": true,
+          "declaration_kind_name_matches": true,
+          "source_documentation_present": false,
+          "documentation_matches": null
+        }
+      ],
+      "scope": "Three preselected generated message structs only; not all generated methods, full generated API or cgo. Exported bytes match sealed plan; checked-in convenience source was not used."
+    }
+  },
+  "claude_admission": {
+    "status": "pending user-relayed report on exact sealed SCIPs",
+    "reviewed_codenav_candidate": "c1137529deed94826218a86261f1316e5662ea39",
+    "integrated_main_admission_established": false
+  },
+  "execution": {
+    "serial_order": [
+      "ordinary",
+      "proto",
+      "fanout"
+    ],
+    "continued_regardless_of_earlier_outcomes": true,
+    "target_repairs": 0,
+    "reruns": 0,
+    "code_changed_during_runs": false,
+    "container_network_denied": true,
+    "host_vm_command_network_policy": "sandbox-exec denies nonlocal outbound; localhost and Unix sockets allowed for local SSH/Docker",
+    "tool_downloads": 0,
+    "historical_evidence_files_unchanged": 24,
+    "generated_export": "Post-container, read-only selected generated-root bytes retained privately and matched to sealed plan before scratch cleanup; not a target rerun."
+  },
+  "cleanup": {
+    "custody_clear": true,
+    "dedicated_vm_stopped": true,
+    "vm_config_sha256": "sha256:83f790debe37f206ded7975febc6839b242870ad51ccb655186accfed8cc32fe",
+    "vm_memory_bytes": 8589934592,
+    "vm_cpus": 2,
+    "vm_disk_bytes": 10737418240
+  },
+  "limits": [
+    "Bounded pinned public target/cohorts only; skip-tests and skip-implementations.",
+    "No target cgo, full generated API, scale or release claim.",
+    "Process lifetimes are sampled lower bounds; descriptor observations are non-atomic.",
+    "Generated oracle covers three preselected message structs; admission coverage is a separate gate.",
+    "No merge, push or PR."
+  ]
+}

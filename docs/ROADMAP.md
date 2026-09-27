@@ -125,6 +125,18 @@ checks passed, but the native-neutral gate did not. The source-free record is
 stopped and the allowance is consumed. No rerun, repair or public execution is
 authorized; T45.1b feasibility remains open.
 
+**T45.2 reduced contract (2026-09-27).** Ben accepted T45.1b REDUCE and
+PR #19 merged. Exact merged-tree admission at `78d0a683` passes all three
+unchanged sealed SCIPs; proto generated navigation stays unavailable. The
+source-free replay is `spike/t451b/merged-admission-results.json`. The pure
+`internal/typedindex` contract now binds trusted administrator/source/profile
+state, tool/config/bundle/resource identities, profile epochs, exact planned
+successors and private custody requirements under the measured reduced caps.
+No executor or public API is registered. T45.3 is next: its explicit ACs now
+require the generated-document lane and canonical SCIP ordering. T45.4 owns
+actual verified copies and execution; T45.5 owns routed navigation. No extra
+target run, cap change, merge or push accompanies this local implementation.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

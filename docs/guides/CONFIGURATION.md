@@ -824,3 +824,70 @@ scrubs legacy URL credentials, hides invalid/unsafe legacy rows, and repairs
 DB/shard revision mismatches by forcing a new index. Any audit, quarantine, or
 repair failure stops startup so unverified state is never served. Destructive cleanup remains gated by `cleanup_orphans` and only
 touches validated, non-symlinked paths under the data directory.
+
+## Managed typed-index contract (T45.2)
+
+Managed indexing remains unavailable in ordinary runtime: this ticket defines
+an internal contract, not a configuration switch, worker or HTTP/MCP endpoint.
+The accepted initial profile is Bazel/rules_go/scip-go on Linux arm64 with
+skip-tests/skip-implementations and generated documents omitted. Existing
+committed-SCIP navigation keeps its behavior. T45.3 must supply the generated
+lane and canonical ordering before generated coverage can advance; T45.4 owns
+the executor and T45.5 the routed reader.
+
+A managed build executes repository-controlled build logic. It is not a pure
+source extractor, and ordinary repository visibility never grants execution.
+Future API adapters must pass authenticated administrator authority separately
+from request JSON and load authoritative HEAD, repository incarnation, source
+generation and current operator profile epoch from trusted server state.
+No browser input can provide executable paths, shell commands, environment,
+rc content, cache locations, credentials or tool identities. Profiles are
+operator-owned; every tool/image/config/resource/prehydration identity is
+bound. Profile replacement requires an atomic durable epoch increment even
+when values repeat (A→B→A); request retries retain their exact idempotency key.
+The executor must recheck authority at transitions and before publication.
+
+Profile and request JSON use exact schema field spelling/order and explicit
+fields, including empty optional values; whitespace is accepted. Unknown,
+duplicate, omitted, case-aliased or malformed fields refuse. Profile metadata
+is bounded to 16 KiB, requests to 8 KiB and source-free progress to 512 bytes.
+Do not put raw tool errors, source, credentials or paths in progress reasons.
+Reported elapsed time can exceed the 300-second limit when describing a
+watchdog refusal; this never increases the execution budget.
+
+The measured execution envelope stays fixed:
+
+| Resource | Limit |
+|---|---:|
+| Memory | 4,533,092,352 bytes |
+| Scratch | 4,573,403,136 bytes; 262,144 inodes |
+| Tasks / descriptors | 294 tasks; 128 descriptors per process |
+| CPU | 200,000 / 100,000 microseconds (2 CPUs) |
+| Wall | 300 seconds |
+| Worker output / SCIP | 16,777,216 / 2,285,819 bytes |
+
+Scratch requires ext4 with verified direct I/O and request-private custody;
+network egress and remote/shared caches stay denied. Ambient system, home and
+workspace bazelrc discovery is disabled. The sole optional copied rc is the
+exact resolved line `build --compilation_mode=fastbuild` plus newline, with a
+bound SHA-256; imports, extra configuration, command substitution and overrides
+refuse. Tool and launcher paths and argv recipes are Phebs-owned.
+
+The immutable prehydration manifest retains the reviewed importer ceilings:
+16 MiB of metadata, 50,000 files, 20,000 directories, 256 MiB per file and
+2 GiB total. It is digest-bound and rejects unsafe/duplicate/file-directory
+colliding paths. These are validation bounds, not evidence that every shape
+fits execution capacity. Before either Bazel planning or member execution, T45.4 must reserve capacity, copy
+and verify every declared file and mode into new private immutable inputs,
+reject undeclared files/links, verify tools/image/rc and actual policy, and
+produce trusted preparation evidence. `ValidatePreparation` checks that bound
+evidence; a caller-supplied boolean is not proof of filesystem or containment
+facts. This contract performs no copy or sandbox launch itself.
+
+Every workspace, input copy, cache, server/worker state and output path derives
+from the exact request digest beneath `typed-index/attempts/`. Lifecycle must
+inventory that custody on success, refusal, cancellation and restart. A planned
+successor binds its exact original request and sealed package-load map; changing
+any source, profile, tool, universe or idempotency field invalidates that link.
+Disabled contract admission returns before decoding, hashing or inventory;
+there is no default poller, startup scan, child or publication work.

@@ -1,0 +1,440 @@
+{
+  "schema": "phebs-t451b-phase2b-diagnostic-results-v1",
+  "source_commit": "5a7630cb8802621760c1483ab0ec2a8d029d21ec",
+  "source_tree": "8a1b2e6a1397f9ce0003cbaae29f43b63b17a22d",
+  "target_head": "d5824b1a2286806b07efd030aa3a139c4f540157",
+  "profile": "native-linux-arm64-rules-go-059-v3",
+  "diagnostic": "phase2b-ordinary-900s",
+  "feasibility_gate_complete": false,
+  "t45_2_go": false,
+  "frozen_inputs": {
+    "schema": "phebs-t451b-native-request-v2",
+    "diagnostic": "phase2b-ordinary-900s",
+    "scratch_sha256": "sha256:d17a00a5efc271e4e330226f1d49f6bfb1cd8db5d775decc4fa375875dce98bc",
+    "profile": "native-linux-arm64-rules-go-059-v3",
+    "cohort": "ordinary",
+    "bundle_sha256": "sha256:87d4c97d63ac1ef00eac9a5d7b860a51e8e1ca6a80e60e6dfbbe113602df7027",
+    "helper_sha256": "sha256:39136723d498ccd4b1b4e0c57eb00f89059360d469995615816dfd99f40a5563",
+    "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+    "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+    "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+    "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+    "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+    "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+    "aspect_sha256": "sha256:411e6fda3b1bc030af10b5a5f193aaa0b9dbb1253d1a643b101de84f4c68ad21",
+    "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+  },
+  "caps": {
+    "memory_bytes": 4533092352,
+    "scratch_bytes": 4573403136,
+    "tasks": 294,
+    "scratch_inodes": 262144,
+    "descriptors_per_process": 128,
+    "wall_seconds": 900,
+    "output_bytes": 16777216,
+    "scip_bytes": 2285819,
+    "cpus": 2,
+    "network": "none"
+  },
+  "sealed_wall_seconds_unchanged": 300,
+  "dispatch_ssh_timeout_seconds": 1200,
+  "runs": [
+    {
+      "receipt_number": 14,
+      "cohort": "ordinary",
+      "loop_mode": "default",
+      "observed_direct_io": false,
+      "dispatches": 1,
+      "config": {
+        "bytes": 2011,
+        "sha256": "sha256:183fa2c5e96c9ec5c64c372875c82e537270ea0c3d1e4625bec1bb9dafc52c4b"
+      },
+      "receipt": {
+        "bytes": 3896731,
+        "sha256": "sha256:662be22f05931b016f17db044447c8423c272783c96fa7505a2da3dc57866011"
+      },
+      "request_sha256": "sha256:edd31843de12718ef4c53d63f46018f17bb33aa28a3b9b47f67138b948615925",
+      "outcome": "NATIVE_DIAGNOSTIC_OBSERVED",
+      "stage": "complete",
+      "exit_code": 0,
+      "host_wall_nanoseconds": 349223239493,
+      "worker_wall_nanoseconds": 346608485162,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 5178798433
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 297435682538
+        },
+        {
+          "stage": "profile",
+          "nanoseconds": 430563842
+        },
+        {
+          "stage": "package-load/typecheck",
+          "nanoseconds": 37087318617
+        },
+        {
+          "stage": "indexer-unlocalized",
+          "nanoseconds": 6309881186
+        },
+        {
+          "stage": "validation",
+          "nanoseconds": 1860850
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 164373058
+        }
+      ],
+      "watchdog": null,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 4088532992,
+        "sampled_peak_rss_bytes": 767479808,
+        "sampled_peak_processes": 19,
+        "sampled_peak_scratch_bytes": 1656557568,
+        "sampled_peak_scratch_inodes": 59305,
+        "samples": 5679,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 37632
+      },
+      "output_bytes": 3894264,
+      "output_sha256": "sha256:a45f4915623e0c0337bcb4eda075d32ca72e1ee55c8d19df4a864ff4f2848de8",
+      "stderr_bytes": 0,
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docker_oom_killed": false,
+      "scip": {
+        "bytes": 65044,
+        "sha256": "sha256:6feb777490d4ae538e25ba684dc0572c45ee54047cc295181c160a3184271e91"
+      },
+      "pressure": {
+        "samples": 195,
+        "unavailable_rows": 16,
+        "missed_intervals": 139,
+        "log_bytes": 326959,
+        "log_sha256": "862a22a12036bb75bedfb82d0080d6ddca1325440800e1113695551dfd8907db",
+        "first_sample_time_ns": 1790475133348148000,
+        "last_sample_time_ns": 1790475479351980000,
+        "observed_window_seconds": 346.003832,
+        "memory_stat_observed_counter_deltas": {
+          "workingset_refault_anon": 0,
+          "workingset_refault_file": 0,
+          "workingset_activate_anon": 0,
+          "workingset_activate_file": 0,
+          "workingset_restore_anon": 0,
+          "workingset_restore_file": 0,
+          "workingset_nodereclaim": 0,
+          "pgscan": 0,
+          "pgsteal": 0,
+          "pgscan_kswapd": 0,
+          "pgscan_direct": 0,
+          "pgscan_khugepaged": 0,
+          "pgsteal_kswapd": 0,
+          "pgsteal_direct": 0,
+          "pgsteal_khugepaged": 0,
+          "pgfault": 8939449,
+          "pgmajfault": 123
+        },
+        "memory_stat_observed_max_bytes": {
+          "anon": 633815040,
+          "file": 3390554112,
+          "kernel": 201269248,
+          "shmem": 0,
+          "file_dirty": 365867008,
+          "file_writeback": 8347648,
+          "slab": 195290272,
+          "active_file": 37859328,
+          "inactive_file": 3352694784
+        },
+        "memory_events_observed_max": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "pressure": {
+          "memory.pressure": {
+            "some": {
+              "observed_total_delta_microseconds": 8,
+              "max_avg10_percent": 0.0
+            },
+            "full": {
+              "observed_total_delta_microseconds": 8,
+              "max_avg10_percent": 0.0
+            }
+          },
+          "io.pressure": {
+            "some": {
+              "observed_total_delta_microseconds": 353776,
+              "max_avg10_percent": 1.89
+            },
+            "full": {
+              "observed_total_delta_microseconds": 264810,
+              "max_avg10_percent": 1.71
+            }
+          },
+          "cpu.pressure": {
+            "some": {
+              "observed_total_delta_microseconds": 189131602,
+              "max_avg10_percent": 80.7
+            },
+            "full": {
+              "observed_total_delta_microseconds": 37770790,
+              "max_avg10_percent": 21.15
+            }
+          }
+        },
+        "measurement_limits": "Observed host windows only; startup/discovery and terminal gaps are not extrapolated; memory.stat fields overlap and are not summed; samples are serial file reads, not an atomic kernel snapshot."
+      },
+      "cleanup": {
+        "container_removed": true,
+        "inputs_removed": true,
+        "host_stage_removed": true,
+        "scratch_removed": true,
+        "namespace_empty": true,
+        "containers": 0,
+        "owned_mounts": 0,
+        "owned_loop_images": 0
+      },
+      "staging_free_bytes_after_scratch_reservation": 3386998784,
+      "staging_required_additional_bytes": 2099219416
+    },
+    {
+      "receipt_number": 15,
+      "cohort": "ordinary",
+      "loop_mode": "direct",
+      "observed_direct_io": true,
+      "dispatches": 1,
+      "config": {
+        "bytes": 2005,
+        "sha256": "sha256:c316d8050de1f90e1cf75b7454eddc78ffd94247ac92001ca49cd3529675c105"
+      },
+      "receipt": {
+        "bytes": 3896722,
+        "sha256": "sha256:eef9a2f0aea833a87cbf27b0e1bd1e7739acc1e351e1583081007e5163439130"
+      },
+      "request_sha256": "sha256:b6dec74bec93064f24aa2e6c6ef200ad7cc7d474a0cea6d3c3b8ecff64dd0e84",
+      "outcome": "NATIVE_DIAGNOSTIC_OBSERVED",
+      "stage": "complete",
+      "exit_code": 0,
+      "host_wall_nanoseconds": 76506716290,
+      "worker_wall_nanoseconds": 74771516874,
+      "timings": [
+        {
+          "stage": "profile",
+          "nanoseconds": 1331019017
+        },
+        {
+          "stage": "planning",
+          "nanoseconds": 36538857994
+        },
+        {
+          "stage": "profile",
+          "nanoseconds": 41637031
+        },
+        {
+          "stage": "package-load/typecheck",
+          "nanoseconds": 28829989703
+        },
+        {
+          "stage": "indexer-unlocalized",
+          "nanoseconds": 7816414161
+        },
+        {
+          "stage": "validation",
+          "nanoseconds": 1995176
+        },
+        {
+          "stage": "containment/measurement",
+          "nanoseconds": 211595251
+        }
+      ],
+      "watchdog": null,
+      "resources": {
+        "memory_oom_events": 0,
+        "memory_oom_kills": 0,
+        "memory_limit_events": 0,
+        "task_limit_events": 0,
+        "sampling_unavailable": false,
+        "limits_verified": true,
+        "memory_peak_bytes": 2445656064,
+        "sampled_peak_rss_bytes": 765771776,
+        "sampled_peak_processes": 22,
+        "sampled_peak_scratch_bytes": 1656516608,
+        "sampled_peak_scratch_inodes": 59307,
+        "samples": 1498,
+        "per_process_descriptors": 128,
+        "aggregate_descriptor_ceiling": 37632
+      },
+      "output_bytes": 3894257,
+      "output_sha256": "sha256:2105c0dde953f8c7337467a187a1fc37d412ad757d91e5620198be83d3049864",
+      "stderr_bytes": 0,
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docker_oom_killed": false,
+      "scip": {
+        "bytes": 65044,
+        "sha256": "sha256:4e922637fec9c8657ba14b794f97ec6e1a95b62297aa8b9444d6db45a69fc786"
+      },
+      "pressure": {
+        "samples": 72,
+        "unavailable_rows": 2,
+        "missed_intervals": 3,
+        "log_bytes": 119703,
+        "log_sha256": "5b29834002322e8166cec7f547a04a52b9226ae8dfb303d0eca4e48d4e6629ed",
+        "first_sample_time_ns": 1790475650081949000,
+        "last_sample_time_ns": 1790475724087084000,
+        "observed_window_seconds": 74.005135,
+        "memory_stat_observed_counter_deltas": {
+          "workingset_refault_anon": 0,
+          "workingset_refault_file": 0,
+          "workingset_activate_anon": 0,
+          "workingset_activate_file": 0,
+          "workingset_restore_anon": 0,
+          "workingset_restore_file": 0,
+          "workingset_nodereclaim": 0,
+          "pgscan": 0,
+          "pgsteal": 0,
+          "pgscan_kswapd": 0,
+          "pgscan_direct": 0,
+          "pgscan_khugepaged": 0,
+          "pgsteal_kswapd": 0,
+          "pgsteal_direct": 0,
+          "pgsteal_khugepaged": 0,
+          "pgfault": 8941064,
+          "pgmajfault": 123
+        },
+        "memory_stat_observed_max_bytes": {
+          "anon": 652005376,
+          "file": 1691275264,
+          "kernel": 150900736,
+          "shmem": 0,
+          "file_dirty": 440303616,
+          "file_writeback": 0,
+          "slab": 145020552,
+          "active_file": 37859328,
+          "inactive_file": 1653415936
+        },
+        "memory_events_observed_max": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "pressure": {
+          "memory.pressure": {
+            "some": {
+              "observed_total_delta_microseconds": 4,
+              "max_avg10_percent": 0.0
+            },
+            "full": {
+              "observed_total_delta_microseconds": 4,
+              "max_avg10_percent": 0.0
+            }
+          },
+          "io.pressure": {
+            "some": {
+              "observed_total_delta_microseconds": 54219,
+              "max_avg10_percent": 0.0
+            },
+            "full": {
+              "observed_total_delta_microseconds": 34534,
+              "max_avg10_percent": 0.0
+            }
+          },
+          "cpu.pressure": {
+            "some": {
+              "observed_total_delta_microseconds": 27810136,
+              "max_avg10_percent": 52.58
+            },
+            "full": {
+              "observed_total_delta_microseconds": 702546,
+              "max_avg10_percent": 0.61
+            }
+          }
+        },
+        "measurement_limits": "Observed host windows only; startup/discovery and terminal gaps are not extrapolated; memory.stat fields overlap and are not summed; samples are serial file reads, not an atomic kernel snapshot."
+      },
+      "cleanup": {
+        "container_removed": true,
+        "inputs_removed": true,
+        "host_stage_removed": true,
+        "scratch_removed": true,
+        "namespace_empty": true,
+        "containers": 0,
+        "owned_mounts": 0,
+        "owned_loop_images": 0
+      },
+      "staging_free_bytes_after_scratch_reservation": 3382194176,
+      "staging_required_additional_bytes": 2099219404
+    }
+  ],
+  "execution": {
+    "serial_order": [
+      "default",
+      "direct"
+    ],
+    "repairs": 0,
+    "reruns": 0,
+    "code_changed_during_runs": false,
+    "container_network_denied": true,
+    "host_vm_command_network_policy": "sandbox-exec denies nonlocal outbound; localhost and Unix sockets allowed for local SSH/Docker",
+    "tool_downloads": 0,
+    "historical_evidence_files_unchanged": 23
+  },
+  "validation": {
+    "implementation_review_findings": 0,
+    "helper_independent_rebuild_equal": true,
+    "python_regressions": 26,
+    "integrated_normal_race_vet_lint_docs_glossary_pass": true,
+    "neutral_watchdog_linux_test_binary": {
+      "bytes": 10471521,
+      "sha256": "sha256:71a8f3ca37a68944af76e5d6e30d859400bc8dca271cb2b6a616ed174b41f76a"
+    },
+    "neutral_watchdog_linux_log": {
+      "bytes": 1948,
+      "sha256": "sha256:426895181bd92a336ca4cd59b5d778f0bdb3cc3590ab8996e3ab8172cc6e2a4a"
+    },
+    "neutral_sampler_log": {
+      "bytes": 12052,
+      "sha256": "sha256:1149e893eefa7d45d55ebbbc2277c906082ee4460c6cec014fecb78524a5251b"
+    }
+  },
+  "interpretation": {
+    "observed_delay": "Default-loop ordinary completed in 349.223 seconds host wall; worker planning consumed 297.436 seconds before package load and indexing. This configuration exceeds the sealed 300-second budget.",
+    "direct_io_comparison": "Direct-I/O ordinary completed in 76.507 seconds host wall; planning consumed 36.539 seconds. Peak cgroup memory fell from 4088532992 to 2445656064 bytes; observed file-cache maxima fell from 3390554112 to 1691275264 bytes.",
+    "memory_thrashing": "Unsupported: both memory.events records contain zero max/oom/oom_kill events; observed pgscan, pgsteal and workingset refault deltas are zero, and memory PSI is negligible.",
+    "causal_limits": "The memory difference is consistent with avoiding loop backing-file cache duplication. The timing difference is correlated with direct I/O, not proof of its exact CPU/kernel mechanism. Each mode ran once, serially. Fresh VM boots and scratch do not reset macOS host caches or control host load. The prior sealed timeouts have no stage evidence and cannot be assigned this cause retrospectively.",
+    "pressure_limits": "Default: 195 complete samples, 16 unavailable rows, 139 missed target intervals. Direct: 72 complete samples, 2 unavailable rows, 3 missed target intervals. Counter deltas cover only observed windows; serial file reads are not atomic, overlapping memory fields are not summed.",
+    "watchdog": "Neither public diagnostic reached 900 seconds, so neither emitted a watchdog report. The permanent timeout path is proved by neutral Linux subprocess tests, not by these two public completions.",
+    "proposal": {
+      "fix": "Use verified losetup --direct-io=on for fresh sealed Phase 2 scratch, retaining protected mode ownership and prepare/verify/cleanup DIO checks. This extension to sealed execution is proposed only, not implemented by this diagnostic approval.",
+      "wall_seconds": 300,
+      "resource_caps": "Keep all existing Phase 2 byte, memory, task, inode, descriptor, CPU, output and SCIP caps unchanged.",
+      "rationale": "Direct ordinary completed within 300 seconds with lower measured memory; there is no evidence requiring a cap or wall increase. Proto and fan-out remain unmeasured under direct I/O.",
+      "next_run": "A separately approved, reviewed sealed ordinary/proto/fan-out sequence; no reruns or execution are authorized by this record."
+    },
+    "feasibility": "Diagnostic SCIPs are not substituted for sealed oracle/admission/cross-cohort proof. T45.1b remains open and T45.2 blocked.",
+    "scip_comparison": "Independent private protobuf decoding found identical metadata and occurrences and equal per-document symbol multisets across both 65044-byte SCIPs; only symbol-array order differs. This explains different byte digests and is not full oracle/admission proof."
+  },
+  "cleanup": {
+    "custody_clear": true,
+    "vm_stopped": true,
+    "vm_config_sha256": "sha256:83f790debe37f206ded7975febc6839b242870ad51ccb655186accfed8cc32fe",
+    "vm_memory_bytes": 8589934592,
+    "vm_cpus": 2,
+    "vm_disk_bytes": 10737418240
+  }
+}

@@ -6375,3 +6375,107 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   bundle under a canonical generated path. Cost: one prefix and cleanliness
   check per rejected document path; admitted paths, queries, sync, startup,
   retry, publication, locks, caches, and children are unchanged.
+
+- **2026-09-27 — T45.2 reduced provider/profile authority contract.**
+  Ben accepts T45.1b REDUCE and removes the previous GO-only progression hold.
+  PR #19 merged at `78d0a6830488438b38bc9da2f4ddea87116f51ac`, tree
+  `49e0bcaa9c22253f77a37849114ce7b49065cbcb`. A local replay against that
+  exact codenav tree and the three unmodified sealed SCIP files passes merged
+  admission: ordinary 3 documents/535 occurrences, proto 1/1,309 and fan-out
+  13/13,278. Self-resolving definitions are 146/148, 241/642 and 2,338/2,350;
+  every retained definition has hover. The 401 omitted proto definitions,
+  embedded-field redirects and canonical package-clause redirects match the
+  earlier reviewed positions. Definition/Hover/References ran at every oracle
+  point; the three source signatures/ranges, eighteen reference points and
+  exact cross-cohort symbols for the three oracle functions pass. This closes
+  the integrated admission prerequisite for REDUCE, not generated navigation, original private
+  failure reproduction, target cgo or scale. The exact report/helper hashes
+  and input identities are in `spike/t451b/merged-admission-results.json`.
+  Fan-out's eighteen reference queries return no definition location or hover
+  payload because their definition documents are in the other cohort indexes;
+  References includes the expected points. This gate proves emitted symbol
+  identity, not cross-member query routing, which remains T45.3/T45.5 work.
+  Earlier Phase 2b, direct-run and decision records remain byte-exact; no VM,
+  Bazel or scip-go execution occurred. Temporary fixture repositories were
+  removed after replay; private checker and detailed results are retained.
+
+  `internal/typedindex` is a pure contract with no registered provider,
+  endpoint, worker or child. Its operator profile binds versioned provider,
+  seven tool identities, image, closed configuration, immutable bundle and
+  measured resource policy. Browser intent contains only bound identities,
+  authoritative HEAD/source/incarnation, universe and an idempotency key.
+  Trusted administrator/source/profile state is supplied separately, never
+  decoded from request JSON. Disabled and unauthorized intents refuse before
+  parsing or hashing. Unknown, duplicate, missing, case-aliased and unsafe
+  fields refuse using bounded canonical JSON; whitespace is accepted but
+  schema field order and spelling are fixed. Profile/request/progress byte
+  ceilings are 16 KiB/8 KiB/512 bytes. Unsupported tests, implementations,
+  generated consumption, network or scratch/resource widening refuse.
+
+  Profile values are immutable after decoding. Durable operator replacement
+  must compare-and-swap the prior epoch with `AdvanceProfile`'s strictly
+  incremented result, including equal-value updates; overflow refuses. The
+  package itself persists nothing. Tool replacement and A→B→A cannot alias
+  admitted request identity. A planned successor includes its original request
+  digest and sealed package-load map; admission reconstructs the entire parent
+  and verifies its digest, so no field or idempotency key can change while
+  reusing a prior plan. Current authoritative source/profile/universe and
+  parent/map bindings must be rechecked by the executor at every transition.
+
+  Phebs owns executable paths, environment and argv recipes. System/home/
+  workspace rc discovery is disabled; the only optional operator-copied rc
+  has fully resolved fixed fastbuild content and a bound digest. Arbitrary
+  imports, command/config overrides, remote caches and repository-controlled
+  executable selection have no request representation. The inventory retains
+  the reviewed importer ceilings: 16 MiB metadata, 50,000 files, 20,000 parent
+  directories, 256 MiB/file and 2 GiB aggregate. Files are decoded serially
+  with a pre-allocation count gate, then validated for sorted unique safe paths,
+  digests, sizes, directory collisions and overflow-safe aggregate charging.
+  Inventory access returns copies, not mutable internal slices.
+
+  Every input/workspace/cache/server/worker/output path derives from the exact
+  request digest and is lifecycle-owned. Preparation validation requires a
+  matching inventory/private input root, copy/immutability/tool/rc evidence,
+  observed exact policy/image/tool identities, direct I/O, network denial,
+  private scratch and reserved capacity. These are trusted executor facts,
+  never client attestations. The predicate grants no execution capability and
+  does not itself inspect/copy a filesystem or establish containment. T45.4
+  must obtain the evidence from real verified immutable copies and sandbox
+  observations before both planning and execution, reject links/undeclared
+  files and own cleanup/durable state;
+  it must not promote unchecked booleans into authority. Capability reporting
+  explicitly says execution/tests/implementations/generated documents are
+  unavailable. Progress has closed stages/states/source-free refusal reasons;
+  a nonnegative elapsed observation may exceed the wall when reporting timeout,
+  without increasing the budget. Publication remains entirely T45.3/T45.4.
+
+  The demonstrated skip-tests/skip-implementations profile retains memory
+  4,533,092,352 bytes, scratch 4,573,403,136 bytes/262,144 inodes, 294 tasks,
+  128 descriptors/process, 200,000/100,000 CPU microseconds, 300-second wall,
+  16,777,216 output bytes and 2,285,819 SCIP bytes. This is a measured small
+  public-target posture, not a universal capacity guarantee. Ben requires
+  T45.3's ACs to deliver both canonical generated-document identity/bytes/
+  provenance and canonical SCIP ordering before member/root sealing. Missing,
+  stale, corrupt or conflicting generated bytes refuse complete publication;
+  generated/repository namespaces cannot collide. Permutations of semantically
+  unordered records must seal byte-identically without changing semantic order,
+  roles or ranges. Historical SCIP evidence is never normalized in place.
+  T45.4 supplies custody and T45.5 routed reading; generated omission remains
+  explicit until that lane is usable, never a retroactive complete claim.
+
+  Cost: no product query/request, sync tick, startup/restart, retry/no-op or
+  publication transition imports this unbound contract, so ordinary runtime
+  adds zero work. Future explicit profile decoding hashes bounded fixed-size
+  metadata once; each explicit admission decodes and hashes at most 8 KiB,
+  compares fixed fields and hashes one reconstructed parent for execution.
+  Repeated intents repeat that bounded computation; no implicit cache exists.
+  Inventory preflight hashes/decodes at most 16 MiB, holds at most 50,000 file
+  rows plus 20,000 directory entries and their bounded strings, and uses bounded
+  canonical/compact buffers. Directory-prefix reuse avoids repeated ancestor
+  walks. `Files` copies at most 50,000 rows only when explicitly called.
+  Preparation validation and custody derivation are fixed-size operations.
+  There are no locks, persistent allocations, invalidation scans, disk writes,
+  children or goroutines; concurrent explicit callers multiply these per-call
+  bounds, with execution concurrency and actual byte copies owned by T45.4.
+  Refusals cause no mutation and no raw-input diagnostic persistence. This
+  implementation adds no target run, merge, push, release or scale claim.

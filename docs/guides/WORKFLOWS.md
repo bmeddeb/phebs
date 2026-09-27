@@ -982,6 +982,15 @@ clearing that failure. `spike/t451b/zombie-cap-results.json` records the bounded
 source-free evidence. Cleanup is complete and the dedicated VM is stopped;
 no further repair, rerun or public run is authorized. Product behavior is unchanged.
 
+Ben accepted T45.1b's REDUCE posture. The merged codenav fixes were replayed
+on exact main commit `78d0a683` against all three sealed SCIP files and pass
+admission for retained source documents. Generated proto files remain omitted,
+with their payload charged; this is not complete generated navigation. The
+T45.2 contract keeps skip-tests/skip-implementations, measured caps and verified
+direct-I/O disk scratch. It adds no user-facing generation command or enabled
+provider. T45.3 must deliver the generated-document lane and canonical ordering,
+followed by T45.4 execution custody and T45.5 routed consumption.
+
 Managed generation must be partitionable and resumable without requiring one
 whole-repository package/type graph or one monolithic in-memory navigation
 snapshot. The selected design publishes a Phebs-managed bundle of conforming

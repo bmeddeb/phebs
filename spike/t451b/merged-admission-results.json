@@ -1,0 +1,87 @@
+{
+  "schema": "phebs-t451b-merged-admission-v1",
+  "source_commit": "78d0a6830488438b38bc9da2f4ddea87116f51ac",
+  "source_tree": "49e0bcaa9c22253f77a37849114ce7b49065cbcb",
+  "go_toolchain": "go version go1.26.5 darwin/arm64",
+  "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+  "archive_source_files": 128,
+  "oracle_sha256": "sha256:0620be2b4c5631e01626f6a27b18621908f045edbf73a00ceffd0b638bb616d1",
+  "checker_sha256": "sha256:77fc4788d59a7157d384f5535e8fb80f9e25d78d1b05f92ba22febf76792ade4",
+  "private_report_sha256": "sha256:ea3b1ff4a8fbe4f6d90329457412601081ef734d6f5be61240517de2b7fe8553",
+  "cohorts": [
+    {
+      "cohort": "ordinary",
+      "scip_sha256": "sha256:f4b6ff5131159826ead98ad3086d694384c84bb1623e02552612fbc8cd1df5e5",
+      "scip_bytes": 65044,
+      "admission": "PASS",
+      "retained_documents": 3,
+      "retained_occurrences": 535,
+      "omitted_documents": 0,
+      "omitted_occurrences": 0,
+      "definitions": 148,
+      "self_resolving_definitions": 146,
+      "retained_definition_hovers": 148,
+      "exceptions": {
+        "embedded_field": 2
+      },
+      "unclassified_exceptions": 0,
+      "oracle_points": 2,
+      "oracle_definition_queries_with_location": 2,
+      "oracle_hover_queries_with_payload": 2
+    },
+    {
+      "cohort": "proto",
+      "scip_sha256": "sha256:59b6693822d3f66c885599f42454f7cbb24f0edf7acc5a949563911558c7b8f6",
+      "scip_bytes": 491436,
+      "admission": "PASS",
+      "retained_documents": 1,
+      "retained_occurrences": 1309,
+      "omitted_documents": 1,
+      "omitted_occurrences": 1429,
+      "definitions": 642,
+      "self_resolving_definitions": 241,
+      "retained_definition_hovers": 241,
+      "exceptions": {
+        "omitted_generated": 401
+      },
+      "unclassified_exceptions": 0,
+      "oracle_points": 1,
+      "oracle_definition_queries_with_location": 1,
+      "oracle_hover_queries_with_payload": 1
+    },
+    {
+      "cohort": "fanout",
+      "scip_sha256": "sha256:621a7bd790180bb154a5f784fc12b63af70fdb7d1fce42acd4890d6e2e0bf71f",
+      "scip_bytes": 1523879,
+      "admission": "PASS",
+      "retained_documents": 13,
+      "retained_occurrences": 13278,
+      "omitted_documents": 0,
+      "omitted_occurrences": 0,
+      "definitions": 2350,
+      "self_resolving_definitions": 2338,
+      "retained_definition_hovers": 2350,
+      "exceptions": {
+        "embedded_field": 2,
+        "package_clause": 10
+      },
+      "unclassified_exceptions": 0,
+      "oracle_points": 18,
+      "oracle_definition_queries_with_location": 0,
+      "oracle_hover_queries_with_payload": 0
+    }
+  ],
+  "oracle_source_definitions": 3,
+  "oracle_reference_points": 18,
+  "cross_cohort_identity": "PASS",
+  "method": "Ingest on archive-derived throwaway Git repositories; Definition and Hover at every retained definition; raw omitted definitions counted without source reads. Definition/Hover/References called at all 21 oracle points; reference points found in References results; signatures/ranges checked at three definition points. Cross-cohort raw symbols equal. All retained exception positions match the earlier reviewed report.",
+  "generated_navigation_available": false,
+  "decision": "REDUCE",
+  "integrated_main_admission_established": true,
+  "new_bazel_scip_runs": 0,
+  "vm_started": false,
+  "fixture_cleanup": "Python TemporaryDirectory contexts completed for all cohorts; only private report/checker retained.",
+  "cross_cohort_identity_scope": "Exact emitted symbols for the three frozen oracle functions only.",
+  "cross_member_query_routing_established": false,
+  "fanout_oracle_limitation": "All 18 reference points are returned by References, but Definition locations and Hover payloads are absent because the defining documents are in separate cohort indexes. This proves emitted symbol identity, not cross-member routing."
+}
