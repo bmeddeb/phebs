@@ -7038,3 +7038,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lock or expiry polling is added. Independent implementation/cost review and
   real store, race, schema/accounting, host/Linux vet/lint gates pass. Complete
   controller capacity, startup and lifecycle integration remain open.
+
+- **2026-09-27 — T45.4 actual workspace capacity and complete future budget.**
+  Descriptor-derived observation binds the existing private base inode/device
+  and actual byte/inode geometry without creating files or locks. The complete
+  one-attempt budget reuses admitted inventory layout and checked allocation
+  arithmetic: rounded input extents/metadata, full allowed publication,
+  inventory/input/publication receipts, both owner/collecting/container journal
+  versions, scratch authority, standalone planning/execution requests, profile,
+  plan and directory/lock metadata. Host backing storage belongs to its separate
+  domain. Existing8KiB container and4KiB authority ceilings are shared constants,
+  not widened limits. Standalone controls require a separate owned readonly
+  directory; they cannot mutate an already sealed prehydration copy.
+
+  The controller must group equal devices, preserve destination pressure latches,
+  admit the full future envelope once and acquire the durable holder before
+  growth. Actual retained bytes are already charged by statfs. Later operations
+  check only incremental allocations. Failed random-stage Copy/Install cannot
+  repeat inside one attempt under this one-tree budget; ambiguous residue stays
+  held. The4KiB-block maximum-inventory fixture reserves2,757,767,168 bytes and
+ 90,160 inodes. This is a conservative admission budget, not an OS reservation.
+
+  **Cost.** Observation performs two bounded ancestry opens, stat/statfs and named
+  identity recheck, with at most four simultaneous descriptors. Budget derivation
+  clones at most50,000 file records, builds at most70,001 layout entries, walks
+  bounded parent paths, sorts at most20,001 directory names, sums extents and
+  performs constant control arithmetic. It does not allocate receipt payloads,
+  read/hash source, spawn children or hold locks. Existing layout/receipt paths
+  gain cancellation checks and preserve cancellation identity. Independent cost
+  review, exact host/unprivileged-Linux gates, race, host/Linux vet/lint pass.
+  No runtime caller or native readiness is registered.

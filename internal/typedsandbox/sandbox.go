@@ -126,6 +126,9 @@ type supervisorReport struct {
 	Resources  Resources `json:"resources"`
 }
 
+// MaxContainerJournalBytes bounds both durable and pending container journals.
+const MaxContainerJournalBytes = 8192
+
 type journal struct {
 	Schema, Name, ContainerID, DaemonID, ImageID, Socket, Inputs string
 	Scratch                                                      *ScratchAuthority `json:",omitempty"`
@@ -237,7 +240,7 @@ func newClient(options Options) (*client, error) {
 		if options.scratch.Validate() != nil {
 			return nil, ErrRefused
 		}
-		raw, err := readSmall(filepath.Join(options.Inputs, ScratchAuthorityFile), 4096)
+		raw, err := readSmall(filepath.Join(options.Inputs, ScratchAuthorityFile), MaxScratchAuthorityBytes)
 		if err != nil {
 			return nil, ErrRefused
 		}
@@ -646,7 +649,7 @@ func journalPath(options Options) string { return options.Inputs + ".typed-conta
 
 func writeJournal(options Options, owner journal, initial bool) error {
 	raw, err := json.Marshal(owner)
-	if err != nil || len(raw) > 8192 {
+	if err != nil || len(raw) > MaxContainerJournalBytes {
 		return ErrCustody
 	}
 	path := journalPath(options)
@@ -691,10 +694,10 @@ func readJournalFile(options Options, name string) (journal, error) {
 	}
 	defer func() { _ = file.Close() }()
 	info, err := file.Stat()
-	if err != nil || !os.SameFile(named, info) || !info.Mode().IsRegular() || info.Size() > 8192 || info.Mode().Perm() != 0o600 {
+	if err != nil || !os.SameFile(named, info) || !info.Mode().IsRegular() || info.Size() > MaxContainerJournalBytes || info.Mode().Perm() != 0o600 {
 		return owner, ErrCustody
 	}
-	raw, err := io.ReadAll(io.LimitReader(file, 8193))
+	raw, err := io.ReadAll(io.LimitReader(file, MaxContainerJournalBytes+1))
 	if err != nil || json.Unmarshal(raw, &owner) != nil || owner.Schema != ownerSchema ||
 		!reflect.DeepEqual(owner.Scratch, options.scratch) || owner.Socket != options.Socket || owner.Inputs != options.Inputs || owner.ImageID != options.ImageID || owner.DaemonID == "" ||
 		!strings.HasPrefix(owner.Name, "phebs-typed-index-") || len(owner.Name) != len("phebs-typed-index-")+32 || owner.ContainerID != "" && !containerID(owner.ContainerID) {

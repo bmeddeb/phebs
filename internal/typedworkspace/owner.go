@@ -386,7 +386,7 @@ func saveOwnerInputs(ctx context.Context, base string, id OwnerIdentity, expecte
 	if err != nil {
 		return OwnerManifest{}, err
 	}
-	raw, err := encodeOwnerInputs(inv, r)
+	raw, err := encodeOwnerInputs(ctx, inv, r)
 	if err != nil {
 		return OwnerManifest{}, err
 	}
@@ -422,9 +422,12 @@ func ownerControlsBudget(m OwnerManifest, extra int64) error {
 	}
 	return nil
 }
-func encodeOwnerInputs(inv typedindex.Inventory, r Receipt) ([]byte, error) {
-	tree, err := inventoryLayout(inv)
-	if err != nil || r.Schema != receiptSchema || r.InventoryDigest != inv.Digest() || !publishedName(r.Name) || len(r.Nodes) != len(tree.entries) {
+func encodeOwnerInputs(ctx context.Context, inv typedindex.Inventory, r Receipt) ([]byte, error) {
+	tree, err := inventoryLayout(ctx, inv)
+	if err != nil {
+		return nil, err
+	}
+	if r.Schema != receiptSchema || r.InventoryDigest != inv.Digest() || !publishedName(r.Name) || len(r.Nodes) != len(tree.entries) {
 		return nil, ErrCustody
 	}
 	previous := ""
@@ -441,7 +444,7 @@ func encodeOwnerInputs(inv typedindex.Inventory, r Receipt) ([]byte, error) {
 	}
 	return raw, nil
 }
-func decodeOwnerInputs(inv typedindex.Inventory, raw []byte) (Receipt, error) {
+func decodeOwnerInputs(ctx context.Context, inv typedindex.Inventory, raw []byte) (Receipt, error) {
 	var r Receipt
 	if len(raw) > MaxInputReceiptBytes {
 		return r, ErrCustody
@@ -453,7 +456,7 @@ func decodeOwnerInputs(inv typedindex.Inventory, raw []byte) (Receipt, error) {
 	if !take(json.Delim('{')) || !take("schema") || d.Decode(&r.Schema) != nil || !take("inventory_digest") || d.Decode(&r.InventoryDigest) != nil || !take("name") || d.Decode(&r.Name) != nil || !take("nodes") || !take(json.Delim('[')) {
 		return r, ErrCustody
 	}
-	tree, err := inventoryLayout(inv)
+	tree, err := inventoryLayout(ctx, inv)
 	if err != nil {
 		return r, err
 	}
@@ -470,8 +473,11 @@ func decodeOwnerInputs(inv typedindex.Inventory, raw []byte) (Receipt, error) {
 	if !take(json.Delim(']')) || !take(json.Delim('}')) {
 		return Receipt{}, ErrCustody
 	}
-	want, err := encodeOwnerInputs(inv, r)
-	if err != nil || !bytes.Equal(raw, want) {
+	want, err := encodeOwnerInputs(ctx, inv, r)
+	if err != nil {
+		return Receipt{}, err
+	}
+	if !bytes.Equal(raw, want) {
 		return Receipt{}, ErrCustody
 	}
 	return r, nil
@@ -506,7 +512,7 @@ func LoadOwnerInputs(ctx context.Context, base string, id OwnerIdentity) (typedi
 	if err != nil {
 		return inv, Receipt{}, err
 	}
-	r, err := decodeOwnerInputs(inv, raw)
+	r, err := decodeOwnerInputs(ctx, inv, raw)
 	if err != nil {
 		return inv, r, err
 	}

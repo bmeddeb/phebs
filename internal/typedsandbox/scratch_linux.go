@@ -7,7 +7,7 @@ import (
 )
 
 func readScratch() (ScratchAuthority, error) {
-	raw, err := readSmall("/inputs/"+ScratchAuthorityFile, 4096)
+	raw, err := readSmall("/inputs/"+ScratchAuthorityFile, MaxScratchAuthorityBytes)
 	if err != nil {
 		return ScratchAuthority{}, ErrRefused
 	}

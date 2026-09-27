@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"math"
 	"os"
 	"path"
 	"slices"
@@ -48,13 +49,22 @@ type layout struct {
 	entries     map[string]bool
 }
 
-func inventoryLayout(inventory typedindex.Inventory) (layout, error) {
+func inventoryLayout(ctx context.Context, inventory typedindex.Inventory) (layout, error) {
+	if ctx == nil {
+		return layout{}, ErrCustody
+	}
+	if err := ctx.Err(); err != nil {
+		return layout{}, err
+	}
 	files := inventory.Files()
 	if inventory.Digest() == "" || len(files) == 0 || len(files) > typedindex.MaxInventoryFiles {
 		return layout{}, ErrCustody
 	}
 	entries := map[string]bool{".": true}
 	for _, file := range files {
+		if err := ctx.Err(); err != nil {
+			return layout{}, err
+		}
 		entries[file.Path] = false
 		for dir := path.Dir(file.Path); dir != "."; dir = path.Dir(dir) {
 			entries[dir] = true
@@ -62,6 +72,9 @@ func inventoryLayout(inventory typedindex.Inventory) (layout, error) {
 	}
 	dirs := make([]string, 0, len(entries)-len(files))
 	for name, dir := range entries {
+		if err := ctx.Err(); err != nil {
+			return layout{}, err
+		}
 		if dir {
 			dirs = append(dirs, name)
 		}
@@ -70,6 +83,9 @@ func inventoryLayout(inventory typedindex.Inventory) (layout, error) {
 		return layout{}, ErrCustody
 	}
 	slices.Sort(dirs)
+	if err := ctx.Err(); err != nil {
+		return layout{}, err
+	}
 	return layout{files, dirs, entries}, nil
 }
 
@@ -89,7 +105,7 @@ func copyInputs(ctx context.Context, source, parent string, inventory typedindex
 	if err = ctx.Err(); err != nil {
 		return receipt, err
 	}
-	tree, err := inventoryLayout(inventory)
+	tree, err := inventoryLayout(ctx, inventory)
 	if err != nil {
 		return receipt, err
 	}
@@ -207,7 +223,7 @@ func Verify(ctx context.Context, privateParent string, inventory typedindex.Inve
 	if err = ctx.Err(); err != nil {
 		return err
 	}
-	tree, err := inventoryLayout(inventory)
+	tree, err := inventoryLayout(ctx, inventory)
 	if err != nil {
 		return err
 	}
@@ -251,17 +267,29 @@ func publishedName(s string) bool {
 	return err == nil && strings.ToLower(token) == token
 }
 
-type space struct{ bytes, inodes, block, total uint64 }
+type space struct{ bytes, inodes, block, total, free, totalInodes uint64 }
 
 func neededSpace(tree layout, block uint64) (uint64, error) {
-	if block == 0 || block > 1<<20 {
+	return allocationBytes(tree.files, uint64(len(tree.entries)), block)
+}
+
+// Share the existing one-metadata-unit-per-inode and rounded-file-extent policy.
+// Checked arithmetic also supports the future-envelope derivation without
+// manufacturing a large synthetic directory map.
+func allocationBytes(files []typedindex.BundleFile, nodes, block uint64) (uint64, error) {
+	if block == 0 || block > 1<<20 || nodes > math.MaxUint64/block {
 		return 0, ErrCustody
 	}
-	// One allocation unit per directory plus rounded file extents and an allocation
-	// unit per file for metadata. Actual filesystem allocations remain observable.
-	total := uint64(len(tree.entries)) * block
-	for _, f := range tree.files {
-		total += (uint64(f.Bytes) + block - 1) / block * block
+	total := nodes * block
+	for _, f := range files {
+		if f.Bytes < 0 {
+			return 0, ErrCustody
+		}
+		rounded := (uint64(f.Bytes) + block - 1) / block * block
+		if rounded > math.MaxUint64-total {
+			return 0, ErrCustody
+		}
+		total += rounded
 	}
 	return total, nil
 }

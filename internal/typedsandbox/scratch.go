@@ -12,6 +12,9 @@ import (
 
 const ScratchAuthorityFile = "typed-scratch.json"
 
+// MaxScratchAuthorityBytes is the existing worker/control decoder byte ceiling.
+const MaxScratchAuthorityBytes = 4096
+
 // ScratchAuthority is captured by the privileged host owner from the private fixed
 // filesystem before launch, then sealed into the read-only input directory.
 // Blocks describes statfs usable blocks, not the larger filesystem image.
@@ -50,7 +53,7 @@ func DecodeScratchAuthority(raw []byte) (ScratchAuthority, error) {
 	var a ScratchAuthority
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
-	if len(raw) > 4096 || dec.Decode(&a) != nil || dec.Decode(new(any)) != io.EOF || a.Validate() != nil {
+	if len(raw) > MaxScratchAuthorityBytes || dec.Decode(&a) != nil || dec.Decode(new(any)) != io.EOF || a.Validate() != nil {
 		return a, ErrRefused
 	}
 	return a, nil

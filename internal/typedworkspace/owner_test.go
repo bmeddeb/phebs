@@ -340,12 +340,17 @@ func TestOwnerReceiptBindingAndStrictDecode(t *testing.T) {
 			t.Fatal("wrong inventory accepted")
 		}
 	}
-	good, err := encodeOwnerInputs(inv, receipt)
+	good, err := encodeOwnerInputs(t.Context(), inv, receipt)
 	if err != nil {
 		t.Fatal(err)
 	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := decodeOwnerInputs(canceled, inv, good); !errors.Is(err, context.Canceled) {
+		t.Fatalf("receipt decode cancellation lost: %v", err)
+	}
 	for _, bad := range [][]byte{append(append([]byte{}, good...), ' '), []byte(strings.Replace(string(good), `"schema":`, `"extra":0,"schema":`, 1)), []byte(strings.Replace(string(good), `"inode":`, `"inode":0,"inode":`, 1))} {
-		if _, err := decodeOwnerInputs(inv, bad); err == nil {
+		if _, err := decodeOwnerInputs(t.Context(), inv, bad); err == nil {
 			t.Fatal("noncanonical receipt")
 		}
 	}

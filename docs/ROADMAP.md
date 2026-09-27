@@ -177,6 +177,9 @@ One durable per-lease growth holder and indexed retained-control quotas now pass
 independent review and real store/accounting gates. Store metadata does not prove
 physical headroom or cleanup; controller/startup/lifecycle integration stays open.
 
+Actual private-root capacity observation and complete one-attempt workspace
+budgeting are also reviewed. They add no runtime worker or native proof.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

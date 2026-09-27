@@ -157,8 +157,8 @@ func directoryInfo(file *os.File, name string, readonly bool) (Node, error) {
 }
 func capacity(file *os.File) (space, error) {
 	var st unix.Statfs_t
-	if unix.Fstatfs(int(file.Fd()), &st) != nil || st.Bsize <= 0 || uint64(st.Bavail) > math.MaxInt64/uint64(st.Bsize) || uint64(st.Blocks) > math.MaxInt64/uint64(st.Bsize) {
+	if unix.Fstatfs(int(file.Fd()), &st) != nil || st.Bsize <= 0 || uint64(st.Bavail) > math.MaxInt64/uint64(st.Bsize) || uint64(st.Blocks) > math.MaxInt64/uint64(st.Bsize) || st.Bfree > st.Blocks || st.Bavail > st.Bfree || st.Ffree > st.Files {
 		return space{}, ErrCustody
 	}
-	return space{bytes: uint64(st.Bavail) * uint64(st.Bsize), inodes: uint64(st.Ffree), block: uint64(st.Bsize), total: uint64(st.Blocks) * uint64(st.Bsize)}, nil
+	return space{bytes: uint64(st.Bavail) * uint64(st.Bsize), inodes: uint64(st.Ffree), block: uint64(st.Bsize), total: uint64(st.Blocks) * uint64(st.Bsize), free: uint64(st.Bfree) * uint64(st.Bsize), totalInodes: uint64(st.Files)}, nil
 }
