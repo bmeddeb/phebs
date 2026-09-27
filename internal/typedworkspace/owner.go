@@ -47,7 +47,7 @@ func NewOwnerIdentity(parent typedindex.Admission, chunk, lease string) (OwnerId
 }
 func (i OwnerIdentity) valid() bool {
 	raw, err := json.Marshal(i.Request)
-	return err == nil && len(raw) <= typedindex.MaxRequestBytes && i.Request.Action == typedindex.Plan && i.Request.ParentRequestDigest == "" && i.Request.PlanDigest == "" && publicationDigest(raw) == i.PlanningDigest && publicationHash(i.AttemptDigest) && publicationHash(i.ChunkIdentity) && publicationHash(i.LeaseDigest)
+	return err == nil && i.Request.ValidatePurpose() == nil && len(raw) <= typedindex.MaxRequestBytes && i.Request.Action == typedindex.Plan && i.Request.ParentRequestDigest == "" && i.Request.PlanDigest == "" && publicationDigest(raw) == i.PlanningDigest && publicationHash(i.AttemptDigest) && publicationHash(i.ChunkIdentity) && publicationHash(i.LeaseDigest)
 }
 func (i OwnerIdentity) RelativeName() string {
 	if !i.valid() {
@@ -117,6 +117,9 @@ func encodeOwner(m OwnerManifest) ([]byte, error) {
 		revision++
 	}
 	if m.Publication != nil {
+		if m.Identity.Request.Schema == typedindex.ManagedRequestSchema && m.Identity.Request.Purpose != typedindex.Publish {
+			return nil, ErrCustody
+		}
 		revision++
 	}
 	if m.Revision != revision {
@@ -545,6 +548,9 @@ func LoadOwnerInputs(ctx context.Context, base string, id OwnerIdentity) (typedi
 }
 
 func SaveOwnerPublication(ctx context.Context, base string, id OwnerIdentity, expected string, parent, execution typedindex.Admission, r PublicationReceipt, gate *lifecycle.Gate) (OwnerManifest, error) {
+	if !publicationAuthority(parent, execution, r.PlanDigest) {
+		return OwnerManifest{}, ErrCustody
+	}
 	if ctx == nil || !id.valid() || parent.Digest() != id.PlanningDigest || parent.Request() != id.Request || !publicationHash(expected) {
 		return OwnerManifest{}, ErrCustody
 	}

@@ -15155,6 +15155,14 @@ review and parent neutral tests pass; baseline legacy bytes remain exact. Empty
 coverage refuses publication. Actual sandbox completion, controller CAS/cleanup
 and fresh native correctness/cost evidence still gate registration.
 
+Managed request-v2 now binds publish/canary/dry-run and a deterministic retry
+key to exact planning authority. All publication/current boundaries refuse
+nonpublish authority independently; authenticated controls and historical census
+preserve purpose. Parent normal/race, real-store and actual Linux checks plus
+independent source/cost review pass, with legacy v1 bytes unchanged. Successful
+checked outcomes/controller workflow and fresh native proof remain open;
+canary/dry-run availability is not claimed by this contract.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

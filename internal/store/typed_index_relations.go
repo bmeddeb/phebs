@@ -190,6 +190,9 @@ func (s *Surreal) inspectTypedIndexControlRelations(ctx context.Context, kind Ty
 	}
 	if kind == TypedIndexCurrents {
 		b := current.Pointer.Binding
+		if proof.Parent.Schema == typedindex.ManagedRequestSchema && proof.Parent.Purpose != typedindex.Publish {
+			return typedindex.Invalid
+		}
 		if attempt.Stage != TypedComplete || !typedCustodyMatches(attempt.Custody, current.Pointer) || b.RequestDigest != requestDigest || b.Source != proof.Parent.Source || b.ProfileDigest != proof.Parent.ProfileDigest || b.ToolsDigest != proof.Parent.ToolsDigest || b.PlanDigest != proof.PlanDigest {
 			return typedindex.Invalid
 		}
@@ -202,6 +205,9 @@ func (s *Surreal) inspectTypedIndexControlRelations(ctx context.Context, kind Ty
 		r := proof.Parent
 		// Match the stored intent, not today's repository incarnation or source.
 		want := typedindex.NewRequest(r.Source, profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, r.IdempotencyKey)
+		if r.Schema == typedindex.ManagedRequestSchema {
+			want = typedindex.NewManagedRequest(r.Source, profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, r.Purpose)
+		}
 		if r != want {
 			return typedindex.Invalid
 		}

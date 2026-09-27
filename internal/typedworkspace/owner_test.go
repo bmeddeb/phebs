@@ -23,6 +23,10 @@ func ownerFixture(t *testing.T) (publicationFixture, string, []byte, typedindex.
 }
 func ownerFixtureInventory(t *testing.T, whitespace bool) (publicationFixture, string, []byte, typedindex.Inventory, OwnerIdentity, OwnerManifest) {
 	t.Helper()
+	return ownerPurposeFixture(t, whitespace, "")
+}
+func ownerPurposeFixture(t *testing.T, whitespace bool, purpose typedindex.Purpose) (publicationFixture, string, []byte, typedindex.Inventory, OwnerIdentity, OwnerManifest) {
+	t.Helper()
 	f := newPublicationFixture(t)
 	src, _, inv, _ := fixture(t)
 	raw := publicationJSON(t, typedindex.InventoryDefinition{Schema: typedindex.InventorySchema, Files: inv.Files()})
@@ -41,6 +45,9 @@ func ownerFixtureInventory(t *testing.T, whitespace bool) (publicationFixture, s
 	}
 	auth := typedindex.Authority{Enabled: true, Administrator: true, Source: f.parent.Request().Source, Profile: typedindex.Epoch{Number: 1, Digest: profile.Digest()}, UniverseDigest: f.parent.Request().UniverseDigest}
 	request := typedindex.NewRequest(auth.Source, profile, 1, auth.UniverseDigest, "owner")
+	if purpose != "" {
+		request = typedindex.NewManagedRequest(auth.Source, profile, 1, auth.UniverseDigest, purpose)
+	}
 	oldBundle := f.bundle
 	oldPlan := f.plan.Bytes()
 	f.parent, err = typedindex.Admit(t.Context(), auth, profile, publicationJSON(t, request))
@@ -413,12 +420,18 @@ func TestOwnerUpdateChargesOnlyIncrementalControls(t *testing.T) {
 func TestOwnerEnvelopeRefusesBeforeGrowth(t *testing.T) {
 	for _, tc := range []struct {
 		name                  string
+		purpose               typedindex.Purpose
 		escaped               int
 		initialFits, admitted bool
 	}{
-		{"ordinary", 0, true, true},
-		{"later-receipt-overflow", 300, true, false},
-		{"initial-overflow", 510, false, false},
+		{"ordinary", "", 0, true, true},
+		{"later-receipt-overflow", "", 300, true, false},
+		{"initial-overflow", "", 510, false, false},
+		{"managed-publish", typedindex.Publish, 0, true, true},
+		{"managed-canary", typedindex.Canary, 0, true, true},
+		{"managed-dry-run", typedindex.DryRun, 0, true, true},
+		{"managed-later-overflow", typedindex.DryRun, 300, true, false},
+		{"managed-initial-overflow", typedindex.Canary, 510, false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, base, _, gate := fixture(t)
@@ -435,6 +448,9 @@ func TestOwnerEnvelopeRefusesBeforeGrowth(t *testing.T) {
 			source := typedindex.Source{Repository: "x/" + strings.Repeat("<", tc.escaped) + strings.Repeat("a", 510-tc.escaped), Incarnation: strings.Repeat("i", 64), Generation: hash, Commit: strings.Repeat("a", 40)}
 			authority := typedindex.Authority{Enabled: true, Administrator: true, Source: source, Profile: typedindex.Epoch{Number: 1, Digest: profile.Digest()}, UniverseDigest: hash}
 			request := typedindex.NewRequest(source, profile, 1, hash, strings.Repeat("k", 64))
+			if tc.purpose != "" {
+				request = typedindex.NewManagedRequest(source, profile, 1, hash, tc.purpose)
+			}
 			admission, err := typedindex.Admit(t.Context(), authority, profile, publicationJSON(t, request))
 			if err != nil {
 				t.Fatal("request itself must be valid", err)

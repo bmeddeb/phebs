@@ -212,6 +212,10 @@ func publicationReceiptDimensions(raw []byte) bool {
 }
 
 func publicationAuthority(parent, execution typedindex.Admission, plan string) bool {
+	return parent.Purpose() == typedindex.Publish && execution.Purpose() == typedindex.Publish && executionAuthority(parent, execution, plan)
+}
+
+func executionAuthority(parent, execution typedindex.Admission, plan string) bool {
 	if parent.Digest() == "" || execution.Digest() == "" || !publicationHash(plan) {
 		return false
 	}

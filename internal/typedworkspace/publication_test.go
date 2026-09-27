@@ -41,6 +41,10 @@ func publicationJSON(t *testing.T, v any) []byte {
 }
 func newPublicationFixture(t *testing.T) publicationFixture {
 	t.Helper()
+	return newPublicationPurposeFixture(t, "")
+}
+func newPublicationPurposeFixture(t *testing.T, purpose typedindex.Purpose) publicationFixture {
+	t.Helper()
 	_, dir, _, gate := fixture(t)
 	tool := typedindex.Tool{Version: "0.2.7", Digest: digest([]byte("tool"))}
 	p, err := typedindex.DecodeProfile(t.Context(), publicationJSON(t, typedindex.ProfileDefinition{Schema: typedindex.ProfileSchema, Name: "reduced", Provider: typedindex.ProviderID, Tools: typedindex.Tools{Bazel: tool, RulesGo: tool, Go: tool, Driver: tool, Indexer: tool, Planner: tool, Launcher: tool}, Config: typedindex.ReducedConfig(), Policy: typedindex.MeasuredPolicy(), BundleDigest: digest([]byte("inputs")), ImageDigest: digest([]byte("image"))}))
@@ -52,6 +56,9 @@ func newPublicationFixture(t *testing.T) publicationFixture {
 	source := typedindex.Source{Repository: "example.test/repo", Incarnation: "repo-1", Generation: digest([]byte("source")), Commit: strings.Repeat("a", 40)}
 	auth := typedindex.Authority{Enabled: true, Administrator: true, Source: source, Profile: typedindex.Epoch{Number: 1, Digest: p.Digest()}, UniverseDigest: digest(publicationJSON(t, targets))}
 	request := typedindex.NewRequest(source, p, 1, auth.UniverseDigest, "one")
+	if purpose != "" {
+		request = typedindex.NewManagedRequest(source, p, 1, auth.UniverseDigest, purpose)
+	}
 	parent, err := typedindex.Admit(t.Context(), auth, p, publicationJSON(t, request))
 	if err != nil {
 		t.Fatal(err)
@@ -542,4 +549,43 @@ func TestPublicationCrossProcessReaderPin(t *testing.T) {
 		t.Fatal(err)
 	}
 	run("0")
+}
+
+func TestPublicationManagedPurpose(t *testing.T) {
+	for _, purpose := range []typedindex.Purpose{typedindex.Publish, typedindex.Canary, typedindex.DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			f := newPublicationPurposeFixture(t, purpose)
+			before, e := os.ReadDir(f.dir)
+			if e != nil {
+				t.Fatal(e)
+			}
+			r, e := InstallPublication(t.Context(), f.dir, f.parent, f.execution, f.plan, f.bundle, f.gate)
+			if purpose == typedindex.Publish {
+				if e != nil {
+					t.Fatal(e)
+				}
+				p, e := f.open(t.Context(), r)
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = p.Close(); e != nil {
+					t.Fatal(e)
+				}
+				return
+			}
+			if !errors.Is(e, ErrCustody) {
+				t.Fatal("nonpublish installed", e)
+			}
+			after, e := os.ReadDir(f.dir)
+			if e != nil || len(after) != len(before) {
+				t.Fatal("refusal grew namespace", e)
+			}
+			if _, e = SaveOwnerPublication(t.Context(), f.dir, OwnerIdentity{}, "", f.parent, f.execution, PublicationReceipt{PlanDigest: f.plan.Digest()}, f.gate); !errors.Is(e, ErrCustody) {
+				t.Fatal("nonpublish saved", e)
+			}
+			if !executionAuthority(f.parent, f.execution, f.plan.Digest()) || publicationAuthority(f.parent, f.execution, f.plan.Digest()) {
+				t.Fatal("execution confused with publication")
+			}
+		})
+	}
 }

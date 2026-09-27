@@ -328,6 +328,16 @@ proto's generated path still requires sealed mapping. Durable receipt and worker
 integration remain open, with no provider registration or native run.
 
 
+Managed request-v2 now binds publish/canary/dry-run and a deterministic retry
+key to exact planning authority. All publication/current boundaries refuse
+nonpublish authority independently; authenticated controls and historical census
+preserve purpose. Parent normal/race, real-store and actual Linux checks plus
+independent source/cost review pass, with legacy v1 bytes unchanged. Successful
+checked outcomes/controller workflow and fresh native proof remain open;
+canary/dry-run availability is not claimed by this contract.
+
+
+
 
 
 

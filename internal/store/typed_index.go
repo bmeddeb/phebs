@@ -714,6 +714,9 @@ func (s *Surreal) publishTypedIndex(ctx context.Context, chunk GenerationChunk, 
 	if err != nil {
 		return expected, err
 	}
+	if x.work.Admission.Purpose() != typedindex.Publish {
+		return expected, typedindex.Invalid
+	}
 	if x.attempt.Stage != TypedPublication || expected.Epoch >= math.MaxInt64 {
 		return expected, typedindex.Stale
 	}
@@ -847,6 +850,9 @@ func (s *Surreal) resolveTypedIndexCurrentCustody(ctx context.Context, a typedAu
 	admission, err := a.admit(ctx, request.Raw, typedIndexPlan{Digest: wire.PlanDigest}, wire.ParentRequestDigest)
 	if err != nil {
 		return TypedIndexCurrentCustody{}, err
+	}
+	if admission.Purpose() != typedindex.Publish {
+		return TypedIndexCurrentCustody{}, typedindex.Invalid
 	}
 	if admission.Digest() != pointer.Binding.RequestDigest || pointer.Binding.Source != admission.Request().Source || pointer.Binding.ProfileDigest != a.profile.Digest() || pointer.Binding.ToolsDigest != admission.Request().ToolsDigest || pointer.Binding.PlanDigest != wire.PlanDigest || !validSHA256(pointer.RootDigest) {
 		return TypedIndexCurrentCustody{}, typedindex.Invalid

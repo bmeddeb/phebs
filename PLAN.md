@@ -7807,3 +7807,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Host/Linux vet, lint and documentation pass. Native containment/common-clock,
   cold target feasibility and production registration remain open; neutral native
   seams do not establish them.
+
+- **2026-09-27 — T45.6 bind managed purpose to request identity.** Request-v2
+  requires one closed purpose: publish, canary or dry-run. Its trusted factory
+  derives the retry key from canonical planning authority, including exact
+  source, profile epoch, tools, universe, bundle, policy and purpose. Caller retry
+  tokens cannot create a second managed identity. Planned execution preserves
+  that purpose/key. Request-v1 bytes, digests and arbitrary-key behavior remain
+  exact; reencoding as v1 creates different authority and cannot borrow a v2
+  parent, owner or control identity.
+
+  Valid nonpublish bundles remain useful for validation, while logical,
+  filesystem and store publication boundaries independently refuse them. Current
+  resolution and relation census also refuse forged nonpublish current rows.
+  Authenticated worker controls use the exact execution relation independently
+  of publishing permission. Historical intent reconstruction preserves request
+  schema, so valid v2 authority survives startup/census inspection. No mutable
+  mode flag, profile widening or launcher environment change is introduced.
+
+  **Cost.** Each managed factory/admission, historical shape check and owner
+  identity validation adds a bounded canonical request encode/hash; repeated
+  owner/control/census checks repeat that work. Legacy shape checks add no hash.
+  Request8KiB and owner4KiB limits remain exact; envelope overflow refuses before
+  growth. Guards add no SDK query/write, filesystem file, lock, child, cache or
+  polling loop. Nonpublish store refusal precedes current lookup/mutation.
+
+  Independent review and parent portable/store race, actual Linux owner/control/
+  publication race, host/Linux vet and lint pass. Tests preserve prior current,
+  reject purpose/key/downgrade substitution and forged current, and cover all
+  census relations plus legacy golden bytes. The successful checked terminal
+  and controller branch remain the next prerequisite; this contract alone does
+  not make canary/dry-run or the provider available. Native gates remain open.

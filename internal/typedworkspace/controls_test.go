@@ -25,7 +25,11 @@ func controlsFixture(t *testing.T) (publicationFixture, OwnerIdentity, OwnerMani
 }
 func controlsFixtureInventory(t *testing.T, whitespace bool) (publicationFixture, OwnerIdentity, OwnerManifest, ControlSpec, Receipt) {
 	t.Helper()
-	f, source, raw, inventory, id, m := ownerFixtureInventory(t, whitespace)
+	return controlsPurposeFixture(t, whitespace, "")
+}
+func controlsPurposeFixture(t *testing.T, whitespace bool, purpose typedindex.Purpose) (publicationFixture, OwnerIdentity, OwnerManifest, ControlSpec, Receipt) {
+	t.Helper()
+	f, source, raw, inventory, id, m := ownerPurposeFixture(t, whitespace, purpose)
 	attempt := filepath.Join(f.dir, id.RelativeName())
 	copied, err := Copy(t.Context(), source, attempt, inventory, f.gate)
 	if err != nil {

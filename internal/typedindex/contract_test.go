@@ -486,3 +486,98 @@ func TestGeneratedProfileIsExplicitAndReducedIdentityUnchanged(t *testing.T) {
 		t.Fatal("contract enabled runtime capability")
 	}
 }
+
+func TestManagedPurposeIdentity(t *testing.T) {
+	p, auth, legacy, _ := fixture(t)
+	if err := auth.Source.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if err := (Source{}).Validate(); !errors.Is(err, Invalid) {
+		t.Fatal(err)
+	}
+	for _, bad := range []Request{NewManagedRequest(Source{}, p, 1, auth.UniverseDigest, Publish), NewManagedRequest(auth.Source, Profile{}, 1, auth.UniverseDigest, Publish), NewManagedRequest(auth.Source, p, 0, auth.UniverseDigest, Publish), NewManagedRequest(auth.Source, p, 1, "invalid", Publish), NewManagedRequest(auth.Source, p, 1, auth.UniverseDigest, "unknown")} {
+		if bad != (Request{}) {
+			t.Fatal("invalid factory shape returned authority")
+		}
+	}
+	seen := map[string]bool{}
+	for _, purpose := range []Purpose{Publish, Canary, DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			r := NewManagedRequest(auth.Source, p, auth.Profile.Number, auth.UniverseDigest, purpose)
+			if r != NewManagedRequest(auth.Source, p, auth.Profile.Number, auth.UniverseDigest, purpose) || len(r.IdempotencyKey) != 64 {
+				t.Fatal("unstable managed identity")
+			}
+			a := admit(t, p, auth, r)
+			if a.Purpose() != purpose || seen[a.Digest()] {
+				t.Fatal("purpose alias")
+			}
+			seen[a.Digest()] = true
+			for _, mutate := range []func(*Request){func(v *Request) { v.Purpose = "" }, func(v *Request) { v.Purpose = "other" }, func(v *Request) {
+				if v.Purpose == Publish {
+					v.Purpose = Canary
+				} else {
+					v.Purpose = Publish
+				}
+			}, func(v *Request) { v.IdempotencyKey = "browser-retry" }, func(v *Request) { v.Schema = RequestSchema }, func(v *Request) { v.Schema = "unknown" }} {
+				bad := r
+				mutate(&bad)
+				if _, e := Admit(t.Context(), auth, p, wire(t, bad)); e == nil {
+					t.Fatal("mutated managed authority admitted", bad)
+				}
+			}
+			raw := wire(t, r)
+			for _, bad := range [][]byte{bytes.Replace(raw, []byte(`,"purpose":"`+string(purpose)+`"`), nil, 1), bytes.Replace(raw, []byte(`"purpose":`), []byte(`"purpose":"publish","purpose":`), 1), bytes.Replace(raw, []byte(`"purpose":"`+string(purpose)+`"`), []byte(`"purpose":null`), 1)} {
+				if _, e := Admit(t.Context(), auth, p, bad); e == nil {
+					t.Fatal("missing/duplicate purpose")
+				}
+			}
+			next, e := PlannedSuccessor(t.Context(), a, hash([]byte("plan")))
+			if e != nil {
+				t.Fatal(e)
+			}
+			xauth := auth
+			xauth.ParentRequestDigest = a.Digest()
+			xauth.PlanDigest = next.PlanDigest
+			x := admit(t, p, xauth, next)
+			if x.Purpose() != purpose || next.IdempotencyKey != r.IdempotencyKey {
+				t.Fatal("successor lost purpose")
+			}
+			// Legacy accepts arbitrary keys by design; stripping both version and
+			// purpose creates DIFFERENT authority, never an alias or valid successor.
+			downgraded := r
+			downgraded.Schema = RequestSchema
+			downgraded.Purpose = ""
+			d := admit(t, p, auth, downgraded)
+			if d.Digest() == a.Digest() {
+				t.Fatal("downgrade aliases")
+			}
+			next.Schema = RequestSchema
+			next.Purpose = ""
+			if _, e = Admit(t.Context(), xauth, p, wire(t, next)); e == nil {
+				t.Fatal("downgraded successor borrowed parent")
+			}
+			changed := auth.Source
+			changed.Incarnation = "replacement"
+			if NewManagedRequest(changed, p, auth.Profile.Number, auth.UniverseDigest, purpose).IdempotencyKey == r.IdempotencyKey || NewManagedRequest(auth.Source, p, auth.Profile.Number+1, auth.UniverseDigest, purpose).IdempotencyKey == r.IdempotencyKey || NewManagedRequest(auth.Source, p, auth.Profile.Number, hash([]byte("changed-universe")), purpose).IdempotencyKey == r.IdempotencyKey {
+				t.Fatal("changed authority aliases")
+			}
+		})
+	}
+	legacyRaw := wire(t, legacy)
+	for _, value := range []string{`null`, `""`, `"publish"`} {
+		bad := append(bytes.Clone(legacyRaw[:len(legacyRaw)-1]), []byte(`,"purpose":`+value+`}`)...)
+		if _, e := Admit(t.Context(), auth, p, bad); e == nil {
+			t.Fatal("legacy explicit purpose accepted", value)
+		}
+	}
+	if admit(t, p, auth, legacy).Purpose() != Publish {
+		t.Fatal("legacy publish changed")
+	}
+	legacy.Purpose = Publish
+	if _, e := Admit(t.Context(), auth, p, wire(t, legacy)); e == nil {
+		t.Fatal("legacy purpose accepted")
+	}
+	if (Admission{}).Purpose() != "" {
+		t.Fatal("empty admission publishes")
+	}
+}

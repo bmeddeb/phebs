@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/typedindex"
@@ -298,5 +299,57 @@ func TestWorkerControlsReturnedSnapshotDoesNotAliasPath(t *testing.T) {
 	escaped[0].Path = "changed"
 	if !slices.Equal(got.Inventory.Files(), expected.Files()) {
 		t.Fatal("returned inventory aliased caller slice")
+	}
+}
+
+func TestWorkerControlsManagedPurpose(t *testing.T) {
+	for _, purpose := range []typedindex.Purpose{typedindex.Publish, typedindex.Canary, typedindex.DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			f, id, m, s, _ := controlsPurposeFixture(t, false, purpose)
+			if !ownerEnvelopeFits(id, m.Budget) {
+				t.Fatal("managed envelope exceeded unchanged cap")
+			}
+			forged := m
+			forged.Revision = 3
+			forged.Publication = &OwnerControl{Digest: digest([]byte("publication")), Bytes: 1, Device: m.Directory.Device, Inode: 42}
+			forged.PublicationName = "bundle-" + strings.Repeat("a", 32)
+			_, e := encodeOwner(forged)
+			if purpose == typedindex.Publish && e != nil || purpose != typedindex.Publish && !errors.Is(e, ErrCustody) {
+				t.Fatal("owner publication purpose", e)
+			}
+			for _, spec := range []ControlSpec{s, executionControls(f, s)} {
+				ref, e := InstallControls(t.Context(), f.dir, id, spec, f.gate)
+				if e != nil {
+					t.Fatal(e)
+				}
+				path := filepath.Join(f.dir, id.RelativeName(), controlName(spec.Phase))
+				got, e := loadWorkerControls(t.Context(), path, spec.Allowance, string(spec.Phase), ref.Identity.RequestDigest, ref.Seal.Digest, testControlMount)
+				if e != nil || got.Parent.Purpose() != purpose || spec.Phase == ControlsExecution && got.Execution.Purpose() != purpose {
+					t.Fatal("purpose lost in authenticated controls", e)
+				}
+				wrong := id
+				wrong.Request.Purpose = typedindex.Publish
+				if purpose == typedindex.Publish {
+					wrong.Request.Purpose = typedindex.Canary
+				}
+				if wrong.valid() {
+					t.Fatal("purpose swap retained owner identity")
+				}
+				wrong = id
+				wrong.Request.Schema = typedindex.RequestSchema
+				wrong.Request.Purpose = ""
+				if wrong.valid() {
+					t.Fatal("downgrade retained owner identity")
+				}
+				if _, e = OpenControls(t.Context(), f.dir, wrong, spec, ref); e == nil {
+					t.Fatal("downgraded owner opened controls")
+				}
+				// Exact seal/request identity, not the mutable encoded request fields,
+				// remains the loader's bootstrap authority.
+				if _, e = loadWorkerControls(t.Context(), path, spec.Allowance, string(spec.Phase), digest([]byte("other-purpose-request")), ref.Seal.Digest, testControlMount); e == nil {
+					t.Fatal("request swap accepted")
+				}
+			}
+		})
 	}
 }

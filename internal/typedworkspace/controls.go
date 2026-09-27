@@ -186,7 +186,7 @@ func controlData(ctx context.Context, id OwnerIdentity, s ControlSpec) (ControlI
 		return identity, nil, ErrCustody
 	}
 	if s.Phase == ControlsExecution {
-		if !publicationAuthority(s.Parent, s.Execution, s.Plan.Digest()) {
+		if !executionAuthority(s.Parent, s.Execution, s.Plan.Digest()) {
 			return identity, nil, ErrCustody
 		}
 		raw := s.Plan.Bytes()

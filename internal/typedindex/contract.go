@@ -21,6 +21,7 @@ const (
 	ProfileSchema          = "phebs-typed-profile-v1"
 	GeneratedProfileSchema = "phebs-typed-profile-v2"
 	RequestSchema          = "phebs-typed-request-v1"
+	ManagedRequestSchema   = "phebs-typed-request-v2"
 	MaxProfileBytes        = 16 << 10
 	MaxRequestBytes        = 8 << 10
 )
@@ -185,6 +186,14 @@ type Source struct {
 	Commit      string `json:"commit"` // exact authoritative HEAD; never a branch selector
 }
 
+// Validate checks only source shape, not current repository authority.
+func (s Source) Validate() error {
+	if !validSource(s) {
+		return Invalid
+	}
+	return nil
+}
+
 func validSource(s Source) bool {
 	return reponame.Validate(s.Repository) == nil && len(s.Repository) <= 512 && token(s.Incarnation) && digest(s.Generation) && lowerHex(s.Commit, 40)
 }
@@ -196,22 +205,32 @@ const (
 	Execute Action = "execute"
 )
 
+// Purpose is immutable request authority, not a runtime publication option.
+type Purpose string
+
+const (
+	Publish Purpose = "publish"
+	Canary  Purpose = "canary"
+	DryRun  Purpose = "dry-run"
+)
+
 type Request struct {
-	Schema              string `json:"schema"`
-	Action              Action `json:"action"`
-	Source              Source `json:"source"`
-	Provider            string `json:"provider"`
-	ProfileName         string `json:"profile_name"`
-	ProfileEpoch        uint64 `json:"profile_epoch"`
-	ProfileDigest       string `json:"profile_digest"`
-	ConfigDigest        string `json:"config_digest"`
-	ToolsDigest         string `json:"tools_digest"`
-	UniverseDigest      string `json:"universe_digest"`
-	BundleDigest        string `json:"bundle_digest"`
-	PolicyDigest        string `json:"policy_digest"`
-	IdempotencyKey      string `json:"idempotency_key"`
-	ParentRequestDigest string `json:"parent_request_digest"`
-	PlanDigest          string `json:"plan_digest"`
+	Schema              string  `json:"schema"`
+	Action              Action  `json:"action"`
+	Source              Source  `json:"source"`
+	Provider            string  `json:"provider"`
+	ProfileName         string  `json:"profile_name"`
+	ProfileEpoch        uint64  `json:"profile_epoch"`
+	ProfileDigest       string  `json:"profile_digest"`
+	ConfigDigest        string  `json:"config_digest"`
+	ToolsDigest         string  `json:"tools_digest"`
+	UniverseDigest      string  `json:"universe_digest"`
+	BundleDigest        string  `json:"bundle_digest"`
+	PolicyDigest        string  `json:"policy_digest"`
+	IdempotencyKey      string  `json:"idempotency_key"`
+	ParentRequestDigest string  `json:"parent_request_digest"`
+	PlanDigest          string  `json:"plan_digest"`
+	Purpose             Purpose `json:"purpose,omitempty"`
 }
 
 // Authority is trusted server state, loaded after authentication. None of its
@@ -243,6 +262,58 @@ func (a Admission) Request() Request { return a.request }
 func NewRequest(source Source, profile Profile, epoch uint64, universe, key string) Request {
 	return Request{Schema: RequestSchema, Action: Plan, Source: source, Provider: ProviderID, ProfileName: profile.definition.Name, ProfileEpoch: epoch, ProfileDigest: profile.digest, ConfigDigest: profile.configDigest, ToolsDigest: profile.toolsDigest, UniverseDigest: universe, BundleDigest: profile.definition.BundleDigest, PolicyDigest: profile.policyDigest, IdempotencyKey: key}
 }
+
+// NewManagedRequest constructs deterministic managed planning authority. It has
+// no caller retry key; invalid shape returns a zero Request before encoding.
+// Admit must still verify current trusted authority.
+func NewManagedRequest(source Source, profile Profile, epoch uint64, universe string, purpose Purpose) Request {
+	if len(source.Repository) > 512 || !validSource(source) || profile.digest == "" || epoch == 0 || !digest(universe) || purpose != Publish && purpose != Canary && purpose != DryRun {
+		return Request{}
+	}
+	r := NewRequest(source, profile, epoch, universe, "")
+	r.Schema, r.Purpose = ManagedRequestSchema, purpose
+	r.IdempotencyKey = managedKey(r)
+	return r
+}
+
+func managedKey(r Request) string {
+	r.Action, r.ParentRequestDigest, r.PlanDigest, r.IdempotencyKey = Plan, "", "", ""
+	raw, _ := json.Marshal(r)
+	return hash(append([]byte("phebs-typed-managed-planning-key-v2\x00"), raw...))[7:]
+}
+
+// ValidatePurpose checks versioned purpose/key shape without asserting current
+// authority. It also serves obsolete-owner and census reconstruction.
+func (r Request) ValidatePurpose() error {
+	switch r.Schema {
+	case RequestSchema:
+		if r.Purpose != "" {
+			return Invalid
+		}
+	case ManagedRequestSchema:
+		if r.Purpose != Publish && r.Purpose != Canary && r.Purpose != DryRun {
+			return Invalid
+		}
+		if r.IdempotencyKey != managedKey(r) {
+			return Invalid
+		}
+	default:
+		return Invalid
+	}
+	return nil
+}
+
+// Purpose returns the admitted purpose; historical v1 means publishing.
+func (a Admission) Purpose() Purpose {
+	if a.digest == "" {
+		return ""
+	}
+	if a.request.Schema == RequestSchema {
+		return Publish
+	}
+	return a.request.Purpose
+}
+
 func Admit(ctx context.Context, authority Authority, profile Profile, raw []byte) (Admission, error) {
 	if !authority.Enabled {
 		return Admission{}, Disabled
@@ -257,7 +328,7 @@ func Admit(ctx context.Context, authority Authority, profile Profile, raw []byte
 	if err := decode(raw, MaxRequestBytes, &r); err != nil {
 		return Admission{}, err
 	}
-	if profile.digest == "" || r.Schema != RequestSchema || !validSource(r.Source) || !token(r.IdempotencyKey) || !digest(r.UniverseDigest) || r.ProfileEpoch == 0 {
+	if profile.digest == "" || r.ValidatePurpose() != nil || !validSource(r.Source) || !token(r.IdempotencyKey) || !digest(r.UniverseDigest) || r.ProfileEpoch == 0 {
 		return Admission{}, Invalid
 	}
 	if r.Action != Plan && r.Action != Execute {

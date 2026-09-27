@@ -179,7 +179,7 @@ func decodeWorkerControls(ctx context.Context, seal controlSeal, data map[string
 		}
 		authority.ParentRequestDigest, authority.PlanDigest = parent.Digest(), plan.Digest()
 		execution, e := typedindex.Admit(ctx, authority, profile, data["request.json"])
-		if e != nil || execution.Digest() != seal.Identity.RequestDigest || !publicationAuthority(parent, execution, plan.Digest()) {
+		if e != nil || execution.Digest() != seal.Identity.RequestDigest || !executionAuthority(parent, execution, plan.Digest()) {
 			return WorkerControls{}, ErrCustody
 		}
 		canonical, e := json.Marshal(execution.Request())

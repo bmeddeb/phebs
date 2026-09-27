@@ -717,6 +717,9 @@ func NextPublication(ctx context.Context, current, expected PublicationPointer, 
 	if current != expected || authority.digest == "" || b.binding != generationBinding(authority) || len(b.root) == 0 {
 		return current, Stale
 	}
+	if authority.Purpose() != Publish {
+		return current, Invalid
+	}
 	if current.Epoch == math.MaxUint64 {
 		return current, Capacity
 	}

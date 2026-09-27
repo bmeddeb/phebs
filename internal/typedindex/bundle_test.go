@@ -24,6 +24,10 @@ type bundleFixtureData struct {
 
 func bundleFixture(t *testing.T) bundleFixtureData {
 	t.Helper()
+	return bundlePurposeFixture(t, "")
+}
+func bundlePurposeFixture(t *testing.T, purpose Purpose) bundleFixtureData {
+	t.Helper()
 	ctx := context.Background()
 	profile, auth, request, _ := fixture(t)
 	pd := profile.Definition()
@@ -44,6 +48,9 @@ func bundleFixture(t *testing.T) bundleFixtureData {
 	slices.SortFunc(d.Targets, func(a, b PlannedTarget) int { return strings.Compare(a.ID, b.ID) })
 	request.UniverseDigest = identity(d.Targets)
 	auth.UniverseDigest = request.UniverseDigest
+	if purpose != "" {
+		request = NewManagedRequest(auth.Source, profile, auth.Profile.Number, auth.UniverseDigest, purpose)
+	}
 	parent := admit(t, profile, auth, request)
 	d.ParentRequestDigest = parent.Digest()
 	plan, err := SealPackagePlan(ctx, parent, d)
@@ -696,5 +703,26 @@ func TestReducedProfileOrdinaryBundle(t *testing.T) {
 	}
 	if _, err = VerifyBundle(ctx, execution, plan, bundle.AttemptBytes(), bundle.RootBytes(), bundleContents(bundle)); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestBundleManagedPurposePublication(t *testing.T) {
+	for _, purpose := range []Purpose{Publish, Canary, DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			f := bundlePurposeFixture(t, purpose)
+			b := buildFixture(t, f)
+			if _, e := VerifyBundle(t.Context(), f.execution, f.plan, b.AttemptBytes(), b.RootBytes(), bundleContents(b)); e != nil {
+				t.Fatal("pure validation must work", e)
+			}
+			old := PublicationPointer{Epoch: 7, RootDigest: hash([]byte("prior"))}
+			next, e := NextPublication(t.Context(), old, old, f.execution, b)
+			if purpose == Publish {
+				if e != nil || next.Epoch != 8 {
+					t.Fatal(next, e)
+				}
+			} else if !errors.Is(e, Invalid) || next != old {
+				t.Fatal("nonpublish changed current", next, e)
+			}
+		})
 	}
 }
