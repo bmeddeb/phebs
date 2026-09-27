@@ -6930,3 +6930,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   member hashing or runtime registration. Independent real store and actual
   export/restore tests, host/Linux vet and lint pass; exact parent store gates
   pass. Physical reservation and lifecycle/native integration remain open.
+
+- **2026-09-27 — T45.4 bounded attempt drainage prerequisite (local,
+  unregistered).** The filesystem owner can drain one exact attempt only after
+  its trusted controller has established irreversible database retirement and
+  native quiescence. A manifest reference alone grants no deletion authority.
+  Base-then-attempt exclusive kernel guards exclude readers. Durable chained
+  collecting markers retain the owner manifest through terminal cleanup;
+  checkpoint-before-delete and exact empty-inode recovery cover interrupted
+  prefixes. Request parents are removed only empty. Native journals, unknown or
+  substituted controls, malformed collecting authority, mount crossings,
+  symlinks, hardlinks and special files remain held. Linux openat2 beneath,
+  no-symlink and no-cross-device resolution is required; unsupported hosts refuse.
+
+  **Cost.** One turn performs at most16 deletions including marker replacements,
+  48 traversal steps,216 owner traversal/authority stats and five bounded4KiB
+  control reads, with at most8 live descriptors. Reused ancestry/guard helper
+  validation is separately bounded and is not included in that stat count.
+  Each guard acquisition has a100ms deadline; failed reader exclusion releases
+  the base guard. This does not bound filesystem syscall latency. Known safe
+  abandoned receipt controls can drain without interpreting payloads; referenced
+  controls remain inode-bound. Interior trees are traversed without receipt-wide
+  hashes, and a fresh four-entry root census precedes terminal state. Reports
+  expose actual reads, opens, stats, deletes, syncs and marker writes. No child,
+  cache, database transaction or runtime query/tick/startup work is added.
+
+  Independent parent review corrected atime comparisons, traversal accounting,
+  guard waits and changing-directory EOF assumptions. Real unprivileged Linux
+  deep/wide, interrupted-prefix, reader-pin, cancellation, mount-boundary and
+  held-custody regressions pass, with vet/lint and documentation gates. Durable
+  aggregate reservation and integrated store/native/startup lifecycle authority
+  remain separate gates; this primitive does not close T45.4.

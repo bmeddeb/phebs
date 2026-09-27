@@ -14943,6 +14943,11 @@ resolve the completed owner independently of replacement work. Publication
 requires matching persisted revision3 custody, while actual readiness remains
 an explicit controller filesystem check. Independent real store and actual
 backup/restore gates pass; no new table or public status field is introduced.
+The attempt drainer now passes independent parent review and real Linux tests
+for bounded deep traversal, reader exclusion and every durable mutation prefix.
+It requires prior store retirement and native quiescence, retains ambiguous
+custody, and is not registered. Global reservation and lifecycle integration
+remain open before actual native validation or any runtime registration.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that

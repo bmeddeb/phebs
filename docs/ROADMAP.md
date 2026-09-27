@@ -170,7 +170,8 @@ protection and irreversible worker fences, including full lease-descriptor
 binding. Physical custody reclamation and runtime registration remain open.
 Durable private attempt manifests and receipt persistence are also reviewed;
 store binding now passes independent real-store and backup/restore gates.
-Physical reservation, bounded cleanup integration and native proof remain open.
+The bounded attempt drainer also passes independent Linux regression gates.
+Physical reservation, store/native cleanup integration and native proof remain open.
 
 ## Now
 
