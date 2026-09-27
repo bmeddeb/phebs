@@ -218,12 +218,15 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte{1, 0, 0})
 			return
 		}
-		report := supervisorReport{Schema: reportSchema, Allowance: d.options.Allowance, Phase: d.options.Control.Phase, RequestDigest: d.options.Control.RequestDigest, Stdout: []byte("fixture result"), Complete: true, Resources: Resources{LimitsVerified: true, Samples: 1}}
+		report := supervisorReport{SealDigest: d.options.Control.SealDigest, Schema: reportSchema, Allowance: d.options.Allowance, Phase: d.options.Control.Phase, RequestDigest: d.options.Control.RequestDigest, Stdout: []byte("fixture result"), Complete: true, Resources: Resources{LimitsVerified: true, Samples: 1}}
 		if d.config.Cmd[0] == SupervisorCommand {
 			report.Schema = reportSchema
 		}
 		if d.fault == "wrong allowance report" {
 			report.Allowance.Deadline++
+		}
+		if d.fault == "wrong seal report" {
+			report.SealDigest = controlDigest([]byte("changed-seal"))
 		}
 		if d.fault == "wrong phase report" {
 			report.Phase = ControlExecute
@@ -240,7 +243,7 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		raw, _ := json.Marshal(report)
 		if strings.HasPrefix(d.fault, "watchdog") {
 			snapshots := newWatchdogSnapshots(WallLimit)
-			snapshots.invocation(invocationDigest(d.options.Allowance, d.options.Control.Phase, d.options.Control.RequestDigest))
+			snapshots.invocation(invocationDigest(d.options.Allowance, d.options.Control.Phase, d.options.Control.RequestDigest, d.options.Control.SealDigest))
 			snapshots.resources(Resources{LimitsVerified: true, Samples: 1})
 			snapshots.progress(2, 0)
 			frame := snapshots.frame.Load().data

@@ -81,7 +81,7 @@ func observeCapacity(ctx context.Context, base string, probe func(*os.File) (spa
 // Controls reserve inventory/input/publication receipts, owner main+pending,
 // collecting main+pending, container journal main+pending and both standalone
 // phase snapshots. Those occupy two fixed, create-only phase directories, with
-// parent/profile/scratch duplicated, one execution request/plan and two seals.
+// inventory/parent/profile/scratch duplicated, one execution request/plan and two seals.
 // No control
 // may be injected into an already sealed copied inventory.
 //
@@ -129,8 +129,9 @@ func DeriveOwnerBudget(ctx context.Context, inventory typedindex.Inventory, bloc
 		// Second retained phase duplicates parent, profile and fresh scratch authority.
 		{Bytes: typedindex.MaxRequestBytes}, {Bytes: typedindex.MaxProfileBytes}, {Bytes: typedsandbox.MaxScratchAuthorityBytes},
 		{Bytes: MaxControlSealBytes}, {Bytes: MaxControlSealBytes},
+		{Bytes: typedindex.MaxInventoryBytes}, {Bytes: typedindex.MaxInventoryBytes},
 	}
-	// Nineteen controls, two lock files, request/attempt and two phase directories.
+	// Twenty-one controls, two lock files, request/attempt and two phase directories.
 	controlNodes := uint64(len(controls) + 2 + 4)
 	controlBytes, err := allocationBytes(controls, controlNodes, block)
 	if err != nil {

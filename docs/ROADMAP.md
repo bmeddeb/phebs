@@ -146,6 +146,11 @@ retained proto/fan-out members, which the mandatory conflict refusal preserves.
 T45.6 must resolve that provider compatibility gate before registration. No
 historical evidence, pinned tool, execution cap or runtime registration changes.
 
+The local executor now has an independently reviewed authenticated worker
+handoff, with exact-source Linux race validation. The executable dispatch and
+complete controller/provider runtime remain unfinished; no fresh target run or
+production registration follows from these unit gates.
+
 T45.3's follow-up now enforces reduced-profile omission at plan and bundle
 admission. Only the explicit prospective v2 profile admits sealed generated
 documents; old v1 identities, skip policies and measured caps remain unchanged.

@@ -70,7 +70,7 @@ const (
 	SupervisorCommand = "__typed_supervisor"
 	WorkerCommand     = "__typed_worker"
 	ownerSchema       = "phebs-typed-container-owner-v3"
-	reportSchema      = "phebs-typed-supervisor-v2"
+	reportSchema      = "phebs-typed-supervisor-v3"
 )
 
 // Resources distinguish kernel-enforced ceilings from sampled observations.
@@ -122,6 +122,7 @@ func readSmall(path string, limit int64) ([]byte, error) {
 }
 
 type supervisorReport struct {
+	SealDigest    string    `json:"seal_digest"`
 	Allowance     Allowance `json:"allowance"`
 	Phase         string    `json:"phase"`
 	RequestDigest string    `json:"request_digest"`
@@ -632,7 +633,7 @@ func runChecked(ctx context.Context, options Options, check func(context.Context
 		}
 		return result, ErrExecution
 	}
-	if json.Unmarshal(wire.stdout, &report) != nil || len(wire.stderr) != 0 || report.Schema != reportSchema || report.Allowance != options.Allowance || report.Phase != options.Control.Phase || report.RequestDigest != options.Control.RequestDigest ||
+	if json.Unmarshal(wire.stdout, &report) != nil || len(wire.stderr) != 0 || report.Schema != reportSchema || report.Allowance != options.Allowance || report.SealDigest != options.Control.SealDigest || report.Phase != options.Control.Phase || report.RequestDigest != options.Control.RequestDigest ||
 		int64(len(report.Stdout)+len(report.Stderr)) > OutputBytes-options.Allowance.WorkerBytesUsed {
 		return result, ErrExecution
 	}

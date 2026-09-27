@@ -85,7 +85,7 @@ func TestAllowanceProcessHelper(t *testing.T) {
 		os.Exit(93)
 	}
 	probe := os.NewFile(3, "probe")
-	args := supervisorArgs(Options{Allowance: a, Control: ControlIdentity{Phase: ControlExecute, RequestDigest: testImage}})
+	args := supervisorArgs(Options{Allowance: a, Control: ControlIdentity{Phase: ControlExecute, RequestDigest: testImage, SealDigest: testImage}})
 	_, _, _, stop, err := bootstrapSupervisor(args, func(timerErr error) {
 		if timerErr != nil {
 			os.Exit(96)

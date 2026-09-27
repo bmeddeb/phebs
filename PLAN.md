@@ -7551,3 +7551,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   portable and unprivileged Linux unit checks, read-only retained-artifact
   checks, normal/race, host/Linux vet/lint, docs and glossary pass. None of these
   executes the native Bazel/SCIP target or establishes runtime registration.
+
+- **2026-09-27 — T45.4 authenticate the supervisor-to-worker handoff.**
+  Control seal v3 includes the original inventory bytes in both cold phases.
+  The root supervisor transfers the exact invocation digest once over the
+  existing close-on-exec progress socket; the worker checks its root PID1 peer,
+  exact datagram and live allowance before minting a process-local capability.
+  Arguments or request JSON alone cannot mint transferred admission. The fixed
+  read-only control loader checks the authenticated seal, exact directory
+  membership, file identities and bounded bytes before reconstructing snapshots.
+  Those snapshots never replace the host's current store/lease fences.
+
+  Final metadata checks establish read consistency, not future immutability;
+  the read-only mount and trusted host custody retain that obligation. Returned
+  bytes are copied and independent of later pathname changes. Control budgets
+  include both inventory copies without changing execution caps or T45.1a.
+
+  **Cost.** Each invocation adds one71-byte datagram on the existing descriptor,
+  no new persistent descriptor or child. Plan controls read at most16MiB+32KiB;
+  execution controls at most32MiB+40KiB, plus bounded inventory/plan decoding.
+  At most four transient descriptors accompany the inherited progress socket.
+  Host preparation/reopen repeats bounded inventory copy/hash/decode before
+  existing locks. No corpus scan, new lock, cache or ordinary registered request,
+  startup, sync, retry/no-op or publication work is added. Byte ceilings are not
+  peak-heap measurements. Independent code/cost review and parent exact-source
+  host/Linux tests and Linux race pass. Privileged dispatch and native cold
+  replay remain open; this is not provider registration or target evidence.

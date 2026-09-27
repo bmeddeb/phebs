@@ -19,9 +19,21 @@ import (
 
 func ownerFixture(t *testing.T) (publicationFixture, string, []byte, typedindex.Inventory, OwnerIdentity, OwnerManifest) {
 	t.Helper()
+	return ownerFixtureInventory(t, false)
+}
+func ownerFixtureInventory(t *testing.T, whitespace bool) (publicationFixture, string, []byte, typedindex.Inventory, OwnerIdentity, OwnerManifest) {
+	t.Helper()
 	f := newPublicationFixture(t)
 	src, _, inv, _ := fixture(t)
 	raw := publicationJSON(t, typedindex.InventoryDefinition{Schema: typedindex.InventorySchema, Files: inv.Files()})
+	if whitespace {
+		raw = append(append([]byte(" \n"), raw...), '\n')
+		var err error
+		inv, err = typedindex.DecodeInventory(t.Context(), raw, digest(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	tool := typedindex.Tool{Version: "0.2.7", Digest: digest([]byte("tool"))}
 	profile, err := typedindex.DecodeProfile(t.Context(), publicationJSON(t, typedindex.ProfileDefinition{Schema: typedindex.ProfileSchema, Name: "reduced", Provider: typedindex.ProviderID, Tools: typedindex.Tools{Bazel: tool, RulesGo: tool, Go: tool, Driver: tool, Indexer: tool, Planner: tool, Launcher: tool}, Config: typedindex.ReducedConfig(), Policy: typedindex.MeasuredPolicy(), BundleDigest: inv.Digest(), ImageDigest: digest([]byte("image"))}))
 	if err != nil {

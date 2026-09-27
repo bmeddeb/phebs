@@ -15048,6 +15048,13 @@ gates pass. Still-admissible canceled roots retain replay protection; missing or
 uncertain authority remains held. Physical drainage and runtime lifecycle wiring
 remain mandatory and are not inferred from these database checks.
 
+The supervisor-to-worker handoff now authenticates sealed v3 controls over the
+existing one-shot root-peer socket. Original inventory bytes are bound in both
+phases; loaded snapshots still require host-side current authority fences.
+Independent review, host/Linux checks and exact-source Linux race pass. The
+binary dispatch, complete controller execution and privileged native proof remain
+open; no provider is registered by this prerequisite.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

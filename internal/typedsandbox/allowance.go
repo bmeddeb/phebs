@@ -99,10 +99,10 @@ func AdvanceAllowance(original Allowance, result Result) (Allowance, error) {
 
 func supervisorArgs(o Options) []string {
 	raw, _ := EncodeAllowance(o.Allowance)
-	return []string{SupervisorCommand, o.Control.Phase, o.Control.RequestDigest, string(raw)}
+	return []string{SupervisorCommand, o.Control.Phase, o.Control.RequestDigest, string(raw), o.Control.SealDigest}
 }
 func parseSupervisorArgs(args []string) (Allowance, string, string, error) {
-	if len(args) != 4 || args[0] != SupervisorCommand {
+	if len(args) != 5 || args[0] != SupervisorCommand || !hostDigest(args[4]) {
 		return Allowance{}, "", "", ErrRefused
 	}
 	a, err := DecodeAllowance([]byte(args[3]))
@@ -125,7 +125,7 @@ func checkSealAllowance(raw []byte, a Allowance, phase, request string) error {
 			RequestDigest  string          `json:"request_digest"`
 		} `json:"identity"`
 	}
-	if len(raw) > MaxControlSealBytes || json.Unmarshal(raw, &seal) != nil || seal.Schema != "phebs-typed-worker-controls-v2" || !a.invocation(phase, request) {
+	if len(raw) > MaxControlSealBytes || json.Unmarshal(raw, &seal) != nil || seal.Schema != "phebs-typed-worker-controls-v3" || !a.invocation(phase, request) {
 		return ErrRefused
 	}
 	got, err := DecodeAllowance(seal.Identity.Allowance)
@@ -135,7 +135,7 @@ func checkSealAllowance(raw []byte, a Allowance, phase, request string) error {
 	return nil
 }
 
-func invocationDigest(a Allowance, phase, request string) string {
-	raw, _ := json.Marshal(supervisorArgs(Options{Allowance: a, Control: ControlIdentity{Phase: phase, RequestDigest: request}}))
+func invocationDigest(a Allowance, phase, request, seal string) string {
+	raw, _ := json.Marshal(supervisorArgs(Options{Allowance: a, Control: ControlIdentity{Phase: phase, RequestDigest: request, SealDigest: seal}}))
 	return controlDigest(raw)
 }

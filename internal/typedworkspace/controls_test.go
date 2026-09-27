@@ -21,7 +21,11 @@ import (
 
 func controlsFixture(t *testing.T) (publicationFixture, OwnerIdentity, OwnerManifest, ControlSpec, Receipt) {
 	t.Helper()
-	f, source, raw, inventory, id, m := ownerFixture(t)
+	return controlsFixtureInventory(t, false)
+}
+func controlsFixtureInventory(t *testing.T, whitespace bool) (publicationFixture, OwnerIdentity, OwnerManifest, ControlSpec, Receipt) {
+	t.Helper()
+	f, source, raw, inventory, id, m := ownerFixtureInventory(t, whitespace)
 	attempt := filepath.Join(f.dir, id.RelativeName())
 	copied, err := Copy(t.Context(), source, attempt, inventory, f.gate)
 	if err != nil {
@@ -47,7 +51,7 @@ func controlsFixture(t *testing.T) (publicationFixture, OwnerIdentity, OwnerMani
 	if err != nil {
 		t.Fatal(err)
 	}
-	return f, id, m, ControlSpec{Allowance: allowance, Phase: ControlsPlanning, Parent: f.parent, Profile: profile, Scratch: host}, copied
+	return f, id, m, ControlSpec{InventoryRaw: raw, Allowance: allowance, Phase: ControlsPlanning, Parent: f.parent, Profile: profile, Scratch: host}, copied
 }
 func executionControls(f publicationFixture, s ControlSpec) ControlSpec {
 	s.Phase = ControlsExecution
@@ -142,7 +146,7 @@ func TestControlsBothPhasesAndInputImmutability(t *testing.T) {
 
 func TestControlsTrustAndBoundsBeforeGrowth(t *testing.T) {
 	f, id, _, s, _ := controlsFixture(t)
-	for _, tc := range []string{"phase", "parent", "profile", "plan-in-planning", "execution-parent", "host-attempt", "host-base", "host-DIO", "host-source", "nil-gate", "cancel", "allowance-attempt", "allowance-deadline", "allowance-planning-output"} {
+	for _, tc := range []string{"phase", "parent", "profile", "inventory", "plan-in-planning", "execution-parent", "host-attempt", "host-base", "host-DIO", "host-source", "nil-gate", "cancel", "allowance-attempt", "allowance-deadline", "allowance-planning-output"} {
 		t.Run(tc, func(t *testing.T) {
 			spec := s
 			gate := f.gate
@@ -155,6 +159,8 @@ func TestControlsTrustAndBoundsBeforeGrowth(t *testing.T) {
 				spec.Allowance.Deadline++
 			case "allowance-planning-output":
 				spec.Allowance.WorkerBytesUsed = 1
+			case "inventory":
+				spec.InventoryRaw = nil
 			case "phase":
 				spec.Phase = "other"
 			case "parent":
@@ -354,7 +360,7 @@ func TestControlsCanonicalSealAndCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if seal.Identity != ref.Identity || len(seal.Files) != 3 {
+	if seal.Identity != ref.Identity || len(seal.Files) != 4 {
 		t.Fatal("planning seal shape")
 	}
 	for _, bad := range [][]byte{append(bytes.Clone(raw), ' '), append([]byte(`{"unknown":1,`), raw[1:]...), bytes.Replace(raw, []byte(`"schema":`), []byte(`"schema":"duplicate","schema":`), 1), bytes.Repeat([]byte(" "), MaxControlSealBytes+1)} {

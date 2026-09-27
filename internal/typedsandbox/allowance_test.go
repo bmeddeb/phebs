@@ -20,7 +20,7 @@ func testControlSeal(t *testing.T, a Allowance, c ControlIdentity) []byte {
 	raw, err := json.Marshal(struct {
 		Schema   string `json:"schema"`
 		Identity any    `json:"identity"`
-	}{"phebs-typed-worker-controls-v2", struct {
+	}{"phebs-typed-worker-controls-v3", struct {
 		Allowance      Allowance `json:"allowance"`
 		Phase          string    `json:"phase"`
 		PlanningDigest string    `json:"planning_digest"`
@@ -83,7 +83,7 @@ func TestAllowanceCanonicalArithmetic(t *testing.T) {
 }
 
 func TestAllowanceJoinedToken(t *testing.T) {
-	for _, fault := range []string{"", "cleanup error", "truncated stream", "incomplete report", "watchdog only", "wrong allowance report", "wrong phase report", "changed invocation", "expires in cleanup"} {
+	for _, fault := range []string{"", "cleanup error", "truncated stream", "incomplete report", "watchdog only", "wrong allowance report", "wrong phase report", "wrong seal report", "changed invocation", "expires in cleanup"} {
 		t.Run(fault, func(t *testing.T) {
 			fakeFault := fault
 			if fault == "expires in cleanup" {

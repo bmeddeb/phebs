@@ -21,7 +21,7 @@ import (
 
 const MaxControlSealBytes = 4096
 const ControlSealFile = "control-seal.json"
-const controlSealSchema = "phebs-typed-worker-controls-v2"
+const controlSealSchema = "phebs-typed-worker-controls-v3"
 
 type ControlPhase string
 
@@ -38,9 +38,11 @@ type ControlSpec struct {
 	Phase     ControlPhase
 	Parent    typedindex.Admission
 	Profile   typedindex.Profile
-	Execution typedindex.Admission
-	Plan      typedindex.PackagePlan
-	Scratch   typedsandbox.HostScratchReceipt
+	// InventoryRaw preserves exact admitted bytes, including allowed whitespace.
+	InventoryRaw []byte
+	Execution    typedindex.Admission
+	Plan         typedindex.PackagePlan
+	Scratch      typedsandbox.HostScratchReceipt
 }
 
 type ControlIdentity struct {
@@ -87,10 +89,10 @@ func controlTreeName(name string) bool {
 }
 func controlFiles(phase ControlPhase) []string {
 	if phase == ControlsPlanning {
-		return []string{"parent.json", "profile.json", typedsandbox.ScratchAuthorityFile}
+		return []string{"inventory.json", "parent.json", "profile.json", typedsandbox.ScratchAuthorityFile}
 	}
 	if phase == ControlsExecution {
-		return []string{"parent.json", "plan.json", "profile.json", "request.json", typedsandbox.ScratchAuthorityFile}
+		return []string{"inventory.json", "parent.json", "plan.json", "profile.json", "request.json", typedsandbox.ScratchAuthorityFile}
 	}
 	return nil
 }
@@ -100,6 +102,8 @@ func controlLimit(name string) int {
 		return typedindex.MaxRequestBytes
 	case "profile.json":
 		return typedindex.MaxProfileBytes
+	case "inventory.json":
+		return typedindex.MaxInventoryBytes
 	case "plan.json":
 		return typedindex.MaxPlanBytes
 	case typedsandbox.ScratchAuthorityFile:
@@ -158,7 +162,14 @@ func controlData(ctx context.Context, id OwnerIdentity, s ControlSpec) (ControlI
 		return identity, nil, err
 	}
 	identity.HostReceiptDigest = publicationDigest(hostRaw)
-	data := make(map[string][]byte, 5)
+	data := make(map[string][]byte, 6)
+	if len(s.InventoryRaw) == 0 || len(s.InventoryRaw) > typedindex.MaxInventoryBytes {
+		return identity, nil, ErrCustody
+	}
+	data["inventory.json"] = bytes.Clone(s.InventoryRaw)
+	if _, err = typedindex.DecodeInventory(ctx, data["inventory.json"], id.Request.BundleDigest); err != nil {
+		return identity, nil, err
+	}
 	data["parent.json"], err = json.Marshal(s.Parent.Request())
 	if err != nil {
 		return identity, nil, err
@@ -499,8 +510,8 @@ func OpenControls(ctx context.Context, base string, id OwnerIdentity, spec Contr
 	return &Controls{root: dir, release: releaseAttempt, path: filepath.Join(attempt, controlName(spec.Phase)), ref: expected}, nil
 }
 
-// Metadata paths read only the <=4KiB seal and at most seven direct entries
-// (six expected plus overflow), never plans.
+// Metadata paths read only the <=4KiB seal and at most eight direct entries
+// (seven expected plus overflow), never plans.
 func controlMetadata(ctx context.Context, parent *os.File, name string) (_ *os.File, seal controlSeal, sealRef OwnerControl, total int64, err error) {
 	if !controlTreeName(name) || strings.HasSuffix(name, ".stage") {
 		return nil, seal, sealRef, 0, ErrCustody

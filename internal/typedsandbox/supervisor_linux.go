@@ -60,7 +60,7 @@ func supervisorProfile() int {
 		}
 		return current - now, nil
 	})
-	snapshots.invocation(invocationDigest(allowance, phase, request))
+	snapshots.invocation(invocationDigest(allowance, phase, request, os.Args[5]))
 	published.Store(snapshots)
 	reportReady.Store(nonblockingReportFD(2))
 	ctx, cancel := context.WithCancel(context.Background())
@@ -77,7 +77,7 @@ func supervisorProfile() int {
 		case <-finished:
 		}
 	}()
-	if readSupervisorAllowance(allowance, phase, request) != nil {
+	if readSupervisorAllowance(allowance, phase, request, os.Args[5]) != nil {
 		return 125
 	}
 	if validateProcess(false) != nil || unix.Prctl(unix.PR_SET_DUMPABLE, 0, 0, 0, 0) != nil {
@@ -88,8 +88,8 @@ func supervisorProfile() int {
 		return 125
 	}
 	scratch := &authority
-	report := supervise(ctx, cancel, scratch, snapshots, allowance)
-	report.Allowance, report.Phase, report.RequestDigest = allowance, phase, request
+	report := supervise(ctx, cancel, scratch, snapshots, allowance, workerArgs(os.Args[1:]))
+	report.Allowance, report.Phase, report.RequestDigest, report.SealDigest = allowance, phase, request, os.Args[5]
 	if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
 		return 125
 	}
@@ -155,7 +155,7 @@ func validateProcess(worker bool) error {
 	return nil
 }
 
-func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchAuthority, snapshots *watchdogSnapshots, allowance Allowance) supervisorReport {
+func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchAuthority, snapshots *watchdogSnapshots, allowance Allowance, args []string) supervisorReport {
 	report := supervisorReport{Schema: reportSchema, ExitCode: 125, StopReason: "kernel_limits"}
 	if verifyKernelLimits() != nil || observeResources(&report.Resources, scratch) != nil {
 		return report
@@ -180,7 +180,7 @@ func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchA
 		}
 	}
 	output := &childOutput{cancel: cancel, limit: OutputBytes - allowance.WorkerBytesUsed}
-	command := exec.CommandContext(ctx, HelperPath, WorkerCommand)
+	command := exec.CommandContext(ctx, HelperPath, args...)
 	command.Dir = "/scratch"
 	command.Env = environment()
 	command.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: 65534, Gid: 65534, Groups: []uint32{}}}
@@ -193,6 +193,10 @@ func supervise(ctx context.Context, cancel context.CancelFunc, scratch *ScratchA
 		return report
 	}
 	defer func() { _ = progressRead.Close(); _ = progressWrite.Close() }()
+	if sendWorkerInvocation(progressRead, args) != nil {
+		report.StopReason = "worker_start"
+		return report
+	}
 	command.ExtraFiles = []*os.File{progressWrite}
 	if command.Start() != nil {
 		report.StopReason = "worker_start"

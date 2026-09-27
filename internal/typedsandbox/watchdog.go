@@ -57,7 +57,7 @@ func newWatchdogSnapshots(wall time.Duration) *watchdogSnapshots {
 	return newWatchdogClock(wall, func() (int64, error) { return time.Since(started).Nanoseconds(), nil })
 }
 func newWatchdogClock(wall time.Duration, elapsed func() (int64, error)) *watchdogSnapshots {
-	s := &watchdogSnapshots{elapsed: elapsed, report: WatchdogReport{Schema: "phebs-typed-watchdog-partial-v2", ExitCode: 124, WallNanoseconds: wall.Nanoseconds()}}
+	s := &watchdogSnapshots{elapsed: elapsed, report: WatchdogReport{Schema: "phebs-typed-watchdog-partial-v3", ExitCode: 124, WallNanoseconds: wall.Nanoseconds()}}
 	s.publish()
 	return s
 }
@@ -131,7 +131,7 @@ func decodeWatchdog(raw []byte, wall time.Duration) (*WatchdogReport, error) {
 	var r WatchdogReport
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.DisallowUnknownFields()
-	if len(raw) == 0 || len(raw) > watchdogBytes || d.Decode(&r) != nil || d.Decode(new(any)) != io.EOF || r.Schema != "phebs-typed-watchdog-partial-v2" || r.ExitCode != 124 || r.WallNanoseconds != wall.Nanoseconds() || r.SnapshotNanoseconds < 0 || r.SnapshotNanoseconds > r.WallNanoseconds || r.ResourceSampleNanoseconds < 0 || r.ResourceSampleNanoseconds > r.SnapshotNanoseconds || r.WorkerStageStartedNanoseconds < 0 || r.WorkerStageStartedNanoseconds > r.WallNanoseconds || len(r.CompletedStages) > 15 {
+	if len(raw) == 0 || len(raw) > watchdogBytes || d.Decode(&r) != nil || d.Decode(new(any)) != io.EOF || r.Schema != "phebs-typed-watchdog-partial-v3" || r.ExitCode != 124 || r.WallNanoseconds != wall.Nanoseconds() || r.SnapshotNanoseconds < 0 || r.SnapshotNanoseconds > r.WallNanoseconds || r.ResourceSampleNanoseconds < 0 || r.ResourceSampleNanoseconds > r.SnapshotNanoseconds || r.WorkerStageStartedNanoseconds < 0 || r.WorkerStageStartedNanoseconds > r.WallNanoseconds || len(r.CompletedStages) > 15 {
 		return nil, ErrExecution
 	}
 	if r.ResourceSampleAvailable {
@@ -171,7 +171,7 @@ func (s *watchdogSnapshots) invocation(digest string) {
 }
 func decodeInvocationWatchdog(raw []byte, o Options) (*WatchdogReport, error) {
 	var r WatchdogReport
-	if len(raw) > watchdogBytes || json.Unmarshal(raw, &r) != nil || r.Invocation != invocationDigest(o.Allowance, o.Control.Phase, o.Control.RequestDigest) || r.WallNanoseconds <= 0 || r.WallNanoseconds > int64(WallLimit) {
+	if len(raw) > watchdogBytes || json.Unmarshal(raw, &r) != nil || r.Invocation != invocationDigest(o.Allowance, o.Control.Phase, o.Control.RequestDigest, o.Control.SealDigest) || r.WallNanoseconds <= 0 || r.WallNanoseconds > int64(WallLimit) {
 		return nil, ErrExecution
 	}
 	return decodeWatchdog(raw, time.Duration(r.WallNanoseconds))

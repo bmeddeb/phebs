@@ -176,7 +176,7 @@ func bootstrapSupervisor(args []string, expire func(error)) (Allowance, string, 
 	return a, phase, request, stop, nil
 }
 
-func readSupervisorAllowance(a Allowance, phase, request string) error {
+func readSupervisorAllowance(a Allowance, phase, request, seal string) error {
 	if a.CheckLive(context.Background()) != nil {
 		return ErrRefused
 	}
@@ -187,6 +187,9 @@ func readSupervisorAllowance(a Allowance, phase, request string) error {
 	defer func() { _ = root.Close() }()
 	raw, err := readControlFile(root, ControlSealFile, MaxControlSealBytes)
 	if err != nil {
+		return ErrRefused
+	}
+	if controlDigest(raw) != seal {
 		return ErrRefused
 	}
 	return checkSealAllowance(raw, a, phase, request)
