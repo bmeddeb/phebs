@@ -137,6 +137,15 @@ require the generated-document lane and canonical SCIP ordering. T45.4 owns
 actual verified copies and execution; T45.5 owns routed navigation. No extra
 target run, cap change, merge or push accompanies this local implementation.
 
+
+**T45.3 local implementation (2026-09-27).** The bundle, generated-document and
+canonical-member contracts passed independent correction review and local gates on the ticket
+branch, ready for Ben's code review. T45.4 remains the next executor
+step. Read-only replay exposes conflicting blank-identifier metadata in the
+retained proto/fan-out members, which the mandatory conflict refusal preserves.
+T45.6 must resolve that provider compatibility gate before registration. No
+historical evidence, pinned tool, execution cap or runtime registration changes.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

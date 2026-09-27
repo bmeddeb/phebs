@@ -6479,3 +6479,86 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   bounds, with execution concurrency and actual byte copies owned by T45.4.
   Refusals cause no mutation and no raw-input diagnostic persistence. This
   implementation adds no target run, merge, push, release or scale claim.
+
+- **2026-09-27 — T45.3 Phebs bundle contract, generated identity and canonical
+  SCIP.** Managed publication uses a small `phebs-scip-bundle-v1` root naming
+  separate content-addressed attempt, document-route and symbol-route controls;
+  its bounded members remain ordinary conforming SCIP `Index` messages. This is
+  a Phebs bundle, not a native SCIP shard format. The owned planner seals the
+  exact configured-target universe and package-load-unit/import/document graph
+  plus named member slots before execution. Target outcomes include dependency
+  failures through an acyclic bounded graph; impossible complete package loads
+  with non-complete required imports refuse. Its digest is bound into T45.2's execution successor. A
+  unit identity has the closed `package-load:sha256:` namespace: target, service,
+  repository, document and member identities cannot substitute for required
+  units. Every unit and configured target has a terminal classification in the
+  attempt manifest. Only test units identified in the pre-execution plan may
+  use the reduced profile's already-frozen skip-tests exclusion; unsupported or
+  failed required units have no current root. Generated omission is not an
+  after-the-fact exclusion. Routes are derived from checked member bytes and
+  regenerated during verification, including document-local symbol scope and
+  cross-member global postings. Each member must contribute its planned
+  documents and match the admitted scip-go name/version; unassigned empty
+  members refuse. Missing, extra, conflicting or corrupt graph,
+  coverage, content and route facts refuse. A pure compare-and-swap proposal
+  binds the complete expected pointer and current source/request authority;
+  T45.4 must execute that proposal inside its durable publication fence. No
+  in-memory transition is claimed to be durable publication.
+
+  Generated source uses the reserved `.phebs-generated/<package-unit-hash>/`
+  namespace with exact byte size/digest, generating-action provenance and
+  source/request/profile/tool/plan binding. Repository documents cannot occupy
+  that namespace. Producer absolute and parent-traversal paths are never source
+  authority. The complete bundle verifies each generated payload against the
+  independently sealed document plan; byte custody and product readers remain
+  T45.4/T45.5 responsibilities. The reduced executor configuration remains
+  `generated_documents: omit`; defining this contract does not enable a runtime
+  provider or silently upgrade coverage.
+
+  Canonical member admission first bounds and validates protobuf wire fields
+  before allocating messages, rejects unknown fields and duplicate singular
+  fields, then sorts only semantically unordered documents, occurrences,
+  symbols and relationships. Ordered documentation, arguments, ranges, roles
+  and identities remain exact. Duplicate documents and conflicting metadata
+  refuse. The retained sealed ordinary member passes read-only canonical
+  admission. Proto and fan-out expose conflicting global metadata for Go blank
+  identifiers; proto additionally needs planned generated-path localization.
+  Those historical bytes are unchanged. This is an explicit T45.6 provider
+  compatibility blocker, not a new target run, a retroactive T45.1b reversal,
+  permission to change the pinned tool or a waived conflict check.
+
+  Reduce-first bounds: 8,192 configured targets (sealed maximum 6,994), 512
+  package units (219 configured plus 202 SDK packages in the largest retained
+  cohort), 131,072 graph edges, 128 bundle documents, four SCIP members and
+  8 MiB aggregate SCIP. Each member retains the measured 2,285,819-byte ceiling
+  and additionally bounds 32 documents, 20,000 occurrences, 8,192 symbols,
+  16,384 relationships, 65,536 protobuf messages, 4,096-byte symbols, 512-byte
+  paths, 64 KiB text values and 128 repeated scalar/string parts. The sealed
+  fan-out observed 13 documents, 13,278 occurrences and 2,342 symbols. Plan,
+  attempt, root and each route control are bounded independently at 16 MiB,
+  2 MiB, 4 KiB and 2 MiB; symbol routes at 32,768 entries. Source documents are
+  at most 8 MiB each and 16 MiB aggregate, and the whole publication at most
+  32 MiB. A two-member neutral generated fixture measured a 1,727-byte plan,
+  3,592-byte attempt, 1,203-byte root and 5,851-byte total publication. A neutral
+  8,192-target/512-unit plan measured 1,781,423 encoded bytes. These are
+  contract measurements, not native target or scale runs. These are simultaneous refusal limits, not a promise that all
+  independent maxima fit together or a large-repository admission claim.
+
+  Cost: unregistered pure contracts add no query, sync tick, startup/restart,
+  retry/no-op or publication work to the running product. Explicit sealing
+  copies/hashes one bounded plan, sorts its bounded graph and checks maps once.
+  Explicit build canonicalizes/hashes each of at most four members, derives
+  routes once, verifies each generated source hash twice (plan check and descriptor check)
+  and encodes bounded controls.
+  Explicit verification repeats that bounded work; it does not trust a cached
+  routing result. Canonical sorting is O(records log records), with transient
+  protobufs, encoded sort keys and maps proportional to bounded input/record
+  counts. Bundle construction retains at most 32 MiB of final content, plus
+  a separately encoded attempt copy and bounded input, decoder, graph, sort,
+  routing and encoding working memory;
+  the final-content ceiling is not a peak-RSS promise. Byte accessors clone only
+  the explicitly requested bounded value. Pointer proposals compare fixed
+  fields and hash at most 4 KiB. There are no locks, persistent caches, cache
+  invalidation scans, disk writes, child processes or goroutines. Concurrent
+  explicit callers multiply transient cost; the T45.4 executor must enforce
+  its single execution slot. Legacy committed-blob reader behavior is unchanged.
