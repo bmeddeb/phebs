@@ -7230,3 +7230,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   corrected an unknown-name deletion bug and is now clean; parent host/Linux
   checks and host race/vet/lint pass. Linux filesystem race proof remains open.
   No worker, reader or provider is registered by these custody primitives.
+
+- **2026-09-27 — T45.4 verify retained quotas during startup.**
+  Reuse the existing repository/root indexed admission queries for a read-only
+  retained-control check after unfiltered global census. Exactly 64 retained
+  roots and attempts remain valid; another growth admission still requires
+  fewer than 64. The selected parent must belong to the named repository, and
+  successors must have parents in the bounded repository selection. Malformed
+  projections, missing/foreign parents and overflow refuse. Old incarnations
+  remain included. No schema, admission fence or historical cap changes.
+
+  **Cost.** A successful observation makes two indexed reads, capped at 129
+  request and 65 attempt bodies (1,421 KiB of valid payload before decoder/SDK
+  overhead). Its parent-key set is bounded by that selection. Startup invokes
+  this once per planning parent, so repository requests can be reread up to 64
+  times per repository; this is not one repository read. There is no global
+  count/map, mutation, new lock, file hash or child. Independent review is clean;
+  actual 64/65 boundary and physical-index tests, old admission races, affected
+  race, host/Linux vet and lint pass. Runtime integration remains separate.

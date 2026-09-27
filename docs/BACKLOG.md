@@ -14998,6 +14998,10 @@ for live consumers. Interrupted stages remain held and drainage recognizes only
 four closed names. Independent review and parent Linux checks pass; controller
 and worker wiring plus Linux filesystem race validation remain open.
 
+Startup now has an independently reviewed retained-quota check using the existing
+capped database indexes. Exact 64-row quotas remain valid while new growth keeps
+its stricter boundary; controller integration and native proof remain open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.
