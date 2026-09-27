@@ -225,6 +225,11 @@ Independent review and actual Linux/database checks cover interrupted writes,
 obsolete authority, changed bases and refusal to repeat staging. Worker execution,
 recovery/lifecycle, native proof and Linux race remain open.
 
+The sealed configured planner/helper now lives under production ownership with
+neutral fixtures/default roots confined to tests. Exact source parity and
+independent code/cost review pass; intermediate bounds do not replace final
+plan admission. Worker dispatch and native/provider validation remain open.
+
 
 ## Now
 

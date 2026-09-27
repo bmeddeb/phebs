@@ -7298,3 +7298,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   native disk/daemon custody. Host race and host/Linux vet/lint pass. Linux race,
   previous-current end-to-end preservation, worker execution, recovery/lifecycle
   and runtime registration remain open.
+
+- **2026-09-27 — T45.4 give the configured planner production ownership.**
+  Promote the sealed9ced49f4 planner/helper algorithms into
+  `internal/typedbazel/planner` without importing spike packages. Neutral
+  fixtures, oracle and default-root entrypoints become test-only; production
+  command construction requires1–64 exact unique main-repository labels.
+  V2 non-Go files, configured producer/alias/transition joins, SDK declaration
+  checks and original wire identities remain unchanged. This constructs argv
+  and intermediate plans; it registers no provider and runs no Bazel command.
+
+  **Cost and boundary.** Intermediate parser limits remain64MiB each for cquery/
+  aquery and aggregate projections,8MiB per projection/file,16,384 targets,
+  131,072 edges,4096 projections,8192 units,65,536 documents and1024 SDK packages.
+  Final typed-index plan admission is separate and stricter. Assembly decodes,
+  joins, sorts and hashes bounded domains, retaining input buffers, decoded
+  structures and marshal buffers together; input byte limits are not resident
+  memory limits. Ancestor queries charge at most1,048,576 lookup/queue units and
+  cache only complete results within one call. The helper reads one declared
+  file at a time; ordinary projection caches at most64MiB unique source bytes
+  plus an8MiB in-flight file, while SDK projection retains metadata. Each unique
+  loaded source is hashed; repeated invocations recompute. There are no new
+  registered query/startup/sync/retry/publication costs, locks or children.
+  Helper file operations follow execution-root symlinks and may block before
+  stat; they belong only inside the enforced native sandbox, not on the host.
+  Raw errors require classification by the future worker; context-free parsers
+  rely on finite limits plus that sandbox's wall/memory containment.
+
+  Independent41-file source parity and implementation/cost review are clean.
+  Historical configured graph, non-Go, SDK and bound tests, race, host/Linux vet
+  and lint pass. Worker dispatch, final plan conversion and native/provider
+  validation remain open; historical evidence and frozen tool identities remain
+  unchanged.

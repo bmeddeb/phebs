@@ -1,0 +1,2 @@
+module(name = "neutral_external", version = "0.0.0")
+bazel_dep(name = "rules_go", version = "0.63.0")

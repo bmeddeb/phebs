@@ -1,0 +1,2 @@
+load("@rules_go//go:def.bzl", "go_library")
+go_library(name = "broken", srcs = ["missing.go"], deps = ["//does_not_exist:broken"], importpath = "example.test/broken")

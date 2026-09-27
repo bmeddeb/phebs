@@ -15013,6 +15013,11 @@ Independent review and actual Linux/database checks cover interrupted writes,
 obsolete authority, changed bases and refusal to repeat staging. Worker execution,
 recovery/lifecycle, native proof and Linux race remain open.
 
+The sealed configured planner/helper now lives under production ownership with
+neutral fixtures/default roots confined to tests. Exact source parity and
+independent code/cost review pass; intermediate bounds do not replace final
+plan admission. Worker dispatch and native/provider validation remain open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

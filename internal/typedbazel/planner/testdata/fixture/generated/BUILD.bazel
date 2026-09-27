@@ -1,0 +1,3 @@
+load("@rules_go//go:def.bzl", "go_library")
+genrule(name = "source", outs = ["generated.go"], cmd = "printf 'package generated\\nfunc Generated() int { return 7 }\\n' > $@")
+go_library(name = "generated", srcs = [":source"], importpath = "example.test/neutral/generated")

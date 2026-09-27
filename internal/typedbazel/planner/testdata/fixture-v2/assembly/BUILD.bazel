@@ -1,0 +1,2 @@
+load("@rules_go//go:def.bzl", "go_library")
+go_library(name = "assembly", srcs = ["assembly.go", "answer_arm64.s"], importpath = "example.test/assembly", visibility = ["//visibility:public"])
