@@ -203,6 +203,15 @@ func (s *Surreal) typedAuthority(ctx context.Context, repository string) (typedA
 	if _, err := s.GetTypedSource(ctx, repository); err != nil {
 		return typedAuthority{}, err
 	}
+	return s.readTypedAuthority(ctx, repository)
+}
+
+// readTypedAuthority never initializes repository source identity. Mutation
+// callers retain the initializing wrapper; queries cannot mint restored custody.
+func (s *Surreal) readTypedAuthority(ctx context.Context, repository string) (typedAuthority, error) {
+	if reponame.Validate(repository) != nil || len(repository) > 512 {
+		return typedAuthority{}, typedindex.Invalid
+	}
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return typedAuthority{}, err
 	}
@@ -213,6 +222,15 @@ func (s *Surreal) typedAuthority(ctx context.Context, repository string) (typedA
 	rows := firstDomainRows(results)
 	if len(rows) != 1 || rows[0].Name != repository {
 		return typedAuthority{}, typedindex.Stale
+	}
+	if rows[0].Deleting || rows[0].Commit == "" {
+		return typedAuthority{}, ErrNotFound
+	}
+	if !typedSourceHex(rows[0].Commit, 40) {
+		return typedAuthority{}, typedindex.Invalid
+	}
+	if !rows[0].HasIncarnation && !rows[0].HasEpoch {
+		return typedAuthority{}, typedindex.Unprepared
 	}
 	if _, err := typedSource(rows[0]); err != nil {
 		return typedAuthority{}, err

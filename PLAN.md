@@ -7731,3 +7731,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   cancellation and pin/retirement checks fail closed. Runtime store-to-reader
   composition and native/provider gates remain open. Generated SCIP still feeds
   no evidence consumer.
+
+- **2026-09-27 — T45.5 bind routed navigation to read-only store authority.**
+  The prospective command adapter uses persisted provider intent independently
+  of source initialization. Only absent intent selects legacy SCIP; malformed
+  intent errors and selected restored/deleting/unavailable source stays
+  unavailable. Query reads never initialize source identity. Existing mutation
+  getters retain that behavior. Available bindings include exact HEAD, current
+  epoch and completed inode/manifest/publication custody. Open rereads current;
+  the final current check remains under the physical attempt pin. No authority
+  map or runtime registration is added.
+
+  **Cost.** Available navigation performs20 bounded SDK point/fence reads
+  (7 selection,6 open,7 final); successful legacy fallback adds2 intent reads.
+  All are read-only. Repeated bounded profile/request decoding is explicit;
+  there is no table/plan/member scan or new background work. Current/attempt
+  controls are4KiB, request wrappers9KiB, profiles16KiB and intent24KiB maximum.
+  Routed cache/member/source-read limits and physical pins remain unchanged.
+  No new startup, sync, retry, publication, persistent cache, disk write or child.
+
+  Independent source/cost review and parent host/store race plus actual Linux
+  generated-navigation race pass, including Unicode, restored identity,
+  legacy refusal, final-current pin race and old-root retirement. Host/Linux
+  vet and lint pass. Native/provider registration and generated evidence remain
+  separately gated; these fixtures establish no production latency or scale.

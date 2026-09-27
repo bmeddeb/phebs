@@ -15097,6 +15097,14 @@ Independent review, full portable normal/race and actual Linux filesystem/adapte
 race checks pass. Runtime resolver composition and T45.4 registration gates remain
 open; generated bundles still supply no SCIP-derived evidence.
 
+The concrete store-to-reader adapter now passes independent source/cost review
+and parent host/store plus actual Linux race checks. It uses strict read-only
+intent/current selection, preserves restored source identity, fences exact HEAD
+and custody at open and final query, and retains legacy navigation only when no
+provider intent exists. Available queries use20 bounded SDK reads and zero
+writes; no authority cache or production registration is added. Native/provider
+registration and generated-evidence gates remain open.
+
 **T45.6 · Bazel managed provider** *(needs T45.1b–T45.5)* — implement the first
 provider using the exact validated `rules_go` `gopackagesdriver`/`scip-go`
 route. Preflight detects and reports, but never guesses authority from,

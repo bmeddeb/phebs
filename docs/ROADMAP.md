@@ -301,6 +301,14 @@ Independent review, full portable normal/race and actual Linux filesystem/adapte
 race checks pass. Runtime resolver composition and T45.4 registration gates remain
 open; generated bundles still supply no SCIP-derived evidence.
 
+The concrete store-to-reader adapter now passes independent source/cost review
+and parent host/store plus actual Linux race checks. It uses strict read-only
+intent/current selection, preserves restored source identity, fences exact HEAD
+and custody at open and final query, and retains legacy navigation only when no
+provider intent exists. Available queries use20 bounded SDK reads and zero
+writes; no authority cache or production registration is added. Native/provider
+registration and generated-evidence gates remain open.
+
 Local worker prerequisite (2026-09-27): a versioned adapter for the exact pinned
 scip-go0.2.7 preserves all blank-declaration metadata while assigning deterministic
 document-local identities only after proving no references across the complete
