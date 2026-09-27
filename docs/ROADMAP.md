@@ -168,6 +168,8 @@ scoped review; these primitives do not register a reader or generated source.
 Store retirement now has bounded global/root census, exact current/desired/live
 protection and irreversible worker fences, including full lease-descriptor
 binding. Physical custody reclamation and runtime registration remain open.
+Durable private attempt manifests and receipt persistence are also reviewed;
+store binding, physical reservation and bounded cleanup remain in progress.
 
 ## Now
 

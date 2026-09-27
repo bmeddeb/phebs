@@ -6852,3 +6852,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   review and exact real-store regression gates are recorded with this commit.
   Full filesystem ownership, reservation, lifecycle/runtime wiring and native
   proof remain open; this prerequisite does not close T45.4.
+
+- **2026-09-27 — T45.4 durable attempt filesystem owner prerequisite
+  (local, unregistered).** A private Linux namespace derives each attempt from
+  admitted planning authority and the exact chunk/lease; only the lease digest
+  persists. Creation installs the existing reader/mutator lock and an inode-bound
+  4-KiB canonical owner manifest before child growth. Exact input inventory and
+  verified input/publication receipts live in immutable referenced control files,
+  not duplicated large database fields. Small manifest revisions advance by CAS
+  through inputs and publication; fsynced pending controls or incomplete children
+  remain explicit held custody after interruption. Metadata inspection validates
+  closed names and referenced control inodes/size/mode without reading receipts.
+  Actual readiness always reopens and verifies the full input or publication.
+
+  Namespace admission includes orphan/held entries: at most 4,096 request
+  roots and 64 attempts per root. A base scan reads at most 4,098 raw entries
+  including its known lock and returns at most 4,097 names; an attempt scan
+  reads at most 65. Overflow is an incomplete prefix and refusal, not success.
+  Request census examines at most 64 small manifests with sequential bounded
+  metadata reads. No operation sums all possible 262,144 attempt manifests.
+
+  **Cost.** Owner controls are at most 4 KiB, inventories 16 MiB, derived input
+  receipts 89,420,704 bytes and publication receipts 67,025,920 bytes. Standard
+  JSON decoding, canonical comparison and validation can retain several bounded
+  buffers plus maps/strings; these wire bounds are not peak-RSS measurements.
+  Creation observes the trusted full future growth promise. Subsequent control
+  saves observe only additional block-rounded controls/metadata and the pending
+  manifest, because Statfs already accounts allocated input/publication bytes.
+  The cumulative control budget still applies. This is per-attempt admission,
+  not an installation-wide reservation of outstanding growth.
+
+  Create/save hold the base namespace exclusive lock. Save verifies full input
+  bytes (up to 2 GiB) or the complete publication before control persistence, so
+  that lock can span those bounded hashes and filesystem syncs. Input reopen
+  holds the base shared lock through verification. Publication reopen holds the
+  base lock only until acquiring its attempt's shared pin; the returned handle
+  retains only that child pin, allowing unrelated creation/publication. Every
+  future drainer must take the attempt exclusive pin before rename/unlink and
+  remove request parents only when empty. No new runtime query/tick/startup work,
+  cache, database transaction, child process or timer is registered.
+
+  Independent parent review corrected full-promise double charging, a global
+  reader lock hold, missing fresh-attempt locks and overflow-prefix accounting.
+  Exact unprivileged Linux tests cover positive persistence/readiness, pins,
+  pressure/cancellation, stale CAS, unsafe/missing/substituted controls and
+  over-cap namespaces; Linux vet/lint and documentation checks pass. Store
+  binding, durable physical reservation, bounded drainage, startup/host census
+  and native validation remain open. This prerequisite does not close T45.4.

@@ -14934,6 +14934,10 @@ protect current, desired and running work. Retirement also detaches only its
 exact canceled schedule, and every worker transition binds the complete stored
 lease descriptor. These store prerequisites do not reclaim physical custody;
 retained-control admission bounds and full lifecycle integration remain open.
+Durable filesystem attempt manifests and immutable receipt persistence now pass
+independent review and Linux tests, including exact reopen and bounded held
+namespace census. Database binding, physical reservation and bounded drainage
+are still required before worker or reader registration.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
