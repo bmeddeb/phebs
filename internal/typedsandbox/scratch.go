@@ -70,16 +70,20 @@ func EncodeScratchAuthority(a ScratchAuthority) ([]byte, error) {
 // A bind of the filesystem root may not hide an extra writable submount. The
 // loop device is not exposed to the container, and neither process can mount.
 func verifyScratchMounts(raw string, a ScratchAuthority) error {
+	return verifyScratchMountpoint(raw, a, "/scratch")
+}
+
+func verifyScratchMountpoint(raw string, a ScratchAuthority, mountpoint string) error {
 	count := 0
 	for _, line := range strings.Split(strings.TrimSpace(raw), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 10 {
 			return ErrRefused
 		}
-		if strings.HasPrefix(fields[4], "/scratch/") {
+		if strings.HasPrefix(fields[4], mountpoint+"/") {
 			return ErrRefused
 		}
-		if fields[4] != "/scratch" {
+		if fields[4] != mountpoint {
 			continue
 		}
 		count++

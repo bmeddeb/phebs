@@ -160,6 +160,9 @@ caller; lifecycle, aggregate reservation and native executor validation remain
 separate gates. Durable typed request/stage/current controls and manifest-v9
 precious-only backup/restore have also passed scoped independent review. No
 managed worker or provider is registered; these are local prerequisites.
+The prospective host scratch owner now passes scoped review and safe process
+regressions, while privileged native proof, exact formatter/profile binding
+and full lifecycle/reservation remain required.
 
 ## Now
 

@@ -14922,6 +14922,10 @@ Durable typed intent/request/stage/current controls and the dedicated queue now
 pass independent review, together with actual precious-only backup/restore.
 They remain unregistered; filesystem publication, complete lifecycle/pins,
 executor wiring and native custody validation are still required.
+The prospective root-provisioned scratch owner also has a clean independent
+review after hard-death and mount-alias corrections. It requires an empty
+dedicated daemon for cleanup and retains ambiguous formatting; actual native
+DIO/formatter/crash proof and profile identity binding remain open.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that

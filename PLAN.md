@@ -6725,3 +6725,46 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retention checks pass with no remaining scoped review findings. Filesystem
   publication, pins, complete lifecycle, execution wiring and native proof
   remain open; this prerequisite does not close T45.4.
+
+- **2026-09-27 — T45.4 prospective host scratch custody prerequisite
+  (local, unregistered).** A root-provisioned Linux-only owner stages the fixed
+  measured ext4 scratch image under `/var/lib/phebs-typed-index`; it never
+  provisions privileges or a VM. Exact request/attempt journals, fully allocated
+  image inode identity, native loop ioctls, observed direct I/O, mount geometry
+  and flags bind prepare/verify/cleanup. The single formatter is the fixed
+  `/usr/sbin/mkfs.ext4`, opened and hash-checked before execution with closed
+  arguments/environment. Its digest and recipe must enter a prospective
+  request/profile before use; this is not the historical Phase 2 helper/tool
+  identity. Frozen ceremony dispatch refuses before host mutation.
+
+  Cleanup uses normal unmount/detach and closed owned entries only. A durable
+  `formatting` phase precedes the child; failed, interrupted or ambiguous
+  formatting retains custody indefinitely rather than inferring descendant
+  quiescence from parent death. Direct-child parent-death signalling, a pinned
+  spawning thread and bounded residual-group termination are mitigations, not
+  escaped-descendant proof. Exact partial images can resume retirement after
+  its durable boundary. Container cleanup requires an empty dedicated daemon,
+  with creation serialized by the owning lifecycle: even stopped, unrelated,
+  mountless or tmpfs-only containers refuse, and none is deleted by host
+  cleanup. Current path/device observations cannot disprove historical mount
+  aliases or privileged device custody. Unknown ownership retains the journal.
+
+  **Cost.** No query, sync, ordinary startup or registered worker invokes these
+  functions. An explicit host operation takes one bounded-wait global flock;
+  prepare holds it across full fixed image allocation, at most 32 MiB formatter
+  identity hashing, a single 60-second child deadline and fixed mount/device
+  calls. Unexpected residual groups add at most one second of polling. Kernel
+  allocation/sync/mount calls do not gain an absolute wall guarantee. Journals
+  are at most 8 KiB, with durable phase transitions; cleanup reads one bounded
+  daemon inventory (128 containers plus overflow sentinel, 512 mounts, existing
+  response cap, 10-second deadline), then checks exact owned kernel/file state.
+  It adds no per-query cache or corpus scan. Interrupted formatting may retain
+  the full image and block further physical execution until explicit custody
+  reconciliation; stale leases do not permit deletion.
+
+  Independent review corrected formatter hard-death custody, partial retirement
+  recovery and container mount aliases. Normal/race and host/Linux static gates
+  pass, and actual unprivileged Linux subprocess regressions prove the limited
+  parent-death/residual-group behavior. They do not prove privileged formatter,
+  loop DIO, ext4 geometry or native crash cleanup. Those gates, durable global
+  reservation/census and runtime wiring remain open before registration.
