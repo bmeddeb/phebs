@@ -14976,6 +14976,12 @@ locks. Prospective host journal v3, replacement/privacy regressions and independ
 budget/root-name vectors pass review and parent Linux gates. No native or runtime
 readiness is inferred; controller integration remains open.
 
+All six typed-control tables now have strict bounded recovery census, and obsolete
+attempt inspection returns coherent original request/custody without granting
+stale admission. The corrected continuation query passes its limit into the
+pinned engine's storage scan. Independent review and actual store/accounting
+gates pass; controller bidirectional ownership reconciliation is still required.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

@@ -19,11 +19,15 @@ func TestTypedIndexLifecycle(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		authority, err := s.typedAuthority(ctx, f.repo)
+		if err != nil {
+			t.Fatal(err)
+		}
 		for n := 0; n < 65; n++ {
 			request := typedindex.NewRequest(source, f.profile, uint64(f.intent.ProfileEpoch), f.intent.UniverseDigest, fmt.Sprintf("page-%d", n))
 			raw := typedTestJSON(t, request)
 			id := typedDigest(raw)
-			body, _ := typedEncode(typedIndexRequest{Raw: string(raw), Root: id, SourceEpoch: 1}, typedindex.MaxRequestBytes+1024)
+			body, _ := typedEncode(typedIndexRequest{Raw: string(raw), Root: id, SourceEpoch: authority.source.Epoch}, typedindex.MaxRequestBytes+1024)
 			if err = s.typedWrite(ctx, `CREATE ONLY $rid SET repository=$repo,request_root=$root,control_key=$root,is_parent=true,custody_state='live',body=$body RETURN NONE;`, map[string]any{"rid": typedID("typed_index_request", id), "repo": f.repo, "root": id, "body": body}, 1); err != nil {
 				t.Fatal(err)
 			}

@@ -191,6 +191,10 @@ First-growth admission now binds observed workspace/host allocation roots under
 existing provisioned locks and preserves shared pressure state. Independent review
 and parent safe Linux gates pass; this still registers no executor or provider.
 
+Six-table recovery census and coherent obsolete-attempt inspection are now
+reviewed, including actual bounded database query plans. They do not supply
+filesystem or native cleanup authority; controller reconciliation remains open.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

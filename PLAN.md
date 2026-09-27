@@ -7136,3 +7136,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   presence refuses immediately under v1. No new lock, database read, filesystem
   work, child, cache or runtime path is introduced. Independent exact-source/cost
   review is clean after strengthening terminal-outcome and v2 rejection tests.
+
+- **2026-09-27 — T45.4 complete recovery-control census and obsolete inspection.**
+  Global record-ID census covers all six typed control tables, including intent,
+  state and current wrappers, with strict canonical bodies/projections and an
+  independently validated overflow sentinel. Repository and digest keys have
+  separate closed grammars. Original source identity is recomputed from its
+  stored epoch, without relying on the current repository/profile.
+
+  Correct the inherited continuation query: on pinned SurrealDB3.2.0 a literal
+  record range materializes its remainder before an outer limit. Parameterized
+  `type::record($table,$after>..)` selects DynamicScan and forwards the limit to
+  the primary-key scan. Actual EXPLAIN tests require that bounded physical plan;
+  first-page and indexed root-child plans retain their existing bounded recipes.
+  The original-request inspector rechecks attempt and plan alongside their exact
+  parent/request/successor in one readonly transaction. It remains usable after
+  replacement, cancellation or deletion, but returns no live admission, cleanup
+  permission or manufactured current authority. A fresh retry may legitimately
+  begin preflight with an already sealed execution request.
+
+  **Cost.** A page uses one SDK read and at most64 rows plus one sentinel:
+  intent bodies at most24KiB, request9KiB, others4KiB for valid stored controls.
+  A complete six-table census is linear in retained metadata. Inspection uses
+  three SDK reads: two point reads, then five point lookups in one readonly
+  transaction. Retained body strings total at most43KiB before bounded decode
+  copies. These are not pre-receipt bounds for corrupt oversized database data
+  or total RSS claims. No schema, mutation, filesystem work, child, cache, process
+  lock or registered runtime work is added. Independent review is clean after
+  successor/stage and physical-query corrections. Actual store/race, accounting,
+  host/Linux vet/lint and parent whole typed-store gates validate the changes;
+  complete controller/ownership reconciliation remains open.

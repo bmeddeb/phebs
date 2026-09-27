@@ -1,5 +1,7 @@
 // Typed root inventory has no registered runtime caller. Each page is one SDK
-// read of at most 65 bounded controls (requests <=9 KiB, others <=4 KiB).
+// read of at most 65 bounded controls (intent <=24 KiB, requests <=9 KiB,
+// other controls <=4 KiB). Each complete startup census is linear in retained
+// metadata; it is not an installation-wide constant bound.
 // Retirement inspection is four SDK reads: root, intent, current, then one
 // exact bounded observation with two direct request lookups, one direct current
 // owner-attempt lookup (including its bounded body/projections), and a running-lease
@@ -35,6 +37,9 @@ const (
 	TypedIndexRequests TypedIndexControlKind = "typed_index_request"
 	TypedIndexAttempts TypedIndexControlKind = "typed_index_attempt"
 	TypedIndexPlans    TypedIndexControlKind = "typed_index_plan"
+	TypedIndexIntents  TypedIndexControlKind = "typed_index_intent"
+	TypedIndexStates   TypedIndexControlKind = "typed_index_state"
+	TypedIndexCurrents TypedIndexControlKind = "typed_index_current"
 )
 
 // TypedIndexControl is bounded control metadata, never filesystem authority.
@@ -135,32 +140,23 @@ func (s *Surreal) ScanTypedIndexRoots(ctx context.Context, after string, limit i
 	return s.scanTypedIndexControls(ctx, TypedIndexRequests, "", after, limit)
 }
 func (s *Surreal) ScanTypedIndexRootChildren(ctx context.Context, root string, kind TypedIndexControlKind, after string, limit int) (TypedIndexControlPage, error) {
-	if !validSHA256(root) {
+	if !validSHA256(root) || !typedDigestControlKind(kind) {
 		return TypedIndexControlPage{}, typedindex.Invalid
 	}
 	return s.scanTypedIndexControls(ctx, kind, root, after, limit)
 }
 func (s *Surreal) scanTypedIndexControls(ctx context.Context, kind TypedIndexControlKind, root, after string, limit int) (TypedIndexControlPage, error) {
-	if kind != TypedIndexRequests && kind != TypedIndexAttempts && kind != TypedIndexPlans || limit < 1 || limit > MaxTypedIndexLifecycleRows || after != "" && !validSHA256(after) {
+	if err := ctx.Err(); err != nil {
+		return TypedIndexControlPage{}, err
+	}
+	if !typedControlKind(kind) || limit < 1 || limit > MaxTypedIndexLifecycleRows || after != "" && !typedControlKey(kind, after) {
 		return TypedIndexControlPage{}, typedindex.Invalid
 	}
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return TypedIndexControlPage{}, err
 	}
-	table := string(kind)
-	from := table
-	if after != "" {
-		cursorID := typedID(table, after)
-		from = cursorID.String() + ">.."
-	}
-	statement := "SELECT " + typedControlProjection + " FROM " + from
-	vars := map[string]any{"limit": limit + 1, "root": root}
-	if root != "" {
-		vars["after"] = after
-		statement = "SELECT " + typedControlProjection + " FROM " + table + " WHERE request_root=$root AND control_key>$after ORDER BY control_key LIMIT $limit;"
-	} else {
-		statement += " ORDER BY id LIMIT $limit;"
-	}
+	statement, vars := typedControlScanStatement(kind, root, after, limit)
+
 	results, err := storeQuery[[]TypedIndexControl](ctx, s.accounting, s.db, statement, vars, storeRead())
 	if err != nil {
 		return TypedIndexControlPage{}, typedError(ctx, err)
@@ -171,7 +167,13 @@ func (s *Surreal) scanTypedIndexControls(ctx context.Context, kind TypedIndexCon
 	}
 	previous := after
 	for _, row := range rows {
-		if validateTypedControl(kind, row) != nil || row.ID <= previous || root != "" && row.Root != root {
+		if err := validateTypedCensusControl(ctx, kind, row); err != nil {
+			if ctx.Err() != nil {
+				return TypedIndexControlPage{}, ctx.Err()
+			}
+			return TypedIndexControlPage{}, typedindex.Invalid
+		}
+		if row.ID <= previous || root != "" && row.Root != root {
 			return TypedIndexControlPage{}, typedindex.Invalid
 		}
 		previous = row.ID
@@ -182,6 +184,22 @@ func (s *Surreal) scanTypedIndexControls(ctx context.Context, kind TypedIndexCon
 		page.Next = page.Rows[limit-1].ID
 	}
 	return page, nil
+}
+
+// DynamicScan forwards the bounded limit into the excluded record-key range.
+// A literal range instead selects RecordIdScan, which materializes the entire
+// remaining range before applying an outer Limit on SurrealDB 3.2.0. No ORDER
+// is needed on a forward key range; the result's strict order is checked above.
+// See upstream v3.2.0 exec/operators/scan/{dynamic,record_id}.rs.
+func typedControlScanStatement(kind TypedIndexControlKind, root, after string, limit int) (string, map[string]any) {
+	vars := map[string]any{"scan_limit": limit + 1, "root": root, "after": after, "table": string(kind)}
+	statement := "SELECT " + typedControlProjection + " FROM " + string(kind) + " ORDER BY id LIMIT $scan_limit;"
+	if root != "" {
+		statement = "SELECT " + typedControlProjection + " FROM " + string(kind) + " WHERE request_root=$root AND control_key>$after ORDER BY control_key LIMIT $scan_limit;"
+	} else if after != "" {
+		statement = "SELECT " + typedControlProjection + " FROM type::record($table,$after>..) LIMIT $scan_limit;"
+	}
+	return statement, vars
 }
 
 // Every root-affecting typed writer uses this inside its mutation transaction.
