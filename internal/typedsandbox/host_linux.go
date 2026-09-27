@@ -358,12 +358,18 @@ func hostLock(ctx context.Context, o HostScratchOptions) (*os.File, error) {
 		_ = f.Close()
 		return nil, ErrCustody
 	}
+	return hostAcquireLock(ctx, f)
+}
+
+// hostAcquireLock owns f on entry and closes it on every refusal.
+func hostAcquireLock(ctx context.Context, f *os.File) (*os.File, error) {
+	var err error
 	timeout := time.NewTimer(2 * time.Second)
 	defer timeout.Stop()
 	tick := time.NewTicker(10 * time.Millisecond)
 	defer tick.Stop()
 	for {
-		if err = unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err == nil {
+		if err = unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err == nil {
 			return f, nil
 		}
 		if !errors.Is(err, unix.EWOULDBLOCK) {

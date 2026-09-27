@@ -180,6 +180,9 @@ physical headroom or cleanup; controller/startup/lifecycle integration stays ope
 Actual private-root capacity observation and complete one-attempt workspace
 budgeting are also reviewed. They add no runtime worker or native proof.
 
+Bounded host base/journal observation now also passes independent review and
+safe Linux gates, with no native mutation or inferred cleanup authority.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

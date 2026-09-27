@@ -14962,6 +14962,11 @@ now pass independent review and host/Linux gates. Initial combined-device
 admission, separate immutable worker controls and durable holder wiring remain
 required; the budget does not permit repeated failed stages within one attempt.
 
+The host now offers bounded read-only base/journal observation under its existing
+preprovisioned lock. Independent review and safe Linux gates pass; pending,
+unknown and incomplete custody remains held. Metadata does not prove native
+readiness or cleanup, and runtime/controller integration remains open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

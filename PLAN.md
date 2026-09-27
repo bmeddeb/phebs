@@ -7068,3 +7068,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   gain cancellation checks and preserve cancellation identity. Independent cost
   review, exact host/unprivileged-Linux gates, race, host/Linux vet/lint pass.
   No runtime caller or native readiness is registered.
+
+- **2026-09-27 — T45.4 bounded read-only host custody observation.**
+  Observe the fixed root-provisioned scratch base through the existing exclusive
+  lock without creating it: the operator must provision its root:root0600,
+  zero-byte, single-link `.lock`. Return actual base inode/device and statfs
+  geometry, a bounded namespace prefix and at most one selected canonical v2
+  journal. Unknown, overflow, pending or incomplete custody remains held;
+  pending journals are never promoted. A ready journal with both expected child
+  names and matching image inode is still only metadata, not allocated-image,
+  direct-I/O, mount, daemon-quiescence or cleanup proof. The scratch child may be
+  a live worker-owned mount and is never traversed. Main and pending cancellation
+  errors preserve their identity; hardlink regression isolates the link check.
+
+  **Cost.** One observation holds the existing host lock for bounded metadata
+  work, with its unchanged2s polling allowance and no filesystem-syscall latency
+  claim. It reads at most three base entries, five selected-root entries and two
+ 8193-byte control streams including overflow sentinels; at most four descriptors
+  coexist. Existing bounded ancestry checks, stat/statfs, named inode rechecks
+  and bounded canonical JSON passes add no source hash, child, daemon call,
+  device access, persistent state or namespace mutation. Production remains
+  fixed-root/root-identity and refuses unavailable Linux openat2 protections.
+  Independent exact-source/cost review is clean after two low corrections;
+  safe unprivileged Linux Host gates and host/Linux lint pass. No native operation
+  or runtime caller is registered, and all formatter/DIO/cap/cleanup rules stay
+  unchanged. The controller must still match journal claims to durable authority.
