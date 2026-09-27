@@ -1,0 +1,3 @@
+load(":aspect.bzl", "pinned_helper")
+exports_files(["t451a"])
+pinned_helper(name = "helper", src = "t451a", visibility = ["//visibility:public"])

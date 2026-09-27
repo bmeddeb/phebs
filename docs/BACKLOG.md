@@ -15089,6 +15089,14 @@ vet/lint and read-only retained-file checks pass. Raw evidence stays unchanged;
 proto's generated path still requires sealed mapping. Durable receipt and worker
 integration remain open, with no provider registration or native run.
 
+The owned worker now implements both cold planning and execution against a
+presealed source-bound configured universe. It verifies pinned tools and actual
+resolved rules_go files, binds source documents to immutable input bytes, retains
+bounded failure diagnostics and returns raw SCIP plus explicit generated-v2
+payloads under the unchanged shared output/wall limits. This remains an
+unregistered prerequisite: host result admission, final bundle/receipt wiring,
+controller integration and fresh native correctness/cost proof are open.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

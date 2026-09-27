@@ -150,6 +150,11 @@ T45.3's follow-up now enforces reduced-profile omission at plan and bundle
 admission. Only the explicit prospective v2 profile admits sealed generated
 documents; old v1 identities, skip policies and measured caps remain unchanged.
 
+The owned Bazel worker now implements independently bound cold plan/execute,
+exact tools and resolved rules_go verification, and bounded raw/generated output.
+It remains unregistered pending host result/bundle integration, complete executor
+custody/lifecycle and the separately authorized native correctness/cost gate.
+
 **T45.4 local prerequisites (2026-09-27).** Source-only repository epochs and
 incarnations preserve exact reuse while fencing source ABA; the dedicated
 scheduler class reserves the existing controller allowance plus the unchanged
