@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/typedindex"
@@ -339,4 +340,199 @@ func (s *Surreal) CollectDrainedTypedIndexControls(ctx context.Context, c TypedI
 		return s.typedFence(ctx, statement, vars)
 	}
 	return s.typedWrite(ctx, statement, vars, operands)
+}
+
+// TypedIndexTombstoneExpiry is a coherent database selection, not evidence that
+// filesystem custody has been drained. It cannot authorize deletion on its own.
+type TypedIndexTombstoneExpiry struct {
+	collection  TypedIndexCollection
+	observation typedTombstoneObservation
+	expected    map[string]any
+}
+
+type typedTombstoneObservation struct {
+	Collection      typedCollectionObservation      `json:"collection"`
+	Source          []typedSourceRecord             `json:"source"`
+	Schedule        bool                            `json:"schedule"`
+	Chunks          bool                            `json:"chunks"`
+	ScheduleCurrent []typedTombstoneScheduleCurrent `json:"schedule_current"`
+}
+type typedTombstoneScheduleCurrent struct {
+	Repository string `json:"repository"`
+	Stage      string `json:"stage"`
+	Digest     string `json:"schedule_digest"`
+	Generation string `json:"generation"`
+}
+
+const typedTombstoneChunksSQL = `SELECT id FROM generation_schedule_chunk WHERE generation=$root AND stage='typed-index' LIMIT 1`
+const typedTombstoneObservationSQL = typedCollectionObservationSQL + `
+LET $expiry = {collection:$collection,
+ source:(SELECT name ?? '' AS name, indexed_commit_hash ?? '' AS indexed_commit_hash,
+ typed_incarnation ?? '' AS typed_incarnation, typed_source_epoch ?? 0 AS typed_source_epoch,
+ deleting ?? false AS deleting, typed_incarnation != NONE AS has_incarnation,
+ typed_source_epoch != NONE AS has_epoch FROM $repository_record LIMIT 1),
+ schedule:array::len(SELECT id FROM $schedule LIMIT 1)>0,
+ chunks:array::len(` + typedTombstoneChunksSQL + `)>0,
+ schedule_current:(SELECT repository ?? '' AS repository, stage ?? '' AS stage,
+ schedule_digest ?? '' AS schedule_digest, generation ?? '' AS generation FROM $schedule_current LIMIT 1)};
+`
+
+func tombstoneVariables(c TypedIndexCollection) (map[string]any, error) {
+	stateID := "absent"
+	if len(c.observation.StateOwner) == 1 {
+		stateID = c.observation.StateOwner[0].ID
+	}
+	vars, err := collectionVariables(c.retirement, stateID)
+	if err != nil {
+		return nil, err
+	}
+	repo, root := c.retirement.repository, c.retirement.root
+	digest := generationScheduleDigest(GenerationScheduleSpec{Repository: repo, Stage: TypedIndexScheduleStage, Generation: root, ResourceClass: GenerationResourceTypedIndex, TotalItems: 1, ChunkItems: 1, MaxAttempts: 3, RepositoryTokens: 1})
+	vars["repository_record"] = repoID(repo)
+	vars["schedule"] = models.NewRecordID("generation_schedule", strings.TrimPrefix(digest, "sha256:"))
+	vars["schedule_current"] = models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(repo, TypedIndexScheduleStage), "sha256:"))
+	return vars, nil
+}
+
+// InspectTypedIndexTombstoneExpiry requires the same global census and shared
+// lifecycle guard as InspectTypedIndexCollection. It adds one coherent read of
+// the collection, current source, exact schedule/current records and one indexed
+// chunk-existence probe. Total: seven/eight SDK reads, no writes or filesystem
+// work. Existing collection bounds apply; source/current add bounded scalars.
+// An absent, deleting, unindexed or malformed current authority is held.
+func (s *Surreal) InspectTypedIndexTombstoneExpiry(ctx context.Context, root string) (TypedIndexTombstoneExpiry, error) {
+	var out TypedIndexTombstoneExpiry
+	c, err := s.InspectTypedIndexCollection(ctx, root)
+	if err != nil {
+		return out, err
+	}
+	vars, err := tombstoneVariables(c)
+	if err != nil {
+		return out, err
+	}
+	if err = readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return out, err
+	}
+	result, err := storeQuery[[]typedTombstoneObservation](ctx, s.accounting, s.db, "BEGIN TRANSACTION;"+typedTombstoneObservationSQL+"RETURN [$expiry]; COMMIT TRANSACTION;", vars, storeRead())
+	if err != nil {
+		return out, typedError(ctx, err)
+	}
+	rows := firstDomainRows(result)
+	if len(rows) != 1 {
+		return out, typedindex.Invalid
+	}
+	observed := rows[0]
+	observedCollection, err := collectionObject(observed.Collection)
+	if err != nil {
+		return out, err
+	}
+	if !reflect.DeepEqual(observedCollection, c.expected) {
+		return out, typedindex.Stale
+	}
+	raw, err := json.Marshal(observed)
+	if err != nil {
+		return out, typedindex.Invalid
+	}
+	var expected map[string]any
+	if json.Unmarshal(raw, &expected) != nil {
+		return out, typedindex.Invalid
+	}
+	expected["collection"] = observedCollection
+	// json.Unmarshal's float64 must not round a valid source epoch above2^53.
+	// Preserve the native integer in the SDK transaction parameter.
+	sources, _ := expected["source"].([]any)
+	for i, source := range sources {
+		fields, ok := source.(map[string]any)
+		if !ok {
+			return out, typedindex.Invalid
+		}
+		fields["typed_source_epoch"] = observed.Source[i].Epoch
+	}
+	out = TypedIndexTombstoneExpiry{c, observed, expected}
+	if err = validateTypedTombstone(ctx, out); err != nil {
+		return TypedIndexTombstoneExpiry{}, err
+	}
+	return out, ctx.Err()
+}
+func validateTypedTombstone(ctx context.Context, selected TypedIndexTombstoneExpiry) error {
+	c, o := selected.collection, selected.observation
+	if err := validateTypedCollection(ctx, c); err != nil {
+		return err
+	}
+	if selected.expected == nil || len(c.observation.Requests) != 1 || len(c.observation.Attempts) != 0 || len(c.observation.Plan) != 0 || o.Schedule || o.Chunks || len(o.Source) != 1 || len(o.ScheduleCurrent) > 1 {
+		return typedindex.Stale
+	}
+	root, repo := c.retirement.root, c.retirement.repository
+	if c.observation.Retirement.DesiredRoot == root || c.observation.Retirement.CurrentRoot == root || len(c.observation.StateOwner) == 1 && c.observation.StateOwner[0].Root == root {
+		return typedindex.Stale
+	}
+	for _, current := range o.ScheduleCurrent {
+		if current.Repository != repo || current.Stage != TypedIndexScheduleStage || !typedStoredDigest(current.Digest) || !typedStoredDigest(current.Generation) {
+			return typedindex.Invalid
+		}
+		digest := generationScheduleDigest(GenerationScheduleSpec{Repository: repo, Stage: TypedIndexScheduleStage, Generation: root, ResourceClass: GenerationResourceTypedIndex, TotalItems: 1, ChunkItems: 1, MaxAttempts: 3, RepositoryTokens: 1})
+		if current.Generation == root || current.Digest == digest {
+			return typedindex.Stale
+		}
+	}
+	source := o.Source[0]
+	current, err := typedSource(source)
+	if err != nil || !source.HasIncarnation || !source.HasEpoch || current.Repository != repo {
+		return typedindex.Invalid
+	}
+	var stored typedIndexRequest
+	var request typedindex.Request
+	var intent TypedIndexIntent
+	if typedDecode(c.observation.Requests[0].Body, typedindex.MaxRequestBytes+1024, &stored) != nil || typedDecode(stored.Raw, typedindex.MaxRequestBytes, &request) != nil {
+		return typedindex.Invalid
+	}
+	intentRaw := c.observation.Retirement.Intent
+	if validateTypedCensusControl(ctx, TypedIndexIntents, TypedIndexControl{ID: repo, Repository: repo, Body: intentRaw}) != nil || typedDecode(intentRaw, maxTypedIntentBytes, &intent) != nil {
+		return typedindex.Invalid
+	}
+	// UpsertRepo preserves an existing incarnation and chooses a fresh random
+	// server-owned token only for creation. Source/profile epochs never decrement
+	// or wrap. Offline restore removes derived controls before authority reset.
+	if current.Incarnation != request.Source.Incarnation {
+		return nil
+	}
+	if source.Epoch < stored.SourceEpoch || uint64(intent.ProfileEpoch) < request.ProfileEpoch {
+		return typedindex.Invalid
+	}
+	if source.Epoch == stored.SourceEpoch && current != request.Source {
+		return typedindex.Invalid
+	}
+	if uint64(intent.ProfileEpoch) == request.ProfileEpoch && (intent.ProfileDigest != request.ProfileDigest || intent.UniverseDigest != request.UniverseDigest) {
+		return typedindex.Invalid
+	}
+	if source.Epoch > stored.SourceEpoch || uint64(intent.ProfileEpoch) > request.ProfileEpoch {
+		return nil
+	}
+	return typedindex.Stale
+}
+
+// ExpireDrainedTypedIndexTombstone deletes one empty collecting parent only
+// after irreversible source/profile invalidation. Cancellation alone never
+// qualifies. The caller must hold the shared lifecycle guard, complete the
+// unfiltered census, prove native quiescence, and verify the entire physical root
+// is drained/absent. Neither this selection nor database absence supplies that
+// proof. Existing scheduler lifecycle must remove its references first.
+// One transaction repeats every selected authority/reference observation and
+// deletes exactly one parent (one mutation operand). No other root is changed.
+func (s *Surreal) ExpireDrainedTypedIndexTombstone(ctx context.Context, selected TypedIndexTombstoneExpiry) error {
+	if ctx == nil {
+		return typedindex.Invalid
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := validateTypedTombstone(ctx, selected); err != nil {
+		return err
+	}
+	vars, err := tombstoneVariables(selected.collection)
+	if err != nil {
+		return err
+	}
+	vars["expected_expiry"] = selected.expected
+	return s.typedWrite(ctx, typedTombstoneObservationSQL+`IF $expiry != $expected_expiry { THROW 'typed-stale'; }; DELETE $typed_root RETURN NONE;`, vars, 1)
 }

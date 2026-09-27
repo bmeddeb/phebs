@@ -15041,6 +15041,13 @@ and the real database fixture. The parent independently repeated the check with
 unchanged source and verified empty test custody. It reused existing compiler
 bytes with unchanged host Go; native clock/privileged/cold/target gates remain open.
 
+Empty collecting-parent expiry now requires permanently obsolete source/profile
+authority plus absence of every selected control/scheduler reference. Independent
+review and real database ABA, race, index/accounting and64-root quota recovery
+gates pass. Still-admissible canceled roots retain replay protection; missing or
+uncertain authority remains held. Physical drainage and runtime lifecycle wiring
+remain mandatory and are not inferred from these database checks.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

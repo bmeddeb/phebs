@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/typedindex"
@@ -453,5 +454,341 @@ func TestTypedIndexCollectionHistoricalAndMalformed(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func emptyTombstoneFixture(t *testing.T, s *Surreal, name string) (*typedFixture, []byte, string) {
+	t.Helper()
+	f := newTypedFixture(t, s, name)
+	raw := f.enqueue(t, "old")
+	root := typedDigest(raw)
+	if err := s.CancelTypedIndex(t.Context(), f.repo, root); err != nil {
+		t.Fatal(err)
+	}
+	retired, err := s.InspectTypedIndexRetirement(t.Context(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.BeginTypedIndexRetirement(t.Context(), retired); err != nil {
+		t.Fatal(err)
+	}
+	selected, err := s.InspectTypedIndexCollection(t.Context(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.CollectDrainedTypedIndexControls(t.Context(), selected, nil); err != nil {
+		t.Fatal(err)
+	}
+	return f, raw, root
+}
+func TestTypedIndexCollectionTombstoneAuthority(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := t.Context()
+	for _, mode := range []string{"source-ABA", "profile-ABA", "remove-readd", "large-epoch"} {
+		t.Run(mode, func(t *testing.T) {
+			f, raw, root := emptyTombstoneFixture(t, s, "expiry-"+mode)
+			if _, err := s.InspectTypedIndexTombstoneExpiry(ctx, root); !errors.Is(err, typedindex.Stale) {
+				t.Fatal("cancellation alone", err)
+			}
+			switch mode {
+			case "large-epoch":
+				if err := s.typedWrite(ctx, `UPDATE $rid SET typed_source_epoch=9007199254740993 RETURN NONE;`, map[string]any{"rid": repoID(f.repo)}, 1); err != nil {
+					t.Fatal(err)
+				}
+			case "source-ABA":
+				for _, commit := range []string{strings.Repeat("b", 40), strings.Repeat("a", 40)} {
+					if err := s.SetRepoIndexed(ctx, f.repo, commit, time.Now()); err != nil {
+						t.Fatal(err)
+					}
+				}
+			case "profile-ABA":
+				def := f.profile.Definition()
+				def.Tools.Driver.Version = "changed"
+				other, err := typedindex.DecodeProfile(ctx, typedTestJSON(t, def))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err = s.InstallTypedProfile(ctx, f.repo, other, f.intent.UniverseDigest, 1); err != nil {
+					t.Fatal(err)
+				}
+				f.intent, err = s.InstallTypedProfile(ctx, f.repo, f.profile, f.intent.UniverseDigest, 2)
+				if err != nil {
+					t.Fatal(err)
+				}
+			case "remove-readd":
+				if err := s.SetRepoDeleting(ctx, f.repo, true); err != nil {
+					t.Fatal(err)
+				}
+				if err := s.DeleteRepo(ctx, f.repo); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := s.InspectTypedIndexTombstoneExpiry(ctx, root); err == nil {
+					t.Fatal("absent authority")
+				}
+				if err := s.UpsertRepo(ctx, Repo{Name: f.repo}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := s.InspectTypedIndexTombstoneExpiry(ctx, root); err == nil {
+					t.Fatal("unindexed authority")
+				}
+				if err := s.SetRepoIndexed(ctx, f.repo, strings.Repeat("a", 40), time.Now()); err != nil {
+					t.Fatal(err)
+				}
+				var err error
+				f.intent, err = s.InstallTypedProfile(ctx, f.repo, f.profile, f.intent.UniverseDigest, 0)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			rctx, ledger, err := readaccounting.Start(ctx, readaccounting.Counts{StoreReadAttempts: 7})
+			if err != nil {
+				t.Fatal(err)
+			}
+			selected, err := s.InspectTypedIndexTombstoneExpiry(rctx, root)
+			counts, finish := ledger.Finish()
+			if err != nil || finish != nil || counts.StoreReadAttempts != 7 {
+				t.Fatal("selection", counts, err, finish)
+			}
+			if err = s.ExpireDrainedTypedIndexTombstone(ctx, selected); err != nil {
+				t.Fatal(err)
+			}
+			if body, e := s.typedRead(ctx, string(TypedIndexRequests), root); e != nil || body != "" {
+				t.Fatal("parent retained", body, e)
+			}
+			if _, err = s.EnqueueTypedIndex(ctx, f.repo, raw); err == nil {
+				t.Fatal("old ABA request re-admitted")
+			}
+			f.enqueue(t, "new")
+			if err = s.ExpireDrainedTypedIndexTombstone(ctx, selected); !errors.Is(err, typedindex.Stale) {
+				t.Fatal("stale replay", err)
+			}
+		})
+	}
+}
+
+func TestTypedIndexCollectionTombstoneRacesAndBounds(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := t.Context()
+	f, _, root := emptyTombstoneFixture(t, s, "expiry-races")
+	if err := s.SetRepoIndexed(ctx, f.repo, strings.Repeat("b", 40), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	selected, err := s.InspectTypedIndexTombstoneExpiry(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vars, err := tombstoneVariables(selected.collection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalSource := selected.observation.Source[0]
+	intentRaw := selected.collection.observation.Retirement.Intent
+	var desired TypedIndexIntent
+	if typedDecode(intentRaw, maxTypedIntentBytes, &desired) != nil {
+		t.Fatal("intent fixture")
+	}
+	desired.Desired = root
+	desiredRaw, err := typedEncode(desired, maxTypedIntentBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, change, undo string
+		vars               map[string]any
+	}{
+		{"source", `UPDATE $rid SET typed_source_epoch+=1 RETURN NONE;`, `UPDATE $rid SET typed_source_epoch=$epoch RETURN NONE;`, map[string]any{"rid": repoID(f.repo), "epoch": originalSource.Epoch}},
+		{"source rollback", `UPDATE $rid SET typed_source_epoch=1 RETURN NONE;`, `UPDATE $rid SET typed_source_epoch=$epoch RETURN NONE;`, map[string]any{"rid": repoID(f.repo), "epoch": originalSource.Epoch}},
+		{"source unindexed", `UPDATE $rid SET indexed_commit_hash=NONE RETURN NONE;`, `UPDATE $rid SET indexed_commit_hash=$commit RETURN NONE;`, map[string]any{"rid": repoID(f.repo), "commit": originalSource.Commit}},
+		{"intent missing", `DELETE $rid RETURN NONE;`, `CREATE ONLY $rid SET repository=$repo,body=$body RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexIntents), f.repo), "repo": f.repo, "body": intentRaw}},
+		{"source deleting", `UPDATE $rid SET deleting=true RETURN NONE;`, `UPDATE $rid SET deleting=false RETURN NONE;`, map[string]any{"rid": repoID(f.repo)}},
+		{"source malformed", `UPDATE $rid SET typed_incarnation='bad' RETURN NONE;`, `UPDATE $rid SET typed_incarnation=$incarnation RETURN NONE;`, map[string]any{"rid": repoID(f.repo), "incarnation": originalSource.Incarnation}},
+		{"intent", `UPDATE $rid SET body=$changed RETURN NONE;`, `UPDATE $rid SET body=$original RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexIntents), f.repo), "changed": intentRaw + " ", "original": intentRaw}},
+		{"inactive desired", `UPDATE $rid SET body=$changed RETURN NONE;`, `UPDATE $rid SET body=$original RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexIntents), f.repo), "changed": desiredRaw, "original": intentRaw}},
+		{"parent", `UPDATE $rid SET custody_state='live' RETURN NONE;`, `UPDATE $rid SET custody_state='collecting' RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexRequests), root)}},
+		{"attempt and held growth", `CREATE ONLY $rid SET repository=$repo,request_root=$root,control_key=$key,growth_key='typed-index',body='{}' RETURN NONE;`, `DELETE $rid RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexAttempts), typedDigest([]byte("held"))), "repo": f.repo, "root": root, "key": typedDigest([]byte("held"))}},
+		{"plan", `CREATE ONLY $rid SET repository=$repo,request_root=$root,control_key=$root,body='{}' RETURN NONE;`, `DELETE $rid RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexPlans), root), "repo": f.repo, "root": root}},
+		{"state", `CREATE ONLY $rid SET repository=$repo,body='{}' RETURN NONE;`, `DELETE $rid RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexStates), f.repo), "repo": f.repo}},
+		{"current", `CREATE ONLY $rid SET repository=$repo,body='{}' RETURN NONE;`, `DELETE $rid RETURN NONE;`, map[string]any{"rid": typedID(string(TypedIndexCurrents), f.repo), "repo": f.repo}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := s.typedWrite(ctx, tc.change, tc.vars, 1); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.ExpireDrainedTypedIndexTombstone(ctx, selected); !errors.Is(err, typedindex.Stale) {
+				t.Fatal("race accepted", err)
+			}
+			if _, err := s.InspectTypedIndexTombstoneExpiry(ctx, root); err == nil && tc.name != "source" {
+				t.Fatal("bad new observation accepted")
+			}
+			if err := s.typedWrite(ctx, tc.undo, tc.vars, 1); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := s.InspectTypedIndexTombstoneExpiry(ctx, root); err != nil {
+				t.Fatal("restored positive", err)
+			}
+		})
+	}
+	result, e := surrealdb.Query[any](ctx, s.db, typedTombstoneChunksSQL+" EXPLAIN FULL", vars)
+	if e != nil {
+		t.Fatal(e)
+	}
+	scans := 0
+	for _, op := range retentionPlanOperators(result) {
+		if strings.Contains(op.operator, "Sort") || op.operator == "UnionIndexScan" || op.operator == "Filter" {
+			t.Fatal("unbounded query", op)
+		}
+		if op.operator == "IndexScan" {
+			scans++
+			if fmt.Sprint(op.attrs["index"]) != "generation_chunk_typed_root" || fmt.Sprint(op.attrs["limit"]) != "1" {
+				t.Fatal("physical bound", op)
+			}
+		}
+	}
+	if scans != 1 {
+		t.Fatal("index scan count", scans, result)
+	}
+	accountingCtx, owner, controller := storeAccountingFixture(t, 10, 2)
+	db, native := storeAccountingDB(t, accountingCtx, owner)
+	native.call = func(_ context.Context, req *connection.RPCRequest) (any, error) {
+		statement, _ := req.Params[0].(string)
+		if !strings.Contains(statement, "IF $expiry != $expected_expiry") || !strings.Contains(statement, "DELETE $typed_root RETURN NONE") {
+			t.Fatal("recipe", statement)
+		}
+		snapshot, e := controller.Snapshot()
+		if e != nil || snapshot.Transactions != 1 || snapshot.Rows != 1 || snapshot.MaximumRows != 1 {
+			t.Fatal(snapshot, e)
+		}
+		return []surrealdb.QueryResult[any]{{Status: "OK"}}, nil
+	}
+	if err = (&Surreal{db: db, accounting: owner}).ExpireDrainedTypedIndexTombstone(accountingCtx, selected); err != nil {
+		t.Fatal(err)
+	}
+	if native.calls != 1 {
+		t.Fatal(native.calls)
+	}
+	var wg sync.WaitGroup
+	results := make(chan error, 2)
+	for range 2 {
+		wg.Go(func() { results <- s.ExpireDrainedTypedIndexTombstone(ctx, selected) })
+	}
+	wg.Wait()
+	close(results)
+	success := 0
+	for err := range results {
+		if err == nil {
+			success++
+		} else if !errors.Is(err, typedindex.Stale) {
+			t.Fatal(err)
+		}
+	}
+	if success != 1 {
+		t.Fatal("atomic winners", success)
+	}
+}
+
+func TestTypedIndexCollectionTombstoneQuotaRelease(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := t.Context()
+	f, raw, root := emptyTombstoneFixture(t, s, "expiry-quota")
+	if err := s.SetRepoIndexed(ctx, f.repo, strings.Repeat("b", 40), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	for n := range MaxTypedIndexRootsPerRepository - 1 {
+		f.enqueue(t, fmt.Sprintf("next-%d", n))
+	}
+	source, err := s.GetTypedSource(ctx, f.repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next := typedTestJSON(t, typedindex.NewRequest(source, f.profile, uint64(f.intent.ProfileEpoch), f.intent.UniverseDigest, "quota-recovered"))
+	if _, err = s.EnqueueTypedIndex(ctx, f.repo, next); !errors.Is(err, typedindex.Capacity) {
+		t.Fatal("full quota", err)
+	}
+	selected, err := s.InspectTypedIndexTombstoneExpiry(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.ExpireDrainedTypedIndexTombstone(ctx, selected); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.EnqueueTypedIndex(ctx, f.repo, raw); err == nil {
+		t.Fatal("old request readmitted")
+	}
+	if _, err = s.EnqueueTypedIndex(ctx, f.repo, next); err != nil {
+		t.Fatal("quota not released", err)
+	}
+}
+
+func TestTypedIndexCollectionTombstoneScheduler(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := t.Context()
+	f, _, root, _ := collectionFixture(t, s, "expiry-scheduler")
+	c, err := s.InspectTypedIndexCollection(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.CollectDrainedTypedIndexControls(ctx, c, c.Attempts()); err != nil {
+		t.Fatal(err)
+	}
+	f.intent, err = s.InstallTypedProfile(ctx, f.repo, f.profile, f.intent.UniverseDigest, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.InspectTypedIndexTombstoneExpiry(ctx, root); !errors.Is(err, typedindex.Stale) {
+		t.Fatal("retained schedule accepted", err)
+	}
+	// A newer retired schedule gives the existing count-retention collector its
+	// normal eligibility; expiry itself never deletes scheduler records.
+	newer := typedDigest(f.enqueue(t, "newer"))
+	spec, err := s.TypedIndexSchedule(ctx, f.repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.EnqueueGenerationSchedule(ctx, spec); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.CancelTypedIndex(ctx, f.repo, newer); err != nil {
+		t.Fatal(err)
+	}
+	retired, err := s.InspectTypedIndexRetirement(ctx, newer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.BeginTypedIndexRetirement(ctx, retired); err != nil {
+		t.Fatal(err)
+	}
+	sweep, err := s.SweepGenerationScheduleLifecycle(ctx, "", 64, 16, 1)
+	if err != nil || sweep.Deleted != 2 {
+		t.Fatal("normal scheduler drainage", sweep, err)
+	}
+	selected, err := s.InspectTypedIndexTombstoneExpiry(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The selected root has no schedule; a forged stale current reference must
+	// still invalidate the transaction and independently refuse new selection.
+	vars, err := tombstoneVariables(selected.collection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := generationScheduleDigest(GenerationScheduleSpec{Repository: f.repo, Stage: TypedIndexScheduleStage, Generation: root, ResourceClass: GenerationResourceTypedIndex, TotalItems: 1, ChunkItems: 1, MaxAttempts: 3, RepositoryTokens: 1})
+	vars["repository"], vars["digest"] = f.repo, digest
+	if err = s.typedWrite(ctx, `CREATE ONLY $schedule_current SET repository=$repository,stage='typed-index',generation=$root,schedule_digest=$digest,updated_at=time::now() RETURN NONE;`, vars, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.ExpireDrainedTypedIndexTombstone(ctx, selected); !errors.Is(err, typedindex.Stale) {
+		t.Fatal("scheduler race", err)
+	}
+	if _, err = s.InspectTypedIndexTombstoneExpiry(ctx, root); !errors.Is(err, typedindex.Stale) {
+		t.Fatal("scheduler reference", err)
+	}
+	if err = s.typedWrite(ctx, `DELETE $schedule_current RETURN NONE;`, vars, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.ExpireDrainedTypedIndexTombstone(ctx, selected); err != nil {
+		t.Fatal("restored positive", err)
+	}
+	if body, e := s.typedRead(ctx, string(TypedIndexRequests), newer); e != nil || body == "" {
+		t.Fatal("newer root removed", body, e)
 	}
 }

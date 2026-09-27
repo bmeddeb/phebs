@@ -253,6 +253,14 @@ and the real database fixture. The parent independently repeated the check with
 unchanged source and verified empty test custody. It reused existing compiler
 bytes with unchanged host Go; native clock/privileged/cold/target gates remain open.
 
+Empty collecting-parent expiry now requires permanently obsolete source/profile
+authority plus absence of every selected control/scheduler reference. Independent
+review and real database ABA, race, index/accounting and64-root quota recovery
+gates pass. Still-admissible canceled roots retain replay protection; missing or
+uncertain authority remains held. Physical drainage and runtime lifecycle wiring
+remain mandatory and are not inferred from these database checks.
+
+
 Local worker prerequisite (2026-09-27): a versioned adapter for the exact pinned
 scip-go0.2.7 preserves all blank-declaration metadata while assigning deterministic
 document-local identities only after proving no references across the complete

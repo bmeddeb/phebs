@@ -7469,3 +7469,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and fan-out each preserve two adapted records and all other metadata. Proto
   still refuses its unmapped generated path. No tool/target run or historical
   evidence rewrite occurred; worker/persistence/provider integration remains open.
+
+- **2026-09-27 — T45.4 expire permanently obsolete collecting parents.**
+  Empty collecting tombstones may expire only after original authority can no
+  longer be admitted: a fresh server-generated incarnation, or strictly higher
+  source/profile epoch with equal-epoch identities still exact. Cancellation,
+  changed idempotency or missing/deleting/unindexed/malformed authority never
+  qualifies. Source/profile ABA remains fenced by monotonic counters; restore
+  removes derived controls before resetting authority. The exact current source,
+  intent/profile, collection and scheduler observations are repeated atomically
+  before deleting one parent. Native drainage and complete global census remain
+  explicit caller obligations, even for empty rows.
+
+  Attempts, plan, successor, selected-root state/current/desired, deterministic
+  schedule, any-status typed chunks and schedule-current references must be
+  absent. Existing scheduler retention removes its own rows first; this API
+  changes neither its policy nor another root. One obsolete deletion recovers
+  one existing64-root quota slot. Still-admissible canceled roots remain held.
+  Exact int64 epochs survive SDK parameter encoding above2^53.
+
+  **Cost.** Inspection adds one coherent read to collection:7–8 SDK calls,
+ 31–32 point selections and8 bounded indexed probes overall. Delete repeats
+ 12 points and four probes (running1, requests3, attempts65, any-status chunk1)
+  in one transaction with one mutation operand. A conservative cumulative body
+  bound is924KiB before scalar/JSON/SDK overhead; bounded typed/CAS copies coexist.
+  No new schema, filesystem/hash work, child, cache or lock. Future caller holds
+  the existing lifecycle guard; no registered request/startup/idle work changes.
+
+  Independent exact-source/cost review and parent real-store gates pass, including
+  source/profile ABA, remove/readd, stale/concurrent snapshots, exact large epoch,
+  actual scheduler drainage, pushed-limit index proof and quota recovery. Affected
+  normal/race, host/Linux vet/lint, docs and glossary pass. Full physical/runtime
+  lifecycle integration remains open.
