@@ -24,7 +24,17 @@ var rulesFiles = [...]struct {
 	{"f0ea14c601a983d77cd58e400d38ce4188af94e948b2bd8c37a633b913487030", 400},
 }
 
+// productionHelperMain is the fixed expected main identity for the managed
+// helper and native driver. Production verification never accepts a caller-
+// supplied value; only the package-local preparation test overrides it through
+// the unexported seam below to supply its own observed build main.
+const productionHelperMain = "github.com/bmeddeb/phebs/cmd/phebs"
+
 func verifyTools(ctx context.Context, i Invocation) error {
+	return verifyToolsWithHelperMain(ctx, i, productionHelperMain)
+}
+
+func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain string) error {
 	p := i.Profile.Definition()
 	helper, e := inventoryFile(i.Inventory, typedindex.ManagedHelperFile)
 	if e != nil || !helper.Executable || p.Tools.Planner.Digest != helper.Digest || p.Tools.Launcher.Digest != helper.Digest || p.Tools.RulesGo.Digest != "sha256:"+rulesArchive {
@@ -60,8 +70,8 @@ func verifyTools(ctx context.Context, i Invocation) error {
 		path, digest, main string
 		typed              bool
 	}{
-		{typedindex.ManagedHelperFile, helper.Digest, "github.com/bmeddeb/phebs/cmd/phebs", false},
-		{"tools/bin/phebs-t451b-native-driver", helper.Digest, "github.com/bmeddeb/phebs/cmd/phebs", false},
+		{typedindex.ManagedHelperFile, helper.Digest, helperMain, false},
+		{"tools/bin/phebs-t451b-native-driver", helper.Digest, helperMain, false},
 		{"tools/bin/t451b-native-probe", "", "phebs.local/t451b-native-probe", true},
 		{"tools/bin/scip-go", SCIPDigest, "github.com/scip-code/scip-go/cmd/scip-go", true},
 		{"tools/go/bin/go", GoDigest, "cmd/go", false},
