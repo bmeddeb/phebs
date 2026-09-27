@@ -7838,3 +7838,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   census relations plus legacy golden bytes. The successful checked terminal
   and controller branch remain the next prerequisite; this contract alone does
   not make canary/dry-run or the provider available. Native gates remain open.
+
+- **2026-09-27 — T45.6 provision exact Bazel selection and report posture.**
+  A pure trusted builder consumes explicit roots and independently reviewed
+  configured-query/action-query/projection evidence. It reuses the owned planner
+  and the worker's shared target/source mapping, emits canonical Selection-v1
+  bytes plus the universe digest, and binds source documents to the supplied
+  immutable inventory. Selection is inserted before final inventory/profile
+  sealing; no self-referential inventory digest or worker-derived universe is
+  invented. Content checks do not prove native provenance of supplied evidence.
+
+  Preflight returns at most4KiB of fixed inventory/profile/root identities and
+  MODULE/lock/WORKSPACE/go.mod facts. Source-inventory policy means presence and
+  byte limits; declared-profile policy preserves the existing pin predicate.
+  Runtime compatibility remains explicitly unobserved. No Starlark inference,
+  recursive discovery, filesystem read, tool invocation or registration is added.
+
+  **Cost.** Explicit provisioning performs one existing bounded planner assembly,
+  shared row/source derivation, sorting and canonical encoding. It retains the
+  existing64MiB cquery/aquery and aggregate projection ceilings, then applies the
+  typed graph/selection bounds. Inventory.Files clones at most50,000 records;
+  source/document maps and encoded copies remain bounded. Configured-root lookup
+  scans targets for at most64 roots. Existing assembly cannot be canceled midway;
+  context checks surround it and new traversals. Preflight scans one inventory
+  clone with five fixed comparisons and sorts cloned roots. No new query, sync,
+  startup, retry, publication, lock, child or persistent-cache work occurs.
+
+  Independent source/cost review and parent full provider normal/race,
+  host/Linux vet/lint and documentation pass. Neutral raw-wire tests cover
+  aliases, transitions, order invariance, hostile graph/source inputs and bounds.
+  Tool identities and valid legacy worker mapping remain exact. Automatic source
+  refresh, successful checked workflow and native/provider availability remain
+  separately gated.

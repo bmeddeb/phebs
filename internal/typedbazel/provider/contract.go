@@ -137,12 +137,19 @@ func (i Invocation) validate(ctx context.Context) error {
 	default:
 		return typedindex.Invalid
 	}
-	p := i.Profile.Definition()
-	if p.RCDigest != "" || p.Tools.Bazel.Digest != BazelDigest || p.Tools.Bazel.Version != "9.0.0" || p.Tools.Go.Digest != GoDigest || p.Tools.Go.Version != "1.25.0" || p.Tools.Driver.Digest != "sha256:"+launcher.NativeDriverSHA256 || p.Tools.RulesGo.Version != "0.59.0" || p.Tools.Indexer.Digest != SCIPDigest || p.Tools.Indexer.Version != "0.2.7" {
+	if !pinnedProfile(i.Profile) {
 		return typedindex.Unsupported
 	}
 	return nil
 }
+
+// pinnedProfile checks only the existing declared pin policy. Actual executable,
+// SDK and resolved rules identity remain the worker's separate physical proofs.
+func pinnedProfile(profile typedindex.Profile) bool {
+	p := profile.Definition()
+	return p.RCDigest == "" && p.Tools.Bazel.Digest == BazelDigest && p.Tools.Bazel.Version == "9.0.0" && p.Tools.Go.Digest == GoDigest && p.Tools.Go.Version == "1.25.0" && p.Tools.Driver.Digest == "sha256:"+launcher.NativeDriverSHA256 && p.Tools.RulesGo.Version == "0.59.0" && p.Tools.Indexer.Digest == SCIPDigest && p.Tools.Indexer.Version == "0.2.7"
+}
+
 func classify(err error) error {
 	if err == nil {
 		return nil

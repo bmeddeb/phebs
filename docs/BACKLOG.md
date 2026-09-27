@@ -15163,6 +15163,13 @@ independent source/cost review pass, with legacy v1 bytes unchanged. Successful
 checked outcomes/controller workflow and fresh native proof remain open;
 canary/dry-run availability is not claimed by this contract.
 
+Trusted pure Bazel provisioning now builds canonical presealed selection from
+explicit roots and independently reviewed planner evidence, sharing the worker's
+source/target checks. Bounded preflight reports inventory posture and declared
+profile policy separately from unobserved runtime compatibility. Parent provider
+normal/race, host/Linux vet/lint and independent source/cost review pass. These
+operations perform no target/tool execution and do not enable the provider.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

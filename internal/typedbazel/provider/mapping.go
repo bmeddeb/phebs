@@ -3,11 +3,9 @@ package provider
 import (
 	"context"
 	"encoding/json"
-	"net/url"
 	"path"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
@@ -31,8 +29,7 @@ func bindSelection(ctx context.Context, i Invocation, raw []byte) (Selection, er
 	if _, e = planner.NativeCommands(s.Roots); e != nil {
 		return s, typedindex.Invalid
 	}
-	u, e := url.Parse(s.Remote)
-	if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || len(s.Remote) > 4096 || s.Module == "" || len(s.Module) > 4096 || strings.ContainsAny(s.Module, "\\\x00\r\n \t") || strings.ContainsAny(s.Remote, "\x00\r\n") {
+	if !selectionLocation(s.Module, s.Remote) {
 		return s, typedindex.Invalid
 	}
 	previous := ""
@@ -69,34 +66,15 @@ func targetID(c planner.Configured) string { return identity(c) }
 // root-package compiled Go documents are SCIP members; dependencies remain load
 // units. Omitted generated documents are explicit observations, not exclusions.
 func mapPlan(ctx context.Context, i Invocation, s Selection, p planner.Plan, roots []planner.Configured) (typedindex.PackagePlan, []DocumentOutcome, []typedindex.UnitOutcome, error) {
-	if len(p.Units) > typedindex.MaxBundleUnits || len(p.Targets) > typedindex.MaxBundleTargets || len(p.Documents) > planner.MaxDocuments {
-		return typedindex.PackagePlan{}, nil, nil, typedindex.Capacity
+	rows, e := mappedTargets(ctx, p)
+	if e != nil {
+		return typedindex.PackagePlan{}, nil, nil, e
 	}
-	if p.Version != planner.PlanV2 {
-		return typedindex.PackagePlan{}, nil, nil, typedindex.Invalid
+	docs, e := mappedSources(ctx, i.Inventory, p)
+	if e != nil {
+		return typedindex.PackagePlan{}, nil, nil, e
 	}
-	d := typedindex.PackagePlanDefinition{Schema: typedindex.PackagePlanSchema, ParentRequestDigest: i.Parent.Digest(), Targets: []typedindex.PlannedTarget{}, Units: []typedindex.PlannedUnit{}, Documents: []typedindex.PlannedDocument{}}
-	remainingEdges := typedindex.MaxBundleEdges
-	for _, t := range p.Targets {
-		n := len(t.Inputs) + len(t.Units)
-		if n > remainingEdges {
-			return typedindex.PackagePlan{}, nil, nil, typedindex.Capacity
-		}
-		remainingEdges -= n
-	}
-	for _, u := range p.Units {
-		if len(u.Imports) > remainingEdges {
-			return typedindex.PackagePlan{}, nil, nil, typedindex.Capacity
-		}
-		remainingEdges -= len(u.Imports)
-	}
-	sources := map[string]typedindex.BundleFile{}
-	for _, f := range i.Inventory.Files() {
-		if strings.HasPrefix(f.Path, "source/") {
-			sources[strings.TrimPrefix(f.Path, "source/")] = f
-		}
-	}
-	docs := map[string]planner.Document{}
+	d := typedindex.PackagePlanDefinition{Schema: typedindex.PackagePlanSchema, ParentRequestDigest: i.Parent.Digest(), Targets: rows, Units: []typedindex.PlannedUnit{}, Documents: []typedindex.PlannedDocument{}}
 	rootUnits := map[string]bool{}
 	testUnits := map[string]bool{}
 	for _, t := range p.Targets {
@@ -111,35 +89,6 @@ func mapPlan(ctx context.Context, i Invocation, s Selection, p planner.Plan, roo
 			}
 		}
 	}
-	for _, doc := range p.Documents {
-		if e := ctx.Err(); e != nil {
-			return typedindex.PackagePlan{}, nil, nil, e
-		}
-		if doc.Kind == "source" {
-			f, ok := sources[doc.Path]
-			if !ok || doc.Repository != "" || doc.ExecPath != doc.Path || f.Bytes != int64(doc.Bytes) || f.Digest != "sha256:"+doc.SHA256 {
-				return typedindex.PackagePlan{}, nil, nil, typedindex.Stale
-			}
-		}
-		docs[doc.ID] = doc
-	}
-	for _, t := range p.Targets {
-		row := typedindex.PlannedTarget{ID: targetID(t.Configured), Dependencies: []string{}, Units: []typedindex.PackageUnitID{}, Test: t.Kind == "go_test"}
-		for _, dep := range t.Inputs {
-			row.Dependencies = append(row.Dependencies, targetID(dep))
-		}
-		for _, id := range t.Units {
-			v, e := unitID(id)
-			if e != nil {
-				return typedindex.PackagePlan{}, nil, nil, e
-			}
-			row.Units = append(row.Units, v)
-		}
-		slices.Sort(row.Dependencies)
-		slices.Sort(row.Units)
-		d.Targets = append(d.Targets, row)
-	}
-	slices.SortFunc(d.Targets, func(a, b typedindex.PlannedTarget) int { return strings.Compare(a.ID, b.ID) })
 	if identity(d.Targets) != identity(s.Targets) {
 		return typedindex.PackagePlan{}, nil, nil, typedindex.Stale
 	}
