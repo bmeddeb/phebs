@@ -848,6 +848,15 @@ func restoreReplayOwnedName(name string, path bool) bool {
 }
 
 func restoreReplayOwnedDefinition(line string) bool {
+	// Native 3.2.0 declarations added by typed-index precious intent/source
+	// authority. Match whole recipes: this does not admit arbitrary byte-bound
+	// expressions or transport the excluded derived typed-control tables.
+	switch line {
+	case "DEFINE FIELD OVERWRITE typed_source_epoch ON repo TYPE none | int ASSERT $value = NONE OR $value > 0 PERMISSIONS FULL;",
+		"DEFINE FIELD OVERWRITE body ON typed_index_intent TYPE string ASSERT bytes::len(<bytes> $value) <= 24576 PERMISSIONS FULL;",
+		"DEFINE FIELD OVERWRITE repository ON typed_index_intent TYPE string ASSERT bytes::len(<bytes> $value) <= 512 PERMISSIONS FULL;":
+		return true
+	}
 	if rest, ok := strings.CutPrefix(line, "DEFINE TABLE "); ok {
 		name, tail, ok := strings.Cut(rest, " TYPE ")
 		return ok && restoreReplayOwnedName(name, false) &&

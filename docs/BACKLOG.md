@@ -15055,6 +15055,12 @@ Independent review, host/Linux checks and exact-source Linux race pass. The
 binary dispatch, complete controller execution and privileged native proof remain
 open; no provider is registered by this prerequisite.
 
+The strict native backup replay recognizer now accepts the exact new precious
+source/intent declarations. The actual backup regression exercises strict stream
+preflight and traversal before restore instead of relying on ordinary fallback.
+Independent review preserves old recipes, unknown refusal and derived exclusions;
+this correction does not close native executor or runtime-registration gates.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

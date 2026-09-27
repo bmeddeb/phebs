@@ -276,6 +276,10 @@ uncertain authority remains held. Physical drainage and runtime lifecycle wiring
 remain mandatory and are not inferred from these database checks.
 
 
+Strict native backup replay now recognizes the exact new precious typed schema;
+its real backup regression no longer lets ordinary fallback hide missing recipes.
+Derived exclusions and unavailable-on-restore authority remain unchanged.
+
 Local worker prerequisite (2026-09-27): a versioned adapter for the exact pinned
 scip-go0.2.7 preserves all blank-declaration metadata while assigning deterministic
 document-local identities only after proving no references across the complete

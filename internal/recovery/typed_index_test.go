@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,6 +35,49 @@ func TestTypedIndexManifestVersions(t *testing.T) {
 		}
 		if err := validateManifest(m); err == nil {
 			t.Fatal("accepted a recipe from the other manifest version")
+		}
+	}
+}
+
+func TestTypedIndexOwnedReplayDeclarations(t *testing.T) {
+	// The pre-existing generic nonnegative optional-int recipe stays readable.
+	legacy := "DEFINE FIELD OVERWRITE old_epoch ON repo TYPE none | int ASSERT $value = NONE OR $value >= 0 PERMISSIONS FULL;"
+	path, artifact := restoreReplayTestArtifact(t, "OPTION IMPORT;\n"+legacy+"\n")
+	prepared, err := prepareRestoreReplay(t.Context(), path, artifact)
+	if err != nil {
+		t.Fatal("legacy recipe refused", err)
+	}
+	if err := prepared.close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, declaration := range []string{
+		"DEFINE FIELD OVERWRITE typed_source_epoch ON repo TYPE none | int ASSERT $value = NONE OR $value > 0 PERMISSIONS FULL;",
+		"DEFINE FIELD OVERWRITE body ON typed_index_intent TYPE string ASSERT bytes::len(<bytes> $value) <= 24576 PERMISSIONS FULL;",
+		"DEFINE FIELD OVERWRITE repository ON typed_index_intent TYPE string ASSERT bytes::len(<bytes> $value) <= 512 PERMISSIONS FULL;",
+	} {
+		for _, changed := range []string{
+			declaration,
+			strings.Replace(declaration, " ON ", " ON wrong_", 1),
+			strings.Replace(declaration, " OVERWRITE ", " OVERWRITE wrong_", 1),
+			strings.Replace(declaration, " ASSERT ", " ASSERT false AND ", 1),
+			strings.Replace(declaration, " PERMISSIONS FULL;", " OR true PERMISSIONS FULL;", 1),
+			strings.NewReplacer("> 0", "> 1", "<= 24576", "<= 24577", "<= 512", "<= 513").Replace(declaration),
+		} {
+			path, artifact := restoreReplayTestArtifact(t, "OPTION IMPORT;\n"+changed+"\n")
+			prepared, err := prepareRestoreReplay(t.Context(), path, artifact)
+			if changed == declaration {
+				if err != nil {
+					t.Fatal("owned declaration refused", err)
+				}
+				if err := prepared.close(); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				var unsupported *restoreReplayUnsupported
+				if prepared != nil || !errors.As(err, &unsupported) {
+					t.Fatalf("changed declaration admitted: %q: %v", changed, err)
+				}
+			}
 		}
 	}
 }
@@ -134,6 +178,32 @@ func TestTypedIndexRegenerateOnRestore(t *testing.T) {
 		if strings.Contains(string(export), table) {
 			t.Fatalf("derived table %s traveled in backup", table)
 		}
+	}
+	// Exercise the strict selected path as well as ordinary restore's native
+	// fallback. New precious schema must be recognized before any replay starts.
+	var database Artifact
+	for _, artifact := range manifest.Inventory {
+		if artifact.Path == DatabaseName {
+			database = artifact
+		}
+	}
+	prepared, err := prepareRestoreReplay(ctx, filepath.Join(backup, DatabaseName), database)
+	if err != nil {
+		t.Fatal("new backup strict replay preflight", err)
+	}
+	defer func() { _ = prepared.close() }()
+	for {
+		if _, err := prepared.next(ctx); errors.Is(err, io.EOF) {
+			break
+		} else if err != nil {
+			t.Fatal("new backup strict replay", err)
+		}
+	}
+	if prepared.census.Definitions == 0 || prepared.census.Records == 0 {
+		t.Fatal("empty native replay proof")
+	}
+	if err := prepared.close(); err != nil {
+		t.Fatal(err)
 	}
 	for _, artifact := range manifest.Inventory {
 		b, err := os.ReadFile(filepath.Join(backup, artifact.Path))

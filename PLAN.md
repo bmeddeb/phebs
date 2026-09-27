@@ -7616,3 +7616,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
  803385dd preserves all seven legacy fixture output identities. Supervisor
   success, joined cleanup, current authority/CAS and fresh native feasibility
   remain controller/validation obligations; no provider is registered here.
+
+- **2026-09-27 — T45.4 preserve strict native backup replay for typed intent.**
+  Selected backup's archive-evidence parser rejected the new precious typed
+  declarations although ordinary backup/restore could use native fallback.
+  Recognize only the three exact SurrealDB3.2.0 statements for positive optional
+  source epoch and bounded intent body/repository fields. The existing legacy
+  grammar, unknown-expression refusal, derived-table exclusions and unavailable
+  restored authority remain unchanged. The real typed backup regression now
+  traverses the complete strict stream before restore, so fallback cannot hide
+  another schema-recognition regression.
+
+  **Cost.** One fixed three-string comparison in existing declaration passes;
+  no additional runtime scan, child, I/O, allocation collection, lock or cache.
+  Query, startup, sync, retry/no-op and publication work stay unchanged. Fresh
+  neutral export recipes and independent code/cost review support this narrow
+  correction; parent normal/race, selected command integration, host/Linux vet,
+  lint, docs and glossary pass. No historical
+  evidence, execution cap, target or provider-registration claim changes.
