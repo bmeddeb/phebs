@@ -15023,6 +15023,12 @@ allowance. Independent review corrected timeout-evidence loss; parent host/Linux
 checks and affected race/vet/lint pass. Native common-clock and cold-replay proof,
 Linux race and complete controller sequencing remain open.
 
+Post-drain store collection now atomically rechecks exact child snapshots and
+protected references before bounded cleanup. Independent review and real database,
+race, index/accounting and vet/lint gates pass. The collecting parent tombstone
+remains quota-accounted; physical drainage, obsolete-tombstone policy and runtime
+lifecycle integration are separate requirements.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

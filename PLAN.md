@@ -7366,3 +7366,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   re-review pass. Native common-time-namespace proof is mandatory: a later
   namespace check cannot repair an offset bootstrap timer. Two-cold-run feasibility,
   Linux race and controller sequencing remain separate open integration gates.
+
+- **2026-09-27 — T45.4 bounded post-drain control collection.**
+  An opaque coherent database selection binds one already-collecting root and
+  its exact children. After independently proving native quiescence, zero future
+  growth and complete physical drainage under the shared lifecycle guard, the
+  controller may delete that selected plan, successor, attempts and owned state
+  atomically. Current, active desired and running references protect the root;
+  changed bodies/projections/new children refuse. Inactive desired is cleared
+  only for the collected root; the collecting parent remains an irreversible
+  quota-accounted tombstone. This does not implement tombstone expiry or grant
+  deletion authority from database absence or an empty attempt list.
+
+  **Cost.** Inspection performs6–7 bounded SDK reads: four retirement reads,
+  state, optional state owner and one coherent snapshot. Child indexes admit
+  at most3 request rows and65 attempt rows with overflow sentinels; valid-body
+  replies are bounded to462KiB before SDK/JSON/scalar overhead. Typed and
+  normalized CAS copies coexist. Parent/successor validation runs once.
+  Mutation repeats exact selection/protection in one transaction with at most68
+  operands; empty replay is a read fence. No schema, filesystem/hash work,
+  child process or new process lock. Future caller holds the existing lifecycle
+  guard through these bounded reads/write; no registered product work is added.
+
+  Independent review, parent actual database tests, affected race, host/Linux
+  vet and lint pass. Actual physical cleanup and full lifecycle registration
+  remain open; the tests assert no native authority.
