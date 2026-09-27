@@ -36,6 +36,7 @@ type cacheEntry struct {
 	loadErr         error
 	bytes           int64
 	element         *list.Element
+	finish          func(context.Context, bool) error
 }
 
 type typedIndexBinding struct {
@@ -60,7 +61,9 @@ type Service struct {
 	lru        *list.List
 	cacheBytes int64
 
-	repoLocks [64]sync.Mutex
+	repoLocks      [64]sync.Mutex
+	routed         *routedCache
+	routedResolver RoutedResolver
 }
 
 func New(opts Options) *Service {
@@ -84,8 +87,13 @@ func New(opts Options) *Service {
 	if maxCacheBytes <= 0 {
 		maxCacheBytes = DefaultMaxCacheBytes
 	}
+	var routed *routedCache
+	if opts.RoutedResolver != nil {
+		routed = newRoutedCache(opts)
+	}
 	return &Service{
-		dataDir:             opts.DataDir,
+		dataDir: opts.DataDir,
+		routed:  routed, routedResolver: opts.RoutedResolver,
 		indexPath:           indexPath,
 		bindingResolver:     opts.BindingResolver,
 		maxIndexBytes:       maxBytes,
@@ -105,6 +113,24 @@ func (s *Service) Ingest(ctx context.Context, repo, revision string) (Availabili
 	if err != nil {
 		return Availability{}, err
 	}
+	if s.routedResolver != nil {
+		q := Query{Repo: repo, Revision: revision}
+		entry, _, _, _, selected, e := s.resolveRouted(ctx, q)
+		if e != nil {
+			return Availability{}, e
+		}
+		if selected {
+			if e = s.finishQuery(ctx, entry, q, true); e != nil {
+				return Availability{}, e
+			}
+			a := Availability{Repo: repo, Revision: revision, Available: entry.index != nil}
+			if entry.index != nil {
+				a.Documents = entry.index.documentCount
+				a.Occurrences = entry.index.retainedOccurrences
+			}
+			return a, nil
+		}
+	}
 	binding, err := s.resolveTypedIndex(ctx, repo, revision)
 	if err != nil {
 		return Availability{}, err
@@ -117,12 +143,7 @@ func (s *Service) Ingest(ctx context.Context, repo, revision string) (Availabili
 	if err != nil {
 		return Availability{}, err
 	}
-	if err := s.validateResultBinding(
-		ctx,
-		repo,
-		revision,
-		binding.identity,
-	); err != nil {
+	if err := s.finishQuery(ctx, cacheEntry{bindingIdentity: binding.identity}, Query{Repo: repo, Revision: revision}, true); err != nil {
 		return Availability{}, err
 	}
 	return availability, nil
@@ -222,6 +243,9 @@ func (s *Service) Remove(repo string) error {
 	lock.Lock()
 	defer lock.Unlock()
 	s.deleteEntry(repo)
+	if s.routed != nil {
+		s.routed.remove(repo)
+	}
 	return nil
 }
 
@@ -234,15 +258,7 @@ func (s *Service) Definition(
 		return DefinitionResult{}, err
 	}
 	defer func() {
-		if resultErr != nil {
-			return
-		}
-		if err := s.validateResultBinding(
-			ctx,
-			q.Repo,
-			q.Revision,
-			entry.bindingIdentity,
-		); err != nil {
+		if err := s.finishQuery(ctx, entry, q, resultErr == nil); err != nil && resultErr == nil {
 			result = DefinitionResult{}
 			resultErr = err
 		}
@@ -284,15 +300,7 @@ func (s *Service) References(
 		return ReferencesResult{}, err
 	}
 	defer func() {
-		if resultErr != nil {
-			return
-		}
-		if err := s.validateResultBinding(
-			ctx,
-			q.Repo,
-			q.Revision,
-			entry.bindingIdentity,
-		); err != nil {
+		if err := s.finishQuery(ctx, entry, q, resultErr == nil); err != nil && resultErr == nil {
 			result = ReferencesResult{}
 			resultErr = err
 		}
@@ -336,15 +344,7 @@ func (s *Service) Hover(
 		return HoverResult{}, err
 	}
 	defer func() {
-		if resultErr != nil {
-			return
-		}
-		if err := s.validateResultBinding(
-			ctx,
-			q.Repo,
-			q.Revision,
-			entry.bindingIdentity,
-		); err != nil {
+		if err := s.finishQuery(ctx, entry, q, resultErr == nil); err != nil && resultErr == nil {
 			result = HoverResult{}
 			resultErr = err
 		}
@@ -410,6 +410,12 @@ func (s *Service) resolve(ctx context.Context, q Query) (Query, cacheEntry, *doc
 	q.Encoding, err = normalizeEncoding(q.Encoding)
 	if err != nil {
 		return Query{}, cacheEntry{}, nil, nil, nil, err
+	}
+	if s.routedResolver != nil {
+		entry, doc, occurrence, converter, selected, err := s.resolveRouted(ctx, q)
+		if selected || err != nil {
+			return q, entry, doc, occurrence, converter, err
+		}
 	}
 	entry, err := s.ensure(ctx, q.Repo, q.Revision)
 	if err != nil || entry.index == nil {

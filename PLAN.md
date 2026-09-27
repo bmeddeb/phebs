@@ -7691,3 +7691,43 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   filesystem/controller and race gates pass. Neutral tests substitute native
   operations explicitly; privileged containment, common-clock deployment,
   two cold phases within measured caps and target compatibility remain unproved.
+
+- **2026-09-27 — T45.5 authenticate routes and cache selected SCIP members.**
+  An optional trusted current resolver selects a complete generated publication;
+  selected-but-unavailable never falls back to committed SCIP. Decode only
+  root/attempt/document/symbol controls under already-admitted store authority,
+  then verify and parse selected members. Publication-time complete validation
+  remains mandatory. Workspace opens acquire base then attempt pins, validate
+  exact owner custody, release the base and retain the attempt through source
+  reads and final current revalidation. Generated reads use sealed bytes;
+  ordinary reads keep immutable Git authority. Idle caches retain no pins.
+
+  Definition, references and hover reuse existing parsing, relationships, range
+  conversion and deterministic limits. Explicit Ingest force-loads at most four
+  members and reports retained navigable occurrences, including legacy handling
+  of symbol-empty records. Physical read failures retry; deterministic malformed
+  members cache independently. Exact custody/root keys isolate replacements.
+  Remove invalidates in-flight cold construction with one global generation,
+  conservatively refusing overlapping unrelated cold construction without a
+  per-repository map. Active retired entries remain charged until release.
+
+  **Cost.** No configured resolver allocates no routed cache or background work.
+  Configured fallback adds selection and final scalar lookups. One cancellable
+  cold slot bounds decode concurrency; warm opens bypass it. Cold metadata reads
+  a receipt up to67,025,920 bytes and four controls (4KiB root, up to2MiB each
+  for attempt/documents/symbols), without reading every member or the plan.
+  Cold selected members repeat bounded hash/canonical/protobuf passes; warm
+  members do not. Retained LRU defaults64MiB/64entries separately from the legacy
+  cache; active queries default4, maximum16. Transient decode, query views and
+  per-query32MiB source conversion coexist outside retained-cache accounting;
+  these are ceilings, not measured RSS. Selected fan-out remains at most4members
+  and8MiB aggregate SCIP. Warm workspace opens check the small owner/root inode
+  before selected source reads. Startup, sync, publication and children remain
+  unregistered and unchanged; retries reacquire physical/current authority.
+
+  Independent source/cost review and parent full portable normal/race plus actual
+  Linux routed-workspace/concrete-adapter race gates pass. Cross-member and
+  generated Unicode fixtures match a monolithic oracle; corruption, invalidation,
+  cancellation and pin/retirement checks fail closed. Runtime store-to-reader
+  composition and native/provider gates remain open. Generated SCIP still feeds
+  no evidence consumer.

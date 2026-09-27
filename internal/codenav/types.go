@@ -180,9 +180,13 @@ func (resolve TypedIndexResolveFunc) ResolveTypedIndex(
 }
 
 type Options struct {
-	DataDir         string // bare mirrors live beneath DataDir/repos
-	IndexPath       string // repository-relative; defaults to index.scip
-	BindingResolver TypedIndexResolver
+	DataDir               string // bare mirrors live beneath DataDir/repos
+	IndexPath             string // repository-relative; defaults to index.scip
+	BindingResolver       TypedIndexResolver
+	RoutedResolver        RoutedResolver
+	MaxRoutedCacheBytes   int64 // independent metadata/member LRU; defaults to 64 MiB
+	MaxRoutedCacheEntries int   // defaults to 64; active entries remain charged
+	MaxRoutedQueries      int   // defaults to 4, maximum 16 active cold/warm lookups
 
 	MaxIndexBytes       int64 // maximum committed SCIP protobuf size
 	MaxSourceBytes      int64 // maximum source blob used for range conversion

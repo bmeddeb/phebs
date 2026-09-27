@@ -20,6 +20,7 @@ func (c *rangeConverter) position(filePath string, line, character int32, from, 
 
 type rangeConverter struct {
 	service             *Service
+	readSource          func(context.Context, string, int64) ([]byte, error)
 	ctx                 context.Context
 	repo                string
 	revision            string
@@ -80,7 +81,13 @@ func (c *rangeConverter) source(filePath string) ([]byte, error) {
 	if source, ok := c.sources[filePath]; ok {
 		return source, nil
 	}
-	source, err := c.service.readBlob(c.ctx, c.repo, c.revision, filePath, c.maxSourceBytes, ErrSourceTooLarge)
+	var source []byte
+	var err error
+	if c.readSource != nil {
+		source, err = c.readSource(c.ctx, filePath, c.maxSourceBytes)
+	} else {
+		source, err = c.service.readBlob(c.ctx, c.repo, c.revision, filePath, c.maxSourceBytes, ErrSourceTooLarge)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("read %s for range conversion: %w", filePath, err)
 	}
