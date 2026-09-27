@@ -27,6 +27,7 @@ func bundleFixture(t *testing.T) bundleFixtureData {
 	ctx := context.Background()
 	profile, auth, request, _ := fixture(t)
 	pd := profile.Definition()
+	pd.Schema, pd.Config = GeneratedProfileSchema, GeneratedConfig()
 	pd.Tools.Indexer.Version = "0.2.7"
 	var profileErr error
 	profile, profileErr = DecodeProfile(ctx, wire(t, pd))
@@ -603,4 +604,97 @@ func TestBundleMeasuredEnvelope(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("neutral maximum configured-target/unit counts: targets=%d units=%d encoded_plan=%d bytes", len(d.Targets), len(d.Units), len(enlarged.plan.Bytes()))
+}
+
+func TestReducedProfileRefusesGeneratedAuthority(t *testing.T) {
+	ctx := t.Context()
+	f := bundleFixture(t)
+	original := buildFixture(t, f)
+	d := f.parent.profile.Definition()
+	d.Schema, d.Config = ProfileSchema, ReducedConfig()
+	profile, err := DecodeProfile(ctx, wire(t, d))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := NewRequest(f.parent.Request().Source, profile, f.parent.Request().ProfileEpoch, f.parent.Request().UniverseDigest, f.parent.Request().IdempotencyKey)
+	authority := Authority{Enabled: true, Administrator: true, Source: request.Source, Profile: Epoch{Number: request.ProfileEpoch, Digest: profile.Digest()}, UniverseDigest: request.UniverseDigest}
+	parent := admit(t, profile, authority, request)
+	definition := f.plan.definition
+	definition.ParentRequestDigest = parent.Digest()
+	raw := wire(t, definition)
+	if _, err = SealPackagePlan(ctx, parent, definition); !errors.Is(err, Unsupported) {
+		t.Fatalf("omit plan: %v", err)
+	}
+	if _, err = DecodePackagePlan(ctx, parent, raw, hash(raw)); !errors.Is(err, Unsupported) {
+		t.Fatalf("omit decoded plan: %v", err)
+	}
+	// Model a plan already sealed by the old implementation. Its public admission
+	// and digests are valid, so the independent publication policy fence must fire.
+	legacy := PackagePlan{definition: definition, raw: raw, digest: hash(raw)}
+	successor, err := PlannedSuccessor(ctx, parent, legacy.Digest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority.ParentRequestDigest, authority.PlanDigest = parent.Digest(), legacy.Digest()
+	execution := admit(t, profile, authority, successor)
+	if _, err = BuildBundle(ctx, execution, legacy, f.outcomes, f.members, f.generated); !errors.Is(err, Unsupported) {
+		t.Fatalf("omit bundle: %v", err)
+	}
+	var manifest AttemptManifest
+	if err = json.Unmarshal(original.AttemptBytes(), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Request = successor
+	if _, err = VerifyBundle(ctx, execution, legacy, wire(t, manifest), original.RootBytes(), bundleContents(original)); !errors.Is(err, Unsupported) {
+		t.Fatalf("omit verify: %v", err)
+	}
+	// A zero generated map cannot hide a generated plan from publication policy.
+	if _, err = BuildBundle(ctx, execution, legacy, f.outcomes, f.members, nil); !errors.Is(err, Unsupported) {
+		t.Fatalf("omit plan with absent payload: %v", err)
+	}
+	for _, state := range []UnitState{UnitFailed, UnitUnsupported} {
+		outcomes := slices.Clone(f.outcomes)
+		outcomes[0].State = state
+		if _, err = BuildBundle(ctx, execution, legacy, outcomes, nil, nil); !errors.Is(err, Unsupported) {
+			t.Fatalf("omit terminal %s: %v", state, err)
+		}
+	}
+}
+
+func TestReducedProfileOrdinaryBundle(t *testing.T) {
+	ctx := t.Context()
+	f := bundleFixture(t)
+	d := f.parent.profile.Definition()
+	d.Schema, d.Config = ProfileSchema, ReducedConfig()
+	profile, err := DecodeProfile(ctx, wire(t, d))
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition := f.plan.definition
+	// Keep the ordinary unit and its configured target, with no generated data.
+	definition.Documents = slices.DeleteFunc(definition.Documents, func(d PlannedDocument) bool { return d.Generated })
+	unit := definition.Documents[0].Unit
+	definition.Units = slices.DeleteFunc(definition.Units, func(u PlannedUnit) bool { return u.ID != unit })
+	definition.Targets = slices.DeleteFunc(definition.Targets, func(target PlannedTarget) bool { return !slices.Contains(target.Units, unit) })
+	request := NewRequest(f.parent.Request().Source, profile, f.parent.Request().ProfileEpoch, identity(definition.Targets), f.parent.Request().IdempotencyKey)
+	authority := Authority{Enabled: true, Administrator: true, Source: request.Source, Profile: Epoch{Number: request.ProfileEpoch, Digest: profile.Digest()}, UniverseDigest: request.UniverseDigest}
+	parent := admit(t, profile, authority, request)
+	definition.ParentRequestDigest = parent.Digest()
+	plan, err := SealPackagePlan(ctx, parent, definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	successor, err := PlannedSuccessor(ctx, parent, plan.Digest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority.ParentRequestDigest, authority.PlanDigest = parent.Digest(), plan.Digest()
+	execution := admit(t, profile, authority, successor)
+	bundle, err := BuildBundle(ctx, execution, plan, []UnitOutcome{{unit, UnitComplete}}, f.members[:1], nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = VerifyBundle(ctx, execution, plan, bundle.AttemptBytes(), bundle.RootBytes(), bundleContents(bundle)); err != nil {
+		t.Fatal(err)
+	}
 }

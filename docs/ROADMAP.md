@@ -146,6 +146,10 @@ retained proto/fan-out members, which the mandatory conflict refusal preserves.
 T45.6 must resolve that provider compatibility gate before registration. No
 historical evidence, pinned tool, execution cap or runtime registration changes.
 
+T45.3's follow-up now enforces reduced-profile omission at plan and bundle
+admission. Only the explicit prospective v2 profile admits sealed generated
+documents; old v1 identities, skip policies and measured caps remain unchanged.
+
 **T45.4 local prerequisites (2026-09-27).** Source-only repository epochs and
 incarnations preserve exact reuse while fencing source ABA; the dedicated
 scheduler class reserves the existing controller allowance plus the unchanged

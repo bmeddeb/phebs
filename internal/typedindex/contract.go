@@ -17,11 +17,12 @@ import (
 )
 
 const (
-	ProviderID      = "bazel-rules-go-scip-v1"
-	ProfileSchema   = "phebs-typed-profile-v1"
-	RequestSchema   = "phebs-typed-request-v1"
-	MaxProfileBytes = 16 << 10
-	MaxRequestBytes = 8 << 10
+	ProviderID             = "bazel-rules-go-scip-v1"
+	ProfileSchema          = "phebs-typed-profile-v1"
+	GeneratedProfileSchema = "phebs-typed-profile-v2"
+	RequestSchema          = "phebs-typed-request-v1"
+	MaxProfileBytes        = 16 << 10
+	MaxRequestBytes        = 8 << 10
 )
 
 // Refusal is a closed, source-free boundary error. Never persist a raw tool error.
@@ -89,6 +90,14 @@ func ReducedConfig() Config {
 	return Config{GOOS: "linux", GOARCH: "arm64", Mode: "fastbuild", SkipTests: true, SkipImplementations: true, GeneratedDocuments: "omit", Network: "none", Scratch: "ext4-direct-io"}
 }
 
+// GeneratedConfig admits the sealed generated-document lane prospectively.
+// It changes no execution limit or skip policy and registers no runtime provider.
+func GeneratedConfig() Config {
+	c := ReducedConfig()
+	c.GeneratedDocuments = "sealed"
+	return c
+}
+
 // ProfileDefinition is operator-owned configuration, never supplied by a browser
 // planning request. RC copies can contain only the exact resolved bytes below.
 type ProfileDefinition struct {
@@ -113,6 +122,10 @@ type Profile struct {
 	policyDigest string
 }
 
+func (p Profile) permitsGenerated() bool {
+	return p.definition.Schema == GeneratedProfileSchema && p.definition.Config.GeneratedDocuments == "sealed"
+}
+
 func (p Profile) Digest() string                { return p.digest }
 func (p Profile) Definition() ProfileDefinition { return p.definition }
 
@@ -127,10 +140,14 @@ func DecodeProfile(ctx context.Context, raw []byte) (Profile, error) {
 	if err := decode(raw, MaxProfileBytes, &d); err != nil {
 		return Profile{}, err
 	}
-	if d.Schema != ProfileSchema || !token(d.Name) || d.Provider != ProviderID || (!digest(d.BundleDigest) || !digest(d.ImageDigest)) {
+	if (d.Schema != ProfileSchema && d.Schema != GeneratedProfileSchema) || !token(d.Name) || d.Provider != ProviderID || (!digest(d.BundleDigest) || !digest(d.ImageDigest)) {
 		return Profile{}, Invalid
 	}
-	if d.Config != ReducedConfig() || d.Policy != MeasuredPolicy() {
+	wantConfig := ReducedConfig()
+	if d.Schema == GeneratedProfileSchema {
+		wantConfig = GeneratedConfig()
+	}
+	if d.Config != wantConfig || d.Policy != MeasuredPolicy() {
 		return Profile{}, Unsupported
 	}
 	for _, t := range []Tool{d.Tools.Bazel, d.Tools.RulesGo, d.Tools.Go, d.Tools.Driver, d.Tools.Indexer, d.Tools.Planner, d.Tools.Launcher} {

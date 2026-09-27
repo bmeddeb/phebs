@@ -11093,3 +11093,11 @@ the retained proto and fan-out SCIPs. Mandatory conflict refusal remains intact
 and historical bytes are unchanged. T45.6 must resolve this compatibility gate
 before registration. T45.4 still owns durable custody/CAS and T45.5 routed
 consumption; this contract does not activate a provider or generated navigation.
+
+The T45.3 follow-up closes a medium omission-policy gap found during executor
+integration. V1 reduced profiles now refuse generated plans/bundles; explicit
+v2 alone admits the sealed lane with unchanged caps and skip policies. Tests
+cover ordinary v1 success, generated positive v2, retained legacy plans,
+failed/unsupported terminal outcomes, configuration widening, decode/reopen
+and fixed pre-change v1 profile/request hash goldens. Independent review has no
+remaining findings. This is a local contract correction, not runtime admission.

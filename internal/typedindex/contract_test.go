@@ -197,14 +197,19 @@ func TestClosedProfileAndCommands(t *testing.T) {
 		{"unsafe version", func(p *ProfileDefinition) { p.Tools.Driver.Version = "../repo/driver" }},
 		{"rc import", func(p *ProfileDefinition) { p.RCDigest = hash([]byte("import /etc/bazelrc\n")) }},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := p.Definition()
-			tt.change(&d)
-			if _, err := DecodeProfile(ctx, wire(t, d)); err == nil {
-				t.Fatal("accepted widened profile")
-			}
-		})
+	for _, schema := range []string{ProfileSchema, GeneratedProfileSchema} {
+		for _, tt := range tests {
+			t.Run(schema+"/"+tt.name, func(t *testing.T) {
+				d := p.Definition()
+				if schema == GeneratedProfileSchema {
+					d.Schema, d.Config = schema, GeneratedConfig()
+				}
+				tt.change(&d)
+				if _, err := DecodeProfile(ctx, wire(t, d)); err == nil {
+					t.Fatal("accepted widened profile")
+				}
+			})
+		}
 	}
 	raw := wire(t, p.Definition())
 	for _, bad := range [][]byte{
@@ -429,5 +434,55 @@ func TestPolicyMatchesSealedEvidence(t *testing.T) {
 	evidence.Caps.CPUPeriodMicros = 100000
 	if got := MeasuredPolicy(); got != evidence.Caps.Policy {
 		t.Fatalf("policy differs from sealed caps: %+v", got)
+	}
+}
+
+func TestGeneratedProfileIsExplicitAndReducedIdentityUnchanged(t *testing.T) {
+	p, a, r, _ := fixture(t)
+	reducedProfile := wire(t, p.Definition())
+	reducedRequest := wire(t, r)
+	// Captured independently from the unchanged fixture at 836575e4.
+	if p.Digest() != "sha256:354e82ca33a8fe8d20fbe112502e2914bc545914321f26f10bc6c3881c051eb8" || hash(reducedRequest) != "sha256:83627cab55639e086b68483d1064082a3757b89dd7958a1f2a419c3199dccfc0" {
+		t.Fatal("historical reduced profile/request identity changed")
+	}
+	for _, tt := range []struct {
+		name, schema, mode string
+		allowed            bool
+	}{
+		{"legacy omit", ProfileSchema, "omit", true},
+		{"legacy cannot enable", ProfileSchema, "sealed", false},
+		{"explicit sealed", GeneratedProfileSchema, "sealed", true},
+		{"new schema cannot masquerade as legacy", GeneratedProfileSchema, "omit", false},
+		{"unknown schema", "phebs-typed-profile-v3", "sealed", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			d := p.Definition()
+			d.Schema = tt.schema
+			d.Config.GeneratedDocuments = tt.mode
+			got, err := DecodeProfile(t.Context(), wire(t, d))
+			if (err == nil) != tt.allowed {
+				t.Fatal(got, err)
+			}
+			if err != nil {
+				return
+			}
+			if got.Definition().Policy != MeasuredPolicy() || !got.Definition().Config.SkipTests || !got.Definition().Config.SkipImplementations {
+				t.Fatal("policy changed")
+			}
+			if tt.schema == ProfileSchema {
+				if !bytes.Equal(reducedProfile, wire(t, got.Definition())) || p.Digest() != got.Digest() {
+					t.Fatal("reduced profile changed")
+				}
+				old := admit(t, got, a, r)
+				if !bytes.Equal(reducedRequest, wire(t, old.Request())) {
+					t.Fatal("reduced request changed")
+				}
+			} else if got.Digest() == p.Digest() {
+				t.Fatal("generated authority aliases reduced")
+			}
+		})
+	}
+	if Describe().ExecutionAvailable || Describe().GeneratedDocuments {
+		t.Fatal("contract enabled runtime capability")
 	}
 }

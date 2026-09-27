@@ -7117,3 +7117,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   findings and one low test-oracle issue; final severity counts are zero. Parent
   portable and safe Linux gates pass. Durable controller admission, actual native
   execution and lifecycle integration remain open.
+
+- **2026-09-27 — T45.3 explicit generated-profile authority.**
+  Correct the omission-policy gap: the unchanged v1 reduced profile refuses
+  generated plans and bundles, including retained plans and failed/unsupported
+  terminal attempts. Prospective profile v2 alone accepts `generated_documents`
+  set to `sealed`; every other configuration field and measured cap remains
+  unchanged. Both plan sealing and bundle construction enforce this boundary,
+  so decoding and reopening inherit the refusal. Fixed v1 profile/request hash
+  goldens were reproduced from the pre-change source. Ordinary v1 bundles still
+  seal/reopen; generated fixtures explicitly use v2. No installed profile,
+  historical evidence, runtime provider or generated navigation is activated.
+
+  **Cost.** Profile decode adds a constant schema/config branch. Plan sealing
+  adds a constant policy check per generated document within the existing128
+  document bound. Bundle admission adds one allocation-free scan of at most128
+  planned documents before any terminal/publication processing; generated payload
+  presence refuses immediately under v1. No new lock, database read, filesystem
+  work, child, cache or runtime path is introduced. Independent exact-source/cost
+  review is clean after strengthening terminal-outcome and v2 rejection tests.

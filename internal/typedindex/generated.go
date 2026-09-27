@@ -6,7 +6,8 @@ import (
 )
 
 // MaxGeneratedBytes retains the planner's per-source-file ceiling. Defining this
-// lane does not enable generated documents in the reduced execution profile.
+// lane does not enable generated documents in the reduced v1 profile. Only the
+// explicit generated v2 profile admits this lane through plan/bundle sealing.
 const MaxGeneratedBytes = 8 << 20
 
 const generatedNamespace = ".phebs-generated"

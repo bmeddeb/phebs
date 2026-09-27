@@ -146,6 +146,9 @@ func SealPackagePlan(ctx context.Context, parent Admission, input PackagePlanDef
 			return PackagePlan{}, Invalid
 		}
 		if d.Generated {
+			if !parent.profile.permitsGenerated() {
+				return PackagePlan{}, Unsupported
+			}
 			prefix := ".phebs-generated/" + strings.TrimPrefix(string(d.Unit), "package-load:sha256:") + "/"
 			canonical, err := GeneratedPath(d.Unit, strings.TrimPrefix(d.Path, prefix))
 			if err != nil || canonical != d.Path || !strings.HasPrefix(d.Path, prefix) || !digest(d.ProvenanceDigest) {
@@ -351,6 +354,11 @@ func BuildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []Uni
 	}
 	if len(outcomes) != len(p.definition.Units) || len(members) > MaxSCIPMembers || len(generated) > MaxBundleDocuments {
 		return Bundle{}, Invalid
+	}
+	// Recheck the policy independently of plan sealing: retained plans produced
+	// before this fence cannot turn an omit profile into generated authority.
+	if !a.profile.permitsGenerated() && (len(generated) != 0 || slices.ContainsFunc(p.definition.Documents, func(d PlannedDocument) bool { return d.Generated })) {
+		return Bundle{}, Unsupported
 	}
 	states := map[PackageUnitID]UnitState{}
 	for _, o := range outcomes {

@@ -14871,6 +14871,9 @@ local implementation and independent correction review complete, pending Ben's
 code review/integration. Full acceptance and verification record is in the
 [completed backlog](./BACKLOG_COMPLETED.md#epic-45-local-implementation-records).
 T45.6 retains the explicit proto/fan-out blank-identifier metadata conflict gate.
+A follow-up independent review closes the v1 omission-policy gap: only explicit
+profile v2 admits sealed generated documents, with unchanged caps and v1 byte
+identities. Plan admission and bundle reopening enforce the same boundary.
 
 **T45.4 · Managed exact-workspace executor and durable generation scheduling**
 *(needs T45.2–T45.3)* — materialize or bind an exact private build workspace
