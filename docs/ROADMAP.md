@@ -253,6 +253,16 @@ and the real database fixture. The parent independently repeated the check with
 unchanged source and verified empty test custody. It reused existing compiler
 bytes with unchanged host Go; native clock/privileged/cold/target gates remain open.
 
+Local worker prerequisite (2026-09-27): a versioned adapter for the exact pinned
+scip-go0.2.7 preserves all blank-declaration metadata while assigning deterministic
+document-local identities only after proving no references across the complete
+member set. Unknown/ambiguous/referenced cases and local collisions refuse;
+generic canonical conflict rules remain exact. Independent review, normal/race,
+vet/lint and read-only retained-file checks pass. Raw evidence stays unchanged;
+proto's generated path still requires sealed mapping. Durable receipt and worker
+integration remain open, with no provider registration or native run.
+
+
 
 
 

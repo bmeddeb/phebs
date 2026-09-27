@@ -7436,3 +7436,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   container and serial memory-capped unit runs; no production work is added.
   This closes the actual Linux filesystem race gap, not native common-clock,
   privileged scratch/containment, cold replay or target-provider validation.
+
+- **2026-09-27 — T45.6 preserve pinned scip-go blank metadata explicitly.**
+  A pure versioned adapter before canonical admission accepts only the exact
+  scip-go0.2.7 indexer digest and producer metadata. Parsed terminal Go blank
+  terms may become document-local identities only after an exhaustive reference
+  scan across the complete member set. Occurrences, relationships, enclosing
+  symbols and signature occurrences—including external metadata and escaped
+  spellings—refuse any blank reference. External blank records and collisions
+  with existing local definitions/references also refuse. Every metadata record,
+  field, ordered list and duplicate remains; only its symbol changes. The local
+  identity hashes a domain, raw document path and canonical full original record.
+  Canonical hashing uses clones; generic CanonicalSCIP conflict rules are unchanged.
+
+  Raw/output hashes and one mapping per record form a separate versioned receipt
+  sharing the existing2MiB attempt envelope. Caller raw bytes remain unchanged;
+  no new persistent file or resource cap is introduced. The caller must persist
+  this receipt with the same attempt/member set before claiming complete output
+  integration. Path/source authority and generated localization remain mandatory.
+
+  **Cost.** One bounded wire preflight/decode, symbol/reference traversal and
+  per-blank clone/canonical hash, sorted mappings and output serialization/hashes.
+  At most4 members,2,285,819 bytes/member and8MiB total raw/output; decoded objects,
+  caller raw bytes, output, local/reference maps, bounded receipt rows/encoding
+  and one record clone coexist. Byte limits are not resident-memory limits.
+  Final generic admission incurs its own later decode/sort/hash. No filesystem,
+  locks, child, persistent cache or registered request/sync/startup cost is added.
+
+  Independent review corrected an escaped-reference draft gap and confirmed all
+  severity counts zero. Parent normal/race, host/Linux vet/lint and canonical
+  regressions pass. Read-only retained ordinary remains byte-identical; proto
+  and fan-out each preserve two adapted records and all other metadata. Proto
+  still refuses its unmapped generated path. No tool/target run or historical
+  evidence rewrite occurred; worker/persistence/provider integration remains open.

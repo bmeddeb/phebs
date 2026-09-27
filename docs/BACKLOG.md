@@ -15073,6 +15073,15 @@ another Bazel/scip-go child; changed authority creates a distinct successor;
 target-corpus execution repeats the frozen T45.1b cost and correctness gates
 before runtime registration.
 
+Local worker prerequisite (2026-09-27): a versioned adapter for the exact pinned
+scip-go0.2.7 preserves all blank-declaration metadata while assigning deterministic
+document-local identities only after proving no references across the complete
+member set. Unknown/ambiguous/referenced cases and local collisions refuse;
+generic canonical conflict rules remain exact. Independent review, normal/race,
+vet/lint and read-only retained-file checks pass. Raw evidence stays unchanged;
+proto's generated path still requires sealed mapping. Durable receipt and worker
+integration remain open, with no provider registration or native run.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an
