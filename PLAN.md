@@ -6632,3 +6632,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Source/migration/accounting real-store normal and race checks, controller and
   scheduler normal/race checks, host and Linux/arm64 vet, lint, documentation,
   glossary and whitespace gates pass. No native run occurred.
+
+- **2026-09-27 — T45.4 private prehydration copy prerequisite (local,
+  unregistered).** Copy exact decoded inventory bytes into newly created,
+  service-private Linux custody; never bind the operator's mutable input tree.
+  Componentwise nofollow/nonblocking opens reject symlinks, special files and
+  hard links. Exclusive output inodes are hashed, synced and closed before
+  read-only sealing, no-replace publication and parent sync. A trusted bounded
+  receipt binds every file/directory inode; resume rehashes the exact inventory
+  and refuses inode, mode, path, size or digest substitution. Failed copies
+  retain named stage custody for the later lifecycle owner. Darwin and other
+  unsupported platforms refuse: Darwin extended ACLs can grant access despite
+  a 0700 POSIX mode, so those bits alone do not prove private custody.
+
+  Capacity comes from the actual opened destination descriptor. The shared
+  lifecycle gate accepts that validated observation through `CheckObserved`,
+  preserving its existing hard-watermark refusal until below the resume
+  watermark. A full filesystem also sets the latch before exact byte/inode
+  sufficiency is evaluated; an unrelated healthy ancestor cannot clear it.
+  Cancellation is checked before every directory seal mutation. Independent
+  review found and corrected the destination latch, directory-seal cancellation
+  and Darwin ACL gaps; Linux-only custody is an explicit supported-platform
+  boundary, not an emulated native-harness pass.
+
+  **Cost.** No caller is registered, so this adds no request, sync, startup,
+  retry/no-op or publication work today. Each Copy scans source metadata twice
+  and destination metadata once, reads/hashes at most 2 GiB once, and uses one
+  32 KiB transfer buffer plus bounded metadata for at most 50,000 files and
+  20,001 directories. Each Verify performs two metadata censuses and one full
+  rehash. Componentwise opens cost bounded path-depth work per entry, and each
+  census sorts bounded inode records. Copies/fsyncs run outside the short
+  pressure-latch mutex; no child, cache or background worker is introduced.
+  Fresh copies repeat disk growth; the estimate covers rounded extents and
+  entry metadata but is not an aggregate reservation. Trusted receipt storage,
+  aggregate reservation, lifecycle pins/cleanup, host DIO and full executor
+  integration remain T45.4 gates. Host refusal/pressure normal and race checks,
+  actual Linux/arm64 unprivileged filesystem regressions, vet and lint are the
+  prerequisite checks; no target or privileged native harness was run.

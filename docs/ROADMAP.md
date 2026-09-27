@@ -154,6 +154,10 @@ Phase 2-only containment promotion has new owned helper/schema identities.
 It is not the historical approved helper and has not been run natively.
 Durable typed requests, DIO/input custody, lifecycle/publication/restore and
 native validation remain open before runtime registration.
+The private Linux prehydration copy prerequisite now verifies actual immutable
+bytes/inodes and retains pressure refusal across retries. It has no registered
+caller; lifecycle, aggregate reservation and native executor validation remain
+separate gates.
 
 ## Now
 

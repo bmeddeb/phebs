@@ -104,6 +104,26 @@ func (gate *Gate) Check(ctx context.Context, estimatedBytes int64) (Capacity, er
 		return Capacity{Pressure: PressureUnavailable},
 			fmt.Errorf("%w: %v", ErrCapacityUnavailable, err)
 	}
+	return gate.CheckObserved(ctx, capacity, estimatedBytes)
+}
+
+// CheckObserved applies this gate's persistent pressure latch to capacity
+// measured from an already-open destination descriptor. The caller must obtain
+// this observation from the filesystem, never from a client request. Do not
+// precede it with Check on a different filesystem: that could clear its latch.
+func (gate *Gate) CheckObserved(ctx context.Context, capacity Capacity, estimatedBytes int64) (Capacity, error) {
+	if gate == nil || ctx == nil {
+		return Capacity{Pressure: PressureUnavailable}, ErrCapacityUnavailable
+	}
+	if err := ctx.Err(); err != nil {
+		return Capacity{}, err
+	}
+	if estimatedBytes < 0 || estimatedBytes > MaxPressureDependentAdmissionBytes {
+		return Capacity{}, fmt.Errorf("lifecycle admission bytes must be from 0 through %d", MaxPressureDependentAdmissionBytes)
+	}
+	if capacity.TotalBytes <= 0 || capacity.AvailableBytes < 0 || capacity.AvailableBytes > capacity.TotalBytes || capacity.UsedBytes != capacity.TotalBytes-capacity.AvailableBytes {
+		return Capacity{Pressure: PressureUnavailable}, ErrCapacityUnavailable
+	}
 	if capacity.UsedBytes > math.MaxInt64-estimatedBytes {
 		return Capacity{}, errors.New("lifecycle projected capacity overflows int64")
 	}
