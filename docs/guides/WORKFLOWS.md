@@ -874,7 +874,13 @@ making every valid document in the committed index unavailable. Its document,
 occurrence, symbol, and relationship payload still consumes the configured
 semantic limits, and queries into that omitted path return an available empty
 result. phebs does not substitute the metadata text encoding, because that
-field describes source-file bytes rather than SCIP range units. Other
+field describes source-file bytes rather than SCIP range units. One producer
+exception applies: indexes whose metadata tool is `scip-go` never set the field
+and report Go byte-offset columns, so their unspecified documents are read as
+UTF-8. A document whose path leaves the repository (`../...` or absolute), such
+as a Bazel-generated file under `../bazel-output/`, is likewise omitted and
+never read while its payload still counts against the limits, so navigation
+into generated code is unavailable. Every other malformed path and other
 index-wide structural and boundedness failures remain hard errors and are
 negative-cached by immutable revision.
 
