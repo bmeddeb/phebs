@@ -62,7 +62,7 @@ type fileIdentity struct {
 }
 
 // Prepared has no caller-settable argv, environment, overlay, build flags or
-// response authority. Prepare is its only constructor.
+// response authority. Prepare and PrepareCompatibility are its closed constructors.
 type Prepared struct {
 	patterns, environment, roots []string
 	packages                     map[string]flatPackage
@@ -70,6 +70,7 @@ type Prepared struct {
 	request                      []byte
 	scope                        []byte
 	digest                       string
+	mode                         planner.GoMode
 }
 
 // Digest binds the selected configured roots and exact closed invocation.
@@ -372,6 +373,7 @@ func Prepare(plan planner.Plan, roots []planner.Configured) (Prepared, error) {
 		}
 	}
 	p.scope = scopeBytes(plan.MappingSHA256, plan.DocumentsSHA256, p.roots, p.patterns)
+	p.mode = selectedMode
 	p.environment = closedEnvironment("set(" + strings.Join(scope, " ") + ")")
 	cgo := "0"
 	if selectedMode.Cgo {
@@ -484,6 +486,10 @@ func checkDriver(want string) error {
 	if want != DriverSHA256 {
 		return errors.New("missing pinned driver identity")
 	}
+	return checkPinnedDriver(want)
+}
+
+func checkPinnedDriver(want string) error {
 	b, err := readFile(DriverPath, 128<<20)
 	if err != nil {
 		return err

@@ -5849,3 +5849,501 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   original evidence is byte-identical. No container or private input remains,
   and the dedicated VM is stopped. This record changes no built/embedded
   input and grants neither integration nor T45.1b target execution authority.
+
+- **2026-09-26 — T45.1b typed compatibility and public corpus selection.**
+  Ben merged T45.1a in PR #14 at
+  `c4eac8e5fe3f3fe58e6991abd6ad1d94dad88051` and authorized proceeding
+  with a suitable public repository. The neutral compatibility prerequisite
+  pins Apache-2.0 scip-go v0.2.7 at
+  `2e9ff3c2603a85daabe125c9f20075ec52df0731`, its actual x/tools v0.45.0,
+  and Go 1.25.0/Linux arm64. A separate compiled owned driver accepts only the
+  exact scrubbed caller environment and type-loading mode 8681, with tests
+  disabled and null build flags/overlays. It reconstructs the underlying
+  driver's environment; inbound environment never becomes execution authority.
+  Two fixed private slots distinguish the real `packages.Load` and scip-go
+  calls. Raw driver equality precedes metadata adaptation, and selected source
+  bytes plus the exact declared export-file inventory remain bound through
+  completion of each client. The original mode-31 contract and all T45.1a
+  evidence stay exact. The neutral implementation is authored; this is not a
+  recorded compatibility PASS. Native wire evidence and independent review
+  remain mandatory before any target command.
+  The selected public candidate is Apache-2.0
+  `bazelbuild/remote-apis-sdks`, observed default HEAD
+  `d5824b1a2286806b07efd030aa3a139c4f540157`. Resolve current HEAD again
+  before freezing execution. Its ordinary libraries, generated protobufs and
+  shared-dependency consumers provide three proposed bounded cohorts. Its
+  native Bazel 9.0.0/rules_go 0.59.0 profile differs from the neutral profile
+  and needs its own reviewed compatibility evidence, exact resolved SDK and
+  complete immutable offline dependencies. Preserve upstream build files;
+  never silently upgrade them to fit the harness. First-party cgo, a natural
+  unrelated broken target, and large-monorepo scale are not established.
+  An owned excluded control must be separately identified. No prior private
+  failure receipt was supplied, so a public attempt cannot claim to reproduce
+  that unidentified failure. No target has run and no GO/REDUCE/STOP is yet
+  established. Existing resource limits and product/runtime authority remain
+  unchanged; exact prerequisite and target cost records follow their measured
+  runs, rather than being inferred from this source-selection decision.
+  Static cost accounting: bundle admission keeps the existing full manifest
+  count/byte/digest verification and private copy. Worker startup additionally
+  hashes the helper, its identical adapter copy, probe, scip-go and SDK Go
+  executable and reads their build metadata, bounded by the existing per-file
+  tool limit. Each serial client leg performs five full sealed-selection
+  preparations inside the container: worker setup, adapter admission, driver
+  execution, returned-call verification, and post-client file verification.
+  Host evidence validation performs one further preparation per leg. The
+  caller control carries the full bounded plan: inside each leg its JSON is
+  encoded four times and decoded twice, including canonical re-encoding;
+  host validation adds two encodings and one decoding per leg. Each driver
+  call also rehashes the fixed driver executable, hashes selected sources
+  before and after the driver, and hashes declared exports once. Post-client
+  verification adds one source and one export pass. Each accepted source/export
+  pass is bounded by 64 MiB and 8 MiB per file; the inherited source verifier
+  may read one additional bounded file before rejecting aggregate overflow,
+  while the new export reader checks the remaining aggregate budget first.
+  Metadata adaptation adds bounded JSON buffers beside the raw response;
+  each response remains capped at 16 MiB and the complete worker evidence
+  retains the existing 16-MiB output ceiling. Each leg creates two exclusive
+  launcher control files and separate caller plan/trace files. Legs are serial;
+  there is no new shared lock or persistent cache. Client-leg wall times and
+  observed process/memory/scratch peaks require native evidence. This neutral
+  wrapper does not measure lifetime child counts or descriptor peaks; sampled
+  process peaks and enforced descriptor ceilings do not substitute for them.
+  This spike adds no production
+  request/query, sync, startup/restart, retry/no-op, publication or lifecycle
+  cost.
+
+- **2026-09-26 — T45.1b neutral real-client compatibility proof.** Exact
+  implementation `c835c80ae22735ec40c2279df1eeabd31821917e`, with
+  source-identical cost correction `010cdce813a72d3fbe6ece4ff843634891a097b1`,
+  passed real `packages.Load` and scip-go discovery twice in the unchanged
+  isolated native boundary. `spike/t451b/neutral-results.json` binds three
+  retained receipts: the first was an operator-manifest ordering admission
+  STOP before any container; sorting the identical entries by full path fixed
+  preparation without changing source, helper, files or caps. Both subsequent
+  cold runs passed, removed containers/private inputs, and left the dedicated
+  VM stopped. Exact request mode 8681, full scrubbed environment, null flags
+  and overlay, tests=false, argv and both raw/adapted response bytes are
+  retained. Each selected alias leg loads two packages, verifies two export
+  files, and indexes two root documents. The 1,511-byte SCIP output has eight
+  occurrences, three symbol records, the two required definition/hovers,
+  cross-file and external references. Responses, exports, typed-probe output
+  and SCIP bytes match across both runs. All repository targets/units/documents
+  and the configured-target universe match; whole mapping/document seals
+  differ only with the retained cold SDK evidence: six cgo package compiled
+  lists and eleven generated cache-document locators in each of three SDK
+  lanes, plus the SDK list digests. Same-locator SDK documents are unchanged.
+  The larger observed kernel memory peak is 2,554,912,768 bytes; sampled scratch
+  peaks at 1,674,379,264 bytes and 59,426 inodes, under the unchanged limits.
+  These observations do not replace the unmeasured lifetime-child/descriptor
+  metrics required for the target run. Normal/race, combined regression,
+  host/Linux arm64 vet/lint, docs/glossary/format/whitespace, and independent
+  implementation/cost/native-evidence reviews pass with no open findings.
+  This closes only the neutral compatibility prerequisite. Public-target
+  profile, offline closure, execution, current Phebs admission, three-cohort
+  oracle and T45.2 GO/REDUCE/STOP remain open; T45.1b is not complete.
+
+- **2026-09-26 — T45.1b closed native profile preparation.** The public
+  `remote-apis-sdks` HEAD remains
+  `d5824b1a2286806b07efd030aa3a139c4f540157`. A separate spike-only profile
+  binds Bazel 9.0.0, rules_go 0.59.0, its independently built driver, scip-go
+  0.2.7/x-tools 0.45.0, and Go 1.25.0/Linux arm64. The owned aspect asserts
+  the configured SDK version/root and helper-source ownership; the worker
+  hashes the actually selected SDK executable. Upstream `MODULE.bazel`, lock,
+  BUILD files, go.mod, go.sum and rc bytes remain unchanged. In particular,
+  upstream's go.mod says Go 1.25.7; a native refusal is recorded, never repaired
+  by silently changing its SDK/module declaration. Ambient rc discovery stays
+  disabled. Four closed cohort names select an owned neutral control or the
+  ordinary, generated-proto and fan-out public roots. Each uses a fresh private
+  container. No arbitrary roots, command, environment, overlay or build flags
+  become request fields. The native neutral copy alone pins its external
+  fixture to rules_go 0.59.0, declares an inactive Windows source, and permits
+  lock creation during planning; the resulting at-most-8-MiB lock is then sealed
+  and subsequent driver calls use error mode.
+  Historical fixtures, schemas, receipts and the original profile stay exact.
+  An owned excluded broken genrule has an absolute sentinel checked outside the
+  selected plan; it does not establish first-party cgo or natural-failure
+  coverage in the public repository.
+  Native rules_go filters both GoFiles and CompiledGoFiles. A separate sealed
+  active-GoFiles inventory is derived from every declared source's exact bytes,
+  the existing Go 1.25 build context and upstream's cgo filename exceptions.
+  It supplements the unchanged declared-document plan. Runtime independently
+  rederives it before the driver; host validation proves structure/membership,
+  not source filtering without those bytes. Real packages.Load/scip-go use the
+  owned executable adapter and exact mode-8681 caller contract. Raw driver
+  equality precedes metadata adaptation. Raw generated SCIP paths, including
+  possible parent-relative paths, are retained for later current-Phebs
+  admission; they are never rewritten to manufacture acceptance. Partial STOP
+  evidence survives a failed worker when independently decodable. A later
+  measurement failure preserves the first failure phase and its separate
+  measurement status. Oversized evidence records only STOP with the omitted
+  byte count/digest, never a complete claim. A successful
+  cohort is explicitly not a complete three-cohort oracle or feasibility GO;
+  unlocalized indexer failure does not guess relationship versus serialization
+  attribution.
+  Public input preparation retained 812 digest-bound inputs, 509,786,808 bytes,
+  including all 384 lock registry records and their source archives, patches
+  and overlays. The immutable per-request HTTP cache contains 506 unique blobs,
+  255,455,739 bytes and 54 empty canonical-ID markers. Original HTTPS registry
+  identities and lock hashes remain enforced with `--lockfile_mode=error`;
+  the fixed `block *` downloader, disabled repository-contents cache, disabled
+  hardlinks and existing network denial refuse cache misses. A file registry
+  would discard that HTTPS lock enforcement and is not used. Go proxy data is
+  separately pinned. Twenty-six unneeded platform/tool URL specifications
+  remain deliberately unmaterialized: source inventory is not proof of the
+  executed dependency closure or resource fit. Required notices are retained.
+  `spike/t451b/public-oracle.json` freezes the independently reviewed pre-output
+  source identities, three definitions, eighteen cross-cohort references and
+  hover expectations; generated declaration coordinates remain open.
+  No downloaded target/tool code has executed under this new profile. Native
+  neutral proof, exact execution approval, public cohort receipts, independent
+  source oracle comparison, current Phebs admission and T45.2 GO/REDUCE/STOP
+  remain open.
+  Cost: existing full input verification/private copy, three serial bounded
+  planner commands, compiler extraction and compiler-cache eviction are reused.
+  Each worker reads/hashes the 249,496-byte public archive and decodes its 128
+  regular files / 1,079,184 bytes into bounded source maps before materializing
+  the selected public or owned-neutral workspace. Public originals are rechecked
+  after planning and again after quiescence on success or failure; each accepted
+  pass reads and compares at most that fixed 1,079,184-byte corpus. The same
+  snapshot also rereads owned aspect/helper/control bytes, including the
+  admitted helper (bounded by the existing tool-file cap) and the sealed
+  native-neutral lock after planning. Original-file type and excluded-control
+  checks accompany those reads. Stage timing/count
+  summaries and an oversized-evidence STOP retain no complete-coverage claim.
+  One initial source hash/filter pass seals active GoFiles. Each accepted native
+  client leg performs six full compatibility preparations inside the container;
+  host receipt validation performs one initial preparation plus one per leg.
+  The driver hashes its executable/build metadata, performs a source hash/filter
+  pass before execution, then a source and export pass; post-client verification
+  adds one source and one export pass. Each accepted pass remains bounded by
+  64 MiB and 8 MiB per file; inherited post-source verification may read one
+  further bounded file before overflow refusal. Two prepared graph maps may
+  coexist in native driver execution. Sidecar encodings remain bounded by
+  16 MiB, wrapper scopes by 1 MiB, individual responses by 16 MiB, and the entire
+  worker output by the unchanged 16-MiB ceiling. Source matching constructs
+  the fixed build context/release tags per evaluated file; declared-root
+  validation adds one bounded map pass, including the seven original roots.
+  Tool and selected-SDK hashing, caller-control serialization, raw/adapted
+  response decoding, member sorting and SCIP validation are repeated bounded
+  request work; no persistent cache or invalidation is added.
+  The new sampler uses one goroutine/ticker with initial/final and nominal
+  50-ms observations, at most 256 process leaders and 65,536 PID/starttime keys.
+  Each sampled same-UID leader incurs three at-most-8-KiB proc reads and one
+  128-descriptor-plus-sentinel directory read, with one temporary descriptor
+  open at a time. Child lifetimes are a sampled lower bound; descriptor sums
+  are sequential/non-atomic and are not an exact simultaneous peak. Existing
+  sandbox RSS, memory, process and scratch metrics remain separate. After
+  observer stop and joined direct commands, the existing bounded process census
+  refuses residual tool leaders before cache inventory. This is an observation,
+  not an atomic process-history fence. The six fixed cache roots permit at most
+  65,536 entries plus a sentinel, one directory descriptor at a time and no
+  content reads; device/inode deduplication measures logical/allocated bytes.
+  The read-only input cache is reported separately. Cold/retry runs repeat
+  private preparation; no production request/query, sync tick, startup/restart,
+  retry/no-op, publication, lock, concurrency, runtime cap or UI changes result.
+
+- **2026-09-26 — T45.1b failed-client evidence correction.** Independent
+  integration review of `ce091a18189a67e89aaffd456fed00bda15f47f9` found one
+  medium gap: a failed native client discarded any completed adapter trace,
+  leaving protocol refusal and later client failure indistinguishable in the
+  durable phase-only receipt. Native STOP evidence now retains the failed
+  slot, closed failure point, client-error fact, bounded output byte counts
+  and digests, and any independently validated complete adapter response.
+  Missing, empty, malformed or invalid trace remains `unproven`; a completed
+  driver protocol proves neither successful typing/indexing nor a target cause.
+  Failed legs cannot occupy the successful-leg list or satisfy cohort success.
+  An oversized receipt drops its trace and downgrades protocol evidence to
+  unproven while retaining the omitted-evidence digest. The first failing phase
+  remains controlling. Outer receipts additionally bind stderr bytes/digest;
+  raw diagnostic output stays local with an 8,192-rune stderr excerpt,
+  including the fallback incomplete-result path. The excerpt can occupy up to
+  32 KiB of UTF-8; surrounding and wrapped error text is additional, so this is
+  not a whole-error byte ceiling. The existing 16-MiB aggregate worker-output
+  bound is unchanged. Historical neutral
+  receipts and successful client checks remain unchanged. This correction
+  requires exact local gates, independent re-review and rebuilt artifact/config
+  bindings before requesting execution of the new profile.
+  Cost: only failed client legs hash their already bounded stdout/stderr,
+  totaling at most 1 MiB. A failed client now attempts the existing at-most-4-MiB
+  trace read/decode and one full compatibility preparation when that trace can
+  be validated; host validation repeats that preparation for a retained
+  completed call. The bounded trace remains in partial STOP evidence, within
+  the unchanged whole-worker output ceiling. Successful client preparation,
+  source/export checks and child count are unchanged. Every sandbox return adds
+  one hash over its already bounded stderr, at most 16 MiB, including the empty
+  result. No extra tool execution, retry, persistent state, cache, lock or
+  production request, sync, startup or publication work is added.
+
+- **2026-09-26 — T45.1b native-neutral planning STOP and diagnostic repair.**
+  The first approved native-neutral run at executable source `272a228d` stopped
+  during planning before any sealed plan or client leg, with verified limits,
+  no OOM or limit event, and complete container/private-input cleanup. This is
+  harness evidence only. Its source-free receipt retains stderr size/digest,
+  but the local gate runner's 480-character failure preview consumed the large
+  receipt log before reaching the error text; no exact planning cause survived
+  that preview. The opt-in native test now logs its existing diagnostic before
+  the receipt, and subsequent approved runs retain the complete bounded test
+  transcript in local task custody. This test-only reporting repair changes
+  no helper/fixture bytes, tools, request/environment contract, target roots,
+  resource limits or production behavior. Existing compiled artifacts remain
+  exact. A fresh numbered config/receipt is mandatory for the first of at most
+  two authorized harness-source repair/reruns at this stage. Each invocation
+  adds one test log line only on error; the existing bounded diagnostic is
+  repeated. The local transcript adds one host file and tee process; existing
+  gate-runner output/timeout refusal and all worker bounds remain unchanged.
+  No worker, lock, cache or steady-state work changes.
+
+- **2026-09-26 — T45.1b owned-neutral module-graph correction.** The retained
+  diagnostic rerun reproduced the planning STOP: the offline public lock/cache
+  contains the selected nlohmann_json 3.11.3 source, while the smaller owned
+  neutral root selected 3.6.1 and its blocked source-manifest fetch failed.
+  The owned neutral root had omitted the public root's existing grpc 1.76.0.bcr.1
+  and googleapis 0.0.0-20260130-c0fcb356 constraints. It now carries those exact
+  constraints alongside its unchanged rules_go, Gazelle, rules_proto and
+  protobuf pins; a data-only check compares every public direct dependency
+  declaration against the owned root. This repairs the fixture's dependency
+  context without replacing dependency bytes or downloading missing inputs.
+  Public sources/lock, requested cohort roots, Go/Bazel/rules_go/driver/scip-go,
+  launcher request/environment and all admission/resource bounds remain exact.
+  Only helper/build-record bytes change in the fresh bundle. Module resolution
+  and repository preparation may do more bounded work inside the same serial
+  planner children; the next attempt must measure that work and may still STOP.
+  This consumes the second and final authorized native-neutral source-repair
+  rerun only when executed, with independent source/artifact review and fresh
+  numbered config/receipt/log. No public execution or feasibility conclusion
+  follows from the correction, and no production/steady-state cost changes.
+
+- **2026-09-26 — T45.1b native-neutral terminal harness STOP.** All three
+  approved native-neutral attempts stopped in `cquery` planning, before a
+  sealed plan, selected-SDK proof, client leg or SCIP output. Source-free
+  receipts and exact source/config/tool bindings are retained in
+  `spike/t451b/native-neutral-results.json`; independent returned-evidence
+  review confirms the harness attribution. The complete second diagnostic
+  reconstructs the same stderr bytes/digest as the first, substantiating both
+  earlier module-graph refusals. After the owned-root correction at `9ac5ae8e`,
+  attempt three reached the already admitted protobuf 33.5 archive but its
+  extraction failed: Bazel 9's blanket-blocked URL list produces `cacheprobe`
+  when no explicit archive type exists, losing the `.tar.gz` suffix before a
+  checksum-cache hit returns the file. Retained upstream source and exact
+  archive/registry hashes support this cause; no new download or Go-version
+  refusal is established. Limits were verified with zero OOM/memory/task-limit
+  events, every container/private-input directory was removed, dedicated
+  Docker inventory was empty, and the dedicated VM was stopped. Sampled
+  resource facts describe these early failures only, not full workload fit.
+  Both authorized harness-source repair/reruns are consumed; no further repair
+  or execution is authorized. A prospective fix would preserve archive URL
+  suffixes while disabling archive downloads and retaining registry/network
+  denial. Bazel's registry reader ignores `--repository_disable_download`, so
+  that flag alone cannot replace the current downloader policy. Changing the
+  fixed downloader/common-flags environment contract requires Ben's approval
+  and a fresh bounded run allowance before implementation. Public cohorts
+  remain unrun; target feasibility, current Phebs admission, semantic oracle
+  and T45.2 GO remain unestablished. No production request, sync, startup,
+  retry/no-op, publication, lock, cache or child-process cost changes in this
+  evidence/documentation record; historical neutral evidence remains exact.
+
+- **2026-09-26 — T45.1b approved native downloader repair.** Ben authorized
+  one narrowly scoped correction and one fresh native-neutral attempt after
+  host proof and independent review. Native common flags now require
+  `--repository_disable_download`; exact bundle admission requires downloader
+  bytes `block bcr.bazel.build` followed by one LF. Original archive URLs retain
+  their basenames for checksum-cache hits, while archive/download cache misses
+  refuse before the downloader is called. Registry reads ignore that flag and
+  retain the exact host/subdomain block. Original HTTPS registry identities,
+  lock hashes, read-only caches, container network denial, protected tools,
+  target HEAD/cohort roots and caps remain unchanged. The driver wrapper and
+  caller environment accept only the full fixed flag vector; missing, alternate
+  or duplicate override flags/configuration refuse. Historical profiles and
+  evidence remain unchanged. Before the sole new run, host tests must exercise
+  the pinned Bazel binary's actual downloader classes for archive cache-hit
+  suffix/content, archive and plain-download misses before network callbacks,
+  registry miss denial and retained cache authority, with positive controls;
+  admission tests must reject flag/config removal and overrides. Exact source,
+  rebuilt artifacts and fresh numbered configuration require independent
+  review. After the run, retain returned evidence, complete cleanup and stop
+  regardless of outcome; no public cohort, merge, push or PR is authorized.
+  Cost: the native profile adds one fixed argv element and replaces one short
+  fixed config string. An archive cache miss can now reach the existence check
+  for inherited `/inputs/tools/cache/distdir`, which remains absent in the admitted
+  bundle, before download disablement refuses; no directory listing is needed.
+  It adds no child, retry, lock or persistent cache. Host-only opt-in proof
+  extracts the pinned server jar into temporary test custody and invokes the
+  existing host Java compiler/runtime; it adds no production request, sync,
+  startup/restart, retry/no-op or publication work. A successful cache hit may
+  now reach existing archive extraction under the unchanged native limits;
+  neither host proof nor this correction establishes full offline closure.
+
+- **2026-09-26 — T45.1b downloader repair attempt 4 terminal harness STOP.**
+  Exact source `346c0ebdf70fe914f912611dc25408b9c631cd62`, passing actual
+  pinned-Bazel-class host proof and clean independent source/artifact review
+  preceded the sole additional native-neutral run. Config 4 preserved protected
+  tools, registry/lock/cache identities, target HEAD/roots and all caps. The
+  downloader correction passed the former extraction boundary: planning
+  retained 6,143 configured targets, 96 units and the selected Go 1.25.0 SDK;
+  real `go/packages` and scip-go each returned 129 packages over three roots.
+  The neutral oracle retained 27,852 SCIP bytes, six documents and 195
+  occurrences. These are partial evidence: the worker ended at
+  `containment/measurement` after 134.307 seconds (139.022 seconds host wall).
+  Its inner observer reported procfs descriptor-directory permission denial,
+  301 unexpected errors and unavailable process measurement. Final quiescence
+  also refused, so final original-source/excluded-control revalidation and
+  exact private-cache accounting did not run. False source flags establish
+  neither mutation nor unchanged source; zero cache counters mean unavailable,
+  not empty. The denied process's executable identity is unestablished. The
+  separate outer resource sampler remained available and verified limits,
+  with zero OOM/memory/task-limit events; it cannot cure the inner failure or
+  establish full workload fit. Earlier planning compiler-cache eviction is
+  retained separately from the later final-quiescence refusal.
+  `spike/t451b/downloader-repair-results.json` is an allowlisted source-free
+  projection bound to the exact private raw receipt/config/log hashes; it
+  omits raw SCIP, plan/source paths, responses, traces and argv/environment.
+  Original neutral and attempts 1–3 evidence remain byte-identical. Container
+  and private inputs were removed, dedicated Docker inventory was empty and
+  the dedicated VM stopped. The extra one-run allowance is consumed; stop
+  after independent returned-evidence review, with no repair/rerun, public
+  cohort, merge, push or PR. Native-neutral PASS, target feasibility and current
+  Phebs admission remain open. This record adds no production request, sync,
+  startup/restart, retry/no-op, publication, lock, cache, memory/disk or child
+  work; the preceding repair cost record remains controlling.
+
+- **2026-09-26 — T45.1b approved process-refusal diagnostics.** Ben authorized
+  one diagnostic-only helper change and one fresh native-neutral run, followed
+  by independent returned-evidence review, cleanup and stop. The first sticky
+  observer process error with a known lifetime may retain only `comm`, `state`,
+  `ppid`, `pgid`, `sid`, all four `Uid`/`Gid` values, `NoNewPrivs` and `CapPrm`.
+  The shared quiescence refusal attaches the same fields, covering both its
+  planning and finalization callers with separate native receipt slots. It
+  retains its exact census, PID-1/self exemptions and error text; zombies and
+  other-UID entries still refuse. The observer's UID/vanished handling,
+  lifetime/descriptor/process bounds and sticky failure remain exact. A
+  bounded `stat`/`status`/`stat` capture checks PID, lifetime and stable stat
+  identity internally without retaining PID/starttime or raw records. If the
+  identity is unavailable, malformed or changes, the diagnostic is absent;
+  this does not clear the original refusal or authorize a diagnostic retry.
+  Neither cmdline, environment nor exe is read. Snapshots are sequential,
+  not an atomic process-state claim. Diagnostics cannot establish completion.
+  Only helper/bundle identities change; tools, target HEAD, roots, request/env,
+  downloader policy, container network denial and all caps stay fixed. Original
+  evidence is unchanged. No public cohort, merge, push or PR is authorized.
+  Cost: healthy observation adds no proc read or child. The first process
+  failure and each existing planning/final quiescence refusal add at most
+  three serial bounded proc reads/opens/closes, each accepting at most 8 KiB
+  plus one overflow sentinel, with no subprocess, retry or persistent cache.
+  The census descriptor remains open during capture, so quiescence adds at
+  most one concurrent descriptor. Observer capture may overlap the planning
+  capture, adding at most two diagnostic descriptors across both callers;
+  finalization joins the observer before its census. The quiescence snapshot does not identify
+  the lifetime seen by an earlier observer error or prove an executable name.
+  At most three small diagnostic records are retained by one native worker;
+  they share the existing aggregate output cap. No production query/request,
+  sync, startup/restart, retry/no-op, publication, lock or cache cost changes.
+
+- **2026-09-26 — T45.1b diagnostic attempt 5 terminal harness STOP.** Exact
+  source `126f77ea70da468646638898b6576b066541a1c8` passed affected normal/race,
+  host/Linux vet and pinned lint, documentation checks and independent review.
+  Config 5 changed only helper/bundle identities. Its sole authorized neutral
+  run stopped in planning after 109.110 seconds worker / 115.153 seconds host:
+  the Bazel `GoStdlibList` build reported `no space left on device`. Sampled
+  scratch peaks of 1,699,106,816 bytes and 63,309 inodes do not identify the
+  exhausted dimension or exclude an unsampled peak. Separately, the inner
+  observer retained descriptor-directory permission denial, 69 unexpected
+  errors and unavailable measurement. Its first captured offending lifetime
+  had `comm=process-wrapper`, state `Z`, parent 21, process group/session 1,
+  all four UID/GID values 65534, `NoNewPrivs=true`, and zero `CapPrm`. These
+  are the nine approved fields only. State `Z` describes the diagnostic reads,
+  not necessarily the earlier failed FD read; comm is process-controlled and
+  does not authenticate an executable. This neither identifies attempt 4's
+  offender nor establishes a common cause with the build failure.
+  Planning failed before its quiescence check/cache eviction; no sealed plan,
+  selected-SDK validation, typed client or SCIP result was retained. Final
+  quiescence passed and exact cache inventory completed. The final
+  `originals_unchanged=true` check does not re-seal the neutral planning lock;
+  absent a plan, `excluded_control_absent=false` establishes no control
+  violation or complete source/plan/lock proof. Outer sampling remained
+  available with verified limits and no OOM/memory/task-limit event; it cannot
+  cure the inner refusal or establish full resource fit.
+  `spike/t451b/process-diagnostic-results.json` preserves only allowlisted
+  source-free facts bound to the private receipt/config/log hashes. Earlier
+  evidence is unchanged. Container/private inputs were removed, dedicated
+  Docker inventory was empty and the dedicated VM stopped. Independent
+  returned-evidence review found no issues; the sole extra allowance is consumed
+  and no rerun, public cohort, merge, push or PR is authorized. Native-neutral
+  compatibility and T45.1b feasibility remain open. This record adds no runtime
+  work; the preceding bounded diagnostic cost decision remains controlling.
+
+- **2026-09-26 — T45.1b approved zombie handling and native inode capacity.**
+  Ben authorized one repair, one native-only inode-cap change and one neutral
+  run, followed by independent review, cleanup and stop. A verified state-Z
+  process contributes zero descriptors and does not block the shared quiescence
+  census. A denied FD read is recoverable only when one bounded stat reread
+  proves the same lifetime is Z or the process has disappeared; a live,
+  malformed, unreadable or replaced lifetime still refuses. Prior sticky
+  observer failures remain sticky. Partial FD entries and directory-close
+  failures cannot use denied-read recovery. The census still refuses every live process
+  except PID 1 and the worker, including another UID. Existing census/task,
+  descriptor and lifetime bounds remain in force; no wait, reap or retry loop
+  is added. Failure diagnostics retain their existing nine-field allowlist.
+  Each failed planning command captures one immediate `/scratch` statfs
+  snapshot of free blocks and free inodes. Availability is explicit, so an
+  unreadable snapshot cannot be mistaken for zero free space. This snapshot is
+  after command return, not an authenticated observation at the failing write;
+  the original command error and STOP remain controlling.
+  The prospective native profile becomes
+  `native-linux-arm64-rules-go-059-v2`, binding its 262,144 scratch inode ceiling.
+  T45.1a and the original T45.1b compatibility profile keep 65,536. Distinct
+  fixed native dispatch and custody identities prevent profile mixing; the
+  Docker recipe, actual supervisor checks, worker dispatch and native cache
+  evidence agree on the selected profile. Scratch bytes (2,032 MiB), shared
+  memory, RAM, tasks, descriptors, wall/output bounds, network denial, launcher
+  request/environment shape, tools, target HEAD and cohort roots stay fixed.
+  Prior profiles, configs and evidence are historical and are not rerun or
+  rewritten. Config/receipt 6 is neutral only; no public cohort, merge, push or
+  PR follows, whatever the outcome.
+  Cost: healthy live observation keeps the existing stat/status/FD/stat cadence
+  and one open file at a time, adding two bounded PID string conversions for
+  shared stat-path construction; initial zombies skip FD enumeration. Pure
+  zero-entry permission denial adds at most one
+  bounded stat read before an existing refusal/diagnostic or safe disappearance
+  handling. Shared quiescence now reads bounded stat records for encountered
+  nonexempt entries, within the unchanged census ceiling, stopping at the first
+  live or unprovable entry. Failed planning adds one statfs syscall, three
+  fixed scalar evidence fields and no child, scan, retry, cache or lock.
+  Each spike worker admission adds one bounded scratch statfs check to reject
+  cross-profile dispatch; existing supervisor sampling reuses its statfs call.
+  Before importing custody, the host revalidates one bounded closed request to
+  select the exact profile; it adds no child or retained cache.
+  Native exact-cache inventory follows the approved inode ceiling: worst-case
+  entry work and retained inode/queue/directory-entry state grow from 65,536 to
+  262,144, while
+  scratch bytes and memory remain capped independently. No production query,
+  sync, startup/restart, retry/no-op, publication or lock cost changes.
+
+- **2026-09-26 — T45.1b sole zombie/cap run stops on live process observation.**
+  Source `6a499a74190508225b0b4353e3d33b44da0346d8` passed complete normal/race,
+  host/Linux-arm64 vet and pinned lint, docs/glossary/format/whitespace, and exact
+  independent source/artifact review. Native profile v2 attempt 6 is
+  `HARNESS_STOP` at containment/measurement after 152.961 seconds host time.
+  The first observer denial is bound to a diagnostic with `comm=compile`,
+  state `R`, UID/GID 65534, `NoNewPrivs=true` and zero permitted capabilities;
+  18 unexpected observation errors make unavailability sticky. The name does
+  not authenticate the executable, and sequential diagnostic reads do not
+  establish the exact state at the denied FD read, its cause, or a connection
+  to prior attempts. The approved live/unproven refusal remains fatal.
+  Planning completed with 6,143 targets, 96 units, 212 documents and two SDK
+  rows. Both client legs returned 129 packages; the neutral SCIP is 27,852
+  bytes with six documents and 195 occurrences. These are partial evidence,
+  not native-neutral PASS, target evidence or a feasibility decision. Planning
+  commands succeeded, so no failure-only free-block/free-inode snapshot exists.
+  Planning and final quiescence, workspace/control revalidation and exact final
+  cache inventory passed; they do not clear the earlier observation failure.
+  The sampled scratch peak was 1,866,539,008 bytes and 73,718 inodes, with
+  outer limits verified and no OOM or task-limit event. The inode observation
+  exceeds the former cap but proves neither complete peaks nor the exhausted
+  dimension in attempt 5. No particular zombie-recovery branch is established
+  as executed by this receipt. `spike/t451b/zombie-cap-results.json` retains the
+  source-free projection; all ten previous evidence files remain byte-exact.
+  Container and private inputs were removed, the dedicated Docker inventory
+  was empty, and the dedicated VM stopped. The additional allowance is consumed
+  once; no repair, rerun, public cohort, merge, push or PR follows. T45.1b stays
+  open. This evidence/documentation record adds no runtime cost; the preceding
+  approved spike-only cost decision remains controlling.

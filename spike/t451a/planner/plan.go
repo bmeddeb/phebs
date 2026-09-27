@@ -58,6 +58,19 @@ func jsonDigest(v any) string { b, _ := json.Marshal(v); return digest(b) }
 // cquery universe and owned aspect projections must agree through aquery's
 // exact declared-artifact locator. Extra bytes, objects and edges refuse.
 func Assemble(cqueryProto, aqueryProto []byte, projections map[string][]byte) (Plan, error) {
+	return assemble(cqueryProto, aqueryProto, projections, Roots())
+}
+
+// AssembleRoots uses the same configured-closure authority for a closed caller's
+// explicit roots. Driver output is never an input to root selection.
+func AssembleRoots(cqueryProto, aqueryProto []byte, projections map[string][]byte, roots []string) (Plan, error) {
+	if err := validateRoots(roots); err != nil {
+		return Plan{}, err
+	}
+	return assemble(cqueryProto, aqueryProto, projections, roots)
+}
+
+func assemble(cqueryProto, aqueryProto []byte, projections map[string][]byte, roots []string) (Plan, error) {
 	plan := Plan{Version: "phebs-t451a-plan-v1", Units: []Unit{}, Documents: []Document{}}
 	targets, err := DecodeCquery(cqueryProto)
 	if err != nil {
@@ -80,7 +93,7 @@ func Assemble(cqueryProto, aqueryProto []byte, projections map[string][]byte) (P
 	// Every configured node must belong to the exact requested root closure.
 	var queue []Configured
 	requestedRoots := map[Configured]bool{}
-	for _, root := range Roots() {
+	for _, root := range roots {
 		matches := byLabel[canonicalLabel(root)]
 		if len(matches) != 1 {
 			return Plan{}, errors.New("missing or ambiguous neutral root")

@@ -14,10 +14,23 @@ import (
 
 const gazelleCompilerCache = "/scratch/bazel-output/external/gazelle++non_module_deps+bazel_gazelle_go_repository_cache/gocache"
 
+// QuiescenceError retains only a best-effort diagnostic for the process that
+// caused the existing refusal. A missing diagnostic never changes that refusal.
+type QuiescenceError struct {
+	Process *ProcessDiagnostic
+}
+
+func (*QuiescenceError) Error() string { return "tool process remains before cache eviction" }
+
 // Cache eviction runs only after every tool process has exited. Threads share
-// their process's directory; PID1 and this worker are the only allowed leaders.
+// their process's directory; PID1 and this worker are the only allowed live
+// leaders. A validated zombie has no descriptors or cache-writing capability.
 func ensureQuiescentWorker() error {
-	proc, err := os.Open("/proc")
+	return ensureQuiescentWorkerAt("/proc", os.Getpid())
+}
+
+func ensureQuiescentWorkerAt(procPath string, workerPID int) error {
+	proc, err := os.Open(procPath)
 	if err != nil {
 		return err
 	}
@@ -28,14 +41,24 @@ func ensureQuiescentWorker() error {
 	}
 	for _, name := range names {
 		pid, err := strconv.Atoi(name)
-		if err == nil && pid != 1 && pid != os.Getpid() {
-			return errors.New("tool process remains before cache eviction")
+		if err == nil && pid != 1 && pid != workerPID {
+			var diagnostic *ProcessDiagnostic
+			if pid > 0 && uint64(pid) <= 1<<32-1 && strconv.Itoa(pid) == name {
+				root := os.DirFS(procPath)
+				start, state, readErr := ReadProcessState(root, uint32(pid))
+				if ProcessGone(readErr) || readErr == nil && state == 'Z' {
+					continue
+				}
+				diagnostic = ReadProcessDiagnostic(root, uint32(pid), start)
+			}
+			return &QuiescenceError{Process: diagnostic}
 		}
 	}
 	return nil
 }
 
-type cacheEviction struct {
+// CacheEviction records the bounded private compiler-cache reclamation.
+type CacheEviction struct {
 	Files             int    `json:"files"`
 	LogicalBytes      int64  `json:"logical_bytes"`
 	ScratchBytesFreed uint64 `json:"scratch_bytes_freed"`
@@ -44,8 +67,8 @@ type cacheEviction struct {
 // This fixed Go build cache is not a repository source or Bazel action output.
 // Go 1.25 uses hash-prefix directories and nested cached-executable directories.
 // Inventory completes before mutation; unfamiliar structure refuses.
-func evictCompilerCache(name string) (cacheEviction, error) {
-	var result cacheEviction
+func evictCompilerCache(name string) (CacheEviction, error) {
+	var result CacheEviction
 	canonical, err := filepath.EvalSymlinks(name)
 	if err != nil || canonical != name {
 		return result, errors.New("compiler cache path is not canonical")

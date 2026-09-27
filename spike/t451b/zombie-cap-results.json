@@ -1,0 +1,372 @@
+{
+  "schema": "phebs-t451b-zombie-cap-results-v1",
+  "date": "2026-09-26",
+  "attempt": 6,
+  "scope": "owned native-neutral only",
+  "outcome": "HARNESS_STOP",
+  "native_neutral_pass": false,
+  "public_cohorts_executed": [],
+  "t451b_feasibility_decision": null,
+  "source_commit": "6a499a74190508225b0b4353e3d33b44da0346d8",
+  "source_tree": "2077f8d2574f441bd7945b00a7125979c77d7405",
+  "source_manifest_sha256": "sha256:8b8f25680193a0d0151d7a1481c354ab654be14bc8631d4ed33cd9d1e7faa910",
+  "authorization": {
+    "repairs_authorized": 1,
+    "repairs_used": 1,
+    "native_inode_cap_changes_authorized": 1,
+    "native_inode_cap_changes_used": 1,
+    "additional_native_runs_authorized": 1,
+    "additional_native_runs_used": 1,
+    "stop_after_run": true,
+    "further_execution_authorized": false,
+    "public_execution_authorized": false,
+    "merge_push_pr_authorized": false
+  },
+  "profile": {
+    "native_scratch_inodes": 262144,
+    "original_scratch_inodes": 65536,
+    "scratch_bytes": 2130706432,
+    "other_limits_tools_target_head_roots_request_environment_unchanged": true,
+    "zombies_zero_descriptors_and_quiescent": true,
+    "live_or_unproven_denied_fd_read_fatal": true,
+    "partial_fd_entries_or_directory_close_failure_fatal": true,
+    "planning_failure_scratch_fields_added": true
+  },
+  "requested_roots": [
+    "//lib:alias",
+    "//proto:message_go",
+    "//cgo:cgo"
+  ],
+  "public_target_head_not_executed": "d5824b1a2286806b07efd030aa3a139c4f540157",
+  "host_gates": {
+    "normal_race_output_sha256": "0477f6c5999ffe3e523466f9f85a225578dee4165ae3350202903b4fc4ab70e6",
+    "static_output_sha256": "22ea796077cf9f8bc5cd91d48469cc99ada8d82a26e2149ee5c60eace42ac753"
+  },
+  "pre_run_independent_review": {
+    "report_bytes": 17681,
+    "report_sha256": "sha256:d1f3bc9984cb662106492b61f30569512cb4977130aa73202b9b9007ab3c6029",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "helper": {
+    "bytes": 15684205,
+    "sha256": "sha256:2dcc3bf5aa9c09d61d750a87e50319d2f0eaca1e6eedaf384c0e34e37c2f956b"
+  },
+  "bundle_manifest": {
+    "bytes": 3387047,
+    "sha256": "sha256:cded0572e1c84a9860d86cd4fda4003a1e118d09e44e31ea672b68a43731eb4d"
+  },
+  "config": {
+    "bytes": 1695,
+    "sha256": "sha256:f088644524729235d4f274d33cbd08cfc69ee735fa799433a3c432bafbbdcd61"
+  },
+  "private_raw_receipt": {
+    "bytes": 6963056,
+    "sha256": "sha256:21e8a9b00b6d42837729c2c87080eda63d1941db42bf50211d75c2017985bcae"
+  },
+  "private_test_log": {
+    "bytes": 2704,
+    "sha256": "sha256:6665c6f0f9dcd2d6433faf31cfec5a62d0a6beddf69c716d16031a21390ee18f"
+  },
+  "retention": "Allowlisted source-free projection. Raw receipt/config/log remain in private review custody. Source paths, raw SCIP, command/environment arrays, driver responses, tool build metadata and symbol/member rows are omitted. The only retained offending-process facts are the approved nine fields; no cmdline, environment or exe is captured.",
+  "request": {
+    "schema": "phebs-t451b-native-request-v1",
+    "profile": "native-linux-arm64-rules-go-059-v2",
+    "cohort": "neutral",
+    "bundle_sha256": "sha256:cded0572e1c84a9860d86cd4fda4003a1e118d09e44e31ea672b68a43731eb4d",
+    "helper_sha256": "sha256:2dcc3bf5aa9c09d61d750a87e50319d2f0eaca1e6eedaf384c0e34e37c2f956b",
+    "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+    "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+    "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+    "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+    "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+    "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+    "aspect_sha256": "sha256:5c594f2adc61b536cc377d76b21d1beb04745f793108731a7f887fd45161ae08",
+    "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+  },
+  "request_sha256": "sha256:339d03bc02a21ce76567fba9aac5988e8330c0d7e84219813374c5269f548bd3",
+  "terminal": {
+    "stage": "containment/measurement",
+    "host_wall_nanoseconds": 152960618125,
+    "output_bytes": 6960900,
+    "output_sha256": "sha256:f15495b0da86734fa6c90e4caa06e6920413aff21355e3390e83b4b4e8a7eb77",
+    "stderr_bytes": 61,
+    "stderr_sha256": "sha256:aa1a97feec00b96650eda06cdace712a15c5dde31eb0af5d6848a5db72f97b24",
+    "exit_code": 1,
+    "stop_reason": "worker_failed",
+    "oom_killed": false,
+    "removed": true,
+    "inputs_removed": true
+  },
+  "classification": {
+    "kind": "harness_live_process_descriptor_observation_refusal",
+    "inner_observer_error": "procfs_descriptor_directory_permission_denied",
+    "diagnostic_state": "R",
+    "process_executable_identity_established": false,
+    "fd_denial_root_cause_established": false,
+    "same_process_or_cause_as_prior_attempts_established": false,
+    "planning_completed": true,
+    "planning_quiescence_passed": true,
+    "final_quiescence_passed": true,
+    "target_failure_established": false
+  },
+  "worker_wall_nanoseconds": 146250800933,
+  "timings": [
+    {
+      "stage": "profile",
+      "nanoseconds": 1318832656
+    },
+    {
+      "stage": "planning",
+      "nanoseconds": 115398888529
+    },
+    {
+      "stage": "profile",
+      "nanoseconds": 67037615
+    },
+    {
+      "stage": "package-load/typecheck",
+      "nanoseconds": 16609662585
+    },
+    {
+      "stage": "indexer-unlocalized",
+      "nanoseconds": 12687855958
+    },
+    {
+      "stage": "validation",
+      "nanoseconds": 2677714
+    },
+    {
+      "stage": "containment/measurement",
+      "nanoseconds": 165845502
+    }
+  ],
+  "resources": {
+    "memory_oom_events": 0,
+    "memory_oom_kills": 0,
+    "memory_limit_events": 0,
+    "task_limit_events": 0,
+    "sampling_unavailable": false,
+    "limits_verified": true,
+    "memory_peak_bytes": 2666278912,
+    "sampled_peak_rss_bytes": 893333504,
+    "sampled_peak_processes": 18,
+    "sampled_peak_scratch_bytes": 1866539008,
+    "sampled_peak_scratch_inodes": 73718,
+    "samples": 2769,
+    "per_process_descriptors": 128,
+    "aggregate_descriptor_ceiling": 32768
+  },
+  "observations": {
+    "version": "phebs-t451b-sampled-observations-v1",
+    "interval_nanoseconds": 50000000,
+    "duration_nanoseconds": 146084970019,
+    "samples": 2917,
+    "sampled_child_lifetimes": 1219,
+    "child_lifetimes_lower_bound": true,
+    "sampled_process_fd_peak": 26,
+    "sampled_aggregate_fd_peak": 117,
+    "fd_counts_non_atomic": true,
+    "vanished": 26,
+    "raced": 0,
+    "unexpected_errors": 18,
+    "unavailable": true,
+    "failure": "process",
+    "failure_process": {
+      "comm": "compile",
+      "state": "R",
+      "ppid": 855,
+      "pgid": 855,
+      "sid": 855,
+      "Uid": [
+        65534,
+        65534,
+        65534,
+        65534
+      ],
+      "Gid": [
+        65534,
+        65534,
+        65534,
+        65534
+      ],
+      "NoNewPrivs": true,
+      "CapPrm": "0000000000000000"
+    }
+  },
+  "planning_scratch": null,
+  "quiescence_diagnostics": {
+    "planning": null,
+    "final": null
+  },
+  "partial_evidence": {
+    "plan_counts": {
+      "targets": 6143,
+      "units": 96,
+      "documents": 212,
+      "sdks": 2
+    },
+    "plan_digests": {
+      "universe_sha256": "ec46b0b1a09c518126d85c6099f989d52640c43821fc4389fbfe0d040d516739",
+      "mapping_sha256": "53f6ae677aa1a63051c83046af05baa67a4b458a23f9da844f23f00bdae315c4",
+      "documents_sha256": "22e7c0e055f21fc20b9e6b4ac458c65b17461bc62cdc9cc23b0eedc89aaff0e1"
+    },
+    "selected_sdk": {
+      "bytes": 13936112,
+      "sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389"
+    },
+    "compiler_cache_eviction": {
+      "files": 1436,
+      "logical_bytes": 141562806,
+      "scratch_bytes_freed": 146604032
+    },
+    "client_legs": [
+      {
+        "slot": "load",
+        "wall_nanoseconds": 16579516553,
+        "packages": 129,
+        "driver_response_bytes": 228622,
+        "driver_response_sha256": "sha256:1a039b481eff5e0fc25c3ee83eddb1e31fc235c6f2a865156f272386ac19d995",
+        "adapted_response_bytes": 228630,
+        "adapted_response_sha256": "sha256:f0d22cd4fb383171bc963a7a0c959d06caba417c969fee5b27b8b8e42426682f",
+        "stdout_bytes": 21210,
+        "stdout_sha256": "sha256:3fbeddc5a4c37e089e2f2797829dee63c7ac5dd5e9b1ad25ed6c196527b13fa6",
+        "stderr_bytes": 0,
+        "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "typed_roots": 3,
+        "probe_packages": 129,
+        "probe_errors": 0
+      },
+      {
+        "slot": "scip",
+        "wall_nanoseconds": 12655113990,
+        "packages": 129,
+        "driver_response_bytes": 228622,
+        "driver_response_sha256": "sha256:8714250bae5a852989f036dc7542d3653ad994715feda23ce3167c9b6c24f13f",
+        "adapted_response_bytes": 228630,
+        "adapted_response_sha256": "sha256:30c67c02408d3fd845955ebd82db20908965aef30c33256abdc7d3ad1beaf277",
+        "stdout_bytes": 147,
+        "stdout_sha256": "sha256:c4943f11f1c2a1ee8bc95f63aa819d1f241b7858c10092b0638e43e43a31c2ac",
+        "stderr_bytes": 0,
+        "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "scip": {
+      "bytes": 27852,
+      "sha256": "sha256:1a8c1d4a8545fa1346ece44174fbc6b89d1a62a898db0265d3230c3dd3ef705c"
+    },
+    "oracle_counts": {
+      "documents": 6,
+      "occurrences": 195,
+      "symbols": 56,
+      "external_symbols": 0,
+      "definitions": 2,
+      "cross_file_references": 1,
+      "external_references": 1,
+      "hovers": 2
+    },
+    "oracle_coverage": {
+      "configured_targets": 6143,
+      "configured_units": 96,
+      "tool_units": 45,
+      "root_packages": 3,
+      "required_non_tool_packages": 49,
+      "sdk_packages": 80,
+      "root_documents": 6,
+      "member_edges": 6,
+      "excluded_controls": 1
+    },
+    "public_oracle_complete": false,
+    "current_admission_established": false,
+    "final_materialization": {
+      "planning_lock_sha256": "sha256:e97019c5794000cbb1281ac9aca28caa8a3e37fe3ecce318c1ae700a9fe912f3",
+      "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+      "source_files": 0,
+      "source_bytes": 0,
+      "source_sha256": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "owned_sha256": "sha256:68c596e6f1c8a7fe31723157b4e26ef2ee787ad7ca68b0e180d3872cb16bc2b4",
+      "aspect_sha256": "sha256:5c594f2adc61b536cc377d76b21d1beb04745f793108731a7f887fd45161ae08",
+      "originals_unchanged": true,
+      "excluded_control_absent": true
+    },
+    "final_private_cache": {
+      "version": "phebs-t451b-private-cache-v1",
+      "entries": 59261,
+      "regular_files": 51077,
+      "directories": 8083,
+      "symlinks": 101,
+      "unique_inodes": 59261,
+      "logical_bytes": 1284437817,
+      "allocated_bytes": 1424285696,
+      "complete": true
+    },
+    "missing_cache_roots": 3
+  },
+  "interpretation": [
+    "Planning and both clients completed, but sticky inner observation failure keeps the entire native-neutral result at HARNESS_STOP. Partial semantic evidence is not a compatibility pass or target evidence.",
+    "The first diagnostic records comm compile and state R across its bounded capture. comm is process-controlled, not an authenticated executable identity. Sequential stat/status snapshots do not prove the exact state at the denied FD read, its root cause, or identity/cause shared with prior attempts.",
+    "Planning commands succeeded, so the new failure-only scratch snapshot is absent. No planning ENOSPC or exhausted storage dimension is established for this run. The sampled inode peak exceeded the former cap; it does not establish complete peaks or causality for prior failures.",
+    "Planning and final quiescence checks passed. Original/owned workspace revalidation, excluded-control absence and final cache inventory completed despite unavailable inner observation; none clears the earlier sticky failure.",
+    "Sampled child lifetimes are incomplete lower bounds; per-process and aggregate FD counts are sequential non-atomic observations, not guaranteed simultaneous-peak lower bounds. Outer sampling availability does not repair inner unavailability.",
+    "The run does not establish which zombie-recovery branches executed, current Phebs admission, public-cohort behavior, or a T45.1b feasibility decision."
+  ],
+  "cleanup": {
+    "container_removed": true,
+    "private_inputs_removed": true,
+    "dedicated_docker_inventory_after_run": 0,
+    "private_input_parent_entries_after_run": 0,
+    "dedicated_vm_profile": "phebs-t451a",
+    "dedicated_vm_started_at": "2026-09-26T13:47:43-07:00",
+    "dedicated_vm_ready_at": "2026-09-26T13:48:17-07:00",
+    "dedicated_vm_stopped_at": "2026-09-26T13:51:19-07:00",
+    "dedicated_vm_stopped_confirmed_at": "2026-09-26T13:51:41-07:00",
+    "dedicated_vm_status": "Stopped",
+    "unrelated_default_vm_unchanged": true
+  },
+  "preserved_evidence": {
+    "process-diagnostic-results.json": {
+      "bytes": 11012,
+      "sha256": "sha256:6ad5c1a719059ffef5dc89ba181c181efc4af048cbb17ea983869c3a9d1f5010"
+    },
+    "downloader-repair-results.json": {
+      "bytes": 14741,
+      "sha256": "sha256:80d87a8b1949dd90a152950e2a96c4031938c5548beced9700ff7b6652c8710f"
+    },
+    "native-neutral-results.json": {
+      "bytes": 16888,
+      "sha256": "sha256:8404146f1fa0ccbfc12b0e7adf1ad092bb9e874c364a1faa9c510893de6f46b6"
+    },
+    "native-neutral-receipt-1.json.gz": {
+      "bytes": 2827,
+      "sha256": "sha256:0f816104146ca807b2c6824a5ce228aa60111c11a00396ee37a97bb2afb766e4"
+    },
+    "native-neutral-receipt-2.json.gz": {
+      "bytes": 2824,
+      "sha256": "sha256:9fd778c7215d0e1cfacde33168e937a65a66c45078c76314385f9f5f4bfb2a75"
+    },
+    "native-neutral-receipt-3.json.gz": {
+      "bytes": 2831,
+      "sha256": "sha256:7b4144b4304ba13f714b65f646ca545eaf3ed8b81c045dd36febff6f6ca3e49e"
+    },
+    "neutral-results.json": {
+      "bytes": 13941,
+      "sha256": "sha256:2a4aacad46f176cf9005b53d13f52deffa04d986e5fcee48f11335889409a5f6"
+    },
+    "neutral-receipt-1.json.gz": {
+      "bytes": 720,
+      "sha256": "sha256:b86becd6038f269112790959125a73ca933422c7058605cee8680475c4523131"
+    },
+    "neutral-receipt-2.json.gz": {
+      "bytes": 681761,
+      "sha256": "sha256:e74c5ad0c2539a71a29923d588384c50f5d2d03ca4f13dc93d251b4dd94135d2"
+    },
+    "neutral-receipt-3.json.gz": {
+      "bytes": 681777,
+      "sha256": "sha256:7fe70f73c5e9438d11f1479f33f916454007fa876412419294341a2156760b74"
+    }
+  },
+  "steady_state_cost": "Evidence-only record adds no runtime work. The approved spike observation, failure-only statfs, profile-admission and native cache-ceiling costs remain in PLAN; production request, sync, startup, retry, publication, lock and cache costs are unchanged."
+}

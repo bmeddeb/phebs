@@ -1,0 +1,375 @@
+{
+  "schema": "phebs-t451b-downloader-repair-results-v1",
+  "date": "2026-09-26",
+  "scope": "owned native-neutral compatibility prerequisite only",
+  "attempt": 4,
+  "outcome": "HARNESS_STOP",
+  "native_neutral_pass": false,
+  "target_execution": "NOT_RUN",
+  "public_cohorts_executed": [],
+  "t451b_feasibility_decision": null,
+  "source_commit": "346c0ebdf70fe914f912611dc25408b9c631cd62",
+  "source_tree": "ff463593ae4686877e461d43929f73f6d59915e4",
+  "authorization": {
+    "downloader_repairs_authorized": 1,
+    "downloader_repairs_used": 1,
+    "additional_native_runs_authorized": 1,
+    "additional_native_runs_used": 1,
+    "stop_after_run": true,
+    "further_execution_authorized": false,
+    "public_execution_authorized_this_stage": false,
+    "merge_push_pr_authorized": false
+  },
+  "repair": {
+    "mandatory_flag": "--repository_disable_download",
+    "downloader_config": "block bcr.bazel.build\n",
+    "downloader_config_sha256": "sha256:28e9eba3ce5d55b32dbd6c9a70e2ecf0e741f65e0c963aa7b16bd440df48653f",
+    "original_urls_registry_identities_lock_hashes_preserved": true,
+    "container_network": "none",
+    "protected_tools_target_head_roots_caps_preserved": true,
+    "inherited_distdir_present": false
+  },
+  "requested_roots": [
+    "//lib:alias",
+    "//proto:message_go",
+    "//cgo:cgo"
+  ],
+  "public_target_head_not_executed": "d5824b1a2286806b07efd030aa3a139c4f540157",
+  "host_proof": {
+    "output": {
+      "bytes": 1669,
+      "sha256": "sha256:147c0d6b21fd5c44981fbde2849165ddb29a51936208e45f0b97dbdb98685824"
+    },
+    "actual_pinned_bazel_classes": true,
+    "archive_cache_hit_preserves_suffix_content_and_extracts": true,
+    "archive_cache_miss_refuses_before_network": true,
+    "registry_miss_blocked": true,
+    "flag_config_removal_and_overrides_refused": true,
+    "network_boundary_positive_controls_pass": true,
+    "normal_race_gate_output_sha256": "sha256:0ad1344258866f130d46d17624d19aac0f514e3c12bf8ea1e3308a42f6cc23d9",
+    "static_gate_output_sha256": "sha256:89a0024f21e55eaad65c7450920c956b23714ccb5361b139913cb1d4e91a0566",
+    "auxiliary_host_runtime": "existing OpenJDK 26.0.2.1; native tool identities unchanged"
+  },
+  "pre_run_independent_review": {
+    "report_bytes": 13911,
+    "report_sha256": "sha256:b4541004f944e4a07cdf2a27695479a1e9fae6110bd18e6b468da2a294df2f3e",
+    "source_manifest_sha256": "sha256:7ecfe380ea36841a0c50c4e3124e51a1877ac95d752739449194625780fb2e14",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "config": {
+    "bytes": 1695,
+    "sha256": "sha256:975da814ecff54c122582e517d47cfd2c475cda96962244dbabd43519dace753"
+  },
+  "private_raw_receipt": {
+    "bytes": 6962608,
+    "sha256": "sha256:cde3e804e8c7c5a236e36fbf754fb9bba7acabc7aa7ef20735ca8bac919e68ae"
+  },
+  "private_test_log": {
+    "bytes": 2805,
+    "sha256": "sha256:2845d4ebbe2a2abb636f2efa5b4c505a5bf116dc92718b67b3603b7dfd1c1293"
+  },
+  "retention": "This is an allowlisted source-free projection, not the raw native receipt. Raw receipt/config/log remain in private local review custody; base64 SCIP, plan/source paths, traces, responses, argv/environment and oracle members are omitted. Original attempts 1-3 and neutral records remain byte-identical.",
+  "request": {
+    "schema": "phebs-t451b-native-request-v1",
+    "profile": "native-linux-arm64-rules-go-059-v1",
+    "cohort": "neutral",
+    "bundle_sha256": "sha256:c67e27ab83a715bcac4cccc36003a0e2d321cd15fd04c407ef3da896a5ccd579",
+    "helper_sha256": "sha256:63247d6e83d6e5dd757f0ed01660e75c0a6e4a068db11ce5304ebeca46e51078",
+    "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+    "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+    "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+    "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+    "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+    "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+    "aspect_sha256": "sha256:5c594f2adc61b536cc377d76b21d1beb04745f793108731a7f887fd45161ae08",
+    "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+  },
+  "request_sha256": "sha256:326b5460a175f2cdd771075cfef9822e03cc44eefac6d90b3af23f8b11384817",
+  "terminal": {
+    "stage": "containment/measurement",
+    "host_wall_nanoseconds": 139022293834,
+    "output_bytes": 6960451,
+    "output_sha256": "sha256:b6f53ac6c45b61f933e9f5721a9899994039282a9706d2208c253491c5dd5020",
+    "stderr_bytes": 103,
+    "stderr_sha256": "sha256:3b8fb17b3549c4a2ed8153414c5725c3895b61527a0748a85956984126541895",
+    "exit_code": 1,
+    "stop_reason": "worker_failed",
+    "oom_killed": false,
+    "removed": true,
+    "inputs_removed": true
+  },
+  "classification": {
+    "kind": "harness_process_observation_unavailable_and_final_quiescence_refusal",
+    "inner_process_observation_error": "procfs_descriptor_directory_permission_denied",
+    "process_executable_identity_established": false,
+    "final_quiescence_refused": true,
+    "final_source_revalidation_established": false,
+    "observed_source_mutation_established": false,
+    "exact_final_private_cache_inventory_established": false,
+    "outer_sampling_unavailable_distinct_from_inner_observer": true,
+    "target_failure_established": false
+  },
+  "worker_wall_nanoseconds": 134307192392,
+  "timings": [
+    {
+      "stage": "profile",
+      "nanoseconds": 1275917072
+    },
+    {
+      "stage": "planning",
+      "nanoseconds": 107791957324
+    },
+    {
+      "stage": "profile",
+      "nanoseconds": 59790298
+    },
+    {
+      "stage": "package-load/typecheck",
+      "nanoseconds": 14077530214
+    },
+    {
+      "stage": "indexer-unlocalized",
+      "nanoseconds": 11099646356
+    },
+    {
+      "stage": "validation",
+      "nanoseconds": 2253199
+    },
+    {
+      "stage": "containment/measurement",
+      "nanoseconds": 97675
+    }
+  ],
+  "resources": {
+    "memory_oom_events": 0,
+    "memory_oom_kills": 0,
+    "memory_limit_events": 0,
+    "task_limit_events": 0,
+    "sampling_unavailable": false,
+    "limits_verified": true,
+    "memory_peak_bytes": 2656739328,
+    "sampled_peak_rss_bytes": 721235968,
+    "sampled_peak_processes": 19,
+    "sampled_peak_scratch_bytes": 1741504512,
+    "sampled_peak_scratch_inodes": 62958,
+    "samples": 2689,
+    "per_process_descriptors": 128,
+    "aggregate_descriptor_ceiling": 32768
+  },
+  "observations": {
+    "version": "phebs-t451b-sampled-observations-v1",
+    "interval_nanoseconds": 50000000,
+    "duration_nanoseconds": 134307081615,
+    "samples": 2688,
+    "sampled_child_lifetimes": 1270,
+    "child_lifetimes_lower_bound": true,
+    "sampled_process_fd_peak": 32,
+    "sampled_aggregate_fd_peak": 112,
+    "fd_counts_non_atomic": true,
+    "vanished": 17,
+    "raced": 0,
+    "unexpected_errors": 301,
+    "unavailable": true,
+    "failure": "process"
+  },
+  "partial_evidence": {
+    "plan": {
+      "configured_targets": 6143,
+      "configured_units": 96,
+      "documents": 212,
+      "sdks": 2,
+      "universe_sha256": "ec46b0b1a09c518126d85c6099f989d52640c43821fc4389fbfe0d040d516739",
+      "mapping_sha256": "02b622de5d2b2070fec8ddb9e8d5fc5dcbcbb8b4623d8ded648ceab60f7251e2",
+      "documents_sha256": "c5018c50a7fd6a2abde71d8e89e0887808ef6cb197abbee6d96f2f0031505d5f"
+    },
+    "selected_sdk": {
+      "bytes": 13936112,
+      "sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389"
+    },
+    "selected_sdk_go_version": "go1.25.0",
+    "compiler_cache_eviction_during_planning": {
+      "files": 1436,
+      "logical_bytes": 141562806,
+      "scratch_bytes_freed": 146604032
+    },
+    "client_legs": [
+      {
+        "slot": "load",
+        "wall_nanoseconds": 14039332597,
+        "mode": 8681,
+        "plan_sha256": "sha256:c0f1148d9ae74f241f4b84d9412f99d4559206b58a736957dc326b6ef938116c",
+        "request_sha256": "sha256:dde54bee91cf33e079e3a3bbc4350f2a4667b2f89e30590b73f447a71628811c",
+        "launcher_sha256": "70876c6ef7401c2e66290a6baa01267f5a44af45aa46a2f3c27953b6316550b2",
+        "export_files": 49,
+        "stdout": {
+          "bytes": 21210,
+          "sha256": "sha256:3fbeddc5a4c37e089e2f2797829dee63c7ac5dd5e9b1ad25ed6c196527b13fa6"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "driver_response": {
+          "bytes": 228622,
+          "sha256": "sha256:5a6ecebd16d55c396aca6fa4a61ca9d212f9a98ac3e1c7fa6a6b0d85cd1de6aa",
+          "roots": 3,
+          "packages": 129
+        },
+        "response": {
+          "bytes": 228630,
+          "sha256": "sha256:0f98bc8675aaf73d3af035cbb2cfa20e0f5463a9716219c58e56aaf6828eb964",
+          "roots": 3,
+          "packages": 129
+        }
+      },
+      {
+        "slot": "scip",
+        "wall_nanoseconds": 11075203233,
+        "mode": 8681,
+        "plan_sha256": "sha256:91e2d6479115f0bdaa4515e394d4c4bc650c413e501e36965b7ec3768fdd5f4d",
+        "request_sha256": "sha256:472a2f3c44925d705739ec43efa8917ecb71e52e3eac7fb2f0f2dbd1640d758f",
+        "launcher_sha256": "d3443017cf8bab37bfd5165dcb809a5c0cb522b87a3839af5732d6710add809f",
+        "export_files": 49,
+        "stdout": {
+          "bytes": 147,
+          "sha256": "sha256:c4943f11f1c2a1ee8bc95f63aa819d1f241b7858c10092b0638e43e43a31c2ac"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "driver_response": {
+          "bytes": 228622,
+          "sha256": "sha256:2f14228c170554d95bafc8fe85318fe9cc93d42a0b275fc912c08b30d4871603",
+          "roots": 3,
+          "packages": 129
+        },
+        "response": {
+          "bytes": 228630,
+          "sha256": "sha256:6bd2054a6b9d6ce9f5b37372b0f5f8b4078c347861ebeb1479be2d4ed4f333ed",
+          "roots": 3,
+          "packages": 129
+        }
+      }
+    ],
+    "probe": {
+      "mode": 8681,
+      "roots": 3,
+      "packages": 129,
+      "root_syntax_counts": [
+        3,
+        2,
+        1
+      ],
+      "all_roots_have_types_and_type_info": true,
+      "package_errors": 0,
+      "ill_typed_packages": 0,
+      "packages_without_types_or_type_info": 2
+    },
+    "scip": {
+      "bytes": 27852,
+      "sha256": "sha256:6ea6024c926917d3e6f9a542531a9ae70c192623bc836bb82dc37127a478a7f0"
+    },
+    "oracle": {
+      "counts": {
+        "documents": 6,
+        "occurrences": 195,
+        "symbols": 56,
+        "external_symbols": 0,
+        "definitions": 2,
+        "cross_file_references": 1,
+        "external_references": 1,
+        "hovers": 2
+      },
+      "coverage": {
+        "configured_targets": 6143,
+        "configured_units": 96,
+        "tool_units": 45,
+        "root_packages": 3,
+        "required_non_tool_packages": 49,
+        "sdk_packages": 80,
+        "root_documents": 6,
+        "member_edges": 6,
+        "excluded_controls": 1
+      },
+      "public_oracle_complete": false,
+      "current_admission_established": false
+    },
+    "final_materialization_flags": {
+      "originals_unchanged": false,
+      "excluded_control_absent": false
+    },
+    "final_cache": {
+      "version": "",
+      "roots": null,
+      "missing_roots": null,
+      "entries": 0,
+      "regular_files": 0,
+      "directories": 0,
+      "symlinks": 0,
+      "unique_inodes": 0,
+      "logical_bytes": 0,
+      "allocated_bytes": 0,
+      "complete": false
+    }
+  },
+  "interpretation": [
+    "Plan, SDK, both client legs and the neutral semantic oracle are retained partial evidence, not a native cohort PASS.",
+    "Child lifetimes are incomplete lower bounds. Descriptor counts and aggregate sums are incomplete non-atomic observations, not guaranteed simultaneous-peak lower bounds; outer resource samples do not cure that failure.",
+    "Zero-valued final cache counters mean not measured, not an empty cache. Final source flags remain false because the quiescence guard skipped revalidation; they establish neither unchanged source nor mutation.",
+    "The compiler-cache eviction count belongs to completed planning; the later quiescence error text does not undo that earlier eviction.",
+    "The two driver responses have separate digests and are not claimed byte-identical between client legs.",
+    "No Go-version refusal, public target failure, full resource-fit claim, current Phebs admission or final T45.1b feasibility decision is established."
+  ],
+  "cleanup": {
+    "container_removed": true,
+    "private_inputs_removed": true,
+    "dedicated_docker_inventory_after_run": 0,
+    "private_input_parent_entries_after_run": 0,
+    "dedicated_vm_profile": "phebs-t451a",
+    "dedicated_vm_started_at": "2026-09-26T10:40:13-07:00",
+    "dedicated_vm_ready_at": "2026-09-26T10:40:24-07:00",
+    "dedicated_vm_stopped_at": "2026-09-26T10:46:58-07:00",
+    "dedicated_vm_status": "Stopped",
+    "unrelated_default_vm_unchanged": true
+  },
+  "preserved_evidence": {
+    "native-neutral-results.json": {
+      "bytes": 16888,
+      "sha256": "sha256:8404146f1fa0ccbfc12b0e7adf1ad092bb9e874c364a1faa9c510893de6f46b6"
+    },
+    "native-neutral-receipt-1.json.gz": {
+      "bytes": 2827,
+      "sha256": "sha256:0f816104146ca807b2c6824a5ce228aa60111c11a00396ee37a97bb2afb766e4"
+    },
+    "native-neutral-receipt-2.json.gz": {
+      "bytes": 2824,
+      "sha256": "sha256:9fd778c7215d0e1cfacde33168e937a65a66c45078c76314385f9f5f4bfb2a75"
+    },
+    "native-neutral-receipt-3.json.gz": {
+      "bytes": 2831,
+      "sha256": "sha256:7b4144b4304ba13f714b65f646ca545eaf3ed8b81c045dd36febff6f6ca3e49e"
+    },
+    "neutral-results.json": {
+      "bytes": 13941,
+      "sha256": "sha256:2a4aacad46f176cf9005b53d13f52deffa04d986e5fcee48f11335889409a5f6"
+    },
+    "neutral-receipt-1.json.gz": {
+      "bytes": 720,
+      "sha256": "sha256:b86becd6038f269112790959125a73ca933422c7058605cee8680475c4523131"
+    },
+    "neutral-receipt-2.json.gz": {
+      "bytes": 681761,
+      "sha256": "sha256:e74c5ad0c2539a71a29923d588384c50f5d2d03ca4f13dc93d251b4dd94135d2"
+    },
+    "neutral-receipt-3.json.gz": {
+      "bytes": 681777,
+      "sha256": "sha256:7fe70f73c5e9438d11f1479f33f916454007fa876412419294341a2156760b74"
+    }
+  },
+  "steady_state_cost": "Evidence-only record adds no production query/request, sync, startup/restart, retry/no-op, publication, lock, cache, memory/disk or child work. Native repair costs remain the preceding PLAN ADR; host proof is opt-in."
+}

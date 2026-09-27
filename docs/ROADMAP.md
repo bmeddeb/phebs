@@ -80,6 +80,51 @@ native and non-native gates plus independent review; its separate evidence in
 `spike/t451a/review-results.json` retains exact driver bytes and leaves the
 original acceptance artifacts unchanged.
 
+Ben merged PR #14 at `c4eac8e5fe3f3fe58e6991abd6ad1d94dad88051`.
+T45.1b's separately versioned neutral compatibility prerequisite passes two
+cold real-client runs and independent review, with receipts bound by
+`spike/t451b/neutral-results.json`. Its authorized public corpus is Apache-2.0
+`bazelbuild/remote-apis-sdks`. That native toolchain differs from the neutral
+profile and still needs compatibility proof. Corpus selection is not target
+execution, a reproduction of the unavailable private failure receipt, or a
+scale pass. Three native-neutral attempts stopped during planning, first on an
+owned-fixture dependency mismatch and then on cached-archive type loss caused
+by the blanket downloader block. `spike/t451b/native-neutral-results.json`
+binds these harness STOPs and cleanup; both original repair/reruns are used.
+Ben's subsequent one-repair/one-run allowance produced attempt 4 after host
+proof and independent review. Planning, real typed clients and neutral SCIP
+output are retained, but process-observation permission denial and final
+quiescence refusal leave a harness STOP, not native-neutral PASS. Its source-free
+projection is `spike/t451b/downloader-repair-results.json`; final source/cache
+checks remain incomplete. Cleanup is complete and the dedicated VM is stopped.
+The extra allowance is consumed; further repair or execution needs Ben's
+approval. Public runs, current Phebs admission and T45.1b's feasibility decision
+remain open.
+
+The subsequent approved diagnostic-only attempt 5 also stopped: its neutral
+planning build reported exhausted space, while the observer captured a process
+named `process-wrapper` in zombie state during the diagnostic reads. The name
+does not authenticate an executable; sampled storage peaks do not distinguish
+byte from inode exhaustion. Final quiescence/cache inventory passed, but no
+sealed plan, typed client or SCIP result was retained. The source-free record is
+`spike/t451b/process-diagnostic-results.json`. The sole diagnostic allowance is
+consumed, cleanup is complete and the dedicated VM is stopped. Independent
+returned-evidence review found no issues; no rerun or public execution is authorized.
+
+A later approval permits one zombie-handling repair, failed-planning storage
+diagnostics and one native-neutral attempt 6. Native profile v2 alone raises
+scratch inodes to 262,144; all other caps and protected inputs remain fixed.
+Host proof and independent review precede execution; cleanup, returned-evidence
+review and stop follow. Public cohorts remain unauthorized.
+
+Attempt 6 returned `HARNESS_STOP` after planning and both clients completed.
+The observer's first refusal diagnostic records `comm=compile`, state `R`;
+18 errors leave observation unavailable. Final quiescence/workspace/cache
+checks passed, but the native-neutral gate did not. The source-free record is
+`spike/t451b/zombie-cap-results.json`. Cleanup is complete, the dedicated VM is
+stopped and the allowance is consumed. No rerun, repair or public execution is
+authorized; T45.1b feasibility remains open.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

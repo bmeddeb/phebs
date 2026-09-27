@@ -25,6 +25,15 @@ import (
 // caller must immediately os.Exit with the returned code: PID 1 exit is the
 // kernel-owned descendant shutdown boundary, including escaped sessions.
 func Supervisor() int {
+	return supervisor(false)
+}
+
+// SupervisorNativeT451b is dispatched only by the native fixed command.
+func SupervisorNativeT451b() int {
+	return supervisor(true)
+}
+
+func supervisor(native bool) int {
 	if os.Getpid() != 1 || os.Getuid() != 0 || os.Getgid() != 0 || validateProcess(false) != nil ||
 		unix.Prctl(unix.PR_SET_DUMPABLE, 0, 0, 0, 0) != nil {
 		return 125
@@ -49,7 +58,7 @@ func Supervisor() int {
 		case <-finished:
 		}
 	}()
-	report := supervise(ctx, cancel)
+	report := supervise(ctx, cancel, native)
 	if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
 		return 125
 	}
@@ -59,10 +68,27 @@ func Supervisor() int {
 // ValidateWorker checks __worker before it reads its request or executes a tool.
 // Action helpers inherit containment but use Bazel's action environment.
 func ValidateWorker() error {
+	return validateWorker(false)
+}
+
+func ValidateNativeT451bWorker() error {
+	return validateWorker(true)
+}
+
+func validateWorker(native bool) error {
 	if os.Getpid() == 1 || os.Getuid() != 65534 || os.Geteuid() != 65534 || os.Getgid() != 65534 || os.Getegid() != 65534 {
 		return ErrRefused
 	}
-	return validateProcess(true)
+	if err := validateProcess(true); err != nil {
+		return err
+	}
+	// Dispatch alone is not a resource proof: reject a worker placed in the
+	// other profile even when its UID, environment and capabilities match.
+	var stat unix.Statfs_t
+	if unix.Statfs("/scratch", &stat) != nil || stat.Type != unix.TMPFS_MAGIC || !scratchInodesMatch(native, stat.Files) {
+		return ErrRefused
+	}
+	return nil
 }
 
 func validateProcess(worker bool) error {
@@ -112,9 +138,9 @@ func validateProcess(worker bool) error {
 	return nil
 }
 
-func supervise(ctx context.Context, cancel context.CancelFunc) supervisorReport {
-	report := supervisorReport{Schema: "t451a-supervisor-v1", ExitCode: 125, StopReason: "kernel_limits"}
-	if verifyKernelLimits() != nil || observeResources(&report.Resources) != nil {
+func supervise(ctx context.Context, cancel context.CancelFunc, native bool) supervisorReport {
+	report := supervisorReport{Schema: reportSchema(native), ExitCode: 125, StopReason: "kernel_limits"}
+	if verifyKernelLimits() != nil || observeResources(&report.Resources, native) != nil {
 		return report
 	}
 	report.Resources.LimitsVerified = true
@@ -129,7 +155,7 @@ func supervise(ctx context.Context, cancel context.CancelFunc) supervisorReport 
 		}
 	}
 	output := &childOutput{cancel: cancel}
-	command := exec.CommandContext(ctx, "/inputs/t451a", "__worker")
+	command := exec.CommandContext(ctx, "/inputs/t451a", workerCommand(native))
 	command.Dir = "/scratch"
 	command.Env = environment()
 	command.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: 65534, Gid: 65534, Groups: []uint32{}}}
@@ -148,7 +174,7 @@ func supervise(ctx context.Context, cancel context.CancelFunc) supervisorReport 
 	measurementFailed := false
 running:
 	for {
-		if observeResources(&report.Resources) != nil {
+		if observeResources(&report.Resources, native) != nil {
 			measurementFailed = true
 			cancel()
 		}
@@ -158,7 +184,7 @@ running:
 		case <-ticker.C:
 		}
 	}
-	if observeResources(&report.Resources) != nil {
+	if observeResources(&report.Resources, native) != nil {
 		measurementFailed = true
 	}
 	output.mu.Lock()
@@ -290,7 +316,7 @@ func observeKernelEvents(resources *Resources) error {
 	return nil
 }
 
-func observeResources(resources *Resources) (err error) {
+func observeResources(resources *Resources, native bool) (err error) {
 	stage := "kernel_events"
 	defer func() {
 		if err != nil && resources.SamplingFailureStage == "" {
@@ -328,7 +354,7 @@ func observeResources(resources *Resources) (err error) {
 			return ErrRefused
 		}
 		if stat.Flags&(unix.ST_NOSUID|unix.ST_NODEV) != unix.ST_NOSUID|unix.ST_NODEV || stat.Flags&unix.ST_RDONLY != 0 ||
-			path == "/scratch" && (stat.Flags&unix.ST_NOEXEC != 0 || stat.Files > ScratchInodes) ||
+			path == "/scratch" && (stat.Flags&unix.ST_NOEXEC != 0 || !scratchInodesMatch(native, stat.Files)) ||
 			path == "/dev/shm" && (stat.Flags&unix.ST_NOEXEC == 0 || stat.Files > 1<<20) {
 			return ErrRefused
 		}

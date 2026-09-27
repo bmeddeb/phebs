@@ -933,6 +933,49 @@ and many-target-to-one-package edges must be deterministic. `scip-go`,
 cannot create or amend those authority layers; an inexact planner stops the
 feasibility program.
 
+T45.1a is merged. T45.1b's separate neutral adapter passes real `go/packages`
+and scip-go discovery in two cold runs with independent review. A bounded
+public-corpus run using Apache-2.0 `bazelbuild/remote-apis-sdks` remains pending;
+its prepared native profile preserves the upstream lockfile and refuses missing
+offline inputs, but still needs compatibility proof. Three native-neutral
+attempts stopped on harness planning failures before any typed client or SCIP
+output; the latest cannot infer the cached protobuf archive's type after the
+blanket downloader block removes its URL. The source-free record is
+`spike/t451b/native-neutral-results.json`. A subsequently approved downloader
+repair passed host proof and independent review; its sole new attempt 4 reached
+real typed clients and neutral SCIP output, then stopped on process-observation
+permission denial and final quiescence refusal. The source-free projection is
+`spike/t451b/downloader-repair-results.json`. Final source revalidation and exact
+cache inventory remain unestablished. Cleanup is complete, the dedicated VM is
+stopped, and all approved attempts are consumed. Further repair or execution
+needs Ben's approval. Public cohorts remain unrun. Raw generated SCIP paths must pass the
+existing committed-index admission rules. There is no available
+managed generation command or supported scale claim from this work. Target
+gates remain open, and committed SCIP import remains the available compatibility
+path.
+
+A later approved diagnostic-only attempt 5 stopped during its neutral planning
+build on `no space left on device`. The observer captured `comm=process-wrapper`
+and zombie state during the diagnostic reads, without authenticating the
+executable. Final quiescence and cache inventory passed; no sealed plan, typed
+client or SCIP result was retained. The source-free record is
+`spike/t451b/process-diagnostic-results.json`. Its one-run allowance is consumed;
+cleanup is complete and the dedicated VM is stopped. Independent evidence
+review found no issues. Work stops here; no public run or further execution is authorized.
+
+The next bounded approval covers zombie-aware observation/quiescence,
+failed-planning free-space diagnostics, and a native-only 262,144-inode profile.
+One neutral attempt follows host tests and independent review, then cleanup,
+returned-evidence review and stop. It enables no product command or public run.
+
+That sole attempt 6 completed planning and both clients but remains a harness
+STOP: the process observer refused a live/unproven FD denial and stayed
+unavailable. Its diagnostic name `compile` is not executable authentication.
+Quiescence, workspace/control checks and final cache inventory passed without
+clearing that failure. `spike/t451b/zombie-cap-results.json` records the bounded
+source-free evidence. Cleanup is complete and the dedicated VM is stopped;
+no further repair, rerun or public run is authorized. Product behavior is unchanged.
+
 Managed generation must be partitionable and resumable without requiring one
 whole-repository package/type graph or one monolithic in-memory navigation
 snapshot. The selected design publishes a Phebs-managed bundle of conforming

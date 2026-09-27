@@ -156,8 +156,12 @@ func RunBazel(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	return runBazelCommand(ctx, output, argv)
+}
+
+func runBazelCommand(ctx context.Context, output []byte, argv []string) error {
 	if argv == nil {
-		_, err = os.Stdout.Write(output)
+		_, err := os.Stdout.Write(output)
 		return err
 	}
 	for _, arg := range argv {

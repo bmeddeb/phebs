@@ -14735,6 +14735,72 @@ and tool digests. Protocol rejection is a harness admission STOP and cannot
 serve as target failure evidence. This prerequisite grants no target execution
 authority and does not widen T45.1a's frozen request.
 
+Current work starts from Ben's merged PR #14. The authorized public candidate
+is Apache-2.0 `bazelbuild/remote-apis-sdks`; its observed current HEAD, proposed
+ordinary/generated-proto/shared-dependency cohorts, native toolchain mismatch,
+and missing historical private failure receipt are recorded in the owning
+2026-09-26 PLAN decision. Neutral real-client compatibility now passes in two
+cold runs with complete cleanup and independent review; exact requests,
+responses, probe/SCIP bytes and the preceding admission STOP are bound by
+`spike/t451b/neutral-results.json`. Target-native compatibility, exact offline
+admission, target execution and the feasibility decision remain open. Public
+corpus selection and the neutral proof do not establish target cgo or
+product-scale coverage. The separate native profile and immutable HTTP cache are
+prepared with strict lock preservation, active-GoFiles rederivation, sampled
+process/descriptor facts and a quiescent cache inventory. Three approved
+native-neutral attempts stopped in planning; source-free receipts are bound by
+`spike/t451b/native-neutral-results.json`. The first two exposed an owned-fixture
+module-graph mismatch; after its correction, the third exposed the blanket
+downloader block stripping the cached protobuf archive's inferred type. These
+are harness STOPs, with complete container/private-input cleanup and the
+dedicated VM stopped. Both original repair/reruns are consumed. Ben then
+authorized one downloader repair and one fresh neutral attempt, stopping
+afterward regardless of outcome. The fixed download-disable flag and registry
+block passed actual pinned-class host proof and independent review. Attempt 4
+retained planning, both typed-client legs and neutral SCIP/oracle output, then
+stopped on process-observation permission denial and final quiescence refusal.
+`spike/t451b/downloader-repair-results.json` binds its source-free projection;
+the raw receipt remains in private review custody. Final source revalidation
+and exact cache inventory were not established. Container/private inputs are
+removed and the dedicated VM is stopped. The extra allowance is consumed;
+further repair or execution needs Ben's approval. Native-neutral PASS, public
+cohorts, current Phebs admission and the final feasibility decision remain open.
+These harness STOPs establish neither target failure nor full resource fit.
+
+Ben subsequently authorized one diagnostic-only helper change and one neutral
+run with fixed tools, roots, HEAD and caps. Attempt 5 stopped during the Bazel
+planning build on `no space left on device`; sampled peaks cannot distinguish
+byte from inode exhaustion. The observer separately captured a process named
+`process-wrapper` in zombie state at the diagnostic reads, UID/GID 65534,
+`NoNewPrivs=true` and zero permitted capabilities. This is no executable-identity
+claim or attribution of attempt 4. Final quiescence and cache inventory passed,
+but no sealed plan, selected-SDK validation, typed client or SCIP result exists.
+Original-file verification does not establish the missing plan/lock/control
+proof. `spike/t451b/process-diagnostic-results.json` binds the source-free
+record. Cleanup is complete and the dedicated VM is stopped. The diagnostic
+allowance is consumed and independent returned-evidence review found no issues.
+Work stops here, with no further execution authorized. T45.1b remains open.
+
+Ben's next bounded authorization permits verified zombies to hold zero FDs
+and be quiescent, while live or unprovable processes still refuse. Failed
+planning commands gain free-block/free-inode diagnostics. Only native profile
+v2 raises scratch inodes to 262,144; T45.1a keeps 65,536 and all other caps,
+tool identities, HEAD and roots remain fixed. Host tests and independent review
+precede one fresh neutral attempt 6, then returned-evidence review, cleanup and
+stop. This authorizes no public cohort, merge, push or PR.
+
+Attempt 6 at source `6a499a74` is `HARNESS_STOP` at containment/measurement.
+Planning and both 129-package client legs completed, producing 27,852 SCIP
+bytes with six documents and 195 occurrences. The observer retained 18 errors;
+its first diagnostic records `comm=compile`, state `R`, not an authenticated
+executable or a proven cause. The live/unproven denial remains fatal. Planning
+and final quiescence, workspace/control checks and exact cache inventory passed,
+but cannot clear sticky unavailable observation. Planning succeeded, so the new
+failure-only scratch snapshot is absent. `spike/t451b/zombie-cap-results.json`
+binds this source-free terminal record. Cleanup is complete and the dedicated
+VM is stopped. The one-run allowance is consumed; no further repair/execution
+or public cohort is authorized. Native-neutral PASS and T45.1b remain open.
+
 **T45.2 · Closed provider/profile and execution-authority contract** *(needs
 T45.1b GO)* — generalize the accepted spike identities into versioned provider
 descriptors, operator-owned named

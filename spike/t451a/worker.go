@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/spike/t451a/launcher"
 	"github.com/bmeddeb/phebs/spike/t451a/planner"
 	"github.com/bmeddeb/phebs/spike/t451a/sandbox"
+	"golang.org/x/sys/unix"
 )
 
 type neutralEvidence struct {
@@ -28,12 +29,60 @@ type neutralEvidence struct {
 	ResponseBytes              int                 `json:"response_bytes"`
 	ResponseWire               []byte              `json:"response_wire"` // Base64 preserves exact driver bytes.
 	RepeatedConfigurationStops bool                `json:"repeated_configuration_stops"`
-	CompilerCacheEviction      cacheEviction       `json:"compiler_cache_eviction"`
+	CompilerCacheEviction      CacheEviction       `json:"compiler_cache_eviction"`
 }
 
-// WorkerPlan is called only after WorkerRequest validates the sandbox boundary.
-// Bazel receives the same closed startup/configuration on every invocation.
-func WorkerPlan(ctx context.Context) error {
+// BuildNeutralPlan constructs only the closed embedded neutral fixture plan.
+// The caller must validate the sandbox boundary before invoking it.
+func BuildNeutralPlan(ctx context.Context) (planner.Plan, CacheEviction, error) {
+	if err := SetupCompiler(); err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	const workspace = "/scratch/workspace"
+	fixtures, err := planner.Fixtures()
+	if err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	names := make([]string, 0, len(fixtures))
+	for name := range fixtures {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if !validPath(name) {
+			return planner.Plan{}, CacheEviction{}, errors.New("invalid owned fixture path")
+		}
+		destination := filepath.Join(workspace, name)
+		if err := os.MkdirAll(filepath.Dir(destination), 0700); err != nil {
+			return planner.Plan{}, CacheEviction{}, err
+		}
+		if err := os.WriteFile(destination, fixtures[name], 0600); err != nil {
+			return planner.Plan{}, CacheEviction{}, err
+		}
+	}
+	helper, err := readBounded("/inputs/t451a", MaxFileBytes)
+	if err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	if err := os.WriteFile(workspace+"/phebs_plan/t451a", helper, 0500); err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	plan, evicted, err := buildDeclaredPlan(ctx, planner.Roots(), planner.Commands(), launcher.BazelCommon())
+	if err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	if err := planner.VerifyNeutral(plan); err != nil {
+		return planner.Plan{}, CacheEviction{}, err
+	}
+	return plan, evicted, nil
+}
+
+// EnsureQuiescentWorker refuses residual tool processes before cache inspection.
+func EnsureQuiescentWorker() error { return ensureQuiescentWorker() }
+
+// SetupCompiler imports only the admitted compiler archive into private scratch.
+// The caller must first validate the existing worker containment boundary.
+func SetupCompiler() error {
 	if err := unpackCompiler("/inputs/tools/cc-sysroot.zip", "/scratch/toolchain"); err != nil {
 		return fmt.Errorf("offline compiler import: %w", err)
 	}
@@ -46,45 +95,65 @@ exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/tool
 	if err := os.WriteFile("/scratch/toolchain/cc", []byte(compiler), 0500); err != nil {
 		return err
 	}
-	const workspace = "/scratch/workspace"
-	fixtures, err := planner.Fixtures()
+	return nil
+}
+
+// BuildNativePlan reads an already materialized owned workspace using only the
+// fixed native planner commands. Roots must come from the caller's closed profile.
+func BuildNativePlan(ctx context.Context, roots []string, ownedNeutral bool) (planner.Plan, CacheEviction, error) {
+	commands, err := planner.NativeCommands(roots)
 	if err != nil {
-		return err
+		return planner.Plan{}, CacheEviction{}, err
 	}
-	names := make([]string, 0, len(fixtures))
-	for name := range fixtures {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		if !validPath(name) {
-			return errors.New("invalid owned fixture path")
-		}
-		destination := filepath.Join(workspace, name)
-		if err := os.MkdirAll(filepath.Dir(destination), 0700); err != nil {
-			return err
-		}
-		if err := os.WriteFile(destination, fixtures[name], 0600); err != nil {
-			return err
+	common := launcher.NativeBazelCommon()
+	if ownedNeutral {
+		for i, arg := range common {
+			if arg == "--lockfile_mode=error" {
+				common[i] = "--lockfile_mode=update"
+			}
 		}
 	}
-	helper, err := readBounded("/inputs/t451a", MaxFileBytes)
-	if err != nil {
-		return err
+	return buildDeclaredPlan(ctx, roots, commands, common)
+}
+
+// PlanningScratch records one post-failure scratch snapshot. An unavailable
+// statfs is explicit; zero available counts can mean exhausted space.
+type PlanningScratch struct {
+	Available  bool   `json:"available"`
+	FreeBlocks uint64 `json:"free_blocks"`
+	FreeInodes uint64 `json:"free_inodes"`
+}
+
+// PlanningCommandError preserves the command failure with bounded storage facts.
+type PlanningCommandError struct {
+	Cause   error
+	Scratch PlanningScratch
+}
+
+func (e *PlanningCommandError) Error() string { return e.Cause.Error() }
+func (e *PlanningCommandError) Unwrap() error { return e.Cause }
+
+func planningCommandFailure(cause error, statfs func(string, *unix.Statfs_t) error) error {
+	e := &PlanningCommandError{Cause: cause}
+	var stat unix.Statfs_t
+	if statfs("/scratch", &stat) == nil {
+		e.Scratch = PlanningScratch{Available: true, FreeBlocks: stat.Bfree, FreeInodes: stat.Ffree}
 	}
-	if err := os.WriteFile(workspace+"/phebs_plan/t451a", helper, 0500); err != nil {
-		return err
-	}
-	startup, common := launcher.BazelStartup(), launcher.BazelCommon()
+	return e
+}
+
+func buildDeclaredPlan(ctx context.Context, roots []string, commands [][]string, common []string) (planner.Plan, CacheEviction, error) {
+	startup := launcher.BazelStartup()
 	budget := commandBudget{remaining: sandbox.OutputBytes}
 	var outputs [][]byte
-	var evicted cacheEviction
-	for index, suffix := range planner.Commands() {
+	var evicted CacheEviction
+	var err error
+	for index, suffix := range commands {
 		args := append(append(append([]string{}, startup...), suffix...), common...)
 		commandCtx, commandCancel := context.WithCancel(ctx)
 		budget.cancel = commandCancel
 		command := exec.CommandContext(commandCtx, "/inputs/tools/bin/bazel", args...)
-		command.Dir = workspace
+		command.Dir = launcher.Workspace
 		command.Env = launcher.BazelEnvironment()
 		stdout, stderr := commandOutput{budget: &budget}, commandOutput{budget: &budget}
 		command.Stdout, command.Stderr = &stdout, &stderr
@@ -94,61 +163,68 @@ exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/tool
 		if runErr != nil {
 			// These diagnostics contain only compiled-in neutral names and public
 			// tool material. Host receipts retain no raw command/error bytes.
-			return fmt.Errorf("neutral %s refused: %w: %.8192s", suffix[0], runErr, stderr.buffer.Bytes())
+			cause := fmt.Errorf("neutral %s refused: %w: %.8192s", suffix[0], runErr, stderr.buffer.Bytes())
+			return planner.Plan{}, CacheEviction{}, planningCommandFailure(cause, unix.Statfs)
 		}
 		outputs = append(outputs, stdout.buffer.Bytes())
 		if index == 1 {
 			if err := ensureQuiescentWorker(); err != nil {
-				return err
+				return planner.Plan{}, CacheEviction{}, err
 			}
 			evicted, err = evictCompilerCache(gazelleCompilerCache)
 			if err != nil {
-				return fmt.Errorf("private compiler cache eviction: %w", err)
+				return planner.Plan{}, CacheEviction{}, fmt.Errorf("private compiler cache eviction: %w", err)
 			}
 		}
 	}
 	if len(outputs) != 3 {
-		return errors.New("closed command sequence changed")
+		return planner.Plan{}, CacheEviction{}, errors.New("closed command sequence changed")
 	}
 	paths, err := planner.ProjectionPaths(outputs[1])
 	if err != nil {
-		return err
+		return planner.Plan{}, CacheEviction{}, err
 	}
 	execRoot, err := os.OpenRoot("/scratch/bazel-output/execroot/_main")
 	if err != nil {
-		return err
+		return planner.Plan{}, CacheEviction{}, err
 	}
 	defer func() { _ = execRoot.Close() }()
 	projections := make(map[string][]byte, len(paths))
 	var total int
 	for _, name := range paths {
 		if !validPath(name) {
-			return errors.New("invalid projection locator")
+			return planner.Plan{}, CacheEviction{}, errors.New("invalid projection locator")
 		}
 		info, err := execRoot.Lstat(name)
 		if err != nil || !info.Mode().IsRegular() || info.Size() > int64(planner.MaxProjectionBytes) {
-			return errors.New("projection file refused")
+			return planner.Plan{}, CacheEviction{}, errors.New("projection file refused")
 		}
 		file, err := execRoot.Open(name)
 		if err != nil {
-			return err
+			return planner.Plan{}, CacheEviction{}, err
 		}
 		data, readErr := io.ReadAll(io.LimitReader(file, int64(planner.MaxProjectionBytes)+1))
 		closeErr := file.Close()
 		if readErr != nil || closeErr != nil || len(data) > planner.MaxProjectionBytes {
-			return errors.New("projection bytes refused")
+			return planner.Plan{}, CacheEviction{}, errors.New("projection bytes refused")
 		}
 		total += len(data)
 		if total > planner.MaxProtoBytes {
-			return errors.New("aggregate projection byte limit")
+			return planner.Plan{}, CacheEviction{}, errors.New("aggregate projection byte limit")
 		}
 		projections[name] = data
 	}
-	plan, err := planner.Assemble(outputs[0], outputs[1], projections)
+	plan, err := planner.AssembleRoots(outputs[0], outputs[1], projections, roots)
 	if err != nil {
-		return err
+		return planner.Plan{}, CacheEviction{}, err
 	}
-	if err := planner.VerifyNeutral(plan); err != nil {
+	return plan, evicted, nil
+}
+
+// WorkerPlan preserves the historical direct mode-31 neutral proof.
+func WorkerPlan(ctx context.Context) error {
+	plan, evicted, err := BuildNeutralPlan(ctx)
+	if err != nil {
 		return err
 	}
 	var ordinary, transition []planner.Configured

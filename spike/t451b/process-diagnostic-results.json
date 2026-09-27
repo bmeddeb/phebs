@@ -1,0 +1,268 @@
+{
+  "schema": "phebs-t451b-process-diagnostic-results-v1",
+  "date": "2026-09-26",
+  "attempt": 5,
+  "scope": "owned native-neutral diagnostic run only",
+  "outcome": "HARNESS_STOP",
+  "native_neutral_pass": false,
+  "public_cohorts_executed": [],
+  "t451b_feasibility_decision": null,
+  "source_commit": "126f77ea70da468646638898b6576b066541a1c8",
+  "source_tree": "273e9ab1a3f430970a956efa60f0301f644aa4a9",
+  "source_manifest_sha256": "sha256:07831d47e464f5edbc573900f66c2efe85218009983d703833cc5542ce3a16f1",
+  "authorization": {
+    "diagnostic_changes_authorized": 1,
+    "diagnostic_changes_used": 1,
+    "additional_native_runs_authorized": 1,
+    "additional_native_runs_used": 1,
+    "stop_after_run": true,
+    "further_execution_authorized": false,
+    "public_execution_authorized": false,
+    "merge_push_pr_authorized": false
+  },
+  "preserved_contract": {
+    "observer_and_quiescence_refusals_unchanged": true,
+    "only_helper_and_bundle_identities_changed": true,
+    "tools_target_head_roots_caps_unchanged": true,
+    "request_environment_downloader_network_policy_unchanged": true
+  },
+  "requested_roots": [
+    "//lib:alias",
+    "//proto:message_go",
+    "//cgo:cgo"
+  ],
+  "public_target_head_not_executed": "d5824b1a2286806b07efd030aa3a139c4f540157",
+  "host_gates": {
+    "normal_race_output_sha256": "sha256:13ac52408ae6b86e5df5c93481828167786cfc3b9ffe01df9fbab5a08f04afbc",
+    "host_linux_vet_lint_docs_output_sha256": "sha256:198e3d7f335ede86aa284851a076cf53e2cde55e2f580972bb33b5ad5cfa53fe"
+  },
+  "pre_run_independent_review": {
+    "report_bytes": 15202,
+    "report_sha256": "sha256:9f2a34489a9b8bbe085d19e5bc9e9c253145eba2531a26b24ac7adcafd2fc5c9",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "helper": {
+    "bytes": 15678919,
+    "sha256": "sha256:9c3efaade52c728d130a5c346bc1bd091fa588b397f8a9c98716025390f8c6a1"
+  },
+  "bundle_manifest": {
+    "bytes": 3387047,
+    "sha256": "sha256:007e4074ceca2a8987a1a72c28e67f4b2cfb4108a203800cf5240f1f92ca78b7"
+  },
+  "config": {
+    "bytes": 1699,
+    "sha256": "sha256:821ec7150c7d9cb24ae0bd25047c194eebe897b837f1f4e274ebe63f0a50ca04"
+  },
+  "private_raw_receipt": {
+    "bytes": 10172,
+    "sha256": "sha256:a3ffa348c4ca737e40b28909b54923a708630396d23d591dec6e858576caca95"
+  },
+  "private_test_log": {
+    "bytes": 7928,
+    "sha256": "sha256:30d467cf4ed9549917013a8d2b4e021151337de5f297321ff8b89cdcfa6f3cbb"
+  },
+  "retention": "Allowlisted source-free projection. Raw receipt/config/log remain in private review custody. No raw stderr, source paths, tool build metadata, cmdline, environment or exe is copied. Original evidence is unchanged.",
+  "request": {
+    "schema": "phebs-t451b-native-request-v1",
+    "profile": "native-linux-arm64-rules-go-059-v1",
+    "cohort": "neutral",
+    "bundle_sha256": "sha256:007e4074ceca2a8987a1a72c28e67f4b2cfb4108a203800cf5240f1f92ca78b7",
+    "helper_sha256": "sha256:9c3efaade52c728d130a5c346bc1bd091fa588b397f8a9c98716025390f8c6a1",
+    "probe_sha256": "sha256:e0396be3a4731424a5875bbbe167193f13a05e2fb81f596c18e2ee90e0021aae",
+    "probe_source_sha256": "sha256:b54f9e2ae71e008259eb2c207a7bb5183d2c1f64685b36e1314f002194d52df2",
+    "scip_go_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+    "go_sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "bazel_sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f",
+    "driver_sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd",
+    "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+    "aspect_sha256": "sha256:5c594f2adc61b536cc377d76b21d1beb04745f793108731a7f887fd45161ae08",
+    "image_id": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818"
+  },
+  "request_sha256": "sha256:957e00dd5e931c1f95566c5e79be1bf8d9c8fca2143ab0eb2391b44652d633f3",
+  "terminal": {
+    "stage": "planning",
+    "host_wall_nanoseconds": 115153380875,
+    "output_bytes": 8032,
+    "output_sha256": "sha256:1b18efb5d123e9920c2f4c6601ec079ad95f2b8dffbde17d3717855d4aaa8c2d",
+    "stderr_bytes": 2449,
+    "stderr_sha256": "sha256:50dfa534743eab877db8f14d4de7af77709e5929b3a421aee25773f9e0eb69ce",
+    "exit_code": 1,
+    "stop_reason": "worker_failed",
+    "oom_killed": false,
+    "removed": true,
+    "inputs_removed": true
+  },
+  "classification": {
+    "kind": "harness_neutral_build_enospc_and_process_observation_unavailable",
+    "build_failure": "GoStdlibList reported no space left on device",
+    "storage_exhaustion_dimension_established": false,
+    "inner_observer_error": "procfs_descriptor_directory_permission_denied",
+    "process_executable_identity_established": false,
+    "same_process_or_cause_as_attempt4_established": false,
+    "planning_quiescence_reached": false,
+    "final_quiescence_passed": true,
+    "target_failure_established": false
+  },
+  "worker_wall_nanoseconds": 109110315777,
+  "timings": [
+    {
+      "stage": "profile",
+      "nanoseconds": 1214859501
+    },
+    {
+      "stage": "planning",
+      "nanoseconds": 107729049750
+    },
+    {
+      "stage": "containment/measurement",
+      "nanoseconds": 166405692
+    }
+  ],
+  "resources": {
+    "memory_oom_events": 0,
+    "memory_oom_kills": 0,
+    "memory_limit_events": 0,
+    "task_limit_events": 0,
+    "sampling_unavailable": false,
+    "limits_verified": true,
+    "memory_peak_bytes": 2523856896,
+    "sampled_peak_rss_bytes": 713330688,
+    "sampled_peak_processes": 17,
+    "sampled_peak_scratch_bytes": 1699106816,
+    "sampled_peak_scratch_inodes": 63309,
+    "samples": 2184,
+    "per_process_descriptors": 128,
+    "aggregate_descriptor_ceiling": 32768
+  },
+  "observations": {
+    "version": "phebs-t451b-sampled-observations-v1",
+    "interval_nanoseconds": 50000000,
+    "duration_nanoseconds": 108943936051,
+    "samples": 2179,
+    "sampled_child_lifetimes": 1052,
+    "child_lifetimes_lower_bound": true,
+    "sampled_process_fd_peak": 23,
+    "sampled_aggregate_fd_peak": 105,
+    "fd_counts_non_atomic": true,
+    "vanished": 22,
+    "raced": 0,
+    "unexpected_errors": 69,
+    "unavailable": true,
+    "failure": "process",
+    "failure_process": {
+      "comm": "process-wrapper",
+      "state": "Z",
+      "ppid": 21,
+      "pgid": 1,
+      "sid": 1,
+      "Uid": [
+        65534,
+        65534,
+        65534,
+        65534
+      ],
+      "Gid": [
+        65534,
+        65534,
+        65534,
+        65534
+      ],
+      "NoNewPrivs": true,
+      "CapPrm": "0000000000000000"
+    }
+  },
+  "quiescence_diagnostics": {
+    "planning": null,
+    "final": null
+  },
+  "partial_evidence": {
+    "sealed_plan_retained": false,
+    "selected_sdk_retained": false,
+    "client_legs": 0,
+    "scip_bytes": 0,
+    "semantic_oracle_retained": false,
+    "compiler_cache_eviction": {
+      "files": 0,
+      "logical_bytes": 0,
+      "scratch_bytes_freed": 0
+    },
+    "final_materialization_flags": {
+      "originals_unchanged": true,
+      "excluded_control_absent": false
+    },
+    "final_private_cache": {
+      "version": "phebs-t451b-private-cache-v1",
+      "entries": 57388,
+      "regular_files": 49928,
+      "directories": 7368,
+      "symlinks": 92,
+      "unique_inodes": 57388,
+      "logical_bytes": 1226001763,
+      "allocated_bytes": 1361936384,
+      "complete": true
+    },
+    "missing_cache_roots": 3
+  },
+  "interpretation": [
+    "The first offending observer lifetime has a stable selected stat tuple across capture. State Z means zombie at those reads. comm is a process-controlled name, not authenticated executable identity; status/stat snapshots are sequential, not atomic.",
+    "ENOSPC is retained from exact hash-bound stderr. Sampled scratch byte/inode peaks cannot distinguish which limit was exhausted or exclude an unsampled peak. No capacity or refusal rule is changed.",
+    "Planning build failed before planner quiescence/cache eviction and before a sealed plan, selected-SDK validation, either typed client or SCIP. Zero eviction counts describe the unreached step, not a successful empty eviction.",
+    "Final quiescence passed, enabling original-file verification and complete private-cache inventory. The neutral planning lock was not re-sealed. With no sealed plan, excluded_control_absent stays false; originals_unchanged proves neither a completed plan/lock/control check nor active-source completeness.",
+    "Inner observation is unavailable despite healthy outer sampling. Child lifetimes are incomplete lower bounds; FD counts and sums are non-atomic observations, not guaranteed simultaneous-peak lower bounds.",
+    "This diagnostic does not identify the offending process from attempt4, establish a common cause with ENOSPC, prove current Phebs admission, or decide target feasibility."
+  ],
+  "cleanup": {
+    "container_removed": true,
+    "private_inputs_removed": true,
+    "dedicated_docker_inventory_after_run": 0,
+    "private_input_parent_entries_after_run": 0,
+    "dedicated_vm_profile": "phebs-t451a",
+    "dedicated_vm_started_at": "2026-09-26T12:35:59-07:00",
+    "dedicated_vm_ready_at": "2026-09-26T12:36:07-07:00",
+    "dedicated_vm_stopped_at": "2026-09-26T12:38:41-07:00",
+    "dedicated_vm_status": "Stopped",
+    "unrelated_default_vm_unchanged": true
+  },
+  "preserved_evidence": {
+    "downloader-repair-results.json": {
+      "bytes": 14741,
+      "sha256": "sha256:80d87a8b1949dd90a152950e2a96c4031938c5548beced9700ff7b6652c8710f"
+    },
+    "native-neutral-results.json": {
+      "bytes": 16888,
+      "sha256": "sha256:8404146f1fa0ccbfc12b0e7adf1ad092bb9e874c364a1faa9c510893de6f46b6"
+    },
+    "native-neutral-receipt-1.json.gz": {
+      "bytes": 2827,
+      "sha256": "sha256:0f816104146ca807b2c6824a5ce228aa60111c11a00396ee37a97bb2afb766e4"
+    },
+    "native-neutral-receipt-2.json.gz": {
+      "bytes": 2824,
+      "sha256": "sha256:9fd778c7215d0e1cfacde33168e937a65a66c45078c76314385f9f5f4bfb2a75"
+    },
+    "native-neutral-receipt-3.json.gz": {
+      "bytes": 2831,
+      "sha256": "sha256:7b4144b4304ba13f714b65f646ca545eaf3ed8b81c045dd36febff6f6ca3e49e"
+    },
+    "neutral-results.json": {
+      "bytes": 13941,
+      "sha256": "sha256:2a4aacad46f176cf9005b53d13f52deffa04d986e5fcee48f11335889409a5f6"
+    },
+    "neutral-receipt-1.json.gz": {
+      "bytes": 720,
+      "sha256": "sha256:b86becd6038f269112790959125a73ca933422c7058605cee8680475c4523131"
+    },
+    "neutral-receipt-2.json.gz": {
+      "bytes": 681761,
+      "sha256": "sha256:e74c5ad0c2539a71a29923d588384c50f5d2d03ca4f13dc93d251b4dd94135d2"
+    },
+    "neutral-receipt-3.json.gz": {
+      "bytes": 681777,
+      "sha256": "sha256:7fe70f73c5e9438d11f1479f33f916454007fa876412419294341a2156760b74"
+    }
+  },
+  "steady_state_cost": "This evidence-only record adds no runtime work. Diagnostic helper cost remains the approved bounded failure-only proc capture in PLAN; production request, sync, startup, retry, publication, lock and cache costs are unchanged."
+}
