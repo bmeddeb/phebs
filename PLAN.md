@@ -7634,3 +7634,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   correction; parent normal/race, selected command integration, host/Linux vet,
   lint, docs and glossary pass. No historical
   evidence, execution cap, target or provider-registration claim changes.
+
+- **2026-09-27 — T45.4 wire authenticated internal roles into the owned binary.**
+  Exact supervisor, worker, adapter, native-Bazel and planner roles dispatch
+  before ordinary bootstrap. Any production-accounting selector, including an
+  empty one, refuses internal dispatch before work. Primary workers require the
+  authenticated root-peer invocation and immutable controls; children retain
+  their existing distinct closed boundaries. Supervisor return immediately exits
+  the process. Private classified failure bytes remain failure and are not logged
+  as raw command errors. No public option, installation or provider is added.
+
+  **Cost.** Ordinary startup adds fixed argument inspection without an environment
+  read, allocation, I/O, lock or child. Internal roles add fixed guards before
+  existing bounded work; worker results use one write over already bounded bytes.
+  No new query, sync, retry/no-op, publication, cache or persistent work. Linked
+  binary growth is not a native RSS measurement.
+
+  Independent exact-source/cost review and parent actual-main host/race,
+  unprivileged Linux forwarding/refusal, vet/lint and documentation checks pass.
+  Broader command checks exposed the separately corrected strict-backup regression;
+  all affected selected families pass. The extra whole command suite hit its
+  ten-minute package timeout, so no whole-suite pass is claimed. Exact owned
+  fixture children were stopped after timeout; diagnostics remain retained.
+  Privileged native execution, complete controller integration and target cost
+  evidence remain open before provider registration.

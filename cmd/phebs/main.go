@@ -263,6 +263,9 @@ func legacyExtractionRequired(
 }
 
 func main() {
+	if handled, code := runTypedCommand(); handled {
+		os.Exit(code)
+	}
 	code, err := runPhebs(os.Args[1:])
 	if err != nil {
 		log.Print(err)

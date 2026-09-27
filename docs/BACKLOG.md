@@ -15061,6 +15061,11 @@ preflight and traversal before restore instead of relying on ordinary fallback.
 Independent review preserves old recipes, unknown refusal and derived exclusions;
 this correction does not close native executor or runtime-registration gates.
 
+The owned binary now dispatches the authenticated worker and fixed helper roles,
+with production-selector refusal and immediate supervisor exit. Independent review
+and actual-main host/race plus neutral Linux forwarding/refusal checks pass.
+Complete controller integration and privileged native proof remain open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.
