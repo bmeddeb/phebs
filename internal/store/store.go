@@ -96,6 +96,10 @@ type Repo struct {
 	// consumers that compose live evidence to detect a publication transition
 	// even when commit and semantic unit digest are unchanged.
 	EvidenceRevision int64 `json:"-" cbor:"evidence_revision,omitempty"`
+	// Typed source identity changes only with the owned indexed HEAD/scope.
+	// Incarnation is assigned by the store and never accepted from an upsert.
+	TypedIncarnation string `json:"-" cbor:"typed_incarnation,omitempty"`
+	TypedSourceEpoch int64  `json:"-" cbor:"typed_source_epoch,omitempty"`
 	// CallerPublicationRevision is the repository-local monotonic visibility
 	// fence for complete caller generations. It deliberately survives an
 	// unavailable interval: publishing A, clearing A, and republishing the same

@@ -46,7 +46,8 @@ var (
 	ErrGenerationExhausted = errors.New("generation chunk attempts exhausted")
 )
 
-const generationResourceClassMigrationVersion = "t40.10-generation-resource-class-v1"
+const generationResourceClassMigrationVersion = "t45.4-generation-resource-class-v2"
+const previousGenerationResourceClassMigrationVersion = "t40.10-generation-resource-class-v1"
 
 type generationResourceClassMigrationState struct {
 	Version string `json:"version"`
@@ -56,9 +57,8 @@ func generationResourceClassMigrationID() models.RecordID {
 	return models.NewRecordID("store_migration", "generation_resource_class")
 }
 
-// migrateGenerationResourceClasses adds the extraction-only worker class to
-// stores created before partition execution was wired into the production
-// scheduler. The completion marker keeps steady-state startup to one point
+// migrateGenerationResourceClasses adds the isolated typed-index worker class
+// and upgrades the previous extraction-class marker. The completion marker keeps steady-state startup to one point
 // read and prevents an unknown future schema generation from being replaced.
 func (s *Surreal) migrateGenerationResourceClasses(ctx context.Context) error {
 	complete, err := s.generationResourceClassMigrationComplete(ctx)
@@ -71,17 +71,19 @@ func (s *Surreal) migrateGenerationResourceClasses(ctx context.Context) error {
 	results, err := storeQuery[any](ctx, s.accounting, s.db, `
 BEGIN;
 LET $current_version = (SELECT version FROM $marker LIMIT 1)[0].version;
-IF $current_version != NONE AND $current_version != '' AND $current_version != $version {
+IF $current_version != NONE AND $current_version != '' AND $current_version != $version
+	AND $current_version != $previous_version {
 	THROW 'phebs-permanent: unsupported generation resource class migration';
 };
 DEFINE FIELD OVERWRITE resource_class ON generation_schedule TYPE string
-	ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
+	ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction', 'typed-index'];
 DEFINE FIELD OVERWRITE resource_class ON generation_schedule_chunk TYPE string
-	ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
+	ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction', 'typed-index'];
 UPSERT $marker SET version = $version, completed_at = time::now() RETURN NONE;
 COMMIT;`, map[string]any{
-		"marker":  generationResourceClassMigrationID(),
-		"version": generationResourceClassMigrationVersion,
+		"marker":           generationResourceClassMigrationID(),
+		"version":          generationResourceClassMigrationVersion,
+		"previous_version": previousGenerationResourceClassMigrationVersion,
 	}, storeWrite(3))
 	if err != nil {
 		return fmt.Errorf("migrate generation resource classes: %w", err)
@@ -120,7 +122,7 @@ func (s *Surreal) generationResourceClassMigrationComplete(ctx context.Context) 
 			if row.Version == generationResourceClassMigrationVersion {
 				return true, nil
 			}
-			if row.Version != "" {
+			if row.Version != "" && row.Version != previousGenerationResourceClassMigrationVersion {
 				return false, fmt.Errorf("unsupported marker %q", row.Version)
 			}
 		}
@@ -154,6 +156,9 @@ const (
 	// stage-specific; sharing CPU would let an observation worker claim and
 	// terminally reject a partitioned-extraction chunk.
 	GenerationResourceExtraction GenerationResourceClass = "extraction"
+	// TypedIndex owns a single exact request, never a generic CPU task.
+	GenerationResourceTypedIndex GenerationResourceClass = "typed-index"
+	TypedIndexScheduleStage      string                  = "typed-index"
 )
 
 type GenerationScheduleStatus string
@@ -763,6 +768,11 @@ func normalizeGenerationScheduleSpec(spec GenerationScheduleSpec) (GenerationSch
 	if spec.RepositoryTokens < 1 || spec.RepositoryTokens > MaxGenerationRepositoryTokens {
 		return GenerationScheduleSpec{}, fmt.Errorf("generation repository tokens must be from 1 through %d", MaxGenerationRepositoryTokens)
 	}
+	if spec.ResourceClass == GenerationResourceTypedIndex &&
+		(spec.Stage != TypedIndexScheduleStage || spec.TotalItems != 1 || spec.ChunkItems != 1 || spec.RepositoryTokens != 1) ||
+		spec.Stage == TypedIndexScheduleStage && spec.ResourceClass != GenerationResourceTypedIndex {
+		return GenerationScheduleSpec{}, errors.New("typed-index schedule requires its isolated one-item class and one repository token")
+	}
 	chunks := (spec.TotalItems + int64(spec.ChunkItems) - 1) / int64(spec.ChunkItems)
 	if chunks > MaxGenerationChunks {
 		return GenerationScheduleSpec{}, fmt.Errorf("generation schedule has %d chunks, limit %d", chunks, MaxGenerationChunks)
@@ -773,7 +783,7 @@ func normalizeGenerationScheduleSpec(spec GenerationScheduleSpec) (GenerationSch
 func validGenerationResourceClass(class GenerationResourceClass) bool {
 	switch class {
 	case GenerationResourceCPU, GenerationResourceIO, GenerationResourceMemory,
-		GenerationResourceExtraction:
+		GenerationResourceExtraction, GenerationResourceTypedIndex:
 		return true
 	default:
 		return false

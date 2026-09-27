@@ -6,6 +6,9 @@
 DEFINE TABLE IF NOT EXISTS repo SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS repo_name ON repo FIELDS name UNIQUE;
 DEFINE FIELD IF NOT EXISTS indexed_analysis_unit ON repo TYPE option<object>;
+DEFINE FIELD IF NOT EXISTS typed_incarnation ON repo TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS typed_source_epoch ON repo TYPE option<int>
+    ASSERT $value = NONE OR $value > 0;
 
 DEFINE TABLE IF NOT EXISTS connection SCHEMALESS;
 DEFINE TABLE IF NOT EXISTS repo_connection SCHEMALESS;
@@ -166,7 +169,7 @@ DEFINE FIELD IF NOT EXISTS digest ON generation_schedule TYPE string;
 DEFINE FIELD IF NOT EXISTS repository ON generation_schedule TYPE string;
 DEFINE FIELD IF NOT EXISTS stage ON generation_schedule TYPE string;
 DEFINE FIELD IF NOT EXISTS generation ON generation_schedule TYPE string;
-DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
+DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction', 'typed-index'];
 DEFINE FIELD IF NOT EXISTS total_items ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 80000000;
 DEFINE FIELD IF NOT EXISTS chunk_items ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 4096;
 DEFINE FIELD IF NOT EXISTS total_chunks ON generation_schedule TYPE int ASSERT $value > 0 AND $value <= 1000000;
@@ -207,7 +210,7 @@ DEFINE FIELD IF NOT EXISTS schedule_digest ON generation_schedule_chunk TYPE str
 DEFINE FIELD IF NOT EXISTS repository ON generation_schedule_chunk TYPE string;
 DEFINE FIELD IF NOT EXISTS stage ON generation_schedule_chunk TYPE string;
 DEFINE FIELD IF NOT EXISTS generation ON generation_schedule_chunk TYPE string;
-DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule_chunk TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction'];
+DEFINE FIELD IF NOT EXISTS resource_class ON generation_schedule_chunk TYPE string ASSERT $value INSIDE ['cpu', 'io', 'memory', 'extraction', 'typed-index'];
 DEFINE FIELD IF NOT EXISTS offset ON generation_schedule_chunk TYPE int ASSERT $value >= 0;
 DEFINE FIELD IF NOT EXISTS length ON generation_schedule_chunk TYPE int ASSERT $value > 0 AND $value <= 4096;
 DEFINE FIELD IF NOT EXISTS attempt ON generation_schedule_chunk TYPE int ASSERT $value >= 0 AND $value < 8;

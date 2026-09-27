@@ -146,6 +146,15 @@ retained proto/fan-out members, which the mandatory conflict refusal preserves.
 T45.6 must resolve that provider compatibility gate before registration. No
 historical evidence, pinned tool, execution cap or runtime registration changes.
 
+**T45.4 local prerequisites (2026-09-27).** Source-only repository epochs and
+incarnations preserve exact reuse while fencing source ABA; the dedicated
+scheduler class reserves the existing controller allowance plus the unchanged
+measured container envelope and permits one process-wide typed slot. The
+Phase 2-only containment promotion has new owned helper/schema identities.
+It is not the historical approved helper and has not been run natively.
+Durable typed requests, DIO/input custody, lifecycle/publication/restore and
+native validation remain open before runtime registration.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

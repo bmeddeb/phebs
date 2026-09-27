@@ -6562,3 +6562,73 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   invalidation scans, disk writes, child processes or goroutines. Concurrent
   explicit callers multiply transient cost; the T45.4 executor must enforce
   its single execution slot. Legacy committed-blob reader behavior is unchanged.
+
+- **2026-09-27 — T45.4 source, admission and containment prerequisites.**
+  Managed source authority uses a server-owned random repository incarnation
+  and a source-only monotonic epoch, bound with the exact indexed HEAD in
+  `phebs-typed-source-v1`. Indexed HEAD and exact owned source-scope changes,
+  including clearing and reinstalling the same source, advance the epoch in
+  the existing repository transaction. Identical indexing, named-revision-only
+  changes and evidence publications preserve it. Repository removal/readdition
+  receives a new incarnation. This avoids using the evidence revision, whose
+  independent publications would invalidate exact typed reuse. Legacy rows
+  initialize by bounded compare-and-set only when the repository exists, has a
+  canonical indexed HEAD and is not deleting; malformed existing identity and
+  epoch overflow refuse. Internal fields are absent from repository JSON.
+
+  A dedicated `typed-index` generation resource class owns only the closed
+  one-item, one-chunk, one-repository-token typed schedule. The existing
+  scheduler owns leases, heartbeats and bounded retry; a process-wide typed
+  slot prevents separate scheduler instances from multiplying execution.
+  Admission reserves the existing maximum controller allowance of 1 GiB and
+  256 descriptors plus the measured container's 4,533,092,352 bytes and
+  294 times 128 descriptor ceiling. Container caps remain unchanged. The
+  generic descriptor pool remains 4,096, the total process admission memory
+  remains 8 GiB, and generic classes cannot borrow the container's descriptor
+  allowance or its larger memory budget. The resource-class migration upgrades
+  only the known previous marker; unknown future versions refuse.
+
+  `internal/typedsandbox` promotes the reviewed Phase 2 controller, PID-1
+  supervisor, resource sampling, bounded watchdog and durable container-owner
+  journal from retained implementation `5a7630cb`; it removes legacy tmpfs and
+  diagnostic-wall entrypoints. The prospective helper has fixed owned paths
+  and dispatch selectors, new schema/owner names, and a fixed Linux-local
+  scratch namespace. It is a new compiled identity, not the historical helper.
+  Only the measured disk-scratch profile and 300-second wall are exposed.
+  Non-Linux invocation refuses. Container creation and recovery retain exact
+  daemon/image/recipe/owner checks; missing create responses recover by the
+  journaled exact container name. Cleanup must prove container absence before
+  removing the journal. Worker execution still needs the separately verified
+  prehydration, DIO scratch owner, provider observer, durable request state and
+  immediate PID-1 exit dispatch integration. No executable or runtime provider
+  is registered by these prerequisites. Mock/controller and cross-compile
+  checks are not Linux-native containment or target evidence.
+
+  Cost: ordinary metadata upserts draw one 16-byte random candidate, retaining
+  the already-stored incarnation when present; they add no row read or write.
+  Index/clear transactions add fixed field comparisons and one epoch field to
+  their existing row mutation. A typed source lookup reads one bounded row;
+  legacy initialization adds at most the existing bounded queue-retry count of
+  CAS writes and rereads, charged through existing read/write accounting.
+  Schema loading adds two repository field definitions. Scheduler startup
+  still reads one resource-class marker, with three schema/
+  marker writes on its known-version upgrade. Admission adds a fixed class
+  comparison and one counter under the existing short process-admission mutex;
+  no child executes under that mutex. Explicit containment creates one container
+  and owned worker, samples bounded process/resource state every 50 ms, buffers
+  at most 24 MiB of wire output and 16 MiB of child output, and publishes a
+  bounded 4 KiB watchdog snapshot. It has no registered query, sync, idle or
+  publication path. Remaining custody, lifecycle, backup/restore and native
+  gates keep T45.4 open.
+
+  Independent correction review closed one medium interrupted-journal-update
+  finding and one low progress-diagnostic finding. Recovery now validates both
+  main and pending owner records, retains malformed/conflicting custody, and
+  removes a matching pending record only after exact container absence, syncing
+  its parent before removing the main journal. Malformed progress frames mark
+  progress unavailable while preserving the last valid diagnostic fields.
+  These add bounded journal reads/fsyncs only to explicit cleanup and a fixed
+  malformed-frame branch; the watchdog wall and containment do not change.
+  Source/migration/accounting real-store normal and race checks, controller and
+  scheduler normal/race checks, host and Linux/arm64 vet, lint, documentation,
+  glossary and whitespace gates pass. No native run occurred.

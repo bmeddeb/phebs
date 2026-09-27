@@ -14908,6 +14908,13 @@ and are reclaimed only through the bounded owner. Exact backup/restore,
 startup, hard-death, pressure, pin, and cleanup tests pass before a reader or
 provider may register.
 
+Local prerequisite progress (2026-09-27): repository incarnation/source-only
+epoch fences, isolated full-envelope scheduler admission, and the Phase 2-only
+container/supervisor promotion are implemented on the local T45.4 branch.
+T45.4 remains open: durable requests/stages, owned prehydration and DIO scratch,
+publication/lifecycle/pins, regenerate-on-restore and actual native custody
+validation are not supplied by those prerequisites. No provider is registered.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

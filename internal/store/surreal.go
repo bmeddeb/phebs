@@ -2035,8 +2035,14 @@ func (s *Surreal) Close(ctx context.Context) error {
 func repoID(name string) models.RecordID { return models.NewRecordID("repo", name) }
 
 func (s *Surreal) UpsertRepo(ctx context.Context, r Repo) error {
-	_, err := storeQuery[any](ctx, s.accounting, s.db,
+	incarnation, err := newLeaseToken()
+	if err != nil {
+		return err
+	}
+	_, err = storeQuery[any](ctx, s.accounting, s.db,
 		`UPSERT $rid SET
+			typed_incarnation = typed_incarnation ?? $typed_incarnation,
+			typed_source_epoch = typed_source_epoch ?? 1,
 			name = $name,
 			display_name = $display_name,
 			clone_url = $clone_url,
@@ -2052,6 +2058,7 @@ func (s *Surreal) UpsertRepo(ctx context.Context, r Repo) error {
 			external_code_host_url = $external_host_url`,
 		map[string]any{
 			"rid":                repoID(r.Name),
+			"typed_incarnation":  incarnation,
 			"name":               r.Name,
 			"display_name":       r.DisplayName,
 			"clone_url":          r.CloneURL,
@@ -2594,8 +2601,11 @@ LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
 IF $caller_writer_ok = false {
 	THROW 'phebs-permanent: caller-generation publication writer is not active'
 };` + fence + `
-LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
-LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
+LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit, typed_source_epoch FROM $rid)[0];
+LET $typed_source_changed = ($before.indexed_commit_hash ?? '') != $hash
+	OR $before.indexed_analysis_unit != ` + unitValue + `;
+` + typedSourceEpochGuardSQL + `
+LET $updated = UPDATE $rid SET typed_source_epoch = $typed_source_epoch, indexed_commit_hash = $hash,
 	indexed_revisions = $revisions, indexed_analysis_unit = ` + unitValue + `,
 	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
 LET $scope_unchanged = ($before.indexed_commit_hash ?? '') = $hash
@@ -2728,7 +2738,7 @@ LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
 IF $caller_writer_ok = false {
 	THROW 'phebs-permanent: caller-generation publication writer is not active'
 };` + fence + `
-LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
+LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit, typed_source_epoch FROM $rid)[0];
 LET $publication = (SELECT id FROM $publication_rid)[0];
 LET $catalog = (SELECT id FROM $catalog_rid)[0];
 LET $caller = (SELECT id FROM $caller_rid)[0];
@@ -2736,7 +2746,10 @@ LET $visibility_changed = ($before != NONE
 	AND (($before.indexed_commit_hash ?? '') != ''
 		OR $before.indexed_analysis_unit != NONE))
 	OR $publication != NONE OR $catalog != NONE OR $caller != NONE;
-LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
+LET $typed_source_changed = ($before.indexed_commit_hash ?? '') != ''
+	OR $before.indexed_analysis_unit != NONE;
+` + typedSourceEpochGuardSQL + `
+LET $updated = UPDATE $rid SET typed_source_epoch = $typed_source_epoch, indexed_commit_hash = NONE, indexed_revisions = NONE,
 	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
 LET $retired_catalog = IF array::len($updated) = 1 THEN
 	(` + catalogDelete + ` RETURN BEFORE)

@@ -15,6 +15,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 const (
@@ -24,6 +25,19 @@ const (
 	MaxChunkMemoryBytes   int64 = 1 << 30
 	MaxChunkDescriptors         = 256
 )
+
+// TypedIndexBudget reserves the ordinary maximum controller envelope plus the
+// entire measured container. It does not change any kernel-enforced cap.
+func TypedIndexBudget() Budget {
+	policy := typedindex.MeasuredPolicy()
+	return Budget{MaxMemoryBytes: MaxChunkMemoryBytes + policy.MemoryBytes,
+		MaxDescriptors: MaxChunkDescriptors + int(policy.Tasks*policy.Descriptors)}
+}
+
+func typedContainerDescriptors() int {
+	policy := typedindex.MeasuredPolicy()
+	return int(policy.Tasks * policy.Descriptors)
+}
 
 type Budget struct {
 	MaxMemoryBytes int64
@@ -99,7 +113,8 @@ var processAdmission struct {
 	sync.Mutex
 	concurrency int
 	memoryBytes int64
-	descriptors int
+	descriptors int // generic/controller pool; container descriptors counted by typedSlots
+	typedSlots  int
 }
 
 func (scheduler *Scheduler) Run(ctx context.Context) error {
@@ -143,22 +158,29 @@ func (scheduler *Scheduler) acquireProcessAdmission(
 	concurrency := 0
 	var memoryBytes int64
 	descriptors := 0
+	typedSlots := 0
 	for _, class := range classes {
 		configuration := scheduler.Classes[class]
 		concurrency += configuration.Concurrency
 		memoryBytes += int64(configuration.Concurrency) * configuration.Budget.MaxMemoryBytes
 		descriptors += configuration.Concurrency * configuration.Budget.MaxDescriptors
+		if class == store.GenerationResourceTypedIndex {
+			typedSlots += configuration.Concurrency
+			descriptors -= configuration.Concurrency * typedContainerDescriptors()
+		}
 	}
 	processAdmission.Lock()
 	defer processAdmission.Unlock()
 	if processAdmission.concurrency+concurrency > MaxProcessConcurrency ||
 		processAdmission.memoryBytes+memoryBytes > MaxProcessMemoryBytes ||
-		processAdmission.descriptors+descriptors > MaxProcessDescriptors {
+		processAdmission.descriptors+descriptors > MaxProcessDescriptors ||
+		processAdmission.typedSlots+typedSlots > 1 {
 		return nil, errors.New("generation scheduler instances exceed process admission")
 	}
 	processAdmission.concurrency += concurrency
 	processAdmission.memoryBytes += memoryBytes
 	processAdmission.descriptors += descriptors
+	processAdmission.typedSlots += typedSlots
 	var once sync.Once
 	return func() {
 		once.Do(func() {
@@ -167,6 +189,7 @@ func (scheduler *Scheduler) acquireProcessAdmission(
 			processAdmission.concurrency -= concurrency
 			processAdmission.memoryBytes -= memoryBytes
 			processAdmission.descriptors -= descriptors
+			processAdmission.typedSlots -= typedSlots
 		})
 	}, nil
 }
@@ -184,8 +207,12 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 	if scheduler.MaxMemoryBytes == 0 {
 		scheduler.MaxMemoryBytes = MaxProcessMemoryBytes
 	}
+	descriptorCeiling := MaxProcessDescriptors
+	if _, exists := scheduler.Classes[store.GenerationResourceTypedIndex]; exists {
+		descriptorCeiling += typedContainerDescriptors()
+	}
 	if scheduler.MaxDescriptors == 0 {
-		scheduler.MaxDescriptors = MaxProcessDescriptors
+		scheduler.MaxDescriptors = descriptorCeiling
 	}
 	if scheduler.PollEvery == 0 {
 		scheduler.PollEvery = 250 * time.Millisecond
@@ -207,7 +234,7 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 	}
 	if scheduler.MaxConcurrency < 1 || scheduler.MaxConcurrency > MaxProcessConcurrency ||
 		scheduler.MaxMemoryBytes < 1 || scheduler.MaxMemoryBytes > MaxProcessMemoryBytes ||
-		scheduler.MaxDescriptors < 1 || scheduler.MaxDescriptors > MaxProcessDescriptors ||
+		scheduler.MaxDescriptors < 1 || scheduler.MaxDescriptors > descriptorCeiling ||
 		scheduler.PollEvery <= 0 || scheduler.HeartbeatEvery <= 0 ||
 		scheduler.StaleAfter <= scheduler.HeartbeatEvery || scheduler.StoreCallTimeout <= 0 {
 		return nil, errors.New("generation scheduler process bounds are invalid")
@@ -216,17 +243,20 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 	totalConcurrency := 0
 	var totalMemory int64
 	totalDescriptors := 0
+	genericDescriptors := 0
 	for class, configuration := range scheduler.Classes {
 		if class != store.GenerationResourceCPU && class != store.GenerationResourceIO &&
 			class != store.GenerationResourceMemory &&
-			class != store.GenerationResourceExtraction {
+			class != store.GenerationResourceExtraction && class != store.GenerationResourceTypedIndex {
 			return nil, fmt.Errorf("generation scheduler resource class %q is invalid", class)
 		}
-		if configuration.Concurrency < 1 || configuration.Handle == nil ||
-			configuration.Budget.MaxMemoryBytes < 1 ||
-			configuration.Budget.MaxMemoryBytes > MaxChunkMemoryBytes ||
-			configuration.Budget.MaxDescriptors < 1 ||
-			configuration.Budget.MaxDescriptors > MaxChunkDescriptors {
+		typed := class == store.GenerationResourceTypedIndex
+		validBudget := configuration.Budget.MaxMemoryBytes >= 1 && configuration.Budget.MaxMemoryBytes <= MaxChunkMemoryBytes &&
+			configuration.Budget.MaxDescriptors >= 1 && configuration.Budget.MaxDescriptors <= MaxChunkDescriptors
+		if typed {
+			validBudget = configuration.Concurrency == 1 && configuration.Budget == TypedIndexBudget()
+		}
+		if configuration.Concurrency < 1 || configuration.Concurrency > MaxProcessConcurrency || configuration.Handle == nil || !validBudget {
 			return nil, fmt.Errorf("generation scheduler class %q bounds are invalid", class)
 		}
 		if configuration.BeforeLeaseHeartbeat != nil &&
@@ -250,10 +280,15 @@ func (scheduler *Scheduler) validate() ([]store.GenerationResourceClass, error) 
 		totalConcurrency += configuration.Concurrency
 		totalMemory += int64(configuration.Concurrency) * configuration.Budget.MaxMemoryBytes
 		totalDescriptors += configuration.Concurrency * configuration.Budget.MaxDescriptors
+		if typed {
+			genericDescriptors += MaxChunkDescriptors
+		} else {
+			genericDescriptors += configuration.Concurrency * configuration.Budget.MaxDescriptors
+		}
 		classes = append(classes, class)
 	}
 	if totalConcurrency > scheduler.MaxConcurrency || totalMemory > scheduler.MaxMemoryBytes ||
-		totalDescriptors > scheduler.MaxDescriptors {
+		totalDescriptors > scheduler.MaxDescriptors || genericDescriptors > MaxProcessDescriptors {
 		return nil, errors.New("generation scheduler class budgets exceed process bounds")
 	}
 	slices.Sort(classes)
