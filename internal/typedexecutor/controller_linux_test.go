@@ -93,7 +93,7 @@ type fixture struct {
 	raw    []byte
 }
 
-func preparationFixture(t *testing.T, endpoint, database string) fixture {
+func preparationFixture(t *testing.T, endpoint, database string, corpus ...func(*store.Surreal, string, string) (typedindex.Profile, []byte, string)) fixture {
 	t.Helper()
 	ctx := t.Context()
 	s, err := store.Open(ctx, endpoint, "root", "fixture", "executor", database)
@@ -136,7 +136,11 @@ func preparationFixture(t *testing.T, endpoint, database string) fixture {
 	if err = s.SetRepoIndexed(ctx, repo, strings.Repeat("a", 40), time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	intent, err := s.InstallTypedProfile(ctx, repo, profile, testHash([]byte("universe")), 0)
+	universe := testHash([]byte("universe"))
+	if len(corpus) != 0 {
+		profile, raw, universe = corpus[0](s, repo, source)
+	}
+	intent, err := s.InstallTypedProfile(ctx, repo, profile, universe, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -550,8 +550,8 @@ func runChecked(ctx context.Context, options Options, check func(context.Context
 		if retErr == nil && removed {
 			retErr = check(turnContext)
 		}
-		if retErr == nil && removed && options.Control.Phase == ControlPlan {
-			result.completed = &completion{allowance: options.Allowance, worker: int64(len(result.Stdout) + len(result.Stderr)), wire: acceptedWire}
+		if retErr == nil && removed {
+			result.completed = &completion{allowance: options.Allowance, worker: int64(len(result.Stdout) + len(result.Stderr)), wire: acceptedWire, control: options.Control, output: completionOutput(result.Stdout, result.Stderr)}
 		}
 	}()
 	var created struct {
@@ -873,4 +873,78 @@ func syncParent(path string) error {
 		return ErrCustody
 	}
 	return nil
+}
+
+// QuiescentAttempt performs only exact recorded cleanup, then proves the
+// dedicated daemon empty and both journal names absent. The trusted caller must
+// serialize daemon and ownership mutations through its lifecycle guard. Missing
+// journals alone never prove quiescence; unknown containers are never killed.
+func QuiescentAttempt(ctx context.Context, o RecoveryOptions) error {
+	if runtime.GOOS != "linux" {
+		return ErrRefused
+	}
+	return quiescentAttempt(ctx, o)
+}
+func quiescentAttempt(ctx context.Context, o RecoveryOptions) error {
+	if ctx == nil || !validOptionPath(o.Socket) || !validOptionPath(o.Inputs) || !imageID(o.ImageID) || !hostDigest(o.PlanningDigest) || !hostDigest(o.AttemptDigest) {
+		return ErrRefused
+	}
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	present, err := attemptJournalPresence(o.Inputs)
+	if err != nil {
+		return err
+	}
+	if present {
+		r, e := recoverRecorded(ctx, o)
+		if e != nil || !r.Removed {
+			return errors.Join(ErrCustody, e)
+		}
+	}
+	list, err := hostContainers(ctx, o.Socket)
+	if err != nil || len(list) != 0 {
+		return ErrCustody
+	}
+	present, err = attemptJournalPresence(o.Inputs)
+	if err != nil || present {
+		return ErrCustody
+	}
+	return ctx.Err()
+}
+func attemptJournalPresence(inputs string) (bool, error) {
+	parent := filepath.Dir(inputs)
+	fd, err := openControlDirectory(parent)
+	if err != nil {
+		return false, ErrCustody
+	}
+	defer func() { _ = fd.Close() }()
+	before, err := fd.Stat()
+	if err != nil {
+		return false, ErrCustody
+	}
+	root, err := os.OpenRoot(parent)
+	if err != nil {
+		return false, ErrCustody
+	}
+	defer func() { _ = root.Close() }()
+	named, err := root.Stat(".")
+	if err != nil || !os.SameFile(before, named) {
+		return false, ErrCustody
+	}
+	main := filepath.Base(inputs) + ".typed-container.json"
+	_, mainErr := root.Lstat(main)
+	_, pendingErr := root.Lstat(main + ".next")
+	if pendingErr != nil && !errors.Is(pendingErr, os.ErrNotExist) || mainErr != nil && !errors.Is(mainErr, os.ErrNotExist) {
+		return false, ErrCustody
+	}
+	final, err := openControlDirectory(parent)
+	if err != nil {
+		return false, ErrCustody
+	}
+	defer func() { _ = final.Close() }()
+	after, err := final.Stat()
+	if err != nil || !os.SameFile(before, after) {
+		return false, ErrCustody
+	}
+	return mainErr == nil || pendingErr == nil, nil
 }

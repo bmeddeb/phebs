@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -119,8 +121,8 @@ func TestAllowanceJoinedToken(t *testing.T) {
 			result.Stdout = nil
 			result.Removed = false
 			result.ExitCode = 99
-			if again, e := AdvanceAllowance(o.Allowance, result); e != nil || again != next {
-				t.Fatal("public mutation changed trusted counts", again, e)
+			if again, e := AdvanceAllowance(o.Allowance, result); e == nil {
+				t.Fatal("public mutation reused completion", again, e)
 			}
 			wrong := o.Allowance
 			wrong.AttemptDigest = testImage
@@ -250,5 +252,58 @@ func TestStopOnlyTransportDoesNotCancelBeforeCleanup(t *testing.T) {
 	stop()
 	if transport.Err() == nil {
 		t.Fatal("watcher/transport retained after stop")
+	}
+}
+
+func TestExecuteCompletionIsExactAndNotAnotherAllowance(t *testing.T) {
+	d, o := fakeDaemon(t, "")
+	old := o.Controls
+	o.Controls = filepath.Join(filepath.Dir(o.Inputs), "controls-execute")
+	if err := os.Rename(old, o.Controls); err != nil {
+		t.Fatal(err)
+	}
+	o.Control.Phase = ControlExecute
+	o.Control.RequestDigest = "sha256:" + strings.Repeat("d", 64)
+	o.Allowance.WorkerBytesUsed = 3
+	o.Allowance.WireBytesUsed = 9
+	raw := testControlSeal(t, o.Allowance, o.Control)
+	seal := filepath.Join(o.Controls, ControlSealFile)
+	if err := os.Chmod(seal, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(seal, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(seal, 0444); err != nil {
+		t.Fatal(err)
+	}
+	o.Control.SealDigest = controlDigest(raw)
+	d.options = o
+	result, err := runChecked(t.Context(), o, func(context.Context) error { return nil })
+	if err != nil || VerifyCompletion(o.Allowance, o.Control, result) != nil {
+		t.Fatal(result, err)
+	}
+	if _, err = AdvanceAllowance(o.Allowance, result); err == nil {
+		t.Fatal("execute minted a third phase")
+	}
+	for _, mutate := range []func(*Result){
+		func(r *Result) { r.Stdout = append([]byte(nil), r.Stdout...); r.Stdout[0] ^= 1 },
+		func(r *Result) { r.Stderr = append(r.Stderr, 'x') }, func(r *Result) { r.Removed = false }, func(r *Result) { r.ExitCode = 1 }, func(r *Result) { r.StopReason = "wall_limit" },
+	} {
+		bad := result
+		mutate(&bad)
+		if VerifyCompletion(o.Allowance, o.Control, bad) == nil {
+			t.Fatal("mutated completion accepted")
+		}
+	}
+	for _, mutate := range []func(*ControlIdentity){func(c *ControlIdentity) { c.SealDigest = testImage }, func(c *ControlIdentity) { c.RequestDigest = testImage }, func(c *ControlIdentity) { c.AttemptDigest = testImage }, func(c *ControlIdentity) { c.Inode++ }} {
+		bad := o.Control
+		mutate(&bad)
+		if VerifyCompletion(o.Allowance, bad, result) == nil {
+			t.Fatal("different invocation accepted")
+		}
+	}
+	if VerifyCompletion(o.Allowance, o.Control, Result{ExitCode: 0, Removed: true, Stdout: result.Stdout}) == nil {
+		t.Fatal("forged public result")
 	}
 }

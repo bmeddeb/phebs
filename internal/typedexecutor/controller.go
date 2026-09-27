@@ -1,5 +1,5 @@
-// Package typedexecutor owns preparation of one durable typed-index attempt.
-// It does not register a scheduler handler, launch workers or release custody.
+// Package typedexecutor owns the unregistered typed-index controller.
+// Installation and scheduler registration remain separate from this package.
 package typedexecutor
 
 import (
@@ -25,6 +25,8 @@ type Config struct {
 	Store     *store.Surreal
 	Workspace string
 	Acquire   func(context.Context) (func(), error)
+	// Socket/Image are fixed trusted installation identities, not request fields.
+	Socket, Image string
 }
 
 type Controller struct {
@@ -34,13 +36,14 @@ type Controller struct {
 	workspace, host typedworkspace.CapacityObservation
 	gates           map[uint64]*lifecycle.Gate
 	observeHost     func(context.Context, string) (typedsandbox.HostObservation, error)
+	native          nativeOperations
 }
 
 func New(config Config) (*Controller, error) {
 	if config.Store == nil || config.Acquire == nil || !filepath.IsAbs(config.Workspace) || filepath.Clean(config.Workspace) != config.Workspace {
 		return nil, ErrUnavailable
 	}
-	return &Controller{config: config, serial: make(chan struct{}, 1), gates: make(map[uint64]*lifecycle.Gate), observeHost: typedsandbox.ObserveHostScratch}, nil
+	return &Controller{config: config, serial: make(chan struct{}, 1), gates: make(map[uint64]*lifecycle.Gate), observeHost: typedsandbox.ObserveHostScratch, native: productionNative()}, nil
 }
 func (c *Controller) enter(ctx context.Context) (func(), error) {
 	if c == nil || ctx == nil {
@@ -78,6 +81,9 @@ func (c *Controller) Prepare(ctx context.Context, chunk store.GenerationChunk, s
 		return Prepared{}, err
 	}
 	defer release()
+	return c.prepare(ctx, chunk, source, inventoryRaw)
+}
+func (c *Controller) prepare(ctx context.Context, chunk store.GenerationChunk, source string, inventoryRaw []byte) (Prepared, error) {
 	if !c.ready {
 		return Prepared{}, ErrUnavailable
 	}

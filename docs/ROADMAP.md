@@ -284,6 +284,14 @@ Owned binary internal dispatch now preserves authenticated worker controls,
 production-accounting refusal and immediate supervisor exit. Neutral command
 checks pass; this does not register a provider or prove privileged execution.
 
+The complete unregistered controller now composes preparation, two phases under
+one absolute allowance, returned-evidence admission, immutable publication and
+exact current/owner CAS. Independent review and host/store/Linux/race checks
+cover failure prefixes, stale replacement, joined cleanup and post-settlement
+release. Startup performs coherent bidirectional custody checks; early ambiguous
+custody remains held. Scheduler/lifecycle registration, safe disposition of those
+early prefixes and actual native/common-clock/target validation remain open.
+
 Local worker prerequisite (2026-09-27): a versioned adapter for the exact pinned
 scip-go0.2.7 preserves all blank-declaration metadata while assigning deterministic
 document-local identities only after proving no references across the complete

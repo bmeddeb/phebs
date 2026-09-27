@@ -9,9 +9,10 @@ import (
 )
 
 // Startup must finish before typed claims are enabled. It visits all six tables
-// one page at a time, then both filesystem ownership directions. It never
-// repairs, adopts, deletes or hashes large receipts. Failed startup clears
-// readiness, but preserves pressure latches and pinned base identities.
+// one page at a time, then both filesystem ownership directions. Configured
+// recovery may stop/remove exact native custody and release settled promises;
+// it never adopts owners, rewrites publication authority or hashes large receipts.
+// Failed startup clears readiness but preserves pressure latches and base identities.
 func (c *Controller) Startup(ctx context.Context) error {
 	release, err := c.enter(ctx)
 	if err != nil {
@@ -19,9 +20,36 @@ func (c *Controller) Startup(ctx context.Context) error {
 	}
 	defer release()
 	c.ready = false
+	if c.config.Socket != "" || c.config.Image != "" {
+		if err = c.recoverHeld(ctx, ""); err != nil {
+			return err
+		}
+	}
 	if _, _, err = c.observe(ctx); err != nil {
 		return err
 	}
+	growth, e := c.config.Store.GetTypedIndexGrowth(ctx)
+	if e != nil && !errors.Is(e, store.ErrNotFound) {
+		return e
+	}
+	if e == nil && (!growthBase(growth.Spec.Workspace, c.workspace) || !growthBase(growth.Spec.Host, c.host)) {
+		return ErrHeld
+	}
+	if c.config.Socket == "" && c.config.Image == "" {
+		if err = c.censusOwnership(ctx); err != nil {
+			return err
+		}
+	}
+	if err = ctx.Err(); err != nil {
+		return err
+	}
+	c.ready = true
+	return nil
+}
+
+// censusOwnership checks every durable relation and both custody directions
+// before recovery can mutate native state. The caller holds the lifecycle guard.
+func (c *Controller) censusOwnership(ctx context.Context) error {
 	kinds := []store.TypedIndexControlKind{store.TypedIndexIntents, store.TypedIndexRequests, store.TypedIndexPlans, store.TypedIndexAttempts, store.TypedIndexStates, store.TypedIndexCurrents}
 	for _, kind := range kinds {
 		after := ""
@@ -62,16 +90,6 @@ func (c *Controller) Startup(ctx context.Context) error {
 			after = page.Next
 		}
 	}
-	// Only after a complete unfiltered structural scan is indexed absence usable.
-	growth, err := c.config.Store.GetTypedIndexGrowth(ctx)
-	if err != nil && !errors.Is(err, store.ErrNotFound) {
-		return err
-	}
-	if err == nil {
-		if !growthBase(growth.Spec.Workspace, c.workspace) || !growthBase(growth.Spec.Host, c.host) {
-			return ErrHeld
-		}
-	}
 	roots, err := typedworkspace.CensusOwners(ctx, c.config.Workspace, "")
 	if err != nil {
 		return err
@@ -107,11 +125,7 @@ func (c *Controller) Startup(ctx context.Context) error {
 			}
 		}
 	}
-	if err = ctx.Err(); err != nil {
-		return err
-	}
-	c.ready = true
-	return nil
+	return ctx.Err()
 }
 func growthBase(d store.TypedIndexGrowthDomain, o typedworkspace.CapacityObservation) bool {
 	return d.Device == o.Device && d.BaseInode == o.Inode && d.BlockBytes == o.BlockSize && d.TotalBytes == o.TotalBytes && d.TotalInodes == o.TotalInodes

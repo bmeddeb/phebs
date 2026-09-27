@@ -29,8 +29,8 @@ func (c *Controller) observe(ctx context.Context) (typedworkspace.CapacityObserv
 	if err != nil {
 		return w, host, err
 	}
-	// No native recovery is registered in this preparation leaf. Even a canonical
-	// ready journal is held rather than mistaken for absence/quiescence.
+	// Growth admission requires an empty native namespace. Recovery separately
+	// authenticates retained journals before this check can admit new work.
 	if h.Held || h.Overflow || len(h.Names) != 0 || h.Selected != nil || !validCapacity(w) || !validCapacity(host) {
 		return w, host, ErrHeld
 	}

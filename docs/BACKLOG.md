@@ -15066,6 +15066,14 @@ with production-selector refusal and immediate supervisor exit. Independent revi
 and actual-main host/race plus neutral Linux forwarding/refusal checks pass.
 Complete controller integration and privileged native proof remain open.
 
+The complete unregistered controller now composes preparation, two phases under
+one absolute allowance, returned-evidence admission, immutable publication and
+exact current/owner CAS. Independent review and host/store/Linux/race checks
+cover failure prefixes, stale replacement, joined cleanup and post-settlement
+release. Startup performs coherent bidirectional custody checks; early ambiguous
+custody remains held. Scheduler/lifecycle registration, safe disposition of those
+early prefixes and actual native/common-clock/target validation remain open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

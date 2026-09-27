@@ -7658,3 +7658,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   fixture children were stopped after timeout; diagnostics remain retained.
   Privileged native execution, complete controller integration and target cost
   evidence remain open before provider registration.
+
+- **2026-09-27 — T45.4 compose the complete two-phase controller turn.**
+  One durable preflight transition precedes one absolute allowance spanning
+  planning, execution, decoding and publication. Each phase uses fresh scratch,
+  exact immutable controls and an opaque completion bound to request, phase,
+  allowance and returned bytes. The controller releases the lifecycle guard
+  during the worker while retaining its attempt pin; joined cleanup reacquires
+  the guard before mutation. Returned evidence passes the owned decoder and
+  canonical finalizer before immutable installation, revision-3 custody and
+  an exact old-current/owner CAS. Obsolete current authority may be replaced
+  without becoming readable. No interrupted later stage gains a fresh clock.
+
+  Startup recovery checks both database and filesystem ownership directions,
+  authenticates native cleanup and proves quiescence before growth release.
+  The explicit post-settlement hook cannot release a running scheduler lease.
+  Unknown, missing, torn early or ambiguous formatter custody remains held;
+  complete lifecycle handling and scheduler registration remain required.
+
+  **Cost.** One serial controller turn, existing shared transition guard and
+  attempt pin; no public query or sync registration. Metadata reads original
+  inventory and selection up to16MiB each, input receipt up to89,420,704 bytes
+  and host tools up to1KiB, plus bounded decoded maps, without another corpus
+  hash. One allowance timer/goroutine can poll20times/s alongside the existing
+  phase timer. Output completion adds bounded hashes; existing repeated bundle
+  verification remains. Old-current selection adds bounded point reads and two
+  transactional predicates, not scans. Startup remains a bounded full census;
+  ready settlement checks only the selected holder/attempt. Retained bytes stay
+  charged after future-growth release. No exact RSS or native feasibility claim.
+
+  Independent exact-source/cost review and parent host/store, actual Linux
+  filesystem/controller and race gates pass. Neutral tests substitute native
+  operations explicitly; privileged containment, common-clock deployment,
+  two cold phases within measured caps and target compatibility remain unproved.

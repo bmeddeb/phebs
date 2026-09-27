@@ -689,6 +689,9 @@ func (s *Surreal) SealTypedIndexPlan(ctx context.Context, chunk GenerationChunk,
 }
 
 func (s *Surreal) PublishTypedIndex(ctx context.Context, chunk GenerationChunk, expected typedindex.PublicationPointer, bundle typedindex.Bundle) (typedindex.PublicationPointer, error) {
+	return s.publishTypedIndex(ctx, chunk, expected, bundle, nil)
+}
+func (s *Surreal) publishTypedIndex(ctx context.Context, chunk GenerationChunk, expected typedindex.PublicationPointer, bundle typedindex.Bundle, replacement *TypedIndexReplacement) (typedindex.PublicationPointer, error) {
 	x, err := s.typedExecution(ctx, chunk, true)
 	if err != nil {
 		return expected, err
@@ -721,6 +724,13 @@ func (s *Surreal) PublishTypedIndex(ctx context.Context, chunk GenerationChunk, 
 	guard := `IF (SELECT body FROM $current LIMIT 1)[0].body != $current_before { THROW 'typed-stale'; };`
 	if currentRaw == "" {
 		guard = `IF (SELECT id FROM $current LIMIT 1)[0].id != NONE { THROW 'typed-stale'; };`
+	}
+	if replacement != nil {
+		extra, e := replacement.fence(x)
+		if e != nil {
+			return current, e
+		}
+		guard += extra
 	}
 	next := x.attempt
 	next.Stage = TypedComplete

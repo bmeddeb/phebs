@@ -2,6 +2,8 @@ package typedsandbox
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"math"
 	"strings"
@@ -85,10 +87,15 @@ func (a Allowance) remaining(now int64) (int64, error) {
 type completion struct {
 	allowance    Allowance
 	worker, wire int64
+	control      ControlIdentity
+	output       [32]byte
 }
 
 func AdvanceAllowance(original Allowance, result Result) (Allowance, error) {
 	token := result.completed
+	if token == nil || token.control.Phase != ControlPlan || VerifyCompletion(original, token.control, result) != nil {
+		return Allowance{}, ErrRefused
+	}
 	if original.Validate() != nil || token == nil || token.allowance != original || original.WorkerBytesUsed != 0 || original.WireBytesUsed != 0 || token.worker < 0 || token.worker > OutputBytes || token.wire < 0 || token.wire > maxWireBytes {
 		return Allowance{}, ErrRefused
 	}
@@ -138,4 +145,27 @@ func checkSealAllowance(raw []byte, a Allowance, phase, request string) error {
 func invocationDigest(a Allowance, phase, request, seal string) string {
 	raw, _ := json.Marshal(supervisorArgs(Options{Allowance: a, Control: ControlIdentity{Phase: phase, RequestDigest: request, SealDigest: seal}}))
 	return controlDigest(raw)
+}
+
+// VerifyCompletion authenticates successful, joined output from one exact
+// invocation. Public Result fields and mutable output slices cannot mint it.
+func VerifyCompletion(a Allowance, control ControlIdentity, result Result) error {
+	token := result.completed
+	if a.Validate() != nil || control.Validate() != nil || token == nil || token.allowance != a || token.control != control || !a.invocation(control.Phase, control.RequestDigest) || control.PlanningDigest != a.PlanningDigest || control.AttemptDigest != a.AttemptDigest || len(result.Stdout) > OutputBytes || len(result.Stderr) > OutputBytes-len(result.Stdout) || token.output != completionOutput(result.Stdout, result.Stderr) || result.ExitCode != 0 || !result.Removed || result.OOMKilled || result.StopReason != "" {
+		return ErrRefused
+	}
+	return nil
+}
+func completionOutput(stdout, stderr []byte) [32]byte {
+	h := sha256.New()
+	var length [8]byte
+	binary.BigEndian.PutUint64(length[:], uint64(len(stdout)))
+	_, _ = h.Write(length[:])
+	_, _ = h.Write(stdout)
+	binary.BigEndian.PutUint64(length[:], uint64(len(stderr)))
+	_, _ = h.Write(length[:])
+	_, _ = h.Write(stderr)
+	var out [32]byte
+	copy(out[:], h.Sum(nil))
+	return out
 }

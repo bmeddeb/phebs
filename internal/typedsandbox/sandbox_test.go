@@ -129,6 +129,24 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 			imageConfig.Volumes = map[string]struct{}{"/escape": {}}
 		}
 		write(200, map[string]any{"Id": testImage, "Os": "linux", "Architecture": "arm64", "Config": imageConfig})
+	case path == "/containers/json":
+		if d.fault == "census unavailable" {
+			write(500, nil)
+			return
+		}
+		if d.fault == "census overflow" {
+			list := make([]hostContainer, 129)
+			for i := range list {
+				list[i].ID = testContainer
+			}
+			write(200, list)
+			return
+		}
+		if d.created && !d.removed || d.fault == "orphan container" {
+			write(200, []hostContainer{{ID: testContainer}})
+		} else {
+			write(200, []hostContainer{})
+		}
 	case path == "/containers/create":
 		if json.NewDecoder(r.Body).Decode(&d.config) != nil {
 			write(400, nil)
@@ -585,5 +603,53 @@ func TestInitialJournalRefusesUnownedPending(t *testing.T) {
 	}
 	if _, err := os.Lstat(journalPath(o)); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("created main despite pending", err)
+	}
+}
+
+func TestQuiescentAttemptExactAbsenceAndRecovery(t *testing.T) {
+	for _, fault := range []string{"absent", "retained", "valid pending", "orphan pending", "invalid pending", "orphan container", "census unavailable", "census overflow"} {
+		t.Run(fault, func(t *testing.T) {
+			d, o := fakeDaemon(t, "")
+			r := RecoveryOptions{Socket: o.Socket, ImageID: o.ImageID, Inputs: o.Inputs, PlanningDigest: o.Control.PlanningDigest, AttemptDigest: o.Control.AttemptDigest}
+			if fault == "retained" || fault == "valid pending" || fault == "invalid pending" {
+				d.fault = "cleanup error"
+				if _, err := runFake(t.Context(), o); err == nil {
+					t.Fatal("fixture did not retain")
+				}
+				d.fault = ""
+				if fault != "retained" {
+					owner, err := readJournal(o)
+					if err != nil {
+						t.Fatal(err)
+					}
+					raw, _ := json.Marshal(owner)
+					if fault == "invalid pending" {
+						raw = []byte("{}")
+					}
+					if err = os.WriteFile(journalPath(o)+".next", raw, 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if fault == "orphan pending" {
+				if err := os.WriteFile(journalPath(o)+".next", []byte("{}"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if strings.HasPrefix(fault, "census") || fault == "orphan container" {
+				d.fault = fault
+			}
+			err := quiescentAttempt(t.Context(), r)
+			good := fault == "absent" || fault == "retained" || fault == "valid pending"
+			if (err == nil) != good {
+				t.Fatalf("%s: %v", fault, err)
+			}
+			if good {
+				present, e := attemptJournalPresence(o.Inputs)
+				if e != nil || present {
+					t.Fatal("journals remain", e)
+				}
+			}
+		})
 	}
 }
