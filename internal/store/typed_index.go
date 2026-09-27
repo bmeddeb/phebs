@@ -41,6 +41,7 @@ const (
 	TypedValidation  TypedIndexStage = "validation"
 	TypedPublication TypedIndexStage = "publication"
 	TypedComplete    TypedIndexStage = "complete"
+	TypedChecked     TypedIndexStage = "checked"
 )
 
 var typedStages = [...]TypedIndexStage{TypedPreflight, TypedPlanning, TypedExecution, TypedValidation, TypedPublication}
@@ -55,15 +56,16 @@ type typedIndexPlan struct {
 	Successor string `json:"successor"`
 }
 type typedIndexAttempt struct {
-	ChunkIdentity string             `json:"chunk_identity"`
-	Root          string             `json:"root"`
-	Request       string             `json:"request"`
-	Lease         string             `json:"lease"`
-	Stage         TypedIndexStage    `json:"stage"`
-	States        [5]string          `json:"states"`
-	Reason        typedindex.Refusal `json:"reason"`
-	Custody       *TypedIndexCustody `json:"custody,omitempty"`
-	Growth        *TypedIndexGrowth  `json:"growth,omitempty"`
+	ChunkIdentity string                     `json:"chunk_identity"`
+	Root          string                     `json:"root"`
+	Request       string                     `json:"request"`
+	Lease         string                     `json:"lease"`
+	Stage         TypedIndexStage            `json:"stage"`
+	States        [5]string                  `json:"states"`
+	Reason        typedindex.Refusal         `json:"reason"`
+	Custody       *TypedIndexCustody         `json:"custody,omitempty"`
+	Growth        *TypedIndexGrowth          `json:"growth,omitempty"`
+	Check         *typedindex.CheckedSummary `json:"check,omitempty"`
 }
 
 // TypedIndexWork contains immutable authority and durable stage state. Resume
@@ -89,6 +91,7 @@ type TypedIndexStatus struct {
 	RestoreRequired bool                           `json:"restore_required"`
 	Stale           bool                           `json:"stale"`
 	Current         *typedindex.PublicationPointer `json:"current,omitempty"`
+	Check           *typedindex.CheckedSummary     `json:"check,omitempty"`
 }
 
 type typedBody struct {
@@ -534,6 +537,9 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 		if typedDecode(x.attemptRaw, maxTypedControlBytes, &x.attempt) != nil || !validTypedAttempt(x.attempt) || x.attempt.ChunkIdentity != chunk.Identity || x.attempt.Root != chunk.Generation || x.attempt.Request != a.intent.Desired || x.attempt.Lease != GenerationLeaseTokenDigest(chunk.LeaseToken) || x.attempt.Custody != nil && x.attempt.Custody.AttemptDigest != x.work.AttemptDigest {
 			return x, typedindex.Stale
 		}
+		if !typedCheckRelation(x.attempt, x.work.Parent.Request(), x.work.PlanDigest) {
+			return x, typedindex.Invalid
+		}
 		if x.attempt.Growth != nil {
 			if x.attempt.Growth.State == "released" {
 				return x, typedindex.Stale
@@ -593,6 +599,12 @@ func typedStageIndex(stage TypedIndexStage) int {
 }
 func validTypedAttempt(a typedIndexAttempt) bool {
 	if !validSHA256(a.ChunkIdentity) || !validSHA256(a.Root) || !validSHA256(a.Request) || !validSHA256(a.Lease) || !typedAttemptCustodyValid(a) || !validTypedAttemptGrowth(a) {
+		return false
+	}
+	if a.Stage == TypedChecked {
+		return a.Reason == "" && a.Check != nil && a.Check.Validate() == nil && a.Check.ParentDigest == a.Root && a.Check.RequestDigest == a.Request && a.States == [5]string{"complete", "complete", "complete", "complete", "not_requested"}
+	}
+	if a.Check != nil {
 		return false
 	}
 	index := typedStageIndex(a.Stage)
@@ -919,6 +931,32 @@ func (s *Surreal) GetTypedIndexStatus(ctx context.Context, repository string) (T
 			out.Stage = attempt.Stage
 			out.States = attempt.States
 			out.Reason = attempt.Reason
+			if attempt.Check != nil {
+				proof, e := s.InspectTypedIndexAttempt(ctx, activeAttempt)
+				if e != nil {
+					return out, e
+				}
+				if proof.Check == nil || *proof.Check != *attempt.Check || proof.RequestDigest != attempt.Request || proof.Stage != attempt.Stage || proof.States != attempt.States {
+					return out, typedindex.Stale
+				}
+				parentRaw, e := typedEncode(proof.Parent, typedindex.MaxRequestBytes)
+				if e != nil {
+					return out, e
+				}
+				parent, e := a.admit(ctx, parentRaw, typedIndexPlan{}, "")
+				if err := ctx.Err(); err != nil {
+					return out, err
+				}
+				if e != nil || parent.Digest() != proof.PlanningDigest || proof.SourceEpoch != a.source.Epoch {
+					out.Stale = true
+					out.Stage = ""
+					out.States = [5]string{}
+					out.Reason = ""
+				} else {
+					v := *attempt.Check
+					out.Check = &v
+				}
+			}
 		}
 	}
 	current, err := s.resolveTypedIndexCurrent(ctx, a)

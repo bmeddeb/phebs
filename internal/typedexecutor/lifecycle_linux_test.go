@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"github.com/bmeddeb/phebs/internal/typedworkspace"
 	"golang.org/x/sys/unix"
@@ -328,5 +330,118 @@ func TestTypedLifecycleCurrentProtected(t *testing.T) {
 	current, e := f.s.ResolveTypedIndexCurrent(ctx, f.chunk.Repository)
 	if e != nil || current != request {
 		t.Fatal("current changed", e)
+	}
+}
+
+func TestTypedLifecycleCheckedCustody(t *testing.T) {
+	endpoint := testServer(t)
+	for _, purpose := range []typedindex.Purpose{typedindex.Canary, typedindex.DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			ctx := t.Context()
+			f, w, prior := checkedFixture(t, endpoint, "check_lifecycle_"+strings.ReplaceAll(string(purpose), "-", "_"), purpose)
+			_, begins := installNeutralNative(t, f, w, "")
+			out, e := f.c.Execute(ctx, f.chunk, f.source, f.raw)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if e = f.s.CompleteGenerationChunk(ctx, f.chunk); e != nil {
+				t.Fatal(e)
+			}
+			if e = f.c.AfterSettlement(ctx, out.AttemptDigest); e != nil {
+				t.Fatal(e)
+			}
+			selected, e := f.s.InspectTypedIndexRetirement(ctx, f.chunk.Generation)
+			if e != nil || !selected.Protected() {
+				t.Fatal("desired check unprotected", e)
+			}
+			if e = f.s.BeginTypedIndexRetirement(ctx, selected); e == nil {
+				t.Fatal("desired check retired")
+			}
+			inspected, e := f.s.InspectTypedIndexAttempt(ctx, out.AttemptDigest)
+			if e != nil {
+				t.Fatal(e)
+			}
+			id := typedworkspace.OwnerIdentity{PlanningDigest: inspected.PlanningDigest, AttemptDigest: inspected.AttemptDigest, ChunkIdentity: inspected.ChunkIdentity, LeaseDigest: inspected.LeaseDigest, Request: inspected.Parent}
+			if e = f.s.CancelTypedIndex(ctx, f.chunk.Repository, inspected.RequestDigest); e != nil {
+				t.Fatal(e)
+			}
+			selected, e = f.s.InspectTypedIndexRetirement(ctx, f.chunk.Generation)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if e = f.s.BeginTypedIndexRetirement(ctx, selected); e != nil {
+				t.Fatal(e)
+			}
+			lock, e := os.Open(filepath.Join(f.c.config.Workspace, id.RelativeName(), ".phebs-index-publication.lock"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			if e = unix.Flock(int(lock.Fd()), unix.LOCK_SH|unix.LOCK_NB); e != nil {
+				t.Fatal(e)
+			}
+			owner := LifecycleOwner{Controller: f.c}
+			cursor := ""
+			blocked := false
+			for range 4 {
+				r := owner.Sweep(ctx, time.Now(), cursor, lifecycle.DefaultLimits())
+				cursor = r.Cursor
+				if r.Err != nil {
+					blocked = true
+					break
+				}
+				if r.Deleted != 0 {
+					t.Fatal("pin bypassed", r)
+				}
+			}
+			if !blocked {
+				t.Fatal("selected checked pin never held")
+			}
+			if e = unix.Flock(int(lock.Fd()), unix.LOCK_UN); e != nil {
+				t.Fatal(e)
+			}
+			if e = lock.Close(); e != nil {
+				t.Fatal(e)
+			}
+			finished := false
+			for range 40 {
+				r := owner.Sweep(ctx, time.Now(), cursor, lifecycle.DefaultLimits())
+				cursor = r.Cursor
+				if r.Err != nil || r.Deleted > 16 {
+					t.Fatal("checked drain", r)
+				}
+				fresh, e := New(f.c.config)
+				if e != nil {
+					t.Fatal(e)
+				}
+				fresh.native = f.c.native
+				fresh.observeHost = f.c.observeHost
+				if e = fresh.Startup(ctx); e != nil {
+					t.Fatal("checked drain restart", e)
+				}
+				f.c = fresh
+				owner.Controller = fresh
+				_, absent, e := typedworkspace.InspectDrainNamespace(ctx, f.c.config.Workspace, id.PlanningDigest, drainBase(f.c.workspace))
+				if e != nil {
+					t.Fatal(e)
+				}
+				if absent {
+					collection, e := f.s.InspectTypedIndexCollection(ctx, id.PlanningDigest)
+					if e != nil {
+						t.Fatal(e)
+					}
+					if len(collection.Attempts()) == 0 {
+						finished = true
+						break
+					}
+				}
+			}
+			if !finished || *begins != 1 {
+				t.Fatal("checked custody not collected or replayed")
+			}
+			current, e := f.s.ResolveTypedIndexCurrent(ctx, f.chunk.Repository)
+			if e != nil || current != prior {
+				t.Fatal("drain changed current", e)
+			}
+		})
 	}
 }

@@ -341,7 +341,7 @@ func (s *Surreal) InspectTypedIndexRetirement(ctx context.Context, root string) 
 			return out, typedindex.Invalid
 		}
 		var wire typedindex.Request
-		if typedDecode(request.Raw, typedindex.MaxRequestBytes, &wire) != nil || wire.Source.Repository != row.Repository ||
+		if typedDecode(request.Raw, typedindex.MaxRequestBytes, &wire) != nil || !typedStoredRequest(wire) || wire.Source.Repository != row.Repository ||
 			(wire.Action == typedindex.Plan && (request.Root != ref.id || wire.ParentRequestDigest != "")) ||
 			(wire.Action == typedindex.Execute && wire.ParentRequestDigest != request.Root) ||
 			(wire.Action != typedindex.Plan && wire.Action != typedindex.Execute) {
@@ -351,7 +351,7 @@ func (s *Surreal) InspectTypedIndexRetirement(ctx context.Context, root string) 
 	if currentRaw != "" {
 		var request typedIndexRequest
 		var wire typedindex.Request
-		if typedDecode(o.CurrentBody, typedindex.MaxRequestBytes+1024, &request) != nil || typedDecode(request.Raw, typedindex.MaxRequestBytes, &wire) != nil || wire.Action != typedindex.Execute || current.Binding.Source != wire.Source || current.Binding.ProfileDigest != wire.ProfileDigest || current.Binding.ToolsDigest != wire.ToolsDigest || current.Binding.PlanDigest != wire.PlanDigest {
+		if typedDecode(o.CurrentBody, typedindex.MaxRequestBytes+1024, &request) != nil || typedDecode(request.Raw, typedindex.MaxRequestBytes, &wire) != nil || wire.Action != typedindex.Execute || wire.Schema == typedindex.ManagedRequestSchema && wire.Purpose != typedindex.Publish || current.Binding.Source != wire.Source || current.Binding.ProfileDigest != wire.ProfileDigest || current.Binding.ToolsDigest != wire.ToolsDigest || current.Binding.PlanDigest != wire.PlanDigest {
 			return out, typedindex.Invalid
 		}
 	}

@@ -19,6 +19,7 @@ import (
 type Outcome struct {
 	AttemptDigest string
 	Pointer       typedindex.PublicationPointer
+	Check         *typedindex.CheckedSummary
 	Reports       [2]PhaseReport
 }
 
@@ -218,6 +219,13 @@ func (c *Controller) Execute(ctx context.Context, chunk store.GenerationChunk, s
 	}
 	if _, err = c.config.Store.BeginTypedIndex(ctx, chunk); err != nil {
 		return out, err
+	}
+	if execution.Purpose() != typedindex.Publish {
+		checked, e := c.config.Store.CompleteTypedIndexCheck(ctx, chunk, bundle)
+		if e == nil {
+			out.Check = &checked
+		}
+		return out, e
 	}
 	attempt := filepath.Join(c.config.Workspace, id.RelativeName())
 	publication, err := typedworkspace.InstallPublication(ctx, attempt, w.Parent, execution, plan, bundle, c.gates[c.workspace.Device])

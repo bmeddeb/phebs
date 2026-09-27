@@ -726,3 +726,55 @@ func TestBundleManagedPurposePublication(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckedBundleSummary(t *testing.T) {
+	for _, purpose := range []Purpose{Publish, Canary, DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			f := bundlePurposeFixture(t, purpose)
+			b := buildFixture(t, f)
+			summary, e := CheckBundle(t.Context(), f.execution, b)
+			if purpose == Publish {
+				if !errors.Is(e, Invalid) {
+					t.Fatal("publish check", e)
+				}
+				return
+			}
+			if e != nil || summary.Validate() != nil || summary.Purpose != purpose || summary.Units != 2 || summary.Targets != 2 || summary.Members != 2 || summary.Documents != 2 || summary.Generated != 1 {
+				t.Fatal(summary, e)
+			}
+			verified, e := VerifyBundle(t.Context(), f.execution, f.plan, b.AttemptBytes(), b.RootBytes(), bundleContents(b))
+			if e != nil {
+				t.Fatal(e)
+			}
+			again, e := CheckBundle(t.Context(), f.execution, verified)
+			if e != nil || again != summary {
+				t.Fatal("verification changed summary", e)
+			}
+			for _, bad := range []Bundle{{}, func() Bundle { incomplete := b; incomplete.root = nil; return incomplete }()} {
+				if _, e = CheckBundle(t.Context(), f.execution, bad); e == nil {
+					t.Fatal("incomplete check")
+				}
+			}
+			other := bundlePurposeFixture(t, func() Purpose {
+				if purpose == Canary {
+					return DryRun
+				}
+				return Canary
+			}())
+			if _, e = CheckBundle(t.Context(), other.execution, b); e == nil {
+				t.Fatal("cross purpose")
+			}
+			if _, e = CheckBundle(t.Context(), f.parent, b); e == nil {
+				t.Fatal("plan check")
+			}
+			mutations := []func(*CheckedSummary){func(s *CheckedSummary) { s.Purpose = Publish }, func(s *CheckedSummary) { s.ParentDigest = hash([]byte("other")) }, func(s *CheckedSummary) { s.RequestDigest = hash([]byte("other")) }, func(s *CheckedSummary) { s.PlanDigest = hash([]byte("other")) }, func(s *CheckedSummary) { s.RootDigest = hash([]byte("other")) }, func(s *CheckedSummary) { s.Units++ }, func(s *CheckedSummary) { s.Targets++ }, func(s *CheckedSummary) { s.Members++ }, func(s *CheckedSummary) { s.Documents++ }, func(s *CheckedSummary) { s.Generated++ }, func(s *CheckedSummary) { s.Checksum = hash(nil) }}
+			for _, mutate := range mutations {
+				bad := summary
+				mutate(&bad)
+				if bad.Validate() == nil {
+					t.Fatal("corrupt summary accepted", bad)
+				}
+			}
+		})
+	}
+}

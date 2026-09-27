@@ -47,7 +47,7 @@ func typedAttemptCustodyValid(a typedIndexAttempt) bool {
 	switch a.Stage {
 	case TypedPreflight:
 		return a.Custody == nil || a.Custody.Revision <= 2
-	case TypedPlanning, TypedExecution:
+	case TypedPlanning, TypedExecution, TypedChecked:
 		return a.Custody != nil && a.Custody.Revision == 2
 	case TypedValidation:
 		return a.Custody != nil && a.Custody.Revision >= 2

@@ -315,6 +315,7 @@ type Bundle struct {
 	root     []byte
 	contents map[string][]byte
 	binding  GenerationBinding
+	counts   [5]uint32
 }
 
 func (b Bundle) AttemptBytes() []byte { return bytes.Clone(b.attempt) }
@@ -647,6 +648,7 @@ func buildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []Uni
 		}
 		total += len(raw)
 	}
+	b.counts = [5]uint32{uint32(len(manifest.Units)), uint32(len(manifest.Targets)), uint32(len(manifest.Members)), uint32(len(manifest.Documents)), uint32(len(manifest.Generated))}
 	return b, nil
 }
 
@@ -833,4 +835,50 @@ func unitAcyclic(units []PlannedUnit) bool {
 	}
 	_, ok := targetOrder(targets)
 	return ok
+}
+
+// CheckedSummary records bounded write-time verified bundle facts. Its checksum
+// detects scalar corruption; it does not authenticate an external producer or
+// rederive historical counts from a plan digest after member bytes are gone.
+type CheckedSummary struct {
+	Purpose       Purpose `json:"purpose"`
+	ParentDigest  string  `json:"parent_digest"`
+	RequestDigest string  `json:"request_digest"`
+	PlanDigest    string  `json:"plan_digest"`
+	RootDigest    string  `json:"root_digest"`
+	Units         uint32  `json:"units"`
+	Targets       uint32  `json:"targets"`
+	Members       uint32  `json:"members"`
+	Documents     uint32  `json:"documents"`
+	Generated     uint32  `json:"generated"`
+	Checksum      string  `json:"checksum"`
+}
+
+func (s CheckedSummary) checksum() string {
+	s.Checksum = ""
+	raw, _ := json.Marshal(s)
+	return hash(append([]byte("phebs-typed-checked-summary-v1\x00"), raw...))
+}
+func (s CheckedSummary) Validate() error {
+	if s.Purpose != Canary && s.Purpose != DryRun || !digest(s.ParentDigest) || !digest(s.RequestDigest) || !digest(s.PlanDigest) || !digest(s.RootDigest) || s.Units == 0 || s.Units > MaxBundleUnits || s.Targets == 0 || s.Targets > MaxBundleTargets || s.Members == 0 || s.Members > MaxSCIPMembers || s.Documents == 0 || s.Documents > MaxBundleDocuments || s.Generated > s.Documents || s.Checksum != s.checksum() {
+		return Invalid
+	}
+	return nil
+}
+
+// CheckBundle derives nonpublishing success only from an exact complete opaque
+// bundle. It adds no member decoding/copy or publication capability.
+func CheckBundle(ctx context.Context, a Admission, b Bundle) (CheckedSummary, error) {
+	if err := ctx.Err(); err != nil {
+		return CheckedSummary{}, err
+	}
+	if a.digest == "" || a.request.Schema != ManagedRequestSchema || a.request.Action != Execute || a.Purpose() != Canary && a.Purpose() != DryRun || b.binding != generationBinding(a) || len(b.root) == 0 {
+		return CheckedSummary{}, Invalid
+	}
+	s := CheckedSummary{Purpose: a.Purpose(), ParentDigest: a.request.ParentRequestDigest, RequestDigest: a.digest, PlanDigest: a.request.PlanDigest, RootDigest: b.RootDigest(), Units: b.counts[0], Targets: b.counts[1], Members: b.counts[2], Documents: b.counts[3], Generated: b.counts[4]}
+	s.Checksum = s.checksum()
+	if err := s.Validate(); err != nil {
+		return CheckedSummary{}, err
+	}
+	return s, nil
 }

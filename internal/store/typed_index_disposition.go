@@ -25,6 +25,7 @@ type TypedIndexDispositionState string
 const (
 	TypedIndexFresh            TypedIndexDispositionState = "fresh"
 	TypedIndexAlreadyPublished TypedIndexDispositionState = "already_published"
+	TypedIndexAlreadyChecked   TypedIndexDispositionState = "already_checked"
 	TypedIndexInterrupted      TypedIndexDispositionState = "interrupted"
 )
 
@@ -59,6 +60,7 @@ func (s *Surreal) inspectTypedIndexDisposition(ctx context.Context, chunk Genera
 	if len(out.rows) > 64 {
 		return TypedIndexDisposition{}, typedindex.Capacity
 	}
+	checked, interrupted := 0, false
 	for _, row := range out.rows {
 		if err = validateTypedCensusControl(ctx, TypedIndexAttempts, row); err != nil {
 			return TypedIndexDisposition{}, err
@@ -67,9 +69,24 @@ func (s *Surreal) inspectTypedIndexDisposition(ctx context.Context, chunk Genera
 		if typedDecode(row.Body, maxTypedControlBytes, &a) != nil || row.Repository != chunk.Repository || row.Root != chunk.Generation || a.Request != chunk.Generation && a.Request != x.plan.Successor {
 			return TypedIndexDisposition{}, typedindex.Invalid
 		}
-		if a.Stage != TypedPreflight {
+		if !typedCheckRelation(a, x.work.Parent.Request(), x.plan.Digest) {
+			return TypedIndexDisposition{}, typedindex.Invalid
+		}
+		if a.Stage == TypedChecked {
+			if a.Request != x.work.Admission.Digest() {
+				return TypedIndexDisposition{}, typedindex.Invalid
+			}
+			checked++
+		} else if a.Stage != TypedPreflight {
+			interrupted = true
 			out.state = TypedIndexInterrupted
 		}
+	}
+	if checked > 1 || checked == 1 && interrupted {
+		return TypedIndexDisposition{}, typedindex.Invalid
+	}
+	if checked == 1 {
+		out.state = TypedIndexAlreadyChecked
 	}
 	out.current, err = s.typedRelationPoint(ctx, TypedIndexCurrents, chunk.Repository)
 	if err != nil {

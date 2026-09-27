@@ -239,6 +239,9 @@ func validateTypedCollection(ctx context.Context, c TypedIndexCollection) error 
 			}
 			planDigest = execution.PlanDigest
 		}
+		if !typedCheckRelation(a, execution.Parent, planDigest) {
+			return typedindex.Invalid
+		}
 		if a.Custody != nil && a.Custody.Revision == 3 && (a.Custody.PublicationRequestDigest != a.Request || a.Custody.PublicationPlanDigest != planDigest) {
 			return typedindex.Invalid
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -307,6 +308,83 @@ func TestTypedRuntimeCancellationSettlement(t *testing.T) {
 			}
 			if *begins != 1 {
 				t.Fatal("cancellation refreshed allowance")
+			}
+		})
+	}
+}
+
+func TestTypedRuntimeCheckedNoReplay(t *testing.T) {
+	endpoint := testServer(t)
+	for _, purpose := range []typedindex.Purpose{typedindex.Canary, typedindex.DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			ctx := t.Context()
+			f, w, prior := checkedFixture(t, endpoint, "check_reuse_"+strings.ReplaceAll(string(purpose), "-", "_"), purpose)
+			_, begins := installNeutralNative(t, f, w, "")
+			r, lookups := runtimeFixture(t, f)
+			if e := r.Class().Handle(ctx, f.chunk, generationscheduler.TypedIndexBudget()); e != nil {
+				t.Fatal(e)
+			}
+			if e := r.Class().Handle(ctx, f.chunk, generationscheduler.TypedIndexBudget()); e != nil {
+				t.Fatal("same lease reuse", e)
+			}
+			if *begins != 1 || *lookups != 1 {
+				t.Fatal("same lease replay", *begins, *lookups)
+			}
+			// Crash after the checked CAS but before settlement, discard the controller
+			// and make the external bundle source unavailable. Exact reuse needs neither.
+			if e := f.s.ReleaseGenerationChunk(ctx, f.chunk, "lost checked reply"); e != nil {
+				t.Fatal(e)
+			}
+			next, e := f.s.ClaimGenerationChunk(ctx, store.GenerationResourceTypedIndex, "check-retry")
+			if e != nil || next == nil {
+				t.Fatal(e)
+			}
+			fresh, e := New(f.c.config)
+			if e != nil {
+				t.Fatal(e)
+			}
+			fresh.native = f.c.native
+			fresh.observeHost = f.c.observeHost
+			r.controller = fresh
+			if e = r.Reconcile(ctx); e != nil {
+				t.Fatal("checked recovery", e)
+			}
+			if e = os.Rename(f.source, f.source+"-unavailable"); e != nil {
+				t.Fatal(e)
+			}
+			r.bundle = func(context.Context, typedindex.Admission) (string, []byte, error) {
+				t.Fatal("checked reuse looked up bundle")
+				return "", nil, ErrHeld
+			}
+			before, e := f.s.ScanTypedIndexRootChildren(ctx, f.chunk.Generation, store.TypedIndexAttempts, "", 64)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if e = r.Class().Handle(ctx, *next, generationscheduler.TypedIndexBudget()); e != nil {
+				t.Fatal("new lease reuse", e)
+			}
+			after, e := f.s.ScanTypedIndexRootChildren(ctx, f.chunk.Generation, store.TypedIndexAttempts, "", 64)
+			if e != nil || len(before.Rows) != len(after.Rows) || len(after.Rows) != 1 {
+				t.Fatal("reuse created attempt", before, after, e)
+			}
+			if *begins != 1 || *lookups != 1 {
+				t.Fatal("checked repeated child/copy")
+			}
+			if _, e = fresh.Execute(ctx, *next, f.source, f.raw); e == nil {
+				t.Fatal("direct checked replay")
+			}
+			if *begins != 1 {
+				t.Fatal("direct checked replay began native work")
+			}
+			if e = f.s.CompleteGenerationChunk(ctx, *next); e != nil {
+				t.Fatal(e)
+			}
+			if e = r.Class().AfterSettlement(ctx, *next); e != nil {
+				t.Fatal(e)
+			}
+			current, e := f.s.ResolveTypedIndexCurrent(ctx, f.chunk.Repository)
+			if e != nil || current != prior {
+				t.Fatal("reuse current", e)
 			}
 		})
 	}

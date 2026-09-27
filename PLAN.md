@@ -7870,3 +7870,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Tool identities and valid legacy worker mapping remain exact. Automatic source
   refresh, successful checked workflow and native/provider availability remain
   separately gated.
+
+- **2026-09-27 — T45.6 checked canary/dry-run completion.** Both managed
+  nonpublish purposes execute the same two cold phases and complete bundle
+  validation, then atomically persist a checked terminal before any publication
+  installation. It requires revision-2 input custody and four complete states
+  followed by publication not_requested. Prior current and its immutable files
+  remain authoritative; checks cannot acquire revision-3 publication custody.
+
+  The bounded summary binds purpose, parent/request/plan/candidate-root digests
+  and five counts. Counts come from the opaque verified bundle; its checksum
+  detects corruption but does not authenticate a producer or rederive counts
+  from historical digest-only plan rows. The single attempt CAS compares exact
+  parent, successor, plan, lease, source and intent observations. Identical
+  committed replay fences without mutation. Runtime reuse returns before bundle
+  lookup, copying, growth, allowance or children, including after a lost reply
+  and new lease. Interrupted precommit history still refuses replay.
+
+  Historical inspection, census, disposition and collection preserve these
+  relations. Checked status additionally admits the historical parent against
+  current source/profile authority: changed HEAD hides checked success and marks
+  stale. Desired roots retain existing protection until cancellation/replacement;
+  native cleanup, scheduler settlement and bounded custody drainage stay separate.
+
+  **Cost.** Bundle adds five uint32 counts, assigned from existing manifests;
+  no additional member or2MiB attempt decode. The checked attempt fits2,620 of
+  the unchanged4,096-byte bound. Completion adds one attempt mutation and three
+  immutable-body predicates within its existing transaction. Checked status adds
+  three bounded SDK read recipes (seven point lookups) plus one parent admission;
+  ordinary status is unchanged. Retry/census/collection add fixed summary checks,
+  no full-source hashing, child, watcher, cache, lock or capacity increase.
+
+  Independent source/cost review and parent host/store race, actual Linux CGO
+  controller/runtime/lifecycle race, host/Linux vet and lint pass. Tests cover
+  both purposes, prior-current preservation, before/after-CAS recovery, fresh
+  lease reuse without original inputs, failed checks, stale/forged summaries,
+  pins and bounded drainage. Native feasibility, provider registration and
+  ticket closure remain open; neutral native seams are not deployment evidence.

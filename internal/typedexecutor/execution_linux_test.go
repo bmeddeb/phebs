@@ -663,3 +663,142 @@ func TestTypedExecutorEarlyCrashCustodyHeld(t *testing.T) {
 		})
 	}
 }
+
+// checkedFixture retains a real prior publication, then selects an exact managed
+// nonpublishing successor. Only native operations use the existing private seam.
+func checkedFixture(t *testing.T, endpoint, database string, purpose typedindex.Purpose) (fixture, wireFixture, typedindex.PublicationPointer) {
+	t.Helper()
+	ctx := t.Context()
+	f, w := completeFixture(t, endpoint, database)
+	installNeutralNative(t, f, w, "")
+	old, e := f.c.Execute(ctx, f.chunk, f.source, f.raw)
+	if e != nil {
+		t.Fatal("prior publish", e)
+	}
+	if e = f.s.CompleteGenerationChunk(ctx, f.chunk); e != nil {
+		t.Fatal(e)
+	}
+	if e = f.c.AfterSettlement(ctx, old.AttemptDigest); e != nil {
+		t.Fatal(e)
+	}
+	intent, e := f.s.GetTypedIndexIntent(ctx, f.chunk.Repository)
+	if e != nil {
+		t.Fatal(e)
+	}
+	source, e := f.s.GetTypedSource(ctx, f.chunk.Repository)
+	if e != nil {
+		t.Fatal(e)
+	}
+	request := typedindex.NewManagedRequest(source, w.profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, purpose)
+	if _, e = f.s.EnqueueTypedIndex(ctx, f.chunk.Repository, encode(t, request)); e != nil {
+		t.Fatal(e)
+	}
+	spec, e := f.s.TypedIndexSchedule(ctx, f.chunk.Repository)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = f.s.EnqueueGenerationSchedule(ctx, spec); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = f.s.ExpandGenerationSchedule(ctx, spec.Repository, spec.Stage, spec.Generation); e != nil {
+		t.Fatal(e)
+	}
+	chunk, e := f.s.ClaimGenerationChunk(ctx, store.GenerationResourceTypedIndex, "check")
+	if e != nil || chunk == nil {
+		t.Fatal(e)
+	}
+	f.chunk = *chunk
+	return f, w, old.Pointer
+}
+
+func TestTypedExecutorCheckedTurn(t *testing.T) {
+	endpoint := testServer(t)
+	for _, purpose := range []typedindex.Purpose{typedindex.Canary, typedindex.DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			ctx := t.Context()
+			f, w, prior := checkedFixture(t, endpoint, "checked_"+strings.ReplaceAll(string(purpose), "-", "_"), purpose)
+			events, begins := installNeutralNative(t, f, w, "")
+			out, e := f.c.Execute(ctx, f.chunk, f.source, f.raw)
+			if e != nil || out.Check == nil || out.Check.Purpose != purpose || out.Pointer.Epoch != 0 || *begins != 1 {
+				t.Fatal("checked turn", out, e, *events)
+			}
+			want := []string{"prepare", "verify", "run-plan", "complete-plan", "quiescent", "cleanup", "advance", "prepare", "verify", "run-execute", "complete-execute", "quiescent", "cleanup"}
+			if !slices.Equal(*events, want) {
+				t.Fatal("changed two-phase execution", *events)
+			}
+			work, e := f.s.BeginTypedIndex(ctx, f.chunk)
+			if e != nil {
+				t.Fatal(e)
+			}
+			id, e := typedworkspace.NewOwnerIdentity(work.Parent, f.chunk.Identity, f.chunk.LeaseToken)
+			if e != nil {
+				t.Fatal(e)
+			}
+			manifest, e := typedworkspace.LoadOwner(ctx, f.c.config.Workspace, id)
+			if e != nil || manifest.Revision != 2 || manifest.Publication != nil || manifest.PublicationName != "" {
+				t.Fatal("published custody", manifest, e)
+			}
+			entries, e := os.ReadDir(filepath.Join(f.c.config.Workspace, id.RelativeName()))
+			if e != nil {
+				t.Fatal(e)
+			}
+			for _, entry := range entries {
+				if strings.HasPrefix(entry.Name(), "bundle-") || entry.Name() == "publication-receipt.json" {
+					t.Fatal("check installed publication", entry.Name())
+				}
+			}
+			current, e := f.s.ResolveTypedIndexCurrent(ctx, f.chunk.Repository)
+			if e != nil || current != prior {
+				t.Fatal("prior current lost", e)
+			}
+			if e = f.c.AfterSettlement(ctx, out.AttemptDigest); e == nil {
+				t.Fatal("released before scheduler settlement")
+			}
+			if e = f.s.CompleteGenerationChunk(ctx, f.chunk); e != nil {
+				t.Fatal(e)
+			}
+			if e = f.c.AfterSettlement(ctx, out.AttemptDigest); e != nil {
+				t.Fatal(e)
+			}
+			if _, e = f.s.GetTypedIndexGrowth(ctx); !errors.Is(e, store.ErrNotFound) {
+				t.Fatal("check holder stranded", e)
+			}
+			if e = f.c.Startup(ctx); e != nil {
+				t.Fatal("checked restart census", e)
+			}
+		})
+	}
+}
+
+func TestTypedExecutorCheckedFailure(t *testing.T) {
+	endpoint := testServer(t)
+	for n, purpose := range []typedindex.Purpose{typedindex.Canary, typedindex.DryRun} {
+		t.Run(string(purpose), func(t *testing.T) {
+			f, w, prior := checkedFixture(t, endpoint, "checkedfailure"+string(rune('a'+n)), purpose)
+			_, begins := installNeutralNative(t, f, w, "complete-execute")
+			out, e := f.c.Execute(t.Context(), f.chunk, f.source, f.raw)
+			if e == nil || out.Check != nil || out.Pointer.Epoch != 0 {
+				t.Fatal("failed check succeeded", out, e)
+			}
+			status, e := f.s.GetTypedIndexStatus(t.Context(), f.chunk.Repository)
+			if e != nil || status.Check != nil || status.Stage == store.TypedChecked {
+				t.Fatal("failed status", status, e)
+			}
+			if current, e := f.s.ResolveTypedIndexCurrent(t.Context(), f.chunk.Repository); e != nil || current != prior {
+				t.Fatal("prior current changed", e)
+			}
+			if _, e = f.c.Execute(t.Context(), f.chunk, f.source, f.raw); e == nil || *begins != 1 {
+				t.Fatal("failed check replayed", e, *begins)
+			}
+			if e = f.s.FailGenerationChunk(t.Context(), f.chunk, "checked fixture failure"); e != nil {
+				t.Fatal(e)
+			}
+			if e = f.c.AfterSettlement(t.Context(), out.AttemptDigest); e != nil {
+				t.Fatal("failure cleanup", e)
+			}
+			if e = f.c.Startup(t.Context()); e != nil {
+				t.Fatal("failed check recovery", e)
+			}
+		})
+	}
+}

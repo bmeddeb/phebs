@@ -179,6 +179,9 @@ func (s *Surreal) inspectTypedIndexControlRelations(ctx context.Context, kind Ty
 	if err != nil {
 		return err
 	}
+	if len(attemptRow) == 1 && !typedCheckRelation(attempt, proof.Parent, proof.PlanDigest) {
+		return typedindex.Invalid
+	}
 	// Retirement always protects current and protects desired unless canceled or
 	// awaiting restore. Historical controls may still reference collecting roots.
 	activePointer := kind == TypedIndexCurrents || kind == TypedIndexIntents && !intent.Canceled && !intent.RestoreRequired

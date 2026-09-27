@@ -151,6 +151,7 @@ type TypedIndexAttemptInspection struct {
 	Reason         typedindex.Refusal
 	Custody        *TypedIndexCustody
 	Growth         *TypedIndexGrowth
+	Check          *typedindex.CheckedSummary
 }
 
 type typedAttemptObservation struct {
@@ -251,12 +252,15 @@ func (s *Surreal) inspectTypedIndexAttempt(ctx context.Context, digest string, b
 	if err != nil {
 		return out, err
 	}
+	if !typedCheckRelation(attempt, out.Parent, out.PlanDigest) {
+		return TypedIndexAttemptInspection{}, typedindex.Invalid
+	}
 	if attempt.Custody != nil && attempt.Custody.Revision == 3 && (attempt.Custody.PublicationRequestDigest != attempt.Request || attempt.Custody.PublicationPlanDigest != out.PlanDigest) {
 		return TypedIndexAttemptInspection{}, typedindex.Invalid
 	}
 	out.AttemptDigest, out.ChunkIdentity, out.LeaseDigest = digest, attempt.ChunkIdentity, attempt.Lease
 	out.Stage, out.States, out.Reason = attempt.Stage, attempt.States, attempt.Reason
-	out.Custody, out.Growth = attempt.Custody, attempt.Growth
+	out.Custody, out.Growth, out.Check = attempt.Custody, attempt.Growth, attempt.Check
 	return out, nil
 }
 

@@ -15159,9 +15159,14 @@ Managed request-v2 now binds publish/canary/dry-run and a deterministic retry
 key to exact planning authority. All publication/current boundaries refuse
 nonpublish authority independently; authenticated controls and historical census
 preserve purpose. Parent normal/race, real-store and actual Linux checks plus
-independent source/cost review pass, with legacy v1 bytes unchanged. Successful
-checked outcomes/controller workflow and fresh native proof remain open;
-canary/dry-run availability is not claimed by this contract.
+independent source/cost review pass, with legacy v1 bytes unchanged. The local
+checked workflow now completes both cold phases and final validation without
+publication, records an exact purpose-bound summary, and reuses it across leases
+without new input lookup, copying, growth or children. Checked status rejects
+foreign relations and hides success after source/profile changes. Parent
+host/store and actual Linux controller/runtime/lifecycle race, vet/lint and
+independent cost review pass. Native proof and registration remain open;
+canary/dry-run availability is not claimed.
 
 Trusted pure Bazel provisioning now builds canonical presealed selection from
 explicit roots and independently reviewed planner evidence, sharing the worker's

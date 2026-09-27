@@ -84,7 +84,7 @@ func (r *Runtime) handle(ctx context.Context, chunk store.GenerationChunk, budge
 		return err
 	}
 	switch d.State() {
-	case store.TypedIndexAlreadyPublished:
+	case store.TypedIndexAlreadyPublished, store.TypedIndexAlreadyChecked:
 		return nil
 	case store.TypedIndexInterrupted:
 		return store.WithTerminal(ErrHeld)
