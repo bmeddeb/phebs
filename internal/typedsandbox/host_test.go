@@ -14,10 +14,11 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 )
 
 func hostFixture() HostScratchOptions {
-	return HostScratchOptions{RequestDigest: "sha256:" + strings.Repeat("a", 64), AttemptDigest: "sha256:" + strings.Repeat("d", 64), Socket: "/run/docker.sock", MkfsDigest: "sha256:" + strings.Repeat("b", 64)}
+	return HostScratchOptions{Base: HostBaseIdentity{Device: 1, Inode: 2, BlockSize: 4096}, RequestDigest: "sha256:" + strings.Repeat("a", 64), AttemptDigest: "sha256:" + strings.Repeat("d", 64), Socket: "/run/docker.sock", MkfsDigest: "sha256:" + strings.Repeat("b", 64)}
 }
 func TestHostAuthorityAndRecipe(t *testing.T) {
 	o := hostFixture()
@@ -55,7 +56,7 @@ func TestHostAuthorityAndRecipe(t *testing.T) {
 		t.Fatal("selected legacy ceremony admitted")
 	}
 	// Selection refuses before any root check, lock, directory or native operation.
-	if _, err := PrepareHostScratch(context.Background(), o); err == nil {
+	if _, err := PrepareHostScratch(context.Background(), o, lifecycle.NewGate(HostScratchBase)); err == nil {
 		t.Fatal("selected prepare admitted")
 	}
 }
@@ -324,5 +325,46 @@ func TestHostExactLeaseJournalIdentity(t *testing.T) {
 				t.Fatal("legacy/ambiguous authority accepted", err)
 			}
 		})
+	}
+}
+
+func TestHostBackingBudgetAndRootName(t *testing.T) {
+	o := hostFixture()
+	name, err := HostScratchRootName(o.RequestDigest, o.AttemptDigest)
+	if err != nil || name != filepath.Base(o.root()) || name != "3aa40082b93654f16edc5c81fbdf597c6b5b666b395143145422066f9935e9bc" {
+		t.Fatal(name, err)
+	}
+	// Literal independently counted extents: fixed 4,573,401,088-byte image,
+	// two journal extents and sixteen metadata blocks. Do not mirror the helper.
+	for _, tc := range []struct {
+		block uint64
+		bytes int64
+	}{
+		{512, 4573425664}, {4096, 4573483008}, {65536, 4574609408}, {1 << 20, 4592762880},
+	} {
+		got, e := DeriveHostScratchBudget(tc.block)
+		if e != nil || got.Bytes != tc.bytes || got.Inodes != 16 {
+			t.Fatal(tc, got, e)
+		}
+	}
+	for _, block := range []uint64{0, 3, 1 << 21, ^uint64(0)} {
+		if _, err = DeriveHostScratchBudget(block); err == nil {
+			t.Fatal("bad geometry", block)
+		}
+	}
+	if _, err = HostScratchRootName("", o.AttemptDigest); err == nil {
+		t.Fatal("invalid root")
+	}
+	j := hostOwner{Schema: hostOwnerSchema, Options: o, Phase: "new", Loop: -1}
+	raw, _ := json.Marshal(j)
+	if _, err = decodeHostOwner([]byte(strings.Replace(string(raw), hostOwnerSchema, "phebs-typed-host-scratch-v2", 1)), o); err == nil {
+		t.Fatal("unbound legacy journal")
+	}
+	for _, change := range []func(*HostScratchOptions){func(o *HostScratchOptions) { o.Base.Inode = 0 }, func(o *HostScratchOptions) { o.Base.BlockSize = 0 }} {
+		bad := o
+		change(&bad)
+		if bad.valid() {
+			t.Fatal("missing root authority")
+		}
 	}
 }

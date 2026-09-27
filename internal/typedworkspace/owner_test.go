@@ -67,7 +67,7 @@ func ownerFixture(t *testing.T) (publicationFixture, string, []byte, typedindex.
 	if err != nil {
 		t.Fatal(err)
 	}
-	m, err := CreateOwner(t.Context(), f.dir, id, OwnerBudget{Bytes: 1 << 20, Inodes: 128}, f.gate)
+	m, err := CreateOwner(t.Context(), f.dir, ownerProvisionedObservation(t, f.dir), id, OwnerBudget{Bytes: 1 << 20, Inodes: 128}, f.gate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ func TestOwnerNamespaceBoundsAndHeldCensus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = CreateOwner(t.Context(), f.dir, next, m.Budget, f.gate); err == nil {
+	if _, err = CreateOwner(t.Context(), f.dir, ownerProvisionedObservation(t, f.dir), next, m.Budget, f.gate); err == nil {
 		t.Fatal("orphan attempt cap bypass")
 	}
 	entries, err := CensusOwners(t.Context(), f.dir, id.PlanningDigest)
@@ -269,14 +269,14 @@ func TestOwnerNamespaceBoundsAndHeldCensus(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = CreateOwner(t.Context(), f.dir, otherID, m.Budget, f.gate); e == nil {
+	if _, e = CreateOwner(t.Context(), f.dir, ownerProvisionedObservation(t, f.dir), otherID, m.Budget, f.gate); e == nil {
 		t.Fatal("full request namespace accepted another root")
 	}
 	if _, e = os.Stat(filepath.Join(f.dir, otherID.PlanningDigest[7:])); !errors.Is(e, os.ErrNotExist) {
 		t.Fatal("request cap grew root", e)
 	}
 	// Existing request is full; changing only lease still refuses before mutation.
-	if _, err = CreateOwner(t.Context(), f.dir, next, m.Budget, f.gate); err == nil {
+	if _, err = CreateOwner(t.Context(), f.dir, ownerProvisionedObservation(t, f.dir), next, m.Budget, f.gate); err == nil {
 		t.Fatal("full namespaces accepted")
 	}
 	if err = os.Mkdir(filepath.Join(f.dir, "overflow"), 0700); err != nil {
@@ -307,7 +307,7 @@ func TestOwnerCapacityAndCancellationBeforeGrowth(t *testing.T) {
 			return space{total: total, bytes: total * uint64(100-tc.percent) / 100, inodes: tc.inodes, block: 4096}, nil
 		}
 		name := next.RelativeName()
-		_, err = createOwner(t.Context(), f.dir, next, m.Budget, gate, probe)
+		_, err = createOwner(t.Context(), f.dir, ownerProvisionedObservation(t, f.dir), next, m.Budget, gate, probe)
 		if (err == nil) != tc.ok {
 			t.Fatal(tc, err)
 		}
@@ -321,7 +321,7 @@ func TestOwnerCapacityAndCancellationBeforeGrowth(t *testing.T) {
 	}
 	canceled, cancel := context.WithCancel(t.Context())
 	cancel()
-	if _, err := CreateOwner(canceled, f.dir, next, m.Budget, gate); !errors.Is(err, context.Canceled) {
+	if _, err := CreateOwner(canceled, f.dir, ownerProvisionedObservation(t, f.dir), next, m.Budget, gate); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(f.dir, next.RelativeName())); !errors.Is(err, os.ErrNotExist) {
@@ -438,7 +438,7 @@ func TestOwnerEnvelopeRefusesBeforeGrowth(t *testing.T) {
 			}
 			probed := false
 			probe := func(f *os.File) (space, error) { probed = true; return capacity(f) }
-			m, err := createOwner(t.Context(), base, id, budget, gate, probe)
+			m, err := createOwner(t.Context(), base, ownerProvisionedObservation(t, base), id, budget, gate, probe)
 			if tc.admitted {
 				if err != nil || !probed || m.Digest() == "" {
 					t.Fatal("positive owner failed", err)
@@ -452,13 +452,116 @@ func TestOwnerEnvelopeRefusesBeforeGrowth(t *testing.T) {
 				t.Fatal("late refusal or side effect", err, probed)
 			}
 			entries, err := os.ReadDir(base)
-			if err != nil || len(entries) != 0 {
+			if err != nil || len(entries) != 1 || entries[0].Name() != publicationLock {
 				t.Fatal("oversized owner grew namespace/lock", entries, err)
 			}
 			// No filesystem lookup is needed even when base cannot exist.
-			if _, err = CreateOwner(t.Context(), filepath.Join(base, "absent"), id, budget, gate); !errors.Is(err, ErrCustody) {
+			if _, err = CreateOwner(t.Context(), filepath.Join(base, "absent"), ownerProvisionedObservation(t, base), id, budget, gate); !errors.Is(err, ErrCustody) {
 				t.Fatal("filesystem checked before envelope", err)
 			}
 		})
+	}
+}
+
+func ownerProvisionedObservation(t *testing.T, base string) CapacityObservation {
+	t.Helper()
+	// Explicit neutral fixture provisioning; production CreateOwner never creates
+	// the base's lock. Existing locks are preserved, including their inode.
+	name := filepath.Join(base, publicationLock)
+	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		if err = os.WriteFile(name, nil, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	observed, err := ObserveCapacity(t.Context(), base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return observed
+}
+
+func TestOwnerBoundFirstGrowth(t *testing.T) {
+	_, _, _, _, id, m := ownerFixture(t)
+	for _, tc := range []string{"device", "inode", "block", "nil-gate", "replaced"} {
+		t.Run(tc, func(t *testing.T) {
+			_, base, _, gate := fixture(t)
+			expected := ownerProvisionedObservation(t, base)
+			switch tc {
+			case "device":
+				expected.Device++
+			case "inode":
+				expected.Inode++
+			case "block":
+				expected.BlockSize *= 2
+			case "nil-gate":
+				gate = nil
+			case "replaced":
+				if err := os.Rename(base, base+"-old"); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = os.Remove(base); _ = os.Rename(base+"-old", base) })
+				if err := os.Mkdir(base, 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := CreateOwner(t.Context(), base, expected, id, m.Budget, gate); !errors.Is(err, ErrCustody) {
+				t.Fatal("mismatched root admitted", err)
+			}
+			entries, err := os.ReadDir(base)
+			want := 1
+			if tc == "replaced" {
+				want = 0
+			}
+			if err != nil || len(entries) != want {
+				t.Fatal("refusal grew namespace", entries, err)
+			}
+		})
+	}
+}
+
+func TestOwnerBaseReplacementDuringAdmission(t *testing.T) {
+	_, _, _, _, id, m := ownerFixture(t)
+	_, base, _, gate := fixture(t)
+	expected := ownerProvisionedObservation(t, base)
+	swapped := false
+	probe := func(f *os.File) (space, error) {
+		if !swapped {
+			swapped = true
+			if err := os.Rename(base, base+"-old"); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = os.Remove(base); _ = os.Rename(base+"-old", base) })
+			if err := os.Mkdir(base, 0700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return capacity(f)
+	}
+	if _, err := createOwner(t.Context(), base, expected, id, m.Budget, gate, probe); !errors.Is(err, ErrCustody) {
+		t.Fatal("changed base admitted", err)
+	}
+	entries, err := os.ReadDir(base)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("wrong base grew", entries, err)
+	}
+	old, err := os.ReadDir(base + "-old")
+	if err != nil || len(old) != 1 || old[0].Name() != publicationLock {
+		t.Fatal("old base grew", old, err)
+	}
+}
+
+func TestOwnerRequiresProvisionedLock(t *testing.T) {
+	_, _, _, _, id, m := ownerFixture(t)
+	_, base, _, gate := fixture(t)
+	expected, err := ObserveCapacity(t.Context(), base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = CreateOwner(t.Context(), base, expected, id, m.Budget, gate); !errors.Is(err, ErrCustody) {
+		t.Fatal("unprovisioned root admitted", err)
+	}
+	entries, err := os.ReadDir(base)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("missing lock was created", entries, err)
 	}
 }

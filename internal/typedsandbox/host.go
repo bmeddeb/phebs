@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -20,18 +21,52 @@ import (
 const HostScratchBase = "/var/lib/phebs-typed-index"
 const HostMkfsPath = "/usr/sbin/mkfs.ext4"
 const hostImageBytes = ScratchBytes / 4096 * 4096
-const hostOwnerSchema = "phebs-typed-host-scratch-v2"
+const hostOwnerSchema = "phebs-typed-host-scratch-v3"
 const hostContainerLimit = 128
 
 // HostScratchOptions are trusted operator/request inputs, never browser options.
 // AttemptDigest is the exact durable per-lease attempt identity, never a retry
 // ordinal or a truncated hash. MkfsDigest must be bound into the prospective request/profile before use.
-// The base directory must already be provisioned root:root, mode 0700.
+// The base directory must already be provisioned root:root, mode 0700, with
+// its empty root:root 0600 single-link .lock. Base binds the observed allocation
+// root; replaced roots refuse even if a journal was copied into the replacement.
+type HostBaseIdentity struct {
+	Device    uint64 `json:"device"`
+	Inode     uint64 `json:"inode"`
+	BlockSize uint64 `json:"block_size"`
+}
+
+func (b HostBaseIdentity) valid() bool { return b.Inode != 0 && hostBudgetBlock(b.BlockSize) }
+
+// HostScratchBudget is a conservative physical backing-filesystem envelope,
+// not the ext4 scratch capacity or a reservation against unrelated writers.
+type HostScratchBudget struct {
+	Bytes  int64
+	Inodes uint64
+}
+
+func hostBudgetBlock(block uint64) bool { return block > 0 && block <= 1<<20 && block&(block-1) == 0 }
+
+// DeriveHostScratchBudget charges the fixed image rounded to actual filesystem
+// blocks, main+pending 8KiB journals and sixteen metadata/inode units. No I/O.
+func DeriveHostScratchBudget(block uint64) (HostScratchBudget, error) {
+	if !hostBudgetBlock(block) {
+		return HostScratchBudget{}, ErrRefused
+	}
+	round := func(n uint64) uint64 { return (n + block - 1) / block * block }
+	bytes := round(uint64(hostImageBytes)) + 2*round(8192) + 16*block
+	if bytes > math.MaxInt64 {
+		return HostScratchBudget{}, ErrRefused
+	}
+	return HostScratchBudget{Bytes: int64(bytes), Inodes: 16}, nil
+}
+
 type HostScratchOptions struct {
-	RequestDigest string `json:"request_digest"`
-	AttemptDigest string `json:"attempt_digest"`
-	Socket        string `json:"socket"`
-	MkfsDigest    string `json:"mkfs_digest"`
+	Base          HostBaseIdentity `json:"base"`
+	RequestDigest string           `json:"request_digest"`
+	AttemptDigest string           `json:"attempt_digest"`
+	Socket        string           `json:"socket"`
+	MkfsDigest    string           `json:"mkfs_digest"`
 }
 
 type HostScratchReceipt struct {
@@ -63,15 +98,25 @@ func hostDigest(s string) bool {
 	return true
 }
 func (o HostScratchOptions) valid() bool {
-	return hostDigest(o.RequestDigest) && hostDigest(o.AttemptDigest) && hostDigest(o.MkfsDigest) && filepath.IsAbs(o.Socket) && filepath.Clean(o.Socket) == o.Socket && len(o.Socket) <= 512 && !strings.ContainsAny(o.Socket, "\x00\r\n")
+	return o.Base.valid() && hostDigest(o.RequestDigest) && hostDigest(o.AttemptDigest) && hostDigest(o.MkfsDigest) && filepath.IsAbs(o.Socket) && filepath.Clean(o.Socket) == o.Socket && len(o.Socket) <= 512 && !strings.ContainsAny(o.Socket, "\x00\r\n")
 }
-func (o HostScratchOptions) root() string {
+
+// HostScratchRootName is the exact deterministic basename, independent of base
+// device identity: replacement of the fixed base must refuse, not rename custody.
+func HostScratchRootName(requestDigest, attemptDigest string) (string, error) {
+	if !hostDigest(requestDigest) || !hostDigest(attemptDigest) {
+		return "", ErrRefused
+	}
 	raw, _ := json.Marshal(struct {
 		Request       string
 		AttemptDigest string
-	}{o.RequestDigest, o.AttemptDigest})
+	}{requestDigest, attemptDigest})
 	sum := sha256.Sum256(raw)
-	return HostScratchBase + "/" + hex.EncodeToString(sum[:])
+	return hex.EncodeToString(sum[:]), nil
+}
+func (o HostScratchOptions) root() string {
+	name, _ := HostScratchRootName(o.RequestDigest, o.AttemptDigest)
+	return HostScratchBase + "/" + name
 }
 func hostSelected() bool {
 	_, selected := os.LookupEnv(dispatchadmission.ProductionEnvironment)

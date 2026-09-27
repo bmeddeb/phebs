@@ -14967,6 +14967,12 @@ preprovisioned lock. Independent review and safe Linux gates pass; pending,
 unknown and incomplete custody remains held. Metadata does not prove native
 readiness or cleanup, and runtime/controller integration remains open.
 
+First-growth workspace and host admission now bind actual allocation-root identity
+and geometry, reuse a caller-owned pressure gate and acquire only provisioned
+locks. Prospective host journal v3, replacement/privacy regressions and independent
+budget/root-name vectors pass review and parent Linux gates. No native or runtime
+readiness is inferred; controller integration remains open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

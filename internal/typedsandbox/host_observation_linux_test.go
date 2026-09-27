@@ -34,6 +34,7 @@ func hostObservationFixture(t *testing.T) (string, func(string) (HostObservation
 func hostObservationOwner(t *testing.T, base string) (string, hostOwner) {
 	t.Helper()
 	o := hostFixture()
+	o.Base = hostTestBase(t, base)
 	name := filepath.Base(o.root())
 	if err := os.Mkdir(filepath.Join(base, name), 0700); err != nil {
 		t.Fatal(err)
@@ -343,9 +344,31 @@ func TestHostObservationJournalCancellation(t *testing.T) {
 			}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
-			out, held, err := hostObserveSelected(&hostJournalCancelContext{ctx, cancel, at}, dir, name, uint32(os.Geteuid()), uint32(os.Getegid()), uint64(st.Dev))
+			out, held, err := hostObserveSelected(&hostJournalCancelContext{ctx, cancel, at}, dir, name, uint32(os.Geteuid()), uint32(os.Getegid()), hostTestBase(t, base))
 			if !errors.Is(err, context.Canceled) || !held || out != nil {
 				t.Fatal(out, held, err)
+			}
+		})
+	}
+}
+
+func TestHostObservationBindsAllocationRoot(t *testing.T) {
+	for _, field := range []string{"device", "inode", "block"} {
+		t.Run(field, func(t *testing.T) {
+			base, observe := hostObservationFixture(t)
+			name, j := hostObservationOwner(t, base)
+			switch field {
+			case "device":
+				j.Options.Base.Device++
+			case "inode":
+				j.Options.Base.Inode++
+			case "block":
+				j.Options.Base.BlockSize *= 2
+			}
+			hostObservationWrite(t, base, name, "owner.json", j)
+			out, err := observe(name)
+			if !errors.Is(err, ErrCustody) || !out.Held {
+				t.Fatal("journal from another allocation root admitted", out, err)
 			}
 		})
 	}

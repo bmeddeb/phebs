@@ -103,7 +103,7 @@ func observeHostDirectory(ctx context.Context, base, selected string, uid, gid u
 	out.Overflow = len(out.Names) > 1
 	out.Held = out.Held || out.Overflow || len(out.Names) != 0
 	if selected != "" && slices.Contains(out.Names, selected) {
-		observation, held, e := hostObserveSelected(ctx, root, selected, uid, gid, st.Dev)
+		observation, held, e := hostObserveSelected(ctx, root, selected, uid, gid, HostBaseIdentity{Device: uint64(st.Dev), Inode: st.Ino, BlockSize: out.Capacity.BlockSize})
 		if e != nil {
 			return out, e
 		}
@@ -155,14 +155,14 @@ func hostObservationCapacity(st unix.Stat_t, fs unix.Statfs_t) (HostCapacity, er
 	return HostCapacity{uint64(st.Dev), st.Ino, b, fs.Blocks * b, fs.Bfree * b, fs.Bavail * b, fs.Files, fs.Ffree}, nil
 }
 
-func hostObserveSelected(ctx context.Context, base *os.File, name string, uid, gid uint32, device uint64) (*HostJournalObservation, bool, error) {
+func hostObserveSelected(ctx context.Context, base *os.File, name string, uid, gid uint32, expected HostBaseIdentity) (*HostJournalObservation, bool, error) {
 	dir, err := hostObserveOpen(base, name, true)
 	if err != nil {
 		return nil, true, ErrCustody
 	}
 	defer func() { _ = dir.Close() }()
 	var st unix.Stat_t
-	if unix.Fstat(int(dir.Fd()), &st) != nil || !hostObservationDirectory(st, uid, gid) || uint64(st.Dev) != device {
+	if unix.Fstat(int(dir.Fd()), &st) != nil || !hostObservationDirectory(st, uid, gid) || uint64(st.Dev) != expected.Device {
 		return nil, true, ErrCustody
 	}
 	entries, err := hostObserveEntries(dir, 5)
@@ -197,18 +197,18 @@ func hostObserveSelected(ctx context.Context, base *os.File, name string, uid, g
 	if !main {
 		return nil, true, ErrCustody
 	}
-	j, err := hostObserveJournal(ctx, dir, "owner.json", uid, gid, device)
+	j, err := hostObserveJournal(ctx, dir, "owner.json", uid, gid, expected.Device)
 	if err != nil {
 		return nil, true, err
 	}
-	if strings.TrimPrefix(j.Options.root(), HostScratchBase+"/") != name {
+	if j.Options.Base != expected || strings.TrimPrefix(j.Options.root(), HostScratchBase+"/") != name {
 		return nil, true, ErrCustody
 	}
 	if j.Phase == "ready" && imagePresent && (uint64(image.Dev) != j.ImageDevice || image.Ino != j.ImageInode) {
 		return nil, true, ErrCustody
 	}
 	if pending {
-		next, e := hostObserveJournal(ctx, dir, "owner.next", uid, gid, device)
+		next, e := hostObserveJournal(ctx, dir, "owner.next", uid, gid, expected.Device)
 		if e != nil {
 			return nil, true, e
 		}

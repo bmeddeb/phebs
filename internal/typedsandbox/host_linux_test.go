@@ -4,6 +4,8 @@ package typedsandbox
 
 import (
 	"errors"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"golang.org/x/sys/unix"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -124,4 +126,81 @@ func hostTestExited(t *testing.T, pid int) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal("formatter process remained live", pid)
+}
+
+func hostTestBase(t *testing.T, base string) HostBaseIdentity {
+	t.Helper()
+	f, err := os.Open(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	var st unix.Stat_t
+	var fs unix.Statfs_t
+	if unix.Fstat(int(f.Fd()), &st) != nil || unix.Fstatfs(int(f.Fd()), &fs) != nil {
+		t.Fatal("stat fixture")
+	}
+	return HostBaseIdentity{Device: uint64(st.Dev), Inode: st.Ino, BlockSize: uint64(fs.Bsize)}
+}
+
+func TestHostBoundBaseAndSharedPressure(t *testing.T) {
+	base := t.TempDir()
+	if err := os.Chmod(base, 0700); err != nil {
+		t.Fatal(err)
+	}
+	expected := hostTestBase(t, base)
+	open := func(identity HostBaseIdentity) (*os.File, HostCapacity, error) {
+		return hostBoundBase(t.Context(), base, identity, uint32(os.Geteuid()), uint32(os.Getegid()))
+	}
+	f, observed, err := open(expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	for _, change := range []func(*HostBaseIdentity){func(i *HostBaseIdentity) { i.Inode++ }, func(i *HostBaseIdentity) { i.Device++ }, func(i *HostBaseIdentity) { i.BlockSize *= 2 }} {
+		bad := expected
+		change(&bad)
+		if file, _, e := open(bad); e == nil {
+			_ = file.Close()
+			t.Fatal("different allocation root admitted")
+		}
+	}
+	if err = os.Chmod(base, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = hostRecheckBase(t.Context(), f, base, expected, uint32(os.Geteuid()), uint32(os.Getegid())); !errors.Is(err, ErrCustody) {
+		t.Fatal("public base retained authority", err)
+	}
+	if err = os.Chmod(base, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Rename(base, base+"-old"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(base); _ = os.Rename(base+"-old", base) })
+	if err = os.Mkdir(base, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = hostRecheckBase(t.Context(), f, base, expected, uint32(os.Geteuid()), uint32(os.Getegid())); !errors.Is(err, ErrCustody) {
+		t.Fatal("replaced base admitted", err)
+	}
+	if entries, e := os.ReadDir(base); e != nil || len(entries) != 0 {
+		t.Fatal("identity refusal grew files", entries, e)
+	}
+	gate := lifecycle.NewGate(base)
+	// Both allocation lanes reuse this exact gate. A host refusal must preserve
+	// the latch observed by the other lane, including a completely full filesystem.
+	observed.TotalBytes = 1 << 40
+	observed.TotalInodes = 10000
+	observed.FreeInodes = 9000
+	for _, used := range []int64{100, 85, 73, 95, 85, 73} {
+		observed.AvailableBytes = observed.TotalBytes * uint64(100-used) / 100
+		err = hostCapacity(t.Context(), observed, gate)
+		if (err == nil) != (used == 73) {
+			t.Fatalf("used=%d err=%v", used, err)
+		}
+	}
+	if err = hostCapacity(t.Context(), observed, nil); err == nil {
+		t.Fatal("nil pressure authority accepted")
+	}
 }

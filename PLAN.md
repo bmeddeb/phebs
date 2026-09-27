@@ -7093,3 +7093,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   safe unprivileged Linux Host gates and host/Linux lint pass. No native operation
   or runtime caller is registered, and all formatter/DIO/cap/cleanup rules stay
   unchanged. The controller must still match journal claims to durable authority.
+
+- **2026-09-27 — T45.4 bind allocation roots before first growth.**
+  Workspace creation now takes the previously observed device, inode and block
+  geometry, then checks actual capacity before and under the existing kernel
+  publication lock. It opens only the operator-provisioned lock through the
+  pinned directory descriptor; missing or replaced roots/locks refuse before
+  any namespace growth. Host scratch uses the same caller-owned persistent
+  pressure gate and binds its actual allocation base in prospective journal v3.
+  Prepare, verify, cleanup and selected-journal observation repeat that identity
+  and private-mode check. V2 journals refuse. Exact ready resume does not charge
+  the full image again. Pure root naming preserves the historical identity;
+  the backing budget rounds the fixed image, two8KiB journals and16 metadata
+  units to actual blocks. Formatter, direct-I/O recipe and all caps stay exact.
+
+  **Cost.** No runtime caller is registered. New workspace creation adds two
+  fixed descriptor/capacity checks around the existing bounded namespace work.
+  Its existing-lock acquisition uses one extra descriptor, a2s maximum and10ms
+  polling; it creates no lock. Host operations add fixed base identity/geometry
+  checks, while fresh prepare adds a capacity check through the persistent gate.
+  Verify/cleanup add no growth admission. There is no source scan/hash, database
+  query or new child. Independent review corrected two medium pre-growth/privacy
+  findings and one low test-oracle issue; final severity counts are zero. Parent
+  portable and safe Linux gates pass. Durable controller admission, actual native
+  execution and lifecycle integration remain open.

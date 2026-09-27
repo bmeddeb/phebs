@@ -183,6 +183,10 @@ budgeting are also reviewed. They add no runtime worker or native proof.
 Bounded host base/journal observation now also passes independent review and
 safe Linux gates, with no native mutation or inferred cleanup authority.
 
+First-growth admission now binds observed workspace/host allocation roots under
+existing provisioned locks and preserves shared pressure state. Independent review
+and parent safe Linux gates pass; this still registers no executor or provider.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +26,10 @@ import (
 // PrepareHostScratch is prospective root-only host staging. It never provisions
 // privileges, tools or a VM. A ready exact journal may resume only while empty;
 // interrupted setup must first pass CleanupHostScratch, or retain ambiguous custody.
-func PrepareHostScratch(ctx context.Context, o HostScratchOptions) (HostScratchReceipt, error) {
+func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecycle.Gate) (HostScratchReceipt, error) {
+	if gate == nil {
+		return HostScratchReceipt{}, ErrRefused
+	}
 	lock, err := hostLock(ctx, o)
 	if err != nil {
 		return HostScratchReceipt{}, err
@@ -47,8 +49,17 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions) (HostScratchR
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return HostScratchReceipt{}, ErrCustody
 	}
-	if err = hostCapacity(ctx); err != nil {
-		return HostScratchReceipt{}, err
+	base, observed, e := hostBoundBase(ctx, HostScratchBase, o.Base, 0, 0)
+	if e != nil {
+		return HostScratchReceipt{}, e
+	}
+	e = hostCapacity(ctx, observed, gate)
+	if e == nil {
+		_, e = hostRecheckBase(ctx, base, HostScratchBase, o.Base, 0, 0)
+	}
+	e = errors.Join(e, base.Close())
+	if e != nil {
+		return HostScratchReceipt{}, e
 	}
 	if err = os.Mkdir(root, 0700); err != nil {
 		return HostScratchReceipt{}, ErrCustody
@@ -345,20 +356,35 @@ func hostLock(ctx context.Context, o HostScratchOptions) (*os.File, error) {
 			return nil, ErrCustody
 		}
 	}
-	if err := hostDirectory(HostScratchBase); err != nil {
+	base, _, err := hostBoundBase(ctx, HostScratchBase, o.Base, 0, 0)
+	if err != nil {
 		return nil, err
 	}
-	fd, err := unix.Open(HostScratchBase+"/.lock", unix.O_RDWR|unix.O_CREAT|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0600)
+	defer func() { _ = base.Close() }()
+	flags := unix.O_RDWR | unix.O_CLOEXEC | unix.O_NOFOLLOW
+	fd, err := unix.Openat(int(base.Fd()), ".lock", flags, 0600)
 	if err != nil {
 		return nil, ErrCustody
 	}
 	f := os.NewFile(uintptr(fd), "scratch-owner-lock")
 	var st unix.Stat_t
-	if unix.Fstat(fd, &st) != nil || !hostPrivateFileMetadata(st.Mode, st.Uid, st.Gid, uint64(st.Nlink)) {
+	if unix.Fstat(fd, &st) != nil || !hostPrivateFileMetadata(st.Mode, st.Uid, st.Gid, uint64(st.Nlink)) || st.Size != 0 || uint64(st.Dev) != o.Base.Device {
 		_ = f.Close()
 		return nil, ErrCustody
 	}
-	return hostAcquireLock(ctx, f)
+	f, err = hostAcquireLock(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	_, err = hostRecheckBase(ctx, base, HostScratchBase, o.Base, 0, 0)
+	if err == nil && !hostObserveNamed(base, ".lock", st) {
+		err = ErrCustody
+	}
+	if err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+	return f, nil
 }
 
 // hostAcquireLock owns f on entry and closes it on every refusal.
@@ -399,25 +425,71 @@ func hostDirectory(path string) error {
 	return nil
 }
 
-var hostCapacityGate = lifecycle.NewGate(HostScratchBase)
-
-func hostCapacity(ctx context.Context) error {
-	fd, err := unix.Open(HostScratchBase, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+// The controller supplies the SAME persistent gate for workspace and host roots
+// on one device. This package never creates an independent pressure authority.
+func hostCapacity(ctx context.Context, observed HostCapacity, gate *lifecycle.Gate) error {
+	if gate == nil {
+		return ErrRefused
+	}
+	budget, err := DeriveHostScratchBudget(observed.BlockSize)
 	if err != nil {
-		return ErrRefused
+		return err
 	}
-	defer func() { _ = unix.Close(fd) }()
-	var s unix.Statfs_t
-	if unix.Fstatfs(fd, &s) != nil || s.Bsize <= 0 || s.Blocks > uint64(math.MaxInt64)/uint64(s.Bsize) || s.Bavail > s.Blocks {
-		return ErrRefused
+	// hostObservationCapacity validated signed arithmetic and actual geometry.
+	capacity := lifecycle.Capacity{TotalBytes: int64(observed.TotalBytes), AvailableBytes: int64(observed.AvailableBytes), UsedBytes: int64(observed.TotalBytes - observed.AvailableBytes)}
+	result, err := gate.CheckObserved(ctx, capacity, budget.Bytes)
+	if err != nil {
+		return err
 	}
-	total, available := int64(s.Blocks)*int64(s.Bsize), int64(s.Bavail)*int64(s.Bsize)
-	capacity := lifecycle.Capacity{TotalBytes: total, AvailableBytes: available, UsedBytes: total - available}
-	observed, err := hostCapacityGate.CheckObserved(ctx, capacity, hostImageBytes+65536)
-	if err != nil || observed.Pressure != lifecycle.PressureNormal || !hostInodesFree(s.Files, s.Ffree) {
+	if result.Pressure != lifecycle.PressureNormal || observed.AvailableBytes < uint64(budget.Bytes) || !hostInodesFree(observed.TotalInodes, observed.FreeInodes) {
 		return ErrRefused
 	}
 	return nil
+}
+
+// Only neutral tests vary base/uid/gid; native callers fix the provisioned root.
+func hostBoundBase(ctx context.Context, name string, expected HostBaseIdentity, uid, gid uint32) (*os.File, HostCapacity, error) {
+	if ctx == nil || !expected.valid() {
+		return nil, HostCapacity{}, ErrCustody
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, HostCapacity{}, err
+	}
+	actual, err := filepath.EvalSymlinks(name)
+	if err != nil || actual != name {
+		return nil, HostCapacity{}, ErrCustody
+	}
+	fd, err := unix.Open(name, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, HostCapacity{}, ErrCustody
+	}
+	f := os.NewFile(uintptr(fd), "host-admission-base")
+	var st unix.Stat_t
+	if unix.Fstat(fd, &st) != nil || !hostObservationDirectory(st, uid, gid) {
+		_ = f.Close()
+		return nil, HostCapacity{}, ErrCustody
+	}
+	observed, err := hostRecheckBase(ctx, f, name, expected, uid, gid)
+	if err != nil {
+		_ = f.Close()
+		return nil, HostCapacity{}, err
+	}
+	return f, observed, nil
+}
+func hostRecheckBase(ctx context.Context, root *os.File, name string, expected HostBaseIdentity, uid, gid uint32) (HostCapacity, error) {
+	if err := ctx.Err(); err != nil {
+		return HostCapacity{}, err
+	}
+	var st, named unix.Stat_t
+	var fs unix.Statfs_t
+	if unix.Fstat(int(root.Fd()), &st) != nil || !hostObservationDirectory(st, uid, gid) || unix.Lstat(name, &named) != nil || st.Dev != named.Dev || st.Ino != named.Ino || uint64(st.Dev) != expected.Device || st.Ino != expected.Inode || unix.Fstatfs(int(root.Fd()), &fs) != nil {
+		return HostCapacity{}, ErrCustody
+	}
+	observed, err := hostObservationCapacity(st, fs)
+	if err != nil || observed.BlockSize != expected.BlockSize {
+		return HostCapacity{}, ErrCustody
+	}
+	return observed, nil
 }
 
 func writeHostOwner(root string, j hostOwner, initial bool) error {

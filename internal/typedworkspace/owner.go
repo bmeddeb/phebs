@@ -157,8 +157,11 @@ func decodeOwner(raw []byte) (OwnerManifest, error) {
 // CreateOwner returns a named manifest even on a later error once the attempt
 // directory was created. Such a result is residue, never ready custody. Existing
 // attempts refuse; use LoadOwner with trusted identity for exact reopening.
-func CreateOwner(ctx context.Context, base string, id OwnerIdentity, budget OwnerBudget, gate *lifecycle.Gate) (OwnerManifest, error) {
-	return createOwner(ctx, base, id, budget, gate, capacity)
+// The private base and its existing empty 0600 publication lock are provisioned
+// by the operator. expected is the controller-observed base identity/geometry;
+// capacity is reread, and gate is shared with every allocation on that device.
+func CreateOwner(ctx context.Context, base string, expected CapacityObservation, id OwnerIdentity, budget OwnerBudget, gate *lifecycle.Gate) (OwnerManifest, error) {
+	return createOwner(ctx, base, expected, id, budget, gate, capacity)
 }
 
 // Reserve the largest later metadata encoding before any namespace growth.
@@ -179,8 +182,8 @@ func ownerEnvelopeFits(id OwnerIdentity, budget OwnerBudget) bool {
 	return err == nil && len(raw) <= MaxOwnerBytes
 }
 
-func createOwner(ctx context.Context, base string, id OwnerIdentity, budget OwnerBudget, gate *lifecycle.Gate, probe func(*os.File) (space, error)) (m OwnerManifest, err error) {
-	if ctx == nil || !id.valid() || !budget.valid() {
+func createOwner(ctx context.Context, base string, expected CapacityObservation, id OwnerIdentity, budget OwnerBudget, gate *lifecycle.Gate, probe func(*os.File) (space, error)) (m OwnerManifest, err error) {
+	if ctx == nil || gate == nil || !id.valid() || !budget.valid() || !expected.valid() {
 		return m, ErrCustody
 	}
 	if err = ctx.Err(); err != nil {
@@ -194,11 +197,11 @@ func createOwner(ctx context.Context, base string, id OwnerIdentity, budget Owne
 		return m, err
 	}
 	defer func() { err = errors.Join(err, dir.Close()) }()
-	// Check before even creating the shared namespace lock; recheck under it.
-	if err = ownerCapacity(ctx, dir, budget, gate, probe); err != nil {
+	// Check before acquiring the provisioned namespace lock; recheck under it.
+	if err = ownerAdmission(ctx, dir, expected, budget, gate, probe); err != nil {
 		return m, err
 	}
-	release, err := publicationLease(ctx, base, true, true)
+	release, err := ownerBaseLease(ctx, dir)
 	if err != nil {
 		return m, err
 	}
@@ -206,7 +209,10 @@ func createOwner(ctx context.Context, base string, id OwnerIdentity, budget Owne
 	if err = ownerSameDirectory(dir, base); err != nil {
 		return m, err
 	}
-	if err = ownerCapacity(ctx, dir, budget, gate, probe); err != nil {
+	if err = ownerAdmission(ctx, dir, expected, budget, gate, probe); err != nil {
+		return m, err
+	}
+	if err = ownerSameDirectory(dir, base); err != nil {
 		return m, err
 	}
 	requests, err := ownerEntries(ctx, dir, MaxOwnerRequests, true)
@@ -289,6 +295,21 @@ func createOwner(ctx context.Context, base string, id OwnerIdentity, budget Owne
 	}
 	return m, attempt.Sync()
 }
+
+// ownerAdmission binds the previous controller observation to the actual opened
+// allocation root. Capacity is always fresh; the observation is not a reservation.
+func ownerAdmission(ctx context.Context, dir *os.File, expected CapacityObservation, budget OwnerBudget, gate *lifecycle.Gate, probe func(*os.File) (space, error)) error {
+	node, err := directoryInfo(dir, ".", false)
+	if err != nil || node.Device != expected.Device || node.Inode != expected.Inode {
+		return ErrCustody
+	}
+	actual, err := probe(dir)
+	if err != nil || actual.block != expected.BlockSize {
+		return ErrCustody
+	}
+	return ownerCapacity(ctx, dir, budget, gate, func(*os.File) (space, error) { return actual, nil })
+}
+
 func ownerCapacity(ctx context.Context, dir *os.File, b OwnerBudget, gate *lifecycle.Gate, probe func(*os.File) (space, error)) error {
 	s, err := probe(dir)
 	if err != nil || s.total > math.MaxInt64 || s.bytes > s.total || s.block == 0 || s.block > 1<<20 {
