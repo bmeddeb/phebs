@@ -22,6 +22,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 const (
@@ -57,15 +59,16 @@ func (e *StageError) Unwrap() error { return e.Cause }
 // Options supplies only operator-owned daemon, image and immutable inputs.
 // No command, environment, resource override or remote daemon URL is accepted.
 type Options struct {
-	Socket, ImageID, Inputs string
-	scratch                 *ScratchAuthority
+	Socket, ImageID, Inputs, Controls string
+	Control                           ControlIdentity
+	scratch                           *ScratchAuthority
 }
 
 const (
-	HelperPath        = "/inputs/phebs-typed-worker"
+	HelperPath        = "/inputs/" + typedindex.ManagedHelperFile
 	SupervisorCommand = "__typed_supervisor"
 	WorkerCommand     = "__typed_worker"
-	ownerSchema       = "phebs-typed-container-owner-v1"
+	ownerSchema       = "phebs-typed-container-owner-v2"
 	reportSchema      = "phebs-typed-supervisor-v1"
 )
 
@@ -130,8 +133,9 @@ type supervisorReport struct {
 const MaxContainerJournalBytes = 8192
 
 type journal struct {
-	Schema, Name, ContainerID, DaemonID, ImageID, Socket, Inputs string
-	Scratch                                                      *ScratchAuthority `json:",omitempty"`
+	Schema, Name, ContainerID, DaemonID, ImageID, Socket, Inputs, Controls string
+	Control                                                                ControlIdentity
+	Scratch                                                                *ScratchAuthority `json:",omitempty"`
 }
 
 type client struct{ http *http.Client }
@@ -227,43 +231,26 @@ func recipe(options Options, name string) config {
 	scratch.BindOptions.Propagation = "rprivate"
 	scratch.BindOptions.NonRecursive = true
 	c.HostConfig.Mounts = append(c.HostConfig.Mounts, scratch)
+	controls := bindMount{Type: "bind", Source: options.Controls, Target: "/controls", ReadOnly: true}
+	controls.BindOptions.Propagation = "rprivate"
+	controls.BindOptions.NonRecursive = true
+	c.HostConfig.Mounts = append(c.HostConfig.Mounts, controls)
 	c.HostConfig.LogConfig.Type = "none"
 	c.HostConfig.LogConfig.Config = map[string]string{}
 	return c
 }
 
+// newClient validates only trusted scalar configuration and the daemon socket.
+// Cleanup deliberately does not require input/control files to remain readable.
+func validOptions(options Options) bool {
+	return options.scratch != nil && options.scratch.Validate() == nil && validOptionPath(options.Socket) && validOptionPath(options.Inputs) && validOptionPath(options.Controls) && verifyControlPath(options) && imageID(options.ImageID)
+}
 func newClient(options Options) (*client, error) {
-	if options.scratch == nil {
-		return nil, ErrRefused
-	}
-	{
-		if options.scratch.Validate() != nil {
-			return nil, ErrRefused
-		}
-		raw, err := readSmall(filepath.Join(options.Inputs, ScratchAuthorityFile), MaxScratchAuthorityBytes)
-		if err != nil {
-			return nil, ErrRefused
-		}
-		actual, err := DecodeScratchAuthority(raw)
-		if err != nil || actual != *options.scratch {
-			return nil, ErrRefused
-		}
-	}
-	if !filepath.IsAbs(options.Socket) || filepath.Clean(options.Socket) != options.Socket ||
-		!filepath.IsAbs(options.Inputs) || filepath.Clean(options.Inputs) != options.Inputs ||
-		strings.ContainsAny(options.Inputs, ":\x00\r\n") || !imageID(options.ImageID) {
+	if !validOptions(options) {
 		return nil, ErrRefused
 	}
 	info, err := os.Stat(options.Socket)
 	if err != nil || info.Mode()&os.ModeSocket == 0 {
-		return nil, ErrRefused
-	}
-	canonical, err := filepath.EvalSymlinks(options.Inputs)
-	if err != nil || canonical != options.Inputs {
-		return nil, ErrRefused
-	}
-	info, err = os.Lstat(options.Inputs)
-	if err != nil || !info.IsDir() || info.Mode().Perm()&0o022 != 0 {
 		return nil, ErrRefused
 	}
 	transport := &http.Transport{Proxy: nil, DisableCompression: true, MaxResponseHeaderBytes: 16 << 10,
@@ -271,6 +258,20 @@ func newClient(options Options) (*client, error) {
 			return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "unix", options.Socket)
 		}}
 	return &client{http: &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return ErrRefused }}}, nil
+}
+func validOptionPath(name string) bool {
+	return len(name) <= 4096 && filepath.IsAbs(name) && filepath.Clean(name) == name && !strings.ContainsAny(name, ":\x00\r\n")
+}
+func verifyInputs(options Options) error {
+	canonical, err := filepath.EvalSymlinks(options.Inputs)
+	if err != nil || canonical != options.Inputs {
+		return ErrRefused
+	}
+	info, err := os.Lstat(options.Inputs)
+	if err != nil || !info.IsDir() || info.Mode().Perm()&0022 != 0 {
+		return ErrRefused
+	}
+	return nil
 }
 
 func imageID(value string) bool {
@@ -375,7 +376,7 @@ func (c *client) inspect(ctx context.Context, id string) (inspection, int, error
 
 func verify(got inspection, options Options, owner journal) error {
 	want := recipe(options, owner.Name)
-	if owner.Schema != ownerSchema || !reflect.DeepEqual(owner.Scratch, options.scratch) || !containerID(got.ID) || got.Image != options.ImageID || got.Name != "/"+owner.Name || got.Config.Labels[ownerLabel] != owner.Name ||
+	if owner.Schema != ownerSchema || owner.Controls != options.Controls || owner.Control != options.Control || !reflect.DeepEqual(owner.Scratch, options.scratch) || !containerID(got.ID) || got.Image != options.ImageID || got.Name != "/"+owner.Name || got.Config.Labels[ownerLabel] != owner.Name ||
 		owner.ContainerID != "" && got.ID != owner.ContainerID || got.AppArmorProfile != "docker-default" {
 		return ErrRefused
 	}
@@ -403,7 +404,7 @@ func verify(got inspection, options Options, owner journal) error {
 	if !reflect.DeepEqual(actualHost, want.HostConfig) {
 		return ErrRefused
 	}
-	binds, scratchBinds := 0, 0
+	binds, scratchBinds, controlBinds := 0, 0, 0
 	for _, mount := range got.Mounts {
 		if mount.Type == "bind" && mount.Source == options.Inputs && mount.Destination == "/inputs" && !mount.RW {
 			binds++
@@ -413,9 +414,13 @@ func verify(got inspection, options Options, owner journal) error {
 			scratchBinds++
 			continue
 		}
+		if mount.Type == "bind" && mount.Source == options.Controls && mount.Destination == "/controls" && !mount.RW {
+			controlBinds++
+			continue
+		}
 		return ErrRefused
 	}
-	if binds != 1 || scratchBinds != 1 {
+	if binds != 1 || scratchBinds != 1 || controlBinds != 1 {
 		return ErrRefused
 	}
 	return nil
@@ -451,6 +456,14 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 		return result, err
 	}
 	defer c.http.CloseIdleConnections()
+	if err = verifyInputs(options); err != nil {
+		return result, err
+	}
+	controls, err := openControls(ctx, options)
+	if err != nil {
+		return result, err
+	}
+	defer func() { _ = controls.Close() }()
 	stage = "preflight"
 	daemon, err := c.preflight(ctx, options)
 	if err != nil {
@@ -460,8 +473,11 @@ func run(ctx context.Context, options Options) (result Result, retErr error) {
 	if _, err = rand.Read(token[:]); err != nil {
 		return result, ErrRefused
 	}
-	owner := journal{Schema: ownerSchema, Name: "phebs-typed-index-" + hex.EncodeToString(token[:]), DaemonID: daemon, ImageID: options.ImageID, Socket: options.Socket, Inputs: options.Inputs, Scratch: options.scratch}
+	owner := journal{Schema: ownerSchema, Name: "phebs-typed-index-" + hex.EncodeToString(token[:]), DaemonID: daemon, ImageID: options.ImageID, Socket: options.Socket, Inputs: options.Inputs, Controls: options.Controls, Control: options.Control, Scratch: options.scratch}
 	stage = "journal"
+	if err = verifyControls(ctx, options, controls); err != nil {
+		return result, err
+	}
 	if err = writeJournal(options, owner, true); err != nil {
 		return result, err
 	}
@@ -572,7 +588,21 @@ func Recover(ctx context.Context, options Options, authority ScratchAuthority) (
 	return recoverContainer(ctx, options)
 }
 
-func recoverContainer(ctx context.Context, options Options) (result Result, err error) {
+func recoverContainer(ctx context.Context, options Options) (Result, error) {
+	if ctx == nil || !validOptions(options) {
+		return Result{ExitCode: -1}, ErrRefused
+	}
+	if err := ctx.Err(); err != nil {
+		return Result{ExitCode: -1}, err
+	}
+	owner, err := readJournal(options)
+	if err != nil {
+		return Result{ExitCode: -1}, err
+	}
+	return recoverSelected(ctx, options, owner)
+}
+
+func recoverSelected(ctx context.Context, options Options, owner journal) (result Result, err error) {
 	result.ExitCode = -1
 	if ctx == nil {
 		return result, ErrRefused
@@ -584,10 +614,6 @@ func recoverContainer(ctx context.Context, options Options) (result Result, err 
 		return result, err
 	}
 	defer c.http.CloseIdleConnections()
-	owner, err := readJournal(options)
-	if err != nil {
-		return result, err
-	}
 	result.Removed, result.ContainerID, err = c.cleanup(ctx, options, owner)
 	return result, err
 }
@@ -649,7 +675,7 @@ func journalPath(options Options) string { return options.Inputs + ".typed-conta
 
 func writeJournal(options Options, owner journal, initial bool) error {
 	raw, err := json.Marshal(owner)
-	if err != nil || len(raw) > MaxContainerJournalBytes {
+	if err != nil || len(raw) > MaxContainerJournalBytes || !validOptions(options) || !reflect.DeepEqual(owner.options(), options) || owner.Schema != ownerSchema {
 		return ErrCustody
 	}
 	path := journalPath(options)
@@ -682,24 +708,21 @@ func readJournal(options Options) (journal, error) {
 	return readJournalFile(options, journalPath(options))
 }
 
+func (owner journal) options() Options {
+	return Options{Socket: owner.Socket, ImageID: owner.ImageID, Inputs: owner.Inputs, Controls: owner.Controls, Control: owner.Control, scratch: owner.Scratch}
+}
 func readJournalFile(options Options, name string) (journal, error) {
+	owner, err := readJournalMetadata(name)
+	if err != nil || !reflect.DeepEqual(owner.options(), options) {
+		return journal{}, ErrCustody
+	}
+	return owner, nil
+}
+func readJournalMetadata(name string) (journal, error) {
 	var owner journal
-	named, err := os.Lstat(name)
-	if err != nil || !named.Mode().IsRegular() {
-		return owner, ErrCustody
-	}
-	file, err := os.Open(name)
-	if err != nil {
-		return owner, ErrCustody
-	}
-	defer func() { _ = file.Close() }()
-	info, err := file.Stat()
-	if err != nil || !os.SameFile(named, info) || !info.Mode().IsRegular() || info.Size() > MaxContainerJournalBytes || info.Mode().Perm() != 0o600 {
-		return owner, ErrCustody
-	}
-	raw, err := io.ReadAll(io.LimitReader(file, MaxContainerJournalBytes+1))
+	raw, err := readJournalBytes(name)
 	if err != nil || json.Unmarshal(raw, &owner) != nil || owner.Schema != ownerSchema ||
-		!reflect.DeepEqual(owner.Scratch, options.scratch) || owner.Socket != options.Socket || owner.Inputs != options.Inputs || owner.ImageID != options.ImageID || owner.DaemonID == "" ||
+		!validOptions(owner.options()) || owner.DaemonID == "" || owner.Name != strings.ToLower(owner.Name) ||
 		!strings.HasPrefix(owner.Name, "phebs-typed-index-") || len(owner.Name) != len("phebs-typed-index-")+32 || owner.ContainerID != "" && !containerID(owner.ContainerID) {
 		return journal{}, ErrCustody
 	}

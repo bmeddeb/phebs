@@ -76,6 +76,15 @@ type HostScratchReceipt struct {
 	ObservedDirectIO bool               `json:"observed_direct_io"`
 }
 
+// Validate checks receipt shape and exact internal identity only. A caller must
+// still obtain fresh native evidence through VerifyHostScratch before launch.
+func (r HostScratchReceipt) Validate() error {
+	if r.Schema != hostOwnerSchema || !r.Options.valid() || !r.ObservedDirectIO || r.Authority.Validate() != nil || r.Authority.Source != r.Options.root()+"/scratch" {
+		return ErrRefused
+	}
+	return nil
+}
+
 type hostOwner struct {
 	Schema      string             `json:"schema"`
 	Options     HostScratchOptions `json:"options"`

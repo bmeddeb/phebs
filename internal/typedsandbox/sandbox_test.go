@@ -67,17 +67,23 @@ func fakeDaemon(t *testing.T, fault string) (*daemon, Options) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	t.Cleanup(func() {
+		_ = filepath.WalkDir(root, func(name string, entry os.DirEntry, err error) error {
+			if err == nil && entry.IsDir() {
+				_ = os.Chmod(name, 0700)
+			}
+			return nil
+		})
+		_ = os.RemoveAll(root)
+	})
 	inputs := filepath.Join(root, "inputs")
 	if err = os.Mkdir(inputs, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	a := testScratchAuthority()
-	raw, _ := EncodeScratchAuthority(a)
-	if err := os.WriteFile(filepath.Join(inputs, ScratchAuthorityFile), raw, 0600); err != nil {
-		t.Fatal(err)
-	}
 	options := Options{scratch: &a, Socket: filepath.Join(root, "docker.sock"), ImageID: testImage, Inputs: inputs}
+	options = testControlOptions(t, options)
+
 	d := &daemon{options: options, fault: fault, start: make(chan struct{})}
 	listener, err := net.Listen("unix", options.Socket)
 	if err != nil {
@@ -146,13 +152,27 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		}{"bind", d.options.Inputs, "/inputs", false})
 		if d.config.Cmd[0] == SupervisorCommand {
 			for _, m := range d.config.HostConfig.Mounts {
-				if m.Target == "/scratch" {
+				if m.Target == "/scratch" || m.Target == "/controls" {
 					got.Mounts = append(got.Mounts, struct {
 						Type, Source, Destination string
 						RW                        bool
 					}{m.Type, m.Source, m.Target, !m.ReadOnly})
 				}
 			}
+		}
+		switch d.fault {
+		case "controls missing mount":
+			got.Mounts = got.Mounts[:2]
+		case "controls writable mount":
+			got.Mounts[2].RW = true
+		case "controls wrong mount":
+			got.Mounts[2].Source += "-other"
+		case "controls extra mount":
+			got.Mounts = append(got.Mounts, got.Mounts[2])
+		case "controls recursive mount":
+			got.HostConfig.Mounts[2].BindOptions.NonRecursive = false
+		case "controls shared mount":
+			got.HostConfig.Mounts[2].BindOptions.Propagation = "shared"
 		}
 		if d.started && strings.HasPrefix(d.fault, "watchdog") {
 			got.State.ExitCode = 124
@@ -257,7 +277,7 @@ func TestRunRefusesWithoutLosingCustody(t *testing.T) {
 		started, retained bool
 	}{
 		{"missing seccomp", false, false}, {"oversized info", false, false}, {"image environment", false, false}, {"image volume", false, false},
-		{"changed effective configuration", false, true}, {"start error", false, false}, {"truncated stream", true, false},
+		{"changed effective configuration", false, true}, {"controls missing mount", false, true}, {"controls writable mount", false, true}, {"controls wrong mount", false, true}, {"controls extra mount", false, true}, {"controls recursive mount", false, true}, {"controls shared mount", false, true}, {"start error", false, false}, {"truncated stream", true, false},
 		{"incomplete report", true, false}, {"cleanup error", true, true},
 	} {
 		t.Run(test.fault, func(t *testing.T) {

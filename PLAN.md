@@ -7184,3 +7184,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the opened formatter. Independent review and whole package/race, host/Linux
   vet/lint and documentation gates pass. Actual controller/tool custody remains
   an integration gate.
+
+- **2026-09-27 — T45.4 immutable sandbox controls and retained-owner recovery.**
+  Bind each invocation to one readonly controls-plan or controls-execute sibling,
+  its exact directory identity and bounded seal hash. Scratch authority is read
+  only from that third closed mount; prehydration stays immutable. Prospective
+  container journal v2 records the complete phase and control identity. Recovery
+  selects the original exact journal from trusted input/attempt identity, so
+  missing inputs or controls do not prevent cleaning its recorded container.
+  Selected-journal equality is preserved through cleanup. Journal reads now use
+  nofollow, nonblocking, owned single-link regular files with descriptor/named
+  metadata rechecks; exact8KiB fits and overflow refuses before journal growth.
+  Pure host-receipt validation proves shape only, never native readiness.
+
+  **Cost.** No runtime caller is registered. Run adds two checks, each reading
+  at most4KiB seal and4KiB scratch, plus bounded path traversal and one retained
+  directory descriptor. The controller must separately hold its workspace pin.
+  Recovery adds one initial journal selection and reuses the existing20s cleanup
+  path; each journal read is bounded to8KiB plus metadata checks. No database
+  action, source scan/hash, cache or new child is added. Caps and the300s wall
+  remain unchanged. Independent review is clean after correcting journal-read
+  custody; host race, host/Linux normal, vet and lint pass. Linux filesystem race
+  validation, shared split-phase allowance and native/controller proof remain open.

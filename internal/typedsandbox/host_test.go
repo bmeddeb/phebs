@@ -368,3 +368,33 @@ func TestHostBackingBudgetAndRootName(t *testing.T) {
 		}
 	}
 }
+
+func TestHostReceiptShape(t *testing.T) {
+	o := hostFixture()
+	a := testScratchAuthority()
+	a.Source = o.root() + "/scratch"
+	r := HostScratchReceipt{Schema: hostOwnerSchema, Options: o, Authority: a, ObservedDirectIO: true}
+	if err := r.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name   string
+		change func(*HostScratchReceipt)
+	}{
+		{"schema", func(r *HostScratchReceipt) { r.Schema = "phebs-typed-host-scratch-v2" }},
+		{"base", func(r *HostScratchReceipt) { r.Options.Base.Inode = 0 }},
+		{"tool", func(r *HostScratchReceipt) { r.Options.MkfsDigest = "" }},
+		{"dio", func(r *HostScratchReceipt) { r.ObservedDirectIO = false }},
+		{"authority", func(r *HostScratchReceipt) { r.Authority.Inodes++ }},
+		{"source", func(r *HostScratchReceipt) { r.Authority.Source = testScratchAuthority().Source }},
+		{"attempt", func(r *HostScratchReceipt) { r.Options.AttemptDigest = "sha256:" + strings.Repeat("c", 64) }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			changed := r
+			tt.change(&changed)
+			if changed.Validate() == nil {
+				t.Fatal("invalid receipt admitted")
+			}
+		})
+	}
+}

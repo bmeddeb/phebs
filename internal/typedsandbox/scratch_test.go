@@ -39,12 +39,12 @@ func TestScratchAuthorityAndRecipe(t *testing.T) {
 			t.Fatal("accepted malformed authority")
 		}
 	}
-	o := Options{Inputs: "/inputs-on-host", ImageID: testImage, scratch: &a}
+	o := Options{Inputs: "/inputs-on-host", Controls: "/controls-plan", Control: testControlIdentity(), ImageID: testImage, scratch: &a}
 	c := recipe(o, "owner")
-	if c.Cmd[0] != SupervisorCommand || c.HostConfig.Memory != MemoryBytes || c.HostConfig.MemorySwap != MemoryBytes || c.HostConfig.NanoCpus != 2_000_000_000 || c.HostConfig.PidsLimit != TaskLimit || len(c.HostConfig.Tmpfs) != 0 || len(c.HostConfig.Mounts) != 2 || c.HostConfig.Mounts[1].Source != a.Source || c.HostConfig.Mounts[1].ReadOnly {
+	if c.Cmd[0] != SupervisorCommand || c.HostConfig.Memory != MemoryBytes || c.HostConfig.MemorySwap != MemoryBytes || c.HostConfig.NanoCpus != 2_000_000_000 || c.HostConfig.PidsLimit != TaskLimit || len(c.HostConfig.Tmpfs) != 0 || len(c.HostConfig.Mounts) != 3 || c.HostConfig.Mounts[1].Source != a.Source || c.HostConfig.Mounts[1].ReadOnly {
 		t.Fatal("wrong sealed phase2 recipe", c)
 	}
-	owner := journal{Schema: ownerSchema, Name: "owner", Scratch: &a}
+	owner := journal{Schema: ownerSchema, Name: "owner", Controls: o.Controls, Control: o.Control, Scratch: &a}
 	got := inspection{ID: testContainer, Image: testImage, Name: "/owner", Config: wantWithoutHost(c), HostConfig: c.HostConfig, AppArmorProfile: "docker-default"}
 	for _, m := range c.HostConfig.Mounts {
 		got.Mounts = append(got.Mounts, struct {
@@ -69,10 +69,6 @@ func TestScratchAuthorityAndRecipe(t *testing.T) {
 func TestScratchRunAndAuthorityRefusal(t *testing.T) {
 	d, o := fakeDaemon(t, "")
 	a := testScratchAuthority()
-	raw, _ := EncodeScratchAuthority(a)
-	if err := os.WriteFile(filepath.Join(o.Inputs, ScratchAuthorityFile), raw, 0600); err != nil {
-		t.Fatal(err)
-	}
 	result, err := run(context.Background(), o)
 	if err != nil || !result.Removed {
 		t.Fatal(result, err)
@@ -134,9 +130,9 @@ func TestScratchScratchEmpty(t *testing.T) {
 // otherwise fill from ambient daemon configuration.
 func TestEveryEffectiveRecipeFieldIsPinned(t *testing.T) {
 	a := testScratchAuthority()
-	o := Options{Inputs: "/owned/inputs", ImageID: testImage, scratch: &a}
+	o := Options{Inputs: "/owned/inputs", Controls: "/owned/controls-plan", Control: testControlIdentity(), ImageID: testImage, scratch: &a}
 	c := recipe(o, "owner")
-	owner := journal{Schema: ownerSchema, Name: "owner", Scratch: &a}
+	owner := journal{Schema: ownerSchema, Name: "owner", Controls: o.Controls, Control: o.Control, Scratch: &a}
 	good := inspection{ID: testContainer, Image: testImage, Name: "/owner", Config: wantWithoutHost(c), HostConfig: c.HostConfig, AppArmorProfile: "docker-default"}
 	for _, m := range c.HostConfig.Mounts {
 		good.Mounts = append(good.Mounts, struct {

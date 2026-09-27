@@ -199,6 +199,13 @@ Expected helper/formatter identities now bind through the existing immutable
 inventory, without redundant profile fields or a new tool selection. Actual
 private-copy and native execution proof remain separate integration gates.
 
+Immutable sandbox controls now bind a closed third readonly mount and exact
+phase/attempt seal. Retained-journal recovery can clean the original container
+without surviving input/control files; bounded nofollow journal reads and byte
+limits pass independent review and host/Linux checks. Runtime/native integration,
+Linux filesystem race validation and the shared split-phase allowance remain open.
+
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed

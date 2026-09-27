@@ -14987,6 +14987,12 @@ bounded canonical host-tool metadata file through the existing request inventory
 Independent review and contract gates pass. It selects no new tool and proves no
 filesystem/native readiness; verified-copy and controller binding remain required.
 
+Immutable sandbox controls now bind a closed third readonly mount and exact
+phase/attempt seal. Retained-journal recovery can clean the original container
+without surviving input/control files; bounded nofollow journal reads and byte
+limits pass independent review and host/Linux checks. Runtime/native integration,
+Linux filesystem race validation and the shared split-phase allowance remain open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.
