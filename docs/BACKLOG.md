@@ -14918,6 +14918,10 @@ The next local prerequisite adds Linux-only exact private prehydration Copy/Veri
 with inode-bound receipts, persistent destination-pressure refusal and bounded
 failed-stage custody. Independent filesystem review and regressions cover its
 boundary; aggregate reservation, receipt persistence and lifecycle remain open.
+Durable typed intent/request/stage/current controls and the dedicated queue now
+pass independent review, together with actual precious-only backup/restore.
+They remain unregistered; filesystem publication, complete lifecycle/pins,
+executor wiring and native custody validation are still required.
 
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that

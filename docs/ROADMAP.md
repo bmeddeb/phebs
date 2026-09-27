@@ -157,7 +157,9 @@ native validation remain open before runtime registration.
 The private Linux prehydration copy prerequisite now verifies actual immutable
 bytes/inodes and retains pressure refusal across retries. It has no registered
 caller; lifecycle, aggregate reservation and native executor validation remain
-separate gates.
+separate gates. Durable typed request/stage/current controls and manifest-v9
+precious-only backup/restore have also passed scoped independent review. No
+managed worker or provider is registered; these are local prerequisites.
 
 ## Now
 

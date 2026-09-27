@@ -68,9 +68,12 @@ DEFINE FIELD OVERWRITE resource_class ON generation_schedule_chunk TYPE string A
 	if err := state.migrateGenerationResourceClasses(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	typed := generationSpec("example.invalid/typed", "sha256:"+strings.Repeat("a", 64))
-	typed.Stage, typed.ResourceClass = TypedIndexScheduleStage, GenerationResourceTypedIndex
-	typed.TotalItems, typed.ChunkItems, typed.RepositoryTokens = 1, 1, 1
+	fixture := newTypedFixture(t, state, "typed")
+	fixture.enqueue(t, "migration-claim")
+	typed, err := state.TypedIndexSchedule(t.Context(), fixture.repo)
+	if err != nil {
+		t.Fatal(err)
+	}
 	generic := generationSpec("example.invalid/generic", "sha256:"+strings.Repeat("b", 64))
 	generic.TotalItems, generic.ChunkItems = 1, 1
 	for _, spec := range []GenerationScheduleSpec{typed, generic} {

@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	ManifestSchema                       = "phebs-backup-manifest-v8"
+	ManifestSchema                       = "phebs-backup-manifest-v9"
+	legacyManifestSchema                 = "phebs-backup-manifest-v8"
 	FocusedIndexArchiveReportSchema      = "phebs-focused-archive-report-v1"
 	ResolverCatalogArchiveReportSchema   = "phebs-resolver-catalog-archive-report-v1"
 	CallerPublicationArchiveReportSchema = "phebs-caller-publication-archive-report-v1"
@@ -54,7 +55,7 @@ const (
 	maxArtifactBytes = int64(1 << 40)
 )
 
-var derivedExclusions = []string{
+var legacyDerivedExclusions = []string{
 	"index/ whole-repository zoekt shards (focused publications are preserved byte-exactly)",
 	"repos/ (bare repository mirrors)",
 	"candidates/ (content-addressed candidate manifests and partition rows)",
@@ -66,9 +67,28 @@ var derivedExclusions = []string{
 	"temporary extraction and build caches",
 }
 
-var exportCommand = []string{
+var legacyExportCommand = []string{
 	"surreal", "export", "--endpoint", "<live-loopback-endpoint>",
 	"--namespace", "phebs", "--database", "phebs", "--log", "none", DatabaseName,
+}
+
+// Typed bundles regenerate on restore. Shared generation controls are also
+// derived: omitting all four tables avoids carrying typed leases through a
+// generic table and matches the existing unconditional restore-time reset.
+const derivedExportTables = "typed_index_request,typed_index_plan,typed_index_attempt,typed_index_current,typed_index_state,typed_index_job,generation_schedule,generation_schedule_current,generation_schedule_repository,generation_schedule_chunk"
+
+var derivedExclusions = append(slices.Clone(legacyDerivedExclusions),
+	"typed-index/ and host typed scratch (all generated bundles, workspace, caches, prehydration and worker custody)",
+	"typed_index_request, typed_index_plan, typed_index_attempt, typed_index_current, typed_index_state, typed_index_job (regenerate-on-restore)",
+	"generation_schedule, generation_schedule_current, generation_schedule_repository, generation_schedule_chunk (restartable execution controls)",
+)
+
+var exportCommand = databaseExportCommand("<live-loopback-endpoint>", DatabaseName)
+
+func databaseExportCommand(endpoint, destination string) []string {
+	return []string{"surreal", "export", "--endpoint", endpoint,
+		"--namespace", "phebs", "--database", "phebs", "--log", "none",
+		"--tables-exclude", derivedExportTables, destination}
 }
 
 type ToolIdentity struct {
@@ -408,11 +428,7 @@ func Create(ctx context.Context, opts BackupOptions) (_ Manifest, retErr error) 
 	}
 
 	artifactPath := filepath.Join(stage, DatabaseName)
-	args := []string{
-		"export", "--endpoint", cliEndpoint(runtime.Endpoint),
-		"--namespace", "phebs", "--database", "phebs", "--log", "none",
-		artifactPath,
-	}
+	args := databaseExportCommand(cliEndpoint(runtime.Endpoint), artifactPath)[1:]
 	if err := runSurreal(ctx, actualSurreal.Path, args, runtime.Pass); err != nil {
 		return Manifest{}, fmt.Errorf("export SurrealDB: %w", err)
 	}
@@ -892,6 +908,9 @@ func Restore(ctx context.Context, opts RestoreOptions) (_ Manifest, retErr error
 			"clear restartable generation schedules after restore: %w", err,
 		)
 	}
+	if err := st.ClearTypedIndexForRestore(ctx); err != nil {
+		return Manifest{}, fmt.Errorf("clear generated typed-index authority after restore: %w", err)
+	}
 	// Clear imported caller authority first. Candidate and resolver bulk clears
 	// also invalidate caller authority; this dedicated raw transition must own
 	// the sole restore-time revision advance while the pointer still exists.
@@ -1170,7 +1189,7 @@ func VerifyContext(
 }
 
 func validateManifest(manifest Manifest) error {
-	if manifest.Schema != ManifestSchema || manifest.CreatedAt.IsZero() || manifest.CreatedAt.Location() != time.UTC ||
+	if (manifest.Schema != ManifestSchema && manifest.Schema != legacyManifestSchema) || manifest.CreatedAt.IsZero() || manifest.CreatedAt.Location() != time.UTC ||
 		manifest.Database != (DatabaseIdentity{Namespace: "phebs", Database: "phebs"}) ||
 		manifest.ConfigSHA256 == "" || manifest.Phebs.Version == "" || manifest.Phebs.SHA256 == "" ||
 		manifest.Surreal.Version == "" || manifest.Surreal.SHA256 == "" || manifest.ManifestSHA256 == "" {
@@ -1272,10 +1291,14 @@ func validateManifest(manifest Manifest) error {
 		manifest.Relationship.Bytes < 0 || manifest.Relationship.Omitted < 0 {
 		return errors.New("backup relationship archive report is invalid")
 	}
-	if !slices.Equal(manifest.DerivedExclusions, derivedExclusions) {
+	wantExclusions, wantExport := derivedExclusions, exportCommand
+	if manifest.Schema == legacyManifestSchema {
+		wantExclusions, wantExport = legacyDerivedExclusions, legacyExportCommand
+	}
+	if !slices.Equal(manifest.DerivedExclusions, wantExclusions) {
 		return errors.New("backup manifest derived-state classification is invalid")
 	}
-	if !slices.Equal(manifest.ExportCommand, exportCommand) {
+	if !slices.Equal(manifest.ExportCommand, wantExport) {
 		return errors.New("backup manifest export command is invalid")
 	}
 	for _, digest := range []string{

@@ -1008,11 +1008,31 @@ func (s *Surreal) EnqueueGenerationSchedule(
 		"repository_tokens": spec.RepositoryTokens,
 		"max_active_stages": MaxGenerationActiveStagesPerRepository,
 	}
+	statement := enqueueGenerationScheduleSQL
+	if spec.ResourceClass == GenerationResourceTypedIndex {
+		// Keep the preparation write gate ahead of typed authority reads too.
+		if err := readaccounting.Charge(ctx, readaccounting.StoreWriteAttempt, 1); err != nil {
+			return nil, fmt.Errorf("enqueue typed generation schedule: %w", err)
+		}
+		authority, current, err := s.typedSchedule(ctx, spec.Repository)
+		if err != nil {
+			return nil, err
+		}
+		if current != spec {
+			return nil, ErrGenerationStale
+		}
+		for key, value := range authority.variables() {
+			variables[key] = value
+		}
+		statement = strings.Replace(statement, "BEGIN;", "BEGIN;\n"+typedSourceFenceSQL+typedIntentFenceSQL, 1)
+	}
 	for attempt := 0; ; attempt++ {
 		// Keep the existing preparation-write gate ahead of every SDK call.
 		// A permitted preparation also accounts for this new actual read.
-		if err := readaccounting.Charge(ctx, readaccounting.StoreWriteAttempt, 1); err != nil {
-			return nil, fmt.Errorf("enqueue generation schedule: %w", err)
+		if spec.ResourceClass != GenerationResourceTypedIndex || attempt > 0 {
+			if err := readaccounting.Charge(ctx, readaccounting.StoreWriteAttempt, 1); err != nil {
+				return nil, fmt.Errorf("enqueue generation schedule: %w", err)
+			}
 		}
 		if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 			return nil, fmt.Errorf("read generation enqueue prior: %w", err)
@@ -1053,7 +1073,7 @@ RETURN [{ old_digest: $old_digest, ids: $prior_ids }];`, variables, storeRead())
 		if len(prior.IDs) == 1 {
 			variables["prior_schedule"] = prior.IDs[0]
 		}
-		results, queryErr := storeQuery[[]generationScheduleRec](ctx, s.accounting, s.db, enqueueGenerationScheduleSQL, variables, storeWrite(uint64(3+len(prior.IDs))))
+		results, queryErr := storeQuery[[]generationScheduleRec](ctx, s.accounting, s.db, statement, variables, storeWrite(uint64(3+len(prior.IDs))))
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue

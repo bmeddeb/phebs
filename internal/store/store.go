@@ -38,9 +38,10 @@ type JobKind string
 
 // Job kinds name their SurrealDB table directly.
 const (
-	JobSync  JobKind = "connection_sync_job"
-	JobIndex JobKind = "indexing_job"
-	JobFetch JobKind = "repo_fetch_job" // webhook-driven single-repo fetch (T7.4)
+	JobSync       JobKind = "connection_sync_job"
+	JobIndex      JobKind = "indexing_job"
+	JobTypedIndex JobKind = "typed_index_job" // coordinator only; generation chunks own execution
+	JobFetch      JobKind = "repo_fetch_job"  // webhook-driven single-repo fetch (T7.4)
 	// JobCandidate plans and publishes the commit-bound candidate manifest
 	// that extraction must validate before starting (T30.4).
 	JobCandidate JobKind = "candidate_manifest_job"

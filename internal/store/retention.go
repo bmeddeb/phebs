@@ -149,6 +149,7 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 		table: "proof_bundle", readiness: retentionEvidenceReady,
 		byteExpression: "IF type::is_string(content) THEN bytes::len(<bytes>content) ELSE NONE END",
 	},
+	RetentionComponent(JobTypedIndex):      {table: string(JobTypedIndex), readiness: retentionJobsReady},
 	RetentionComponent(JobSync):            {table: string(JobSync), readiness: retentionJobsReady},
 	RetentionComponent(JobIndex):           {table: string(JobIndex), readiness: retentionJobsReady},
 	RetentionComponent(JobFetch):           {table: string(JobFetch), readiness: retentionJobsReady},
@@ -172,7 +173,7 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 
 const (
 	maxRetentionReportedPerComponent   = 147
-	maxCoreRetentionRequests           = 21
+	maxCoreRetentionRequests           = 22
 	maxCoreRetentionReportedIdentities = 3_074
 	maxCoreRetentionScanIdentities     = 3_095
 )

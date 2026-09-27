@@ -23,6 +23,7 @@ import (
 
 func deleteRepoTestObservation() deleteRepoObservation {
 	return deleteRepoObservation{
+		TypedJobs: []models.RecordID{}, TypedIntents: []models.RecordID{}, TypedCurrents: []models.RecordID{},
 		PublishedRuns: []models.RecordID{}, StagedRuns: []models.RecordID{},
 		Attempts: []models.RecordID{}, Outcomes: []models.RecordID{},
 		ExtractionJobs: []models.RecordID{}, CandidateJobs: []models.RecordID{},
@@ -50,6 +51,7 @@ func deleteRepoTestFields(observed *deleteRepoObservation) []struct {
 		{&observed.Currents, "generation_schedule_current"}, {&observed.Candidates, "candidate_manifest_publication"},
 		{&observed.Resolvers, "resolver_catalog_publication"}, {&observed.Callers, "caller_generation_publication"},
 		{&observed.CallerOutcomes, "caller_leaf_outcome"}, {&observed.CallerAdmissions, "caller_generation_admission"},
+		{&observed.TypedJobs, "typed_index_job"}, {&observed.TypedIntents, "typed_index_intent"}, {&observed.TypedCurrents, "typed_index_current"},
 		{&observed.Permissions, "repo_permission"}, {&observed.Connections, "repo_connection"},
 	}
 }
@@ -69,7 +71,7 @@ func TestDeleteRepoAccounting(t *testing.T) {
 				for index, field := range deleteRepoTestFields(&observed) {
 					*field.ids = []models.RecordID{models.NewRecordID(field.table, uint64(index))}
 				}
-				wantRows = 19
+				wantRows = 22
 			case "limit", "overflow", "sentinel", "too_many", "bad_sentinel":
 				count := map[string]int{"limit": 511, "overflow": 512, "sentinel": 513, "too_many": 514, "bad_sentinel": 513}[mode]
 				for index := range count {
@@ -201,10 +203,11 @@ IF $delete_repo_census != $deletion {
 		"$deletion.currents", "generation_schedule_current", "$deletion.candidates", "candidate_manifest_publication",
 		"$deletion.resolvers", "resolver_catalog_publication", "$deletion.callers", "caller_generation_publication",
 		"$deletion.caller_outcomes", "caller_leaf_outcome", "$deletion.caller_admissions", "caller_generation_admission",
+		"$deletion.typed_jobs", "typed_index_job", "$deletion.typed_intents", "typed_index_intent", "$deletion.typed_currents", "typed_index_current",
 		"$deletion.permissions", "repo_permission", "$deletion.connections", "repo_connection",
 	}
-	if "BEGIN;\n"+strings.NewReplacer(pairs...).Replace(body) != deleteRepoLegacySQL || len(pairs) != 36 {
-		t.Fatal("bounded cleanup changed one of its nineteen original mutation statements")
+	if "BEGIN;\n"+strings.NewReplacer(pairs...).Replace(body) != deleteRepoLegacySQL || len(pairs) != 42 {
+		t.Fatal("bounded cleanup changed one of its twenty-two mutation statements")
 	}
 	file, err := parser.ParseFile(token.NewFileSet(), "surreal.go", nil, 0)
 	if err != nil {

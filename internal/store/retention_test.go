@@ -123,6 +123,7 @@ func coreRetentionComponents() []RetentionComponent {
 		RetentionComponent(JobExtract),
 		RetentionComponent(JobResolverCatalog),
 		RetentionComponent(JobCallerLeaf),
+		RetentionComponent(JobTypedIndex),
 		RetentionCallerPublication,
 		RetentionCallerAdmission,
 		RetentionCallerLeafOutcome,
@@ -133,10 +134,11 @@ func coreRetentionRequests() []RetentionComponentRequest {
 	components := coreRetentionComponents()
 	requests := make([]RetentionComponentRequest, len(components))
 	for index, component := range components {
-		reported, scanned := 147, 148
-		if index >= 8 {
-			reported, scanned = 146, 147
+		reported := (3095 - len(components)) / len(components)
+		if index < (3095-len(components))%len(components) {
+			reported++
 		}
+		scanned := reported + 1
 		requests[index] = RetentionComponentRequest{
 			Component: component, ReportedIdentities: reported,
 			ScanIdentities: scanned,
@@ -318,8 +320,8 @@ func TestCoreRetentionAllTwentyThreePlansAndJobStatuses(t *testing.T) {
 	})
 
 	requests := coreRetentionRequests()
-	if len(requests) != 21 {
-		t.Fatalf("core requests = %d, want 21", len(requests))
+	if len(requests) != 22 {
+		t.Fatalf("core requests = %d, want 22", len(requests))
 	}
 	totalScans := 0
 	for _, request := range requests {

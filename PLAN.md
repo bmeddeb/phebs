@@ -6669,3 +6669,59 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   integration remain T45.4 gates. Host refusal/pressure normal and race checks,
   actual Linux/arm64 unprivileged filesystem regressions, vet and lint are the
   prerequisite checks; no target or privileged native harness was run.
+
+- **2026-09-27 — T45.4 durable state and regenerate-on-restore prerequisite
+  (local, unregistered).** Store one bounded precious profile/universe/request
+  intent per repository, separately from immutable derived requests, plan
+  bindings, per-lease stage attempts, current pointers and active-attempt state.
+  `typed_index_job` carries only a repository target. The typed schedule uses
+  one item, one repository token and the owned three-attempt policy; enqueue
+  compares the entire normalized specification and transactionally fences the
+  current source and desired request. The immutable planning request remains
+  the chunk generation after sealing its execution successor. Retrying that
+  parent cannot restore old desire or create a second successor.
+
+  Each stage and publication transaction checks repository incarnation,
+  source-only epoch/HEAD, exact profile/intent and live chunk lease/current
+  schedule. Publication additionally compares the expected current pointer.
+  Canceled/failed replacements preserve a still-valid prior current; source
+  changes return explicit stale status instead of making fresh enqueue fail
+  after committing. The store records only closed diagnostic reasons and
+  bounded identities, not member bytes, private paths or raw child output.
+  Resume under a new lease restarts preflight and requires the later executor
+  to prove custody again. No store flag grants execution readiness.
+
+  Backup manifest v9 explicitly excludes all six typed derived tables and
+  the four shared restartable generation-schedule tables. Only bounded typed
+  profile/request intent travels; no generated current pointer, member,
+  workspace or lease is transported. Offline restore clears derived controls
+  in existing bounded pages and marks intent unavailable, requiring trusted
+  source/profile/tool revalidation and a distinct successor. The v8 manifest
+  validator retains its exact old export recipe and exclusions; existing
+  binary, configuration and store compatibility pins still apply. An actual
+  neutral six-artifact backup/restore regression verifies exclusion, precious
+  intent retention, replay refusal and fresh revalidated enqueue.
+
+  **Cost.** The new store calls have no registered worker or query caller.
+  Current resolution uses six bounded point reads; status uses at most eight;
+  a stage transition uses at most eight point reads and one transaction
+  mutating one through four rows. Profile canonical decoding is bounded at
+  16 KiB; no full plan/member is stored in these control rows. Schema startup
+  defines seven typed tables and closed indexes, including the pending-key
+  unique index independently of the old queue migration marker. Existing repo
+  deletion extends its exact census/mutation vectors by typed pending jobs,
+  intent and current state, and supersedes typed schedules. It deliberately
+  retains other derived rows for the pending typed lifecycle owner. The core
+  collector allowlist grows from 21 to 22, while its aggregate ceilings remain
+  3,074 reported/3,095 scanned identities; the public retention registry remains
+  28 components until its owning lifecycle integration. Restore clears at most
+  512 identities per page and performs bounded per-intent read/CAS revalidation
+  marking; it is not constant total work over the installation. No member scan,
+  new lock/cache, background process or provider registration is added.
+
+  Independent review corrected two medium findings: caller-overridable retry
+  policy and stale-current misclassification after source advance. Final
+  focused normal/race, actual restore, migration, deletion/accounting and
+  retention checks pass with no remaining scoped review findings. Filesystem
+  publication, pins, complete lifecycle, execution wiring and native proof
+  remain open; this prerequisite does not close T45.4.

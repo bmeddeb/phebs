@@ -898,6 +898,7 @@ DEFINE INDEX IF NOT EXISTS candidate_manifest_job_pending_key ON candidate_manif
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS resolver_catalog_job_pending_key ON resolver_catalog_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS caller_leaf_job_pending_key ON caller_leaf_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS typed_index_job_pending_key ON typed_index_job FIELDS pending_key UNIQUE;
 `
 
 // retiredEvidenceStoreSchemas are the writer generations this binary neither
@@ -986,7 +987,7 @@ const (
 
 var durableJobKinds = [...]JobKind{
 	JobSync, JobIndex, JobFetch, JobCandidate, JobExtract,
-	JobResolverCatalog, JobCallerLeaf,
+	JobResolverCatalog, JobCallerLeaf, JobTypedIndex,
 }
 
 func jobActiveMigrationID() models.RecordID {
@@ -2178,18 +2179,21 @@ UPDATE caller_leaf_job SET status = 'canceled', error = 'repository deleting',
 UPDATE generation_schedule SET status = 'superseded', updated_at = time::now()
     WHERE repository = $name AND status = 'active'
         AND stage IN [$state_reconcile_stage, $state_activate_stage,
-            $relationship_v3_stage] RETURN NONE;
+            $relationship_v3_stage, 'typed-index'] RETURN NONE;
 UPDATE service_state_v3_plan SET state = 'superseded', updated_at = time::now()
     WHERE repository = $name AND state = 'running'
         AND phase IN ['reconcile', 'activate'] RETURN NONE;
 DELETE generation_schedule_current WHERE repository = $name
     AND stage IN [$state_reconcile_stage, $state_activate_stage,
-        $relationship_v3_stage] RETURN NONE;
+        $relationship_v3_stage, 'typed-index'] RETURN NONE;
 DELETE candidate_manifest_publication WHERE repository = $name RETURN NONE;
 DELETE resolver_catalog_publication WHERE repository = $name RETURN NONE;
 DELETE caller_generation_publication WHERE repository = $name RETURN NONE;
 DELETE caller_leaf_outcome WHERE repository = $name RETURN NONE;
 DELETE caller_generation_admission WHERE repository = $name RETURN NONE;
+UPDATE typed_index_job SET status = 'canceled', error = 'repository deleting', finished_at = time::now(), not_before = NONE, pending_key = NONE WHERE target = $name AND status = 'pending' RETURN NONE;
+DELETE typed_index_intent WHERE repository = $name RETURN NONE;
+DELETE typed_index_current WHERE repository = $name RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
 DELETE repo_connection WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
@@ -2209,16 +2213,19 @@ LET $delete_repo_census = {
  resolver_jobs: (SELECT VALUE id FROM resolver_catalog_job WHERE target = $name AND status = 'pending' ORDER BY id LIMIT 513),
  caller_jobs: (SELECT VALUE id FROM caller_leaf_job WHERE target = $name AND status = 'pending' ORDER BY id LIMIT 513),
  schedules: (SELECT VALUE id FROM generation_schedule WHERE repository = $name AND status = 'active'
-  AND stage IN [$state_reconcile_stage, $state_activate_stage, $relationship_v3_stage] ORDER BY id LIMIT 513),
+  AND stage IN [$state_reconcile_stage, $state_activate_stage, $relationship_v3_stage, 'typed-index'] ORDER BY id LIMIT 513),
  plans: (SELECT VALUE id FROM service_state_v3_plan WHERE repository = $name AND state = 'running'
   AND phase IN ['reconcile', 'activate'] ORDER BY id LIMIT 513),
  currents: (SELECT VALUE id FROM generation_schedule_current WHERE repository = $name
-  AND stage IN [$state_reconcile_stage, $state_activate_stage, $relationship_v3_stage] ORDER BY id LIMIT 513),
+  AND stage IN [$state_reconcile_stage, $state_activate_stage, $relationship_v3_stage, 'typed-index'] ORDER BY id LIMIT 513),
  candidates: (SELECT VALUE id FROM candidate_manifest_publication WHERE repository = $name ORDER BY id LIMIT 513),
  resolvers: (SELECT VALUE id FROM resolver_catalog_publication WHERE repository = $name ORDER BY id LIMIT 513),
  callers: (SELECT VALUE id FROM caller_generation_publication WHERE repository = $name ORDER BY id LIMIT 513),
  caller_outcomes: (SELECT VALUE id FROM caller_leaf_outcome WHERE repository = $name ORDER BY id LIMIT 513),
  caller_admissions: (SELECT VALUE id FROM caller_generation_admission WHERE repository = $name ORDER BY id LIMIT 513),
+ typed_jobs: (SELECT VALUE id FROM typed_index_job WHERE target = $name AND status = 'pending' ORDER BY id LIMIT 513),
+ typed_intents: (SELECT VALUE id FROM typed_index_intent WHERE repository = $name ORDER BY id LIMIT 513),
+ typed_currents: (SELECT VALUE id FROM typed_index_current WHERE repository = $name ORDER BY id LIMIT 513),
  permissions: (SELECT VALUE id FROM repo_permission WHERE repo = $name ORDER BY id LIMIT 513),
  connections: (SELECT VALUE id FROM repo_connection WHERE repo = $name ORDER BY id LIMIT 513)
 };
@@ -2249,24 +2256,30 @@ UPDATE $deletion.caller_jobs SET status = 'canceled', error = 'repository deleti
 UPDATE $deletion.schedules SET status = 'superseded', updated_at = time::now()
     WHERE repository = $name AND status = 'active'
         AND stage IN [$state_reconcile_stage, $state_activate_stage,
-            $relationship_v3_stage] RETURN NONE;
+            $relationship_v3_stage, 'typed-index'] RETURN NONE;
 UPDATE $deletion.plans SET state = 'superseded', updated_at = time::now()
     WHERE repository = $name AND state = 'running'
         AND phase IN ['reconcile', 'activate'] RETURN NONE;
 DELETE $deletion.currents WHERE repository = $name
     AND stage IN [$state_reconcile_stage, $state_activate_stage,
-        $relationship_v3_stage] RETURN NONE;
+        $relationship_v3_stage, 'typed-index'] RETURN NONE;
 DELETE $deletion.candidates WHERE repository = $name RETURN NONE;
 DELETE $deletion.resolvers WHERE repository = $name RETURN NONE;
 DELETE $deletion.callers WHERE repository = $name RETURN NONE;
 DELETE $deletion.caller_outcomes WHERE repository = $name RETURN NONE;
 DELETE $deletion.caller_admissions WHERE repository = $name RETURN NONE;
+UPDATE $deletion.typed_jobs SET status = 'canceled', error = 'repository deleting', finished_at = time::now(), not_before = NONE, pending_key = NONE WHERE target = $name AND status = 'pending' RETURN NONE;
+DELETE $deletion.typed_intents WHERE repository = $name RETURN NONE;
+DELETE $deletion.typed_currents WHERE repository = $name RETURN NONE;
 DELETE $deletion.permissions WHERE repo = $name RETURN NONE;
 DELETE $deletion.connections WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
 COMMIT;`
 
 type deleteRepoObservation struct {
+	TypedJobs        []models.RecordID `json:"typed_jobs" cbor:"typed_jobs"`
+	TypedIntents     []models.RecordID `json:"typed_intents" cbor:"typed_intents"`
+	TypedCurrents    []models.RecordID `json:"typed_currents" cbor:"typed_currents"`
 	PublishedRuns    []models.RecordID `json:"published_runs" cbor:"published_runs"`
 	StagedRuns       []models.RecordID `json:"staged_runs" cbor:"staged_runs"`
 	Attempts         []models.RecordID `json:"attempts" cbor:"attempts"`
@@ -2317,6 +2330,7 @@ func (s *Surreal) deleteRepoCensus(ctx context.Context, vars map[string]any) (de
 		{observed.Currents, "generation_schedule_current"}, {observed.Candidates, "candidate_manifest_publication"},
 		{observed.Resolvers, "resolver_catalog_publication"}, {observed.Callers, "caller_generation_publication"},
 		{observed.CallerOutcomes, "caller_leaf_outcome"}, {observed.CallerAdmissions, "caller_generation_admission"},
+		{observed.TypedJobs, "typed_index_job"}, {observed.TypedIntents, "typed_index_intent"}, {observed.TypedCurrents, "typed_index_current"},
 		{observed.Permissions, "repo_permission"}, {observed.Connections, "repo_connection"},
 	} {
 		if field.ids == nil || len(field.ids) > restoreClearRows+1 {

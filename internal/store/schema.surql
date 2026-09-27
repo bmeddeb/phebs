@@ -624,3 +624,36 @@ DEFINE INDEX IF NOT EXISTS proof_bundle_retention ON proof_bundle
     FIELDS retained_at, bundle_id;
 DEFINE INDEX IF NOT EXISTS proof_bundle_legacy_retention ON proof_bundle
     FIELDS created_at, bundle_id;
+
+-- T45.4: typed configuration is precious; all other typed rows regenerate.
+DEFINE TABLE IF NOT EXISTS typed_index_job SCHEMALESS;
+DEFINE FIELD OVERWRITE status ON typed_index_job TYPE string ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS typed_index_job_status ON typed_index_job FIELDS status;
+DEFINE INDEX IF NOT EXISTS typed_index_job_lifecycle ON typed_index_job FIELDS status, finished_at;
+DEFINE TABLE IF NOT EXISTS typed_index_intent SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON typed_index_intent TYPE string;
+DEFINE FIELD IF NOT EXISTS body ON typed_index_intent TYPE string ASSERT string::len($value) <= 24576;
+DEFINE INDEX IF NOT EXISTS typed_index_intent_repository ON typed_index_intent FIELDS repository;
+DEFINE TABLE IF NOT EXISTS typed_index_request SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON typed_index_request TYPE string;
+DEFINE FIELD IF NOT EXISTS body ON typed_index_request TYPE string ASSERT string::len($value) <= 9216;
+DEFINE INDEX IF NOT EXISTS typed_index_request_repository ON typed_index_request FIELDS repository;
+DEFINE TABLE IF NOT EXISTS typed_index_plan SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON typed_index_plan TYPE string;
+DEFINE FIELD IF NOT EXISTS body ON typed_index_plan TYPE string ASSERT string::len($value) <= 4096;
+DEFINE INDEX IF NOT EXISTS typed_index_plan_repository ON typed_index_plan FIELDS repository;
+DEFINE TABLE IF NOT EXISTS typed_index_attempt SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON typed_index_attempt TYPE string;
+DEFINE FIELD IF NOT EXISTS body ON typed_index_attempt TYPE string ASSERT string::len($value) <= 4096;
+DEFINE INDEX IF NOT EXISTS typed_index_attempt_repository ON typed_index_attempt FIELDS repository;
+DEFINE TABLE IF NOT EXISTS typed_index_current SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON typed_index_current TYPE string;
+DEFINE FIELD IF NOT EXISTS body ON typed_index_current TYPE string ASSERT string::len($value) <= 4096;
+DEFINE INDEX IF NOT EXISTS typed_index_current_repository ON typed_index_current FIELDS repository;
+DEFINE TABLE IF NOT EXISTS typed_index_state SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON typed_index_state TYPE string;
+DEFINE FIELD IF NOT EXISTS body ON typed_index_state TYPE string ASSERT string::len($value) <= 4096;
+DEFINE INDEX IF NOT EXISTS typed_index_state_repository ON typed_index_state FIELDS repository;
+-- New queue has no legacy rows; establish its uniqueness even when the generic
+-- pre-lease migration marker already exists on an upgraded installation.
+DEFINE INDEX IF NOT EXISTS typed_index_job_pending_key ON typed_index_job FIELDS pending_key UNIQUE;

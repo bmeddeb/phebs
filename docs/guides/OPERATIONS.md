@@ -118,6 +118,16 @@ The source-definition guard is not a database-row or memory limit.
 
 ### Backup & restore
 
+Manifest v9 omits managed typed-index requests, attempts, plan bindings, current
+pointers, active-attempt state and jobs, plus restartable generation schedules.
+It preserves bounded typed profile/request intent. Generated bundles, private
+input copies, workspaces and scratch are never backup payloads. Restore marks
+that intent unavailable until trusted current source/profile/tool revalidation
+creates a fresh request; an imported request cannot resume or route generated
+navigation. Managed generation remains unregistered in this build. The exact
+v8 manifest recipe remains recognized under the existing binary/configuration
+compatibility requirements.
+
 Precious state is `$DATA/db`, `$DATA/.surreal-child-pass`, and the exact
 config file — the users, OIDC
 links, API-key hashes, sessions, permission edges, audit/analytics history,
