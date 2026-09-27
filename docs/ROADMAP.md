@@ -247,6 +247,13 @@ Independent exact-source parity and code/cost review plus portable/race/vet/lint
 gates pass. Its opt-in native downloader proof remains unrun; actual owned
 worker dispatch and native/provider validation remain required.
 
+Actual Linux/arm64 race validation now passes for the complete workspace,
+sandbox and preparation-controller unit packages, including cross-process pins
+and the real database fixture. The parent independently repeated the check with
+unchanged source and verified empty test custody. It reused existing compiler
+bytes with unchanged host Go; native clock/privileged/cold/target gates remain open.
+
+
 
 
 

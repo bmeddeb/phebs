@@ -7415,3 +7415,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   vet and lint pass. Native downloader proof remains explicitly skipped.
   Worker entrypoints, final plan mapping and native/provider proof remain open;
   no historical receipt or selected tool identity changed.
+
+- **2026-09-27 — T45.4 close actual Linux race unit validation.**
+  The existing retained compiler archive(b5bc6148e85dc7f96e9a756f407aac10893cf8327668e4e22f5f4263454cb5c4)
+  supplies GCC12.2.0 to unchanged host Go1.26.5 solely for Linux/arm64 race unit
+  compilation. A private gate validates all2422 regular archive entries and
+ 282,912,654 expanded bytes, extracts into a disposable case-sensitive volume,
+  and uses existing image identities with network disabled, readonly roots and
+  all capabilities dropped. No tool download/install or frozen native identity
+  changed. Actual workspace57, sandbox63 and preparation-controller3 top-level
+  tests pass without skips; source manifests and binary build information prove
+  unchanged sources, Linux/arm64, CGO and race instrumentation.
+
+  Parent independently reran all three packages, including cross-process reader
+  pins, blocked supervisor deadlines and the explicit-server database fixture,
+  and verified empty owned container/volume inventories after cleanup. Output
+  fingerprint99f1f081cbb01e94af2fe4611028c339bd907a911629ebcdfcccf9b3add1cfed;
+  pre/post source manifest81af4c201aafaf993e8b2f39df890a5c4a8edc879f6fb0ac4a50a9115efbe78b.
+  Gate-only cost is one bounded archive validation/extraction, serial compiler
+  container and serial memory-capped unit runs; no production work is added.
+  This closes the actual Linux filesystem race gap, not native common-clock,
+  privileged scratch/containment, cold replay or target-provider validation.
