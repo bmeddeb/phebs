@@ -17,6 +17,7 @@ func (f *typedFixture) custodyInputs(t *testing.T, chunk GenerationChunk) TypedI
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.acquireGrowth(t, chunk)
 	c := TypedIndexCustody{PlanningDigest: work.RootDigest, AttemptDigest: work.AttemptDigest, ManifestDigest: typedDigest([]byte(work.AttemptDigest + "owner-1")), Revision: 1, DirectoryDevice: 1, DirectoryInode: 42}
 	if err = f.s.SaveTypedIndexCustody(t.Context(), chunk, "", c); err != nil {
 		t.Fatal(err)
@@ -73,6 +74,7 @@ func TestTypedIndexCustodyCASAndStageFences(t *testing.T) {
 	if err = s.AdvanceTypedIndex(ctx, chunk, TypedPreflight); !errors.Is(err, typedindex.Unprepared) {
 		t.Fatalf("missing inputs: %v", err)
 	}
+	f.acquireGrowth(t, chunk)
 	c := TypedIndexCustody{PlanningDigest: w.RootDigest, AttemptDigest: w.AttemptDigest, ManifestDigest: typedDigest([]byte("manifest-1")), Revision: 1, DirectoryDevice: 1, DirectoryInode: 42}
 	for _, tc := range []struct {
 		name   string
@@ -214,6 +216,10 @@ func TestTypedIndexCustodyControlByteBound(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("f", 64)
 	c := TypedIndexCustody{PlanningDigest: hash, AttemptDigest: hash, ManifestDigest: hash, Revision: 3, DirectoryDevice: ^uint64(0), DirectoryInode: ^uint64(0), InputReceiptDigest: hash, PublicationReceiptDigest: hash, PublicationRequestDigest: hash, PublicationPlanDigest: hash, PublicationRootDigest: hash}
 	attempt := typedIndexAttempt{ChunkIdentity: hash, Root: hash, Request: hash, Lease: hash, Stage: TypedComplete, States: [5]string{"complete", "complete", "complete", "complete", "complete"}, Custody: &c}
+	d := TypedIndexGrowthDomain{Device: ^uint64(0), BaseInode: ^uint64(0), BlockBytes: 4096, TotalBytes: ((1 << 63) - 1) &^ 4095, AvailableBytes: ((1 << 63) - 1) &^ 4095, TotalInodes: ^uint64(0), FreeInodes: ^uint64(0), FutureBytes: 1 << 62, FutureInodes: 1 << 63}
+	other := d
+	other.Device--
+	attempt.Growth = &TypedIndexGrowth{PlanningDigest: hash, AttemptDigest: hash, ChunkID: strings.Repeat("z", 128), ChunkIdentity: hash, LeaseDigest: hash, State: "released", Spec: TypedIndexGrowthSpec{Workspace: d, Host: other}}
 	raw, err := typedEncode(attempt, maxTypedControlBytes)
 	if err != nil || !validTypedAttempt(attempt) || len(raw) > maxTypedControlBytes {
 		t.Fatalf("attempt bytes=%d error=%v", len(raw), err)
@@ -317,6 +323,21 @@ func TestTypedIndexCustodyCurrentExactOwner(t *testing.T) {
 	if err = s.CompleteGenerationChunk(ctx, chunk); err != nil {
 		t.Fatal(err)
 	}
+	held, err := s.GetTypedIndexGrowth(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	released, err := s.InspectTypedIndexGrowthRelease(ctx, held.AttemptDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.ReleaseTypedIndexGrowth(ctx, released); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.ResolveTypedIndexCurrentCustody(ctx, f.repo); err != nil {
+		t.Fatalf("released completed current: %v", err)
+	}
+
 	f.enqueue(t, "replacement")
 	replacement := f.claim(t)
 	if _, err = s.BeginTypedIndex(ctx, replacement); err != nil {

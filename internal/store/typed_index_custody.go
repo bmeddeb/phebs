@@ -69,6 +69,9 @@ func (s *Surreal) SaveTypedIndexCustody(ctx context.Context, chunk GenerationChu
 	if err != nil {
 		return err
 	}
+	if x.attempt.Growth == nil {
+		return typedindex.Unprepared
+	}
 	if next.PlanningDigest != x.work.RootDigest || next.AttemptDigest != x.work.AttemptDigest {
 		return typedindex.Stale
 	}

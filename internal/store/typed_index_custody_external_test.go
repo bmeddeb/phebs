@@ -91,6 +91,10 @@ func TestTypedIndexCustodyOwnerAPICompatibility(t *testing.T) {
 		t.Fatal("real owner manifest constructor refused fixture")
 	}
 	reference := store.TypedIndexCustody{PlanningDigest: owner.PlanningDigest, AttemptDigest: owner.AttemptDigest, ManifestDigest: manifest.Digest(), Revision: manifest.Revision, DirectoryDevice: manifest.Directory.Device, DirectoryInode: manifest.Directory.Inode}
+	domain := store.TypedIndexGrowthDomain{Device: 1, BaseInode: 2, BlockBytes: 4096, TotalBytes: 1 << 30, AvailableBytes: 1 << 29, TotalInodes: 1 << 20, FreeInodes: 1 << 19, FutureBytes: 1 << 20, FutureInodes: 100}
+	if _, err = s.AcquireTypedIndexGrowth(ctx, *chunk, store.TypedIndexGrowthSpec{Workspace: domain, Host: domain}); err != nil {
+		t.Fatal(err)
+	}
 	if err = s.SaveTypedIndexCustody(ctx, *chunk, "", reference); err != nil {
 		t.Fatal(err)
 	}

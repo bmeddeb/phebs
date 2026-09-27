@@ -46,13 +46,14 @@ type TypedIndexControl struct {
 	Parent     bool   `json:"is_parent"`
 	State      string `json:"custody_state"`
 	Body       string `json:"body"`
+	GrowthKey  string `json:"growth_key"`
 }
 type TypedIndexControlPage struct {
 	Rows []TypedIndexControl
 	Next string
 }
 
-const typedControlProjection = `id, control_key, record::id(id) AS key, control_key ?? '' AS stored_key, repository, request_root, is_parent ?? false AS is_parent, custody_state ?? '' AS custody_state, body`
+const typedControlProjection = `id, control_key, record::id(id) AS key, control_key ?? '' AS stored_key, repository, request_root, is_parent ?? false AS is_parent, custody_state ?? '' AS custody_state, growth_key ?? '' AS growth_key, body`
 
 func validateTypedControl(kind TypedIndexControlKind, row TypedIndexControl) error {
 	if !validSHA256(row.ID) || row.StoredKey != row.ID || !validSHA256(row.Root) || reponame.Validate(row.Repository) != nil || len(row.Repository) > 512 {
@@ -60,6 +61,9 @@ func validateTypedControl(kind TypedIndexControlKind, row TypedIndexControl) err
 	}
 	switch kind {
 	case TypedIndexRequests:
+		if row.GrowthKey != "" {
+			return typedindex.Invalid
+		}
 		var r typedIndexRequest
 		var wire typedindex.Request
 		if typedDecode(row.Body, typedindex.MaxRequestBytes+1024, &r) != nil || r.Root != row.Root || r.SourceEpoch < 1 || typedDecode(r.Raw, typedindex.MaxRequestBytes, &wire) != nil || typedDigest([]byte(r.Raw)) != row.ID || wire.Source.Repository != row.Repository {
@@ -74,10 +78,13 @@ func validateTypedControl(kind TypedIndexControlKind, row TypedIndexControl) err
 		}
 	case TypedIndexAttempts:
 		var a typedIndexAttempt
-		if typedDecode(row.Body, maxTypedControlBytes, &a) != nil || !validTypedAttempt(a) || a.Custody != nil && a.Custody.AttemptDigest != row.ID || a.Root != row.Root || row.Parent || row.State != "" {
+		if typedDecode(row.Body, maxTypedControlBytes, &a) != nil || !validTypedAttempt(a) || a.Custody != nil && a.Custody.AttemptDigest != row.ID || a.Root != row.Root || a.Growth != nil && a.Growth.AttemptDigest != row.ID || row.GrowthKey != typedAttemptGrowthKey(a) || row.Parent || row.State != "" {
 			return typedindex.Invalid
 		}
 	case TypedIndexPlans:
+		if row.GrowthKey != "" {
+			return typedindex.Invalid
+		}
 		var p typedIndexPlan
 		if typedDecode(row.Body, maxTypedControlBytes, &p) != nil || !validSHA256(p.Digest) || !validSHA256(p.Successor) || row.ID != row.Root || row.Parent || row.State != "" {
 			return typedindex.Invalid
@@ -232,14 +239,14 @@ const typedRetirementObservationSQL = `
 LET $r = (SELECT body, repository, request_root, control_key, is_parent, custody_state FROM $typed_root LIMIT 1)[0];
 LET $d = (SELECT body, request_root, control_key, repository FROM $desired_request LIMIT 1)[0];
 LET $c = (SELECT body, request_root, control_key, repository FROM $current_request LIMIT 1)[0];
-LET $o = (SELECT record::id(id) AS key, control_key, repository, request_root, body FROM $current_owner LIMIT 1)[0];
+LET $o = (SELECT record::id(id) AS key, control_key, repository, request_root, growth_key, body FROM $current_owner LIMIT 1)[0];
 LET $observation = {
  root_body:$r.body ?? '', root_repository:$r.repository ?? '', root_projection:$r.request_root ?? '', root_key:$r.control_key ?? '',
  parent:$r.is_parent ?? false, state:$r.custody_state ?? '',
  intent:(SELECT body FROM $intent LIMIT 1)[0].body ?? '',
  current:(SELECT body FROM $current LIMIT 1)[0].body ?? '',
  desired_body:$d.body ?? '', desired_root:$d.request_root ?? '', desired_repository:$d.repository ?? '', desired_key:$d.control_key ?? '',
- current_owner:{key:$o.key ?? '',stored_key:$o.control_key ?? '',repository:$o.repository ?? '',request_root:$o.request_root ?? '',is_parent:false,custody_state:'',body:$o.body ?? ''},
+ current_owner:{key:$o.key ?? '',stored_key:$o.control_key ?? '',repository:$o.repository ?? '',request_root:$o.request_root ?? '',is_parent:false,custody_state:'',growth_key:$o.growth_key ?? '',body:$o.body ?? ''},
  current_body:$c.body ?? '', current_root:$c.request_root ?? '', current_repository:$c.repository ?? '', current_key:$c.control_key ?? '',
  running:array::len(SELECT id FROM generation_schedule_chunk WHERE generation=$root
  AND stage='typed-index' AND status='running' LIMIT 1)>0

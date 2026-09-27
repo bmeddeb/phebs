@@ -671,3 +671,6 @@ DEFINE FIELD IF NOT EXISTS request_root ON typed_index_plan TYPE option<string> 
 DEFINE FIELD IF NOT EXISTS control_key ON typed_index_plan TYPE option<string> ASSERT $value = NONE OR bytes::len(<bytes>$value) = 71;
 DEFINE INDEX IF NOT EXISTS typed_index_plan_root ON typed_index_plan FIELDS request_root, control_key;
 DEFINE INDEX IF NOT EXISTS generation_chunk_typed_root ON generation_schedule_chunk FIELDS generation, stage, status;
+
+DEFINE FIELD IF NOT EXISTS growth_key ON typed_index_attempt TYPE option<string> ASSERT $value = NONE OR $value = "typed-index";
+DEFINE INDEX IF NOT EXISTS typed_index_attempt_growth ON typed_index_attempt FIELDS growth_key UNIQUE;

@@ -7003,3 +7003,38 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   fixed. No new runtime request/tick/startup work, lock, cache, child or allocation
   is registered. Independent Host regressions and Linux vet pass; parent Host,
   host/Linux vet and lint gates pass. Native proof remains required.
+
+- **2026-09-27 — T45.4 durable growth holder and retained-control admission.**
+  Reuse the existing attempt table with one optional unique growth key rather
+  than a reservation table. One exact per-lease holder binds the planning root,
+  full lease identity and two bounded actual-device/future-budget observations.
+  Acquisition is fenced by current source, profile, intent, live root and lease;
+  identical held replay is free of growth. Cancellation, expiry, source/profile
+  changes and repository deletion do not release custody. Release compares the
+  exact attempt and bounded chunk snapshot, refuses its original running lease,
+  and is irreversible. Completed released current publications remain readable.
+  Trusted controller proof of joined writers, native cleanup and zero future
+  growth remains mandatory; these store scalars are not physical proof.
+
+  New admission counts every retained incarnation/state: at most64 parent roots
+  per repository and64 attempts per root. Existing indexed cap-plus-sentinel
+  scans and intent/active-state transaction fences prevent concurrent overflow;
+  exact coalescing remains free at the cap. Unknown projections refuse. An
+  unavailable holder must yield before lease/attempt churn, not consume execution
+  retries. Offline restore still requires complete physical-custody reconciliation.
+
+  **Cost.** Acquisition/replay uses eight point reads and one fenced transaction
+  (one acquisition write operand, zero on replay). Holder discovery reads at
+  most two4KiB controls; release inspection uses two bounded point reads and
+  release one write operand. New root/attempt admission adds one bounded census,
+  repeated in its existing transaction: at most129 request or65 attempt rows,
+  with native EXPLAIN proving physical indexed limits. Census snapshots may
+  retain1,188,864 request-body bytes or266,240 attempt-body bytes before
+  projections, JSON escaping and transient map copies; they are not scalar-only
+  reads or complete RSS bounds. The maximum-shaped
+  growth+custody attempt is2479/4096bytes. Schema adds two definitions:442 total;
+  measured fresh initialization38 transactions/727 rows, reopen7/454, maximum
+  batch442. No runtime registration, filesystem access, child, cache, process
+  lock or expiry polling is added. Independent implementation/cost review and
+  real store, race, schema/accounting, host/Linux vet/lint gates pass. Complete
+  controller capacity, startup and lifecycle integration remain open.

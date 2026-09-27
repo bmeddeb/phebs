@@ -14951,6 +14951,12 @@ remain open before actual native validation or any runtime registration.
 Owner creation also checks its maximum later manifest encoding before any
 filesystem work, preserving the4KiB bound even for valid heavily escaped names.
 
+Durable growth now uses one unique exact per-lease attempt holder, retained until
+trusted cleanup and a fenced one-way release. Atomic indexed admission bounds
+all retained states to64 roots/repository and64 attempts/root; independent real
+store, race and accounting gates pass. Actual device admission, startup census
+and lifecycle release remain controller obligations; T45.4 stays open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

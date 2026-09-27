@@ -63,6 +63,7 @@ type typedIndexAttempt struct {
 	States        [5]string          `json:"states"`
 	Reason        typedindex.Refusal `json:"reason"`
 	Custody       *TypedIndexCustody `json:"custody,omitempty"`
+	Growth        *TypedIndexGrowth  `json:"growth,omitempty"`
 }
 
 // TypedIndexWork contains immutable authority and durable stage state. Resume
@@ -77,6 +78,7 @@ type TypedIndexWork struct {
 	States        [5]string
 	Resume        bool
 	Custody       *TypedIndexCustody
+	Growth        *TypedIndexGrowth
 }
 type TypedIndexStatus struct {
 	Desired         string                         `json:"request_digest"`
@@ -124,7 +126,10 @@ func typedError(ctx context.Context, err error) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	if strings.Contains(err.Error(), "typed-stale") {
+	if strings.Contains(err.Error(), "typed-capacity") || strings.Contains(err.Error(), "typed_index_attempt_growth") {
+		return typedindex.Capacity
+	}
+	if strings.Contains(err.Error(), "typed-stale") || isRetryable(err) {
 		return typedindex.Stale
 	}
 	return typedindex.ExecutionFailed
@@ -357,6 +362,10 @@ func (s *Surreal) EnqueueTypedIndex(ctx context.Context, repository string, raw 
 	vars["root"] = digest
 	vars["body"] = intentBody
 	vars["pending_ids"] = pending
+	admissionFence, err := s.typedAdmissionSnapshot(ctx, true, vars)
+	if err != nil {
+		return TypedIndexStatus{}, err
+	}
 	write := `CREATE ONLY $request SET repository=$repository, request_root=$root, control_key=$root, is_parent=true, custody_state='live', body=$request_body RETURN NONE;
 UPDATE $intent SET body=$body RETURN NONE;`
 	count := uint64(2)
@@ -369,7 +378,7 @@ UPDATE $intent SET body=$body RETURN NONE;`
 		write += `CREATE ONLY $new_job CONTENT { target:$repository,status:'pending',attempts:0,created_at:time::now(),pending_key:$repository,force:false } RETURN NONE;`
 		count++
 	}
-	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+`
+	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+admissionFence+`
 IF (SELECT VALUE id FROM typed_index_job WHERE pending_key=$repository AND status='pending' ORDER BY created_at LIMIT 1) != $pending_ids { THROW 'typed-stale'; };
 `+write, vars, count)
 	if err != nil {
@@ -498,6 +507,7 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 			return x, typedindex.Invalid
 		}
 	}
+	x.vars["state_before"] = statusRaw
 	x.attemptRaw, err = s.typedReadControl(ctx, "typed_index_attempt", x.work.AttemptDigest)
 	if err != nil {
 		return x, err
@@ -505,6 +515,13 @@ func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, req
 	if x.attemptRaw != "" {
 		if typedDecode(x.attemptRaw, maxTypedControlBytes, &x.attempt) != nil || !validTypedAttempt(x.attempt) || x.attempt.ChunkIdentity != chunk.Identity || x.attempt.Root != chunk.Generation || x.attempt.Request != a.intent.Desired || x.attempt.Lease != GenerationLeaseTokenDigest(chunk.LeaseToken) || x.attempt.Custody != nil && x.attempt.Custody.AttemptDigest != x.work.AttemptDigest {
 			return x, typedindex.Stale
+		}
+		if x.attempt.Growth != nil {
+			if x.attempt.Growth.State == "released" {
+				return x, typedindex.Stale
+			}
+			g := *x.attempt.Growth
+			x.work.Growth = &g
 		}
 		if x.attempt.Custody != nil {
 			c := *x.attempt.Custody
@@ -538,7 +555,11 @@ func (s *Surreal) BeginTypedIndex(ctx context.Context, chunk GenerationChunk) (T
 	x.vars["body"] = body
 	x.vars["state_body"] = stateBody
 	x.vars["state"] = typedID("typed_index_state", chunk.Repository)
-	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+`CREATE ONLY $attempt SET repository=$repository,request_root=$root,control_key=record::id($attempt),body=$body RETURN NONE; UPSERT $state SET repository=$repository,body=$state_body RETURN NONE;`, x.vars, 2)
+	admissionFence, err := s.typedAdmissionSnapshot(ctx, false, x.vars)
+	if err != nil {
+		return TypedIndexWork{}, err
+	}
+	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+typedChunkFenceSQL+admissionFence+`IF ((SELECT body FROM $state LIMIT 1)[0].body ?? '') != $state_before { THROW 'typed-stale'; }; CREATE ONLY $attempt SET repository=$repository,request_root=$root,control_key=record::id($attempt),body=$body RETURN NONE; UPSERT $state SET repository=$repository,body=$state_body RETURN NONE;`, x.vars, 2)
 	x.work.Resume = chunk.Attempt > 0 || x.activeAttempt != ""
 	x.work.Stage = x.attempt.Stage
 	x.work.States = x.attempt.States
@@ -553,7 +574,7 @@ func typedStageIndex(stage TypedIndexStage) int {
 	return -1
 }
 func validTypedAttempt(a typedIndexAttempt) bool {
-	if !validSHA256(a.ChunkIdentity) || !validSHA256(a.Root) || !validSHA256(a.Request) || !validSHA256(a.Lease) || !typedAttemptCustodyValid(a) {
+	if !validSHA256(a.ChunkIdentity) || !validSHA256(a.Root) || !validSHA256(a.Request) || !validSHA256(a.Lease) || !typedAttemptCustodyValid(a) || !validTypedAttemptGrowth(a) {
 		return false
 	}
 	index := typedStageIndex(a.Stage)
@@ -829,9 +850,10 @@ func (s *Surreal) resolveTypedIndexCurrentCustody(ctx context.Context, a typedAu
 	vars["owner_before"] = attemptRaw
 	vars["owner_root"] = attempt.Root
 	vars["owner_key"] = stored.AttemptDigest
+	vars["owner_growth"] = typedAttemptGrowthKey(attempt)
 	vars["current"] = typedID("typed_index_current", repository)
 	vars["pointer_before"] = raw
-	if err := s.typedFence(ctx, typedSourceFenceSQL+typedIntentFenceSQL+`IF (SELECT body FROM $current LIMIT 1)[0].body != $pointer_before OR (SELECT body FROM $owner_attempt WHERE repository=$repository AND request_root=$owner_root AND control_key=$owner_key LIMIT 1)[0].body != $owner_before { THROW 'typed-stale'; };`, vars); err != nil {
+	if err := s.typedFence(ctx, typedSourceFenceSQL+typedIntentFenceSQL+`IF (SELECT body FROM $current LIMIT 1)[0].body != $pointer_before OR (SELECT body FROM $owner_attempt WHERE repository=$repository AND request_root=$owner_root AND control_key=$owner_key AND (growth_key ?? '')=$owner_growth LIMIT 1)[0].body != $owner_before { THROW 'typed-stale'; };`, vars); err != nil {
 		return TypedIndexCurrentCustody{}, err
 	}
 	return TypedIndexCurrentCustody{Parent: parent, Admission: admission, ChunkIdentity: attempt.ChunkIdentity, LeaseDigest: attempt.Lease, Pointer: pointer, PlanningDigest: attempt.Root, AttemptDigest: stored.AttemptDigest, Custody: *attempt.Custody}, nil

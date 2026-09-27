@@ -173,6 +173,10 @@ store binding now passes independent real-store and backup/restore gates.
 The bounded attempt drainer also passes independent Linux regression gates.
 Physical reservation, store/native cleanup integration and native proof remain open.
 
+One durable per-lease growth holder and indexed retained-control quotas now pass
+independent review and real store/accounting gates. Store metadata does not prove
+physical headroom or cleanup; controller/startup/lifecycle integration stays open.
+
 ## Now
 
 **T42.2v restored-launch recovery, 2026-09-22:** signed
