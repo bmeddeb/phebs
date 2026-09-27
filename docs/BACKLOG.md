@@ -15104,6 +15104,13 @@ payloads under the unchanged shared output/wall limits. This remains an
 unregistered prerequisite: host result admission, final bundle/receipt wiring,
 controller integration and fresh native correctness/cost proof are open.
 
+Host result admission and finalization now rederive the exact plan and caller
+protocol, validate generated payloads, scan blanks before omissions and seal
+canonical bundles with bounded audit receipts. Independent exact-source/cost
+review and parent neutral tests pass; baseline legacy bytes remain exact. Empty
+coverage refuses publication. Actual sandbox completion, controller CAS/cleanup
+and fresh native correctness/cost evidence still gate registration.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

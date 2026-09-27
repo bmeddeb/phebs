@@ -290,14 +290,15 @@ type SymbolRoute struct {
 	Members       []string `json:"members"`
 }
 type AttemptManifest struct {
-	Schema    string              `json:"schema"`
-	Request   Request             `json:"request"`
-	Units     []UnitOutcome       `json:"units"`
-	Targets   []TargetOutcome     `json:"targets"`
-	Members   []SCIPMember        `json:"members"`
-	Documents []DocumentRoute     `json:"documents"`
-	Generated []GeneratedDocument `json:"generated"`
-	Complete  bool                `json:"complete"`
+	SCIPGo    *SCIPGoAdapterReceipt `json:"scip_go,omitempty"`
+	Schema    string                `json:"schema"`
+	Request   Request               `json:"request"`
+	Units     []UnitOutcome         `json:"units"`
+	Targets   []TargetOutcome       `json:"targets"`
+	Members   []SCIPMember          `json:"members"`
+	Documents []DocumentRoute       `json:"documents"`
+	Generated []GeneratedDocument   `json:"generated"`
+	Complete  bool                  `json:"complete"`
 }
 type BundleRoot struct {
 	Schema    string            `json:"schema"`
@@ -341,6 +342,10 @@ func generationBinding(a Admission) GenerationBinding {
 // It derives routes from verified members; callers cannot propose routing facts.
 // A failed/unsupported required unit yields only a non-current attempt manifest.
 func BuildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []UnitOutcome, members []MemberInput, generated map[string][]byte) (Bundle, error) {
+	return buildBundle(ctx, a, p, outcomes, members, generated, nil)
+}
+
+func buildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []UnitOutcome, members []MemberInput, generated map[string][]byte, receipt *SCIPGoAdapterReceipt) (Bundle, error) {
 	if err := ctx.Err(); err != nil {
 		return Bundle{}, err
 	}
@@ -373,6 +378,13 @@ func BuildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []Uni
 		states[o.Unit] = o.State
 	}
 	manifest := AttemptManifest{Schema: AttemptSchema, Request: a.request, Units: []UnitOutcome{}, Targets: []TargetOutcome{}, Members: []SCIPMember{}, Documents: []DocumentRoute{}, Generated: []GeneratedDocument{}, Complete: true}
+	if receipt != nil {
+		if err := validateSCIPGoReceipt(ctx, a.profile, receipt); err != nil {
+			return Bundle{}, err
+		}
+		canonicalReceipt := canonicalSCIPGoReceipt(*receipt)
+		manifest.Schema, manifest.SCIPGo = SCIPGoAttemptSchema, &canonicalReceipt
+	}
 	for _, u := range p.definition.Units {
 		state := states[u.ID]
 		if state == "" {
@@ -644,6 +656,9 @@ func VerifyBundle(ctx context.Context, a Admission, p PackagePlan, attempt, root
 	if len(contents) > MaxSCIPMembers+MaxBundleDocuments+3 {
 		return Bundle{}, Capacity
 	}
+	if err := scipGoAttemptDimensions(ctx, attempt); err != nil {
+		return Bundle{}, err
+	}
 	var m AttemptManifest
 	if err := decode(attempt, MaxAttemptBytes, &m); err != nil {
 		return Bundle{}, err
@@ -651,7 +666,8 @@ func VerifyBundle(ctx context.Context, a Admission, p PackagePlan, attempt, root
 	if len(m.Members) > MaxSCIPMembers || len(m.Units) > MaxBundleUnits || len(m.Targets) > MaxBundleTargets || len(m.Documents) > MaxBundleDocuments || len(m.Generated) > MaxBundleDocuments {
 		return Bundle{}, Capacity
 	}
-	if m.Schema != AttemptSchema || m.Request != a.request {
+	validSchema := m.Schema == AttemptSchema && m.SCIPGo == nil || m.Schema == SCIPGoAttemptSchema && m.SCIPGo != nil
+	if !validSchema || m.Request != a.request {
 		return Bundle{}, Stale
 	}
 	members := make([]MemberInput, 0, len(m.Members))
@@ -670,7 +686,7 @@ func VerifyBundle(ctx context.Context, a Admission, p PackagePlan, attempt, root
 		}
 		generated[doc.Path] = raw
 	}
-	b, err := BuildBundle(ctx, a, p, m.Units, members, generated)
+	b, err := buildBundle(ctx, a, p, m.Units, members, generated, m.SCIPGo)
 	if err != nil {
 		return Bundle{}, err
 	}

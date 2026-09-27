@@ -151,6 +151,11 @@ handoff, with exact-source Linux race validation. The executable dispatch and
 complete controller/provider runtime remain unfinished; no fresh target run or
 production registration follows from these unit gates.
 
+Returned-worker protocol admission and canonical finalization are also locally
+reviewed and tested, with audit receipts under existing limits and legacy byte
+compatibility. Native execution success and durable publication remain separate
+controller gates; this does not make the provider available.
+
 T45.3's follow-up now enforces reduced-profile omission at plan and bundle
 admission. Only the explicit prospective v2 profile admits sealed generated
 documents; old v1 identities, skip policies and measured caps remain unchanged.
