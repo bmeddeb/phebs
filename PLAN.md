@@ -6979,3 +6979,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   distinguish initial overflow, later receipt expansion and normal persistence,
   proving no filesystem growth on either refusal. Independent review and exact
   scoped gates accompany this correction; executor integration remains open.
+
+- **2026-09-27 — T45.4 cleanup helper platform placement.** Move only private
+  Linux drain marker/path helpers into the existing Linux implementation file;
+  the portable public refusal API and exported bounds remain unchanged. This
+  closes host unused-symbol lint findings without suppressions or runtime changes.
+  Host/Linux vet and lint verify the platform split; no cost or native authority
+  changes.

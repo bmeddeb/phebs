@@ -2,7 +2,6 @@ package typedworkspace
 
 import (
 	"context"
-	"strings"
 	"time"
 )
 
@@ -14,10 +13,6 @@ const DrainLockWait = 100 * time.Millisecond
 // authority/cursor checks and terminal cleanup (guard helper stats are separate).
 const MaxDrainTraversalStats = 4*MaxDrainSteps + 24
 const MaxDrainMarkerBytes = 4096
-const drainMarkerName = "collecting.json"
-const drainPendingName = "collecting.next"
-const drainMarkerSchema = "phebs-typed-collecting-v1"
-const drainMaxPath = 512 + 1 + 45 // longest admitted child path plus stage basename
 
 // DrainAuthority comes from trusted controller state, never from an HTTP request
 // or an untrusted filesystem census. The controller MUST already have fenced the
@@ -37,20 +32,6 @@ func RetirementAuthority(m OwnerManifest) (DrainAuthority, error) {
 		return DrainAuthority{}, ErrCustody
 	}
 	return DrainAuthority{m.Identity.PlanningDigest, m.Identity.AttemptDigest, digest, m.Directory.Device, m.Directory.Inode}, nil
-}
-func (a DrainAuthority) valid() bool {
-	return publicationHash(a.PlanningDigest) && publicationHash(a.AttemptDigest) && publicationHash(a.ManifestDigest) && a.DirectoryInode != 0
-}
-func (a DrainAuthority) relative() string { return a.PlanningDigest[7:] + "/" + a.AttemptDigest[7:] }
-
-type drainMarker struct {
-	Schema      string         `json:"schema"`
-	Authority   DrainAuthority `json:"authority"`
-	Revision    uint64         `json:"revision"`
-	Previous    string         `json:"previous"`
-	Terminal    bool           `json:"terminal"`
-	Cursor      string         `json:"cursor"`
-	CursorInode uint64         `json:"cursor_inode"`
 }
 
 // DrainReport counts actual owner-issued work, excluding the reused guard/private
@@ -100,12 +81,4 @@ type DrainReport struct {
 // Privileged host scratch is outside this drainer's namespace.
 func DrainOwner(ctx context.Context, base string, a DrainAuthority) (DrainReport, error) {
 	return drainOwner(ctx, base, a, nil)
-}
-func drainTopName(name string) bool {
-	switch name {
-	case ownerManifest, ownerPending, "inventory.json", "input-receipt.json", "publication-receipt.json":
-		return true
-	}
-	name = strings.TrimSuffix(name, ".stage")
-	return publishedName(name) || publicationName(name)
 }

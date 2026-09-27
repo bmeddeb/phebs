@@ -18,6 +18,35 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const drainMarkerName = "collecting.json"
+const drainPendingName = "collecting.next"
+const drainMarkerSchema = "phebs-typed-collecting-v1"
+const drainMaxPath = 512 + 1 + 45 // longest admitted child path plus stage basename
+
+func (a DrainAuthority) valid() bool {
+	return publicationHash(a.PlanningDigest) && publicationHash(a.AttemptDigest) && publicationHash(a.ManifestDigest) && a.DirectoryInode != 0
+}
+func (a DrainAuthority) relative() string { return a.PlanningDigest[7:] + "/" + a.AttemptDigest[7:] }
+
+type drainMarker struct {
+	Schema      string         `json:"schema"`
+	Authority   DrainAuthority `json:"authority"`
+	Revision    uint64         `json:"revision"`
+	Previous    string         `json:"previous"`
+	Terminal    bool           `json:"terminal"`
+	Cursor      string         `json:"cursor"`
+	CursorInode uint64         `json:"cursor_inode"`
+}
+
+func drainTopName(name string) bool {
+	switch name {
+	case ownerManifest, ownerPending, "inventory.json", "input-receipt.json", "publication-receipt.json":
+		return true
+	}
+	name = strings.TrimSuffix(name, ".stage")
+	return publishedName(name) || publicationName(name)
+}
+
 type drainTurn struct {
 	ctx       context.Context
 	authority DrainAuthority
