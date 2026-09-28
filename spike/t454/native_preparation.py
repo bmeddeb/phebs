@@ -212,6 +212,7 @@ import hashlib,json,os,pathlib,re,signal,stat,subprocess,sys,tarfile
 signal.alarm(600)
 B=pathlib.Path('/var/lib/phebs-typed-preparation')
 NAMES={'config.json','inventory.json','profile.json','deployment.json','native-preparation.test'}
+MAX_DIAG=1<<20
 def reject(): raise RuntimeError('neutral preparation transport refused')
 def digest(b): return 'sha256:'+hashlib.sha256(b).hexdigest()
 def checkdir(p):
@@ -298,8 +299,15 @@ elif a in ('run','collect'):
   cfg=json.loads(raw)
   if digest(read(root/'native-preparation.test',256<<20))!=cfg['test_sha256']: reject()
   write(root/'dispatch.json',json.dumps({'config':expected},separators=(',',':')).encode())
-  result=subprocess.run([str(root/'native-preparation.test'),'-test.run=^TestNativePreparationHost$','-test.count=1','-test.timeout=600s','-typed-preparation-config='+str(root/'config.json'),'-typed-preparation-role=host'],env={'PATH':'/usr/bin:/bin','HOME':str(root)},stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True,timeout=600)
-  if result.returncode: reject()
+  diagfd=os.open(root/'test-output.log',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_APPEND,0o600)
+  rc=0
+  try:
+   try: rc=subprocess.run([str(root/'native-preparation.test'),'-test.run=^TestNativePreparationHost$','-test.count=1','-test.timeout=600s','-typed-preparation-config='+str(root/'config.json'),'-typed-preparation-role=host'],env={'PATH':'/usr/bin:/bin','HOME':str(root)},stdin=subprocess.DEVNULL,stdout=diagfd,stderr=diagfd,start_new_session=True,timeout=600).returncode
+   except subprocess.TimeoutExpired: rc=1
+   if os.fstat(diagfd).st_size>MAX_DIAG: os.ftruncate(diagfd,MAX_DIAG)
+   os.fsync(diagfd)
+  finally: os.close(diagfd)
+  if rc: reject()
 else: reject()
 '''
 
