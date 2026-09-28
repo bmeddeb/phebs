@@ -14817,54 +14817,23 @@ The preceding Phase 2 artifacts are retained byte-exact; original private
 failure reproduction, target cgo, generated navigation and scale remain outside
 the result. There are no further Claude handoffs.
 
-**T45.2 · Closed provider/profile and execution-authority contract** *(Ben
-accepted T45.1b REDUCE; merged-tree admission passed)* — generalize the accepted
-spike identities into versioned provider descriptors, operator-owned named
-profiles, immutable request identity, capability reporting, and bounded
-structured refusal/progress vocabulary. One request binds repository
-incarnation, the current authoritative HEAD source generation and its resolved
-exact commit, provider, profile/config digest, configured-target-universe
-digest, Bazel/rules_go/Go/indexer/planner/launcher identities, immutable
-prehydration-bundle digest, resource policy, and idempotency key; the planned
-successor identity also binds the sealed target-to-package-load-unit map
-digest. Historical commit selection remains outside this epic. AC: strict decoding rejects
-unknown, duplicate, missing, unsafe, or oversized fields before mutation; only
-administrators may plan or execute; ordinary repository visibility grants no
-host execution; profiles contain no browser-supplied arbitrary command data;
-the driver executable/launcher and argv are Phebs-owned closed fields and no
-repository-controlled executable can satisfy them;
-ambient bazelrc discovery is disabled; any single admitted operator-copied rc
-is fully resolved, closed-field validated, and digest-bound; prehydration
-inventory is immutable, bounded, digest-verified, and copied before execution;
-output roots and any request-private local cache are identity-bound and
-lifecycle-owned; tool
-replacement and equal-value A→B→A profile transitions cannot alias;
-threat model and configuration guide distinguish the managed child from pure
-extractors; disabled steady state is zero-work.
-
-Implementation: `internal/typedindex` defines strict canonical profile/request
-and prehydration inventory decoding, exact HEAD/source/incarnation authority,
-operator profile epochs, planned-successor linkage, reduced capability and
-source-free progress/refusal vocabulary. Only trusted administrator authority
-can admit plan or execute intent; neither is an execution capability. Provider,
-tool/image/config/resource/bundle identities and idempotency key are bound into
-the request. Equal-value profile replacement increments a durable epoch, and
-execution reconstructs its exact parent request to prevent plan reuse with
-changed inputs. Owned command recipes disable ambient rc and remote caches;
-the optional rc admits only its fully resolved fixed content. Private custody
-paths derive from the request digest. Preparation rejects absent copied/verified
-inputs, mismatched tools/image/policy/rc, shared scratch, network access, missing
-direct I/O or capacity evidence. This is a pure contract: T45.4 must obtain
-those facts from actual immutable copies and sandbox observations, recheck
-current authority and own durable transitions. It is not a new importer,
-executor, HTTP/MCP endpoint, enabled provider or publication implementation.
-
-Tests cover malformed and oversized wires, nested duplicates and missing
-fields, non-admin and disabled admission, source/profile/tool changes, A→B→A
-and equal-value epochs, forged successors, rc overrides, inventory path/count/
-byte bounds and incomplete preparation. The configuration guide records the
-trusted/untrusted boundary, fixed caps and successor obligations. No ordinary
-query, startup, sync or publication gains work while this contract is unbound.
+**T45.2 ✅ · Closed provider/profile and execution-authority contract** *(Ben
+accepted T45.1b REDUCE; merged-tree admission passed)* — integrated at main
+`d5fd1825` and confirmed host-only against each acceptance criterion on
+2026-09-28. The pure `internal/typedindex` contract binds versioned provider
+descriptors, operator-owned named profiles, immutable request identity, exact
+HEAD/source/incarnation authority, closed Phebs-owned driver/launcher/argv plus a
+resolved digest-bound copied rc with ambient bazelrc discovery disabled, an
+immutable bounded digest-verified prehydration inventory copied before
+execution, identity-bound lifecycle-owned output roots and request-private cache,
+non-aliasing tool-replacement and equal-value A→B→A epoch transitions,
+administrator-only plan/execute admission where ordinary visibility grants no
+host execution, and a zero-work disabled steady state. Full acceptance criteria,
+the criterion→code/test mapping, and the host-only verification record are in the
+[completed backlog](./BACKLOG_COMPLETED.md#epic-45-local-implementation-records).
+This confirmation grants no native run, provider activation, merge, push, or
+scale/SLO/release claim; T45.4 owns the executor and must recheck current
+authority from actual immutable copies and sandbox observations.
 
 **T45.3 ✅ · Immutable Phebs SCIP-bundle and atomic-publication contract** —
 local implementation and independent correction review complete, pending Ben's

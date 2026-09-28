@@ -11032,6 +11032,69 @@ replay, release, or `GATE2-V2` result.
 
 ## Epic 45 local implementation records
 
+**T45.2 ✅ · Closed provider/profile and execution-authority contract** *(Ben
+accepted T45.1b REDUCE; merged-tree admission passed)* — generalize the accepted
+spike identities into versioned provider descriptors, operator-owned named
+profiles, immutable request identity, capability reporting, and bounded
+structured refusal/progress vocabulary. One request binds repository
+incarnation, the current authoritative HEAD source generation and its resolved
+exact commit, provider, profile/config digest, configured-target-universe
+digest, Bazel/rules_go/Go/indexer/planner/launcher identities, immutable
+prehydration-bundle digest, resource policy, and idempotency key; the planned
+successor identity also binds the sealed target-to-package-load-unit map digest.
+Historical commit selection remains outside this epic.
+
+AC: strict decoding rejects unknown, duplicate, missing, unsafe, or oversized
+fields before mutation; only administrators may plan or execute; ordinary
+repository visibility grants no host execution; profiles contain no
+browser-supplied arbitrary command data; the driver executable/launcher and argv
+are Phebs-owned closed fields and no repository-controlled executable can satisfy
+them; ambient bazelrc discovery is disabled; any single admitted operator-copied
+rc is fully resolved, closed-field validated, and digest-bound; prehydration
+inventory is immutable, bounded, digest-verified, and copied before execution;
+output roots and any request-private local cache are identity-bound and
+lifecycle-owned; tool replacement and equal-value A→B→A profile transitions
+cannot alias; threat model and configuration guide distinguish the managed child
+from pure extractors; disabled steady state is zero-work.
+
+Integrated at main `d5fd1825` (`feat(t45.2): define reduced typed-index
+authority contract`). Confirmed host-only on 2026-09-28 against each criterion;
+the pure contract lives in `internal/typedindex` and ships no importer, executor,
+HTTP/MCP endpoint, enabled provider, or publication path. Criterion→code/test
+mapping: strict decode before mutation → `Admit`/`DecodeProfile`/`DecodeInventory`
+with `TestAuthorityAndWireRefuseBeforeAdmission`, `TestClosedProfileAndCommands`,
+`TestInventoryAndProgressBounds`, `TestInventoryCountAndAggregateCeilings`;
+administrator-only admission and visibility-grants-no-execution →
+`Authority.Administrator` plus `Admit` `Disabled`/`Forbidden` in
+`TestAuthorityAndWireRefuseBeforeAdmission`; no browser command data and
+Phebs-owned closed driver/launcher/argv → `TestClosedProfileAndCommands`,
+`TestBoundHostTools`; ambient bazelrc disabled and resolved digest-bound copied rc
+→ `TestClosedProfileAndCommands` rc cases; immutable bounded digest-verified
+prehydration inventory copied before execution → `DecodeInventory`,
+`TestPreparedCustodyCannotBeSkippedOrReused`; identity-bound lifecycle-owned
+output roots/cache → request-digest derivation in
+`TestPreparedCustodyCannotBeSkippedOrReused`; non-aliasing tool replacement and
+equal-value A→B→A epochs plus forged-successor refusal →
+`TestProfileReplacementsAndPlannedSuccessor`; threat model distinguishing the
+managed child from pure extractors → `docs/guides/CONFIGURATION.md` §“Managed
+typed-index contract (T45.2)” (“A managed build executes repository-controlled
+build logic. It is not a pure source extractor, and ordinary repository
+visibility never grants execution.”); zero-work disabled steady state →
+`TestDisabledAdmissionDoesNotAllocate`; measured policy equal to the sealed
+evidence caps → `TestPolicyMatchesSealedEvidence`; managed request purpose and
+nonpublish-authority refusal → `TestManagedPurposeIdentity`.
+
+Host-only acceptance evidence (offline `GOENV=off GOTOOLCHAIN=local GOPROXY=off
+GOSUMDB=off GOWORK=off`, go1.26.5 darwin/arm64): `go build`, `go vet`, `go test`,
+and `go test -race` for `./internal/typedindex/...` all pass; scoped
+`golangci-lint run ./internal/typedindex/...` reports 0 issues (host golangci-lint
+2.13.1; the repository pins v2.12.2, which only `make ci-static` enforces);
+`make verify-glossary` and `make docs-check` pass. This confirmation is a
+host-only status check on already-integrated code; it grants no native run, VM
+startup, tool/cap change, provider activation, merge, push, PR, or scale/SLO/
+release claim, and it does not advance T45.4, whose executor must still obtain
+these facts from actual immutable copies and sandbox observations.
+
 **T45.3 ✅ · Immutable Phebs SCIP-bundle and atomic-publication contract** *(needs
 T45.2)* — define a small exact generation root over bounded conforming SCIP
 `Index` members, document-routing members, symbol-routing members, and complete
