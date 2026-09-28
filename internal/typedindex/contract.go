@@ -130,6 +130,13 @@ func (p Profile) permitsGenerated() bool {
 func (p Profile) Digest() string                { return p.digest }
 func (p Profile) Definition() ProfileDefinition { return p.definition }
 
+// Provider returns the validated profile's closed provider discriminant. Every
+// profile with a non-empty digest was admitted by DecodeProfile, which pins this
+// to ProviderID today; request authority derives its provider from here rather
+// than from a constant, so a request can never claim a provider its profile does
+// not carry.
+func (p Profile) Provider() string { return p.definition.Provider }
+
 // DecodeProfile requires canonical JSON (whitespace may surround or separate
 // tokens). Canonical field spelling/order and explicit zero values make omitted,
 // duplicate, case-aliased and unknown fields fail before any mutation.
@@ -257,10 +264,12 @@ type Admission struct {
 func (a Admission) Digest() string   { return a.digest }
 func (a Admission) Request() Request { return a.request }
 
-// NewRequest constructs a plan intent from trusted operator/source state. Admit
-// remains mandatory at every boundary, including for requests constructed here.
+// NewRequest constructs a plan intent from trusted operator/source state. The
+// provider is derived from the validated profile, never a constant, so the
+// request cannot claim a provider its profile does not carry. Admit remains
+// mandatory at every boundary, including for requests constructed here.
 func NewRequest(source Source, profile Profile, epoch uint64, universe, key string) Request {
-	return Request{Schema: RequestSchema, Action: Plan, Source: source, Provider: ProviderID, ProfileName: profile.definition.Name, ProfileEpoch: epoch, ProfileDigest: profile.digest, ConfigDigest: profile.configDigest, ToolsDigest: profile.toolsDigest, UniverseDigest: universe, BundleDigest: profile.definition.BundleDigest, PolicyDigest: profile.policyDigest, IdempotencyKey: key}
+	return Request{Schema: RequestSchema, Action: Plan, Source: source, Provider: profile.definition.Provider, ProfileName: profile.definition.Name, ProfileEpoch: epoch, ProfileDigest: profile.digest, ConfigDigest: profile.configDigest, ToolsDigest: profile.toolsDigest, UniverseDigest: universe, BundleDigest: profile.definition.BundleDigest, PolicyDigest: profile.policyDigest, IdempotencyKey: key}
 }
 
 // NewManagedRequest constructs deterministic managed planning authority. It has
@@ -334,7 +343,7 @@ func Admit(ctx context.Context, authority Authority, profile Profile, raw []byte
 	if r.Action != Plan && r.Action != Execute {
 		return Admission{}, Invalid
 	}
-	if r.Provider != ProviderID || r.ProfileName != profile.definition.Name || r.ProfileDigest != profile.digest || r.ConfigDigest != profile.configDigest || r.ToolsDigest != profile.toolsDigest || r.BundleDigest != profile.definition.BundleDigest || r.PolicyDigest != profile.policyDigest {
+	if r.Provider != profile.definition.Provider || r.ProfileName != profile.definition.Name || r.ProfileDigest != profile.digest || r.ConfigDigest != profile.configDigest || r.ToolsDigest != profile.toolsDigest || r.BundleDigest != profile.definition.BundleDigest || r.PolicyDigest != profile.policyDigest {
 		return Admission{}, Stale
 	}
 	if !validSource(authority.Source) || r.Source != authority.Source || r.ProfileEpoch != authority.Profile.Number || r.ProfileDigest != authority.Profile.Digest || r.UniverseDigest != authority.UniverseDigest {
