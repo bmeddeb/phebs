@@ -157,6 +157,12 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if unix.Mount(loop.Name(), mount, "ext4", unix.MS_NOSUID|unix.MS_NODEV, "") != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
+	// A fresh mount under a shared parent subtree inherits shared propagation, so
+	// its mount/unmount events would leak to the host. Detach it to private; the
+	// scratch verifier in observeHostScratch requires a private mountpoint.
+	if unix.Mount("", mount, "", unix.MS_PRIVATE|unix.MS_REC, "") != nil {
+		return HostScratchReceipt{}, ErrCustody
+	}
 	j.Authority, err = observeHostScratch(j)
 	if err != nil {
 		return HostScratchReceipt{}, err
