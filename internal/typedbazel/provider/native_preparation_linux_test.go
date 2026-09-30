@@ -479,7 +479,7 @@ func TestNativePreparationHost(t *testing.T) {
 		err = errors.Join(typedindex.WallLimit, err)
 	}
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v (container_exit=%d oom_killed=%v)", err, result.ExitCode, result.OOMKilled)
 	}
 	if err = typedsandbox.VerifyCompletion(allowance, control, result); err != nil {
 		t.Fatal(err)
