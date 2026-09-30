@@ -176,23 +176,26 @@ func bootstrapSupervisor(args []string, expire func(error)) (Allowance, string, 
 	return a, phase, request, stop, nil
 }
 
-func readSupervisorAllowance(a Allowance, phase, request, seal string) error {
+func readSupervisorAllowance(a Allowance, phase, request, seal string) (refusalSite, error) {
 	if a.CheckLive(context.Background()) != nil {
-		return ErrRefused
+		return SiteAllowanceLive, ErrRefused
 	}
 	root, err := openControlDirectory("/controls")
 	if err != nil {
-		return ErrRefused
+		return SiteAllowanceControls, ErrRefused
 	}
 	defer func() { _ = root.Close() }()
 	raw, err := readControlFile(root, ControlSealFile, MaxControlSealBytes)
 	if err != nil {
-		return ErrRefused
+		return SiteAllowanceSeal, ErrRefused
 	}
 	if controlDigest(raw) != seal {
-		return ErrRefused
+		return SiteAllowanceDigest, ErrRefused
 	}
-	return checkSealAllowance(raw, a, phase, request)
+	if checkSealAllowance(raw, a, phase, request) != nil {
+		return SiteAllowanceBinding, ErrRefused
+	}
+	return 0, nil
 }
 
 // Used after the absolute timer has been armed; no filesystem is touched here.

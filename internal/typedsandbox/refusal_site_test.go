@@ -24,8 +24,8 @@ func TestRefusalSiteVocabularyIsClosedAndDistinct(t *testing.T) {
 	if len(vocab) != int(refusalSiteCount) {
 		t.Fatalf("table holds %d tokens but refusalSiteCount is %d", len(vocab), refusalSiteCount)
 	}
-	if len(vocab) != 11 {
-		t.Fatalf("vocabulary has %d tokens, want 11; adding a site is a deliberate act", len(vocab))
+	if len(vocab) != 15 {
+		t.Fatalf("vocabulary has %d tokens, want 15; adding a site is a deliberate act", len(vocab))
 	}
 	seen := make(map[string]struct{}, len(vocab))
 	for site, token := range vocab {
@@ -106,6 +106,11 @@ func TestRefusalSiteFrame(t *testing.T) {
 		{"shortest_token", SiteArgv, "phebs_site=argv\n"},
 		{"identity", SiteIdentity, "phebs_site=identity\n"},
 		{"selector", SiteSelector, "phebs_site=selector\n"},
+		{"allow_live", SiteAllowanceLive, "phebs_site=allow_live\n"},
+		{"allow_controls", SiteAllowanceControls, "phebs_site=allow_controls\n"},
+		{"allow_seal", SiteAllowanceSeal, "phebs_site=allow_seal\n"},
+		{"allow_digest", SiteAllowanceDigest, "phebs_site=allow_digest\n"},
+		{"allow_binding", SiteAllowanceBinding, "phebs_site=allow_binding\n"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

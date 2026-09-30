@@ -55,6 +55,18 @@ func TestAllowanceLinuxClockAndContext(t *testing.T) {
 	}
 }
 
+func TestSupervisorAllowanceNamesLiveRefusal(t *testing.T) {
+	c := testControlIdentity()
+	a, err := BeginAllowance(t.Context(), c.PlanningDigest, c.AttemptDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.TimeInode++
+	if site, err := readSupervisorAllowance(a, ControlPlan, a.PlanningDigest, c.SealDigest); site != SiteAllowanceLive || err != ErrRefused {
+		t.Fatalf("site=%v err=%v, want live refusal", site, err)
+	}
+}
+
 type allowanceProbe struct {
 	PID, Parent int
 	Now         int64

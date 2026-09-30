@@ -18,7 +18,11 @@ const (
 	SiteBootstrap
 	SiteBootNow
 	SiteSignal
-	SiteAllowance
+	SiteAllowanceLive
+	SiteAllowanceControls
+	SiteAllowanceSeal
+	SiteAllowanceDigest
+	SiteAllowanceBinding
 	SiteProcess
 	SiteScratch
 	SiteEncode
@@ -31,23 +35,27 @@ const (
 // refusalSiteTokens is the wire vocabulary, keyed by site so that a reordered
 // constant block cannot silently relabel a site.
 var refusalSiteTokens = [refusalSiteCount]string{
-	SiteIdentity:  "identity",
-	SiteTimer:     "timer",
-	SiteBootstrap: "bootstrap",
-	SiteBootNow:   "bootnow",
-	SiteSignal:    "signal",
-	SiteAllowance: "allowance",
-	SiteProcess:   "process",
-	SiteScratch:   "scratch",
-	SiteEncode:    "encode",
-	SiteSelector:  "selector",
-	SiteArgv:      "argv",
+	SiteIdentity:          "identity",
+	SiteTimer:             "timer",
+	SiteBootstrap:         "bootstrap",
+	SiteBootNow:           "bootnow",
+	SiteSignal:            "signal",
+	SiteAllowanceLive:     "allow_live",
+	SiteAllowanceControls: "allow_controls",
+	SiteAllowanceSeal:     "allow_seal",
+	SiteAllowanceDigest:   "allow_digest",
+	SiteAllowanceBinding:  "allow_binding",
+	SiteProcess:           "process",
+	SiteScratch:           "scratch",
+	SiteEncode:            "encode",
+	SiteSelector:          "selector",
+	SiteArgv:              "argv",
 }
 
 // refusalSiteLongestToken must be the longest entry in refusalSiteTokens. The
 // frame bound is derived from it and the oracle re-measures the table's maximum
 // against it, so lengthening a token without lengthening this fails a gate.
-const refusalSiteLongestToken = "bootstrap"
+const refusalSiteLongestToken = "allow_controls"
 
 // refusalSitePrefix frames the token so a host-side reader can distinguish it
 // from any other bytes that reach the attach stream.

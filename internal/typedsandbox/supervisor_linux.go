@@ -82,8 +82,8 @@ func supervisorProfile() int {
 		case <-finished:
 		}
 	}()
-	if readSupervisorAllowance(allowance, phase, request, os.Args[5]) != nil {
-		RefuseSite(SiteAllowance)
+	if site, err := readSupervisorAllowance(allowance, phase, request, os.Args[5]); err != nil {
+		RefuseSite(site)
 		return 125
 	}
 	if validateProcess(false) != nil || unix.Prctl(unix.PR_SET_DUMPABLE, 0, 0, 0, 0) != nil {

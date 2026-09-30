@@ -42,7 +42,7 @@ const (
 const refusalWirePrefixBytes = 512
 
 // refusalSiteTokenMax bounds what the reader will echo back into a failure message. The
-// writer's real vocabulary tops out at nine bytes, but this reader cannot see that
+// writer's real vocabulary tops out at fourteen bytes, but this reader cannot see that
 // vocabulary, so it enforces a generous bound of its own rather than trusting the input:
 // a longer run is not a token and is reported as torn instead of copied.
 const refusalSiteTokenMax = 32

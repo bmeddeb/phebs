@@ -7907,3 +7907,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lease reuse without original inputs, failed checks, stale/forged summaries,
   pins and bounded drainage. Native feasibility, provider registration and
   ticket closure remain open; neutral native seams are not deployment evidence.
+
+- **2026-09-30 — T45.4 neutral-prep-9 allowance refusal attribution.** The
+  single dispatched neutral-prep-9 stopped at supervisor exit125 with the
+  complete `site=allowance` frame, no result or receipt, and clean scratch and
+  container teardown. Host-side verification of the retained seal and live
+  allowance cannot distinguish the container's clock identity from its mounted
+  control view. Keep that attempt spent. On prospective source only, replace
+  the one allowance site with five closed tokens for live allowance, control
+  directory open, seal read, digest match and sealed binding. Preserve every
+  refusal and its ordering; a new token names only the failed predicate, never
+  its cause or private bytes. A fresh ID and separate native execution decision
+  remain necessary before any claimed diagnosis or feasibility pass.
+
+  **Cost.** The accepting supervisor performs the same live check, directory
+  open, bounded read, digest and binding check, returning one scalar site with
+  no extra syscall, hash, lock, allocation, child or retained state. A refusal
+  still makes one unretried nonblocking fd2 write; its derived maximum frame
+  grows from21 to26 bytes. Ordinary query/request, sync tick, startup/restart,
+  retry/no-op and publication paths add no work; held locks, cache behavior,
+  corpus/shard reads and memory/disk bounds are unchanged.
