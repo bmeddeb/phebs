@@ -32,6 +32,7 @@ func runTypedCommand() (handled bool, code int) {
 	// Presence, including an empty selector, forbids bypassing exact production
 	// accounting. This is checked before any control read, child or worker work.
 	if _, selected := os.LookupEnv(dispatchadmission.ProductionEnvironment); selected {
+		typedsandbox.RefuseSite(typedsandbox.SiteSelector)
 		return true, 125
 	}
 	if adapter {
@@ -40,6 +41,7 @@ func runTypedCommand() (handled bool, code int) {
 	switch role {
 	case typedsandbox.SupervisorCommand:
 		if len(os.Args) != 6 {
+			typedsandbox.RefuseSite(typedsandbox.SiteArgv)
 			return true, 125
 		}
 		return true, typedsandbox.Supervisor()

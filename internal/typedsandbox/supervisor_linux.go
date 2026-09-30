@@ -28,12 +28,14 @@ func Supervisor() int { return supervisorProfile() }
 
 func supervisorProfile() int {
 	if os.Getpid() != 1 || os.Getuid() != 0 || os.Getgid() != 0 {
+		RefuseSite(SiteIdentity)
 		return 125
 	}
 	var published atomic.Pointer[watchdogSnapshots]
 	var reportReady atomic.Bool
 	allowance, phase, request, stop, err := bootstrapSupervisor(os.Args[1:], func(timerErr error) {
 		if timerErr != nil {
+			RefuseSite(SiteTimer)
 			os.Exit(125)
 		}
 		if snapshots := published.Load(); snapshots != nil {
@@ -42,11 +44,13 @@ func supervisorProfile() int {
 		supervisorExpired()
 	})
 	if err != nil {
+		RefuseSite(SiteBootstrap)
 		return 125
 	}
 	defer stop()
 	now, err := bootNow()
 	if err != nil {
+		RefuseSite(SiteBootNow)
 		return 125
 	}
 	remaining, err := allowance.remaining(now)
@@ -73,24 +77,29 @@ func supervisorProfile() int {
 	go func() {
 		select {
 		case <-signals:
+			RefuseSite(SiteSignal)
 			os.Exit(125)
 		case <-finished:
 		}
 	}()
 	if readSupervisorAllowance(allowance, phase, request, os.Args[5]) != nil {
+		RefuseSite(SiteAllowance)
 		return 125
 	}
 	if validateProcess(false) != nil || unix.Prctl(unix.PR_SET_DUMPABLE, 0, 0, 0, 0) != nil {
+		RefuseSite(SiteProcess)
 		return 125
 	}
 	authority, err := readScratch()
 	if err != nil {
+		RefuseSite(SiteScratch)
 		return 125
 	}
 	scratch := &authority
 	report := supervise(ctx, cancel, scratch, snapshots, allowance, workerArgs(os.Args[1:]))
 	report.Allowance, report.Phase, report.RequestDigest, report.SealDigest = allowance, phase, request, os.Args[5]
 	if err := json.NewEncoder(os.Stdout).Encode(report); err != nil {
+		RefuseSite(SiteEncode)
 		return 125
 	}
 	return report.ExitCode
