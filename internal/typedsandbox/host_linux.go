@@ -157,18 +157,33 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if unix.Mount(loop.Name(), mount, "ext4", unix.MS_NOSUID|unix.MS_NODEV, "") != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
+	// A fresh mount under a shared parent subtree inherits shared propagation, so
+	// its mount/unmount events would leak to the host. Detach it to private; the
+	// scratch verifier in observeHostScratch requires a private mountpoint.
+	if unix.Mount("", mount, "", unix.MS_PRIVATE|unix.MS_REC, "") != nil {
+		return HostScratchReceipt{}, ErrCustody
+	}
 	j.Authority, err = observeHostScratch(j)
 	if err != nil {
 		return HostScratchReceipt{}, err
 	}
 	// mkfs creates only this empty directory. Never recursively remove its contents.
+	// Each failure retains its underlying reason/errno joined to ErrCustody (as at
+	// sandbox.go's errors.Join(ErrCustody, e)) so errors.Is(err, ErrCustody) still holds
+	// for every caller while a transient fault is named instead of collapsed to the sentinel.
 	lost := mount + "/lost+found"
 	if st, e := os.Lstat(lost); e == nil {
-		if !st.IsDir() || !scratchEmpty(lost) || os.Remove(lost) != nil {
-			return HostScratchReceipt{}, ErrCustody
+		if !st.IsDir() {
+			return HostScratchReceipt{}, errors.Join(ErrCustody, errors.New("lost+found is not a directory"))
+		}
+		if !scratchEmpty(lost) {
+			return HostScratchReceipt{}, errors.Join(ErrCustody, errors.New("lost+found is not empty"))
+		}
+		if rerr := os.Remove(lost); rerr != nil {
+			return HostScratchReceipt{}, errors.Join(ErrCustody, rerr)
 		}
 	} else if !errors.Is(e, os.ErrNotExist) {
-		return HostScratchReceipt{}, ErrCustody
+		return HostScratchReceipt{}, errors.Join(ErrCustody, e)
 	}
 	if !scratchEmpty(mount) {
 		return HostScratchReceipt{}, ErrCustody

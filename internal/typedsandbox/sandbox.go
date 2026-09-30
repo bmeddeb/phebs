@@ -47,7 +47,8 @@ var (
 	ErrCustody   = errors.New("typed-index container cleanup is unproven; private custody retained")
 )
 
-// StageError carries only a closed local stage, never daemon or repository text.
+// StageError carries only a closed local stage plus a bounded hex-encoded local
+// diagnostic prefix, never daemon or repository text.
 type StageError struct {
 	Stage string
 	Cause error
@@ -633,9 +634,9 @@ func runChecked(ctx context.Context, options Options, check func(context.Context
 		}
 		return result, ErrExecution
 	}
-	if json.Unmarshal(wire.stdout, &report) != nil || len(wire.stderr) != 0 || report.Schema != reportSchema || report.Allowance != options.Allowance || report.SealDigest != options.Control.SealDigest || report.Phase != options.Control.Phase || report.RequestDigest != options.Control.RequestDigest ||
-		int64(len(report.Stdout)+len(report.Stderr)) > OutputBytes-options.Allowance.WorkerBytesUsed {
-		return result, ErrExecution
+	decodeErr := json.Unmarshal(wire.stdout, &report)
+	if reason := supervisorReportRefusal(decodeErr, wire, report, options); reason != "" {
+		return result, errors.Join(ErrExecution, errors.New(reason))
 	}
 	acceptedWire = wire.payloadBytes
 	result.Stdout, result.Stderr, result.Resources = report.Stdout, report.Stderr, report.Resources
@@ -647,6 +648,64 @@ func runChecked(ctx context.Context, options Options, check func(context.Context
 		return result, ErrExecution
 	}
 	return result, nil
+}
+
+// reportWirePrefixBytes bounds the raw wire bytes a supervisor-report refusal
+// retains as a hex prefix. It is diagnostic-only, emitted solely on the two
+// contract-violation predicates (an undecodable envelope or non-empty stderr), and
+// never carries the decoded worker output fields.
+const reportWirePrefixBytes = 512
+
+// supervisorReportRefusal reproduces the exact fail-closed predicate set and
+// short-circuit order of the historical single boolean OR at the supervisor_report
+// stage, but returns a bounded private diagnostic naming the FIRST failing predicate
+// instead of collapsing every cause to a bare ErrExecution. An empty string means
+// every predicate passed. The caller joins the reason to ErrExecution, so
+// errors.Is(err, ErrExecution) still holds for every caller through errors.Join and the
+// StageError wrapper while a preparation STOP becomes diagnosable. No predicate is
+// weakened: the refuse/accept decision is the same set, only its explanation is added.
+// Content is captured only for the two content-dependent predicates and only as a
+// bounded hex prefix plus byte lengths; the schema/allowance/seal/phase/request
+// predicates are named without values and the output bound reports sizes, never corpus
+// bytes.
+func supervisorReportRefusal(decodeErr error, wire wireResult, report supervisorReport, options Options) string {
+	if decodeErr != nil {
+		return fmt.Sprintf("supervisor_report_refusal predicate=report_decode decode_error=%q stdout_len=%d stdout_prefix_hex=%s stderr_len=%d stderr_prefix_hex=%s",
+			decodeErr.Error(), len(wire.stdout), boundedWireHex(wire.stdout), len(wire.stderr), boundedWireHex(wire.stderr))
+	}
+	if len(wire.stderr) != 0 {
+		return fmt.Sprintf("supervisor_report_refusal predicate=nonempty_stderr stderr_len=%d stderr_prefix_hex=%s",
+			len(wire.stderr), boundedWireHex(wire.stderr))
+	}
+	if report.Schema != reportSchema {
+		return "supervisor_report_refusal predicate=schema_mismatch"
+	}
+	if report.Allowance != options.Allowance {
+		return "supervisor_report_refusal predicate=allowance_mismatch"
+	}
+	if report.SealDigest != options.Control.SealDigest {
+		return "supervisor_report_refusal predicate=seal_digest_mismatch"
+	}
+	if report.Phase != options.Control.Phase {
+		return "supervisor_report_refusal predicate=phase_mismatch"
+	}
+	if report.RequestDigest != options.Control.RequestDigest {
+		return "supervisor_report_refusal predicate=request_digest_mismatch"
+	}
+	if bound := OutputBytes - options.Allowance.WorkerBytesUsed; int64(len(report.Stdout)+len(report.Stderr)) > bound {
+		return fmt.Sprintf("supervisor_report_refusal predicate=output_bound_exceeded worker_output_len=%d output_bound=%d",
+			len(report.Stdout)+len(report.Stderr), bound)
+	}
+	return ""
+}
+
+// boundedWireHex hex-encodes at most reportWirePrefixBytes of a wire buffer so a
+// refusal retains a bounded, injection-safe diagnostic prefix of the raw stream.
+func boundedWireHex(b []byte) string {
+	if len(b) > reportWirePrefixBytes {
+		b = b[:reportWirePrefixBytes]
+	}
+	return hex.EncodeToString(b)
 }
 
 // Recover addresses only the exact durable owner, including create-response loss.

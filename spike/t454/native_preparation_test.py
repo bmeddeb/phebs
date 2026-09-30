@@ -34,7 +34,7 @@ def fixture_config():
         n.SCHEMA, 'neutral-prep-1', 'a' * 40,
         dict(repository=n.REPO, incarnation='fixture', generation=h, commit='b' * 40),
         n.REPO, n.REMOTE, n.ROOT,
-        h, h, h, h, h, h, h, h, h, 1]))
+        h, h, h, h, h, h, h, h]))
 
 
 class PreparationTests(unittest.TestCase):
@@ -42,7 +42,7 @@ class PreparationTests(unittest.TestCase):
         c = fixture_config()
         raw = n.canonical(c)
         self.assertEqual(n.config(raw, n.digest(raw)), c)
-        for key, bad in [('id', '../escape'), ('helper_sha256', ''), ('profile_epoch', True), ('source_commit', 'main')]:
+        for key, bad in [('id', '../escape'), ('helper_sha256', ''), ('source_commit', 'main')]:
             v = copy.deepcopy(c); v[key] = bad
             with self.subTest(key=key), self.assertRaises(ValueError):
                 n.config(n.canonical(v))
@@ -50,7 +50,9 @@ class PreparationTests(unittest.TestCase):
                        lambda v: v.update(root='//other:other'),
                        lambda v: v.update(module='example.invalid/other'),
                        lambda v: v.update(remote='https://example.invalid/other'),
-                       lambda v: v.update(command='sh')]:
+                       lambda v: v.update(command='sh'),
+                       lambda v: v.update(selection_sha256=n.digest(b'run-produced')),
+                       lambda v: v.update(profile_epoch=1)]:
             v = copy.deepcopy(c); mutate(v)
             with self.assertRaises(ValueError):
                 n.config(n.canonical(v))
@@ -128,15 +130,37 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         call = calls[0]
         scope = {'subprocess': subprocess, 'root': Path('/var/lib/phebs-typed-preparation/neutral'), 'str': str}
-        keywords = {x.arg: eval(compile(ast.Expression(x.value), '<keyword>', 'eval'), scope) for x in call.keywords}
-        self.assertIs(keywords['start_new_session'], True)
-        self.assertEqual(keywords['timeout'], 600)
-        for stream in ('stdin', 'stdout', 'stderr'):
-            self.assertEqual(keywords[stream], subprocess.DEVNULL)
-        argv = eval(compile(ast.Expression(call.args[0]), '<argv>', 'eval'), scope)
+        keywords = {x.arg: x.value for x in call.keywords}
+        ev = lambda node: eval(compile(ast.Expression(node), '<keyword>', 'eval'), scope)
+        # detached session + wall-clock bound are unchanged
+        self.assertIs(ev(keywords['start_new_session']), True)
+        self.assertEqual(ev(keywords['timeout']), 600)
+        # stdin stays closed; stdout/stderr are captured to the SAME bounded
+        # diagnostic fd (never DEVNULL-discarded, never inherited from the transport)
+        self.assertEqual(ev(keywords['stdin']), subprocess.DEVNULL)
+        for stream in ('stdout', 'stderr'):
+            self.assertIsInstance(keywords[stream], ast.Name)
+            self.assertEqual(keywords[stream].id, 'diagfd')
+        argv = ev(call.args[0])
         self.assertEqual(argv[1:4], ['-test.run=^TestNativePreparationHost$', '-test.count=1', '-test.timeout=600s'])
         self.assertEqual(argv[-1], '-typed-preparation-role=host')
-        self.assertLess(n.REMOTE_PROGRAM.index("write(root/'dispatch.json'"), n.REMOTE_PROGRAM.index('result=subprocess.run'))
+        # one-dispatch fence: the exclusive marker is written before the test runs
+        self.assertLess(n.REMOTE_PROGRAM.index("write(root/'dispatch.json'"), n.REMOTE_PROGRAM.index('subprocess.run('))
+
+    def test_remote_diagnostic_output_is_bounded_and_retained(self):
+        rp = n.REMOTE_PROGRAM
+        # created exclusively, no symlink follow, owner-only, in the verified stage root
+        self.assertIn("os.open(root/'test-output.log',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_APPEND,0o600)", rp)
+        # bounded to MAX_DIAG after the run, then durably persisted and closed
+        self.assertIn('MAX_DIAG=1<<20', rp)
+        self.assertIn('if os.fstat(diagfd).st_size>MAX_DIAG: os.ftruncate(diagfd,MAX_DIAG)', rp)
+        self.assertIn('os.fsync(diagfd)', rp)
+        self.assertIn('finally: os.close(diagfd)', rp)
+        # retained on a wall-clock timeout and on a non-zero exit: the bounded
+        # capture is finalized BEFORE the refusal, so a STOP keeps its diagnostic
+        self.assertIn('except subprocess.TimeoutExpired: rc=1', rp)
+        self.assertLess(rp.index('os.ftruncate(diagfd,MAX_DIAG)'), rp.index('if rc: reject()'))
+        self.assertLess(rp.index('os.fsync(diagfd)'), rp.index('if rc: reject()'))
 
     def test_remote_program_compiles_and_has_no_privilege_escape_recipe(self):
         compile(n.REMOTE_PROGRAM, '<fixed preparation remote program>', 'exec')

@@ -28,6 +28,7 @@ import (
 const preparationSchema = "phebs-typed-native-preparation-v1"
 const preparationResultSchema = "phebs-typed-native-preparation-result-v1"
 const preparationReceiptSchema = "phebs-typed-native-preparation-receipt-v1"
+const preparationSeedProvenanceSchema = "phebs-typed-native-preparation-seed-v1"
 const preparationRepo = "example.invalid/phebs-native-neutral"
 const preparationRemote = "https://example.invalid/phebs-native-neutral"
 const preparationRoot = "//lib:lib"
@@ -46,13 +47,21 @@ const preparationMaxResult = typedsandbox.OutputBytes
 
 var preparationID = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
 
-var preparationConfigPath = flag.String("typed-preparation-config", "", "reviewed private neutral preparation config")
+// The host-role config flag (typed-preparation-config) is declared beside its only
+// consumer in native_preparation_linux_test.go. The portable seed role uses the
+// commit/provenance flags below and never a full pre-validated config.
 var preparationRole = flag.String("typed-preparation-role", "", "opt-in preparation role: seed or host")
+var preparationCommit = flag.String("typed-preparation-commit", "", "opt-in seed role: exact 40-hex neutral source commit to provision and observe")
+var preparationSeedOut = flag.String("typed-preparation-seed-out", "", "opt-in seed role: create-only path for the observed source provenance record")
 
 // nativePreparationConfig binds exactly one preparation ID, the fixed neutral
 // source/module/remote/sole-root, and the exact source, inventory, profile,
 // helper, image and formatter identities. It accepts no command, environment,
 // path, root or cap override; the fixed caps come from typedsandbox constants.
+// It deliberately carries only identities knowable BEFORE the run: the
+// run-produced Selection-v1 digest and the real-store profile epoch are recorded
+// in the post-run final identity chain, never staged here, so a truthful config
+// can exist at stage time without fabricating a run output.
 type nativePreparationConfig struct {
 	Schema           string            `json:"schema"`
 	ID               string            `json:"id"`
@@ -66,11 +75,9 @@ type nativePreparationConfig struct {
 	EngineSHA256     string            `json:"engine_sha256"`
 	InventorySHA256  string            `json:"inventory_sha256"`
 	ProfileSHA256    string            `json:"profile_sha256"`
-	SelectionSHA256  string            `json:"selection_sha256"`
 	ImageSHA256      string            `json:"image_sha256"`
 	MkfsSHA256       string            `json:"mkfs_sha256"`
 	DeploymentSHA256 string            `json:"deployment_sha256"`
-	ProfileEpoch     int64             `json:"profile_epoch"`
 }
 
 // nativePreparationResult carries the raw provenance the host independently
@@ -121,6 +128,17 @@ type nativePreparationReceipt struct {
 	ExitCode       int    `json:"exit_code"`
 	Removed        bool   `json:"removed"`
 	Complete       bool   `json:"complete"`
+}
+
+// preparationSeedProvenance is the source-free observed identity the seed step
+// returns. It carries only store-minted metadata (repository, the lazily
+// CAS-minted incarnation, the generation computed over repository/incarnation/
+// commit/epoch, and the indexed commit), never raw source bytes. It is the exact
+// provenance the later config authoring step binds, so the seed observes it back
+// rather than requiring it up front.
+type preparationSeedProvenance struct {
+	Schema string            `json:"schema"`
+	Source typedindex.Source `json:"source"`
 }
 
 func preparationDigest(raw []byte) string {
@@ -184,14 +202,11 @@ func parsePreparationConfig(raw []byte) (nativePreparationConfig, error) {
 	if c.Module != preparationRepo || c.Remote != preparationRemote || c.Root != preparationRoot {
 		return c, errors.New("neutral preparation module/remote/root")
 	}
-	if c.ProfileEpoch < 1 {
-		return c, errors.New("neutral preparation epoch")
-	}
 	b, e := hex.DecodeString(c.SourceCommit)
 	if e != nil || len(b) != 20 || hex.EncodeToString(b) != c.SourceCommit {
 		return c, errors.New("neutral preparation source commit")
 	}
-	for _, h := range []string{c.TestSHA256, c.HelperSHA256, c.EngineSHA256, c.InventorySHA256, c.ProfileSHA256, c.SelectionSHA256, c.ImageSHA256, c.MkfsSHA256, c.DeploymentSHA256} {
+	for _, h := range []string{c.TestSHA256, c.HelperSHA256, c.EngineSHA256, c.InventorySHA256, c.ProfileSHA256, c.ImageSHA256, c.MkfsSHA256, c.DeploymentSHA256} {
 		if !preparationHash(h) {
 			return c, errors.New("unfilled preparation identity")
 		}
@@ -308,7 +323,7 @@ func fixturePreparationConfig(t *testing.T) nativePreparationConfig {
 		Source:       typedindex.Source{Repository: preparationRepo, Incarnation: "fixture", Generation: h, Commit: fmt.Sprintf("%040x", 2)},
 		Module:       preparationRepo, Remote: preparationRemote, Root: preparationRoot,
 		TestSHA256: h, HelperSHA256: h, EngineSHA256: h, InventorySHA256: h, ProfileSHA256: h,
-		SelectionSHA256: h, ImageSHA256: h, MkfsSHA256: h, DeploymentSHA256: h, ProfileEpoch: 1,
+		ImageSHA256: h, MkfsSHA256: h, DeploymentSHA256: h,
 	}
 }
 
@@ -333,7 +348,6 @@ func TestNativePreparationConfig(t *testing.T) {
 		{"remote", func(c *nativePreparationConfig) { c.Remote = "https://example.invalid/other" }},
 		{"root", func(c *nativePreparationConfig) { c.Root = "//other:other" }},
 		{"empty", func(c *nativePreparationConfig) { c.HelperSHA256 = "" }},
-		{"epoch", func(c *nativePreparationConfig) { c.ProfileEpoch = 0 }},
 		{"commit", func(c *nativePreparationConfig) { c.SourceCommit = "deadbeef" }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -464,22 +478,42 @@ func TestNativePreparationReceiptExclusive(t *testing.T) {
 	}
 }
 
+// parseSeedCommit accepts exactly the 40 lowercase-hex authoritative commit the
+// seed provisions. The commit is the only variable seed input: repository and
+// remote are the fixed neutral constants, so the seed never needs a full
+// pre-validated config. Requiring one would be circular, because that config's
+// source.incarnation/source.generation are exactly what the seed observes back.
+func parseSeedCommit(s string) (string, error) {
+	if len(s) != 40 {
+		return "", errors.New("seed commit must be exactly 40 lowercase hex characters")
+	}
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return "", errors.New("seed commit must be exactly 40 lowercase hex characters")
+		}
+	}
+	return s, nil
+}
+
 // TestNativePreparationSeed is the opt-in pristine real-store seed entrypoint.
-// Ordinary runs skip it; it executes only when an operator supplies a reviewed
-// config and the seed role. It provisions indexed source metadata and installs
-// the final profile through the real store; it is not a claim that a search
-// index was built and adds no fake incarnation/epoch setter.
+// Ordinary runs skip it; it executes only when an operator supplies the seed
+// role, the reviewed neutral source commit, a create-only provenance path, and an
+// isolated PHEBS_PREPARATION_STORE endpoint. It provisions indexed source
+// metadata and OBSERVES the store-minted incarnation and computed generation back
+// to the operator; it installs no profile, builds no search index, and invents no
+// incarnation or epoch. The observed Source is the provenance the later config
+// authoring step binds, which is why the seed takes only the commit and never a
+// full config.
 func TestNativePreparationSeed(t *testing.T) {
-	if *preparationRole != "seed" || *preparationConfigPath == "" {
+	if *preparationRole != "seed" {
 		t.Skip("neutral preparation seed is opt-in")
 	}
-	raw, e := os.ReadFile(*preparationConfigPath)
+	commit, e := parseSeedCommit(*preparationCommit)
 	if e != nil {
 		t.Fatal(e)
 	}
-	c, e := parsePreparationConfig(raw)
-	if e != nil {
-		t.Fatal(e)
+	if *preparationSeedOut == "" {
+		t.Fatal("seed role requires -typed-preparation-seed-out provenance path")
 	}
 	endpoint := os.Getenv("PHEBS_PREPARATION_STORE")
 	if endpoint == "" {
@@ -491,7 +525,15 @@ func TestNativePreparationSeed(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer func() { _ = s.Close(context.Background()) }()
-	if e = seedPreparationSource(ctx, s, c); e != nil {
+	got, e := seedPreparationSource(ctx, s, commit)
+	if e != nil {
+		t.Fatal(e)
+	}
+	// Record the observed source-free provenance create-only and fsynced; a lost
+	// reply or a second seed refuses rather than overwriting the first observation.
+	if e = preparationReceipt(*preparationSeedOut, preparationSeedProvenance{
+		Schema: preparationSeedProvenanceSchema, Source: got,
+	}); e != nil {
 		t.Fatal(e)
 	}
 }
@@ -505,20 +547,24 @@ func openPreparationStore(ctx context.Context, endpoint string) (*store.Surreal,
 // seedPreparationSource establishes and observes the real neutral fixture source
 // identity through the existing store setters. It provisions indexed source
 // metadata only; it builds no search index and invents no incarnation or epoch.
-func seedPreparationSource(ctx context.Context, s *store.Surreal, c nativePreparationConfig) error {
-	commit := c.Source.Commit
-	if err := s.UpsertRepo(ctx, store.Repo{Name: c.Source.Repository, CloneURL: c.Remote, DefaultBranch: "main", IsPublic: true}); err != nil {
-		return err
+// It returns the store-minted Source: GetTypedSource lazily CAS-mints the
+// incarnation and computes the generation over repository/incarnation/commit/
+// epoch, so neither is offline-authorable and the observed record is the only
+// authoritative provenance. Re-seeding the same repository can advance the store
+// epoch and therefore the computed generation.
+func seedPreparationSource(ctx context.Context, s *store.Surreal, commit string) (typedindex.Source, error) {
+	if err := s.UpsertRepo(ctx, store.Repo{Name: preparationRepo, CloneURL: preparationRemote, DefaultBranch: "main", IsPublic: true}); err != nil {
+		return typedindex.Source{}, err
 	}
-	if err := s.SetRepoIndexed(ctx, c.Source.Repository, commit, time.Now()); err != nil {
-		return err
+	if err := s.SetRepoIndexed(ctx, preparationRepo, commit, time.Now()); err != nil {
+		return typedindex.Source{}, err
 	}
-	got, err := s.GetTypedSource(ctx, c.Source.Repository)
+	got, err := s.GetTypedSource(ctx, preparationRepo)
 	if err != nil {
-		return err
+		return typedindex.Source{}, err
 	}
-	if got.Repository != c.Source.Repository || got.Commit != commit || got.Validate() != nil {
-		return errors.New("seed source identity mismatch")
+	if got.Repository != preparationRepo || got.Commit != commit || got.Validate() != nil {
+		return typedindex.Source{}, errors.New("seed source identity mismatch")
 	}
-	return nil
+	return got, nil
 }

@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"io"
 	"os"
 	"path/filepath"
@@ -30,6 +31,12 @@ import (
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"golang.org/x/sys/unix"
 )
+
+// preparationConfigPath is the reviewed private neutral preparation config the
+// opt-in host role consumes. It is declared here, beside its only consumer
+// (TestNativePreparationHost), because the portable seed role takes a commit and
+// a create-only provenance path instead and never a full config.
+var preparationConfigPath = flag.String("typed-preparation-config", "", "reviewed private neutral preparation config")
 
 // preparationSocket is the designated dedicated daemon socket. Preparation never
 // substitutes a default daemon or changes the VM/mount posture.
@@ -472,7 +479,7 @@ func TestNativePreparationHost(t *testing.T) {
 		err = errors.Join(typedindex.WallLimit, err)
 	}
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v (container_exit=%d oom_killed=%v)", err, result.ExitCode, result.OOMKilled)
 	}
 	if err = typedsandbox.VerifyCompletion(allowance, control, result); err != nil {
 		t.Fatal(err)

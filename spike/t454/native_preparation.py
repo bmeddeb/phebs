@@ -32,12 +32,16 @@ REMOTE = 'https://example.invalid/phebs-native-neutral'
 ROOT = '//lib:lib'
 SCHEMA = 'phebs-typed-native-preparation-v1'
 # Closed key order; must equal the Go nativePreparationConfig field order so the
-# canonical round-trip check is meaningful across both codecs.
+# canonical round-trip check is meaningful across both codecs. It carries only
+# identities knowable BEFORE the run: the run-produced Selection-v1 digest and the
+# real-store profile epoch are recorded in the post-run final identity chain, never
+# staged here, so a truthful config can exist at stage time without fabricating a
+# run output. (The leaf-4.79 acceptance codec keeps both: its cases run only after
+# preparation has produced the final selection/epoch.)
 CONFIG_KEYS = ('schema', 'id', 'source_commit', 'source', 'module', 'remote',
                'root', 'test_sha256', 'helper_sha256', 'engine_sha256',
-               'inventory_sha256', 'profile_sha256', 'selection_sha256',
-               'image_sha256', 'mkfs_sha256', 'deployment_sha256',
-               'profile_epoch')
+               'inventory_sha256', 'profile_sha256', 'image_sha256',
+               'mkfs_sha256', 'deployment_sha256')
 # Native preparation stages no engine and no seed: the pristine real-store seed
 # is a separate, non-native host step. Only these fixed names plus bundle/ join.
 STAGED_NAMES = frozenset({'config.json', 'inventory.json', 'profile.json',
@@ -72,8 +76,6 @@ def config(raw, expected=None):
     for key in CONFIG_KEYS:
         if key.endswith('_sha256') and not hash_valid(value[key]):
             fail('missing preparation identity')
-    if type(value['profile_epoch']) is not int or value['profile_epoch'] < 1:
-        fail('preparation epoch')
     if expected is not None and (not hash_valid(expected) or digest(raw) != expected):
         fail('reviewed preparation config changed')
     return value
@@ -199,7 +201,7 @@ def build(output):
     env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH='arm64', CGO_ENABLED='0')
     subprocess.run(['go', 'test', '-c', '-o', str(output / 'native-preparation.test'), './internal/typedbazel/provider'], cwd=repo, env=env, check=True, timeout=300)
     print('native-preparation.test', *file_hash(output / 'native-preparation.test', MAX_FILE))
-    print('Unfilled: finalized neutral lock/cache/selection, pre-selection inventory, profile, VM engine/formatter/image and source identities. No config was invented.')
+    print('Unfilled: finalized neutral lock/cache, pre-selection inventory, profile, VM engine/formatter/image and source identities. No config was invented.')
 
 
 # Fixed remote program: no arbitrary command or extraction option. It refuses an
@@ -210,6 +212,7 @@ import hashlib,json,os,pathlib,re,signal,stat,subprocess,sys,tarfile
 signal.alarm(600)
 B=pathlib.Path('/var/lib/phebs-typed-preparation')
 NAMES={'config.json','inventory.json','profile.json','deployment.json','native-preparation.test'}
+MAX_DIAG=1<<20
 def reject(): raise RuntimeError('neutral preparation transport refused')
 def digest(b): return 'sha256:'+hashlib.sha256(b).hexdigest()
 def checkdir(p):
@@ -296,8 +299,15 @@ elif a in ('run','collect'):
   cfg=json.loads(raw)
   if digest(read(root/'native-preparation.test',256<<20))!=cfg['test_sha256']: reject()
   write(root/'dispatch.json',json.dumps({'config':expected},separators=(',',':')).encode())
-  result=subprocess.run([str(root/'native-preparation.test'),'-test.run=^TestNativePreparationHost$','-test.count=1','-test.timeout=600s','-typed-preparation-config='+str(root/'config.json'),'-typed-preparation-role=host'],env={'PATH':'/usr/bin:/bin','HOME':str(root)},stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True,timeout=600)
-  if result.returncode: reject()
+  diagfd=os.open(root/'test-output.log',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_APPEND,0o600)
+  rc=0
+  try:
+   try: rc=subprocess.run([str(root/'native-preparation.test'),'-test.run=^TestNativePreparationHost$','-test.count=1','-test.timeout=600s','-typed-preparation-config='+str(root/'config.json'),'-typed-preparation-role=host'],env={'PATH':'/usr/bin:/bin','HOME':str(root)},stdin=subprocess.DEVNULL,stdout=diagfd,stderr=diagfd,start_new_session=True,timeout=600).returncode
+   except subprocess.TimeoutExpired: rc=1
+   if os.fstat(diagfd).st_size>MAX_DIAG: os.ftruncate(diagfd,MAX_DIAG)
+   os.fsync(diagfd)
+  finally: os.close(diagfd)
+  if rc: reject()
 else: reject()
 '''
 
