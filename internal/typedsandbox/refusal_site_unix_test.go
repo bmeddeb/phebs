@@ -9,6 +9,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// closeFD discards the result: these are test-scoped pipe ends, and a fatal exit
+// path must not leak one while an explicit early close must not turn the deferred
+// cleanup into a reported double close.
+func closeFD(fd int) { _ = unix.Close(fd) }
+
 // TestRefuseSiteWritesTheFrameToDescriptorTwo proves the frame really reaches
 // fd 2 rather than only being constructed correctly. Descriptor 2 is redirected
 // to a pipe for the duration of one call and then restored, so a failure here
@@ -19,14 +24,14 @@ func TestRefuseSiteWritesTheFrameToDescriptorTwo(t *testing.T) {
 		t.Fatalf("pipe: %v", err)
 	}
 	readFD, writeFD := fds[0], fds[1]
-	defer unix.Close(readFD)
-	defer unix.Close(writeFD)
+	defer closeFD(readFD)
+	defer closeFD(writeFD)
 
 	saved, err := unix.Dup(2)
 	if err != nil {
 		t.Fatalf("dup stderr: %v", err)
 	}
-	defer unix.Close(saved)
+	defer closeFD(saved)
 	if err := unix.Dup2(writeFD, 2); err != nil {
 		t.Fatalf("redirect stderr: %v", err)
 	}
@@ -43,7 +48,7 @@ func TestRefuseSiteWritesTheFrameToDescriptorTwo(t *testing.T) {
 		t.Fatalf("restore stderr: %v", err)
 	}
 	restored = true
-	unix.Close(writeFD)
+	closeFD(writeFD)
 
 	var got [refusalSiteFrameBytes]byte
 	n, err := unix.Read(readFD, got[:])
@@ -71,8 +76,8 @@ func TestRefuseSiteDoesNotBlockOnAFullDescriptorTwo(t *testing.T) {
 		t.Fatalf("pipe: %v", err)
 	}
 	readFD, writeFD := fds[0], fds[1]
-	defer unix.Close(readFD)
-	defer unix.Close(writeFD)
+	defer closeFD(readFD)
+	defer closeFD(writeFD)
 
 	if err := unix.SetNonblock(writeFD, true); err != nil {
 		t.Fatalf("set nonblocking for the fill: %v", err)
@@ -100,7 +105,7 @@ func TestRefuseSiteDoesNotBlockOnAFullDescriptorTwo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dup stderr: %v", err)
 	}
-	defer unix.Close(saved)
+	defer closeFD(saved)
 	if err := unix.Dup2(writeFD, 2); err != nil {
 		t.Fatalf("redirect stderr: %v", err)
 	}
