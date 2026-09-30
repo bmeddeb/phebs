@@ -30,13 +30,17 @@ func closeOnce(t *testing.T, fd int) func() {
 	return closer
 }
 
-// redirectStderr points descriptor 2 at fd for the duration of the test and restores
-// it during cleanup. The restore is a cleanup rather than a step on the happy path:
-// without it a t.Fatalf between the redirect and the restore would leave every later
-// diagnostic in the package writing into a pipe whose write end is closed, and Go
-// re-raises SIGPIPE for descriptors 1 and 2, which can kill the whole test binary and
-// mask the real failure.
-func redirectStderr(t *testing.T, fd int) {
+// redirectStderr points descriptor 2 at fd and returns an idempotent restore. The
+// restore is BOTH returned and registered as a cleanup, because the two paths need
+// different things. A test that reads the pipe to EOF has to restore first: descriptor
+// 2 holds its own reference to the same pipe, so closing the test's write end alone
+// leaves the reader blocked forever rather than at EOF — the first draft of this change
+// discovered that by hanging the focused leg for its whole 300s timeout. And a t.Fatalf
+// between the redirect and any explicit restore would otherwise leave every later
+// diagnostic in the package writing into a pipe whose write end is closed, where Go
+// re-raises SIGPIPE for descriptors 1 and 2 and can kill the whole test binary, masking
+// the real failure.
+func redirectStderr(t *testing.T, fd int) func() {
 	t.Helper()
 	saved, err := unix.Dup(2)
 	if err != nil {
@@ -46,12 +50,19 @@ func redirectStderr(t *testing.T, fd int) {
 		_ = unix.Close(saved)
 		t.Fatalf("redirect stderr: %v", err)
 	}
-	t.Cleanup(func() {
+	done := false
+	restore := func() {
+		if done {
+			return
+		}
+		done = true
 		if err := unix.Dup2(saved, 2); err != nil {
 			t.Errorf("restore stderr: %v", err)
 		}
 		_ = unix.Close(saved)
-	})
+	}
+	t.Cleanup(restore)
+	return restore
 }
 
 // TestRefuseSiteWritesTheFrameToDescriptorTwo proves the frame really reaches
@@ -67,12 +78,13 @@ func TestRefuseSiteWritesTheFrameToDescriptorTwo(t *testing.T) {
 	closeOnce(t, readFD)
 	closeWrite := closeOnce(t, writeFD)
 
-	redirectStderr(t, writeFD)
+	restore := redirectStderr(t, writeFD)
 	RefuseSite(SiteScratch)
 
-	// Closing the write end before reading is what lets the second read observe EOF
-	// instead of blocking. Descriptor 2 holds its own reference to the same open file
-	// description, so this does not disturb the redirect.
+	// Undoing the redirect before closing the write end is what lets the second read
+	// observe EOF instead of blocking: descriptor 2 was a second reference to this
+	// pipe's write end, and a pipe reader sees EOF only once every one is closed.
+	restore()
 	closeWrite()
 
 	want := string(refusalSiteFrame(SiteScratch))
@@ -84,7 +96,7 @@ func TestRefuseSiteWritesTheFrameToDescriptorTwo(t *testing.T) {
 	if string(got[:n]) != want {
 		t.Fatalf("descriptor 2 received %q, want %q", got[:n], want)
 	}
-	if left, err := unix.Read(readFD, got[:]); err != unix.EAGAIN && left != 0 {
+	if left, err := unix.Read(readFD, got[:]); left != 0 {
 		t.Fatalf("descriptor 2 received %d unexpected extra bytes (err=%v)", left, err)
 	}
 }
@@ -103,8 +115,9 @@ func TestRefuseSiteWritesARegularFile(t *testing.T) {
 	}
 	defer func() { _ = f.Close() }()
 
-	redirectStderr(t, int(f.Fd()))
+	restore := redirectStderr(t, int(f.Fd()))
 	RefuseSite(SiteEncode)
+	restore()
 
 	got, err := os.ReadFile(f.Name())
 	if err != nil {
