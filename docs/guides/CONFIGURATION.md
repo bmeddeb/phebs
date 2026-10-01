@@ -915,6 +915,17 @@ The fresh attempt's own supervisor live check is the clock-domain admission
 gate. A host check or a separate container cannot prove the next container's
 clock identity.
 
+In the prep-12 neutral attempt, `site=allow_nsdiff` meant that the supervisor
+read the expected boot ID but its container time-namespace device or inode
+differed from the sealed host identity. It stopped before controls or worker
+admission and produced no result or receipt. Docker 29.5 enables private
+container time namespaces by default on supported kernels; the observed VM
+ran Docker 29.5.2 without a `time-namespaces` override. This is the likely
+host cause, not a reason to weaken the required common clock domain. Docker's
+daemon-wide `features.time-namespaces=false` is a candidate host setting; it
+requires a separate host change and verification before another native
+attempt. The spent stage and STOP evidence remain held.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact

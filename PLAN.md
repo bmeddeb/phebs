@@ -7998,3 +7998,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   container. The actual supervisor retains its existing single ordered live
   check; ordinary request, sync, startup, retry/no-op and publication costs,
   locks, cache, memory/disk and child bounds are unchanged.
+
+- **2026-09-30 — T45.4 prep-12 time-namespace STOP.** The approved guarded
+  prep-11 cleanup and single prep-12 stage/dispatch passed offline input,
+  empty-custody and capacity gates. The native test stopped in 0.25 seconds
+  with supervisor exit 125, `site=allow_nsdiff`, before controls or worker
+  admission. The boot-ID check passed; the container's time-namespace device
+  or inode differed from the sealed host allowance. No result or receipt
+  exists. The one-shot markers are spent, and the exact stage and eight small
+  STOP records are preserved. Do not retry, collect or remove that stage under
+  this decision. The VM runs Docker 29.5.2 with no `time-namespaces` override;
+  Docker 29.5 enables private container time namespaces by default on supported
+  kernels. This is a strong host-cause inference, not proof of the daemon's
+  exact launch path. Keep the common host/container clock-domain invariant.
+  A daemon-wide `features.time-namespaces=false` setting and restart are a
+  candidate host repair, requiring a separate reviewed host decision and
+  bounded verification before any fresh native identifier or execution.
+
+  **Cost.** The failed attempt changes no production request, query, sync,
+  startup/restart, retry/no-op or publication work. It adds no code, locks,
+  scans, cache invalidation, child or persistent runtime memory/disk. The
+  preserved neutral stage continues to occupy its measured VM storage until a
+  separately authorized cleanup.
