@@ -899,6 +899,11 @@ The prospective executor's bundle also binds its fixed executable
 still verifies the compiled formatter path. These local contracts do not enable
 an executor or replace verification of the private input copy.
 
+For neutral native preparation, the offline input check binds the test binary
+to both executable bundle entry paths before staging, and remote dispatch
+rehashes both staged helpers before spending its one shot. The final cmd helper
+remains a separately verified postrun substitution.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact

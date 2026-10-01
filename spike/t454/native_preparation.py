@@ -100,6 +100,8 @@ def inputs(directory, expected=None):
         if h != cfg[key]:
             fail('fixed preparation input identity')
         rows.append((name, h, size, name == 'native-preparation.test'))
+    test_size = rows[-1][2]
+    helpers = {'phebs-typed-worker', 'tools/bin/phebs-t451b-native-driver'}
     total, previous, directories = 0, '', set()
     for row in inv['files']:
         if tuple(row) != ('path', 'bytes', 'digest', 'executable') or not relative(row['path']) or row['path'] <= previous or type(row['bytes']) is not int or not 0 <= row['bytes'] <= MAX_FILE or type(row['executable']) is not bool:
@@ -112,7 +114,13 @@ def inputs(directory, expected=None):
         h, size = file_hash(directory / 'bundle' / row['path'], row['bytes'])
         if h != row['digest'] or size != row['bytes']:
             fail('bundle identity')
+        if row['path'] in helpers:
+            if h != cfg['test_sha256'] or size != test_size or not row['executable']:
+                fail('preparation test helper mismatch')
+            helpers.remove(row['path'])
         rows.append(('bundle/' + row['path'], h, size, row['executable']))
+    if helpers:
+        fail('preparation test helper missing')
     for name, _, _, _ in rows:
         entry = tarfile.TarInfo(name)
         try:
@@ -298,6 +306,9 @@ elif a in ('run','collect'):
   if digest(read(root/'deployment.json',16384))!=sys.argv[4]: reject()
   cfg=json.loads(raw)
   if digest(read(root/'native-preparation.test',256<<20))!=cfg['test_sha256']: reject()
+  for name in ('phebs-typed-worker','tools/bin/phebs-t451b-native-driver'):
+   p=root/'bundle'/name
+   if stat.S_IMODE(os.lstat(p).st_mode)!=0o500 or digest(read(p,256<<20))!=cfg['test_sha256']: reject()
   write(root/'dispatch.json',json.dumps({'config':expected},separators=(',',':')).encode())
   diagfd=os.open(root/'test-output.log',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_APPEND,0o600)
   rc=0

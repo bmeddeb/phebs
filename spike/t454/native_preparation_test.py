@@ -99,17 +99,28 @@ class PreparationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d).resolve() / 'input'; root.mkdir()
             (root / 'bundle/source/lib').mkdir(parents=True)
+            (root / 'bundle/tools/bin').mkdir(parents=True)
             c = fixture_config()
             for name, key in [('deployment.json', 'deployment_sha256'), ('profile.json', 'profile_sha256'), ('native-preparation.test', 'test_sha256')]:
                 raw = name.encode(); (root / name).write_bytes(raw); c[key] = n.digest(raw)
+            test_bytes = (root / 'native-preparation.test').read_bytes()
+            (root / 'native-preparation.test').chmod(0o500)
+            helpers = ('phebs-typed-worker', 'tools/bin/phebs-t451b-native-driver')
+            for path in helpers:
+                helper = root / 'bundle' / path
+                helper.write_bytes(test_bytes); helper.chmod(0o500)
             data = b'package lib\n'
             (root / 'bundle/source/lib/lib.go').write_bytes(data)
-            inv = dict(schema='phebs-typed-prehydration-v1', files=[dict(path='source/lib/lib.go', bytes=len(data), digest=n.digest(data), executable=False)])
+            inv = dict(schema='phebs-typed-prehydration-v1', files=[
+                dict(path=helpers[0], bytes=len(test_bytes), digest=n.digest(test_bytes), executable=True),
+                dict(path='source/lib/lib.go', bytes=len(data), digest=n.digest(data), executable=False),
+                dict(path=helpers[1], bytes=len(test_bytes), digest=n.digest(test_bytes), executable=True),
+            ])
             raw = n.canonical(inv); (root / 'inventory.json').write_bytes(raw); c['inventory_sha256'] = n.digest(raw)
             (root / 'config.json').write_bytes(n.canonical(c))
             cfg, rows = n.inputs(root)
             self.assertEqual(cfg, c)
-            self.assertEqual(len(rows), 6)
+            self.assertEqual(len(rows), 8)
             (root / 'extra').write_bytes(b'no')
             with self.assertRaises(ValueError):
                 n.inputs(root)
@@ -120,6 +131,19 @@ class PreparationTests(unittest.TestCase):
             (root / 'bundle/source/lib/lib.go').unlink()
             (root / 'bundle/source/lib/lib.go').symlink_to(root / 'profile.json')
             with self.assertRaises(ValueError):
+                n.inputs(root)
+            (root / 'bundle/source/lib/lib.go').unlink()
+            (root / 'bundle/source/lib/lib.go').write_bytes(data)
+            stale = b'previous test binary'
+            for path in helpers:
+                helper = root / 'bundle' / path
+                helper.unlink(); helper.write_bytes(stale); helper.chmod(0o500)
+            for row in inv['files']:
+                if row['path'] in helpers:
+                    row.update(bytes=len(stale), digest=n.digest(stale))
+            raw = n.canonical(inv); (root / 'inventory.json').write_bytes(raw); c['inventory_sha256'] = n.digest(raw)
+            (root / 'config.json').write_bytes(n.canonical(c))
+            with self.assertRaisesRegex(ValueError, 'preparation test helper mismatch'):
                 n.inputs(root)
 
     def test_remote_dispatch_is_detached_and_bounded(self):
@@ -146,6 +170,10 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(argv[-1], '-typed-preparation-role=host')
         # one-dispatch fence: the exclusive marker is written before the test runs
         self.assertLess(n.REMOTE_PROGRAM.index("write(root/'dispatch.json'"), n.REMOTE_PROGRAM.index('subprocess.run('))
+        # The staged helper bytes are checked before spending the one dispatch.
+        self.assertIn("for name in ('phebs-typed-worker','tools/bin/phebs-t451b-native-driver'):", n.REMOTE_PROGRAM)
+        self.assertLess(n.REMOTE_PROGRAM.index("if stat.S_IMODE(os.lstat(p).st_mode)!=0o500 or digest(read(p,256<<20))!=cfg['test_sha256']: reject()"),
+                        n.REMOTE_PROGRAM.index("write(root/'dispatch.json'"))
 
     def test_remote_diagnostic_output_is_bounded_and_retained(self):
         rp = n.REMOTE_PROGRAM

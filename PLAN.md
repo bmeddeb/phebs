@@ -7927,3 +7927,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   grows from21 to26 bytes. Ordinary query/request, sync tick, startup/restart,
   retry/no-op and publication paths add no work; held locks, cache behavior,
   corpus/shard reads and memory/disk bounds are unchanged.
+
+- **2026-09-30 — T45.4 neutral preparation helper coherence before staging.**
+  The single prep-10 dispatch used a correctly hash-declared but stale bundled
+  test helper at both executable entry paths. Its top-level test and profile
+  named the newer binary, so the old helper emitted `site=allowance` and the
+  five-site diagnostic was never exercised. Prep-10 is spent, has no receipt,
+  and retains a held scratch owner. In the shared offline preparation input
+  check, require both helper members to equal the verified top-level test
+  binary in digest, size and executable declaration. Reject a missing or
+  mismatched member before staging. The remote run entrypoint also rehashes
+  both fixed staged helpers against that test identity and requires their
+  staged executable mode before writing the one-shot dispatch marker. The
+  final cmd helper identity remains a distinct postrun substitution. A fresh identifier,
+  exact guarded recovery and a new scoped execution decision remain necessary.
+
+  **Cost.** Offline `check` and `stage` reuse the existing per-file hashes and
+  add one set membership check per inventory row, two bounded member
+  comparisons and one fixed two-entry presence check. No additional
+  full-bundle read or hash occurs. Remote `run` reads two file modes and
+  rehashes the two bounded helper files once before dispatch, with at most
+  one helper file resident in memory at a time; this is a neutral one-shot
+  transport cost only.
+  Ordinary query/request, sync tick, startup/restart, retry/no-op and
+  publication paths gain no work, lock, child, cache or retained bytes.
