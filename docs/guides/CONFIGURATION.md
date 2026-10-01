@@ -926,6 +926,12 @@ daemon-wide `features.time-namespaces=false` is a candidate host setting; it
 requires a separate host change and verification before another native
 attempt. The spent stage and STOP evidence remain held.
 
+The dedicated neutral VM now has that exact feature set to `false`. Its
+replacement config passed `dockerd --validate`, one Docker restart succeeded,
+and the daemon reports the override with no containers present. The spent
+prep-12 attempt was not rerun; a fresh attempt must still pass its own
+supervisor clock gate.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact

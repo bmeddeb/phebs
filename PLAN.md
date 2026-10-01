@@ -8020,3 +8020,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   scans, cache invalidation, child or persistent runtime memory/disk. The
   preserved neutral stage continues to occupy its measured VM storage until a
   separately authorized cleanup.
+
+- **2026-09-30 — T45.4 prep-12 host time-namespace repair.** Under a separate
+  explicit host decision, the dedicated VM's Docker 29.5.2 configuration was
+  changed only by adding `"time-namespaces": false` to its existing `features`
+  map. The original `/etc/docker/daemon.json` SHA-256 was
+  `98cca37c96431bbc76bcdf978832b7fd6cea9b115254765ebae3d063fbe82b25`;
+  `dockerd --validate` accepted the replacement, SHA-256
+  `9710ae6983477c73031a1f6ccd57933e49aa256afd77a6210e485bc86b848053`.
+  One Docker restart succeeded. The daemon is active, reports the override in
+  its log, and has zero containers. A read-only comparison confirmed the
+  preserved prep-12 stage, eight records, scratch, loops and mounts unchanged.
+  This repairs the identified host configuration without weakening supervisor
+  admission, but it is not a fresh native execution or feasibility pass.
+  Prep-12 remains spent. Cleanup and another identifier require their own
+  reviewed custody and execution decision.
+
+  **Cost.** This host override changes the time-namespace behavior of future
+  containers on the dedicated VM. It adds no Phebs request, query, sync tick,
+  startup/restart, retry/no-op or publication work; no Phebs lock, corpus or
+  shard scan, cache, concurrency, memory/disk or child bound changes. The
+  one-time daemon restart and config validation are retained host costs.
