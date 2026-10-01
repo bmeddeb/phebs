@@ -904,6 +904,14 @@ to both executable bundle entry paths before staging, and remote dispatch
 rehashes both staged helpers before spending its one shot. The final cmd helper
 remains a separately verified postrun substitution.
 
+If neutral native preparation stops with supervisor exit 125 and
+`site=allow_live`, the supervisor rejected the live allowance before reading
+controls or starting a worker. The next diagnostic distinguishes a boot-ID
+read or mismatch, time-namespace stat or mismatch, BOOTTIME read, and
+allowance-window refusal with fixed, value-free tokens. A token identifies the
+failed check, not the underlying host cause. Preserve the spent stage and
+its records; another native attempt requires a fresh ID and scoped decision.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact

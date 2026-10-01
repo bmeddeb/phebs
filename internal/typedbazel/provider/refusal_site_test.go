@@ -260,7 +260,7 @@ func TestReadRefusalSite(t *testing.T) {
 		{"frame after earlier stderr", refusalText("nonempty_stderr", nil, append([]byte("runtime: warning\n"), frameBytes("encode")...)), "site=encode"},
 		{"nonempty stderr predicate", refusalText("nonempty_stderr", nil, frameBytes("scratch")), "site=scratch"},
 		{"first of two frames wins", refusalText("nonempty_stderr", nil, append(frameBytes("identity"), frameBytes("argv")...)), "site=identity"},
-		{"longest real token", refusalText("report_decode", nil, frameBytes("bootstrap")), "site=bootstrap"},
+		{"longest real token", refusalText("report_decode", nil, frameBytes("allow_bootread")), "site=allow_bootread"},
 		{"shortest real token", refusalText("report_decode", nil, frameBytes("argv")), "site=argv"},
 		{"token at the bound", refusalText("report_decode", nil, frameBytes(strings.Repeat("a", refusalSiteTokenMax))), "site=" + strings.Repeat("a", refusalSiteTokenMax)},
 		{"no newline", refusalText("report_decode", nil, []byte("phebs_site=bootstrap")), "site_torn"},

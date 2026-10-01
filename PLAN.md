@@ -7951,3 +7951,30 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   transport cost only.
   Ordinary query/request, sync tick, startup/restart, retry/no-op and
   publication paths gain no work, lock, child, cache or retained bytes.
+
+- **2026-09-30 — T45.4 neutral-prep-11 live allowance attribution.** The
+  single prep-11 dispatch used coherent helper bytes and passed stage/capacity
+  gates, then stopped after a 0.25-second native test with supervisor exit125
+  `site=allow_live`. No result or receipt exists; scratch and container custody
+  are clean, while the exact spent stage and eight small stop records remain
+  held. The token proves only that the supervisor's live allowance check
+  failed before reading controls or starting a worker. It does not distinguish
+  boot identity, time namespace, BOOTTIME or window failure. Prospectively
+  keep the same ordered live check and refusal boundary but name six fixed,
+  value-free subsites: boot-ID read, boot-ID mismatch, time-namespace stat,
+  time-namespace mismatch, BOOTTIME read and allowance window. Retain
+  `allow_live` for validation/context fallback. Do not relax the common
+  host/container clock-domain invariant or infer a cause from this STOP.
+  A fresh identifier, reviewed native clock-domain gate and separate scoped
+  execution decision remain required before another attempt.
+
+  **Cost.** Each accepting live check still performs the same two allowance
+  validations, one bounded boot-ID read, one namespace stat, one BOOTTIME
+  read, one window calculation and the same context checks, with no second
+  sample. Refusal adds only scalar site selection and the existing one-shot
+  fd2 frame; the derived maximum remains 26 bytes. Ordinary query/request,
+  sync tick, startup/restart, retry/no-op and publication work, held locks,
+  full-corpus or shard reads/hashes, cache invalidation and concurrency
+  bounds remain unchanged. Ordinary runtime memory/disk and child-process
+  costs do not change; six fixed token entries and helper code grow compiled
+  bytes.

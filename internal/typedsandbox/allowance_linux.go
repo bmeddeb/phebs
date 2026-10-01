@@ -24,16 +24,33 @@ func bootNow() (int64, error) {
 	}
 	return n + ts.Nsec, nil
 }
-func clockIdentity() (string, uint64, uint64, error) {
+func checkedBootID(raw []byte, readErr error) (string, refusalSite, error) {
+	if readErr != nil || len(raw) != 37 || raw[36] != '\n' || !bootUUID(string(raw[:36])) {
+		return "", SiteAllowanceBootRead, ErrRefused
+	}
+	return strings.TrimSuffix(string(raw), "\n"), 0, nil
+}
+
+func checkedTimeNamespace(st unix.Stat_t, statErr error) (uint64, uint64, refusalSite, error) {
+	if statErr != nil || st.Dev == 0 || st.Ino == 0 {
+		return 0, 0, SiteAllowanceTimeStat, ErrRefused
+	}
+	return uint64(st.Dev), st.Ino, 0, nil
+}
+
+func clockIdentity() (string, uint64, uint64, refusalSite, error) {
 	raw, err := readSmall("/proc/sys/kernel/random/boot_id", 37)
-	if err != nil || len(raw) != 37 || raw[36] != '\n' || !bootUUID(string(raw[:36])) {
-		return "", 0, 0, ErrRefused
+	boot, site, err := checkedBootID(raw, err)
+	if err != nil {
+		return "", 0, 0, site, err
 	}
 	var st unix.Stat_t
-	if unix.Stat("/proc/self/ns/time", &st) != nil || st.Dev == 0 || st.Ino == 0 {
-		return "", 0, 0, ErrRefused
+	statErr := unix.Stat("/proc/self/ns/time", &st)
+	device, inode, site, err := checkedTimeNamespace(st, statErr)
+	if err != nil {
+		return "", 0, 0, site, err
 	}
-	return strings.TrimSuffix(string(raw), "\n"), uint64(st.Dev), st.Ino, nil
+	return boot, device, inode, 0, nil
 }
 func BeginAllowance(ctx context.Context, planning, attempt string) (Allowance, error) {
 	if ctx == nil || !hostDigest(planning) || !hostDigest(attempt) {
@@ -42,7 +59,7 @@ func BeginAllowance(ctx context.Context, planning, attempt string) (Allowance, e
 	if err := ctx.Err(); err != nil {
 		return Allowance{}, err
 	}
-	boot, device, inode, err := clockIdentity()
+	boot, device, inode, _, err := clockIdentity()
 	if err != nil {
 		return Allowance{}, err
 	}
@@ -56,26 +73,49 @@ func BeginAllowance(ctx context.Context, planning, attempt string) (Allowance, e
 	}
 	return a, ctx.Err()
 }
-func (a Allowance) CheckLive(ctx context.Context) error {
+func (a Allowance) checkLiveWindow(now int64, clockErr error) (refusalSite, error) {
+	if clockErr != nil {
+		return SiteAllowanceNowRead, clockErr
+	}
+	if _, err := a.remaining(now); err != nil {
+		return SiteAllowanceWindow, err
+	}
+	return 0, nil
+}
+
+// checkLiveSite is the shared host/supervisor live check. The site is diagnostic
+// only; CheckLive preserves the original public error surface. Each kernel fact
+// is sampled once, in the same order as before this split.
+func (a Allowance) checkLiveSite(ctx context.Context) (refusalSite, error) {
 	if ctx == nil || a.Validate() != nil {
-		return ErrRefused
+		return SiteAllowanceLive, ErrRefused
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return SiteAllowanceLive, err
 	}
-	boot, device, inode, err := clockIdentity()
-	if err != nil || boot != a.BootID || device != a.TimeDevice || inode != a.TimeInode {
-		return ErrRefused
+	boot, device, inode, site, err := clockIdentity()
+	if err != nil {
+		return site, err
+	}
+	if boot != a.BootID {
+		return SiteAllowanceBootMismatch, ErrRefused
+	}
+	if device != a.TimeDevice || inode != a.TimeInode {
+		return SiteAllowanceTimeMismatch, ErrRefused
 	}
 	now, err := bootNow()
-	if err != nil {
-		return err
+	if site, err = a.checkLiveWindow(now, err); err != nil {
+		return site, err
 	}
-	_, err = a.remaining(now)
-	if err != nil {
-		return err
+	if err := ctx.Err(); err != nil {
+		return SiteAllowanceLive, err
 	}
-	return ctx.Err()
+	return 0, nil
+}
+
+func (a Allowance) CheckLive(ctx context.Context) error {
+	_, err := a.checkLiveSite(ctx)
+	return err
 }
 
 // armAllowance performs only bounded scalar/clock/timer syscalls before arming.
@@ -177,8 +217,8 @@ func bootstrapSupervisor(args []string, expire func(error)) (Allowance, string, 
 }
 
 func readSupervisorAllowance(a Allowance, phase, request, seal string) (refusalSite, error) {
-	if a.CheckLive(context.Background()) != nil {
-		return SiteAllowanceLive, ErrRefused
+	if site, err := a.checkLiveSite(context.Background()); err != nil {
+		return site, ErrRefused
 	}
 	root, err := openControlDirectory("/controls")
 	if err != nil {

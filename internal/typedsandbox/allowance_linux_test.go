@@ -61,9 +61,114 @@ func TestSupervisorAllowanceNamesLiveRefusal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.TimeInode++
-	if site, err := readSupervisorAllowance(a, ControlPlan, a.PlanningDigest, c.SealDigest); site != SiteAllowanceLive || err != ErrRefused {
-		t.Fatalf("site=%v err=%v, want live refusal", site, err)
+	now, err := bootNow()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name   string
+		change func(*Allowance)
+		want   refusalSite
+	}{
+		{"boot_id_mismatch", func(a *Allowance) {
+			if a.BootID[0] == '0' {
+				a.BootID = "1" + a.BootID[1:]
+			} else {
+				a.BootID = "0" + a.BootID[1:]
+			}
+		}, SiteAllowanceBootMismatch},
+		{"time_device_mismatch", func(a *Allowance) { a.TimeDevice++ }, SiteAllowanceTimeMismatch},
+		{"time_inode_mismatch", func(a *Allowance) { a.TimeInode++ }, SiteAllowanceTimeMismatch},
+		{"future_window", func(a *Allowance) { a.Start = now + int64(time.Minute); a.Deadline = a.Start + int64(WallLimit) }, SiteAllowanceWindow},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bad := a
+			tc.change(&bad)
+			if site, err := readSupervisorAllowance(bad, ControlPlan, bad.PlanningDigest, c.SealDigest); site != tc.want || err != ErrRefused {
+				t.Fatalf("site=%v err=%v, want site=%v ErrRefused", site, err, tc.want)
+			}
+			if err := bad.CheckLive(t.Context()); err != ErrRefused {
+				t.Fatalf("public CheckLive error=%v, want ErrRefused", err)
+			}
+		})
+	}
+}
+
+func TestAllowanceLiveReadAndFallbackSites(t *testing.T) {
+	validBoot := []byte("00000000-0000-0000-0000-000000000001\n")
+	for _, tc := range []struct {
+		name string
+		raw  []byte
+		err  error
+	}{
+		{"boot_read_error", nil, os.ErrNotExist},
+		{"boot_malformed", []byte("not-a-boot-id"), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, site, err := checkedBootID(tc.raw, tc.err); site != SiteAllowanceBootRead || err != ErrRefused {
+				t.Fatalf("site=%v err=%v, want boot read refusal", site, err)
+			}
+		})
+	}
+	if boot, site, err := checkedBootID(validBoot, nil); boot != string(validBoot[:36]) || site != 0 || err != nil {
+		t.Fatalf("valid boot = %q, site=%v err=%v", boot, site, err)
+	}
+	for _, tc := range []struct {
+		name string
+		stat unix.Stat_t
+		err  error
+	}{
+		{"namespace_stat_error", unix.Stat_t{}, os.ErrNotExist},
+		{"namespace_zero_device", unix.Stat_t{Ino: 2}, nil},
+		{"namespace_zero_inode", unix.Stat_t{Dev: 1}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, _, site, err := checkedTimeNamespace(tc.stat, tc.err); site != SiteAllowanceTimeStat || err != ErrRefused {
+				t.Fatalf("site=%v err=%v, want namespace stat refusal", site, err)
+			}
+		})
+	}
+	if device, inode, site, err := checkedTimeNamespace(unix.Stat_t{Dev: 1, Ino: 2}, nil); device != 1 || inode != 2 || site != 0 || err != nil {
+		t.Fatalf("valid namespace = %d:%d, site=%v err=%v", device, inode, site, err)
+	}
+	c := testControlIdentity()
+	a, err := BeginAllowance(t.Context(), c.PlanningDigest, c.AttemptDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		now  int64
+		err  error
+		want refusalSite
+	}{
+		{"boottime_read_error", 0, ErrRefused, SiteAllowanceNowRead},
+		{"before_start", a.Start - 1, nil, SiteAllowanceWindow},
+		{"at_deadline", a.Deadline, nil, SiteAllowanceWindow},
+		{"live", a.Start, nil, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			site, err := a.checkLiveWindow(tc.now, tc.err)
+			if site != tc.want || (err != nil) != (tc.want != 0) {
+				t.Fatalf("site=%v err=%v, want site=%v", site, err, tc.want)
+			}
+		})
+	}
+	if site, err := a.checkLiveSite(nil); site != SiteAllowanceLive || err != ErrRefused {
+		t.Fatalf("nil context site=%v err=%v, want generic refusal", site, err)
+	}
+	bad := a
+	bad.Schema = "invalid"
+	if site, err := bad.checkLiveSite(t.Context()); site != SiteAllowanceLive || err != ErrRefused {
+		t.Fatalf("invalid allowance site=%v err=%v, want generic refusal", site, err)
+	}
+	if site, err := readSupervisorAllowance(bad, ControlPlan, bad.PlanningDigest, c.SealDigest); site != SiteAllowanceLive || err != ErrRefused {
+		t.Fatalf("supervisor invalid allowance site=%v err=%v, want generic refusal", site, err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if site, err := a.checkLiveSite(ctx); site != SiteAllowanceLive || err != context.Canceled {
+		t.Fatalf("canceled context site=%v err=%v, want generic canceled", site, err)
 	}
 }
 
