@@ -7978,3 +7978,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   bounds remain unchanged. Ordinary runtime memory/disk and child-process
   costs do not change; six fixed token entries and helper code grow compiled
   bytes.
+
+- **2026-09-30 — T45.4 prep-12 native clock gate correction.** This
+  supersedes only the separate preattempt clock-gate requirement above. A
+  host check cannot prove a later container's boot ID or time namespace. A
+  disposable Docker canary would prove only its own check, with different
+  controls and scratch inputs and another lifecycle whose timeout can retain
+  unknown custody. The fresh attempt's actual production supervisor therefore
+  performs the clock-domain admission gate in `checkLiveSite`. Any refusal
+  spends that identifier and stops before control or worker admission; the
+  refusal subsite is diagnostic, not a host-cause claim. No retry or collect
+  follows a STOP. A separate scoped decision is required before VM cleanup,
+  staging or dispatch. Under that decision, dispatch requires exact
+  source/helper coherence, guarded spent-stage cleanup, empty native custody,
+  offline input check, stage and poststage capacity gates. The prep-11 STOP
+  and all prior evidence remain exact.
+
+  **Cost.** This decision adds no production work or second diagnostic
+  container. The actual supervisor retains its existing single ordered live
+  check; ordinary request, sync, startup, retry/no-op and publication costs,
+  locks, cache, memory/disk and child bounds are unchanged.

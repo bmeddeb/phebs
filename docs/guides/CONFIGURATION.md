@@ -911,6 +911,9 @@ read or mismatch, time-namespace stat or mismatch, BOOTTIME read, and
 allowance-window refusal with fixed, value-free tokens. A token identifies the
 failed check, not the underlying host cause. Preserve the spent stage and
 its records; another native attempt requires a fresh ID and scoped decision.
+The fresh attempt's own supervisor live check is the clock-domain admission
+gate. A host check or a separate container cannot prove the next container's
+clock identity.
 
 ### Immutable bundle contract (T45.3)
 
