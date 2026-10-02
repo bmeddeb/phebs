@@ -8174,3 +8174,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   with constant memory, no file creation/deletion, held lock, new child, cache or
   concurrency change. Retry repeats this bounded lookup; present-cache costs and
   admission bounds remain unchanged. A full native pass is still unestablished.
+
+- **2026-10-02 — T45.4 native preparation and host completion authority.**
+  `neutral-prep-21` at source `4611a38d1053f4d087bd393a237f9ba9e6f5d7e0`
+  passed native preparation and independent host plan reassembly. Its result is
+  `sha256:c605aa662eabae69aacab9a497935e8cd89490e0b71d1cbc66e2d8e93dffce01`;
+  the sealed host receipt records complete exit0 and container removal, with no
+  remaining scratch owner/container/loop/mount. This is neutral preparation,
+  not executor registration, acceptance, target or scale evidence.
+  The first host post-run attempt stopped before store mutation because it
+  incorrectly required the worker to attest its own later container removal.
+  The test-only post-run reader now requires the existing host receipt, binds
+  its exact config/ID/planning/attempt/test/image/result identities and requires
+  complete, removed, exit0 plus a container ID. Worker source/result identities
+  and exit/stop checks remain mandatory; worker `removed` cannot authorize host
+  teardown. Raw native result and receipt bytes remain unchanged and retained.
+  The receipt's historical scratch-device/inode wire names actually carry
+  device major/minor; loop-device minor0 is valid, while major0 still refuses.
+  Regression uses actual minor0 and rejects non-removal, incomplete/nonzero
+  exit, wrong run/executable, missing major and modified result bytes.
+  The frozen final helper was reproduced exactly from clean source `74168d63`;
+  the active main checkout's unrelated dirty file changes VCS build metadata.
+  **Cost.** Opt-in host post-run adds one <=128-KiB receipt read/strict decode,
+  fixed identity comparisons and hashes of bounded config/derived identities
+  plus one SHA256 over the <=16-MiB raw result. It
+  creates no additional child, lock, cache, file or production work. Existing
+  post-run seal/store/export work is unchanged. Native source21 evidence stays
+  bound to its original commit; the later host-only correction establishes no
+  new native execution pass or production-helper acceptance.

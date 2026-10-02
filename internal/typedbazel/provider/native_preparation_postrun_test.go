@@ -70,7 +70,7 @@ const preparationDerivedExportTables = "typed_index_request,typed_index_plan,typ
 // The post-run role reuses the single opt-in preparation role flag and adds its
 // own in/out directory and final-helper flags. Ordinary runs leave them empty and
 // skip.
-var preparationPostRunIn = flag.String("typed-preparation-postrun-in", "", "opt-in post-run role: directory holding config.json/result.json/provenance.json/inventory.json")
+var preparationPostRunIn = flag.String("typed-preparation-postrun-in", "", "opt-in post-run role: directory holding config.json/result.json/receipt.json/provenance.json/inventory.json")
 var preparationPostRunOut = flag.String("typed-preparation-postrun-out", "", "opt-in post-run role: create-only directory for seed.surql and postrun.json")
 var preparationCmdHelper = flag.String("typed-preparation-cmd-helper", "", "opt-in post-run role: path to the frozen final cmd helper binary substituted into the FINAL inventory")
 
@@ -620,6 +620,13 @@ func TestNativePreparationPostRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	receiptRaw, err := readBounded(filepath.Join(*preparationPostRunIn, "receipt.json"), preparationMaxReceipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = verifyPreparationCompletion(cfg, cfgRaw, resRaw, receiptRaw); err != nil {
+		t.Fatal(err)
+	}
 	provRaw, err := readBounded(filepath.Join(*preparationPostRunIn, "provenance.json"), preparationMaxReceipt)
 	if err != nil {
 		t.Fatal(err)
@@ -640,7 +647,7 @@ func TestNativePreparationPostRun(t *testing.T) {
 		res.ProfileSHA256 != cfg.ProfileSHA256 ||
 		res.PlanningDigest != cfg.planningDigest() ||
 		res.AttemptDigest != cfg.attemptDigest() ||
-		res.ExitCode != 0 || !res.Removed || res.StopReason != "" {
+		res.ExitCode != 0 || res.StopReason != "" {
 		t.Fatal("post-run result identity/completion mismatch")
 	}
 	invRaw, err := readBounded(filepath.Join(*preparationPostRunIn, "inventory.json"), typedindex.MaxInventoryBytes)
@@ -725,5 +732,52 @@ func TestNativePreparationPostRun(t *testing.T) {
 		SurrealSHA256: surreal.SHA256, SurrealVersion: surreal.Version,
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Container teardown is host authority; the worker cannot observe its removal.
+func verifyPreparationCompletion(cfg nativePreparationConfig, cfgRaw, resultRaw, receiptRaw []byte) error {
+	rc, err := parsePreparationReceipt(receiptRaw)
+	if err != nil {
+		return err
+	}
+	if rc.ID != cfg.ID || rc.ConfigSHA256 != preparationDigest(cfgRaw) ||
+		rc.PlanningDigest != cfg.planningDigest() || rc.AttemptDigest != cfg.attemptDigest() ||
+		rc.TestSHA256 != cfg.TestSHA256 || rc.ImageSHA256 != cfg.ImageSHA256 ||
+		rc.ResultSHA256 != preparationDigest(resultRaw) || !preparationHash("sha256:"+rc.ContainerID) ||
+		rc.ExitCode != 0 || !rc.Removed || !rc.Complete {
+		return errors.New("post-run host completion receipt mismatch")
+	}
+	return nil
+}
+
+func TestPreparationHostCompletion(t *testing.T) {
+	cfg := fixturePreparationConfig(t)
+	cfgRaw, resultRaw := preparationJSON(cfg), []byte("unaltered worker bytes")
+	good := nativePreparationReceipt{Schema: preparationReceiptSchema, ID: cfg.ID,
+		PlanningDigest: cfg.planningDigest(), AttemptDigest: cfg.attemptDigest(),
+		ConfigSHA256: preparationDigest(cfgRaw), TestSHA256: cfg.TestSHA256, ImageSHA256: cfg.ImageSHA256,
+		ScratchDevice: 7, ScratchInode: 0, ContainerID: strings.Repeat("a", 64),
+		ResultSHA256: preparationDigest(resultRaw), ExitCode: 0, Removed: true, Complete: true}
+	if err := verifyPreparationCompletion(cfg, cfgRaw, resultRaw, preparationJSON(good)); err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range []func(*nativePreparationReceipt){
+		func(r *nativePreparationReceipt) { r.Removed = false },
+		func(r *nativePreparationReceipt) { r.Complete = false },
+		func(r *nativePreparationReceipt) { r.ExitCode = 125 },
+		func(r *nativePreparationReceipt) { r.ID = "other-run" },
+		func(r *nativePreparationReceipt) { r.TestSHA256 = preparationDigest([]byte("other executable")) },
+		func(r *nativePreparationReceipt) { r.ScratchDevice = 0 },
+		func(r *nativePreparationReceipt) { r.ContainerID = "not-a-container-id" },
+	} {
+		bad := good
+		change(&bad)
+		if err := verifyPreparationCompletion(cfg, cfgRaw, resultRaw, preparationJSON(bad)); err == nil {
+			t.Fatal("unsubstantiated completion accepted")
+		}
+	}
+	if err := verifyPreparationCompletion(cfg, cfgRaw, append(resultRaw, 'x'), preparationJSON(good)); err == nil {
+		t.Fatal("changed worker bytes accepted")
 	}
 }

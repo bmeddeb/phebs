@@ -878,6 +878,9 @@ compiler cache. A graph that never creates that cache has nothing to reclaim;
 absence is accepted only beneath a canonical existing directory ancestor.
 Aliases, dangling links and unexpected entries still refuse. An absent cache
 is not created, and an existing cache retains its inventory and deletion limits.
+Neutral preparation post-run sealing requires the host completion receipt bound
+to the exact returned result and configured run/executable/image identities.
+Container removal is a host observation; a worker result cannot attest it.
 
 The immutable prehydration manifest retains the reviewed importer ceilings:
 16 MiB of metadata, 50,000 files, 20,000 directories, 256 MiB per file and

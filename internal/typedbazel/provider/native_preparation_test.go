@@ -121,13 +121,14 @@ type nativePreparationReceipt struct {
 	ConfigSHA256   string `json:"config"`
 	TestSHA256     string `json:"test_sha256"`
 	ImageSHA256    string `json:"image_sha256"`
-	ScratchDevice  uint64 `json:"scratch_device"`
-	ScratchInode   uint64 `json:"scratch_inode"`
-	ContainerID    string `json:"container_id"`
-	ResultSHA256   string `json:"result_sha256"`
-	ExitCode       int    `json:"exit_code"`
-	Removed        bool   `json:"removed"`
-	Complete       bool   `json:"complete"`
+	// Historical wire names carry the scratch device major/minor, not an inode.
+	ScratchDevice uint64 `json:"scratch_device"`
+	ScratchInode  uint64 `json:"scratch_inode"`
+	ContainerID   string `json:"container_id"`
+	ResultSHA256  string `json:"result_sha256"`
+	ExitCode      int    `json:"exit_code"`
+	Removed       bool   `json:"removed"`
+	Complete      bool   `json:"complete"`
 }
 
 // preparationSeedProvenance is the source-free observed identity the seed step
@@ -284,7 +285,7 @@ func parsePreparationReceipt(raw []byte) (nativePreparationReceipt, error) {
 			return rc, errors.New("neutral preparation receipt identity")
 		}
 	}
-	if rc.ScratchDevice == 0 || rc.ScratchInode == 0 {
+	if rc.ScratchDevice == 0 {
 		return rc, errors.New("neutral preparation receipt scratch")
 	}
 	return rc, nil
@@ -454,7 +455,7 @@ func TestNativePreparationReceiptExclusive(t *testing.T) {
 		Schema: preparationReceiptSchema, ID: "neutral-prep-1",
 		PlanningDigest: preparationDigest([]byte("p")), AttemptDigest: preparationDigest([]byte("a")),
 		ConfigSHA256: preparationDigest([]byte("c")), TestSHA256: preparationDigest([]byte("t")),
-		ImageSHA256: preparationDigest([]byte("i")), ScratchDevice: 7, ScratchInode: 3,
+		ImageSHA256: preparationDigest([]byte("i")), ScratchDevice: 7, ScratchInode: 0,
 		ContainerID: fmt.Sprintf("%064x", 9), ResultSHA256: preparationDigest([]byte("r")),
 		ExitCode: 0, Removed: true, Complete: true,
 	}
