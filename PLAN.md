@@ -8202,3 +8202,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   post-run seal/store/export work is unchanged. Native source21 evidence stays
   bound to its original commit; the later host-only correction establishes no
   new native execution pass or production-helper acceptance.
+
+- **2026-10-02 — T45.4 neutral host post-run seal completed.** The corrected
+  host-only chain at `5139f2dc45896af0367160a90400cebc011b22b0` passed in1.09s
+  against the retained isolated neutral seed authority. It verified profile
+  epoch1 and exported seed
+  `sha256:bca875b510e9359511b1d7f5df780f52ccf3d06c563f6e8d7ce65b2e720469c1`.
+  The exact identity-chain receipt is
+  `sha256:ca028ffb2c081b4a04667ac40275459e0a973ce1b5c13cf2924450437a402503`.
+  This consumes the original source4611/native21 result and host receipt without
+  rewriting either. Both independent reviews have no unresolved findings; the
+  scoped provider normal/race, vet, lint, docs, glossary and whitespace gates
+  pass. Host test/export process-group cleanup was separately exercised against
+  an orphaned TERM-ignoring child; bounded KILL removed the group. The actual
+  post-run test group and isolated database child stopped and its port closed.
+  The temporary exact-source helper checkout is archived; its byte-matching
+  frozen helper is retained with the private evidence. No additional production
+  cost follows from this evidence record. Native acceptance/controller/recovery,
+  runtime registration, target execution and scale/release gates remain open.

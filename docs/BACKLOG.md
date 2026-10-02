@@ -15052,6 +15052,19 @@ per batch. Unknown early custody stays held; retained roots preserve backlog
 cadence. No runtime registration occurs. Privileged native/common-clock/cold
 target validation and the remaining provider workflow still gate availability.
 
+
+Neutral preparation progress (2026-10-02): `neutral-prep-21` passed native
+planning/build/projection capture and independent host reassembly at source
+`4611a38d1053f4d087bd393a237f9ba9e6f5d7e0`, with complete exit0 and clean
+container/scratch/loop/mount teardown. The corrected host-only post-run chain
+at `5139f2dc45896af0367160a90400cebc011b22b0` bound that original host receipt,
+sealed the FINAL inventory/profile/selection identity chain, verified retained
+neutral source authority and profile epoch1, and exported the pristine seed.
+Its test group/exporter, isolated engine and port closed. Independent review
+and scoped normal/race/static/documentation gates pass. This closes neutral
+preparation only: production-helper acceptance, native controller/recovery
+proof, registration, target execution and scale/release claims remain open.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.
