@@ -633,6 +633,9 @@ func TestOwnerNativeInspectionKeepsDrainStrict(t *testing.T) {
 				}
 			} else {
 				err = os.WriteFile(path, data, mode)
+				if err == nil && kind == "public-mode" {
+					err = os.Chmod(path, mode)
+				}
 			}
 			if err != nil {
 				t.Fatal(err)

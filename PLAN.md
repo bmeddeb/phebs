@@ -8366,3 +8366,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   receipts remain exact. Linux checks, exact owned recovery, fresh preparation,
   store successor seal, independent review and all four native acceptance cases
   remain required before the prerequisite merge bar is green.
+
+- **2026-10-02 — T45.4 native-journal fixture mode.** The first Linux safe
+  check passed canonical metadata cases but invalidated the public-mode owner
+  negative: the private launcher umask077 reduced requested creation mode0644
+  to0600. The negative fixture now explicitly chmods its own journal to0644
+  after creation. Production inspection remains unchanged and must refuse that
+  actual mode. The first failed safe record is retained; no recovery ran. This
+  adds one chmod only to the negative fixture and no production cost or authority.
