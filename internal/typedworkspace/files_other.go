@@ -3,6 +3,7 @@
 package typedworkspace
 
 import (
+	"context"
 	"github.com/bmeddeb/phebs/internal/typedindex"
 	"os"
 )
@@ -19,3 +20,5 @@ func fileInfo(*os.File, typedindex.BundleFile, bool) (metadata, error) { return 
 func directoryInfo(*os.File, string, bool) (Node, error)               { return Node{}, ErrCustody }
 func capacity(*os.File) (space, error)                                 { return space{}, ErrCustody }
 func renameExclusive(*os.File, string, string) error                   { return ErrCustody }
+
+func ownerNativeJournal(context.Context, *os.File, string) error { return ErrCustody }

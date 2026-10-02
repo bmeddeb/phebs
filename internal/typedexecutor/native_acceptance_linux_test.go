@@ -86,6 +86,7 @@ type acceptanceFinal struct {
 	RetainedTombstones int                     `json:"retained_tombstones"`
 	EngineJoined       bool                    `json:"engine_joined"`
 	Error              string                  `json:"error,omitempty"`
+	Emergency          string                  `json:"emergency,omitempty"`
 }
 
 // Open every component without following links. Only reviewed root-owned regular
@@ -767,12 +768,39 @@ func (d *acceptanceDocker) list(ctx context.Context) ([]struct {
 }
 
 // The returned pin must remain held through the caller's exact pidfd signal.
-func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, selected acceptanceSelected, seen map[string]bool) (*acceptanceObservation, func(), error) {
+// Only closed site tokens enter the source-free receipt; wrapped private causes
+// remain available to error classification without being serialized.
+type acceptanceObservationError struct {
+	site  string
+	cause error
+}
+
+func (e *acceptanceObservationError) Error() string { return "native observation refused" }
+func (e *acceptanceObservationError) Unwrap() error { return e.cause }
+func acceptanceObservationSite(err error) string {
+	var e *acceptanceObservationError
+	if errors.As(err, &e) {
+		switch e.site {
+		case "container_list", "container_identity", "container_state", "attempt", "pin_open", "pin_lock", "owner_load", "owner_compare", "recorded", "phase", "host_observe", "host_verify", "worker_recheck", "kernel", "recorded_recheck":
+			return "observe_" + e.site
+		}
+	}
+	return "observe_unavailable"
+}
+
+func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, selected acceptanceSelected, seen map[string]bool) (observation *acceptanceObservation, unpin func(), err error) {
+	site := "container_list"
+	defer func() {
+		if err != nil {
+			err = &acceptanceObservationError{site: site, cause: err}
+		}
+	}()
 	noop := func() {}
 	rows, e := d.list(ctx)
 	if e != nil || len(rows) == 0 {
 		return nil, noop, e
 	}
+	site = "container_identity"
 	id := rows[0].ID
 	if seen[id] {
 		return nil, noop, nil
@@ -782,6 +810,7 @@ func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig
 	}
 	// This preliminary observation only avoids expensive custody reads before the
 	// worker exists. It supplies no authority to record or signal anything.
+	site = "container_state"
 	var state struct {
 		State struct {
 			Pid     int
@@ -798,6 +827,7 @@ func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig
 	if e != nil {
 		return nil, noop, nil
 	}
+	site = "attempt"
 	attempt, e := s.InspectTypedIndexAttempt(ctx, selected.Attempt)
 	if e != nil || attempt.Custody == nil || attempt.PlanningDigest != selected.Chunk.Generation || attempt.ChunkIdentity != selected.Chunk.Identity {
 		return nil, noop, errors.New("selected attempt custody")
@@ -812,45 +842,59 @@ func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig
 		}
 	}
 	for _, dir := range []string{base, attemptPath} {
+		site = "pin_open"
 		pin, err := acceptanceOpen(filepath.Join(dir, ".phebs-index-publication.lock"))
 		if err != nil {
 			release()
 			return nil, noop, err
 		}
 		pins = append(pins, pin)
+		site = "pin_lock"
 		if err = unix.Flock(int(pin.Fd()), unix.LOCK_SH|unix.LOCK_NB); err != nil {
 			release()
 			return nil, noop, err
 		}
 	}
 	fail := func(err error) (*acceptanceObservation, func(), error) { release(); return nil, noop, err }
-	manifest, e := typedworkspace.LoadOwner(ctx, base, identity)
-	if e != nil || manifest.Digest() != attempt.Custody.ManifestDigest || manifest.Directory.Device != attempt.Custody.DirectoryDevice || manifest.Directory.Inode != attempt.Custody.DirectoryInode || manifest.InputName == "" {
+	site = "owner_load"
+	manifest, e := typedworkspace.LoadOwnerWithNativeCustody(ctx, base, identity)
+	if e != nil {
+		return fail(e)
+	}
+	site = "owner_compare"
+	if manifest.Digest() != attempt.Custody.ManifestDigest || manifest.Directory.Device != attempt.Custody.DirectoryDevice || manifest.Directory.Inode != attempt.Custody.DirectoryInode || manifest.InputName == "" {
 		return fail(errors.New("retained owner mismatch"))
 	}
+	site = "recorded"
 	observed, e := typedsandbox.InspectRecorded(ctx, typedsandbox.RecoveryOptions{Socket: acceptanceSocket, ImageID: c.ImageSHA256, Inputs: filepath.Join(attemptPath, manifest.InputName), PlanningDigest: attempt.PlanningDigest, AttemptDigest: attempt.AttemptDigest})
 	if e != nil || observed.ContainerID != id || observed.PID != state.State.Pid {
 		return fail(errors.New("authenticated container mismatch"))
 	}
+	site = "phase"
 	if observed.Control.RequestDigest != attempt.RequestDigest || observed.Controls != filepath.Join(attemptPath, "controls-"+string(observed.Control.Phase)) {
 		return fail(errors.New("authenticated phase mismatch"))
 	}
 	name, _ := typedsandbox.HostScratchRootName(attempt.PlanningDigest, attempt.AttemptDigest)
+	site = "host_observe"
 	host, e := typedsandbox.ObserveHostScratch(ctx, name)
 	if e != nil || host.Held || host.Selected == nil {
 		return fail(errors.New("host scratch ownership"))
 	}
+	site = "host_verify"
 	receipt, e := typedsandbox.VerifyHostScratch(ctx, host.Selected.Options)
 	if e != nil || receipt.Authority != observed.Scratch {
 		return fail(errors.New("host scratch authority mismatch"))
 	}
+	site = "worker_recheck"
 	if parent, current, e := acceptanceProc(worker); e != nil || parent != observed.PID || current != start {
 		return fail(errors.New("worker changed during authentication"))
 	}
+	site = "kernel"
 	kernel, e := acceptanceKernelLimits(observed.PID, worker)
 	if e != nil {
 		return fail(e)
 	}
+	site = "recorded_recheck"
 	confirmed, e := typedsandbox.InspectRecorded(ctx, typedsandbox.RecoveryOptions{Socket: acceptanceSocket, ImageID: c.ImageSHA256, Inputs: observed.Inputs, PlanningDigest: attempt.PlanningDigest, AttemptDigest: attempt.AttemptDigest})
 	if e != nil || confirmed != observed {
 		return fail(errors.New("running container changed during authentication"))
@@ -1119,7 +1163,12 @@ func acceptanceRunParent(ctx context.Context, c nativeAcceptanceConfig, p typedi
 			}
 		}
 		if err != nil && joined {
-			err = errors.Join(err, acceptanceEmergency(c, s))
+			emergencyErr := acceptanceEmergency(c, s)
+			final.Emergency = "completed"
+			if emergencyErr != nil {
+				final.Emergency = "held"
+			}
+			err = errors.Join(err, emergencyErr)
 		}
 	}()
 	defer func() {
@@ -1158,6 +1207,7 @@ loop:
 			}
 			observed, unpin, e := docker.observe(ctx, c, s, selected, seen)
 			if e != nil {
+				failureSite = acceptanceObservationSite(e)
 				return e
 			}
 			if observed == nil {
@@ -1824,5 +1874,22 @@ func TestNativeAcceptanceWorkerTaskCensus(t *testing.T) {
 	}
 	if _, err := acceptanceWorkerPID(root); err == nil {
 		t.Fatal("unbounded tasks")
+	}
+}
+
+func TestNativeAcceptanceObservationSite(t *testing.T) {
+	private := errors.New("/private/path credential")
+	for _, site := range []string{"owner_load", "owner_compare", "recorded", "host_verify", "kernel", "/private/path credential"} {
+		err := &acceptanceObservationError{site: site, cause: private}
+		token := acceptanceObservationSite(err)
+		if strings.Contains(token, "private") || !errors.Is(err, private) {
+			t.Fatal("private cause lost or exposed")
+		}
+		if site == "/private/path credential" && token != "observe_unavailable" {
+			t.Fatal("unknown site accepted")
+		}
+	}
+	if acceptanceObservationSite(private) != "observe_unavailable" {
+		t.Fatal("raw error classified")
 	}
 }

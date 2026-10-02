@@ -3,8 +3,10 @@ package typedexecutor
 import (
 	"context"
 	"errors"
+	"path/filepath"
 
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"github.com/bmeddeb/phebs/internal/typedworkspace"
 )
 
@@ -149,7 +151,7 @@ func growthBase(d store.TypedIndexGrowthDomain, o typedworkspace.CapacityObserva
 }
 func (c *Controller) inspectOwner(ctx context.Context, a store.TypedIndexAttemptInspection) error {
 	id := typedworkspace.OwnerIdentity{PlanningDigest: a.PlanningDigest, AttemptDigest: a.AttemptDigest, ChunkIdentity: a.ChunkIdentity, LeaseDigest: a.LeaseDigest, Request: a.Parent}
-	m, err := typedworkspace.LoadOwner(ctx, c.config.Workspace, id)
+	m, err := typedworkspace.LoadOwnerWithNativeCustody(ctx, c.config.Workspace, id)
 	if err != nil {
 		return err
 	}
@@ -162,6 +164,9 @@ func (c *Controller) inspectOwner(ctx context.Context, a store.TypedIndexAttempt
 	actual.PublicationRootDigest = expected.PublicationRootDigest
 	if actual != expected {
 		return ErrHeld
+	}
+	if m.Inputs != nil {
+		return typedsandbox.ValidateRecordedMetadata(ctx, typedsandbox.RecoveryOptions{Socket: c.config.Socket, ImageID: c.config.Image, Inputs: filepath.Join(c.config.Workspace, id.RelativeName(), m.InputName), PlanningDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest}, a.RequestDigest)
 	}
 	return nil
 }

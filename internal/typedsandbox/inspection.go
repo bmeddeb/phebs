@@ -2,6 +2,8 @@ package typedsandbox
 
 import (
 	"context"
+	"errors"
+	"os"
 	"reflect"
 	"runtime"
 )
@@ -15,6 +17,42 @@ type RecordedInspection struct {
 	Control                             ControlIdentity
 	Allowance                           Allowance
 	Scratch                             ScratchAuthority
+}
+
+// ValidateRecordedMetadata authenticates an optional retained journal without
+// contacting the daemon or authorizing mutation. The caller must first census
+// the pinned owner namespace; a pending journal without its main is refused.
+func ValidateRecordedMetadata(ctx context.Context, options RecoveryOptions, requestDigest string) error {
+	if ctx == nil || !validOptionPath(options.Inputs) || !hostDigest(options.PlanningDigest) || !hostDigest(options.AttemptDigest) {
+		return ErrRefused
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	name := journalPath(Options{Inputs: options.Inputs})
+	if _, err := os.Lstat(name); errors.Is(err, os.ErrNotExist) {
+		if _, pending := os.Lstat(name + ".next"); errors.Is(pending, os.ErrNotExist) {
+			return ctx.Err()
+		}
+		return ErrCustody
+	} else if err != nil {
+		return ErrCustody
+	}
+	if !validOptionPath(options.Socket) || !imageID(options.ImageID) || !hostDigest(requestDigest) {
+		return ErrCustody
+	}
+	owner, err := readJournalMetadata(name)
+	if err != nil || owner.Socket != options.Socket || owner.ImageID != options.ImageID || owner.Inputs != options.Inputs || owner.Control.PlanningDigest != options.PlanningDigest || owner.Control.AttemptDigest != options.AttemptDigest {
+		return ErrCustody
+	}
+	name, err = HostScratchRootName(options.PlanningDigest, options.AttemptDigest)
+	if err != nil || owner.Control.RequestDigest != requestDigest || owner.Scratch == nil || owner.Scratch.Source != HostScratchBase+"/"+name+"/scratch" {
+		return ErrCustody
+	}
+	if _, err = cleanupOwner(owner.options(), owner); err != nil {
+		return err
+	}
+	return ctx.Err()
 }
 
 func InspectRecorded(ctx context.Context, options RecoveryOptions) (RecordedInspection, error) {

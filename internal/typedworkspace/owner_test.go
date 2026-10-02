@@ -593,3 +593,79 @@ func TestOwnerRequiresProvisionedLock(t *testing.T) {
 		t.Fatal("missing lock was created", entries, err)
 	}
 }
+
+func TestOwnerNativeInspectionKeepsDrainStrict(t *testing.T) {
+	for _, kind := range []string{"main", "pending", "pending-only", "malformed", "oversize", "public-mode", "symlink", "hardlink", "directory", "other-input"} {
+		t.Run(kind, func(t *testing.T) {
+			f, source, raw, inv, id, m := ownerFixture(t)
+			attempt := filepath.Join(f.dir, id.RelativeName())
+			receipt, err := Copy(t.Context(), source, attempt, inv, f.gate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			m, err = SaveOwnerInputs(t.Context(), f.dir, id, m.Digest(), raw, receipt, f.gate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			name := m.InputName + ".typed-container.json"
+			path := filepath.Join(attempt, name)
+			data := []byte(`{"schema":"physical-shape-only"}`)
+			mode := os.FileMode(0600)
+			switch kind {
+			case "pending-only":
+				path += ".next"
+			case "malformed":
+				data = []byte("{")
+			case "oversize":
+				data = []byte(`{"x":"` + strings.Repeat("a", 8192) + `"}`)
+			case "public-mode":
+				mode = 0644
+			case "other-input":
+				path = filepath.Join(attempt, "inputs-"+strings.Repeat("0", 32)+".typed-container.json")
+			}
+			if kind == "directory" {
+				err = os.Mkdir(path, 0700)
+			} else if kind == "symlink" {
+				target := filepath.Join(t.TempDir(), "journal")
+				err = os.WriteFile(target, data, 0600)
+				if err == nil {
+					err = os.Symlink(target, path)
+				}
+			} else {
+				err = os.WriteFile(path, data, mode)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if kind == "pending" {
+				if err = os.WriteFile(path+".next", data, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if kind == "hardlink" {
+				if err = os.Link(path, filepath.Join(t.TempDir(), "alias")); err != nil {
+					t.Fatal(err)
+				}
+			}
+			got, err := LoadOwnerWithNativeCustody(t.Context(), f.dir, id)
+			want := kind == "main" || kind == "pending"
+			if (err == nil) != want || want && got.Digest() != m.Digest() {
+				t.Fatal("inspection", got.Digest(), err)
+			}
+			if _, err = LoadOwner(t.Context(), f.dir, id); err == nil {
+				t.Fatal("ordinary loader ignored native custody")
+			}
+			authority, err := RetirementAuthority(m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			report, err := DrainOwner(t.Context(), f.dir, authority)
+			if err == nil || !report.Held {
+				t.Fatal("drain erased native custody", report, err)
+			}
+			if _, err := os.Lstat(path); err != nil {
+				t.Fatal("native record removed", err)
+			}
+		})
+	}
+}

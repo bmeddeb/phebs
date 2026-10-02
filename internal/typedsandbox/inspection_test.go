@@ -123,3 +123,74 @@ func TestInspectRecorded(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRecordedMetadata(t *testing.T) {
+	for _, fault := range []string{"absent", "absent unconfigured", "unconfigured", "main", "initial", "pending", "orphan pending", "invalid object", "attempt", "socket", "image", "pending mismatch", "request", "scratch"} {
+		t.Run(fault, func(t *testing.T) {
+			_, o := fakeDaemon(t, "")
+			o.Socket = filepath.Join(filepath.Dir(o.Socket), "metadata-only.sock")
+			name, err := HostScratchRootName(o.Control.PlanningDigest, o.Control.AttemptDigest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			o.scratch.Source = HostScratchBase + "/" + name + "/scratch"
+			requestDigest := o.Control.RequestDigest
+			owner := journal{Schema: ownerSchema, Name: "phebs-typed-index-" + strings.Repeat("a", 32), ContainerID: testContainer, DaemonID: "owned-daemon", ImageID: o.ImageID, Socket: o.Socket, Inputs: o.Inputs, Controls: o.Controls, Control: o.Control, Allowance: o.Allowance, Scratch: o.scratch}
+			expected := RecoveryOptions{Socket: o.Socket, ImageID: o.ImageID, Inputs: o.Inputs, PlanningDigest: o.Control.PlanningDigest, AttemptDigest: o.Control.AttemptDigest}
+			put := func(name string, value journal) {
+				t.Helper()
+				raw, err := json.Marshal(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = os.WriteFile(name, raw, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if fault == "request" {
+				requestDigest = "sha256:" + strings.Repeat("f", 64)
+			}
+			if fault == "scratch" {
+				owner.Scratch.Source = HostScratchBase + "/wrong/scratch"
+			}
+			main := owner
+			if fault == "initial" || fault == "pending" {
+				main.ContainerID = ""
+			}
+			if fault == "absent unconfigured" || fault == "unconfigured" {
+				expected.Socket = ""
+				expected.ImageID = ""
+			}
+			if fault == "attempt" {
+				expected.AttemptDigest = "sha256:" + strings.Repeat("f", 64)
+			}
+			if fault == "socket" {
+				expected.Socket += ".other"
+			}
+			if fault == "image" {
+				expected.ImageID = "sha256:" + strings.Repeat("f", 64)
+			}
+			if fault != "absent" && fault != "absent unconfigured" && fault != "orphan pending" {
+				put(journalPath(o), main)
+			}
+			if fault == "invalid object" {
+				if err := os.WriteFile(journalPath(o), []byte("{}"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if fault == "pending" || fault == "orphan pending" || fault == "pending mismatch" {
+				pending := owner
+				if fault == "pending mismatch" {
+					pending.Name = "phebs-typed-index-" + strings.Repeat("b", 32)
+				}
+				put(journalPath(o)+".next", pending)
+			}
+			err = ValidateRecordedMetadata(t.Context(), expected, requestDigest)
+			good := fault == "absent" || fault == "absent unconfigured" || fault == "main" || fault == "initial" || fault == "pending"
+			if (err == nil) != good {
+				t.Fatalf("metadata acceptance %s: %v", fault, err)
+			}
+			// No daemon is listening: every positive path above must stay metadata-only.
+		})
+	}
+}

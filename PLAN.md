@@ -8335,3 +8335,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   must both report refusal and prove root absence. Fresh helper/prep24/FINAL
   authority and independent review remain required; prep23 establishes no new
   acceptance authority for this correction.
+
+- **2026-10-02 — T45.4 authenticated native-journal census prerequisite.**
+  Neutral acceptance5 stopped with no observation or child receipt; separate
+  read-only custody retained one exited planning container and its exact loop
+  image. Its allocation overhead was 4,096 bytes. Source tracing independently
+  found that the strict owner namespace rejected the native journal sibling
+  before observation and recovery could authenticate it; this does not identify
+  the spent receipt's sole discarded cause. A separate pinned inspection loader
+  admits only the completed input's exact private, single-link, same-device
+  regular main journal and optional pending journal, each at most 8KiB, with
+  coherent descriptor/name identity and valid JSON object shape. Pending-only
+  custody refuses. Startup then authenticates the existing canonical sandbox
+  codec, exact input/planning/attempt/socket/image identity, store-authenticated
+  request identity, derived scratch root, controls/scratch invariants and legal container-ID-only pending advance before the stale reaper.
+  Absent journals permit prepared owners without native configuration; present
+  journals require it. This performs no daemon request or mutation. Full native
+  authentication and cleanup remain mandatory afterward. Ordinary owner loads,
+  publication and drain retain their strict namespace refusal.
+  Each native inspection reads at most two physical journals plus two main codec
+  reads and one pending codec read (five bounded reads); startup's bidirectional
+  census invokes this twice per retained attempt, at most ten 8KiB reads. The
+  existing sixteen-entry namespace bound, shared lifecycle/controller turn and
+  publication pins remain; no full source hashing, new lock, cache, child,
+  allowance or ordinary query/sync/publication work is added. Recovery repeats
+  these bounded checks. Each metadata inspection adds one small root-name hash
+  and fixed identity comparisons. The test-only observer records closed observation-site
+  tokens and a separate completed/held emergency-reconciliation field while
+  preserving private wrapped errors without serializing them. Original spent
+  receipts remain exact. Linux checks, exact owned recovery, fresh preparation,
+  store successor seal, independent review and all four native acceptance cases
+  remain required before the prerequisite merge bar is green.

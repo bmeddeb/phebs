@@ -118,7 +118,7 @@ func (c *Controller) recoverCensusedHeld(ctx context.Context, expectedAttempt st
 		return err
 	}
 	id := typedworkspace.OwnerIdentity{PlanningDigest: a.PlanningDigest, AttemptDigest: a.AttemptDigest, ChunkIdentity: a.ChunkIdentity, LeaseDigest: a.LeaseDigest, Request: a.Parent}
-	m, err := typedworkspace.LoadOwner(ctx, c.config.Workspace, id)
+	m, err := typedworkspace.LoadOwnerWithNativeCustody(ctx, c.config.Workspace, id)
 	if err != nil || m.InputName == "" {
 		return errors.Join(ErrHeld, err)
 	}

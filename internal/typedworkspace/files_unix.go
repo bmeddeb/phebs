@@ -3,12 +3,17 @@
 package typedworkspace
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/typedindex"
+	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"golang.org/x/sys/unix"
 )
 
@@ -161,4 +166,28 @@ func capacity(file *os.File) (space, error) {
 		return space{}, ErrCustody
 	}
 	return space{bytes: uint64(st.Bavail) * uint64(st.Bsize), inodes: uint64(st.Ffree), block: uint64(st.Bsize), total: uint64(st.Blocks) * uint64(st.Bsize), free: uint64(st.Bfree) * uint64(st.Bsize), totalInodes: uint64(st.Files)}, nil
+}
+
+// The native codec authenticates these bytes separately before any action.
+func ownerNativeJournal(ctx context.Context, root *os.File, name string) (err error) {
+	if err = ctx.Err(); err != nil {
+		return err
+	}
+	f, err := openRelative(root, name, false)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, f.Close()) }()
+	var base, before, after, named unix.Stat_t
+	if unix.Fstat(int(root.Fd()), &base) != nil || unix.Fstat(int(f.Fd()), &before) != nil || before.Dev != base.Dev || before.Uid != uint32(os.Geteuid()) || before.Mode != unix.S_IFREG|0600 || before.Nlink != 1 || before.Size < 1 || before.Size > typedsandbox.MaxContainerJournalBytes {
+		return ErrCustody
+	}
+	raw, err := io.ReadAll(io.LimitReader(f, typedsandbox.MaxContainerJournalBytes+1))
+	if err != nil || int64(len(raw)) != before.Size || raw[0] != '{' || !json.Valid(raw) {
+		return ErrCustody
+	}
+	if unix.Fstat(int(f.Fd()), &after) != nil || unix.Fstatat(int(root.Fd()), name, &named, unix.AT_SYMLINK_NOFOLLOW) != nil || before.Dev != after.Dev || before.Ino != after.Ino || before.Mode != after.Mode || before.Uid != after.Uid || before.Nlink != after.Nlink || before.Size != after.Size || before.Mtim != after.Mtim || before.Ctim != after.Ctim || named.Dev != before.Dev || named.Ino != before.Ino || named.Mode != before.Mode || named.Uid != before.Uid || named.Nlink != before.Nlink || named.Size != before.Size {
+		return ErrCustody
+	}
+	return ctx.Err()
 }

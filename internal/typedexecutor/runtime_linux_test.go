@@ -4,6 +4,7 @@ package typedexecutor
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
@@ -209,8 +210,9 @@ func TestTypedRuntimeCensusBeforeStaleReap(t *testing.T) {
 	ctx := t.Context()
 	_, begins := installNeutralNative(t, f, w, "")
 	r, _ := runtimeFixture(t, f)
-	if _, err := f.c.Prepare(ctx, f.chunk, f.source, f.raw); err != nil {
-		t.Fatal(err)
+	prepared, prepareErr := f.c.Prepare(ctx, f.chunk, f.source, f.raw)
+	if prepareErr != nil {
+		t.Fatal(prepareErr)
 	}
 	if err := f.s.AdvanceTypedIndex(ctx, f.chunk, store.TypedPreflight); err != nil {
 		t.Fatal(err)
@@ -246,6 +248,82 @@ func TestTypedRuntimeCensusBeforeStaleReap(t *testing.T) {
 	if err = os.Remove(unknown); err != nil {
 		t.Fatal(err)
 	}
+	journal := filepath.Join(f.c.config.Workspace, prepared.Manifest.Identity.RelativeName(), prepared.Inputs.Name+".typed-container.json")
+	if err = os.WriteFile(journal, []byte("{}"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = r.Reconcile(ctx); err == nil {
+		t.Fatal("invalid native journal accepted")
+	}
+	rows, err = surrealdb.Query[[]struct {
+		Status string `json:"status"`
+	}](ctx, db, `SELECT status FROM $row`, map[string]any{"row": rid})
+	if err != nil || rows == nil || len(*rows) != 1 || len((*rows)[0].Result) != 1 || (*rows)[0].Result[0].Status != "running" {
+		t.Fatalf("native census failure reaped lease: %v %v", rows, err)
+	}
+	if err = os.Remove(journal); err != nil {
+		t.Fatal(err)
+	}
+	oldSocket, oldImage := f.c.config.Socket, f.c.config.Image
+	f.c.config.Socket = filepath.Join(t.TempDir(), "unavailable.sock")
+	f.c.config.Image = "sha256:" + strings.Repeat("a", 64)
+	id := prepared.Manifest.Identity
+	rootName, e := typedsandbox.HostScratchRootName(id.PlanningDigest, id.AttemptDigest)
+	if e != nil {
+		t.Fatal(e)
+	}
+	record := struct {
+		Schema, Name, ContainerID, DaemonID, ImageID, Socket, Inputs, Controls string
+		Control                                                                typedsandbox.ControlIdentity
+		Allowance                                                              typedsandbox.Allowance
+		Scratch                                                                *typedsandbox.ScratchAuthority `json:",omitempty"`
+	}{
+		Schema: "phebs-typed-container-owner-v3", Name: "phebs-typed-index-" + strings.Repeat("a", 32), DaemonID: "fixture", ImageID: f.c.config.Image, Socket: f.c.config.Socket,
+		Inputs: strings.TrimSuffix(journal, ".typed-container.json"), Controls: filepath.Join(filepath.Dir(journal), "controls-plan"),
+		Control:   typedsandbox.ControlIdentity{PlanningDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest, RequestDigest: id.PlanningDigest, Phase: typedsandbox.ControlPlan, SealDigest: "sha256:" + strings.Repeat("c", 64), Device: 1, Inode: 1},
+		Allowance: typedsandbox.Allowance{Schema: "phebs-typed-allowance-v1", PlanningDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest, BootID: "00000000-0000-0000-0000-000000000000", TimeDevice: 1, TimeInode: 1, Start: 1, Deadline: 1 + int64(typedsandbox.WallLimit)},
+		Scratch:   &typedsandbox.ScratchAuthority{Source: typedsandbox.HostScratchBase + "/" + rootName + "/scratch", DeviceMajor: 7, BlockSize: 4096, Blocks: 100, Inodes: typedsandbox.ScratchInodes, ImageBytes: typedsandbox.ScratchBytes / 4096 * 4096},
+	}
+	for _, fault := range []string{"canonical", "wrong scratch", "wrong request"} {
+		saved := record
+		scratch := *record.Scratch
+		if fault == "wrong scratch" {
+			scratch.Source = typedsandbox.HostScratchBase + "/wrong/scratch"
+			record.Scratch = &scratch
+		}
+		if fault == "wrong request" {
+			record.Control.Phase = typedsandbox.ControlExecute
+			record.Control.RequestDigest = "sha256:" + strings.Repeat("d", 64)
+			record.Controls = filepath.Join(filepath.Dir(journal), "controls-execute")
+		}
+		raw, e := json.Marshal(record)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if e = os.WriteFile(journal, raw, 0600); e != nil {
+			t.Fatal(e)
+		}
+		if fault == "canonical" {
+			if e = f.c.censusOwnership(ctx); e != nil {
+				t.Fatal("canonical interrupted census", e)
+			}
+		} else {
+			if e = r.Reconcile(ctx); e == nil {
+				t.Fatal("mismatched native identity accepted", fault)
+			}
+			rows, e := surrealdb.Query[[]struct {
+				Status string `json:"status"`
+			}](ctx, db, `SELECT status FROM $row`, map[string]any{"row": rid})
+			if e != nil || rows == nil || len(*rows) != 1 || len((*rows)[0].Result) != 1 || (*rows)[0].Result[0].Status != "running" {
+				t.Fatal("mismatched identity reaped lease", fault, e)
+			}
+		}
+		record = saved
+	}
+	if err = os.Remove(journal); err != nil {
+		t.Fatal(err)
+	}
+	f.c.config.Socket, f.c.config.Image = oldSocket, oldImage
 	if err = r.Reconcile(ctx); err != nil {
 		t.Fatal("restored census/reap", err)
 	}

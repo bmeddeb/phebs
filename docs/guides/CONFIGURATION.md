@@ -1048,3 +1048,14 @@ An overallocated image still makes native execution fail even when exact cleanup
 removes it successfully: cleanup returns `ErrCustody` after retiring that image.
 Record resource absence separately from the failed execution result. Initialization
 and successful retirement do not waive post-worker allocation checks.
+
+Native observation and recovery use a pinned inspection loader for the exact
+input's private main container journal and optional pending journal. Startup
+checks their canonical metadata and exact retained identity before stale-job
+reaping. Unknown, malformed, mismatched or pending-only custody remains held;
+publication and workspace deletion keep their strict journal refusal until
+native cleanup proves absence. No daemon request occurs during this metadata
+census. Native acceptance receipts additionally record closed observation-site
+tokens and `emergency=completed` or `held`, independently of the primary refusal.
+These fields do not replace the required native-absence and workspace-drain
+proofs, and spent receipts retain their original fields.

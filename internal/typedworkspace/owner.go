@@ -359,6 +359,17 @@ func ownerEntries(ctx context.Context, dir *os.File, limit int, lock bool) ([]os
 // mode and size. It never reads/hashes the large receipts. Call LoadOwnerInputs
 // or OpenOwnerPublication for actual readiness.
 func LoadOwner(ctx context.Context, base string, id OwnerIdentity) (OwnerManifest, error) {
+	return loadOwnerPinned(ctx, base, id, false)
+}
+
+// LoadOwnerWithNativeCustody inspects owner references while exact named native
+// journal files remain. It validates their physical shape, not their authority.
+// Callers must authenticate the journal through typedsandbox before signaling
+// or cleanup. Publication and drain continue using the strict ordinary loader.
+func LoadOwnerWithNativeCustody(ctx context.Context, base string, id OwnerIdentity) (OwnerManifest, error) {
+	return loadOwnerPinned(ctx, base, id, true)
+}
+func loadOwnerPinned(ctx context.Context, base string, id OwnerIdentity, native bool) (OwnerManifest, error) {
 	if ctx == nil || !id.valid() {
 		return OwnerManifest{}, ErrCustody
 	}
@@ -367,9 +378,12 @@ func LoadOwner(ctx context.Context, base string, id OwnerIdentity) (OwnerManifes
 		return OwnerManifest{}, err
 	}
 	defer release()
-	return loadOwner(ctx, base, id, false)
+	return loadOwnerMode(ctx, base, id, false, native)
 }
-func loadOwner(ctx context.Context, base string, id OwnerIdentity, growing bool) (m OwnerManifest, err error) {
+func loadOwner(ctx context.Context, base string, id OwnerIdentity, growing bool) (OwnerManifest, error) {
+	return loadOwnerMode(ctx, base, id, growing, false)
+}
+func loadOwnerMode(ctx context.Context, base string, id OwnerIdentity, growing, native bool) (m OwnerManifest, err error) {
 	dir, err := openDirectory(filepath.Join(base, id.RelativeName()), true)
 	if err != nil {
 		return m, err
@@ -387,7 +401,7 @@ func loadOwner(ctx context.Context, base string, id OwnerIdentity, growing bool)
 	if err != nil || node != m.Directory {
 		return m, ErrCustody
 	}
-	if err = ownerNames(ctx, dir, m, growing); err != nil {
+	if err = ownerNamesMode(ctx, dir, m, growing, native); err != nil {
 		return m, err
 	}
 	if err = ownerReferences(dir, m); err != nil {
@@ -799,11 +813,15 @@ func ownerControlCapacity(ctx context.Context, dir *os.File, sizes []int64, gate
 }
 
 func ownerNames(ctx context.Context, dir *os.File, m OwnerManifest, growing bool) error {
+	return ownerNamesMode(ctx, dir, m, growing, false)
+}
+func ownerNamesMode(ctx context.Context, dir *os.File, m OwnerManifest, growing, native bool) error {
 	entries, err := ownerEntries(ctx, dir, 16, false)
 	if err != nil {
 		return err
 	}
 	seenLock, seenInput, seenPublication := false, m.InputName == "", m.PublicationName == ""
+	seenNative, seenPendingNative := false, false
 	for _, entry := range entries {
 		name := entry.Name()
 		switch name {
@@ -832,6 +850,17 @@ func ownerNames(ctx context.Context, dir *os.File, m OwnerManifest, growing bool
 				return ErrCustody
 			}
 		default:
+			if native && m.Inputs != nil && m.InputName != "" && (name == m.InputName+".typed-container.json" || name == m.InputName+".typed-container.json.next") {
+				if err := ownerNativeJournal(ctx, dir, name); err != nil {
+					return err
+				}
+				if strings.HasSuffix(name, ".next") {
+					seenPendingNative = true
+				} else {
+					seenNative = true
+				}
+				continue
+			}
 			if controlTreeName(name) {
 				control, seal, _, _, e := controlMetadata(ctx, dir, name)
 				if e != nil {
@@ -857,7 +886,7 @@ func ownerNames(ctx context.Context, dir *os.File, m OwnerManifest, growing bool
 		}
 	}
 
-	if !seenLock || !seenInput || !seenPublication {
+	if !seenLock || !seenInput || !seenPublication || seenPendingNative && !seenNative {
 		return ErrCustody
 	}
 	return nil
