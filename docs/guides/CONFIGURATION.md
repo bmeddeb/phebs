@@ -1003,3 +1003,12 @@ text while sorting unordered records. It refuses conflicting metadata. The
 retained proto and fan-out public SCIP files contain conflicting metadata for
 blank-identifier symbols, so the new provider's compatibility gate remains open;
 committed-SCIP navigation and the earlier accepted REDUCE decision are unchanged.
+
+The neutral post-run role seals `typed-host-tools.json` into the FINAL bundle
+using the preparation config's verified fixed formatter digest. An already
+present selection or host-tool metadata entry refuses. The default profile
+install expects epoch 0 and proves successor 1. A reviewed reseal can explicitly
+set `-typed-preparation-profile-epoch=N`; the store CAS requires predecessor
+`N-1`, and the role independently checks successor `N`, exact source and all
+seed predicates before export. Preserve prior receipts and use a fresh native
+acceptance ID with the new seed, inventory and profile hashes.

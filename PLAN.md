@@ -8246,3 +8246,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   one bounded32MiB opened-file hash in place of the rejected generic input
   hash; it creates no child, lock, cache or persistent state. Native four-case
   correctness and recovery remain unestablished until their actual receipts.
+- **2026-10-02 — T45.4 neutral post-run formatter seal.** The shared test-only
+  post-run chain now includes canonical `typed-host-tools.json`, bound to the
+  preparation config's already-observed fixed formatter digest, in the FINAL
+  inventory/profile. Existing selection or metadata entries refuse rather than
+  being overwritten. The opt-in post-run role defaults to first profile epoch 1;
+  an explicit successor epoch enables a reviewed reseal through the existing
+  store CAS, after rechecking source authority, with independent epoch and full
+  seed predicates before export. Spent epoch-1 evidence remains exact. This adds
+  one bounded metadata encoding and inventory entry to host preparation and one
+  source read before installation; no ordinary request, sync, retry, publication,
+  lock, cache, child or production behavior changes. Native acceptance remains
+  unestablished until actual four-case receipts pass.

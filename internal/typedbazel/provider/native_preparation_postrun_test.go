@@ -71,6 +71,7 @@ const preparationDerivedExportTables = "typed_index_request,typed_index_plan,typ
 // skip.
 var preparationPostRunIn = flag.String("typed-preparation-postrun-in", "", "opt-in post-run role: directory holding config.json/result.json/receipt.json/provenance.json/inventory.json")
 var preparationPostRunOut = flag.String("typed-preparation-postrun-out", "", "opt-in post-run role: create-only directory for seed.surql and postrun.json")
+var preparationProfileEpoch = flag.Int64("typed-preparation-profile-epoch", 1, "opt-in post-run role: independently expected successor profile epoch; CAS refuses any other predecessor")
 var preparationCmdHelper = flag.String("typed-preparation-cmd-helper", "", "opt-in post-run role: path to the frozen final cmd helper binary substituted into the FINAL inventory")
 
 // preparationFinalTools builds the exact pinned tool identity set for the reduced
@@ -160,13 +161,13 @@ func sealPreparationSelection(ctx context.Context, in Provisioning) (Selection, 
 	return s, raw, universe, nil
 }
 
-// sealPreparationFinalInventory appends the SelectionFile bundle entry to the
+// sealPreparationFinalInventory appends selection and fixed formatter metadata to the
 // final-helper pre-selection inventory and re-decodes it, so the FINAL inventory
 // digest is the reduced profile's BundleDigest. It refuses an empty selection, an
 // oversize selection, or a pre-selection inventory that already carries
-// SelectionFile.
-func sealPreparationFinalInventory(ctx context.Context, pre typedindex.Inventory, selection []byte) (typedindex.Inventory, error) {
-	if len(selection) == 0 {
+// SelectionFile or host-tool metadata.
+func sealPreparationFinalInventory(ctx context.Context, pre typedindex.Inventory, selection []byte, mkfsDigest string) (typedindex.Inventory, error) {
+	if len(selection) == 0 || !preparationHash(mkfsDigest) {
 		return typedindex.Inventory{}, typedindex.Invalid
 	}
 	if int64(len(selection)) > typedindex.MaxFileBytes {
@@ -174,11 +175,16 @@ func sealPreparationFinalInventory(ctx context.Context, pre typedindex.Inventory
 	}
 	files := pre.Files()
 	for _, f := range files {
-		if f.Path == SelectionFile {
+		if f.Path == SelectionFile || f.Path == typedindex.HostToolsFile {
 			return typedindex.Inventory{}, typedindex.Invalid
 		}
 	}
-	files = append(files, typedindex.BundleFile{Path: SelectionFile, Bytes: int64(len(selection)), Digest: hash(selection)})
+	metadata, err := json.Marshal(typedindex.HostToolsDefinition{Schema: typedindex.HostToolsSchema, MkfsDigest: mkfsDigest})
+	if err != nil {
+		return typedindex.Inventory{}, err
+	}
+	files = append(files, typedindex.BundleFile{Path: SelectionFile, Bytes: int64(len(selection)), Digest: hash(selection)},
+		typedindex.BundleFile{Path: typedindex.HostToolsFile, Bytes: int64(len(metadata)), Digest: hash(metadata)})
 	slices.SortFunc(files, func(a, b typedindex.BundleFile) int { return strings.Compare(a.Path, b.Path) })
 	raw, err := json.Marshal(typedindex.InventoryDefinition{Schema: typedindex.InventorySchema, Files: files})
 	if err != nil {
@@ -230,11 +236,11 @@ type preparationPostRun struct {
 
 // runPreparationPostRunChain seals the whole host chain in protocol order:
 // substitute the final cmd helper into the staged inventory, BuildSelection over
-// the run's raw outputs, append SelectionFile to seal the FINAL inventory, assert
+// the run's raw outputs, append selection and host-tool metadata, assert
 // the profile/inventory helper coherence, then seal the reduced Profile-v1. The
 // helper digest is taken from the pinned tools so the inventory and profile cannot
 // drift; helperBytes is the observed length of that same cmd helper binary.
-func runPreparationPostRunChain(ctx context.Context, in Provisioning, helperBytes int64, tools typedindex.Tools, profileName, imageDigest string) (preparationPostRun, error) {
+func runPreparationPostRunChain(ctx context.Context, in Provisioning, helperBytes int64, tools typedindex.Tools, profileName, imageDigest, mkfsDigest string) (preparationPostRun, error) {
 	if tools.Planner.Digest != tools.Launcher.Digest {
 		return preparationPostRun{}, typedindex.Invalid
 	}
@@ -247,7 +253,7 @@ func runPreparationPostRunChain(ctx context.Context, in Provisioning, helperByte
 	if err != nil {
 		return preparationPostRun{}, err
 	}
-	final, err := sealPreparationFinalInventory(ctx, pre, raw)
+	final, err := sealPreparationFinalInventory(ctx, pre, raw, mkfsDigest)
 	if err != nil {
 		return preparationPostRun{}, err
 	}
@@ -261,11 +267,14 @@ func runPreparationPostRunChain(ctx context.Context, in Provisioning, helperByte
 	return preparationPostRun{Selection: sel, Raw: raw, Universe: universe, Final: final, Profile: profile}, nil
 }
 
-// installPreparationProfile CASes the reduced profile into the pristine isolated
-// store at epoch 0. A non-pristine store (an existing intent) refuses Stale rather
-// than overwriting, so the seed can never silently advance an established epoch.
-func installPreparationProfile(ctx context.Context, s *store.Surreal, profile typedindex.Profile, universe string) (store.TypedIndexIntent, error) {
-	return s.InstallTypedProfile(ctx, preparationRepo, profile, universe, 0)
+// installPreparationProfile CASes only the independently declared predecessor.
+// The default first install expects zero; a reviewed reseal explicitly declares
+// its successor epoch and refuses any other current epoch.
+func installPreparationProfile(ctx context.Context, s *store.Surreal, profile typedindex.Profile, universe string, epoch int64) (store.TypedIndexIntent, error) {
+	if epoch < 1 {
+		return store.TypedIndexIntent{}, typedindex.Invalid
+	}
+	return s.InstallTypedProfile(ctx, preparationRepo, profile, universe, epoch-1)
 }
 
 // verifyPreparationSeed reproduces the acceptance seed predicate set exactly: the
@@ -276,7 +285,7 @@ func installPreparationProfile(ctx context.Context, s *store.Surreal, profile ty
 // then captures (the intent table is not in the excluded derived set, so it rides
 // the seed); it does not re-open or content-verify the exported file. The epoch is
 // an independent literal (the pristine first install mints 1), not the install's
-// own echo.
+// own echo; an explicit reseal independently declares its successor epoch.
 func verifyPreparationSeed(ctx context.Context, s *store.Surreal, source typedindex.Source, profile typedindex.Profile, universe string, epoch int64) error {
 	got, err := s.GetTypedSource(ctx, preparationRepo)
 	if err != nil || got != source {
@@ -431,7 +440,7 @@ func TestPreparationPostRunChain(t *testing.T) {
 	in.Inventory = pre
 	tools := preparationFinalTools(cmdHelper)
 
-	out, err := runPreparationPostRunChain(ctx, in, cmdHelperBytes, tools, "neutral", image)
+	out, err := runPreparationPostRunChain(ctx, in, cmdHelperBytes, tools, "neutral", image, hash([]byte("formatter")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -478,7 +487,7 @@ func TestPreparationPostRunChain(t *testing.T) {
 		t.Fatal("pre-selection inventory already carries the selection file")
 	}
 	finalFiles := out.Final.Files()
-	if len(finalFiles) != len(preFiles)+1 {
+	if len(finalFiles) != len(preFiles)+2 {
 		t.Fatal("final inventory file count", len(finalFiles), len(preFiles))
 	}
 	idx := slices.IndexFunc(finalFiles, func(f typedindex.BundleFile) bool { return f.Path == SelectionFile })
@@ -487,6 +496,20 @@ func TestPreparationPostRunChain(t *testing.T) {
 	}
 	if sf := finalFiles[idx]; sf.Bytes != int64(len(out.Raw)) || sf.Digest != hash(out.Raw) || sf.Executable {
 		t.Fatal("selection file binding", sf.Bytes, sf.Digest, sf.Executable)
+	}
+	metadata := preparationJSON(typedindex.HostToolsDefinition{Schema: typedindex.HostToolsSchema, MkfsDigest: hash([]byte("formatter"))})
+	meta, err := inventoryFile(out.Final, typedindex.HostToolsFile)
+	if err != nil || meta.Bytes != int64(len(metadata)) || meta.Digest != hash(metadata) || meta.Executable {
+		t.Fatal("host formatter metadata binding")
+	}
+	request := typedindex.NewRequest(in.Source, out.Profile, 1, out.Universe, "run")
+	admitted, err := typedindex.Admit(ctx, typedindex.Authority{Enabled: true, Administrator: true, Source: in.Source, Profile: typedindex.Epoch{Number: 1, Digest: out.Profile.Digest()}, UniverseDigest: out.Universe}, out.Profile, preparationJSON(request))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound, err := typedindex.BindHostTools(ctx, admitted, out.Final, metadata)
+	if err != nil || bound.MkfsDigest != hash([]byte("formatter")) || bound.Helper.Digest != cmdHelper {
+		t.Fatal("production host-tool binding", err)
 	}
 	if out.Final.Digest() == pre.Digest() {
 		t.Fatal("final inventory digest did not advance past the pre-selection digest")
@@ -501,7 +524,7 @@ func TestPreparationPostRunChain(t *testing.T) {
 			v := provisionFixture(t)
 			v.Inventory = pre
 			v.Source.Commit = "not-a-commit"
-			_, e := runPreparationPostRunChain(ctx, v, cmdHelperBytes, tools, "neutral", image)
+			_, e := runPreparationPostRunChain(ctx, v, cmdHelperBytes, tools, "neutral", image, hash([]byte("formatter")))
 			return e
 		}},
 		{"inventory-source-mutated", typedindex.Stale, func(t *testing.T, ctx context.Context) error {
@@ -511,7 +534,7 @@ func TestPreparationPostRunChain(t *testing.T) {
 				{Path: preparationNativeDriverPath, Bytes: 4096, Digest: testHelper, Executable: true},
 				{Path: "source/lib/lib.go", Bytes: 12, Digest: hash([]byte("changed"))},
 			})
-			_, e := runPreparationPostRunChain(ctx, v, cmdHelperBytes, tools, "neutral", image)
+			_, e := runPreparationPostRunChain(ctx, v, cmdHelperBytes, tools, "neutral", image, hash([]byte("formatter")))
 			return e
 		}},
 		{"driver-path-absent", typedindex.Unprepared, func(t *testing.T, ctx context.Context) error {
@@ -520,13 +543,13 @@ func TestPreparationPostRunChain(t *testing.T) {
 				{Path: typedindex.ManagedHelperFile, Bytes: 4096, Digest: testHelper, Executable: true},
 				{Path: "source/lib/lib.go", Bytes: 12, Digest: hash([]byte("package lib\n"))},
 			})
-			_, e := runPreparationPostRunChain(ctx, v, cmdHelperBytes, tools, "neutral", image)
+			_, e := runPreparationPostRunChain(ctx, v, cmdHelperBytes, tools, "neutral", image, hash([]byte("formatter")))
 			return e
 		}},
 		{"tool-helper-mismatch", typedindex.Invalid, func(t *testing.T, ctx context.Context) error {
 			bad := tools
 			bad.Launcher.Digest = hash([]byte("other-helper"))
-			_, e := runPreparationPostRunChain(ctx, in, cmdHelperBytes, bad, "neutral", image)
+			_, e := runPreparationPostRunChain(ctx, in, cmdHelperBytes, bad, "neutral", image, hash([]byte("formatter")))
 			return e
 		}},
 		{"helper-bad-digest", typedindex.Invalid, func(t *testing.T, ctx context.Context) error {
@@ -540,13 +563,22 @@ func TestPreparationPostRunChain(t *testing.T) {
 		{"helper-incoherent", typedindex.Unsupported, func(t *testing.T, ctx context.Context) error {
 			return assertPreparationHelperCoherence(out.Final, preparationFinalTools(hash([]byte("mismatched-helper"))))
 		}},
+		{"formatter-bad-digest", typedindex.Invalid, func(t *testing.T, ctx context.Context) error {
+			_, e := sealPreparationFinalInventory(ctx, pre, out.Raw, "not-a-digest")
+			return e
+		}},
+		{"duplicate-host-tools", typedindex.Invalid, func(t *testing.T, ctx context.Context) error {
+			dup := provisionInventory(t, append(pre.Files(), meta))
+			_, e := sealPreparationFinalInventory(ctx, dup, out.Raw, image)
+			return e
+		}},
 		{"empty-selection", typedindex.Invalid, func(t *testing.T, ctx context.Context) error {
-			_, e := sealPreparationFinalInventory(ctx, pre, nil)
+			_, e := sealPreparationFinalInventory(ctx, pre, nil, image)
 			return e
 		}},
 		{"duplicate-selection", typedindex.Invalid, func(t *testing.T, ctx context.Context) error {
 			dup := provisionInventory(t, append(pre.Files(), typedindex.BundleFile{Path: SelectionFile, Bytes: 4, Digest: hash([]byte("seln"))}))
-			_, e := sealPreparationFinalInventory(ctx, dup, []byte("seln"))
+			_, e := sealPreparationFinalInventory(ctx, dup, []byte("seln"), image)
 			return e
 		}},
 		{"profile-empty-bundle", typedindex.Invalid, func(t *testing.T, ctx context.Context) error {
@@ -680,7 +712,7 @@ func TestNativePreparationPostRun(t *testing.T) {
 		Module: cfg.Module, Remote: cfg.Remote,
 		Cquery: res.Cquery, Aquery: res.Aquery, Projections: res.Projections,
 	}
-	out, err := runPreparationPostRunChain(ctx, in, int64(len(cmdHelperRaw)), preparationFinalTools(cfg.HelperSHA256), "neutral", cfg.ImageSHA256)
+	out, err := runPreparationPostRunChain(ctx, in, int64(len(cmdHelperRaw)), preparationFinalTools(cfg.HelperSHA256), "neutral", cfg.ImageSHA256, cfg.MkfsSHA256)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,16 +728,19 @@ func TestNativePreparationPostRun(t *testing.T) {
 	}
 	defer func() { _ = s.Close(context.Background()) }()
 
-	intent, err := installPreparationProfile(ctx, s, out.Profile, out.Universe)
+	currentSource, err := s.GetTypedSource(ctx, preparationRepo)
+	if err != nil || currentSource != prov.Source {
+		t.Fatal("post-run source authority changed before install")
+	}
+	intent, err := installPreparationProfile(ctx, s, out.Profile, out.Universe, *preparationProfileEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The pristine seed has no prior intent, so the install mints epoch 1; assert it
-	// independently rather than echoing the install's own return into the verifier.
-	if intent.ProfileEpoch != 1 {
-		t.Fatal("post-run seed epoch is not the pristine first install", intent.ProfileEpoch)
+	// Assert the independently declared successor, never the install return as its own oracle.
+	if intent.ProfileEpoch != *preparationProfileEpoch {
+		t.Fatal("post-run seed successor epoch mismatch", intent.ProfileEpoch)
 	}
-	if err = verifyPreparationSeed(ctx, s, prov.Source, out.Profile, out.Universe, 1); err != nil {
+	if err = verifyPreparationSeed(ctx, s, prov.Source, out.Profile, out.Universe, *preparationProfileEpoch); err != nil {
 		t.Fatal(err)
 	}
 	if err = os.MkdirAll(*preparationPostRunOut, 0700); err != nil {
