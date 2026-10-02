@@ -292,7 +292,7 @@ func verifyPreparationSeed(ctx context.Context, s *store.Surreal, source typedin
 		return errors.New("post-run seed source authority")
 	}
 	intent, err := s.GetTypedIndexIntent(ctx, preparationRepo)
-	if err != nil || intent.ProfileDigest != profile.Digest() || intent.ProfileEpoch != epoch || intent.UniverseDigest != universe || intent.Desired != "" || intent.Canceled || intent.RestoreRequired {
+	if err != nil || !preparationSeedIntentValid(intent, profile.Digest(), universe, epoch) {
 		return errors.New("post-run seed profile authority")
 	}
 	for _, kind := range []store.TypedIndexControlKind{store.TypedIndexIntents, store.TypedIndexRequests, store.TypedIndexPlans, store.TypedIndexAttempts, store.TypedIndexStates, store.TypedIndexCurrents} {
@@ -309,6 +309,31 @@ func verifyPreparationSeed(ctx context.Context, s *store.Surreal, source typedin
 		return errors.New("post-run seed growth")
 	}
 	return nil
+}
+
+// Both predecessor and successor seed checks require an idle, unrestored intent.
+func preparationSeedIntentValid(intent store.TypedIndexIntent, profile, universe string, epoch int64) bool {
+	return epoch > 0 && intent.ProfileDigest == profile && intent.ProfileEpoch == epoch && intent.UniverseDigest == universe && intent.Desired == "" && !intent.Canceled && !intent.RestoreRequired
+}
+
+func TestPreparationSeedIntent(t *testing.T) {
+	profile, universe := hash([]byte("profile")), hash([]byte("universe"))
+	valid := store.TypedIndexIntent{ProfileDigest: profile, ProfileEpoch: 1, UniverseDigest: universe}
+	if !preparationSeedIntentValid(valid, profile, universe, 1) {
+		t.Fatal("idle predecessor refused")
+	}
+	for _, mutate := range []func(*store.TypedIndexIntent){
+		func(v *store.TypedIndexIntent) { v.RestoreRequired = true },
+		func(v *store.TypedIndexIntent) { v.Canceled = true },
+		func(v *store.TypedIndexIntent) { v.Desired = hash([]byte("request")) },
+		func(v *store.TypedIndexIntent) { v.ProfileEpoch = 2 },
+	} {
+		v := valid
+		mutate(&v)
+		if preparationSeedIntentValid(v, profile, universe, 1) {
+			t.Fatal("non-pristine predecessor accepted")
+		}
+	}
 }
 
 // preparationHTTPEndpoint translates the SDK WebSocket endpoint into the HTTP form
