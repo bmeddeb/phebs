@@ -8261,3 +8261,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   sync, retry, publication,
   lock, cache, child or production behavior changes. Native acceptance remains
   unestablished until actual four-case receipts pass.
+- **2026-10-02 — T45.4 native early-stop attribution.** Acceptance3 passed
+  Linux input verification but stopped before controller dispatch, with an
+  empty observation/result receipt and joined engine. Separate read-only custody
+  proves no owned executable, container, loop or scratch root survived; retained
+  case DB remains. The prospective test-only parent records fixed boundary
+  tokens in its existing error field, with a closed whitelist for local engine
+  seed-import refusals. It never exports raw errors or response bodies and does
+  not attribute a new token to the spent receipt. No production cost changes;
+  the test parent adds one stage assignment per early boundary and a fixed
+  error lookup only on engine failure. Fresh ID and review precede another run.
+- **2026-10-02 — T45.4 fresh neutral import scope.** An isolated pinned
+  SurrealDB3.2 host reproduction with the exact epoch2 seed returned HTTP200
+  plus an ERR namespace-missing response. Two literal neutral namespace/database
+  definitions removed that refusal on another fresh engine; its HTTP200
+  empty-array response matches OPTION IMPORT result suppression. The parser
+  accepts that array while refusing null, other shapes, ERR rows and overflow.
+  These establish the host API blockers, not the discarded cause of
+  native3. The test-only native engine now bootstraps only `t454`/`neutral` via
+  one five-second HTTP request, bounded16KiB response and exactly two OK rows,
+  before import. Full imported source/profile/epoch/history/growth checks stay
+  mandatory. One extra bounded request per case adds no production behavior,
+  controller admission, tool, cap, registration or target authority.

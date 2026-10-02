@@ -1014,3 +1014,18 @@ predicates, refusing desire, cancellation, restore markers or other controls.
 The role independently checks successor `N`, exact source and all
 seed predicates before export. Preserve prior receipts and use a fresh native
 acceptance ID with the new seed, inventory and profile hashes.
+
+Future native acceptance failures use `native_acceptance_failed/<fixed site>`
+for the called boundary. Only fixed local engine seed-import errors refine that
+site; library errors keep the generic engine boundary. These tokens do not carry
+raw errors or response bodies. Preserve spent receipts without retrospectively
+assigning a cause, inspect owned custody separately, and use a fresh ID.
+
+A fresh neutral acceptance engine creates only the compiled `t454` namespace
+and `neutral` database before importing its authenticated seed. The bootstrap
+requires exactly two OK rows within its five-second,16KiB response bounds;
+full source/profile/epoch/history/growth checks still run after import.
+
+`OPTION IMPORT` suppresses result rows, so HTTP200 with `[]` is accepted.
+Null, malformed/non-array responses, ERR rows and response overflow still
+refuse. HTTP success alone never replaces the full imported seed predicates.

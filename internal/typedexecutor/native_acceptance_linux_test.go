@@ -15,6 +15,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
@@ -369,6 +370,9 @@ func acceptanceEngine(ctx context.Context, c nativeAcceptanceConfig) (endpoint s
 	if e != nil || acceptanceDigest(seed) != c.SeedSHA256 {
 		return "", stop, errors.New("seed identity")
 	}
+	if e = acceptanceBootstrap(ctx, address, password); e != nil {
+		return "", stop, e
+	}
 	req, e := http.NewRequestWithContext(ctx, http.MethodPost, "http://"+address+"/import", bytes.NewReader(seed))
 	if e != nil {
 		return "", stop, e
@@ -388,19 +392,84 @@ func acceptanceEngine(ctx context.Context, c nativeAcceptanceConfig) (endpoint s
 	if e != nil || response.StatusCode != 200 || len(body) >= 1<<20 {
 		return "", stop, errors.New("seed import failed")
 	}
-	var rows []struct {
-		Status string `json:"status"`
-	}
-	if json.Unmarshal(body, &rows) != nil || len(rows) == 0 {
-		return "", stop, errors.New("seed import response")
-	}
-	for _, r := range rows {
-		if r.Status != "OK" {
-			return "", stop, errors.New("seed import statement failed")
-		}
+	if e = acceptanceImportResponse(body); e != nil {
+		return "", stop, e
 	}
 	return "ws://" + address, stop, nil
 }
+
+// OPTION IMPORT suppresses result rows; the empty array is valid, null is not.
+// Imported authority is verified separately before any controller dispatch.
+func acceptanceImportResponse(body []byte) error {
+	var rows []struct {
+		Status string `json:"status"`
+	}
+	if len(body) >= 1<<20 || json.Unmarshal(body, &rows) != nil || rows == nil {
+		return errors.New("seed import response")
+	}
+	for _, row := range rows {
+		if row.Status != "OK" {
+			return errors.New("seed import statement failed")
+		}
+	}
+	return nil
+}
+
+func TestNativeAcceptanceImportResponse(t *testing.T) {
+	for _, body := range []string{`[]`, `[{"status":"OK"}]`, `null`, `{}`, `[{"status":"ERR"}]`, `[{"result":null}]`, strings.Repeat(" ", 1<<20)} {
+		err := acceptanceImportResponse([]byte(body))
+		if (err == nil) != (body == `[]` || body == `[{"status":"OK"}]`) {
+			t.Fatal("import response gate")
+		}
+	}
+}
+
+// Fresh engine namespaces do not exist yet; bootstrap only this compiled neutral scope.
+func acceptanceBootstrap(ctx context.Context, address, password string) error {
+	const query = "DEFINE NAMESPACE IF NOT EXISTS t454; DEFINE DATABASE IF NOT EXISTS neutral;"
+	req, e := http.NewRequestWithContext(ctx, http.MethodPost, "http://"+address+"/sql", strings.NewReader(query))
+	if e != nil {
+		return errors.New("seed namespace bootstrap")
+	}
+	req.SetBasicAuth("root", password)
+	req.Header.Set("Surreal-NS", "t454")
+	req.Header.Set("Surreal-DB", "neutral")
+	req.Header.Set("Accept", "application/json")
+	client := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{Proxy: nil}}
+	defer client.CloseIdleConnections()
+	res, e := client.Do(req)
+	if e != nil {
+		return errors.New("seed namespace bootstrap")
+	}
+	defer func() { _ = res.Body.Close() }()
+	raw, e := io.ReadAll(io.LimitReader(res.Body, 16385))
+	var rows []struct {
+		Status string `json:"status"`
+	}
+	if e != nil || res.StatusCode != 200 || len(raw) > 16384 || json.Unmarshal(raw, &rows) != nil || len(rows) != 2 || rows[0].Status != "OK" || rows[1].Status != "OK" {
+		return errors.New("seed namespace bootstrap")
+	}
+	return nil
+}
+
+func TestNativeAcceptanceBootstrap(t *testing.T) {
+	for _, body := range []string{`[{"status":"OK"},{"status":"OK"}]`, `[]`, `[{"status":"OK"},{"status":"ERR"}]`} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, pass, ok := r.BasicAuth()
+			raw, e := io.ReadAll(io.LimitReader(r.Body, 513))
+			if e != nil || !ok || user != "root" || pass != "fixture" || r.Method != http.MethodPost || r.URL.Path != "/sql" || r.Header.Get("Surreal-NS") != "t454" || r.Header.Get("Surreal-DB") != "neutral" || string(raw) != "DEFINE NAMESPACE IF NOT EXISTS t454; DEFINE DATABASE IF NOT EXISTS neutral;" {
+				t.Error("bootstrap escaped fixed neutral protocol")
+			}
+			_, _ = io.WriteString(w, body)
+		}))
+		err := acceptanceBootstrap(t.Context(), strings.TrimPrefix(server.URL, "http://"), "fixture")
+		server.Close()
+		if (err == nil) != (body == `[{"status":"OK"},{"status":"OK"}]`) {
+			t.Fatal("bootstrap status gate", err)
+		}
+	}
+}
+
 func acceptanceStore(ctx context.Context, c nativeAcceptanceConfig, endpoint string) (*store.Surreal, error) {
 	pw, e := acceptanceRead(filepath.Join(c.caseRoot(*acceptanceCase), "credential"), 64)
 	if e != nil || len(pw) != 64 {
@@ -896,12 +965,41 @@ func acceptanceChild(ctx context.Context, c nativeAcceptanceConfig, endpoint, ro
 	go func() { done <- cmd.Wait() }()
 	return cmd, done, nil
 }
+
+// Only fixed local engine refusals refine the stage token; library errors remain generic.
+func acceptanceEngineFailureSite(err error) string {
+	switch err.Error() {
+	case "seed namespace bootstrap":
+		return "engine_seed_namespace_bootstrap"
+	case "seed identity":
+		return "engine_seed_identity"
+	case "seed import failed":
+		return "engine_seed_import_http"
+	case "seed import response":
+		return "engine_seed_import_response"
+	case "seed import statement failed":
+		return "engine_seed_import_statement"
+	default:
+		return "engine"
+	}
+}
+
+func TestNativeAcceptanceFailureSite(t *testing.T) {
+	if acceptanceEngineFailureSite(errors.New("seed import response")) != "engine_seed_import_response" || acceptanceEngineFailureSite(errors.New("private/path/credential")) != "engine" {
+		t.Fatal("closed source-free failure classification")
+	}
+}
+
 func acceptanceRunParent(ctx context.Context, c nativeAcceptanceConfig, p typedindex.Profile) (err error) {
+	failureSite := "deployment"
 	final := acceptanceFinal{Schema: acceptanceSchema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Observations: []acceptanceObservation{}}
 	// Receipt is bounded and exclusive even on failure, never a raw error channel.
 	defer func() {
 		if err != nil {
 			final.Error = "native_acceptance_failed"
+			if failureSite != "" {
+				final.Error += "/" + failureSite
+			}
 			final.Pass = false
 		}
 		err = errors.Join(err, acceptanceReceipt(filepath.Join(c.caseRoot(*acceptanceCase), "receipt.json"), final))
@@ -911,39 +1009,56 @@ func acceptanceRunParent(ctx context.Context, c nativeAcceptanceConfig, p typedi
 	if e := acceptanceDeployment(ctx, c, docker); e != nil {
 		return e
 	}
+	failureSite = "daemon_empty"
 	rows, e := docker.list(ctx)
 	if e != nil || len(rows) != 0 {
 		return errors.New("daemon not initially empty")
 	}
+	failureSite = "scratch_empty"
 	host, e := typedsandbox.ObserveHostScratch(ctx, "")
 	if e != nil || host.Held || host.Overflow || len(host.Names) != 0 {
 		return errors.New("host not initially empty")
 	}
+	failureSite = "engine"
 	endpoint, stop, e := acceptanceEngine(ctx, c)
 	if stop != nil {
-		defer func() { stopErr := stop(); final.EngineJoined = stopErr == nil; err = errors.Join(err, stopErr) }()
+		defer func() {
+			stopErr := stop()
+			final.EngineJoined = stopErr == nil
+			if err == nil && stopErr != nil {
+				failureSite = "engine_join"
+			}
+			err = errors.Join(err, stopErr)
+		}()
 	}
 	if e != nil {
+		failureSite = acceptanceEngineFailureSite(e)
 		return e
 	}
+	failureSite = "store_open"
 	s, e := acceptanceStore(ctx, c, endpoint)
 	if e != nil {
 		return e
 	}
 	defer func() { _ = s.Close(context.Background()) }()
+	failureSite = "seed_authority"
 	if e = acceptanceSeed(ctx, c, s, p); e != nil {
 		return e
 	}
+	failureSite = "scheduler_empty"
 	if e = acceptanceEmptyScheduler(ctx, c, endpoint); e != nil {
 		return e
 	}
+	failureSite = "dispatch_marker"
 	if e = acceptanceReceipt(filepath.Join(c.caseRoot(*acceptanceCase), "dispatched.json"), map[string]string{"config": final.Config, "case": *acceptanceCase}); e != nil {
 		return e
 	}
+	failureSite = "controller_child"
 	cmd, done, e := acceptanceChild(ctx, c, endpoint, "run")
 	if e != nil {
 		return e
 	}
+	failureSite = "controller_identity"
 	_, controllerStart, e := acceptanceProc(cmd.Process.Pid)
 	if e != nil {
 		_ = cmd.Process.Kill()
@@ -954,6 +1069,7 @@ func acceptanceRunParent(ctx context.Context, c nativeAcceptanceConfig, p typedi
 			return errors.Join(e, errors.New("initial controller join unproved; custody held"))
 		}
 	}
+	failureSite = ""
 	// Never leave the owned controller running after a monitor failure. Exact
 	// production recovery below is attempted only after its process is joined.
 	joined := false
