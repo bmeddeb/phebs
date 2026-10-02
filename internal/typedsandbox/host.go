@@ -290,9 +290,35 @@ func hostCleanupPhase(phase string) bool { return phase != "formatting" }
 
 func hostFullImageRequired(phase string) bool { return phase != "image" && phase != "retiring" }
 
+func hostImageGeometry(size, blocks int64, full bool) bool {
+	return size >= 0 && size <= hostImageBytes && blocks >= 0 &&
+		(!full || size == hostImageBytes && blocks >= hostImageBytes/512)
+}
+
 func hostImageAllocation(size, blocks int64, full bool) bool {
-	if size < 0 || size > hostImageBytes || blocks < 0 || blocks > (hostImageBytes+65536)/512 {
-		return false
+	return hostImageGeometry(size, blocks, full) && blocks <= (hostImageBytes+65536)/512
+}
+
+// Real writes convert fallocate's unwritten mappings before scattered guest
+// writes can split them. The existing allocation checks still govern admission.
+func initializeHostImage(ctx context.Context, image io.WriterAt, size int64) error {
+	if size != hostImageBytes {
+		return ErrCustody
 	}
-	return !full || size == hostImageBytes && blocks >= hostImageBytes/512
+	zero := make([]byte, 64<<10)
+	for offset := int64(0); offset < size; {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		chunk := zero[:min(int64(len(zero)), size-offset)]
+		n, err := image.WriteAt(chunk, offset)
+		if err != nil {
+			return err
+		}
+		if n != len(chunk) {
+			return io.ErrShortWrite
+		}
+		offset += int64(n)
+	}
+	return ctx.Err()
 }

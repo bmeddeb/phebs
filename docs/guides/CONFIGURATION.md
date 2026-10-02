@@ -1029,3 +1029,17 @@ full source/profile/epoch/history/growth checks still run after import.
 `OPTION IMPORT` suppresses result rows, so HTTP200 with `[]` is accepted.
 Null, malformed/non-array responses, ERR rows and response overflow still
 refuse. HTTP success alone never replaces the full imported seed predicates.
+
+Native scratch preparation writes actual zeros across the fixed preallocated
+backing image before formatting, retaining the same capacity, physical-allocation
+and time bounds. A fresh image adds 4,573,401,088 host writes before the existing sync while
+the existing preparation lock is held; a complete cold plan/execute attempt adds
+two such passes. Ready empty reuse adds none. The fixed 64KiB buffer does not
+bound kernel dirty-page memory or write/sync latency. Cancellation checks occur
+between writes. Unsupported allocation realizations still refuse execution.
+
+Exact scratch retirement checks ownership and geometry independently from the
+execution allocation ceiling, so an overallocated owned image can be retired
+through the normal locked loop/mount/daemon checks. Ambiguous formatting or
+foreign/replaced custody still refuses. Cleanup does not turn a failed native
+receipt into a pass; record its outcome separately and use fresh run IDs.

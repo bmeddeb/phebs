@@ -1,9 +1,11 @@
 package typedsandbox
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -396,5 +398,81 @@ func TestHostReceiptShape(t *testing.T) {
 				t.Fatal("invalid receipt admitted")
 			}
 		})
+	}
+}
+
+type hostInitializationWriter struct {
+	offset  int64
+	calls   int
+	cancel  context.CancelFunc
+	short   bool
+	fail    bool
+	invalid bool
+}
+
+func (w *hostInitializationWriter) WriteAt(p []byte, offset int64) (int, error) {
+	w.calls++
+	if offset != w.offset || len(p) == 0 || len(p) > 64<<10 || w.calls == 1 && !bytes.Equal(p, make([]byte, len(p))) {
+		w.invalid = true
+	}
+	w.offset += int64(len(p))
+	if w.cancel != nil {
+		w.cancel()
+	}
+	if w.fail {
+		return 0, io.ErrClosedPipe
+	}
+	if w.short {
+		return len(p) - 1, nil
+	}
+	return len(p), nil
+}
+func TestHostInitializationAndRetirementGeometry(t *testing.T) {
+	for _, tc := range []struct {
+		name                string
+		short, fail, cancel bool
+		want                error
+	}{
+		{name: "complete"}, {name: "short", short: true, want: io.ErrShortWrite}, {name: "error", fail: true, want: io.ErrClosedPipe}, {name: "cancel", cancel: true, want: context.Canceled},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			w := &hostInitializationWriter{short: tc.short, fail: tc.fail}
+			if tc.cancel {
+				w.cancel = cancel
+			}
+			err := initializeHostImage(ctx, w, hostImageBytes)
+			if !errors.Is(err, tc.want) || w.invalid {
+				t.Fatal("initialization", err, w)
+			}
+			if tc.want == nil && (w.offset != hostImageBytes || w.calls != (int(hostImageBytes)+(64<<10)-1)/(64<<10)) {
+				t.Fatal("incomplete initialization", w)
+			}
+			if tc.want != nil && w.calls != 1 {
+				t.Fatal("continued after failure", w)
+			}
+		})
+	}
+	w := &hostInitializationWriter{}
+	if initializeHostImage(t.Context(), w, hostImageBytes+1) == nil || w.calls != 0 {
+		t.Fatal("wrong geometry written")
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if !errors.Is(initializeHostImage(ctx, w, hostImageBytes), context.Canceled) || w.calls != 0 {
+		t.Fatal("canceled image written")
+	}
+	blocks := int64((hostImageBytes+65536)/512 + 1)
+	if !hostImageGeometry(hostImageBytes, blocks, true) || hostImageAllocation(hostImageBytes, blocks, true) {
+		t.Fatal("retirement conflated with admission")
+	}
+	for _, tc := range []struct {
+		size, blocks int64
+		full         bool
+	}{{-1, 0, false}, {hostImageBytes + 1, 0, false}, {0, -1, false}, {4096, 8, true}, {hostImageBytes, 0, true}} {
+		if hostImageGeometry(tc.size, tc.blocks, tc.full) {
+			t.Fatal("invalid retirement geometry", tc)
+		}
 	}
 }

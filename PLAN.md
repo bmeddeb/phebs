@@ -8283,3 +8283,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   before import. Full imported source/profile/epoch/history/growth checks stay
   mandatory. One extra bounded request per case adds no production behavior,
   controller admission, tool, cap, registration or target authority.
+
+- **2026-10-02 — T45.4 backing-image initialization and exact retirement.**
+  Acceptance4 dispatched the neutral controller and its planning worker exited
+  zero with limits verified, then stopped before execution. Read-only FIEMAP
+  retained 2,205 extents including 1,115 unwritten extents; the exact image's
+  4,573,487,104 allocated bytes exceed the current image guard by 20,480 bytes
+  and complete host reservation by 4,096 bytes. This substantiates the shared
+  cleanup refusal, not the sole discarded child error. Fresh preparation now
+  converts fallocate mappings through sequential actual zero writes before
+  formatting; no allocation ceiling, reservation, wall or admission bound changes.
+  Initialization consumes 4,573,401,088 additional host writes per
+  fresh image (9,146,802,176 writes for a cold two-phase attempt), followed
+  by the existing sync moved after initialization,
+  under the existing host lock and controller turn. Its 64KiB reusable buffer
+  bounds user-space allocation; kernel page-cache/dirty-page cost and I/O latency
+  remain host-dependent. Cancellation is checked between writes; syscall latency
+  is not bounded by those checks. Ready reuse adds no pass; fresh retries repeat
+  it. No ordinary query/sync/publication work, cache, hash or child is added.
+  Execution still requires the existing physical-allocation guard. Retirement
+  authenticates the same exact private single-link inode/device, fixed geometry,
+  phase, loop, mount and empty daemon, but does not require the admission upper
+  allocation ceiling: removing exact-owned overallocated custody grants no new
+  allocation or execution authority. Formatting ambiguity still refuses.
+  The test-only observer scans at most 256 creating threads, each with a 4KiB
+  child census, deduplicates one direct worker and preserves credentials,
+  namespace, ancestry, lifetime and pidfd checks. A missing/changing/overflowing
+  census refuses that observation. This reads at most 257 directory entries (including an overflow sentinel)
+  and 1,048,832 child-list bytes (256 times 4,097, including sentinels)
+  per observer tick; no production request cost.
+  Controlled Linux proof, rebuilt exact helpers, fresh preparation/store seal,
+  independent review and all four acceptance cases remain required. Spent
+  receipts remain exact; no registration, target, release or scale claim.

@@ -3,7 +3,9 @@
 package typedsandbox
 
 import (
+	"context"
 	"errors"
+	"flag"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"golang.org/x/sys/unix"
 	"os"
@@ -202,5 +204,166 @@ func TestHostBoundBaseAndSharedPressure(t *testing.T) {
 	}
 	if err = hostCapacity(t.Context(), observed, nil); err == nil {
 		t.Fatal("nil pressure authority accepted")
+	}
+}
+
+// Opt-in neutral host proof: no loop, mount, daemon, store or worker mutation.
+// It exercises the actual fixed geometry and formatter on the backing filesystem.
+var hostInitializationProof = flag.Bool("typed-host-initialization-proof", false, "run fixed native backing-image initialization proof")
+
+func TestHostInitializedBackingImage(t *testing.T) {
+	if !*hostInitializationProof {
+		t.Skip("native opt-in")
+	}
+	if os.Geteuid() != 0 {
+		t.Fatal("root required")
+	}
+	base := hostTestBase(t, HostScratchBase)
+	o := hostFixture()
+	o.Base = base
+	o.MkfsDigest = "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+	ctx, cancel := context.WithTimeout(t.Context(), 120*time.Second)
+	defer cancel()
+	lock, err := hostLock(ctx, o)
+	if err != nil {
+		t.Fatal("lock refused")
+	}
+	defer func() {
+		if err := lock.Close(); err != nil {
+			t.Error("lock close", err)
+		}
+	}()
+	entries, err := os.ReadDir(HostScratchBase)
+	if err != nil || len(entries) != 1 || entries[0].Name() != ".lock" {
+		t.Fatal("custody not empty")
+	}
+	bound, capacity, err := hostBoundBase(ctx, HostScratchBase, base, 0, 0)
+	if err != nil {
+		t.Fatal("base refused")
+	}
+	err = hostCapacity(ctx, capacity, lifecycle.NewGate(HostScratchBase))
+	err = errors.Join(err, bound.Close())
+	if err != nil {
+		t.Fatal("capacity refused")
+	}
+	path := HostScratchBase + "/.initialization-proof"
+	image, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := image.Close(); err != nil {
+			t.Error("close", err)
+		}
+		if err := os.Remove(path); err != nil {
+			t.Error("remove", err)
+		}
+		if err := syncParent(path); err != nil {
+			t.Error("sync retirement", err)
+		}
+	}()
+	var st unix.Stat_t
+	if unix.Fstat(int(image.Fd()), &st) != nil || !hostPrivateFileMetadata(st.Mode, st.Uid, st.Gid, uint64(st.Nlink)) {
+		t.Fatal("private image")
+	}
+	j := hostOwner{Options: o, ImageDevice: uint64(st.Dev), ImageInode: st.Ino}
+	observe := func(stage string) {
+		if unix.Fstat(int(image.Fd()), &st) != nil || !hostImageMatches(image, j, true) {
+			t.Fatal(stage, "allocation refused", st.Size, st.Blocks)
+		}
+		t.Logf("INITIALIZED_IMAGE stage=%s logical=%d allocated=%d", stage, st.Size, st.Blocks*512)
+	}
+	if unix.Fallocate(int(image.Fd()), 0, 0, hostImageBytes) != nil {
+		t.Fatal("fallocate")
+	}
+	if err = initializeHostImage(ctx, image, hostImageBytes); err != nil {
+		t.Fatal("initialize", err)
+	}
+	if err = image.Sync(); err != nil {
+		t.Fatal("sync", err)
+	}
+	observe("initialized")
+	if err = runHostMkfs(ctx, o, image); err != nil {
+		t.Fatal("formatter", err)
+	}
+	if err = image.Sync(); err != nil {
+		t.Fatal("sync", err)
+	}
+	observe("formatted")
+	block := make([]byte, 4096)
+	for i := range block {
+		block[i] = byte(i)
+	}
+	for i := int64(0); i < 65536; i++ {
+		if err = ctx.Err(); err != nil {
+			t.Fatal(err)
+		}
+		offset := (i * 3001 % (hostImageBytes / 4096)) * 4096
+		if n, e := image.WriteAt(block, offset); e != nil || n != len(block) {
+			t.Fatal("scattered write", e)
+		}
+	}
+	if err = image.Sync(); err != nil {
+		t.Fatal("sync", err)
+	}
+	observe("scattered")
+}
+
+func TestHostImageIdentity(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("root-owned file metadata")
+	}
+	path := filepath.Join(t.TempDir(), "image")
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			t.Error("file close", err)
+		}
+	}()
+	if _, err = f.Write([]byte("image")); err != nil {
+		t.Fatal(err)
+	}
+	var st unix.Stat_t
+	if unix.Fstat(int(f.Fd()), &st) != nil {
+		t.Fatal("stat")
+	}
+	j := hostOwner{ImageDevice: uint64(st.Dev), ImageInode: st.Ino}
+	if _, ok := hostImageIdentity(f, j); !ok {
+		t.Fatal("positive identity")
+	}
+	for _, change := range []func(*hostOwner){func(j *hostOwner) { j.ImageDevice++ }, func(j *hostOwner) { j.ImageInode++ }} {
+		bad := j
+		change(&bad)
+		if _, ok := hostImageIdentity(f, bad); ok {
+			t.Fatal("foreign identity")
+		}
+	}
+	if err = os.Chmod(path, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := hostImageIdentity(f, j); ok {
+		t.Fatal("public file")
+	}
+	if err = os.Chmod(path, 0600); err != nil {
+		t.Fatal(err)
+	}
+	alias := path + "-alias"
+	if err = os.Link(path, alias); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := hostImageIdentity(f, j); ok {
+		t.Fatal("aliased image")
+	}
+	if err = os.Remove(alias); err != nil {
+		t.Fatal(err)
+	}
+	if err = f.Truncate(hostImageBytes + 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := hostImageIdentity(f, j); ok {
+		t.Fatal("wrong geometry")
 	}
 }

@@ -88,7 +88,16 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if err = ctx.Err(); err != nil {
 		return HostScratchReceipt{}, err
 	}
-	if unix.Fallocate(int(image.Fd()), 0, 0, hostImageBytes) != nil || image.Sync() != nil {
+	if unix.Fallocate(int(image.Fd()), 0, 0, hostImageBytes) != nil {
+		return HostScratchReceipt{}, ErrCustody
+	}
+	if !hostImageMatches(image, j, true) {
+		return HostScratchReceipt{}, ErrCustody
+	}
+	if err = initializeHostImage(ctx, image, hostImageBytes); err != nil {
+		return HostScratchReceipt{}, err
+	}
+	if image.Sync() != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
 	j.Phase = "allocated"
@@ -260,7 +269,7 @@ func CleanupHostScratch(ctx context.Context, o HostScratchOptions) error {
 					_ = image.Close()
 				}
 			}()
-			if !hostImageMatches(image, j, hostFullImageRequired(j.Phase)) {
+			if st, valid := hostImageIdentity(image, j); !valid || !hostImageGeometry(st.Size, st.Blocks, hostFullImageRequired(j.Phase)) {
 				return ErrCustody
 			}
 		}
@@ -569,18 +578,23 @@ func openHostImage(j hostOwner) (*os.File, error) {
 		return nil, ErrCustody
 	}
 	f := os.NewFile(uintptr(fd), "scratch-image")
-	if !hostImageMatches(f, j, false) {
+	if _, valid := hostImageIdentity(f, j); !valid {
 		_ = f.Close()
 		return nil, ErrCustody
 	}
 	return f, nil
 }
-func hostImageMatches(f *os.File, j hostOwner, full bool) bool {
+
+// Opening authenticates custody only. Execution separately enforces allocation;
+// retirement must be able to remove an exact-owned overallocated image.
+func hostImageIdentity(f *os.File, j hostOwner) (unix.Stat_t, bool) {
 	var st unix.Stat_t
-	if unix.Fstat(int(f.Fd()), &st) != nil || !hostPrivateFileMetadata(st.Mode, st.Uid, st.Gid, uint64(st.Nlink)) || uint64(st.Dev) != j.ImageDevice || st.Ino != j.ImageInode || st.Size < 0 || st.Size > hostImageBytes {
-		return false
-	}
-	return hostImageAllocation(st.Size, st.Blocks, full)
+	valid := unix.Fstat(int(f.Fd()), &st) == nil && hostPrivateFileMetadata(st.Mode, st.Uid, st.Gid, uint64(st.Nlink)) && uint64(st.Dev) == j.ImageDevice && st.Ino == j.ImageInode && hostImageGeometry(st.Size, st.Blocks, false)
+	return st, valid
+}
+func hostImageMatches(f *os.File, j hostOwner, full bool) bool {
+	st, valid := hostImageIdentity(f, j)
+	return valid && hostImageAllocation(st.Size, st.Blocks, full)
 }
 func openHostLoop(number int) (*os.File, error) {
 	name := "/dev/loop" + strconv.Itoa(number)

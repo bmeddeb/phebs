@@ -876,19 +876,53 @@ func acceptanceProc(pid int) (ppid int, start string, err error) {
 	}
 	return ppid, fields[19], nil
 }
+
+// /proc children is per creating thread, not per thread group. Bound the
+// complete task census; disappearing threads refuse this observation.
+func acceptanceWorkerPID(tasks string) (int, error) {
+	f, err := os.Open(tasks)
+	if err != nil {
+		return 0, errors.New("worker census")
+	}
+	threads, err := f.ReadDir(257)
+	closeErr := f.Close()
+	if err != nil && !errors.Is(err, io.EOF) || closeErr != nil || len(threads) == 0 || len(threads) > 256 {
+		return 0, errors.New("worker task census")
+	}
+	worker := 0
+	for _, thread := range threads {
+		tid, parseErr := strconv.Atoi(thread.Name())
+		if parseErr != nil || tid < 2 || !thread.IsDir() {
+			return 0, errors.New("worker task identity")
+		}
+		children, openErr := os.Open(filepath.Join(tasks, thread.Name(), "children"))
+		if openErr != nil {
+			return 0, errors.New("worker census")
+		}
+		b, readErr := io.ReadAll(io.LimitReader(children, 4097))
+		closeErr = children.Close()
+		if readErr != nil || closeErr != nil || len(b) > 4096 {
+			return 0, errors.New("worker census")
+		}
+		for _, field := range strings.Fields(string(b)) {
+			pid, parseErr := strconv.Atoi(field)
+			if parseErr != nil || pid < 2 || worker != 0 && worker != pid {
+				return 0, errors.New("worker cardinality")
+			}
+			worker = pid
+		}
+	}
+	if worker == 0 {
+		return 0, errors.New("worker cardinality")
+	}
+	return worker, nil
+}
+
 func acceptanceWorker(supervisor int) (int, string, error) {
 	if supervisor < 2 {
 		return 0, "", errors.New("supervisor pid")
 	}
-	b, e := os.ReadFile(fmt.Sprintf("/proc/%d/task/%d/children", supervisor, supervisor))
-	if e != nil || len(b) > 4096 {
-		return 0, "", errors.New("worker census")
-	}
-	pids := strings.Fields(string(b))
-	if len(pids) != 1 {
-		return 0, "", errors.New("worker cardinality")
-	}
-	pid, e := strconv.Atoi(pids[0])
+	pid, e := acceptanceWorkerPID(fmt.Sprintf("/proc/%d/task", supervisor))
 	if e != nil {
 		return 0, "", e
 	}
@@ -896,7 +930,7 @@ func acceptanceWorker(supervisor int) (int, string, error) {
 	if e != nil || parent != supervisor {
 		return 0, "", errors.New("worker ancestry")
 	}
-	b, e = os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
+	b, e := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
 	if e != nil || len(b) > 16384 {
 		return 0, "", errors.New("worker status")
 	}
@@ -1752,5 +1786,43 @@ func TestNativeAcceptanceNeutralDefinition(t *testing.T) {
 				t.Fatal("neutral oracle")
 			}
 		})
+	}
+}
+
+func TestNativeAcceptanceWorkerTaskCensus(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		children []string
+		want     int
+	}{
+		{"other-thread", []string{"", "1234"}, 1234}, {"duplicate", []string{"1234", "1234"}, 1234},
+		{"absent", []string{"", ""}, 0}, {"multiple", []string{"1234", "1235"}, 0}, {"malformed", []string{"no"}, 0},
+		{"invalid-pid", []string{"1"}, 0}, {"overflow", []string{strings.Repeat(" ", 4097)}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			for i, children := range tc.children {
+				dir := filepath.Join(root, strconv.Itoa(100+i))
+				if err := os.Mkdir(dir, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(dir, "children"), []byte(children), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			pid, err := acceptanceWorkerPID(root)
+			if tc.want == 0 && err == nil || tc.want != 0 && (err != nil || pid != tc.want) {
+				t.Fatal(pid, err)
+			}
+		})
+	}
+	root := t.TempDir()
+	for i := 0; i < 257; i++ {
+		if err := os.Mkdir(filepath.Join(root, strconv.Itoa(100+i)), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := acceptanceWorkerPID(root); err == nil {
+		t.Fatal("unbounded tasks")
 	}
 }
