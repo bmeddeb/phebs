@@ -1009,6 +1009,8 @@ using the preparation config's verified fixed formatter digest. An already
 present selection or host-tool metadata entry refuses. The default profile
 install expects epoch 0 and proves successor 1. A reviewed reseal can explicitly
 set `-typed-preparation-profile-epoch=N`; the store CAS requires predecessor
-`N-1`, and the role independently checks successor `N`, exact source and all
+`N-1`. Before CAS the role verifies the predecessor profile and full seed
+predicates, refusing desire, cancellation, restore markers or other controls.
+The role independently checks successor `N`, exact source and all
 seed predicates before export. Preserve prior receipts and use a fresh native
 acceptance ID with the new seed, inventory and profile hashes.

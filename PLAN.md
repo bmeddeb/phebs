@@ -8252,9 +8252,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   inventory/profile. Existing selection or metadata entries refuse rather than
   being overwritten. The opt-in post-run role defaults to first profile epoch 1;
   an explicit successor epoch enables a reviewed reseal through the existing
-  store CAS, after rechecking source authority, with independent epoch and full
+  store CAS, after rechecking source authority and predecessor seed predicates,
+  with independent epoch and full
   seed predicates before export. Spent epoch-1 evidence remains exact. This adds
   one bounded metadata encoding and inventory entry to host preparation and one
-  source read before installation; no ordinary request, sync, retry, publication,
+  source read before installation. Explicit successors additionally read the prior
+  intent and repeat the bounded seed predicates before CAS; no ordinary request,
+  sync, retry, publication,
   lock, cache, child or production behavior changes. Native acceptance remains
   unestablished until actual four-case receipts pass.

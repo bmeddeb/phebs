@@ -732,6 +732,19 @@ func TestNativePreparationPostRun(t *testing.T) {
 	if err != nil || currentSource != prov.Source {
 		t.Fatal("post-run source authority changed before install")
 	}
+	if *preparationProfileEpoch > 1 {
+		predecessor, err := s.GetTypedIndexIntent(ctx, preparationRepo)
+		if err != nil {
+			t.Fatal(err)
+		}
+		profile, err := typedindex.DecodeProfile(ctx, []byte(predecessor.ProfileJSON))
+		if err != nil || profile.Digest() != predecessor.ProfileDigest {
+			t.Fatal("post-run predecessor profile identity")
+		}
+		if err = verifyPreparationSeed(ctx, s, prov.Source, profile, predecessor.UniverseDigest, *preparationProfileEpoch-1); err != nil {
+			t.Fatal(err)
+		}
+	}
 	intent, err := installPreparationProfile(ctx, s, out.Profile, out.Universe, *preparationProfileEpoch)
 	if err != nil {
 		t.Fatal(err)
