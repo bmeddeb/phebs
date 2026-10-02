@@ -7,8 +7,8 @@ package provider
 // registration. TestMain intercepts the exact internal role tokens the managed
 // sandbox already uses and otherwise runs ordinary tests, so its default
 // absence changes no existing behavior. The host preparation is opt-in through
-// the reviewed config/role flags and skips by default; it has never run here and
-// is cross-compile verified only on this darwin development host.
+// the reviewed config/role flags and skips by default. Native execution requires
+// the dedicated Linux VM and exact sealed preparation inputs.
 
 import (
 	"context"

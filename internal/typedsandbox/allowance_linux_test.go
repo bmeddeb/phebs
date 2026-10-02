@@ -154,7 +154,7 @@ func TestAllowanceLiveReadAndFallbackSites(t *testing.T) {
 			}
 		})
 	}
-	if site, err := a.checkLiveSite(nil); site != SiteAllowanceLive || err != ErrRefused {
+	if site, err := a.checkLiveSite(nil); site != SiteAllowanceLive || err != ErrRefused { //nolint:staticcheck // Deliberately exercise fail-closed nil-context refusal.
 		t.Fatalf("nil context site=%v err=%v, want generic refusal", site, err)
 	}
 	bad := a

@@ -933,7 +933,8 @@ ran Docker 29.5.2 without a `time-namespaces` override. This is the likely
 host cause, not a reason to weaken the required common clock domain. Docker's
 daemon-wide `features.time-namespaces=false` is a candidate host setting; it
 requires a separate host change and verification before another native
-attempt. The spent stage and STOP evidence remain held.
+attempt. The spent stage was later freed by exact guarded cleanup; its sealed
+STOP evidence remains retained.
 
 The dedicated neutral VM now has that exact feature set to `false`. Its
 replacement config passed `dockerd --validate`, one Docker restart succeeded,
@@ -946,8 +947,9 @@ Prep-13 then reached a valid supervisor report but stopped at the later
 reason was not retained. For future stopped-inspection refusals, the error
 names the first failed predicate and, on a nonzero supervisor exit, reports
 only an allowlisted stop reason and optional sampling stage. Unknown strings
-become `unknown`; the check remains fail closed. Prep-13 remains spent and
-held, with no result or receipt.
+become `unknown`; the check remains fail closed. Prep-13 remains spent, with
+no result or receipt; its stage was later freed by exact guarded cleanup and
+its sealed STOP evidence remains retained.
 
 Prep-14 then stopped at the reported `worker_start` reason, with no result or
 receipt. Its exact child-start syscall was not retained. The staged bundle's
@@ -955,15 +957,17 @@ root-owned `0700` directories and `0500` helper could not be traversed or
 executed by the sandbox worker's UID 65534. Future native preparation stages
 make only the read-only bundle view worker-visible (`0555` directories and
 executables, `0444` other files) before sealing the stage; the private stage
-root and host package stay owner-only. The spent prep-14 stage is held.
+root and host package stay owner-only. The spent prep-14 stage was later
+freed by exact guarded cleanup; its sealed STOP evidence remains retained.
 
 Prep-15 passed those access checks and reached the worker, but the worker
 returned 125 and the supervisor reported `worker_failed`. No result or receipt
 exists; the exact worker step was not retained. For future attempts, a terminal
 error includes `worker_site=<fixed token>` only when the valid supervisor report
 contains one exact worker refusal frame. Missing or malformed frames report
-`unknown` without copying worker stderr. Preserve the spent prep-15 stage and
-its STOP records; another attempt needs a fresh ID and scoped decision.
+`unknown` without copying worker stderr. The spent prep-15 stage was later
+freed by exact guarded cleanup; its sealed STOP records remain retained.
+Another attempt needs a fresh ID and scoped decision.
 
 ### Immutable bundle contract (T45.3)
 

@@ -17,8 +17,7 @@ package provider
 //
 // The pure seal functions are fixture-tested by TestPreparationPostRunChain on
 // every ordinary run. The live store/export/verify entrypoint is opt-in and skips
-// by default; it has never run here and depends on an isolated engine fixture
-// (execution-plan B4) that is not yet provisioned.
+// by default and requires an isolated engine fixture (execution-plan B4).
 
 import (
 	"bytes"
@@ -596,8 +595,8 @@ func TestPreparationPostRunChain(t *testing.T) {
 // seed produced provenance.json. It reassembles the identity chain from those
 // retained private artifacts, observes the cmd helper identity, installs the
 // reduced profile into the pristine store, exports and verifies the seed, and
-// writes the create-only source-free receipt. It depends on an isolated engine
-// fixture (execution-plan B4) that is not yet provisioned, so it has never run.
+// writes the create-only source-free receipt. It requires an isolated engine
+// fixture (execution-plan B4).
 func TestNativePreparationPostRun(t *testing.T) {
 	if *preparationRole != "postrun" || *preparationPostRunIn == "" || *preparationPostRunOut == "" || *preparationCmdHelper == "" {
 		t.Skip("neutral preparation post-run chain is opt-in")
