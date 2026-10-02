@@ -276,6 +276,12 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 				report.Resources.SamplingFailureStage = "private/path"
 			case "reported hostile stop":
 				report.StopReason = "private/path"
+			case "reported worker controls":
+				report.StopReason = "worker_failed"
+				report.Stderr = refusalSiteFrame(SiteWorkerControls)
+			case "reported hostile worker":
+				report.StopReason = "worker_failed"
+				report.Stderr = []byte("private/path")
 			}
 		}
 		raw, _ := json.Marshal(report)

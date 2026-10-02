@@ -8093,3 +8093,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   child. Query/request, sync tick, startup/restart, retry/no-op, publication,
   locks, cache, shard/corpus reads and steady-state memory/disk costs do not
   change. The spent prep-14 stage is never repaired in place.
+
+- **2026-10-02 — T45.4 prep-15 worker refusal attribution.** The separately
+  approved prep-14 cleanup and single prep-15 stage/dispatch passed offline,
+  mode, custody and capacity gates. The worker started, then its valid supervisor
+  report stopped at `worker_failed`, exit 125, with no result or receipt. The
+  terminal error retained no worker stderr, so the failed worker step cannot be
+  reconstructed. Eight small STOP records and the spent VM stage are sealed.
+  Prospective preparation workers write one fixed `phebs_site` frame on fd 2
+  before each terminal exit 125; the host accepts only an exact whole frame
+  from the closed worker-site vocabulary in the valid supervisor report and
+  adds `worker_site=<token>` to the stopped-inspection error. Empty, torn,
+  oversized or arbitrary worker stderr becomes `unknown`; raw bytes never enter
+  that error. This is attribution, not a relaxation of supervisor admission,
+  output limits, descendant accounting or one-shot dispatch. A new ID, reviewed
+  package and separate execution decision remain required.
+
+  **Cost.** Accepting preparation workers do no new work. A terminal worker
+  refusal makes one bounded nonblocking fd-2 write; `worker_failed` inspection
+  compares at most fourteen fixed frames after the existing report checks.
+  Ordinary requests, sync ticks, startup/restart, retry/no-op, publication,
+  held locks, full-corpus/shard reads, cache invalidation, concurrency,
+  persistent memory/disk and child-process counts do not change. The worker
+  output remains under the existing report byte ceiling.

@@ -110,14 +110,17 @@ func preparationWorkerMain() int {
 	ctx := context.Background()
 	invocation, err := typedsandbox.ReadWorkerInvocation(ctx)
 	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerInvocation)
 		return 125
 	}
 	allowance, phase, request, seal, err := invocation.Binding(ctx)
 	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerBinding)
 		return 125
 	}
 	workCtx, cancel, err := typedsandbox.AllowanceContext(ctx, allowance)
 	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerClock)
 		return 125
 	}
 	defer cancel()
@@ -126,10 +129,12 @@ func preparationWorkerMain() int {
 		return 125
 	}
 	if int64(len(raw))+1 > int64(typedsandbox.OutputBytes) {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerOutput)
 		return 125
 	}
 	out := append(raw, '\n')
 	if n, writeErr := os.Stdout.Write(out); writeErr != nil || n != len(out) {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerOutput)
 		return 125
 	}
 	return 0
@@ -143,10 +148,12 @@ func preparationWorkerMain() int {
 func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance, phase, request, seal string) ([]byte, error) {
 	cfg, inventory, profile, err := loadPreparationControls(ctx, allowance, phase, request, seal)
 	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerControls)
 		return nil, err
 	}
 	info, ok := debug.ReadBuildInfo()
 	if !ok || info == nil || info.Path == "" {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerBuildInfo)
 		return nil, errors.New("neutral preparation helper identity")
 	}
 	inv := Invocation{Profile: profile, Inventory: inventory}
@@ -160,10 +167,12 @@ func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance,
 
 	at := time.Now()
 	if err = verifyToolsWithHelperMain(ctx, inv, info.Path); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerTools)
 		return nil, err
 	}
 	helper, err := inventoryFile(inventory, typedindex.ManagedHelperFile)
 	if err != nil || helper.Digest != cfg.TestSHA256 {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerTools)
 		return nil, errors.New("neutral preparation helper binding")
 	}
 	mark("tools", at)
@@ -171,12 +180,14 @@ func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance,
 	at = time.Now()
 	originals, err := materialize(ctx, inv)
 	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerMaterialize)
 		return nil, err
 	}
 	mark("materialize", at)
 
 	at = time.Now()
 	if err = setupCompiler(ctx, inventory); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerCompiler)
 		return nil, err
 	}
 	mark("compiler", at)
@@ -184,39 +195,51 @@ func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance,
 	at = time.Now()
 	plan, err := buildPlan(ctx, roots, capture.command, ensureQuiescentWorker, evictCompilerCache, capture.read)
 	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerPlan)
 		return nil, err
 	}
 	mark("plan", at)
 
 	at = time.Now()
 	if err = verifyRules(ctx, inventory); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerVerify)
 		return nil, err
 	}
 	if err = verifyWorkspace(ctx, plan, originals); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerVerify)
 		return nil, err
 	}
 	if err = verifySDK(plan); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerVerify)
 		return nil, err
 	}
 	mark("verify", at)
 
 	at = time.Now()
 	if err = ensureQuiescentWorker(); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerFinal)
 		return nil, err
 	}
 	if err = verifyRules(ctx, inventory); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerFinal)
 		return nil, err
 	}
 	if err = verifyWorkspace(ctx, planner.Plan{}, originals); err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerFinal)
 		return nil, err
 	}
 	mark("final", at)
 
 	result, err := capture.result(cfg, allowance, stages, time.Since(started))
 	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerResult)
 		return nil, err
 	}
-	return encodePreparationResult(result)
+	raw, err := encodePreparationResult(result)
+	if err != nil {
+		typedsandbox.RefuseSite(typedsandbox.SiteWorkerEncode)
+	}
+	return raw, err
 }
 
 // loadPreparationControls reads the fixed read-only /controls mount under the

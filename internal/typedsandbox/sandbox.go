@@ -673,6 +673,9 @@ func inspectStoppedRefusal(inspectErr error, got inspection, options Options, ow
 		if report.StopReason == "resource_observation" {
 			reason += " sampling_stage=" + closedSamplingStage(report.Resources.SamplingFailureStage)
 		}
+		if report.StopReason == "worker_failed" {
+			reason += " worker_site=" + closedWorkerSite(report.Stderr)
+		}
 		return reason
 	case !report.Complete:
 		return prefix + "incomplete"
@@ -701,6 +704,18 @@ func closedSamplingStage(stage string) string {
 	default:
 		return "unknown"
 	}
+}
+
+func closedWorkerSite(stderr []byte) string {
+	if len(stderr) > refusalSiteFrameBytes {
+		return "unknown"
+	}
+	for site := SiteWorkerInvocation; site <= SiteWorkerOutput; site++ {
+		if bytes.Equal(stderr, refusalSiteFrame(site)) {
+			return site.token()
+		}
+	}
+	return "unknown"
 }
 
 // reportWirePrefixBytes bounds the raw wire bytes a supervisor-report refusal

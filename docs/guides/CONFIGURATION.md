@@ -948,6 +948,14 @@ make only the read-only bundle view worker-visible (`0555` directories and
 executables, `0444` other files) before sealing the stage; the private stage
 root and host package stay owner-only. The spent prep-14 stage is held.
 
+Prep-15 passed those access checks and reached the worker, but the worker
+returned 125 and the supervisor reported `worker_failed`. No result or receipt
+exists; the exact worker step was not retained. For future attempts, a terminal
+error includes `worker_site=<fixed token>` only when the valid supervisor report
+contains one exact worker refusal frame. Missing or malformed frames report
+`unknown` without copying worker stderr. Preserve the spent prep-15 stage and
+its STOP records; another attempt needs a fresh ID and scoped decision.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact

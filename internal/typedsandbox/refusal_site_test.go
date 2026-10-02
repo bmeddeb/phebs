@@ -24,8 +24,8 @@ func TestRefusalSiteVocabularyIsClosedAndDistinct(t *testing.T) {
 	if len(vocab) != int(refusalSiteCount) {
 		t.Fatalf("table holds %d tokens but refusalSiteCount is %d", len(vocab), refusalSiteCount)
 	}
-	if len(vocab) != 21 {
-		t.Fatalf("vocabulary has %d tokens, want 21; adding a site is a deliberate act", len(vocab))
+	if len(vocab) != 35 {
+		t.Fatalf("vocabulary has %d tokens, want 35; adding a site is a deliberate act", len(vocab))
 	}
 	seen := make(map[string]struct{}, len(vocab))
 	for site, token := range vocab {
@@ -108,6 +108,7 @@ func TestRefusalSiteFrame(t *testing.T) {
 		{"selector", SiteSelector, "phebs_site=selector\n"},
 		{"allow_live", SiteAllowanceLive, "phebs_site=allow_live\n"},
 		{"allow_bootdiff", SiteAllowanceBootMismatch, "phebs_site=allow_bootdiff\n"},
+		{"worker_materialize", SiteWorkerMaterialize, "phebs_site=w_materialize\n"},
 		{"allow_nsstat", SiteAllowanceTimeStat, "phebs_site=allow_nsstat\n"},
 		{"allow_nsdiff", SiteAllowanceTimeMismatch, "phebs_site=allow_nsdiff\n"},
 		{"allow_nowread", SiteAllowanceNowRead, "phebs_site=allow_nowread\n"},
@@ -138,6 +139,24 @@ func TestRefusalSiteFrame(t *testing.T) {
 		}
 		if body := strings.TrimSuffix(strings.TrimPrefix(string(frame), refusalSitePrefix), "\n"); body != token {
 			t.Fatalf("token %q round-tripped as %q", token, body)
+		}
+	}
+}
+
+func TestClosedWorkerSite(t *testing.T) {
+	for site := SiteWorkerInvocation; site <= SiteWorkerOutput; site++ {
+		if got := closedWorkerSite(refusalSiteFrame(site)); got != site.token() {
+			t.Fatalf("site %d became %q, want %q", site, got, site.token())
+		}
+	}
+	for _, raw := range [][]byte{
+		nil,
+		[]byte("phebs_site=w_controls"),
+		[]byte("phebs_site=w_controls\nprivate/path"),
+		refusalSiteFrame(SiteAllowanceLive),
+	} {
+		if got := closedWorkerSite(raw); got != "unknown" {
+			t.Fatalf("worker stderr %q became %q", raw, got)
 		}
 	}
 }

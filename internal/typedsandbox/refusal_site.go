@@ -11,7 +11,8 @@ type refusalSite int
 
 // The closed refusal-site vocabulary. Each site names exactly one terminal
 // exit-125 refusal reachable on the production linux/arm64 target, on the
-// supervisor's pre-report path or on the dispatcher's pre-Supervisor path.
+// supervisor's pre-report path, dispatcher's pre-Supervisor path, or the
+// neutral preparation worker's terminal path.
 const (
 	SiteIdentity refusalSite = iota
 	SiteTimer
@@ -34,6 +35,20 @@ const (
 	SiteEncode
 	SiteSelector
 	SiteArgv
+	SiteWorkerInvocation
+	SiteWorkerBinding
+	SiteWorkerClock
+	SiteWorkerControls
+	SiteWorkerBuildInfo
+	SiteWorkerTools
+	SiteWorkerMaterialize
+	SiteWorkerCompiler
+	SiteWorkerPlan
+	SiteWorkerVerify
+	SiteWorkerFinal
+	SiteWorkerResult
+	SiteWorkerEncode
+	SiteWorkerOutput
 
 	refusalSiteCount
 )
@@ -62,6 +77,20 @@ var refusalSiteTokens = [refusalSiteCount]string{
 	SiteEncode:                "encode",
 	SiteSelector:              "selector",
 	SiteArgv:                  "argv",
+	SiteWorkerInvocation:      "w_invocation",
+	SiteWorkerBinding:         "w_binding",
+	SiteWorkerClock:           "w_clock",
+	SiteWorkerControls:        "w_controls",
+	SiteWorkerBuildInfo:       "w_buildinfo",
+	SiteWorkerTools:           "w_tools",
+	SiteWorkerMaterialize:     "w_materialize",
+	SiteWorkerCompiler:        "w_compiler",
+	SiteWorkerPlan:            "w_plan",
+	SiteWorkerVerify:          "w_verify",
+	SiteWorkerFinal:           "w_final",
+	SiteWorkerResult:          "w_result",
+	SiteWorkerEncode:          "w_encode",
+	SiteWorkerOutput:          "w_output",
 }
 
 // refusalSiteLongestToken must be the longest entry in refusalSiteTokens. The
@@ -103,8 +132,9 @@ func refusalSiteFrame(site refusalSite) []byte {
 }
 
 // RefuseSite names the terminal refusal site on fd 2 before the process exits
-// 125 without a report. Every call site is already a run-ending refusal on the
-// goroutine that refuses, so this cannot turn that goroutine's accepting path
+// 125. A worker frame can be carried inside its supervisor report. Every call
+// site is already a run-ending refusal on the goroutine that refuses, so this
+// cannot turn that goroutine's accepting path
 // into a stderr producer. One bounded write, never retried: an unavailable
 // transport cannot prevent the exit, which is the same discipline watchdogExit
 // applies to its own fd-2 frame.

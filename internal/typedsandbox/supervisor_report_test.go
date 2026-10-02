@@ -193,6 +193,8 @@ func TestRunNamesInspectStoppedRefusal(t *testing.T) {
 		{"reported resource observation", "predicate=supervisor_exit stop_reason=resource_observation sampling_stage=process_stat_read"},
 		{"reported hostile sampling", "predicate=supervisor_exit stop_reason=resource_observation sampling_stage=unknown"},
 		{"reported hostile stop", "predicate=supervisor_exit stop_reason=unknown"},
+		{"reported worker controls", "predicate=supervisor_exit stop_reason=worker_failed worker_site=w_controls"},
+		{"reported hostile worker", "predicate=supervisor_exit stop_reason=worker_failed worker_site=unknown"},
 		{"incomplete report", "predicate=incomplete"},
 	} {
 		t.Run(tc.fault, func(t *testing.T) {
