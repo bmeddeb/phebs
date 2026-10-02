@@ -193,7 +193,14 @@ func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance,
 	mark("compiler", at)
 
 	at = time.Now()
-	plan, err := buildPlan(ctx, roots, capture.command, ensureQuiescentWorker, evictCompilerCache, capture.read)
+	plan, err := buildPlan(ctx, roots, capture.command, ensureQuiescentWorker, func(name string) (CacheEviction, error) {
+		result, err := evictCompilerCache(name)
+		if err != nil {
+			_, cause := filepath.EvalSymlinks(name)
+			err = errors.Join(err, cause)
+		}
+		return result, err
+	}, capture.read)
 	if err != nil {
 		if !capture.commandFailed {
 			frame := preparationCommandFailure(capture.index, []byte(err.Error()), err)
