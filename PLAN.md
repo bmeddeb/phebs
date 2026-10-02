@@ -8041,3 +8041,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   startup/restart, retry/no-op or publication work; no Phebs lock, corpus or
   shard scan, cache, concurrency, memory/disk or child bound changes. The
   one-time daemon restart and config validation are retained host costs.
+
+- **2026-10-01 — T45.4 prep-13 stopped-report attribution.** The approved
+  exact prep-12 cleanup and single prep-13 stage/dispatch passed offline,
+  custody, Docker-setting and capacity gates. The native test stopped in
+  0.56 seconds at `inspect_stopped`, with container exit 125 and no result or
+  receipt. The supervisor report passed schema, allowance, seal, phase and
+  request checks, but the later stopped-inspection OR returned generic
+  `ErrExecution`; the harness correctly printed `site_unreported` because
+  there was no fd2 refusal token. The exact predicate and report stop reason
+  were not retained, so this STOP establishes no worker or host cause. The
+  spent stage and eight small records remain held. Prospectively, keep the
+  stopped-inspection predicates and order exact, name the first refusal with
+  fixed tokens, and include only allowlisted report stop and sampling-stage
+  tokens when a nonzero supervisor exit reaches that predicate. Unknown
+  report strings collapse to `unknown`; raw Docker or worker text is never
+  copied into the error. Preserve `ErrExecution`, cleanup and completion
+  behavior. A fresh native ID, independent review and separate execution
+  decision remain required to learn the next report reason.
+
+  **Cost.** An accepting run performs the same already-required stopped
+  inspection and identity verification, with only local ordered scalar
+  branches. A refusal adds one bounded closed error string; it performs no
+  extra daemon request, filesystem read, hash, lock or child. Ordinary
+  query/request, sync tick, startup/restart, retry/no-op and publication
+  costs, full-corpus/shard work, cache behavior, concurrency, and persistent
+  memory/disk bounds are unchanged.

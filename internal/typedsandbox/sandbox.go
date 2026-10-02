@@ -643,11 +643,64 @@ func runChecked(ctx context.Context, options Options, check func(context.Context
 	result.StopReason = report.StopReason
 	stage = "inspect_stopped"
 	got, _, err = c.inspect(ctx, created.ID)
-	if err != nil || verify(got, options, owner) != nil || got.State.Running || got.State.Pid != 0 || got.State.OOMKilled ||
-		got.State.ExitCode != waited.StatusCode || waited.StatusCode != report.ExitCode || report.ExitCode != 0 || !report.Complete || !report.Resources.LimitsVerified {
-		return result, ErrExecution
+	if reason := inspectStoppedRefusal(err, got, options, owner, waited.StatusCode, report); reason != "" {
+		return result, errors.Join(ErrExecution, errors.New(reason))
 	}
 	return result, nil
+}
+
+// inspectStoppedRefusal preserves the existing predicate order while keeping
+// the returned diagnostic inside closed, source-free vocabularies.
+func inspectStoppedRefusal(inspectErr error, got inspection, options Options, owner journal, waitedCode int, report supervisorReport) string {
+	const prefix = "inspect_stopped_refusal predicate="
+	switch {
+	case inspectErr != nil:
+		return prefix + "inspect"
+	case verify(got, options, owner) != nil:
+		return prefix + "identity"
+	case got.State.Running:
+		return prefix + "running"
+	case got.State.Pid != 0:
+		return prefix + "pid"
+	case got.State.OOMKilled:
+		return prefix + "oom_killed"
+	case got.State.ExitCode != waitedCode:
+		return prefix + "inspect_wait_exit_mismatch"
+	case waitedCode != report.ExitCode:
+		return prefix + "wait_report_exit_mismatch"
+	case report.ExitCode != 0:
+		reason := prefix + "supervisor_exit stop_reason=" + closedSupervisorStop(report.StopReason)
+		if report.StopReason == "resource_observation" {
+			reason += " sampling_stage=" + closedSamplingStage(report.Resources.SamplingFailureStage)
+		}
+		return reason
+	case !report.Complete:
+		return prefix + "incomplete"
+	case !report.Resources.LimitsVerified:
+		return prefix + "limits_unverified"
+	default:
+		return ""
+	}
+}
+
+func closedSupervisorStop(reason string) string {
+	switch reason {
+	case "kernel_limits", "scratch_setup", "worker_start", "resource_observation", "output_limit",
+		"memory_limit", "process_limit", "descendants_retained", "worker_failed":
+		return reason
+	default:
+		return "unknown"
+	}
+}
+
+func closedSamplingStage(stage string) string {
+	switch stage {
+	case "kernel_events", "memory_peak", "process_inventory", "process_stat_read", "process_stat_shape",
+		"process_count", "scratch_space", "shared_memory_space":
+		return stage
+	default:
+		return "unknown"
+	}
 }
 
 // reportWirePrefixBytes bounds the raw wire bytes a supervisor-report refusal

@@ -184,3 +184,28 @@ func TestRunNamesSupervisorReportPredicate(t *testing.T) {
 		})
 	}
 }
+
+func TestRunNamesInspectStoppedRefusal(t *testing.T) {
+	for _, tc := range []struct {
+		fault, want string
+	}{
+		{"reported kernel limits", "predicate=supervisor_exit stop_reason=kernel_limits"},
+		{"reported resource observation", "predicate=supervisor_exit stop_reason=resource_observation sampling_stage=process_stat_read"},
+		{"reported hostile sampling", "predicate=supervisor_exit stop_reason=resource_observation sampling_stage=unknown"},
+		{"reported hostile stop", "predicate=supervisor_exit stop_reason=unknown"},
+		{"incomplete report", "predicate=incomplete"},
+	} {
+		t.Run(tc.fault, func(t *testing.T) {
+			_, options := fakeDaemon(t, tc.fault)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			result, err := runFake(ctx, options)
+			if !errors.Is(err, ErrExecution) || !result.Removed ||
+				!strings.Contains(err.Error(), "typed-index inspect_stopped:") ||
+				!strings.Contains(err.Error(), "inspect_stopped_refusal "+tc.want) ||
+				strings.Contains(err.Error(), "private/path") {
+				t.Fatalf("result=%+v error=%v", result, err)
+			}
+		})
+	}
+}

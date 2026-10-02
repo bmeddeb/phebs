@@ -199,6 +199,9 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		if d.started && strings.HasPrefix(d.fault, "watchdog") {
 			got.State.ExitCode = 124
 		}
+		if d.started && strings.HasPrefix(d.fault, "reported ") {
+			got.State.ExitCode = 125
+		}
 		write(200, got)
 	case strings.HasSuffix(path, "/attach"):
 		w.WriteHeader(200)
@@ -258,6 +261,23 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		if d.fault == "incomplete report" {
 			report.Complete = false
 		}
+		if strings.HasPrefix(d.fault, "reported ") {
+			report.ExitCode = 125
+			report.Complete = false
+			report.Resources.LimitsVerified = false
+			switch d.fault {
+			case "reported kernel limits":
+				report.StopReason = "kernel_limits"
+			case "reported resource observation":
+				report.StopReason = "resource_observation"
+				report.Resources.SamplingFailureStage = "process_stat_read"
+			case "reported hostile sampling":
+				report.StopReason = "resource_observation"
+				report.Resources.SamplingFailureStage = "private/path"
+			case "reported hostile stop":
+				report.StopReason = "private/path"
+			}
+		}
 		raw, _ := json.Marshal(report)
 		if strings.HasPrefix(d.fault, "watchdog") {
 			snapshots := newWatchdogSnapshots(WallLimit)
@@ -309,6 +329,9 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		status := 0
 		if strings.HasPrefix(d.fault, "watchdog") {
 			status = 124
+		}
+		if strings.HasPrefix(d.fault, "reported ") {
+			status = 125
 		}
 		write(200, map[string]int{"StatusCode": status})
 	case r.Method == "DELETE":

@@ -932,6 +932,14 @@ and the daemon reports the override with no containers present. The spent
 prep-12 attempt was not rerun; a fresh attempt must still pass its own
 supervisor clock gate.
 
+Prep-13 then reached a valid supervisor report but stopped at the later
+`inspect_stopped` check with exit 125 and no fd2 site token. Its exact report
+reason was not retained. For future stopped-inspection refusals, the error
+names the first failed predicate and, on a nonzero supervisor exit, reports
+only an allowlisted stop reason and optional sampling stage. Unknown strings
+become `unknown`; the check remains fail closed. Prep-13 remains spent and
+held, with no result or receipt.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact
