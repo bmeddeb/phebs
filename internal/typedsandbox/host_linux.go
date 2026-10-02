@@ -234,6 +234,8 @@ func VerifyHostScratch(ctx context.Context, o HostScratchOptions) (HostScratchRe
 // container mutations through its lifecycle. Any existing container,
 // including stopped or unrelated containers, refuses cleanup; none is deleted.
 // This availability tradeoff makes no shared-daemon coexistence claim.
+// An exact-owned overallocated image is retired, but ErrCustody is returned so
+// cleanup cannot erase the execution refusal.
 func CleanupHostScratch(ctx context.Context, o HostScratchOptions) error {
 	lock, err := hostLock(ctx, o)
 	if err != nil {
@@ -256,6 +258,7 @@ func CleanupHostScratch(ctx context.Context, o HostScratchOptions) error {
 	}
 	imagePath := root + "/image.ext4"
 	var image *os.File
+	var allocationErr error
 	if j.ImageInode != 0 {
 		if _, e := os.Lstat(imagePath); errors.Is(e, os.ErrNotExist) && j.Phase == "retiring" {
 			image = nil
@@ -269,8 +272,13 @@ func CleanupHostScratch(ctx context.Context, o HostScratchOptions) error {
 					_ = image.Close()
 				}
 			}()
-			if st, valid := hostImageIdentity(image, j); !valid || !hostImageGeometry(st.Size, st.Blocks, hostFullImageRequired(j.Phase)) {
+			st, valid := hostImageIdentity(image, j)
+			full := hostFullImageRequired(j.Phase)
+			if !valid || !hostImageGeometry(st.Size, st.Blocks, full) {
 				return ErrCustody
+			}
+			if !hostImageAllocation(st.Size, st.Blocks, full) {
+				allocationErr = ErrCustody
 			}
 		}
 	} else if _, err = os.Lstat(imagePath); !errors.Is(err, os.ErrNotExist) {
@@ -364,7 +372,7 @@ func CleanupHostScratch(ctx context.Context, o HostScratchOptions) error {
 	if os.Remove(root) != nil {
 		return ErrCustody
 	}
-	return syncParent(root)
+	return errors.Join(syncParent(root), allocationErr)
 }
 
 func hostLock(ctx context.Context, o HostScratchOptions) (*os.File, error) {

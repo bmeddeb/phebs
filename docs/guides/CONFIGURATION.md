@@ -1043,3 +1043,8 @@ execution allocation ceiling, so an overallocated owned image can be retired
 through the normal locked loop/mount/daemon checks. Ambiguous formatting or
 foreign/replaced custody still refuses. Cleanup does not turn a failed native
 receipt into a pass; record its outcome separately and use fresh run IDs.
+
+An overallocated image still makes native execution fail even when exact cleanup
+removes it successfully: cleanup returns `ErrCustody` after retiring that image.
+Record resource absence separately from the failed execution result. Initialization
+and successful retirement do not waive post-worker allocation checks.

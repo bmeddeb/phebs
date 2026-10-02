@@ -312,11 +312,17 @@ func installNeutralNative(t *testing.T, f fixture, w wireFixture, fail string) (
 	f.c.native.verify = func(context.Context, typedsandbox.HostScratchOptions) (typedsandbox.HostScratchReceipt, error) {
 		return *receipt, add("verify")
 	}
+	cleanups := 0
 	f.c.native.cleanup = func(context.Context, typedsandbox.HostScratchOptions) error {
-		if e := add("cleanup"); e != nil {
-			return e
-		}
+		cleanups++
+		// Overage remains a refusal even after the exact-owned image is gone.
 		receipt = nil
+		if e := add("cleanup"); e != nil {
+			return errors.Join(typedsandbox.ErrCustody, e)
+		}
+		if cleanups == 2 && fail == "cleanup-execute" {
+			return typedsandbox.ErrCustody
+		}
 		return nil
 	}
 	f.c.native.quiescent = func(context.Context, typedsandbox.RecoveryOptions) error { return add("quiescent") }
@@ -357,7 +363,7 @@ func installNeutralNative(t *testing.T, f fixture, w wireFixture, fail string) (
 
 func TestTypedExecutorCompleteTurn(t *testing.T) {
 	endpoint := testServer(t)
-	for n, fail := range []string{"", "prepare", "verify", "run-plan", "complete-plan", "advance", "run-execute", "complete-execute", "cleanup", "quiescent"} {
+	for n, fail := range []string{"", "prepare", "verify", "run-plan", "complete-plan", "advance", "run-execute", "complete-execute", "cleanup", "cleanup-execute", "quiescent"} {
 		t.Run("prefix-"+fail, func(t *testing.T) {
 			f, w := completeFixture(t, endpoint, "turn"+string(rune('a'+n)))
 			events, begins := installNeutralNative(t, f, w, fail)
@@ -368,6 +374,17 @@ func TestTypedExecutorCompleteTurn(t *testing.T) {
 				}
 				if *begins != 1 {
 					t.Fatal("allowance count", *begins)
+				}
+				if fail == "cleanup" || fail == "cleanup-execute" {
+					if !errors.Is(e, typedsandbox.ErrCustody) {
+						t.Fatal("allocation refusal lost", e)
+					}
+					if fail == "cleanup" && slices.Contains(*events, "advance") {
+						t.Fatal("plan cleanup advanced")
+					}
+					if fail == "cleanup-execute" && !slices.Contains(*events, "complete-execute") {
+						t.Fatal("execute cleanup not exercised")
+					}
 				}
 				inspected, inspectErr := f.s.InspectTypedIndexAttempt(t.Context(), out.AttemptDigest)
 				wantReason := typedindex.Containment

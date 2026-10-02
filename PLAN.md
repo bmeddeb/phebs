@@ -8315,3 +8315,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Controlled Linux proof, rebuilt exact helpers, fresh preparation/store seal,
   independent review and all four acceptance cases remain required. Spent
   receipts remain exact; no registration, target, release or scale claim.
+
+- **2026-10-02 — T45.4 preserve post-worker allocation refusal on retirement.**
+  The backing-image controlled proof and neutral-prep-23 passed at source36de,
+  with clean owned teardown; original spent receipts remain exact. Further audit
+  found that cleanup's old upper-allocation guard was also the post-worker
+  refusal joined before plan advancement or publication. Exact retirement now
+  records that violation from the same authenticated stat, removes only
+  unambiguous owned custody, and returns ErrCustody joined with the final parent
+  sync even after successful removal. This preserves refusal for every caller,
+  including native preparation, rather than treating initialization as proof of
+  a universal bound. No extra production stat, sync, child, lock, admission or resource
+  allowance is added. The opt-in negative fixture separately admits 64MiB
+  headroom, writes at most 256MiB of scattered data, samples/syncs after
+  each 128 writes (at most 512 pairs plus final sync/stat), and stops at the
+  first sampled production overage. Its own physical ceiling is checked;
+  ambiguity retains honest STOP custody. Plan and execute cleanup regressions must prevent advance
+  and publication/no-replay respectively; an actual Linux overallocated fixture
+  must both report refusal and prove root absence. Fresh helper/prep24/FINAL
+  authority and independent review remain required; prep23 establishes no new
+  acceptance authority for this correction.

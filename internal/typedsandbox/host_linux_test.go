@@ -367,3 +367,148 @@ func TestHostImageIdentity(t *testing.T) {
 		t.Fatal("wrong geometry")
 	}
 }
+
+func TestHostOverallocatedRetirement(t *testing.T) {
+	if !*hostInitializationProof {
+		t.Skip("native opt-in")
+	}
+	if os.Geteuid() != 0 {
+		t.Fatal("root required")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 120*time.Second)
+	defer cancel()
+	o := hostFixture()
+	o.Base = hostTestBase(t, HostScratchBase)
+	o.MkfsDigest = "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+	lock, err := hostLock(ctx, o)
+	if err != nil {
+		t.Fatal("lock refused")
+	}
+	var image *os.File
+	owned := false
+	defer func() {
+		if image != nil {
+			if err := image.Close(); err != nil {
+				t.Error("image close", err)
+			}
+		}
+		if lock != nil {
+			if err := lock.Close(); err != nil {
+				t.Error("lock close", err)
+			}
+		}
+		if owned {
+			cleanupCtx, done := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer done()
+			err := CleanupHostScratch(cleanupCtx, o)
+			if err != nil && !errors.Is(err, ErrCustody) {
+				t.Error("cleanup", err)
+			}
+			if _, err := os.Lstat(o.root()); !errors.Is(err, os.ErrNotExist) {
+				t.Error("custody retained")
+			}
+		}
+	}()
+	entries, err := os.ReadDir(HostScratchBase)
+	if err != nil || len(entries) != 1 || entries[0].Name() != ".lock" {
+		t.Fatal("custody not empty")
+	}
+	bound, capacity, err := hostBoundBase(ctx, HostScratchBase, o.Base, 0, 0)
+	if err != nil {
+		t.Fatal("base refused")
+	}
+	gate := lifecycle.NewGate(HostScratchBase)
+	err = hostCapacity(ctx, capacity, gate)
+	const fixtureExtra = 64 << 20 // Negative fixture only; production allowance stays exact.
+	budget, budgetErr := DeriveHostScratchBudget(capacity.BlockSize)
+	observed := lifecycle.Capacity{TotalBytes: int64(capacity.TotalBytes), AvailableBytes: int64(capacity.AvailableBytes), UsedBytes: int64(capacity.TotalBytes - capacity.AvailableBytes)}
+	admitted, extraErr := gate.CheckObserved(ctx, observed, budget.Bytes+fixtureExtra)
+	err = errors.Join(err, budgetErr, extraErr, bound.Close())
+	if admitted.Pressure != lifecycle.PressureNormal || capacity.AvailableBytes < uint64(budget.Bytes+fixtureExtra) {
+		t.Fatal("fixture headroom refused")
+	}
+	t.Logf("FAULT_FIXTURE reserved_extra=%d projected_percent=%d", fixtureExtra, admitted.UsedPercent)
+	if err != nil {
+		t.Fatal("capacity refused")
+	}
+	if err = os.Mkdir(o.root(), 0700); err != nil {
+		t.Fatal(err)
+	}
+	owned = true
+	if err = syncParent(o.root()); err != nil {
+		t.Fatal(err)
+	}
+	j := hostOwner{Schema: hostOwnerSchema, Options: o, Phase: "new", Loop: -1}
+	if err = writeHostOwner(o.root(), j, true); err != nil {
+		t.Fatal(err)
+	}
+	image, err = os.OpenFile(o.root()+"/image.ext4", os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st unix.Stat_t
+	if unix.Fstat(int(image.Fd()), &st) != nil {
+		t.Fatal("stat")
+	}
+	j.Phase = "image"
+	j.ImageDevice = uint64(st.Dev)
+	j.ImageInode = st.Ino
+	if err = writeHostOwner(o.root(), j, false); err != nil {
+		t.Fatal(err)
+	}
+	if unix.Fallocate(int(image.Fd()), 0, 0, hostImageBytes) != nil {
+		t.Fatal("fallocate")
+	}
+	// Fault injection: scattered conversion of unwritten extents realizes the
+	// overage that retirement must report even after safely removing the image.
+	block := make([]byte, 4096)
+	block[0] = 1
+	for i := int64(0); i < 65536; i++ {
+		if err = ctx.Err(); err != nil {
+			t.Fatal(err)
+		}
+		if n, e := image.WriteAt(block, (i*3001%(hostImageBytes/4096))*4096); e != nil || n != len(block) {
+			t.Fatal("scatter", e)
+		}
+		if i%128 == 127 {
+			if err = image.Sync(); err != nil {
+				t.Fatal(err)
+			}
+			if unix.Fstat(int(image.Fd()), &st) != nil {
+				t.Fatal("stat")
+			}
+			if st.Blocks*512 > hostImageBytes+fixtureExtra {
+				t.Fatal("fixture physical ceiling exceeded")
+			}
+			if !hostImageAllocation(st.Size, st.Blocks, true) {
+				break
+			}
+		}
+	}
+	if err = image.Sync(); err != nil {
+		t.Fatal(err)
+	}
+	if unix.Fstat(int(image.Fd()), &st) != nil || !hostImageGeometry(st.Size, st.Blocks, true) || hostImageMatches(image, j, true) {
+		t.Fatal("overage not realized", st.Size, st.Blocks)
+	}
+	t.Logf("OVERALLOCATED_IMAGE logical=%d allocated=%d", st.Size, st.Blocks*512)
+	j.Phase = "allocated"
+	if err = writeHostOwner(o.root(), j, false); err != nil {
+		t.Fatal(err)
+	}
+	if err = image.Close(); err != nil {
+		t.Fatal(err)
+	}
+	image = nil
+	if err = lock.Close(); err != nil {
+		t.Fatal(err)
+	}
+	lock = nil
+	if err = CleanupHostScratch(ctx, o); !errors.Is(err, ErrCustody) {
+		t.Fatal("allocation violation erased", err)
+	}
+	if _, err = os.Lstat(o.root()); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("overallocated custody retained")
+	}
+	owned = false
+}
