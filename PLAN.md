@@ -8220,3 +8220,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   frozen helper is retained with the private evidence. No additional production
   cost follows from this evidence record. Native acceptance/controller/recovery,
   runtime registration, target execution and scale/release gates remain open.
+
+- **2026-10-02 — T45.4 fixed formatter alias in native acceptance.**
+  Fresh `neutral-prep-22` at integrated source `24a83fe6` passed native
+  preparation and host sealing with the current production helper, profile
+  epoch1 and clean owned teardown. The first neutral controller acceptance
+  stopped in read-only input verification before a case workspace or engine
+  existed. Its host capacity/run/collect groups closed; a deliberately invalid
+  child role, which cannot enter controller execution, isolated the fixed
+  formatter identity refusal. The VM's `/usr/sbin/mkfs.ext4` is the standard
+  alias to `/usr/sbin/mke2fs`; its bytes match the original sealed digest.
+  Production `runHostMkfs` already opens the fixed formatter, validates its
+  opened identity and bounded32MiB content, and executes that descriptor.
+  The test-only acceptance check now resolves only that fixed system path and
+  hashes its canonical regular, root-owned, non-writable target under the
+  same32MiB bound. Every staged input continues through the unchanged
+  component-by-component nofollow check. A read-only actual-system test and
+  the existing input-alias negative tests gate this correction. No production
+  behavior, tool digest, measured policy or registration changes. Acceptance
+  uses a fresh ID; the spent first dispatch is retained without a PASS claim.
+  The existing VM data disk hosts the separately admitted acceptance workspace
+  while host scratch retains its original device, avoiding a VM resize.
+  Per request/query, sync, retry/no-op and publication production costs are
+  unchanged. Acceptance preflight adds fixed-path canonical resolution and
+  one bounded32MiB opened-file hash in place of the rejected generic input
+  hash; it creates no child, lock, cache or persistent state. Native four-case
+  correctness and recovery remain unestablished until their actual receipts.

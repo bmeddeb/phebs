@@ -147,6 +147,34 @@ func acceptanceFileHash(name string, limit int64) (string, error) {
 	}
 	return "sha256:" + hex.EncodeToString(h.Sum(nil)), nil
 }
+
+// The system formatter may be the standard mkfs.ext4 -> mke2fs alias. Resolve
+// only that fixed system path; staged inputs still forbid aliases in every component.
+func acceptanceFormatterHash() (string, error) {
+	name, err := filepath.EvalSymlinks(typedsandbox.HostMkfsPath)
+	if err != nil {
+		return "", err
+	}
+	return acceptanceFileHash(name, 32<<20)
+}
+
+func TestNativeAcceptanceFormatterAlias(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("fixed system formatter ownership requires root")
+	}
+	raw, err := acceptanceSystemRead(typedsandbox.HostMkfsPath, 32<<20)
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skip("fixed system formatter is not installed")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := acceptanceFormatterHash()
+	if err != nil || got != acceptanceDigest(raw) {
+		t.Fatalf("formatter identity: digest=%s err=%v", got, err)
+	}
+}
+
 func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath string) (typedindex.Profile, []byte, error) {
 	var p typedindex.Profile
 	if configPath != filepath.Join(c.root(), "config.json") {
@@ -156,11 +184,15 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 	if e != nil || exe != filepath.Join(c.root(), "native-acceptance.test") {
 		return p, nil, errors.New("test executable location")
 	}
-	for _, x := range []struct{ path, digest string }{{exe, c.TestSHA256}, {filepath.Join(c.root(), "surreal"), c.EngineSHA256}, {typedsandbox.HostMkfsPath, c.MkfsSHA256}} {
+	for _, x := range []struct{ path, digest string }{{exe, c.TestSHA256}, {filepath.Join(c.root(), "surreal"), c.EngineSHA256}} {
 		h, e := acceptanceFileHash(x.path, typedindex.MaxFileBytes)
 		if e != nil || h != x.digest {
 			return p, nil, errors.New("executable identity")
 		}
+	}
+	formatter, e := acceptanceFormatterHash()
+	if e != nil || formatter != c.MkfsSHA256 {
+		return p, nil, errors.New("formatter identity")
 	}
 	raw, e := acceptanceRead(filepath.Join(c.root(), "inventory.json"), typedindex.MaxInventoryBytes)
 	if e != nil {

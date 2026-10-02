@@ -969,6 +969,13 @@ contains one exact worker refusal frame. Missing or malformed frames report
 freed by exact guarded cleanup; its sealed STOP records remain retained.
 Another attempt needs a fresh ID and scoped decision.
 
+Native acceptance checks the fixed system formatter separately from staged
+inputs: the standard `mkfs.ext4` alias may resolve to its canonical, root-owned
+`mke2fs` file, whose bounded bytes must match the sealed digest. Staged input
+aliases still refuse. Workspace and host scratch may use distinct existing
+filesystems only when each independently admits its unchanged complete budget;
+neutral preparation alone does not establish controller acceptance.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact
