@@ -8067,3 +8067,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   query/request, sync tick, startup/restart, retry/no-op and publication
   costs, full-corpus/shard work, cache behavior, concurrency, and persistent
   memory/disk bounds are unchanged.
+
+- **2026-10-02 — T45.4 prep-14 worker-visible bundle mode correction.** The
+  separately approved prep-13 stage free and single prep-14 stage/dispatch
+  passed custody and capacity gates, then stopped at a valid supervisor report:
+  `inspect_stopped_refusal predicate=supervisor_exit stop_reason=worker_start`,
+  exit 125, no result or receipt. Eight small records are sealed; the spent
+  stage remains held. The report does not distinguish socket creation,
+  invocation send or child start. Independently, exact VM modes show the
+  root-owned `/inputs` bind source at `0700` and its helper at `0500`, while
+  the supervisor starts the worker as UID 65534 without DAC override. That
+  worker cannot traverse or execute the helper. Keep the host package and
+  archive modes, private stage root, read-only bind, file hashes and one-shot
+  admission exact. On a *new* stage, publish bundle regular files as `0444` or
+  `0555` and bundle directories as `0555`, syncing each mode before the stage
+  marker. Dispatch requires `0555` for the two pinned helper binaries before
+  spending its marker. This fixes the deterministic access defect without
+  claiming which of the three historical `worker_start` returns fired. A fresh
+  ID, reviewed package and separate execution decision remain required.
+
+  **Cost.** Only one native stage adds one `fchmod` per accepted file (at most
+  50,006) and one open, `fchmod`, `fsync` and close per bundle directory (at
+  most 20,010); the existing file `fsync`, hash, byte and entry bounds remain.
+  Dispatch keeps its two already-required helper hashes and adds no scan or
+  child. Query/request, sync tick, startup/restart, retry/no-op, publication,
+  locks, cache, shard/corpus reads and steady-state memory/disk costs do not
+  change. The spent prep-14 stage is never repaired in place.

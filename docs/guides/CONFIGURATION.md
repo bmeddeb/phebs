@@ -940,6 +940,14 @@ only an allowlisted stop reason and optional sampling stage. Unknown strings
 become `unknown`; the check remains fail closed. Prep-13 remains spent and
 held, with no result or receipt.
 
+Prep-14 then stopped at the reported `worker_start` reason, with no result or
+receipt. Its exact child-start syscall was not retained. The staged bundle's
+root-owned `0700` directories and `0500` helper could not be traversed or
+executed by the sandbox worker's UID 65534. Future native preparation stages
+make only the read-only bundle view worker-visible (`0555` directories and
+executables, `0444` other files) before sealing the stage; the private stage
+root and host package stay owner-only. The spent prep-14 stage is held.
+
 ### Immutable bundle contract (T45.3)
 
 The managed contract defines a Phebs bundle over bounded SCIP members, exact

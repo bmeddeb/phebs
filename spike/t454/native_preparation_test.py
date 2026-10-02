@@ -172,8 +172,23 @@ class PreparationTests(unittest.TestCase):
         self.assertLess(n.REMOTE_PROGRAM.index("write(root/'dispatch.json'"), n.REMOTE_PROGRAM.index('subprocess.run('))
         # The staged helper bytes are checked before spending the one dispatch.
         self.assertIn("for name in ('phebs-typed-worker','tools/bin/phebs-t451b-native-driver'):", n.REMOTE_PROGRAM)
-        self.assertLess(n.REMOTE_PROGRAM.index("if stat.S_IMODE(os.lstat(p).st_mode)!=0o500 or digest(read(p,256<<20))!=cfg['test_sha256']: reject()"),
+        self.assertLess(n.REMOTE_PROGRAM.index("if stat.S_IMODE(os.lstat(p).st_mode)!=0o555 or digest(read(p,256<<20))!=cfg['test_sha256']: reject()"),
                         n.REMOTE_PROGRAM.index("write(root/'dispatch.json'"))
+
+    def test_staged_bundle_is_visible_to_unprivileged_worker(self):
+        node = next(x for x in ast.parse(n.REMOTE_PROGRAM).body
+                    if isinstance(x, ast.FunctionDef) and x.name == 'staged_mode')
+        scope = {}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), '<staged_mode>', 'exec'), scope)
+        mode = scope['staged_mode']
+        self.assertEqual(mode('bundle/phebs-typed-worker', 0o500), 0o555)
+        self.assertEqual(mode('bundle/source/lib/lib.go', 0o400), 0o444)
+        self.assertEqual(mode('native-preparation.test', 0o500), 0o500)
+        rp = n.REMOTE_PROGRAM
+        self.assertLess(rp.index('os.fchmod(out.fileno(),mode);os.fsync(out.fileno())'),
+                        rp.index("write(root/'staged.json'"))
+        self.assertLess(rp.index('os.fchmod(fd,0o555);os.fsync(fd)'),
+                        rp.index("write(root/'staged.json'"))
 
     def test_remote_diagnostic_output_is_bounded_and_retained(self):
         rp = n.REMOTE_PROGRAM

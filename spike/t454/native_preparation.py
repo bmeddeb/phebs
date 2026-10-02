@@ -242,6 +242,10 @@ def write(p,b,mode=0o600):
  fd=os.open(p.parent,os.O_RDONLY|os.O_DIRECTORY)
  try: os.fsync(fd)
  finally: os.close(fd)
+def staged_mode(name,mode):
+ if name.startswith('bundle/'):
+  return 0o555 if mode==0o500 else 0o444
+ return mode
 if os.geteuid()!=0 or len(sys.argv)<3: reject()
 a,ident=sys.argv[1:3]
 if not re.fullmatch('[a-z][a-z0-9-]{0,31}',ident): reject()
@@ -271,10 +275,11 @@ if a=='stage':
   v=os.statvfs(root)
   need=((row.size+v.f_frsize-1)//v.f_frsize+4)*v.f_frsize
   if v.f_bavail*v.f_frsize-need <= v.f_blocks*v.f_frsize//5 or v.f_favail<4: reject()
-  fd=os.open(dest,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,row.mode)
+  mode=staged_mode(name,row.mode)
+  fd=os.open(dest,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,mode)
   with os.fdopen(fd,'wb') as out:
    for chunk in contents: out.write(chunk)
-   out.flush();os.fsync(out.fileno())
+   out.flush();os.fchmod(out.fileno(),mode);os.fsync(out.fileno())
  raw=read(root/'config.json',16384)
  if digest(raw)!=expected: reject()
  cfg=json.loads(raw)
@@ -288,6 +293,11 @@ if a=='stage':
  for name,key,n in [('deployment.json','deployment_sha256',16384),('profile.json','profile_sha256',16384),('native-preparation.test','test_sha256',256<<20)]:
   if digest(read(root/name,n))!=cfg[key]: reject()
  if seen!=expected_names or cfg['id']!=ident: reject()
+ for directory in sorted(dirs):
+  if directory=='bundle' or directory.startswith('bundle/'):
+   fd=os.open(root/directory,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+   try: os.fchmod(fd,0o555);os.fsync(fd)
+   finally: os.close(fd)
  write(root/'staged.json',json.dumps({'config':expected},separators=(',',':')).encode())
 elif a in ('run','collect'):
  if len(sys.argv)!=(5 if a=='run' else 4): reject()
@@ -308,7 +318,7 @@ elif a in ('run','collect'):
   if digest(read(root/'native-preparation.test',256<<20))!=cfg['test_sha256']: reject()
   for name in ('phebs-typed-worker','tools/bin/phebs-t451b-native-driver'):
    p=root/'bundle'/name
-   if stat.S_IMODE(os.lstat(p).st_mode)!=0o500 or digest(read(p,256<<20))!=cfg['test_sha256']: reject()
+   if stat.S_IMODE(os.lstat(p).st_mode)!=0o555 or digest(read(p,256<<20))!=cfg['test_sha256']: reject()
   write(root/'dispatch.json',json.dumps({'config':expected},separators=(',',':')).encode())
   diagfd=os.open(root/'test-output.log',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_APPEND,0o600)
   rc=0
