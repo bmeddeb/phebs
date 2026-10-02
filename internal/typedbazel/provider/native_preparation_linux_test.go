@@ -336,6 +336,12 @@ func (c *preparationCapture) close() {
 func (c *preparationCapture) command(ctx context.Context, executable string, args, env []string, budget *outputBudget) ([]byte, []byte, error) {
 	stdout, stderr, err := runCommand(ctx, executable, args, env, budget)
 	if err != nil {
+		// Private neutral failure evidence only; never print tool stderr in the
+		// operator log or admit it as successful planning output.
+		frame := preparationCommandFailure(c.index, stderr, err)
+		if unix.SetNonblock(2, true) == nil {
+			_, _ = unix.Write(2, frame)
+		}
 		return stdout, stderr, err
 	}
 	i := c.index
@@ -502,6 +508,11 @@ func TestNativePreparationHost(t *testing.T) {
 		err = errors.Join(typedindex.WallLimit, err)
 	}
 	if err != nil {
+		if len(result.Stderr) > 0 && len(result.Stderr) <= preparationFailureBytes {
+			if captureErr := writeFile(filepath.Join(root, "failed-command.json"), result.Stderr, 0600); captureErr != nil {
+				t.Fatal("neutral preparation private failure capture unavailable")
+			}
+		}
 		t.Fatalf("%v (container_exit=%d oom_killed=%v %s)", err, result.ExitCode, result.OOMKilled, readRefusalSite(err.Error()))
 	}
 	if err = typedsandbox.VerifyCompletion(allowance, control, result); err != nil {

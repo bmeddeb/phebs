@@ -8116,3 +8116,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   held locks, full-corpus/shard reads, cache invalidation, concurrency,
   persistent memory/disk and child-process counts do not change. The worker
   output remains under the existing report byte ceiling.
+
+- **2026-10-02 — T45.4 neutral preparation private command-failure capture.**
+  Prep-16 proved missing source inventory (`w_materialize`); prep-17 added the
+  five exact neutral Git objects and progressed through compiler setup before
+  `w_plan`. The test-only command callback now returns a private failure frame
+  with zero-based command index, observed exit code (or -1), stderr byte count,
+  full stderr digest and at most 16 KiB of raw prefix. The host retains at most
+  32 KiB of returned worker stderr in a create-only mode-0600 failure file before
+  terminal refusal. Operator logs and production closed-site interpretation
+  retain their source-free behavior; arbitrary private bytes cannot authorize
+  completion. A lost/torn nonblocking single write remains inconclusive.
+  **Cost.** Only a failed opt-in neutral command hashes its already bounded
+  stderr, marshals at most a 16-KiB prefix with JSON/base64 expansion, and tries
+  one unretried nonblocking fd-2 write. Existing worker/supervisor output and
+  wall limits still apply. Its host adds at most one bounded private file on
+  terminal failure. Production query, sync, startup, retry, publication, locks,
+  caches, children and admission bounds are unchanged. No native pass follows.
