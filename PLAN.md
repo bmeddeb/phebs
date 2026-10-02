@@ -8141,6 +8141,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   command count for a non-command planning failure with the same single
   nonblocking fd-2 attempt. A command failure remains captured once; no second
   frame is emitted. These bytes remain private diagnostics, never admission
-  authority or operator log text. Cost is one bounded marshal/write only on
-  that terminal neutral failure, with unchanged production and successful-run
+  authority or operator log text. Cost adds the private error-string byte materialization and full-error
+  SHA256 (bounded by existing planner/projection/path inputs), one bounded
+  marshal/write only on that terminal neutral failure, and one boolean store
+  on a failed command, with unchanged production and successful-run
   costs, caps, locks, process count and cleanup. No native pass is established.
