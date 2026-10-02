@@ -8133,3 +8133,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   wall limits still apply. Its host adds at most one bounded private file on
   terminal failure. Production query, sync, startup, retry, publication, locks,
   caches, children and admission bounds are unchanged. No native pass follows.
+
+- **2026-10-02 — T45.4 neutral planning failure capture follow-up.**
+  Prep-18 reached `w_plan` but returned only its site token: command-only
+  capture does not cover cache, projection or assembly refusals. The opt-in
+  test worker now captures the bounded private error prefix and successful
+  command count for a non-command planning failure with the same single
+  nonblocking fd-2 attempt. A command failure remains captured once; no second
+  frame is emitted. These bytes remain private diagnostics, never admission
+  authority or operator log text. Cost is one bounded marshal/write only on
+  that terminal neutral failure, with unchanged production and successful-run
+  costs, caps, locks, process count and cleanup. No native pass is established.

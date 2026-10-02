@@ -195,6 +195,12 @@ func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance,
 	at = time.Now()
 	plan, err := buildPlan(ctx, roots, capture.command, ensureQuiescentWorker, evictCompilerCache, capture.read)
 	if err != nil {
+		if !capture.commandFailed {
+			frame := preparationCommandFailure(capture.index, []byte(err.Error()), err)
+			if unix.SetNonblock(2, true) == nil {
+				_, _ = unix.Write(2, frame)
+			}
+		}
 		typedsandbox.RefuseSite(typedsandbox.SiteWorkerPlan)
 		return nil, err
 	}
@@ -309,14 +315,15 @@ func loadPreparationControls(ctx context.Context, allowance typedsandbox.Allowan
 // root-relative reader nativePlan uses; returned bytes are captured under the
 // neutral retained ceiling.
 type preparationCapture struct {
-	ceiling  int64
-	retained int64
-	index    int
-	exe      [3]string
-	args     [3][]string
-	stdout   [2][]byte
-	proj     map[string][]byte
-	buildOut struct {
+	commandFailed bool
+	ceiling       int64
+	retained      int64
+	index         int
+	exe           [3]string
+	args          [3][]string
+	stdout        [2][]byte
+	proj          map[string][]byte
+	buildOut      struct {
 		sha   string
 		bytes int64
 	}
@@ -336,6 +343,7 @@ func (c *preparationCapture) close() {
 func (c *preparationCapture) command(ctx context.Context, executable string, args, env []string, budget *outputBudget) ([]byte, []byte, error) {
 	stdout, stderr, err := runCommand(ctx, executable, args, env, budget)
 	if err != nil {
+		c.commandFailed = true
 		// Private neutral failure evidence only; never print tool stderr in the
 		// operator log or admit it as successful planning output.
 		frame := preparationCommandFailure(c.index, stderr, err)
