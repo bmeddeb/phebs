@@ -873,6 +873,12 @@ exact resolved line `build --compilation_mode=fastbuild` plus newline, with a
 bound SHA-256; imports, extra configuration, command substitution and overrides
 refuse. Tool and launcher paths and argv recipes are Phebs-owned.
 
+Planning checks tool-process quiescence before reclaiming the private Gazelle
+compiler cache. A graph that never creates that cache has nothing to reclaim;
+absence is accepted only beneath a canonical existing directory ancestor.
+Aliases, dangling links and unexpected entries still refuse. An absent cache
+is not created, and an existing cache retains its inventory and deletion limits.
+
 The immutable prehydration manifest retains the reviewed importer ceilings:
 16 MiB of metadata, 50,000 files, 20,000 directories, 256 MiB per file and
 2 GiB total. It is digest-bound and rejects unsafe/duplicate/file-directory

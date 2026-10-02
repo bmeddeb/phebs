@@ -69,6 +69,22 @@ type CacheEviction struct {
 func evictCompilerCache(name string) (CacheEviction, error) {
 	var result CacheEviction
 	canonical, err := filepath.EvalSymlinks(name)
+	if errors.Is(err, os.ErrNotExist) && filepath.IsAbs(name) && filepath.Clean(name) == name {
+		// A graph without go_repository may never create this private cache.
+		// Validate the nearest existing ancestor before accepting absence;
+		// dangling links and aliases remain refusals, including below a link.
+		for ancestor := name; ; ancestor = filepath.Dir(ancestor) {
+			info, statErr := os.Lstat(ancestor)
+			if errors.Is(statErr, os.ErrNotExist) && ancestor != "/" {
+				continue
+			}
+			resolved, resolveErr := filepath.EvalSymlinks(ancestor)
+			if statErr != nil || !info.IsDir() || resolveErr != nil || resolved != ancestor {
+				return result, errors.New("compiler cache path is not canonical")
+			}
+			return result, nil
+		}
+	}
 	if err != nil || canonical != name {
 		return result, errors.New("compiler cache path is not canonical")
 	}

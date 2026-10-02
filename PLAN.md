@@ -8155,3 +8155,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   bounded private diagnostic. It does not retry eviction or mutate a path.
   Failure-only cost is one additional bounded-depth path resolution plus error
   joining; successful neutral and production work and all gates are unchanged.
+
+- **2026-10-02 — T45.4 absent Gazelle cache no-op.** Prep-20's private
+  supplemental lookup confirmed the fixed Gazelle repository-cache directory
+  missing after both query commands succeeded; its exact neutral graph declares
+  no `go_repository`. The shared provider eviction helper accepts confirmed
+  absence only on an absolute clean path beneath a canonical existing directory
+  ancestor. It walks missing suffix ancestors with Lstat; an existing symlink,
+  dangling link, alias, non-directory or failed lookup still refuses. No cache
+  is fabricated, no data is removed on absence, and the existing cache inventory,
+  byte/entry limits and deletion path are unchanged. Quiescence stays mandatory.
+  Regression covers missing leaf/repository and live/dangling parent/leaf aliases
+  plus non-directory refusal. The historical spike implementation remains exact.
+  **Cost.** Ordinary queries, sync, startup/restart and publication gain no work.
+  Each managed plan still attempts eviction once after query two. Existing caches
+  add one error-classification predicate; absence adds at most one Lstat per
+  fixed-path ancestor (six including `/`) and one nearest-ancestor resolution,
+  with constant memory, no file creation/deletion, held lock, new child, cache or
+  concurrency change. Retry repeats this bounded lookup; present-cache costs and
+  admission bounds remain unchanged. A full native pass is still unestablished.

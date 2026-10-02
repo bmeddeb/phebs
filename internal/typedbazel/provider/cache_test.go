@@ -140,3 +140,47 @@ func TestCompilerCacheRefusesUnfamiliarTreeBeforeMutation(t *testing.T) {
 		})
 	}
 }
+
+func TestCompilerCacheAbsence(t *testing.T) {
+	for _, kind := range []string{"missing cache", "missing repository", "alias", "dangling", "leaf alias", "leaf dangling", "file"} {
+		t.Run(kind, func(t *testing.T) {
+			parent, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			cache := filepath.Join(parent, "repository", "gocache")
+			switch kind {
+			case "missing cache":
+				err = os.Mkdir(filepath.Dir(cache), 0700)
+			case "alias":
+				err = os.Symlink(parent, filepath.Join(parent, "repository"))
+			case "dangling":
+				err = os.Symlink(filepath.Join(parent, "absent"), filepath.Join(parent, "repository"))
+			case "leaf alias", "leaf dangling":
+				if err = os.Mkdir(filepath.Dir(cache), 0700); err == nil {
+					target := parent
+					if kind == "leaf dangling" {
+						target = filepath.Join(parent, "absent")
+					}
+					err = os.Symlink(target, cache)
+				}
+			case "file":
+				err = os.WriteFile(filepath.Join(parent, "repository"), []byte("keep"), 0600)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := evictCompilerCache(cache)
+			if strings.HasPrefix(kind, "missing") {
+				if err != nil || result != (CacheEviction{}) {
+					t.Fatal("absent cache must be a zero-cost no-op", result, err)
+				}
+				if _, err := os.Lstat(cache); !errors.Is(err, os.ErrNotExist) {
+					t.Fatal("absence was mutated", err)
+				}
+			} else if err == nil {
+				t.Fatal("unfamiliar path accepted as absence")
+			}
+		})
+	}
+}
