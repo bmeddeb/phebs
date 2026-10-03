@@ -8535,3 +8535,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Bazel. Corrected transport and actual original-Git positive/negative checks,
   normal/race, offline Linux compilation/vet and two independent reviews pass;
   fresh native cohort execution remains pending.
+
+- **2026-10-02 — T45.4 runtime gate assertion preservation.** The complete
+  command-package check exposed the topology fixture's literal seven-call census
+  after dormant typed composition added one conditional coordinator call. Keep
+  the seven ordinary call sites exact and independently require the one optional
+  typed call; disabled-path runtime tests still require zero typed installation.
+  Two inherited command-refusal tests also incorrectly expected empty captured
+  output where the existing supervisor-argv and production-selector boundaries
+  emit their fixed path-free refusal frames. Require those exact frames and keep
+  all other refusal branches empty, retaining exit125. This changes only test
+  expectations, no command behavior or evidence/cost/admission contract. The
+  initial complete native fixture run on an isolated2-GiB RAM test volume passed
+  its real backup/archive/lifecycle fixtures but failed these assertions; that
+  diagnostic remains a failed gate. Its root-directory launcher also produced
+  unrelated fixture-path errors. Final validation uses the ordinary Go runner,
+  correct package directory and unchanged fixture deadlines, with Go build
+  temporaries on the host and fixture temporaries on the owned volume. This
+  avoids the host disk's independently demonstrated87-percent occupancy refusal
+  without deleting unrelated data or changing the production80-percent watermark.
+  Failed logs remain on the host; volume detachment follows joined test/engine
+  cleanup. No production query, sync, startup, retry, publication, lock, cache,
+  child, memory promise or disk admission limit changes.

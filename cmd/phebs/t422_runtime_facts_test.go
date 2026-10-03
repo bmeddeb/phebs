@@ -202,7 +202,7 @@ func TestT422RuntimeFactsSchedulerConstruction(t *testing.T) {
 	}
 	sources = append([]string{"main.go"}, sources...)
 	want := map[string]int{"observationIOConcurrency": 1, "observationCPUConcurrency": 1, "relationshipConcurrency": 1}
-	runnerStarts := 0
+	runnerStarts, typedRunnerStarts := 0, 0
 	for _, source := range sources {
 		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
 		if err != nil {
@@ -211,7 +211,11 @@ func TestT422RuntimeFactsSchedulerConstruction(t *testing.T) {
 		ast.Inspect(file, func(node ast.Node) bool {
 			if call, ok := node.(*ast.CallExpr); ok {
 				if function, ok := call.Fun.(*ast.Ident); ok && function.Name == "runStoreRunner" {
-					runnerStarts++
+					if source == "serve_typed_runtime.go" {
+						typedRunnerStarts++
+					} else {
+						runnerStarts++
+					}
 				}
 			}
 			field, ok := node.(*ast.KeyValueExpr)
@@ -238,5 +242,8 @@ func TestT422RuntimeFactsSchedulerConstruction(t *testing.T) {
 	}
 	if runnerStarts != 7 {
 		t.Fatal("serve store-runner topology changed", runnerStarts)
+	}
+	if typedRunnerStarts != 1 {
+		t.Fatal("optional typed store-runner topology changed", typedRunnerStarts)
 	}
 }

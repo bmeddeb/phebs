@@ -86,7 +86,11 @@ func TestTypedCommandRefusals(t *testing.T) {
 	for _, argv := range cases {
 		t.Run(strings.Join(argv, " "), func(t *testing.T) {
 			b, code := typedCommandProcess(t, "", "absent", argv...)
-			if code != 125 || len(b) != 0 {
+			want := ""
+			if len(argv) == 2 && argv[1] == "__typed_supervisor" {
+				want = "phebs_site=argv\n"
+			}
+			if code != 125 || string(b) != want {
 				t.Fatalf("refusal: exit=%d output=%q", code, b)
 			}
 		})
@@ -103,7 +107,7 @@ func TestTypedCommandProductionSelector(t *testing.T) {
 			{"phebs", "__plan_helper", "in.json", "out.phebs-plan.json"},
 		} {
 			b, code := typedCommandProcess(t, "", selector, argv...)
-			if code != 125 || len(b) != 0 {
+			if code != 125 || string(b) != "phebs_site=selector\n" {
 				t.Fatalf("selector %q: exit=%d output=%q", selector, code, b)
 			}
 		}
