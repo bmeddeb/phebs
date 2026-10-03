@@ -17,6 +17,7 @@ import (
 )
 
 const acceptanceSchema = "phebs-typed-native-acceptance-v1"
+const acceptanceCorpusSchema = "phebs-typed-native-corpus-acceptance-v1"
 const acceptanceRepo = "example.invalid/phebs-native-neutral"
 const acceptanceMaxConfig = 16384
 const acceptanceMaxReceipt = 128 << 10
@@ -44,6 +45,8 @@ type nativeAcceptanceConfig struct {
 	ProfileEpoch     int64             `json:"profile_epoch"`
 	DeploymentSHA256 string            `json:"deployment_sha256"`
 	Policy           typedindex.Policy `json:"policy"`
+	Cohort           string            `json:"cohort,omitempty"`
+	SourceGitSHA256  string            `json:"source_git_sha256,omitempty"`
 }
 
 func acceptanceDigest(raw []byte) string {
@@ -80,8 +83,19 @@ func parseAcceptance(raw []byte) (nativeAcceptanceConfig, error) {
 	if e := acceptanceDecode(raw, acceptanceMaxConfig, &c); e != nil {
 		return c, e
 	}
-	if c.Schema != acceptanceSchema || !acceptanceID.MatchString(c.ID) || c.Source.Repository != acceptanceRepo || c.Source.Validate() != nil || c.ProfileEpoch < 1 || c.Policy != typedindex.MeasuredPolicy() {
-		return c, errors.New("neutral acceptance contract")
+	if !acceptanceID.MatchString(c.ID) || c.Source.Validate() != nil || c.ProfileEpoch < 1 || c.Policy != typedindex.MeasuredPolicy() {
+		return c, errors.New("acceptance contract")
+	}
+	if c.Schema == acceptanceSchema {
+		if c.Source.Repository != acceptanceRepo || c.Cohort != "" || c.SourceGitSHA256 != "" {
+			return c, errors.New("neutral acceptance contract")
+		}
+	} else if c.Schema == acceptanceCorpusSchema {
+		if c.Source.Repository != acceptanceCorpusRepo || c.Source.Commit != acceptanceCorpusCommit || len(acceptanceCorpusRoots(c.Cohort)) == 0 || !acceptanceHash(c.SourceGitSHA256) {
+			return c, errors.New("frozen corpus acceptance contract")
+		}
+	} else {
+		return c, errors.New("unknown acceptance contract")
 	}
 	b, e := hex.DecodeString(c.SourceCommit)
 	if e != nil || len(b) != 20 || hex.EncodeToString(b) != c.SourceCommit {
@@ -101,6 +115,15 @@ func acceptanceCaseValid(name string) bool {
 		}
 	}
 	return false
+}
+func (c nativeAcceptanceConfig) caseValid(name string) bool {
+	return acceptanceCaseValid(name) && (c.Schema != acceptanceCorpusSchema || name == "success")
+}
+func (c nativeAcceptanceConfig) roots() []string {
+	if c.Schema == acceptanceCorpusSchema {
+		return acceptanceCorpusRoots(c.Cohort)
+	}
+	return []string{"//lib:lib"}
 }
 func acceptanceCheckedPurpose(name string) typedindex.Purpose {
 	if name == string(typedindex.Canary) || name == string(typedindex.DryRun) {

@@ -30,6 +30,13 @@ POLICY = dict(memory_bytes=4533092352, scratch_bytes=4573403136,
               cpu_quota_micros=200000, cpu_period_micros=100000,
               wall_seconds=300, output_bytes=16777216, scip_bytes=2285819)
 REPO = 'example.invalid/phebs-native-neutral'
+CORPUS_SCHEMA = 'phebs-typed-native-corpus-acceptance-v1'
+CORPUS_REPO = 'github.com/bazelbuild/remote-apis-sdks'
+CORPUS_COMMIT = 'd5824b1a2286806b07efd030aa3a139c4f540157'
+CORPUS_GIT_MAX = 4 << 20
+COHORTS = ('ordinary', 'proto', 'fanout')
+ORACLE_SHA256 = 'sha256:0620be2b4c5631e01626f6a27b18621908f045edbf73a00ceffd0b638bb616d1'
+ARCHIVE_SHA256 = 'sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc'
 MAX_BUNDLE = 2 << 30
 MAX_FILE = 256 << 20
 MAX_ARCHIVE = MAX_BUNDLE + 2 * MAX_FILE + (32 << 20)
@@ -111,18 +118,22 @@ def hash_valid(value):
 
 def config(raw, expected=None):
     value = decode(raw, 16384)
-    if tuple(value) != CONFIG_KEYS or value['schema'] != 'phebs-typed-native-acceptance-v1':
+    corpus = value.get('schema') == CORPUS_SCHEMA
+    keys = CONFIG_KEYS + ('cohort', 'source_git_sha256') if corpus else CONFIG_KEYS
+    if tuple(value) != keys or value['schema'] not in ('phebs-typed-native-acceptance-v1', CORPUS_SCHEMA):
         fail('closed configuration')
     if not re.fullmatch(r'[a-z][a-z0-9-]{0,31}', value['id']):
         fail('run identity')
     source = value['source']
-    if tuple(source) != ('repository', 'incarnation', 'generation', 'commit') or source['repository'] != REPO:
-        fail('neutral source')
+    if tuple(source) != ('repository', 'incarnation', 'generation', 'commit') or source['repository'] != (CORPUS_REPO if corpus else REPO):
+        fail('closed source')
+    if corpus and (source['commit'] != CORPUS_COMMIT or value['cohort'] not in COHORTS or not hash_valid(value['source_git_sha256'])):
+        fail('frozen corpus source')
     if not re.fullmatch(r'[0-9a-f]{40}', source['commit']) or not source['incarnation'] or not hash_valid(source['generation']):
         fail('source identity')
     if not re.fullmatch(r'[0-9a-f]{40}', value['source_commit']):
         fail('implementation identity')
-    for key in CONFIG_KEYS:
+    for key in keys:
         if key.endswith('_sha256') and not hash_valid(value[key]):
             fail('missing identity')
     if type(value['profile_epoch']) is not int or value['profile_epoch'] < 1 or value['policy'] != POLICY:
@@ -185,6 +196,11 @@ def inputs(directory, expected=None):
         fail('inventory count')
     rows = [('config.json', digest(raw), len(raw), False),
             ('inventory.json', cfg['inventory_sha256'], len(inv_raw), False)]
+    if cfg['schema'] == CORPUS_SCHEMA:
+        h, size = file_hash(directory / 'source-git.tar', CORPUS_GIT_MAX)
+        if h != cfg['source_git_sha256']:
+            fail('source Git identity')
+        rows.append(('source-git.tar', h, size, False))
     for name, key, maximum in (('deployment.json', 'deployment_sha256', 16384), ('profile.json', 'profile_sha256', 16384),
                                ('seed.surql', 'seed_sha256', 4 << 20),
                                ('native-acceptance.test', 'test_sha256', MAX_FILE),
@@ -305,6 +321,56 @@ def collect(run_id, case, expected, output):
     exclusive(output, result.stdout)
 
 
+def compare_corpus(paths):
+    """Offline source-free equality at the three frozen function identities.
+
+    Native success/publication and product-query proof do not establish the
+    missing process/FD/private-cache cost evidence or authorize registration.
+    """
+    symbols, inputs = {}, []
+    names = {'ordinary': ('NewOutWriter', 'NewErrWriter'),
+             'proto': ('NewRemoteErrorResult',),
+             'fanout': ('NewOutWriter', 'NewErrWriter', 'NewRemoteErrorResult')}
+    counts = {'ordinary': (3, 535, 148), 'proto': (1, 1309, 241),
+              'fanout': (13, 13278, 2350)}
+    for cohort in COHORTS:
+        raw = read(paths[cohort], MAX_RECEIPT)
+        receipt = decode(raw, MAX_RECEIPT)
+        result = receipt.get('result', {})
+        proof = result.get('corpus', {})
+        if (receipt.get('schema') != CORPUS_SCHEMA or receipt.get('case') != 'success'
+                or receipt.get('pass') is not True or not hash_valid(receipt.get('config'))
+                or any(receipt.get(k) is not True for k in ('native_absent', 'workspace_drained', 'engine_joined'))
+                or any(result.get(k) is not True for k in ('settled', 'no_replay', 'publication_verified', 'growth_released'))
+                or result.get('execution_error') is not False
+                or proof.get('cohort') != cohort or proof.get('commit') != CORPUS_COMMIT
+                or proof.get('oracle_sha256') != ORACLE_SHA256 or proof.get('archive_sha256') != ARCHIVE_SHA256
+                or proof.get('navigation_verified') is not True or proof.get('source_git_drained') is not True
+                or proof.get('generated_documents') != 0
+                or tuple(proof.get(k) for k in ('documents', 'occurrences', 'definitions')) != counts[cohort]
+                or proof.get('cross_cohort') != 'pending' or proof.get('cost_gate') != 'unavailable'
+                or proof.get('cost_missing') != ['sampled_child_lifetimes', 'sampled_fd_counts', 'private_cache_inventory']):
+            fail('incomplete frozen corpus receipt')
+        rows = proof.get('symbols', [])
+        if tuple(row.get('name') for row in rows) != names[cohort]:
+            fail('closed oracle identities')
+        for row in rows:
+            expected = 16 if row['name'] == 'NewRemoteErrorResult' and cohort == 'fanout' else 1
+            if (not hash_valid(row.get('symbol_sha256')) or row.get('query_points') != expected
+                    or row.get('definition_locations') != (0 if cohort == 'fanout' else 1)
+                    or row.get('hover_payloads') != (0 if cohort == 'fanout' else 1)
+                    or row.get('reference_points') != (expected if cohort == 'fanout' else 0)):
+                fail('frozen oracle point proof')
+            prior = symbols.setdefault(row['name'], row['symbol_sha256'])
+            if prior != row['symbol_sha256']:
+                fail('cross-cohort emitted symbol mismatch')
+        inputs.append(dict(cohort=cohort, receipt_sha256=digest(raw), config=receipt['config']))
+    return dict(schema='phebs-typed-native-corpus-comparison-v1', commit=CORPUS_COMMIT,
+                oracle_sha256=ORACLE_SHA256, inputs=inputs, frozen_oracle_points=21,
+                cross_cohort_identity='pass', product_navigation='pass',
+                cost_gate='unavailable', registration_ready=False)
+
+
 def acceptance_id(value):
     return isinstance(value, str) and re.fullmatch(r'[a-z][a-z0-9-]{0,31}', value)
 
@@ -331,6 +397,9 @@ B=pathlib.Path('/var/lib/phebs-typed-acceptance')
 C=('success','cancel','wall','hard-death','canary','dry-run')
 def reject(): raise RuntimeError('neutral acceptance transport refused')
 def digest(b): return 'sha256:'+hashlib.sha256(b).hexdigest()
+def fixed_input(name,size,mode,corpus):
+ if name=='source-git.tar': return corpus and size<=4<<20 and mode==0o400
+ return name in {'config.json','inventory.json','profile.json','seed.surql','native-acceptance.test','surreal','deployment.json'} or name.startswith('bundle/')
 def checkdir(p):
  s=p.lstat()
  if not stat.S_ISDIR(s.st_mode) or s.st_uid!=0 or s.st_mode&0o077: reject()
@@ -357,19 +426,20 @@ checkdir(B);root=B/ident
 if a=='stage':
  expected=sys.argv[3]
  if len(sys.argv)!=4 or not re.fullmatch('sha256:[0-9a-f]{64}',expected): reject()
- total=0;seen=set();dirs=set()
+ total=0;seen=set();dirs=set();corpus=False
  for row,contents in read_ustar(sys.stdin.buffer):
   name=row.name;p=pathlib.PurePosixPath(name)
   if not row.isfile() or p.is_absolute() or str(p)!=name or '..' in p.parts or '\\' in name or any(ord(c)<32 or ord(c)==127 for c in name) or name in seen or row.size<0 or row.size>256<<20 or row.mode not in (0o400,0o500): reject()
-  if name not in {'config.json','inventory.json','profile.json','seed.surql','native-acceptance.test','surreal','deployment.json'} and not name.startswith('bundle/'): reject()
+  if not fixed_input(name,row.size,row.mode,corpus): reject()
   if not seen:
    if name!='config.json' or row.size>16384: reject()
    data=b''.join(contents)
    if digest(data)!=expected: reject()
+   corpus=json.loads(data).get('schema')=='phebs-typed-native-corpus-acceptance-v1'
    root.mkdir(mode=0o700)
    contents=iter([data])
   seen.add(name);total+=row.size
-  if len(seen)>50007 or total>(2<<30)+2*(256<<20)+(32<<20): reject()
+  if len(seen)>(50008 if corpus else 50007) or total>(2<<30)+2*(256<<20)+(32<<20): reject()
   dest=root/name
   for d in reversed(dest.parent.relative_to(root).parents):
    if str(d)!='.': (root/d).mkdir(mode=0o700,exist_ok=True)
@@ -391,6 +461,9 @@ if a=='stage':
  if digest(invraw)!=cfg['inventory_sha256']: reject()
  inv=json.loads(invraw)
  expected_names={'config.json','inventory.json','profile.json','seed.surql','native-acceptance.test','surreal','deployment.json'}
+ if cfg['schema']=='phebs-typed-native-corpus-acceptance-v1':
+  expected_names.add('source-git.tar')
+  if digest(read(root/'source-git.tar',4<<20))!=cfg['source_git_sha256']: reject()
  for f in inv['files']:
   name='bundle/'+f['path'];expected_names.add(name)
   if digest(read(root/name,f['bytes']))!=f['digest']: reject()
@@ -406,6 +479,7 @@ elif a in ('run','collect'):
  raw=read(root/'config.json',16384)
  if digest(raw)!=expected: reject()
  cfg=json.loads(raw)
+ if cfg['schema']=='phebs-typed-native-corpus-acceptance-v1' and case!='success': reject()
  if json.loads(read(root/'staged.json',1024))!={'config':expected}: reject()
  if a=='collect':
   data=read(root/case/'receipt.json',128<<10)
@@ -432,6 +506,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
     p = sub.add_parser('build'); p.add_argument('--output', required=True)
+    p = sub.add_parser('compare-corpus')
+    for cohort in COHORTS: p.add_argument('--' + cohort, required=True)
+    p.add_argument('--output', required=True)
     for action in ('check', 'stage'):
         p = sub.add_parser(action); p.add_argument('--input', required=True); p.add_argument('--config-sha', required=True)
     for action in ('run', 'collect'):
@@ -440,6 +517,8 @@ def main():
         else: p.add_argument('--deployment', required=True)
     args = parser.parse_args()
     if args.command == 'build': build(args.output)
+    elif args.command == 'compare-corpus':
+        exclusive(args.output, canonical(compare_corpus({c: getattr(args, c) for c in COHORTS})))
     elif args.command == 'check':
         cfg, rows = inputs(args.input, args.config_sha)
         print(cfg['id'], len(rows), 'verified inputs; no execution')

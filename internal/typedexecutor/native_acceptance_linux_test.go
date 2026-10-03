@@ -50,17 +50,18 @@ type acceptanceSelected struct {
 	Attempt string                `json:"attempt"`
 }
 type acceptanceChildResult struct {
-	Schema              string  `json:"schema"`
-	Config              string  `json:"config"`
-	Case                string  `json:"case"`
-	Recovery            bool    `json:"recovery"`
-	Outcome             Outcome `json:"outcome"`
-	ExecutionError      bool    `json:"execution_error"`
-	Settled             bool    `json:"settled"`
-	NoReplay            bool    `json:"no_replay"`
-	PublicationVerified bool    `json:"publication_verified"`
-	GrowthReleased      bool    `json:"growth_released"`
-	FailureSite         string  `json:"failure_site,omitempty"`
+	Schema              string                  `json:"schema"`
+	Config              string                  `json:"config"`
+	Case                string                  `json:"case"`
+	Recovery            bool                    `json:"recovery"`
+	Outcome             Outcome                 `json:"outcome"`
+	ExecutionError      bool                    `json:"execution_error"`
+	Settled             bool                    `json:"settled"`
+	NoReplay            bool                    `json:"no_replay"`
+	PublicationVerified bool                    `json:"publication_verified"`
+	GrowthReleased      bool                    `json:"growth_released"`
+	FailureSite         string                  `json:"failure_site,omitempty"`
+	Corpus              *acceptanceCorpusResult `json:"corpus,omitempty"`
 }
 type acceptanceObservation struct {
 	ID            string                          `json:"id"`
@@ -197,6 +198,12 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 	if e != nil || formatter != c.MkfsSHA256 {
 		return p, nil, errors.New("formatter identity")
 	}
+	if c.Schema == acceptanceCorpusSchema {
+		h, e := acceptanceFileHash(filepath.Join(c.root(), "source-git.tar"), acceptanceCorpusGitMax)
+		if e != nil || h != c.SourceGitSHA256 {
+			return p, nil, errors.New("source Git input identity")
+		}
+	}
 	raw, e := acceptanceRead(filepath.Join(c.root(), "inventory.json"), typedindex.MaxInventoryBytes)
 	if e != nil {
 		return p, nil, e
@@ -205,12 +212,19 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 	if e != nil {
 		return p, nil, e
 	}
-	required := map[string]bool{"source/MODULE.bazel": false, "source/MODULE.bazel.lock": false, "source/go.mod": false, "source/lib/BUILD.bazel": false, "source/lib/lib.go": false, typedindex.ManagedHelperFile: false, provider.SelectionFile: false, typedindex.HostToolsFile: false}
+	required := map[string]bool{typedindex.ManagedHelperFile: false, provider.SelectionFile: false, typedindex.HostToolsFile: false}
+	if c.Schema == acceptanceCorpusSchema {
+		required["tools/corpus/remote-apis-sdks.tar.gz"] = false
+	} else {
+		for _, name := range []string{"source/MODULE.bazel", "source/MODULE.bazel.lock", "source/go.mod", "source/lib/BUILD.bazel", "source/lib/lib.go"} {
+			required[name] = false
+		}
+	}
 	for _, f := range inv.Files() {
 		if e := ctx.Err(); e != nil {
 			return p, nil, e
 		}
-		if strings.HasPrefix(f.Path, "source/") {
+		if strings.HasPrefix(f.Path, "source/") && c.Schema != acceptanceCorpusSchema {
 			if _, ok := required[f.Path]; !ok {
 				return p, nil, errors.New("non-neutral source member")
 			}
@@ -231,9 +245,26 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 			return p, nil, errors.New("missing neutral input")
 		}
 	}
-	source, e := acceptanceRead(filepath.Join(c.root(), "bundle/source/lib/lib.go"), 1024)
-	if e != nil || string(source) != acceptanceSource {
-		return p, nil, errors.New("neutral source oracle")
+	if c.Schema == acceptanceCorpusSchema {
+		archive, e := acceptanceRead(filepath.Join(c.root(), "bundle/tools/corpus/remote-apis-sdks.tar.gz"), 249496)
+		if e != nil {
+			return p, nil, e
+		}
+		expected, e := acceptanceCorpusFiles(ctx, archive)
+		actual := []typedindex.BundleFile{}
+		for _, f := range inv.Files() {
+			if strings.HasPrefix(f.Path, "source/") {
+				actual = append(actual, f)
+			}
+		}
+		if e != nil || !reflect.DeepEqual(actual, expected) {
+			return p, nil, errors.New("frozen corpus source inventory")
+		}
+	} else {
+		source, e := acceptanceRead(filepath.Join(c.root(), "bundle/source/lib/lib.go"), 1024)
+		if e != nil || string(source) != acceptanceSource {
+			return p, nil, errors.New("neutral source oracle")
+		}
 	}
 	profile, e := acceptanceRead(filepath.Join(c.root(), "profile.json"), typedindex.MaxProfileBytes)
 	if e != nil {
@@ -266,6 +297,9 @@ func TestTypedNativeAcceptance(t *testing.T) {
 	c, e := parseAcceptance(raw)
 	if e != nil {
 		t.Fatal(e)
+	}
+	if !c.caseValid(*acceptanceCase) {
+		t.Fatal("case outside admitted corpus contract")
 	}
 	p, inventory, e := acceptanceVerify(ctx, c, *acceptanceConfigPath)
 	if e != nil {
@@ -497,11 +531,11 @@ func acceptanceController(c nativeAcceptanceConfig, s *store.Surreal) (*Controll
 	return controller, r, e
 }
 func acceptanceSeed(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, p typedindex.Profile) error {
-	source, e := s.GetTypedSource(ctx, acceptanceRepo)
+	source, e := s.GetTypedSource(ctx, c.Source.Repository)
 	if e != nil || source != c.Source {
 		return errors.New("seed source authority")
 	}
-	intent, e := s.GetTypedIndexIntent(ctx, acceptanceRepo)
+	intent, e := s.GetTypedIndexIntent(ctx, c.Source.Repository)
 	if e != nil || intent.ProfileDigest != p.Digest() || intent.ProfileEpoch != c.ProfileEpoch || intent.UniverseDigest != c.UniverseSHA256 || intent.Desired != "" || intent.Canceled || intent.RestoreRequired {
 		return errors.New("seed profile authority")
 	}
@@ -530,7 +564,7 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 	if e != nil {
 		return e
 	}
-	result := acceptanceChildResult{Schema: acceptanceSchema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Recovery: recovery}
+	result := acceptanceChildResult{Schema: c.Schema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Recovery: recovery}
 	defer func() {
 		name := "child.json"
 		if recovery {
@@ -590,10 +624,13 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 		if purpose != "" {
 			request = typedindex.NewManagedRequest(c.Source, p, uint64(c.ProfileEpoch), c.UniverseSHA256, purpose)
 		}
-		if _, e = s.EnqueueTypedIndex(ctx, acceptanceRepo, acceptanceJSON(request)); e != nil {
+		if c.Schema == acceptanceCorpusSchema {
+			request = typedindex.NewManagedRequest(c.Source, p, uint64(c.ProfileEpoch), c.UniverseSHA256, typedindex.Publish)
+		}
+		if _, e = s.EnqueueTypedIndex(ctx, c.Source.Repository, acceptanceJSON(request)); e != nil {
 			return e
 		}
-		if e = r.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: acceptanceRepo}); e != nil {
+		if e = r.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: c.Source.Repository}); e != nil {
 			return e
 		}
 		scheduler, e := r.Scheduler(ctx)
@@ -652,12 +689,19 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 			if result.ExecutionError {
 				return errors.New("positive execution refused")
 			}
-			if e = acceptancePublication(ctx, c, s); e != nil {
+			if c.Schema == acceptanceCorpusSchema {
+				for i, phase := range result.Outcome.Reports {
+					if phase.Phase != [2]typedindex.Action{typedindex.Plan, typedindex.Execute}[i] || phase.ExitCode != 0 || !phase.Removed || phase.StopReason != "" || phase.Failure != nil {
+						return errors.New("corpus cold phase unsuccessful")
+					}
+				}
+			}
+			if e = acceptancePublication(ctx, c, s, &result.Corpus); e != nil {
 				return e
 			}
 			result.PublicationVerified = true
 			result.FailureSite = "schedule_before"
-			before, e := s.GetGenerationSchedule(ctx, acceptanceRepo, store.TypedIndexScheduleStage)
+			before, e := s.GetGenerationSchedule(ctx, c.Source.Repository, store.TypedIndexScheduleStage)
 			if e != nil {
 				return e
 			}
@@ -666,11 +710,11 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 				return errors.New("success schedule not settled")
 			}
 			result.FailureSite = "duplicate_coordinator"
-			if e = r.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: acceptanceRepo}); e != nil {
+			if e = r.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: c.Source.Repository}); e != nil {
 				return e
 			}
 			result.FailureSite = "schedule_after"
-			after, e := s.GetGenerationSchedule(ctx, acceptanceRepo, store.TypedIndexScheduleStage)
+			after, e := s.GetGenerationSchedule(ctx, c.Source.Repository, store.TypedIndexScheduleStage)
 			if e != nil {
 				return e
 			}
@@ -694,7 +738,7 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 			if !result.ExecutionError {
 				return errors.New("negative execution succeeded")
 			}
-			if _, e = s.ResolveTypedIndexCurrentCustody(ctx, acceptanceRepo); e == nil {
+			if _, e = s.ResolveTypedIndexCurrentCustody(ctx, c.Source.Repository); e == nil {
 				return errors.New("negative published")
 			}
 			if *acceptanceCase == "wall" && (result.Outcome.Reports[1].StopReason != "wall_limit" || result.Outcome.Reports[1].Watchdog == nil || result.Outcome.Reports[1].ExitCode != 124) {
@@ -727,7 +771,7 @@ func acceptanceChecked(ctx context.Context, c nativeAcceptanceConfig, s *store.S
 		}
 	}
 	states := [5]string{"complete", "complete", "complete", "complete", "not_requested"}
-	status, err := s.GetTypedIndexStatus(ctx, acceptanceRepo)
+	status, err := s.GetTypedIndexStatus(ctx, c.Source.Repository)
 	if err != nil || status.Stage != store.TypedChecked || status.States != states || status.Current != nil || status.Stale || status.Canceled || status.RestoreRequired || status.Check == nil || *status.Check != *out.Check || status.Desired != out.Check.RequestDigest {
 		return errors.New("checked status or current")
 	}
@@ -813,8 +857,8 @@ func acceptanceHandle(c nativeAcceptanceConfig, handle generationscheduler.Handl
 		return handle(ctx, chunk, budget)
 	}
 }
-func acceptancePublication(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal) error {
-	current, e := s.ResolveTypedIndexCurrentCustody(ctx, acceptanceRepo)
+func acceptancePublication(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, corpus **acceptanceCorpusResult) error {
+	current, e := s.ResolveTypedIndexCurrentCustody(ctx, c.Source.Repository)
 	if e != nil {
 		return e
 	}
@@ -834,20 +878,27 @@ func acceptancePublication(ctx context.Context, c nativeAcceptanceConfig, s *sto
 	if e = json.Unmarshal(raw, &manifest); e != nil {
 		return e
 	}
-	if !manifest.Complete || len(manifest.Members) != 1 {
-		return errors.New("neutral publication member cardinality")
-	}
-	for _, member := range manifest.Members {
-		raw, e = p.ReadMember(ctx, member.Name)
+	if c.Schema == acceptanceCorpusSchema {
+		*corpus, e = acceptanceCorpusPublication(ctx, c, s, p, manifest)
 		if e != nil {
 			return e
 		}
-		var index scip.Index
-		if proto.Unmarshal(raw, &index) != nil || !acceptanceNeutralDefinition(&index) {
-			return errors.New("neutral Answer definition oracle")
+	} else {
+		if !manifest.Complete || len(manifest.Members) != 1 {
+			return errors.New("neutral publication member cardinality")
 		}
-	}
+		for _, member := range manifest.Members {
+			raw, e = p.ReadMember(ctx, member.Name)
+			if e != nil {
+				return e
+			}
+			var index scip.Index
+			if proto.Unmarshal(raw, &index) != nil || !acceptanceNeutralDefinition(&index) {
+				return errors.New("neutral Answer definition oracle")
+			}
+		}
 
+	}
 	blocked, ca := context.WithTimeout(ctx, 75*time.Millisecond)
 	defer ca()
 	release, e := typedworkspace.AcquirePublicationMutation(blocked, filepath.Join(base, id.RelativeName()))
@@ -1222,7 +1273,7 @@ func TestNativeAcceptanceFailureSite(t *testing.T) {
 
 func acceptanceRunParent(ctx context.Context, c nativeAcceptanceConfig, p typedindex.Profile) (err error) {
 	failureSite := "deployment"
-	final := acceptanceFinal{Schema: acceptanceSchema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Observations: []acceptanceObservation{}}
+	final := acceptanceFinal{Schema: c.Schema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Observations: []acceptanceObservation{}}
 	// Receipt is bounded and exclusive even on failure, never a raw error channel.
 	defer func() {
 		if err != nil {
@@ -1308,7 +1359,7 @@ func acceptanceRunParent(ctx context.Context, c nativeAcceptanceConfig, p typedi
 			for _, name := range []string{"recovery.json", "child.json"} {
 				raw, e := acceptanceRead(filepath.Join(c.caseRoot(*acceptanceCase), name), acceptanceMaxReceipt)
 				var partial acceptanceChildResult
-				if e == nil && acceptanceDecode(raw, acceptanceMaxReceipt, &partial) == nil && partial.Schema == acceptanceSchema && partial.Config == final.Config && partial.Case == final.Case && acceptanceChildFailureSiteValid(partial.FailureSite) {
+				if e == nil && acceptanceDecode(raw, acceptanceMaxReceipt, &partial) == nil && partial.Schema == c.Schema && partial.Config == final.Config && partial.Case == final.Case && acceptanceChildFailureSiteValid(partial.FailureSite) {
 					final.Result = partial
 					break
 				}
@@ -1438,7 +1489,7 @@ loop:
 		return errors.New("controller proof failed")
 	}
 	resultRaw, e := acceptanceRead(filepath.Join(c.caseRoot(*acceptanceCase), resultName), acceptanceMaxReceipt)
-	if e != nil || acceptanceDecode(resultRaw, acceptanceMaxReceipt, &final.Result) != nil || final.Result.Schema != acceptanceSchema || final.Result.Recovery != (*acceptanceCase == "hard-death") || final.Result.Config != final.Config || final.Result.Case != final.Case || !final.Result.GrowthReleased || !final.Result.Settled || !final.Result.NoReplay || final.Result.FailureSite != "" {
+	if e != nil || acceptanceDecode(resultRaw, acceptanceMaxReceipt, &final.Result) != nil || final.Result.Schema != c.Schema || final.Result.Recovery != (*acceptanceCase == "hard-death") || final.Result.Config != final.Config || final.Result.Case != final.Case || !final.Result.GrowthReleased || !final.Result.Settled || !final.Result.NoReplay || final.Result.FailureSite != "" {
 		return errors.New("child evidence")
 	}
 	rows, e = docker.list(ctx)
@@ -1450,6 +1501,9 @@ loop:
 	if *acceptanceCase == "success" {
 		if !final.Result.PublicationVerified {
 			return errors.New("publication proof missing")
+		}
+		if c.Schema == acceptanceCorpusSchema && (final.Result.Corpus == nil || !final.Result.Corpus.NavigationVerified || !final.Result.Corpus.SourceGitDrained || final.Result.Corpus.Cohort != c.Cohort || final.Result.Corpus.CostGate != "unavailable") {
+			return errors.New("corpus product reader proof missing")
 		}
 	} else if purpose := acceptanceCheckedPurpose(*acceptanceCase); purpose != "" {
 		if final.Injected || final.Result.ExecutionError || final.Result.PublicationVerified {
@@ -1480,7 +1534,7 @@ func acceptanceDrain(ctx context.Context, c nativeAcceptanceConfig, s *store.Sur
 	if e != nil {
 		return e
 	}
-	e = s.DeleteRepo(ctx, acceptanceRepo)
+	e = s.DeleteRepo(ctx, c.Source.Repository)
 	release()
 	if e != nil {
 		return e
@@ -1506,7 +1560,7 @@ func acceptanceDrain(ctx context.Context, c nativeAcceptanceConfig, s *store.Sur
 			return e
 		}
 		if len(entries) == 1 && entries[0].Name() == ".phebs-index-publication.lock" {
-			drained, tombstones, err := acceptanceControlsDrained(ctx, s)
+			drained, tombstones, err := acceptanceControlsDrained(ctx, c, s)
 			if err != nil {
 				return err
 			}
@@ -1594,7 +1648,7 @@ func acceptanceEmptyScheduler(ctx context.Context, c nativeAcceptanceConfig, end
 			return errors.New("seed contains scheduled history")
 		}
 	}
-	if rows[4].Status != "OK" || len(rows[4].Result) != 1 || !bytes.Equal(rows[4].Result[0], acceptanceJSON(acceptanceRepo)) {
+	if rows[4].Status != "OK" || len(rows[4].Result) != 1 || !bytes.Equal(rows[4].Result[0], acceptanceJSON(c.Source.Repository)) {
 		return errors.New("seed repository universe")
 	}
 	return nil
@@ -1740,7 +1794,7 @@ func acceptanceDeployment(ctx context.Context, c nativeAcceptanceConfig, d *acce
 
 // The installation contains one reviewed neutral repository/root only. These
 // bounded point-sized census pages prove no child controls remain after drain.
-func acceptanceControlsDrained(ctx context.Context, s *store.Surreal) (bool, int, error) {
+func acceptanceControlsDrained(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal) (bool, int, error) {
 	complete, tombstones := true, 0
 	for _, kind := range []store.TypedIndexControlKind{store.TypedIndexRequests, store.TypedIndexPlans, store.TypedIndexAttempts, store.TypedIndexStates, store.TypedIndexCurrents, store.TypedIndexIntents} {
 		page, e := s.ScanTypedIndexControls(ctx, kind, "", 3)
@@ -1751,7 +1805,7 @@ func acceptanceControlsDrained(ctx context.Context, s *store.Surreal) (bool, int
 			return false, 0, errors.New("unexpected retained control count")
 		}
 		for _, row := range page.Rows {
-			if kind == store.TypedIndexRequests && row.Parent && row.ID == row.Root && row.State == "collecting" && row.Repository == acceptanceRepo {
+			if kind == store.TypedIndexRequests && row.Parent && row.ID == row.Root && row.State == "collecting" && row.Repository == c.Source.Repository {
 				tombstones++
 				continue
 			}
@@ -1764,7 +1818,7 @@ func acceptanceControlsDrained(ctx context.Context, s *store.Surreal) (bool, int
 	return complete, tombstones, nil
 }
 func acceptanceSettledNoReplay(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal) error {
-	before, e := s.GetGenerationSchedule(ctx, acceptanceRepo, store.TypedIndexScheduleStage)
+	before, e := s.GetGenerationSchedule(ctx, c.Source.Repository, store.TypedIndexScheduleStage)
 	if e != nil || before.Running != 0 || before.Status != store.GenerationScheduleSettled && before.Status != store.GenerationScheduleActive {
 		return errors.New("negative schedule not released or settled")
 	}
@@ -1779,10 +1833,10 @@ func acceptanceSettledNoReplay(ctx context.Context, c nativeAcceptanceConfig, s 
 	if e = fresh.Reconcile(ctx); e != nil {
 		return e
 	}
-	if e = fresh.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: acceptanceRepo}); e != nil {
+	if e = fresh.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: c.Source.Repository}); e != nil {
 		return e
 	}
-	after, e := s.GetGenerationSchedule(ctx, acceptanceRepo, store.TypedIndexScheduleStage)
+	after, e := s.GetGenerationSchedule(ctx, c.Source.Repository, store.TypedIndexScheduleStage)
 	if e != nil || !bytes.Equal(acceptanceJSON(before), acceptanceJSON(after)) {
 		return errors.New("fresh runtime changed negative schedule")
 	}
@@ -1810,7 +1864,7 @@ func acceptanceSettledNoReplay(ctx context.Context, c nativeAcceptanceConfig, s 
 	} else if before.Status != store.GenerationScheduleSettled {
 		return errors.New("released negative lease unavailable")
 	}
-	settled, e := s.GetGenerationSchedule(ctx, acceptanceRepo, store.TypedIndexScheduleStage)
+	settled, e := s.GetGenerationSchedule(ctx, c.Source.Repository, store.TypedIndexScheduleStage)
 	if e != nil || settled.Status != store.GenerationScheduleSettled || settled.Running != 0 || settled.Pending != 0 {
 		return errors.New("negative replay settlement")
 	}
@@ -1842,6 +1896,9 @@ func acceptanceProfile(ctx context.Context, c nativeAcceptanceConfig, raw, selec
 		return p, e
 	}
 	d := p.Definition()
+	if c.Schema == acceptanceCorpusSchema && d.Name != "corpus-"+c.Cohort {
+		return p, errors.New("frozen corpus profile name")
+	}
 	if acceptanceDigest(raw) != c.ProfileSHA256 || d.Schema != typedindex.ProfileSchema || d.Config != typedindex.ReducedConfig() || d.Policy != c.Policy || d.BundleDigest != c.InventorySHA256 || d.ImageDigest != c.ImageSHA256 || d.Tools.Planner.Digest != c.HelperSHA256 || d.Tools.Launcher.Digest != c.HelperSHA256 || d.Tools.Go.Digest != provider.GoDigest || d.Tools.Bazel.Digest != provider.BazelDigest || d.Tools.Indexer.Digest != provider.SCIPDigest || d.Tools.Driver.Digest != "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd" || d.Tools.RulesGo.Digest != "sha256:68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86" || d.RCDigest != "" {
 		return p, errors.New("profile differs from approved tools/policy")
 	}
@@ -1849,7 +1906,7 @@ func acceptanceProfile(ctx context.Context, c nativeAcceptanceConfig, raw, selec
 	if e = acceptanceDecode(selectionRaw, provider.MaxSelectionBytes, &s); e != nil {
 		return p, e
 	}
-	if acceptanceDigest(selectionRaw) != c.SelectionSHA256 || s.Schema != provider.SelectionSchema || s.Source != c.Source || s.Module != acceptanceRepo || s.Remote != "https://"+acceptanceRepo || !reflect.DeepEqual(s.Roots, []string{"//lib:lib"}) || acceptanceDigest(acceptanceJSON(s.Targets)) != c.UniverseSHA256 {
+	if acceptanceDigest(selectionRaw) != c.SelectionSHA256 || s.Schema != provider.SelectionSchema || s.Source != c.Source || s.Module != c.Source.Repository || s.Remote != "https://"+c.Source.Repository || !reflect.DeepEqual(s.Roots, c.roots()) || acceptanceDigest(acceptanceJSON(s.Targets)) != c.UniverseSHA256 {
 		return p, errors.New("neutral selection")
 	}
 	return p, nil

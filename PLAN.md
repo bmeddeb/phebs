@@ -8509,3 +8509,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   host restoration add no production query, sync, startup, retry, publication,
   lock, cache or child cost. Frozen public-corpus correctness/cost replay still
   gates Bazel registration; these neutral checked cases do not establish it.
+
+- **2026-10-02 — T45.6 frozen-corpus product oracle.** Extend the opt-in native
+  acceptance harness with a separate schema for only the three frozen public
+  cohorts and their exact source commit. Neutral schemas, byte contracts, cases
+  and caps remain exact. Corpus acceptance authenticates the pinned archive and
+  admits a separately hash-bound five-file bare Git-object archive bounded to 4 MiB:
+  fixed HEAD/shallow/config plus one matching pack/index pair, no hooks, alternates
+  or arbitrary paths. A derived empty refs directory permits ordinary read-only
+  Git access; immutable commit/tree checks and a bounded serial batch independently
+  compare all 128 source paths, modes, sizes and blob digests to the archive.
+  The authenticated current publication must preserve the frozen document,
+  occurrence and definition counts and satisfy the 21 original oracle points
+  through 63 serial Definition/Hover/References calls to the actual routed
+  navigation service. Absent out-of-cohort definitions/hover remain absent;
+  emitted full-symbol digests require a later cross-cohort comparison. Generated
+  navigation and cross-member lookup are not inferred from this small oracle.
+  This adds only opt-in test work: bounded archive/pack reads, 128 blob hashes,
+  one complete decoded publication census and 63 queries using existing current
+  revalidation, source conversion, reader pins and the existing 64-MiB/64-entry cache. Reader
+  and Git close errors reject; the service cache and derived Git mirror are
+  removed before the publication pin closes. No production work or admission
+  changes. Native child-lifetime/descriptor/private-cache costs remain explicitly
+  unavailable until measured; a workflow/correctness pass alone cannot register
+  Bazel. Corrected transport and actual original-Git positive/negative checks,
+  normal/race, offline Linux compilation/vet and two independent reviews pass;
+  fresh native cohort execution remains pending.

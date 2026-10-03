@@ -21,7 +21,90 @@ def fixture_config():
         h, h, h, h, h, h, h, h, h, h, 1, h, dict(n.POLICY)]))
 
 
+def fixture_corpus_config(cohort='ordinary'):
+    c = fixture_config()
+    c['schema'] = n.CORPUS_SCHEMA
+    c['source']['repository'] = n.CORPUS_REPO
+    c['source']['commit'] = n.CORPUS_COMMIT
+    c['cohort'] = cohort
+    c['source_git_sha256'] = n.digest(b'git')
+    return c
+
+
+def fixture_corpus_receipt(cohort):
+    count = {'ordinary': (3, 535, 148), 'proto': (1, 1309, 241), 'fanout': (13, 13278, 2350)}[cohort]
+    names = {'ordinary': ('NewOutWriter', 'NewErrWriter'), 'proto': ('NewRemoteErrorResult',),
+             'fanout': ('NewOutWriter', 'NewErrWriter', 'NewRemoteErrorResult')}[cohort]
+    rows = []
+    for name in names:
+        points = 16 if cohort == 'fanout' and name == 'NewRemoteErrorResult' else 1
+        rows.append(dict(name=name, symbol_sha256=n.digest(name.encode()), query_points=points,
+                         definition_locations=0 if cohort == 'fanout' else 1,
+                         hover_payloads=0 if cohort == 'fanout' else 1,
+                         reference_points=points if cohort == 'fanout' else 0))
+    proof = dict(cohort=cohort, commit=n.CORPUS_COMMIT, archive_sha256=n.ARCHIVE_SHA256,
+                 oracle_sha256=n.ORACLE_SHA256, root_digest=n.digest(b'root'), plan_digest=n.digest(b'plan'),
+                 member_digests=[n.digest(cohort.encode())], documents=count[0], occurrences=count[1], definitions=count[2],
+                 generated_documents=0, navigation_verified=True, source_git_drained=True, symbols=rows,
+                 cross_cohort='pending', cost_gate='unavailable',
+                 cost_missing=['sampled_child_lifetimes', 'sampled_fd_counts', 'private_cache_inventory'])
+    return dict(schema=n.CORPUS_SCHEMA, config=n.digest(cohort.encode()), case='success',
+                **{'pass': True}, native_absent=True, workspace_drained=True, engine_joined=True,
+                result=dict(settled=True, no_replay=True, publication_verified=True, growth_released=True,
+                            execution_error=False, corpus=proof))
+
+
 class AcceptanceTests(unittest.TestCase):
+    def test_closed_corpus_config_preserves_neutral_wire(self):
+        neutral = fixture_config()
+        self.assertEqual(tuple(n.config(n.canonical(neutral))), n.CONFIG_KEYS)
+        self.assertNotIn(b'cohort', n.canonical(neutral))
+        for cohort in n.COHORTS:
+            c = fixture_corpus_config(cohort)
+            self.assertEqual(n.config(n.canonical(c)), c)
+        c = fixture_corpus_config()
+        for change in [lambda v: v.update(cohort='all'), lambda v: v['source'].update(commit='a'*40),
+                       lambda v: v['source'].update(repository=n.REPO), lambda v: v.update(source_git_sha256=''),
+                       lambda v: v.update(schema='phebs-typed-native-acceptance-v1')]:
+            v = copy.deepcopy(c); change(v)
+            with self.assertRaises(ValueError): n.config(n.canonical(v))
+
+    def test_corpus_cross_cohort_product_proof_keeps_cost_open(self):
+        with tempfile.TemporaryDirectory() as d:
+            paths = {c: Path(d).resolve()/c for c in n.COHORTS}
+            for cohort, path in paths.items(): path.write_bytes(n.canonical(fixture_corpus_receipt(cohort)))
+            proof = n.compare_corpus(paths)
+            self.assertEqual(proof['cross_cohort_identity'], 'pass')
+            self.assertEqual(proof['product_navigation'], 'pass')
+            self.assertEqual(proof['cost_gate'], 'unavailable')
+            self.assertIs(proof['registration_ready'], False)
+            for change in [lambda r: r['result']['corpus']['symbols'][0].update(symbol_sha256=n.digest(b'mismatch')),
+                           lambda r: r['result']['corpus'].update(source_git_drained=False),
+                           lambda r: r['result']['corpus'].update(occurrences=13277),
+                           lambda r: r['result']['corpus'].update(cost_gate='pass'),
+                           lambda r: r['result']['corpus']['symbols'][0].update(reference_points=0),
+                           lambda r: r.update(engine_joined=False)]:
+                r = fixture_corpus_receipt('fanout'); change(r)
+                paths['fanout'].write_bytes(n.canonical(r))
+                with self.assertRaises(ValueError): n.compare_corpus(paths)
+                paths['fanout'].write_bytes(n.canonical(fixture_corpus_receipt('fanout')))
+
+    def test_remote_stage_admits_only_bounded_corpus_git_input(self):
+        import ast
+        tree = ast.parse(n.REMOTE)
+        function = next(x for x in tree.body if isinstance(x, ast.FunctionDef) and x.name == 'fixed_input')
+        scope = {}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), '<fixed-input>', 'exec'), scope)
+        admit = scope['fixed_input']
+        self.assertTrue(admit('source-git.tar', n.CORPUS_GIT_MAX, 0o400, True))
+        for size, mode, corpus in [(n.CORPUS_GIT_MAX, 0o400, False), (n.CORPUS_GIT_MAX+1, 0o400, True), (1, 0o500, True)]:
+            self.assertFalse(admit('source-git.tar', size, mode, corpus))
+        self.assertFalse(admit('other-git.tar', 1, 0o400, True))
+        for name in ('config.json', 'inventory.json', 'profile.json', 'seed.surql', 'native-acceptance.test', 'surreal', 'deployment.json', 'bundle/source/lib/lib.go'):
+            self.assertTrue(admit(name, 1, 0o400, False))
+        calls = [x for x in ast.walk(tree) if isinstance(x, ast.Call) and isinstance(x.func, ast.Name) and x.func.id == 'fixed_input']
+        self.assertEqual(len(calls), 1)
+
     def test_config_positive_and_refusals(self):
         c = fixture_config()
         raw = n.canonical(c)
