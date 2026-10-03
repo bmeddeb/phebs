@@ -290,7 +290,7 @@ func TestTypedNativeAcceptance(t *testing.T) {
 		}
 		t.Skip("requires a separately reviewed and approved native configuration")
 	}
-	if runtime.GOARCH != "arm64" || os.Geteuid() != 0 || !acceptanceCaseValid(*acceptanceCase) {
+	if !typedindex.AdmittedNativeArch(runtime.GOARCH) || runtime.NumCPU() < 2 || os.Geteuid() != 0 || !acceptanceCaseValid(*acceptanceCase) {
 		t.Fatal("native platform/case refused")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 540*time.Second)
@@ -1940,7 +1940,7 @@ func acceptanceDeployment(ctx context.Context, c nativeAcceptanceConfig, d *acce
 		return errors.New("deployment identity")
 	}
 	var expected nativeDeployment
-	if acceptanceDecode(raw, 16384, &expected) != nil || expected.Schema != "phebs-typed-native-deployment-v1" || expected.Profile != "phebs-t451a" || !acceptanceHash(expected.VMConfigSHA256) || !acceptanceHash(expected.OSReleaseSHA256) || !acceptanceHash(expected.RuntimesSHA256) || expected.Architecture != "arm64" || expected.CPUs != 2 || expected.MemoryTotalKB == 0 || expected.DaemonID == "" || expected.DockerVersion == "" || expected.KernelRelease == "" || expected.CgroupDriver == "" {
+	if acceptanceDecode(raw, 16384, &expected) != nil || expected.Schema != "phebs-typed-native-deployment-v1" || expected.Profile != "phebs-t451a" || !acceptanceHash(expected.VMConfigSHA256) || !acceptanceHash(expected.OSReleaseSHA256) || !acceptanceHash(expected.RuntimesSHA256) || expected.Architecture != runtime.GOARCH || !typedindex.AdmittedNativeArch(expected.Architecture) || expected.CPUs != runtime.NumCPU() || expected.CPUs < 2 || expected.MemoryTotalKB < uint64(typedsandbox.MemoryBytes)/1024 || expected.DaemonID == "" || expected.DockerVersion == "" || expected.KernelRelease == "" || expected.CgroupDriver == "" {
 		return errors.New("unfilled deployment")
 	}
 	kernel, e := acceptanceSystemRead("/proc/sys/kernel/osrelease", 256)
@@ -2086,7 +2086,8 @@ func acceptanceProfile(ctx context.Context, c nativeAcceptanceConfig, raw, selec
 	if c.Schema == acceptanceCorpusSchema && d.Name != "corpus-"+c.Cohort {
 		return p, errors.New("frozen corpus profile name")
 	}
-	if acceptanceDigest(raw) != c.ProfileSHA256 || d.Schema != typedindex.ProfileSchema || d.Config != typedindex.ReducedConfig() || d.Policy != c.Policy || d.BundleDigest != c.InventorySHA256 || d.ImageDigest != c.ImageSHA256 || d.Tools.Planner.Digest != c.HelperSHA256 || d.Tools.Launcher.Digest != c.HelperSHA256 || d.Tools.Go.Digest != provider.GoDigest || d.Tools.Bazel.Digest != provider.BazelDigest || d.Tools.Indexer.Digest != provider.SCIPDigest || d.Tools.Driver.Digest != "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd" || d.Tools.RulesGo.Digest != "sha256:68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86" || d.RCDigest != "" {
+	schema, config := typedindex.HostReducedIdentity()
+	if acceptanceDigest(raw) != c.ProfileSHA256 || d.Schema != schema || d.Config != config || d.Policy != c.Policy || d.BundleDigest != c.InventorySHA256 || d.ImageDigest != c.ImageSHA256 || d.Tools.Planner.Digest != c.HelperSHA256 || d.Tools.Launcher.Digest != c.HelperSHA256 || d.Tools.Go.Digest != provider.GoDigest || d.Tools.Bazel.Digest != provider.BazelDigest || d.Tools.Indexer.Digest != provider.SCIPDigest || d.Tools.Driver.Digest != "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd" || d.Tools.RulesGo.Digest != "sha256:68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86" || d.RCDigest != "" {
 		return p, errors.New("profile differs from approved tools/policy")
 	}
 	var s provider.Selection

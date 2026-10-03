@@ -11,9 +11,11 @@ import (
 	"runtime"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 const (
@@ -234,8 +236,8 @@ func RunCompatibility(ctx context.Context, plan planner.Plan, roots []planner.Co
 	if err != nil {
 		return CompatibilityResult{}, err
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 {
-		return CompatibilityResult{}, errors.New("compatibility driver requires admitted Linux arm64 worker")
+	if !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 {
+		return CompatibilityResult{}, errors.New("compatibility driver requires an admitted Linux worker")
 	}
 	if err := checkDriver(DriverSHA256); err != nil {
 		return CompatibilityResult{}, err
@@ -275,7 +277,7 @@ func finishCompatibility(ctx context.Context, p Prepared, data []byte) (Compatib
 	if err := json.Unmarshal(data, &r); err != nil {
 		return CompatibilityResult{}, err
 	}
-	r["Compiler"], r["Arch"], r["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)
+	r["Compiler"], r["Arch"], r["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(strconv.Quote(runtime.GOARCH)), json.RawMessage(`25`)
 	adapted, err := json.Marshal(r)
 	if err != nil {
 		return CompatibilityResult{}, err

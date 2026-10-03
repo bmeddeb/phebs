@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -35,7 +34,7 @@ func prepareServeTypedIndex(d *serveDeps) error {
 	if d.typedInstallation == nil {
 		return nil
 	}
-	if d.typedRuntime != nil || d.semanticLaunch != nil || d.exactReads || d.exactReports || runtime.GOOS != "linux" || runtime.GOARCH != "arm64" {
+	if d.typedRuntime != nil || d.semanticLaunch != nil || d.exactReads || d.exactReports || !typedindex.AdmittedNativeWorker() {
 		return typedServeSafeError(typedexecutor.ErrUnavailable)
 	}
 	i := *d.typedInstallation

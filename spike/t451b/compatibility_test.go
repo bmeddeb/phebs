@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -279,7 +281,7 @@ func retainedCall(t *testing.T) (planner.Plan, []planner.Configured, CallEvidenc
 	if err = json.Unmarshal(raw, &response); err != nil {
 		t.Fatal(err)
 	}
-	response["Compiler"], response["Arch"], response["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)
+	response["Compiler"], response["Arch"], response["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(strconv.Quote(runtime.GOARCH)), json.RawMessage(`25`)
 	adapted, _ := json.Marshal(response)
 	var parsed struct{ Packages []struct{ ExportFile string } }
 	if err = json.Unmarshal(raw, &parsed); err != nil {
@@ -323,7 +325,7 @@ func TestCompatibilityEvidence(t *testing.T) {
 		{"wrong wire hash", func(c *CallEvidence) { c.RequestSHA256 = t451a.Digest(nil) }},
 		{"wrong invocation", func(c *CallEvidence) { c.Launcher.Environment = append(c.Launcher.Environment, "GOFLAGS=-x") }},
 		{"wrong transform", func(c *CallEvidence) {
-			c.Result.Response = bytes.Replace(c.Result.Response, []byte(`"arm64"`), []byte(`"amd64"`), 1)
+			c.Result.Response = bytes.Replace(c.Result.Response, []byte(strconv.Quote(runtime.GOARCH)), []byte(`"386"`), 1)
 			c.ResponseSHA256 = t451a.Digest(c.Result.Response)
 		}},
 		{"duplicate transform key", func(c *CallEvidence) {
@@ -424,7 +426,7 @@ func TestToolEvidenceAdmission(t *testing.T) {
 		{"wrong tools version", func(s *[]ToolIdentity) { (*s)[2].Build.Deps[0].Version = "v0.48.0" }},
 		{"replaced tools", func(s *[]ToolIdentity) { (*s)[2].Build.Deps[0].Replace = &debug.Module{Path: "local"} }},
 		{"wrong build release", func(s *[]ToolIdentity) { (*s)[3].Build.GoVersion = "go1.26.5" }},
-		{"wrong architecture", func(s *[]ToolIdentity) { (*s)[3].Build.Settings[1].Value = "amd64" }},
+		{"wrong architecture", func(s *[]ToolIdentity) { (*s)[3].Build.Settings[1].Value = "386" }},
 		{"duplicate setting", func(s *[]ToolIdentity) {
 			(*s)[3].Build.Settings = append((*s)[3].Build.Settings, debug.BuildSetting{Key: "GOARCH", Value: "arm64"})
 		}},
