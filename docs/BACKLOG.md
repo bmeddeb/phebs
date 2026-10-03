@@ -15202,6 +15202,15 @@ all uncertain records still refuse. Actual Linux models, exact review, fresh
 native correctness/cost passes for all three cohorts and cross-cohort comparison
 remain mandatory before Bazel registration. T45.7 follows closure.
 
+Exact `8987db23` independent source/cost review, a fresh joined offline build
+and all nine selected actual Linux model families now pass. The source-free
+record is `spike/t454/worker_census_linux_model_8987db23.json`; temporary
+model input and child custody are joined and removed. Ben requests this
+reviewed runtime checkpoint merged into `main` and pushed. The target-corpus
+correctness/cost passes and cross-cohort comparison remain open, with frozen
+VM capacity still unresolved. Bazel remains unregistered; T45.7 waits for
+Bazel closure.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

@@ -623,15 +623,16 @@ func TestOwnerNativeInspectionKeepsDrainStrict(t *testing.T) {
 			case "other-input":
 				path = filepath.Join(attempt, "inputs-"+strings.Repeat("0", 32)+".typed-container.json")
 			}
-			if kind == "directory" {
+			switch kind {
+			case "directory":
 				err = os.Mkdir(path, 0700)
-			} else if kind == "symlink" {
+			case "symlink":
 				target := filepath.Join(t.TempDir(), "journal")
 				err = os.WriteFile(target, data, 0600)
 				if err == nil {
 					err = os.Symlink(target, path)
 				}
-			} else {
+			default:
 				err = os.WriteFile(path, data, mode)
 				if err == nil && kind == "public-mode" {
 					err = os.Chmod(path, mode)

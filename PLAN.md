@@ -8834,3 +8834,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   attribution of the retained STOP. Focused extracted normal/race and Linux
   compilation/vet pass; exact review, actual Linux models and fresh native corpus
   correctness/cost proof remain required before Bazel registration.
+
+- **2026-10-03 — T45.6 integrate the reviewed runtime checkpoint.** Ben
+  explicitly requests integration into `main` and push before T45.7. Exact
+  source `8987db231be733db11410c8220df4e8d8e847363` passes fresh independent
+  source/cost review, one joined offline acceptance-test build, and actual Linux
+  execution of all nine selected model families, including coherent zombie
+  exclusion, complete worker discovery and closed final-observation errors.
+  The joined model child and transport exit zero and the temporary executable
+  is removed; the source-free record is
+  `spike/t454/worker_census_linux_model_8987db23.json`. The genuine worker and
+  preparation artifacts retain `91d2c594` provenance and the frozen source/budget
+  method retains `7d6b849c`; no old artifact or failed receipt is relabelled.
+  These finite test/build/source-authentication passes add no production query,
+  sync, startup, retry, publication, lock, cache or child work. The offline build
+  has one 300-second compile within its 720-second owned session; the Linux
+  models retain their 45-second test, 100-second alarm and 160-second owned
+  bounds. Build heap/cache/temp growth is not claimed as a total memory/disk
+  bound. A separate joined read-only failed-case footprint census refuses its
+  directory-mode/count predicate before producing a complete census; its
+  exact failing operand is unavailable. It grants no archival, deletion,
+  drainage or admission result and changes no custody. Frozen VM capacity and
+  all three fresh native corpus correctness/cost passes plus cross-cohort
+  comparison remain open. This checkpoint integrates dormant runtime and
+  reviewed prerequisites while leaving Bazel unregistered. T45.7 still follows
+  Bazel closure; this merge request waives no registration or corpus gate.
+  Integration lint also converts only a pre-existing Linux workspace test
+  fixture's directory/symlink/file selection to an equivalent tagged switch;
+  production files and the compiled acceptance harness remain unchanged.
