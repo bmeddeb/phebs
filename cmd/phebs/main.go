@@ -648,6 +648,9 @@ func serve(ctx context.Context, args []string) (retErr error) {
 	if err := startServeIndexPipeline(d); err != nil {
 		return err
 	}
+	if err := startServeTypedIndex(d); err != nil {
+		return err
+	}
 	reportT4013Startup("scheduler_recovery_complete")
 
 	newServeVisibility(d)

@@ -22,7 +22,7 @@ const acceptanceMaxConfig = 16384
 const acceptanceMaxReceipt = 128 << 10
 
 var acceptanceID = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
-var acceptanceCases = []string{"success", "cancel", "wall", "hard-death"}
+var acceptanceCases = []string{"success", "cancel", "wall", "hard-death", "canary", "dry-run"}
 
 // All paths are derived from ID and fixed names. Reviewed seed provenance is
 // installation authority; a digest here does not manufacture source admission.
@@ -101,6 +101,28 @@ func acceptanceCaseValid(name string) bool {
 		}
 	}
 	return false
+}
+func acceptanceCheckedPurpose(name string) typedindex.Purpose {
+	if name == string(typedindex.Canary) || name == string(typedindex.DryRun) {
+		return typedindex.Purpose(name)
+	}
+	return ""
+}
+func acceptanceFaultCase(name string) bool {
+	return name == "cancel" || name == "wall" || name == "hard-death"
+}
+
+func TestNativeAcceptanceCases(t *testing.T) {
+	for _, name := range acceptanceCases {
+		if !acceptanceCaseValid(name) || (acceptanceCheckedPurpose(name) != "") != (name == "canary" || name == "dry-run") || acceptanceFaultCase(name) != (name == "cancel" || name == "wall" || name == "hard-death") {
+			t.Fatal("case escaped closed purpose/injection mapping", name)
+		}
+	}
+	for _, name := range []string{"", "publish", "target", "Canary", "dry_run", "success;sh"} {
+		if acceptanceCaseValid(name) || acceptanceCheckedPurpose(name) != "" || acceptanceFaultCase(name) {
+			t.Fatal("open case", name)
+		}
+	}
 }
 func acceptanceJSON(v any) []byte {
 	b, e := json.Marshal(v)

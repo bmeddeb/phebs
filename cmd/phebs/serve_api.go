@@ -140,7 +140,7 @@ func openServeSearcher(d *serveDeps) error {
 		}
 	}
 	searcher.Visible = d.visibleFor // T10.3: the per-user RepoSet pre-pass
-	codeNavigation := codenav.New(codenav.Options{
+	codeNavigationOptions := codenav.Options{
 		DataDir: cfg.Server.DataDir,
 		BindingResolver: codenav.TypedIndexResolveFunc(
 			func(ctx context.Context, repository, revision string) (codenav.TypedIndexBinding, error) {
@@ -167,7 +167,11 @@ func openServeSearcher(d *serveDeps) error {
 				)
 			},
 		),
-	})
+	}
+	if d.typedRuntime != nil {
+		codeNavigationOptions.RoutedResolver = d.typedRuntime.resolver
+	}
+	codeNavigation := codenav.New(codeNavigationOptions)
 	d.codeNavigation = codeNavigation
 	return nil
 }

@@ -586,6 +586,10 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 			return e
 		}
 		request := typedindex.NewRequest(c.Source, p, uint64(c.ProfileEpoch), c.UniverseSHA256, "native-neutral")
+		purpose := acceptanceCheckedPurpose(*acceptanceCase)
+		if purpose != "" {
+			request = typedindex.NewManagedRequest(c.Source, p, uint64(c.ProfileEpoch), c.UniverseSHA256, purpose)
+		}
 		if _, e = s.EnqueueTypedIndex(ctx, acceptanceRepo, acceptanceJSON(request)); e != nil {
 			return e
 		}
@@ -603,7 +607,18 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 		_ = inventory
 		// Assignment below uses the scheduler's exact budget type, without replacing
 		// its native operation or settlement implementation.
-		class.Handle = acceptanceHandle(c, handle)
+		class.Handle = acceptanceHandle(c, func(ctx context.Context, chunk store.GenerationChunk, budget generationscheduler.Budget) error {
+			if e := handle(ctx, chunk, budget); e != nil || purpose == "" {
+				return e
+			}
+			result.FailureSite = "checked_reuse"
+			if e := acceptanceCheckedReuse(ctx, c, s, r, chunk, result.Outcome, purpose); e != nil {
+				return e
+			}
+			result.NoReplay = true
+			result.FailureSite = ""
+			return nil
+		})
 		class.AfterSettlement = func(ctx context.Context, chunk store.GenerationChunk) error {
 			e := settle(ctx, chunk)
 			result.Settled = e == nil
@@ -621,7 +636,19 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 		if reportFailed.Load() || !result.Settled {
 			return errors.New("scheduler settlement failed")
 		}
-		if *acceptanceCase == "success" {
+		if purpose != "" {
+			result.FailureSite = "checked_status"
+			if result.ExecutionError || !result.NoReplay {
+				return errors.New("checked execution or reuse refused")
+			}
+			if e = acceptanceChecked(ctx, c, s, result.Outcome, purpose); e != nil {
+				return e
+			}
+			if e = acceptanceSettledNoReplay(ctx, c, s); e != nil {
+				return e
+			}
+			result.FailureSite = ""
+		} else if *acceptanceCase == "success" {
 			if result.ExecutionError {
 				return errors.New("positive execution refused")
 			}
@@ -688,6 +715,95 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 	_ = controller
 	return nil
 }
+
+func acceptanceChecked(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, out Outcome, purpose typedindex.Purpose) error {
+	if out.Check == nil || out.Check.Validate() != nil || out.Check.Purpose != purpose || out.Pointer != (typedindex.PublicationPointer{}) || out.Check.Members != 1 || out.Check.Documents != 1 || out.Check.Generated != 0 {
+		return errors.New("neutral checked summary")
+	}
+	for n, phase := range []typedindex.Action{typedindex.Plan, typedindex.Execute} {
+		report := out.Reports[n]
+		if report.Phase != phase || report.ExitCode != 0 || !report.Removed || report.StopReason != "" || report.Failure != nil {
+			return errors.New("checked cold phase completion")
+		}
+	}
+	states := [5]string{"complete", "complete", "complete", "complete", "not_requested"}
+	status, err := s.GetTypedIndexStatus(ctx, acceptanceRepo)
+	if err != nil || status.Stage != store.TypedChecked || status.States != states || status.Current != nil || status.Stale || status.Canceled || status.RestoreRequired || status.Check == nil || *status.Check != *out.Check || status.Desired != out.Check.RequestDigest {
+		return errors.New("checked status or current")
+	}
+	current, err := s.ScanTypedIndexControls(ctx, store.TypedIndexCurrents, "", 2)
+	if err != nil || len(current.Rows) != 0 || current.Next != "" {
+		return errors.New("checked current installed")
+	}
+	attempt, err := s.InspectTypedIndexAttempt(ctx, out.AttemptDigest)
+	if err != nil || attempt.Parent.Schema != typedindex.ManagedRequestSchema || attempt.Parent.Purpose != purpose || attempt.Parent.Source != c.Source || attempt.Stage != store.TypedChecked || attempt.States != states || attempt.Check == nil || *attempt.Check != *out.Check || attempt.PlanningDigest != out.Check.ParentDigest || attempt.RequestDigest != out.Check.RequestDigest || attempt.PlanDigest != out.Check.PlanDigest || attempt.Custody == nil || attempt.Custody.Revision != 2 {
+		return errors.New("checked attempt authority")
+	}
+	id := typedworkspace.OwnerIdentity{PlanningDigest: attempt.PlanningDigest, AttemptDigest: attempt.AttemptDigest, ChunkIdentity: attempt.ChunkIdentity, LeaseDigest: attempt.LeaseDigest, Request: attempt.Parent}
+	base := filepath.Join(c.caseRoot(*acceptanceCase), "workspace")
+	manifest, err := typedworkspace.LoadOwner(ctx, base, id)
+	if err != nil || manifest.Revision != 2 || manifest.Publication != nil || manifest.PublicationName != "" {
+		return errors.New("checked publication custody")
+	}
+	entries, err := os.ReadDir(filepath.Join(base, id.RelativeName()))
+	if err != nil || len(entries) > 16 {
+		return errors.New("checked owner census")
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "bundle-") || entry.Name() == "publication-receipt.json" {
+			return errors.New("checked publication files")
+		}
+	}
+	return nil
+}
+
+// Reuse the same live lease through the ready runtime before scheduler settlement.
+// Guard input/native entrypoints so a regression cannot launch a third container.
+func acceptanceCheckedReuse(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, r *Runtime, chunk store.GenerationChunk, out Outcome, purpose typedindex.Purpose) error {
+	if err := acceptanceChecked(ctx, c, s, out, purpose); err != nil {
+		return err
+	}
+	before, err := s.ScanTypedIndexControls(ctx, store.TypedIndexAttempts, "", 64)
+	if err != nil {
+		return err
+	}
+	growth, err := s.GetTypedIndexGrowth(ctx)
+	if err != nil {
+		return err
+	}
+	priorNative, priorBundle := r.controller.native, r.bundle
+	defer func() { r.controller.native, r.bundle = priorNative, priorBundle }()
+	var lookup, native atomic.Bool
+	r.controller.native.begin = func(context.Context, string, string) (typedsandbox.Allowance, error) {
+		native.Store(true)
+		return typedsandbox.Allowance{}, ErrHeld
+	}
+	r.controller.native.prepare = func(context.Context, typedsandbox.HostScratchOptions, *lifecycle.Gate) (typedsandbox.HostScratchReceipt, error) {
+		native.Store(true)
+		return typedsandbox.HostScratchReceipt{}, ErrHeld
+	}
+	r.controller.native.run = func(context.Context, typedsandbox.Options, typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
+		native.Store(true)
+		return typedsandbox.Result{}, ErrHeld
+	}
+	r.bundle = func(context.Context, typedindex.Admission) (string, []byte, error) {
+		lookup.Store(true)
+		return "", nil, ErrHeld
+	}
+	if err = r.Class().Handle(ctx, chunk, r.Class().Budget); err != nil {
+		return err
+	}
+	after, err := s.ScanTypedIndexControls(ctx, store.TypedIndexAttempts, "", 64)
+	if err != nil || !bytes.Equal(acceptanceJSON(before), acceptanceJSON(after)) {
+		return errors.New("checked reuse changed attempts")
+	}
+	nextGrowth, err := s.GetTypedIndexGrowth(ctx)
+	if err != nil || !bytes.Equal(acceptanceJSON(growth), acceptanceJSON(nextGrowth)) || lookup.Load() || native.Load() {
+		return errors.New("checked reuse copied, grew or launched")
+	}
+	return acceptanceChecked(ctx, c, s, out, purpose)
+}
+
 func acceptanceHandle(c nativeAcceptanceConfig, handle generationscheduler.Handler) generationscheduler.Handler {
 	return func(ctx context.Context, chunk store.GenerationChunk, budget generationscheduler.Budget) error {
 		selected := acceptanceSelected{Chunk: chunk, Attempt: acceptanceDigest([]byte(chunk.Identity + "\x00" + chunk.LeaseToken))}
@@ -1082,7 +1198,7 @@ func acceptanceEngineFailureSite(err error) string {
 // Only fixed harness sites survive the private child's discarded stderr.
 func acceptanceChildFailureSiteValid(site string) bool {
 	switch site {
-	case "", "schedule_before", "schedule_before_shape", "duplicate_coordinator", "schedule_after", "schedule_changed", "warm_claim", "warm_unexpected", "growth_release":
+	case "", "schedule_before", "schedule_before_shape", "duplicate_coordinator", "schedule_after", "schedule_changed", "warm_claim", "warm_unexpected", "growth_release", "checked_reuse", "checked_status":
 		return true
 	default:
 		return false
@@ -1090,7 +1206,7 @@ func acceptanceChildFailureSiteValid(site string) bool {
 }
 
 func TestNativeAcceptanceChildFailureSite(t *testing.T) {
-	for _, site := range []string{"", "schedule_before", "schedule_before_shape", "duplicate_coordinator", "schedule_after", "schedule_changed", "warm_claim", "warm_unexpected", "growth_release", "private/path/credential", "unknown"} {
+	for _, site := range []string{"", "schedule_before", "schedule_before_shape", "duplicate_coordinator", "schedule_after", "schedule_changed", "warm_claim", "warm_unexpected", "growth_release", "checked_reuse", "checked_status", "private/path/credential", "unknown"} {
 		want := site != "private/path/credential" && site != "unknown"
 		if acceptanceChildFailureSiteValid(site) != want {
 			t.Fatal("closed child failure classification")
@@ -1257,7 +1373,7 @@ loop:
 				seen[observed.ID] = true
 				final.Observations = append(final.Observations, *observed)
 			}
-			if observed.Phase == "execute" && !final.Injected && *acceptanceCase != "success" {
+			if observed.Phase == "execute" && !final.Injected && acceptanceFaultCase(*acceptanceCase) {
 				switch *acceptanceCase {
 				case "cancel":
 					e = acceptanceSignal(cmd.Process.Pid, os.Getpid(), controllerStart, unix.SIGTERM)
@@ -1282,7 +1398,7 @@ loop:
 	if a.Start != b.Start || a.Deadline != b.Deadline || a.BootID != b.BootID || a.TimeDevice != b.TimeDevice || a.TimeInode != b.TimeInode || b.WorkerBytesUsed <= 0 || b.WireBytesUsed <= 0 {
 		return errors.New("shared absolute allowance")
 	}
-	if *acceptanceCase != "success" && !final.Injected {
+	if acceptanceFaultCase(*acceptanceCase) && !final.Injected {
 		return errors.New("missing fault injection")
 	}
 	resultName := "child.json"
@@ -1334,6 +1450,13 @@ loop:
 	if *acceptanceCase == "success" {
 		if !final.Result.PublicationVerified {
 			return errors.New("publication proof missing")
+		}
+	} else if purpose := acceptanceCheckedPurpose(*acceptanceCase); purpose != "" {
+		if final.Injected || final.Result.ExecutionError || final.Result.PublicationVerified {
+			return errors.New("checked case injected or published")
+		}
+		if e = acceptanceChecked(ctx, c, s, final.Result.Outcome, purpose); e != nil {
+			return e
 		}
 	}
 	if e = acceptanceDrain(ctx, c, s, &final); e != nil {
@@ -1701,7 +1824,7 @@ func acceptanceSettledNoReplay(ctx context.Context, c nativeAcceptanceConfig, s 
 
 // These flags exist only in the test executable. No configuration is shipped.
 var acceptanceConfigPath = flag.String("typed-native-config", "", "reviewed private neutral native config")
-var acceptanceCase = flag.String("typed-native-case", "", "success, cancel, wall or hard-death")
+var acceptanceCase = flag.String("typed-native-case", "", "success, cancel, wall, hard-death, canary or dry-run")
 var acceptanceRole = flag.String("typed-native-role", "", "owned controller child: run or recover")
 var acceptanceEndpoint = flag.String("typed-native-endpoint", "", "parent-owned loopback fixture")
 var acceptanceParent = flag.Int("typed-native-parent", 0, "exact parent PID")

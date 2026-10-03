@@ -1080,3 +1080,9 @@ and profile epoch5. Source-free original receipts are retained in
 `spike/t454/neutral_acceptance_7.json`; all four cases require native absence,
 owned workspace drainage, engine join, growth release and no replay. This
 neutral acceptance proof does not enable or register a provider.
+
+The executor, scheduler/lifecycle and generated-navigation adapter now have an
+internal runtime composition. Ordinary `serve` keeps it disabled; there is no
+new configuration switch or managed-indexing endpoint. Native canary/dry-run
+and fresh frozen target-corpus correctness/cost validation must pass before
+Bazel registration. Additional managed providers follow that closure.

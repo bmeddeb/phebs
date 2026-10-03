@@ -40,8 +40,10 @@ class AcceptanceTests(unittest.TestCase):
     def test_closed_transport(self):
         h = n.digest(b'config')
         with mock.patch.object(n, 'transport') as transport, mock.patch.object(n, 'check_deployment_host', return_value=h):
-            n.run('neutral-1', 'success', h, 'deployment.json')
-            transport.assert_called_once_with(['run', 'neutral-1', 'success', h, h], timeout=600)
+            for case in n.CASES:
+                transport.reset_mock()
+                n.run('neutral-1', case, h, 'deployment.json')
+                transport.assert_called_once_with(['run', 'neutral-1', case, h, h], timeout=600)
             for ident, case in [('../escape', 'success'), ('neutral-1', 'target'), ('neutral-1', 'success;sh')]:
                 with self.assertRaises(ValueError): n.run(ident, case, h, "deployment.json")
         with mock.patch.object(subprocess, 'run') as run:
@@ -146,7 +148,23 @@ class AcceptanceTests(unittest.TestCase):
             self.assertNotIn(text, n.REMOTE)
         self.assertIn("root/('dispatch-'+case+'.json')", n.REMOTE)
         self.assertIn('os.O_EXCL', n.REMOTE)
-        self.assertIn("for prior in C[:C.index(case)]", n.REMOTE)
+        self.assertIn("for prior in cases[:cases.index(case)]", n.REMOTE)
+
+    def test_remote_case_prerequisites_preserve_original_sequence(self):
+        import ast
+        tree = ast.parse(n.REMOTE)
+        assignments = [x for x in ast.walk(tree) if isinstance(x, ast.Assign)
+                       and any(isinstance(t, ast.Name) and t.id == 'cases' for t in x.targets)]
+        self.assertEqual(len(assignments), 1)
+        loop = next(x for x in ast.walk(tree) if isinstance(x, ast.For)
+                    and isinstance(x.target, ast.Name) and x.target.id == 'prior')
+        for case, expected in [('success', ()), ('cancel', ('success',)),
+                               ('wall', ('success', 'cancel')),
+                               ('hard-death', ('success', 'cancel', 'wall')),
+                               ('canary', ()), ('dry-run', ('canary',))]:
+            scope = {'C': n.CASES, 'case': case}
+            scope['cases'] = eval(compile(ast.Expression(assignments[0].value), '<cases>', 'eval'), scope)
+            self.assertEqual(eval(compile(ast.Expression(loop.iter), '<prior>', 'eval'), scope), expected)
 
 
 if __name__ == '__main__':

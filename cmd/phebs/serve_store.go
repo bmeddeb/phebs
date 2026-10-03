@@ -155,6 +155,9 @@ func wireServeLifecycle(d *serveDeps) error {
 			lockCtx, filepath.Join(cfg.Server.DataDir, "index"),
 		)
 	}
+	if err := prepareServeTypedIndex(d); err != nil {
+		return err
+	}
 	releaseCatalogRepair, err := d.acquireLifecycleMutation(ctx)
 	if err != nil {
 		return fmt.Errorf("acquire catalog v3 startup repair lock: %w", err)
@@ -223,6 +226,9 @@ func wireServeLifecycle(d *serveDeps) error {
 		Root: d.partitionPublicationRoot, Acquire: d.acquireLifecycleMutation,
 	})
 	lifecycleOwners = append(lifecycleOwners, lifecycle.ClosedOwners()...)
+	if d.typedRuntime != nil {
+		lifecycleOwners = append(lifecycleOwners, d.typedRuntime)
+	}
 	newLifecycleStatus := lifecycle.NewStatusMonitor
 	if semanticLaunch != nil && (semanticLaunch.request.ServerEpoch == 4 || semanticLaunch.request.ServerEpoch == 5) {
 		newLifecycleStatus = lifecycle.NewSelectedCleanupStatusMonitor

@@ -20,7 +20,7 @@ import tarfile
 
 BASE = Path('/var/lib/phebs-typed-acceptance')
 PROFILE = 'phebs-t451a'
-CASES = ('success', 'cancel', 'wall', 'hard-death')
+CASES = ('success', 'cancel', 'wall', 'hard-death', 'canary', 'dry-run')
 CONFIG_KEYS = ('schema', 'id', 'source_commit', 'source', 'test_sha256',
                'helper_sha256', 'engine_sha256', 'seed_sha256',
                'inventory_sha256', 'profile_sha256', 'selection_sha256',
@@ -328,7 +328,7 @@ REMOTE_BODY = r'''
 import hashlib,json,os,pathlib,re,signal,stat,subprocess,sys,tarfile
 signal.alarm(600)
 B=pathlib.Path('/var/lib/phebs-typed-acceptance')
-C=('success','cancel','wall','hard-death')
+C=('success','cancel','wall','hard-death','canary','dry-run')
 def reject(): raise RuntimeError('neutral acceptance transport refused')
 def digest(b): return 'sha256:'+hashlib.sha256(b).hexdigest()
 def checkdir(p):
@@ -414,7 +414,8 @@ elif a in ('run','collect'):
   sys.stdout.buffer.write(data)
  else:
   if cfg['deployment_sha256']!=sys.argv[5] or digest(read(root/'deployment.json',16384))!=sys.argv[5]: reject()
-  for prior in C[:C.index(case)]:
+  cases=C[:4] if case in C[:4] else C[4:]
+  for prior in cases[:cases.index(case)]:
    receipt=json.loads(read(root/prior/'receipt.json',128<<10))
    if not receipt.get('pass') or receipt.get('config')!=expected or receipt.get('case')!=prior: reject()
   if digest(read(root/'native-acceptance.test',256<<20))!=cfg['test_sha256']: reject()

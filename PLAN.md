@@ -8438,3 +8438,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   production query, sync, startup, retry, publication, lock or cache cost beyond
   the already recorded coordinator correction. The neutral proof does not
   register a provider or authorize target execution, ceremony, scale or release.
+
+- **2026-10-02 — T45.4 runtime composition and T45.6 checked native gate.**
+  Compose the existing controller, one-slot generation scheduler, dedicated
+  typed coordinator, bounded lifecycle owner and T45.5 routed reader through
+  one trusted in-process installation. Ordinary `serve` supplies no installation;
+  no configuration, environment or public endpoint enables Bazel before its
+  registration gates. Exact ceremony modes and unsupported hosts refuse that
+  installation. Startup completes the existing ownership reconciliation before
+  installing claims or readers; failed settlement holds new work through repair.
+  Error wrapping retains retry/classification semantics while exposing only
+  closed reasons to job records and logs. The disabled path performs only nil
+  checks, with no typed allocation, scan, read, write, poll, lock, cache or child.
+  Installed runtime uses the existing coordinator/scheduler polling cadence,
+  five-second chunk heartbeat, twenty-second stale threshold and joined background
+  lifetime. A repair timer checks one in-memory latch; only ambiguous settlement
+  triggers the existing complete guarded census. Lifecycle turns retain the
+  existing bounded mutations and reader pins; available navigation retains the
+  adapter's twenty bounded SDK reads and selected-member cache costs. No resource
+  limit, store schema, sync hook or publication predicate changes.
+  The test-only native acceptance transport adds closed `canary` and `dry-run`
+  cases, preserving the original four-case sequence and evidence. Both must
+  complete planning/execution/validation without a current row or publication
+  files, and prove exact checked reuse without input lookup, growth or children,
+  joined settlement, growth release and native/workspace/engine teardown.
+  Fresh harness bytes may use the independently pinned original worker,
+  inventory/profile and pristine epoch-five seed; harness and worker source
+  identities are reported separately. Native checked proof and the frozen
+  public-corpus correctness/cost replay remain gates, not inferred results.

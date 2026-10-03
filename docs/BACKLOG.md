@@ -15080,6 +15080,16 @@ convert old database pointers into a drain claim. These bounded neutral cases
 close this native prerequisite only. Runtime registration, target execution,
 ceremony, scale and release claims remain separate gates.
 
+Runtime composition (2026-10-02): the existing executor, typed coordinator,
+one-slot scheduler, bounded lifecycle owner and T45.5 adapter are now composed
+through one trusted installation seam. Ordinary `serve` keeps that seam nil;
+there is no operator/API activation yet. Startup reconciliation precedes claims,
+failed settlement blocks admission throughout repair, and shutdown uses the
+existing joined background lifetime. Closed errors preserve retry semantics.
+The native harness now has separate canary/dry-run cases requiring checked
+completion, no publication, exact reuse and full teardown. Native checked and
+fresh frozen target-corpus correctness/cost results still gate registration.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

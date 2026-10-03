@@ -14,8 +14,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/typedworkspace"
 )
 
-// This prospective adapter is deliberately not installed by serve. Its sole
-// path comes from trusted installation configuration, never a navigation query.
+// This adapter is installed only by the explicitly composed typed runtime. Its
+// sole path comes from trusted installation configuration, never a navigation query.
 // Every open re-resolves exact current custody; no binding→authority map survives.
 type typedCodeNavigationResolver struct {
 	store     *store.Surreal

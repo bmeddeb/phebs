@@ -110,8 +110,11 @@ type serveDeps struct {
 	runtimeScopedSearch  search.ScopedSearcher
 	serviceStateV3Reader *store.ServiceStateV3Reader
 	codeNavigation       *codenav.Service
-	dist                 fs.FS
-	indexDir             string
+	// Kept nil by ordinary serve until Bazel's registration gates pass.
+	typedInstallation *typedServeInstallation
+	typedRuntime      *typedServeRuntime
+	dist              fs.FS
+	indexDir          string
 }
 
 // deferFunc appends a deferred action run LIFO by runDeferred when serve
