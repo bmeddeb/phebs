@@ -270,11 +270,11 @@ func runPreparationPostRunChain(ctx context.Context, in Provisioning, helperByte
 // installPreparationProfile CASes only the independently declared predecessor.
 // The default first install expects zero; a reviewed reseal explicitly declares
 // its successor epoch and refuses any other current epoch.
-func installPreparationProfile(ctx context.Context, s *store.Surreal, profile typedindex.Profile, universe string, epoch int64) (store.TypedIndexIntent, error) {
+func installPreparationProfile(ctx context.Context, s *store.Surreal, repository string, profile typedindex.Profile, universe string, epoch int64) (store.TypedIndexIntent, error) {
 	if epoch < 1 {
 		return store.TypedIndexIntent{}, typedindex.Invalid
 	}
-	return s.InstallTypedProfile(ctx, preparationRepo, profile, universe, epoch-1)
+	return s.InstallTypedProfile(ctx, repository, profile, universe, epoch-1)
 }
 
 // verifyPreparationSeed reproduces the acceptance seed predicate set exactly: the
@@ -287,11 +287,11 @@ func installPreparationProfile(ctx context.Context, s *store.Surreal, profile ty
 // an independent literal (the pristine first install mints 1), not the install's
 // own echo; an explicit reseal independently declares its successor epoch.
 func verifyPreparationSeed(ctx context.Context, s *store.Surreal, source typedindex.Source, profile typedindex.Profile, universe string, epoch int64) error {
-	got, err := s.GetTypedSource(ctx, preparationRepo)
+	got, err := s.GetTypedSource(ctx, source.Repository)
 	if err != nil || got != source {
 		return errors.New("post-run seed source authority")
 	}
-	intent, err := s.GetTypedIndexIntent(ctx, preparationRepo)
+	intent, err := s.GetTypedIndexIntent(ctx, source.Repository)
 	if err != nil || !preparationSeedIntentValid(intent, profile.Digest(), universe, epoch) {
 		return errors.New("post-run seed profile authority")
 	}
@@ -733,11 +733,11 @@ func TestNativePreparationPostRun(t *testing.T) {
 	}
 
 	in := Provisioning{
-		Source: prov.Source, Inventory: pre, Roots: []string{cfg.Root},
+		Source: prov.Source, Inventory: pre, Roots: cfg.roots(),
 		Module: cfg.Module, Remote: cfg.Remote,
 		Cquery: res.Cquery, Aquery: res.Aquery, Projections: res.Projections,
 	}
-	out, err := runPreparationPostRunChain(ctx, in, int64(len(cmdHelperRaw)), preparationFinalTools(cfg.HelperSHA256), "neutral", cfg.ImageSHA256, cfg.MkfsSHA256)
+	out, err := runPreparationPostRunChain(ctx, in, int64(len(cmdHelperRaw)), preparationFinalTools(cfg.HelperSHA256), cfg.profileName(), cfg.ImageSHA256, cfg.MkfsSHA256)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -753,12 +753,12 @@ func TestNativePreparationPostRun(t *testing.T) {
 	}
 	defer func() { _ = s.Close(context.Background()) }()
 
-	currentSource, err := s.GetTypedSource(ctx, preparationRepo)
+	currentSource, err := s.GetTypedSource(ctx, cfg.Source.Repository)
 	if err != nil || currentSource != prov.Source {
 		t.Fatal("post-run source authority changed before install")
 	}
 	if *preparationProfileEpoch > 1 {
-		predecessor, err := s.GetTypedIndexIntent(ctx, preparationRepo)
+		predecessor, err := s.GetTypedIndexIntent(ctx, cfg.Source.Repository)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -770,7 +770,7 @@ func TestNativePreparationPostRun(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	intent, err := installPreparationProfile(ctx, s, out.Profile, out.Universe, *preparationProfileEpoch)
+	intent, err := installPreparationProfile(ctx, s, cfg.Source.Repository, out.Profile, out.Universe, *preparationProfileEpoch)
 	if err != nil {
 		t.Fatal(err)
 	}

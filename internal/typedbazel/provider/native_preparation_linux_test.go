@@ -157,7 +157,7 @@ func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance,
 		return nil, errors.New("neutral preparation helper identity")
 	}
 	inv := Invocation{Profile: profile, Inventory: inventory}
-	roots := []string{cfg.Root}
+	roots := cfg.roots()
 	started := time.Now()
 	stages := map[string]int64{}
 	mark := func(name string, at time.Time) { stages[name] = time.Since(at).Milliseconds() }
@@ -301,6 +301,12 @@ func loadPreparationControls(ctx context.Context, allowance typedsandbox.Allowan
 	inventory, err := typedindex.DecodeInventory(ctx, invRaw, cfg.InventorySHA256)
 	if err != nil {
 		return empty, emptyInv, emptyPro, err
+	}
+	if cfg.Schema == preparationCorpusSchema {
+		archive, readErr := readInventory(inventory, "tools/corpus/remote-apis-sdks.tar.gz", 249496)
+		if readErr != nil || hash(archive) != preparationCorpusArchive || verifyPreparationCorpusInventory(ctx, inventory, archive) != nil {
+			return empty, emptyInv, emptyPro, errors.New("frozen corpus source inventory")
+		}
 	}
 	profRaw, err := readBounded("/controls/profile.json", typedindex.MaxProfileBytes)
 	if err != nil || preparationDigest(profRaw) != s.Identity.ProfileSHA256 || preparationDigest(profRaw) != cfg.ProfileSHA256 {
@@ -551,7 +557,7 @@ func TestNativePreparationHost(t *testing.T) {
 	}
 	// Independent host reassembly from the returned raw bytes; the parsed worker
 	// Plan alone is not raw provenance.
-	plan, err := planner.AssembleRootsV2(parsed.Cquery, parsed.Aquery, parsed.Projections, []string{cfg.Root})
+	plan, err := planner.AssembleRootsV2(parsed.Cquery, parsed.Aquery, parsed.Projections, cfg.roots())
 	if err != nil || len(plan.Targets) == 0 {
 		t.Fatal("neutral preparation host reassembly")
 	}

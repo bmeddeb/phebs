@@ -38,6 +38,35 @@ def fixture_config():
 
 
 class PreparationTests(unittest.TestCase):
+    def test_frozen_corpus_config_preserves_neutral(self):
+        neutral = fixture_config()
+        self.assertNotIn('cohort', neutral)
+        for cohort in n.CORPUS_ROOTS:
+            c = copy.deepcopy(neutral)
+            c.update(schema=n.CORPUS_SCHEMA, module=n.CORPUS_REPO,
+                     remote='https://' + n.CORPUS_REPO, root='', cohort=cohort)
+            c['source'].update(repository=n.CORPUS_REPO, commit=n.CORPUS_COMMIT)
+            raw = n.canonical(c)
+            self.assertEqual(n.config(raw, n.digest(raw)), c)
+            for mutate in [lambda v: v['source'].update(commit='c' * 40),
+                           lambda v: v['source'].update(repository=n.REPO),
+                           lambda v: v.update(cohort='all'),
+                           lambda v: v.update(root='//...'),
+                           lambda v: v.update(module=n.REPO),
+                           lambda v: v.update(remote=n.REMOTE),
+                           lambda v: v.update(schema=n.SCHEMA),
+                           lambda v: v.update(roots=list(n.CORPUS_ROOTS[cohort]))]:
+                v = copy.deepcopy(c); mutate(v)
+                with self.assertRaises(ValueError):
+                    n.config(n.canonical(v))
+
+    def test_frozen_corpus_archive_refuses_unpinned_bytes(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d).resolve() / 'corpus.tar.gz'
+            path.write_bytes(b'unreviewed archive')
+            with self.assertRaisesRegex(ValueError, 'archive identity'):
+                n.corpus_files(path)
+
     def test_config_positive_and_refusals(self):
         c = fixture_config()
         raw = n.canonical(c)

@@ -1,7 +1,9 @@
 package provider
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,6 +15,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +38,10 @@ const preparationRemote = "https://example.invalid/phebs-native-neutral"
 const preparationRoot = "//lib:lib"
 const preparationPlanningDomain = "phebs-typed-preparation-planning-v1\x00"
 const preparationAttemptDomain = "phebs-typed-preparation-attempt-v1\x00"
+const preparationCorpusSchema = "phebs-typed-native-corpus-preparation-v1"
+const preparationCorpusRepo = "github.com/bazelbuild/remote-apis-sdks"
+const preparationCorpusCommit = "d5824b1a2286806b07efd030aa3a139c4f540157"
+const preparationCorpusArchive = "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc"
 
 const preparationMaxConfig = 16384
 const preparationMaxReceipt = 128 << 10
@@ -52,6 +60,8 @@ var preparationID = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
 // commit/provenance flags below and never a full pre-validated config.
 var preparationRole = flag.String("typed-preparation-role", "", "opt-in preparation role: seed or host")
 var preparationCommit = flag.String("typed-preparation-commit", "", "opt-in seed role: exact 40-hex neutral source commit to provision and observe")
+var preparationCorpus = flag.String("typed-preparation-corpus", "", "opt-in seed role: frozen ordinary, proto or fanout cohort; empty preserves neutral")
+var preparationCorpusArchivePath = flag.String("typed-preparation-corpus-archive", "", "optional read-only frozen Apache-2.0 corpus archive proof; no target execution")
 var preparationSeedOut = flag.String("typed-preparation-seed-out", "", "opt-in seed role: create-only path for the observed source provenance record")
 
 // nativePreparationConfig binds exactly one preparation ID, the fixed neutral
@@ -78,6 +88,112 @@ type nativePreparationConfig struct {
 	ImageSHA256      string            `json:"image_sha256"`
 	MkfsSHA256       string            `json:"mkfs_sha256"`
 	DeploymentSHA256 string            `json:"deployment_sha256"`
+	Cohort           string            `json:"cohort,omitempty"`
+}
+
+// Corpus preparation never accepts caller-authored roots or another revision.
+// The neutral wire omits Cohort and retains its original bytes and identities.
+func preparationCorpusRoots(cohort string) ([]string, error) {
+	switch cohort {
+	case "ordinary":
+		return []string{"//go/pkg/moreflag:moreflag", "//go/pkg/cache:cache", "//go/pkg/outerr:outerr"}, nil
+	case "proto":
+		return []string{"//go/api/command:command", "//go/pkg/command:command"}, nil
+	case "fanout":
+		return []string{"//go/pkg/client:client", "//go/pkg/cas:cas", "//go/pkg/rexec:rexec"}, nil
+	default:
+		return nil, errors.New("unknown frozen corpus cohort")
+	}
+}
+
+func (c nativePreparationConfig) roots() []string {
+	if c.Schema == preparationCorpusSchema {
+		roots, _ := preparationCorpusRoots(c.Cohort) // parsePreparationConfig already admitted this closed selector.
+		return roots
+	}
+	return []string{c.Root}
+}
+
+func (c nativePreparationConfig) profileName() string {
+	if c.Schema == preparationCorpusSchema {
+		return "corpus-" + c.Cohort
+	}
+	return "neutral"
+}
+
+// The commit is bound to the unchanged archived corpus, not merely asserted by
+// the operator's source metadata. This test-only verifier never executes source.
+func preparationCorpusFiles(ctx context.Context, archive []byte) ([]typedindex.BundleFile, error) {
+	if len(archive) != 249496 || preparationDigest(archive) != preparationCorpusArchive {
+		return nil, typedindex.Invalid
+	}
+	gz, err := gzip.NewReader(bytes.NewReader(archive))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = gz.Close() }()
+	r := tar.NewReader(io.LimitReader(gz, 2<<20))
+	prefix := "remote-apis-sdks-" + preparationCorpusCommit
+	files := []typedindex.BundleFile{}
+	seen := map[string]bool{}
+	var total int64
+	for records := 0; ; records++ {
+		if err = ctx.Err(); err != nil {
+			return nil, err
+		}
+		h, nextErr := r.Next()
+		if nextErr == io.EOF {
+			break
+		}
+		if nextErr != nil {
+			return nil, nextErr
+		}
+		if records == 0 && h.Typeflag == tar.TypeXGlobalHeader && h.Name == "pax_global_header" && len(h.PAXRecords) == 1 && h.PAXRecords["comment"] == preparationCorpusCommit {
+			continue
+		}
+		if records >= 168 || h.Name != prefix && !strings.HasPrefix(h.Name, prefix+"/") {
+			return nil, typedindex.Invalid
+		}
+		name := strings.TrimPrefix(h.Name, prefix+"/")
+		if h.Typeflag == tar.TypeDir {
+			if h.Size != 0 {
+				return nil, typedindex.Invalid
+			}
+			continue
+		}
+		if h.Typeflag != tar.TypeReg || !safeRelative(name) || seen[name] || h.Size < 0 || h.Size > 1079184-total {
+			return nil, typedindex.Invalid
+		}
+		b, readErr := io.ReadAll(io.LimitReader(r, h.Size+1))
+		if readErr != nil || int64(len(b)) != h.Size {
+			return nil, typedindex.Invalid
+		}
+		seen[name] = true
+		total += h.Size
+		files = append(files, typedindex.BundleFile{Path: "source/" + name, Bytes: h.Size, Digest: preparationDigest(b), Executable: h.Mode&0111 != 0})
+	}
+	if len(files) != 128 || total != 1079184 {
+		return nil, typedindex.Invalid
+	}
+	slices.SortFunc(files, func(a, b typedindex.BundleFile) int { return strings.Compare(a.Path, b.Path) })
+	return files, nil
+}
+
+func verifyPreparationCorpusInventory(ctx context.Context, inventory typedindex.Inventory, archive []byte) error {
+	expected, err := preparationCorpusFiles(ctx, archive)
+	if err != nil {
+		return err
+	}
+	actual := []typedindex.BundleFile{}
+	for _, f := range inventory.Files() {
+		if strings.HasPrefix(f.Path, "source/") {
+			actual = append(actual, f)
+		}
+	}
+	if !slices.Equal(actual, expected) {
+		return typedindex.Stale
+	}
+	return ctx.Err()
 }
 
 // nativePreparationResult carries the raw provenance the host independently
@@ -183,9 +299,15 @@ func preparationJSON(v any) []byte {
 // from the preparation ID. They are not typedindex admissions and never collide
 // with a managed request/plan/attempt digest because of the fixed domain prefix.
 func (c nativePreparationConfig) planningDigest() string {
+	if c.Schema == preparationCorpusSchema {
+		return preparationDigest([]byte("phebs-typed-corpus-preparation-planning-v1\x00" + c.ID))
+	}
 	return preparationDigest([]byte(preparationPlanningDomain + c.ID))
 }
 func (c nativePreparationConfig) attemptDigest() string {
+	if c.Schema == preparationCorpusSchema {
+		return preparationDigest([]byte("phebs-typed-corpus-preparation-attempt-v1\x00" + c.ID))
+	}
 	return preparationDigest([]byte(preparationAttemptDomain + c.ID))
 }
 
@@ -194,14 +316,20 @@ func parsePreparationConfig(raw []byte) (nativePreparationConfig, error) {
 	if e := preparationDecode(raw, preparationMaxConfig, &c); e != nil {
 		return c, e
 	}
-	if c.Schema != preparationSchema || !preparationID.MatchString(c.ID) {
+	if !preparationID.MatchString(c.ID) || c.Source.Validate() != nil {
 		return c, errors.New("neutral preparation contract")
 	}
-	if c.Source.Repository != preparationRepo || c.Source.Validate() != nil {
-		return c, errors.New("neutral preparation source")
-	}
-	if c.Module != preparationRepo || c.Remote != preparationRemote || c.Root != preparationRoot {
-		return c, errors.New("neutral preparation module/remote/root")
+	switch c.Schema {
+	case preparationSchema:
+		if c.Source.Repository != preparationRepo || c.Module != preparationRepo || c.Remote != preparationRemote || c.Root != preparationRoot || c.Cohort != "" {
+			return c, errors.New("neutral preparation source/module/remote/root")
+		}
+	case preparationCorpusSchema:
+		if _, e := preparationCorpusRoots(c.Cohort); e != nil || c.Source.Repository != preparationCorpusRepo || c.Source.Commit != preparationCorpusCommit || c.Module != preparationCorpusRepo || c.Remote != "https://"+preparationCorpusRepo || c.Root != "" {
+			return c, errors.New("frozen corpus source/module/remote/cohort")
+		}
+	default:
+		return c, errors.New("preparation schema")
 	}
 	b, e := hex.DecodeString(c.SourceCommit)
 	if e != nil || len(b) != 20 || hex.EncodeToString(b) != c.SourceCommit {
@@ -370,6 +498,83 @@ func TestNativePreparationConfig(t *testing.T) {
 	}
 }
 
+func TestNativePreparationCorpusConfig(t *testing.T) {
+	neutral := fixturePreparationConfig(t)
+	if bytes.Contains(preparationJSON(neutral), []byte(`"cohort"`)) {
+		t.Fatal("neutral wire changed")
+	}
+	for _, cohort := range []string{"ordinary", "proto", "fanout"} {
+		t.Run(cohort, func(t *testing.T) {
+			c := neutral
+			c.Schema, c.Cohort, c.Root = preparationCorpusSchema, cohort, ""
+			c.Source.Repository, c.Source.Commit = preparationCorpusRepo, preparationCorpusCommit
+			c.Module, c.Remote = preparationCorpusRepo, "https://"+preparationCorpusRepo
+			if _, err := parsePreparationConfig(preparationJSON(c)); err != nil {
+				t.Fatal(err)
+			}
+			if len(c.roots()) < 2 || c.profileName() != "corpus-"+cohort || c.planningDigest() == neutral.planningDigest() || c.attemptDigest() == neutral.attemptDigest() {
+				t.Fatal("corpus selection/domain")
+			}
+			if repo, remote, err := preparationSeedLocation(preparationCorpusCommit, cohort); err != nil || repo != c.Source.Repository || remote != c.Remote {
+				t.Fatal("corpus seed selector", err)
+			}
+			for _, change := range []func(*nativePreparationConfig){
+				func(v *nativePreparationConfig) { v.Cohort = "all" },
+				func(v *nativePreparationConfig) { v.Source.Commit = neutral.Source.Commit },
+				func(v *nativePreparationConfig) { v.Source.Repository = preparationRepo },
+				func(v *nativePreparationConfig) { v.Root = "//..." },
+				func(v *nativePreparationConfig) { v.Module = preparationRepo },
+				func(v *nativePreparationConfig) { v.Remote = preparationRemote },
+				func(v *nativePreparationConfig) { v.Schema = preparationSchema },
+			} {
+				v := c
+				change(&v)
+				if _, err := parsePreparationConfig(preparationJSON(v)); err == nil {
+					t.Fatal("foreign corpus authority accepted")
+				}
+			}
+		})
+	}
+	for _, cohort := range []string{"all", "ordinary"} {
+		if _, _, err := preparationSeedLocation(neutral.Source.Commit, cohort); err == nil {
+			t.Fatal("unfrozen corpus seed")
+		}
+	}
+}
+
+func TestNativePreparationCorpusArchive(t *testing.T) {
+	if *preparationCorpusArchivePath == "" {
+		t.Skip("explicit read-only frozen corpus archive path required")
+	}
+	ctx := t.Context()
+	raw, err := readBounded(*preparationCorpusArchivePath, 249496)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := preparationCorpusFiles(ctx, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invRaw := preparationJSON(typedindex.InventoryDefinition{Schema: typedindex.InventorySchema, Files: files})
+	inv, err := typedindex.DecodeInventory(ctx, invRaw, preparationDigest(invRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = verifyPreparationCorpusInventory(ctx, inv, raw); err != nil {
+		t.Fatal(err)
+	}
+	files[0].Bytes++
+	badRaw := preparationJSON(typedindex.InventoryDefinition{Schema: typedindex.InventorySchema, Files: files})
+	bad, err := typedindex.DecodeInventory(ctx, badRaw, preparationDigest(badRaw))
+	if err != nil || verifyPreparationCorpusInventory(ctx, bad, raw) == nil {
+		t.Fatal("changed corpus source admitted", err)
+	}
+	raw[len(raw)-1] ^= 1
+	if _, err = preparationCorpusFiles(ctx, raw); err == nil {
+		t.Fatal("changed corpus archive admitted")
+	}
+}
+
 func fixturePreparationResult(t *testing.T) nativePreparationResult {
 	t.Helper()
 	c := fixturePreparationConfig(t)
@@ -513,6 +718,10 @@ func TestNativePreparationSeed(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	repo, remote, e := preparationSeedLocation(commit, *preparationCorpus)
+	if e != nil {
+		t.Fatal(e)
+	}
 	if *preparationSeedOut == "" {
 		t.Fatal("seed role requires -typed-preparation-seed-out provenance path")
 	}
@@ -526,7 +735,7 @@ func TestNativePreparationSeed(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer func() { _ = s.Close(context.Background()) }()
-	got, e := seedPreparationSource(ctx, s, commit)
+	got, e := seedPreparationSource(ctx, s, repo, remote, commit)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -553,18 +762,31 @@ func openPreparationStore(ctx context.Context, endpoint string) (*store.Surreal,
 // epoch, so neither is offline-authorable and the observed record is the only
 // authoritative provenance. Re-seeding the same repository can advance the store
 // epoch and therefore the computed generation.
-func seedPreparationSource(ctx context.Context, s *store.Surreal, commit string) (typedindex.Source, error) {
-	if err := s.UpsertRepo(ctx, store.Repo{Name: preparationRepo, CloneURL: preparationRemote, DefaultBranch: "main", IsPublic: true}); err != nil {
+func preparationSeedLocation(commit, cohort string) (string, string, error) {
+	if _, e := parseSeedCommit(commit); e != nil {
+		return "", "", e
+	}
+	if cohort == "" {
+		return preparationRepo, preparationRemote, nil
+	}
+	if _, e := preparationCorpusRoots(cohort); e != nil || commit != preparationCorpusCommit {
+		return "", "", errors.New("frozen corpus seed selector")
+	}
+	return preparationCorpusRepo, "https://" + preparationCorpusRepo, nil
+}
+
+func seedPreparationSource(ctx context.Context, s *store.Surreal, repo, remote, commit string) (typedindex.Source, error) {
+	if err := s.UpsertRepo(ctx, store.Repo{Name: repo, CloneURL: remote, DefaultBranch: "main", IsPublic: true}); err != nil {
 		return typedindex.Source{}, err
 	}
-	if err := s.SetRepoIndexed(ctx, preparationRepo, commit, time.Now()); err != nil {
+	if err := s.SetRepoIndexed(ctx, repo, commit, time.Now()); err != nil {
 		return typedindex.Source{}, err
 	}
-	got, err := s.GetTypedSource(ctx, preparationRepo)
+	got, err := s.GetTypedSource(ctx, repo)
 	if err != nil {
 		return typedindex.Source{}, err
 	}
-	if got.Repository != preparationRepo || got.Commit != commit || got.Validate() != nil {
+	if got.Repository != repo || got.Commit != commit || got.Validate() != nil {
 		return typedindex.Source{}, errors.New("seed source identity mismatch")
 	}
 	return got, nil

@@ -13,6 +13,7 @@ only this exact recorded owner/result and never starts another run.
 """
 import argparse
 import inspect
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -31,6 +32,15 @@ REPO = 'example.invalid/phebs-native-neutral'
 REMOTE = 'https://example.invalid/phebs-native-neutral'
 ROOT = '//lib:lib'
 SCHEMA = 'phebs-typed-native-preparation-v1'
+CORPUS_SCHEMA = 'phebs-typed-native-corpus-preparation-v1'
+CORPUS_REPO = 'github.com/bazelbuild/remote-apis-sdks'
+CORPUS_COMMIT = 'd5824b1a2286806b07efd030aa3a139c4f540157'
+CORPUS_ARCHIVE = 'sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc'
+CORPUS_ROOTS = {
+    'ordinary': ('//go/pkg/moreflag:moreflag', '//go/pkg/cache:cache', '//go/pkg/outerr:outerr'),
+    'proto': ('//go/api/command:command', '//go/pkg/command:command'),
+    'fanout': ('//go/pkg/client:client', '//go/pkg/cas:cas', '//go/pkg/rexec:rexec'),
+}
 # Closed key order; must equal the Go nativePreparationConfig field order so the
 # canonical round-trip check is meaningful across both codecs. It carries only
 # identities knowable BEFORE the run: the run-produced Selection-v1 digest and the
@@ -60,16 +70,22 @@ def preparation_id(value):
 
 def config(raw, expected=None):
     value = decode(raw, 16384)
-    if tuple(value) != CONFIG_KEYS or value['schema'] != SCHEMA:
+    corpus = value.get('schema') == CORPUS_SCHEMA
+    keys = CONFIG_KEYS + ('cohort',) if corpus else CONFIG_KEYS
+    if tuple(value) != keys or value['schema'] not in (SCHEMA, CORPUS_SCHEMA):
         fail('closed preparation configuration')
     if not preparation_id(value['id']):
         fail('preparation identity')
     source = value['source']
-    if tuple(source) != ('repository', 'incarnation', 'generation', 'commit') or source['repository'] != REPO:
-        fail('neutral source')
+    repo = CORPUS_REPO if corpus else REPO
+    if tuple(source) != ('repository', 'incarnation', 'generation', 'commit') or source['repository'] != repo:
+        fail('preparation source')
     if not re.fullmatch(r'[0-9a-f]{40}', source['commit']) or not source['incarnation'] or not hash_valid(source['generation']):
         fail('source identity')
-    if value['module'] != REPO or value['remote'] != REMOTE or value['root'] != ROOT:
+    if corpus:
+        if source['commit'] != CORPUS_COMMIT or value['cohort'] not in CORPUS_ROOTS or value['module'] != repo or value['remote'] != 'https://' + repo or value['root'] != '':
+            fail('frozen corpus revision/module/remote/cohort')
+    elif value['module'] != REPO or value['remote'] != REMOTE or value['root'] != ROOT:
         fail('neutral module/remote/root')
     if not re.fullmatch(r'[0-9a-f]{40}', value['source_commit']):
         fail('implementation identity')
@@ -79,6 +95,37 @@ def config(raw, expected=None):
     if expected is not None and (not hash_valid(expected) or digest(raw) != expected):
         fail('reviewed preparation config changed')
     return value
+
+
+def corpus_files(archive):
+    """Read exact frozen source bytes as input custody, never execute them."""
+    raw = read(archive, 249496)
+    if len(raw) != 249496 or digest(raw) != CORPUS_ARCHIVE:
+        fail('frozen corpus archive identity')
+    prefix = 'remote-apis-sdks-' + CORPUS_COMMIT
+    files, total, records = [], 0, 0
+    with tarfile.open(fileobj=io.BytesIO(raw), mode='r:gz') as tar:
+        for row in tar:
+            records += 1
+            if records > 167 or row.name != prefix and not row.name.startswith(prefix + '/'):
+                fail('frozen corpus archive record')
+            if row.isdir():
+                if row.size:
+                    fail('frozen corpus directory body')
+                continue
+            name = row.name.removeprefix(prefix + '/')
+            if not row.isfile() or not relative(name) or row.size < 0 or row.size > 1079184 - total:
+                fail('frozen corpus archive member')
+            with tar.extractfile(row) as stream:
+                contents = stream.read(row.size + 1)
+            if len(contents) != row.size:
+                fail('frozen corpus archive length')
+            total += row.size
+            files.append(dict(path='source/' + name, bytes=row.size, digest=digest(contents), executable=bool(row.mode & 0o111)))
+    files.sort(key=lambda row: row['path'])
+    if len(files) != 128 or total != 1079184 or len({row['path'] for row in files}) != 128:
+        fail('frozen corpus archive census')
+    return files
 
 
 def inputs(directory, expected=None):
@@ -121,6 +168,10 @@ def inputs(directory, expected=None):
         rows.append(('bundle/' + row['path'], h, size, row['executable']))
     if helpers:
         fail('preparation test helper missing')
+    if cfg['schema'] == CORPUS_SCHEMA:
+        expected_source = corpus_files(directory / 'bundle/tools/corpus/remote-apis-sdks.tar.gz')
+        if [row for row in inv['files'] if row['path'].startswith('source/')] != expected_source:
+            fail('frozen corpus source inventory')
     for name, _, _, _ in rows:
         entry = tarfile.TarInfo(name)
         try:

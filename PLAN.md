@@ -8473,3 +8473,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   inventory/profile and pristine epoch-five seed; harness and worker source
   identities are reported separately. Native checked proof and the frozen
   public-corpus correctness/cost replay remain gates, not inferred results.
+
+- **2026-10-02 — T45.6 frozen public-corpus preparation.** Extend only the
+  opt-in preparation harness with a distinct closed corpus schema. It admits
+  `bazelbuild/remote-apis-sdks` at the retained exact commit and the three frozen
+  ordinary, proto and fan-out cohorts; root labels, module, remote and archive
+  identity are fixed. Neutral control bytes and digest domains stay unchanged.
+  Both host and worker authenticate the 249,496-byte source archive before
+  comparing its 128 paths, executable bits, lengths and digests (1,079,184
+  source bytes) to the declared inventory. The real store mints and returns
+  source incarnation/generation, and post-run sealing re-reads that source
+  before the existing profile CAS and precious-only seed export. No conversion
+  of historical receipt plans creates fresh planner authority. This adds
+  test-only bounded archive reads/decompression, source hashes and the existing
+  inventory filter/sort; no production work, resource cap, lock, cache, schema
+  or child changes. It is preparation machinery, not a native corpus result,
+  correctness/cost pass or Bazel registration.
