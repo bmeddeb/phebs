@@ -1,0 +1,157 @@
+{
+  "ticket": "T45.7",
+  "date": "2026-10-03",
+  "scope": "Local neutral provider rehearsal; not target-corpus, scale, release or availability proof",
+  "implementation_commit": "0510765fd113f16ab56e3f0043405271c6caf7fa",
+  "build_provenance": {
+    "base_revision": "69a82b3cdca14912eaf25d57a95a02ee4f8baa0c",
+    "vcs_modified": true,
+    "note": "Built before implementation commit from identical implementation bytes. Helper retains original embedded base revision and modified=true; test binaries have no embedded VCS revision. No binary is relabelled.",
+    "go": "go1.26.5",
+    "target": "linux/arm64/v8.0",
+    "cgo": false,
+    "helper_sha256": "a09cab4ddb4b806c64742ab237a684d6d46129682a0c7b4042118bc23107e7f1",
+    "executor_test_sha256": "b8b54407e97be3d1a74791180033c72c4d3db60e89861d93978d00ce95cf4f99",
+    "provider_test_sha256": "b233cbdc4d587f480f1c80ac5868a314f1923ad89f7bf4a80fad87e0259f857f",
+    "changed_file_sha256": {
+      "PLAN.md": "a3a02f219b4a1110ee7acf423c7b05ff2586af8ef810ed6df000823601b0068e",
+      "docs/BACKLOG.md": "41d8f0eb5972ee40c58758b36672c19421624c2bd806a9130dc9168c04465bc8",
+      "docs/ROADMAP.md": "f58b6803ad177d51cdc02e4ed723eb29d6daf3e7525f18699052027dc76a342a",
+      "docs/guides/CONFIGURATION.md": "3b5cbcb8806ac2552ff677b9fc22b82c2ade6e08f71412d60c7d176fa971ac03",
+      "internal/store/typed_index_input_inspection_test.go": "fa71adc13515cf6fe97ad56e246639c559ece14f115168fd5daa36ff2535a24f",
+      "internal/store/typed_index_inspection.go": "2ff5b95faf1eef81da529afdf64471b050853016eb3b7fba28afbd78084c4fe2",
+      "internal/typedbazel/provider/contract.go": "b8ed3dc76c016dd40f1ab63bbcb27044b03a3112b84b7f2ffbe7c43e76d8f355",
+      "internal/typedbazel/provider/files.go": "41d881d6b7f24434ca1ecd2bd38a3b6139b0fc620bf50a8b5bdec7efc91459f8",
+      "internal/typedbazel/provider/finalize.go": "30956ba319680c6047620cf29d8d39242123ddd93ce686fbdd9143b43881aae5",
+      "internal/typedbazel/provider/input_result.go": "661c3e3f975ba501e8d35fa89a21d01976d831b836554cae2885d9e06a38c553",
+      "internal/typedbazel/provider/input_selection.go": "9275917f2bf4fe7220005ec531513d1cafb598992e7cbe8c25fc3bc1e334d4a5",
+      "internal/typedbazel/provider/input_worker.go": "a30fc5b98b262dcad6984893697c3183093db280e24e9808f1cff7c2755dffa4",
+      "internal/typedbazel/provider/input_worker_test.go": "e81b8085287a027b54c30d6e923a235e3beac13215033d8ac037b0c1f65a8b97",
+      "internal/typedbazel/provider/result.go": "c039318336e31bcceeeb5d75a23d2cca9667acec601aa81a9e1844bc916b967d",
+      "internal/typedbazel/provider/worker.go": "623b5930b1e44898b026cd48a505c199968c01e001ee8bc72cb09fd1bd5fbd54",
+      "internal/typedexecutor/input_native_linux_test.go": "a54b6f1974713de4a813d887e786701aecd0e37afef745586326ef4b650cc20e",
+      "internal/typedimport/selection.go": "cf59d8f9dfbb5337a995e49509d6e4c016e9e84ef6e60933d96d642cfa453c54",
+      "internal/typedimport/selection_test.go": "e8764a3f53799088838df0f60909cdd9d3488a0d30852be404a3bc23042d8fb2",
+      "internal/typedindex/bundle.go": "72c4ccc3266b2e106812d6d48d579cae3d6881c562daa75bb740d8a9a92353ef",
+      "internal/typedindex/contract.go": "f7eacb7da11f2b71838585c7edf690eb9e642cd6fac6ac90c847ec4447ba931f",
+      "internal/typedindex/execution.go": "5b3244fedb752539ece31b6e8ae415f4548ca2d09b3470e8848f14dcb93fd9ac",
+      "internal/typedindex/input_options.go": "3614c02291a154b13da354a0ca83d6922893028302f6641eca2c416875dd285e",
+      "internal/typedindex/input_options_test.go": "1d137a2f6afa22992733f54102cdd15090b25008261463186ec78d89eb698059",
+      "internal/typedindex/input_profile.go": "99d6f52c22e7c8420653f5648b3ce981c66171273d647d3f4edbd5d0f04ad961",
+      "internal/typedindex/input_profile_test.go": "c3a69b80897ea72cb96730154e01d07f83b872aea32c783f0c405e279e6362e3",
+      "internal/typedindex/input_receipt.go": "575a5d1f5be1dfd70d417d6cc188e7675fa1b4bf5d5c100cb6a5138db85bdc72",
+      "internal/typedindex/inventory.go": "d05e2ba4ad423d3518bbbbb1b5f9ad4cd5c32082a9444d41ef47b24fa18f725f",
+      "internal/typedindex/routing.go": "c688328d96f76140973a4932d12880f78e87fa2395bfcd8f34cb98dd794ade37",
+      "internal/typedindex/scipgo_receipt.go": "7bae27d9cc6dfc45dd56fca375f89986a7e44cf1e0c245781ea922b963ca3268",
+      "internal/typedmodule/discovery.go": "6101bf3990401cdacfae74bb691dba5a29bd3570808a7ba9ecc8f4e209a48f8d",
+      "internal/typedmodule/discovery_test.go": "69fbb77daac7f0e8002790c2cdbb5ed73e69e81d3d19eff2cd0b5c040a42b0ce",
+      "internal/typedworkspace/execution_metadata.go": "638c216bba650f5e0517780fe3d6ff1c8242c927cc5d2758f1fefaaa86fb1c1f"
+    }
+  },
+  "host": {
+    "vm": "phebs-t451a",
+    "root_filesystem_bytes": 19682557952,
+    "root_disk_configuration_gib": 20,
+    "image_digest": "sha256:8b053ab5c65aee8fe7dfe5f8d9b90cd5a1cf0ace68efdaac3a718f3727a89b94",
+    "note": "Existing local VM had already been expanded; no equivalence to older frozen 10GiB corpus admission."
+  },
+  "cases": [
+    {
+      "mode": "workspace",
+      "result": "PASS",
+      "log_sha256": "a24e747b3f5c00ad7c9890c0f9167a4a6cec18ed2e797f98de8b09793dca323d",
+      "seconds": 98.65,
+      "purposes": {
+        "publish": 26.81,
+        "canary": 35.27,
+        "dry-run": 33.81
+      },
+      "members": 2,
+      "documents": 2,
+      "native_launches": 6,
+      "exact_cross_module_reference": true
+    },
+    {
+      "mode": "single",
+      "result": "PASS",
+      "log_sha256": "e782bb616481f06418e3a59e5aa79e7c2d454678c1e46f020c23b667ca48e2cc",
+      "seconds": 102.77,
+      "purposes": {
+        "publish": 33.71,
+        "canary": 32.69,
+        "dry-run": 31.89
+      },
+      "members": 1,
+      "documents": 1,
+      "native_launches": 6,
+      "exact_cross_module_reference": false
+    },
+    {
+      "mode": "import",
+      "result": "PASS",
+      "log_sha256": "1a0bbd94aa88b24c4b214bbb9d088c48d603d8ea453277e71733c3719f5c0cbc",
+      "seconds": 38.43,
+      "purposes": {
+        "publish": 14.76,
+        "canary": 14.87,
+        "dry-run": 7.93
+      },
+      "members": 1,
+      "documents": 1,
+      "native_launches": 6,
+      "exact_cross_module_reference": false
+    }
+  ],
+  "assertions": [
+    "publish sets epoch1; canary/dry-run return checked receipts and preserve current",
+    "completed execution lease reuses without input lookup or native launch",
+    "settlement releases growth; restart census succeeds",
+    "publication opens under common immutable reader pin and retains input audit",
+    "workspace references match exact returned definitions across two members"
+  ],
+  "cleanup": {
+    "containers": 0,
+    "loop_devices": 0,
+    "host_scratch_entries_except_lock": 0,
+    "test_tmp_directories": 0,
+    "surreal_processes": 0,
+    "phebs_processes": 0,
+    "engines_joined": true,
+    "note": "Disposable fixture temp cleanup plus native host census; not an independent full lifecycle deletion proof.",
+    "dedicated_vm_final_state": "Stopped"
+  },
+  "prior_workspace_attempt": {
+    "result": "FAIL",
+    "reason": "cross-module reference used local version instead of exact definition commit",
+    "log_sha256": "41ea96bc4d9dc8590906127ec32a635aec6d67b29fb40001fea624720d100965",
+    "relabelled": false
+  },
+  "checks": {
+    "six_affected_packages_normal": "PASS",
+    "six_affected_packages_race": "PASS",
+    "linux_provider_package": "PASS",
+    "store_closed_provider_regression": "PASS",
+    "command_typed_tests": "PASS",
+    "vet": "PASS",
+    "lint_2_12_2_fresh_cache": "PASS",
+    "docs_check": "PASS",
+    "verify_glossary": "PASS",
+    "module_verify": "PASS",
+    "diff_check": "PASS"
+  },
+  "review": {
+    "implementation_commit": "0510765fd113f16ab56e3f0043405271c6caf7fa",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "native_evidence_review": "PASS",
+    "coverage": "Independent source/cost and retained log/binary/manifest review; final VM census observed by lead, not separately repeated by reviewer."
+  },
+  "posture": {
+    "providers_registered": false,
+    "ordinary_runtime_installed": false,
+    "bazel_corpus_gate": "waived, not passed",
+    "main_merge_or_push": false
+  }
+}

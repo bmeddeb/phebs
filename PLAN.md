@@ -8928,3 +8928,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   rehearsal, not a pass.
   Local native rehearsal uses the already expanded20 GiB root VM and its actual
   image/tool identities; it cannot satisfy or relabel older frozen corpus bounds.
+
+- **2026-10-03 — T45.7 local provider validation.** Exact implementation
+  `0510765fd113f16ab56e3f0043405271c6caf7fa` passes independent source/cost
+  review with zero findings. Its source-identical precommit binaries retain
+  their original embedded base revision and dirty-build provenance in
+  `spike/t457/native_inputs_1.json`. Local workspace, single-module and import
+  rehearsals pass all three publication/check purposes in98.65s,102.77s and38.43s
+  respectively, with exact lease reuse, growth release, restart and publication
+  pin checks. The workspace additionally proves exact cross-member symbol
+  identity. Final host census finds no containers, loop devices, temporary test
+  directories or Phebs/Surreal processes; scratch retains only its lock. The
+  dedicated VM is stopped after validation. Fixture
+  cleanup is not an independent lifecycle deletion proof. Normal/race packages,
+  actual Linux provider tests, store/command regressions, vet, fresh-cache pinned
+  lint, module, docs and glossary checks pass. These finite validation runs add
+  no production work. The earlier workspace failure remains failed; no Bazel
+  corpus, registration, release, main merge or push is inferred.

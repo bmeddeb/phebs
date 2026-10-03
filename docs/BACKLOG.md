@@ -15236,9 +15236,14 @@ sealed module/workspace and artifact-import profiles, retains input receipts and
 normalizes validated members into the common immutable publication contract.
 Exact source definitions, including occurrence-only definitions, bind the source
 commit; imports execute no producer tool. Provider descriptors stay unavailable
-and ordinary runtime installation stays nil. Local provider-specific native and
-code-review gates are recorded on the ticket branch before closure; this is not
-a Bazel corpus, release or registration result.
+and ordinary runtime installation stays nil. Exact implementation `0510765f` passes source/cost review with zero findings.
+Local single-module, two-module workspace and artifact-import rehearsals each
+pass publish, canary, dry-run, exact lease reuse and restart checks; the workspace
+asserts matching cross-member reference/definition identities. Normal/race, Linux
+provider, vet, lint, module, documentation and glossary checks pass. Source-free
+receipt: `spike/t457/native_inputs_1.json`. This completes the additional-input
+implementation on its ticket branch; it is not a Bazel corpus, release,
+registration, main integration or push result.
 
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**

@@ -1120,3 +1120,9 @@ For the pinned module tool, sibling workspace references using local version `.`
 are normalized only when an admitted module's exact commit-bound definition is
 present in the returned members. Missing definitions refuse publication. Import
 artifacts and external dependency versions are not rewritten by this adapter.
+
+Local neutral single-module, two-module workspace and artifact-import rehearsals
+pass publish, canary/dry-run, exact lease reuse and restart checks. Their original
+binary identities and scoped cleanup are recorded in
+`spike/t457/native_inputs_1.json`; these results do not enable a provider or
+establish a target-corpus performance envelope.
