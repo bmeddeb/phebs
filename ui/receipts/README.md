@@ -155,3 +155,22 @@ pinned or masked — the fixture root is only the repository-identity piece:
 | Indexing transitions ("Indexing…", "Cloning") | `awaitAbsent` terminal-state guards; `Failed` is terminal and fails the capture |
 | Fixture content drift | the t307 bundle pin (`T307_COMMIT`) binds the content |
 | Markdown-preview surface | page-scoped synthetic fixture (`receipt-fixture/markdown-preview`), never instance state |
+
+## T45.8b managed-index workflow fixtures
+
+The `typed-index` project exercises the administrator workflow through explicit
+page-scoped API fixtures; it installs no provider and proves no native execution
+or publication. It covers exact request preview/enqueue/retry, all nine states,
+last-good active-status polling, ordinary-user denial and File-to-Settings links.
+Desktop/390px, light/dark and comfortable/dense receipts exercise keyboard focus,
+native labels, reduced motion, document overflow and console errors. Capture fits
+the complete indexing panel below sticky chrome without masking its anatomy.
+
+Run `npm run receipts -- --project typed-index` against an already running Vite
+or product UI. Canonical pixels use the same digest-pinned Noble/Chromium image
+as CI. Local macOS captures belong in temporary output, never in `baselines/`.
+Synthetic profile availability is rendering evidence only; ordinary production
+serve remains unavailable. New typed transport reads cap streamed bodies at32KiB.
+The existing repository-list fetch is parsed before its4,096-row admission check;
+only active selected status repeats at five seconds. Fixture response timings
+measure a local presentation path and are not production API or native-work SLOs.

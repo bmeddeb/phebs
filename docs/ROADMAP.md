@@ -61,6 +61,13 @@ closes. T45.8a may land one earlier static
 administrator Settings boundary with Bazel first and visibly unavailable; it
 performs no request or action and does not advance the provider/API/execution
 sequence.
+T45.8b now supplies the administrator managed-index operator API and routed
+Settings workflow on its ticket lineages. Exact request preview, CSRF/audit,
+source/profile revision fences and idempotent enqueue share the existing worker;
+ordinary serve remains capability-dark. Presentation fixtures exercise controls,
+not installed-provider authority. T45.9 is the next evidence-integration decision
+and separately bounded neutral/target closure; the remaining T45.6 corpus waiver
+is never a validation PASS and no release or scale claim advances here.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
