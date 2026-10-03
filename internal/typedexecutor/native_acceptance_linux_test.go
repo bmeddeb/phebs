@@ -60,6 +60,7 @@ type acceptanceChildResult struct {
 	NoReplay            bool    `json:"no_replay"`
 	PublicationVerified bool    `json:"publication_verified"`
 	GrowthReleased      bool    `json:"growth_released"`
+	FailureSite         string  `json:"failure_site,omitempty"`
 }
 type acceptanceObservation struct {
 	ID            string                          `json:"id"`
@@ -628,25 +629,39 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 				return e
 			}
 			result.PublicationVerified = true
+			result.FailureSite = "schedule_before"
 			before, e := s.GetGenerationSchedule(ctx, acceptanceRepo, store.TypedIndexScheduleStage)
-			if e != nil || before.Status != store.GenerationScheduleSettled || before.Succeeded != 1 {
+			if e != nil {
+				return e
+			}
+			result.FailureSite = "schedule_before_shape"
+			if before.Status != store.GenerationScheduleSettled || before.Succeeded != 1 {
 				return errors.New("success schedule not settled")
 			}
+			result.FailureSite = "duplicate_coordinator"
 			if e = r.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: acceptanceRepo}); e != nil {
 				return e
 			}
+			result.FailureSite = "schedule_after"
 			after, e := s.GetGenerationSchedule(ctx, acceptanceRepo, store.TypedIndexScheduleStage)
-			if e != nil || !bytes.Equal(acceptanceJSON(before), acceptanceJSON(after)) {
+			if e != nil {
+				return e
+			}
+			result.FailureSite = "schedule_changed"
+			if !bytes.Equal(acceptanceJSON(before), acceptanceJSON(after)) {
 				return errors.New("duplicate coordinator changed settled schedule")
 			}
+			result.FailureSite = "warm_claim"
 			next, e := s.ClaimGenerationChunk(ctx, store.GenerationResourceTypedIndex, "native-warm")
 			if e != nil && !errors.Is(e, store.ErrNotFound) {
 				return e
 			}
+			result.FailureSite = "warm_unexpected"
 			if next != nil {
 				return errors.New("duplicate scheduled native work")
 			}
 			result.NoReplay = true
+			result.FailureSite = ""
 
 		} else {
 			if !result.ExecutionError {
@@ -664,10 +679,12 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 			result.NoReplay = true
 		}
 	}
+	result.FailureSite = "growth_release"
 	if _, e = s.GetTypedIndexGrowth(ctx); !errors.Is(e, store.ErrNotFound) {
 		return errors.New("settled growth not released")
 	}
 	result.GrowthReleased = true
+	result.FailureSite = ""
 	_ = controller
 	return nil
 }
@@ -1062,6 +1079,25 @@ func acceptanceEngineFailureSite(err error) string {
 	}
 }
 
+// Only fixed harness sites survive the private child's discarded stderr.
+func acceptanceChildFailureSiteValid(site string) bool {
+	switch site {
+	case "", "schedule_before", "schedule_before_shape", "duplicate_coordinator", "schedule_after", "schedule_changed", "warm_claim", "warm_unexpected", "growth_release":
+		return true
+	default:
+		return false
+	}
+}
+
+func TestNativeAcceptanceChildFailureSite(t *testing.T) {
+	for _, site := range []string{"", "schedule_before", "schedule_before_shape", "duplicate_coordinator", "schedule_after", "schedule_changed", "warm_claim", "warm_unexpected", "growth_release", "private/path/credential", "unknown"} {
+		want := site != "private/path/credential" && site != "unknown"
+		if acceptanceChildFailureSiteValid(site) != want {
+			t.Fatal("closed child failure classification")
+		}
+	}
+}
+
 func TestNativeAcceptanceFailureSite(t *testing.T) {
 	if acceptanceEngineFailureSite(errors.New("seed import response")) != "engine_seed_import_response" || acceptanceEngineFailureSite(errors.New("private/path/credential")) != "engine" {
 		t.Fatal("closed source-free failure classification")
@@ -1156,7 +1192,7 @@ func acceptanceRunParent(ctx context.Context, c nativeAcceptanceConfig, p typedi
 			for _, name := range []string{"recovery.json", "child.json"} {
 				raw, e := acceptanceRead(filepath.Join(c.caseRoot(*acceptanceCase), name), acceptanceMaxReceipt)
 				var partial acceptanceChildResult
-				if e == nil && acceptanceDecode(raw, acceptanceMaxReceipt, &partial) == nil && partial.Schema == acceptanceSchema && partial.Config == final.Config && partial.Case == final.Case {
+				if e == nil && acceptanceDecode(raw, acceptanceMaxReceipt, &partial) == nil && partial.Schema == acceptanceSchema && partial.Config == final.Config && partial.Case == final.Case && acceptanceChildFailureSiteValid(partial.FailureSite) {
 					final.Result = partial
 					break
 				}
@@ -1286,7 +1322,7 @@ loop:
 		return errors.New("controller proof failed")
 	}
 	resultRaw, e := acceptanceRead(filepath.Join(c.caseRoot(*acceptanceCase), resultName), acceptanceMaxReceipt)
-	if e != nil || acceptanceDecode(resultRaw, acceptanceMaxReceipt, &final.Result) != nil || final.Result.Schema != acceptanceSchema || final.Result.Recovery != (*acceptanceCase == "hard-death") || final.Result.Config != final.Config || final.Result.Case != final.Case || !final.Result.GrowthReleased || !final.Result.Settled || !final.Result.NoReplay {
+	if e != nil || acceptanceDecode(resultRaw, acceptanceMaxReceipt, &final.Result) != nil || final.Result.Schema != acceptanceSchema || final.Result.Recovery != (*acceptanceCase == "hard-death") || final.Result.Config != final.Config || final.Result.Case != final.Case || !final.Result.GrowthReleased || !final.Result.Settled || !final.Result.NoReplay || final.Result.FailureSite != "" {
 		return errors.New("child evidence")
 	}
 	rows, e = docker.list(ctx)

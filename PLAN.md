@@ -8374,3 +8374,53 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   after creation. Production inspection remains unchanged and must refuse that
   actual mode. The first failed safe record is retained; no recovery ran. This
   adds one chmod only to the negative fixture and no production cost or authority.
+
+- **2026-10-02 — T45.4 post-publication acceptance attribution.** The spent
+  acceptance6 success case completed native planning and execution with zero
+  exits and removed containers, then verified real positive publication before
+  stopping at its replay oracle. Its original receipt remains a STOP. A later
+  bounded read-only inspection of its retained database found the schedule
+  settled with one success and no indexed growth holder; this later snapshot
+  does not identify the earlier failed child call. The test-only child now
+  records a closed site at each post-publication schedule read, shape check,
+  duplicate coordinator, schedule comparison, warm claim and growth check.
+  Partial receipts reject unknown sites and successful receipts require an
+  empty site; private errors remain private and every acceptance predicate is
+  retained. The existing scheduler-turn regression also reports bounded begin,
+  lease-equality and execution/capacity-failure facts, and adds assertions to
+  verify that the complete settled schedule survives duplicate coordination
+  without a new claim. Attribution adds fixed assignments and comparisons.
+  The fixture sequence additionally performs two bounded schedule reads, one
+  duplicate coordinator with its existing store writes, and one warm claim
+  query. The initial diagnostic fixture turn was blocked by an actual capacity
+  refusal before allowance creation; that attempt did not verify the sequence.
+  These test-only changes add no production query/request, sync, startup,
+  retry, publication, lock, cache, memory/disk or child-process cost. Existing preparation and helper
+  evidence may be preserved only after exact rebuilt bytes match; the changed
+  acceptance harness requires a fresh identifier and immutable input review.
+  All four native acceptance cases and final gates remain required.
+
+- **2026-10-02 — T45.4 exact terminal typed-coordinator acknowledgement.**
+  After reclaiming the full-content-verified spent prep26 VM duplicate while
+  preserving its host bundle and ten raw records, the ordinary scheduler-turn
+  regression reached positive publication and reproduced duplicate coordinator
+  refusal. An error-only diagnostic overlay left all store predicates intact;
+  source tracing identified the enqueue result's blanket non-active refusal.
+  Typed coordinators must acknowledge both successful and failed settled
+  schedules without restarting them. After the existing fenced transaction and
+  immutable collision checks, enqueue now accepts only a fully validated
+  settled typed-index row whose independently observed prior current digest
+  equals the requested digest. Source, intent, live-root and current-pointer
+  transaction rechecks remain mandatory. Generic classes, superseded,
+  noncurrent, canceled, changed-source and malformed rows retain refusal.
+  This acknowledgement does not grant execution or publication success and
+  does not reactivate a schedule or claim a chunk. Existing same-generation
+  current-pointer and repository timestamp writes remain; this is not a
+  zero-write shortcut. Eligible terminal retries add one bounded small schedule
+  normalization/digest hash and fixed validation comparisons, no SDK call,
+  lock, cache invalidation, child, source scan or new disk reservation. Ordinary
+  query, sync, startup and publication costs are unchanged. Regression coverage
+  requires both terminal outcomes to preserve the full schedule and admit no
+  claim, plus the refusal cases and real scheduler-turn sequence. The changed
+  compiled helper requires fresh preparation and store sealing; historical
+  acceptance6 evidence remains a STOP and all four fresh cases remain required.

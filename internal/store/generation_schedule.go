@@ -1094,7 +1094,13 @@ RETURN [{ old_digest: $old_digest, ids: $prior_ids }];`, variables, storeRead())
 			return nil, errors.New("enqueue generation schedule: immutable schedule collision")
 		}
 		if schedule.Status != GenerationScheduleActive {
-			return nil, ErrGenerationStale
+			// A repeated typed coordinator acknowledges the exact terminal row;
+			// it never reactivates it, including a failed terminal outcome.
+			// The transaction above rechecks source, intent, root and this pointer.
+			if spec.ResourceClass != GenerationResourceTypedIndex || schedule.Status != GenerationScheduleSettled ||
+				prior.OldDigest == nil || *prior.OldDigest != digest || ValidateGenerationSchedule(schedule) != nil {
+				return nil, ErrGenerationStale
+			}
 		}
 		return &schedule, nil
 	}

@@ -3,6 +3,10 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
+
+	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/models"
 	"strings"
 	"testing"
 	"time"
@@ -382,5 +386,88 @@ func TestTypedIndexCoalescingAndInputRefusal(t *testing.T) {
 	}
 	if err = s.FailTypedIndex(ctx, chunk, typedindex.Refusal("/private/raw output")); err == nil {
 		t.Fatal("raw diagnostic accepted")
+	}
+}
+
+func TestTypedIndexSettledCoordinatorRepeat(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := t.Context()
+	for _, name := range []string{"success", "failed", "malformed", "noncurrent", "superseded", "canceled", "source-changed"} {
+		t.Run(name, func(t *testing.T) {
+			f := newTypedFixture(t, s, "typed-repeat-"+name)
+			f.enqueue(t, "one")
+			chunk := f.claim(t)
+			spec, err := s.TypedIndexSchedule(ctx, f.repo)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if name == "failed" {
+				err = s.FailGenerationChunk(ctx, chunk, "terminal fixture")
+			} else {
+				err = s.CompleteGenerationChunk(ctx, chunk)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			before, err := s.GetGenerationSchedule(ctx, f.repo, spec.Stage)
+			if err != nil || before.Status != GenerationScheduleSettled {
+				t.Fatal("fixture not settled", err)
+			}
+			row := models.NewRecordID("generation_schedule", strings.TrimPrefix(before.Digest, "sha256:"))
+			statement := ""
+			switch name {
+			case "malformed":
+				statement = "UPDATE $row SET pending=1 RETURN NONE;"
+			case "superseded":
+				statement = "UPDATE $row SET status='superseded' RETURN NONE;"
+			case "noncurrent":
+				row = models.NewRecordID("generation_schedule_current", strings.TrimPrefix(generationCurrentID(f.repo, spec.Stage), "sha256:"))
+				statement = "UPDATE $row SET schedule_digest=$other RETURN NONE;"
+			case "canceled":
+				err = s.CancelTypedIndex(ctx, f.repo, spec.Generation)
+			case "source-changed":
+				err = s.SetRepoIndexed(ctx, f.repo, strings.Repeat("b", 40), time.Now())
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if statement != "" {
+				if _, err = surrealdb.Query[any](ctx, s.db, statement, map[string]any{"row": row, "other": typedDigest([]byte("other"))}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			got, err := s.EnqueueGenerationSchedule(ctx, spec)
+			if name != "success" && name != "failed" {
+				if err == nil {
+					t.Fatal("invalid repeat accepted")
+				}
+				return
+			}
+			if err != nil || got == nil || !reflect.DeepEqual(before, got) {
+				t.Fatal("terminal row changed", err)
+			}
+			if next, err := s.ClaimGenerationChunk(ctx, GenerationResourceTypedIndex, "repeat-probe"); next != nil || !errors.Is(err, ErrNotFound) {
+				t.Fatal("terminal replay", err)
+			}
+		})
+	}
+	// Other classes keep their existing terminal refusal.
+	spec := generationSpec("example.invalid/generic-repeat", typedDigest([]byte("generic")))
+	spec.TotalItems, spec.ChunkItems = 1, 1
+	if _, err := s.EnqueueGenerationSchedule(ctx, spec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ExpandGenerationSchedule(ctx, spec.Repository, spec.Stage, spec.Generation); err != nil {
+		t.Fatal(err)
+	}
+	chunk, err := s.ClaimGenerationChunk(ctx, spec.ResourceClass, "generic-repeat")
+	if err != nil || chunk == nil {
+		t.Fatal(err)
+	}
+	if err = s.CompleteGenerationChunk(ctx, *chunk); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.EnqueueGenerationSchedule(ctx, spec); !errors.Is(err, ErrGenerationStale) {
+		t.Fatal("generic terminal accepted", err)
 	}
 }

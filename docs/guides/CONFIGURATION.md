@@ -1059,3 +1059,17 @@ census. Native acceptance receipts additionally record closed observation-site
 tokens and `emergency=completed` or `held`, independently of the primary refusal.
 These fields do not replace the required native-absence and workspace-drain
 proofs, and spent receipts retain their original fields.
+
+The native acceptance child also retains a closed `failure_site` for its
+post-publication schedule, duplicate-coordinator, replay and growth checks.
+A successful child has no failure site; a stopped child names only the fixed
+check, never its private error. A later settled database snapshot does not
+convert an earlier STOP into a pass. Fresh acceptance identifiers and all four
+native cases remain required after a harness change.
+
+A duplicate typed coordinator acknowledges its exact current settled schedule,
+including a failed terminal outcome, without reactivating work. It rechecks
+source, intent, live-root and current-pointer authority and validates the full
+schedule. This acknowledgement does not turn a failed execution into a success
+or authorize publication; generic, superseded, noncurrent and malformed
+schedules still refuse.

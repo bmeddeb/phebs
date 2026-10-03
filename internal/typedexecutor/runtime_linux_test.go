@@ -10,11 +10,13 @@ import (
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
+	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
@@ -60,6 +62,11 @@ func TestTypedRuntimeSchedulerTurn(t *testing.T) {
 	var begins *int
 	var selected store.GenerationChunk
 	settled := 0
+	executionFailed, capacityRefused := false, false
+	r.Report = func(_ Outcome, err error) {
+		executionFailed = err != nil
+		capacityRefused = errors.Is(err, lifecycle.ErrPressureRefusal) || errors.Is(err, lifecycle.ErrCapacityUnavailable)
+	}
 	configuration.Handle = func(ctx context.Context, c store.GenerationChunk, b generationscheduler.Budget) error {
 		selected = c
 		actual := f
@@ -79,13 +86,32 @@ func TestTypedRuntimeSchedulerTurn(t *testing.T) {
 		t.Fatal(err)
 	}
 	if settled != 1 || begins == nil || *begins != 1 || *lookups != 1 || selected.LeaseToken == f.chunk.LeaseToken {
-		t.Fatalf("turn: settle=%d begin=%v lookups=%d", settled, begins, *lookups)
+		count := -1
+		if begins != nil {
+			count = *begins
+		}
+		t.Fatalf("turn: settle=%d begins=%d lookups=%d lease_unchanged=%t execution_failed=%t capacity_refused=%t", settled, count, *lookups, selected.LeaseToken == f.chunk.LeaseToken, executionFailed, capacityRefused)
 	}
 	if _, err = f.s.ResolveTypedIndexCurrentCustody(ctx, f.chunk.Repository); err != nil {
 		t.Fatal("real publication", err)
 	}
 	if _, err = f.s.GetTypedIndexGrowth(ctx); !errors.Is(err, store.ErrNotFound) {
 		t.Fatal("settlement stranded growth", err)
+	}
+	before, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	if err != nil || before.Status != store.GenerationScheduleSettled || before.Succeeded != 1 {
+		t.Fatal("published schedule not settled", before, err)
+	}
+	if err = r.Coordinator(ctx, store.Job{Kind: store.JobTypedIndex, Target: f.chunk.Repository}); err != nil {
+		t.Fatal("published duplicate coordinator", err)
+	}
+	after, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	if err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatal("published duplicate changed schedule", err)
+	}
+	next, err := f.s.ClaimGenerationChunk(ctx, store.GenerationResourceTypedIndex, "published-warm")
+	if err != nil && !errors.Is(err, store.ErrNotFound) || next != nil || *lookups != 1 || *begins != 1 {
+		t.Fatal("published duplicate replay", next, err)
 	}
 }
 func TestTypedRuntimeCrossLeaseNoReplay(t *testing.T) {
