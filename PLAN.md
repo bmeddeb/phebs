@@ -8557,3 +8557,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Failed logs remain on the host; volume detachment follows joined test/engine
   cleanup. No production query, sync, startup, retry, publication, lock, cache,
   child, memory promise or disk admission limit changes.
+
+- **2026-10-02 — T45.4 exact command gate and T45.6 corpus preflight stop.**
+  The ordinary Go command-package runner at exact source
+  `db795e4c44a951abd6001f18ff7ceb6af682df39` passed in471.718 seconds,
+  including all eleven native composition/endpoint fixtures, on the isolated
+  2-GiB fixture volume. Its actual test executable, argv, source identity and
+  joined engine/volume teardown are retained; the earlier failed runner records
+  remain failed. Subsequent production provider changes require a fresh exact
+  command gate. Fresh ordinary frozen-corpus preparation passed, but acceptance
+  identifier `corpus-ordinary-1` stopped before creating its case directory,
+  database or native worker: the host config copied the preparation-input
+  selection digest instead of the final sealed selection digest, and the
+  harness compared original root order with provisioning's canonical sorted
+  roots. A bounded read-only invocation with an invalid child role reproduced
+  the selection refusal without entering parent execution. Correct the config
+  only under a fresh identifier and compare the unchanged frozen root set in
+  canonical order; strengthen offline digest checks before future dispatch.
+  `spike/t454/runtime_gates_1.json` preserves these distinct outcomes. No target
+  correctness/cost pass, registration, source/profile authority or cap change
+  follows; the correction adds only bounded test preflight work.

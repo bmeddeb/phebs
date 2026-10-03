@@ -1,0 +1,82 @@
+{
+  "schema": "phebs-typed-runtime-integration-gates-v1",
+  "scope": "intermediate exact-source records; no registration or target correctness/cost pass",
+  "command_package": {
+    "status": "passed",
+    "source_commit": "db795e4c44a951abd6001f18ff7ceb6af682df39",
+    "production_inputs_identical_to": "fc9434a70a7f30ba4eb724f59c5a1b6ae25a7aa9",
+    "actual_cmd_test_binary_sha256": "sha256:64e2a4a3166e86cf8e29fc694469f8edbd347386215309e733cd0f83e0703956",
+    "actual_go_test_argv": [
+      "go",
+      "test",
+      "-work",
+      "./cmd/phebs",
+      "-count=1",
+      "-timeout=30m",
+      "-v"
+    ],
+    "package_seconds": 471.718,
+    "total_seconds": 480.85362275,
+    "native_fixtures": [
+      "--- PASS: TestT422BackupRetiredNativeEndpoint (2.46s)",
+      "--- PASS: TestT422RestoreRetiredNativeEndpoint (12.09s)",
+      "--- PASS: TestT422ArchiveWorkspaceNativeComposition (12.45s)",
+      "--- PASS: TestT422WorkspaceEpochFiveNativeComposition (17.30s)",
+      "--- PASS: TestT422WorkspaceCleanupNativeComposition (112.31s)",
+      "--- PASS: TestT422WorkspaceAllOwnersNativeComposition (185.63s)",
+      "--- PASS: TestT422WorkspaceNativeComposition (5.25s)",
+      "--- PASS: TestT422WorkspaceEarlyNativeComposition (1.46s)",
+      "--- PASS: TestT422WorkspaceWarmNativeComposition (1.57s)",
+      "--- PASS: TestT422WorkspacePhysicalNativeComposition (1.49s)",
+      "--- PASS: TestT422WorkspaceRecoveryNativeComposition (1.55s)"
+    ],
+    "ram_fixture_capacity_bytes": 2147483648,
+    "ram_device_detached": true,
+    "surviving_test_or_engine_processes": 0,
+    "preserved_failed_records": true,
+    "scope": "cmd/phebs package at db795e4c only; later provider codec production changes require a fresh exact gate"
+  },
+  "command_private_proof_sha256": "sha256:5a535b8c6a8ab188007d40ff6779bf22a3fd465602fc570ed66623ab35dd627d",
+  "ordinary_native_preparation": {
+    "config": "sha256:cfa2f29e8db37496a6d3ad98f9d9b663985f18be8c3843d934d25f8cc0d6f47b",
+    "complete": true,
+    "removed": true,
+    "exit_code": 0
+  },
+  "ordinary_native_preparation_receipt_sha256": "sha256:bb110e283a1191a4d11565f31fe58ae83f5e7b572fee0b1cdb71778090650525",
+  "ordinary_acceptance_preflight_stop": {
+    "schema": "phebs-typed-native-corpus-preflight-stop-v1",
+    "status": "stopped",
+    "id": "corpus-ordinary-1",
+    "source_commit": "41e620b6cb957e74aa37eafcd6202189d42dd7fb",
+    "config_sha256": "sha256:f7507743f46d046570632f18415125aa4cad217c1800447417ff9cd3255afbdc",
+    "harness_test_started": true,
+    "case_root_created": false,
+    "engine_started": false,
+    "native_absent": true,
+    "workspace_absent": true,
+    "host_transport_groups_closed": true,
+    "read_only_reproduction": {
+      "result": "neutral selection",
+      "original_test_site": "native_acceptance_linux_test.go:306",
+      "invalid_role_used_to_prevent_parent_entry": true
+    },
+    "config_selection_sha256": "sha256:386def453d61c2077372fc3d0761ab98949e76b11abeb9f878cd822874596c07",
+    "actual_final_selection_sha256": "sha256:b6bf3151dd135c5502cebf3e6527abee102a13c71905e093d99b6cdb39bd65ea",
+    "canonical_roots": [
+      "//go/pkg/cache:cache",
+      "//go/pkg/moreflag:moreflag",
+      "//go/pkg/outerr:outerr"
+    ],
+    "requested_frozen_roots": [
+      "//go/pkg/moreflag:moreflag",
+      "//go/pkg/cache:cache",
+      "//go/pkg/outerr:outerr"
+    ],
+    "interpretation": "preflight config identity and canonical root-order mismatches; no target phase executed; not a correctness/cost pass",
+    "terminal_sha256": "sha256:4e4b38f30d71adaa75ac13171e1af0aac581611b34e638a263c18a69965f1c57",
+    "transport_dispatch_attempted": true,
+    "native_worker_dispatched": false
+  },
+  "registration_ready": false
+}
