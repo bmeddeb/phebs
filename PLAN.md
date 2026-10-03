@@ -8931,8 +8931,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 - **2026-10-03 — T45.7 local provider validation.** Exact implementation
   `0510765fd113f16ab56e3f0043405271c6caf7fa` passes independent source/cost
-  review with zero findings. Its source-identical precommit binaries retain
-  their original embedded base revision and dirty-build provenance in
+  review with zero findings. The source-identical precommit helper retains its
+  original embedded base revision and dirty-build provenance; test binaries
+  carry no embedded VCS revision. These identities are recorded in
   `spike/t457/native_inputs_1.json`. Local workspace, single-module and import
   rehearsals pass all three publication/check purposes in98.65s,102.77s and38.43s
   respectively, with exact lease reuse, growth release, restart and publication
