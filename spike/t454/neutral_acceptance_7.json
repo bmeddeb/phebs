@@ -1,0 +1,912 @@
+{
+  "schema": "phebs-t454-neutral-native-acceptance-evidence-v1",
+  "source_commit": "960b2051a6a9295cd3beff6f6f9299da9c5ba948",
+  "id": "neutral-acceptance-7",
+  "config_sha256": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+  "helper_sha256": "sha256:068f68a91d94d636ef4cb62787376971a50758f84605e761b3efe21835eae74f",
+  "test_sha256": "sha256:173ac480c9146fe83de50dc78ae72fb4d9383d3db425ceb15ff59e2785822eb3",
+  "profile_epoch": 5,
+  "preparation_id": "neutral-prep-27",
+  "preparation_config_sha256": "sha256:6375c9c21ac72b45e6f55bc720eddfab26b074611e47f4c96ed151a249541942",
+  "postrun_sha256": "sha256:56aea755ff47dd3faced734532cfbf373f5492e925c55a1b3c7427db29d66465",
+  "seed_sha256": "sha256:d8b99a828c67a6f202cb66c14fd95b9315f133616c14fa6eeefdd7aefd3134fc",
+  "scope": "neutral production-helper acceptance only; no registration, target, ceremony, scale or release claim",
+  "cases": [
+    {
+      "case": "success",
+      "receipt_sha256": "sha256:dc2f66090a9cac7ea5e36be84c2b2222d5b902c2b54b2d41fca433ccaa69b30a",
+      "host_terminal_sha256": "sha256:fe0ee16893947e11d1badfd4960a6c34c9e278bf17b0333181da9bca6b82a76d",
+      "receipt": {
+        "schema": "phebs-typed-native-acceptance-v1",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "case": "success",
+        "pass": true,
+        "injected": false,
+        "observations": [
+          {
+            "id": "90738f8f530dd5b24003f37cf90125a07758b1ef57f8ee365e7b2f298d83e042",
+            "phase": "plan",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:1bf5966c467e9a2d24a169fce96625720de7074664d080bf2ce47be15909558f",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 32618542058170,
+              "deadline_boottime_ns": 32918542058170,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            "seal": "sha256:45ad104edc36b57140af91dacfccd4c72209bfe7552254a5ae190f160b6678cd",
+            "supervisor_pid": 58562,
+            "worker_pid": 58581,
+            "worker_start": "3262575",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:1bf5966c467e9a2d24a169fce96625720de7074664d080bf2ce47be15909558f",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/86d70aa466a71a5f5b344f4b2b9453cbe4ed557b2cf76cb167d1d237cad40ce3/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          },
+          {
+            "id": "a69bd5e17baeb4f5403600c3234ff7063ce087ae04a133e2bdf769ffa5730bd3",
+            "phase": "execute",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:1bf5966c467e9a2d24a169fce96625720de7074664d080bf2ce47be15909558f",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 32618542058170,
+              "deadline_boottime_ns": 32918542058170,
+              "worker_bytes_used": 4417303,
+              "wire_bytes_used": 5890872
+            },
+            "seal": "sha256:f4ccf8df4a16964f3cd032f4af25e5c3128590a4ff26cd357ef52f408f9666f6",
+            "supervisor_pid": 62306,
+            "worker_pid": 62330,
+            "worker_start": "3265861",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:1bf5966c467e9a2d24a169fce96625720de7074664d080bf2ce47be15909558f",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/86d70aa466a71a5f5b344f4b2b9453cbe4ed557b2cf76cb167d1d237cad40ce3/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          }
+        ],
+        "result": {
+          "schema": "phebs-typed-native-acceptance-v1",
+          "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+          "case": "success",
+          "recovery": false,
+          "outcome": {
+            "AttemptDigest": "sha256:1bf5966c467e9a2d24a169fce96625720de7074664d080bf2ce47be15909558f",
+            "Pointer": {
+              "epoch": 1,
+              "binding": {
+                "source": {
+                  "repository": "example.invalid/phebs-native-neutral",
+                  "incarnation": "28c925b21a41b0c046478afc9a2712dd",
+                  "generation": "sha256:a2e3632172f6ec012d6e92955a84892be4cdf0029f823f65fe6d3668594e2cc2",
+                  "commit": "fb480d08eb458ae64d0072bd2b586a52c54c18c4"
+                },
+                "request_digest": "sha256:6f62dfd9b4a0acaa1b76cecd0fa5d078b9bd2e0f70c3624bc5f7055527905b44",
+                "profile_digest": "sha256:d8ce698ce8dfc17050846a093b65d18f4233bbece0c72ded9228c6935ad0bf06",
+                "tools_digest": "sha256:9b978a58cf66db99b366e2f00403ddfcf623c13eca5d64c1088e23e78972292f",
+                "plan_digest": "sha256:cf32bb26d9602734f40394b05a89dd1d087873813b54312e50f9b825f6ef7f66"
+              },
+              "root_digest": "sha256:7a4a4837437617f7d4c8e549bac7c9dfbc00fc808782c5be8be61a746e7624f1"
+            },
+            "Check": null,
+            "Reports": [
+              {
+                "Phase": "plan",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 2332667904,
+                  "sampled_peak_rss_bytes": 942764032,
+                  "sampled_peak_processes": 18,
+                  "sampled_peak_scratch_bytes": 1141850112,
+                  "sampled_peak_scratch_inodes": 42434,
+                  "samples": 565,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              },
+              {
+                "Phase": "execute",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 2968707072,
+                  "sampled_peak_rss_bytes": 1011904512,
+                  "sampled_peak_processes": 21,
+                  "sampled_peak_scratch_bytes": 1674375168,
+                  "sampled_peak_scratch_inodes": 56483,
+                  "samples": 1206,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              }
+            ]
+          },
+          "execution_error": false,
+          "settled": true,
+          "no_replay": true,
+          "publication_verified": true,
+          "growth_released": true
+        },
+        "native_absent": true,
+        "lifecycle_turns": 1323,
+        "workspace_drained": true,
+        "retained_tombstones": 1,
+        "engine_joined": true
+      },
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "success",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "transport_exit": 0,
+        "collection_exit": 0,
+        "host_error": null,
+        "collection_error": null,
+        "run_group_closed": true,
+        "collect_group_closed": true,
+        "capacity_exit": 0,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": true
+      }
+    },
+    {
+      "case": "cancel",
+      "receipt_sha256": "sha256:6177e2df73b2c1e56a9391f881dd22c30a7cdb17c3caf636451b994f0a337e67",
+      "host_terminal_sha256": "sha256:ab7b18a1402d3e7c08ae5be4b9b4b28b8ab87eda096bd3b4e9c6e1a8ab5e2a63",
+      "receipt": {
+        "schema": "phebs-typed-native-acceptance-v1",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "case": "cancel",
+        "pass": true,
+        "injected": true,
+        "observations": [
+          {
+            "id": "68851eeca6cdd36bfe1390e69acd73fd0eda8efd7647431af579c1599e4838d2",
+            "phase": "plan",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:ad8f3b17aa43a3d9050abccd2b1564fe4ce95954e5aab30a0553eaa8420c28ba",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 32780963859247,
+              "deadline_boottime_ns": 33080963859247,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            "seal": "sha256:06b9d0a8fd91b2ca38bb53c8a56f45e8a3e13c1a35ae1b8f8b66ecbe02546234",
+            "supervisor_pid": 79175,
+            "worker_pid": 79195,
+            "worker_start": "3278674",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:ad8f3b17aa43a3d9050abccd2b1564fe4ce95954e5aab30a0553eaa8420c28ba",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/dd5303c63cdc40b35a1fd00eca93b15de3acae54c6b73b037e0fa5dbb2dd53b1/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          },
+          {
+            "id": "28a0be1703ba499f70e26a83be237acc5eb3c2134d820de8e9e81c88968041b3",
+            "phase": "execute",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:ad8f3b17aa43a3d9050abccd2b1564fe4ce95954e5aab30a0553eaa8420c28ba",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 32780963859247,
+              "deadline_boottime_ns": 33080963859247,
+              "worker_bytes_used": 4417303,
+              "wire_bytes_used": 5890872
+            },
+            "seal": "sha256:9134914e9ba921b06576cde22b69d90089cf052843db33b9c23d66b10bf15d4b",
+            "supervisor_pid": 82984,
+            "worker_pid": 83003,
+            "worker_start": "3281663",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:ad8f3b17aa43a3d9050abccd2b1564fe4ce95954e5aab30a0553eaa8420c28ba",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/dd5303c63cdc40b35a1fd00eca93b15de3acae54c6b73b037e0fa5dbb2dd53b1/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          }
+        ],
+        "result": {
+          "schema": "phebs-typed-native-acceptance-v1",
+          "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+          "case": "cancel",
+          "recovery": false,
+          "outcome": {
+            "AttemptDigest": "sha256:ad8f3b17aa43a3d9050abccd2b1564fe4ce95954e5aab30a0553eaa8420c28ba",
+            "Pointer": {
+              "epoch": 0,
+              "binding": {
+                "source": {
+                  "repository": "",
+                  "incarnation": "",
+                  "generation": "",
+                  "commit": ""
+                },
+                "request_digest": "",
+                "profile_digest": "",
+                "tools_digest": "",
+                "plan_digest": ""
+              },
+              "root_digest": ""
+            },
+            "Check": null,
+            "Reports": [
+              {
+                "Phase": "plan",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 2338201600,
+                  "sampled_peak_rss_bytes": 934481920,
+                  "sampled_peak_processes": 12,
+                  "sampled_peak_scratch_bytes": 1141784576,
+                  "sampled_peak_scratch_inodes": 42425,
+                  "samples": 527,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              },
+              {
+                "Phase": "execute",
+                "ExitCode": -1,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": false,
+                  "memory_peak_bytes": 0,
+                  "sampled_peak_rss_bytes": 0,
+                  "sampled_peak_processes": 0,
+                  "sampled_peak_scratch_bytes": 0,
+                  "sampled_peak_scratch_inodes": 0,
+                  "samples": 0,
+                  "per_process_descriptors": 0,
+                  "aggregate_descriptor_ceiling": 0
+                },
+                "Watchdog": null,
+                "Failure": null
+              }
+            ]
+          },
+          "execution_error": true,
+          "settled": true,
+          "no_replay": true,
+          "publication_verified": false,
+          "growth_released": true
+        },
+        "native_absent": true,
+        "lifecycle_turns": 1323,
+        "workspace_drained": true,
+        "retained_tombstones": 1,
+        "engine_joined": true
+      },
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "cancel",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "transport_exit": 0,
+        "collection_exit": 0,
+        "host_error": null,
+        "collection_error": null,
+        "run_group_closed": true,
+        "collect_group_closed": true,
+        "capacity_exit": 0,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": true
+      }
+    },
+    {
+      "case": "wall",
+      "receipt_sha256": "sha256:0738bdbf25d81639ed873409a6542f6b24cbe18e9e61c552cc9617db97245f23",
+      "host_terminal_sha256": "sha256:9fb038c83c96bf3520a2f5e315e07e3efb10e1339801b3ade4a4adba8da04256",
+      "receipt": {
+        "schema": "phebs-typed-native-acceptance-v1",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "case": "wall",
+        "pass": true,
+        "injected": true,
+        "observations": [
+          {
+            "id": "9b728b6dbac61277202c4250371b18ae8ae2121edf723179cc256213c86cf36f",
+            "phase": "plan",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:449a68f4a895d923d509b0248a9e29a391e368dabfca67220126ecc892d35fda",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 32864447286011,
+              "deadline_boottime_ns": 33164447286011,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            "seal": "sha256:8a0e212fcc1895e55797657b5fa85f4de57f873b45afd1de9befbc9e7483446c",
+            "supervisor_pid": 83186,
+            "worker_pid": 83205,
+            "worker_start": "3286936",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:449a68f4a895d923d509b0248a9e29a391e368dabfca67220126ecc892d35fda",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/a6c65103e5f605786cb09b764dfd4f433ccb9b0154fdb28db124b912c279dde8/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          },
+          {
+            "id": "9611471c2586a08b43643ac77578184ed9e2ff17dbabc6e2d21e401e0cf9ce35",
+            "phase": "execute",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:449a68f4a895d923d509b0248a9e29a391e368dabfca67220126ecc892d35fda",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 32864447286011,
+              "deadline_boottime_ns": 33164447286011,
+              "worker_bytes_used": 4417303,
+              "wire_bytes_used": 5890872
+            },
+            "seal": "sha256:66bb1d06d16bd9f8c6639b535d7656dfc48a91c9975bfeb47bf33e58eaeea557",
+            "supervisor_pid": 86913,
+            "worker_pid": 86933,
+            "worker_start": "3289899",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:449a68f4a895d923d509b0248a9e29a391e368dabfca67220126ecc892d35fda",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/a6c65103e5f605786cb09b764dfd4f433ccb9b0154fdb28db124b912c279dde8/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          }
+        ],
+        "result": {
+          "schema": "phebs-typed-native-acceptance-v1",
+          "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+          "case": "wall",
+          "recovery": false,
+          "outcome": {
+            "AttemptDigest": "sha256:449a68f4a895d923d509b0248a9e29a391e368dabfca67220126ecc892d35fda",
+            "Pointer": {
+              "epoch": 0,
+              "binding": {
+                "source": {
+                  "repository": "",
+                  "incarnation": "",
+                  "generation": "",
+                  "commit": ""
+                },
+                "request_digest": "",
+                "profile_digest": "",
+                "tools_digest": "",
+                "plan_digest": ""
+              },
+              "root_digest": ""
+            },
+            "Check": null,
+            "Reports": [
+              {
+                "Phase": "plan",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 2346033152,
+                  "sampled_peak_rss_bytes": 938995712,
+                  "sampled_peak_processes": 12,
+                  "sampled_peak_scratch_bytes": 1141813248,
+                  "sampled_peak_scratch_inodes": 42425,
+                  "samples": 516,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              },
+              {
+                "Phase": "execute",
+                "ExitCode": 124,
+                "Removed": true,
+                "StopReason": "wall_limit",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 139153408,
+                  "sampled_peak_rss_bytes": 160038912,
+                  "sampled_peak_processes": 2,
+                  "sampled_peak_scratch_bytes": 20480,
+                  "sampled_peak_scratch_inodes": 13,
+                  "samples": 5311,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": {
+                  "invocation": "sha256:d99ed35a78c8879456c40890c9928b12bab1feef31386dcf701e2022679c9c3d",
+                  "schema": "phebs-typed-watchdog-partial-v3",
+                  "exit_code": 124,
+                  "wall_nanoseconds": 265457636022,
+                  "snapshot_nanoseconds": 265454210036,
+                  "resource_sample_nanoseconds": 265454208786,
+                  "resource_age_at_deadline_nanoseconds": 3427236,
+                  "resource_sample_available": true,
+                  "resources": {
+                    "memory_oom_events": 0,
+                    "memory_oom_kills": 0,
+                    "memory_limit_events": 0,
+                    "task_limit_events": 0,
+                    "sampling_unavailable": false,
+                    "limits_verified": true,
+                    "memory_peak_bytes": 139153408,
+                    "sampled_peak_rss_bytes": 160038912,
+                    "sampled_peak_processes": 2,
+                    "sampled_peak_scratch_bytes": 20480,
+                    "sampled_peak_scratch_inodes": 13,
+                    "samples": 5311,
+                    "per_process_descriptors": 128,
+                    "aggregate_descriptor_ceiling": 37632
+                  },
+                  "worker_progress_available": false,
+                  "worker_stage_started_nanoseconds": 0,
+                  "stage_age_at_deadline_nanoseconds": 0
+                },
+                "Failure": null
+              }
+            ]
+          },
+          "execution_error": true,
+          "settled": true,
+          "no_replay": true,
+          "publication_verified": false,
+          "growth_released": true
+        },
+        "native_absent": true,
+        "lifecycle_turns": 1323,
+        "workspace_drained": true,
+        "retained_tombstones": 1,
+        "engine_joined": true
+      },
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "wall",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "transport_exit": 0,
+        "collection_exit": 0,
+        "host_error": null,
+        "collection_error": null,
+        "run_group_closed": true,
+        "collect_group_closed": true,
+        "capacity_exit": 0,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": true
+      }
+    },
+    {
+      "case": "hard-death",
+      "receipt_sha256": "sha256:08bc60361bda679d9563188b3475df0070d9bcb6736ee2f2ff1992e2c9adf40a",
+      "host_terminal_sha256": "sha256:64552e8883fc16f558bb874ef266c0e3d6adab80c763a69def5f4eeca4c8a300",
+      "receipt": {
+        "schema": "phebs-typed-native-acceptance-v1",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "case": "hard-death",
+        "pass": true,
+        "injected": true,
+        "observations": [
+          {
+            "id": "41e14785c1f0e9856622dbad7b3425c890de5c30fbb01b2f1897fde8bd8171c5",
+            "phase": "plan",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:d0276b5875d740f9ef2d10930627a63b9ced9f65b47715e364f9c1f73043ad6e",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 33193798818620,
+              "deadline_boottime_ns": 33493798818620,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            "seal": "sha256:058b7063ac4052489ab2d42e6ba45cc64bc384346297f4d6359b7d2cacdb895a",
+            "supervisor_pid": 87121,
+            "worker_pid": 87140,
+            "worker_start": "3319924",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:d0276b5875d740f9ef2d10930627a63b9ced9f65b47715e364f9c1f73043ad6e",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/3a254b032bc7de168c6a4fffc99691ef3c4ff2bb6fc556e2f07033ab4593f6c7/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          },
+          {
+            "id": "2587e90120a1d502278b29e593b7257397655a5cf5c115319eebd3aef832dd4d",
+            "phase": "execute",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+              "attempt_digest": "sha256:d0276b5875d740f9ef2d10930627a63b9ced9f65b47715e364f9c1f73043ad6e",
+              "boot_id": "976446cf-e73a-48fd-baa0-ec5a0e51d968",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 33193798818620,
+              "deadline_boottime_ns": 33493798818620,
+              "worker_bytes_used": 4417303,
+              "wire_bytes_used": 5890872
+            },
+            "seal": "sha256:8be91d02df0cc8faaeeb415b823bff7d8cf6a6e7679eefb7c6394c9e61956325",
+            "supervisor_pid": 90841,
+            "worker_pid": 90863,
+            "worker_start": "3322820",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:f385476954cdbbb1cc70b362b2eb82060c1330586b2801abf7b1052ad2a4a5f1",
+                "attempt_digest": "sha256:d0276b5875d740f9ef2d10930627a63b9ced9f65b47715e364f9c1f73043ad6e",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/3a254b032bc7de168c6a4fffc99691ef3c4ff2bb6fc556e2f07033ab4593f6c7/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          }
+        ],
+        "result": {
+          "schema": "phebs-typed-native-acceptance-v1",
+          "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+          "case": "hard-death",
+          "recovery": true,
+          "outcome": {
+            "AttemptDigest": "",
+            "Pointer": {
+              "epoch": 0,
+              "binding": {
+                "source": {
+                  "repository": "",
+                  "incarnation": "",
+                  "generation": "",
+                  "commit": ""
+                },
+                "request_digest": "",
+                "profile_digest": "",
+                "tools_digest": "",
+                "plan_digest": ""
+              },
+              "root_digest": ""
+            },
+            "Check": null,
+            "Reports": [
+              {
+                "Phase": "",
+                "ExitCode": 0,
+                "Removed": false,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": false,
+                  "memory_peak_bytes": 0,
+                  "sampled_peak_rss_bytes": 0,
+                  "sampled_peak_processes": 0,
+                  "sampled_peak_scratch_bytes": 0,
+                  "sampled_peak_scratch_inodes": 0,
+                  "samples": 0,
+                  "per_process_descriptors": 0,
+                  "aggregate_descriptor_ceiling": 0
+                },
+                "Watchdog": null,
+                "Failure": null
+              },
+              {
+                "Phase": "",
+                "ExitCode": 0,
+                "Removed": false,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": false,
+                  "memory_peak_bytes": 0,
+                  "sampled_peak_rss_bytes": 0,
+                  "sampled_peak_processes": 0,
+                  "sampled_peak_scratch_bytes": 0,
+                  "sampled_peak_scratch_inodes": 0,
+                  "samples": 0,
+                  "per_process_descriptors": 0,
+                  "aggregate_descriptor_ceiling": 0
+                },
+                "Watchdog": null,
+                "Failure": null
+              }
+            ]
+          },
+          "execution_error": false,
+          "settled": true,
+          "no_replay": true,
+          "publication_verified": false,
+          "growth_released": true
+        },
+        "native_absent": true,
+        "lifecycle_turns": 1323,
+        "workspace_drained": true,
+        "retained_tombstones": 1,
+        "engine_joined": true
+      },
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "hard-death",
+        "config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+        "transport_exit": 0,
+        "collection_exit": 0,
+        "host_error": null,
+        "collection_error": null,
+        "run_group_closed": true,
+        "collect_group_closed": true,
+        "capacity_exit": 0,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": true
+      }
+    }
+  ]
+}

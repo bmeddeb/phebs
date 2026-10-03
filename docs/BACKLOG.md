@@ -15065,6 +15065,21 @@ and scoped normal/race/static/documentation gates pass. This closes neutral
 preparation only: production-helper acceptance, native controller/recovery
 proof, registration, target execution and scale/release claims remain open.
 
+
+Native production-helper acceptance (2026-10-02): all four fresh
+`neutral-acceptance-7` cases passed at compiled source
+`960b2051a6a9295cd3beff6f6f9299da9c5ba948`, using native preparation27
+and the real-store epoch5 successor. Success proves publication, exact settled
+coordinator acknowledgement and no replay; cancellation, shared absolute-wall
+expiry and hard-death recovery prove no publication or replay. Every case
+proves growth release, native absence, owned workspace drainage and engine join.
+The source-free receipts and host terminals are retained in
+`spike/t454/neutral_acceptance_7.json`. Earlier spent STOP receipts remain exact;
+verified duplicate retirement preserved complete host custody and did not
+convert old database pointers into a drain claim. These bounded neutral cases
+close this native prerequisite only. Runtime registration, target execution,
+ceremony, scale and release claims remain separate gates.
+
 **T45.5 · Generated typed-index source and routed code-navigation reader**
 *(needs T45.3–T45.4)* — introduce an exact typed-index publication resolver that
 preserves the current Git-blob source and adds generated bundle authority.

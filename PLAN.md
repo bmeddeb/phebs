@@ -8424,3 +8424,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   claim, plus the refusal cases and real scheduler-turn sequence. The changed
   compiled helper requires fresh preparation and store sealing; historical
   acceptance6 evidence remains a STOP and all four fresh cases remain required.
+
+- **2026-10-02 — T45.4 neutral native acceptance closure.** Fresh preparation27,
+  exact offline Linux builds and the real-store epoch5 successor bind source
+  `960b2051a6a9295cd3beff6f6f9299da9c5ba948`. Acceptance7 passed success,
+  cancellation, original shared 300-second wall expiry and hard-death recovery.
+  Every case proves no replay, growth release and owned native/workspace/engine
+  teardown; only success publishes. Source-free original receipts and host
+  terminals live at `spike/t454/neutral_acceptance_7.json`. Retained STOPs stay
+  unchanged. Complete authenticated host archival preceded duplicate VM custody
+  retirement; old receipt/database references were preserved without a drain
+  claim. These one-off serial cases and archival hash/copy passes add no
+  production query, sync, startup, retry, publication, lock or cache cost beyond
+  the already recorded coordinator correction. The neutral proof does not
+  register a provider or authorize target execution, ceremony, scale or release.

@@ -1073,3 +1073,10 @@ source, intent, live-root and current-pointer authority and validates the full
 schedule. This acknowledgement does not turn a failed execution into a success
 or authorize publication; generic, superseded, noncurrent and malformed
 schedules still refuse.
+
+The neutral production-helper acceptance suite passed success, cancellation,
+shared absolute-wall expiry and hard-death recovery with fresh preparation27
+and profile epoch5. Source-free original receipts are retained in
+`spike/t454/neutral_acceptance_7.json`; all four cases require native absence,
+owned workspace drainage, engine join, growth release and no replay. This
+neutral acceptance proof does not enable or register a provider.
