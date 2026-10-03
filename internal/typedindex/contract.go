@@ -20,6 +20,7 @@ const (
 	ProviderID             = "bazel-rules-go-scip-v1"
 	ProfileSchema          = "phebs-typed-profile-v1"
 	GeneratedProfileSchema = "phebs-typed-profile-v2"
+	Amd64ProfileSchema     = "phebs-typed-profile-amd64-v1"
 	RequestSchema          = "phebs-typed-request-v1"
 	ManagedRequestSchema   = "phebs-typed-request-v2"
 	MaxProfileBytes        = 16 << 10
@@ -89,8 +90,16 @@ type Config struct {
 
 func ReducedConfig() Config {
 	// GOARCH stays arm64 so the historical reduced profile digest remains exact.
-	// Worker, image, and tool execution follow the admitted host separately.
+	// An amd64 host uses Amd64ReducedConfig under Amd64ProfileSchema instead.
 	return Config{GOOS: "linux", GOARCH: "arm64", Mode: "fastbuild", SkipTests: true, SkipImplementations: true, GeneratedDocuments: "omit", Network: "none", Scratch: "ext4-direct-io"}
+}
+
+// Amd64ReducedConfig is the explicit reduced successor for an amd64 host.
+// Every other field matches ReducedConfig. It is not a reinterpretation of it.
+func Amd64ReducedConfig() Config {
+	c := ReducedConfig()
+	c.GOARCH = "amd64"
+	return c
 }
 
 // GeneratedConfig admits the sealed generated-document lane prospectively.
@@ -143,12 +152,15 @@ func DecodeProfile(ctx context.Context, raw []byte) (Profile, error) {
 	if err := decode(raw, MaxProfileBytes, &d); err != nil {
 		return Profile{}, err
 	}
-	if (d.Schema != ProfileSchema && d.Schema != GeneratedProfileSchema) || !token(d.Name) || d.Provider != ProviderID || (!digest(d.BundleDigest) || !digest(d.ImageDigest)) {
+	if (d.Schema != ProfileSchema && d.Schema != GeneratedProfileSchema && d.Schema != Amd64ProfileSchema) || !token(d.Name) || d.Provider != ProviderID || (!digest(d.BundleDigest) || !digest(d.ImageDigest)) {
 		return Profile{}, Invalid
 	}
 	wantConfig := ReducedConfig()
-	if d.Schema == GeneratedProfileSchema {
+	switch d.Schema {
+	case GeneratedProfileSchema:
 		wantConfig = GeneratedConfig()
+	case Amd64ProfileSchema:
+		wantConfig = Amd64ReducedConfig()
 	}
 	if d.Config != wantConfig || d.Policy != MeasuredPolicy() {
 		return Profile{}, Unsupported

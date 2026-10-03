@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"runtime"
 	"runtime/debug"
 	"testing"
 
@@ -62,27 +63,29 @@ func TestCheckBuildRejectsIncorrectCmdMetadata(t *testing.T) {
 }
 
 func TestCheckBuildAcceptsExactIdentities(t *testing.T) {
-	linuxArm64 := map[string]string{"GOOS": "linux", "GOARCH": "arm64"}
-	if err := checkBuild(buildInfo("cmd/go", "go1.25.0", linuxArm64), "cmd/go", false); err != nil {
+	host := map[string]string{"GOOS": "linux", "GOARCH": runtime.GOARCH}
+	if err := checkBuild(buildInfo("cmd/go", "go1.25.0", host), "cmd/go", false); err != nil {
 		t.Fatalf("cmd/go rejected: %v", err)
 	}
-	if err := checkBuild(buildInfo(productionHelperMain, "go1.25.0", linuxArm64), productionHelperMain, false); err != nil {
+	if err := checkBuild(buildInfo(productionHelperMain, "go1.25.0", host), productionHelperMain, false); err != nil {
 		t.Fatalf("helper rejected: %v", err)
 	}
-	typed := buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0",
-		map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "0", "GOARM64": "v8.0"},
+	typedSettings := map[string]string{"GOOS": "linux", "GOARCH": runtime.GOARCH, "CGO_ENABLED": "0"}
+	other := map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "0", "GOARM64": "v8.0"}
+	if runtime.GOARCH == "arm64" {
+		typedSettings["GOARM64"] = "v8.0"
+		other = map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0", "GOAMD64": "v1"}
+	} else {
+		typedSettings["GOAMD64"] = "v1"
+	}
+	typed := buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", typedSettings,
 		&debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="})
 	if err := checkBuild(typed, "github.com/scip-code/scip-go/cmd/scip-go", true); err != nil {
 		t.Fatalf("scip-go rejected: %v", err)
 	}
-	amd64 := buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0",
-		map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0", "GOAMD64": "v1"},
-		&debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="})
-	if err := checkBuild(amd64, "github.com/scip-code/scip-go/cmd/scip-go", true); err != nil {
-		t.Fatalf("amd64 scip-go rejected: %v", err)
-	}
-	if err := checkBuild(buildInfo("cmd/go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "amd64"}), "cmd/go", false); err != nil {
-		t.Fatalf("amd64 cmd/go rejected: %v", err)
+	if err := checkBuild(buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", other,
+		&debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}), "github.com/scip-code/scip-go/cmd/scip-go", true); err == nil {
+		t.Fatal("other admitted architecture accepted on this host")
 	}
 }
 

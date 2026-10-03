@@ -8956,3 +8956,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The decision reads the same `/info` body and compares one more
   existing security-option string. It adds no request, lock, cache, child,
   or production startup work.
+
+- **2026-10-03 — T45.6 amd64 reduced profile is an explicit successor.** The
+  historical reduced profile stays `phebs-typed-profile-v1` with `GOARCH`
+  `arm64`, and its sealed digest stays
+  `sha256:354e82ca33a8fe8d20fbe112502e2914bc545914321f26f10bc6c3881c051eb8`.
+  That profile cannot be executed on an amd64 host: command emission and
+  tool build identity each require the process architecture. A plan may
+  still contain one admitted architecture; mixed archive modes still
+  refuse. The amd64 successor is `phebs-typed-profile-amd64-v1` with
+  the same reduced fields and `GOARCH` `amd64`. The historical schema
+  refuses that config, and the successor schema refuses the arm64 config.
+  Preparation seals the
+  successor only on amd64. Tool builds set `GOAMD64=v1` on amd64 and
+  `GOARM64=v8.0` on arm64. The deployment logical name stays `phebs-t451a`.
+  No corpus attempt is spent. Bazel stays unregistered.
+
+  **Cost.** Profile decode compares one more schema string and the same
+  config value. Command emission and tool identity compare one
+  architecture string already present on the profile or build info.
+  Preparation copies that config. None of this adds a request, lock,
+  cache, child, or production startup.

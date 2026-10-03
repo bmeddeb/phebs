@@ -959,7 +959,11 @@ admitted. `observe` writes
 `deployment.json` from that live host. An exact `Content-Length` body stays
 exact. A chunked body is accepted under the same 1 MiB cap, and both
 encodings together are refused. The worker cgroup quota stays 2 CPUs
-(`200000/100000`). Scratch, wall, output, task, and descriptor limits are
+(`200000/100000`). The historical reduced profile remains
+`phebs-typed-profile-v1` with `GOARCH=arm64`. An amd64 host seals
+`phebs-typed-profile-amd64-v1` instead and refuses the arm64 profile.
+Tool builds use `GOAMD64=v1` on amd64 and `GOARM64=v8.0` on arm64. Scratch,
+wall, output, task, and descriptor limits are
 unchanged. Keep stage directories and collected receipts on durable storage;
 a failed attempt stays retained.
 

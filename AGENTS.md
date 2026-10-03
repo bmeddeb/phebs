@@ -1009,7 +1009,9 @@ no AppArmor and `/v1.47/info` is chunked, so no deployment is sealed and no
 cohort runs (`spike/t454/amd64_apparmor_kernel_stop.json`). The chunked body
 is now accepted under the same 1 MiB cap. The live deployment is sealed at
 `spike/t454/amd64-deployment.json`. Preflight now admits this daemon's
-seccomp and `name=cgroupns` pair. No cohort has run.
+seccomp and `name=cgroupns` pair. No cohort has run. An amd64 host now
+requires the explicit reduced successor `phebs-typed-profile-amd64-v1`;
+the historical arm64 profile stays exact and is not reused here.
 
 The public remote and hosted CI exist. `v0.2.0` is an immutable but unverified
 historical tag; `v0.2.1-dev` is the current source line and may be tagged only

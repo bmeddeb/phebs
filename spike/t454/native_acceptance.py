@@ -872,7 +872,12 @@ def build(output):
     output = Path(output).absolute()
     output.mkdir(mode=0o700)  # deliberately refuses an existing output directory
     repo = Path(__file__).resolve().parents[2]
-    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=host_goarch(), CGO_ENABLED='0')
+    arch = host_goarch()
+    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=arch, CGO_ENABLED='0')
+    if arch == 'amd64':
+        env['GOAMD64'] = 'v1'
+    elif arch == 'arm64':
+        env['GOARM64'] = 'v8.0'
     subprocess.run(['go', 'build', '-trimpath', '-o', str(output / 'phebs'), './cmd/phebs'], cwd=repo, env=env, check=True, timeout=300)
     subprocess.run(['go', 'test', '-c', '-o', str(output / 'native-acceptance.test'), './internal/typedexecutor'], cwd=repo, env=env, check=True, timeout=300)
     for name in ('phebs', 'native-acceptance.test'):

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"debug/buildinfo"
+	"runtime"
 	"runtime/debug"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
@@ -113,7 +114,7 @@ func checkBuild(info *debug.BuildInfo, main string, typed bool) error {
 		}
 		settings[s.Key] = s.Value
 	}
-	if settings["GOOS"] != "linux" || !typedindex.AdmittedNativeArch(settings["GOARCH"]) {
+	if settings["GOOS"] != "linux" || settings["GOARCH"] != runtime.GOARCH || !typedindex.AdmittedNativeArch(settings["GOARCH"]) {
 		return typedindex.Unsupported
 	}
 	if main == "cmd/go" && info.GoVersion != "go1.25.0" {

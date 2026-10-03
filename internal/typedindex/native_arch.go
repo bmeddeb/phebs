@@ -37,3 +37,12 @@ func AdmittedNativeToolTag(arch string) (string, bool) {
 func AdmittedNativeWorker() bool {
 	return runtime.GOOS == "linux" && AdmittedNativeArch(runtime.GOARCH)
 }
+
+// HostReducedIdentity is the reduced profile this process may execute.
+// arm64 keeps the historical schema and config. amd64 is the explicit successor.
+func HostReducedIdentity() (schema string, config Config) {
+	if runtime.GOARCH == "amd64" {
+		return Amd64ProfileSchema, Amd64ReducedConfig()
+	}
+	return ProfileSchema, ReducedConfig()
+}

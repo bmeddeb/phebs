@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -518,7 +519,7 @@ func checkPinnedDriver(want string) error {
 	for _, s := range info.Settings {
 		settings[s.Key] = s.Value
 	}
-	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || !typedindex.AdmittedNativeArch(settings["GOARCH"]) || settings["CGO_ENABLED"] != "0" || !typedindex.AdmittedNativeVariant(settings["GOARCH"], settings["GOARM64"], settings["GOAMD64"]) {
+	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || settings["GOARCH"] != runtime.GOARCH || !typedindex.AdmittedNativeArch(settings["GOARCH"]) || settings["CGO_ENABLED"] != "0" || !typedindex.AdmittedNativeVariant(settings["GOARCH"], settings["GOARM64"], settings["GOAMD64"]) {
 		return errors.New("driver closed build profile mismatch")
 	}
 	return nil

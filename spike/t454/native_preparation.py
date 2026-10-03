@@ -246,7 +246,12 @@ def build(output):
     output = Path(output).absolute()
     output.mkdir(mode=0o700)  # deliberately refuses an existing output directory
     repo = Path(__file__).resolve().parents[2]
-    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=host_goarch(), CGO_ENABLED='0')
+    arch = host_goarch()
+    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=arch, CGO_ENABLED='0')
+    if arch == 'amd64':
+        env['GOAMD64'] = 'v1'
+    elif arch == 'arm64':
+        env['GOARM64'] = 'v8.0'
     subprocess.run(['go', 'test', '-c', '-o', str(output / 'native-preparation.test'), './internal/typedbazel/provider'], cwd=repo, env=env, check=True, timeout=300)
     print('native-preparation.test', *file_hash(output / 'native-preparation.test', MAX_FILE))
     print('Unfilled: finalized neutral lock/cache, pre-selection inventory, profile, VM engine/formatter/image and source identities. No config was invented.')

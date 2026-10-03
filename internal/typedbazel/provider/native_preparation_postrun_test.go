@@ -193,19 +193,21 @@ func sealPreparationFinalInventory(ctx context.Context, pre typedindex.Inventory
 	return typedindex.DecodeInventory(ctx, raw, hash(raw))
 }
 
-// sealPreparationProfile emits the reduced Profile-v1 bound to the FINAL
-// inventory digest. The profile carries no universe field: the universe digest is
-// a separate InstallTypedProfile argument, which is why the closed profile codec
+// sealPreparationProfile emits the host reduced profile bound to the FINAL
+// inventory digest. arm64 keeps Profile-v1. amd64 uses the explicit successor
+// schema. The profile carries no universe field: the universe digest is a
+// separate InstallTypedProfile argument, which is why the closed profile codec
 // stays unchanged. DecodeProfile re-validates schema/config/policy/tools, so a
-// generated-lane masquerade under ProfileSchema is refused here, not downstream;
+// generated-lane masquerade or the other architecture is refused here;
 // pinnedProfile then refuses a well-formed but non-pinned frozen tool identity.
 func sealPreparationProfile(ctx context.Context, final typedindex.Inventory, tools typedindex.Tools, name, imageDigest string) (typedindex.Profile, error) {
 	if final.Digest() == "" {
 		return typedindex.Profile{}, typedindex.Invalid
 	}
+	schema, config := typedindex.HostReducedIdentity()
 	def := typedindex.ProfileDefinition{
-		Schema: typedindex.ProfileSchema, Name: name, Provider: typedindex.ProviderID,
-		Tools: tools, Config: typedindex.ReducedConfig(), Policy: typedindex.MeasuredPolicy(),
+		Schema: schema, Name: name, Provider: typedindex.ProviderID,
+		Tools: tools, Config: config, Policy: typedindex.MeasuredPolicy(),
 		BundleDigest: final.Digest(), ImageDigest: imageDigest,
 	}
 	raw, err := json.Marshal(def)
@@ -476,10 +478,11 @@ func TestPreparationPostRunChain(t *testing.T) {
 		t.Fatal("universe digest", out.Universe)
 	}
 	def := out.Profile.Definition()
-	if def.Schema != typedindex.ProfileSchema || def.Provider != typedindex.ProviderID || def.Name != "neutral" {
+	schema, config := typedindex.HostReducedIdentity()
+	if def.Schema != schema || def.Provider != typedindex.ProviderID || def.Name != "neutral" {
 		t.Fatal("profile identity", def.Schema, def.Provider, def.Name)
 	}
-	if def.Config != typedindex.ReducedConfig() || def.Policy != typedindex.MeasuredPolicy() {
+	if def.Config != config || def.Policy != typedindex.MeasuredPolicy() {
 		t.Fatal("profile config/policy")
 	}
 	if def.BundleDigest != out.Final.Digest() || def.ImageDigest != image || def.RCDigest != "" {

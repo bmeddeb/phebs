@@ -15234,6 +15234,11 @@ AppArmor is not advertised here. Preflight now admits this daemon's
 seccomp and `name=cgroupns` pair. Seccomp alone is still refused. No corpus
 attempt is spent.
 
+The historical reduced profile stays arm64 under `phebs-typed-profile-v1`.
+An amd64 host seals and executes the explicit successor
+`phebs-typed-profile-amd64-v1` instead. The old profile is refused on this
+host, and mixed archive modes still refuse. No corpus attempt is spent.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

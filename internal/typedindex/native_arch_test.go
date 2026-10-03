@@ -24,8 +24,15 @@ func TestAdmittedNativeArch(t *testing.T) {
 	if ok {
 		t.Fatal("other architecture has a tool tag")
 	}
-	if ReducedConfig().GOARCH != "arm64" {
+	if ReducedConfig().GOARCH != "arm64" || Amd64ReducedConfig().GOARCH != "amd64" || Amd64ReducedConfig().GOOS != ReducedConfig().GOOS {
 		t.Fatal("historical reduced profile architecture changed")
+	}
+	if Amd64ReducedConfig() == ReducedConfig() {
+		t.Fatal("amd64 successor aliases the historical profile")
+	}
+	schema, config := HostReducedIdentity()
+	if config.GOARCH != runtime.GOARCH || (runtime.GOARCH == "amd64" && schema != Amd64ProfileSchema) || (runtime.GOARCH == "arm64" && (schema != ProfileSchema || config != ReducedConfig())) {
+		t.Fatal("host reduced identity does not match this process")
 	}
 	if MeasuredPolicy().CPUQuotaMicros != 200000 || MeasuredPolicy().CPUPeriodMicros != 100000 {
 		t.Fatal("worker CPU quota changed")
