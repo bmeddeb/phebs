@@ -8688,3 +8688,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   source digest. Production requests, sync/startup/retry/publication work,
   locks, cache, schema, helper, children, wall, command-output and admission caps
   remain unchanged. Actual corrected native correctness/cost gates remain open.
+
+- **2026-10-03 — T45.4/T45.6 retain complete neutral acceptance and ordinary cost stop.**
+  Fresh exact-`7d6b849c` native success, cancellation, the real shared 300-second
+  wall boundary, hard controller death, canary and dry-run all pass, with joined
+  engines, proven native absence, no replay, released growth and drained case
+  workspaces. Success publishes epoch one; both checked modes retain their
+  checked summaries without publication. Actual receipts and physical resource
+  observations live in `spike/t454/neutral_acceptance_7d6b849c.json`. A separate
+  authenticated retirement removes only duplicate VM input bundle/test bytes
+  after all six gates, preserving controls, receipts and engines.
+  The ordinary frozen-corpus attempt then stops in planning on the measured
+  helper's sticky process-observation failure. Its later same-lifetime compiler
+  diagnostic identifies neither the failed operation nor errno; it proves no
+  permission denial, successful dispatch or complete cache/cost measurement.
+  `spike/t454/ordinary_cost_stop_7d6b849c.json` preserves the failed receipt and
+  separately binds a later bounded observation of current native absence. That
+  observation does not repair the original failed custody predicates or claim
+  its retained workspace drained. Proto/fanout correctness and cost remain open;
+  Bazel stays unregistered. These records change no runtime work or resource
+  ceiling, and no original stop is replayed or promoted.
