@@ -8452,7 +8452,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   checks, with no typed allocation, scan, read, write, poll, lock, cache or child.
   Installed runtime uses the existing coordinator/scheduler polling cadence,
   five-second chunk heartbeat, twenty-second stale threshold and joined background
-  lifetime. A repair timer checks one in-memory latch; only ambiguous settlement
+  lifetime. Installed composition retains six Go goroutines (coordinator one,
+  scheduler root plus planner/reaper/worker four, repair one), three scheduler
+  tickers, one repair ticker, a recurring coordinator timer and active-lease
+  heartbeats. The existing typed reservation is 5,606,834,176 memory bytes and
+  256 host descriptors; the separate contained descendant descriptor ceiling
+  remains 37,632. Together with the existing configured classes, the default
+  memory promises total 8,559,624,192 bytes, 30,310,400 below the unchanged 8-GiB
+  scheduler ceiling. A repair timer checks one in-memory latch; only ambiguous settlement
   triggers the existing complete guarded census. Lifecycle turns retain the
   existing bounded mutations and reader pins; available navigation retains the
   adapter's twenty bounded SDK reads and selected-member cache costs. No resource
