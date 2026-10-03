@@ -119,6 +119,9 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		if d.fault == "missing seccomp" {
 			security = security[1:]
 		}
+		if d.fault == "seccomp only" {
+			security = []string{"name=seccomp,profile=builtin"}
+		}
 		write(200, map[string]any{"ID": "test-daemon", "OSType": "linux", "CgroupVersion": "2", "MemoryLimit": true, "SwapLimit": true, "PidsLimit": true, "CPUCfsQuota": true, "SecurityOptions": security})
 	case strings.HasPrefix(path, "/images/"):
 		imageConfig := config{}
@@ -370,12 +373,34 @@ func TestRunFiniteContainerLifecycle(t *testing.T) {
 	}
 }
 
+func TestAdmittedDaemonSecurityMatchesHostConfig(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		options []string
+		admit   bool
+	}{
+		{"apparmor host", []string{"name=seccomp,profile=builtin", "name=apparmor"}, true},
+		{"cgroupns host", []string{"name=seccomp,profile=builtin", "name=cgroupns"}, true},
+		{"both", []string{"name=seccomp,profile=builtin", "name=apparmor", "name=cgroupns"}, true},
+		{"seccomp only", []string{"name=seccomp,profile=builtin"}, false},
+		{"apparmor only", []string{"name=apparmor"}, false},
+		{"cgroupns only", []string{"name=cgroupns"}, false},
+		{"empty", nil, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if admittedDaemonSecurity(test.options) != test.admit {
+				t.Fatalf("admitted=%v", !test.admit)
+			}
+		})
+	}
+}
+
 func TestRunRefusesWithoutLosingCustody(t *testing.T) {
 	for _, test := range []struct {
 		fault             string
 		started, retained bool
 	}{
-		{"missing seccomp", false, false}, {"oversized info", false, false}, {"image environment", false, false}, {"image volume", false, false},
+		{"missing seccomp", false, false}, {"seccomp only", false, false}, {"oversized info", false, false}, {"image environment", false, false}, {"image volume", false, false},
 		{"changed effective configuration", false, true}, {"controls missing mount", false, true}, {"controls writable mount", false, true}, {"controls wrong mount", false, true}, {"controls extra mount", false, true}, {"controls recursive mount", false, true}, {"controls shared mount", false, true}, {"start error", false, false}, {"truncated stream", true, false},
 		{"incomplete report", true, false}, {"cleanup error", true, true},
 	} {

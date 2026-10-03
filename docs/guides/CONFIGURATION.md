@@ -952,7 +952,10 @@ execution host itself, set `PHEBS_TYPED_NATIVE_TRANSPORT=direct`. Either mode ru
 live Linux machine: `x86_64` seals `amd64` and `aarch64` seals `arm64`. CPU
 count is the live processor count and must be at least 2. MemTotal must be at
 least 4,533,092,352 bytes. Docker listens on `/var/run/docker.sock` at API
-v1.47, and `features.time-namespaces` stays `false`. `observe` writes
+v1.47, and `features.time-namespaces` stays `false`. Preflight requires
+seccomp's builtin profile. AppArmor remains mandatory when the daemon
+advertises it. A daemon that advertises seccomp and `name=cgroupns` is
+admitted. `observe` writes
 `deployment.json` from that live host. An exact `Content-Length` body stays
 exact. A chunked body is accepted under the same 1 MiB cap, and both
 encodings together are refused. The worker cgroup quota stays 2 CPUs

@@ -15230,7 +15230,9 @@ attempt is spent. Bazel stays unregistered.
 The chunked info body is now accepted under that same 1 MiB cap. The sealed
 live deployment is `spike/t454/amd64-deployment.json`
 (`sha256:85ece7516a7dca9b5a82842ac560921db078dd316b5dd3fb6df297867e16afdb`).
-AppArmor preflight still refuses execution. No corpus attempt is spent.
+AppArmor is not advertised here. Preflight now admits this daemon's
+seccomp and `name=cgroupns` pair. Seccomp alone is still refused. No corpus
+attempt is spent.
 
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same

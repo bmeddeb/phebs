@@ -8942,3 +8942,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** Observation remains one bounded socket read and one decode per
   admission check. It adds no production query, tick, startup, publication,
   lock, cache, or child.
+
+- **2026-10-03 — T45.6 admits this daemon's security config.** Preflight still
+  requires cgroup v2, memory, swap, pid, and CPU controls, plus
+  `name=seccomp,profile=builtin`. AppArmor stays mandatory when
+  `/info` advertises `name=apparmor`. This host advertises seccomp and
+  `name=cgroupns` instead, and that pair is now admitted. Seccomp alone is
+  refused. The container recipe is unchanged and still requests
+  `apparmor=docker-default`; this daemon records that profile. The kernel
+  LSM remains `capability,landlock,selinux` and does not enforce the profile.
+  No corpus attempt is spent.
+
+  **Cost.** The decision reads the same `/info` body and compares one more
+  existing security-option string. It adds no request, lock, cache, child,
+  or production startup work.
