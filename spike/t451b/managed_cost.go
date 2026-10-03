@@ -15,6 +15,7 @@ import (
 const ManagedCostSchema = "phebs-typed-native-corpus-cost-v1"
 const MaxManagedCostBytes = 4 << 10
 const ManagedCostStopSchema = "phebs-typed-native-corpus-cost-stop-v1"
+const ManagedCacheSchema = "phebs-typed-native-corpus-worker-cache-v2"
 
 // ManagedCost is source-free operational evidence from a test-only measured
 // helper. Its enclosing native completion token must bind the exact worker
@@ -24,6 +25,14 @@ type ManagedCost struct {
 	Schema       string                  `json:"schema"`
 	Observations Observations            `json:"observations"`
 	Cache        PrivateCacheObservation `json:"cache"`
+}
+
+// ManagedCache reports only the quiescent worker cache census. It makes no
+// process-observation or completion claim; the root observer's separate witness
+// and the exact native completion must be authenticated by the caller.
+type ManagedCache struct {
+	Schema string                  `json:"schema"`
+	Cache  PrivateCacheObservation `json:"cache"`
 }
 
 // ManagedCostStop preserves bounded failure-only sampler facts. It is never a
@@ -98,10 +107,26 @@ func DecodeManagedCostStop(raw []byte) (ManagedCostStop, error) {
 }
 
 func validateManagedCost(m ManagedCost) error {
-	o, c := m.Observations, m.Cache
-	if m.Schema != ManagedCostSchema || o.Version != "phebs-t451b-sampled-observations-v1" || o.IntervalNanoseconds != observationInterval.Nanoseconds() || o.DurationNanoseconds <= 0 || o.DurationNanoseconds > int64(typedsandbox.WallLimit) || o.Samples < 2 || o.SampledChildLifetimes == 0 || o.SampledChildLifetimes > maxObservedLifetimes || !o.ChildLifetimesLowerBound || !o.FDCountsNonAtomic || o.SampledProcessFDPeak == 0 || o.SampledProcessFDPeak > typedsandbox.DescriptorLimit || o.SampledAggregateFDPeak < o.SampledProcessFDPeak || o.SampledAggregateFDPeak > typedsandbox.DescriptorLimit*typedsandbox.TaskLimit || o.Unavailable || o.UnexpectedErrors != 0 || o.Failure != "" || o.FailureProcess != nil {
+	if m.Schema != ManagedCostSchema {
 		return errors.New("managed process measurement unavailable or invalid")
 	}
+	if err := ValidateManagedObservations(m.Observations); err != nil {
+		return err
+	}
+	return validateManagedCache(m.Cache)
+}
+
+// ValidateManagedObservations retains the v1 qualified healthy process gates.
+// It grants no namespace, lifecycle, control or completion authority. A caller
+// using the root method must separately prove the full authenticated interval.
+func ValidateManagedObservations(o Observations) error {
+	if o.Version != "phebs-t451b-sampled-observations-v1" || o.IntervalNanoseconds != observationInterval.Nanoseconds() || o.DurationNanoseconds <= 0 || o.DurationNanoseconds > int64(typedsandbox.WallLimit) || o.Samples < 2 || o.SampledChildLifetimes == 0 || o.SampledChildLifetimes > maxObservedLifetimes || !o.ChildLifetimesLowerBound || !o.FDCountsNonAtomic || o.SampledProcessFDPeak == 0 || o.SampledProcessFDPeak > typedsandbox.DescriptorLimit || o.SampledAggregateFDPeak < o.SampledProcessFDPeak || o.SampledAggregateFDPeak > typedsandbox.DescriptorLimit*typedsandbox.TaskLimit || o.Unavailable || o.UnexpectedErrors != 0 || o.Failure != "" || o.FailureProcess != nil {
+		return errors.New("managed process measurement unavailable or invalid")
+	}
+	return nil
+}
+
+func validateManagedCache(c PrivateCacheObservation) error {
 	roots := []string{"/scratch/bazel-user", "/scratch/bazel-output", "/scratch/repository-cache", "/scratch/gocache", "/scratch/gomodcache", "/scratch/cache"}
 	if c.Version != "phebs-t451b-private-cache-v1" || !c.Complete || !slices.Equal(c.Roots, roots) || c.Entries == 0 || c.Entries > typedsandbox.ScratchInodes || c.LogicalBytes > typedsandbox.ScratchBytes || c.AllocatedBytes > typedsandbox.ScratchBytes || c.RegularFiles > c.Entries || c.Directories > c.Entries-c.RegularFiles || c.Symlinks != c.Entries-c.RegularFiles-c.Directories || c.UniqueInodes > c.Entries {
 		return errors.New("managed private cache measurement unavailable or invalid")
@@ -114,6 +139,39 @@ func validateManagedCost(m ManagedCost) error {
 		missing[name] = true
 	}
 	return nil
+}
+
+// EncodeManagedCache accepts only the unchanged complete fixed-root cache gates
+// in a distinct cache-only frame under the existing physical stderr bound.
+func EncodeManagedCache(m ManagedCache) ([]byte, error) {
+	if m.Schema != ManagedCacheSchema {
+		return nil, errors.New("invalid managed cache schema")
+	}
+	if err := validateManagedCache(m.Cache); err != nil {
+		return nil, err
+	}
+	raw, err := json.Marshal(m)
+	if err != nil || len(raw)+1 > MaxManagedCostBytes {
+		return nil, errors.New("managed cache byte bound")
+	}
+	return append(raw, '\n'), nil
+}
+
+func DecodeManagedCache(raw []byte) (ManagedCache, error) {
+	var m ManagedCache
+	if len(raw) == 0 || len(raw) > MaxManagedCostBytes {
+		return m, errors.New("managed cache byte bound")
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&m); err != nil {
+		return m, err
+	}
+	canonical, err := EncodeManagedCache(m)
+	if err != nil || !bytes.Equal(raw, canonical) {
+		return ManagedCache{}, errors.New("managed cache is not exact bounded evidence")
+	}
+	return m, nil
 }
 
 // EncodeManagedCost accepts only complete qualified measurements under the

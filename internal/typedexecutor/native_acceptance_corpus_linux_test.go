@@ -53,15 +53,18 @@ type acceptanceCorpusResult struct {
 }
 
 type acceptanceCorpusPhaseCost struct {
-	Phase             typedindex.Action `json:"phase"`
-	PlanningDigest    string            `json:"planning_digest"`
-	AttemptDigest     string            `json:"attempt_digest"`
-	RequestDigest     string            `json:"request_digest"`
-	SealDigest        string            `json:"seal_digest"`
-	StdoutSHA256      string            `json:"stdout_sha256"`
-	StderrSHA256      string            `json:"stderr_sha256"`
-	WorkerOutputBytes int64             `json:"worker_output_bytes"`
-	Metrics           t451b.ManagedCost `json:"metrics"`
+	Phase             typedindex.Action            `json:"phase"`
+	PlanningDigest    string                       `json:"planning_digest"`
+	AttemptDigest     string                       `json:"attempt_digest"`
+	RequestDigest     string                       `json:"request_digest"`
+	SealDigest        string                       `json:"seal_digest"`
+	StdoutSHA256      string                       `json:"stdout_sha256"`
+	StderrSHA256      string                       `json:"stderr_sha256"`
+	WorkerOutputBytes int64                        `json:"worker_output_bytes"`
+	Metrics           *t451b.ManagedCost           `json:"metrics,omitempty"`
+	HostWitness       *acceptanceCorpusHostWitness `json:"host_witness,omitempty"`
+	HostWitnessSHA256 string                       `json:"host_witness_sha256,omitempty"`
+	WorkerCache       *t451b.ManagedCache          `json:"worker_cache,omitempty"`
 }
 
 type acceptanceCorpusPhaseStop struct {
@@ -135,6 +138,18 @@ func acceptanceCorpusCost(ctx context.Context, options typedsandbox.Options, res
 	if err := typedsandbox.VerifyCompletion(options.Allowance, options.Control, result); err != nil {
 		return cost, err
 	}
+	phase, err := acceptanceCorpusResultPhase(ctx, options, result)
+	if err != nil {
+		return cost, err
+	}
+	metrics, err := t451b.DecodeManagedCost(result.Stderr)
+	if err != nil {
+		return cost, err
+	}
+	return acceptanceCorpusPhaseCost{Phase: phase, PlanningDigest: options.Control.PlanningDigest, AttemptDigest: options.Control.AttemptDigest, RequestDigest: options.Control.RequestDigest, SealDigest: options.Control.SealDigest, StdoutSHA256: acceptanceDigest(result.Stdout), StderrSHA256: acceptanceDigest(result.Stderr), WorkerOutputBytes: int64(len(result.Stdout) + len(result.Stderr)), Metrics: &metrics}, nil
+}
+
+func acceptanceCorpusResultPhase(ctx context.Context, options typedsandbox.Options, result typedsandbox.Result) (typedindex.Action, error) {
 	var header struct {
 		Schema        string            `json:"schema"`
 		RequestDigest string            `json:"request_digest"`
@@ -142,16 +157,12 @@ func acceptanceCorpusCost(ctx context.Context, options typedsandbox.Options, res
 	}
 	wire, err := provider.DecodeResultWire(ctx, result.Stdout, typedsandbox.OutputBytes-options.Allowance.WorkerBytesUsed)
 	if err != nil {
-		return cost, err
+		return "", err
 	}
 	if err := json.Unmarshal(wire, &header); err != nil || header.Schema != "phebs-bazel-worker-result-v1" || string(header.Phase) != options.Control.Phase || header.RequestDigest != options.Control.RequestDigest {
-		return cost, errors.New("cost result metadata differs from authenticated native control")
+		return "", errors.New("cost result metadata differs from authenticated native control")
 	}
-	metrics, err := t451b.DecodeManagedCost(result.Stderr)
-	if err != nil {
-		return cost, err
-	}
-	return acceptanceCorpusPhaseCost{Phase: header.Phase, PlanningDigest: options.Control.PlanningDigest, AttemptDigest: options.Control.AttemptDigest, RequestDigest: header.RequestDigest, SealDigest: options.Control.SealDigest, StdoutSHA256: acceptanceDigest(result.Stdout), StderrSHA256: acceptanceDigest(result.Stderr), WorkerOutputBytes: int64(len(result.Stdout) + len(result.Stderr)), Metrics: metrics}, nil
+	return header.Phase, nil
 }
 
 func acceptanceCorpusSetCost(r *acceptanceCorpusResult, costs []acceptanceCorpusPhaseCost) error {
@@ -172,6 +183,9 @@ func acceptanceCorpusSetCost(r *acceptanceCorpusResult, costs []acceptanceCorpus
 	}
 	var output, duration int64
 	for i, cost := range costs {
+		if (cost.HostWitness == nil) != (costs[0].HostWitness == nil) {
+			return errors.New("mixed cold phase measurement methods")
+		}
 		if cost.Phase != [2]typedindex.Action{typedindex.Plan, typedindex.Execute}[i] || cost.PlanningDigest != costs[0].PlanningDigest || cost.AttemptDigest != costs[0].AttemptDigest || (cost.RequestDigest == cost.PlanningDigest) != (i == 0) || cost.WorkerOutputBytes <= 0 || cost.WorkerOutputBytes > typedsandbox.OutputBytes-output {
 			return errors.New("cost phase, owner or shared output differs")
 		}
@@ -180,7 +194,25 @@ func acceptanceCorpusSetCost(r *acceptanceCorpusResult, costs []acceptanceCorpus
 				return errors.New("cost control digest")
 			}
 		}
-		raw, err := t451b.EncodeManagedCost(cost.Metrics)
+		var raw []byte
+		var err error
+		if cost.HostWitness != nil {
+			if cost.Metrics != nil || cost.WorkerCache == nil || acceptanceValidateHostCost(cost) != nil {
+				return errors.New("host cost witness differs from completed phase")
+			}
+			a, first := cost.HostWitness.Allowance, costs[0].HostWitness.Allowance
+			if a.Start != first.Start || a.Deadline != first.Deadline || a.BootID != first.BootID || a.TimeDevice != first.TimeDevice || a.TimeInode != first.TimeInode || a.WorkerBytesUsed != output || (a.WireBytesUsed == 0) != (i == 0) {
+				return errors.New("host cost shared allowance differs")
+			}
+			raw, err = t451b.EncodeManagedCache(*cost.WorkerCache)
+			duration += cost.HostWitness.Observations.DurationNanoseconds
+		} else {
+			if cost.Metrics == nil || cost.WorkerCache != nil || cost.HostWitnessSHA256 != "" {
+				return errors.New("missing or mixed cost method")
+			}
+			raw, err = t451b.EncodeManagedCost(*cost.Metrics)
+			duration += cost.Metrics.Observations.DurationNanoseconds
+		}
 		if err != nil {
 			return err
 		}
@@ -188,7 +220,6 @@ func acceptanceCorpusSetCost(r *acceptanceCorpusResult, costs []acceptanceCorpus
 			return errors.New("cost stderr identity or physical output")
 		}
 		output += cost.WorkerOutputBytes
-		duration += cost.Metrics.Observations.DurationNanoseconds
 	}
 	if duration > int64(typedsandbox.WallLimit) {
 		return errors.New("sampled cost duration exceeds shared wall")
@@ -212,7 +243,7 @@ func TestNativeAcceptanceCorpusCost(t *testing.T) {
 		if phase == typedindex.Execute {
 			request = acceptanceDigest([]byte("execute"))
 		}
-		costs = append(costs, acceptanceCorpusPhaseCost{Phase: phase, PlanningDigest: planning, AttemptDigest: attempt, RequestDigest: request, SealDigest: acceptanceDigest([]byte(phase)), StdoutSHA256: acceptanceDigest([]byte("result")), StderrSHA256: acceptanceDigest(raw), WorkerOutputBytes: 4096, Metrics: metrics})
+		costs = append(costs, acceptanceCorpusPhaseCost{Phase: phase, PlanningDigest: planning, AttemptDigest: attempt, RequestDigest: request, SealDigest: acceptanceDigest([]byte(phase)), StdoutSHA256: acceptanceDigest([]byte("result")), StderrSHA256: acceptanceDigest(raw), WorkerOutputBytes: 4096, Metrics: &metrics})
 	}
 	for _, tc := range []struct {
 		name   string

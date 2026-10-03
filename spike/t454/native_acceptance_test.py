@@ -87,7 +87,54 @@ def fixture_measured_corpus_receipt(cohort):
     return receipt
 
 
+def fixture_root_measured_corpus_receipt(cohort):
+    receipt = fixture_measured_corpus_receipt(cohort)
+    costs = receipt['result']['corpus']['costs']
+    for i, cost in enumerate(costs):
+        metrics = cost.pop('metrics')
+        worker_cache = dict(schema='phebs-typed-native-corpus-worker-cache-v2', cache=metrics['cache'])
+        cost['stderr_sha256'] = n.digest(n.canonical(worker_cache)+b'\n')
+        control = dict(planning_digest=cost['planning_digest'], attempt_digest=cost['attempt_digest'],
+                       request_digest=cost['request_digest'], phase=cost['phase'],
+                       seal_digest=cost['seal_digest'], device=1, inode=2)
+        allowance = dict(schema='phebs-typed-allowance-v1', planning_digest=cost['planning_digest'],
+                         attempt_digest=cost['attempt_digest'], boot_id='12345678-1234-1234-1234-123456789abc',
+                         time_device=1, time_inode=2, start_boottime_ns=1, deadline_boottime_ns=300000000001,
+                         worker_bytes_used=4096 if i else 0, wire_bytes_used=8192 if i else 0)
+        witness = dict(schema='phebs-typed-native-host-cost-witness-v2', control=control, allowance=allowance,
+                       container_id='a'*64, worker_start='2', supervisor_start='1', private_worker_pid=2,
+                       namespace_device=1, namespace_inode=2, proc_device=3, proc_inode=4,
+                       stdout_sha256=cost['stdout_sha256'], stderr_sha256=cost['stderr_sha256'],
+                       observations=metrics['observations'])
+        cost.update(host_witness=witness, host_witness_sha256=n.digest(n.canonical(witness)), worker_cache=worker_cache)
+        receipt['observations'][i].update(id=witness['container_id'], worker_start=witness['worker_start'],
+                                          allowance=copy.deepcopy(allowance))
+    return receipt
+
+
+def rebind_root_cost(receipt, index=1):
+    """Keep hashes coherent so semantic negatives reach their actual fence."""
+    cost = receipt['result']['corpus']['costs'][index]
+    witness = cost['host_witness']
+    cost['stderr_sha256'] = n.digest(n.canonical(cost['worker_cache'])+b'\n')
+    witness['stderr_sha256'] = cost['stderr_sha256']
+    cost['host_witness_sha256'] = n.digest(n.canonical(witness))
+    receipt['observations'][index]['allowance'] = copy.deepcopy(witness['allowance'])
+
+
 class AcceptanceTests(unittest.TestCase):
+    def test_legacy_measurement_and_neutral_golden_bytes(self):
+        self.assertEqual(n.digest(n.canonical(fixture_config())),
+                         'sha256:3ff6e5582144614b9685e9090855cb41b3a6d356ba3ab482708946ec2eebeead')
+        receipt = fixture_measured_corpus_receipt('ordinary')
+        self.assertEqual(n.digest(n.canonical(receipt)),
+                         'sha256:5d3452d6a29206eb0f74f7007b799935ebf569066e6dc12dc4843383a7c2740e')
+        self.assertTrue(n.corpus_cost(receipt, receipt['result']['corpus']))
+        for cost in receipt['result']['corpus']['costs']:
+            self.assertEqual(set(cost), {'phase', 'planning_digest', 'attempt_digest', 'request_digest',
+                                        'seal_digest', 'stdout_sha256', 'stderr_sha256', 'worker_output_bytes', 'metrics'})
+            self.assertEqual(cost['metrics']['schema'], 'phebs-typed-native-corpus-cost-v1')
+
     def test_closed_corpus_config_preserves_neutral_wire(self):
         neutral = fixture_config()
         self.assertEqual(tuple(n.config(n.canonical(neutral))), n.CONFIG_KEYS)
@@ -160,6 +207,125 @@ class AcceptanceTests(unittest.TestCase):
             proof = n.compare_corpus(paths)
             self.assertEqual(proof['cost_gate'], 'unavailable')
             self.assertIs(proof['registration_ready'], False)
+
+    def test_root_measured_corpus_requires_both_bound_phases(self):
+        with tempfile.TemporaryDirectory() as d:
+            paths = {c: Path(d).resolve()/c for c in n.COHORTS}
+            for cohort, path in paths.items():
+                path.write_bytes(n.canonical(fixture_root_measured_corpus_receipt(cohort)))
+            proof = n.compare_corpus(paths)
+            self.assertEqual(proof['cost_gate'], 'pass')
+            self.assertIs(proof['registration_ready'], True)
+            original = fixture_root_measured_corpus_receipt('fanout')
+            changes = {
+                'missing-phase': lambda r: r['result']['corpus']['costs'].pop(),
+                'old-stop': lambda r: r['result'].update(cost_stop={'diagnostic_only': True}),
+                'host-stop': lambda r: r['result'].update(host_cost_stop={'diagnostic_only': True}),
+                'foreign-phase': lambda r: r['result']['corpus']['costs'][1].update(phase='plan'),
+                'foreign-owner': lambda r: r['result']['corpus']['costs'][1].update(attempt_digest=n.digest(b'foreign')),
+                'changed-witness': lambda r: r['result']['corpus']['costs'][1]['host_witness'].update(proc_inode=5),
+                'changed-cache': lambda r: r['result']['corpus']['costs'][1]['worker_cache']['cache'].update(allocated_bytes=512),
+                'foreign-stdout': lambda r: r['result']['corpus']['costs'][1].update(stdout_sha256=n.digest(b'foreign')),
+                'foreign-stderr': lambda r: r['result']['corpus']['costs'][1].update(stderr_sha256=n.digest(b'foreign')),
+                'foreign-container': lambda r: r['observations'][1].update(id='b'*64),
+                'foreign-worker': lambda r: r['observations'][1].update(worker_start='3'),
+                'foreign-seal': lambda r: r['observations'][1].update(seal=n.digest(b'foreign')),
+                'foreign-allowance': lambda r: r['observations'][1]['allowance'].update(time_inode=3),
+                'allowance-type-alias': lambda r: r['observations'][1]['allowance'].update(time_device=True),
+                'physical-output': lambda r: r['result']['corpus']['costs'][1].update(worker_output_bytes=n.POLICY['output_bytes']),
+                'missing-completion': lambda r: r['result']['outcome']['Reports'][1].update(Removed=False),
+                'mixed-methods': lambda r: r['result']['corpus']['costs'].__setitem__(1, fixture_measured_corpus_receipt('fanout')['result']['corpus']['costs'][1]),
+                'missing-witness': lambda r: r['result']['corpus']['costs'][1].pop('host_witness'),
+                'missing-cache': lambda r: r['result']['corpus']['costs'][1].pop('worker_cache'),
+                'v1-metrics-added': lambda r: r['result']['corpus']['costs'][1].update(metrics={}),
+                'scalar-completion': lambda r: r['result']['corpus']['costs'][1]['host_witness'].update(verified=True),
+            }
+            for name, mutate in changes.items():
+                with self.subTest(name=name):
+                    value = copy.deepcopy(original); mutate(value)
+                    paths['fanout'].write_bytes(n.canonical(value))
+                    with self.assertRaises(ValueError): n.compare_corpus(paths)
+
+    def test_root_measurement_semantic_tampering_cannot_rehash_to_pass(self):
+        original = fixture_root_measured_corpus_receipt('ordinary')
+        changes = {
+            'control-request': lambda w, c: w['control'].update(request_digest=w['control']['planning_digest']),
+            'control-extra': lambda w, c: w['control'].update(verified=True),
+            'control-device': lambda w, c: w['control'].update(device=0),
+            'control-bool': lambda w, c: w['control'].update(inode=True),
+            'host-schema': lambda w, c: w.update(schema='phebs-typed-native-corpus-cost-v1'),
+            'cache-schema': lambda w, c: c.update(schema='phebs-typed-native-corpus-cost-v1'),
+            'clock-domain': lambda w, c: w['allowance'].update(time_inode=3),
+            'deadline': lambda w, c: w['allowance'].update(deadline_boottime_ns=300000000002),
+            'boot-uuid': lambda w, c: w['allowance'].update(boot_id='not-a-boot'),
+            'start-overflow': lambda w, c: w['allowance'].update(start_boottime_ns=1 << 63, deadline_boottime_ns=(1 << 63)+300000000000),
+            'cumulative-output': lambda w, c: w['allowance'].update(worker_bytes_used=4097),
+            'no-wire': lambda w, c: w['allowance'].update(wire_bytes_used=0),
+            'wire-cap': lambda w, c: w['allowance'].update(wire_bytes_used=(24 << 20)+1),
+            'private-pid1': lambda w, c: w.update(private_worker_pid=1),
+            'private-pid-overflow': lambda w, c: w.update(private_worker_pid=1 << 32),
+            'namespace-zero': lambda w, c: w.update(namespace_inode=0),
+            'proc-zero': lambda w, c: w.update(proc_device=0),
+            'supervisor-leading-zero': lambda w, c: w.update(supervisor_start='01'),
+            'supervisor-overflow': lambda w, c: w.update(supervisor_start=str(1 << 64)),
+            'sticky': lambda w, c: w['observations'].update(unavailable=True),
+            'error': lambda w, c: w['observations'].update(unexpected_errors=1),
+            'failure': lambda w, c: w['observations'].update(failure='process'),
+            'interval': lambda w, c: w['observations'].update(interval_nanoseconds=100000000),
+            'samples': lambda w, c: w['observations'].update(samples=1),
+            'lifetimes': lambda w, c: w['observations'].update(sampled_child_lifetimes=65537),
+            'lower-bound': lambda w, c: w['observations'].update(child_lifetimes_lower_bound=False),
+            'fd-atomic': lambda w, c: w['observations'].update(fd_counts_non_atomic=False),
+            'fd-bound': lambda w, c: w['observations'].update(sampled_process_fd_peak=129),
+            'counter-overflow': lambda w, c: w['observations'].update(vanished=1 << 64),
+            'shared-wall': lambda w, c: w['observations'].update(duration_nanoseconds=300000000000),
+            'incomplete-cache': lambda w, c: c['cache'].update(complete=False),
+            'cache-roots': lambda w, c: c['cache'].update(roots=['/inputs']),
+            'cache-cap': lambda w, c: c['cache'].update(allocated_bytes=n.POLICY['scratch_bytes']+1),
+            'cache-count': lambda w, c: c['cache'].update(entries=7),
+            'cache-duplicate-root': lambda w, c: c['cache'].update(missing_roots=['/scratch/cache']*2),
+            'cache-extra': lambda w, c: c['cache'].update(path='/private'),
+            'witness-order': lambda w, c: w.__setitem__('schema', w.pop('schema')),
+            'cache-order': lambda w, c: c.__setitem__('schema', c.pop('schema')),
+        }
+        for name, mutate in changes.items():
+            with self.subTest(name=name):
+                value = copy.deepcopy(original)
+                cost = value['result']['corpus']['costs'][1]
+                mutate(cost['host_witness'], cost['worker_cache'])
+                rebind_root_cost(value)
+                with self.assertRaises(ValueError): n.corpus_cost(value, value['result']['corpus'])
+        for mutate in [lambda r: r['result']['outcome']['Reports'][1]['Resources'].update(sampling_unavailable=True),
+                       lambda r: r['result']['outcome']['Reports'][1]['Resources'].update(memory_oom_events=False),
+                       lambda r: r['result']['outcome']['Reports'][1]['Resources'].update(samples=1 << 64),
+                       lambda r: r['result']['outcome']['Reports'][1]['Resources'].update(memory_peak_bytes=n.POLICY['memory_bytes']+1)]:
+            value = copy.deepcopy(original); mutate(value)
+            with self.assertRaises(ValueError): n.corpus_cost(value, value['result']['corpus'])
+        # Zero plan spending is mandatory even when both recorded allowances agree.
+        value = copy.deepcopy(original)
+        value['result']['corpus']['costs'][0]['host_witness']['allowance']['worker_bytes_used'] = 1
+        rebind_root_cost(value, 0)
+        with self.assertRaises(ValueError): n.corpus_cost(value, value['result']['corpus'])
+
+    def test_root_measurement_exact_shared_output_and_wall_boundaries(self):
+        value = fixture_root_measured_corpus_receipt('ordinary')
+        costs = value['result']['corpus']['costs']
+        costs[1]['worker_output_bytes'] = n.POLICY['output_bytes']-costs[0]['worker_output_bytes']
+        for i, cost in enumerate(costs):
+            cost['host_witness']['observations']['duration_nanoseconds'] = 150000000000
+            rebind_root_cost(value, i)
+        self.assertTrue(n.corpus_cost(value, value['result']['corpus']))
+        overflow = copy.deepcopy(value)
+        overflow['result']['corpus']['costs'][1]['worker_output_bytes'] += 1
+        with self.assertRaises(ValueError): n.corpus_cost(overflow, overflow['result']['corpus'])
+        overflow = copy.deepcopy(value)
+        overflow['result']['corpus']['costs'][1]['host_witness']['observations']['duration_nanoseconds'] += 1
+        rebind_root_cost(overflow)
+        with self.assertRaises(ValueError): n.corpus_cost(overflow, overflow['result']['corpus'])
+        # A cache-only frame cannot claim a successful provider result's stdout.
+        cache_only = fixture_root_measured_corpus_receipt('ordinary')
+        cache_only['result']['corpus']['costs'][1]['worker_output_bytes'] = len(n.canonical(costs[1]['worker_cache']))+1
+        with self.assertRaises(ValueError): n.corpus_cost(cache_only, cache_only['result']['corpus'])
 
     def test_remote_stage_admits_only_bounded_corpus_git_input(self):
         import ast

@@ -3,9 +3,9 @@
 package main
 
 import (
-	"context"
 	"os"
 	"runtime"
+	"syscall"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
@@ -26,38 +26,33 @@ func init() {
 }
 
 func runMeasuredTypedWorker() int {
-	stop, err := t451b.StartManagedObservations(context.Background())
-	if err != nil {
-		return measuredTypedStop("observer_start", nil)
+	// SIGSTOP stops the whole worker thread group before dispatch. The root
+	// acceptance owner must authenticate this stopped lifetime and arm the
+	// private-namespace sampler before resuming; the absolute allowance still runs.
+	if err := syscall.Kill(os.Getpid(), syscall.SIGSTOP); err != nil {
+		return 125
 	}
 	handled, code := runTypedCommand()
-	observations, err := stop()
-	if err != nil {
-		return measuredTypedStop("observations", &observations)
-	}
 	if !handled || code != 0 {
-		return measuredTypedStop("worker", &observations)
+		return 125
 	}
 	// Successful production dispatch already joined every tool and verified
 	// final quiescence/workspace custody. No new writer or child follows it.
 	cache, err := t451b.ObserveManagedPrivateCache()
 	if err != nil {
-		return measuredTypedStop("cache", &observations)
+		return 125
 	}
-	raw, err := t451b.EncodeManagedCost(t451b.ManagedCost{Schema: t451b.ManagedCostSchema, Observations: observations, Cache: cache})
+	raw, err := t451b.EncodeManagedCache(t451b.ManagedCache{Schema: t451b.ManagedCacheSchema, Cache: cache})
 	if err != nil {
-		return measuredTypedStop("cost_encode", &observations)
+		return 125
 	}
 	if n, err := os.Stderr.Write(raw); err != nil || n != len(raw) {
 		return 125
 	}
-	return 0
-}
-
-func measuredTypedStop(stage string, observations *t451b.Observations) int {
-	raw, err := t451b.EncodeManagedCostStop(t451b.ManagedCostStop{Schema: t451b.ManagedCostStopSchema, Stage: stage, Observations: observations})
-	if err == nil {
-		_, _ = os.Stderr.Write(raw)
+	// Keep this same worker alive for the root owner's final coherent sample.
+	// A cache frame alone cannot authenticate successful native completion.
+	if err := syscall.Kill(os.Getpid(), syscall.SIGSTOP); err != nil {
+		return 125
 	}
-	return 125
+	return 0
 }

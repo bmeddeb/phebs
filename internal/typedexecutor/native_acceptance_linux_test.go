@@ -63,6 +63,7 @@ type acceptanceChildResult struct {
 	FailureSite         string                     `json:"failure_site,omitempty"`
 	Corpus              *acceptanceCorpusResult    `json:"corpus,omitempty"`
 	CostStop            *acceptanceCorpusPhaseStop `json:"cost_stop,omitempty"`
+	HostCostStop        *acceptanceCorpusHostStop  `json:"host_cost_stop,omitempty"`
 }
 type acceptanceObservation struct {
 	ID            string                          `json:"id"`
@@ -570,7 +571,10 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 	if c.Schema == acceptanceCorpusSchema && !recovery {
 		run := controller.native.run
 		controller.native.run = func(ctx context.Context, options typedsandbox.Options, authority typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
-			native, err := run(ctx, options, authority)
+			native, witness, stage, err := acceptanceRunRootMeasured(ctx, c, s, run, options, authority)
+			if err != nil {
+				result.HostCostStop = acceptanceHostCostStop(stage, witness)
+			}
 			if native.ExitCode == 125 && len(native.Stderr) != 0 {
 				if stopped, diagnosticErr := acceptanceCorpusStop(options, native); diagnosticErr == nil {
 					result.CostStop = &stopped
@@ -578,8 +582,9 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 				return native, err
 			}
 			if err == nil && len(native.Stderr) != 0 {
-				cost, measurementErr := acceptanceCorpusCost(ctx, options, native)
+				cost, measurementErr := acceptanceCorpusHostCost(ctx, options, native, witness)
 				if measurementErr != nil {
+					result.HostCostStop = acceptanceHostCostStop("cost", witness)
 					return native, measurementErr
 				}
 				costs = append(costs, cost)
@@ -1529,7 +1534,7 @@ loop:
 		if !final.Result.PublicationVerified {
 			return errors.New("publication proof missing")
 		}
-		if c.Schema == acceptanceCorpusSchema && (final.Result.CostStop != nil || final.Result.Corpus == nil || !final.Result.Corpus.NavigationVerified || !final.Result.Corpus.SourceGitDrained || final.Result.Corpus.Cohort != c.Cohort || final.Result.Corpus.CostGate != "unavailable" && final.Result.Corpus.CostGate != "pass") {
+		if c.Schema == acceptanceCorpusSchema && (final.Result.CostStop != nil || final.Result.HostCostStop != nil || final.Result.Corpus == nil || !final.Result.Corpus.NavigationVerified || !final.Result.Corpus.SourceGitDrained || final.Result.Corpus.Cohort != c.Cohort || final.Result.Corpus.CostGate != "unavailable" && final.Result.Corpus.CostGate != "pass") {
 			return errors.New("corpus product reader proof missing")
 		}
 		if c.Schema == acceptanceCorpusSchema && final.Result.Corpus.CostGate == "pass" {

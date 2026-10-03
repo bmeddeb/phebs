@@ -23,8 +23,10 @@ const maxObservedLifetimes = 65536
 
 // Observations are sampled within the private PID namespace. Child lifetimes
 // exclude the worker, PID 1 and other effective UIDs. FD counts include the
-// worker (and the observer's temporary descriptors), exclude PID 1 and other
-// UIDs, and are sequential, non-atomic directory-entry observations. In
+// worker, exclude PID 1 and other UIDs, and are sequential, non-atomic
+// directory-entry observations. The v1 in-worker method includes observer
+// temporary descriptors; the root method keeps those outside the private PID
+// namespace. In
 // particular their aggregate is not an exact simultaneous peak or a guaranteed
 // lower bound on that peak. Unavailable is sticky; no field proves completeness.
 // Validated zombies contribute zero descriptors but retain lifetime accounting.

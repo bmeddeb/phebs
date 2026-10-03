@@ -329,6 +329,45 @@ def collect(run_id, case, expected, output):
     exclusive(output, result.stdout)
 
 
+def corpus_observations(o):
+    numeric = ('interval_nanoseconds', 'duration_nanoseconds', 'samples', 'sampled_child_lifetimes', 'sampled_process_fd_peak', 'sampled_aggregate_fd_peak', 'vanished', 'raced', 'unexpected_errors')
+    if (set(o) != {'version', *numeric, 'child_lifetimes_lower_bound', 'fd_counts_non_atomic', 'unavailable'}
+            or any(type(o.get(k)) is not int or o[k] < 0 for k in numeric)
+            or o.get('version') != 'phebs-t451b-sampled-observations-v1' or o['interval_nanoseconds'] != 50000000
+            or not 0 < o['duration_nanoseconds'] <= 300000000000 or o['samples'] < 2
+            or not 0 < o['sampled_child_lifetimes'] <= 65536 or o['child_lifetimes_lower_bound'] is not True
+            or o['fd_counts_non_atomic'] is not True or not 0 < o['sampled_process_fd_peak'] <= 128
+            or not o['sampled_process_fd_peak'] <= o['sampled_aggregate_fd_peak'] <= 128*294
+            or o['unavailable'] is not False or o['unexpected_errors'] != 0):
+        fail('sampled lifetime or descriptor evidence unavailable')
+
+
+def corpus_cache(cache):
+    roots = ['/scratch/'+n for n in ('bazel-user', 'bazel-output', 'repository-cache', 'gocache', 'gomodcache', 'cache')]
+    counters = ('entries', 'regular_files', 'directories', 'symlinks', 'unique_inodes', 'logical_bytes', 'allocated_bytes')
+    if (set(cache) != {'version', 'roots', 'missing_roots', *counters, 'complete'}
+            or any(type(cache.get(k)) is not int or cache[k] < 0 for k in counters)
+            or cache.get('version') != 'phebs-t451b-private-cache-v1' or cache.get('complete') is not True or cache.get('roots') != roots
+            or not 0 < cache['entries'] <= POLICY['scratch_inodes'] or cache['unique_inodes'] > cache['entries']
+            or cache['regular_files']+cache['directories']+cache['symlinks'] != cache['entries']
+            or max(cache['logical_bytes'], cache['allocated_bytes']) > POLICY['scratch_bytes']
+            or not isinstance(cache.get('missing_roots'), list) or len(set(cache['missing_roots'])) != len(cache['missing_roots'])
+            or any(n not in roots for n in cache['missing_roots'])):
+        fail('private cache evidence unavailable')
+
+
+def corpus_resources(resources):
+    bounds = {'memory_peak_bytes': POLICY['memory_bytes'], 'sampled_peak_rss_bytes': POLICY['memory_bytes'],
+              'sampled_peak_processes': POLICY['tasks'], 'sampled_peak_scratch_bytes': POLICY['scratch_bytes'],
+              'sampled_peak_scratch_inodes': POLICY['scratch_inodes']}
+    if (resources.get('limits_verified') is not True or resources.get('sampling_unavailable') is not False
+            or any(type(resources.get(k)) is not int or not 0 <= resources[k] <= bound for k, bound in bounds.items())
+            or type(resources.get('samples')) is not int or resources['samples'] <= 0
+            or any(resources.get(k) != 0 for k in ('memory_oom_events', 'memory_oom_kills', 'memory_limit_events', 'task_limit_events'))
+            or resources.get('per_process_descriptors') != 128 or resources.get('aggregate_descriptor_ceiling') != 128*294):
+        fail('native resource cost not established')
+
+
 def corpus_cost(receipt, proof):
     """Require two authenticated, qualified cold-phase measurement records."""
     missing = ['sampled_child_lifetimes', 'sampled_fd_counts', 'private_cache_inventory']
@@ -339,12 +378,13 @@ def corpus_cost(receipt, proof):
     costs = proof.get('costs', [])
     if proof.get('cost_gate') != 'pass' or proof.get('cost_missing') != [] or len(costs) != 2:
         fail('both cold phases require measured cost')
+    if any(isinstance(cost, dict) and set(cost) & {'host_witness', 'host_witness_sha256', 'worker_cache'} for cost in costs):
+        return corpus_host_cost(receipt, costs)
     reports = receipt.get('result', {}).get('outcome', {}).get('Reports', [])
     observed = receipt.get('observations', [])
     if len(reports) != 2 or len(observed) != 2:
         fail('measured native phase controls missing')
     total_output, duration = 0, 0
-    roots = ['/scratch/'+n for n in ('bazel-user', 'bazel-output', 'repository-cache', 'gocache', 'gomodcache', 'cache')]
     for i, phase in enumerate(('plan', 'execute')):
         cost, report, control = costs[i], reports[i], observed[i]
         allowance = control.get('allowance', {})
@@ -360,41 +400,108 @@ def corpus_cost(receipt, proof):
                 or set(metrics) != {'schema', 'observations', 'cache'} or metrics.get('schema') != 'phebs-typed-native-corpus-cost-v1'
                 or digest(canonical(metrics)+b'\n') != cost['stderr_sha256']):
             fail('cost control or native completion binding')
-        numeric = ('interval_nanoseconds', 'duration_nanoseconds', 'samples', 'sampled_child_lifetimes', 'sampled_process_fd_peak', 'sampled_aggregate_fd_peak', 'vanished', 'raced', 'unexpected_errors')
-        if (set(o) != {'version', *numeric, 'child_lifetimes_lower_bound', 'fd_counts_non_atomic', 'unavailable'}
-                or any(type(o.get(k)) is not int or o[k] < 0 for k in numeric)
-                or o.get('version') != 'phebs-t451b-sampled-observations-v1' or o['interval_nanoseconds'] != 50000000
-                or not 0 < o['duration_nanoseconds'] <= 300000000000 or o['samples'] < 2
-                or not 0 < o['sampled_child_lifetimes'] <= 65536 or o['child_lifetimes_lower_bound'] is not True
-                or o['fd_counts_non_atomic'] is not True or not 0 < o['sampled_process_fd_peak'] <= 128
-                or not o['sampled_process_fd_peak'] <= o['sampled_aggregate_fd_peak'] <= 128*294
-                or o['unavailable'] is not False or o['unexpected_errors'] != 0):
-            fail('sampled lifetime or descriptor evidence unavailable')
-        counters = ('entries', 'regular_files', 'directories', 'symlinks', 'unique_inodes', 'logical_bytes', 'allocated_bytes')
-        if (set(cache) != {'version', 'roots', 'missing_roots', *counters, 'complete'}
-                or any(type(cache.get(k)) is not int or cache[k] < 0 for k in counters)
-                or cache.get('version') != 'phebs-t451b-private-cache-v1' or cache.get('complete') is not True or cache.get('roots') != roots
-                or not 0 < cache['entries'] <= POLICY['scratch_inodes'] or cache['unique_inodes'] > cache['entries']
-                or cache['regular_files']+cache['directories']+cache['symlinks'] != cache['entries']
-                or max(cache['logical_bytes'], cache['allocated_bytes']) > POLICY['scratch_bytes']
-                or not isinstance(cache.get('missing_roots'), list) or len(set(cache['missing_roots'])) != len(cache['missing_roots'])
-                or any(n not in roots for n in cache['missing_roots'])):
-            fail('private cache evidence unavailable')
-        resources = report.get('Resources', {})
-        bounds = {'memory_peak_bytes': POLICY['memory_bytes'], 'sampled_peak_rss_bytes': POLICY['memory_bytes'],
-                  'sampled_peak_processes': POLICY['tasks'], 'sampled_peak_scratch_bytes': POLICY['scratch_bytes'],
-                  'sampled_peak_scratch_inodes': POLICY['scratch_inodes']}
-        if (resources.get('limits_verified') is not True or resources.get('sampling_unavailable') is not False
-                or any(type(resources.get(k)) is not int or not 0 <= resources[k] <= bound for k, bound in bounds.items())
-                or type(resources.get('samples')) is not int or resources['samples'] <= 0
-                or any(resources.get(k) != 0 for k in ('memory_oom_events', 'memory_oom_kills', 'memory_limit_events', 'task_limit_events'))
-                or resources.get('per_process_descriptors') != 128 or resources.get('aggregate_descriptor_ceiling') != 128*294):
-            fail('native resource cost not established')
+        corpus_observations(o)
+        corpus_cache(cache)
+        corpus_resources(report.get('Resources', {}))
         if type(cost.get('worker_output_bytes')) is not int or not len(canonical(metrics))+1 <= cost['worker_output_bytes'] <= POLICY['output_bytes']-total_output:
             fail('shared physical worker output cost')
         total_output += cost['worker_output_bytes']
         duration += o['duration_nanoseconds']
     if duration > 300000000000:
+        fail('sampled durations exceed shared wall')
+    return True
+
+
+def corpus_host_cost(receipt, costs):
+    """Check the separate root witness; these scalars mint no completion token."""
+    reports = receipt.get('result', {}).get('outcome', {}).get('Reports', [])
+    observed = receipt.get('observations', [])
+    if len(reports) != 2 or len(observed) != 2:
+        fail('measured native phase controls missing')
+    cost_keys = ('phase', 'planning_digest', 'attempt_digest', 'request_digest', 'seal_digest',
+                 'stdout_sha256', 'stderr_sha256', 'worker_output_bytes',
+                 'host_witness', 'host_witness_sha256', 'worker_cache')
+    witness_keys = ('schema', 'control', 'allowance', 'container_id', 'worker_start',
+                    'supervisor_start', 'private_worker_pid', 'namespace_device', 'namespace_inode',
+                    'proc_device', 'proc_inode', 'stdout_sha256', 'stderr_sha256', 'observations')
+    control_keys = ('planning_digest', 'attempt_digest', 'request_digest', 'phase', 'seal_digest', 'device', 'inode')
+    allowance_keys = ('schema', 'planning_digest', 'attempt_digest', 'boot_id', 'time_device', 'time_inode',
+                      'start_boottime_ns', 'deadline_boottime_ns', 'worker_bytes_used', 'wire_bytes_used')
+    observation_keys = ('version', 'interval_nanoseconds', 'duration_nanoseconds', 'samples',
+                        'sampled_child_lifetimes', 'child_lifetimes_lower_bound', 'sampled_process_fd_peak',
+                        'sampled_aggregate_fd_peak', 'fd_counts_non_atomic', 'vanished', 'raced',
+                        'unexpected_errors', 'unavailable')
+    cache_keys = ('version', 'roots', 'missing_roots', 'entries', 'regular_files', 'directories',
+                  'symlinks', 'unique_inodes', 'logical_bytes', 'allocated_bytes', 'complete')
+    clock_keys = ('boot_id', 'time_device', 'time_inode', 'start_boottime_ns', 'deadline_boottime_ns')
+    wall_ns, total_output, duration = POLICY['wall_seconds'] * 1000000000, 0, 0
+    for i, phase in enumerate(('plan', 'execute')):
+        cost, report, native = costs[i], reports[i], observed[i]
+        if any(type(row) is not dict for row in (cost, report, native)) or tuple(cost) != cost_keys:
+            fail('closed host cost row')
+        witness, worker_cache = cost['host_witness'], cost['worker_cache']
+        if (type(witness) is not dict or tuple(witness) != witness_keys
+                or witness['schema'] != 'phebs-typed-native-host-cost-witness-v2'
+                or type(worker_cache) is not dict or tuple(worker_cache) != ('schema', 'cache')
+                or worker_cache['schema'] != 'phebs-typed-native-corpus-worker-cache-v2'):
+            fail('closed host witness or worker cache')
+        control, allowance = witness['control'], witness['allowance']
+        o, cache = witness['observations'], worker_cache['cache']
+        if (any(type(row) is not dict for row in (control, allowance, o, cache))
+                or tuple(control) != control_keys or tuple(allowance) != allowance_keys
+                or tuple(o) != observation_keys or tuple(cache) != cache_keys):
+            fail('closed canonical host evidence')
+        if (cost['phase'] != phase or report.get('Phase') != phase or native.get('phase') != phase
+                or type(report.get('ExitCode')) is not int or report['ExitCode'] != 0
+                or report.get('Removed') is not True or report.get('StopReason') != '' or report.get('Failure') is not None
+                or any(not hash_valid(cost[k]) for k in ('planning_digest', 'attempt_digest', 'request_digest', 'seal_digest', 'stdout_sha256', 'stderr_sha256', 'host_witness_sha256'))
+                or any(control[k] != cost[k] for k in ('planning_digest', 'attempt_digest', 'request_digest', 'seal_digest'))
+                or control['phase'] != phase or cost['seal_digest'] != native.get('seal')
+                or canonical(allowance) != canonical(native.get('allowance')) or allowance['schema'] != 'phebs-typed-allowance-v1'
+                or cost['planning_digest'] != allowance['planning_digest'] or cost['attempt_digest'] != allowance['attempt_digest']
+                or cost['planning_digest'] != costs[0]['planning_digest'] or cost['attempt_digest'] != costs[0]['attempt_digest']
+                or (cost['request_digest'] == cost['planning_digest']) != (phase == 'plan')
+                or witness['stdout_sha256'] != cost['stdout_sha256'] or witness['stderr_sha256'] != cost['stderr_sha256']
+                or digest(canonical(witness)) != cost['host_witness_sha256']):
+            fail('host cost control or native completion binding')
+        if (any(type(control[k]) is not int or not 0 < control[k] < 1 << 64 for k in ('device', 'inode'))
+                or any(type(allowance[k]) is not int or not 0 < allowance[k] < 1 << 64 for k in ('time_device', 'time_inode'))
+                or not isinstance(allowance['boot_id'], str)
+                or re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', allowance['boot_id']) is None
+                or type(allowance['start_boottime_ns']) is not int or not 0 < allowance['start_boottime_ns'] <= (1 << 63)-1-wall_ns
+                or type(allowance['deadline_boottime_ns']) is not int or allowance['deadline_boottime_ns'] != allowance['start_boottime_ns']+wall_ns
+                or type(allowance['worker_bytes_used']) is not int or allowance['worker_bytes_used'] != total_output
+                or type(allowance['wire_bytes_used']) is not int or not 0 <= allowance['wire_bytes_used'] <= 24 << 20
+                or (allowance['wire_bytes_used'] == 0) != (i == 0)
+                or any(allowance[k] != costs[0]['host_witness']['allowance'][k] for k in clock_keys)):
+            fail('host cost shared allowance differs')
+        if (not isinstance(witness['container_id'], str) or re.fullmatch(r'[0-9a-f]{64}', witness['container_id']) is None
+                or witness['container_id'] != native.get('id') or witness['worker_start'] != native.get('worker_start')
+                or any(not isinstance(witness[k], str) or re.fullmatch(r'[1-9][0-9]{0,19}', witness[k]) is None
+                       or int(witness[k]) >= 1 << 64 for k in ('worker_start', 'supervisor_start'))
+                or type(witness['private_worker_pid']) is not int or not 2 <= witness['private_worker_pid'] < 1 << 32
+                or any(type(witness[k]) is not int or not 0 < witness[k] < 1 << 64 for k in ('namespace_device', 'namespace_inode', 'proc_device', 'proc_inode'))):
+            fail('host cost lifetime or namespace identity')
+        corpus_observations(o)
+        if (not isinstance(cache['missing_roots'], list)
+                or any(not isinstance(name, str) for name in cache['missing_roots'])
+                or type(report.get('Resources')) is not dict):
+            fail('closed host cache or native resources')
+        corpus_cache(cache)
+        corpus_resources(report.get('Resources', {}))
+        resources = report['Resources']
+        if (any(o[k] >= 1 << 64 for k in ('samples', 'vanished', 'raced'))
+                or resources['samples'] >= 1 << 64
+                or any(type(resources.get(k)) is not int for k in ('memory_oom_events', 'memory_oom_kills', 'memory_limit_events', 'task_limit_events'))):
+            fail('host process counter bound')
+        cache_raw = canonical(worker_cache) + b'\n'
+        if (len(cache_raw) > 4 << 10 or digest(cache_raw) != cost['stderr_sha256']
+                or type(cost['worker_output_bytes']) is not int
+                or not len(cache_raw) < cost['worker_output_bytes'] <= POLICY['output_bytes']-total_output):
+            fail('host cost cache stream or shared physical output')
+        total_output += cost['worker_output_bytes']
+        duration += o['duration_nanoseconds']
+    if duration > wall_ns:
         fail('sampled durations exceed shared wall')
     return True
 
@@ -422,6 +529,7 @@ def compare_corpus(paths):
                 or any(result.get(k) is not True for k in ('settled', 'no_replay', 'publication_verified', 'growth_released'))
                 or result.get('execution_error') is not False
                 or result.get('cost_stop') is not None
+                or result.get('host_cost_stop') is not None
                 or proof.get('cohort') != cohort or proof.get('commit') != CORPUS_COMMIT
                 or proof.get('oracle_sha256') != ORACLE_SHA256 or proof.get('archive_sha256') != ARCHIVE_SHA256
                 or proof.get('navigation_verified') is not True or proof.get('source_git_drained') is not True

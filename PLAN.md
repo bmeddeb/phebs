@@ -8708,3 +8708,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   its retained workspace drained. Proto/fanout correctness and cost remain open;
   Bazel stays unregistered. These records change no runtime work or resource
   ceiling, and no original stop is replayed or promoted.
+
+- **2026-10-03 — T45.6 prospective root-host cost witness v2.**
+  The ordinary stop does not identify a failing operation/errno. Prospectively,
+  only the tagged genuine-main measured helper adds checked thread-group
+  stop/continue rendezvous before production dispatch and after joined tools,
+  quiescent fixed-root cache census and one cache-only stderr frame. The existing
+  root acceptance process authenticates exact attempt/control/allowance, scratch,
+  worker/supervisor lifetimes, namespace and kernel limits, anchors that private
+  proc filesystem, and reuses the unchanged sticky 50-ms bounded sampler. It
+  requires an observed live resumed state between its exactly two pidfd CONTs;
+  a short unobserved interval, forged early stop, drift, unavailable sample or
+  deadline cannot produce completion. No extra CONT or denied-read retry exists.
+  A separate host-witness v2 binds qualified observations to original exact
+  stdout/cache-v2 stderr and verified native completion. Root observer temporary
+  descriptors lie outside the private namespace; counts remain sequential and
+  non-atomic, and child lifetimes remain a sampled lower bound. Retained v1
+  methods and bytes remain exact; no old stderr digest is reinterpreted.
+  Validation alone adds one native-call join goroutine/channel, one bounded
+  sampler goroutine/ticker/map, one 50-ms barrier poller, a pinned proc root and
+  worker pidfd, and initial/final full custody inspections per cold phase. Shared
+  publication pins cover each inspection and initial/final sampler work, then
+  release after its CONT without waiting for resumed work. The poller reads one
+  anchored worker stat per turn; the sampler retains 588 inventory entries,
+  294 processes, 128 descriptors/process, 65,536 lifetimes and 8-KiB records.
+  All barriers, cache and encoding work consumes the original shared 300-second
+  window and physical output caps. No new production query, tick, startup,
+  retry, publication, cache or child work, container capability, host entitlement
+  or admission ceiling is introduced. Fresh immutable helper/profile/attempt
+  lineages, exact review and native corpus correctness/cost proof remain required.
+  Separately, the reviewed failed-proto input retirement releases only 15,594 VM
+  duplicate input files/911,676,562 logical bytes and its preparation test, keeping
+  failed controls/diagnostics unchanged; its actual source-free proof lives in
+  `spike/t454/proto_failed_input_retirement_7d6b849c.json`. Bazel stays unregistered.
