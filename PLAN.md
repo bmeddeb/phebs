@@ -8900,3 +8900,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   comparison are not executed by this decision. The earlier ARM64 stop stays
   at `spike/t454/remote_arm64_admission_stop.json` and is superseded by
   `spike/t454/host_geometry_admission.json`.
+
+- **2026-10-03 — T45.6 amd64 host Docker stop.** On this Linux `x86_64` machine,
+  starting from `9857db4bb46e5db2f947f5088464bb0d5e4f8a08`, Ubuntu `docker.io`
+  29.1.3 and containerd are installed and the engine is running. The live host
+  has 4 CPUs and MemTotal 16,398,384 kB. The daemon id is
+  `a9035234-31d5-4908-9eec-868ffe24d8b9`, cgroup v2, cgroupfs, API v1.47.
+  A container with the frozen worker quota shows `cpu.max` `200000 100000`,
+  `memory.max` 4,533,092,352, `memory.swap.max` 0, `pids.max` 294, and
+  `/proc/self/cgroup` `0::/`. Host and container `unix.Stat` of the time
+  namespace match. Seccomp is active, bind mounts work, and SIGKILL of the
+  container init leaves no descendant. Worker limits are unchanged. No corpus
+  attempt identifier is spent. The kernel command line includes `nomodule`,
+  `/sys/kernel/security/lsm` is `capability,landlock,selinux`, and
+  `/sys/module/apparmor` is absent. Docker does not advertise `name=apparmor`,
+  and `/proc/self/attr/current` stays `kernel` inside a container labeled
+  `apparmor=docker-default`. Sandbox preflight refuses that daemon. The same
+  info response is `Transfer-Encoding: chunked` with no `Content-Length`, so
+  the existing observer stops at `docker length` and seals no deployment.
+  The source-free record is `spike/t454/amd64_apparmor_kernel_stop.json`.
+  Bazel stays unregistered.
+
+  **Cost.** This host decision adds no production query, sync, startup,
+  retry, publication, lock, cache, or child. The probes are one-shot local
+  Docker reads and one short-lived container. Ordinary runtime cost is
+  unchanged.

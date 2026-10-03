@@ -15220,6 +15220,13 @@ limits stay exact. The earlier ARM64-only stop remains at
 `spike/t454/host_geometry_admission.json`. The three cohort gates and the
 cross-cohort comparison remain unexecuted. Bazel stays unregistered.
 
+On this x86_64 host, Ubuntu Docker 29.1.3 is running and the frozen worker
+cgroup quota is enforced, but the kernel has no AppArmor (`nomodule`; LSM
+`capability,landlock,selinux`). Sandbox preflight therefore refuses the
+daemon, and the chunked `/v1.47/info` response seals no deployment. The
+source-free stop is `spike/t454/amd64_apparmor_kernel_stop.json`. No corpus
+attempt is spent. Bazel stays unregistered.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

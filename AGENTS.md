@@ -1004,7 +1004,9 @@ host. `x86_64` admits `amd64` and `aarch64` admits `arm64`; the observed CPU
 count must be at least 2. Worker limits stay exact. The earlier ARM64-only
 stop is superseded by `spike/t454/host_geometry_admission.json`. The frozen
 corpus cohorts and cross-cohort comparison are unexecuted. Bazel stays
-unregistered.
+unregistered. This x86_64 host runs Ubuntu Docker 29.1.3, but its kernel has
+no AppArmor and `/v1.47/info` is chunked, so no deployment is sealed and no
+cohort runs (`spike/t454/amd64_apparmor_kernel_stop.json`).
 
 The public remote and hosted CI exist. `v0.2.0` is an immutable but unverified
 historical tag; `v0.2.1-dev` is the current source line and may be tagged only
