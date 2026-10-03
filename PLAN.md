@@ -8767,3 +8767,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and fresh immutable native attempts remain required. No original STOP is
   replayed or promoted; all three corpus correctness/cost gates and Bazel
   registration remain open.
+  The fresh exact-`ec16a206` Linux model run subsequently passes all nine
+  selected models, including the final-observation HTTP cases, with joined
+  child/transport custody and removed temporary input. Its source-free record
+  is `spike/t454/final_observation_linux_model_ec16a206.json`. The genuine worker
+  and preparation artifacts retain their original `91d2c594` provenance; only
+  the acceptance test is rebuilt. This closes the Linux model prerequisite,
+  establishes no native corpus correctness/cost pass, and changes no limit.
+  A fresh `ec16a206` proto attempt then completes joined immutable input assembly
+  and staging but refuses the unchanged post-stage capacity gate before native
+  dispatch. Its terminal lacks the failing pressure operand. A later bounded
+  read-only observation records current workspace projection rounding to 80
+  percent, with scratch and inode predicates passing; it neither attributes that
+  later sample retroactively nor grants admission. The source-free record is
+  `spike/t454/proto_stage_capacity_stop_ec16a206.json`. Observation reuses the
+  existing pressure arithmetic and bounded process/namespace guards, reads only
+  selected control bytes and nonrecursive fixed metadata, and adds no production
+  work. Its single 35-second-alarm/40-second-owned role joins cleanly; no native
+  worker or engine starts, no custody is deleted, and prior STOPs remain exact.
