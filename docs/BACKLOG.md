@@ -15190,6 +15190,18 @@ profile policy separately from unobserved runtime compatibility. Parent provider
 normal/race, host/Linux vet/lint and independent source/cost review pass. These
 operations perform no target/tool execution and do not enable the provider.
 
+The runtime executor/scheduler/lifecycle and T45.5 reader composition is in
+place, and neutral native canary/dry-run passes. Frozen target-corpus closure
+remains open: the fresh `ec16a206` proto successor passes capacity admission
+but stops at execute final worker discovery. Its source-free STOP record is
+`spike/t454/proto_host_cost_stop_ec16a206.json`; the failed inner operation is
+unknown. A separately proved harness census mismatch counts validated zombie
+nonwriters as extra workers. The prospective census correction now requires
+coherent child state, lifetime and ancestry before excluding only zombies;
+all uncertain records still refuse. Actual Linux models, exact review, fresh
+native correctness/cost passes for all three cohorts and cross-cohort comparison
+remain mandatory before Bazel registration. T45.7 follows closure.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

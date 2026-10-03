@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/focusedindex"
@@ -38,6 +40,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"github.com/bmeddeb/phebs/internal/typedworkspace"
+	"github.com/bmeddeb/phebs/spike/t451a"
 	"github.com/scip-code/scip/bindings/go/scip"
 	"golang.org/x/sys/unix"
 	"google.golang.org/protobuf/proto"
@@ -996,6 +999,11 @@ func (e *acceptanceObservationError) Unwrap() error { return e.cause }
 func acceptanceObservationSite(err error) string {
 	var e *acceptanceObservationError
 	if errors.As(err, &e) {
+		if e.site == "worker_discovery" {
+			if detail := acceptanceWorkerCause(e.cause); detail != "" {
+				return "observe_worker_discovery_" + detail
+			}
+		}
 		switch e.site {
 		case "container_list", "container_identity", "container_state", "container_absent", "container_stopped", "worker_discovery", "attempt", "pin_open", "pin_lock", "owner_load", "owner_compare", "recorded", "phase", "host_observe", "host_verify", "worker_recheck", "kernel", "recorded_recheck":
 			return "observe_" + e.site
@@ -1139,82 +1147,196 @@ func (d *acceptanceDocker) observeMode(ctx context.Context, c nativeAcceptanceCo
 	}
 	return &acceptanceObservation{ID: id, Phase: string(observed.Control.Phase), Allowance: observed.Allowance, Seal: observed.Control.SealDigest, SupervisorPID: observed.PID, WorkerPID: worker, WorkerStart: start, Scratch: receipt, Kernel: kernel}, release, nil
 }
+
+// Worker diagnostics reuse the existing closed observation boundary. Only these
+// fixed operation/errno tokens may be serialized, never the private cause text.
+func acceptanceWorkerCause(err error) string {
+	var observed *acceptanceObservationError
+	if !errors.As(err, &observed) {
+		return ""
+	}
+	switch observed.site {
+	case "worker_supervisor_pid", "worker_task_open", "worker_task_read", "worker_task_close", "worker_task_count", "worker_task_identity", "worker_children_open", "worker_children_read", "worker_children_close", "worker_children_overflow", "worker_child_identity", "worker_child_bound", "worker_state", "worker_stat_open", "worker_stat_read", "worker_stat_close", "worker_stat_overflow", "worker_stat_framing", "worker_stat_fields", "worker_stat_parent", "worker_stat_identity", "worker_ancestry", "worker_lifetime", "worker_zombie_state", "worker_cardinality", "worker_status_read", "worker_status_overflow", "worker_namespace_worker", "worker_namespace_parent", "worker_namespace_mismatch", "worker_credentials":
+	default:
+		return ""
+	}
+	class := "none"
+	var number syscall.Errno
+	if errors.As(observed.cause, &number) {
+		switch number {
+		case syscall.ENOENT:
+			class = "enoent"
+		case syscall.ESRCH:
+			class = "esrch"
+		case syscall.EPERM:
+			class = "eperm"
+		case syscall.EACCES:
+			class = "eacces"
+		default:
+			class = "other"
+		}
+	}
+	return strings.TrimPrefix(observed.site, "worker_") + "_" + class
+}
+func acceptanceWorkerError(site string, cause error) error {
+	return &acceptanceObservationError{site: "worker_" + site, cause: cause}
+}
 func acceptanceProc(pid int) (ppid int, start string, err error) {
-	raw, e := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
-	if e != nil || len(raw) > 4096 {
-		return 0, "", errors.New("proc stat")
+	return acceptanceProcAt(os.DirFS("/proc"), pid)
+}
+func acceptanceProcAt(proc fs.FS, pid int) (ppid int, start string, err error) {
+	parent, current, _, e := acceptanceProcStateAt(proc, pid)
+	return parent, current, e
+}
+func acceptanceProcStateAt(proc fs.FS, pid int) (ppid int, start string, state byte, err error) {
+	file, e := proc.Open(strconv.Itoa(pid) + "/stat")
+	if e != nil {
+		return 0, "", 0, acceptanceWorkerError("stat_open", e)
+	}
+	raw, readErr := io.ReadAll(io.LimitReader(file, 4097))
+	closeErr := file.Close()
+	if readErr != nil {
+		return 0, "", 0, acceptanceWorkerError("stat_read", readErr)
+	}
+	if closeErr != nil {
+		return 0, "", 0, acceptanceWorkerError("stat_close", closeErr)
+	}
+	if len(raw) > 4096 {
+		return 0, "", 0, acceptanceWorkerError("stat_overflow", nil)
 	}
 	i := bytes.LastIndex(raw, []byte(") "))
-	if i < 0 {
-		return 0, "", errors.New("proc stat framing")
+	if i < len(strconv.Itoa(pid))+2 || !bytes.HasPrefix(raw, []byte(strconv.Itoa(pid)+" (")) {
+		return 0, "", 0, acceptanceWorkerError("stat_framing", nil)
 	}
 	fields := strings.Fields(string(raw[i+2:]))
 	if len(fields) < 22 {
-		return 0, "", errors.New("proc stat fields")
+		return 0, "", 0, acceptanceWorkerError("stat_fields", nil)
+	}
+	if len(fields[0]) != 1 || !strings.ContainsAny(fields[0], "RSDZTtXxKWPI") {
+		return 0, "", 0, acceptanceWorkerError("stat_identity", nil)
 	}
 	ppid, e = strconv.Atoi(fields[1])
 	if e != nil {
-		return 0, "", e
+		return 0, "", 0, acceptanceWorkerError("stat_parent", e)
 	}
-	return ppid, fields[19], nil
+	return ppid, fields[19], fields[0][0], nil
 }
 
-// /proc children is per creating thread, not per thread group. Bound the
-// complete task census; disappearing threads refuse this observation.
-func acceptanceWorkerPID(tasks string) (int, error) {
-	f, err := os.Open(tasks)
-	if err != nil {
-		return 0, errors.New("worker census")
+// /proc children is per creating thread. Retain the complete bounded task
+// census, but count only live children: a PID/lifetime/ancestry-validated zombie
+// is a nonwriter, as in production quiescence and supervisor resource sampling.
+// Missing, denied, malformed or changed child records still refuse; no retry.
+func acceptanceWorkerPID(proc fs.FS, supervisor int) (int, error) {
+	if supervisor < 2 {
+		return 0, acceptanceWorkerError("supervisor_pid", nil)
 	}
-	threads, err := f.ReadDir(257)
+	tasks := strconv.Itoa(supervisor) + "/task"
+	f, err := proc.Open(tasks)
+	if err != nil {
+		return 0, acceptanceWorkerError("task_open", err)
+	}
+	directory, ok := f.(fs.ReadDirFile)
+	if !ok {
+		return 0, acceptanceWorkerError("task_read", f.Close())
+	}
+	threads, err := directory.ReadDir(257)
 	closeErr := f.Close()
-	if err != nil && !errors.Is(err, io.EOF) || closeErr != nil || len(threads) == 0 || len(threads) > 256 {
-		return 0, errors.New("worker task census")
+	if err != nil && !errors.Is(err, io.EOF) {
+		return 0, acceptanceWorkerError("task_read", err)
+	}
+	if closeErr != nil {
+		return 0, acceptanceWorkerError("task_close", closeErr)
+	}
+	if len(threads) == 0 || len(threads) > 256 {
+		return 0, acceptanceWorkerError("task_count", nil)
 	}
 	worker := 0
+	seen := make(map[int]bool, int(typedsandbox.TaskLimit))
 	for _, thread := range threads {
 		tid, parseErr := strconv.Atoi(thread.Name())
-		if parseErr != nil || tid < 2 || !thread.IsDir() {
-			return 0, errors.New("worker task identity")
+		if parseErr != nil || tid < 2 || strconv.Itoa(tid) != thread.Name() || !thread.IsDir() {
+			return 0, acceptanceWorkerError("task_identity", parseErr)
 		}
-		children, openErr := os.Open(filepath.Join(tasks, thread.Name(), "children"))
+		children, openErr := proc.Open(tasks + "/" + thread.Name() + "/children")
 		if openErr != nil {
-			return 0, errors.New("worker census")
+			return 0, acceptanceWorkerError("children_open", openErr)
 		}
 		b, readErr := io.ReadAll(io.LimitReader(children, 4097))
 		closeErr = children.Close()
-		if readErr != nil || closeErr != nil || len(b) > 4096 {
-			return 0, errors.New("worker census")
+		if readErr != nil {
+			return 0, acceptanceWorkerError("children_read", readErr)
+		}
+		if closeErr != nil {
+			return 0, acceptanceWorkerError("children_close", closeErr)
+		}
+		if len(b) > 4096 {
+			return 0, acceptanceWorkerError("children_overflow", nil)
 		}
 		for _, field := range strings.Fields(string(b)) {
 			pid, parseErr := strconv.Atoi(field)
-			if parseErr != nil || pid < 2 || worker != 0 && worker != pid {
-				return 0, errors.New("worker cardinality")
+			if parseErr != nil || pid < 2 || strconv.Itoa(pid) != field || uint64(pid) > 1<<32-1 {
+				return 0, acceptanceWorkerError("child_identity", parseErr)
+			}
+			if seen[pid] {
+				continue
+			}
+			if len(seen) >= int(typedsandbox.TaskLimit) {
+				return 0, acceptanceWorkerError("child_bound", nil)
+			}
+			seen[pid] = true
+			initial, state, stateErr := t451a.ReadProcessState(proc, uint32(pid))
+			if stateErr != nil {
+				return 0, acceptanceWorkerError("state", stateErr)
+			}
+			parent, start, currentState, statErr := acceptanceProcStateAt(proc, pid)
+			if statErr != nil {
+				return 0, statErr
+			}
+			if parent != supervisor {
+				return 0, acceptanceWorkerError("ancestry", nil)
+			}
+			if start != strconv.FormatUint(initial, 10) {
+				return 0, acceptanceWorkerError("lifetime", nil)
+			}
+			if (state == 'Z') != (currentState == 'Z') {
+				return 0, acceptanceWorkerError("zombie_state", nil)
+			}
+			if state == 'Z' {
+				continue
+			}
+			if worker != 0 && worker != pid {
+				return 0, acceptanceWorkerError("cardinality", nil)
 			}
 			worker = pid
 		}
 	}
 	if worker == 0 {
-		return 0, errors.New("worker cardinality")
+		return 0, acceptanceWorkerError("cardinality", nil)
 	}
 	return worker, nil
 }
 
 func acceptanceWorker(supervisor int) (int, string, error) {
 	if supervisor < 2 {
-		return 0, "", errors.New("supervisor pid")
+		return 0, "", acceptanceWorkerError("supervisor_pid", nil)
 	}
-	pid, e := acceptanceWorkerPID(fmt.Sprintf("/proc/%d/task", supervisor))
+	pid, e := acceptanceWorkerPID(os.DirFS("/proc"), supervisor)
 	if e != nil {
 		return 0, "", e
 	}
 	parent, start, e := acceptanceProc(pid)
-	if e != nil || parent != supervisor {
-		return 0, "", errors.New("worker ancestry")
+	if e != nil {
+		return 0, "", e
+	}
+	if parent != supervisor {
+		return 0, "", acceptanceWorkerError("ancestry", nil)
 	}
 	b, e := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
-	if e != nil || len(b) > 16384 {
-		return 0, "", errors.New("worker status")
+	if e != nil {
+		return 0, "", acceptanceWorkerError("status_read", e)
+	}
+	if len(b) > 16384 {
+		return 0, "", acceptanceWorkerError("status_overflow", nil)
 	}
 	uid, gid, nspid := false, false, false
 	for _, line := range strings.Split(string(b), "\n") {
@@ -1231,11 +1353,17 @@ func acceptanceWorker(supervisor int) (int, string, error) {
 		}
 	}
 	var workerNS, parentNS unix.Stat_t
-	if unix.Stat(fmt.Sprintf("/proc/%d/ns/pid", pid), &workerNS) != nil || unix.Stat(fmt.Sprintf("/proc/%d/ns/pid", supervisor), &parentNS) != nil || workerNS.Dev != parentNS.Dev || workerNS.Ino != parentNS.Ino {
-		return 0, "", errors.New("worker PID namespace changed")
+	if e := unix.Stat(fmt.Sprintf("/proc/%d/ns/pid", pid), &workerNS); e != nil {
+		return 0, "", acceptanceWorkerError("namespace_worker", e)
+	}
+	if e := unix.Stat(fmt.Sprintf("/proc/%d/ns/pid", supervisor), &parentNS); e != nil {
+		return 0, "", acceptanceWorkerError("namespace_parent", e)
+	}
+	if workerNS.Dev != parentNS.Dev || workerNS.Ino != parentNS.Ino {
+		return 0, "", acceptanceWorkerError("namespace_mismatch", nil)
 	}
 	if !uid || !gid || !nspid {
-		return 0, "", errors.New("worker credentials/namespace")
+		return 0, "", acceptanceWorkerError("credentials", nil)
 	}
 	return pid, start, nil
 }
@@ -2114,41 +2242,122 @@ func TestNativeAcceptanceNeutralDefinition(t *testing.T) {
 	}
 }
 
+func acceptanceTestStat(pid, parent int, state byte, start string) []byte {
+	fields := make([]string, 52)
+	for i := range fields {
+		fields[i] = "0"
+	}
+	fields[0], fields[1], fields[19] = string(state), strconv.Itoa(parent), start
+	return []byte(strconv.Itoa(pid) + " (fixture) " + strings.Join(fields, " "))
+}
+
+type acceptanceProcFixtureFS struct {
+	fs.FS
+	name        string
+	replacement []byte
+	denied      error
+	calls       int
+}
+
+func (f *acceptanceProcFixtureFS) Open(name string) (fs.File, error) {
+	if name == f.name {
+		f.calls++
+		if f.calls == 2 {
+			if f.denied != nil {
+				return nil, &fs.PathError{Op: "open", Path: "/private/credential", Err: f.denied}
+			}
+			return fstest.MapFS{name: &fstest.MapFile{Data: f.replacement}}.Open(name)
+		}
+	}
+	return f.FS.Open(name)
+}
+
 func TestNativeAcceptanceWorkerTaskCensus(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		children []string
+		fault    string
 		want     int
 	}{
-		{"other-thread", []string{"", "1234"}, 1234}, {"duplicate", []string{"1234", "1234"}, 1234},
-		{"absent", []string{"", ""}, 0}, {"multiple", []string{"1234", "1235"}, 0}, {"malformed", []string{"no"}, 0},
-		{"invalid-pid", []string{"1"}, 0}, {"overflow", []string{strings.Repeat(" ", 4097)}, 0},
+		{"other-thread", []string{"", "1234"}, "", 1234}, {"duplicate", []string{"1234", "1234"}, "", 1234},
+		{"live-with-adopted-zombie", []string{"1235", "1234 1235"}, "zombie", 1234},
+		{"only-zombies", []string{"1234 1235"}, "only-zombies", 0}, {"absent", []string{"", ""}, "", 0},
+		{"multiple-live", []string{"1234", "1235"}, "", 0}, {"wrong-parent", []string{"1234 1235"}, "wrong-parent", 0},
+		{"malformed-stat", []string{"1234"}, "malformed", 0}, {"missing-stat", []string{"1234"}, "missing", 0},
+		{"unknown-state", []string{"1234"}, "unknown-state", 0}, {"zero-start", []string{"1234"}, "zero-start", 0},
+		{"changed-start", []string{"1234"}, "changed-start", 0},
+		{"changed-zombie-state", []string{"1234"}, "changed-zombie-state", 0}, {"live-to-zombie", []string{"1234"}, "live-to-zombie", 0},
+		{"denied-second-stat", []string{"1234"}, "denied", 0},
+		{"malformed-child", []string{"no"}, "", 0}, {"noncanonical-child", []string{"01234"}, "", 0},
+		{"invalid-pid", []string{"1"}, "", 0}, {"overflow", []string{strings.Repeat(" ", 4097)}, "", 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
+			records := fstest.MapFS{}
 			for i, children := range tc.children {
-				dir := filepath.Join(root, strconv.Itoa(100+i))
-				if err := os.Mkdir(dir, 0700); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(filepath.Join(dir, "children"), []byte(children), 0600); err != nil {
-					t.Fatal(err)
-				}
+				records[fmt.Sprintf("100/task/%d/children", 100+i)] = &fstest.MapFile{Data: []byte(children)}
 			}
-			pid, err := acceptanceWorkerPID(root)
+			records["1234/stat"] = &fstest.MapFile{Data: acceptanceTestStat(1234, 100, 'T', "42")}
+			records["1235/stat"] = &fstest.MapFile{Data: acceptanceTestStat(1235, 100, 'S', "43")}
+			var proc fs.FS = records
+			switch tc.fault {
+			case "zombie":
+				records["1235/stat"].Data = acceptanceTestStat(1235, 100, 'Z', "43")
+			case "only-zombies":
+				for _, pid := range []int{1234, 1235} {
+					records[strconv.Itoa(pid)+"/stat"].Data = acceptanceTestStat(pid, 100, 'Z', "42")
+				}
+			case "wrong-parent":
+				records["1235/stat"].Data = acceptanceTestStat(1235, 999, 'Z', "43")
+			case "malformed":
+				records["1234/stat"].Data = []byte("malformed")
+			case "missing":
+				delete(records, "1234/stat")
+			case "unknown-state":
+				records["1234/stat"].Data = acceptanceTestStat(1234, 100, '?', "42")
+			case "zero-start":
+				records["1234/stat"].Data = acceptanceTestStat(1234, 100, 'T', "0")
+			case "changed-start":
+				proc = &acceptanceProcFixtureFS{FS: records, name: "1234/stat", replacement: acceptanceTestStat(1234, 100, 'T', "44")}
+			case "changed-zombie-state":
+				records["1234/stat"].Data = acceptanceTestStat(1234, 100, 'Z', "42")
+				proc = &acceptanceProcFixtureFS{FS: records, name: "1234/stat", replacement: acceptanceTestStat(1234, 100, 'T', "42")}
+			case "live-to-zombie":
+				proc = &acceptanceProcFixtureFS{FS: records, name: "1234/stat", replacement: acceptanceTestStat(1234, 100, 'Z', "42")}
+			case "denied":
+				proc = &acceptanceProcFixtureFS{FS: records, name: "1234/stat", denied: syscall.EPERM}
+			}
+			pid, err := acceptanceWorkerPID(proc, 100)
 			if tc.want == 0 && err == nil || tc.want != 0 && (err != nil || pid != tc.want) {
 				t.Fatal(pid, err)
 			}
 		})
 	}
-	root := t.TempDir()
-	for i := 0; i < 257; i++ {
-		if err := os.Mkdir(filepath.Join(root, strconv.Itoa(100+i)), 0700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if _, err := acceptanceWorkerPID(root); err == nil {
-		t.Fatal("unbounded tasks")
+	for _, tc := range []struct {
+		name     string
+		count    int
+		children bool
+		site     string
+	}{{"task-bound", 257, false, "task_count"}, {"child-bound", 295, true, "child_bound"}} {
+		t.Run(tc.name, func(t *testing.T) {
+			records := fstest.MapFS{}
+			var ids []string
+			for i := 0; i < tc.count; i++ {
+				if tc.children {
+					pid := 1000 + i
+					ids = append(ids, strconv.Itoa(pid))
+					records[strconv.Itoa(pid)+"/stat"] = &fstest.MapFile{Data: acceptanceTestStat(pid, 100, 'Z', "42")}
+				} else {
+					records[fmt.Sprintf("100/task/%d/children", 100+i)] = &fstest.MapFile{}
+				}
+			}
+			if tc.children {
+				records["100/task/100/children"] = &fstest.MapFile{Data: []byte(strings.Join(ids, " "))}
+			}
+			_, err := acceptanceWorkerPID(records, 100)
+			if acceptanceWorkerCause(err) != tc.site+"_none" {
+				t.Fatal("census bound lost its closed site", err)
+			}
+		})
 	}
 }
 
@@ -2165,6 +2374,25 @@ func TestNativeAcceptanceObservationSite(t *testing.T) {
 			t.Fatal("unknown site accepted")
 		}
 	}
+	for _, tc := range []struct {
+		cause error
+		class string
+	}{{syscall.ENOENT, "enoent"}, {syscall.ESRCH, "esrch"}, {syscall.EPERM, "eperm"}, {syscall.EACCES, "eacces"}, {syscall.EIO, "other"}, {private, "none"}} {
+		inner := acceptanceWorkerError("children_open", &fs.PathError{Op: "open", Path: "/private/credential", Err: tc.cause})
+		err := &acceptanceObservationError{site: "worker_discovery", cause: inner}
+		got := acceptanceObservationSite(err)
+		if got != "observe_worker_discovery_children_open_"+tc.class || !errors.Is(err, tc.cause) || strings.Contains(err.Error(), "private") {
+			t.Fatal("closed worker diagnostic", got, err)
+		}
+		raw := acceptanceJSON(acceptanceHostCostStop("finish_authentication_"+got, &acceptanceCorpusHostWitness{}))
+		if bytes.Contains(raw, []byte("/private/credential")) {
+			t.Fatal("private worker cause exposed")
+		}
+	}
+	unknown := &acceptanceObservationError{site: "worker_discovery", cause: acceptanceWorkerError("/private/credential", private)}
+	if acceptanceObservationSite(unknown) != "observe_worker_discovery" {
+		t.Fatal("unknown worker operation accepted")
+	}
 	if acceptanceObservationSite(private) != "observe_unavailable" {
 		t.Fatal("raw error classified")
 	}
@@ -2173,7 +2401,7 @@ func TestNativeAcceptanceObservationSite(t *testing.T) {
 	}{
 		{"absent", `[]`, "", "observe_container_absent"},
 		{"stopped", `[{"Id":"` + strings.Repeat("a", 64) + `"}]`, `{"State":{"Pid":1,"Running":false}}`, "observe_container_stopped"},
-		{"worker-unavailable", `[{"Id":"` + strings.Repeat("a", 64) + `"}]`, `{"State":{"Pid":1,"Running":true}}`, "observe_worker_discovery"},
+		{"worker-unavailable", `[{"Id":"` + strings.Repeat("a", 64) + `"}]`, `{"State":{"Pid":1,"Running":true}}`, "observe_worker_discovery_supervisor_pid_none"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -8785,3 +8785,52 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   selected control bytes and nonrecursive fixed metadata, and adds no production
   work. Its single 35-second-alarm/40-second-owned role joins cleanly; no native
   worker or engine starts, no custody is deleted, and prior STOPs remain exact.
+
+- **2026-10-03 — T45.6 retain the qualified worker-discovery STOP.**
+  Verified retirement of duplicate engine images and failed-stage input copies
+  preserves original controls and derived cases. The fresh `ec16a206` proto
+  successor then passes immutable assembly and capacity admission: workspace
+  projection rounds to 79 percent and scratch to 66 percent. Native planning
+  completes, but execute stops at
+  `finish_authentication_observe_worker_discovery`, before final custody
+  authentication and its second CONT. The closed site identifies neither the
+  worker-discovery predicate nor its operation/errno. Available sticky sampling
+  and the partial plan report establish no execute completion or corpus cost
+  pass. Original failed native-absence, workspace-drain, publication, growth and
+  replay predicates stay failed. `spike/t454/proto_host_cost_stop_ec16a206.json`
+  binds those facts to the exact receipts, preserving all prior STOPs. The
+  acceptance harness retains `ec16a206` provenance, the genuine worker and
+  preparation artifacts retain `91d2c594`, and the source/budget method retains
+  `7d6b849c`; no artifact is rebuilt or relabelled by this evidence record.
+  A separate later read-only observation joins its 35-second-alarm/40-second
+  role and records no known native process, Docker container or loop, with only
+  the existing scratch lock present. Each of its two guard turns performs the
+  inherited acceptance process census and a separate strong all-acceptance
+  native scan, each bounded at 65,536 PIDs and 4-KiB command lines, plus the
+  existing bounded Docker/loop queries. Fixed control/nonrecursive metadata
+  and statvfs reads retain the failed derived case and original false
+  predicates. Current projected workspace pressure rounds
+  to 89 percent; scratch remains 66 percent. This establishes neither historical
+  drainage nor new admission and adds no production work.
+  Separately, source review establishes a deterministic harness mismatch:
+  production quiescence and supervisor accounting exclude validated zombie
+  nonwriters, while acceptance worker discovery counted every direct child as a
+  live worker. The prospective test-only correction retains the complete
+  256-thread/4-KiB-per-children-file census, deduplicates at most the existing
+  294-task limit's unique PID references, and requires each referenced PID's
+  validated state, positive lifetime and coherent supervisor ancestry. Only a
+  zombie proved in both reads is excluded. Exactly one live worker and all
+  existing credential, namespace and custody checks remain required. Missing,
+  denied, malformed or changed records refuse; there is no retry or pinned-PID
+  bypass. Existing closed observation errors now retain allowlisted worker
+  operations and errno classes without exposing private causes; initial polling
+  remains exact. The shared proc parser bounds its read and checks close errors.
+  Validation adds a map of at most 294 references and at most one existing
+  bounded 8-KiB state read plus one 4-KiB ancestry/lifetime/state read per unique
+  child per discovery. These reads occur before publication pins are acquired;
+  original task/children, selected-worker, kernel, cache, FD, wall and output
+  bounds stay exact. It adds no production query, tick, startup, retry,
+  publication, cache invalidation, disk or child cost. This source bug is not an
+  attribution of the retained STOP. Focused extracted normal/race and Linux
+  compilation/vet pass; exact review, actual Linux models and fresh native corpus
+  correctness/cost proof remain required before Bazel registration.
