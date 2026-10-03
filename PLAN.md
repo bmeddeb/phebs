@@ -8862,3 +8862,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Integration lint also converts only a pre-existing Linux workspace test
   fixture's directory/symlink/file selection to an equivalent tagged switch;
   production files and the compiled acceptance harness remain unchanged.
+
+- **2026-10-03 — T45.6 corpus-gate waiver and T45.7 continuation.** Ben
+  explicitly directs, "gate waived proceed with the next epic", after the
+  remote agent reports that its admitted host still lacks Docker and that
+  ordinary, proto, fanout and their comparison have not run. In the ongoing
+  Epic 45 sequence, the next work is T45.7's additional managed input options.
+  This direction supersedes the requirement to close the remaining T45.6
+  target-corpus correctness/cost gate before proceeding to T45.7. Record that
+  gate as waived, never PASS: no target-corpus correctness, cost, supported
+  architecture, scale or release measurement is established by the waiver,
+  and every historical STOP remains exact. The waiver itself changes no
+  provider registration or runtime availability. Follow-on implementation
+  retains input authentication, immutable publication, architecture coherence,
+  execution/admission limits, cancellation, cleanup and applicable code checks.
+  The remote host report is context supplied by Ben, not independently observed
+  deployment evidence in this checkout. This documentation-only decision adds
+  zero query, sync, startup, retry, publication, lock, cache, disk or child work.
+  Continue the existing T45.7 lineage where appropriate; no new main merge or
+  push is authorized by this sequencing direction.

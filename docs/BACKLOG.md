@@ -15222,6 +15222,15 @@ mutable external path; unavailable providers are omitted or explicitly
 unavailable, never rendered as functioning controls; no generic shell-command
 provider or dynamic Go plugin is introduced.
 
+Sequencing override (2026-10-03): Ben explicitly waives the remaining T45.6
+target-corpus correctness/cost gate and directs continuation. T45.7 may proceed
+without those corpus passes, superseding the closure hold above. The waived
+gate has no PASS result: ordinary, proto, fanout and their comparison remain
+unestablished, and historical STOP receipts remain exact. This decision itself
+registers no provider and establishes no availability, scale or release claim.
+T45.7's provider-specific acceptance criteria, immutable publication,
+authentication, execution bounds and applicable implementation checks remain.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a
