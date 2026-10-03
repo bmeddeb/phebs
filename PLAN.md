@@ -8741,3 +8741,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   duplicate input files/911,676,562 logical bytes and its preparation test, keeping
   failed controls/diagnostics unchanged; its actual source-free proof lives in
   `spike/t454/proto_failed_input_retirement_7d6b849c.json`. Bazel stays unregistered.
+
+- **2026-10-03 — T45.6 retain root-host stops and final observation diagnostics.**
+  Exact `91d2c594` ordinary staging refuses projected workspace capacity before
+  native dispatch. A later bounded non-atomic observation identifies the
+  unchanged 80-percent boundary; verified retirement removes only duplicate
+  input bundles/tests and preserves controls, engines and failed custody.
+  `spike/t454/ordinary_stage_capacity_stop_91d2c594.json` keeps admission failed.
+  Proto then passes staging and stops at execute final cost-witness
+  authentication. Available sticky sampling records zero unexpected errors,
+  but authenticates neither execute completion nor output. Its original
+  failed native-absence/workspace-drain predicates remain failed; the retained
+  inner error site, nil subtype and cause/errno are unavailable.
+  `spike/t454/proto_host_cost_stop_91d2c594.json` preserves those qualified facts.
+  Prospectively, the Linux acceptance harness uses its existing closed error
+  classifier at that final boundary and distinguishes absent container,
+  stopped container and unavailable worker discovery. Initial and parent
+  polling, all authentication checks, locks, lifetime fences, CONT/completion,
+  sticky sampling, retries and resource limits remain exact. Healthy validation
+  performs the same inspections; failed final observation adds only bounded
+  classification. No production query, sync tick, startup, retry, publication,
+  hashing, cache, memory/disk or child cost changes. The three finite local HTTP
+  models close their clients and servers. Focused normal/race, Linux compile,
+  vet, pinned lint and independent review pass; actual Linux model execution
+  and fresh immutable native attempts remain required. No original STOP is
+  replayed or promoted; all three corpus correctness/cost gates and Bazel
+  registration remain open.

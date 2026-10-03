@@ -997,7 +997,7 @@ func acceptanceObservationSite(err error) string {
 	var e *acceptanceObservationError
 	if errors.As(err, &e) {
 		switch e.site {
-		case "container_list", "container_identity", "container_state", "attempt", "pin_open", "pin_lock", "owner_load", "owner_compare", "recorded", "phase", "host_observe", "host_verify", "worker_recheck", "kernel", "recorded_recheck":
+		case "container_list", "container_identity", "container_state", "container_absent", "container_stopped", "worker_discovery", "attempt", "pin_open", "pin_lock", "owner_load", "owner_compare", "recorded", "phase", "host_observe", "host_verify", "worker_recheck", "kernel", "recorded_recheck":
 			return "observe_" + e.site
 		}
 	}
@@ -1005,6 +1005,16 @@ func acceptanceObservationSite(err error) string {
 }
 
 func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, selected acceptanceSelected, seen map[string]bool) (observation *acceptanceObservation, unpin func(), err error) {
+	return d.observeMode(ctx, c, s, selected, seen, false)
+}
+
+// The final stopped-worker barrier cannot poll again. Retain why a preliminary
+// observation was unavailable while preserving ordinary/initial polling below.
+func (d *acceptanceDocker) observeFinal(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, selected acceptanceSelected) (observation *acceptanceObservation, unpin func(), err error) {
+	return d.observeMode(ctx, c, s, selected, nil, true)
+}
+
+func (d *acceptanceDocker) observeMode(ctx context.Context, c nativeAcceptanceConfig, s *store.Surreal, selected acceptanceSelected, seen map[string]bool, final bool) (observation *acceptanceObservation, unpin func(), err error) {
 	site := "container_list"
 	defer func() {
 		if err != nil {
@@ -1014,6 +1024,10 @@ func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig
 	noop := func() {}
 	rows, e := d.list(ctx)
 	if e != nil || len(rows) == 0 {
+		if e == nil && final {
+			site = "container_absent"
+			e = errors.New("final container absent")
+		}
 		return nil, noop, e
 	}
 	site = "container_identity"
@@ -1037,10 +1051,18 @@ func (d *acceptanceDocker) observe(ctx context.Context, c nativeAcceptanceConfig
 		return nil, noop, e
 	}
 	if !state.State.Running {
+		if final {
+			site = "container_stopped"
+			return nil, noop, errors.New("final container stopped")
+		}
 		return nil, noop, nil
 	}
 	worker, start, e := acceptanceWorker(state.State.Pid)
 	if e != nil {
+		if final {
+			site = "worker_discovery"
+			return nil, noop, e
+		}
 		return nil, noop, nil
 	}
 	site = "attempt"
@@ -2132,10 +2154,11 @@ func TestNativeAcceptanceWorkerTaskCensus(t *testing.T) {
 
 func TestNativeAcceptanceObservationSite(t *testing.T) {
 	private := errors.New("/private/path credential")
-	for _, site := range []string{"owner_load", "owner_compare", "recorded", "host_verify", "kernel", "/private/path credential"} {
+	for _, site := range []string{"container_absent", "container_stopped", "worker_discovery", "owner_load", "owner_compare", "recorded", "host_verify", "kernel", "/private/path credential"} {
 		err := &acceptanceObservationError{site: site, cause: private}
 		token := acceptanceObservationSite(err)
-		if strings.Contains(token, "private") || !errors.Is(err, private) {
+		raw := acceptanceJSON(acceptanceHostCostStop("finish_authentication_"+token, &acceptanceCorpusHostWitness{}))
+		if strings.Contains(token, "private") || bytes.Contains(raw, []byte(private.Error())) || !errors.Is(err, private) {
 			t.Fatal("private cause lost or exposed")
 		}
 		if site == "/private/path credential" && token != "observe_unavailable" {
@@ -2144,5 +2167,38 @@ func TestNativeAcceptanceObservationSite(t *testing.T) {
 	}
 	if acceptanceObservationSite(private) != "observe_unavailable" {
 		t.Fatal("raw error classified")
+	}
+	for _, tc := range []struct {
+		name, list, state, site string
+	}{
+		{"absent", `[]`, "", "observe_container_absent"},
+		{"stopped", `[{"Id":"` + strings.Repeat("a", 64) + `"}]`, `{"State":{"Pid":1,"Running":false}}`, "observe_container_stopped"},
+		{"worker-unavailable", `[{"Id":"` + strings.Repeat("a", 64) + `"}]`, `{"State":{"Pid":1,"Running":true}}`, "observe_worker_discovery"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/v1.47/containers/json" {
+					_, _ = io.WriteString(w, tc.list)
+				} else {
+					_, _ = io.WriteString(w, tc.state)
+				}
+			}))
+			defer server.Close()
+			docker := &acceptanceDocker{&http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "tcp", server.Listener.Addr().String())
+			}}, Timeout: time.Second}}
+			defer docker.client.CloseIdleConnections()
+			// The same preliminary state stays pollable by both existing callers.
+			observed, unpin, err := docker.observe(t.Context(), nativeAcceptanceConfig{}, nil, acceptanceSelected{}, nil)
+			unpin()
+			if err != nil || observed != nil {
+				t.Fatal("preliminary observation no longer pollable")
+			}
+			observed, unpin, err = docker.observeFinal(t.Context(), nativeAcceptanceConfig{}, nil, acceptanceSelected{})
+			unpin()
+			if err == nil || observed != nil || acceptanceObservationSite(err) != tc.site {
+				t.Fatal("final unavailable observation lost its closed site")
+			}
+		})
 	}
 }

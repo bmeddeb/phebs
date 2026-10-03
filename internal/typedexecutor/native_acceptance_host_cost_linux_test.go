@@ -209,12 +209,12 @@ func acceptanceRunRootMeasured(ctx context.Context, c nativeAcceptanceConfig, s 
 				resumed = true
 				continue
 			}
-			observed, unpin, e := docker.observe(ctx, c, s, selected, map[string]bool{})
+			observed, unpin, e := docker.observeFinal(ctx, c, s, selected)
 			if e != nil {
-				return native, witness, "finish_authentication", e
+				return native, witness, "finish_authentication_" + acceptanceObservationSite(e), e
 			}
 			if observed == nil {
-				return native, witness, "finish_authentication", errors.New("final worker custody absent")
+				return native, witness, "finish_authentication_observe_unavailable", errors.New("final worker custody absent")
 			}
 			e = func() error {
 				defer unpin()
