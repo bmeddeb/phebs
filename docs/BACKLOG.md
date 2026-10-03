@@ -15278,6 +15278,19 @@ File-page unavailable state links administrators to the preselected Settings
 section while ordinary users retain non-actionable `available: false`; mobile,
 keyboard, reduced-motion, light/dark, and bounded-error gates pass.
 
+T45.8b implementation now supplies four administrator endpoints, exact
+source/profile request previews and existing-worker idempotent enqueue. Read-only
+status authenticates desired identity and creation-linked coordinator evidence,
+retains stale/restore precedence and mints no source identity. The routed
+presentation lineage adds server-bound Settings controls, closed bounded
+responses, exact retry, selected-status polling and administrator File links.
+Unit/build/lint, authorization/CSRF, real-store normal/race and selected restore
+recipe/production-export checks pass. Local Chrome interaction and deterministic
+pixel checks cover both densities, themes and390px/desktop; those pixels remain
+local and are not canonical Ubuntu baselines. Canonical receipt and final
+immutable review gates remain open before ticket closure. Ordinary serve remains
+unavailable; the T45.6 waiver and all scale/release boundaries stay exact.
+
 **T45.9 · Generated-SCIP evidence integration and product-scale closure**
 *(needs T45.5, T45.6, and T45.8b; T45.7 is optional)* — decide separately
 whether generated bundle members may feed SCIP-derived evidence. If GO,

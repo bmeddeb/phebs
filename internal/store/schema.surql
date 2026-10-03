@@ -674,3 +674,7 @@ DEFINE INDEX IF NOT EXISTS generation_chunk_typed_root ON generation_schedule_ch
 
 DEFINE FIELD IF NOT EXISTS growth_key ON typed_index_attempt TYPE option<string> ASSERT $value = NONE OR $value = "typed-index";
 DEFINE INDEX IF NOT EXISTS typed_index_attempt_growth ON typed_index_attempt FIELDS growth_key UNIQUE;
+
+-- T45.8b creation-linked bounded coordinator status; derived, never authority.
+DEFINE FIELD IF NOT EXISTS latest_typed_job ON repo TYPE option<record<typed_index_job>>;
+DEFINE FIELD IF NOT EXISTS latest_typed_root ON repo TYPE option<string>;

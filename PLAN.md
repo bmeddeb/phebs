@@ -8946,3 +8946,81 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lint, module, docs and glossary checks pass. These finite validation runs add
   no production work. The earlier workspace failure remains failed; no Bazel
   corpus, registration, release, main merge or push is inferred.
+
+- **2026-10-03 — T45.8b exact managed-index operator API and Settings handoff.**
+  Ben's continuation after the named next ticket routes the presentation change
+  through `../phebs-ux`; backend and shared spine remain in this checkout.
+  Administrator-only provider/status/request-preview/enqueue endpoints project
+  the installed runtime and sealed repository profile. Ordinary `serve` still
+  installs no runtime, so the endpoints report unavailable and refuse enqueue.
+  The closed three-provider order is Bazel, Go module/workspace, existing
+  artifact. The browser selects only the installed profile name, named config,
+  fixed resource policy and publish/canary/dry-run purpose. No browser command,
+  path, environment, cache, credential, target expansion or resource override
+  is admitted. The request preview is pure canonical request construction;
+  native package planning occurs only after explicit enqueue. Canary/dry-run
+  remain nonpublishing. Current navigation still requires the existing complete
+  publication proof; a queue link, checked request or UI fixture is no substitute.
+
+  The expected revision hashes exact source/incarnation/epoch, profile epoch
+  and digest, and universe digest; progress/desired/current are deliberately
+  excluded so an unconfirmed transport can retry identical admitted bytes.
+  Preview digest and deterministic idempotency key are recomputed at enqueue.
+  Existing admission and atomic source/intent/profile fences still reject
+  changes between the expected-revision read and write. Both POSTs require the
+  existing CSRF boundary and audit target. Status reauthorizes repository
+  visibility and indexed/evidence revision, authenticates desired source and
+  profile identity, and prioritizes stale/restored authority over old attempt
+  progress. Queued planning requires an actual linked pending/claimed/running
+  coordinator; desired alone never invents work. Missing collected coordinator
+  history is unavailable. Two optional derived repository fields link the
+  coordinator and root within the existing fenced enqueue transaction; they
+  are not precious backup authority and restored/legacy reads mint no identity.
+
+  Cost: provider descriptors are fixed three rows with no store read. Disabled
+  status performs one repository authorization read. Installed status performs
+  two repository authorization reads, two source/intent authority passes, the
+  shared bounded state/attempt/check/current proof reads, one desired-request
+  control read, one repository-link point read and at most one coordinator
+  point read. Exact check/current authentication may repeat bounded control
+  reads/plan decoding; there is no cached single-row claim. New link/job reads
+  charge the existing request read meter before the database call. No file,
+  corpus, shard, source inventory, filesystem hash or job-history scan occurs.
+  Preview repeats that read path plus bounded request encoding/admission.
+  Enqueue repeats preview, an expected-revision authority read, existing
+  admission/pending-job fences and transaction, then status refresh. A new
+  admitted request adds one repository row update to the existing transaction;
+  exact idempotent reuse adds none and creates no second native job. Existing
+  transaction/worker/publication locks, reservations, concurrency and output,
+  wall, memory/disk and child limits remain unchanged. Ordinary query, sync,
+  startup/restart, retry/no-op and publication gain no background work, cache or
+  child; schema gains only two optional fields, no index or corpus migration.
+
+  Settings downloads the existing repository inventory once at mount and each
+  explicit/post-enqueue refresh, admits at most 4,096 rows after its existing
+  download/JSON parse, and sorts O(R log R). That is not a preparse byte bound.
+  New typed responses stream at most 32 KiB; mutation bodies are at most 4 KiB,
+  repository names 512 bytes and named selections 128 bytes. Only active
+  planning/indexing/validating/publishing schedule one chained five-second
+  selected-status read; settled/unavailable states do not poll. Failures retain
+  last confirmed state and closed public messages, with exact-request retry.
+  Repository/purpose URL changes dispose old reads/mutations and preview
+  identity; source/profile drift rejects stale enqueue server-side. File's
+  unavailable navigation links only administrators to that repository's
+  Settings section, focusing its heading without animation. UI fixtures prove
+  rendering/interaction only and cannot enable a provider. The T45.6 corpus
+  waiver remains a waiver, never PASS. This ticket adds no scale/release claim,
+  ceremony authority or inferred main integration/push.
+
+  Native precious-only exports may carry the inert repository links while the
+  derived job table is excluded. Selected replay accepts only the exact owned
+  `latest_typed_job` optional-record declaration, never arbitrary record fields
+  or target tables; the existing optional-string recipe covers the root. A
+  fresh production-command neutral export is75,741bytes with digest
+  `sha256:16f62b29b1f310d3051a430c60bee5f890af1ff244c57ff98bc95800159d05d8`
+  and passes the bounded selected replay preflight. Full-schema export authoring
+  retains its separate historical contract; excluded derived-table recipes are
+  not silently accepted. Restore clears desired/control authority before any
+  operator read; dangling job links grant nothing and new admission overwrites
+  them in the existing transaction. The parser adds one fixed string recipe,
+  no row expansion, query, lock, child or runtime fallback.

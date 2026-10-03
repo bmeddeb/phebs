@@ -852,7 +852,8 @@ func restoreReplayOwnedDefinition(line string) bool {
 	// authority. Match whole recipes: this does not admit arbitrary byte-bound
 	// expressions or transport the excluded derived typed-control tables.
 	switch line {
-	case "DEFINE FIELD OVERWRITE typed_source_epoch ON repo TYPE none | int ASSERT $value = NONE OR $value > 0 PERMISSIONS FULL;",
+	case "DEFINE FIELD OVERWRITE latest_typed_job ON repo TYPE none | record<typed_index_job> PERMISSIONS FULL;",
+		"DEFINE FIELD OVERWRITE typed_source_epoch ON repo TYPE none | int ASSERT $value = NONE OR $value > 0 PERMISSIONS FULL;",
 		"DEFINE FIELD OVERWRITE body ON typed_index_intent TYPE string ASSERT bytes::len(<bytes> $value) <= 24576 PERMISSIONS FULL;",
 		"DEFINE FIELD OVERWRITE repository ON typed_index_intent TYPE string ASSERT bytes::len(<bytes> $value) <= 512 PERMISSIONS FULL;":
 		return true

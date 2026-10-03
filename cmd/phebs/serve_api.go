@@ -192,8 +192,9 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 	}
 	retentionStatus := retentionstatus.New(cfg.Server.DataDir, st)
 	apiOpts := api.Options{
-		Version: version,
-		Store:   st, Search: d.searcher, ScopedSearch: d.runtimeScopedSearch,
+		Version:             version,
+		TypedIndexAvailable: d.typedRuntime != nil,
+		Store:               st, Search: d.searcher, ScopedSearch: d.runtimeScopedSearch,
 		DataDir: cfg.Server.DataDir,
 		CodeNav: d.codeNavigation,
 		RetentionStatusSource: api.NewCompleteRetentionStatusSource(
