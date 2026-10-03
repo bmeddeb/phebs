@@ -50,18 +50,19 @@ type acceptanceSelected struct {
 	Attempt string                `json:"attempt"`
 }
 type acceptanceChildResult struct {
-	Schema              string                  `json:"schema"`
-	Config              string                  `json:"config"`
-	Case                string                  `json:"case"`
-	Recovery            bool                    `json:"recovery"`
-	Outcome             Outcome                 `json:"outcome"`
-	ExecutionError      bool                    `json:"execution_error"`
-	Settled             bool                    `json:"settled"`
-	NoReplay            bool                    `json:"no_replay"`
-	PublicationVerified bool                    `json:"publication_verified"`
-	GrowthReleased      bool                    `json:"growth_released"`
-	FailureSite         string                  `json:"failure_site,omitempty"`
-	Corpus              *acceptanceCorpusResult `json:"corpus,omitempty"`
+	Schema              string                     `json:"schema"`
+	Config              string                     `json:"config"`
+	Case                string                     `json:"case"`
+	Recovery            bool                       `json:"recovery"`
+	Outcome             Outcome                    `json:"outcome"`
+	ExecutionError      bool                       `json:"execution_error"`
+	Settled             bool                       `json:"settled"`
+	NoReplay            bool                       `json:"no_replay"`
+	PublicationVerified bool                       `json:"publication_verified"`
+	GrowthReleased      bool                       `json:"growth_released"`
+	FailureSite         string                     `json:"failure_site,omitempty"`
+	Corpus              *acceptanceCorpusResult    `json:"corpus,omitempty"`
+	CostStop            *acceptanceCorpusPhaseStop `json:"cost_stop,omitempty"`
 }
 type acceptanceObservation struct {
 	ID            string                          `json:"id"`
@@ -565,6 +566,27 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 		return e
 	}
 	result := acceptanceChildResult{Schema: c.Schema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Recovery: recovery}
+	var costs []acceptanceCorpusPhaseCost
+	if c.Schema == acceptanceCorpusSchema && !recovery {
+		run := controller.native.run
+		controller.native.run = func(ctx context.Context, options typedsandbox.Options, authority typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
+			native, err := run(ctx, options, authority)
+			if native.ExitCode == 125 && len(native.Stderr) != 0 {
+				if stopped, diagnosticErr := acceptanceCorpusStop(options, native); diagnosticErr == nil {
+					result.CostStop = &stopped
+				}
+				return native, err
+			}
+			if err == nil && len(native.Stderr) != 0 {
+				cost, measurementErr := acceptanceCorpusCost(ctx, options, native)
+				if measurementErr != nil {
+					return native, measurementErr
+				}
+				costs = append(costs, cost)
+			}
+			return native, err
+		}
+	}
 	defer func() {
 		name := "child.json"
 		if recovery {
@@ -698,6 +720,11 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 			}
 			if e = acceptancePublication(ctx, c, s, &result.Corpus); e != nil {
 				return e
+			}
+			if c.Schema == acceptanceCorpusSchema {
+				if e = acceptanceCorpusSetCost(result.Corpus, costs); e != nil {
+					return e
+				}
 			}
 			result.PublicationVerified = true
 			result.FailureSite = "schedule_before"
@@ -1502,8 +1529,13 @@ loop:
 		if !final.Result.PublicationVerified {
 			return errors.New("publication proof missing")
 		}
-		if c.Schema == acceptanceCorpusSchema && (final.Result.Corpus == nil || !final.Result.Corpus.NavigationVerified || !final.Result.Corpus.SourceGitDrained || final.Result.Corpus.Cohort != c.Cohort || final.Result.Corpus.CostGate != "unavailable") {
+		if c.Schema == acceptanceCorpusSchema && (final.Result.CostStop != nil || final.Result.Corpus == nil || !final.Result.Corpus.NavigationVerified || !final.Result.Corpus.SourceGitDrained || final.Result.Corpus.Cohort != c.Cohort || final.Result.Corpus.CostGate != "unavailable" && final.Result.Corpus.CostGate != "pass") {
 			return errors.New("corpus product reader proof missing")
+		}
+		if c.Schema == acceptanceCorpusSchema && final.Result.Corpus.CostGate == "pass" {
+			if e = acceptanceCorpusSetCost(final.Result.Corpus, final.Result.Corpus.Costs); e != nil {
+				return e
+			}
 		}
 	} else if purpose := acceptanceCheckedPurpose(*acceptanceCase); purpose != "" {
 		if final.Injected || final.Result.ExecutionError || final.Result.PublicationVerified {
@@ -1906,7 +1938,7 @@ func acceptanceProfile(ctx context.Context, c nativeAcceptanceConfig, raw, selec
 	if e = acceptanceDecode(selectionRaw, provider.MaxSelectionBytes, &s); e != nil {
 		return p, e
 	}
-	if acceptanceDigest(selectionRaw) != c.SelectionSHA256 || s.Schema != provider.SelectionSchema || s.Source != c.Source || s.Module != c.Source.Repository || s.Remote != "https://"+c.Source.Repository || !reflect.DeepEqual(s.Roots, c.roots()) || acceptanceDigest(acceptanceJSON(s.Targets)) != c.UniverseSHA256 {
+	if acceptanceDigest(selectionRaw) != c.SelectionSHA256 || s.Schema != provider.SelectionSchema || s.Source != c.Source || s.Module != c.Source.Repository || s.Remote != "https://"+c.Source.Repository || !reflect.DeepEqual(s.Roots, c.selectionRoots()) || acceptanceDigest(acceptanceJSON(s.Targets)) != c.UniverseSHA256 {
 		return p, errors.New("neutral selection")
 	}
 	return p, nil

@@ -17,7 +17,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/typedindex"
 )
@@ -65,34 +64,6 @@ var acceptanceCorpusSymbols = []acceptanceOracleSymbol{
 	{Package: acceptanceCorpusRepo + "/go/pkg/command", Name: "NewRemoteErrorResult", Definition: acceptanceOraclePoint{"proto", "go/pkg/command/command.go", [3]int32{460, 5, 25}}, References: []acceptanceOraclePoint{
 		{"fanout", "go/pkg/rexec/rexec.go", [3]int32{147, 17, 37}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{150, 17, 37}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{163, 43, 63}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{281, 23, 43}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{343, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{359, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{379, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{445, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{451, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{457, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{475, 25, 45}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{480, 25, 45}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{501, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{505, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{539, 22, 42}}, {"fanout", "go/pkg/rexec/rexec.go", [3]int32{556, 22, 42}},
 	}, Signature: "func NewRemoteErrorResult(err error) *Result", Documentation: "NewRemoteErrorResult constructs a Result from a remote error."},
-}
-
-type acceptanceCorpusSymbolResult struct {
-	Name                string `json:"name"`
-	SymbolSHA256        string `json:"symbol_sha256"`
-	QueryPoints         int    `json:"query_points"`
-	DefinitionLocations int    `json:"definition_locations"`
-	HoverPayloads       int    `json:"hover_payloads"`
-	ReferencePoints     int    `json:"reference_points"`
-}
-type acceptanceCorpusResult struct {
-	Cohort             string                         `json:"cohort"`
-	Commit             string                         `json:"commit"`
-	ArchiveSHA256      string                         `json:"archive_sha256"`
-	OracleSHA256       string                         `json:"oracle_sha256"`
-	RootDigest         string                         `json:"root_digest"`
-	PlanDigest         string                         `json:"plan_digest"`
-	MemberDigests      []string                       `json:"member_digests"`
-	Documents          int                            `json:"documents"`
-	Occurrences        int                            `json:"occurrences"`
-	Definitions        int                            `json:"definitions"`
-	GeneratedDocuments int                            `json:"generated_documents"`
-	NavigationVerified bool                           `json:"navigation_verified"`
-	SourceGitDrained   bool                           `json:"source_git_drained"`
-	Symbols            []acceptanceCorpusSymbolResult `json:"symbols"`
-	CrossCohort        string                         `json:"cross_cohort"`
-	CostGate           string                         `json:"cost_gate"`
-	CostMissing        []string                       `json:"cost_missing"`
 }
 
 // Check the exact frozen archive independently of the preparation receipt.
@@ -304,13 +275,6 @@ func acceptanceCorpusProofRead(name string, bound int64) ([]byte, error) {
 	return b, nil
 }
 
-func acceptanceCorpusLocation(c nativeAcceptanceConfig, p acceptanceOraclePoint, l *codenav.Location) bool {
-	return l != nil && l.Repo == c.Source.Repository && l.Revision == c.Source.Commit && l.Path == p.Path && l.Encoding == codenav.EncodingUTF8 && l.Range == acceptanceCorpusRange(p)
-}
-func acceptanceCorpusRange(p acceptanceOraclePoint) codenav.CodeRange {
-	return codenav.CodeRange{Start: codenav.CodePosition{Line: p.Range[0], Character: p.Range[1]}, End: codenav.CodePosition{Line: p.Range[0], Character: p.Range[2]}}
-}
-
 func TestNativeAcceptanceCorpusOracle(t *testing.T) {
 	raw, err := os.ReadFile("../../spike/t451b/public-oracle.json")
 	if err != nil || acceptanceDigest(raw) != acceptanceCorpusOracle {
@@ -341,6 +305,22 @@ func TestNativeAcceptanceCorpusConfig(t *testing.T) {
 		mutate(&v)
 		if _, err := parseAcceptance(acceptanceJSON(v)); err == nil {
 			t.Fatal("widened corpus selector")
+		}
+	}
+}
+
+func TestNativeAcceptanceCorpusProvisionOrdering(t *testing.T) {
+	c := nativeAcceptanceConfig{Schema: acceptanceCorpusSchema, Cohort: "ordinary"}
+	frozen := c.roots()
+	// This is the actual canonical root order from trusted BuildSelection for
+	// the fresh frozen ordinary preparation, independent of declared order.
+	provisioned := []string{"//go/pkg/cache:cache", "//go/pkg/moreflag:moreflag", "//go/pkg/outerr:outerr"}
+	if !slices.Equal(c.selectionRoots(), provisioned) || !slices.Equal(c.roots(), frozen) || slices.Equal(frozen, provisioned) {
+		t.Fatal("provision order rejected or frozen order changed")
+	}
+	for _, bad := range [][]string{provisioned[:2], append(slices.Clone(provisioned), "//..."), {provisioned[0], provisioned[0], provisioned[2]}} {
+		if slices.Equal(c.selectionRoots(), bad) {
+			t.Fatal("selection root membership widened")
 		}
 	}
 }

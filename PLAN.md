@@ -8610,3 +8610,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   follows. Normal/race, host/Linux vet, Linux compilation, pinned lint and
   independent source/cost review pass. Fresh native correctness/cost proof
   remains required; no profile, cap or registration changes.
+
+- **2026-10-02 — T45.6 native cost witness and canonical preflight.**
+  An explicitly tagged validation build of the genuine `cmd/phebs` main wraps
+  only the exact unprivileged Linux-arm64 direct worker dispatch with the
+  existing T45.1b sampler and quiescent cache census. All production dispatch,
+  tool-main verification, controls, stdout, sandbox completion, limits and
+  publication fences remain exact; untagged builds contain no observer hook or
+  persistent work. The sampler uses only the frozen managed294-task ceiling:
+  one goroutine, one50-ms ticker, initial/final samples, at most588 `/proc`
+  inventory entries plus sentinel and294 processes per sample, bounded
+  stat/status/128-FD/stat observations and at most65,536 lifetime keys. First
+  offending-lifetime diagnostics reuse the existing bounded stat/status/stat
+  attempt, never a sampler retry. Joining it precedes one no-follow census of
+  six fixed private-cache roots, at most262,144 entries/inode keys/pending
+  paths, one transient directory FD and4,573,403,136 logical/allocated bytes.
+  Pending paths can retain substantial bounded memory (roughly1 GiB at the
+  entry ceiling with long Linux paths), charged within the unchanged worker
+  memory cap. Sampler duration excludes the final cache census; the complete
+  helper/census/encoding/write remains within the original shared300 seconds.
+  Exactly one canonical stderr record at most4 KiB is physically charged
+  alongside stdout. Healthy measurements retain lower-bound child lifetimes
+  and non-atomic FD qualifications. A distinct STOP schema retains only bounded
+  diagnostic facts and exits125; failed native completion remains failed and
+  cannot mint a healthy cost or publication. The test receipt preserves that
+  diagnostic separately with exact observed stream/control hashes and explicit
+  absent successful-completion authority. Healthy witnesses require the actual
+  private completion token before binding both phases to their exact control,
+  allowance and original stdout/stderr hashes. Cross-cohort comparison requires
+  all three correctness receipts, both phases' qualified process/cache/resource
+  evidence, unchanged caps and physical output accounting before registration
+  readiness. Legacy sampler/census limits and neutral receipt bytes remain
+  exact. Corpus preflight now compares the unchanged closed roots in canonical
+  provisioned order and checks the final selection's actual digest locally
+  before transport. No source/schema authority, child, lock, cache, production
+  query, sync, startup, retry or publication work is added. Fresh immutable
+  helper/profile/preparation/native evidence remains mandatory; tagged compile
+  artifacts alone establish no gate.

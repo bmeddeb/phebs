@@ -58,10 +58,15 @@ type processObserver struct {
 	seen  map[observedLifetime]struct{}
 	facts Observations
 	err   error
+	tasks int
 }
 
 func newProcessObserver(proc fs.FS, pid, uid uint32) *processObserver {
-	return &processObserver{proc: proc, pid: pid, uid: uid, seen: make(map[observedLifetime]struct{}), facts: Observations{
+	return newProcessObserverBounded(proc, pid, uid, sandbox.TaskLimit)
+}
+
+func newProcessObserverBounded(proc fs.FS, pid, uid uint32, tasks int) *processObserver {
+	return &processObserver{proc: proc, pid: pid, uid: uid, tasks: tasks, seen: make(map[observedLifetime]struct{}), facts: Observations{
 		Version: "phebs-t451b-sampled-observations-v1", IntervalNanoseconds: observationInterval.Nanoseconds(),
 		ChildLifetimesLowerBound: true, FDCountsNonAtomic: true,
 	}}
@@ -238,8 +243,9 @@ func (o *processObserver) process(pid uint32) (fdsCount, start uint64, err error
 func (o *processObserver) sample() {
 	o.facts.Samples++
 	// /proc also contains non-process kernel entries. Bound those independently
-	// through this 512-entry inventory, then enforce the 256-process ceiling.
-	entries, err := observationDirectory(o.proc, ".", 2*sandbox.TaskLimit)
+	// through an independently bounded inventory, then enforce the selected
+	// legacy or closed managed process ceiling.
+	entries, err := observationDirectory(o.proc, ".", 2*o.tasks)
 	if err != nil {
 		o.fail("inventory", err)
 		return
@@ -257,7 +263,7 @@ func (o *processObserver) sample() {
 			return
 		}
 		count++
-		if count > sandbox.TaskLimit {
+		if count > o.tasks {
 			o.fail("inventory", errors.New("process inventory bound"))
 			return
 		}
@@ -290,10 +296,14 @@ func (o *processObserver) sample() {
 }
 
 func startObservations(ctx context.Context, proc fs.FS, pid, uid uint32) (func() (Observations, error), error) {
+	return startObservationsBounded(ctx, proc, pid, uid, sandbox.TaskLimit)
+}
+
+func startObservationsBounded(ctx context.Context, proc fs.FS, pid, uid uint32, tasks int) (func() (Observations, error), error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	o := newProcessObserver(proc, pid, uid)
+	o := newProcessObserverBounded(proc, pid, uid, tasks)
 	started := time.Now()
 	o.sample()
 	stop, done := make(chan struct{}), make(chan struct{})
@@ -356,6 +366,10 @@ func ObservePrivateCache() (PrivateCacheObservation, error) {
 }
 
 func observePrivateCache(scratch string) (PrivateCacheObservation, error) {
+	return observePrivateCacheBounded(scratch, sandbox.ScratchBytes)
+}
+
+func observePrivateCacheBounded(scratch string, bytes uint64) (PrivateCacheObservation, error) {
 	result := PrivateCacheObservation{Version: "phebs-t451b-private-cache-v1", MissingRoots: []string{}}
 	seen := make(map[cacheInode]struct{})
 	for _, name := range []string{"bazel-user", "bazel-output", "repository-cache", "gocache", "gomodcache", "cache"} {
@@ -372,7 +386,7 @@ func observePrivateCache(scratch string) (PrivateCacheObservation, error) {
 		if !info.IsDir() {
 			return result, errors.New("private cache root is not a directory")
 		}
-		err = walkCache(root, &result, seen)
+		err = walkCacheBounded(root, &result, seen, bytes)
 		if err != nil {
 			return result, err
 		}
@@ -382,6 +396,10 @@ func observePrivateCache(scratch string) (PrivateCacheObservation, error) {
 }
 
 func walkCache(root string, result *PrivateCacheObservation, seen map[cacheInode]struct{}) error {
+	return walkCacheBounded(root, result, seen, sandbox.ScratchBytes)
+}
+
+func walkCacheBounded(root string, result *PrivateCacheObservation, seen map[cacheInode]struct{}, bytes uint64) error {
 	// Read directories in bounded batches instead of WalkDir's unbounded sort.
 	queue := []string{root}
 	for len(queue) > 0 {
@@ -406,7 +424,7 @@ func walkCache(root string, result *PrivateCacheObservation, seen map[cacheInode
 			return errors.New("unsupported private cache inode")
 		}
 		stat, ok := info.Sys().(*syscall.Stat_t)
-		if !ok || stat.Ino == 0 || stat.Blocks < 0 || info.Size() < 0 || uint64(stat.Blocks) > sandbox.ScratchBytes/512 {
+		if !ok || stat.Ino == 0 || stat.Blocks < 0 || info.Size() < 0 || uint64(stat.Blocks) > bytes/512 {
 			return errors.New("private cache allocation unavailable or over bound")
 		}
 		key := cacheInode{uint64(stat.Dev), stat.Ino}
@@ -418,7 +436,7 @@ func walkCache(root string, result *PrivateCacheObservation, seen map[cacheInode
 			if info.Mode().IsRegular() {
 				logical = uint64(info.Size())
 			}
-			if allocated > sandbox.ScratchBytes-result.AllocatedBytes || logical > sandbox.ScratchBytes-result.LogicalBytes {
+			if allocated > bytes-result.AllocatedBytes || logical > bytes-result.LogicalBytes {
 				return errors.New("private cache byte bound")
 			}
 			result.AllocatedBytes += allocated

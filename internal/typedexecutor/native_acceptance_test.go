@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/typedindex"
@@ -86,15 +87,16 @@ func parseAcceptance(raw []byte) (nativeAcceptanceConfig, error) {
 	if !acceptanceID.MatchString(c.ID) || c.Source.Validate() != nil || c.ProfileEpoch < 1 || c.Policy != typedindex.MeasuredPolicy() {
 		return c, errors.New("acceptance contract")
 	}
-	if c.Schema == acceptanceSchema {
+	switch c.Schema {
+	case acceptanceSchema:
 		if c.Source.Repository != acceptanceRepo || c.Cohort != "" || c.SourceGitSHA256 != "" {
 			return c, errors.New("neutral acceptance contract")
 		}
-	} else if c.Schema == acceptanceCorpusSchema {
+	case acceptanceCorpusSchema:
 		if c.Source.Repository != acceptanceCorpusRepo || c.Source.Commit != acceptanceCorpusCommit || len(acceptanceCorpusRoots(c.Cohort)) == 0 || !acceptanceHash(c.SourceGitSHA256) {
 			return c, errors.New("frozen corpus acceptance contract")
 		}
-	} else {
+	default:
 		return c, errors.New("unknown acceptance contract")
 	}
 	b, e := hex.DecodeString(c.SourceCommit)
@@ -124,6 +126,14 @@ func (c nativeAcceptanceConfig) roots() []string {
 		return acceptanceCorpusRoots(c.Cohort)
 	}
 	return []string{"//lib:lib"}
+}
+
+// Trusted provisioning canonically sorts the selection roots. Compare against
+// that exact order while preserving the closed profile's declared root order.
+func (c nativeAcceptanceConfig) selectionRoots() []string {
+	roots := slices.Clone(c.roots())
+	slices.Sort(roots)
+	return roots
 }
 func acceptanceCheckedPurpose(name string) typedindex.Purpose {
 	if name == string(typedindex.Canary) || name == string(typedindex.DryRun) {

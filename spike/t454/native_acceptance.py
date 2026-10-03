@@ -194,6 +194,14 @@ def inputs(directory, expected=None):
         fail('inventory identity')
     if not 1 <= len(inv['files']) <= 50000:
         fail('inventory count')
+    # The final trusted provisioned selection differs from preparation's input
+    # control. Bind the actual bundle file before any transport or native work.
+    selection_hash, selection_size = file_hash(directory / 'bundle/typed-bazel-selection.json', 16 << 20)
+    if selection_hash != cfg['selection_sha256']:
+        fail('selection identity')
+    selection_rows = [r for r in inv['files'] if r.get('path') == 'typed-bazel-selection.json']
+    if len(selection_rows) != 1 or selection_rows[0].get('digest') != selection_hash or selection_rows[0].get('bytes') != selection_size or selection_rows[0].get('executable') is not False:
+        fail('selection inventory identity')
     rows = [('config.json', digest(raw), len(raw), False),
             ('inventory.json', cfg['inventory_sha256'], len(inv_raw), False)]
     if cfg['schema'] == CORPUS_SCHEMA:
@@ -321,13 +329,83 @@ def collect(run_id, case, expected, output):
     exclusive(output, result.stdout)
 
 
+def corpus_cost(receipt, proof):
+    """Require two authenticated, qualified cold-phase measurement records."""
+    missing = ['sampled_child_lifetimes', 'sampled_fd_counts', 'private_cache_inventory']
+    if proof.get('cost_gate') == 'unavailable':
+        if proof.get('cost_missing') != missing or proof.get('costs'):
+            fail('contradictory unavailable cost evidence')
+        return False
+    costs = proof.get('costs', [])
+    if proof.get('cost_gate') != 'pass' or proof.get('cost_missing') != [] or len(costs) != 2:
+        fail('both cold phases require measured cost')
+    reports = receipt.get('result', {}).get('outcome', {}).get('Reports', [])
+    observed = receipt.get('observations', [])
+    if len(reports) != 2 or len(observed) != 2:
+        fail('measured native phase controls missing')
+    total_output, duration = 0, 0
+    roots = ['/scratch/'+n for n in ('bazel-user', 'bazel-output', 'repository-cache', 'gocache', 'gomodcache', 'cache')]
+    for i, phase in enumerate(('plan', 'execute')):
+        cost, report, control = costs[i], reports[i], observed[i]
+        allowance = control.get('allowance', {})
+        metrics = cost.get('metrics', {})
+        o, cache = metrics.get('observations', {}), metrics.get('cache', {})
+        if (set(cost) != {'phase', 'planning_digest', 'attempt_digest', 'request_digest', 'seal_digest', 'stdout_sha256', 'stderr_sha256', 'worker_output_bytes', 'metrics'}
+                or cost.get('phase') != phase or report.get('Phase') != phase or control.get('phase') != phase
+                or report.get('ExitCode') != 0 or report.get('Removed') is not True or report.get('StopReason') != '' or report.get('Failure') is not None
+                or any(not hash_valid(cost.get(k)) for k in ('planning_digest', 'attempt_digest', 'request_digest', 'seal_digest', 'stdout_sha256', 'stderr_sha256'))
+                or cost['planning_digest'] != allowance.get('planning_digest') or cost['attempt_digest'] != allowance.get('attempt_digest') or cost['seal_digest'] != control.get('seal')
+                or cost['planning_digest'] != costs[0]['planning_digest'] or cost['attempt_digest'] != costs[0]['attempt_digest']
+                or (cost['request_digest'] == cost['planning_digest']) != (phase == 'plan')
+                or set(metrics) != {'schema', 'observations', 'cache'} or metrics.get('schema') != 'phebs-typed-native-corpus-cost-v1'
+                or digest(canonical(metrics)+b'\n') != cost['stderr_sha256']):
+            fail('cost control or native completion binding')
+        numeric = ('interval_nanoseconds', 'duration_nanoseconds', 'samples', 'sampled_child_lifetimes', 'sampled_process_fd_peak', 'sampled_aggregate_fd_peak', 'vanished', 'raced', 'unexpected_errors')
+        if (set(o) != {'version', *numeric, 'child_lifetimes_lower_bound', 'fd_counts_non_atomic', 'unavailable'}
+                or any(type(o.get(k)) is not int or o[k] < 0 for k in numeric)
+                or o.get('version') != 'phebs-t451b-sampled-observations-v1' or o['interval_nanoseconds'] != 50000000
+                or not 0 < o['duration_nanoseconds'] <= 300000000000 or o['samples'] < 2
+                or not 0 < o['sampled_child_lifetimes'] <= 65536 or o['child_lifetimes_lower_bound'] is not True
+                or o['fd_counts_non_atomic'] is not True or not 0 < o['sampled_process_fd_peak'] <= 128
+                or not o['sampled_process_fd_peak'] <= o['sampled_aggregate_fd_peak'] <= 128*294
+                or o['unavailable'] is not False or o['unexpected_errors'] != 0):
+            fail('sampled lifetime or descriptor evidence unavailable')
+        counters = ('entries', 'regular_files', 'directories', 'symlinks', 'unique_inodes', 'logical_bytes', 'allocated_bytes')
+        if (set(cache) != {'version', 'roots', 'missing_roots', *counters, 'complete'}
+                or any(type(cache.get(k)) is not int or cache[k] < 0 for k in counters)
+                or cache.get('version') != 'phebs-t451b-private-cache-v1' or cache.get('complete') is not True or cache.get('roots') != roots
+                or not 0 < cache['entries'] <= POLICY['scratch_inodes'] or cache['unique_inodes'] > cache['entries']
+                or cache['regular_files']+cache['directories']+cache['symlinks'] != cache['entries']
+                or max(cache['logical_bytes'], cache['allocated_bytes']) > POLICY['scratch_bytes']
+                or not isinstance(cache.get('missing_roots'), list) or len(set(cache['missing_roots'])) != len(cache['missing_roots'])
+                or any(n not in roots for n in cache['missing_roots'])):
+            fail('private cache evidence unavailable')
+        resources = report.get('Resources', {})
+        bounds = {'memory_peak_bytes': POLICY['memory_bytes'], 'sampled_peak_rss_bytes': POLICY['memory_bytes'],
+                  'sampled_peak_processes': POLICY['tasks'], 'sampled_peak_scratch_bytes': POLICY['scratch_bytes'],
+                  'sampled_peak_scratch_inodes': POLICY['scratch_inodes']}
+        if (resources.get('limits_verified') is not True or resources.get('sampling_unavailable') is not False
+                or any(type(resources.get(k)) is not int or not 0 <= resources[k] <= bound for k, bound in bounds.items())
+                or type(resources.get('samples')) is not int or resources['samples'] <= 0
+                or any(resources.get(k) != 0 for k in ('memory_oom_events', 'memory_oom_kills', 'memory_limit_events', 'task_limit_events'))
+                or resources.get('per_process_descriptors') != 128 or resources.get('aggregate_descriptor_ceiling') != 128*294):
+            fail('native resource cost not established')
+        if type(cost.get('worker_output_bytes')) is not int or not len(canonical(metrics))+1 <= cost['worker_output_bytes'] <= POLICY['output_bytes']-total_output:
+            fail('shared physical worker output cost')
+        total_output += cost['worker_output_bytes']
+        duration += o['duration_nanoseconds']
+    if duration > 300000000000:
+        fail('sampled durations exceed shared wall')
+    return True
+
+
 def compare_corpus(paths):
     """Offline source-free equality at the three frozen function identities.
 
-    Native success/publication and product-query proof do not establish the
-    missing process/FD/private-cache cost evidence or authorize registration.
+    Registration readiness additionally requires complete native cost records
+    from both phases of every cohort; unavailable measurements remain open.
     """
-    symbols, inputs = {}, []
+    symbols, inputs, measured = {}, [], []
     names = {'ordinary': ('NewOutWriter', 'NewErrWriter'),
              'proto': ('NewRemoteErrorResult',),
              'fanout': ('NewOutWriter', 'NewErrWriter', 'NewRemoteErrorResult')}
@@ -343,13 +421,13 @@ def compare_corpus(paths):
                 or any(receipt.get(k) is not True for k in ('native_absent', 'workspace_drained', 'engine_joined'))
                 or any(result.get(k) is not True for k in ('settled', 'no_replay', 'publication_verified', 'growth_released'))
                 or result.get('execution_error') is not False
+                or result.get('cost_stop') is not None
                 or proof.get('cohort') != cohort or proof.get('commit') != CORPUS_COMMIT
                 or proof.get('oracle_sha256') != ORACLE_SHA256 or proof.get('archive_sha256') != ARCHIVE_SHA256
                 or proof.get('navigation_verified') is not True or proof.get('source_git_drained') is not True
                 or proof.get('generated_documents') != 0
                 or tuple(proof.get(k) for k in ('documents', 'occurrences', 'definitions')) != counts[cohort]
-                or proof.get('cross_cohort') != 'pending' or proof.get('cost_gate') != 'unavailable'
-                or proof.get('cost_missing') != ['sampled_child_lifetimes', 'sampled_fd_counts', 'private_cache_inventory']):
+                or proof.get('cross_cohort') != 'pending'):
             fail('incomplete frozen corpus receipt')
         rows = proof.get('symbols', [])
         if tuple(row.get('name') for row in rows) != names[cohort]:
@@ -364,11 +442,12 @@ def compare_corpus(paths):
             prior = symbols.setdefault(row['name'], row['symbol_sha256'])
             if prior != row['symbol_sha256']:
                 fail('cross-cohort emitted symbol mismatch')
+        measured.append(corpus_cost(receipt, proof))
         inputs.append(dict(cohort=cohort, receipt_sha256=digest(raw), config=receipt['config']))
     return dict(schema='phebs-typed-native-corpus-comparison-v1', commit=CORPUS_COMMIT,
                 oracle_sha256=ORACLE_SHA256, inputs=inputs, frozen_oracle_points=21,
                 cross_cohort_identity='pass', product_navigation='pass',
-                cost_gate='unavailable', registration_ready=False)
+                cost_gate='pass' if all(measured) else 'unavailable', registration_ready=all(measured))
 
 
 def acceptance_id(value):

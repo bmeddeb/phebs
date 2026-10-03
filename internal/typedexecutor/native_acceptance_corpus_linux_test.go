@@ -4,19 +4,263 @@ package typedexecutor
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"testing"
 
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
 	"github.com/bmeddeb/phebs/internal/typedindex"
+	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"github.com/bmeddeb/phebs/internal/typedworkspace"
+	"github.com/bmeddeb/phebs/spike/t451b"
 	"github.com/scip-code/scip/bindings/go/scip"
 	"google.golang.org/protobuf/proto"
 )
+
+type acceptanceCorpusSymbolResult struct {
+	Name                string `json:"name"`
+	SymbolSHA256        string `json:"symbol_sha256"`
+	QueryPoints         int    `json:"query_points"`
+	DefinitionLocations int    `json:"definition_locations"`
+	HoverPayloads       int    `json:"hover_payloads"`
+	ReferencePoints     int    `json:"reference_points"`
+}
+type acceptanceCorpusResult struct {
+	Cohort             string                         `json:"cohort"`
+	Commit             string                         `json:"commit"`
+	ArchiveSHA256      string                         `json:"archive_sha256"`
+	OracleSHA256       string                         `json:"oracle_sha256"`
+	RootDigest         string                         `json:"root_digest"`
+	PlanDigest         string                         `json:"plan_digest"`
+	MemberDigests      []string                       `json:"member_digests"`
+	Documents          int                            `json:"documents"`
+	Occurrences        int                            `json:"occurrences"`
+	Definitions        int                            `json:"definitions"`
+	GeneratedDocuments int                            `json:"generated_documents"`
+	NavigationVerified bool                           `json:"navigation_verified"`
+	SourceGitDrained   bool                           `json:"source_git_drained"`
+	Symbols            []acceptanceCorpusSymbolResult `json:"symbols"`
+	CrossCohort        string                         `json:"cross_cohort"`
+	CostGate           string                         `json:"cost_gate"`
+	CostMissing        []string                       `json:"cost_missing"`
+	Costs              []acceptanceCorpusPhaseCost    `json:"costs,omitempty"`
+}
+
+type acceptanceCorpusPhaseCost struct {
+	Phase             typedindex.Action `json:"phase"`
+	PlanningDigest    string            `json:"planning_digest"`
+	AttemptDigest     string            `json:"attempt_digest"`
+	RequestDigest     string            `json:"request_digest"`
+	SealDigest        string            `json:"seal_digest"`
+	StdoutSHA256      string            `json:"stdout_sha256"`
+	StderrSHA256      string            `json:"stderr_sha256"`
+	WorkerOutputBytes int64             `json:"worker_output_bytes"`
+	Metrics           t451b.ManagedCost `json:"metrics"`
+}
+
+type acceptanceCorpusPhaseStop struct {
+	Phase              string                `json:"phase"`
+	PlanningDigest     string                `json:"planning_digest"`
+	AttemptDigest      string                `json:"attempt_digest"`
+	RequestDigest      string                `json:"request_digest"`
+	SealDigest         string                `json:"seal_digest"`
+	StdoutSHA256       string                `json:"stdout_sha256"`
+	StderrSHA256       string                `json:"stderr_sha256"`
+	ExitCode           int                   `json:"exit_code"`
+	DiagnosticOnly     bool                  `json:"diagnostic_only"`
+	CompletionVerified bool                  `json:"completion_verified"`
+	Stop               t451b.ManagedCostStop `json:"stop"`
+}
+
+// A failed native invocation has no successful completion authority. Preserve
+// only its bounded diagnostic and exact observed stream hashes beside the
+// original nonpass; never add this record to successful Costs.
+func acceptanceCorpusStop(options typedsandbox.Options, result typedsandbox.Result) (acceptanceCorpusPhaseStop, error) {
+	var stopped acceptanceCorpusPhaseStop
+	if result.ExitCode != 125 || options.Allowance.Validate() != nil || options.Control.Validate() != nil || options.Control.PlanningDigest != options.Allowance.PlanningDigest || options.Control.AttemptDigest != options.Allowance.AttemptDigest || int64(len(result.Stdout)+len(result.Stderr)) > typedsandbox.OutputBytes-options.Allowance.WorkerBytesUsed {
+		return stopped, errors.New("invalid failed native diagnostic")
+	}
+	diagnostic, err := t451b.DecodeManagedCostStop(result.Stderr)
+	if err != nil {
+		return stopped, err
+	}
+	return acceptanceCorpusPhaseStop{Phase: options.Control.Phase, PlanningDigest: options.Control.PlanningDigest, AttemptDigest: options.Control.AttemptDigest, RequestDigest: options.Control.RequestDigest, SealDigest: options.Control.SealDigest, StdoutSHA256: acceptanceDigest(result.Stdout), StderrSHA256: acceptanceDigest(result.Stderr), ExitCode: result.ExitCode, DiagnosticOnly: true, Stop: diagnostic}, nil
+}
+
+func TestNativeAcceptanceCorpusStop(t *testing.T) {
+	control := typedsandbox.ControlIdentity{PlanningDigest: acceptanceDigest([]byte("plan")), AttemptDigest: acceptanceDigest([]byte("attempt")), Phase: "plan", SealDigest: acceptanceDigest([]byte("seal")), Device: 1, Inode: 2}
+	control.RequestDigest = control.PlanningDigest
+	options := typedsandbox.Options{Control: control, Allowance: typedsandbox.Allowance{Schema: "phebs-typed-allowance-v1", PlanningDigest: control.PlanningDigest, AttemptDigest: control.AttemptDigest, BootID: "12345678-1234-1234-1234-123456789abc", TimeDevice: 1, TimeInode: 2, Start: 1, Deadline: 1 + int64(typedsandbox.WallLimit)}}
+	raw, err := t451b.EncodeManagedCostStop(t451b.ManagedCostStop{Schema: t451b.ManagedCostStopSchema, Stage: "observer_start"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	failed := typedsandbox.Result{ExitCode: 125, Stderr: raw}
+	stopped, err := acceptanceCorpusStop(options, failed)
+	if err != nil || !stopped.DiagnosticOnly || stopped.CompletionVerified || stopped.StderrSHA256 != acceptanceDigest(raw) || stopped.ExitCode != 125 || stopped.SealDigest != control.SealDigest {
+		t.Fatal("failed native diagnostic not preserved", err)
+	}
+	if _, err := acceptanceCorpusCost(t.Context(), options, failed); err == nil {
+		t.Fatal("diagnostic minted successful completion")
+	}
+	for _, change := range []func(*typedsandbox.Options, *typedsandbox.Result){
+		func(_ *typedsandbox.Options, r *typedsandbox.Result) { r.ExitCode = 0 },
+		func(o *typedsandbox.Options, _ *typedsandbox.Result) {
+			o.Control.AttemptDigest = acceptanceDigest([]byte("foreign"))
+		},
+		func(o *typedsandbox.Options, _ *typedsandbox.Result) {
+			o.Allowance.WorkerBytesUsed = typedsandbox.OutputBytes
+		},
+		func(_ *typedsandbox.Options, r *typedsandbox.Result) { r.Stderr = append(slices.Clone(r.Stderr), '\n') },
+	} {
+		o, r := options, failed
+		change(&o, &r)
+		if _, err := acceptanceCorpusStop(o, r); err == nil {
+			t.Fatal("invalid failed diagnostic admitted")
+		}
+	}
+}
+
+// Parse only source-free metadata from the existing success Result-v1. Full
+// provider admission still runs unchanged in the controller. The completion
+// token, rather than a copied scalar receipt, authenticates both exact streams.
+func acceptanceCorpusCost(ctx context.Context, options typedsandbox.Options, result typedsandbox.Result) (acceptanceCorpusPhaseCost, error) {
+	var cost acceptanceCorpusPhaseCost
+	if err := typedsandbox.VerifyCompletion(options.Allowance, options.Control, result); err != nil {
+		return cost, err
+	}
+	var header struct {
+		Schema        string            `json:"schema"`
+		RequestDigest string            `json:"request_digest"`
+		Phase         typedindex.Action `json:"phase"`
+	}
+	wire, err := provider.DecodeResultWire(ctx, result.Stdout, typedsandbox.OutputBytes-options.Allowance.WorkerBytesUsed)
+	if err != nil {
+		return cost, err
+	}
+	if err := json.Unmarshal(wire, &header); err != nil || header.Schema != "phebs-bazel-worker-result-v1" || string(header.Phase) != options.Control.Phase || header.RequestDigest != options.Control.RequestDigest {
+		return cost, errors.New("cost result metadata differs from authenticated native control")
+	}
+	metrics, err := t451b.DecodeManagedCost(result.Stderr)
+	if err != nil {
+		return cost, err
+	}
+	return acceptanceCorpusPhaseCost{Phase: header.Phase, PlanningDigest: options.Control.PlanningDigest, AttemptDigest: options.Control.AttemptDigest, RequestDigest: header.RequestDigest, SealDigest: options.Control.SealDigest, StdoutSHA256: acceptanceDigest(result.Stdout), StderrSHA256: acceptanceDigest(result.Stderr), WorkerOutputBytes: int64(len(result.Stdout) + len(result.Stderr)), Metrics: metrics}, nil
+}
+
+func acceptanceCorpusSetCost(r *acceptanceCorpusResult, costs []acceptanceCorpusPhaseCost) error {
+	if r == nil {
+		return errors.New("missing corpus proof for cost")
+	}
+	if len(costs) == 0 {
+		if r.CostGate != "unavailable" || len(r.Costs) != 0 || !slices.Equal(r.CostMissing, []string{"sampled_child_lifetimes", "sampled_fd_counts", "private_cache_inventory"}) {
+			return errors.New("missing cost cannot establish completion")
+		}
+		return nil
+	}
+	if r.CostGate == "pass" && len(r.CostMissing) != 0 {
+		return errors.New("completed cost contradicts missing measurements")
+	}
+	if len(costs) != 2 {
+		return errors.New("both cold phases require complete cost measurements")
+	}
+	var output, duration int64
+	for i, cost := range costs {
+		if cost.Phase != [2]typedindex.Action{typedindex.Plan, typedindex.Execute}[i] || cost.PlanningDigest != costs[0].PlanningDigest || cost.AttemptDigest != costs[0].AttemptDigest || (cost.RequestDigest == cost.PlanningDigest) != (i == 0) || cost.WorkerOutputBytes <= 0 || cost.WorkerOutputBytes > typedsandbox.OutputBytes-output {
+			return errors.New("cost phase, owner or shared output differs")
+		}
+		for _, digest := range []string{cost.PlanningDigest, cost.AttemptDigest, cost.RequestDigest, cost.SealDigest, cost.StdoutSHA256, cost.StderrSHA256} {
+			if !acceptanceHash(digest) {
+				return errors.New("cost control digest")
+			}
+		}
+		raw, err := t451b.EncodeManagedCost(cost.Metrics)
+		if err != nil {
+			return err
+		}
+		if acceptanceDigest(raw) != cost.StderrSHA256 || int64(len(raw)) >= cost.WorkerOutputBytes {
+			return errors.New("cost stderr identity or physical output")
+		}
+		output += cost.WorkerOutputBytes
+		duration += cost.Metrics.Observations.DurationNanoseconds
+	}
+	if duration > int64(typedsandbox.WallLimit) {
+		return errors.New("sampled cost duration exceeds shared wall")
+	}
+	r.CostGate, r.CostMissing, r.Costs = "pass", []string{}, slices.Clone(costs)
+	return nil
+}
+
+func TestNativeAcceptanceCorpusCost(t *testing.T) {
+	metrics := t451b.ManagedCost{Schema: t451b.ManagedCostSchema,
+		Observations: t451b.Observations{Version: "phebs-t451b-sampled-observations-v1", IntervalNanoseconds: 50000000, DurationNanoseconds: 1, Samples: 2, SampledChildLifetimes: 1, ChildLifetimesLowerBound: true, SampledProcessFDPeak: 2, SampledAggregateFDPeak: 2, FDCountsNonAtomic: true},
+		Cache:        t451b.PrivateCacheObservation{Version: "phebs-t451b-private-cache-v1", Roots: []string{"/scratch/bazel-user", "/scratch/bazel-output", "/scratch/repository-cache", "/scratch/gocache", "/scratch/gomodcache", "/scratch/cache"}, MissingRoots: []string{}, Entries: 6, Directories: 6, UniqueInodes: 6, Complete: true}}
+	raw, err := t451b.EncodeManagedCost(metrics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planning, attempt := acceptanceDigest([]byte("planning")), acceptanceDigest([]byte("attempt"))
+	costs := []acceptanceCorpusPhaseCost{}
+	for _, phase := range []typedindex.Action{typedindex.Plan, typedindex.Execute} {
+		request := planning
+		if phase == typedindex.Execute {
+			request = acceptanceDigest([]byte("execute"))
+		}
+		costs = append(costs, acceptanceCorpusPhaseCost{Phase: phase, PlanningDigest: planning, AttemptDigest: attempt, RequestDigest: request, SealDigest: acceptanceDigest([]byte(phase)), StdoutSHA256: acceptanceDigest([]byte("result")), StderrSHA256: acceptanceDigest(raw), WorkerOutputBytes: 4096, Metrics: metrics})
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*acceptanceCorpusResult, *[]acceptanceCorpusPhaseCost)
+		valid  bool
+	}{
+		{"both-phases", func(*acceptanceCorpusResult, *[]acceptanceCorpusPhaseCost) {}, true},
+		{"unavailable", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) { *c = nil }, true},
+		{"empty-pass", func(r *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) { r.CostGate = "pass"; *c = nil }, false},
+		{"partial", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) { *c = (*c)[:1] }, false},
+		{"phase", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) { (*c)[1].Phase = typedindex.Plan }, false},
+		{"owner", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) {
+			(*c)[1].AttemptDigest = acceptanceDigest([]byte("foreign"))
+		}, false},
+		{"stderr-hash", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) {
+			(*c)[1].StderrSHA256 = acceptanceDigest([]byte("foreign"))
+		}, false},
+		{"request", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) { (*c)[1].RequestDigest = planning }, false},
+		{"output", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) {
+			(*c)[1].WorkerOutputBytes = typedsandbox.OutputBytes
+		}, false},
+		{"qualified", func(_ *acceptanceCorpusResult, c *[]acceptanceCorpusPhaseCost) {
+			(*c)[1].Metrics.Observations.FDCountsNonAtomic = false
+		}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &acceptanceCorpusResult{CostGate: "unavailable", CostMissing: []string{"sampled_child_lifetimes", "sampled_fd_counts", "private_cache_inventory"}}
+			input := slices.Clone(costs)
+			tc.mutate(r, &input)
+			if err := acceptanceCorpusSetCost(r, input); (err == nil) != tc.valid {
+				t.Fatal("cost completion classification", err)
+			}
+		})
+	}
+	// Exported healthy-looking scalars plus genuine cost JSON cannot mint the
+	// private successful native completion token from another invocation.
+	fake := typedsandbox.Result{ExitCode: 0, Removed: true, Stdout: []byte(`{"schema":"phebs-bazel-worker-result-v1","request_digest":"` + planning + `","phase":"plan"}`), Stderr: raw}
+	if _, err := acceptanceCorpusCost(t.Context(), typedsandbox.Options{}, fake); err == nil {
+		t.Fatal("copied result bypassed native completion token")
+	}
+}
+
+func acceptanceCorpusLocation(c nativeAcceptanceConfig, p acceptanceOraclePoint, l *codenav.Location) bool {
+	return l != nil && l.Repo == c.Source.Repository && l.Revision == c.Source.Commit && l.Path == p.Path && l.Encoding == codenav.EncodingUTF8 && l.Range == acceptanceCorpusRange(p)
+}
+func acceptanceCorpusRange(p acceptanceOraclePoint) codenav.CodeRange {
+	return codenav.CodeRange{Start: codenav.CodePosition{Line: p.Range[0], Character: p.Range[1]}, End: codenav.CodePosition{Line: p.Range[0], Character: p.Range[2]}}
+}
 
 // Every query/open/final check re-reads real exact current authority. There is
 // no mutable binding map, imported source authority or Git fallback here.
