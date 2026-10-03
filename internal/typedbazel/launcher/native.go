@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 const (
@@ -349,8 +349,8 @@ func RunNativeCompatibility(ctx context.Context, plan planner.Plan, roots []plan
 	if err != nil {
 		return CompatibilityResult{}, err
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 {
-		return CompatibilityResult{}, errors.New("native compatibility driver requires admitted Linux arm64 worker")
+	if !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 {
+		return CompatibilityResult{}, errors.New("native compatibility driver requires an admitted Linux worker")
 	}
 	if err := checkPinnedDriver(NativeDriverSHA256); err != nil {
 		return CompatibilityResult{}, err

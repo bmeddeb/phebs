@@ -88,6 +88,8 @@ type Config struct {
 }
 
 func ReducedConfig() Config {
+	// GOARCH stays arm64 so the historical reduced profile digest remains exact.
+	// Worker, image, and tool execution follow the admitted host separately.
 	return Config{GOOS: "linux", GOARCH: "arm64", Mode: "fastbuild", SkipTests: true, SkipImplementations: true, GeneratedDocuments: "omit", Network: "none", Scratch: "ext4-direct-io"}
 }
 

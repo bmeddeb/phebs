@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -123,9 +125,10 @@ func TestCompatibilityBoundary(t *testing.T) {
 			}},
 			{"mixed archive mode", func(p *planner.Plan) { p.Units[1].Mode.Cgo = true }},
 			{"SDK mode mismatch", func(p *planner.Plan) { p.SDKs[0].Mode.Cgo = true }},
+			{"mixed architecture", func(p *planner.Plan) { p.Units[1].Mode.GOARCH = "amd64" }},
 			{"wrong platform", func(p *planner.Plan) {
 				for i := range p.Units {
-					p.Units[i].Mode.GOARCH = "amd64"
+					p.Units[i].Mode.GOARCH = "386"
 				}
 			}},
 			{"missing selected package", func(p *planner.Plan) { p.Units = p.Units[:1] }},
@@ -318,7 +321,7 @@ func testCompatibilityResponse(t *testing.T) {
 	if err := json.Unmarshal(raw, &before); err != nil {
 		t.Fatal(err)
 	}
-	before["Compiler"], before["Arch"], before["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)
+	before["Compiler"], before["Arch"], before["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(strconv.Quote(runtime.GOARCH)), json.RawMessage(`25`)
 	want, err := json.Marshal(before)
 	if err != nil || !bytes.Equal(want, result.Response) {
 		t.Fatal("adaptation changed more than uniform metadata")

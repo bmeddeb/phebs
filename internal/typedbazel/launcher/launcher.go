@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 const (
@@ -181,7 +181,7 @@ func Prepare(plan planner.Plan, roots []planner.Configured) (Prepared, error) {
 		if other := labelOwners[u.ArchiveLabel]; other != "" && other != id {
 			return Prepared{}, fmt.Errorf("%w: repeated label configuration or archive variant", ErrUnrepresentable)
 		}
-		if u.Mode.GOOS != "linux" || u.Mode.GOARCH != "arm64" || len(u.Mode.Tags) > 64 {
+		if u.Mode.GOOS != "linux" || !typedindex.AdmittedNativeArch(u.Mode.GOARCH) || len(u.Mode.Tags) > 64 {
 			return Prepared{}, fmt.Errorf("%w: archive mode", ErrUnrepresentable)
 		}
 		if len(selected) > 0 && jsonHash(selectedMode) != jsonHash(u.Mode) {
@@ -436,8 +436,8 @@ func Run(ctx context.Context, plan planner.Plan, roots []planner.Configured, dri
 	if err != nil {
 		return nil, err
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 {
-		return nil, errors.New("driver requires admitted Linux arm64 worker")
+	if !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 {
+		return nil, errors.New("driver requires an admitted Linux worker")
 	}
 	if err := checkDriver(driverSHA256); err != nil {
 		return nil, err
@@ -518,7 +518,7 @@ func checkPinnedDriver(want string) error {
 	for _, s := range info.Settings {
 		settings[s.Key] = s.Value
 	}
-	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || settings["GOARCH"] != "arm64" || settings["CGO_ENABLED"] != "0" || settings["GOARM64"] != "v8.0" {
+	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || !typedindex.AdmittedNativeArch(settings["GOARCH"]) || settings["CGO_ENABLED"] != "0" || !typedindex.AdmittedNativeVariant(settings["GOARCH"], settings["GOARM64"], settings["GOAMD64"]) {
 		return errors.New("driver closed build profile mismatch")
 	}
 	return nil

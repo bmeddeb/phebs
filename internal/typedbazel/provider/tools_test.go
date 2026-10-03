@@ -40,11 +40,12 @@ func TestCheckBuildRejectsIncorrectCmdMetadata(t *testing.T) {
 		{"nil", nil, "cmd/go", false},
 		{"wrong-main", buildInfo("example.invalid/other", "go1.25.0", linuxArm64), "cmd/go", false},
 		{"wrong-goos", buildInfo("cmd/go", "go1.25.0", map[string]string{"GOOS": "darwin", "GOARCH": "arm64"}), "cmd/go", false},
-		{"wrong-goarch", buildInfo("cmd/go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "amd64"}), "cmd/go", false},
+		{"wrong-goarch", buildInfo("cmd/go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "386"}), "cmd/go", false},
 		{"wrong-go-version", buildInfo("cmd/go", "go1.99.0", linuxArm64), "cmd/go", false},
 		{"typed-wrong-go-version", buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.24.0", map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "0", "GOARM64": "v8.0"}, &debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}), "github.com/scip-code/scip-go/cmd/scip-go", true},
 		{"typed-cgo-enabled", buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "1", "GOARM64": "v8.0"}, &debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}), "github.com/scip-code/scip-go/cmd/scip-go", true},
 		{"typed-wrong-goarm64", buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "0", "GOARM64": "v8.1"}, &debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}), "github.com/scip-code/scip-go/cmd/scip-go", true},
+		{"typed-wrong-goamd64", buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0", "GOAMD64": "v2"}, &debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}), "github.com/scip-code/scip-go/cmd/scip-go", true},
 		{"typed-wrong-xtools-version", buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "0", "GOARM64": "v8.0"}, &debug.Module{Path: "golang.org/x/tools", Version: "v0.44.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}), "github.com/scip-code/scip-go/cmd/scip-go", true},
 		{"typed-missing-xtools", buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "0", "GOARM64": "v8.0"}), "github.com/scip-code/scip-go/cmd/scip-go", true},
 		{"typed-replaced-xtools", buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "arm64", "CGO_ENABLED": "0", "GOARM64": "v8.0"}, &debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8=", Replace: &debug.Module{Path: "example.invalid/x/tools"}}), "github.com/scip-code/scip-go/cmd/scip-go", true},
@@ -73,6 +74,15 @@ func TestCheckBuildAcceptsExactIdentities(t *testing.T) {
 		&debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="})
 	if err := checkBuild(typed, "github.com/scip-code/scip-go/cmd/scip-go", true); err != nil {
 		t.Fatalf("scip-go rejected: %v", err)
+	}
+	amd64 := buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0",
+		map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0", "GOAMD64": "v1"},
+		&debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="})
+	if err := checkBuild(amd64, "github.com/scip-code/scip-go/cmd/scip-go", true); err != nil {
+		t.Fatalf("amd64 scip-go rejected: %v", err)
+	}
+	if err := checkBuild(buildInfo("cmd/go", "go1.25.0", map[string]string{"GOOS": "linux", "GOARCH": "amd64"}), "cmd/go", false); err != nil {
+		t.Fatalf("amd64 cmd/go rejected: %v", err)
 	}
 }
 

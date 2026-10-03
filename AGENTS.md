@@ -999,11 +999,12 @@ test-source association, extractor expansion, automatic authority adapters,
 and the distributed P6 profile remain separately reviewed future work.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
 completeness, migration-completion, or decommission-safety claim exists.
-T45.6 native transport now uses SSH or direct execution on a dedicated Linux
-arm64 host and seals that host by observation. No personal ARM64 host or
-provisioning credential is available, so the frozen corpus cohorts and
-cross-cohort comparison are unexecuted. The STOP is
-`spike/t454/remote_arm64_admission_stop.json`. Bazel stays unregistered.
+T45.6 native transport uses SSH or direct execution and seals the live Linux
+host. `x86_64` admits `amd64` and `aarch64` admits `arm64`; the observed CPU
+count must be at least 2. Worker limits stay exact. The earlier ARM64-only
+stop is superseded by `spike/t454/host_geometry_admission.json`. The frozen
+corpus cohorts and cross-cohort comparison are unexecuted. Bazel stays
+unregistered.
 
 The public remote and hosted CI exist. `v0.2.0` is an immutable but unverified
 historical tag; `v0.2.1-dev` is the current source line and may be tagged only

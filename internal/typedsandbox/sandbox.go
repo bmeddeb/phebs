@@ -357,7 +357,7 @@ func (c *client) preflight(ctx context.Context, options Options) (string, error)
 	if _, err := c.request(ctx, "GET", "/images/"+options.ImageID+"/json", nil, &image, 200); err != nil {
 		return "", err
 	}
-	if image.ID != options.ImageID || image.OS != "linux" || image.Architecture != "arm64" || len(image.Config.Volumes) != 0 {
+	if image.ID != options.ImageID || image.OS != "linux" || image.Architecture != runtime.GOARCH || !typedindex.AdmittedNativeArch(image.Architecture) || len(image.Config.Volumes) != 0 {
 		return "", ErrRefused
 	}
 	allowed := map[string]bool{}

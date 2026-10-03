@@ -4,8 +4,8 @@
 check/build are offline. stage/run require a separately reviewed configuration
 hash and the already running dedicated VM. This script never starts a VM, pulls
 an image, downloads dependencies, changes a profile, or supplies Docker flags.
-Transport is direct execution on that arm64 host, or SSH to it. It never reads
-a Colima profile or invents one.
+Transport is direct execution on the admitted Linux host, or SSH to it. The
+host is x86_64 or aarch64. It never reads a Colima profile or invents one.
 
 It drives exactly ONE finite preparation invocation (no case loop, no retry, no
 downloader, no installer, no general job framework). The offline bounded archive
@@ -27,7 +27,7 @@ import tarfile
 from native_acceptance import (
     read_ustar, digest, canonical, decode, hash_valid, regular, read,
     file_hash, relative, exclusive, PROFILE, MAX_FILE, MAX_RECEIPT,
-    remote_argv, check_deployment_host,
+    remote_argv, check_deployment_host, host_goarch,
 )
 
 BASE = Path('/var/lib/phebs-typed-preparation')
@@ -246,7 +246,7 @@ def build(output):
     output = Path(output).absolute()
     output.mkdir(mode=0o700)  # deliberately refuses an existing output directory
     repo = Path(__file__).resolve().parents[2]
-    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH='arm64', CGO_ENABLED='0')
+    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=host_goarch(), CGO_ENABLED='0')
     subprocess.run(['go', 'test', '-c', '-o', str(output / 'native-preparation.test'), './internal/typedbazel/provider'], cwd=repo, env=env, check=True, timeout=300)
     print('native-preparation.test', *file_hash(output / 'native-preparation.test', MAX_FILE))
     print('Unfilled: finalized neutral lock/cache, pre-selection inventory, profile, VM engine/formatter/image and source identities. No config was invented.')

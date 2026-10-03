@@ -113,14 +113,14 @@ func checkBuild(info *debug.BuildInfo, main string, typed bool) error {
 		}
 		settings[s.Key] = s.Value
 	}
-	if settings["GOOS"] != "linux" || settings["GOARCH"] != "arm64" {
+	if settings["GOOS"] != "linux" || !typedindex.AdmittedNativeArch(settings["GOARCH"]) {
 		return typedindex.Unsupported
 	}
 	if main == "cmd/go" && info.GoVersion != "go1.25.0" {
 		return typedindex.Unsupported
 	}
 	if typed {
-		if info.GoVersion != "go1.25.0" || settings["CGO_ENABLED"] != "0" || settings["GOARM64"] != "v8.0" {
+		if info.GoVersion != "go1.25.0" || settings["CGO_ENABLED"] != "0" || !typedindex.AdmittedNativeVariant(settings["GOARCH"], settings["GOARM64"], settings["GOAMD64"]) {
 			return typedindex.Unsupported
 		}
 		count := 0

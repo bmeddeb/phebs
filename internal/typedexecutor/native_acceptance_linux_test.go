@@ -290,7 +290,7 @@ func TestTypedNativeAcceptance(t *testing.T) {
 		}
 		t.Skip("requires a separately reviewed and approved native configuration")
 	}
-	if runtime.GOARCH != "arm64" || os.Geteuid() != 0 || !acceptanceCaseValid(*acceptanceCase) {
+	if !typedindex.AdmittedNativeArch(runtime.GOARCH) || runtime.NumCPU() < 2 || os.Geteuid() != 0 || !acceptanceCaseValid(*acceptanceCase) {
 		t.Fatal("native platform/case refused")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 540*time.Second)
@@ -1940,7 +1940,7 @@ func acceptanceDeployment(ctx context.Context, c nativeAcceptanceConfig, d *acce
 		return errors.New("deployment identity")
 	}
 	var expected nativeDeployment
-	if acceptanceDecode(raw, 16384, &expected) != nil || expected.Schema != "phebs-typed-native-deployment-v1" || expected.Profile != "phebs-t451a" || !acceptanceHash(expected.VMConfigSHA256) || !acceptanceHash(expected.OSReleaseSHA256) || !acceptanceHash(expected.RuntimesSHA256) || expected.Architecture != "arm64" || expected.CPUs != 2 || expected.MemoryTotalKB == 0 || expected.DaemonID == "" || expected.DockerVersion == "" || expected.KernelRelease == "" || expected.CgroupDriver == "" {
+	if acceptanceDecode(raw, 16384, &expected) != nil || expected.Schema != "phebs-typed-native-deployment-v1" || expected.Profile != "phebs-t451a" || !acceptanceHash(expected.VMConfigSHA256) || !acceptanceHash(expected.OSReleaseSHA256) || !acceptanceHash(expected.RuntimesSHA256) || expected.Architecture != runtime.GOARCH || !typedindex.AdmittedNativeArch(expected.Architecture) || expected.CPUs != runtime.NumCPU() || expected.CPUs < 2 || expected.MemoryTotalKB < uint64(typedsandbox.MemoryBytes)/1024 || expected.DaemonID == "" || expected.DockerVersion == "" || expected.KernelRelease == "" || expected.CgroupDriver == "" {
 		return errors.New("unfilled deployment")
 	}
 	kernel, e := acceptanceSystemRead("/proc/sys/kernel/osrelease", 256)

@@ -128,7 +128,7 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		if d.fault == "image volume" {
 			imageConfig.Volumes = map[string]struct{}{"/escape": {}}
 		}
-		write(200, map[string]any{"Id": testImage, "Os": "linux", "Architecture": "arm64", "Config": imageConfig})
+		write(200, map[string]any{"Id": testImage, "Os": "linux", "Architecture": runtime.GOARCH, "Config": imageConfig})
 	case path == "/containers/json":
 		if d.fault == "census unavailable" {
 			write(500, nil)

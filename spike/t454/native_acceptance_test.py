@@ -381,7 +381,7 @@ class AcceptanceTests(unittest.TestCase):
             self.assertNotIn('shell', run.call_args.kwargs)
         with mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'ssh', 'PHEBS_TYPED_NATIVE_SSH_TARGET': '-oProxyCommand=evil'}), self.assertRaises(ValueError):
             n.transport(['collect', 'neutral-1', 'success', h], timeout=30)
-        with mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), self.assertRaisesRegex(ValueError, 'arm64'):
+        with mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), mock.patch.object(n.os, 'uname', return_value=type('Host', (), {'machine': 'ppc64le'})()), self.assertRaisesRegex(ValueError, 'admitted linux host'):
             n.transport(['collect', 'neutral-1', 'success', h], timeout=30)
 
     def test_receipt_exclusive_and_bound(self):
@@ -527,6 +527,20 @@ class AcceptanceTests(unittest.TestCase):
         small['memory_total_kb'] = n.POLICY['memory_bytes'] // 1024 - 1
         with self.assertRaisesRegex(ValueError, 'memory'):
             n.deployment_from_observation(small)
+        wide = dict(obs)
+        wide['architecture'] = 'amd64'
+        wide['cpus'] = 4
+        self.assertEqual(n.deployment_from_observation(wide)['architecture'], 'amd64')
+        self.assertEqual(n.deployment_from_observation(wide)['cpus'], 4)
+        for bad in ({'architecture': '386', 'cpus': 4}, {'architecture': 'amd64', 'cpus': 1}):
+            refused = dict(obs)
+            refused.update(bad)
+            with self.assertRaisesRegex(ValueError, 'geometry'):
+                n.deployment_from_observation(refused)
+        if os.uname().machine == 'x86_64':
+            self.assertEqual(n.host_goarch(), 'amd64')
+        elif os.uname().machine == 'aarch64':
+            self.assertEqual(n.host_goarch(), 'arm64')
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / 'deployment.json'
             with mock.patch.object(n, 'observe_host', return_value=obs):
@@ -537,15 +551,15 @@ class AcceptanceTests(unittest.TestCase):
             with mock.patch.object(n, 'observe_host', return_value=changed), self.assertRaisesRegex(ValueError, 'observation changed'):
                 n.check_deployment_host(path)
 
-    def test_direct_transport_executes_only_on_the_arm64_host(self):
-        class Host:
-            machine = 'aarch64'
-        with mock.patch.object(n.os, 'uname', return_value=Host()), mock.patch.object(n.os, 'geteuid', return_value=0), mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), mock.patch.object(subprocess, 'run') as run:
-            n.transport(['collect', 'neutral-1', 'success', 'sha256:' + 'a' * 64], timeout=30)
-            self.assertEqual(run.call_args.args[0][:2], ['python3', '-c'])
-        with mock.patch.object(n.os, 'uname', return_value=Host()), mock.patch.object(n.os, 'geteuid', return_value=1000), mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), mock.patch.object(subprocess, 'run') as run:
-            n.transport(['collect', 'neutral-1', 'success', 'sha256:' + 'a' * 64], timeout=30)
-            self.assertEqual(run.call_args.args[0][:4], ['sudo', '-n', 'python3', '-c'])
+    def test_direct_transport_executes_on_an_admitted_host(self):
+        for machine in ('aarch64', 'x86_64'):
+            host = type('Host', (), {'machine': machine})()
+            with mock.patch.object(n.os, 'uname', return_value=host), mock.patch.object(n.os, 'geteuid', return_value=0), mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), mock.patch.object(subprocess, 'run') as run:
+                n.transport(['collect', 'neutral-1', 'success', 'sha256:' + 'a' * 64], timeout=30)
+                self.assertEqual(run.call_args.args[0][:2], ['python3', '-c'])
+            with mock.patch.object(n.os, 'uname', return_value=host), mock.patch.object(n.os, 'geteuid', return_value=1000), mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), mock.patch.object(subprocess, 'run') as run:
+                n.transport(['collect', 'neutral-1', 'success', 'sha256:' + 'a' * 64], timeout=30)
+                self.assertEqual(run.call_args.args[0][:4], ['sudo', '-n', 'python3', '-c'])
 
 
 if __name__ == '__main__':

@@ -4,8 +4,8 @@
 check/build are offline. stage/run require a separately reviewed configuration
 hash and the already running dedicated VM. This script never starts a VM, pulls
 an image, downloads dependencies, changes a profile, or supplies Docker flags.
-Transport is direct execution on that arm64 host, or SSH to it. It never reads
-a Colima profile or invents one.
+Transport is direct execution on the admitted Linux host, or SSH to it. The
+host is x86_64 or aarch64. It never reads a Colima profile or invents one.
 """
 import argparse
 import hashlib
@@ -386,11 +386,17 @@ def remote_command(program, arguments):
     return ' '.join(sh_quote(part) for part in ('sudo', '-n', 'python3', '-c', program, *arguments))
 
 
+def host_goarch():
+    arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}.get(os.uname().machine)
+    if arch is None:
+        fail('admitted linux host')
+    return arch
+
+
 def remote_argv(program, arguments):
     mode = os.environ.get('PHEBS_TYPED_NATIVE_TRANSPORT', '')
     if mode == 'direct':
-        if os.uname().machine != 'aarch64':
-            fail('direct transport requires the dedicated arm64 host')
+        host_goarch()
         if os.geteuid() == 0:
             return ['python3', '-c', program, *arguments]
         return ['sudo', '-n', 'python3', '-c', program, *arguments]
@@ -428,7 +434,9 @@ def _observer_main():
     for line in memory.decode().split('\n'):
         if line.startswith('MemTotal:'):
             total = int(line.split()[1])
-    if total is None or os.cpu_count() != 2 or os.uname().machine != 'aarch64' or not kernel:
+    arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}.get(os.uname().machine)
+    cpus = os.cpu_count()
+    if total is None or arch is None or not isinstance(cpus, int) or cpus < 2 or not kernel:
         raise SystemExit('geometry')
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.settimeout(2)
@@ -463,8 +471,8 @@ def _observer_main():
         'schema': 'phebs-typed-native-host-observation-v1',
         'kernel_release': kernel,
         'os_release_sha256': digest(osrelease),
-        'architecture': 'arm64',
-        'cpus': 2,
+        'architecture': arch,
+        'cpus': cpus,
         'memory_total_kb': total,
         'daemon_id': json.loads(wanted['ID']),
         'docker_version': json.loads(wanted['ServerVersion']),
@@ -490,7 +498,7 @@ OBSERVER = (
 def deployment_from_observation(obs):
     if tuple(obs) != OBSERVATION_KEYS or obs['schema'] != 'phebs-typed-native-host-observation-v1':
         fail('host observation')
-    if obs['architecture'] != 'arm64' or type(obs['cpus']) is not int or obs['cpus'] != 2:
+    if obs['architecture'] not in ('arm64', 'amd64') or type(obs['cpus']) is not int or obs['cpus'] < 2:
         fail('host geometry')
     if type(obs['memory_total_kb']) is not int or obs['memory_total_kb'] * 1024 < POLICY['memory_bytes']:
         fail('host memory below measured envelope')
@@ -822,7 +830,7 @@ def build(output):
     output = Path(output).absolute()
     output.mkdir(mode=0o700)  # deliberately refuses an existing output directory
     repo = Path(__file__).resolve().parents[2]
-    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH='arm64', CGO_ENABLED='0')
+    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=host_goarch(), CGO_ENABLED='0')
     subprocess.run(['go', 'build', '-trimpath', '-o', str(output / 'phebs'), './cmd/phebs'], cwd=repo, env=env, check=True, timeout=300)
     subprocess.run(['go', 'test', '-c', '-o', str(output / 'native-acceptance.test'), './internal/typedexecutor'], cwd=repo, env=env, check=True, timeout=300)
     for name in ('phebs', 'native-acceptance.test'):

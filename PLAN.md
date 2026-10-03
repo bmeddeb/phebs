@@ -8881,3 +8881,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   proto, fanout, and the cross-cohort comparison are not executed. The
   source-free STOP and setup proposal are
   `spike/t454/remote_arm64_admission_stop.json`. Bazel stays unregistered.
+
+- **2026-10-03 — T45.6 admits the live Linux host.** The ceremony no longer
+  requires an arm64 machine or exactly two host CPUs. `x86_64` seals
+  architecture `amd64` and `aarch64` seals `arm64`. The sealed CPU count is
+  the live processor count and must be at least 2. Worker process checks,
+  container image architecture, tool build settings, command `GOARCH`, and
+  metadata adaptation follow that host. The historical reduced profile
+  `GOARCH` stays `arm64`, so its sealed digest is unchanged. arm64 tools keep
+  `GOARM64=v8.0`. amd64 tools require `GOAMD64=v1`. Mixed architectures in
+  one plan still refuse. The worker cgroup quota stays `200000/100000`, and
+  the memory floor stays 4,533,092,352 bytes. Scratch, wall, output, task,
+  descriptor, and SCIP limits are unchanged. Direct transport runs on either
+  admitted machine; any other machine refuses. Observation remains one
+  bounded SSH or local read per admission check. It adds no production
+  query, tick, startup, publication, or child. The corpus, oracle, and Bazel
+  registration are unchanged. Ordinary, proto, fanout, and the cross-cohort
+  comparison are not executed by this decision. The earlier ARM64 stop stays
+  at `spike/t454/remote_arm64_admission_stop.json` and is superseded by
+  `spike/t454/host_geometry_admission.json`.

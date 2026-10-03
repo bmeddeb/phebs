@@ -15211,12 +15211,14 @@ correctness/cost passes and cross-cohort comparison remain open, with frozen
 VM capacity still unresolved. Bazel remains unregistered; T45.7 waits for
 Bazel closure.
 
-Native acceptance and preparation now reach the dedicated host by SSH or by
-direct execution on that arm64 machine. Deployment attestation is a live host
-observation; Colima configuration is not an input. No personal ARM64 host or
-provisioning credential is available, so the three cohort gates and the
-cross-cohort comparison remain unexecuted. The STOP and setup proposal are
-`spike/t454/remote_arm64_admission_stop.json`.
+Native acceptance and preparation reach the execution host by SSH or by
+direct execution. The ceremony admits the live Linux host: `x86_64`/`amd64`
+or `aarch64`/`arm64`, with the observed CPU count when it is at least 2.
+Worker quota, memory floor, scratch, wall, output, task, and descriptor
+limits stay exact. The earlier ARM64-only stop remains at
+`spike/t454/remote_arm64_admission_stop.json` and is superseded by
+`spike/t454/host_geometry_admission.json`. The three cohort gates and the
+cross-cohort comparison remain unexecuted. Bazel stays unregistered.
 
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
