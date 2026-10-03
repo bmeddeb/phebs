@@ -419,6 +419,51 @@ def transport(arguments, **kwargs):
     return invoke(REMOTE, arguments, **kwargs)
 
 
+def docker_body(head, body):
+    """Return one info body. Content-Length stays exact; chunked is the same 1 MiB cap."""
+    length = None
+    chunked = False
+    for line in head.split(b'\r\n')[1:]:
+        lower = line.lower()
+        if lower.startswith(b'content-length:'):
+            if length is not None:
+                raise SystemExit('docker length')
+            length = int(line.split(b':', 1)[1].strip())
+        elif lower.startswith(b'transfer-encoding:'):
+            chunked = line.split(b':', 1)[1].strip().lower() == b'chunked'
+    if length is not None and chunked:
+        raise SystemExit('docker length')
+    if length is not None:
+        if length < 0 or length > 1 << 20 or len(body) < length:
+            raise SystemExit('docker length')
+        return body[:length]
+    if not chunked:
+        raise SystemExit('docker length')
+    out = b''
+    rest = body
+    while True:
+        line, sep, rest = rest.partition(b'\r\n')
+        if not sep:
+            raise SystemExit('docker length')
+        size_text = line.split(b';', 1)[0]
+        if not size_text or any(c not in b'0123456789abcdefABCDEF' for c in size_text):
+            raise SystemExit('docker length')
+        size = int(size_text, 16)
+        if size == 0:
+            if len(out) > 1 << 20:
+                raise SystemExit('docker length')
+            return out
+        if size > (1 << 20) - len(out) or len(rest) < size + 2 or rest[size:size + 2] != b'\r\n':
+            raise SystemExit('docker length')
+        out += rest[:size]
+        rest = rest[size + 2:]
+
+
+def info_object(payload):
+    """Drop only the encoder's trailing whitespace. Field bytes stay raw."""
+    return payload.rstrip(b' \t\r\n')
+
+
 def _observer_main():
     kernel = open('/proc/sys/kernel/osrelease', 'rb').read(257)
     if len(kernel) > 256:
@@ -453,14 +498,9 @@ def _observer_main():
     head, sep, body = buf.partition(b'\r\n\r\n')
     if not sep or b' 200 ' not in head.split(b'\r\n', 1)[0]:
         raise SystemExit('docker status')
-    length = None
-    for line in head.split(b'\r\n')[1:]:
-        if line.lower().startswith(b'content-length:'):
-            length = int(line.split(b':', 1)[1].strip())
-    if length is None or length > 1 << 20 or len(body) < length:
-        raise SystemExit('docker length')
+    payload = info_object(docker_body(head, body))
     wanted = {}
-    for key, value in json_pairs(body[:length]):
+    for key, value in json_pairs(payload):
         if key in ('ID', 'ServerVersion', 'CgroupDriver', 'KernelVersion', 'Runtimes'):
             wanted[key] = value
     if set(wanted) != {'ID', 'ServerVersion', 'CgroupDriver', 'KernelVersion', 'Runtimes'}:
@@ -490,6 +530,8 @@ OBSERVER = (
     + inspect.getsource(json_pairs)
     + inspect.getsource(canonical)
     + inspect.getsource(canonical_object)
+    + inspect.getsource(docker_body)
+    + inspect.getsource(info_object)
     + inspect.getsource(_observer_main)
     + '_observer_main()\n'
 )

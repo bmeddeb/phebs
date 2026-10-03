@@ -1006,7 +1006,9 @@ stop is superseded by `spike/t454/host_geometry_admission.json`. The frozen
 corpus cohorts and cross-cohort comparison are unexecuted. Bazel stays
 unregistered. This x86_64 host runs Ubuntu Docker 29.1.3, but its kernel has
 no AppArmor and `/v1.47/info` is chunked, so no deployment is sealed and no
-cohort runs (`spike/t454/amd64_apparmor_kernel_stop.json`).
+cohort runs (`spike/t454/amd64_apparmor_kernel_stop.json`). The chunked body
+is now accepted under the same 1 MiB cap. The live deployment is sealed at
+`spike/t454/amd64-deployment.json`. AppArmor preflight still refuses a run.
 
 The public remote and hosted CI exist. `v0.2.0` is an immutable but unverified
 historical tag; `v0.2.1-dev` is the current source line and may be tagged only

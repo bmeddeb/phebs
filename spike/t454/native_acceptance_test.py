@@ -510,6 +510,25 @@ class AcceptanceTests(unittest.TestCase):
     def test_host_observation_replaces_colima_attestation(self):
         self.assertNotIn('colima', Path(n.__file__).read_text())
         compile(n.OBSERVER, '<observer>', 'exec')
+        self.assertIn('def docker_body(', n.OBSERVER)
+        payload = b'{"ID":"daemon"}'
+        self.assertEqual(n.info_object(payload + b'\n'), payload)
+        self.assertEqual(n.json_pairs(n.info_object(payload + b'\n'))[0][0], 'ID')
+        framed = f'{len(payload):x}\r\n'.encode() + payload + b'\r\n0\r\n\r\n'
+        self.assertEqual(n.docker_body(b'HTTP/1.1 200 OK\r\nContent-Length: ' + str(len(payload)).encode() + b'\r\n\r\n', payload + b'extra'), payload)
+        self.assertEqual(n.docker_body(b'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n', b'4\r\n{"ID\r\n' + f'{len(payload) - 4:x}'.encode() + b'\r\n' + payload[4:] + b'\r\n0\r\n\r\n'), payload)
+        self.assertEqual(n.docker_body(b'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n', framed), payload)
+        for head, body in (
+            (b'HTTP/1.1 200 OK\r\n\r\n', payload),
+            (b'HTTP/1.1 200 OK\r\nContent-Length: 3\r\nTransfer-Encoding: chunked\r\n\r\n', framed),
+            (b'HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\n', b'short'),
+            (b'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n', b'100001\r\n' + b'x' * ((1 << 20) + 1) + b'\r\n0\r\n\r\n'),
+            (b'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n', b'zz\r\n'),
+            (b'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n', b'2\r\nab'),
+        ):
+            with self.assertRaises(SystemExit) as refused:
+                n.docker_body(head, body)
+            self.assertEqual(refused.exception.code, 'docker length')
         for text in ('colima', 'shell=True', 'docker run', '--privileged'):
             self.assertNotIn(text, n.OBSERVER)
         raw = b'{"b":1,"a":{"z":2,"y":1}}'

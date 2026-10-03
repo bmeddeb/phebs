@@ -8925,3 +8925,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retry, publication, lock, cache, or child. The probes are one-shot local
   Docker reads and one short-lived container. Ordinary runtime cost is
   unchanged.
+
+- **2026-10-03 — T45.6 seals the live amd64 deployment.** The observer still
+  accepts an exact `Content-Length` body. A chunked info response is decoded
+  in place of that length, still capped at 1 MiB, and refused when both
+  encodings are present, the chunks are truncated, or the size is not hex.
+  One trailing whitespace strip removes the JSON encoder's newline; runtime
+  field bytes stay raw. The same field set and kernel match remain. The live
+  seal is `spike/t454/amd64-deployment.json`,
+  `sha256:85ece7516a7dca9b5a82842ac560921db078dd316b5dd3fb6df297867e16afdb`,
+  architecture `amd64`, 4 CPUs, MemTotal 16,398,384 kB, daemon
+  `a9035234-31d5-4908-9eec-868ffe24d8b9`. A second observation matched it.
+  The AppArmor stop stays exact. No corpus attempt is spent. Bazel stays
+  unregistered.
+
+  **Cost.** Observation remains one bounded socket read and one decode per
+  admission check. It adds no production query, tick, startup, publication,
+  lock, cache, or child.
