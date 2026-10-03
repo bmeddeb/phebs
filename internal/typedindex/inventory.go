@@ -40,6 +40,15 @@ type Inventory struct {
 func (i Inventory) Digest() string      { return i.digest }
 func (i Inventory) Files() []BundleFile { return slices.Clone(i.files) }
 func (i Inventory) Bytes() int64        { return i.bytes }
+
+// File looks up an immutable entry without copying the complete inventory.
+func (i Inventory) File(name string) (BundleFile, bool) {
+	n, ok := slices.BinarySearchFunc(i.files, name, func(f BundleFile, name string) int { return strings.Compare(f.Path, name) })
+	if !ok {
+		return BundleFile{}, false
+	}
+	return i.files[n], true
+}
 func DecodeInventory(ctx context.Context, raw []byte, expected string) (Inventory, error) {
 	if err := ctx.Err(); err != nil {
 		return Inventory{}, err

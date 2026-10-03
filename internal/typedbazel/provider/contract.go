@@ -121,6 +121,9 @@ func (i Invocation) validate(ctx context.Context) error {
 	if e := ctx.Err(); e != nil {
 		return e
 	}
+	if i.Parent.Request().Provider != i.Profile.Provider() {
+		return typedindex.Unsupported
+	}
 	switch i.Phase {
 	case typedindex.Plan:
 		if i.Execution.Digest() != "" || i.Plan.Digest() != "" || i.Allowance.WorkerBytesUsed != 0 || i.Allowance.WireBytesUsed != 0 {
@@ -137,7 +140,7 @@ func (i Invocation) validate(ctx context.Context) error {
 	default:
 		return typedindex.Invalid
 	}
-	if !pinnedProfile(i.Profile) {
+	if i.Profile.Definition().Schema != typedindex.InputProfileSchema && !pinnedProfile(i.Profile) {
 		return typedindex.Unsupported
 	}
 	return nil

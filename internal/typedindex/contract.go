@@ -20,6 +20,7 @@ const (
 	ProviderID             = "bazel-rules-go-scip-v1"
 	ProfileSchema          = "phebs-typed-profile-v1"
 	GeneratedProfileSchema = "phebs-typed-profile-v2"
+	InputProfileSchema     = "phebs-typed-input-profile-v1"
 	RequestSchema          = "phebs-typed-request-v1"
 	ManagedRequestSchema   = "phebs-typed-request-v2"
 	MaxProfileBytes        = 16 << 10
@@ -131,8 +132,8 @@ func (p Profile) Digest() string                { return p.digest }
 func (p Profile) Definition() ProfileDefinition { return p.definition }
 
 // Provider returns the validated profile's closed provider discriminant. Every
-// profile with a non-empty digest was admitted by DecodeProfile, which pins this
-// to ProviderID today; request authority derives its provider from here rather
+// profile with a non-empty digest was admitted by DecodeProfile, which validates
+// its provider-specific contract; request authority derives its provider here rather
 // than from a constant, so a request can never claim a provider its profile does
 // not carry.
 func (p Profile) Provider() string { return p.definition.Provider }
@@ -148,7 +149,16 @@ func DecodeProfile(ctx context.Context, raw []byte) (Profile, error) {
 	if err := decode(raw, MaxProfileBytes, &d); err != nil {
 		return Profile{}, err
 	}
-	if (d.Schema != ProfileSchema && d.Schema != GeneratedProfileSchema) || !token(d.Name) || d.Provider != ProviderID || (!digest(d.BundleDigest) || !digest(d.ImageDigest)) {
+	if !token(d.Name) || !digest(d.BundleDigest) || !digest(d.ImageDigest) {
+		return Profile{}, Invalid
+	}
+	if d.Schema == InputProfileSchema {
+		if err := validateInputProfile(d); err != nil {
+			return Profile{}, err
+		}
+		return Profile{d, identity(d), identity(d.Config), identity(d.Tools), identity(d.Policy)}, nil
+	}
+	if (d.Schema != ProfileSchema && d.Schema != GeneratedProfileSchema) || d.Provider != ProviderID {
 		return Profile{}, Invalid
 	}
 	wantConfig := ReducedConfig()

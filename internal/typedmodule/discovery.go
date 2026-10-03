@@ -214,7 +214,7 @@ func moduleRoot(ctx context.Context, read func(string) ([]byte, error), dir, goM
 		return ModuleRoot{}, err
 	}
 	f, err := modfile.Parse(goMod, raw, nil)
-	if err != nil || f == nil || f.Module == nil || f.Module.Mod.Path == "" {
+	if err != nil || f == nil || f.Module == nil || module.CheckImportPath(f.Module.Mod.Path) != nil || strings.HasPrefix(f.Module.Mod.Path, "-") {
 		return ModuleRoot{}, typedindex.Invalid
 	}
 	// Discovery refuses any directive that alters module-graph or replacement
@@ -361,7 +361,7 @@ func normalizePackages(packages []string) ([]string, error) {
 // "./..." patterns, the all/std defaults, absolutes and empty/oversized values, so
 // no owned invocation can silently expand to a recursive default.
 func literalSelector(s string) bool {
-	if s == "" || len(s) > MaxPathBytes || strings.ContainsAny(s, "*\\\x00") {
+	if s == "" || len(s) > MaxPathBytes || strings.HasPrefix(s, "-") || strings.ContainsAny(s, "*\\\x00") {
 		return false
 	}
 	if strings.Contains(s, "...") {
@@ -490,7 +490,7 @@ func (s ModuleSelection) validate() error {
 		expected[r.GoMod] = true
 		prev = r.Path
 	}
-	if s.Mode == ModeSingle && s.Roots[0].GoMod != s.Entry {
+	if s.Mode == ModeSingle && (len(s.Roots) != 1 || s.Roots[0].GoMod != s.Entry) {
 		return typedindex.Invalid
 	}
 	pkgs, err := normalizePackages(s.Packages)
@@ -502,6 +502,11 @@ func (s ModuleSelection) validate() error {
 	}
 	for p, d := range s.Controls {
 		if !expected[p] || !isDigest(d) {
+			return typedindex.Invalid
+		}
+	}
+	for _, r := range s.Roots {
+		if module.CheckImportPath(r.Module) != nil || strings.HasPrefix(r.Module, "-") || s.Controls[r.GoMod] != r.Digest {
 			return typedindex.Invalid
 		}
 	}

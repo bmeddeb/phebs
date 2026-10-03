@@ -1,12 +1,7 @@
 package typedindex
 
-// T45.7 closed additional-input provider discriminants. These identifiers and
-// their ordering are the only thing this file introduces: neither provider is
-// implemented, registered, or available, and naming one grants no capability and
-// implies no authority. The frozen Bazel provider (ProviderID) remains the sole
-// execution authority. Selection definitions, discovery, workers, dispatch and
-// registration are separate later leaves that must keep every v1/v2 canonical
-// byte, identity and digest exact.
+// T45.7 closed additional-input provider discriminants. Describing an input
+// contract grants no runtime registration or execution availability.
 const (
 	ModuleProviderID = "go-module-scip-v1"
 	ImportProviderID = "imported-artifact-scip-v1"
@@ -38,11 +33,8 @@ func ProviderOrder() []string {
 	return out
 }
 
-// ProviderDescriptors returns one capability record per known provider in the
-// stable order. Only Bazel currently carries a planning contract, identical to
-// Describe(); the unimplemented T45.7 module and import providers report no
-// planning contract and no execution availability. Describing a provider is not
-// registering it, and an unavailable Bazel card stays unavailable.
+// ProviderDescriptors returns the implemented planning contracts in stable
+// order. Runtime registration is separate; every descriptor stays unavailable.
 func ProviderDescriptors() []Capabilities {
 	out := make([]Capabilities, 0, len(providerOrder))
 	for _, id := range providerOrder {
@@ -50,7 +42,7 @@ func ProviderDescriptors() []Capabilities {
 			out = append(out, Describe())
 			continue
 		}
-		out = append(out, Capabilities{Provider: id})
+		out = append(out, Capabilities{Provider: id, PlanningContract: true})
 	}
 	return out
 }

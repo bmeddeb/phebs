@@ -109,6 +109,9 @@ func DecodeRouting(ctx context.Context, a Admission, expected string, root, atte
 	if m.Request != a.request || !m.Complete || len(m.Members) == 0 || len(m.Members) > MaxSCIPMembers || len(m.Documents) > MaxBundleDocuments || len(m.Generated) > MaxBundleDocuments || len(m.Units) > MaxBundleUnits || len(m.Targets) > MaxBundleTargets {
 		return z, Invalid
 	}
+	if err := validateInputReceipt(a.profile, m.Input); err != nil {
+		return z, err
+	}
 	if m.Schema == SCIPGoAttemptSchema {
 		if err := validateSCIPGoReceipt(ctx, a.profile, m.SCIPGo); err != nil {
 			return z, err

@@ -15231,6 +15231,15 @@ registers no provider and establishes no availability, scale or release claim.
 T45.7's provider-specific acceptance criteria, immutable publication,
 authentication, execution bounds and applicable implementation checks remain.
 
+T45.7 implementation (2026-10-03): the existing executor now accepts separately
+sealed module/workspace and artifact-import profiles, retains input receipts and
+normalizes validated members into the common immutable publication contract.
+Exact source definitions, including occurrence-only definitions, bind the source
+commit; imports execute no producer tool. Provider descriptors stay unavailable
+and ordinary runtime installation stays nil. Local provider-specific native and
+code-review gates are recorded on the ticket branch before closure; this is not
+a Bazel corpus, release or registration result.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

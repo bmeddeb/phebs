@@ -1095,3 +1095,28 @@ fitting results and failure frames retain their original format. Both the
 physical shared output and each decoded result stay bounded. Compression does
 not change the shared wall limit or bypass plan, source, tool, caller or SCIP
 validation.
+
+T45.7 adds internal Go module/`go.work` and existing-artifact inputs behind the
+same managed publication contract. Ordinary startup still installs no managed
+provider: there is no new configuration switch or functioning generation control.
+Bazel remains first for detected/configured Bazel repositories. The2026-10-03
+sequencing waiver permits this work before the remaining Bazel corpus gate; it
+does not turn that gate into a pass or enable any provider.
+
+The module input requires an explicit `go.mod` or `go.work`, at most four exact
+module roots and512 explicit packages, pinned Go1.25.0/scip-go0.2.7, and offline
+immutable inputs. Recursive/wildcard selection, replacement directives, ambient
+Go flags and dependency downloads are refused. Package files and internal imports
+must match the sealed plan. Existing-artifact import copies authenticated SCIP
+bytes into managed immutable custody, checks declared producer and source commit,
+and requires exact document coverage and explicit root mappings when normalizing
+paths. Global definitions must match the source commit even when symbol metadata
+is absent; dependency references may retain external versions. A declared producer
+is provenance, not proof that its executable ran. Both inputs retain raw artifact
+hashes in the attempt receipt and use the existing publication, canary/dry-run,
+restart and exact-reuse contracts. No generic command provider is supported.
+
+For the pinned module tool, sibling workspace references using local version `.`
+are normalized only when an admitted module's exact commit-bound definition is
+present in the returned members. Missing definitions refuse publication. Import
+artifacts and external dependency versions are not rewritten by this adapter.

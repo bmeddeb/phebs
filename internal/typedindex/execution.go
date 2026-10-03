@@ -28,6 +28,9 @@ func (p Profile) Commands() (Commands, error) {
 	if p.digest == "" {
 		return Commands{}, Invalid
 	}
+	if p.definition.Provider != ProviderID {
+		return Commands{}, Unsupported
+	}
 	rc := "/dev/null"
 	if p.definition.RCDigest != "" {
 		rc = "/inputs/profile.bazelrc"

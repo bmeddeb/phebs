@@ -51,6 +51,29 @@ func TestDiscoverSingleModule(t *testing.T) {
 	}
 }
 
+func TestDiscoveryRefusesFlagSelectorsAndForgedSingleScope(t *testing.T) {
+	for _, selector := range []string{"--help", "-mod=mod", "-C=/outside"} {
+		if _, err := Discover(t.Context(), fakeSource{files: map[string][]byte{"go.mod": goMod("example.com/root", "1.25")}}, ModeSingle, "go.mod", []string{selector}); err == nil {
+			t.Fatal("flag selector accepted", selector)
+		}
+	}
+	src := fakeSource{files: map[string][]byte{"go.mod": goMod("example.com/root", "1.25"), "other/go.mod": goMod("example.com/other", "1.25")}}
+	sel, err := Discover(t.Context(), src, ModeSingle, "go.mod", []string{"example.com/root"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := Discover(t.Context(), src, ModeSingle, "other/go.mod", []string{"example.com/other"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sel.Roots = append(sel.Roots, other.Roots[0])
+	sel.Controls["other/go.mod"] = other.Controls["other/go.mod"]
+	raw, _ := sel.Encode()
+	if _, err := DecodeModuleSelection(t.Context(), raw); err == nil {
+		t.Fatal("single-module scope expanded")
+	}
+}
+
 func TestDiscoverSingleModuleIgnoresSiblingGoWork(t *testing.T) {
 	ctx := context.Background()
 	src := fakeSource{files: map[string][]byte{

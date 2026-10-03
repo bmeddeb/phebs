@@ -17,12 +17,13 @@ import (
 // DecodedResult owns its decoded bytes. It proves the returned protocol, not
 // sandbox success, quiescence, current authority or permission to publish.
 type DecodedResult struct {
-	adapted    []byte
-	receipt    typedindex.SCIPGoAdapterReceipt
-	invocation Invocation
-	result     Result
-	plan       typedindex.PackagePlan
-	valid      bool
+	inputBundle *typedindex.Bundle
+	adapted     []byte
+	receipt     typedindex.SCIPGoAdapterReceipt
+	invocation  Invocation
+	result      Result
+	plan        typedindex.PackagePlan
+	valid       bool
 }
 
 func (r DecodedResult) Plan() typedindex.PackagePlan { return r.plan }
@@ -50,6 +51,10 @@ func (r DecodedResult) Failure() *Failure {
 // exact authenticated inventory member; worker JSON cannot choose this input.
 // A valid failure returns bounded diagnostic custody and a nonnil closed error.
 func DecodeResult(ctx context.Context, i Invocation, selection, raw []byte) (DecodedResult, error) {
+	if i.Profile.Provider() != typedindex.ProviderID {
+		r, err := decodeInputResult(ctx, i, selection, raw)
+		return r, classify(err)
+	}
 	r, err := decodeResult(ctx, i, selection, raw)
 	return r, classify(err)
 }

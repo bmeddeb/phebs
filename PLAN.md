@@ -8881,3 +8881,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   zero query, sync, startup, retry, publication, lock, cache, disk or child work.
   Continue the existing T45.7 lineage where appropriate; no new main merge or
   push is authorized by this sequencing direction.
+
+- **2026-10-03 — T45.7 additional inputs share the managed executor.** The
+  closed module and artifact-import discriminants use the existing authenticated
+  plan/execute, workspace custody, publication and runtime composition. A separate
+  input profile preserves historical Bazel profile bytes and ordering. Module
+  discovery admits at most four explicit roots and 512 explicit package selectors;
+  no recursive discovery, ambient flags, network downloads or shell provider is
+  added. Offline Go1.25.0 package discovery must match sealed source documents and
+  internal dependency edges; pinned scip-go0.2.7 runs per selected root with the
+  exact source commit. Import authenticates immutable artifact bytes, declared
+  producer, root mappings, commit and exact coverage. Both SymbolInformation and
+  global definition occurrences bind scheme/manager/commit; external reference
+  versions remain independent. Raw member digests and selection/provenance receipts
+  survive normalized repository coordinates. Producer declaration is not execution
+  proof. The sequencing waiver remains a waiver, never a corpus PASS. All provider
+  descriptors remain execution-unavailable and ordinary runtime installation nil.
+  No UI, schema, configuration activation or registration changes.
+  Cost: no additional query, ordinary startup, sync tick or inactive retry work.
+  Active binding checks up to512 selectors quadratically for duplicates and scans
+  at most four roots plus the bounded plan documents; invocation validation reparses
+  the plan. Inventory lookup uses binary search over at most50,000 entries without
+  cloning the full inventory. Each module phase authenticates tool binaries/build
+  info, materializes and rehashes at most64 MiB of source, rereads bounded discovery
+  controls and runs one offline `go list`; execution additionally runs at most four
+  serial indexers. Their command output shares a1 MiB bound. Import verifies the
+  helper and reads at most four artifacts without Go/indexer children. Both use
+  the existing two sandbox phases, locks, admission budgets and absolute deadline.
+  Worker and host independently finalize results: bounded SCIP wire/protobuf
+  parsing, module blank adaptation, normalization, canonical bundle hashing and
+  routes. JSON/base64 and canonical buffers overlap; the8 MiB aggregate SCIP and
+  16 MiB result bounds are not total heap bounds. Host Finalize reuses its verified
+  bundle. Publication retains the existing authority/pin/lifecycle locks and
+  immutable files; receipts add bounded metadata and no independent cache.
+  Exact completed-request reuse avoids input lookup and native launch; a fresh
+  attempt repeats validation/copy/tool work under existing concurrency limits.
+  Pinned scip-go emits sibling workspace references with version `.`. The
+  module-only adapter rewrites that local version only for an admitted module
+  with an exact commit-bound definition in the returned members; missing
+  definitions refuse. Imports and external versions are unchanged. All symbol
+  reference fields are covered, including signatures and relationships. This
+  adds two bounded member walks, parsing/encoding and a definition set capped at
+  32,768 symbols; decoded members coexist during adaptation. Raw member receipt
+  hashes still bind original output. The first workspace rehearsal exposed this
+  mismatch after publication in its disposable fixture; it remains a failed
+  rehearsal, not a pass.
+  Local native rehearsal uses the already expanded20 GiB root VM and its actual
+  image/tool identities; it cannot satisfy or relabel older frozen corpus bounds.

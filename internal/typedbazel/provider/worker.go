@@ -30,7 +30,12 @@ func Run(ctx context.Context, i Invocation) ([]byte, error) {
 	if e = typedsandbox.InitializeWorkerProgress(); e != nil {
 		return nil, typedindex.Containment
 	}
-	b, e := runValidated(ctx, i, nativeOperations())
+	var b []byte
+	if i.Profile.Provider() != typedindex.ProviderID {
+		b, e = runInput(ctx, i, nativeInputOperations())
+	} else {
+		b, e = runValidated(ctx, i, nativeOperations())
+	}
 	return b, classify(e)
 }
 

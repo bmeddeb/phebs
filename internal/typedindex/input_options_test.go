@@ -77,10 +77,10 @@ func TestProviderDescriptors(t *testing.T) {
 	if !ds[0].PlanningContract {
 		t.Fatal("Bazel descriptor lost its planning contract")
 	}
-	// The unimplemented module and import providers claim nothing.
+	// Additional planning contracts do not imply execution availability.
 	for _, d := range ds[1:] {
-		if d.PlanningContract || d.ExecutionAvailable || d.Tests || d.Implementations || d.GeneratedDocuments {
-			t.Fatalf("unimplemented provider %q claims a capability: %#v", d.Provider, d)
+		if !d.PlanningContract || d.ExecutionAvailable || d.Tests || d.Implementations || d.GeneratedDocuments {
+			t.Fatalf("provider %q has inconsistent capabilities: %#v", d.Provider, d)
 		}
 		if d.Provider != ModuleProviderID && d.Provider != ImportProviderID {
 			t.Fatalf("unexpected non-Bazel descriptor provider %q", d.Provider)
@@ -97,12 +97,12 @@ func TestProviderDescriptors(t *testing.T) {
 	// function ever returned a shared/cached slice instead of a fresh one.
 	ds[0].PlanningContract = false
 	ds[0].ExecutionAvailable = true
-	ds[1].PlanningContract = true
+	ds[1].PlanningContract = false
 	fresh := ProviderDescriptors()
 	if !fresh[0].PlanningContract || fresh[0].ExecutionAvailable {
 		t.Fatal("mutating a returned Bazel descriptor disturbed a later ProviderDescriptors() result")
 	}
-	if fresh[1].PlanningContract {
+	if !fresh[1].PlanningContract {
 		t.Fatal("mutating a returned module descriptor disturbed a later ProviderDescriptors() result")
 	}
 	if fresh[0] != Describe() {

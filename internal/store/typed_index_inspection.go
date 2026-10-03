@@ -48,7 +48,7 @@ func typedStoredSource(s typedindex.Source) bool {
 	return err == nil
 }
 func typedStoredRequest(r typedindex.Request) bool {
-	if r.ValidatePurpose() != nil || r.Provider != typedindex.ProviderID || !typedStoredSource(r.Source) || !typedStoredToken(r.ProfileName) || !typedStoredToken(r.IdempotencyKey) || r.ProfileEpoch == 0 {
+	if r.ValidatePurpose() != nil || !typedindex.KnownProvider(r.Provider) || !typedStoredSource(r.Source) || !typedStoredToken(r.ProfileName) || !typedStoredToken(r.IdempotencyKey) || r.ProfileEpoch == 0 {
 		return false
 	}
 	for _, d := range []string{r.ProfileDigest, r.ConfigDigest, r.ToolsDigest, r.UniverseDigest, r.BundleDigest, r.PolicyDigest} {

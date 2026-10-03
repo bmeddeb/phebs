@@ -70,6 +70,17 @@ func TestImportSelectionValid(t *testing.T) {
 	}
 }
 
+func TestImportSelectionRefusesFlagCoverage(t *testing.T) {
+	for _, selector := range []string{"--help", "-C=/outside", "-mod=mod"} {
+		s := validSelection()
+		s.Coverage = []string{selector}
+		raw, _ := s.Encode()
+		if _, err := DecodeImportSelection(t.Context(), raw); err == nil {
+			t.Fatal("flag accepted", selector)
+		}
+	}
+}
+
 func TestImportSelectionRefusals(t *testing.T) {
 	ctx := context.Background()
 

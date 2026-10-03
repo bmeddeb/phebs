@@ -3,13 +3,9 @@
 // ImportSelection contract and its strict canonical decoder: the closed authority
 // an importer must be handed before it may copy and validate any artifact.
 //
-// It reads no filesystem, copies or verifies no artifact byte, launches no
-// child/Bazel/driver/indexer/scip-go, downloads or builds no tool, registers no
-// provider, and exposes no worker/result/execution path. The byte-copy, staging,
-// worker, result-finalizer, publication and recovery halves are deliberately out
-// of this leaf: they verify actual copied bytes against the immutable Git HEAD and
-// the independently admitted universe, which requires the separately authorized
-// native gate.
+// Selection performs no I/O or execution. The shared typed workspace copies
+// admitted bytes; the provider worker and finalizer verify copied artifacts,
+// exact source, metadata and complete coverage before common publication.
 //
 // Trust boundary: the DECLARED producer recorded here is an operator ATTESTATION
 // ONLY. A name/version/digest is never treated as proof that the corresponding
@@ -270,7 +266,7 @@ func validateSelectors(sel []string) error {
 // literalSelector accepts only an explicit literal package selector: a valid
 // import path, or a repo-relative "./dir" path.
 func literalSelector(s string) bool {
-	if s == "" || len(s) > MaxPathBytes || strings.ContainsAny(s, "*\\\x00") {
+	if s == "" || len(s) > MaxPathBytes || strings.HasPrefix(s, "-") || strings.ContainsAny(s, "*\\\x00") {
 		return false
 	}
 	if strings.Contains(s, "...") {

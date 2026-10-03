@@ -18,7 +18,7 @@ const SCIPGoAttemptSchema = "phebs-scip-attempt-v2"
 // only the trusted finalizer, while holding those bytes, proves that derivation.
 // Persistence authenticates this audit record through the existing root hash.
 func BuildBundleWithSCIPGoReceipt(ctx context.Context, a Admission, p PackagePlan, outcomes []UnitOutcome, members []MemberInput, generated map[string][]byte, receipt SCIPGoAdapterReceipt) (Bundle, error) {
-	return buildBundle(ctx, a, p, outcomes, members, generated, &receipt)
+	return buildBundle(ctx, a, p, outcomes, members, generated, &receipt, nil)
 }
 
 func validateSCIPGoReceipt(ctx context.Context, p Profile, receipt *SCIPGoAdapterReceipt) error {
@@ -123,6 +123,8 @@ func scipGoAttemptDimensions(ctx context.Context, raw []byte) error {
 			limit := MaxBundleEdges
 			switch at {
 			case "/scip_go/members":
+				limit = MaxSCIPMembers
+			case "/input/members":
 				limit = MaxSCIPMembers
 			case "/scip_go/members/*/mappings":
 				limit = MaxSCIPSymbols

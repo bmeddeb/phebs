@@ -90,11 +90,15 @@ func LoadOwnerExecutionMetadata(ctx context.Context, base string, id OwnerIdenti
 		return out, ErrCustody
 	}
 	files := out.Inventory.Files()
+	selection, err := typedindex.SelectionFile(id.Request.Provider)
+	if err != nil {
+		return out, err
+	}
 	for _, selected := range []struct {
 		name  string
 		limit int
 		dest  *[]byte
-	}{{typedindex.HostToolsFile, typedindex.MaxHostToolsBytes, &out.HostTools}, {"typed-bazel-selection.json", typedindex.MaxPlanBytes, &out.Selection}} {
+	}{{typedindex.HostToolsFile, typedindex.MaxHostToolsBytes, &out.HostTools}, {selection, typedindex.MaxPlanBytes, &out.Selection}} {
 		var row typedindex.BundleFile
 		for _, f := range files {
 			if f.Path == selected.name {

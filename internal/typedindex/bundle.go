@@ -290,6 +290,7 @@ type SymbolRoute struct {
 	Members       []string `json:"members"`
 }
 type AttemptManifest struct {
+	Input     *InputReceipt         `json:"input,omitempty"`
 	SCIPGo    *SCIPGoAdapterReceipt `json:"scip_go,omitempty"`
 	Schema    string                `json:"schema"`
 	Request   Request               `json:"request"`
@@ -343,15 +344,18 @@ func generationBinding(a Admission) GenerationBinding {
 // It derives routes from verified members; callers cannot propose routing facts.
 // A failed/unsupported required unit yields only a non-current attempt manifest.
 func BuildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []UnitOutcome, members []MemberInput, generated map[string][]byte) (Bundle, error) {
-	return buildBundle(ctx, a, p, outcomes, members, generated, nil)
+	return buildBundle(ctx, a, p, outcomes, members, generated, nil, nil)
 }
 
-func buildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []UnitOutcome, members []MemberInput, generated map[string][]byte, receipt *SCIPGoAdapterReceipt) (Bundle, error) {
+func buildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []UnitOutcome, members []MemberInput, generated map[string][]byte, receipt *SCIPGoAdapterReceipt, input *InputReceipt) (Bundle, error) {
 	if err := ctx.Err(); err != nil {
 		return Bundle{}, err
 	}
 	if a.digest == "" || a.request.Action != Execute || p.digest == "" || a.request.PlanDigest != p.digest || a.request.ParentRequestDigest != p.definition.ParentRequestDigest {
 		return Bundle{}, Stale
+	}
+	if err := validateInputReceipt(a.profile, input); err != nil {
+		return Bundle{}, err
 	}
 	parentRequest := a.request
 	parentRequest.Action, parentRequest.ParentRequestDigest, parentRequest.PlanDigest = Plan, "", ""
@@ -379,6 +383,7 @@ func buildBundle(ctx context.Context, a Admission, p PackagePlan, outcomes []Uni
 		states[o.Unit] = o.State
 	}
 	manifest := AttemptManifest{Schema: AttemptSchema, Request: a.request, Units: []UnitOutcome{}, Targets: []TargetOutcome{}, Members: []SCIPMember{}, Documents: []DocumentRoute{}, Generated: []GeneratedDocument{}, Complete: true}
+	manifest.Input = input
 	if receipt != nil {
 		if err := validateSCIPGoReceipt(ctx, a.profile, receipt); err != nil {
 			return Bundle{}, err
@@ -688,7 +693,7 @@ func VerifyBundle(ctx context.Context, a Admission, p PackagePlan, attempt, root
 		}
 		generated[doc.Path] = raw
 	}
-	b, err := buildBundle(ctx, a, p, m.Units, members, generated, m.SCIPGo)
+	b, err := buildBundle(ctx, a, p, m.Units, members, generated, m.SCIPGo, m.Input)
 	if err != nil {
 		return Bundle{}, err
 	}

@@ -49,10 +49,8 @@ func writeFile(name string, b []byte, mode os.FileMode) error {
 	return errors.Join(e, f.Close())
 }
 func inventoryFile(inv typedindex.Inventory, name string) (typedindex.BundleFile, error) {
-	for _, f := range inv.Files() {
-		if f.Path == name {
-			return f, nil
-		}
+	if f, ok := inv.File(name); ok {
+		return f, nil
 	}
 	return typedindex.BundleFile{}, typedindex.Unprepared
 }
@@ -80,7 +78,7 @@ type original struct {
 	Digest string
 }
 
-func materialize(ctx context.Context, i Invocation) ([]original, error) {
+func materializeSource(ctx context.Context, i Invocation) ([]original, error) {
 	var originals []original
 	var total int64
 	for _, f := range i.Inventory.Files() {
@@ -114,6 +112,14 @@ func materialize(ctx context.Context, i Invocation) ([]original, error) {
 	}
 	if len(originals) == 0 {
 		return nil, typedindex.Unprepared
+	}
+	return originals, nil
+}
+
+func materialize(ctx context.Context, i Invocation) ([]original, error) {
+	originals, e := materializeSource(ctx, i)
+	if e != nil {
+		return nil, e
 	}
 	for _, name := range []string{"MODULE.bazel", "MODULE.bazel.lock", "go.mod"} {
 		found := false

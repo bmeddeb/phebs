@@ -18,6 +18,9 @@ func (r DecodedResult) Finalize(ctx context.Context) (typedindex.Bundle, error) 
 	if err := ctx.Err(); err != nil {
 		return typedindex.Bundle{}, err
 	}
+	if r.inputBundle != nil {
+		return *r.inputBundle, nil
+	}
 	// DecodeResult scanned every raw record before any omission and retained the
 	// adapter output privately. No caller-visible byte accessor can change it.
 	var index scip.Index
