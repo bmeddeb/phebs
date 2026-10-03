@@ -15175,6 +15175,14 @@ host/store and actual Linux controller/runtime/lifecycle race, vet/lint and
 independent cost review pass. Native proof and registration remain open;
 canary/dry-run availability is not claimed.
 
+Fresh neutral native canary and dry-run now pass in order with the independently
+pinned production worker and exact new harness. Both complete cold planning and
+execution without publication, prove same-lease and settled checked reuse with
+zero new children/input lookup/growth, and join native/workspace/engine cleanup.
+Original source-free receipts and the two pre-dispatch host refusals are retained
+at `spike/t454/neutral_checked_8.json`. Frozen public-corpus correctness/cost
+results remain required before Bazel registration or availability.
+
 Trusted pure Bazel provisioning now builds canonical presealed selection from
 explicit roots and independently reviewed planner evidence, sharing the worker's
 source/target checks. Bounded preflight reports inventory posture and declared

@@ -1,0 +1,524 @@
+{
+  "schema": "phebs-checked-native-provenance-v1",
+  "id": "neutral-checked-8",
+  "harness_source_commit": "fc9434a70a7f30ba4eb724f59c5a1b6ae25a7aa9",
+  "worker_source_commit": "960b2051a6a9295cd3beff6f6f9299da9c5ba948",
+  "original_config": "sha256:4fbe456ed77ff5887e15aa02a9d152615acd1506d0b5cf40f24fb6481cfbe4bc",
+  "new_config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+  "worker_digest": "sha256:068f68a91d94d636ef4cb62787376971a50758f84605e761b3efe21835eae74f",
+  "inventory_digest": "sha256:371fc804efcf4dd3a5a8e32c68587fb0fd198321d09e6dcddc1e660b3ed4692e",
+  "profile_digest": "sha256:d8ce698ce8dfc17050846a093b65d18f4233bbece0c72ded9228c6935ad0bf06",
+  "seed_digest": "sha256:d8b99a828c67a6f202cb66c14fd95b9315f133616c14fa6eeefdd7aefd3134fc",
+  "profile_epoch": 5,
+  "test_sha256": "sha256:14c8ccded4416e2658b8e7eb420492f3a6b46a4ebb2945d512bb23a0a9dc3cdf",
+  "scope": "neutral canary and dry-run production-helper proof only; frozen-corpus correctness/cost and Bazel registration remain open",
+  "cases": [
+    {
+      "case": "canary",
+      "receipt_sha256": "sha256:50a437edaeefceb8edd5ac7e6dcd750194b5c40ae7bf496a21117f87eb49b8d4",
+      "host_terminal_sha256": "sha256:2933bf547352dedb0a05f01884f79b3387b0fa343f4d44ece08fce09ca0a9c95",
+      "receipt": {
+        "schema": "phebs-typed-native-acceptance-v1",
+        "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+        "case": "canary",
+        "pass": true,
+        "injected": false,
+        "observations": [
+          {
+            "id": "d2efeb43bb27ff75ff6a0e86665d0b5fcee8844bceeb90c48e5247455ec7890d",
+            "phase": "plan",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:8ee79129afb4c39518226f4375a93cc1773a93f6ea0670606453400fb1ed2806",
+              "attempt_digest": "sha256:43847315807e669cda35c14417193c68c4460b9914ff461765c764bf7fa398af",
+              "boot_id": "efe8cdb6-71b0-41f5-a2c4-5546d81bc69b",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 2006802197645,
+              "deadline_boottime_ns": 2306802197645,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            "seal": "sha256:bcd9e37f7a9db260fede6d66be84c6988d6e820881026287139539e177c4139e",
+            "supervisor_pid": 1998,
+            "worker_pid": 2017,
+            "worker_start": "201080",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:8ee79129afb4c39518226f4375a93cc1773a93f6ea0670606453400fb1ed2806",
+                "attempt_digest": "sha256:43847315807e669cda35c14417193c68c4460b9914ff461765c764bf7fa398af",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/9f135be99108d7b9d441e6042f485bd4035d164a54ff5f18a98165c36fb159c2/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          },
+          {
+            "id": "8226af2903cce081c2aa95b172a0e7a359817192a4d8ae33c804c5d7610c7118",
+            "phase": "execute",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:8ee79129afb4c39518226f4375a93cc1773a93f6ea0670606453400fb1ed2806",
+              "attempt_digest": "sha256:43847315807e669cda35c14417193c68c4460b9914ff461765c764bf7fa398af",
+              "boot_id": "efe8cdb6-71b0-41f5-a2c4-5546d81bc69b",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 2006802197645,
+              "deadline_boottime_ns": 2306802197645,
+              "worker_bytes_used": 4417303,
+              "wire_bytes_used": 5890870
+            },
+            "seal": "sha256:61a1c510148522e38fb533b265da324a58418c633a276308cc671cb3ab65a3b2",
+            "supervisor_pid": 5709,
+            "worker_pid": 5727,
+            "worker_start": "204079",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:8ee79129afb4c39518226f4375a93cc1773a93f6ea0670606453400fb1ed2806",
+                "attempt_digest": "sha256:43847315807e669cda35c14417193c68c4460b9914ff461765c764bf7fa398af",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/9f135be99108d7b9d441e6042f485bd4035d164a54ff5f18a98165c36fb159c2/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          }
+        ],
+        "result": {
+          "schema": "phebs-typed-native-acceptance-v1",
+          "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+          "case": "canary",
+          "recovery": false,
+          "outcome": {
+            "AttemptDigest": "sha256:43847315807e669cda35c14417193c68c4460b9914ff461765c764bf7fa398af",
+            "Pointer": {
+              "epoch": 0,
+              "binding": {
+                "source": {
+                  "repository": "",
+                  "incarnation": "",
+                  "generation": "",
+                  "commit": ""
+                },
+                "request_digest": "",
+                "profile_digest": "",
+                "tools_digest": "",
+                "plan_digest": ""
+              },
+              "root_digest": ""
+            },
+            "Check": {
+              "purpose": "canary",
+              "parent_digest": "sha256:8ee79129afb4c39518226f4375a93cc1773a93f6ea0670606453400fb1ed2806",
+              "request_digest": "sha256:3dde438847efe01b56eadc849ed8de47d1f962647f55034f00da935c29bae877",
+              "plan_digest": "sha256:112b02a4bc9b9e97b8c572866572d1d227741ff30841d4ee28fe71180fb63068",
+              "root_digest": "sha256:c3d05428de5ea2b160dd84dd9a85ec9ff2cdeb206176b01def03da704abf7542",
+              "units": 2,
+              "targets": 5658,
+              "members": 1,
+              "documents": 1,
+              "generated": 0,
+              "checksum": "sha256:3d5a70cd41e4a9c76e2254c52a9b665941313524e991b623c87780946c79390f"
+            },
+            "Reports": [
+              {
+                "Phase": "plan",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 1919438848,
+                  "sampled_peak_rss_bytes": 969543680,
+                  "sampled_peak_processes": 12,
+                  "sampled_peak_scratch_bytes": 1141465088,
+                  "sampled_peak_scratch_inodes": 42348,
+                  "samples": 525,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              },
+              {
+                "Phase": "execute",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 2553151488,
+                  "sampled_peak_rss_bytes": 985649152,
+                  "sampled_peak_processes": 14,
+                  "sampled_peak_scratch_bytes": 1674739712,
+                  "sampled_peak_scratch_inodes": 56474,
+                  "samples": 1160,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              }
+            ]
+          },
+          "execution_error": false,
+          "settled": true,
+          "no_replay": true,
+          "publication_verified": false,
+          "growth_released": true
+        },
+        "native_absent": true,
+        "lifecycle_turns": 1323,
+        "workspace_drained": true,
+        "retained_tombstones": 1,
+        "engine_joined": true
+      },
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "canary",
+        "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+        "transport_exit": 0,
+        "collection_exit": 0,
+        "host_error": null,
+        "collection_error": null,
+        "run_group_closed": true,
+        "collect_group_closed": true,
+        "capacity_exit": 0,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": true
+      }
+    },
+    {
+      "case": "dry-run",
+      "receipt_sha256": "sha256:7a76c780c59d1b4fa0b01e44d7fa02df2eef6640daba376e24ff127bacfda933",
+      "host_terminal_sha256": "sha256:31125824d888d1cb4b6ce314415488463a703c05637e413229b9c168c18a853a",
+      "receipt": {
+        "schema": "phebs-typed-native-acceptance-v1",
+        "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+        "case": "dry-run",
+        "pass": true,
+        "injected": false,
+        "observations": [
+          {
+            "id": "342744c2a9d3971c4f8a760f2bb95ca10528af0843adfa31d8c22d9cf942f7b6",
+            "phase": "plan",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:1b3f43aaf71de8cf3c16712e1f080fc0f340117bdb3751b19097bd0ff2065e88",
+              "attempt_digest": "sha256:18d1c66dfefa8904a5b1efd04be1cd443428b0e9678f428c1fe891d982a5099b",
+              "boot_id": "efe8cdb6-71b0-41f5-a2c4-5546d81bc69b",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 2164302870785,
+              "deadline_boottime_ns": 2464302870785,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            "seal": "sha256:344e80f96eeb34030b86cf919d47306d320cea192f589ed1cdd3b0bac68a7979",
+            "supervisor_pid": 22594,
+            "worker_pid": 22615,
+            "worker_start": "216764",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:1b3f43aaf71de8cf3c16712e1f080fc0f340117bdb3751b19097bd0ff2065e88",
+                "attempt_digest": "sha256:18d1c66dfefa8904a5b1efd04be1cd443428b0e9678f428c1fe891d982a5099b",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/c3eda3903683436c7f5e1ef2a8959448f6b8b827217d126d47408b768a445c64/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          },
+          {
+            "id": "36899810aff57aee8617812ef7e9e33ec7545f8c03671e68443d03702e93823b",
+            "phase": "execute",
+            "allowance": {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:1b3f43aaf71de8cf3c16712e1f080fc0f340117bdb3751b19097bd0ff2065e88",
+              "attempt_digest": "sha256:18d1c66dfefa8904a5b1efd04be1cd443428b0e9678f428c1fe891d982a5099b",
+              "boot_id": "efe8cdb6-71b0-41f5-a2c4-5546d81bc69b",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 2164302870785,
+              "deadline_boottime_ns": 2464302870785,
+              "worker_bytes_used": 4417303,
+              "wire_bytes_used": 5890870
+            },
+            "seal": "sha256:f2664c27586f7f685dd3184f1a83039b4cf465247e38687f6564ef4c5b77221b",
+            "supervisor_pid": 26290,
+            "worker_pid": 26310,
+            "worker_start": "219822",
+            "scratch": {
+              "schema": "phebs-typed-host-scratch-v3",
+              "options": {
+                "base": {
+                  "device": 64769,
+                  "inode": 280879,
+                  "block_size": 4096
+                },
+                "request_digest": "sha256:1b3f43aaf71de8cf3c16712e1f080fc0f340117bdb3751b19097bd0ff2065e88",
+                "attempt_digest": "sha256:18d1c66dfefa8904a5b1efd04be1cd443428b0e9678f428c1fe891d982a5099b",
+                "socket": "/var/run/docker.sock",
+                "mkfs_digest": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2"
+              },
+              "authority": {
+                "source": "/var/lib/phebs-typed-index/c3eda3903683436c7f5e1ef2a8959448f6b8b827217d126d47408b768a445c64/scratch",
+                "device_major": 7,
+                "device_minor": 0,
+                "block_size": 4096,
+                "blocks": 1103634,
+                "inodes": 262144,
+                "image_bytes": 4573401088
+              },
+              "observed_direct_io": true
+            },
+            "kernel": {
+              "memory_max": "4533092352",
+              "memory_swap_max": "0",
+              "pids_max": "294",
+              "cpu_max": "200000 100000",
+              "worker_open_files": "128 128"
+            }
+          }
+        ],
+        "result": {
+          "schema": "phebs-typed-native-acceptance-v1",
+          "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+          "case": "dry-run",
+          "recovery": false,
+          "outcome": {
+            "AttemptDigest": "sha256:18d1c66dfefa8904a5b1efd04be1cd443428b0e9678f428c1fe891d982a5099b",
+            "Pointer": {
+              "epoch": 0,
+              "binding": {
+                "source": {
+                  "repository": "",
+                  "incarnation": "",
+                  "generation": "",
+                  "commit": ""
+                },
+                "request_digest": "",
+                "profile_digest": "",
+                "tools_digest": "",
+                "plan_digest": ""
+              },
+              "root_digest": ""
+            },
+            "Check": {
+              "purpose": "dry-run",
+              "parent_digest": "sha256:1b3f43aaf71de8cf3c16712e1f080fc0f340117bdb3751b19097bd0ff2065e88",
+              "request_digest": "sha256:a338ecafab785179d9ddcf61af0cd6041d1bc93a10bb732d8d9a0b8ce3df18ff",
+              "plan_digest": "sha256:bc46bc180131bfedbbe262a0e3363b0544e60d0873b19329a937cd6984c43e8a",
+              "root_digest": "sha256:575c33000f0f4eb94f7932a3dd424c749aa561c92a5a863be95e559896535199",
+              "units": 2,
+              "targets": 5658,
+              "members": 1,
+              "documents": 1,
+              "generated": 0,
+              "checksum": "sha256:23480442b096e2c546df54c6931dfcc655560bba82decb1dbcc33dbcaa1934fc"
+            },
+            "Reports": [
+              {
+                "Phase": "plan",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 2077007872,
+                  "sampled_peak_rss_bytes": 968802304,
+                  "sampled_peak_processes": 12,
+                  "sampled_peak_scratch_bytes": 1141800960,
+                  "sampled_peak_scratch_inodes": 42425,
+                  "samples": 529,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              },
+              {
+                "Phase": "execute",
+                "ExitCode": 0,
+                "Removed": true,
+                "StopReason": "",
+                "Resources": {
+                  "memory_oom_events": 0,
+                  "memory_oom_kills": 0,
+                  "memory_limit_events": 0,
+                  "task_limit_events": 0,
+                  "sampling_unavailable": false,
+                  "limits_verified": true,
+                  "memory_peak_bytes": 2712629248,
+                  "sampled_peak_rss_bytes": 986697728,
+                  "sampled_peak_processes": 22,
+                  "sampled_peak_scratch_bytes": 1675005952,
+                  "sampled_peak_scratch_inodes": 56483,
+                  "samples": 1504,
+                  "per_process_descriptors": 128,
+                  "aggregate_descriptor_ceiling": 37632
+                },
+                "Watchdog": null,
+                "Failure": null
+              }
+            ]
+          },
+          "execution_error": false,
+          "settled": true,
+          "no_replay": true,
+          "publication_verified": false,
+          "growth_released": true
+        },
+        "native_absent": true,
+        "lifecycle_turns": 1322,
+        "workspace_drained": true,
+        "retained_tombstones": 1,
+        "engine_joined": true
+      },
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "dry-run",
+        "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+        "transport_exit": 0,
+        "collection_exit": 0,
+        "host_error": null,
+        "collection_error": null,
+        "run_group_closed": true,
+        "collect_group_closed": true,
+        "capacity_exit": 0,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": true
+      }
+    }
+  ],
+  "pre_dispatch_stops": [
+    {
+      "reason": "restored daemon configuration missing prior approved time-namespace override",
+      "host_terminal_sha256": "sha256:8c560c26278b11feedecf60db2abf704840c983b23dbee2b3b8fcb0889fed9f3",
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "canary",
+        "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+        "transport_exit": null,
+        "collection_exit": null,
+        "host_error": "AssertionError",
+        "collection_error": null,
+        "run_group_closed": false,
+        "collect_group_closed": false,
+        "capacity_exit": 1,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": false
+      },
+      "capacity_log_sha256": "sha256:8ab2fc2ea31e6abcff5d9791184aaf818e730ad680776d65ef47b323d7e9a032"
+    },
+    {
+      "reason": "conservative projected data-disk occupancy ceiling reached80 percent",
+      "host_terminal_sha256": "sha256:8c560c26278b11feedecf60db2abf704840c983b23dbee2b3b8fcb0889fed9f3",
+      "host_terminal": {
+        "schema": "phebs-native-acceptance-host-case-v1",
+        "case": "canary",
+        "config": "sha256:d9e0ac54cbc0221ba15f12ec3fe204a6abc3e4fcf8ccb318b922b9ee6db29f4f",
+        "transport_exit": null,
+        "collection_exit": null,
+        "host_error": "AssertionError",
+        "collection_error": null,
+        "run_group_closed": false,
+        "collect_group_closed": false,
+        "capacity_exit": 1,
+        "capacity_group_closed": true,
+        "capacity_error": null,
+        "native_dispatch_attempted": false
+      },
+      "capacity_log_sha256": "sha256:9524612b3d1949eb0fd10fc58f83ff0e1913cafd52c0fe1c64b3db014024ce03"
+    }
+  ],
+  "host_repair": {
+    "approved_daemon_sha256": "sha256:9710ae6983477c73031a1f6ccd57933e49aa256afd77a6210e485bc86b848053",
+    "restored_existing_data_mount": true,
+    "caps_unchanged": true,
+    "duplicate_inputs_host_verified": true,
+    "original_results_preserved": true
+  }
+}

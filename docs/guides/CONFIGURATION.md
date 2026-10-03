@@ -1083,6 +1083,8 @@ neutral acceptance proof does not enable or register a provider.
 
 The executor, scheduler/lifecycle and generated-navigation adapter now have an
 internal runtime composition. Ordinary `serve` keeps it disabled; there is no
-new configuration switch or managed-indexing endpoint. Native canary/dry-run
-and fresh frozen target-corpus correctness/cost validation must pass before
-Bazel registration. Additional managed providers follow that closure.
+new configuration switch or managed-indexing endpoint. Neutral native canary
+and dry-run have passed without publication and with exact reuse and joined
+cleanup; their source-free originals live at `spike/t454/neutral_checked_8.json`.
+Fresh frozen target-corpus correctness/cost validation still gates Bazel
+registration. Additional managed providers follow that closure.

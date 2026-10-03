@@ -8489,3 +8489,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   inventory filter/sort; no production work, resource cap, lock, cache, schema
   or child changes. It is preparation machinery, not a native corpus result,
   correctness/cost pass or Bazel registration.
+
+- **2026-10-02 — T45.6 native checked-mode closure.** Exact harness source
+  `fc9434a70a7f30ba4eb724f59c5a1b6ae25a7aa9` and independently pinned worker
+  `960b2051a6a9295cd3beff6f6f9299da9c5ba948` passed fresh neutral canary and
+  dry-run in that order. Both completed the two native phases without publication,
+  proved same-lease and settled checked reuse without new input lookup, copying,
+  growth or children, released growth and joined native/workspace/engine cleanup.
+  Source-free originals and host terminals are retained at
+  `spike/t454/neutral_checked_8.json`. Two preceding host preflights stopped before
+  native dispatch: reboot had lost the existing admitted data bind and previously
+  approved exact time-namespace override; after restoring those, conservative
+  projected occupancy reached its unchanged 80-percent ceiling. Full-content
+  verification of retained host inputs preceded retirement of duplicate VM
+  bundle/test/engine inputs, preserving old controls, results and databases without
+  a lifecycle-drain claim. The subsequent projected ceilings were 79 percent on
+  the data disk and 76 percent on the scratch disk. Resource, wall, output and
+  inode limits remain exact. These serial one-off proofs, input hash passes and
+  host restoration add no production query, sync, startup, retry, publication,
+  lock, cache or child cost. Frozen public-corpus correctness/cost replay still
+  gates Bazel registration; these neutral checked cases do not establish it.
