@@ -1088,3 +1088,10 @@ and dry-run have passed without publication and with exact reuse and joined
 cleanup; their source-free originals live at `spike/t454/neutral_checked_8.json`.
 Fresh frozen target-corpus correctness/cost validation still gates Bazel
 registration. Additional managed providers follow that closure.
+
+The shared worker-output limit remains16 MiB. A successful result that exceeds
+the remaining output allowance can use a bounded lossless gzip envelope;
+fitting results and failure frames retain their original format. Both the
+physical shared output and each decoded result stay bounded. Compression does
+not change the shared wall limit or bypass plan, source, tool, caller or SCIP
+validation.

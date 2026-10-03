@@ -58,9 +58,11 @@ func decodeResult(ctx context.Context, i Invocation, selection, raw []byte) (Dec
 	if err := i.validate(ctx); err != nil {
 		return empty, err
 	}
-	if len(raw) == 0 || int64(len(raw)) > int64(typedsandbox.OutputBytes)-i.Allowance.WorkerBytesUsed {
-		return empty, typedindex.Capacity
+	logical, wrapped, err := decodeResultWire(ctx, raw, int64(typedsandbox.OutputBytes)-i.Allowance.WorkerBytesUsed)
+	if err != nil {
+		return empty, err
 	}
+	raw = logical
 	if err := resultDimensions(ctx, raw); err != nil {
 		return empty, err
 	}
@@ -80,6 +82,9 @@ func decodeResult(ctx context.Context, i Invocation, selection, raw []byte) (Dec
 		return empty, typedindex.Stale
 	}
 	if r.Failure != nil {
+		if wrapped {
+			return empty, typedindex.Invalid
+		}
 		if err = validateFailure(r.Failure); err != nil {
 			return empty, err
 		}

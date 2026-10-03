@@ -8577,3 +8577,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `spike/t454/runtime_gates_1.json` preserves these distinct outcomes. No target
   correctness/cost pass, registration, source/profile authority or cap change
   follows; the correction adds only bounded test preflight work.
+
+- **2026-10-02 — T45.6 bounded oversized-result transport.** Historical
+  frozen metadata serialized through the actual Result-v1 mapper requires
+  9,952,732/22,383,450/24,956,495 shared worker bytes for
+  ordinary/proto/fan-out. These are sizing diagnostics, not fresh native
+  authority. Each individual frame remains below16 MiB; fan-out execution is
+  15,144,029 bytes. Preserve fitting Result-v1 and failure bytes exactly. Only
+  a successful frame exceeding its remaining physical allowance uses a closed
+  canonical gzip envelope of the exact original JSON plus LF. Its declared
+  decoded length remains bounded to16 MiB. Physical stdout/stderr, supervisor
+  wire, completion hashes and shared300-second allowance remain authoritative;
+  logical bytes never replace those counters. Host admission first checks the
+  remaining physical bound, then rejects noncanonical, extra/duplicate/trailing,
+  truncated, CRC-invalid, multistream, length-mismatched, oversized or canceled
+  compression before the existing complete dimensions, source, request, phase,
+  plan, caller, SCIP and generated-payload validation. Wrapped failures refuse.
+  Fitting success adds one context/size branch. Fallback adds one BestSpeed
+  gzip pass, bounded wrapper JSON work and fixed compressor state of roughly
+  1.2 MiB with a32-KiB distance window. Worker buffer lengths remain original
+  JSON below16 MiB, compressed payload below12 MiB and physical wrapper at
+  most the remaining16 MiB. Host additionally retains decoded compressed bytes
+  below12 MiB, canonical wrapper at most16 MiB and exact logical allocation at
+  most16 MiB, plus bounded decoder/marshal/window scratch and existing decoded
+  Result/plan/SCIP state. These lengths are not a total heap bound: geometric
+  capacities and JSON encode-state/copy buffers add overhead within the
+  unchanged resource envelope. The one existing serial turn bounds concurrency;
+  inflate/canonical decode extends its existing reacquired post-phase lifecycle
+  guard hold. Chunked gzip work checks cancellation every32 KiB; individual
+  bounded JSON calls retain their existing non-preemptible behavior. No new
+  lock, file, disk allocation, child, cache, query, sync, startup or reuse work
+  follows. Normal/race, host/Linux vet, Linux compilation, pinned lint and
+  independent source/cost review pass. Fresh native correctness/cost proof
+  remains required; no profile, cap or registration changes.

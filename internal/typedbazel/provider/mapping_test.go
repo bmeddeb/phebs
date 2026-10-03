@@ -136,8 +136,10 @@ func TestGeneratedPayloadAndReducedOmission(t *testing.T) {
 					t.Fatal("exact aggregate allowance", err)
 				}
 				i.Allowance.WorkerBytesUsed++
-				if _, err := run(context.Background(), i, o); !errors.Is(err, typedindex.Capacity) {
-					t.Fatal("aggregate allowance overflow", err)
+				compressed, err := run(context.Background(), i, o)
+				logical, decodeErr := DecodeResultWire(context.Background(), compressed, typedsandbox.OutputBytes-i.Allowance.WorkerBytesUsed)
+				if err != nil || decodeErr != nil || !slices.Equal(logical, b) || len(compressed) >= len(b) {
+					t.Fatal("lossless aggregate allowance fallback", err, decodeErr)
 				}
 				o.read = func(string, int64) ([]byte, error) { return []byte("wrong"), nil }
 				if _, e = generatedBytes(context.Background(), r.Documents, p, o.read); !errors.Is(e, typedindex.Stale) {

@@ -224,8 +224,5 @@ func runValidated(ctx context.Context, i Invocation, o workerOperations) (raw []
 		return nil, e
 	}
 	remaining := int64(typedsandbox.OutputBytes) - i.Allowance.WorkerBytesUsed
-	if int64(len(raw))+1 > remaining {
-		return nil, typedindex.Capacity
-	}
-	return append(raw, '\n'), nil
+	return encodeResultWire(ctx, raw, remaining)
 }
