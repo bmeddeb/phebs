@@ -8862,3 +8862,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Integration lint also converts only a pre-existing Linux workspace test
   fixture's directory/symlink/file selection to an equivalent tagged switch;
   production files and the compiled acceptance harness remain unchanged.
+
+- **2026-10-03 — T45.6 native transport observes the dedicated host directly.**
+  Acceptance and preparation no longer invoke Colima or hash
+  `~/.colima/phebs-t451a/colima.yaml`. The logical profile name remains
+  `phebs-t451a`. `PHEBS_TYPED_NATIVE_TRANSPORT=ssh` runs one noninteractive
+  SSH command with batch mode, strict host-key checking, and a quoted remote
+  `sudo -n python3` program. `direct` runs that program only when the local
+  machine is `aarch64`. An unset or non-arm64 direct transport refuses.
+  `vm_config_sha256` is the digest of the live host observation: kernel,
+  `/etc/os-release`, arm64, exactly two CPUs, MemTotal at least the unchanged
+  4,533,092,352-byte envelope, and the Docker daemon identity read from
+  `/v1.47/info`. Each stage and run re-observes that host and refuses a
+  mismatch. Worker, scratch, wall, output, task, and descriptor limits stay
+  exact. The observation is one bounded SSH or local read per admission
+  check; it adds no production query, tick, startup, publication, or child.
+  No ARM64 host or provisioning credential is available here, so ordinary,
+  proto, fanout, and the cross-cohort comparison are not executed. The
+  source-free STOP and setup proposal are
+  `spike/t454/remote_arm64_admission_stop.json`. Bazel stays unregistered.

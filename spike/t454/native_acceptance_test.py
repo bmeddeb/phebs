@@ -2,6 +2,7 @@ import copy
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -367,12 +368,21 @@ class AcceptanceTests(unittest.TestCase):
                 transport.assert_called_once_with(['run', 'neutral-1', case, h, h], timeout=600)
             for ident, case in [('../escape', 'success'), ('neutral-1', 'target'), ('neutral-1', 'success;sh')]:
                 with self.assertRaises(ValueError): n.run(ident, case, h, "deployment.json")
-        with mock.patch.object(subprocess, 'run') as run:
+        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, 'transport unconfigured'):
+            n.transport(['collect', 'neutral-1', 'success', h], timeout=30)
+        with mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'ssh', 'PHEBS_TYPED_NATIVE_SSH_TARGET': 'phebs@typed-native'}), mock.patch.object(subprocess, 'run') as run:
             n.transport(['collect', 'neutral-1', 'success', h], timeout=30)
             argv = run.call_args.args[0]
-            self.assertEqual(argv[:7], ['colima', 'ssh', '--profile', 'phebs-t451a', '--', 'sudo', 'python3'])
-            self.assertNotIn('start', argv)
+            self.assertEqual(argv[:10], ['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'RequestTTY=no', '-o', 'ConnectTimeout=10', 'phebs@typed-native'])
+            self.assertEqual(argv[10], '--')
+            self.assertIn(n.sh_quote(n.REMOTE), argv[11])
+            self.assertIn(n.sh_quote('sudo'), argv[11])
+            self.assertNotIn('colima', argv[11])
             self.assertNotIn('shell', run.call_args.kwargs)
+        with mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'ssh', 'PHEBS_TYPED_NATIVE_SSH_TARGET': '-oProxyCommand=evil'}), self.assertRaises(ValueError):
+            n.transport(['collect', 'neutral-1', 'success', h], timeout=30)
+        with mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), self.assertRaisesRegex(ValueError, 'arm64'):
+            n.transport(['collect', 'neutral-1', 'success', h], timeout=30)
 
     def test_receipt_exclusive_and_bound(self):
         h = n.digest(b'config')
@@ -496,6 +506,46 @@ class AcceptanceTests(unittest.TestCase):
             scope = {'C': n.CASES, 'case': case}
             scope['cases'] = eval(compile(ast.Expression(assignments[0].value), '<cases>', 'eval'), scope)
             self.assertEqual(eval(compile(ast.Expression(loop.iter), '<prior>', 'eval'), scope), expected)
+
+    def test_host_observation_replaces_colima_attestation(self):
+        self.assertNotIn('colima', Path(n.__file__).read_text())
+        compile(n.OBSERVER, '<observer>', 'exec')
+        for text in ('colima', 'shell=True', 'docker run', '--privileged'):
+            self.assertNotIn(text, n.OBSERVER)
+        raw = b'{"b":1,"a":{"z":2,"y":1}}'
+        self.assertEqual(n.canonical_object(raw), b'{"a":{"z":2,"y":1},"b":1}')
+        h = n.digest(b'os')
+        runtime = n.digest(b'{"runc":{"path":"runc"}}')
+        obs = dict(zip(n.OBSERVATION_KEYS, [
+            'phebs-typed-native-host-observation-v1', '6.8.0', h, 'arm64', 2,
+            n.POLICY['memory_bytes'] // 1024, 'daemon', '29.5.2', 'cgroupfs', runtime]))
+        sealed = n.deployment_from_observation(obs)
+        self.assertEqual(tuple(sealed), n.DEPLOYMENT_KEYS)
+        self.assertEqual(sealed['vm_config_sha256'], n.digest(n.canonical(obs)))
+        self.assertEqual(sealed['profile'], 'phebs-t451a')
+        small = dict(obs)
+        small['memory_total_kb'] = n.POLICY['memory_bytes'] // 1024 - 1
+        with self.assertRaisesRegex(ValueError, 'memory'):
+            n.deployment_from_observation(small)
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / 'deployment.json'
+            with mock.patch.object(n, 'observe_host', return_value=obs):
+                n.write_deployment(path)
+                self.assertEqual(n.check_deployment_host(path), n.digest(path.read_bytes()))
+            changed = dict(obs)
+            changed['kernel_release'] = 'other'
+            with mock.patch.object(n, 'observe_host', return_value=changed), self.assertRaisesRegex(ValueError, 'observation changed'):
+                n.check_deployment_host(path)
+
+    def test_direct_transport_executes_only_on_the_arm64_host(self):
+        class Host:
+            machine = 'aarch64'
+        with mock.patch.object(n.os, 'uname', return_value=Host()), mock.patch.object(n.os, 'geteuid', return_value=0), mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), mock.patch.object(subprocess, 'run') as run:
+            n.transport(['collect', 'neutral-1', 'success', 'sha256:' + 'a' * 64], timeout=30)
+            self.assertEqual(run.call_args.args[0][:2], ['python3', '-c'])
+        with mock.patch.object(n.os, 'uname', return_value=Host()), mock.patch.object(n.os, 'geteuid', return_value=1000), mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'direct'}), mock.patch.object(subprocess, 'run') as run:
+            n.transport(['collect', 'neutral-1', 'success', 'sha256:' + 'a' * 64], timeout=30)
+            self.assertEqual(run.call_args.args[0][:4], ['sudo', '-n', 'python3', '-c'])
 
 
 if __name__ == '__main__':
