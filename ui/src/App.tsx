@@ -151,7 +151,7 @@ export default function App() {
     { label: 'Settings', path: '/settings', available: true },
   ]
   let page
-  if (path.startsWith('/file')) page = <FilePage params={params} />
+  if (path.startsWith('/file')) page = <FilePage params={params} isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
   else if (path.startsWith('/blame')) page = <BlamePage params={params} />
   else if (path.startsWith('/commit')) page = <CommitPage params={params} />

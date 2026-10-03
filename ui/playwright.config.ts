@@ -46,5 +46,6 @@ export default defineConfig({
       use: { storageState: 'receipts/.auth/auth.json' },
     },
     { name: 'anon', testMatch: /anon\.spec\.ts/ },
+    { name: 'typed-index', testMatch: /typed-index\.spec\.ts/ },
   ],
 })

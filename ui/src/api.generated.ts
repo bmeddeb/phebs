@@ -61,6 +61,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/code-navigation-indexing/enqueue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["enqueue-code-navigation-indexing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/code-navigation-indexing/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["plan-code-navigation-indexing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/code-navigation-indexing/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get API code navigation indexing providers */
+        get: operations["get-api-code-navigation-indexing-providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/code-navigation-indexing/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get API code navigation indexing status */
+        get: operations["get-api-code-navigation-indexing-status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/commit": {
         parameters: {
             query?: never;
@@ -1619,6 +1685,90 @@ export interface components {
             kind: string;
             path: string;
         };
+        TypedIndexEnqueue: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/TypedIndexEnqueue.json
+             */
+            readonly $schema?: string;
+            expected_revision: string;
+            idempotency_key: string;
+            profile: string;
+            provider: string;
+            /** @enum {string} */
+            purpose: "publish" | "canary" | "dry-run";
+            repository: string;
+            request_digest: string;
+        };
+        TypedIndexPreview: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/TypedIndexPreview.json
+             */
+            readonly $schema?: string;
+            commit: string;
+            idempotency_key: string;
+            request_digest: string;
+            resource_profile: string;
+            schema: string;
+            selection: components["schemas"]["TypedIndexSelection"];
+        };
+        TypedIndexProvider: {
+            available: boolean;
+            id: string;
+            name: string;
+        };
+        TypedIndexProviders: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/TypedIndexProviders.json
+             */
+            readonly $schema?: string;
+            providers: components["schemas"]["TypedIndexProvider"][] | null;
+            schema: string;
+        };
+        TypedIndexSelection: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/TypedIndexSelection.json
+             */
+            readonly $schema?: string;
+            expected_revision: string;
+            profile: string;
+            provider: string;
+            /** @enum {string} */
+            purpose: "publish" | "canary" | "dry-run";
+            repository: string;
+        };
+        TypedIndexView: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/TypedIndexView.json
+             */
+            readonly $schema?: string;
+            available: boolean;
+            checked_purpose: string;
+            commit: string;
+            config_profile: string;
+            current_commit: string;
+            job_state: string;
+            profile: string;
+            provider: string;
+            reason: string;
+            repository: string;
+            request_digest: string;
+            resource_profile: string;
+            revision: string;
+            schema: string;
+            /** @enum {string} */
+            state: "absent" | "current" | "stale" | "planning" | "indexing" | "validating" | "publishing" | "failed" | "canceled";
+            target_profile: string;
+        };
         VersionOutBody: {
             /**
              * Format: uri
@@ -1725,6 +1875,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BlameResult"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "enqueue-code-navigation-indexing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TypedIndexEnqueue"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TypedIndexView"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "plan-code-navigation-indexing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TypedIndexSelection"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TypedIndexPreview"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-api-code-navigation-indexing-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TypedIndexProviders"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-api-code-navigation-indexing-status": {
+        parameters: {
+            query: {
+                repository: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TypedIndexView"];
                 };
             };
             /** @description Error */
