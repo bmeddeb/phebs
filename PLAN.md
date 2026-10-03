@@ -8647,3 +8647,44 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   query, sync, startup, retry or publication work is added. Fresh immutable
   helper/profile/preparation/native evidence remains mandatory; tagged compile
   artifacts alone establish no gate.
+
+- **2026-10-02 — T45.4/T45.6 exact machine-gate preservation.** Exact source
+  `7d6b849c1a4dad5bec137abbd53231dbe0d87b27` passes all nine affected packages
+  in normal and race modes, module verification, full vet, repository-pinned
+  host and tagged Linux lint, Linux builds, Python/shell/documentation/glossary
+  checks and the complete actual command package. The proper command runner
+  passes all eleven native fixtures in 507.062 seconds, joins every owned test
+  and engine, and detaches its verified 2-GiB task RAM fixture. Source-free
+  identities, exact commands, durations and retained private-proof hashes live
+  in `spike/t454/machine_gates_7d6b849c.json`. These machine gates do not supply
+  fresh native worker, checked-mode or frozen-corpus correctness/cost authority;
+  Bazel remains unregistered pending those gates.
+
+- **2026-10-02 — T45.6 preserve proto preparation stop and close corpus transport.**
+  Fresh exact-`7d6b849c` neutral and ordinary preparation pass with their original
+  seed authority, native teardown and epoch-one post-run seals. Proto preparation
+  `corpus-proto-codec-prep-1` stops after all three native commands at the
+  test-only aggregate raw-capture ceiling; its authenticated diagnostics prove
+  no successful result/receipt and clean native custody. They do not retain the
+  offending projection, byte count or excess. Source-free receipt identities
+  and the controlling stop live in `spike/t454/native_preparation_7d6b849c.json`;
+  fanout remains unexecuted and Bazel unregistered.
+  Prospectively, only the closed frozen-corpus preparation config selects a new
+  result schema and raw-capture ceiling of 12,582,911 bytes, derived from the
+  unchanged 16-MiB physical frame minus its LF and base64 expansion. The complete
+  uncompressed JSON plus LF must still fit that frame; metadata can refuse it
+  below the raw ceiling. Neutral and retained legacy corpus receipts keep the
+  exact old schema and 8-MiB ceiling. The new corpus parser binds its already
+  validated config, source, inventory, profile and control digests. No result is
+  truncated or omitted; original failed evidence remains failed, and a fresh
+  immutable harness and new attempt IDs are required.
+  The old pure helper's exactly 16-MiB JSON-only boundary now reserves its LF;
+  that boundary never fit an authenticated healthy frame under the same cap.
+  Only opt-in corpus preparation admits up to 4,194,303 additional raw bytes.
+  Capture and marshal retain their existing allocation shape; a pending
+  projection may coexist with retained data and an attempted metadata-heavy
+  marshal may exceed the physical limit before refusal, so this is no whole-heap
+  bound. Host/post-run parsing adds a bounded 16-KiB config round trip and small
+  source digest. Production requests, sync/startup/retry/publication work,
+  locks, cache, schema, helper, children, wall, command-output and admission caps
+  remain unchanged. Actual corrected native correctness/cost gates remain open.

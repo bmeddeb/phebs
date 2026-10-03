@@ -39,6 +39,7 @@ const preparationRoot = "//lib:lib"
 const preparationPlanningDomain = "phebs-typed-preparation-planning-v1\x00"
 const preparationAttemptDomain = "phebs-typed-preparation-attempt-v1\x00"
 const preparationCorpusSchema = "phebs-typed-native-corpus-preparation-v1"
+const preparationCorpusResultSchema = "phebs-typed-native-corpus-preparation-result-v1"
 const preparationCorpusRepo = "github.com/bazelbuild/remote-apis-sdks"
 const preparationCorpusCommit = "d5824b1a2286806b07efd030aa3a139c4f540157"
 const preparationCorpusArchive = "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc"
@@ -52,6 +53,12 @@ const preparationMaxReceipt = 128 << 10
 // output ceiling that the JSON/base64 expansion must also fit.
 const preparationRetainedCeiling = 8 << 20
 const preparationMaxResult = typedsandbox.OutputBytes
+
+// The corpus result retains the same fields, without compression or omission.
+// Raw base64 payload alone cannot exceed floor((physical ceiling - LF)*3/4).
+// JSON keys, padding and metadata also consume that frame, so encode still
+// refuses any complete JSON+LF that exceeds the unchanged physical ceiling.
+const preparationCorpusRetainedCeiling = (preparationMaxResult - 1) * 3 / 4
 
 var preparationID = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
 
@@ -119,6 +126,20 @@ func (c nativePreparationConfig) profileName() string {
 		return "corpus-" + c.Cohort
 	}
 	return "neutral"
+}
+
+func (c nativePreparationConfig) resultSchema() string {
+	if c.Schema == preparationCorpusSchema {
+		return preparationCorpusResultSchema
+	}
+	return preparationResultSchema
+}
+
+func (c nativePreparationConfig) retainedCeiling() int64 {
+	if c.Schema == preparationCorpusSchema {
+		return preparationCorpusRetainedCeiling
+	}
+	return preparationRetainedCeiling
 }
 
 // The commit is bound to the unchanged archived corpus, not merely asserted by
@@ -351,12 +372,31 @@ func preparationRetained(r *nativePreparationResult) int64 {
 	return total
 }
 
-func parsePreparationResult(raw []byte) (nativePreparationResult, error) {
+func parsePreparationResult(raw []byte, cfg nativePreparationConfig) (nativePreparationResult, error) {
 	var r nativePreparationResult
-	if e := preparationDecode(raw, preparationMaxResult, &r); e != nil {
+	if _, e := parsePreparationConfig(preparationJSON(cfg)); e != nil {
 		return r, e
 	}
-	if r.Schema != preparationResultSchema || !preparationID.MatchString(r.ID) {
+	if e := preparationDecode(raw, preparationMaxResult-1, &r); e != nil {
+		return r, e
+	}
+	ceiling := int64(preparationRetainedCeiling)
+	switch r.Schema {
+	case preparationResultSchema:
+		// Retained neutral and corpus receipts both used this exact schema.
+	case preparationCorpusResultSchema:
+		if cfg.Schema != preparationCorpusSchema {
+			return r, errors.New("corpus preparation result requires corpus config")
+		}
+		if r.ID != cfg.ID || r.PlanningDigest != cfg.planningDigest() || r.AttemptDigest != cfg.attemptDigest() ||
+			r.SourceSHA256 != preparationDigest(preparationJSON(cfg.Source)) || r.InventorySHA256 != cfg.InventorySHA256 || r.ProfileSHA256 != cfg.ProfileSHA256 {
+			return r, errors.New("corpus preparation result config binding")
+		}
+		ceiling = preparationCorpusRetainedCeiling
+	default:
+		return r, errors.New("preparation result schema")
+	}
+	if !preparationID.MatchString(r.ID) {
 		return r, errors.New("neutral preparation result contract")
 	}
 	if !preparationHash(r.PlanningDigest) || !preparationHash(r.AttemptDigest) {
@@ -384,7 +424,7 @@ func parsePreparationResult(raw []byte) (nativePreparationResult, error) {
 	if r.RetainedBytes != retained {
 		return r, errors.New("neutral preparation retained mismatch")
 	}
-	if retained > preparationRetainedCeiling {
+	if retained > ceiling {
 		return r, errors.New("neutral preparation retained ceiling")
 	}
 	return r, nil
@@ -394,7 +434,7 @@ func parsePreparationResult(raw []byte) (nativePreparationResult, error) {
 // existing worker output ceiling, returning only a bounded classified error.
 func encodePreparationResult(r nativePreparationResult) ([]byte, error) {
 	raw := preparationJSON(r)
-	if int64(len(raw)) > preparationMaxResult {
+	if len(raw) > preparationMaxResult-1 {
 		return nil, errors.New("neutral preparation result overflow")
 	}
 	return raw, nil
@@ -515,6 +555,9 @@ func TestNativePreparationCorpusConfig(t *testing.T) {
 			if len(c.roots()) < 2 || c.profileName() != "corpus-"+cohort || c.planningDigest() == neutral.planningDigest() || c.attemptDigest() == neutral.attemptDigest() {
 				t.Fatal("corpus selection/domain")
 			}
+			if c.resultSchema() != preparationCorpusResultSchema || c.retainedCeiling() != preparationCorpusRetainedCeiling {
+				t.Fatal("corpus preparation transport selection")
+			}
 			if repo, remote, err := preparationSeedLocation(preparationCorpusCommit, cohort); err != nil || repo != c.Source.Repository || remote != c.Remote {
 				t.Fatal("corpus seed selector", err)
 			}
@@ -598,7 +641,7 @@ func TestNativePreparationResult(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = parsePreparationResult(raw); e != nil {
+	if _, e = parsePreparationResult(raw, fixturePreparationConfig(t)); e != nil {
 		t.Fatal(e)
 	}
 	for _, tc := range []struct {
@@ -625,7 +668,7 @@ func TestNativePreparationResult(t *testing.T) {
 			if e != nil {
 				return
 			}
-			if _, e = parsePreparationResult(raw); e == nil {
+			if _, e = parsePreparationResult(raw, fixturePreparationConfig(t)); e == nil {
 				t.Fatal("accepted")
 			}
 		})
@@ -637,7 +680,7 @@ func TestNativePreparationResult(t *testing.T) {
 	if raw, e = encodePreparationResult(at); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = parsePreparationResult(raw); e != nil {
+	if _, e = parsePreparationResult(raw, fixturePreparationConfig(t)); e != nil {
 		t.Fatal("at-ceiling refused", e)
 	}
 }
@@ -652,6 +695,135 @@ func TestNativePreparationResultOverflow(t *testing.T) {
 	r.RetainedBytes = preparationRetained(&r)
 	if _, e := encodePreparationResult(r); e == nil {
 		t.Fatal("oversize result encoded")
+	}
+}
+
+func TestNativePreparationResultLegacyBytes(t *testing.T) {
+	raw, err := encodePreparationResult(fixturePreparationResult(t))
+	if err != nil || len(raw) != 1191 || preparationDigest(raw) != "sha256:b5a015aa5bcebb1939958da3255c6a992fa7e20008add0339c2f1d0f097d4ce5" {
+		t.Fatal("legacy result bytes changed", err)
+	}
+	cfg := fixturePreparationConfig(t)
+	if cfg.resultSchema() != preparationResultSchema || cfg.retainedCeiling() != 8<<20 {
+		t.Fatal("neutral result selection changed")
+	}
+}
+
+func fixtureCorpusPreparationResult(t *testing.T) (nativePreparationConfig, nativePreparationResult) {
+	t.Helper()
+	cfg := fixturePreparationConfig(t)
+	cfg.Schema, cfg.Cohort, cfg.Root, cfg.ID = preparationCorpusSchema, "proto", "", "corpus-proto-prep-2"
+	cfg.Source.Repository, cfg.Source.Commit = preparationCorpusRepo, preparationCorpusCommit
+	cfg.Module, cfg.Remote = preparationCorpusRepo, "https://"+preparationCorpusRepo
+	r := fixturePreparationResult(t)
+	r.Schema, r.ID = cfg.resultSchema(), cfg.ID
+	r.PlanningDigest, r.AttemptDigest = cfg.planningDigest(), cfg.attemptDigest()
+	r.SourceSHA256 = preparationDigest(preparationJSON(cfg.Source))
+	r.InventorySHA256, r.ProfileSHA256 = cfg.InventorySHA256, cfg.ProfileSHA256
+	return cfg, r
+}
+
+func TestNativePreparationCorpusResult(t *testing.T) {
+	cfg, r := fixtureCorpusPreparationResult(t)
+	if preparationCorpusRetainedCeiling != 12582911 || cfg.retainedCeiling() != preparationCorpusRetainedCeiling {
+		t.Fatal("corpus retention is not derived from the existing base64 frame ceiling")
+	}
+	for _, tc := range []struct {
+		name     string
+		schema   string
+		retained int64
+		want     bool
+	}{
+		{"legacy-corpus-at-neutral-limit", preparationResultSchema, preparationRetainedCeiling, true},
+		{"legacy-corpus-over-neutral-limit", preparationResultSchema, preparationRetainedCeiling + 1, false},
+		{"corpus-over-neutral-limit", preparationCorpusResultSchema, preparationRetainedCeiling + 1, true},
+		{"corpus-at-raw-ceiling-needs-metadata", preparationCorpusResultSchema, preparationCorpusRetainedCeiling, false},
+		{"corpus-over-raw-ceiling", preparationCorpusResultSchema, preparationCorpusRetainedCeiling + 1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			value := r
+			value.Schema = tc.schema
+			value.Cquery = make([]byte, tc.retained-int64(len(value.Aquery))-int64(len(value.Projections["lib/lib.x"])))
+			value.RetainedBytes = preparationRetained(&value)
+			raw, err := encodePreparationResult(value)
+			if err == nil {
+				_, err = parsePreparationResult(raw, cfg)
+			}
+			if (err == nil) != tc.want {
+				t.Fatal("corpus retention/frame boundary", err)
+			}
+		})
+	}
+	raw, err := encodePreparationResult(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = parsePreparationResult(raw, fixturePreparationConfig(t)); err == nil {
+		t.Fatal("corpus result admitted under neutral config")
+	}
+	badConfig := cfg
+	badConfig.Cohort = "all"
+	if _, err = parsePreparationResult(raw, badConfig); err == nil {
+		t.Fatal("corpus result admitted under open cohort")
+	}
+	for _, tc := range []struct {
+		name   string
+		change func(*nativePreparationResult)
+	}{
+		{"schema", func(v *nativePreparationResult) { v.Schema = "unknown" }},
+		{"id", func(v *nativePreparationResult) { v.ID = "other-prep" }},
+		{"planning", func(v *nativePreparationResult) { v.PlanningDigest = cfg.attemptDigest() }},
+		{"attempt", func(v *nativePreparationResult) { v.AttemptDigest = cfg.planningDigest() }},
+		{"source", func(v *nativePreparationResult) { v.SourceSHA256 = cfg.TestSHA256 }},
+		{"inventory", func(v *nativePreparationResult) { v.InventorySHA256 = preparationDigest([]byte("other")) }},
+		{"profile", func(v *nativePreparationResult) { v.ProfileSHA256 = preparationDigest([]byte("other")) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			value := r
+			tc.change(&value)
+			if _, err = parsePreparationResult(preparationJSON(value), cfg); err == nil {
+				t.Fatal("unbound corpus result admitted")
+			}
+		})
+	}
+	for _, invalid := range [][]byte{
+		append(slices.Clone(raw), '\n'),
+		bytes.Replace(raw, []byte(`"schema":`), []byte(`"unknown":1,"schema":`), 1),
+		bytes.Replace(raw, []byte(`"id":"corpus-proto-prep-2"`), []byte(`"id":"corpus-proto-prep-2","id":"corpus-proto-prep-2"`), 1),
+	} {
+		if _, err = parsePreparationResult(invalid, cfg); err == nil {
+			t.Fatal("ambiguous corpus result admitted")
+		}
+	}
+}
+
+func TestNativePreparationCorpusResultFrameLF(t *testing.T) {
+	cfg, r := fixtureCorpusPreparationResult(t)
+	r.StageMillis = map[string]int64{"m": 1}
+	base := len(preparationJSON(r))
+	for _, tc := range []struct {
+		name  string
+		bytes int
+		want  bool
+	}{
+		{"JSON-plus-LF-at-physical-limit", preparationMaxResult - 1, true},
+		{"JSON-alone-at-physical-limit", preparationMaxResult, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			value := r
+			value.StageMillis = map[string]int64{strings.Repeat("m", tc.bytes-base+1): 1}
+			raw := preparationJSON(value)
+			if len(raw) != tc.bytes {
+				t.Fatal("frame boundary fixture")
+			}
+			encoded, err := encodePreparationResult(value)
+			if (err == nil) != tc.want || tc.want && !bytes.Equal(encoded, raw) {
+				t.Fatal("physical frame encode boundary", err)
+			}
+			if _, err = parsePreparationResult(raw, cfg); (err == nil) != tc.want {
+				t.Fatal("physical frame parse boundary", err)
+			}
+		})
 	}
 }
 

@@ -1,0 +1,656 @@
+{
+  "schema": "phebs-typed-runtime-machine-gates-v1",
+  "source_commit": "7d6b849c1a4dad5bec137abbd53231dbe0d87b27",
+  "scope": "Machine and command-package gates only; fresh native neutral and frozen target-corpus correctness/cost gates remain required.",
+  "peer_manifest_sha256": "sha256:6d8845a5640312815d0c72e76f2293c3467d8271285134ab27572681e7434dae",
+  "peer_machine_gates": {
+    "schema": "phebs-t45-peer-machine-gates-v1",
+    "source_commit": "7d6b849c1a4dad5bec137abbd53231dbe0d87b27",
+    "source_state": "clean immutable managed worktree",
+    "result": "PASS",
+    "capture": "Exact completed tool output retained after completion; no gate was rerun to reconstruct a log",
+    "host_engine_execution": false,
+    "native_execution": false,
+    "git_mutation": false,
+    "cmd_full_gate_included": false,
+    "registration_ready": false,
+    "native_correctness_cost_established": false,
+    "gates": [
+      {
+        "name": "normal",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "go",
+              "test",
+              "./internal/typedexecutor",
+              "./internal/typedbazel/...",
+              "./internal/typedsandbox",
+              "./internal/typedindex",
+              "./internal/typedworkspace",
+              "./internal/codenav",
+              "./spike/t451b",
+              "-count=1"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/normal.log",
+          "bytes": 539,
+          "sha256": "sha256:e3c11f3bf394a0ba98b461f65e3fe27075da85075a06c8a3a3687531f2d854f6"
+        },
+        "durations": {
+          "unit": "seconds",
+          "semantics": "Go-reported per-package elapsed time; not whole-command wall",
+          "packages": [
+            {
+              "package": "internal/typedexecutor",
+              "elapsed": 0.663
+            },
+            {
+              "package": "internal/typedbazel/launcher",
+              "elapsed": 1.219
+            },
+            {
+              "package": "internal/typedbazel/planner",
+              "elapsed": 0.945
+            },
+            {
+              "package": "internal/typedbazel/provider",
+              "elapsed": 3.827
+            },
+            {
+              "package": "internal/typedsandbox",
+              "elapsed": 5.957
+            },
+            {
+              "package": "internal/typedindex",
+              "elapsed": 3.881
+            },
+            {
+              "package": "internal/typedworkspace",
+              "elapsed": 3.417
+            },
+            {
+              "package": "internal/codenav",
+              "elapsed": 21.578
+            },
+            {
+              "package": "spike/t451b",
+              "elapsed": 25.917
+            }
+          ]
+        }
+      },
+      {
+        "name": "race",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "go",
+              "test",
+              "-race",
+              "./internal/typedexecutor",
+              "./internal/typedbazel/...",
+              "./internal/typedsandbox",
+              "./internal/typedindex",
+              "./internal/typedworkspace",
+              "./internal/codenav",
+              "./spike/t451b",
+              "-count=1"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/race.log",
+          "bytes": 540,
+          "sha256": "sha256:539b830644c3a00edb8a2901239fd7e989060b5d096a87fc0026c4212aa42fee"
+        },
+        "durations": {
+          "unit": "seconds",
+          "semantics": "Go-reported per-package elapsed time; not whole-command wall",
+          "packages": [
+            {
+              "package": "internal/typedexecutor",
+              "elapsed": 1.544
+            },
+            {
+              "package": "internal/typedbazel/launcher",
+              "elapsed": 2.912
+            },
+            {
+              "package": "internal/typedbazel/planner",
+              "elapsed": 3.557
+            },
+            {
+              "package": "internal/typedbazel/provider",
+              "elapsed": 9.776
+            },
+            {
+              "package": "internal/typedsandbox",
+              "elapsed": 8.691
+            },
+            {
+              "package": "internal/typedindex",
+              "elapsed": 7.951
+            },
+            {
+              "package": "internal/typedworkspace",
+              "elapsed": 5.834
+            },
+            {
+              "package": "internal/codenav",
+              "elapsed": 35.545
+            },
+            {
+              "package": "spike/t451b",
+              "elapsed": 304.536
+            }
+          ]
+        }
+      },
+      {
+        "name": "module_verification",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "go",
+              "mod",
+              "verify"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/module.log",
+          "bytes": 21,
+          "sha256": "sha256:b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd"
+        }
+      },
+      {
+        "name": "full_repository_vet",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "go",
+              "vet",
+              "./..."
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/vet.log",
+          "bytes": 0,
+          "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      {
+        "name": "pinned_host_full_repository_lint",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "golangci-lint",
+              "run",
+              "--concurrency=4",
+              "./..."
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off",
+              "GOMAXPROCS": "4",
+              "GOCACHE": "<fresh-private-cache>",
+              "GOLANGCI_LINT_CACHE": "<fresh-private-lint-cache>"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/lint-host.log",
+          "bytes": 10,
+          "sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+        },
+        "tool": {
+          "version": "2.12.2",
+          "sha256": "sha256:691b9100ce968ff0009b6b7757ef6a585e31ae9ab11dfe0340ebb6e8e21fdc3d"
+        }
+      },
+      {
+        "name": "pinned_tagged_linux_changed_scope_lint",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "golangci-lint",
+              "run",
+              "--concurrency=4",
+              "--build-tags=t45_native_cost_helper",
+              "./cmd/phebs",
+              "./internal/typedexecutor",
+              "./internal/typedbazel/provider",
+              "./spike/t451b"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off",
+              "GOMAXPROCS": "4",
+              "GOCACHE": "<fresh-private-cache>",
+              "GOLANGCI_LINT_CACHE": "<fresh-private-lint-cache>",
+              "GOOS": "linux",
+              "GOARCH": "arm64",
+              "CGO_ENABLED": "0"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/lint-linux.log",
+          "bytes": 10,
+          "sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+        },
+        "tool": {
+          "version": "2.12.2",
+          "sha256": "sha256:691b9100ce968ff0009b6b7757ef6a585e31ae9ab11dfe0340ebb6e8e21fdc3d"
+        }
+      },
+      {
+        "name": "python_acceptance_and_preparation",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "-m",
+              "unittest",
+              "discover",
+              "-s",
+              "spike/t454",
+              "-p",
+              "*test.py"
+            ],
+            "environment": {
+              "PYTHONDONTWRITEBYTECODE": "1"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/python.log",
+          "bytes": 122,
+          "sha256": "sha256:edfefc6158de5797a8e286fdd65cfc4a5c253d18f34dbda62d51761f51d42d35"
+        },
+        "tests": 23,
+        "elapsed_seconds": 0.086
+      },
+      {
+        "name": "shell_syntax",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "bash",
+              "-n",
+              "scripts/install-surreal-ci.sh"
+            ]
+          },
+          {
+            "argv": [
+              "bash",
+              "-n",
+              "scripts/stage-receipt-fixtures.sh"
+            ]
+          },
+          {
+            "argv": [
+              "bash",
+              "-n",
+              "scripts/test-stage-receipt-fixtures.sh"
+            ]
+          },
+          {
+            "argv": [
+              "bash",
+              "-n",
+              "spike/t111/labeling/gate2-v2/stage1_launch.sh"
+            ]
+          },
+          {
+            "argv": [
+              "bash",
+              "-n",
+              "spike/t4013/run-large-mac-ceremony.sh"
+            ]
+          },
+          {
+            "argv": [
+              "bash",
+              "-n",
+              "spike/t4013/run-phase7-full-profile-replay.sh"
+            ]
+          },
+          {
+            "argv": [
+              "bash",
+              "-n",
+              "spike/t4013/run-phase8-pressure-rehearsal.sh"
+            ]
+          }
+        ],
+        "log": {
+          "path": "logs/shell.log",
+          "bytes": 34,
+          "sha256": "sha256:d18ddd985fed19ce5d7319ce8db13db0ac05d09aa1b132c49c13e577f9e7fd57"
+        },
+        "scripts": 7
+      },
+      {
+        "name": "linux_acceptance_compile_tagged_vet_and_helper_build",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "go",
+              "test",
+              "-c",
+              "-o",
+              "<peer-native-acceptance.test>",
+              "./internal/typedexecutor"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off",
+              "GOOS": "linux",
+              "GOARCH": "arm64",
+              "CGO_ENABLED": "0"
+            }
+          },
+          {
+            "argv": [
+              "go",
+              "vet",
+              "-tags=t45_native_cost_helper",
+              "./cmd/phebs",
+              "./internal/typedexecutor",
+              "./internal/typedbazel/provider",
+              "./spike/t451b"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off",
+              "GOOS": "linux",
+              "GOARCH": "arm64",
+              "CGO_ENABLED": "0"
+            }
+          },
+          {
+            "argv": [
+              "go",
+              "build",
+              "-trimpath",
+              "-buildvcs=false",
+              "-tags=t45_native_cost_helper",
+              "-o",
+              "<peer-measured-worker>",
+              "./cmd/phebs"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off",
+              "GOOS": "linux",
+              "GOARCH": "arm64",
+              "CGO_ENABLED": "0"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/linux-compile-vet-build.log",
+          "bytes": 0,
+          "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "go_version": "go1.26.5",
+        "native_execution": false
+      },
+      {
+        "name": "original-git-normal",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "go",
+              "test",
+              "./internal/typedexecutor",
+              "-run",
+              "^TestNativeAcceptanceCorpusOriginalGit$",
+              "-count=1",
+              "-typed-native-corpus-git-proof=<frozen-source-git.tar>",
+              "-typed-native-corpus-archive-proof=<frozen-corpus-archive>"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/original-git-normal.log",
+          "bytes": 60,
+          "sha256": "sha256:f5addec3475f31641b8d3d0b98b7e54ddb6232bc99fef0b3af39a32b2b669207"
+        },
+        "elapsed_seconds": 0.781,
+        "inputs": [
+          {
+            "role": "original Git object tar",
+            "bytes": 307200,
+            "sha256": "sha256:6b37262ebca797aa6ffb086d54dd5f8faa698745a399054ca9759441e4cf4a90"
+          },
+          {
+            "role": "frozen public corpus archive",
+            "bytes": 249496,
+            "sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc"
+          }
+        ],
+        "cases": [
+          "good",
+          "corrupt-pack",
+          "tree-count",
+          "tree-mode",
+          "blob-digest"
+        ],
+        "source_code_executed": false
+      },
+      {
+        "name": "original-git-race",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "go",
+              "test",
+              "-race",
+              "./internal/typedexecutor",
+              "-run",
+              "^TestNativeAcceptanceCorpusOriginalGit$",
+              "-count=1",
+              "-typed-native-corpus-git-proof=<frozen-source-git.tar>",
+              "-typed-native-corpus-archive-proof=<frozen-corpus-archive>"
+            ],
+            "environment": {
+              "GOTOOLCHAIN": "local",
+              "GOPROXY": "off",
+              "GOSUMDB": "off"
+            }
+          }
+        ],
+        "log": {
+          "path": "logs/original-git-race.log",
+          "bytes": 60,
+          "sha256": "sha256:c3456990fc2916df2db3ff66f83b344c0d555e77470a9407639efbaa1028f00c"
+        },
+        "elapsed_seconds": 1.744,
+        "inputs": [
+          {
+            "role": "original Git object tar",
+            "bytes": 307200,
+            "sha256": "sha256:6b37262ebca797aa6ffb086d54dd5f8faa698745a399054ca9759441e4cf4a90"
+          },
+          {
+            "role": "frozen public corpus archive",
+            "bytes": 249496,
+            "sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc"
+          }
+        ],
+        "cases": [
+          "good",
+          "corrupt-pack",
+          "tree-count",
+          "tree-mode",
+          "blob-digest"
+        ],
+        "source_code_executed": false
+      },
+      {
+        "name": "clean_immutable_worktree",
+        "status": "PASS",
+        "exit_code": 0,
+        "commands": [
+          {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          }
+        ],
+        "log": {
+          "path": "logs/source-clean.log",
+          "bytes": 0,
+          "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    ],
+    "compiled_artifacts": [
+      {
+        "path": "artifacts/peer-measured-worker",
+        "role": "explicitly tagged Linux validation helper",
+        "bytes": 72272590,
+        "sha256": "sha256:a7e8fc0ab1d8bdbf32dabbbccd383903ee48c419d0ff257bc3de646f0f1368a8",
+        "executed": false,
+        "source_commit": "7d6b849c1a4dad5bec137abbd53231dbe0d87b27"
+      },
+      {
+        "path": "artifacts/peer-native-acceptance.test",
+        "role": "Linux compile-only acceptance harness",
+        "bytes": 39719386,
+        "sha256": "sha256:db6113737627b19d6147ca6114c200bacccfbe2505ebe1c45212d34510658b92",
+        "executed": false,
+        "source_commit": "7d6b849c1a4dad5bec137abbd53231dbe0d87b27"
+      }
+    ],
+    "limitations": [
+      "Go package times are package elapsed times, not complete command wall measurements.",
+      "Native opt-in acceptance/preparation/cohort execution was not run.",
+      "Private cache sampling and product corpus gates require fresh native evidence.",
+      "Compiled peer artifacts do not substitute for separately pinned preparation/acceptance tools.",
+      "Absolute private execution and cache/output paths are deliberately omitted."
+    ]
+  },
+  "command_private_proof_sha256": "sha256:f90678a92f615f834f349ba7434dd86827f527bda4ee64a505b292feb6728681",
+  "command_package": {
+    "argv": [
+      "go",
+      "test",
+      "-work",
+      "./cmd/phebs",
+      "-count=1",
+      "-timeout=30m",
+      "-v"
+    ],
+    "actual_test_binary_sha256": "sha256:31d685c2204d40eef9ccbaf24012c2091c57b910e02d542988fadc68066c5efd",
+    "actual_test_binary_bytes": 59219490,
+    "proper_go_test_cwd_verified": true,
+    "source_clean_unchanged": true,
+    "exit_code": 0,
+    "package_seconds": 507.062,
+    "total_seconds": 509.845516666,
+    "fixture_ram_bytes": 2147483648,
+    "fixture_deadlines_unchanged": true,
+    "host_build_temp_separate": true,
+    "ui_default_stub_only": true,
+    "native_pass_rows": [
+      "--- PASS: TestT422ActivationConstructorRequiresNativeBootstrap (0.00s)",
+      "--- PASS: TestT422AttemptCompactNativeVocabulary (0.00s)",
+      "--- PASS: TestT422PhysicalNativeOutput (0.00s)",
+      "--- PASS: TestT422WarmNativeOutput (0.00s)",
+      "--- PASS: TestT422BackupRetiredNativeEndpoint (3.03s)",
+      "--- PASS: TestT422RestoreRetiredNativeEndpoint (12.59s)",
+      "--- PASS: TestT422ArchiveWorkspaceNativeComposition (14.50s)",
+      "--- PASS: TestT422WorkspaceEpochFiveNativeComposition (18.04s)",
+      "--- PASS: TestT422ArchiveWorkspaceNativeFailures (12.47s)",
+      "--- PASS: TestT422ArchiveReadNativeSuppliedManifest (29.66s)",
+      "--- PASS: TestT422NativeFailurePrefix (0.00s)",
+      "--- PASS: TestT422CheckpointRecoveredNativeIdentity (0.00s)",
+      "--- PASS: TestT422LifecycleNativeReturnedPrefix (0.00s)",
+      "--- PASS: TestT422LifecycleNativeEventBound (0.00s)",
+      "--- PASS: TestT422LifecycleUnadmittedOperationsRefuseBeforeNative (0.00s)",
+      "--- PASS: TestT422LifecycleNativeCursorReadFailureEvent (0.00s)",
+      "--- PASS: TestT422MarkerNativeRecoveryRefusalReleasesFence (0.00s)",
+      "--- PASS: TestT422MarkerNativeOutputModel (0.00s)",
+      "--- PASS: TestT422NativeQueryCommandChild (0.00s)",
+      "--- PASS: TestT422NativeQueryCommand (0.15s)",
+      "--- PASS: TestT422NativeQueryResult (0.09s)",
+      "--- PASS: TestT422RetentionNativeCurrentPrior (0.36s)",
+      "--- PASS: TestT422RetentionNativePositiveFailure (0.00s)",
+      "--- PASS: TestT422WorkspaceCleanupNativeComposition (105.96s)",
+      "--- PASS: TestT422WorkspaceAllOwnersNativeComposition (185.91s)",
+      "--- PASS: TestT422WorkspaceNativeComposition (5.26s)",
+      "--- PASS: TestT422WorkspaceEarlyNativeComposition (1.97s)",
+      "--- PASS: TestT422WorkspaceWarmNativeComposition (1.71s)",
+      "--- PASS: TestT422WorkspacePhysicalNativeComposition (1.64s)",
+      "--- PASS: TestT422WorkspaceRecoveryNativeComposition (1.61s)",
+      "--- PASS: TestT422WorkspaceNativeHelper (0.00s)"
+    ],
+    "owned_test_and_engine_processes_absent": true,
+    "go_test_group_closed": true,
+    "fixture_empty": true,
+    "task_ram_detached": true
+  },
+  "registration_ready": false
+}

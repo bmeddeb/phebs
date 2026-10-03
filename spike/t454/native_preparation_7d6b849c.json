@@ -1,0 +1,96 @@
+{
+  "schema": "phebs-typed-native-preparation-gates-v1",
+  "source_commit": "7d6b849c1a4dad5bec137abbd53231dbe0d87b27",
+  "scope": "Fresh finite preparation only; no actual controller/canary/dry-run/corpus correctness/cost result or registration.",
+  "passed_preparations": {
+    "neutral": {
+      "receipt": {
+        "schema": "phebs-typed-native-preparation-receipt-v1",
+        "id": "neutral-codec-prep-2",
+        "planning_digest": "sha256:c8c8b4b0f4d2932b7c5742237d9521f6b737abfa5b02b66aeb20c1ae3e3287b3",
+        "attempt_digest": "sha256:5dc6636570ee10294eef45f9dfcddeed0adade9aa4b5d801eb8d2dc531336134",
+        "config": "sha256:95b2087a9fb3a09e3440f9e780871301c6123496c522b884630e63027467ae80",
+        "test_sha256": "sha256:5ef9f1aab75e2f9965c18748de286e525bc9282025043d7ad445f808262ceae9",
+        "image_sha256": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818",
+        "scratch_device": 7,
+        "scratch_inode": 0,
+        "container_id": "2f85d31b0ebdbd727a85eed8cc39b326db6c13a1d83da5dc3dbfa9890ca6e93b",
+        "result_sha256": "sha256:5ba9b1df55e023f6538154ff37608582b24c273751d969bced0b7ec6574f9ee3",
+        "exit_code": 0,
+        "removed": true,
+        "complete": true
+      },
+      "receipt_sha256": "sha256:4a36431a96b8c956302d4876fdc16034084596c7813d92449669ac5ff392f830",
+      "host_terminal_sha256": "sha256:c7650ad6240bc3698b47985138c632ef68f2807e71e3092bba59c1cead1c5cbb",
+      "original_seed_postrun_epoch": 1,
+      "input_duplicate_retirement_passed": true
+    },
+    "ordinary": {
+      "receipt": {
+        "schema": "phebs-typed-native-preparation-receipt-v1",
+        "id": "corpus-ordinary-codec-prep-1",
+        "planning_digest": "sha256:1ed73830bade7c51189cca0b8298be2a65324ef280d9c839b58edd4e68e25aa0",
+        "attempt_digest": "sha256:bf15470ff88a56e452401bd0c8d77a44cbbb4ee0db983b7bc3b314346fcf4810",
+        "config": "sha256:cb899653cafe40eb22568717707ebc769cee7bca7af4d1e14757b26bd76e4601",
+        "test_sha256": "sha256:5ef9f1aab75e2f9965c18748de286e525bc9282025043d7ad445f808262ceae9",
+        "image_sha256": "sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818",
+        "scratch_device": 7,
+        "scratch_inode": 0,
+        "container_id": "269aa650504ad1713e4fb4745e45c72ec131e2b5031700703cead2867688e21f",
+        "result_sha256": "sha256:0a0360f737023fe845221f9f46058729e083480a04624c6c6ed483cabdc8d8ba",
+        "exit_code": 0,
+        "removed": true,
+        "complete": true
+      },
+      "receipt_sha256": "sha256:7c3f300026c0c7eaee96a7c2b327807b6490381bec10422f1927ecdaee02f684",
+      "host_terminal_sha256": "sha256:7db7351e7b136dcdc55840c782b0b8ee07b4e05c362a272f3842b2c24417fcd4",
+      "original_seed_postrun_epoch": 1,
+      "input_duplicate_retirement_passed": true
+    }
+  },
+  "proto_stop": {
+    "id": "corpus-proto-codec-prep-1",
+    "config_sha256": "sha256:5ce4f39b57d1c435ef0fd0bf232a2c53d4c303c4122bd700ac0c8d40231e5e02",
+    "host_terminal_sha256": "sha256:e573d4d401aadc0fe2592dd95ff0aa08f64f5ea94528562a6027ae0cc3305200",
+    "preflight_and_poststage_capacity_passed": true,
+    "projected_host_percent_ceiling": 76,
+    "transport_and_collection_exit": 1,
+    "transport_groups_closed": true,
+    "successful_receipt_present": false,
+    "native_test_seconds": 71.66,
+    "container_exit": 125,
+    "oom_killed": false,
+    "worker_site_report": "unknown",
+    "private_worker_marker": "w_plan",
+    "failure_callback_index": 3,
+    "three_native_commands_succeeded": true,
+    "failure_index_is_not_a_fourth_command": true,
+    "failure_error": "typed index: capacity_refused",
+    "failing_source_guard": "preparationCapture.read raw retained 8 MiB ceiling",
+    "retained_limit_bytes": 8388608,
+    "retained_bytes_at_refusal": null,
+    "offending_projection": null,
+    "excess_bytes": null,
+    "diagnostic_archive_sha256": "sha256:c429d79bac8307f20c243f99fd66e941b83dd01eaf64aec4e88d58b22ab88418",
+    "post_stop_observation": {
+      "schema": "phebs-private-t45-preparation-stop-observation-v1",
+      "id": "corpus-proto-codec-prep-1",
+      "config_sha256": "sha256:5ce4f39b57d1c435ef0fd0bf232a2c53d4c303c4122bd700ac0c8d40231e5e02",
+      "preparation_receipt_present": false,
+      "preparation_result_present": false,
+      "current_native_absent": true,
+      "current_host_namespace_entries": [
+        ".lock"
+      ],
+      "matching_preparation_processes": [],
+      "processes_censused": 91,
+      "successful_preparation": false,
+      "offending_projection": null,
+      "retained_bytes_at_refusal": null,
+      "excess_bytes": null
+    },
+    "static_independent_causal_review_sha256": "sha256:265c1526084debfbdfbdf17638af7a3d5ca2adaff15f192b042ba7a1f805aadb"
+  },
+  "fanout_native_dispatched": false,
+  "registration_ready": false
+}

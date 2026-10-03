@@ -143,7 +143,7 @@ func preparationWorkerMain() int {
 // runPreparationWorker calls the production planning functions directly with
 // only the profile/inventory fields of an internal Invocation. Zero parent or
 // execution values are admitted or treated as authority. It captures the raw
-// cquery/aquery/projection bytes under the neutral retained ceiling and emits
+// cquery/aquery/projection bytes under the selected preparation retained ceiling and emits
 // the bounded result; it executes no packages.Load, driver or indexer.
 func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance, phase, request, seal string) ([]byte, error) {
 	cfg, inventory, profile, err := loadPreparationControls(ctx, allowance, phase, request, seal)
@@ -162,7 +162,7 @@ func runPreparationWorker(ctx context.Context, allowance typedsandbox.Allowance,
 	stages := map[string]int64{}
 	mark := func(name string, at time.Time) { stages[name] = time.Since(at).Milliseconds() }
 
-	capture := &preparationCapture{ceiling: preparationRetainedCeiling}
+	capture := &preparationCapture{ceiling: cfg.retainedCeiling()}
 	defer capture.close()
 
 	at := time.Now()
@@ -326,7 +326,7 @@ func loadPreparationControls(ctx context.Context, allowance typedsandbox.Allowan
 // flags or running an extra planner. Execution delegates to the unchanged
 // runCommand and projection reads to the same bounded, no-special-file,
 // root-relative reader nativePlan uses; returned bytes are captured under the
-// neutral retained ceiling.
+// selected preparation retained ceiling.
 type preparationCapture struct {
 	commandFailed bool
 	ceiling       int64
@@ -422,7 +422,7 @@ func (c *preparationCapture) result(cfg nativePreparationConfig, allowance typed
 	}
 	stages["wall"] = wall.Milliseconds()
 	r := nativePreparationResult{
-		Schema: preparationResultSchema, ID: cfg.ID,
+		Schema: cfg.resultSchema(), ID: cfg.ID,
 		PlanningDigest: allowance.PlanningDigest, AttemptDigest: allowance.AttemptDigest,
 		Cquery: c.stdout[0], Aquery: c.stdout[1], Projections: c.proj,
 		BuildStdoutSHA256: c.buildOut.sha, BuildStdoutBytes: c.buildOut.bytes,
@@ -543,7 +543,7 @@ func TestNativePreparationHost(t *testing.T) {
 	if !ok {
 		t.Fatal("neutral preparation worker frame")
 	}
-	parsed, err := parsePreparationResult(body)
+	parsed, err := parsePreparationResult(body, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

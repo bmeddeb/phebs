@@ -672,7 +672,7 @@ func TestNativePreparationPostRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := parsePreparationResult(resRaw)
+	res, err := parsePreparationResult(resRaw, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
