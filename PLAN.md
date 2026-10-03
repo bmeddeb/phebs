@@ -8862,3 +8862,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Integration lint also converts only a pre-existing Linux workspace test
   fixture's directory/symlink/file selection to an equivalent tagged switch;
   production files and the compiled acceptance harness remain unchanged.
+
+- **2026-10-03 — T45.6 remote admission does not reach the dedicated host.**
+  Exact starting source remains `f7900e6983655702bb67aff8cc5cc84a9f5ceb75`.
+  The frozen corpus transport still requires the already running Colima profile
+  `phebs-t451a` and seals deployment identity from that host. This runner is
+  Linux x86_64 and has no Colima binary, saved profile, SSH material, or API
+  credential. The connected personal Darwin worker for `~/phebs.com` is visible,
+  but this run cannot place work on it. No attempt identifier is spent, no
+  remote custody is created, and no cohort, comparison, or cleanup result is
+  claimed. Prior STOP receipts stay failed. The source-free record is
+  `spike/t454/remote_host_admission_stop_f7900e69.json`. Bazel stays
+  unregistered. The smallest continuation is to run the unchanged harness from
+  the machine that already owns that profile.
