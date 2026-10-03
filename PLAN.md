@@ -9024,3 +9024,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   operator read; dangling job links grant nothing and new admission overwrites
   them in the existing transaction. The parser adds one fixed string recipe,
   no row expansion, query, lock, child or runtime fallback.
+
+  The existing CI workflow gains an explicit manual-dispatch entry point for
+  canonical receipt validation when automatic PR events have produced no run.
+  It reuses the same jobs, pinned renderer, zero retries, thresholds and artifact
+  upload; no execution gate or baseline update is made automatic. This affects
+  finite operator-selected CI runs only, with no product or startup cost.
