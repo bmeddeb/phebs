@@ -160,8 +160,14 @@ responsive appearances. Cross-member UTF-16 navigation uses fixture-authored
 sealed bytes, with no native generation or public restore in this fixture.
 Unchanged current UI inputs bind `8fbf1051`; system Chrome/Node and existing
 Playwright are qualified without canonical Noble pixels or presentation edits.
-Source/static/browser/teardown and final review gates remain pending; the planned
-record is `spike/t459/settings_browser_1.json`. This does not close complete
+Exact implementation `88ab0f4f` passed eleven rendered checks, all nine states
+and eight appearances, with zero unexpected browser errors and joined teardown.
+Linux navigation/HTTP-client, focused Darwin normal/race, compilation/vet,
+pinned lint, module and syntax gates passed; two independent seven-path source
+reviews report all severity counts zero. Complete asset provenance and the
+source-free record are in `spike/t459/settings_browser_1.json`. Full Darwin
+command-package probes hit cumulative six- and fifteen-minute alarms in unrelated
+T42.2 native fixtures; that package remains unestablished. This does not close complete
 neutral or separately authorized target acceptance or change ordinary dark
 providers, the T45.6 waiver or scale/release posture.
 T45.1a's reviewed neutral harness gate is now PASS at source

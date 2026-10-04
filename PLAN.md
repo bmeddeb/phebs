@@ -9996,7 +9996,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   UI sources are copied through `git archive` from exact input tree `8fbf1051`
   into private external build custody, using existing lock-matched dependencies
   without modifying the presentation checkout, UI source, baselines or receipt
-  tooling. The planned host uses system Chrome 154, Node 26 and Playwright
+  tooling. The executed host uses system Chrome 154, Node 26 and Playwright
   1.62.1. These are explicitly qualified functional mechanics; they establish
   neither canonical pinned Noble pixels nor a repository-pinned Node build.
   The unchanged HTTP-client probe is corrected only to expect current
@@ -10051,7 +10051,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   diagnostic suffix, 128 managed-request events per context, eight mutation
   bodies, sixteen plan responses, sixteen projected status diagnostics and
   sixteen browser-error diagnostics with 160-character message/path limits.
-  The fixed request envelope covers the approximately 66-request complete
+  The fixed request envelope covers the observed 67-request administrator
   flow plus polling, rather than truncating the restore tail. The test has a ten-minute alarm and
   the driver a ten-minute cancellation timer, twenty-second EOF cleanup grace
   and ten-second termination escalation. These do not establish a whole-turn
@@ -10059,10 +10059,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   read, write and idle timeouts remain explicit. Cleanup must join auth,
   servers, browser and SSH children and remove only fresh owned test custody.
 
-  Source review, compilation/static gates, real rendered execution, exact
-  teardown and final evidence/cost review remain pending. The planned
-  source-free record is `spike/t459/settings_browser_1.json`; no PASS is claimed
-  before those gates. This is only the rendered authenticated Settings/API
+  Exact implementation `88ab0f4f` passed the real rendered fixture: eleven
+  checks, all nine states, eight functional appearances, four authenticated
+  successful enqueue audits and zero unexpected browser errors. Complete
+  165-file asset provenance accounts for 6,747,870 bytes; clean transfer matched
+  every regular guest asset. The Linux fixture binary was built at `335a6e2a`;
+  all Go, module and UI inputs are identical at `88ab0f4f`, whose external driver
+  corrects only canceled diagnostic-body handling. Existing Linux navigation,
+  HTTP/client, focused Darwin normal/race, cross-compilation, Linux vet, both
+  platform pinned lint, module and driver-syntax gates passed. Two independent
+  correctness/evidence and cost/documentation reviews covered all seven source
+  paths with all severity counts zero. Browser, SSH, TLS, auth cleanup and the
+  engine joined; fresh guest custody was removed and the personal VM returned
+  to its initially stopped state. The source-free record is
+  `spike/t459/settings_browser_1.json`.
+
+  Full Darwin command-package probes are unestablished: cumulative six- and
+  fifteen-minute alarms expired in unrelated native T42.2 fixtures, after only
+  37 and 38 seconds in their respective current tests. Those fixtures have
+  individual ten-minute deadlines. This records both alarms and claims neither
+  a complete command-package pass nor an exact-base reproduction. Each alarm's
+  one identified owned engine was stopped and verified gone; its failed-probe
+  temporary directories remain local diagnostic custody. The appropriate
+  changed-path gates above are green. This is only the rendered authenticated Settings/API
   prerequisite. Complete neutral closure and separately authorized target
   closure remain open; zero accepted service incarnations and this tiny fixture
   establish no 5,000-service/12-GB supported envelope. Ordinary providers remain

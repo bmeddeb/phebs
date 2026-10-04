@@ -15571,9 +15571,18 @@ appearances cover keyboard, named controls, reduced motion and overflow. UI
 sources/build assets bind exact input tree `8fbf1051` in private external custody;
 no UI, baseline or presentation-tooling edit is included. System Chrome 154,
 Node 26 and Playwright 1.62.1 are qualified, without canonical Noble pixels or a
-repository-pinned Node claim. Source/static/browser/cleanup and final review
-gates remain pending; the planned source-free record is
-`spike/t459/settings_browser_1.json`. Production behavior, cache and native
+repository-pinned Node claim. Exact implementation `88ab0f4f` passed eleven
+rendered checks, nine states, eight appearances, four real successful enqueue
+audits and zero unexpected browser errors, with complete 165-file/6,747,870-byte
+asset provenance. Existing Linux navigation and HTTP/client, focused Darwin
+normal/race, Linux compilation/vet, both platform pinned lint, module and driver
+syntax gates passed. Two independent source/evidence/cost reviews covered all
+seven source paths with all severity counts zero; browser/fixture/tunnel/engine
+joined and fresh guest custody was removed. The source-free record is
+`spike/t459/settings_browser_1.json`. Full Darwin command-package probes hit
+cumulative six- and fifteen-minute alarms in unrelated T42.2 native fixtures;
+that complete package remains unestablished, without a claimed base reproduction.
+Production behavior, cache and native
 bounds remain unchanged. Complete neutral and separately authorized target
 closure remain open; the zero-service tiny fixture establishes no product-scale
 envelope, ordinary providers remain dark and T45.6 is not PASS.
