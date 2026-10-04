@@ -350,6 +350,18 @@
       "result": "PASS",
       "race_seconds": 15.851,
       "scope": "Operator tests include actual claimed schedule Running=1 before Begin and fresh preflight attempt beside stale old publication; production implementation unchanged."
+    },
+    "advanced_stack_base_confirmation": {
+      "source": "9bdbf78c261438c28ef731170eacbd946c487f64",
+      "base": "d6f60d2c9c763166188f9272d13b92b598a49115",
+      "reason": "PR25 was already merged into its T45.7 base; follow-up PR27 preserves that advanced base, including its independent main synchronization.",
+      "api_store_ui_source_unchanged_from_correction": true,
+      "focused_api_operator_race_seconds": {
+        "api": 1.873,
+        "store": 15.961
+      },
+      "vet_lint_docs_glossary_generated_api_parity": "PASS",
+      "native_execution_claim": false
     }
   }
 }
