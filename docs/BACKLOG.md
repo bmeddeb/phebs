@@ -15465,7 +15465,7 @@ after restore, rendered authenticated Settings and separately authorized target
 closure remain unestablished. Target binding is pending, with no target execution
 authorized; ordinary providers stay unavailable and T45.6 is not PASS.
 
-T45.9 neutral workspace fault prerequisite (2026-10-04, **OPEN**): reuse the
+T45.9 neutral workspace fault prerequisite (2026-10-04): reuse the
 existing opt-in acceptance parent under a separate closed test-only schema for
 the fixed five-file, 176-byte workspace and module profile. A fresh pristine
 store seed contains no queued job, attempt or previous dispatch custody. Serial
@@ -15475,9 +15475,18 @@ refuse replay without publication, settle and release growth, and prove
 native/workspace/engine teardown. Hard death requires a separate recovery child;
 the earlier fresh-controller census alone does not establish it. Historical
 Bazel gates and receipts remain exact supporting evidence. Production behavior
-and bounds are unchanged. Immutable source, independent source/cost review,
-fresh native receipts and full machine/teardown gates are **OPEN**; no pass is
-recorded. Actual pressure/lifecycle closure, native generation after restore,
+and bounds are unchanged. Exact implementation `b6be304f11f869358fc9eb76d2296a4f19d391fe`
+passes fresh cancellation (43.14s), original watchdog expiry (323.31s) and
+hard-death/fresh-process recovery (49.32s), with actual failed-owner drain and
+one retained parent tombstone per case. The existing real runner/coordinator
+and routed-consumer regression passes after fixture reuse (33.65s). Linux
+acceptance models, affected package normal/race and static/docs gates pass;
+pre-dispatch independent source/config/cost reviews record all severity counts
+zero. The source-free record is `spike/t459/native_faults_1.json`; final evidence
+review remains the branch-close check. Fresh staging is removed after verified
+absence and the personal profile is stopped. Prior staging/model/lint failures
+remain retained, and the initial provisioned installation ran no native case.
+Actual pressure/lifecycle closure, native generation after restore,
 rendered authenticated Settings, full neutral closure and the separately
 authorized target closure remain open. The fixture has zero accepted services
 and establishes no product-scale dimensions; ordinary providers remain

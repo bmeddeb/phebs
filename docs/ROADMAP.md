@@ -104,16 +104,19 @@ gates pass and exact-source review is clean; broader Linux lint retains 13
 baseline-identical T42.1 warnings. Two independent all-path evidence/cost
 reviews of exact candidate `c2300f68` find all severity counts zero.
 Complete native/neutral,
-native fault/hard-death, pressure/lifecycle, native restore regeneration, rendered
+pressure/lifecycle, native restore regeneration, rendered
 Settings and separately authorized target closure remain open. Pending target
 binding authorizes no target run.
-The next T45.9 prerequisite is **OPEN**: reuse the opt-in acceptance harness for
-the fixed 176-byte neutral workspace's cancellation, shared-wall expiry and
-hard-controller-death recovery under a separate closed test schema. Production
-and historical Bazel gates remain unchanged. Exact source/review, fresh serial
-native receipts and machine/teardown gates are pending. This slice establishes
-no PASS, product-scale envelope, pressure/lifecycle or native restore closure,
-rendered Settings, complete neutral closure or target execution authority.
+The next T45.9 prerequisite proves the fixed 176-byte neutral workspace's
+cancellation, original 300-second watchdog expiry and hard-controller-death
+recovery under a separate closed test schema. Exact implementation `b6be304f`
+passes all three fresh native cases and the reused coordinator/consumer
+regression; supporting machine gates and pre-dispatch reviews pass. The record
+is `spike/t459/native_faults_1.json`; final evidence review remains the branch-close
+check. Failed-owner cleanup is proven, while actual pressure/lifecycle,
+native restore, rendered Settings, complete neutral closure and the separately
+authorized target remain open. Production and historical Bazel gates stay exact;
+this fixture establishes no product-scale envelope or target authority.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

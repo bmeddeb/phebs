@@ -9603,7 +9603,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   T45.6 waiver is not PASS; pending target binding authorizes no target execution
   or scale/release claim.
 
-- **2026-10-04 — T45.9 neutral workspace fault prerequisite (OPEN).** Extend
+- **2026-10-04 — T45.9 neutral workspace fault prerequisite.** Extend
   only the opt-in acceptance tests with the closed
   `phebs-typed-workspace-fault-acceptance-v1` schema. It admits only the fixed
   neutral repository, its five workspace source files totaling 176 admitted
@@ -9626,12 +9626,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   publication paths add zero work, locks, scans/hashes, cache invalidation,
   goroutines, children or persistent state. Test provisioning copies and hashes
   the full pinned Go SDK and indexer/helper bytes, not only the 176 source
-  bytes; it repeats the existing bounded inventory walk, per-file buffers and
-  serial neutral Git construction, uses one supervised in-memory setup engine
+  bytes. The inherited trusted host provisioning walk reads each complete file
+  before native admission enforces its bounds; it retains one file buffer plus
+  inventory records. This fixed installation has 14,506 files and 292,010,065
+  input bytes, with a 72,860,463-byte largest file; the SDK itself has 14,496
+  files and 202,159,789 bytes. Provisioning repeats serial neutral Git
+  construction, uses one joined in-memory setup engine
   and exports one pristine seed. Profile/inventory/config controls keep their
   own existing size ceilings; receipts retain the 128-KiB ceiling. Each serial
   case adds one parent-owned persistent engine, one controller child and, for
-  hard death, one joined recovery child. At most two sequential native phase
+  hard death, one joined recovery child. Parent and controller each reopen and
+  hash all 14,506 inventory files and 292,010,065 bytes before dispatch; the
+  hard-death recovery child repeats that verification. Real attempt preparation
+  also copies and verifies that complete input into owned immutable custody.
+  Preparation holds the existing controller serialization and lifecycle guard
+  through that copy/verification. Native phases release the mutation guard while
+  retaining controller serialization and their control pin; authenticated
+  observations take short nonblocking shared publication pins. Startup and
+  each lifecycle turn retain their existing guarded passes.
+  At most two sequential native phase
   containers retain the original shared absolute 300-second allowance and all
   memory, disk, inode, task, descriptor and output bounds. The 540-second outer
   case context, bounded 100-ms observations and publication pins, and existing
@@ -9644,9 +9657,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   bounds test work; it guarantees neither timing nor deletion progress.
   Original cache behavior, source/runtime pins and Bazel admission remain exact.
 
-  **Validation: OPEN.** An immutable source commit, independent implementation
-  and steady-state-cost review, fresh serial native fault receipts, machine
-  gates and exact teardown evidence remain pending. This draft records no PASS.
+  **Validation.** Exact implementation `b6be304f11f869358fc9eb76d2296a4f19d391fe`
+  passes the fresh serial workspace cancellation (43.14s), original watchdog
+  expiry (323.31s, exit 124 / `wall_limit`) and controller-hard-death recovery
+  (49.32s) cases. Each retains two authenticated native observations and the
+  original allowance, rejects replay/current publication, releases growth and
+  proves native, workspace and engine drain. Ordinary owner cleanup takes
+  1,196 / 1,197 / 1,196 selected turns with one honest parent tombstone each;
+  this is failed-owner cleanup evidence, not pressure/hysteresis closure. The
+  inherited fault harness invokes the real coordinator directly; the separate
+  runner/coordinator/routed-consumer regression also passes after shared fixture
+  extraction (33.65s). A current reference helper rebuild matches its staged
+  bytes exactly. All 27 selected Linux acceptance models pass; the original-Git
+  fixture test skips without its explicit corpus argument. Darwin package
+  normal/race, Linux compilation/vet, full Darwin and affected Linux pinned
+  lint, module and docs/glossary gates pass. Broader Linux lint's retained
+  thirteen unchanged T42.1 warnings are not relabeled. Two independent
+  pre-dispatch source/config/cost reviews report all severity counts zero;
+  final evidence review follows the source-free record
+  `spike/t459/native_faults_1.json`. The initial staging newline, missing model
+  oracle and two pinned-lint style failures remain retained; the first
+  provisioned installation dispatched no native work. Fresh guest staging is
+  removed after exact absence checks, the personal profile is stopped and the
+  existing native namespace lock remains. The record changes no compiled input.
   Full T45.9 neutral acceptance, actual pressure/lifecycle transitions, native
   regeneration after restore, rendered authenticated Settings and separately
   authorized target closure remain open. The fixture has zero accepted service

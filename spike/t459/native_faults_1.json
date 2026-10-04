@@ -1,0 +1,439 @@
+{
+  "schema": "phebs-t459-native-workspace-faults-v1",
+  "recorded_date": "2026-10-04",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "implementation_commit": "b6be304f11f869358fc9eb76d2296a4f19d391fe",
+  "stack_base_commit": "ac34be5fa3dc804fa3cfd6f786a6202feaf3c2cd",
+  "installation": {
+    "id": "t459-workspace-fault-2",
+    "config_sha256": "sha256:f9ce52360b47d477ab6151cd4a3857bc7c4a53a6985fa434b4098d85c60a8f2b",
+    "schema": "phebs-typed-workspace-fault-acceptance-v1",
+    "source": {
+      "repository": "example.invalid/phebs-native-neutral",
+      "incarnation": "398e76961d7bb3f7bd4d84d1d17b913d",
+      "generation": "sha256:ee3d4c3142f4e64967fb68036e3f93ec0feb28b22de8d39fea2b12e4944fed78",
+      "commit": "5415b259c1060690c7757bde0ec76aff3b8944e3"
+    },
+    "profile_digest": "sha256:f31bb57be85a39f684d4012a8660c01abc55fe780fb4969c69c7a871986101cf",
+    "inventory_digest": "sha256:6db8e655362ca5ba4c9da87fb170e806f96828f5590be071b71a49282f855c17",
+    "selection_digest": "sha256:5a50c8e60bc672a1fe193a17ca01f4206ada64213ef76c3b812c5489dca0b74a",
+    "universe_digest": "sha256:bef2a3571b300ed838423365330ad4360e9fa0bdbbeeb45b223b043151e28366",
+    "seed_digest": "sha256:f5395a76195e42c8da025b8c2ba8f8f022d556a4b5abc12f8a6f0c5560c3d7dc",
+    "deployment_digest": "sha256:42abe49fa21208bbee59b404769dbbcdb865172767f343855770130d92892e77",
+    "profile_epoch": 1,
+    "seed": "real pristine export: repo, migrations and one intent; no queued job, request, schedule, attempt or current"
+  },
+  "cases": [
+    {
+      "case": "cancel",
+      "status": "PASS",
+      "seconds": 43.14,
+      "receipt_sha256": "sha256:fb340fa59359c14f9fb00e95ce6da9bbb25016b6081545b87d7da02942d6ba82",
+      "authenticated_phase_observations": 2,
+      "injected": true,
+      "shared_absolute_wall_seconds": 300,
+      "original_allowance_reused": true,
+      "execute_worker_bytes_used": 2024,
+      "execute_wire_bytes_used": 3821,
+      "fresh_recovery_process": false,
+      "interrupted_work_replay": "refused",
+      "current_absent": true,
+      "settled": true,
+      "growth_released": true,
+      "native_absent": true,
+      "workspace_drained": true,
+      "engine_joined": true,
+      "lifecycle_turns": 1196,
+      "retained_parent_tombstones": 1,
+      "phase_reports": [
+        {
+          "phase": "plan",
+          "exit_code": 0,
+          "removed": true,
+          "stop_reason": "",
+          "watchdog_present": false,
+          "resources": {
+            "memory_oom_events": 0,
+            "memory_oom_kills": 0,
+            "memory_limit_events": 0,
+            "task_limit_events": 0,
+            "sampling_unavailable": false,
+            "limits_verified": true,
+            "memory_peak_bytes": 227741696,
+            "sampled_peak_rss_bytes": 297009152,
+            "sampled_peak_processes": 3,
+            "sampled_peak_scratch_bytes": 1150976,
+            "sampled_peak_scratch_inodes": 288,
+            "samples": 8,
+            "per_process_descriptors": 128,
+            "aggregate_descriptor_ceiling": 37632
+          }
+        },
+        {
+          "phase": "execute",
+          "exit_code": -1,
+          "removed": true,
+          "stop_reason": "",
+          "watchdog_present": false,
+          "resources": {
+            "memory_oom_events": 0,
+            "memory_oom_kills": 0,
+            "memory_limit_events": 0,
+            "task_limit_events": 0,
+            "sampling_unavailable": false,
+            "limits_verified": false,
+            "memory_peak_bytes": 0,
+            "sampled_peak_rss_bytes": 0,
+            "sampled_peak_processes": 0,
+            "sampled_peak_scratch_bytes": 0,
+            "sampled_peak_scratch_inodes": 0,
+            "samples": 0,
+            "per_process_descriptors": 0,
+            "aggregate_descriptor_ceiling": 0
+          }
+        }
+      ],
+      "phase_report_qualification": "actual controller phase reports"
+    },
+    {
+      "case": "wall",
+      "status": "PASS",
+      "seconds": 323.31,
+      "receipt_sha256": "sha256:3ba0e5cb0ac6ac306049a018bef8a22f795ad86715592c796d4f8cb769fb29ba",
+      "authenticated_phase_observations": 2,
+      "injected": true,
+      "shared_absolute_wall_seconds": 300,
+      "original_allowance_reused": true,
+      "execute_worker_bytes_used": 2024,
+      "execute_wire_bytes_used": 3821,
+      "fresh_recovery_process": false,
+      "interrupted_work_replay": "refused",
+      "current_absent": true,
+      "settled": true,
+      "growth_released": true,
+      "native_absent": true,
+      "workspace_drained": true,
+      "engine_joined": true,
+      "lifecycle_turns": 1197,
+      "retained_parent_tombstones": 1,
+      "phase_reports": [
+        {
+          "phase": "plan",
+          "exit_code": 0,
+          "removed": true,
+          "stop_reason": "",
+          "watchdog_present": false,
+          "resources": {
+            "memory_oom_events": 0,
+            "memory_oom_kills": 0,
+            "memory_limit_events": 0,
+            "task_limit_events": 0,
+            "sampling_unavailable": false,
+            "limits_verified": true,
+            "memory_peak_bytes": 236584960,
+            "sampled_peak_rss_bytes": 294338560,
+            "sampled_peak_processes": 2,
+            "sampled_peak_scratch_bytes": 1150976,
+            "sampled_peak_scratch_inodes": 288,
+            "samples": 7,
+            "per_process_descriptors": 128,
+            "aggregate_descriptor_ceiling": 37632
+          }
+        },
+        {
+          "phase": "execute",
+          "exit_code": 124,
+          "removed": true,
+          "stop_reason": "wall_limit",
+          "watchdog_present": true,
+          "resources": {
+            "memory_oom_events": 0,
+            "memory_oom_kills": 0,
+            "memory_limit_events": 0,
+            "task_limit_events": 0,
+            "sampling_unavailable": false,
+            "limits_verified": true,
+            "memory_peak_bytes": 65003520,
+            "sampled_peak_rss_bytes": 126353408,
+            "sampled_peak_processes": 2,
+            "sampled_peak_scratch_bytes": 20480,
+            "sampled_peak_scratch_inodes": 13,
+            "samples": 5681,
+            "per_process_descriptors": 128,
+            "aggregate_descriptor_ceiling": 37632
+          }
+        }
+      ],
+      "phase_report_qualification": "actual controller phase reports"
+    },
+    {
+      "case": "hard-death",
+      "status": "PASS",
+      "seconds": 49.32,
+      "receipt_sha256": "sha256:54e7edd9987e9c74d811ce697399e22fd59dd18580458ce980ec3b5df57799de",
+      "authenticated_phase_observations": 2,
+      "injected": true,
+      "shared_absolute_wall_seconds": 300,
+      "original_allowance_reused": true,
+      "execute_worker_bytes_used": 2024,
+      "execute_wire_bytes_used": 3821,
+      "fresh_recovery_process": true,
+      "interrupted_work_replay": "refused",
+      "current_absent": true,
+      "settled": true,
+      "growth_released": true,
+      "native_absent": true,
+      "workspace_drained": true,
+      "engine_joined": true,
+      "lifecycle_turns": 1196,
+      "retained_parent_tombstones": 1,
+      "phase_reports": null,
+      "phase_report_qualification": "not retained from killed controller; authenticated observations and recovery receipt establish the proof"
+    }
+  ],
+  "coordinator_regression": {
+    "status": "PASS",
+    "selector": "^TestNativeInputCoordinator$",
+    "seconds": 33.65,
+    "native_launches": 2,
+    "runner_and_scheduler": "actual successful settlement",
+    "routed_navigation": "exact cold/warm Definition, References and Hover; stale cached queries/binding refused",
+    "qualification": "separate fresh fixture; fault harness itself invokes actual coordinator directly"
+  },
+  "acceptance_dimensions": {
+    "accepted_service_incarnations": 0,
+    "regular_source_git_blobs": 5,
+    "admitted_regular_source_git_blob_bytes": 176,
+    "qualification": "fixed neutral fixture; no product-scale envelope"
+  },
+  "trusted_staged_input": {
+    "files": 14506,
+    "bytes": 292010065,
+    "max_file_bytes": 72860463,
+    "go_sdk_files": 14496,
+    "go_sdk_bytes": 202159789,
+    "go_sdk_max_file_bytes": 20123511,
+    "qualification": "host provisioning reads each complete trusted file before native admission; per-case parent/controller each rehash full inventory, hard-death recovery adds one pass"
+  },
+  "native_policy": {
+    "memory_bytes": 4533092352,
+    "scratch_bytes": 4573403136,
+    "scratch_inodes": 262144,
+    "tasks": 294,
+    "descriptors_per_process": 128,
+    "cpu_quota_micros": 200000,
+    "cpu_period_micros": 100000,
+    "wall_seconds": 300,
+    "output_bytes": 16777216,
+    "scip_bytes": 2285819
+  },
+  "outer_case_seconds": 540,
+  "stale_recovery_wait_seconds": 21,
+  "observation_poll_milliseconds": 100,
+  "lifecycle_turn_ceiling": 12000,
+  "tools": {
+    "build_go": "1.26.5",
+    "native_go_sdk": "1.25.0",
+    "scip_go": "0.2.7",
+    "surreal": "3.2.0",
+    "golangci_lint": "2.12.2",
+    "linux_build_cgo_enabled": false,
+    "helper_reference_build": "current source rebuild byte-identical to the staged helper; production source unchanged"
+  },
+  "binary_sha256": {
+    "native_acceptance_test": "47a6ac0e84982835e0c7000be3a2fb5f98c3e23534ec248310008c02c22473dd",
+    "helper": "6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d",
+    "surreal": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+    "mke2fs": "84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2",
+    "native_go": "4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "scip_go": "7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765"
+  },
+  "host": {
+    "personal_profile": "phebs-t451a",
+    "architecture": "aarch64",
+    "kernel": "6.8.0-117-generic",
+    "cpus": 2,
+    "memory_bytes": 8589934592,
+    "root_filesystem_bytes": 19682557952,
+    "execution_uid": 0,
+    "private_temp_root_mode": "0700",
+    "image_digest": "sha256:8b053ab5c65aee8fe7dfe5f8d9b90cd5a1cf0ace68efdaac3a718f3727a89b94",
+    "daemon_config_changed": false,
+    "historical_custody_reused": false
+  },
+  "checks": [
+    {
+      "name": "three fresh serial native workspace faults",
+      "status": "PASS"
+    },
+    {
+      "name": "fresh native coordinator and routed-consumer regression",
+      "status": "PASS"
+    },
+    {
+      "name": "Linux acceptance semantic/model tests",
+      "status": "PASS",
+      "top_level_passes": 27,
+      "skips": 1,
+      "skip": "original Git corpus test requires explicit archive argument"
+    },
+    {
+      "name": "Darwin typedexecutor package normal/race",
+      "status": "PASS",
+      "qualification": "Linux-only tests excluded; not a Linux race pass"
+    },
+    {
+      "name": "Linux compilation and affected vet",
+      "status": "PASS"
+    },
+    {
+      "name": "full Darwin and affected Linux pinned lint",
+      "status": "PASS",
+      "issues": 0
+    },
+    {
+      "name": "module/docs/glossary/whitespace",
+      "status": "PASS"
+    }
+  ],
+  "retained_stops": [
+    {
+      "status": "FAIL",
+      "name": "deployment observation whitespace before provisioning",
+      "log": "deployment.log",
+      "native_launches": 0
+    },
+    {
+      "status": "FAIL",
+      "name": "model run without public oracle fixture",
+      "log": "acceptance-linux-models.log",
+      "cause": "materialization omission; exact public oracle added before corrected runs",
+      "native_launches": 0
+    },
+    {
+      "status": "FAIL",
+      "name": "two tagged-switch lint style findings",
+      "log": "lint-linux.log",
+      "implementation_commit": "b8d503dc9480187ff4e0c17756178fae8f281ed3",
+      "native_launches": 0
+    },
+    {
+      "status": "NOT_DISPATCHED",
+      "name": "initial provision-only installation",
+      "id": "t459-workspace-fault-1",
+      "config_sha256": "sha256:753ace43be62e4367e4f18c82a12c56c1643c0fa7028d52a393e48803b84bbe7",
+      "native_launches": 0,
+      "fresh_guest_staging_removed": true
+    }
+  ],
+  "broader_linux_lint": {
+    "status": "retained prior baseline FAIL",
+    "issues": 13,
+    "package": "spike/t421",
+    "current_rerun": false,
+    "unchanged_inputs": [
+      "entire spike/t421 tree",
+      "go.mod",
+      "go.sum",
+      ".golangci.yml"
+    ],
+    "prior_record": "spike/t459/native_coordinator_1.json",
+    "full_linux_lint_pass": false
+  },
+  "independent_review": {
+    "pre_dispatch_reviewers": 2,
+    "manual_code_paths_reviewed": 4,
+    "ocr_code_paths_excluded": 4,
+    "source_config_and_cost_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "final_evidence_review": "PENDING"
+  },
+  "cleanup": {
+    "containers": 0,
+    "loop_devices": 0,
+    "host_scratch_entries_except_existing_lock": 0,
+    "matching_test_or_engine_processes": 0,
+    "fresh_guest_staging_removed": true,
+    "existing_lock_preserved": true,
+    "historical_roots_modified": false,
+    "personal_profile_final_state": "Stopped",
+    "ui_tree_edited": false
+  },
+  "production_cost_delta": "zero; test-only closed schema and fixture reuse, existing runtime and containment",
+  "unestablished": [
+    "full T45.9 native/neutral closure",
+    "actual pressure/hysteresis and successful-current lifecycle closure",
+    "native regeneration after real backup/restore",
+    "rendered authenticated Settings/API composition",
+    "separately authorized target closure",
+    "5000 accepted services / 12000000000 admitted source bytes",
+    "ordinary managed provider availability or T45.6 PASS",
+    "scale or release decision"
+  ],
+  "prior_receipts": {
+    "spike/t459/native_coordinator_1.json": "05d2d78e2f53da0e7a3c6194217d08677ba4b6812d3e35bb59b40fef38213aa5",
+    "spike/t459/neutral_api_client_1.json": "8479d8098075dc99901acc645a4ce2cf03483caca5f425d6e648770d24317667",
+    "spike/t459/linux_command_gates_1.json": "0dedf7e60a510e396a7ef092e00b0a5b80c13484bd6271c9db7a0ad4e72fc914"
+  },
+  "source_and_module_sha256": {
+    "internal/typedexecutor/input_fault_acceptance_linux_test.go": "9b669a28e07b26983dc226efc79acc1363e5c40a0fac1c2fe37e5a1ec26d5b49",
+    "internal/typedexecutor/input_native_linux_test.go": "10f49c25c42bb3a384465c423c48510396f544e69ff36083a9eeddd688e15537",
+    "internal/typedexecutor/native_acceptance_linux_test.go": "aa63df877a94f9eda67ef09ed276606b8e618e200ecd73941cbb89888d14abdc",
+    "internal/typedexecutor/native_acceptance_test.go": "20af08545ea287d779815ba9ffe8d99f56db91d28961bd7c8214f4952b530d67",
+    "go.mod": "71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662",
+    "go.sum": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+  },
+  "retained_log_sha256": {
+    "acceptance-darwin.log": "05bd0c65bc5f24d0e3cd127f6defab9e4debe757dc45cc93d798173e2be846fe",
+    "acceptance-linux-corrected.log": "27c2c1dbe6db36c2534598ab32416cc377e8a87bedfda95812d014b5f2a3f8f9",
+    "acceptance-linux-models-fixture.log": "fbd94e2fb16ba3218b23202d15e34b543732bb90b77232e0de61b444c897dcaa",
+    "acceptance-linux-models.log": "2aea739e165b9e4f8dff9ffc90573a4dc482b2d86e204cc2393464230a359384",
+    "adapter-compile-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "adapter-portable-normal.log": "4d559436915a2cdd541a5d168402e0ea8f9b44f036b393155a3bbf1344c721dc",
+    "adapter-portable-race.log": "4e7a5b0f92184de51367ee7de774d761ea995d18cb167671b12415739f4f05d3",
+    "adapter-vet-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup-guest.log": "42965481b77ea9752ba294f245d398d6fd575ad8f27d34b6f3c44d8b5ce91b53",
+    "compile-corrected-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "compile-exact-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "deployment-2.log": "817295fb6a0bc4b7832dd10096e8d502ae2243d5b96a8ae54808ee7e1cac57f0",
+    "deployment-corrected.log": "817295fb6a0bc4b7832dd10096e8d502ae2243d5b96a8ae54808ee7e1cac57f0",
+    "deployment.log": "5698165c8a2330761171df41e40cf4da292199529971e63a5c984f27c7a68d0a",
+    "docs-cost-corrected.log": "30c6a852915826bb5fb41d39f87962f55702b3c17cd2fee10711123de0aa5fc9",
+    "docs-draft.log": "2caf80edc5056c5d790ff9c80d2960740c0efd0edde8257537dc1afecfa9afb2",
+    "docs-lock-cost.log": "302bb1cae25ab91c14b6c64057fac52a6dc0c2ed8b409ebda604a08719868678",
+    "docs-source.log": "b0c19a853f3b93b275f85f7671eebca75671ec7342c8fab8a3a17654619585db",
+    "glossary-cost-corrected.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "glossary-draft.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "glossary-lock-cost.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "glossary-source.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "helper-reference.log": "29393f64715af52ccc378b5c85e83d95e6f27025167615492bb644b9c019493d",
+    "host-final.log": "470b658dc3c606d852905244fd4969e10fb2c43b98b02725b0150de64306f0c5",
+    "host-preflight.log": "ecb391dd8609c9fbeeca255f8f5b4a127eaa1417cf2d0a2141689dc7a7a40f6a",
+    "host-start.log": "50537adfd04a952dcda040e879900e3284e847e985cfecda4173ee902eb991a0",
+    "host-stop.log": "7e5cbab95b2e58fb26819325102387653fdeb4217f9bba92876be8b7dfd41f06",
+    "lint-darwin-full.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "lint-darwin.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "lint-linux-corrected.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "lint-linux.log": "b2223d2d585d0dea776b9b13d634c846de9ee4246026ec75c5c6fb587fa994cf",
+    "modules.log": "b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd",
+    "native-cancel.log": "a87002ffebdce92ff707e7094c38317c7c31b5f88b878a7580cc9a74380ae3ef",
+    "native-coordinator-regression.log": "f44310eddbc53bcfc270bd80d49d66ed40f59f74a2542b813e41b6ce2e10311e",
+    "native-hard-death.log": "ba6e4f95a02d16c147c8c7842f0cf0d7de4de4f8f62053ed64ea1a38e0c6753f",
+    "native-wall.log": "c2fb2a51fa2bd92fc401e36a5bae90c79c16a970606d2f8341894d8b5c940230",
+    "provision-2.log": "076b9088b474c0f75424dd8fbf3eba4c22af3243abfca9a451b5b26541a7a55c",
+    "provision.log": "f4a5fb11b2194b2674aec2efd2240e827515142e735a2364833fd4de0ae441a7",
+    "schema-darwin-race.log": "623e5e4eaf97bfbd6b4891f481e271c779e6f80939f93a93493b7475e8083544",
+    "schema-darwin.log": "a6270d645bfc927b512290d1f91a1fe9d266fe373690f4b982bf4f08ef74d513",
+    "stage-public-tools.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "typedexecutor-darwin-race.log": "bc54a70ae5aa3ad699a5c5f68a72d267433bb96050a2af8c403e2210abe0676b",
+    "typedexecutor-darwin.log": "14ab050888b7263382efdd56c962a4091a2ef93b470103ba55ccd499eec6825f",
+    "vet-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "vet-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "wall-progress.log": "d4d76aac8321670b4da08de785768da0ea5b7245a1e8eddd31fb051cadf4b93c"
+  }
+}
