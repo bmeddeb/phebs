@@ -86,7 +86,9 @@ complete neutral acceptance or the separately authorized target closure.
 The T45.9 Linux command-gate prerequisite isolates engine-version stdout from
 stderr warnings without changing strict identity checks or exact aggregate
 output admission, and corrects the platform-specific supervisor refusal oracle.
-Its validation and independent review remain pending; the retained neutral
+Its Linux typed gate, affected normal/race and static/docs gates pass;
+independent exact-source/cost review finds all severity counts zero. The new record is
+`spike/t459/linux_command_gates_1.json`; the retained neutral
 API/client FAIL receipt is unchanged. Native cold generation, full neutral,
 rendered authenticated Settings and separately authorized target closure remain
 unestablished, with ordinary providers unavailable and the T45.6 waiver not PASS.

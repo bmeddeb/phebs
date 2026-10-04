@@ -15433,8 +15433,12 @@ version stdout independently of stderr warnings, retaining strict token and
 executable-digest checks. Exact dispatch keeps the aggregate 4,096-byte output
 limit and kills and joins an overflowing probe. The supervisor refusal oracle
 expects the existing closed identity frame on Linux and silence on other
-platforms. Focused, broader Linux command, cost, and independent review gates
-remain pending. The prior `spike/t459/neutral_api_client_1.json` FAIL bytes are
+platforms. Focused Linux checks, the broader Linux typed command selector,
+affected Darwin normal/race, full recovery and static/docs gates pass at source
+`91912ffec16d888e05391f9cc4bb1a7bb94cc58b`; independent exact-source and cost
+review records all severity counts zero. The source-free record is
+`spike/t459/linux_command_gates_1.json`; the explicit Settings client test
+skips without its UI argument. The prior `spike/t459/neutral_api_client_1.json` FAIL bytes are
 unchanged. This prerequisite establishes no native cold generation, complete
 neutral closure, rendered authenticated Settings or authorized target closure;
 ordinary providers remain unavailable and the T45.6 waiver is not PASS.

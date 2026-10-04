@@ -9497,8 +9497,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   output keeps the standard library's stdout buffer and error-stderr retention,
   with no new ordinary output-memory limit claimed.
 
-  Validation and independent review remain pending. This is a prerequisite to
-  the broader Linux command gate, not full T45.9 acceptance, native cold
+  Exact implementation `91912ffec16d888e05391f9cc4bb1a7bb94cc58b` passes the
+  broader Linux typed command selector with pinned ARM64 SurrealDB 3.2.0,
+  focused Linux store and admitted-output regressions, full Darwin admission
+  normal/race, focused store and typed-command normal/race, full recovery,
+  affected Darwin/Linux vet, pinned 2.12.2 lint (zero issues), module,
+  documentation, glossary and whitespace gates. The new version regression
+  fails before the production fix. An initial Linux run omitted the engine from
+  `PATH`; its two composition failures remain retained, and the unchanged
+  binary passes after correcting test staging. The explicit Settings client
+  test skips without its UI-directory argument; no new client or rendered
+  parity is claimed. The source-free record is
+  `spike/t459/linux_command_gates_1.json`. The test root and staged tools are
+  removed, no matching child survives and the personal VM is stopped.
+  Independent exact-source review records critical/high/medium/low all zero
+  across all nine implementation paths, including the cost record. This closes the two named
+  Linux prerequisites, not full T45.9 acceptance, native cold
   generation, complete neutral closure, rendered authenticated Settings or a
   separately authorized target closure. Retained
   `spike/t459/neutral_api_client_1.json` FAIL bytes remain unchanged. Ordinary

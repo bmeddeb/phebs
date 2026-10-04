@@ -1,0 +1,164 @@
+{
+  "schema": "phebs-t459-linux-command-gates-v1",
+  "recorded_date": "2026-10-04",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "implementation_commit": "91912ffec16d888e05391f9cc4bb1a7bb94cc58b",
+  "base_commit": "f1272225a0285c50dd471f7920c7ae0b64d7e832",
+  "tools": {
+    "go": "1.26.5",
+    "golangci_lint": "2.12.2",
+    "surreal": "3.2.0",
+    "linux_surreal_sha256": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+    "cgo_enabled_for_linux_build": false,
+    "bazel_or_scip_indexer_executed": false
+  },
+  "hosts": {
+    "linux": {
+      "personal_profile": "phebs-t451a",
+      "architecture": "aarch64",
+      "kernel": "6.8.0-117-generic",
+      "cpus": 2,
+      "memory_bytes": 8589934592,
+      "uid": 501
+    },
+    "darwin": {
+      "architecture": "arm64"
+    }
+  },
+  "input_sha256": {
+    "go.mod": "71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662",
+    "go.sum": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+    "internal/dispatchadmission/production.go": "b634c7a8eecb6395b7d42c0e0e59f27e84dfab3bd267b224b1ec7848eb28d589",
+    "internal/dispatchadmission/bootstrap_test.go": "8ec4d4ece3451ab71638a2b79817746dc7897238ed804e60941c42f87380d42f",
+    "internal/store/child.go": "4b75d9bb294d35b80061539ee22d41043cf9b2372d67d70db1d519f013023d48",
+    "internal/store/child_test.go": "dd56c3b00958115c651589bcac17fcf19fac3257ed0460742763810b0fd69b96",
+    "cmd/phebs/typed_dispatch_test.go": "2c338ffa8c2027e93c0064addcdc855850ea6a2ceea14352c740f638b20282f4"
+  },
+  "linux_binary_sha256": {
+    "phebs-command.test": "dc4d11ee63bc1c8c446a593aa9b5703657ca9274d0ca858a082a1be166598bfd",
+    "store.test": "19151b55bbdd216329846d572328f8ea3512a121f4591a7d5aa0e7f30d037c66",
+    "dispatchadmission.test": "cc98b022fb7010320ec62a22868a1b1193cabb43ea9c218a3a6527aaadcd1b7c"
+  },
+  "checks": [
+    {
+      "name": "Linux version stdout and stderr separation",
+      "status": "PASS",
+      "stdout": "3.2.0 for linux on aarch64",
+      "stderr": "onnxruntime cpuid_info warning: Unknown CPU vendor. cpuinfo_vendor value: 0"
+    },
+    {
+      "name": "Linux store version/digest/start-boundary regressions",
+      "status": "PASS",
+      "selector": "^Test(InspectSurrealBinary|SurrealVersion|ExpectedSurrealDigest|StartEngine)"
+    },
+    {
+      "name": "Linux admitted output protocol and aggregate limits",
+      "status": "PASS",
+      "selector": "^TestProductionBootstrapInheritedBoundary$"
+    },
+    {
+      "name": "broader Linux typed command gate",
+      "status": "PASS",
+      "selector": "^TestTyped",
+      "qualification": "TestTypedSettingsHTTPClient skips without an explicit UI directory; no client or rendered Settings parity is claimed"
+    },
+    {
+      "name": "Darwin full dispatch admission package",
+      "status": "PASS",
+      "normal_seconds": 9.905,
+      "race_seconds": 12.902
+    },
+    {
+      "name": "Darwin store version/digest/start-boundary selector",
+      "status": "PASS",
+      "normal_seconds": 1.535,
+      "race_seconds": 2.872
+    },
+    {
+      "name": "Darwin typed command selector",
+      "status": "PASS",
+      "normal_seconds": 3.368,
+      "race_seconds": 6.458,
+      "qualification": "explicit Settings client test skips; no client or rendered parity is claimed"
+    },
+    {
+      "name": "Darwin full recovery package",
+      "status": "PASS",
+      "normal_seconds": 91.97
+    },
+    {
+      "name": "Darwin and Linux-arm64 affected vet, pinned lint, modules, docs, glossary, whitespace",
+      "status": "PASS",
+      "lint_issues": 0
+    }
+  ],
+  "retained_failures": [
+    {
+      "name": "new version regression before production fix",
+      "status": "FAIL",
+      "working_tree": true,
+      "cause": "combined output misparses warning and accepts stderr-only or invalid-stdout probes",
+      "log": "version-before-fix.log"
+    },
+    {
+      "name": "initial Linux test staging",
+      "status": "FAIL",
+      "binary_sha256": "dc4d11ee63bc1c8c446a593aa9b5703657ca9274d0ca858a082a1be166598bfd",
+      "cause": "two composition fixtures use exec.LookPath and surreal was absent from PATH",
+      "correction": "add staged engine directory to PATH; same binary then passes",
+      "log": "typed-linux-missing-path.log"
+    }
+  ],
+  "previous_receipt": {
+    "path": "spike/t459/neutral_api_client_1.json",
+    "sha256": "8479d8098075dc99901acc645a4ce2cf03483caca5f425d6e648770d24317667",
+    "modified": false,
+    "retained_failures_rewritten": false
+  },
+  "cleanup": {
+    "guest_gate_directory_removed": true,
+    "guest_test_temporary_roots": 0,
+    "matching_test_or_engine_processes": 0,
+    "personal_profile_final_state": "Stopped",
+    "darwin_surreal_processes": 0,
+    "ui_tree_edited": false
+  },
+  "log_sha256": {
+    "admission-linux.log": "eb0b02ff8ea2b0f4b2b9f615095a0131f98b9e8678d0553403b29e850a307247",
+    "admission-normal.log": "a0bb8c91089cf342f1d1b31c90e26b9b3db74bf34922d59724adea45b3455afc",
+    "admission-race.log": "3996c1a48afdfc60a26c34070a23d1334a991d531ee7ee66fa30bb4ee038fea3",
+    "command-typed-normal.log": "734242c5fd655f6b536c0624f1433b22df11e9ae6f3a8cf67136e6a58d8bc659",
+    "command-typed-race.log": "1e86b9e3ba35ad221b51d6e57e32ff1625b5a1d10f4ff22ec4c25a9a090c1d8a",
+    "docs.log": "9ef177293021858f9842cb3339518e04df01107adef60786cd71310471664aea",
+    "glossary.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "lint.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "modules.log": "b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd",
+    "recovery-normal.log": "ce682d518bd575c550646c8cff4188c4dcbd3155395916930b8580e26b59cf1d",
+    "store-version-linux.log": "e443b9e0d9659e58f1e1f8027df0a5058341e4b3ae90618cf7cfc7231ce60099",
+    "store-version-normal.log": "906948bb2e599dd6bca7c3656023390a4bcce731814459554311e5dbb639f333",
+    "store-version-race.log": "0be968283c69cb1e50dd9c6e861e7179eb0cd175ca051649762a26fe0c7162a9",
+    "typed-linux-missing-path.log": "fbb4164dd0109b7d7c6adfb870fb04c4848a017ef523c11a5abba26464f58674",
+    "typed-linux.log": "29d87b20f710e8d8d7f71615723d44d5f5e9f57280dbcef24e0436382bca42a5",
+    "version-before-fix.log": "952505c71a31a234d2ba890e90e6eb406817f735553d9549299e81451fa020f0",
+    "vet-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "unestablished": [
+    "native cold generation and full neutral closure",
+    "rendered authenticated Settings",
+    "separately authorized target closure",
+    "accepted-service and admitted-source-byte envelope",
+    "hosted CI",
+    "release or DO_NOT_RELEASE decision"
+  ],
+  "review": {
+    "exact_implementation_commit": "91912ffec16d888e05391f9cc4bb1a7bb94cc58b",
+    "changed_paths_reviewed": 9,
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "steady_state_cost_pass": true
+  }
+}
