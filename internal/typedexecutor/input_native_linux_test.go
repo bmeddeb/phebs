@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
@@ -50,9 +51,10 @@ func (c inputNativeControls) Read(ctx context.Context, name string, limit int) (
 	return slices.Clone(b), nil
 }
 
-func nativeInputFixture(t *testing.T, endpoint, mode string) (fixture, typedindex.Profile) {
+func nativeInputFixture(t *testing.T, endpoint, mode string) (fixture, typedindex.Profile, string) {
 	t.Helper()
 	var profile typedindex.Profile
+	var originalGit string
 	f := preparationFixture(t, endpoint, "input_"+mode, func(s *store.Surreal, repo, dir string) (typedindex.Profile, []byte, string) {
 		if err := os.Remove(filepath.Join(dir, "data")); err != nil {
 			t.Fatal(err)
@@ -70,6 +72,7 @@ func nativeInputFixture(t *testing.T, endpoint, mode string) (fixture, typedinde
 		}
 		// A real neutral Git commit, never an inferred tool-output version.
 		git := t.TempDir()
+		originalGit = git
 		for name, b := range sourceFiles {
 			nativeInputWrite(t, filepath.Join(git, name), b, 0600)
 			nativeInputWrite(t, filepath.Join(dir, "source", name), b, 0600)
@@ -222,7 +225,7 @@ func nativeInputFixture(t *testing.T, endpoint, mode string) (fixture, typedinde
 	f.c.observeHost = typedsandbox.ObserveHostScratch
 	f.c.config.Socket = "/var/run/docker.sock"
 	f.c.config.Image = *inputNativeImage
-	return f, profile
+	return f, profile, originalGit
 }
 func nativeInputWrite(t *testing.T, name string, b []byte, mode os.FileMode) {
 	t.Helper()
@@ -264,7 +267,7 @@ func TestNativeAdditionalInputs(t *testing.T) {
 		t.Fatal("explicit root/tool/image/mode admission required")
 	}
 	endpoint := testServer(t)
-	f, profile := nativeInputFixture(t, endpoint, *inputNativeMode)
+	f, profile, _ := nativeInputFixture(t, endpoint, *inputNativeMode)
 	ctx := t.Context()
 	if e := f.c.Startup(ctx); e != nil {
 		t.Fatal("native startup", e)
@@ -438,7 +441,7 @@ func TestNativeInputCoordinator(t *testing.T) {
 	if !filepath.IsAbs(*inputNativeTools) || os.Geteuid() != 0 || (*inputNativeMode != "single" && *inputNativeMode != "workspace" && *inputNativeMode != "import") {
 		t.Fatal("explicit root/tool/image/mode admission required")
 	}
-	f, profile := nativeInputFixture(t, testServer(t), *inputNativeMode)
+	f, profile, originalGit := nativeInputFixture(t, testServer(t), *inputNativeMode)
 	ctx := t.Context()
 	// preparationFixture claims its legacy seed request. Release that unused
 	// lease before a distinct managed request goes through the real coordinator.
@@ -608,12 +611,115 @@ func TestNativeInputCoordinator(t *testing.T) {
 	if err != nil && !errors.Is(err, store.ErrNotFound) || next != nil || lookups != 1 || launches != 2 {
 		t.Fatal("published duplicate replay", err)
 	}
-	if err = r.Reconcile(ctx); err != nil {
-		t.Fatal("published restart census", err)
+	// A fresh controller repeats production startup custody checks. This is
+	// in-process reconstruction, not a hard-death or process-restart proof.
+	fresh, err := New(f.c.config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	freshNativeRun := fresh.native.run
+	fresh.native.run = func(ctx context.Context, o typedsandbox.Options, a typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
+		launches++
+		return freshNativeRun(ctx, o, a)
+	}
+	freshRuntime, err := NewRuntime(fresh, r.bundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = freshRuntime.Reconcile(ctx); err != nil || !fresh.ready || lookups != 1 || launches != 2 {
+		t.Fatal("published fresh-controller census", err)
 	}
 	host, err := typedsandbox.ObserveHostScratch(ctx, "")
 	if err != nil || host.Held || len(host.Names) != 0 {
 		t.Fatal("native scratch not drained", err)
+	}
+	if *inputNativeMode == "workspace" {
+		// Product range conversion reads an independent bare mirror of the exact
+		// original source commit; it never opens the worker's source directory.
+		data := t.TempDir()
+		mirror := filepath.Join(data, "repos", filepath.FromSlash(source.Repository)+".git")
+		if err = os.MkdirAll(filepath.Dir(mirror), 0700); err != nil {
+			t.Fatal(err)
+		}
+		cloneCtx, stopClone := context.WithTimeout(ctx, time.Minute)
+		err = exec.CommandContext(cloneCtx, "git", "clone", "--bare", "--no-hardlinks", "--", originalGit, mirror).Run()
+		stopClone()
+		if err != nil {
+			t.Fatal("neutral source mirror", err)
+		}
+		resolver := &acceptanceCorpusResolver{store: f.s, base: f.c.config.Workspace, conf: nativeAcceptanceConfig{Source: source}}
+		service := codenav.New(codenav.Options{DataDir: data, RoutedResolver: resolver})
+		t.Cleanup(func() {
+			if err := service.Remove(source.Repository); err != nil {
+				t.Error("navigation cache cleanup", err)
+			}
+		})
+		query := codenav.Query{Repo: source.Repository, Revision: source.Commit, Path: "a/a.go", Line: 2, Character: 15, Encoding: codenav.EncodingUTF8}
+		definitionPoint := acceptanceOraclePoint{Path: "b/b.go", Range: [3]int32{1, 6, 12}}
+		referencePoint := acceptanceOraclePoint{Path: "a/a.go", Range: [3]int32{2, 15, 21}}
+		var coldDefinition codenav.DefinitionResult
+		var coldReferences codenav.ReferencesResult
+		var coldHover codenav.HoverResult
+		for _, phase := range []string{"cold", "warm"} {
+			definition, err := service.Definition(ctx, query)
+			if err != nil || !definition.Available || definition.Symbol == "" || !acceptanceCorpusLocation(resolver.conf, definitionPoint, definition.Location) {
+				t.Fatal(phase, "workspace Definition", err)
+			}
+			references, err := service.References(ctx, query)
+			// Product references exclude the definition occurrence.
+			if err != nil || !references.Available || references.Symbol != definition.Symbol || references.Truncated || len(references.Locations) != 1 || !acceptanceCorpusLocation(resolver.conf, referencePoint, &references.Locations[0]) {
+				t.Fatal(phase, "workspace References", err)
+			}
+			hover, err := service.Hover(ctx, query)
+			if err != nil || !hover.Available || hover.Hover == nil || hover.Hover.Symbol != definition.Symbol || hover.Hover.Range != acceptanceCorpusRange(referencePoint) || hover.Hover.Encoding != codenav.EncodingUTF8 || !strings.Contains(hover.Hover.Signature+"\n"+strings.Join(hover.Hover.Documentation, "\n"), "Answer") {
+				t.Fatal(phase, "workspace Hover payload", err)
+			}
+			if phase == "cold" {
+				coldDefinition, coldReferences, coldHover = definition, references, hover
+			} else if !reflect.DeepEqual(coldDefinition, definition) || !reflect.DeepEqual(coldReferences, references) || !reflect.DeepEqual(coldHover, hover) {
+				t.Fatal("workspace warm query payload changed")
+			}
+		}
+		confirmed, err := f.s.ReadTypedIndexCurrentCustody(ctx, source.Repository)
+		if err != nil || !reflect.DeepEqual(current, confirmed) || lookups != 1 || launches != 2 {
+			t.Fatal("workspace queries changed exact publication authority", err)
+		}
+		binding, err := resolver.ResolveRoutedIndex(ctx, source.Repository, source.Commit)
+		if err != nil {
+			t.Fatal("workspace current binding", err)
+		}
+		reader, metadata, err := resolver.OpenRoutedIndex(ctx, binding, nil)
+		if err != nil {
+			t.Fatal("workspace cached binding", err)
+		}
+		if err = reader.Close(); err != nil {
+			t.Fatal(err)
+		}
+		staleCommit := strings.Repeat("b", 40)
+		if staleCommit == source.Commit {
+			staleCommit = strings.Repeat("c", 40)
+		}
+		if err = f.s.SetRepoIndexed(ctx, source.Repository, staleCommit, time.Now()); err != nil {
+			t.Fatal("neutral stale source", err)
+		}
+		if definition, err := service.Definition(ctx, query); !errors.Is(err, typedindex.Stale) || definition.Available || definition.Symbol != "" || definition.Location != nil {
+			t.Fatal("cached Definition escaped stale source fence", err)
+		}
+		if references, err := service.References(ctx, query); !errors.Is(err, typedindex.Stale) || references.Available || references.Symbol != "" || len(references.Locations) != 0 {
+			t.Fatal("cached References escaped stale source fence", err)
+		}
+		if hover, err := service.Hover(ctx, query); !errors.Is(err, typedindex.Stale) || hover.Available || hover.Hover != nil {
+			t.Fatal("cached Hover escaped stale source fence", err)
+		}
+		reader, _, err = resolver.OpenRoutedIndex(ctx, binding, metadata)
+		if reader != nil {
+			_ = reader.Close()
+			t.Fatal("cached binding reopened stale publication")
+		}
+		if !errors.Is(err, typedindex.Stale) {
+			t.Fatal("cached binding stale source fence", err)
+		}
+		t.Log("native workspace consumers: cold=exact warm=exact stale_queries=refused stale_binding=refused")
 	}
 	t.Logf("native coordinator: provider=%s coordinator_jobs=1 succeeded_chunks=1 lookups=%d launches=%d same_lease_reused=%t", profile.Provider(), lookups, launches, reused)
 	t.Logf("native identity: source_commit=%s profile=%s inventory=%s planning=%s execution=%s root=%s", source.Commit, profile.Digest(), profile.Definition().BundleDigest, current.PlanningDigest, current.Admission.Digest(), current.Pointer.RootDigest)
