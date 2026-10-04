@@ -257,5 +257,93 @@
     "native_provider_registration": false,
     "corpus_waiver_is_pass": false,
     "scale_release_or_main_integration_claim": false
+  },
+  "review_correction": {
+    "backend": "1f1b1833103cb0d93e36f2435a33b22196179c33",
+    "ui": "9751596becb7131c327d93c27d7f2ff1e630b54c",
+    "managed_fixture_compare_tests": 13,
+    "managed_fixture_compare_seconds": 47.3,
+    "original_preview_pixels_changed": false,
+    "unit_tests": 746,
+    "unit_test_files": 43,
+    "ui_lint": "PASS",
+    "ui_build": "PASS",
+    "fixture_scope": "Consumed-purpose explanation, exact network retry, active 503 recovery to terminal state; original eight previews compare unchanged. No new ordinary cohort or native execution claim.",
+    "bundle": {
+      "file": "ui/ui/dist/assets/SettingsPage-BfvAoLrf.js",
+      "bytes": 28072,
+      "reported_gzip_kb": 8.33,
+      "digest": "sha256:15562c5a2841c0034113f05e2b5ff812a8e05e2eec2048c61936e5a571271e17"
+    },
+    "fixture_timings": [
+      {
+        "theme": "light",
+        "width": 1280,
+        "density": "comfortable",
+        "fixtureReadyMillis": 1928,
+        "fixturePreviewMillis": 341,
+        "consoleErrors": 0
+      },
+      {
+        "theme": "light",
+        "width": 1280,
+        "density": "dense",
+        "fixtureReadyMillis": 1902,
+        "fixturePreviewMillis": 347,
+        "consoleErrors": 0
+      },
+      {
+        "theme": "light",
+        "width": 390,
+        "density": "comfortable",
+        "fixtureReadyMillis": 1662,
+        "fixturePreviewMillis": 262,
+        "consoleErrors": 0
+      },
+      {
+        "theme": "light",
+        "width": 390,
+        "density": "dense",
+        "fixtureReadyMillis": 1946,
+        "fixturePreviewMillis": 290,
+        "consoleErrors": 0
+      },
+      {
+        "theme": "dark",
+        "width": 1280,
+        "density": "comfortable",
+        "fixtureReadyMillis": 1691,
+        "fixturePreviewMillis": 338,
+        "consoleErrors": 0
+      },
+      {
+        "theme": "dark",
+        "width": 1280,
+        "density": "dense",
+        "fixtureReadyMillis": 1893,
+        "fixturePreviewMillis": 284,
+        "consoleErrors": 0
+      },
+      {
+        "theme": "dark",
+        "width": 390,
+        "density": "comfortable",
+        "fixtureReadyMillis": 1695,
+        "fixturePreviewMillis": 228,
+        "consoleErrors": 0
+      },
+      {
+        "theme": "dark",
+        "width": 390,
+        "density": "dense",
+        "fixtureReadyMillis": 1567,
+        "fixturePreviewMillis": 248,
+        "consoleErrors": 0
+      }
+    ],
+    "prior_review_superseded": true,
+    "cardinality_correction": "Original preview baselines added eight PNGs beyond the ordinary route manifest. Fresh full suite includes the shared managed-preview matrix.",
+    "final_status_backend": "02dd735b9ce937a32c8e20a39098d48ecc9dba14",
+    "final_status_gate": "PASS: API/operator race after stale-current versus fresh-desired distinction (1.777s/17.427s); preceding broad typed-store race 334.088s. No UI source changed."
   }
 }

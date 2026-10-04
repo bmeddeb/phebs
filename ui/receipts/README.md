@@ -215,3 +215,7 @@ T45.8b review corrections add a consumed-request refusal fixture and verify that
 a transient active poll continues to a terminal response. Preview pixels retain
 their original provenance; a fresh corrected-source comparison checks them without
 reauthoring. Exact transport retry remains separate from starting another run.
+The corrected Settings chunk is 28,072 bytes (8.33 kB reported gzip). All 746
+UI tests pass with the executable preview matrix included in manifest cardinality;
+13 fresh pinned Chromium checks pass, comparing eight original preview pixels
+unchanged. Original ordinary-cohort and native receipts retain their old source.
