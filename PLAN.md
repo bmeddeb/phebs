@@ -9687,3 +9687,95 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   incarnations and establishes no product-scale envelope. Ordinary providers
   remain unavailable; the T45.6 waiver is not PASS and no scale or release claim
   changes.
+
+- **2026-10-04 — T45.9 neutral pressure and successful-publication lifecycle prerequisite.**
+  Add only opt-in Linux tests around the existing neutral workspace coordinator
+  proof. Require a fresh root-owned, fully allocated 4-GiB image, its exact
+  loop-backed ext4 mount with 4,096-byte blocks and 262,144 inodes, and a
+  separate native host-scratch device. The operational driver owns formatting,
+  mounting and teardown; the test authenticates the opened mount, workspace
+  and ballast inodes and geometry. Ballast is a workspace sibling on that
+  filesystem, outside the closed typed custody census. Initial available bytes
+  and inodes must fit the full derived owner budget with projected use below
+  the strict 75-percent resume boundary.
+
+  Three actual `Prepare` calls on one live scheduler lease must refuse at
+  measured projected use of 80, 90 and then 77 percent. Each percentage charges
+  the complete `DeriveOwnerBudget` against actual descriptor capacity, rather
+  than treating the requested ballast length as an observation. Preserve the
+  same production controller gate through collect, hard refusal and partial
+  relief. Refusal may retain its durable preflight attempt, but must create no
+  growth holder, physical custody, allowance, native phase or current pointer.
+  After removing ballast, production `observe`/`admit` under controller
+  serialization and the lifecycle guard must recover before any diagnostic
+  gate read can clear the latch. The unchanged actual job runner/coordinator
+  and scheduler then require two native phases, one shared original absolute
+  allowance, exact same-lease reuse, successful settlement, growth release and
+  identical cold/warm cross-member navigation.
+
+  After publication, target actual filesystem use of 90 percent while gate
+  observations continue charging the full future owner budget. Bounded real
+  `lifecycle.Controller.Tick` turns must preserve exact current custody and
+  routed Definition, References and Hover, including after desired cancellation.
+  Clear ballast, retain the production publication reader pin across guarded
+  `DeleteRepo`, and require that pin to block selected physical drainage. After
+  closing the pin, require a real collecting prefix, a fresh in-process
+  controller's production startup census without native replay, and bounded
+  selected drainage. This proves fixture-repository deletion retirement; it
+  does not prove successor-publication replacement, process hard-death recovery,
+  ordinary lifecycle runner cadence or pressure-recovery idle convergence.
+  Accept zero through two honestly retained collecting parent tombstones for
+  the legacy and managed roots, rather than asserting one or total row absence.
+
+  **Cost.** Production query/request, sync, startup/restart, retry/no-op and
+  publication paths add zero work, locks, scans/hashes, cache invalidation,
+  goroutines, children or persistent state. Fixture setup retains the inherited
+  complete public SDK/indexer/helper copy and inventory hashing, including
+  trusted host whole-file reads before native bounds, one file buffer plus
+  inventory records, serial neutral Git construction and one joined memory
+  engine. Accepted preparation copies and verifies the complete immutable tool
+  and source inventory under controller serialization and the lifecycle guard;
+  the 176 source bytes do not describe that cost. Existing startup/reopen
+  custody checks, one bounded bare-mirror clone and production cold/warm reads
+  remain; each protected turn adds exact custody checks and three serial routed
+  reads under the unchanged cache and reader-pin rules. Query concurrency stays
+  one, runner/scheduler concurrency one, and native planning/execution remain
+  two sequential phases with all original memory, disk, inode, task, descriptor,
+  output and shared 300-second limits. Native phases release the lifecycle
+  mutation guard while retaining controller serialization and control pins;
+  startup and selected Sweeps retain guarded passes. Joined test waits do not
+  extend native limits.
+
+  Provisioning adds one fully allocated 4-GiB image, formatter/loop/mount work
+  and its eventual unmount/detach. Host headroom must also retain the full
+  original native backing promise and fixture/tool/engine custody; ballast
+  consumes space inside the already allocated image. The helper holds three
+  volume descriptors, plus temporary ancestry/capacity descriptors and the
+  publication reader pin. Each observation rechecks held/named inode metadata
+  and actual statfs geometry. Each target permits at most four measured
+  correction attempts; a resize may truncate, fallocate, file-sync and
+  filesystem-sync the bounded ballast, with observations before and after.
+  Clearing it repeats the same bounded resize path.
+  These syscall counts do not bound syscall duration. Gates retain their short
+  mutex only for latch arithmetic. Each real lifecycle Tick adds up to four
+  cursor SDK operations around its existing guarded selected Sweep; an owner
+  error without cursor advancement skips the owner CAS. At most 64 fixed
+  discovery/pin/prefix turns precede 12,000 drain turns. Physical drainage
+  retains at most sixteen mutations, 48 traversal steps and 216 traversal stats
+  per turn, excluding fixed guard/private-ancestry work, its eight-descriptor
+  bound and 100-ms pin waits. Planning query/stat fields are not enforced
+  whole-turn SDK/stat ceilings. Namespace/control checks remain bounded and
+  retirement does not rehash source payloads. Turn ceilings bound work, not
+  deletion progress or elapsed time. Cleanup must join engine/native/callback
+  work and close volume/read pins before ordinary unmount/detach, prove exact
+  absence, remove only fresh owned roots and preserve prior receipts and the
+  existing native namespace lock.
+
+  **Validation: PENDING.** No fresh native rehearsal or source-free result is
+  claimed. The planned record is `spike/t459/native_pressure_lifecycle_1.json`;
+  it does not yet exist. The fixture still has zero accepted service
+  incarnations and 176 admitted regular-source Git blob bytes. Native restore
+  regeneration, rendered authenticated Settings/API parity, complete neutral
+  closure and separately authorized target closure remain open. Ordinary
+  providers remain unavailable, T45.6 is not PASS, and no product-scale envelope,
+  target execution, release or scale claim follows.

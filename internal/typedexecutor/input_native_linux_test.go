@@ -542,14 +542,33 @@ func TestNativeAdditionalInputs(t *testing.T) {
 // This independent fresh fixture exercises queue coordination, scheduler lease
 // execution and settlement; TestNativeAdditionalInputs retains the direct proof.
 func TestNativeInputCoordinator(t *testing.T) {
+	nativeInputCoordinator(t, false)
+}
+
+func TestNativeInputPressureLifecycle(t *testing.T) {
+	if *inputNativePressureVolume == "" {
+		t.Skip("explicit fresh private pressure volume")
+	}
+	nativeInputCoordinator(t, true)
+}
+
+func nativeInputCoordinator(t *testing.T, pressure bool) {
+	t.Helper()
 	if *inputNativeTools == "" && *inputNativeImage == "" && *inputNativeMode == "" {
 		t.Skip("explicit privileged neutral rehearsal")
 	}
 	if !filepath.IsAbs(*inputNativeTools) || os.Geteuid() != 0 || (*inputNativeMode != "single" && *inputNativeMode != "workspace" && *inputNativeMode != "import") {
 		t.Fatal("explicit root/tool/image/mode admission required")
 	}
+	if pressure && *inputNativeMode != "workspace" {
+		t.Fatal("pressure proof requires the neutral workspace")
+	}
 	f, profile, originalGit := nativeInputFixture(t, testServer(t), *inputNativeMode)
 	ctx := t.Context()
+	var pressureProof *nativeInputPressureProof
+	if pressure {
+		pressureProof = nativeInputPressureFixture(t, ctx, &f)
+	}
 	// preparationFixture claims its legacy seed request. Release that unused
 	// lease before a distinct managed request goes through the real coordinator.
 	if err := f.s.ReleaseGenerationChunk(ctx, f.chunk, "unused neutral fixture seed"); err != nil {
@@ -586,6 +605,9 @@ func TestNativeInputCoordinator(t *testing.T) {
 	f.c.native.run = func(ctx context.Context, o typedsandbox.Options, a typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
 		launches++
 		return nativeRun(ctx, o, a)
+	}
+	if pressureProof != nil {
+		pressureProof.trackNative(f.c, &launches)
 	}
 
 	coordinatorCtx, stopCoordinator := context.WithTimeout(ctx, time.Minute)
@@ -652,6 +674,11 @@ func TestNativeInputCoordinator(t *testing.T) {
 	configuration.Handle = func(ctx context.Context, chunk store.GenerationChunk, budget generationscheduler.Budget) error {
 		handled++
 		selected = chunk
+		if pressureProof != nil {
+			if err := pressureProof.beforeExecution(ctx, chunk); err != nil {
+				return err
+			}
+		}
 		if err := handle(ctx, chunk, budget); err != nil {
 			return err
 		}
@@ -790,6 +817,19 @@ func TestNativeInputCoordinator(t *testing.T) {
 		confirmed, err := f.s.ReadTypedIndexCurrentCustody(ctx, source.Repository)
 		if err != nil || !reflect.DeepEqual(current, confirmed) || lookups != 1 || launches != 2 {
 			t.Fatal("workspace queries changed exact publication authority", err)
+		}
+		if pressureProof != nil {
+			pressureProof.finish(t, ctx, &f, current, outcome, func() error {
+				definition, de := service.Definition(ctx, query)
+				references, re := service.References(ctx, query)
+				hover, he := service.Hover(ctx, query)
+				if errors.Join(de, re, he) != nil || !reflect.DeepEqual(coldDefinition, definition) || !reflect.DeepEqual(coldReferences, references) || !reflect.DeepEqual(coldHover, hover) {
+					return errors.New("pressure changed routed current content")
+				}
+				return nil
+			})
+			t.Logf("native identity: source_commit=%s profile=%s inventory=%s planning=%s execution=%s root=%s", source.Commit, profile.Digest(), profile.Definition().BundleDigest, current.PlanningDigest, current.Admission.Digest(), current.Pointer.RootDigest)
+			return
 		}
 		binding, err := resolver.ResolveRoutedIndex(ctx, source.Repository, source.Commit)
 		if err != nil {
