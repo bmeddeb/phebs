@@ -10077,6 +10077,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   tool observations whose raw terminal outputs were not separately retained.
   The retained host snapshot proves present stopped-profile/context/PID state,
   while the raw browser receipt separately records its joined result.
+  Final independent source/evidence and cost/documentation re-reviews of exact
+  corrected candidate `de0eb9ee` cover all eight paths with every severity count
+  zero. The record-only seal changes no compiled, fixture or driver input.
 
   Full Darwin command-package probes remain unestablished. The six-minute
   cumulative alarm expired 37 seconds into an unrelated T42.2 cleanup fixture.

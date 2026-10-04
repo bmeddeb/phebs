@@ -1085,7 +1085,7 @@
       "gate": "owning documentation and glossary",
       "status": "PASS",
       "command": "make docs-check verify-glossary",
-      "log": "docs-review-correction.log"
+      "log": "docs-seal.log"
     },
     {
       "gate": "Go format, JSON/source/log provenance and whitespace",
@@ -1210,6 +1210,10 @@
     "docs-review-correction.log": {
       "sha256": "sha256:40fddff58da5608d4d188a66f674977ff6289de894fcb1123fcaf239230ec208",
       "bytes": 239
+    },
+    "docs-seal.log": {
+      "sha256": "sha256:3dbf6a7be50a693739af250ad9acdcce8787c79a7c2a3f0cdbc4513d5364c96f",
+      "bytes": 239
     }
   },
   "independent_source_reviews": [
@@ -1314,5 +1318,54 @@
       "Qualify guest comparison/removal and alarm stops as operator tool observations whose raw outputs were not separately retained; bind the independent current host snapshot."
     ],
     "compiled_and_external_driver_inputs_changed": false
-  }
+  },
+  "final_candidate_reviews": [
+    {
+      "reviewer_role": "correctness/security/evidence",
+      "reviewed_commit": "de0eb9ee8afa9df25562cac0da5b09c643ba9fa3",
+      "total_files": 8,
+      "reviewed_files": [
+        "PLAN.md",
+        "docs/BACKLOG.md",
+        "docs/ROADMAP.md",
+        "cmd/phebs/serve_typed_linux_test.go",
+        "cmd/phebs/serve_typed_settings_linux_test.go",
+        "spike/t459/settings_browser.cjs",
+        "spike/t459/settings_client.cjs",
+        "spike/t459/settings_browser_1.json"
+      ],
+      "skipped_files": [],
+      "coverage_rate": 1,
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    },
+    {
+      "reviewer_role": "steady-state cost/docs/evidence",
+      "reviewed_commit": "de0eb9ee8afa9df25562cac0da5b09c643ba9fa3",
+      "total_files": 8,
+      "reviewed_files": [
+        "PLAN.md",
+        "docs/BACKLOG.md",
+        "docs/ROADMAP.md",
+        "cmd/phebs/serve_typed_linux_test.go",
+        "cmd/phebs/serve_typed_settings_linux_test.go",
+        "spike/t459/settings_browser.cjs",
+        "spike/t459/settings_client.cjs",
+        "spike/t459/settings_browser_1.json"
+      ],
+      "skipped_files": [],
+      "coverage_rate": 1,
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    }
+  ],
+  "record_only_seal": "Records the two independent exact-candidate reviews; changes no compiled, embedded, fixture or external-driver input from the passed implementation88ab0f4f."
 }

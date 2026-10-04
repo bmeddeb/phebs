@@ -171,7 +171,9 @@ results. Full Darwin command-package probes hit cumulative six- and fifteen-minu
 alarms. The serial command also recorded an unrelated T42.2 cleanup-test failure
 after 600.03 seconds before its later AllOwners alarm; the initial omission is
 corrected, with no cause or base reproduction inferred. That package remains
-unestablished. This does not close complete
+unestablished. Final independent exact-candidate `de0eb9ee` reviews cover all
+eight paths with every severity count zero; this record-only seal changes no
+compiled or harness input. This does not close complete
 neutral or separately authorized target acceptance or change ordinary dark
 providers, the T45.6 waiver or scale/release posture.
 T45.1a's reviewed neutral harness gate is now PASS at source
