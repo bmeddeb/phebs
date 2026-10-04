@@ -10024,8 +10024,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Real auth setup and three password logins incur existing user/session and
   audit reads/writes; fixture Argon concurrency is one, with its existing
   19-MiB password hash work. One auth cleanup owner is canceled and joined.
-  Two in-process TLS servers share that store; one SSH fixture process and one
-  SSH tunnel forward their two ports. One Chrome invocation owns its browser
+  A separate disabled lifecycle monitor exposes one registered durable-job
+  owner as `not_run`; it performs no sweep. One additional CLOEXEC, pollable
+  stdin descriptor is held through the thirteen protocol reads and closed
+  during cleanup; the inherited SSH descriptor remains unchanged.
+  Two in-process TLS servers share that store; one private, nonmultiplexed SSH
+  fixture process and one private SSH tunnel forward their two ports. Both
+  connections bypass shared SSH masters so tunnel termination removes its
+  own forwards. One Chrome invocation owns its browser
   descendant tree, with at most three simultaneous contexts admitted by the
   driver; no numeric browser RSS/descendant cap is inferred. Browser requests
   retain the existing Settings repository download/JSON parse followed by its
@@ -10040,7 +10046,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   checkpoints. Go stdin frames and emitted JSON each cap at 4 KiB; the driver
   accepts at most 32 queued frames, checks text lines at 64 KiB and observes an
   aggregate 512-KiB stdout/stderr limit. The fixture's eight-minute context
-  starts after engine/schema/mirror setup; the test has a ten-minute alarm and
+  starts before engine/schema/mirror setup; the existing engine/publication
+  helpers still use the test context. The driver retains at most a 64-KiB
+  diagnostic suffix, 128 managed-request events per context, eight mutation
+  bodies, sixteen plan responses and sixteen projected status diagnostics.
+  The fixed request envelope covers the approximately 66-request complete
+  flow plus polling, rather than truncating the restore tail. The test has a ten-minute alarm and
   the driver a ten-minute cancellation timer, twenty-second EOF cleanup grace
   and ten-second termination escalation. These do not establish a whole-turn
   SDK, filesystem syscall or descendant duration bound. Existing TLS header,

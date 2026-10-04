@@ -14,10 +14,11 @@ for (const value of [dependencies, chrome, sshConfig, fixture, assets, receipt])
 // ssh assembles a remote shell command: the two remote paths are deliberately closed.
 for (const value of [fixture, assets]) assert(/^\/[A-Za-z0-9/_.-]+$/.test(value), 'unsafe remote fixture path')
 const { chromium, expect } = require(path.join(dependencies, '@playwright/test'))
-const sshArgs = ['-F', sshConfig, '-o', 'BatchMode=yes', 'colima-phebs-t451a']
+const sshArgs = ['-F', sshConfig, '-o', 'BatchMode=yes', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', 'colima-phebs-t451a']
 const child = spawn('ssh', [...sshArgs, `env PATH=${path.dirname(fixture)}:/usr/bin:/bin ${fixture} -test.run '^TestTypedSettingsBrowserLinux$' -test.v -test.timeout 10m -typed-settings-browser-ui ${assets}`], { stdio: ['pipe', 'pipe', 'pipe'] })
 let tunnel, browser, ready, phase = 'fixture startup', outputBytes = 0, lineBytes = 0, diagnostics = ''
 let fatal
+const statusReads = []
 const frames = []
 let wake
 const exited = once(child, 'exit').catch(() => [-1])
@@ -26,20 +27,20 @@ child.stdout.on('data', bytes => {
   outputBytes += bytes.length
   const last = bytes.lastIndexOf(10)
   lineBytes = last < 0 ? lineBytes + bytes.length : bytes.length - last - 1
-  if (outputBytes > 524288 || lineBytes > 65536) { fatal = new Error('fixture output bound'); child.stdin.end(); wake?.() }
+  if (outputBytes > 524288 || lineBytes > 65536) { fatal ??= new Error('fixture output bound'); child.stdin.end(); wake?.() }
 })
-child.stderr.on('data', bytes => { diagnostics = (diagnostics + bytes.toString()).slice(-65536); outputBytes += bytes.length; if (outputBytes > 524288) { fatal = new Error('fixture output bound'); child.stdin.end(); wake?.() } })
+child.stderr.on('data', bytes => { diagnostics = (diagnostics + bytes.toString()).slice(-65536); outputBytes += bytes.length; if (outputBytes > 524288) { fatal ??= new Error('fixture output bound'); child.stdin.end(); wake?.() } })
 lines.on('line', line => {
   if (!line.startsWith('PHEBS_SETTINGS ')) { diagnostics = (diagnostics + '\n' + line).slice(-65536); return }
   try {
     assert(line.length <= 65536 && frames.length < 32, 'fixture frame bound')
     frames.push(JSON.parse(line.slice(15)))
-  } catch { fatal = new Error('invalid fixture frame') }
+  } catch { fatal ??= new Error('invalid fixture frame') }
   wake?.()
 })
-child.on('error', () => { fatal = new Error('fixture launch failed'); wake?.() })
-child.stdin.on('error', () => { fatal = new Error('fixture pipe failed'); wake?.() })
-child.on('exit', code => { if (code !== 0) fatal = new Error('fixture failed'); wake?.() })
+child.on('error', () => { fatal ??= new Error('fixture launch failed'); wake?.() })
+child.stdin.on('error', () => { fatal ??= new Error('fixture pipe failed'); wake?.() })
+child.on('exit', code => { if (code !== 0) fatal ??= new Error('fixture failed'); wake?.() })
 async function frame() {
   if (!frames.length && !fatal) await new Promise((resolve, reject) => {
     const timer = setTimeout(() => { wake = undefined; reject(new Error('fixture frame timeout')) }, 180000)
@@ -70,7 +71,7 @@ async function join(proc) {
   const timer = setTimeout(() => proc.kill('SIGKILL'), 10000)
   try { await done } finally { clearTimeout(timer) }
 }
-const results = { schema: 'phebs-t459-settings-browser-v1', native_execution: false, canonical_pixel_comparison: false, checks: [], states: [], viewports: [] }
+const results = { schema: 'phebs-t459-settings-browser-v1', native_execution: false, canonical_pixel_comparison: false, checks: [], states: [], viewports: [], managed_request_counts: [] }
 const check = name => { results.checks.push(name); phase = name }
 const allowedStates = ['absent', 'planning', 'indexing', 'validating', 'publishing', 'current', 'failed', 'canceled', 'stale']
 let timer
@@ -78,8 +79,8 @@ async function run() {
   ready = await frame(); assert.equal(ready.event, 'ready')
   for (const key of ['port', 'darkPort']) assert(Number.isInteger(ready[key]) && ready[key] > 0 && ready[key] < 65536)
   const port = await unusedPort(), darkPort = await unusedPort()
-  tunnel = spawn('ssh', ['-F', sshConfig, '-o', 'BatchMode=yes', '-o', 'ExitOnForwardFailure=yes', '-N', '-L', `${port}:127.0.0.1:${ready.port}`, '-L', `${darkPort}:127.0.0.1:${ready.darkPort}`, 'colima-phebs-t451a'], { stdio: 'ignore' })
-  tunnel.on('error', () => { fatal = new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
+  tunnel = spawn('ssh', [...sshArgs.slice(0, -1), '-o', 'ExitOnForwardFailure=yes', '-N', '-L', `${port}:127.0.0.1:${ready.port}`, '-L', `${darkPort}:127.0.0.1:${ready.darkPort}`, 'colima-phebs-t451a'], { stdio: 'ignore' })
+  tunnel.on('error', () => { fatal ??= new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
   const origin = `https://127.0.0.1:${port}`, darkOrigin = `https://127.0.0.1:${darkPort}`
   browser = await chromium.launch({ executablePath: chrome, headless: true })
   results.browser = browser.version()
@@ -94,10 +95,15 @@ async function run() {
   async function login(email, url = origin) {
     const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' })
     const managedReads = []
+    const census = { context: email === ready.ordinaryEmail ? 'ordinary' : url === darkOrigin ? 'dark_admin' : 'admin', requests: 0 }
+    results.managed_request_counts.push(census)
     context.on('request', request => {
       if (!request.url().includes('/api/code-navigation-indexing')) return
-      if (managedReads.length >= 64) { fatal = new Error('managed request event bound'); child.stdin.end(); wake?.(); return }
+      // The complete state/appearance flow needs about 66 requests; allow one
+      // fixed 128-event envelope including active polling, never an open list.
+      if (managedReads.length >= 128) { fatal ??= new Error('managed request event bound'); child.stdin.end(); wake?.(); return }
       managedReads.push(new URL(request.url()).pathname)
+      census.requests++
     })
     const page = await context.newPage()
     page.on('pageerror', () => unexpectedBrowserErrors++)
@@ -151,18 +157,30 @@ async function run() {
   const mutationBodies = [], plans = []
   page.on('request', request => {
     if (request.url().endsWith('/api/code-navigation-indexing/enqueue')) {
-      if (mutationBodies.length >= 8) { fatal = new Error('mutation event bound'); child.stdin.end(); wake?.(); return }
+      if (mutationBodies.length >= 8) { fatal ??= new Error('mutation event bound'); child.stdin.end(); wake?.(); return }
       mutationBodies.push(request.postData())
     }
   })
   page.on('response', async response => {
+    if (response.url().includes('/api/code-navigation-indexing/status?')) {
+      try {
+        const view = await response.json()
+        statusReads.push({ status: response.status(), state: view.state, available: view.available, reason: view.reason })
+        if (statusReads.length > 16) statusReads.shift()
+      } catch { unexpectedBrowserErrors++ }
+    }
     if (response.url().endsWith('/api/code-navigation-indexing/plan') && response.ok()) {
       try { assert(plans.length < 16); plans.push(await response.json()) } catch { unexpectedBrowserErrors++ }
     }
   })
   const section = page.getByRole('region', { name: 'Code navigation indexing' })
-  async function state(value, refresh = true) {
-    if (refresh) await section.getByRole('button', { name: 'Refresh indexing' }).click()
+  async function state(value, refresh = true, available) {
+    const updated = refresh ? page.waitForResponse(async response => {
+      if (!response.url().includes('/api/code-navigation-indexing/status?') || response.status() !== 200) return false
+      const view = await response.json()
+      return view.state === value && (available === undefined || view.available === available)
+    }, { timeout: 15000 }) : undefined
+    if (refresh) await Promise.all([updated, section.getByRole('button', { name: 'Refresh indexing' }).click()])
     await expect(section.getByText(value, { exact: true })).toBeVisible({ timeout: 15000 })
     if (!results.states.includes(value)) results.states.push(value)
   }
@@ -267,8 +285,11 @@ async function run() {
   await command('stale'); await state('stale')
   assert.equal((await fetchJSON(page, '/api/code-navigation-indexing/enqueue', enqueue)).status, 409)
   assert.equal((await fetchJSON(page, '/api/find_definitions' + position(publication.referencePath, 1, 0))).body.available, false)
-  await command('restore'); await state('stale')
-  await expect(section.getByText('No installed profile is available for this repository.')).toBeVisible()
+  await command('restore')
+  const restored = await fetchJSON(page, '/api/code-navigation-indexing/status?' + new URLSearchParams({ repository: ready.repo }))
+  assert.equal(restored.status, 200); assert.equal(restored.body.available, false)
+  await state('stale', true, false)
+  await expect(section.getByText('No installed profile is available for this repository.')).toBeVisible({ timeout: 15000 })
   await expect(section.getByRole('button', { name: 'Review indexing plan' })).toHaveCount(0)
   assert.equal((await fetchJSON(page, '/api/find_definitions' + position(publication.referencePath, 1, 0))).body.available, false)
   check('source fence and restore clearance')
@@ -285,11 +306,11 @@ async function run() {
   fs.writeFileSync(receipt, JSON.stringify(results, null, 2) + '\n', { flag: 'wx', mode: 0o600 })
   console.log(JSON.stringify({ result: 'pass', checks: results.checks.length, states: results.states.length, appearances: results.viewports.length }))
 }
-timer = setTimeout(() => { fatal = new Error('driver timeout'); child.stdin.end(); wake?.() }, 600000)
+timer = setTimeout(() => { fatal ??= new Error('driver timeout'); child.stdin.end(); wake?.() }, 600000)
 run().catch(error => {
   for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) diagnostics = diagnostics.replaceAll(secret, '[redacted]')
-  fs.writeFileSync(receipt + '.failure.txt', diagnostics, { flag: 'wx', mode: 0o600 })
-  console.error(`Settings browser failed during ${phase}: ${error.message}`); process.exitCode = 1
+  fs.writeFileSync(receipt + '.failure.txt', diagnostics + '\nRecent status: ' + JSON.stringify(statusReads) + '\nRequest counts: ' + JSON.stringify(results.managed_request_counts), { flag: 'wx', mode: 0o600 })
+  console.error(`Settings browser failed during ${phase}: ${fatal?.message || error.message}`); process.exitCode = 1
 }).finally(async () => {
   clearTimeout(timer); lines.close(); child.stdin.end()
   if (browser) await browser.close()
