@@ -515,7 +515,9 @@ func TestNativeInputCoordinator(t *testing.T) {
 		t.Fatal("coordinator executed native work")
 	}
 	jobs, err := f.s.ListJobsPage(ctx, store.JobPageQuery{Kind: store.JobTypedIndex, Limit: 1})
-	if err != nil || jobs == nil || jobs.Next != nil || len(jobs.Jobs) != 1 || jobs.Jobs[0].ID != coordinatorJob.ID || jobs.Jobs[0].Status != store.StatusDone || jobs.Jobs[0].Attempts != 1 || jobs.Jobs[0].FinishedAt == nil {
+	// Durable Attempts counts prior failed/reaped tries; lifecycle Attempt is
+	// one-based. A first successful execution therefore stores zero retries.
+	if err != nil || jobs == nil || jobs.Next != nil || len(jobs.Jobs) != 1 || jobs.Jobs[0].ID != coordinatorJob.ID || jobs.Jobs[0].Status != store.StatusDone || jobs.Jobs[0].Attempts != 0 || jobs.Jobs[0].FinishedAt == nil {
 		t.Fatal("coordinator durable completion", err)
 	}
 	planned, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
