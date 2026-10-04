@@ -9453,7 +9453,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and digests each, and native membership predicates in the existing schedule
   inventory; these do not bound the engine's scan or comparison work. Live
   backup passes empty reference arrays and retains all strict checks. Both
-  modes now decode native IDs for at most 24,576 returned schedule rows; only
-  restore adds the corresponding identity comparisons. No new
+  modes now decode native IDs for at most 24,576 accepted schedule rows plus
+  one overflow sentinel; only restore adds the corresponding identity
+  comparisons. Without an optimized membership plan, engine comparison work
+  can be proportional to all stored schedules times referenced plans; the
+  query's returned-row limit does not establish a native-scan bound. No new
   lock, cache, schema, child or ordinary request, sync, startup, retry/no-op or
   publication work is added.
