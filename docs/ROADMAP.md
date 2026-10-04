@@ -383,6 +383,10 @@ Ben requests integration and push of this reviewed runtime checkpoint.
 Frozen target-corpus correctness/cost closure and capacity remain open;
 Bazel remains unregistered and T45.7 still follows that closure.
 
+An admission attempt at exact `f7900e69` stops before any cohort because the
+runner cannot reach Colima profile `phebs-t451a`. No attempt identifier is
+spent. The record is `spike/t454/remote_host_admission_stop_f7900e69.json`.
+
 Sequencing override (2026-10-03): Ben waives the remaining T45.6 target-corpus
 correctness/cost gate and authorizes T45.7 continuation. This supersedes the
 T45.7 closure hold above. The corpus gate is waived, not passed; ordinary,
