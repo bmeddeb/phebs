@@ -19,6 +19,7 @@ const child = spawn('ssh', [...sshArgs, `env PATH=${path.dirname(fixture)}:/usr/
 let tunnel, browser, ready, phase = 'fixture startup', outputBytes = 0, lineBytes = 0, diagnostics = ''
 let fatal
 const statusReads = []
+const browserDiagnostics = []
 const frames = []
 let wake
 const exited = once(child, 'exit').catch(() => [-1])
@@ -106,7 +107,10 @@ async function run() {
       census.requests++
     })
     const page = await context.newPage()
-    page.on('pageerror', () => unexpectedBrowserErrors++)
+    page.on('pageerror', error => {
+      unexpectedBrowserErrors++
+      if (browserDiagnostics.length < 16) browserDiagnostics.push({ kind: 'pageerror', message: error.message.slice(0, 160) })
+    })
     page.on('console', message => {
       if (message.type() !== 'error') return
       let pathname
@@ -114,7 +118,10 @@ async function run() {
       const deliberateHTTP = /server responded with a status of (403|409|503) /.test(message.text()) && /^\/api\/code-navigation-indexing\/(providers|plan|enqueue)$/.test(pathname)
       const deliberateDrop = message.text().includes('net::ERR_FAILED') && /^\/api\/code-navigation-indexing\/(enqueue|status)$/.test(pathname)
       if (deliberateHTTP || deliberateDrop) expectedNetworkErrors++
-      else unexpectedBrowserErrors++
+      else {
+        unexpectedBrowserErrors++
+        if (browserDiagnostics.length < 16) browserDiagnostics.push({ kind: 'console', pathname: pathname.slice(0, 160), message: message.text().slice(0, 160) })
+      }
     })
     await page.goto(url + settings)
     await page.getByLabel('Email', { exact: true }).fill(email)
@@ -167,7 +174,12 @@ async function run() {
         const view = await response.json()
         statusReads.push({ status: response.status(), state: view.state, available: view.available, reason: view.reason })
         if (statusReads.length > 16) statusReads.shift()
-      } catch { unexpectedBrowserErrors++ }
+      } catch {
+        // UI generation changes cancel obsolete reads. A diagnostic clone
+        // losing its body is not an application console/page error.
+        statusReads.push({ status: response.status(), diagnostic: 'body_unavailable' })
+        if (statusReads.length > 16) statusReads.shift()
+      }
     }
     if (response.url().endsWith('/api/code-navigation-indexing/plan') && response.ok()) {
       try { assert(plans.length < 16); plans.push(await response.json()) } catch { unexpectedBrowserErrors++ }
@@ -177,8 +189,10 @@ async function run() {
   async function state(value, refresh = true, available) {
     const updated = refresh ? page.waitForResponse(async response => {
       if (!response.url().includes('/api/code-navigation-indexing/status?') || response.status() !== 200) return false
-      const view = await response.json()
-      return view.state === value && (available === undefined || view.available === available)
+      try {
+        const view = await response.json()
+        return view.state === value && (available === undefined || view.available === available)
+      } catch { return false }
     }, { timeout: 15000 }) : undefined
     if (refresh) await Promise.all([updated, section.getByRole('button', { name: 'Refresh indexing' }).click()])
     await expect(section.getByText(value, { exact: true })).toBeVisible({ timeout: 15000 })
@@ -308,8 +322,9 @@ async function run() {
 }
 timer = setTimeout(() => { fatal ??= new Error('driver timeout'); child.stdin.end(); wake?.() }, 600000)
 run().catch(error => {
-  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) diagnostics = diagnostics.replaceAll(secret, '[redacted]')
-  fs.writeFileSync(receipt + '.failure.txt', diagnostics + '\nRecent status: ' + JSON.stringify(statusReads) + '\nRequest counts: ' + JSON.stringify(results.managed_request_counts), { flag: 'wx', mode: 0o600 })
+  let recorded = diagnostics + '\nRecent status: ' + JSON.stringify(statusReads) + '\nRequest counts: ' + JSON.stringify(results.managed_request_counts) + '\nBrowser errors: ' + JSON.stringify(browserDiagnostics)
+  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) recorded = recorded.replaceAll(secret, '[redacted]')
+  fs.writeFileSync(receipt + '.failure.txt', recorded, { flag: 'wx', mode: 0o600 })
   console.error(`Settings browser failed during ${phase}: ${fatal?.message || error.message}`); process.exitCode = 1
 }).finally(async () => {
   clearTimeout(timer); lines.close(); child.stdin.end()

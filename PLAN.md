@@ -10049,7 +10049,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   starts before engine/schema/mirror setup; the existing engine/publication
   helpers still use the test context. The driver retains at most a 64-KiB
   diagnostic suffix, 128 managed-request events per context, eight mutation
-  bodies, sixteen plan responses and sixteen projected status diagnostics.
+  bodies, sixteen plan responses, sixteen projected status diagnostics and
+  sixteen browser-error diagnostics with 160-character message/path limits.
   The fixed request envelope covers the approximately 66-request complete
   flow plus polling, rather than truncating the restore tail. The test has a ten-minute alarm and
   the driver a ten-minute cancellation timer, twenty-second EOF cleanup grace
