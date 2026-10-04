@@ -148,9 +148,9 @@ func TestStoreAccountingLocalFactoryActualSDKWire(t *testing.T) {
 			case <-ctx.Done():
 				t.Fatal("SDK socket did not join")
 			}
-			wantCalls, wantWrites, wantRows, wantMaximum := controls+1, uint64(3), uint64(444), uint64(442)
+			wantCalls, wantWrites, wantRows, wantMaximum := controls+1, uint64(3), uint64(446), uint64(444)
 			if test.existing {
-				wantWrites, wantRows = 1, 442
+				wantWrites, wantRows = 1, 444
 			}
 			if test.failStep != 0 {
 				wantCalls = int(test.failStep)
