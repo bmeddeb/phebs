@@ -146,7 +146,9 @@ and two original allowances; drains take 1,198/1,196 selected turns with one
 parent tombstone each. The reused native coordinator passes in 76.76s, affected
 gates and source/driver review pass, and exact cleanup stops the personal
 profile. The source-free record is `spike/t459/native_restore_1.json`; final
-exact-candidate evidence/cost review remains pending. Rendered Settings, complete
+source/evidence/cost reviews of exact candidate `3739fe6c` cover all six changed
+paths with all severity counts zero. This record-only seal changes no compiled
+or harness input. Rendered Settings, complete
 neutral acceptance and separately
 authorized target closure stay open; production behavior and limits are unchanged.
 T45.1a's reviewed neutral harness gate is now PASS at source

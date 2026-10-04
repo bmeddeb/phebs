@@ -9952,8 +9952,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   loop devices or matching test/engine processes, empty test temporary custody,
   removed fresh roots and preservation of the existing native namespace lock;
   the personal test profile is stopped. The source-free record is
-  `spike/t459/native_restore_1.json`. Final exact-candidate evidence/cost review
-  remains pending. This is only the native regenerate-on-restore prerequisite.
+  `spike/t459/native_restore_1.json`. Two final source/evidence/cost reviews of
+  exact candidate `3739fe6c` cover all six changed paths and retained evidence,
+  with all severity counts zero. This record-only seal changes no compiled,
+  fixture, module or native harness input. This is only the native
+  regenerate-on-restore prerequisite.
   Rendered
   authenticated Settings/API parity, complete neutral closure and separately
   authorized target closure remain open. The fixed workspace has zero accepted

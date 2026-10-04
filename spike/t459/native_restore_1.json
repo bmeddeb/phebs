@@ -541,8 +541,49 @@
     "native_evidence": "pending at source review"
   },
   "final_candidate_review": {
-    "status": "PENDING",
-    "qualification": "exact candidate all-path source/evidence/cost review before PR"
+    "schema": "phebs-exact-review-v1",
+    "candidate_commit": "3739fe6cc6e4e78582538f45e9d2463fdf4e646e",
+    "implementation_commit": "025325c3a6a12dc0bcf7d16b284a9d99bbf7b176",
+    "base_commit": "8424d1917425f9854eff6791b3fe15bc8aad637d",
+    "coverage": [
+      "PLAN.md",
+      "docs/BACKLOG.md",
+      "docs/ROADMAP.md",
+      "internal/typedexecutor/input_native_linux_test.go",
+      "internal/typedexecutor/input_restore_linux_test.go",
+      "spike/t459/native_restore_1.json"
+    ],
+    "driver_reviewed": true,
+    "recorded_hashes_verified": 38,
+    "upload_hashes_verified": 4,
+    "reviews": [
+      {
+        "reviewer": "next_ticket_audit",
+        "role": "independent all-path authority/evidence/custody/cost review",
+        "counts": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      },
+      {
+        "reviewer": "pr31_cost_docs",
+        "role": "independent Linux source/evidence/cost review; initial pending ADR author, separately reviewed by root and next-ticket auditor",
+        "counts": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      }
+    ],
+    "author_audit": {
+      "reviewer": "pr31_correctness",
+      "result": "proof/claims/hashes match actual assertions and log; not counted as independent review"
+    },
+    "result": "PASS",
+    "qualification": "record-only seal adds these results without changing any compiled, fixture, module or native harness input"
   },
   "cleanup": {
     "containers": 0,
@@ -599,7 +640,8 @@
       "logs/refactor-compile-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "logs/upload.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "logs/vet-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    }
+    },
+    "candidate_review_sha256": "sha256:80ffe0318f7611af8f024c45931e2d39c684b14aa52433ac7dbbc551eb7a9ec9"
   },
   "outer_test_timeout_seconds": 1500,
   "claim_boundary": "Only the native regenerate-on-restore neutral prerequisite is PASS. Rendered authenticated Settings, complete neutral acceptance and separately authorized target remain open; ordinary providers unavailable, T45.6 not PASS; no target execution, product-scale, release or scale claim."
