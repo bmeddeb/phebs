@@ -107,6 +107,13 @@ Complete native/neutral,
 native fault/hard-death, pressure/lifecycle, native restore regeneration, rendered
 Settings and separately authorized target closure remain open. Pending target
 binding authorizes no target run.
+The next T45.9 prerequisite is **OPEN**: reuse the opt-in acceptance harness for
+the fixed 176-byte neutral workspace's cancellation, shared-wall expiry and
+hard-controller-death recovery under a separate closed test schema. Production
+and historical Bazel gates remain unchanged. Exact source/review, fresh serial
+native receipts and machine/teardown gates are pending. This slice establishes
+no PASS, product-scale envelope, pressure/lifecycle or native restore closure,
+rendered Settings, complete neutral closure or target execution authority.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

@@ -226,13 +226,14 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 		}
 	}
 	required := map[string]bool{typedindex.ManagedHelperFile: false, selectionFile: false, typedindex.HostToolsFile: false}
-	if c.Schema == acceptanceCorpusSchema {
+	switch c.Schema {
+	case acceptanceCorpusSchema:
 		required["tools/corpus/remote-apis-sdks.tar.gz"] = false
-	} else if c.Schema == acceptanceWorkspaceFaultSchema {
+	case acceptanceWorkspaceFaultSchema:
 		for _, file := range acceptanceWorkspaceSourceFiles() {
 			required[file.Path] = false
 		}
-	} else {
+	default:
 		for _, name := range []string{"source/MODULE.bazel", "source/MODULE.bazel.lock", "source/go.mod", "source/lib/BUILD.bazel", "source/lib/lib.go"} {
 			required[name] = false
 		}
@@ -262,7 +263,8 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 			return p, nil, errors.New("missing neutral input")
 		}
 	}
-	if c.Schema == acceptanceCorpusSchema {
+	switch c.Schema {
+	case acceptanceCorpusSchema:
 		archive, e := acceptanceRead(filepath.Join(c.root(), "bundle/tools/corpus/remote-apis-sdks.tar.gz"), 249496)
 		if e != nil {
 			return p, nil, e
@@ -277,11 +279,11 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 		if e != nil || !reflect.DeepEqual(actual, expected) {
 			return p, nil, errors.New("frozen corpus source inventory")
 		}
-	} else if c.Schema == acceptanceWorkspaceFaultSchema {
+	case acceptanceWorkspaceFaultSchema:
 		if !acceptanceWorkspaceSources(inv) {
 			return p, nil, errors.New("neutral workspace source inventory")
 		}
-	} else {
+	default:
 		source, e := acceptanceRead(filepath.Join(c.root(), "bundle/source/lib/lib.go"), 1024)
 		if e != nil || string(source) != acceptanceSource {
 			return p, nil, errors.New("neutral source oracle")

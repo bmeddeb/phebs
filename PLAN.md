@@ -9602,3 +9602,54 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   closure remain unestablished. Ordinary providers remain unavailable and the
   T45.6 waiver is not PASS; pending target binding authorizes no target execution
   or scale/release claim.
+
+- **2026-10-04 — T45.9 neutral workspace fault prerequisite (OPEN).** Extend
+  only the opt-in acceptance tests with the closed
+  `phebs-typed-workspace-fault-acceptance-v1` schema. It admits only the fixed
+  neutral repository, its five workspace source files totaling 176 admitted
+  regular-source Git blob bytes, the module provider and the `cancel`, `wall`
+  and `hard-death` cases. A fresh pristine installation provisions the original
+  public SDK/indexer and current helper, binds exact test/source/tool/image/host
+  identities, and exports real store source/profile authority without queued
+  jobs, attempts or prior dispatch custody. The existing acceptance parent
+  owns each case's persistent engine and authenticates both native phase
+  observations before injecting controller SIGTERM, worker SIGSTOP or
+  controller SIGKILL. Hard death uses a separate recovery child after the
+  existing stale interval. Require terminal interrupted-work refusal without
+  replay or allowance refresh, no current publication, successful settlement,
+  released growth and proven native/workspace/engine drain. Historical Bazel
+  receipts remain supporting evidence at their original identities; their
+  schemas and profile/tool gates are unchanged. No production registration,
+  authority, resource bound or user behavior changes.
+
+  **Cost.** Ordinary query/request, sync, startup/restart, retry/no-op and
+  publication paths add zero work, locks, scans/hashes, cache invalidation,
+  goroutines, children or persistent state. Test provisioning copies and hashes
+  the full pinned Go SDK and indexer/helper bytes, not only the 176 source
+  bytes; it repeats the existing bounded inventory walk, per-file buffers and
+  serial neutral Git construction, uses one supervised in-memory setup engine
+  and exports one pristine seed. Profile/inventory/config controls keep their
+  own existing size ceilings; receipts retain the 128-KiB ceiling. Each serial
+  case adds one parent-owned persistent engine, one controller child and, for
+  hard death, one joined recovery child. At most two sequential native phase
+  containers retain the original shared absolute 300-second allowance and all
+  memory, disk, inode, task, descriptor and output bounds. The 540-second outer
+  case context, bounded 100-ms observations and publication pins, and existing
+  21-second stale wait do not extend that allowance. Teardown performs the
+  existing guarded repository deletion and at most 12,000 selected lifecycle
+  turns with the existing defaults, controller serialization and
+  lifecycle-mutation lock. A turn accepts at most sixteen mutations; physical
+  drainage retains its 48-traversal-step and 216-traversal-stat ceilings,
+  excluding the existing fixed guard/private-ancestry helper work. The turn cap
+  bounds test work; it guarantees neither timing nor deletion progress.
+  Original cache behavior, source/runtime pins and Bazel admission remain exact.
+
+  **Validation: OPEN.** An immutable source commit, independent implementation
+  and steady-state-cost review, fresh serial native fault receipts, machine
+  gates and exact teardown evidence remain pending. This draft records no PASS.
+  Full T45.9 neutral acceptance, actual pressure/lifecycle transitions, native
+  regeneration after restore, rendered authenticated Settings and separately
+  authorized target closure remain open. The fixture has zero accepted service
+  incarnations and establishes no product-scale envelope. Ordinary providers
+  remain unavailable; the T45.6 waiver is not PASS and no scale or release claim
+  changes.
