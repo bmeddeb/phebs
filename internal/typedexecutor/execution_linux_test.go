@@ -19,7 +19,9 @@ import (
 	"google.golang.org/protobuf/proto"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -149,7 +151,7 @@ func verifiedNeutralLeg(t *testing.T, p planner.Plan, roots []planner.Configured
 	if e = json.Unmarshal(raw, &adapted); e != nil {
 		t.Fatal(e)
 	}
-	adapted["Compiler"], adapted["Arch"], adapted["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)
+	adapted["Compiler"], adapted["Arch"], adapted["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(strconv.Quote(runtime.GOARCH)), json.RawMessage(`25`)
 	response, e := json.Marshal(adapted)
 	if e != nil {
 		t.Fatal(e)

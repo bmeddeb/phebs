@@ -332,6 +332,23 @@ func (c *client) request(ctx context.Context, method, path string, body any, out
 	return response.StatusCode, nil
 }
 
+func admittedDaemonSecurity(options []string) bool {
+	seccomp, apparmor, cgroupns := false, false, false
+	for _, value := range options {
+		switch value {
+		case "name=seccomp,profile=builtin":
+			seccomp = true
+		case "name=apparmor":
+			apparmor = true
+		case "name=cgroupns":
+			cgroupns = true
+		}
+	}
+	// AppArmor stays mandatory when advertised. This host advertises seccomp
+	// and a private cgroup namespace instead. Seccomp alone is not enough.
+	return seccomp && (apparmor || cgroupns)
+}
+
 func (c *client) preflight(ctx context.Context, options Options) (string, error) {
 	var info struct {
 		ID, OSType, CgroupVersion                      string
@@ -341,12 +358,7 @@ func (c *client) preflight(ctx context.Context, options Options) (string, error)
 	if _, err := c.request(ctx, "GET", "/info", nil, &info, 200); err != nil {
 		return "", err
 	}
-	seccomp, apparmor := false, false
-	for _, value := range info.SecurityOptions {
-		seccomp = seccomp || value == "name=seccomp,profile=builtin"
-		apparmor = apparmor || value == "name=apparmor"
-	}
-	if info.ID == "" || info.OSType != "linux" || info.CgroupVersion != "2" || !info.MemoryLimit || !info.SwapLimit || !info.PidsLimit || !info.CPUCfsQuota || !seccomp || !apparmor {
+	if info.ID == "" || info.OSType != "linux" || info.CgroupVersion != "2" || !info.MemoryLimit || !info.SwapLimit || !info.PidsLimit || !info.CPUCfsQuota || !admittedDaemonSecurity(info.SecurityOptions) {
 		return "", ErrRefused
 	}
 	var image struct {
@@ -357,7 +369,7 @@ func (c *client) preflight(ctx context.Context, options Options) (string, error)
 	if _, err := c.request(ctx, "GET", "/images/"+options.ImageID+"/json", nil, &image, 200); err != nil {
 		return "", err
 	}
-	if image.ID != options.ImageID || image.OS != "linux" || image.Architecture != "arm64" || len(image.Config.Volumes) != 0 {
+	if image.ID != options.ImageID || image.OS != "linux" || image.Architecture != runtime.GOARCH || !typedindex.AdmittedNativeArch(image.Architecture) || len(image.Config.Volumes) != 0 {
 		return "", ErrRefused
 	}
 	allowed := map[string]bool{}

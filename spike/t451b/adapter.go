@@ -7,10 +7,10 @@ import (
 	"errors"
 	"io"
 	"os"
-	"runtime"
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/spike/t451a"
 	"github.com/bmeddeb/phebs/spike/t451a/launcher"
 	"github.com/bmeddeb/phebs/spike/t451a/planner"
@@ -98,8 +98,8 @@ func inspectCall(data []byte, hash string, argv, env []string, cwd string, reque
 // RunAdapter is selected only by the exact compiled executable pathname.
 // No client field is forwarded into the launcher after this complete comparison.
 func RunAdapter(ctx context.Context) error {
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 || os.Getpid() == 1 {
-		return errors.New("compatibility adapter requires isolated Linux arm64 worker")
+	if !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 || os.Getpid() == 1 {
+		return errors.New("compatibility adapter requires an admitted Linux worker")
 	}
 	planPath, tracePath, err := slotPaths(os.Getenv(slotEnv))
 	if err != nil {

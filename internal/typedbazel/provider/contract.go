@@ -24,13 +24,16 @@ const (
 	NativeProbePath   = "/inputs/tools/bin/t451b-native-probe"
 	NativeAdapterPath = "/inputs/tools/bin/phebs-t451b-native-driver"
 	SCIPPath          = "/inputs/tools/bin/scip-go"
-	GoDigest          = "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389"
-	SCIPDigest        = "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765"
+	GoDigest          = "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389" // linux/arm64
+	SCIPDigest        = typedindex.SCIPGoIndexerDigest
 	BazelDigest       = "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f"
-	nativeSDKRoot     = "external/rules_go++go_sdk+go_default_sdk"
-	maxClientBytes    = 1 << 20
-	maxRequestBytes   = 4096
-	maxTraceBytes     = 4 << 20
+	// Official go1.25.0 and Bazel 9.0.0 linux/amd64 releases (spike/t457/native_tool_pins_amd64.json).
+	GoDigestAmd64    = "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25"
+	BazelDigestAmd64 = "sha256:c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403"
+	nativeSDKRoot    = "external/rules_go++go_sdk+go_default_sdk"
+	maxClientBytes   = 1 << 20
+	maxRequestBytes  = 4096
+	maxTraceBytes    = 4 << 20
 )
 
 // Invocation contains only already admitted controller values. A command loader
@@ -146,11 +149,24 @@ func (i Invocation) validate(ctx context.Context) error {
 	return nil
 }
 
+// NativeToolDigests returns the pinned Go SDK, scip-go and Bazel images for an
+// admitted architecture. The driver pin is launcher.NativeDriverDigest.
+func NativeToolDigests(arch string) (goSDK, scip, bazel string, ok bool) {
+	switch arch {
+	case "arm64":
+		return GoDigest, SCIPDigest, BazelDigest, true
+	case "amd64":
+		return GoDigestAmd64, typedindex.SCIPGoIndexerDigestAmd64, BazelDigestAmd64, true
+	}
+	return "", "", "", false
+}
+
 // pinnedProfile checks only the existing declared pin policy. Actual executable,
 // SDK and resolved rules identity remain the worker's separate physical proofs.
 func pinnedProfile(profile typedindex.Profile) bool {
 	p := profile.Definition()
-	return p.RCDigest == "" && p.Tools.Bazel.Digest == BazelDigest && p.Tools.Bazel.Version == "9.0.0" && p.Tools.Go.Digest == GoDigest && p.Tools.Go.Version == "1.25.0" && p.Tools.Driver.Digest == "sha256:"+launcher.NativeDriverSHA256 && p.Tools.RulesGo.Version == "0.59.0" && p.Tools.Indexer.Digest == SCIPDigest && p.Tools.Indexer.Version == "0.2.7"
+	goSDK, scip, bazel, ok := NativeToolDigests(p.Config.GOARCH)
+	return ok && p.RCDigest == "" && p.Tools.Bazel.Digest == bazel && p.Tools.Bazel.Version == "9.0.0" && p.Tools.Go.Digest == goSDK && p.Tools.Go.Version == "1.25.0" && p.Tools.Driver.Digest == "sha256:"+launcher.NativeDriverDigest(p.Config.GOARCH) && p.Tools.RulesGo.Version == "0.59.0" && p.Tools.Indexer.Digest == scip && p.Tools.Indexer.Version == "0.2.7"
 }
 
 func classify(err error) error {

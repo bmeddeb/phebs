@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"runtime"
 	"slices"
+	"strconv"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
@@ -30,7 +32,7 @@ func verifyPreparedCall(p launcher.Prepared, slot string, call CallEvidence) err
 	if err := json.Unmarshal(call.Result.DriverResponse, &raw); err != nil {
 		return err
 	}
-	raw["Compiler"], raw["Arch"], raw["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)
+	raw["Compiler"], raw["Arch"], raw["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(strconv.Quote(runtime.GOARCH)), json.RawMessage(`25`)
 	expected, err := json.Marshal(raw)
 	if err != nil {
 		return err

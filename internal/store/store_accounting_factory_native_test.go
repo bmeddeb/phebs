@@ -205,10 +205,11 @@ func TestStoreAccountingNativeFullInitializationAndReopen(t *testing.T) {
 	t.Cleanup(closeCurrent)
 	// The fresh epoch includes both T46.1 retirement marker transactions;
 	// reopen reads their markers without repeating either destructive migration.
-	// Base schema: 442 definitions (45 more than the previous397); the eighth
-	// queue adds one pending-index definition only to fresh migration. Thus
-	// fresh681+45+1=727 rows; reopen409+45=454, unchanged transaction counts.
-	startup := [...]struct{ transactions, rows uint64 }{{38, 727}, {7, 454}}
+	// Base schema: 444 definitions (45 more than the previous 397, plus T45.8b's
+	// two optional repo link fields); the eighth queue adds one pending-index
+	// definition only to fresh migration. Thus fresh 681+47+1=729 rows; reopen
+	// 409+47=456, unchanged transaction counts.
+	startup := [...]struct{ transactions, rows uint64 }{{38, 729}, {7, 456}}
 	for phase := uint32(1); phase <= 2; phase++ {
 		if phase == 1 {
 			current, err = openLocalRootWithOwner(ctx, runtime, owner)
@@ -234,7 +235,7 @@ func TestStoreAccountingNativeFullInitializationAndReopen(t *testing.T) {
 		}
 		initial := beforeAuth.Phases[phase-1]
 		want := startup[phase-1]
-		if initial.Transactions != want.transactions || initial.Rows != want.rows || initial.MaximumRows != 442 {
+		if initial.Transactions != want.transactions || initial.Rows != want.rows || initial.MaximumRows != 444 {
 			t.Fatalf("selected initialization phase=%d prefix=%+v", phase, initial)
 		}
 		t.Logf("phase=%d pre_auth_transactions=%d pre_auth_rows=%d maximum_rows=%d tables=%d", phase,
@@ -261,7 +262,7 @@ func TestStoreAccountingNativeFullInitializationAndReopen(t *testing.T) {
 		}
 		prefix, err := controller.Snapshot()
 		if err != nil || prefix.Phases[phase-1].Transactions != want.transactions+1 ||
-			prefix.Phases[phase-1].Rows != want.rows+2 || prefix.Phases[phase-1].MaximumRows != 442 {
+			prefix.Phases[phase-1].Rows != want.rows+2 || prefix.Phases[phase-1].MaximumRows != 444 {
 			t.Fatalf("actual initialization prefix=%+v %v", prefix, err)
 		}
 		t.Logf("phase=%d transactions=%d rows=%d maximum_rows=%d tables=%d", phase,

@@ -9,6 +9,7 @@ import { PaletteContext } from '../theme'
 import type { PaletteName } from '../palette'
 
 const api = vi.hoisted(() => ({
+  fetchRepoStatus: vi.fn().mockResolvedValue([]),
   createAPIKey: vi.fn(),
   fetchAPIKeys: vi.fn(),
   fetchLifecycleStatus: vi.fn(),
@@ -16,6 +17,7 @@ const api = vi.hoisted(() => ({
 }))
 
 vi.mock('../api', () => api)
+vi.mock('../typedIndex', () => ({ fetchTypedProviders: vi.fn().mockResolvedValue({ schema: 'phebs-typed-index-providers-v1', providers: [] }), fetchTypedView: vi.fn() }))
 
 const engine = new Client()
 

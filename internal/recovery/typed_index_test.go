@@ -176,12 +176,13 @@ func TestTypedIndexRegenerateOnRestore(t *testing.T) {
 		!strings.Contains(string(export), profile.Digest()) {
 		t.Fatal("precious profile intent is missing")
 	}
-	// Inert repo links and their owned field type may name an excluded table.
-	// Its native declaration and row IDs must still be absent.
+	// T45.8b's optional repo.latest_typed_job link may name typed_index_job;
+	// no derived table definition or row may travel.
 	for _, table := range strings.Split(derivedExportTables, ",") {
-		if strings.Contains(string(export), "DEFINE TABLE "+table+" ") ||
-			strings.Contains(string(export), "id: "+table+":") {
-			t.Fatalf("derived table %s traveled in backup", table)
+		for _, marker := range []string{"DEFINE TABLE " + table + " ", "TABLE DATA: " + table + "\n", "id: " + table + ":"} {
+			if strings.Contains(string(export), marker) {
+				t.Fatalf("derived table %s traveled in backup (%q)", table, marker)
+			}
 		}
 	}
 	// Exercise the strict selected path as well as ordinary restore's native

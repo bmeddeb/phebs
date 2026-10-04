@@ -10,12 +10,15 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"runtime"
 	"runtime/debug"
 	"slices"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/spike/t451a"
 	"github.com/bmeddeb/phebs/spike/t451a/launcher"
 	"github.com/bmeddeb/phebs/spike/t451a/planner"
@@ -103,11 +106,11 @@ func validateToolProfiles(expected []toolProfile, tools []ToolIdentity) error {
 			}
 			settings[s.Key] = s.Value
 		}
-		if settings["GOOS"] != "linux" || settings["GOARCH"] != "arm64" {
+		if settings["GOOS"] != "linux" || !typedindex.AdmittedNativeArch(settings["GOARCH"]) {
 			return errors.New("executed tool platform mismatch")
 		}
 		if t.tools {
-			if info.GoVersion != "go1.25.0" || settings["CGO_ENABLED"] != "0" || settings["GOARM64"] != "v8.0" {
+			if info.GoVersion != "go1.25.0" || settings["CGO_ENABLED"] != "0" || !typedindex.AdmittedNativeVariant(settings["GOARCH"], settings["GOARM64"], settings["GOAMD64"]) {
 				return errors.New("typed tool build profile mismatch")
 			}
 			count := 0
@@ -307,7 +310,7 @@ func verifyPreparedCall(p launcher.Prepared, slot string, call CallEvidence) err
 	if err := json.Unmarshal(call.Result.DriverResponse, &raw); err != nil {
 		return err
 	}
-	raw["Compiler"], raw["Arch"], raw["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)
+	raw["Compiler"], raw["Arch"], raw["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(strconv.Quote(runtime.GOARCH)), json.RawMessage(`25`)
 	expected, err := json.Marshal(raw)
 	if err != nil {
 		return err

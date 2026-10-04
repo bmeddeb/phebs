@@ -106,9 +106,6 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 		}
 		request := typedindex.NewManagedRequest(before.Source, before.Profile, before.ProfileEpoch, before.UniverseDigest, typedindex.Canary)
 		raw := typedTestJSON(t, request)
-		if err = s.CheckTypedIndexPreview(ctx, f.repo, before.Revision, raw); err != nil {
-			t.Fatal(err)
-		}
 		if _, err = s.EnqueueTypedIndexExpected(ctx, f.repo, before.Revision, raw); err != nil {
 			t.Fatal(err)
 		}
@@ -161,9 +158,6 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 		if err != nil || failed.Status.Stage != "" || failed.Schedule == nil || failed.Schedule.Failed != 1 || failed.Schedule.Status != GenerationScheduleSettled {
 			t.Fatal(failed, err)
 		}
-		if err = s.CheckTypedIndexPreview(ctx, f.repo, before.Revision, raw); !errors.Is(err, ErrTypedIndexRequestRecorded) {
-			t.Fatal("recorded canary preview", err)
-		}
 		// Same bytes remain a transport confirmation, never a second coordinator.
 		if _, err = s.EnqueueTypedIndexExpected(ctx, f.repo, before.Revision, raw); err != nil {
 			t.Fatal(err)
@@ -175,9 +169,6 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 		dry := typedTestJSON(t, typedindex.NewManagedRequest(before.Source, before.Profile, before.ProfileEpoch, before.UniverseDigest, typedindex.DryRun))
 		if _, err = s.EnqueueTypedIndexExpected(ctx, f.repo, before.Revision, dry); err != nil {
 			t.Fatal(err)
-		}
-		if err = s.CheckTypedIndexPreview(ctx, f.repo, before.Revision, raw); !errors.Is(err, ErrTypedIndexRequestRecorded) {
-			t.Fatal("superseded purpose preview", err)
 		}
 		if _, err = s.CancelPendingJobs(ctx, JobTypedIndex, f.repo); err != nil {
 			t.Fatal(err)
@@ -198,21 +189,25 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 		if err = s.FailGenerationChunk(ctx, dryChunk, "execution_failed"); err != nil {
 			t.Fatal(err)
 		}
-		if err = s.CheckTypedIndexPreview(ctx, f.repo, before.Revision, dry); !errors.Is(err, ErrTypedIndexRequestRecorded) {
-			t.Fatal("failed attempt preview", err)
-		}
 		if _, err = s.EnqueueTypedIndexExpected(ctx, f.repo, before.Revision, dry); err != nil {
 			t.Fatal("failed exact transport confirmation", err)
 		}
 		publish := typedTestJSON(t, typedindex.NewManagedRequest(before.Source, before.Profile, before.ProfileEpoch, before.UniverseDigest, typedindex.Publish))
-		if err = s.CheckTypedIndexPreview(ctx, f.repo, before.Revision, publish); err != nil {
-			t.Fatal("fresh purpose refused", err)
-		}
 		if _, err = s.EnqueueTypedIndexExpected(ctx, f.repo, before.Revision, publish); err != nil {
 			t.Fatal(err)
 		}
-		if err = s.CheckTypedIndexPreview(ctx, f.repo, before.Revision, dry); !errors.Is(err, ErrTypedIndexRequestRecorded) {
-			t.Fatal("round-trip purpose preview", err)
+		// The failed, superseded dry-run re-runs at the next run ordinal: a new
+		// root that reuses the one pending coordinator, never refresh or repair.
+		rerun := typedindex.NewManagedRequest(before.Source, before.Profile, before.ProfileEpoch, before.UniverseDigest, typedindex.DryRun).ManagedRun(1)
+		if _, err = s.EnqueueTypedIndexExpected(ctx, f.repo, before.Revision, typedTestJSON(t, rerun)); err != nil {
+			t.Fatal("re-run refused", err)
+		}
+		after, err := s.ReadTypedIndexOperator(ctx, f.repo)
+		if err != nil || after.Desired.Purpose != typedindex.DryRun || after.Desired.Run != 1 || after.Status.Reason != "" || after.Coordinator != StatusPending {
+			t.Fatal("re-run did not become desired work", after.Desired, after.Status.Reason, after.Coordinator, err)
+		}
+		if pending, e := s.queuePendingIDs(ctx, JobTypedIndex, f.repo, ""); e != nil || len(pending) != 1 {
+			t.Fatal("re-run coordinator", pending, e)
 		}
 		if _, err = s.CancelPendingJobs(ctx, JobTypedIndex, f.repo); err != nil {
 			t.Fatal(err)

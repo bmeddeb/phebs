@@ -118,7 +118,12 @@ func TestTypedNavigationAPICompositionLinux(t *testing.T) {
 	if len(jobs.Jobs) != 1 || jobs.Next != nil || jobs.Jobs[0].Status != store.StatusPending || jobs.Jobs[0].Attempts != 0 {
 		t.Fatal("retry duplicated or executed job", jobs)
 	}
-	typedNavigationHTTP(ctx, t, handler, api.TypedIndexPath+"/plan", selection, nil, http.StatusUnprocessableEntity)
+	// An in-flight purpose previews its own exact request, never a duplicate run.
+	var inflight api.TypedIndexPreview
+	typedNavigationHTTP(ctx, t, handler, api.TypedIndexPath+"/plan", selection, &inflight, http.StatusOK)
+	if inflight.RequestDigest != preview.RequestDigest || inflight.IdempotencyKey != preview.IdempotencyKey {
+		t.Fatal("in-flight preview", inflight, preview)
+	}
 	publication := f.publishQueued(t, true)
 	if publication.parent.Digest() != preview.RequestDigest {
 		t.Fatal("HTTP request was not the published request", publication.parent.Digest(), preview.RequestDigest)
@@ -178,7 +183,17 @@ func TestTypedNavigationAPICompositionLinux(t *testing.T) {
 	if len(jobs.Jobs) != 1 || jobs.Next != nil || jobs.Jobs[0].Status != store.StatusDone || jobs.Jobs[0].ID != completed.ID || jobs.Jobs[0].Attempts != completed.Attempts {
 		t.Fatal("completed retry requeued or duplicated job", jobs)
 	}
-	typedNavigationHTTP(ctx, t, handler, api.TypedIndexPath+"/plan", selection, nil, http.StatusUnprocessableEntity)
+	// A completed purpose previews its next run; previewing alone queues nothing.
+	var rerun api.TypedIndexPreview
+	typedNavigationHTTP(ctx, t, handler, api.TypedIndexPath+"/plan", selection, &rerun, http.StatusOK)
+	if rerun.RequestDigest == preview.RequestDigest || rerun.IdempotencyKey == preview.IdempotencyKey {
+		t.Fatal("completed purpose did not preview a new run", rerun)
+	}
+	jobs, e = f.state.ListJobsPage(ctx, store.JobPageQuery{Kind: store.JobTypedIndex, Limit: 2})
+	check(e)
+	if len(jobs.Jobs) != 1 || jobs.Next != nil || jobs.Jobs[0].ID != completed.ID {
+		t.Fatal("re-run preview queued work", jobs)
+	}
 	// Fail a real coordinator before execution: the API must expose failure
 	// without erasing the prior current publication or leaking its private error.
 	canary := selection

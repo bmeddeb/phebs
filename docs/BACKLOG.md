@@ -15211,6 +15211,40 @@ correctness/cost passes and cross-cohort comparison remain open, with frozen
 VM capacity still unresolved. Bazel remains unregistered; T45.7 waits for
 Bazel closure.
 
+A later admission attempt from exact source `f7900e69` does not reach profile
+`phebs-t451a`: the runner has no Colima transport, and the connected personal
+worker cannot be targeted from this run. No cohort executes and no attempt
+identifier is spent. The source-free STOP is
+`spike/t454/remote_host_admission_stop_f7900e69.json`.
+
+Native acceptance and preparation reach the execution host by SSH or by
+direct execution. The ceremony admits the live Linux host: `x86_64`/`amd64`
+or `aarch64`/`arm64`, with the observed CPU count when it is at least 2.
+Worker quota, memory floor, scratch, wall, output, task, and descriptor
+limits stay exact. The earlier ARM64-only stop remains at
+`spike/t454/remote_arm64_admission_stop.json` and is superseded by
+`spike/t454/host_geometry_admission.json`. The three cohort gates and the
+cross-cohort comparison remain unexecuted. Bazel stays unregistered.
+
+On this x86_64 host, Ubuntu Docker 29.1.3 is running and the frozen worker
+cgroup quota is enforced, but the kernel has no AppArmor (`nomodule`; LSM
+`capability,landlock,selinux`). Sandbox preflight therefore refuses the
+daemon, and the chunked `/v1.47/info` response seals no deployment. The
+source-free stop is `spike/t454/amd64_apparmor_kernel_stop.json`. No corpus
+attempt is spent. Bazel stays unregistered.
+
+The chunked info body is now accepted under that same 1 MiB cap. The sealed
+live deployment is `spike/t454/amd64-deployment.json`
+(`sha256:85ece7516a7dca9b5a82842ac560921db078dd316b5dd3fb6df297867e16afdb`).
+AppArmor is not advertised here. Preflight now admits this daemon's
+seccomp and `name=cgroupns` pair. Seccomp alone is still refused. No corpus
+attempt is spent.
+
+The historical reduced profile stays arm64 under `phebs-typed-profile-v1`.
+An amd64 host seals and executes the explicit successor
+`phebs-typed-profile-amd64-v1` instead. The old profile is refused on this
+host, and mixed archive modes still refuse. No corpus attempt is spent.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an
@@ -15244,6 +15278,14 @@ provider, vet, lint, module, documentation and glossary checks pass. Source-free
 receipt: `spike/t457/native_inputs_1.json`. This completes the additional-input
 implementation on its ticket branch; it is not a Bazel corpus, release,
 registration, main integration or push result.
+
+T45.7 dual-architecture pins (2026-10-03): module and import profiles now seal
+`arm64` or `amd64`, the worker refuses a profile for another architecture, and
+Go SDK, scip-go, Bazel and gopackagesdriver pins are selected per architecture.
+The `amd64` pins and their provenance are in
+`spike/t457/native_tool_pins_amd64.json`. Unit checks pass natively on `arm64`
+and as `amd64` under Rosetta. Still open: an `amd64` prehydrated inventory and
+native rehearsal on an x86_64 host, and an `amd64` Bazel C sysroot.
 
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
@@ -15308,6 +15350,14 @@ changes, keeping queued replacement work visible. Real-store/API final focused
 race, vet/lint, docs/glossary and 13 pinned Chromium checks pass; all eight
 preview pixels compare unchanged. The broad typed-store race pass precedes
 only that status distinction. Ticket integration remains a distinct gate.
+
+T45.8b re-run follow-up (2026-10-04): Ben chose re-runs over consumed requests.
+Managed requests carry an optional run ordinal. Plan previews the next run of a
+finished or superseded purpose and reuses an in-flight one; enqueue keeps exact
+transport retry idempotent; the `request_already_recorded` refusal is removed.
+Contract, API, real-store and UI tests and the browser spec are updated. The
+spec's five functional checks pass in local Chrome; the canonical pinned
+renderer checks were not rerun.
 
 The earlier host-volume command run is retained as FAIL on three phase-nine lifecycle
 compositions; the short composition reproduces the same deadline at both exact

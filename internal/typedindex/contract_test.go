@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -221,15 +222,30 @@ func TestClosedProfileAndCommands(t *testing.T) {
 			t.Fatal("accepted malformed profile")
 		}
 	}
-	commands, err := p.Commands()
+	hostSchema, hostConfig := HostReducedIdentity()
+	hostDef := p.Definition()
+	hostDef.Schema, hostDef.Config = hostSchema, hostConfig
+	host, err := DecodeProfile(ctx, wire(t, hostDef))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if commands.Driver != DriverPath || commands.Launcher != LauncherPath || commands.BazelStartup[3] != "--bazelrc=/dev/null" {
+	if runtime.GOARCH != "arm64" {
+		if got, err := p.Commands(); err == nil || got.Driver != "" {
+			t.Fatal("historical arm64 profile emitted commands on another host", err)
+		}
+		if host.Digest() == p.Digest() {
+			t.Fatal("amd64 successor aliases the historical profile")
+		}
+	}
+	commands, err := host.Commands()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commands.Driver != DriverPath || commands.Launcher != LauncherPath || commands.BazelStartup[3] != "--bazelrc=/dev/null" || !strings.Contains(strings.Join(commands.Environment, "\n"), "GOARCH="+runtime.GOARCH) {
 		t.Fatal(commands)
 	}
 	commands.Environment[0] = "injected"
-	again, _ := p.Commands()
+	again, _ := host.Commands()
 	if again.Environment[0] == "injected" {
 		t.Fatal("mutable recipe")
 	}
@@ -485,6 +501,22 @@ func TestGeneratedProfileIsExplicitAndReducedIdentityUnchanged(t *testing.T) {
 	if Describe().ExecutionAvailable || Describe().GeneratedDocuments {
 		t.Fatal("contract enabled runtime capability")
 	}
+	successor := p.Definition()
+	successor.Schema, successor.Config = Amd64ProfileSchema, Amd64ReducedConfig()
+	got, err := DecodeProfile(t.Context(), wire(t, successor))
+	if err != nil || got.Digest() == p.Digest() || got.Definition().Config.GOARCH != "amd64" {
+		t.Fatal("amd64 successor refused or aliased", err)
+	}
+	masquerade := successor
+	masquerade.Schema = ProfileSchema
+	if _, err = DecodeProfile(t.Context(), wire(t, masquerade)); err == nil {
+		t.Fatal("historical schema accepted amd64 config")
+	}
+	masquerade = p.Definition()
+	masquerade.Schema = Amd64ProfileSchema
+	if _, err = DecodeProfile(t.Context(), wire(t, masquerade)); err == nil {
+		t.Fatal("amd64 schema accepted the historical arm64 config")
+	}
 }
 
 func TestManagedPurposeIdentity(t *testing.T) {
@@ -579,5 +611,38 @@ func TestManagedPurposeIdentity(t *testing.T) {
 	}
 	if (Admission{}).Purpose() != "" {
 		t.Fatal("empty admission publishes")
+	}
+}
+
+func TestManagedRunOrdinal(t *testing.T) {
+	p, auth, legacy, _ := fixture(t)
+	base := NewManagedRequest(auth.Source, p, auth.Profile.Number, auth.UniverseDigest, Canary)
+	if base.ManagedRun(0) != base || bytes.Contains(wire(t, base), []byte(`"run"`)) {
+		t.Fatal("run zero changed the original request bytes")
+	}
+	seen := map[string]bool{admit(t, p, auth, base).Digest(): true}
+	for _, run := range []uint64{1, 2} {
+		r := base.ManagedRun(run)
+		a := admit(t, p, auth, r)
+		if r.Run != run || r.IdempotencyKey == base.IdempotencyKey || seen[a.Digest()] {
+			t.Fatal("run did not create a distinct root", run)
+		}
+		seen[a.Digest()] = true
+		next, e := PlannedSuccessor(t.Context(), a, hash([]byte("plan")))
+		if e != nil || next.Run != run || next.ManagedRun(run) != (Request{}) {
+			t.Fatal("successor lost its run or was rebased", e)
+		}
+		bad := r
+		bad.Run++
+		if _, e := Admit(t.Context(), auth, p, wire(t, bad)); e == nil {
+			t.Fatal("run changed without its key")
+		}
+	}
+	legacy.Run = 1
+	if _, e := Admit(t.Context(), auth, p, wire(t, legacy)); e == nil {
+		t.Fatal("legacy request admitted a run")
+	}
+	if legacy.ManagedRun(1) != (Request{}) {
+		t.Fatal("legacy request rebased as managed")
 	}
 }

@@ -14,16 +14,30 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 const (
-	NativeDriverSHA256     = "f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd"
-	NativeDownloaderConfig = "block bcr.bazel.build\n"
-	nativeGoFilesVersion   = "phebs-t451b-native-go-files-v1"
-	nativeScopeVersionV2   = "phebs-t451b-native-driver-scope-v2"
-	nativeScopeVersion     = "phebs-t451b-native-driver-scope-v1"
-	nativeDescriptorFlag   = "--experimental_proto_descriptor_sets_include_source_info"
+	NativeDriverSHA256 = "f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd" // linux/arm64
+	// Same rules_go 0.59.0 recipe for linux/amd64 v1 (spike/t457/native_tool_pins_amd64.json).
+	NativeDriverSHA256Amd64 = "2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8"
+	NativeDownloaderConfig  = "block bcr.bazel.build\n"
+	nativeGoFilesVersion    = "phebs-t451b-native-go-files-v1"
+	nativeScopeVersionV2    = "phebs-t451b-native-driver-scope-v2"
+	nativeScopeVersion      = "phebs-t451b-native-driver-scope-v1"
+	nativeDescriptorFlag    = "--experimental_proto_descriptor_sets_include_source_info"
 )
+
+// NativeDriverDigest is the pinned driver image for an admitted architecture.
+func NativeDriverDigest(arch string) string {
+	switch arch {
+	case "arm64":
+		return NativeDriverSHA256
+	case "amd64":
+		return NativeDriverSHA256Amd64
+	}
+	return ""
+}
 
 // NativeGoFiles supplements the unchanged declared-source plan with the exact
 // active GoFiles expected from rules_go 0.59.0. It grants no new membership.
@@ -349,10 +363,10 @@ func RunNativeCompatibility(ctx context.Context, plan planner.Plan, roots []plan
 	if err != nil {
 		return CompatibilityResult{}, err
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 {
-		return CompatibilityResult{}, errors.New("native compatibility driver requires admitted Linux arm64 worker")
+	if !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 {
+		return CompatibilityResult{}, errors.New("native compatibility driver requires an admitted Linux worker")
 	}
-	if err := checkPinnedDriver(NativeDriverSHA256); err != nil {
+	if err := checkPinnedDriver(NativeDriverDigest(runtime.GOARCH)); err != nil {
 		return CompatibilityResult{}, err
 	}
 	declared, err := PrepareCompatibility(plan, roots, slot)

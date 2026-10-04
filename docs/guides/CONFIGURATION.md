@@ -829,8 +829,10 @@ touches validated, non-symlinked paths under the data directory.
 
 Managed indexing remains unavailable in ordinary runtime: this ticket defines
 an internal contract, not a configuration switch, worker or HTTP/MCP endpoint.
-The accepted initial profile is Bazel/rules_go/scip-go on Linux arm64 with
-skip-tests/skip-implementations and generated documents omitted. Existing
+The accepted initial profile is Bazel/rules_go/scip-go. Its sealed reduced
+configuration stays `linux/arm64`, with skip-tests/skip-implementations and
+generated documents omitted. Execution admits the live Linux host, `arm64` or
+`amd64`. Existing
 committed-SCIP navigation keeps its behavior. T45.3 must supply the generated
 lane and canonical ordering before generated coverage can advance; T45.4 owns
 the executor and T45.5 the routed reader.
@@ -941,6 +943,29 @@ replacement config passed `dockerd --validate`, one Docker restart succeeded,
 and the daemon reports the override with no containers present. The spent
 prep-12 attempt was not rerun; a fresh attempt must still pass its own
 supervisor clock gate.
+
+Native acceptance and preparation no longer read a Colima profile. Set
+`PHEBS_TYPED_NATIVE_TRANSPORT=ssh` and `PHEBS_TYPED_NATIVE_SSH_TARGET` to the
+dedicated user and host, with that host key already in `known_hosts`. On the
+execution host itself, set `PHEBS_TYPED_NATIVE_TRANSPORT=direct`. Either mode runs
+`sudo -n python3` (or `python3` when direct and already root). The host is the
+live Linux machine: `x86_64` seals `amd64` and `aarch64` seals `arm64`. CPU
+count is the live processor count and must be at least 2. MemTotal must be at
+least 4,533,092,352 bytes. Docker listens on `/var/run/docker.sock` at API
+v1.47, and `features.time-namespaces` stays `false`. Preflight requires
+seccomp's builtin profile. AppArmor remains mandatory when the daemon
+advertises it. A daemon that advertises seccomp and `name=cgroupns` is
+admitted. `observe` writes
+`deployment.json` from that live host. An exact `Content-Length` body stays
+exact. A chunked body is accepted under the same 1 MiB cap, and both
+encodings together are refused. The worker cgroup quota stays 2 CPUs
+(`200000/100000`). The historical reduced profile remains
+`phebs-typed-profile-v1` with `GOARCH=arm64`. An amd64 host seals
+`phebs-typed-profile-amd64-v1` instead and refuses the arm64 profile.
+Tool builds use `GOAMD64=v1` on amd64 and `GOARM64=v8.0` on arm64. Scratch,
+wall, output, task, and descriptor limits are
+unchanged. Keep stage directories and collected receipts on durable storage;
+a failed attempt stays retained.
 
 Prep-13 then reached a valid supervisor report but stopped at the later
 `inspect_stopped` check with exit 125 and no fd2 site token. Its exact report
@@ -1127,6 +1152,15 @@ binary identities and scoped cleanup are recorded in
 `spike/t457/native_inputs_1.json`; these results do not enable a provider or
 establish a target-corpus performance envelope.
 
+Module and import profiles target Linux `arm64` or `amd64`. The architecture is
+sealed in the profile configuration and must match the worker host; module
+commands use `GOARM64=v8.0` or `GOAMD64=v1` accordingly. Each architecture has
+its own pinned Go 1.25.0 and scip-go 0.2.7 images, recorded in
+`spike/t457/native_tool_pins_amd64.json`, and a profile carrying the other
+architecture's tools is refused. Bazel tool pins are also per architecture, but
+its C toolchain sysroot is still `arm64` only, so Bazel on an `amd64` host refuses
+until an `amd64` sysroot is sealed. No `amd64` native rehearsal has run yet.
+
 ## Code navigation indexing Settings (T45.8b)
 
 Administrators can open **Settings → Code navigation indexing**, select a
@@ -1163,15 +1197,15 @@ request digest and idempotency key. Source/profile changes reject that request;
 refresh and review a new request before enqueueing again. Raw worker output and
 private paths are withheld.
 
-Each exact purpose may be recorded once for its source/profile authority.
-A failed or completed request cannot start a new run at identical authority,
-and switching back to a recorded purpose cannot start another run. **Review
-indexing plan** explains this limit and disables that selection; refreshing
-identical authority will not clear it. Another unrecorded purpose remains
-available. A changed indexed HEAD or installed profile authority permits a
-new request. This limit does not change **Retry exact request** after an
-unconfirmed network response. `/plan` reports this limit with HTTP 422 and
-`request_already_recorded`.
+A failed, canceled, completed or superseded purpose can run again on the same
+commit and profile. **Review indexing plan** previews the next run of that
+purpose: a new request digest that starts a fresh attempt once you enqueue it,
+while earlier runs keep their records. While a request of the same purpose is
+still planning, indexing, validating or publishing, review shows that request
+instead, so a second click never starts a duplicate. **Retry exact request**
+after an unconfirmed network response still resends the original digest and
+never starts another run. The existing limit of 64 retained requests per
+repository still applies; when it is full, a new run is refused.
 
 The administrator HTTP contract is under `/api/code-navigation-indexing`:
 `GET /providers`, `GET /status?repository=…`, `POST /plan` and `POST /enqueue`.

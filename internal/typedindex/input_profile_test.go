@@ -6,14 +6,21 @@ import (
 )
 
 func TestInputProfileAuthorityAndIsolation(t *testing.T) {
-	for _, provider := range []string{ModuleProviderID, ImportProviderID} {
-		t.Run(provider, func(t *testing.T) {
+	for _, tc := range []struct{ provider, arch, other string }{
+		{ModuleProviderID, "arm64", "amd64"}, {ModuleProviderID, "amd64", "arm64"},
+		{ImportProviderID, "arm64", "amd64"}, {ImportProviderID, "amd64", "arm64"},
+	} {
+		provider := tc.provider
+		t.Run(provider+"/"+tc.arch, func(t *testing.T) {
 			base, _, _, _ := fixture(t)
 			d := base.Definition()
 			d.Schema, d.Provider = InputProfileSchema, provider
-			d.Config, _ = InputConfig(provider)
+			d.Config, _ = InputConfig(provider, tc.arch)
+			if d.Config.GOARCH != tc.arch {
+				t.Fatal("input config architecture", d.Config)
+			}
 			helper := Tool{Version: "worker", Digest: hash([]byte("worker"))}
-			d.Tools = Tools{Planner: helper, Launcher: helper, Indexer: Tool{Version: "0.2.7", Digest: SCIPGoIndexerDigest}}
+			d.Tools = Tools{Planner: helper, Launcher: helper, Indexer: SCIPGoIndexer(tc.arch)}
 			if provider == ModuleProviderID {
 				d.Tools.Go = Tool{Version: "1.25.0", Digest: hash([]byte("SDK"))}
 			}
@@ -34,12 +41,20 @@ func TestInputProfileAuthorityAndIsolation(t *testing.T) {
 			if _, err = Admit(t.Context(), a, p, wire(t, r)); err == nil {
 				t.Fatal("provider substitution admitted")
 			}
-			for _, mode := range []string{"old-schema", "foreign-provider", "bazel-tools", "rc", "resource", "helper", "generated", "go-tool"} {
+			modes := []string{"old-schema", "foreign-provider", "bazel-tools", "rc", "resource", "helper", "generated", "go-tool", "foreign-arch"}
+			if provider == ModuleProviderID {
+				modes = append(modes, "cross-arch-indexer")
+			}
+			for _, mode := range modes {
 				t.Run(mode, func(t *testing.T) {
 					bad := d
 					switch mode {
 					case "old-schema":
 						bad.Schema = ProfileSchema
+					case "foreign-arch":
+						bad.Config.GOARCH = "riscv64"
+					case "cross-arch-indexer":
+						bad.Tools.Indexer = SCIPGoIndexer(tc.other)
 					case "foreign-provider":
 						bad.Provider = "shell"
 					case "bazel-tools":

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"path"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -90,13 +91,14 @@ func inputFixtureFor(t *testing.T, kind string, mutate ...func(*scip.Index)) inp
 		t.Fatal(err)
 	}
 	helper := typedindex.Tool{Version: "test-helper", Digest: hash(f.files[typedindex.ManagedHelperFile])}
-	tools := typedindex.Tools{Planner: helper, Launcher: helper, Indexer: typedindex.Tool{Version: "0.2.7", Digest: SCIPDigest}}
+	goSDK, scip, _, _ := NativeToolDigests(runtime.GOARCH)
+	tools := typedindex.Tools{Planner: helper, Launcher: helper, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}
 	if f.selection.Module != nil {
-		tools.Go = typedindex.Tool{Version: "1.25.0", Digest: GoDigest}
+		tools.Go = typedindex.Tool{Version: "1.25.0", Digest: goSDK}
 	} else {
 		tools.Indexer.Digest = f.selection.Import.Producer.Digest
 	}
-	cfg, _ := typedindex.InputConfig(kind)
+	cfg, _ := typedindex.InputConfig(kind, runtime.GOARCH)
 	pRaw, _ := json.Marshal(typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Name: "input", Provider: kind, Tools: tools, Config: cfg, Policy: typedindex.MeasuredPolicy(), BundleDigest: inv.Digest(), ImageDigest: hash([]byte("image"))})
 	p, err := typedindex.DecodeProfile(ctx, pRaw)
 	if err != nil {
@@ -146,7 +148,7 @@ func inputFixtureOperations(t *testing.T, f inputFixture, commands *int, joined 
 		verify:      func(context.Context, planner.Plan, []original) error { return nil },
 		command: func(_ context.Context, executable string, args, env []string, _ *outputBudget, directory string) ([]byte, []byte, error) {
 			*commands++
-			if !slices.Equal(env, inputEnvironment(*f.selection.Module)) {
+			if !slices.Equal(env, inputEnvironment(*f.selection.Module, runtime.GOARCH)) {
 				t.Fatal("unexpected environment")
 			}
 			if executable == "/inputs/tools/go/bin/go" {
@@ -230,6 +232,34 @@ func TestAdditionalInputsPlanExecuteAndRouting(t *testing.T) {
 				t.Fatal("import attestation became execution/adaptation proof")
 			}
 		})
+	}
+}
+
+func TestAdditionalInputArchitecture(t *testing.T) {
+	for _, tc := range []struct{ arch, variant, foreign string }{{"arm64", "GOARM64=v8.0", "GOAMD64="}, {"amd64", "GOAMD64=v1", "GOARM64="}} {
+		env := inputEnvironment(typedmodule.ModuleSelection{}, tc.arch)
+		if !slices.Contains(env, "GOARCH="+tc.arch) || !slices.Contains(env, tc.variant) || slices.ContainsFunc(env, func(v string) bool { return strings.HasPrefix(v, tc.foreign) }) {
+			t.Fatal(tc.arch, env)
+		}
+	}
+	// A profile sealed for the other architecture never runs on this host.
+	f := inputFixtureFor(t, typedindex.ModuleProviderID)
+	other := map[string]string{"arm64": "amd64", "amd64": "arm64"}[runtime.GOARCH]
+	if other == "" {
+		t.Skip("host architecture is not admitted")
+	}
+	d := f.i.Profile.Definition()
+	d.Config, _ = typedindex.InputConfig(d.Provider, other)
+	d.Tools.Go.Digest, d.Tools.Indexer.Digest, _, _ = NativeToolDigests(other)
+	raw, _ := json.Marshal(d)
+	p, err := typedindex.DecodeProfile(t.Context(), raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.i.Profile = p
+	commands, joined := 0, false
+	if _, err = runInput(t.Context(), f.i, inputFixtureOperations(t, f, &commands, &joined)); !errors.Is(err, typedindex.Unsupported) || commands != 0 {
+		t.Fatal("foreign architecture profile ran", err, commands)
 	}
 }
 

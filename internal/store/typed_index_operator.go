@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/readaccounting"
@@ -24,6 +23,8 @@ type TypedIndexOperator struct {
 	Coordinator    JobStatus
 	Schedule       *GenerationSchedule
 	DesiredFresh   bool // Independently authenticated; current publication may be stale.
+	// Desired is that authenticated request; zero unless DesiredFresh.
+	Desired typedindex.Request
 }
 
 func operatorRevision(a typedAuthority) (string, error) {
@@ -84,6 +85,7 @@ func (s *Surreal) ReadTypedIndexOperator(ctx context.Context, repository string)
 			out.Status.Check = nil
 		} else {
 			out.DesiredFresh = true
+			out.Desired = desired
 		}
 		// The coordinator finishes before the single generation worker claims.
 		// Read the desired root's exact schedule, never the current stage pointer.
@@ -184,53 +186,4 @@ func (s *Surreal) EnqueueTypedIndexExpected(ctx context.Context, repository, exp
 		return TypedIndexStatus{}, typedindex.Stale
 	}
 	return s.EnqueueTypedIndex(ctx, repository, raw)
-}
-
-// ErrTypedIndexRequestRecorded is a preview refusal, not an execution failure.
-// Recorded requests remain immutable; transport retries use Enqueue unchanged.
-var ErrTypedIndexRequestRecorded = errors.New("typed index request already recorded")
-
-func (s *Surreal) CheckTypedIndexPreview(ctx context.Context, repository, expected string, raw []byte) error {
-	a, err := s.readTypedAuthority(ctx, repository)
-	if err != nil {
-		return err
-	}
-	revision, err := operatorRevision(a)
-	if err != nil {
-		return err
-	}
-	if revision != expected {
-		return typedindex.Stale
-	}
-	admission, err := a.admit(ctx, string(raw), typedIndexPlan{}, "")
-	if err != nil {
-		return err
-	}
-	if admission.Request().Action != typedindex.Plan {
-		return typedindex.Invalid
-	}
-	type row struct {
-		Repository string `json:"repository"`
-		Root       string `json:"request_root"`
-	}
-	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
-		return err
-	}
-	result, err := storeQuery[[]row](ctx, s.accounting, s.db,
-		"SELECT repository, request_root FROM $request LIMIT 1",
-		map[string]any{"request": typedID("typed_index_request", admission.Digest())}, storeRead())
-	if err != nil {
-		return typedError(ctx, err)
-	}
-	rows := firstDomainRows(result)
-	if len(rows) > 1 {
-		return typedindex.Invalid
-	}
-	if len(rows) == 1 {
-		if rows[0].Repository != repository || rows[0].Root != admission.Digest() {
-			return typedindex.Invalid
-		}
-		return ErrTypedIndexRequestRecorded
-	}
-	return nil
 }
