@@ -614,5 +614,5 @@ func TestNativeInputCoordinator(t *testing.T) {
 		t.Fatal("native scratch not drained", err)
 	}
 	t.Logf("native coordinator: provider=%s coordinator_jobs=1 succeeded_chunks=1 lookups=%d launches=%d same_lease_reused=%t", profile.Provider(), lookups, launches, reused)
-	t.Logf("native identity: source_commit=%s profile=%s inventory=%s planning=%s execution=%s root=%s", source.Commit, profile.Digest(), profile.Definition().BundleDigest, custody.PlanningDigest, custody.Admission.Digest(), custody.Pointer.RootDigest)
+	t.Logf("native identity: source_commit=%s profile=%s inventory=%s planning=%s execution=%s root=%s", source.Commit, profile.Digest(), profile.Definition().BundleDigest, current.PlanningDigest, current.Admission.Digest(), current.Pointer.RootDigest)
 }
