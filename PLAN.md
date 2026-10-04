@@ -9024,3 +9024,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   operator read; dangling job links grant nothing and new admission overwrites
   them in the existing transaction. The parser adds one fixed string recipe,
   no row expansion, query, lock, child or runtime fallback.
+
+
+  T45.8b validation (2026-10-03): affected API/auth, typed store and command,
+  native selected replay and archive/restore gates pass, including changed-path
+  race, vet/lint, generated API parity,744 UI tests/build/lint and docs/glossary.
+  Canonical Noble Chromium uses the unchanged pinned AMD64 image
+  `sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac`
+  in a temporary personal Rosetta renderer VM (two CPUs,6GiB RAM,16GiB disk).
+  Eight preview fixtures and eight ordinary Settings receipts retain both
+  themes/densities and390px/desktop; fixture actions do not install a provider.
+  Strict unchanged readiness passes the same pinned neutral bundles/catalogs
+  in an explicit whole-repository configuration with no analysis units and no
+  typed runtime. The make-dev-built binary uses a disposable1GiB APFS data
+  volume with unchanged admission bounds. Configuration/image/pixel provenance,
+  the27,095-byte Settings chunk (8.04kB reported gzip), and qualified local
+  interaction/capture timing are retained in `ui/receipts/t458b.json`.
+  Loopback TCP bridging changes no Chromium flags or product path; indexing
+  anatomy is never masked and capture verifies clearance below sticky chrome.
+  Hosted Actions is account-disabled, so no hosted CI PASS is asserted.
+
+  Broader command verification remains FAIL: three existing phase-nine native
+  lifecycle compositions expire at their fixed deadlines. One bounded short
+  comparison reproduces the same180-second boundary at exact base c2b860ec and
+  candidate after regenerable Go-cache cleanup. This establishes inherited
+  reproduction of that short case, not an exact pressure cause or an individual
+  base run for the two600-second variants. Affected typed command and native
+  archive/restore checks remain separately PASS. The default focused T30.7
+  neutral cohort indexed exact HEAD but lacked the v2 source-generation control
+  needed for current services/relationships; its diagnostic is retained and
+  neither passed nor waived. Whole-cohort Settings receipts do not close it.
+  No scale, corpus, release, ceremony, installed-provider or integration claim
+  advances. Temporary renderer/demo resources are task-owned and disposable;
+  retained native custody and other lineages remain untouched.
