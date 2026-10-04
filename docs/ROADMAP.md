@@ -124,8 +124,14 @@ fresh fully allocated 4-GiB loop/ext4 volume. The same production gate charges
 the full future owner budget through projected 80/90/77-percent refusals and
 recovery. Real lifecycle Ticks preserve navigation at actual 90-percent use,
 then exercise publication-pin refusal, guarded repository deletion, collecting
-prefix startup and bounded drainage. Native validation remains PENDING; the
-planned record `spike/t459/native_pressure_lifecycle_1.json` does not yet exist.
+prefix startup and bounded drainage. Exact implementation `42d5b07b` passes
+in 63.30s with one original allowance/two native phases, 1,211 selected turns
+and two honest parent tombstones; the unchanged coordinator regression passes
+in 42.69s. Affected machine/static/docs gates and corrected-source review pass;
+final all-path evidence/cost review remains pending. The source-free record is
+`spike/t459/native_pressure_lifecycle_1.json`; verified ordinary teardown
+removed only fresh roots and stopped the test profile. Initial test-oracle,
+driver-cost, archive-packaging and stale-cache lint failures remain retained.
 This selected deleted-repository proof changes no production bound and does not
 claim ordinary runner cadence, successor replacement, native restore, rendered
 Settings, complete neutral or separately authorized target closure.

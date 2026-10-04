@@ -9771,11 +9771,41 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   absence, remove only fresh owned roots and preserve prior receipts and the
   existing native namespace lock.
 
-  **Validation: PENDING.** No fresh native rehearsal or source-free result is
-  claimed. The planned record is `spike/t459/native_pressure_lifecycle_1.json`;
-  it does not yet exist. The fixture still has zero accepted service
-  incarnations and 176 admitted regular-source Git blob bytes. Native restore
-  regeneration, rendered authenticated Settings/API parity, complete neutral
-  closure and separately authorized target closure remain open. Ordinary
-  providers remain unavailable, T45.6 is not PASS, and no product-scale envelope,
-  target execution, release or scale claim follows.
+  **Validation.** Exact implementation `42d5b07bca557b4aa6a5917c194ff06f39437d24`
+  passes the fresh privileged native pressure/current-retirement rehearsal in
+  63.30s. The full owner promise is 756,432,896 bytes and 36,272 inodes;
+  prospective use measures 80 collect, 90 refuse, 77 still refused and 19 normal
+  after production recovery. Published-current actual use measures 90 percent,
+  with the future promise clamped to 100 percent. Two native phases share one
+  original 300-second allowance. Exact navigation/current and canceled-current
+  protection, publication-pin refusal, collecting-prefix startup and drainage
+  pass in 1,211 selected lifecycle turns, with two honest parent tombstones.
+  The unchanged real coordinator/consumer regression also passes in 42.69s,
+  including stale cached-query/binding refusal. This proves selected deleted-
+  repository retirement, not successor replacement or ordinary runner cadence.
+  The current production helper rebuild matches its prior tested bytes.
+
+  Darwin package normal/race, Linux compilation/vet, 26 Linux model tests,
+  affected Linux and full Darwin pinned lint, module and docs/glossary gates
+  pass. The original-Git model skips without its explicit corpus argument;
+  Linux race is not claimed and broader Linux's retained T42.1 warnings stay
+  exact. Initial review found two medium test-oracle errors, both fixed before
+  native execution; corrected-source independent reviews cover all six paths
+  with all severity counts zero. A low driver cost-record error was also fixed
+  before provisioning. Two archive-packaging refusals stopped before extraction,
+  image creation or native dispatch; verified empty staging was removed. The
+  clean archive has 16,091 entries and retains the original 20,000-entry bound.
+  Stale-cache Darwin lint reported seventeen old-worktree warnings; isolating
+  both caches passes with zero issues. All failures remain retained.
+
+  Exact image/loop/mount identities and absence were checked after both cases;
+  ballast was zero and workspace held only its publication lock before ordinary
+  unmount/detach. Only fresh staging/volume/model-temp roots were removed,
+  the existing native lock remains and the personal profile is stopped.
+  The source-free record is `spike/t459/native_pressure_lifecycle_1.json`;
+  final all-path evidence/cost review remains pending. The fixture has zero
+  accepted service incarnations and 176 admitted source Git blob bytes.
+  Native restore regeneration, rendered authenticated Settings/API parity,
+  complete neutral closure and separately authorized target closure remain
+  open. Ordinary providers remain unavailable, T45.6 is not PASS, and no
+  product-scale envelope, target execution, release or scale claim follows.

@@ -1,0 +1,551 @@
+{
+  "schema": "phebs-t459-native-pressure-lifecycle-v1",
+  "recorded_date": "2026-10-04",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "implementation_commit": "42d5b07bca557b4aa6a5917c194ff06f39437d24",
+  "stack_base_commit": "384b2ef7864786a8c2126a136da54e6d45ab0880",
+  "native_case": {
+    "selector": "^TestNativeInputPressureLifecycle$",
+    "mode": "workspace",
+    "seconds": 63.3,
+    "proof": {
+      "allowances": [
+        {
+          "schema": "phebs-typed-allowance-v1",
+          "planning_digest": "sha256:82a8e2fd9930319c1d96e9b278f65e2cb73dc235b164ee1bfa85300372beecaf",
+          "attempt_digest": "sha256:eda95eaf045325d7b4f0078fa635dba9d429a46a1f7c13dc0bbca7621112bc7a",
+          "boot_id": "361f2e69-aede-4345-a6ae-e8ff4e64313c",
+          "time_device": 4,
+          "time_inode": 4026531834,
+          "start_boottime_ns": 1684617083869,
+          "deadline_boottime_ns": 1984617083869,
+          "worker_bytes_used": 0,
+          "wire_bytes_used": 0
+        },
+        {
+          "schema": "phebs-typed-allowance-v1",
+          "planning_digest": "sha256:82a8e2fd9930319c1d96e9b278f65e2cb73dc235b164ee1bfa85300372beecaf",
+          "attempt_digest": "sha256:eda95eaf045325d7b4f0078fa635dba9d429a46a1f7c13dc0bbca7621112bc7a",
+          "boot_id": "361f2e69-aede-4345-a6ae-e8ff4e64313c",
+          "time_device": 4,
+          "time_inode": 4026531834,
+          "start_boottime_ns": 1684617083869,
+          "deadline_boottime_ns": 1984617083869,
+          "worker_bytes_used": 2024,
+          "wire_bytes_used": 3821
+        }
+      ],
+      "canceled_current_protected": true,
+      "collecting_restart": true,
+      "current_protected": true,
+      "execution_digest": "sha256:b7dc3934f7c82e4468c71b96f84600b1351dd330c96605326ecf7e6c7e6e5f1e",
+      "host_budget": {
+        "Bytes": 4573483008,
+        "Inodes": 16
+      },
+      "host_observed": {
+        "Device": 64769,
+        "Inode": 280879,
+        "BlockSize": 4096,
+        "TotalBytes": 19682557952,
+        "FreeBytes": 11992408064,
+        "AvailableBytes": 11975630848,
+        "TotalInodes": 2490368,
+        "FreeInodes": 2406789
+      },
+      "inventory_digest": "sha256:2b1aa777fcd595ecdadcbd176f0335c80ece33aeab435ed06fed76aa92623604",
+      "lifecycle_turns": 1211,
+      "native_absent": true,
+      "native_allowances": 1,
+      "native_launches": 2,
+      "phase_reports": [
+        {
+          "Phase": "plan",
+          "ExitCode": 0,
+          "Removed": true,
+          "StopReason": "",
+          "Resources": {
+            "memory_oom_events": 0,
+            "memory_oom_kills": 0,
+            "memory_limit_events": 0,
+            "task_limit_events": 0,
+            "sampling_unavailable": false,
+            "limits_verified": true,
+            "memory_peak_bytes": 233418752,
+            "sampled_peak_rss_bytes": 290721792,
+            "sampled_peak_processes": 2,
+            "sampled_peak_scratch_bytes": 1150976,
+            "sampled_peak_scratch_inodes": 288,
+            "samples": 8,
+            "per_process_descriptors": 128,
+            "aggregate_descriptor_ceiling": 37632
+          },
+          "Watchdog": null,
+          "Failure": null
+        },
+        {
+          "Phase": "execute",
+          "ExitCode": 0,
+          "Removed": true,
+          "StopReason": "",
+          "Resources": {
+            "memory_oom_events": 0,
+            "memory_oom_kills": 0,
+            "memory_limit_events": 0,
+            "task_limit_events": 0,
+            "sampling_unavailable": false,
+            "limits_verified": true,
+            "memory_peak_bytes": 238362624,
+            "sampled_peak_rss_bytes": 291221504,
+            "sampled_peak_processes": 2,
+            "sampled_peak_scratch_bytes": 1208320,
+            "sampled_peak_scratch_inodes": 303,
+            "samples": 7,
+            "per_process_descriptors": 128,
+            "aggregate_descriptor_ceiling": 37632
+          },
+          "Watchdog": null,
+          "Failure": null
+        }
+      ],
+      "planning_digest": "sha256:82a8e2fd9930319c1d96e9b278f65e2cb73dc235b164ee1bfa85300372beecaf",
+      "profile_digest": "sha256:7c2e9b4f9aa4eace6ea3eba585d10b3bb28364ba3c8351b88cdbe858313b775b",
+      "reader_pin_refused": true,
+      "retained_parent_tombstones": 2,
+      "retirement": "fixture_repository_deletion",
+      "root_digest": "sha256:d64a7e663112d7e16b8a7f0dda0a3fd69fba13f0f183c54bb14eee41581e706d",
+      "routed_content_unchanged": true,
+      "schema": "phebs-typed-neutral-pressure-lifecycle-v1",
+      "source": {
+        "repository": "example.invalid/preparation",
+        "incarnation": "1ba7e67026b5478cdce76eaee046cecd",
+        "generation": "sha256:71dab5db10a240a85d6b4b91d3232e2cb0b9f89813b26a63ef1427b2dd185a44",
+        "commit": "cc6252f56490d7d31814f9d04723ccd7103e9024"
+      },
+      "steps": [
+        {
+          "name": "collect",
+          "observed": {
+            "Device": 1792,
+            "Inode": 131073,
+            "BlockSize": 4096,
+            "TotalBytes": 4143677440,
+            "FreeBytes": 1622663168,
+            "AvailableBytes": 1605885952,
+            "TotalInodes": 262144,
+            "FreeInodes": 262131
+          },
+          "projected": {
+            "TotalBytes": 4143677440,
+            "AvailableBytes": 1605885952,
+            "UsedBytes": 2537791488,
+            "ProjectedBytes": 3294224384,
+            "UsedPercent": 80,
+            "Pressure": "collect"
+          }
+        },
+        {
+          "name": "hard",
+          "observed": {
+            "Device": 1792,
+            "Inode": 131073,
+            "BlockSize": 4096,
+            "TotalBytes": 4143677440,
+            "FreeBytes": 1208299520,
+            "AvailableBytes": 1191522304,
+            "TotalInodes": 262144,
+            "FreeInodes": 262131
+          },
+          "projected": {
+            "TotalBytes": 4143677440,
+            "AvailableBytes": 1191522304,
+            "UsedBytes": 2952155136,
+            "ProjectedBytes": 3708588032,
+            "UsedPercent": 90,
+            "Pressure": "refuse"
+          }
+        },
+        {
+          "name": "partial_relief",
+          "observed": {
+            "Device": 1792,
+            "Inode": 131073,
+            "BlockSize": 4096,
+            "TotalBytes": 4143677440,
+            "FreeBytes": 1746976768,
+            "AvailableBytes": 1730199552,
+            "TotalInodes": 262144,
+            "FreeInodes": 262131
+          },
+          "projected": {
+            "TotalBytes": 4143677440,
+            "AvailableBytes": 1730199552,
+            "UsedBytes": 2413477888,
+            "ProjectedBytes": 3169910784,
+            "UsedPercent": 77,
+            "Pressure": "refuse"
+          }
+        },
+        {
+          "name": "recovered",
+          "observed": {
+            "Device": 1792,
+            "Inode": 131073,
+            "BlockSize": 4096,
+            "TotalBytes": 4143677440,
+            "FreeBytes": 4143665152,
+            "AvailableBytes": 4126887936,
+            "TotalInodes": 262144,
+            "FreeInodes": 262131
+          },
+          "projected": {
+            "TotalBytes": 4143677440,
+            "AvailableBytes": 4126887936,
+            "UsedBytes": 16789504,
+            "ProjectedBytes": 773222400,
+            "UsedPercent": 19,
+            "Pressure": "normal"
+          }
+        },
+        {
+          "name": "current_pressure",
+          "observed": {
+            "Device": 1792,
+            "Inode": 131073,
+            "BlockSize": 4096,
+            "TotalBytes": 4143677440,
+            "FreeBytes": 451862528,
+            "AvailableBytes": 435085312,
+            "TotalInodes": 262144,
+            "FreeInodes": 245991
+          },
+          "projected": {
+            "TotalBytes": 4143677440,
+            "AvailableBytes": 435085312,
+            "UsedBytes": 3708592128,
+            "ProjectedBytes": 4143677440,
+            "UsedPercent": 100,
+            "Pressure": "refuse"
+          }
+        }
+      ],
+      "workspace_budget": {
+        "bytes": 756432896,
+        "inodes": 36272
+      },
+      "workspace_drained": true
+    },
+    "admission_refusals": "three real Prepare calls on one actual scheduler lease; no growth, physical custody, allowance, phase or current; preflight prefix allowed",
+    "recovery": "same production gate; full-budget observe/admit precedes diagnostic gate read",
+    "coordinator_scheduler": "real runner, durable successful job and chunk; growth released; same-lease and duplicate coordination have no replay",
+    "consumers": "exact cold/warm Definition, References and Hover; payloads unchanged under current/canceled-current pressure",
+    "retirement_qualification": "guarded fixture repository deletion; publication reader pin blocks selected physical drain; fresh in-process controller accepts collecting prefix",
+    "not_established": [
+      "ordinary lifecycle runner cadence or hourly pressure-recovery convergence",
+      "successor-publication replacement",
+      "process hard-death by this slice",
+      "native regeneration after restore",
+      "rendered authenticated Settings",
+      "complete neutral or separately authorized target acceptance"
+    ]
+  },
+  "coordinator_regression": {
+    "selector": "^TestNativeInputCoordinator$",
+    "mode": "workspace",
+    "status": "PASS",
+    "seconds": 42.69,
+    "identity": {
+      "source_commit": "2e74ea29ef9d513a1e3b77e423c2b9486635aae1",
+      "profile_digest": "sha256:5bed3e00689fd07cc47704b5d6ca86f377b0d5b44a7a121b6021a3f0894f09fc",
+      "inventory_digest": "sha256:af77a40bb95feb38345fa71cb6c49d6c8d2277d1000ae02a782d214e5b4936a1",
+      "planning_digest": "sha256:a29ea29eae3cb424a7f075375c04ec8ef24652762cb334aa9354492dd83c16ba",
+      "execution_digest": "sha256:1f7584ea63f92602a06cbd2c17bcb79a1338a08ab7b59845dac65feee6ba4210",
+      "root_digest": "sha256:bf42a5fe7c0a6c4e5f4e3d86363f0e5aef0870fd236c037ae4b4ea858cb99a6f"
+    },
+    "native_launches": 2,
+    "coordinator_jobs_done": 1,
+    "succeeded_chunks": 1,
+    "bundle_lookups": 1,
+    "same_lease_and_duplicate": "no_replay",
+    "cold_warm_consumers": "exact",
+    "stale_queries_and_binding": "refused"
+  },
+  "acceptance_dimensions": {
+    "accepted_service_incarnations": 0,
+    "regular_source_git_blobs": 5,
+    "admitted_regular_source_git_blob_bytes": 176,
+    "qualification": "fixed neutral fixture; no service-catalog load measurement or product-scale envelope"
+  },
+  "volume": {
+    "schema": "phebs-neutral-pressure-volume-v1",
+    "installation": "t459-workspace-pressure-1",
+    "source_commit": "42d5b07bca557b4aa6a5917c194ff06f39437d24",
+    "root_headroom_observation": {
+      "total_bytes": 19682557952,
+      "available_bytes": 17108316160,
+      "host_promise_bytes": 4573483008,
+      "host_backing_block_bytes": 4096,
+      "fixture_headroom_bytes": 2147483648,
+      "projected_bytes": 13590175744
+    },
+    "geometry": {
+      "image_device": 64769,
+      "image_inode": 306817,
+      "image_bytes": 4294967296,
+      "image_allocated_bytes": 4294971392,
+      "loop": "/dev/loop0",
+      "volume_device": 1792,
+      "volume_inode": 2,
+      "block_bytes": 4096,
+      "total_bytes": 4143677440,
+      "total_inodes": 262144,
+      "available_bytes": 4126875648,
+      "free_inodes": 262133
+    },
+    "mke2fs_sha256": "84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2",
+    "upload_sha256": {
+      "native-acceptance.test": "541ac5268ef4f5aadf99e76c6401842c2a4039c0c2691874f3ba1bf6409c1e79",
+      "public-tools.tar.gz": "69f98506cf99def3a949d52de5570e0b94c1c25d2993c0c436fb6778cee6af07",
+      "surreal": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+      "volume-driver.py": "4245f555fa45ff297a77b6ab24bc5423f3d18616498504ec70794e50f8680e13"
+    },
+    "helper_sha256": "6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d"
+  },
+  "volume_after_cases": {
+    "image_device": 64769,
+    "image_inode": 306817,
+    "image_bytes": 4294967296,
+    "image_allocated_bytes": 4294975488,
+    "loop": "/dev/loop0",
+    "volume_device": 1792,
+    "volume_inode": 2,
+    "block_bytes": 4096,
+    "total_bytes": 4143677440,
+    "total_inodes": 262144,
+    "available_bytes": 4126887936,
+    "free_inodes": 262131
+  },
+  "tools": {
+    "build_go": "1.26.5",
+    "native_go_sdk": "1.25.0",
+    "scip_go": "0.2.7",
+    "surreal": "3.2.0",
+    "golangci_lint": "2.12.2",
+    "cgo_enabled_for_linux_build": false,
+    "helper_provenance": "fresh current production build; byte-identical to previous native helper; only test/doc/receipt repository paths changed"
+  },
+  "binary_sha256": {
+    "native_acceptance_test": "sha256:541ac5268ef4f5aadf99e76c6401842c2a4039c0c2691874f3ba1bf6409c1e79",
+    "helper": "sha256:6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d",
+    "native_go": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "scip_go": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+    "surreal": "sha256:a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+    "mke2fs": "sha256:84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2",
+    "original_go_sdk_archive": "sha256:05de75d6994a2783699815ee553bd5a9327d8b79991de36e38b66862782f54ae",
+    "clean_public_tools_archive": "sha256:69f98506cf99def3a949d52de5570e0b94c1c25d2993c0c436fb6778cee6af07",
+    "operational_volume_driver": "sha256:4245f555fa45ff297a77b6ab24bc5423f3d18616498504ec70794e50f8680e13"
+  },
+  "host": {
+    "personal_profile": "phebs-t451a",
+    "kernel": "6.8.0-117-generic",
+    "architecture": "aarch64",
+    "cpus": 2,
+    "memory_bytes": 8589934592,
+    "root_filesystem_bytes": 19682557952,
+    "execution_uid": 0,
+    "private_temp_root_mode": "0700",
+    "image_digest": "sha256:8b053ab5c65aee8fe7dfe5f8d9b90cd5a1cf0ace68efdaac3a718f3727a89b94",
+    "daemon_config_changed": false,
+    "historical_custody_reused": false,
+    "profile_final_state": "Stopped"
+  },
+  "native_limits": {
+    "shared_absolute_wall_seconds": 300,
+    "memory_bytes": 4533092352,
+    "scratch_inodes": 262144,
+    "tasks": 294,
+    "descriptors_per_process": 128,
+    "cpu_quota_microseconds": 200000,
+    "cpu_period_microseconds": 100000,
+    "aggregate_worker_output_bytes": 16777216,
+    "scip_output_bytes": 2285819,
+    "qualification": "unchanged production limits; full backing budget is separate from scratch allowance/image",
+    "scratch_allowance_bytes": 4573403136,
+    "scratch_image_bytes": 4573401088
+  },
+  "checks": [
+    {
+      "name": "Darwin typedexecutor package normal/race",
+      "status": "PASS",
+      "qualification": "Linux-only files excluded; no Linux race result"
+    },
+    {
+      "name": "Linux arm64 test compilation and affected vet",
+      "status": "PASS",
+      "qualification": "CGO_ENABLED=0; compilation/vet include Linux-only paths"
+    },
+    {
+      "name": "Linux supporting acceptance and volume-bound models",
+      "status": "PASS",
+      "qualification": "26 top-level passes; original-Git fixture skips without its explicit corpus argument"
+    },
+    {
+      "name": "Repository-pinned full Darwin lint",
+      "status": "PASS",
+      "qualification": "2.12.2, isolated Go and lint caches: 0 issues"
+    },
+    {
+      "name": "Repository-pinned affected Linux lint",
+      "status": "PASS",
+      "qualification": "0 issues; broader Linux retained T42.1 baseline warnings are unchanged and not relabeled"
+    },
+    {
+      "name": "Module verification, owning documentation and glossary",
+      "status": "PASS",
+      "qualification": "docs/glossary rerun after record-only sealing"
+    },
+    {
+      "name": "Current helper rebuild equality",
+      "status": "PASS",
+      "qualification": "fresh production rebuild matches prior tested bytes"
+    }
+  ],
+  "cost": {
+    "production_delta": "zero request/query, sync, startup/restart, retry/no-op, publication, lock/cache/schema/child cost; opt-in test changes only",
+    "fixture_setup": "complete SDK/indexer/helper copy and full immutable inventory hashing; trusted host whole-file reads precede native admission; 176 source bytes do not describe tool cost",
+    "clean_archive": {
+      "entries": 16091,
+      "regular_files": 14498,
+      "bytes": 292007250,
+      "max_file_bytes": 72860463,
+      "entry_cap": 20000,
+      "total_byte_cap": 419430400,
+      "file_byte_cap": 104857600
+    },
+    "volume": "one fully allocated 4-GiB image plus original full host backing promise and 2-GiB fixture headroom; ballast stays inside image; three held descriptors plus temporary ancestry/statfs and publication-pin descriptors",
+    "ballast": "each resize permits at most four measured corrections; truncate/fallocate/file sync/filesystem sync; actual allocated metadata/statfs checks; syscall count does not bound duration",
+    "serialization": "preparation copy/hash under controller serialization and lifecycle guard; native phases release guard while retaining controller serialization/control pins; startup/selected Sweeps guarded",
+    "queries": "one query at a time; each protected turn performs exact custody checks and three routed reads under unchanged cache/pin rules",
+    "selected_ticks": "up to four cursor SDK operations around existing selected Sweep; no-advance errors skip owner CAS; maximum64 discovery/pin/prefix plus12000 drain turns; actual1211 total",
+    "drain": "existing per-turn sixteen mutations,48 traversal steps,216 traversal stats,eight descriptors and100-ms pin waits; fixed guard/private-ancestry work excluded; not a whole-turn SDK/stat or time bound",
+    "concurrency": "one joined memory engine, one runner/scheduler, two sequential native phases; no new production concurrency"
+  },
+  "initial_findings": {
+    "source_commit": "092c30c6676d8846d9adfb30bd9bbef9e2a28bb5",
+    "critical": 0,
+    "high": 0,
+    "medium": 2,
+    "low": 0,
+    "corrections": "preflight retains planning RootDigest; desired cancellation must use executed admission digest; corrected before native execution",
+    "operational_driver_low": 1,
+    "operational_correction": "full rounded host backing promise4573483008 replaces scratch-only4573403136; corrected before provisioning/native"
+  },
+  "pre_dispatch_review": {
+    "implementation_commit": "42d5b07bca557b4aa6a5917c194ff06f39437d24",
+    "reviewers": [
+      "next_ticket_audit",
+      "pr31_cost_docs"
+    ],
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "coverage": "all six repository paths manually plus operational driver; corrected clean archive independently byte-checked against prior original tools"
+  },
+  "final_review": {
+    "status": "PENDING",
+    "coverage": "all seven changed paths including source-free proof, costs and exact teardown"
+  },
+  "retained_pre_native_failures": [
+    {
+      "phase": "volume provision1",
+      "status": "FAIL",
+      "native_dispatched": false,
+      "cause": "macOS archive had32182entries above original20000cap; only empty root directories created"
+    },
+    {
+      "phase": "volume provision2",
+      "status": "FAIL",
+      "native_dispatched": false,
+      "cause": "temporary32768cap exposed rejected AppleDouble paths before extraction; clean COPYFILE_DISABLE archive has16091entries, so original20000cap restored"
+    },
+    {
+      "phase": "full Darwin lint stale caches",
+      "status": "FAIL",
+      "cause": "17 warnings referenced removed historical worktree paths; isolated both Go and lint caches rerun reports0issues"
+    }
+  ],
+  "cleanup": {
+    "containers": 0,
+    "loop_devices": 0,
+    "matching_processes": 0,
+    "fresh_volume_unmounted": true,
+    "fresh_staging_removed": true,
+    "native_lock_preserved": true,
+    "fresh_model_temp_removed": true,
+    "fresh_test_root_removed": true,
+    "fresh_upload_removed": true,
+    "native_namespace_only_lock": true,
+    "guest_profile": "Stopped",
+    "production_native_namespace_lock_preserved": true,
+    "historical_receipts_preserved": true,
+    "qualification": "exact mount/image/loop identities checked after both cases; ballast0 and workspaceonlypublicationlock before ordinary unmount/detach; only fresh roots removed"
+  },
+  "source_and_module_sha256": {
+    "internal/typedexecutor/input_native_linux_test.go": "sha256:2e16a4046b307bb08b82896932a646ff91420db55406c533acbeec8e6ebfeb6e",
+    "internal/typedexecutor/input_pressure_linux_test.go": "sha256:2069958a80bdfdee011b19767f4e248b66b076a58e66638667ff2a3bd97f1315",
+    "internal/typedexecutor/input_pressure_volume_linux_test.go": "sha256:9f5c088547b36a48e0b05ce75e765dd4e76cd2d09c3c25dd880bc57daeff7516",
+    "go.mod": "sha256:71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662",
+    "go.sum": "sha256:d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+    ".golangci.yml": "sha256:ac470aeaf92b159bdabdea28104131935e4758ba347e74f3018337b7df91768b"
+  },
+  "unchanged_prior_receipts_sha256": {
+    "spike/t459/native_coordinator_1.json": "sha256:05d2d78e2f53da0e7a3c6194217d08677ba4b6812d3e35bb59b40fef38213aa5",
+    "spike/t459/native_faults_1.json": "sha256:bb976bb8017264f5854decdaba144a9f9fa0f07ac2f40008cf52056f0ac6888b",
+    "spike/t459/neutral_api_client_1.json": "sha256:8479d8098075dc99901acc645a4ce2cf03483caca5f425d6e648770d24317667"
+  },
+  "retained_artifacts": {
+    "local_artifact_directory": "/Users/ben/.codex/artifacts/phebs-t459-pressure-lifecycle-20261004",
+    "raw_pressure_proof_sha256": "sha256:0778ca81771201173dc17a978ed0c1e50d31c5a5da653dfba47c53d65a384706",
+    "volume_proof_sha256": "sha256:626518e24b599dbab0d7cb39344b853ccb08ffb0d168be3188e0e21d4d602a32",
+    "log_sha256": {
+      "logs/compile-candidate-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/compile-corrected-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/compile-linux-final.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/compile-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/docs-draft.log": "sha256:91214012b8c34a939804e01c52ae9f4cdbd5390bf0af6b70625e28351e642cc8",
+      "logs/docs-result.log": "sha256:d4da07888f818dac5a8c4e22f39cb010214ad52947f1bcec82500d64f76732f9",
+      "logs/empty-staging-cleanup-2.log": "sha256:1fb8577df00e4c4ecc9fd945b5b4f21b845eb28be135937ba33973976c8742cc",
+      "logs/glossary-draft.log": "sha256:f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+      "logs/glossary-result.log": "sha256:f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+      "logs/helper-reference.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/host-final-absence.log": "sha256:c222b7aaacfd66fdb5b60ddd4f3327d43db9742e0e1edbfcd5bdf35516246431",
+      "logs/host-preflight-corrected.log": "sha256:a49ef33c7b0cfb0d97142c4a5cec9ea203ed7138692ccb53aad40f7722c31917",
+      "logs/host-preflight.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/host-profiles-final.json": "sha256:8fa3befb6844faf011e2eed2b334966de28bf30da8818eb4b3ecb7001641153a",
+      "logs/host-start.log": "sha256:e9495231301fce13e024d5a5655e86b2c6047d510177a3efdfebe244cfdc4da1",
+      "logs/host-stop.log": "sha256:d367935cb1b9af720999178f06ef8bb6704bfa6ff20d777d9a1ac271da58e8c0",
+      "logs/lint-corrected-linux.log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "logs/lint-darwin-fresh-cache.log": "sha256:2f97aad5cdb67e067004dd8fa5f03cd4bb2a086381f45e044cafb8d5b71a0d6c",
+      "logs/lint-darwin-isolated-caches.log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "logs/lint-darwin.log": "sha256:63b4657191e32bf2daf1d4990f30e6a743e7b90e03ede947b23bcdb0d93d7073",
+      "logs/lint-linux.log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "logs/models-linux.log": "sha256:1ce18c201be6648b4475134ed22e9eedf568d49561d065dc888e8ca7664f031b",
+      "logs/modules.log": "sha256:b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd",
+      "logs/native-coordinator-regression.log": "sha256:af9ec10e6e2c2e4b72ce8a087153d55528711c7dc25443f6184878a4703f7ed5",
+      "logs/native-pressure-1.log": "sha256:3ba88c927837f46d1f8fb475e8ee3fa105bed232438a78bba6bf0ed34b542a5b",
+      "logs/package-darwin.log": "sha256:b0854712e821577262e428eb4b15026fd1aa69a04141edac59792511e4fc693f",
+      "logs/package-race-darwin.log": "sha256:379d98c0ad56cc40d10a5952812fc35476b6b9ac2ccf4df58fb9520217c7b750",
+      "logs/vet-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/volume-cleanup.log": "sha256:8dc34cab59887e4db34eac29e948391e2bb90aa822c51b920baf830a8f8b11ed",
+      "logs/volume-final-inspect-after-regression.log": "sha256:4d6c076b399d2671e6a8fafb76827bd9f8722ba59e69046d2709e94c5b7ae181",
+      "logs/volume-final-inspect.log": "sha256:4d6c076b399d2671e6a8fafb76827bd9f8722ba59e69046d2709e94c5b7ae181",
+      "logs/volume-provision-1.log": "sha256:ca62c98b6da1fe008629bf7af7aaa6a8a9aa89a26f42d8a6380d116fc51c1c32",
+      "logs/volume-provision-2.log": "sha256:d2f56604c4b352c58f336aa85380d988ed8b6d088c8255929110f695ac8e1627",
+      "logs/volume-provision-3.log": "sha256:626518e24b599dbab0d7cb39344b853ccb08ffb0d168be3188e0e21d4d602a32"
+    }
+  },
+  "claim_boundary": "Only this neutral pressure/protected-current/deleted-repository lifecycle prerequisite is PASS. Ordinary providers remain unavailable; T45.6 is not PASS; no target execution, product-scale, release or scale claim.",
+  "outer_test_timeout_seconds": 1200
+}
