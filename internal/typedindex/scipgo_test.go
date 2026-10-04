@@ -194,6 +194,23 @@ func TestSCIPGoCollisionAndPin(t *testing.T) {
 			t.Fatal("pin", e)
 		}
 	}
+	// Each admitted architecture accepts only its own pinned scip-go image.
+	for _, arch := range []string{"arm64", "amd64"} {
+		d := p.Definition()
+		if arch == "amd64" {
+			d.Schema, d.Config = Amd64ProfileSchema, Amd64ReducedConfig()
+		}
+		for _, indexer := range []string{"arm64", "amd64"} {
+			d.Tools.Indexer = SCIPGoIndexer(indexer)
+			q, e := DecodeProfile(ctx, wire(t, d))
+			if e != nil {
+				t.Fatal(e)
+			}
+			if _, _, e = AdaptSCIPGoBlanks(ctx, q, [][]byte{raw}); (indexer == arch) != (e == nil) {
+				t.Fatal("architecture pin", arch, indexer, e)
+			}
+		}
+	}
 	for _, edit := range []func(*scip.Index){func(i *scip.Index) { i.Metadata.ToolInfo.Name = "other" }, func(i *scip.Index) { i.Metadata.ToolInfo.Version = "0.2.8" }, func(i *scip.Index) { i.Documents[0].Symbols[2].Symbol = "other gomod example.com v1 pkg/_." }} {
 		index := scipGoFixture()
 		edit(index)

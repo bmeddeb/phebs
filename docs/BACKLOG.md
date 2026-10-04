@@ -15279,6 +15279,14 @@ receipt: `spike/t457/native_inputs_1.json`. This completes the additional-input
 implementation on its ticket branch; it is not a Bazel corpus, release,
 registration, main integration or push result.
 
+T45.7 dual-architecture pins (2026-10-03): module and import profiles now seal
+`arm64` or `amd64`, the worker refuses a profile for another architecture, and
+Go SDK, scip-go, Bazel and gopackagesdriver pins are selected per architecture.
+The `amd64` pins and their provenance are in
+`spike/t457/native_tool_pins_amd64.json`. Unit checks pass natively on `arm64`
+and as `amd64` under Rosetta. Still open: an `amd64` prehydrated inventory and
+native rehearsal on an x86_64 host, and an `amd64` Bazel C sysroot.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

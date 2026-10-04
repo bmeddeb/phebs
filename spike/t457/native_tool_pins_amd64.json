@@ -1,0 +1,47 @@
+{
+  "schema": "phebs-t457-native-tool-pins-v1",
+  "measured_at_utc": "2026-10-04T03:02:42Z",
+  "scope": "Source-free provenance for the linux/amd64 v1 native tool pins beside the existing linux/arm64 pins. No provider registration, corpus run, target execution, release or scale claim.",
+  "builder": {
+    "linux": "official go1.25.0 linux/arm64 SDK inside image sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 (debian:bookworm-slim, the T45.1b worker image), --network none, GOPROXY=off, GOTOOLCHAIN=local",
+    "cross_check": "go1.25.0 darwin/arm64 toolchain; amd64 outputs byte-identical to the Linux builder"
+  },
+  "tools": [
+    {
+      "role": "go_sdk",
+      "version": "1.25.0",
+      "member": "go/bin/go",
+      "source": "https://go.dev/dl/",
+      "arm64": {"archive": "go1.25.0.linux-arm64.tar.gz", "archive_sha256": "05de75d6994a2783699815ee553bd5a9327d8b79991de36e38b66862782f54ae", "matches_published": true, "sha256": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389", "reproduces_existing_pin": true},
+      "amd64": {"archive": "go1.25.0.linux-amd64.tar.gz", "archive_sha256": "2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613", "matches_published": true, "sha256": "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25"}
+    },
+    {
+      "role": "bazel",
+      "version": "9.0.0",
+      "source": "https://github.com/bazelbuild/bazel/releases/tag/9.0.0",
+      "arm64": {"asset": "bazel-9.0.0-linux-arm64", "bytes": 63709962, "matches_published": true, "sha256": "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f", "reproduces_existing_pin": true},
+      "amd64": {"asset": "bazel-9.0.0-linux-x86_64", "bytes": 65821854, "matches_published": true, "sha256": "sha256:c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403"}
+    },
+    {
+      "role": "gopackagesdriver",
+      "version": "rules_go 0.59.0",
+      "source": "github.com/bazelbuild/rules_go@v0.59.0 h1:RLhOwYIqeMgBpKelHEWTfIPjA37so3oa/rX+/qqq/P4= ./go/tools/gopackagesdriver",
+      "recipe": "go1.25.0 GOOS=linux CGO_ENABLED=0 GOARM64=v8.0|GOAMD64=v1 go build -mod=readonly -buildvcs=false -trimpath -ldflags=-X=main.rulesGoRepositoryName=@rules_go",
+      "arm64": {"bytes": 5016265, "sha256": "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd", "reproduces_existing_pin": true},
+      "amd64": {"sha256": "sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8"}
+    },
+    {
+      "role": "scip-go",
+      "version": "0.2.7",
+      "source": "github.com/scip-code/scip-go@v0.2.7 (tag commit 2e9ff3c2603a85daabe125c9f20075ec52df0731) h1:gcHFnhoMCdp3C/0xvCn9QFuTsF/W3JSR5cLVf7uG+Us=, golang.org/x/tools v0.45.0 h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8=",
+      "recipe": "go1.25.0 GOOS=linux CGO_ENABLED=0 GOARM64=v8.0|GOAMD64=v1 go build -mod=readonly -buildvcs=false -trimpath ./cmd/scip-go",
+      "arm64": {"existing_pin_sha256": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765", "existing_pin_bytes": 16986998, "recipe_sha256": "sha256:24eb0872af06338bad70efb2212a6627da74da3b1860b7b65627a9b6bc8f225f", "recipe_bytes": 16986888, "reproduces_existing_pin": false},
+      "amd64": {"sha256": "sha256:31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"},
+      "qualification": "The retained T45.1b arm64 image is not byte-reproduced: its recorded BuildInfo (go1.25.0, (devel), -trimpath, CGO_ENABLED=0, GOARM64=v8.0) and nine dependencies equal the recipe output, which is 110 bytes smaller. go install @v0.2.7, workspace mode, darwin and Linux hosts and upstream's go1.25.7 release binary were also ruled out. The arm64 pin stays the historical image; the amd64 pin is the deterministic recipe output from the same source graph."
+    }
+  ],
+  "unchanged_arm64_only": [
+    "Bazel C sysroot tools/cc-sysroot.zip (compilerDigest) and its aarch64-linux-gnu paths: an amd64 sysroot must be sealed on an x86_64 host before Bazel can run there"
+  ],
+  "not_established": ["amd64 native rehearsal", "amd64 prehydrated tool inventory", "provider registration", "Bazel corpus", "release or scale posture"]
+}

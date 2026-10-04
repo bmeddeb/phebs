@@ -9260,3 +9260,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   reported gzip), with qualified timing/provenance appended to the receipt.
   Original ordinary-cohort and native receipts retain their exact old source;
   no fresh native/full-command execution is inferred from the correction gates.
+
+- **2026-10-03 — T45.7 dual-architecture native tool pins.** Ben asked to
+  target both `arm64` and x86 and routed the change onto the T45.7 lineage.
+  T45.6 admitted `amd64` host and profile geometry, but every provider still
+  verified one `arm64` tool image set, and tool BuildInfo must match the host,
+  so no provider could execute on `amd64`. Module and import profiles now take
+  `GOARCH` from `InputConfig(provider, arch)`, `arm64` or `amd64`, under the
+  existing input schema; `arm64` profile bytes and digests are unchanged. The
+  worker sets `GOARCH` and `GOARM64=v8.0` or `GOAMD64=v1` from the sealed
+  profile, and refuses a profile whose architecture is not the host's, as
+  Bazel commands already do. Go SDK, scip-go, Bazel and gopackagesdriver pins
+  are selected per architecture for profile pin checks, worker tool
+  verification and scip-go blank adaptation. The `amd64` pins are the official
+  go1.25.0 and Bazel 9.0.0 release images, plus scip-go 0.2.7 and rules_go
+  0.59.0 gopackagesdriver rebuilt offline with go1.25.0, `-trimpath` and
+  `-buildvcs=false`; Linux and darwin builders produce identical bytes. The
+  same methods reproduce the existing `arm64` Go SDK, Bazel and driver pins
+  exactly. The retained `arm64` scip-go image is not reproduced: its recorded
+  BuildInfo and dependencies match, but it is 110 bytes larger, so it stays a
+  historical pin and the `amd64` scip-go pin is the deterministic recipe
+  output. The source-free record is `spike/t457/native_tool_pins_amd64.json`.
+  Bazel's C sysroot archive and its `aarch64-linux-gnu` paths stay `arm64`
+  only, so Bazel on `amd64` still refuses at compiler setup until an `amd64`
+  sysroot is sealed on an x86_64 host. No `amd64` rehearsal, prehydrated
+  inventory, provider registration, corpus, release or scale claim follows.
+
+  **Cost.** Each pin lookup is a constant switch inside an existing check;
+  profile decode compares the same fields. The worker adds one architecture
+  string comparison before any input work. No request, query, sync, startup,
+  retry, publication, lock, cache, file read or child is added.

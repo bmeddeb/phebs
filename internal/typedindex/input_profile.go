@@ -1,9 +1,14 @@
 package typedindex
 
-// InputConfig describes the closed additional-provider recipes. Historical
-// Bazel profiles retain their schemas, configuration and canonical identities.
-func InputConfig(provider string) (Config, error) {
+// InputConfig describes the closed additional-provider recipes for one admitted
+// native architecture. arm64 keeps the sealed T45.7 identity; amd64 differs only
+// in GOARCH. Historical Bazel profiles retain their schemas and identities.
+func InputConfig(provider, arch string) (Config, error) {
+	if !AdmittedNativeArch(arch) {
+		return Config{}, Unsupported
+	}
 	c := ReducedConfig()
+	c.GOARCH = arch
 	switch provider {
 	case ModuleProviderID:
 		c.Mode = "go-module"
@@ -16,7 +21,7 @@ func InputConfig(provider string) (Config, error) {
 }
 
 func validateInputProfile(d ProfileDefinition) error {
-	c, err := InputConfig(d.Provider)
+	c, err := InputConfig(d.Provider, d.Config.GOARCH)
 	if err != nil {
 		return err
 	}
@@ -32,7 +37,7 @@ func validateInputProfile(d ProfileDefinition) error {
 		return Unsupported
 	}
 	if d.Provider == ModuleProviderID {
-		if d.Tools.Go.Version != "1.25.0" || !digest(d.Tools.Go.Digest) || d.Tools.Indexer.Digest != SCIPGoIndexerDigest {
+		if d.Tools.Go.Version != "1.25.0" || !digest(d.Tools.Go.Digest) || d.Tools.Indexer != SCIPGoIndexer(d.Config.GOARCH) {
 			return Unsupported
 		}
 	} else if d.Tools.Go != (Tool{}) {

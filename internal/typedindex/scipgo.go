@@ -11,7 +11,23 @@ import (
 )
 
 const SCIPGoBlankAdapter = "phebs-scip-go-blank-metadata-v1"
+
+// SCIPGoIndexerDigest is the retained T45.1b scip-go 0.2.7 linux/arm64 image.
+// SCIPGoIndexerDigestAmd64 is linux/amd64 v1, rebuilt from the same tag, x/tools
+// graph and go1.25.0 (spike/t457/native_tool_pins_amd64.json).
 const SCIPGoIndexerDigest = "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765"
+const SCIPGoIndexerDigestAmd64 = "sha256:31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
+
+// SCIPGoIndexer is the pinned scip-go identity for an admitted architecture.
+func SCIPGoIndexer(arch string) Tool {
+	switch arch {
+	case "arm64":
+		return Tool{Version: "0.2.7", Digest: SCIPGoIndexerDigest}
+	case "amd64":
+		return Tool{Version: "0.2.7", Digest: SCIPGoIndexerDigestAmd64}
+	}
+	return Tool{}
+}
 
 type SCIPGoBlankMapping struct {
 	Document       string `json:"document"`
@@ -45,7 +61,7 @@ func AdaptSCIPGoBlanks(ctx context.Context, profile Profile, members [][]byte) (
 	if err := ctx.Err(); err != nil {
 		return nil, empty, err
 	}
-	if profile.digest == "" || profile.definition.Tools.Indexer != (Tool{Version: "0.2.7", Digest: SCIPGoIndexerDigest}) {
+	if profile.digest == "" || profile.definition.Tools.Indexer != SCIPGoIndexer(profile.definition.Config.GOARCH) {
 		return nil, empty, Unsupported
 	}
 	if len(members) == 0 || len(members) > MaxSCIPMembers {

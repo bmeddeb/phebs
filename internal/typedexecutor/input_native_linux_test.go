@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -136,11 +137,12 @@ func nativeInputFixture(t *testing.T, endpoint, mode string) (fixture, typedinde
 		}
 		nativeInputWrite(t, filepath.Join(dir, typedindex.ManagedHelperFile), toolBytes, 0700)
 		helper := typedindex.Tool{Version: "neutral-t45.7", Digest: hash(toolBytes)}
-		tools := typedindex.Tools{Planner: helper, Launcher: helper, Indexer: typedindex.Tool{Version: "0.2.7", Digest: provider.SCIPDigest}}
+		goSDK, scip, _, _ := provider.NativeToolDigests(runtime.GOARCH)
+		tools := typedindex.Tools{Planner: helper, Launcher: helper, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}
 		if mode == "import" {
 			tools.Indexer.Digest = selection.Import.Producer.Digest
 		} else {
-			tools.Go = typedindex.Tool{Version: "1.25.0", Digest: provider.GoDigest}
+			tools.Go = typedindex.Tool{Version: "1.25.0", Digest: goSDK}
 			for _, prefix := range []string{"go", "bin"} {
 				root := filepath.Join(*inputNativeTools, prefix)
 				if e = filepath.WalkDir(root, func(name string, d fs.DirEntry, err error) error {
@@ -209,7 +211,7 @@ func nativeInputFixture(t *testing.T, endpoint, mode string) (fixture, typedinde
 		}
 		slices.SortFunc(inventory.Files, func(a, b typedindex.BundleFile) int { return strings.Compare(a.Path, b.Path) })
 		raw := encode(t, inventory)
-		config, _ := typedindex.InputConfig(kind)
+		config, _ := typedindex.InputConfig(kind, runtime.GOARCH)
 		profile, e = typedindex.DecodeProfile(t.Context(), encode(t, typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Name: "neutral-input", Provider: kind, Tools: tools, Config: config, Policy: typedindex.MeasuredPolicy(), BundleDigest: hash(raw), ImageDigest: *inputNativeImage}))
 		if e != nil {
 			t.Fatal(e)

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"path"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -63,6 +64,10 @@ func nativeInputOperations() inputOperations {
 }
 
 func runInput(ctx context.Context, i Invocation, o inputOperations) (raw []byte, err error) {
+	// The sealed profile architecture is the executing host, as for Bazel commands.
+	if i.Profile.Definition().Config.GOARCH != runtime.GOARCH {
+		return nil, typedindex.Unsupported
+	}
 	name, e := typedindex.SelectionFile(i.Parent.Request().Provider)
 	if e != nil {
 		return nil, e
@@ -103,7 +108,7 @@ func runInput(ctx context.Context, i Invocation, o inputOperations) (raw []byte,
 		if e != nil || discovered.Digest() != m.Digest() {
 			return nil, typedindex.Stale
 		}
-		env := inputEnvironment(*m)
+		env := inputEnvironment(*m, i.Profile.Definition().Config.GOARCH)
 		args := []string{"list", "-json", "-mod=readonly"}
 		for _, p := range b.packages {
 			args = append(args, p.importPath)
@@ -184,16 +189,17 @@ func verifyInputTools(ctx context.Context, i Invocation) error {
 		typed              bool
 	}{{typedindex.ManagedHelperFile, p.Tools.Launcher.Digest, productionHelperMain, false}}
 	if p.Provider == typedindex.ModuleProviderID {
-		if p.Tools.Go.Digest != GoDigest || p.Tools.Indexer.Digest != SCIPDigest {
+		goSDK, scip, _, ok := NativeToolDigests(p.Config.GOARCH)
+		if !ok || p.Tools.Go.Digest != goSDK || p.Tools.Indexer.Digest != scip {
 			return typedindex.Unsupported
 		}
 		roles = append(roles, struct {
 			name, digest, main string
 			typed              bool
-		}{"tools/go/bin/go", GoDigest, "cmd/go", false}, struct {
+		}{"tools/go/bin/go", p.Tools.Go.Digest, "cmd/go", false}, struct {
 			name, digest, main string
 			typed              bool
-		}{"tools/bin/scip-go", SCIPDigest, "github.com/scip-code/scip-go/cmd/scip-go", true})
+		}{"tools/bin/scip-go", p.Tools.Indexer.Digest, "github.com/scip-code/scip-go/cmd/scip-go", true})
 	}
 	for _, role := range roles {
 		row, err := inventoryFile(i.Inventory, role.name)
@@ -218,12 +224,16 @@ func inputDirectory(m typedmodule.ModuleSelection) string {
 	return path.Join(launcher.Workspace, path.Dir(m.Entry))
 }
 
-func inputEnvironment(m typedmodule.ModuleSelection) []string {
+func inputEnvironment(m typedmodule.ModuleSelection, arch string) []string {
 	work := "off"
 	if m.Mode == typedmodule.ModeWorkspace {
 		work = path.Join(launcher.Workspace, m.Entry)
 	}
-	return []string{"HOME=/scratch/home", "GOOS=linux", "GOARCH=arm64", "GOARM64=v8.0", "CGO_ENABLED=0", "PATH=/inputs/tools/go/bin:/inputs/tools/bin:/usr/bin:/bin", "GOROOT=/inputs/tools/go", "TMPDIR=/scratch/tmp", "GOCACHE=/scratch/cache/go-build", "GOMODCACHE=/inputs/tools/modcache", "GOPROXY=off", "GOSUMDB=off", "GOTOOLCHAIN=local", "GOTELEMETRY=off", "GOENV=off", "GOFLAGS=-mod=readonly", "GOWORK=" + work, "GOPACKAGESDRIVER=off"}
+	variant := "GOARM64=v8.0"
+	if arch == "amd64" {
+		variant = "GOAMD64=v1"
+	}
+	return []string{"HOME=/scratch/home", "GOOS=linux", "GOARCH=" + arch, variant, "CGO_ENABLED=0", "PATH=/inputs/tools/go/bin:/inputs/tools/bin:/usr/bin:/bin", "GOROOT=/inputs/tools/go", "TMPDIR=/scratch/tmp", "GOCACHE=/scratch/cache/go-build", "GOMODCACHE=/inputs/tools/modcache", "GOPROXY=off", "GOSUMDB=off", "GOTOOLCHAIN=local", "GOTELEMETRY=off", "GOENV=off", "GOFLAGS=-mod=readonly", "GOWORK=" + work, "GOPACKAGESDRIVER=off"}
 }
 
 func inputOutput(n int) string { return "/scratch/" + inputSlot(n) + ".scip" }

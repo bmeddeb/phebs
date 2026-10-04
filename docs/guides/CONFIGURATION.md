@@ -1152,6 +1152,15 @@ binary identities and scoped cleanup are recorded in
 `spike/t457/native_inputs_1.json`; these results do not enable a provider or
 establish a target-corpus performance envelope.
 
+Module and import profiles target Linux `arm64` or `amd64`. The architecture is
+sealed in the profile configuration and must match the worker host; module
+commands use `GOARM64=v8.0` or `GOAMD64=v1` accordingly. Each architecture has
+its own pinned Go 1.25.0 and scip-go 0.2.7 images, recorded in
+`spike/t457/native_tool_pins_amd64.json`, and a profile carrying the other
+architecture's tools is refused. Bazel tool pins are also per architecture, but
+its C toolchain sysroot is still `arm64` only, so Bazel on an `amd64` host refuses
+until an `amd64` sysroot is sealed. No `amd64` native rehearsal has run yet.
+
 ## Code navigation indexing Settings (T45.8b)
 
 Administrators can open **Settings → Code navigation indexing**, select a

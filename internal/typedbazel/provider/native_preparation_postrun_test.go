@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -82,12 +83,13 @@ var preparationCmdHelper = flag.String("typed-preparation-cmd-helper", "", "opt-
 // FINAL inventory.
 func preparationFinalTools(helperDigest string) typedindex.Tools {
 	helper := typedindex.Tool{Version: "cmd", Digest: helperDigest}
+	goSDK, scip, bazel, _ := NativeToolDigests(runtime.GOARCH)
 	return typedindex.Tools{
-		Bazel:    typedindex.Tool{Version: "9.0.0", Digest: BazelDigest},
+		Bazel:    typedindex.Tool{Version: "9.0.0", Digest: bazel},
 		RulesGo:  typedindex.Tool{Version: "0.59.0", Digest: "sha256:" + rulesArchive},
-		Go:       typedindex.Tool{Version: "1.25.0", Digest: GoDigest},
-		Driver:   typedindex.Tool{Version: "0.59.0", Digest: "sha256:" + launcher.NativeDriverSHA256},
-		Indexer:  typedindex.Tool{Version: "0.2.7", Digest: SCIPDigest},
+		Go:       typedindex.Tool{Version: "1.25.0", Digest: goSDK},
+		Driver:   typedindex.Tool{Version: "0.59.0", Digest: "sha256:" + launcher.NativeDriverDigest(runtime.GOARCH)},
+		Indexer:  typedindex.Tool{Version: "0.2.7", Digest: scip},
 		Planner:  helper,
 		Launcher: helper,
 	}

@@ -37,6 +37,10 @@ func verifyTools(ctx context.Context, i Invocation) error {
 
 func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain string) error {
 	p := i.Profile.Definition()
+	goSDK, scip, bazel, ok := NativeToolDigests(runtime.GOARCH)
+	if !ok {
+		return typedindex.Unsupported
+	}
 	helper, e := inventoryFile(i.Inventory, typedindex.ManagedHelperFile)
 	if e != nil || !helper.Executable || p.Tools.Planner.Digest != helper.Digest || p.Tools.Launcher.Digest != helper.Digest || p.Tools.RulesGo.Digest != "sha256:"+rulesArchive {
 		return typedindex.Unsupported
@@ -74,8 +78,8 @@ func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain str
 		{typedindex.ManagedHelperFile, helper.Digest, helperMain, false},
 		{"tools/bin/phebs-t451b-native-driver", helper.Digest, helperMain, false},
 		{"tools/bin/t451b-native-probe", "", "phebs.local/t451b-native-probe", true},
-		{"tools/bin/scip-go", SCIPDigest, "github.com/scip-code/scip-go/cmd/scip-go", true},
-		{"tools/go/bin/go", GoDigest, "cmd/go", false},
+		{"tools/bin/scip-go", scip, "github.com/scip-code/scip-go/cmd/scip-go", true},
+		{"tools/go/bin/go", goSDK, "cmd/go", false},
 	} {
 		if e = ctx.Err(); e != nil {
 			return e
@@ -92,7 +96,7 @@ func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain str
 			return typedindex.Unsupported
 		}
 	}
-	for name, want := range map[string]string{"tools/bin/bazel": BazelDigest, "tools/bin/gopackagesdriver": "sha256:" + launcher.NativeDriverSHA256} {
+	for name, want := range map[string]string{"tools/bin/bazel": bazel, "tools/bin/gopackagesdriver": "sha256:" + launcher.NativeDriverDigest(runtime.GOARCH)} {
 		f, err := inventoryFile(i.Inventory, name)
 		if err != nil || !f.Executable || f.Digest != want {
 			return typedindex.Unprepared
@@ -151,9 +155,10 @@ func verifySDK(p planner.Plan) error {
 			return typedindex.Unsupported
 		}
 	}
+	goSDK, _, _, ok := NativeToolDigests(runtime.GOARCH)
 	name := launcher.ExecRoot + "/" + nativeSDKRoot + "/bin/go"
 	b, e := readBounded(name, typedindex.MaxFileBytes)
-	if e != nil || hash(b) != GoDigest {
+	if !ok || e != nil || hash(b) != goSDK {
 		return typedindex.Unsupported
 	}
 	info, e := buildinfo.ReadFile(name)
