@@ -9132,3 +9132,57 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   reported gzip), with qualified timing/provenance appended to the receipt.
   Original ordinary-cohort and native receipts retain their exact old source;
   no fresh native/full-command execution is inferred from the correction gates.
+
+- **2026-10-03 — T45.9 generated-evidence decision: STOP.** Keep managed
+  code-navigation bundles and SCIP-derived evidence as independent authorities.
+  The evidence candidate, partition, generation and coverage contracts identify
+  one committed Git path/object/digest; fact and citation readers require
+  immutable Git source. A navigation publication or successful member query
+  cannot supply that input, establish evidence completeness, or erase its
+  absent, corrupt or out-of-scope state. Committed root and explicitly selected
+  focused unit-bound SCIP inputs retain their existing behavior, including no
+  focused root fallback. This STOP concerns generated-bundle evidence admission;
+  it does not disable independent committed evidence or the implemented routed
+  navigation adapter. Ordinary managed runtime installation remains nil.
+
+  A future GO requires a bounded exact member iterator, complete-root candidate
+  and coverage identity, final publication/source fencing, cross-member
+  definition/reference joins, and immutable generated-source citation custody.
+  Repeated independent single-member extraction or concatenating members cannot
+  substitute for those contracts. No such iterator, schema, worker or cache is
+  added by this decision. The neutral boundary regression uses sealed managed
+  controls with a modeled physical navigation reader and actual immutable Git
+  evidence reads; it cannot establish native generation or product-scale closure.
+  The full neutral closure, routed Settings lineage composition and separately
+  authorized target closure remain open under T45.9's unchanged acceptance
+  criteria. Their source-free receipt must retain exact accepted service
+  incarnations and admitted regular-source Git blob bytes from
+  `docs/SIZING_ASSUMPTIONS.md`; small fixtures and filesystem totals cannot
+  satisfy the 5,000-service/12-GB design target. The T45.6 corpus waiver remains
+  unpassed, and no registration, scale, release or `DO_NOT_RELEASE` decision
+  changes.
+
+  Cost: this decision and its regression add zero production query/request,
+  sync-tick, startup/restart, retry/no-op or publication work. Existing locks,
+  cache invalidation, concurrency, memory/disk and child-process bounds remain
+  unchanged; there is no new corpus/shard read, hashing pass, retained runtime
+  state, schema migration or background job. Tests alone create and clean
+  bounded neutral Git fixtures and modeled publication controls.
+
+  The neutral restore check first failed on an inherited raw substring oracle:
+  the lawful `repo.latest_typed_job` field type and inert reference name
+  `typed_index_job` without transporting that table. The correction checks
+  actual native table declarations and row IDs, positively verifies the
+  precious intent declaration/row shape, and preserves strict replay, poison
+  exclusion and restored-authority fences. Export, parser, backup bytes and
+  restore behavior are unchanged; this is a test correction, not a relaxed
+  derived-state exclusion.
+
+  Decision-slice validation: complete navigation, three SCIP consumer packages
+  and typed-index contract tests pass; complete navigation race and focused
+  real backup/restore normal/race pass. Focused extraction-scope, real-store
+  source/intent/operator fences, operator API and exact replay-declaration checks
+  pass, as do affected vet, pinned lint, docs, glossary and whitespace gates.
+  Independent source/documentation/cost review records all severity counts zero.
+  No SurrealDB child remains after these checks. These are decision/boundary
+  regressions, not a full native neutral or target closure or hosted CI result.

@@ -15341,6 +15341,28 @@ validation decision. The closure receipt uses the exact accepted-service and
 admitted-source-byte dimensions in `docs/SIZING_ASSUMPTIONS.md`; aggregate
 filesystem size or total catalog rows cannot substitute for them.
 
+T45.9 decision (2026-10-03): **STOP** for generated-bundle evidence admission.
+Managed navigation does not replace the evidence contract's selected committed
+Git SCIP input or supply its coverage/citation authority. Independent committed
+root and focused unit-bound evidence retain their current behavior; missing,
+corrupt and out-of-scope inputs remain visible, with no focused root fallback.
+The first ticket slice records this decision and a neutral cross-plane regression
+using sealed managed controls, modeled physical navigation and actual immutable
+Git evidence reads. It establishes neither native cold generation nor a complete
+neutral closure. Full neutral closure, T45.8b Settings/backend composition and
+the separately authorized target closure remain open. Target selection must
+bind corpus/commit/profile/tool/host and the exact accepted-service and
+admitted-source-byte dimensions above. Ordinary providers remain unavailable;
+the T45.6 waiver is not PASS, and no scale or release claim changes.
+The neutral restore regression's raw table-name substring oracle was corrected
+to check native declarations and row IDs, allowing the existing inert
+`latest_typed_job` reference while preserving derived-byte exclusion and strict
+replay. The original failed run remains failed; production export is unchanged.
+Decision-slice normal/race, affected vet/pinned lint, docs/glossary and scoped
+source/operator/extraction/restore checks pass, with independent review finding
+all severity counts zero. Full T45.9 acceptance remains open; these checks do not
+establish native generation, installed Settings parity or product-scale closure.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

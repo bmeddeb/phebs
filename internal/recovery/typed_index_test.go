@@ -171,11 +171,16 @@ func TestTypedIndexRegenerateOnRestore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(export), "typed_index_intent") || !strings.Contains(string(export), profile.Digest()) {
+	if !strings.Contains(string(export), "DEFINE TABLE typed_index_intent ") ||
+		!strings.Contains(string(export), "id: typed_index_intent:") ||
+		!strings.Contains(string(export), profile.Digest()) {
 		t.Fatal("precious profile intent is missing")
 	}
+	// Inert repo links and their owned field type may name an excluded table.
+	// Its native declaration and row IDs must still be absent.
 	for _, table := range strings.Split(derivedExportTables, ",") {
-		if strings.Contains(string(export), table) {
+		if strings.Contains(string(export), "DEFINE TABLE "+table+" ") ||
+			strings.Contains(string(export), "id: "+table+":") {
 			t.Fatalf("derived table %s traveled in backup", table)
 		}
 	}
