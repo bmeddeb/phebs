@@ -8971,8 +8971,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   existing CSRF boundary and audit target. Status reauthorizes repository
   visibility and indexed/evidence revision, authenticates desired source and
   profile identity, and prioritizes stale/restored authority over old attempt
-  progress. Queued planning requires an actual linked pending/claimed/running
-  coordinator; desired alone never invents work. Missing collected coordinator
+  progress. Queued planning uses the exact desired-root generation schedule, including
+  unmaterialized, pending and running work after coordinator completion; a
+  schedule failure is terminal even before an attempt exists. Before schedule
+  creation, linked pending/claimed/running coordinator evidence supplies planning.
+  Desired or coordinator completion alone never invents work. Missing collected coordinator
   history is unavailable. Two optional derived repository fields link the
   coordinator and root within the existing fenced enqueue transaction; they
   are not precious backup authority and restored/legacy reads mint no identity.
@@ -8981,12 +8984,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   status performs one repository authorization read. Installed status performs
   two repository authorization reads, two source/intent authority passes, the
   shared bounded state/attempt/check/current proof reads, one desired-request
-  control read, one repository-link point read and at most one coordinator
+  control read, one desired-schedule point read, one repository-link point read
+  and at most one coordinator
   point read. Exact check/current authentication may repeat bounded control
   reads/plan decoding; there is no cached single-row claim. New link/job reads
   charge the existing request read meter before the database call. No file,
   corpus, shard, source inventory, filesystem hash or job-history scan occurs.
-  Preview repeats that read path plus bounded request encoding/admission.
+  Preview repeats that read path plus bounded request encoding/admission, one
+  read-only source/intent authority pass and one exact request-parent point read.
   Enqueue repeats preview, an expected-revision authority read, existing
   admission/pending-job fences and transaction, then status refresh. A new
   admitted request adds one repository row update to the existing transaction;
@@ -9003,7 +9008,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   repository names 512 bytes and named selections 128 bytes. Only active
   planning/indexing/validating/publishing schedule one chained five-second
   selected-status read; settled/unavailable states do not poll. Failures retain
-  last confirmed state and closed public messages, with exact-request retry.
+  last confirmed state and closed public messages. A transient failed active poll
+  schedules the next five-second read; terminal success stops polling. Exact
+  enqueue retry confirms the original request without admitting another attempt.
   Repository/purpose URL changes dispose old reads/mutations and preview
   identity; source/profile drift rejects stale enqueue server-side. File's
   unavailable navigation links only administrators to that repository's
@@ -9016,7 +9023,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   derived job table is excluded. Selected replay accepts only the exact owned
   `latest_typed_job` optional-record declaration, never arbitrary record fields
   or target tables; the existing optional-string recipe covers the root. A
-  fresh production-command neutral export is75,741bytes with digest
+  fresh production-command neutral export is 75,741 bytes with digest
   `sha256:16f62b29b1f310d3051a430c60bee5f890af1ff244c57ff98bc95800159d05d8`
   and passes the bounded selected replay preflight. Full-schema export authoring
   retains its separate historical contract; excluded derived-table recipes are
@@ -9028,17 +9035,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   T45.8b validation (2026-10-03): affected API/auth, typed store and command,
   native selected replay and archive/restore gates pass, including changed-path
-  race, vet/lint, generated API parity,744 UI tests/build/lint and docs/glossary.
+  race, vet/lint, generated API parity, 744 UI tests/build/lint and docs/glossary.
   Canonical Noble Chromium uses the unchanged pinned AMD64 image
   `sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac`
-  in a temporary personal Rosetta renderer VM (two CPUs,6GiB RAM,16GiB disk).
+  in a temporary personal Rosetta renderer VM (two CPUs, 6 GiB RAM, 16 GiB disk).
   Eight preview fixtures and eight ordinary Settings receipts retain both
-  themes/densities and390px/desktop; fixture actions do not install a provider.
+  themes/densities and 390px/desktop; fixture actions do not install a provider.
   Strict unchanged readiness passes the same pinned neutral bundles/catalogs
   in an explicit whole-repository configuration with no analysis units and no
-  typed runtime. The make-dev-built binary uses a disposable1GiB APFS data
+  typed runtime. The make-dev-built binary uses a disposable 1 GiB APFS data
   volume with unchanged admission bounds. Configuration/image/pixel provenance,
-  the27,095-byte Settings chunk (8.04kB reported gzip), and qualified local
+  the 27,095-byte Settings chunk (8.04 kB reported gzip), and qualified local
   interaction/capture timing are retained in `ui/receipts/t458b.json`.
   Loopback TCP bridging changes no Chromium flags or product path; indexing
   anatomy is never masked and capture verifies clearance below sticky chrome.
@@ -9047,10 +9054,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Earlier host-volume broader command verification is retained as FAIL: three
   existing phase-nine native
   lifecycle compositions expire at their fixed deadlines. One bounded short
-  comparison reproduces the same180-second boundary at exact base c2b860ec and
+  comparison reproduces the same 180-second boundary at exact base c2b860ec and
   candidate after regenerable Go-cache cleanup. This establishes inherited
   reproduction of that short case, not an exact pressure cause or an individual
-  base run for the two600-second variants. Affected typed command and native
+  base run for the two 600-second variants. Affected typed command and native
   archive/restore checks remain separately PASS. The default focused T30.7
   neutral cohort indexed exact HEAD but lacked the v2 source-generation control
   needed for current services/relationships; its diagnostic is retained and
@@ -9061,14 +9068,43 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 
   A corrected test-environment confirmation closes the full command gate:
-  unchanged short native workspace composition passes in21.858s, and the complete
-  `cmd/phebs` package passes in946.515s with `TMPDIR` on the disposable1GiB
+  unchanged short native workspace composition passes in 21.858s, and the complete
+  `cmd/phebs` package passes in 946.515s with `TMPDIR` on the disposable 1 GiB
   APFS volume. The volume has physical capacity headroom; source, fixture inputs,
   native scope/admission policy, per-turn budgets and fixed deadlines are
   unchanged. This establishes that complete package result on the stated
   filesystem, not an exact retrospective cause for the host-volume failures.
   All children joined before volume detach. The default focused-cohort gap and
   disabled hosted Actions remain separately qualified; all T45.8b affected and
-  canonical receipt gates pass on the ticket lineages, with independent exact
-  source/receipt review critical/high/medium/low0. No main integration follows
+  canonical receipt gates pass on the ticket lineages, with the prior independent exact
+  source/receipt review recording critical/high/medium/low 0. Ben's subsequent
+  real-store review found the coordinator handoff and consumed-purpose gaps,
+  superseding that branch-close assessment; the correction record below owns
+  fresh validation. No main integration follows
   merely from validation readiness.
+
+- **2026-10-03 — T45.8b review correction: exact queue projection and consumed requests.**
+  Ben reproduced the coordinator-done/schedule-queued interval and immutable
+  purpose reuse against the real store. Status now authenticates the desired
+  root's single generation schedule and reports planning until its queued work
+  starts, including when older navigation remains published. Failed chunks
+  report failed before BeginTypedIndex; neither desired nor coordinator done
+  is treated as perpetual work. The schedule shares the worker's exact spec
+  constructor and existing bounded validation. It adds one metered point read
+  per installed status with a desired request, no history scan or worker.
+
+  Product decision: a recorded exact request is consumed, including active,
+  successful, failed, canceled and superseded purposes. No new attempt is
+  minted at unchanged source/profile/universe authority. POST /plan returns
+  422 with closed detail `request_already_recorded` when that exact immutable
+  parent exists, including its retained collection tombstone. Settings explains
+  the limit and disables review for that selection until authority or purpose
+  changes; refreshing identical authority cannot repair it. A different
+  unrecorded purpose remains admissible. Indexed HEAD or installed authority
+  change creates a new exact request. POST /enqueue preserves the existing exact
+  network-confirmation path; it never allocates a second job for identical bytes.
+  Preview adds one authority pass and one metered bounded parent-row read;
+  query, sync, startup, retry, publication, locks, caches, concurrency, child and
+  disk/memory limits remain unchanged. Poll failures retain last-good active
+  state and continue the existing serial five-second chain until terminal state
+  or disposal. No extra timer, parallel poll, provider or background work is added.

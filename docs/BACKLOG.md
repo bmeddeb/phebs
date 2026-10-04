@@ -15286,20 +15286,25 @@ presentation lineage adds server-bound Settings controls, closed bounded
 responses, exact retry, selected-status polling and administrator File links.
 Affected authorization/CSRF, API/auth, real-store normal/race, typed command,
 selected restore recipe/production export and base/candidate archive checks pass;
-all744 UI tests, build/lint and generated API parity pass. Canonical pinned Noble
+all 744 UI tests, build/lint and generated API parity pass. Canonical pinned Noble
 Chromium checks retain eight preview and eight ordinary Settings pixels across
-both densities/themes and390px/desktop, with keyboard, motion, labels, overflow,
+both densities/themes and 390px/desktop, with keyboard, motion, labels, overflow,
 console and exact retry/state checks. The unchanged strict cohort-readiness
 oracle passes an explicit whole-repository configuration for the same neutral
 bundles/catalogs; this is ordinary default-dark Settings mechanics, not focused
 pipeline closure. `ui/receipts/t458b.json` retains provenance, bundle/timing and
-failure qualifications. Immutable source and canonical receipt review is all0. Ticket integration
-remains a distinct gate.
+failure qualifications. The prior immutable review recorded all 0, then Ben's real-store review
+reopened queue handoff, consumed-purpose and transient-poll gaps. The correction
+reads the desired generation schedule, preserves planning through coordinator
+completion and reports early chunk failure. Recorded exact purposes cannot
+start a new attempt: plan refuses with `request_already_recorded`; Settings
+explains this and preserves exact enqueue transport retry. Active polling
+continues after a transient read error. Ticket integration remains a distinct gate.
 
 The earlier host-volume command run is retained as FAIL on three phase-nine lifecycle
 compositions; the short composition reproduces the same deadline at both exact
 base and candidate after cache cleanup. The unchanged short case then passed
-in21.858s and the full command package passed in946.515s with test temporary
+in 21.858s and the full command package passed in 946.515s with test temporary
 roots on the bounded1GiB APFS volume and unchanged admission policy. No exact
 original capacity cause is inferred; the successful run closes this package
 gate without rewriting the failed runs.

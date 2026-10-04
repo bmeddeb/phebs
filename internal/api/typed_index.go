@@ -16,6 +16,7 @@ const TypedIndexPath = "/api/code-navigation-indexing"
 const TypedIndexResourceProfile = "native-arm64-bounded-v1"
 
 type typedOperatorStore interface {
+	CheckTypedIndexPreview(context.Context, string, string, []byte) error
 	ReadTypedIndexOperator(context.Context, string) (store.TypedIndexOperator, error)
 	EnqueueTypedIndexExpected(context.Context, string, string, []byte) (store.TypedIndexStatus, error)
 }
@@ -133,10 +134,14 @@ func typedIndexRead(ctx context.Context, opts Options, repository string) (Typed
 	switch {
 	case status.Stale || status.RestoreRequired:
 		view.State = "stale"
+	case snapshot.Schedule != nil && snapshot.Schedule.Status == store.GenerationScheduleSuperseded:
+		view.State = "canceled"
 	case status.Canceled || status.Reason == typedindex.Canceled || snapshot.Coordinator == store.StatusCanceled:
 		view.State = "canceled"
-	case status.Reason != "" || snapshot.Coordinator == store.StatusFailed:
+	case status.Reason != "" || snapshot.Coordinator == store.StatusFailed || snapshot.Schedule != nil && snapshot.Schedule.Failed > 0:
 		view.State = "failed"
+	case snapshot.Schedule != nil && snapshot.Schedule.Status == store.GenerationScheduleActive && (snapshot.Schedule.NextOffset < snapshot.Schedule.TotalItems || snapshot.Schedule.Pending > 0 || snapshot.Schedule.Running > 0) && status.Stage == "":
+		view.State = "planning"
 	case status.Stage == store.TypedPlanning || status.Stage == store.TypedPreflight:
 		view.State = "planning"
 	case status.Stage == store.TypedExecution:
@@ -214,9 +219,15 @@ func registerTypedIndex(api huma.API, opts Options) {
 	type planOut struct{ Body TypedIndexPreview }
 	huma.Register(api, huma.Operation{OperationID: "plan-code-navigation-indexing", Method: http.MethodPost, Path: TypedIndexPath + "/plan", MaxBodyBytes: 4096}, func(ctx context.Context, in *planIn) (*planOut, error) {
 		setAuditTarget(ctx, in.Body.Repository)
-		preview, _, err := typedIndexPreview(ctx, opts, in.Body)
+		preview, raw, err := typedIndexPreview(ctx, opts, in.Body)
 		if err != nil {
 			return nil, err
+		}
+		if err := opts.Store.(typedOperatorStore).CheckTypedIndexPreview(ctx, in.Body.Repository, in.Body.ExpectedRevision, raw); err != nil {
+			if errors.Is(err, store.ErrTypedIndexRequestRecorded) {
+				return nil, huma.Error422UnprocessableEntity("request_already_recorded")
+			}
+			return nil, typedIndexHTTPError(err)
 		}
 		return &planOut{Body: preview}, nil
 	})
