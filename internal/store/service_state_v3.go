@@ -3560,6 +3560,9 @@ SELECT * FROM service_state_v3_plan ORDER BY digest LIMIT $limit`, map[string]an
 		referencedIDs = make([]models.RecordID, len(planRows))
 		referencedDigests = make([]string, len(planRows))
 		for i, record := range planRows {
+			if !validSHA256Digest(record.ScheduleDigest) {
+				return 0, 0, 0, ErrInvalidServiceStateV3
+			}
 			referencedIDs[i] = models.NewRecordID("generation_schedule", strings.TrimPrefix(record.ScheduleDigest, "sha256:"))
 			referencedDigests[i] = record.ScheduleDigest
 		}

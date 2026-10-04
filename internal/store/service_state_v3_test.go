@@ -2086,8 +2086,9 @@ func TestServiceStateV3RestoreValidationWithoutDerivedSchedules(t *testing.T) {
 	if err = s.PublishServiceCatalogV3Candidate(ctx, generation("b", "Orders B")); err != nil {
 		t.Fatal(err)
 	}
-	if running, e := s.BeginServiceStateV3Reconcile(ctx, repository); e != nil || running.Plan == nil {
-		t.Fatal(running, e)
+	running, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil || running.Plan == nil {
+		t.Fatal(running, err)
 	}
 	for _, restored := range []bool{false, true} {
 		if report, e := s.validateServiceCatalogV3Precious(ctx, restored); e != nil || report.StatePlans != 3 {
@@ -2104,6 +2105,20 @@ func TestServiceStateV3RestoreValidationWithoutDerivedSchedules(t *testing.T) {
 	}
 	if report, e := s.validateServiceCatalogV3Precious(ctx, true); e != nil || report.StatePlans != 3 {
 		t.Fatal("restore validation refused excluded schedules", report, e)
+	}
+	for _, digest := range []string{"", "sha256:" + strings.Repeat("0", 4096), running.Plan.ScheduleDigest} {
+		if _, err := storeQuery[any](ctx, s.accounting, s.db,
+			"UPDATE $rid SET schedule_digest = $digest RETURN NONE", map[string]any{
+				"rid":    models.NewRecordID("service_state_v3_plan", strings.TrimPrefix(running.Plan.Digest, "sha256:")),
+				"digest": digest,
+			}, storeWrite(1)); err != nil {
+			t.Fatal(err)
+		}
+		_, err := s.validateServiceCatalogV3Precious(ctx, true)
+		if digest != running.Plan.ScheduleDigest && !errors.Is(err, ErrInvalidServiceStateV3) ||
+			digest == running.Plan.ScheduleDigest && err != nil {
+			t.Fatal("restore validation of imported schedule reference", err)
+		}
 	}
 	if err = s.RestoreSelectedServiceStateV3ForRestore(ctx); err != nil {
 		t.Fatal("restore rollback", err)

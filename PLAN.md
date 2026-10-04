@@ -9447,6 +9447,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Restore also checks returned schedule IDs against their digests, so a changed
   internally valid digest cannot turn a present native row into an absent plan
   reference.
+  Imported reference digests are shape-checked before becoming query inputs;
+  malformed or oversized references refuse without the schedule inventory read.
 
   **Cost.** Validation retains the same query count and returned-row bounds.
   Offline restore adds two bounded reference arrays, at most 24,576 native IDs
