@@ -371,9 +371,12 @@ func TestRestoreReplayOwnedExportFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(output, DatabaseName)
-	if err := runSurreal(ctx, runtime.Surreal.Path, []string{
-		"export", "--endpoint", cliEndpoint(runtime.Endpoint), "--namespace", "phebs", "--database", "phebs", "--log", "none", path,
-	}, runtime.Pass); err != nil {
+	command := []string{"export", "--endpoint", cliEndpoint(runtime.Endpoint), "--namespace", "phebs", "--database", "phebs", "--log", "none", path}
+	// Separate current precious-only export; the retained full-schema fixture stays exact.
+	if os.Getenv("PHEBS_RESTORE_REPLAY_PRECIOUS_ONLY") == "1" {
+		command = databaseExportCommand(cliEndpoint(runtime.Endpoint), path)[1:]
+	}
+	if err := runSurreal(ctx, runtime.Surreal.Path, command, runtime.Pass); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(path, 0o600); err != nil {
@@ -384,4 +387,42 @@ func TestRestoreReplayOwnedExportFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("neutral owned-schema fixture retained: %s bytes=%d digest=%s", path, artifact.Size, artifact.SHA256)
+}
+
+func TestRestoreReplayTypedOperatorDefinitions(t *testing.T) {
+	for _, tc := range []struct {
+		line string
+		want bool
+	}{
+		{"DEFINE FIELD OVERWRITE latest_typed_job ON repo TYPE none | record<typed_index_job> PERMISSIONS FULL;", true},
+		{"DEFINE FIELD OVERWRITE latest_typed_root ON repo TYPE none | string PERMISSIONS FULL;", true},
+		{"DEFINE FIELD OVERWRITE foreign ON repo TYPE none | record<typed_index_job> PERMISSIONS FULL;", false},
+		{"DEFINE FIELD OVERWRITE latest_typed_job ON foreign TYPE none | record<typed_index_job> PERMISSIONS FULL;", false},
+		{"DEFINE FIELD OVERWRITE latest_typed_job ON repo TYPE none | record<other> PERMISSIONS FULL;", false},
+	} {
+		if got := restoreReplayOwnedDefinition(tc.line); got != tc.want {
+			t.Fatalf("definition accepted=%v want=%v: %s", got, tc.want, tc.line)
+		}
+	}
+}
+
+// Consumes a fresh current-schema export, never relabeling retained frozen fixtures.
+func TestRestoreReplayCurrentOperatorExport(t *testing.T) {
+	path := os.Getenv("PHEBS_RESTORE_OPERATOR_EXPORT")
+	if path == "" {
+		t.Skip("fresh current operator export not selected")
+	}
+	artifact, err := inspectArtifact(t.Context(), path, DatabaseName, "precious", "application/surrealql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := prepareRestoreReplay(t.Context(), path, artifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = prepared.close() }()
+	if prepared.census.Definitions < 2 {
+		t.Fatal("missing schema definitions", prepared.census)
+	}
+	t.Logf("current native export accepted: bytes=%d digest=%s", artifact.Size, artifact.SHA256)
 }

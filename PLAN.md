@@ -8946,3 +8946,129 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lint, module, docs and glossary checks pass. These finite validation runs add
   no production work. The earlier workspace failure remains failed; no Bazel
   corpus, registration, release, main merge or push is inferred.
+
+- **2026-10-03 — T45.8b exact managed-index operator API and Settings handoff.**
+  Ben's continuation after the named next ticket routes the presentation change
+  through `../phebs-ux`; backend and shared spine remain in this checkout.
+  Administrator-only provider/status/request-preview/enqueue endpoints project
+  the installed runtime and sealed repository profile. Ordinary `serve` still
+  installs no runtime, so the endpoints report unavailable and refuse enqueue.
+  The closed three-provider order is Bazel, Go module/workspace, existing
+  artifact. The browser selects only the installed profile name, named config,
+  fixed resource policy and publish/canary/dry-run purpose. No browser command,
+  path, environment, cache, credential, target expansion or resource override
+  is admitted. The request preview is pure canonical request construction;
+  native package planning occurs only after explicit enqueue. Canary/dry-run
+  remain nonpublishing. Current navigation still requires the existing complete
+  publication proof; a queue link, checked request or UI fixture is no substitute.
+
+  The expected revision hashes exact source/incarnation/epoch, profile epoch
+  and digest, and universe digest; progress/desired/current are deliberately
+  excluded so an unconfirmed transport can retry identical admitted bytes.
+  Preview digest and deterministic idempotency key are recomputed at enqueue.
+  Existing admission and atomic source/intent/profile fences still reject
+  changes between the expected-revision read and write. Both POSTs require the
+  existing CSRF boundary and audit target. Status reauthorizes repository
+  visibility and indexed/evidence revision, authenticates desired source and
+  profile identity, and prioritizes stale/restored authority over old attempt
+  progress. Queued planning requires an actual linked pending/claimed/running
+  coordinator; desired alone never invents work. Missing collected coordinator
+  history is unavailable. Two optional derived repository fields link the
+  coordinator and root within the existing fenced enqueue transaction; they
+  are not precious backup authority and restored/legacy reads mint no identity.
+
+  Cost: provider descriptors are fixed three rows with no store read. Disabled
+  status performs one repository authorization read. Installed status performs
+  two repository authorization reads, two source/intent authority passes, the
+  shared bounded state/attempt/check/current proof reads, one desired-request
+  control read, one repository-link point read and at most one coordinator
+  point read. Exact check/current authentication may repeat bounded control
+  reads/plan decoding; there is no cached single-row claim. New link/job reads
+  charge the existing request read meter before the database call. No file,
+  corpus, shard, source inventory, filesystem hash or job-history scan occurs.
+  Preview repeats that read path plus bounded request encoding/admission.
+  Enqueue repeats preview, an expected-revision authority read, existing
+  admission/pending-job fences and transaction, then status refresh. A new
+  admitted request adds one repository row update to the existing transaction;
+  exact idempotent reuse adds none and creates no second native job. Existing
+  transaction/worker/publication locks, reservations, concurrency and output,
+  wall, memory/disk and child limits remain unchanged. Ordinary query, sync,
+  startup/restart, retry/no-op and publication gain no background work, cache or
+  child; schema gains only two optional fields, no index or corpus migration.
+
+  Settings downloads the existing repository inventory once at mount and each
+  explicit/post-enqueue refresh, admits at most 4,096 rows after its existing
+  download/JSON parse, and sorts O(R log R). That is not a preparse byte bound.
+  New typed responses stream at most 32 KiB; mutation bodies are at most 4 KiB,
+  repository names 512 bytes and named selections 128 bytes. Only active
+  planning/indexing/validating/publishing schedule one chained five-second
+  selected-status read; settled/unavailable states do not poll. Failures retain
+  last confirmed state and closed public messages, with exact-request retry.
+  Repository/purpose URL changes dispose old reads/mutations and preview
+  identity; source/profile drift rejects stale enqueue server-side. File's
+  unavailable navigation links only administrators to that repository's
+  Settings section, focusing its heading without animation. UI fixtures prove
+  rendering/interaction only and cannot enable a provider. The T45.6 corpus
+  waiver remains a waiver, never PASS. This ticket adds no scale/release claim,
+  ceremony authority or inferred main integration/push.
+
+  Native precious-only exports may carry the inert repository links while the
+  derived job table is excluded. Selected replay accepts only the exact owned
+  `latest_typed_job` optional-record declaration, never arbitrary record fields
+  or target tables; the existing optional-string recipe covers the root. A
+  fresh production-command neutral export is75,741bytes with digest
+  `sha256:16f62b29b1f310d3051a430c60bee5f890af1ff244c57ff98bc95800159d05d8`
+  and passes the bounded selected replay preflight. Full-schema export authoring
+  retains its separate historical contract; excluded derived-table recipes are
+  not silently accepted. Restore clears desired/control authority before any
+  operator read; dangling job links grant nothing and new admission overwrites
+  them in the existing transaction. The parser adds one fixed string recipe,
+  no row expansion, query, lock, child or runtime fallback.
+
+
+  T45.8b validation (2026-10-03): affected API/auth, typed store and command,
+  native selected replay and archive/restore gates pass, including changed-path
+  race, vet/lint, generated API parity,744 UI tests/build/lint and docs/glossary.
+  Canonical Noble Chromium uses the unchanged pinned AMD64 image
+  `sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac`
+  in a temporary personal Rosetta renderer VM (two CPUs,6GiB RAM,16GiB disk).
+  Eight preview fixtures and eight ordinary Settings receipts retain both
+  themes/densities and390px/desktop; fixture actions do not install a provider.
+  Strict unchanged readiness passes the same pinned neutral bundles/catalogs
+  in an explicit whole-repository configuration with no analysis units and no
+  typed runtime. The make-dev-built binary uses a disposable1GiB APFS data
+  volume with unchanged admission bounds. Configuration/image/pixel provenance,
+  the27,095-byte Settings chunk (8.04kB reported gzip), and qualified local
+  interaction/capture timing are retained in `ui/receipts/t458b.json`.
+  Loopback TCP bridging changes no Chromium flags or product path; indexing
+  anatomy is never masked and capture verifies clearance below sticky chrome.
+  Hosted Actions is account-disabled, so no hosted CI PASS is asserted.
+
+  Earlier host-volume broader command verification is retained as FAIL: three
+  existing phase-nine native
+  lifecycle compositions expire at their fixed deadlines. One bounded short
+  comparison reproduces the same180-second boundary at exact base c2b860ec and
+  candidate after regenerable Go-cache cleanup. This establishes inherited
+  reproduction of that short case, not an exact pressure cause or an individual
+  base run for the two600-second variants. Affected typed command and native
+  archive/restore checks remain separately PASS. The default focused T30.7
+  neutral cohort indexed exact HEAD but lacked the v2 source-generation control
+  needed for current services/relationships; its diagnostic is retained and
+  neither passed nor waived. Whole-cohort Settings receipts do not close it.
+  No scale, corpus, release, ceremony, installed-provider or integration claim
+  advances. Temporary renderer/demo resources are task-owned and disposable;
+  retained native custody and other lineages remain untouched.
+
+
+  A corrected test-environment confirmation closes the full command gate:
+  unchanged short native workspace composition passes in21.858s, and the complete
+  `cmd/phebs` package passes in946.515s with `TMPDIR` on the disposable1GiB
+  APFS volume. The volume has physical capacity headroom; source, fixture inputs,
+  native scope/admission policy, per-turn budgets and fixed deadlines are
+  unchanged. This establishes that complete package result on the stated
+  filesystem, not an exact retrospective cause for the host-volume failures.
+  All children joined before volume detach. The default focused-cohort gap and
+  disabled hosted Actions remain separately qualified; all T45.8b affected and
+  canonical receipt gates pass on the ticket lineages, with independent exact
+  source/receipt review critical/high/medium/low0. No main integration follows
+  merely from validation readiness.

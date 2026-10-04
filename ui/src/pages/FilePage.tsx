@@ -69,7 +69,7 @@ type SourceState =
 
 // T5.3/T5.5: CodeMirror 6 read-only viewer with breadcrumbs, a sticky
 // metadata header, ?L= deep-link line, and syntax highlighting.
-export default function FilePage({ params }: { params: URLSearchParams }) {
+export default function FilePage({ params, isAdmin = false }: { params: URLSearchParams; isAdmin?: boolean }) {
   const repo = params.get('repo') ?? ''
   const path = params.get('path') ?? ''
   const ref = params.get('ref') ?? ''
@@ -223,6 +223,7 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
                 <CodeNavigationPanel
                   position={navPosition}
                   navigation={navigation}
+                  indexingHref={isAdmin ? href('/settings', { repo, section: 'code-navigation-indexing' }) : undefined}
                 />
               )}
             </div>
@@ -236,9 +237,11 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
 function CodeNavigationPanel({
   position,
   navigation,
+  indexingHref,
 }: {
   position: SourcePosition
   navigation: CodeNavigationState | null
+  indexingHref?: string
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -283,7 +286,7 @@ function CodeNavigationPanel({
             {navigation.error}
           </Notification>
         )}
-        {unavailable && <PanelMessage>SCIP data is not available for this revision.</PanelMessage>}
+        {unavailable && <PanelMessage>SCIP data is not available for this revision.{indexingHref && <><br /><a href={indexingHref}>Open code navigation indexing</a></>}</PanelMessage>}
         {empty && <PanelMessage>No precise symbol exists at this position.</PanelMessage>}
         {hover && (
           <section className={css({ marginBottom: '16px' })}>

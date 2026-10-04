@@ -383,6 +383,12 @@ func (s *Surreal) EnqueueTypedIndex(ctx context.Context, repository string, raw 
 	vars["root"] = digest
 	vars["body"] = intentBody
 	vars["pending_ids"] = pending
+	if len(pending) > 1 {
+		return TypedIndexStatus{}, typedindex.Invalid
+	}
+	if len(pending) == 1 {
+		vars["operator_job"] = pending[0]
+	}
 	admissionFence, err := s.typedAdmissionSnapshot(ctx, true, vars)
 	if err != nil {
 		return TypedIndexStatus{}, err
@@ -396,9 +402,12 @@ UPDATE $intent SET body=$body RETURN NONE;`
 			return TypedIndexStatus{}, e
 		}
 		vars["new_job"] = typedID(string(JobTypedIndex), nonce)
+		vars["operator_job"] = vars["new_job"]
 		write += `CREATE ONLY $new_job CONTENT { target:$repository,status:'pending',attempts:0,created_at:time::now(),pending_key:$repository,force:false } RETURN NONE;`
 		count++
 	}
+	write += `UPDATE $repo SET latest_typed_job=$operator_job, latest_typed_root=$root RETURN NONE;`
+	count++
 	err = s.typedWrite(ctx, typedSourceFenceSQL+typedIntentFenceSQL+admissionFence+`
 IF (SELECT VALUE id FROM typed_index_job WHERE pending_key=$repository AND status='pending' ORDER BY created_at LIMIT 1) != $pending_ids { THROW 'typed-stale'; };
 `+write, vars, count)
@@ -909,6 +918,11 @@ func (s *Surreal) GetTypedIndexStatus(ctx context.Context, repository string) (T
 	if err != nil {
 		return TypedIndexStatus{}, err
 	}
+	return s.typedIndexStatus(ctx, a)
+}
+
+func (s *Surreal) typedIndexStatus(ctx context.Context, a typedAuthority) (TypedIndexStatus, error) {
+	repository := a.source.Name
 	out := TypedIndexStatus{Desired: a.intent.Desired, Canceled: a.intent.Canceled, RestoreRequired: a.intent.RestoreRequired}
 	stateRaw, err := s.typedRead(ctx, "typed_index_state", repository)
 	if err != nil {

@@ -1,0 +1,261 @@
+{
+  "schema": "phebs-t458b-presentation-receipt-v1",
+  "date": "2026-10-03",
+  "source": {
+    "backend": "f07e88508828961dcf6603d3aba03559c6f9a1bb",
+    "ui": "bf7c9fe774f77b74f9f8da802472359f1211e2d3",
+    "combined_make_dev_build": "278e8615",
+    "receipt_capture": "sticky-header clearance correction; final commit records these bytes",
+    "built_binary": "sha256:e29b0cc008e2b9cdff9e75c52bd32672c191da0db8f1bb4bdbc8d7a92cdf1275",
+    "build_was_git_clean": false
+  },
+  "renderer": {
+    "image": "sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+    "os": "Ubuntu Noble",
+    "architecture": "linux/amd64",
+    "browser": "package-matched Chromium",
+    "execution": "personal temporary ARM64 VZ VM with Rosetta",
+    "cpu": 2,
+    "memory_gib": 6,
+    "disk_gib": 16,
+    "browser_flags_changed": false,
+    "hosted_ci": false
+  },
+  "ordinary_cohort": {
+    "mode": "explicit whole-repository; no analysis units or typed runtime",
+    "configuration_digest": "sha256:431e9401cf0a5565ab7d801a6500b68ce002087fc77fbaecee35cbb27f063ba0",
+    "configuration_contains_ephemeral_bootstrap_password": true,
+    "data_volume_gib": 1,
+    "admission_policy_changed": false,
+    "strict_readiness": "unchanged exact two repositories/HEADs, settled jobs, current required services, complete orders-api relationships",
+    "bundles": [
+      {
+        "file": "docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+        "digest": "sha256:4cbc49a956b913e63914d014d210a063febdf90f5265ddb09fde3c569b1a1461"
+      },
+      {
+        "file": "spike/t323/t323-neutral-corpus.bundle",
+        "digest": "sha256:8d70693ee440ff7683f8c3a39cc9b6565dd265cbc546d40e961759f2237617fa"
+      }
+    ],
+    "catalogs": [
+      {
+        "file": "docs/fixtures/t33.5-service-directory/t335-service-catalog.json",
+        "digest": "sha256:7c495f76ed5660cc7f00d58a3089a77da2ebb860c7a22af6a76218a031f66ff0"
+      },
+      {
+        "file": "docs/fixtures/t34.4-service-search/t344-service-catalog.json",
+        "digest": "sha256:3308dd76d476a1dde641c3d5e794ba25288b450f81d0abcb6ea0cd1a64719e94"
+      }
+    ]
+  },
+  "checks": {
+    "managed_fixture_author_tests": 12,
+    "managed_fixture_compare_tests": 12,
+    "ordinary_settings_author_tests": 8,
+    "ordinary_settings_compare_tests": 8,
+    "strict_setup_author": "PASS",
+    "strict_setup_compare": "PASS",
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "widths": [
+      1280,
+      390
+    ],
+    "densities": [
+      "comfortable",
+      "dense"
+    ],
+    "keyboard": "heading focus, Tab through native controls, Enter review",
+    "accessibility": "named native controls, text states, visible focus, reduced motion, no document overflow",
+    "console_errors": 0,
+    "indexing_anatomy_masked": false,
+    "screenshot_max_diff_pixel_ratio": 0.001,
+    "fixture_scope": "request preview/exact retry,9 states, retained last-good selected polling, ordinary-user denial, File deep link, unavailable runtime; no provider execution",
+    "full_command_package": {
+      "result": "PASS",
+      "seconds": 946.515,
+      "source": "975a6b611dbc920f6128afdc630eeb0af37ea261",
+      "test_temporary_roots": "disposable1GiB APFS volume",
+      "source_and_admission_policy_changed": false
+    },
+    "short_native_workspace_on_bounded_volume": {
+      "result": "PASS",
+      "seconds": 21.858
+    }
+  },
+  "bundle": {
+    "file": "ui/dist/assets/SettingsPage-C6glFidL.js",
+    "bytes": 27095,
+    "reported_gzip_kb": 8.04,
+    "digest": "sha256:bf2fbfb5c1c3a9e6897e0efafd82a957321befeae51c9e7a13c829871ed4455f",
+    "new_dependencies": 0,
+    "inherited_large_chunk_warning": true
+  },
+  "fixture_timings": [
+    {
+      "theme": "light",
+      "width": 1280,
+      "density": "comfortable",
+      "fixtureReadyMillis": 1502,
+      "fixturePreviewMillis": 326,
+      "consoleErrors": 0
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "density": "dense",
+      "fixtureReadyMillis": 1389,
+      "fixturePreviewMillis": 262,
+      "consoleErrors": 0
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "density": "comfortable",
+      "fixtureReadyMillis": 1337,
+      "fixturePreviewMillis": 247,
+      "consoleErrors": 0
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "density": "dense",
+      "fixtureReadyMillis": 1228,
+      "fixturePreviewMillis": 369,
+      "consoleErrors": 0
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "density": "comfortable",
+      "fixtureReadyMillis": 1410,
+      "fixturePreviewMillis": 270,
+      "consoleErrors": 0
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "density": "dense",
+      "fixtureReadyMillis": 1418,
+      "fixturePreviewMillis": 269,
+      "consoleErrors": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "density": "comfortable",
+      "fixtureReadyMillis": 1396,
+      "fixturePreviewMillis": 239,
+      "consoleErrors": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "density": "dense",
+      "fixtureReadyMillis": 1391,
+      "fixturePreviewMillis": 256,
+      "consoleErrors": 0
+    }
+  ],
+  "timing_scope": "fixtureReadyMillis includes keyboard traversal; fixturePreviewMillis includes interaction and screenshot bookkeeping. Local mechanics only, no production API, indexing, user-validation or SLO claim.",
+  "pixels": [
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--dark--1280--comfortable.png",
+      "bytes": 61499,
+      "digest": "sha256:85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af"
+    },
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--dark--1280--dense.png",
+      "bytes": 61499,
+      "digest": "sha256:85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af"
+    },
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--dark--390--comfortable.png",
+      "bytes": 57016,
+      "digest": "sha256:631b346c6c5974011d03548b25f20a9667266fc3caf4dfa80c534d9ba16c7a55"
+    },
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--dark--390--dense.png",
+      "bytes": 57000,
+      "digest": "sha256:9ceb6f54a8e6af0568202f8358550bd60f0de89574d457935e2a868ea6bab59b"
+    },
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--light--1280--comfortable.png",
+      "bytes": 60545,
+      "digest": "sha256:7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e"
+    },
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--light--1280--dense.png",
+      "bytes": 60545,
+      "digest": "sha256:7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e"
+    },
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--light--390--comfortable.png",
+      "bytes": 55998,
+      "digest": "sha256:6804965b9eed6140153e1543940efa0c32a72f4dafe565754cf5c83ef05f25cd"
+    },
+    {
+      "file": "ui/receipts/baselines/typed-index-preview--light--390--dense.png",
+      "bytes": 56013,
+      "digest": "sha256:cfcf31b86e50ce0d9ca3e6bf86b89acc32982daf868ffc9d8276e14cff21f5bc"
+    },
+    {
+      "file": "ui/receipts/baselines/settings--dark--comfortable.png",
+      "bytes": 61384,
+      "digest": "sha256:b510526dff3d000dabc9c99db850b58b43ffcdf9ed2463543d817a69cc3b9825"
+    },
+    {
+      "file": "ui/receipts/baselines/settings--dark--dense.png",
+      "bytes": 61343,
+      "digest": "sha256:865b4f9c550473caa119d73e866b533642cb94b87a2c86c6e78b5bebb6bf7308"
+    },
+    {
+      "file": "ui/receipts/baselines/settings--light--comfortable.png",
+      "bytes": 60624,
+      "digest": "sha256:6bb3cc8b7a4819ae4a7d03b27a944ad73486965fa28e8186f6150424d6332551"
+    },
+    {
+      "file": "ui/receipts/baselines/settings--light--dense.png",
+      "bytes": 60605,
+      "digest": "sha256:b502b5a1919455df8b7135da0c7ab5202a7cf983d90977b04eb7f0bb58041832"
+    },
+    {
+      "file": "ui/receipts/baselines/settings-indexing-390--dark--comfortable.png",
+      "bytes": 53313,
+      "digest": "sha256:0103fa723bd04d6e7ad8db403582522c7a3550c247b724df1e5e6bd6e77a6ee3"
+    },
+    {
+      "file": "ui/receipts/baselines/settings-indexing-390--dark--dense.png",
+      "bytes": 53288,
+      "digest": "sha256:1bca9c7c28e2795b13bfe35bf6b9648302df53efeda6a7c09bc929f4063c3638"
+    },
+    {
+      "file": "ui/receipts/baselines/settings-indexing-390--light--comfortable.png",
+      "bytes": 52395,
+      "digest": "sha256:3de33b1eb013420d861cd33d377568adf4afbeb95b71feadc37c5ff18898669e"
+    },
+    {
+      "file": "ui/receipts/baselines/settings-indexing-390--light--dense.png",
+      "bytes": 52377,
+      "digest": "sha256:df95288fbc2e06d7d2bfcef73c923ed5543582657f6f683cecd2f4226d8b9fe6"
+    }
+  ],
+  "limitations": {
+    "hosted_actions": "account disabled; local pinned-renderer PASS does not assert hosted CI",
+    "default_focused_cohort": "exact HEAD indexed; missing v2 source-generation control leaves services/relationships unavailable. Not passed, waived or repaired. Whole-cohort receipts do not close focused pipeline.",
+    "broad_command_suite": "Earlier host-volume run FAIL at three phase9 deadlines remains retained. Subsequent complete package PASS946.515s on bounded APFS volume closes package gate; original exact capacity cause unestablished.",
+    "short_native_comparison": {
+      "base": "c2b860eca18d7df092be6418e7cd367daa15a4aa",
+      "candidate": "6a307dd7",
+      "base_seconds": 180.888,
+      "candidate_seconds": 180.924,
+      "result": "both FAIL at phase9 measurement deadline after cache cleanup; exact capacity cause unestablished; no base run for the two600-second variants"
+    },
+    "native_provider_registration": false,
+    "corpus_waiver_is_pass": false,
+    "scale_release_or_main_integration_claim": false
+  }
+}

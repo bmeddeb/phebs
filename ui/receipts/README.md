@@ -155,3 +155,58 @@ pinned or masked — the fixture root is only the repository-identity piece:
 | Indexing transitions ("Indexing…", "Cloning") | `awaitAbsent` terminal-state guards; `Failed` is terminal and fails the capture |
 | Fixture content drift | the t307 bundle pin (`T307_COMMIT`) binds the content |
 | Markdown-preview surface | page-scoped synthetic fixture (`receipt-fixture/markdown-preview`), never instance state |
+
+## T45.8b managed-index workflow fixtures
+
+The `typed-index` project exercises the administrator workflow through explicit
+page-scoped API fixtures; it installs no provider and proves no native execution
+or publication. It covers exact request preview/enqueue/retry, all nine states,
+last-good active-status polling, ordinary-user denial and File-to-Settings links.
+Desktop/390px, light/dark and comfortable/dense receipts exercise keyboard focus,
+native labels, reduced motion, document overflow and console errors. Capture fits
+the complete indexing panel below sticky chrome without masking its anatomy.
+
+Run `npm run receipts -- --project typed-index` against an already running Vite
+or product UI. Canonical pixels use the same digest-pinned Noble/Chromium image
+as CI. Local macOS captures belong in temporary output, never in `baselines/`.
+Synthetic profile availability is rendering evidence only; ordinary production
+serve remains unavailable. New typed transport reads cap streamed bodies at 32 KiB.
+The existing repository-list fetch is parsed before its 4,096-row admission check;
+only active selected status repeats at five seconds. Fixture response timings
+measure a local presentation path and are not production API or native-work SLOs.
+
+
+T45.8b canonical evidence is retained in `t458b.json`: eight preview fixture
+pixels and eight ordinary Settings pixels were authored and compared with the
+pinned image. The complete panel is scrolled below sticky chrome, then its
+position is checked; no indexing anatomy is masked. The ordinary instance uses
+the make-dev-built binary with an explicit whole-repository configuration for
+both unchanged staged neutral bundles, their retained operator catalogs, and
+provisional protobuf/Kafka packs. It has no analysis units or typed runtime.
+The unchanged strict setup checks both exact HEADs, settled jobs, current
+required services and complete orders-api relationship authority before capture.
+The configuration digest and bundle/chunk metrics are in the evidence record.
+
+The default focused T30.7 configuration separately indexed but lacked its v2
+source-generation control, leaving service/relationship authority unavailable.
+That diagnostic is not a receipt PASS or focused-pipeline closure. The ordinary
+neutral data uses a disposable 1 GiB APFS volume with unchanged disk admission
+limits; it proves this small cohort only. Chromium runs in the untouched pinned
+AMD64 image under Rosetta in a temporary 2-CPU/6-GiB renderer VM. A TCP bridge to
+trustworthy loopback changes no browser flags or product behavior. Hosted Actions
+is account-disabled; these are local pinned-renderer checks, not hosted CI.
+
+The Settings chunk is 27,095 bytes (8.04 kB reported gzip); no dependency was
+added. Fixture readiness includes keyboard traversal. Fixture preview timing
+includes interaction and screenshot bookkeeping; neither timing is a production
+request, indexing or user-validation claim. Existing full command checks also
+retain three phase-nine lifecycle deadline failures, distinct from the passing
+affected typed/restore checks; the receipt record never labels them green.
+
+
+The unchanged short workspace composition subsequently passes in21.858s, and
+full `cmd/phebs` passes in946.515s with test temporary roots on the bounded
+1GiB APFS volume. This closes that package gate for the stated filesystem;
+it preserves the earlier failed host-volume runs and does not invent their
+exact cause. Source, admission policy, fixture budgets and deadlines are
+unchanged. The volume is detached only after all test children join.

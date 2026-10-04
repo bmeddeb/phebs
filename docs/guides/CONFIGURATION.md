@@ -1126,3 +1126,46 @@ pass publish, canary/dry-run, exact lease reuse and restart checks. Their origin
 binary identities and scoped cleanup are recorded in
 `spike/t457/native_inputs_1.json`; these results do not enable a provider or
 establish a target-corpus performance envelope.
+
+## Code navigation indexing Settings (T45.8b)
+
+Administrators can open **Settings → Code navigation indexing**, select a
+repository and read its exact indexed HEAD. File's unavailable precise
+navigation panel links administrators directly to that repository's Settings
+section. Ordinary users see the unavailable navigation message without an
+indexing action.
+
+Providers appear Bazel first, followed by Go module/workspace and existing
+artifact. Availability requires an installed managed runtime and that
+repository's admitted profile; the ordinary build still has neither a managed
+runtime switch nor provider registration. Its cards remain **Unavailable**.
+These endpoints supersede the earlier T45.4 statement that no managed-indexing
+endpoint exists; they do not change that disabled startup boundary.
+
+When available, target, configuration and resource profiles are server-owned
+names shown read-only. Select **Generate navigation**, **Canary** or **Dry run**,
+then **Review indexing plan** to review the exact commit and request authority.
+This is a request preview; native package planning starts after the separate
+explicit enqueue action. Canary and dry run validate without publication.
+Only a complete successful generation replaces current precise navigation.
+There are no raw command, flag, path, environment, credential or resource
+controls.
+
+The status surface distinguishes absent, current, stale, planning, indexing,
+validating, publishing, failed and canceled. Active work refreshes the selected
+repository every five seconds. A read failure retains the last confirmed state
+and offers refresh; missing collected job history remains unavailable. A
+stale/restored source never displays old attempt progress as work on new HEAD.
+An unconfirmed enqueue offers **Retry exact request**, reusing its original
+request digest and idempotency key. Source/profile changes reject that request;
+refresh and review a new request before enqueueing again. Raw worker output and
+private paths are withheld.
+
+The administrator HTTP contract is under `/api/code-navigation-indexing`:
+`GET /providers`, `GET /status?repository=…`, `POST /plan` and `POST /enqueue`.
+Both POSTs use the existing authenticated CSRF boundary and audit target.
+Enqueue binds the preview's expected revision, request digest and idempotency
+key to server-owned exact source/profile/universe authority. A preview does not
+queue work. Status reads do not initialize source identity or inspect native
+files. The T45.6 remaining Bazel corpus gate stays waived, not passed; this
+workflow establishes no supported target scale or release posture.

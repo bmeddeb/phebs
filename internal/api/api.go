@@ -49,6 +49,10 @@ func searchHTTPError(err error) error {
 }
 
 type Options struct {
+	// TypedIndexAvailable is set only by trusted reconciled runtime composition.
+	// Browser/config input cannot install execution; false keeps all controls unavailable.
+	TypedIndexAvailable bool
+
 	Version string
 	APIKey  string // empty = open API; serve logs the warning
 	Store   store.Store
@@ -448,6 +452,7 @@ func New(opts Options) http.Handler {
 
 	registerHistory(api, opts)
 	registerCodeNavigation(api, opts)
+	registerTypedIndex(api, opts)
 	registerAudit(api, opts)
 	registerAnalytics(api, opts)
 	registerRetentionStatus(api, opts)

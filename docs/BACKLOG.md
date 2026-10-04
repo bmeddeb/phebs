@@ -15278,6 +15278,37 @@ File-page unavailable state links administrators to the preselected Settings
 section while ordinary users retain non-actionable `available: false`; mobile,
 keyboard, reduced-motion, light/dark, and bounded-error gates pass.
 
+T45.8b implementation supplies four administrator endpoints, exact
+source/profile request previews and existing-worker idempotent enqueue. Read-only
+status authenticates desired identity and creation-linked coordinator evidence,
+retains stale/restore precedence and mints no source identity. The routed
+presentation lineage adds server-bound Settings controls, closed bounded
+responses, exact retry, selected-status polling and administrator File links.
+Affected authorization/CSRF, API/auth, real-store normal/race, typed command,
+selected restore recipe/production export and base/candidate archive checks pass;
+all744 UI tests, build/lint and generated API parity pass. Canonical pinned Noble
+Chromium checks retain eight preview and eight ordinary Settings pixels across
+both densities/themes and390px/desktop, with keyboard, motion, labels, overflow,
+console and exact retry/state checks. The unchanged strict cohort-readiness
+oracle passes an explicit whole-repository configuration for the same neutral
+bundles/catalogs; this is ordinary default-dark Settings mechanics, not focused
+pipeline closure. `ui/receipts/t458b.json` retains provenance, bundle/timing and
+failure qualifications. Immutable source and canonical receipt review is all0. Ticket integration
+remains a distinct gate.
+
+The earlier host-volume command run is retained as FAIL on three phase-nine lifecycle
+compositions; the short composition reproduces the same deadline at both exact
+base and candidate after cache cleanup. The unchanged short case then passed
+in21.858s and the full command package passed in946.515s with test temporary
+roots on the bounded1GiB APFS volume and unchanged admission policy. No exact
+original capacity cause is inferred; the successful run closes this package
+gate without rewriting the failed runs.
+The default focused neutral demo separately lacks its v2 source-generation
+control, so its service/relationship readiness is not passed or waived. Hosted
+Actions is account-disabled; local pinned-renderer evidence is not hosted CI.
+Ordinary serve remains unavailable; the T45.6 waiver and all scale/release
+boundaries stay exact. No main integration is claimed.
+
 **T45.9 · Generated-SCIP evidence integration and product-scale closure**
 *(needs T45.5, T45.6, and T45.8b; T45.7 is optional)* — decide separately
 whether generated bundle members may feed SCIP-derived evidence. If GO,
