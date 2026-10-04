@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { TYPED_PROVIDERS, TYPED_STATES } from '../src/typedIndex'
+import { DENSITIES, THEMES, TYPED_INDEX_WIDTHS } from './routes'
 
 // Presentation fixtures only: these never install a runtime or execute a provider.
 const repository = 'example.test/neutral'
@@ -12,6 +13,7 @@ async function fixture(page: Page, admin = true) {
   let state: string = 'absent'
   let refusal = false
   let enqueueFailure = false
+  let recorded = false
   let unavailable = false
   await page.route('**/api/**', async route => {
     const request = route.request()
@@ -28,7 +30,7 @@ async function fixture(page: Page, admin = true) {
       case '/api/lifecycle-status': value = { schema: 'phebs-lifecycle-status-v1', policy: { enabled: false, owners: 0, soft_watermark_percent: 80, hard_watermark_percent: 90, resume_watermark_percent: 75, max_candidates_per_turn: 64, max_deletes_per_turn: 16, max_queries_per_turn: 16 }, capacity: { completeness: 'unavailable', pressure: 'unavailable' }, owners: [] }; break
       case '/api/code-navigation-indexing/providers': value = { schema: 'phebs-typed-index-providers-v1', providers: TYPED_PROVIDERS.map((id, index) => ({ id, name: ['Bazel', 'Go module / workspace', 'Existing artifact'][index], available: !unavailable && index === 0 })) }; break
       case '/api/code-navigation-indexing/status': value = refusal ? { detail: '/private/worker/stderr' } : { ...view, available: !unavailable, state, ...(unavailable ? { provider: '', profile: '', target_profile: '', config_profile: '', resource_profile: '', revision: '' } : {}) }; status = refusal ? 503 : 200; break
-      case '/api/code-navigation-indexing/plan': value = { schema: 'phebs-typed-index-preview-v1', selection: body, commit, request_digest: digest, idempotency_key: 'c'.repeat(64), resource_profile: resource }; break
+      case '/api/code-navigation-indexing/plan': value = recorded ? { detail: 'request_already_recorded' } : { schema: 'phebs-typed-index-preview-v1', selection: body, commit, request_digest: digest, idempotency_key: 'c'.repeat(64), resource_profile: resource }; status = recorded ? 422 : 200; break
       case '/api/code-navigation-indexing/enqueue': value = enqueueFailure ? { detail: '/private/worker/stderr' } : { ...view, state: 'planning', request_digest: digest, job_state: 'pending' }; status = enqueueFailure ? 503 : 200; state = enqueueFailure ? state : 'planning'; break
       case '/api/source': value = { content: 'package neutral\nfunc Example() {}\n', encoding: 'utf8', size: 34 }; break
       case '/api/folder_contents': value = { entries: [{ name: 'main.go', type: 'file', size: 34 }] }; break
@@ -37,10 +39,10 @@ async function fixture(page: Page, admin = true) {
     }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(value) })
   })
-  return { requests, setState: (next: string) => { state = next }, refuse: () => { refusal = true }, failEnqueue: (next: boolean) => { enqueueFailure = next }, unavailable: () => { unavailable = true } }
+  return { requests, setState: (next: string) => { state = next }, refuse: (next = true) => { refusal = next }, recorded: () => { recorded = true }, failEnqueue: (next: boolean) => { enqueueFailure = next }, unavailable: () => { unavailable = true } }
 }
 const url = '/#/settings?' + new URLSearchParams({ repo: repository, section: 'code-navigation-indexing' })
-for (const theme of ['light', 'dark'] as const) for (const width of [1280, 390]) for (const density of ['comfortable', 'dense']) {
+for (const theme of THEMES) for (const width of TYPED_INDEX_WIDTHS) for (const density of DENSITIES) {
   test(`managed indexing ${theme} ${width} ${density}`, async ({ page }) => {
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
@@ -119,6 +121,29 @@ test('exact request retry, all states and last-good polling', async ({ page }) =
   await expect(section.getByText('indexing', { exact: true })).toBeVisible()
   expect(f.requests.slice(initialCount).map(r => r.path)).toEqual(['/api/code-navigation-indexing/status'])
   expect(await section.innerText()).not.toContain('/private/')
+  f.refuse(false)
+  f.setState('current')
+  await expect(section.getByText('current', { exact: true })).toBeVisible({ timeout: 8000 })
+  await expect(section.getByRole('alert')).toHaveCount(0)
+  expect(f.requests.slice(initialCount).map(r => r.path)).toEqual(['/api/code-navigation-indexing/status', '/api/code-navigation-indexing/status'])
+})
+
+test('recorded purpose explains immutable limit and refresh keeps it disabled', async ({ page }) => {
+  const f = await fixture(page)
+  f.setState('failed')
+  f.recorded()
+  await page.goto(url)
+  const section = page.getByRole('region', { name: 'Code navigation indexing' })
+  await section.getByRole('button', { name: 'Review indexing plan' }).click()
+  await expect(section.getByText('Request already recorded', { exact: true })).toBeVisible()
+  await expect(section.getByText('This exact request is already recorded.', { exact: false })).toBeVisible()
+  await expect(section.getByRole('button', { name: 'Review indexing plan' })).toBeDisabled()
+  await expect(section.getByRole('button', { name: 'Retry exact request' })).toHaveCount(0)
+  await section.getByRole('button', { name: 'Refresh indexing' }).click()
+  await expect(section.getByRole('button', { name: 'Review indexing plan' })).toBeDisabled()
+  await section.getByRole('combobox', { name: 'Indexing action' }).selectOption('canary')
+  await expect(section.getByRole('button', { name: 'Review indexing plan' })).toBeEnabled()
+  expect(f.requests.some(r => r.path.endsWith('/enqueue'))).toBe(false)
 })
 
 test('ordinary user has no managed reads or actions; File link is administrator-only', async ({ page }) => {

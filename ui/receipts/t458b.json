@@ -73,12 +73,12 @@
     "console_errors": 0,
     "indexing_anatomy_masked": false,
     "screenshot_max_diff_pixel_ratio": 0.001,
-    "fixture_scope": "request preview/exact retry,9 states, retained last-good selected polling, ordinary-user denial, File deep link, unavailable runtime; no provider execution",
+    "fixture_scope": "request preview/exact retry, 9 states, retained last-good selected polling, ordinary-user denial, File deep link, unavailable runtime; no provider execution",
     "full_command_package": {
       "result": "PASS",
       "seconds": 946.515,
       "source": "975a6b611dbc920f6128afdc630eeb0af37ea261",
-      "test_temporary_roots": "disposable1GiB APFS volume",
+      "test_temporary_roots": "disposable 1 GiB APFS volume",
       "source_and_admission_policy_changed": false
     },
     "short_native_workspace_on_bounded_volume": {
@@ -246,13 +246,13 @@
   "limitations": {
     "hosted_actions": "account disabled; local pinned-renderer PASS does not assert hosted CI",
     "default_focused_cohort": "exact HEAD indexed; missing v2 source-generation control leaves services/relationships unavailable. Not passed, waived or repaired. Whole-cohort receipts do not close focused pipeline.",
-    "broad_command_suite": "Earlier host-volume run FAIL at three phase9 deadlines remains retained. Subsequent complete package PASS946.515s on bounded APFS volume closes package gate; original exact capacity cause unestablished.",
+    "broad_command_suite": "Earlier host-volume run FAIL at three phase9 deadlines remains retained. Subsequent complete package PASS 946.515s on bounded APFS volume closes package gate; original exact capacity cause unestablished.",
     "short_native_comparison": {
       "base": "c2b860eca18d7df092be6418e7cd367daa15a4aa",
       "candidate": "6a307dd7",
       "base_seconds": 180.888,
       "candidate_seconds": 180.924,
-      "result": "both FAIL at phase9 measurement deadline after cache cleanup; exact capacity cause unestablished; no base run for the two600-second variants"
+      "result": "both FAIL at phase9 measurement deadline after cache cleanup; exact capacity cause unestablished; no base run for the two 600-second variants"
     },
     "native_provider_registration": false,
     "corpus_waiver_is_pass": false,

@@ -204,9 +204,14 @@ retain three phase-nine lifecycle deadline failures, distinct from the passing
 affected typed/restore checks; the receipt record never labels them green.
 
 
-The unchanged short workspace composition subsequently passes in21.858s, and
-full `cmd/phebs` passes in946.515s with test temporary roots on the bounded
-1GiB APFS volume. This closes that package gate for the stated filesystem;
+The unchanged short workspace composition subsequently passes in 21.858s, and
+full `cmd/phebs` passes in 946.515s with test temporary roots on the bounded
+1 GiB APFS volume. This closes that package gate for the stated filesystem;
 it preserves the earlier failed host-volume runs and does not invent their
 exact cause. Source, admission policy, fixture budgets and deadlines are
 unchanged. The volume is detached only after all test children join.
+
+T45.8b review corrections add a consumed-request refusal fixture and verify that
+a transient active poll continues to a terminal response. Preview pixels retain
+their original provenance; a fresh corrected-source comparison checks them without
+reauthoring. Exact transport retry remains separate from starting another run.

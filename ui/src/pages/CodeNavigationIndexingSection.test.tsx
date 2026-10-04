@@ -4,12 +4,13 @@ import { BaseProvider } from 'baseui'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { lightTheme } from '../theme'
+import { TYPED_REQUEST_RECORDED } from '../typedIndex'
 import { CodeNavigationIndexingSection } from './CodeNavigationIndexingSection'
 
 const api = vi.hoisted(() => ({ fetchRepoStatus: vi.fn() }))
 const typed = vi.hoisted(() => ({ fetchTypedProviders: vi.fn(), fetchTypedView: vi.fn(), planTypedIndex: vi.fn(), enqueueTypedIndex: vi.fn() }))
 vi.mock('../api', () => api)
-vi.mock('../typedIndex', () => typed)
+vi.mock('../typedIndex', async importOriginal => ({ ...await importOriginal<typeof import('../typedIndex')>(), ...typed }))
 const engine = new Client()
 const digest = 'sha256:' + 'a'.repeat(64)
 const repository = 'example.test/repo'
@@ -58,7 +59,7 @@ test('review precedes explicit enqueue and transport retry keeps exact identity'
 })
 test('retains confirmed active status on a poll failure and only polls the selected status', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
-  typed.fetchTypedView.mockResolvedValueOnce({ ...view, state: 'indexing' }).mockRejectedValueOnce(new Error('raw output'))
+  typed.fetchTypedView.mockResolvedValueOnce({ ...view, state: 'indexing' }).mockRejectedValueOnce(new Error('raw output')).mockResolvedValueOnce({ ...view, state: 'current' })
   renderSection()
   expect(await screen.findByText('indexing')).toBeTruthy()
   await vi.advanceTimersByTimeAsync(5100)
@@ -67,9 +68,27 @@ test('retains confirmed active status on a poll failure and only polls the selec
   expect(typed.fetchTypedView).toHaveBeenCalledTimes(2)
   expect(typed.fetchTypedProviders).toHaveBeenCalledTimes(1)
   expect(api.fetchRepoStatus).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(5100)
+  expect(await screen.findByText('current')).toBeTruthy()
+  expect(screen.queryByRole('alert')).toBeNull()
+  await vi.advanceTimersByTimeAsync(10100)
+  expect(typed.fetchTypedView).toHaveBeenCalledTimes(3)
 })
 test.each(['absent', 'current', 'stale', 'planning', 'indexing', 'validating', 'publishing', 'failed', 'canceled'])('renders %s as text', async state => {
   typed.fetchTypedView.mockResolvedValue({ ...view, state })
   renderSection()
   expect(await screen.findByText(state)).toBeTruthy()
+})
+
+test('recorded-purpose refusal explains no new attempt and survives refresh at identical authority', async () => {
+  typed.planTypedIndex.mockRejectedValueOnce(new Error(TYPED_REQUEST_RECORDED))
+  renderSection()
+  fireEvent.click(await screen.findByRole('button', { name: 'Review indexing plan' }))
+  expect(await screen.findByText(TYPED_REQUEST_RECORDED)).toBeTruthy()
+  expect((screen.getByRole('button', { name: 'Review indexing plan' }) as HTMLButtonElement).disabled).toBe(true)
+  expect(screen.queryByRole('button', { name: 'Retry exact request' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh indexing' }))
+  await waitFor(() => expect(typed.fetchTypedView).toHaveBeenCalledTimes(2))
+  expect(screen.getByText(TYPED_REQUEST_RECORDED)).toBeTruthy()
+  expect(typed.enqueueTypedIndex).not.toHaveBeenCalled()
 })

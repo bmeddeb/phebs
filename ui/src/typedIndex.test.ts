@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { setCSRFToken } from './authSession'
-import { enqueueTypedIndex, fetchTypedView, validateTypedPreview, validateTypedProviders, validateTypedView } from './typedIndex'
+import { TYPED_REQUEST_RECORDED, planTypedIndex, enqueueTypedIndex, fetchTypedView, validateTypedPreview, validateTypedProviders, validateTypedView } from './typedIndex'
 const repo = 'example.test/repo'
 const h = 'sha256:' + 'a'.repeat(64)
 const view = { schema: 'phebs-typed-index-status-v1', repository: repo, commit: 'a'.repeat(40), revision: h, available: true, state: 'absent', provider: 'bazel-rules-go-scip-v1', profile: 'reduced', target_profile: 'reduced', config_profile: 'ordinary', resource_profile: 'native-arm64-bounded-v1', request_digest: '', job_state: '', current_commit: '', reason: '', checked_purpose: '' }
@@ -28,4 +28,13 @@ test('enqueue carries CSRF and exact preview identity', async () => {
   const init = vi.mocked(fetch).mock.calls[0][1]!
   expect(init.headers).toMatchObject({ 'X-CSRF-Token': 'neutral-csrf' })
   expect(JSON.parse(init.body as string)).toEqual({ ...selection, request_digest: h, idempotency_key: 'a'.repeat(64) })
+})
+
+test('only the bounded closed plan refusal becomes the no-new-attempt message', async () => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ detail: 'request_already_recorded' }), {status:422}))
+  await expect(planTypedIndex(selection,view.commit)).rejects.toThrow(TYPED_REQUEST_RECORDED)
+  vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({detail:'/private/worker/stderr'}),{status:422}))
+  await expect(planTypedIndex(selection,view.commit)).rejects.toThrow('Indexing unavailable')
+  vi.mocked(fetch).mockResolvedValue(new Response('x'.repeat(32769),{status:422}))
+  await expect(planTypedIndex(selection,view.commit)).rejects.toThrow('Indexing response unavailable')
 })

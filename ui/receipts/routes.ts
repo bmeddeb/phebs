@@ -165,3 +165,6 @@ export const THEMES = ['light', 'dark'] as const
 // densities for every routed surface — surfaces that ignore density are
 // pinned to prove they ignore it.
 export const DENSITIES = ['comfortable', 'dense'] as const
+
+// T45.8b synthetic managed-index preview matrix, separate from ordinary routes.
+export const TYPED_INDEX_WIDTHS = [1280, 390] as const
