@@ -9044,7 +9044,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   anatomy is never masked and capture verifies clearance below sticky chrome.
   Hosted Actions is account-disabled, so no hosted CI PASS is asserted.
 
-  Broader command verification remains FAIL: three existing phase-nine native
+  Earlier host-volume broader command verification is retained as FAIL: three
+  existing phase-nine native
   lifecycle compositions expire at their fixed deadlines. One bounded short
   comparison reproduces the same180-second boundary at exact base c2b860ec and
   candidate after regenerable Go-cache cleanup. This establishes inherited
@@ -9057,3 +9058,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   No scale, corpus, release, ceremony, installed-provider or integration claim
   advances. Temporary renderer/demo resources are task-owned and disposable;
   retained native custody and other lineages remain untouched.
+
+
+  A corrected test-environment confirmation closes the full command gate:
+  unchanged short native workspace composition passes in21.858s, and the complete
+  `cmd/phebs` package passes in946.515s with `TMPDIR` on the disposable1GiB
+  APFS volume. The volume has physical capacity headroom; source, fixture inputs,
+  native scope/admission policy, per-turn budgets and fixed deadlines are
+  unchanged. This establishes that complete package result on the stated
+  filesystem, not an exact retrospective cause for the host-volume failures.
+  All children joined before volume detach. The default focused-cohort gap and
+  disabled hosted Actions remain separately qualified; all T45.8b affected and
+  canonical receipt gates pass on the ticket lineages, with independent exact
+  source/receipt review critical/high/medium/low0. No main integration follows
+  merely from validation readiness.

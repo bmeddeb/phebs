@@ -15293,12 +15293,16 @@ console and exact retry/state checks. The unchanged strict cohort-readiness
 oracle passes an explicit whole-repository configuration for the same neutral
 bundles/catalogs; this is ordinary default-dark Settings mechanics, not focused
 pipeline closure. `ui/receipts/t458b.json` retains provenance, bundle/timing and
-failure qualifications. Immutable implementation review is all0; final receipt
-review and ticket integration remain distinct gates.
+failure qualifications. Immutable source and canonical receipt review is all0. Ticket integration
+remains a distinct gate.
 
-The broader command run remains FAIL on three phase-nine lifecycle
+The earlier host-volume command run is retained as FAIL on three phase-nine lifecycle
 compositions; the short composition reproduces the same deadline at both exact
-base and candidate after cache cleanup. No exact capacity cause is inferred.
+base and candidate after cache cleanup. The unchanged short case then passed
+in21.858s and the full command package passed in946.515s with test temporary
+roots on the bounded1GiB APFS volume and unchanged admission policy. No exact
+original capacity cause is inferred; the successful run closes this package
+gate without rewriting the failed runs.
 The default focused neutral demo separately lacks its v2 source-generation
 control, so its service/relationship readiness is not passed or waived. Hosted
 Actions is account-disabled; local pinned-renderer evidence is not hosted CI.
