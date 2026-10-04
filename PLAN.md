@@ -10073,15 +10073,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   engine joined; fresh guest custody was removed and the personal VM returned
   to its initially stopped state. The source-free record is
   `spike/t459/settings_browser_1.json`.
+  Guest asset comparison/removal and identified alarm-engine stops are operator
+  tool observations whose raw terminal outputs were not separately retained.
+  The retained host snapshot proves present stopped-profile/context/PID state,
+  while the raw browser receipt separately records its joined result.
 
-  Full Darwin command-package probes are unestablished: cumulative six- and
-  fifteen-minute alarms expired in unrelated native T42.2 fixtures, after only
-  37 and 38 seconds in their respective current tests. Those fixtures have
-  individual ten-minute deadlines. This records both alarms and claims neither
-  a complete command-package pass nor an exact-base reproduction. Each alarm's
+  Full Darwin command-package probes remain unestablished. The six-minute
+  cumulative alarm expired 37 seconds into an unrelated T42.2 cleanup fixture.
+  The fifteen-minute serial command first recorded a completed
+  `TestT422WorkspaceCleanupNativeComposition` failure after 600.03 seconds,
+  with a native lifecycle measurement diagnostic, then hit its package alarm
+  38 seconds into AllOwners. Record review corrected the omission of that
+  completed failure from the first receipt draft. Neither its cause nor an
+  exact-base reproduction is established; no complete-package pass is claimed.
+  Those fixtures have individual ten-minute deadlines. Each alarm's
   one identified owned engine was stopped and verified gone; its failed-probe
   temporary directories remain local diagnostic custody. The appropriate
-  changed-path gates above are green. This is only the rendered authenticated Settings/API
+  changed-path gates above are green. This is only the rendered authenticated
+  Settings/API
   prerequisite. Complete neutral closure and separately authorized target
   closure remain open; zero accepted service incarnations and this tiny fixture
   establish no 5,000-service/12-GB supported envelope. Ordinary providers remain

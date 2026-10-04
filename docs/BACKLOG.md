@@ -15578,10 +15578,14 @@ asset provenance. Existing Linux navigation and HTTP/client, focused Darwin
 normal/race, Linux compilation/vet, both platform pinned lint, module and driver
 syntax gates passed. Two independent source/evidence/cost reviews covered all
 seven source paths with all severity counts zero; browser/fixture/tunnel/engine
-joined and fresh guest custody was removed. The source-free record is
-`spike/t459/settings_browser_1.json`. Full Darwin command-package probes hit
-cumulative six- and fifteen-minute alarms in unrelated T42.2 native fixtures;
-that complete package remains unestablished, without a claimed base reproduction.
+joined and operator-observed fresh guest custody was removed. The record
+qualifies unretained raw cleanup outputs separately from retained browser and
+host-state results. The source-free record is `spike/t459/settings_browser_1.json`.
+Full Darwin command-package probes hit cumulative six- and fifteen-minute alarms.
+The serial command also completed an unrelated T42.2 cleanup-test failure after
+600.03 seconds with a native lifecycle measurement diagnostic before its later
+AllOwners alarm. Record review corrected the initial omission of that failure;
+that complete package remains unestablished, with no cause or base reproduction claimed.
 Production behavior, cache and native
 bounds remain unchanged. Complete neutral and separately authorized target
 closure remain open; the zero-service tiny fixture establishes no product-scale

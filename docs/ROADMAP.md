@@ -165,9 +165,13 @@ and eight appearances, with zero unexpected browser errors and joined teardown.
 Linux navigation/HTTP-client, focused Darwin normal/race, compilation/vet,
 pinned lint, module and syntax gates passed; two independent seven-path source
 reviews report all severity counts zero. Complete asset provenance and the
-source-free record are in `spike/t459/settings_browser_1.json`. Full Darwin
-command-package probes hit cumulative six- and fifteen-minute alarms in unrelated
-T42.2 native fixtures; that package remains unestablished. This does not close complete
+source-free record are in `spike/t459/settings_browser_1.json`; cleanup observations
+with unretained raw outputs are qualified separately from retained browser/host
+results. Full Darwin command-package probes hit cumulative six- and fifteen-minute
+alarms. The serial command also recorded an unrelated T42.2 cleanup-test failure
+after 600.03 seconds before its later AllOwners alarm; the initial omission is
+corrected, with no cause or base reproduction inferred. That package remains
+unestablished. This does not close complete
 neutral or separately authorized target acceptance or change ordinary dark
 providers, the T45.6 waiver or scale/release posture.
 T45.1a's reviewed neutral harness gate is now PASS at source

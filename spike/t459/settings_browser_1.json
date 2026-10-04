@@ -995,7 +995,8 @@
       "sha256": "sha256:4a252bdbcd7b55e5670b269198f98c6e3df363979964b43bd1366d7cc2137cab",
       "bytes": 6878720
     },
-    "guest_asset_verification": "All 165 regular assets matched the complete local size/SHA-256 manifest before the exact-source rendered pass; AppleDouble metadata was excluded from the fresh final transfer."
+    "guest_asset_verification": "All 165 regular assets matched the complete local size/SHA-256 manifest before the exact-source rendered pass; AppleDouble metadata was excluded from the fresh final transfer.",
+    "guest_asset_verification_qualification": "The full guest comparison is an operator tool observation preserved in the working record; its raw terminal output was not separately retained. The local complete manifest and clean transfer archive were independently verified against retained bytes."
   },
   "machine_gates": [
     {
@@ -1008,7 +1009,7 @@
     {
       "gate": "focused typed command/auth/API regressions",
       "status": "PASS",
-      "command": "go test ./cmd/phebs ./internal/auth ./internal/api -run ^(TestTyped|TestAuthOwners) -count=1 -timeout=5m",
+      "command": "go test ./cmd/phebs ./internal/auth ./internal/api -run '^(TestTyped|TestAuthOwners)' -count=1 -timeout=5m",
       "platform": "darwin/arm64",
       "package_seconds": {
         "cmd/phebs": 3.808,
@@ -1020,7 +1021,7 @@
     {
       "gate": "focused typed command/auth race regressions",
       "status": "PASS",
-      "command": "go test -race ./cmd/phebs ./internal/auth -run ^(TestTyped|TestAuthOwners) -count=1 -timeout=5m",
+      "command": "go test -race ./cmd/phebs ./internal/auth -run '^(TestTyped|TestAuthOwners)' -count=1 -timeout=5m",
       "platform": "darwin/arm64",
       "package_seconds": {
         "cmd/phebs": 9.397,
@@ -1084,7 +1085,7 @@
       "gate": "owning documentation and glossary",
       "status": "PASS",
       "command": "make docs-check verify-glossary",
-      "log": "docs-final.log"
+      "log": "docs-review-correction.log"
     },
     {
       "gate": "Go format, JSON/source/log provenance and whitespace",
@@ -1125,14 +1126,26 @@
     },
     {
       "command": "go test ./cmd/phebs -count=1 -timeout=15m",
-      "result": "package_alarm",
+      "result": "completed_test_failure_then_package_alarm",
       "package_seconds": 900.807,
       "active_test": "TestT422WorkspaceAllOwnersNativeComposition",
       "active_test_elapsed_seconds": 38,
-      "log": "darwin-command-serial.log"
+      "log": "darwin-command-serial.log",
+      "completed_test_failure": {
+        "test": "TestT422WorkspaceCleanupNativeComposition",
+        "seconds": 600.03,
+        "diagnostic": "native lifecycle measurement; unavailable ResponseChannel",
+        "source_location": "cmd/phebs/t422_backup_retirement_test.go:1246",
+        "log_lines": [
+          46,
+          47
+        ],
+        "cause_established": false,
+        "exact_base_reproduction": false
+      }
     }
   ],
-  "non_gate_probe_qualification": "The full Darwin command package remains unestablished. These cumulative package allowances expired inside unrelated native T42.2 fixtures, whose individual deadlines are ten minutes. No exact-base full-package pass or baseline-red reproduction is claimed.",
+  "non_gate_probe_qualification": "The full Darwin command package remains unestablished and contains a completed unrelated T42.2 cleanup failure. The six-minute command hit a cumulative package alarm. The fifteen-minute serial command first failed TestT422WorkspaceCleanupNativeComposition after 600.03s with a native lifecycle measurement diagnostic, then later hit the cumulative package alarm inside AllOwners. No causal explanation, complete-package pass or exact-base reproduction is claimed.",
   "retained_log_bindings": {
     "browser-exact-88ab0f4f.json": {
       "sha256": "sha256:4fbb397670f0a8d67cc5f0515153aa07d684f8826846078dd61e57cfb080ef65",
@@ -1188,6 +1201,14 @@
     },
     "docs-final.log": {
       "sha256": "sha256:2015dc249f21d08d2248658946ccca2a1a23fbe0c28ca3fe34c6f94eaba00983",
+      "bytes": 239
+    },
+    "host-cleanup-final.json": {
+      "sha256": "sha256:3d33e037aedd4975419f99aead4e61649a8b0ff24495d9e87ace1f71fbbbf664",
+      "bytes": 918
+    },
+    "docs-review-correction.log": {
+      "sha256": "sha256:40fddff58da5608d4d188a66f674977ff6289de894fcb1123fcaf239230ec208",
       "bytes": 239
     }
   },
@@ -1247,7 +1268,13 @@
     "original_default_docker_context": "colima",
     "non_gate_alarm_children": "Each alarm left one identified owned SurrealDB child; its exact argv and test namespace were checked, it received SIGINT and its disappearance was verified. Failed-probe temporary directories remain local diagnostic custody.",
     "credentials_retained": false,
-    "primary_checkout_touched": false
+    "primary_checkout_touched": false,
+    "evidence_qualification": "The raw browser receipt records joined=true. Fresh guest removal, full guest asset comparison, and identity-checked alarm engine stops are prior operator tool observations; their raw terminal outputs were not separately retained. A separately retained final host snapshot verifies current stopped profile, default context colima and absence of the identified owned probe/alarm PIDs; it does not retrospectively prove guest filesystem removal.",
+    "host_snapshot": {
+      "log": "host-cleanup-final.json",
+      "sha256": "sha256:3d33e037aedd4975419f99aead4e61649a8b0ff24495d9e87ace1f71fbbbf664",
+      "bytes": 918
+    }
   },
   "limits": [
     "No production or UI source changes; no presentation baseline or canonical pixel comparison.",
@@ -1258,5 +1285,34 @@
     "Zero accepted service incarnations; immutable Git source is 8 bytes, separate copied input is 1 byte, two generated documents total 16 bytes. No 5000-service/12-GB supported envelope.",
     "Complete neutral and separately authorized target closure remain open; ordinary providers remain unavailable, T45.6 is waived rather than PASS, and generated evidence remains STOP.",
     "Final exact-source pass is retained; earlier pre-correction attempts are not counted as passing final-content repetitions."
-  ]
+  ],
+  "record_review_corrections": {
+    "reviewed_commit": "055f09c59c58a13af44b35c40c2ac220a46ffe69",
+    "reviewed_files": 8,
+    "reviews": [
+      {
+        "role": "correctness/security/evidence",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 1,
+          "low": 0
+        }
+      },
+      {
+        "role": "cost/docs/evidence",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 1,
+          "low": 1
+        }
+      }
+    ],
+    "corrections": [
+      "Record the completed 600.03-second T42.2 cleanup failure beside the later cumulative alarm; no cause or exact-base reproduction inferred.",
+      "Qualify guest comparison/removal and alarm stops as operator tool observations whose raw outputs were not separately retained; bind the independent current host snapshot."
+    ],
+    "compiled_and_external_driver_inputs_changed": false
+  }
 }
