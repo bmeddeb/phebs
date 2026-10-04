@@ -270,7 +270,7 @@
     "ui_build": "PASS",
     "fixture_scope": "Consumed-purpose explanation, exact network retry, active 503 recovery to terminal state; original eight previews compare unchanged. No new ordinary cohort or native execution claim.",
     "bundle": {
-      "file": "ui/ui/dist/assets/SettingsPage-BfvAoLrf.js",
+      "file": "ui/dist/assets/SettingsPage-BfvAoLrf.js",
       "bytes": 28072,
       "reported_gzip_kb": 8.33,
       "digest": "sha256:15562c5a2841c0034113f05e2b5ff812a8e05e2eec2048c61936e5a571271e17"
@@ -344,6 +344,12 @@
     "prior_review_superseded": true,
     "cardinality_correction": "Original preview baselines added eight PNGs beyond the ordinary route manifest. Fresh full suite includes the shared managed-preview matrix.",
     "final_status_backend": "02dd735b9ce937a32c8e20a39098d48ecc9dba14",
-    "final_status_gate": "PASS: API/operator race after stale-current versus fresh-desired distinction (1.777s/17.427s); preceding broad typed-store race 334.088s. No UI source changed."
+    "final_status_gate": "PASS: API/operator race after stale-current versus fresh-desired distinction (1.777s/17.427s); preceding broad typed-store race 334.088s. No UI source changed.",
+    "extended_store_transition_gate": {
+      "source": "80fe2232c76efab7b63408ad9a4bc5578d2822f0",
+      "result": "PASS",
+      "race_seconds": 15.851,
+      "scope": "Operator tests include actual claimed schedule Running=1 before Begin and fresh preflight attempt beside stale old publication; production implementation unchanged."
+    }
   }
 }
