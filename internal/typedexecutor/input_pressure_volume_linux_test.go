@@ -19,6 +19,8 @@ import (
 
 const nativePressureImageBytes = int64(4 << 30)
 
+var errNativePressurePath = errors.New("pressure volume path is outside the closed fixture")
+
 var nativePressurePath = regexp.MustCompile(`^/var/lib/phebs-typed-acceptance/t459-workspace-pressure-[a-z0-9-]+/volume$`)
 
 // The operational driver owns the pinned formatter, fully allocated 4GiB image,
@@ -49,8 +51,11 @@ func nativePressureOpen(t *testing.T, ctx context.Context, base string) *nativeP
 }
 
 func nativePressureBind(ctx context.Context, base string) (_ *nativePressureVolume, err error) {
-	if ctx == nil || os.Geteuid() != 0 || len(base) > 256 || !nativePressurePath.MatchString(base) || filepath.Clean(base) != base {
-		return nil, errors.New("pressure volume is not the closed root-owned fixture")
+	if len(base) > 256 || !nativePressurePath.MatchString(base) || filepath.Clean(base) != base {
+		return nil, errNativePressurePath
+	}
+	if ctx == nil || os.Geteuid() != 0 {
+		return nil, errors.New("pressure volume requires root and a context")
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -312,10 +317,10 @@ func (p *nativePressureVolume) Clear(t *testing.T, ctx context.Context) typedwor
 }
 
 func TestNativePressureVolumeClosedBounds(t *testing.T) {
-	for _, path := range []string{"", "/tmp/volume", "/var/lib/phebs-typed-index/volume", "/var/lib/phebs-typed-acceptance/t459-workspace-pressure-x/volume/", "/var/lib/phebs-typed-acceptance/t459-workspace-pressure-x/../volume"} {
+	for _, path := range []string{"", "/var/lib/phebs-typed-acceptance/t459-workspace-pressure-" + strings.Repeat("x", 257) + "/volume", "/tmp/volume", "/var/lib/phebs-typed-index/volume", "/var/lib/phebs-typed-acceptance/t459-workspace-pressure-x/volume/", "/var/lib/phebs-typed-acceptance/t459-workspace-pressure-x/../volume"} {
 		t.Run(path, func(t *testing.T) {
-			if _, err := nativePressureBind(t.Context(), path); err == nil {
-				t.Fatal("nonfixture volume accepted")
+			if _, err := nativePressureBind(t.Context(), path); !errors.Is(err, errNativePressurePath) {
+				t.Fatal("nonfixture volume did not reach path validation", err)
 			}
 		})
 	}

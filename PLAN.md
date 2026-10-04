@@ -9811,3 +9811,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   complete neutral closure and separately authorized target closure remain
   open. Ordinary providers remain unavailable, T45.6 is not PASS, and no
   product-scale envelope, target execution, release or scale claim follows.
+
+- **2026-10-04 — T45.9 pressure fixture path-oracle review correction.**
+  Check the closed path's length, pattern and canonical form before root/context
+  admission, and make invalid-path subtests require a distinct path refusal.
+  Merely reordering the predicates would still let a missing path check pass
+  through a later root rejection. Include an overlong path in the existing
+  table. This changes only opt-in test validation; a valid fixture retains every
+  privilege, geometry and native limit check. Production cost remains zero;
+  invalid paths now stop at the path checks without querying UID or opening files.
+  The native receipt retains its exact pre-correction implementation and hashes;
+  no fresh privileged native rehearsal is claimed for this guard correction.
+  Linux bounds pass as both UID 501 and root; compilation/vet and repository-
+  pinned affected lint pass with zero issues. Fresh bounds-only staging was
+  removed and the personal test profile stopped; no volume or native work was
+  created. Independent source/cost review reports all severity counts zero.
