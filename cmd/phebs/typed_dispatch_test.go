@@ -8,13 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 // Subprocess calls the real main boundary with actual role arguments, rather
@@ -134,7 +134,7 @@ func TestTypedCommandPlanner(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, code := typedCommandProcess(t, dir, "absent", "bazel-out/phebs_plan/t451a", "__plan_helper", "in.json", "out.phebs-plan.json")
-	eligible := runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && os.Getuid() == 65534 && os.Getgid() == 65534
+	eligible := typedindex.AdmittedNativeWorker() && os.Getuid() == 65534 && os.Getgid() == 65534
 	if !eligible {
 		if code != 125 || len(b) != 0 {
 			t.Fatalf("host planner refusal: %d %q", code, b)

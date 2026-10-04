@@ -4,10 +4,10 @@ package main
 
 import (
 	"os"
-	"runtime"
 	"syscall"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"github.com/bmeddeb/phebs/spike/t451b"
 )
@@ -16,7 +16,7 @@ import (
 // main and the production dispatcher. Untagged builds contain none of this
 // hook, observer import or cost work. All non-worker roles continue to main.
 func init() {
-	if len(os.Args) < 2 || os.Args[0] != typedsandbox.HelperPath || os.Args[1] != typedsandbox.WorkerCommand || runtime.GOARCH != "arm64" || os.Getuid() != 65534 || os.Getgid() != 65534 || os.Getpid() == 1 {
+	if len(os.Args) < 2 || os.Args[0] != typedsandbox.HelperPath || os.Args[1] != typedsandbox.WorkerCommand || !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 || os.Getgid() != 65534 || os.Getpid() == 1 {
 		return
 	}
 	if _, selected := os.LookupEnv(dispatchadmission.ProductionEnvironment); selected {

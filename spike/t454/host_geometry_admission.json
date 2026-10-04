@@ -1,0 +1,36 @@
+{
+  "schema": "phebs-typed-native-host-geometry-admission-v1",
+  "registration_ready": false,
+  "bazel_registered": false,
+  "corpus_execution": false,
+  "attempt_identifier_spent": false,
+  "custody_created": false,
+  "supersedes": "spike/t454/remote_arm64_admission_stop.json",
+  "profile": "phebs-t451a",
+  "transport": "ssh-or-direct",
+  "admitted_machines": {
+    "x86_64": "amd64",
+    "aarch64": "arm64"
+  },
+  "minimum_cpus": 2,
+  "worker_cpu_quota": "200000/100000",
+  "memory_total_minimum_bytes": 4533092352,
+  "scratch_bytes": 4573403136,
+  "scratch_inodes": 262144,
+  "wall_seconds": 300,
+  "output_bytes": 16777216,
+  "task_limit": 294,
+  "descriptor_limit": 128,
+  "reduced_profile_goarch": "arm64",
+  "variants": {
+    "arm64": "GOARM64=v8.0",
+    "amd64": "GOAMD64=v1"
+  },
+  "corpus_oracle_unchanged": true,
+  "cohort_results": {
+    "ordinary": "not_executed",
+    "proto": "not_executed",
+    "fanout": "not_executed",
+    "cross_cohort_comparison": "not_executed"
+  }
+}

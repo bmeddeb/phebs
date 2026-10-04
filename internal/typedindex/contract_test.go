@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -221,15 +222,30 @@ func TestClosedProfileAndCommands(t *testing.T) {
 			t.Fatal("accepted malformed profile")
 		}
 	}
-	commands, err := p.Commands()
+	hostSchema, hostConfig := HostReducedIdentity()
+	hostDef := p.Definition()
+	hostDef.Schema, hostDef.Config = hostSchema, hostConfig
+	host, err := DecodeProfile(ctx, wire(t, hostDef))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if commands.Driver != DriverPath || commands.Launcher != LauncherPath || commands.BazelStartup[3] != "--bazelrc=/dev/null" {
+	if runtime.GOARCH != "arm64" {
+		if got, err := p.Commands(); err == nil || got.Driver != "" {
+			t.Fatal("historical arm64 profile emitted commands on another host", err)
+		}
+		if host.Digest() == p.Digest() {
+			t.Fatal("amd64 successor aliases the historical profile")
+		}
+	}
+	commands, err := host.Commands()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commands.Driver != DriverPath || commands.Launcher != LauncherPath || commands.BazelStartup[3] != "--bazelrc=/dev/null" || !strings.Contains(strings.Join(commands.Environment, "\n"), "GOARCH="+runtime.GOARCH) {
 		t.Fatal(commands)
 	}
 	commands.Environment[0] = "injected"
-	again, _ := p.Commands()
+	again, _ := host.Commands()
 	if again.Environment[0] == "injected" {
 		t.Fatal("mutable recipe")
 	}
@@ -484,6 +500,22 @@ func TestGeneratedProfileIsExplicitAndReducedIdentityUnchanged(t *testing.T) {
 	}
 	if Describe().ExecutionAvailable || Describe().GeneratedDocuments {
 		t.Fatal("contract enabled runtime capability")
+	}
+	successor := p.Definition()
+	successor.Schema, successor.Config = Amd64ProfileSchema, Amd64ReducedConfig()
+	got, err := DecodeProfile(t.Context(), wire(t, successor))
+	if err != nil || got.Digest() == p.Digest() || got.Definition().Config.GOARCH != "amd64" {
+		t.Fatal("amd64 successor refused or aliased", err)
+	}
+	masquerade := successor
+	masquerade.Schema = ProfileSchema
+	if _, err = DecodeProfile(t.Context(), wire(t, masquerade)); err == nil {
+		t.Fatal("historical schema accepted amd64 config")
+	}
+	masquerade = p.Definition()
+	masquerade.Schema = Amd64ProfileSchema
+	if _, err = DecodeProfile(t.Context(), wire(t, masquerade)); err == nil {
+		t.Fatal("amd64 schema accepted the historical arm64 config")
 	}
 }
 
