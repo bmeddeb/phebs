@@ -1,0 +1,62 @@
+{
+  "schema": "phebs-typed-native-remote-admission-stop-v1",
+  "registration_ready": false,
+  "bazel_registered": false,
+  "corpus_execution": false,
+  "attempt_identifier_spent": false,
+  "custody_created": false,
+  "cleanup_performed": false,
+  "source_commit": "f7900e6983655702bb67aff8cc5cc84a9f5ceb75",
+  "source_lineage": "origin/main",
+  "profile": "phebs-t451a",
+  "transport": "colima ssh --profile phebs-t451a -- sudo python3",
+  "corpus": {
+    "repository": "github.com/bazelbuild/remote-apis-sdks",
+    "commit": "d5824b1a2286806b07efd030aa3a139c4f540157",
+    "cohorts": ["ordinary", "proto", "fanout"],
+    "oracle": "spike/t451b/public-oracle.json"
+  },
+  "cohort_results": {
+    "ordinary": "not_executed",
+    "proto": "not_executed",
+    "fanout": "not_executed",
+    "cross_cohort_comparison": "not_executed"
+  },
+  "retained_failures_unchanged": [
+    "spike/t454/proto_host_cost_stop_ec16a206.json",
+    "spike/t454/proto_stage_capacity_stop_ec16a206.json",
+    "spike/t454/proto_host_cost_stop_91d2c594.json",
+    "spike/t454/ordinary_stage_capacity_stop_91d2c594.json",
+    "spike/t454/ordinary_cost_stop_7d6b849c.json"
+  ],
+  "remote_host": {
+    "deployment_observed": false,
+    "reason": "required_colima_profile_absent_from_this_runner",
+    "runner_uname": "Linux x86_64",
+    "colima_present": false,
+    "colima_profile_config_present": false,
+    "ssh_material_present": false,
+    "api_credential_present": false,
+    "connected_personal_worker": {
+      "worker_id": "74bc4a80-885a-508b-afa9-daeb4f734b81",
+      "display_name": "~/phebs.com @ Ben's MacBook Air",
+      "os_label": "darwin",
+      "repo": "bmeddeb/phebs",
+      "eligible_for_subagent": true,
+      "shared_assignment_allowed": true,
+      "task_worker_argument_honored": false,
+      "create_agent_tool_available": false
+    }
+  },
+  "checks": {
+    "code_changed": false,
+    "normal": "not_applicable_no_code_change",
+    "race": "not_applicable_no_code_change",
+    "vet": "not_applicable_no_code_change",
+    "pinned_lint": "not_applicable_no_code_change",
+    "documentation": "go test ./scripts -run TestTrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest passed",
+    "glossary": "go run ./internal/glossary/cmd/glossary-gen -verify -root . passed"
+  },
+  "stop": "remote_admission_unreachable",
+  "smallest_human_action": "Start this gate on the Mac that already owns the running Colima profile phebs-t451a, or dispatch the agent onto that connected ~/phebs.com worker. Do not paste credentials into chat."
+}

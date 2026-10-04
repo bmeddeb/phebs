@@ -15211,6 +15211,12 @@ correctness/cost passes and cross-cohort comparison remain open, with frozen
 VM capacity still unresolved. Bazel remains unregistered; T45.7 waits for
 Bazel closure.
 
+A later admission attempt from exact source `f7900e69` does not reach profile
+`phebs-t451a`: the runner has no Colima transport, and the connected personal
+worker cannot be targeted from this run. No cohort executes and no attempt
+identifier is spent. The source-free STOP is
+`spike/t454/remote_host_admission_stop_f7900e69.json`.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an
