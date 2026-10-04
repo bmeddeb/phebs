@@ -18,8 +18,12 @@ type typedAPIStore struct {
 	snapshot                 store.TypedIndexOperator
 	reads, lookups, enqueues int
 	fault                    error
+	previewFault             error
 }
 
+func (s *typedAPIStore) CheckTypedIndexPreview(context.Context, string, string, []byte) error {
+	return s.previewFault
+}
 func (s *typedAPIStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
 	s.lookups++
 	if name != s.snapshot.Source.Repository {
@@ -181,5 +185,43 @@ func TestTypedIndexAPIClosedStatesAndErrors(t *testing.T) {
 	response := typedAPIRequest(t, New(opts), "/status?repository=example.test/repo", nil)
 	if response.Code != 503 || strings.Contains(response.Body.String(), "private") || strings.Contains(response.Body.String(), "secret") {
 		t.Fatal(response.Body.String())
+	}
+}
+
+func TestTypedIndexAPIRecordedRequestRefusesOnlyNewPreview(t *testing.T) {
+	s, opts := typedAPIFixture(t)
+	handler := New(opts)
+	selection := TypedIndexSelection{Repository: s.snapshot.Source.Repository, ExpectedRevision: s.snapshot.Revision, Provider: s.snapshot.Profile.Provider(), Profile: s.snapshot.Profile.Definition().Name, Purpose: typedindex.Canary}
+	preview, _, err := typedIndexPreview(t.Context(), opts, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.previewFault = store.ErrTypedIndexRequestRecorded
+	response := typedAPIRequest(t, handler, "/plan", selection)
+	if response.Code != 422 || !strings.Contains(response.Body.String(), "request_already_recorded") || s.enqueues != 0 {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	// A transport retry may confirm the original completed request; no fresh preview.
+	response = typedAPIRequest(t, handler, "/enqueue", TypedIndexEnqueue{TypedIndexSelection: selection, RequestDigest: preview.RequestDigest, IdempotencyKey: preview.IdempotencyKey})
+	if response.Code != 200 || s.enqueues != 1 {
+		t.Fatal(response.Code, response.Body.String())
+	}
+}
+func TestTypedIndexAPIScheduleGapAndEarlyFailure(t *testing.T) {
+	s, opts := typedAPIFixture(t)
+	s.snapshot.Coordinator = store.StatusDone
+	s.snapshot.Status.Desired = "sha256:" + strings.Repeat("a", 64)
+	for _, current := range []*typedindex.PublicationPointer{nil, {}} {
+		s.snapshot.Status.Current = current
+		s.snapshot.Schedule = &store.GenerationSchedule{Status: store.GenerationScheduleActive, TotalItems: 1}
+		view, _, err := typedIndexRead(t.Context(), opts, s.snapshot.Source.Repository)
+		if err != nil || view.State != "planning" {
+			t.Fatal(view, err)
+		}
+		s.snapshot.Schedule = &store.GenerationSchedule{Status: store.GenerationScheduleSettled, Failed: 1}
+		view, _, err = typedIndexRead(t.Context(), opts, s.snapshot.Source.Repository)
+		if err != nil || view.State != "failed" {
+			t.Fatal(view, err)
+		}
 	}
 }

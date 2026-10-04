@@ -1153,13 +1153,25 @@ controls.
 
 The status surface distinguishes absent, current, stale, planning, indexing,
 validating, publishing, failed and canceled. Active work refreshes the selected
-repository every five seconds. A read failure retains the last confirmed state
-and offers refresh; missing collected job history remains unavailable. A
+repository every five seconds, including queued work after coordinator completion.
+A read failure retains the last confirmed state and continues automatic checks
+while that state is active; refresh remains available. Early queued-work failure
+is terminal. Missing collected job history remains unavailable. A
 stale/restored source never displays old attempt progress as work on new HEAD.
 An unconfirmed enqueue offers **Retry exact request**, reusing its original
 request digest and idempotency key. Source/profile changes reject that request;
 refresh and review a new request before enqueueing again. Raw worker output and
 private paths are withheld.
+
+Each exact purpose may be recorded once for its source/profile authority.
+A failed or completed request cannot start a new run at identical authority,
+and switching back to a recorded purpose cannot start another run. **Review
+indexing plan** explains this limit and disables that selection; refreshing
+identical authority will not clear it. Another unrecorded purpose remains
+available. A changed indexed HEAD or installed profile authority permits a
+new request. This limit does not change **Retry exact request** after an
+unconfirmed network response. `/plan` reports this limit with HTTP 422 and
+`request_already_recorded`.
 
 The administrator HTTP contract is under `/api/code-navigation-indexing`:
 `GET /providers`, `GET /status?repository=…`, `POST /plan` and `POST /enqueue`.

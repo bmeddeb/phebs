@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/typedindex"
@@ -20,6 +22,7 @@ type TypedIndexOperator struct {
 	Revision       string
 	Status         TypedIndexStatus
 	Coordinator    JobStatus
+	Schedule       *GenerationSchedule
 }
 
 func operatorRevision(a typedAuthority) (string, error) {
@@ -79,6 +82,30 @@ func (s *Surreal) ReadTypedIndexOperator(ctx context.Context, repository string)
 			out.Status.Reason = ""
 			out.Status.Check = nil
 		}
+		// The coordinator finishes before the single generation worker claims.
+		// Read the desired root's exact schedule, never the current stage pointer.
+		spec := typedIndexScheduleSpec(repository, request.Root)
+		digest := generationScheduleDigest(spec)
+		if e := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); e != nil {
+			return out, e
+		}
+		result, e := storeQuery[[]generationScheduleRec](ctx, s.accounting, s.db,
+			"SELECT * FROM $schedule LIMIT 1", map[string]any{"schedule": typedID("generation_schedule", strings.TrimPrefix(digest, "sha256:"))}, storeRead())
+		if e != nil {
+			return out, typedError(ctx, e)
+		}
+		rows := firstDomainRows(result)
+		if len(rows) > 1 {
+			return out, typedindex.Invalid
+		}
+		if len(rows) == 1 {
+			schedule := rows[0].schedule()
+			if ValidateGenerationSchedule(schedule) != nil || schedule.Digest != digest {
+				return out, typedindex.Invalid
+			}
+			out.Schedule = &schedule
+		}
+
 		type link struct {
 			Job  *models.RecordID `json:"latest_typed_job"`
 			Root string           `json:"latest_typed_root"`
@@ -86,11 +113,11 @@ func (s *Surreal) ReadTypedIndexOperator(ctx context.Context, repository string)
 		if e := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); e != nil {
 			return out, e
 		}
-		result, e := storeQuery[[]link](ctx, s.accounting, s.db, "SELECT latest_typed_job, latest_typed_root FROM $repo LIMIT 1", map[string]any{"repo": repoID(repository)}, storeRead())
+		linksResult, e := storeQuery[[]link](ctx, s.accounting, s.db, "SELECT latest_typed_job, latest_typed_root FROM $repo LIMIT 1", map[string]any{"repo": repoID(repository)}, storeRead())
 		if e != nil {
 			return out, typedError(ctx, e)
 		}
-		links := firstDomainRows(result)
+		links := firstDomainRows(linksResult)
 		if len(links) != 1 {
 			return out, typedindex.Stale
 		}
@@ -154,4 +181,53 @@ func (s *Surreal) EnqueueTypedIndexExpected(ctx context.Context, repository, exp
 		return TypedIndexStatus{}, typedindex.Stale
 	}
 	return s.EnqueueTypedIndex(ctx, repository, raw)
+}
+
+// ErrTypedIndexRequestRecorded is a preview refusal, not an execution failure.
+// Recorded requests remain immutable; transport retries use Enqueue unchanged.
+var ErrTypedIndexRequestRecorded = errors.New("typed index request already recorded")
+
+func (s *Surreal) CheckTypedIndexPreview(ctx context.Context, repository, expected string, raw []byte) error {
+	a, err := s.readTypedAuthority(ctx, repository)
+	if err != nil {
+		return err
+	}
+	revision, err := operatorRevision(a)
+	if err != nil {
+		return err
+	}
+	if revision != expected {
+		return typedindex.Stale
+	}
+	admission, err := a.admit(ctx, string(raw), typedIndexPlan{}, "")
+	if err != nil {
+		return err
+	}
+	if admission.Request().Action != typedindex.Plan {
+		return typedindex.Invalid
+	}
+	type row struct {
+		Repository string `json:"repository"`
+		Root       string `json:"request_root"`
+	}
+	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
+		return err
+	}
+	result, err := storeQuery[[]row](ctx, s.accounting, s.db,
+		"SELECT repository, request_root FROM $request LIMIT 1",
+		map[string]any{"request": typedID("typed_index_request", admission.Digest())}, storeRead())
+	if err != nil {
+		return typedError(ctx, err)
+	}
+	rows := firstDomainRows(result)
+	if len(rows) > 1 {
+		return typedindex.Invalid
+	}
+	if len(rows) == 1 {
+		if rows[0].Repository != repository || rows[0].Root != admission.Digest() {
+			return typedindex.Invalid
+		}
+		return ErrTypedIndexRequestRecorded
+	}
+	return nil
 }

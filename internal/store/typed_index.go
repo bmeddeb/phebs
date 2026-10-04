@@ -383,9 +383,6 @@ func (s *Surreal) EnqueueTypedIndex(ctx context.Context, repository string, raw 
 	vars["root"] = digest
 	vars["body"] = intentBody
 	vars["pending_ids"] = pending
-	if len(pending) > 1 {
-		return TypedIndexStatus{}, typedindex.Invalid
-	}
 	if len(pending) == 1 {
 		vars["operator_job"] = pending[0]
 	}
@@ -454,7 +451,7 @@ func (s *Surreal) typedSchedule(ctx context.Context, repository string) (typedAu
 	if err := s.typedLiveRoot(ctx, repository, request.Root); err != nil {
 		return typedAuthority{}, GenerationScheduleSpec{}, err
 	}
-	return a, GenerationScheduleSpec{Repository: repository, Stage: "typed-index", Generation: request.Root, ResourceClass: GenerationResourceTypedIndex, TotalItems: 1, ChunkItems: 1, MaxAttempts: 3, RepositoryTokens: 1}, nil
+	return a, typedIndexScheduleSpec(repository, request.Root), nil
 }
 
 type typedExecution struct {
@@ -467,6 +464,10 @@ type typedExecution struct {
 	attemptRaw    string
 	activeAttempt string
 	vars          map[string]any
+}
+
+func typedIndexScheduleSpec(repository, root string) GenerationScheduleSpec {
+	return GenerationScheduleSpec{Repository: repository, Stage: TypedIndexScheduleStage, Generation: root, ResourceClass: GenerationResourceTypedIndex, TotalItems: 1, ChunkItems: 1, MaxAttempts: 3, RepositoryTokens: 1}
 }
 
 func (s *Surreal) typedExecution(ctx context.Context, chunk GenerationChunk, requireAttempt bool) (typedExecution, error) {
