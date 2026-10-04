@@ -15296,7 +15296,7 @@ pipeline closure. `ui/receipts/t458b.json` retains provenance, bundle/timing and
 failure qualifications. Immutable implementation review is all0; final receipt
 review and ticket integration remain distinct gates.
 
-The broader command run remains FAIL on three pre-existing phase-nine lifecycle
+The broader command run remains FAIL on three phase-nine lifecycle
 compositions; the short composition reproduces the same deadline at both exact
 base and candidate after cache cleanup. No exact capacity cause is inferred.
 The default focused neutral demo separately lacks its v2 source-generation
