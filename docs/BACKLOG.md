@@ -15493,6 +15493,42 @@ authorized target closure remain open. The fixture has zero accepted services
 and establishes no product-scale dimensions; ordinary providers remain
 unavailable and the T45.6 waiver is not PASS.
 
+T45.9 neutral pressure/lifecycle prerequisite (2026-10-04):
+the opt-in workspace coordinator test requires a fresh fully allocated 4-GiB
+loop/ext4 volume with 262,144 inodes and ballast outside its typed workspace.
+Actual capacity plus the full derived future owner budget must observe projected
+80-percent collect, 90-percent hard refusal, continued refusal after partial
+relief to 77 percent, and recovery below 75 percent through the same controller's
+production admission before diagnostic reads. Actual Prepare refusals on the
+live scheduler lease may retain a preflight prefix but no growth, custody,
+allowance, native launch or publication. The existing real runner/scheduler then
+requires two native phases, exact reuse, successful settlement and cold/warm
+routed content. At actual 90-percent filesystem use, bounded real lifecycle
+Ticks must preserve current and canceled-desired navigation. A production reader
+pin must block physical drain after guarded repository deletion; closing it
+permits a collecting prefix, fresh in-process startup without replay and at
+most 12,000 drain turns plus fixed discovery turns under unchanged limits.
+Zero through two retained parent tombstones remain explicit. This is selected
+deleted-repository retirement, not successor replacement or ordinary runner
+cadence/idle-recovery proof. Exact implementation `42d5b07b` passes the fresh
+native case in 63.30s: full-budget projected 80/90/77/19-percent observations,
+actual 90-percent current protection, one original shared allowance, two phases,
+1,211 lifecycle turns and two honest parent tombstones. The unchanged
+coordinator/consumer regression passes in 42.69s. Darwin normal/race, Linux
+compilation/vet and 26 models, affected Linux/full Darwin pinned lint, module
+and docs/glossary gates pass; the explicit original-Git model skips and Linux
+race is not claimed. Corrected-source pre-dispatch review is clean; initial
+oracle/cost, archive-packaging and stale-cache lint failures remain retained.
+Two independent final reviews of exact candidate `8dcc3849` cover all seven
+paths, retained evidence and costs with all severity counts zero. The source-
+free record is `spike/t459/native_pressure_lifecycle_1.json`; it changes no
+compiled input. Exact absence/unmount/detach
+teardown removed only fresh roots and the personal profile is stopped.
+Production work and bounds remain unchanged. Native restore, rendered Settings,
+complete neutral and separately authorized target closure remain open; zero
+accepted services and 176 admitted source bytes establish no product-scale
+dimension, ordinary providers remain unavailable and T45.6 is not PASS.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

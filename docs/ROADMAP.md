@@ -118,6 +118,24 @@ Failed-owner cleanup is proven, while actual pressure/lifecycle,
 native restore, rendered Settings, complete neutral closure and the separately
 authorized target remain open. Production and historical Bazel gates stay exact;
 this fixture establishes no product-scale envelope or target authority.
+The next T45.9 prerequisite adds actual capacity-backed pressure/hysteresis and
+successful-current protection/retirement to that neutral workspace proof on a
+fresh fully allocated 4-GiB loop/ext4 volume. The same production gate charges
+the full future owner budget through projected 80/90/77-percent refusals and
+recovery. Real lifecycle Ticks preserve navigation at actual 90-percent use,
+then exercise publication-pin refusal, guarded repository deletion, collecting
+prefix startup and bounded drainage. Exact implementation `42d5b07b` passes
+in 63.30s with one original allowance/two native phases, 1,211 selected turns
+and two honest parent tombstones; the unchanged coordinator regression passes
+in 42.69s. Affected machine/static/docs gates and corrected-source review pass;
+two independent final reviews of exact candidate `8dcc3849` cover all seven
+paths, retained evidence and costs with all severity counts zero. The source-free
+record is `spike/t459/native_pressure_lifecycle_1.json`; verified ordinary teardown
+removed only fresh roots and stopped the test profile. Initial test-oracle,
+driver-cost, archive-packaging and stale-cache lint failures remain retained.
+This selected deleted-repository proof changes no production bound and does not
+claim ordinary runner cadence, successor replacement, native restore, rendered
+Settings, complete neutral or separately authorized target closure.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
