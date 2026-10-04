@@ -15482,8 +15482,9 @@ one retained parent tombstone per case. The existing real runner/coordinator
 and routed-consumer regression passes after fixture reuse (33.65s). Linux
 acceptance models, affected package normal/race and static/docs gates pass;
 pre-dispatch independent source/config/cost reviews record all severity counts
-zero. The source-free record is `spike/t459/native_faults_1.json`; final evidence
-review remains the branch-close check. Fresh staging is removed after verified
+zero. Two independent final reviews of exact candidate `6efc50ae` cover all
+eight changed paths with all severity counts zero; the source-free record is
+`spike/t459/native_faults_1.json`. Fresh staging is removed after verified
 absence and the personal profile is stopped. Prior staging/model/lint failures
 remain retained, and the initial provisioned installation ran no native case.
 Actual pressure/lifecycle closure, native generation after restore,

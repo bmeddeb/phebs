@@ -112,8 +112,9 @@ cancellation, original 300-second watchdog expiry and hard-controller-death
 recovery under a separate closed test schema. Exact implementation `b6be304f`
 passes all three fresh native cases and the reused coordinator/consumer
 regression; supporting machine gates and pre-dispatch reviews pass. The record
-is `spike/t459/native_faults_1.json`; final evidence review remains the branch-close
-check. Failed-owner cleanup is proven, while actual pressure/lifecycle,
+is `spike/t459/native_faults_1.json`; two independent final reviews of exact
+candidate `6efc50ae` cover all eight changed paths with all severity counts zero.
+Failed-owner cleanup is proven, while actual pressure/lifecycle,
 native restore, rendered Settings, complete neutral closure and the separately
 authorized target remain open. Production and historical Bazel gates stay exact;
 this fixture establishes no product-scale envelope or target authority.

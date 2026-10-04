@@ -9673,8 +9673,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   normal/race, Linux compilation/vet, full Darwin and affected Linux pinned
   lint, module and docs/glossary gates pass. Broader Linux lint's retained
   thirteen unchanged T42.1 warnings are not relabeled. Two independent
-  pre-dispatch source/config/cost reviews report all severity counts zero;
-  final evidence review follows the source-free record
+  pre-dispatch source/config/cost reviews report all severity counts zero.
+  Two independent final reviews of exact candidate `6efc50ae` cover all eight
+  changed paths with all severity counts zero; their source-free record is
   `spike/t459/native_faults_1.json`. The initial staging newline, missing model
   oracle and two pinned-lint style failures remain retained; the first
   provisioned installation dispatched no native work. Fresh guest staging is
