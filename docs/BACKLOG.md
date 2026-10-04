@@ -15351,6 +15351,14 @@ race, vet/lint, docs/glossary and 13 pinned Chromium checks pass; all eight
 preview pixels compare unchanged. The broad typed-store race pass precedes
 only that status distinction. Ticket integration remains a distinct gate.
 
+T45.8b re-run follow-up (2026-10-04): Ben chose re-runs over consumed requests.
+Managed requests carry an optional run ordinal. Plan previews the next run of a
+finished or superseded purpose and reuses an in-flight one; enqueue keeps exact
+transport retry idempotent; the `request_already_recorded` refusal is removed.
+Contract, API, real-store and UI tests and the browser spec are updated. The
+spec's five functional checks pass in local Chrome; the canonical pinned
+renderer checks were not rerun.
+
 The earlier host-volume command run is retained as FAIL on three phase-nine lifecycle
 compositions; the short composition reproduces the same deadline at both exact
 base and candidate after cache cleanup. The unchanged short case then passed

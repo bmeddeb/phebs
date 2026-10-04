@@ -3,7 +3,7 @@ import { useStyletron } from 'baseui'
 import { Button, KIND, SIZE } from 'baseui/button'
 import { StateNotice, StatusChip } from '../components/kit'
 import { fetchRepoStatus } from '../api'
-import { TYPED_REQUEST_RECORDED, enqueueTypedIndex, fetchTypedProviders, fetchTypedView, planTypedIndex, type TypedIndexPreview, type TypedIndexProviders, type TypedIndexSelection, type TypedIndexView } from '../typedIndex'
+import { enqueueTypedIndex, fetchTypedProviders, fetchTypedView, planTypedIndex, type TypedIndexPreview, type TypedIndexProviders, type TypedIndexSelection, type TypedIndexView } from '../typedIndex'
 import { navigate, useHashRoute } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
@@ -22,8 +22,6 @@ export function CodeNavigationIndexingSection() {
   const [view, setView] = useState<TypedIndexView | null>(null)
   const [preview, setPreview] = useState<TypedIndexPreview | null>(null)
   const [error, setError] = useState('')
-  const [refusedPlan, setRefusedPlan] = useState('')
-  const selectionKey = [repository, purpose, view?.revision ?? ''].join('\0')
   const [busy, setBusy] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const activeRepository = useRef('')
@@ -78,7 +76,7 @@ export function CodeNavigationIndexingSection() {
 
   const route = (repo: string, selectedPurpose = purpose) => navigate('/settings', { repo, purpose: selectedPurpose, section: 'code-navigation-indexing' })
   const plan = async () => {
-    if (!view?.available || refusedPlan === selectionKey || error || !providers?.providers.some(provider => provider.available && provider.id === view.provider)) return
+    if (!view?.available || error || !providers?.providers.some(provider => provider.available && provider.id === view.provider)) return
     const epoch = generation.current
     const control = new AbortController()
     mutation.current = control
@@ -86,12 +84,7 @@ export function CodeNavigationIndexingSection() {
     try {
       const next = await planTypedIndex({ repository, expected_revision: view.revision, provider: view.provider, profile: view.profile, purpose }, view.commit, control.signal)
       if (epoch === generation.current) setPreview(next)
-    } catch (e) {
-      if (epoch === generation.current && !isAbortError(e)) {
-        if (e instanceof Error && e.message === TYPED_REQUEST_RECORDED) { setPreview(null); setRefusedPlan(selectionKey) }
-        else setError('Indexing selection changed or is unavailable. Refresh before planning again.')
-      }
-    }
+    } catch (e) { if (epoch === generation.current && !isAbortError(e)) setError('Indexing selection changed or is unavailable. Refresh before planning again.') }
     finally { if (epoch === generation.current) setBusy(false) }
   }
   const enqueue = async () => {
@@ -113,7 +106,6 @@ export function CodeNavigationIndexingSection() {
     <section id="code-navigation-indexing" aria-labelledby="code-navigation-indexing-heading" className={css({ marginBottom: '32px', minWidth: 0 })}>
       <h1 id="code-navigation-indexing-heading" tabIndex={-1} className={css({ margin: '0 0 8px', scrollMarginTop: '64px', fontSize: '20px', color: tok.textPrimary })}>Code navigation indexing</h1>
       <p className={css({ fontSize: '12px', color: tok.textSecondary })}>Generate precise navigation for the repository’s indexed HEAD.</p>
-      {refusedPlan === selectionKey && <StateNotice tone="amber" title="Request already recorded">{TYPED_REQUEST_RECORDED}</StateNotice>}
       {error && <div role="alert"><StateNotice tone="amber" title="Indexing unavailable">{error}</StateNotice></div>}
       <div className={css({ display: 'flex', gap: '8px', marginBottom: '12px' })}>
         <Button size={SIZE.compact} kind={KIND.secondary} onClick={() => { setError(''); setRefresh(value => value + 1) }} disabled={busy}>Refresh indexing</Button>
@@ -152,7 +144,7 @@ export function CodeNavigationIndexingSection() {
             <option value="publish">Generate navigation</option><option value="canary">Canary</option><option value="dry-run">Dry run</option>
           </select></label>
           <p className={css({ margin: 0, fontSize: '12px', color: tok.textSecondary })}>Canary and dry run validate without publishing. Only a complete generation replaces current navigation.</p>
-          <Button size={SIZE.compact} kind={KIND.secondary} disabled={busy || !!error || refusedPlan === selectionKey || ACTIVE.has(selected.state)} onClick={() => void plan()}>Review indexing plan</Button>
+          <Button size={SIZE.compact} kind={KIND.secondary} disabled={busy || !!error || ACTIVE.has(selected.state)} onClick={() => void plan()}>Review indexing plan</Button>
         </>}
         {preview && <div className={css({ minWidth: 0, padding: '12px', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
           <p className={css({ fontSize: '12px', color: tok.textSecondary, overflowWrap: 'anywhere' })}>Exact commit: <code>{preview.commit}</code></p>

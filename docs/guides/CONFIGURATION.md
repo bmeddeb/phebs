@@ -1197,15 +1197,15 @@ request digest and idempotency key. Source/profile changes reject that request;
 refresh and review a new request before enqueueing again. Raw worker output and
 private paths are withheld.
 
-Each exact purpose may be recorded once for its source/profile authority.
-A failed or completed request cannot start a new run at identical authority,
-and switching back to a recorded purpose cannot start another run. **Review
-indexing plan** explains this limit and disables that selection; refreshing
-identical authority will not clear it. Another unrecorded purpose remains
-available. A changed indexed HEAD or installed profile authority permits a
-new request. This limit does not change **Retry exact request** after an
-unconfirmed network response. `/plan` reports this limit with HTTP 422 and
-`request_already_recorded`.
+A failed, canceled, completed or superseded purpose can run again on the same
+commit and profile. **Review indexing plan** previews the next run of that
+purpose: a new request digest that starts a fresh attempt once you enqueue it,
+while earlier runs keep their records. While a request of the same purpose is
+still planning, indexing, validating or publishing, review shows that request
+instead, so a second click never starts a duplicate. **Retry exact request**
+after an unconfirmed network response still resends the original digest and
+never starts another run. The existing limit of 64 retained requests per
+repository still applies; when it is full, a new run is refused.
 
 The administrator HTTP contract is under `/api/code-navigation-indexing`:
 `GET /providers`, `GET /status?repository=…`, `POST /plan` and `POST /enqueue`.

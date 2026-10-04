@@ -209,7 +209,7 @@ func (s *Surreal) inspectTypedIndexControlRelations(ctx context.Context, kind Ty
 		// Match the stored intent, not today's repository incarnation or source.
 		want := typedindex.NewRequest(r.Source, profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, r.IdempotencyKey)
 		if r.Schema == typedindex.ManagedRequestSchema {
-			want = typedindex.NewManagedRequest(r.Source, profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, r.Purpose)
+			want = typedindex.NewManagedRequest(r.Source, profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, r.Purpose).ManagedRun(r.Run)
 		}
 		if r != want {
 			return typedindex.Invalid

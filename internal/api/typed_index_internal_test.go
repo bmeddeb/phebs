@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -18,12 +19,8 @@ type typedAPIStore struct {
 	snapshot                 store.TypedIndexOperator
 	reads, lookups, enqueues int
 	fault                    error
-	previewFault             error
 }
 
-func (s *typedAPIStore) CheckTypedIndexPreview(context.Context, string, string, []byte) error {
-	return s.previewFault
-}
 func (s *typedAPIStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
 	s.lookups++
 	if name != s.snapshot.Source.Repository {
@@ -188,23 +185,52 @@ func TestTypedIndexAPIClosedStatesAndErrors(t *testing.T) {
 	}
 }
 
-func TestTypedIndexAPIRecordedRequestRefusesOnlyNewPreview(t *testing.T) {
-	s, opts := typedAPIFixture(t)
-	handler := New(opts)
-	selection := TypedIndexSelection{Repository: s.snapshot.Source.Repository, ExpectedRevision: s.snapshot.Revision, Provider: s.snapshot.Profile.Provider(), Profile: s.snapshot.Profile.Definition().Name, Purpose: typedindex.Canary}
-	preview, _, err := typedIndexPreview(t.Context(), opts, selection)
+func typedAPIDigest(t *testing.T, s *typedAPIStore, r typedindex.Request) string {
+	t.Helper()
+	raw, _ := json.Marshal(r)
+	a, err := typedindex.Admit(t.Context(), typedindex.Authority{Enabled: true, Administrator: true, Source: s.snapshot.Source, Profile: typedindex.Epoch{Number: s.snapshot.ProfileEpoch, Digest: s.snapshot.Profile.Digest()}, UniverseDigest: s.snapshot.UniverseDigest}, s.snapshot.Profile, raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.previewFault = store.ErrTypedIndexRequestRecorded
-	response := typedAPIRequest(t, handler, "/plan", selection)
-	if response.Code != 422 || !strings.Contains(response.Body.String(), "request_already_recorded") || s.enqueues != 0 {
-		t.Fatal(response.Code, response.Body.String())
-	}
-	// A transport retry may confirm the original completed request; no fresh preview.
-	response = typedAPIRequest(t, handler, "/enqueue", TypedIndexEnqueue{TypedIndexSelection: selection, RequestDigest: preview.RequestDigest, IdempotencyKey: preview.IdempotencyKey})
-	if response.Code != 200 || s.enqueues != 1 {
-		t.Fatal(response.Code, response.Body.String())
+	return a.Digest()
+}
+func TestTypedIndexAPIReruns(t *testing.T) {
+	s, opts := typedAPIFixture(t)
+	handler := New(opts)
+	src := s.snapshot
+	desired := "sha256:" + strings.Repeat("c", 64)
+	canary := typedindex.NewManagedRequest(src.Source, src.Profile, src.ProfileEpoch, src.UniverseDigest, typedindex.Canary)
+	dryRun := typedindex.NewManagedRequest(src.Source, src.Profile, src.ProfileEpoch, src.UniverseDigest, typedindex.DryRun)
+	selection := TypedIndexSelection{Repository: src.Source.Repository, ExpectedRevision: src.Revision, Provider: src.Profile.Provider(), Profile: src.Profile.Definition().Name, Purpose: typedindex.Canary}
+	for _, tc := range []struct {
+		name    string
+		desired typedindex.Request
+		status  store.TypedIndexStatus
+		want    uint64
+		accept  []uint64
+	}{
+		{"first", typedindex.Request{}, store.TypedIndexStatus{}, 0, []uint64{0}},
+		{"failed retry", canary.ManagedRun(2), store.TypedIndexStatus{Desired: desired, Reason: typedindex.ExecutionFailed}, 3, []uint64{3, 2}},
+		{"switch back", dryRun.ManagedRun(4), store.TypedIndexStatus{Desired: desired}, 5, []uint64{5}},
+		{"in flight", canary.ManagedRun(1), store.TypedIndexStatus{Desired: desired, Stage: store.TypedExecution}, 1, []uint64{1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s.snapshot.Desired, s.snapshot.DesiredFresh = tc.desired, tc.desired.Schema != ""
+			s.snapshot.Status, s.snapshot.Coordinator = tc.status, store.StatusDone
+			planned := typedAPIRequest(t, handler, "/plan", selection)
+			var preview TypedIndexPreview
+			if planned.Code != 200 || json.Unmarshal(planned.Body.Bytes(), &preview) != nil || preview.IdempotencyKey != canary.ManagedRun(tc.want).IdempotencyKey {
+				t.Fatal(planned.Code, planned.Body.String())
+			}
+			for run := range uint64(7) {
+				r := canary.ManagedRun(run)
+				before := s.enqueues
+				response := typedAPIRequest(t, handler, "/enqueue", TypedIndexEnqueue{TypedIndexSelection: selection, RequestDigest: typedAPIDigest(t, s, r), IdempotencyKey: r.IdempotencyKey})
+				if accepted := slices.Contains(tc.accept, run); accepted != (response.Code == 200) || accepted != (s.enqueues == before+1) {
+					t.Fatal("run", run, response.Code, response.Body.String())
+				}
+			}
+		})
 	}
 }
 func TestTypedIndexAPIScheduleGapAndEarlyFailure(t *testing.T) {

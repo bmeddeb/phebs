@@ -16,7 +16,6 @@ const TypedIndexPath = "/api/code-navigation-indexing"
 const TypedIndexResourceProfile = "native-arm64-bounded-v1"
 
 type typedOperatorStore interface {
-	CheckTypedIndexPreview(context.Context, string, string, []byte) error
 	ReadTypedIndexOperator(context.Context, string) (store.TypedIndexOperator, error)
 	EnqueueTypedIndexExpected(context.Context, string, string, []byte) (store.TypedIndexStatus, error)
 }
@@ -159,27 +158,59 @@ func typedIndexRead(ctx context.Context, opts Options, repository string) (Typed
 	}
 	return view, snapshot, nil
 }
-func typedIndexPreview(ctx context.Context, opts Options, selection TypedIndexSelection) (TypedIndexPreview, []byte, error) {
+
+type typedIndexCandidate struct {
+	preview TypedIndexPreview
+	raw     []byte
+}
+
+// typedIndexRuns picks managed run ordinals. An in-flight desired request of the
+// same purpose is reused exactly. Otherwise the next run after the desired one
+// re-runs a finished or superseded purpose; that finished request stays an exact
+// enqueue candidate so a transport retry of a committed enqueue remains idempotent.
+func typedIndexRuns(state string, desired, base typedindex.Request) []uint64 {
+	if desired.Schema != typedindex.ManagedRequestSchema {
+		return []uint64{0}
+	}
+	root := desired
+	root.Action, root.ParentRequestDigest, root.PlanDigest = typedindex.Plan, "", ""
+	if root != base.ManagedRun(desired.Run) {
+		return []uint64{desired.Run + 1}
+	}
+	if state == "planning" || state == "indexing" || state == "validating" || state == "publishing" {
+		return []uint64{desired.Run}
+	}
+	return []uint64{desired.Run + 1, desired.Run}
+}
+
+// typedIndexCandidates returns the previewed request first, then any other
+// request enqueue may accept for the same selection.
+func typedIndexCandidates(ctx context.Context, opts Options, selection TypedIndexSelection) ([]typedIndexCandidate, error) {
 	view, snapshot, err := typedIndexRead(ctx, opts, selection.Repository)
 	if err != nil {
-		return TypedIndexPreview{}, nil, err
+		return nil, err
 	}
 	if !view.Available {
-		return TypedIndexPreview{}, nil, huma.Error503ServiceUnavailable("managed indexing unavailable")
+		return nil, huma.Error503ServiceUnavailable("managed indexing unavailable")
 	}
 	if selection.ExpectedRevision != view.Revision || selection.Provider != view.Provider || selection.Profile != view.Profile {
-		return TypedIndexPreview{}, nil, huma.Error409Conflict("indexing selection changed; refresh")
+		return nil, huma.Error409Conflict("indexing selection changed; refresh")
 	}
-	request := typedindex.NewManagedRequest(snapshot.Source, snapshot.Profile, snapshot.ProfileEpoch, snapshot.UniverseDigest, selection.Purpose)
-	raw, err := json.Marshal(request)
-	if err != nil {
-		return TypedIndexPreview{}, nil, typedIndexHTTPError(err)
+	base := typedindex.NewManagedRequest(snapshot.Source, snapshot.Profile, snapshot.ProfileEpoch, snapshot.UniverseDigest, selection.Purpose)
+	var out []typedIndexCandidate
+	for _, run := range typedIndexRuns(view.State, snapshot.Desired, base) {
+		request := base.ManagedRun(run)
+		raw, err := json.Marshal(request)
+		if err != nil {
+			return nil, typedIndexHTTPError(err)
+		}
+		admission, err := typedindex.Admit(ctx, typedindex.Authority{Enabled: true, Administrator: true, Source: snapshot.Source, Profile: typedindex.Epoch{Number: snapshot.ProfileEpoch, Digest: snapshot.Profile.Digest()}, UniverseDigest: snapshot.UniverseDigest}, snapshot.Profile, raw)
+		if err != nil {
+			return nil, typedIndexHTTPError(err)
+		}
+		out = append(out, typedIndexCandidate{TypedIndexPreview{SchemaVersion: "phebs-typed-index-preview-v1", Selection: selection, Commit: view.Commit, RequestDigest: admission.Digest(), IdempotencyKey: request.IdempotencyKey, ResourceProfile: TypedIndexResourceProfile}, raw})
 	}
-	admission, err := typedindex.Admit(ctx, typedindex.Authority{Enabled: true, Administrator: true, Source: snapshot.Source, Profile: typedindex.Epoch{Number: snapshot.ProfileEpoch, Digest: snapshot.Profile.Digest()}, UniverseDigest: snapshot.UniverseDigest}, snapshot.Profile, raw)
-	if err != nil {
-		return TypedIndexPreview{}, nil, typedIndexHTTPError(err)
-	}
-	return TypedIndexPreview{SchemaVersion: "phebs-typed-index-preview-v1", Selection: selection, Commit: view.Commit, RequestDigest: admission.Digest(), IdempotencyKey: request.IdempotencyKey, ResourceProfile: TypedIndexResourceProfile}, raw, nil
+	return out, nil
 }
 func typedIndexHTTPError(err error) error {
 	switch {
@@ -221,26 +252,26 @@ func registerTypedIndex(api huma.API, opts Options) {
 	type planOut struct{ Body TypedIndexPreview }
 	huma.Register(api, huma.Operation{OperationID: "plan-code-navigation-indexing", Method: http.MethodPost, Path: TypedIndexPath + "/plan", MaxBodyBytes: 4096}, func(ctx context.Context, in *planIn) (*planOut, error) {
 		setAuditTarget(ctx, in.Body.Repository)
-		preview, raw, err := typedIndexPreview(ctx, opts, in.Body)
+		candidates, err := typedIndexCandidates(ctx, opts, in.Body)
 		if err != nil {
 			return nil, err
 		}
-		if err := opts.Store.(typedOperatorStore).CheckTypedIndexPreview(ctx, in.Body.Repository, in.Body.ExpectedRevision, raw); err != nil {
-			if errors.Is(err, store.ErrTypedIndexRequestRecorded) {
-				return nil, huma.Error422UnprocessableEntity("request_already_recorded")
-			}
-			return nil, typedIndexHTTPError(err)
-		}
-		return &planOut{Body: preview}, nil
+		return &planOut{Body: candidates[0].preview}, nil
 	})
 	type enqueueIn struct{ Body TypedIndexEnqueue }
 	huma.Register(api, huma.Operation{OperationID: "enqueue-code-navigation-indexing", Method: http.MethodPost, Path: TypedIndexPath + "/enqueue", MaxBodyBytes: 4096}, func(ctx context.Context, in *enqueueIn) (*statusOut, error) {
 		setAuditTarget(ctx, in.Body.Repository)
-		preview, raw, err := typedIndexPreview(ctx, opts, in.Body.TypedIndexSelection)
+		candidates, err := typedIndexCandidates(ctx, opts, in.Body.TypedIndexSelection)
 		if err != nil {
 			return nil, err
 		}
-		if in.Body.RequestDigest != preview.RequestDigest || in.Body.IdempotencyKey != preview.IdempotencyKey {
+		var raw []byte
+		for _, c := range candidates {
+			if in.Body.RequestDigest == c.preview.RequestDigest && in.Body.IdempotencyKey == c.preview.IdempotencyKey {
+				raw = c.raw
+			}
+		}
+		if raw == nil {
 			return nil, huma.Error409Conflict("indexing request changed; refresh")
 		}
 		backend := opts.Store.(typedOperatorStore)

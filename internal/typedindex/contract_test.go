@@ -613,3 +613,36 @@ func TestManagedPurposeIdentity(t *testing.T) {
 		t.Fatal("empty admission publishes")
 	}
 }
+
+func TestManagedRunOrdinal(t *testing.T) {
+	p, auth, legacy, _ := fixture(t)
+	base := NewManagedRequest(auth.Source, p, auth.Profile.Number, auth.UniverseDigest, Canary)
+	if base.ManagedRun(0) != base || bytes.Contains(wire(t, base), []byte(`"run"`)) {
+		t.Fatal("run zero changed the original request bytes")
+	}
+	seen := map[string]bool{admit(t, p, auth, base).Digest(): true}
+	for _, run := range []uint64{1, 2} {
+		r := base.ManagedRun(run)
+		a := admit(t, p, auth, r)
+		if r.Run != run || r.IdempotencyKey == base.IdempotencyKey || seen[a.Digest()] {
+			t.Fatal("run did not create a distinct root", run)
+		}
+		seen[a.Digest()] = true
+		next, e := PlannedSuccessor(t.Context(), a, hash([]byte("plan")))
+		if e != nil || next.Run != run || next.ManagedRun(run) != (Request{}) {
+			t.Fatal("successor lost its run or was rebased", e)
+		}
+		bad := r
+		bad.Run++
+		if _, e := Admit(t.Context(), auth, p, wire(t, bad)); e == nil {
+			t.Fatal("run changed without its key")
+		}
+	}
+	legacy.Run = 1
+	if _, e := Admit(t.Context(), auth, p, wire(t, legacy)); e == nil {
+		t.Fatal("legacy request admitted a run")
+	}
+	if legacy.ManagedRun(1) != (Request{}) {
+		t.Fatal("legacy request rebased as managed")
+	}
+}

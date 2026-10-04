@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { setCSRFToken } from './authSession'
-import { TYPED_REQUEST_RECORDED, planTypedIndex, enqueueTypedIndex, fetchTypedView, validateTypedPreview, validateTypedProviders, validateTypedView } from './typedIndex'
+import { planTypedIndex, enqueueTypedIndex, fetchTypedView, validateTypedPreview, validateTypedProviders, validateTypedView } from './typedIndex'
 const repo = 'example.test/repo'
 const h = 'sha256:' + 'a'.repeat(64)
 const view = { schema: 'phebs-typed-index-status-v1', repository: repo, commit: 'a'.repeat(40), revision: h, available: true, state: 'absent', provider: 'bazel-rules-go-scip-v1', profile: 'reduced', target_profile: 'reduced', config_profile: 'ordinary', resource_profile: 'native-arm64-bounded-v1', request_digest: '', job_state: '', current_commit: '', reason: '', checked_purpose: '' }
@@ -30,11 +30,9 @@ test('enqueue carries CSRF and exact preview identity', async () => {
   expect(JSON.parse(init.body as string)).toEqual({ ...selection, request_digest: h, idempotency_key: 'a'.repeat(64) })
 })
 
-test('only the bounded closed plan refusal becomes the no-new-attempt message', async () => {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ detail: 'request_already_recorded' }), {status:422}))
-  await expect(planTypedIndex(selection,view.commit)).rejects.toThrow(TYPED_REQUEST_RECORDED)
-  vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({detail:'/private/worker/stderr'}),{status:422}))
-  await expect(planTypedIndex(selection,view.commit)).rejects.toThrow('Indexing unavailable')
-  vi.mocked(fetch).mockResolvedValue(new Response('x'.repeat(32769),{status:422}))
-  await expect(planTypedIndex(selection,view.commit)).rejects.toThrow('Indexing response unavailable')
+test('plan refusals never surface a response body', async () => {
+  for (const body of [JSON.stringify({ detail: 'request_already_recorded' }), JSON.stringify({ detail: '/private/worker/stderr' }), 'x'.repeat(32769)]) {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(body, { status: 422 }))
+    await expect(planTypedIndex(selection, view.commit)).rejects.toThrow('Indexing unavailable. Refresh to retry.')
+  }
 })

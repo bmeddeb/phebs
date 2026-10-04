@@ -4,7 +4,6 @@ import { BaseProvider } from 'baseui'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { lightTheme } from '../theme'
-import { TYPED_REQUEST_RECORDED } from '../typedIndex'
 import { CodeNavigationIndexingSection } from './CodeNavigationIndexingSection'
 
 const api = vi.hoisted(() => ({ fetchRepoStatus: vi.fn() }))
@@ -80,15 +79,16 @@ test.each(['absent', 'current', 'stale', 'planning', 'indexing', 'validating', '
   expect(await screen.findByText(state)).toBeTruthy()
 })
 
-test('recorded-purpose refusal explains no new attempt and survives refresh at identical authority', async () => {
-  typed.planTypedIndex.mockRejectedValueOnce(new Error(TYPED_REQUEST_RECORDED))
+test('a failed purpose can be reviewed and run again', async () => {
+  const rerun = 'sha256:' + 'b'.repeat(64)
+  typed.fetchTypedView.mockResolvedValue({ ...view, state: 'failed', request_digest: digest, job_state: 'done', reason: 'execution_failed' })
+  typed.planTypedIndex.mockImplementationOnce(async selection => ({ schema: 'phebs-typed-index-preview-v1', selection, commit: view.commit, request_digest: rerun, idempotency_key: 'b'.repeat(64), resource_profile: view.resource_profile }))
   renderSection()
-  fireEvent.click(await screen.findByRole('button', { name: 'Review indexing plan' }))
-  expect(await screen.findByText(TYPED_REQUEST_RECORDED)).toBeTruthy()
-  expect((screen.getByRole('button', { name: 'Review indexing plan' }) as HTMLButtonElement).disabled).toBe(true)
-  expect(screen.queryByRole('button', { name: 'Retry exact request' })).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: 'Refresh indexing' }))
-  await waitFor(() => expect(typed.fetchTypedView).toHaveBeenCalledTimes(2))
-  expect(screen.getByText(TYPED_REQUEST_RECORDED)).toBeTruthy()
-  expect(typed.enqueueTypedIndex).not.toHaveBeenCalled()
+  const review = await screen.findByRole('button', { name: 'Review indexing plan' })
+  expect((review as HTMLButtonElement).disabled).toBe(false)
+  fireEvent.click(review)
+  fireEvent.click(await screen.findByRole('button', { name: 'Generate navigation' }))
+  await waitFor(() => expect(typed.enqueueTypedIndex).toHaveBeenCalledTimes(1))
+  expect(typed.enqueueTypedIndex.mock.calls[0][0].request_digest).toBe(rerun)
+  expect(screen.queryByRole('alert')).toBeNull()
 })

@@ -8,7 +8,6 @@ export type TypedIndexProviders = Schemas['TypedIndexProviders'] & { providers: 
 export type TypedIndexEnqueue = Schemas['TypedIndexEnqueue']
 export const TYPED_PROVIDERS = ['bazel-rules-go-scip-v1', 'go-module-scip-v1', 'imported-artifact-scip-v1'] as const
 export const TYPED_STATES = ['absent', 'current', 'stale', 'planning', 'indexing', 'validating', 'publishing', 'failed', 'canceled'] as const
-export const TYPED_REQUEST_RECORDED = 'This exact request is already recorded. It cannot start another run. Change the indexed HEAD or installed profile to run this purpose again.'
 const PATH = '/api/code-navigation-indexing'
 const digest = (v: unknown) => typeof v === 'string' && /^sha256:[a-f0-9]{64}$/.test(v)
 const commit = (v: unknown) => typeof v === 'string' && (v === '' || /^[a-f0-9]{40}$/.test(v))
@@ -50,13 +49,7 @@ export function validateTypedPreview(value: unknown, selection: TypedIndexSelect
 async function typedJSON(path: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
   const response = await fetch(PATH + path, { signal, credentials: 'same-origin', ...(body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json', ...csrfHeaders() }, body: JSON.stringify(body) }) })
   if (response.status === 401) notifyAuthRequired()
-  if (!response.ok) {
-    if (path === '/plan' && response.status === 422) {
-      const value = await readTypedJSON(response)
-      if (value && typeof value === 'object' && 'detail' in value && value.detail === 'request_already_recorded') throw new Error(TYPED_REQUEST_RECORDED)
-    }
-    throw new Error(response.status === 409 ? 'Indexing selection changed. Refresh before trying again.' : 'Indexing unavailable. Refresh to retry.')
-  }
+  if (!response.ok) throw new Error(response.status === 409 ? 'Indexing selection changed. Refresh before trying again.' : 'Indexing unavailable. Refresh to retry.')
   return readTypedJSON(response)
 }
 async function readTypedJSON(response: Response): Promise<unknown> {

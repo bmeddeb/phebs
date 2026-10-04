@@ -9290,3 +9290,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   profile decode compares the same fields. The worker adds one architecture
   string comparison before any input work. No request, query, sync, startup,
   retry, publication, lock, cache, file read or child is added.
+
+- **2026-10-04 — T45.8b re-runs supersede consumed requests.** Ben chose to let
+  an exact purpose run again at unchanged source/profile authority, superseding
+  the consumed-request decision in the T45.8b review correction above. A
+  managed v2 request gains an optional `run` ordinal (`omitempty`); run 0 keeps
+  every existing request byte-identical, and the deterministic idempotency key
+  hashes the ordinal, so each run is a distinct immutable root. Legacy v1
+  requests refuse a run. Preview picks the run from the authenticated desired
+  request: an in-flight request of the same purpose is reused exactly; otherwise
+  the next run follows the desired one. Enqueue accepts that preview or, for a
+  finished request of the same purpose, its exact desired bytes, so a transport
+  retry of a committed enqueue stays idempotent and allocates no second job.
+  The store's enqueue path is unchanged: a new root becomes desired and uses the
+  existing coordinator and generation schedule. `/plan` no longer returns
+  `request_already_recorded`; the store preview check and the Settings refusal
+  notice are removed. Each run uses one of the existing 64 retained roots per
+  repository; a full quota refuses with the existing capacity error.
+
+  **Cost.** Preview and enqueue construct and admit at most two candidate
+  requests in memory instead of one, and drop the authority pass and parent-row
+  point read the refusal used. Status reads are unchanged. No store query,
+  lock, cache, job, child, poll or schema change is added.

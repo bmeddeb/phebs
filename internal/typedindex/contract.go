@@ -262,6 +262,9 @@ type Request struct {
 	ParentRequestDigest string  `json:"parent_request_digest"`
 	PlanDigest          string  `json:"plan_digest"`
 	Purpose             Purpose `json:"purpose,omitempty"`
+	// Run distinguishes an explicit managed re-run of the same purpose on the
+	// same source/profile. Zero keeps the original request bytes and key.
+	Run uint64 `json:"run,omitempty"`
 }
 
 // Authority is trusted server state, loaded after authentication. None of its
@@ -309,6 +312,18 @@ func NewManagedRequest(source Source, profile Profile, epoch uint64, universe st
 	return r
 }
 
+// ManagedRun returns this managed planning request at run ordinal run, with its
+// recomputed key. A different run is a distinct root, so a finished or
+// superseded purpose can execute again without weakening exact idempotency.
+func (r Request) ManagedRun(run uint64) Request {
+	if r.Schema != ManagedRequestSchema || r.Action != Plan || r.ParentRequestDigest != "" || r.PlanDigest != "" {
+		return Request{}
+	}
+	r.Run = run
+	r.IdempotencyKey = managedKey(r)
+	return r
+}
+
 func managedKey(r Request) string {
 	r.Action, r.ParentRequestDigest, r.PlanDigest, r.IdempotencyKey = Plan, "", "", ""
 	raw, _ := json.Marshal(r)
@@ -320,7 +335,7 @@ func managedKey(r Request) string {
 func (r Request) ValidatePurpose() error {
 	switch r.Schema {
 	case RequestSchema:
-		if r.Purpose != "" {
+		if r.Purpose != "" || r.Run != 0 {
 			return Invalid
 		}
 	case ManagedRequestSchema:
