@@ -829,8 +829,10 @@ touches validated, non-symlinked paths under the data directory.
 
 Managed indexing remains unavailable in ordinary runtime: this ticket defines
 an internal contract, not a configuration switch, worker or HTTP/MCP endpoint.
-The accepted initial profile is Bazel/rules_go/scip-go on Linux arm64 with
-skip-tests/skip-implementations and generated documents omitted. Existing
+The accepted initial profile is Bazel/rules_go/scip-go. Its sealed reduced
+configuration stays `linux/arm64`, with skip-tests/skip-implementations and
+generated documents omitted. Execution admits the live Linux host, `arm64` or
+`amd64`. Existing
 committed-SCIP navigation keeps its behavior. T45.3 must supply the generated
 lane and canonical ordering before generated coverage can advance; T45.4 owns
 the executor and T45.5 the routed reader.
@@ -941,6 +943,29 @@ replacement config passed `dockerd --validate`, one Docker restart succeeded,
 and the daemon reports the override with no containers present. The spent
 prep-12 attempt was not rerun; a fresh attempt must still pass its own
 supervisor clock gate.
+
+Native acceptance and preparation no longer read a Colima profile. Set
+`PHEBS_TYPED_NATIVE_TRANSPORT=ssh` and `PHEBS_TYPED_NATIVE_SSH_TARGET` to the
+dedicated user and host, with that host key already in `known_hosts`. On the
+execution host itself, set `PHEBS_TYPED_NATIVE_TRANSPORT=direct`. Either mode runs
+`sudo -n python3` (or `python3` when direct and already root). The host is the
+live Linux machine: `x86_64` seals `amd64` and `aarch64` seals `arm64`. CPU
+count is the live processor count and must be at least 2. MemTotal must be at
+least 4,533,092,352 bytes. Docker listens on `/var/run/docker.sock` at API
+v1.47, and `features.time-namespaces` stays `false`. Preflight requires
+seccomp's builtin profile. AppArmor remains mandatory when the daemon
+advertises it. A daemon that advertises seccomp and `name=cgroupns` is
+admitted. `observe` writes
+`deployment.json` from that live host. An exact `Content-Length` body stays
+exact. A chunked body is accepted under the same 1 MiB cap, and both
+encodings together are refused. The worker cgroup quota stays 2 CPUs
+(`200000/100000`). The historical reduced profile remains
+`phebs-typed-profile-v1` with `GOARCH=arm64`. An amd64 host seals
+`phebs-typed-profile-amd64-v1` instead and refuses the arm64 profile.
+Tool builds use `GOAMD64=v1` on amd64 and `GOARM64=v8.0` on arm64. Scratch,
+wall, output, task, and descriptor limits are
+unchanged. Keep stage directories and collected receipts on durable storage;
+a failed attempt stays retained.
 
 Prep-13 then reached a valid supervisor report but stopped at the later
 `inspect_stopped` check with exit 125 and no fd2 site token. Its exact report

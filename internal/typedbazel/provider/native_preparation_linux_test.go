@@ -82,8 +82,8 @@ func TestMain(m *testing.M) {
 		case "__plan_helper":
 			// Child roles intentionally have distinct environments from the
 			// primary worker; the linux build tag supplies the OS guard and this
-			// retains the existing arm64/UID65534/no-PID1 child guard.
-			if runtime.GOARCH != "arm64" || os.Getuid() != 65534 || os.Getgid() != 65534 || os.Getpid() == 1 {
+			// retains the admitted-host/UID65534/no-PID1 child guard.
+			if !typedindex.AdmittedNativeArch(runtime.GOARCH) || os.Getuid() != 65534 || os.Getgid() != 65534 || os.Getpid() == 1 {
 				os.Exit(125)
 			}
 			os.Exit(preparationExit(planner.RunHelper(os.Args[2:])))

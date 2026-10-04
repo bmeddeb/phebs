@@ -386,6 +386,26 @@ Ben requests integration and push of this reviewed runtime checkpoint.
 Frozen target-corpus correctness/cost closure and capacity remain open;
 Bazel remains unregistered and T45.7 still follows that closure.
 
+An admission attempt at exact `f7900e69` stops before any cohort because the
+runner cannot reach Colima profile `phebs-t451a`. No attempt identifier is
+spent. The record is `spike/t454/remote_host_admission_stop_f7900e69.json`.
+
+Native transport uses SSH or direct execution and seals the live Linux host.
+`x86_64` admits `amd64` and `aarch64` admits `arm64`; the observed CPU count
+must be at least 2. Worker limits stay exact. The earlier ARM64-only stop is
+superseded by `spike/t454/host_geometry_admission.json`. The corpus gates
+remain unexecuted. Bazel stays unregistered.
+
+This x86_64 host now runs Ubuntu Docker 29.1.3 with the frozen worker cgroup
+quota, but its kernel has no AppArmor and the info response is chunked, so
+no deployment is sealed and no cohort runs. The stop is
+`spike/t454/amd64_apparmor_kernel_stop.json`. The chunked info body is now
+accepted under the same 1 MiB cap, and the live deployment is sealed at
+`spike/t454/amd64-deployment.json`. Preflight now admits this daemon's
+seccomp and `name=cgroupns` pair. No cohort has run. An amd64 host now
+requires the explicit reduced successor `phebs-typed-profile-amd64-v1`;
+the historical arm64 profile stays exact and is not reused here.
+
 Sequencing override (2026-10-03): Ben waives the remaining T45.6 target-corpus
 correctness/cost gate and authorizes T45.7 continuation. This supersedes the
 T45.7 closure hold above. The corpus gate is waived, not passed; ordinary,

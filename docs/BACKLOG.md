@@ -15211,6 +15211,40 @@ correctness/cost passes and cross-cohort comparison remain open, with frozen
 VM capacity still unresolved. Bazel remains unregistered; T45.7 waits for
 Bazel closure.
 
+A later admission attempt from exact source `f7900e69` does not reach profile
+`phebs-t451a`: the runner has no Colima transport, and the connected personal
+worker cannot be targeted from this run. No cohort executes and no attempt
+identifier is spent. The source-free STOP is
+`spike/t454/remote_host_admission_stop_f7900e69.json`.
+
+Native acceptance and preparation reach the execution host by SSH or by
+direct execution. The ceremony admits the live Linux host: `x86_64`/`amd64`
+or `aarch64`/`arm64`, with the observed CPU count when it is at least 2.
+Worker quota, memory floor, scratch, wall, output, task, and descriptor
+limits stay exact. The earlier ARM64-only stop remains at
+`spike/t454/remote_arm64_admission_stop.json` and is superseded by
+`spike/t454/host_geometry_admission.json`. The three cohort gates and the
+cross-cohort comparison remain unexecuted. Bazel stays unregistered.
+
+On this x86_64 host, Ubuntu Docker 29.1.3 is running and the frozen worker
+cgroup quota is enforced, but the kernel has no AppArmor (`nomodule`; LSM
+`capability,landlock,selinux`). Sandbox preflight therefore refuses the
+daemon, and the chunked `/v1.47/info` response seals no deployment. The
+source-free stop is `spike/t454/amd64_apparmor_kernel_stop.json`. No corpus
+attempt is spent. Bazel stays unregistered.
+
+The chunked info body is now accepted under that same 1 MiB cap. The sealed
+live deployment is `spike/t454/amd64-deployment.json`
+(`sha256:85ece7516a7dca9b5a82842ac560921db078dd316b5dd3fb6df297867e16afdb`).
+AppArmor is not advertised here. Preflight now admits this daemon's
+seccomp and `name=cgroupns` pair. Seccomp alone is still refused. No corpus
+attempt is spent.
+
+The historical reduced profile stays arm64 under `phebs-typed-profile-v1`.
+An amd64 host seals and executes the explicit successor
+`phebs-typed-profile-amd64-v1` instead. The old profile is refused on this
+host, and mixed archive modes still refuse. No corpus attempt is spent.
+
 **T45.7 · Additional managed input options** *(needs T45.2–T45.5; may follow
 Bazel closure)* — add only separately validated providers behind the same
 publication contract: a standard Go module/`go.work` `scip-go` provider and an

@@ -4,6 +4,8 @@
 check/build are offline. stage/run require a separately reviewed configuration
 hash and the already running dedicated VM. This script never starts a VM, pulls
 an image, downloads dependencies, changes a profile, or supplies Docker flags.
+Transport is direct execution on the admitted Linux host, or SSH to it. The
+host is x86_64 or aarch64. It never reads a Colima profile or invents one.
 """
 import argparse
 import hashlib
@@ -94,6 +96,102 @@ def digest(data):
 
 def canonical(value):
     return json.dumps(value, separators=(',', ':'), ensure_ascii=False).encode()
+
+
+def json_pairs(raw):
+    """Split one JSON object into key/raw-value pairs without reserializing values."""
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) < 2 or raw[:1] != b'{' or raw[-1:] != b'}':
+        raise ValueError('raw object')
+    def skip(i):
+        if i >= len(raw):
+            raise ValueError('raw value')
+        c = raw[i:i+1]
+        if c == b'"':
+            i += 1
+            while i < len(raw):
+                if raw[i:i+1] == b'\\':
+                    i += 2
+                    continue
+                if raw[i:i+1] == b'"':
+                    return i + 1
+                i += 1
+            raise ValueError('raw string')
+        if c == b'{':
+            i = skip_ws(i + 1)
+            if raw[i:i+1] == b'}':
+                return i + 1
+            while True:
+                i = skip_ws(i)
+                i = skip(i)
+                i = skip_ws(i)
+                if raw[i:i+1] != b':':
+                    raise ValueError('raw colon')
+                i = skip(skip_ws(i + 1))
+                i = skip_ws(i)
+                if raw[i:i+1] == b',':
+                    i += 1
+                    continue
+                if raw[i:i+1] == b'}':
+                    return i + 1
+                raise ValueError('raw object end')
+        if c == b'[':
+            i = skip_ws(i + 1)
+            if raw[i:i+1] == b']':
+                return i + 1
+            while True:
+                i = skip(skip_ws(i))
+                i = skip_ws(i)
+                if raw[i:i+1] == b',':
+                    i += 1
+                    continue
+                if raw[i:i+1] == b']':
+                    return i + 1
+                raise ValueError('raw array end')
+        if c in b'tfn':
+            word = {b't': b'true', b'f': b'false', b'n': b'null'}[c]
+            if raw[i:i+len(word)] != word:
+                raise ValueError('raw literal')
+            return i + len(word)
+        if c in b'-0123456789':
+            j = i + 1
+            while j < len(raw) and raw[j:j+1] in b'0123456789.eE+-':
+                j += 1
+            return j
+        raise ValueError('raw value')
+    def skip_ws(i):
+        while i < len(raw) and raw[i:i+1] in b' \t\r\n':
+            i += 1
+        return i
+    i, pairs = 1, []
+    if raw[1:2] == b'}':
+        return pairs
+    while True:
+        i = skip_ws(i)
+        if raw[i:i+1] != b'"':
+            raise ValueError('raw key')
+        key_end = skip(i)
+        key = json.loads(raw[i:key_end])
+        i = skip_ws(key_end)
+        if raw[i:i+1] != b':':
+            raise ValueError('raw colon')
+        value_at = skip_ws(i + 1)
+        value_end = skip(value_at)
+        pairs.append((key, bytes(raw[value_at:value_end])))
+        i = skip_ws(value_end)
+        if i == len(raw) - 1 and raw[i:i+1] == b'}':
+            return pairs
+        if raw[i:i+1] != b',':
+            raise ValueError('raw separator')
+        i += 1
+
+
+def canonical_object(raw):
+    pairs = json_pairs(raw)
+    keys = [key for key, _ in pairs]
+    if len(keys) != len(set(keys)):
+        raise ValueError('duplicate key')
+    parts = [json.dumps(key, ensure_ascii=False).encode() + b':' + value for key, value in sorted(pairs, key=lambda item: item[0])]
+    return b'{' + b','.join(parts) + b'}'
 
 
 def decode(raw, maximum):
@@ -268,8 +366,214 @@ def exclusive(path, raw):
             os.close(directory)
 
 
+SSH_OPTIONS = ('BatchMode=yes', 'StrictHostKeyChecking=yes', 'RequestTTY=no', 'ConnectTimeout=10')
+DEPLOYMENT_KEYS = ('schema', 'profile', 'vm_config_sha256', 'kernel_release', 'os_release_sha256',
+                   'architecture', 'cpus', 'memory_total_kb', 'daemon_id', 'docker_version',
+                   'cgroup_driver', 'runtimes_sha256')
+OBSERVATION_KEYS = ('schema', 'kernel_release', 'os_release_sha256', 'architecture', 'cpus',
+                    'memory_total_kb', 'daemon_id', 'docker_version', 'cgroup_driver', 'runtimes_sha256')
+
+
+def sh_quote(text):
+    if not isinstance(text, str):
+        fail('remote argument')
+    return "'" + text.replace("'", "'\"'\"'") + "'"
+
+
+def remote_command(program, arguments):
+    if not isinstance(program, str) or any(not isinstance(arg, str) for arg in arguments):
+        fail('remote argument')
+    return ' '.join(sh_quote(part) for part in ('sudo', '-n', 'python3', '-c', program, *arguments))
+
+
+def host_goarch():
+    arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}.get(os.uname().machine)
+    if arch is None:
+        fail('admitted linux host')
+    return arch
+
+
+def remote_argv(program, arguments):
+    mode = os.environ.get('PHEBS_TYPED_NATIVE_TRANSPORT', '')
+    if mode == 'direct':
+        host_goarch()
+        if os.geteuid() == 0:
+            return ['python3', '-c', program, *arguments]
+        return ['sudo', '-n', 'python3', '-c', program, *arguments]
+    if mode == 'ssh':
+        target = os.environ.get('PHEBS_TYPED_NATIVE_SSH_TARGET', '')
+        if not re.fullmatch(r'(?:[A-Za-z0-9_][A-Za-z0-9._-]{0,31}@)?[A-Za-z0-9][A-Za-z0-9.-]{0,252}', target):
+            fail('ssh target')
+        argv = ['ssh']
+        for option in SSH_OPTIONS:
+            argv.extend(('-o', option))
+        return [*argv, target, '--', remote_command(program, arguments)]
+    fail('transport unconfigured')
+
+
+def invoke(program, arguments, **kwargs):
+    return subprocess.run(remote_argv(program, arguments), check=True, **kwargs)
+
+
 def transport(arguments, **kwargs):
-    return subprocess.run(['colima', 'ssh', '--profile', PROFILE, '--', 'sudo', 'python3', '-c', REMOTE, *arguments], check=True, **kwargs)
+    return invoke(REMOTE, arguments, **kwargs)
+
+
+def docker_body(head, body):
+    """Return one info body. Content-Length stays exact; chunked is the same 1 MiB cap."""
+    length = None
+    chunked = False
+    for line in head.split(b'\r\n')[1:]:
+        lower = line.lower()
+        if lower.startswith(b'content-length:'):
+            if length is not None:
+                raise SystemExit('docker length')
+            length = int(line.split(b':', 1)[1].strip())
+        elif lower.startswith(b'transfer-encoding:'):
+            chunked = line.split(b':', 1)[1].strip().lower() == b'chunked'
+    if length is not None and chunked:
+        raise SystemExit('docker length')
+    if length is not None:
+        if length < 0 or length > 1 << 20 or len(body) < length:
+            raise SystemExit('docker length')
+        return body[:length]
+    if not chunked:
+        raise SystemExit('docker length')
+    out = b''
+    rest = body
+    while True:
+        line, sep, rest = rest.partition(b'\r\n')
+        if not sep:
+            raise SystemExit('docker length')
+        size_text = line.split(b';', 1)[0]
+        if not size_text or any(c not in b'0123456789abcdefABCDEF' for c in size_text):
+            raise SystemExit('docker length')
+        size = int(size_text, 16)
+        if size == 0:
+            if len(out) > 1 << 20:
+                raise SystemExit('docker length')
+            return out
+        if size > (1 << 20) - len(out) or len(rest) < size + 2 or rest[size:size + 2] != b'\r\n':
+            raise SystemExit('docker length')
+        out += rest[:size]
+        rest = rest[size + 2:]
+
+
+def info_object(payload):
+    """Drop only the encoder's trailing whitespace. Field bytes stay raw."""
+    return payload.rstrip(b' \t\r\n')
+
+
+def _observer_main():
+    kernel = open('/proc/sys/kernel/osrelease', 'rb').read(257)
+    if len(kernel) > 256:
+        raise SystemExit('kernel bound')
+    kernel = kernel.decode().strip()
+    osrelease = open('/etc/os-release', 'rb').read(16385)
+    if len(osrelease) > 16384:
+        raise SystemExit('os bound')
+    memory = open('/proc/meminfo', 'rb').read(16385)
+    if len(memory) > 16384:
+        raise SystemExit('memory bound')
+    total = None
+    for line in memory.decode().split('\n'):
+        if line.startswith('MemTotal:'):
+            total = int(line.split()[1])
+    arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}.get(os.uname().machine)
+    cpus = os.cpu_count()
+    if total is None or arch is None or not isinstance(cpus, int) or cpus < 2 or not kernel:
+        raise SystemExit('geometry')
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(2)
+    sock.connect('/var/run/docker.sock')
+    sock.sendall(b'GET /v1.47/info HTTP/1.1\r\nHost: docker\r\nConnection: close\r\n\r\n')
+    buf = b''
+    while len(buf) <= (1 << 20) + 8192:
+        chunk = sock.recv(65536)
+        if not chunk:
+            break
+        buf += chunk
+    else:
+        raise SystemExit('docker bound')
+    head, sep, body = buf.partition(b'\r\n\r\n')
+    if not sep or b' 200 ' not in head.split(b'\r\n', 1)[0]:
+        raise SystemExit('docker status')
+    payload = info_object(docker_body(head, body))
+    wanted = {}
+    for key, value in json_pairs(payload):
+        if key in ('ID', 'ServerVersion', 'CgroupDriver', 'KernelVersion', 'Runtimes'):
+            wanted[key] = value
+    if set(wanted) != {'ID', 'ServerVersion', 'CgroupDriver', 'KernelVersion', 'Runtimes'}:
+        raise SystemExit('docker fields')
+    if json.loads(wanted['KernelVersion']) != kernel:
+        raise SystemExit('kernel')
+    facts = {
+        'schema': 'phebs-typed-native-host-observation-v1',
+        'kernel_release': kernel,
+        'os_release_sha256': digest(osrelease),
+        'architecture': arch,
+        'cpus': cpus,
+        'memory_total_kb': total,
+        'daemon_id': json.loads(wanted['ID']),
+        'docker_version': json.loads(wanted['ServerVersion']),
+        'cgroup_driver': json.loads(wanted['CgroupDriver']),
+        'runtimes_sha256': digest(canonical_object(wanted['Runtimes'])),
+    }
+    sys.stdout.buffer.write(canonical({key: facts[key] for key in (
+        'schema', 'kernel_release', 'os_release_sha256', 'architecture', 'cpus',
+        'memory_total_kb', 'daemon_id', 'docker_version', 'cgroup_driver', 'runtimes_sha256')}))
+
+
+OBSERVER = (
+    'import hashlib, json, os, socket, sys\n'
+    + inspect.getsource(digest)
+    + inspect.getsource(json_pairs)
+    + inspect.getsource(canonical)
+    + inspect.getsource(canonical_object)
+    + inspect.getsource(docker_body)
+    + inspect.getsource(info_object)
+    + inspect.getsource(_observer_main)
+    + '_observer_main()\n'
+)
+
+
+def deployment_from_observation(obs):
+    if tuple(obs) != OBSERVATION_KEYS or obs['schema'] != 'phebs-typed-native-host-observation-v1':
+        fail('host observation')
+    if obs['architecture'] not in ('arm64', 'amd64') or type(obs['cpus']) is not int or obs['cpus'] < 2:
+        fail('host geometry')
+    if type(obs['memory_total_kb']) is not int or obs['memory_total_kb'] * 1024 < POLICY['memory_bytes']:
+        fail('host memory below measured envelope')
+    for key in ('kernel_release', 'daemon_id', 'docker_version', 'cgroup_driver'):
+        text = obs[key]
+        if not isinstance(text, str) or not text or len(text) > 128 or any(ord(c) < 32 or ord(c) == 127 for c in text):
+            fail('host identity')
+    for key in ('os_release_sha256', 'runtimes_sha256'):
+        if not hash_valid(obs[key]):
+            fail('host identity')
+    sealed = {
+        'schema': 'phebs-typed-native-deployment-v1',
+        'profile': PROFILE,
+        'vm_config_sha256': digest(canonical(obs)),
+        'kernel_release': obs['kernel_release'],
+        'os_release_sha256': obs['os_release_sha256'],
+        'architecture': obs['architecture'],
+        'cpus': obs['cpus'],
+        'memory_total_kb': obs['memory_total_kb'],
+        'daemon_id': obs['daemon_id'],
+        'docker_version': obs['docker_version'],
+        'cgroup_driver': obs['cgroup_driver'],
+        'runtimes_sha256': obs['runtimes_sha256'],
+    }
+    return {key: sealed[key] for key in DEPLOYMENT_KEYS}
+
+
+def observe_host():
+    try:
+        result = invoke(OBSERVER, [], stdout=subprocess.PIPE, timeout=30)
+    except (OSError, subprocess.CalledProcessError):
+        fail('host observation')
+    return decode(result.stdout, 16384)
 
 
 def check_deployment_host(path, expected=None):
@@ -277,13 +581,15 @@ def check_deployment_host(path, expected=None):
     value = decode(raw, 16384)
     if expected is not None and digest(raw) != expected:
         fail('deployment identity')
-    if value.get('schema') != 'phebs-typed-native-deployment-v1' or value.get('profile') != PROFILE:
+    if tuple(value) != DEPLOYMENT_KEYS or value['schema'] != 'phebs-typed-native-deployment-v1' or value['profile'] != PROFILE:
         fail('deployment profile')
-    vm = Path.home() / '.colima' / PROFILE / 'colima.yaml'
-    h, _ = file_hash(vm, 1 << 20)
-    if value.get('vm_config_sha256') != h:
-        fail('saved VM configuration changed')
+    if deployment_from_observation(observe_host()) != value:
+        fail('saved host observation changed')
     return digest(raw)
+
+
+def write_deployment(output):
+    exclusive(output, canonical(deployment_from_observation(observe_host())))
 
 
 def stage(directory, expected):
@@ -566,7 +872,12 @@ def build(output):
     output = Path(output).absolute()
     output.mkdir(mode=0o700)  # deliberately refuses an existing output directory
     repo = Path(__file__).resolve().parents[2]
-    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH='arm64', CGO_ENABLED='0')
+    arch = host_goarch()
+    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=arch, CGO_ENABLED='0')
+    if arch == 'amd64':
+        env['GOAMD64'] = 'v1'
+    elif arch == 'arm64':
+        env['GOARM64'] = 'v8.0'
     subprocess.run(['go', 'build', '-trimpath', '-o', str(output / 'phebs'), './cmd/phebs'], cwd=repo, env=env, check=True, timeout=300)
     subprocess.run(['go', 'test', '-c', '-o', str(output / 'native-acceptance.test'), './internal/typedexecutor'], cwd=repo, env=env, check=True, timeout=300)
     for name in ('phebs', 'native-acceptance.test'):
@@ -693,6 +1004,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
     p = sub.add_parser('build'); p.add_argument('--output', required=True)
+    p = sub.add_parser('observe'); p.add_argument('--output', required=True)
     p = sub.add_parser('compare-corpus')
     for cohort in COHORTS: p.add_argument('--' + cohort, required=True)
     p.add_argument('--output', required=True)
@@ -704,6 +1016,7 @@ def main():
         else: p.add_argument('--deployment', required=True)
     args = parser.parse_args()
     if args.command == 'build': build(args.output)
+    elif args.command == 'observe': write_deployment(args.output)
     elif args.command == 'compare-corpus':
         exclusive(args.output, canonical(compare_corpus({c: getattr(args, c) for c in COHORTS})))
     elif args.command == 'check':

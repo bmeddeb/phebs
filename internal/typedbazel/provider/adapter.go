@@ -7,12 +7,12 @@ import (
 	"errors"
 	"io"
 	"os"
-	"runtime"
 	"slices"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 type CallEvidence struct {
@@ -102,8 +102,8 @@ func inspectNativeCall(data []byte, expectedHash string, argv, env []string, cwd
 }
 
 func RunAdapter(ctx context.Context) error {
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 || os.Getpid() == 1 {
-		return errors.New("native adapter requires isolated Linux arm64 worker")
+	if !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 || os.Getpid() == 1 {
+		return errors.New("native adapter requires an admitted Linux worker")
 	}
 	planPath, tracePath, err := nativeSlotPaths(os.Getenv(nativeSlotEnv))
 	if err != nil {
