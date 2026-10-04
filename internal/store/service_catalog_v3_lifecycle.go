@@ -965,6 +965,16 @@ SELECT * FROM service_catalog_v3_member
 func (s *Surreal) ValidateServiceCatalogV3Precious(
 	ctx context.Context,
 ) (ServiceCatalogV3PreciousReport, error) {
+	return s.validateServiceCatalogV3Precious(ctx, false)
+}
+
+// validateServiceCatalogV3Precious with restored set accepts service-state
+// plans whose derived generation schedules the backup excluded (T45.4); restore
+// discards those plans after rollback. A schedule that is present still matches.
+func (s *Surreal) validateServiceCatalogV3Precious(
+	ctx context.Context,
+	restored bool,
+) (ServiceCatalogV3PreciousReport, error) {
 	if err := ctx.Err(); err != nil {
 		return ServiceCatalogV3PreciousReport{}, err
 	}
@@ -1134,7 +1144,7 @@ SELECT * FROM service_catalog_v3_relationship_reference
 		}
 	}
 	stateRows, stateSummaries, statePlans, err := s.validateServiceStateV3Precious(
-		ctx, states, repositories, candidateRoots,
+		ctx, states, repositories, candidateRoots, restored,
 	)
 	if err != nil {
 		return ServiceCatalogV3PreciousReport{}, err

@@ -3293,6 +3293,7 @@ func (s *Surreal) validateServiceStateV3Precious(
 	roots map[string]string,
 	rootRepositories map[string]string,
 	candidateRoots map[string]string,
+	restored bool,
 ) (int, int, int, error) {
 	const maxStateRows = servicecatalogv3.MaxTotalServices * 2
 	rowResults, err := storeQuery[[]serviceStateRec](ctx, s.accounting, s.db, `
@@ -3599,18 +3600,19 @@ SELECT repository, stage, schedule_digest FROM generation_schedule_current
 		plan := record.plan()
 		expectedID := strings.TrimPrefix(plan.Digest, "sha256:")
 		schedule, ok := schedules[plan.ScheduleDigest]
+		// A restored backup excludes derived schedules; only a present one must match.
 		if validateServiceStateV3Plan(plan) != nil ||
 			!validServiceCatalogV3RecordID(record.RecID, "service_state_v3_plan", expectedID) ||
 			roots[plan.CatalogRoot] != serviceCatalogV3Historical ||
-			rootRepositories[plan.CatalogRoot] != plan.Repository || !ok ||
-			schedule.Generation != plan.Digest || schedule.Repository != plan.Repository ||
-			schedule.Stage != serviceStateV3Stage(plan.Phase) {
+			rootRepositories[plan.CatalogRoot] != plan.Repository || !ok && !restored ||
+			ok && (schedule.Generation != plan.Digest || schedule.Repository != plan.Repository ||
+				schedule.Stage != serviceStateV3Stage(plan.Phase)) {
 			return 0, 0, 0, ErrInvalidServiceStateV3
 		}
 		if plan.State == serviceStateV3Running {
-			key := plan.Repository + "\x00" + schedule.Stage
-			if schedule.Status != GenerationScheduleActive ||
-				currents[key] != schedule.Digest || !counts[plan.Repository].matchesPlan(plan) {
+			key := plan.Repository + "\x00" + serviceStateV3Stage(plan.Phase)
+			if ok && (schedule.Status != GenerationScheduleActive || currents[key] != schedule.Digest) ||
+				!counts[plan.Repository].matchesPlan(plan) {
 				return 0, 0, 0, ErrInvalidServiceStateV3
 			}
 			if plan.Phase == serviceStateV3Reconcile {

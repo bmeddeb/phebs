@@ -1983,3 +1983,58 @@ func serviceStateV3PlanCount(t *testing.T, s *Surreal) int {
 	}
 	return rows[0].Count
 }
+
+// A backup excludes derived generation schedules (T45.4); restore validates the
+// imported plans before discarding them. Live validation stays strict.
+func TestServiceStateV3RestoreValidationWithoutDerivedSchedules(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	repository := "example.com/acme/service-state-v3-restore"
+	commit := strings.Repeat("7", 40)
+	seedServiceCatalogV3Repo(t, s, repository, commit)
+	generation := func(suffix, name string) servicecatalogv3.Generation {
+		return serviceStateV3Generation(t, repository, commit, suffix, []servicecatalog.Service{{
+			Key: "orders", DisplayName: name, Disposition: servicecatalog.DispositionAccepted,
+			Origin: servicecatalog.OriginBase,
+		}})
+	}
+	if err := s.PublishServiceCatalogV3Candidate(ctx, generation("a", "Orders")); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil || reconcile.Plan == nil {
+		t.Fatal(reconcile, err)
+	}
+	runServiceStateV3Plan(t, s, reconcile)
+	activation, err := s.BeginServiceStateV3Activation(ctx, repository, "sha256:"+strings.Repeat("9", 64))
+	if err != nil || activation.Plan == nil {
+		t.Fatal(activation, err)
+	}
+	runServiceStateV3Plan(t, s, activation)
+	// Leave a successor reconcile unsettled: its plan explains partial rows.
+	if err = s.PublishServiceCatalogV3Candidate(ctx, generation("b", "Orders B")); err != nil {
+		t.Fatal(err)
+	}
+	if running, e := s.BeginServiceStateV3Reconcile(ctx, repository); e != nil || running.Plan == nil {
+		t.Fatal(running, e)
+	}
+	for _, restored := range []bool{false, true} {
+		if report, e := s.validateServiceCatalogV3Precious(ctx, restored); e != nil || report.StatePlans != 3 {
+			t.Fatal("schedules present", restored, report, e)
+		}
+	}
+	for _, table := range []string{"generation_schedule", "generation_schedule_current"} {
+		if _, err = storeQuery[any](ctx, s.accounting, s.db, "DELETE type::table($table) RETURN NONE", map[string]any{"table": table}, storeWrite(1)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = s.ValidateServiceCatalogV3Precious(ctx); !errors.Is(err, ErrInvalidServiceStateV3) {
+		t.Fatal("live validation accepted a plan without its schedule", err)
+	}
+	if report, e := s.validateServiceCatalogV3Precious(ctx, true); e != nil || report.StatePlans != 3 {
+		t.Fatal("restore validation refused excluded schedules", report, e)
+	}
+	if err = s.RestoreSelectedServiceStateV3ForRestore(ctx); err != nil {
+		t.Fatal("restore rollback", err)
+	}
+}

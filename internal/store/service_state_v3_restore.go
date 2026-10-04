@@ -17,7 +17,7 @@ import (
 // to its exact v3 selector snapshot and discards unselected rebuildable state.
 // Restore calls this before deleting the plans that explain partial rows.
 func (s *Surreal) RestoreSelectedServiceStateV3ForRestore(ctx context.Context) error {
-	if _, err := s.ValidateServiceCatalogV3Precious(ctx); err != nil {
+	if _, err := s.validateServiceCatalogV3Precious(ctx, true); err != nil {
 		return fmt.Errorf("restore selected service state v3: validate: %w", err)
 	}
 	selectors, err := s.ListServiceRuntimeSelectors(ctx)

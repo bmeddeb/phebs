@@ -9426,3 +9426,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   requests in memory instead of one, and drop the authority pass and parent-row
   point read the refusal used. Status reads are unchanged. No store query,
   lock, cache, job, child, poll or schema change is added.
+
+- **2026-10-04 — Restore validates service-state plans without derived
+  schedules.** Since T45.4 (`d2f2941f`) backups exclude all `generation_schedule*`
+  tables as derived, but restore still validated imported service-state v3 plans
+  against their schedules before clearing them, so every restore of a catalog
+  with recorded plans failed (`TestLiveBackupRestoreAndStartupExactSearchRecovery`).
+  Restore now uses a restore mode of the same precious validation: a plan whose
+  schedule is absent is accepted, while its shape, record ID, historical catalog
+  root, repository and running counts are still checked, and a running reconcile
+  plan still explains partial rows. A schedule that is present, as in older
+  backups, must still match exactly. Backup creation keeps strict validation.
+  Restore then rolls state back to the selector snapshot and clears the plans and
+  schedules as before; the backup contract and exclusions are unchanged.
+
+  **Cost.** Offline restore only: the same validation queries and row bounds,
+  with fewer comparisons when schedules are absent. No query, lock, cache,
+  schema, child or ordinary request, sync, startup or publication work changes.
