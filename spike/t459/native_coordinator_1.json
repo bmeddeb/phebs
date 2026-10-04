@@ -151,7 +151,16 @@
       "medium": 0,
       "low": 0
     },
-    "final_evidence_and_cost_review": "pending"
+    "final_evidence_and_cost_review": "PASS",
+    "candidate_commit": "c2300f68e71b928f5c9ec3ff5661476ae5890114",
+    "reviewers": 2,
+    "changed_paths_reviewed": 5,
+    "all_severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    }
   },
   "cleanup": {
     "containers": 0,
@@ -217,6 +226,8 @@
     "native-workspace.log": "2ce615bfa4aef99e26bc4910853a37a0e52dbe203951c4b9e79eece7d205da33",
     "portable-normal.log": "30c9d404e2300aa384ce98ac5827deb0a2cb48bc2ca8dd5bd3e9ba9e18a017fc",
     "portable-race.log": "4007de0f0825bda6c85d5c45bf1c9d991039af22e9eac628d15e657a87653191",
+    "record-docs.log": "71b532fc5561a799aab0a4fce0e4a1d889984f747b29070fd31289b6456ac159",
+    "record-glossary.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
     "runtime-executor-lifecycle-linux.log": "432ce5827b0b909a5d38cbd9d537d6a2f7b83d135843b1ee7e9588c552ad8f1a",
     "sdk-download.log": "e6f5dd5690e02d8b1a1a38174a05a6b2eb36ac989a092f71299b11afa0148db9",
     "vet-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",

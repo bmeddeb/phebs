@@ -101,7 +101,8 @@ refused and fresh in-process controller census without native replay. Its
 source-free record is `spike/t459/native_coordinator_1.json`; this tiny fixture
 has zero accepted services and 176 admitted source Git blob bytes. Affected
 gates pass and exact-source review is clean; broader Linux lint retains 13
-baseline-identical T42.1 warnings. Final evidence/cost review remains pending.
+baseline-identical T42.1 warnings. Two independent all-path evidence/cost
+reviews of exact candidate `c2300f68` find all severity counts zero.
 Complete native/neutral,
 native fault/hard-death, pressure/lifecycle, native restore regeneration, rendered
 Settings and separately authorized target closure remain open. Pending target

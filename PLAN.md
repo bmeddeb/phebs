@@ -9592,7 +9592,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   It is not a full Linux lint PASS. Fresh staging is removed, no matching child,
   container or loop device survives, only the pre-existing native namespace
   lock remains and the personal VM is stopped. Independent exact-source review
-  finds all severity counts zero; final evidence/cost review remains pending.
+  finds all severity counts zero. Two independent reviews of exact candidate
+  `c2300f68e71b928f5c9ec3ff5661476ae5890114` cover all five paths, source,
+  evidence and steady-state costs with critical/high/medium/low all zero; log,
+  input, prior-receipt and retained tool/binary hashes match.
   Full T45.9 native/neutral acceptance, bounded native fault and
   hard-death recovery, actual pressure/lifecycle transitions, native regeneration
   after restore, rendered authenticated Settings and separately authorized target
