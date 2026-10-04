@@ -999,6 +999,11 @@ test-source association, extractor expansion, automatic authority adapters,
 and the distributed P6 profile remain separately reviewed future work.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
 completeness, migration-completion, or decommission-safety claim exists.
+T45.6 Bazel registration remains open. Exact source
+`f7900e6983655702bb67aff8cc5cc84a9f5ceb75` does not reach Colima profile
+`phebs-t451a` from this runner, so no corpus cohort, comparison, attempt
+identifier, or remote custody is produced. The source-free STOP is
+`spike/t454/remote_host_admission_stop_f7900e69.json`.
 T45.6 native transport uses SSH or direct execution and seals the live Linux
 host. `x86_64` admits `amd64` and `aarch64` admits `arm64`; the observed CPU
 count must be at least 2. Worker limits stay exact. The earlier ARM64-only

@@ -15211,6 +15211,12 @@ correctness/cost passes and cross-cohort comparison remain open, with frozen
 VM capacity still unresolved. Bazel remains unregistered; T45.7 waits for
 Bazel closure.
 
+A later admission attempt from exact source `f7900e69` does not reach profile
+`phebs-t451a`: the runner has no Colima transport, and the connected personal
+worker cannot be targeted from this run. No cohort executes and no attempt
+identifier is spent. The source-free STOP is
+`spike/t454/remote_host_admission_stop_f7900e69.json`.
+
 Native acceptance and preparation reach the execution host by SSH or by
 direct execution. The ceremony admits the live Linux host: `x86_64`/`amd64`
 or `aarch64`/`arm64`, with the observed CPU count when it is at least 2.
