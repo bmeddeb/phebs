@@ -15519,8 +15519,10 @@ compilation/vet and 26 models, affected Linux/full Darwin pinned lint, module
 and docs/glossary gates pass; the explicit original-Git model skips and Linux
 race is not claimed. Corrected-source pre-dispatch review is clean; initial
 oracle/cost, archive-packaging and stale-cache lint failures remain retained.
-Final all-path evidence/cost review is pending. The source-free record is
-`spike/t459/native_pressure_lifecycle_1.json`; exact absence/unmount/detach
+Two independent final reviews of exact candidate `8dcc3849` cover all seven
+paths, retained evidence and costs with all severity counts zero. The source-
+free record is `spike/t459/native_pressure_lifecycle_1.json`; it changes no
+compiled input. Exact absence/unmount/detach
 teardown removed only fresh roots and the personal profile is stopped.
 Production work and bounds remain unchanged. Native restore, rendered Settings,
 complete neutral and separately authorized target closure remain open; zero

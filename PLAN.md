@@ -9803,7 +9803,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   unmount/detach. Only fresh staging/volume/model-temp roots were removed,
   the existing native lock remains and the personal profile is stopped.
   The source-free record is `spike/t459/native_pressure_lifecycle_1.json`;
-  final all-path evidence/cost review remains pending. The fixture has zero
+  two independent final reviews of exact candidate `8dcc3849` cover all seven
+  changed paths, retained evidence and costs with all severity counts zero.
+  The record changes no compiled, fixture or module input. The fixture has zero
   accepted service incarnations and 176 admitted source Git blob bytes.
   Native restore regeneration, rendered authenticated Settings/API parity,
   complete neutral closure and separately authorized target closure remain

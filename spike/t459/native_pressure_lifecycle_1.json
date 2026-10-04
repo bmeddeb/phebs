@@ -454,8 +454,22 @@
     "coverage": "all six repository paths manually plus operational driver; corrected clean archive independently byte-checked against prior original tools"
   },
   "final_review": {
-    "status": "PENDING",
-    "coverage": "all seven changed paths including source-free proof, costs and exact teardown"
+    "status": "PASS",
+    "reviewed_candidate": "8dcc38496d890913c79ab7ea43412fe6a5585f30",
+    "reviewers": [
+      "next_ticket_audit",
+      "pr31_cost_docs"
+    ],
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "coverage": "all seven changed paths; three Linux tests and three owning Markdown sections manually covered; JSON receipt selected by OCR",
+    "compiled_inputs_unchanged_from_implementation": true,
+    "verified_candidate_log_hashes": 34,
+    "verified_source_module_config_hashes": 6,
+    "verified_prior_receipt_hashes": 3,
+    "qualification": "source-free record-only seal receives separate exact-head re-review; reviewers cannot waive remaining acceptance"
   },
   "retained_pre_native_failures": [
     {
@@ -537,6 +551,7 @@
       "logs/native-pressure-1.log": "sha256:3ba88c927837f46d1f8fb475e8ee3fa105bed232438a78bba6bf0ed34b542a5b",
       "logs/package-darwin.log": "sha256:b0854712e821577262e428eb4b15026fd1aa69a04141edac59792511e4fc693f",
       "logs/package-race-darwin.log": "sha256:379d98c0ad56cc40d10a5952812fc35476b6b9ac2ccf4df58fb9520217c7b750",
+      "logs/vet-linux-corrected.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "logs/vet-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "logs/volume-cleanup.log": "sha256:8dc34cab59887e4db34eac29e948391e2bb90aa822c51b920baf830a8f8b11ed",
       "logs/volume-final-inspect-after-regression.log": "sha256:4d6c076b399d2671e6a8fafb76827bd9f8722ba59e69046d2709e94c5b7ae181",

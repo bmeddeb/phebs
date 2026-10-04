@@ -128,8 +128,9 @@ prefix startup and bounded drainage. Exact implementation `42d5b07b` passes
 in 63.30s with one original allowance/two native phases, 1,211 selected turns
 and two honest parent tombstones; the unchanged coordinator regression passes
 in 42.69s. Affected machine/static/docs gates and corrected-source review pass;
-final all-path evidence/cost review remains pending. The source-free record is
-`spike/t459/native_pressure_lifecycle_1.json`; verified ordinary teardown
+two independent final reviews of exact candidate `8dcc3849` cover all seven
+paths, retained evidence and costs with all severity counts zero. The source-free
+record is `spike/t459/native_pressure_lifecycle_1.json`; verified ordinary teardown
 removed only fresh roots and stopped the test profile. Initial test-oracle,
 driver-cost, archive-packaging and stale-cache lint failures remain retained.
 This selected deleted-repository proof changes no production bound and does not
