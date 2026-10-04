@@ -132,7 +132,7 @@ func typedIndexRead(ctx context.Context, opts Options, repository string) (Typed
 		view.CheckedPurpose = status.Check.Purpose
 	}
 	switch {
-	case status.Stale || status.RestoreRequired:
+	case status.RestoreRequired || status.Stale && !snapshot.DesiredFresh:
 		view.State = "stale"
 	case snapshot.Schedule != nil && snapshot.Schedule.Status == store.GenerationScheduleSuperseded:
 		view.State = "canceled"
@@ -152,6 +152,8 @@ func typedIndexRead(ctx context.Context, opts Options, repository string) (Typed
 		view.State = "publishing"
 	case status.Desired != "" && status.Check == nil && status.Stage == "" && (snapshot.Coordinator == store.StatusPending || snapshot.Coordinator == store.StatusClaimed || snapshot.Coordinator == store.StatusRunning):
 		view.State = "planning"
+	case status.Stale:
+		view.State = "stale"
 	case status.Current != nil:
 		view.State = "current"
 	}

@@ -15286,7 +15286,10 @@ presentation lineage adds server-bound Settings controls, closed bounded
 responses, exact retry, selected-status polling and administrator File links.
 Affected authorization/CSRF, API/auth, real-store normal/race, typed command,
 selected restore recipe/production export and base/candidate archive checks pass;
-all 744 UI tests, build/lint and generated API parity pass. Canonical pinned Noble
+The prior 744-test result preceded final fixture baselines; those added eight
+PNGs and exposed an omitted manifest cardinality term. The corrected matrix
+is now shared with the executable fixtures, and all 746 UI tests, build/lint
+and generated API parity pass. Canonical pinned Noble
 Chromium checks retain eight preview and eight ordinary Settings pixels across
 both densities/themes and 390px/desktop, with keyboard, motion, labels, overflow,
 console and exact retry/state checks. The unchanged strict cohort-readiness
@@ -15299,13 +15302,18 @@ reads the desired generation schedule, preserves planning through coordinator
 completion and reports early chunk failure. Recorded exact purposes cannot
 start a new attempt: plan refuses with `request_already_recorded`; Settings
 explains this and preserves exact enqueue transport retry. Active polling
-continues after a transient read error. Ticket integration remains a distinct gate.
+continues after a transient read error. A further reviewed regression now
+distinguishes stale old publication from fresh desired authority after HEAD
+changes, keeping queued replacement work visible. Real-store/API final focused
+race, vet/lint, docs/glossary and 13 pinned Chromium checks pass; all eight
+preview pixels compare unchanged. The broad typed-store race pass precedes
+only that status distinction. Ticket integration remains a distinct gate.
 
 The earlier host-volume command run is retained as FAIL on three phase-nine lifecycle
 compositions; the short composition reproduces the same deadline at both exact
 base and candidate after cache cleanup. The unchanged short case then passed
 in 21.858s and the full command package passed in 946.515s with test temporary
-roots on the bounded1GiB APFS volume and unchanged admission policy. No exact
+roots on the bounded 1 GiB APFS volume and unchanged admission policy. No exact
 original capacity cause is inferred; the successful run closes this package
 gate without rewriting the failed runs.
 The default focused neutral demo separately lacks its v2 source-generation
