@@ -3,6 +3,7 @@ package typedindex
 import (
 	"context"
 	"path"
+	"runtime"
 )
 
 // ResolvedRC is the only optional operator-copied rc in v1. Imports, recursive
@@ -28,7 +29,7 @@ func (p Profile) Commands() (Commands, error) {
 	if p.digest == "" {
 		return Commands{}, Invalid
 	}
-	if p.definition.Provider != ProviderID {
+	if p.definition.Provider != ProviderID || p.definition.Config.GOARCH != runtime.GOARCH {
 		return Commands{}, Unsupported
 	}
 	rc := "/dev/null"
@@ -40,7 +41,7 @@ func (p Profile) Commands() (Commands, error) {
 		BazelStartup:     []string{"--nosystem_rc", "--nohome_rc", "--noworkspace_rc", "--bazelrc=" + rc, "--output_user_root=/scratch/bazel-user", "--output_base=/scratch/bazel-output"},
 		BazelBuild:       []string{"--repository_disable_download", "--repository_cache=/scratch/cache/repository", "--disk_cache=/scratch/cache/action", "--remote_cache=", "--remote_executor=", "--compilation_mode=fastbuild"},
 		IndexerArguments: []string{"index", "--skip-tests", "--skip-implementations"},
-		Environment:      []string{"HOME=/scratch/home", "GOOS=linux", "GOARCH=arm64", "PATH=/inputs/tools/go/bin:/inputs/tools/bin:/usr/bin:/bin", "TMPDIR=/scratch/tmp", "GOCACHE=/scratch/cache/go-build", "GOMODCACHE=/inputs/tools/modcache", "GOPROXY=off", "GOSUMDB=off", "GOTOOLCHAIN=local", "GOTELEMETRY=off", "GOENV=off", "GOWORK=off", "GOPACKAGESDRIVER=" + DriverPath},
+		Environment:      []string{"HOME=/scratch/home", "GOOS=linux", "GOARCH=" + p.definition.Config.GOARCH, "PATH=/inputs/tools/go/bin:/inputs/tools/bin:/usr/bin:/bin", "TMPDIR=/scratch/tmp", "GOCACHE=/scratch/cache/go-build", "GOMODCACHE=/inputs/tools/modcache", "GOPROXY=off", "GOSUMDB=off", "GOTOOLCHAIN=local", "GOTELEMETRY=off", "GOENV=off", "GOWORK=off", "GOPACKAGESDRIVER=" + DriverPath},
 	}, nil
 }
 func (p Profile) VerifyRC(ctx context.Context, raw []byte) error {

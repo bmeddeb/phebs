@@ -20,6 +20,7 @@ const (
 	ProviderID             = "bazel-rules-go-scip-v1"
 	ProfileSchema          = "phebs-typed-profile-v1"
 	GeneratedProfileSchema = "phebs-typed-profile-v2"
+	Amd64ProfileSchema     = "phebs-typed-profile-amd64-v1"
 	InputProfileSchema     = "phebs-typed-input-profile-v1"
 	RequestSchema          = "phebs-typed-request-v1"
 	ManagedRequestSchema   = "phebs-typed-request-v2"
@@ -89,7 +90,17 @@ type Config struct {
 }
 
 func ReducedConfig() Config {
+	// GOARCH stays arm64 so the historical reduced profile digest remains exact.
+	// An amd64 host uses Amd64ReducedConfig under Amd64ProfileSchema instead.
 	return Config{GOOS: "linux", GOARCH: "arm64", Mode: "fastbuild", SkipTests: true, SkipImplementations: true, GeneratedDocuments: "omit", Network: "none", Scratch: "ext4-direct-io"}
+}
+
+// Amd64ReducedConfig is the explicit reduced successor for an amd64 host.
+// Every other field matches ReducedConfig. It is not a reinterpretation of it.
+func Amd64ReducedConfig() Config {
+	c := ReducedConfig()
+	c.GOARCH = "amd64"
+	return c
 }
 
 // GeneratedConfig admits the sealed generated-document lane prospectively.
@@ -158,12 +169,15 @@ func DecodeProfile(ctx context.Context, raw []byte) (Profile, error) {
 		}
 		return Profile{d, identity(d), identity(d.Config), identity(d.Tools), identity(d.Policy)}, nil
 	}
-	if (d.Schema != ProfileSchema && d.Schema != GeneratedProfileSchema) || d.Provider != ProviderID {
+	if (d.Schema != ProfileSchema && d.Schema != GeneratedProfileSchema && d.Schema != Amd64ProfileSchema) || d.Provider != ProviderID {
 		return Profile{}, Invalid
 	}
 	wantConfig := ReducedConfig()
-	if d.Schema == GeneratedProfileSchema {
+	switch d.Schema {
+	case GeneratedProfileSchema:
 		wantConfig = GeneratedConfig()
+	case Amd64ProfileSchema:
+		wantConfig = Amd64ReducedConfig()
 	}
 	if d.Config != wantConfig || d.Policy != MeasuredPolicy() {
 		return Profile{}, Unsupported

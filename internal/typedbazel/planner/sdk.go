@@ -11,6 +11,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 const MaxSDKPackages = 1024
@@ -229,7 +231,7 @@ func projectSDK(in SDKInput, read func(string, int) ([]byte, error)) (SDKProject
 }
 
 func sdkMetadata(s SDKProjection) error {
-	if s.Mode.GOOS != "linux" || s.Mode.GOARCH != "arm64" || len(s.Mode.Tags) > 64 {
+	if s.Mode.GOOS != "linux" || !typedindex.AdmittedNativeArch(s.Mode.GOARCH) || len(s.Mode.Tags) > 64 {
 		return errors.New("SDK mode outside pinned profile")
 	}
 	if s.Version != "1.25.0" || !relative(s.Root) || !strings.HasPrefix(s.Root, "external/") || !strings.HasSuffix(s.Prefix, "//stdlib:") || !strings.HasPrefix(s.Prefix, "@@") || !relative(s.List.Path) || !strings.HasPrefix(s.List.Path, "bazel-out/") || s.List.Source || s.List.Tree || !label(s.List.Owner) || len(s.Caches) != 1 {

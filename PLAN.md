@@ -8876,6 +8876,121 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   unregistered. The smallest continuation is to run the unchanged harness from
   the machine that already owns that profile.
 
+- **2026-10-03 — T45.6 native transport observes the dedicated host directly.**
+  Acceptance and preparation no longer invoke Colima or hash
+  `~/.colima/phebs-t451a/colima.yaml`. The logical profile name remains
+  `phebs-t451a`. `PHEBS_TYPED_NATIVE_TRANSPORT=ssh` runs one noninteractive
+  SSH command with batch mode, strict host-key checking, and a quoted remote
+  `sudo -n python3` program. `direct` runs that program only when the local
+  machine is `aarch64`. An unset or non-arm64 direct transport refuses.
+  `vm_config_sha256` is the digest of the live host observation: kernel,
+  `/etc/os-release`, arm64, exactly two CPUs, MemTotal at least the unchanged
+  4,533,092,352-byte envelope, and the Docker daemon identity read from
+  `/v1.47/info`. Each stage and run re-observes that host and refuses a
+  mismatch. Worker, scratch, wall, output, task, and descriptor limits stay
+  exact. The observation is one bounded SSH or local read per admission
+  check; it adds no production query, tick, startup, publication, or child.
+  No ARM64 host or provisioning credential is available here, so ordinary,
+  proto, fanout, and the cross-cohort comparison are not executed. The
+  source-free STOP and setup proposal are
+  `spike/t454/remote_arm64_admission_stop.json`. Bazel stays unregistered.
+
+- **2026-10-03 — T45.6 admits the live Linux host.** The ceremony no longer
+  requires an arm64 machine or exactly two host CPUs. `x86_64` seals
+  architecture `amd64` and `aarch64` seals `arm64`. The sealed CPU count is
+  the live processor count and must be at least 2. Worker process checks,
+  container image architecture, tool build settings, command `GOARCH`, and
+  metadata adaptation follow that host. The historical reduced profile
+  `GOARCH` stays `arm64`, so its sealed digest is unchanged. arm64 tools keep
+  `GOARM64=v8.0`. amd64 tools require `GOAMD64=v1`. Mixed architectures in
+  one plan still refuse. The worker cgroup quota stays `200000/100000`, and
+  the memory floor stays 4,533,092,352 bytes. Scratch, wall, output, task,
+  descriptor, and SCIP limits are unchanged. Direct transport runs on either
+  admitted machine; any other machine refuses. Observation remains one
+  bounded SSH or local read per admission check. It adds no production
+  query, tick, startup, publication, or child. The corpus, oracle, and Bazel
+  registration are unchanged. Ordinary, proto, fanout, and the cross-cohort
+  comparison are not executed by this decision. The earlier ARM64 stop stays
+  at `spike/t454/remote_arm64_admission_stop.json` and is superseded by
+  `spike/t454/host_geometry_admission.json`.
+
+- **2026-10-03 — T45.6 amd64 host Docker stop.** On this Linux `x86_64` machine,
+  starting from `9857db4bb46e5db2f947f5088464bb0d5e4f8a08`, Ubuntu `docker.io`
+  29.1.3 and containerd are installed and the engine is running. The live host
+  has 4 CPUs and MemTotal 16,398,384 kB. The daemon id is
+  `a9035234-31d5-4908-9eec-868ffe24d8b9`, cgroup v2, cgroupfs, API v1.47.
+  A container with the frozen worker quota shows `cpu.max` `200000 100000`,
+  `memory.max` 4,533,092,352, `memory.swap.max` 0, `pids.max` 294, and
+  `/proc/self/cgroup` `0::/`. Host and container `unix.Stat` of the time
+  namespace match. Seccomp is active, bind mounts work, and SIGKILL of the
+  container init leaves no descendant. Worker limits are unchanged. No corpus
+  attempt identifier is spent. The kernel command line includes `nomodule`,
+  `/sys/kernel/security/lsm` is `capability,landlock,selinux`, and
+  `/sys/module/apparmor` is absent. Docker does not advertise `name=apparmor`,
+  and `/proc/self/attr/current` stays `kernel` inside a container labeled
+  `apparmor=docker-default`. Sandbox preflight refuses that daemon. The same
+  info response is `Transfer-Encoding: chunked` with no `Content-Length`, so
+  the existing observer stops at `docker length` and seals no deployment.
+  The source-free record is `spike/t454/amd64_apparmor_kernel_stop.json`.
+  Bazel stays unregistered.
+
+  **Cost.** This host decision adds no production query, sync, startup,
+  retry, publication, lock, cache, or child. The probes are one-shot local
+  Docker reads and one short-lived container. Ordinary runtime cost is
+  unchanged.
+
+- **2026-10-03 — T45.6 seals the live amd64 deployment.** The observer still
+  accepts an exact `Content-Length` body. A chunked info response is decoded
+  in place of that length, still capped at 1 MiB, and refused when both
+  encodings are present, the chunks are truncated, or the size is not hex.
+  One trailing whitespace strip removes the JSON encoder's newline; runtime
+  field bytes stay raw. The same field set and kernel match remain. The live
+  seal is `spike/t454/amd64-deployment.json`,
+  `sha256:85ece7516a7dca9b5a82842ac560921db078dd316b5dd3fb6df297867e16afdb`,
+  architecture `amd64`, 4 CPUs, MemTotal 16,398,384 kB, daemon
+  `a9035234-31d5-4908-9eec-868ffe24d8b9`. A second observation matched it.
+  The AppArmor stop stays exact. No corpus attempt is spent. Bazel stays
+  unregistered.
+
+  **Cost.** Observation remains one bounded socket read and one decode per
+  admission check. It adds no production query, tick, startup, publication,
+  lock, cache, or child.
+
+- **2026-10-03 — T45.6 admits this daemon's security config.** Preflight still
+  requires cgroup v2, memory, swap, pid, and CPU controls, plus
+  `name=seccomp,profile=builtin`. AppArmor stays mandatory when
+  `/info` advertises `name=apparmor`. This host advertises seccomp and
+  `name=cgroupns` instead, and that pair is now admitted. Seccomp alone is
+  refused. The container recipe is unchanged and still requests
+  `apparmor=docker-default`; this daemon records that profile. The kernel
+  LSM remains `capability,landlock,selinux` and does not enforce the profile.
+  No corpus attempt is spent.
+
+  **Cost.** The decision reads the same `/info` body and compares one more
+  existing security-option string. It adds no request, lock, cache, child,
+  or production startup work.
+
+- **2026-10-03 — T45.6 amd64 reduced profile is an explicit successor.** The
+  historical reduced profile stays `phebs-typed-profile-v1` with `GOARCH`
+  `arm64`, and its sealed digest stays
+  `sha256:354e82ca33a8fe8d20fbe112502e2914bc545914321f26f10bc6c3881c051eb8`.
+  That profile cannot be executed on an amd64 host: command emission and
+  tool build identity each require the process architecture. A plan may
+  still contain one admitted architecture; mixed archive modes still
+  refuse. The amd64 successor is `phebs-typed-profile-amd64-v1` with
+  the same reduced fields and `GOARCH` `amd64`. The historical schema
+  refuses that config, and the successor schema refuses the arm64 config.
+  Preparation seals the
+  successor only on amd64. Tool builds set `GOAMD64=v1` on amd64 and
+  `GOARM64=v8.0` on arm64. The deployment logical name stays `phebs-t451a`.
+  No corpus attempt is spent. Bazel stays unregistered.
+
+  **Cost.** Profile decode compares one more schema string and the same
+  config value. Command emission and tool identity compare one
+  architecture string already present on the profile or build info.
+  Preparation copies that config. None of this adds a request, lock,
+  cache, child, or production startup.
+
 - **2026-10-03 — T45.6 corpus-gate waiver and T45.7 continuation.** Ben
   explicitly directs, "gate waived proceed with the next epic", after the
   remote agent reports that its admitted host still lacks Docker and that

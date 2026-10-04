@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"os"
-	"runtime"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
 	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
 	"github.com/bmeddeb/phebs/internal/typedworkspace"
 )
@@ -70,7 +70,7 @@ func runTypedCommand() (handled bool, code int) {
 	default:
 		// Child roles intentionally have distinct environments from the primary
 		// worker. Their owned implementations validate their exact inputs.
-		if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 || os.Getgid() != 65534 || os.Getpid() == 1 {
+		if !typedindex.AdmittedNativeWorker() || os.Getuid() != 65534 || os.Getgid() != 65534 || os.Getpid() == 1 {
 			return true, 125
 		}
 		if role == "__plan_helper" {

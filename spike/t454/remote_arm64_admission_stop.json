@@ -1,0 +1,41 @@
+{
+  "schema": "phebs-typed-native-remote-arm64-admission-stop-v1",
+  "registration_ready": false,
+  "bazel_registered": false,
+  "corpus_execution": false,
+  "attempt_identifier_spent": false,
+  "custody_created": false,
+  "source_commit": "f7900e6983655702bb67aff8cc5cc84a9f5ceb75",
+  "profile": "phebs-t451a",
+  "transport": "ssh-or-direct",
+  "colima_used": false,
+  "corpus": {
+    "repository": "github.com/bazelbuild/remote-apis-sdks",
+    "commit": "d5824b1a2286806b07efd030aa3a139c4f540157",
+    "cohorts": ["ordinary", "proto", "fanout"],
+    "oracle": "spike/t451b/public-oracle.json"
+  },
+  "cohort_results": {
+    "ordinary": "not_executed",
+    "proto": "not_executed",
+    "fanout": "not_executed",
+    "cross_cohort_comparison": "not_executed"
+  },
+  "missing_prerequisite": "No personal Linux arm64 host is reachable, and this runner has no cloud provisioning credential or CLI for AWS, GCP, Azure, Hetzner, Oracle, Fly, or DigitalOcean. The runner is Linux x86_64.",
+  "setup_proposal": {
+    "cpu": 2,
+    "memory_total_minimum_bytes": 4533092352,
+    "recommended_ram": "8 GiB so kernel overhead still leaves MemTotal at or above the measured envelope",
+    "scratch_bytes": 4573403136,
+    "scratch_inodes": 262144,
+    "occupancy_ceiling": "80 percent, unchanged",
+    "recommended_disk": "A dedicated durable ext4 volume of at least 64 GiB for /var/lib/phebs-typed-acceptance and /var/lib/phebs-typed-preparation. 64 GiB is operator headroom under the existing ceiling, not a new limit.",
+    "docker": "API v1.47 on /var/run/docker.sock, features.time-namespaces=false, dockerd --validate, restart, and zero containers before admission",
+    "transport_ssh": "PHEBS_TYPED_NATIVE_TRANSPORT=ssh and PHEBS_TYPED_NATIVE_SSH_TARGET=user@host, with the host key pinned in known_hosts and sudo -n python3 permitted",
+    "transport_direct": "On that same arm64 host, PHEBS_TYPED_NATIVE_TRANSPORT=direct",
+    "seal": "python3 spike/t454/native_acceptance.py observe --output <durable>/deployment.json",
+    "retention": "Keep failed stage directories and collected receipts on that volume. Do not delete failed custody to create free space.",
+    "excluded_host": "Do not use Ben's Mac or its Colima VM."
+  },
+  "stop": "remote_arm64_host_unavailable"
+}

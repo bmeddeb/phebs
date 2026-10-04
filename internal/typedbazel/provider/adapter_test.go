@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"runtime"
 	"runtime/debug"
 	"slices"
 	"testing"
@@ -66,7 +67,11 @@ func TestExactCallerContract(t *testing.T) {
 }
 
 func TestPinnedBuildInformation(t *testing.T) {
-	base := debug.BuildInfo{GoVersion: "go1.25.0", Path: "phebs.local/t451b-native-probe", Settings: []debug.BuildSetting{{Key: "GOOS", Value: "linux"}, {Key: "GOARCH", Value: "arm64"}, {Key: "CGO_ENABLED", Value: "0"}, {Key: "GOARM64", Value: "v8.0"}}, Deps: []*debug.Module{{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}}}
+	variant := debug.BuildSetting{Key: "GOAMD64", Value: "v1"}
+	if runtime.GOARCH == "arm64" {
+		variant = debug.BuildSetting{Key: "GOARM64", Value: "v8.0"}
+	}
+	base := debug.BuildInfo{GoVersion: "go1.25.0", Path: "phebs.local/t451b-native-probe", Settings: []debug.BuildSetting{{Key: "GOOS", Value: "linux"}, {Key: "GOARCH", Value: runtime.GOARCH}, {Key: "CGO_ENABLED", Value: "0"}, variant}, Deps: []*debug.Module{{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}}}
 	for _, change := range []string{"none", "go", "main", "platform", "duplicate", "replace", "dependency"} {
 		b := base
 		b.Settings = slices.Clone(base.Settings)

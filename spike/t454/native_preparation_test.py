@@ -3,6 +3,7 @@ import copy
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -99,11 +100,12 @@ class PreparationTests(unittest.TestCase):
             for ident in ('../escape', 'neutral-prep-1;sh', ''):
                 with self.assertRaises(ValueError):
                     n.run(ident, h, 'deployment.json')
-        with mock.patch.object(subprocess, 'run') as run:
+        with mock.patch.dict(os.environ, {'PHEBS_TYPED_NATIVE_TRANSPORT': 'ssh', 'PHEBS_TYPED_NATIVE_SSH_TARGET': 'phebs@typed-native'}), mock.patch.object(subprocess, 'run') as run:
             n.transport(['collect', 'neutral-prep-1', h], timeout=30)
             argv = run.call_args.args[0]
-            self.assertEqual(argv[:7], ['colima', 'ssh', '--profile', 'phebs-t451a', '--', 'sudo', 'python3'])
-            self.assertNotIn('start', argv)
+            self.assertEqual(argv[9], 'phebs@typed-native')
+            self.assertIn(sys.modules['native_acceptance'].sh_quote(n.REMOTE_PROGRAM), argv[11])
+            self.assertNotIn('colima', argv[11])
             self.assertNotIn('shell', run.call_args.kwargs)
 
     def test_receipt_exclusive_and_bound(self):
@@ -236,6 +238,7 @@ class PreparationTests(unittest.TestCase):
 
     def test_remote_program_compiles_and_has_no_privilege_escape_recipe(self):
         compile(n.REMOTE_PROGRAM, '<fixed preparation remote program>', 'exec')
+        self.assertNotIn('colima', Path(n.__file__).read_text())
         for text in ['docker run', 'colima start', 'rm -rf', 'shell=True', 'tar.extractall', '--privileged']:
             self.assertNotIn(text, n.REMOTE_PROGRAM)
         self.assertIn("write(root/'dispatch.json'", n.REMOTE_PROGRAM)

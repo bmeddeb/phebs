@@ -4,6 +4,8 @@
 check/build are offline. stage/run require a separately reviewed configuration
 hash and the already running dedicated VM. This script never starts a VM, pulls
 an image, downloads dependencies, changes a profile, or supplies Docker flags.
+Transport is direct execution on the admitted Linux host, or SSH to it. The
+host is x86_64 or aarch64. It never reads a Colima profile or invents one.
 
 It drives exactly ONE finite preparation invocation (no case loop, no retry, no
 downloader, no installer, no general job framework). The offline bounded archive
@@ -25,6 +27,7 @@ import tarfile
 from native_acceptance import (
     read_ustar, digest, canonical, decode, hash_valid, regular, read,
     file_hash, relative, exclusive, PROFILE, MAX_FILE, MAX_RECEIPT,
+    remote_argv, check_deployment_host, host_goarch,
 )
 
 BASE = Path('/var/lib/phebs-typed-preparation')
@@ -194,22 +197,8 @@ def inputs(directory, expected=None):
     return cfg, rows
 
 
-def check_deployment_host(path, expected=None):
-    raw = read(path, 16384)
-    value = decode(raw, 16384)
-    if expected is not None and digest(raw) != expected:
-        fail('deployment identity')
-    if value.get('schema') != 'phebs-typed-native-deployment-v1' or value.get('profile') != PROFILE:
-        fail('deployment profile')
-    vm = Path.home() / '.colima' / PROFILE / 'colima.yaml'
-    h, _ = file_hash(vm, 1 << 20)
-    if value.get('vm_config_sha256') != h:
-        fail('saved VM configuration changed')
-    return digest(raw)
-
-
 def transport(arguments, **kwargs):
-    return subprocess.run(['colima', 'ssh', '--profile', PROFILE, '--', 'sudo', 'python3', '-c', REMOTE_PROGRAM, *arguments], check=True, **kwargs)
+    return subprocess.run(remote_argv(REMOTE_PROGRAM, arguments), check=True, **kwargs)
 
 
 def stage(directory, expected):
@@ -257,7 +246,12 @@ def build(output):
     output = Path(output).absolute()
     output.mkdir(mode=0o700)  # deliberately refuses an existing output directory
     repo = Path(__file__).resolve().parents[2]
-    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH='arm64', CGO_ENABLED='0')
+    arch = host_goarch()
+    env = dict(os.environ, GOENV='off', GOTOOLCHAIN='local', GOPROXY='off', GOSUMDB='off', GOWORK='off', GOOS='linux', GOARCH=arch, CGO_ENABLED='0')
+    if arch == 'amd64':
+        env['GOAMD64'] = 'v1'
+    elif arch == 'arm64':
+        env['GOARM64'] = 'v8.0'
     subprocess.run(['go', 'test', '-c', '-o', str(output / 'native-preparation.test'), './internal/typedbazel/provider'], cwd=repo, env=env, check=True, timeout=300)
     print('native-preparation.test', *file_hash(output / 'native-preparation.test', MAX_FILE))
     print('Unfilled: finalized neutral lock/cache, pre-selection inventory, profile, VM engine/formatter/image and source identities. No config was invented.')

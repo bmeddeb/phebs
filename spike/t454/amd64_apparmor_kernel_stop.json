@@ -1,0 +1,82 @@
+{
+  "schema": "phebs-typed-native-amd64-apparmor-kernel-stop-v1",
+  "registration_ready": false,
+  "bazel_registered": false,
+  "corpus_execution": false,
+  "attempt_identifier_spent": false,
+  "deployment_sealed": false,
+  "custody_created": false,
+  "starting_commit": "9857db4bb46e5db2f947f5088464bb0d5e4f8a08",
+  "profile": "phebs-t451a",
+  "reduced_profile_goarch": "arm64",
+  "transport": "direct",
+  "host": {
+    "uname_machine": "x86_64",
+    "architecture": "amd64",
+    "cpus": 4,
+    "memory_total_kb": 16398384,
+    "kernel_release": "6.12.94+",
+    "os_release_sha256": "sha256:01af466feb100306498c86aa6bad1815e33036019aa34d4362c20f374ea5c829",
+    "lsm": "capability,landlock,selinux",
+    "kernel_cmdline_includes_nomodule": true,
+    "apparmor_module_present": false
+  },
+  "docker": {
+    "package": "docker.io 29.1.3-0ubuntu3~24.04.2",
+    "api": "v1.47",
+    "api_status": 200,
+    "transfer_encoding": "chunked",
+    "content_length_present": false,
+    "daemon_id": "a9035234-31d5-4908-9eec-868ffe24d8b9",
+    "server_version": "29.1.3",
+    "cgroup_driver": "cgroupfs",
+    "cgroup_version": "2",
+    "kernel_version": "6.12.94+",
+    "ncpu": 4,
+    "daemon_memory_total_bytes": 16791945216,
+    "memory_limit": true,
+    "swap_limit": true,
+    "pids_limit": true,
+    "cpu_cfs_quota": true,
+    "security_options": [
+      "name=seccomp,profile=builtin",
+      "name=cgroupns"
+    ],
+    "apparmor_advertised": false,
+    "storage": "overlayfs on an ext4 loop, because overlay-on-overlay returned EINVAL"
+  },
+  "worker_quota_unchanged": "200000/100000",
+  "verified_container": {
+    "image_architecture": "amd64",
+    "cpu_max": "200000 100000",
+    "memory_max": 4533092352,
+    "memory_swap_max": 0,
+    "pids_max": 294,
+    "cgroup": "0::/",
+    "time_namespace_stat_matches_host": true,
+    "time_namespace": "dev=4 ino=4026531834",
+    "seccomp": 2,
+    "no_new_privs": 1,
+    "bind_mount_read": true,
+    "bind_mount_write": true,
+    "hard_death_descendants_cleared": true,
+    "attr_current": "kernel",
+    "inspect_apparmor_profile": "docker-default"
+  },
+  "corpus": {
+    "repository": "github.com/bazelbuild/remote-apis-sdks",
+    "commit": "d5824b1a2286806b07efd030aa3a139c4f540157",
+    "cohorts": ["ordinary", "proto", "fanout"],
+    "oracle": "spike/t451b/public-oracle.json"
+  },
+  "cohort_results": {
+    "ordinary": "not_executed",
+    "proto": "not_executed",
+    "fanout": "not_executed",
+    "cross_cohort_comparison": "not_executed"
+  },
+  "missing_capability": "Kernel AppArmor is not available. The active LSM list is capability,landlock,selinux, the command line sets nomodule, and /sys/module/apparmor does not exist. Docker therefore omits name=apparmor, while a container given apparmor=docker-default still has /proc/self/attr/current equal to kernel. internal/typedsandbox preflight refuses a daemon without name=apparmor.",
+  "observer_stop": "spike/t454/native_acceptance.py observe exits docker length because GET /v1.47/info is Transfer-Encoding chunked and has no Content-Length. No deployment.json was written.",
+  "smallest_external_action": "Boot this machine with a kernel that has AppArmor built in and selected in the LSM list, without nomodule blocking it. After that boot, GET /v1.47/info must include name=apparmor, and /proc/self/attr/current inside an apparmor=docker-default container must be the docker-default profile. Do not spoof /sys/module/apparmor. The chunked info response still needs the existing observer to accept a bounded chunked body before a deployment can be sealed.",
+  "stop": "kernel_apparmor_unavailable"
+}
