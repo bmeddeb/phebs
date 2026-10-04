@@ -9964,3 +9964,95 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   filesystem bytes do not establish a product-scale dimension. Ordinary
   providers remain unavailable, T45.6 is not PASS, and no target execution,
   product-scale envelope, release or scale claim follows.
+
+- **2026-10-04 — T45.9 rendered authenticated Settings/API prerequisite.**
+  Add one opt-in Linux command fixture and a separate browser driver, owned in
+  `cmd/phebs` and `spike/t459`, to compose unchanged current Settings assets with
+  the production HTTP mux, real TLS browser sessions, CSRF, administrator
+  authorization, audit storage and operator API over an actual SurrealDB child.
+  A fresh administrator and ordinary user exercise the unavailable installation
+  and installed fixture boundaries. Three purpose previews must leave typed
+  authority and coordinator inventory unchanged; the browser discards one real
+  enqueue response after admission and retries identical request bytes, which
+  must preserve one pending coordinator. Durable store checkpoints expose all
+  nine states, including queued planning after coordinator completion, while a
+  dropped real status response tests retained last-good state and continued
+  selected polling. Failed canary re-review must produce a distinct request
+  and key; canceled dry-run and source drift must preserve or fence prior
+  current authority as appropriate. The real session mutation audit must retain
+  its actor and repository target.
+
+  The reused routed-publication fixture manually advances real store and
+  filesystem custody, and seals two small SCIP members; it executes no native
+  planner/indexer or ordinary runtime registration. Browser fetches exercise
+  production cross-member definition, reference and hover APIs with UTF-16
+  coordinates. Administrator File links must preselect and focus Settings,
+  while the ordinary user sees no managed actions. Eight functional appearance
+  combinations cover desktop/390px, both themes/densities, keyboard focus,
+  named controls, reduced motion and document overflow. Restore-state clearing
+  tests unavailable authority, not a public backup/restore round trip; the
+  separate native restore prerequisite and its retained receipt remain exact.
+
+  UI sources are copied through `git archive` from exact input tree `8fbf1051`
+  into private external build custody, using existing lock-matched dependencies
+  without modifying the presentation checkout, UI source, baselines or receipt
+  tooling. The planned host uses system Chrome 154, Node 26 and Playwright
+  1.62.1. These are explicitly qualified functional mechanics; they establish
+  neither canonical pinned Noble pixels nor a repository-pinned Node build.
+  The unchanged HTTP-client probe is corrected only to expect current
+  in-flight request reuse instead of the superseded consumed-request refusal;
+  its historical receipt bytes are unchanged.
+
+  **Cost.** This tests-only change adds zero production work per query/request,
+  sync tick, startup/restart, retry/no-op or publication transition. Store,
+  source/custody, cache invalidation, native concurrency/admission and child
+  bounds are unchanged. Test setup exports/builds/copies and hashes the complete
+  current UI input/assets, rather than only the Settings chunk; its complete
+  bytes belong in the retained provenance. The asset entry check caps only
+  `index.html` at 2 MiB, not the whole static asset tree. One memory engine is
+  explicitly launched and joined; this fixture does not substitute for
+  production local-engine executable admission. Six isolated Git commands run
+  serially in fresh owned directories, each with a one-minute context and
+  inherited Git routing removed, creating one bare mirror without hardlinks.
+  The immutable UTF-8 Git source blob is eight bytes; the separate copied input
+  inventory is one byte, and two authored generated documents total sixteen
+  bytes. The modeled publication retains two explicit 1-MiB/128-inode growth
+  promises and existing publication/read custody checks, not native allowances.
+  No SDK/tool bundle copy, native container, job runner, scheduler or production
+  lifecycle drain is added by this fixture.
+
+  Real auth setup and three password logins incur existing user/session and
+  audit reads/writes; fixture Argon concurrency is one, with its existing
+  19-MiB password hash work. One auth cleanup owner is canceled and joined.
+  Two in-process TLS servers share that store; one SSH fixture process and one
+  SSH tunnel forward their two ports. One Chrome invocation owns its browser
+  descendant tree, with at most three simultaneous contexts admitted by the
+  driver; no numeric browser RSS/descendant cap is inferred. Browser requests
+  retain the existing Settings repository download/JSON parse followed by its
+  4,096-row check and sort, plus chained five-second active selected-status
+  reads. That repository check is not a preparse byte bound. Typed client
+  responses retain the 32-KiB streaming limit and mutation bodies 4 KiB; the
+  driver's browser-fetch helper checks response text after reading it and adds
+  no streaming bound. Routed query caching and per-open physical pins retain
+  production defaults; warm metadata does not retain an idle physical pin.
+
+  The protocol has nine named command checkpoints plus four fixed continuation
+  checkpoints. Go stdin frames and emitted JSON each cap at 4 KiB; the driver
+  accepts at most 32 queued frames, checks text lines at 64 KiB and observes an
+  aggregate 512-KiB stdout/stderr limit. The fixture's eight-minute context
+  starts after engine/schema/mirror setup; the test has a ten-minute alarm and
+  the driver a ten-minute cancellation timer, twenty-second EOF cleanup grace
+  and ten-second termination escalation. These do not establish a whole-turn
+  SDK, filesystem syscall or descendant duration bound. Existing TLS header,
+  read, write and idle timeouts remain explicit. Cleanup must join auth,
+  servers, browser and SSH children and remove only fresh owned test custody.
+
+  Source review, compilation/static gates, real rendered execution, exact
+  teardown and final evidence/cost review remain pending. The planned
+  source-free record is `spike/t459/settings_browser_1.json`; no PASS is claimed
+  before those gates. This is only the rendered authenticated Settings/API
+  prerequisite. Complete neutral closure and separately authorized target
+  closure remain open; zero accepted service incarnations and this tiny fixture
+  establish no 5,000-service/12-GB supported envelope. Ordinary providers remain
+  unavailable, T45.6 remains waived rather than passed, generated evidence stays
+  STOP, and no target execution, release or scale claim changes.

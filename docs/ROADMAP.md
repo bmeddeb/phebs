@@ -151,6 +151,19 @@ paths with all severity counts zero. This record-only seal changes no compiled
 or harness input. Rendered Settings, complete
 neutral acceptance and separately
 authorized target closure stay open; production behavior and limits are unchanged.
+The next T45.9 prerequisite composes rendered authenticated Settings with the
+production HTTP mux, real TLS sessions/CSRF/authorization/audit and operator
+API/store. It covers pure previews, exact lost-response retry, nine durable
+states and polling recovery, re-run preview/cancellation/source fencing,
+restore-state clearance, administrator File links and eight functional
+responsive appearances. Cross-member UTF-16 navigation uses fixture-authored
+sealed bytes, with no native generation or public restore in this fixture.
+Unchanged current UI inputs bind `8fbf1051`; system Chrome/Node and existing
+Playwright are qualified without canonical Noble pixels or presentation edits.
+Source/static/browser/teardown and final review gates remain pending; the planned
+record is `spike/t459/settings_browser_1.json`. This does not close complete
+neutral or separately authorized target acceptance or change ordinary dark
+providers, the T45.6 waiver or scale/release posture.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

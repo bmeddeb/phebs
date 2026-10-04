@@ -15557,6 +15557,27 @@ neutral acceptance or the separately authorized target; the fixed fixture has
 zero accepted services and 176 admitted source bytes, ordinary providers remain
 unavailable and T45.6 is not PASS.
 
+T45.9 rendered authenticated Settings/API prerequisite (2026-10-04): add an
+opt-in Linux fixture and browser driver over real TLS sessions, the production
+HTTP mux, CSRF/administrator authorization, audit and operator API/store.
+Unchanged current UI assets must prove three pure purpose previews, lost-response
+exact enqueue retry with one coordinator, all nine durable states, last-good
+active polling and recovery, failed-purpose re-run preview, cancellation, stale
+source rejection, restore-state clearance and administrator-only File links.
+Production routed APIs consume two fixture-authored sealed SCIP members with
+UTF-16 cross-member navigation; no native generation or public backup/restore
+round trip occurs in this fixture. Eight desktop/390px theme/density functional
+appearances cover keyboard, named controls, reduced motion and overflow. UI
+sources/build assets bind exact input tree `8fbf1051` in private external custody;
+no UI, baseline or presentation-tooling edit is included. System Chrome 154,
+Node 26 and Playwright 1.62.1 are qualified, without canonical Noble pixels or a
+repository-pinned Node claim. Source/static/browser/cleanup and final review
+gates remain pending; the planned source-free record is
+`spike/t459/settings_browser_1.json`. Production behavior, cache and native
+bounds remain unchanged. Complete neutral and separately authorized target
+closure remain open; the zero-service tiny fixture establishes no product-scale
+envelope, ordinary providers remain dark and T45.6 is not PASS.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,
