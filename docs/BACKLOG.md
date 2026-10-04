@@ -15541,7 +15541,15 @@ advance the trusted profile epoch, fence the old request/binding/metadata, and
 publish fresh exact native identities with identical cold/warm routed content.
 Each attempt retains its own original shared 300-second allowance; all native
 limits stay exact. A second bounded production drain and joined engine/native
-teardown are required. Native execution and final evidence/review are pending.
+teardown are required. Exact implementation `025325c3` passes the native restore
+case in 205.56s, with epochs one to two, four phases/two original allowances,
+unchanged content, 1,198/1,196 lifecycle turns and one parent tombstone each.
+The reused native coordinator regression passes in 76.76s; affected machine,
+pinned lint and documentation gates pass. Source/driver review is clean;
+initial compilation/model/admission refusals and corrected review findings
+remain recorded. Exact identity-fenced cleanup removes only fresh custody and
+stops the personal profile. The record is `spike/t459/native_restore_1.json`;
+final exact-candidate evidence/cost review remains pending.
 This prerequisite does not close rendered authenticated Settings, complete
 neutral acceptance or the separately authorized target; the fixed fixture has
 zero accepted services and 176 admitted source bytes, ordinary providers remain

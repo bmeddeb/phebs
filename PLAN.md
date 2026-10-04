@@ -9872,7 +9872,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   records before native admission. Two accepted preparations then serially
   copy and verify the complete immutable input inventory under controller
   serialization and the lifecycle mutation guard. Existing custody/metadata
-  reopens remain. Four native phases run serially across two attempts with
+  reopens and full derived workspace/host backing admission promises remain.
+  Four native phases run serially across two attempts with
   unchanged memory, scratch, inode, task, descriptor, CPU and output limits.
   Native phases release the lifecycle guard while retaining controller
   serialization and control pins. Runner/scheduler concurrency stays one;
@@ -9887,12 +9888,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   streaming HTTP replay; the ordinary unsupported-export fallback may instead
   add an import CLI beside the import engine. Backup retains its focused-index
   backup lock, live catalog validation, six-artifact creation/hashing and
-  self-verification. Restore retains archive verification, replay preflight,
+  existing per-family archive validation. Restore retains archive verification,
+  replay preflight,
   isolated import, schema/authority validation and bounded 512-identity clear
   pages with per-intent read/CAS marking; total work is not constant over an
   installation. Both database roots and the backup remain fixture custody until
-  cleanup. The extra export oracle reads at most 16 MiB, and restored-control
-  checks add capped pages plus one authenticated read-only SDK session with
+  cleanup. The extra export oracle accepts at most 16 MiB and reads one overflow
+  sentinel. Restored-control checks add capped pages plus one authenticated
+  read-only SDK session with
   four `LIMIT 1` generation-table reads.
 
   Trusted revalidation adds a metadata open and separate streaming hash open
@@ -9923,9 +9926,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   both authority/allowance identities, phase reports, archive identities,
   actual drain turns/tombstones and exact teardown predicates.
 
-  **Validation pending.** Native dispatch, machine/static gates, immutable
-  independent review and exact cleanup are not yet recorded for this slice.
-  It is only the native regenerate-on-restore prerequisite. Rendered
+  **Validation.** Exact implementation `025325c3a6a12dc0bcf7d16b284a9d99bbf7b176`
+  passes the privileged public restore rehearsal in 205.56s: the source stays
+  exact, trusted profile epochs advance from one to two, unavailable warm-cache
+  and old request/binding/metadata reads refuse, and fresh native navigation
+  matches the original content. Four phases use two distinct original shared
+  300-second allowances. Both guarded production drains pass in 1,198/1,196
+  selected turns, with one honest parent tombstone each. The existing native
+  coordinator/consumer regression passes in 76.76s after shared-helper reuse.
+  The five non-database backup artifacts are empty 1,024-byte archives in this
+  fixture; no relationship/caller/focused corpus roundtrip is claimed here.
+
+  Darwin package normal/race, Linux compilation/vet, affected Linux and full
+  Darwin repository-pinned lint (zero issues), module verification, the existing
+  typed restore regression, documentation and glossary gates pass. Linux models
+  pass 28 top-level cases with the explicit original-Git corpus case skipped;
+  Linux race and a fresh broader-Linux lint pass are not claimed. Immutable
+  source/driver review finds no remaining findings. The initial caller-scope
+  compilation error, model UID/cwd refusals, missing digest-prefix admission
+  refusal and corrected driver/cost review findings remain recorded. The digest
+  refusal launched no engine/native work, and the source stayed unchanged for
+  the subsequent successful native case.
+
+  Cleanup verifies exact provisioned root/upload identities, no containers,
+  loop devices or matching test/engine processes, empty test temporary custody,
+  removed fresh roots and preservation of the existing native namespace lock;
+  the personal test profile is stopped. The source-free record is
+  `spike/t459/native_restore_1.json`. Final exact-candidate evidence/cost review
+  remains pending. This is only the native regenerate-on-restore prerequisite.
+  Rendered
   authenticated Settings/API parity, complete neutral closure and separately
   authorized target closure remain open. The fixed workspace has zero accepted
   service incarnations and 176 admitted source Git blob bytes; SDK/aggregate

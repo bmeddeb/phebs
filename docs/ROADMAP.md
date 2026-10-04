@@ -140,8 +140,14 @@ The next T45.9 prerequisite covers actual native generation after the public
 v9 backup/restore, with unavailable restored authority, retained-tool/source
 revalidation, a fresh profile epoch and equivalent routed content. The original
 workspace is drained before restore, then the fresh publication is separately
-drained through production lifecycle. Native execution and final evidence/review
-remain pending. Rendered Settings, complete neutral acceptance and separately
+drained through production lifecycle. Exact implementation `025325c3` passes
+in 205.56s with fresh profile/native identities, identical content, four phases
+and two original allowances; drains take 1,198/1,196 selected turns with one
+parent tombstone each. The reused native coordinator passes in 76.76s, affected
+gates and source/driver review pass, and exact cleanup stops the personal
+profile. The source-free record is `spike/t459/native_restore_1.json`; final
+exact-candidate evidence/cost review remains pending. Rendered Settings, complete
+neutral acceptance and separately
 authorized target closure stay open; production behavior and limits are unchanged.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,

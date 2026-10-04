@@ -1,0 +1,606 @@
+{
+  "schema": "phebs-t459-native-restore-v1",
+  "recorded_date": "2026-10-04",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "implementation_commit": "025325c3a6a12dc0bcf7d16b284a9d99bbf7b176",
+  "stack_base_commit": "8424d1917425f9854eff6791b3fe15bc8aad637d",
+  "native_case": {
+    "selector": "^TestNativeInputRestore$",
+    "mode": "workspace",
+    "seconds": 205.56,
+    "proof": {
+      "artifacts": [
+        {
+          "path": "database.surql",
+          "classification": "precious",
+          "media_type": "application/surrealql",
+          "size": 78316,
+          "sha256": "sha256:25d6d7ba43e1d4de1e3119212bf2d37ca51c5717c739bb9249ab8641e0f63e63"
+        },
+        {
+          "path": "focused-index.tar",
+          "classification": "derived-byte-exact",
+          "media_type": "application/x-tar",
+          "size": 1024,
+          "sha256": "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+        },
+        {
+          "path": "resolver-catalog.tar",
+          "classification": "derived-byte-exact",
+          "media_type": "application/x-tar",
+          "size": 1024,
+          "sha256": "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+        },
+        {
+          "path": "caller-publication.tar",
+          "classification": "derived-byte-exact",
+          "media_type": "application/x-tar",
+          "size": 1024,
+          "sha256": "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+        },
+        {
+          "path": "observation-publication.tar",
+          "classification": "derived-byte-exact",
+          "media_type": "application/x-tar",
+          "size": 1024,
+          "sha256": "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+        },
+        {
+          "path": "relationship-publication.tar",
+          "classification": "derived-byte-exact",
+          "media_type": "application/x-tar",
+          "size": 1024,
+          "sha256": "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+        }
+      ],
+      "attempt_digests": [
+        "sha256:5dd29e07d814dbe8066939e59bc04f3746b65b17b7eee5eebeb756bbb1f008f9",
+        "sha256:84df6d15d6dbdaa964745aceaca949ea371667099cf29bfc88883a4273be46dc"
+      ],
+      "chunk_identities": [
+        "sha256:08bf1605f955b4d85402af121a2e6cf31e1e74f5ea59081632cdaef97b03f86b",
+        "sha256:9244053139f8acb93020f6129352edd7c92d5cccba04a522cf09d6a56fa80559"
+      ],
+      "derived_exclusions": [
+        "index/ whole-repository zoekt shards (focused publications are preserved byte-exactly)",
+        "repos/ (bare repository mirrors)",
+        "candidates/ (content-addressed candidate manifests and partition rows)",
+        "observation-plans/ (restartable source-partition planning state)",
+        "relationship-schedules/ (restartable relationship scheduler bindings)",
+        "relationship-v3-schedules/ (restartable v3 relationship scheduler bindings)",
+        "invalid, in-flight, unreferenced, and non-current relationship component publications",
+        "caller-leaves/ invalid, incomplete, marker-covered, and unreferenced derived caller publications",
+        "temporary extraction and build caches",
+        "typed-index/ and host typed scratch (all generated bundles, workspace, caches, prehydration and worker custody)",
+        "typed_index_request, typed_index_plan, typed_index_attempt, typed_index_current, typed_index_state, typed_index_job (regenerate-on-restore)",
+        "generation_schedule, generation_schedule_current, generation_schedule_repository, generation_schedule_chunk (restartable execution controls)"
+      ],
+      "engines_joined": true,
+      "execution_digests": [
+        "sha256:2d8de66d1b6fb3f9c96598b27ff01f033c5b15d9b3f9a705eb87b4a2053cc459",
+        "sha256:3ff281cc7985dbddbdcd7ba0eb8e6abfa204b136f1d4b1d66200148f5fc1fbc0"
+      ],
+      "export_command": [
+        "surreal",
+        "export",
+        "--endpoint",
+        "<live-loopback-endpoint>",
+        "--namespace",
+        "phebs",
+        "--database",
+        "phebs",
+        "--log",
+        "none",
+        "--tables-exclude",
+        "typed_index_request,typed_index_plan,typed_index_attempt,typed_index_current,typed_index_state,typed_index_job,generation_schedule,generation_schedule_current,generation_schedule_repository,generation_schedule_chunk",
+        "database.surql"
+      ],
+      "image_digest": "sha256:8b053ab5c65aee8fe7dfe5f8d9b90cd5a1cf0ace68efdaac3a718f3727a89b94",
+      "inventory_digest": "sha256:575cb911b2c35038f01fa975a0229e2b504d466cc70fce3e716d7e0e5af5c87d",
+      "lease_digests": [
+        "sha256:2e17e6b740380c1b5643017a9949a8bc4336333afc3fe8008d1808ed15aeb31d",
+        "sha256:834ff8360667d409dae2b2dfcdfb5574882a42af33b702f7ed18b47af705a9ff"
+      ],
+      "lifecycle_turns": [
+        1198,
+        1196
+      ],
+      "manifest_digest": "sha256:64c43ca287a058463656087fa7510869373b4f613d13c96c767b9e45b3b86672",
+      "manifest_schema": "phebs-backup-manifest-v9",
+      "mode": "workspace",
+      "native_absent": true,
+      "native_allowances": 2,
+      "native_launches": 4,
+      "old_binding_refused": true,
+      "old_metadata_refused": true,
+      "old_request_disabled": true,
+      "old_request_stale": true,
+      "phase_reports": [
+        [
+          {
+            "Phase": "plan",
+            "ExitCode": 0,
+            "Removed": true,
+            "StopReason": "",
+            "Resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 232275968,
+              "sampled_peak_rss_bytes": 290172928,
+              "sampled_peak_processes": 2,
+              "sampled_peak_scratch_bytes": 1150976,
+              "sampled_peak_scratch_inodes": 288,
+              "samples": 8,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            },
+            "Watchdog": null,
+            "Failure": null
+          },
+          {
+            "Phase": "execute",
+            "ExitCode": 0,
+            "Removed": true,
+            "StopReason": "",
+            "Resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 241414144,
+              "sampled_peak_rss_bytes": 305627136,
+              "sampled_peak_processes": 3,
+              "sampled_peak_scratch_bytes": 1208320,
+              "sampled_peak_scratch_inodes": 303,
+              "samples": 8,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            },
+            "Watchdog": null,
+            "Failure": null
+          }
+        ],
+        [
+          {
+            "Phase": "plan",
+            "ExitCode": 0,
+            "Removed": true,
+            "StopReason": "",
+            "Resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 257523712,
+              "sampled_peak_rss_bytes": 327041024,
+              "sampled_peak_processes": 3,
+              "sampled_peak_scratch_bytes": 1150976,
+              "sampled_peak_scratch_inodes": 288,
+              "samples": 7,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            },
+            "Watchdog": null,
+            "Failure": null
+          },
+          {
+            "Phase": "execute",
+            "ExitCode": 0,
+            "Removed": true,
+            "StopReason": "",
+            "Resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 241508352,
+              "sampled_peak_rss_bytes": 294313984,
+              "sampled_peak_processes": 2,
+              "sampled_peak_scratch_bytes": 1208320,
+              "sampled_peak_scratch_inodes": 303,
+              "samples": 8,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            },
+            "Watchdog": null,
+            "Failure": null
+          }
+        ]
+      ],
+      "phases": [
+        {
+          "begins": 1,
+          "launches": 2,
+          "allowances": [
+            {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:4980da0f7d5e4020b06a26a9ecb92eca88707f994f7166f596a0e90202cb69f1",
+              "attempt_digest": "sha256:5dd29e07d814dbe8066939e59bc04f3746b65b17b7eee5eebeb756bbb1f008f9",
+              "boot_id": "ff78181b-feb6-46a3-848f-3e96160688ad",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 448534544291,
+              "deadline_boottime_ns": 748534544291,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:4980da0f7d5e4020b06a26a9ecb92eca88707f994f7166f596a0e90202cb69f1",
+              "attempt_digest": "sha256:5dd29e07d814dbe8066939e59bc04f3746b65b17b7eee5eebeb756bbb1f008f9",
+              "boot_id": "ff78181b-feb6-46a3-848f-3e96160688ad",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 448534544291,
+              "deadline_boottime_ns": 748534544291,
+              "worker_bytes_used": 2024,
+              "wire_bytes_used": 3819
+            }
+          ]
+        },
+        {
+          "begins": 1,
+          "launches": 2,
+          "allowances": [
+            {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:08c49b20f136f8e5936c70c1f277a80dce203ecde92ed443cc00c522e500513a",
+              "attempt_digest": "sha256:84df6d15d6dbdaa964745aceaca949ea371667099cf29bfc88883a4273be46dc",
+              "boot_id": "ff78181b-feb6-46a3-848f-3e96160688ad",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 563713325085,
+              "deadline_boottime_ns": 863713325085,
+              "worker_bytes_used": 0,
+              "wire_bytes_used": 0
+            },
+            {
+              "schema": "phebs-typed-allowance-v1",
+              "planning_digest": "sha256:08c49b20f136f8e5936c70c1f277a80dce203ecde92ed443cc00c522e500513a",
+              "attempt_digest": "sha256:84df6d15d6dbdaa964745aceaca949ea371667099cf29bfc88883a4273be46dc",
+              "boot_id": "ff78181b-feb6-46a3-848f-3e96160688ad",
+              "time_device": 4,
+              "time_inode": 4026531834,
+              "start_boottime_ns": 563713325085,
+              "deadline_boottime_ns": 863713325085,
+              "worker_bytes_used": 2024,
+              "wire_bytes_used": 3819
+            }
+          ]
+        }
+      ],
+      "phebs": {
+        "version": "neutral-native-restore",
+        "sha256": "sha256:6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d"
+      },
+      "planning_digests": [
+        "sha256:4980da0f7d5e4020b06a26a9ecb92eca88707f994f7166f596a0e90202cb69f1",
+        "sha256:08c49b20f136f8e5936c70c1f277a80dce203ecde92ed443cc00c522e500513a"
+      ],
+      "profile_digest": "sha256:8e54cd8c5cf30d814a200b8081b6ba669184ff7c558da439a1868684f29eec72",
+      "profile_epochs": [
+        1,
+        2
+      ],
+      "provider": "go-module-scip-v1",
+      "restored_unavailable": true,
+      "retained_parent_tombstones": [
+        1,
+        1
+      ],
+      "retirement": "fixture_repository_deletion",
+      "root_digests": [
+        "sha256:e7fe597e260990021fcfd93666348787d2c2148f227779be5773d226b244231b",
+        "sha256:279943502ca217d26a37b56c6c42e003c54a78872f55bf87e418b1b461c87abb"
+      ],
+      "routed_content_equal": true,
+      "same_lease_reused": true,
+      "schema": "phebs-typed-neutral-native-restore-v1",
+      "source": {
+        "repository": "example.invalid/native-restore",
+        "incarnation": "c158e3b2a3dddf4d9ae25b85c4d46eed",
+        "generation": "sha256:e8403b6088728c16204be4c77f086faf706cae0307333f7ebdb584ec8685f030",
+        "commit": "3d32b7a85c60baaae73860cd4793ab853fdde04b"
+      },
+      "source_preserved": true,
+      "surreal": {
+        "version": "3.2.0",
+        "sha256": "sha256:a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c"
+      },
+      "tools": {
+        "bazel": {
+          "version": "",
+          "digest": ""
+        },
+        "rules_go": {
+          "version": "",
+          "digest": ""
+        },
+        "go": {
+          "version": "1.25.0",
+          "digest": "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389"
+        },
+        "driver": {
+          "version": "",
+          "digest": ""
+        },
+        "indexer": {
+          "version": "0.2.7",
+          "digest": "sha256:7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765"
+        },
+        "planner": {
+          "version": "neutral-t45.7",
+          "digest": "sha256:6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d"
+        },
+        "launcher": {
+          "version": "neutral-t45.7",
+          "digest": "sha256:6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d"
+        }
+      },
+      "warm_cache_missing_refused": true,
+      "workspace_drained": true
+    }
+  },
+  "existing_native_coordinator_regression": {
+    "selector": "^TestNativeInputCoordinator$",
+    "seconds": 76.76,
+    "status": "PASS",
+    "qualification": "actual cold/warm cross-member content, stale cached reads/binding refused, same-lease reuse and fresh in-process census without replay"
+  },
+  "fixture": {
+    "accepted_service_incarnations": 0,
+    "admitted_source_git_blob_bytes": 176,
+    "source_files": 5,
+    "members": 2,
+    "qualification": "fixed neutral module workspace; SDK/filesystem bytes do not establish product-scale dimensions; five non-database artifacts are empty1024-byte archives; no nonempty focused/relationship/caller roundtrip claim"
+  },
+  "native_limits": {
+    "shared_allowance_seconds_per_attempt": 300,
+    "sequential_attempts": 2,
+    "native_phases": 4,
+    "memory_bytes": 4533092352,
+    "scratch_allowance_bytes": 4573403136,
+    "scratch_image_bytes": 4573401088,
+    "scratch_inodes": 262144,
+    "tasks": 294,
+    "per_process_descriptors": 128,
+    "cpu_quota_microseconds": 200000,
+    "cpu_period_microseconds": 100000,
+    "aggregate_worker_output_bytes": 16777216,
+    "scip_output_bytes": 2285819,
+    "qualification": "unchanged production limits; accepted host backing promise is separate from scratch allowance/image; each attempt retains its own original absolute deadline"
+  },
+  "installation": {
+    "schema": "phebs-neutral-native-restore-installation-v1",
+    "installation": "t459-workspace-restore-1",
+    "source_commit": "025325c3a6a12dc0bcf7d16b284a9d99bbf7b176",
+    "root_identity": {
+      "device": 64769,
+      "inode": 295930
+    },
+    "upload_identity": {
+      "device": 64769,
+      "inode": 295918
+    },
+    "root_headroom_observation": {
+      "total_bytes": 19682557952,
+      "available_bytes": 17096691712,
+      "host_promise_bytes": 4573483008,
+      "host_backing_block_bytes": 4096,
+      "fixture_headroom_bytes": 2147483648,
+      "projected_bytes": 9306832896
+    },
+    "mke2fs_sha256": "84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2",
+    "upload_sha256": {
+      "native-acceptance.test": "b5b7875880608e4987961b6f4d81d86b00df8dfa988534e301e09a3a77aedbcc",
+      "surreal": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+      "public-tools.tar.gz": "69f98506cf99def3a949d52de5570e0b94c1c25d2993c0c436fb6778cee6af07",
+      "restore-driver.py": "cdaa010c6e691dee0ad9acc38975a008ccf29e6f1a72c5463218b863520da157"
+    },
+    "helper_sha256": "6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d"
+  },
+  "checks": [
+    {
+      "name": "Darwin typedexecutor normal/race",
+      "status": "PASS",
+      "qualification": "Linux-only source excluded; no Linux race result"
+    },
+    {
+      "name": "Linux arm64 compilation and affected vet",
+      "status": "PASS",
+      "qualification": "CGO_ENABLED=0; includes Linux-only source"
+    },
+    {
+      "name": "Linux supporting models",
+      "status": "PASS",
+      "qualification": "28 top-level passes as root from exact frozen-oracle cwd; one original-Git corpus skip without explicit argument"
+    },
+    {
+      "name": "Repository-pinned affected Linux lint",
+      "status": "PASS",
+      "qualification": "2.12.2: zero issues; broader Linux retained T42.1 warnings are not relabeled"
+    },
+    {
+      "name": "Repository-pinned full Darwin lint",
+      "status": "PASS",
+      "qualification": "2.12.2, isolated Go and lint caches: zero issues"
+    },
+    {
+      "name": "Existing recovery typed regenerate regression",
+      "status": "PASS",
+      "qualification": "TestTypedIndexRegenerateOnRestore27.600s; native execution is proven separately above"
+    },
+    {
+      "name": "Module verification, owning docs and glossary",
+      "status": "PASS",
+      "qualification": "record-only docs/glossary seal reruns required"
+    },
+    {
+      "name": "Current production helper rebuild equality",
+      "status": "PASS",
+      "qualification": "fresh trimpath/buildvcs=false build equals previously tested6f0efa80 bytes"
+    }
+  ],
+  "cost": {
+    "production_delta": "zero query/request, sync, startup/restart, retry/no-op, publication, lock/cache/schema/child delta; Linux opt-in test changes only",
+    "setup": "one complete public SDK/indexer/helper copy and full trusted inventory hashing; two sequential complete admitted workspace copies, four phases/two original allowances; copies do not coexist; full derived workspace/host backing promises retained",
+    "restore": "four serial supervised engine lifetimes; export CLI beside live original engine; inherited engine hash/version/schema checks, focused backup lock, six artifact creation/hash and per-family validation; verified restore archives and streaming replay or inherited import fallback; paged512-ID restore clears and per-intent marking are bounded per page, not constant total",
+    "oracle": "16MiB accepted export buffer plus one overflow read; capped control/job inventory pages and extra authenticated read-only SDK connection with four LIMIT1 schedule-table queries; full retained bundle rehash adds metadata and streaming hash opens per inventory file plus host-tool metadata, formatter/helper hashes and one Git HEAD read",
+    "consumers": "one bounded bare no-hardlinks clone; same warmed service rebinding; two query triples before and two after restore plus one unavailable triple; one saved reader open/close and three old binding/metadata refusal probes; unchanged64MiB/64-entry cache, four query slots and one cold-load slot; fixture queries serial, cache holds no idle publication reader",
+    "locks": "existing controller serialization and lifecycle mutation guard cover preparation/custody mutation; native phases release lifecycle guard and retain controller/control pins; real lifecycle ticks acquire existing guarded selected sweep; short capacity mutex unchanged",
+    "drains": "two selected production drains, each at most12000 Tick calls and15-minute outer context; existing sixteen mutations/48 traversal steps/216 traversal stats/eight descriptors and100ms guard/pin waits, excluding fixed ancestry/guard work; up to four cursor SDK operations around sweep; not whole-turn SDK/stat, syscall-duration or deletion-progress bounds",
+    "teardown": "30-second uncanceled engine/SDK close contexts; joined native/runner work, empty fixture temp and exact provisioned ROOT/UPLOAD identity checks before removal; no new pressure volume or profile expansion"
+  },
+  "failure_history": [
+    {
+      "kind": "initial refactor compile",
+      "result": "caller err scope failed compilation; corrected before immutable source/native; failing tool output retained in conversation, no separate local failure log"
+    },
+    {
+      "kind": "driver review",
+      "result": "one medium cleanup custody finding corrected before provisioning by identity-bound proof; exact re-review zero"
+    },
+    {
+      "kind": "supporting model invocation",
+      "result": "UID501/default cwd failed root-only safe-file ownership and missing frozen oracle; corrected root/cwd model run passes; no native flags or launch"
+    },
+    {
+      "kind": "native invocation admission",
+      "result": "missing sha256 prefix refused before engine/native launch at0.00s; verified empty custody, corrected environment only; unchanged source passes"
+    },
+    {
+      "kind": "cost review",
+      "result": "low backup self-verification wording corrected to existing per-family archive validation; export sentinel precision and full backing promise wording added; no source change"
+    }
+  ],
+  "source_review": {
+    "schema": "phebs-review-receipt-v1",
+    "source_commit": "025325c3a6a12dc0bcf7d16b284a9d99bbf7b176",
+    "base_commit": "8424d1917425f9854eff6791b3fe15bc8aad637d",
+    "coverage": [
+      "PLAN.md",
+      "docs/BACKLOG.md",
+      "docs/ROADMAP.md",
+      "internal/typedexecutor/input_native_linux_test.go",
+      "internal/typedexecutor/input_restore_linux_test.go"
+    ],
+    "selection": "OCR default excludes all five paths; all were explicitly reviewed using delegate rules",
+    "reviews": [
+      {
+        "reviewer": "next_ticket_audit",
+        "role": "independent all-path source and operational custody review",
+        "counts": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      },
+      {
+        "reviewer": "pr31_correctness",
+        "role": "test author cross-review of shared helper, docs and operational driver; self-check of new test",
+        "counts": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      },
+      {
+        "reviewer": "pr31_cost_docs",
+        "role": "independent test cost review; owning ADR author",
+        "counts": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      }
+    ],
+    "operational_driver_sha256": "cdaa010c6e691dee0ad9acc38975a008ccf29e6f1a72c5463218b863520da157",
+    "resolved_findings": [
+      {
+        "severity": "medium",
+        "owner": "next_ticket_audit",
+        "issue": "cleanup lacked provisioned ROOT/UPLOAD inode identity check",
+        "resolution": "identity-bound root-owned nofollow regular single-link bounded installation proof verified before removal",
+        "before_native_dispatch": true
+      }
+    ],
+    "native_evidence": "pending at source review"
+  },
+  "final_candidate_review": {
+    "status": "PENDING",
+    "qualification": "exact candidate all-path source/evidence/cost review before PR"
+  },
+  "cleanup": {
+    "containers": 0,
+    "loop_devices": 0,
+    "matching_processes": 0,
+    "fresh_staging_removed": true,
+    "native_lock_preserved": true,
+    "model_staging_removed": true,
+    "guest_profile": "Stopped",
+    "historical_receipts_preserved": true
+  },
+  "source_and_module_sha256": {
+    "internal/typedexecutor/input_native_linux_test.go": "sha256:b871cb826ade01adae5ac5cddb6f659f7f927dca0a5a7764de914a071b814051",
+    "internal/typedexecutor/input_restore_linux_test.go": "sha256:7f4087f713e7ad28b4d177d7b1b0a8dfb2707ed3f1d0d0ad366ec36e127c5054",
+    "go.mod": "sha256:71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662",
+    "go.sum": "sha256:d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+    ".golangci.yml": "sha256:ac470aeaf92b159bdabdea28104131935e4758ba347e74f3018337b7df91768b"
+  },
+  "unchanged_prior_receipts_sha256": {
+    "spike/t459/linux_command_gates_1.json": "sha256:0dedf7e60a510e396a7ef092e00b0a5b80c13484bd6271c9db7a0ad4e72fc914",
+    "spike/t459/native_coordinator_1.json": "sha256:05d2d78e2f53da0e7a3c6194217d08677ba4b6812d3e35bb59b40fef38213aa5",
+    "spike/t459/native_faults_1.json": "sha256:bb976bb8017264f5854decdaba144a9f9fa0f07ac2f40008cf52056f0ac6888b",
+    "spike/t459/native_pressure_lifecycle_1.json": "sha256:925e3f7133b55dc1e647717e1ceba00bbcc9664a2247f85608154b25c753c056",
+    "spike/t459/neutral_api_client_1.json": "sha256:8479d8098075dc99901acc645a4ce2cf03483caca5f425d6e648770d24317667"
+  },
+  "retained_artifacts": {
+    "local_artifact_directory": "/Users/ben/.codex/artifacts/phebs-t459-native-restore-20261004",
+    "native_proof_sha256": "sha256:4740efbeb71d5f45cd72bb70873d158c90dbc69b50423f2a96873666524a5c5b",
+    "operational_driver_sha256": "sha256:cdaa010c6e691dee0ad9acc38975a008ccf29e6f1a72c5463218b863520da157",
+    "log_sha256": {
+      "logs/build-helper-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/compile-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/docs-check-initial.log": "sha256:210c69214858693bc300198486df5a018d75b8fc0e7aea8fc366e02f8dc3c25d",
+      "logs/fixture-cleanup.log": "sha256:68c6e27ad41e9d6ffac042618f7b54763f9f1acf1a0141600d2285dd17a3dc44",
+      "logs/glossary-initial.log": "sha256:f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+      "logs/installation-proof.log": "sha256:d64ae56973fceaa18f9cc9b4745d464f2ddaac529af70c133f1ccf569a6944b9",
+      "logs/lint-darwin-full.log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "logs/lint-linux.log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "logs/model-staging-cleanup.log": "sha256:e4b3374434a257c8e198e3365c85d96825612e67ce16aa6578e168d3fa6d5848",
+      "logs/models-linux-root.log": "sha256:b2d49c2875746796ab6b3889cf41fbd6141fe5a9f886d3579d5593f26a56f456",
+      "logs/models-linux.log": "sha256:6bb403d3203a06890d2df70a8568c0c668322332d6daea6ba68e33b6d1d40c95",
+      "logs/module-verify.log": "sha256:b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd",
+      "logs/native-coordinator-regression.log": "sha256:a96c29ae4d61a4495dceedd595713bc0bb2794914c7cbd7680b35e4ceb238f85",
+      "logs/native-restore-admission-fail.log": "sha256:6af623c0133b5d33bad66305237b852d99eea19d651d82db810d3a8f2e3a2b5c",
+      "logs/native-restore.log": "sha256:ae688d30fe4dbe21e3bbea88acb104a062ef1594682e5e41a4b4186d25b6ccb1",
+      "logs/package-darwin.log": "sha256:36d76866d6c260bcabdf802e4b9d180052ed5340391383db53e0a1c2d0f2653b",
+      "logs/package-race-darwin.log": "sha256:ab6faab2b0d524f92b325ab0866edede2270d6613477b30ca71fb6c87445d5c9",
+      "logs/post-admission-failure-custody.log": "sha256:05fce1cd45740b455c423aa6b02c4e67db81eba5fb2deb5296cb413492adc20b",
+      "logs/profile-preflight.log": "sha256:5feddb0394d01de376cba992380408e67149ce31e2b4ed521ed598f6f43f7ecd",
+      "logs/profile-start.log": "sha256:c2086dce89d0d8141d7c02e40c906398372fa6c3106b6bd18ad25fd77c3b5e1d",
+      "logs/profile-stop.log": "sha256:5fe239a82df337ae7849a71372bd0b34ec476ed0abc975e05571575768a58160",
+      "logs/profiles-final.json": "sha256:8fa3befb6844faf011e2eed2b334966de28bf30da8818eb4b3ecb7001641153a",
+      "logs/recovery-regenerate-darwin.log": "sha256:6bc3a460f98ba95132058c37d3b990717ee07c0f55428799aacc80b09a4cb66d",
+      "logs/refactor-compile-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/upload.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "logs/vet-linux.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "outer_test_timeout_seconds": 1500,
+  "claim_boundary": "Only the native regenerate-on-restore neutral prerequisite is PASS. Rendered authenticated Settings, complete neutral acceptance and separately authorized target remain open; ordinary providers unavailable, T45.6 not PASS; no target execution, product-scale, release or scale claim."
+}
