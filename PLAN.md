@@ -9541,7 +9541,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   runner and scheduler, each with concurrency one; planning and execution use
   two sequential native phase containers and the existing bounded helper
   processes. The original absolute workspace/scratch allowances, native memory,
-  disk, process and 300-second phase bounds remain exact. Test observations use
+  disk, process and shared 300-second native wall allowance remain exact. Test observations use
   three fixed job-report slots and one sticky scheduler-error slot. Runner,
   scheduler, heartbeat and callback work joins before post-run assertions;
   test wait contexts do not extend native phase bounds.

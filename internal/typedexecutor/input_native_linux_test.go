@@ -585,8 +585,12 @@ func TestNativeInputCoordinator(t *testing.T) {
 		t.Fatal("native schedule not successfully settled", err)
 	}
 	status, err := f.s.GetTypedIndexStatus(ctx, f.chunk.Repository)
-	if err != nil || status.Desired != queued.Desired || status.Stage != store.TypedComplete || status.States != [5]string{"complete", "complete", "complete", "complete", "complete"} || status.Current == nil || *status.Current != outcome.Pointer || status.Stale || status.Canceled || status.RestoreRequired {
+	if err != nil || status.Desired != outcome.Pointer.Binding.RequestDigest || status.Stage != store.TypedComplete || status.States != [5]string{"complete", "complete", "complete", "complete", "complete"} || status.Current == nil || *status.Current != outcome.Pointer || status.Stale || status.Canceled || status.RestoreRequired {
 		t.Fatal("native publication status", err)
+	}
+	current, err := f.s.ResolveTypedIndexCurrentCustody(ctx, f.chunk.Repository)
+	if err != nil || current.PlanningDigest != queued.Desired || current.Parent.Request() != request || current.Admission.Digest() != status.Desired || current.Pointer != outcome.Pointer {
+		t.Fatal("native parent/execution continuity", err)
 	}
 	if _, err = f.s.GetTypedIndexGrowth(ctx); !errors.Is(err, store.ErrNotFound) {
 		t.Fatal("settlement stranded growth", err)
@@ -610,4 +614,5 @@ func TestNativeInputCoordinator(t *testing.T) {
 		t.Fatal("native scratch not drained", err)
 	}
 	t.Logf("native coordinator: provider=%s coordinator_jobs=1 succeeded_chunks=1 lookups=%d launches=%d same_lease_reused=%t", profile.Provider(), lookups, launches, reused)
+	t.Logf("native identity: source_commit=%s profile=%s inventory=%s planning=%s execution=%s root=%s", source.Commit, profile.Digest(), profile.Definition().BundleDigest, custody.PlanningDigest, custody.Admission.Digest(), custody.Pointer.RootDigest)
 }
