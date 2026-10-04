@@ -552,38 +552,28 @@ func TestNativeInputPressureLifecycle(t *testing.T) {
 	nativeInputCoordinator(t, true)
 }
 
-func nativeInputCoordinator(t *testing.T, pressure bool) {
+// Reuse the actual coordinator/scheduler proof for each fresh native publication.
+// Mutable counters remain visible to the caller's subsequent query/restart checks.
+type nativeInputPublication struct {
+	current  store.TypedIndexCurrentCustody
+	outcome  Outcome
+	lookups  *int
+	launches *int
+}
+
+func nativeInputPublish(t *testing.T, f *fixture, repo string, profile typedindex.Profile, pressureProof *nativeInputPressureProof) nativeInputPublication {
 	t.Helper()
-	if *inputNativeTools == "" && *inputNativeImage == "" && *inputNativeMode == "" {
-		t.Skip("explicit privileged neutral rehearsal")
-	}
-	if !filepath.IsAbs(*inputNativeTools) || os.Geteuid() != 0 || (*inputNativeMode != "single" && *inputNativeMode != "workspace" && *inputNativeMode != "import") {
-		t.Fatal("explicit root/tool/image/mode admission required")
-	}
-	if pressure && *inputNativeMode != "workspace" {
-		t.Fatal("pressure proof requires the neutral workspace")
-	}
-	f, profile, originalGit := nativeInputFixture(t, testServer(t), *inputNativeMode)
 	ctx := t.Context()
-	var pressureProof *nativeInputPressureProof
-	if pressure {
-		pressureProof = nativeInputPressureFixture(t, ctx, &f)
-	}
-	// preparationFixture claims its legacy seed request. Release that unused
-	// lease before a distinct managed request goes through the real coordinator.
-	if err := f.s.ReleaseGenerationChunk(ctx, f.chunk, "unused neutral fixture seed"); err != nil {
-		t.Fatal(err)
-	}
-	intent, err := f.s.GetTypedIndexIntent(ctx, f.chunk.Repository)
+	intent, err := f.s.GetTypedIndexIntent(ctx, repo)
 	if err != nil {
 		t.Fatal(err)
 	}
-	source, err := f.s.GetTypedSource(ctx, f.chunk.Repository)
+	source, err := f.s.GetTypedSource(ctx, repo)
 	if err != nil {
 		t.Fatal(err)
 	}
 	request := typedindex.NewManagedRequest(source, profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, typedindex.Publish)
-	queued, err := f.s.EnqueueTypedIndex(ctx, f.chunk.Repository, encode(t, request))
+	queued, err := f.s.EnqueueTypedIndex(ctx, repo, encode(t, request))
 	if err != nil || queued.Desired == f.chunk.Generation {
 		t.Fatal("fresh managed request", err)
 	}
@@ -639,7 +629,7 @@ func nativeInputCoordinator(t *testing.T, pressure bool) {
 		t.Fatalf("coordinator: reports=%d handler_failed=%t report_failed=%t", reportCount, coordinatorErr != nil, reportErr != nil)
 	}
 	for i, event := range []string{"claimed", "started", "done"} {
-		if reports[i].Schema != store.JobLifecycleSchema || reports[i].Event != event || reports[i].JobID != coordinatorJob.ID || reports[i].Kind != store.JobTypedIndex || reports[i].Target != f.chunk.Repository || reports[i].Attempt != 1 {
+		if reports[i].Schema != store.JobLifecycleSchema || reports[i].Event != event || reports[i].JobID != coordinatorJob.ID || reports[i].Kind != store.JobTypedIndex || reports[i].Target != repo || reports[i].Attempt != 1 {
 			t.Fatal("coordinator lifecycle identity")
 		}
 	}
@@ -652,7 +642,7 @@ func nativeInputCoordinator(t *testing.T, pressure bool) {
 	if err != nil || jobs == nil || jobs.Next != nil || len(jobs.Jobs) != 1 || jobs.Jobs[0].ID != coordinatorJob.ID || jobs.Jobs[0].Status != store.StatusDone || jobs.Jobs[0].Attempts != 0 || jobs.Jobs[0].FinishedAt == nil {
 		t.Fatal("coordinator durable completion", err)
 	}
-	planned, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	planned, err := f.s.GetGenerationSchedule(ctx, repo, store.TypedIndexScheduleStage)
 	if err != nil || planned.Generation != queued.Desired || planned.Status != store.GenerationScheduleActive || planned.TotalChunks != 1 || planned.Succeeded != 0 || planned.Failed != 0 {
 		t.Fatal("coordinator schedule", err)
 	}
@@ -719,15 +709,15 @@ func nativeInputCoordinator(t *testing.T, pressure bool) {
 	if handled != 1 || executed != 1 || settled != 1 || executionErr != nil || settlementErr != nil || !reused || lookups != 1 || launches != 2 || selected.Generation != queued.Desired || selected.LeaseToken == f.chunk.LeaseToken || outcome.Pointer.Epoch != 1 || outcome.Check != nil {
 		t.Fatalf("native scheduler: handled=%d executed=%d settled=%d lookups=%d launches=%d reused=%t execution_failed=%t settlement_failed=%t", handled, executed, settled, lookups, launches, reused, executionErr != nil, settlementErr != nil)
 	}
-	before, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	before, err := f.s.GetGenerationSchedule(ctx, repo, store.TypedIndexScheduleStage)
 	if err != nil || before.Status != store.GenerationScheduleSettled || before.Succeeded != 1 || before.Failed != 0 || before.Pending != 0 || before.Running != 0 {
 		t.Fatal("native schedule not successfully settled", err)
 	}
-	status, err := f.s.GetTypedIndexStatus(ctx, f.chunk.Repository)
+	status, err := f.s.GetTypedIndexStatus(ctx, repo)
 	if err != nil || status.Desired != outcome.Pointer.Binding.RequestDigest || status.Stage != store.TypedComplete || status.States != [5]string{"complete", "complete", "complete", "complete", "complete"} || status.Current == nil || *status.Current != outcome.Pointer || status.Stale || status.Canceled || status.RestoreRequired {
 		t.Fatal("native publication status", err)
 	}
-	current, err := f.s.ResolveTypedIndexCurrentCustody(ctx, f.chunk.Repository)
+	current, err := f.s.ResolveTypedIndexCurrentCustody(ctx, repo)
 	if err != nil || current.PlanningDigest != queued.Desired || current.Parent.Request() != request || current.Admission.Digest() != status.Desired || current.Pointer != outcome.Pointer {
 		t.Fatal("native parent/execution continuity", err)
 	}
@@ -737,7 +727,7 @@ func nativeInputCoordinator(t *testing.T, pressure bool) {
 	if err = r.Coordinator(ctx, coordinatorJob); err != nil {
 		t.Fatal("published duplicate coordinator", err)
 	}
-	after, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	after, err := f.s.GetGenerationSchedule(ctx, repo, store.TypedIndexScheduleStage)
 	if err != nil || !reflect.DeepEqual(before, after) {
 		t.Fatal("published duplicate changed schedule", err)
 	}
@@ -767,6 +757,36 @@ func nativeInputCoordinator(t *testing.T, pressure bool) {
 	if err != nil || host.Held || len(host.Names) != 0 {
 		t.Fatal("native scratch not drained", err)
 	}
+	t.Logf("native coordinator: provider=%s coordinator_jobs=1 succeeded_chunks=1 lookups=%d launches=%d same_lease_reused=%t", profile.Provider(), lookups, launches, reused)
+	return nativeInputPublication{current, outcome, &lookups, &launches}
+}
+
+func nativeInputCoordinator(t *testing.T, pressure bool) {
+	t.Helper()
+	if *inputNativeTools == "" && *inputNativeImage == "" && *inputNativeMode == "" {
+		t.Skip("explicit privileged neutral rehearsal")
+	}
+	if !filepath.IsAbs(*inputNativeTools) || os.Geteuid() != 0 || (*inputNativeMode != "single" && *inputNativeMode != "workspace" && *inputNativeMode != "import") {
+		t.Fatal("explicit root/tool/image/mode admission required")
+	}
+	if pressure && *inputNativeMode != "workspace" {
+		t.Fatal("pressure proof requires the neutral workspace")
+	}
+	f, profile, originalGit := nativeInputFixture(t, testServer(t), *inputNativeMode)
+	ctx := t.Context()
+	var pressureProof *nativeInputPressureProof
+	if pressure {
+		pressureProof = nativeInputPressureFixture(t, ctx, &f)
+	}
+	// preparationFixture claims its legacy seed request. Release that unused
+	// lease before a distinct managed request goes through the real coordinator.
+	if err := f.s.ReleaseGenerationChunk(ctx, f.chunk, "unused neutral fixture seed"); err != nil {
+		t.Fatal(err)
+	}
+	publication := nativeInputPublish(t, &f, f.chunk.Repository, profile, pressureProof)
+	current, outcome := publication.current, publication.outcome
+	source := current.Parent.Request().Source
+	var err error
 	if *inputNativeMode == "workspace" {
 		// Product range conversion reads an independent bare mirror of the exact
 		// original source commit; it never opens the worker's source directory.
@@ -815,7 +835,7 @@ func nativeInputCoordinator(t *testing.T, pressure bool) {
 			}
 		}
 		confirmed, err := f.s.ReadTypedIndexCurrentCustody(ctx, source.Repository)
-		if err != nil || !reflect.DeepEqual(current, confirmed) || lookups != 1 || launches != 2 {
+		if err != nil || !reflect.DeepEqual(current, confirmed) || *publication.lookups != 1 || *publication.launches != 2 {
 			t.Fatal("workspace queries changed exact publication authority", err)
 		}
 		if pressureProof != nil {
@@ -868,6 +888,5 @@ func nativeInputCoordinator(t *testing.T, pressure bool) {
 		}
 		t.Log("native workspace consumers: cold=exact warm=exact stale_queries=refused stale_binding=refused")
 	}
-	t.Logf("native coordinator: provider=%s coordinator_jobs=1 succeeded_chunks=1 lookups=%d launches=%d same_lease_reused=%t", profile.Provider(), lookups, launches, reused)
 	t.Logf("native identity: source_commit=%s profile=%s inventory=%s planning=%s execution=%s root=%s", source.Commit, profile.Digest(), profile.Definition().BundleDigest, current.PlanningDigest, current.Admission.Digest(), current.Pointer.RootDigest)
 }

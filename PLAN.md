@@ -9826,3 +9826,109 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   pinned affected lint pass with zero issues. Fresh bounds-only staging was
   removed and the personal test profile stopped; no volume or native work was
   created. Independent source/cost review reports all severity counts zero.
+
+- **2026-10-04 — T45.9 native regenerate-on-restore prerequisite.** Add one
+  opt-in privileged Linux neutral-workspace test around the shared actual
+  coordinator/scheduler publication proof. Build a successful native current in
+  a fresh supervised local store, take the public six-artifact v9 backup, retire
+  that original fixture repository through guarded `DeleteRepo` and selected
+  production lifecycle turns, then close its engine before offline restore.
+  The restored source identity and bounded profile intent must remain exact;
+  all six typed derived tables, all four generation-schedule tables and every
+  generated workspace remain absent. The export oracle checks declarations
+  and native row IDs, preserving the existing inert repository job reference.
+
+  Restored status must require revalidation with no desired request or current;
+  the imported planning request must refuse as disabled. Keep the same warmed
+  navigation service across the store/workspace rebinding and require empty,
+  unavailable results from the missing restored current. A saved binding and
+  routing metadata must also fail to reopen it. Rehash the retained complete
+  immutable source/tool inventory, check exact file ownership, size and mode,
+  bind the original host-tool metadata, recheck the actual formatter/helper and
+  original Git HEAD, and only then install the trusted profile at the next
+  epoch. The old request must now refuse as stale, and installation itself
+  creates no current. A second actual coordinator/scheduler publication must
+  mint distinct planning, execution, chunk, lease, attempt and root identities
+  while preserving the source and routed Definition, References and Hover.
+  Saved old binding/metadata must remain fenced from the fresh publication.
+
+  Each publication retains the existing durable successful coordinator job,
+  one successfully settled chunk, one bundle lookup, exact same-lease reuse,
+  duplicate-coordinator/no-claim checks, growth release and fresh startup
+  census. The two native phases of each attempt share that attempt's original
+  absolute 300-second allowance; the restored attempt has a later start and
+  distinct attempt identity. Original and restored workspace drainage are
+  sequential, so their complete accepted input copies do not coexist. Each
+  retirement is fixture-repository deletion and may honestly retain zero or
+  one collecting parent tombstone. The preceding pressure/hysteresis, current
+  protection, publication-pin and collecting-prefix proof stays unchanged.
+
+  **Cost.** Production query/request, sync, startup/restart, retry/no-op and
+  publication paths add zero work, locks, scans/hashes, cache invalidation,
+  goroutines, children or persistent state. Shared helper extraction moves the
+  existing opt-in runner/scheduler assertions without changing their bounds.
+  Fixture setup retains one complete public SDK/indexer/helper copy and full
+  inventory hashing, including trusted host whole-file reads and inventory
+  records before native admission. Two accepted preparations then serially
+  copy and verify the complete immutable input inventory under controller
+  serialization and the lifecycle mutation guard. Existing custody/metadata
+  reopens remain. Four native phases run serially across two attempts with
+  unchanged memory, scratch, inode, task, descriptor, CPU and output limits.
+  Native phases release the lifecycle guard while retaining controller
+  serialization and control pins. Runner/scheduler concurrency stays one;
+  coordinator waits retain one minute and scheduler waits fifteen minutes per
+  publication, without extending the native allowance.
+
+  The fixture uses four sequential supervised engine lifetimes: original live
+  store, raw restore import, restored schema/repair validation and restored live
+  store. At most one engine runs at a time; live backup additionally launches
+  the existing export CLI. Engine hash/version/readiness checks and schema
+  opens keep their existing costs. Recognized 3.2.0 exports use the existing
+  streaming HTTP replay; the ordinary unsupported-export fallback may instead
+  add an import CLI beside the import engine. Backup retains its focused-index
+  backup lock, live catalog validation, six-artifact creation/hashing and
+  self-verification. Restore retains archive verification, replay preflight,
+  isolated import, schema/authority validation and bounded 512-identity clear
+  pages with per-intent read/CAS marking; total work is not constant over an
+  installation. Both database roots and the backup remain fixture custody until
+  cleanup. The extra export oracle reads at most 16 MiB, and restored-control
+  checks add capped pages plus one authenticated read-only SDK session with
+  four `LIMIT 1` generation-table reads.
+
+  Trusted revalidation adds a metadata open and separate streaming hash open
+  for every retained inventory file, plus host-tool metadata, formatter/helper
+  hashes and one bounded Git HEAD read. It constructs no second public bundle.
+  One bare `--no-hardlinks` source-mirror clone retains its one-minute context.
+  The same routed cache survives the authority transition: its existing
+  64-MiB/64-entry budget, four-query admission and one cold-load slot remain;
+  fixture queries are serial. Two query triples precede backup, one triple
+  checks unavailable restored authority and two triples read the fresh native
+  publication. One saved-publication open/close and three saved binding/metadata
+  refusal probes are additional. Each successful query retains production
+  authority rechecks, bounded member/source conversion reads and its publication
+  reader pin; the cache holds decoded data/metadata rather than idle reader pins.
+
+  Each of the two direct lifecycle drains has at most 12,000 selected `Tick`
+  calls under its own fifteen-minute context. A Tick retains up to four cursor
+  SDK operations around the existing guarded selected Sweep; no-advance errors
+  skip the owner CAS. Physical drainage keeps sixteen mutations, 48 traversal
+  steps, 216 traversal stats and eight descriptors per turn, excluding fixed
+  guard/private-ancestry work, and existing 100-ms guard/pin waits. Bounded
+  namespace/control checks and final growth/native-absence reads remain; drain
+  does not rehash source payloads. These are selected-work ceilings, not
+  whole-turn SDK/stat ceilings, syscall-duration or deletion-progress bounds.
+  Engine closes use thirty-second cleanup contexts; callbacks/native work must
+  join and temporary readers close before fresh owned custody is removed.
+  The source-free test receipt is capped at the existing 128 KiB and records
+  both authority/allowance identities, phase reports, archive identities,
+  actual drain turns/tombstones and exact teardown predicates.
+
+  **Validation pending.** Native dispatch, machine/static gates, immutable
+  independent review and exact cleanup are not yet recorded for this slice.
+  It is only the native regenerate-on-restore prerequisite. Rendered
+  authenticated Settings/API parity, complete neutral closure and separately
+  authorized target closure remain open. The fixed workspace has zero accepted
+  service incarnations and 176 admitted source Git blob bytes; SDK/aggregate
+  filesystem bytes do not establish a product-scale dimension. Ordinary
+  providers remain unavailable, T45.6 is not PASS, and no target execution,
+  product-scale envelope, release or scale claim follows.

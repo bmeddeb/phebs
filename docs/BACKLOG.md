@@ -15529,6 +15529,24 @@ complete neutral and separately authorized target closure remain open; zero
 accepted services and 176 admitted source bytes establish no product-scale
 dimension, ordinary providers remain unavailable and T45.6 is not PASS.
 
+T45.9 neutral native restore prerequisite (2026-10-04): reuse the actual
+managed workspace coordinator/scheduler proof for two fresh native publications
+separated by the public v9 six-artifact backup/restore. The original successful
+current is backed up, then retired through guarded repository deletion and
+bounded production lifecycle before its engine closes. Restore must preserve
+the exact source and precious profile intent, omit generated controls/jobs and
+workspace custody, and refuse the old request and the same warm navigation
+cache while unavailable. Full retained source/tool/inventory revalidation must
+advance the trusted profile epoch, fence the old request/binding/metadata, and
+publish fresh exact native identities with identical cold/warm routed content.
+Each attempt retains its own original shared 300-second allowance; all native
+limits stay exact. A second bounded production drain and joined engine/native
+teardown are required. Native execution and final evidence/review are pending.
+This prerequisite does not close rendered authenticated Settings, complete
+neutral acceptance or the separately authorized target; the fixed fixture has
+zero accepted services and 176 admitted source bytes, ordinary providers remain
+unavailable and T45.6 is not PASS.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,
