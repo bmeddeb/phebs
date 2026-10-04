@@ -22,7 +22,7 @@ func BuildBundleWithSCIPGoReceipt(ctx context.Context, a Admission, p PackagePla
 }
 
 func validateSCIPGoReceipt(ctx context.Context, p Profile, receipt *SCIPGoAdapterReceipt) error {
-	if receipt == nil || receipt.Schema != SCIPGoBlankAdapter || len(receipt.Members) == 0 || len(receipt.Members) > MaxSCIPMembers || p.definition.Tools.Indexer != (Tool{Version: "0.2.7", Digest: SCIPGoIndexerDigest}) {
+	if receipt == nil || receipt.Schema != SCIPGoBlankAdapter || len(receipt.Members) == 0 || len(receipt.Members) > MaxSCIPMembers || p.definition.Tools.Indexer != SCIPGoIndexer(p.definition.Config.GOARCH) {
 		return Invalid
 	}
 	remaining := MaxAttemptBytes
