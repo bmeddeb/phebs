@@ -23,6 +23,7 @@ type TypedIndexOperator struct {
 	Status         TypedIndexStatus
 	Coordinator    JobStatus
 	Schedule       *GenerationSchedule
+	DesiredFresh   bool // Independently authenticated; current publication may be stale.
 }
 
 func operatorRevision(a typedAuthority) (string, error) {
@@ -81,6 +82,8 @@ func (s *Surreal) ReadTypedIndexOperator(ctx context.Context, repository string)
 			out.Status.States = [5]string{}
 			out.Status.Reason = ""
 			out.Status.Check = nil
+		} else {
+			out.DesiredFresh = true
 		}
 		// The coordinator finishes before the single generation worker claims.
 		// Read the desired root's exact schedule, never the current stage pointer.

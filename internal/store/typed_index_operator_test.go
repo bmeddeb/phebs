@@ -2,7 +2,6 @@ package store
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -43,7 +42,7 @@ func TestTypedIndexOperatorReadonlyAndExpectedRevision(t *testing.T) {
 		t.Fatal("old HEAD accepted", err)
 	}
 	stale, err := s.ReadTypedIndexOperator(ctx, f.repo)
-	if err != nil || !stale.Status.Stale || stale.Status.Stage != "" {
+	if err != nil || !stale.Status.Stale || stale.DesiredFresh || stale.Status.Stage != "" {
 		t.Fatal("old active stage crossed HEAD", stale, err)
 	}
 	repo := "example.invalid/uninitialized-operator"
@@ -70,9 +69,16 @@ func TestTypedIndexOperatorReadonlyAndExpectedRevision(t *testing.T) {
 func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 	s := newRunnerStore(t)
 	ctx := t.Context()
-	for _, oldPublication := range []bool{false, true} {
-		f := newTypedFixture(t, s, "operator-queued-"+fmt.Sprint(oldPublication))
-		if oldPublication {
+	for _, tc := range []struct {
+		name                 string
+		publication, newHEAD bool
+	}{
+		{"absent", false, false},
+		{"published", true, false},
+		{"replacing-stale", true, true},
+	} {
+		f := newTypedFixture(t, s, "operator-queued-"+tc.name)
+		if tc.publication {
 			f.enqueue(t, "old-publication")
 			chunk := f.claim(t)
 			admission, plan := f.seal(t, chunk)
@@ -86,6 +92,11 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 			}
 			// The coordinator for this test-only directly executed publication is still pending.
 			if _, err := s.CancelPendingJobs(ctx, JobTypedIndex, f.repo); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if tc.newHEAD {
+			if err := s.SetRepoIndexed(ctx, f.repo, strings.Repeat("b", 40), time.Now()); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -125,11 +136,14 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 				}
 			}
 			queued, err := s.ReadTypedIndexOperator(ctx, f.repo)
-			if err != nil || queued.Coordinator != StatusDone || queued.Status.Stage != "" || queued.Schedule == nil || queued.Schedule.Status != GenerationScheduleActive {
+			if err != nil || queued.Coordinator != StatusDone || queued.Status.Stage != "" || queued.Schedule == nil || queued.Schedule.Status != GenerationScheduleActive || !queued.DesiredFresh {
 				t.Fatal(queued, err)
 			}
-			if (queued.Status.Current != nil) != oldPublication {
+			if (queued.Status.Current != nil) != (tc.publication && !tc.newHEAD) {
 				t.Fatal("last publication lost", queued)
+			}
+			if queued.Status.Stale != tc.newHEAD {
+				t.Fatal("stale current must remain separate from fresh desired", queued)
 			}
 		}
 		chunk, err := s.ClaimGenerationChunk(ctx, GenerationResourceTypedIndex, "worker")

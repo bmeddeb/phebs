@@ -9108,3 +9108,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   disk/memory limits remain unchanged. Poll failures retain last-good active
   state and continue the existing serial five-second chain until terminal state
   or disposal. No extra timer, parallel poll, provider or background work is added.
+
+  Independent correction review additionally reproduced old published HEAD →
+  new indexed HEAD → fresh queued replacement. Current-publication staleness
+  remains true internally while independently authenticated desired freshness
+  allows planning/indexing/validation/publication and terminal failure to remain
+  visible. Genuine stale desired authority and restore stay highest priority;
+  settled work without a replacement publication retains stale navigation.
+  This distinction adds no read, storage field or public schema. Real-store
+  queue tests cover absent, same-HEAD prior publication and stale prior HEAD.
+
+  Correction validation: the complete typed API/store race selector passed
+  (store 334.088s) before the final desired/current distinction; the final
+  API/operator race selector then passed (API 1.777s, store 17.427s), exercising
+  the new-HEAD replacement and genuine stale desired cases. API/auth normal,
+  affected vet/lint, docs/glossary and generated API parity pass. The prior
+  744-test UI run preceded the final eight preview PNGs; the final baseline set
+  exposed a missing cardinality term. The executable fixture matrix now shares
+  that dimension with the assertion, and all 746 UI tests, build and lint pass.
+  Thirteen fresh pinned Noble/Chromium checks pass in 47.3s, including transient
+  active-poll recovery and consumed-purpose refusal; all eight preview pixels
+  compare unchanged. The corrected Settings chunk is 28,072 bytes (8.33 kB
+  reported gzip), with qualified timing/provenance appended to the receipt.
+  Original ordinary-cohort and native receipts retain their exact old source;
+  no fresh native/full-command execution is inferred from the correction gates.

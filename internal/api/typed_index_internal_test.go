@@ -210,6 +210,8 @@ func TestTypedIndexAPIRecordedRequestRefusesOnlyNewPreview(t *testing.T) {
 func TestTypedIndexAPIScheduleGapAndEarlyFailure(t *testing.T) {
 	s, opts := typedAPIFixture(t)
 	s.snapshot.Coordinator = store.StatusDone
+	s.snapshot.DesiredFresh = true
+	s.snapshot.Status.Stale = true // Prior publication belongs to the previous HEAD.
 	s.snapshot.Status.Desired = "sha256:" + strings.Repeat("a", 64)
 	for _, current := range []*typedindex.PublicationPointer{nil, {}} {
 		s.snapshot.Status.Current = current
@@ -223,5 +225,11 @@ func TestTypedIndexAPIScheduleGapAndEarlyFailure(t *testing.T) {
 		if err != nil || view.State != "failed" {
 			t.Fatal(view, err)
 		}
+		s.snapshot.DesiredFresh = false
+		view, _, err = typedIndexRead(t.Context(), opts, s.snapshot.Source.Repository)
+		if err != nil || view.State != "stale" {
+			t.Fatal("stale desired hidden", view, err)
+		}
+		s.snapshot.DesiredFresh = true
 	}
 }
