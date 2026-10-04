@@ -120,7 +120,7 @@ func (p *nativeInputPressureProof) beforeExecution(ctx context.Context, chunk st
 			return err
 		}
 		work, err := p.f.s.BeginTypedIndex(ctx, chunk)
-		if err != nil || work.Stage != store.TypedPreflight || work.Custody != nil || work.Growth != nil || work.PlanDigest != "" || work.RootDigest != "" || p.begins != 0 || *p.launches != 0 {
+		if err != nil || work.Stage != store.TypedPreflight || work.Custody != nil || work.Growth != nil || work.PlanDigest != "" || work.RootDigest != chunk.Generation || work.Parent.Digest() != chunk.Generation || p.begins != 0 || *p.launches != 0 {
 			return errors.New("refused pressure attempt grew or launched")
 		}
 		if _, err = p.f.s.GetTypedIndexGrowth(ctx); !errors.Is(err, store.ErrNotFound) {
@@ -226,8 +226,12 @@ func (p *nativeInputPressureProof) finish(t *testing.T, ctx context.Context, f *
 		}
 	}
 	protected()
-	if err = f.s.CancelTypedIndex(ctx, current.Parent.Request().Source.Repository, current.PlanningDigest); err != nil {
+	if err = f.s.CancelTypedIndex(ctx, current.Parent.Request().Source.Repository, current.Admission.Digest()); err != nil {
 		t.Fatal(err)
+	}
+	canceled, err := f.s.GetTypedIndexStatus(ctx, current.Parent.Request().Source.Repository)
+	if err != nil || !canceled.Canceled || canceled.Desired != current.Admission.Digest() || canceled.Current == nil || *canceled.Current != current.Pointer {
+		t.Fatal("desired cancellation did not preserve visible current", err)
 	}
 	protected() // A canceled desired request does not remove current authority.
 	p.volume.Clear(t, ctx)
