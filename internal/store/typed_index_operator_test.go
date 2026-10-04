@@ -150,6 +150,10 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 		if err != nil || chunk == nil {
 			t.Fatal(chunk, err)
 		}
+		running, err := s.ReadTypedIndexOperator(ctx, f.repo)
+		if err != nil || !running.DesiredFresh || running.Schedule == nil || running.Schedule.Running != 1 || running.Status.Stage != "" {
+			t.Fatal("claimed queue lost", running, err)
+		}
 		if err = s.FailGenerationChunk(ctx, *chunk, "before BeginTypedIndex"); err != nil {
 			t.Fatal(err)
 		}
@@ -183,6 +187,10 @@ func TestTypedIndexOperatorQueuedScheduleAndEarlyFailure(t *testing.T) {
 		dryChunk := f.claim(t)
 		if _, err = s.BeginTypedIndex(ctx, dryChunk); err != nil {
 			t.Fatal(err)
+		}
+		started, err := s.ReadTypedIndexOperator(ctx, f.repo)
+		if err != nil || !started.DesiredFresh || started.Status.Stage != TypedPreflight || started.Status.Stale != tc.newHEAD {
+			t.Fatal("fresh attempt hidden by prior navigation", started, err)
 		}
 		if err = s.FailTypedIndex(ctx, dryChunk, typedindex.ExecutionFailed); err != nil {
 			t.Fatal(err)
