@@ -92,6 +92,7 @@ type acceptanceFinal struct {
 	WorkspaceDrained   bool                    `json:"workspace_drained"`
 	RetainedTombstones int                     `json:"retained_tombstones"`
 	EngineJoined       bool                    `json:"engine_joined"`
+	CurrentAbsent      bool                    `json:"current_absent,omitempty"`
 	Error              string                  `json:"error,omitempty"`
 	Emergency          string                  `json:"emergency,omitempty"`
 }
@@ -217,9 +218,20 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 	if e != nil {
 		return p, nil, e
 	}
-	required := map[string]bool{typedindex.ManagedHelperFile: false, provider.SelectionFile: false, typedindex.HostToolsFile: false}
+	selectionFile := provider.SelectionFile
+	if c.Schema == acceptanceWorkspaceFaultSchema {
+		selectionFile, e = typedindex.SelectionFile(typedindex.ModuleProviderID)
+		if e != nil {
+			return p, nil, e
+		}
+	}
+	required := map[string]bool{typedindex.ManagedHelperFile: false, selectionFile: false, typedindex.HostToolsFile: false}
 	if c.Schema == acceptanceCorpusSchema {
 		required["tools/corpus/remote-apis-sdks.tar.gz"] = false
+	} else if c.Schema == acceptanceWorkspaceFaultSchema {
+		for _, file := range acceptanceWorkspaceSourceFiles() {
+			required[file.Path] = false
+		}
 	} else {
 		for _, name := range []string{"source/MODULE.bazel", "source/MODULE.bazel.lock", "source/go.mod", "source/lib/BUILD.bazel", "source/lib/lib.go"} {
 			required[name] = false
@@ -265,6 +277,10 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 		if e != nil || !reflect.DeepEqual(actual, expected) {
 			return p, nil, errors.New("frozen corpus source inventory")
 		}
+	} else if c.Schema == acceptanceWorkspaceFaultSchema {
+		if !acceptanceWorkspaceSources(inv) {
+			return p, nil, errors.New("neutral workspace source inventory")
+		}
 	} else {
 		source, e := acceptanceRead(filepath.Join(c.root(), "bundle/source/lib/lib.go"), 1024)
 		if e != nil || string(source) != acceptanceSource {
@@ -275,7 +291,7 @@ func acceptanceVerify(ctx context.Context, c nativeAcceptanceConfig, configPath 
 	if e != nil {
 		return p, nil, e
 	}
-	selection, e := acceptanceRead(filepath.Join(c.root(), "bundle", provider.SelectionFile), provider.MaxSelectionBytes)
+	selection, e := acceptanceRead(filepath.Join(c.root(), "bundle", selectionFile), provider.MaxSelectionBytes)
 	if e != nil {
 		return p, nil, e
 	}
@@ -654,7 +670,7 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 		if purpose != "" {
 			request = typedindex.NewManagedRequest(c.Source, p, uint64(c.ProfileEpoch), c.UniverseSHA256, purpose)
 		}
-		if c.Schema == acceptanceCorpusSchema {
+		if c.Schema == acceptanceCorpusSchema || c.Schema == acceptanceWorkspaceFaultSchema {
 			request = typedindex.NewManagedRequest(c.Source, p, uint64(c.ProfileEpoch), c.UniverseSHA256, typedindex.Publish)
 		}
 		if _, e = s.EnqueueTypedIndex(ctx, c.Source.Repository, acceptanceJSON(request)); e != nil {
@@ -1674,6 +1690,13 @@ loop:
 	if e != nil || acceptanceDecode(resultRaw, acceptanceMaxReceipt, &final.Result) != nil || final.Result.Schema != c.Schema || final.Result.Recovery != (*acceptanceCase == "hard-death") || final.Result.Config != final.Config || final.Result.Case != final.Case || !final.Result.GrowthReleased || !final.Result.Settled || !final.Result.NoReplay || final.Result.FailureSite != "" {
 		return errors.New("child evidence")
 	}
+	if c.Schema == acceptanceWorkspaceFaultSchema {
+		currents, err := s.ScanTypedIndexControls(ctx, store.TypedIndexCurrents, "", 1)
+		if err != nil || len(currents.Rows) != 0 || currents.Next != "" {
+			return errors.New("workspace fault retained publication authority")
+		}
+		final.CurrentAbsent = true
+	}
 	rows, e = docker.list(ctx)
 	host, he := typedsandbox.ObserveHostScratch(ctx, "")
 	if e != nil || len(rows) != 0 || he != nil || host.Held || host.Overflow || len(host.Names) != 0 {
@@ -2081,6 +2104,9 @@ func acceptanceProfile(ctx context.Context, c nativeAcceptanceConfig, raw, selec
 	p, e := typedindex.DecodeProfile(ctx, raw)
 	if e != nil {
 		return p, e
+	}
+	if c.Schema == acceptanceWorkspaceFaultSchema {
+		return p, acceptanceWorkspaceProfile(ctx, c, p, raw, selectionRaw)
 	}
 	d := p.Definition()
 	if c.Schema == acceptanceCorpusSchema && d.Name != "corpus-"+c.Cohort {

@@ -19,6 +19,7 @@ import (
 
 const acceptanceSchema = "phebs-typed-native-acceptance-v1"
 const acceptanceCorpusSchema = "phebs-typed-native-corpus-acceptance-v1"
+const acceptanceWorkspaceFaultSchema = "phebs-typed-workspace-fault-acceptance-v1"
 const acceptanceRepo = "example.invalid/phebs-native-neutral"
 const acceptanceMaxConfig = 16384
 const acceptanceMaxReceipt = 128 << 10
@@ -88,7 +89,7 @@ func parseAcceptance(raw []byte) (nativeAcceptanceConfig, error) {
 		return c, errors.New("acceptance contract")
 	}
 	switch c.Schema {
-	case acceptanceSchema:
+	case acceptanceSchema, acceptanceWorkspaceFaultSchema:
 		if c.Source.Repository != acceptanceRepo || c.Cohort != "" || c.SourceGitSHA256 != "" {
 			return c, errors.New("neutral acceptance contract")
 		}
@@ -119,6 +120,9 @@ func acceptanceCaseValid(name string) bool {
 	return false
 }
 func (c nativeAcceptanceConfig) caseValid(name string) bool {
+	if c.Schema == acceptanceWorkspaceFaultSchema {
+		return acceptanceFaultCase(name)
+	}
 	return acceptanceCaseValid(name) && (c.Schema != acceptanceCorpusSchema || name == "success")
 }
 func (c nativeAcceptanceConfig) roots() []string {
@@ -165,8 +169,12 @@ func acceptanceJSON(v any) []byte {
 	return b
 }
 func acceptanceReceipt(path string, v any) error {
-	raw := acceptanceJSON(v)
-	if len(raw) > acceptanceMaxReceipt {
+	return acceptanceWrite(path, acceptanceJSON(v), acceptanceMaxReceipt)
+}
+
+// Different staged controls keep their own bounds; receipts remain at 128 KiB.
+func acceptanceWrite(path string, raw []byte, limit int) error {
+	if limit < 0 || len(raw) > limit {
 		return errors.New("receipt overflow")
 	}
 	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
@@ -212,6 +220,33 @@ func TestNativeAcceptanceConfig(t *testing.T) {
 		t.Fatal("open case namespace")
 	}
 }
+
+func TestNativeAcceptanceWorkspaceFaultConfig(t *testing.T) {
+	h := acceptanceDigest([]byte("fixed"))
+	c := nativeAcceptanceConfig{Schema: acceptanceWorkspaceFaultSchema, ID: "workspace-fault-1", SourceCommit: fmt.Sprintf("%040x", 1), Source: typedindex.Source{Repository: acceptanceRepo, Incarnation: "fixture", Generation: h, Commit: fmt.Sprintf("%040x", 2)}, TestSHA256: h, HelperSHA256: h, EngineSHA256: h, SeedSHA256: h, InventorySHA256: h, ProfileSHA256: h, SelectionSHA256: h, ImageSHA256: h, MkfsSHA256: h, UniverseSHA256: h, ProfileEpoch: 1, DeploymentSHA256: h, Policy: typedindex.MeasuredPolicy()}
+	if _, err := parseAcceptance(acceptanceJSON(c)); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"success", "cancel", "wall", "hard-death", "canary", "dry-run", "", "target"} {
+		t.Run(name, func(t *testing.T) {
+			if c.caseValid(name) != acceptanceFaultCase(name) {
+				t.Fatal("workspace case escaped fault contract")
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name   string
+		change func(*nativeAcceptanceConfig)
+	}{{"target", func(c *nativeAcceptanceConfig) { c.Source.Repository = "github.com/public/target" }}, {"corpus", func(c *nativeAcceptanceConfig) { c.Cohort = "ordinary" }}, {"source-git", func(c *nativeAcceptanceConfig) { c.SourceGitSHA256 = h }}, {"policy", func(c *nativeAcceptanceConfig) { c.Policy.WallSeconds++ }}} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := c
+			tc.change(&v)
+			if _, err := parseAcceptance(acceptanceJSON(v)); err == nil {
+				t.Fatal("workspace contract expansion accepted")
+			}
+		})
+	}
+}
 func TestNativeAcceptanceReceiptExclusive(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "receipt")
 	if e := acceptanceReceipt(p, map[string]string{"state": "held"}); e != nil {
@@ -223,5 +258,35 @@ func TestNativeAcceptanceReceiptExclusive(t *testing.T) {
 	b, e := os.ReadFile(p)
 	if e != nil || string(b) != `{"state":"held"}` {
 		t.Fatal(string(b), e)
+	}
+}
+
+func TestNativeAcceptanceWriteBounds(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		bytes int
+		limit int
+		want  bool
+	}{{"exact", 3, 3, true}, {"overflow", 4, 3, false}, {"negative", 0, -1, false}, {"inventory-control", acceptanceMaxReceipt + 1, typedindex.MaxInventoryBytes, true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "control")
+			raw := bytes.Repeat([]byte("x"), tc.bytes)
+			err := acceptanceWrite(path, raw, tc.limit)
+			if (err == nil) != tc.want {
+				t.Fatal("write bound", err)
+			}
+			stored, err := os.ReadFile(path)
+			if tc.want {
+				if err != nil || !bytes.Equal(raw, stored) {
+					t.Fatal("control not preserved", err)
+				}
+			} else if !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("rejected control created a file", err)
+			}
+		})
+	}
+	path := filepath.Join(t.TempDir(), "receipt")
+	if err := acceptanceReceipt(path, bytes.Repeat([]byte("x"), acceptanceMaxReceipt)); err == nil {
+		t.Fatal("receipt ceiling expanded")
 	}
 }

@@ -37,6 +37,8 @@ import (
 var inputNativeTools = flag.String("typed-input-tools", "", "private neutral input tool directory")
 var inputNativeImage = flag.String("typed-input-image", "", "exact locally present neutral image digest")
 var inputNativeMode = flag.String("typed-input-mode", "", "one neutral rehearsal: single, workspace or import")
+var inputNativeAcceptanceID = flag.String("typed-input-acceptance-id", "", "fresh neutral workspace fault installation")
+var inputNativeSourceCommit = flag.String("typed-input-source-commit", "", "exact test source commit for fault provisioning")
 
 type inputNativeControls map[string][]byte
 
@@ -59,174 +61,185 @@ func nativeInputFixture(t *testing.T, endpoint, mode string) (fixture, typedinde
 		if err := os.Remove(filepath.Join(dir, "data")); err != nil {
 			t.Fatal(err)
 		}
-		sourceFiles := inputNativeControls{"go.mod": []byte("module example.test/root\ngo 1.25.0\n"), "lib.go": []byte("package root\nconst Answer = 42\n")}
-		selectors := []string{"example.test/root"}
-		entry := "go.mod"
-		discoveryMode := typedmodule.ModeSingle
-		kind := typedindex.ModuleProviderID
-		if mode == "workspace" {
-			sourceFiles = inputNativeControls{"go.work": []byte("go 1.25.0\nuse (\n ./a\n ./b\n)\n"), "a/go.mod": []byte("module example.test/a\ngo 1.25.0\n"), "b/go.mod": []byte("module example.test/b\ngo 1.25.0\n"), "a/a.go": []byte("package a\nimport \"example.test/b\"\nvar Answer = b.Answer\n"), "b/b.go": []byte("package b\nconst Answer = 42\n")}
-			selectors = []string{"example.test/a", "example.test/b"}
-			entry = "go.work"
-			discoveryMode = typedmodule.ModeWorkspace
-		}
-		// A real neutral Git commit, never an inferred tool-output version.
-		git := t.TempDir()
-		originalGit = git
-		for name, b := range sourceFiles {
-			nativeInputWrite(t, filepath.Join(git, name), b, 0600)
-			nativeInputWrite(t, filepath.Join(dir, "source", name), b, 0600)
-		}
-		for _, args := range [][]string{{"init", "-q"}, {"add", "--", "."}, {"-c", "user.name=neutral", "-c", "user.email=neutral@example.invalid", "commit", "-q", "-m", "neutral input"}} {
-			if b, e := exec.CommandContext(t.Context(), "git", append([]string{"-C", git}, args...)...).CombinedOutput(); e != nil {
-				t.Fatal(e, string(b))
-			}
-		}
-		commit, e := exec.CommandContext(t.Context(), "git", "-C", git, "rev-parse", "HEAD").Output()
-		if e != nil {
-			t.Fatal(e)
-		}
-		if e = s.SetRepoIndexed(t.Context(), repo, strings.TrimSpace(string(commit)), time.Now()); e != nil {
-			t.Fatal(e)
-		}
-		source, e := s.GetTypedSource(t.Context(), repo)
-		if e != nil {
-			t.Fatal(e)
-		}
-		selection := provider.InputSelection{Schema: provider.InputSelectionSchema, Source: source, Plan: typedindex.PackagePlanDefinition{Schema: typedindex.PackagePlanSchema}}
-		discovered, e := typedmodule.Discover(t.Context(), sourceFiles, discoveryMode, entry, selectors)
-		if e != nil {
-			t.Fatal(e)
-		}
-		scope := discovered.Digest()
-		selection.Module = &discovered
-		if mode == "import" {
-			kind = typedindex.ImportProviderID
-			selection.Module = nil
-			symbol := "scip-go gomod example.test/root " + source.Commit + " root/Answer."
-			artifact, e := proto.Marshal(&scip.Index{Metadata: &scip.Metadata{ProjectRoot: "file:///capture", TextDocumentEncoding: scip.TextEncoding_UTF8, ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7"}}, Documents: []*scip.Document{{Language: "go", RelativePath: "lib.go", Symbols: []*scip.SymbolInformation{{Symbol: symbol}}, Occurrences: []*scip.Occurrence{{Symbol: symbol, Range: []int32{1, 6, 12}, SymbolRoles: int32(scip.SymbolRole_Definition)}}}}})
-			if e != nil {
-				t.Fatal(e)
-			}
-			nativeInputWrite(t, filepath.Join(dir, "artifacts/index.scip"), artifact, 0600)
-			selection.Import = &typedimport.ImportSelection{Schema: typedimport.SelectionSchema, Source: source, Producer: typedimport.Producer{Name: "scip-go", Version: "0.2.7", Digest: hash([]byte("declared-neutral-producer"))}, Artifacts: []typedimport.ImportArtifact{{Path: "artifacts/index.scip", Bytes: int64(len(artifact)), Digest: hash(artifact)}}, Roots: []typedimport.RootMapping{{Input: "capture", Repo: "."}}, Coverage: selectors, Excluded: []string{}, Provenance: "neutral-operator-attestation"}
-			scope = selection.Import.Digest()
-		}
-		for n, selector := range selectors {
-			target := provider.InputTargetID(kind, scope, selector)
-			unit, _ := typedindex.NewPackageUnitID(target)
-			doc := "lib.go"
-			if mode == "workspace" {
-				doc = []string{"a/a.go", "b/b.go"}[n]
-			}
-			imports := []typedindex.PackageUnitID{}
-			deps := []string{}
-			if mode == "workspace" && n == 0 {
-				dep := provider.InputTargetID(kind, scope, selectors[1])
-				u, _ := typedindex.NewPackageUnitID(dep)
-				imports = append(imports, u)
-				deps = append(deps, dep)
-			}
-			selection.Plan.Targets = append(selection.Plan.Targets, typedindex.PlannedTarget{ID: target, Units: []typedindex.PackageUnitID{unit}, Dependencies: deps})
-			selection.Plan.Units = append(selection.Plan.Units, typedindex.PlannedUnit{ID: unit, Imports: imports, Documents: []string{doc}})
-			selection.Plan.Documents = append(selection.Plan.Documents, typedindex.PlannedDocument{Path: doc, Unit: unit, Member: "input-" + string(rune('0'+n)), Bytes: int64(len(sourceFiles[doc])), Digest: hash(sourceFiles[doc])})
-		}
-		slices.SortFunc(selection.Plan.Targets, func(a, b typedindex.PlannedTarget) int { return strings.Compare(a.ID, b.ID) })
-		slices.SortFunc(selection.Plan.Units, func(a, b typedindex.PlannedUnit) int { return strings.Compare(string(a.ID), string(b.ID)) })
-		name, _ := typedindex.SelectionFile(kind)
-		nativeInputWrite(t, filepath.Join(dir, name), encode(t, selection), 0600)
-		toolBytes, e := os.ReadFile(filepath.Join(*inputNativeTools, "phebs"))
-		if e != nil {
-			t.Fatal(e)
-		}
-		nativeInputWrite(t, filepath.Join(dir, typedindex.ManagedHelperFile), toolBytes, 0700)
-		helper := typedindex.Tool{Version: "neutral-t45.7", Digest: hash(toolBytes)}
-		goSDK, scip, _, _ := provider.NativeToolDigests(runtime.GOARCH)
-		tools := typedindex.Tools{Planner: helper, Launcher: helper, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}
-		if mode == "import" {
-			tools.Indexer.Digest = selection.Import.Producer.Digest
-		} else {
-			tools.Go = typedindex.Tool{Version: "1.25.0", Digest: goSDK}
-			for _, prefix := range []string{"go", "bin"} {
-				root := filepath.Join(*inputNativeTools, prefix)
-				if e = filepath.WalkDir(root, func(name string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return err
-					}
-					if d.IsDir() {
-						return nil
-					}
-					info, err := d.Info()
-					if err != nil {
-						return err
-					}
-					if !info.Mode().IsRegular() {
-						return typedindex.Invalid
-					}
-					rel, err := filepath.Rel(*inputNativeTools, name)
-					if err != nil {
-						return err
-					}
-					b, err := os.ReadFile(name)
-					if err != nil {
-						return err
-					}
-					mode := os.FileMode(0600)
-					if info.Mode()&0111 != 0 {
-						mode = 0700
-					}
-					nativeInputWrite(t, filepath.Join(dir, "tools", rel), b, mode)
-					return nil
-				}); e != nil {
-					t.Fatal(e)
-				}
-			}
-		}
-		nativeInputWrite(t, filepath.Join(dir, "tools/modcache/.phebs-empty"), nil, 0600)
-		formatter, e := os.ReadFile("/usr/sbin/mke2fs")
-		if e != nil {
-			t.Fatal(e)
-		}
-		nativeInputWrite(t, filepath.Join(dir, typedindex.HostToolsFile), encode(t, typedindex.HostToolsDefinition{Schema: typedindex.HostToolsSchema, MkfsDigest: hash(formatter)}), 0600)
-		inventory := typedindex.InventoryDefinition{Schema: typedindex.InventorySchema, Files: []typedindex.BundleFile{}}
-		if e = filepath.WalkDir(dir, func(name string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if d.IsDir() {
-				return nil
-			}
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			b, err := os.ReadFile(name)
-			if err != nil {
-				return err
-			}
-			rel, err := filepath.Rel(dir, name)
-			if err != nil {
-				return err
-			}
-			inventory.Files = append(inventory.Files, typedindex.BundleFile{Path: filepath.ToSlash(rel), Bytes: int64(len(b)), Digest: hash(b), Executable: info.Mode()&0111 != 0})
-			return nil
-		}); e != nil {
-			t.Fatal(e)
-		}
-		slices.SortFunc(inventory.Files, func(a, b typedindex.BundleFile) int { return strings.Compare(a.Path, b.Path) })
-		raw := encode(t, inventory)
-		config, _ := typedindex.InputConfig(kind, runtime.GOARCH)
-		profile, e = typedindex.DecodeProfile(t.Context(), encode(t, typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Name: "neutral-input", Provider: kind, Tools: tools, Config: config, Policy: typedindex.MeasuredPolicy(), BundleDigest: hash(raw), ImageDigest: *inputNativeImage}))
-		if e != nil {
-			t.Fatal(e)
-		}
-		return profile, raw, identity(selection.Plan.Targets)
+		var raw []byte
+		var universe string
+		profile, raw, universe, originalGit = nativeInputBundle(t, s, repo, dir, mode)
+		return profile, raw, universe
 	})
 	f.c.observeHost = typedsandbox.ObserveHostScratch
 	f.c.config.Socket = "/var/run/docker.sock"
 	f.c.config.Image = *inputNativeImage
 	return f, profile, originalGit
 }
+
+// Shared neutral source/tool bundle construction adds no request or schedule.
+func nativeInputBundle(t *testing.T, s *store.Surreal, repo, dir, mode string) (typedindex.Profile, []byte, string, string) {
+	t.Helper()
+	var profile typedindex.Profile
+	sourceFiles := inputNativeControls{"go.mod": []byte("module example.test/root\ngo 1.25.0\n"), "lib.go": []byte("package root\nconst Answer = 42\n")}
+	selectors := []string{"example.test/root"}
+	entry := "go.mod"
+	discoveryMode := typedmodule.ModeSingle
+	kind := typedindex.ModuleProviderID
+	if mode == "workspace" {
+		sourceFiles = nativeInputWorkspaceControls()
+		selectors = []string{"example.test/a", "example.test/b"}
+		entry = "go.work"
+		discoveryMode = typedmodule.ModeWorkspace
+	}
+	// A real neutral Git commit, never an inferred tool-output version.
+	git := t.TempDir()
+	originalGit := git
+	for name, b := range sourceFiles {
+		nativeInputWrite(t, filepath.Join(git, name), b, 0600)
+		nativeInputWrite(t, filepath.Join(dir, "source", name), b, 0600)
+	}
+	for _, args := range [][]string{{"init", "-q"}, {"add", "--", "."}, {"-c", "user.name=neutral", "-c", "user.email=neutral@example.invalid", "commit", "-q", "-m", "neutral input"}} {
+		if b, e := exec.CommandContext(t.Context(), "git", append([]string{"-C", git}, args...)...).CombinedOutput(); e != nil {
+			t.Fatal(e, string(b))
+		}
+	}
+	commit, e := exec.CommandContext(t.Context(), "git", "-C", git, "rev-parse", "HEAD").Output()
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = s.SetRepoIndexed(t.Context(), repo, strings.TrimSpace(string(commit)), time.Now()); e != nil {
+		t.Fatal(e)
+	}
+	source, e := s.GetTypedSource(t.Context(), repo)
+	if e != nil {
+		t.Fatal(e)
+	}
+	selection := provider.InputSelection{Schema: provider.InputSelectionSchema, Source: source, Plan: typedindex.PackagePlanDefinition{Schema: typedindex.PackagePlanSchema}}
+	discovered, e := typedmodule.Discover(t.Context(), sourceFiles, discoveryMode, entry, selectors)
+	if e != nil {
+		t.Fatal(e)
+	}
+	scope := discovered.Digest()
+	selection.Module = &discovered
+	if mode == "import" {
+		kind = typedindex.ImportProviderID
+		selection.Module = nil
+		symbol := "scip-go gomod example.test/root " + source.Commit + " root/Answer."
+		artifact, e := proto.Marshal(&scip.Index{Metadata: &scip.Metadata{ProjectRoot: "file:///capture", TextDocumentEncoding: scip.TextEncoding_UTF8, ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7"}}, Documents: []*scip.Document{{Language: "go", RelativePath: "lib.go", Symbols: []*scip.SymbolInformation{{Symbol: symbol}}, Occurrences: []*scip.Occurrence{{Symbol: symbol, Range: []int32{1, 6, 12}, SymbolRoles: int32(scip.SymbolRole_Definition)}}}}})
+		if e != nil {
+			t.Fatal(e)
+		}
+		nativeInputWrite(t, filepath.Join(dir, "artifacts/index.scip"), artifact, 0600)
+		selection.Import = &typedimport.ImportSelection{Schema: typedimport.SelectionSchema, Source: source, Producer: typedimport.Producer{Name: "scip-go", Version: "0.2.7", Digest: hash([]byte("declared-neutral-producer"))}, Artifacts: []typedimport.ImportArtifact{{Path: "artifacts/index.scip", Bytes: int64(len(artifact)), Digest: hash(artifact)}}, Roots: []typedimport.RootMapping{{Input: "capture", Repo: "."}}, Coverage: selectors, Excluded: []string{}, Provenance: "neutral-operator-attestation"}
+		scope = selection.Import.Digest()
+	}
+	for n, selector := range selectors {
+		target := provider.InputTargetID(kind, scope, selector)
+		unit, _ := typedindex.NewPackageUnitID(target)
+		doc := "lib.go"
+		if mode == "workspace" {
+			doc = []string{"a/a.go", "b/b.go"}[n]
+		}
+		imports := []typedindex.PackageUnitID{}
+		deps := []string{}
+		if mode == "workspace" && n == 0 {
+			dep := provider.InputTargetID(kind, scope, selectors[1])
+			u, _ := typedindex.NewPackageUnitID(dep)
+			imports = append(imports, u)
+			deps = append(deps, dep)
+		}
+		selection.Plan.Targets = append(selection.Plan.Targets, typedindex.PlannedTarget{ID: target, Units: []typedindex.PackageUnitID{unit}, Dependencies: deps})
+		selection.Plan.Units = append(selection.Plan.Units, typedindex.PlannedUnit{ID: unit, Imports: imports, Documents: []string{doc}})
+		selection.Plan.Documents = append(selection.Plan.Documents, typedindex.PlannedDocument{Path: doc, Unit: unit, Member: "input-" + string(rune('0'+n)), Bytes: int64(len(sourceFiles[doc])), Digest: hash(sourceFiles[doc])})
+	}
+	slices.SortFunc(selection.Plan.Targets, func(a, b typedindex.PlannedTarget) int { return strings.Compare(a.ID, b.ID) })
+	slices.SortFunc(selection.Plan.Units, func(a, b typedindex.PlannedUnit) int { return strings.Compare(string(a.ID), string(b.ID)) })
+	name, _ := typedindex.SelectionFile(kind)
+	nativeInputWrite(t, filepath.Join(dir, name), encode(t, selection), 0600)
+	toolBytes, e := os.ReadFile(filepath.Join(*inputNativeTools, "phebs"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	nativeInputWrite(t, filepath.Join(dir, typedindex.ManagedHelperFile), toolBytes, 0700)
+	helper := typedindex.Tool{Version: "neutral-t45.7", Digest: hash(toolBytes)}
+	goSDK, scip, _, _ := provider.NativeToolDigests(runtime.GOARCH)
+	tools := typedindex.Tools{Planner: helper, Launcher: helper, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}
+	if mode == "import" {
+		tools.Indexer.Digest = selection.Import.Producer.Digest
+	} else {
+		tools.Go = typedindex.Tool{Version: "1.25.0", Digest: goSDK}
+		for _, prefix := range []string{"go", "bin"} {
+			root := filepath.Join(*inputNativeTools, prefix)
+			if e = filepath.WalkDir(root, func(name string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if d.IsDir() {
+					return nil
+				}
+				info, err := d.Info()
+				if err != nil {
+					return err
+				}
+				if !info.Mode().IsRegular() {
+					return typedindex.Invalid
+				}
+				rel, err := filepath.Rel(*inputNativeTools, name)
+				if err != nil {
+					return err
+				}
+				b, err := os.ReadFile(name)
+				if err != nil {
+					return err
+				}
+				mode := os.FileMode(0600)
+				if info.Mode()&0111 != 0 {
+					mode = 0700
+				}
+				nativeInputWrite(t, filepath.Join(dir, "tools", rel), b, mode)
+				return nil
+			}); e != nil {
+				t.Fatal(e)
+			}
+		}
+	}
+	nativeInputWrite(t, filepath.Join(dir, "tools/modcache/.phebs-empty"), nil, 0600)
+	formatter, e := os.ReadFile("/usr/sbin/mke2fs")
+	if e != nil {
+		t.Fatal(e)
+	}
+	nativeInputWrite(t, filepath.Join(dir, typedindex.HostToolsFile), encode(t, typedindex.HostToolsDefinition{Schema: typedindex.HostToolsSchema, MkfsDigest: hash(formatter)}), 0600)
+	inventory := typedindex.InventoryDefinition{Schema: typedindex.InventorySchema, Files: []typedindex.BundleFile{}}
+	if e = filepath.WalkDir(dir, func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		b, err := os.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(dir, name)
+		if err != nil {
+			return err
+		}
+		inventory.Files = append(inventory.Files, typedindex.BundleFile{Path: filepath.ToSlash(rel), Bytes: int64(len(b)), Digest: hash(b), Executable: info.Mode()&0111 != 0})
+		return nil
+	}); e != nil {
+		t.Fatal(e)
+	}
+	slices.SortFunc(inventory.Files, func(a, b typedindex.BundleFile) int { return strings.Compare(a.Path, b.Path) })
+	raw := encode(t, inventory)
+	config, _ := typedindex.InputConfig(kind, runtime.GOARCH)
+	profile, e = typedindex.DecodeProfile(t.Context(), encode(t, typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Name: "neutral-input", Provider: kind, Tools: tools, Config: config, Policy: typedindex.MeasuredPolicy(), BundleDigest: hash(raw), ImageDigest: *inputNativeImage}))
+	if e != nil {
+		t.Fatal(e)
+	}
+	return profile, raw, identity(selection.Plan.Targets), originalGit
+}
+
 func nativeInputWrite(t *testing.T, name string, b []byte, mode os.FileMode) {
 	t.Helper()
 	if e := os.MkdirAll(filepath.Dir(name), 0700); e != nil {
@@ -235,6 +248,100 @@ func nativeInputWrite(t *testing.T, name string, b []byte, mode os.FileMode) {
 	if e := os.WriteFile(name, b, mode); e != nil {
 		t.Fatal(e)
 	}
+}
+
+// Provisioning exports only pristine real store authority. Native fault cases
+// run separately under the existing parent-owned persistent engine harness.
+func TestNativeInputFaultProvision(t *testing.T) {
+	if *inputNativeAcceptanceID == "" && *inputNativeSourceCommit == "" {
+		t.Skip("explicit fresh neutral fault provisioning")
+	}
+	if os.Geteuid() != 0 || !acceptanceID.MatchString(*inputNativeAcceptanceID) || !filepath.IsAbs(*inputNativeTools) || *inputNativeMode != "workspace" {
+		t.Fatal("explicit root/workspace/tool/installation admission required")
+	}
+	ctx := t.Context()
+	c := nativeAcceptanceConfig{Schema: acceptanceWorkspaceFaultSchema, ID: *inputNativeAcceptanceID, SourceCommit: *inputNativeSourceCommit, Policy: typedindex.MeasuredPolicy(), ImageSHA256: *inputNativeImage}
+	exe, err := os.Executable()
+	if err != nil || exe != filepath.Join(c.root(), "native-acceptance.test") {
+		t.Fatal("fresh installed test executable required")
+	}
+	for name, target := range map[string]*string{"native-acceptance.test": &c.TestSHA256, "surreal": &c.EngineSHA256, "deployment.json": &c.DeploymentSHA256} {
+		*target, err = acceptanceFileHash(filepath.Join(c.root(), name), typedindex.MaxFileBytes)
+		if err != nil {
+			t.Fatal("installed identity", err)
+		}
+	}
+	c.MkfsSHA256, err = acceptanceFormatterHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = os.Lstat(filepath.Join(c.root(), "config.json")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("installation already provisioned")
+	}
+	bundle := filepath.Join(c.root(), "bundle")
+	if err = os.Mkdir(bundle, 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", c.root()+":/usr/bin:/bin")
+	endpoint := testServer(t)
+	s, err := store.Open(ctx, endpoint, "root", "fixture", "t454", "neutral")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Close(context.Background()) }()
+	if err = s.UpsertRepo(ctx, store.Repo{Name: acceptanceRepo}); err != nil {
+		t.Fatal(err)
+	}
+	profile, inventory, universe, _ := nativeInputBundle(t, s, acceptanceRepo, bundle, "workspace")
+	intent, err := s.InstallTypedProfile(ctx, acceptanceRepo, profile, universe, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Source, err = s.GetTypedSource(ctx, acceptanceRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.ProfileEpoch, c.UniverseSHA256 = intent.ProfileEpoch, universe
+	c.InventorySHA256 = acceptanceDigest(inventory)
+	profileRaw := encode(t, profile.Definition())
+	c.ProfileSHA256, c.HelperSHA256 = acceptanceDigest(profileRaw), profile.Definition().Tools.Planner.Digest
+	selection, _ := typedindex.SelectionFile(typedindex.ModuleProviderID)
+	c.SelectionSHA256, err = acceptanceFileHash(filepath.Join(bundle, selection), provider.MaxSelectionBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = acceptanceSeed(ctx, c, s, profile); err != nil {
+		t.Fatal("non-pristine preparation", err)
+	}
+	seedPath := filepath.Join(c.root(), "seed.surql")
+	cmd := exec.CommandContext(ctx, filepath.Join(c.root(), "surreal"), "export", "--endpoint", "http://"+strings.TrimPrefix(endpoint, "ws://"), "--namespace", "t454", "--database", "neutral", "--log", "none", seedPath)
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + c.root(), "SURREAL_USER=root", "SURREAL_PASS=fixture"}
+	if err = cmd.Run(); err != nil {
+		t.Fatal("pristine seed export", err)
+	}
+	if err = os.Chmod(seedPath, 0600); err != nil {
+		t.Fatal(err)
+	}
+	c.SeedSHA256, err = acceptanceFileHash(seedPath, 4<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = parseAcceptance(acceptanceJSON(c)); err != nil {
+		t.Fatal("closed installation", err)
+	}
+	for _, control := range []struct {
+		name string
+		raw  []byte
+		max  int
+	}{{"profile.json", profileRaw, typedindex.MaxProfileBytes}, {"inventory.json", inventory, typedindex.MaxInventoryBytes}, {"config.json", acceptanceJSON(c), acceptanceMaxConfig}} {
+		if err = acceptanceWrite(filepath.Join(c.root(), control.name), control.raw, control.max); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, _, err = acceptanceVerify(ctx, c, filepath.Join(c.root(), "config.json")); err != nil {
+		t.Fatal("installed verification", err)
+	}
+	t.Logf("workspace fault provisioned: config=%s source=%s profile=%s inventory=%s", acceptanceDigest(acceptanceJSON(c)), c.Source.Commit, c.ProfileSHA256, c.InventorySHA256)
 }
 
 var inputNativeCleanup = flag.String("typed-input-cleanup", "", "exact scratch name from a stopped neutral rehearsal")
