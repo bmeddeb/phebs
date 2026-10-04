@@ -92,6 +92,11 @@ independent exact-source/cost review finds all severity counts zero. The new rec
 API/client FAIL receipt is unchanged. Native cold generation, full neutral,
 rendered authenticated Settings and separately authorized target closure remain
 unestablished, with ordinary providers unavailable and the T45.6 waiver not PASS.
+The next T45.9 prerequisite tests fresh managed Publish through the actual
+coordinator job runner and native generation scheduler, preserving the separate
+T45.7 direct proof and all native bounds. Validation and independent review are
+pending; complete native/neutral, rendered Settings and separately authorized
+target closure remain open. Pending target binding authorizes no target run.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

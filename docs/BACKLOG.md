@@ -15443,6 +15443,16 @@ unchanged. This prerequisite establishes no native cold generation, complete
 neutral closure, rendered authenticated Settings or authorized target closure;
 ordinary providers remain unavailable and the T45.6 waiver is not PASS.
 
+T45.9 neutral native coordinator prerequisite (2026-10-04): a separate opt-in
+test drives a fresh managed Publish through the actual job runner/coordinator
+and generation scheduler, requiring durable successful job/chunk settlement,
+two real native phases, growth release and no native replay on same-lease reuse
+or duplicate coordination. The existing T45.7 direct-execution proof remains
+unchanged. Validation and independent review are pending; full native/neutral
+closure, rendered authenticated Settings and separately authorized target
+closure remain unestablished. Target binding is pending, with no target
+execution authorized; ordinary providers stay unavailable and T45.6 is not PASS.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

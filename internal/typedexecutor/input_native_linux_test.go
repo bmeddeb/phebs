@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"slices"
 	"strings"
@@ -426,4 +427,187 @@ func TestNativeAdditionalInputs(t *testing.T) {
 			break
 		}
 	}
+}
+
+// This independent fresh fixture exercises queue coordination, scheduler lease
+// execution and settlement; TestNativeAdditionalInputs retains the direct proof.
+func TestNativeInputCoordinator(t *testing.T) {
+	if *inputNativeTools == "" && *inputNativeImage == "" && *inputNativeMode == "" {
+		t.Skip("explicit privileged neutral rehearsal")
+	}
+	if !filepath.IsAbs(*inputNativeTools) || os.Geteuid() != 0 || (*inputNativeMode != "single" && *inputNativeMode != "workspace" && *inputNativeMode != "import") {
+		t.Fatal("explicit root/tool/image/mode admission required")
+	}
+	f, profile := nativeInputFixture(t, testServer(t), *inputNativeMode)
+	ctx := t.Context()
+	// preparationFixture claims its legacy seed request. Release that unused
+	// lease before a distinct managed request goes through the real coordinator.
+	if err := f.s.ReleaseGenerationChunk(ctx, f.chunk, "unused neutral fixture seed"); err != nil {
+		t.Fatal(err)
+	}
+	intent, err := f.s.GetTypedIndexIntent(ctx, f.chunk.Repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := f.s.GetTypedSource(ctx, f.chunk.Repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := typedindex.NewManagedRequest(source, profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, typedindex.Publish)
+	queued, err := f.s.EnqueueTypedIndex(ctx, f.chunk.Repository, encode(t, request))
+	if err != nil || queued.Desired == f.chunk.Generation {
+		t.Fatal("fresh managed request", err)
+	}
+	lookups, launches := 0, 0
+	r, err := NewRuntime(f.c, func(_ context.Context, parent typedindex.Admission) (string, []byte, error) {
+		lookups++
+		if parent.Digest() != queued.Desired {
+			return "", nil, errors.New("wrong immutable bundle selection")
+		}
+		return f.source, f.raw, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = r.Reconcile(ctx); err != nil {
+		t.Fatal("native startup", err)
+	}
+	nativeRun := f.c.native.run
+	f.c.native.run = func(ctx context.Context, o typedsandbox.Options, a typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
+		launches++
+		return nativeRun(ctx, o, a)
+	}
+
+	coordinatorCtx, stopCoordinator := context.WithTimeout(ctx, time.Minute)
+	defer stopCoordinator()
+	var coordinatorJob store.Job
+	var coordinatorErr, reportErr error
+	var reports [3]store.JobLifecycleReport
+	reportCount := 0
+	runner := store.Runner{Store: f.s, Kind: store.JobTypedIndex, Handle: func(ctx context.Context, job store.Job) error {
+		coordinatorJob = job
+		coordinatorErr = r.Coordinator(ctx, job)
+		return coordinatorErr
+	}}
+	runner.LifecycleReports = func(raw []byte) error {
+		if reportCount == len(reports) || json.Unmarshal(raw, &reports[reportCount]) != nil {
+			return errors.New("unexpected coordinator lifecycle report")
+		}
+		reportCount++
+		if reports[reportCount-1].Event == "done" {
+			stopCoordinator()
+		}
+		return nil
+	}
+	runner.LifecycleReportFailure = func(err error) { reportErr = err; stopCoordinator() }
+	// Run returns only after its handler and heartbeat join. Assertions stay on
+	// this goroutine; the fixture retains all ordinary polling and lease defaults.
+	runner.Run(coordinatorCtx)
+	if coordinatorErr != nil || reportErr != nil || reportCount != len(reports) {
+		t.Fatalf("coordinator: reports=%d handler_failed=%t report_failed=%t", reportCount, coordinatorErr != nil, reportErr != nil)
+	}
+	for i, event := range []string{"claimed", "started", "done"} {
+		if reports[i].Schema != store.JobLifecycleSchema || reports[i].Event != event || reports[i].JobID != coordinatorJob.ID || reports[i].Kind != store.JobTypedIndex || reports[i].Target != f.chunk.Repository || reports[i].Attempt != 1 {
+			t.Fatal("coordinator lifecycle identity")
+		}
+	}
+	if reports[2].Outcome != "success" || lookups != 0 || launches != 0 {
+		t.Fatal("coordinator executed native work")
+	}
+	jobs, err := f.s.ListJobsPage(ctx, store.JobPageQuery{Kind: store.JobTypedIndex, Limit: 1})
+	if err != nil || jobs == nil || jobs.Next != nil || len(jobs.Jobs) != 1 || jobs.Jobs[0].ID != coordinatorJob.ID || jobs.Jobs[0].Status != store.StatusDone || jobs.Jobs[0].Attempts != 1 || jobs.Jobs[0].FinishedAt == nil {
+		t.Fatal("coordinator durable completion", err)
+	}
+	planned, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	if err != nil || planned.Generation != queued.Desired || planned.Status != store.GenerationScheduleActive || planned.TotalChunks != 1 || planned.Succeeded != 0 || planned.Failed != 0 {
+		t.Fatal("coordinator schedule", err)
+	}
+
+	scheduler, err := r.Scheduler(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	schedulerCtx, stopScheduler := context.WithTimeout(ctx, 15*time.Minute)
+	defer stopScheduler()
+	configuration := scheduler.Classes[store.GenerationResourceTypedIndex]
+	handle, settle := configuration.Handle, configuration.AfterSettlement
+	var selected store.GenerationChunk
+	var outcome Outcome
+	var executionErr, settlementErr error
+	handled, executed, settled := 0, 0, 0
+	reused := false
+	r.Report = func(out Outcome, err error) { outcome = out; executionErr = err; executed++ }
+	configuration.Handle = func(ctx context.Context, chunk store.GenerationChunk, budget generationscheduler.Budget) error {
+		handled++
+		selected = chunk
+		if err := handle(ctx, chunk, budget); err != nil {
+			return err
+		}
+		beforeLookups, beforeLaunches := lookups, launches
+		if err := handle(ctx, chunk, budget); err != nil {
+			return err
+		}
+		reused = lookups == beforeLookups && launches == beforeLaunches
+		if !reused {
+			return errors.New("same lease repeated native execution")
+		}
+		return nil
+	}
+	configuration.AfterSettlement = func(ctx context.Context, chunk store.GenerationChunk) error {
+		settlementErr = settle(ctx, chunk)
+		settled++
+		stopScheduler()
+		return settlementErr
+	}
+	scheduler.Classes[store.GenerationResourceTypedIndex] = configuration
+	schedulerErrors := make(chan error, 1)
+	scheduler.Report = func(err error) {
+		select {
+		case schedulerErrors <- err:
+		default:
+		}
+	}
+	// Scheduler.Run cancels and joins every planner, reaper, worker and heartbeat;
+	// its nil return alone does not establish successful durable settlement.
+	if err = scheduler.Run(schedulerCtx); err != nil {
+		t.Fatal("scheduler", err)
+	}
+	select {
+	case <-schedulerErrors:
+		t.Fatal("scheduler reported failure")
+	default:
+	}
+	if handled != 1 || executed != 1 || settled != 1 || executionErr != nil || settlementErr != nil || !reused || lookups != 1 || launches != 2 || selected.Generation != queued.Desired || selected.LeaseToken == f.chunk.LeaseToken || outcome.Pointer.Epoch != 1 || outcome.Check != nil {
+		t.Fatalf("native scheduler: handled=%d executed=%d settled=%d lookups=%d launches=%d reused=%t execution_failed=%t settlement_failed=%t", handled, executed, settled, lookups, launches, reused, executionErr != nil, settlementErr != nil)
+	}
+	before, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	if err != nil || before.Status != store.GenerationScheduleSettled || before.Succeeded != 1 || before.Failed != 0 || before.Pending != 0 || before.Running != 0 {
+		t.Fatal("native schedule not successfully settled", err)
+	}
+	status, err := f.s.GetTypedIndexStatus(ctx, f.chunk.Repository)
+	if err != nil || status.Desired != queued.Desired || status.Stage != store.TypedComplete || status.States != [5]string{"complete", "complete", "complete", "complete", "complete"} || status.Current == nil || *status.Current != outcome.Pointer || status.Stale || status.Canceled || status.RestoreRequired {
+		t.Fatal("native publication status", err)
+	}
+	if _, err = f.s.GetTypedIndexGrowth(ctx); !errors.Is(err, store.ErrNotFound) {
+		t.Fatal("settlement stranded growth", err)
+	}
+	if err = r.Coordinator(ctx, coordinatorJob); err != nil {
+		t.Fatal("published duplicate coordinator", err)
+	}
+	after, err := f.s.GetGenerationSchedule(ctx, f.chunk.Repository, store.TypedIndexScheduleStage)
+	if err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatal("published duplicate changed schedule", err)
+	}
+	next, err := f.s.ClaimGenerationChunk(ctx, store.GenerationResourceTypedIndex, "native-published-warm")
+	if err != nil && !errors.Is(err, store.ErrNotFound) || next != nil || lookups != 1 || launches != 2 {
+		t.Fatal("published duplicate replay", err)
+	}
+	if err = r.Reconcile(ctx); err != nil {
+		t.Fatal("published restart census", err)
+	}
+	host, err := typedsandbox.ObserveHostScratch(ctx, "")
+	if err != nil || host.Held || len(host.Names) != 0 {
+		t.Fatal("native scratch not drained", err)
+	}
+	t.Logf("native coordinator: provider=%s coordinator_jobs=1 succeeded_chunks=1 lookups=%d launches=%d same_lease_reused=%t", profile.Provider(), lookups, launches, reused)
 }

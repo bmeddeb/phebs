@@ -9518,3 +9518,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `spike/t459/neutral_api_client_1.json` FAIL bytes remain unchanged. Ordinary
   providers stay unavailable; the T45.6 waiver is not PASS and no scale or
   release claim changes.
+
+- **2026-10-04 — T45.9 neutral native coordinator prerequisite.** Add the
+  opt-in `TestNativeInputCoordinator` beside the unchanged T45.7 direct-execution
+  proof. A fresh fixture releases its unused legacy seed lease and queues a
+  distinct managed Publish request. The actual single-worker `store.Runner`
+  drives `Runtime.Coordinator` to durable job completion, then the existing
+  `Runtime.Scheduler` drives native planning, execution and settlement. Callback
+  wrappers invoke the original handlers and native runner; assertions occur
+  after each runner joins. Require one successful done job, exactly two native
+  phase launches, one successfully settled chunk with no failed/pending/running
+  work, exact current status and released growth. Same-lease reuse and duplicate
+  coordination must add no bundle lookup or native replay; restart census and
+  native scratch must drain. This does not replace the direct proof's pinned
+  publication and symbol checks or change production registration or bounds.
+
+  **Cost.** This test adds zero production query/request, sync, startup/restart,
+  retry/no-op or publication work, locks, scans/hashes, cache invalidation,
+  schema or persistent state. It repeats existing fixture source/tool copying,
+  inventory walking and hashing, retaining the existing inventory and current
+  copied-file buffers. One supervised test engine serves the serial coordinator
+  runner and scheduler, each with concurrency one; planning and execution use
+  two sequential native phase containers and the existing bounded helper
+  processes. The original absolute workspace/scratch allowances, native memory,
+  disk, process and 300-second phase bounds remain exact. Test observations use
+  three fixed job-report slots and one sticky scheduler-error slot. Runner,
+  scheduler, heartbeat and callback work joins before post-run assertions;
+  test wait contexts do not extend native phase bounds.
+
+  Validation and independent review remain pending. The existing explicit
+  single/workspace/import fixture flags and T45.7 proof remain unchanged. The
+  planned personal-VM workspace rehearsal uses fresh custody, the retained
+  neutral image and public tool pins, and a current Phebs helper; copying a
+  historical pinned public tool does not reuse a prior dispatch or allowance.
+  Full T45.9 native closure, complete neutral closure, rendered authenticated
+  Settings and separately authorized target closure remain unestablished.
+  Ordinary providers remain unavailable and the T45.6 waiver is not PASS;
+  pending target binding authorizes no target execution or scale/release claim.
