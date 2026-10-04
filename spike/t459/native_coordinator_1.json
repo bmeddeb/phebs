@@ -1,0 +1,227 @@
+{
+  "schema": "phebs-t459-native-coordinator-v1",
+  "recorded_date": "2026-10-04",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "implementation_commit": "e5a08c865ab15b75dc5c4a912c502f8410633b1f",
+  "stack_base_commit": "ab47b0990827bf84bdeee4a1ec7ddb5f891c90b4",
+  "native_case": {
+    "selector": "^TestNativeInputCoordinator$",
+    "mode": "workspace",
+    "seconds": 37.41,
+    "identity": {
+      "source_commit": "750dc171b196823f19193ebcaed966e9d0d16390",
+      "profile_digest": "sha256:852fce3d7fcc7e2d295ab48b0da053bd0dbe278bc3af106bed6e132d07bea4b9",
+      "inventory_digest": "sha256:0c260a1664f40b28c770e979e5f42fb6de4732ecb50c1a14e2d3f5663083f008",
+      "planning_digest": "sha256:30cd4f5861c3d66953166741e0bd6dc978423af9c00136c7ef23ab6f41ed7165",
+      "execution_digest": "sha256:fdc39210740df926e32918d859c40c15d958cf46bee9cee51dd7e04fadd9c23b",
+      "root_digest": "sha256:8752092d546d5b1440424b29fc04ba02457344cad9923f6c43abc858be6a4cc9"
+    },
+    "coordinator_jobs_done": 1,
+    "durable_retry_count": 0,
+    "lifecycle_attempt_ordinal": 1,
+    "succeeded_chunks": 1,
+    "native_launches": 2,
+    "bundle_lookups": 1,
+    "cold_warm_definition_references_hover": "exact_equal",
+    "stale_cached_queries_and_binding": "refused",
+    "same_lease_and_duplicate_coordinator": "no_replay",
+    "fresh_controller": "in_process_custody_reconstruction_only"
+  },
+  "acceptance_dimensions": {
+    "accepted_service_incarnations": 0,
+    "regular_source_git_blobs": 5,
+    "admitted_regular_source_git_blob_bytes": 176,
+    "qualification": "fixed neutral fixture construction; no product-scale envelope or service-catalog load measurement"
+  },
+  "tools": {
+    "build_go": "1.26.5",
+    "native_go_sdk": "1.25.0",
+    "scip_go": "0.2.7",
+    "surreal": "3.2.0",
+    "golangci_lint": "2.12.2",
+    "cgo_enabled_for_linux_build": false,
+    "helper_build_provenance": "built at stack base with trimpath and buildvcs=false; subsequent changes are tests and records only"
+  },
+  "binary_sha256": {
+    "executor_consumers_test": "d933f647382dabcb0ecf88e48773b9252305881949f18a78c4fc06292ee26d0d",
+    "helper": "6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d",
+    "native_go": "4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389",
+    "scip_go": "7d162fc544b6669fc8470c59480b754ea24339dfb6f27791e2f66346146ba765",
+    "surreal": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+    "mke2fs": "84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2",
+    "go_sdk_archive": "05de75d6994a2783699815ee553bd5a9327d8b79991de36e38b66862782f54ae"
+  },
+  "host": {
+    "personal_profile": "phebs-t451a",
+    "kernel": "6.8.0-117-generic",
+    "architecture": "aarch64",
+    "cpus": 2,
+    "memory_bytes": 8589934592,
+    "root_filesystem_bytes": 19682557952,
+    "execution_uid": 0,
+    "private_temp_root_uid": 0,
+    "private_temp_root_mode": "0700",
+    "image_digest": "sha256:8b053ab5c65aee8fe7dfe5f8d9b90cd5a1cf0ace68efdaac3a718f3727a89b94",
+    "daemon_config_changed": false,
+    "historical_custody_reused": false
+  },
+  "checks": [
+    {
+      "name": "fresh privileged native workspace coordinator/scheduler/consumers",
+      "status": "PASS"
+    },
+    {
+      "name": "Linux real-store runtime/executor/lifecycle regressions",
+      "status": "PASS",
+      "selector": "^TestTyped(Runtime|Executor|Lifecycle)",
+      "top_level_tests": 21,
+      "native_execution": "modeled in these supporting regressions"
+    },
+    {
+      "name": "Darwin typedexecutor and codenav package normal/race",
+      "status": "PASS",
+      "qualification": "Linux-only native test excluded by build tags; not a Linux race result"
+    },
+    {
+      "name": "Linux arm64 compile and affected vet",
+      "status": "PASS"
+    },
+    {
+      "name": "repository Darwin and affected Linux pinned lint",
+      "status": "PASS",
+      "issues": 0
+    },
+    {
+      "name": "docs/glossary/whitespace",
+      "status": "PASS"
+    }
+  ],
+  "retained_stops": [
+    {
+      "status": "NOT_LAUNCHED",
+      "name": "optional external timer absent",
+      "implementation_commit": "136892ae4f9c0347ce1131bb08cb7c6b899c5e22",
+      "log": "native-prelaunch-missing-time.log",
+      "native_launches": 0
+    },
+    {
+      "status": "FAIL",
+      "name": "private temporary ancestry staging",
+      "implementation_commit": "136892ae4f9c0347ce1131bb08cb7c6b899c5e22",
+      "log": "native-workspace.log",
+      "cause": "root test rejected uid-501 staging ancestor; same source rerun with root-owned TMPDIR",
+      "native_launches": 0
+    },
+    {
+      "status": "FAIL",
+      "name": "incorrect first-success durable retry oracle",
+      "implementation_commit": "136892ae4f9c0347ce1131bb08cb7c6b899c5e22",
+      "log": "native-workspace-root-tmp.log",
+      "cause": "test expected durable Attempts1; ordinary success stores zero prior retries while reports use attempt1",
+      "native_launches": 0
+    },
+    {
+      "status": "FAIL",
+      "name": "broader repository Linux lint",
+      "log": "final-lint-linux.log",
+      "issues": 13,
+      "package": "spike/t421",
+      "baseline_verification": {
+        "status": "same_failure_reproduced",
+        "source_commit": "ee304799bec66e03f3d0b529d28ceb172e0ee380",
+        "scope": "./spike/t421/...",
+        "log": "baseline-spike-linux-lint.log",
+        "log_byte_identical": true,
+        "inputs_identical_at_primary_base_and_candidate": [
+          "entire spike/t421 tree",
+          "go.mod",
+          "go.sum",
+          ".golangci.yml"
+        ],
+        "cause": "Darwin-only orchestration/test consumers are excluded on Linux",
+        "full_linux_lint_pass": false
+      }
+    }
+  ],
+  "independent_review": {
+    "source_severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "final_evidence_and_cost_review": "pending"
+  },
+  "cleanup": {
+    "containers": 0,
+    "loop_devices": 0,
+    "host_scratch_entries_except_existing_lock": 0,
+    "test_temporary_roots": 0,
+    "matching_test_or_engine_processes": 0,
+    "fresh_guest_staging_removed": true,
+    "personal_profile_final_state": "Stopped",
+    "ui_tree_edited": false,
+    "historical_roots_modified": false
+  },
+  "production_cost_delta": "zero; test-only fixture, real existing runtime and routed consumer calls",
+  "unestablished": [
+    "full T45.9 native/neutral closure",
+    "bounded native fault and hard-death/process restart recovery",
+    "actual capacity-pressure and native lifecycle transitions",
+    "native regeneration after real backup/restore",
+    "rendered authenticated Settings/API composition",
+    "separately authorized target closure",
+    "5000 accepted services / 12000000000 admitted source bytes",
+    "ordinary managed provider availability or T45.6 PASS",
+    "scale or release decision"
+  ],
+  "prior_receipts": {
+    "spike/t459/neutral_api_client_1.json": "8479d8098075dc99901acc645a4ce2cf03483caca5f425d6e648770d24317667",
+    "spike/t459/linux_command_gates_1.json": "0dedf7e60a510e396a7ef092e00b0a5b80c13484bd6271c9db7a0ad4e72fc914"
+  },
+  "input_sha256": {
+    "go.mod": "71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662",
+    "go.sum": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+    "internal/typedexecutor/input_native_linux_test.go": "7e6742662677be6a5ad7cd1b537815a1615345f112f015a12caf5c1419116738",
+    "internal/typedexecutor/runtime.go": "17d07cc713c015b7e87a9ee42a42653b07beeab3e612f7d17c16e42b1e4eba55",
+    "internal/typedexecutor/startup.go": "5bf101ff3d41547386458c7913984497b2afa96a808872adae49e1e1a82881c2",
+    "internal/codenav/routed.go": "f0b7aeb8f8a76932c964bc2adfc0f22faf29e10fd4abb3d06216bf0e6cf114e8"
+  },
+  "log_sha256": {
+    "baseline-spike-linux-lint.log": "25bbc549aa8294d6ac669d4b59d7cc180a501139dc5ab1e2ef48c0c21d7eeac9",
+    "consumer-runtime-executor-lifecycle-linux.log": "04cb8d8343b70df9f84fd55d6d0df2bfaf73e513bb817fe65b2b9e5880baa5b2",
+    "consumer-vet-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "corrected-lint-linux.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "corrected-portable-normal.log": "5d76662918a642f8e14c00336e80cb08fce6e6bf0efc25ecaaeeb4c0e38a5672",
+    "corrected-portable-race.log": "50316ca6807f3d56072645de832949e7498120abba6a7136c52d9fb81e08a9d7",
+    "docs.log": "63302130ec9b49baa63ab2cbe8d785181b281375080c2aabe41eb99f3cdab9fd",
+    "final-custody-after-staging-removal.log": "bcd537a28d8cac6dbcd1bbc1eaeac71bbd2a2a7870095eee1771f1e504422791",
+    "final-custody-before-staging-removal.log": "52478d57c29d1338972eec568e9dd302d36c294f3063958e2d7135334eb629be",
+    "final-docs.log": "7909a4c37e625ffdaa4255c621966a2cf21014bdd3b08c776e4e05daadee078b",
+    "final-glossary.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "final-lint-affected-linux.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "final-lint-darwin.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "final-lint-linux.log": "25bbc549aa8294d6ac669d4b59d7cc180a501139dc5ab1e2ef48c0c21d7eeac9",
+    "final-portable-normal.log": "9f99f95d838045ba2f12dc5552a32d228eaa0ebcd425cd3c7a4512749fbf1a9c",
+    "final-portable-race.log": "1a92fb3bfd7b12eb6feeb27e86714a2f7ebe4aa2e6791b62c72e34ca4e6390ef",
+    "glossary.log": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "host-and-tool-identities-complete.log": "1d07bba354b5243be619a4d7e345642daaf1f0ad0cbb2e22efc5556bfa5236a3",
+    "host-and-tool-identities.log": "697912c4104045319ca433a94d3e43d17cad111451563a2f2a430f8d6de46418",
+    "lint-linux.log": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "native-prelaunch-missing-time.log": "205f1d85eaf9c0d2e8a7fe430f93ed112733a88a51198f2b821012d21158ace3",
+    "native-success-custody.log": "259379cf60004a61e51cc482bcf321343e3bf01021ac44b6398449a0cac4df34",
+    "native-workspace-attempt-corrected.log": "356efb4ff5b2ac6e4103bb37aada86f2f3a6fa2633e2ef0adc0c14be257009f2",
+    "native-workspace-consumers.log": "d952a6300057129504bee393d0a2394b93aa956824508a1e45da445e4c652790",
+    "native-workspace-root-tmp.log": "94d0552e5bbaf114f00dd7d3d1b16598d75c788fcfdc191b4d75c0fba3f7e31a",
+    "native-workspace.log": "2ce615bfa4aef99e26bc4910853a37a0e52dbe203951c4b9e79eece7d205da33",
+    "portable-normal.log": "30c9d404e2300aa384ce98ac5827deb0a2cb48bc2ca8dd5bd3e9ba9e18a017fc",
+    "portable-race.log": "4007de0f0825bda6c85d5c45bf1c9d991039af22e9eac628d15e657a87653191",
+    "runtime-executor-lifecycle-linux.log": "432ce5827b0b909a5d38cbd9d537d6a2f7b83d135843b1ee7e9588c552ad8f1a",
+    "sdk-download.log": "e6f5dd5690e02d8b1a1a38174a05a6b2eb36ac989a092f71299b11afa0148db9",
+    "vet-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "vm-final-state.log": "470b658dc3c606d852905244fd4969e10fb2c43b98b02725b0150de64306f0c5",
+    "vm-start.log": "02e69babe9092a8800ea1e3713f53fc2121e1c15434170b41c3d297bd1132bc6",
+    "vm-stop.log": "25852a830d0e4d2814ff2fcb1818c83828f8a8870809dcce42c4fbd9f3581d9b"
+  }
+}

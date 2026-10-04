@@ -94,9 +94,18 @@ rendered authenticated Settings and separately authorized target closure remain
 unestablished, with ordinary providers unavailable and the T45.6 waiver not PASS.
 The next T45.9 prerequisite tests fresh managed Publish through the actual
 coordinator job runner and native generation scheduler, preserving the separate
-T45.7 direct proof and all native bounds. Validation and independent review are
-pending; complete native/neutral, rendered Settings and separately authorized
-target closure remain open. Pending target binding authorizes no target run.
+T45.7 direct proof and all native bounds. Exact implementation
+`e5a08c865ab15b75dc5c4a912c502f8410633b1f` passes a fresh privileged workspace
+rehearsal with actual cold/warm cross-member navigation, stale cached reads
+refused and fresh in-process controller census without native replay. Its
+source-free record is `spike/t459/native_coordinator_1.json`; this tiny fixture
+has zero accepted services and 176 admitted source Git blob bytes. Affected
+gates pass and exact-source review is clean; broader Linux lint retains 13
+baseline-identical T42.1 warnings. Final evidence/cost review remains pending.
+Complete native/neutral,
+native fault/hard-death, pressure/lifecycle, native restore regeneration, rendered
+Settings and separately authorized target closure remain open. Pending target
+binding authorizes no target run.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

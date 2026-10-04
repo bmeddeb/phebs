@@ -9529,9 +9529,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   after each runner joins. Require one successful done job, exactly two native
   phase launches, one successfully settled chunk with no failed/pending/running
   work, exact current status and released growth. Same-lease reuse and duplicate
-  coordination must add no bundle lookup or native replay; restart census and
-  native scratch must drain. This does not replace the direct proof's pinned
-  publication and symbol checks or change production registration or bounds.
+  coordination must add no bundle lookup or native replay. A fresh in-process
+  controller must pass the production custody census without new native work;
+  this is not a hard-death or process-restart proof. The workspace case queries
+  the actual two-member publication through the existing routed resolver and
+  production navigation service. An independent bare mirror of the original
+  neutral Git commit supplies source range conversion. Cold and warm Definition,
+  References and Hover must return the same exact cross-member payloads and
+  preserve current authority. A distinct indexed-source transition must refuse
+  all three cached queries and reopening the old binding with cached metadata.
+  Native scratch must drain. The separate T45.7 direct proof retains its existing
+  behavior; only its fixture return is extended to expose the original Git path.
+  Production registration and bounds remain unchanged.
 
   **Cost.** This test adds zero production query/request, sync, startup/restart,
   retry/no-op or publication work, locks, scans/hashes, cache invalidation,
@@ -9541,17 +9550,52 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   runner and scheduler, each with concurrency one; planning and execution use
   two sequential native phase containers and the existing bounded helper
   processes. The original absolute workspace/scratch allowances, native memory,
-  disk, process and shared 300-second native wall allowance remain exact. Test observations use
-  three fixed job-report slots and one sticky scheduler-error slot. Runner,
-  scheduler, heartbeat and callback work joins before post-run assertions;
-  test wait contexts do not extend native phase bounds.
+  disk, process and shared 300-second native wall allowance remain exact.
+  Test observations use three fixed job-report slots and one sticky scheduler
+  error slot. Runner, scheduler, heartbeat and callback work joins before
+  post-run assertions; test wait contexts do not extend native phase bounds.
 
-  Validation and independent review remain pending. The existing explicit
-  single/workspace/import fixture flags and T45.7 proof remain unchanged. The
-  planned personal-VM workspace rehearsal uses fresh custody, the retained
-  neutral image and public tool pins, and a current Phebs helper; copying a
-  historical pinned public tool does not reuse a prior dispatch or allowance.
-  Full T45.9 native closure, complete neutral closure, rendered authenticated
-  Settings and separately authorized target closure remain unestablished.
-  Ordinary providers remain unavailable and the T45.6 waiver is not PASS;
-  pending target binding authorizes no target execution or scale/release claim.
+  The workspace test additionally creates one tiny independent bare Git mirror
+  through one serial clone child with a one-minute deadline, reconstructs one
+  in-process controller and repeats its existing full custody census, and makes
+  six serial navigation queries plus three stale refusals. Queries retain the
+  existing bounded exact-authority resolve/open/final reads and immutable Git
+  source-read children. Cold routing validates and parses the selected members;
+  warm routing reuses accounted metadata/member caches while reauthenticating
+  custody and reading source ranges. The existing 64-MiB/64-entry routed cache,
+  four-query ceiling, one cold-load slot, cache mutex and publication reader pins
+  remain exact; this test has query concurrency one. One explicit reader open
+  and close retains metadata for the stale-open refusal, and one existing
+  indexed-source transition changes the fixed neutral repository. Cache and
+  mirror cleanup add no persistent state or additional native phase.
+
+  Exact implementation `e5a08c865ab15b75dc5c4a912c502f8410633b1f` passes the
+  fresh privileged personal-VM workspace rehearsal in 37.41 seconds: one durable
+  coordinator success, two native phases, one settled successful chunk, exact
+  cold/warm cross-member reads, stale cached-query/binding refusal, no replay
+  and no retained native scratch. The fixture has zero accepted service
+  incarnations and five regular-source Git blobs totaling 176 bytes; it is not
+  product-scale evidence. The source-free record is
+  `spike/t459/native_coordinator_1.json`. Earlier staging refusal (a uid-501
+  temporary ancestor under a root run), prelaunch missing timer and incorrect
+  durable retry-count assertion remain retained; none reached native dispatch.
+  Corrected staging changes no production custody rule. The existing explicit
+  single/workspace/import flags, retained neutral image and public tool pins
+  remain exact; copying a historical pinned public tool reuses no prior dispatch
+  or allowance. All 21 selected Linux real-store runtime/executor/lifecycle
+  regressions pass; their native operations are modeled. Darwin typedexecutor
+  and navigation normal/race, Linux compilation/vet, full Darwin and affected
+  Linux pinned lint (zero issues), docs/glossary and whitespace pass. Darwin
+  race excludes this Linux-only native test. Broader Linux repository lint
+  retains 13 unused warnings in unchanged `spike/t421`; an independent baseline
+  run produces a byte-identical log from identical spike, module and lint inputs.
+  It is not a full Linux lint PASS. Fresh staging is removed, no matching child,
+  container or loop device survives, only the pre-existing native namespace
+  lock remains and the personal VM is stopped. Independent exact-source review
+  finds all severity counts zero; final evidence/cost review remains pending.
+  Full T45.9 native/neutral acceptance, bounded native fault and
+  hard-death recovery, actual pressure/lifecycle transitions, native regeneration
+  after restore, rendered authenticated Settings and separately authorized target
+  closure remain unestablished. Ordinary providers remain unavailable and the
+  T45.6 waiver is not PASS; pending target binding authorizes no target execution
+  or scale/release claim.

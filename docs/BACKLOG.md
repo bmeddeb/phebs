@@ -15447,11 +15447,22 @@ T45.9 neutral native coordinator prerequisite (2026-10-04): a separate opt-in
 test drives a fresh managed Publish through the actual job runner/coordinator
 and generation scheduler, requiring durable successful job/chunk settlement,
 two real native phases, growth release and no native replay on same-lease reuse
-or duplicate coordination. The existing T45.7 direct-execution proof remains
-unchanged. Validation and independent review are pending; full native/neutral
-closure, rendered authenticated Settings and separately authorized target
-closure remain unestablished. Target binding is pending, with no target
-execution authorized; ordinary providers stay unavailable and T45.6 is not PASS.
+or duplicate coordination. Exact source
+`e5a08c865ab15b75dc5c4a912c502f8410633b1f` passes the fresh privileged workspace
+rehearsal in 37.41 seconds, including actual cross-member Definition, References
+and Hover, identical cold/warm payloads, stale cached-query/binding refusal and
+fresh in-process controller census. The retained T45.7 direct proof keeps its
+behavior. The fixture has zero accepted service incarnations and 176 admitted
+regular-source Git blob bytes; it establishes no product-scale envelope. The
+source-free record is `spike/t459/native_coordinator_1.json`. All 21 selected
+Linux supporting regressions and affected normal/race/static/docs gates pass;
+full Linux lint retains 13 unchanged T42.1 warnings reproduced byte-identically
+at baseline. Exact-source review is clean; final evidence/cost review remains
+pending. Full native/neutral closure, bounded
+native failure/hard-death recovery, actual pressure/lifecycle, native generation
+after restore, rendered authenticated Settings and separately authorized target
+closure remain unestablished. Target binding is pending, with no target execution
+authorized; ordinary providers stay unavailable and T45.6 is not PASS.
 
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
