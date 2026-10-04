@@ -170,7 +170,35 @@ Run `npm run receipts -- --project typed-index` against an already running Vite
 or product UI. Canonical pixels use the same digest-pinned Noble/Chromium image
 as CI. Local macOS captures belong in temporary output, never in `baselines/`.
 Synthetic profile availability is rendering evidence only; ordinary production
-serve remains unavailable. New typed transport reads cap streamed bodies at32KiB.
-The existing repository-list fetch is parsed before its4,096-row admission check;
+serve remains unavailable. New typed transport reads cap streamed bodies at 32 KiB.
+The existing repository-list fetch is parsed before its 4,096-row admission check;
 only active selected status repeats at five seconds. Fixture response timings
 measure a local presentation path and are not production API or native-work SLOs.
+
+
+T45.8b canonical evidence is retained in `t458b.json`: eight preview fixture
+pixels and eight ordinary Settings pixels were authored and compared with the
+pinned image. The complete panel is scrolled below sticky chrome, then its
+position is checked; no indexing anatomy is masked. The ordinary instance uses
+the make-dev-built binary with an explicit whole-repository configuration for
+both unchanged staged neutral bundles, their retained operator catalogs, and
+provisional protobuf/Kafka packs. It has no analysis units or typed runtime.
+The unchanged strict setup checks both exact HEADs, settled jobs, current
+required services and complete orders-api relationship authority before capture.
+The configuration digest and bundle/chunk metrics are in the evidence record.
+
+The default focused T30.7 configuration separately indexed but lacked its v2
+source-generation control, leaving service/relationship authority unavailable.
+That diagnostic is not a receipt PASS or focused-pipeline closure. The ordinary
+neutral data uses a disposable 1 GiB APFS volume with unchanged disk admission
+limits; it proves this small cohort only. Chromium runs in the untouched pinned
+AMD64 image under Rosetta in a temporary 2-CPU/6-GiB renderer VM. A TCP bridge to
+trustworthy loopback changes no browser flags or product behavior. Hosted Actions
+is account-disabled; these are local pinned-renderer checks, not hosted CI.
+
+The Settings chunk is 27,095 bytes (8.04 kB reported gzip); no dependency was
+added. Fixture readiness includes keyboard traversal. Fixture preview timing
+includes interaction and screenshot bookkeeping; neither timing is a production
+request, indexing or user-validation claim. Existing full command checks also
+retain three phase-nine lifecycle deadline failures, distinct from the passing
+affected typed/restore checks; the receipt record never labels them green.
