@@ -456,18 +456,34 @@ func RunProductionWithEnv(ctx context.Context, site uint32, command *exec.Cmd, e
 // the owned command, which is still joined before returning. The caller retains
 // its existing five-second command context. This is not a report collector.
 func CombinedOutputProduction(ctx context.Context, site uint32, command *exec.Cmd) ([]byte, error) {
+	return productionOutput(ctx, site, command, true)
+}
+
+// OutputProduction returns stdout only. In exact mode, both output streams
+// still share the version probe's 4 KiB limit and overflow kills and joins it.
+func OutputProduction(ctx context.Context, site uint32, command *exec.Cmd) ([]byte, error) {
+	return productionOutput(ctx, site, command, false)
+}
+
+func productionOutput(ctx context.Context, site uint32, command *exec.Cmd, combined bool) ([]byte, error) {
 	if command == nil {
 		return nil, ErrConfig
 	}
-	if productionRuntime.Load() == nil {
-		return command.CombinedOutput()
+	runtime := productionRuntime.Load()
+	if runtime == nil {
+		if combined {
+			return command.CombinedOutput()
+		}
+		return command.Output()
 	}
 	if site != SiteSurrealVersion || command.Stdout != nil || command.Stderr != nil {
-		return nil, productionRuntime.Load().client.fail(ErrProductionBootstrap)
+		return nil, runtime.client.fail(ErrProductionBootstrap)
 	}
-	runtime := productionRuntime.Load()
 	output := productionVersionOutput{command: command, client: runtime.client}
 	command.Stdout, command.Stderr = &output, &output
+	if !combined {
+		command.Stderr = productionVersionStderr{output: &output}
+	}
 	if command.WaitDelay == 0 || command.WaitDelay > time.Second {
 		command.WaitDelay = time.Second
 	}
@@ -476,19 +492,36 @@ func CombinedOutputProduction(ctx context.Context, site uint32, command *exec.Cm
 }
 
 type productionVersionOutput struct {
+	mu      sync.Mutex
 	buffer  [4 << 10]byte
 	size    int
+	used    int
 	command *exec.Cmd
 	client  *Client
 	err     error
 }
 
 func (output *productionVersionOutput) Write(data []byte) (int, error) {
+	return output.write(data, true)
+}
+
+type productionVersionStderr struct{ output *productionVersionOutput }
+
+func (stderr productionVersionStderr) Write(data []byte) (int, error) {
+	return stderr.output.write(data, false)
+}
+
+func (output *productionVersionOutput) write(data []byte, retain bool) (int, error) {
+	output.mu.Lock()
+	defer output.mu.Unlock()
 	if output.err != nil {
 		return 0, output.err
 	}
-	accepted := copy(output.buffer[output.size:], data)
-	output.size += accepted
+	accepted := min(len(data), len(output.buffer)-output.used)
+	output.used += accepted
+	if retain {
+		output.size += copy(output.buffer[output.size:], data[:accepted])
+	}
 	if accepted == len(data) {
 		return accepted, nil
 	}

@@ -76,6 +76,11 @@ matching password file cannot be opened. Deleting the whole data directory
 is an intentional auth reset as well as a reindex;
 the next start requires first-user enrollment.
 
+Local engine identity inspection reads the first `surreal version` stdout
+token. Stderr warnings cannot replace that version; empty or invalid stdout
+and unsuccessful commands still refuse startup. Exact controlled probes retain
+the shared 4,096-byte stdout-plus-stderr limit, including discarded stderr.
+
 ### Startup schema repair
 
 The supervised local engine explicitly defines its fixed `phebs` namespace

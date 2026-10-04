@@ -9462,3 +9462,45 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   query's returned-row limit does not establish a native-scan bound. No new
   lock, cache, schema, child or ordinary request, sync, startup, retry/no-op or
   publication work is added.
+
+- **2026-10-04 — T45.9 Linux command-gate prerequisite.** Parse the first
+  stdout token from `surreal version`, rather than combining it with stderr:
+  the pinned Linux engine can emit an ONNX warning before its valid version.
+  Ordinary inspection uses standard-library `exec.Cmd.Output`; empty or invalid
+  stdout, unsuccessful execution, strict version-token checks, executable
+  digest checks, cache admission and controlled-dispatch admission still refuse
+  under their existing rules. Exact inspection separates stdout retention from
+  stderr accounting while preserving one aggregate 4,096-byte budget across
+  both streams. Any overflow latches failure, kills the owned command and joins
+  it before returning. The existing five-second command context and exact
+  `WaitDelay` cap of one second remain. The test-only supervisor oracle now expects
+  Linux's existing closed `phebs_site=identity` refusal frame for malformed
+  identity arguments; other platforms retain silence. Production refusal and
+  containment behavior do not change.
+
+  **Cost.** Query/request serving, sync ticks, publication and ordinary worker
+  retry/no-op add no work. Startup/restart and backup/restore identity inspection
+  keep the existing path/size/mtime cache lookup and insertion, expected-digest
+  cache bypass, uncached executable hash and one version child per uncached
+  inspection. Cache hits start no probe; an inspection retry repeats existing
+  hashing/probing rather than adding a new retry loop. There is no corpus/shard
+  scan, extra hashing pass, cache invalidation, schema, disk write or additional
+  child/admission. Cache locks remain brief lookup/insertion holds, outside the
+  hash and probe. Separated output uses two `os/exec` pipes and copy goroutines
+  instead of the combined writer's one, with their copy buffers and kernel pipe
+  storage; child concurrency remains under the existing dispatch admission.
+  Exact writers share one mutex per copied chunk, including failure latching
+  and kill on overflow; joining occurs outside it. The combined exact helper
+  retains one writer/pump and now takes that same per-chunk mutex. Exact retained
+  stdout stays within its fixed 4-KiB array and discarded stderr still spends
+  the aggregate budget; that array is not a whole-probe memory bound. Ordinary
+  output keeps the standard library's stdout buffer and error-stderr retention,
+  with no new ordinary output-memory limit claimed.
+
+  Validation and independent review remain pending. This is a prerequisite to
+  the broader Linux command gate, not full T45.9 acceptance, native cold
+  generation, complete neutral closure, rendered authenticated Settings or a
+  separately authorized target closure. Retained
+  `spike/t459/neutral_api_client_1.json` FAIL bytes remain unchanged. Ordinary
+  providers stay unavailable; the T45.6 waiver is not PASS and no scale or
+  release claim changes.

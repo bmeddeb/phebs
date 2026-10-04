@@ -83,6 +83,13 @@ two-member navigation with the production resolver, plus the existing Settings
 HTTP client against a real handler. Fixture-authored SCIP and client transport
 checks do not establish native generation, rendered authenticated Settings,
 complete neutral acceptance or the separately authorized target closure.
+The T45.9 Linux command-gate prerequisite isolates engine-version stdout from
+stderr warnings without changing strict identity checks or exact aggregate
+output admission, and corrects the platform-specific supervisor refusal oracle.
+Its validation and independent review remain pending; the retained neutral
+API/client FAIL receipt is unchanged. Native cold generation, full neutral,
+rendered authenticated Settings and separately authorized target closure remain
+unestablished, with ordinary providers unavailable and the T45.6 waiver not PASS.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

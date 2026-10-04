@@ -191,7 +191,7 @@ func inspectSurrealBinary(
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	output, err := dispatchadmission.CombinedOutputProduction(ctx, dispatchadmission.SiteSurrealVersion,
+	output, err := dispatchadmission.OutputProduction(ctx, dispatchadmission.SiteSurrealVersion,
 		exec.CommandContext(ctx, resolved, "version"))
 	if err != nil {
 		return SurrealIdentity{}, fmt.Errorf("run surreal version: %w", err)

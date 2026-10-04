@@ -70,6 +70,34 @@ func TestInspectSurrealBinaryAcceptsBuildMetadataVersion(t *testing.T) {
 	}
 }
 
+func TestInspectSurrealBinaryUsesStdoutVersion(t *testing.T) {
+	for _, tc := range []struct {
+		name, script, version string
+	}{
+		{"warning", "printf 'onnxruntime warning\\n' >&2\nprintf '3.2.0 for linux on aarch64\\n'\n", "3.2.0"},
+		{"stderr only", "printf '3.2.0\\n' >&2\n", ""},
+		{"invalid stdout", "printf '3.2.0\\n' >&2\nprintf 'invalid\\n'\n", ""},
+		{"nonzero exit", "printf '3.2.0\\n'\nexit 7\n", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "surreal")
+			if err := os.WriteFile(path, []byte("#!/bin/sh\n"+tc.script), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			identity, err := InspectSurrealBinaryContext(t.Context(), path)
+			if tc.version == "" {
+				if err == nil {
+					t.Fatalf("invalid version probe accepted: %+v", identity)
+				}
+				return
+			}
+			if err != nil || identity.Version != tc.version || !validSHA256(identity.SHA256) {
+				t.Fatalf("identity = %+v, %v", identity, err)
+			}
+		})
+	}
+}
+
 func TestExpectedSurrealDigestBypassesIdentityCache(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "surreal")
 	marker := filepath.Join(t.TempDir(), "replacement-ran")

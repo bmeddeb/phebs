@@ -15428,6 +15428,17 @@ command validation remains FAIL on the unchanged engine-version warning and
 supervisor-refusal oracle, reproduced with a qualified base overlay. These
 failures remain retained; full neutral acceptance is not passed or waived.
 
+T45.9 Linux command-gate prerequisite (2026-10-04): engine identity now parses
+version stdout independently of stderr warnings, retaining strict token and
+executable-digest checks. Exact dispatch keeps the aggregate 4,096-byte output
+limit and kills and joins an overflowing probe. The supervisor refusal oracle
+expects the existing closed identity frame on Linux and silence on other
+platforms. Focused, broader Linux command, cost, and independent review gates
+remain pending. The prior `spike/t459/neutral_api_client_1.json` FAIL bytes are
+unchanged. This prerequisite establishes no native cold generation, complete
+neutral closure, rendered authenticated Settings or authorized target closure;
+ordinary providers remain unavailable and the T45.6 waiver is not PASS.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

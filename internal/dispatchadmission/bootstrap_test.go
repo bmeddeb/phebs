@@ -113,10 +113,37 @@ func TestProductionBootstrapHelper(t *testing.T) {
 		}
 		return
 	}
-	if mode == "output-overflow" {
-		command := exec.CommandContext(ctx, ProductionTool("surreal"), "-c", `i=0; while [ "$i" -lt 4097 ]; do printf x; i=$((i+1)); done; while :; do :; done`)
-		output, err := CombinedOutputProduction(ctx, SiteSurrealVersion, command)
-		if err == nil || !errors.Is(err, ErrLimit) || len(output) != 4096 || command.ProcessState == nil {
+	if mode == "stdout" {
+		for _, test := range []struct{ script, output string }{
+			{`printf 'warning\n' >&2; printf 'native-version\n'`, "native-version\n"},
+			{`i=0; while [ "$i" -lt 2048 ]; do printf x; printf y >&2; i=$((i+1)); done`, strings.Repeat("x", 2048)},
+		} {
+			command := exec.CommandContext(ctx, ProductionTool("surreal"), "-c", test.script)
+			output, err := OutputProduction(ctx, SiteSurrealVersion, command)
+			if err != nil || string(output) != test.output || command.ProcessState == nil {
+				t.Fatalf("stdout not isolated/joined: %q, %v, %v", output, err, command.ProcessState)
+			}
+		}
+		productionHelperFinish(t, ctx, lifetime)
+		return
+	}
+	if mode == "output-overflow" || mode == "stdout-overflow" || mode == "stderr-overflow" {
+		script := `i=0; while [ "$i" -lt 4097 ]; do printf x; i=$((i+1)); done; while :; do :; done`
+		switch mode {
+		case "stdout-overflow":
+			script = `i=0; while [ "$i" -lt 2048 ]; do printf x; printf y >&2; i=$((i+1)); done; printf z >&2; while :; do :; done`
+		case "stderr-overflow":
+			script = `i=0; while [ "$i" -lt 4097 ]; do printf x >&2; i=$((i+1)); done; while :; do :; done`
+		}
+		command := exec.CommandContext(ctx, ProductionTool("surreal"), "-c", script)
+		var output []byte
+		if mode == "output-overflow" {
+			output, err = CombinedOutputProduction(ctx, SiteSurrealVersion, command)
+		} else {
+			output, err = OutputProduction(ctx, SiteSurrealVersion, command)
+		}
+		if err == nil || !errors.Is(err, ErrLimit) || len(output) > 4096 || command.ProcessState == nil ||
+			mode == "output-overflow" && len(output) != 4096 || mode == "stderr-overflow" && len(output) != 0 {
 			t.Fatalf("overflow not refused/joined: bytes=%d, err=%v, state=%v", len(output), err, command.ProcessState)
 		}
 		if lifetime.Close(ctx) == nil {
@@ -272,8 +299,9 @@ func productionHelperFinish(t *testing.T, ctx context.Context, lifetime *Product
 }
 
 func TestProductionBootstrapInheritedBoundary(t *testing.T) {
-	for _, mode := range []string{"healthy", "author", "semantic", "wrong-path", "wrong-argv0", "extra-files", "unknown-site", "compatibility", "surreal-no-credential", "check-refused", "zero-budget", "output-overflow"} {
+	for _, mode := range []string{"healthy", "author", "semantic", "stdout", "wrong-path", "wrong-argv0", "extra-files", "unknown-site", "compatibility", "surreal-no-credential", "check-refused", "zero-budget", "output-overflow", "stdout-overflow", "stderr-overflow"} {
 		t.Run(mode, func(t *testing.T) {
+			successful := mode == "healthy" || mode == "author" || mode == "semantic" || mode == "stdout"
 			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 			defer cancel()
 			record := productionTestRecord()
@@ -353,7 +381,7 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 					return nil
 				})
 			}()
-			if mode == "healthy" || mode == "author" || mode == "semantic" {
+			if successful {
 				reader := bufio.NewReader(output)
 				ready, err := reader.ReadString('\n')
 				if err != nil || ready != "ready\n" {
@@ -372,7 +400,7 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 				if err := control.Checkpoint(ctx); err != nil {
 					t.Fatal(err)
 				}
-				if mode == "healthy" || mode == "semantic" {
+				if mode != "author" {
 					if _, err := input.Write([]byte{1}); err != nil {
 						t.Fatal(err)
 					}
@@ -383,7 +411,7 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 			}
 			serveErr := <-server
 			snapshot, snapshotErr := controller.Snapshot()
-			if mode == "healthy" || mode == "author" || mode == "semantic" {
+			if successful {
 				expected := uint64(3)
 				if mode == "author" {
 					expected = 1
@@ -391,12 +419,15 @@ func TestProductionBootstrapInheritedBoundary(t *testing.T) {
 				if mode == "semantic" {
 					expected = 0
 				}
+				if mode == "stdout" {
+					expected = 2
+				}
 				if serveErr != nil || snapshotErr != nil || !snapshot.Complete || snapshot.Attempts != expected || uint64(checks.Load()) != expected {
 					t.Fatalf("healthy prefix: %+v, %v/%v, checks=%d", snapshot, serveErr, snapshotErr, checks.Load())
 				}
 			} else {
 				expected := uint64(0)
-				if mode == "output-overflow" {
+				if mode == "output-overflow" || mode == "stdout-overflow" || mode == "stderr-overflow" {
 					expected = 1
 				}
 				if serveErr == nil || snapshotErr == nil || snapshot.Complete || snapshot.Attempts != expected ||

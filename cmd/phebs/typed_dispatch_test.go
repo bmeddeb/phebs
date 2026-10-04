@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -89,6 +90,8 @@ func TestTypedCommandRefusals(t *testing.T) {
 			want := ""
 			if len(argv) == 2 && argv[1] == "__typed_supervisor" {
 				want = "phebs_site=argv\n"
+			} else if len(argv) == 6 && argv[1] == "__typed_supervisor" && runtime.GOOS == "linux" {
+				want = "phebs_site=identity\n"
 			}
 			if code != 125 || string(b) != want {
 				t.Fatalf("refusal: exit=%d output=%q", code, b)
