@@ -15371,6 +15371,12 @@ cross-member reads, failed-coordinator visibility, stale/restore-state-clear
 refusal and unavailable providers. It does not execute native generation or
 render an authenticated Settings session.
 Full neutral and separately authorized target acceptance remain open.
+The slice's exact source passes focused Linux composition, Darwin command/client
+normal/race, build/vet, pinned lint and independent zero-finding review; its
+source-free record is `spike/t459/neutral_api_client_1.json`. Broader Linux
+command validation remains FAIL on the unchanged engine-version warning and
+supervisor-refusal oracle, reproduced with a qualified base overlay. These
+failures remain retained; full neutral acceptance is not passed or waived.
 
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 

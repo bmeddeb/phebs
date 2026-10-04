@@ -1,0 +1,222 @@
+{
+  "schema": "phebs-t459-neutral-api-client-v1",
+  "recorded_date": "2026-10-03",
+  "status": "PARTIAL",
+  "composition_slice": "PASS",
+  "t459_acceptance": "OPEN",
+  "implementation_commit": "65aa2148015705b82a7e8497e0970fe59ee90209",
+  "base_commit": "5319dc49304739b8a3cd7fefd672bc45d8132043",
+  "input_sha256": {
+    "go.mod": "71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662",
+    "go.sum": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+    "cmd/phebs/serve_typed_linux_test.go": "23dc61f7a4bfee25ff7325751b23e3f0934bc6f713b0a6016722522bd19af26a",
+    "cmd/phebs/serve_typed_api_linux_test.go": "3f2c69f905ec505b8b7e7a34e94fbe01dd54c4cd0cc4b23fc76f2d07d07b3fc1",
+    "cmd/phebs/serve_typed_client_test.go": "5ac8af4f60097559cf5023882126478bc3dd0a58aacf2db15a31a2f9421b8915",
+    "spike/t459/settings_client.cjs": "0889d50e18b6d7b93a1a9e1b349604e794e408fe2e996968b3e635f76de2c6e1",
+    "linux_test_binary": "bb6046955e11584720bcb27059bad77fc57f7af7f6838074bad4c9b29f54b8d2",
+    "darwin_surreal_binary": "ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+    "pinned_lint_binary": "ed419de2397a00d7fdfb6a6aa6d4d9a58f53aac217e444950e643c848b638d94"
+  },
+  "ui": {
+    "commit": "e2ec0a4f707dc0091e9b0b4a0f3c9f171d8d5776",
+    "tree_edited": false,
+    "node": "26.7.0",
+    "typescript": "6.0.3",
+    "typed_index_client_sha256": "e4d086796c2b61a8b8bbe74fa6effc8522b5285e810fd6d73eb58c5365787e71",
+    "auth_session_sha256": "de3bdabda4adc6c6cec1e947abc3cb06f42079f779621849d61ecfed0d742363",
+    "package_lock_sha256": "24966ddd75895750499d80e39bac17c5bd6b7e8223245826a8f6c41bd75dca5a",
+    "openapi_paths_compared": 4,
+    "openapi_schemas_compared": 6,
+    "rendered_authenticated_settings": "NOT_ESTABLISHED"
+  },
+  "tools": {
+    "go": "1.26.5",
+    "surreal": "3.2.0",
+    "linux_surreal_sha256": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+    "linux_surreal_archive_sha256": "8dc83157d74d906e573d80b0c33c6fb80185ceb58c9553ea1768b8d7b4c7703c",
+    "linux_surreal_release": "https://github.com/surrealdb/surrealdb/releases/tag/v3.2.0",
+    "golangci_lint": "2.12.2",
+    "bazel_or_scip_indexer_executed": false
+  },
+  "hosts": {
+    "linux": {
+      "personal_profile": "phebs-t451a",
+      "architecture": "aarch64",
+      "kernel": "6.8.0-117-generic",
+      "cpus": 2,
+      "memory_bytes": 8589934592,
+      "uid": 501,
+      "tmp_filesystem": {
+        "total_bytes": 19682557952,
+        "available_bytes_before_staging": 17388965888,
+        "block_bytes": 4096,
+        "inodes": 2490368,
+        "free_inodes_before_staging": 2439218
+      },
+      "root_disk_config_gib": 20,
+      "separate_container_disk_config_gib": 10
+    },
+    "darwin": {
+      "architecture": "arm64",
+      "kernel": "25.6.0"
+    }
+  },
+  "corpus": {
+    "kind": "fixture-authored navigation controls and generated SCIP; modeled source commit; no native generation",
+    "repositories": 1,
+    "modeled_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "targets": 1,
+    "package_units": 1,
+    "members": 2,
+    "generated_documents": 2,
+    "generated_document_bytes": 16,
+    "copied_input_bytes": 1,
+    "workspace_growth_promise_bytes": 1048576,
+    "host_growth_promise_bytes": 1048576,
+    "inodes_per_promise": 128,
+    "accepted_service_incarnations": null,
+    "admitted_unique_regular_git_source_blob_bytes": null,
+    "sizing_dimensions": "NOT_MEASURED",
+    "design_target_accepted_service_incarnations": 5000,
+    "design_target_admitted_unique_regular_git_source_blob_bytes": 12000000000
+  },
+  "checks": [
+    {
+      "name": "linux API and physical navigation composition",
+      "status": "PASS",
+      "selector": "^TestTypedNavigation(APIComposition)?Linux$",
+      "test_seconds": {
+        "composition": 0.58,
+        "existing_navigation": 0.51
+      },
+      "command_wall_seconds": 1.33,
+      "binary_sha256": "bb6046955e11584720bcb27059bad77fc57f7af7f6838074bad4c9b29f54b8d2"
+    },
+    {
+      "name": "Darwin typed command and actual Settings HTTP client",
+      "status": "PASS",
+      "command": "go test ./cmd/phebs -run ^TestTyped -count=1 -timeout=5m -args -typed-settings-ui=<unchanged-UI-directory>",
+      "package_seconds": 4.841,
+      "command_wall_seconds": 10.36
+    },
+    {
+      "name": "Darwin typed command and actual Settings HTTP client race",
+      "status": "PASS",
+      "race": true,
+      "package_seconds": 7.897,
+      "command_wall_seconds": 13.91
+    },
+    {
+      "name": "API/auth Typed-CSRF-Audit selector",
+      "status": "PASS",
+      "api_seconds": 2.44,
+      "auth_seconds": 0.735,
+      "qualification": "run before freeze; package source unchanged"
+    },
+    {
+      "name": "linux-arm64 build/vet and pinned lint",
+      "status": "PASS",
+      "cgo_enabled": false,
+      "lint_issues": 0
+    },
+    {
+      "name": "existing UI unit/render fixtures",
+      "status": "PASS",
+      "tests": 24,
+      "seconds": 2.61,
+      "qualification": "mocked rendering/unit evidence; not installed Settings"
+    },
+    {
+      "name": "docs/glossary, Node syntax, whitespace",
+      "status": "PASS",
+      "qualification": "checked after this evidence record and owning documentation were written"
+    }
+  ],
+  "retained_failures": [
+    {
+      "name": "initial navigation composition oracle",
+      "status": "FAIL",
+      "working_tree": true,
+      "binary_sha256": "238a6ff7faadc90fe8f942fb3ef816d0e6f1807595196fc2641602c52f19fa6b",
+      "test_seconds": 0.53,
+      "cause": "test assumed desired remains the parent digest after SealTypedIndexPlan; store lawfully reports sealed execution successor",
+      "correction": "compare parent with API preview and current status with execution digest",
+      "retention": "Terminal tool-output fact and observed binary hash; raw log and original binary were not retained"
+    },
+    {
+      "name": "second navigation composition oracle",
+      "status": "FAIL",
+      "working_tree": true,
+      "binary_sha256": "bfd3304fc5d5efb165c43b9ee9e3fb85a2bf25c80a44348c52205752d75c2a58",
+      "test_seconds": 0.58,
+      "cause": "test assumed manually claimed coordinator increments Attempts; ClaimJob/SetJobStatus do not",
+      "correction": "compare actual coordinator ID/status/Attempts before and after retry",
+      "retention": "Original failed terminal log retained; observed binary hash recorded, original binary overwritten by correction"
+    },
+    {
+      "name": "broader Linux typed command gate",
+      "status": "FAIL",
+      "selector": "^TestTyped",
+      "test_seconds": {
+        "composition_pass": 0.66,
+        "existing_navigation_pass": 0.71
+      },
+      "cause": [
+        "OpenLocalMemory version detection merges stderr warning with valid stdout and parses onnxruntime as version",
+        "malformed supervisor returns closed phebs_site=identity, while retained refusal oracle expects empty output"
+      ],
+      "production_or_retained_test_fix": false
+    },
+    {
+      "name": "qualified baseline comparison",
+      "status": "FAIL",
+      "base_commit": "5319dc49304739b8a3cd7fefd672bc45d8132043",
+      "binary_sha256": "5662a6590c1332d67575f3d908a2d14f1bf9a72bd10646541b62ce6e87da1408",
+      "selector": "^TestTyped(Navigation(Selection|Legacy)|CommandRefusals)$",
+      "qualification": "Go overlay restores base navigation test and empties the two added Go tests; other compiled Go/module inputs match base; not a pristine checkout",
+      "result": "reproduces both broader gate failure classes unchanged"
+    }
+  ],
+  "review": {
+    "exact_commit": "65aa2148015705b82a7e8497e0970fe59ee90209",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "production_steady_state_cost_change": false
+  },
+  "cleanup": {
+    "guest_gate_directory_removed": true,
+    "guest_test_temporary_roots": 0,
+    "matching_test_or_engine_processes": 0,
+    "staged_tools_removed": [
+      "phebs-baseline.test",
+      "phebs-command.test",
+      "surreal"
+    ],
+    "uid": 501,
+    "personal_profile_final_state": "Stopped",
+    "darwin_surreal_processes": 0,
+    "ui_tree_final_state": "clean"
+  },
+  "log_sha256": {
+    "linux-focused-exact.log": "ac3a3b0de2b7f6e37ff2d7e56fb10a3d8a31f86dc9490bd5fffd295dbe37653d",
+    "linux-exact.log": "5d0c1bbb136519c9d6cbee8ff897275864769632d7fbb1fd1a99ab0a64849dba",
+    "linux-baseline.log": "61845a60c62b9060423e28caec0cd01f408a201315712e3fd40d152cf89fb400",
+    "command-normal.log": "3d7387740fb95895f2b6abb4196a83014eb574160eae219e265f18daa465fa1f",
+    "command-race.log": "1248fecc4b585e0d9fa57cc47723b239dc89e0d3cad925ba0849de0978d255aa",
+    "lint-pinned-linux.log": "9201a352fb091e2940d98fcc85110d1cff7048f2fb33cc97a82eaf2b13544e08",
+    "vet-linux.log": "7ba59a5b8a95a6840ab1b326b28bc493a13a7af6ce654198abebf9da980872b7"
+  },
+  "unestablished": [
+    "native cold generation and bounded native failure",
+    "worker restart/resume",
+    "native reuse/no-op and pressure/lifecycle closure",
+    "actual backup/restore regeneration",
+    "rendered authenticated Settings session",
+    "separately authorized target corpus/profile/tool/host closure",
+    "accepted-service and admitted-source-byte numeric envelope",
+    "hosted CI",
+    "release or DO_NOT_RELEASE decision"
+  ]
+}

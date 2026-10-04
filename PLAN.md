@@ -9223,3 +9223,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   clean transpilation even if Node times out; there are no presentation-tree
   writes. A runnable opt-in test binds the external UI path
   because that lineage is separately owned, rather than copying its client.
+
+  Exact implementation `65aa2148015705b82a7e8497e0970fe59ee90209` passes the
+  Linux composition/existing-navigation selector, Darwin typed command/client
+  normal and race selectors, Linux build/vet, repository-pinned 2.12.2 lint,
+  Node syntax and scoped API/auth gates. Independent exact-source/cost review
+  records critical/high/medium/low all zero. The source-free qualification is
+  retained in `spike/t459/neutral_api_client_1.json`; the unchanged presentation
+  client is bound to `e2ec0a4f707dc0091e9b0b4a0f3c9f171d8d5776`.
+  The two initial fixture-oracle failures remain failed: desired advances to
+  sealed execution identity, and manually driven coordinator transitions do
+  not increment the runtime attempt count. Neither required a production fix.
+
+  The broader Linux typed command selector remains FAIL on two unchanged
+  failure classes, reproduced by a qualified base-5319 Go-overlay comparison:
+  the pinned ARM64 engine emits an ONNX warning on stderr before valid version
+  stdout, which the existing combined-output version check misparses; a
+  malformed Linux supervisor emits the closed identity refusal while its
+  retained oracle expects no output. No version check or refusal is bypassed
+  or rewritten here. The overlay restores the original navigation test and
+  removes the two added test bodies, with other Go/module inputs unchanged;
+  it is not a pristine checkout. Full neutral acceptance remains open.
+  Staged Linux tools and test roots are removed, no matching child survives,
+  and the dedicated personal VM is stopped; the presentation tree is untouched.
