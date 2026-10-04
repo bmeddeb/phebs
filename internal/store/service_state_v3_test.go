@@ -1984,6 +1984,77 @@ func serviceStateV3PlanCount(t *testing.T, s *Surreal) int {
 	return rows[0].Count
 }
 
+func TestServiceStateV3RestoreRejectsPresentWrongStageSchedule(t *testing.T) {
+	s := newServiceCatalogV3InternalStore(t)
+	ctx := t.Context()
+	repository := "example.com/acme/restore-present-wrong-stage"
+	commit := strings.Repeat("7", 40)
+	seedServiceCatalogV3Repo(t, s, repository, commit)
+	generation := serviceStateV3Generation(t, repository, commit, "a", []servicecatalog.Service{{
+		Key: "orders", DisplayName: "Orders", Disposition: servicecatalog.DispositionAccepted,
+		Origin: servicecatalog.OriginBase,
+	}})
+	if err := s.PublishServiceCatalogV3Candidate(ctx, generation); err != nil {
+		t.Fatal(err)
+	}
+	reconcile, err := s.BeginServiceStateV3Reconcile(ctx, repository)
+	if err != nil || reconcile.Plan == nil {
+		t.Fatal(reconcile, err)
+	}
+	if _, err := s.ValidateServiceCatalogV3Precious(ctx); err != nil {
+		t.Fatal("valid original schedule", err)
+	}
+	schedule := reconcile.Schedule
+	changedDigest, err := GenerationScheduleDigest(GenerationScheduleSpec{
+		Repository: schedule.Repository, Stage: "other-stage", Generation: schedule.Generation,
+		ResourceClass: schedule.ResourceClass, TotalItems: schedule.TotalItems,
+		ChunkItems: schedule.ChunkItems, MaxAttempts: schedule.MaxAttempts,
+		RepositoryTokens: schedule.RepositoryTokens,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name   string
+		digest string
+		move   bool
+	}{
+		{"wrong stage", reconcile.Plan.ScheduleDigest, false},
+		{"wrong stage and digest", "sha256:" + strings.Repeat("0", 64), false},
+		{"wrong stage and recomputed digest", changedDigest, false},
+		{"wrong stage and native id", reconcile.Plan.ScheduleDigest, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// The native row remains present under the referenced schedule ID.
+			if _, err := storeQuery[any](ctx, s.accounting, s.db, `
+UPDATE $rid SET stage = 'other-stage', digest = $digest RETURN NONE`, map[string]any{
+				"rid":    models.NewRecordID("generation_schedule", strings.TrimPrefix(reconcile.Plan.ScheduleDigest, "sha256:")),
+				"digest": tc.digest,
+			}, storeWrite(1)); err != nil {
+				t.Fatal(err)
+			}
+			if tc.move {
+				if _, err := storeQuery[any](ctx, s.accounting, s.db, `
+BEGIN;
+LET $row = (SELECT * OMIT id FROM $source LIMIT 1)[0];
+DELETE $source RETURN NONE;
+CREATE generation_schedule:wrong_native_id CONTENT $row RETURN NONE;
+COMMIT;`, map[string]any{
+					"source": models.NewRecordID("generation_schedule", strings.TrimPrefix(reconcile.Plan.ScheduleDigest, "sha256:")),
+				}, storeWrite(2)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := s.ValidateServiceCatalogV3Precious(ctx); !errors.Is(err, ErrInvalidServiceStateV3) {
+				t.Fatal("strict validation failed to reject wrong stage", err)
+			}
+			if err := s.RestoreSelectedServiceStateV3ForRestore(ctx); !errors.Is(err, ErrInvalidServiceStateV3) {
+				t.Fatal("restore accepted a present wrong-stage schedule", err)
+			}
+		})
+	}
+}
+
 // A backup excludes derived generation schedules (T45.4); restore validates the
 // imported plans before discarding them. Live validation stays strict.
 func TestServiceStateV3RestoreValidationWithoutDerivedSchedules(t *testing.T) {

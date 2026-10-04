@@ -3552,11 +3552,30 @@ SELECT * FROM service_state_v3_plan ORDER BY digest LIMIT $limit`, map[string]an
 	if len(planRows) > maxPlans {
 		return 0, 0, 0, ErrInvalidServiceStateV3
 	}
-	scheduleResults, err := storeQuery[[]generationScheduleRec](ctx, s.accounting, s.db, `
+	// Include referenced identities even when a present row has a corrupt stage
+	// or digest, so restore cannot mistake that row for an excluded schedule.
+	referencedIDs := []models.RecordID{}
+	referencedDigests := []string{}
+	if restored {
+		referencedIDs = make([]models.RecordID, len(planRows))
+		referencedDigests = make([]string, len(planRows))
+		for i, record := range planRows {
+			referencedIDs[i] = models.NewRecordID("generation_schedule", strings.TrimPrefix(record.ScheduleDigest, "sha256:"))
+			referencedDigests[i] = record.ScheduleDigest
+		}
+	}
+	type scheduleRecord struct {
+		GenerationSchedule
+		RecID *models.RecordID `json:"id"`
+	}
+	scheduleResults, err := storeQuery[[]scheduleRecord](ctx, s.accounting, s.db, `
 SELECT * FROM generation_schedule
-	WHERE stage = $reconcile OR stage = $activate ORDER BY digest LIMIT $limit`, map[string]any{
+	WHERE stage = $reconcile OR stage = $activate
+		OR id IN $referenced_ids OR digest IN $referenced_digests
+	ORDER BY digest LIMIT $limit`, map[string]any{
 		"reconcile": ServiceStateV3ReconcileStage,
 		"activate":  ServiceStateV3ActivateStage, "limit": maxPlans + 1,
+		"referenced_ids": referencedIDs, "referenced_digests": referencedDigests,
 	}, storeRead())
 	if err != nil {
 		return 0, 0, 0, err
@@ -3567,8 +3586,9 @@ SELECT * FROM generation_schedule
 	}
 	schedules := make(map[string]GenerationSchedule, len(scheduleRows))
 	for _, record := range scheduleRows {
-		schedule := record.schedule()
-		if ValidateGenerationSchedule(schedule) != nil {
+		schedule := record.GenerationSchedule
+		if ValidateGenerationSchedule(schedule) != nil || restored &&
+			!validServiceCatalogV3RecordID(record.RecID, "generation_schedule", strings.TrimPrefix(schedule.Digest, "sha256:")) {
 			return 0, 0, 0, ErrInvalidServiceStateV3
 		}
 		schedules[schedule.Digest] = schedule

@@ -9440,6 +9440,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Restore then rolls state back to the selector snapshot and clears the plans and
   schedules as before; the backup contract and exclusions are unchanged.
 
-  **Cost.** Offline restore only: the same validation queries and row bounds,
-  with fewer comparisons when schedules are absent. No query, lock, cache,
-  schema, child or ordinary request, sync, startup or publication work changes.
+  Review found that the stage-filtered inventory could mistake a present
+  wrong-stage schedule for an excluded one. Restore now includes each plan's
+  referenced native schedule ID and digest in that same inventory query, so
+  corrupt present rows cannot bypass validation through the stage filter.
+  Restore also checks returned schedule IDs against their digests, so a changed
+  internally valid digest cannot turn a present native row into an absent plan
+  reference.
+
+  **Cost.** Validation retains the same query count and returned-row bounds.
+  Offline restore adds two bounded reference arrays, at most 24,576 native IDs
+  and digests each, and native membership predicates in the existing schedule
+  inventory; these do not bound the engine's scan or comparison work. Live
+  backup passes empty reference arrays and retains all strict checks. Both
+  modes now decode native IDs for at most 24,576 returned schedule rows; only
+  restore adds the corresponding identity comparisons. No new
+  lock, cache, schema, child or ordinary request, sync, startup, retry/no-op or
+  publication work is added.

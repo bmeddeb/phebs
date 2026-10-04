@@ -193,6 +193,9 @@ partial progress is never successful restored authority.
 Selected v3 service-state rollback also uses bounded pages: at most 512 future
 current-state deletions, then 256 current/preimage replacement pairs per
 transaction, followed by the selected summary and its optional preimage.
+Before rollback, restore validates imported plans even when their derived
+schedules were excluded from the backup. A schedule present in an older backup
+must still match exactly; live backup validation always requires the schedule.
 Every page repeats exact selector and state witnesses; the final summary
 requires future rows and selected row preimages to be drained. Already-settled
 state performs no rollback write. Interrupted rollback remains an offline
