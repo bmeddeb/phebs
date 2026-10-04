@@ -202,3 +202,11 @@ includes interaction and screenshot bookkeeping; neither timing is a production
 request, indexing or user-validation claim. Existing full command checks also
 retain three phase-nine lifecycle deadline failures, distinct from the passing
 affected typed/restore checks; the receipt record never labels them green.
+
+
+The unchanged short workspace composition subsequently passes in21.858s, and
+full `cmd/phebs` passes in946.515s with test temporary roots on the bounded
+1GiB APFS volume. This closes that package gate for the stated filesystem;
+it preserves the earlier failed host-volume runs and does not invent their
+exact cause. Source, admission policy, fixture budgets and deadlines are
+unchanged. The volume is detached only after all test children join.
