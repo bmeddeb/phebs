@@ -900,6 +900,16 @@ refusal boundaries, not the intended typed-index ceiling for the declared
 massive-monorepo target. phebs does not yet ship a generated-index manifest or
 part-reader surface.
 
+Managed SCIP bundles and SCIP-derived evidence have independent input authority.
+T45.9 selects **STOP** for admitting generated bundles to evidence extraction:
+a managed navigation result cannot replace the committed root or configured
+unit-bound SCIP artifact, establish evidence coverage, or clear a missing,
+corrupt or out-of-scope evidence input. Independent committed evidence continues
+to use its exact Git source and immutable citations. The routed managed
+navigation adapter is implemented, but ordinary managed providers remain
+unavailable. Complete neutral and target closure remain open; this decision
+establishes no supported numeric envelope or release claim.
+
 SCIP-derived experimental extractors parse the complete bounded committed index
 before applying their source-language projection, so every foreign-language
 document and occurrence still consumes the global SCIP safety limits. The

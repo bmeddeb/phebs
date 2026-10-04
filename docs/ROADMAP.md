@@ -71,6 +71,13 @@ read errors. Ordinary serve remains capability-dark. Presentation fixtures exerc
 not installed-provider authority. T45.9 is the next evidence-integration decision
 and separately bounded neutral/target closure; the remaining T45.6 corpus waiver
 is never a validation PASS and no release or scale claim advances here.
+T45.9 selects STOP for generated-bundle evidence admission: managed navigation
+cannot replace committed SCIP evidence input or its coverage/citation authority.
+The decision slice checks that boundary with neutral navigation controls and
+real Git input; complete neutral and separately authorized target closure remain
+open, including composition with the T45.8b presentation lineage. Ordinary
+managed providers remain unavailable and the design-target dimensions remain
+5,000 accepted service incarnations and 12,000,000,000 admitted source blob bytes.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
