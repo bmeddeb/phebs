@@ -9186,3 +9186,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Independent source/documentation/cost review records all severity counts zero.
   No SurrealDB child remains after these checks. These are decision/boundary
   regressions, not a full native neutral or target closure or hosted CI result.
+
+- **2026-10-03 — T45.9 neutral HTTP/client composition boundary.** Compose
+  the real operator HTTP handler, SurrealDB state and physical publication with
+  the production routed navigation resolver. The API preview remains read-only;
+  expected authority, digest and key fence enqueue; exact transport retries
+  confirm one coordinator. A fixture-authored two-member publication binds that
+  admitted parent to its sealed execution request, joins generated definitions,
+  references and hover through HTTP, and reopens through fresh resolvers. Warm
+  reads add no store writes. A distinct canary coordinator failure remains
+  visible without exposing its private error or erasing current navigation.
+  Changed HEAD and an offline restore-state clear refuse old navigation; an
+  unavailable installation continues to advertise unavailable providers.
+  The fixture manually drives store stages and authors SCIP bytes: it does not
+  execute a native planner/indexer or prove worker restart/resume.
+
+  Separately, the unchanged T45.8b presentation lineage's actual HTTP client is
+  transpiled with its installed TypeScript and exercised against the real
+  loopback handler. Its validators, CSRF-header transport, exact request retry
+  and refusal normalization run without canned responses or presentation edits.
+  This composes client and API envelopes, not a rendered authenticated Settings
+  session; existing authentication/CSRF regression gates remain separate.
+  The test opts into a trusted fixture capability and never registers ordinary
+  serve. These checks are one T45.9 prerequisite, not full neutral acceptance,
+  native generation, pressure/recovery/restore regeneration, target validation,
+  scale, release, or a replacement for the T45.6 remaining corpus gate.
+
+  Cost: tests add zero production query/request, sync-tick, startup/restart,
+  retry/no-op or publication work. Existing locks, metadata cache invalidation,
+  concurrency and memory/disk/child bounds remain exact; no schema, corpus scan,
+  hashing pass, dependency or runtime installation is added. Linux fixtures use
+  two explicit 1-MiB/128-inode growth promises, one short-lived memory engine,
+  two small generated documents and two members. The client probe runs four
+  serial Node children, at most one concurrently, against three in-process
+  loopback servers and one supervised memory engine. Go-owned temporary roots
+  clean transpilation even if Node times out; there are no presentation-tree
+  writes. A runnable opt-in test binds the external UI path
+  because that lineage is separately owned, rather than copying its client.

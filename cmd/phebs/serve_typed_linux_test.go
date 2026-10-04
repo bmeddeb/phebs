@@ -154,10 +154,31 @@ func (f typedNavigationFixture) publish(t *testing.T, key string) typedNavigatio
 	raw := typedNavigationJSON(t, typedindex.NewRequest(source, f.profile, uint64(intent.ProfileEpoch), intent.UniverseDigest, key))
 	_, e = f.state.EnqueueTypedIndex(ctx, f.repo, raw)
 	check(e)
+	return f.publishQueued(t, false)
+}
+
+// Manually drive an already admitted request through real store/filesystem
+// custody. This fixture creates sealed bytes; it does not run a native indexer.
+func (f typedNavigationFixture) publishQueued(t *testing.T, crossMember bool) typedNavigationPublication {
+	t.Helper()
+	ctx := t.Context()
+	check := func(e error) {
+		t.Helper()
+		if e != nil {
+			t.Fatal(e)
+		}
+	}
+	coordinator, e := f.state.ClaimJob(ctx, store.JobTypedIndex, "reader-fixture")
+	check(e)
+	if coordinator == nil {
+		t.Fatal("no coordinator")
+	}
+	check(f.state.SetJobStatus(ctx, *coordinator, store.StatusRunning, ""))
 	schedule, e := f.state.TypedIndexSchedule(ctx, f.repo)
 	check(e)
 	_, e = f.state.EnqueueGenerationSchedule(ctx, schedule)
 	check(e)
+	check(f.state.SetJobStatus(ctx, *coordinator, store.StatusDone, ""))
 	_, e = f.state.ExpandGenerationSchedule(ctx, f.repo, schedule.Stage, schedule.Generation)
 	check(e)
 	chunk, e := f.state.ClaimGenerationChunk(ctx, store.GenerationResourceTypedIndex, "reader-fixture")
@@ -201,15 +222,40 @@ func (f typedNavigationFixture) publish(t *testing.T, key string) typedNavigatio
 	save(before, "", "")
 	check(f.state.AdvanceTypedIndex(ctx, *chunk, store.TypedPreflight))
 	body := []byte("😀x\nx\n")
-	plan, e := typedindex.SealPackagePlan(ctx, work.Parent, typedindex.PackagePlanDefinition{Schema: typedindex.PackagePlanSchema, ParentRequestDigest: work.Parent.Digest(), Targets: f.targets, Units: []typedindex.PlannedUnit{{ID: f.unit, Imports: []typedindex.PackageUnitID{}, Documents: []string{f.document}}}, Documents: []typedindex.PlannedDocument{{Path: f.document, Member: "one", Unit: f.unit, Bytes: int64(len(body)), Digest: typedNavigationBytes(body), Generated: true, ProvenanceDigest: typedNavigationHash("generator")}}})
+	definition := typedindex.PackagePlanDefinition{Schema: typedindex.PackagePlanSchema, ParentRequestDigest: work.Parent.Digest(), Targets: f.targets, Units: []typedindex.PlannedUnit{{ID: f.unit, Imports: []typedindex.PackageUnitID{}, Documents: []string{f.document}}}, Documents: []typedindex.PlannedDocument{{Path: f.document, Member: "one", Unit: f.unit, Bytes: int64(len(body)), Digest: typedNavigationBytes(body), Generated: true, ProvenanceDigest: typedNavigationHash("generator")}}}
+	generated := map[string][]byte{f.document: body}
+	var reference string
+	if crossMember {
+		reference, e = typedindex.GeneratedPath(f.unit, "reference.go")
+		check(e)
+		definition.Units[0].Documents = append(definition.Units[0].Documents, reference)
+		document := definition.Documents[0]
+		document.Path, document.Member = reference, "two"
+		definition.Documents = append(definition.Documents, document)
+		generated[reference] = body
+	}
+	plan, e := typedindex.SealPackagePlan(ctx, work.Parent, definition)
 	check(e)
 	admission, e := f.state.SealTypedIndexPlan(ctx, *chunk, plan)
 	check(e)
 	work.Admission = admission
 	symbol := "scip-go gomod example.test v1 X#"
-	member, e := proto.Marshal(&scip.Index{Metadata: &scip.Metadata{ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7"}, ProjectRoot: "file:///workspace", TextDocumentEncoding: scip.TextEncoding_UTF8}, Documents: []*scip.Document{{RelativePath: f.document, PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart, Occurrences: []*scip.Occurrence{{TypedRange: &scip.Occurrence_SingleLineRange{SingleLineRange: &scip.SingleLineRange{Line: 0, StartCharacter: 4, EndCharacter: 5}}, Symbol: symbol, SymbolRoles: 1}, {TypedRange: &scip.Occurrence_SingleLineRange{SingleLineRange: &scip.SingleLineRange{Line: 1, StartCharacter: 0, EndCharacter: 1}}, Symbol: symbol}}, Symbols: []*scip.SymbolInformation{{Symbol: symbol, Documentation: []string{"generated"}}}}}})
+	index := &scip.Index{Metadata: &scip.Metadata{ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7"}, ProjectRoot: "file:///workspace", TextDocumentEncoding: scip.TextEncoding_UTF8}, Documents: []*scip.Document{{RelativePath: f.document, PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart, Occurrences: []*scip.Occurrence{{TypedRange: &scip.Occurrence_SingleLineRange{SingleLineRange: &scip.SingleLineRange{Line: 0, StartCharacter: 4, EndCharacter: 5}}, Symbol: symbol, SymbolRoles: 1}, {TypedRange: &scip.Occurrence_SingleLineRange{SingleLineRange: &scip.SingleLineRange{Line: 1, StartCharacter: 0, EndCharacter: 1}}, Symbol: symbol}}, Symbols: []*scip.SymbolInformation{{Symbol: symbol, Documentation: []string{"generated"}}}}}}
+	var members []typedindex.MemberInput
+	if crossMember {
+		other := proto.Clone(index).(*scip.Index)
+		other.Documents[0].RelativePath = reference
+		other.Documents[0].Occurrences = other.Documents[0].Occurrences[1:]
+		other.Documents[0].Symbols = nil
+		member, e := proto.Marshal(other)
+		check(e)
+		members = append(members, typedindex.MemberInput{Name: "two", SCIP: member})
+		index.Documents[0].Occurrences = index.Documents[0].Occurrences[:1]
+	}
+	member, e := proto.Marshal(index)
 	check(e)
-	bundle, e := typedindex.BuildBundle(ctx, admission, plan, []typedindex.UnitOutcome{{Unit: f.unit, State: typedindex.UnitComplete}}, []typedindex.MemberInput{{Name: "one", SCIP: member}}, map[string][]byte{f.document: body})
+	members = append(members, typedindex.MemberInput{Name: "one", SCIP: member})
+	bundle, e := typedindex.BuildBundle(ctx, admission, plan, []typedindex.UnitOutcome{{Unit: f.unit, State: typedindex.UnitComplete}}, members, generated)
 	check(e)
 	check(f.state.AdvanceTypedIndex(ctx, *chunk, store.TypedExecution))
 	pub, e := typedworkspace.InstallPublication(ctx, attempt, work.Parent, admission, plan, bundle, gate)

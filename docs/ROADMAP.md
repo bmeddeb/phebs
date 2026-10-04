@@ -78,6 +78,11 @@ real Git input; complete neutral and separately authorized target closure remain
 open, including composition with the T45.8b presentation lineage. Ordinary
 managed providers remain unavailable and the design-target dimensions remain
 5,000 accepted service incarnations and 12,000,000,000 admitted source blob bytes.
+The next neutral prerequisite composes the real operator API/store and physical
+two-member navigation with the production resolver, plus the existing Settings
+HTTP client against a real handler. Fixture-authored SCIP and client transport
+checks do not establish native generation, rendered authenticated Settings,
+complete neutral acceptance or the separately authorized target closure.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

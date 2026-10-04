@@ -15363,6 +15363,15 @@ source/operator/extraction/restore checks pass, with independent review finding
 all severity counts zero. Full T45.9 acceptance remains open; these checks do not
 establish native generation, installed Settings parity or product-scale closure.
 
+The next neutral slice composes the real operator API and store with a
+fixture-authored physical two-member publication and production routed resolver,
+and separately runs the unchanged T45.8b HTTP client against the real handler.
+This checks parent/execution identity, pure preview, exact enqueue/retry,
+cross-member reads, failed-coordinator visibility, stale/restore-state-clear
+refusal and unavailable providers. It does not execute native generation or
+render an authenticated Settings session.
+Full neutral and separately authorized target acceptance remain open.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,
