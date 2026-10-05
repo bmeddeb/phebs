@@ -194,10 +194,10 @@ async function run() {
   phase = 'ordinary runtime no-op boundary'; const warm = await command('warm')
   assert.deepEqual(await reads(), cold); check('ordinary polling preserves current without native replay')
   await command('stale')
-  // Only the source-authority branch carries this reason; request/selection
-  // conflicts use other 409 details.
+  // The indexed-commit transition moves the typed source and the selection
+  // revision together, so the saved enqueue is a stale selection.
   const refused = await json(page, '/api/code-navigation-indexing/enqueue', enqueue)
-  assert.equal(refused.status, 409); assert.equal(refused.body?.detail, 'indexing authority changed; refresh')
+  assert.equal(refused.status, 409); assert.equal(refused.body?.detail, 'indexing selection changed; refresh')
   for (const pathname of ['/api/find_definitions', '/api/find_references', '/api/hover']) {
     const query = pathname === '/api/find_references' ? position('b/b.go', 1, 6) : position('a/a.go', 2, 15)
     assert.equal((await json(page, pathname + query)).body.available, false)

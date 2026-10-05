@@ -230,6 +230,9 @@ That rehearsal uses `PHEBS_TYPED_NATIVE_TRANSPORT` (`ssh` or `direct`) and, for
 ssh, the closed `PHEBS_TYPED_NATIVE_SSH_TARGET` with the supplied ssh config.
 Its fixture daemon socket is `/var/run/docker.sock`. The retired Colima alias is
 not a parameter. Neither retained STOP is explained, and no allowance is spent.
+Docker 29 clears the reported AppArmor profile after creation, and `/dev/shm`
+now uses the existing 16,777,216-byte ceiling with 1,024 inodes. A direct
+rehearsal on this host then passed all eight Settings bridge checks.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

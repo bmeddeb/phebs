@@ -204,6 +204,7 @@ type inspection struct {
 	HostConfig      hostConfig
 	AppArmorProfile string
 	State           struct {
+		Status                                       string
 		Running, Paused, Restarting, OOMKilled, Dead bool
 		Pid, ExitCode                                int
 	}
@@ -229,6 +230,7 @@ func recipe(options Options, name string) config {
 		ReadonlyRootfs: true, CapDrop: []string{"ALL"}, CapAdd: []string{"SETUID", "SETGID"},
 		SecurityOpt: []string{"no-new-privileges", "apparmor=docker-default"},
 		Memory:      MemoryBytes, MemorySwap: MemoryBytes, NanoCpus: 2_000_000_000, PidsLimit: TaskLimit, ShmSize: SharedMemoryBytes,
+		Tmpfs:   map[string]string{"/dev/shm": fmt.Sprintf("rw,nosuid,nodev,noexec,size=%d,nr_inodes=1024", SharedMemoryBytes)},
 		Ulimits: []ulimit{{"nofile", DescriptorLimit, DescriptorLimit}, {"core", 0, 0}}}
 	c.HostConfig.RestartPolicy.Name = "no"
 	mount := bindMount{Type: "bind", Source: options.Inputs, Target: "/inputs", ReadOnly: true}
@@ -397,7 +399,7 @@ func (c *client) inspect(ctx context.Context, id string) (inspection, int, error
 func verify(got inspection, options Options, owner journal) error {
 	want := recipe(options, owner.Name)
 	if owner.Schema != ownerSchema || owner.Controls != options.Controls || owner.Control != options.Control || owner.Allowance != options.Allowance || !reflect.DeepEqual(owner.Scratch, options.scratch) || !containerID(got.ID) || got.Image != options.ImageID || got.Name != "/"+owner.Name || got.Config.Labels[ownerLabel] != owner.Name ||
-		owner.ContainerID != "" && got.ID != owner.ContainerID || got.AppArmorProfile != "docker-default" {
+		owner.ContainerID != "" && got.ID != owner.ContainerID || !apparmorProfileAccepted(got) {
 		return ErrRefused
 	}
 	actual := got.Config
@@ -447,6 +449,20 @@ func verify(got inspection, options Options, owner journal) error {
 }
 
 func wantWithoutHost(c config) config { c.HostConfig = hostConfig{}; return c }
+
+// Docker 29 reports docker-default only while the container is still created.
+// After start it clears AppArmorProfile. The create inspection still requires
+// the profile, and HostConfig.SecurityOpt keeps apparmor=docker-default.
+func apparmorProfileAccepted(got inspection) bool {
+	switch got.AppArmorProfile {
+	case "docker-default":
+		return true
+	case "":
+		return got.State.Status != "" && got.State.Status != "created"
+	default:
+		return false
+	}
+}
 
 // Run executes only the fixed owned supervisor in the verified Linux boundary.
 // Scratch must have been prepared and DIO-verified by the privileged host owner.

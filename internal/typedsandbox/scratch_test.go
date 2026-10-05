@@ -3,6 +3,7 @@ package typedsandbox
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -132,6 +133,9 @@ func TestEveryEffectiveRecipeFieldIsPinned(t *testing.T) {
 	a := testScratchAuthority()
 	o := Options{Inputs: "/owned/inputs", Controls: "/owned/controls-plan", Control: testControlIdentity(), Allowance: testAllowance(), ImageID: testImage, scratch: &a}
 	c := recipe(o, "owner")
+	if c.HostConfig.Tmpfs["/dev/shm"] != fmt.Sprintf("rw,nosuid,nodev,noexec,size=%d,nr_inodes=1024", SharedMemoryBytes) {
+		t.Fatal("shared memory mount is not the bounded tmpfs")
+	}
 	owner := journal{Schema: ownerSchema, Name: "owner", Controls: o.Controls, Control: o.Control, Allowance: o.Allowance, Scratch: &a}
 	good := inspection{ID: testContainer, Image: testImage, Name: "/owner", Config: wantWithoutHost(c), HostConfig: c.HostConfig, AppArmorProfile: "docker-default"}
 	for _, m := range c.HostConfig.Mounts {
@@ -161,5 +165,19 @@ func TestEveryEffectiveRecipeFieldIsPinned(t *testing.T) {
 				t.Fatal("effective configuration mutation accepted")
 			}
 		})
+	}
+	for _, status := range []string{"running", "exited"} {
+		cleared := good
+		cleared.AppArmorProfile = ""
+		cleared.State.Status = status
+		if verify(cleared, o, owner) != nil {
+			t.Fatalf("docker-cleared profile rejected after %s", status)
+		}
+	}
+	created := good
+	created.AppArmorProfile = ""
+	created.State.Status = "created"
+	if verify(created, o, owner) == nil {
+		t.Fatal("created container accepted without the apparmor profile")
 	}
 }

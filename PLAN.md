@@ -10365,3 +10365,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The socket string is the opt-in fixture's installation identity.
   Query, sync, startup, retry, publication, locks, cache and admission costs
   are unchanged.
+
+- **2026-10-05 — T45.9 Docker 29 stopped-container AppArmor profile.** Docker 29
+  reports `AppArmorProfile=docker-default` only while a container remains
+  `created`. After start it clears that field even though
+  `HostConfig.SecurityOpt` still contains `apparmor=docker-default`. The
+  post-start inspection treated the cleared field as a lost profile and
+  refused a container that had already exited 125, so the supervisor report
+  was never decoded. A created container still requires `docker-default`.
+  Any other profile name is still refused. An empty profile is accepted only
+  after the container has left the created state. No request, sync, startup,
+  retry, or publication path changes. The check is one string comparison on
+  the inspection the controller already performs.
+  The same container mount now sets `/dev/shm` to the existing 16,777,216-byte
+  shared-memory ceiling with 1,024 inodes, `noexec`, `nosuid`, and `nodev`.
+  A host tmpfs otherwise inherits an inode count from RAM, which exceeds the
+  existing 1,048,576 inode census on this 16 GiB host and stops the supervisor
+  at `shared_memory_space` before limits are verified.
