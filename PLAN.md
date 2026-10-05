@@ -10382,3 +10382,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   A host tmpfs otherwise inherits an inode count from RAM, which exceeds the
   existing 1,048,576 inode census on this 16 GiB host and stops the supervisor
   at `shared_memory_space` before limits are verified.
+
+- **2026-10-05 — T45.9 exact-commit Settings native bridge rehearsal.** Exact
+  source `5797fee6fd4257dee968e02324e30b56862386d1` rebuilt the helper, the
+  Settings fixture, and the provisioner. Installation `t459-settings-native-5`
+  binds that commit and the local linux/amd64 scratch image
+  `sha256:c1c5442274a324e5efb985e240fafcfd4e26cac4ecc5361cc922ce0bac81b571`.
+  Direct transport passed all eight bridge checks. Plan and execute both
+  exited 0 with limits verified. Warm reuse took 31,013 ms. Teardown joined,
+  drained the workspace, and left the host scratch lock with no container.
+  `spike/t459/settings_native_3.json` is the source-free receipt. This closes
+  the authenticated Settings/native bridge gate for that source. Complete
+  T45.9 acceptance, the 5,000-service product class, T45.6, and release
+  posture stay open.
+
+  **Cost.** No production request, query, sync, startup/restart, retry,
+  publication, lock, cache, schema, or admission path changes. The receipt
+  records the rehearsal; it adds no runtime work.

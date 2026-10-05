@@ -15687,6 +15687,17 @@ census stays inside its existing inode bound. The saved enqueue after the
 indexed-commit transition is refused as a changed selection. A direct
 rehearsal then passed all eight bridge checks with the container removed.
 
+Exact source `5797fee6fd4257dee968e02324e30b56862386d1` repeats that pass
+from binaries built at that commit. Installation `t459-settings-native-5`
+binds the commit and image
+`sha256:c1c5442274a324e5efb985e240fafcfd4e26cac4ecc5361cc922ce0bac81b571`.
+Plan and execute both exited 0 with limits verified. Warm reuse was 31,013 ms.
+Teardown joined and left only the host scratch lock.
+`spike/t459/settings_native_3.json` is the source-free receipt. Receipts 1 and
+2 remain byte-exact. This is the authenticated Settings/native bridge gate.
+Complete T45.9, the 5,000-service product class, T45.6, and release claims
+remain open.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,
