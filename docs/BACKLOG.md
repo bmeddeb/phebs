@@ -15649,6 +15649,27 @@ Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
 all thirteen PR paths with every severity count zero. The record-only seal
 preserves all tested inputs and leaves the failed native gate open.
 
+**T45.9 · Native phase failure attribution prerequisite** (2026-10-04) —
+separate the original controller-phase failure from deferred cleanup in the
+existing bounded private phase report. AC: closed labels identify only failed
+operations; successful/untouched phases have empty labels; primary and cleanup
+failures remain independently visible without losing joined errors, refusal
+classification, native results or the no-replay/allowance/guard rules. Existing
+Linux execution models must cover primary-only, cleanup-only, simultaneous
+failures, receipt mismatch, successful phases and cleanup-guard loss. The
+Settings fixture must retain its source-free projection. No privileged run,
+new allowance or retrospective cause claim is part of this diagnostic ticket.
+The two native STOP receipts remain unchanged and full T45.9 stays open; the
+consumed confirmation authorizes no third attempt. A later rehearsal needs
+fresh prospective source/input review and a separate bound.
+
+Implementation `f05621b0` passes full Linux normal/race models, focused command,
+static/pinned lint and documentation gates with independent zero-finding source
+and cost reviews. `spike/t459/native_failure_attribution_1.json` records the
+scoped PASS and qualified test-container setup failures. Both prior native
+receipts remain unchanged. The attribution prerequisite is complete; neither
+native bridge completion nor a cause for either STOP is established.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

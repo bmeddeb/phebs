@@ -1,0 +1,277 @@
+{
+  "schema": "phebs-t459-native-phase-attribution-v1",
+  "recorded_date": "2026-10-05",
+  "result": "PASS",
+  "scope": "Controller phase diagnostic prerequisite only; neither native bridge nor full T45.9 acceptance.",
+  "source_commit": "f05621b065c5b345e03aaccfd4cfd812496bf677",
+  "base_commit": "baa63558f35ef8b8068fa4d4bb3341932aff95f1",
+  "inputs": {
+    "PLAN.md": {
+      "sha256": "sha256:b165b4a0b956604290a215ed5ec7e9f8208560ab493f7f9eee81e7fae5729d76",
+      "bytes": 2491345
+    },
+    "docs/BACKLOG.md": {
+      "sha256": "sha256:29d81e36b8f99229f792705e5804a36ff24bfeae125f3d9b361859273e601bba",
+      "bytes": 1109141
+    },
+    "docs/ROADMAP.md": {
+      "sha256": "sha256:b58e9339127b48dfef8479befb7cb984e731dcc45af56f81320b7b04db28ff5c",
+      "bytes": 330617
+    },
+    "cmd/phebs/serve_typed_settings_native_linux_test.go": {
+      "sha256": "sha256:5b6788b9c06f251d3bdcec66a291d6dd5e4de790a239f768d6dd2cda94222ad7",
+      "bytes": 31250
+    },
+    "internal/typedexecutor/execution.go": {
+      "sha256": "sha256:6687ce6917a7eea5127bd68632f36220a4e00dd29fdd32383459c0c90c4d32af",
+      "bytes": 13478
+    },
+    "internal/typedexecutor/execution_linux_test.go": {
+      "sha256": "sha256:ae76c5ff91eb1ac52c74d2ee2b2aecfe041ce7d2f2eddf4cb9ff75fb9308c0f7",
+      "bytes": 35502
+    }
+  },
+  "binaries": {
+    "typedexecutor.test": {
+      "sha256": "sha256:0f318e6944c47b3bb504d23dc1fccd1874e88be2f7542460afc2228a856f019a",
+      "bytes": 43158998
+    },
+    "typedexecutor-race.test": {
+      "sha256": "sha256:c86f906fc981330bc39b123cae64a3b4be5d2021e7c5a27fe2b8fe939c828ce8",
+      "bytes": 52056979
+    },
+    "settings.test": {
+      "sha256": "sha256:987c05d5bee2c8cc6fbb109a736a3ffb0ddfd03669ec3fdd5f938d76f66363a1",
+      "bytes": 79102408
+    }
+  },
+  "toolchain": {
+    "go": "go1.26.5",
+    "os_arch": "linux/arm64 and darwin/arm64",
+    "golangci_lint": "2.12.2",
+    "surrealdb": "3.2.0",
+    "surrealdb_sha256": "sha256:a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c"
+  },
+  "gates": [
+    {
+      "gate": "build-linux-executor-final",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 8.697,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata_sha256": "sha256:a8e7c12ab565477322b1f2d0cb93ae60a7880379f613063afba75c8f6955091d"
+    },
+    {
+      "gate": "build-linux-command",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 28.943,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata_sha256": "sha256:bfdc8434984d7a063c0dbfe5591198c9d96a398feec3fa3cb1ebe28873f8b02c"
+    },
+    {
+      "gate": "build-pinned-linux-race",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 48.655,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata_sha256": "sha256:44247385f35c60604950eae9d78ff2d3fb8ebe53bf15b100b4b7f6ca88102ced"
+    },
+    {
+      "gate": "linux-complete-turn-with-engine",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 5.012,
+      "log_sha256": "sha256:08286885be3736d5a90d994df25678b02a9829f22cd6b36250c6a1b5d42fbfbb",
+      "metadata_sha256": "sha256:511011c22aed579e643f6cbf05761ae537e2112015e8d87d36c138b168c18e6a"
+    },
+    {
+      "gate": "linux-full-with-fixtures",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 12.265,
+      "log_sha256": "sha256:d1fa34f0205c0b18c8622a942778c513d6b8fb625806560e452c4a677659582f",
+      "metadata_sha256": "sha256:7b0633a381cb5b3161d1ee7973841b1f6294ab4d23989f528c2e26c3a9e45dd0"
+    },
+    {
+      "gate": "linux-race-with-fixtures",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 24.326,
+      "log_sha256": "sha256:cfdeca44a7871aca95a19535862cd39be2c68265d23969c09127d3ebc1171e60",
+      "metadata_sha256": "sha256:ea2ed107d99b4f2096888007e0a19a8cb4394e01061a098d5f29961c82f9ca8b"
+    },
+    {
+      "gate": "linux-command-with-engine",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 3.397,
+      "log_sha256": "sha256:fe9ceba031f0e530f881306eb8c3406c6d236cf0f5341a44366cff781116c413",
+      "metadata_sha256": "sha256:87854661c12b57c4055b05b9371d9d26c81bda945166f5063e81d0c6cfa94263"
+    },
+    {
+      "gate": "linux-vet",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 30.53,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata_sha256": "sha256:08727d0437be8843888cdf7d0a02dad677e937176cd9ad60c91a6112fa2b8d1a"
+    },
+    {
+      "gate": "linux-lint",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 16.553,
+      "log_sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "metadata_sha256": "sha256:b2286275018071ea43bc342e5fcce53b0b847f4bf4034147fec4abd6aca9866b"
+    },
+    {
+      "gate": "darwin-package",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 27.591,
+      "log_sha256": "sha256:affb02ead2fb32dfa3ef45bf64b2b4caa37782e7623a2bee9d53ac42185a84b6",
+      "metadata_sha256": "sha256:91e3e2e56117f229f37bbbb21c95ec3d8358623c5559e5504fee4fd57ac3988f"
+    },
+    {
+      "gate": "darwin-race",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 21.581,
+      "log_sha256": "sha256:ee7dacb841a0b48f6c5e44ffad8641a87a8b978feee98291f01cb02a9ea98014",
+      "metadata_sha256": "sha256:5c94f39de076b84c9ba66521f8976ac04b524bb4ede99aa1671afa82ff6c905f"
+    },
+    {
+      "gate": "docs",
+      "result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 4.941,
+      "log_sha256": "sha256:34b0337298bdb142a21fc59f99a8d1aa3073fdb0908c38711a94a3c430e26187",
+      "metadata_sha256": "sha256:0cdc3431aacda10ed8abe1570241366d618c4de88842b3081db7874a5e6137ac"
+    }
+  ],
+  "retained_setup_failures": [
+    {
+      "gate": "linux-complete-turn",
+      "result": "FAIL",
+      "exit_code": 1,
+      "qualification": "Read-only engine input had no executable bit; executable copy in temporary container corrected the fixture.",
+      "log_sha256": "sha256:a51981323a142f4f8c1769d4a0e94f4f861ef3a45ed8d1ab9c28e6a60bb1192b"
+    },
+    {
+      "gate": "linux-command-focused",
+      "result": "FAIL",
+      "exit_code": 1,
+      "qualification": "Same missing executable engine fixture.",
+      "log_sha256": "sha256:3f58804d1021ef64a561edb890b5257b34346eed8b4bf3674142ce3e7aa0fa07"
+    },
+    {
+      "gate": "linux-full-package",
+      "result": "FAIL",
+      "exit_code": 1,
+      "qualification": "Frozen public oracle was absent from the container; read-only source mount and package working directory corrected the fixture.",
+      "log_sha256": "sha256:f52154bcae33170c45652c47248f5560ef2a942dd72a5f33d13d979c50bf655b"
+    }
+  ],
+  "coverage": {
+    "phase_primary_only": true,
+    "phase_cleanup_only": true,
+    "simultaneous_private_primary_and_cleanup_held": true,
+    "receipt_mismatch": true,
+    "successful_and_untouched_phases_empty": true,
+    "cleanup_guard_loss": true,
+    "allowance_cancellation_and_no_replay": true
+  },
+  "reviews": [
+    {
+      "kind": "source-correctness-security",
+      "source_commit": "f05621b065c5b345e03aaccfd4cfd812496bf677",
+      "reviewed_paths": [
+        "cmd/phebs/serve_typed_settings_native_linux_test.go",
+        "internal/typedexecutor/execution.go",
+        "internal/typedexecutor/execution_linux_test.go"
+      ],
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "independently_reran_tests": false
+    },
+    {
+      "kind": "source-evidence-steady-state-cost",
+      "source_commit": "f05621b065c5b345e03aaccfd4cfd812496bf677",
+      "reviewed_paths": [
+        "PLAN.md",
+        "docs/BACKLOG.md",
+        "docs/ROADMAP.md",
+        "cmd/phebs/serve_typed_settings_native_linux_test.go",
+        "internal/typedexecutor/execution.go",
+        "internal/typedexecutor/execution_linux_test.go"
+      ],
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "independently_reran_tests": false,
+      "private_review_sha256": "sha256:4da65ec1da16827d1e42f9580a25c1ae5139de4ada09f9b11ed3ace6336f41c2"
+    }
+  ],
+  "operations": {
+    "primary": [
+      "phase_fence",
+      "host_prepare",
+      "host_verify",
+      "control_install",
+      "control_open",
+      "launch_fence",
+      "native_run",
+      "completion_verify"
+    ],
+    "cleanup": [
+      "mutation_lock",
+      "native_cleanup",
+      "control_close"
+    ],
+    "cleanup_selection": "First failing cleanup operation in execution order; all errors remain joined.",
+    "empty": "Successful or untouched side of a phase.",
+    "authority": false,
+    "raw_errors_paths_watchdogs_worker_envelopes_projected": false
+  },
+  "cost": {
+    "retained_metadata_bytes_on_64bit": 64,
+    "maximum_added_json_bytes_per_affected_phase": 77,
+    "work": "Constant literal assignments inside existing guards; transient value copies excluded from retained metadata count.",
+    "additional_io_scans_hashing_locks_guarded_scope_caches_children_durable_writes": false
+  },
+  "historical_receipts": [
+    {
+      "receipt": "settings_native_1.json",
+      "sha256": "sha256:c303f627af5ebc9e069f1b4dae4bcfb44bad8056b37e3768e990584d4ec4dc2a",
+      "unchanged": true
+    },
+    {
+      "receipt": "settings_native_2.json",
+      "sha256": "sha256:7bf85c3e88d2d7602aa8bed86581d46313b3c3b78c518a16555cc1f8bebd8d05",
+      "unchanged": true
+    }
+  ],
+  "execution_boundaries": {
+    "native_operations_in_linux_models": "Substituted through the existing private seam; real database, custody, control and publication paths remain.",
+    "privileged_native_rehearsal_executed": false,
+    "browser_fixtures_executed": false,
+    "option_dependent_native_and_browser_tests": "Skipped without flags; no fixture completion claim.",
+    "new_accepted_native_allowance": false,
+    "model_allowance_values": "Existing execution models only; no accepted native dispatch.",
+    "confirmation_remaining": 0,
+    "native_stop_causes": "Unestablished.",
+    "native_bridge_and_full_t459_acceptance": "OPEN",
+    "target_scale_release": "Unchanged and unestablished.",
+    "hosted_ci": "Hosted Actions disabled; local checks only.",
+    "native_vm_profile": "Remained stopped; unchanged.",
+    "main_checkout": "Branch, core.bare=false and pre-existing history.txt preserved."
+  }
+}

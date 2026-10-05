@@ -58,11 +58,13 @@ type typedSettingsNativeConfigSubset struct {
 // The public report's fixed-size successful phase/resource projection keeps a
 // single frame below the protocol cap; no arbitrary watchdog/output is sent.
 type typedSettingsNativePhase struct {
-	Phase      typedindex.Action      `json:"phase"`
-	ExitCode   int                    `json:"exit_code"`
-	Removed    bool                   `json:"removed"`
-	StopReason string                 `json:"stop_reason"`
-	Resources  typedsandbox.Resources `json:"resources"`
+	Phase            typedindex.Action      `json:"phase"`
+	ExitCode         int                    `json:"exit_code"`
+	Removed          bool                   `json:"removed"`
+	StopReason       string                 `json:"stop_reason"`
+	Resources        typedsandbox.Resources `json:"resources"`
+	FailureOperation string                 `json:"failure_operation,omitempty"`
+	CleanupOperation string                 `json:"cleanup_operation,omitempty"`
 }
 
 var typedSettingsInstallationPattern = regexp.MustCompile(`^/var/lib/phebs-typed-acceptance/[a-z][a-z0-9-]{0,31}$`)
@@ -444,7 +446,7 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 			event["root"], event["epoch"], event["attemptDigest"], event["leaseDigest"], event["profileDigest"] = current.Pointer.RootDigest, current.Pointer.Epoch, current.AttemptDigest, current.LeaseDigest, profile.Digest()
 			var phaseReports [2]typedSettingsNativePhase
 			for i, phase := range outcome.Reports {
-				phaseReports[i] = typedSettingsNativePhase{phase.Phase, phase.ExitCode, phase.Removed, phase.StopReason, phase.Resources}
+				phaseReports[i] = typedSettingsNativePhase{phase.Phase, phase.ExitCode, phase.Removed, phase.StopReason, phase.Resources, phase.FailureOperation, phase.CleanupOperation}
 			}
 			event["reports"], event["lookups"], event["reportCount"] = phaseReports, lookups.Load(), reports.Load()
 			event["definitionPath"], event["referencePath"], event["sourceBytes"], event["sourceFiles"] = "b/b.go", "a/a.go", 176, 5
@@ -544,7 +546,7 @@ func typedSettingsNativeSettle(ctx context.Context, t *testing.T, state *store.S
 			if r.err != nil {
 				var phases [2]typedSettingsNativePhase
 				for i, phase := range r.outcome.Reports {
-					phases[i] = typedSettingsNativePhase{phase.Phase, phase.ExitCode, phase.Removed, phase.StopReason, phase.Resources}
+					phases[i] = typedSettingsNativePhase{phase.Phase, phase.ExitCode, phase.Removed, phase.StopReason, phase.Resources, phase.FailureOperation, phase.CleanupOperation}
 				}
 				// Keep classification and bounded public measurements; never log
 				// the private error, watchdog or worker failure envelope.

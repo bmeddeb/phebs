@@ -214,6 +214,18 @@ The bounded confirmation is consumed; no third native attempt or merge occurs.
 Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
 all thirteen paths with zero findings. The record-only seal preserves the
 executed inputs; native acceptance and merge readiness remain open.
+The next T45.9 prerequisite preserves closed original-failure and
+cleanup-failure operation labels in the existing private phase report. It adds
+no retry, new allowance or privileged execution. Existing execution models
+must prove successful labels remain empty, simultaneous errors remain joined,
+and guard/no-replay rules hold. This prepares reliable attribution; neither
+retained native STOP has an established underlying cause, and a later rehearsal
+still needs a fresh prospective bound and exact-source/input review.
+The diagnostic prerequisite passes full Linux normal/race models and scoped
+static/documentation gates at `f05621b0`, with independent zero-finding reviews;
+`spike/t459/native_failure_attribution_1.json` records its limited PASS. It runs
+no privileged native or browser fixture and preserves both prior native receipts.
+The next native attribution rehearsal and full T45.9 acceptance remain open.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
