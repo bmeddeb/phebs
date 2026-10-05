@@ -333,7 +333,7 @@ run().catch(error => {
     summary = summary.replaceAll(secret, '[redacted]')
   }
   fs.writeFileSync(receipt + '.failure.txt', recorded, { flag: 'wx', mode: 0o600 })
-  console.error(summary); process.exitCode = 1
+  console.error(summary.slice(0, 1024)); process.exitCode = 1
 }).finally(async () => {
   clearTimeout(timer); lines.close(); child.stdin.end()
   if (browser) await browser.close()

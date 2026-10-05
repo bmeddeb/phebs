@@ -10146,7 +10146,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Source drift refuses saved enqueue and cached navigation. Join runtime before
   guarded repository deletion and bounded production lifecycle drainage.
   Both browser drivers redact readiness credentials from failure summaries as
-  well as retained diagnostics; this adds bounded string replacements only.
+  well as retained diagnostics; this adds three secret replacements and a
+  1,024-character console-summary cap, with no extra child or request.
   The existing nine-state/UTF-16 fixture remains fixture-authored supporting
   evidence; this bridge neither pauses nor writes native stages. Public reports
   expose no shared-clock timestamps, so original-allowance identity remains
