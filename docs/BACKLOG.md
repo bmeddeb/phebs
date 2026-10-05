@@ -15670,6 +15670,23 @@ scoped PASS and qualified test-container setup failures. Both prior native
 receipts remain unchanged. The attribution prerequisite is complete; neither
 native bridge completion nor a cause for either STOP is established.
 
+The next Settings native rehearsal uses the existing acceptance transport
+parameters: `PHEBS_TYPED_NATIVE_TRANSPORT=ssh` or `direct`, and for ssh the
+closed `PHEBS_TYPED_NATIVE_SSH_TARGET` plus the supplied ssh config. The fixture
+daemon socket is `/var/run/docker.sock`. Direct mode supplies stdin through a
+private FIFO so the fixture can reopen it. The retired Colima alias is not a
+rehearsal parameter. This correction spends no allowance and does not explain
+either retained STOP.
+
+Docker 29 clears `AppArmorProfile` after a container leaves the created state.
+Post-start inspection now accepts that empty profile while a created container
+still requires `docker-default` and any other name is refused.
+`HostConfig.SecurityOpt` remains the durable apparmor selection. `/dev/shm`
+uses that same 16,777,216-byte ceiling with 1,024 inodes so the supervisor
+census stays inside its existing inode bound. The saved enqueue after the
+indexed-commit transition is refused as a changed selection. A direct
+rehearsal then passed all eight bridge checks with the container removed.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

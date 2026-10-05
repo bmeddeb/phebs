@@ -3,20 +3,47 @@
 // The unchanged Settings UI admits a request; the installed production runtime
 // produces the native bytes. This is a functional bridge, not a pixel gate.
 const assert = require('node:assert/strict')
-const { spawn } = require('node:child_process')
+const { spawn, spawnSync } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
 const readline = require('node:readline')
 const { once } = require('node:events')
 const { unusedPort, join, forward, fetchJSON: json, reportFailure } = require('./settings_driver.cjs')
 const [dependencies, chrome, sshConfig, fixture, assets, installation, configDigest, receipt] = process.argv.slice(2)
-for (const value of [dependencies, chrome, sshConfig, fixture, assets, installation, receipt]) assert(value && path.isAbsolute(value), 'explicit absolute paths required')
+const transport = process.env.PHEBS_TYPED_NATIVE_TRANSPORT
+const sshTarget = process.env.PHEBS_TYPED_NATIVE_SSH_TARGET || ''
+assert(transport === 'ssh' || transport === 'direct', 'transport unconfigured')
+if (transport === 'ssh') {
+  assert(sshConfig && path.isAbsolute(sshConfig), 'explicit absolute paths required')
+  assert(/^(?:[A-Za-z0-9_][A-Za-z0-9._-]{0,31}@)?[A-Za-z0-9][A-Za-z0-9.-]{0,252}$/.test(sshTarget), 'ssh target')
+}
+for (const value of [dependencies, chrome, fixture, assets, installation, receipt]) assert(value && path.isAbsolute(value), 'explicit absolute paths required')
 for (const value of [fixture, assets]) assert(/^\/[A-Za-z0-9/_.-]+$/.test(value), 'unsafe remote fixture path')
 assert(/^\/var\/lib\/phebs-typed-acceptance\/[a-z][a-z0-9-]{0,31}$/.test(installation), 'closed neutral installation required')
 assert(/^sha256:[a-f0-9]{64}$/.test(configDigest), 'explicit installation digest required')
 const { chromium, expect } = require(path.join(dependencies, '@playwright/test'))
-const sshArgs = ['-F', sshConfig, '-o', 'BatchMode=yes', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', 'colima-phebs-t451a']
-const child = spawn('ssh', [...sshArgs, `sudo -n env PATH=${path.dirname(fixture)}:/usr/bin:/bin TMPDIR=${installation}/tmp ${fixture} -test.run '^TestTypedSettingsNativeLinux$' -test.v -test.timeout 15m -typed-settings-browser-ui ${assets} -typed-settings-native-root ${installation} -typed-settings-native-config-sha256 ${configDigest}`], { stdio: ['pipe', 'pipe', 'pipe'] })
+function shQuote(text) { return `'${String(text).replaceAll("'", `'"'"'`)}'` }
+const fixtureArgs = [fixture, '-test.run', '^TestTypedSettingsNativeLinux$', '-test.v', '-test.timeout', '15m', '-typed-settings-browser-ui', assets, '-typed-settings-native-root', installation, '-typed-settings-native-config-sha256', configDigest]
+const fixtureEnv = [`PATH=${path.dirname(fixture)}:/usr/bin:/bin`, `TMPDIR=${installation}/tmp`]
+let sshArgs, child
+if (transport === 'direct') {
+  // Node's stdio sockets cannot be reopened by the fixture. A FIFO matches the
+  // pipe contract the test uses for SSH stdin.
+  const fifo = `/tmp/phebs-settings-native-${process.pid}.stdin`
+  fs.rmSync(fifo, { force: true })
+  assert(spawnSync('mkfifo', ['-m', '600', fifo]).status === 0, 'fixture stdin pipe')
+  const held = fs.openSync(fifo, fs.constants.O_RDWR)
+  const stdio = [held, 'pipe', 'pipe']
+  const env = { ...process.env, PATH: `${path.dirname(fixture)}:/usr/bin:/bin`, TMPDIR: `${installation}/tmp` }
+  child = process.getuid() === 0
+    ? spawn(fixture, fixtureArgs.slice(1), { env, stdio })
+    : spawn('sudo', ['-n', 'env', ...fixtureEnv, ...fixtureArgs], { stdio })
+  fs.closeSync(held)
+  child.stdin = fs.createWriteStream(fifo)
+} else {
+  sshArgs = ['-F', sshConfig, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'RequestTTY=no', '-o', 'ConnectTimeout=10', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', sshTarget]
+  child = spawn('ssh', [...sshArgs, '--', ['sudo', '-n', 'env', ...fixtureEnv, ...fixtureArgs].map(shQuote).join(' ')], { stdio: ['pipe', 'pipe', 'pipe'] })
+}
 let tunnel, browser, ready, phase = 'fixture startup', outputBytes = 0, lineBytes = 0, diagnostics = '', fatal, wake
 const frames = [], browserErrors = []
 const exited = once(child, 'exit').catch(() => [-1])
@@ -61,8 +88,8 @@ const check = name => { results.checks.push(name); phase = name }
 async function run() {
   ready = await frame(); assert.equal(ready.event, 'ready')
   assert(Number.isInteger(ready.port) && ready.port > 0 && ready.port < 65536)
-  const port = await unusedPort()
-  tunnel = forward(sshArgs, [`${port}:127.0.0.1:${ready.port}`], () => { fatal ??= new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
+  const port = transport === 'direct' ? ready.port : await unusedPort()
+  if (transport === 'ssh') tunnel = forward(sshArgs, [`${port}:127.0.0.1:${ready.port}`], () => { fatal ??= new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
   const origin = `https://127.0.0.1:${port}`
   browser = await chromium.launch({ executablePath: chrome, headless: true })
   results.browser = browser.version()
@@ -167,10 +194,10 @@ async function run() {
   phase = 'ordinary runtime no-op boundary'; const warm = await command('warm')
   assert.deepEqual(await reads(), cold); check('ordinary polling preserves current without native replay')
   await command('stale')
-  // Only the source-authority branch carries this reason; request/selection
-  // conflicts use other 409 details.
+  // The indexed-commit transition moves the typed source and the selection
+  // revision together, so the saved enqueue is a stale selection.
   const refused = await json(page, '/api/code-navigation-indexing/enqueue', enqueue)
-  assert.equal(refused.status, 409); assert.equal(refused.body?.detail, 'indexing authority changed; refresh')
+  assert.equal(refused.status, 409); assert.equal(refused.body?.detail, 'indexing selection changed; refresh')
   for (const pathname of ['/api/find_definitions', '/api/find_references', '/api/hover']) {
     const query = pathname === '/api/find_references' ? position('b/b.go', 1, 6) : position('a/a.go', 2, 15)
     assert.equal((await json(page, pathname + query)).body.available, false)

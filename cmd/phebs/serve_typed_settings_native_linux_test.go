@@ -348,7 +348,7 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 		}
 		return filepath.Join(*typedSettingsNativeRoot, "bundle"), bytes.Clone(inventoryRaw), nil
 	}
-	deps := &serveDeps{ctx: runtimeCtx, cancel: stopRuntime, cfg: &config.Config{Server: config.Server{DataDir: *typedSettingsNativeRoot}}, st: state, startup: &serveOwners{}, exact: &serveExact{}, typedInstallation: &typedServeInstallation{Workspace: workspace, Socket: "/run/docker.sock", Image: cfg.ImageSHA256, Bundle: bundle}}
+	deps := &serveDeps{ctx: runtimeCtx, cancel: stopRuntime, cfg: &config.Config{Server: config.Server{DataDir: *typedSettingsNativeRoot}}, st: state, startup: &serveOwners{}, exact: &serveExact{}, typedInstallation: &typedServeInstallation{Workspace: workspace, Socket: "/var/run/docker.sock", Image: cfg.ImageSHA256, Bundle: bundle}}
 	deps.runBackground = func(run func()) { workers.Add(1); go func() { defer workers.Done(); run() }() }
 	deps.stopBackground = joinRuntime
 	check(wireServeLifecycle(deps))
