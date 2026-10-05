@@ -288,6 +288,8 @@ async function run() {
     await page.evaluate(({ theme, density }) => { localStorage.setItem('phebs-theme', theme); localStorage.setItem('phebs-density', density) }, { theme, density })
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Code navigation indexing', exact: true })).toBeFocused()
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.colorScheme)).toBe(theme)
+    await expect(page.getByRole('button', { name: density === 'dense' ? 'Switch to comfortable rows' : 'Switch to dense rows', exact: true })).toBeVisible()
     await page.keyboard.press('Tab'); await expect(section.getByRole('button', { name: 'Refresh indexing' })).toBeFocused()
     await page.keyboard.press('Tab'); await expect(section.getByRole('combobox', { name: 'Indexing repository' })).toBeFocused()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -308,6 +310,7 @@ async function run() {
   assert.equal((await fetchJSON(page, '/api/find_definitions' + position(publication.referencePath, 1, 0))).body.available, false)
   check('source fence and restore clearance')
   assert.deepEqual([...results.states].sort(), [...allowedStates].sort()); assert.equal(unexpectedBrowserErrors, 0)
+  assert.equal(expectedNetworkErrors, 11) // three ordinary, one dark, four CSRF, one stale, two dropped responses
   await admin.context.close(); await browser.close(); browser = undefined
   phase = 'fixture teardown'; const finished = await command('finish'); child.stdin.end()
   const [code] = await exited; assert.equal(code, 0)

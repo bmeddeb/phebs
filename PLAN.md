@@ -10099,3 +10099,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   establish no 5,000-service/12-GB supported envelope. Ordinary providers remain
   unavailable, T45.6 remains waived rather than passed, generated evidence stays
   STOP, and no target execution, release or scale claim changes.
+
+- **2026-10-04 — T45.9 rendered Settings review-oracle correction.** Verify
+  applied React theme and density after each reload, using the root color
+  scheme and the existing density button's accessible name. Require exactly
+  eleven deliberate browser network errors and exactly four successful enqueue
+  audit records so additional failures/admissions cannot pass the prior lower
+  bounds. The three external low review comments are valid; this also closes
+  the equivalent density-input-only gap. Cost adds sixteen bounded DOM checks
+  and two scalar comparisons to the fixture, with no new backend request,
+  audit read, lock, cache, child or production work at request, sync, startup,
+  retry or publication boundaries. Fresh compilation, rendered execution and
+  scoped source/evidence review remain pending. Preserve the original receipt
+  bytes; the correction will retain a separate source-bound result and does
+  not close full neutral or authorized target acceptance.

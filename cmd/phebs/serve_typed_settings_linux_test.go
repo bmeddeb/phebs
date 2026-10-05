@@ -314,8 +314,8 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 					enqueues++
 				}
 			}
-			if enqueues < 4 {
-				t.Fatal("successful first enqueue, retry, canary and dry-run audits missing", enqueues)
+			if enqueues != 4 {
+				t.Fatal("expected exactly four successful first enqueue, retry, canary and dry-run audits", enqueues)
 			}
 			event["auditEnqueues"] = enqueues
 		}
