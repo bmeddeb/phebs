@@ -10170,8 +10170,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   docs and glossary gates pass with platform/scope qualifications in
   `spike/t459/settings_native_1.json`. Earlier full Darwin command failures and
   alarms remain exact, without a full-package or baseline-cause claim. Both
-  independent pre-dispatch source and fresh-input reviews are clean; final
-  exact-candidate source/evidence review remains pending.
+  independent pre-dispatch source and fresh-input reviews are clean. Final
+  independent exact-candidate `50559254` source/evidence and cost reviews cover
+  all ten PR paths with every severity count zero. The record-only seal changes
+  no compiled, embedded, fixture, UI, tool or driver input.
 
   **Cost.** No production request/query, sync tick, startup/restart, retry/no-op,
   publication, schema, cache or admission behavior changes. Test provisioning

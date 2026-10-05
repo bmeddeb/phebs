@@ -687,5 +687,29 @@
       }
     }
   },
-  "final_source_evidence_review": "PENDING; performed on the immutable receipt/documentation candidate after execution."
+  "final_source_evidence_review": {
+    "result": "PASS",
+    "reviewed_candidate_commit": "5055925496ef91a80457b605e5d132cacbdae8d8",
+    "independent_reviewers": 2,
+    "each_severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "covered_pr_paths": 10,
+    "private_operator_scripts": 2,
+    "read_only_inspectors": 2,
+    "records": {
+      "review-final-50559254-correctness.json": {
+        "bytes": 9192,
+        "sha256": "sha256:4d86190d7e3d5cecf82f28ea12b9fd40258865cef66cdb6d1fddaf78e7f83f6d"
+      },
+      "review-cost-final-50559254.json": {
+        "bytes": 13987,
+        "sha256": "sha256:1fa10c4da5ed83703f47424d85772f2ab6c946b92efd631a70ab68238fc6f227"
+      }
+    },
+    "seal_changes": "Review record and owning documentation only; no compiled, embedded, fixture, UI, tool, archive or driver input changes."
+  }
 }

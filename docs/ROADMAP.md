@@ -189,7 +189,9 @@ Exact source `c1ba670d` passes six native bridge checks, one lookup/report,
 Independent identity-bound operator teardown and the legacy rendered regression
 pass; failed attempts and earlier broad command failures remain qualified in
 `spike/t459/settings_native_1.json`. Scoped machine and pre-dispatch reviews pass;
-final exact-candidate evidence review remains pending. The single-Publish tiny neutral
+final independent exact-candidate `50559254` source/evidence and cost reviews
+cover all ten paths with every severity count zero, preserving all tested inputs.
+The single-Publish tiny neutral
 bridge does not close complete neutral or separately authorized target
 acceptance, successor replacement, T45.6 or any scale/release boundary.
 T45.1a's reviewed neutral harness gate is now PASS at source
