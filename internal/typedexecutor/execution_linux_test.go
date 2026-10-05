@@ -312,7 +312,11 @@ func installNeutralNative(t *testing.T, f fixture, w wireFixture, fail string) (
 		return r, nil
 	}
 	f.c.native.verify = func(context.Context, typedsandbox.HostScratchOptions) (typedsandbox.HostScratchReceipt, error) {
-		return *receipt, add("verify")
+		observed := *receipt
+		if fail == "verify-mismatch" {
+			observed.ObservedDirectIO = false
+		}
+		return observed, add("verify")
 	}
 	cleanups := 0
 	f.c.native.cleanup = func(context.Context, typedsandbox.HostScratchOptions) error {
@@ -365,17 +369,52 @@ func installNeutralNative(t *testing.T, f fixture, w wireFixture, fail string) (
 
 func TestTypedExecutorCompleteTurn(t *testing.T) {
 	endpoint := testServer(t)
-	for n, fail := range []string{"", "prepare", "verify", "run-plan", "complete-plan", "advance", "run-execute", "complete-execute", "cleanup", "cleanup-execute", "quiescent"} {
+	for n, fail := range []string{"", "prepare", "verify", "run-plan", "complete-plan", "advance", "run-execute", "complete-execute", "cleanup", "cleanup-execute", "quiescent", "verify-mismatch", "prepare-cleanup-held"} {
 		t.Run("prefix-"+fail, func(t *testing.T) {
 			f, w := completeFixture(t, endpoint, "turn"+string(rune('a'+n)))
-			events, begins := installNeutralNative(t, f, w, fail)
+			nativeFailure := fail
+			if fail == "prepare-cleanup-held" {
+				nativeFailure = "prepare"
+			}
+			events, begins := installNeutralNative(t, f, w, nativeFailure)
+			var primaryErr error
+			if fail == "prepare-cleanup-held" {
+				primaryErr = errors.New("private primary failure")
+				f.c.native.prepare = func(context.Context, typedsandbox.HostScratchOptions, *lifecycle.Gate) (typedsandbox.HostScratchReceipt, error) {
+					return typedsandbox.HostScratchReceipt{}, primaryErr
+				}
+				f.c.native.quiescent = func(context.Context, typedsandbox.RecoveryOptions) error { return ErrHeld }
+			}
 			out, e := f.c.Execute(t.Context(), f.chunk, f.source, f.raw)
+			operations := map[string]string{"prepare": "host_prepare", "verify": "host_verify", "verify-mismatch": "host_verify", "prepare-cleanup-held": "host_prepare", "run-plan": "native_run", "complete-plan": "completion_verify", "run-execute": "native_run", "complete-execute": "completion_verify"}
+			for i, report := range out.Reports {
+				phase := 0
+				if strings.HasSuffix(fail, "execute") {
+					phase = 1
+				}
+				wantOperation, wantCleanup := "", ""
+				if i == phase {
+					wantOperation = operations[fail]
+					if fail == "cleanup" || fail == "cleanup-execute" || fail == "quiescent" || fail == "prepare-cleanup-held" {
+						wantCleanup = "native_cleanup"
+					}
+				}
+				if report.FailureOperation != wantOperation || report.CleanupOperation != wantCleanup {
+					t.Fatal("phase failure attribution lost", i, report.FailureOperation, report.CleanupOperation)
+				}
+			}
 			if fail != "" {
 				if e == nil || out.Pointer.Epoch != 0 {
 					t.Fatal("failure published", out, e)
 				}
 				if *begins != 1 {
 					t.Fatal("allowance count", *begins)
+				}
+				if (fail == "verify-mismatch" || fail == "prepare-cleanup-held") && !errors.Is(e, ErrHeld) {
+					t.Fatal("custody refusal lost", e)
+				}
+				if primaryErr != nil && !errors.Is(e, primaryErr) {
+					t.Fatal("primary failure lost through cleanup", e)
 				}
 				if fail == "cleanup" || fail == "cleanup-execute" {
 					if !errors.Is(e, typedsandbox.ErrCustody) {
@@ -576,6 +615,9 @@ func TestTypedExecutorCleanupNeedsGuard(t *testing.T) {
 	out, e := f.c.Execute(t.Context(), f.chunk, f.source, f.raw)
 	if e == nil || out.Pointer.Epoch != 0 {
 		t.Fatal("lost guard accepted")
+	}
+	if out.Reports[0].FailureOperation != "" || out.Reports[0].CleanupOperation != "mutation_lock" {
+		t.Fatal("cleanup guard failure misattributed")
 	}
 	if slices.Contains(*events, "quiescent") || slices.Contains(*events, "cleanup") {
 		t.Fatal("mutation without guard", *events)

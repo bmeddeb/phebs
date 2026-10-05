@@ -10302,3 +10302,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   zero. The record-only review seal changes no compiled, embedded, fixture or
   driver input. It certifies this STOP record, not native acceptance; merge
   readiness and complete T45.9 remain open.
+
+- **2026-10-04 — T45.9 native phase failure attribution prerequisite.** The
+  corrected Settings bridge's retained `custody_held` STOP cannot distinguish
+  the original phase failure from a deferred cleanup refusal. The planning
+  report shows entry into the controller phase, not a verified native launch;
+  absent controls and later custody observations do not establish its cause.
+  Add two closed operation labels to the existing private `PhaseReport`:
+  `FailureOperation` captures the operation whose error preceded cleanup;
+  `CleanupOperation` captures the first cleanup error in mutation-lock,
+  native-cleanup, control-close order. Each is empty when its side succeeds,
+  including an untouched phase. The fixture projects only these labels and
+  its existing bounded public resource fields. Raw errors, paths, watchdogs
+  and worker failure envelopes remain excluded. Original errors stay joined
+  in the same order; custody, settlement, cancellation, pins, guards, shared
+  300-second allowance and no-replay rules are unchanged. Existing Linux
+  execution models cover primary-only, cleanup-only, simultaneous failures,
+  receipt mismatch, successful phases and lost cleanup guards. This is an
+  attribution prerequisite, not a fix or retrospective cause for either STOP.
+  No privileged execution or fresh allowance is part of this ticket; the
+  consumed confirmation remains consumed, and any later rehearsal requires
+  its own prospective exact-source/input review and bound. Prior receipts,
+  failed custody, complete T45.9, target, scale and release gates remain exact.
+  Cost: each active typed phase adds constant assignments of closed string
+  literals and two string headers per retained phase report (64 bytes across
+  its two reports, excluding transient value copies). A failure frame adds
+  fewer than 128 bytes per phase; empty fields are omitted from JSON, preserving
+  successful projections. No new scan, hashing, I/O, lock acquisition/hold,
+  cache, goroutine, child, store mutation or durable write occurs. Query/request,
+  sync, startup/restart, retry/no-op and publication costs are unchanged;
+  ordinary serve still has no installed typed runtime.

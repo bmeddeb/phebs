@@ -33,10 +33,15 @@ type PhaseReport struct {
 	Resources  typedsandbox.Resources
 	Watchdog   *typedsandbox.WatchdogReport
 	Failure    *provider.Failure
+	// Closed controller operation names preserve the original failure separately
+	// from cleanup. Cleanup names its first failed operation in execution order.
+	// Empty means that side of the phase returned no error.
+	FailureOperation string `json:",omitempty"`
+	CleanupOperation string `json:",omitempty"`
 }
 
-func phaseReport(ctx context.Context, i provider.Invocation, selection []byte, r typedsandbox.Result) PhaseReport {
-	out := PhaseReport{Phase: i.Phase, ExitCode: r.ExitCode, Removed: r.Removed, StopReason: r.StopReason, Resources: r.Resources, Watchdog: r.Watchdog}
+func phaseReport(ctx context.Context, i provider.Invocation, selection []byte, r typedsandbox.Result, out PhaseReport) PhaseReport {
+	out.Phase, out.ExitCode, out.Removed, out.StopReason, out.Resources, out.Watchdog = i.Phase, r.ExitCode, r.Removed, r.StopReason, r.Resources, r.Watchdog
 	// Failed workers may carry a strict bounded diagnostic envelope. A successful
 	// decoded payload without a completion token is deliberately not adopted.
 	if ctx.Err() == nil && r.ExitCode != 0 && len(r.Stdout) > 0 {
@@ -181,8 +186,8 @@ func (c *Controller) Execute(ctx context.Context, chunk store.GenerationChunk, s
 	host := typedsandbox.HostScratchOptions{Base: typedsandbox.HostBaseIdentity{Device: c.host.Device, Inode: c.host.Inode, BlockSize: c.host.BlockSize}, RequestDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest, Socket: c.config.Socket, MkfsDigest: tools.MkfsDigest}
 	invocation := provider.Invocation{Parent: w.Parent, Profile: profile, Inventory: metadata.Inventory, Allowance: allowance, Phase: typedindex.Plan}
 	spec := typedworkspace.ControlSpec{Allowance: allowance, Phase: typedworkspace.ControlsPlanning, Parent: w.Parent, Profile: profile, InventoryRaw: metadata.InventoryRaw}
-	planning, err := c.phase(ctx, t, chunk, p.Manifest, metadata.Inputs, spec, host)
-	out.Reports[0] = phaseReport(ctx, invocation, metadata.Selection, planning)
+	planning, report, err := c.phase(ctx, t, chunk, p.Manifest, metadata.Inputs, spec, host)
+	out.Reports[0] = phaseReport(ctx, invocation, metadata.Selection, planning, report)
 	if err != nil {
 		return out, err
 	}
@@ -201,8 +206,8 @@ func (c *Controller) Execute(ctx context.Context, chunk store.GenerationChunk, s
 	}
 	invocation.Execution, invocation.Plan, invocation.Allowance, invocation.Phase = execution, plan, advanced, typedindex.Execute
 	spec.Execution, spec.Plan, spec.Allowance, spec.Phase = execution, plan, advanced, typedworkspace.ControlsExecution
-	result, err := c.phase(ctx, t, chunk, p.Manifest, metadata.Inputs, spec, host)
-	out.Reports[1] = phaseReport(ctx, invocation, metadata.Selection, result)
+	result, report, err := c.phase(ctx, t, chunk, p.Manifest, metadata.Inputs, spec, host)
+	out.Reports[1] = phaseReport(ctx, invocation, metadata.Selection, result, report)
 	if err != nil {
 		return out, err
 	}
@@ -275,13 +280,17 @@ func sandboxControl(r typedworkspace.ControlRef) typedsandbox.ControlIdentity {
 	return typedsandbox.ControlIdentity{Phase: string(r.Identity.Phase), PlanningDigest: r.Identity.PlanningDigest, AttemptDigest: r.Identity.AttemptDigest, RequestDigest: r.Identity.RequestDigest, Device: r.Directory.Device, Inode: r.Directory.Inode, SealDigest: r.Seal.Digest}
 }
 
-func (c *Controller) phase(ctx context.Context, t *executionTurn, chunk store.GenerationChunk, m typedworkspace.OwnerManifest, inputs typedworkspace.Receipt, spec typedworkspace.ControlSpec, host typedsandbox.HostScratchOptions) (result typedsandbox.Result, err error) {
+func (c *Controller) phase(ctx context.Context, t *executionTurn, chunk store.GenerationChunk, m typedworkspace.OwnerManifest, inputs typedworkspace.Receipt, spec typedworkspace.ControlSpec, host typedsandbox.HostScratchOptions) (result typedsandbox.Result, report PhaseReport, err error) {
 	id := m.Identity
 	recovery := typedsandbox.RecoveryOptions{Socket: c.config.Socket, ImageID: c.config.Image, Inputs: filepath.Join(c.config.Workspace, id.RelativeName(), inputs.Name), PlanningDigest: id.PlanningDigest, AttemptDigest: id.AttemptDigest}
 	var pin *typedworkspace.Controls
+	operation := "phase_fence"
 	// One cleanup obligation, one stop deadline. Never mutate custody without
 	// reacquiring the lifecycle guard; close the attempt pin last on every path.
 	defer func() {
+		if err != nil {
+			report.FailureOperation = operation
+		}
 		cleanupCtx, cancel := stopContext(ctx)
 		defer cancel()
 		lockErr := t.acquire(cleanupCtx)
@@ -293,38 +302,53 @@ func (c *Controller) phase(ctx context.Context, t *executionTurn, chunk store.Ge
 		if pin != nil {
 			closeErr = pin.Close()
 		}
+		switch {
+		case lockErr != nil:
+			report.CleanupOperation = "mutation_lock"
+		case cleanupErr != nil:
+			report.CleanupOperation = "native_cleanup"
+		case closeErr != nil:
+			report.CleanupOperation = "control_close"
+		}
 		err = errors.Join(err, lockErr, cleanupErr, closeErr)
 	}()
 	if _, err = c.config.Store.BeginTypedIndex(ctx, chunk); err != nil {
-		return result, err
+		return result, report, err
 	}
+	operation = "host_prepare"
 	spec.Scratch, err = c.native.prepare(ctx, host, c.gates[c.host.Device])
 	if err != nil {
-		return result, err
+		return result, report, err
 	}
+	operation = "host_verify"
 	observed, err := c.native.verify(ctx, host)
 	if err != nil || observed != spec.Scratch {
-		return result, errors.Join(ErrHeld, err)
+		return result, report, errors.Join(ErrHeld, err)
 	}
+	operation = "control_install"
 	ref, err := typedworkspace.InstallControls(ctx, c.config.Workspace, id, spec, c.gates[c.workspace.Device])
 	if err != nil {
-		return result, err
+		return result, report, err
 	}
+	operation = "control_open"
 	pin, err = typedworkspace.OpenControls(ctx, c.config.Workspace, id, spec, ref)
 	if err != nil {
-		return result, err
+		return result, report, err
 	}
+	operation = "launch_fence"
 	if _, err = c.config.Store.BeginTypedIndex(ctx, chunk); err != nil {
-		return result, err
+		return result, report, err
 	}
 	options := typedsandbox.Options{Socket: c.config.Socket, ImageID: c.config.Image, Inputs: recovery.Inputs, Controls: pin.Path(), Control: sandboxControl(pin.Reference()), Allowance: spec.Allowance}
 	t.unlock()
+	operation = "native_run"
 	result, err = c.native.run(ctx, options, spec.Scratch.Authority)
 	if result.StopReason == "wall_limit" {
 		err = errors.Join(typedindex.WallLimit, err)
 	}
 	if err == nil {
+		operation = "completion_verify"
 		err = c.native.complete(spec.Allowance, options.Control, result)
 	}
-	return result, err
+	return result, report, err
 }
