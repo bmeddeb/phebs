@@ -222,7 +222,7 @@
     {
       "gate": "owning documentation and glossary",
       "status": "PASS",
-      "log": "docs-evidence.log"
+      "log": "docs-cost-correction.log"
     }
   ],
   "independent_source_review": {
@@ -313,6 +313,10 @@
     "docs-evidence.log": {
       "sha256": "sha256:b2b930d19aac565b1f042e3a64ca166b9b51b84074b150999e0e24c60eb4a601",
       "bytes": 239
+    },
+    "docs-cost-correction.log": {
+      "sha256": "sha256:2876b10b5e3775e84c868094ddb6a64df905644ec25749000accb8e1f88b830e",
+      "bytes": 239
     }
   },
   "cleanup": {
@@ -325,7 +329,7 @@
     "raw_external_cleanup_results_retained": true,
     "credentials_retained": false
   },
-  "cost": "Sixteen bounded DOM oracles across eight appearances and two scalar comparisons; no new backend request, audit read, lock, cache, concurrency, memory/disk allowance, child or production request/sync/startup/retry/publication work.",
+  "cost": "Adds sixteen bounded DOM oracles and one final network-error comparison; replaces the existing audit lower-bound comparison with equality and moves the existing unexpected-error comparison after closure. No new backend request, audit read, lock, cache, concurrency, memory/disk allowance, child or production request/sync/startup/retry/publication work.",
   "limits": [
     "Historical receipt1 and its broader Darwin completed T42.2 cleanup failure plus package alarms remain unchanged; this correction does not establish a full command-package pass or exact-base reproduction.",
     "Unchanged current UI assets; no UI source or baseline edit, canonical Noble pixels or repository-pinned Node claim.",
@@ -333,5 +337,31 @@
     "Fresh Go fixture and external driver acceptance inputs were rerun; earlier source88 PASS is not carried forward as proof for changed inputs.",
     "No Linux race rerun claimed; Darwin compiled inputs are unchanged by this Linux-only fixture correction.",
     "Full neutral and separately authorized target closure remain open; ordinary providers stay unavailable, T45.6 remains waived rather than PASS, generated evidence remains STOP, and no scale/release claim changes."
-  ]
+  ],
+  "record_review_correction": {
+    "reviewed_commit": "0e26d8cf3223cf5430677b5695cb4573b0e2710a",
+    "reviewed_files": 9,
+    "reviews": [
+      {
+        "role": "correctness/security/evidence",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      },
+      {
+        "role": "steady-state cost/docs/evidence",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 1
+        }
+      }
+    ],
+    "finding": "Distinguish one added scalar comparison from the replaced audit comparison and moved unexpected-error comparison.",
+    "correction": "Cost delta wording corrected in PLAN and this receipt; executable inputs unchanged."
+  }
 }

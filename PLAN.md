@@ -10106,9 +10106,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   eleven deliberate browser network errors and exactly four successful enqueue
   audit records so additional failures/admissions cannot pass the prior lower
   bounds. The three external low review comments are valid; this also closes
-  the equivalent density-input-only gap. Cost adds sixteen bounded DOM checks
-  and two scalar comparisons to the fixture, with no new backend request,
-  audit read, lock, cache, child or production work at request, sync, startup,
+  the equivalent density-input-only gap. Cost adds sixteen bounded DOM oracles
+  and one final network-error comparison; the existing audit lower-bound
+  comparison becomes equality, and the unexpected-error comparison moves after
+  closure. This adds no backend request, audit read, lock, cache, child or
+  production work at request, sync, startup,
   retry or publication boundaries. The console comparisons run after browser
   closure and qualify the retained Chrome runtime, rather than defining a
   portable browser-logging contract. Exact source `2014caff` passed fresh Linux
