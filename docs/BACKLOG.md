@@ -15600,6 +15600,55 @@ bounds remain unchanged. Complete neutral and separately authorized target
 closure remain open; the zero-service tiny fixture establishes no product-scale
 envelope, ordinary providers remain dark and T45.6 is not PASS.
 
+T45.9 authenticated Settings/native bridge prerequisite (2026-10-04): the next
+bounded slice connects real rendered session/CSRF preview and exact lost-response
+enqueue retry to the production serve coordinator/scheduler and actual native
+publication. Require current/parent/execution continuity, settled work and
+released growth, rendered current plus cold/warm cross-member HTTP navigation,
+ordinary polling without replay, stale-source refusal and joined bounded
+lifecycle teardown. Use freshly provisioned exact neutral authority and the
+original Git mirror; retain the prior fixture-authored nine-state/UTF-16 proof
+separately. Exact source `c1ba670d` passed six native bridge checks, unchanged
+31,011-ms warm polling, one lookup/report and joined 1,197-turn selected-owner
+drainage. Independent operator cleanup removed only fresh identity-bound custody,
+with zero containers, loops and matching processes; the VM returned to stopped.
+The extracted-helper legacy renderer passes eleven checks/nine states/eight
+appearances. Scoped machine gates and both pre-dispatch source/input reviews
+pass; failed staging/lint attempts and earlier broad command failures remain
+qualified in `spike/t459/settings_native_1.json`. Final independent
+exact-candidate `50559254` source/evidence and cost reviews cover all ten paths
+with every severity count zero; the record-only seal changes no tested input.
+This single-Publish bridge
+establishes neither successor replacement nor full neutral/authorized target
+closure; zero accepted services and 176 admitted source bytes establish no
+product-scale envelope. Production provider registration and limits stay exact.
+
+Review correction: the retained `c1ba670d` bridge assembled HTTP options,
+resolver and lifecycle status in the fixture; its prior zero-finding reviews
+do not prove production HTTP wiring. The revised test reuses existing serve
+constructors, checks typed-owner registration over authenticated HTTP, and
+accepts the finished exact enqueue before its drift-specific refusal. Ordinary
+nil admission owners match production outside the bound T42.2 runtime. Shared
+driver failure handling, tunnel checks, wider transport waits and the `ci-ui`
+self-check require fresh native and legacy execution plus a separately sealed
+receipt. Full serve/lifecycle cadence and complete T45.9 closure remain open.
+
+Corrected-source execution is **STOP**, not merge-ready. The first correction
+at `516a6f3b` stopped at its generic report gate in 61.835 seconds; the one
+diagnostic confirmation at exact `12f47126` returned `custody_held` in 52.391
+seconds. Unverified phase fields establish neither a successful native phase
+nor its underlying refusal cause. Its fresh legacy renderer passes eleven
+checks/nine states/eight appearances; Linux scoped gates, pinned lint and
+independent source/input reviews pass. Separate source-bound
+`spike/t459/settings_native_2.json` retains both failures and qualifies the
+post-restart authenticated scratch cleanup: failed SDK workspaces/installations
+and uploads remain retained, and the VM is stopped. Original teardown PASS is
+unestablished after SSH transport loss. The bounded confirmation is consumed;
+no third run, fresh native bridge PASS or complete T45.9 closure is claimed.
+Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
+all thirteen PR paths with every severity count zero. The record-only seal
+preserves all tested inputs and leaves the failed native gate open.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

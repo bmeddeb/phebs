@@ -10128,3 +10128,177 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Final independent exact-candidate `3379409f` source/evidence and cost reviews
   cover all nine PR paths with every severity count zero. The record-only seal
   changes no executable, fixture, UI or driver input from the passed source.
+
+- **2026-10-04 — T45.9 authenticated Settings/native bridge prerequisite.**
+  Connect the existing rendered administrator flow to the trusted
+  `typedServeInstallation`, `prepareServeTypedIndex` and `startServeTypedIndex`
+  composition seams. Ordinary serve retains its nil installation. The opt-in
+  Linux fixture consumes a freshly provisioned, digest-bound pristine neutral
+  seed, immutable workspace inventory/profile and original Git mirror. A real
+  session and CSRF-protected preview/enqueue must survive a discarded admitted
+  response and identical retry with one pending coordinator before workers
+  start. The production runner and scheduler then produce the native current;
+  two successful joined phase reports, exact parent/execution/current continuity,
+  settled schedule and released growth are separate gates. Render unchanged
+  Settings current and query native cross-member Definition/References/Hover
+  through the real HTTP mux. Warm reads and more than two configured scheduler
+  intervals must preserve current without another lookup or native report.
+  Source drift refuses saved enqueue and cached navigation. Join runtime before
+  guarded repository deletion and bounded production lifecycle drainage.
+  Both browser drivers redact readiness credentials from failure summaries as
+  well as retained diagnostics; this adds three secret replacements and a
+  1,024-character console-summary cap, with no extra child or request.
+  The existing nine-state/UTF-16 fixture remains fixture-authored supporting
+  evidence; this bridge neither pauses nor writes native stages. Public reports
+  expose no shared-clock timestamps, so original-allowance identity remains
+  attributed to the existing native controller proofs rather than claimed as
+  a new bridge measurement. Exact source `c1ba670d` passed all six native bridge
+  checks: one lookup/report, native plan and execute, settled current, cold/warm
+  cross-member reads and stale refusal. The measured warm wait was 31,011 ms
+  with unchanged fifteen-second cadence. Joined teardown drained the selected
+  owner in 1,197 bounded turns and retained one allowed collecting parent
+  tombstone before engine close. Independent identity-bound operator cleanup
+  observed zero containers, loops and matching processes, removed only the
+  fresh root/upload, preserved the native lock and returned the VM to stopped
+  with the default Docker context unchanged. The shared-helper legacy renderer
+  also passed eleven checks, nine states, eight appearances, exactly eleven
+  deliberate console errors and four enqueue audits. Its first attempt stopped
+  before engine launch on a missing uploaded execute bit; the same-byte staging
+  correction and separate passing receipt preserve that failure. Initial Linux
+  lint lock contention is retained beside the successful serial retry. Focused
+  Linux checks, Darwin normal/race, compilation/vet, pinned lint, module, driver,
+  docs and glossary gates pass with platform/scope qualifications in
+  `spike/t459/settings_native_1.json`. Earlier full Darwin command failures and
+  alarms remain exact, without a full-package or baseline-cause claim. Both
+  independent pre-dispatch source and fresh-input reviews are clean. Final
+  independent exact-candidate `50559254` source/evidence and cost reviews cover
+  all ten PR paths with every severity count zero. The record-only seal changes
+  no compiled, embedded, fixture, UI, tool or driver input.
+
+  **Cost.** No production request/query, sync tick, startup/restart, retry/no-op,
+  publication, schema, cache or admission behavior changes. Test provisioning
+  copies the full source/SDK/tool bundle and rereads it for inventory hashing,
+  using whole-file buffers, including the helper, plus the complete inventory
+  records. This trusted setup precedes native limits and establishes no
+  whole-setup memory ceiling. It repeats pristine engine setup/export and adds
+  one local bare clone under a 30-second context. Operator archive-header and
+  command-output checks occur after allocation/capture.
+  The bridge imports that seed into one separately supervised test engine and
+  performs production custody reconciliation once before claims. It retains
+  default fifteen-second scheduler/recovery cadence and jittered coordinator
+  polling, concurrency one, five-second heartbeats and twenty-second stale
+  threshold. Idle recovery adds no SDK or filesystem read. One Publish uses
+  native planning/execution under unchanged production limits; actual geometry
+  charges the complete prospective workspace and host backing budgets, with
+  staged SDK/mirror/UI bytes already included in filesystem use. Runtime
+  reports use one bounded slot and atomic counters. Once an outcome arrives,
+  the test observes bounded operator and growth state
+  at 250-millisecond intervals under a six-minute settlement deadline; these
+  repeated SDK reads add no child or production request.
+  Navigation retains default metadata caching, per-open publication pins and
+  immutable Git range reads.
+  Teardown joins background work before serial selected lifecycle turns with
+  the existing sixteen-mutation cap and a 12,000-turn test ceiling. Shared
+  browser/auth helpers retain one pollable stdin descriptor, 4-KiB frames,
+  existing TLS deadlines, session/audit work and bounded Argon admission.
+  The external driver retains bounded request/protocol/error diagnostics and
+  owns one fixture SSH, one private tunnel and Chrome; it establishes no numeric
+  browser or whole-turn resource bound. The zero-service, five-blob/176-byte
+  workspace is mechanics evidence only. Complete neutral closure, successor
+  replacement, separately authorized target closure, T45.6, ordinary dark
+  providers and scale/release posture remain unchanged.
+
+- **2026-10-04 — T45.9 Settings bridge review corrections.** Retain the
+  `c1ba670d` receipt and `50559254` reviews as historical records: their native
+  HTTP options, resolver assignment and lifecycle monitor were fixture
+  composition, so their zero findings did not establish production HTTP wiring.
+  The corrected test calls existing `wireServeLifecycle`, `openServeSearcher`,
+  `newServeAPIOptions` and `newServeHTTPHandlers`; no production extraction or
+  refactor is needed. Authenticated lifecycle HTTP must register the typed
+  owner, availability must expose the provider, and native navigation must use
+  the production resolver. This covers those constructors, not full `serve`,
+  its listener, automatic lifecycle cadence or ceremony admission. Ordinary
+  serve has nil admission owners unless the T42.2 dispatcher runtime is bound;
+  the reported empty-owner mismatch is therefore rejected.
+  Replay the finished exact enqueue successfully before source drift, then
+  require the unchanged warm authority/job/current/launch census and the
+  drift-specific refusal detail. This adds one accepted audit, not another
+  Publish. Settlement fails immediately on the production recovery-pending
+  latch. The driver's thirteen-minute frame wait outlasts the fixture's
+  twelve-minute context plus thirty-second worker join; its fifteen-minute
+  outer bound and the six-minute settlement/native limits remain unchanged.
+  Shared stateless driver helpers centralize credential redaction and tunnel
+  ownership. Unexpected tunnel failure is latched once and refuses receipt
+  sealing even during teardown. `ci-ui` runs the actual callback/tunnel
+  self-check. The existing visible Appearance barrier shares the Settings render
+  commit; native additionally waits for settled network activity. Both changed
+  fixtures require fresh immutable-source execution and a new receipt before
+  these corrections can be certified. Earlier receipt bytes remain exact.
+
+  **Cost.** Production request/query, sync, startup/restart, retry/no-op,
+  publication, locks, cache, schema and admission costs are unchanged. Fixture
+  startup now performs bounded catalog repair under the existing mutation lock,
+  constructs the full bounded lifecycle monitor/publication caches, opens one
+  empty searcher with its watcher and scoped readers, and builds the real
+  API/MCP/metrics mux. Searcher bootstrap reads the complete one-repository
+  fixture census under its own background-based ten-minute warming deadline;
+  the absent manifest leaves its shared-generation leg empty. The thirteen-minute
+  transport comparison covers context-bound native phases and worker join,
+  not the complete constructor/store/searcher/cleanup lifetime. The searcher
+  closes after runtime join attempts and before
+  successful destructive drainage. Its fresh root index contains only the
+  existing publication lock; identity-bound operator cleanup refuses unknown
+  index custody. One shared jobs census reads at most four rows instead of the
+  native fixture's former two, still requiring the exact count and no cursor.
+  Legacy test servers share one monitor. The added lifecycle read and accepted
+  enqueue are test requests; unchanged warm equality proves no replay. Driver
+  sharing adds no child or polling loop. Existing native, trusted setup,
+  browser and selected-owner cost qualifications remain exact.
+
+  The first corrected-source native run at `516a6f3b` stopped after 61.835
+  seconds at the report gate; its generic message did not retain the returned
+  error classification or phase projection. Later scheduler `wall_limit` /
+  `execution_failed` and SDK channel diagnostics establish no original cause.
+  Containers, loops, native host scratch and matching processes are absent;
+  the failed installation and fixture workspace remain retained. This is not
+  a native PASS. A test-only diagnostic now emits the closed serve reason,
+  deadline/cancellation booleans and the existing bounded public phase fields,
+  excluding private errors, watchdogs and worker envelopes. One fresh identity
+  rehearsal may establish that missing boundary under unchanged admission,
+  heartbeat, stale, native allowance and settlement limits. It cannot recertify
+  the failed source or label its cause retrospectively.
+
+  The one fresh diagnostic confirmation at exact `12f47126` also **STOPPED**
+  after 52.391 seconds. It returned `custody_held`, with neither deadline nor
+  cancellation set; its plan projection and empty second phase both have
+  unverified zero/default resource fields. These establish no successful
+  verified native phase, launch count or underlying refusal cause. Later
+  scheduler `wall_limit` does not prove that the native 300-second allowance
+  was consumed. The exact new binary's legacy renderer passed all eleven
+  checks/nine states/eight appearances in 16.629 seconds. Fresh Linux builds,
+  focused units, nonroot flag refusals, vet, pinned 2.12.2 lint, driver
+  self-check/syntax and documentation gates pass; complete `ci-ui`, pinned
+  Node and a fresh full command-package pass remain unclaimed. Both source/input
+  reviews have zero findings, independently of the failed native result.
+  `spike/t459/settings_native_2.json` records both STOPs and preserves receipt 1.
+  Native publication, navigation, warm/drift and lifecycle completion on the
+  corrected bridge remain unestablished. No third native run was attempted;
+  the bounded diagnostic confirmation is consumed and merge readiness is open.
+
+  Post-run SSH failed before a custody census. An inspection-only VM restart
+  found one exact native scratch residue; the existing authenticated cleanup
+  helper removed it without native execution or a new allowance. The subsequent
+  census observes zero containers, loops and matching processes, with only the
+  native lock remaining. This observation follows the restart and cleanup and
+  is not original teardown PASS evidence. Both failed SDK workspaces,
+  installations and uploads remain retained. The selected VM returned to
+  stopped, its profile and Docker context remain unchanged, and neither Ben's
+  checkout/history nor Claude's uncommitted inputs changed. Cleanup adds one
+  explicitly selected existing custody observation/removal and final census;
+  it adds no production cost, native retry or broader deletion authority.
+
+  Independent exact-candidate `b3876e4e` source/evidence and steady-state-cost
+  reviews cover all thirteen PR paths with critical/high/medium/low counts
+  zero. The record-only review seal changes no compiled, embedded, fixture or
+  driver input. It certifies this STOP record, not native acceptance; merge
+  readiness and complete T45.9 remain open.

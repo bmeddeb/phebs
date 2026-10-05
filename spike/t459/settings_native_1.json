@@ -1,0 +1,715 @@
+{
+  "schema": "phebs-t459-authenticated-settings-native-prerequisite-v1",
+  "recorded_date": "2026-10-04",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "authorized_target_acceptance": "OPEN",
+  "execution_source_commit": "c1ba670d79537e72ca327f43701101fa242c3bf9",
+  "compiled_input_commit": "6587b8e248bf26ed5960268d624a01a765d58100",
+  "base_commit": "ca95156b2ad8a39d9fba6f7b17a6866824de8add",
+  "scope": "One Publish through authenticated rendered Settings and the production serve coordinator/scheduler/native controller; bridge-only mechanics evidence.",
+  "production_changes": false,
+  "ui_or_design_changes": false,
+  "source_preservation": {
+    "difference_since_compiled_input": [
+      "PLAN.md"
+    ],
+    "compiled_embedded_fixture_driver_inputs_unchanged": true,
+    "buildvcs": false
+  },
+  "native_case": {
+    "schema": "phebs-t459-settings-native-v1",
+    "t459_acceptance": "OPEN",
+    "native_execution": true,
+    "canonical_pixel_comparison": false,
+    "checks": [
+      "real anonymous and ordinary session refusal",
+      "pure preview and real CSRF refusal",
+      "lost admitted response retains exact request and one coordinator",
+      "rendered native current and cold warm cross-member HTTP navigation",
+      "ordinary polling preserves current without native replay",
+      "source transition fences rendered state and cached native reads"
+    ],
+    "browser": "154.0.8037.93",
+    "fixture": {
+      "repo": "example.invalid/phebs-native-neutral",
+      "commit": "bde9183594968b7d2be8341d7c38f9e3837d13ea",
+      "provider": "go-module-scip-v1",
+      "publication": {
+        "attemptDigest": "sha256:3c29a68c67c5b620024a85f2bb95612c3da3fb92d457d430997e31da89071e1b",
+        "command": "publish",
+        "definitionPath": "b/b.go",
+        "epoch": 1,
+        "event": "done",
+        "executionDigest": "sha256:86e57ecd7db20abd9589c68331edd87bed4b86bc19cb2796a4f8395a4b2a0580",
+        "leaseDigest": "sha256:63e10aee2b8fe37b74d13784ce7ff4e14634d28622c0e3d6a5bd2eb431fef991",
+        "lookups": 1,
+        "parentDigest": "sha256:4c6e1dccda5c3a898332a87293ae26b21bbf5f4201ff38d509e7190c7e7068bf",
+        "profileDigest": "sha256:9a1ca46f00c0c4bc1bc9762a20b4a0a3d8d2aaa5704d213ba5a2c4ce08e2ef6d",
+        "referencePath": "a/a.go",
+        "reportCount": 1,
+        "reports": [
+          {
+            "phase": "plan",
+            "exit_code": 0,
+            "removed": true,
+            "stop_reason": "",
+            "resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 232943616,
+              "sampled_peak_rss_bytes": 303058944,
+              "sampled_peak_processes": 4,
+              "sampled_peak_scratch_bytes": 1150976,
+              "sampled_peak_scratch_inodes": 288,
+              "samples": 7,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            }
+          },
+          {
+            "phase": "execute",
+            "exit_code": 0,
+            "removed": true,
+            "stop_reason": "",
+            "resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 237977600,
+              "sampled_peak_rss_bytes": 290533376,
+              "sampled_peak_processes": 2,
+              "sampled_peak_scratch_bytes": 1208320,
+              "sampled_peak_scratch_inodes": 303,
+              "samples": 7,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            }
+          }
+        ],
+        "root": "sha256:44afee1c52d354cdbc70bb77797ef5b2226827cf7c90281f20984affc97d82e9",
+        "sourceBytes": 176,
+        "sourceFiles": 5,
+        "state": "current"
+      }
+    },
+    "warm": {
+      "cadenceMS": 15000,
+      "command": "warm",
+      "elapsedMS": 31011,
+      "event": "done",
+      "lookups": 1,
+      "reportCount": 1,
+      "requiredWaitMS": 31000,
+      "state": "current"
+    },
+    "cleanup": {
+      "auditEnqueues": 2,
+      "command": "finish",
+      "configDigest": "sha256:37c54009ae763b5adfcae934a297cabe1c7e9f349aeb3fa711749039e4f69b5f",
+      "drainTurns": 1197,
+      "event": "done",
+      "growthAbsent": true,
+      "hostScratchDrained": true,
+      "inputBytes": 292010065,
+      "inputFiles": 14506,
+      "inventoryDigest": "sha256:1623f824bb5e196039f5612316ae362cbf6c0c2f697ee1aab794f2ddfe042340",
+      "lookups": 1,
+      "reportCount": 1,
+      "retainedParentTombstones": 1,
+      "runtimeJoined": true,
+      "seedDigest": "sha256:bafa7248f285bf103c9fd4a426e68a25532587970a963110202452f444825a83",
+      "workspaceDrained": true
+    },
+    "managed_requests": 31,
+    "unexpected_browser_errors": 0,
+    "deliberate_network_console_errors": 7,
+    "joined": true
+  },
+  "legacy_regression": {
+    "result": "PASS",
+    "native_execution": false,
+    "proof": {
+      "schema": "phebs-t459-settings-browser-v1",
+      "native_execution": false,
+      "canonical_pixel_comparison": false,
+      "checks": [
+        "anonymous boundary",
+        "ordinary session and File boundary",
+        "real dark handler boundary",
+        "administrator File deep link and provider order",
+        "three pure previews and real CSRF refusals",
+        "lost admitted response and exact retry",
+        "last-good active polling and recovery",
+        "real routed cross-member definition references hover",
+        "failed re-run preview and canceled coordinator",
+        "eight functional responsive keyboard motion appearances",
+        "source fence and restore clearance"
+      ],
+      "states": [
+        "absent",
+        "planning",
+        "indexing",
+        "validating",
+        "publishing",
+        "current",
+        "failed",
+        "canceled",
+        "stale"
+      ],
+      "viewports": [
+        {
+          "width": 1280,
+          "theme": "light",
+          "density": "comfortable"
+        },
+        {
+          "width": 1280,
+          "theme": "light",
+          "density": "dense"
+        },
+        {
+          "width": 1280,
+          "theme": "dark",
+          "density": "comfortable"
+        },
+        {
+          "width": 1280,
+          "theme": "dark",
+          "density": "dense"
+        },
+        {
+          "width": 390,
+          "theme": "light",
+          "density": "comfortable"
+        },
+        {
+          "width": 390,
+          "theme": "light",
+          "density": "dense"
+        },
+        {
+          "width": 390,
+          "theme": "dark",
+          "density": "comfortable"
+        },
+        {
+          "width": 390,
+          "theme": "dark",
+          "density": "dense"
+        }
+      ],
+      "managed_request_counts": [
+        {
+          "context": "ordinary",
+          "requests": 3
+        },
+        {
+          "context": "dark_admin",
+          "requests": 3
+        },
+        {
+          "context": "admin",
+          "requests": 67
+        }
+      ],
+      "browser": "154.0.8037.93",
+      "fixture": {
+        "repo": "example.invalid/routed",
+        "commit": "8514251a31aa4987e97c764c7276537801b6750a",
+        "command": "publish",
+        "definitionPath": ".phebs-generated/f5ed203d0a3d577629eb40b1223fe79f193591f7ae9bcee1af637fdcf2457444/unicode.go",
+        "event": "done",
+        "executionDigest": "sha256:26bdc7fb644e189d9dd04cbfeb58c60930a53741c07126801f5af0a6a243deff",
+        "generatedDocuments": 2,
+        "generatedSourceBytes": 16,
+        "members": 2,
+        "parentDigest": "sha256:f638fb99dab7bba15289ad39fc3244cb5e586682f96cf5e423ba8da3a227cc78",
+        "referencePath": ".phebs-generated/f5ed203d0a3d577629eb40b1223fe79f193591f7ae9bcee1af637fdcf2457444/reference.go",
+        "state": "current"
+      },
+      "audit_enqueues": 4,
+      "unexpected_browser_errors": 0,
+      "deliberate_network_console_errors": 11,
+      "joined": true
+    },
+    "qualification": "Separate fixture-authored SCIP and generated-document/UTF-16 cases; its bytes are not native outputs."
+  },
+  "authority": {
+    "config": {
+      "bytes": 1655,
+      "sha256": "sha256:37c54009ae763b5adfcae934a297cabe1c7e9f349aeb3fa711749039e4f69b5f"
+    },
+    "profile": {
+      "bytes": 1313,
+      "sha256": "sha256:9a1ca46f00c0c4bc1bc9762a20b4a0a3d8d2aaa5704d213ba5a2c4ce08e2ef6d"
+    },
+    "inventory": {
+      "bytes": 2517395,
+      "sha256": "sha256:1623f824bb5e196039f5612316ae362cbf6c0c2f697ee1aab794f2ddfe042340"
+    },
+    "seed": {
+      "bytes": 90844,
+      "sha256": "sha256:bafa7248f285bf103c9fd4a426e68a25532587970a963110202452f444825a83"
+    },
+    "source": {
+      "repository": "example.invalid/phebs-native-neutral",
+      "incarnation": "5c70319d4c2329212fff0e032c423625",
+      "generation": "sha256:50ad3e2385603f57426648103dd0dce387245392d7003c7abf69551906a084ac",
+      "commit": "bde9183594968b7d2be8341d7c38f9e3837d13ea"
+    },
+    "profile_epoch": 1,
+    "universe_digest": "sha256:bef2a3571b300ed838423365330ad4360e9fa0bdbbeeb45b223b043151e28366",
+    "selection_digest": "sha256:21cd05d17e6ca8e0d2353155a7607ceef5b3e03ffb5e549ccb206df2f8a1dd93",
+    "policy": {
+      "memory_bytes": 4533092352,
+      "scratch_bytes": 4573403136,
+      "scratch_inodes": 262144,
+      "tasks": 294,
+      "descriptors_per_process": 128,
+      "cpu_quota_micros": 200000,
+      "cpu_period_micros": 100000,
+      "wall_seconds": 300,
+      "output_bytes": 16777216,
+      "scip_bytes": 2285819
+    },
+    "input_files": 14506,
+    "input_bytes": 292010065,
+    "source_git_blobs": 5,
+    "admitted_regular_source_git_blob_bytes": 176,
+    "accepted_service_incarnations": 0,
+    "installed_deployment_digest": "sha256:42abe49fa21208bbee59b404769dbbcdb865172767f343855770130d92892e77",
+    "deployment_stdout_capture_note": "One final newline is present in the retained547+1-byte stdout capture; the installed547-byte digest is independently inspected."
+  },
+  "provenance": {
+    "go_version": "go1.26.5",
+    "fixture_platform": "linux/arm64,CGO_ENABLED=0",
+    "surreal_version": "3.2.0 linux/aarch64",
+    "binaries": {
+      "settings.test": {
+        "bytes": 79098581,
+        "sha256": "sha256:ae2977d4329634512463449e8fd6f296efd29232034a4cc2bc4467ca39b08b12"
+      },
+      "native-acceptance.test": {
+        "bytes": 43158290,
+        "sha256": "sha256:09480f4f20fa92cf7709b60209e0d36c3176bc3bb6dae92956726b41099bb2b5"
+      },
+      "phebs-current": {
+        "bytes": 72860463,
+        "sha256": "sha256:6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d"
+      },
+      "surreal": {
+        "bytes": 116424792,
+        "sha256": "sha256:a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c"
+      }
+    },
+    "upload_sha256": {
+      "native-acceptance.test": "09480f4f20fa92cf7709b60209e0d36c3176bc3bb6dae92956726b41099bb2b5",
+      "settings.test": "ae2977d4329634512463449e8fd6f296efd29232034a4cc2bc4467ca39b08b12",
+      "phebs-current": "6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d",
+      "surreal": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+      "public-tools.tar.gz": "69f98506cf99def3a949d52de5570e0b94c1c25d2993c0c436fb6778cee6af07",
+      "ui-dist-clean.tar": "4a252bdbcd7b55e5670b269198f98c6e3df363979964b43bd1366d7cc2137cab",
+      "native-host.py": "95792e2bca96b10f6bc87214631cc6bf5ceae0eab9949d8c9d04aac1a537e617",
+      "deployment.py": "6783d8c99c665f2459619683d472a7b62d477b8f37eed32a5cdbe14d84de959a",
+      "native_acceptance.py": "f70cbc11b2388e0491db3ea3de478fa5cba170dd7d4fd684733db24109d67407"
+    },
+    "source_files": {
+      "cmd/phebs/serve_typed_settings_linux_test.go": {
+        "bytes": 16417,
+        "sha256": "sha256:63371b92addee1dd467b09c2e4ad64255e652b21432156b9e4ab7d75e47af05e"
+      },
+      "cmd/phebs/serve_typed_settings_native_linux_test.go": {
+        "bytes": 29416,
+        "sha256": "sha256:0827378127bc5da6b356cc860364dc5e8996cd6dcf234980e56ed52108ba0724"
+      },
+      "internal/typedexecutor/input_native_linux_test.go": {
+        "bytes": 39528,
+        "sha256": "sha256:2e898b6d082f026efdc6091a9ed623622fbfec3c2bb86ce903fe6da0f058de15"
+      },
+      "spike/t459/settings_browser.cjs": {
+        "bytes": 24346,
+        "sha256": "sha256:9b75ae15f0a54f3b6000d318c8c6593ae104e6fd7185c68d4b7f41eb19a12b79"
+      },
+      "spike/t459/settings_native.cjs": {
+        "bytes": 15383,
+        "sha256": "sha256:5a2a614bb236d79710e0a5aed9b1a99957eb12964ec722fc785c667d40ffe6bd"
+      },
+      "spike/t459/settings_driver_test.cjs": {
+        "bytes": 1566,
+        "sha256": "sha256:0e2ed08c554ec974b36157bd2a92d5b54a93192a119ae2abac839bcc3a6e455c"
+      }
+    },
+    "deployment": {
+      "schema": "phebs-typed-native-deployment-v1",
+      "profile": "phebs-t451a",
+      "vm_config_sha256": "sha256:a7055c425cd4da0d9d57b4dfb5dfe45039473bbe54dad4f58cc52e96197eba69",
+      "kernel_release": "6.8.0-117-generic",
+      "os_release_sha256": "sha256:01af466feb100306498c86aa6bad1815e33036019aa34d4362c20f374ea5c829",
+      "architecture": "arm64",
+      "cpus": 2,
+      "memory_total_kb": 8112908,
+      "daemon_id": "c129a8dd-6bbf-4a58-bdbe-97eacedb72d7",
+      "docker_version": "29.5.2",
+      "cgroup_driver": "cgroupfs",
+      "runtimes_sha256": "sha256:f586aa13abd5460ee49924c191c09d3842c05a4bfcd0dd51f2c66d4aecc91a4b"
+    },
+    "native_image_digest": "sha256:8b053ab5c65aee8fe7dfe5f8d9b90cd5a1cf0ace68efdaac3a718f3727a89b94",
+    "ui_input_commit": "8fbf10517c333278f1716250efbd8f7d308ac295",
+    "ui_git_tree": "b65207582813b84a9c9554a9d022789672a901ef",
+    "ui_package_lock_digest": "sha256:24966ddd75895750499d80e39bac17c5bd6b7e8223245826a8f6c41bd75dca5a",
+    "ui_manifest_ref": "spike/t459/settings_browser_1.json:provenance.ui_assets",
+    "ui_complete_guest_hash_and_size_match": true,
+    "ui_assets": 165,
+    "ui_bytes": 6747870,
+    "node_version": "v26.7.0",
+    "playwright_version": "1.62.1",
+    "chrome_version": "154.0.8037.93",
+    "canonical_pixel_comparison": false,
+    "repository_pinned_node_claim": false
+  },
+  "staged_headroom_observation": {
+    "total_bytes": 19682557952,
+    "available_bytes": 16922738688,
+    "host_promise_bytes": 4573483008,
+    "host_backing_block_bytes": 4096,
+    "fixture_headroom_bytes": 2147483648,
+    "projected_bytes": 9480785920
+  },
+  "teardown": {
+    "native_selected_owner_turns": 1197,
+    "per_turn_mutation_cap": 16,
+    "turn_ceiling": 12000,
+    "retained_parent_collecting_tombstones_before_engine_close": 1,
+    "selected_turns_are_not_fair_rotation_or_latency_evidence": true,
+    "independent_operator_result": {
+      "containers": 0,
+      "loop_devices": 0,
+      "matching_processes": 0,
+      "fresh_staging_removed": true,
+      "native_lock_preserved": true
+    },
+    "root_upload_identity_bound": true,
+    "vm_returned_to_original_stopped_state": true,
+    "default_docker_context_unchanged": "colima",
+    "primary_checkout_branch_unchanged": "codex/t45.9-neutral-api-closure",
+    "primary_core_bare": false,
+    "primary_preexisting_history_digest_unchanged": "sha256:ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056"
+  },
+  "machine_gate_scope": {
+    "linux_actual": "Pure native flag gates, constructor/selection/legacy navigation, serve composition/refusal/settlement/privacy/lifecycle; rendered and native fixtures initially skip without flags and pass separately with flags.",
+    "linux_nonroot": "Six native root/digest/UI flag-shape table cases pass without root.",
+    "linux_compile_vet_lint": "cmd/phebs and internal/typedexecutor; serial pinned lint0issues.",
+    "darwin_normal_race": "Focused cmd/phebs TestTyped(Serve|Navigation) and typedexecutor/codenav, PHEBS_SKIP_SURREAL_TESTS=1; Darwin excludes Linux-native fixtures.",
+    "darwin_pinned_lint": "Repository ./... reports0issues; Linux build-tag paths covered separately.",
+    "modules": "go mod verify PASS.",
+    "driver": "Both node --check driver commands passed; actualcatchcallback credentialredaction self-check PASS.",
+    "documentation": "docs-check and verify-glossary PASS before dispatch; final record checks/review separate.",
+    "linux_race": "Not run; cross-compiled fixture CGO_ENABLED=0.",
+    "fresh_full_cmd_package": "Not established; focused gates only."
+  },
+  "failed_or_invalid_attempts": [
+    {
+      "scope": "Linux pinned lint initial",
+      "result": "exit3 process-global lint lock contention",
+      "followup": "Unchanged serial retry PASS0issues; initial output retained."
+    },
+    {
+      "scope": "Legacy renderer first staging attempt",
+      "result": "Fixture startup failed before engine launch because user-uploaded SurrealDB had no execute permission.",
+      "followup": "chmod700 on the same uploaded bytes; distinct attempt2 receipt/log PASS11checks/9states/8appearances/exact11errors/4audits."
+    }
+  ],
+  "preserved_prior_full_cmd_qualification": "Prior rendered lineage full Darwin cmd probes hit cumulative six- and fifteen-minute alarms. The serial command also completed TestT422WorkspaceCleanupNativeComposition FAIL after600.03s with a native lifecycle measurement diagnostic before its later AllOwners alarm. No unchanged-base reproduction or cause is claimed. This package is not represented as PASS.",
+  "prior_receipts": {
+    "spike/t459/settings_browser_1.json": {
+      "bytes": 51256,
+      "sha256": "sha256:a197511f2c984e2c915d2d1bdb9ea25ebe5ea544a106f97c2b4bfbfdc71c7725",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/settings_browser_2.json": {
+      "bytes": 15437,
+      "sha256": "sha256:907d7f843514aa73176648119c093aca04cd6b0c2a970c49e53d6cccbd7f0771",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_coordinator_1.json": {
+      "bytes": 11597,
+      "sha256": "sha256:05d2d78e2f53da0e7a3c6194217d08677ba4b6812d3e35bb59b40fef38213aa5",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_faults_1.json": {
+      "bytes": 19314,
+      "sha256": "sha256:bb976bb8017264f5854decdaba144a9f9fa0f07ac2f40008cf52056f0ac6888b",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_pressure_lifecycle_1.json": {
+      "bytes": 26373,
+      "sha256": "sha256:925e3f7133b55dc1e647717e1ceba00bbcc9664a2247f85608154b25c753c056",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_restore_1.json": {
+      "bytes": 30093,
+      "sha256": "sha256:ed44d4e8fe7f6df1e722ba5ae9a3b140c699c7bca3499e83114ba64dfcb56547",
+      "preserved_byte_exact": true
+    }
+  },
+  "supporting_original_clock_evidence": "Existing native coordinator/fault/pressure/restore proofs retain original allowance identity at their own sources. This bridge public Outcome exposes no shared-clock timestamps and claims no newly measured begin count or allowance clock.",
+  "limits": {
+    "successor_replacement": "Not established by this bridge.",
+    "restart_and_public_backup_restore": "Not established by this bridge; earlier separate native restore receipt remains supporting evidence.",
+    "complete_neutral_acceptance": "OPEN",
+    "authorized_target_acceptance": "OPEN; no target binding/execution authorized here.",
+    "generated_evidence_admission": "STOP",
+    "ordinary_provider_registration": "Nil/dark",
+    "t456": "Waived, not PASS",
+    "scale_and_release": "No claim; existing DO_NOT_RELEASE posture unchanged.",
+    "browser_resource_ceiling": "No numeric Chrome RSS/descendant or whole-turn resource ceiling.",
+    "trusted_setup_memory": "Full SDK/tool/source copy and whole-file inventory hashing precede native limits; no whole-setup memory ceiling.",
+    "capacity": "Stage snapshot records projected host headroom; production native admission derives its actual fresh prospective workspace and host promises without changing policy.",
+    "stale_source": "Store source-authority transition via SetRepoIndexed; original physical Git HEAD remains unchanged.",
+    "warm_polling": "Default15-second scheduler/recovery cadence and jittered coordinator; actual31011ms warm wait does not assert a coordinator poll count."
+  },
+  "predispatch_review_records": {
+    "source-review-fb8077b3-correctness.json": {
+      "bytes": 4610,
+      "sha256": "sha256:5b9fbb457153ca3d13b93b671b06019867aa46accfdf5852368cd1d95073fbc6"
+    },
+    "source-review-6587b8e2-correctness.json": {
+      "bytes": 5719,
+      "sha256": "sha256:8fdd9402d377f57e99a9e0a8c874ad4f227d17f729d77c170293a75a0e7a93bb"
+    },
+    "review-cost-predispatch-fb8077b3.json": {
+      "bytes": 7269,
+      "sha256": "sha256:31610d24353c1e46b9762a520484091a1a2462ae06e6b7c3e825cb34ab40ea2e"
+    },
+    "review-cost-predispatch-6587b8e2.json": {
+      "bytes": 9632,
+      "sha256": "sha256:27f53e4a52f71bd157ccbbee279f3c4d507448fe53a3f6d05c241764d6287b3b"
+    },
+    "review-cost-predispatch-c1ba670d.json": {
+      "bytes": 9630,
+      "sha256": "sha256:371fa5e6eb6bc2b2eec0e72e8c57274273182aba21aaee12f4f91af325f56bf4"
+    },
+    "input-review-c1ba670d-correctness.json": {
+      "bytes": 4761,
+      "sha256": "sha256:53bb77dac036e35c11b92d310f980c90c69c2221fdd7d55365ae5321b4d051fa"
+    },
+    "review-cost-fresh-input-c1ba670d.json": {
+      "bytes": 7311,
+      "sha256": "sha256:73e755a13ec52f24b25f666e6595df6dfdb75371d8e8de5bc97167332dc2dce0"
+    }
+  },
+  "raw_artifact_custody": {
+    "location": "Private external Codex artifact directory phebs-t459-settings-native-20261004; raw seed/config/tool/archive bytes are not checked in.",
+    "records": {
+      "native-browser-proof.json": {
+        "bytes": 4077,
+        "sha256": "sha256:fc96d0758c3f1b7699a8799783a9c61d89e30aa0a228752cb078a2441a5b9353"
+      },
+      "legacy-browser-proof-2.json": {
+        "bytes": 2574,
+        "sha256": "sha256:97bd0d67db6667b059a2a740ca662b882f3a595ea3aa7261ae726641ad3586ee"
+      },
+      "logs/native-browser.log": {
+        "bytes": 29,
+        "sha256": "sha256:d5070dcf15e7233223c63eec3e491f956ae17ef349a46c218e4e7111946df9bb"
+      },
+      "logs/legacy-browser-2.log": {
+        "bytes": 57,
+        "sha256": "sha256:db237b5b8f023f8446a2ce321abfb0d76933c02db5f12dee447e96f19a8ec011"
+      },
+      "logs/legacy-browser.log": {
+        "bytes": 63,
+        "sha256": "sha256:d9baf38b02875ac03d5adb133b34db60dad10f7401bbe27c438aa01be12b6644"
+      },
+      "legacy-browser-proof.json.failure.txt": {
+        "bytes": 244,
+        "sha256": "sha256:bdc59ba1a15ac13dc47ad72ede76d99c6b70bbb004e429c091abf85104eea118"
+      },
+      "cleanup-proof.json": {
+        "bytes": 115,
+        "sha256": "sha256:68c6e27ad41e9d6ffac042618f7b54763f9f1acf1a0141600d2285dd17a3dc44"
+      },
+      "installation-proof.json": {
+        "bytes": 1518,
+        "sha256": "sha256:33dfb68b015c0f390ff74b1d41fdbbb3c2fbaa0c27096ba160898e20e8eee260"
+      },
+      "expected.json": {
+        "bytes": 23110,
+        "sha256": "sha256:2a973644c871ba5410b1a8daac8eb9dd7647cc6ee7f6953fe2ecc872edb9832f"
+      },
+      "deployment.json": {
+        "bytes": 548,
+        "sha256": "sha256:817295fb6a0bc4b7832dd10096e8d502ae2243d5b96a8ae54808ee7e1cac57f0"
+      },
+      "predispatch-inspection.json": {
+        "bytes": 1779,
+        "sha256": "sha256:35eba620b5c2a1e73975725e2008fee39d614ec53aa1336d4dc195efdfe6358e"
+      },
+      "postrun-inspection.json": {
+        "bytes": 1779,
+        "sha256": "sha256:35eba620b5c2a1e73975725e2008fee39d614ec53aa1336d4dc195efdfe6358e"
+      },
+      "legacy-staging.json": {
+        "bytes": 317,
+        "sha256": "sha256:723e6543619308179c2044baa56be51bacd0f467a1f73f5d45942bd612ad52b0"
+      },
+      "final-vm-list.log": {
+        "bytes": 315,
+        "sha256": "sha256:470b658dc3c606d852905244fd4969e10fb2c43b98b02725b0150de64306f0c5"
+      },
+      "final-docker-context.log": {
+        "bytes": 7,
+        "sha256": "sha256:3b0ea748a4d388f3bd8e531999a8aad877d310eece43eb9f85a37f758520f2a3"
+      },
+      "logs/vm-stop.log": {
+        "bytes": 1613,
+        "sha256": "sha256:b5ed6cc09f7e38f6dd811855ad37503a7716c07075355e4b0582c4d91fe5a654"
+      },
+      "runtime-versions.json": {
+        "bytes": 41,
+        "sha256": "sha256:3ddfded5528c1aa5768924e7b6e5e57c51c8c9f75a85059eb09a1df1dcdf93ba"
+      },
+      "runtime-binaries.sha256": {
+        "bytes": 216,
+        "sha256": "sha256:9ecc995d1d452922efa507a87ca3997bcdba60133bb80aacf45d9e849ee712cf"
+      },
+      "settings-build-info-final.log": {
+        "bytes": 6881,
+        "sha256": "sha256:193cd2b71d80bb9606201a19ce775f347dd8210afd70c39341d4dc73d694afd3"
+      },
+      "provision-build-info-final.log": {
+        "bytes": 274,
+        "sha256": "sha256:62b6155d485082217bfc1972851b7f4d251c4d7bffef519f63b20f6d77f26ffb"
+      },
+      "helper-build-info-final.log": {
+        "bytes": 6881,
+        "sha256": "sha256:41fb2102741ff89b40da7c5edc3561867b8426941c4398a01e5e06e4d907b7d5"
+      },
+      "inspect-host.py": {
+        "bytes": 1725,
+        "sha256": "sha256:bf408203701653d3b17337a858ffb1dfd412432b50e0ecd3435fa9f5e05476cd"
+      },
+      "legacy-staging-inspection.py": {
+        "bytes": 780,
+        "sha256": "sha256:af414f72a89f825dc7f0c507e691ecbe71987ce41bc82556c9a2395d944721d0"
+      },
+      "native-host.py": {
+        "bytes": 7324,
+        "sha256": "sha256:95792e2bca96b10f6bc87214631cc6bf5ceae0eab9949d8c9d04aac1a537e617"
+      },
+      "deployment.py": {
+        "bytes": 1695,
+        "sha256": "sha256:6783d8c99c665f2459619683d472a7b62d477b8f37eed32a5cdbe14d84de959a"
+      },
+      "dispatch.json": {
+        "bytes": 775,
+        "sha256": "sha256:38b911a0892a349d6321d8b5e29c67c8bd84bd7abd9beadf6fedbe962d23e25d"
+      },
+      "logs/provision.log": {
+        "bytes": 447,
+        "sha256": "sha256:c13093b88a410f626a42524f4cf8ac161a79907d75b4264a14c8b628f601dc26"
+      },
+      "logs/linux-focused.log": {
+        "bytes": 3066,
+        "sha256": "sha256:ca8f7e20901961420204fa79d2b3341690dd1de855e223428c58d8a0e7427e4e"
+      },
+      "logs/linux-nonroot-flags.log": {
+        "bytes": 863,
+        "sha256": "sha256:12eb4c5b9bd512c6b58823edfbc5323c872088ba55a0690c907eb1ef85894b47"
+      },
+      "logs/linux-lint.log": {
+        "bytes": 118,
+        "sha256": "sha256:9c6b9e12b6b2a88acd31f1450579d7621d687a639b2813b947a1a2816e24d8ba"
+      },
+      "logs/linux-lint-final.log": {
+        "bytes": 10,
+        "sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+      },
+      "logs/darwin-lint.log": {
+        "bytes": 10,
+        "sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+      },
+      "logs/darwin-cmd-focused.log": {
+        "bytes": 47,
+        "sha256": "sha256:93a5ecb2e2863ce6c9173fb9e539af37dd74bf70aa8b46850e37e8ca45c8198b"
+      },
+      "logs/darwin-cmd-race.log": {
+        "bytes": 47,
+        "sha256": "sha256:03b04ea7b0e870316e81fd1b3e1e4b67eb094962410d884e040e1de8dff08ff5"
+      },
+      "logs/darwin-packages.log": {
+        "bytes": 115,
+        "sha256": "sha256:cfcdd1d153ae1f8f62d5d70c97e2547ba722c4e5979c98485e6d6e30d15eb6da"
+      },
+      "logs/darwin-race.log": {
+        "bytes": 115,
+        "sha256": "sha256:50d3e93d23fab050f5b7776cf833c791bfceaee9d307c6b4a60d84327906400b"
+      },
+      "logs/modules.log": {
+        "bytes": 21,
+        "sha256": "sha256:b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd"
+      },
+      "logs/linux-vet-final.log": {
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "logs/driver-self-check.log": {
+        "bytes": 50,
+        "sha256": "sha256:d19d5cfe15ac5c2b4e25cff41e40d65ca79f10112dc779c2fde10f56aaeaa09b"
+      },
+      "logs/build-settings-exact.log": {
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "logs/build-provision-exact.log": {
+        "bytes": 0,
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "logs/docs-predispatch.log": {
+        "bytes": 179,
+        "sha256": "sha256:29b8cbacbe45fd3f3bdab0e41a30ab509f35f924d2e0a3204421d67849632cbc"
+      },
+      "logs/glossary-predispatch.log": {
+        "bytes": 60,
+        "sha256": "sha256:f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+      },
+      "supporting-gates.json": {
+        "bytes": 23926,
+        "sha256": "sha256:31ea1f4f2d0b43fa880d5d5d3ca6b1c686a32ded3a846b95bee26cb0b6e882ff"
+      }
+    }
+  },
+  "final_source_evidence_review": {
+    "result": "PASS",
+    "reviewed_candidate_commit": "5055925496ef91a80457b605e5d132cacbdae8d8",
+    "independent_reviewers": 2,
+    "each_severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "covered_pr_paths": 10,
+    "private_operator_scripts": 2,
+    "read_only_inspectors": 2,
+    "records": {
+      "review-final-50559254-correctness.json": {
+        "bytes": 9192,
+        "sha256": "sha256:4d86190d7e3d5cecf82f28ea12b9fd40258865cef66cdb6d1fddaf78e7f83f6d"
+      },
+      "review-cost-final-50559254.json": {
+        "bytes": 13987,
+        "sha256": "sha256:1fa10c4da5ed83703f47424d85772f2ab6c946b92efd631a70ab68238fc6f227"
+      }
+    },
+    "seal_changes": "Review record and owning documentation only; no compiled, embedded, fixture, UI, tool, archive or driver input changes."
+  }
+}

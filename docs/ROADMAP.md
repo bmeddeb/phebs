@@ -181,6 +181,39 @@ fresh static gates and rendered execution pass with applied theme/density,
 exact eleven deliberate errors and four enqueue audits. Separate receipt
 `spike/t459/settings_browser_2.json` binds that source and retained guest
 asset/cleanup results, preserving receipt 1 and all acceptance limits.
+The next bounded T45.9 prerequisite connects authenticated rendered enqueue to
+the production serve runtime and actual native publication, followed by current
+and cross-member reads, warm no-replay, source fencing and bounded cleanup.
+Exact source `c1ba670d` passes six native bridge checks, one lookup/report,
+31,011-ms warm reuse, stale refusal and joined 1,197-turn selected-owner cleanup.
+Independent identity-bound operator teardown and the legacy rendered regression
+pass; failed attempts and earlier broad command failures remain qualified in
+`spike/t459/settings_native_1.json`. Scoped machine and pre-dispatch reviews pass;
+final independent exact-candidate `50559254` source/evidence and cost reviews
+cover all ten paths with every severity count zero, preserving all tested inputs.
+The single-Publish tiny neutral
+bridge does not close complete neutral or separately authorized target
+acceptance, successor replacement, T45.6 or any scale/release boundary.
+The subsequent review identified fixture-authored HTTP wiring in that retained
+source. Corrections now use existing production constructors and add an
+idempotent accepted-enqueue control, typed-owner HTTP check, shared redaction
+and tunnel self-checks. Ordinary nil admission owners match production. Fresh
+native and legacy runs and a new source-bound receipt are required; the old
+receipt and review bytes remain historical. This does not prove full serve or
+automatic lifecycle cadence.
+The corrected bridge remains **STOP / not merge-ready**: `516a6f3b` stopped at
+its generic report gate, and the one fresh diagnostic confirmation at
+`12f47126` returned `custody_held` with unverified phase fields. The original
+cause and fresh native completion remain unestablished. The exact new binary's
+legacy renderer, scoped Linux gates, pinned lint and source/input reviews pass;
+`spike/t459/settings_native_2.json` records both STOPs. A post-run SSH loss
+required an inspection-only restart and authenticated removal of one native
+scratch residue; the later empty process/container/loop census does not certify
+original teardown. Failed SDK custody remains retained and the VM is stopped.
+The bounded confirmation is consumed; no third native attempt or merge occurs.
+Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
+all thirteen paths with zero findings. The record-only seal preserves the
+executed inputs; native acceptance and merge readiness remain open.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
