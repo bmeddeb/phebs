@@ -161,6 +161,13 @@ func (f typedNavigationFixture) publish(t *testing.T, key string) typedNavigatio
 // custody. This fixture creates sealed bytes; it does not run a native indexer.
 func (f typedNavigationFixture) publishQueued(t *testing.T, crossMember bool) typedNavigationPublication {
 	t.Helper()
+	return f.publishQueuedSteps(t, crossMember, nil)
+}
+
+// onStage pauses the fixture after a durable transition for a rendered reader.
+// It does not change the sealed publication or run an indexer.
+func (f typedNavigationFixture) publishQueuedSteps(t *testing.T, crossMember bool, onStage func(string)) typedNavigationPublication {
+	t.Helper()
 	ctx := t.Context()
 	check := func(e error) {
 		t.Helper()
@@ -179,6 +186,9 @@ func (f typedNavigationFixture) publishQueued(t *testing.T, crossMember bool) ty
 	_, e = f.state.EnqueueGenerationSchedule(ctx, schedule)
 	check(e)
 	check(f.state.SetJobStatus(ctx, *coordinator, store.StatusDone, ""))
+	if onStage != nil {
+		onStage("planning")
+	}
 	_, e = f.state.ExpandGenerationSchedule(ctx, f.repo, schedule.Stage, schedule.Generation)
 	check(e)
 	chunk, e := f.state.ClaimGenerationChunk(ctx, store.GenerationResourceTypedIndex, "reader-fixture")
@@ -239,6 +249,9 @@ func (f typedNavigationFixture) publishQueued(t *testing.T, crossMember bool) ty
 	admission, e := f.state.SealTypedIndexPlan(ctx, *chunk, plan)
 	check(e)
 	work.Admission = admission
+	if onStage != nil {
+		onStage("indexing")
+	}
 	symbol := "scip-go gomod example.test v1 X#"
 	index := &scip.Index{Metadata: &scip.Metadata{ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7"}, ProjectRoot: "file:///workspace", TextDocumentEncoding: scip.TextEncoding_UTF8}, Documents: []*scip.Document{{RelativePath: f.document, PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart, Occurrences: []*scip.Occurrence{{TypedRange: &scip.Occurrence_SingleLineRange{SingleLineRange: &scip.SingleLineRange{Line: 0, StartCharacter: 4, EndCharacter: 5}}, Symbol: symbol, SymbolRoles: 1}, {TypedRange: &scip.Occurrence_SingleLineRange{SingleLineRange: &scip.SingleLineRange{Line: 1, StartCharacter: 0, EndCharacter: 1}}, Symbol: symbol}}, Symbols: []*scip.SymbolInformation{{Symbol: symbol, Documentation: []string{"generated"}}}}}}
 	var members []typedindex.MemberInput
@@ -258,6 +271,9 @@ func (f typedNavigationFixture) publishQueued(t *testing.T, crossMember bool) ty
 	bundle, e := typedindex.BuildBundle(ctx, admission, plan, []typedindex.UnitOutcome{{Unit: f.unit, State: typedindex.UnitComplete}}, members, generated)
 	check(e)
 	check(f.state.AdvanceTypedIndex(ctx, *chunk, store.TypedExecution))
+	if onStage != nil {
+		onStage("validating")
+	}
 	pub, e := typedworkspace.InstallPublication(ctx, attempt, work.Parent, admission, plan, bundle, gate)
 	check(e)
 	before = owner.Digest()
@@ -265,6 +281,9 @@ func (f typedNavigationFixture) publishQueued(t *testing.T, crossMember bool) ty
 	check(e)
 	save(before, plan.Digest(), bundle.RootDigest())
 	check(f.state.AdvanceTypedIndex(ctx, *chunk, store.TypedValidation))
+	if onStage != nil {
+		onStage("publishing")
+	}
 	replacement, e := f.state.ReadExpectedTypedIndexCurrent(ctx, *chunk)
 	check(e)
 	_, e = f.state.PublishTypedIndexReplacement(ctx, *chunk, replacement, bundle)

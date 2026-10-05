@@ -151,6 +151,36 @@ paths with all severity counts zero. This record-only seal changes no compiled
 or harness input. Rendered Settings, complete
 neutral acceptance and separately
 authorized target closure stay open; production behavior and limits are unchanged.
+The next T45.9 prerequisite composes rendered authenticated Settings with the
+production HTTP mux, real TLS sessions/CSRF/authorization/audit and operator
+API/store. It covers pure previews, exact lost-response retry, nine durable
+states and polling recovery, re-run preview/cancellation/source fencing,
+restore-state clearance, administrator File links and eight functional
+responsive appearances. Cross-member UTF-16 navigation uses fixture-authored
+sealed bytes, with no native generation or public restore in this fixture.
+Unchanged current UI inputs bind `8fbf1051`; system Chrome/Node and existing
+Playwright are qualified without canonical Noble pixels or presentation edits.
+Exact implementation `88ab0f4f` passed eleven rendered checks, all nine states
+and eight appearances, with zero unexpected browser errors and joined teardown.
+Linux navigation/HTTP-client, focused Darwin normal/race, compilation/vet,
+pinned lint, module and syntax gates passed; two independent seven-path source
+reviews report all severity counts zero. Complete asset provenance and the
+source-free record are in `spike/t459/settings_browser_1.json`; cleanup observations
+with unretained raw outputs are qualified separately from retained browser/host
+results. Full Darwin command-package probes hit cumulative six- and fifteen-minute
+alarms. The serial command also recorded an unrelated T42.2 cleanup-test failure
+after 600.03 seconds before its later AllOwners alarm; the initial omission is
+corrected, with no cause or base reproduction inferred. That package remains
+unestablished. Final independent exact-candidate `de0eb9ee` reviews cover all
+eight paths with every severity count zero; this record-only seal changes no
+compiled or harness input. This does not close complete
+neutral or separately authorized target acceptance or change ordinary dark
+providers, the T45.6 waiver or scale/release posture.
+Three external low oracle comments are confirmed and corrected at `2014caff`;
+fresh static gates and rendered execution pass with applied theme/density,
+exact eleven deliberate errors and four enqueue audits. Separate receipt
+`spike/t459/settings_browser_2.json` binds that source and retained guest
+asset/cleanup results, preserving receipt 1 and all acceptance limits.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
