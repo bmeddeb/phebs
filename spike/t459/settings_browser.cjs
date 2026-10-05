@@ -5,10 +5,10 @@
 const assert = require('node:assert/strict')
 const { spawn } = require('node:child_process')
 const fs = require('node:fs')
-const net = require('node:net')
 const path = require('node:path')
 const readline = require('node:readline')
 const { once } = require('node:events')
+const { unusedPort, join, forward, fetchJSON, reportFailure } = require('./settings_driver.cjs')
 const [dependencies, chrome, sshConfig, fixture, assets, receipt] = process.argv.slice(2)
 for (const value of [dependencies, chrome, sshConfig, fixture, assets, receipt]) assert(value && path.isAbsolute(value), 'explicit absolute paths required')
 // ssh assembles a remote shell command: the two remote paths are deliberately closed.
@@ -58,20 +58,6 @@ async function command(name) {
   assert.equal(next.event, 'done'); assert.equal(next.command, name)
   return next
 }
-async function unusedPort() {
-  const listener = net.createServer()
-  listener.listen(0, '127.0.0.1'); await once(listener, 'listening')
-  const port = listener.address().port
-  await new Promise(resolve => listener.close(resolve))
-  return port
-}
-async function join(proc) {
-  if (!proc || !proc.pid || proc.exitCode !== null || proc.signalCode !== null) return
-  const done = once(proc, 'exit')
-  proc.kill('SIGTERM')
-  const timer = setTimeout(() => proc.kill('SIGKILL'), 10000)
-  try { await done } finally { clearTimeout(timer) }
-}
 const results = { schema: 'phebs-t459-settings-browser-v1', native_execution: false, canonical_pixel_comparison: false, checks: [], states: [], viewports: [], managed_request_counts: [] }
 const check = name => { results.checks.push(name); phase = name }
 const allowedStates = ['absent', 'planning', 'indexing', 'validating', 'publishing', 'current', 'failed', 'canceled', 'stale']
@@ -80,8 +66,7 @@ async function run() {
   ready = await frame(); assert.equal(ready.event, 'ready')
   for (const key of ['port', 'darkPort']) assert(Number.isInteger(ready[key]) && ready[key] > 0 && ready[key] < 65536)
   const port = await unusedPort(), darkPort = await unusedPort()
-  tunnel = spawn('ssh', [...sshArgs.slice(0, -1), '-o', 'ExitOnForwardFailure=yes', '-N', '-L', `${port}:127.0.0.1:${ready.port}`, '-L', `${darkPort}:127.0.0.1:${ready.darkPort}`, 'colima-phebs-t451a'], { stdio: 'ignore' })
-  tunnel.on('error', () => { fatal ??= new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
+  tunnel = forward(sshArgs, [`${port}:127.0.0.1:${ready.port}`, `${darkPort}:127.0.0.1:${ready.darkPort}`], () => { fatal ??= new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
   const origin = `https://127.0.0.1:${port}`, darkOrigin = `https://127.0.0.1:${darkPort}`
   browser = await chromium.launch({ executablePath: chrome, headless: true })
   results.browser = browser.version()
@@ -131,16 +116,6 @@ async function run() {
     const cookie = (await context.cookies()).find(cookie => cookie.name === 'phebs_session')
     assert(cookie?.secure && cookie.httpOnly && cookie.sameSite === 'Lax', 'real secure session cookie required')
     return { context, page, managedReads }
-  }
-  async function fetchJSON(page, pathname, body, token = 'real') {
-    return page.evaluate(async ({ pathname, body, token }) => {
-      const headers = { 'Content-Type': 'application/json' }
-      if (body !== undefined && token !== '') headers['X-CSRF-Token'] = token === 'real' ? (await (await fetch('/api/auth/status')).json()).csrf_token : token
-      const response = await fetch(pathname, { credentials: 'same-origin', ...(body === undefined ? {} : { method: 'POST', headers, body: JSON.stringify(body) }) })
-      const text = await response.text()
-      if (text.length > 32768) throw new Error('response bound')
-      return { status: response.status, body: text ? JSON.parse(text) : null }
-    }, { pathname, body, token })
   }
   const ordinary = await login(ready.ordinaryEmail)
   await expect(ordinary.page.getByRole('region', { name: 'Code navigation indexing' })).toHaveCount(0)
@@ -316,6 +291,7 @@ async function run() {
   phase = 'fixture teardown'; const finished = await command('finish'); child.stdin.end()
   const [code] = await exited; assert.equal(code, 0)
   await join(tunnel); tunnel = undefined
+  if (fatal) throw fatal
   results.fixture = { repo: ready.repo, commit: ready.commit, ...publication }
   results.audit_enqueues = finished.auditEnqueues
   results.unexpected_browser_errors = unexpectedBrowserErrors
@@ -325,16 +301,11 @@ async function run() {
   console.log(JSON.stringify({ result: 'pass', checks: results.checks.length, states: results.states.length, appearances: results.viewports.length }))
 }
 timer = setTimeout(() => { fatal ??= new Error('driver timeout'); child.stdin.end(); wake?.() }, 600000)
-run().catch(error => {
-  let recorded = diagnostics + '\nRecent status: ' + JSON.stringify(statusReads) + '\nRequest counts: ' + JSON.stringify(results.managed_request_counts) + '\nBrowser errors: ' + JSON.stringify(browserDiagnostics)
-  let summary = `Settings browser failed during ${phase}: ${fatal?.message || error.message}`
-  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) {
-    recorded = recorded.replaceAll(secret, '[redacted]')
-    summary = summary.replaceAll(secret, '[redacted]')
-  }
-  fs.writeFileSync(receipt + '.failure.txt', recorded, { flag: 'wx', mode: 0o600 })
-  console.error(summary.slice(0, 1024)); process.exitCode = 1
-}).finally(async () => {
+run().catch(error => reportFailure({
+  ready, receipt,
+  recorded: diagnostics + '\nRecent status: ' + JSON.stringify(statusReads) + '\nRequest counts: ' + JSON.stringify(results.managed_request_counts) + '\nBrowser errors: ' + JSON.stringify(browserDiagnostics),
+  summary: `Settings browser failed during ${phase}: ${fatal?.message || error.message}`,
+})).finally(async () => {
   clearTimeout(timer); lines.close(); child.stdin.end()
   if (browser) await browser.close()
   // EOF gives the owned test time to close TLS, join auth, and close its engine.

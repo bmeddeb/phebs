@@ -68,29 +68,21 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 	check(err)
 	authentication := typedSettingsBrowserAuth(ctx, t, f.state, cancel)
 	admin, password, auditFailed := authentication.admin, authentication.password, authentication.failed
-	const adminEmail, ordinaryEmail = "admin@settings.invalid", "ordinary@settings.invalid"
 	resolver, err := newTypedCodeNavigationResolver(f.state, f.base)
 	check(err)
 	navigation := codenav.New(codenav.Options{DataDir: f.base, RoutedResolver: resolver})
+	monitor, err := lifecycle.NewStatusMonitor(false, []lifecycle.Owner{lifecycle.JobOwnerImpl{Store: f.state}})
+	check(err)
 	server := func(available bool) *httptest.Server {
-		return typedSettingsBrowserServer(ctx, t, dist, f.base, f.state, navigation, authentication, available)
+		return typedSettingsBrowserServer(ctx, t, dist, f.base, f.state, navigation, authentication, monitor, available)
 	}
 	installed, dark := server(true), server(false)
 	emit, expect := typedSettingsBrowserProtocol(ctx, t)
-	jobs := func(want int) []store.Job {
-		t.Helper()
-		page, err := f.state.ListJobsPage(ctx, store.JobPageQuery{Kind: store.JobTypedIndex, Limit: 4})
-		check(err)
-		if len(page.Jobs) != want || page.Next != nil {
-			t.Fatal("unexpected coordinator census", len(page.Jobs), want)
-		}
-		return page.Jobs
-	}
 	port := func(s *httptest.Server) int { return s.Listener.Addr().(*net.TCPAddr).Port }
 	// The launcher keeps this credentials-bearing readiness event in a private
 	// pipe; receipts contain only source-free assertions, never credentials.
 	emit(map[string]any{"event": "ready", "port": port(installed), "darkPort": port(dark), "repo": f.repo,
-		"adminEmail": adminEmail, "ordinaryEmail": ordinaryEmail, "password": password,
+		"adminEmail": authentication.adminEmail, "ordinaryEmail": authentication.ordinaryEmail, "password": password,
 		"commit": commit, "sourcePath": "unicode.go", "sourceBytes": len("😀x\nx\n")})
 	var queuedDigest, coordinatorID string
 	var current typedindex.PublicationPointer
@@ -104,12 +96,12 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 			if !reflect.DeepEqual(before, after) || after.Status.Desired != "" {
 				t.Fatal("browser preview or refusal changed typed authority")
 			}
-			jobs(0)
+			typedSettingsJobs(ctx, t, f.state, 0)
 			event["state"] = "absent"
 		case "queued":
 			status, err := f.state.GetTypedIndexStatus(ctx, f.repo)
 			check(err)
-			page := jobs(1)
+			page := typedSettingsJobs(ctx, t, f.state, 1)
 			if status.Desired == "" || status.Current != nil || page[0].Status != store.StatusPending || page[0].Attempts != 0 {
 				t.Fatal("exact browser retry did not retain one pending request")
 			}
@@ -134,7 +126,7 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 			}
 			current, err = f.state.ResolveTypedIndexCurrent(ctx, f.repo)
 			check(err)
-			page := jobs(1)
+			page := typedSettingsJobs(ctx, t, f.state, 1)
 			if page[0].ID != coordinatorID || page[0].Status != store.StatusDone || current.RootDigest != publication.bundle.RootDigest() {
 				t.Fatal("published current or coordinator differs")
 			}
@@ -154,7 +146,7 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 				t.Fatal("browser did not enqueue the expected fresh purpose", purpose)
 			}
 			if command == "failed" {
-				jobs(2)
+				typedSettingsJobs(ctx, t, f.state, 2)
 				job, err := f.state.ClaimJob(ctx, store.JobTypedIndex, "settings-failed-fixture")
 				check(err)
 				if job == nil {
@@ -163,7 +155,7 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 				check(f.state.SetJobStatus(ctx, *job, store.StatusRunning, ""))
 				check(f.state.SetJobStatus(ctx, *job, store.StatusFailed, "private /unretained/driver-output"))
 			} else {
-				jobs(3)
+				typedSettingsJobs(ctx, t, f.state, 3)
 				check(f.state.CancelTypedIndex(ctx, f.repo, op.Status.Desired))
 				count, err := f.state.CancelPendingJobs(ctx, store.JobTypedIndex, f.repo)
 				check(err)
@@ -198,7 +190,7 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 			if !status.RestoreRequired || status.Desired != "" || status.Current != nil {
 				t.Fatal("restore clearing retained readable managed authority")
 			}
-			jobs(0)
+			typedSettingsJobs(ctx, t, f.state, 0)
 			event["state"] = "stale"
 		case "finish":
 			status, err := f.state.GetTypedIndexStatus(ctx, f.repo)
@@ -206,7 +198,7 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 			if !status.RestoreRequired || status.Desired != "" || status.Current != nil || auditFailed.Load() {
 				t.Fatal("final restored authority or real audit failed")
 			}
-			jobs(0)
+			typedSettingsJobs(ctx, t, f.state, 0)
 			auditEvents, err := f.state.ListAuditEvents(ctx, 0, 32)
 			check(err)
 			enqueues := 0
@@ -276,12 +268,14 @@ func typedSettingsBrowserMirror(ctx context.Context, t *testing.T, f typedNaviga
 	return commit
 }
 
+// One shared composition per fixture: both test servers read one monitor.
 type typedSettingsAuth struct {
-	service  *auth.Service
-	admin    *store.User
-	password string
-	audit    func(context.Context, store.AuditEvent)
-	failed   *atomic.Bool
+	service                   *auth.Service
+	admin                     *store.User
+	adminEmail, ordinaryEmail string
+	password                  string
+	audit                     func(context.Context, store.AuditEvent)
+	failed                    *atomic.Bool
 }
 
 func typedSettingsBrowserAuth(ctx context.Context, t *testing.T, state *store.Surreal, cancel context.CancelFunc) typedSettingsAuth {
@@ -329,20 +323,20 @@ func typedSettingsBrowserAuth(ctx context.Context, t *testing.T, state *store.Su
 	if ordinary == nil || ordinary.IsAdmin {
 		t.Fatal("ordinary fixture user has administrator authority")
 	}
-	return typedSettingsAuth{authService, admin, password, audit, &auditFailed}
+	return typedSettingsAuth{authService, admin, adminEmail, ordinaryEmail, password, audit, &auditFailed}
 }
 
-func typedSettingsBrowserServer(ctx context.Context, t *testing.T, dist, base string, state *store.Surreal, navigation *codenav.Service, authentication typedSettingsAuth, available bool) *httptest.Server {
+func typedSettingsJobs(ctx context.Context, t *testing.T, state *store.Surreal, want int) []store.Job {
 	t.Helper()
-	check := func(err error) {
-		t.Helper()
-		if err != nil {
-			t.Fatal(err)
-		}
+	page, err := state.ListJobsPage(ctx, store.JobPageQuery{Kind: store.JobTypedIndex, Limit: 4})
+	if err != nil || len(page.Jobs) != want || page.Next != nil {
+		t.Fatal("unexpected coordinator census", len(page.Jobs), want, err)
 	}
-	monitor, err := lifecycle.NewStatusMonitor(false, []lifecycle.Owner{lifecycle.JobOwnerImpl{Store: state}})
-	check(err)
+	return page.Jobs
+}
 
+func typedSettingsBrowserServer(ctx context.Context, t *testing.T, dist, base string, state *store.Surreal, navigation *codenav.Service, authentication typedSettingsAuth, monitor *lifecycle.StatusMonitor, available bool) *httptest.Server {
+	t.Helper()
 	options := api.Options{
 		Version: "neutral-settings-fixture", Store: state, DataDir: base, CodeNav: navigation,
 		TypedIndexAvailable: available, AuditRecord: authentication.audit, AuditLog: state,
@@ -360,6 +354,11 @@ func typedSettingsBrowserServer(ctx context.Context, t *testing.T, dist, base st
 		},
 	}
 	handler := newHTTPHandler(authentication.service, api.New(options), http.NotFoundHandler(), http.NotFoundHandler(), http.FileServerFS(os.DirFS(dist)), config.Server{})
+	return typedSettingsTLSServer(ctx, t, handler)
+}
+
+func typedSettingsTLSServer(ctx context.Context, t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
 	out := httptest.NewUnstartedServer(handler)
 	out.Config.BaseContext = func(net.Listener) context.Context { return ctx }
 	out.Config.ReadHeaderTimeout = 5 * time.Second

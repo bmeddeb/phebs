@@ -23,9 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
-	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -238,22 +236,13 @@ func typedSettingsNativeImport(ctx context.Context, t *testing.T, endpoint strin
 	}
 }
 
-func typedSettingsNativeJobs(ctx context.Context, t *testing.T, state *store.Surreal, want int) []store.Job {
-	t.Helper()
-	page, err := state.ListJobsPage(ctx, store.JobPageQuery{Kind: store.JobTypedIndex, Limit: 2})
-	if err != nil || len(page.Jobs) != want || page.Next != nil {
-		t.Fatal("native coordinator census differs", err)
-	}
-	return page.Jobs
-}
-
 func typedSettingsNativePristine(ctx context.Context, t *testing.T, state *store.Surreal, cfg typedSettingsNativeConfigSubset, profile typedindex.Profile) store.TypedIndexOperator {
 	t.Helper()
 	op, err := state.ReadTypedIndexOperator(ctx, cfg.Source.Repository)
 	if err != nil || op.Source != cfg.Source || op.Profile.Digest() != profile.Digest() || op.ProfileEpoch != uint64(cfg.ProfileEpoch) || op.UniverseDigest != cfg.UniverseSHA256 || op.Status.Desired != "" || op.Status.Current != nil || op.Status.Canceled || op.Status.RestoreRequired || op.Schedule != nil {
 		t.Fatal("imported source/profile/intent is not pristine", err)
 	}
-	typedSettingsNativeJobs(ctx, t, state, 0)
+	typedSettingsJobs(ctx, t, state, 0)
 	for _, kind := range []store.TypedIndexControlKind{store.TypedIndexRequests, store.TypedIndexAttempts, store.TypedIndexPlans, store.TypedIndexIntents, store.TypedIndexStates, store.TypedIndexCurrents} {
 		page, err := state.ScanTypedIndexControls(ctx, kind, "", 2)
 		want := 0
@@ -325,7 +314,7 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 	}
 	owned, err := os.MkdirTemp(temporary, "settings-native-")
 	check(err)
-	workspace, indexDir := filepath.Join(owned, "typed-index"), filepath.Join(owned, "index")
+	workspace, indexDir := filepath.Join(owned, "typed-index"), filepath.Join(*typedSettingsNativeRoot, "index")
 	check(os.Mkdir(workspace, 0700))
 	check(os.Mkdir(indexDir, 0700))
 	check(os.WriteFile(filepath.Join(workspace, ".phebs-index-publication.lock"), nil, 0600))
@@ -357,31 +346,47 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 		}
 		return filepath.Join(*typedSettingsNativeRoot, "bundle"), bytes.Clone(inventoryRaw), nil
 	}
-	deps := &serveDeps{ctx: runtimeCtx, cancel: stopRuntime, cfg: &config.Config{}, st: state, startup: &serveOwners{}, acquireLifecycleMutation: func(ctx context.Context) (func(), error) { return focusedindex.AcquireMutationLock(ctx, indexDir) }, typedInstallation: &typedServeInstallation{Workspace: workspace, Socket: "/run/docker.sock", Image: cfg.ImageSHA256, Bundle: bundle}}
+	deps := &serveDeps{ctx: runtimeCtx, cancel: stopRuntime, cfg: &config.Config{Server: config.Server{DataDir: *typedSettingsNativeRoot}}, st: state, startup: &serveOwners{}, exact: &serveExact{}, typedInstallation: &typedServeInstallation{Workspace: workspace, Socket: "/run/docker.sock", Image: cfg.ImageSHA256, Bundle: bundle}}
 	deps.runBackground = func(run func()) { workers.Add(1); go func() { defer workers.Done(); run() }() }
-	check(prepareServeTypedIndex(deps))
-	type report struct {
-		outcome typedexecutor.Outcome
-		err     error
-	}
-	outcomes := make(chan report, 1)
+	deps.stopBackground = joinRuntime
+	check(wireServeLifecycle(deps))
+	outcomes := make(chan typedSettingsNativeReport, 1)
 	deps.typedRuntime.runtime.Report = func(outcome typedexecutor.Outcome, err error) {
 		if reports.Add(1) != 1 {
 			reportFailed.Store(true)
 		}
 		select {
-		case outcomes <- report{outcome, err}:
+		case outcomes <- typedSettingsNativeReport{outcome, err}:
 		default:
 			reportFailed.Store(true)
 		}
 	}
 	authCtx, stopAuth := context.WithCancel(ctx)
 	authentication := typedSettingsBrowserAuth(authCtx, t, state, stopAuth)
-	navigation := codenav.New(codenav.Options{DataDir: *typedSettingsNativeRoot, RoutedResolver: deps.typedRuntime.resolver})
-	installed := typedSettingsBrowserServer(ctx, t, dist, *typedSettingsNativeRoot, state, navigation, authentication, true)
+	deps.authService, deps.auditRecord = authentication.service, authentication.audit
+	var closeSearcherOnce sync.Once
+	closeSearcher := func() {
+		joinRuntime()
+		closeSearcherOnce.Do(func() {
+			if deps.searcher != nil {
+				deps.searcher.Close()
+			}
+		})
+	}
+	t.Cleanup(closeSearcher)
+	newServeVisibility(deps)
+	check(openServeSearcher(deps))
+	// The separately verified assets keep the browser gate independent of the
+	// test binary's placeholder UI while every HTTP/API option comes from serve.
+	deps.dist = os.DirFS(dist)
+	options, err := newServeAPIOptions(deps)
+	check(err)
+	handler, err := newServeHTTPHandlers(deps, options, t421ExactFinalAuthorityRead{}, t421ExactFinalAuthorityRead{})
+	check(err)
+	installed := typedSettingsTLSServer(ctx, t, handler)
 	emit, expect := typedSettingsBrowserProtocol(ctx, t)
 	port := func(server *httptest.Server) int { return server.Listener.Addr().(*net.TCPAddr).Port }
-	emit(map[string]any{"event": "ready", "port": port(installed), "repo": cfg.Source.Repository, "commit": cfg.Source.Commit, "provider": profile.Provider(), "adminEmail": "admin@settings.invalid", "ordinaryEmail": "ordinary@settings.invalid", "password": authentication.password})
+	emit(map[string]any{"event": "ready", "port": port(installed), "repo": cfg.Source.Repository, "commit": cfg.Source.Commit, "provider": profile.Provider(), "adminEmail": authentication.adminEmail, "ordinaryEmail": authentication.ordinaryEmail, "password": authentication.password, "httpComposition": "production-helpers", "lifecycleOwners": deps.lifecycleStatus.Snapshot().Policy.Owners})
 	var coordinator string
 	var outcome typedexecutor.Outcome
 	var current store.TypedIndexCurrentCustody
@@ -397,12 +402,12 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 			if !reflect.DeepEqual(before, after) {
 				t.Fatal("browser preview or refusal mutated native authority")
 			}
-			typedSettingsNativeJobs(ctx, t, state, 0)
+			typedSettingsJobs(ctx, t, state, 0)
 			event["state"] = "absent"
 		case "queued":
 			op, err := state.ReadTypedIndexOperator(ctx, cfg.Source.Repository)
 			check(err)
-			jobs := typedSettingsNativeJobs(ctx, t, state, 1)
+			jobs := typedSettingsJobs(ctx, t, state, 1)
 			if op.Source != cfg.Source || op.Status.Desired == "" || !op.DesiredFresh || op.Desired.Purpose != typedindex.Publish || op.Desired.Action != typedindex.Plan || op.Status.Current != nil || op.Schedule != nil || jobs[0].Status != store.StatusPending || jobs[0].Attempts != 0 {
 				t.Fatal("browser retry did not retain one pristine pending Publish")
 			}
@@ -413,57 +418,19 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 			event["state"], event["requestDigest"] = "planning", planning
 		case "publish":
 			check(startServeTypedIndex(deps))
-			waitCtx, stop := context.WithTimeout(ctx, 6*time.Minute)
-			ticker := time.NewTicker(250 * time.Millisecond)
-			var received bool
-			for {
-				select {
-				case r := <-outcomes:
-					if received || r.err != nil {
-						stop()
-						ticker.Stop()
-						t.Fatal("native report failed or duplicated")
-					}
-					outcome, received = r.outcome, true
-				case <-ticker.C:
-				case <-waitCtx.Done():
-					stop()
-					ticker.Stop()
-					t.Fatal("production native publication did not settle")
+			outcome, published = typedSettingsNativeSettle(ctx, t, state, cfg.Source.Repository, outcomes, func() error {
+				switch {
+				case reportFailed.Load():
+					return errors.New("native report bound failed")
+				case deps.typedRuntime.pending.Load():
+					// A failed settlement only recovers; fail now, not at the deadline.
+					return errors.New("native settlement failed; recovery pending")
 				}
-				if reportFailed.Load() {
-					stop()
-					ticker.Stop()
-					t.Fatal("native report bound failed")
-				}
-				if !received {
-					continue
-				}
-				op, err := state.ReadTypedIndexOperator(waitCtx, cfg.Source.Repository)
-				if err != nil {
-					stop()
-					ticker.Stop()
-					t.Fatal("publication observation refused", err)
-				}
-				if op.Coordinator != store.StatusDone || op.Status.Stage != store.TypedComplete || op.Schedule == nil || op.Schedule.Status != store.GenerationScheduleSettled || op.Schedule.Succeeded != 1 || op.Schedule.Failed != 0 || op.Schedule.Pending != 0 || op.Schedule.Running != 0 {
-					continue
-				}
-				if _, err := state.GetTypedIndexGrowth(waitCtx); !errors.Is(err, store.ErrNotFound) {
-					if err == nil {
-						continue
-					}
-					stop()
-					ticker.Stop()
-					t.Fatal("publication growth observation refused", err)
-				}
-				published = op
-				break
-			}
-			stop()
-			ticker.Stop()
+				return nil
+			})
 			current, err = state.ResolveTypedIndexCurrentCustody(ctx, cfg.Source.Repository)
 			check(err)
-			finishedJobs = typedSettingsNativeJobs(ctx, t, state, 1)
+			finishedJobs = typedSettingsJobs(ctx, t, state, 1)
 			if current.PlanningDigest != planning || current.Parent.Digest() != planning || current.Parent.Request().Source != cfg.Source || current.Parent.Purpose() != typedindex.Publish || current.Admission.Digest() != published.Status.Desired || !reflect.DeepEqual(current.Pointer, outcome.Pointer) || current.AttemptDigest != outcome.AttemptDigest || current.Pointer.Binding.RequestDigest != current.Admission.Digest() || current.Pointer.Epoch != 1 || finishedJobs[0].ID != coordinator || finishedJobs[0].Status != store.StatusDone || finishedJobs[0].Attempts != 0 || finishedJobs[0].FinishedAt == nil || published.Status.Stale || published.Status.Canceled || published.Status.RestoreRequired || published.Schedule.Generation != planning || published.Schedule.TotalChunks != 1 || deps.typedRuntime.pending.Load() || deps.typedRuntime.recovering.Load() || lookups.Load() != 1 || reports.Load() != 1 {
 				t.Fatal("native current, request, durable settlement or counts differ")
 			}
@@ -498,7 +465,7 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 			check(err)
 			retained, err := state.ResolveTypedIndexCurrentCustody(ctx, cfg.Source.Repository)
 			check(err)
-			jobs := typedSettingsNativeJobs(ctx, t, state, 1)
+			jobs := typedSettingsJobs(ctx, t, state, 1)
 			if !reflect.DeepEqual(after, published) || !reflect.DeepEqual(retained, current) || !reflect.DeepEqual(jobs, finishedJobs) || lookups.Load() != 1 || reports.Load() != 1 || reportFailed.Load() || len(outcomes) != 0 || deps.typedRuntime.pending.Load() || deps.typedRuntime.recovering.Load() {
 				t.Fatal("ordinary polling replayed work or changed publication")
 			}
@@ -535,10 +502,11 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 					enqueues++
 				}
 			}
-			if enqueues != 2 {
-				t.Fatal("native bridge did not retain exactly two successful enqueue audits", enqueues)
+			if enqueues != 3 {
+				t.Fatal("native bridge did not retain exactly three successful enqueue audits", enqueues)
 			}
 			installed.Close()
+			closeSearcher()
 			turns, tombstones := typedSettingsNativeDrain(ctx, t, deps, cfg.Source.Repository, workspace, current)
 			check(os.RemoveAll(owned))
 			stopAuth()
@@ -550,6 +518,55 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 		emit(event)
 	}
 	t.Log("authenticated Settings native bridge complete; successor/restart/restore and full T45.9 closure remain unestablished")
+}
+
+type typedSettingsNativeReport struct {
+	outcome typedexecutor.Outcome
+	err     error
+}
+
+// Settlement completes only after one successful report and durable settled,
+// growth-free operator state. failed reports runtime faults that end the wait.
+func typedSettingsNativeSettle(ctx context.Context, t *testing.T, state *store.Surreal, repo string, outcomes <-chan typedSettingsNativeReport, failed func() error) (typedexecutor.Outcome, store.TypedIndexOperator) {
+	t.Helper()
+	waitCtx, stop := context.WithTimeout(ctx, 6*time.Minute)
+	defer stop()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	var outcome typedexecutor.Outcome
+	var received bool
+	for {
+		select {
+		case r := <-outcomes:
+			if received || r.err != nil {
+				t.Fatal("native report failed or duplicated")
+			}
+			outcome, received = r.outcome, true
+		case <-ticker.C:
+		case <-waitCtx.Done():
+			t.Fatal("production native publication did not settle")
+		}
+		if err := failed(); err != nil {
+			t.Fatal(err)
+		}
+		if !received {
+			continue
+		}
+		op, err := state.ReadTypedIndexOperator(waitCtx, repo)
+		if err != nil {
+			t.Fatal("publication observation refused", err)
+		}
+		if op.Coordinator != store.StatusDone || op.Status.Stage != store.TypedComplete || op.Schedule == nil || op.Schedule.Status != store.GenerationScheduleSettled || op.Schedule.Succeeded != 1 || op.Schedule.Failed != 0 || op.Schedule.Pending != 0 || op.Schedule.Running != 0 {
+			continue
+		}
+		if _, err := state.GetTypedIndexGrowth(waitCtx); !errors.Is(err, store.ErrNotFound) {
+			if err == nil {
+				continue
+			}
+			t.Fatal("publication growth observation refused", err)
+		}
+		return outcome, op
+	}
 }
 
 func typedSettingsNativeDrain(ctx context.Context, t *testing.T, deps *serveDeps, repo, workspace string, current store.TypedIndexCurrentCustody) (int, int) {

@@ -15623,6 +15623,16 @@ establishes neither successor replacement nor full neutral/authorized target
 closure; zero accepted services and 176 admitted source bytes establish no
 product-scale envelope. Production provider registration and limits stay exact.
 
+Review correction: the retained `c1ba670d` bridge assembled HTTP options,
+resolver and lifecycle status in the fixture; its prior zero-finding reviews
+do not prove production HTTP wiring. The revised test reuses existing serve
+constructors, checks typed-owner registration over authenticated HTTP, and
+accepts the finished exact enqueue before its drift-specific refusal. Ordinary
+nil admission owners match production outside the bound T42.2 runtime. Shared
+driver failure handling, tunnel checks, wider transport waits and the `ci-ui`
+self-check require fresh native and legacy execution plus a separately sealed
+receipt. Full serve/lifecycle cadence and complete T45.9 closure remain open.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

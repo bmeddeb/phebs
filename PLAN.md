@@ -10207,3 +10207,45 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   workspace is mechanics evidence only. Complete neutral closure, successor
   replacement, separately authorized target closure, T45.6, ordinary dark
   providers and scale/release posture remain unchanged.
+
+- **2026-10-04 — T45.9 Settings bridge review corrections.** Retain the
+  `c1ba670d` receipt and `50559254` reviews as historical records: their native
+  HTTP options, resolver assignment and lifecycle monitor were fixture
+  composition, so their zero findings did not establish production HTTP wiring.
+  The corrected test calls existing `wireServeLifecycle`, `openServeSearcher`,
+  `newServeAPIOptions` and `newServeHTTPHandlers`; no production extraction or
+  refactor is needed. Authenticated lifecycle HTTP must register the typed
+  owner, availability must expose the provider, and native navigation must use
+  the production resolver. This covers those constructors, not full `serve`,
+  its listener, automatic lifecycle cadence or ceremony admission. Ordinary
+  serve has nil admission owners unless the T42.2 dispatcher runtime is bound;
+  the reported empty-owner mismatch is therefore rejected.
+  Replay the finished exact enqueue successfully before source drift, then
+  require the unchanged warm authority/job/current/launch census and the
+  drift-specific refusal detail. This adds one accepted audit, not another
+  Publish. Settlement fails immediately on the production recovery-pending
+  latch. The driver's thirteen-minute frame wait outlasts the fixture's
+  twelve-minute context plus thirty-second worker join; its fifteen-minute
+  outer bound and the six-minute settlement/native limits remain unchanged.
+  Shared stateless driver helpers centralize credential redaction and tunnel
+  ownership. Unexpected tunnel failure is latched once and refuses receipt
+  sealing even during teardown. `ci-ui` runs the actual callback/tunnel
+  self-check. The existing visible Appearance barrier shares the Settings render
+  commit; native additionally waits for settled network activity. Both changed
+  fixtures require fresh immutable-source execution and a new receipt before
+  these corrections can be certified. Earlier receipt bytes remain exact.
+
+  **Cost.** Production request/query, sync, startup/restart, retry/no-op,
+  publication, locks, cache, schema and admission costs are unchanged. Fixture
+  startup now performs bounded catalog repair under the existing mutation lock,
+  constructs the full bounded lifecycle monitor/publication caches, opens one
+  empty searcher with its watcher and scoped readers, and builds the real
+  API/MCP/metrics mux. The searcher closes after runtime join attempts and before
+  successful destructive drainage. Its fresh root index contains only the
+  existing publication lock; identity-bound operator cleanup refuses unknown
+  index custody. One shared jobs census reads at most four rows instead of the
+  native fixture's former two, still requiring the exact count and no cursor.
+  Legacy test servers share one monitor. The added lifecycle read and accepted
+  enqueue are test requests; unchanged warm equality proves no replay. Driver
+  sharing adds no child or polling loop. Existing native, trusted setup,
+  browser and selected-owner cost qualifications remain exact.

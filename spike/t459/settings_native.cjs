@@ -5,10 +5,10 @@
 const assert = require('node:assert/strict')
 const { spawn } = require('node:child_process')
 const fs = require('node:fs')
-const net = require('node:net')
 const path = require('node:path')
 const readline = require('node:readline')
 const { once } = require('node:events')
+const { unusedPort, join, forward, fetchJSON: json, reportFailure } = require('./settings_driver.cjs')
 const [dependencies, chrome, sshConfig, fixture, assets, installation, configDigest, receipt] = process.argv.slice(2)
 for (const value of [dependencies, chrome, sshConfig, fixture, assets, installation, receipt]) assert(value && path.isAbsolute(value), 'explicit absolute paths required')
 for (const value of [fixture, assets]) assert(/^\/[A-Za-z0-9/_.-]+$/.test(value), 'unsafe remote fixture path')
@@ -39,9 +39,11 @@ lines.on('line', line => {
 })
 for (const stream of [child, child.stdin]) stream.on('error', () => { fatal ??= new Error('fixture transport failed'); wake?.() })
 child.on('exit', code => { if (code !== 0) fatal ??= new Error('fixture failed'); wake?.() })
+// Transport waits outlast the fixture's twelve-minute context and thirty-second
+// worker join; native execution and the six-minute settlement bound stay fixed.
 async function frame() {
   if (!frames.length && !fatal) await new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => { wake = undefined; reject(new Error('fixture frame timeout')) }, 360000)
+    const timeout = setTimeout(() => { wake = undefined; reject(new Error('fixture frame timeout')) }, 780000)
     wake = () => { clearTimeout(timeout); wake = undefined; resolve() }
   })
   if (fatal) throw fatal
@@ -54,25 +56,13 @@ async function command(command) {
   assert.equal(next.event, 'done'); assert.equal(next.command, command)
   return next
 }
-async function unusedPort() {
-  const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening')
-  const port = listener.address().port
-  await new Promise(resolve => listener.close(resolve)); return port
-}
-async function join(proc) {
-  if (!proc?.pid || proc.exitCode !== null || proc.signalCode !== null) return
-  const done = once(proc, 'exit'); proc.kill('SIGTERM')
-  const timeout = setTimeout(() => proc.kill('SIGKILL'), 10000)
-  try { await done } finally { clearTimeout(timeout) }
-}
 const results = { schema: 'phebs-t459-settings-native-v1', t459_acceptance: 'OPEN', native_execution: true, canonical_pixel_comparison: false, checks: [] }
 const check = name => { results.checks.push(name); phase = name }
 async function run() {
   ready = await frame(); assert.equal(ready.event, 'ready')
   assert(Number.isInteger(ready.port) && ready.port > 0 && ready.port < 65536)
   const port = await unusedPort()
-  tunnel = spawn('ssh', [...sshArgs.slice(0, -1), '-o', 'ExitOnForwardFailure=yes', '-N', '-L', `${port}:127.0.0.1:${ready.port}`, 'colima-phebs-t451a'], { stdio: 'ignore' })
-  tunnel.on('error', () => { fatal ??= new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
+  tunnel = forward(sshArgs, [`${port}:127.0.0.1:${ready.port}`], () => { fatal ??= new Error('fixture tunnel failed'); child.stdin.end(); wake?.() })
   const origin = `https://127.0.0.1:${port}`
   browser = await chromium.launch({ executablePath: chrome, headless: true })
   results.browser = browser.version()
@@ -101,20 +91,20 @@ async function run() {
     assert(cookie?.secure && cookie.httpOnly && cookie.sameSite === 'Lax')
     return { context, page }
   }
-  async function json(page, pathname, body, token = 'real') {
-    return page.evaluate(async ({ pathname, body, token }) => {
-      const headers = { 'Content-Type': 'application/json' }
-      if (body !== undefined && token !== '') headers['X-CSRF-Token'] = token === 'real' ? (await (await fetch('/api/auth/status')).json()).csrf_token : token
-      const response = await fetch(pathname, { credentials: 'same-origin', ...(body === undefined ? {} : { method: 'POST', headers, body: JSON.stringify(body) }) })
-      const text = await response.text(); if (text.length > 32768) throw new Error('response bound')
-      return { status: response.status, body: text ? JSON.parse(text) : null }
-    }, { pathname, body, token })
-  }
   const ordinary = await login(ready.ordinaryEmail)
+  // Settle the session's requests first so absence is not a pre-render read.
+  await ordinary.page.waitForLoadState('networkidle')
   await expect(ordinary.page.getByRole('region', { name: 'Code navigation indexing' })).toHaveCount(0)
   assert.equal((await json(ordinary.page, '/api/code-navigation-indexing/providers')).status, 403)
   await ordinary.context.close(); check('real anonymous and ordinary session refusal')
   const admin = await login(ready.adminEmail), page = admin.page
+  const lifecycle = await json(page, '/api/lifecycle-status')
+  assert.equal(lifecycle.status, 200); assert.equal(lifecycle.body?.schema, 'phebs-lifecycle-status-v1')
+  assert.equal(ready.httpComposition, 'production-helpers')
+  assert.equal(lifecycle.body.policy.owners, ready.lifecycleOwners)
+  assert.equal(lifecycle.body.policy.owners, lifecycle.body.owners.length)
+  assert.equal(lifecycle.body.owners.filter(owner => owner.name === 'typed-index-generations').length, 1)
+  check('production lifecycle registers the typed owner over authenticated HTTP')
   const section = page.getByRole('region', { name: 'Code navigation indexing' })
   let requests = 0
   const mutations = [], previews = []
@@ -167,10 +157,20 @@ async function run() {
   }
   const cold = await reads(); assert.deepEqual(await reads(), cold)
   check('rendered native current and cold warm cross-member HTTP navigation')
+  // The finished parent remains an accepted exact retry. The next warm oracle
+  // checks that this control changes no authority, job, publication or launch.
+  const accepted = await json(page, '/api/code-navigation-indexing/enqueue', enqueue)
+  assert.equal(accepted.status, 200); assert.equal(accepted.body?.state, 'current')
+  assert.equal(accepted.body.request_digest, publication.executionDigest)
+  assert.equal(accepted.body.current_commit, ready.commit); assert.equal(accepted.body.provider, ready.provider)
+  check('completed exact enqueue remains accepted before source drift')
   phase = 'ordinary runtime no-op boundary'; const warm = await command('warm')
   assert.deepEqual(await reads(), cold); check('ordinary polling preserves current without native replay')
   await command('stale')
-  assert.equal((await json(page, '/api/code-navigation-indexing/enqueue', enqueue)).status, 409)
+  // Only the source-authority branch carries this reason; request/selection
+  // conflicts use other 409 details.
+  const refused = await json(page, '/api/code-navigation-indexing/enqueue', enqueue)
+  assert.equal(refused.status, 409); assert.equal(refused.body?.detail, 'indexing authority changed; refresh')
   for (const pathname of ['/api/find_definitions', '/api/find_references', '/api/hover']) {
     const query = pathname === '/api/find_references' ? position('b/b.go', 1, 6) : position('a/a.go', 2, 15)
     assert.equal((await json(page, pathname + query)).body.available, false)
@@ -182,21 +182,16 @@ async function run() {
   phase = 'native lifecycle teardown'; const cleanup = await command('finish'); child.stdin.end()
   const [code] = await exited; assert.equal(code, 0)
   await join(tunnel); tunnel = undefined
+  if (fatal) throw fatal
   Object.assign(results, { fixture: { repo: ready.repo, commit: ready.commit, provider: ready.provider, publication }, warm, cleanup, managed_requests: requests, unexpected_browser_errors: unexpected, deliberate_network_console_errors: deliberate, joined: true })
   fs.writeFileSync(receipt, JSON.stringify(results, null, 2) + '\n', { flag: 'wx', mode: 0o600 })
   console.log(JSON.stringify({ result: 'pass', checks: results.checks.length }))
 }
 const timer = setTimeout(() => { fatal ??= new Error('driver timeout'); child.stdin.end(); wake?.() }, 900000)
-run().catch(error => {
-  let recorded = diagnostics + '\nBrowser errors: ' + JSON.stringify(browserErrors)
-  let summary = `Native Settings failed during ${phase}: ${fatal?.message || error.message}`
-  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) {
-    recorded = recorded.replaceAll(secret, '[redacted]')
-    summary = summary.replaceAll(secret, '[redacted]')
-  }
-  fs.writeFileSync(receipt + '.failure.txt', recorded, { flag: 'wx', mode: 0o600 })
-  console.error(summary.slice(0, 1024)); process.exitCode = 1
-}).finally(async () => {
+run().catch(error => reportFailure({
+  ready, receipt, recorded: diagnostics + '\nBrowser errors: ' + JSON.stringify(browserErrors),
+  summary: `Native Settings failed during ${phase}: ${fatal?.message || error.message}`,
+})).finally(async () => {
   clearTimeout(timer); lines.close(); child.stdin.end()
   if (browser) await browser.close()
   if (child.exitCode === null && child.signalCode === null) {

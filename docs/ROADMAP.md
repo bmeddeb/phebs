@@ -194,6 +194,13 @@ cover all ten paths with every severity count zero, preserving all tested inputs
 The single-Publish tiny neutral
 bridge does not close complete neutral or separately authorized target
 acceptance, successor replacement, T45.6 or any scale/release boundary.
+The subsequent review identified fixture-authored HTTP wiring in that retained
+source. Corrections now use existing production constructors and add an
+idempotent accepted-enqueue control, typed-owner HTTP check, shared redaction
+and tunnel self-checks. Ordinary nil admission owners match production. Fresh
+native and legacy runs and a new source-bound receipt are required; the old
+receipt and review bytes remain historical. This does not prove full serve or
+automatic lifecycle cadence.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
