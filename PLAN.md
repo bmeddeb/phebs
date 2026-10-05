@@ -10254,3 +10254,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   enqueue are test requests; unchanged warm equality proves no replay. Driver
   sharing adds no child or polling loop. Existing native, trusted setup,
   browser and selected-owner cost qualifications remain exact.
+
+  The first corrected-source native run at `516a6f3b` stopped after 61.835
+  seconds at the report gate; its generic message did not retain the returned
+  error classification or phase projection. Later scheduler `wall_limit` /
+  `execution_failed` and SDK channel diagnostics establish no original cause.
+  Containers, loops, native host scratch and matching processes are absent;
+  the failed installation and fixture workspace remain retained. This is not
+  a native PASS. A test-only diagnostic now emits the closed serve reason,
+  deadline/cancellation booleans and the existing bounded public phase fields,
+  excluding private errors, watchdogs and worker envelopes. One fresh identity
+  rehearsal may establish that missing boundary under unchanged admission,
+  heartbeat, stale, native allowance and settlement limits. It cannot recertify
+  the failed source or label its cause retrospectively.

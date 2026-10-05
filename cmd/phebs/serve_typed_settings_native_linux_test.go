@@ -538,8 +538,25 @@ func typedSettingsNativeSettle(ctx context.Context, t *testing.T, state *store.S
 	for {
 		select {
 		case r := <-outcomes:
-			if received || r.err != nil {
-				t.Fatal("native report failed or duplicated")
+			if received {
+				t.Fatal("native report duplicated")
+			}
+			if r.err != nil {
+				var phases [2]typedSettingsNativePhase
+				for i, phase := range r.outcome.Reports {
+					phases[i] = typedSettingsNativePhase{phase.Phase, phase.ExitCode, phase.Removed, phase.StopReason, phase.Resources}
+				}
+				// Keep classification and bounded public measurements; never log
+				// the private error, watchdog or worker failure envelope.
+				diagnostic, err := json.Marshal(map[string]any{
+					"reason": typedServeReason(r.err), "deadline": errors.Is(r.err, context.DeadlineExceeded),
+					"canceled": errors.Is(r.err, context.Canceled), "phaseReports": phases,
+				})
+				if err != nil {
+					t.Fatal("native refusal diagnostic unavailable")
+				}
+				t.Logf("native refusal %s", diagnostic)
+				t.Fatal("native execution refused")
 			}
 			outcome, received = r.outcome, true
 		case <-ticker.C:
