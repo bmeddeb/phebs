@@ -10240,7 +10240,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   startup now performs bounded catalog repair under the existing mutation lock,
   constructs the full bounded lifecycle monitor/publication caches, opens one
   empty searcher with its watcher and scoped readers, and builds the real
-  API/MCP/metrics mux. The searcher closes after runtime join attempts and before
+  API/MCP/metrics mux. Searcher bootstrap reads the complete one-repository
+  fixture census under its own background-based ten-minute warming deadline;
+  the absent manifest leaves its shared-generation leg empty. The thirteen-minute
+  transport comparison covers context-bound native phases and worker join,
+  not the complete constructor/store/searcher/cleanup lifetime. The searcher
+  closes after runtime join attempts and before
   successful destructive drainage. Its fresh root index contains only the
   existing publication lock; identity-bound operator cleanup refuses unknown
   index custody. One shared jobs census reads at most four rows instead of the
