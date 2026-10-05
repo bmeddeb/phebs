@@ -226,6 +226,10 @@ static/documentation gates at `f05621b0`, with independent zero-finding reviews;
 `spike/t459/native_failure_attribution_1.json` records its limited PASS. It runs
 no privileged native or browser fixture and preserves both prior native receipts.
 The next native attribution rehearsal and full T45.9 acceptance remain open.
+That rehearsal uses `PHEBS_TYPED_NATIVE_TRANSPORT` (`ssh` or `direct`) and, for
+ssh, the closed `PHEBS_TYPED_NATIVE_SSH_TARGET` with the supplied ssh config.
+Its fixture daemon socket is `/var/run/docker.sock`. The retired Colima alias is
+not a parameter. Neither retained STOP is explained, and no allowance is spent.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

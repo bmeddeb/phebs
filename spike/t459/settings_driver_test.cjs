@@ -13,6 +13,10 @@ const ready = { password: 'private-passphrase', adminEmail: 'admin@private.inval
 const privateText = Object.values(ready).join(' ')
 const { writeFileSync } = fs, { error } = console, exitCode = process.exitCode
 try {
+  const nativeSource = fs.readFileSync(path.join(__dirname, 'settings_native.cjs'), 'utf8')
+  assert(nativeSource.includes('PHEBS_TYPED_NATIVE_TRANSPORT') && nativeSource.includes('PHEBS_TYPED_NATIVE_SSH_TARGET'), 'native rehearsal transport parameters required')
+  assert(!nativeSource.includes('colima-phebs-t451a'), 'native rehearsal still uses a retired host parameter')
+  assert(nativeSource.includes('StrictHostKeyChecking=yes') && nativeSource.includes("transport === 'direct'"), 'native rehearsal transport branch missing')
   for (const name of ['settings_browser.cjs', 'settings_native.cjs']) {
     const source = fs.readFileSync(path.join(__dirname, name), 'utf8')
     const marker = 'run().catch(error => ', start = source.indexOf(marker), end = source.indexOf(')).finally', start)

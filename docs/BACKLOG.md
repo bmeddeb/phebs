@@ -15670,6 +15670,13 @@ scoped PASS and qualified test-container setup failures. Both prior native
 receipts remain unchanged. The attribution prerequisite is complete; neither
 native bridge completion nor a cause for either STOP is established.
 
+The next Settings native rehearsal uses the existing acceptance transport
+parameters: `PHEBS_TYPED_NATIVE_TRANSPORT=ssh` or `direct`, and for ssh the
+closed `PHEBS_TYPED_NATIVE_SSH_TARGET` plus the supplied ssh config. The fixture
+daemon socket is `/var/run/docker.sock`. The retired Colima alias is not a
+rehearsal parameter. This correction spends no allowance and does not explain
+either retained STOP.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

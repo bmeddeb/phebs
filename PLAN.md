@@ -10344,3 +10344,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   corrected-source STOPs still have no established underlying cause.
   This closes the diagnostic prerequisite only; a separately bounded future
   native rehearsal and complete T45.9 acceptance remain open.
+
+- **2026-10-05 — T45.9 Settings native rehearsal parameters.** The opt-in
+  Settings bridge driver uses the existing acceptance transport:
+  `PHEBS_TYPED_NATIVE_TRANSPORT=ssh` or `direct`. SSH requires the closed
+  `PHEBS_TYPED_NATIVE_SSH_TARGET` and the operator-supplied ssh config, with
+  the same batch, host-key, TTY and connect options as native acceptance.
+  Direct mode runs the fixture on this host, as root or through `sudo -n`,
+  and does not open a tunnel. The fixture daemon socket is
+  `/var/run/docker.sock`. The retired Colima alias is not a parameter.
+  Allowance, image, profile, settlement and browser checks stay exact. This
+  spends no native allowance and does not explain either retained STOP.
+
+  **Cost.** The driver reads two environment variables once before its
+  existing fixture spawn. SSH adds the four existing acceptance options and
+  shell-quotes the same remote command. Direct mode allocates no tunnel
+  process. The socket string is the opt-in fixture's installation identity.
+  Query, sync, startup, retry, publication, locks, cache and admission costs
+  are unchanged.
