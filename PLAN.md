@@ -10340,6 +10340,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   zero findings. `spike/t459/native_failure_attribution_1.json` retains these
   scoped gates and earlier test-container setup failures. Native operations
   are substituted in the models; no privileged rehearsal or browser fixture
-  ran. Both historical native receipts remain byte-identical and unattributed.
+  ran. Both historical native receipts remain byte-identical; the two
+  corrected-source STOPs still have no established underlying cause.
   This closes the diagnostic prerequisite only; a separately bounded future
   native rehearsal and complete T45.9 acceptance remain open.
