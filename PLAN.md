@@ -10332,3 +10332,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   cache, goroutine, child, store mutation or durable write occurs. Query/request,
   sync, startup/restart, retry/no-op and publication costs are unchanged;
   ordinary serve still has no installed typed runtime.
+
+  Exact implementation `f05621b065c5b345e03aaccfd4cfd812496bf677` passes the full
+  Linux model package (12.265s), full race package (24.326s), focused command,
+  build/vet, pinned lint (zero issues), Darwin package/race and docs/glossary
+  gates. Independent code/security and all-six-path source/cost reviews report
+  zero findings. `spike/t459/native_failure_attribution_1.json` retains these
+  scoped gates and earlier test-container setup failures. Native operations
+  are substituted in the models; no privileged rehearsal or browser fixture
+  ran. Both historical native receipts remain byte-identical and unattributed.
+  This closes the diagnostic prerequisite only; a separately bounded future
+  native rehearsal and complete T45.9 acceptance remain open.

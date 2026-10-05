@@ -221,6 +221,11 @@ must prove successful labels remain empty, simultaneous errors remain joined,
 and guard/no-replay rules hold. This prepares reliable attribution; neither
 retained native STOP has an established underlying cause, and a later rehearsal
 still needs a fresh prospective bound and exact-source/input review.
+The diagnostic prerequisite passes full Linux normal/race models and scoped
+static/documentation gates at `f05621b0`, with independent zero-finding reviews;
+`spike/t459/native_failure_attribution_1.json` records its limited PASS. It runs
+no privileged native or browser fixture and preserves both prior native receipts.
+The next native attribution rehearsal and full T45.9 acceptance remain open.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
