@@ -10171,8 +10171,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   native planning/execution under unchanged production limits; actual geometry
   charges the complete prospective workspace and host backing budgets, with
   staged SDK/mirror/UI bytes already included in filesystem use. Runtime
-  reports use one bounded slot and atomic counters. Navigation retains default
-  metadata caching, per-open publication pins and immutable Git range reads.
+  reports use one bounded slot and atomic counters. Once an outcome arrives,
+  the test observes bounded operator and growth state
+  at 250-millisecond intervals under a six-minute settlement deadline; these
+  repeated SDK reads add no child or production request.
+  Navigation retains default metadata caching, per-open publication pins and
+  immutable Git range reads.
   Teardown joins background work before serial selected lifecycle turns with
   the existing sixteen-mutation cap and a 12,000-turn test ceiling. Shared
   browser/auth helpers retain one pollable stdin descriptor, 4-KiB frames,
