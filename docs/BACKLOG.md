@@ -15608,7 +15608,15 @@ released growth, rendered current plus cold/warm cross-member HTTP navigation,
 ordinary polling without replay, stale-source refusal and joined bounded
 lifecycle teardown. Use freshly provisioned exact neutral authority and the
 original Git mirror; retain the prior fixture-authored nine-state/UTF-16 proof
-separately. Execution/evidence gates remain pending. This single-Publish bridge
+separately. Exact source `c1ba670d` passed six native bridge checks, unchanged
+31,011-ms warm polling, one lookup/report and joined 1,197-turn selected-owner
+drainage. Independent operator cleanup removed only fresh identity-bound custody,
+with zero containers, loops and matching processes; the VM returned to stopped.
+The extracted-helper legacy renderer passes eleven checks/nine states/eight
+appearances. Scoped machine gates and both pre-dispatch source/input reviews
+pass; failed staging/lint attempts and earlier broad command failures remain
+qualified in `spike/t459/settings_native_1.json`. Final exact-candidate
+source/evidence review remains pending. This single-Publish bridge
 establishes neither successor replacement nor full neutral/authorized target
 closure; zero accepted services and 176 admitted source bytes establish no
 product-scale envelope. Production provider registration and limits stay exact.

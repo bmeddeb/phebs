@@ -184,7 +184,12 @@ asset/cleanup results, preserving receipt 1 and all acceptance limits.
 The next bounded T45.9 prerequisite connects authenticated rendered enqueue to
 the production serve runtime and actual native publication, followed by current
 and cross-member reads, warm no-replay, source fencing and bounded cleanup.
-Its execution/evidence gates remain pending; the single-Publish tiny neutral
+Exact source `c1ba670d` passes six native bridge checks, one lookup/report,
+31,011-ms warm reuse, stale refusal and joined 1,197-turn selected-owner cleanup.
+Independent identity-bound operator teardown and the legacy rendered regression
+pass; failed attempts and earlier broad command failures remain qualified in
+`spike/t459/settings_native_1.json`. Scoped machine and pre-dispatch reviews pass;
+final exact-candidate evidence review remains pending. The single-Publish tiny neutral
 bridge does not close complete neutral or separately authorized target
 acceptance, successor replacement, T45.6 or any scale/release boundary.
 T45.1a's reviewed neutral harness gate is now PASS at source

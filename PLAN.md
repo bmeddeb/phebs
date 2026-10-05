@@ -10152,8 +10152,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   evidence; this bridge neither pauses nor writes native stages. Public reports
   expose no shared-clock timestamps, so original-allowance identity remains
   attributed to the existing native controller proofs rather than claimed as
-  a new bridge measurement. Native execution and final evidence gates remain
-  pending at this implementation record.
+  a new bridge measurement. Exact source `c1ba670d` passed all six native bridge
+  checks: one lookup/report, native plan and execute, settled current, cold/warm
+  cross-member reads and stale refusal. The measured warm wait was 31,011 ms
+  with unchanged fifteen-second cadence. Joined teardown drained the selected
+  owner in 1,197 bounded turns and retained one allowed collecting parent
+  tombstone before engine close. Independent identity-bound operator cleanup
+  observed zero containers, loops and matching processes, removed only the
+  fresh root/upload, preserved the native lock and returned the VM to stopped
+  with the default Docker context unchanged. The shared-helper legacy renderer
+  also passed eleven checks, nine states, eight appearances, exactly eleven
+  deliberate console errors and four enqueue audits. Its first attempt stopped
+  before engine launch on a missing uploaded execute bit; the same-byte staging
+  correction and separate passing receipt preserve that failure. Initial Linux
+  lint lock contention is retained beside the successful serial retry. Focused
+  Linux and Darwin normal/race, compilation/vet, pinned lint, module, driver,
+  docs and glossary gates pass with platform/scope qualifications in
+  `spike/t459/settings_native_1.json`. Earlier full Darwin command failures and
+  alarms remain exact, without a full-package or baseline-cause claim. Both
+  independent pre-dispatch source and fresh-input reviews are clean; final
+  exact-candidate source/evidence review remains pending.
 
   **Cost.** No production request/query, sync tick, startup/restart, retry/no-op,
   publication, schema, cache or admission behavior changes. Test provisioning
