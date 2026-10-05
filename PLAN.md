@@ -10351,7 +10351,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `PHEBS_TYPED_NATIVE_SSH_TARGET` and the operator-supplied ssh config, with
   the same batch, host-key, TTY and connect options as native acceptance.
   Direct mode runs the fixture on this host, as root or through `sudo -n`,
-  and does not open a tunnel. The fixture daemon socket is
+  and does not open a tunnel. Its stdin is a private FIFO because the fixture
+  reopens file descriptor 0, and a socket cannot satisfy that open. The fixture
+  daemon socket is
   `/var/run/docker.sock`. The retired Colima alias is not a parameter.
   Allowance, image, profile, settlement and browser checks stay exact. This
   spends no native allowance and does not explain either retained STOP.
@@ -10359,6 +10361,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The driver reads two environment variables once before its
   existing fixture spawn. SSH adds the four existing acceptance options and
   shell-quotes the same remote command. Direct mode allocates no tunnel
-  process. The socket string is the opt-in fixture's installation identity.
+  process and one private FIFO for the fixture's existing stdin reopen.
+  The socket string is the opt-in fixture's installation identity.
   Query, sync, startup, retry, publication, locks, cache and admission costs
   are unchanged.

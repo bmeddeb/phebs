@@ -15673,7 +15673,8 @@ native bridge completion nor a cause for either STOP is established.
 The next Settings native rehearsal uses the existing acceptance transport
 parameters: `PHEBS_TYPED_NATIVE_TRANSPORT=ssh` or `direct`, and for ssh the
 closed `PHEBS_TYPED_NATIVE_SSH_TARGET` plus the supplied ssh config. The fixture
-daemon socket is `/var/run/docker.sock`. The retired Colima alias is not a
+daemon socket is `/var/run/docker.sock`. Direct mode supplies stdin through a
+private FIFO so the fixture can reopen it. The retired Colima alias is not a
 rehearsal parameter. This correction spends no allowance and does not explain
 either retained STOP.
 

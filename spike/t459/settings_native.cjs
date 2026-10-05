@@ -3,7 +3,7 @@
 // The unchanged Settings UI admits a request; the installed production runtime
 // produces the native bytes. This is a functional bridge, not a pixel gate.
 const assert = require('node:assert/strict')
-const { spawn } = require('node:child_process')
+const { spawn, spawnSync } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
 const readline = require('node:readline')
@@ -27,9 +27,19 @@ const fixtureArgs = [fixture, '-test.run', '^TestTypedSettingsNativeLinux$', '-t
 const fixtureEnv = [`PATH=${path.dirname(fixture)}:/usr/bin:/bin`, `TMPDIR=${installation}/tmp`]
 let sshArgs, child
 if (transport === 'direct') {
+  // Node's stdio sockets cannot be reopened by the fixture. A FIFO matches the
+  // pipe contract the test uses for SSH stdin.
+  const fifo = `/tmp/phebs-settings-native-${process.pid}.stdin`
+  fs.rmSync(fifo, { force: true })
+  assert(spawnSync('mkfifo', ['-m', '600', fifo]).status === 0, 'fixture stdin pipe')
+  const held = fs.openSync(fifo, fs.constants.O_RDWR)
+  const stdio = [held, 'pipe', 'pipe']
+  const env = { ...process.env, PATH: `${path.dirname(fixture)}:/usr/bin:/bin`, TMPDIR: `${installation}/tmp` }
   child = process.getuid() === 0
-    ? spawn(fixture, fixtureArgs.slice(1), { env: { ...process.env, PATH: `${path.dirname(fixture)}:/usr/bin:/bin`, TMPDIR: `${installation}/tmp` }, stdio: ['pipe', 'pipe', 'pipe'] })
-    : spawn('sudo', ['-n', 'env', ...fixtureEnv, ...fixtureArgs], { stdio: ['pipe', 'pipe', 'pipe'] })
+    ? spawn(fixture, fixtureArgs.slice(1), { env, stdio })
+    : spawn('sudo', ['-n', 'env', ...fixtureEnv, ...fixtureArgs], { stdio })
+  fs.closeSync(held)
+  child.stdin = fs.createWriteStream(fifo)
 } else {
   sshArgs = ['-F', sshConfig, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'RequestTTY=no', '-o', 'ConnectTimeout=10', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', sshTarget]
   child = spawn('ssh', [...sshArgs, '--', ['sudo', '-n', 'env', ...fixtureEnv, ...fixtureArgs].map(shQuote).join(' ')], { stdio: ['pipe', 'pipe', 'pipe'] })
