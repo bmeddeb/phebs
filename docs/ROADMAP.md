@@ -237,6 +237,10 @@ Exact source `5797fee6fd4257dee968e02324e30b56862386d1` binds that pass in
 `spike/t459/settings_native_3.json`: the helper and fixture were rebuilt at
 that commit, plan and execute exited 0, and teardown left only the host
 scratch lock. Complete T45.9 acceptance remains open.
+`spike/t459/closure/closure.json` completes the neutral closure over the
+retained receipts and records the target closure as `not_run`. The measured
+envelope is 0 accepted services and 176 admitted source bytes. The 5,000-service
+and 12,000,000,000-byte design target stays unmet.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

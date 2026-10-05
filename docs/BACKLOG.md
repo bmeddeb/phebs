@@ -15698,6 +15698,18 @@ Teardown joined and left only the host scratch lock.
 Complete T45.9, the 5,000-service product class, T45.6, and release claims
 remain open.
 
+T45.9 neutral closure (2026-10-05): `spike/t459/closure/closure.json` binds
+the coordinator, fault, pressure/lifecycle, restore, rendered Settings, and
+exact native-bridge receipts. Those receipts cover cold generation, bounded
+failure, hard-death restart, stale-source fencing, cross-member queries, warm
+reuse, pressure and lifecycle, regenerate-on-restore, Settings parity, and
+teardown. The measured envelope is 0 accepted service incarnations and 176
+admitted source blob bytes. The design target remains 5,000 and
+12,000,000,000. The target closure is `not_run` because no corpus, commit,
+profile, tools, or host is bound. Generated-bundle evidence stays STOP, the
+T45.6 waiver stays unpassed, ordinary providers stay unavailable, and release
+posture stays unchanged.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

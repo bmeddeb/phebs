@@ -1,0 +1,114 @@
+{
+  "schema": "phebs-t459-closure-v1",
+  "t459_acceptance": "OPEN",
+  "generated_bundle_evidence": "STOP",
+  "t456_corpus_waiver": "WAIVED_NOT_PASS",
+  "ordinary_providers": "unavailable",
+  "release": "unchanged",
+  "neutral": {
+    "outcome": "completed",
+    "repository": "example.invalid/phebs-native-neutral",
+    "behaviors": [
+      {
+        "name": "cold_generation",
+        "receipt": "spike/t459/native_coordinator_1.json",
+        "evidence": "fresh native coordinator, two launches"
+      },
+      {
+        "name": "bounded_failure",
+        "receipt": "spike/t459/native_faults_1.json",
+        "evidence": "cancel, wall, and hard-death passed"
+      },
+      {
+        "name": "restart_resume",
+        "receipt": "spike/t459/native_faults_1.json",
+        "evidence": "hard-death recovery process joined and refused replay"
+      },
+      {
+        "name": "stale_source_fencing",
+        "receipt": "spike/t459/settings_native_3.json",
+        "evidence": "source transition fences rendered state and cached native reads"
+      },
+      {
+        "name": "cross_member_queries",
+        "receipt": "spike/t459/settings_native_3.json",
+        "evidence": "cold and warm cross-member HTTP navigation"
+      },
+      {
+        "name": "warm_reuse",
+        "receipt": "spike/t459/settings_native_3.json",
+        "evidence": "warm current retained one lookup"
+      },
+      {
+        "name": "pressure_lifecycle",
+        "receipt": "spike/t459/native_pressure_lifecycle_1.json",
+        "evidence": "1211 selected lifecycle turns"
+      },
+      {
+        "name": "regenerate_on_restore",
+        "receipt": "spike/t459/native_restore_1.json",
+        "evidence": "restored authority unavailable, then fresh publication"
+      },
+      {
+        "name": "settings_api_parity",
+        "receipt": "spike/t459/settings_browser_2.json",
+        "evidence": "rendered Settings pass plus native bridge pass"
+      },
+      {
+        "name": "clean_teardown",
+        "receipt": "spike/t459/settings_native_3.json",
+        "evidence": "joined runtime, drained scratch, zero containers"
+      }
+    ]
+  },
+  "target": {
+    "outcome": "not_run",
+    "corpus": "",
+    "commit": "",
+    "profile": "",
+    "tools": "",
+    "host": "",
+    "reason": "No corpus, commit, profile, tools, or host is bound, and no retained measurement meets the design target."
+  },
+  "design_target": {
+    "accepted_service_incarnations": 5000,
+    "admitted_source_blob_bytes": 12000000000
+  },
+  "measured": {
+    "accepted_service_incarnations": 0,
+    "admitted_source_blob_bytes": 176,
+    "satisfies_design_target": false
+  },
+  "inputs": [
+    {
+      "path": "spike/t459/native_coordinator_1.json",
+      "schema": "phebs-t459-native-coordinator-v1",
+      "digest": "sha256:05d2d78e2f53da0e7a3c6194217d08677ba4b6812d3e35bb59b40fef38213aa5"
+    },
+    {
+      "path": "spike/t459/native_faults_1.json",
+      "schema": "phebs-t459-native-workspace-faults-v1",
+      "digest": "sha256:bb976bb8017264f5854decdaba144a9f9fa0f07ac2f40008cf52056f0ac6888b"
+    },
+    {
+      "path": "spike/t459/native_pressure_lifecycle_1.json",
+      "schema": "phebs-t459-native-pressure-lifecycle-v1",
+      "digest": "sha256:925e3f7133b55dc1e647717e1ceba00bbcc9664a2247f85608154b25c753c056"
+    },
+    {
+      "path": "spike/t459/native_restore_1.json",
+      "schema": "phebs-t459-native-restore-v1",
+      "digest": "sha256:ed44d4e8fe7f6df1e722ba5ae9a3b140c699c7bca3499e83114ba64dfcb56547"
+    },
+    {
+      "path": "spike/t459/settings_browser_2.json",
+      "schema": "phebs-t459-rendered-settings-review-correction-v1",
+      "digest": "sha256:907d7f843514aa73176648119c093aca04cd6b0c2a970c49e53d6cccbd7f0771"
+    },
+    {
+      "path": "spike/t459/settings_native_3.json",
+      "schema": "phebs-t459-authenticated-settings-native-exact-rehearsal-v1",
+      "digest": "sha256:03a52880e0b82c6841922d3c7d45dbf6f0d7d88d75c1b99abe295a8348b3a124"
+    }
+  ]
+}

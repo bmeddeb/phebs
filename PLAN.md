@@ -10399,3 +10399,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** No production request, query, sync, startup/restart, retry,
   publication, lock, cache, schema, or admission path changes. The receipt
   records the rehearsal; it adds no runtime work.
+
+- **2026-10-05 — T45.9 neutral and target closure record.** Compose the retained
+  neutral receipts into `spike/t459/closure/closure.json`. The neutral closure
+  is completed for cold generation, bounded failure, hard-death restart,
+  stale-source fencing, cross-member queries, warm reuse, pressure and
+  lifecycle, regenerate-on-restore, Settings parity, and teardown. Its measured
+  envelope is 0 accepted service incarnations and 176 admitted source blob
+  bytes. The design target remains 5,000 accepted service incarnations and
+  12,000,000,000 admitted source blob bytes, so that measurement does not
+  satisfy it. The target closure is `not_run`: no corpus, commit, profile,
+  tools, or host is bound. Generated-bundle evidence stays STOP, the T45.6
+  waiver stays unpassed, ordinary providers stay unavailable, and release
+  posture stays unchanged. T45.9 acceptance stays open.
+
+  **Cost.** The closure test reads and hashes the six retained receipts once
+  per run. It adds no production request, query, sync, startup, retry,
+  publication, lock, cache, schema, child, or native execution.
