@@ -10166,7 +10166,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   before engine launch on a missing uploaded execute bit; the same-byte staging
   correction and separate passing receipt preserve that failure. Initial Linux
   lint lock contention is retained beside the successful serial retry. Focused
-  Linux and Darwin normal/race, compilation/vet, pinned lint, module, driver,
+  Linux checks, Darwin normal/race, compilation/vet, pinned lint, module, driver,
   docs and glossary gates pass with platform/scope qualifications in
   `spike/t459/settings_native_1.json`. Earlier full Darwin command failures and
   alarms remain exact, without a full-package or baseline-cause claim. Both
