@@ -222,7 +222,7 @@
     {
       "gate": "owning documentation and glossary",
       "status": "PASS",
-      "log": "docs-cost-correction.log"
+      "log": "docs-seal.log"
     }
   ],
   "independent_source_review": {
@@ -317,6 +317,10 @@
     "docs-cost-correction.log": {
       "sha256": "sha256:2876b10b5e3775e84c868094ddb6a64df905644ec25749000accb8e1f88b830e",
       "bytes": 239
+    },
+    "docs-seal.log": {
+      "sha256": "sha256:b4607cdfbf57b25bd3f74af0ab7cc1f013725f2f1fc437f8ebeb55be6754e1bf",
+      "bytes": 239
     }
   },
   "cleanup": {
@@ -363,5 +367,56 @@
     ],
     "finding": "Distinguish one added scalar comparison from the replaced audit comparison and moved unexpected-error comparison.",
     "correction": "Cost delta wording corrected in PLAN and this receipt; executable inputs unchanged."
-  }
+  },
+  "final_candidate_reviews": [
+    {
+      "role": "correctness/security/evidence",
+      "reviewed_commit": "3379409f2b551a41910d90854f969125ca062db9",
+      "total_files": 9,
+      "reviewed_files": [
+        "PLAN.md",
+        "docs/BACKLOG.md",
+        "docs/ROADMAP.md",
+        "cmd/phebs/serve_typed_linux_test.go",
+        "cmd/phebs/serve_typed_settings_linux_test.go",
+        "spike/t459/settings_browser.cjs",
+        "spike/t459/settings_client.cjs",
+        "spike/t459/settings_browser_1.json",
+        "spike/t459/settings_browser_2.json"
+      ],
+      "skipped_files": [],
+      "coverage_rate": 1,
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    },
+    {
+      "role": "steady-state cost/docs/evidence",
+      "reviewed_commit": "3379409f2b551a41910d90854f969125ca062db9",
+      "total_files": 9,
+      "reviewed_files": [
+        "PLAN.md",
+        "docs/BACKLOG.md",
+        "docs/ROADMAP.md",
+        "cmd/phebs/serve_typed_linux_test.go",
+        "cmd/phebs/serve_typed_settings_linux_test.go",
+        "spike/t459/settings_browser.cjs",
+        "spike/t459/settings_client.cjs",
+        "spike/t459/settings_browser_1.json",
+        "spike/t459/settings_browser_2.json"
+      ],
+      "skipped_files": [],
+      "coverage_rate": 1,
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    }
+  ],
+  "record_only_seal": "Records the exact nine-path candidate reviews; no compiled, embedded, fixture, UI or external-driver input changed from passed implementation2014caff."
 }
