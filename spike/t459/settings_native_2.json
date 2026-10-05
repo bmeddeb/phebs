@@ -1,0 +1,1260 @@
+{
+  "schema": "phebs-t459-authenticated-settings-native-review-corrections-v2",
+  "record_date": "2026-10-04",
+  "prerequisite_status": "STOP",
+  "merge_readiness": "OPEN: corrected native bridge has no fresh PASS",
+  "complete_t459_status": "OPEN",
+  "execution_source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+  "compiled_input_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+  "pr_base_commit": "ca95156b2ad8a39d9fba6f7b17a6866824de8add",
+  "production_code_changed": false,
+  "ui_or_design_track_changed": false,
+  "review_dispositions": [
+    {
+      "finding": 1,
+      "result": "IMPLEMENTED",
+      "detail": "Native fixture reuses production lifecycle/searcher/API/HTTP constructors; full serve is not covered."
+    },
+    {
+      "finding": 2,
+      "result": "REJECTED",
+      "detail": "Ordinary production admission owners are nil without a bound T42.2 dispatcher runtime; no ceremony admission claim."
+    },
+    {
+      "finding": 3,
+      "result": "IMPLEMENTED_WITH_SCOPE",
+      "detail": "Recovery-pending ends settlement early; 13-minute transport versus 12-minute fixture context plus 30-second worker join; independent constructor lifetimes remain qualified."
+    },
+    {
+      "finding": 4,
+      "result": "IMPLEMENTED",
+      "detail": "Finished exact enqueue must return 200/current before drift without another Publish, then drift-specific 409 detail; fresh native completion remains unestablished."
+    },
+    {
+      "finding": 5,
+      "result": "IMPLEMENTED",
+      "detail": "Shared stateless port/process/tunnel/CSRF/redaction helpers; distinct fixture protocols retained."
+    },
+    {
+      "finding": 6,
+      "result": "IMPLEMENTED",
+      "detail": "ci-ui invokes the self-check; standalone self-check passes, complete ci-ui was not run."
+    },
+    {
+      "finding": 7,
+      "result": "IMPLEMENTED",
+      "detail": "Unexpected tunnel error/exit latches once and final fatal guards refuse receipt sealing; deliberate joins remain quiet."
+    },
+    {
+      "finding": 8,
+      "result": "QUALIFIED_AND_STRENGTHENED",
+      "detail": "Legacy visible Appearance shares the indexing render commit; native additionally waits for networkidle."
+    },
+    {
+      "finding": 9,
+      "result": "IMPLEMENTED",
+      "detail": "Shared authentication email constants."
+    },
+    {
+      "finding": 10,
+      "result": "IMPLEMENTED",
+      "detail": "Deferred settlement context/timer cleanup."
+    },
+    {
+      "finding": 11,
+      "result": "IMPLEMENTED",
+      "detail": "One jobs helper with four-row cap, exact count and no cursor."
+    },
+    {
+      "finding": 12,
+      "result": "IMPLEMENTED",
+      "detail": "Legacy servers share one monitor; native uses the production owner monitor."
+    }
+  ],
+  "historical_qualification": "Receipt1 remains byte-exact and source-bound to c1ba670d, with prior50559254 zero-finding reviews. Its fixture-authored HTTP assembly did not establish production constructor wiring. Those PASS and review claims do not cover these corrected bytes.",
+  "prior_receipts": {
+    "spike/t459/linux_command_gates_1.json": {
+      "bytes": 6984,
+      "sha256": "sha256:0dedf7e60a510e396a7ef092e00b0a5b80c13484bd6271c9db7a0ad4e72fc914",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_coordinator_1.json": {
+      "bytes": 11597,
+      "sha256": "sha256:05d2d78e2f53da0e7a3c6194217d08677ba4b6812d3e35bb59b40fef38213aa5",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_faults_1.json": {
+      "bytes": 19314,
+      "sha256": "sha256:bb976bb8017264f5854decdaba144a9f9fa0f07ac2f40008cf52056f0ac6888b",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_pressure_lifecycle_1.json": {
+      "bytes": 26373,
+      "sha256": "sha256:925e3f7133b55dc1e647717e1ceba00bbcc9664a2247f85608154b25c753c056",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/native_restore_1.json": {
+      "bytes": 30093,
+      "sha256": "sha256:ed44d4e8fe7f6df1e722ba5ae9a3b140c699c7bca3499e83114ba64dfcb56547",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/neutral_api_client_1.json": {
+      "bytes": 9267,
+      "sha256": "sha256:8479d8098075dc99901acc645a4ce2cf03483caca5f425d6e648770d24317667",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/settings_browser_1.json": {
+      "bytes": 51256,
+      "sha256": "sha256:a197511f2c984e2c915d2d1bdb9ea25ebe5ea544a106f97c2b4bfbfdc71c7725",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/settings_browser_2.json": {
+      "bytes": 15437,
+      "sha256": "sha256:907d7f843514aa73176648119c093aca04cd6b0c2a970c49e53d6cccbd7f0771",
+      "preserved_byte_exact": true
+    },
+    "spike/t459/settings_native_1.json": {
+      "bytes": 29561,
+      "sha256": "sha256:c303f627af5ebc9e069f1b4dae4bcfb44bad8056b37e3768e990584d4ec4dc2a",
+      "preserved_byte_exact": true
+    }
+  },
+  "native_attempts": [
+    {
+      "installation": "t459-settings-native-2",
+      "result": "STOP",
+      "execution_source_commit": "516a6f3b593bb5bbadffb9136a7382fb49c4e0b2",
+      "compiled_input_commit": "f14f24532d013f8b0ca633c598108c080c897a93",
+      "difference_since_compiled_input": [
+        "PLAN.md"
+      ],
+      "command": {
+        "argv": [
+          "node",
+          "spike/t459/settings_native.cjs",
+          "/Users/ben/phebs-ux/ui/node_modules",
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          "/Users/ben/.codex/artifacts/phebs-pr38-review-corrections-20261004/ssh_config",
+          "/var/lib/phebs-typed-acceptance/t459-settings-native-2/settings.test",
+          "/var/lib/phebs-typed-acceptance/t459-settings-native-2/ui-dist",
+          "/var/lib/phebs-typed-acceptance/t459-settings-native-2",
+          "sha256:24f37c4dc8a90d1d19bb8730455bdbd8aac7c93c5030674b2281bf192a9c03da",
+          "/Users/ben/.codex/artifacts/phebs-pr38-review-corrections-20261004/native-browser-proof.json"
+        ],
+        "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+        "source_commit": "516a6f3b593bb5bbadffb9136a7382fb49c4e0b2",
+        "started_utc": "2026-10-05T03:10:50.877210+00:00",
+        "elapsed_seconds": 61.835,
+        "exit_code": 1,
+        "log_bytes": 76,
+        "log_sha256": "sha256:681275aa528501ef907eab3235f356268011c5ae0db26829957af7d59d892554",
+        "metadata": {
+          "bytes": 996,
+          "sha256": "sha256:104634f271390ee6c5af19291c09af95da7754dc44c9da5d0a522e4ca003f27b"
+        }
+      },
+      "config": {
+        "bytes": 1655,
+        "sha256": "sha256:24f37c4dc8a90d1d19bb8730455bdbd8aac7c93c5030674b2281bf192a9c03da"
+      },
+      "settings_binary": {
+        "bytes": 79101272,
+        "sha256": "sha256:7a8fdca62454510e8f8423e04c30a2debe958b08da3c135db3a32a02348176eb"
+      },
+      "failure_artifact": {
+        "bytes": 2166,
+        "sha256": "sha256:9f62d3a871c93826814248d7449325ffff05af649708d56d862a7f294758c484"
+      },
+      "original_cause": "UNESTABLISHED: generic report failure omitted the returned reason and phase projection; later scheduler/SDK logs do not retrospectively classify it.",
+      "legacy_command": {
+        "argv": [
+          "node",
+          "spike/t459/settings_browser.cjs",
+          "/Users/ben/phebs-ux/ui/node_modules",
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          "/Users/ben/.codex/artifacts/phebs-pr38-review-corrections-20261004/ssh_config",
+          "/tmp/phebs-pr38-review-upload-20261004/settings.test",
+          "/tmp/phebs-pr38-review-upload-20261004/ui-dist",
+          "/Users/ben/.codex/artifacts/phebs-pr38-review-corrections-20261004/legacy-browser-proof.json"
+        ],
+        "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+        "source_commit": "516a6f3b593bb5bbadffb9136a7382fb49c4e0b2",
+        "started_utc": "2026-10-05T03:04:07.370491+00:00",
+        "elapsed_seconds": 18.658,
+        "exit_code": 0,
+        "log_bytes": 57,
+        "log_sha256": "sha256:db237b5b8f023f8446a2ce321abfb0d76933c02db5f12dee447e96f19a8ec011",
+        "metadata": {
+          "bytes": 824,
+          "sha256": "sha256:dd270a19cfdd1d32b2ac9aa2d1b30b398f894a373f64e71b504bf97ba8775dff"
+        }
+      }
+    },
+    {
+      "installation": "t459-settings-native-3",
+      "result": "STOP",
+      "execution_source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "compiled_input_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "command": {
+        "argv": [
+          "node",
+          "spike/t459/settings_native.cjs",
+          "/Users/ben/phebs-ux/ui/node_modules",
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/ssh_config",
+          "/var/lib/phebs-typed-acceptance/t459-settings-native-3/settings.test",
+          "/var/lib/phebs-typed-acceptance/t459-settings-native-3/ui-dist",
+          "/var/lib/phebs-typed-acceptance/t459-settings-native-3",
+          "sha256:c91b414423db1869be801a8c390cb9e7ecd73b88c9be1e644295170b788fd453",
+          "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/native-browser-proof.json"
+        ],
+        "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+        "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+        "started_utc": "2026-10-05T03:25:57.429667+00:00",
+        "elapsed_seconds": 52.391,
+        "exit_code": 1,
+        "log_bytes": 76,
+        "log_sha256": "sha256:681275aa528501ef907eab3235f356268011c5ae0db26829957af7d59d892554",
+        "metadata": {
+          "bytes": 998,
+          "sha256": "sha256:72402e226a72f21b3b5d0ec3a45d1d8de2f328739077d8e19b75f1f92c531ab4"
+        }
+      },
+      "diagnostic": {
+        "canceled": false,
+        "deadline": false,
+        "phaseReports": [
+          {
+            "phase": "plan",
+            "exit_code": 0,
+            "removed": false,
+            "stop_reason": "",
+            "resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": false,
+              "memory_peak_bytes": 0,
+              "sampled_peak_rss_bytes": 0,
+              "sampled_peak_processes": 0,
+              "sampled_peak_scratch_bytes": 0,
+              "sampled_peak_scratch_inodes": 0,
+              "samples": 0,
+              "per_process_descriptors": 0,
+              "aggregate_descriptor_ceiling": 0
+            }
+          },
+          {
+            "phase": "",
+            "exit_code": 0,
+            "removed": false,
+            "stop_reason": "",
+            "resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": false,
+              "memory_peak_bytes": 0,
+              "sampled_peak_rss_bytes": 0,
+              "sampled_peak_processes": 0,
+              "sampled_peak_scratch_bytes": 0,
+              "sampled_peak_scratch_inodes": 0,
+              "samples": 0,
+              "per_process_descriptors": 0,
+              "aggregate_descriptor_ceiling": 0
+            }
+          }
+        ],
+        "reason": "custody_held"
+      },
+      "original_cause": "UNESTABLISHED beyond the returned closed custody_held classification.",
+      "qualification": "Unverified zero/default resources, exit codes and empty second phase establish no successful verified native phase and no launch count. Later scheduler wall_limit does not establish consumed 300-second native allowance."
+    }
+  ],
+  "native_completion": {
+    "pass_receipt_exists": false,
+    "fresh_publication_navigation_warm_drift_and_lifecycle_gates": "UNESTABLISHED",
+    "third_native_attempt": "NOT RUN; bounded diagnostic confirmation consumed"
+  },
+  "legacy_regression": {
+    "result": "PASS",
+    "command": {
+      "argv": [
+        "node",
+        "spike/t459/settings_browser.cjs",
+        "/Users/ben/phebs-ux/ui/node_modules",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/ssh_config",
+        "/tmp/phebs-pr38-confirm-upload-20261004/settings.test",
+        "/tmp/phebs-pr38-confirm-upload-20261004/ui-dist",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/legacy-browser-proof.json"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:22:26.090396+00:00",
+      "elapsed_seconds": 16.629,
+      "exit_code": 0,
+      "log_bytes": 57,
+      "log_sha256": "sha256:db237b5b8f023f8446a2ce321abfb0d76933c02db5f12dee447e96f19a8ec011",
+      "metadata": {
+        "bytes": 828,
+        "sha256": "sha256:e71d643c03d66026674c151b6db2a54506ce6c1ae4e2c853ccd7fb528b51522b"
+      }
+    },
+    "proof": {
+      "schema": "phebs-t459-settings-browser-v1",
+      "native_execution": false,
+      "canonical_pixel_comparison": false,
+      "checks": [
+        "anonymous boundary",
+        "ordinary session and File boundary",
+        "real dark handler boundary",
+        "administrator File deep link and provider order",
+        "three pure previews and real CSRF refusals",
+        "lost admitted response and exact retry",
+        "last-good active polling and recovery",
+        "real routed cross-member definition references hover",
+        "failed re-run preview and canceled coordinator",
+        "eight functional responsive keyboard motion appearances",
+        "source fence and restore clearance"
+      ],
+      "states": [
+        "absent",
+        "planning",
+        "indexing",
+        "validating",
+        "publishing",
+        "current",
+        "failed",
+        "canceled",
+        "stale"
+      ],
+      "viewports": [
+        {
+          "width": 1280,
+          "theme": "light",
+          "density": "comfortable"
+        },
+        {
+          "width": 1280,
+          "theme": "light",
+          "density": "dense"
+        },
+        {
+          "width": 1280,
+          "theme": "dark",
+          "density": "comfortable"
+        },
+        {
+          "width": 1280,
+          "theme": "dark",
+          "density": "dense"
+        },
+        {
+          "width": 390,
+          "theme": "light",
+          "density": "comfortable"
+        },
+        {
+          "width": 390,
+          "theme": "light",
+          "density": "dense"
+        },
+        {
+          "width": 390,
+          "theme": "dark",
+          "density": "comfortable"
+        },
+        {
+          "width": 390,
+          "theme": "dark",
+          "density": "dense"
+        }
+      ],
+      "managed_request_counts": [
+        {
+          "context": "ordinary",
+          "requests": 3
+        },
+        {
+          "context": "dark_admin",
+          "requests": 3
+        },
+        {
+          "context": "admin",
+          "requests": 67
+        }
+      ],
+      "browser": "154.0.8037.93",
+      "fixture": {
+        "repo": "example.invalid/routed",
+        "commit": "afa4f78066e6fb4158ed89a1ff9516c28e6ef992",
+        "command": "publish",
+        "definitionPath": ".phebs-generated/f5ed203d0a3d577629eb40b1223fe79f193591f7ae9bcee1af637fdcf2457444/unicode.go",
+        "event": "done",
+        "executionDigest": "sha256:eb6c9b720c3bba8c373ad613d3b5e5807a06bafca5cf5f032f2636b455329f9d",
+        "generatedDocuments": 2,
+        "generatedSourceBytes": 16,
+        "members": 2,
+        "parentDigest": "sha256:482c685d418dd112bebe649c024ff9585e2cf105ed755ee6e5a0dde9f3a1aac9",
+        "referencePath": ".phebs-generated/f5ed203d0a3d577629eb40b1223fe79f193591f7ae9bcee1af637fdcf2457444/reference.go",
+        "state": "current"
+      },
+      "audit_enqueues": 4,
+      "unexpected_browser_errors": 0,
+      "deliberate_network_console_errors": 11,
+      "joined": true
+    },
+    "qualification": "Fixture-authored SCIP; no native generation or canonical pixel comparison."
+  },
+  "authority": {
+    "source": {
+      "repository": "example.invalid/phebs-native-neutral",
+      "incarnation": "0c1c5e09bc67db67af85e375df60455e",
+      "generation": "sha256:b4d16a122aa099ee40a1f920f76c1d9ccacfc711a473597e287b17d598a85680",
+      "commit": "e05fd5f17136c97837674a3037b270e45a556561"
+    },
+    "source_files": 5,
+    "source_bytes": 176,
+    "accepted_services": 0,
+    "policy": {
+      "memory_bytes": 4533092352,
+      "scratch_bytes": 4573403136,
+      "scratch_inodes": 262144,
+      "tasks": 294,
+      "descriptors_per_process": 128,
+      "cpu_quota_micros": 200000,
+      "cpu_period_micros": 100000,
+      "wall_seconds": 300,
+      "output_bytes": 16777216,
+      "scip_bytes": 2285819
+    },
+    "profile_epoch": 1,
+    "inventory_files": 14506,
+    "inventory_bytes": 292010065,
+    "universe_digest": "sha256:bef2a3571b300ed838423365330ad4360e9fa0bdbbeeb45b223b043151e28366",
+    "selection_digest": "sha256:e9ff9086c4146a56de46e4d4a03e6be5389ba4bcf85cf372050028cc95c8a0f8",
+    "installed_deployment_digest": "sha256:c7c0f90b6dacbe2405eaee6a393d0212498ee76c858a19f521b2d92ebf8fab38",
+    "installation": {
+      "schema": "phebs-neutral-settings-native-installation-v1",
+      "installation": "t459-settings-native-3",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "root_identity": {
+        "device": 64769,
+        "inode": 344799
+      },
+      "upload_identity": {
+        "device": 64769,
+        "inode": 328680
+      },
+      "root_headroom_observation": {
+        "total_bytes": 19682557952,
+        "available_bytes": 15219986432,
+        "host_promise_bytes": 4573483008,
+        "host_backing_block_bytes": 4096,
+        "fixture_headroom_bytes": 2147483648,
+        "projected_bytes": 11183538176
+      },
+      "mke2fs_sha256": "84419f91298e173cf1569b3a9c957c9f3e26a28852a6025800ed9e0cd9227ea2",
+      "upload_sha256": {
+        "native-acceptance.test": "09480f4f20fa92cf7709b60209e0d36c3176bc3bb6dae92956726b41099bb2b5",
+        "settings.test": "6e0bf283c7a31d9d6042d9fdb414e88e93f745890e21f2ed32b5d96b16257430",
+        "phebs-current": "6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d",
+        "surreal": "a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+        "public-tools.tar.gz": "69f98506cf99def3a949d52de5570e0b94c1c25d2993c0c436fb6778cee6af07",
+        "ui-dist-clean.tar": "4a252bdbcd7b55e5670b269198f98c6e3df363979964b43bd1366d7cc2137cab",
+        "native-host.py": "a19a901e5d7a5da328fd9f26f4355c44db5d2a2fcec7310e60c896cd5606b19e",
+        "deployment.py": "ee71a9d470b59ca09cd904224c3962d261877e0a6b615d622e47f2a8cb0c076c",
+        "native_acceptance.py": "f70cbc11b2388e0491db3ea3de478fa5cba170dd7d4fd684733db24109d67407"
+      },
+      "helper_sha256": "6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d",
+      "installed_settings_sha256": "6e0bf283c7a31d9d6042d9fdb414e88e93f745890e21f2ed32b5d96b16257430"
+    },
+    "controls": {
+      "config.json": {
+        "bytes": 1655,
+        "sha256": "sha256:c91b414423db1869be801a8c390cb9e7ecd73b88c9be1e644295170b788fd453"
+      },
+      "profile.json": {
+        "bytes": 1313,
+        "sha256": "sha256:28383a13b82540d328ad341577e19c64cac479f2af54e6eed561c191eae8d574"
+      },
+      "inventory.json": {
+        "bytes": 2517395,
+        "sha256": "sha256:7636e6b6a2a11feb6b0c9b8fa62c0d798bdca180fa1b2be20b1bcd93b639dbae"
+      },
+      "seed.surql": {
+        "bytes": 90844,
+        "sha256": "sha256:b6dde1a08d68555adbd92cf57da7808ca31724c42d8deb408ad8e1ff3231e4e4"
+      },
+      "typed-module-selection.json": {
+        "bytes": 2513,
+        "sha256": "sha256:e9ff9086c4146a56de46e4d4a03e6be5389ba4bcf85cf372050028cc95c8a0f8"
+      },
+      "typed-host-tools.json": {
+        "bytes": 126,
+        "sha256": "sha256:ad32217b86f4ca9ce71b2674caf12454dcfdc7915d00065f9e1bc470a60e3e80"
+      }
+    },
+    "binaries": {
+      "settings.test": {
+        "bytes": 79101640,
+        "sha256": "sha256:6e0bf283c7a31d9d6042d9fdb414e88e93f745890e21f2ed32b5d96b16257430"
+      },
+      "native-acceptance.test": {
+        "bytes": 43158290,
+        "sha256": "sha256:09480f4f20fa92cf7709b60209e0d36c3176bc3bb6dae92956726b41099bb2b5"
+      },
+      "phebs-current": {
+        "bytes": 72860463,
+        "sha256": "sha256:6f0efa8076f3e11b2d48301e11a3263c91ca01536f5e9bf69b662799e1a0e56d"
+      },
+      "surreal": {
+        "bytes": 116424792,
+        "sha256": "sha256:a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c"
+      }
+    },
+    "source_inputs": {
+      "Makefile": {
+        "bytes": 12717,
+        "sha256": "sha256:a746ca7fd71030b4abde78bfb1f2ef0236183be9eef1b6210bd336cbecc90632"
+      },
+      "cmd/phebs/serve_typed_settings_linux_test.go": {
+        "bytes": 16982,
+        "sha256": "sha256:ba53e5d95a7997ad05cd9b6b3fa6ffdf6b79a8e23afa3b018b29e873c8d99bea"
+      },
+      "cmd/phebs/serve_typed_settings_native_linux_test.go": {
+        "bytes": 30968,
+        "sha256": "sha256:001da65fed626d3b2f87e1bcbd48a3a54a38441474b00cf519bf603b471e0ece"
+      },
+      "internal/typedexecutor/input_native_linux_test.go": {
+        "bytes": 39528,
+        "sha256": "sha256:2e898b6d082f026efdc6091a9ed623622fbfec3c2bb86ce903fe6da0f058de15"
+      },
+      "spike/t459/settings_browser.cjs": {
+        "bytes": 22689,
+        "sha256": "sha256:419c879f6642f78428a4b49f37a1081d5181230c0c270b7471957a02f279270c"
+      },
+      "spike/t459/settings_native.cjs": {
+        "bytes": 15407,
+        "sha256": "sha256:11849a0f33f8f1515e0fee011461d6842d7f017f2b4beaeb571c074ac85b4bb3"
+      },
+      "spike/t459/settings_driver.cjs": {
+        "bytes": 2701,
+        "sha256": "sha256:c2c865560f9cfdfe26a5f526ce66dca67a7cea2aa755ad3d1f9099fcba2d000e"
+      },
+      "spike/t459/settings_driver_test.cjs": {
+        "bytes": 4619,
+        "sha256": "sha256:b43f0462745fbfb00bdd128e59666ddb0fa55c6221bd1699b8eec4890dd4749e"
+      }
+    }
+  },
+  "supporting_gates": {
+    "build-settings": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-trimpath",
+        "-buildvcs=false",
+        "-o",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/settings.test",
+        "./cmd/phebs"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:18:39.064797+00:00",
+      "elapsed_seconds": 4.632,
+      "exit_code": 0,
+      "log_bytes": 0,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata": {
+        "bytes": 621,
+        "sha256": "sha256:f169b32887db77d96ff18bfcaba1507a240a43ad5407e5585645ff50e5cd0db0"
+      }
+    },
+    "build-provision": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-trimpath",
+        "-buildvcs=false",
+        "-o",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/native-acceptance.test",
+        "./internal/typedexecutor"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:18:39.064681+00:00",
+      "elapsed_seconds": 3.067,
+      "exit_code": 0,
+      "log_bytes": 0,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata": {
+        "bytes": 643,
+        "sha256": "sha256:94f2fd1851cb16ad0560587356f88cf569823c25854b41978d1a32808cfe8dff"
+      }
+    },
+    "build-helper": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "build",
+        "-trimpath",
+        "-buildvcs=false",
+        "-o",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/phebs-current",
+        "./cmd/phebs"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:18:39.064759+00:00",
+      "elapsed_seconds": 3.325,
+      "exit_code": 0,
+      "log_bytes": 0,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata": {
+        "bytes": 612,
+        "sha256": "sha256:b63bb590805ef51cad1983360e41bda193d88e08d6b2c445fe4acf5273e592f6"
+      }
+    },
+    "linux-vet": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "vet",
+        "./cmd/phebs",
+        "./internal/typedexecutor"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:18:39.065475+00:00",
+      "elapsed_seconds": 1.198,
+      "exit_code": 0,
+      "log_bytes": 0,
+      "log_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "metadata": {
+        "bytes": 503,
+        "sha256": "sha256:bf4b52cf842037fdccad1965dafb67cd65f80a80b61d3ebf7422d925ed3133f1"
+      }
+    },
+    "linux-lint": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "GOLANGCI_LINT_CACHE=/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/lint-linux-cache",
+        "/Users/ben/.codex/artifacts/phebs-t422n-machine-f229374a.8MJFVf/tools/golangci-lint",
+        "run",
+        "./cmd/phebs"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:18:39.067848+00:00",
+      "elapsed_seconds": 9.687,
+      "exit_code": 0,
+      "log_bytes": 10,
+      "log_sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "metadata": {
+        "bytes": 665,
+        "sha256": "sha256:86b6decc63a161c8fc5cbd49df9145dcd9bdabbff508447579ab42c2c9e12a37"
+      }
+    },
+    "linux-focused": {
+      "argv": [
+        "ssh",
+        "-F",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/ssh_config",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "ControlMaster=no",
+        "-o",
+        "ControlPath=none",
+        "colima-phebs-t451a",
+        "sudo -n env PATH=/var/lib/phebs-typed-acceptance/t459-settings-native-3:/usr/bin:/bin /var/lib/phebs-typed-acceptance/t459-settings-native-3/settings.test -test.run '^TestTyped(SettingsNativeFlagRefusals|SettingsNativeLinux|SettingsBrowserLinux|Serve|Navigation)' -test.v -test.timeout 3m"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:24:47.964624+00:00",
+      "elapsed_seconds": 2.709,
+      "exit_code": 0,
+      "log_bytes": 3066,
+      "log_sha256": "sha256:757b9706f4792ecb8786dbd8fe94945191b3f9968f329fe78bd18cc895b5b2d0",
+      "metadata": {
+        "bytes": 892,
+        "sha256": "sha256:e52ca45b299f0814c314416ffc3a8dfcb60ba213899a8d426d220da45dc6c463"
+      }
+    },
+    "linux-nonroot-flags": {
+      "argv": [
+        "ssh",
+        "-F",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/ssh_config",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "ControlMaster=no",
+        "-o",
+        "ControlPath=none",
+        "colima-phebs-t451a",
+        "/tmp/phebs-pr38-confirm-upload-20261004/settings.test",
+        "-test.run",
+        "^TestTypedSettingsNativeFlagRefusals$",
+        "-test.v",
+        "-test.timeout",
+        "1m"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:24:49.249460+00:00",
+      "elapsed_seconds": 0.103,
+      "exit_code": 0,
+      "log_bytes": 863,
+      "log_sha256": "sha256:12eb4c5b9bd512c6b58823edfbc5323c872088ba55a0690c907eb1ef85894b47",
+      "metadata": {
+        "bytes": 764,
+        "sha256": "sha256:5d40ad0f6007c87e548e2109025c280e40b7d3df83e19a9060bf0a997939a545"
+      }
+    },
+    "driver-self-check": {
+      "argv": [
+        "node",
+        "spike/t459/settings_driver_test.cjs"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:24:49.109896+00:00",
+      "elapsed_seconds": 0.067,
+      "exit_code": 0,
+      "log_bytes": 142,
+      "log_sha256": "sha256:c26e78ad0d8b227b9cb7bcd5752c4554307ad63fc0b28bb1abf0c28f781f956d",
+      "metadata": {
+        "bytes": 418,
+        "sha256": "sha256:6109afa03ce0824e26edc8d21812f19333ca97a08ef00957538a808ad4813f72"
+      }
+    },
+    "docs-predispatch": {
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:18:39.067435+00:00",
+      "elapsed_seconds": 2.354,
+      "exit_code": 0,
+      "log_bytes": 239,
+      "log_sha256": "sha256:c51a1f44634fc45caa8e831d74cbb9c5377f673ab47e8159ec159a6ee58aaefe",
+      "metadata": {
+        "bytes": 416,
+        "sha256": "sha256:cf8385be03189f0c7ba3b2519ca28aea905750dfbd7e266e9949656061aca249"
+      }
+    }
+  },
+  "machine_gate_qualifications": [
+    "Linux arm64 CGO0 Go1.26.5 builds; Linux vet cmd/phebs and typedexecutor; repository-pinned golangci-lint2.12.2 cmd/phebs0issues.",
+    "Actual Linux focused unit command passes; native/legacy flag-gated cases explicitly skip there. Both browser fixtures execute separately above.",
+    "Actual nonroot six flag-shape refusals pass. No Linux race run with CGO0, fresh full cmd package or complete ci-ui claim.",
+    "Driver self-check and all four syntax checks pass on local Node26.7.0, Playwright1.62.1, Chrome154.0.8037.93; pinned Node24.18.0 ci-ui was not run.",
+    "Earlier focused Darwin normal/race and ordinary nil-owner unit gates remain source-bound supporting records in the first correction artifact directory, not a fresh full-package pass.",
+    "First correction Linux selector invocation failed in the remote shell before Go; distinct correctly quoted retry passed. Both records retained."
+  ],
+  "predispatch_reviews": {
+    "review-source-input-cost.json": {
+      "bytes": 4239,
+      "sha256": "sha256:0e4308489207c637b4215ec2e9450b1d2255c6ea07099f27e742b2fab03e60b8"
+    },
+    "review-input-correctness-12f47126.json": {
+      "bytes": 8658,
+      "sha256": "sha256:b058d20eb1465b01bb8c4c80b77892ebca04b3427452621dcef70fcfc1ed4769"
+    }
+  },
+  "teardown": {
+    "original_postrun_census": "UNAVAILABLE: SSH transport closed before inspection",
+    "inspection_only_vm_restart": true,
+    "residual_native_name_observed_after_restart": "78e11d13974fe053f305e76ed7e9ce7dcd06abc0035b991552d45898652ac2f2",
+    "residual_precleanup_inode_identity": "NOT CAPTURED",
+    "authenticated_cleanup": {
+      "argv": [
+        "ssh",
+        "-F",
+        "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004/ssh_config",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "ControlMaster=no",
+        "-o",
+        "ControlPath=none",
+        "colima-phebs-t451a",
+        "sudo",
+        "-n",
+        "/var/lib/phebs-typed-acceptance/t459-settings-native-3/native-acceptance.test",
+        "-test.run",
+        "^TestNativeInputScratchCleanup$",
+        "-test.v",
+        "-test.timeout",
+        "2m",
+        "-typed-input-cleanup",
+        "78e11d13974fe053f305e76ed7e9ce7dcd06abc0035b991552d45898652ac2f2"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:37:35.544789+00:00",
+      "elapsed_seconds": 0.14,
+      "exit_code": 0,
+      "log_bytes": 93,
+      "log_sha256": "sha256:f70d55323da47cd8ad0f497447b21e23ee56985e9fff930b2aed684990143d27",
+      "metadata": {
+        "bytes": 902,
+        "sha256": "sha256:06f3185d37ffa765f892eb620a96dcf9123b2d071d81902f8195274099f04a95"
+      }
+    },
+    "cleanup_scope": "Existing TestNativeInputScratchCleanup authenticates the selected exact native scratch name and removes it; cleanup-only, no new native execution or allowance.",
+    "current_observation_after_restart_and_cleanup": {
+      "schema": "phebs-t459-retained-native-custody-v1",
+      "observation": "After inspection-only VM restart; not original teardown evidence.",
+      "roots": [
+        {
+          "root": "/var/lib/phebs-typed-acceptance/t459-settings-native-2",
+          "root_identity": {
+            "device": 64769,
+            "inode": 296079
+          },
+          "workspace": "/var/lib/phebs-typed-acceptance/t459-settings-native-2/tmp/settings-native-1686076264",
+          "entries": [
+            {
+              "path": "typed-index",
+              "mode": "0o700",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 328673
+            },
+            {
+              "path": "typed-index/d0db9753287eddc8cadf4b4987c44d8087524e632ea0b3b2ddc8af9d2626156e",
+              "mode": "0o700",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 328677
+            },
+            {
+              "path": "typed-index/d0db9753287eddc8cadf4b4987c44d8087524e632ea0b3b2ddc8af9d2626156e/48b51faa55271becc89d17b5da7ea62b0423a9fc1cbf20f337ef47dcfb9953df",
+              "mode": "0o700",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 328678
+            },
+            {
+              "path": "typed-index/d0db9753287eddc8cadf4b4987c44d8087524e632ea0b3b2ddc8af9d2626156e/48b51faa55271becc89d17b5da7ea62b0423a9fc1cbf20f337ef47dcfb9953df/owner.json",
+              "mode": "0o444",
+              "directory": false,
+              "bytes": 2096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 344788
+            },
+            {
+              "path": "typed-index/d0db9753287eddc8cadf4b4987c44d8087524e632ea0b3b2ddc8af9d2626156e/48b51faa55271becc89d17b5da7ea62b0423a9fc1cbf20f337ef47dcfb9953df/inputs-f288f68f148a453024e9bf7658e1f08c",
+              "mode": "0o555",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 328681
+            },
+            {
+              "path": "typed-index/d0db9753287eddc8cadf4b4987c44d8087524e632ea0b3b2ddc8af9d2626156e/48b51faa55271becc89d17b5da7ea62b0423a9fc1cbf20f337ef47dcfb9953df/inventory.json",
+              "mode": "0o444",
+              "directory": false,
+              "bytes": 2517395,
+              "uid": 0,
+              "device": 64769,
+              "inode": 344786
+            },
+            {
+              "path": "typed-index/d0db9753287eddc8cadf4b4987c44d8087524e632ea0b3b2ddc8af9d2626156e/48b51faa55271becc89d17b5da7ea62b0423a9fc1cbf20f337ef47dcfb9953df/.phebs-index-publication.lock",
+              "mode": "0o600",
+              "directory": false,
+              "bytes": 0,
+              "uid": 0,
+              "device": 64769,
+              "inode": 328679
+            },
+            {
+              "path": "typed-index/d0db9753287eddc8cadf4b4987c44d8087524e632ea0b3b2ddc8af9d2626156e/48b51faa55271becc89d17b5da7ea62b0423a9fc1cbf20f337ef47dcfb9953df/input-receipt.json",
+              "mode": "0o444",
+              "directory": false,
+              "bytes": 1708649,
+              "uid": 0,
+              "device": 64769,
+              "inode": 344787
+            },
+            {
+              "path": "typed-index/.phebs-index-publication.lock",
+              "mode": "0o600",
+              "directory": false,
+              "bytes": 0,
+              "uid": 0,
+              "device": 64769,
+              "inode": 328675
+            }
+          ],
+          "retained": true
+        },
+        {
+          "root": "/var/lib/phebs-typed-acceptance/t459-settings-native-3",
+          "root_identity": {
+            "device": 64769,
+            "inode": 344799
+          },
+          "workspace": "/var/lib/phebs-typed-acceptance/t459-settings-native-3/tmp/settings-native-2425124544",
+          "entries": [
+            {
+              "path": "typed-index",
+              "mode": "0o700",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 786603
+            },
+            {
+              "path": "typed-index/.phebs-index-publication.lock",
+              "mode": "0o600",
+              "directory": false,
+              "bytes": 0,
+              "uid": 0,
+              "device": 64769,
+              "inode": 786604
+            },
+            {
+              "path": "typed-index/7ee2d345023e1606c8ad94fdb24e1394cca618a659ee27a7ea30f8b7920a264e",
+              "mode": "0o700",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 786605
+            },
+            {
+              "path": "typed-index/7ee2d345023e1606c8ad94fdb24e1394cca618a659ee27a7ea30f8b7920a264e/ef5e900b2af22a1264af28fea93306d39db5efbefc9ad571f17db58e9a9f86c7",
+              "mode": "0o700",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 786606
+            },
+            {
+              "path": "typed-index/7ee2d345023e1606c8ad94fdb24e1394cca618a659ee27a7ea30f8b7920a264e/ef5e900b2af22a1264af28fea93306d39db5efbefc9ad571f17db58e9a9f86c7/owner.json",
+              "mode": "0o444",
+              "directory": false,
+              "bytes": 2096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 802716
+            },
+            {
+              "path": "typed-index/7ee2d345023e1606c8ad94fdb24e1394cca618a659ee27a7ea30f8b7920a264e/ef5e900b2af22a1264af28fea93306d39db5efbefc9ad571f17db58e9a9f86c7/inputs-bcb70feb98bb02b67efafd6fe86f3b49",
+              "mode": "0o555",
+              "directory": true,
+              "bytes": 4096,
+              "uid": 0,
+              "device": 64769,
+              "inode": 786609
+            },
+            {
+              "path": "typed-index/7ee2d345023e1606c8ad94fdb24e1394cca618a659ee27a7ea30f8b7920a264e/ef5e900b2af22a1264af28fea93306d39db5efbefc9ad571f17db58e9a9f86c7/inventory.json",
+              "mode": "0o444",
+              "directory": false,
+              "bytes": 2517395,
+              "uid": 0,
+              "device": 64769,
+              "inode": 802714
+            },
+            {
+              "path": "typed-index/7ee2d345023e1606c8ad94fdb24e1394cca618a659ee27a7ea30f8b7920a264e/ef5e900b2af22a1264af28fea93306d39db5efbefc9ad571f17db58e9a9f86c7/.phebs-index-publication.lock",
+              "mode": "0o600",
+              "directory": false,
+              "bytes": 0,
+              "uid": 0,
+              "device": 64769,
+              "inode": 786607
+            },
+            {
+              "path": "typed-index/7ee2d345023e1606c8ad94fdb24e1394cca618a659ee27a7ea30f8b7920a264e/ef5e900b2af22a1264af28fea93306d39db5efbefc9ad571f17db58e9a9f86c7/input-receipt.json",
+              "mode": "0o444",
+              "directory": false,
+              "bytes": 1708649,
+              "uid": 0,
+              "device": 64769,
+              "inode": 802715
+            }
+          ],
+          "retained": true
+        }
+      ],
+      "containers": 0,
+      "loop_devices": 0,
+      "matching_processes": 0,
+      "native_scratch_only_lock": true
+    },
+    "original_teardown_pass_claim": false,
+    "failed_sdk_workspaces_installations_and_uploads_retained": true,
+    "vm_stop": {
+      "argv": [
+        "colima",
+        "stop",
+        "--profile",
+        "phebs-t451a"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t459-settings-parity/phebs.com",
+      "source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+      "started_utc": "2026-10-05T03:39:15.006116+00:00",
+      "elapsed_seconds": 1.883,
+      "exit_code": 0,
+      "log_bytes": 1613,
+      "log_sha256": "sha256:eb02294234555427c6ffd3b2a409bcdf2edf3e89bd6d758d6096cf227ccb5fbc",
+      "metadata": {
+        "bytes": 426,
+        "sha256": "sha256:03024de413075c5f0e4ab3ac7efaa89bcef6d146bf6381999e1ea2c1375a6fb4"
+      }
+    },
+    "final_vm_state": "phebs-t451a stopped; default running; layago stopped; unchanged profile",
+    "final_docker_context": "colima"
+  },
+  "cost_and_scope": [
+    "Test-only production constructor composition; full serve/listener/automatic lifecycle cadence and ceremony admission remain unestablished.",
+    "Production query/request, sync, startup/restart, retry/no-op, publication, locks, caches, schema and admission bounds unchanged.",
+    "Fixture constructor catalog repair, full owner monitor/caches, one empty searcher/watcher, one-repository warming census and real mux incur existing startup costs. Searcher warming has its independent background10-minute deadline;13-minute frames do not bound constructor/store/searcher/cleanup lifetimes.",
+    "Jobs census cap is four rows. Finished exact retry adds one accepted audit without another Publish; this oracle is implemented but current native completion is unestablished.",
+    "Trusted setup copies and hashes the complete SDK/tool inventory with whole-file buffers; no whole-setup/browser memory or whole-turn bound. Native policy remains unchanged.",
+    "Failure-only diagnostic logs a fixed two-phase projection; raw errors, watchdogs and worker envelopes excluded. No added production child, request, cache or loop.",
+    "Zero services and176 source bytes establish no product-scale, successor/restart/restore, authorized target, T45.6 PASS or release claim; ordinary providers stay dark."
+  ],
+  "preservation": {
+    "branch": "codex/t45.9-neutral-api-closure",
+    "head": "ee304799bec66e03f3d0b529d28ceb172e0ee380",
+    "status": "M history.txt",
+    "core_bare": "false",
+    "history": {
+      "bytes": 9648,
+      "sha256": "sha256:ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056"
+    },
+    "vm_config": {
+      "bytes": 8594,
+      "sha256": "sha256:a7055c425cd4da0d9d57b4dfb5dfe45039473bbe54dad4f58cc52e96197eba69"
+    },
+    "claude_preserved": true,
+    "claude_files": 7,
+    "claude_snapshot": {
+      "bytes": 1333,
+      "sha256": "sha256:25b618e812edb41fbba55352e303936c772efcca37d9c6b197ae5bf9b2bf08c7"
+    }
+  },
+  "raw_artifact_custody": {
+    "first_correction_directory": "/Users/ben/.codex/artifacts/phebs-pr38-review-corrections-20261004",
+    "confirmation_directory": "/Users/ben/.codex/artifacts/phebs-pr38-native-confirmation-20261004",
+    "qualification": "Private external artifacts retain raw control, seed, binary, tool/archive and logs; only source-free projections and hashes are committed.",
+    "confirmation_records": {
+      "config.json": {
+        "bytes": 1655,
+        "sha256": "sha256:c91b414423db1869be801a8c390cb9e7ecd73b88c9be1e644295170b788fd453"
+      },
+      "profile.json": {
+        "bytes": 1313,
+        "sha256": "sha256:28383a13b82540d328ad341577e19c64cac479f2af54e6eed561c191eae8d574"
+      },
+      "inventory.json": {
+        "bytes": 2517395,
+        "sha256": "sha256:7636e6b6a2a11feb6b0c9b8fa62c0d798bdca180fa1b2be20b1bcd93b639dbae"
+      },
+      "seed.surql": {
+        "bytes": 90844,
+        "sha256": "sha256:b6dde1a08d68555adbd92cf57da7808ca31724c42d8deb408ad8e1ff3231e4e4"
+      },
+      "expected.json": {
+        "bytes": 23110,
+        "sha256": "sha256:a040189dbe6ec780ea86f4a57d976e92613ee0999c113cd40d696ba998c3e3f9"
+      },
+      "typed-module-selection.json": {
+        "bytes": 2513,
+        "sha256": "sha256:e9ff9086c4146a56de46e4d4a03e6be5389ba4bcf85cf372050028cc95c8a0f8"
+      },
+      "typed-host-tools.json": {
+        "bytes": 126,
+        "sha256": "sha256:ad32217b86f4ca9ce71b2674caf12454dcfdc7915d00065f9e1bc470a60e3e80"
+      },
+      "installation-proof.json": {
+        "bytes": 1519,
+        "sha256": "sha256:753979fe07b63969681fd5b36afee8808243516df3ac109d91c6ee78dfb4216d"
+      },
+      "predispatch-inspection.json": {
+        "bytes": 1779,
+        "sha256": "sha256:d87a2a961a770e244f06d4385c9177d56a3534848011ca7a79fd5ee88fa812bb"
+      },
+      "deployment.json": {
+        "bytes": 548,
+        "sha256": "sha256:00fe63322eb97bd8215f5942d6fe2469de03bd700fc6b7bfee6b8b837bd0b006"
+      },
+      "legacy-staging.json": {
+        "bytes": 317,
+        "sha256": "sha256:58f2718d7784198d04da27992d3bae0da81da11484c1f6e040b96c71ea520572"
+      },
+      "legacy-browser-proof.json": {
+        "bytes": 2574,
+        "sha256": "sha256:88cb24bed044388392e80bc9acfec8bcf06eb4dd3116c7a6632a891586672ec8"
+      },
+      "native-browser-proof.json.failure.txt": {
+        "bytes": 3282,
+        "sha256": "sha256:aa42c2da73afdcf2866ff2850607eda399d62e83df2e3fb321c4d2069b2ba649"
+      },
+      "runtime-versions.json": {
+        "bytes": 44,
+        "sha256": "sha256:060f55ed86405e9c7b8e916d434ba9706a72224ffd6cc01846163aa67085f3d6"
+      },
+      "runtime-binaries.json": {
+        "bytes": 328,
+        "sha256": "sha256:f04de4b7414765d3aee1bd38a03d247f24c7414f3da490fba32ba31aad2d07c4"
+      },
+      "node-syntax.json": {
+        "bytes": 333,
+        "sha256": "sha256:26ca218421215cc899779d0df903e8cfec0de3d9765a7488d39b56879c2aa9c5"
+      },
+      "settings.test.build-info": {
+        "bytes": 6949,
+        "sha256": "sha256:c90f8280d0759cfcb25060732240ea36e92acc2725b2eacf23336ba51118af0d"
+      },
+      "native-acceptance.test.build-info": {
+        "bytes": 342,
+        "sha256": "sha256:7c12981c36e600915b6888edd80fa4f446e0e8ea0b50fa93a2a1f740c3a47149"
+      },
+      "phebs-current.build-info": {
+        "bytes": 6949,
+        "sha256": "sha256:8ea4f7be2811b36f620972701dd31b84a81315f180a5755be004b6b49c7ee9a6"
+      },
+      "native-host.py": {
+        "bytes": 7729,
+        "sha256": "sha256:a19a901e5d7a5da328fd9f26f4355c44db5d2a2fcec7310e60c896cd5606b19e"
+      },
+      "deployment.py": {
+        "bytes": 1679,
+        "sha256": "sha256:ee71a9d470b59ca09cd904224c3962d261877e0a6b615d622e47f2a8cb0c076c"
+      },
+      "native_acceptance.py": {
+        "bytes": 52332,
+        "sha256": "sha256:f70cbc11b2388e0491db3ea3de478fa5cba170dd7d4fd684733db24109d67407"
+      },
+      "inspect-host.py": {
+        "bytes": 1725,
+        "sha256": "sha256:32f052b62b52edd1a159b92ba6637bf3e78e646d0c9d2a7a1941a23050f5b9a9"
+      },
+      "legacy-staging-inspection.py": {
+        "bytes": 772,
+        "sha256": "sha256:c2fd61c780b9ddbcf62079e45036e844ff1c843778c60fc5a5496143a1d4b1db"
+      },
+      "gate.py": {
+        "bytes": 1011,
+        "sha256": "sha256:605083945e4527f819bcfa29072efb088eefbf5f6e68210341c3a6d00f79f837"
+      },
+      "review-source-input-cost.json": {
+        "bytes": 4239,
+        "sha256": "sha256:0e4308489207c637b4215ec2e9450b1d2255c6ea07099f27e742b2fab03e60b8"
+      },
+      "review-input-correctness-12f47126.json": {
+        "bytes": 8658,
+        "sha256": "sha256:b058d20eb1465b01bb8c4c80b77892ebca04b3427452621dcef70fcfc1ed4769"
+      },
+      "retained-custody-after-authenticated-cleanup.json": {
+        "bytes": 4900,
+        "sha256": "sha256:fbf6210959c17401309c27d17b43376e2902ab001170b790d3f84075907a15ae"
+      },
+      "postrun-inspection-after-restart.json": {
+        "bytes": 1779,
+        "sha256": "sha256:d87a2a961a770e244f06d4385c9177d56a3534848011ca7a79fd5ee88fa812bb"
+      },
+      "postrun-inspection-qualification.json": {
+        "bytes": 449,
+        "sha256": "sha256:2f3d2af25e572b7a3c85d2716ac7e16aecb111dd261c6859e099d4de23966082"
+      },
+      "final-vm-list.log": {
+        "bytes": 371,
+        "sha256": "sha256:8fa3befb6844faf011e2eed2b334966de28bf30da8818eb4b3ecb7001641153a"
+      },
+      "final-docker-context.log": {
+        "bytes": 7,
+        "sha256": "sha256:3b0ea748a4d388f3bd8e531999a8aad877d310eece43eb9f85a37f758520f2a3"
+      },
+      "final-preservation.json": {
+        "bytes": 597,
+        "sha256": "sha256:a5ce473b090ed7a782068ad3ac020830b25142bed58869a256c13dd6d39e18dc"
+      },
+      "inspect-retained.py": {
+        "bytes": 2085,
+        "sha256": "sha256:a985bbf20958d9ce7d6b8f1e9f425f4d1f0901ee9c82e59ca855c624131797f2"
+      },
+      "vm-serial-capture.log": {
+        "bytes": 75,
+        "sha256": "sha256:2fd2fa398ee837092e3912e519e09c6894e76501c2208c6206239ce87014dc35"
+      }
+    },
+    "first_correction_records": {
+      "failed-custody-inspection.json": {
+        "bytes": 2473,
+        "sha256": "sha256:96515a81ceca070336938fef3357633208b4337892c7589809b26f136fe854cc"
+      },
+      "review-input-cost-516a6f3b.json": {
+        "bytes": 13047,
+        "sha256": "sha256:85e64e90e6cf7c2bb79e01a82110f8e6e03f2d1a47024965fa4b8894d2a18bfe"
+      },
+      "review-input-correctness-516a6f3b.json": {
+        "bytes": 13790,
+        "sha256": "sha256:5775aad1c3c9779bc7983b4ae35c1edbecf2bcc8b5d6cd9921522235908ebee8"
+      },
+      "logs/linux-focused.json": {
+        "bytes": 951,
+        "sha256": "sha256:d2877c3c9bf191e4ad6b577b16208443810e3d9b584742349cb75cdd0b39147e"
+      },
+      "logs/linux-focused.log": {
+        "bytes": 364,
+        "sha256": "sha256:e67e4ad284061ec60e82869fd18515c7ebcace621f3c15b8d54f09827b7b45f7"
+      },
+      "logs/linux-focused-quoted.json": {
+        "bytes": 891,
+        "sha256": "sha256:681d2bc81edaf01d99635f6d4ec2edb1d47b013f5c0b6a096fbebdd34aed21a7"
+      },
+      "logs/linux-focused-quoted.log": {
+        "bytes": 3066,
+        "sha256": "sha256:84830bc962b509c2ed089d9fb30c65f3174a878538a2cd11e0be1da6b5b6a6a1"
+      }
+    }
+  },
+  "final_source_evidence_review": "PENDING immutable receipt/documentation candidate; source/input review is distinct from the failed native gate."
+}

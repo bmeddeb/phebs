@@ -10267,3 +10267,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   rehearsal may establish that missing boundary under unchanged admission,
   heartbeat, stale, native allowance and settlement limits. It cannot recertify
   the failed source or label its cause retrospectively.
+
+  The one fresh diagnostic confirmation at exact `12f47126` also **STOPPED**
+  after 52.391 seconds. It returned `custody_held`, with neither deadline nor
+  cancellation set; its plan projection and empty second phase both have
+  unverified zero/default resource fields. These establish no successful
+  verified native phase, launch count or underlying refusal cause. Later
+  scheduler `wall_limit` does not prove that the native 300-second allowance
+  was consumed. The exact new binary's legacy renderer passed all eleven
+  checks/nine states/eight appearances in 16.629 seconds. Fresh Linux builds,
+  focused units, nonroot flag refusals, vet, pinned 2.12.2 lint, driver
+  self-check/syntax and documentation gates pass; complete `ci-ui`, pinned
+  Node and a fresh full command-package pass remain unclaimed. Both source/input
+  reviews have zero findings, independently of the failed native result.
+  `spike/t459/settings_native_2.json` records both STOPs and preserves receipt 1.
+  Native publication, navigation, warm/drift and lifecycle completion on the
+  corrected bridge remain unestablished. No third native run was attempted;
+  the bounded diagnostic confirmation is consumed and merge readiness is open.
+
+  Post-run SSH failed before a custody census. An inspection-only VM restart
+  found one exact native scratch residue; the existing authenticated cleanup
+  helper removed it without native execution or a new allowance. The subsequent
+  census observes zero containers, loops and matching processes, with only the
+  native lock remaining. This observation follows the restart and cleanup and
+  is not original teardown PASS evidence. Both failed SDK workspaces,
+  installations and uploads remain retained. The selected VM returned to
+  stopped, its profile and Docker context remain unchanged, and neither Ben's
+  checkout/history nor Claude's uncommitted inputs changed. Cleanup adds one
+  explicitly selected existing custody observation/removal and final census;
+  it adds no production cost, native retry or broader deletion authority.

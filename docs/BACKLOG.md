@@ -15633,6 +15633,19 @@ driver failure handling, tunnel checks, wider transport waits and the `ci-ui`
 self-check require fresh native and legacy execution plus a separately sealed
 receipt. Full serve/lifecycle cadence and complete T45.9 closure remain open.
 
+Corrected-source execution is **STOP**, not merge-ready. The first correction
+at `516a6f3b` stopped at its generic report gate in 61.835 seconds; the one
+diagnostic confirmation at exact `12f47126` returned `custody_held` in 52.391
+seconds. Unverified phase fields establish neither a successful native phase
+nor its underlying refusal cause. Its fresh legacy renderer passes eleven
+checks/nine states/eight appearances; Linux scoped gates, pinned lint and
+independent source/input reviews pass. Separate source-bound
+`spike/t459/settings_native_2.json` retains both failures and qualifies the
+post-restart authenticated scratch cleanup: failed SDK workspaces/installations
+and uploads remain retained, and the VM is stopped. Original teardown PASS is
+unestablished after SSH transport loss. The bounded confirmation is consumed;
+no third run, fresh native bridge PASS or complete T45.9 closure is claimed.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,
