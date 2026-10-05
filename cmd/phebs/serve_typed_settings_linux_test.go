@@ -66,113 +66,17 @@ func TestTypedSettingsBrowserLinux(t *testing.T) {
 	check(f.state.SetRepoIndexed(ctx, f.repo, commit, time.Now()))
 	before, err := f.state.ReadTypedIndexOperator(ctx, f.repo)
 	check(err)
-	owners, err := dispatchadmission.NewOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 1})
-	check(err)
+	authentication := typedSettingsBrowserAuth(ctx, t, f.state, cancel)
+	admin, password, auditFailed := authentication.admin, authentication.password, authentication.failed
 	const adminEmail, ordinaryEmail = "admin@settings.invalid", "ordinary@settings.invalid"
-	var secret [32]byte
-	_, err = rand.Read(secret[:])
-	check(err)
-	password := hex.EncodeToString(secret[:])
-	var auditFailed atomic.Bool
-	audit := func(ctx context.Context, event store.AuditEvent) {
-		if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.User != nil {
-			event.ActorID, event.ActorEmail = principal.User.ID, principal.User.Email
-			event.AuthMethod = principal.AuthMethod
-		}
-		if err := f.state.AppendAuditEvent(ctx, event); err != nil {
-			auditFailed.Store(true)
-		}
-	}
-	authService, err := auth.New(ctx, auth.Options{
-		Store: f.state, Config: config.Auth{BootstrapUser: config.BootstrapUser{
-			Email: adminEmail, DisplayName: "Neutral administrator", Password: password,
-		}}, Owners: owners, ArgonConcurrency: 1, Audit: audit,
-	})
-	check(err)
-	t.Cleanup(func() { cancel(); authService.WaitCleanup() })
-	admin, err := f.state.GetUserByEmail(ctx, adminEmail)
-	check(err)
-	if admin == nil || !admin.IsAdmin || admin.PasswordHash == "" {
-		t.Fatal("real administrator bootstrap missing")
-	}
-	ordinary, err := f.state.CreateUser(ctx, store.User{
-		ID: "settings-ordinary", Email: ordinaryEmail, NormalizedEmail: ordinaryEmail,
-		DisplayName: "Neutral reader", PasswordHash: admin.PasswordHash,
-	})
-	check(err)
-	if ordinary == nil || ordinary.IsAdmin {
-		t.Fatal("ordinary fixture user has administrator authority")
-	}
 	resolver, err := newTypedCodeNavigationResolver(f.state, f.base)
 	check(err)
 	navigation := codenav.New(codenav.Options{DataDir: f.base, RoutedResolver: resolver})
-	monitor, err := lifecycle.NewStatusMonitor(false, []lifecycle.Owner{lifecycle.JobOwnerImpl{Store: f.state}})
-	check(err)
 	server := func(available bool) *httptest.Server {
-		options := api.Options{
-			Version: "neutral-settings-fixture", Store: f.state, DataDir: f.base, CodeNav: navigation,
-			TypedIndexAvailable: available, AuditRecord: audit, AuditLog: f.state,
-			LifecycleStatusSource: func(context.Context) lifecycle.Status { return monitor.Snapshot() },
-			IsAdmin: func(ctx context.Context) bool {
-				principal, ok := auth.PrincipalFromContext(ctx)
-				return ok && principal.IsAdmin
-			},
-			Principal: func(ctx context.Context) string {
-				principal, ok := auth.PrincipalFromContext(ctx)
-				if !ok || principal.User == nil {
-					return ""
-				}
-				return "user:" + principal.User.ID
-			},
-		}
-		handler := newHTTPHandler(authService, api.New(options), http.NotFoundHandler(), http.NotFoundHandler(), http.FileServerFS(os.DirFS(dist)), config.Server{})
-		out := httptest.NewUnstartedServer(handler)
-		out.Config.BaseContext = func(net.Listener) context.Context { return ctx }
-		out.Config.ReadHeaderTimeout = 5 * time.Second
-		out.Config.ReadTimeout = 10 * time.Second
-		out.Config.WriteTimeout = 30 * time.Second
-		out.Config.IdleTimeout = 10 * time.Second
-		out.StartTLS()
-		t.Cleanup(out.Close)
-		return out
+		return typedSettingsBrowserServer(ctx, t, dist, f.base, f.state, navigation, authentication, available)
 	}
 	installed, dark := server(true), server(false)
-	deadline, _ := ctx.Deadline()
-	// Reopen the launcher's pipe with an independent nonblocking description;
-	// inherited SSH stdin itself is not registered with Go's poller. This keeps
-	// deadline-bound reads on this test goroutine without a reader goroutine.
-	input, err := os.OpenFile("/proc/self/fd/0", os.O_RDONLY|syscall.O_NONBLOCK, 0)
-	check(err)
-	t.Cleanup(func() { _ = input.Close() })
-	check(input.SetReadDeadline(deadline))
-	scanner := bufio.NewScanner(input)
-	scanner.Buffer(make([]byte, 4096), 4096)
-	emit := func(event map[string]any) {
-		t.Helper()
-		raw, err := json.Marshal(event)
-		check(err)
-		if len(raw) > 4096 {
-			t.Fatal("fixture event exceeds protocol bound")
-		}
-		_, err = fmt.Fprintf(os.Stdout, "PHEBS_SETTINGS %s\n", raw)
-		check(err)
-	}
-	expect := func(want string) {
-		t.Helper()
-		if !scanner.Scan() {
-			t.Fatal("fixture command missing", want, scanner.Err())
-		}
-		var command struct {
-			Command string `json:"command"`
-		}
-		decoder := json.NewDecoder(strings.NewReader(scanner.Text()))
-		decoder.DisallowUnknownFields()
-		check(decoder.Decode(&command))
-		if decoder.Decode(new(any)) != io.EOF || command.Command != want {
-			t.Fatal("unexpected fixture command", want)
-		}
-		check(ctx.Err())
-	}
+	emit, expect := typedSettingsBrowserProtocol(ctx, t)
 	jobs := func(want int) []store.Job {
 		t.Helper()
 		page, err := f.state.ListJobsPage(ctx, store.JobPageQuery{Kind: store.JobTypedIndex, Limit: 4})
@@ -370,4 +274,146 @@ func typedSettingsBrowserMirror(ctx context.Context, t *testing.T, f typedNaviga
 	}
 	run("clone", "--bare", "--no-hardlinks", "--", origin, mirror)
 	return commit
+}
+
+type typedSettingsAuth struct {
+	service  *auth.Service
+	admin    *store.User
+	password string
+	audit    func(context.Context, store.AuditEvent)
+	failed   *atomic.Bool
+}
+
+func typedSettingsBrowserAuth(ctx context.Context, t *testing.T, state *store.Surreal, cancel context.CancelFunc) typedSettingsAuth {
+	t.Helper()
+	check := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	owners, err := dispatchadmission.NewOwners(ctx, dispatchadmission.OwnerLimits{Owners: 1, Requests: 1})
+	check(err)
+	const adminEmail, ordinaryEmail = "admin@settings.invalid", "ordinary@settings.invalid"
+	var secret [32]byte
+	_, err = rand.Read(secret[:])
+	check(err)
+	password := hex.EncodeToString(secret[:])
+	var auditFailed atomic.Bool
+	audit := func(ctx context.Context, event store.AuditEvent) {
+		if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.User != nil {
+			event.ActorID, event.ActorEmail = principal.User.ID, principal.User.Email
+			event.AuthMethod = principal.AuthMethod
+		}
+		if err := state.AppendAuditEvent(ctx, event); err != nil {
+			auditFailed.Store(true)
+		}
+	}
+	authService, err := auth.New(ctx, auth.Options{
+		Store: state, Config: config.Auth{BootstrapUser: config.BootstrapUser{
+			Email: adminEmail, DisplayName: "Neutral administrator", Password: password,
+		}}, Owners: owners, ArgonConcurrency: 1, Audit: audit,
+	})
+	check(err)
+	t.Cleanup(func() { cancel(); authService.WaitCleanup() })
+	admin, err := state.GetUserByEmail(ctx, adminEmail)
+	check(err)
+	if admin == nil || !admin.IsAdmin || admin.PasswordHash == "" {
+		t.Fatal("real administrator bootstrap missing")
+	}
+	ordinary, err := state.CreateUser(ctx, store.User{
+		ID: "settings-ordinary", Email: ordinaryEmail, NormalizedEmail: ordinaryEmail,
+		DisplayName: "Neutral reader", PasswordHash: admin.PasswordHash,
+	})
+	check(err)
+	if ordinary == nil || ordinary.IsAdmin {
+		t.Fatal("ordinary fixture user has administrator authority")
+	}
+	return typedSettingsAuth{authService, admin, password, audit, &auditFailed}
+}
+
+func typedSettingsBrowserServer(ctx context.Context, t *testing.T, dist, base string, state *store.Surreal, navigation *codenav.Service, authentication typedSettingsAuth, available bool) *httptest.Server {
+	t.Helper()
+	check := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	monitor, err := lifecycle.NewStatusMonitor(false, []lifecycle.Owner{lifecycle.JobOwnerImpl{Store: state}})
+	check(err)
+
+	options := api.Options{
+		Version: "neutral-settings-fixture", Store: state, DataDir: base, CodeNav: navigation,
+		TypedIndexAvailable: available, AuditRecord: authentication.audit, AuditLog: state,
+		LifecycleStatusSource: func(context.Context) lifecycle.Status { return monitor.Snapshot() },
+		IsAdmin: func(ctx context.Context) bool {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			return ok && principal.IsAdmin
+		},
+		Principal: func(ctx context.Context) string {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok || principal.User == nil {
+				return ""
+			}
+			return "user:" + principal.User.ID
+		},
+	}
+	handler := newHTTPHandler(authentication.service, api.New(options), http.NotFoundHandler(), http.NotFoundHandler(), http.FileServerFS(os.DirFS(dist)), config.Server{})
+	out := httptest.NewUnstartedServer(handler)
+	out.Config.BaseContext = func(net.Listener) context.Context { return ctx }
+	out.Config.ReadHeaderTimeout = 5 * time.Second
+	out.Config.ReadTimeout = 10 * time.Second
+	out.Config.WriteTimeout = 30 * time.Second
+	out.Config.IdleTimeout = 10 * time.Second
+	out.StartTLS()
+	t.Cleanup(out.Close)
+	return out
+}
+
+func typedSettingsBrowserProtocol(ctx context.Context, t *testing.T) (func(map[string]any), func(string)) {
+	t.Helper()
+	check := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	deadline, _ := ctx.Deadline()
+	// Reopen the launcher's pipe with an independent nonblocking description;
+	// inherited SSH stdin itself is not registered with Go's poller. This keeps
+	// deadline-bound reads on this test goroutine without a reader goroutine.
+	input, err := os.OpenFile("/proc/self/fd/0", os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	check(err)
+	t.Cleanup(func() { _ = input.Close() })
+	check(input.SetReadDeadline(deadline))
+	scanner := bufio.NewScanner(input)
+	scanner.Buffer(make([]byte, 4096), 4096)
+	emit := func(event map[string]any) {
+		t.Helper()
+		raw, err := json.Marshal(event)
+		check(err)
+		if len(raw) > 4096 {
+			t.Fatal("fixture event exceeds protocol bound")
+		}
+		_, err = fmt.Fprintf(os.Stdout, "PHEBS_SETTINGS %s\n", raw)
+		check(err)
+	}
+	expect := func(want string) {
+		t.Helper()
+		if !scanner.Scan() {
+			t.Fatal("fixture command missing", want, scanner.Err())
+		}
+		var command struct {
+			Command string `json:"command"`
+		}
+		decoder := json.NewDecoder(strings.NewReader(scanner.Text()))
+		decoder.DisallowUnknownFields()
+		check(decoder.Decode(&command))
+		if decoder.Decode(new(any)) != io.EOF || command.Command != want {
+			t.Fatal("unexpected fixture command", want)
+		}
+		check(ctx.Err())
+	}
+	return emit, expect
 }

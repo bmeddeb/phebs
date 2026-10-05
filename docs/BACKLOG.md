@@ -15600,6 +15600,19 @@ bounds remain unchanged. Complete neutral and separately authorized target
 closure remain open; the zero-service tiny fixture establishes no product-scale
 envelope, ordinary providers remain dark and T45.6 is not PASS.
 
+T45.9 authenticated Settings/native bridge prerequisite (2026-10-04): the next
+bounded slice connects real rendered session/CSRF preview and exact lost-response
+enqueue retry to the production serve coordinator/scheduler and actual native
+publication. Require current/parent/execution continuity, settled work and
+released growth, rendered current plus cold/warm cross-member HTTP navigation,
+ordinary polling without replay, stale-source refusal and joined bounded
+lifecycle teardown. Use freshly provisioned exact neutral authority and the
+original Git mirror; retain the prior fixture-authored nine-state/UTF-16 proof
+separately. Execution/evidence gates remain pending. This single-Publish bridge
+establishes neither successor replacement nor full neutral/authorized target
+closure; zero accepted services and 176 admitted source bytes establish no
+product-scale envelope. Production provider registration and limits stay exact.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

@@ -10128,3 +10128,55 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Final independent exact-candidate `3379409f` source/evidence and cost reviews
   cover all nine PR paths with every severity count zero. The record-only seal
   changes no executable, fixture, UI or driver input from the passed source.
+
+- **2026-10-04 — T45.9 authenticated Settings/native bridge prerequisite.**
+  Connect the existing rendered administrator flow to the trusted
+  `typedServeInstallation`, `prepareServeTypedIndex` and `startServeTypedIndex`
+  composition seams. Ordinary serve retains its nil installation. The opt-in
+  Linux fixture consumes a freshly provisioned, digest-bound pristine neutral
+  seed, immutable workspace inventory/profile and original Git mirror. A real
+  session and CSRF-protected preview/enqueue must survive a discarded admitted
+  response and identical retry with one pending coordinator before workers
+  start. The production runner and scheduler then produce the native current;
+  two successful joined phase reports, exact parent/execution/current continuity,
+  settled schedule and released growth are separate gates. Render unchanged
+  Settings current and query native cross-member Definition/References/Hover
+  through the real HTTP mux. Warm reads and more than two configured scheduler
+  intervals must preserve current without another lookup or native report.
+  Source drift refuses saved enqueue and cached navigation. Join runtime before
+  guarded repository deletion and bounded production lifecycle drainage.
+  The existing nine-state/UTF-16 fixture remains fixture-authored supporting
+  evidence; this bridge neither pauses nor writes native stages. Public reports
+  expose no shared-clock timestamps, so original-allowance identity remains
+  attributed to the existing native controller proofs rather than claimed as
+  a new bridge measurement. Native execution and final evidence gates remain
+  pending at this implementation record.
+
+  **Cost.** No production request/query, sync tick, startup/restart, retry/no-op,
+  publication, schema, cache or admission behavior changes. Test provisioning
+  copies the full source/SDK/tool bundle and rereads it for inventory hashing,
+  using whole-file buffers, including the helper, plus the complete inventory
+  records. This trusted setup precedes native limits and establishes no
+  whole-setup memory ceiling. It repeats pristine engine setup/export and adds
+  one local bare clone under a 30-second context. Operator archive-header and
+  command-output checks occur after allocation/capture.
+  The bridge imports that seed into one separately supervised test engine and
+  performs production custody reconciliation once before claims. It retains
+  default fifteen-second scheduler/recovery cadence and jittered coordinator
+  polling, concurrency one, five-second heartbeats and twenty-second stale
+  threshold. Idle recovery adds no SDK or filesystem read. One Publish uses
+  native planning/execution under unchanged production limits; actual geometry
+  charges the complete prospective workspace and host backing budgets, with
+  staged SDK/mirror/UI bytes already included in filesystem use. Runtime
+  reports use one bounded slot and atomic counters. Navigation retains default
+  metadata caching, per-open publication pins and immutable Git range reads.
+  Teardown joins background work before serial selected lifecycle turns with
+  the existing sixteen-mutation cap and a 12,000-turn test ceiling. Shared
+  browser/auth helpers retain one pollable stdin descriptor, 4-KiB frames,
+  existing TLS deadlines, session/audit work and bounded Argon admission.
+  The external driver retains bounded request/protocol/error diagnostics and
+  owns one fixture SSH, one private tunnel and Chrome; it establishes no numeric
+  browser or whole-turn resource bound. The zero-service, five-blob/176-byte
+  workspace is mechanics evidence only. Complete neutral closure, successor
+  replacement, separately authorized target closure, T45.6, ordinary dark
+  providers and scale/release posture remain unchanged.

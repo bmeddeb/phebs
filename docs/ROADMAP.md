@@ -181,6 +181,12 @@ fresh static gates and rendered execution pass with applied theme/density,
 exact eleven deliberate errors and four enqueue audits. Separate receipt
 `spike/t459/settings_browser_2.json` binds that source and retained guest
 asset/cleanup results, preserving receipt 1 and all acceptance limits.
+The next bounded T45.9 prerequisite connects authenticated rendered enqueue to
+the production serve runtime and actual native publication, followed by current
+and cross-member reads, warm no-replay, source fencing and bounded cleanup.
+Its execution/evidence gates remain pending; the single-Publish tiny neutral
+bridge does not close complete neutral or separately authorized target
+acceptance, successor replacement, T45.6 or any scale/release boundary.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
