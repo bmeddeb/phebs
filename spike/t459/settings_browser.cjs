@@ -309,9 +309,10 @@ async function run() {
   await expect(section.getByRole('button', { name: 'Review indexing plan' })).toHaveCount(0)
   assert.equal((await fetchJSON(page, '/api/find_definitions' + position(publication.referencePath, 1, 0))).body.available, false)
   check('source fence and restore clearance')
-  assert.deepEqual([...results.states].sort(), [...allowedStates].sort()); assert.equal(unexpectedBrowserErrors, 0)
-  assert.equal(expectedNetworkErrors, 11) // three ordinary, one dark, four CSRF, one stale, two dropped responses
+  assert.deepEqual([...results.states].sort(), [...allowedStates].sort())
   await admin.context.close(); await browser.close(); browser = undefined
+  assert.equal(unexpectedBrowserErrors, 0)
+  assert.equal(expectedNetworkErrors, 11) // three ordinary, one dark, four CSRF, one stale, two dropped responses
   phase = 'fixture teardown'; const finished = await command('finish'); child.stdin.end()
   const [code] = await exited; assert.equal(code, 0)
   await join(tunnel); tunnel = undefined
