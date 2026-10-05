@@ -176,6 +176,11 @@ eight paths with every severity count zero; this record-only seal changes no
 compiled or harness input. This does not close complete
 neutral or separately authorized target acceptance or change ordinary dark
 providers, the T45.6 waiver or scale/release posture.
+Three external low oracle comments are confirmed and corrected at `2014caff`;
+fresh static gates and rendered execution pass with applied theme/density,
+exact eleven deliberate errors and four enqueue audits. Separate receipt
+`spike/t459/settings_browser_2.json` binds that source and retained guest
+asset/cleanup results, preserving receipt 1 and all acceptance limits.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

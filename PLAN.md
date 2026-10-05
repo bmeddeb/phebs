@@ -10109,7 +10109,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the equivalent density-input-only gap. Cost adds sixteen bounded DOM checks
   and two scalar comparisons to the fixture, with no new backend request,
   audit read, lock, cache, child or production work at request, sync, startup,
-  retry or publication boundaries. Fresh compilation, rendered execution and
-  scoped source/evidence review remain pending. Preserve the original receipt
-  bytes; the correction will retain a separate source-bound result and does
+  retry or publication boundaries. The console comparisons run after browser
+  closure and qualify the retained Chrome runtime, rather than defining a
+  portable browser-logging contract. Exact source `2014caff` passed fresh Linux
+  compilation, vet, pinned lint, format/syntax and documentation/glossary gates,
+  and all eleven rendered checks, nine states and eight applied appearances in
+  16.219 seconds. It observed exactly eleven deliberate errors, zero unexpected
+  errors and four enqueue audits. Independent three-path source review reports
+  all severity counts zero. `spike/t459/settings_browser_2.json` binds the new
+  fixture/driver, prior complete UI manifest, fresh 165-file guest comparison
+  and retained raw cleanup results. The fixture, engine and tunnel joined,
+  owned guest custody was removed, and the VM returned to its original stopped
+  state with the default Docker context unchanged. Original receipt bytes and
+  their broader Darwin failure/alarm qualifications remain exact. This does
   not close full neutral or authorized target acceptance.
