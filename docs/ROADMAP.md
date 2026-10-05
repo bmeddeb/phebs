@@ -211,6 +211,9 @@ required an inspection-only restart and authenticated removal of one native
 scratch residue; the later empty process/container/loop census does not certify
 original teardown. Failed SDK custody remains retained and the VM is stopped.
 The bounded confirmation is consumed; no third native attempt or merge occurs.
+Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
+all thirteen paths with zero findings. The record-only seal preserves the
+executed inputs; native acceptance and merge readiness remain open.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

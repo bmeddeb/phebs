@@ -1256,5 +1256,44 @@
       }
     }
   },
-  "final_source_evidence_review": "PENDING immutable receipt/documentation candidate; source/input review is distinct from the failed native gate."
+  "final_source_evidence_review": {
+    "candidate_commit": "b3876e4ee1f1771cd1353faa75e8cfdf66651fac",
+    "records": {
+      "review-final-correctness-b3876e4e.json": {
+        "bytes": 10535,
+        "sha256": "sha256:e1f6f3c26b240bdf91b21d4d6d6447b0bdc3cd9718683803b6bdf2d4676cdf2e",
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "low": 0,
+          "medium": 0
+        }
+      },
+      "review-final-cost-b3876e4e.json": {
+        "bytes": 4888,
+        "sha256": "sha256:6251f7b8cc24c46229c852de772bb0f2d952d4e942cb4e509f7bf7ccd598e402",
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      }
+    },
+    "total_paths": 13,
+    "reviewed_paths": 13,
+    "skipped_paths": 0,
+    "coverage_rate": 1.0,
+    "qualification": "Zero source/evidence and cost findings do not satisfy the failed native gate. This record-only seal preserves all compiled, embedded, fixture and driver inputs; native acceptance and merge readiness remain OPEN."
+  },
+  "source_preservation": {
+    "execution_source_commit": "12f4712692aa7bbdc1dba1f39edc1e60b33d4d9e",
+    "difference_since_execution": [
+      "PLAN.md",
+      "docs/BACKLOG.md",
+      "docs/ROADMAP.md",
+      "spike/t459/settings_native_2.json"
+    ],
+    "compiled_embedded_fixture_driver_inputs_unchanged": true
+  }
 }

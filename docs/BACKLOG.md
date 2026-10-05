@@ -15645,6 +15645,9 @@ post-restart authenticated scratch cleanup: failed SDK workspaces/installations
 and uploads remain retained, and the VM is stopped. Original teardown PASS is
 unestablished after SSH transport loss. The bounded confirmation is consumed;
 no third run, fresh native bridge PASS or complete T45.9 closure is claimed.
+Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
+all thirteen PR paths with every severity count zero. The record-only seal
+preserves all tested inputs and leaves the failed native gate open.
 
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
