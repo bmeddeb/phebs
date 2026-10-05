@@ -171,7 +171,10 @@ async function run() {
   assert.deepEqual(await reads(), cold); check('ordinary polling preserves current without native replay')
   await command('stale')
   assert.equal((await json(page, '/api/code-navigation-indexing/enqueue', enqueue)).status, 409)
-  for (const pathname of ['/api/find_definitions', '/api/find_references', '/api/hover']) assert.equal((await json(page, pathname + position('a/a.go', 2, 15))).body.available, false)
+  for (const pathname of ['/api/find_definitions', '/api/find_references', '/api/hover']) {
+    const query = pathname === '/api/find_references' ? position('b/b.go', 1, 6) : position('a/a.go', 2, 15)
+    assert.equal((await json(page, pathname + query)).body.available, false)
+  }
   await section.getByRole('button', { name: 'Refresh indexing' }).click(); await expect(section.getByText('stale', { exact: true })).toBeVisible()
   check('source transition fences rendered state and cached native reads')
   await admin.context.close(); await browser.close(); browser = undefined
@@ -186,9 +189,13 @@ async function run() {
 const timer = setTimeout(() => { fatal ??= new Error('driver timeout'); child.stdin.end(); wake?.() }, 900000)
 run().catch(error => {
   let recorded = diagnostics + '\nBrowser errors: ' + JSON.stringify(browserErrors)
-  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) recorded = recorded.replaceAll(secret, '[redacted]')
+  let summary = `Native Settings failed during ${phase}: ${fatal?.message || error.message}`
+  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) {
+    recorded = recorded.replaceAll(secret, '[redacted]')
+    summary = summary.replaceAll(secret, '[redacted]')
+  }
   fs.writeFileSync(receipt + '.failure.txt', recorded, { flag: 'wx', mode: 0o600 })
-  console.error(`Native Settings failed during ${phase}: ${fatal?.message || error.message}`); process.exitCode = 1
+  console.error(summary); process.exitCode = 1
 }).finally(async () => {
   clearTimeout(timer); lines.close(); child.stdin.end()
   if (browser) await browser.close()

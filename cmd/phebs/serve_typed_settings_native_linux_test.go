@@ -445,7 +445,7 @@ func TestTypedSettingsNativeLinux(t *testing.T) {
 					ticker.Stop()
 					t.Fatal("publication observation refused", err)
 				}
-				if op.Coordinator != store.StatusDone || op.Status.Stage != store.TypedComplete || op.Schedule == nil || op.Schedule.Succeeded != 1 || op.Schedule.Failed != 0 || op.Schedule.Pending != 0 || op.Schedule.Running != 0 {
+				if op.Coordinator != store.StatusDone || op.Status.Stage != store.TypedComplete || op.Schedule == nil || op.Schedule.Status != store.GenerationScheduleSettled || op.Schedule.Succeeded != 1 || op.Schedule.Failed != 0 || op.Schedule.Pending != 0 || op.Schedule.Running != 0 {
 					continue
 				}
 				if _, err := state.GetTypedIndexGrowth(waitCtx); !errors.Is(err, store.ErrNotFound) {

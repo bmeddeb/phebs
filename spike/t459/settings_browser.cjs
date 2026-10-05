@@ -327,9 +327,13 @@ async function run() {
 timer = setTimeout(() => { fatal ??= new Error('driver timeout'); child.stdin.end(); wake?.() }, 600000)
 run().catch(error => {
   let recorded = diagnostics + '\nRecent status: ' + JSON.stringify(statusReads) + '\nRequest counts: ' + JSON.stringify(results.managed_request_counts) + '\nBrowser errors: ' + JSON.stringify(browserDiagnostics)
-  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) recorded = recorded.replaceAll(secret, '[redacted]')
+  let summary = `Settings browser failed during ${phase}: ${fatal?.message || error.message}`
+  for (const secret of [ready?.password, ready?.adminEmail, ready?.ordinaryEmail]) if (secret) {
+    recorded = recorded.replaceAll(secret, '[redacted]')
+    summary = summary.replaceAll(secret, '[redacted]')
+  }
   fs.writeFileSync(receipt + '.failure.txt', recorded, { flag: 'wx', mode: 0o600 })
-  console.error(`Settings browser failed during ${phase}: ${fatal?.message || error.message}`); process.exitCode = 1
+  console.error(summary); process.exitCode = 1
 }).finally(async () => {
   clearTimeout(timer); lines.close(); child.stdin.end()
   if (browser) await browser.close()
