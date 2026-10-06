@@ -15331,6 +15331,14 @@ absent, and `RunNativeCompatibility` still requires Linux arm64 uid 65534.
 The receipt is `spike/t457/amd64_bazel_next_1.json` with outcome `STOP`. The
 arm64 profile is unchanged. No cohort was launched.
 
+T45.7 rules_cc vendor closure (2026-10-06): blocking `bcr.bazel.build` stops
+before rules_cc 0.1.1 `MODULE.bazel` is read. A networked resolution of that
+request selected rules_cc 0.2.14, protobuf 33.4, 27 source modules, and a
+112,257,936-byte repository cache. protobuf 27.0 is a 7,991,003-byte zip.
+That closure was not vendored. The receipt is
+`spike/t457/amd64_rules_cc_vendor_1.json` with outcome `STOP`. The arm64
+profile is unchanged. No cohort was launched.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a
