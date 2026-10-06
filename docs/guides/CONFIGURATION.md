@@ -1165,6 +1165,10 @@ is `spike/t457/amd64_tool_inventory.json`. Single, workspace, and import
 native rehearsals passed on this x86_64 host; the receipt is
 `spike/t457/amd64_native_rehearsal_1.json`. The arm64-locked Bazel cohort
 stops before launch; the receipt is `spike/t457/amd64_bazel_rehearsal_1.json`.
+A separate `native-linux-amd64-rules-go-059-v1` profile admits the measured
+amd64 pins. Its receipt is `spike/t457/amd64_native_profile_1.json`. The
+sealed sysroot can be reassembled from the parts in
+`spike/t457/amd64_sysroot_parts.json`.
 
 ## Code navigation indexing Settings (T45.8b)
 

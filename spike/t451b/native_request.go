@@ -12,6 +12,7 @@ import (
 
 const (
 	NativeProfile       = "native-linux-arm64-rules-go-059-v2"
+	NativeProfileAmd64  = "native-linux-amd64-rules-go-059-v1"
 	NativeAdapterPath   = "/inputs/tools/bin/phebs-t451b-native-driver"
 	NativeProbePath     = "/inputs/tools/bin/t451b-native-probe"
 	NativeBazelDigest   = "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f"
@@ -20,7 +21,28 @@ const (
 	PublicArchiveDigest = "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc"
 	PublicArchivePath   = "/inputs/tools/corpus/remote-apis-sdks.tar.gz"
 	nativeSDKRoot       = "external/rules_go++go_sdk+go_default_sdk"
+	// Measured linux/amd64 pins. They admit only NativeProfileAmd64.
+	goDigestAmd64      = "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25"
+	bazelDigestAmd64   = "sha256:c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403"
+	driverDigestAmd64  = "sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8"
+	scipDigestAmd64    = "sha256:31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
+	sysrootDigestAmd64 = "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde"
 )
+
+type nativeProfilePins struct {
+	goSHA, bazelSHA, driverSHA, scipSHA, sysrootSHA string
+}
+
+func pinsForNativeProfile(profile string) (nativeProfilePins, bool) {
+	switch profile {
+	case NativeProfile:
+		return nativeProfilePins{GoDigest, NativeBazelDigest, "sha256:" + launcher.NativeDriverSHA256, SCIPDigest, ""}, true
+	case NativeProfileAmd64:
+		return nativeProfilePins{goDigestAmd64, bazelDigestAmd64, driverDigestAmd64, scipDigestAmd64, sysrootDigestAmd64}, true
+	default:
+		return nativeProfilePins{}, false
+	}
+}
 
 // NativeProbeSource is compiled in the same isolated client module graph as
 // ProbeSource; the historical source and executable remain unchanged.
@@ -67,7 +89,8 @@ func DecodeNativeRequest(data []byte) (NativeRequest, error) {
 	}
 	_, err = cohortRoots(r.Cohort)
 	aspect, aspectErr := NativeAspect()
-	if err != nil || aspectErr != nil || r.Schema != "phebs-t451b-native-request-v1" || r.Profile != NativeProfile || !digest(r.BundleSHA256) || !digest(r.HelperSHA256) || !digest(r.ProbeSHA256) || !digest(r.ImageID) || r.ProbeSourceSHA256 != t451a.Digest(NativeProbeSource) || r.SCIPGoSHA256 != SCIPDigest || r.GoSHA256 != GoDigest || r.BazelSHA256 != NativeBazelDigest || r.DriverSHA256 != "sha256:"+launcher.NativeDriverSHA256 || r.ArchiveSHA256 != PublicArchiveDigest || r.AspectSHA256 != t451a.Digest(aspect) {
+	pins, pinned := pinsForNativeProfile(r.Profile)
+	if err != nil || aspectErr != nil || r.Schema != "phebs-t451b-native-request-v1" || !pinned || !digest(r.BundleSHA256) || !digest(r.HelperSHA256) || !digest(r.ProbeSHA256) || !digest(r.ImageID) || r.ProbeSourceSHA256 != t451a.Digest(NativeProbeSource) || r.SCIPGoSHA256 != pins.scipSHA || r.GoSHA256 != pins.goSHA || r.BazelSHA256 != pins.bazelSHA || r.DriverSHA256 != pins.driverSHA || r.ArchiveSHA256 != PublicArchiveDigest || r.AspectSHA256 != t451a.Digest(aspect) {
 		return NativeRequest{}, errors.New("native request identity refused")
 	}
 	return r, nil
@@ -84,7 +107,11 @@ func nativeToolProfiles(r NativeRequest) []toolProfile {
 }
 
 func validateNativeLayout(bundle t451a.Bundle, r NativeRequest) error {
-	required := map[string]string{"tools/bin/bazel": NativeBazelDigest, "tools/bin/gopackagesdriver": r.DriverSHA256, "tools/cc-sysroot.zip": "", "tools/corpus/remote-apis-sdks.tar.gz": PublicArchiveDigest, "tools/cache/downloader.cfg": t451a.Digest([]byte(launcher.NativeDownloaderConfig))}
+	pins, pinned := pinsForNativeProfile(r.Profile)
+	if !pinned {
+		return errors.New("native profile refused")
+	}
+	required := map[string]string{"tools/bin/bazel": pins.bazelSHA, "tools/bin/gopackagesdriver": r.DriverSHA256, "tools/cc-sysroot.zip": pins.sysrootSHA, "tools/corpus/remote-apis-sdks.tar.gz": PublicArchiveDigest, "tools/cache/downloader.cfg": t451a.Digest([]byte(launcher.NativeDownloaderConfig))}
 	for _, tool := range nativeToolProfiles(r)[1:] {
 		required[strings.TrimPrefix(tool.path, "/inputs/")] = tool.sha
 	}

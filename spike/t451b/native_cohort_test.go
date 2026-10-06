@@ -13,6 +13,9 @@ import (
 	"testing"
 	"time"
 
+	internallauncher "github.com/bmeddeb/phebs/internal/typedbazel/launcher"
+	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/spike/t451a"
 	"github.com/bmeddeb/phebs/spike/t451a/launcher"
 	"github.com/bmeddeb/phebs/spike/t451a/planner"
@@ -60,11 +63,70 @@ func validNativeRequest(t *testing.T) NativeRequest {
 
 func TestAmd64PinsDoNotAdmitArm64NativeCohort(t *testing.T) {
 	r := validNativeRequest(t)
-	r.GoSHA256 = "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25"
-	r.BazelSHA256 = "sha256:c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403"
-	r.DriverSHA256 = "sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8"
+	r.GoSHA256 = goDigestAmd64
+	r.BazelSHA256 = bazelDigestAmd64
+	r.DriverSHA256 = driverDigestAmd64
+	r.SCIPGoSHA256 = scipDigestAmd64
 	if _, err := DecodeNativeRequest(nativeRequestBytes(r)); err == nil {
 		t.Fatal("amd64 tool pins were admitted by the arm64 native cohort")
+	}
+}
+
+func amd64NativeRequest(t *testing.T) NativeRequest {
+	t.Helper()
+	r := validNativeRequest(t)
+	r.Profile = NativeProfileAmd64
+	r.GoSHA256 = goDigestAmd64
+	r.BazelSHA256 = bazelDigestAmd64
+	r.DriverSHA256 = driverDigestAmd64
+	r.SCIPGoSHA256 = scipDigestAmd64
+	return r
+}
+
+func TestAmd64NativeProfileAdmitsMeasuredPins(t *testing.T) {
+	if goDigestAmd64 != provider.GoDigestAmd64 || bazelDigestAmd64 != provider.BazelDigestAmd64 || driverDigestAmd64 != "sha256:"+internallauncher.NativeDriverSHA256Amd64 || scipDigestAmd64 != typedindex.SCIPGoIndexerDigestAmd64 {
+		t.Fatal("amd64 admission pins diverged from the measured seals")
+	}
+	r := amd64NativeRequest(t)
+	for _, cohort := range []string{"neutral", "ordinary", "proto", "fanout"} {
+		r.Cohort = cohort
+		got, err := DecodeNativeRequest(nativeRequestBytes(r))
+		if err != nil || got.Profile != NativeProfileAmd64 {
+			t.Fatal(cohort, err)
+		}
+	}
+	native, err := nativeSandboxRequest(nativeRequestBytes(r))
+	if err != nil || !native {
+		t.Fatal("amd64 profile did not select the native scratch cap", err)
+	}
+	mixed := r
+	mixed.BazelSHA256 = NativeBazelDigest
+	if _, err = DecodeNativeRequest(nativeRequestBytes(mixed)); err == nil {
+		t.Fatal("arm64 bazel digest admitted on the amd64 profile")
+	}
+	swapped := validNativeRequest(t)
+	swapped.Profile = NativeProfileAmd64
+	if _, err = DecodeNativeRequest(nativeRequestBytes(swapped)); err == nil {
+		t.Fatal("arm64 pins admitted on the amd64 profile")
+	}
+	bundle := t451a.Bundle{Schema: "phebs-t451a-offline-v1", Files: []t451a.BundleFile{
+		{Path: "tools/bin/bazel", Bytes: 65821854, SHA256: r.BazelSHA256, Executable: true},
+		{Path: "tools/bin/gopackagesdriver", Bytes: 5210483, SHA256: r.DriverSHA256, Executable: true},
+		{Path: "tools/cc-sysroot.zip", Bytes: 72352400, SHA256: sysrootDigestAmd64},
+		{Path: "tools/corpus/remote-apis-sdks.tar.gz", Bytes: 249496, SHA256: PublicArchiveDigest},
+		{Path: "tools/cache/downloader.cfg", Bytes: int64(len(launcher.NativeDownloaderConfig)), SHA256: t451a.Digest([]byte(launcher.NativeDownloaderConfig))},
+	}}
+	for _, tool := range nativeToolProfiles(r)[1:] {
+		bundle.Files = append(bundle.Files, t451a.BundleFile{Path: strings.TrimPrefix(tool.path, "/inputs/"), Bytes: 1, SHA256: tool.sha, Executable: true})
+	}
+	if err = validateNativeLayout(bundle, r); err != nil {
+		t.Fatal(err)
+	}
+	bad := bundle
+	bad.Files = slices.Clone(bundle.Files)
+	bad.Files[2].SHA256 = r.BundleSHA256
+	if err = validateNativeLayout(bad, r); err == nil {
+		t.Fatal("amd64 layout accepted a different sysroot")
 	}
 }
 
