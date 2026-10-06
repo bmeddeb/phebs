@@ -10518,3 +10518,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The gate test reads the existing downloader constant and the
   existing worker source. It adds no production request, query, sync,
   startup, retry, publication, fetch, or child.
+
+- **2026-10-06 — T45.7 rules_cc vendor closure STOP.** A downloader config of
+  `block bcr.bazel.build` cannot read
+  `https://bcr.bazel.build/modules/rules_cc/0.1.1/MODULE.bazel`. A separate
+  networked fetch of that same request selected rules_cc 0.2.14 and protobuf
+  33.4, with 27 `source.json` modules, a 112,257,936-byte repository cache,
+  and a 45,188,616-byte protobuf content tree. protobuf 27.0 itself is a
+  7,991,003-byte zip. That closure was not copied into the repository. The
+  receipt is `spike/t457/amd64_rules_cc_vendor_1.json`. Outcome `STOP`. The
+  arm64 profile is unchanged. No cohort launch or release claim follows.
+
+  **Cost.** The test reads one retained receipt and the existing downloader
+  constant. It adds no production request, query, sync, startup, retry,
+  publication, or child.

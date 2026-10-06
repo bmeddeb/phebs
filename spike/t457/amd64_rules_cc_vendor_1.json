@@ -1,0 +1,35 @@
+{
+  "schema": "phebs-t457-amd64-rules-cc-vendor-v1",
+  "recorded_date": "2026-10-06",
+  "outcome": "STOP",
+  "chosen_gate": "vendor rules_cc and its Bazel Central Registry closure",
+  "cohort_result": "not_observed",
+  "blocked_fetch": {
+    "exit_code": 32,
+    "downloader_config": "block bcr.bazel.build",
+    "error": "Configured URL rewriter blocked all URLs: https://bcr.bazel.build/modules/rules_cc/0.1.1/MODULE.bazel"
+  },
+  "requested_rules_cc": "0.1.1",
+  "resolved_rules_cc": "0.2.14",
+  "resolved_note": "A networked fetch of rules_cc 0.1.1 selected rules_cc 0.2.14 and protobuf 33.4. That resolved repository cache was not vendored.",
+  "resolved_source_json_count": 27,
+  "resolved_repo_cache_bytes": 112257936,
+  "protobuf_content_tree_bytes": 45188616,
+  "modules": [
+    {"name": "rules_cc", "version": "0.1.1", "url": "https://github.com/bazelbuild/rules_cc/releases/download/0.1.1/rules_cc-0.1.1.tar.gz", "bytes": 181594, "integrity": "sha256-cS13hosxUt1hjE1k+q3e/MWWX5D13m5t0dXdzQvoLUI="},
+    {"name": "rules_cc", "version": "0.2.14", "url": "https://github.com/bazelbuild/rules_cc/releases/download/0.2.14/rules_cc-0.2.14.tar.gz", "bytes": 368520, "integrity": "sha256-ov394qubIXa9ajOvyhRFgDkCPtsd0uc+aCOBCAnfQCc="},
+    {"name": "protobuf", "version": "27.0", "url": "https://github.com/protocolbuffers/protobuf/releases/download/v27.0/protobuf-27.0.zip", "bytes": 7991003, "integrity": "sha256-PhFI2wkP8hImwYiO85+nvHeQBCviH/Qon9Ic4XNfNFU="},
+    {"name": "protobuf", "version": "33.4", "url": "https://github.com/protocolbuffers/protobuf/releases/download/v33.4/protobuf-33.4.bazel.tar.gz", "bytes": 6889704, "integrity": "sha256-aH6YpHGXO1xf1xF1DEC4uCwK3jP2Sdtl4AspDyk0Wis="},
+    {"name": "bazel_skylib", "version": "1.7.1", "url": "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz", "bytes": 43566, "integrity": "sha256-vCg8381SalLDIBJ5zaS8KYZS76iYsQtNsIN9xRZSdW8="},
+    {"name": "bazel_skylib", "version": "1.8.2", "url": "https://github.com/bazelbuild/bazel-skylib/releases/download/1.8.2/bazel-skylib-1.8.2.tar.gz", "bytes": 44667, "integrity": "sha256-bnjw5X3iaAH29WT6fEpI3Is2hz5BYlepK7sJN+6shEY="},
+    {"name": "platforms", "version": "0.0.10", "url": "https://github.com/bazelbuild/platforms/releases/download/0.0.10/platforms-0.0.10.tar.gz", "bytes": 7680, "integrity": "sha256-IY7+juc20mo1cmY7N0olPAErcW2K8MB+hC6C8jigp+4="},
+    {"name": "platforms", "version": "1.0.0", "url": "https://github.com/bazelbuild/platforms/releases/download/1.0.0/platforms-1.0.0.tar.gz", "bytes": 7879, "integrity": "sha256-M4TrHDB2JwT7445EAgThFBVAhsj8iowuPihEECjAGag="},
+    {"name": "bazel_features", "version": "1.33.0", "url": "https://github.com/bazel-contrib/bazel_features/releases/download/v1.33.0/bazel_features-v1.33.0.tar.gz", "bytes": 17227, "integrity": "sha256-xBhT47Y2xTO4a/WrRlgGTmzJ2wo7zlLL/wYp4JQ0TKk="}
+  ],
+  "protobuf_27_0_zip_bytes": 7991003,
+  "reason": "Vendoring was not taken. A blocked downloader cannot read rules_cc 0.1.1 from bcr.bazel.build. The networked resolution selected 27 source modules and a 112257936-byte repository cache, including a 45188616-byte protobuf content tree. That closure was not copied into the repository.",
+  "arm64_profile": "native-linux-arm64-rules-go-059-v2",
+  "amd64_profile": "native-linux-amd64-rules-go-059-v1",
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}
