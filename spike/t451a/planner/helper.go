@@ -219,18 +219,19 @@ func RunHelper(args []string) error {
 	return nil
 }
 
-// MatchGoFile applies the fixed Go 1.25.0 linux/arm64 constraint context to
+// MatchGoFile applies the fixed Go 1.25.0 native Linux constraint context to
 // supplied declared-source bytes. It performs no discovery or filesystem read.
 // Matching import "C" is deliberately separate from cgo compilation selection.
 func MatchGoFile(name string, data []byte, mode GoMode) (bool, error) {
-	if name == "" || filepath.Clean(name) != name || strings.ContainsAny(name, "\\\x00\r\n") || !strings.HasSuffix(name, ".go") || len(data) > MaxFileBytes || mode.GOOS != "linux" || mode.GOARCH != "arm64" || len(mode.Tags) > 64 {
+	if name == "" || filepath.Clean(name) != name || strings.ContainsAny(name, "\\\x00\r\n") || !strings.HasSuffix(name, ".go") || len(data) > MaxFileBytes || !SupportedGoMode(mode) {
 		return false, errors.New("unsupported source constraint input")
 	}
 	releaseTags := make([]string, 25)
 	for i := range releaseTags {
 		releaseTags[i] = fmt.Sprintf("go1.%d", i+1)
 	}
-	bctx := build.Context{GOOS: mode.GOOS, GOARCH: mode.GOARCH, CgoEnabled: mode.Cgo, Compiler: "gc", BuildTags: mode.Tags, ReleaseTags: releaseTags, ToolTags: []string{"arm64.v8.0", "goexperiment.regabiwrappers", "goexperiment.regabiargs", "goexperiment.aliastypeparams", "goexperiment.swissmap", "goexperiment.synchashtriemap", "goexperiment.dwarf5"}}
+	profile, _ := NativeProfile(mode.GOARCH)
+	bctx := build.Context{GOOS: mode.GOOS, GOARCH: mode.GOARCH, CgoEnabled: mode.Cgo, Compiler: "gc", BuildTags: mode.Tags, ReleaseTags: releaseTags, ToolTags: []string{profile.ToolTag, "goexperiment.regabiwrappers", "goexperiment.regabiargs", "goexperiment.aliastypeparams", "goexperiment.swissmap", "goexperiment.synchashtriemap", "goexperiment.dwarf5"}}
 	bctx.OpenFile = func(requested string) (io.ReadCloser, error) {
 		if requested != name {
 			return nil, errors.New("build constraint requested an undeclared source")
@@ -301,7 +302,7 @@ func project(data []byte, read func(string, int) ([]byte, error)) ([]byte, error
 		if a.Name == "" || !label(a.Label) || !relative(a.Export) || a.ImportPath == "" || len(a.Sources) > MaxDocuments || len(a.Imports) > MaxUnits || len(a.Tags) > 64 {
 			return nil, errors.New("invalid archive identity")
 		}
-		if a.GOOS != "linux" || a.GOARCH != "arm64" {
+		if !SupportedGoMode(GoMode{GOOS: a.GOOS, GOARCH: a.GOARCH, Tags: a.Tags}) {
 			return nil, errors.New("unsupported neutral archive mode")
 		}
 		if a.TestFilter != "" && a.TestFilter != "off" && a.TestFilter != "only" && a.TestFilter != "exclude" {

@@ -15373,6 +15373,42 @@ called. The worker receipt is
 The arm64 profile is unchanged. No cohort was launched. The next gate is
 to run that driver on a Linux arm64 worker with uid 65534.
 
+T45.7 x86 compatibility admission (2026-10-06): `RunNativeCompatibility`
+admits linux/amd64 as well as linux/arm64. The frozen profile
+`native-linux-arm64-rules-go-059-v2` and its driver pin are unchanged.
+The amd64 driver pin is
+`sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8`.
+The sandbox uid remains 65534. This host is Linux amd64 uid 1000, so the
+function was not called. The receipt is
+`spike/t457/amd64_native_compat_arch_1.json` with outcome `STOP`. No
+cohort was launched. The next gate is to run that function as uid 65534
+on this Linux amd64 host.
+
+T45.7 uid 65534 compatibility attempt (2026-10-06): the function ran as
+Linux uid 65534 on this amd64 host with the amd64 driver pin
+`sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8`.
+It returned `open /scratch/workspace/lib/lib.go: no such file or directory`
+before starting the driver child. The receipt is
+`spike/t457/amd64_native_compat_uid_1.json` with outcome `STOP`. The
+arm64 profile is unchanged. No cohort was launched.
+
+T45.7 PR 53 review correction (2026-10-06): the runtime calls the shared
+worker-admission predicate and uses one architecture/digest/build-variant
+table. The legacy pinned-driver wrapper retains a live `checkDriver` caller.
+The automated review's additional amd64-plan refusal is corrected in selected
+unit, source and SDK validation using that same table; execution refuses a
+plan for another worker architecture, and typed response metadata preserves
+the selected mode. Mixed unit/SDK modes and unsupported architectures refuse.
+Host-specific receipt and uid-attempt tests skip outside their observed host
+geometry; launcher tests exercise production refusal before driver access.
+The guide now identifies historical arm64-only stops separately from current
+dual-architecture admission. Frozen pins and retained STOP receipts are
+unchanged; no cohort result is established.
+Changed planner/launcher/T45.7 normal and race tests, affected-tree vet,
+pinned lint, docs, glossary and whitespace checks pass. Broader normal testing
+encounters unchanged sandbox tests requiring the absent `/private/tmp` host
+directory; that host limitation does not become a complete-tree PASS.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

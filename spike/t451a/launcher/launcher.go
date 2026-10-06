@@ -178,7 +178,7 @@ func Prepare(plan planner.Plan, roots []planner.Configured) (Prepared, error) {
 		if other := labelOwners[u.ArchiveLabel]; other != "" && other != id {
 			return Prepared{}, fmt.Errorf("%w: repeated label configuration or archive variant", ErrUnrepresentable)
 		}
-		if u.Mode.GOOS != "linux" || u.Mode.GOARCH != "arm64" || len(u.Mode.Tags) > 64 {
+		if !planner.SupportedGoMode(u.Mode) {
 			return Prepared{}, fmt.Errorf("%w: archive mode", ErrUnrepresentable)
 		}
 		if len(selected) > 0 && jsonHash(selectedMode) != jsonHash(u.Mode) {
@@ -426,7 +426,7 @@ func Run(ctx context.Context, plan planner.Plan, roots []planner.Configured, dri
 	if err != nil {
 		return nil, err
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 {
+	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || p.mode.GOARCH != runtime.GOARCH || os.Getuid() != 65534 {
 		return nil, errors.New("driver requires admitted Linux arm64 worker")
 	}
 	if err := checkDriver(driverSHA256); err != nil {
@@ -489,7 +489,21 @@ func checkDriver(want string) error {
 	return checkPinnedDriver(want)
 }
 
+// checkPinnedDriver retains checkDriver's legacy arm64 build profile and digest.
 func checkPinnedDriver(want string) error {
+	profile, _ := planner.NativeProfile("arm64")
+	return checkPinnedDriverProfile(want, "arm64", profile.VariantKey, profile.Variant)
+}
+
+func checkNativeCompatDriver(arch string) error {
+	profile, ok := planner.NativeProfile(arch)
+	if !ok {
+		return errors.New("driver closed build profile mismatch")
+	}
+	return checkPinnedDriverProfile(profile.DriverSHA256, arch, profile.VariantKey, profile.Variant)
+}
+
+func checkPinnedDriverProfile(want, arch, variantKey, variant string) error {
 	b, err := readFile(DriverPath, 128<<20)
 	if err != nil {
 		return err
@@ -508,7 +522,7 @@ func checkPinnedDriver(want string) error {
 	for _, s := range info.Settings {
 		settings[s.Key] = s.Value
 	}
-	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || settings["GOARCH"] != "arm64" || settings["CGO_ENABLED"] != "0" || settings["GOARM64"] != "v8.0" {
+	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || settings["GOARCH"] != arch || settings["CGO_ENABLED"] != "0" || settings[variantKey] != variant {
 		return errors.New("driver closed build profile mismatch")
 	}
 	return nil

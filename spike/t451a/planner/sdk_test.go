@@ -95,6 +95,31 @@ func TestSDKProjectionUsesOnlyDeclaredArtifacts(t *testing.T) {
 	}
 }
 
+func TestSDKProjectionNativeArchitectures(t *testing.T) {
+	for _, arch := range []string{"arm64", "amd64", "386"} {
+		t.Run(arch, func(t *testing.T) {
+			in, files := sdkFixture(t)
+			in.Mode.GOARCH = arch
+			sdk, err := projectSDK(in, func(name string, limit int) ([]byte, error) {
+				data, ok := files[name]
+				if !ok || len(data) > limit {
+					return nil, errors.New("undeclared or oversized SDK read")
+				}
+				return data, nil
+			})
+			if arch == "386" {
+				if err == nil {
+					t.Fatal("unsupported SDK architecture accepted")
+				}
+				return
+			}
+			if err != nil || sdk.Mode.GOARCH != arch || len(sdk.Packages) != 2 {
+				t.Fatalf("SDK projection: %+v, %v", sdk, err)
+			}
+		})
+	}
+}
+
 func TestStrictStructFieldsPreserveImportCase(t *testing.T) {
 	var value struct{ Imports map[string]string }
 	data := []byte(`{"Imports":{"example.test/Pkg":"upper","example.test/pkg":"lower"}}`)

@@ -234,7 +234,7 @@ func RunCompatibility(ctx context.Context, plan planner.Plan, roots []planner.Co
 	if err != nil {
 		return CompatibilityResult{}, err
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 {
+	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || p.mode.GOARCH != runtime.GOARCH || os.Getuid() != 65534 {
 		return CompatibilityResult{}, errors.New("compatibility driver requires admitted Linux arm64 worker")
 	}
 	if err := checkDriver(DriverSHA256); err != nil {
@@ -275,7 +275,11 @@ func finishCompatibility(ctx context.Context, p Prepared, data []byte) (Compatib
 	if err := json.Unmarshal(data, &r); err != nil {
 		return CompatibilityResult{}, err
 	}
-	r["Compiler"], r["Arch"], r["GoVersion"] = json.RawMessage(`"gc"`), json.RawMessage(`"arm64"`), json.RawMessage(`25`)
+	arch, err := json.Marshal(p.mode.GOARCH)
+	if err != nil {
+		return CompatibilityResult{}, err
+	}
+	r["Compiler"], r["Arch"], r["GoVersion"] = json.RawMessage(`"gc"`), arch, json.RawMessage(`25`)
 	adapted, err := json.Marshal(r)
 	if err != nil {
 		return CompatibilityResult{}, err
