@@ -1178,7 +1178,12 @@ amd64 profile is rules_cc 0.2.14 with protobuf 33.4 at
 `spike/t457/amd64_rules_cc_offline_1.json`. The frozen 249,496-byte public
 archive is still absent, and `RunNativeCompatibility` still requires a
 Linux arm64 worker with uid 65534. That search receipt is
-`spike/t457/amd64_public_archive_stop_1.json`.
+`spike/t457/amd64_public_archive_stop_1.json`. The same archive is now
+placed at `tools/corpus/remote-apis-sdks.tar.gz` from an external host
+attachment. Its receipt is `spike/t457/amd64_public_archive_found_1.json`.
+`RunNativeCompatibility` still requires a Linux arm64 worker with uid
+65534; this host does not match, and that receipt is
+`spike/t457/amd64_native_compat_worker_stop_1.json`.
 
 ## Code navigation indexing Settings (T45.8b)
 

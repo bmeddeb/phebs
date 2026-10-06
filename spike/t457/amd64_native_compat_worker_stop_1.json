@@ -1,0 +1,22 @@
+{
+  "schema": "phebs-t457-amd64-native-compat-worker-stop-v1",
+  "recorded_date": "2026-10-06",
+  "outcome": "STOP",
+  "scope": "RunNativeCompatibility worker geometry",
+  "worker_function": "spike/t451a/launcher.RunNativeCompatibility",
+  "worker_invoked": false,
+  "worker_requires": "linux arm64 uid 65534 and profile native-linux-arm64-rules-go-059-v2",
+  "host_goos": "linux",
+  "host_goarch": "amd64",
+  "host_uid": 1000,
+  "arm64_profile": "native-linux-arm64-rules-go-059-v2",
+  "arm64_profile_unchanged": true,
+  "archive_path": "tools/corpus/remote-apis-sdks.tar.gz",
+  "archive_bytes": 249496,
+  "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+  "cohort_result": "not_observed",
+  "decision": "The frozen archive is placed. This host is Linux amd64 uid 1000, so RunNativeCompatibility was not called and no cohort was launched.",
+  "next_gate": "Run spike/t451a/launcher.RunNativeCompatibility on a Linux arm64 worker with uid 65534 using profile native-linux-arm64-rules-go-059-v2. The frozen archive is at tools/corpus/remote-apis-sdks.tar.gz.",
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}

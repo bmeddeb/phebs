@@ -15362,6 +15362,17 @@ arm64 profile is unchanged. No cohort was launched. The next gate is to
 obtain those exact archive bytes and run that driver on a Linux arm64
 worker with uid 65534.
 
+T45.7 public archive placement (2026-10-06): an external host attachment
+supplied the frozen archive. It is 249,496 bytes at
+`sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc`
+and is copied to `tools/corpus/remote-apis-sdks.tar.gz`. It was not
+reconstructed. The receipt is `spike/t457/amd64_public_archive_found_1.json`.
+This host is Linux amd64 uid 1000, so `RunNativeCompatibility` was not
+called. The worker receipt is
+`spike/t457/amd64_native_compat_worker_stop_1.json` with outcome `STOP`.
+The arm64 profile is unchanged. No cohort was launched. The next gate is
+to run that driver on a Linux arm64 worker with uid 65534.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

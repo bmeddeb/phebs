@@ -10565,3 +10565,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The test reads one retained receipt and the existing worker
   source. It adds no production request, query, sync, startup, retry,
   publication, or child.
+
+- **2026-10-06 — T45.7 public archive placed; worker geometry STOP.** An
+  external host attachment supplied the frozen public archive. It is
+  249,496 bytes at
+  `sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc`
+  and is copied to `tools/corpus/remote-apis-sdks.tar.gz`. It was not
+  reconstructed. The receipt is `spike/t457/amd64_public_archive_found_1.json`.
+  This host is Linux amd64 uid 1000, so `RunNativeCompatibility` was not
+  called. The arm64 profile `native-linux-arm64-rules-go-059-v2` is
+  unchanged. No cohort was launched. The worker receipt is
+  `spike/t457/amd64_native_compat_worker_stop_1.json`. Outcome `STOP`.
+
+  **Cost.** The test reads the placed archive and two retained receipts.
+  It adds no production request, query, sync, startup, retry, publication,
+  or child.
