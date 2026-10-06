@@ -47,6 +47,12 @@
   ],
   "containers_after": 0,
   "host_scratch_entries": [".lock"],
+  "sysroot_archive_sha256": "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde",
+  "sysroot_archive_bytes": 72352400,
+  "sysroot_archive_paths": [
+    "/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip",
+    "/opt/cursor/artifacts/cc-sysroot-amd64.zip"
+  ],
   "bazel_cohort": "not_run",
   "provider_registration": "unchanged",
   "release": "unchanged"
