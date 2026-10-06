@@ -15384,6 +15384,14 @@ function was not called. The receipt is
 cohort was launched. The next gate is to run that function as uid 65534
 on this Linux amd64 host.
 
+T45.7 uid 65534 compatibility attempt (2026-10-06): the function ran as
+Linux uid 65534 on this amd64 host with the amd64 driver pin
+`sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8`.
+It returned `open /scratch/workspace/lib/lib.go: no such file or directory`
+before starting the driver child. The receipt is
+`spike/t457/amd64_native_compat_uid_1.json` with outcome `STOP`. The
+arm64 profile is unchanged. No cohort was launched.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

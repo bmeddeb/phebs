@@ -10593,3 +10593,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The admission adds one architecture switch and one driver-pin
   constant on the existing compatibility path. It adds no production
   request, query, sync, startup, retry, publication, or child.
+
+- **2026-10-06 — T45.7 uid 65534 compatibility attempt STOP.** The same
+  function was invoked as Linux uid 65534 on this amd64 host. The installed
+  driver at `/inputs/tools/bin/gopackagesdriver` is 5,210,483 bytes at
+  `sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8`.
+  The call returned `open /scratch/workspace/lib/lib.go: no such file or
+  directory` before starting the driver child. The arm64 profile and pin
+  are unchanged. No cohort was launched. The receipt is
+  `spike/t457/amd64_native_compat_uid_1.json`. Outcome `STOP`.
+
+  **Cost.** The attempt is one process run of the existing function outside
+  production. It adds no request, query, sync, startup, retry, publication,
+  or child beyond that invocation.
