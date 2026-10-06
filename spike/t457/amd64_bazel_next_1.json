@@ -1,0 +1,28 @@
+{
+  "schema": "phebs-t457-amd64-bazel-next-v1",
+  "recorded_date": "2026-10-06",
+  "outcome": "STOP",
+  "chosen_gate": "offline rules_cc admission",
+  "rules_cc": {
+    "inspected_tags": ["0.1.1", "0.2.0"],
+    "tag_0_1_1_commit": "a1162270a0bb680190e8b4f3dab066f15a1ede6c",
+    "bcr_deps": ["bazel_features", "bazel_skylib 1.7.1", "platforms 0.0.10", "protobuf 27.0"],
+    "offline_admission": "not_taken"
+  },
+  "downloader_config": "block bcr.bazel.build\n",
+  "reason": "rules_cc 0.1.1 and 0.2.0 both depend on Bazel Central Registry modules, including protobuf 27.0. The native cohort downloader blocks bcr.bazel.build, so rules_cc was not vendored and no cc_binary build was admitted. The 249496-byte frozen public archive is not on this host. RunNativeCompatibility still requires a Linux arm64 worker with uid 65534.",
+  "public_archive": {
+    "bytes": 249496,
+    "sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+    "present": false
+  },
+  "cohort_result": "not_observed",
+  "arm64_profile": "native-linux-arm64-rules-go-059-v2",
+  "amd64_profile": "native-linux-amd64-rules-go-059-v1",
+  "sysroot_host_path": "/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip",
+  "sysroot_sha256": "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde",
+  "sysroot_bytes": 72352400,
+  "sysroot_parts": "spike/t457/amd64_sysroot_parts.json",
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}

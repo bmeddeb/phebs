@@ -15323,6 +15323,14 @@ arm64 uid 65534, and the 249,496-byte public archive is absent. The receipt
 is `spike/t457/amd64_native_profile_1.json`. The sysroot is also split into
 nine sha256 parts recorded in `spike/t457/amd64_sysroot_parts.json`.
 
+T45.7 rules_cc offline admission (2026-10-06): rules_cc 0.1.1 and 0.2.0 both
+depend on Bazel Central Registry modules, including protobuf 27.0. The cohort
+downloader still blocks `bcr.bazel.build`, so rules_cc was not vendored and
+no cc_binary build was admitted. The 249,496-byte public archive remains
+absent, and `RunNativeCompatibility` still requires Linux arm64 uid 65534.
+The receipt is `spike/t457/amd64_bazel_next_1.json` with outcome `STOP`. The
+arm64 profile is unchanged. No cohort was launched.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a
