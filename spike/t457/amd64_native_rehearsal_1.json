@@ -1,0 +1,53 @@
+{
+  "schema": "phebs-t457-amd64-native-rehearsal-v1",
+  "recorded_date": "2026-10-06",
+  "source_commit": "154e699aabe0ec8d5f7d8dc0f3bcb5bfb430bc86",
+  "selector": "TestNativeAdditionalInputs",
+  "host_arch": "amd64",
+  "image_sha256": "sha256:c1c5442274a324e5efb985e240fafcfd4e26cac4ecc5361cc922ce0bac81b571",
+  "helper_sha256": "sha256:868480c5d4966b14eb765a65345080d060b14eaef248fe45e874753ce33e5792",
+  "executor_test_sha256": "sha256:fe48c2897c7f42c89f85bbe9e8173e7762bb180b477295b88a6683688eec43d7",
+  "cases": [
+    {
+      "mode": "single",
+      "result": "PASS",
+      "seconds": 160.95,
+      "provider": "go-module-scip-v1",
+      "members": 1,
+      "documents": 1,
+      "definitions": 1,
+      "references": 0,
+      "native_launches": 6,
+      "purposes": {"publish": 54.71, "canary": 52.97, "dry-run": 49.27}
+    },
+    {
+      "mode": "workspace",
+      "result": "PASS",
+      "seconds": 161.48,
+      "provider": "go-module-scip-v1",
+      "members": 2,
+      "documents": 2,
+      "definitions": 2,
+      "references": 1,
+      "native_launches": 6,
+      "purposes": {"publish": 52.07, "canary": 52.80, "dry-run": 53.74}
+    },
+    {
+      "mode": "import",
+      "result": "PASS",
+      "seconds": 40.69,
+      "provider": "imported-artifact-scip-v1",
+      "members": 1,
+      "documents": 1,
+      "definitions": 1,
+      "references": 0,
+      "native_launches": 6,
+      "purposes": {"publish": 13.00, "canary": 14.23, "dry-run": 12.90}
+    }
+  ],
+  "containers_after": 0,
+  "host_scratch_entries": [".lock"],
+  "bazel_cohort": "not_run",
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}

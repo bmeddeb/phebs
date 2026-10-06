@@ -15299,6 +15299,14 @@ admits the measured Bazel 9.0.0, rules_go 0.59.0 driver, scip-go 0.2.7, Go
 1.25.0, and gcc-13 sysroot bytes. `go test ./spike/t457` decodes that
 inventory. The Bazel native rehearsal remains open.
 
+T45.7 amd64 native rehearsal (2026-10-06): `TestNativeAdditionalInputs` passed
+single, workspace, and import on this x86_64 host from source `154e699a`.
+Publish, canary, and dry-run each completed, with six native launches per
+mode and one workspace cross-member reference. The receipt is
+`spike/t457/amd64_native_rehearsal_1.json`. Containers and scratch were
+absent afterward except the host lock. The arm64-locked Bazel cohort did
+not run.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a
