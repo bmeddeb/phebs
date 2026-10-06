@@ -10549,3 +10549,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The admission constants are two strings on the amd64 profile.
   The rehearsal is outside production. No request, query, sync, startup,
   retry, or publication path changes.
+
+- **2026-10-06 — T45.7 public archive search STOP.** The frozen public
+  archive is 249,496 bytes at
+  `sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc`.
+  Git objects, git history, the host, and the agent store do not contain
+  those bytes. The only 249,496-byte host file is an unrelated charset map
+  at `sha256:0712ceade13b0fb970245fec9885971ae0ca5759cc9770cdd002b07a2bfb418e`.
+  The archive was not staged and was not reconstructed.
+  `RunNativeCompatibility` in `spike/t451a/launcher` still requires a Linux
+  arm64 worker with uid 65534. This host is Linux amd64 uid 1000. The arm64
+  profile is unchanged. No cohort was launched. The receipt is
+  `spike/t457/amd64_public_archive_stop_1.json`. Outcome `STOP`.
+
+  **Cost.** The test reads one retained receipt and the existing worker
+  source. It adds no production request, query, sync, startup, retry,
+  publication, or child.
