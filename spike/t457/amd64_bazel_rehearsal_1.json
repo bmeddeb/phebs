@@ -1,0 +1,30 @@
+{
+  "schema": "phebs-t457-amd64-bazel-rehearsal-v1",
+  "recorded_date": "2026-10-06",
+  "outcome": "STOP",
+  "stage": "admission",
+  "cohort_result": "not_observed",
+  "reason": "The frozen native cohort admits only profile native-linux-arm64-rules-go-059-v2 and the arm64 Bazel, Go, and driver digests. Substituting the measured amd64 pins is refused. The 249496-byte frozen public archive is not on this host, so the cohort was not launched.",
+  "bazel_binary_sha256": "sha256:c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403",
+  "version_probe": {
+    "exit_code": 0,
+    "build_label": "9.0.0",
+    "stdout_bytes": 212,
+    "stdout_sha256": "sha256:5f072be132c9446c0704e402bf615c96b373e3231dbb07bfd578302e01d8d22b",
+    "stderr_bytes": 311,
+    "stderr_sha256": "sha256:da9c93c3f43aef04832cff38150a80edbb3a92d6a22d7eed5a233586fe036d99"
+  },
+  "offline_cc_binary": {
+    "exit_code": 1,
+    "result": "STOP",
+    "detail": "Bazel 9 rejected cc_binary because the builtin rule was removed. No rules_cc fetch was attempted."
+  },
+  "sysroot_archive_sha256": "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde",
+  "sysroot_archive_bytes": 72352400,
+  "sysroot_archive_paths": [
+    "/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip",
+    "/opt/cursor/artifacts/cc-sysroot-amd64.zip"
+  ],
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}
