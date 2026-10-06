@@ -27,6 +27,9 @@ const (
 	driverDigestAmd64  = "sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8"
 	scipDigestAmd64    = "sha256:31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
 	sysrootDigestAmd64 = "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde"
+	// Offline CC module set admitted with NativeProfileAmd64 only.
+	Amd64RulesCCVersion  = "0.2.14"
+	Amd64ProtobufVersion = "33.4"
 )
 
 type nativeProfilePins struct {

@@ -1172,7 +1172,10 @@ sealed sysroot can be reassembled from the parts in
 because those releases still require Bazel Central Registry modules; the
 receipt is `spike/t457/amd64_bazel_next_1.json`. Vendoring the resolved
 closure stopped at a 112,257,936-byte repository cache; the receipt is
-`spike/t457/amd64_rules_cc_vendor_1.json`.
+`spike/t457/amd64_rules_cc_vendor_1.json`. The sealed offline set for the
+amd64 profile is rules_cc 0.2.14 with protobuf 33.4 at
+`/var/lib/phebs-typed-sysroot/rules-cc-0.2.14`. Its receipt is
+`spike/t457/amd64_rules_cc_offline_1.json`.
 
 ## Code navigation indexing Settings (T45.8b)
 

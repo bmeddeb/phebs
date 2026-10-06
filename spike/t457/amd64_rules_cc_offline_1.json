@@ -1,0 +1,38 @@
+{
+  "schema": "phebs-t457-amd64-rules-cc-offline-v1",
+  "recorded_date": "2026-10-06",
+  "outcome": "PASS",
+  "scope": "cc_binary offline admission for the amd64 profile's sealed module set",
+  "sealed_set": "rules_cc 0.2.14 + protobuf 33.4",
+  "not_sealed": "rules_cc 0.1.1 + protobuf 27.0",
+  "rules_cc": "0.2.14",
+  "protobuf": "33.4",
+  "bazel_skylib": "1.8.2",
+  "platforms": "1.0.0",
+  "bazel_features": "1.33.0",
+  "vendor_dir": "/var/lib/phebs-typed-sysroot/rules-cc-0.2.14",
+  "vendor_dir_bytes": 80205204,
+  "vendor_files": 6752,
+  "archive_path": "/var/lib/phebs-typed-sysroot/rules-cc-0.2.14.tar",
+  "archive_bytes": 85483520,
+  "archive_sha256": "sha256:97e24d24608a993d6f57a8c11f6e4e8c26f8431cd5cd303373412fd476e31161",
+  "parts": "spike/t457/amd64_rules_cc_parts.json",
+  "assemble": "cat rules-cc-0.2.14.tar.part-* > rules-cc-0.2.14.tar && sha256sum -c rules-cc-0.2.14.tar.sha256",
+  "module_lock_sha256": "sha256:a6de50f6ff50735ea26cb011f8b883f89c2e47ee497763d2b6cf5a328121fa66",
+  "downloader_config": "block bcr.bazel.build",
+  "rehearsal": {
+    "command": "bazel build //:hi",
+    "exit_code": 0,
+    "actions": 7,
+    "hello_exit_code": 0
+  },
+  "cohort_result": "not_observed",
+  "arm64_profile": "native-linux-arm64-rules-go-059-v2",
+  "amd64_profile": "native-linux-amd64-rules-go-059-v1",
+  "remaining_blockers": [
+    "public archive 249496 bytes sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc is absent",
+    "RunNativeCompatibility still requires a Linux arm64 worker with uid 65534"
+  ],
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}
