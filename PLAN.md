@@ -10606,3 +10606,45 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The attempt is one process run of the existing function outside
   production. It adds no request, query, sync, startup, retry, publication,
   or child beyond that invocation.
+
+- **2026-10-06 — T45.7 compatibility admission review correction (PR 53).**
+  `RunNativeCompatibility` now calls `NativeCompatWorkerAdmitted`; one closed
+  architecture table supplies each native driver's digest and build variant
+  for admission, source constraints, SDK projection and executable verification.
+  Plan preparation admits both sealed Linux modes, rejects mixed unit/SDK
+  modes, and binds native execution to the actual worker architecture before
+  driver access. Typed response metadata uses the selected plan architecture.
+  Legacy execution remains arm64-only and also refuses a foreign plan. The
+  test-only architecture helper is removed. `checkPinnedDriver` remains
+  called by the legacy `checkDriver`
+  path and retains its separate digest and arm64 build profile. Native arm64
+  and amd64 pins, uid 65534, frozen profiles and historical STOP receipts stay
+  exact. Host-specific attempt tests skip outside their observed geometry;
+  launcher tests exercise the actual unadmitted-worker refusal and unsupported
+  architecture refusal. Receipt tests no longer search implementation text.
+  The configuration guide distinguishes historical arm64-only stops from
+  current dual-architecture admission. This correction runs no cohort.
+
+  **Cost.** Package initialization adds one fixed two-entry read-only table.
+  Each compatibility invocation performs one lookup during worker admission
+  and, if admitted, one lookup before the unchanged bounded driver read/hash
+  and build-info verification. Legacy driver verification adds one lookup for
+  its existing arm64 variant. Unsupported architectures refuse before driver
+  reads. Existing selected-unit, declared-archive and SDK mode validation
+  each use one constant-time table lookup; each source-constraint match uses two
+  lookups for mode admission and its fixed architecture tool tag. Execution
+  adds one plan/worker architecture comparison and response adaptation
+  marshals that bounded architecture string. Existing traversal, source read,
+  hashing and output bounds remain unchanged. No lock, cache invalidation,
+  concurrency limit, corpus/shard scan, persistent disk or child-process
+  cost changes. Ordinary query/request,
+  sync, startup/restart, retry/no-op and publication paths add no work; repeated
+  compatibility invocations retain their existing source and driver checks.
+
+  **Validation.** Full changed planner/launcher/T45.7 package tests and race
+  tests pass. Vet and repository-pinned golangci-lint 2.12.2 pass across
+  `spike/t451a/...`, `spike/t451b/...` and `spike/t457`; documentation,
+  glossary and whitespace checks pass. A broader normal run encounters
+  unchanged `spike/t451a/sandbox` tests requiring the absent host directory
+  `/private/tmp`. The uid-65534 attempt remains host-gated and skipped by
+  ordinary uid-1000 tests; no fresh compatibility or cohort PASS is claimed.

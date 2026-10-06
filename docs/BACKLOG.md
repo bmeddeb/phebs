@@ -15392,6 +15392,23 @@ before starting the driver child. The receipt is
 `spike/t457/amd64_native_compat_uid_1.json` with outcome `STOP`. The
 arm64 profile is unchanged. No cohort was launched.
 
+T45.7 PR 53 review correction (2026-10-06): the runtime calls the shared
+worker-admission predicate and uses one architecture/digest/build-variant
+table. The legacy pinned-driver wrapper retains a live `checkDriver` caller.
+The automated review's additional amd64-plan refusal is corrected in selected
+unit, source and SDK validation using that same table; execution refuses a
+plan for another worker architecture, and typed response metadata preserves
+the selected mode. Mixed unit/SDK modes and unsupported architectures refuse.
+Host-specific receipt and uid-attempt tests skip outside their observed host
+geometry; launcher tests exercise production refusal before driver access.
+The guide now identifies historical arm64-only stops separately from current
+dual-architecture admission. Frozen pins and retained STOP receipts are
+unchanged; no cohort result is established.
+Changed planner/launcher/T45.7 normal and race tests, affected-tree vet,
+pinned lint, docs, glossary and whitespace checks pass. Broader normal testing
+encounters unchanged sandbox tests requiring the absent `/private/tmp` host
+directory; that host limitation does not become a complete-tree PASS.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

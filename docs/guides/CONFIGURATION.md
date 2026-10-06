@@ -1176,19 +1176,23 @@ closure stopped at a 112,257,936-byte repository cache; the receipt is
 amd64 profile is rules_cc 0.2.14 with protobuf 33.4 at
 `/var/lib/phebs-typed-sysroot/rules-cc-0.2.14`. Its receipt is
 `spike/t457/amd64_rules_cc_offline_1.json`. The frozen 249,496-byte public
-archive is still absent, and `RunNativeCompatibility` still requires a
-Linux arm64 worker with uid 65534. That search receipt is
+archive was absent at the earlier search, when `RunNativeCompatibility`
+required a Linux arm64 worker with uid 65534. That search receipt is
 `spike/t457/amd64_public_archive_stop_1.json`. The same archive is now
 placed at `tools/corpus/remote-apis-sdks.tar.gz` from an external host
 attachment. Its receipt is `spike/t457/amd64_public_archive_found_1.json`.
-`RunNativeCompatibility` still requires a Linux arm64 worker with uid
-65534; this host does not match, and that receipt is
-`spike/t457/amd64_native_compat_worker_stop_1.json`. linux/amd64 is now
-an admitted architecture for that function. The sandbox uid remains
-65534, and this host does not match it. That receipt is
+At placement, `RunNativeCompatibility` required a Linux arm64 worker with
+uid 65534; this host did not match, and that receipt is
+`spike/t457/amd64_native_compat_worker_stop_1.json`. The function now
+admits Linux arm64 and amd64 workers with uid 65534. This host's ordinary
+uid 1000 does not match that sandbox uid. That receipt is
 `spike/t457/amd64_native_compat_arch_1.json`. A uid 65534 invocation
 on this host then stopped because `/scratch/workspace/lib/lib.go` is
 absent. That receipt is `spike/t457/amd64_native_compat_uid_1.json`.
+Compatibility plan, source and SDK checks now admit both Linux modes and
+require the selected plan architecture to match the worker. Typed responses
+carry that selected architecture; this validation does not establish a
+successful cohort run.
 
 ## Code navigation indexing Settings (T45.8b)
 

@@ -3,15 +3,16 @@ package launcher
 import (
 	"context"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestRunNativeCompatibilityAsNobody(t *testing.T) {
-	if os.Getuid() != 65534 {
-		t.Skip("uid 65534 attempt")
+	if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || os.Getuid() != 65534 {
+		t.Skip("Linux amd64 uid 65534 attempt")
 	}
-	plan, roots := compatibilityFixture()
+	plan, roots := nativeCompatibilityFixture("amd64")
 	prepared, err := PrepareCompatibility(plan, roots, "load")
 	if err != nil {
 		t.Fatal(err)

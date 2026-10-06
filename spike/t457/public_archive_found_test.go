@@ -1,7 +1,6 @@
 package t457
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"testing"
@@ -20,13 +19,6 @@ func TestPublicArchiveFoundAndWorkerStaysStopped(t *testing.T) {
 	}
 	if len(archive) != 249496 || t451a.Digest(archive) != t451b.PublicArchiveDigest {
 		t.Fatalf("placed archive bytes %d digest %s", len(archive), t451a.Digest(archive))
-	}
-	worker, err := os.ReadFile("../t451a/launcher/native.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Contains(worker, []byte(`os.Getuid() != 65534`)) || !bytes.Contains(worker, []byte("native compatibility driver requires an admitted Linux worker")) || !bytes.Contains(worker, []byte("2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8")) || bytes.Contains(worker, []byte(`runtime.GOARCH != "arm64"`)) {
-		t.Fatal("amd64 compatibility admission missing")
 	}
 	foundRaw, err := os.ReadFile("amd64_public_archive_found_1.json")
 	if err != nil {

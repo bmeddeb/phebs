@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	NativeDriverSHA256 = "f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd" // linux/arm64
+	NativeDriverSHA256 = planner.NativeDriverSHA256Arm64 // linux/arm64
 	// Same rules_go 0.59.0 recipe for linux/amd64 v1.
-	NativeDriverSHA256Amd64 = "2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8"
+	NativeDriverSHA256Amd64 = planner.NativeDriverSHA256Amd64
 	NativeDownloaderConfig  = "block bcr.bazel.build\n"
 	nativeGoFilesVersion    = "phebs-t451b-native-go-files-v1"
 	nativeScopeVersion      = "phebs-t451b-native-driver-scope-v1"
@@ -67,12 +67,6 @@ func NativeBazelCommon() []string {
 	return append(args, "--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false")
 }
 
-// AdmittedNativeCompatArch is the process architecture for RunNativeCompatibility.
-// The frozen arm64 profile stays valid. linux/amd64 is the x86 worker.
-func AdmittedNativeCompatArch(arch string) bool {
-	return arch == "arm64" || arch == "amd64"
-}
-
 // NativeCompatWorkerAdmitted is the process identity for RunNativeCompatibility.
 // linux/amd64 and linux/arm64 are both admitted. The sandbox uid stays 65534.
 func NativeCompatWorkerAdmitted() bool {
@@ -81,14 +75,8 @@ func NativeCompatWorkerAdmitted() bool {
 
 // NativeCompatDriverDigest is the pinned gopackagesdriver for that architecture.
 func NativeCompatDriverDigest(arch string) string {
-	switch arch {
-	case "arm64":
-		return NativeDriverSHA256
-	case "amd64":
-		return NativeDriverSHA256Amd64
-	default:
-		return ""
-	}
+	profile, _ := planner.NativeProfile(arch)
+	return profile.DriverSHA256
 }
 
 func nativeCommandPrefix(command string) []string {
@@ -370,11 +358,13 @@ func RunNativeCompatibility(ctx context.Context, plan planner.Plan, roots []plan
 	if err != nil {
 		return CompatibilityResult{}, err
 	}
-	digest := NativeCompatDriverDigest(runtime.GOARCH)
-	if runtime.GOOS != "linux" || digest == "" || os.Getuid() != 65534 {
+	if p.mode.GOARCH != runtime.GOARCH {
+		return CompatibilityResult{}, errors.New("native compatibility plan/worker architecture mismatch")
+	}
+	if !NativeCompatWorkerAdmitted() {
 		return CompatibilityResult{}, errors.New("native compatibility driver requires an admitted Linux worker")
 	}
-	if err := checkNativeCompatDriver(runtime.GOARCH, digest); err != nil {
+	if err := checkNativeCompatDriver(runtime.GOARCH); err != nil {
 		return CompatibilityResult{}, err
 	}
 	declared, err := PrepareCompatibility(plan, roots, slot)

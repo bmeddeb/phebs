@@ -35,7 +35,7 @@ func RunThroughEntrypoint(ctx context.Context, plan planner.Plan, roots []planne
 	if err != nil {
 		return nil, err
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || os.Getuid() != 65534 {
+	if runtime.GOOS != "linux" || runtime.GOARCH != "arm64" || p.mode.GOARCH != runtime.GOARCH || os.Getuid() != 65534 {
 		return nil, errors.New("driver endpoint requires admitted Linux arm64 worker")
 	}
 	data, err := json.Marshal(entrypointPlan{"phebs-t451a-driver-plan-v1", plan, roots})
