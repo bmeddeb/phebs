@@ -10503,3 +10503,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** Admission adds one profile switch before the existing digest
   comparisons. Arm64 requests take the original pin set. No production
   request, query, sync, startup, retry, or publication path changes.
+
+- **2026-10-06 — T45.7 rules_cc offline admission STOP.** rules_cc 0.1.1
+  (`a1162270a0bb680190e8b4f3dab066f15a1ede6c`) and 0.2.0 both declare Bazel
+  Central Registry dependencies, including protobuf 27.0, bazel_skylib 1.7.1,
+  and platforms 0.0.10. The native cohort downloader remains
+  `block bcr.bazel.build`. Those modules were not vendored, and no cc_binary
+  build was admitted. The 249,496-byte public archive is still absent.
+  `RunNativeCompatibility` still requires a Linux arm64 worker with uid
+  65534. The receipt is `spike/t457/amd64_bazel_next_1.json`. Outcome `STOP`.
+  The arm64 profile is unchanged. No cohort launch, provider registration,
+  or release claim follows.
+
+  **Cost.** The gate test reads the existing downloader constant and the
+  existing worker source. It adds no production request, query, sync,
+  startup, retry, publication, fetch, or child.
