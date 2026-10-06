@@ -10472,3 +10472,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The rehearsal uses the existing native controller, one scratch
   image, and the pinned tools. It adds no production request, query, sync,
   startup, retry, or publication path.
+
+- **2026-10-06 — T45.7 amd64 Bazel rehearsal STOP.** The measured
+  `bazel-9.0.0-linux-x86_64` binary prints `Build label: 9.0.0`. The frozen
+  native cohort still requires profile `native-linux-arm64-rules-go-059-v2`
+  and the arm64 tool digests, so the amd64 pins are refused before launch.
+  The 249,496-byte public archive is not on this host. An offline `cc_binary`
+  build stops because Bazel 9 removed that builtin rule and no rules package
+  was fetched. The receipt is `spike/t457/amd64_bazel_rehearsal_1.json`.
+  Outcome `STOP`. No cohort container, provider registration, or release
+  claim follows. The sealed sysroot stays at
+  `/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip`.
+
+  **Cost.** The admission check compares the existing request digests. The
+  version probe is one sealed binary outside production. No request, query,
+  sync, startup, retry, or publication path changes.

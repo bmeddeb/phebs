@@ -1164,7 +1164,7 @@ through that wrapper passed on this x86_64 host. The admitted tool inventory
 is `spike/t457/amd64_tool_inventory.json`. Single, workspace, and import
 native rehearsals passed on this x86_64 host; the receipt is
 `spike/t457/amd64_native_rehearsal_1.json`. The arm64-locked Bazel cohort
-has not run.
+stops before launch; the receipt is `spike/t457/amd64_bazel_rehearsal_1.json`.
 
 ## Code navigation indexing Settings (T45.8b)
 

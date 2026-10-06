@@ -15307,6 +15307,14 @@ mode and one workspace cross-member reference. The receipt is
 absent afterward except the host lock. The arm64-locked Bazel cohort did
 not run.
 
+T45.7 amd64 Bazel rehearsal (2026-10-06): the sealed `bazel-9.0.0-linux-x86_64`
+binary printed `Build label: 9.0.0`. The frozen cohort still refuses those
+amd64 pins, and the 249,496-byte public archive is absent, so no cohort
+container was launched. An offline `cc_binary` build stopped because Bazel 9
+removed that builtin rule. The receipt is
+`spike/t457/amd64_bazel_rehearsal_1.json` with outcome `STOP`. The sealed
+sysroot remains at `/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip`.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

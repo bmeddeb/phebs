@@ -58,6 +58,16 @@ func validNativeRequest(t *testing.T) NativeRequest {
 	return NativeRequest{"phebs-t451b-native-request-v1", NativeProfile, "neutral", h, h, h, t451a.Digest(NativeProbeSource), SCIPDigest, GoDigest, NativeBazelDigest, "sha256:" + launcher.NativeDriverSHA256, PublicArchiveDigest, t451a.Digest(aspect), h}
 }
 
+func TestAmd64PinsDoNotAdmitArm64NativeCohort(t *testing.T) {
+	r := validNativeRequest(t)
+	r.GoSHA256 = "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25"
+	r.BazelSHA256 = "sha256:c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403"
+	r.DriverSHA256 = "sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8"
+	if _, err := DecodeNativeRequest(nativeRequestBytes(r)); err == nil {
+		t.Fatal("amd64 tool pins were admitted by the arm64 native cohort")
+	}
+}
+
 func TestNativeCohortBoundary(t *testing.T) {
 	t.Run("closed request", func(t *testing.T) {
 		r := validNativeRequest(t)
