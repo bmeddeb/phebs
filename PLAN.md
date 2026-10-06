@@ -10487,3 +10487,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The admission check compares the existing request digests. The
   version probe is one sealed binary outside production. No request, query,
   sync, startup, retry, or publication path changes.
+
+- **2026-10-06 — T45.7 separate amd64 native profile.** A request may now use
+  `native-linux-amd64-rules-go-059-v1` with the measured amd64 Go, Bazel,
+  gopackagesdriver, and scip-go digests, and that profile's layout requires
+  the sealed gcc-13 sysroot. `native-linux-arm64-rules-go-059-v2` still
+  refuses those pins and keeps its previous digest checks. This admits a
+  future amd64 cohort request. It does not launch one: the compatibility
+  driver still requires a Linux arm64 worker, and the 249,496-byte public
+  archive is absent. The receipt is
+  `spike/t457/amd64_native_profile_1.json`. The sysroot is split into nine
+  verified parts under `/opt/cursor/artifacts/cc-sysroot-amd64/` and remains
+  whole at `/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip`.
+
+  **Cost.** Admission adds one profile switch before the existing digest
+  comparisons. Arm64 requests take the original pin set. No production
+  request, query, sync, startup, retry, or publication path changes.

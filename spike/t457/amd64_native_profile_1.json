@@ -1,0 +1,16 @@
+{
+  "schema": "phebs-t457-amd64-native-profile-v1",
+  "recorded_date": "2026-10-06",
+  "profile": "native-linux-amd64-rules-go-059-v1",
+  "arm64_profile_unchanged": "native-linux-arm64-rules-go-059-v2",
+  "admission": "measured amd64 go, bazel, driver, and scip-go pins decode; the arm64 profile still refuses them",
+  "sysroot_sha256": "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde",
+  "sysroot_bytes": 72352400,
+  "sysroot_host_path": "/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip",
+  "sysroot_parts": "spike/t457/amd64_sysroot_parts.json",
+  "sysroot_assemble": "cat cc-sysroot-amd64.zip.part-* > cc-sysroot-amd64.zip && sha256sum -c cc-sysroot-amd64.zip.sha256",
+  "cohort_result": "not_observed",
+  "remaining_stop": "RunNativeCompatibility still requires a Linux arm64 worker with uid 65534, and the 249496-byte frozen public archive is not on this host.",
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}

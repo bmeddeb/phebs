@@ -15315,6 +15315,14 @@ removed that builtin rule. The receipt is
 `spike/t457/amd64_bazel_rehearsal_1.json` with outcome `STOP`. The sealed
 sysroot remains at `/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip`.
 
+T45.7 amd64 native profile (2026-10-06): `native-linux-amd64-rules-go-059-v1`
+admits the measured amd64 tool pins and the sealed sysroot. The arm64 profile
+name and its pin checks stay exact and still refuse those amd64 pins. No
+cohort container was launched. The compatibility driver still requires Linux
+arm64 uid 65534, and the 249,496-byte public archive is absent. The receipt
+is `spike/t457/amd64_native_profile_1.json`. The sysroot is also split into
+nine sha256 parts recorded in `spike/t457/amd64_sysroot_parts.json`.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

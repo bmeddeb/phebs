@@ -1,0 +1,54 @@
+{
+  "archive_sha256": "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde",
+  "archive_bytes": 72352400,
+  "part_bytes": 8388608,
+  "parts": [
+    {
+      "name": "cc-sysroot-amd64.zip.part-00",
+      "bytes": 8388608,
+      "sha256": "sha256:1ca64c18b32735e927256652f0f6d14da5d254f5d0c5aff3f22ba9fa1da6e3a7"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-01",
+      "bytes": 8388608,
+      "sha256": "sha256:6511eab86b71e5816e2e8246ff9067e0be5d9538bae92a464f25c43ca911163c"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-02",
+      "bytes": 8388608,
+      "sha256": "sha256:5aa7e1a2fb1b15e7ce0399fed7c341a13660b75ad80fe00b791b52a0e84d865a"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-03",
+      "bytes": 8388608,
+      "sha256": "sha256:086a982181a25458afd2d7a2d94fb3896f89ab8a682388d0afcacf81af477f19"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-04",
+      "bytes": 8388608,
+      "sha256": "sha256:cb32d4c43fc91ab1046766eba46dd2440e853f49dfba9d628c0cce354bab6274"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-05",
+      "bytes": 8388608,
+      "sha256": "sha256:1e1800399ff39a9549a18c6d30c3332c56ee5d27be5a170844352c228ed38f90"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-06",
+      "bytes": 8388608,
+      "sha256": "sha256:09c65fdeedca3f6d5ca1cd8831c2a253282c8d5fc56d7429cde671ab4569d2d1"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-07",
+      "bytes": 8388608,
+      "sha256": "sha256:08ce19dc4643155e884565cc589fb219d89354d95d4a866b4a56aaefada20264"
+    },
+    {
+      "name": "cc-sysroot-amd64.zip.part-08",
+      "bytes": 5243536,
+      "sha256": "sha256:e7b98147db26c61385b5b5b701d576bc0a4562f7aadcd62bc80cb085c6d8ab91"
+    }
+  ],
+  "host_path": "/var/lib/phebs-typed-sysroot/cc-sysroot-amd64.zip",
+  "assemble": "cat cc-sysroot-amd64.zip.part-* > cc-sysroot-amd64.zip && sha256sum -c cc-sysroot-amd64.zip.sha256"
+}
