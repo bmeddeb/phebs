@@ -15287,6 +15287,18 @@ The `amd64` pins and their provenance are in
 and as `amd64` under Rosetta. Still open: an `amd64` prehydrated inventory and
 native rehearsal on an x86_64 host, and an `amd64` Bazel C sysroot.
 
+T45.7 amd64 sysroot (2026-10-06): the worker now seals
+`sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde`
+for `amd64` and keeps the `arm64` gcc-12 digest. The archive has 3,076
+entries from the host gcc-13 tree. A wrapper compile returned 7. The record
+is `spike/t457/amd64_sysroot_1.json`. The `amd64` prehydrated inventory and
+Bazel native rehearsal remain open.
+
+T45.7 amd64 tool inventory (2026-10-06): `spike/t457/amd64_tool_inventory.json`
+admits the measured Bazel 9.0.0, rules_go 0.59.0 driver, scip-go 0.2.7, Go
+1.25.0, and gcc-13 sysroot bytes. `go test ./spike/t457` decodes that
+inventory. The Bazel native rehearsal remains open.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

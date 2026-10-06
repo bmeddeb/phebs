@@ -10431,3 +10431,30 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The closure test additionally reads two existing source files to
   confirm those frozen literals. No production request, query, sync, startup,
   retry, publication, lock, cache, schema, child, or corpus run is added.
+
+- **2026-10-06 — T45.7 amd64 C sysroot seal.** Bazel on `amd64` refused at
+  compiler setup because the only sealed sysroot was the `arm64` gcc-12
+  archive. An `amd64` worker now accepts only
+  `sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde`,
+  a 3,076-entry gcc-13 sysroot, and writes an `x86_64-linux-gnu-gcc-13`
+  wrapper. The `arm64` script and digest stay exact. A compile-and-link probe
+  returned 7 through that wrapper. The receipt is
+  `spike/t457/amd64_sysroot_1.json`. No Bazel rehearsal, prehydrated Bazel
+  inventory, provider registration, corpus, or release claim follows.
+
+  **Cost.** Compiler setup still reads one inventory member and checks one
+  digest. The arch choice is a constant switch on the host architecture.
+  Ordinary requests do not install a compiler. No query, sync, startup, retry,
+  or publication path changes.
+
+- **2026-10-06 — T45.7 amd64 prehydrated tool inventory.** The measured
+  linux/amd64 Bazel 9.0.0 binary, rules_go 0.59.0 gopackagesdriver, scip-go
+  0.2.7, Go 1.25.0 `go` binary, and the sealed gcc-13 sysroot are one
+  `phebs-typed-prehydration-v1` inventory at
+  `spike/t457/amd64_tool_inventory.json`. The driver and release digests match
+  the existing pins. This inventory does not launch Bazel or register a
+  provider.
+
+  **Cost.** The inventory test decodes one retained JSON document. It adds no
+  production request, query, sync, startup, retry, publication, child, or
+  corpus run.
