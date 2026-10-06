@@ -1183,7 +1183,10 @@ placed at `tools/corpus/remote-apis-sdks.tar.gz` from an external host
 attachment. Its receipt is `spike/t457/amd64_public_archive_found_1.json`.
 `RunNativeCompatibility` still requires a Linux arm64 worker with uid
 65534; this host does not match, and that receipt is
-`spike/t457/amd64_native_compat_worker_stop_1.json`.
+`spike/t457/amd64_native_compat_worker_stop_1.json`. linux/amd64 is now
+an admitted architecture for that function. The sandbox uid remains
+65534, and this host does not match it. That receipt is
+`spike/t457/amd64_native_compat_arch_1.json`.
 
 ## Code navigation indexing Settings (T45.8b)
 

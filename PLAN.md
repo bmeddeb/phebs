@@ -10580,3 +10580,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The test reads the placed archive and two retained receipts.
   It adds no production request, query, sync, startup, retry, publication,
   or child.
+
+- **2026-10-06 — T45.7 x86 compatibility admission.** linux/amd64 is an
+  admitted architecture for `RunNativeCompatibility`. The frozen arm64
+  profile `native-linux-arm64-rules-go-059-v2` and its driver pin stay
+  unchanged. The amd64 driver pin is
+  `sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8`.
+  The sandbox uid remains 65534. This host is Linux amd64 uid 1000, so the
+  function was not called and no cohort was launched. The receipt is
+  `spike/t457/amd64_native_compat_arch_1.json`. Outcome `STOP`.
+
+  **Cost.** The admission adds one architecture switch and one driver-pin
+  constant on the existing compatibility path. It adds no production
+  request, query, sync, startup, retry, publication, or child.

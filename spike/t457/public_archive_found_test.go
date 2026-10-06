@@ -25,8 +25,8 @@ func TestPublicArchiveFoundAndWorkerStaysStopped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(worker, []byte(`runtime.GOARCH != "arm64" || os.Getuid() != 65534`)) || !bytes.Contains(worker, []byte("native compatibility driver requires admitted Linux arm64 worker")) {
-		t.Fatal("arm64 worker gate changed")
+	if !bytes.Contains(worker, []byte(`os.Getuid() != 65534`)) || !bytes.Contains(worker, []byte("native compatibility driver requires an admitted Linux worker")) || !bytes.Contains(worker, []byte("2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8")) || bytes.Contains(worker, []byte(`runtime.GOARCH != "arm64"`)) {
+		t.Fatal("amd64 compatibility admission missing")
 	}
 	foundRaw, err := os.ReadFile("amd64_public_archive_found_1.json")
 	if err != nil {

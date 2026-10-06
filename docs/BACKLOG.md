@@ -15373,6 +15373,17 @@ called. The worker receipt is
 The arm64 profile is unchanged. No cohort was launched. The next gate is
 to run that driver on a Linux arm64 worker with uid 65534.
 
+T45.7 x86 compatibility admission (2026-10-06): `RunNativeCompatibility`
+admits linux/amd64 as well as linux/arm64. The frozen profile
+`native-linux-arm64-rules-go-059-v2` and its driver pin are unchanged.
+The amd64 driver pin is
+`sha256:2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8`.
+The sandbox uid remains 65534. This host is Linux amd64 uid 1000, so the
+function was not called. The receipt is
+`spike/t457/amd64_native_compat_arch_1.json` with outcome `STOP`. No
+cohort was launched. The next gate is to run that function as uid 65534
+on this Linux amd64 host.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

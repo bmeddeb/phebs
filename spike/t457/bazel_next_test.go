@@ -23,7 +23,7 @@ func TestAmd64BazelNextGateStaysStopped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(worker, []byte(`runtime.GOARCH != "arm64" || os.Getuid() != 65534`)) || !bytes.Contains(worker, []byte("native compatibility driver requires admitted Linux arm64 worker")) {
-		t.Fatal("arm64 worker gate changed")
+	if !bytes.Contains(worker, []byte(`os.Getuid() != 65534`)) || !bytes.Contains(worker, []byte("native compatibility driver requires an admitted Linux worker")) || !bytes.Contains(worker, []byte(launcher.NativeDriverSHA256Amd64)) || bytes.Contains(worker, []byte(`runtime.GOARCH != "arm64"`)) {
+		t.Fatal("amd64 compatibility admission missing")
 	}
 }

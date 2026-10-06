@@ -490,6 +490,21 @@ func checkDriver(want string) error {
 }
 
 func checkPinnedDriver(want string) error {
+	return checkPinnedDriverProfile(want, "arm64", "GOARM64", "v8.0")
+}
+
+func checkNativeCompatDriver(arch, want string) error {
+	switch arch {
+	case "arm64":
+		return checkPinnedDriverProfile(want, "arm64", "GOARM64", "v8.0")
+	case "amd64":
+		return checkPinnedDriverProfile(want, "amd64", "GOAMD64", "v1")
+	default:
+		return errors.New("driver closed build profile mismatch")
+	}
+}
+
+func checkPinnedDriverProfile(want, arch, variantKey, variant string) error {
 	b, err := readFile(DriverPath, 128<<20)
 	if err != nil {
 		return err
@@ -508,7 +523,7 @@ func checkPinnedDriver(want string) error {
 	for _, s := range info.Settings {
 		settings[s.Key] = s.Value
 	}
-	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || settings["GOARCH"] != "arm64" || settings["CGO_ENABLED"] != "0" || settings["GOARM64"] != "v8.0" {
+	if info.Path != "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver" || settings["GOOS"] != "linux" || settings["GOARCH"] != arch || settings["CGO_ENABLED"] != "0" || settings[variantKey] != variant {
 		return errors.New("driver closed build profile mismatch")
 	}
 	return nil
