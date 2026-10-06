@@ -1,0 +1,46 @@
+{
+  "schema": "phebs-t457-amd64-public-archive-stop-v1",
+  "recorded_date": "2026-10-06",
+  "outcome": "STOP",
+  "scope": "frozen public archive location and RunNativeCompatibility worker geometry",
+  "archive_path": "tools/corpus/remote-apis-sdks.tar.gz",
+  "archive_bytes": 249496,
+  "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+  "archive_found": false,
+  "searches": [
+    {
+      "place": "git objects",
+      "result": "no blob of 249496 bytes"
+    },
+    {
+      "place": "git history",
+      "result": "no path remote-apis-sdks.tar.gz"
+    },
+    {
+      "place": "host files of 249496 bytes",
+      "result": "only /usr/share/emacs/29.3/etc/charsets/BIG5-HKSCS.map"
+    },
+    {
+      "place": "agent store /cursor/stores",
+      "result": "no file of that size or name"
+    }
+  ],
+  "rejected_candidate": {
+    "path": "/usr/share/emacs/29.3/etc/charsets/BIG5-HKSCS.map",
+    "bytes": 249496,
+    "sha256": "sha256:0712ceade13b0fb970245fec9885971ae0ca5759cc9770cdd002b07a2bfb418e"
+  },
+  "worker_function": "spike/t451a/launcher.RunNativeCompatibility",
+  "worker_requires": "linux arm64 uid 65534 and the arm64 driver pin",
+  "host_goos": "linux",
+  "host_goarch": "amd64",
+  "host_uid": 1000,
+  "arm64_profile": "native-linux-arm64-rules-go-059-v2",
+  "amd64_profile": "native-linux-amd64-rules-go-059-v1",
+  "arm64_profile_unchanged": true,
+  "cohort_result": "not_observed",
+  "decision": "The archive bytes were not found offline, so they were not staged. The frozen arm64 worker gate stays in place. This host is Linux amd64 uid 1000, so the worker geometry does not match.",
+  "next_gate": "Obtain the exact 249496-byte archive that already hashes to sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc, and run RunNativeCompatibility on a Linux arm64 worker with uid 65534. Do not reconstruct the archive.",
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}

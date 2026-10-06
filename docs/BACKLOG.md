@@ -15351,6 +15351,17 @@ is cc_binary admission only. The arm64 profile is unchanged. No cohort was
 launched. The 249,496-byte public archive and the arm64 uid-65534 worker
 check remain separate blockers.
 
+T45.7 public archive search (2026-10-06): git objects, git history, the
+host, and the agent store do not contain the frozen 249,496-byte archive
+`sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc`.
+The only same-size host file is an unrelated charset map. The archive was
+not staged. `RunNativeCompatibility` still requires Linux arm64 uid 65534,
+and this host is Linux amd64 uid 1000. The receipt is
+`spike/t457/amd64_public_archive_stop_1.json` with outcome `STOP`. The
+arm64 profile is unchanged. No cohort was launched. The next gate is to
+obtain those exact archive bytes and run that driver on a Linux arm64
+worker with uid 65534.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a
