@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
@@ -180,14 +181,44 @@ func verifyWorkspace(ctx context.Context, p planner.Plan, originals []original) 
 	return nil
 }
 
-const compilerScript = `#!/bin/sh
+const compilerScriptArm64 = `#!/bin/sh
 export GCC_EXEC_PREFIX=/scratch/toolchain/usr/lib/gcc/
 export LIBRARY_PATH=/scratch/toolchain/usr/lib/aarch64-linux-gnu:/scratch/toolchain/lib/aarch64-linux-gnu
 export LD_LIBRARY_PATH=/scratch/toolchain/usr/lib/aarch64-linux-gnu:/scratch/toolchain/lib/aarch64-linux-gnu
 exec /scratch/toolchain/usr/bin/aarch64-linux-gnu-gcc-12 --sysroot=/scratch/toolchain -B/scratch/toolchain/usr/bin/ -B/scratch/toolchain/usr/lib/gcc/aarch64-linux-gnu/12/ "$@"
 `
 
-const compilerDigest = "sha256:b5bc6148e85dc7f96e9a756f407aac10893cf8327668e4e22f5f4263454cb5c4"
+const compilerScriptAmd64 = `#!/bin/sh
+export GCC_EXEC_PREFIX=/scratch/toolchain/usr/lib/gcc/
+export LIBRARY_PATH=/scratch/toolchain/usr/lib/x86_64-linux-gnu:/scratch/toolchain/lib/x86_64-linux-gnu
+export LD_LIBRARY_PATH=/scratch/toolchain/usr/lib/x86_64-linux-gnu:/scratch/toolchain/lib/x86_64-linux-gnu
+exec /scratch/toolchain/usr/bin/x86_64-linux-gnu-gcc-13 --sysroot=/scratch/toolchain -B/scratch/toolchain/usr/bin/ -B/scratch/toolchain/usr/lib/gcc/x86_64-linux-gnu/13/ -B/scratch/toolchain/usr/libexec/gcc/x86_64-linux-gnu/13/ "$@"
+`
+
+const compilerDigestArm64 = "sha256:b5bc6148e85dc7f96e9a756f407aac10893cf8327668e4e22f5f4263454cb5c4"
+const compilerDigestAmd64 = "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde"
+
+func compilerScriptFor(arch string) (string, bool) {
+	switch arch {
+	case "arm64":
+		return compilerScriptArm64, true
+	case "amd64":
+		return compilerScriptAmd64, true
+	default:
+		return "", false
+	}
+}
+
+func compilerDigestFor(arch string) (string, bool) {
+	switch arch {
+	case "arm64":
+		return compilerDigestArm64, true
+	case "amd64":
+		return compilerDigestAmd64, true
+	default:
+		return "", false
+	}
+}
 
 func setupCompiler(ctx context.Context, inv typedindex.Inventory) error {
 	// Verify the immutable archive before expansion; expansion cannot introduce a
@@ -203,7 +234,8 @@ func setupCompiler(ctx context.Context, inv typedindex.Inventory) error {
 	return unpackCompiler(ctx, r, "/scratch/toolchain")
 }
 func compilerZIP(b []byte) (*zip.Reader, error) {
-	if hash(b) != compilerDigest {
+	digest, ok := compilerDigestFor(runtime.GOARCH)
+	if !ok || hash(b) != digest {
 		return nil, typedindex.Unsupported
 	}
 	return zip.NewReader(bytes.NewReader(b), int64(len(b)))
@@ -249,5 +281,9 @@ func unpackCompiler(ctx context.Context, r *zip.Reader, destination string) erro
 			return typedindex.Invalid
 		}
 	}
-	return writeFile(filepath.Join(destination, "cc"), []byte(compilerScript), 0500)
+	script, ok := compilerScriptFor(runtime.GOARCH)
+	if !ok {
+		return typedindex.Unsupported
+	}
+	return writeFile(filepath.Join(destination, "cc"), []byte(script), 0500)
 }

@@ -39,6 +39,7 @@ var inputNativeImage = flag.String("typed-input-image", "", "exact locally prese
 var inputNativeMode = flag.String("typed-input-mode", "", "one neutral rehearsal: single, workspace or import")
 var inputNativeAcceptanceID = flag.String("typed-input-acceptance-id", "", "fresh neutral workspace fault installation")
 var inputNativeSourceCommit = flag.String("typed-input-source-commit", "", "exact test source commit for fault provisioning")
+var inputNativeRetainMirror = flag.Bool("typed-input-retain-mirror", false, "retain the exact neutral Git mirror for the opt-in Settings/native bridge")
 
 type inputNativeControls map[string][]byte
 
@@ -253,7 +254,7 @@ func nativeInputWrite(t *testing.T, name string, b []byte, mode os.FileMode) {
 // Provisioning exports only pristine real store authority. Native fault cases
 // run separately under the existing parent-owned persistent engine harness.
 func TestNativeInputFaultProvision(t *testing.T) {
-	if *inputNativeAcceptanceID == "" && *inputNativeSourceCommit == "" {
+	if *inputNativeAcceptanceID == "" && *inputNativeSourceCommit == "" && !*inputNativeRetainMirror {
 		t.Skip("explicit fresh neutral fault provisioning")
 	}
 	if os.Geteuid() != 0 || !acceptanceID.MatchString(*inputNativeAcceptanceID) || !filepath.IsAbs(*inputNativeTools) || *inputNativeMode != "workspace" {
@@ -292,7 +293,21 @@ func TestNativeInputFaultProvision(t *testing.T) {
 	if err = s.UpsertRepo(ctx, store.Repo{Name: acceptanceRepo}); err != nil {
 		t.Fatal(err)
 	}
-	profile, inventory, universe, _ := nativeInputBundle(t, s, acceptanceRepo, bundle, "workspace")
+	profile, inventory, universe, originalGit := nativeInputBundle(t, s, acceptanceRepo, bundle, "workspace")
+	if *inputNativeRetainMirror {
+		mirror := filepath.Join(c.root(), "repos", acceptanceRepo+".git")
+		if err = os.MkdirAll(filepath.Dir(mirror), 0700); err != nil {
+			t.Fatal("neutral mirror parent", err)
+		}
+		cloneCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		cmd := exec.CommandContext(cloneCtx, "git", "clone", "--bare", "--no-hardlinks", "--", originalGit, mirror)
+		cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + c.root(), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
+		err = cmd.Run()
+		cancel()
+		if err != nil {
+			t.Fatal("exact neutral source mirror", err)
+		}
+	}
 	intent, err := s.InstallTypedProfile(ctx, acceptanceRepo, profile, universe, 0)
 	if err != nil {
 		t.Fatal(err)

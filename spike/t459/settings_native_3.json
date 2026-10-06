@@ -1,0 +1,182 @@
+{
+  "schema": "phebs-t459-authenticated-settings-native-exact-rehearsal-v1",
+  "recorded_date": "2026-10-05",
+  "bridge_gate": "PASS",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "authorized_target_acceptance": "OPEN",
+  "complete_t459_status": "OPEN",
+  "execution_source_commit": "5797fee6fd4257dee968e02324e30b56862386d1",
+  "compiled_input_commit": "5797fee6fd4257dee968e02324e30b56862386d1",
+  "transport": "direct",
+  "started_utc": "2026-10-05T12:17:52Z",
+  "finished_utc": "2026-10-05T12:20:17Z",
+  "scope": "Eight authenticated Settings bridge checks through the production serve coordinator and native controller. Mechanics evidence for the 176-byte neutral workspace only.",
+  "production_code_changed": false,
+  "image": {
+    "sha256": "sha256:c1c5442274a324e5efb985e240fafcfd4e26cac4ecc5361cc922ce0bac81b571",
+    "os": "linux",
+    "architecture": "amd64",
+    "env": [
+      "PATH=/usr/bin:/bin"
+    ]
+  },
+  "installation": {
+    "id": "t459-settings-native-5",
+    "schema": "phebs-typed-workspace-fault-acceptance-v1",
+    "source_commit": "5797fee6fd4257dee968e02324e30b56862386d1",
+    "neutral_commit": "84e21851e68c8348d2bc38e0ef83103786af08c7",
+    "config_sha256": "sha256:e5a0acfb6edf0d218ae742cfa9ec948039525357f49f16491e9fc308e218d1e3",
+    "helper_sha256": "sha256:8a7df9cbfb993b72c4c515a7e7863e4ebb2476d176244631fbeee31ae74f4b5e",
+    "provisioner_sha256": "sha256:e1681fdb64149df24da8f37e5c248ae4ebcac4af2dda34446c1ef1681f7e41f0",
+    "settings_fixture_sha256": "sha256:4c795c3f207edd6423814b39357f515995f735217abaf808725c46228ea94f90",
+    "profile_sha256": "sha256:0e01a32a6a8e5dbeaf043ecdd58dcd792e28be18dbe78f3aa29b2b246312e799",
+    "inventory_sha256": "sha256:08a2a636f632aebced5139bafca3ba29c951f1978411d91699c5c43e6a097986",
+    "seed_sha256": "sha256:ffc8eef5689a3990f5b0d713d55fc7896174950eb127feb4c331c0a81dfdddda"
+  },
+  "build": {
+    "go": "go1.26.5",
+    "GOOS": "linux",
+    "GOARCH": "amd64",
+    "GOAMD64": "v1",
+    "CGO_ENABLED": "0",
+    "buildvcs": false,
+    "trimpath": true
+  },
+  "native_case": {
+    "schema": "phebs-t459-settings-native-v1",
+    "t459_acceptance": "OPEN",
+    "native_execution": true,
+    "canonical_pixel_comparison": false,
+    "checks": [
+      "real anonymous and ordinary session refusal",
+      "production lifecycle registers the typed owner over authenticated HTTP",
+      "pure preview and real CSRF refusal",
+      "lost admitted response retains exact request and one coordinator",
+      "rendered native current and cold warm cross-member HTTP navigation",
+      "completed exact enqueue remains accepted before source drift",
+      "ordinary polling preserves current without native replay",
+      "source transition fences rendered state and cached native reads"
+    ],
+    "browser": "148.0.7778.96",
+    "fixture": {
+      "repo": "example.invalid/phebs-native-neutral",
+      "commit": "84e21851e68c8348d2bc38e0ef83103786af08c7",
+      "provider": "go-module-scip-v1",
+      "publication": {
+        "attemptDigest": "sha256:2c41b21cc45ff575ce35ac5f3fcadf08901d0f54d5e7e36f6c2b2ad15e33ba63",
+        "command": "publish",
+        "definitionPath": "b/b.go",
+        "epoch": 1,
+        "event": "done",
+        "executionDigest": "sha256:7e5d84bfca764e9fd95b5ce473704449d600e169a98288797bddbcb5080991a4",
+        "leaseDigest": "sha256:88fe9fbf266777d1c3883fd1baa60446beb14ce9ab8baf8b6f08caaf4ef7e851",
+        "lookups": 1,
+        "parentDigest": "sha256:deeede62578f353d51d1ce929967d0bf814a8fb6b09e39eb8d5d78956c21beb4",
+        "profileDigest": "sha256:0e01a32a6a8e5dbeaf043ecdd58dcd792e28be18dbe78f3aa29b2b246312e799",
+        "referencePath": "a/a.go",
+        "reportCount": 1,
+        "reports": [
+          {
+            "phase": "plan",
+            "exit_code": 0,
+            "removed": true,
+            "stop_reason": "",
+            "resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 363458560,
+              "sampled_peak_rss_bytes": 298827776,
+              "sampled_peak_processes": 2,
+              "sampled_peak_scratch_bytes": 1150976,
+              "sampled_peak_scratch_inodes": 288,
+              "samples": 10,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            }
+          },
+          {
+            "phase": "execute",
+            "exit_code": 0,
+            "removed": true,
+            "stop_reason": "",
+            "resources": {
+              "memory_oom_events": 0,
+              "memory_oom_kills": 0,
+              "memory_limit_events": 0,
+              "task_limit_events": 0,
+              "sampling_unavailable": false,
+              "limits_verified": true,
+              "memory_peak_bytes": 328081408,
+              "sampled_peak_rss_bytes": 300331008,
+              "sampled_peak_processes": 3,
+              "sampled_peak_scratch_bytes": 1208320,
+              "sampled_peak_scratch_inodes": 303,
+              "samples": 10,
+              "per_process_descriptors": 128,
+              "aggregate_descriptor_ceiling": 37632
+            }
+          }
+        ],
+        "root": "sha256:ff44ba907f838cf72e8e6f09f6cd98d85ae9d3702d1e9002a14a4d07559e0d26",
+        "sourceBytes": 176,
+        "sourceFiles": 5,
+        "state": "current"
+      }
+    },
+    "warm": {
+      "cadenceMS": 15000,
+      "command": "warm",
+      "elapsedMS": 31013,
+      "event": "done",
+      "lookups": 1,
+      "reportCount": 1,
+      "requiredWaitMS": 31000,
+      "state": "current"
+    },
+    "cleanup": {
+      "auditEnqueues": 3,
+      "command": "finish",
+      "configDigest": "sha256:e5a0acfb6edf0d218ae742cfa9ec948039525357f49f16491e9fc308e218d1e3",
+      "drainTurns": 1200,
+      "event": "done",
+      "growthAbsent": true,
+      "hostScratchDrained": true,
+      "inputBytes": 302219406,
+      "inputFiles": 14506,
+      "inventoryDigest": "sha256:08a2a636f632aebced5139bafca3ba29c951f1978411d91699c5c43e6a097986",
+      "lookups": 1,
+      "reportCount": 1,
+      "retainedParentTombstones": 1,
+      "runtimeJoined": true,
+      "seedDigest": "sha256:ffc8eef5689a3990f5b0d713d55fc7896174950eb127feb4c331c0a81dfdddda",
+      "workspaceDrained": true
+    },
+    "managed_requests": 29,
+    "unexpected_browser_errors": 0,
+    "deliberate_network_console_errors": 7,
+    "joined": true
+  },
+  "post_run": {
+    "containers": 0,
+    "settings_fixture_process": false,
+    "host_scratch_entries": [
+      ".lock"
+    ]
+  },
+  "historical_receipts_unchanged": [
+    "spike/t459/settings_native_1.json",
+    "spike/t459/settings_native_2.json"
+  ],
+  "not_claimed": [
+    "complete T45.9 acceptance",
+    "5000-service product class",
+    "T45.6 PASS",
+    "release or DO_NOT_RELEASE change",
+    "main integration"
+  ]
+}

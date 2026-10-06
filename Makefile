@@ -246,5 +246,6 @@ ci-ui: verify-node verify-go
 	cd ui && npm run lint
 	cd ui && npm run build
 	go build -tags ui ./...
+	node spike/t459/settings_driver_test.cjs
 
 ci: ci-static ci-go ci-race ci-ui

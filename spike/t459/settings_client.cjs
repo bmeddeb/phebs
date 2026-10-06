@@ -57,7 +57,7 @@ async function main() {
     assert.equal(first.request_digest, preview.request_digest)
     assert.deepEqual(await client.enqueueTypedIndex(preview), first)
     assert.deepEqual(await client.fetchTypedView(repository), first)
-    await assert.rejects(client.planTypedIndex(preview.selection, preview.commit), { message: client.TYPED_REQUEST_RECORDED })
+    assert.deepEqual(await client.planTypedIndex(preview.selection, preview.commit), preview)
     await assert.rejects(client.enqueueTypedIndex({ ...preview, request_digest: 'sha256:' + 'b'.repeat(64) }), { message: changed })
   } else if (phase === 'stale') {
     const view = await client.fetchTypedView(repository)

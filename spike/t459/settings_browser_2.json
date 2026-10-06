@@ -1,0 +1,422 @@
+{
+  "schema": "phebs-t459-rendered-settings-review-correction-v1",
+  "recorded_date": "2026-10-04",
+  "prerequisite_status": "PASS",
+  "t459_acceptance": "OPEN",
+  "implementation_commit": "2014caffea52377e576943e76aaf78e1ca7754f3",
+  "previous_pr_head": "ed8c79b58c8f3ae5fdeda0678f3c94525428c2c6",
+  "prior_receipt": {
+    "path": "spike/t459/settings_browser_1.json",
+    "sha256": "sha256:a197511f2c984e2c915d2d1bdb9ea25ebe5ea544a106f97c2b4bfbfdc71c7725",
+    "bytes": 51256,
+    "preserved_byte_exact": true
+  },
+  "review_comment_verification": [
+    {
+      "comment_id": 4179862384,
+      "url": "https://github.com/bmeddeb/phebs/pull/37#discussion_r4179862384",
+      "severity": "low",
+      "verdict": "confirmed",
+      "correction": "After each appearance reload, poll applied root colorScheme and assert the rendered density button name reflects the selected DensityContext. The equivalent density input-only gap is closed too."
+    },
+    {
+      "comment_id": 4179862388,
+      "url": "https://github.com/bmeddeb/phebs/pull/37#discussion_r4179862388",
+      "severity": "low",
+      "verdict": "confirmed",
+      "correction": "After browser/context closure, require zero unexpected errors and exactly eleven deliberate console errors. This is qualified to the retained Chrome runtime, not a portable logging contract.",
+      "expected_components": {
+        "ordinary_refusals": 3,
+        "dark_refusal": 1,
+        "csrf_refusals": 4,
+        "transport_drops": 2,
+        "stale_refusal": 1
+      }
+    },
+    {
+      "comment_id": 4179862391,
+      "url": "https://github.com/bmeddeb/phebs/pull/37#discussion_r4179862391",
+      "severity": "low",
+      "verdict": "confirmed",
+      "correction": "Require exactly four successful session enqueue audit records, retaining all actor/auth-method/repository checks.",
+      "expected_admissions": [
+        "initial publish",
+        "identical retry",
+        "canary",
+        "dry-run"
+      ]
+    }
+  ],
+  "rendered_case": {
+    "source_commit": "2014caffea52377e576943e76aaf78e1ca7754f3",
+    "result": "PASS",
+    "wall_seconds": 16.219,
+    "raw_receipt": {
+      "sha256": "sha256:876b240d9ef8cefdee89fa69741e95a41d2cbcb0667ebc563e063eb1d9d3117d",
+      "bytes": 2574
+    },
+    "proof": {
+      "schema": "phebs-t459-settings-browser-v1",
+      "native_execution": false,
+      "canonical_pixel_comparison": false,
+      "checks": [
+        "anonymous boundary",
+        "ordinary session and File boundary",
+        "real dark handler boundary",
+        "administrator File deep link and provider order",
+        "three pure previews and real CSRF refusals",
+        "lost admitted response and exact retry",
+        "last-good active polling and recovery",
+        "real routed cross-member definition references hover",
+        "failed re-run preview and canceled coordinator",
+        "eight functional responsive keyboard motion appearances",
+        "source fence and restore clearance"
+      ],
+      "states": [
+        "absent",
+        "planning",
+        "indexing",
+        "validating",
+        "publishing",
+        "current",
+        "failed",
+        "canceled",
+        "stale"
+      ],
+      "viewports": [
+        {
+          "width": 1280,
+          "theme": "light",
+          "density": "comfortable"
+        },
+        {
+          "width": 1280,
+          "theme": "light",
+          "density": "dense"
+        },
+        {
+          "width": 1280,
+          "theme": "dark",
+          "density": "comfortable"
+        },
+        {
+          "width": 1280,
+          "theme": "dark",
+          "density": "dense"
+        },
+        {
+          "width": 390,
+          "theme": "light",
+          "density": "comfortable"
+        },
+        {
+          "width": 390,
+          "theme": "light",
+          "density": "dense"
+        },
+        {
+          "width": 390,
+          "theme": "dark",
+          "density": "comfortable"
+        },
+        {
+          "width": 390,
+          "theme": "dark",
+          "density": "dense"
+        }
+      ],
+      "managed_request_counts": [
+        {
+          "context": "ordinary",
+          "requests": 3
+        },
+        {
+          "context": "dark_admin",
+          "requests": 3
+        },
+        {
+          "context": "admin",
+          "requests": 67
+        }
+      ],
+      "browser": "154.0.8037.93",
+      "fixture": {
+        "repo": "example.invalid/routed",
+        "commit": "6d9663c5060ec17c84cb712c04a7b551387a8d74",
+        "command": "publish",
+        "definitionPath": ".phebs-generated/f5ed203d0a3d577629eb40b1223fe79f193591f7ae9bcee1af637fdcf2457444/unicode.go",
+        "event": "done",
+        "executionDigest": "sha256:b7ef00648d87f3a91feae446a1f6124d13a90db004556a9aa0d519ee35a98e0b",
+        "generatedDocuments": 2,
+        "generatedSourceBytes": 16,
+        "members": 2,
+        "parentDigest": "sha256:cffd39dccae7a7803dc6ca42a321983ddab25b5708ed097679dfad890f89c26d",
+        "referencePath": ".phebs-generated/f5ed203d0a3d577629eb40b1223fe79f193591f7ae9bcee1af637fdcf2457444/reference.go",
+        "state": "current"
+      },
+      "audit_enqueues": 4,
+      "unexpected_browser_errors": 0,
+      "deliberate_network_console_errors": 11,
+      "joined": true
+    }
+  },
+  "provenance": {
+    "go_version": "go1.26.5",
+    "go_build_platform": "darwin/arm64",
+    "fixture_platform": "linux/arm64, CGO_ENABLED=0",
+    "fixture_build_commit": "2014caffea52377e576943e76aaf78e1ca7754f3",
+    "fixture_binary": {
+      "sha256": "sha256:a575407f311c3a96a27d8fc1e98c347317ddf6e63785c5bb9e91bb99091a29ab",
+      "bytes": 79104656
+    },
+    "surreal_version": "3.2.0 linux/aarch64",
+    "surreal_binary_sha256": "sha256:a235206f2c4a803616d7669f56bc5bca5cc0ae7ed2b79acbe91f14712b28fe5c",
+    "node_version": "v26.7.0",
+    "node_binary_sha256": "sha256:1ef99ea25fe70c9b67e7efe768ef8ee22148d3cabc703db6131b57aeb617d040",
+    "chrome_version": "154.0.8037.93",
+    "chrome_binary_sha256": "sha256:b4a14b08946ab78756169696fd272d6c3040a22df52da4f83f665225685f4c10",
+    "playwright_version": "1.62.1",
+    "ui_input_commit": "8fbf10517c333278f1716250efbd8f7d308ac295",
+    "ui_git_tree": "b65207582813b84a9c9554a9d022789672a901ef",
+    "ui_package_lock_sha256": "sha256:24966ddd75895750499d80e39bac17c5bd6b7e8223245826a8f6c41bd75dca5a",
+    "ui_clean_transfer_archive": {
+      "sha256": "sha256:4a252bdbcd7b55e5670b269198f98c6e3df363979964b43bd1366d7cc2137cab",
+      "bytes": 6878720
+    },
+    "ui_asset_manifest_ref": "prior_receipt.provenance.ui_assets",
+    "ui_assets": 165,
+    "ui_bytes": 6747870,
+    "full_guest_hash_and_size_match": true,
+    "guest_hash_log": "guest-asset-sha256.log",
+    "guest_size_log": "guest-asset-sizes.log",
+    "source_files_sha256": {
+      "cmd/phebs/serve_typed_linux_test.go": "sha256:e134b2e05e82986afd51cbed5eec2729c08b9ecd291a16f254e35c2730e8c3b9",
+      "cmd/phebs/serve_typed_settings_linux_test.go": "sha256:84324e11220e156e296e03f365e670d02399964bc203b7a6158d1f98f4d26861",
+      "spike/t459/settings_browser.cjs": "sha256:a08a0cd649b3f2af22afbfb1b3ecf0a371376af734ec266302f8f1eb8f0be9fb",
+      "spike/t459/settings_client.cjs": "sha256:27a74eb78038fe8c928979e399fc5c19e84d41bafd16e76db7acfcafbedb3ac0"
+    }
+  },
+  "machine_gates": [
+    {
+      "gate": "fresh complete Linux command-test compilation",
+      "status": "PASS",
+      "command": "GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go test -c ./cmd/phebs",
+      "log": "linux-compile.log"
+    },
+    {
+      "gate": "Linux command vet",
+      "status": "PASS",
+      "log": "linux-vet.log"
+    },
+    {
+      "gate": "repository-pinned Linux command lint",
+      "status": "PASS",
+      "version": "2.12.2",
+      "issues": 0,
+      "log": "linux-lint.log"
+    },
+    {
+      "gate": "driver syntax, Go format, whitespace",
+      "status": "PASS"
+    },
+    {
+      "gate": "owning documentation and glossary",
+      "status": "PASS",
+      "log": "docs-seal.log"
+    }
+  ],
+  "independent_source_review": {
+    "reviewed_commit": "2014caffea52377e576943e76aaf78e1ca7754f3",
+    "reviewed_paths": [
+      "PLAN.md",
+      "cmd/phebs/serve_typed_settings_linux_test.go",
+      "spike/t459/settings_browser.cjs"
+    ],
+    "reviewed_files": 3,
+    "skipped_files": [],
+    "findings": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    }
+  },
+  "retained_log_bindings": {
+    "claude-comments.json": {
+      "sha256": "sha256:ea21a2303d78911692da92966ae886c2dd11fbf6acd631ac0bc73c89b802fe16",
+      "bytes": 1549
+    },
+    "browser-exact-2014caff.json": {
+      "sha256": "sha256:876b240d9ef8cefdee89fa69741e95a41d2cbcb0667ebc563e063eb1d9d3117d",
+      "bytes": 2574
+    },
+    "browser-exact-2014caff.log": {
+      "sha256": "sha256:db237b5b8f023f8446a2ce321abfb0d76933c02db5f12dee447e96f19a8ec011",
+      "bytes": 57
+    },
+    "browser-execution.json": {
+      "sha256": "sha256:ddc107eec05e2dee587d87cb7e2c130baee8d547b09c64e957ef7d7fb073319d",
+      "bytes": 212
+    },
+    "linux-compile.log": {
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "linux-vet.log": {
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "linux-lint.log": {
+      "sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "bytes": 10
+    },
+    "docs-source.log": {
+      "sha256": "sha256:f1367665e6186e3d1eb19031d89c5961895ae24f5e4f8293835382df387b897c",
+      "bytes": 239
+    },
+    "guest-prepare.log": {
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "guest-asset-sha256.log": {
+      "sha256": "sha256:7c2c2e0e1b1c04cb7222cdc87b8a477fa6350d24de268b9c72d1eec07cb8e5ce",
+      "bytes": 23588
+    },
+    "guest-asset-sizes.log": {
+      "sha256": "sha256:8ee6e0ebfe24a030b17e165cf05439a987b686c7428624f91170ece2ef0335fd",
+      "bytes": 6307
+    },
+    "guest-tools.log": {
+      "sha256": "sha256:07e9fc0405c35862fc94d4d3cf259548a86c3b920b698d8da29d877843ee68ab",
+      "bytes": 345
+    },
+    "guest-cleanup.json": {
+      "sha256": "sha256:97558028c294ad59ae1e011da9d8cd0b649298ef43a2d5a6ef45aa9a9717d4c4",
+      "bytes": 1188
+    },
+    "host-before.json": {
+      "sha256": "sha256:1099b77b34ac49a3fb136ee51a88cfeeed4ae636f5af00a956b59d81de94dda0",
+      "bytes": 622
+    },
+    "host-after.json": {
+      "sha256": "sha256:ebf52e069187b1a32298a06a004f32cb4941fead36e5432fd54ba1267c165cd2",
+      "bytes": 651
+    },
+    "colima-start.log": {
+      "sha256": "sha256:a100fa82daa6a715855176c4b8547b72bf333fa5898c7e9050eeb1c4fde4ebed",
+      "bytes": 3633
+    },
+    "colima-stop.log": {
+      "sha256": "sha256:cab1fa539d815700d7795896506071fa83fdcfe76fbd944e2bf8bc1fa8a1a608",
+      "bytes": 1613
+    },
+    "docs-evidence.log": {
+      "sha256": "sha256:b2b930d19aac565b1f042e3a64ca166b9b51b84074b150999e0e24c60eb4a601",
+      "bytes": 239
+    },
+    "docs-cost-correction.log": {
+      "sha256": "sha256:2876b10b5e3775e84c868094ddb6a64df905644ec25749000accb8e1f88b830e",
+      "bytes": 239
+    },
+    "docs-seal.log": {
+      "sha256": "sha256:b4607cdfbf57b25bd3f74af0ab7cc1f013725f2f1fc437f8ebeb55be6754e1bf",
+      "bytes": 239
+    }
+  },
+  "cleanup": {
+    "driver_browser_fixture_and_tunnel_joined": true,
+    "owned_guest_fixture_and_engine_processes_absent": true,
+    "fresh_guest_root_removed_and_absence_verified": true,
+    "fixture_profile_initial_and_final": "Stopped",
+    "default_docker_context_initial_and_final": "colima",
+    "owned_local_ssh_processes_absent": true,
+    "raw_external_cleanup_results_retained": true,
+    "credentials_retained": false
+  },
+  "cost": "Adds sixteen bounded DOM oracles and one final network-error comparison; replaces the existing audit lower-bound comparison with equality and moves the existing unexpected-error comparison after closure. No new backend request, audit read, lock, cache, concurrency, memory/disk allowance, child or production request/sync/startup/retry/publication work.",
+  "limits": [
+    "Historical receipt1 and its broader Darwin completed T42.2 cleanup failure plus package alarms remain unchanged; this correction does not establish a full command-package pass or exact-base reproduction.",
+    "Unchanged current UI assets; no UI source or baseline edit, canonical Noble pixels or repository-pinned Node claim.",
+    "Fixture-authored sealed SCIP bytes and state transitions, without native planner/indexer/job runner or public backup/restore round trip.",
+    "Fresh Go fixture and external driver acceptance inputs were rerun; earlier source88 PASS is not carried forward as proof for changed inputs.",
+    "No Linux race rerun claimed; Darwin compiled inputs are unchanged by this Linux-only fixture correction.",
+    "Full neutral and separately authorized target closure remain open; ordinary providers stay unavailable, T45.6 remains waived rather than PASS, generated evidence remains STOP, and no scale/release claim changes."
+  ],
+  "record_review_correction": {
+    "reviewed_commit": "0e26d8cf3223cf5430677b5695cb4573b0e2710a",
+    "reviewed_files": 9,
+    "reviews": [
+      {
+        "role": "correctness/security/evidence",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        }
+      },
+      {
+        "role": "steady-state cost/docs/evidence",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 0,
+          "low": 1
+        }
+      }
+    ],
+    "finding": "Distinguish one added scalar comparison from the replaced audit comparison and moved unexpected-error comparison.",
+    "correction": "Cost delta wording corrected in PLAN and this receipt; executable inputs unchanged."
+  },
+  "final_candidate_reviews": [
+    {
+      "role": "correctness/security/evidence",
+      "reviewed_commit": "3379409f2b551a41910d90854f969125ca062db9",
+      "total_files": 9,
+      "reviewed_files": [
+        "PLAN.md",
+        "docs/BACKLOG.md",
+        "docs/ROADMAP.md",
+        "cmd/phebs/serve_typed_linux_test.go",
+        "cmd/phebs/serve_typed_settings_linux_test.go",
+        "spike/t459/settings_browser.cjs",
+        "spike/t459/settings_client.cjs",
+        "spike/t459/settings_browser_1.json",
+        "spike/t459/settings_browser_2.json"
+      ],
+      "skipped_files": [],
+      "coverage_rate": 1,
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    },
+    {
+      "role": "steady-state cost/docs/evidence",
+      "reviewed_commit": "3379409f2b551a41910d90854f969125ca062db9",
+      "total_files": 9,
+      "reviewed_files": [
+        "PLAN.md",
+        "docs/BACKLOG.md",
+        "docs/ROADMAP.md",
+        "cmd/phebs/serve_typed_linux_test.go",
+        "cmd/phebs/serve_typed_settings_linux_test.go",
+        "spike/t459/settings_browser.cjs",
+        "spike/t459/settings_client.cjs",
+        "spike/t459/settings_browser_1.json",
+        "spike/t459/settings_browser_2.json"
+      ],
+      "skipped_files": [],
+      "coverage_rate": 1,
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    }
+  ],
+  "record_only_seal": "Records the exact nine-path candidate reviews; no compiled, embedded, fixture, UI or external-driver input changed from passed implementation2014caff."
+}

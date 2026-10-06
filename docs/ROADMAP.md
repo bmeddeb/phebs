@@ -151,6 +151,99 @@ paths with all severity counts zero. This record-only seal changes no compiled
 or harness input. Rendered Settings, complete
 neutral acceptance and separately
 authorized target closure stay open; production behavior and limits are unchanged.
+The next T45.9 prerequisite composes rendered authenticated Settings with the
+production HTTP mux, real TLS sessions/CSRF/authorization/audit and operator
+API/store. It covers pure previews, exact lost-response retry, nine durable
+states and polling recovery, re-run preview/cancellation/source fencing,
+restore-state clearance, administrator File links and eight functional
+responsive appearances. Cross-member UTF-16 navigation uses fixture-authored
+sealed bytes, with no native generation or public restore in this fixture.
+Unchanged current UI inputs bind `8fbf1051`; system Chrome/Node and existing
+Playwright are qualified without canonical Noble pixels or presentation edits.
+Exact implementation `88ab0f4f` passed eleven rendered checks, all nine states
+and eight appearances, with zero unexpected browser errors and joined teardown.
+Linux navigation/HTTP-client, focused Darwin normal/race, compilation/vet,
+pinned lint, module and syntax gates passed; two independent seven-path source
+reviews report all severity counts zero. Complete asset provenance and the
+source-free record are in `spike/t459/settings_browser_1.json`; cleanup observations
+with unretained raw outputs are qualified separately from retained browser/host
+results. Full Darwin command-package probes hit cumulative six- and fifteen-minute
+alarms. The serial command also recorded an unrelated T42.2 cleanup-test failure
+after 600.03 seconds before its later AllOwners alarm; the initial omission is
+corrected, with no cause or base reproduction inferred. That package remains
+unestablished. Final independent exact-candidate `de0eb9ee` reviews cover all
+eight paths with every severity count zero; this record-only seal changes no
+compiled or harness input. This does not close complete
+neutral or separately authorized target acceptance or change ordinary dark
+providers, the T45.6 waiver or scale/release posture.
+Three external low oracle comments are confirmed and corrected at `2014caff`;
+fresh static gates and rendered execution pass with applied theme/density,
+exact eleven deliberate errors and four enqueue audits. Separate receipt
+`spike/t459/settings_browser_2.json` binds that source and retained guest
+asset/cleanup results, preserving receipt 1 and all acceptance limits.
+The next bounded T45.9 prerequisite connects authenticated rendered enqueue to
+the production serve runtime and actual native publication, followed by current
+and cross-member reads, warm no-replay, source fencing and bounded cleanup.
+Exact source `c1ba670d` passes six native bridge checks, one lookup/report,
+31,011-ms warm reuse, stale refusal and joined 1,197-turn selected-owner cleanup.
+Independent identity-bound operator teardown and the legacy rendered regression
+pass; failed attempts and earlier broad command failures remain qualified in
+`spike/t459/settings_native_1.json`. Scoped machine and pre-dispatch reviews pass;
+final independent exact-candidate `50559254` source/evidence and cost reviews
+cover all ten paths with every severity count zero, preserving all tested inputs.
+The single-Publish tiny neutral
+bridge does not close complete neutral or separately authorized target
+acceptance, successor replacement, T45.6 or any scale/release boundary.
+The subsequent review identified fixture-authored HTTP wiring in that retained
+source. Corrections now use existing production constructors and add an
+idempotent accepted-enqueue control, typed-owner HTTP check, shared redaction
+and tunnel self-checks. Ordinary nil admission owners match production. Fresh
+native and legacy runs and a new source-bound receipt are required; the old
+receipt and review bytes remain historical. This does not prove full serve or
+automatic lifecycle cadence.
+The corrected bridge remains **STOP / not merge-ready**: `516a6f3b` stopped at
+its generic report gate, and the one fresh diagnostic confirmation at
+`12f47126` returned `custody_held` with unverified phase fields. The original
+cause and fresh native completion remain unestablished. The exact new binary's
+legacy renderer, scoped Linux gates, pinned lint and source/input reviews pass;
+`spike/t459/settings_native_2.json` records both STOPs. A post-run SSH loss
+required an inspection-only restart and authenticated removal of one native
+scratch residue; the later empty process/container/loop census does not certify
+original teardown. Failed SDK custody remains retained and the VM is stopped.
+The bounded confirmation is consumed; no third native attempt or merge occurs.
+Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
+all thirteen paths with zero findings. The record-only seal preserves the
+executed inputs; native acceptance and merge readiness remain open.
+The next T45.9 prerequisite preserves closed original-failure and
+cleanup-failure operation labels in the existing private phase report. It adds
+no retry, new allowance or privileged execution. Existing execution models
+must prove successful labels remain empty, simultaneous errors remain joined,
+and guard/no-replay rules hold. This prepares reliable attribution; neither
+retained native STOP has an established underlying cause, and a later rehearsal
+still needs a fresh prospective bound and exact-source/input review.
+The diagnostic prerequisite passes full Linux normal/race models and scoped
+static/documentation gates at `f05621b0`, with independent zero-finding reviews;
+`spike/t459/native_failure_attribution_1.json` records its limited PASS. It runs
+no privileged native or browser fixture and preserves both prior native receipts.
+The next native attribution rehearsal and full T45.9 acceptance remain open.
+That rehearsal uses `PHEBS_TYPED_NATIVE_TRANSPORT` (`ssh` or `direct`) and, for
+ssh, the closed `PHEBS_TYPED_NATIVE_SSH_TARGET` with the supplied ssh config.
+Its fixture daemon socket is `/var/run/docker.sock`. The retired Colima alias is
+not a parameter. Neither retained STOP is explained, and no allowance is spent.
+Docker 29 clears the reported AppArmor profile after creation, and `/dev/shm`
+now uses the existing 16,777,216-byte ceiling with 1,024 inodes. A direct
+rehearsal on this host then passed all eight Settings bridge checks.
+Exact source `5797fee6fd4257dee968e02324e30b56862386d1` binds that pass in
+`spike/t459/settings_native_3.json`: the helper and fixture were rebuilt at
+that commit, plan and execute exited 0, and teardown left only the host
+scratch lock. Complete T45.9 acceptance remains open.
+`spike/t459/closure/closure.json` completes the neutral closure over the
+retained receipts. The target closure names the frozen public corpus
+`github.com/bazelbuild/remote-apis-sdks` at
+`d5824b1a2286806b07efd030aa3a139c4f540157`: 128 paths, 1,079,184 source bytes,
+and 0 accepted services. Its outcome is `below_design_target`. The neutral
+envelope remains 0 accepted services and 176 admitted source bytes. The
+5,000-service and 12,000,000,000-byte design target stays unmet.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
@@ -501,6 +594,11 @@ has zero source/cost review findings. The retained receipt is
 `spike/t457/native_inputs_1.json`. All descriptors remain unavailable and ordinary
 runtime installation remains nil. Work stays on its ticket branch; no
 presentation track, main integration or target-corpus claim changes.
+The `amd64` C sysroot is now sealed at
+`sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde`
+in `spike/t457/amd64_sysroot_1.json`. A host gcc-13 wrapper compile returned 7.
+The admitted amd64 tool inventory is `spike/t457/amd64_tool_inventory.json`.
+The Bazel native rehearsal remains open.
 
 The local routed reader now validates current-bound routing controls, lazily
 verifies selected members and reads sealed generated bytes under active pins.

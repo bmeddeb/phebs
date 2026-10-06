@@ -1,0 +1,16 @@
+{
+  "schema": "phebs-t457-amd64-sysroot-v1",
+  "recorded_date": "2026-10-06",
+  "host_arch": "amd64",
+  "compiler": "x86_64-linux-gnu-gcc-13",
+  "compiler_package": "Ubuntu 13.3.0-6ubuntu2~24.04.1",
+  "archive_entries": 3076,
+  "archive_bytes": 72352400,
+  "uncompressed_bytes": 197366737,
+  "archive_sha256": "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde",
+  "compile_probe": "int main(void){return 7;} linked and returned 7",
+  "bazel_rehearsal": "not_run",
+  "prehydrated_inventory": "not_run",
+  "provider_registration": "unchanged",
+  "release": "unchanged"
+}

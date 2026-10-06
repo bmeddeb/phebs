@@ -15287,6 +15287,18 @@ The `amd64` pins and their provenance are in
 and as `amd64` under Rosetta. Still open: an `amd64` prehydrated inventory and
 native rehearsal on an x86_64 host, and an `amd64` Bazel C sysroot.
 
+T45.7 amd64 sysroot (2026-10-06): the worker now seals
+`sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde`
+for `amd64` and keeps the `arm64` gcc-12 digest. The archive has 3,076
+entries from the host gcc-13 tree. A wrapper compile returned 7. The record
+is `spike/t457/amd64_sysroot_1.json`. The `amd64` prehydrated inventory and
+Bazel native rehearsal remain open.
+
+T45.7 amd64 tool inventory (2026-10-06): `spike/t457/amd64_tool_inventory.json`
+admits the measured Bazel 9.0.0, rules_go 0.59.0 driver, scip-go 0.2.7, Go
+1.25.0, and gcc-13 sysroot bytes. `go test ./spike/t457` decodes that
+inventory. The Bazel native rehearsal remains open.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a
@@ -15556,6 +15568,167 @@ This prerequisite does not close rendered authenticated Settings, complete
 neutral acceptance or the separately authorized target; the fixed fixture has
 zero accepted services and 176 admitted source bytes, ordinary providers remain
 unavailable and T45.6 is not PASS.
+
+T45.9 rendered authenticated Settings/API prerequisite (2026-10-04): add an
+opt-in Linux fixture and browser driver over real TLS sessions, the production
+HTTP mux, CSRF/administrator authorization, audit and operator API/store.
+Unchanged current UI assets must prove three pure purpose previews, lost-response
+exact enqueue retry with one coordinator, all nine durable states, last-good
+active polling and recovery, failed-purpose re-run preview, cancellation, stale
+source rejection, restore-state clearance and administrator-only File links.
+Production routed APIs consume two fixture-authored sealed SCIP members with
+UTF-16 cross-member navigation; no native generation or public backup/restore
+round trip occurs in this fixture. Eight desktop/390px theme/density functional
+appearances cover keyboard, named controls, reduced motion and overflow. UI
+sources/build assets bind exact input tree `8fbf1051` in private external custody;
+no UI, baseline or presentation-tooling edit is included. System Chrome 154,
+Node 26 and Playwright 1.62.1 are qualified, without canonical Noble pixels or a
+repository-pinned Node claim. Exact implementation `88ab0f4f` passed eleven
+rendered checks, nine states, eight appearances, four real successful enqueue
+audits and zero unexpected browser errors, with complete 165-file/6,747,870-byte
+asset provenance. Existing Linux navigation and HTTP/client, focused Darwin
+normal/race, Linux compilation/vet, both platform pinned lint, module and driver
+syntax gates passed. Two independent source/evidence/cost reviews covered all
+seven source paths with all severity counts zero; browser/fixture/tunnel/engine
+joined and operator-observed fresh guest custody was removed. The record
+qualifies unretained raw cleanup outputs separately from retained browser and
+host-state results. The source-free record is `spike/t459/settings_browser_1.json`.
+Full Darwin command-package probes hit cumulative six- and fifteen-minute alarms.
+The serial command also completed an unrelated T42.2 cleanup-test failure after
+600.03 seconds with a native lifecycle measurement diagnostic before its later
+AllOwners alarm. Record review corrected the initial omission of that failure;
+that complete package remains unestablished, with no cause or base reproduction claimed.
+Final independent source/evidence/cost reviews of corrected exact candidate
+`de0eb9ee` cover all eight paths with all severity counts zero. This record-only
+seal changes no compiled or harness input.
+The three external low review comments are confirmed and corrected at
+`2014caff`: applied theme/density and exact eleven-error/four-audit oracles.
+Fresh compilation, vet/pinned lint, syntax/format/docs and the complete rendered
+case pass; `spike/t459/settings_browser_2.json` preserves a separate source-bound
+result with retained guest asset/cleanup evidence. Receipt 1 remains byte-exact,
+including its broader failure/alarm qualifications.
+Production behavior, cache and native
+bounds remain unchanged. Complete neutral and separately authorized target
+closure remain open; the zero-service tiny fixture establishes no product-scale
+envelope, ordinary providers remain dark and T45.6 is not PASS.
+
+T45.9 authenticated Settings/native bridge prerequisite (2026-10-04): the next
+bounded slice connects real rendered session/CSRF preview and exact lost-response
+enqueue retry to the production serve coordinator/scheduler and actual native
+publication. Require current/parent/execution continuity, settled work and
+released growth, rendered current plus cold/warm cross-member HTTP navigation,
+ordinary polling without replay, stale-source refusal and joined bounded
+lifecycle teardown. Use freshly provisioned exact neutral authority and the
+original Git mirror; retain the prior fixture-authored nine-state/UTF-16 proof
+separately. Exact source `c1ba670d` passed six native bridge checks, unchanged
+31,011-ms warm polling, one lookup/report and joined 1,197-turn selected-owner
+drainage. Independent operator cleanup removed only fresh identity-bound custody,
+with zero containers, loops and matching processes; the VM returned to stopped.
+The extracted-helper legacy renderer passes eleven checks/nine states/eight
+appearances. Scoped machine gates and both pre-dispatch source/input reviews
+pass; failed staging/lint attempts and earlier broad command failures remain
+qualified in `spike/t459/settings_native_1.json`. Final independent
+exact-candidate `50559254` source/evidence and cost reviews cover all ten paths
+with every severity count zero; the record-only seal changes no tested input.
+This single-Publish bridge
+establishes neither successor replacement nor full neutral/authorized target
+closure; zero accepted services and 176 admitted source bytes establish no
+product-scale envelope. Production provider registration and limits stay exact.
+
+Review correction: the retained `c1ba670d` bridge assembled HTTP options,
+resolver and lifecycle status in the fixture; its prior zero-finding reviews
+do not prove production HTTP wiring. The revised test reuses existing serve
+constructors, checks typed-owner registration over authenticated HTTP, and
+accepts the finished exact enqueue before its drift-specific refusal. Ordinary
+nil admission owners match production outside the bound T42.2 runtime. Shared
+driver failure handling, tunnel checks, wider transport waits and the `ci-ui`
+self-check require fresh native and legacy execution plus a separately sealed
+receipt. Full serve/lifecycle cadence and complete T45.9 closure remain open.
+
+Corrected-source execution is **STOP**, not merge-ready. The first correction
+at `516a6f3b` stopped at its generic report gate in 61.835 seconds; the one
+diagnostic confirmation at exact `12f47126` returned `custody_held` in 52.391
+seconds. Unverified phase fields establish neither a successful native phase
+nor its underlying refusal cause. Its fresh legacy renderer passes eleven
+checks/nine states/eight appearances; Linux scoped gates, pinned lint and
+independent source/input reviews pass. Separate source-bound
+`spike/t459/settings_native_2.json` retains both failures and qualifies the
+post-restart authenticated scratch cleanup: failed SDK workspaces/installations
+and uploads remain retained, and the VM is stopped. Original teardown PASS is
+unestablished after SSH transport loss. The bounded confirmation is consumed;
+no third run, fresh native bridge PASS or complete T45.9 closure is claimed.
+Independent exact-candidate `b3876e4e` source/evidence and cost reviews cover
+all thirteen PR paths with every severity count zero. The record-only seal
+preserves all tested inputs and leaves the failed native gate open.
+
+**T45.9 · Native phase failure attribution prerequisite** (2026-10-04) —
+separate the original controller-phase failure from deferred cleanup in the
+existing bounded private phase report. AC: closed labels identify only failed
+operations; successful/untouched phases have empty labels; primary and cleanup
+failures remain independently visible without losing joined errors, refusal
+classification, native results or the no-replay/allowance/guard rules. Existing
+Linux execution models must cover primary-only, cleanup-only, simultaneous
+failures, receipt mismatch, successful phases and cleanup-guard loss. The
+Settings fixture must retain its source-free projection. No privileged run,
+new allowance or retrospective cause claim is part of this diagnostic ticket.
+The two native STOP receipts remain unchanged and full T45.9 stays open; the
+consumed confirmation authorizes no third attempt. A later rehearsal needs
+fresh prospective source/input review and a separate bound.
+
+Implementation `f05621b0` passes full Linux normal/race models, focused command,
+static/pinned lint and documentation gates with independent zero-finding source
+and cost reviews. `spike/t459/native_failure_attribution_1.json` records the
+scoped PASS and qualified test-container setup failures. Both prior native
+receipts remain unchanged. The attribution prerequisite is complete; neither
+native bridge completion nor a cause for either STOP is established.
+
+The next Settings native rehearsal uses the existing acceptance transport
+parameters: `PHEBS_TYPED_NATIVE_TRANSPORT=ssh` or `direct`, and for ssh the
+closed `PHEBS_TYPED_NATIVE_SSH_TARGET` plus the supplied ssh config. The fixture
+daemon socket is `/var/run/docker.sock`. Direct mode supplies stdin through a
+private FIFO so the fixture can reopen it. The retired Colima alias is not a
+rehearsal parameter. This correction spends no allowance and does not explain
+either retained STOP.
+
+Docker 29 clears `AppArmorProfile` after a container leaves the created state.
+Post-start inspection now accepts that empty profile while a created container
+still requires `docker-default` and any other name is refused.
+`HostConfig.SecurityOpt` remains the durable apparmor selection. `/dev/shm`
+uses that same 16,777,216-byte ceiling with 1,024 inodes so the supervisor
+census stays inside its existing inode bound. The saved enqueue after the
+indexed-commit transition is refused as a changed selection. A direct
+rehearsal then passed all eight bridge checks with the container removed.
+
+Exact source `5797fee6fd4257dee968e02324e30b56862386d1` repeats that pass
+from binaries built at that commit. Installation `t459-settings-native-5`
+binds the commit and image
+`sha256:c1c5442274a324e5efb985e240fafcfd4e26cac4ecc5361cc922ce0bac81b571`.
+Plan and execute both exited 0 with limits verified. Warm reuse was 31,013 ms.
+Teardown joined and left only the host scratch lock.
+`spike/t459/settings_native_3.json` is the source-free receipt. Receipts 1 and
+2 remain byte-exact. This is the authenticated Settings/native bridge gate.
+Complete T45.9, the 5,000-service product class, T45.6, and release claims
+remain open.
+
+T45.9 neutral closure (2026-10-05): `spike/t459/closure/closure.json` binds
+the coordinator, fault, pressure/lifecycle, restore, rendered Settings, and
+exact native-bridge receipts. Those receipts cover cold generation, bounded
+failure, hard-death restart, stale-source fencing, cross-member queries, warm
+reuse, pressure and lifecycle, regenerate-on-restore, Settings parity, and
+teardown. The measured envelope is 0 accepted service incarnations and 176
+admitted source blob bytes. The design target remains 5,000 and
+12,000,000,000. The target closure is `not_run` because no corpus, commit,
+profile, tools, or host is bound. Generated-bundle evidence stays STOP, the
+T45.6 waiver stays unpassed, ordinary providers stay unavailable, and release
+posture stays unchanged.
+
+T45.9 target binding (2026-10-06): the same closure names the frozen public
+corpus `github.com/bazelbuild/remote-apis-sdks` at
+`d5824b1a2286806b07efd030aa3a139c4f540157`. Its retained archive is 128 paths
+and 1,079,184 source bytes, with Bazel 9.0.0, rules_go 0.59.0, Go 1.25.0, and
+scip-go 0.2.7. Accepted service incarnations are 0. No retained host executed
+the closure behaviors. The outcome is `below_design_target`; the 5,000-service
+and 12,000,000,000-byte requirement stays unmet.
 
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
