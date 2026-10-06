@@ -10458,3 +10458,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The inventory test decodes one retained JSON document. It adds no
   production request, query, sync, startup, retry, publication, child, or
   corpus run.
+
+- **2026-10-06 — T45.7 amd64 additional-input native rehearsal.** Source
+  `154e699aabe0ec8d5f7d8dc0f3bcb5bfb430bc86` ran
+  `TestNativeAdditionalInputs` for single, workspace, and import on this
+  x86_64 host. Each mode passed publish, canary, and dry-run. Workspace
+  published two members and one cross-member reference. Six native launches
+  occurred in each mode. The receipt is
+  `spike/t457/amd64_native_rehearsal_1.json`. Cleanup left no container and
+  only the host scratch lock. This is the module and import rehearsal. The
+  arm64-locked Bazel cohort did not run, and no provider was registered.
+
+  **Cost.** The rehearsal uses the existing native controller, one scratch
+  image, and the pinned tools. It adds no production request, query, sync,
+  startup, retry, or publication path.
