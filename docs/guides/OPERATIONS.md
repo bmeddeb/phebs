@@ -6,6 +6,47 @@ This guide owns data layout, backup and restore, security, permissions, audit,
 jobs, experimental extraction operations, metrics, shutdown, troubleshooting,
 and contributor commands.
 
+## Current rehearsal and ceremony machine
+
+As directed by Ben on 2026-10-06, every new rehearsal, ceremony, and rerun of
+a historical workload uses the current Ubuntu Linux amd64 machine. Its
+baseline facts are 12 logical CPUs and 15,991,791,616 bytes physical RAM
+(14.89 GiB), recorded in
+[`host-baseline.json`](../../spike/t42h1/host-baseline.json). There is no active
+arm64/Darwin requirement or 24-GiB minimum-memory requirement. The available
+disk prerequisite remains 120 GiB.
+
+Older Darwin/Homebrew/APFS commands and host envelopes later in this guide
+are retained historical procedures. Do not execute them as the entry path
+for a new Linux run. Rerun the workload under a fresh Linux-bound plan, tool
+inventory, host observation, and receipt; do not rewrite the original host
+facts, signatures, failure classifications, or results.
+
+T42.H1/H2 in [BACKLOG.md](../BACKLOG.md) own this transition. The existing T42
+execution implementation still has Darwin-specific process, executable,
+custody, signing/session, and pressure-volume adapters. Implement and verify
+their Linux equivalents here before a run. New plan memory budgets must fit
+measured physical/effective cgroup capacity, include child reservations and
+host headroom, and replace the old 20-GiB RSS envelope. Swap supplies no extra
+physical-memory admission. Workload correctness, isolation, accounting,
+pressure/recovery, and clean teardown remain required.
+
+On this host, development tools are in `/home/ben/.local/bin`; native amd64
+tools are staged separately under
+`/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and
+inspect the preparation inventory with:
+
+```sh
+. /home/ben/.local/share/phebs-host/env.sh
+/home/ben/.local/bin/phebs-host-check
+```
+
+The checker is a local setup inventory, not ceremony admission. Docker group
+access and private scratch roots, the sealed amd64 sysroot, the complete
+offline bundle/cache, the worker image, and fresh host/tool admission must be
+verified before their owning runs. A hardware-baseline update alone creates
+no execution or scale PASS.
+
 ## Operations
 
 The private V3 executor counts successful native observation-parse events only

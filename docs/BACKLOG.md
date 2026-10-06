@@ -3065,6 +3065,45 @@ execution remains unauthorized and unexecuted.
 
 ## Epic 42 · Combined scale gate and topology decision *(V2 sealed; local integration authorized)*
 
+**Active host override (2026-10-06):** Ben selects the current Ubuntu Linux
+amd64 machine for every new rehearsal, ceremony, and rerun of historical
+workloads. Its measured 14.89 GiB physical memory replaces the former 24-GiB
+prerequisite; Darwin/arm64 is no longer a target requirement. Earlier host
+requirements and V1–V4 seals below are historical records. New Linux-bound
+profiles and receipts must preserve workload oracles and freeze memory budgets
+within measured host/cgroup capacity. The 120-GiB disk prerequisite remains.
+
+**T42.H1 · Current-machine host baseline** *(Ben-directed, 2026-10-06)* —
+record the Linux amd64 target in AGENTS, PLAN, ROADMAP, this backlog, and the
+operations guide; record measured source-free facts in
+`spike/t42h1/host-baseline.json`; update the local preparation checker so it
+reports Linux implementation/admission prerequisites rather than requiring
+Darwin/arm64 or 24 GiB. AC: every new run, including reruns of earlier
+workloads, targets this machine; historical evidence stays byte-exact; no
+claim of runtime portability or completed execution follows from the policy.
+
+**T42.H2 · Linux host execution and resource admission** *(next host
+prerequisite; needs T42.H1)* — port the active T40/T42 rehearsal and ceremony
+entry paths to this Linux amd64 machine. Work proceeds as PR-sized slices:
+native process/executable identity and accounting; protected input, tool,
+signer, and dispatch custody; session/descendant cancellation and teardown;
+isolated pressure filesystem/allocation/restore semantics; then prospective
+Linux-bound plan construction, validation, admission, and readiness replay.
+AC: normal/race and real Linux paths cover the same refusal, correctness,
+publication, accounting, signature, pressure, recovery, and cleanup oracles;
+no required native test silently skips; aggregate RSS/child reservations and
+host headroom are frozen within observed physical/effective cgroup capacity,
+with no 24-GiB floor, no inherited 20-GiB RSS allowance, and no swap credit;
+amd64 tool/sysroot/offline inputs and fresh daemon/host identity are admitted;
+complete finite readiness and clean teardown pass before any fresh ceremony
+freeze. Keep the 120-GiB disk prerequisite and existing non-memory workload
+and per-unit limits. Retained plans and receipts are decoded under their
+original versions; a new version records the changed Linux execution
+semantics. Legacy Darwin-only refusal is tracked implementation debt here,
+not an alternative-host requirement. This ticket authorizes preparation and
+implementation, not a ceremony launch, a fabricated past PASS, or a scale or
+release claim.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

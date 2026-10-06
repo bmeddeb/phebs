@@ -5,6 +5,16 @@ in the [active backlog](./BACKLOG.md), completed implementation history lives in
 [completed backlog](./BACKLOG_COMPLETED.md), and architecture decisions live in
 [PLAN.md](../PLAN.md).
 
+**Execution host baseline (2026-10-06):** all future rehearsals, ceremonies,
+and reruns of earlier workloads target the current Ubuntu Linux amd64 machine
+with 14.89 GiB measured physical RAM. The former Darwin/arm64 and 24-GiB
+requirements are superseded; old signed evidence keeps its original host
+facts. T42.H1 records the baseline, and T42.H2 is the next host prerequisite:
+Linux custody/process/pressure adapters and new resource-bounded admission
+must pass here before execution. Missing Linux support is implementation work
+on this machine. The 120-GiB available-disk prerequisite remains. This change
+establishes no rehearsal, ceremony, scale, or release result.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:
