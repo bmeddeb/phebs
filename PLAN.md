@@ -10532,3 +10532,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The test reads one retained receipt and the existing downloader
   constant. It adds no production request, query, sync, startup, retry,
   publication, or child.
+
+- **2026-10-06 — T45.7 offline rules_cc 0.2.14 module set.** The amd64 profile
+  admits one CC module pin: rules_cc 0.2.14 with protobuf 33.4, bazel_skylib
+  1.8.2, platforms 1.0.0, and bazel_features 1.33.0. The rules_cc 0.1.1 and
+  protobuf 27.0 pair is not that pin. Bazel vendored the resolved closure to
+  `/var/lib/phebs-typed-sysroot/rules-cc-0.2.14` (80,205,204 bytes, 6,752
+  files). Its deterministic tar is 85,483,520 bytes at
+  `sha256:97e24d24608a993d6f57a8c11f6e4e8c26f8431cd5cd303373412fd476e31161`.
+  With `block bcr.bazel.build` and that vendor directory, `bazel build //:hi`
+  completed 7 actions and the binary exited 0. The receipt is
+  `spike/t457/amd64_rules_cc_offline_1.json`. This is cc_binary admission
+  only. The arm64 profile is unchanged. No cohort was launched. The public
+  archive and the arm64 uid-65534 worker check remain separate blockers.
+
+  **Cost.** The admission constants are two strings on the amd64 profile.
+  The rehearsal is outside production. No request, query, sync, startup,
+  retry, or publication path changes.

@@ -1,0 +1,67 @@
+{
+  "schema": "phebs-t457-rules-cc-offline-parts-v1",
+  "set": "rules_cc 0.2.14 + protobuf 33.4",
+  "archive_path": "/var/lib/phebs-typed-sysroot/rules-cc-0.2.14.tar",
+  "vendor_dir": "/var/lib/phebs-typed-sysroot/rules-cc-0.2.14",
+  "archive_bytes": 85483520,
+  "archive_sha256": "sha256:97e24d24608a993d6f57a8c11f6e4e8c26f8431cd5cd303373412fd476e31161",
+  "part_bytes": 8388608,
+  "parts": [
+    {
+      "name": "rules-cc-0.2.14.tar.part-00",
+      "bytes": 8388608,
+      "sha256": "sha256:0d42989e4fee624083508bc946959dd3e7977a368ceb01148e062b4a91c8cd3c"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-01",
+      "bytes": 8388608,
+      "sha256": "sha256:0d17d620e33c4e11e86468df18d6e90f431d6aa4d5427f966b9a5b218bc63c2f"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-02",
+      "bytes": 8388608,
+      "sha256": "sha256:e12d954e3df275c21476d82f87255b07bd1f943fc8a4718f6756930aec847a56"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-03",
+      "bytes": 8388608,
+      "sha256": "sha256:5eae4391b397a26962439cff4b04ea811ccabc5265fb8c34968d069cb4ea21bd"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-04",
+      "bytes": 8388608,
+      "sha256": "sha256:222f21264a1e63f39e8215a06848f6f4df23b32dd9abe54ec14788dbe04daee9"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-05",
+      "bytes": 8388608,
+      "sha256": "sha256:ac394f4a8fb571885c440028ba94d82432cb73904a0ed101c389d95bfbb2addf"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-06",
+      "bytes": 8388608,
+      "sha256": "sha256:e68cf66b82ae509a6c462b79e0e34663c02711838cc3c704d43f1b784ad0808a"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-07",
+      "bytes": 8388608,
+      "sha256": "sha256:66b12c7eca1700ca1069f338a7c62c84883042fcafb01a048441239725d049c9"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-08",
+      "bytes": 8388608,
+      "sha256": "sha256:7bd31c79f9b15540e10a03cdca9f32f458dd4c954516db0c1d5fa3b7209f45e9"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-09",
+      "bytes": 8388608,
+      "sha256": "sha256:b06ece5e8a57e0ba488d84a92b9b54bd173f84959e8086bb42f376b4cc29699d"
+    },
+    {
+      "name": "rules-cc-0.2.14.tar.part-10",
+      "bytes": 1597440,
+      "sha256": "sha256:eb89f9ec777a9adb672003ad63b3c2dbc56c88b93ebe0caef83cc30b285e5e05"
+    }
+  ],
+  "assemble": "cat rules-cc-0.2.14.tar.part-* > rules-cc-0.2.14.tar && sha256sum -c rules-cc-0.2.14.tar.sha256"
+}

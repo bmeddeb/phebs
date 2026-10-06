@@ -15339,6 +15339,18 @@ That closure was not vendored. The receipt is
 `spike/t457/amd64_rules_cc_vendor_1.json` with outcome `STOP`. The arm64
 profile is unchanged. No cohort was launched.
 
+T45.7 offline rules_cc set (2026-10-06): the amd64 profile's CC pin is
+rules_cc 0.2.14 with protobuf 33.4, not rules_cc 0.1.1 with protobuf 27.0.
+The vendored closure is `/var/lib/phebs-typed-sysroot/rules-cc-0.2.14`
+(80,205,204 bytes). Its tar is 85,483,520 bytes at
+`sha256:97e24d24608a993d6f57a8c11f6e4e8c26f8431cd5cd303373412fd476e31161`,
+with part hashes in `spike/t457/amd64_rules_cc_parts.json`. With
+`block bcr.bazel.build`, `bazel build //:hi` completed and the binary
+exited 0. The receipt is `spike/t457/amd64_rules_cc_offline_1.json`. This
+is cc_binary admission only. The arm64 profile is unchanged. No cohort was
+launched. The 249,496-byte public archive and the arm64 uid-65534 worker
+check remain separate blockers.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

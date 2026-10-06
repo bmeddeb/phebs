@@ -87,6 +87,9 @@ func TestAmd64NativeProfileAdmitsMeasuredPins(t *testing.T) {
 	if goDigestAmd64 != provider.GoDigestAmd64 || bazelDigestAmd64 != provider.BazelDigestAmd64 || driverDigestAmd64 != "sha256:"+internallauncher.NativeDriverSHA256Amd64 || scipDigestAmd64 != typedindex.SCIPGoIndexerDigestAmd64 {
 		t.Fatal("amd64 admission pins diverged from the measured seals")
 	}
+	if NativeProfile != "native-linux-arm64-rules-go-059-v2" || Amd64RulesCCVersion != "0.2.14" || Amd64ProtobufVersion != "33.4" {
+		t.Fatal("amd64 offline CC pin is ambiguous or the arm64 profile changed")
+	}
 	r := amd64NativeRequest(t)
 	for _, cohort := range []string{"neutral", "ordinary", "proto", "fanout"} {
 		r.Cohort = cohort
