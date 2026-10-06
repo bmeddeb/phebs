@@ -15294,6 +15294,11 @@ entries from the host gcc-13 tree. A wrapper compile returned 7. The record
 is `spike/t457/amd64_sysroot_1.json`. The `amd64` prehydrated inventory and
 Bazel native rehearsal remain open.
 
+T45.7 amd64 tool inventory (2026-10-06): `spike/t457/amd64_tool_inventory.json`
+admits the measured Bazel 9.0.0, rules_go 0.59.0 driver, scip-go 0.2.7, Go
+1.25.0, and gcc-13 sysroot bytes. `go test ./spike/t457` decodes that
+inventory. The Bazel native rehearsal remains open.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

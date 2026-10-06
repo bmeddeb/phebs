@@ -10446,3 +10446,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   digest. The arch choice is a constant switch on the host architecture.
   Ordinary requests do not install a compiler. No query, sync, startup, retry,
   or publication path changes.
+
+- **2026-10-06 — T45.7 amd64 prehydrated tool inventory.** The measured
+  linux/amd64 Bazel 9.0.0 binary, rules_go 0.59.0 gopackagesdriver, scip-go
+  0.2.7, Go 1.25.0 `go` binary, and the sealed gcc-13 sysroot are one
+  `phebs-typed-prehydration-v1` inventory at
+  `spike/t457/amd64_tool_inventory.json`. The driver and release digests match
+  the existing pins. This inventory does not launch Bazel or register a
+  provider.
+
+  **Cost.** The inventory test decodes one retained JSON document. It adds no
+  production request, query, sync, startup, retry, publication, child, or
+  corpus run.

@@ -1160,8 +1160,9 @@ its own pinned Go 1.25.0 and scip-go 0.2.7 images, recorded in
 architecture's tools is refused. Bazel tool pins are also per architecture, but
 its C toolchain sysroot is sealed per architecture. `amd64` uses the host
 gcc-13 archive recorded in `spike/t457/amd64_sysroot_1.json`. A C compile
-through that wrapper passed on this x86_64 host. No `amd64` Bazel native
-rehearsal or prehydrated Bazel inventory has run yet.
+through that wrapper passed on this x86_64 host. The admitted tool inventory
+is `spike/t457/amd64_tool_inventory.json`. No `amd64` Bazel native rehearsal
+has run yet.
 
 ## Code navigation indexing Settings (T45.8b)
 
