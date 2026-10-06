@@ -15710,6 +15710,14 @@ profile, tools, or host is bound. Generated-bundle evidence stays STOP, the
 T45.6 waiver stays unpassed, ordinary providers stay unavailable, and release
 posture stays unchanged.
 
+T45.9 target binding (2026-10-06): the same closure names the frozen public
+corpus `github.com/bazelbuild/remote-apis-sdks` at
+`d5824b1a2286806b07efd030aa3a139c4f540157`. Its retained archive is 128 paths
+and 1,079,184 source bytes, with Bazel 9.0.0, rules_go 0.59.0, Go 1.25.0, and
+scip-go 0.2.7. Accepted service incarnations are 0. No retained host executed
+the closure behaviors. The outcome is `below_design_target`; the 5,000-service
+and 12,000,000,000-byte requirement stays unmet.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

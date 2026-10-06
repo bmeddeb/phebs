@@ -10416,3 +10416,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   **Cost.** The closure test reads and hashes the six retained receipts once
   per run. It adds no production request, query, sync, startup, retry,
   publication, lock, cache, schema, child, or native execution.
+
+- **2026-10-06 — T45.9 target closure binds the frozen public corpus.** The
+  target record now names `github.com/bazelbuild/remote-apis-sdks` at
+  `d5824b1a2286806b07efd030aa3a139c4f540157`, archive
+  `sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc`,
+  Bazel 9.0.0, rules_go 0.59.0, Go 1.25.0, and scip-go 0.2.7. The retained
+  archive measurement is 128 paths and 1,079,184 source bytes, with no
+  accepted service catalog. No retained host executed the closure behaviors.
+  The outcome is `below_design_target`. The 5,000-service and
+  12,000,000,000-byte requirement stays unmet. This reads the frozen contract
+  already in the repository and adds no native execution.
+
+  **Cost.** The closure test additionally reads two existing source files to
+  confirm those frozen literals. No production request, query, sync, startup,
+  retry, publication, lock, cache, schema, child, or corpus run is added.

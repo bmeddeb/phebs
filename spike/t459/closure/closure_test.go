@@ -28,8 +28,11 @@ func TestClosureReceiptIsStable(t *testing.T) {
 		t.Fatalf("retained closure differs\n%s", first)
 	}
 	got := Build()
-	if got.Neutral.Outcome != "completed" || got.Target.Outcome != "not_run" || got.T459Acceptance != "OPEN" {
+	if got.Neutral.Outcome != "completed" || got.Target.Outcome != "below_design_target" || got.T459Acceptance != "OPEN" {
 		t.Fatalf("closure posture: %+v %+v", got.Neutral.Outcome, got.Target)
+	}
+	if got.Target.Corpus != "github.com/bazelbuild/remote-apis-sdks" || got.Target.Commit != "d5824b1a2286806b07efd030aa3a139c4f540157" || got.Target.SourcePaths != 128 || got.Target.SourceBytes != 1079184 || got.Target.AcceptedServiceIncarnations != 0 || got.Target.BehaviorsExecuted || got.Target.Host != "" {
+		t.Fatalf("target binding: %+v", got.Target)
 	}
 	if len(got.Neutral.Behaviors) != 10 || len(got.Inputs) != 6 {
 		t.Fatalf("behaviors %d inputs %d", len(got.Neutral.Behaviors), len(got.Inputs))
@@ -38,16 +41,50 @@ func TestClosureReceiptIsStable(t *testing.T) {
 		t.Fatal("neutral measurement satisfied the design target")
 	}
 	bound := got.Target
-	bound.Corpus, bound.Commit, bound.Profile, bound.Tools, bound.Host = "example", "abc", "profile", "tools", "host"
+	bound.Host = "retained-host"
+	bound.BehaviorsExecuted = true
 	if TargetSatisfied(bound, got.Measured) {
 		t.Fatal("bound target with the neutral measurement satisfied the design target")
 	}
 	met := Dimensions{AcceptedServiceIncarnations: DesignAcceptedServices, AdmittedSourceBlobBytes: DesignAdmittedBytes}
 	if TargetSatisfied(got.Target, met) {
-		t.Fatal("unbound target with a sufficient measurement was accepted")
+		t.Fatal("target without host execution and behavior coverage was accepted")
 	}
 	if !TargetSatisfied(bound, met) {
-		t.Fatal("bound target with a sufficient measurement was refused")
+		t.Fatal("bound executed target with a sufficient measurement was refused")
+	}
+}
+
+func TestTargetBindingMatchesFrozenCorpus(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(root(t), "internal/typedexecutor/native_acceptance_corpus_test.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := Build().Target
+	for _, needle := range []string{
+		`acceptanceCorpusRepo = "` + target.Corpus + `"`,
+		`acceptanceCorpusCommit = "` + target.Commit + `"`,
+		`acceptanceCorpusArchive = "` + target.ArchiveSHA256 + `"`,
+		"len(files) != 128",
+		"total != 1079184",
+	} {
+		if !bytes.Contains(raw, []byte(needle)) {
+			t.Errorf("frozen corpus contract missing %s", needle)
+		}
+	}
+	profile, err := os.ReadFile(filepath.Join(root(t), "internal/typedbazel/provider/contract.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{
+		`p.Tools.Bazel.Version == "9.0.0"`,
+		`p.Tools.RulesGo.Version == "0.59.0"`,
+		`p.Tools.Go.Version == "1.25.0"`,
+		`p.Tools.Indexer.Version == "0.2.7"`,
+	} {
+		if !bytes.Contains(profile, []byte(needle)) {
+			t.Errorf("tool profile missing %s", needle)
+		}
 	}
 }
 

@@ -45,13 +45,18 @@ type Behavior struct {
 }
 
 type Target struct {
-	Outcome string `json:"outcome"`
-	Corpus  string `json:"corpus"`
-	Commit  string `json:"commit"`
-	Profile string `json:"profile"`
-	Tools   string `json:"tools"`
-	Host    string `json:"host"`
-	Reason  string `json:"reason"`
+	Outcome                     string `json:"outcome"`
+	Corpus                      string `json:"corpus"`
+	Commit                      string `json:"commit"`
+	ArchiveSHA256               string `json:"archive_sha256"`
+	Profile                     string `json:"profile"`
+	Tools                       string `json:"tools"`
+	Host                        string `json:"host"`
+	SourcePaths                 int    `json:"source_paths"`
+	SourceBytes                 int64  `json:"source_bytes"`
+	AcceptedServiceIncarnations int64  `json:"accepted_service_incarnations"`
+	BehaviorsExecuted           bool   `json:"behaviors_executed"`
+	Reason                      string `json:"reason"`
 }
 
 type DesignTarget struct {
@@ -98,8 +103,17 @@ func Build() Receipt {
 			},
 		},
 		Target: Target{
-			Outcome: "not_run",
-			Reason:  "No corpus, commit, profile, tools, or host is bound, and no retained measurement meets the design target.",
+			Outcome:                     "below_design_target",
+			Corpus:                      "github.com/bazelbuild/remote-apis-sdks",
+			Commit:                      "d5824b1a2286806b07efd030aa3a139c4f540157",
+			ArchiveSHA256:               "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+			Profile:                     "bazel 9.0.0 / rules_go 0.59.0",
+			Tools:                       "go 1.25.0 / scip-go 0.2.7",
+			SourcePaths:                 128,
+			SourceBytes:                 1079184,
+			AcceptedServiceIncarnations: 0,
+			BehaviorsExecuted:           false,
+			Reason:                      "The frozen public archive measures 128 paths and 1079184 source bytes, with no accepted service catalog. No retained host executed the closure behaviors, and the measurement is below the design target.",
 		},
 		DesignTarget: DesignTarget{
 			AcceptedServiceIncarnations: DesignAcceptedServices,
@@ -124,7 +138,7 @@ func satisfies(d Dimensions) bool {
 // TargetSatisfied is true only for a bound target whose retained measurement
 // meets the design dimensions. The neutral fixture cannot satisfy it.
 func TargetSatisfied(target Target, measured Dimensions) bool {
-	if target.Corpus == "" || target.Commit == "" || target.Profile == "" || target.Tools == "" || target.Host == "" {
+	if target.Corpus == "" || target.Commit == "" || target.Profile == "" || target.Tools == "" || target.Host == "" || !target.BehaviorsExecuted {
 		return false
 	}
 	return satisfies(measured)

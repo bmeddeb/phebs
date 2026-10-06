@@ -62,13 +62,18 @@
     ]
   },
   "target": {
-    "outcome": "not_run",
-    "corpus": "",
-    "commit": "",
-    "profile": "",
-    "tools": "",
+    "outcome": "below_design_target",
+    "corpus": "github.com/bazelbuild/remote-apis-sdks",
+    "commit": "d5824b1a2286806b07efd030aa3a139c4f540157",
+    "archive_sha256": "sha256:c9ecf680cd7bd0d88d8a6d1a0084a09c0a9dc45145fc28fbdcda888586d54bcc",
+    "profile": "bazel 9.0.0 / rules_go 0.59.0",
+    "tools": "go 1.25.0 / scip-go 0.2.7",
     "host": "",
-    "reason": "No corpus, commit, profile, tools, or host is bound, and no retained measurement meets the design target."
+    "source_paths": 128,
+    "source_bytes": 1079184,
+    "accepted_service_incarnations": 0,
+    "behaviors_executed": false,
+    "reason": "The frozen public archive measures 128 paths and 1079184 source bytes, with no accepted service catalog. No retained host executed the closure behaviors, and the measurement is below the design target."
   },
   "design_target": {
     "accepted_service_incarnations": 5000,
