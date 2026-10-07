@@ -135,8 +135,9 @@ else fails closed with no weaker fallback, and `e_phnum <= 128` plus
 `e_phoff >= 64` are conservative screen bounds rather than ELF limits.
 Anonymous executed images need a prospective
 kernel-object binding; the existing process observer still refuses deleted
-paths. Linux tool/dispatch custody (T42.H2c) and signer/namespace custody
-(T42.H2d) have since shipped; Git/Go SDK/helper and fixed-system recipes,
+paths. Linux tool/dispatch custody (T42.H2c), signer/namespace custody
+(T42.H2d) and the shared Git/Go child-probe observation recipe (T42.H2e) have
+since shipped; Git/Go SDK/helper location recipes,
 session teardown, pressure adapters, new plan versions and complete
 resource/readiness admission remain required. These commands launch no ceremony and establish no scale result.
 
@@ -194,7 +195,8 @@ external child work have no new hard RSS/disk quota. The existing cooperative
 reference-build deadline and native command/output/cleanup bounds remain. New
 Linux external provenance deliberately fails historical freeze validation;
 retained plans and evidence keep their original versions. Signer/namespace
-custody (T42.H2d) has since shipped; Git/Go SDK/helper and fixed-system recipes,
+custody (T42.H2d) and the shared Git/Go child-probe observation recipe
+(T42.H2e) have since shipped; Git/Go SDK/helper location recipes,
 complete session/pressure adapters and prospective measured
 resource/plan/readiness admission remain required. These checks execute no ceremony and establish no scale claim.
 
@@ -232,13 +234,16 @@ symlink. Do not "fix" one seam to match the other: the holder's literal-path rul
 is the load-bearing control for held custody, and the observer's resolution is
 what makes a distribution symlink usable at all. A fixed-system image must be a
 root-owned regular non-set-ID non-writable executable with a stable volume tuple;
-no read-only-mount claim follows from holding it. Git, Go and SurrealDB
-child-probe roles refuse on Linux before any path resolution, scratch directory
-or execution, so an unadmitted recipe costs one string comparison and leaves no
-scratch entry behind.
+no read-only-mount claim follows from holding it. As shipped, Git, Go and
+SurrealDB child-probe roles all refused on Linux before any path resolution,
+scratch directory or execution, so an unadmitted recipe cost one string
+comparison and left no scratch entry behind. T42.H2e has since admitted the Git
+and Go recipes on that same public observer; only SurrealDB still refuses there,
+before resolution, scratch or execution, keeping its sealed custody the single
+Linux route.
 
 This slice supplies no signer-driven ceremony entry point, no command permission
-and no scale result. Git/Go SDK/helper and fixed-system recipes, native
+and no scale result. Git/Go SDK/helper location recipes, native
 session/descendant hard-death supervision, isolated pressure/allocation/restore
 adapters, new Linux-bound plan versions and aggregate
 physical/effective-cgroup resource/readiness admission remain required.
@@ -248,6 +253,77 @@ The source-free exact-commit record is
 It names the observed fixed-system tools with their literal and resolved paths,
 distinguishes the retained full-package baseline failure from this slice, and
 preserves the changed-file lint qualification in the owning backlog.
+
+T42.H2e admits the shared Git and Go child-probe recipe on the Linux public
+external-tool observer, so both frozen hosts now run one identical closed recipe
+instead of Linux refusing every version probe. Linux admission is a fail-closed
+allowlist of the roles that carry an explicit decision — the two child-probe
+recipes and the three fixed-system images that run no version child — so a future
+probed role refuses rather than being silently observed with no platform
+decision. SurrealDB keeps its single Linux route and still refuses on that public
+path. With the prepared host PATH loaded
+(so `git` and `go` resolve, and the sealed SurrealDB probe can find its image),
+run the finite native gates:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=20m ./spike/t421 -run 'ExternalTool|ExternalProbe|LinuxToolCustody'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=20m ./spike/t421 -run '^TestLinuxExternalTool|^TestObserveExecutionExternalToolRefusesUnadmittedRolePathAndContext|^TestRunExternalToolProbe|^TestLinuxToolCustody'
+GOMAXPROCS=2 go test -race -p=2 -count=20 -timeout=30m ./spike/t421 -run '^TestLinuxExternalTool|^TestRunExternalToolProbe'
+```
+
+On the selected host these measured 43.733s, 48.100s and 98.216s with no data
+race and no failure. The first selector is deliberately unanchored, so besides
+the Linux evidence — 19 passing top-level tests and 86 passing subtests — it also
+selects six pre-existing Darwin-gated tests that skip on Linux:
+`TestObserveExecutionExternalToolBindsRealGitAndGo`,
+`TestObserveExecutionExternalToolBindsFixedNativeImagesWithoutVersionProbe`,
+`TestObserveExecutionExternalToolRefusesVersionOfWrongRole`,
+`TestObserveExecutionExternalToolRefusesDelegatingAppleGitShim`,
+`TestObserveExecutionExternalToolOptionalRealSurreal` and
+`TestExternalProbePreparationParentRetainsScratch`. Those skips are expected on
+this host and are not a Linux coverage gap; both anchored race selectors report
+zero skips. Do not narrow the first selector to manufacture a zero-skip number.
+The twenty-repetition boundary emits 680 pass lines: 34 top-level and subtest
+passes per repetition across 9 top-level tests and 25 subtests. Test selection
+discovers images through the prepared host PATH, but
+the production API always receives an explicit selected absolute path and
+performs no discovery; a missing required image fails the test rather than
+skipping it. Git's oracle is structural, not nominal: `git --exec-path` must
+resolve to a directory whose `git` core image hashes equal to the selected
+image, so a delegating shim cannot bless an unrelated helper. On this host that
+equality holds because `/usr/bin/git` and `/usr/lib/git-core/git` are separate
+regular files with identical bytes. The exec-path itself holds 172 entries — 142
+symlinks to that core image, 3 symlinks to `git-remote-http`, 25 other separate
+regular helper executables and one `mergetools` directory — and every one of them
+stays unadmitted, so the equality oracle admits a core image and not a helper
+manifest. Go's oracle requires exactly
+`go version <runtime.Version()> <GOOS>/<GOARCH>`, so the prepared
+`go1.26.5 linux/amd64` toolchain matches and any other build refuses.
+
+Three operator caveats. The new Linux refusal tests assert exact messages, so on
+`linux/arm64` the frozen-host platform gate fires first and they fail; arm64
+Linux is not a claimed gate for this slice. Each admitted probe child still runs
+through the shared reference-command session drain, which on Linux enumerates the
+whole host with `/bin/ps -Ao pid=,stat=` (128 KiB output cap, 2s probe timeout)
+plus one `getsid` per host PID, polled every 10ms until the session is empty or
+the 5s deadline expires. Observing Git therefore spawns at least two full-host
+census children and Go at least one, so on a host with a very large process
+table these probes are noticeably more expensive than the two version children
+alone. That cost is inherited from the existing Darwin recipe and fails closed;
+T42.H2f owns replacing it with bounded native `/proc` records. The full
+`spike/t421` package is still not green:
+`TestProductionDispatchSitesMatchActualBoundaries` fails byte-identically modulo
+timings at base and head, so it is the retained H2a production-dispatch
+inventory failure rather than an H2e regression, and the broader package timeout
+is likewise retained. An observed identity remains neither a launch recipe nor
+dispatch authority, and `validateExecutionHost` still refuses any Linux freeze.
+
+The source-free exact-commit record is
+[`tool-observation-rehearsal-1.json`](../../spike/t42h2e/tool-observation-rehearsal-1.json).
+It names the real Git and Go images it observed with their versions,
+distinguishes the retained full-package baseline failure from this slice, and
+records that this slice's changed-file pinned lint is green rather than
+qualified.
 
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under

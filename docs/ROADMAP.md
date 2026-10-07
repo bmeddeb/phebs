@@ -57,6 +57,27 @@ hard-death integration, pressure/allocation/restore adapters, new Linux plan
 versions and aggregate physical/effective-cgroup resource/readiness admission
 remain open; no ceremony entry point is enabled.
 
+T42.H2e admits the shared Git and Go child-probe observation recipe on Linux
+amd64, so the public external-tool observer now runs one identical closed recipe
+on both frozen hosts instead of refusing every Linux version probe. The oracles
+stay structural and role-bound: Git must resolve an exec-path whose core image
+hashes equal to the selected image, so a delegating shim cannot bless an
+unrelated helper, and Go must equal the verifier toolchain exactly. SurrealDB
+deliberately keeps its single admitted Linux route — the sealed custody from
+T42.H2c — and the public path refuses that role before resolving, hashing or
+executing anything, rather than issuing a second, weaker identity for the same
+bytes. Linux admission is a fail-closed role allowlist, so an undecided future
+probed role refuses rather than being silently observed with no platform
+decision. Fixed-system roles, the resolved `/bin/sh` seam and the
+`external-executed-file-v1` provenance are unchanged, and `validateExecutionHost`
+remains the separate freeze-platform fence, so no Linux plan can be frozen from
+this. Git's remaining exec-path helpers and Go's GOROOT/SDK locations stay
+unadmitted on both hosts, so an observed identity is neither a launch recipe nor
+dispatch authority. Native session/descendant hard-death supervision, isolated
+pressure/allocation/restore adapters, new Linux-bound plan versions and
+aggregate physical/effective-cgroup resource/readiness admission remain open; no
+ceremony entry point is enabled.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:
