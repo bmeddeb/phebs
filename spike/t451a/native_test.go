@@ -7,12 +7,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 var nativeSocket = flag.String("t451a-native-socket", "", "explicit local Docker socket; empty skips native containment gates")
-var nativeImage = flag.String("t451a-native-image", "", "exact Linux arm64 image ID")
+var nativeImage = flag.String("t451a-native-image", "", "exact Linux image ID matching the controller architecture")
 var nativeParent = flag.String("t451a-native-parent", "", "private parent visible at the same path to host and daemon")
 var nativeBundle = flag.String("t451a-native-bundle", "", "offline tool bundle for the neutral planner gate")
 var nativeManifest = flag.String("t451a-native-manifest", "", "canonical offline tool manifest")
@@ -48,7 +49,7 @@ func nativeHelper(t *testing.T) (string, string, string) {
 			build.Env = append(build.Env, value)
 		}
 	}
-	build.Env = append(build.Env, "GOOS=linux", "GOARCH=arm64", "CGO_ENABLED=0")
+	build.Env = append(build.Env, "GOOS=linux", "GOARCH="+runtime.GOARCH, "CGO_ENABLED=0")
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build helper: %v\n%s", err, output)
 	}
@@ -62,9 +63,13 @@ func nativeHelper(t *testing.T) (string, string, string) {
 
 func TestNativeBoundary(t *testing.T) {
 	root, helper, helperDigest := nativeHelper(t)
+	profile, err := ProbeProfileForArch(runtime.GOARCH)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, probe := range []string{"access", "watchdog", "descriptors", "scratch-bytes", "scratch-inodes", "tasks", "output", "memory"} {
 		t.Run(probe, func(t *testing.T) {
-			request := Request{Schema: "phebs-t451a-request-v1", Profile: Profile, Mode: "probe", Probe: probe, BundleSHA256: Digest(nil),
+			request := Request{Schema: "phebs-t451a-request-v1", Profile: profile, Mode: "probe", Probe: probe, BundleSHA256: Digest(nil),
 				HelperSHA256: helperDigest, PlannerSHA256: helperDigest, LauncherSHA256: helperDigest, ImageID: *nativeImage}
 			receipt, err := Run(context.Background(), Options{Socket: *nativeSocket, Parent: root, Helper: helper, Request: request})
 			encoded, _ := json.Marshal(receipt)

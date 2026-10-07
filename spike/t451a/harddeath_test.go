@@ -62,7 +62,7 @@ func TestNativeControllerDeath(t *testing.T) {
 			t.Log("hard-death private custody retained:", root)
 		}
 	})
-	for _, build := range []struct{ path, system, architecture string }{{host, runtime.GOOS, runtime.GOARCH}, {helper, "linux", "arm64"}} {
+	for _, build := range []struct{ path, system, architecture string }{{host, runtime.GOOS, runtime.GOARCH}, {helper, "linux", runtime.GOARCH}} {
 		ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 		command := exec.CommandContext(ctx, "go", "build", "-trimpath", "-o", build.path, "./cmd/t451a")
 		for _, entry := range os.Environ() {

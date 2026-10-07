@@ -23,13 +23,43 @@ inventory, host observation, and receipt; do not rewrite the original host
 facts, signatures, failure classifications, or results.
 
 T42.H1/H2 in [BACKLOG.md](../BACKLOG.md) own this transition. The existing T42
-execution implementation still has Darwin-specific process, executable,
-custody, signing/session, and pressure-volume adapters. Implement and verify
+execution implementation still has Darwin-specific custody, signing/session,
+and pressure-volume adapters. Implement and verify
 their Linux equivalents here before a run. New plan memory budgets must fit
 measured physical/effective cgroup capacity, include child reservations and
 host headroom, and replace the old 20-GiB RSS envelope. Swap supplies no extra
 physical-memory admission. Workload correctness, isolation, accounting,
 pressure/recovery, and clean teardown remain required.
+
+T42.H2a supplies native Linux process-tree/RSS records and executable-path
+observations through the shared T40 collector. To run its finite real-host and
+refusal checks on this machine:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=2m ./spike/t4013 -run 'TestLinux|TestObserveProcessTreeRecordsRealAndCanceled'
+```
+
+The collector admits at most 8,192 `/proc` directory entries and 129 selected
+process candidates, with 4-KiB bounded stat/rollup records. Resident bytes come
+from the kernel memory rollup, checked against the same lifetime, parent and
+command before and after the read. These are sequential samples; they do not
+prove an atomic tree, simultaneous resource ceiling or complete history of
+short children. Missing rollup support, permission denial, malformed/overflowing
+records and changed lifetimes/parents refuse. A command-name transition alone
+may remeasure at most three times under the same context, accepting only a fresh
+bracketed row of the same lifetime and parent. Denial never retries. A live
+process never receives invented
+zero RSS; a matching kernel-confirmed defunct process has zero resident bytes. Executable paths are observations requiring later independent image
+custody; deleted images refuse. No sampler helper child is launched.
+
+The rollup asks the kernel to walk each selected process's mappings/page tables,
+so sampling cost grows with mapped memory even though returned data is bounded.
+Context cancellation is checked between reads; an active kernel syscall is
+cooperative rather than forcibly interrupted. Custody, session/orphan teardown,
+pressure-volume adapters, new Linux-bound plans and memory admission are still
+required before complete readiness. This command launches no ceremony. The first source-free native normal/race
+record is [`native-accounting-rehearsal-1.json`](../../spike/t42h2a/native-accounting-rehearsal-1.json);
+its owning backlog record preserves the broader baseline gate failures.
 
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
@@ -7911,16 +7941,34 @@ go test ./spike/t451a/...
 ```
 
 Native tests require an explicitly named local Docker Unix socket, an already
-present immutable Linux/arm64 image, and a parent directory visible at the same
+present immutable Linux image matching the controller architecture, and a parent directory visible at the same
 absolute path to the host and daemon. A Colima VM may not expose the host's
 temporary directory; the harness refuses an absent daemon-side bind source.
 It never pulls an image, enables network, changes daemon configuration, or
 starts unrelated services. The daemon must support cgroup v2, the required
 kernel limits, seccomp, and AppArmor. Run rehearsals serially.
+The current machine uses amd64. Containment probes select
+`neutral-probes-linux-amd64-v1`; that profile cannot admit a compiler plan.
+Cross-architecture images refuse before container creation. A local empty
+scratch image is sufficient for containment because the static, digest-bound
+helper is supplied through the read-only input mount; compiler cohorts need
+their complete sealed image and offline tool inputs. Docker 29's exact
+`name=apparmor,profile=default` info label is accepted alongside the older
+`name=apparmor`, while container inspection still requires `docker-default`.
+The recipe explicitly mounts `/dev/shm` with noexec/nosuid/nodev, 16 MiB, and
+the existing 1,048,576-inode ceiling so host-sized defaults cannot silently
+change the verified envelope.
 The fixed neutral profile uses one CPU, 3 GiB memory without swap, and 2 GiB
 aggregate tmpfs data. Tmpfs consumes that same memory allowance. Provision a
 dedicated test daemon with headroom (the development VM has 4 GiB RAM); do not
 resize or restart a shared daemon to run the harness.
+
+The current-host containment result is retained in
+[`amd64_boundary_rehearsal_1.json`](../../spike/t457/amd64_boundary_rehearsal_1.json).
+Its eight probes passed on exact source
+`f26ac239ec57a7119bffe600390857364f997a64`, including required task/output/memory
+refusals and exact cleanup. It does not prove the compiler cohort or the
+separate controller-hard-death gate.
 
 The explicit native selectors are `TestNativeBoundary`,
 `TestNativeControllerDeath`, and `TestNativePlan`. Supply

@@ -16,24 +16,26 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
 )
 
 const (
-	MemoryBytes       = 3 << 30
-	ScratchBytes      = 2032 << 20
-	ScratchInodes     = 65536
-	SharedMemoryBytes = 16 << 20
-	TaskLimit         = 256
-	DescriptorLimit   = 128
-	OutputBytes       = 16 << 20
-	WallLimit         = 5 * time.Minute
-	apiVersion        = "/v1.47"
-	maxResponseBytes  = 1 << 20
-	maxWireBytes      = 24 << 20
-	ownerLabel        = "phebs.t451a.owner"
+	MemoryBytes        = 3 << 30
+	ScratchBytes       = 2032 << 20
+	ScratchInodes      = 65536
+	SharedMemoryBytes  = 16 << 20
+	SharedMemoryInodes = 1 << 20
+	TaskLimit          = 256
+	DescriptorLimit    = 128
+	OutputBytes        = 16 << 20
+	WallLimit          = 5 * time.Minute
+	apiVersion         = "/v1.47"
+	maxResponseBytes   = 1 << 20
+	maxWireBytes       = 24 << 20
+	ownerLabel         = "phebs.t451a.owner"
 )
 
 // NativeT451bScratchInodes belongs only to the explicitly selected native
@@ -244,8 +246,11 @@ func recipe(options Options, name string) config {
 	c.HostConfig = hostConfig{NetworkMode: "none", IpcMode: "private", CgroupnsMode: "private", Runtime: "runc",
 		ReadonlyRootfs: true, CapDrop: []string{"ALL"}, CapAdd: []string{"SETUID", "SETGID"},
 		SecurityOpt: []string{"no-new-privileges", "apparmor=docker-default"},
-		Tmpfs:       map[string]string{"/scratch": fmt.Sprintf("rw,exec,nosuid,nodev,size=%d,nr_inodes=%d,mode=1777", ScratchBytes, scratchInodes(options.nativeT451b))},
-		Memory:      MemoryBytes, MemorySwap: MemoryBytes, NanoCpus: 1_000_000_000, PidsLimit: TaskLimit, ShmSize: SharedMemoryBytes,
+		Tmpfs: map[string]string{
+			"/scratch": fmt.Sprintf("rw,exec,nosuid,nodev,size=%d,nr_inodes=%d,mode=1777", ScratchBytes, scratchInodes(options.nativeT451b)),
+			"/dev/shm": fmt.Sprintf("rw,noexec,nosuid,nodev,size=%d,nr_inodes=%d,mode=1777", SharedMemoryBytes, SharedMemoryInodes),
+		},
+		Memory: MemoryBytes, MemorySwap: MemoryBytes, NanoCpus: 1_000_000_000, PidsLimit: TaskLimit, ShmSize: SharedMemoryBytes,
 		Ulimits: []ulimit{{"nofile", DescriptorLimit, DescriptorLimit}, {"core", 0, 0}}}
 	c.HostConfig.RestartPolicy.Name = "no"
 	mount := bindMount{Type: "bind", Source: options.Inputs, Target: "/inputs", ReadOnly: true}
@@ -344,7 +349,7 @@ func (c *client) preflight(ctx context.Context, options Options) (string, error)
 	seccomp, apparmor := false, false
 	for _, value := range info.SecurityOptions {
 		seccomp = seccomp || value == "name=seccomp,profile=builtin"
-		apparmor = apparmor || value == "name=apparmor"
+		apparmor = apparmor || value == "name=apparmor" || value == "name=apparmor,profile=default"
 	}
 	if info.ID == "" || info.OSType != "linux" || info.CgroupVersion != "2" || !info.MemoryLimit || !info.SwapLimit || !info.PidsLimit || !info.CPUCfsQuota || !seccomp || !apparmor {
 		return "", ErrRefused
@@ -357,7 +362,8 @@ func (c *client) preflight(ctx context.Context, options Options) (string, error)
 	if _, err := c.request(ctx, "GET", "/images/"+options.ImageID+"/json", nil, &image, 200); err != nil {
 		return "", err
 	}
-	if image.ID != options.ImageID || image.OS != "linux" || image.Architecture != "arm64" || len(image.Config.Volumes) != 0 {
+	if image.ID != options.ImageID || image.OS != "linux" ||
+		(runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64") || image.Architecture != runtime.GOARCH || len(image.Config.Volumes) != 0 {
 		return "", ErrRefused
 	}
 	allowed := map[string]bool{}
@@ -418,7 +424,7 @@ func verify(got inspection, options Options, owner journal) error {
 			binds++
 			continue
 		}
-		if mount.Type == "tmpfs" && mount.Destination == "/scratch" && mount.RW {
+		if mount.Type == "tmpfs" && (mount.Destination == "/scratch" || mount.Destination == "/dev/shm") && mount.RW {
 			continue
 		}
 		return ErrRefused

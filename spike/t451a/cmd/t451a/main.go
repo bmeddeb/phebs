@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -69,8 +70,8 @@ func run() error {
 	command := os.Args[1]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
 	socket := flags.String("socket", "", "explicit local Docker Unix socket")
-	image := flags.String("image", "", "immutable local Linux arm64 image ID")
-	helper := flags.String("helper", "", "pinned Linux arm64 t451a executable")
+	image := flags.String("image", "", "immutable local Linux image matching the controller architecture")
+	helper := flags.String("helper", "", "pinned Linux t451a executable matching the image architecture")
 	helperDigest := flags.String("helper-sha256", "", "exact helper digest")
 	parent := flags.String("parent", "", "existing private run parent")
 	probe := flags.String("probe", "access", "compiled-in neutral probe name")
@@ -105,6 +106,12 @@ func run() error {
 			request.Mode, request.Probe, request.BundleSHA256 = "plan", "", *bundleDigest
 		} else if *bundleRoot != "" || *bundleManifest != "" || *bundleDigest != "" {
 			return errors.New("probes cannot import tools")
+		} else {
+			var err error
+			request.Profile, err = t451a.ProbeProfileForArch(runtime.GOARCH)
+			if err != nil {
+				return err
+			}
 		}
 		receipt, err := t451a.Run(ctx, t451a.Options{Socket: *socket, Parent: *parent, Helper: *helper, Request: request, BundleRoot: *bundleRoot, Manifest: manifest})
 		return errors.Join(err, encoder.Encode(receipt))

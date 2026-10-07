@@ -19,8 +19,9 @@ func ObserveProcessExecutablePath(ctx context.Context, pid int) (string, error) 
 	return paths[0], nil
 }
 
-// ObserveProcessExecutablePaths performs one bounded native acquisition for
-// each of at most two exact PIDs under one kernel argument-size observation.
+// ObserveProcessExecutablePaths performs bounded native path acquisitions for
+// at most two exact PIDs. Darwin bounds kernel arguments; Linux bounds readlink
+// and brackets it with process-lifetime observations. Neither holds image custody.
 func ObserveProcessExecutablePaths(ctx context.Context, pids []int) ([]string, error) {
 	if ctx == nil || len(pids) == 0 || len(pids) > 2 || ctx.Err() != nil {
 		return nil, errors.New("native process executable observation is unavailable")

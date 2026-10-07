@@ -3104,6 +3104,44 @@ not an alternative-host requirement. This ticket authorizes preparation and
 implementation, not a ceremony launch, a fabricated past PASS, or a scale or
 release claim.
 
+**T42.H2a · Linux native process accounting** *(first H2 slice, 2026-10-06)* —
+add bounded native Linux process-tree records and executable-path observation to
+T40's shared collector, which T42's process gauges already consume. One host
+`/proc` directory census admits at most 8,192 entries; each stat/rollup read is
+capped at 4,096 bytes plus an overflow sentinel. Traverse at most 129 root-first
+process candidates. Use `smaps_rollup` resident bytes, bracketed by unchanged
+lifetime, parent and command records, rather than approximate stat/statm RSS.
+Only same-lifetime/same-parent command transitions may remeasure, at most three
+attempts under the original context. Unavailable memory or permission errors
+refuse; only kernel-confirmed vanished
+processes may be omitted. Linux kernel-worker names up to 256 bytes may enter
+the host census; selected measured processes retain the 16-byte name bound.
+Executable observations admit at most two PIDs, bounded canonical undeleted
+paths and unchanged bracket identities; they do not establish image custody.
+AC: real Linux tree/RSS/exit, exec-class epoch, current/deleted image and
+normal/race refusal tests pass without native skips; malformed records,
+overflow, unavailable RSS, lifetime/parent/name drift and cancellation refuse.
+This slice changes no serialized plan/receipt or historical evidence. Custody,
+session/orphan teardown, pressure filesystems and prospective Linux resource
+admission remain separate H2 slices before readiness/freeze.
+
+T42.H2a exact implementation `059e66166b9caf480aa1151556cc84f14634b3ea`
+passed finite native normal/race gates in 1.376s/3.042s, thirty source-identical
+precommit exec/exit race repetitions in 35.679s, and the real T42 process-gauge
+race selector in 1.736s. No selected native test skipped. Full T4013 normal/race
+passed in 132.607s/154.092s with one explicit exclusion:
+`TestClosedHostToolchainIgnoresAmbientSurrealOverride` requires absent Linux
+`/usr/bin/sandbox-exec`; its exact failure reproduced at base `64a67676`.
+Affected vet, T4013 pinned lint (zero issues), docs, glossary and whitespace
+pass. Broader T421 lint's thirteen platform-dependent unused findings and its
+stale production-dispatch inventory failure reproduced unchanged at that base.
+The initial broader T421 package attempt also timed out at twelve minutes in
+retained fixture/version validation; no regression attribution is established,
+and that broad package is not claimed green. The source-free record is
+[`native-accounting-rehearsal-1.json`](../spike/t42h2a/native-accounting-rehearsal-1.json).
+The private rehearsal parent is empty. Independent review remains pending;
+no integration, complete H2 readiness, new plan, freeze or ceremony follows.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
@@ -15447,6 +15485,34 @@ Changed planner/launcher/T45.7 normal and race tests, affected-tree vet,
 pinned lint, docs, glossary and whitespace checks pass. Broader normal testing
 encounters unchanged sandbox tests requiring the absent `/private/tmp` host
 directory; that host limitation does not become a complete-tree PASS.
+
+T45.7 current-host containment prerequisite (2026-10-06): Docker access on
+the selected Linux amd64 machine is established. Sandbox image admission now
+requires the controller's native architecture; the default-AppArmor labels
+from older Docker and Docker 29 are both explicit, with unchanged live
+`docker-default` inspection. The probe-only
+`neutral-probes-linux-amd64-v1` profile cannot admit a compiler plan. Native
+probe/controller-death helper builds select the controller architecture.
+The recipe explicitly bounds `/dev/shm` at the existing 16-MiB and
+1,048,576-inode ceilings rather than inheriting host-sized inode capacity.
+The first diagnostic stopped before probes at `shared_memory_space` and
+retired all containers and inputs; its local log is preserved. Current-tree
+containment confirmation and source-free evidence are recorded separately;
+the five-minute controller-hard-death gate and full compiler cohort are not
+claimed. The sealed sysroot and complete offline worker bundle remain needed.
+
+T45.7 exact-commit containment confirmation (2026-10-06): implementation
+`f26ac239ec57a7119bffe600390857364f997a64` passed the eight native boundary
+probes in 14.49 seconds (14.511 seconds package time), on this amd64 host with
+one CPU and the unchanged 3-GiB no-swap container limit. Access, watchdog,
+descriptor, scratch-byte and scratch-inode probes completed; task, output,
+and memory probes proved their required named refusals. Every receipt records
+verified limits and exact container/input removal; final matching container
+count and private-parent entry count are both zero. The source-free record is
+`spike/t457/amd64_boundary_rehearsal_1.json`. Normal/race T45.1a gates, downstream
+T45.1b/T45.7 normal gates, affected vet/lint, docs, glossary and whitespace pass.
+Independent review remains pending. This is containment evidence only; full
+compiler generation, controller-hard-death and T40/T42 readiness remain open.
 
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**

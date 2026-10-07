@@ -6,6 +6,19 @@ import (
 )
 
 const Profile = "neutral-linux-arm64-v1"
+const ProbeProfileAmd64 = "neutral-probes-linux-amd64-v1"
+
+// ProbeProfileForArch selects containment probes only, not a compiler plan.
+func ProbeProfileForArch(arch string) (string, error) {
+	switch arch {
+	case "amd64":
+		return ProbeProfileAmd64, nil
+	case "arm64":
+		return Profile, nil
+	default:
+		return "", errors.New("unsupported probe architecture")
+	}
+}
 
 // Request has no repository path, argv, environment, rc file, or package pattern.
 // The only executable workload is the compiled-in neutral fixture/probe suite.
@@ -26,7 +39,8 @@ func DecodeRequest(data []byte) (Request, error) {
 	if err != nil {
 		return Request{}, err
 	}
-	if request.Schema != "phebs-t451a-request-v1" || request.Profile != Profile || !validDigest(request.BundleSHA256) ||
+	profileAdmitted := request.Profile == Profile || request.Profile == ProbeProfileAmd64 && request.Mode == "probe"
+	if request.Schema != "phebs-t451a-request-v1" || !profileAdmitted || !validDigest(request.BundleSHA256) ||
 		!validDigest(request.HelperSHA256) || !validDigest(request.PlannerSHA256) || !validDigest(request.LauncherSHA256) || !validDigest(request.ImageID) {
 		return Request{}, errors.New("request identity refused")
 	}

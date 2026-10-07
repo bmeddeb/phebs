@@ -355,7 +355,7 @@ func observeResources(resources *Resources, native bool) (err error) {
 		}
 		if stat.Flags&(unix.ST_NOSUID|unix.ST_NODEV) != unix.ST_NOSUID|unix.ST_NODEV || stat.Flags&unix.ST_RDONLY != 0 ||
 			path == "/scratch" && (stat.Flags&unix.ST_NOEXEC != 0 || !scratchInodesMatch(native, stat.Files)) ||
-			path == "/dev/shm" && (stat.Flags&unix.ST_NOEXEC == 0 || stat.Files > 1<<20) {
+			path == "/dev/shm" && (stat.Flags&unix.ST_NOEXEC == 0 || stat.Files > SharedMemoryInodes) {
 			return ErrRefused
 		}
 		allocated += (stat.Blocks - stat.Bfree) * uint64(stat.Bsize)

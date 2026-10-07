@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -102,6 +103,12 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		if d.fault == "missing seccomp" {
 			security = security[1:]
 		}
+		if d.fault == "modern apparmor" {
+			security[1] = "name=apparmor,profile=default"
+		}
+		if d.fault == "unknown apparmor profile" {
+			security[1] = "name=apparmor,profile=unconfined"
+		}
 		write(200, map[string]any{"ID": "test-daemon", "OSType": "linux", "CgroupVersion": "2", "MemoryLimit": true, "SwapLimit": true, "PidsLimit": true, "CPUCfsQuota": true, "SecurityOptions": security})
 	case strings.HasPrefix(path, "/images/"):
 		imageConfig := config{}
@@ -111,7 +118,15 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		if d.fault == "image volume" {
 			imageConfig.Volumes = map[string]struct{}{"/escape": {}}
 		}
-		write(200, map[string]any{"Id": testImage, "Os": "linux", "Architecture": "arm64", "Config": imageConfig})
+		arch := runtime.GOARCH
+		if d.fault == "wrong image architecture" {
+			if arch == "amd64" {
+				arch = "arm64"
+			} else {
+				arch = "amd64"
+			}
+		}
+		write(200, map[string]any{"Id": testImage, "Os": "linux", "Architecture": arch, "Config": imageConfig})
 	case path == "/containers/create":
 		if json.NewDecoder(r.Body).Decode(&d.config) != nil {
 			write(400, nil)
@@ -125,6 +140,9 @@ func (d *daemon) serve(w http.ResponseWriter, r *http.Request) {
 		if d.fault == "crossed scratch cap" {
 			native := d.config.Cmd[0] == supervisorCommand(true)
 			d.config.HostConfig.Tmpfs["/scratch"] = recipe(Options{nativeT451b: !native}, "").HostConfig.Tmpfs["/scratch"]
+		}
+		if d.fault == "shared memory inode cap" {
+			d.config.HostConfig.Tmpfs["/dev/shm"] = "rw,noexec,nosuid,nodev,size=16777216,nr_inodes=2097152,mode=1777"
 		}
 		if d.fault == "crossed supervisor command" {
 			d.config.Cmd = []string{supervisorCommand(d.config.Cmd[0] != supervisorCommand(true))}
@@ -213,13 +231,46 @@ func TestRunFiniteContainerLifecycle(t *testing.T) {
 	}
 }
 
+func TestHostImagePreflight(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		wantOK bool
+	}{
+		{"", true},
+		{"modern apparmor", true},
+		{"unknown apparmor profile", false},
+		{"wrong image architecture", false},
+		{"missing seccomp", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d, options := fakeDaemon(t, tc.name)
+			c, err := newClient(options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer c.http.CloseIdleConnections()
+			_, err = c.preflight(context.Background(), options)
+			if (err == nil) != tc.wantOK {
+				t.Fatalf("preflight accepted=%v, want %v: %v", err == nil, tc.wantOK, err)
+			}
+			d.mu.Lock()
+			defer d.mu.Unlock()
+			if d.created || d.started {
+				t.Fatal("preflight created or started a container")
+			}
+		})
+	}
+}
+
 func TestRunRefusesWithoutLosingCustody(t *testing.T) {
 	for _, test := range []struct {
 		fault             string
 		started, retained bool
 	}{
-		{"missing seccomp", false, false}, {"oversized info", false, false}, {"image environment", false, false}, {"image volume", false, false},
+		{"missing seccomp", false, false}, {"unknown apparmor profile", false, false}, {"wrong image architecture", false, false},
+		{"oversized info", false, false}, {"image environment", false, false}, {"image volume", false, false},
 		{"changed effective configuration", false, true}, {"start error", false, false}, {"truncated stream", true, false},
+		{"shared memory inode cap", false, true},
 		{"incomplete report", true, false}, {"cleanup error", true, true},
 	} {
 		t.Run(test.fault, func(t *testing.T) {
