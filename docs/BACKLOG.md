@@ -3203,6 +3203,25 @@ admission: resource bounds are per instance, not globally reserved; existing
 reference compile/cache work has no hard RSS/disk ceiling. Independent review,
 prospective admission and ceremony entry-point integration remain pending.
 
+T42.H2c exact implementation `ecaccf8c482bc3386c469cb866361123b0e0bba0`
+passed 22 tool/input/reference top-level tests normal in 96.535s and race in
+105.047s, including the existing public exact-byte verifier and preparation
+session regressions. Five kernel-image/path tests passed normal in 0.114s and
+race in 1.347s; twenty image-matching race repetitions passed in 2.524s, and
+twenty scoped-tool/retained-probe race repetitions passed in 17.989s. No selected
+test skipped. Actual host SurrealDB 3.2.0 was probed from its sealed image;
+the exact reference build used the neutral `phebs-focused-index` fixture, not a
+full tool inventory. Native wrong-version, stderr, source fragment, output-cap
+and executed cancellation probes refused cleanly; unjoined/live-descendant
+cleanup retained unusable custody until drained. Affected vet, module
+verification, changed-file pinned lint (zero issues), docs, glossary and
+whitespace pass. No Linux tool-probe scratch entry remains. The source-free
+record is [`tool-custody-rehearsal-1.json`](../spike/t42h2c/tool-custody-rehearsal-1.json).
+Broader T421 lint/package remain qualified by the retained H2a/H2b baseline
+failures and are not claimed green. Independent review and the remaining H2
+adapters/admission remain pending; no merge, complete readiness, new plan,
+freeze, ceremony or scale claim follows.
+
 **T42.H2d · Linux signer and namespace custody** *(next H2 slice)* — implement
 Linux signing/keypair and immutable control/dispatch-input custody with exact
 key integrity, authenticated returned-evidence and durable namespace/promotion

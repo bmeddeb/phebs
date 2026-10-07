@@ -97,9 +97,9 @@ The ELF header screen and joined neutral executable prove only this primitive;
 they do not admit tools, loader/library/helper closure, a signer, environment,
 argv or ceremony dispatch. Anonymous executed images need a prospective
 kernel-object binding; the existing process observer still refuses deleted
-paths. Linux tool/signer/dispatch custody (T42.H2c), session teardown, pressure
-adapters, new plan versions and complete resource/readiness admission remain
-required. These commands launch no ceremony and establish no scale result.
+paths. Full Linux tool/dispatch custody (T42.H2c), signer/namespace custody
+(T42.H2d), session teardown, pressure adapters, new plan versions and complete
+resource/readiness admission remain required. These commands launch no ceremony and establish no scale result.
 
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
@@ -150,6 +150,11 @@ retained plans and evidence keep their original versions. Signer/namespace
 custody (T42.H2d), Git/Go SDK/helper and fixed-system recipes, complete session/
 pressure adapters and prospective measured resource/plan/readiness admission
 remain required. These checks execute no ceremony and establish no scale claim.
+
+The source-free exact-commit record is
+[`tool-custody-rehearsal-1.json`](../../spike/t42h2c/tool-custody-rehearsal-1.json).
+It distinguishes the actual SurrealDB observation from the neutral Go fixture
+and preserves broader baseline gate qualifications in the owning backlog.
 
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
