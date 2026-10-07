@@ -45,7 +45,10 @@ from the kernel memory rollup, checked against the same lifetime, parent and
 command before and after the read. These are sequential samples; they do not
 prove an atomic tree, simultaneous resource ceiling or complete history of
 short children. Missing rollup support, permission denial, malformed/overflowing
-records and changed identities refuse. A live process never receives invented
+records and changed lifetimes/parents refuse. A command-name transition alone
+may remeasure at most three times under the same context, accepting only a fresh
+bracketed row of the same lifetime and parent. Denial never retries. A live
+process never receives invented
 zero RSS. Executable paths are observations requiring later independent image
 custody; deleted images refuse. No sampler helper child is launched.
 

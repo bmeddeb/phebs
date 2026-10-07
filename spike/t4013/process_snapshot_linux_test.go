@@ -256,3 +256,56 @@ func TestLinuxNativeSamplerAccountsExecClassEpoch(t *testing.T) {
 			transitioned, metrics, sampler.samples, sampler.failedSamples, err)
 	}
 }
+
+func TestLinuxResidentObservationRetriesOnlyNameTransition(t *testing.T) {
+	census := linuxProcessStat{snapshot: processSnapshot{parent: 1, identityToken: "100", name: "sh"}}
+	for _, test := range []struct {
+		name         string
+		probeErr     error
+		change       string
+		wantAttempts int
+		wantError    bool
+	}{
+		{"settled", errLinuxProcessNameTransition, "name", 2, false},
+		{"denied", os.ErrPermission, "name", 1, true},
+		{"missing memory", os.ErrNotExist, "name", 1, true},
+		{"parent", errLinuxProcessNameTransition, "parent", 1, true},
+		{"lifetime", errLinuxProcessNameTransition, "lifetime", 1, true},
+		{"unsettled", errLinuxProcessNameTransition, "unsettled", maxProcessSampleAttempts, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			attempts := 0
+			_, err := collectLinuxResidentObservation(t.Context(), census,
+				func(before linuxProcessStat) (processSnapshot, error) {
+					attempts++
+					if attempts == 1 || test.change == "unsettled" {
+						return processSnapshot{}, test.probeErr
+					}
+					row := before.snapshot
+					row.coherent = true
+					row.rssBytes = 4096
+					return row, nil
+				}, func() (linuxProcessStat, error) {
+					row := census
+					row.snapshot.name = "git"
+					if test.change == "parent" {
+						row.snapshot.parent = 2
+					}
+					if test.change == "lifetime" {
+						row.snapshot.identityToken = "101"
+					}
+					return row, nil
+				})
+			if (err != nil) != test.wantError || attempts != test.wantAttempts {
+				t.Fatalf("attempts=%d,err=%v", attempts, err)
+			}
+		})
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	called := false
+	_, err := collectLinuxResidentObservation(ctx, census, func(linuxProcessStat) (processSnapshot, error) { called = true; return processSnapshot{}, nil }, nil)
+	if !errors.Is(err, context.Canceled) || called {
+		t.Fatalf("canceled attempt called=%t,err=%v", called, err)
+	}
+}

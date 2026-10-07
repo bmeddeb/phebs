@@ -3111,7 +3111,9 @@ T40's shared collector, which T42's process gauges already consume. One host
 capped at 4,096 bytes plus an overflow sentinel. Traverse at most 129 root-first
 process candidates. Use `smaps_rollup` resident bytes, bracketed by unchanged
 lifetime, parent and command records, rather than approximate stat/statm RSS.
-Unavailable memory or permission errors refuse; only kernel-confirmed vanished
+Only same-lifetime/same-parent command transitions may remeasure, at most three
+attempts under the original context. Unavailable memory or permission errors
+refuse; only kernel-confirmed vanished
 processes may be omitted. Linux kernel-worker names up to 256 bytes may enter
 the host census; selected measured processes retain the 16-byte name bound.
 Executable observations admit at most two PIDs, bounded canonical undeleted

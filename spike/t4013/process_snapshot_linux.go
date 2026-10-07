@@ -18,6 +18,8 @@ import (
 
 const maxLinuxProcessFileBytes = 4096
 
+var errLinuxProcessNameTransition = errors.New("linux process command changed during resident observation")
+
 type linuxProcessStat struct {
 	snapshot processSnapshot
 	state    string
@@ -95,8 +97,12 @@ func linuxProcessResidentBytes(procRoot string, pid int, before linuxProcessStat
 	if err != nil {
 		return processSnapshot{}, err
 	}
-	if before.snapshot != after.snapshot || before.state != after.state && (after.state == "Z" || after.state == "X") {
+	if before.snapshot.identityToken != after.snapshot.identityToken || before.snapshot.parent != after.snapshot.parent ||
+		before.state != after.state && (after.state == "Z" || after.state == "X") {
 		return processSnapshot{}, errors.New("linux process changed during resident memory observation")
+	}
+	if before.snapshot.name != after.snapshot.name {
+		return processSnapshot{}, errLinuxProcessNameTransition
 	}
 	if len(after.snapshot.name) > 16 {
 		return processSnapshot{}, errors.New("linux selected process command exceeds its bound")
@@ -104,6 +110,32 @@ func linuxProcessResidentBytes(procRoot string, pid int, before linuxProcessStat
 	result := after.snapshot
 	result.rssBytes, result.coherent = rss, true
 	return result, nil
+}
+
+// A command transition may invalidate one read without losing its lifetime or
+// parent. Retry only that class of refusal, under the caller's same deadline.
+// Denial, missing memory, lifetime/parent drift and exhausted retries stay fatal.
+func collectLinuxResidentObservation(ctx context.Context, census linuxProcessStat,
+	observe func(linuxProcessStat) (processSnapshot, error), refresh func() (linuxProcessStat, error),
+) (processSnapshot, error) {
+	before := census
+	for attempt := 0; attempt < maxProcessSampleAttempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return processSnapshot{}, err
+		}
+		row, err := observe(before)
+		if !errors.Is(err, errLinuxProcessNameTransition) || attempt == maxProcessSampleAttempts-1 {
+			return row, err
+		}
+		before, err = refresh()
+		if err != nil {
+			return processSnapshot{}, err
+		}
+		if before.snapshot.identityToken != census.snapshot.identityToken || before.snapshot.parent != census.snapshot.parent {
+			return processSnapshot{}, errors.New("linux process lifetime or parent changed during command transition")
+		}
+	}
+	return processSnapshot{}, errLinuxProcessNameTransition
 }
 
 func parseLinuxResidentBytes(raw []byte) (int64, error) {
@@ -192,7 +224,11 @@ func linuxProcessSnapshotAt(ctx context.Context, procRoot string, root int) ([]i
 			return nil, nil, err
 		}
 		pid := queue[index]
-		observed, err := linuxProcessResidentBytes(procRoot, pid, stats[pid])
+		observed, err := collectLinuxResidentObservation(ctx, stats[pid],
+			func(before linuxProcessStat) (processSnapshot, error) {
+				return linuxProcessResidentBytes(procRoot, pid, before)
+			},
+			func() (linuxProcessStat, error) { return linuxProcessStatAt(procRoot, pid) })
 		if errors.Is(err, errProcessIdentityMissing) {
 			if pid == root {
 				return []int{root}, map[int]processSnapshot{}, nil
