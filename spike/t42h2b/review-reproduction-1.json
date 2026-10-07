@@ -95,6 +95,9 @@
   },
 
   "corrected_reproduction": {
+    "corrected_commit": "56970e995079b8e4145b5f88f618383c79e0d58e",
+    "test_binary_sha256": "sha256:e18fd156c88ef0f899a5663c2866dbdb469d9fc232c91c0066d814c5392a01f6",
+    "committed_tree_binding": "the 20/20 result below was re-run from a test binary recompiled at 56970e99 after that commit, with both committed blob hashes matching corrected_source_files_sha256",
     "repetitions": 20,
     "pass": 20,
     "fail": 0,

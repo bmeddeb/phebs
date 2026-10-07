@@ -3251,12 +3251,15 @@ Because these corrections change both bound source files, the retained
 `sealed-input-rehearsal-1.json` no longer describes the corrected tree. That
 record is preserved unchanged and remains true of `c07bc930`. The corrected tree
 carries the off-selected-host reproduction at
-[`review-reproduction-1.json`](../spike/t42h2b/review-reproduction-1.json); that
-host is not the T42.H1 selected machine, the `go` toolchain cannot run inside it
-and no `-race` build was possible, so a fresh native normal and race rerun on
-the selected host remains required before the corrected tree can be called
-green. No merge, complete readiness, new plan, freeze, execution or scale claim
-follows.
+[`review-reproduction-1.json`](../spike/t42h2b/review-reproduction-1.json),
+which binds corrected implementation
+`56970e995079b8e4145b5f88f618383c79e0d58e` and records a 20/20 repetition run
+from a test binary recompiled at that exact commit with both blob hashes
+verified. That host is not the T42.H1 selected machine, the `go` toolchain
+cannot run inside it and no `-race` build was possible, so a fresh native normal
+and race rerun on the selected host remains required before the corrected tree
+can be called green. No merge, complete readiness, new plan, freeze, execution
+or scale claim follows.
 
 **T42.H2c · Linux direct-tool custody and object binding** *(third H2 slice,
 2026-10-06)* — bind implemented Go reference tools and the selected external
