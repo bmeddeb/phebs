@@ -14,15 +14,21 @@ import (
 func TestLinuxExternalToolRefusesChildProbeRolesWithoutExecution(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "must-not-run")
 	script := writeExternalToolScript(t, fmt.Sprintf("printf called > %q\n", marker))
+	assertRefusal := func(t *testing.T, role, binary string) {
+		t.Helper()
+		identity, err := ObserveExecutionExternalTool(t.Context(), role, binary)
+		assertExternalToolRefusal(t, identity, err, binary)
+		if err == nil || err.Error() != "external tool version probes are not admitted on Linux" {
+			t.Fatalf("child-probe role %q did not hit the Linux probe refusal: %v", role, err)
+		}
+	}
 	for _, role := range []string{"git", "go", "surreal"} {
 		t.Run(role, func(t *testing.T) {
-			identity, err := ObserveExecutionExternalTool(t.Context(), role, script)
-			assertExternalToolRefusal(t, identity, err, script, marker)
+			assertRefusal(t, role, script)
+			if binary, err := exec.LookPath(role); err == nil {
+				assertRefusal(t, role, binary)
+			}
 		})
-		if binary, err := exec.LookPath(role); err == nil {
-			identity, err := ObserveExecutionExternalTool(t.Context(), role, binary)
-			assertExternalToolRefusal(t, identity, err, binary)
-		}
 	}
 	if _, err := os.Lstat(marker); !os.IsNotExist(err) {
 		t.Fatalf("Linux child-probe refusal executed a rejected image: %v", err)

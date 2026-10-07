@@ -45,7 +45,8 @@ func executionSystemToolPath(role string) string {
 func HoldExecutionSystemTool(ctx context.Context, role string) (_ *ExecutionSystemToolCustody, retErr error) {
 	path := executionSystemToolPath(role)
 	if ctx == nil || ctx.Err() != nil || path == "" ||
-		!((runtime.GOOS == "darwin" && runtime.GOARCH == "arm64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64")) {
+		((runtime.GOOS != "darwin" || runtime.GOARCH != "arm64") &&
+			(runtime.GOOS != "linux" || runtime.GOARCH != "amd64")) {
 		return nil, ErrExecutionToolCustody
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
