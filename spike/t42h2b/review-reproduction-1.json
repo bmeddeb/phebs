@@ -37,7 +37,15 @@
     "race_build_possible": false,
     "race_build_reason": "the race detector requires cgo and a linux/amd64 C cross toolchain, which this host does not provide",
     "go_toolchain_runnable_in_container": false,
-    "go_toolchain_failure": "cmd/go aborted with 'runtime: marked free object in span ... (bad use of unsafe.Pointer or having race conditions?)' at cmd/go/internal/modindex.getFileInfo while indexing the module cache; an emulation artifact, so only the pre-cross-compiled test binary was executed"
+    "go_toolchain_failure": "cmd/go aborted with 'runtime: marked free object in span ... (bad use of unsafe.Pointer or having race conditions?)' at cmd/go/internal/modindex.getFileInfo while indexing the module cache; an emulation artifact, so only the pre-cross-compiled test binary was executed",
+    "emulation_artifact": {
+      "symptom": "a linux/amd64 binary occasionally exits 139 (SIGSEGV) before printing any output",
+      "control_experiment": "a trivial hello-world linux/amd64 Go binary segfaulted 1 of 300 runs in the same container, and the t421 test binary invoked with -test.list, which runs no test at all, segfaulted 3 of 200",
+      "attribution": "Rosetta translation process startup. Independent of phebs code, of the custody implementation and of every test assertion.",
+      "observed_rate": "roughly 0.3% to 1.5% of process starts",
+      "handling": "exit 139 with no test output is discarded as environmental; only runs that reach test output are counted",
+      "warning_for_reruns": "an emulated rerun will show occasional exit 139. It is not a custody failure and must not be recorded as one; rerun the affected repetition instead."
+    }
   },
 
   "kernel_contract_probe": {
@@ -120,10 +128,18 @@
   "corrected_reproduction": {
     "corrected_commit": "56970e995079b8e4145b5f88f618383c79e0d58e",
     "test_binary_sha256": "sha256:e18fd156c88ef0f899a5663c2866dbdb469d9fc232c91c0066d814c5392a01f6",
-    "committed_tree_binding": "the 20/20 result below was re-run from a test binary recompiled at 56970e99 after that commit, with both committed blob hashes matching corrected_source_files_sha256",
+    "committed_tree_binding": "the 20/20 result below was re-run from a test binary recompiled at 56970e99 after that commit, with both committed blob hashes matching corrected_source_files_sha256; recompiling at 74554873 produced a byte-identical binary at the same digest, because no file under spike/t421/ changed",
     "repetitions": 20,
     "pass": 20,
     "fail": 0,
+    "extended_repetition_tally": {
+      "batches": "six independent batches of 20, 20, 20, 40, 25 and 60 repetitions",
+      "runs_attempted": 185,
+      "runs_reaching_test_output": 183,
+      "assertion_failures": 0,
+      "emulation_segfaults_discarded": 2,
+      "one_batch_under_4x_cpu_contention": "25 of 25 passed on a 2-CPU VM"
+    },
     "top_level_tests": 9,
     "subtests": 53,
     "skipped_tests": 0,

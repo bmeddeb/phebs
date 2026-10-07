@@ -3270,7 +3270,15 @@ carries the off-selected-host reproduction at
 which binds corrected implementation
 `56970e995079b8e4145b5f88f618383c79e0d58e` and records a 20/20 repetition run
 from a test binary recompiled at that exact commit with both blob hashes
-verified. That host is not the T42.H1 selected machine, the `go` toolchain
+verified; recompiling at the later probe commit produced a byte-identical
+binary, because no file under `spike/t421/` changed. Across six batches, 183 of
+185 runs reached test output and none failed an assertion. The other two exited
+139 before printing anything, and a control showed a trivial hello-world
+linux/amd64 binary segfaulting 1 in 300 in the same container while the test
+binary under `-test.list`, which runs no test at all, segfaulted 3 in 200.
+Those are Rosetta process-startup artifacts of the emulated host rather than
+custody failures, and a rerun must not record them as such. That host is not the
+T42.H1 selected machine, the `go` toolchain
 cannot run inside it and no `-race` build was possible, so a fresh native normal
 and race rerun on the selected host remains required before the corrected tree
 can be called green. No merge, complete readiness, new plan, freeze, execution
