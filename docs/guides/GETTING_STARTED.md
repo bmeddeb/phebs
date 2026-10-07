@@ -12,8 +12,9 @@ phebs builds and runs on 64-bit platforms only: Linux amd64 and arm64, and
 macOS arm64 and amd64. 32-bit targets such as `linux/386` and `linux/arm` are
 not supported, and are not built, tested or released; other operating systems
 are out of scope on the same basis. The published release bundle is
-`linux-amd64`, and `make release` builds for the host platform and refuses a
-target that cannot be smoke-tested there.
+`linux-amd64`. `make release` refuses any target outside that supported set
+before doing any build work, and then requires the target to be executable on
+the host so it can be smoke-tested there.
 
 | Requirement                        | Why                                                                  | Install                                                                                |
 | ---------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |

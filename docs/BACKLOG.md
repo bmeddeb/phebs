@@ -3280,6 +3280,25 @@ previously stated no architecture requirement at all. No T42.H2b or T42.H2c
 custody file appears among the failures, so the Linux custody work builds across
 the whole supported set.
 
+Ben then asked for the policy to be enforced rather than only written down.
+`make validate-release-target` now refuses any target outside
+`SUPPORTED_RELEASE_TARGETS` before any build work, ahead of the pre-existing
+requirement that the target be executable on the smoke host, which is unchanged.
+The refusal names the supported set so it is actionable, and adds a 32-bit
+explanation for genuine 32-bit GOARCH values only: `linux/386`, `arm`, `mips`,
+`mipsle`, `ppc` and `s390` get it, while an unsupported 64-bit target such as
+`linux/riscv64` or `linux/loong64` and a non-Linux/Darwin OS do not, so the
+diagnostic never misattributes the reason. `linux/arm64` is deliberately
+checked not to match the `arm` rule. `scripts/release_target_test.go` pins the
+refusal behavior across eleven targets, the arm64 prefix hazard, host-platform
+acceptance, and the exact supported list, so widening the variable fails a gate
+instead of passing silently; the same test asserts the PLAN, AGENTS and
+getting-started records still carry the decision. Verified by mutation: widening
+the list on the command line lets `linux/386` past the policy gate and into the
+host-executability refusal, confirming the variable is what drives it. The full
+`scripts` package passes with the new tests. The guard runs only under `make
+release`; `make build` and `make dev` use the host toolchain and are unchanged.
+
 Because these corrections change both bound source files, the retained
 `sealed-input-rehearsal-1.json` no longer describes the corrected tree. That
 record is preserved unchanged and remains true of `c07bc930`. The corrected tree
