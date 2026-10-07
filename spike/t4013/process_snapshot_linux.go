@@ -78,12 +78,17 @@ func linuxProcessStatAt(procRoot string, pid int) (linuxProcessStat, error) {
 // bracketed by lifetime, parent and command observations, instead.
 func linuxProcessResidentBytes(procRoot string, pid int, before linuxProcessStat) (processSnapshot, error) {
 	rss := int64(0)
-	if before.state != "Z" && before.state != "X" {
+	if !linuxProcessDefunct(before.state) {
 		raw, err := readLinuxProcessFile(filepath.Join(procRoot, strconv.Itoa(pid), "smaps_rollup"))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) || errors.Is(err, unix.ESRCH) {
-				if _, identityErr := linuxProcessStatAt(procRoot, pid); errors.Is(identityErr, errProcessIdentityMissing) {
+				fresh, identityErr := linuxProcessStatAt(procRoot, pid)
+				if errors.Is(identityErr, errProcessIdentityMissing) {
 					return processSnapshot{}, identityErr
+				}
+				if identityErr == nil && fresh.snapshot.identityToken == before.snapshot.identityToken &&
+					fresh.snapshot.parent == before.snapshot.parent && linuxProcessDefunct(fresh.state) {
+					return linuxResidentProcessRow(fresh, 0)
 				}
 			}
 			return processSnapshot{}, fmt.Errorf("read Linux resident memory: %w", err)
@@ -98,18 +103,28 @@ func linuxProcessResidentBytes(procRoot string, pid int, before linuxProcessStat
 		return processSnapshot{}, err
 	}
 	if before.snapshot.identityToken != after.snapshot.identityToken || before.snapshot.parent != after.snapshot.parent ||
-		before.state != after.state && (after.state == "Z" || after.state == "X") {
+		linuxProcessDefunct(before.state) && !linuxProcessDefunct(after.state) {
 		return processSnapshot{}, errors.New("linux process changed during resident memory observation")
+	}
+	if linuxProcessDefunct(after.state) {
+		return linuxResidentProcessRow(after, 0)
 	}
 	if before.snapshot.name != after.snapshot.name {
 		return processSnapshot{}, errLinuxProcessNameTransition
 	}
-	if len(after.snapshot.name) > 16 {
+
+	return linuxResidentProcessRow(after, rss)
+}
+
+func linuxProcessDefunct(state string) bool { return state == "Z" || state == "X" || state == "x" }
+
+func linuxResidentProcessRow(stat linuxProcessStat, rss int64) (processSnapshot, error) {
+	if len(stat.snapshot.name) > 16 {
 		return processSnapshot{}, errors.New("linux selected process command exceeds its bound")
 	}
-	result := after.snapshot
-	result.rssBytes, result.coherent = rss, true
-	return result, nil
+	row := stat.snapshot
+	row.rssBytes, row.coherent = rss, true
+	return row, nil
 }
 
 // A command transition may invalidate one read without losing its lifetime or

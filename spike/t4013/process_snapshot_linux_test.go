@@ -95,7 +95,6 @@ func TestLinuxSnapshotRefusalAndTraversal(t *testing.T) {
 		{"lifetime", linuxStatFixture(11, 10, "test", "101", "S")},
 		{"parent", linuxStatFixture(11, 1, "test", "100", "S")},
 		{"image class", linuxStatFixture(11, 10, "git", "100", "S")},
-		{"exit", linuxStatFixture(11, 10, "test", "100", "Z")},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(root, "11", "stat"), test.raw, 0600); err != nil {
@@ -112,6 +111,16 @@ func TestLinuxSnapshotRefusalAndTraversal(t *testing.T) {
 	if err := os.Remove(filepath.Join(root, "11", "smaps_rollup")); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(root, "11", "stat"), linuxStatFixture(11, 10, "test", "100", "Z"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if row, err := linuxProcessResidentBytes(root, 11, before); err != nil || row.rssBytes != 0 || !row.coherent {
+		t.Fatalf("confirmed defunct=%+v,%v", row, err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "11", "stat"), linuxStatFixture(11, 10, "test", "100", "S"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
 	if _, _, err := linuxProcessSnapshotAt(t.Context(), root, 10); err == nil {
 		t.Fatal("unavailable child RSS admitted")
 	}

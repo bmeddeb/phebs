@@ -23,8 +23,8 @@ inventory, host observation, and receipt; do not rewrite the original host
 facts, signatures, failure classifications, or results.
 
 T42.H1/H2 in [BACKLOG.md](../BACKLOG.md) own this transition. The existing T42
-execution implementation still has Darwin-specific process, executable,
-custody, signing/session, and pressure-volume adapters. Implement and verify
+execution implementation still has Darwin-specific custody, signing/session,
+and pressure-volume adapters. Implement and verify
 their Linux equivalents here before a run. New plan memory budgets must fit
 measured physical/effective cgroup capacity, include child reservations and
 host headroom, and replace the old 20-GiB RSS envelope. Swap supplies no extra
@@ -49,7 +49,7 @@ records and changed lifetimes/parents refuse. A command-name transition alone
 may remeasure at most three times under the same context, accepting only a fresh
 bracketed row of the same lifetime and parent. Denial never retries. A live
 process never receives invented
-zero RSS. Executable paths are observations requiring later independent image
+zero RSS; a matching kernel-confirmed defunct process has zero resident bytes. Executable paths are observations requiring later independent image
 custody; deleted images refuse. No sampler helper child is launched.
 
 The rollup asks the kernel to walk each selected process's mappings/page tables,
