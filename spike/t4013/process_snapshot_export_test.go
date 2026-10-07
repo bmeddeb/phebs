@@ -58,7 +58,7 @@ func TestObserveProcessTreeRecordsRealAndCanceled(t *testing.T) {
 	if _, err := ObserveProcessTreeRecords(ctx, os.Getpid()); err == nil {
 		t.Fatal("canceled observation accepted")
 	}
-	if runtime.GOOS != "darwin" {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 		if _, err := ObserveProcessTreeRecords(t.Context(), os.Getpid()); err == nil {
 			t.Fatal("unsupported native collector accepted")
 		}
