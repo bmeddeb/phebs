@@ -3330,6 +3330,24 @@ and race rerun on the selected host remains required before the corrected tree
 can be called green. No merge, complete readiness, new plan, freeze, execution
 or scale claim follows.
 
+**The selected-host rerun is done (2026-10-07).** The fresh native normal and
+race rerun required above subsequently ran on the T42.H1 selected host (kernel
+`7.0.0-38-generic`) against exact branch bytes `fd1fb626`, after both committed
+source blobs re-hashed to `corrected_source_files_sha256`. Normal passed 9
+top-level tests and 53 subtests with 0 failures and 0 skips in 0.135s; twenty
+`-race` repetitions of the same selector passed in 3.411s. `t42h2b-seal-probe`
+passed all 24 kernel invariants. The ctime probe inverted the reviewer's host
+result rather than reproducing it: this host measured ~886ns effective
+timestamp granularity and 0/200 restored-chmod sequences left `Ctim` unchanged,
+where the reviewer's ~1 ms host saw the failure 198/200 — the original flake
+was environmental while both replacement oracles were deterministic here
+(200/200 unrestored drift, explicit `utimensat` drift). Module build, vet over
+the changed package trees, gofmt, the `scripts` package, changed-file pinned
+lint (`--new-from-rev=origin/main --whole-files`, 0 issues), `make docs-check`,
+`make verify-glossary` and whitespace pass. This closes only the tested-bytes
+nonclaim of `review-reproduction-1.json`; complete H2 readiness, a new plan,
+freeze, execution and scale claims remain open.
+
 **T42.H2c · Linux direct-tool custody and object binding** *(third H2 slice,
 2026-10-06)* — bind implemented Go reference tools and the selected external
 SurrealDB direct image to H2b sealed bytes. Verify Go tools through the existing
