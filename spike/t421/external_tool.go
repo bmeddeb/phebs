@@ -52,8 +52,20 @@ func ObserveExecutionExternalTool(ctx context.Context, role, binary string) (ide
 	default:
 		return identity, errors.New("external tool role is not in the implemented inventory")
 	}
-	if runtime.GOOS == "linux" && role == "surreal" {
-		return identity, errors.New("external SurrealDB observation requires its sealed Linux custody")
+	// Linux admits an allowlist of the roles that carry an explicit decision here,
+	// not a denial of one named role, so a future probed role fails closed instead
+	// of being silently observed with no platform decision. SurrealDB keeps its
+	// single admitted Linux route in ProtectLinuxExecutionExternalTool.
+	if runtime.GOOS == "linux" {
+		switch role {
+		case "surreal":
+			return identity, errors.New("external SurrealDB observation requires its sealed Linux custody")
+		case "git", "go", "sh", "ssh-keygen", "hdiutil":
+			// The two shared child-probe recipes and the three fixed-system images
+			// that run no version child.
+		default:
+			return identity, errors.New("external tool role has no admitted Linux observation")
+		}
 	}
 	if !filepath.IsAbs(binary) || strings.TrimSpace(binary) != binary {
 		return identity, errors.New("external tool requires an explicit absolute image path")

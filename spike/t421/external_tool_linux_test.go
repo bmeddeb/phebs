@@ -73,18 +73,29 @@ func TestLinuxExternalToolRefusesSurrealWithoutExecution(t *testing.T) {
 }
 
 // TestLinuxExternalToolRefusesWrongRoleNativeImages proves each admitted role
-// stays bound to its own structural oracle. Every image here is a real native
-// ELF64 executable that passes the bounded header screen, so only the role
-// oracle refuses it, and each refusal names that oracle instead of leaking the
-// selected path. This is the Linux analogue of the Darwin delegating-shim case,
-// which additionally needs a second Git build this host does not carry.
+// stays bound to an oracle that rejects a foreign image. Every image here is a
+// real native ELF64 executable that passes the bounded header screen, so no case
+// is refused by the image screen and each subtest names the exact oracle that
+// does refuse it: three reach a role-specific oracle, while the foreign
+// `ssh-keygen` image stops earlier at the role-independent closed-probe oracle
+// because its `--version` exits nonzero with stderr. A refused observation must
+// also leave no private probe scratch behind. This is the Linux analogue of the
+// Darwin delegating-shim case, which additionally needs a second Git build this
+// host does not carry.
 func TestLinuxExternalToolRefusesWrongRoleNativeImages(t *testing.T) {
 	gitBinary := requireLinuxExternalTool(t, "git")
 	surrealBinary := requireLinuxExternalTool(t, "surreal")
+	probeParent, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TMPDIR", probeParent)
+	defer assertExternalProbeParentEmpty(t, probeParent)
 	for _, test := range []struct{ name, role, binary, want string }{
 		{"go role rejects the Git image", "go", gitBinary,
 			"external Go version differs from the verifier toolchain"},
-		{"git role rejects a foreign native image", "git", executionSystemToolPath("ssh-keygen"),
+		{"git role rejects a foreign native image at the closed probe oracle", "git",
+			executionSystemToolPath("ssh-keygen"),
 			"external tool version probe failed or was not source-free"},
 		{"git role rejects a valid non-Git version", "git", surrealBinary,
 			"external Git version is invalid"},
