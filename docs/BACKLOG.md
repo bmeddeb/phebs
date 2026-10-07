@@ -3142,6 +3142,95 @@ and that broad package is not claimed green. The source-free record is
 The private rehearsal parent is empty. Independent review remains pending;
 no integration, complete H2 readiness, new plan, freeze or ceremony follows.
 
+**T42.H2b · Linux sealed direct-input custody** *(second H2 prerequisite slice,
+2026-10-06)* — add a distinct anonymous-FD custody capability on Linux amd64.
+Keep Darwin path/directory custody and retained plan/receipt bytes exact. Copy
+at most 64 selected direct files, each 256 MiB and together 2 GiB, with one
+reused 32-KiB buffer; require canonical nonfollowing regular sources, stable
+held/path metadata, exact sealed-byte hashes and kernel write/size/execute-bit/
+seal-set protection. Publish only read-only CLOEXEC keepers; scoped loans hold
+the custody lock through trusted joined use and release the loan on failure or
+panic. Check never hashes payloads and latches metadata/protection/descriptor,
+context, missing-input or closed-state failures. AC: actual kernel mutation
+refusals, joined executable and denied data execution, source independence,
+partial-failure/64-file FD cleanup, ELF header bounds, cancellation, sticky
+checks and normal/race tests pass without native skips. Non-execute permissions
+are mutable kernel metadata and their drift must refuse even if restored.
+Anonymous payload memory is separately reserved beyond process RSS in future
+aggregate admission; neither the 2-GiB local ceiling nor successful `/usr/bin/true`
+execution admits a loader, dynamic library, helper, tool provenance or command.
+This foundation does not wire a ceremony entry point or establish complete
+input/tool/signer/dispatch custody. Kernel support/permission denial refuses
+without a chmod-only fallback. Independent review remains pending; no merge,
+complete readiness, new plan, freeze, execution or scale claim follows.
+
+T42.H2b exact implementation `c07bc9302220ce505a907cacdcc5245d755e8497`
+passed all nine native tests without skips: normal 0.181s, race 1.368s and twenty
+race repetitions 2.747s. Real joined executable/noexec-data, kernel mutation
+refusals, 64-file and partial-failure FD cleanup, source independence, panic and
+cancellation checks passed. Existing T42 process gauges passed race in 2.038s;
+T40 current/deleted executable regressions passed race in 1.498s. Affected vet,
+module verification, changed-file pinned lint (zero issues), docs, glossary and
+whitespace pass. Broader T421 lint still has the same thirteen inherited unused
+findings, and the full T421 package is not claimed green; H2a's retained broader
+baseline qualifications remain. The source-free record is
+[`sealed-input-rehearsal-1.json`](../spike/t42h2b/sealed-input-rehearsal-1.json).
+The final documentation record additionally states per-instance bounds, no
+global reservation and up to 2 GiB reclaimable source-file cache; no compiled,
+fixture or harness input changed. Independent review and the remaining H2
+adapters/admission are still pending.
+
+**T42.H2c · Linux direct-tool custody and object binding** *(third H2 slice,
+2026-10-06)* — bind implemented Go reference tools and the selected external
+SurrealDB direct image to H2b sealed bytes. Verify Go tools through the existing
+exact source/module/SDK/reference-byte recipe using the held FD; preserve the
+public path verifier and historical contracts. Execute only the selected sealed
+SurrealDB image for its closed version probe. Give scoped callers the protected
+image and detached verifier-produced identity, with no caller-authored verified
+flag. Add a separate bounded process-object matcher: one pidfd exit fence, two
+4-KiB stat brackets and one executable-object open, comparing the held inode;
+H2a's existing deleted-path refusals remain exact. AC: normal/race actual
+SurrealDB and exact Go rebuild, metadata-identical byte-lie rejection, source
+path removal, unknown role/context/version/source-bearing/stderr/output-cap
+refusals, executed cancellation, anonymous/deleted/current/wrong/exited image
+matches and retained unjoined/live-descendant probe cleanup pass without native
+skips. Uncertain probe drain/removal returns unusable retained cleanup custody,
+not a success or premature scratch/image disposal. Check hashes no image; scoped
+use serializes Close and requires trusted no-escape/joined callbacks. The new
+external provenance is not accepted by retained freeze validators. This is
+neither toolchain/loader/library/helper closure nor complete dispatch/session
+admission: resource bounds are per instance, not globally reserved; existing
+reference compile/cache work has no hard RSS/disk ceiling. Independent review,
+prospective admission and ceremony entry-point integration remain pending.
+
+T42.H2c exact implementation `ecaccf8c482bc3386c469cb866361123b0e0bba0`
+passed 22 tool/input/reference top-level tests normal in 96.535s and race in
+105.047s, including the existing public exact-byte verifier and preparation
+session regressions. Five kernel-image/path tests passed normal in 0.114s and
+race in 1.347s; twenty image-matching race repetitions passed in 2.524s, and
+twenty scoped-tool/retained-probe race repetitions passed in 17.989s. No selected
+test skipped. Actual host SurrealDB 3.2.0 was probed from its sealed image;
+the exact reference build used the neutral `phebs-focused-index` fixture, not a
+full tool inventory. Native wrong-version, stderr, source fragment, output-cap
+and executed cancellation probes refused cleanly; unjoined/live-descendant
+cleanup retained unusable custody until drained. Affected vet, module
+verification, changed-file pinned lint (zero issues), docs, glossary and
+whitespace pass. No Linux tool-probe scratch entry remains. The source-free
+record is [`tool-custody-rehearsal-1.json`](../spike/t42h2c/tool-custody-rehearsal-1.json).
+Broader T421 lint/package remain qualified by the retained H2a/H2b baseline
+failures and are not claimed green. Independent review and the remaining H2
+adapters/admission remain pending; no merge, complete readiness, new plan,
+freeze, ceremony or scale claim follows.
+
+**T42.H2d · Linux signer and namespace custody** *(next H2 slice)* — implement
+Linux signing/keypair and immutable control/dispatch-input custody with exact
+key integrity, authenticated returned-evidence and durable namespace/promotion
+refusal gates. Existing kernel byte seals and tool identities supply no signer
+or command permission. Git/Go SDK/helper and fixed-system recipes, native
+session/descendant hard-death supervision, isolated pressure/allocation/restore,
+new Linux plan versions and aggregate physical/effective-cgroup resource
+admission remain H2 prerequisites before complete readiness, freeze or execution.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

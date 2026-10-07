@@ -61,6 +61,101 @@ required before complete readiness. This command launches no ceremony. The first
 record is [`native-accounting-rehearsal-1.json`](../../spike/t42h2a/native-accounting-rehearsal-1.json);
 its owning backlog record preserves the broader baseline gate failures.
 
+T42.H2b supplies a separate Linux amd64 direct-input custody primitive using
+kernel-sealed anonymous memory files. Its finite native checks run with:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=2m ./spike/t421 -run '^TestLinuxInputCustody'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=2m ./spike/t421 -run '^TestLinuxInputCustody'
+```
+
+The kernel must support explicit executable/nonexecutable memfd creation and
+write, size, execute-bit and seal-set protection. Policy denial or unsupported
+protection refuses; these checks have no native skip or mode-only fallback and
+require no additional sudo setup. Each copy is at most 256 MiB, at most 64 files
+and 2 GiB total; those are local bounds rather than prospective aggregate
+admission. Up to 2 GiB of anonymous shmem payload must be reserved separately
+from process RSS against measured physical/effective cgroup capacity, with
+children and host headroom and no swap credit. One reused 32-KiB buffer streams
+construction; at most 64 read-only CLOEXEC keepers remain. Construction peaks at
+66 owned FDs, and one scoped loan adds one keeper-equivalent FD.
+The bounds are per instance and reserve no global capacity. Source reads may
+also populate up to 2 GiB of reclaimable file cache; future admission must
+account for concurrent instances, cache and kernel overhead as well as payload.
+
+Original files and namespace entries stay mutable and caller-owned; custody
+owns sealed copies. Byte/size/execute-bit changes are kernel-denied, while
+other permission metadata remains mutable and any observed drift invalidates
+custody. Checks inspect kernel metadata and seals without hashing the payload.
+Scoped use serializes Check/Close until the trusted callback joins all users;
+returned callback errors propagate, and protection/close/cancellation failures
+or callback panic invalidate custody. The caller must not escape descriptors
+or mappings. Close releases owned FDs, with no source removal or disk copies;
+it cannot certify orphan/descendant teardown.
+
+The ELF header screen and joined neutral executable prove only this primitive;
+they do not admit tools, loader/library/helper closure, a signer, environment,
+argv or ceremony dispatch. Anonymous executed images need a prospective
+kernel-object binding; the existing process observer still refuses deleted
+paths. Full Linux tool/dispatch custody (T42.H2c), signer/namespace custody
+(T42.H2d), session teardown, pressure adapters, new plan versions and complete
+resource/readiness admission remain required. These commands launch no ceremony and establish no scale result.
+
+The first source-free normal/race and twenty-repetition record is
+[`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
+Its owning backlog preserves the broader T421 gate qualifications.
+
+T42.H2c binds selected direct tool images to those sealed bytes. Implemented Go
+roles undergo the same independent exact tracked-source/module/SDK build and
+complete byte comparison; the public path verifier keeps its existing recipe.
+SurrealDB alone supports a Linux external sealed-image probe. With the prepared
+host PATH loaded (including its SurrealDB binary), run the finite native gates:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=10m ./spike/t421 -run '^TestLinuxToolCustody|^TestVerifyExecutionReferenceToolComparesExactBinaryBytes$'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=10m ./spike/t421 -run '^TestLinuxToolCustody|^TestVerifyExecutionReferenceToolComparesExactBinaryBytes$'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=2m ./spike/t4013 -run '^TestLinuxProcessImage|^TestLinuxDeletedExecutableRefused$'
+```
+
+The native SurrealDB test fails if its prepared host tool is missing; it does not
+skip. The production API receives an explicit selected image, never discovers a
+PATH executable. The version probe executes its sealed FD with a closed
+argument/environment recipe, 4-KiB stdout/stderr caps, a ten-second command
+context, joined root and existing bounded preparation-session drain. Version
+syntax is observation, not vendor attestation or helper/loader/library closure.
+Uncertain probe drain/removal returns non-nil unusable cleanup custody. Retain
+that handle, keeper and private scratch; retry Close for observation/removal.
+Close does not signal a reused PID or dispose scratch before join/drain. The
+preparation drain still uses the inherited bounded Linux `/bin/ps` helper,
+including one additional final census before scratch removal; native session/
+hard-death integration remains separate work.
+
+The new process matcher compares a live task's executable inode with a held
+image under two bounded stat brackets and a pidfd exit fence. It supports
+anonymous/deleted kernel objects; the existing pathname observer still refuses
+deleted images. This is one sample, not continuous exec history, process
+ownership or authorization. No process census, helper or image hash is added to
+that matcher. Protected-image scoped callbacks must join all users, avoid
+escaping FDs/mappings and avoid reentering custody methods; a refused use leaves
+the tool permanently unusable.
+
+Each tool copy can hold 256 MiB of anonymous payload beyond process RSS, and its
+reads may add 256 MiB of reclaimable source cache. Budgets must also include
+concurrent instances, children, reference compiler/cache and kernel overhead.
+These limits reserve no global capacity; reference build/cache and trusted
+external child work have no new hard RSS/disk quota. The existing cooperative
+reference-build deadline and native command/output/cleanup bounds remain. New
+Linux external provenance deliberately fails historical freeze validation;
+retained plans and evidence keep their original versions. Signer/namespace
+custody (T42.H2d), Git/Go SDK/helper and fixed-system recipes, complete session/
+pressure adapters and prospective measured resource/plan/readiness admission
+remain required. These checks execute no ceremony and establish no scale claim.
+
+The source-free exact-commit record is
+[`tool-custody-rehearsal-1.json`](../../spike/t42h2c/tool-custody-rehearsal-1.json).
+It distinguishes the actual SurrealDB observation from the neutral Go fixture
+and preserves broader baseline gate qualifications in the owning backlog.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

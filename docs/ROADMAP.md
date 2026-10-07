@@ -23,7 +23,24 @@ filesystems and prospective measured resource admission remain open; this slice
 alone does not make a rehearsal or ceremony ready. Its finite Linux normal/race
 and real T42 gauge checks pass; broader legacy platform/dispatch gates remain
 qualified in the owning backlog record. Linux input/tool/signer/dispatch custody
-is the next H2 slice.
+follows native accounting.
+
+T42.H2b adds Linux sealed direct-input custody as the next prerequisite:
+anonymous kernel-protected bytes, read-only descriptors and scoped joined use,
+with a separate payload-memory reservation required beyond process RSS. It
+keeps the existing Darwin namespace contract exact and adds no ceremony entry
+point. T42.H2c owns Linux direct-tool provenance and protected image binding;
+session/descendant teardown, pressure adapters, prospective plan versions and
+aggregate resource admission remain open before complete readiness.
+
+T42.H2c supplies Linux direct-tool custody: exact reference-built Go images,
+a sealed SurrealDB version probe, and a separate held-object process matcher for
+anonymous images. Historical pathname refusals stay exact. Retained uncertain
+probe custody remains unusable until joined/drained cleanup succeeds; successful
+observations are not loader/helper or full toolchain admission. T42.H2d next
+owns signer/namespace custody. Git/Go SDK/helper and fixed-system recipes,
+session/hard-death integration, pressure adapters, new plans and aggregate
+resource/readiness admission remain open; no ceremony entry point is enabled.
 
 ## Current product posture
 

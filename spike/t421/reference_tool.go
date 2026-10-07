@@ -3,9 +3,12 @@ package t421
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"debug/buildinfo"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"os/exec"
@@ -41,13 +44,24 @@ type ReferenceToolRequest struct {
 // exact source snapshot and compares the complete binary, not just its metadata.
 // It neither runs the supplied binary nor issues a CheckoutAdmissionBinding.
 func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequest) (identity ExecutionToolIdentity, retErr error) {
+	return verifyExecutionReferenceTool(ctx, request, nil)
+}
+
+// A non-nil supplied FD is lent only by the Linux sealed-input owner. It is
+// inspected directly, never resolved through a deleted memfd pathname. The
+// public path verifier retains its original observations and build recipe.
+func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequest, suppliedImage *os.File) (identity ExecutionToolIdentity, retErr error) {
 	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRoleForSchema(request.Role, request.PlanSchema, request.SourceCommit)
 	if err != nil {
 		return identity, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
-	for _, path := range []*string{&request.RepositoryRoot, &request.GitBinary, &request.GoRoot, &request.ModuleCache, &request.Binary} {
+	paths := []*string{&request.RepositoryRoot, &request.GitBinary, &request.GoRoot, &request.ModuleCache}
+	if suppliedImage == nil {
+		paths = append(paths, &request.Binary)
+	}
+	for _, path := range paths {
 		if !filepath.IsAbs(*path) {
 			return identity, errors.New("reference build requires absolute input paths")
 		}
@@ -81,11 +95,32 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 	if err != nil {
 		return identity, errors.New("reference build Go driver is unavailable")
 	}
-	suppliedDigest, err := executableidentity.Digest(request.Binary)
+	digestSupplied := func() (string, error) {
+		if suppliedImage != nil {
+			return digestExecutionReferenceFD(ctx, suppliedImage)
+		}
+		return executableidentity.Digest(request.Binary)
+	}
+	verifySupplied := func(expected string) error {
+		if suppliedImage == nil {
+			return executableidentity.Verify(request.Binary, expected)
+		}
+		digest, err := digestSupplied()
+		if err != nil || digest != expected {
+			return errors.New("reference build held supplied image changed")
+		}
+		return nil
+	}
+	suppliedDigest, err := digestSupplied()
 	if err != nil {
 		return identity, errors.New("reference build supplied image is unavailable")
 	}
-	supplied, err := buildinfo.ReadFile(request.Binary)
+	var supplied *debug.BuildInfo
+	if suppliedImage == nil {
+		supplied, err = buildinfo.ReadFile(request.Binary)
+	} else {
+		supplied, err = buildinfo.Read(suppliedImage)
+	}
 	if err != nil || validateReferenceBuildInfoForSchema(supplied, request.Role, request.PlanSchema, packagePath, request.SourceCommit, modulePath, moduleVersion, moduleSum, nil) != nil {
 		return identity, errors.New("reference build supplied Go identity is invalid")
 	}
@@ -197,7 +232,7 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 	}
 	afterSDK, err := referenceSDKDigest(ctx, request.GoRoot)
 	if err != nil || afterSDK != sdkDigest || executableidentity.Verify(goBinary, goDigest) != nil ||
-		executableidentity.Verify(request.GitBinary, gitDigest) != nil || executableidentity.Verify(request.Binary, suppliedDigest) != nil || ctx.Err() != nil {
+		executableidentity.Verify(request.GitBinary, gitDigest) != nil || verifySupplied(suppliedDigest) != nil || ctx.Err() != nil {
 		return identity, errors.New("reference build inputs changed or verification expired")
 	}
 	identity = ExecutionToolIdentity{Role: request.Role, FileType: regularFileType, SHA256: suppliedDigest,
@@ -210,6 +245,21 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 		}
 	}
 	return identity, nil
+}
+
+func digestExecutionReferenceFD(ctx context.Context, file *os.File) (string, error) {
+	before, err := file.Stat()
+	if ctx == nil || ctx.Err() != nil || err != nil || !before.Mode().IsRegular() || before.Mode().Perm()&0o111 == 0 ||
+		before.Size() <= 0 || before.Size() > maxInputCustodyFileBytes {
+		return "", ErrExecutionToolCustody
+	}
+	hash := sha256.New()
+	written, err := io.Copy(hash, executionInputReader{ctx, io.NewSectionReader(file, 0, before.Size())})
+	after, statErr := file.Stat()
+	if err != nil || statErr != nil || written != before.Size() || !sameCheckoutFile(before, after) || ctx.Err() != nil {
+		return "", ErrExecutionToolCustody
+	}
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func referenceToolRoleForSchema(role, schema, sourceCommit string) (packagePath, modulePath, version, sum, recipe string, err error) {
