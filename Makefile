@@ -8,6 +8,11 @@ GOLANGCI_LINT_VERSION := $(patsubst v%,%,$(shell tr -d '[:space:]' < .golangci-l
 SURREALDB_VERSION := $(shell tr -d '[:space:]' < .surrealdb-version)
 TARGET_GOOS ?= $(shell go env GOOS)
 TARGET_GOARCH ?= $(shell go env GOARCH)
+# Supported release platforms, per the 2026-10-07 PLAN decision: 64-bit only.
+# 32-bit GOARCH (linux/386, linux/arm, mips, mipsle, ppc, s390) and non-Linux/
+# Darwin operating systems are out of scope: not built, tested, released or
+# repaired. Adding a target here needs a dated PLAN ADR, not a local override.
+SUPPORTED_RELEASE_TARGETS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
 RELEASE_ROOT ?= dist
 RELEASE_COMMIT ?= $(shell git rev-parse HEAD)
 RELEASE_STAGE = $(RELEASE_ROOT)/.build-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
@@ -74,6 +79,18 @@ validate-release-version:
 	}
 
 validate-release-target:
+	@target="$(TARGET_GOOS)/$(TARGET_GOARCH)"; \
+	case " $(SUPPORTED_RELEASE_TARGETS) " in \
+	*" $$target "*) ;; \
+	*) \
+		printf 'release target %s is not supported\n' "$$target" >&2; \
+		printf 'supported release targets: %s\n' "$(SUPPORTED_RELEASE_TARGETS)" >&2; \
+		case "$$target" in \
+		*/386|*/arm|*/mips|*/mipsle|*/ppc|*/s390) \
+			printf 'phebs is 64-bit only: 32-bit targets are out of scope and are not built, tested, released or repaired (PLAN 2026-10-07)\n' >&2 ;; \
+		esac; \
+		exit 2 ;; \
+	esac
 	@test "$(TARGET_GOOS)/$(TARGET_GOARCH)" = "$$(go env GOOS)/$$(go env GOARCH)" || { \
 		printf 'release target %s/%s is not executable on this %s/%s smoke host\n' \
 			"$(TARGET_GOOS)" "$(TARGET_GOARCH)" "$$(go env GOOS)" "$$(go env GOARCH)" >&2; \

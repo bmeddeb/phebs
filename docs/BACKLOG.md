@@ -3180,6 +3180,174 @@ global reservation and up to 2 GiB reclaimable source-file cache; no compiled,
 fixture or harness input changed. Independent review and the remaining H2
 adapters/admission are still pending.
 
+Independent review of exact PR head `8f1a4fc7f968ef5790f2151c378acb2e9f9d4fd3`
+found critical/high/medium 0 and seven low documentation and hygiene items, and
+then found one medium test-oracle defect while reproducing the native suite off
+the selected host. Reviewer-verified from darwin/arm64: linux/amd64 build, vet
+and test-binary compilation; linux/arm64, whole-module linux/amd64 and native
+darwin builds; plus a linux/386 build of the changed package only, which is
+incidental portability and not a support claim because 32-bit targets are out
+of scope; gofmt, whitespace, `make docs-check`,
+`make verify-glossary` and the changed-file pinned lint at
+`--new-from-rev=a46488aa --whole-files` (0 issues). Both `source_files_sha256`
+values in the retained record match the blobs at `c07bc930` exactly, those blobs
+are unchanged at `8f1a4fc7`, and the PR diff is 995 insertions with zero
+deletions, so no existing Darwin custody or T40.13 source was touched. This
+entry supersedes only the "independent review ... pending" wording above for
+that reviewed head; every other qualification in it stands.
+
+**Medium (test-only, pre-existing): the restored-chmod drift oracle was
+unsound.** `TestLinuxInputCustodyKernelMutationRefusals` chmod'ed a sealed memfd
+to add owner-write and then restored the original mode, and required `Check` to
+refuse through `Ctim`. Linux stamps inodes from a coarse clock, so a restore
+inside one tick changes no compared field and `Check` correctly accepts. The
+retained `t42h2b-ctime-probe` measured 198/200 such sequences on
+6.8.0-117-generic leaving `Ctim` identical, at an effective granularity of
+~1.000104 ms; the scratch probe that first diagnosed this saw 199/200, and the
+rate varies per run, which is the finding rather than a fixed figure. The
+pristine PR bytes failed that assertion 1 time in 15 runs; the executable
+variant, which does more work before the drift, passed. The recorded host
+therefore passed by timing margin rather than by guarantee. This is not a production defect and
+narrows no byte guarantee: the same probe confirmed `pwrite`, both `ftruncate`
+directions, execute-bit `fchmod`, `F_ADD_SEALS` and shared writable `mmap` all
+return `EPERM` even with the mode left owner-writable and an `O_RDWR` descriptor
+open, so the seals and not the metadata comparison carry immutability. The
+correction leaves the mode drift unrestored, which strengthens the six mutation
+subtests by running them against a writable mode and descriptor, and makes the
+refusal deterministic at 200/200 observed; it replaces the restored-chmod oracle
+with an explicit `utimensat` drift that the probe confirmed succeeds on a fully
+sealed memfd with the seal set intact at all five seals. The PLAN ADR and the
+operations guide now state the same-tick boundary instead of claiming detection
+of any permission drift.
+
+Low corrections: the loan descriptor's dead second `Close` is removed so the
+deferred close is unambiguously panic-only and the inspected close happens
+exactly once; `Close` drops retained descriptors and stat snapshots; the ELF
+screen's `e_phnum 1..128` and `e_phoff >= 64` bounds, and the measured
+`e_phnum 6`/`e_phoff 64` of real linux/amd64 Go binaries including a full phebs
+build, are recorded in the ADR and guide; the one-loan-at-a-time limit that
+makes nested `WithInput` deadlock, and the separate atomic multi-loan API that
+multi-input dispatch would need, are documented in the type, the method, the ADR
+and the guide. T42.H2c, which merged into this branch while the review was in
+progress, composes around that limit rather than hitting it: each tool custody
+holds its own single-input `LinuxExecutionInputCustody` and restates the
+no-escape/no-reentry contract at its own call sites. The limit is therefore a
+recorded design constraint and not a defect, but a future child needing a tool
+image and a separate fixed input at once still requires the multi-loan API; the
+deliberate
+single-linux-symbol-with-runtime-amd64-gate shape is documented; the guide
+declares the host `/usr/bin/true` ELF64 amd64 dependency and the Linux 6.3
+minimum for `MFD_EXEC`/`MFD_NOEXEC_SEAL`; and the suite gains closed-custody
+loan, nil-context `Check` and nil-context loan refusals, each asserted to leak
+no descriptor. Every addition stays inside the existing nine top-level tests, so
+the retained record's test enumeration remains accurate for the corrected tree.
+
+**Host-fact drift is recorded here rather than repaired.**
+`spike/t42h1/host-baseline.json` and the T42.H1 ADR fix the selected host at
+kernel `7.0.0-34-generic` and 15,991,791,616 bytes, and H1 states that baseline
+governs all future rehearsals, ceremonies and fresh reruns. H2a and H2b both
+observed `7.0.0-38-generic` and 15,991,742,464 bytes, with logical CPUs
+unchanged at 12, and neither slice noted the divergence. The H1 record stays
+byte-exact as historical evidence and this entry is the note; a later H2 slice
+should decide whether the baseline is re-observed or explicitly versioned.
+
+Both diagnostics are retained in the repository so the kernel contract and the
+drift-detection boundary are re-derivable rather than trusted from a recorded
+measurement: `spike/t42h2b/cmd/t42h2b-seal-probe` asserts the 24 kernel
+invariants the constructor depends on and exits non-zero if the host cannot
+protect direct inputs at all, which separates a host refusal from a custody
+defect; `spike/t42h2b/cmd/t42h2b-ctime-probe` asserts none and measures the
+coarse-clock boundary, exiting zero unless it cannot run. Both are
+`//go:build linux`, use `golang.org/x/sys/unix` rather than a per-architecture
+hardcoded syscall number, and therefore build on every linux GOARCH including
+the unsupported 32-bit ones; they exercise no
+phebs code, create no files and leave no disk copy. Adding them touches no file
+under `spike/t421/`, so the corrected-tree native result binding below holds
+across this commit.
+
+**32-bit targets are out of scope (2026-10-07, Ben-directed).** This review
+incidentally found that `internal/typedsandbox`, `spike/t324` and `spike/t451a`
+do not compile on `linux/386` or `linux/arm`, reproduced identically at base
+`bbcad9cf`. Ben's disposition is that phebs does not support 32-bit, so these
+are not defects and must not be repaired inside an unrelated ticket, nor worked
+around by widening a type or lowering an accounting bound. The supported set is
+`linux/amd64`, `linux/arm64`, `darwin/arm64` and `darwin/amd64`, all four of
+which build the whole module cleanly; `windows/amd64` (six failing packages) and
+`freebsd/amd64` (two) are unsupported on the same basis. The decision is
+recorded as a dated PLAN ADR, as an AGENTS convention so agents stop treating
+32-bit breakage as a regression, and in the getting-started prerequisites, which
+previously stated no architecture requirement at all. No T42.H2b or T42.H2c
+custody file appears among the failures, so the Linux custody work builds across
+the whole supported set.
+
+Ben then asked for the policy to be enforced rather than only written down.
+`make validate-release-target` now refuses any target outside
+`SUPPORTED_RELEASE_TARGETS` before any build work, ahead of the pre-existing
+requirement that the target be executable on the smoke host, which is unchanged.
+The refusal names the supported set so it is actionable, and adds a 32-bit
+explanation for genuine 32-bit GOARCH values only: `linux/386`, `arm`, `mips`,
+`mipsle`, `ppc` and `s390` get it, while an unsupported 64-bit target such as
+`linux/riscv64` or `linux/loong64` and a non-Linux/Darwin OS do not, so the
+diagnostic never misattributes the reason. `linux/arm64` is deliberately
+checked not to match the `arm` rule. `scripts/release_target_test.go` pins the
+refusal behavior across eleven targets, the arm64 prefix hazard, host-platform
+acceptance, and the exact supported list, so widening the variable fails a gate
+instead of passing silently; the same test asserts the PLAN, AGENTS and
+getting-started records still carry the decision. Verified by mutation: widening
+the list on the command line lets `linux/386` past the policy gate and into the
+host-executability refusal, confirming the variable is what drives it. The full
+`scripts` package passes with the new tests. The guard runs only under `make
+release`; `make build` and `make dev` use the host toolchain and are unchanged.
+
+Because these corrections change both bound source files, the retained
+`sealed-input-rehearsal-1.json` no longer describes the corrected tree. That
+record is preserved unchanged and remains true of `c07bc930`. The corrected tree
+carries the off-selected-host reproduction at
+[`review-reproduction-1.json`](../spike/t42h2b/review-reproduction-1.json),
+which binds corrected implementation
+`03f9b1b770077e73220e00bb76d3bb957ef297e7`. These corrections were originally
+authored on the reviewed head `8f1a4fc7`; while the review was in progress PR
+#58 merged T42.H2c into this branch, advancing it to `bbcad9cf`, and PR #57
+merged this branch into H2a, so the corrections were rebased onto that tip and
+neither slice is in `main` yet. Both corrected source files are byte-identical
+across the rebase, because H2c touches neither, and both probe binaries
+reproduce byte-identically; only the test-binary digest changed, since the
+compiled `spike/t421` package now also contains H2c's tool custody sources. On
+the rebased tree 25 of 25 repetitions reached test output with 9 top-level
+tests, 53 subtests, no skips and no assertion failure, and the seal probe again
+passed all 24 invariants. H2c's own `TestLinuxToolCustody` suite was not run
+here, because it needs host SurrealDB 3.2.0 and an exact Go reference build; its
+gates remain its own record's responsibility. Across seven batches, 208 of
+210 runs reached test output and none failed an assertion. The other two exited
+139 before printing anything, and a control showed a trivial hello-world
+linux/amd64 binary segfaulting 1 in 300 in the same container while the test
+binary under `-test.list`, which runs no test at all, segfaulted 3 in 200.
+Those are Rosetta process-startup artifacts of the emulated host rather than
+custody failures, and a rerun must not record them as such. That host is not the
+T42.H1 selected machine, the `go` toolchain
+cannot run inside it and no `-race` build was possible, so a fresh native normal
+and race rerun on the selected host remains required before the corrected tree
+can be called green. No merge, complete readiness, new plan, freeze, execution
+or scale claim follows.
+
+**The selected-host rerun is done (2026-10-07).** The fresh native normal and
+race rerun required above subsequently ran on the T42.H1 selected host (kernel
+`7.0.0-38-generic`) against exact branch bytes `fd1fb626`, after both committed
+source blobs re-hashed to `corrected_source_files_sha256`. Normal passed 9
+top-level tests and 53 subtests with 0 failures and 0 skips in 0.135s; twenty
+`-race` repetitions of the same selector passed in 3.411s. `t42h2b-seal-probe`
+passed all 24 kernel invariants. The ctime probe inverted the reviewer's host
+result rather than reproducing it: this host measured ~886ns effective
+timestamp granularity and 0/200 restored-chmod sequences left `Ctim` unchanged,
+where the reviewer's ~1 ms host saw the failure 198/200 — the original flake
+was environmental while both replacement oracles were deterministic here
+(200/200 unrestored drift, explicit `utimensat` drift). Module build, vet over
+the changed package trees, gofmt, the `scripts` package, changed-file pinned
+lint (`--new-from-rev=origin/main --whole-files`, 0 issues), `make docs-check`,
+`make verify-glossary` and whitespace pass. This closes only the tested-bytes
+nonclaim of `review-reproduction-1.json`; complete H2 readiness, a new plan,
+freeze, execution and scale claims remain open.
+
 **T42.H2c · Linux direct-tool custody and object binding** *(third H2 slice,
 2026-10-06)* — bind implemented Go reference tools and the selected external
 SurrealDB direct image to H2b sealed bytes. Verify Go tools through the existing

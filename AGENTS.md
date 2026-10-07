@@ -49,6 +49,19 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
   admission are prerequisites to implement here, not instructions to return
   to the former host. Follow T42.H1/H2 in `docs/BACKLOG.md` and the dated PLAN
   decision; preserve correctness, custody, accounting, and teardown gates.
+- **Supported build platforms; 32-bit is out of scope (2026-10-07,
+  Ben-directed).** phebs builds and runs on 64-bit platforms only:
+  `linux/amd64`, `linux/arm64`, `darwin/arm64` and `darwin/amd64`. Do not
+  target, test, release or repair 32-bit GOARCH (`linux/386`, `linux/arm`), and
+  do not report their compile failures as regressions or fix them inside an
+  unrelated ticket. `internal/typedsandbox`, `spike/t324` and `spike/t451a`
+  are known to fail there and are expected to stay that way; non-Linux/Darwin
+  operating systems are unsupported on the same basis. Widening a type or
+  lowering an accounting bound to satisfy a 32-bit build is the wrong fix —
+  record it as out of scope and continue. `make validate-release-target`
+  enforces the same set for releases, and `scripts/release_target_test.go`
+  pins it, so widening `SUPPORTED_RELEASE_TARGETS` needs a dated PLAN ADR.
+  See the 2026-10-07 PLAN decision for the measured matrix.
 - PR-sized, stacked changes; one ticket per PR; ACs in BACKLOG.md are the merge bar.
 - `main` is the integration branch. Ticket worktrees and branches are temporary:
  remove them after a verified fast-forward merge; retain unmerged validation

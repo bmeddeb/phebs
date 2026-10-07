@@ -44,6 +44,13 @@ type linuxExecutionInput struct {
 // single-owner caller must exclude descriptor replacement and code injection.
 // Anonymous payload memory must be reserved separately from process RSS; it
 // can reach 2 GiB and receives no swap credit in future resource admission.
+//
+// The custody lock is held for a whole loan, so at most one loan is
+// outstanding and one child can be handed exactly one lent input. Nested
+// WithInput calls deadlock rather than composing; dispatch that needs a tool
+// image and a fixed input in the same child requires a separate atomic
+// multi-loan API, which this slice deliberately does not provide. Close and
+// Check wait behind an in-progress loan and its joined child.
 type LinuxExecutionInputCustody struct {
 	mu     sync.Mutex
 	inputs map[string]linuxExecutionInput
@@ -57,10 +64,18 @@ type LinuxExecutionInputCustody struct {
 // read-only, closes the writer, then hashes the sealed bytes once. Unsupported
 // or denied kernel protection refuses without a chmod-only fallback.
 //
-// Executable copies require a bounded ELF64 amd64 header screen. This is not a
-// provenance, loader/library/helper closure or executable-dispatch verifier.
-// Existing deleted-path process observations do not bind anonymous images.
-// Failure closes all owned descriptors and returns nil; no disk copies remain.
+// This symbol is compiled for every linux GOARCH and refuses at runtime on
+// anything but amd64, because the ELF screen is fixed to ELF64 little-endian
+// EM_X86_64; it does not exist on other GOOS. Callers therefore still need
+// build tags. Keeping one linux symbol with a runtime arch gate holds the amd64
+// requirement in one place instead of splitting this file per architecture, and
+// makes a non-amd64 linux misuse a sticky refusal rather than a link error.
+//
+// Executable copies require the bounded ELF64 amd64 header screen documented on
+// linuxInputELF. That screen is not a provenance, loader/library/helper closure
+// or executable-dispatch verifier. Existing deleted-path process observations
+// do not bind anonymous images. Failure closes all owned descriptors and
+// returns nil; no disk copies remain.
 func ProtectLinuxExecutionInputs(ctx context.Context, copies []ExecutionInputCopy) (_ *LinuxExecutionInputCustody, retErr error) {
 	if runtime.GOARCH != "amd64" || ctx == nil || ctx.Err() != nil || len(copies) == 0 || len(copies) > maxInputCustodyFiles {
 		return nil, ErrExecutionInputCustody
@@ -163,8 +178,17 @@ func copyLinuxExecutionInput(ctx context.Context, input ExecutionInputCopy, rema
 	return entry, nil
 }
 
-// Only the 64-byte header is read. Program-header offsets/counts are checked
-// against the admitted file size; no parser allocates from untrusted counts.
+// linuxInputELF reads only the 64-byte ELF header; no parser allocates from
+// untrusted counts. Admitted bounds: size >= 64, ELFCLASS64, ELFDATA2LSB,
+// EI_VERSION 1, e_type ET_EXEC or ET_DYN, e_machine EM_X86_64, e_version 1,
+// e_ehsize 64, e_phentsize 56, e_phnum in 1..128, and e_phoff in 64..size with
+// the whole program-header table inside the admitted size.
+//
+// e_phnum <= 128 and e_phoff >= 64 are conservative screen bounds, not ELF
+// limits (e_phnum may reach 65535, or 0xffff with PN_XNUM extension). Measured
+// linux/amd64 Go binaries, including a full phebs build, use e_phnum 6 and
+// e_phoff 64, so the bound is generous for every intended direct image. A
+// legitimate header outside it fails closed with no weaker fallback.
 func linuxInputELF(file *os.File, size int64) bool {
 	var header [64]byte
 	if size < int64(len(header)) {
@@ -238,10 +262,14 @@ func (custody *LinuxExecutionInputCustody) Check(ctx context.Context, name strin
 
 // WithInput lends one fresh read-only CLOEXEC descriptor while holding custody's
 // lock. The trusted callback must not retain/duplicate it, call custody methods,
-// or return before any child using it has joined. This method cannot prove that
-// caller contract, session/orphan teardown, argv/environment safety or dispatch
-// authority. Callback errors are returned unchanged; protection/close failures
-// and cancellation latch custody failure. Close waits for the callback.
+// or return before any child using it has joined. Because the lock is held for
+// the whole callback, exactly one loan is outstanding at a time and one child
+// can receive exactly one input; nested WithInput calls deadlock, so multi-input
+// dispatch needs a separate atomic multi-loan API rather than composition here.
+// This method cannot prove that caller contract, session/orphan teardown,
+// argv/environment safety or dispatch authority. Callback errors are returned
+// unchanged and do not latch; protection/close failures and cancellation latch
+// custody failure. Close and Check wait behind the callback.
 func (custody *LinuxExecutionInputCustody) WithInput(ctx context.Context, name string, use func(*os.File) error) error {
 	custody.mu.Lock()
 	defer custody.mu.Unlock()
@@ -258,17 +286,21 @@ func (custody *LinuxExecutionInputCustody) WithInput(ctx context.Context, name s
 		custody.err = ErrExecutionInputCustody
 		return custody.err
 	}
-	completed := false
+	// The deferred close serves only the panic/Goexit path. The normal path
+	// closes exactly once below, where closeErr is inspected instead of
+	// discarded, and released stops the defer from closing a second time.
+	released := false
 	defer func() {
-		_ = file.Close()
-		if !completed { // A panic/Goexit cannot leave a usable custody certificate.
+		if !released {
+			_ = file.Close()
+			// A panic/Goexit cannot leave a usable custody certificate.
 			custody.err = ErrExecutionInputCustody
 		}
 	}()
 	useErr := use(file)
-	completed = true
 	protected := linuxInputProtected(file, entry)
 	closeErr := file.Close()
+	released = true
 	if _, err := custody.checkLocked(ctx, name); err != nil || !protected || closeErr != nil {
 		custody.err = ErrExecutionInputCustody
 		return custody.err
@@ -276,9 +308,10 @@ func (custody *LinuxExecutionInputCustody) WithInput(ctx context.Context, name s
 	return useErr
 }
 
-// Close releases all owned FDs; anonymous bytes disappear after the last holder
-// releases them. It does not certify that a caller joined children or released
-// escaped mappings/duplicates. No source deletion, thaw or disk cleanup occurs.
+// Close releases all owned FDs and drops their stat snapshots; anonymous bytes
+// disappear after the last holder releases them. It does not certify that a
+// caller joined children or released escaped mappings/duplicates. No source
+// deletion, thaw or disk cleanup occurs.
 func (custody *LinuxExecutionInputCustody) Close() error {
 	custody.mu.Lock()
 	defer custody.mu.Unlock()
@@ -289,6 +322,10 @@ func (custody *LinuxExecutionInputCustody) Close() error {
 				custody.err = ErrExecutionInputCustody
 			}
 		}
+		// Retention hygiene only: checkLocked refuses on closed before it
+		// consults the map, so clearing it changes no observable result and
+		// keeps closed descriptors and their snapshots from being retained.
+		clear(custody.inputs)
 	}
 	return custody.err
 }

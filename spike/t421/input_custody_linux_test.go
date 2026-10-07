@@ -90,8 +90,23 @@ func TestLinuxInputCustodyProtectsBytesAndReleasesFDs(t *testing.T) {
 	if err := custody.Close(); err != nil {
 		t.Fatal(err)
 	}
+	if len(custody.inputs) != 0 {
+		t.Fatalf("close must drop retained descriptors and snapshots: %d", len(custody.inputs))
+	}
 	if _, err := custody.Check(context.Background(), input.Name); !errors.Is(err, ErrExecutionInputCustody) {
 		t.Fatal("closed custody accepted")
+	}
+	// Closed custody must refuse a loan without invoking the callback or
+	// opening a descriptor; checkLocked gates on closed before the map read.
+	lent := false
+	if err := custody.WithInput(context.Background(), input.Name, func(*os.File) error {
+		lent = true
+		return nil
+	}); !errors.Is(err, ErrExecutionInputCustody) || lent {
+		t.Fatalf("closed custody lent an input: %v, callback ran: %v", err, lent)
+	}
+	if linuxInputFDCount(t) != before {
+		t.Fatal("closed-custody loan leaked FD")
 	}
 }
 
@@ -106,8 +121,19 @@ func TestLinuxInputCustodyKernelMutationRefusals(t *testing.T) {
 			entry := custody.inputs[input.Name]
 			// A separately reopened writable descriptor must still be powerless;
 			// file mode alone cannot establish this protection for the owner.
-			// Non-execute permission changes are allowed by the seal API, but
-			// custody separately detects that metadata drift even when restored.
+			// Non-execute permission changes are allowed by the seal API, so the
+			// drift is deliberately left UNRESTORED: every mutation below then
+			// runs against an owner-writable mode and an O_RDWR descriptor, and
+			// the closing Check observes drift deterministically.
+			//
+			// A chmod-and-restore is NOT a sound oracle. The kernel stamps
+			// inodes from a coarse clock (measured ~1 ms on 6.8.0-117-generic),
+			// so restoring the mode inside one tick can leave every compared
+			// field identical; a probe measured 199/200 such sequences leaving
+			// Ctim unchanged, which made the previous restored-drift assertion
+			// fail intermittently. That is not a custody failure: seals, not the
+			// metadata comparison, are what keep the bytes immutable, and the
+			// write refusal below holds even with the mode left writable.
 			if err := entry.file.Chmod(entry.fileModeForTest() | 0o200); err != nil {
 				t.Fatal(err)
 			}
@@ -116,9 +142,6 @@ func TestLinuxInputCustodyKernelMutationRefusals(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = unix.Close(fd) }()
-			if err := entry.file.Chmod(entry.fileModeForTest()); err != nil {
-				t.Fatal(err)
-			}
 			operations := []struct {
 				name string
 				run  func() error
@@ -147,10 +170,30 @@ func TestLinuxInputCustodyKernelMutationRefusals(t *testing.T) {
 				})
 			}
 			if _, err := custody.Check(context.Background(), input.Name); !errors.Is(err, ErrExecutionInputCustody) {
-				t.Fatal("allowed non-execute metadata drift must still invalidate custody")
+				t.Fatal("unrestored non-execute mode drift must invalidate custody")
 			}
 		})
 	}
+	// Explicit timestamp drift is the deterministic stand-in for the unsound
+	// restored-chmod oracle above: utimensat succeeds on a fully sealed memfd,
+	// the seal set stays intact, and the moved Mtim must refuse. This proves the
+	// drift comparison is not mode-only without depending on clock resolution.
+	t.Run("timestamp-drift", func(t *testing.T) {
+		input := linuxInputFixture(t)
+		custody := requireLinuxInputCustody(t, input)
+		entry := custody.inputs[input.Name]
+		drifted := unix.NsecToTimespec(time.Now().Add(-72 * time.Hour).UnixNano())
+		proc := fmt.Sprintf("/proc/self/fd/%d", entry.file.Fd())
+		if err := unix.UtimesNanoAt(unix.AT_FDCWD, proc, []unix.Timespec{drifted, drifted}, 0); err != nil {
+			t.Fatalf("sealed memfd must still accept explicit timestamp drift: %v", err)
+		}
+		if seals, err := unix.FcntlInt(entry.file.Fd(), unix.F_GET_SEALS, 0); err != nil || seals&linuxInputSeals != linuxInputSeals {
+			t.Fatalf("timestamp drift must not weaken the seal set: %v, %v", seals, err)
+		}
+		if _, err := custody.Check(context.Background(), input.Name); !errors.Is(err, ErrExecutionInputCustody) {
+			t.Fatal("explicit timestamp drift must invalidate custody")
+		}
+	})
 }
 
 func (entry linuxExecutionInput) fileModeForTest() os.FileMode {
@@ -358,7 +401,7 @@ func TestLinuxInputCustodyRefusesInvalidLoanAndCancellation(t *testing.T) {
 }
 
 func TestLinuxInputCustodyStickyChecksAndScopedClosure(t *testing.T) {
-	for _, fault := range []string{"unknown", "canceled", "closed-keeper", "fd-flags", "mode"} {
+	for _, fault := range []string{"unknown", "canceled", "nil-context", "closed-keeper", "fd-flags", "mode"} {
 		t.Run(fault, func(t *testing.T) {
 			input := linuxInputFixture(t)
 			custody := requireLinuxInputCustody(t, input)
@@ -372,6 +415,8 @@ func TestLinuxInputCustodyStickyChecksAndScopedClosure(t *testing.T) {
 				canceled, cancel := context.WithCancel(ctx)
 				cancel()
 				ctx = canceled
+			case "nil-context":
+				ctx = nil
 			case "closed-keeper":
 				_ = entry.file.Close()
 			case "fd-flags":
@@ -397,6 +442,27 @@ func TestLinuxInputCustodyStickyChecksAndScopedClosure(t *testing.T) {
 	}
 	if _, err := custody.Check(context.Background(), input.Name); err != nil {
 		t.Fatal(err)
+	}
+	// A nil context must refuse the loan before opening a descriptor and must
+	// latch. This uses its own custody so the panic path below still starts
+	// from an unlatched one.
+	loanCustody := requireLinuxInputCustody(t, input)
+	loanBefore := linuxInputFDCount(t)
+	loanLent := false
+	// Held in a variable rather than passed as a literal nil so that the
+	// nil-context refusal stays lintable under SA1012.
+	var nilContext context.Context
+	if err := loanCustody.WithInput(nilContext, input.Name, func(*os.File) error {
+		loanLent = true
+		return nil
+	}); !errors.Is(err, ErrExecutionInputCustody) || loanLent {
+		t.Fatalf("nil-context loan accepted: %v, callback ran: %v", err, loanLent)
+	}
+	if linuxInputFDCount(t) != loanBefore {
+		t.Fatal("nil-context loan leaked FD")
+	}
+	if _, err := loanCustody.Check(context.Background(), input.Name); !errors.Is(err, ErrExecutionInputCustody) {
+		t.Fatal("nil-context loan did not latch")
 	}
 	before := linuxInputFDCount(t)
 	func() {
