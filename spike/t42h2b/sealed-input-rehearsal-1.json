@@ -1,0 +1,115 @@
+{
+  "schema": "phebs-t42h2b-linux-sealed-input-rehearsal-v1",
+  "measured_at_utc": "2026-10-07T02:11:24.609773+00:00",
+  "source_commit": "c07bc9302220ce505a907cacdcc5245d755e8497",
+  "source_files_sha256": {
+    "spike/t421/input_custody_linux.go": "sha256:62385aca307cf942197134069bd867a5203409d61f28231fa74bb6deb54422db",
+    "spike/t421/input_custody_linux_test.go": "sha256:cce1990d21d9d7e9ca7e3893002c605c12b88ba672035bcbd195d175514e33d5"
+  },
+  "host": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "kernel_release": "7.0.0-38-generic",
+    "logical_cpus": 12,
+    "physical_memory_bytes": 15991742464
+  },
+  "scope": "Anonymous kernel-sealed direct copies and trusted scoped FD use only; no ceremony/tool/signer/dispatch admission, loader closure, session/orphan teardown or scale result",
+  "native_runs": {
+    "normal": {
+      "outcome": "PASS",
+      "package_seconds": 0.181,
+      "top_level_tests": [
+        "TestLinuxInputCustodyELFScreenBounds",
+        "TestLinuxInputCustodyFileCeilingAndUnsealedRefusal",
+        "TestLinuxInputCustodyJoinedExecutableAndNoexecData",
+        "TestLinuxInputCustodyKernelMutationRefusals",
+        "TestLinuxInputCustodyProtectsBytesAndReleasesFDs",
+        "TestLinuxInputCustodyRefusesInvalidLoanAndCancellation",
+        "TestLinuxInputCustodyRefusesMalformedSelectionsAndCleansPartial",
+        "TestLinuxInputCustodyRejectsSetIDAndScripts",
+        "TestLinuxInputCustodyStickyChecksAndScopedClosure"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:ad19b41a4ecf2b701e48505d52bea49fc1c4b159e07789287e21dc76595cba62"
+    },
+    "race": {
+      "outcome": "PASS",
+      "package_seconds": 1.368,
+      "top_level_tests": [
+        "TestLinuxInputCustodyELFScreenBounds",
+        "TestLinuxInputCustodyFileCeilingAndUnsealedRefusal",
+        "TestLinuxInputCustodyJoinedExecutableAndNoexecData",
+        "TestLinuxInputCustodyKernelMutationRefusals",
+        "TestLinuxInputCustodyProtectsBytesAndReleasesFDs",
+        "TestLinuxInputCustodyRefusesInvalidLoanAndCancellation",
+        "TestLinuxInputCustodyRefusesMalformedSelectionsAndCleansPartial",
+        "TestLinuxInputCustodyRejectsSetIDAndScripts",
+        "TestLinuxInputCustodyStickyChecksAndScopedClosure"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:e39ed0a603887c057a73a3d27b81bd1b2e8e299dbebf5a7ae29abc27bb4cebfe"
+    },
+    "race_20_repetitions": {
+      "outcome": "PASS",
+      "package_seconds": 2.747,
+      "top_level_tests": [
+        "TestLinuxInputCustodyELFScreenBounds",
+        "TestLinuxInputCustodyFileCeilingAndUnsealedRefusal",
+        "TestLinuxInputCustodyJoinedExecutableAndNoexecData",
+        "TestLinuxInputCustodyKernelMutationRefusals",
+        "TestLinuxInputCustodyProtectsBytesAndReleasesFDs",
+        "TestLinuxInputCustodyRefusesInvalidLoanAndCancellation",
+        "TestLinuxInputCustodyRefusesMalformedSelectionsAndCleansPartial",
+        "TestLinuxInputCustodyRejectsSetIDAndScripts",
+        "TestLinuxInputCustodyStickyChecksAndScopedClosure"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:3a8eefdec07adba37f92b3262766c99e08152d5edc8aec7f494aee83473b7717"
+    }
+  },
+  "race_repetitions": 20,
+  "ownership_oracles": {
+    "keeper_limit": 64,
+    "source_independence": true,
+    "partial_failure_owned_fds_released": true,
+    "scoped_fds_released_including_panic": true,
+    "neutral_executable_joined_before_release": true,
+    "source_namespace_mutable": true,
+    "no_retained_disk_copy_created": true
+  },
+  "bounds": {
+    "per_file_bytes": 268435456,
+    "per_instance_payload_bytes": 2147483648,
+    "reused_buffer_bytes": 32768,
+    "constructor_owned_fds_max": 66,
+    "scoped_loan_owned_fds_max": 65,
+    "global_capacity_reserved": false,
+    "payload_and_source_cache_require_future_aggregate_admission": true
+  },
+  "regression_checks": {
+    "t421_process_gauges_race": {
+      "outcome": "PASS",
+      "package_seconds": 2.038
+    },
+    "t4013_current_and_deleted_executable_race": {
+      "outcome": "PASS",
+      "package_seconds": 1.498
+    }
+  },
+  "affected_vet": "PASS",
+  "module_verification": "PASS",
+  "changed_files_pinned_lint": "PASS (0 issues; --new-from-rev=a46488aa --whole-files)",
+  "baseline_qualifications": {
+    "broader_t421_lint": "13 inherited platform-dependent unused findings; same owning paths/findings as retained H2a baseline; broader lint is not green",
+    "full_t421_package": "Not claimed green; H2a retains its baseline production-dispatch inventory failure and broader timeout"
+  },
+  "documentation_glossary_whitespace": "PASS",
+  "remaining": [
+    "independent review",
+    "Linux tool/signer provenance and protected dispatch binding",
+    "Linux session/descendant cancellation and teardown",
+    "Linux pressure/allocation/restore adapters",
+    "prospective Linux plans, aggregate physical/effective-cgroup memory/child/headroom admission and complete readiness"
+  ],
+  "release_or_scale_claim": false
+}

@@ -3164,6 +3164,22 @@ input/tool/signer/dispatch custody. Kernel support/permission denial refuses
 without a chmod-only fallback. Independent review remains pending; no merge,
 complete readiness, new plan, freeze, execution or scale claim follows.
 
+T42.H2b exact implementation `c07bc9302220ce505a907cacdcc5245d755e8497`
+passed all nine native tests without skips: normal 0.181s, race 1.368s and twenty
+race repetitions 2.747s. Real joined executable/noexec-data, kernel mutation
+refusals, 64-file and partial-failure FD cleanup, source independence, panic and
+cancellation checks passed. Existing T42 process gauges passed race in 2.038s;
+T40 current/deleted executable regressions passed race in 1.498s. Affected vet,
+module verification, changed-file pinned lint (zero issues), docs, glossary and
+whitespace pass. Broader T421 lint still has the same thirteen inherited unused
+findings, and the full T421 package is not claimed green; H2a's retained broader
+baseline qualifications remain. The source-free record is
+[`sealed-input-rehearsal-1.json`](../spike/t42h2b/sealed-input-rehearsal-1.json).
+The final documentation record additionally states per-instance bounds, no
+global reservation and up to 2 GiB reclaimable source-file cache; no compiled,
+fixture or harness input changed. Independent review and the remaining H2
+adapters/admission are still pending.
+
 T42.H2c is the next custody slice: bind admitted Linux tool images and signer
 material to protected kernel objects and verified dispatch, including anonymous
 executable observations. H2a's existing deleted-path refusals must remain exact;

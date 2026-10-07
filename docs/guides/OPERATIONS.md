@@ -79,6 +79,9 @@ from process RSS against measured physical/effective cgroup capacity, with
 children and host headroom and no swap credit. One reused 32-KiB buffer streams
 construction; at most 64 read-only CLOEXEC keepers remain. Construction peaks at
 66 owned FDs, and one scoped loan adds one keeper-equivalent FD.
+The bounds are per instance and reserve no global capacity. Source reads may
+also populate up to 2 GiB of reclaimable file cache; future admission must
+account for concurrent instances, cache and kernel overhead as well as payload.
 
 Original files and namespace entries stay mutable and caller-owned; custody
 owns sealed copies. Byte/size/execute-bit changes are kernel-denied, while
@@ -97,6 +100,10 @@ kernel-object binding; the existing process observer still refuses deleted
 paths. Linux tool/signer/dispatch custody (T42.H2c), session teardown, pressure
 adapters, new plan versions and complete resource/readiness admission remain
 required. These commands launch no ceremony and establish no scale result.
+
+The first source-free normal/race and twenty-repetition record is
+[`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
+Its owning backlog preserves the broader T421 gate qualifications.
 
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
