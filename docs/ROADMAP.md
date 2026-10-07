@@ -25,6 +25,14 @@ and real T42 gauge checks pass; broader legacy platform/dispatch gates remain
 qualified in the owning backlog record. Linux input/tool/signer/dispatch custody
 is the next H2 slice.
 
+T42.H2b adds Linux sealed direct-input custody as the next prerequisite:
+anonymous kernel-protected bytes, read-only descriptors and scoped joined use,
+with a separate payload-memory reservation required beyond process RSS. It
+keeps the existing Darwin namespace contract exact and adds no ceremony entry
+point. T42.H2c next owns Linux tool/signer provenance and protected dispatch;
+session/descendant teardown, pressure adapters, prospective plan versions and
+aggregate resource admission remain open before complete readiness.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:

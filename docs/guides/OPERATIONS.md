@@ -61,6 +61,43 @@ required before complete readiness. This command launches no ceremony. The first
 record is [`native-accounting-rehearsal-1.json`](../../spike/t42h2a/native-accounting-rehearsal-1.json);
 its owning backlog record preserves the broader baseline gate failures.
 
+T42.H2b supplies a separate Linux amd64 direct-input custody primitive using
+kernel-sealed anonymous memory files. Its finite native checks run with:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=2m ./spike/t421 -run '^TestLinuxInputCustody'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=2m ./spike/t421 -run '^TestLinuxInputCustody'
+```
+
+The kernel must support explicit executable/nonexecutable memfd creation and
+write, size, execute-bit and seal-set protection. Policy denial or unsupported
+protection refuses; these checks have no native skip or mode-only fallback and
+require no additional sudo setup. Each copy is at most 256 MiB, at most 64 files
+and 2 GiB total; those are local bounds rather than prospective aggregate
+admission. Up to 2 GiB of anonymous shmem payload must be reserved separately
+from process RSS against measured physical/effective cgroup capacity, with
+children and host headroom and no swap credit. One reused 32-KiB buffer streams
+construction; at most 64 read-only CLOEXEC keepers remain. Construction peaks at
+66 owned FDs, and one scoped loan adds one keeper-equivalent FD.
+
+Original files and namespace entries stay mutable and caller-owned; custody
+owns sealed copies. Byte/size/execute-bit changes are kernel-denied, while
+other permission metadata remains mutable and any observed drift invalidates
+custody. Checks inspect kernel metadata and seals without hashing the payload.
+Scoped use serializes Check/Close until the trusted callback joins all users;
+returned callback errors propagate, and protection/close/cancellation failures
+or callback panic invalidate custody. The caller must not escape descriptors
+or mappings. Close releases owned FDs, with no source removal or disk copies;
+it cannot certify orphan/descendant teardown.
+
+The ELF header screen and joined neutral executable prove only this primitive;
+they do not admit tools, loader/library/helper closure, a signer, environment,
+argv or ceremony dispatch. Anonymous executed images need a prospective
+kernel-object binding; the existing process observer still refuses deleted
+paths. Linux tool/signer/dispatch custody (T42.H2c), session teardown, pressure
+adapters, new plan versions and complete resource/readiness admission remain
+required. These commands launch no ceremony and establish no scale result.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

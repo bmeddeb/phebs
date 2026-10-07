@@ -3142,6 +3142,35 @@ and that broad package is not claimed green. The source-free record is
 The private rehearsal parent is empty. Independent review remains pending;
 no integration, complete H2 readiness, new plan, freeze or ceremony follows.
 
+**T42.H2b · Linux sealed direct-input custody** *(second H2 prerequisite slice,
+2026-10-06)* — add a distinct anonymous-FD custody capability on Linux amd64.
+Keep Darwin path/directory custody and retained plan/receipt bytes exact. Copy
+at most 64 selected direct files, each 256 MiB and together 2 GiB, with one
+reused 32-KiB buffer; require canonical nonfollowing regular sources, stable
+held/path metadata, exact sealed-byte hashes and kernel write/size/execute-bit/
+seal-set protection. Publish only read-only CLOEXEC keepers; scoped loans hold
+the custody lock through trusted joined use and release the loan on failure or
+panic. Check never hashes payloads and latches metadata/protection/descriptor,
+context, missing-input or closed-state failures. AC: actual kernel mutation
+refusals, joined executable and denied data execution, source independence,
+partial-failure/64-file FD cleanup, ELF header bounds, cancellation, sticky
+checks and normal/race tests pass without native skips. Non-execute permissions
+are mutable kernel metadata and their drift must refuse even if restored.
+Anonymous payload memory is separately reserved beyond process RSS in future
+aggregate admission; neither the 2-GiB local ceiling nor successful `/usr/bin/true`
+execution admits a loader, dynamic library, helper, tool provenance or command.
+This foundation does not wire a ceremony entry point or establish complete
+input/tool/signer/dispatch custody. Kernel support/permission denial refuses
+without a chmod-only fallback. Independent review remains pending; no merge,
+complete readiness, new plan, freeze, execution or scale claim follows.
+
+T42.H2c is the next custody slice: bind admitted Linux tool images and signer
+material to protected kernel objects and verified dispatch, including anonymous
+executable observations. H2a's existing deleted-path refusals must remain exact;
+mode-only files, writable aliases or unverified loader/helper closure cannot
+substitute for custody. Session/descendant teardown and pressure/resource/plan
+admission remain subsequent H2 slices.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
