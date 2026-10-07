@@ -3180,12 +3180,56 @@ global reservation and up to 2 GiB reclaimable source-file cache; no compiled,
 fixture or harness input changed. Independent review and the remaining H2
 adapters/admission are still pending.
 
-T42.H2c is the next custody slice: bind admitted Linux tool images and signer
-material to protected kernel objects and verified dispatch, including anonymous
-executable observations. H2a's existing deleted-path refusals must remain exact;
-mode-only files, writable aliases or unverified loader/helper closure cannot
-substitute for custody. Session/descendant teardown and pressure/resource/plan
-admission remain subsequent H2 slices.
+**T42.H2c · Linux direct-tool custody and object binding** *(third H2 slice,
+2026-10-06)* — bind implemented Go reference tools and the selected external
+SurrealDB direct image to H2b sealed bytes. Verify Go tools through the existing
+exact source/module/SDK/reference-byte recipe using the held FD; preserve the
+public path verifier and historical contracts. Execute only the selected sealed
+SurrealDB image for its closed version probe. Give scoped callers the protected
+image and detached verifier-produced identity, with no caller-authored verified
+flag. Add a separate bounded process-object matcher: one pidfd exit fence, two
+4-KiB stat brackets and one executable-object open, comparing the held inode;
+H2a's existing deleted-path refusals remain exact. AC: normal/race actual
+SurrealDB and exact Go rebuild, metadata-identical byte-lie rejection, source
+path removal, unknown role/context/version/source-bearing/stderr/output-cap
+refusals, executed cancellation, anonymous/deleted/current/wrong/exited image
+matches and retained unjoined/live-descendant probe cleanup pass without native
+skips. Uncertain probe drain/removal returns unusable retained cleanup custody,
+not a success or premature scratch/image disposal. Check hashes no image; scoped
+use serializes Close and requires trusted no-escape/joined callbacks. The new
+external provenance is not accepted by retained freeze validators. This is
+neither toolchain/loader/library/helper closure nor complete dispatch/session
+admission: resource bounds are per instance, not globally reserved; existing
+reference compile/cache work has no hard RSS/disk ceiling. Independent review,
+prospective admission and ceremony entry-point integration remain pending.
+
+T42.H2c exact implementation `ecaccf8c482bc3386c469cb866361123b0e0bba0`
+passed 22 tool/input/reference top-level tests normal in 96.535s and race in
+105.047s, including the existing public exact-byte verifier and preparation
+session regressions. Five kernel-image/path tests passed normal in 0.114s and
+race in 1.347s; twenty image-matching race repetitions passed in 2.524s, and
+twenty scoped-tool/retained-probe race repetitions passed in 17.989s. No selected
+test skipped. Actual host SurrealDB 3.2.0 was probed from its sealed image;
+the exact reference build used the neutral `phebs-focused-index` fixture, not a
+full tool inventory. Native wrong-version, stderr, source fragment, output-cap
+and executed cancellation probes refused cleanly; unjoined/live-descendant
+cleanup retained unusable custody until drained. Affected vet, module
+verification, changed-file pinned lint (zero issues), docs, glossary and
+whitespace pass. No Linux tool-probe scratch entry remains. The source-free
+record is [`tool-custody-rehearsal-1.json`](../spike/t42h2c/tool-custody-rehearsal-1.json).
+Broader T421 lint/package remain qualified by the retained H2a/H2b baseline
+failures and are not claimed green. Independent review and the remaining H2
+adapters/admission remain pending; no merge, complete readiness, new plan,
+freeze, ceremony or scale claim follows.
+
+**T42.H2d · Linux signer and namespace custody** *(next H2 slice)* — implement
+Linux signing/keypair and immutable control/dispatch-input custody with exact
+key integrity, authenticated returned-evidence and durable namespace/promotion
+refusal gates. Existing kernel byte seals and tool identities supply no signer
+or command permission. Git/Go SDK/helper and fixed-system recipes, native
+session/descendant hard-death supervision, isolated pressure/allocation/restore,
+new Linux plan versions and aggregate physical/effective-cgroup resource
+admission remain H2 prerequisites before complete readiness, freeze or execution.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

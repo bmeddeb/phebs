@@ -1,0 +1,178 @@
+{
+  "schema": "phebs-t42h2c-linux-tool-custody-rehearsal-v1",
+  "measured_at_utc": "2026-10-07T02:53:54.134818+00:00",
+  "source_commit": "ecaccf8c482bc3386c469cb866361123b0e0bba0",
+  "source_files_sha256": {
+    "spike/t4013/process_image_linux.go": "sha256:e0c7a5fcf7dff9946b24b3bb84aeb0d8ed0105235d8d88bb417c31e2a960700b",
+    "spike/t4013/process_image_linux_test.go": "sha256:c55835dca3a009de21db4b12cd3e5eb6d2822c1e75401426be9f75829c1f5ee3",
+    "spike/t421/reference_tool.go": "sha256:a647fbec993025b5feae58763d56f0a1232cab9d850fd9e5cfa2231d122ea95d",
+    "spike/t421/tool_custody_linux.go": "sha256:600eba23b0496ba9a35c8c5fe5e3eb36df7c35fde85fbbb3cba3d48918685d79",
+    "spike/t421/tool_custody_linux_test.go": "sha256:24c913350d0d3caec748c51319da7ea81338a23d178e163efc4cd6bca9c7db15"
+  },
+  "host": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "kernel_release": "7.0.0-38-generic",
+    "logical_cpus": 12,
+    "physical_memory_bytes": 15991742464,
+    "aggregate_effective_cgroup_capacity_admitted": false
+  },
+  "scope": "Sealed direct-tool images, neutral exact Go reference build, real SurrealDB closed version probe, scoped FD use, sampled kernel executable-object matching and preparation cleanup only; no signer, full toolchain/loader/helper admission, ceremony or scale result",
+  "native_runs": {
+    "tools_normal": {
+      "outcome": "PASS",
+      "package_seconds": 96.535,
+      "selector": "^TestLinuxToolCustody|^TestLinuxInputCustody|^TestReference|^TestVerifyExecutionReference",
+      "top_level_tests": [
+        "TestLinuxInputCustodyELFScreenBounds",
+        "TestLinuxInputCustodyFileCeilingAndUnsealedRefusal",
+        "TestLinuxInputCustodyJoinedExecutableAndNoexecData",
+        "TestLinuxInputCustodyKernelMutationRefusals",
+        "TestLinuxInputCustodyProtectsBytesAndReleasesFDs",
+        "TestLinuxInputCustodyRefusesInvalidLoanAndCancellation",
+        "TestLinuxInputCustodyRefusesMalformedSelectionsAndCleansPartial",
+        "TestLinuxInputCustodyRejectsSetIDAndScripts",
+        "TestLinuxInputCustodyStickyChecksAndScopedClosure",
+        "TestLinuxToolCustodyClosedProbeRefusals",
+        "TestLinuxToolCustodyExternalRefusalsAndCleanup",
+        "TestLinuxToolCustodyRealSurreal",
+        "TestLinuxToolCustodyReferenceSealedExactBuild",
+        "TestLinuxToolCustodyRetainsProbeUntilJoinedAndDrained",
+        "TestLinuxToolCustodyScopedMatchAndStickyRefusal",
+        "TestReferenceBuildInfoRefusesMissingReplacedOrWrongAuthority",
+        "TestReferenceModuleBudgetAndReaderRefuseOverflowAndMutation",
+        "TestReferenceModuleGraphModuleCountBound",
+        "TestReferencePreparationSession",
+        "TestReferenceT422RolesUseExactSourceAuthority",
+        "TestVerifyExecutionReferenceToolComparesExactBinaryBytes",
+        "TestVerifyExecutionReferenceToolRefusesUnavailableRolesBeforeWork"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:bfef38057f893e2e8db6dc227dddff00d4662fd5dc352fc13004aff21fb442e7"
+    },
+    "tools_race": {
+      "outcome": "PASS",
+      "package_seconds": 105.047,
+      "selector": "^TestLinuxToolCustody|^TestLinuxInputCustody|^TestReference|^TestVerifyExecutionReference",
+      "top_level_tests": [
+        "TestLinuxInputCustodyELFScreenBounds",
+        "TestLinuxInputCustodyFileCeilingAndUnsealedRefusal",
+        "TestLinuxInputCustodyJoinedExecutableAndNoexecData",
+        "TestLinuxInputCustodyKernelMutationRefusals",
+        "TestLinuxInputCustodyProtectsBytesAndReleasesFDs",
+        "TestLinuxInputCustodyRefusesInvalidLoanAndCancellation",
+        "TestLinuxInputCustodyRefusesMalformedSelectionsAndCleansPartial",
+        "TestLinuxInputCustodyRejectsSetIDAndScripts",
+        "TestLinuxInputCustodyStickyChecksAndScopedClosure",
+        "TestLinuxToolCustodyClosedProbeRefusals",
+        "TestLinuxToolCustodyExternalRefusalsAndCleanup",
+        "TestLinuxToolCustodyRealSurreal",
+        "TestLinuxToolCustodyReferenceSealedExactBuild",
+        "TestLinuxToolCustodyRetainsProbeUntilJoinedAndDrained",
+        "TestLinuxToolCustodyScopedMatchAndStickyRefusal",
+        "TestReferenceBuildInfoRefusesMissingReplacedOrWrongAuthority",
+        "TestReferenceModuleBudgetAndReaderRefuseOverflowAndMutation",
+        "TestReferenceModuleGraphModuleCountBound",
+        "TestReferencePreparationSession",
+        "TestReferenceT422RolesUseExactSourceAuthority",
+        "TestVerifyExecutionReferenceToolComparesExactBinaryBytes",
+        "TestVerifyExecutionReferenceToolRefusesUnavailableRolesBeforeWork"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:546dd10a455b5712e9d13cacc441ec8bae63f4c78a3eabf34207b301c4c8c7e7"
+    },
+    "image_normal": {
+      "outcome": "PASS",
+      "package_seconds": 0.114,
+      "selector": "^TestLinuxProcessImage|^TestLinuxDeletedExecutableRefused$|^TestLinuxProcessExecutablePathMatchesCurrentImage$",
+      "top_level_tests": [
+        "TestLinuxDeletedExecutableRefused",
+        "TestLinuxProcessExecutablePathMatchesCurrentImage",
+        "TestLinuxProcessImageMatchesAnonymousAndDeletedObjects",
+        "TestLinuxProcessImageMatchesHeldCurrentObject",
+        "TestLinuxProcessImageRefusalInputsAndExitFence"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:4133a6ad2e2b86b1249cabbbb300ae718791be10faaefaaa2fd33cdc563f485f"
+    },
+    "image_race": {
+      "outcome": "PASS",
+      "package_seconds": 1.347,
+      "selector": "^TestLinuxProcessImage|^TestLinuxDeletedExecutableRefused$|^TestLinuxProcessExecutablePathMatchesCurrentImage$",
+      "top_level_tests": [
+        "TestLinuxDeletedExecutableRefused",
+        "TestLinuxProcessExecutablePathMatchesCurrentImage",
+        "TestLinuxProcessImageMatchesAnonymousAndDeletedObjects",
+        "TestLinuxProcessImageMatchesHeldCurrentObject",
+        "TestLinuxProcessImageRefusalInputsAndExitFence"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:2a6f53cbb7c5b5a7842465af3c56e7ca10eb7fc761d3432c5ba765d88c4fd576"
+    },
+    "image_race_20": {
+      "outcome": "PASS",
+      "package_seconds": 2.524,
+      "selector": "^TestLinuxProcessImage",
+      "top_level_tests": [
+        "TestLinuxProcessImageMatchesAnonymousAndDeletedObjects",
+        "TestLinuxProcessImageMatchesHeldCurrentObject",
+        "TestLinuxProcessImageRefusalInputsAndExitFence"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:79810ba999108a5bd051820e582346d2b6da47f5fbb24c0701be2a4a03a21727"
+    },
+    "tool_boundary_race_20": {
+      "outcome": "PASS",
+      "package_seconds": 17.989,
+      "selector": "^TestLinuxToolCustodyScopedMatchAndStickyRefusal$|^TestLinuxToolCustodyRetainsProbeUntilJoinedAndDrained$",
+      "top_level_tests": [
+        "TestLinuxToolCustodyRetainsProbeUntilJoinedAndDrained",
+        "TestLinuxToolCustodyScopedMatchAndStickyRefusal"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:3367809ffb1ecf50d599f3a18b6c68b60589729934e4e897acb4a04ac0066db3"
+    }
+  },
+  "race_repetitions": {
+    "kernel_image_matching": 20,
+    "scoped_tool_and_retained_probe_boundary": 20
+  },
+  "observed_external_tool": {
+    "role": "surreal",
+    "version": "3.2.0",
+    "provenance": "external-sealed-file-linux-amd64-v1",
+    "vendor_attestation": false
+  },
+  "neutral_reference_role": "phebs-focused-index",
+  "oracles": {
+    "no_caller_authored_verified_identity": true,
+    "complete_reference_bytes_not_metadata_only": true,
+    "supplied_source_path_removal_preserves_sealed_bytes": true,
+    "joined_live_descendant_probe_retains_unusable_custody": true,
+    "unjoined_probe_retains_unusable_custody": true,
+    "drained_probe_releases_scratch_and_keeper": true,
+    "native_version_stderr_output_cap_source_fragment_and_executed_cancellation_refuse": true,
+    "unknown_external_roles_and_wrong_versions_refuse": true,
+    "current_anonymous_deleted_kernel_objects_match_by_held_inode": true,
+    "wrong_exited_invalid_or_canceled_image_match_refuses": true,
+    "historical_deleted_path_observation_still_refuses": true
+  },
+  "observed_remaining_linux_tool_probe_scratch_entries": 0,
+  "affected_vet": "PASS",
+  "module_verification": "PASS",
+  "changed_files_pinned_lint": "PASS (0 issues; --new-from-rev=8f1a4fc7 --whole-files)",
+  "documentation_glossary_whitespace": "PASS",
+  "baseline_qualifications": {
+    "broader_t421_lint": "Inherited thirteen platform-dependent unused findings remain qualified by H2a/H2b; full lint is not claimed green",
+    "full_t421_package": "Not claimed green; retained H2a production-dispatch inventory failure and broader timeout remain qualified"
+  },
+  "remaining": [
+    "independent review",
+    "Linux signer/keypair/control namespace custody",
+    "Git/Go SDK/helper and fixed-system recipes",
+    "full native session/descendant hard-death and dispatch integration",
+    "pressure/allocation/restore adapters",
+    "prospective Linux-bound plans, aggregate physical/effective-cgroup resource/child/headroom admission and complete readiness"
+  ],
+  "release_or_scale_claim": false
+}
