@@ -3125,6 +3125,23 @@ This slice changes no serialized plan/receipt or historical evidence. Custody,
 session/orphan teardown, pressure filesystems and prospective Linux resource
 admission remain separate H2 slices before readiness/freeze.
 
+T42.H2a exact implementation `059e66166b9caf480aa1151556cc84f14634b3ea`
+passed finite native normal/race gates in 1.376s/3.042s, thirty source-identical
+precommit exec/exit race repetitions in 35.679s, and the real T42 process-gauge
+race selector in 1.736s. No selected native test skipped. Full T4013 normal/race
+passed in 132.607s/154.092s with one explicit exclusion:
+`TestClosedHostToolchainIgnoresAmbientSurrealOverride` requires absent Linux
+`/usr/bin/sandbox-exec`; its exact failure reproduced at base `64a67676`.
+Affected vet, T4013 pinned lint (zero issues), docs, glossary and whitespace
+pass. Broader T421 lint's thirteen platform-dependent unused findings and its
+stale production-dispatch inventory failure reproduced unchanged at that base.
+The initial broader T421 package attempt also timed out at twelve minutes in
+retained fixture/version validation; no regression attribution is established,
+and that broad package is not claimed green. The source-free record is
+[`native-accounting-rehearsal-1.json`](../spike/t42h2a/native-accounting-rehearsal-1.json).
+The private rehearsal parent is empty. Independent review remains pending;
+no integration, complete H2 readiness, new plan, freeze or ceremony follows.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

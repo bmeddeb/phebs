@@ -57,7 +57,9 @@ so sampling cost grows with mapped memory even though returned data is bounded.
 Context cancellation is checked between reads; an active kernel syscall is
 cooperative rather than forcibly interrupted. Custody, session/orphan teardown,
 pressure-volume adapters, new Linux-bound plans and memory admission are still
-required before complete readiness. This command launches no ceremony.
+required before complete readiness. This command launches no ceremony. The first source-free native normal/race
+record is [`native-accounting-rehearsal-1.json`](../../spike/t42h2a/native-accounting-rehearsal-1.json);
+its owning backlog record preserves the broader baseline gate failures.
 
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under

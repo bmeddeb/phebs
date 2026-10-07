@@ -1,0 +1,108 @@
+{
+  "schema": "phebs-t42h2a-linux-native-accounting-rehearsal-v1",
+  "measured_at_utc": "2026-10-07T01:52:31.575581+00:00",
+  "source_commit": "059e66166b9caf480aa1151556cc84f14634b3ea",
+  "host": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "kernel_release": "7.0.0-38-generic",
+    "logical_cpus": 12,
+    "physical_memory_bytes": 15991742464
+  },
+  "scope": "Native process/tree/RSS/executable observations and refusal gates only; no custody, session/orphan teardown, pressure, complete readiness or ceremony result",
+  "native_runs": {
+    "normal": {
+      "outcome": "PASS",
+      "package_seconds": 1.376,
+      "top_level_tests": [
+        "TestLinuxDeletedExecutableRefused",
+        "TestLinuxNativeProcessTreeAndSampler",
+        "TestLinuxNativeSamplerAccountsExecClassEpoch",
+        "TestLinuxProcessExecutablePathMatchesCurrentImage",
+        "TestLinuxProcessStatAndRSSBounds",
+        "TestLinuxResidentObservationRetriesOnlyNameTransition",
+        "TestLinuxSnapshotInventoryCaps",
+        "TestLinuxSnapshotRefusalAndTraversal",
+        "TestNativeProcessRecordsRequireCompleteCoherentRows",
+        "TestObserveProcessExecutablePathsRefusesInvalidOrCanceledInput",
+        "TestObserveProcessTreeRecordsRealAndCanceled"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:cbcc65a7d067f926e8dad9f8bd6f47f8d8a39936e03abffea3e1155ff5ba1f40"
+    },
+    "race": {
+      "outcome": "PASS",
+      "package_seconds": 3.042,
+      "top_level_tests": [
+        "TestLinuxDeletedExecutableRefused",
+        "TestLinuxNativeProcessTreeAndSampler",
+        "TestLinuxNativeSamplerAccountsExecClassEpoch",
+        "TestLinuxProcessExecutablePathMatchesCurrentImage",
+        "TestLinuxProcessStatAndRSSBounds",
+        "TestLinuxResidentObservationRetriesOnlyNameTransition",
+        "TestLinuxSnapshotInventoryCaps",
+        "TestLinuxSnapshotRefusalAndTraversal",
+        "TestNativeProcessRecordsRequireCompleteCoherentRows",
+        "TestObserveProcessExecutablePathsRefusesInvalidOrCanceledInput",
+        "TestObserveProcessTreeRecordsRealAndCanceled"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:7341cb90b1c037d77d08bf021b7513aa19661b837d03bd823033d416bbd805f9"
+    }
+  },
+  "command_transition_race_repetitions": {
+    "repetitions": 30,
+    "outcome": "PASS",
+    "package_seconds": 35.679,
+    "source_identical_precommit_tree": true,
+    "selectors": [
+      "TestLinuxNativeSamplerAccountsExecClassEpoch",
+      "TestLinuxResidentObservationRetriesOnlyNameTransition",
+      "TestLinuxSnapshotRefusalAndTraversal"
+    ]
+  },
+  "t421_process_gauge_race": {
+    "outcome": "PASS",
+    "package_seconds": 1.736,
+    "selector": "TestProcessObservation|TestEpochProcess",
+    "native_root_test_enabled_on_linux": true
+  },
+  "baseline_qualifications": {
+    "base_commit": "64a67676",
+    "t4013_full_package_exclusion": "TestClosedHostToolchainIgnoresAmbientSurrealOverride requires absent /usr/bin/sandbox-exec; exact failure reproduced at base",
+    "t421_broader_lint": "13 unused platform-dependent findings reproduced unchanged at base",
+    "t421_dispatch_inventory": "TestProductionDispatchSitesMatchActualBoundaries fails on current production boundaries; reproduced unchanged at base"
+  },
+  "remaining": [
+    "Linux input/tool/signer/dispatch custody",
+    "Linux session/orphan cancellation and teardown",
+    "Linux isolated pressure/allocation/restore adapters",
+    "prospective Linux plans, physical/effective memory and child/headroom admission, full readiness"
+  ],
+  "release_or_scale_claim": false,
+  "broader_t421_attempt": {
+    "outcome": "NOT_GREEN",
+    "candidate": "initial pre-correction tree",
+    "dispatch_inventory": "FAIL; subsequently reproduced unchanged at base",
+    "package_seconds": 720.071,
+    "stopped_in": "TestFixtureAdmissionCachePreservesVersionOrder/v1_then_v2",
+    "reason": "12-minute package timeout",
+    "timeout_attribution": "No regression attribution established by this broader attempt"
+  },
+  "t4013_package_gates": {
+    "normal": {
+      "outcome": "PASS_WITH_EXPLICIT_BASELINE_EXCLUSION",
+      "package_seconds": 132.607
+    },
+    "race": {
+      "outcome": "PASS_WITH_EXPLICIT_BASELINE_EXCLUSION",
+      "package_seconds": 154.092
+    },
+    "excluded_test": "TestClosedHostToolchainIgnoresAmbientSurrealOverride",
+    "source_commit": "059e66166b9caf480aa1151556cc84f14634b3ea"
+  },
+  "remaining_private_rehearsal_parent_entries": 0,
+  "affected_vet": "PASS",
+  "t4013_pinned_lint": "PASS (0 issues)",
+  "documentation_glossary_whitespace": "PASS"
+}

@@ -20,7 +20,10 @@ resident-memory and executable-path observation in T40's collector, shared by
 T42's existing gauges. Resident memory uses kernel page-table rollups rather
 than approximate stat/statm counters. Custody, session/orphan cleanup, pressure
 filesystems and prospective measured resource admission remain open; this slice
-alone does not make a rehearsal or ceremony ready.
+alone does not make a rehearsal or ceremony ready. Its finite Linux normal/race
+and real T42 gauge checks pass; broader legacy platform/dispatch gates remain
+qualified in the owning backlog record. Linux input/tool/signer/dispatch custody
+is the next H2 slice.
 
 ## Current product posture
 
