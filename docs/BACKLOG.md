@@ -3184,8 +3184,10 @@ Independent review of exact PR head `8f1a4fc7f968ef5790f2151c378acb2e9f9d4fd3`
 found critical/high/medium 0 and seven low documentation and hygiene items, and
 then found one medium test-oracle defect while reproducing the native suite off
 the selected host. Reviewer-verified from darwin/arm64: linux/amd64 build, vet
-and test-binary compilation; linux/arm64, linux/386, whole-module linux/amd64
-and native darwin builds; gofmt, whitespace, `make docs-check`,
+and test-binary compilation; linux/arm64, whole-module linux/amd64 and native
+darwin builds; plus a linux/386 build of the changed package only, which is
+incidental portability and not a support claim because 32-bit targets are out
+of scope; gofmt, whitespace, `make docs-check`,
 `make verify-glossary` and the changed-file pinned lint at
 `--new-from-rev=a46488aa --whole-files` (0 issues). Both `source_files_sha256`
 values in the retained record match the blobs at `c07bc930` exactly, those blobs
@@ -3257,10 +3259,26 @@ protect direct inputs at all, which separates a host refusal from a custody
 defect; `spike/t42h2b/cmd/t42h2b-ctime-probe` asserts none and measures the
 coarse-clock boundary, exiting zero unless it cannot run. Both are
 `//go:build linux`, use `golang.org/x/sys/unix` rather than a per-architecture
-hardcoded syscall number, build on linux/amd64, arm64, 386 and arm, exercise no
+hardcoded syscall number, and therefore build on every linux GOARCH including
+the unsupported 32-bit ones; they exercise no
 phebs code, create no files and leave no disk copy. Adding them touches no file
 under `spike/t421/`, so the corrected-tree native result binding below holds
 across this commit.
+
+**32-bit targets are out of scope (2026-10-07, Ben-directed).** This review
+incidentally found that `internal/typedsandbox`, `spike/t324` and `spike/t451a`
+do not compile on `linux/386` or `linux/arm`, reproduced identically at base
+`bbcad9cf`. Ben's disposition is that phebs does not support 32-bit, so these
+are not defects and must not be repaired inside an unrelated ticket, nor worked
+around by widening a type or lowering an accounting bound. The supported set is
+`linux/amd64`, `linux/arm64`, `darwin/arm64` and `darwin/amd64`, all four of
+which build the whole module cleanly; `windows/amd64` (six failing packages) and
+`freebsd/amd64` (two) are unsupported on the same basis. The decision is
+recorded as a dated PLAN ADR, as an AGENTS convention so agents stop treating
+32-bit breakage as a regression, and in the getting-started prerequisites, which
+previously stated no architecture requirement at all. No T42.H2b or T42.H2c
+custody file appears among the failures, so the Linux custody work builds across
+the whole supported set.
 
 Because these corrections change both bound source files, the retained
 `sealed-input-rehearsal-1.json` no longer describes the corrected tree. That
