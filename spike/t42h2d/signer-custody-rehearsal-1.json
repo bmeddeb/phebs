@@ -1,0 +1,198 @@
+{
+  "schema": "phebs-t42h2d-linux-signer-custody-rehearsal-v1",
+  "measured_at_utc": "2026-10-07T21:29:05.473324+00:00",
+  "source_commit": "076ec8fb988c2acf6e005e68795bb4ecd5ff0007",
+  "source_files_sha256": {
+    "spike/t421/execution_launcher_darwin.go": "sha256:83c0352ee323ff8210bf35f9866cba2289694459de1b98ffa44580412b37913f",
+    "spike/t421/execution_launcher_handoff.go": "sha256:2a0021eacb130260c3af7f0c3df99178c1c1a791b1b894aca610018acbec5a84",
+    "spike/t421/execution_launcher_output_darwin.go": "sha256:d5730903e02cab6b7a888318a5099e0816ee7c2c432dbe59fef58d043facfbe5",
+    "spike/t421/execution_launcher_output_darwin_test.go": "sha256:ca64e44546871b8559fdfe3eee4a5a896412c413b60c690ec01e082f7a901919",
+    "spike/t421/execution_launcher_output_unix.go": "sha256:ecc6395297336d26cbc221668cb6b8bc6fe8a0be38b281bc5a82cf3e2a5885d1",
+    "spike/t421/execution_launcher_output_unix_test.go": "sha256:b0e1895a0d703dd6c3dcd2759473bb7acc823cd8e0c63ad647d410c74589b6d0",
+    "spike/t421/external_image_darwin.go": "sha256:ad2c3fbdae7f9f3b8e3b31fbc465979b7a73f5b0f410a65b77c62571910fbc96",
+    "spike/t421/external_image_linux.go": "sha256:d61fa3f559d86a9838d6c0b575c7558b2ad71302601555f126bdcd8793126d77",
+    "spike/t421/external_tool.go": "sha256:76c2514c332b2761f456f56aa7a759d77f71e79133c3f3d296f55dd543c08871",
+    "spike/t421/external_tool_linux_test.go": "sha256:44f490ab70a5a9f834d23db28e815f7b0a3374742fee7304867ec98a3cd6a52c",
+    "spike/t421/input_custody_other.go": "sha256:a75d447817c093cdd3fab4afcae5714754548a0c7788c27637df8c45d73428ef",
+    "spike/t421/input_custody_seams_linux.go": "sha256:101ae62bedc5bad3cab50da4a75326d8b0e2c78b26478991259beb5d3696d66e",
+    "spike/t421/returned_package_unix.go": "sha256:97966cb7b13e58a814fc6f8e67cb9e2032bc9358d0b0f97f0f05f9a58da710ef",
+    "spike/t421/returned_signature_unix_test.go": "sha256:4ebce9083685dc8baa7be30cc889af8b588c469ab29372e5a71971f36c2e7ea3",
+    "spike/t421/returned_transport_darwin_test.go": "sha256:44afb2798aeccd1748518d957ae8c966fc7560a06aa153a3b15b1a999784b5b2",
+    "spike/t421/returned_transport_unix.go": "sha256:622b436478d4109760496bb2aaaef69e48c652cea0cbbe72b2ca29bb7e67f02d",
+    "spike/t421/returned_transport_unix_test.go": "sha256:5bc48dc14e2e6735fc1bdb27b29d11fdfb9c7d85b0e0b72e2c5ca03ae1314c5b",
+    "spike/t421/returned_verifier_unix.go": "sha256:75233b813734b5c46227e41928585945e4efe3b3b2404c4ae70b324dcf082e57",
+    "spike/t421/signer_claim.go": "sha256:b5d02f1faf1a8941feaed0eb7c0e874afb2856d5b3d55652b8af82d0bb900382",
+    "spike/t421/signer_claim_unix.go": "sha256:d1517762e81aa3712af56abc4c4f601f93802c89fe45b0b8618b8fab96cce38e",
+    "spike/t421/signer_claim_unix_test.go": "sha256:46fab76ff3e2b01cdd6944005b47a378023188632f2bde9c6dea8ddd4f3a3ed8",
+    "spike/t421/signer_key_promote_darwin.go": "sha256:fac98e8476f411db7cf0b093faeb586f2505c851a2c57678bbe5b6d60af76021",
+    "spike/t421/signer_key_promote_linux.go": "sha256:974a3d5715f591645cb84487edf50a91216948cd438ad0624d4f7ec908246f86",
+    "spike/t421/signer_key_promote_linux_test.go": "sha256:3edab68ee7a94b46cc5654f5813c8a9c8a0b9057de2d825a14ae19a94c47d280",
+    "spike/t421/signer_key_unix.go": "sha256:fffcc495e7917c08737c1281079dbb3d30b44b50b536e48f05124febbbb2fd20",
+    "spike/t421/signer_key_unix_test.go": "sha256:b8b890e97ab33b8bb700da76d1781f5652e3dda3b0f7e18ef6c2df8f17367f89",
+    "spike/t421/signer_namespace_flow_darwin_test.go": "sha256:baab5e0195920f6139b02afe52c526555415b8204eb9bb79eceb9ee44fb9fff5",
+    "spike/t421/signer_namespace_other.go": "sha256:7c4038aba1c2ec9189c63811cae1270e40b4d21730daadf75f74a86bf0b89189",
+    "spike/t421/signer_namespace_other_test.go": "sha256:9b1912ecde80c7fd6e6b41f01795f10cae916751773cfa29f9a7898f22ef408d",
+    "spike/t421/signer_namespace_unix.go": "sha256:871e9cb429e9e9c2da44c5096e2eef6bc094e48fbe40bcacbb3874216933bcdf",
+    "spike/t421/signer_namespace_unix_test.go": "sha256:a1bf48f5dddafc37dedda3277bad5aa82f53657c437abe67924961d2ec38a228",
+    "spike/t421/signer_seal.go": "sha256:710cd9a0c82c011a4751a350c548332e726f31c0fafa1b92f2330488e332359f",
+    "spike/t421/signer_seal_unix.go": "sha256:99116ad3a2f226ff57eecaad42711d691b484d97e77db800f3c720cd877f5dd2",
+    "spike/t421/signer_seal_unix_test.go": "sha256:6ade89bf5b7beed9b2246453b3196b9aa03e3ef887a55daddbaeac2f6491821a",
+    "spike/t421/system_tool_custody.go": "sha256:a49b70167ae4243e0e8cc5c19c59e0449a68e2664a9dd2ab25341fd6833a7d88",
+    "spike/t421/system_tool_custody_linux_test.go": "sha256:6849536c60f3733519bc519afdd3a6ec6e7504e065b4582f32eb21d3136d6ba7"
+  },
+  "host": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "kernel_release": "7.0.0-38-generic",
+    "logical_cpus": 12,
+    "physical_memory_bytes": 15991742464,
+    "aggregate_effective_cgroup_capacity_admitted": false
+  },
+  "scope": "Signer ceremony claim, one-shot key generation, private namespace, seal and returned-evidence custody on Linux amd64 behind widened darwin||linux build tags; platform-specific exclusive promotion rename only; fixed-system tool custody (resolved-equality observation, literal-path holder); Linux child-probe refusal before path resolution, scratch or execution; no ceremony entry point, no full toolchain/helper admission, no scale or release claim",
+  "native_runs": {
+    "signer_normal": {
+      "outcome": "PASS",
+      "package_seconds": 102.326,
+      "selector": "^TestExecutionSigner|^TestExecutionReturned|^TestExecutionSystemTool|^TestExecutionProfileSigner|^TestLinuxSystemTool|^TestLinuxExternalTool|^TestRenameExecutionSignerExclusive",
+      "top_level_tests": [
+        "TestExecutionReturnedPackageCaptureRequiresSuccessfulEOF",
+        "TestExecutionReturnedPackageFrame",
+        "TestExecutionReturnedPackageOutput",
+        "TestExecutionReturnedSignatureNative",
+        "TestExecutionSignerCeremonyClaimIsExclusiveAndRetained",
+        "TestExecutionSignerCeremonyRefusesBeforeMutation",
+        "TestExecutionSignerCeremonyRefusesKnownDestinationsBeforeClaim",
+        "TestExecutionSignerKeyAttemptIsOneShot",
+        "TestExecutionSignerKeyDetectsPromotedFileDrift",
+        "TestExecutionSignerKeyGenerationClaimsFingerprintAndPromotes",
+        "TestExecutionSignerKeyRefusesPostClaimTempCollision",
+        "TestExecutionSignerNamespaceRejectsSymlink",
+        "TestExecutionSignerNamespaceRetainsExactPrivateDirectory",
+        "TestExecutionSignerSealsCandidateAndIssuesAdmission",
+        "TestLinuxExternalToolAdmitsResolvedFixedShImage",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages",
+        "TestLinuxExternalToolNativeImageScreen",
+        "TestLinuxExternalToolRefusesChildProbeRolesWithoutExecution",
+        "TestLinuxSystemToolCustodyHoldsFixedSshKeygen",
+        "TestLinuxSystemToolCustodyRefusalsStick",
+        "TestLinuxSystemToolCustodyRefusesUnadmittedFixedImages",
+        "TestLinuxSystemToolVolumeScreensSystemImages",
+        "TestRenameExecutionSignerExclusiveMovesOnceAndRefusesReplacement"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:2654e7468f5c729d632bd36297a2f39cc0365ec2186043243bda62e9c8c75334"
+    },
+    "signer_race": {
+      "outcome": "PASS",
+      "package_seconds": 666.082,
+      "selector": "^TestExecutionSigner|^TestExecutionReturned|^TestExecutionSystemTool|^TestExecutionProfileSigner|^TestExecutionAuthorizationOutput",
+      "top_level_tests": [
+        "TestExecutionAuthorizationOutputFullPipeCancellationAndDeadlines",
+        "TestExecutionAuthorizationOutputPreservesBorrowedFlagsAndIdentity",
+        "TestExecutionReturnedPackageCaptureRequiresSuccessfulEOF",
+        "TestExecutionReturnedPackageFrame",
+        "TestExecutionReturnedPackageOutput",
+        "TestExecutionReturnedSignatureNative",
+        "TestExecutionSignerCeremonyClaimIsExclusiveAndRetained",
+        "TestExecutionSignerCeremonyRefusesBeforeMutation",
+        "TestExecutionSignerCeremonyRefusesKnownDestinationsBeforeClaim",
+        "TestExecutionSignerKeyAttemptIsOneShot",
+        "TestExecutionSignerKeyDetectsPromotedFileDrift",
+        "TestExecutionSignerKeyGenerationClaimsFingerprintAndPromotes",
+        "TestExecutionSignerKeyRefusesPostClaimTempCollision",
+        "TestExecutionSignerNamespaceRejectsSymlink",
+        "TestExecutionSignerNamespaceRetainsExactPrivateDirectory",
+        "TestExecutionSignerSealsCandidateAndIssuesAdmission"
+      ],
+      "skipped_tests": 0,
+      "log_sha256": "sha256:17a795c9c48d56d8dc93a0df54f5a62a65f4c019b88364c6e8cf9c25434a55ac"
+    },
+    "linux_boundary_race_20": {
+      "outcome": "PASS",
+      "package_seconds": 4.596,
+      "selector": "^TestLinuxSystemTool|^TestLinuxExternalTool|^TestRenameExecutionSignerExclusive",
+      "top_level_tests": [
+        "TestLinuxExternalToolAdmitsResolvedFixedShImage",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages",
+        "TestLinuxExternalToolNativeImageScreen",
+        "TestLinuxExternalToolRefusesChildProbeRolesWithoutExecution",
+        "TestLinuxSystemToolCustodyHoldsFixedSshKeygen",
+        "TestLinuxSystemToolCustodyRefusalsStick",
+        "TestLinuxSystemToolCustodyRefusesUnadmittedFixedImages",
+        "TestLinuxSystemToolVolumeScreensSystemImages",
+        "TestRenameExecutionSignerExclusiveMovesOnceAndRefusesReplacement"
+      ],
+      "skipped_tests": 0,
+      "repetitions": 20,
+      "pass_lines_observed": 180,
+      "log_sha256": "sha256:9af5bccc4da775cc836e17065050d883c68aefa9e30ee642d35cffb735eed8f1"
+    },
+    "full_t421_package": {
+      "outcome": "FAIL (retained, not attributed to this slice)",
+      "measured_source_commit": "cd7e13ecbb90f2218503dfb0d37e64dfd1329690",
+      "measured_commit_note": "the 45m full-package run started 34 seconds after cd7e13ec and finished after fix commit 076ec8fb; the fix touches only the external_tool.go gate form and one test assertion, neither on a failing path, and the targeted rerun at 076ec8fb reproduced the identical failure",
+      "package_seconds": 2700.072,
+      "selector": "(complete package; no -run selector)",
+      "failing_tests": [
+        "TestProductionDispatchSitesMatchActualBoundaries"
+      ],
+      "timeout_panic": "test timed out after 45m0s with TestExecutionFreezeCandidateIsCanonicalDetachedAndNonauthoritative running",
+      "log_sha256": "sha256:36cf16a9aea3bf866c89434ca34548a1b9755ecfee7e6edccb0f6b80e383f107"
+    }
+  },
+  "race_repetitions": {
+    "linux_fixed_system_signer_namespace_boundary": 20
+  },
+  "observed_fixed_system_tools": {
+    "sh": {
+      "literal_path": "/bin/sh",
+      "resolved_path": "/usr/bin/dash",
+      "sha256": "sha256:c626229526bb58ec2d0f585f3c3ae1412e6f973b4353385042d11c38d8426917",
+      "observation": "admitted by resolved-equality against the fixed platform path; no version child runs for fixed-system roles",
+      "holder_disposition": "HoldExecutionSystemTool keeps the separate literal-path rule and refuses the packaged symlink"
+    },
+    "ssh-keygen": {
+      "literal_path": "/usr/bin/ssh-keygen",
+      "resolved_path": "/usr/bin/ssh-keygen",
+      "sha256": "sha256:13400171bcdbc5d7d29cafa4305679f5eab78f8f0cb42dba2443f7a04c92aea5",
+      "observation": "held literal root-owned fixed-system image with a stable volume tuple",
+      "holder_disposition": "held and re-checked; no read-only-mount claim"
+    },
+    "hdiutil": {
+      "literal_path": "/usr/bin/hdiutil",
+      "observation": "absent on this host; observation and holder both refuse"
+    }
+  },
+  "oracles": {
+    "ceremony_claim_exclusive_retained_and_refuses_before_mutation_or_known_destinations": true,
+    "key_attempt_one_shot_with_promoted_drift_and_post_claim_collision_refusals": true,
+    "real_fixed_system_keygen_generates_derives_compares_and_promotes": true,
+    "signer_seals_candidate_and_issues_admission": true,
+    "namespace_rejects_symlink_and_retains_exact_private_directory": true,
+    "exclusive_promotion_rename_moves_once_and_refuses_replacement": true,
+    "resolved_sh_admitted_by_observer_while_holder_keeps_literal_path_rule": true,
+    "fixed_system_roles_require_resolved_fixed_images_hold_ssh_keygen_and_refuse_unadmitted": true,
+    "linux_external_native_image_screen_bounds_elf64": true,
+    "linux_child_probe_roles_refuse_before_path_resolution_scratch_or_execution": true,
+    "system_volume_screens_images_and_custody_refusals_stick": true,
+    "returned_capture_requires_successful_eof_with_exact_frame_output_and_native_signature": true,
+    "authorization_output_preserves_borrowed_flags_and_honors_cancellation_and_deadlines": true
+  },
+  "observed_remaining_linux_tool_probe_scratch_entries": 0,
+  "affected_vet": "PASS",
+  "module_verification": "PASS",
+  "changed_files_pinned_lint": "QUALIFIED (not PASS): golangci-lint 2.12.2 pinned --new-from-rev=52048071 --whole-files reports exactly the 50 changed-file platform-dependent unused findings (42 execution_launcher_handoff.go + 8 returned_package_unix.go) whose only callers are darwin-gated; 0 staticcheck findings after the QF1001 gate-form fix; main baseline is 13 unused with no overlap against the changed file set",
+  "documentation_glossary_whitespace": "PASS",
+  "baseline_qualifications": {
+    "broader_t421_lint": "Inherited platform-dependent unused findings remain qualified by H2a/H2b/H2c; full lint is not claimed green",
+    "full_t421_package": "Not claimed green. TestProductionDispatchSitesMatchActualBoundaries fails byte-identically (modulo timings) at base 52048071 and head 076ec8fb with the same observed/expected inventory maps and the same three zero-call sites (internal/store/child.go:inspectSurrealBinary, internal/store/child.go:startOwnedEngine, internal/recovery/recovery.go:runSurreal); this is the retained H2a production-dispatch inventory failure, not an H2d regression. The broader 45m package timeout is likewise retained. Targeted base log sha256:c2ff5018c1bf3ca91b1319659a237ae02e523800c3c383d7435e83d8aa6d759f; targeted head log sha256:842c22439e455126ae0941098a319cfa6401118174e90dd43f6d0b70796ee7d7"
+  },
+  "remaining": [
+    "independent review of the evidence record and documentation commit",
+    "Git/Go SDK/helper and fixed-system recipes",
+    "full native session/descendant hard-death and dispatch integration",
+    "pressure/allocation/restore adapters",
+    "prospective Linux-bound plans, aggregate physical/effective-cgroup resource/child/headroom admission and complete readiness"
+  ],
+  "release_or_scale_claim": false
+}

@@ -135,8 +135,9 @@ else fails closed with no weaker fallback, and `e_phnum <= 128` plus
 `e_phoff >= 64` are conservative screen bounds rather than ELF limits.
 Anonymous executed images need a prospective
 kernel-object binding; the existing process observer still refuses deleted
-paths. Full Linux tool/dispatch custody (T42.H2c), signer/namespace custody
-(T42.H2d), session teardown, pressure adapters, new plan versions and complete
+paths. Linux tool/dispatch custody (T42.H2c) and signer/namespace custody
+(T42.H2d) have since shipped; Git/Go SDK/helper and fixed-system recipes,
+session teardown, pressure adapters, new plan versions and complete
 resource/readiness admission remain required. These commands launch no ceremony and establish no scale result.
 
 The first source-free normal/race and twenty-repetition record is
@@ -193,14 +194,60 @@ external child work have no new hard RSS/disk quota. The existing cooperative
 reference-build deadline and native command/output/cleanup bounds remain. New
 Linux external provenance deliberately fails historical freeze validation;
 retained plans and evidence keep their original versions. Signer/namespace
-custody (T42.H2d), Git/Go SDK/helper and fixed-system recipes, complete session/
-pressure adapters and prospective measured resource/plan/readiness admission
-remain required. These checks execute no ceremony and establish no scale claim.
+custody (T42.H2d) has since shipped; Git/Go SDK/helper and fixed-system recipes,
+complete session/pressure adapters and prospective measured
+resource/plan/readiness admission remain required. These checks execute no ceremony and establish no scale claim.
 
 The source-free exact-commit record is
 [`tool-custody-rehearsal-1.json`](../../spike/t42h2c/tool-custody-rehearsal-1.json).
 It distinguishes the actual SurrealDB observation from the neutral Go fixture
 and preserves broader baseline gate qualifications in the owning backlog.
+
+T42.H2d adds Linux signer, namespace and returned-evidence custody behind build
+tags widened from Darwin alone to Darwin or Linux. Four returned-evidence files
+are pure tag widenings with no logic change; only exclusive key promotion is
+platform-specific, using `renameat2` with `RENAME_NOREPLACE` on Linux and
+`renameatx_np` with `RENAME_EXCL` on Darwin. Run the finite native gates:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=10m ./spike/t421 -run '^TestExecutionSigner|^TestExecutionReturned|^TestExecutionSystemTool|^TestExecutionProfileSigner|^TestLinuxSystemTool|^TestLinuxExternalTool|^TestRenameExecutionSignerExclusive'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=20m ./spike/t421 -run '^TestExecutionSigner|^TestExecutionReturned|^TestExecutionSystemTool|^TestExecutionProfileSigner|^TestExecutionAuthorizationOutput'
+GOMAXPROCS=2 go test -race -p=2 -count=20 -timeout=5m ./spike/t421 -run '^TestLinuxSystemTool|^TestLinuxExternalTool|^TestRenameExecutionSignerExclusive'
+```
+
+On the selected host these measured 102.326s, 666.082s and 4.596s with no skip
+and no data race. The key-generation gate runs the real host
+`/usr/bin/ssh-keygen`; it fails rather than skips when that fixed-system image is
+missing, and it needs a writable private namespace root so the exclusive
+promotion can move once and refuse any replacement. Ceremony claim, one-shot
+attempt, promoted-file drift, post-claim temporary collision and
+known-destination refusals all apply before any mutation, so an interrupted run
+leaves no partially promoted key.
+
+Fixed-system admission keeps two deliberately distinct seams. The external-tool
+observer admits by resolved-path equality, so `/bin/sh` is admitted through its
+resolution to `/usr/bin/dash` and runs no version child; the system-tool holder
+keeps the stricter literal-path rule and therefore refuses that same packaged
+symlink. Do not "fix" one seam to match the other: the holder's literal-path rule
+is the load-bearing control for held custody, and the observer's resolution is
+what makes a distribution symlink usable at all. A fixed-system image must be a
+root-owned regular non-set-ID non-writable executable with a stable volume tuple;
+no read-only-mount claim follows from holding it. Git, Go and SurrealDB
+child-probe roles refuse on Linux before any path resolution, scratch directory
+or execution, so an unadmitted recipe costs one string comparison and leaves no
+scratch entry behind.
+
+This slice supplies no signer-driven ceremony entry point, no command permission
+and no scale result. Git/Go SDK/helper and fixed-system recipes, native
+session/descendant hard-death supervision, isolated pressure/allocation/restore
+adapters, new Linux-bound plan versions and aggregate
+physical/effective-cgroup resource/readiness admission remain required.
+
+The source-free exact-commit record is
+[`signer-custody-rehearsal-1.json`](../../spike/t42h2d/signer-custody-rehearsal-1.json).
+It names the observed fixed-system tools with their literal and resolved paths,
+distinguishes the retained full-package baseline failure from this slice, and
+preserves the changed-file lint qualification in the owning backlog.
 
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
