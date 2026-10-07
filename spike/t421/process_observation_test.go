@@ -291,8 +291,8 @@ func TestProcessObservationConcurrentDetachedViews(t *testing.T) {
 }
 
 func TestProcessObservationRealNativeRoot(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("native process collector is Darwin-only")
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("native process collector requires Darwin or Linux")
 	}
 	rows, err := t4013.ObserveProcessTreeRecords(t.Context(), os.Getpid())
 	if err != nil {

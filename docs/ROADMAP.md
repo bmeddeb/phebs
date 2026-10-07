@@ -15,6 +15,13 @@ must pass here before execution. Missing Linux support is implementation work
 on this machine. The 120-GiB available-disk prerequisite remains. This change
 establishes no rehearsal, ceremony, scale, or release result.
 
+T42.H2a is the first implementation slice: bounded Linux native process-tree,
+resident-memory and executable-path observation in T40's collector, shared by
+T42's existing gauges. Resident memory uses kernel page-table rollups rather
+than approximate stat/statm counters. Custody, session/orphan cleanup, pressure
+filesystems and prospective measured resource admission remain open; this slice
+alone does not make a rehearsal or ceremony ready.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:

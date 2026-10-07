@@ -31,6 +31,31 @@ host headroom, and replace the old 20-GiB RSS envelope. Swap supplies no extra
 physical-memory admission. Workload correctness, isolation, accounting,
 pressure/recovery, and clean teardown remain required.
 
+T42.H2a supplies native Linux process-tree/RSS records and executable-path
+observations through the shared T40 collector. To run its finite real-host and
+refusal checks on this machine:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=2m ./spike/t4013 -run 'TestLinux|TestObserveProcessTreeRecordsRealAndCanceled'
+```
+
+The collector admits at most 8,192 `/proc` directory entries and 129 selected
+process candidates, with 4-KiB bounded stat/rollup records. Resident bytes come
+from the kernel memory rollup, checked against the same lifetime, parent and
+command before and after the read. These are sequential samples; they do not
+prove an atomic tree, simultaneous resource ceiling or complete history of
+short children. Missing rollup support, permission denial, malformed/overflowing
+records and changed identities refuse. A live process never receives invented
+zero RSS. Executable paths are observations requiring later independent image
+custody; deleted images refuse. No sampler helper child is launched.
+
+The rollup asks the kernel to walk each selected process's mappings/page tables,
+so sampling cost grows with mapped memory even though returned data is bounded.
+Context cancellation is checked between reads; an active kernel syscall is
+cooperative rather than forcibly interrupted. Custody, session/orphan teardown,
+pressure-volume adapters, new Linux-bound plans and memory admission are still
+required before complete readiness. This command launches no ceremony.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

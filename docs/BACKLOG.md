@@ -3104,6 +3104,25 @@ not an alternative-host requirement. This ticket authorizes preparation and
 implementation, not a ceremony launch, a fabricated past PASS, or a scale or
 release claim.
 
+**T42.H2a · Linux native process accounting** *(first H2 slice, 2026-10-06)* —
+add bounded native Linux process-tree records and executable-path observation to
+T40's shared collector, which T42's process gauges already consume. One host
+`/proc` directory census admits at most 8,192 entries; each stat/rollup read is
+capped at 4,096 bytes plus an overflow sentinel. Traverse at most 129 root-first
+process candidates. Use `smaps_rollup` resident bytes, bracketed by unchanged
+lifetime, parent and command records, rather than approximate stat/statm RSS.
+Unavailable memory or permission errors refuse; only kernel-confirmed vanished
+processes may be omitted. Linux kernel-worker names up to 256 bytes may enter
+the host census; selected measured processes retain the 16-byte name bound.
+Executable observations admit at most two PIDs, bounded canonical undeleted
+paths and unchanged bracket identities; they do not establish image custody.
+AC: real Linux tree/RSS/exit, exec-class epoch, current/deleted image and
+normal/race refusal tests pass without native skips; malformed records,
+overflow, unavailable RSS, lifetime/parent/name drift and cancellation refuse.
+This slice changes no serialized plan/receipt or historical evidence. Custody,
+session/orphan teardown, pressure filesystems and prospective Linux resource
+admission remain separate H2 slices before readiness/freeze.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
