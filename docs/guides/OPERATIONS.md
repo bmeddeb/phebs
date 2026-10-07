@@ -7933,6 +7933,13 @@ aggregate tmpfs data. Tmpfs consumes that same memory allowance. Provision a
 dedicated test daemon with headroom (the development VM has 4 GiB RAM); do not
 resize or restart a shared daemon to run the harness.
 
+The current-host containment result is retained in
+[`amd64_boundary_rehearsal_1.json`](../../spike/t457/amd64_boundary_rehearsal_1.json).
+Its eight probes passed on exact source
+`f26ac239ec57a7119bffe600390857364f997a64`, including required task/output/memory
+refusals and exact cleanup. It does not prove the compiler cohort or the
+separate controller-hard-death gate.
+
 The explicit native selectors are `TestNativeBoundary`,
 `TestNativeControllerDeath`, and `TestNativePlan`. Supply
 `-t451a-native-socket`, `-t451a-native-image`, and `-t451a-native-parent` after

@@ -15463,6 +15463,19 @@ containment confirmation and source-free evidence are recorded separately;
 the five-minute controller-hard-death gate and full compiler cohort are not
 claimed. The sealed sysroot and complete offline worker bundle remain needed.
 
+T45.7 exact-commit containment confirmation (2026-10-06): implementation
+`f26ac239ec57a7119bffe600390857364f997a64` passed the eight native boundary
+probes in 14.49 seconds (14.511 seconds package time), on this amd64 host with
+one CPU and the unchanged 3-GiB no-swap container limit. Access, watchdog,
+descriptor, scratch-byte and scratch-inode probes completed; task, output,
+and memory probes proved their required named refusals. Every receipt records
+verified limits and exact container/input removal; final matching container
+count and private-parent entry count are both zero. The source-free record is
+`spike/t457/amd64_boundary_rehearsal_1.json`. Normal/race T45.1a gates, downstream
+T45.1b/T45.7 normal gates, affected vet/lint, docs, glossary and whitespace pass.
+Independent review remains pending. This is containment evidence only; full
+compiler generation, controller-hard-death and T40/T42 readiness remain open.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a
