@@ -69,6 +69,20 @@ GOMAXPROCS=2 go test -p=2 -count=1 -timeout=2m ./spike/t421 -run '^TestLinuxInpu
 GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=2m ./spike/t421 -run '^TestLinuxInputCustody'
 ```
 
+Two retained probes re-derive the host facts those checks assume, without
+exercising phebs code:
+
+```sh
+go run ./spike/t42h2b/cmd/t42h2b-seal-probe
+go run ./spike/t42h2b/cmd/t42h2b-ctime-probe
+```
+
+Run the seal probe before attributing a custody refusal to the implementation:
+it asserts the 24 kernel invariants the constructor depends on and exits
+non-zero if the host cannot protect direct inputs at all. The ctime probe
+asserts nothing and only measures; it is what shows a permission change
+restored inside one coarse inode-timestamp tick is not detectable.
+
 The kernel must support explicit executable/nonexecutable memfd creation and
 write, size, execute-bit and seal-set protection, which means Linux 6.3 or
 later for `MFD_EXEC`/`MFD_NOEXEC_SEAL`. `MFD_NOEXEC_SEAL` applies
@@ -93,8 +107,9 @@ owns sealed copies. Byte/size/execute-bit changes are kernel-denied under any
 mode, while other permission metadata remains mutable and invalidates custody
 whenever it leaves a compared field changed. Observation is bounded by the
 kernel's coarse inode clock: a permission change restored inside one tick
-(measured ~1 ms on 6.8.0-117-generic, where a probe saw 199/200 such sequences
-leave `Ctim` identical) changes no compared field and is therefore not refused.
+(measured ~1 ms granularity on 6.8.0-117-generic, where `t42h2b-ctime-probe`
+saw 198/200 such sequences leave `Ctim` identical) changes no compared field
+and is therefore not refused.
 That narrows no byte guarantee, because the seals deny writes independently of
 mode, so metadata comparison is defense in depth rather than the load-bearing
 control. The native suite accordingly asserts unrestored mode drift and an

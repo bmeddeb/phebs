@@ -3198,12 +3198,14 @@ that reviewed head; every other qualification in it stands.
 unsound.** `TestLinuxInputCustodyKernelMutationRefusals` chmod'ed a sealed memfd
 to add owner-write and then restored the original mode, and required `Check` to
 refuse through `Ctim`. Linux stamps inodes from a coarse clock, so a restore
-inside one tick changes no compared field and `Check` correctly accepts. A
-focused probe on 6.8.0-117-generic measured 199/200 such sequences leaving
-`Ctim` identical with an effective granularity near 1 ms, and the pristine PR
-bytes failed that assertion 1 time in 15 runs; the executable variant, which
-does more work before the drift, passed. The recorded host therefore passed by
-timing margin rather than by guarantee. This is not a production defect and
+inside one tick changes no compared field and `Check` correctly accepts. The
+retained `t42h2b-ctime-probe` measured 198/200 such sequences on
+6.8.0-117-generic leaving `Ctim` identical, at an effective granularity of
+~1.000104 ms; the scratch probe that first diagnosed this saw 199/200, and the
+rate varies per run, which is the finding rather than a fixed figure. The
+pristine PR bytes failed that assertion 1 time in 15 runs; the executable
+variant, which does more work before the drift, passed. The recorded host
+therefore passed by timing margin rather than by guarantee. This is not a production defect and
 narrows no byte guarantee: the same probe confirmed `pwrite`, both `ftruncate`
 directions, execute-bit `fchmod`, `F_ADD_SEALS` and shared writable `mmap` all
 return `EPERM` even with the mode left owner-writable and an `O_RDWR` descriptor
@@ -3246,6 +3248,19 @@ observed `7.0.0-38-generic` and 15,991,742,464 bytes, with logical CPUs
 unchanged at 12, and neither slice noted the divergence. The H1 record stays
 byte-exact as historical evidence and this entry is the note; a later H2 slice
 should decide whether the baseline is re-observed or explicitly versioned.
+
+Both diagnostics are retained in the repository so the kernel contract and the
+drift-detection boundary are re-derivable rather than trusted from a recorded
+measurement: `spike/t42h2b/cmd/t42h2b-seal-probe` asserts the 24 kernel
+invariants the constructor depends on and exits non-zero if the host cannot
+protect direct inputs at all, which separates a host refusal from a custody
+defect; `spike/t42h2b/cmd/t42h2b-ctime-probe` asserts none and measures the
+coarse-clock boundary, exiting zero unless it cannot run. Both are
+`//go:build linux`, use `golang.org/x/sys/unix` rather than a per-architecture
+hardcoded syscall number, build on linux/amd64, arm64, 386 and arm, exercise no
+phebs code, create no files and leave no disk copy. Adding them touches no file
+under `spike/t421/`, so the corrected-tree native result binding below holds
+across this commit.
 
 Because these corrections change both bound source files, the retained
 `sealed-input-rehearsal-1.json` no longer describes the corrected tree. That

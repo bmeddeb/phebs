@@ -69,6 +69,29 @@
     "utimensat_on_fully_sealed_memfd": "succeeds, moves Mtim, seal set stays intact at 0x2f, writes still EPERM"
   },
 
+  "retained_probes": {
+    "note": "Both probes were originally scratch programs; they are now retained in the repository so every measurement above is re-derivable rather than trusted. Each is //go:build linux, uses golang.org/x/sys/unix instead of a hardcoded per-architecture syscall number, and builds on linux/amd64, arm64, 386 and arm. Neither exercises phebs code.",
+    "seal_probe": {
+      "path": "spike/t42h2b/cmd/t42h2b-seal-probe/main.go",
+      "purpose": "asserts the kernel memfd sealing contract input_custody_linux.go depends on, so a refusal inside ProtectLinuxExecutionInputs can be attributed to the host kernel rather than to the custody implementation",
+      "asserts_host_invariants": true,
+      "exits_nonzero_on_any_failure": true,
+      "linux_amd64_binary_sha256": "sha256:54351f230492a46841bce041aaf049b35e0972700ec3c3422a3eed1ccff7c2b7",
+      "observed_run": "24 invariants PASS, 0 FAIL, exit 0",
+      "observed_invariants": 24
+    },
+    "ctime_probe": {
+      "path": "spike/t42h2b/cmd/t42h2b-ctime-probe/main.go",
+      "purpose": "measures the coarse inode timestamp behaviour that bounds metadata-drift detection, which is what made the original restored-chmod oracle unsound",
+      "asserts_host_invariants": false,
+      "exits_nonzero_on_any_failure": false,
+      "exit_zero_rationale": "a low observability rate is the finding rather than a failure, so it exits zero unless it cannot run",
+      "linux_amd64_binary_sha256": "sha256:3fef429163e1e5442f6a3543bb0375618d91c8a2471c4e95d57d24aa05746edb",
+      "observed_run": "198/200 restore sequences left Ctim identical, ~1.000104 ms effective granularity, 200/200 unrestored drift detected, explicit utimensat drift observable with the seal set intact at 0x2f, exit 0"
+    },
+    "kernel_contract_probe_measurements_now_reproducible_via": "t42h2b-seal-probe"
+  },
+
   "flake_diagnosis": {
     "affected_test": "TestLinuxInputCustodyKernelMutationRefusals",
     "status": "pre-existing at the reviewed head; not introduced by any correction",
@@ -77,9 +100,9 @@
     "failing_assertion": "input_custody_linux_test.go:150 'allowed non-execute metadata drift must still invalidate custody'",
     "failing_variant": "executable=false (21-byte fixture); executable=true passed, doing more work before the drift",
     "mechanism": "the test chmod'ed a sealed memfd to add owner-write and restored the original mode, then required Check to refuse through Ctim; Linux stamps inodes from a coarse clock, so a restore inside one tick changes no compared field and Check correctly accepts",
-    "probe_restore_sequences_leaving_ctim_identical": "199 of 200",
-    "probe_slowest_unobserved_sequence": "64.876us",
-    "probe_effective_inode_timestamp_granularity": "~1 ms (40 distinct Ctim values in 40 ms of continuous chmod)",
+    "probe_restore_sequences_leaving_ctim_identical": "198 of 200 with the retained t42h2b-ctime-probe, and 199 of 200 with the scratch probe that first diagnosed it; the rate varies per run, which is the finding rather than a fixed figure",
+    "probe_slowest_unobserved_sequence": "140.937us retained probe, 64.876us scratch probe",
+    "probe_effective_inode_timestamp_granularity": "~1.000104 ms, measured as 40 distinct Ctim values in 40.004193 ms of continuous chmod",
     "probe_unrestored_drift_detected": "200 of 200",
     "security_impact": "none. The seals deny writes independently of mode, so a same-tick restored chmod gains nothing; metadata comparison is defense in depth, not the load-bearing control.",
     "documentation_impact": "the PLAN ADR and operations guide claimed detection of any non-execute permission drift; both now state the same-tick boundary explicitly",
