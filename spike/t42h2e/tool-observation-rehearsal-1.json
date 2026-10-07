@@ -1,0 +1,360 @@
+{
+  "schema": "phebs-t42h2e-linux-tool-observation-rehearsal-v1",
+  "measured_at_utc": "2026-10-07T22:49:49.174953+00:00",
+  "source_commit": "0da4d1e4c3d5496d2389eee86b44e3dceaa23402",
+  "implementation_commit": "deb93c8a11434e98c0dcf0d47dbd0b4b619073b0",
+  "review_correction_commit": "0da4d1e4c3d5496d2389eee86b44e3dceaa23402",
+  "base_commit": "a0a35965ce908c4c8f0926a8b5b9ee974ca222f6",
+  "commit_note": "every gate below was measured at source_commit 0da4d1e4, not at implementation_commit deb93c8a; the review correction changed spike/t421/external_tool.go and spike/t421/external_tool_linux_test.go, so all logs retained from deb93c8a were discarded and re-measured",
+  "source_files_sha256": {
+    "spike/t421/external_tool.go": "sha256:2ebf53051e47b820333c5dc2967beb51753d4de813824f7c25a4c8002e63cab3",
+    "spike/t421/external_tool_linux_test.go": "sha256:16b6df946df0b1d687fc8ce305ea0d394e6e9038a78d500e65c4e890db4ba684"
+  },
+  "host": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "kernel_release": "7.0.0-38-generic",
+    "logical_cpus": 12,
+    "physical_memory_bytes": 15991742464,
+    "go_version": "go1.26.5 linux/amd64",
+    "aggregate_effective_cgroup_capacity_admitted": false
+  },
+  "scope": "Shared Git and Go child-probe observation on the Linux public external-tool observer behind a fail-closed role allowlist, with role-specific structural oracles and external-executed-file-v1 provenance; SurrealDB keeps its single sealed Linux custody route and still refuses on that public path; fixed-system roles, the resolved /bin/sh seam, the bounded native ELF64 image screen and validateExecutionHost as the separate freeze-platform fence are unchanged; no Git exec-path helper manifest, no Go GOROOT/SDK location recipe, no launcher authority, no session teardown, no Linux plan version, no resource admission, no freeze, ceremony or scale claim",
+  "native_runs": {
+    "targeted_normal": {
+      "outcome": "PASS",
+      "package_seconds": 43.733,
+      "selector": "ExternalTool|ExternalProbe|LinuxToolCustody",
+      "command": "GOMAXPROCS=2 go test -p=2 -count=1 -timeout=20m ./spike/t421 -run 'ExternalTool|ExternalProbe|LinuxToolCustody' -v",
+      "top_level_tests": [
+        "TestLinuxExternalToolAdmitsRealGitAndGoChildProbes",
+        "TestLinuxExternalToolAdmitsResolvedFixedShImage",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages",
+        "TestLinuxExternalToolNativeImageScreen",
+        "TestLinuxExternalToolRefusesSurrealWithoutExecution",
+        "TestLinuxExternalToolRefusesWrongRoleNativeImages",
+        "TestLinuxToolCustodyClosedProbeRefusals",
+        "TestLinuxToolCustodyExternalRefusalsAndCleanup",
+        "TestLinuxToolCustodyRealSurreal",
+        "TestLinuxToolCustodyReferenceSealedExactBuild",
+        "TestLinuxToolCustodyRetainsProbeUntilJoinedAndDrained",
+        "TestLinuxToolCustodyScopedMatchAndStickyRefusal",
+        "TestObserveExecutionExternalToolRefusesUnadmittedRolePathAndContext",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation",
+        "TestRunExternalToolProbeCancellationKillsOwnedDescendant",
+        "TestRunExternalToolProbeClosesEnvironmentAndWorkingDirectory",
+        "TestValidateExternalToolImageReadsOnlyNativeHeaders",
+        "TestValidateExternalToolImageRejectsLinkedOrNonExecutableFiles",
+        "TestValidateExternalToolImageRejectsMalformedHeaders"
+      ],
+      "pass_lines_top_level": 19,
+      "pass_lines_subtests": 86,
+      "run_lines": 111,
+      "skipped_tests": 6,
+      "skipped_test_names": [
+        "TestExternalProbePreparationParentRetainsScratch",
+        "TestObserveExecutionExternalToolBindsFixedNativeImagesWithoutVersionProbe",
+        "TestObserveExecutionExternalToolBindsRealGitAndGo",
+        "TestObserveExecutionExternalToolOptionalRealSurreal",
+        "TestObserveExecutionExternalToolRefusesDelegatingAppleGitShim",
+        "TestObserveExecutionExternalToolRefusesVersionOfWrongRole"
+      ],
+      "skip_reason": "all six are pre-existing Darwin-gated tests skipped by requireExternalToolFrozenHost, which is declared in spike/t421/external_tool_test.go:258 and skips unless the host is darwin/arm64. Five of them are defined in that same file, while the sixth, TestExternalProbePreparationParentRetainsScratch, is defined in spike/t421/reference_process_test.go:82 and calls the same helper at line 83. This selector is deliberately unanchored and also matches them on Linux. These skips are expected on this host and are not a Linux coverage gap; do not narrow the selector to manufacture a zero-skip number",
+      "failed_tests": 0,
+      "data_races": 0,
+      "log_sha256": "sha256:8064055c751cc71e578efb389f9557c754c3488e04889ab35494c243b0a9b16e"
+    },
+    "targeted_race": {
+      "outcome": "PASS",
+      "package_seconds": 48.100,
+      "selector": "^TestLinuxExternalTool|^TestObserveExecutionExternalToolRefusesUnadmittedRolePathAndContext|^TestRunExternalToolProbe|^TestLinuxToolCustody",
+      "command": "GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=20m ./spike/t421 -run '^TestLinuxExternalTool|^TestObserveExecutionExternalToolRefusesUnadmittedRolePathAndContext|^TestRunExternalToolProbe|^TestLinuxToolCustody' -v",
+      "top_level_tests": [
+        "TestLinuxExternalToolAdmitsRealGitAndGoChildProbes",
+        "TestLinuxExternalToolAdmitsResolvedFixedShImage",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages",
+        "TestLinuxExternalToolNativeImageScreen",
+        "TestLinuxExternalToolRefusesSurrealWithoutExecution",
+        "TestLinuxExternalToolRefusesWrongRoleNativeImages",
+        "TestLinuxToolCustodyClosedProbeRefusals",
+        "TestLinuxToolCustodyExternalRefusalsAndCleanup",
+        "TestLinuxToolCustodyRealSurreal",
+        "TestLinuxToolCustodyReferenceSealedExactBuild",
+        "TestLinuxToolCustodyRetainsProbeUntilJoinedAndDrained",
+        "TestLinuxToolCustodyScopedMatchAndStickyRefusal",
+        "TestObserveExecutionExternalToolRefusesUnadmittedRolePathAndContext",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation",
+        "TestRunExternalToolProbeCancellationKillsOwnedDescendant",
+        "TestRunExternalToolProbeClosesEnvironmentAndWorkingDirectory"
+      ],
+      "pass_lines_top_level": 16,
+      "pass_lines_subtests": 51,
+      "run_lines": 67,
+      "skipped_tests": 0,
+      "failed_tests": 0,
+      "data_races": 0,
+      "note": "the anchored selector excludes the three TestValidateExternalToolImage* tests that the unanchored normal selector also matches, so 16 top-level passes here against 19 there",
+      "log_sha256": "sha256:a3f39dbe690822f9f773b144f83eb0b9a92fb43c5be9c7e40b978fd3aa19e1f5"
+    },
+    "tool_boundary_race_20": {
+      "outcome": "PASS",
+      "package_seconds": 98.216,
+      "selector": "^TestLinuxExternalTool|^TestRunExternalToolProbe",
+      "command": "GOMAXPROCS=2 go test -race -p=2 -count=20 -timeout=30m ./spike/t421 -run '^TestLinuxExternalTool|^TestRunExternalToolProbe' -v",
+      "repetitions": 20,
+      "pass_lines_observed": 680,
+      "pass_lines_top_level": 180,
+      "pass_lines_subtests": 500,
+      "run_lines": 680,
+      "pass_lines_per_repetition": 34,
+      "distinct_top_level_tests": 9,
+      "distinct_subtests": 25,
+      "top_level_tests": [
+        "TestLinuxExternalToolAdmitsRealGitAndGoChildProbes",
+        "TestLinuxExternalToolAdmitsResolvedFixedShImage",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages",
+        "TestLinuxExternalToolNativeImageScreen",
+        "TestLinuxExternalToolRefusesSurrealWithoutExecution",
+        "TestLinuxExternalToolRefusesWrongRoleNativeImages",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation",
+        "TestRunExternalToolProbeCancellationKillsOwnedDescendant",
+        "TestRunExternalToolProbeClosesEnvironmentAndWorkingDirectory"
+      ],
+      "subtests": [
+        "TestLinuxExternalToolAdmitsRealGitAndGoChildProbes/git",
+        "TestLinuxExternalToolAdmitsRealGitAndGoChildProbes/go",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages/missing_hdiutil",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages/shell_wrapper",
+        "TestLinuxExternalToolFixedSystemRolesRequireResolvedFixedImages/wrong_fixed_image",
+        "TestLinuxExternalToolNativeImageScreen/directory",
+        "TestLinuxExternalToolNativeImageScreen/elf32",
+        "TestLinuxExternalToolNativeImageScreen/empty",
+        "TestLinuxExternalToolNativeImageScreen/missing",
+        "TestLinuxExternalToolNativeImageScreen/non-executable",
+        "TestLinuxExternalToolNativeImageScreen/script",
+        "TestLinuxExternalToolNativeImageScreen/short",
+        "TestLinuxExternalToolRefusesWrongRoleNativeImages/git_role_rejects_a_foreign_native_image_at_the_closed_probe_oracle",
+        "TestLinuxExternalToolRefusesWrongRoleNativeImages/git_role_rejects_a_valid_non-Git_version",
+        "TestLinuxExternalToolRefusesWrongRoleNativeImages/go_role_rejects_a_valid_non-Go_version",
+        "TestLinuxExternalToolRefusesWrongRoleNativeImages/go_role_rejects_the_Git_image",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/exact_stdout_bound",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/exit_status",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/extra_newline_remains_invalid",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/multiple_lines_remain_invalid",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/one_newline",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/source_path_remains_invalid",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/stderr",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/stderr_overflow",
+        "TestRunExternalToolProbeBoundsOutputAndPreservesVersionValidation/stdout_overflow"
+      ],
+      "skipped_tests": 0,
+      "failed_tests": 0,
+      "data_races": 0,
+      "log_sha256": "sha256:e46216492cd368c6e6271a7299eee40baa1dfbc039d0293da105058e13d22077"
+    },
+    "retained_dispatch_base": {
+      "outcome": "FAIL (retained baseline, measured at base_commit a0a35965)",
+      "package_seconds": 2.283,
+      "selector": "^TestProductionDispatchSitesMatchActualBoundaries$",
+      "measured_source_commit": "a0a35965ce908c4c8f0926a8b5b9ee974ca222f6",
+      "failing_tests": [
+        "TestProductionDispatchSitesMatchActualBoundaries"
+      ],
+      "log_bytes": 3720,
+      "log_lines": 11,
+      "log_sha256": "sha256:a6fbe2406fb576160cf120b98bb59404331fdd8d40f47ac23c1777ed8919b879"
+    },
+    "retained_dispatch_head": {
+      "outcome": "FAIL (retained baseline, reproduced at source_commit 0da4d1e4)",
+      "package_seconds": 2.373,
+      "selector": "^TestProductionDispatchSitesMatchActualBoundaries$",
+      "measured_source_commit": "0da4d1e4c3d5496d2389eee86b44e3dceaa23402",
+      "failing_tests": [
+        "TestProductionDispatchSitesMatchActualBoundaries"
+      ],
+      "log_bytes": 3720,
+      "log_lines": 11,
+      "byte_identical_to_base_modulo_timings": true,
+      "log_sha256": "sha256:21c9d8aeacd3bf56822260d78e7bc27344ea18a05a1357f0dc19151144a48758"
+    }
+  },
+  "race_repetitions": {
+    "linux_external_tool_and_probe_boundary": 20
+  },
+  "observed_external_tools": {
+    "git": {
+      "role": "git",
+      "literal_path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "sha256": "sha256:5516c9f362c29376ab9a499a33082f9f611941d8c75930c880e30ad109e39c9a",
+      "observed_version": "git version 2.53.0",
+      "independent_ambient_expectation": "git version 2.53.0",
+      "exec_path": "/usr/lib/git-core",
+      "exec_path_core_image": "/usr/lib/git-core/git",
+      "exec_path_core_image_sha256": "sha256:5516c9f362c29376ab9a499a33082f9f611941d8c75930c880e30ad109e39c9a",
+      "core_image_hashes_equal_to_selected_image": true,
+      "exec_path_inventory": {
+        "entries": 172,
+        "symlinks": 145,
+        "symlinks_resolving_to_the_core_image": 142,
+        "symlinks_resolving_elsewhere": 3,
+        "symlinks_resolving_elsewhere_names": [
+          "git-remote-ftp",
+          "git-remote-ftps",
+          "git-remote-https"
+        ],
+        "regular_files": 26,
+        "regular_files_hashing_equal_to_the_core_image": 1,
+        "regular_files_hashing_differently": 25,
+        "directories": 1,
+        "directory_names": [
+          "mergetools"
+        ],
+        "note": "the 142 symlinks plus the one equal regular file are the core image itself under its dispatch names; the 25 differently-hashed regular files are unadmitted helper executables and the three remote-helper symlinks resolve to git-remote-http, which is also unadmitted. This slice admits only the core image, so the helper manifest stays an open prerequisite"
+      },
+      "helper_manifest_admitted": false,
+      "observation": "admitted by the shared closed recipe: one symlink resolution, one bounded image hash, one ELF64 header screen, one private scratch directory, and two children (git --version and git --exec-path) under a ten-second command context with 4-KiB stdout/stderr caps inside the existing thirty-second observation context, plus one re-hash of the resolved core image for content equality"
+    },
+    "go": {
+      "role": "go",
+      "literal_path": "/home/ben/.local/bin/go",
+      "resolved_path": "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+      "sha256": "sha256:8da5fd321795754b994c64e3eb8a5a14ff47bd285559a7e876f3c79abafc67f9",
+      "observed_version": "go version go1.26.5 linux/amd64",
+      "expected_version": "go version go1.26.5 linux/amd64",
+      "expectation_source": "runtime.Version() plus runtime.GOOS/runtime.GOARCH inside the verifier, so it is exact but not independent of the verifier toolchain",
+      "usr_bin_go_present": false,
+      "goroot": "/home/ben/.local/share/phebs-host/tools/go-1.26.5",
+      "goroot_sdk_location_recipe_admitted": false,
+      "observation": "admitted by the shared closed recipe with one child (go version) and no extra child; the closed probe environment overrides hostile ambient GOFLAGS, GOENV, GOWORK, GOTOOLCHAIN, GOPROXY, GOSUMDB and GOTELEMETRY"
+    },
+    "surreal": {
+      "role": "surreal",
+      "literal_path": "/home/ben/.local/bin/surreal",
+      "resolved_path": "/home/ben/.local/share/phebs-host/downloads/surreal-3.2.0/surreal-bin/surreal",
+      "sha256": "sha256:9d631086ebc74fbfd3914b1acdbad0fa8b1655d02acc93f9208455038ee394c1",
+      "host_version": "3.2.0 for linux on x86_64",
+      "public_observer_disposition": "refused",
+      "refusal_message": "external SurrealDB observation requires its sealed Linux custody",
+      "sealed_custody_route": "ProtectLinuxExecutionExternalTool, memfd sealed FD executed as /proc/self/fd/3, provenance external-sealed-file-linux-amd64-v1",
+      "observation": "refused before any absolute-path validation, symlink resolution, hashing, scratch creation or execution, so Linux retains exactly one admitted SurrealDB route and no second weaker identity is issued for the same bytes"
+    }
+  },
+  "observed_fixed_system_tools": {
+    "sh": {
+      "literal_path": "/bin/sh",
+      "resolved_path": "/usr/bin/dash",
+      "sha256": "sha256:c626229526bb58ec2d0f585f3c3ae1412e6f973b4353385042d11c38d8426917",
+      "observation": "unchanged by this slice: admitted by resolved-equality against the fixed platform path, and no version child runs for fixed-system roles",
+      "holder_disposition": "HoldExecutionSystemTool keeps the separate literal-path rule and refuses the packaged symlink; the two seams are deliberately distinct and must not be reconciled"
+    },
+    "ssh-keygen": {
+      "literal_path": "/usr/bin/ssh-keygen",
+      "resolved_path": "/usr/bin/ssh-keygen",
+      "sha256": "sha256:13400171bcdbc5d7d29cafa4305679f5eab78f8f0cb42dba2443f7a04c92aea5",
+      "observation": "unchanged by this slice; also reused here as a real foreign native ELF64 image for the wrong-role refusal test",
+      "wrong_role_disposition": "under role git its --version exits nonzero with usage on stderr, so the role-independent closed-probe oracle refuses it before any Git-specific oracle runs"
+    },
+    "hdiutil": {
+      "literal_path": "/usr/bin/hdiutil",
+      "observation": "absent on this host; observation and holder both refuse"
+    }
+  },
+  "oracles": {
+    "real_git_admitted_with_independent_ambient_version_expectation": true,
+    "real_go_admitted_with_exact_verifier_toolchain_equality": true,
+    "git_exec_path_resolves_to_a_core_image_hashing_equal_to_the_selected_image": true,
+    "closed_probe_environment_overrides_hostile_ambient_git_and_go_variables": true,
+    "linux_surreal_refuses_on_the_public_path_naming_its_sealed_custody_route_and_executes_nothing": true,
+    "linux_role_admission_is_a_fail_closed_allowlist_rather_than_a_single_named_denial": true,
+    "wrong_role_refusals_use_real_native_elf64_images_that_pass_the_bounded_header_screen": true,
+    "each_wrong_role_subtest_names_the_exact_oracle_that_refuses_it": true,
+    "go_role_rejects_the_real_git_image_at_the_verifier_toolchain_oracle": true,
+    "git_role_rejects_a_foreign_native_image_at_the_role_independent_closed_probe_oracle": true,
+    "git_and_go_roles_each_reject_a_valid_foreign_version_at_their_own_role_oracle": true,
+    "a_refused_observation_leaves_no_private_probe_scratch_behind": true,
+    "fixed_system_roles_require_resolved_fixed_images_and_the_sh_symlink_seam_is_exact": true,
+    "bounded_native_elf64_image_screen_refuses_directory_elf32_empty_missing_non_executable_script_and_short": true,
+    "probe_output_bound_exit_status_stderr_and_version_validation_gates_hold_under_race": true,
+    "probe_cancellation_kills_the_owned_descendant_and_the_closed_environment_and_working_directory_hold": true,
+    "unadmitted_role_relative_path_and_context_refusals_remain_exact_on_linux": true,
+    "no_production_dispatch_site_was_added_or_removed": true,
+    "darwin_arm64_source_is_unchanged_by_the_only_production_edit": true
+  },
+  "observed_remaining_linux_tool_probe_scratch_entries": 0,
+  "scratch_scan_roots": [
+    "/tmp",
+    "/var/tmp",
+    "/home/ben/.local/share/phebs-host"
+  ],
+  "affected_vet": "PASS (host linux/amd64, plus GOOS=darwin GOARCH=arm64 build and vet, plus GOOS=linux GOARCH=arm64 vet)",
+  "module_verification": "PASS (go mod verify: all modules verified)",
+  "changed_files_pinned_lint": "PASS (0 issues): golangci-lint 2.12.2 pinned --new-from-rev=a0a35965 --whole-files ./spike/t421/... reports 0 issues at source_commit 0da4d1e4, so this slice adds no platform-dependent unused artifact; unlike T42.H2d, whose changed-file lint was qualified by 50 findings whose only callers are darwin-gated",
+  "documentation_glossary_whitespace": "PASS (make docs-check ok 0.921s, make verify-glossary clean, git diff --check clean, and no trailing whitespace in this record). docs-check could only pass after this file existed, because the OPERATIONS record link resolves to it through TestTrackedMarkdownLinksResolve. Its input is the tracked markdown link set, the documentation map and the sealed spike/t111 tree digest, none of which this record's own text affects, so the cited timing is stable across the final JSON edit. Two reruns are retained: ok 0.990s covered the record commit's shared-spine content, and the cited ok 0.921s is the later rerun on the delta-correction tree after all four documentation edits, so it covers the final committed markdown rather than an intermediate state",
+  "gofmt": "PASS (gofmt -l reports no file)",
+  "static_gates": {
+    "gofmt_l": "PASS",
+    "go_vet_host": "PASS",
+    "go_build_darwin_arm64": "PASS",
+    "go_vet_darwin_arm64": "PASS",
+    "go_vet_linux_arm64": "PASS",
+    "go_mod_verify": "PASS",
+    "git_diff_check": "PASS",
+    "golangci_lint_pinned_scoped": "PASS (0 issues)"
+  },
+  "independent_review": {
+    "reviewed_commit": "deb93c8a11434e98c0dcf0d47dbd0b4b619073b0",
+    "critical": 0,
+    "high": 0,
+    "medium": 1,
+    "low": 3,
+    "informational": 4,
+    "medium_1": "the OPERATIONS record link pointed at a rehearsal JSON that did not exist, so make docs-check was red and this slice's measurements and lint-green claim were unverifiable; corrected by authoring this record",
+    "low_1": "corrected in review_correction_commit: the Linux guard was a denylist of one named role, so a future seventh probed role added to the inventory switch would have been observed on linux/amd64 with no platform decision; replaced with a fail-closed allowlist that admits git, go, sh, ssh-keygen and hdiutil and refuses anything else with its own message, keeping surreal's sealed-custody message",
+    "low_2": "corrected in review_correction_commit: the wrong-role test comment claimed every refusal came from a role oracle, which was false for the foreign ssh-keygen image, whose --version exits nonzero with stderr so the role-independent closed-probe oracle refuses it first; the subtest now names that oracle and also asserts that a refused observation leaves no private probe scratch behind, and the same false claim was corrected in the docs/BACKLOG.md acceptance criteria",
+    "low_3": "corrected in documentation: the PLAN decision-record cost column under-accounted the inherited Linux session census. Each probe child runs through runReferenceCommand, whose finishExecutionProcessSession drain enumerates the whole host with /bin/ps -Ao pid=,stat= under a 128-KiB output cap and a two-second probe timeout plus one getsid per host PID, polled every ten milliseconds until the session is empty or the five-second deadline expires. Observing Git therefore spawns at least two full-host census children and Go at least one. This slice newly enables that inherited Darwin-recipe cost on Linux rather than adding it, it fails closed, and T42.H2f owns replacing it with bounded native /proc records. Recorded in the PLAN escape-hatch column and as a third OPERATIONS operator caveat",
+    "informational": [
+      "the new Linux refusal tests assert exact messages, so on linux/arm64 the frozen-host platform gate fires first and TestLinuxExternalToolRefusesSurrealWithoutExecution and TestLinuxExternalToolRefusesWrongRoleNativeImages fail; GOOS=linux GOARCH=arm64 go vet ./spike/t421 is clean, so they do compile and run there, but arm64 Linux is not a claimed gate for this slice",
+      "ExecutionToolIdentity carries no platform field and provenance stays external-executed-file-v1, so Linux git and go identities are provenance-compatible with historical Darwin plans; discrimination rests solely on SHA256 equality plus validateExecutionHost's darwin/arm64 freeze fence. This is asymmetric with T42.H2c's deliberately-unaccepted external-sealed-file-linux-amd64-v1",
+      "spike/t421/README.md:313 still describes the observer as running on Darwin/arm64 and that file contains no mention of Linux at all, which has been stale since T42.H2c/H2d; left untouched because no H2 slice has edited it and it is a historical implementation record rather than a task guide",
+      "Go's version expectation duplicates the verifier's own runtime.Version() comparison, so unlike Git's independent ambient probe it is exact but not independent; this matches the existing Darwin recipe and is not weakened here"
+    ],
+    "test_discrimination_proof": "in a throwaway /tmp clone at deb93c8a, deleting the Linux guard made TestLinuxExternalToolRefusesSurrealWithoutExecution FAIL and inverting it made all three new Linux tests FAIL; the clone was deleted and git diff HEAD -- spike/t421/ was empty in the working tree afterwards",
+    "darwin_unchanged_proof": "the only production edit is inside a runtime.GOOS == linux branch and the condition it replaced was equally Linux-gated, while the test file is //go:build linux; GOOS=darwin GOARCH=arm64 build and vet pass",
+    "delta_re_review": {
+      "reviewed_commit": "0da4d1e4c3d5496d2389eee86b44e3dceaa23402",
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 3,
+      "informational": 4,
+      "blocks_merge": false,
+      "verdict": "the delta does not block merging hp/t42.h2e-linux-tool-recipes into main; the reviewer recommended correcting the three new documentation-precision lows in a follow-up documentation commit rather than gating the merge, and that follow-up is this record commit",
+      "prior_findings_verified": "all four first-review findings (medium_1, low_1, low_2, low_3) were independently verified as genuinely fixed rather than re-worded, each with line-level evidence, and each fix confirmed discriminating under test",
+      "reproduced": "both source_files_sha256 values, all five log_sha256 values, all four commit SHAs, every host fact, the resolved git/go/surreal images, the complete /usr/lib/git-core inventory, all three gate timings and pass/skip censuses, the six skip names, dispatch base/head byte-identity after digit normalization, the pinned scoped changed-file lint, every static gate, zero surviving probe scratch, the pure-addition property of the PLAN and ROADMAP diffs, and the absence of any production dispatch site or external-executed-file-v1 reference under internal/ or cmd/",
+      "low_1": "this record attributed all six skips to spike/t421/external_tool_test.go; five live there while TestExternalProbePreparationParentRetainsScratch is at spike/t421/reference_process_test.go:82 with its requireExternalToolFrozenHost call at :83. Corrected in skip_reason above, which now names both files and both line numbers",
+      "low_2": "docs/guides/OPERATIONS.md enumerated 171 of the 172 exec-path entries it claimed, omitting the /usr/lib/git-core/git core regular file that hashes equal to the selected image, while this record already stated the arithmetic exactly. Corrected in the operations guide after re-measuring the whole inventory from scratch rather than trusting the prior prose",
+      "low_3": "the inherited lint baseline carried an unreconciled thirteen-versus-fifty finding count against PLAN.md's H2d row and the reviewer's own measurement. Corrected in broader_t421_lint below with the measured unbounded count, the per-file breakdown, and the default cap that explains the fifty",
+      "informational_findings": [
+        "the new default refusal at spike/t421/external_tool.go:67 is unreachable by construction, because the inventory switch default at :52-53 refuses any role outside the six first and that string appears nowhere else in the repository; correct fail-closed design, untested by necessity",
+        "the PLAN row asserted the Linux refusal allocates nothing while spike/t421/external_tool.go:47 does allocate the shared one-element version argument slice before the guard at :55; immaterial and now corrected in the PLAN row, which names that single allocation instead of denying it",
+        "spike/t421/README.md:313 still describes the external-tool observer as Darwin/arm64-only with zero occurrences of linux; pre-existing, untouched by this slice, and already disclosed as an open documentation prerequisite",
+        "the whole-package verdict was genuinely still in flight during that review, with two live t421.test processes and a partial log buffer ending mid-test, so this record's refusal to state a whole-package duration or pass was honest rather than evasive"
+      ]
+    }
+  },
+  "baseline_qualifications": {
+    "broader_t421_lint": "the whole-repository pinned lint baseline is unchanged by this slice and is not claimed green. Measured on this host at source_commit 0da4d1e4: an unbounded unscoped golangci-lint 2.12.2 run over ./spike/t421/... with --max-issues-per-linter=0 --max-same-issues=0 reports 72 issues, every one from the unused linter and none from any other, spread over eleven files (execution_launcher_handoff.go 42, returned_package_unix.go 13, returned_verifier_unix.go 3, execution_receipt_injections.go 3, epoch_pressure.go 3, execution_receipt_archive.go 2, epoch_launch.go 2, signer_seal.go 1, returned_transport_unix.go 1, receipt_test.go 1, execution_receipt_transition_results.go 1). Neither file this slice changes, external_tool.go nor external_tool_linux_test.go, appears among them, and git diff --name-only a0a35965 0da4d1e4 -- spike/t421/ returns exactly those two names, so this slice contributes zero of the 72. That is a second independent proof alongside the pinned scoped changed-file run reporting 0 issues. The same command with golangci-lint's default caps reports 50, so the 50 recorded for H2d and independently measured by the delta re-review is the default max-issues-per-linter truncation cap rather than a total. The thirteen figure carried in the H2b and H2c records is not reproducible at this head and its original scope is not reconstructable from the current tree, because H2d's *_darwin to *_unix build-tag rename changed which files compile, and so which identifiers look unused, on Linux. The retained unbounded lint log is 13759 bytes at sha256:c239205a618e66545dfae4b3d23afe9f1aa657950dfb8e41aad5cd88d001e3c8 and ends with the 72-issue unused summary and a nonzero exit",
+    "measurement_contention": "disclosed rather than hidden: an orphaned t421.test binary (PID 686093, built from /home/ben/phebs/spike/t421, reparented to systemd --user under PPID 7753, 4458 seconds elapsed and 1:27:25 of CPU at 117 percent when found) left behind by an abandoned earlier run was discovered contending with the full-package measurement and terminated with SIGTERM. The first roughly 28 minutes of that run overlapped it. Pass/fail and skip censuses and every retained log digest are contention-independent, and no whole-package duration is claimed. Host memory and load were verified healthy before the overlapping lint measurement, which was capped at two concurrent workers, and the test run kept advancing throughout",
+    "full_t421_package": "Not claimed green. TestProductionDispatchSitesMatchActualBoundaries fails byte-identically modulo timings at base_commit a0a35965 and source_commit 0da4d1e4 (eleven lines and 3720 bytes each, same three zero-call sites internal/store/child.go:inspectSurrealBinary, internal/store/child.go:startOwnedEngine and internal/recovery/recovery.go:runSurreal, same observed/expected inventory divergence over internal/typedsandbox, internal/typedbazel and internal/dispatchadmission WithEnv sites). This is the retained H2a production-dispatch inventory failure, not an H2e regression. The broader multi-ten-minute package timeout is likewise retained. Base log sha256:a6fbe2406fb576160cf120b98bb59404331fdd8d40f47ac23c1777ed8919b879; head log sha256:21c9d8aeacd3bf56822260d78e7bc27344ea18a05a1357f0dc19151144a48758",
+    "full_package_run": "a complete -timeout=120m ./spike/t421 run at source_commit 0da4d1e4 from a clean detached checkout was still in flight when this record was authored, so no whole-package duration is claimed here; the retained-failure attribution above rests on the targeted base/head byte-identity comparison, which is sufficient and does not depend on the full run"
+  },
+  "remaining": [
+    "Git exec-path helper manifest observation and Go GOROOT/SDK location recipe",
+    "native Linux session and descendant hard-death supervision, including replacing the inherited /bin/ps session census and preparation drain with bounded native /proc records",
+    "isolated pressure, allocation and restore adapters",
+    "prospective Linux-bound plan versions and aggregate physical/effective-cgroup resource, child and headroom admission",
+    "complete readiness, freeze and ceremony entry-point integration"
+  ],
+  "release_or_scale_claim": false
+}

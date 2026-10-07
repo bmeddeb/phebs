@@ -3450,15 +3450,145 @@ Independent review of that record, the remaining H2 adapters/admission and cerem
 entry-point integration remain pending; no complete readiness, new plan,
 freeze, ceremony or scale claim follows.
 
-**T42.H2e · Linux tool recipes and session hard-death supervision** *(next H2
-slice)* — admit the Git and Go SDK/helper recipes and the fixed-system tool
-recipes that H2c/H2d deliberately refuse, then integrate native session and
-descendant hard-death supervision with the Linux custody primitives. Existing
-kernel byte seals, tool identities and signer custody supply no SDK/helper
-location, no launcher authority and no session teardown. Isolated
-pressure/allocation/restore adapters, new Linux-bound plan versions and aggregate
-physical/effective-cgroup resource admission remain H2 prerequisites before
-complete readiness, freeze or execution.
+**T42.H2e · Linux shared Git and Go child-probe observation** *(fifth H2 slice,
+2026-10-07)* — admit the shared Git and Go version-probe recipe on the Linux
+public external-tool observer so both frozen hosts run one identical closed
+recipe, while keeping exactly one admitted Linux SurrealDB route. Replace the
+blanket Linux refusal in `ObserveExecutionExternalTool` with a role-specific
+refusal that fires before absolute-path validation, symlink resolution, hashing,
+scratch creation or execution. Keep every oracle structural and role-bound
+rather than nominal: Git must return a `git version ` token and resolve
+`--exec-path` to a directory whose `git` core image hashes equal to the selected
+image, so a delegating shim cannot bless an unrelated helper; Go must equal the
+verifier toolchain exactly. Keep the fixed-system roles and their two distinct
+admission seams exact, and keep `external-executed-file-v1` provenance with
+`validateExecutionHost` as the separate freeze-platform fence, so no Linux plan
+can be frozen from an observation. Existing kernel byte seals, sealed tool
+custody and signer custody supply no SDK/helper location, no launcher authority
+and no session teardown. AC: real prepared-host `git` and `go` images observe
+against independent ambient-environment version expectations with exact identity
+fields and zero surviving private probe scratch; the closed probe environment
+overrides hostile ambient Git/Go variables; Linux `surreal` refuses on the public
+path naming its sealed-custody route and executes nothing even for a rejected
+script; wrong-role refusals use real native ELF64 images that pass the bounded
+header screen so no case is refused by the image screen, each naming the exact
+oracle that does refuse it; fixed-system observation, the resolved `/bin/sh`
+seam, the native image screen and the shared probe
+bound/cancellation/environment gates pass including under twenty race
+repetitions; Darwin/arm64 behavior, sealed plans, receipts and retained
+evidence bytes remain exact and the platform gate admits exactly
+`darwin/arm64` and `linux/amd64`. This is neither toolchain/loader/library/helper
+closure nor complete dispatch/session admission. Git's remaining exec-path helper
+manifest and Go's GOROOT/SDK location recipe, native session/descendant
+hard-death supervision, isolated pressure/allocation/restore adapters, new
+Linux-bound plan versions and aggregate physical/effective-cgroup resource
+admission remain H2 prerequisites before complete readiness, freeze or execution.
+
+T42.H2e exact implementation `deb93c8a11434e98c0dcf0d47dbd0b4b619073b0` plus
+review correction `0da4d1e4c3d5496d2389eee86b44e3dceaa23402` passed 19
+external-tool and Linux-tool-custody top-level tests with 86 subtests normal in
+43.733s, 16 top-level tests with 51 subtests race in 48.100s, and a twenty
+repetition Linux external-tool/probe boundary in 98.216s observing all 680 pass
+lines across 9 distinct top-level tests and 25 distinct subtests, with no failure
+and no data race. The documented normal selector is deliberately unanchored, so
+besides the Linux evidence it also selects six pre-existing Darwin-gated tests
+that skip on this host (`TestObserveExecutionExternalToolBindsRealGitAndGo`,
+`…BindsFixedNativeImagesWithoutVersionProbe`, `…RefusesVersionOfWrongRole`,
+`…RefusesDelegatingAppleGitShim`, `…OptionalRealSurreal` and
+`TestExternalProbePreparationParentRetainsScratch`); those skips are expected and
+are not a Linux coverage gap, and both anchored race selectors report zero skips.
+Real prepared-host `git version 2.53.0` at `/usr/bin/git` observed against an
+independent ambient-environment expectation, and its `--exec-path`
+`/usr/lib/git-core` resolved to a core image hashing equal to the selected image,
+so the equality oracle admitted a core image and not a helper manifest; real
+`go1.26.5 linux/amd64` matched the verifier toolchain exactly, and the closed
+probe environment overrode hostile ambient Git/Go variables. Linux `surreal`
+refused on the public path naming its sealed-custody route and executed nothing.
+Wrong-role refusals used real native ELF64 images — the Git image under `go`, the
+packaged `surreal` image under both `git` and `go`, and `/usr/bin/ssh-keygen`
+under `git` — each passing the bounded header screen and naming the exact oracle
+that refused it; the foreign `ssh-keygen` image stops at the role-independent
+closed-probe oracle because its `--version` exits nonzero with stderr, which the
+corrected subtest name and comment now state. Zero `phebs-t422-external-*` scratch
+entries survived under `/tmp`, `/var/tmp` or the host preparation root. Affected
+vet, module verification, gofmt, `darwin/arm64` cross-build and vet, `linux/arm64`
+vet, docs, glossary and whitespace pass. Changed-file pinned lint is green rather
+than qualified: golangci-lint 2.12.2 pinned
+`--new-from-rev=a0a35965 --whole-files ./spike/t421/...` reports 0 issues, so this
+slice adds no platform-dependent `unused` artifact. A second, independent proof
+and a measured inherited baseline now back that claim: an unscoped
+`golangci-lint run ./spike/t421/...` at this head reports 72 findings, every one
+`unused`, spread over eleven files of which neither `external_tool.go` nor
+`external_tool_linux_test.go` is one, so this slice contributes none of them. The
+`50` recorded for H2d and repeated by the delta re-review is not a total but
+golangci-lint's default `max-issues-per-linter` cap; disabling that cap yields
+72. The `thirteen` figure carried in the H2b/H2c records is not reproducible at
+this head, and its original scope is not reconstructable from the current tree
+because H2d's `*_darwin` to `*_unix` rename changed which files compile, and so
+which identifiers look unused, on Linux. Broader T421 lint therefore remains
+qualified and is not claimed green; only the changed-file result is. Independent
+review of `deb93c8a` reported critical/high/medium/low 0/0/1/3 plus four
+informational findings. The medium finding was this absent evidence record, which
+OPERATIONS already linked; two low findings are corrected in `0da4d1e4`, namely
+the Linux guard becoming a fail-closed role allowlist rather than a single named
+denial, and the wrong-role test naming its true refusing oracle while asserting
+scratch cleanup; the third low finding is corrected in documentation, because each
+probe child still inherits the shared reference-command session drain, which on
+Linux enumerates the whole host with `/bin/ps -Ao pid=,stat=` under a 128-KiB cap
+plus one `getsid` per host PID, polled every ten milliseconds until the session is
+empty or the five-second deadline expires, so observing Git spawns at least two
+full-host census children and Go at least one. This slice newly enables that
+inherited Darwin-recipe cost on Linux rather than adding it, it fails closed, and
+H2f owns replacing it with bounded native `/proc` records. Two caveats are recorded
+rather than fixed: the new Linux refusal tests assert exact messages, so on
+`linux/arm64` the frozen-host platform gate fires first and they fail, and arm64
+Linux is not a claimed gate for this slice; and `ExecutionToolIdentity` carries no
+platform field while provenance stays `external-executed-file-v1`, so Linux
+identities are provenance-compatible with historical Darwin plans and
+discrimination rests solely on SHA256 equality plus `validateExecutionHost`'s
+`darwin/arm64` freeze fence. The full `spike/t421` package is not claimed green:
+`TestProductionDispatchSitesMatchActualBoundaries` fails byte-identically modulo
+timings at base `a0a35965` and head `0da4d1e4`, eleven lines and 3720 bytes each
+with the same three zero-call sites and the same observed/expected inventory
+divergence, so it is the retained H2a production-dispatch inventory failure rather
+than an H2e regression, and the broader package timeout is likewise retained. The
+source-free record is
+[`tool-observation-rehearsal-1.json`](../spike/t42h2e/tool-observation-rehearsal-1.json).
+Independent delta re-review of `0da4d1e4` reported critical/high/medium/low
+0/0/0/3 plus four informational findings and does not block integration; it
+verified all four first-review findings as genuinely fixed rather than re-worded,
+and each fix as discriminating under test. Its three new findings are
+documentation-only and corrected in a follow-up record commit: the six-skip
+attribution named only `external_tool_test.go` while
+`TestExternalProbePreparationParentRetainsScratch` lives at
+`reference_process_test.go:82`, the operations-guide exec-path enumeration
+accounted for 171 of 172 entries by omitting the `/usr/lib/git-core/git` core
+regular file, and the inherited lint baseline carried the unreconciled
+`thirteen` figure now replaced by the measured 72. One measurement-hygiene
+caveat is disclosed rather than hidden: an orphaned `t421.test` binary left by
+an abandoned earlier run, reparented to `systemd --user` with 4458s elapsed and
+1:27:25 of CPU, was discovered contending with the full-package run and
+terminated with `SIGTERM`; the first roughly 28 minutes of that run overlapped
+it. Pass/fail and skip censuses and every retained log digest are
+contention-independent, and no whole-package duration is claimed. Git's
+remaining exec-path helper manifest, Go's GOROOT/SDK location recipe, the
+remaining H2 adapters/admission and
+ceremony entry-point integration remain pending; no complete readiness, new plan,
+freeze, ceremony or scale claim follows.
+
+**T42.H2f · Linux session and descendant hard-death supervision** *(next H2
+slice)* — integrate native session and descendant hard-death supervision with the
+Linux custody primitives: share the Darwin `PrivateProcessSessionMembership`
+confirmation semantics (double session-identifier confirmation, defunct filtering
+and identity-token equality before and after) behind `darwin` or `linux` build
+tags, replace the Linux `/bin/ps` session census and the inherited `/bin/ps`
+preparation drain with bounded native `/proc` records, and fail closed where a
+native record is unavailable. Existing kernel byte seals, tool identities, signer
+custody and the admitted Git/Go observation recipe supply no launcher authority
+and no session teardown. Git exec-path helper manifest and Go GOROOT/SDK location
+recipes, isolated pressure/allocation/restore adapters, new Linux-bound plan
+versions and aggregate physical/effective-cgroup resource admission remain H2
+prerequisites before complete readiness, freeze or execution.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
