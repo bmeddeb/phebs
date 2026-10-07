@@ -294,9 +294,10 @@ image, so a delegating shim cannot bless an unrelated helper. On this host that
 equality holds because `/usr/bin/git` and `/usr/lib/git-core/git` are separate
 regular files with identical bytes. The exec-path itself holds 172 entries — 142
 symlinks to that core image, 3 symlinks to `git-remote-http`, 25 other separate
-regular helper executables and one `mergetools` directory — and every one of them
-stays unadmitted, so the equality oracle admits a core image and not a helper
-manifest. Go's oracle requires exactly
+regular helper executables, the `/usr/lib/git-core/git` core regular file that
+hashes equal to the selected image, and one `mergetools` directory — and every
+helper stays unadmitted, so the equality oracle admits a core image and not a
+helper manifest. Go's oracle requires exactly
 `go version <runtime.Version()> <GOOS>/<GOARCH>`, so the prepared
 `go1.26.5 linux/amd64` toolchain matches and any other build refuses.
 
@@ -323,7 +324,13 @@ The source-free exact-commit record is
 It names the real Git and Go images it observed with their versions,
 distinguishes the retained full-package baseline failure from this slice, and
 records that this slice's changed-file pinned lint is green rather than
-qualified.
+qualified. That green claim is proven twice: the pinned scoped run reports
+`0 issues.`, and an unbounded unscoped `golangci-lint run ./spike/t421/...`
+reports 72 findings, every one `unused`, across eleven files that include
+neither file this slice changes. The `50` an operator would measure with
+golangci-lint's defaults is that tool's `max-issues-per-linter` cap rather than
+a total, so the inherited T421 lint baseline stays qualified while only this
+slice's changed-file result is claimed green.
 
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under

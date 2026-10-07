@@ -3515,7 +3515,18 @@ vet, module verification, gofmt, `darwin/arm64` cross-build and vet, `linux/arm6
 vet, docs, glossary and whitespace pass. Changed-file pinned lint is green rather
 than qualified: golangci-lint 2.12.2 pinned
 `--new-from-rev=a0a35965 --whole-files ./spike/t421/...` reports 0 issues, so this
-slice adds no platform-dependent `unused` artifact, unlike H2d's 50. Independent
+slice adds no platform-dependent `unused` artifact. A second, independent proof
+and a measured inherited baseline now back that claim: an unscoped
+`golangci-lint run ./spike/t421/...` at this head reports 72 findings, every one
+`unused`, spread over eleven files of which neither `external_tool.go` nor
+`external_tool_linux_test.go` is one, so this slice contributes none of them. The
+`50` recorded for H2d and repeated by the delta re-review is not a total but
+golangci-lint's default `max-issues-per-linter` cap; disabling that cap yields
+72. The `thirteen` figure carried in the H2b/H2c records is not reproducible at
+this head, and its original scope is not reconstructable from the current tree
+because H2d's `*_darwin` to `*_unix` rename changed which files compile, and so
+which identifiers look unused, on Linux. Broader T421 lint therefore remains
+qualified and is not claimed green; only the changed-file result is. Independent
 review of `deb93c8a` reported critical/high/medium/low 0/0/1/3 plus four
 informational findings. The medium finding was this absent evidence record, which
 OPERATIONS already linked; two low findings are corrected in `0da4d1e4`, namely
@@ -3543,8 +3554,25 @@ divergence, so it is the retained H2a production-dispatch inventory failure rath
 than an H2e regression, and the broader package timeout is likewise retained. The
 source-free record is
 [`tool-observation-rehearsal-1.json`](../spike/t42h2e/tool-observation-rehearsal-1.json).
-Independent delta re-review of `0da4d1e4`, Git's remaining exec-path helper
-manifest, Go's GOROOT/SDK location recipe, the remaining H2 adapters/admission and
+Independent delta re-review of `0da4d1e4` reported critical/high/medium/low
+0/0/0/3 plus four informational findings and does not block integration; it
+verified all four first-review findings as genuinely fixed rather than re-worded,
+and each fix as discriminating under test. Its three new findings are
+documentation-only and corrected in a follow-up record commit: the six-skip
+attribution named only `external_tool_test.go` while
+`TestExternalProbePreparationParentRetainsScratch` lives at
+`reference_process_test.go:82`, the operations-guide exec-path enumeration
+accounted for 171 of 172 entries by omitting the `/usr/lib/git-core/git` core
+regular file, and the inherited lint baseline carried the unreconciled
+`thirteen` figure now replaced by the measured 72. One measurement-hygiene
+caveat is disclosed rather than hidden: an orphaned `t421.test` binary left by
+an abandoned earlier run, reparented to `systemd --user` with 4458s elapsed and
+1:27:25 of CPU, was discovered contending with the full-package run and
+terminated with `SIGTERM`; the first roughly 28 minutes of that run overlapped
+it. Pass/fail and skip censuses and every retained log digest are
+contention-independent, and no whole-package duration is claimed. Git's
+remaining exec-path helper manifest, Go's GOROOT/SDK location recipe, the
+remaining H2 adapters/admission and
 ceremony entry-point integration remain pending; no complete readiness, new plan,
 freeze, ceremony or scale claim follows.
 
