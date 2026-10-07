@@ -15,13 +15,20 @@ import (
 )
 
 // ObserveExecutionExternalTool measures one explicitly selected, trusted host
-// tool on the frozen Darwin/arm64 host. Version probes execute that selected
-// image; this is not a sandbox for untrusted programs or vendor attestation.
+// tool on an admitted host: Darwin/arm64 or Linux/amd64. Linux currently admits
+// only the fixed-system roles (sh, hdiutil, ssh-keygen), which run no version
+// child; child-probe roles (git, go, surreal) refuse on Linux until their own
+// admitted probe custody exists. Fixed-system roles compare resolved paths, so
+// the packaged Linux /bin/sh symlink observes its resolved shell image while an
+// absent /usr/bin/hdiutil refuses; HoldExecutionSystemTool keeps the separate
+// literal-path rule. Version probes execute that selected image;
+// this is not a sandbox for untrusted programs or vendor attestation.
 // Native-image headers and Git core equality reject scripts and the Apple Git
 // shim, but do not prove arbitrary native delegation or helper closure.
 // This observation issues no CheckoutAdmissionBinding or launch authority.
 func ObserveExecutionExternalTool(ctx context.Context, role, binary string) (identity ExecutionToolIdentity, retErr error) {
-	if ctx == nil || runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
+	if ctx == nil || ((runtime.GOOS != "darwin" || runtime.GOARCH != "arm64") &&
+		(runtime.GOOS != "linux" || runtime.GOARCH != "amd64")) {
 		return identity, errors.New("external tool observation requires a context and the frozen host platform")
 	}
 	var arguments []string
@@ -37,6 +44,9 @@ func ObserveExecutionExternalTool(ctx context.Context, role, binary string) (ide
 		systemPath = "/bin/sh"
 	default:
 		return identity, errors.New("external tool role is not in the implemented inventory")
+	}
+	if runtime.GOOS == "linux" && len(arguments) != 0 {
+		return identity, errors.New("external tool version probes are not admitted on Linux")
 	}
 	if !filepath.IsAbs(binary) || strings.TrimSpace(binary) != binary {
 		return identity, errors.New("external tool requires an explicit absolute image path")
@@ -57,7 +67,7 @@ func ObserveExecutionExternalTool(ctx context.Context, role, binary string) (ide
 		}
 	}
 	digest, err := t4013.DigestHostExecutable(ctx, binary)
-	if err != nil || validateExternalToolImage(binary) != nil {
+	if err != nil || validateExternalToolNativeImage(binary) != nil {
 		return identity, errors.New("external tool image is not a bounded native executable")
 	}
 	verify := func(path string) bool {

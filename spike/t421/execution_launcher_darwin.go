@@ -486,12 +486,6 @@ func validExecutionLauncherPath(path string) bool {
 	return len(path) > 0 && len(path) <= 1_023 && filepath.IsAbs(path) && filepath.Clean(path) == path && !strings.ContainsRune(path, 0)
 }
 
-type executionPipeIdentity struct {
-	device int64
-	inode  uint64
-	mode   uint32
-}
-
 func executionPipeRow(file *os.File, access int) (executionPipeIdentity, error) {
 	if file == nil {
 		return executionPipeIdentity{}, ErrExecutionLauncher

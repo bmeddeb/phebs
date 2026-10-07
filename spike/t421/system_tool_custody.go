@@ -12,7 +12,9 @@ import (
 )
 
 // ExecutionSystemToolCustody holds one of the three fixed platform images on
-// its observed read-only native volume. It never copies or changes that image.
+// its observed native volume: a read-only system volume on Darwin, or a
+// root-owned fixed-system image with a stable filesystem/device tuple on Linux
+// that makes no read-only-mount claim. It never copies or changes that image.
 // This trusted-host binding is not vendor attestation, a command permission,
 // helper closure, or protection against a privileged host replacement.
 type ExecutionSystemToolCustody struct {
@@ -42,7 +44,8 @@ func executionSystemToolPath(role string) string {
 // closes its sole borrowed-image descriptor; there is no new disk custody.
 func HoldExecutionSystemTool(ctx context.Context, role string) (_ *ExecutionSystemToolCustody, retErr error) {
 	path := executionSystemToolPath(role)
-	if ctx == nil || ctx.Err() != nil || path == "" || runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
+	if ctx == nil || ctx.Err() != nil || path == "" ||
+		!((runtime.GOOS == "darwin" && runtime.GOARCH == "arm64") || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64")) {
 		return nil, ErrExecutionToolCustody
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
