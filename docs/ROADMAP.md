@@ -42,6 +42,21 @@ owns signer/namespace custody. Git/Go SDK/helper and fixed-system recipes,
 session/hard-death integration, pressure adapters, new plans and aggregate
 resource/readiness admission remain open; no ceremony entry point is enabled.
 
+T42.H2d supplies Linux signer, namespace and returned-evidence custody: the
+exact ceremony claim, one-shot key generation with real `/usr/bin/ssh-keygen`
+derivation and comparison, private-namespace retention, candidate sealing and
+authenticated returned evidence run on Linux amd64 behind widened build tags,
+and only the exclusive promotion rename is platform-specific. Fixed-system
+admission keeps two distinct seams — resolved-path equality for the external-tool
+observer and the stricter literal-path rule for the system-tool holder — while
+Linux Git/Go/SurrealDB child probes refuse before any path resolution, scratch
+directory or execution. Darwin behavior, sealed plans, receipts and retained
+evidence bytes stay exact, and the platform gate admits only `darwin/arm64` and
+`linux/amd64`. Git/Go SDK/helper and fixed-system recipes, session/descendant
+hard-death integration, pressure/allocation/restore adapters, new Linux plan
+versions and aggregate physical/effective-cgroup resource/readiness admission
+remain open; no ceremony entry point is enabled.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:

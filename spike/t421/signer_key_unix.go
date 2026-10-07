@@ -1,4 +1,4 @@
-//go:build darwin
+//go:build darwin || linux
 
 package t421
 
@@ -258,7 +258,7 @@ func promoteExecutionSignerFileLocked(
 	if _, err := os.Lstat(destinationPath); !errors.Is(err, os.ErrNotExist) {
 		return errors.New("T42.2 signer final key already exists or cannot be inspected")
 	}
-	if err := unix.RenameatxNp(int(owner.file.Fd()), held.name, int(owner.file.Fd()), destination, unix.RENAME_EXCL); err != nil {
+	if err := renameExecutionSignerExclusive(int(owner.file.Fd()), int(owner.file.Fd()), held.name, destination); err != nil {
 		return errors.New("T42.2 signer key promotion failed")
 	}
 	if owner.file.Sync() != nil {

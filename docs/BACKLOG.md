@@ -3390,14 +3390,75 @@ failures and are not claimed green. Independent review and the remaining H2
 adapters/admission remain pending; no merge, complete readiness, new plan,
 freeze, ceremony or scale claim follows.
 
-**T42.H2d · Linux signer and namespace custody** *(next H2 slice)* — implement
-Linux signing/keypair and immutable control/dispatch-input custody with exact
+**T42.H2d · Linux signer and namespace custody** *(fourth H2 slice,
+2026-10-07)* — implement Linux signing/keypair and immutable control/dispatch-input custody with exact
 key integrity, authenticated returned-evidence and durable namespace/promotion
-refusal gates. Existing kernel byte seals and tool identities supply no signer
-or command permission. Git/Go SDK/helper and fixed-system recipes, native
+refusal gates. Reuse the exact Darwin signer ceremony claim, one-shot key
+generation, fingerprint/promotion integrity, private namespace and returned-evidence
+flows behind build tags widened to `darwin` or `linux`; four returned-evidence files
+are pure tag widenings. Isolate the single platform-specific primitive — exclusive
+promotion rename — behind one seam. Keep the two fixed-system admission seams
+distinct: resolved-path equality for the external-tool observer, the stricter
+literal-path rule for the system-tool holder. Refuse Git/Go/SurrealDB child-probe
+roles on Linux before path resolution, scratch or execution. Existing kernel byte
+seals and tool identities supply no signer or command permission. AC: normal/race
+ceremony claim exclusivity and pre-mutation/known-destination refusals, one-shot key
+attempts with promoted drift and post-claim collision refusals, real
+`/usr/bin/ssh-keygen` generation/derivation/comparison/promotion, candidate sealing
+and admission issuance, symlink refusal with exact private-directory retention, and
+exclusive rename moves-once/refuses-replacement pass without native skips; fixed-system
+observation, holder and volume screening plus the Linux image screen and child-probe
+refusal pass under twenty race repetitions; returned-evidence capture, frame/output
+and native signature oracles stay exact. Darwin behavior, sealed plans, receipts and
+retained evidence bytes remain exact, and the platform gate admits exactly
+`darwin/arm64` and `linux/amd64`. This is neither toolchain/loader/library/helper
+closure nor complete dispatch/session admission. Git/Go SDK/helper and fixed-system
+recipes, native
 session/descendant hard-death supervision, isolated pressure/allocation/restore,
 new Linux plan versions and aggregate physical/effective-cgroup resource
 admission remain H2 prerequisites before complete readiness, freeze or execution.
+
+T42.H2d exact implementation `cd7e13ecbb90f2218503dfb0d37e64dfd1329690` plus fix
+`076ec8fb988c2acf6e005e68795bb4ecd5ff0007` passed 23 signer/returned-evidence/
+fixed-system top-level tests normal in 102.326s and 16 race in 666.082s with no
+data race. Nine Linux fixed-system/signer-namespace/rename boundary tests passed
+twenty race repetitions in 4.596s, observing all 180 per-test pass lines. No
+selected test skipped. Real host `/usr/bin/ssh-keygen` generated, independently
+derived, compared and exclusively promoted an execution signer key; `/bin/sh` was
+admitted by the observer through its resolution to `/usr/bin/dash` while the holder
+refused the packaged symlink under its separate literal-path rule, and
+`/usr/bin/hdiutil` is absent on this host so both seams refuse it. Linux Git/Go/SurrealDB
+child probes refused before any path resolution, scratch directory or execution,
+leaving zero Linux tool-probe scratch entries. Affected vet, module verification,
+gofmt, Darwin cross-compilation, docs, glossary and whitespace pass. Changed-file
+pinned lint is qualified rather than green: golangci-lint 2.12.2 pinned
+`--new-from-rev=52048071 --whole-files` reports exactly the 50 changed-file
+platform-dependent `unused` findings (42 in `execution_launcher_handoff.go` and 8 in
+`returned_package_unix.go`) whose only callers are darwin-gated, with 0 staticcheck
+findings after the gate-form fix; the main baseline is 13 `unused` findings with no
+overlap against the changed file set. Independent review of `cd7e13ec` reported
+critical/high/medium/low 0/0/0/1, corrected in `076ec8fb`; delta re-review of that
+fix reported 0/0/0/1 informational finding confined to `linux/arm64`, which is not a
+claimed gate for this slice. The full `spike/t421` package is not claimed green:
+`TestProductionDispatchSitesMatchActualBoundaries` fails byte-identically modulo
+timings at base `52048071` and head `076ec8fb` with the same observed/expected
+inventory maps and the same three zero-call sites, so it is the retained H2a
+production-dispatch inventory failure rather than an H2d regression, and the broader
+45-minute package timeout is likewise retained. The source-free record is
+[`signer-custody-rehearsal-1.json`](../spike/t42h2d/signer-custody-rehearsal-1.json).
+Independent review of that record, the remaining H2 adapters/admission and ceremony
+entry-point integration remain pending; no complete readiness, new plan,
+freeze, ceremony or scale claim follows.
+
+**T42.H2e · Linux tool recipes and session hard-death supervision** *(next H2
+slice)* — admit the Git and Go SDK/helper recipes and the fixed-system tool
+recipes that H2c/H2d deliberately refuse, then integrate native session and
+descendant hard-death supervision with the Linux custody primitives. Existing
+kernel byte seals, tool identities and signer custody supply no SDK/helper
+location, no launcher authority and no session teardown. Isolated
+pressure/allocation/restore adapters, new Linux-bound plan versions and aggregate
+physical/effective-cgroup resource admission remain H2 prerequisites before
+complete readiness, freeze or execution.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
