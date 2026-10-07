@@ -3268,11 +3268,20 @@ record is preserved unchanged and remains true of `c07bc930`. The corrected tree
 carries the off-selected-host reproduction at
 [`review-reproduction-1.json`](../spike/t42h2b/review-reproduction-1.json),
 which binds corrected implementation
-`56970e995079b8e4145b5f88f618383c79e0d58e` and records a 20/20 repetition run
-from a test binary recompiled at that exact commit with both blob hashes
-verified; recompiling at the later probe commit produced a byte-identical
-binary, because no file under `spike/t421/` changed. Across six batches, 183 of
-185 runs reached test output and none failed an assertion. The other two exited
+`03f9b1b770077e73220e00bb76d3bb957ef297e7`. These corrections were originally
+authored on the reviewed head `8f1a4fc7`; while the review was in progress PR
+#58 merged T42.H2c into this branch, advancing it to `bbcad9cf`, and PR #57
+merged this branch into H2a, so the corrections were rebased onto that tip and
+neither slice is in `main` yet. Both corrected source files are byte-identical
+across the rebase, because H2c touches neither, and both probe binaries
+reproduce byte-identically; only the test-binary digest changed, since the
+compiled `spike/t421` package now also contains H2c's tool custody sources. On
+the rebased tree 25 of 25 repetitions reached test output with 9 top-level
+tests, 53 subtests, no skips and no assertion failure, and the seal probe again
+passed all 24 invariants. H2c's own `TestLinuxToolCustody` suite was not run
+here, because it needs host SurrealDB 3.2.0 and an exact Go reference build; its
+gates remain its own record's responsibility. Across seven batches, 208 of
+210 runs reached test output and none failed an assertion. The other two exited
 139 before printing anything, and a control showed a trivial hello-world
 linux/amd64 binary segfaulting 1 in 300 in the same container while the test
 binary under `-test.list`, which runs no test at all, segfaulted 3 in 200.
