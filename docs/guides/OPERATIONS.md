@@ -70,9 +70,14 @@ GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=2m ./spike/t421 -run '^TestLin
 ```
 
 The kernel must support explicit executable/nonexecutable memfd creation and
-write, size, execute-bit and seal-set protection. Policy denial or unsupported
+write, size, execute-bit and seal-set protection, which means Linux 6.3 or
+later for `MFD_EXEC`/`MFD_NOEXEC_SEAL`. `MFD_NOEXEC_SEAL` applies
+`F_SEAL_EXEC` automatically at creation; `MFD_EXEC` starts unsealed and takes
+`F_SEAL_EXEC` through the explicit seal set. Policy denial or unsupported
 protection refuses; these checks have no native skip or mode-only fallback and
-require no additional sudo setup. Each copy is at most 256 MiB, at most 64 files
+require no additional sudo setup. Two checks execute and read the host
+`/usr/bin/true`, so it must be a real ELF64 amd64 image; a missing or non-ELF
+one fails loudly and never skips. Each copy is at most 256 MiB, at most 64 files
 and 2 GiB total; those are local bounds rather than prospective aggregate
 admission. Up to 2 GiB of anonymous shmem payload must be reserved separately
 from process RSS against measured physical/effective cgroup capacity, with
@@ -84,18 +89,36 @@ also populate up to 2 GiB of reclaimable file cache; future admission must
 account for concurrent instances, cache and kernel overhead as well as payload.
 
 Original files and namespace entries stay mutable and caller-owned; custody
-owns sealed copies. Byte/size/execute-bit changes are kernel-denied, while
-other permission metadata remains mutable and any observed drift invalidates
-custody. Checks inspect kernel metadata and seals without hashing the payload.
-Scoped use serializes Check/Close until the trusted callback joins all users;
+owns sealed copies. Byte/size/execute-bit changes are kernel-denied under any
+mode, while other permission metadata remains mutable and invalidates custody
+whenever it leaves a compared field changed. Observation is bounded by the
+kernel's coarse inode clock: a permission change restored inside one tick
+(measured ~1 ms on 6.8.0-117-generic, where a probe saw 199/200 such sequences
+leave `Ctim` identical) changes no compared field and is therefore not refused.
+That narrows no byte guarantee, because the seals deny writes independently of
+mode, so metadata comparison is defense in depth rather than the load-bearing
+control. The native suite accordingly asserts unrestored mode drift and an
+explicit `utimensat` timestamp drift, both deterministic, instead of a restored
+chmod whose detection depends on clock resolution.
+Checks inspect kernel metadata and seals without hashing the payload.
+Scoped use serializes Check/Close until the trusted callback joins all users,
+so at most one loan is outstanding and one child can be handed exactly one
+input; nested loans deadlock rather than compose, and multi-input dispatch
+needs a separate atomic multi-loan API.
 returned callback errors propagate, and protection/close/cancellation failures
 or callback panic invalidate custody. The caller must not escape descriptors
-or mappings. Close releases owned FDs, with no source removal or disk copies;
+or mappings. Close releases owned FDs and drops their retained stat snapshots,
+with no source removal or disk copies;
 it cannot certify orphan/descendant teardown.
 
 The ELF header screen and joined neutral executable prove only this primitive;
 they do not admit tools, loader/library/helper closure, a signer, environment,
-argv or ceremony dispatch. Anonymous executed images need a prospective
+argv or ceremony dispatch. The screen admits only ELF64 LSB EI_VERSION 1
+ET_EXEC/ET_DYN EM_X86_64 headers with e_ehsize 64, e_phentsize 56, e_phnum
+1..128 and e_phoff 64..size holding the whole program-header table; anything
+else fails closed with no weaker fallback, and `e_phnum <= 128` plus
+`e_phoff >= 64` are conservative screen bounds rather than ELF limits.
+Anonymous executed images need a prospective
 kernel-object binding; the existing process observer still refuses deleted
 paths. Full Linux tool/dispatch custody (T42.H2c), signer/namespace custody
 (T42.H2d), session teardown, pressure adapters, new plan versions and complete
@@ -103,6 +126,14 @@ resource/readiness admission remain required. These commands launch no ceremony 
 
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
+It binds `c07bc930` and is preserved unchanged, so it no longer describes the
+review-corrected tree. The independent review reproduction, including the
+off-host linux/amd64 twenty-repetition run, the kernel sealing probe and the
+coarse-clock flake diagnosis, is
+[`review-reproduction-1.json`](../../spike/t42h2b/review-reproduction-1.json).
+That host is not the selected T42.H1 machine, `cmd/go` cannot run inside it and
+no `-race` build was possible there, so a fresh native normal and race rerun on
+the selected host is still required.
 Its owning backlog preserves the broader T421 gate qualifications.
 
 T42.H2c binds selected direct tool images to those sealed bytes. Implemented Go

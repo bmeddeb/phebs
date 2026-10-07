@@ -3180,6 +3180,84 @@ global reservation and up to 2 GiB reclaimable source-file cache; no compiled,
 fixture or harness input changed. Independent review and the remaining H2
 adapters/admission are still pending.
 
+Independent review of exact PR head `8f1a4fc7f968ef5790f2151c378acb2e9f9d4fd3`
+found critical/high/medium 0 and seven low documentation and hygiene items, and
+then found one medium test-oracle defect while reproducing the native suite off
+the selected host. Reviewer-verified from darwin/arm64: linux/amd64 build, vet
+and test-binary compilation; linux/arm64, linux/386, whole-module linux/amd64
+and native darwin builds; gofmt, whitespace, `make docs-check`,
+`make verify-glossary` and the changed-file pinned lint at
+`--new-from-rev=a46488aa --whole-files` (0 issues). Both `source_files_sha256`
+values in the retained record match the blobs at `c07bc930` exactly, those blobs
+are unchanged at `8f1a4fc7`, and the PR diff is 995 insertions with zero
+deletions, so no existing Darwin custody or T40.13 source was touched. This
+entry supersedes only the "independent review ... pending" wording above for
+that reviewed head; every other qualification in it stands.
+
+**Medium (test-only, pre-existing): the restored-chmod drift oracle was
+unsound.** `TestLinuxInputCustodyKernelMutationRefusals` chmod'ed a sealed memfd
+to add owner-write and then restored the original mode, and required `Check` to
+refuse through `Ctim`. Linux stamps inodes from a coarse clock, so a restore
+inside one tick changes no compared field and `Check` correctly accepts. A
+focused probe on 6.8.0-117-generic measured 199/200 such sequences leaving
+`Ctim` identical with an effective granularity near 1 ms, and the pristine PR
+bytes failed that assertion 1 time in 15 runs; the executable variant, which
+does more work before the drift, passed. The recorded host therefore passed by
+timing margin rather than by guarantee. This is not a production defect and
+narrows no byte guarantee: the same probe confirmed `pwrite`, both `ftruncate`
+directions, execute-bit `fchmod`, `F_ADD_SEALS` and shared writable `mmap` all
+return `EPERM` even with the mode left owner-writable and an `O_RDWR` descriptor
+open, so the seals and not the metadata comparison carry immutability. The
+correction leaves the mode drift unrestored, which strengthens the six mutation
+subtests by running them against a writable mode and descriptor, and makes the
+refusal deterministic at 200/200 observed; it replaces the restored-chmod oracle
+with an explicit `utimensat` drift that the probe confirmed succeeds on a fully
+sealed memfd with the seal set intact at all five seals. The PLAN ADR and the
+operations guide now state the same-tick boundary instead of claiming detection
+of any permission drift.
+
+Low corrections: the loan descriptor's dead second `Close` is removed so the
+deferred close is unambiguously panic-only and the inspected close happens
+exactly once; `Close` drops retained descriptors and stat snapshots; the ELF
+screen's `e_phnum 1..128` and `e_phoff >= 64` bounds, and the measured
+`e_phnum 6`/`e_phoff 64` of real linux/amd64 Go binaries including a full phebs
+build, are recorded in the ADR and guide; the one-loan-at-a-time limit that
+makes nested `WithInput` deadlock, and the separate atomic multi-loan API that
+multi-input dispatch would need, are documented in the type, the method, the ADR
+and the guide. T42.H2c, which merged into this branch while the review was in
+progress, composes around that limit rather than hitting it: each tool custody
+holds its own single-input `LinuxExecutionInputCustody` and restates the
+no-escape/no-reentry contract at its own call sites. The limit is therefore a
+recorded design constraint and not a defect, but a future child needing a tool
+image and a separate fixed input at once still requires the multi-loan API; the
+deliberate
+single-linux-symbol-with-runtime-amd64-gate shape is documented; the guide
+declares the host `/usr/bin/true` ELF64 amd64 dependency and the Linux 6.3
+minimum for `MFD_EXEC`/`MFD_NOEXEC_SEAL`; and the suite gains closed-custody
+loan, nil-context `Check` and nil-context loan refusals, each asserted to leak
+no descriptor. Every addition stays inside the existing nine top-level tests, so
+the retained record's test enumeration remains accurate for the corrected tree.
+
+**Host-fact drift is recorded here rather than repaired.**
+`spike/t42h1/host-baseline.json` and the T42.H1 ADR fix the selected host at
+kernel `7.0.0-34-generic` and 15,991,791,616 bytes, and H1 states that baseline
+governs all future rehearsals, ceremonies and fresh reruns. H2a and H2b both
+observed `7.0.0-38-generic` and 15,991,742,464 bytes, with logical CPUs
+unchanged at 12, and neither slice noted the divergence. The H1 record stays
+byte-exact as historical evidence and this entry is the note; a later H2 slice
+should decide whether the baseline is re-observed or explicitly versioned.
+
+Because these corrections change both bound source files, the retained
+`sealed-input-rehearsal-1.json` no longer describes the corrected tree. That
+record is preserved unchanged and remains true of `c07bc930`. The corrected tree
+carries the off-selected-host reproduction at
+[`review-reproduction-1.json`](../spike/t42h2b/review-reproduction-1.json); that
+host is not the T42.H1 selected machine, the `go` toolchain cannot run inside it
+and no `-race` build was possible, so a fresh native normal and race rerun on
+the selected host remains required before the corrected tree can be called
+green. No merge, complete readiness, new plan, freeze, execution or scale claim
+follows.
+
 **T42.H2c · Linux direct-tool custody and object binding** *(third H2 slice,
 2026-10-06)* — bind implemented Go reference tools and the selected external
 SurrealDB direct image to H2b sealed bytes. Verify Go tools through the existing

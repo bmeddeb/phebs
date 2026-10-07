@@ -1,0 +1,151 @@
+{
+  "schema": "phebs-t42h2b-linux-sealed-input-review-reproduction-v1",
+  "measured_at_utc": "2026-10-07T03:30:28.341908+00:00",
+  "purpose": "Independent review reproduction of the T42.H2b native sealed-input checks and of the kernel memfd sealing contract they depend on, executed off the T42.H1 selected host",
+  "reviewed_head": "8f1a4fc7f968ef5790f2151c378acb2e9f9d4fd3",
+  "reviewed_implementation_commit": "c07bc9302220ce505a907cacdcc5245d755e8497",
+  "retained_record_preserved_unchanged": "spike/t42h2b/sealed-input-rehearsal-1.json",
+  "retained_record_still_true_of": "c07bc9302220ce505a907cacdcc5245d755e8497",
+  "not_the_selected_host": true,
+
+  "selected_host_baseline": {
+    "record": "spike/t42h1/host-baseline.json",
+    "observed_kernel_release": "7.0.0-34-generic",
+    "observed_logical_cpus": 12,
+    "observed_physical_memory_bytes": 15991791616,
+    "left_byte_exact_by_this_review": true
+  },
+  "h2a_and_h2b_observed_host": {
+    "kernel_release": "7.0.0-38-generic",
+    "logical_cpus": 12,
+    "physical_memory_bytes": 15991742464,
+    "physical_memory_delta_bytes": -49152,
+    "drift_previously_noted": false,
+    "drift_now_recorded_in_owning_backlog": true
+  },
+
+  "reproduction_environment": {
+    "review_host": "darwin/arm64",
+    "vm": "colima profile default, vmType vz, aarch64, 2 CPUs, 2 GiB",
+    "vm_kernel_release": "6.8.0-117-generic",
+    "container_image": "debian:bookworm-slim (Debian GNU/Linux 12)",
+    "container_platform_flag": "--platform linux/amd64",
+    "container_uname": "6.8.0-117-generic x86_64",
+    "userspace_architecture": "amd64 under Rosetta translation on an arm64 kernel",
+    "native_amd64_kernel": false,
+    "test_binary_built_by": "GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test -c ./spike/t421, on darwin/arm64 with go1.26.5",
+    "race_build_possible": false,
+    "race_build_reason": "the race detector requires cgo and a linux/amd64 C cross toolchain, which this host does not provide",
+    "go_toolchain_runnable_in_container": false,
+    "go_toolchain_failure": "cmd/go aborted with 'runtime: marked free object in span ... (bad use of unsafe.Pointer or having race conditions?)' at cmd/go/internal/modindex.getFileInfo while indexing the module cache; an emulation artifact, so only the pre-cross-compiled test binary was executed"
+  },
+
+  "kernel_contract_probe": {
+    "note": "Standalone syscall probe, no phebs code, run on the same 6.8.0-117-generic kernel. Verifies the semantics input_custody_linux.go and its tests assume.",
+    "mfd_noexec_seal_seals_at_creation": "EXEC only (F_SEAL_EXEC is applied automatically)",
+    "mfd_exec_seals_at_creation": "none",
+    "mfd_exec_accepts_f_seal_exec": true,
+    "add_all_five_seals_succeeds_on_both": true,
+    "fchmod_non_execute_bits_after_f_seal_exec": "allowed (F_SEAL_EXEC locks only the 0111 bits)",
+    "open_o_rdwr_on_write_sealed_memfd": "succeeds once the mode is owner-writable",
+    "eperm_operations_under_owner_writable_mode_and_o_rdwr_descriptor": [
+      "pwrite",
+      "ftruncate shrink",
+      "ftruncate grow",
+      "fchmod toggling an execute bit",
+      "F_ADD_SEALS(F_SEAL_FUTURE_WRITE)",
+      "mmap PROT_WRITE MAP_SHARED"
+    ],
+    "reopened_proc_self_fd_reader": {
+      "same_dev_and_ino": true,
+      "mode_preserved": true,
+      "all_five_seals_visible_via_f_get_seals": true,
+      "access_mode_o_rdonly": true,
+      "fd_cloexec": true,
+      "nlink": 0
+    },
+    "sealed_mfd_exec_image_executes_via_proc_self_fd_3": "exit status 0",
+    "sealed_noexec_data_image_execution": "refused, permission denied",
+    "utimensat_on_fully_sealed_memfd": "succeeds, moves Mtim, seal set stays intact at 0x2f, writes still EPERM"
+  },
+
+  "flake_diagnosis": {
+    "affected_test": "TestLinuxInputCustodyKernelMutationRefusals",
+    "status": "pre-existing at the reviewed head; not introduced by any correction",
+    "baseline_single_run": "9 top-level PASS, 0 FAIL, 51 subtests, 0 skips",
+    "baseline_15_repetitions": { "pass": 14, "fail": 1 },
+    "failing_assertion": "input_custody_linux_test.go:150 'allowed non-execute metadata drift must still invalidate custody'",
+    "failing_variant": "executable=false (21-byte fixture); executable=true passed, doing more work before the drift",
+    "mechanism": "the test chmod'ed a sealed memfd to add owner-write and restored the original mode, then required Check to refuse through Ctim; Linux stamps inodes from a coarse clock, so a restore inside one tick changes no compared field and Check correctly accepts",
+    "probe_restore_sequences_leaving_ctim_identical": "199 of 200",
+    "probe_slowest_unobserved_sequence": "64.876us",
+    "probe_effective_inode_timestamp_granularity": "~1 ms (40 distinct Ctim values in 40 ms of continuous chmod)",
+    "probe_unrestored_drift_detected": "200 of 200",
+    "security_impact": "none. The seals deny writes independently of mode, so a same-tick restored chmod gains nothing; metadata comparison is defense in depth, not the load-bearing control.",
+    "documentation_impact": "the PLAN ADR and operations guide claimed detection of any non-execute permission drift; both now state the same-tick boundary explicitly",
+    "recorded_host_explanation": "the T42.H1 host passed 20 race repetitions by timing margin, not by guarantee"
+  },
+
+  "baseline_reproduction": {
+    "tree": "pristine reviewed head 8f1a4fc7",
+    "outcome": "PASS with an intermittent failure",
+    "top_level_tests": 9,
+    "subtests": 51,
+    "skipped_tests": 0
+  },
+
+  "corrected_reproduction": {
+    "repetitions": 20,
+    "pass": 20,
+    "fail": 0,
+    "top_level_tests": 9,
+    "subtests": 53,
+    "skipped_tests": 0,
+    "top_level_enumeration_unchanged_from_retained_record": true,
+    "new_or_changed_subtests": [
+      "TestLinuxInputCustodyKernelMutationRefusals/timestamp-drift",
+      "TestLinuxInputCustodyStickyChecksAndScopedClosure/nil-context"
+    ],
+    "new_assertions_inside_existing_tests": [
+      "closed custody refuses a loan without invoking the callback or opening a descriptor",
+      "closed custody retains no descriptors or stat snapshots",
+      "nil-context loan refuses and leaks no descriptor",
+      "unrestored non-execute mode drift refuses deterministically"
+    ],
+    "corrected_source_files_sha256": {
+      "spike/t421/input_custody_linux.go": "sha256:9b5a33bbded8f80cdfe326a383f5c6f172ae8d1c05d1bf21399cfee431bad1cc",
+      "spike/t421/input_custody_linux_test.go": "sha256:46fd6982e8ead9465b7744d8a2fb29bdd5c58b56e2ba739a63c05741e29f328f"
+    }
+  },
+
+  "reviewer_local_gates": {
+    "run_from": "darwin/arm64, go1.26.5",
+    "gofmt": "PASS (no files listed)",
+    "linux_amd64_build": "PASS",
+    "linux_amd64_vet": "PASS",
+    "linux_amd64_test_binary_compile": "PASS",
+    "linux_arm64_build": "PASS",
+    "linux_386_build": "PASS",
+    "linux_amd64_whole_module_build": "PASS",
+    "darwin_build_spike_internal_cmd": "PASS",
+    "changed_files_pinned_lint": "PASS (0 issues; --new-from-rev=a46488aa --whole-files, GOOS=linux GOARCH=amd64)",
+    "whitespace": "PASS (git diff --check clean)",
+    "docs_check": "PASS",
+    "verify_glossary": "PASS",
+    "reviewed_head_diff_shape": "995 insertions, 0 deletions, 7 files; no existing Darwin custody or T40.13 source touched",
+    "retained_record_source_hashes_match_implementation_commit": true
+  },
+
+  "nonclaims": {
+    "selected_host_rerun": "NOT DONE. A fresh native normal and race rerun on the T42.H1 host is required before the corrected tree can be called green.",
+    "race_detector": "NOT RUN anywhere in this reproduction.",
+    "native_amd64_kernel": "NOT USED. amd64 userspace ran under translation on an arm64 kernel.",
+    "broader_t421_lint": "not re-run; the thirteen inherited platform-dependent unused findings and H2a's baseline production-dispatch inventory failure are unchanged and not claimed green.",
+    "full_t421_package": "not claimed green.",
+    "loader_library_helper_closure": "NOT ESTABLISHED by the joined /usr/bin/true execution.",
+    "tool_signer_provenance_or_dispatch": "NOT ESTABLISHED.",
+    "aggregate_memory_or_resource_admission": "NOT ESTABLISHED; the 2 GiB payload ceiling stays a per-instance local bound with no global reservation.",
+    "ceremony_or_freeze": "none. No merge, new serialized plan, freeze, execution, release, Epic closure or scale/SLO claim follows."
+  },
+  "release_or_scale_claim": false
+}
