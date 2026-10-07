@@ -38,6 +38,17 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 ## Conventions
 
+- **Rehearsal and ceremony host baseline (2026-10-06, Ben-directed).** This
+  Ubuntu Linux amd64 machine is the basis for every future rehearsal, ceremony,
+  and rerun of a historical workload. Its observed physical memory is
+  15,991,791,616 bytes (14.89 GiB); arm64/Darwin and a 24-GiB RAM prerequisite
+  are superseded for new executions. Budget against measured physical and
+  effective cgroup capacity on this host; do not count swap as physical RAM or
+  carry forward a 20-GiB RSS ceiling. Historical signed plans and receipts keep
+  their original bytes and host facts. Linux adapter work and fresh host/tool
+  admission are prerequisites to implement here, not instructions to return
+  to the former host. Follow T42.H1/H2 in `docs/BACKLOG.md` and the dated PLAN
+  decision; preserve correctness, custody, accounting, and teardown gates.
 - PR-sized, stacked changes; one ticket per PR; ACs in BACKLOG.md are the merge bar.
 - `main` is the integration branch. Ticket worktrees and branches are temporary:
  remove them after a verified fast-forward merge; retain unmerged validation

@@ -1,0 +1,24 @@
+{
+  "schema": "phebs-rehearsal-host-baseline-v1",
+  "decided_on": "2026-10-06",
+  "authority": "Ben's explicit current-machine baseline instruction",
+  "scope": "All future rehearsals, ceremonies, and fresh reruns of historical workloads",
+  "target": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "distribution": "Ubuntu 26.04.1",
+    "observed_kernel_release": "7.0.0-34-generic",
+    "observed_logical_cpus": 12,
+    "observed_physical_memory_bytes": 15991791616
+  },
+  "resource_policy": {
+    "minimum_available_disk_bytes": 128849018880,
+    "memory_admission": "Freeze aggregate RSS, child reservations, and host headroom within measured physical and effective cgroup capacity",
+    "swap_counts_as_physical_memory": false,
+    "legacy_24_gib_minimum_required": false,
+    "legacy_20_gib_rss_envelope_allowed": false
+  },
+  "historical_evidence": "Preserve original bytes, signatures, host facts, and results; rerun workloads with new Linux-bound plans and receipts",
+  "implementation_prerequisite": "T42.H2 Linux process, custody, signing/session, pressure filesystem, plan, and admission adapters",
+  "execution_established": false
+}
