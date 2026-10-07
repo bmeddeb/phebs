@@ -15448,6 +15448,21 @@ pinned lint, docs, glossary and whitespace checks pass. Broader normal testing
 encounters unchanged sandbox tests requiring the absent `/private/tmp` host
 directory; that host limitation does not become a complete-tree PASS.
 
+T45.7 current-host containment prerequisite (2026-10-06): Docker access on
+the selected Linux amd64 machine is established. Sandbox image admission now
+requires the controller's native architecture; the default-AppArmor labels
+from older Docker and Docker 29 are both explicit, with unchanged live
+`docker-default` inspection. The probe-only
+`neutral-probes-linux-amd64-v1` profile cannot admit a compiler plan. Native
+probe/controller-death helper builds select the controller architecture.
+The recipe explicitly bounds `/dev/shm` at the existing 16-MiB and
+1,048,576-inode ceilings rather than inheriting host-sized inode capacity.
+The first diagnostic stopped before probes at `shared_memory_space` and
+retired all containers and inputs; its local log is preserved. Current-tree
+containment confirmation and source-free evidence are recorded separately;
+the five-minute controller-hard-death gate and full compiler cohort are not
+claimed. The sealed sysroot and complete offline worker bundle remain needed.
+
 **T45.8a · Capability-dark Settings boundary** *(presentation-track handoff;
 may precede T45.2)* — add an administrator-only **Code navigation indexing**
 section that states the current build truth without consuming or implying a

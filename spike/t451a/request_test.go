@@ -11,6 +11,8 @@ func TestRequestClosesExecutionInputs(t *testing.T) {
 	}{
 		{"neutral plan", func(*Request) {}, true},
 		{"closed probe", func(r *Request) { r.Mode, r.Probe = "probe", "access" }, true},
+		{"amd64 probe", func(r *Request) { r.Profile, r.Mode, r.Probe = ProbeProfileAmd64, "probe", "access" }, true},
+		{"amd64 profile cannot admit plan", func(r *Request) { r.Profile = ProbeProfileAmd64 }, false},
 		{"target execution", func(r *Request) { r.Mode = "target" }, false},
 		{"alternate profile", func(r *Request) { r.Profile = "target-linux-v1" }, false},
 		{"command probe", func(r *Request) { r.Mode, r.Probe = "probe", "sh -c true" }, false},
@@ -25,6 +27,19 @@ func TestRequestClosesExecutionInputs(t *testing.T) {
 			_, err := DecodeRequest(wire(t, r))
 			if (err == nil) != tc.pass {
 				t.Fatalf("admission mismatch: %v", err)
+			}
+		})
+	}
+}
+
+func TestProbeProfileArchitecture(t *testing.T) {
+	for _, tc := range []struct{ arch, profile string }{
+		{"amd64", ProbeProfileAmd64}, {"arm64", Profile}, {"386", ""}, {"", ""},
+	} {
+		t.Run(tc.arch, func(t *testing.T) {
+			profile, err := ProbeProfileForArch(tc.arch)
+			if profile != tc.profile || (err == nil) != (tc.profile != "") {
+				t.Fatalf("profile=%q error=%v", profile, err)
 			}
 		})
 	}

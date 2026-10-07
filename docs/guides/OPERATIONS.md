@@ -7911,12 +7911,23 @@ go test ./spike/t451a/...
 ```
 
 Native tests require an explicitly named local Docker Unix socket, an already
-present immutable Linux/arm64 image, and a parent directory visible at the same
+present immutable Linux image matching the controller architecture, and a parent directory visible at the same
 absolute path to the host and daemon. A Colima VM may not expose the host's
 temporary directory; the harness refuses an absent daemon-side bind source.
 It never pulls an image, enables network, changes daemon configuration, or
 starts unrelated services. The daemon must support cgroup v2, the required
 kernel limits, seccomp, and AppArmor. Run rehearsals serially.
+The current machine uses amd64. Containment probes select
+`neutral-probes-linux-amd64-v1`; that profile cannot admit a compiler plan.
+Cross-architecture images refuse before container creation. A local empty
+scratch image is sufficient for containment because the static, digest-bound
+helper is supplied through the read-only input mount; compiler cohorts need
+their complete sealed image and offline tool inputs. Docker 29's exact
+`name=apparmor,profile=default` info label is accepted alongside the older
+`name=apparmor`, while container inspection still requires `docker-default`.
+The recipe explicitly mounts `/dev/shm` with noexec/nosuid/nodev, 16 MiB, and
+the existing 1,048,576-inode ceiling so host-sized defaults cannot silently
+change the verified envelope.
 The fixed neutral profile uses one CPU, 3 GiB memory without swap, and 2 GiB
 aggregate tmpfs data. Tmpfs consumes that same memory allowance. Provision a
 dedicated test daemon with headroom (the development VM has 4 GiB RAM); do not
