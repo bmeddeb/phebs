@@ -105,6 +105,52 @@ The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 Its owning backlog preserves the broader T421 gate qualifications.
 
+T42.H2c binds selected direct tool images to those sealed bytes. Implemented Go
+roles undergo the same independent exact tracked-source/module/SDK build and
+complete byte comparison; the public path verifier keeps its existing recipe.
+SurrealDB alone supports a Linux external sealed-image probe. With the prepared
+host PATH loaded (including its SurrealDB binary), run the finite native gates:
+
+```sh
+GOMAXPROCS=2 go test -p=2 -count=1 -timeout=10m ./spike/t421 -run '^TestLinuxToolCustody|^TestVerifyExecutionReferenceToolComparesExactBinaryBytes$'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=10m ./spike/t421 -run '^TestLinuxToolCustody|^TestVerifyExecutionReferenceToolComparesExactBinaryBytes$'
+GOMAXPROCS=2 go test -race -p=2 -count=1 -timeout=2m ./spike/t4013 -run '^TestLinuxProcessImage|^TestLinuxDeletedExecutableRefused$'
+```
+
+The native SurrealDB test fails if its prepared host tool is missing; it does not
+skip. The production API receives an explicit selected image, never discovers a
+PATH executable. The version probe executes its sealed FD with a closed
+argument/environment recipe, 4-KiB stdout/stderr caps, a ten-second command
+context, joined root and existing bounded preparation-session drain. Version
+syntax is observation, not vendor attestation or helper/loader/library closure.
+Uncertain probe drain/removal returns non-nil unusable cleanup custody. Retain
+that handle, keeper and private scratch; retry Close for observation/removal.
+Close does not signal a reused PID or dispose scratch before join/drain. The
+preparation drain still uses the inherited bounded Linux `/bin/ps` helper,
+including one additional final census before scratch removal; native session/
+hard-death integration remains separate work.
+
+The new process matcher compares a live task's executable inode with a held
+image under two bounded stat brackets and a pidfd exit fence. It supports
+anonymous/deleted kernel objects; the existing pathname observer still refuses
+deleted images. This is one sample, not continuous exec history, process
+ownership or authorization. No process census, helper or image hash is added to
+that matcher. Protected-image scoped callbacks must join all users, avoid
+escaping FDs/mappings and avoid reentering custody methods; a refused use leaves
+the tool permanently unusable.
+
+Each tool copy can hold 256 MiB of anonymous payload beyond process RSS, and its
+reads may add 256 MiB of reclaimable source cache. Budgets must also include
+concurrent instances, children, reference compiler/cache and kernel overhead.
+These limits reserve no global capacity; reference build/cache and trusted
+external child work have no new hard RSS/disk quota. The existing cooperative
+reference-build deadline and native command/output/cleanup bounds remain. New
+Linux external provenance deliberately fails historical freeze validation;
+retained plans and evidence keep their original versions. Signer/namespace
+custody (T42.H2d), Git/Go SDK/helper and fixed-system recipes, complete session/
+pressure adapters and prospective measured resource/plan/readiness admission
+remain required. These checks execute no ceremony and establish no scale claim.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

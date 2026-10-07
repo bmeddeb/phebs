@@ -33,6 +33,15 @@ point. T42.H2c next owns Linux tool/signer provenance and protected dispatch;
 session/descendant teardown, pressure adapters, prospective plan versions and
 aggregate resource admission remain open before complete readiness.
 
+T42.H2c supplies Linux direct-tool custody: exact reference-built Go images,
+a sealed SurrealDB version probe, and a separate held-object process matcher for
+anonymous images. Historical pathname refusals stay exact. Retained uncertain
+probe custody remains unusable until joined/drained cleanup succeeds; successful
+observations are not loader/helper or full toolchain admission. T42.H2d next
+owns signer/namespace custody. Git/Go SDK/helper and fixed-system recipes,
+session/hard-death integration, pressure adapters, new plans and aggregate
+resource/readiness admission remain open; no ceremony entry point is enabled.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:
