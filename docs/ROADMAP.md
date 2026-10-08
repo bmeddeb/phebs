@@ -78,6 +78,35 @@ pressure/allocation/restore adapters, new Linux-bound plan versions and
 aggregate physical/effective-cgroup resource/readiness admission remain open; no
 ceremony entry point is enabled.
 
+T42.H2f integrates native session and descendant hard-death supervision with the
+Linux custody primitives. The Linux private-session census and the inherited
+preparation drain no longer launch `/bin/ps -Ao pid=,stat=`; they enumerate one
+session from a single bounded native `/proc` directory census plus one `getsid`
+per host PID, reading a `/proc/<pid>/stat` state and one confirming `getsid` only
+for PIDs that already match the session. That retires the retained T40.13r
+failure class on this host rather than working around it, since the census child
+is setuid-root and a coherent task-all-info observation met the same `EPERM`, and
+a supervision path that launches a child could make that child a member of the
+session it was proving empty. `PrivateProcessSessionMembership` and its
+confirmation semantics — double session-identifier confirmation, defunct
+filtering between them and identity-token equality before and after — now live in
+one shared `darwin` or `linux` file rather than being restated for Linux, with a
+per-platform defunct adapter because Darwin narrows one short-BSD status while
+Linux narrows one `stat` state to three native dead states. The Darwin runtime
+path stays byte-exact, so V1–V32 evidence, sealed plans and receipts are
+unchanged, and the shared fence test now executes on Linux instead of only
+cross-compiling for Darwin. Its finite Linux normal/race selectors and a
+twenty-repetition boundary pass; the inherited `spike/t4013` toolchain failure,
+one retained zero-margin Linux sampler flake and the two retained `spike/t421`
+Linux failures stay qualified in the owning backlog record. No launcher authority
+and no session teardown
+authority follows. The legacy `ps`/`pgrep` sampler cluster and the sampler's
+`/bin/ps` fallback are retained off the production Linux path rather than claimed
+removed. Git exec-path helper manifest and Go GOROOT/SDK location recipes,
+isolated pressure/allocation/restore adapters, new Linux-bound plan versions and
+aggregate physical/effective-cgroup resource/readiness admission remain open; no
+ceremony entry point is enabled.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:

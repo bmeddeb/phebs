@@ -1,0 +1,156 @@
+{
+  "schema": "phebs-t42h2f-linux-session-supervision-rehearsal-v1",
+  "measured_at_utc": "2026-10-08T00:53:42.937792+00:00",
+  "source_commit": "da566ff31d75d1db010490b8af2b08dcfb7bcc5e",
+  "implementation_commit": "da566ff31d75d1db010490b8af2b08dcfb7bcc5e",
+  "review_correction_commit": null,
+  "base_commit": "4ab0b9b09114a555b3e36d981b85b5cec739112d",
+  "commit_note": "source_commit and implementation_commit are the same tree: this slice shipped no review correction, so no log was discarded and re-measured. The record commit that adds this file, PLAN.md, docs/BACKLOG.md, docs/ROADMAP.md and docs/guides/OPERATIONS.md changes no compiled, embedded, fixture or harness input, so every measurement below stays bound to da566ff3 exactly as the earlier slices' documentation-only follow-ups did.",
+  "source_files_sha256": {
+    "spike/t4013/process_group_linux.go": "sha256:0d422f8265e212d08670bf4b60685199e71756e819e1a192128fbb9a50f56159",
+    "spike/t4013/process_group_linux_test.go": "sha256:df46b503867791109bf2ca907f12c81a7f4b3c83f30585ac05337ef4ebddafeb",
+    "spike/t4013/process_session_membership_darwin.go": "sha256:af07641ffd38be0bd98d36767d3ad0316efff95da88a1b5dc7540bff2f8b872e",
+    "spike/t4013/process_session_membership_linux.go": "sha256:1538c69ab97dc498451d3a09e4d1a606593a542a4d8a2a971d014a6d3e759be6",
+    "spike/t4013/process_session_membership_other.go": "sha256:22943f2def23b69d972cdef0666f2bae8c80416ff0420bb2113fe70b9ea68bc1",
+    "spike/t4013/process_session_membership_other_test.go": "sha256:76fd9faf4cd4a005b5b72cf458f8017d2d32cb300268e3623df5f56f4c93e4ac",
+    "spike/t4013/process_session_membership_unix.go": "sha256:86a23f880b99d16cb9cfec661c628169a6e127c8632e7aca823e018d57fd40b0",
+    "spike/t4013/process_session_membership_unix_test.go": "sha256:d7eb08ed9906f38963dbbcdf13f08a8e02ac48319bc31075b4d0e0b5fadc63ee",
+    "spike/t4013/process_snapshot_linux.go": "sha256:082fbfc1498b001a53964bfc054101ee072aa5af3a9ed87a448278ae97a056ff"
+  },
+  "untouched_darwin_proof": {
+    "command": "git diff --name-only 4ab0b9b0..da566ff3 -- spike/t4013/process_group_darwin.go spike/t4013/process_group_darwin_test.go",
+    "names_returned": 0,
+    "meaning": "the Darwin session census and its test are byte-exact, so the sealed V1-V32 evidence, frozen plans, signed packages and retained receipts keep their meaning; the Linux rewrite mirrors the Darwin structure instead of changing it"
+  },
+  "host": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "kernel_release": "7.0.0-38-generic",
+    "logical_cpus": 12,
+    "physical_memory_bytes": 15991742464,
+    "go_version": "go1.26.5 linux/amd64",
+    "aggregate_effective_cgroup_capacity_admitted": false
+  },
+  "scope": "Native Linux session and descendant hard-death supervision sharing the Darwin PrivateProcessSessionMembership confirmation semantics behind darwin or linux build tags, with the Linux /bin/ps session census replaced by one bounded native /proc listing. Both the inherited preparation drain and the custody-command drain are discharged by the same rewrite because both reach the census through privateServerSessionPIDs. This slice supplies no launcher authority, no session teardown, no dispatch admission, no Git exec-path helper manifest, no Go GOROOT/SDK location recipe, no Linux input-custody immutability model, no pressure/allocation/restore adapter, no Linux plan version, no resource admission, no freeze, ceremony or scale claim.",
+  "diff_stat": {
+    "files_changed": 9,
+    "insertions": 440,
+    "deletions": 145,
+    "note": "process_snapshot_linux.go accounts for 82 insertions and 10 deletions; those ten removed lines are exactly the inline census block now shared as readLinuxProcessCensus, and no removed line references linuxProcessResidentBytes, collectLinuxResidentObservation or smaps_rollup"
+  },
+  "census_contract": {
+    "listing_bound_entries": 8192,
+    "overflow_sentinel": 1,
+    "per_process_files_opened_during_listing": 0,
+    "over_bound_behavior": "refuses with 'linux process census exceeds its bound' rather than truncating",
+    "session_member_bound": 1024,
+    "per_candidate_confirmation": [
+      "unix.Getsid",
+      "linuxProcessDefunctStatus native stat state",
+      "confirming unix.Getsid"
+    ],
+    "helper_processes_launched": 0,
+    "defunct_states_named": [
+      "Z",
+      "X",
+      "x"
+    ],
+    "order": "identity, session, defunct, session, identity",
+    "why_defunct_follows_session": "Linux getsid(2) succeeds on an unreaped task because the task struct survives until reaped, so a zombie still reports the session it belonged to and would otherwise be named as a live member",
+    "hook_signature": "defunctOf func(int) (bool, bool, error)",
+    "why_hook_shape": "a file tagged darwin or linux cannot reference the Darwin-only darwinProcessZombie constant, and Linux's three dead-but-unreaped states cannot be expressed as one comparison against a uint32 status; the hook returns defunct, present and error so a vanished lifetime is omitted while a denial or malformed record refuses rather than guessing liveness",
+    "retired_failure_classes": [
+      "the setuid-root /bin/ps EPERM class the retained T40.13r review attributed to the 50ms compatibility monitor",
+      "supervision forking a child that can itself become a member of the session it is draining",
+      "one 128-KiB text parse and one two-second probe context per ten-millisecond poll"
+    ]
+  },
+  "native_runs": {
+    "targeted_normal": {
+      "selector": "^(TestLinuxSessionInventoryUsesNativeRecords|TestLinuxSessionInventoryRefusals|TestLinuxHostProcessPIDCensusFilter|TestLinuxProcessObservationNamesSelf|TestLinuxProcessDefunctStatusNamesRealZombie|TestPrivateProcessSessionMembershipNamesLinuxMembers|TestPrivateProcessSessionMemberLifetimeFence)$",
+      "top_level_pass": 7,
+      "top_level_fail": 0,
+      "subtests_pass": 17,
+      "subtests_fail": 0,
+      "package_seconds": 0.45,
+      "exit": 0,
+      "log": "sha256:623c0f7ac839de6f3a6daf9c7db6348bc84b9da62d75813c40a66d33bdae89c6",
+      "log_bytes": 3614
+    },
+    "targeted_race": {
+      "top_level_pass": 7,
+      "top_level_fail": 0,
+      "data_races": 0,
+      "package_seconds": 3.612,
+      "exit": 0,
+      "log": "sha256:f3e3c95ff716ad6ba8242a0e3deedd01874f1d85ba7700ab4d55014d9ef56080",
+      "log_bytes": 3614
+    },
+    "twenty_repetition_boundary_normal": {
+      "count": 20,
+      "top_level_pass": 140,
+      "top_level_fail": 0,
+      "failure_detail_lines": 0,
+      "package_seconds": 4.128,
+      "exit": 0,
+      "log": "sha256:046e8ac3ddb11f3f110ff4d1170ecda701c5112540a2165280ce9d1d54e955ba",
+      "log_bytes": 71254
+    },
+    "twenty_repetition_boundary_race": {
+      "count": 20,
+      "top_level_pass": 140,
+      "top_level_fail": 0,
+      "failure_detail_lines": 0,
+      "data_races": 0,
+      "package_seconds": 50.17,
+      "exit": 0,
+      "log": "sha256:fe10fc39af234252c9f6dd1aae2b9fb2b97ae9eee6331141b0d3cc85f6192d56",
+      "log_bytes": 71255
+    },
+    "note": "all four runs were measured with no contending test process on the host, so unlike the H2e measurement these durations are uncontended; the earlier H2f census runs in baseline_qualifications.contended_head_census_flake were deliberately contended and are reported separately for that reason"
+  },
+  "static_gates": {
+    "affected_vet": "clean on linux/amd64; zero-byte log sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "darwin_arm64_cross_build_and_vet": "clean; zero-byte log sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "module_verification": "go mod verify and full-module compilation pass",
+    "gofmt": "no file in the changed set is reformatted by gofmt -l",
+    "unscoped_pinned_lint_t4013": {
+      "command": "golangci-lint run ./spike/t4013/... (repository-pinned v2.12.2)",
+      "result": "0 issues.",
+      "log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "log_bytes": 10
+    },
+    "documentation": "ok scripts (docs-check) sha256:76b95c0b348f0b03602e3ac9145b70f8ed6bb913c3d1724ae87674e022b63b3d",
+    "glossary": "sha256:f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "whitespace": "git diff --check clean"
+  },
+  "baseline_qualifications": {
+    "full_t4013_package": "Not claimed green. The whole package took 131.220s normal (log sha256:4ea5d631023a1c01c1b75b8eaead4840900956c87801db4d34cbc9a9765d1b3c) and 157.657s under race (log sha256:face9e83d5791745ddd3f66ae92db1b7190696adfcedc4c43d05ecf5bf6c050c) with exactly one failure in each, TestClosedHostToolchainIgnoresAmbientSurrealOverride at host_toolchain_test.go:252, failing with 'resolve host executable: lstat /usr/bin/sandbox-exec: no such file or directory' because observeHostToolchain's closedEnvironment fixed-system-tool manifest still names a macOS-only image alongside sh, du, ps, pgrep and sysctl. Base sampling at base_commit 4ab0b9b0 in a separate clean detached worktree reproduced the identical failure line and exit status (log sha256:65fa20dd7b828208df8f8f004a6c1b178ebabbd00b72fecf4ed59f003db47c1b), so it is inherited rather than introduced and was not silently repaired inside this slice. A complete -v census was run at both commits: base reported 453 pass / 1 fail / 16 skip totalling 470 in 153.265s (log sha256:ffad255d42dde1d3da4bc5b10e3db1d63f9d70b2d113e238048c16173683f6ae) and head reported 458 pass / 2 fail / 16 skip totalling 476 in 135.790s (log sha256:870b2005e7e55bbd235e9b26e007942a4ebbb671e41300c038e08978c8b4dae7); the head census ran while contending with an unrelated background full-package run, which is the condition under which the second head failure appeared.",
+    "contended_head_census_flake": {
+      "test": "TestLinuxNativeSamplerAccountsExecClassEpoch",
+      "location": "spike/t4013/process_snapshot_linux_test.go:214-266, assertion at :264",
+      "observed_error": "T40.13 process sampling failed after 1 failed samples: read Linux resident memory: open /proc/<pid>/smaps_rollup: no such process, samples:36 failed:1",
+      "attribution": "retained pre-existing zero-margin host-timing flake, not an H2f regression",
+      "grounds": [
+        "the failing path is byte-identical to H2a's: process_snapshot_linux.go's linuxProcessResidentBytes, collectLinuxResidentObservation and smaps_rollup handling all date to commit 059e6616 and this slice changed none of them; the ten lines this slice removed from that file are exactly the inline census block",
+        "the mechanism is a deliberate race the test constructs: it launches /bin/sh -c '/bin/sh -c \"sleep 1; exec /usr/bin/git hash-object --stdin\" child <&3 & wait' and polls every 20ms for the other-to-git exec transition, so the sampler walks the tree at the instant sleep 1 exits. A descendant that exits is simultaneously reparented, which breaks the parent-equality half of linuxProcessResidentBytes' zero-RSS recovery condition and turns a missing smaps_rollup into the hard error; collectLinuxResidentObservation retries only errLinuxProcessNameTransition, and the test's own table pins {'missing memory', os.ErrNotExist, 'name', 1, true}",
+        "assertion ordering excludes the rewritten census: sampler.failedSamples is asserted before that iteration's drain runs, so privateServerSessionPIDs can influence it only through a prior -count repetition's teardown, which the matched isolated runs below exclude",
+        "the decisive matched experiment runs the other way: under isolated conditions base and head are each 0-for-60 (base 66.238s log sha256:c8961b469881a5259ae7cc78549b6e0922a4d256a8bb972dc679fb55679deb76, head 64.436s log sha256:79b819d7187d5c26303ef383556ec5f90fe2a0bb432f42381ddc957b7a865a17), while under matched contention base failed 3 times in 40 (43.053s, log sha256:c7cbe723c3881ce811112baef9cdfc17a4069075ee7b43ac7eae50a67285d3b9) and head failed once in 40 (41.625s, log sha256:6aea4cdcb24633cf14d317bd9e8afcd931e1a04500671311044a427fe589b1f9). Base therefore flakes more than head under identical contention, and the four subsequent uncontended H2f runs above are 0-for-140 twice over"
+      ]
+    },
+    "retained_legacy_ps_pgrep_cluster": "recorded rather than removed. process.go's sampleLegacy (:1504, exec.Command('ps','-o','rss=','-p',pid) at :1508, processName at :1530), processTree (:1545, 'pgrep -P' at :1547) and processName (:1561, 'ps -o comm=' at :1562) still shell out, and newRSSSampler's snapshotProbe fallback (:1034-1037) still names '/bin/ps -Ao pid=,ppid=,rss=,comm='. All four are off the production Linux path: probeProcessSnapshot (:1167-1181) returns sampler.nativeSnapshotProbe when non-nil, nativeProcessSnapshotProbe is non-nil on Linux (set at :1039), and only process_test.go:1318 nils it. The remaining Go-source occurrences of ps/pgrep are the Darwin-era fixed-tool name list at model.go:1743 and its test at model_test.go:3478-3479, a test shell snippet at phase7_full_profile_replay_driver_test.go:527, and the closedEnvironment fixed-system-tool manifest at host_toolchain.go:236-237, which is an identity manifest rather than a census. process_group_linux.go:22 was removed by this slice. This slice neither removed nor widened the legacy cluster.",
+    "full_t421_package_at_h2e_head": "measured here because it completed during this slice, at 0da4d1e4c3d5496d2389eee86b44e3dceaa23402 from a clean detached checkout. It completed rather than timing out in 6571.347s against a -timeout=120m allowance and enumerated 639 top-level passes, 2 failures and 11 skips, totalling 652 and matching the 652 top-level test functions that compile on Linux out of 866 declared (58 *_darwin_test.go files plus epoch_config_custody_test.go carry //go:build darwin); indented results were 3586 pass, 0 fail, 0 skip. Log 648194 bytes at sha256:0df659095b0d3ea88eede877cb152438b46a2ccbd4ebfd86f3611fb0fc906fba, failures at lines 523 and 8515. Not claimed green; both failures are qualified. TestProductionDispatchSitesMatchActualBoundaries fails byte-identically modulo timings at base and head (eleven lines, 3720 bytes each), so it is the retained H2a production-dispatch inventory failure. TestZoektOfferNativePinnedGraph fails deterministically at zoekt_offer_build_test.go:90 with 'execution Go build inputs unavailable or changed', i.e. ErrExecutionGoBuildCustody, in 0.07-0.08s, and predates the whole H2 stack: walkGoBuildTree's first guard requires inputCustodyOwned, and spike/t421/input_custody_seams_linux.go:21 is deliberately refusal-false on Linux because the Darwin immutable-flag custody model is not implemented there. git diff --stat a0a35965..0da4d1e4 over zoekt_offer_build.go, zoekt_offer_build_test.go, go_build_custody.go and go_build_custody_tree.go is empty and their last touches are September 2026; Linux already refused identically before H2d moved the stub into its own seam file, because input_custody_other.go was then tagged //go:build !darwin and also returned inputCustodyOwned false. Environment causes were ruled out: /tmp had 7.0G of 7.5G available, / had 182G of 233G, and no ENOSPC occurred. Its sibling TestZoektOfferNativeReplacementMetadata passed in 5.52s because it never enters walkGoBuildTree. No t421.test, go test or SurrealDB process and no port-65499 listener survived.",
+    "linux_arm64": "the new Linux tests assert exact refusal messages, so on linux/arm64 the frozen-host platform gate fires first and they fail. GOOS=linux GOARCH=arm64 go vet is clean; arm64 Linux is not a claimed gate for this slice.",
+    "error_collapsing_caveat": "walkGoBuildTree collapses any visit error into ErrExecutionGoBuildCustody, so on Linux a deliberate custody stub refusal is indistinguishable in test output from a real bound violation. Recorded, not fixed here, because that function is outside this slice's changed set."
+  },
+  "newly_named_prerequisite": {
+    "name": "Linux immutable-flag input-custody model",
+    "finding": "Linux FS_IMMUTABLE_FL via FS_IOC_SETFLAGS requires CAP_LINUX_IMMUTABLE; there is no unprivileged owner-set immutable equivalent to Darwin's unix.Fchflags(UF_IMMUTABLE). inputCustodyOwned, inputCustodyProtected, inputCustodyFlag and inputCustodyVolume are therefore refusal stubs on Linux, and ProtectExecutionGoBuildInputs plus the whole zoekt-offer native build path cannot run here.",
+    "why_it_matters": "it is a genuine design question rather than a port: the options are a granted capability, a read-only bind mount, a user namespace, or an explicitly weaker documented custody model, and each has a different adversary.",
+    "backlog_status": "was not named in the remaining-H2-prerequisites list before this slice; it is now recorded in docs/BACKLOG.md under T42.H2f and T42.H2g."
+  },
+  "cost_pass": "No new per-query/request, sync tick, startup/restart, retry/no-op or publication work; ordinary runtime is unchanged and no production dispatch site is added or removed. The changed path is supervision-only and runs at the existing ten-millisecond poll cadence and five-second custody-command deadline. Per poll the syscall order is unchanged while one child process, one pipe and one 128-KiB text parse are removed and the two-second probe context disappears because no child bounds it: the loop is bounded by construction at 8192 listing entries, at most 8192 getsid calls of roughly 200ns each, and at most 1024 session members each costing one /proc/<pid>/stat read plus one confirming getsid. Reading /proc/<pid>/stat field 6 instead of getsid was rejected on cost, at two to five microseconds per candidate versus roughly 200 nanoseconds, over every host PID at ten milliseconds. No numeric sort was added because order is not load-bearing in any of the three callers and the Darwin census is unsorted too; the empty census now returns an empty non-nil slice rather than nil, and all three callers are nil-insensitive. No lock is held across the census, no new persistent state exists, and no cache is invalidated.",
+  "independent_review": "pending",
+  "remaining": "Independent review of this exact source; Git exec-path helper manifest and Go GOROOT/SDK location recipes (T42.H2g); the Linux immutable-flag input-custody model; isolated pressure/allocation/restore adapters; new Linux-bound plan versions; aggregate physical and effective-cgroup resource, child and headroom admission; complete readiness; ceremony entry-point integration; freeze; execution.",
+  "release_or_scale_claim": "None. This record establishes no complete readiness, no new canonical plan, no freeze, no ceremony execution, no seal, no release, no Epic 42 closure and no scale or SLO claim. GATE2-V2 remains NOT_ESTABLISHED and DO_NOT_RELEASE stands."
+}
