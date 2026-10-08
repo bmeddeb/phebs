@@ -479,7 +479,7 @@ func externalDelegationFixtureClass(t *testing.T, path string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer image.Close()
+	defer func() { _ = image.Close() }()
 	header := make([]byte, maxExternalDelegationHeaderBytes)
 	read, err := image.Read(header)
 	if err != nil && read == 0 {

@@ -374,12 +374,12 @@ func TestLinuxExternalDelegationCensusRefusesUnadmittedRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(socketDirectory) })
+	t.Cleanup(func() { _ = os.RemoveAll(socketDirectory) })
 	listener, err := net.Listen("unix", filepath.Join(socketDirectory, "sock"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	emptyDirectory := writeExternalDelegationDirectory(t, filepath.Join(base, "empty"), 0o755)
 	writeExternalDelegationFile(t, filepath.Join(emptyDirectory, "empty-helper"), nil, 0o755)
 	overDirectory := writeExternalDelegationDirectory(t, filepath.Join(base, "over"), 0o755)
