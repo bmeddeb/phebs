@@ -366,33 +366,63 @@ match because Linux `getsid(2)` succeeds on an unreaped task, so a zombie still
 reports the session it belonged to and would otherwise be named as a live
 member.
 
-`process_group_darwin.go` is byte-exact, so the sealed V1–V32 evidence, plans
+`process_group_darwin.go`, `process_group_darwin_test.go` and
+`process_snapshot_darwin.go` are byte-exact, so the sealed V1–V32 evidence, plans
 and receipts keep their meaning. The unsupported-platform file moved from
 `//go:build !darwin` to `//go:build !darwin && !linux`, which orphans nothing
 because Linux now has a real implementation. The fence test moved with the code,
 so all 17 of its subtests execute on this host rather than only on macOS.
 
-The native gates are finite and green: the seven H2f selectors pass 7/7 with all
-17 subtests in 0.450s normal and 3.612s under race, and a 20-repetition boundary
-passes 140/140 in 4.128s normal and 50.170s under race. An unscoped
-repository-pinned `golangci-lint run ./spike/t4013/...` reports `0 issues.`
+The native gates are finite and green at the review-corrected tree: the eight H2f
+selectors pass 8/8 with all 19 subtests in 0.169s normal and 3.438s under race,
+and a 20-repetition boundary passes 160/160 with 380 subtests in 2.520s normal
+and 47.550s under
+race. An unscoped repository-pinned `golangci-lint run ./spike/t4013/...` reports
+`0 issues.` byte-identically before and after the correction, and
+`GOOS=linux GOARCH=arm64 go vet ./spike/t4013/...` is clean alongside the
+`darwin/arm64` cross-vet.
+
+Independent review of the exact implementation returned APPROVE-WITH-NITS with 0
+critical, 0 high, 1 medium and 3 low findings, and the correction changed
+compiled `spike/t4013` bytes, so every gate above was discarded and re-measured
+rather than carried over. A later comment-only correction fixed an arithmetic
+error in the text that first correction added — it called
+`maxProcessSessionMembers` sixteen times `maxProcessDescendants`, where 128 × 8
+is the actual 1024 bound — and because the sealed record binds exact file bytes,
+the gates above were discarded and re-measured a second time so that every number
+here binds to one commit. The medium finding matters to an operator reading older
+notes: this slice's documents and sealed evidence had inherited H2e's
+`linux/arm64` disqualification verbatim, which is false here. The low findings
+were a census error join that let a failed `Close` stay
+`errors.Is(err, io.EOF)`-matchable, a bare `1024` literal duplicating the Darwin
+file, and a vacuous bound assertion that left the member refusal with no
+coverage. The bound is now named `maxProcessSessionMembers` in the Linux file
+only, and `TestLinuxSessionMemberBoundRefuses` drives both of its sides through a
+new `privateServerSessionPIDsAt` seam that takes exactly the `procRoot`,
+`sessionOf` and `defunctOf` hooks the shared fence takes, so the bound is proven
+without weakening the fence.
 
 Four operator caveats. The whole `spike/t4013` package is qualified, not green:
 `TestClosedHostToolchainIgnoresAmbientSurrealOverride` fails identically at this
 slice's base and head with `lstat /usr/bin/sandbox-exec: no such file or
 directory`, because the `closedEnvironment` fixed-system-tool manifest still
-names a macOS-only image. Separately,
+names a macOS-only image. The corrected whole-package census enumerates 460
+passes, 1 failure and 16 skips totalling 477 top-level results in 139.652s
+normal and 185.183s under race. Separately,
 `TestLinuxNativeSamplerAccountsExecClassEpoch` is a retained zero-margin
 host-timing flake, not an H2f regression: its failing path is byte-identical to
-H2a's, it asserts before its own drain runs, and under matched isolated
-conditions base and head are each 0-for-60 while under matched contention base
-failed 3 times in 40 and head once. The legacy `sampleLegacy`, `processTree` and
+H2a's, it asserts before its own drain runs, and a matched 200-repetition sample
+on one otherwise idle host failed seven times at base and seven times at the
+corrected head, all fourteen with the identical `smaps_rollup` disappearance
+signature, so the two rates are indistinguishable. The legacy
+`sampleLegacy`, `processTree` and
 `processName` helpers still shell out to `ps` and `pgrep`, and `newRSSSampler`
 still carries a `/bin/ps` snapshot fallback; all four stay off the production
 Linux path, which uses the native probe, and this slice neither removed nor
-widened them. Finally, the new Linux tests assert exact refusal messages, so on
-`linux/arm64` the frozen-host platform gate fires first; arm64 Linux is not a
-claimed gate for this slice.
+widened them. Finally, the new Linux tests are architecture-agnostic and
+`GOOS=linux GOARCH=arm64 go vet ./spike/t4013/...` is clean, but arm64 Linux was
+not executed on this amd64 host, so it stays unclaimed rather than disqualified;
+the H2e-era frozen-host platform gate is unreachable from this path.
 
 This slice supplies no launcher authority and no session teardown. Git
 exec-path helper manifest and Go GOROOT/SDK location recipes, a Linux input
