@@ -355,6 +355,10 @@ policies. Current-host installed generation/navigation, review and integration
 remain open; missing images, offline inputs and privileges are not waived.
 This changes Epic 45 sequencing only and advances no scale, release,
 generated-evidence or ceremony claim.
+T45.10a admits both native resource-profile names in Settings, so an available
+amd64 installation can be planned and enqueued from the documented Settings
+path. It adds no execution capability. Installed generation, images, offline
+inputs, privileges, review and integration remain open.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

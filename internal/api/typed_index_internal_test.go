@@ -286,3 +286,36 @@ func TestTypedIndexAPIScheduleGapAndEarlyFailure(t *testing.T) {
 		s.snapshot.DesiredFresh = true
 	}
 }
+
+func TestTypedIndexAPIResourceProfileMatchesInstalledArchitecture(t *testing.T) {
+	for _, arch := range []string{"arm64", "amd64"} {
+		t.Run(arch, func(t *testing.T) {
+			s, opts := typedAPIFixture(t)
+			if arch == "amd64" {
+				h := s.snapshot.UniverseDigest
+				tool := typedindex.Tool{Version: "0.2.7", Digest: h}
+				raw, err := json.Marshal(typedindex.ProfileDefinition{Schema: typedindex.Amd64ProfileSchema, Provider: typedindex.ProviderID, Name: "reduced", Tools: typedindex.Tools{Bazel: tool, RulesGo: tool, Go: tool, Driver: tool, Indexer: tool, Planner: tool, Launcher: tool}, Config: typedindex.Amd64ReducedConfig(), Policy: typedindex.MeasuredPolicy(), ImageDigest: h, BundleDigest: h})
+				if err != nil {
+					t.Fatal(err)
+				}
+				profile, err := typedindex.DecodeProfile(t.Context(), raw)
+				if err != nil {
+					t.Fatal(err)
+				}
+				s.snapshot.Profile = profile
+			}
+			handler := New(opts)
+			status := typedAPIRequest(t, handler, "/status?repository="+s.snapshot.Source.Repository, nil)
+			var view TypedIndexView
+			if status.Code != http.StatusOK || json.Unmarshal(status.Body.Bytes(), &view) != nil || !view.Available || view.ResourceProfile != "native-"+arch+"-bounded-v1" {
+				t.Fatal(status.Code, status.Body.String())
+			}
+			selection := TypedIndexSelection{Repository: s.snapshot.Source.Repository, ExpectedRevision: s.snapshot.Revision, Provider: s.snapshot.Profile.Provider(), Profile: s.snapshot.Profile.Definition().Name, Purpose: typedindex.Publish}
+			planned := typedAPIRequest(t, handler, "/plan", selection)
+			var preview TypedIndexPreview
+			if planned.Code != http.StatusOK || json.Unmarshal(planned.Body.Bytes(), &preview) != nil || preview.ResourceProfile != view.ResourceProfile {
+				t.Fatal(planned.Code, planned.Body.String())
+			}
+		})
+	}
+}

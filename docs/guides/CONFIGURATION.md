@@ -1212,7 +1212,9 @@ universe before planning or enqueue is available. Native compatibility and a
 successful generation are established by execution, not the provider card.
 
 When available, target, configuration and resource profiles are server-owned
-names shown read-only. Select **Generate navigation**, **Canary** or **Dry run**,
+names shown read-only. The resource profile is `native-amd64-bounded-v1` or
+`native-arm64-bounded-v1`, matching the installed profile architecture.
+Settings accepts only those two names. Select **Generate navigation**, **Canary** or **Dry run**,
 then **Review indexing plan** to review the exact commit and request authority.
 This is a request preview; native package planning starts after the separate
 explicit enqueue action. Canary and dry run validate without publication.

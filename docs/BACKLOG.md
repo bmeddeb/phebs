@@ -16613,6 +16613,27 @@ failures reproduced on main are repaired by explicit private TempDir ancestry,
 the existing exact /dev/shm recipe oracle, and launching-parent loss under a
 Linux subreaper; production custody/resource rules remain exact.
 
+**T45.10a · Admit both native resource profiles in Settings** *(follows the
+T45.10 review; presentation handoff)* — an available amd64 installation reports
+`native-amd64-bounded-v1`, which the existing Settings validators reject, so the
+documented plan/enqueue path cannot run on this host. Admit exactly
+`native-amd64-bounded-v1` and `native-arm64-bounded-v1` on available status and
+plan preview; refuse every other name. Keep an unavailable status with an empty
+resource profile readable. Pin both server status and plan responses to the
+installed profile architecture. Record the two bounded read-only daemon
+preflight reads in the configured-startup cost. AC: focused UI and API
+regressions pass; no worker, schema, sandbox, or execution change; no installed
+generation, scale, release, or ceremony claim. Merge remains a separate request.
+Lead review of the handoff found no defect in the closed-name validation or
+server architecture mapping. Fresh checks pass all five validator tests, all
+six Settings component tests, the API architecture selector normally and with
+race instrumentation, changed-file UI lint, and the production TypeScript/Vite
+build. The Settings chunk measures 27.31 kB (8.12 kB gzip); no baseline delta or
+interaction-latency measurement is claimed. Charter review preserves existing
+hierarchy, states, keyboard, copy and motion because this changes only response
+validation. Full UI-suite/browser/accessibility/screenshot/latency closure gates
+have not been performed for this slice; no UI-ticket closure is claimed.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,
