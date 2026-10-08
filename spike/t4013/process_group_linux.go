@@ -31,7 +31,8 @@ func privateServerSessionPIDs(sessionID int) ([]int, error) {
 // before and after the liveness read, and a vanished or defunct member is
 // skipped rather than reported.
 //
-// procRoot, sessionOf and defunctOf are the same seams the shared fence takes:
+// sessionOf and defunctOf are two of the three hooks the shared fence takes,
+// and procRoot is the census seam linuxHostProcessPIDs already takes:
 // production passes "/proc" and the native observers, while a synthetic census
 // drives the member bound, which no real single session can reach.
 func privateServerSessionPIDsAt(
