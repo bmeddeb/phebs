@@ -262,8 +262,11 @@ func admitExternalGoSDKTools(entries []externalDelegationEntry) (int, string, er
 
 // admitExternalGoSDKVersionMarker reads at most 4,096 bytes of the SDK's own
 // VERSION marker and requires its first line to name the verifier toolchain
-// release. This is the one bounded content read the recipe performs inside the
-// SDK, and it never walks the tree around it.
+// release. It is the recipe's only read of SDK content for that content's own
+// sake: the shared census layer separately reads at most 64 header bytes per
+// regular entry to classify it, and censusExternalGoSDKLocation fully reads
+// GOROOT/bin/go once to bind the SDK to the admitted image. None of the three
+// walks the tree around the marker.
 func admitExternalGoSDKVersionMarker(path string) error {
 	before, err := os.Lstat(path)
 	if err != nil || !before.Mode().IsRegular() || before.Mode()&os.ModeSymlink != 0 ||
