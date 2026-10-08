@@ -3,52 +3,55 @@
 package t4013
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"syscall"
 
 	"golang.org/x/sys/unix"
 )
 
+// privateServerSessionPIDs enumerates one session from a single bounded native
+// /proc census. It launches no helper, so supervision cannot itself add a
+// session member and cannot meet a setuid-tool denial; the same census also
+// widens the defunct filter from ps's "Z" prefix to every native dead state.
+// Sequential reads are not an atomic session snapshot: membership is confirmed
+// before and after the liveness read, and a vanished or defunct member is
+// skipped rather than reported.
 func privateServerSessionPIDs(sessionID int) ([]int, error) {
 	if sessionID <= 0 {
 		return nil, errors.New("T40.13 private process session is invalid")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), processProbeTimeout)
-	defer cancel()
-	output, err := boundedCommandOutput(ctx, maxProcessProbeBytes, "/bin/ps", "-Ao", "pid=,stat=")
-	if ctx.Err() != nil {
-		return nil, fmt.Errorf("inspect T40.13 private process session: %w", ctx.Err())
-	}
+	hostPIDs, err := linuxHostProcessPIDs("/proc")
 	if err != nil {
-		return nil, fmt.Errorf("inspect T40.13 private process session: %w", err)
+		return nil, err
 	}
-	trimmed := strings.TrimSpace(string(output))
-	if trimmed == "" {
-		return nil, nil
-	}
-	lines := strings.Split(trimmed, "\n")
 	pids := make([]int, 0, 16)
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) != 2 {
-			return nil, errors.New("T40.13 private process session inventory is invalid")
-		}
-		pid, parseErr := strconv.Atoi(fields[0])
-		if parseErr != nil || pid <= 0 {
-			return nil, errors.New("T40.13 private process session inventory is invalid")
-		}
-		session, sessionErr := unix.Getsid(pid)
-		if errors.Is(sessionErr, syscall.ESRCH) {
+	for _, pid := range hostPIDs {
+		session, err := unix.Getsid(pid)
+		if errors.Is(err, syscall.ESRCH) {
 			continue
 		}
-		if sessionErr != nil {
-			return nil, fmt.Errorf("inspect T40.13 process session identity: %w", sessionErr)
+		if err != nil {
+			return nil, fmt.Errorf("inspect T40.13 process session identity: %w", err)
 		}
-		if session != sessionID || strings.HasPrefix(fields[1], "Z") {
+		if session != sessionID {
+			continue
+		}
+		defunct, present, err := linuxProcessDefunctStatus(pid)
+		if err != nil {
+			return nil, err
+		}
+		if !present || defunct {
+			continue
+		}
+		confirmedSession, err := unix.Getsid(pid)
+		if errors.Is(err, syscall.ESRCH) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("reinspect T40.13 process session identity: %w", err)
+		}
+		if confirmedSession != sessionID {
 			continue
 		}
 		pids = append(pids, pid)

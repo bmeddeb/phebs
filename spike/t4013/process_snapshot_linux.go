@@ -194,17 +194,9 @@ func linuxProcessSnapshotAt(ctx context.Context, procRoot string, root int) ([]i
 	if err := ctx.Err(); err != nil {
 		return nil, nil, err
 	}
-	dir, err := os.Open(procRoot)
+	entries, err := readLinuxProcessCensus(procRoot)
 	if err != nil {
-		return nil, nil, fmt.Errorf("open Linux process census: %w", err)
-	}
-	entries, readErr := dir.ReadDir(maxProcessSnapshotRows + 1)
-	closeErr := dir.Close()
-	if readErr != nil && !errors.Is(readErr, io.EOF) || closeErr != nil {
-		return nil, nil, errors.Join(readErr, closeErr)
-	}
-	if len(entries) > maxProcessSnapshotRows {
-		return nil, nil, errors.New("linux process census exceeds its bound")
+		return nil, nil, err
 	}
 	stats := make(map[int]linuxProcessStat)
 	children := make(map[int][]int)
@@ -270,4 +262,84 @@ func linuxProcessSnapshotAt(ctx context.Context, procRoot string, root int) ([]i
 		return nil, nil, err
 	}
 	return pids, rows, nil
+}
+
+// readLinuxProcessCensus reads one bounded host PID directory without opening a
+// single per-process file, so a PID that vanishes mid-census costs nothing here
+// and every caller must confirm each identity it keeps. A directory holding more
+// entries than the bound refuses instead of truncating.
+func readLinuxProcessCensus(procRoot string) ([]os.DirEntry, error) {
+	dir, err := os.Open(procRoot)
+	if err != nil {
+		return nil, fmt.Errorf("open Linux process census: %w", err)
+	}
+	entries, readErr := dir.ReadDir(maxProcessSnapshotRows + 1)
+	closeErr := dir.Close()
+	if readErr != nil && !errors.Is(readErr, io.EOF) || closeErr != nil {
+		return nil, errors.Join(readErr, closeErr)
+	}
+	if len(entries) > maxProcessSnapshotRows {
+		return nil, errors.New("linux process census exceeds its bound")
+	}
+	return entries, nil
+}
+
+// linuxHostProcessPIDs names every positive integer entry in one bounded host
+// census. The order is the directory's own, not ascending PID order, so callers
+// may only rely on membership; duplicate names cannot occur because a directory
+// cannot hold two entries with one name.
+func linuxHostProcessPIDs(procRoot string) ([]int, error) {
+	entries, err := readLinuxProcessCensus(procRoot)
+	if err != nil {
+		return nil, err
+	}
+	pids := make([]int, 0, len(entries))
+	for _, entry := range entries {
+		pid, parseErr := strconv.Atoi(entry.Name())
+		if parseErr != nil || pid <= 0 {
+			continue
+		}
+		pids = append(pids, pid)
+	}
+	return pids, nil
+}
+
+// linuxProcessDefunctStatus reports whether one native lifetime is dead but not
+// yet reaped. present is false once the lifetime is gone; a denied or malformed
+// record refuses rather than guessing liveness.
+func linuxProcessDefunctStatus(pid int) (bool, bool, error) {
+	if pid <= 0 {
+		return false, false, errors.New("T40.13 process identity is invalid")
+	}
+	stat, err := linuxProcessStatAt("/proc", pid)
+	if errors.Is(err, errProcessIdentityMissing) {
+		return false, false, nil
+	}
+	if err != nil {
+		return false, false, err
+	}
+	return linuxProcessDefunct(stat.state), true, nil
+}
+
+// linuxProcessObservation returns one individually coherent native record for a
+// single PID, bracketing the resident-memory read with lifetime, parent and
+// command observations so the shared session fence can compare identity tokens
+// before and after. A vanished lifetime propagates errProcessIdentityMissing;
+// a denial, drift or malformed record refuses. The bounded deadline keeps one
+// refused command transition from outliving the poll that requested it.
+func linuxProcessObservation(pid int) (processSnapshot, error) {
+	if pid <= 0 {
+		return processSnapshot{}, errors.New("T40.13 native process PID is invalid")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), processProbeTimeout)
+	defer cancel()
+	census, err := linuxProcessStatAt("/proc", pid)
+	if err != nil {
+		return processSnapshot{}, err
+	}
+	return collectLinuxResidentObservation(ctx, census,
+		func(before linuxProcessStat) (processSnapshot, error) {
+			return linuxProcessResidentBytes("/proc", pid, before)
+		},
+		func() (linuxProcessStat, error) { return linuxProcessStatAt("/proc", pid) })
 }
