@@ -3615,8 +3615,7 @@ ceiling from the comment would have computed 2048, and the same sentence
 conflated the 8192 per-host-PID `getsid` cost with the at-most-1024
 member-confirmation cost. No compiled expression, bound, refusal message or test
 changed. Because the sealed record binds exact file bytes, every `f5347398`
-measurement was discarded in turn and re-taken at `8fd49b57`; the numbers below
-are those, and they bind uniformly to one commit. The medium finding was a
+measurement was discarded in turn and re-taken at `8fd49b57`. The medium finding was a
 fabricated `linux/arm64` qualification
 carried verbatim from H2e into this slice's documents and sealed evidence, where
 the append-only ADR row could not be reflowed later; it is corrected to the true
@@ -3627,17 +3626,36 @@ while every sibling bound is named, and a vacuous bound assertion that left the
 1024-member refusal with zero coverage anywhere in `spike/`. All three are
 corrected: the close failure now returns alone and wrapped, the bound is named
 `maxProcessSessionMembers` in the Linux file only so the Darwin file stays
-byte-exact, and a new `privateServerSessionPIDsAt` seam takes the same `procRoot`,
-`sessionOf` and `defunctOf` hooks the shared fence takes, so
-`TestLinuxSessionMemberBoundRefuses` drives both sides of the bound through a
-synthetic census without weakening the fence.
+byte-exact, and a new `privateServerSessionPIDsAt` seam — taking `sessionOf` and
+`defunctOf`, two of the three hooks the shared fence takes, plus the `procRoot`
+census seam that exists only in the Linux files and that `linuxHostProcessPIDs`
+already takes, while the fence's third hook is `observe` and it takes no
+`procRoot` — lets `TestLinuxSessionMemberBoundRefuses` drive both sides of the
+bound through a synthetic census without weakening the fence.
 
-The corrected tree passed the eight affected native
-selectors with all 19 subtests in 0.169s normal and 3.438s under race, and
+A delta re-review of the two correction commits returned APPROVE-WITH-NITS with
+0 critical, 0 high, 0 medium and 5 low findings: two in code, three in the
+sealed record's own text. The code lows were the seam comment inside
+`process_group_linux.go`, which claimed the census parameters are the same seams
+the shared fence takes, and the bound test driving both sides of
+`maxProcessSessionMembers` without pinning its value; both are corrected at
+`b4174050962be1b27800c5e5633a0426826c7cf0`, which rewrites the comment
+truthfully and adds the `maxProcessSessionMembers == 8*maxProcessDescendants`
+guard, proven to fire under a 2048 overlay mutation. The record lows were a
+wrong function span for the flake test (`:214-266` with the assertion at `:264`,
+where the function spans `:215-267` and asserts at `:263`), a wrong delegate
+line (`:22` alone, where the signature sits at `:22` and the delegate call at
+`:23`), and two flake digests truncated to eight hex characters. Because
+`b4174050` changed two hashed source files, every measurement was discarded and
+re-taken a third time, this pass against a completely clean working tree; the
+numbers below bind uniformly to `b4174050`.
+
+The delta-corrected tree passed the eight affected native
+selectors with all 19 subtests in 0.365s normal and 3.937s under race, and
 a twenty-repetition boundary passed 160 of 160 top-level results and 380 subtests
-in 2.520s normal and 47.550s under race, with no failure and no data race. Nine
+in 5.597s normal and 54.408s under race, with no failure and no data race. Nine
 files
-changed with 504 insertions and 146 deletions; `process_group_darwin.go`,
+changed with 509 insertions and 146 deletions; `process_group_darwin.go`,
 `process_group_darwin_test.go` and `process_snapshot_darwin.go` are untouched.
 The census replacement is exact:
 `privateServerSessionPIDs` on Linux now reads one bounded `/proc` listing of at
@@ -3657,12 +3675,12 @@ it belonged to and would otherwise be named as a live member; the unsupported
 file moved from `!darwin` to `!darwin && !linux` and orphans nothing. Affected
 vet, `darwin/arm64` cross-build and vet, `linux/arm64` vet, module verification,
 gofmt, docs, glossary and whitespace pass, and an unscoped repository-pinned
-`golangci-lint run ./spike/t4013/...` reports 0 issues byte-identically before
-and after the correction.
+`golangci-lint run ./spike/t4013/...` reports 0 issues, byte-identically across
+every binding commit because a clean run writes the same ten bytes.
 
 Four results are reported qualified rather than green. The whole `spike/t4013`
-package is not green: the corrected tree took 139.652s normal and 185.183s under
-race, each enumerating 460 passes, 1 failure and 16 skips totalling 477
+package is not green: the delta-corrected tree took 177.056s normal and 212.539s
+under race, each enumerating 460 passes, 1 failure and 16 skips totalling 477
 top-level results — 476 at `da566ff3` plus the one new bound test — with exactly
 one inherited failure,
 `TestClosedHostToolchainIgnoresAmbientSurrealOverride`, which fails at
@@ -3684,13 +3702,16 @@ transition, so `linuxProcessResidentBytes` meets `smaps_rollup` disappearance at
 the instant `sleep 1` exits, and the descendant's simultaneous reparenting
 breaks the parent-equality half of the recovery condition; the assertion
 executes before that iteration's drain, so the rewritten census can reach it
-only through a prior repetition's teardown; and a matched 200-repetition sample
-on one otherwise idle host puts the same inherited rate on both sides — base
-`4ab0b9b0` failed seven times and the corrected head `8fd49b57` failed seven
-times, all fourteen with the identical
-`open /proc/<pid>/smaps_rollup: no such process` signature — so the two rates are
-indistinguishable, where the earlier 60- and 40-repetition draws lacked the power
-to separate them. Third, the legacy
+only through a prior repetition's teardown; and matched 200-repetition samples
+on one otherwise idle host reproduce the inherited flake on both sides — base
+`4ab0b9b0` failed 6 of 200 and the delta-corrected head `b4174050` failed 11 of
+200, all seventeen with the identical
+`open /proc/<pid>/smaps_rollup: no such process` signature and no data race on
+either side. No rate equality is claimed: the same pair measured 7-versus-7 at
+`8fd49b57` and 6-versus-11 at `b4174050` while the entire failing path stayed
+byte-identical, which is what sampling noise around one small inherited rate
+looks like, and the earlier 60- and 40-repetition draws lacked the power to
+separate it. Third, the legacy
 `sampleLegacy`, `processTree` and `processName` helpers still shell out to `ps`
 and `pgrep`, and
 `newRSSSampler` still carries a `/bin/ps` snapshot fallback naming
@@ -3725,7 +3746,9 @@ mount, a user namespace or an explicitly weaker documented custody model before
 they can run here. No `t421.test`, `go test` or SurrealDB process and no
 port-65499 listener survived. The source-free record is
 [`session-supervision-rehearsal-1.json`](../spike/t42h2f/session-supervision-rehearsal-1.json).
-A delta re-review of the two correction commits, the remaining H2
+The delta re-review of the two correction commits is complete: its five low
+findings are corrected at `b4174050` and in the rewritten sealed record, and
+every number above binds to that commit. The remaining H2
 adapters/admission and ceremony entry-point integration remain pending; no
 complete readiness, new plan, freeze, ceremony or scale claim follows.
 
