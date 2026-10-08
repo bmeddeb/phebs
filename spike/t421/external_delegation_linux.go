@@ -87,8 +87,15 @@ func runExternalDelegationProbe(ctx context.Context, binary, digest string, argu
 		return "", errors.New("external delegation probe cannot create private directory")
 	}
 	defer func() {
+		// A volume-owned preparation retains even failed probe scratch until the
+		// owner's non-forced detach. Ordinary observation stays unchanged.
 		if preparationParent == "" && os.RemoveAll(workspace) != nil {
 			retErr = errors.Join(retErr, errors.New("external delegation probe cleanup failed"))
+		}
+		// Match the observer's own convention: a refusal returns explicit zeros, so
+		// no partial probe output can reach a caller beside a non-nil error.
+		if retErr != nil {
+			output = ""
 		}
 	}()
 	resolved, err := filepath.EvalSymlinks(workspace)
@@ -223,12 +230,14 @@ func readExternalDelegationRows(ctx context.Context, root *os.Root, path string,
 // a socket, FIFO, device or other typed entry falls through to a refusal, and any
 // setuid or setgid bit refuses outright: a delegation location carrying either is
 // not the shape these recipes describe, and recording it would weaken the
-// resulting manifest.
+// resulting manifest. Every refusal returns an explicit zero entry rather than the
+// partially classified row, so a caller cannot carry a refused entry's name or
+// symlink target past the error that rejected it.
 func classifyExternalDelegationRow(ctx context.Context, directory string, row externalDelegationRow) (externalDelegationEntry, error) {
 	info, mode := row.info, row.info.Mode()
 	entry := externalDelegationEntry{name: row.name, target: row.target}
 	if ctx.Err() != nil || mode&(os.ModeSetuid|os.ModeSetgid) != 0 {
-		return entry, errors.New("external delegation entry is not an admitted file class")
+		return externalDelegationEntry{}, errors.New("external delegation entry is not an admitted file class")
 	}
 	switch {
 	case mode&os.ModeSymlink != 0:
@@ -239,17 +248,17 @@ func classifyExternalDelegationRow(ctx context.Context, directory string, row ex
 		entry.class, entry.perm = externalDelegationDirectory, mode.Perm().String()
 	case mode.IsRegular():
 		if info.Size() == 0 || info.Size() > maxExternalDelegationHelperBytes {
-			return entry, errors.New("external delegation helper is empty or exceeds its byte bound")
+			return externalDelegationEntry{}, errors.New("external delegation helper is empty or exceeds its byte bound")
 		}
 		helper, err := externalDelegationHelperClass(filepath.Join(directory, row.name), info)
 		if err != nil {
-			return entry, err
+			return externalDelegationEntry{}, err
 		}
 		entry.class, entry.helper = externalDelegationRegular, helper
 		entry.size, entry.perm = info.Size(), mode.Perm().String()
 		entry.executable = mode.Perm()&0o111 != 0
 	default:
-		return entry, errors.New("external delegation entry is not an admitted file class")
+		return externalDelegationEntry{}, errors.New("external delegation entry is not an admitted file class")
 	}
 	return entry, nil
 }

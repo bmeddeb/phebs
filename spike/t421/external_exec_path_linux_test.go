@@ -81,11 +81,21 @@ const wantSyntheticExecPathCanonical = "regular 3:git;6:native;3:128;10:-rwxr-xr
 	"regular 7:diffuse;4:text;2:10;10:-rw-r--r--;0:;\n" +
 	"regular 4:meld;4:text;2:10;10:-rw-r--r--;0:;\n"
 
+// wantSyntheticExecPathDigest is the SHA-256 of wantSyntheticExecPathCanonical,
+// computed independently of this repository's digest helper. Both constants are
+// pinned so the production digest function is itself under test: a change to the
+// "sha256:" prefix or to the hash function fails the assertion below rather than
+// silently re-deriving the expectation from the code being checked.
+const wantSyntheticExecPathDigest = "sha256:cebe6dcdb4bab45750938314d849c878929025033a2ce6cc26d1b7c41e78551b"
+
 // TestLinuxExternalGitExecPathCensusBindsCoreImage pins the whole manifest shape
 // of one admitted exec-path: every counter, the bound core digest, the canonical
 // encoding and the provenance string, plus the fact that a second census of the
 // same directory is byte-identical.
 func TestLinuxExternalGitExecPathCensusBindsCoreImage(t *testing.T) {
+	if derived := externalDelegationDigest(wantSyntheticExecPathCanonical); derived != wantSyntheticExecPathDigest {
+		t.Fatalf("digest helper = %s, independently computed %s", derived, wantSyntheticExecPathDigest)
+	}
 	directory, digest := syntheticGitExecPath(t, nil)
 	manifest, err := censusExternalGitExecPath(t.Context(), directory, digest)
 	if err != nil {
@@ -94,7 +104,7 @@ func TestLinuxExternalGitExecPathCensusBindsCoreImage(t *testing.T) {
 	want := ExecutionGitExecPathManifest{
 		Role:                "git",
 		CoreSHA256:          digest,
-		ManifestSHA256:      externalDelegationDigest(wantSyntheticExecPathCanonical),
+		ManifestSHA256:      wantSyntheticExecPathDigest,
 		Entries:             8,
 		RegularFiles:        4,
 		Symlinks:            3,
@@ -326,8 +336,11 @@ func TestLinuxExternalGitExecPathCensusRefusesUnadmittedShapes(t *testing.T) {
 			if manifest != (ExecutionGitExecPathManifest{}) {
 				t.Fatalf("refused census returned %#v", manifest)
 			}
-			if !strings.Contains(err.Error(), testCase.want) {
-				t.Fatalf("refusal = %v, want %q", err, testCase.want)
+			// Exact equality rather than a substring: every message in this table is
+			// the complete production string, so a reordering that swaps one rule for
+			// another fails here instead of passing on a shared prefix.
+			if err.Error() != testCase.want {
+				t.Fatalf("refusal = %q, want %q", err.Error(), testCase.want)
 			}
 		})
 	}
@@ -336,8 +349,8 @@ func TestLinuxExternalGitExecPathCensusRefusesUnadmittedShapes(t *testing.T) {
 		absent := filepath.Join(base, "absent")
 		manifest, err := censusExternalGitExecPath(t.Context(), absent, "sha256:"+strings.Repeat("0", 64))
 		assertExternalDelegationRefusal(t, err, absent)
-		if !strings.Contains(err.Error(), "cannot be opened as a census root") {
-			t.Fatalf("refusal = %v", err)
+		if err.Error() != "external Git exec-path directory cannot be opened as a census root" {
+			t.Fatalf("refusal = %q", err.Error())
 		}
 		if manifest != (ExecutionGitExecPathManifest{}) {
 			t.Fatalf("refused census returned %#v", manifest)
@@ -349,8 +362,8 @@ func TestLinuxExternalGitExecPathCensusRefusesUnadmittedShapes(t *testing.T) {
 		cancel()
 		manifest, err := censusExternalGitExecPath(ctx, directory, digest)
 		assertExternalDelegationRefusal(t, err, directory)
-		if !strings.Contains(err.Error(), "external delegation census is unavailable") {
-			t.Fatalf("refusal = %v", err)
+		if err.Error() != "external delegation census is unavailable" {
+			t.Fatalf("refusal = %q", err.Error())
 		}
 		if manifest != (ExecutionGitExecPathManifest{}) {
 			t.Fatalf("refused census returned %#v", manifest)
@@ -443,7 +456,11 @@ func TestLinuxExternalGitExecPathManifestObservation(t *testing.T) {
 	if manifest.CoreSHA256 != want {
 		t.Fatalf("bound core digest %s, independently %s", manifest.CoreSHA256, want)
 	}
-	assertExternalDelegationPathFree(t, manifest, binary, directory)
+	// Both names are real entries of this host's exec-path — the one subdirectory
+	// and the most-delegated non-core helper — so the assertion pins that a bare
+	// entry name cannot reach the caller either, not merely that a path separator
+	// cannot. The synthetic census test forbids the same names.
+	assertExternalDelegationPathFree(t, manifest, binary, directory, "mergetools", "git-remote-http")
 	repeat, err := ObserveExecutionGitExecPathManifest(t.Context(), binary)
 	if err != nil {
 		t.Fatalf("second real observation refused: %v", err)
@@ -489,8 +506,18 @@ func TestLinuxExternalGitExecPathManifestRefusesUnadmittedImages(t *testing.T) {
 		name string
 		ctx  func(t *testing.T) context.Context
 		path func(t *testing.T) string
+		// Each refusal message is pinned exactly rather than merely observed to
+		// exist, so the fence that refuses a bad image is named: a regression
+		// that admits the image and then fails later in the recipe changes this
+		// string and fails the case.
+		want string
 	}{
-		{name: "nil_context", ctx: func(*testing.T) context.Context { return nil }, path: func(t *testing.T) string { return binary }},
+		{
+			name: "nil_context",
+			ctx:  func(*testing.T) context.Context { return nil },
+			path: func(t *testing.T) string { return binary },
+			want: "external Git exec-path manifest requires a context and the frozen Linux platform",
+		},
 		{
 			name: "expired_context",
 			ctx: func(t *testing.T) context.Context {
@@ -499,16 +526,19 @@ func TestLinuxExternalGitExecPathManifestRefusesUnadmittedImages(t *testing.T) {
 				return ctx
 			},
 			path: func(t *testing.T) string { return binary },
+			want: "external Git exec-path observation canceled",
 		},
 		{
 			name: "relative_path",
 			ctx:  func(t *testing.T) context.Context { return t.Context() },
 			path: func(t *testing.T) string { return filepath.Base(binary) },
+			want: "external delegation image requires an explicit absolute path",
 		},
 		{
 			name: "empty_path",
 			ctx:  func(t *testing.T) context.Context { return t.Context() },
 			path: func(*testing.T) string { return "" },
+			want: "external delegation image requires an explicit absolute path",
 		},
 		{
 			name: "absent_image",
@@ -516,8 +546,11 @@ func TestLinuxExternalGitExecPathManifestRefusesUnadmittedImages(t *testing.T) {
 			path: func(t *testing.T) string {
 				return filepath.Join(requireExternalDelegationCaseDirectory(t, base), "absent-git")
 			},
+			want: "external delegation image cannot be resolved",
 		},
 		{
+			// A delegating shim is refused by the native-image screen before any
+			// probe runs, so it can never reach the manifest it would delegate for.
 			name: "script_substitute",
 			ctx:  func(t *testing.T) context.Context { return t.Context() },
 			path: func(t *testing.T) string {
@@ -525,6 +558,7 @@ func TestLinuxExternalGitExecPathManifestRefusesUnadmittedImages(t *testing.T) {
 					filepath.Join(requireExternalDelegationCaseDirectory(t, base), "git"),
 					[]byte("#!/bin/sh\nexec "+binary+" \"$@\"\n"), 0o755)
 			},
+			want: "external delegation image is not a bounded native executable",
 		},
 		{
 			name: "degraded_elf32_substitute",
@@ -534,11 +568,16 @@ func TestLinuxExternalGitExecPathManifestRefusesUnadmittedImages(t *testing.T) {
 					filepath.Join(requireExternalDelegationCaseDirectory(t, base), "git"),
 					degradedELF32Image(t, binary), 0o755)
 			},
+			want: "external delegation image is not a bounded native executable",
 		},
 		{
+			// A real native image of the wrong role passes the screen and is
+			// refused by the closed probe instead, which is the generic probe
+			// refusal rather than a role-specific claim.
 			name: "native_image_that_is_not_git",
 			ctx:  func(t *testing.T) context.Context { return t.Context() },
 			path: func(t *testing.T) string { return requireLinuxExternalTool(t, "sh") },
+			want: "external tool probe failed, expired, or exceeded output bound",
 		},
 	}
 	for _, testCase := range cases {
@@ -548,6 +587,9 @@ func TestLinuxExternalGitExecPathManifestRefusesUnadmittedImages(t *testing.T) {
 			assertExternalDelegationRefusal(t, err, path, binary)
 			if manifest != (ExecutionGitExecPathManifest{}) {
 				t.Fatalf("refused observation returned %#v", manifest)
+			}
+			if err.Error() != testCase.want {
+				t.Fatalf("refusal = %q, want %q", err.Error(), testCase.want)
 			}
 			assertExternalProbeParentEmpty(t, parent)
 		})

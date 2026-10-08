@@ -104,12 +104,28 @@ const wantSyntheticGoSDKToolCanonical = "regular 3:asm;6:native;3:128;10:-rwxr-x
 	"regular 10:preprofile;6:native;3:128;10:-rwxr-xr-x;0:;\n" +
 	"regular 3:vet;6:native;3:128;10:-rwxr-xr-x;0:;\n"
 
+// wantSyntheticGoSDKRootDigest and wantSyntheticGoSDKToolDigest are the SHA-256
+// values of the two canonical constants above, computed independently of this
+// repository's digest helper. Both are pinned so the production digest function is
+// itself under test: a change to the "sha256:" prefix or to the hash function
+// fails the assertions in the census test rather than silently re-deriving the
+// expectation from the code being checked.
+const wantSyntheticGoSDKRootDigest = "sha256:7723ae0c8077411ac69e4d7fd0bfbb11cf06e1dfdeb839c9073d2a5a99adbb45"
+
+const wantSyntheticGoSDKToolDigest = "sha256:7f88555343375bcb9fbad80d8db05e36da61aefb570145b350370f40ffc5a268"
+
 // TestLinuxExternalGoSDKLocationCensusBindsAdmittedImage pins that one census of
 // a fully admitted synthetic SDK reports the exact bounded shape, digests the root
 // and tool directory canonically rather than by walking the tree, records the
 // release the VERSION marker was required to name, and leaks no host path and no
 // SDK entry name.
 func TestLinuxExternalGoSDKLocationCensusBindsAdmittedImage(t *testing.T) {
+	if derived := externalDelegationDigest(wantSyntheticGoSDKRootCanonical); derived != wantSyntheticGoSDKRootDigest {
+		t.Fatalf("root digest helper = %s, independently computed %s", derived, wantSyntheticGoSDKRootDigest)
+	}
+	if derived := externalDelegationDigest(wantSyntheticGoSDKToolCanonical); derived != wantSyntheticGoSDKToolDigest {
+		t.Fatalf("tool digest helper = %s, independently computed %s", derived, wantSyntheticGoSDKToolDigest)
+	}
 	goroot, tooldir, digest := syntheticGoSDK(t, nil)
 	location, err := censusExternalGoSDKLocation(t.Context(), goroot, tooldir, digest)
 	if err != nil {
@@ -121,10 +137,10 @@ func TestLinuxExternalGoSDKLocationCensusBindsAdmittedImage(t *testing.T) {
 		Version:              runtime.Version(),
 		RootEntries:          12,
 		RootDirectories:      8,
-		RootSHA256:           externalDelegationDigest(wantSyntheticGoSDKRootCanonical),
+		RootSHA256:           wantSyntheticGoSDKRootDigest,
 		BinEntries:           2,
 		ToolDirectoryEntries: 8,
-		ToolDirectorySHA256:  externalDelegationDigest(wantSyntheticGoSDKToolCanonical),
+		ToolDirectorySHA256:  wantSyntheticGoSDKToolDigest,
 		Provenance:           "external-go-sdk-location-linux-amd64-v1",
 	}
 	if location != want {
@@ -146,10 +162,10 @@ func TestLinuxExternalGoSDKLocationCensusBindsAdmittedImage(t *testing.T) {
 
 // TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes pins the fail-closed
 // contract of the SDK recipe across every fence it owns, in the order the census
-// applies them: the bounded VERSION marker, the bin/go digest binding, the root
-// census and its marker set, the exact bin pair, the flat native tool directory
-// and the two source markers. Each case also pins that a refusal returns the zero
-// location rather than a partial description of an unadmitted SDK.
+// applies them: the bounded VERSION marker, the root census and its marker set,
+// the exact bin pair, the bin/go digest binding behind it, the flat native tool
+// directory and the two source markers. Each case also pins that a refusal returns
+// the zero location rather than a partial description of an unadmitted SDK.
 func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -158,7 +174,7 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 	}{
 		{
 			name: "version_marker_is_absent",
-			want: "version marker is not a bounded regular file",
+			want: "external Go SDK version marker is not a bounded regular file",
 			mutate: func(t *testing.T, goroot string) {
 				if err := os.Remove(filepath.Join(goroot, "VERSION")); err != nil {
 					t.Fatal(err)
@@ -167,7 +183,7 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 		},
 		{
 			name: "version_marker_is_empty",
-			want: "version marker is not a bounded regular file",
+			want: "external Go SDK version marker is not a bounded regular file",
 			mutate: func(t *testing.T, goroot string) {
 				if err := os.Truncate(filepath.Join(goroot, "VERSION"), 0); err != nil {
 					t.Fatal(err)
@@ -178,7 +194,7 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 			// The marker bound is enforced against the Lstat size, so a sparse
 			// truncate trips it without materialising four kibibytes of content.
 			name: "version_marker_exceeds_its_bound",
-			want: "version marker is not a bounded regular file",
+			want: "external Go SDK version marker is not a bounded regular file",
 			mutate: func(t *testing.T, goroot string) {
 				if err := os.Truncate(filepath.Join(goroot, "VERSION"), maxGoSDKVersionBytes+1); err != nil {
 					t.Fatal(err)
@@ -187,7 +203,7 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 		},
 		{
 			name: "version_marker_is_a_symlink",
-			want: "version marker is not a bounded regular file",
+			want: "external Go SDK version marker is not a bounded regular file",
 			mutate: func(t *testing.T, goroot string) {
 				path := filepath.Join(goroot, "VERSION")
 				if err := os.Remove(path); err != nil {
@@ -200,25 +216,9 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 		},
 		{
 			name: "version_marker_names_another_release",
-			want: "version marker does not name the verifier toolchain",
+			want: "external Go SDK version marker does not name the verifier toolchain",
 			mutate: func(t *testing.T, goroot string) {
 				writeExternalDelegationFile(t, filepath.Join(goroot, "VERSION"), []byte("go1.0.0\n"), 0o644)
-			},
-		},
-		{
-			name: "bin_go_differs_from_the_admitted_image",
-			want: "external Go GOROOT bin/go differs from the admitted image",
-			mutate: func(t *testing.T, goroot string) {
-				writeExternalDelegationFile(t, filepath.Join(goroot, "bin", "go"), externalDelegationELF(9), 0o755)
-			},
-		},
-		{
-			name: "bin_go_is_absent",
-			want: "external Go GOROOT bin/go differs from the admitted image",
-			mutate: func(t *testing.T, goroot string) {
-				if err := os.Remove(filepath.Join(goroot, "bin", "go")); err != nil {
-					t.Fatal(err)
-				}
 			},
 		},
 		{
@@ -320,6 +320,19 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 			},
 		},
 		{
+			// Removing bin/go leaves one admitted row in bin, so the exact-pair fence
+			// in front of the digest binding is what refuses: the census bounds the
+			// bin rows before any bin/go body is read, which is the precedence the
+			// recipe keeps. The digest fence itself is pinned by the case below.
+			name: "bin_go_is_absent",
+			want: "external Go SDK bin does not hold exactly its two admitted tools",
+			mutate: func(t *testing.T, goroot string) {
+				if err := os.Remove(filepath.Join(goroot, "bin", "go")); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
 			name: "bin_tool_is_a_script",
 			want: "external Go SDK bin is missing an admitted native tool",
 			mutate: func(t *testing.T, goroot string) {
@@ -333,6 +346,13 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 				if err := os.Chmod(filepath.Join(goroot, "bin", "gofmt"), 0o644); err != nil {
 					t.Fatal(err)
 				}
+			},
+		},
+		{
+			name: "bin_go_differs_from_the_admitted_image",
+			want: "external Go GOROOT bin/go differs from the admitted image",
+			mutate: func(t *testing.T, goroot string) {
+				writeExternalDelegationFile(t, filepath.Join(goroot, "bin", "go"), externalDelegationELF(9), 0o755)
 			},
 		},
 		{
@@ -435,8 +455,12 @@ func TestLinuxExternalGoSDKLocationCensusRefusesUnadmittedShapes(t *testing.T) {
 			if location != (ExecutionGoSDKLocation{}) {
 				t.Fatalf("refused census returned %#v", location)
 			}
-			if !strings.Contains(err.Error(), testCase.want) {
-				t.Fatalf("refusal = %v, want %q", err, testCase.want)
+			// Exact equality rather than a substring: every message in this table is
+			// the complete production string, so a fence reordering that lets one
+			// rule refuse where another was expected fails here instead of passing
+			// on a shared prefix.
+			if err.Error() != testCase.want {
+				t.Fatalf("refusal = %q, want %q", err.Error(), testCase.want)
 			}
 		})
 	}
@@ -469,12 +493,17 @@ func TestLinuxExternalGoSDKDirectoryAdmission(t *testing.T) {
 		resolved string
 		want     string
 	}{
-		{name: "one_reported_location", output: goroot, resolved: image, want: "did not report exactly two locations"},
+		{
+			name:     "one_reported_location",
+			output:   goroot,
+			resolved: image,
+			want:     "external Go SDK environment did not report exactly two locations",
+		},
 		{
 			name:     "three_reported_locations",
 			output:   goroot + "\n" + tooldir + "\n" + goroot,
 			resolved: image,
-			want:     "did not report exactly two locations",
+			want:     "external Go SDK environment did not report exactly two locations",
 		},
 		{
 			name:     "goroot_is_relative",
@@ -498,19 +527,19 @@ func TestLinuxExternalGoSDKDirectoryAdmission(t *testing.T) {
 			name:     "tool_directory_is_outside_its_goroot",
 			output:   goroot + "\n" + outsideTool,
 			resolved: image,
-			want:     "tool directory is not the platform directory inside its GOROOT",
+			want:     "external Go tool directory is not the platform directory inside its GOROOT",
 		},
 		{
 			name:     "tool_directory_is_not_the_platform_directory",
 			output:   goroot + "\n" + filepath.Join(goroot, "pkg", "tool"),
 			resolved: image,
-			want:     "tool directory is not the platform directory inside its GOROOT",
+			want:     "external Go tool directory is not the platform directory inside its GOROOT",
 		},
 		{
 			name:     "goroot_holds_another_image",
 			output:   goroot + "\n" + tooldir,
 			resolved: decoy,
-			want:     "GOROOT does not hold the admitted image as its own bin/go",
+			want:     "external Go GOROOT does not hold the admitted image as its own bin/go",
 		},
 	}
 	for _, testCase := range cases {
@@ -520,8 +549,10 @@ func TestLinuxExternalGoSDKDirectoryAdmission(t *testing.T) {
 			if gotRoot != "" || gotTool != "" {
 				t.Fatalf("refused admission returned %q, %q", gotRoot, gotTool)
 			}
-			if !strings.Contains(err.Error(), testCase.want) {
-				t.Fatalf("refusal = %v, want %q", err, testCase.want)
+			// Exact equality rather than a substring, matching the census table
+			// above: every message here is the complete production string.
+			if err.Error() != testCase.want {
+				t.Fatalf("refusal = %q, want %q", err.Error(), testCase.want)
 			}
 		})
 	}
@@ -542,8 +573,11 @@ func TestLinuxExternalGoSDKDirectoryAdmission(t *testing.T) {
 		if gotRoot != "" || gotTool != "" {
 			t.Fatalf("refused admission returned %q, %q", gotRoot, gotTool)
 		}
-		if !strings.Contains(err.Error(), "GOROOT does not hold the admitted image as its own bin/go") {
-			t.Fatalf("refusal = %v", err)
+		// A GOROOT with no bin/go at all and a GOROOT holding a different image
+		// reach the same fence, so both assert the same complete message.
+		const want = "external Go GOROOT does not hold the admitted image as its own bin/go"
+		if err.Error() != want {
+			t.Fatalf("refusal = %q, want %q", err.Error(), want)
 		}
 	})
 }
@@ -596,7 +630,11 @@ func TestLinuxExternalGoSDKLocationObservation(t *testing.T) {
 	if location.ToolDirectoryEntries != toolRows {
 		t.Fatalf("tool entries = %d, want %d", location.ToolDirectoryEntries, toolRows)
 	}
-	assertExternalDelegationPathFree(t, location, binary, goroot, tooldir)
+	// The three names are real entries of this host's GOROOT — the bounded root
+	// marker, the second bin tool and one platform tool — so the assertion pins
+	// that a bare entry name cannot reach the caller either, not merely that a
+	// path separator cannot. The synthetic census test forbids the same names.
+	assertExternalDelegationPathFree(t, location, binary, goroot, tooldir, "VERSION", "gofmt", "preprofile")
 	again, err := ObserveExecutionGoSDKLocation(t.Context(), binary)
 	if err != nil {
 		t.Fatalf("repeat real SDK observation refused: %v", err)
@@ -639,8 +677,18 @@ func TestLinuxExternalGoSDKLocationRefusesUnadmittedImages(t *testing.T) {
 		name string
 		ctx  func(t *testing.T) context.Context
 		path func(t *testing.T) string
+		// Each refusal message is pinned exactly rather than merely observed to
+		// exist, so the fence that refuses a bad image is named: a regression
+		// that admits the image and then fails later in the recipe changes this
+		// string and fails the case.
+		want string
 	}{
-		{name: "nil_context", ctx: func(*testing.T) context.Context { return nil }, path: func(t *testing.T) string { return binary }},
+		{
+			name: "nil_context",
+			ctx:  func(*testing.T) context.Context { return nil },
+			path: func(t *testing.T) string { return binary },
+			want: "external Go SDK location requires a context and the frozen Linux platform",
+		},
 		{
 			name: "expired_context",
 			ctx: func(t *testing.T) context.Context {
@@ -649,19 +697,27 @@ func TestLinuxExternalGoSDKLocationRefusesUnadmittedImages(t *testing.T) {
 				return ctx
 			},
 			path: func(t *testing.T) string { return binary },
+			want: "external Go SDK observation canceled",
 		},
 		{
 			name: "relative_path",
 			ctx:  func(t *testing.T) context.Context { return t.Context() },
 			path: func(t *testing.T) string { return filepath.Base(binary) },
+			want: "external delegation image requires an explicit absolute path",
 		},
-		{name: "empty_path", ctx: func(t *testing.T) context.Context { return t.Context() }, path: func(*testing.T) string { return "" }},
+		{
+			name: "empty_path",
+			ctx:  func(t *testing.T) context.Context { return t.Context() },
+			path: func(*testing.T) string { return "" },
+			want: "external delegation image requires an explicit absolute path",
+		},
 		{
 			name: "absent_image",
 			ctx:  func(t *testing.T) context.Context { return t.Context() },
 			path: func(t *testing.T) string {
 				return filepath.Join(requireExternalDelegationCaseDirectory(t, base), "absent-go")
 			},
+			want: "external delegation image cannot be resolved",
 		},
 		{
 			// A delegating shim is refused by the native-image screen before any
@@ -673,6 +729,7 @@ func TestLinuxExternalGoSDKLocationRefusesUnadmittedImages(t *testing.T) {
 					filepath.Join(requireExternalDelegationCaseDirectory(t, base), "go"),
 					[]byte("#!/bin/sh\nexec "+binary+" \"$@\"\n"), 0o755)
 			},
+			want: "external delegation image is not a bounded native executable",
 		},
 		{
 			name: "degraded_elf32_substitute",
@@ -682,6 +739,7 @@ func TestLinuxExternalGoSDKLocationRefusesUnadmittedImages(t *testing.T) {
 					filepath.Join(requireExternalDelegationCaseDirectory(t, base), "go"),
 					degradedELF32Image(t, binary), 0o755)
 			},
+			want: "external delegation image is not a bounded native executable",
 		},
 		{
 			// A real native image of the wrong role passes the screen and is
@@ -690,6 +748,7 @@ func TestLinuxExternalGoSDKLocationRefusesUnadmittedImages(t *testing.T) {
 			name: "native_image_that_is_not_go",
 			ctx:  func(t *testing.T) context.Context { return t.Context() },
 			path: func(t *testing.T) string { return requireLinuxExternalTool(t, "git") },
+			want: "external tool probe failed, expired, or exceeded output bound",
 		},
 	}
 	for _, testCase := range cases {
@@ -699,6 +758,9 @@ func TestLinuxExternalGoSDKLocationRefusesUnadmittedImages(t *testing.T) {
 			assertExternalDelegationRefusal(t, err, path, binary)
 			if location != (ExecutionGoSDKLocation{}) {
 				t.Fatalf("refused observation returned %#v", location)
+			}
+			if err.Error() != testCase.want {
+				t.Fatalf("refusal = %q, want %q", err.Error(), testCase.want)
 			}
 			assertExternalProbeParentEmpty(t, parent)
 		})

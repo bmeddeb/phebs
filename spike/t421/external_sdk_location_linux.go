@@ -142,13 +142,15 @@ func admitExternalGoSDKDirectories(output, resolved string) (goroot, tooldir str
 // skipped that check. Every intermediate accumulates in a local and reaches the
 // caller only through the single success return, so a refusal yields the zero
 // location rather than a partial description of an unadmitted SDK.
+//
+// The bin census and its admission run before that bin/go digest, so the row
+// describing bin/go is bounded by maxExternalDelegationHelperBytes before any
+// body of it is read. That is the same precedence the Git recipe keeps between
+// its census and its core-image digest, and it means an oversized or otherwise
+// unadmitted bin entry is refused on its metadata alone.
 func censusExternalGoSDKLocation(ctx context.Context, goroot, tooldir, digest string) (location ExecutionGoSDKLocation, err error) {
 	if err := admitExternalGoSDKVersionMarker(filepath.Join(goroot, "VERSION")); err != nil {
 		return location, err
-	}
-	observed, err := t4013.DigestHostExecutable(ctx, filepath.Join(goroot, "bin", "go"))
-	if err != nil || observed != digest {
-		return location, errors.New("external Go GOROOT bin/go differs from the admitted image")
 	}
 	rootRows, err := censusExternalDelegationRoot(ctx, goroot, maxGoSDKRootEntries)
 	if err != nil {
@@ -165,6 +167,9 @@ func censusExternalGoSDKLocation(ctx context.Context, goroot, tooldir, digest st
 	binEntries, err := admitExternalGoSDKBin(binRows)
 	if err != nil {
 		return location, err
+	}
+	if observed, digestErr := t4013.DigestHostExecutable(ctx, filepath.Join(goroot, "bin", "go")); digestErr != nil || observed != digest {
+		return location, errors.New("external Go GOROOT bin/go differs from the admitted image")
 	}
 	toolRows, err := censusExternalDelegationRoot(ctx, tooldir, maxGoSDKToolEntries)
 	if err != nil {
