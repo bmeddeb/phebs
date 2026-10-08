@@ -3576,19 +3576,174 @@ remaining H2 adapters/admission and
 ceremony entry-point integration remain pending; no complete readiness, new plan,
 freeze, ceremony or scale claim follows.
 
-**T42.H2f · Linux session and descendant hard-death supervision** *(next H2
-slice)* — integrate native session and descendant hard-death supervision with the
-Linux custody primitives: share the Darwin `PrivateProcessSessionMembership`
-confirmation semantics (double session-identifier confirmation, defunct filtering
-and identity-token equality before and after) behind `darwin` or `linux` build
-tags, replace the Linux `/bin/ps` session census and the inherited `/bin/ps`
-preparation drain with bounded native `/proc` records, and fail closed where a
-native record is unavailable. Existing kernel byte seals, tool identities, signer
-custody and the admitted Git/Go observation recipe supply no launcher authority
-and no session teardown. Git exec-path helper manifest and Go GOROOT/SDK location
-recipes, isolated pressure/allocation/restore adapters, new Linux-bound plan
-versions and aggregate physical/effective-cgroup resource admission remain H2
-prerequisites before complete readiness, freeze or execution.
+**T42.H2f · Linux session and descendant hard-death supervision** *(sixth H2
+slice, 2026-10-07)* — integrate native session and descendant hard-death
+supervision with the Linux custody primitives: share the Darwin
+`PrivateProcessSessionMembership` confirmation semantics (double
+session-identifier confirmation, defunct filtering and identity-token equality
+before and after) behind `darwin` or `linux` build tags, replace the Linux
+`/bin/ps` session census and the inherited `/bin/ps` preparation drain with
+bounded native `/proc` records, and fail closed where a native record is
+unavailable. Existing kernel byte seals, tool identities, signer custody and the
+admitted Git/Go observation recipe supply no launcher authority and no session
+teardown. AC: one rewrite discharges both the inherited preparation drain and
+the custody-command drain, because both reach the census through the same
+function; the Linux census launches no child, so supervision cannot add a member
+to the session it drains and cannot meet a setuid-tool denial; a census holding
+more entries than its bound refuses rather than truncating; the shared fence
+keeps identity, session, defunct, session, identity ordering on both platforms;
+`process_group_darwin.go` stays byte-exact so the sealed V1–V32 evidence, plans
+and receipts keep their meaning; unsupported platforms still refuse before any
+inventory or helper process is started; and the relocated fence subtests execute
+on Linux rather than only on macOS. Git exec-path helper manifest and Go
+GOROOT/SDK location recipes, isolated pressure/allocation/restore adapters, new
+Linux-bound plan versions and aggregate physical/effective-cgroup resource
+admission remain H2 prerequisites before complete readiness, freeze or
+execution.
+
+T42.H2f exact implementation
+`da566ff31d75d1db010490b8af2b08dcfb7bcc5e` received an independent review that
+returned APPROVE-WITH-NITS with 0 critical, 0 high, 1 medium and 3 low findings.
+Because three of those findings changed compiled `spike/t4013` bytes, every
+measurement bound to `da566ff3` was discarded and re-taken at the review
+correction `f5347398f7379444abb51b65e01bee72bce4763e`. A follow-up comment-only
+correction `8fd49b5780e799740cab5f25f84387348d547b0d` then fixed an arithmetic
+error in the text that correction had added: it described
+`maxProcessSessionMembers` as sixteen times `maxProcessDescendants`, where
+`maxProcessDescendants` is 128 and the bound is 1024, so a reader deriving the
+ceiling from the comment would have computed 2048, and the same sentence
+conflated the 8192 per-host-PID `getsid` cost with the at-most-1024
+member-confirmation cost. No compiled expression, bound, refusal message or test
+changed. Because the sealed record binds exact file bytes, every `f5347398`
+measurement was discarded in turn and re-taken at `8fd49b57`; the numbers below
+are those, and they bind uniformly to one commit. The medium finding was a
+fabricated `linux/arm64` qualification
+carried verbatim from H2e into this slice's documents and sealed evidence, where
+the append-only ADR row could not be reflowed later; it is corrected to the true
+statement. The three low findings were a census error join that let a failed
+`Close` stay `errors.Is(err, io.EOF)`-matchable and so misclassify as a benign
+short read at a T3.3 boundary, a bare `1024` literal duplicating the Darwin file
+while every sibling bound is named, and a vacuous bound assertion that left the
+1024-member refusal with zero coverage anywhere in `spike/`. All three are
+corrected: the close failure now returns alone and wrapped, the bound is named
+`maxProcessSessionMembers` in the Linux file only so the Darwin file stays
+byte-exact, and a new `privateServerSessionPIDsAt` seam takes the same `procRoot`,
+`sessionOf` and `defunctOf` hooks the shared fence takes, so
+`TestLinuxSessionMemberBoundRefuses` drives both sides of the bound through a
+synthetic census without weakening the fence.
+
+The corrected tree passed the eight affected native
+selectors with all 19 subtests in 0.169s normal and 3.438s under race, and
+a twenty-repetition boundary passed 160 of 160 top-level results and 380 subtests
+in 2.520s normal and 47.550s under race, with no failure and no data race. Nine
+files
+changed with 504 insertions and 146 deletions; `process_group_darwin.go`,
+`process_group_darwin_test.go` and `process_snapshot_darwin.go` are untouched.
+The census replacement is exact:
+`privateServerSessionPIDs` on Linux now reads one bounded `/proc` listing of at
+most 8192 entries plus one overflow sentinel, opening no per-process file, then
+confirms each candidate with `getsid(2)`, a native defunct check and a second
+confirming `getsid(2)`, keeping the inherited member refusal bound, now named and
+genuinely covered. The
+shared fence moved to `process_session_membership_unix.go` behind `darwin` or
+`linux`, with each platform supplying only its two native observations through
+`nativeSessionMemberHooks()`. Its third hook became
+`defunctOf func(int) (bool, bool, error)` rather than a zombie status constant,
+because a shared file cannot reference the Darwin-only `darwinProcessZombie` and
+Linux has three dead-but-unreaped states (`Z`, `X`, `x`) that one comparison
+cannot express. The defunct check runs only after a session match because Linux
+`getsid(2)` succeeds on an unreaped task, so a zombie still reports the session
+it belonged to and would otherwise be named as a live member; the unsupported
+file moved from `!darwin` to `!darwin && !linux` and orphans nothing. Affected
+vet, `darwin/arm64` cross-build and vet, `linux/arm64` vet, module verification,
+gofmt, docs, glossary and whitespace pass, and an unscoped repository-pinned
+`golangci-lint run ./spike/t4013/...` reports 0 issues byte-identically before
+and after the correction.
+
+Four results are reported qualified rather than green. The whole `spike/t4013`
+package is not green: the corrected tree took 139.652s normal and 185.183s under
+race, each enumerating 460 passes, 1 failure and 16 skips totalling 477
+top-level results — 476 at `da566ff3` plus the one new bound test — with exactly
+one inherited failure,
+`TestClosedHostToolchainIgnoresAmbientSurrealOverride`, which fails at
+`lstat /usr/bin/sandbox-exec: no such file or directory` because the
+`closedEnvironment` fixed-system-tool manifest still names a macOS-only image.
+Base sampling at `4ab0b9b0` in a separate clean detached worktree reproduced the
+identical failure line, so it is inherited and was neither introduced nor
+silently repaired here. Second, `TestLinuxNativeSamplerAccountsExecClassEpoch`
+failed once in the contended pre-correction head census and is attributed as a
+retained zero-margin host-timing flake rather than an H2f regression; the
+corrected whole-package census did not reproduce it. Four grounds carry that
+attribution: its failing path through `linuxProcessResidentBytes`,
+`collectLinuxResidentObservation` and the `smaps_rollup` read is byte-identical
+to H2a's, this slice changed none of it, and its ten removed lines are exactly
+the inline census block — the review correction touched only error
+classification inside `readLinuxProcessCensus` and left the happy path
+byte-identical; the test deliberately polls every 20ms across an `exec`
+transition, so `linuxProcessResidentBytes` meets `smaps_rollup` disappearance at
+the instant `sleep 1` exits, and the descendant's simultaneous reparenting
+breaks the parent-equality half of the recovery condition; the assertion
+executes before that iteration's drain, so the rewritten census can reach it
+only through a prior repetition's teardown; and a matched 200-repetition sample
+on one otherwise idle host puts the same inherited rate on both sides — base
+`4ab0b9b0` failed seven times and the corrected head `8fd49b57` failed seven
+times, all fourteen with the identical
+`open /proc/<pid>/smaps_rollup: no such process` signature — so the two rates are
+indistinguishable, where the earlier 60- and 40-repetition draws lacked the power
+to separate them. Third, the legacy
+`sampleLegacy`, `processTree` and `processName` helpers still shell out to `ps`
+and `pgrep`, and
+`newRSSSampler` still carries a `/bin/ps` snapshot fallback naming
+`-Ao pid=,ppid=,rss=,comm=`; all four remain off the production Linux path,
+which uses the native probe, and this slice neither removed nor widened them.
+Fourth, the new Linux tests are architecture-agnostic and
+`GOOS=linux GOARCH=arm64 go vet ./spike/t4013/...` is clean, but arm64 Linux was
+not executed on this amd64 host, so it stays unclaimed rather than disqualified.
+The H2e-era `linux/arm64` disqualification does not carry over: that one rests on
+the frozen-host platform gate firing ahead of the asserted refusal messages, and
+that gate is unreachable from this path because `spike/t4013` neither imports
+`spike/t421` nor defines a `TestMain`.
+
+The completed whole-package Linux baseline at the H2e head `0da4d1e4` is also
+recorded here because it finished during this slice: `-timeout=120m
+./spike/t421` completed rather than timing out in 6571.347s and enumerated 639
+top-level passes, 2 failures and 11 skips, matching the 652 top-level test
+functions that compile on Linux, with 3586 indented passes and no indented
+failure or skip. Both failures are qualified. `TestProductionDispatchSitesMatchActualBoundaries`
+fails byte-identically modulo timings at base and head, so it is the retained H2a
+production-dispatch inventory failure. `TestZoektOfferNativePinnedGraph` is a
+deterministic Linux refusal that predates the whole H2 stack: `walkGoBuildTree`
+requires `inputCustodyOwned`, that seam is deliberately refusal-false on Linux
+because Darwin's `UF_IMMUTABLE` owner-set model has no unprivileged counterpart,
+the four files in that call chain are unchanged between base and head with last
+touches in September 2026, and Linux already refused identically before H2d
+moved the stub into its own seam file, since `input_custody_other.go` was then
+tagged `!darwin`. That is a newly named H2 prerequisite: Linux `FS_IMMUTABLE_FL`
+requires `CAP_LINUX_IMMUTABLE`, so `ProtectExecutionGoBuildInputs` and the whole
+zoekt-offer native build path need either a granted capability, a read-only bind
+mount, a user namespace or an explicitly weaker documented custody model before
+they can run here. No `t421.test`, `go test` or SurrealDB process and no
+port-65499 listener survived. The source-free record is
+[`session-supervision-rehearsal-1.json`](../spike/t42h2f/session-supervision-rehearsal-1.json).
+A delta re-review of the two correction commits, the remaining H2
+adapters/admission and ceremony entry-point integration remain pending; no
+complete readiness, new plan, freeze, ceremony or scale claim follows.
+
+**T42.H2g · Linux Git exec-path helper manifest and Go SDK location recipes**
+*(next H2 slice)* — extend the admitted Linux external-tool observation from one
+core image to the locations the tools actually delegate to: a bounded
+`git --exec-path` helper manifest observation and a Go GOROOT/SDK location
+recipe, each fail-closed, each structural rather than nominal, and neither
+hashing enough content to become an unbounded host scan. The 172-entry exec-path
+on this host holds 142 symlinks to the core image, 3 symlinks to
+`git-remote-http`, 25 other separate regular helpers, the core regular file that
+already hashes equal to the selected image and one `mergetools` directory, so
+content-hashing every entry is the wrong shape for a version probe. This slice
+supplies no launcher authority, no session teardown and no dispatch admission.
+The Linux immutable-flag input-custody model, isolated
+pressure/allocation/restore adapters, new Linux-bound plan versions and
+aggregate physical/effective-cgroup resource admission remain H2 prerequisites
+before complete readiness, freeze or execution.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

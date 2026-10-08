@@ -2,95 +2,20 @@
 
 package t4013
 
-import (
-	"errors"
-
-	"golang.org/x/sys/unix"
-)
-
-// PrivateProcessSessionMembership returns records from a bounded native session
-// census, including orphans. Membership/status checks are bracketed by equal
-// native lifetime identities; non-zombie status is observed only at the middle
-// check and can change afterward.
-// Vanished, departed or changing members are omitted; a denied or malformed
-// observation refuses the result. This is not an atomic session snapshot or
-// complete history. Names and identities are private controller inputs, not
-// executable-image authority or source-free evidence. Unsupported platforms
-// fail before any inventory or helper process is started.
-func PrivateProcessSessionMembership(sessionID int) ([]NativeProcessRecord, error) {
-	pids, err := privateServerSessionPIDs(sessionID)
-	if err != nil {
-		return nil, err
-	}
-	records := make([]NativeProcessRecord, 0, len(pids))
-	for _, pid := range pids {
-		record, present, err := privateProcessSessionMember(pid, sessionID, darwinProcessObservation, unix.Getsid, darwinProcessStatus)
-		if err != nil {
-			return nil, err
-		}
-		if present {
-			records = append(records, record)
-		}
-	}
-	return records, nil
+// nativeSessionMemberHooks supplies the Darwin half of the shared session fence:
+// one coherent task-all-info observation per call, and the native short-BSD
+// status narrowed to the defunct question the fence actually asks.
+func nativeSessionMemberHooks() (func(int) (processSnapshot, error), func(int) (bool, bool, error)) {
+	return darwinProcessObservation, darwinProcessDefunct
 }
 
-func privateProcessSessionMember(
-	pid, sessionID int,
-	observe func(int) (processSnapshot, error),
-	sessionOf func(int) (int, error),
-	statusOf func(int) (uint32, bool, error),
-) (NativeProcessRecord, bool, error) {
-	if pid <= 0 || sessionID <= 0 {
-		return NativeProcessRecord{}, false, errors.New("native session-member scope is invalid")
+// darwinProcessDefunct reports whether one live native lifetime is a zombie.
+// present is false once the lifetime is gone; a denial or malformed record
+// refuses rather than guessing liveness.
+func darwinProcessDefunct(pid int) (bool, bool, error) {
+	status, present, err := darwinProcessStatus(pid)
+	if err != nil || !present {
+		return false, present, err
 	}
-	before, err := observe(pid)
-	if errors.Is(err, errProcessIdentityMissing) {
-		return NativeProcessRecord{}, false, nil
-	}
-	if err != nil {
-		return NativeProcessRecord{}, false, err
-	}
-	if !validNativeSessionMember(pid, before) {
-		return NativeProcessRecord{}, false, errors.New("native session-member observation is incomplete")
-	}
-	for check := 0; check < 2; check++ {
-		session, err := sessionOf(pid)
-		if errors.Is(err, unix.ESRCH) || err == nil && session != sessionID {
-			return NativeProcessRecord{}, false, nil
-		}
-		if err != nil {
-			return NativeProcessRecord{}, false, err
-		}
-		if check == 0 {
-			status, present, err := statusOf(pid)
-			if err != nil {
-				return NativeProcessRecord{}, false, err
-			}
-			if !present || status == darwinProcessZombie {
-				return NativeProcessRecord{}, false, nil
-			}
-		}
-	}
-	after, err := observe(pid)
-	if errors.Is(err, errProcessIdentityMissing) {
-		return NativeProcessRecord{}, false, nil
-	}
-	if err != nil {
-		return NativeProcessRecord{}, false, err
-	}
-	if !validNativeSessionMember(pid, after) {
-		return NativeProcessRecord{}, false, errors.New("native session-member observation is incomplete")
-	}
-	if before.identityToken != after.identityToken {
-		return NativeProcessRecord{}, false, nil
-	}
-	return NativeProcessRecord{PID: pid, ParentPID: after.parent, RSSBytes: after.rssBytes,
-		StartIdentity: after.identityToken, ObservedName: after.name}, true, nil
-}
-
-func validNativeSessionMember(pid int, observed processSnapshot) bool {
-	return observed.coherent && observed.parent >= 0 && observed.parent != pid && observed.rssBytes >= 0 &&
-		len(observed.identityToken) > 0 && len(observed.identityToken) <= 64 &&
-		len(observed.name) > 0 && len(observed.name) <= 16
+	return status == darwinProcessZombie, true, nil
 }
