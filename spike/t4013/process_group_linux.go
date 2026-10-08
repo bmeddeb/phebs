@@ -10,10 +10,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// maxProcessSessionMembers bounds one session census at sixteen times
+// maxProcessSessionMembers bounds one session census at eight times
 // maxProcessDescendants, so a runaway session refuses instead of enumerating an
-// unbounded host. Per-poll work stays bounded at this many entries, each costing
-// one getsid(2) plus, for a member, one record read and one confirming getsid(2).
+// unbounded host. Per-poll member work stays bounded at this many confirmations,
+// each costing one record read and one confirming getsid(2), on top of the one
+// getsid(2) the shared census already pays per host PID.
 const maxProcessSessionMembers = 1024
 
 // privateServerSessionPIDs enumerates the real host /proc through the native
