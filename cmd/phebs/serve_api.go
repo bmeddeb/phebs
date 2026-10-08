@@ -191,10 +191,18 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		}
 	}
 	retentionStatus := retentionstatus.New(cfg.Server.DataDir, st)
+	var typedAdmitted func(store.TypedIndexOperator) bool
+	var typedProvider func(string) bool
+	if d.typedRuntime != nil && d.typedRuntime.registry != nil {
+		typedAdmitted = d.typedRuntime.registry.admits
+		typedProvider = d.typedRuntime.registry.provider
+	}
 	apiOpts := api.Options{
-		Version:             version,
-		TypedIndexAvailable: d.typedRuntime != nil,
-		Store:               st, Search: d.searcher, ScopedSearch: d.runtimeScopedSearch,
+		Version:                     version,
+		TypedIndexAvailable:         d.typedRuntime != nil,
+		TypedIndexAdmitted:          typedAdmitted,
+		TypedIndexProviderAvailable: typedProvider,
+		Store:                       st, Search: d.searcher, ScopedSearch: d.runtimeScopedSearch,
 		DataDir: cfg.Server.DataDir,
 		CodeNav: d.codeNavigation,
 		RetentionStatusSource: api.NewCompleteRetentionStatusSource(

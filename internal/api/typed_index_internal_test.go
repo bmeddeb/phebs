@@ -21,6 +21,33 @@ type typedAPIStore struct {
 	fault                    error
 }
 
+func TestTypedIndexAPIInstalledProvidersAndSourceFence(t *testing.T) {
+	s, opts := typedAPIFixture(t)
+	opts.TypedIndexProviderAvailable = func(id string) bool { return id == typedindex.ModuleProviderID }
+	opts.TypedIndexAdmitted = func(store.TypedIndexOperator) bool { return false }
+	handler := New(opts)
+	providers := typedAPIRequest(t, handler, "/providers", nil)
+	var result TypedIndexProviders
+	if providers.Code != http.StatusOK || json.Unmarshal(providers.Body.Bytes(), &result) != nil || len(result.Providers) != 3 {
+		t.Fatal(providers.Code, providers.Body.String())
+	}
+	for _, provider := range result.Providers {
+		if provider.Available != (provider.ID == typedindex.ModuleProviderID) {
+			t.Fatal("uninstalled provider advertised", provider)
+		}
+	}
+	status := typedAPIRequest(t, handler, "/status?repository="+s.snapshot.Source.Repository, nil)
+	var view TypedIndexView
+	if status.Code != http.StatusOK || json.Unmarshal(status.Body.Bytes(), &view) != nil || view.Available {
+		t.Fatal("uninstalled source advertised", status.Body.String())
+	}
+	selection := TypedIndexSelection{Repository: s.snapshot.Source.Repository, Provider: s.snapshot.Profile.Provider(), Profile: s.snapshot.Profile.Definition().Name, Purpose: typedindex.Publish}
+	plan := typedAPIRequest(t, handler, "/plan", selection)
+	if plan.Code != http.StatusServiceUnavailable || s.enqueues != 0 {
+		t.Fatal("uninstalled source planned", plan.Code, plan.Body.String())
+	}
+}
+
 func (s *typedAPIStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
 	s.lookups++
 	if name != s.snapshot.Source.Repository {

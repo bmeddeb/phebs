@@ -259,13 +259,35 @@ func newClient(options Options) (*client, error) {
 	if !validOptions(options) {
 		return nil, ErrRefused
 	}
-	info, err := os.Stat(options.Socket)
+	return installationClient(options.Socket)
+}
+
+// ValidateInstallation performs the existing bounded read-only daemon and exact
+// native-image checks. It neither creates a container nor proves execution.
+func ValidateInstallation(ctx context.Context, socket, image string) error {
+	if ctx == nil || !typedindex.AdmittedNativeWorker() || !validOptionPath(socket) || !imageID(image) {
+		return ErrRefused
+	}
+	c, err := installationClient(socket)
+	if err != nil {
+		return err
+	}
+	defer c.http.CloseIdleConnections()
+	_, err = c.preflight(ctx, Options{Socket: socket, ImageID: image})
+	return err
+}
+
+func installationClient(socket string) (*client, error) {
+	if !validOptionPath(socket) {
+		return nil, ErrRefused
+	}
+	info, err := os.Stat(socket)
 	if err != nil || info.Mode()&os.ModeSocket == 0 {
 		return nil, ErrRefused
 	}
 	transport := &http.Transport{Proxy: nil, DisableCompression: true, MaxResponseHeaderBytes: 16 << 10,
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "unix", options.Socket)
+			return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "unix", socket)
 		}}
 	return &client{http: &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return ErrRefused }}}, nil
 }

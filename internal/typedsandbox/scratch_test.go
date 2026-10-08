@@ -42,7 +42,7 @@ func TestScratchAuthorityAndRecipe(t *testing.T) {
 	}
 	o := Options{Inputs: "/inputs-on-host", Controls: "/controls-plan", Control: testControlIdentity(), Allowance: testAllowance(), ImageID: testImage, scratch: &a}
 	c := recipe(o, "owner")
-	if c.Cmd[0] != SupervisorCommand || c.HostConfig.Memory != MemoryBytes || c.HostConfig.MemorySwap != MemoryBytes || c.HostConfig.NanoCpus != 2_000_000_000 || c.HostConfig.PidsLimit != TaskLimit || len(c.HostConfig.Tmpfs) != 0 || len(c.HostConfig.Mounts) != 3 || c.HostConfig.Mounts[1].Source != a.Source || c.HostConfig.Mounts[1].ReadOnly {
+	if c.Cmd[0] != SupervisorCommand || c.HostConfig.Memory != MemoryBytes || c.HostConfig.MemorySwap != MemoryBytes || c.HostConfig.NanoCpus != 2_000_000_000 || c.HostConfig.PidsLimit != TaskLimit || len(c.HostConfig.Tmpfs) != 1 || c.HostConfig.Tmpfs["/dev/shm"] != "rw,nosuid,nodev,noexec,size=16777216,nr_inodes=1024" || len(c.HostConfig.Mounts) != 3 || c.HostConfig.Mounts[1].Source != a.Source || c.HostConfig.Mounts[1].ReadOnly {
 		t.Fatal("wrong sealed phase2 recipe", c)
 	}
 	owner := journal{Schema: ownerSchema, Name: "owner", Controls: o.Controls, Control: o.Control, Allowance: o.Allowance, Scratch: &a}

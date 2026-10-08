@@ -244,6 +244,12 @@ service_catalogs: {}
 # [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must
 # omit embedded credentials, query, and fragment. Code-host tokens are optional
 # for public listings; uncomment their secret fields for private repositories.
+# Opt-in managed SCIP installation. Omit unless a trusted offline installation
+# has been provisioned and verified for this host and exact indexed HEAD.
+# managed_scip:
+#   manifest: /var/lib/phebs-scip-installation/installation.json
+#   sha256: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
 connections:
   # GitHub: at least one of orgs, users, repos unless app is configured.
   # GitHub forbids url/groups/http_auth/watch.
