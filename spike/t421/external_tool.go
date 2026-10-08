@@ -28,9 +28,16 @@ import (
 // Version probes execute that selected image; this is not a sandbox for
 // untrusted programs or vendor attestation.
 // Native-image headers and Git core equality reject scripts and a delegating
-// shim, but do not prove arbitrary native delegation or helper closure. Git's
-// remaining exec-path helpers and Go's GOROOT/SDK locations stay unadmitted on
-// both hosts, so an observed identity is never a launch or dispatch recipe.
+// shim, but do not prove arbitrary native delegation or helper closure. On
+// Linux/amd64 the two delegation locations this identity cannot see are
+// observed separately and structurally: ObserveExecutionGitExecPathManifest
+// bounds Git's exec-path helper census and binds its core helper to the
+// selected image, while ObserveExecutionGoSDKLocation bounds the GOROOT,
+// GOROOT/bin and GOTOOLDIR shapes an explicitly selected Go image reports for
+// itself. Neither hashes a tree and neither is admitted on Darwin, so both
+// locations stay unadmitted there. They add no field to this identity and
+// widen nothing here, so an observed identity is never a launch or dispatch
+// recipe.
 // This observation issues no CheckoutAdmissionBinding or launch authority, and
 // validateExecutionHost remains the separate freeze-platform fence.
 func ObserveExecutionExternalTool(ctx context.Context, role, binary string) (identity ExecutionToolIdentity, retErr error) {
