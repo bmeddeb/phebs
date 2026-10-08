@@ -274,9 +274,15 @@ func readLinuxProcessCensus(procRoot string) ([]os.DirEntry, error) {
 		return nil, fmt.Errorf("open Linux process census: %w", err)
 	}
 	entries, readErr := dir.ReadDir(maxProcessSnapshotRows + 1)
-	closeErr := dir.Close()
-	if readErr != nil && !errors.Is(readErr, io.EOF) || closeErr != nil {
-		return nil, errors.Join(readErr, closeErr)
+	// A failed close is never the benign short read that ReadDir(n>0) reports as
+	// io.EOF, so it is returned alone and wrapped: joining both would keep the
+	// close failure errors.Is(err, io.EOF)-matchable and misclassify it as a
+	// completed read at a boundary that separates causes.
+	if closeErr := dir.Close(); closeErr != nil {
+		return nil, fmt.Errorf("close Linux process census: %w", closeErr)
+	}
+	if readErr != nil && !errors.Is(readErr, io.EOF) {
+		return nil, fmt.Errorf("read Linux process census: %w", readErr)
 	}
 	if len(entries) > maxProcessSnapshotRows {
 		return nil, errors.New("linux process census exceeds its bound")

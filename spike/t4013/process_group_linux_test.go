@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"testing"
 	"time"
 
@@ -32,16 +33,50 @@ func TestLinuxSessionInventoryUsesNativeRecords(t *testing.T) {
 	if err != nil || !slices.Contains(session, os.Getpid()) {
 		t.Fatalf("native session PIDs = %v, %v", session, err)
 	}
-	if len(session) > 1024 {
-		t.Fatalf("native session census exceeded its bound: %d", len(session))
-	}
 	// The census launches no helper, so supervision cannot add its own member;
-	// every named PID is distinct and positive.
+	// every named PID is distinct and positive. The member bound itself is not
+	// assertable here because a refusal returns no PIDs at all:
+	// TestLinuxSessionMemberBoundRefuses drives both of its sides.
 	for index, pid := range session {
 		if pid <= 0 || slices.Contains(session[:index], pid) {
 			t.Fatalf("native session census is not a distinct positive set: %v", session)
 		}
 	}
+}
+
+// The session member bound refuses instead of truncating. No real single session
+// can reach it, so a synthetic census paired with always-matching native hooks
+// drives both sides of maxProcessSessionMembers; the same hooks are the ones the
+// shared fence takes, so the seam proves the bound without weakening the fence.
+func TestLinuxSessionMemberBoundRefuses(t *testing.T) {
+	const sessionID = 4242
+	matching := func(int) (int, error) { return sessionID, nil }
+	alive := func(int) (bool, bool, error) { return false, true, nil }
+	census := func(t *testing.T, entries int) string {
+		t.Helper()
+		root := t.TempDir()
+		for index := 1; index <= entries; index++ {
+			if err := os.WriteFile(filepath.Join(root, strconv.Itoa(index)), nil, 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return root
+	}
+	t.Run("at bound", func(t *testing.T) {
+		pids, err := privateServerSessionPIDsAt(census(t, maxProcessSessionMembers), sessionID, matching, alive)
+		if err != nil || len(pids) != maxProcessSessionMembers {
+			t.Fatalf("session at its bound = %d entries, %v", len(pids), err)
+		}
+	})
+	t.Run("over bound", func(t *testing.T) {
+		pids, err := privateServerSessionPIDsAt(census(t, maxProcessSessionMembers+1), sessionID, matching, alive)
+		if err == nil || pids != nil {
+			t.Fatalf("session over its bound admitted: %d entries, %v", len(pids), err)
+		}
+		if err.Error() != "T40.13 private process session exceeds its process bound" {
+			t.Fatalf("session bound refusal = %q", err.Error())
+		}
+	})
 }
 
 func TestLinuxSessionInventoryRefusals(t *testing.T) {
