@@ -49,6 +49,10 @@ func TestLinuxSessionInventoryUsesNativeRecords(t *testing.T) {
 // drives both sides of maxProcessSessionMembers; the same hooks are the ones the
 // shared fence takes, so the seam proves the bound without weakening the fence.
 func TestLinuxSessionMemberBoundRefuses(t *testing.T) {
+	if maxProcessSessionMembers != 8*maxProcessDescendants {
+		t.Fatalf("session member bound %d no longer equals eight times maxProcessDescendants %d",
+			maxProcessSessionMembers, 8*maxProcessDescendants)
+	}
 	const sessionID = 4242
 	matching := func(int) (int, error) { return sessionID, nil }
 	alive := func(int) (bool, bool, error) { return false, true, nil }

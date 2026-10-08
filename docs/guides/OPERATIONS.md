@@ -373,12 +373,13 @@ and receipts keep their meaning. The unsupported-platform file moved from
 because Linux now has a real implementation. The fence test moved with the code,
 so all 17 of its subtests execute on this host rather than only on macOS.
 
-The native gates are finite and green at the review-corrected tree: the eight H2f
-selectors pass 8/8 with all 19 subtests in 0.169s normal and 3.438s under race,
-and a 20-repetition boundary passes 160/160 with 380 subtests in 2.520s normal
-and 47.550s under
+The native gates are finite and green at the delta-corrected tree: the eight H2f
+selectors pass 8/8 with all 19 subtests in 0.365s normal and 3.937s under race,
+and a 20-repetition boundary passes 160/160 with 380 subtests in 5.597s normal
+and 54.408s under
 race. An unscoped repository-pinned `golangci-lint run ./spike/t4013/...` reports
-`0 issues.` byte-identically before and after the correction, and
+`0 issues.` byte-identically across every binding commit because a clean run
+writes the same ten bytes, and
 `GOOS=linux GOARCH=arm64 go vet ./spike/t4013/...` is clean alongside the
 `darwin/arm64` cross-vet.
 
@@ -390,7 +391,18 @@ error in the text that first correction added — it called
 `maxProcessSessionMembers` sixteen times `maxProcessDescendants`, where 128 × 8
 is the actual 1024 bound — and because the sealed record binds exact file bytes,
 the gates above were discarded and re-measured a second time so that every number
-here binds to one commit. The medium finding matters to an operator reading older
+here binds to one commit. A delta re-review of the two correction commits then
+returned APPROVE-WITH-NITS with 0 critical, 0 high, 0 medium and 5 low findings
+— two in code, three in the sealed record's own text — and the two code lows are
+corrected at `b4174050962be1b27800c5e5633a0426826c7cf0`: the seam comment now
+states truthfully that `sessionOf` and `defunctOf` are two of the three hooks the
+shared fence takes while `procRoot` is the census seam `linuxHostProcessPIDs`
+already takes and the fence takes no `procRoot`, and
+`TestLinuxSessionMemberBoundRefuses` now pins the arithmetic so the bound cannot
+drift from its documented value. That correction changed compiled `spike/t4013`
+bytes again, so every gate above was discarded and re-measured a third time, this
+pass against a completely clean working tree; every number in this guide binds to
+`b4174050`. The medium finding matters to an operator reading older
 notes: this slice's documents and sealed evidence had inherited H2e's
 `linux/arm64` disqualification verbatim, which is false here. The low findings
 were a census error join that let a failed `Close` stay
@@ -398,23 +410,32 @@ were a census error join that let a failed `Close` stay
 file, and a vacuous bound assertion that left the member refusal with no
 coverage. The bound is now named `maxProcessSessionMembers` in the Linux file
 only, and `TestLinuxSessionMemberBoundRefuses` drives both of its sides through a
-new `privateServerSessionPIDsAt` seam that takes exactly the `procRoot`,
-`sessionOf` and `defunctOf` hooks the shared fence takes, so the bound is proven
-without weakening the fence.
+new `privateServerSessionPIDsAt` seam — taking `sessionOf` and `defunctOf`, two
+of the three hooks the shared fence takes, plus the `procRoot` census seam that
+exists only in the Linux files and that `linuxHostProcessPIDs` already takes,
+while the fence's third hook is `observe` and it takes no `procRoot` — so the
+bound is proven without weakening the fence. The delta correction additionally
+pins `maxProcessSessionMembers == 8*maxProcessDescendants` at the top of that
+test, proven to fire under a 2048 overlay mutation before either census subtest
+runs.
 
 Four operator caveats. The whole `spike/t4013` package is qualified, not green:
 `TestClosedHostToolchainIgnoresAmbientSurrealOverride` fails identically at this
 slice's base and head with `lstat /usr/bin/sandbox-exec: no such file or
 directory`, because the `closedEnvironment` fixed-system-tool manifest still
-names a macOS-only image. The corrected whole-package census enumerates 460
-passes, 1 failure and 16 skips totalling 477 top-level results in 139.652s
-normal and 185.183s under race. Separately,
+names a macOS-only image. The delta-corrected whole-package census enumerates the
+same 460 passes, 1 failure and 16 skips totalling 477 top-level results in
+177.056s normal and 212.539s under race. Separately,
 `TestLinuxNativeSamplerAccountsExecClassEpoch` is a retained zero-margin
 host-timing flake, not an H2f regression: its failing path is byte-identical to
-H2a's, it asserts before its own drain runs, and a matched 200-repetition sample
-on one otherwise idle host failed seven times at base and seven times at the
-corrected head, all fourteen with the identical `smaps_rollup` disappearance
-signature, so the two rates are indistinguishable. The legacy
+H2a's, it asserts before its own drain runs, and matched 200-repetition samples
+on one otherwise idle host reproduce the inherited flake on both sides — base
+`4ab0b9b0` failed 6 of 200 and the delta-corrected head `b4174050` failed 11 of
+200, all seventeen with the identical `smaps_rollup` disappearance signature and
+no data race on either side. No rate equality is claimed: the same pair measured
+7-versus-7 at `8fd49b57` and 6-versus-11 at `b4174050` while the entire failing
+path stayed byte-identical, which is what sampling noise around one small
+inherited rate looks like. The legacy
 `sampleLegacy`, `processTree` and
 `processName` helpers still shell out to `ps` and `pgrep`, and `newRSSSampler`
 still carries a `/bin/ps` snapshot fallback; all four stay off the production
