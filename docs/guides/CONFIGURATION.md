@@ -1204,10 +1204,12 @@ indexing action.
 
 Providers appear Bazel first, followed by Go module/workspace and existing
 artifact. Availability requires an installed managed runtime and that
-repository's admitted profile; the ordinary build still has neither a managed
-runtime switch nor provider registration. Its cards remain **Unavailable**.
-These endpoints supersede the earlier T45.4 statement that no managed-indexing
-endpoint exists; they do not change that disabled startup boundary.
+repository's admitted profile. T45.10 adds the explicit `managed_scip` local
+installation described below. Without it the cards remain **Unavailable**.
+An available provider card means a trusted profile is registered; the selected
+repository must independently match its installed source, profile epoch and
+universe before planning or enqueue is available. Native compatibility and a
+successful generation are established by execution, not the provider card.
 
 When available, target, configuration and resource profiles are server-owned
 names shown read-only. Select **Generate navigation**, **Canary** or **Dry run**,
@@ -1248,3 +1250,79 @@ key to server-owned exact source/profile/universe authority. A preview does not
 queue work. Status reads do not initialize source identity or inspect native
 files. The T45.6 remaining Bazel corpus gate stays waived, not passed; this
 workflow establishes no supported target scale or release posture.
+
+### Install a managed SCIP runtime (T45.10)
+
+This is an explicit Linux amd64/arm64 operator installation. Existing committed
+SCIP navigation remains available without it. It uses the existing offline
+provider recipes, administrator-only API, sandbox, complete publication checks
+and lifecycle owner. It accepts no shell command or raw tool flag and does not
+enable generated SCIP as extraction evidence.
+
+Provision the exact native Docker image, offline tool/dependency bundle and
+fixed root-owned scratch namespace from the existing managed-index executor
+recipe first. Native loop/ext4 preparation requires the existing machine
+privileges, and the current executor requires effective UID/GID 0 for each
+scratch preparation/cleanup; provisioning the directory alone does not enable
+an unprivileged runtime. Docker socket access alone is insufficient. Startup neither
+downloads tools nor creates/repairs these prerequisites. An unavailable daemon,
+wrong image or incomplete retained custody refuses before registration.
+
+Use a service-owned private 0700 installation directory with a single-link 0600
+`installation.json`. Provide a distinct existing service-owned 0700 publication
+workspace with its empty 0600 `.phebs-index-publication.lock`. Neither directory
+may contain the other. Each repository has one private 0700 subdirectory with
+single-link, service-owned 0600 `profile.json` and `inventory.json`, plus
+`bundle/` containing the inventory's offline inputs. Path components may not be
+symlinks. Controls use canonical JSON field spelling/order and explicit fields.
+
+The manifest's layout is:
+
+```json
+{"schema":"phebs-managed-scip-installation-v1","workspace":"/var/lib/phebs-scip-publications","socket":"/var/run/docker.sock","image":"sha256:<native-image>","repositories":[{"source":{"repository":"github.com/example/repo","incarnation":"<server-incarnation>","generation":"sha256:<server-source-generation>","commit":"<indexed-HEAD>"},"profile_epoch":1,"universe_digest":"sha256:<target-universe>","profile_digest":"sha256:<profile-json>","inventory_digest":"sha256:<inventory-json>","directory":"repo"}]}
+```
+
+The placeholders must be replaced with the trusted offline provisioner's exact
+controls; the example is not an executable installation. `source` is the store's
+`GetTypedSource` authority. The bundle's selection must bind that same source.
+Use the existing provider provisioning contracts to seal the target/package/
+document selection and tools; the loader does not generate a selection or
+certify that repository code compiles. `profile.json` must be canonical JSON so
+its file SHA256 equals its decoded identity. Inventory hashes identify exact
+bytes. All profiles select the same image and the server's native architecture.
+
+Set the manifest's exact SHA256 in server YAML and restart. The manifest path
+must be a clean absolute path without `:` or control characters:
+
+```yaml
+managed_scip:
+  manifest: /var/lib/phebs-scip-installation/installation.json
+  sha256: sha256:<exact-installation-json>
+```
+
+Startup authenticates private controls, the daemon/native image, complete
+retained executor custody, every selected source blob against immutable Git
+(including regular/executable file mode), and expected profile epochs. It then
+installs missing/successor profiles and registers existing workers, the lifecycle
+owner and routed navigation reader. Equal restarts preserve epochs, desired
+requests and publications. A repository whose current source no longer matches
+its installed source — sync advanced its HEAD, or it was removed — is withdrawn
+with a logged diagnostic and stays unavailable until a new installation binds
+the new source, while startup continues. Any other epoch or profile mismatch
+refuses startup, and updating only the manifest hash cannot rebind source. Restored intent requires revalidated controls
+and a successor epoch. An interrupted installation prefix completes idempotently
+on a later restart; its failing startup installs no enabled runtime.
+
+Use **Settings → Code navigation indexing → Review indexing plan**, then
+explicitly enqueue generation. Only installed providers appear available.
+Changed HEAD/profile authority makes the repository unavailable, and the worker
+independently refuses stale inputs. Failed work retains its bounded failure
+state and publishes no partial index. Navigation keeps its exact source fences.
+
+This first registry admits at most eight repositories, 32 KiB of manifest bytes,
+32 MiB of aggregate inventory-control bytes, 50,000 aggregate inventory files
+and 2 GiB aggregate offline input bytes. Each profile/file/inventory/attempt
+retains its existing smaller limits. Serial installation source validation has
+one five-minute deadline. These explicit installation bounds do not establish
+the 5,000-service/12-GB target. Historical exact-control ceremony launches refuse
+this configuration instead of accepting unaccounted work.

@@ -10664,3 +10664,86 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   unchanged `spike/t451a/sandbox` tests requiring the absent host directory
   `/private/tmp`. The uid-65534 attempt remains host-gated and skipped by
   ordinary uid-1000 tests; no fresh compatibility or cohort PASS is claimed.
+
+- **2026-10-08 — T45.10 explicit managed SCIP runtime installation.** Ben
+  directs immediate work toward managed SCIP availability. Advance this Epic 45
+  activation slice independently of the still-open combined scale gate, without
+  turning the T45.6 waiver into PASS. Normal startup may consume one explicit
+  digest-bound private `managed_scip` installation with exact source/profile/
+  epoch/universe controls and a separately provisioned publication workspace.
+  Retain the three closed providers, existing offline recipes, native sandbox,
+  coordinator/scheduler, publication, reader, recovery and lifecycle contracts.
+  Browser requests cannot install tools or choose commands. Unconfigured startup
+  remains disabled. Provider descriptors name only installed profiles; the
+  repository must independently match installed authority before plan/enqueue.
+  Architecture-correct resource names distinguish admitted amd64 and arm64.
+  No schema, worker cap, networking, UI or evidence-authority boundary changes.
+
+  Controls are single-link service-owned 0600 files beneath nonfollowing private
+  0700 ancestry. Canonical manifest decoding refuses missing/duplicate/unknown
+  fields, repeated repositories/directories, overlap with the publication root,
+  foreign architecture/image and ambiguous epochs. Read-only daemon preflight
+  uses the existing exact native image/security predicates and creates no
+  container. Existing reconciliation authenticates all retained custody before
+  registration. Immutable Git source verification admits regular/executable
+  modes and hashes only declared source blobs. Source-bound profile installation
+  CAS refuses a source transition after that physical validation. A repository
+  whose current source already differs from its installed source at startup
+  (sync advanced HEAD, or it was removed) is withdrawn from the registry with a
+  diagnostic rather than refusing all of serve, matching how a running process
+  makes it unavailable; every other epoch/profile mismatch still refuses. Equal restarts
+  preserve desire/epochs/publications; partial installation prefixes resume
+  idempotently and never install an enabled runtime in the failing startup.
+  Restore requires newly verified controls with a successor epoch. Exact-control
+  ceremony startup refuses this new selection before reading its manifest.
+
+  **Steady-state cost.** Absent configuration adds one nil/config branch and no
+  I/O, allocation, lock, goroutine or child. Configured startup reads one 32-KiB
+  manifest, at most eight 16-KiB profiles and eight inventories (16 MiB each,
+  32 MiB aggregate), with aggregate 50,000-file/2-GiB input admission. It retains
+  only eight fixed profile/identity/path records, never inventories/source bytes.
+  Installation source validation has one five-minute context and visits entries
+  serially. It rereads/decode-checks one inventory per entry, holds one source
+  blob at a time (at most 256 MiB) and opens one joined cat-file child plus
+  ceil(selected source paths/64) sequential ls-tree children per repository.
+  Each ls-tree response is capped at 270,336 bytes. No whole-corpus/shard scan or
+  tool payload hash is added to startup. Each repository reads current source
+  and intent through the existing bounded store methods (including existing
+  bounded legacy source-incarnation initialization); missing/successor
+  profiles perform one source/epoch-fenced intent transaction apiece. Equal
+  restart performs no profile write. Reconciliation retains its existing shared
+  lifecycle lock/census costs. Installation validation and profile CAS hold no
+  lifecycle lock. No new installation cache invalidation or background scan.
+
+  Each descriptor request adds at most eight profile comparisons for each of
+  three provider IDs. Each selected status/plan/enqueue adds one constant-time
+  installed-authority map lookup/comparison after existing authorization/store
+  checks. A fresh worker bundle lookup adds one private, bounded inventory read
+  and digest check, retaining no descriptor; the existing executor still copies
+  and verifies all selected inputs and tools before native launch. Existing
+  disposition checks prevent that lookup for completed reuse/no-op. Query,
+  sync, ordinary retries, publication and child caps retain their existing work;
+  installed startup reuses the existing one-worker scheduler, lifecycle owner,
+  recovery loop and navigation reader instead of adding execution pathways.
+  No new persistent payload beyond existing intent/publication controls is
+  written. The existing scratch executor requires effective UID/GID 0 for each
+  preparation/cleanup; root-owned scratch provisioning alone is insufficient.
+  That runtime privilege, admitted native image and offline bundle remain
+  prerequisites, not automatic privilege escalation.
+
+  **Validation posture.** Installation/runtime/navigation command regressions
+  and complete API/config/workspace/sandbox packages pass normally and with
+  race instrumentation. Actual-store source-CAS normal/race and durable-flow,
+  independent-fence and operator-revision regressions pass. Vet and pinned lint
+  pass on all six changed packages; documentation, glossary and whitespace
+  checks pass. Complete command/store repository suites were not run for this
+  slice. Broader testing reproduced three inherited fixture failures at the
+  unchanged main baseline: group-writable TempDir ancestry, an obsolete empty
+  tmpfs oracle, and an orphan-child oracle assuming PID-1 adoption. This slice
+  establishes private test ancestry, checks the existing exact /dev/shm recipe,
+  and proves loss of the launching parent even under a Linux subreaper. No
+  production custody predicate or sandbox resource policy is relaxed.
+  Current host inspection has only the probe image, no admitted compiler image
+  or offline bundle, and no passwordless sudo. No actual installed-generation
+  PASS, completed activation, independent review, merge, scale, release or
+  ceremony claim is established by these unit checks.

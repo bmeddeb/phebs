@@ -12,14 +12,15 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/typedexecutor"
 	"github.com/bmeddeb/phebs/internal/typedindex"
+	"github.com/bmeddeb/phebs/internal/typedsandbox"
 )
 
-// Installation is a trusted composition seam, deliberately left nil by serve.
-// The Bazel registration gate must provide exact installed custody and lookup;
-// no configuration, environment or browser input can enable this seam yet.
+// Installation is trusted local composition. Normal serve loads only an
+// explicitly digest-bound private installation; browser input cannot install it.
 type typedServeInstallation struct {
 	Workspace, Socket, Image string
 	Bundle                   typedexecutor.BundleLookup
+	Registry                 *typedInstallationRegistry
 }
 
 type typedServeRuntime struct {
@@ -28,9 +29,20 @@ type typedServeRuntime struct {
 	resolver   *typedCodeNavigationResolver
 	pending    atomic.Bool
 	recovering atomic.Bool
+	registry   *typedInstallationRegistry
 }
 
 func prepareServeTypedIndex(d *serveDeps) error {
+	if d.typedInstallation == nil && d.cfg != nil && d.cfg.ManagedSCIP != nil {
+		if d.semanticLaunch != nil || d.exactReads || d.exactReports {
+			return typedServeSafeError(typedexecutor.ErrUnavailable)
+		}
+		installation, err := loadTypedServeInstallation(d.ctx, d.cfg.ManagedSCIP)
+		if err != nil {
+			return typedServeSafeError(err)
+		}
+		d.typedInstallation = installation
+	}
 	if d.typedInstallation == nil {
 		return nil
 	}
@@ -38,6 +50,11 @@ func prepareServeTypedIndex(d *serveDeps) error {
 		return typedServeSafeError(typedexecutor.ErrUnavailable)
 	}
 	i := *d.typedInstallation
+	if i.Registry != nil {
+		if err := typedsandbox.ValidateInstallation(d.ctx, i.Socket, i.Image); err != nil {
+			return typedServeSafeError(err)
+		}
+	}
 	c, err := typedexecutor.New(typedexecutor.Config{
 		Store: d.st, Workspace: i.Workspace, Acquire: d.acquireLifecycleMutation,
 		Socket: i.Socket, Image: i.Image,
@@ -54,6 +71,11 @@ func prepareServeTypedIndex(d *serveDeps) error {
 	if err := r.Reconcile(d.ctx); err != nil {
 		return typedServeSafeError(err)
 	}
+	if i.Registry != nil {
+		if err := i.Registry.install(d.ctx, d.st, d.cfg.Server.DataDir); err != nil {
+			return typedServeSafeError(err)
+		}
+	}
 	resolver, err := newTypedCodeNavigationResolver(d.st, i.Workspace)
 	if err != nil {
 		return typedServeSafeError(err)
@@ -61,7 +83,7 @@ func prepareServeTypedIndex(d *serveDeps) error {
 	r.Report = func(_ typedexecutor.Outcome, err error) {
 		diagnostics.Logf("typed-index execution state=%s", typedServeReason(err))
 	}
-	d.typedRuntime = &typedServeRuntime{runtime: r, owner: typedexecutor.LifecycleOwner{Controller: c}, resolver: resolver}
+	d.typedRuntime = &typedServeRuntime{runtime: r, owner: typedexecutor.LifecycleOwner{Controller: c}, resolver: resolver, registry: i.Registry}
 	return nil
 }
 

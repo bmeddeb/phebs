@@ -27,6 +27,11 @@ func fixture(t *testing.T) (string, string, typedindex.Inventory, *lifecycle.Gat
 	if err != nil {
 		t.Fatal(err)
 	}
+	// TempDir may inherit group-write permissions on this host. Establish the
+	// private ancestry the production custody contract explicitly requires.
+	if err = os.Chmod(base, 0700); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		_ = filepath.WalkDir(base, func(name string, e os.DirEntry, err error) error {
 			if err == nil && e.IsDir() {

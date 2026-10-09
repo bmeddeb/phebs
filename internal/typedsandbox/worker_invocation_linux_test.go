@@ -8,6 +8,7 @@ import (
 	"golang.org/x/sys/unix"
 	"os"
 	"os/exec"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -19,7 +20,7 @@ func TestMain(m *testing.M) {
 	mode := os.Getenv("PHEBS_HANDOFF_TEST")
 	if mode == "parent" {
 		child := exec.Command(os.Args[0], os.Args[1:]...)
-		child.Env = append(os.Environ(), "PHEBS_HANDOFF_TEST=orphan")
+		child.Env = append(os.Environ(), "PHEBS_HANDOFF_TEST=orphan", "PHEBS_HANDOFF_PARENT="+strconv.Itoa(os.Getpid()))
 		child.Stdout, child.Stderr = os.Stdout, os.Stderr
 		if child.Start() != nil {
 			os.Exit(90)
@@ -27,15 +28,22 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	}
 	if mode == "orphan" {
+		launchingParent, parseErr := strconv.Atoi(os.Getenv("PHEBS_HANDOFF_PARENT"))
+		if parseErr != nil || launchingParent <= 1 {
+			os.Exit(90)
+		}
 		deadline := time.Now().Add(2 * time.Second)
-		for os.Getppid() != 1 && time.Now().Before(deadline) {
+		// Linux may adopt this child into a subreaper rather than PID 1. Prove
+		// the actual launching parent was lost while retaining the argv refusal.
+		for os.Getppid() == launchingParent && time.Now().Before(deadline) {
 			time.Sleep(time.Millisecond)
 		}
 		_, err := ReadWorkerInvocation(context.Background())
 		_ = json.NewEncoder(os.Stdout).Encode(struct {
-			Parent  int
-			Refused bool
-		}{os.Getppid(), err != nil})
+			Parent          int
+			LaunchingParent int
+			Refused         bool
+		}{os.Getppid(), launchingParent, err != nil})
 		os.Exit(0)
 	}
 	os.Exit(m.Run())
@@ -56,10 +64,11 @@ func TestWorkerInvocationOrphanArgvRefuses(t *testing.T) {
 		t.Fatal(err, string(raw))
 	}
 	var got struct {
-		Parent  int
-		Refused bool
+		Parent          int
+		LaunchingParent int
+		Refused         bool
 	}
-	if json.Unmarshal(raw, &got) != nil || got.Parent != 1 || !got.Refused {
+	if json.Unmarshal(raw, &got) != nil || got.Parent < 1 || got.LaunchingParent <= 1 || got.Parent == got.LaunchingParent || !got.Refused {
 		t.Fatal("orphan argv minted authority", string(raw))
 	}
 }

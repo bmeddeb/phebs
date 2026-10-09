@@ -15,6 +15,13 @@ import (
 const TypedIndexPath = "/api/code-navigation-indexing"
 const TypedIndexResourceProfile = "native-arm64-bounded-v1"
 
+func typedIndexResourceProfile(profile typedindex.Profile) string {
+	if profile.Definition().Config.GOARCH == "amd64" {
+		return "native-amd64-bounded-v1"
+	}
+	return TypedIndexResourceProfile
+}
+
 type typedOperatorStore interface {
 	ReadTypedIndexOperator(context.Context, string) (store.TypedIndexOperator, error)
 	EnqueueTypedIndexExpected(context.Context, string, string, []byte) (store.TypedIndexStatus, error)
@@ -114,12 +121,15 @@ func typedIndexRead(ctx context.Context, opts Options, repository string) (Typed
 	status := snapshot.Status
 	view.Revision = snapshot.Revision
 	view.Available = snapshot.Profile.Digest() != "" && !status.RestoreRequired
+	if opts.TypedIndexAdmitted != nil && !opts.TypedIndexAdmitted(snapshot) {
+		view.Available = false
+	}
 	view.Provider = snapshot.Profile.Provider()
 	view.Profile = snapshot.Profile.Definition().Name
 	if view.Available {
 		view.TargetProfile = view.Profile
 		view.ConfigProfile = snapshot.Profile.Definition().Config.Mode
-		view.ResourceProfile = TypedIndexResourceProfile
+		view.ResourceProfile = typedIndexResourceProfile(snapshot.Profile)
 	}
 	view.RequestDigest = status.Desired
 	view.JobState = snapshot.Coordinator
@@ -208,7 +218,7 @@ func typedIndexCandidates(ctx context.Context, opts Options, selection TypedInde
 		if err != nil {
 			return nil, typedIndexHTTPError(err)
 		}
-		out = append(out, typedIndexCandidate{TypedIndexPreview{SchemaVersion: "phebs-typed-index-preview-v1", Selection: selection, Commit: view.Commit, RequestDigest: admission.Digest(), IdempotencyKey: request.IdempotencyKey, ResourceProfile: TypedIndexResourceProfile}, raw})
+		out = append(out, typedIndexCandidate{TypedIndexPreview{SchemaVersion: "phebs-typed-index-preview-v1", Selection: selection, Commit: view.Commit, RequestDigest: admission.Digest(), IdempotencyKey: request.IdempotencyKey, ResourceProfile: typedIndexResourceProfile(snapshot.Profile)}, raw})
 	}
 	return out, nil
 }
@@ -233,7 +243,11 @@ func registerTypedIndex(api huma.API, opts Options) {
 		out := &providersOut{Body: TypedIndexProviders{SchemaVersion: "phebs-typed-index-providers-v1", Providers: []TypedIndexProvider{}}}
 		names := []string{"Bazel", "Go module / workspace", "Existing artifact"}
 		for n, id := range typedindex.ProviderOrder() {
-			out.Body.Providers = append(out.Body.Providers, TypedIndexProvider{ID: id, Name: names[n], Available: opts.TypedIndexAvailable})
+			available := opts.TypedIndexAvailable
+			if available && opts.TypedIndexProviderAvailable != nil {
+				available = opts.TypedIndexProviderAvailable(id)
+			}
+			out.Body.Providers = append(out.Body.Providers, TypedIndexProvider{ID: id, Name: names[n], Available: available})
 		}
 		return out, nil
 	})

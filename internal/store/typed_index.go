@@ -285,12 +285,35 @@ func (s *Surreal) GetTypedIndexIntent(ctx context.Context, repository string) (T
 // InstallTypedProfile CASes the operator epoch, including equal-value changes.
 // After restore the trusted caller must revalidate tools/custody before calling.
 func (s *Surreal) InstallTypedProfile(ctx context.Context, repository string, profile typedindex.Profile, universe string, expectedEpoch int64) (TypedIndexIntent, error) {
+	return s.installTypedProfile(ctx, repository, profile, universe, expectedEpoch, nil)
+}
+
+// InstallTypedProfileExpectedSource also fences the installer's verified source
+// inside the existing source/epoch transaction. A HEAD change after physical
+// validation cannot attach the old installation to the new source generation.
+func (s *Surreal) InstallTypedProfileExpectedSource(ctx context.Context, source typedindex.Source, profile typedindex.Profile, universe string, expectedEpoch int64) (TypedIndexIntent, error) {
+	if source.Validate() != nil {
+		return TypedIndexIntent{}, typedindex.Invalid
+	}
+	return s.installTypedProfile(ctx, source.Repository, profile, universe, expectedEpoch, &source)
+}
+
+func (s *Surreal) installTypedProfile(ctx context.Context, repository string, profile typedindex.Profile, universe string, expectedEpoch int64, expectedSource *typedindex.Source) (TypedIndexIntent, error) {
 	if profile.Digest() == "" || !validSHA256(universe) || expectedEpoch < 0 || expectedEpoch == math.MaxInt64 {
 		return TypedIndexIntent{}, typedindex.Invalid
 	}
 	a, err := s.typedAuthority(ctx, repository)
 	if err != nil {
 		return TypedIndexIntent{}, err
+	}
+	if expectedSource != nil {
+		actual, err := typedSource(a.source)
+		if err != nil {
+			return TypedIndexIntent{}, err
+		}
+		if actual != *expectedSource {
+			return TypedIndexIntent{}, typedindex.Stale
+		}
 	}
 	if a.intent.ProfileEpoch != expectedEpoch {
 		return TypedIndexIntent{}, typedindex.Stale

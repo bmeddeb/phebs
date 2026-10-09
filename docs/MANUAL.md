@@ -32,6 +32,11 @@ an optional Buf compatibility child, and an in-process searcher over the shard
 directory; the [project README](../README.md#architecture) and
 [PLAN.md](../PLAN.md) own the architecture and its decisions.
 
+Managed SCIP navigation can be explicitly installed with a digest-bound local
+`managed_scip` configuration on Linux. Its administrator generation workflow,
+offline provisioning requirements and current bounds are in the
+[configuration guide](./guides/CONFIGURATION.md#install-a-managed-scip-runtime-t4510).
+
 Indexing is **HEAD-only by default**: the default branch of each repo (or, for
 watched local repos, whatever branch is checked out). An explicit per-repo
 allowlist can add up to seven branch/tag revisions, selected with `rev:`.

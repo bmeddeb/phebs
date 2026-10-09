@@ -50,8 +50,12 @@ func searchHTTPError(err error) error {
 
 type Options struct {
 	// TypedIndexAvailable is set only by trusted reconciled runtime composition.
-	// Browser/config input cannot install execution; false keeps all controls unavailable.
+	// Browser input cannot install execution; false keeps all controls unavailable.
 	TypedIndexAvailable bool
+	// Optional installation fences are pure, bounded lookups. They grant no
+	// execution authority and must be set by the trusted runtime, never a request.
+	TypedIndexProviderAvailable func(string) bool
+	TypedIndexAdmitted          func(store.TypedIndexOperator) bool
 
 	Version string
 	APIKey  string // empty = open API; serve logs the warning

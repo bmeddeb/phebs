@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -48,6 +49,25 @@ func TestTypedServeDisabledAndRefusal(t *testing.T) {
 			}
 			if err := prepareServeTypedIndex(d); !errors.Is(err, typedexecutor.ErrUnavailable) || calls != 0 {
 				t.Fatal("refusal performed work", err, calls)
+			}
+		})
+	}
+}
+
+func TestTypedServeConfiguredInstallationRefusesCeremonyBeforeReads(t *testing.T) {
+	for _, mode := range []string{"exact-reads", "exact-reports", "ceremony"} {
+		t.Run(mode, func(t *testing.T) {
+			d := &serveDeps{ctx: t.Context(), cfg: &config.Config{ManagedSCIP: &config.ManagedSCIP{Manifest: "absent", SHA256: "invalid"}}}
+			switch mode {
+			case "exact-reads":
+				d.exactReads = true
+			case "exact-reports":
+				d.exactReports = true
+			case "ceremony":
+				d.semanticLaunch = &t422SemanticLaunch{}
+			}
+			if err := prepareServeTypedIndex(d); !errors.Is(err, typedexecutor.ErrUnavailable) || d.typedInstallation != nil || d.typedRuntime != nil {
+				t.Fatal("ceremony read installation", err)
 			}
 		})
 	}

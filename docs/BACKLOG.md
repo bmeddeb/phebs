@@ -16744,6 +16744,48 @@ scip-go 0.2.7. Accepted service incarnations are 0. No retained host executed
 the closure behaviors. The outcome is `below_design_target`; the 5,000-service
 and 12,000,000,000-byte requirement stays unmet.
 
+**T45.10 · Explicit managed SCIP runtime availability** *(Ben-directed,
+2026-10-08; activation candidate)* — prioritize usable managed code navigation
+now without treating the waived T45.6 corpus gate as PASS or advancing Epic 42.
+Add a digest-bound trusted private installation to normal startup; bind at most
+eight repositories to exact source/profile/epoch/universe and verified Git input
+bytes; reuse existing workers, private offline execution, full publication,
+restart, lifecycle and routed readers. Expose only installed provider cards and
+refuse per-repository source/profile drift before preview/enqueue. AC: absent
+configuration adds no installation work; wrong/case-aliased/duplicate controls,
+unsafe metadata/paths, capacity excess, foreign image/architecture, stale source,
+restore and epoch drift refuse; source-bound profile CAS prevents a concurrent
+HEAD transition attaching old installation authority; equal restart preserves
+desire/epoch/publication; controls close FDs on failure; read-only daemon
+preflight creates no container; administrator/CSRF/idempotent enqueue and cached
+navigation source fences remain exact; focused normal/race, actual store source
+CAS, package/static/docs/glossary gates and steady-state-cost review pass.
+An actual current-host installed generation/navigation/teardown proof remains
+mandatory before claiming operational availability. This slice edits no UI or
+presentation-owned files; existing Settings consumes the same API shapes.
+It supplies no automatic offline provisioner, scale, generated-evidence, release
+or ceremony authority. Merge remains a separate explicit request.
+
+The initial registry retains the existing per-attempt policies and bounds while
+also admitting at most 32 KiB manifest bytes, 32 MiB aggregate inventory controls,
+50,000 aggregate input files and 2 GiB aggregate offline input bytes. These are
+explicit first-installation limits, not satisfaction of the declared design
+target. Serial source validation has one five-minute deadline and performs no
+whole-repository census; each repository has one joined cat-file child plus
+ceil(selected-source-paths/64) bounded literal-path ls-tree children.
+Initial local source inspection finds no admitted compiler image or offline
+bundle on this host and no passwordless sudo. Current-host native generation,
+independent review and integration therefore remain open; unit proofs must not
+be reported as installed-generation PASS.
+The activation candidate passes normal/race installation/runtime/navigation
+command regressions, complete API/config/workspace/sandbox packages and the
+actual-store source-CAS test; durable-flow/source-fence/operator regressions,
+changed-package vet/pinned lint, docs/glossary and whitespace also pass. This
+slice does not claim complete command/store repository suites. Inherited fixture
+failures reproduced on main are repaired by explicit private TempDir ancestry,
+the existing exact /dev/shm recipe oracle, and launching-parent loss under a
+Linux subreaper; production custody/resource rules remain exact.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

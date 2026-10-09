@@ -36,6 +36,7 @@ type Config struct {
 	Analytics    Analytics    `yaml:"analytics"`
 	ProofBundles ProofBundles `yaml:"proof_bundles"`
 	Lifecycle    Lifecycle    `yaml:"lifecycle"`
+	ManagedSCIP  *ManagedSCIP `yaml:"managed_scip"`
 	Experimental Experimental `yaml:"experimental"`
 	// Permissions enables permission-aware search (T10.3) when the block is
 	// present: non-administrators then see only public repositories, the
@@ -87,6 +88,13 @@ type ReleaseSelection struct {
 type ReleaseKey struct {
 	ID        string `yaml:"id"`
 	PublicKey string `yaml:"public_key"`
+}
+
+// ManagedSCIP selects a trusted, digest-bound local installation. It never
+// accepts tool commands, flags or browser-controlled installation paths.
+type ManagedSCIP struct {
+	Manifest string `yaml:"manifest"`
+	SHA256   string `yaml:"sha256"`
 }
 
 const (
@@ -496,6 +504,8 @@ func (e Exclude) isZero() bool {
 
 var nameRE = regexp.MustCompile(`^[a-z0-9-]+$`)
 
+var managedSCIPDigestRE = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+
 // Load reads and validates the config at path.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
@@ -634,6 +644,12 @@ func connectionLines(doc *yaml.Node) []int {
 
 func (c *Config) validate(lines []int) error {
 	var errs []error
+	if m := c.ManagedSCIP; m != nil {
+		if !filepath.IsAbs(m.Manifest) || filepath.Clean(m.Manifest) != m.Manifest || len(m.Manifest) > 4096 ||
+			strings.ContainsAny(m.Manifest, ":\x00\r\n") || !managedSCIPDigestRE.MatchString(m.SHA256) {
+			errs = append(errs, errors.New("managed_scip requires a clean absolute manifest path without ':' or control characters and an explicit sha256 digest"))
+		}
+	}
 	if c.Diagnostics.ExtractorDetails && !c.Diagnostics.Extraction {
 		errs = append(errs, errors.New(
 			"diagnostics.extractor_details requires diagnostics.extraction",

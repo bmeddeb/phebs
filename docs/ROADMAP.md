@@ -409,6 +409,15 @@ retained receipts. The target closure names the frozen public corpus
 and 0 accepted services. Its outcome is `below_design_target`. The neutral
 envelope remains 0 accepted services and 176 admitted source bytes. The
 5,000-service and 12,000,000,000-byte design target stays unmet.
+Ben's 2026-10-08 immediate SCIP priority opens T45.10: an explicit trusted
+`managed_scip` installation connects normal startup to the existing native
+executor, administrator controls and routed navigation. Installed providers and
+exact repository/source/profile availability are fenced separately. The first
+registry is explicitly bounded and preserves existing execution/publication
+policies. Current-host installed generation/navigation, review and integration
+remain open; missing images, offline inputs and privileges are not waived.
+This changes Epic 45 sequencing only and advances no scale, release,
+generated-evidence or ceremony claim.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

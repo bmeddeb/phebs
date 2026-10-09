@@ -46,7 +46,11 @@ func TestObserveCapacityUsesActualPrivateDescriptorWithoutGrowth(t *testing.T) {
 func TestObserveCapacityRefusesChangedOrUntrustedRoot(t *testing.T) {
 	for _, kind := range []string{"replacement", "permissions", "cancel", "invalid geometry"} {
 		t.Run(kind, func(t *testing.T) {
-			base := filepath.Join(t.TempDir(), "base")
+			parent := t.TempDir()
+			if err := os.Chmod(parent, 0700); err != nil {
+				t.Fatal(err)
+			}
+			base := filepath.Join(parent, "base")
 			if err := os.Mkdir(base, 0700); err != nil {
 				t.Fatal(err)
 			}
