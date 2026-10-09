@@ -1,0 +1,78 @@
+{
+  "schema": "t472-caller-corpus-lock-v1",
+  "selected_utc": "2026-10-09",
+  "protocol": "docs/CALLER_QUALITY_PROTOCOL.md",
+  "selection_rule": "Go/gRPC-protobuf repositories containing (1) checked-in *_grpc.pb.go files carrying the unique protoc-gen-go-grpc DO NOT EDIT header, (2) committed .proto declarations corresponding to those generated clients, (3) real in-repo callers of the generated clients, and (4) a permissive license recorded at the pinned commit.",
+  "repos": [
+    {
+      "name": "etcd-io/etcd",
+      "git_url": "https://github.com/etcd-io/etcd.git",
+      "default_branch": "main",
+      "commit": "f061acd0902d489041448cdd19d71a345d27b9f5",
+      "commit_utc": "2026-10-08T09:31:33Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "3 generated clients; declarations and generated clients co-located under api/etcdserverpb/ (rpc.proto + rpc.pb.go + rpc_grpc.pb.go, header protoc-gen-go-grpc v1.6.2), server/etcdserver/api/v3lock/v3lockpb, server/etcdserver/api/v3election/v3electionpb; production caller client/v3/retry.go (NewKVClient), integration tests, in-repo gateway api/etcdserverpb/gw/rpc.pb.gw.go. Checks returned the pinned ref.",
+      "derived": null
+    },
+    {
+      "name": "grpc/grpc-go",
+      "git_url": "https://github.com/grpc/grpc-go.git",
+      "default_branch": "master",
+      "commit": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+      "commit_utc": "2026-10-09T06:21:36Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "17 generated clients with the unique header; in-repo declaration/generated/caller triples under examples/ (helloworld, route_guide, features/*) plus interop/; 12 NewGreeterClient( call sites incl. examples/helloworld/greeter_client/main.go; the helloworld triple and its caller were re-checked at the pinned ref. health/grpc_health_v1 commits the generated pair without an in-repo .proto (declaration upstream in grpc/grpc-proto); broader file/caller counts were recorded at the then-live default-branch head and are re-run at the pin during sealing.",
+      "derived": null
+    },
+    {
+      "name": "containerd/containerd",
+      "git_url": "https://github.com/containerd/containerd.git",
+      "default_branch": "main",
+      "commit": "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9",
+      "commit_utc": "2026-10-07T14:18:08Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "17 generated clients under api/services/*/v1 with co-located .proto (e.g. api/services/events/v1/events.proto declaring service Events); production callers core/events/proxy/remote_events.go and cmd/containerd/command/publish.go (NewEventsClient). Default-branch head unchanged since 2026-10-07T16:30Z, the date of every check recorded here; the sealing step re-runs every cell at the pinned commit.",
+      "derived": null
+    },
+    {
+      "name": "vitessio/vitess",
+      "git_url": "https://github.com/vitessio/vitess.git",
+      "default_branch": "main",
+      "commit": "0ee525542d4157460b40af0951016236fc213afd",
+      "commit_utc": "2026-10-08T17:48:24Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "8 generated clients; declarations under proto/ with generated pairs under go/vt/proto/* (proto/queryservice.proto declares service Query; go/vt/proto/queryservice/queryservice_grpc.pb.go); production caller go/vt/vttablet/grpctabletconn/conn.go using queryservicepb.NewQueryClient, plus bench test. Checks returned the pinned ref.",
+      "derived": null
+    },
+    {
+      "name": "istio/istio",
+      "git_url": "https://github.com/istio/istio.git",
+      "default_branch": "master",
+      "commit": "d501e135abadd7492774f428e0873f7d16494d41",
+      "commit_utc": "2026-10-09T10:21:22Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "test + generated only (no application-role callers in-repo)",
+      "note": "Single generated client pkg/test/echo/proto/echo_grpc.pb.go with co-located echo.proto (service EchoTestService); all in-repo callers are test-role (pkg/test/echo/client.go, pkg/test/echo/server/forwarder/grpc.go, pilot/pkg/networking/grpcgen/grpcgen_test.go). Mainstream Istio API clients live in the istio.io/api module outside this repository. Included for generated-client/test stratum coverage; contributes no application-role callers. Checks returned the pinned ref.",
+      "derived": null
+    }
+  ],
+  "excluded": [
+    {
+      "name": "grafana/mimir",
+      "reason": "AGPL-3.0 license is not permissive (eligibility axis 4)."
+    },
+    {
+      "name": "cockroachdb/cockroach",
+      "reason": "no protoc-gen-go-grpc generated clients carrying the unique header (0 matches; gogo-style inline generation) and license recorded NOASSERTION."
+    }
+  ]
+}
