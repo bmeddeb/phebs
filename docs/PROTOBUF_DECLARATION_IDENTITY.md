@@ -1,35 +1,44 @@
-# Protobuf declaration identity and input contract — T49.1 review draft
+# Protobuf declaration identity and input contract — T49.1
 
-*Design artifact for ticket T49.1 (Epic 49). This document grants nothing: no
-release, no pack promotion, no accuracy or completeness claim, no pilot or
+*Contract record for T49.1a (split from T49.1, Epic 49); the decision itself is
+the 2026-10-09 T49.1 ADR in [PLAN.md](../PLAN.md). This document grants nothing:
+no release, no pack promotion, no accuracy or completeness claim, no pilot or
 environment authority, and no runtime behavior. It changes no extractor, no
 identity token, no schema, and no published assertion. `GATE2-V2` remains
 `NOT_ESTABLISHED`; the `phebs.protobuf.contract` pack remains
 `experimental-dark` per [PROTO_GRPC_PACK_CARDS.md](./PROTO_GRPC_PACK_CARDS.md),
 and nothing here reopens, retries, or reinterprets that closed campaign.*
 
-This contract does two of the three things T49.1 names, and defers the third
-honestly:
+The identity resolution (§4), the shared join contract (§7) and the scorable
+surface (§5, §6) are **frozen** by T49.1a. Independent scoring (§8) is **not**
+sealed; it is T49.1b:
 
 1. It **resolves** the provisional repo/path versus descriptor/module identity
-   gate (§4) and **shares one identity/input contract** with T47.2 (§7). These
-   are design decisions grounded in the shipped code and are frozen here.
+   gate (§4) and states the declaration side of the identity/input contract
+   shared with T47.2 (§7). These are design decisions grounded in the shipped
+   code and are frozen here.
 2. It **freezes** the declaration/operation/message/field fact contract and the
    explicit parser-gap taxonomy as the exact scorable surface (§5, §6). Freezing
    a description of what the shipped extractor already emits requires no new
-   authority.
+   authority; `TestFrozenDeclarationContract` and
+   `TestDeclarationLineageMatchesFrozenProtodeclToken` pin the rule IDs, detail
+   schemas and the shared lineage token so the code cannot drift silently.
 3. It **defines the shape** of independent scoring (§8) but does **not** seal it.
    Sealing is blocked on the same two non-fabricable inputs that block
-   [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) and the deferred
-   T47.2b caller-quality protocol: named independent humans and a real randomness
-   beacon (§9). No name, owner, seed, threshold, or digest is invented here.
+   [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) and T47.2's
+   independent caller-quality labels: named independent humans and a real
+   randomness beacon (§9). No name, owner, seed, threshold, or digest is
+   invented here.
 
 ## 1. Purpose and lineage
 
 `phebs.protobuf.contract` reports Protobuf declarations from `.proto` source with
 exact immutable evidence and explicit gaps. Its declaration identity is the join
-key for the exact Caller Map (T47.2), for resolver materialization, and for the
-field-reference recipe (T51.1). Epic 49 owns this pack separately from the caller
+key for the exact Caller Map (T47.2) and for resolver materialization. It is
+**not** today the field-reference join key: the shipped `scip-proto-field` reader
+(`scipfield`) mints the separate SCIP-package family `contract_scip_package_v1_…`
+(§4), so T51.1 must define any field-reference-to-declaration join explicitly
+rather than inherit this one. Epic 49 owns this pack separately from the caller
 product; T49.1 is the shared identity/input contract that
 [ROADMAP.md](./ROADMAP.md) and the 2026-10-09 T48.1 decision in
 [PLAN.md](../PLAN.md) sequence *before* release-loader integration (T48.2):
@@ -48,7 +57,9 @@ The authoritative implementation is
 [`internal/extract/extractors/protodecl/protodecl.go`](../internal/extract/extractors/protodecl/protodecl.go)
 (domain `proto-contract`, version `3.0.0`, schema `t17-v1`). Where this document
 and the code disagree, the code wins and this document is corrected in the same
-PR; the frozen constants in §5 are quoted from source, not paraphrased.
+PR; the frozen constants in §5 are quoted from source, not paraphrased, and a
+change to a pinned rule ID, detail schema or lineage token fails the pin tests
+named above before it can merge unnoticed.
 
 ## 2. The identity gate
 
@@ -92,12 +103,29 @@ identity, and on what input.
 The optional richer inputs — `SCIPCorpus`, `SCIPDocumentScope`,
 `SCIPTypedPartition`, `SCIPDocumentFilter`, and
 [`AttributionCorpus`](../internal/extract/sdk/attribution.go) — add SCIP
-documents, classification, and generated-from provenance. **None of them supplies
-a Go module path, a Protobuf import root, a Buf module name, or a compiled
-`FileDescriptorSet`.** `SnapshotProvenance.external_digest` is a reserved slot for
-a future adapter; it is not populated by the pure reader. The candidate policy for
-`proto-contract` enumerates `hasSuffix(".proto")` only — unlike `scip-proto-field`,
-it does **not** admit `buf.yaml`, so no module-root declaration is even read.
+documents, classification, and generated-from provenance. Some of them carry
+module- or root-shaped signals, and none of them is a trusted declaration
+identity:
+
+- **SCIP package identity.** SCIP symbols name a package manager and package
+  (for `scip-go`, the Go module path). That identifies the *generated Go*
+  package, not the `.proto` declaration set; `scipfield` already mints it as the
+  separate `contract_scip_package_v1_…` family (§4).
+- **Generator invocation roots.** The committed `t20-generated-from-v1` snapshot
+  may name a `generator_invocation_root` and `generator_relative_path` — a protoc
+  invocation root and import-relative name. They are repository-asserted, scoped
+  to one generated root, and used only to map a generated file back to one
+  `.proto` path; they link no descriptor set.
+- **Buf module markers.** `scipfield` treats a committed `buf.yaml` as a Buf
+  module root when mapping generated sources. The `proto-contract` candidate
+  policy enumerates `hasSuffix(".proto")` only, so no module-root marker reaches
+  this reader.
+
+`protodecl` consults `sdk.Corpus` alone. No input supplies a compiled
+`FileDescriptorSet` or a trusted, linked import closure. `SnapshotProvenance`
+populates only `repository_revision`; its reserved `external_digest` kind is for
+a future adapter handed independently verified *attribution-snapshot* bytes, not
+a module manifest or descriptor set.
 
 `protodecl` correspondingly performs **no import resolution and no cross-file
 linking** (its package doc says so). `collectFileContext` reads a file's own
@@ -110,13 +138,15 @@ ceiling (`MaxFileBytes = 4 << 20`), a 500,000-token ceiling (`MaxTokens`), and a
 bounded import-context capture (at most 64 paths, `maxImportContextPaths`, within
 4 KiB, `maxImportContextBytes`).
 
-**Consequence.** Canonical descriptor/module identity (B) is *not derivable* from
-the input the pure reader is given. Producing it would require admitting a new,
-heavier input — a trusted module/import-root manifest plus linked-descriptor
+**Consequence.** Canonical descriptor/module identity (B) is *not provable* from
+the input the pure reader consults: the signals above are repository-asserted
+layout, the generated package's identity, or outside this reader's candidate
+set, and none links a descriptor set. Producing (B) would require admitting a
+new, trusted input — a module/import-root manifest plus linked-descriptor
 extraction (compile the transitive import closure to a `FileDescriptorSet`, or
-accept a checked-in descriptor set with provenance). That input is exactly what
-Epics 51/53 and T51.1 gate on and what the `external_digest` slot reserves. It is
-out of scope for T49.1 and cannot be synthesized from repo/path/bytes.
+accept a checked-in descriptor set with provenance). That input is what Epics
+51/53 and T51.1 gate on. It is out of scope for T49.1 and cannot be synthesized
+from repo/path/bytes.
 
 ## 4. Gate resolution
 
@@ -152,8 +182,10 @@ Why (A) is correct *here*, not merely expedient:
 Why (B) must be a **new prefix-disjoint family**, never a rename of (A):
 
 - **The token is a primary-key component.** `store.ComputeAssertionID` hashes
-  `Lineage` into every assertion ID. Changing the token shape in place re-keys
-  every published assertion, every Surreal index and cursor, the
+  `Lineage` into every assertion ID — declaration and caller assertions alike.
+  Changing the token shape in place re-keys every published assertion, every
+  Surreal index and cursor, the Epic 17 catalog declaration identity
+  `(repository, declaration_lineage, service_fqn[, method])`, the
   `resolvernamespace` candidate key and digests, `rpccallerposting` digests, and
   the `gocaller` fact fingerprint. A rename is a data migration, not a relabel.
 - **Two families must be distinguishable to coexist.** A canonical
@@ -161,10 +193,18 @@ Why (B) must be a **new prefix-disjoint family**, never a rename of (A):
   during any migration window (different repositories, different recipe
   generations). Distinct prefixes keep an old and a new generation from silently
   colliding or double-counting, and let a reader tell which identity it holds.
-- **The non-join fence must be preserved.** [`spike/t221`](../spike/t221/README.md)
-  gate G8 pins that the SCIP-derived `contract_scip_package_v1_…` family **never**
-  joins the `provisional_repo_path_v1_` family. A future (B) family inherits that
-  discipline: distinct spelling, explicit join policy, no accidental unification.
+  Today's validators check only that a resolved lineage is non-empty (§7), so
+  prefix disjointness is a minting discipline, not a validator check; the (B)
+  ticket must add the family check wherever (B) joins.
+- **The non-join fence must be preserved.** The shipped `scipfield` reader keeps
+  its SCIP-package family `contract_scip_package_v1_…` string-prefix-disjoint
+  from `provisional_repo_path_v1_…`; its tests require that prefix on every
+  emitted field reference
+  ([`scipfield_test.go`](../internal/extract/extractors/scipfield/scipfield_test.go)).
+  The Thrift field spike records the same rule against `thriftdecl` as gate G8
+  and decision D6 ([`spike/t221`](../spike/t221/README.md)). A future (B) family
+  inherits that discipline: distinct spelling, explicit join policy, no
+  accidental unification.
 
 A future (B) recipe is therefore its own ticket with its own admitted input, its
 own prefix, its own correctness evidence, and its own review. T49.1 records the
@@ -185,12 +225,18 @@ half-open byte span `[StartByte, EndByte)` derived from the parser's exact
 | `DECLARES_SERVICE` | `joinFullName(package, service)` | `proto-service-v3` | `proto-service-detail-v1` | schema, name |
 | `DECLARES_OPERATION` | `<serviceFQN>/<rpcName>` | `proto-rpc-v3` | `proto-operation-detail-v1` | request/response type references (§6), `ClientStreaming`, `ServerStreaming` |
 | `DECLARES_MESSAGE` | fully-qualified message name | `proto-message-v3` | `proto-message-detail-v1` | schema, name |
-| `DECLARES_FIELD` | `<messageFQN>#<tag>` | `proto-field-v3` | `proto-field-detail-v2` | type reference or `map{key,value}`, cardinality, `oneof` |
+| `DECLARES_FIELD` | `<messageFQN>#<tag>` | `proto-field-v3` | `proto-field-detail-v2` | schema, name, type reference or `map{key,value}`, cardinality, `oneof` |
 
 A proto2 `group` emits **both** a `DECLARES_FIELD` (field name lower-cased, per the
 descriptor convention) and a `DECLARES_MESSAGE` for the synthetic nested message.
 Field cardinality is one of `repeated`, `required`, `optional`, `singular`
 (`fieldCardinality`).
+
+**Not emitted.** Enum declarations and enum values, `reserved` ranges, extension
+ranges and options produce no fact. Enums are indexed only so that a type
+reference can resolve to them (`Kind: "enum"`). These kinds are outside the
+frozen surface: an independent universe (§8) must exclude them or record them as
+out of scope, never as misses.
 
 Common invariants on every emitted fact:
 
@@ -203,10 +249,12 @@ Common invariants on every emitted fact:
   excluded from content identity**, so identical vendored blobs in different
   repositories share atoms (`TestIdenticalCrossRepoBlobDeduplicatesAtom`). This
   asymmetry matters for §7: a lineage change re-keys *caller* atoms, whose
-  fingerprint includes lineage, but **not** declaration atoms.
+  fingerprint includes lineage, but **not** declaration atoms. Declaration
+  *assertions* still re-key, because `store.ComputeAssertionID` includes
+  `Lineage` (§4).
 - Coverage is `sdk.Coverage{Protocols: ["protobuf", "lineage-provisional-repo-path-v1"]}`.
-  Protocols are sorted, deduplicated, and capped at 64 downstream; the run
-  fails closed rather than emit partial coverage.
+  Downstream, the worker sorts the protocols and refuses a duplicate, an invalid
+  token or more than 64; the run fails closed rather than emit partial coverage.
 
 **Candidate scope.** `Candidate(path)` is `hasSuffix(path, ".proto")`. Extraction
 is parser-only: no import resolution, no cross-file linking, no descriptor
@@ -215,8 +263,10 @@ compilation, no code execution, and no Buf invocation.
 **Fail-closed, never partial.** Any candidate read, parse, tree-walk, span, or
 complexity failure aborts the whole staged run: `Extract` returns an empty
 `Coverage` and the error, because "returning successful partial coverage would
-replace known evidence with a subset." A malformed or unsupported declaration is
-therefore a run failure, never a silent empty contract.
+replace known evidence with a subset." A malformed declaration, or one that needs
+linking (an extension, §6), is therefore a run failure, never a silent empty
+contract. The kinds listed under **Not emitted** are a declared scope limit, not a
+failure.
 
 ## 6. Type-reference resolution states and the explicit gap taxonomy
 
@@ -230,15 +280,22 @@ a scoring round must count, and they are the precise pressure point of the §2 g
 | `intrinsic` | — | scalar/built-in type; nothing to link |
 | `same_file` | — | resolved to exactly one declaration in the same file |
 | `unresolved` | `AMBIGUOUS_SAME_FILE_DECLARATION` | more than one same-file candidate for the name |
-| `unresolved` | `INVALID_DECLARATION_KIND` | resolved to a non-message where a message was required (e.g. an RPC input/output) |
+| `unresolved` | `INVALID_DECLARATION_KIND` | resolved to a non-message where a message was required (only an RPC request/response requires one) |
 | `unresolved` | `DECLARATION_NOT_FOUND` | no same-file candidate and the file declares no imports |
 | `unresolved` | `IMPORT_LINKING_UNAVAILABLE` | no same-file candidate **and** the file imports something — the reference may resolve through an import the pure reader does not link |
 
 `IMPORT_LINKING_UNAVAILABLE` is the exact state that a canonical descriptor/module
 identity (§4 (B)) plus import linking would turn into `same_file`/cross-file
-resolution. Until that input exists, it is an **explicit, counted abstention** —
-evidence of the reader's boundary, not an error and not a miss. This is the state
-§7 shares with T47.2.
+resolution. Until that input exists, it is an **explicit abstention on the type
+link** — evidence of the reader's boundary, not an error and not a miss.
+
+These states are recorded **per reference, inside the fact Detail**, not as
+separate assertions. The containing `DECLARES_FIELD` or `DECLARES_OPERATION` is
+still emitted at `Tier: "exact"` — the declaration was found; only its type link
+is unproved — and `protodecl` emits no unresolved assertion, so the coverage
+manifest's unresolved count stays 0. A scoring round counts these states by
+reading `type`, `map.key`/`map.value`, or `request`/`response` from the Detail,
+and counts them against references, never against the declaration denominator.
 
 Beyond type references, the extractor fails closed (whole-run error, §5) on:
 extension fields (`ExtendNode`, at file top level or inside a message body) with
@@ -249,8 +306,10 @@ invalid parser span or a parser-text/source mismatch; and any input exceeding th
 
 ## 7. Shared identity/input contract with T47.2 (the exact Caller Map join)
 
-T49.1 and T47.2 share **one** identity/input contract, and this section is its
-authority. The `attribution.go` comment states the requirement exactly:
+T49.1 and T47.2 share **one** identity/input contract. This section states its
+declaration side; T47.2's caller-quality protocol states the caller side and must
+cite this section rather than restate the token. The `attribution.go` comment
+states the requirement exactly:
 
 > `declarationLineageID` is the same provisional repository/path identity used by
 > protodecl and thriftdecl. Generated-from provenance must join the declaration
@@ -265,35 +324,54 @@ The shared contract:
   where `declarationPath` is the **`.proto` source path**, not the generated
   `*_grpc.pb.go` stub path. `protodecl` mints it over the `.proto` path;
   `attribution` mints the identical token over the snapshot `DeclarationPath` so
-  the join is byte-identical.
+  the join is byte-identical. The two mints are independent copies of one recipe;
+  `TestFrozenDeclarationContract` and
+  `TestDeclarationLineageMatchesFrozenProtodeclToken` pin both to one literal.
+- **Single-declaration-repository scope.** Both sides mint over the same
+  repository name: `attribution` uses the extraction corpus's repository for
+  every declaration path and requires that path to exist in that corpus. An exact
+  join therefore exists only when the `.proto` declaration is committed in the
+  same repository as the generated client and its callers. A declaration that
+  lives elsewhere yields no generated-from candidate and never joins; that is an
+  abstention, not a cross-repository claim.
 - **The syntactic consumer lane does not join, by design.** The `grpcgo`
   extractor mints the *same prefix* over the **stub** path — a disjoint value that
-  never equals a declaration lineage. Stubs declare no facts of their own. This is
+  never equals a declaration lineage. Stubs carry no declaration facts. This is
   intentional: the exact join is declaration↔caller, not stub↔caller.
-- **Four validators enforce the contract in code.** `resolvernamespace`
+- **Validators enforce presence, not family.** `resolvernamespace`
   ([`model.go`](../internal/resolvernamespace/model.go)), `resolvermaterialize`
-  ([`view.go`](../internal/resolvermaterialize/view.go)), `rpccallerposting`
-  ([`model.go`](../internal/rpccallerposting/model.go)), and `gocaller`
-  ([`direct.go`](../internal/extract/extractors/gocaller/direct.go)) each require a
-  **non-empty** `DeclarationLineage` for a `resolved` record and an **empty** one
-  for every abstention; `gocaller` rejects a "resolved direct descriptor [that]
-  lacks declaration authority." The `__syntax__` sentinel in `direct.go` is the
-  direct/syntactic lane's own non-declaration identity; the declaration contract
-  neither mints nor joins it.
+  ([`view.go`](../internal/resolvermaterialize/view.go)) and `rpccallerposting`
+  ([`model.go`](../internal/rpccallerposting/model.go)) require a **non-empty**
+  `DeclarationLineage` for a resolved record and an **empty** one for every
+  abstention (a `resolvernamespace` conflict record is empty while each of its
+  candidates carries one). `gocaller`'s `validateDirectDescriptor`
+  ([`direct.go`](../internal/extract/extractors/gocaller/direct.go)) rejects a
+  "resolved direct descriptor [that] lacks declaration authority" but requires
+  only a reason of a non-resolved one; caller emission then writes an empty
+  assertion `Lineage` for every abstention. None of the four checks the token's
+  prefix or family — any non-empty text passes — so the provisional family is
+  held by the shared minting recipe, not by these validators. The `__syntax__`
+  sentinel in `direct.go` is the direct/syntactic lane's internal placeholder
+  while describing generated symbols; it is never published, and the declaration
+  contract neither mints nor joins it.
 - **The shared boundary for scoring.** `IMPORT_LINKING_UNAVAILABLE` (§6) is a
-  **declaration-side** abstention. T47.2 caller-quality scoring must treat it as an
-  explicit counted gap in the declaration denominator — never as a caller miss,
-  never as an extraction error, and never as evidence that a caller edge is wrong.
-  Symmetrically, a resolved caller edge inherits the provisional scope of the
-  declaration lineage it joins: it is exact *for that repo/path declaration set*,
-  and it is not a cross-repository, cross-module, or runtime claim.
+  **declaration-side** abstention on a type link inside an emitted declaration.
+  It does not affect whether an operation's declaration lineage resolves, so T47.2
+  caller-quality scoring must not count it at all — never as a caller miss, never
+  as an extraction error, and never as evidence that a caller edge is wrong. Only
+  T49.1b's gap-classification family (§8) scores it. Symmetrically, a resolved
+  caller edge inherits the provisional scope of the declaration lineage it joins:
+  it is exact *for that repo/path declaration set*, and it is not a
+  cross-repository, cross-module, or runtime claim.
 
-Because declaration atoms exclude lineage from their fingerprint while caller atoms
-include it (§5), this contract is stable under the identity freeze: freezing (A)
-changes no caller atom, and any future move to (B) is a caller-side re-key that
-must be planned as such.
+Freezing (A) changes no token, so it moves no atom and no assertion. A future move
+to (B) re-keys **both** sides: caller atoms, whose fingerprint includes lineage
+(§5), and every declaration and caller assertion ID, because
+`store.ComputeAssertionID` includes `Lineage` (§4). Only declaration atoms, whose
+fingerprint is `predicate + "|" + object`, survive it. Such a move must be planned
+as a versioned migration of both sides.
 
-## 8. Prospective independent scoring (shape only — unsealed)
+## 8. Prospective independent scoring (T49.1b, shape only — unsealed)
 
 The frozen surface (§5, §6) is what an independent round would score. The shape
 below reuses the sealed V2 label machinery byte-for-byte, exactly as
@@ -307,19 +385,21 @@ is not a round, produces no number, and seals nothing.**
 
 The declaration claim families are *complementary to, and non-overlapping with,*
 the caller/registration/end-to-end families in the gold protocol, which explicitly
-excludes proto field-level lineage. T49.1 owns the declaration families:
+excludes proto field-level lineage. T49.1b owns the declaration families:
 
 - **Exact-emission precision** — for each emitted `DECLARES_*` fact, does the
   cited immutable span in the cited blob contain exactly that declaration, with
   the correct object identity, detail, and cardinality? Site identity is the
   immutable citation coordinate `repository@commit:path:startByte-endByte`.
-- **Gap-classification correctness** — for each abstention, is the `Resolution` /
-  `Reason` (§6) the correct one, and is a fail-closed condition (§5) correctly a
-  run failure rather than a silent subset?
+- **Gap-classification correctness** — for each type reference (§6, read from
+  the fact Detail), is the `Resolution` / `Reason` the correct one, and is a
+  fail-closed condition (§5) correctly a run failure rather than a silent subset?
 - **Declaration recall** — against a universe enumerated **independently of phebs
   output** (§4-style: `<Gate 0: enumeration method — e.g. exhaustive .proto scan
   with package/message/service/field expansion, tool and version pinned>`), what
-  fraction of real declarations in the snapshot did the extractor emit?
+  fraction of real declarations of the emitted kinds did the extractor emit? The
+  **Not emitted** kinds of §5 are excluded from the universe or reported as out of
+  scope, never counted as misses.
 
 Preregistration discipline (mirrors the gold protocol, all values `<Gate 0>` until
 sealed): sampling unit and strata (`<Gate 0: e.g. predicate × code_role ×
@@ -344,23 +424,24 @@ here:
 1. **Independent humans.** A validation owner plus at least two blind reviewers
    per sheet and an adjudicator, named and signed per Gate 0. The pack cards record
    "Independent validation owner: none assigned; release-blocking," and the
-   PILOT_CHARTER Gate 0 roles are still literal `<name>` placeholders. The
-   deferred T47.2b caller-quality protocol is blocked on the same missing humans.
+   PILOT_CHARTER Gate 0 roles are still literal `<name>` placeholders. T47.2's
+   independent caller-quality labels are blocked on the same missing humans.
 2. **A real public randomness seed.** A NIST beacon pulse URI and its 64-hex
    output for deterministic, third-party-reproducible sampling. The sibling gold
    protocol uses a conspicuous **mock** beacon (`6666…`) and states it does "not
    fill or seal Gate 0." No real pulse is fabricated here.
 
 Also unrun and required before any round: the §8 independent universe enumeration
-that fixes the strata and the recall denominators. Until these exist, T49.1's
-scoring half stays prospective. This mirrors, and does not relax, the deferral
-already recorded for T47.2b.
+that fixes the strata and the recall denominators. Until these exist, T49.1b
+stays prospective. This mirrors, and does not relax, the same blocker on T47.2's
+independent caller-quality scoring.
 
 ## 10. What this contract can and cannot produce
 
 **Can.** Freeze the declaration identity as (A) for the pure-reader scope; state
-the input boundary that makes (B) underivable today; fix the shared
-`DeclarationLineage` join contract with T47.2; freeze the exact `DECLARES_*` fact
+the input boundary that makes (B) unprovable today; fix the declaration side of
+the shared `DeclarationLineage` join contract with T47.2; freeze the exact
+`DECLARES_*` fact
 surface and gap taxonomy as a scorable target; and define an unsealed, reusable
 independent-scoring shape.
 
