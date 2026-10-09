@@ -16925,6 +16925,287 @@ large-monorepo and separate pilot/SCIP-evidence gates. Integrating a passing
 ticket still requires Ben's explicit merge request; no merge or current
 production promotion is authorized merely by this backlog entry.
 
+## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
+
+Ben requests a fast plan that starts a production epic for every currently
+experimental/dark capability. Epic 47 remains the first product priority after
+SCIP operational availability. Epics 48–58 reuse implemented readers, workers,
+publication, security and lifecycle mechanics; work closes the actual identity,
+quality, registration and operating gaps instead of rebuilding those systems.
+This program creates no current production status or large-scale claim.
+
+### Order and dependencies
+
+| Lane | Next work | Dependencies and first deliverable |
+|---|---|---|
+| Immediate SCIP | Existing T45.10/T45.10a activation lineage | Retain exact native installed-generation/navigation/teardown proof and its separate merge decision |
+| First production product | T47.2 Caller Map; T49.1 protobuf declaration identity/discovery | One shared identity/input contract, frozen caller-quality corpus, independent labels and prospective thresholds |
+| Shared release path | T48.2 enforcement; T48.3 validation/operating tooling | Exact release schema/status/signature model and refusal tests; no extractor activation required to build it |
+| Next product | Epic 50 caller comparison | Released exact Caller Map recipe and a directly validated old/replacement comparison |
+| Protobuf follow-ons | Epics 51 and 53 | Proven declaration identity; independently admitted SCIP input for fields and pinned sandboxed Buf for WIRE |
+| Composed Impact | Epic 54 | Only the specific released caller, field, declaration and verdict dependencies the selected report claims |
+| Independent protocol lanes | Epic 52 Thrift fields; Epic 58 RPC syntactic evidence; Epics 55/56 Kafka planes | Separate protocol/generator/library corpus, quality and operating results; no wait for unrelated product promotion |
+| Kafka product | Epic 57 Topics | One or both independently released Kafka planes, with the other explicitly unavailable |
+
+These are dependencies, not permission to run expensive jobs concurrently on
+the 14.89-GiB host. Keep at most one expensive package/race/native rehearsal
+running at a time, freeze its resource/headroom envelope, and serialize Git
+and shared-spine edits through the lead. Independent contract, corpus and
+implementation preparation can proceed while that host gate runs. Backend
+work owns no UI change: each product's presentation ticket receives Ben's
+routed handoff before editing UI or DESIGN_CHARTER. There is no promised
+calendar completion date before the corpus, workload and review work is sized.
+
+### Every retained experimental evidence pack has a release owner
+
+| Retained pack ID | Owning promotion epic | Independent result required |
+|---|---|---|
+| `phebs.protobuf.contract` | 49 Contract Atlas/declarations | Canonical declaration identity and exact declaration quality |
+| `phebs.grpc.consumer.go` | 58 Go RPC syntactic evidence | Call/registration shape accuracy and unresolved accounting |
+| `phebs.grpc.caller.go` | 47 Caller Map | Exact declaration-resolved caller and claimed attribution quality |
+| `phebs.protobuf.field.go` | 51 Protobuf fields | Exact field identity and supported Go generated-field reference quality |
+| `phebs.thrift.contract` | 49 Contract Atlas/declarations | Thrift identity and declaration quality, separate from protobuf |
+| `phebs.thrift.consumer.go` | 58 Go RPC syntactic evidence | Thrift generator/library call and registration quality |
+| `phebs.thrift.field.apache` | 52 Thrift fields | Apache generator-specific field identity/reference quality |
+| `phebs.thrift.field.thriftrw` | 52 Thrift fields | thriftrw generator-specific field identity/reference quality |
+| `phebs.kafka.producer` | 55 Kafka producer | Supported library/topic-expression producer precision/recall and gap accounting |
+| `phebs.kafka.consumer` | 56 Kafka consumer | Supported library/topic-expression consumer precision/recall and gap accounting |
+
+Caller comparison, Buf WIRE, composed Impact and Topics are product claims
+with additional release contracts; they are not extra successful results
+inferred from this ten-pack inventory. If a proposed exact Thrift caller or
+other recipe asserts a claim not covered by an existing card, author and
+validate a prospective claim-specific card rather than borrowing a consumer
+card. Coverage certificates, immutable proof/citation readers and release
+status are common infrastructure, but every projected fact carries its own
+admitted recipe and freshness/authorization identity.
+
+### Common promotion bar, applied independently
+
+Every product/pack ticket below must: freeze supported claims, non-claims,
+canonical identity/input/tool/schema versions and current numerical ceilings;
+preregister a reproducible personal/public-source population, independently
+reviewed labels, metric denominators, thresholds and stop rules before scoring;
+measure all claimed quality/coverage/attribution or composed relationships;
+prove ordinary startup plus each declared authorized HTTP/UI/read-only-MCP surface;
+retain meaningful normal/race, recovery/hard-death, backup/restore, pressure,
+generation/cursor/citation and denied-source gates for its actual boundaries;
+measure an operating envelope below ceilings with headroom on this host; and
+record owner, independent reviewer, expiry/revalidation and suspension/rollback
+behavior. Existing evidence is reusable only for its exact version/scope.
+
+Each promotion binds exact card/manifest/implementation/binary/validation
+digests in its own release decision and names the hold superseded for only
+that claim. Unknown/unavailable/partial/stale/failed/overflow states stay
+explicit; empty results are not universal negatives. Review enumerates
+per-query/request, sync, startup/restart, retry/no-op, publication, locks,
+cache invalidation and worst-case bounded memory/disk/children. Same-PR PLAN
+and owning configuration/workflow/operations guides agree. No release field
+is blank or unmeasured, and a test/fixture demo alone cannot establish quality
+or production support. Historical STOP/NOT_ESTABLISHED/DO_NOT_RELEASE bytes,
+large-scale and pilot authority remain exact; a new scoped decision earns any
+supersession. Generated managed SCIP extraction evidence still needs its
+prospective T45.9 admission. Investigations and Workbench remain retired.
+
+**T48.1 · Production capability inventory and fast dependency plan** — record
+the matrix, execution order, shared gaps, independent release units and all
+named epics in BACKLOG, ROADMAP and a same-change PLAN decision. AC: all ten
+retained packs have owners; existing dark product surfaces have promotion
+tickets; prerequisites have no dependency cycle or unrelated all-packs gate;
+no runtime/default/status/UI/historical artifact changes; docs/glossary and
+whitespace pass. Cost: no new runtime work or resources.
+
+**T48.2 · Prospective signed release enforcement and stable recipe selection**
+*(first shared implementation; needs T48.1)* — implement the current
+design-only release boundary for fixed in-tree modules. PR-sized slices own
+the schema/verifier first, then startup/runtime selection. AC: reject unknown,
+duplicate/noncanonical fields, foreign/mismatched digests, invalid signatures,
+unmeasured claims, expired/revoked releases and unsupported versions;
+registration cannot be obtained by toggling a provisional extraction switch;
+ordinary startup admits only the selected validated recipes; an absent
+production selection adds no pack work. Define compatibility and suspension
+for already published results without rewriting retained evidence. No
+third-party code/manifest loader or retired workflow returns. Verify release
+metadata once at its admitted boundary and define exact invalidation; no
+per-query full artifact hashing or corpus scan. Every owning product still
+needs its own passing record before activation.
+
+**T48.3 · Reusable independent validation and operating receipt harness** —
+share corpus sealing, label separation, scoring/denominator checks,
+authorization/lifecycle test drivers and current-host cost receipts. AC:
+blind/independent label custody and protocol-specific scoring remain separate;
+missing denominators/labels/thresholds refuse; composed accuracy is directly
+measured rather than multiplied from component metrics; no code paths label
+historical `not_run` or capacity STOP as PASS; each run is exact-source/input
+bound and each pack gets its own quality and operating result. Expensive runs
+are serial with retained failure custody, joined children and real teardown.
+
+**T48.4 · Shared release operations and qualification** — document stable
+configuration, supported status, validation expiry, suspension, rollback and
+revalidation; test the absent/one-pack/mixed-pack startup and API/MCP discovery
+matrix. AC: one released component does not activate another; denied source
+stays undisclosed; a suspended dependency cannot appear as current released
+evidence; required source/runtime/cost review and shared machine checks pass.
+This common substrate releases no product by itself.
+
+## Epic 49 · Contract Atlas and declaration production readiness
+
+Own `phebs.protobuf.contract` and `phebs.thrift.contract` separately, plus
+the exact bounded declaration discovery/detail surface. Caller Map uses only
+the necessary admitted discovery subset; Atlas-wide promotion is independent.
+
+**T49.1 · Protobuf declaration identity and validation contract** — resolve
+the provisional repo/path versus descriptor/module identity gate and share
+one reviewed identity/input contract with T47.2; freeze and independently
+score declaration/operation/message/field facts and explicit parser gaps.
+
+**T49.2 · Thrift declaration identity and validation contract** — independently
+freeze namespace/include/generator lineage and declarations, ambiguity,
+missing/unsupported input and gap accounting; protobuf results grant no Thrift
+support.
+
+**T49.3 · Stable Atlas startup and exact discovery/detail** — use T48's
+release selection for only admitted declaration recipes; prove real source,
+authorization, paging/currentness and immutable citations; unrelated
+implementation/consumer evidence remains unavailable unless separately released.
+
+**T49.4 · Measured Atlas promotion and product closure** — satisfy the common
+promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
+One protocol may release while the other remains explicitly unavailable.
+
+## Epic 50 · Caller comparison production readiness
+
+**T50.1 · Exact old/replacement comparison contract and gold cases** — depends
+on the supported Epic 47 identity; independently validate source/unit unions,
+`old_only_evidence`, `both_evidence`, `new_only_evidence` and unresolved states.
+No comparison asserts migration completion or decommission safety.
+
+**T50.2 · Stable comparison registration and joint generation fencing** —
+retain two-publication authorization, cursor/lease/citation binding and
+generation drift/refusal; unsupported endpoint pairs are unavailable.
+
+**T50.3 · Measured comparison promotion** — satisfy the common bar on real
+old/replacement source, concurrent publication and bounded combined read cost;
+release requires its own result even when both Caller Maps are released.
+
+## Epic 51 · Protobuf field-reference production readiness
+
+**T51.1 · Exact field/SCIP identity and independent quality** — depend on
+T49.1 and an admitted SCIP input recipe; freeze generator/indexer/version,
+descriptor field identity, reflection/dynamic/unknown exclusions and direct
+reference quality. Managed navigation authority alone is insufficient.
+
+**T51.2 · Stable field reader registration and source fencing** — isolate
+this recipe from the provisional proto umbrella; preserve exact committed
+source, declaration, SCIP, authorization and gap identity.
+
+**T51.3 · Measured field-reference promotion** — satisfy the common bar and
+publish exact supported generators, input formats, operating bounds and expiry.
+
+## Epic 52 · Thrift field-reference production readiness
+
+**T52.1 · Apache Thrift field contract and independent quality** — freeze
+generator versions, stable field IDs, symbol/tag binding and unsupported shapes;
+depend on the selected T49.2 declaration and independently admitted SCIP recipe.
+
+**T52.2 · thriftrw field contract and independent quality** — separate
+generator-specific identity and quality population; no Apache result transfers.
+
+**T52.3 · Independent stable registration and measured promotion** — split
+the current shared experimental switch into explicitly selected admitted
+recipes; satisfy the common bar for each. Either generator may release alone.
+
+## Epic 53 · Protobuf Buf WIRE compatibility production readiness
+
+**T53.1 · Verdict/input contract and independent golden changes** — freeze
+pinned Buf/tool/config/source bytes, WIRE-only semantics and positive/negative/
+unsupported IDL changes; depend on admitted protobuf input identity. The
+verdict covers those bytes, not runtime or deployment compatibility.
+
+**T53.2 · Stable sandboxed compatibility registration** — retain bounded
+closed execution, no source escape/network discovery, exact digest-bound
+result and authorization; optional unreleased field evidence stays unavailable.
+
+**T53.3 · Measured compatibility promotion** — satisfy the common bar for
+the standalone WIRE verdict and separately qualify any enrichment it claims.
+Thrift has no Buf WIRE support by implication.
+
+## Epic 54 · Contract Impact production readiness
+
+**T54.1 · Supported report contract and direct end-to-end quality** — freeze
+operation/field/proposed-change report shapes and dependencies; measure the
+actual composed output and uncertainty, not a product of component metrics.
+
+**T54.2 · Stable report registration with per-input release checks** — consume
+only the selected admitted declaration/caller/field/compatibility recipes;
+missing/stale/unreleased inputs remain visibly unavailable. Preserve exact
+source, coverage and citations; a supported report never asserts migration
+completion, universal consumer absence or safe retirement.
+
+**T54.3 · Measured Impact promotion** — satisfy the common bar per report
+shape; one shape may release without claiming the others. Dependencies are
+the specific inputs it actually consumes, not every experimental pack.
+
+## Epic 55 · Kafka producer-evidence production readiness
+
+**T55.1 · Producer topic identity and independent quality** — freeze
+supported Go client versions and literal/constant expression shapes, plus
+dynamic/ambiguous/import and extraction-gap denominators; retain static
+source-spelled topic evidence, not a runtime broker identity.
+
+**T55.2 · Independent stable producer registration** — select only admitted
+producer recipes and publication; do not enable consumers through the existing
+shared provisional Kafka switch. Preserve first-class unresolved census.
+
+**T55.3 · Measured producer promotion** — satisfy the common bar, explicit
+library/version/topic-expression scope and bounded topic query/citation costs.
+
+## Epic 56 · Kafka consumer-evidence production readiness
+
+**T56.1 · Consumer subscription identity and independent quality** — freeze
+supported Go client and subscription/expression shapes, consumer-specific
+precision/recall and unresolved/gap population; producer quality is not reuse.
+
+**T56.2 · Independent stable consumer registration** — select only admitted
+consumer recipes; missing publication never appears as a measured zero and
+topic-dependent rows stay separate from topic-independent abstention census.
+
+**T56.3 · Measured consumer promotion** — satisfy the common bar independently
+of Epic 55, including exact source, permission, recovery and per-plane costs.
+
+## Epic 57 · Topics product production readiness
+
+**T57.1 · Topic overview/detail composition contract** — consume one or both
+released Kafka planes, with separate per-plane publication/coverage/quality
+state; directly validate the composed topic inventory and paging/citations.
+
+**T57.2 · Stable Topics UI/HTTP/MCP exposure** — route only admitted evidence,
+keep unsupported/unreleased planes explicitly unavailable, retain the complete
+unresolved census, and receive the presentation handoff for any UI change.
+
+**T57.3 · Measured Topics promotion** — satisfy the common bar for the stated
+producer-only, consumer-only or combined product; none implies runtime topic
+activity, complete topology or equality across broker environments.
+
+## Epic 58 · Go RPC syntactic consumer and registration production readiness
+
+This owns the existing consumer/registration cards independently from exact
+Caller Map, rather than promoting bare-operation matching as resolved callers.
+
+**T58.1 · Go gRPC syntactic consumer/registration quality** — freeze supported
+client/server registration shapes and Go/generator/tool versions; independently
+measure matching evidence and unresolved outcomes; bind declaration facts when
+claimed and never relabel a name match as an exact caller.
+
+**T58.2 · Go Thrift syntactic consumer/registration quality** — independently
+freeze thriftgo/other admitted generator/library shapes and input identity;
+measure unsupported/dynamic/ambiguous cases and registration claims separately.
+
+**T58.3 · Independent stable recipe registration and measured promotion** —
+satisfy the common bar per protocol/claim, retain proof/coverage/HTTP/MCP
+parity, and expose only admitted matching evidence. These results neither
+promote Epic 47 exact resolution nor all Contract Atlas implementation detail.
+
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
 Serve the repository's markdown documentation, rendered, from the phebs binary

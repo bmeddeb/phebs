@@ -149,6 +149,26 @@ does not change through this planning decision. Epic 42 continues as the
 separate Linux/scale track, and the retained pilot, generated-SCIP evidence
 hold and unrelated experimental packs retain their own authority and gates.
 
+**Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
+give every current experimental evidence pack and composed product surface a
+named production path. Epic 48 implements the currently design-only signed
+release enforcement and shares validation/operating machinery; each other
+epic owns its own scope and measured decision. Priority is SCIP availability,
+then Caller Map (47) with the declaration identity/discovery subset of Atlas
+(49), then caller comparison (50). Protobuf fields (51) and compatibility
+(53) follow their input/declaration prerequisites; Impact (54) follows the
+specific released caller/field/verdict inputs it claims. Apache/thriftrw
+fields (52), RPC syntactic consumer/registration evidence (58), Kafka producer
+(55) and Kafka consumer (56) have independent recipe gates; Topics (57)
+composes only admitted Kafka planes. A producer result never promotes the
+consumer. The next tickets are T47.2, T49.1 and T48.2; prepare independent
+contracts/corpora while shared runtime enforcement is built, but serialize
+expensive host execution and Git/spine edits. Production support starts inside
+measured limits with headroom; existing safety ceilings alone are not an
+operating result. No capability waits on an unrelated pack or an unclaimed
+large-scale workflow, and no new status is granted by this plan. The full
+dependency and pack-ownership matrix is in the Epic 48 backlog section.
+
 phebs ships as a self-hosted, single-node Go application with:
 
 - Git repository synchronization, zoekt search, repository browsing, SCIP code
