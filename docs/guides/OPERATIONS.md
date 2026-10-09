@@ -3485,6 +3485,123 @@ protobuf-only and byte-stable; the protocol-neutral `find_field_references`
 route, impact report, and MCP tool fan out across every registered
 field-reference domain whose number rules admit the requested identity.
 
+### Pack-release status, expiry, suspension and rollback (T48.4)
+
+The provisional switches above are development opt-ins. A pack that has been
+through release validation is governed instead by its signed `PackRelease`
+record, selected by
+[`release_selection`](./CONFIGURATION.md#signed-pack-release-selection-t482-t484).
+This section is the operating contract for that gate: what each status permits,
+how a release expires, how to suspend or roll one back, and what forces
+revalidation. It releases no product by itself, and every owning pack still
+needs its own passing quality and operating record before it may be admitted.
+
+**Status comes from the verified record, never from the pack.** A manifest or
+card cannot assert its own lifecycle. The derived status travels in the signed
+release, so changing it requires a new signature over a new record.
+
+| Status | Permitted load modes | Ordinary claim-bearing work |
+| --- | --- | --- |
+| `design` | none | never |
+| `experimental-dark` | internal test only | never |
+| `shadow` | authorized evaluation only | never |
+| `released` | ordinary claim, decision support, historical reproduction | yes, while unexpired and applicable |
+| `suspended` | historical reproduction, diagnostic | never |
+| `retired` | historical reproduction | never |
+
+Only an unexpired, applicable `released` pack may serve ordinary claim-bearing
+or decision-support workflows. A suspended or retired pack cannot perform new
+ordinary claim-bearing work; historical reproduction remains subject to current
+authorization, retained artifacts, and the record's bound
+historical-reproduction rule.
+
+At startup phebs admits a pack only when the record that governs it is
+`released`. A governing record in any other status **withdraws** the pack: the
+pack is not admitted, and no older record in the same directory replaces it.
+Withdrawal is not a server failure, so one suspended pack never refuses an
+otherwise healthy startup.
+
+**Validation expiry is automatic suspension.** A release carries its own
+approval time and expiry triggers. An expired record fails verification, and
+validation expiry, a failed drift check, a provenance break, or an unresolved
+release inconsistency each require automatic suspension with no ordinary
+claim-bearing load. There is no expiry override, no grace window, and no
+configuration key that re-admits an expired record; the correction is a new
+signed release produced by revalidation.
+
+**Suspending a release.** Two supported controls, and they compose:
+
+1. Sign and publish a new record for the same `pack_id` with a higher
+   `release_version` and `derived_status: suspended`. Because the highest
+   version governs, that record withdraws the pack on the next startup. This is
+   the authoritative control: it is signed, it carries the cause, and it travels
+   with the release directory.
+2. Add the governing record's `release_id` to `release_selection.revoked` in
+   configuration. This withdraws the pack without a new signature, which is the
+   right control when the signer is unavailable or the record itself is
+   suspected. Revocation is judged against the governing record only, so
+   revoking an already-superseded record withdraws nothing and does not refuse
+   the selection.
+
+Revoking or suspending the governing record withdraws the whole pack. It never
+falls back to an earlier released record in the same directory, because a
+fallback would silently re-admit the very behavior the withdrawal was meant to
+stop. Removing a record from the directory is not a supported control: every
+record present must verify, and a deletion leaves no signed cause behind.
+
+**Rolling back.** A rollback is a newly signed record, not a consequence of
+withdrawing a later one. Sign the intended earlier content at a
+`release_version` higher than the bad record's, publish it, and restart. The
+withdrawn record may stay in the directory — it is superseded by version, and
+additionally listing its `release_id` in `revoked` records the intent
+explicitly. Retained evidence from the bad release is never rewritten: already
+published results keep their own release binding, and a compatibility or
+suspension decision about them is recorded forward.
+
+**Revalidation.** Every byte change creates a new manifest digest and therefore
+a new `PackRelease`, which does not by itself imply a new measured claim. The
+minimum impact rules are:
+
+| Change | Required action |
+| --- | --- |
+| Editorial card wording with no semantic effect | New card digest and release binding; recorded no-semantic-change review |
+| Query column, ordering, or stricter platform safety ceiling | New manifest version and release binding; product/security review as applicable |
+| Looser limit or new workflow/load mode | Card review plus applicable operating and authorization validation before release |
+| Predicate, construct, qualifier, evidence, identity, decision, comparability, projection, or negative-wording semantics | New `pack_claim_version`; suspend the prior release when applicability changes; revalidate affected claims |
+| Extractor, adapter, schema, rule implementation, compiler, or toolchain behavior | New artifact identities and release binding; apply the card's change-impact matrix and revalidate affected measured properties |
+| Authorization, redaction, aggregate, proof, export, or token behavior | Security review and authorization regression validation; suspend if non-disclosure could be affected |
+| Validation expiry, failed drift check, provenance break, or unresolved release inconsistency | Automatic suspension; no ordinary claim-bearing load |
+
+A pack's own change-impact matrix may require stricter action. It may not
+weaken these minimums. Same revision is not sufficient by itself for
+comparability: a comparison must also evaluate claim and logical identity,
+schema, rule, extractor, adapter, universe, enumeration, snapshot policy, build
+configuration, external-input semantics, and current principal visibility.
+
+**Observing a withdrawal.** One bounded startup log line names each configured
+pack that was not admitted, as `pack_id=cause`, where the cause is `revoked` or
+the governing record's own lifecycle status. The line reports at most sixteen
+entries and then an omitted count. It discloses only a pack identifier the
+operator configured and a bounded status word — never a record's contents,
+signature, approval set, referenced artifacts, or any repository source, so a
+denied pack stays as undisclosed as an absent one.
+
+**Cost and blast radius.** The selection is read once, at the admitted startup
+boundary, and never on a request, sync, or per-query path. An absent or empty
+`path` performs no read and adds no pack work. An empty `revoked` list
+allocates nothing. One released component never activates another: a pack is
+admitted only through its own governing record bound to its own fixed in-tree
+recipe, and a released pack replaces the experimental-dark extractor for its
+own domain rather than widening any other domain's registration.
+
+**Current posture.** This gate ships dark. No pack recipe is bound in this
+binary, and this build cannot yet bind a released record to its own binary,
+toolchain, and referenced artifacts. Any governing `released` record therefore
+refuses startup with an unresolved-reference cause until the owning epic
+supplies both its recipe and its first passing quality and operating record.
+Suspension, revocation, expiry, and withdrawal are implemented and observable
+today; admission is not yet reachable.
+
 ### Source-free service-directory walkthrough
 
 `make dev` and `make dev-api` select the exact retained

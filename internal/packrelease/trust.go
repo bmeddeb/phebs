@@ -54,6 +54,12 @@ type Options struct {
 	// Revoked lists release IDs withdrawn by a later suspension, revocation or
 	// superseding release. A listed release is rejected in every lifecycle
 	// state, so a withdrawn record cannot be replayed before it expires.
+	//
+	// Selection judges revocation once, against the record that governs its
+	// pack, rather than against every record present: see LoadSelection. That
+	// keeps a rollback to a signed earlier release expressible as revoking the
+	// bad record, which would otherwise refuse the whole selection because the
+	// revoked record is still one of the records in the directory.
 	Revoked map[string]struct{}
 }
 
@@ -69,6 +75,13 @@ func ParsePublicKey(encoded string) (ed25519.PublicKey, error) {
 // ValidKeyID reports whether id can name a release signing key: a record's
 // signature.key_id must match the same identifier grammar.
 func ValidKeyID(id string) bool { return idRE.MatchString(id) }
+
+// ValidReleaseID reports whether id can name a release record: a record's
+// release_id must match the same identifier grammar, so an operator-listed
+// revocation can only ever name something a signed record could carry. A
+// malformed entry is refused at configuration time rather than silently
+// revoking nothing.
+func ValidReleaseID(id string) bool { return idRE.MatchString(id) }
 
 // now returns the evaluation instant, defaulting to the current wall clock.
 func (o Options) now() time.Time {

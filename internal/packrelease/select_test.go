@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -43,6 +44,20 @@ func loadOptions(public ed25519.PublicKey) Options {
 			baseline.Validation.ArtifactID: baseline.Validation.Digest,
 		},
 	}
+}
+
+// revokedSet builds the operator revocation list LoadSelection judges against
+// the governing record. An empty list yields nil, matching production, which
+// allocates nothing when the operator revoked no release.
+func revokedSet(ids []string) map[string]struct{} {
+	if len(ids) == 0 {
+		return nil
+	}
+	set := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		set[id] = struct{}{}
+	}
+	return set
 }
 
 func TestLoadSelectionEmptyPathAdmitsNothing(t *testing.T) {
@@ -131,6 +146,165 @@ func TestLoadSelectionGoverningRecord(t *testing.T) {
 				t.Fatalf("admitted = %t (%v), want %t at %q", ok, release, test.admits, test.version)
 			}
 		})
+	}
+}
+
+// TestLoadSelectionRevocation pins the operator revocation control. Revocation
+// is judged once, against the record that governs its pack, so a rollback to a
+// signed earlier release is expressible as revoking the bad record instead of
+// refusing the whole selection, and revoking the governing record withdraws the
+// pack instead of silently falling back to an older record.
+func TestLoadSelectionRevocation(t *testing.T) {
+	onlyBaseline := func(t *testing.T, dir string, private ed25519.PrivateKey) {
+		writeSigned(t, dir, "a.json", "key-1", private, nil)
+	}
+	baselinePlusNewer := func(t *testing.T, dir string, private ed25519.PrivateKey) {
+		onlyBaseline(t, dir, private)
+		writeSigned(t, dir, "b.json", "key-1", private, func(r *PackRelease) {
+			r.ReleaseID, r.ReleaseVersion = "rel-0002", "1.10.0"
+		})
+	}
+	baselinePlusSuspension := func(t *testing.T, dir string, private ed25519.PrivateKey) {
+		onlyBaseline(t, dir, private)
+		writeSigned(t, dir, "b.json", "key-1", private, func(r *PackRelease) {
+			r.ReleaseID, r.ReleaseVersion, r.DerivedStatus = "rel-0002", "1.0.1", StatusSuspended
+		})
+	}
+	tests := []struct {
+		name     string
+		build    func(t *testing.T, dir string, private ed25519.PrivateKey)
+		revoked  []string
+		admits   bool
+		version  string
+		withdraw []Withdrawal
+	}{
+		{
+			name:     "revoking the governing record withdraws its pack",
+			build:    onlyBaseline,
+			revoked:  []string{"rel-0001"},
+			withdraw: []Withdrawal{{PackID: validRelease().PackID, Cause: CauseRevoked}},
+		},
+		{
+			name:    "revoking a superseded record withdraws nothing",
+			build:   baselinePlusNewer,
+			revoked: []string{"rel-0001"},
+			admits:  true,
+			version: "1.10.0",
+		},
+		{
+			// Revocation carries precedence over the status gate, exactly as
+			// Verify orders it, so the operator sees the cause they configured.
+			name:     "revocation is the cause even when the governing record is suspended",
+			build:    baselinePlusSuspension,
+			revoked:  []string{"rel-0002"},
+			withdraw: []Withdrawal{{PackID: validRelease().PackID, Cause: CauseRevoked}},
+		},
+		{
+			name:     "revoking the governing record never falls back to an older release",
+			build:    baselinePlusNewer,
+			revoked:  []string{"rel-0002"},
+			withdraw: []Withdrawal{{PackID: validRelease().PackID, Cause: CauseRevoked}},
+		},
+		{
+			name:    "an unrelated revocation withdraws nothing",
+			build:   onlyBaseline,
+			revoked: []string{"rel-other"},
+			admits:  true,
+			version: "1.0.0",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dir := t.TempDir()
+			public, private := testKey(t)
+			test.build(t, dir, private)
+			opts := loadOptions(public)
+			opts.Revoked = revokedSet(test.revoked)
+			selection, err := LoadSelection(context.Background(), dir, opts)
+			if err != nil {
+				t.Fatalf("LoadSelection: %v", err)
+			}
+			release, ok := selection.Released(validRelease().PackID)
+			if ok != test.admits || ok && release.ReleaseVersion != test.version {
+				t.Fatalf("admitted = %t (%v), want %t at %q", ok, release, test.admits, test.version)
+			}
+			if got := selection.Withdrawn(); !reflect.DeepEqual(got, test.withdraw) {
+				t.Fatalf("withdrawn = %#v, want %#v", got, test.withdraw)
+			}
+		})
+	}
+}
+
+// TestLoadSelectionWithdrawnNamesEveryUnadmittedPack pins that a mixed
+// directory reports each configured-but-unadmitted pack with a bounded
+// lifecycle cause, in sorted pack order, without refusing the healthy admission
+// beside them: one suspended pack never fails an otherwise good startup.
+func TestLoadSelectionWithdrawnNamesEveryUnadmittedPack(t *testing.T) {
+	dir := t.TempDir()
+	public, private := testKey(t)
+	writeSigned(t, dir, "released.json", "key-1", private, func(r *PackRelease) {
+		r.PackID = "phebs.admitted.pack"
+	})
+	writeSigned(t, dir, "suspended.json", "key-1", private, func(r *PackRelease) {
+		r.PackID, r.ReleaseID, r.DerivedStatus = "phebs.suspended.pack", "rel-0002", StatusSuspended
+	})
+	writeSigned(t, dir, "retired.json", "key-1", private, func(r *PackRelease) {
+		r.PackID, r.ReleaseID, r.DerivedStatus = "phebs.retired.pack", "rel-0003", StatusRetired
+	})
+	writeSigned(t, dir, "revoked.json", "key-1", private, func(r *PackRelease) {
+		r.PackID, r.ReleaseID = "phebs.revoked.pack", "rel-0004"
+	})
+
+	opts := loadOptions(public)
+	opts.Revoked = revokedSet([]string{"rel-0004"})
+	selection, err := LoadSelection(context.Background(), dir, opts)
+	if err != nil {
+		t.Fatalf("LoadSelection: %v", err)
+	}
+	want := []Withdrawal{
+		{PackID: "phebs.retired.pack", Cause: StatusRetired},
+		{PackID: "phebs.revoked.pack", Cause: CauseRevoked},
+		{PackID: "phebs.suspended.pack", Cause: StatusSuspended},
+	}
+	got := selection.Withdrawn()
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("withdrawn = %#v, want %#v", got, want)
+	}
+	if selection.Count() != 1 {
+		t.Fatalf("admitted %d pack(s), want exactly the released one: %v", selection.Count(), selection.PackIDs())
+	}
+	if _, ok := selection.Released("phebs.admitted.pack"); !ok {
+		t.Fatal("the released pack beside the withdrawals must still be admitted")
+	}
+	if _, ok := selection.Released("phebs.revoked.pack"); ok {
+		t.Fatal("a revoked pack must never be admitted")
+	}
+	// Withdrawn copies, so an operator-facing consumer cannot mutate the
+	// selection it was handed.
+	got[0].Cause = "mutated"
+	if again := selection.Withdrawn(); !reflect.DeepEqual(again, want) {
+		t.Fatalf("Withdrawn() must copy, second call = %#v", again)
+	}
+}
+
+// TestLoadSelectionRevocationDoesNotSkipVerification pins that revocation is
+// never a shortcut past authenticity. Every record present is still fully
+// verified before any of them can govern, so a foreign-keyed record the
+// operator revoked refuses the selection with its verification cause rather
+// than being quietly withdrawn.
+func TestLoadSelectionRevocationDoesNotSkipVerification(t *testing.T) {
+	dir := t.TempDir()
+	public, private := testKey(t)
+	writeSigned(t, dir, "good.json", "key-1", private, nil)
+	writeSigned(t, dir, "foreign.json", "key-unknown", private, func(r *PackRelease) {
+		r.PackID, r.ReleaseID = "phebs.foreign.pack", "rel-9999"
+	})
+	opts := loadOptions(public)
+	opts.Revoked = revokedSet([]string{"rel-9999"})
+	if _, err := LoadSelection(context.Background(), dir, opts); err == nil {
+		t.Fatal("a revoked foreign-keyed record must still refuse, not be silently withdrawn")
+	} else if reason, _ := ReasonOf(err); reason != ReasonUnknownKey {
+		t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonUnknownKey)
 	}
 }
 

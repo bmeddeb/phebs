@@ -240,10 +240,14 @@ service_catalogs: {}
 #     path: /etc/phebs/service-catalog.json
 #     runtime: v3 # v2 | v3; omitted defaults to v2
 
-# Optional signed pack-release selection (T48.2). Ships dark: an empty path
-# admits no released pack and adds no pack work. `path` is a directory of signed
-# PackRelease JSON records, verified once at the admitted startup boundary
-# against `keys` (base64 ed25519 public keys). Only a record that verifies, is
+# Optional signed pack-release selection (T48.2, operations in T48.4). Ships
+# dark: an empty path admits no released pack and adds no pack work. `path` is a
+# directory of signed PackRelease JSON records, verified once at the admitted
+# startup boundary against `keys` (base64 ed25519 public keys). `path` must be
+# absolute, clean and unpadded so it never resolves against the process working
+# directory, and a non-empty `path` requires at least one key: without a trust
+# anchor no record could ever be admitted, so that half-configured gate is
+# refused while parsing rather than at startup. Only a record that verifies, is
 # unexpired and applicable, and carries the released lifecycle status enters the
 # ordinary/released admission set, and only when its pack identifier is bound to
 # a fixed in-tree recipe; a verified released pack with no bound recipe refuses
@@ -256,14 +260,28 @@ service_catalogs: {}
 # withdraws an older release. This build cannot yet bind a released record to
 # its own binary and artifacts, so any governing released record refuses
 # startup until a later slice supplies those bindings.
+#
+# `revoked` is the operator's suspension and rollback control: it lists
+# release_ids withdrawn out of band. Listing the record that governs its pack
+# withdraws that pack, which is reported in one bounded startup log line rather
+# than only appearing as an absent pack. Withdrawal never falls back to an older
+# released record in the same directory, because a rollback is a newly signed
+# record rather than a consequence of revoking a later one; revoking a
+# superseded record therefore withdraws nothing and does not refuse the
+# selection. Each entry must match a release_id's grammar and be unique. The
+# list is inert while `path` is empty, so a revocation can be staged before the
+# selection directory is configured.
 release_selection:
   path: ""
   keys: []
+  revoked: []
 # release_selection:
 #   path: /etc/phebs/pack-releases
 #   keys:
 #     - id: release-signer
 #       public_key: "base64-ed25519-public-key"
+#   revoked:
+#     - "phebs.protobuf.contract/1.2.0"
 
 # Sources of repos to sync (Epic 2). Names are required, unique, and match
 # [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must
