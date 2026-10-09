@@ -7,6 +7,16 @@ const view = { schema: 'phebs-typed-index-status-v1', repository: repo, commit: 
 const selection = { repository: repo, provider: view.provider, profile: view.profile, expected_revision: h, purpose: 'publish' as const }
 const preview = { schema: 'phebs-typed-index-preview-v1', selection, commit: view.commit, request_digest: h, idempotency_key: 'a'.repeat(64), resource_profile: view.resource_profile }
 afterEach(() => { vi.restoreAllMocks(); setCSRFToken() })
+test('accepts either admitted native resource profile and refuses any other', () => {
+  const amd64 = { ...view, resource_profile: 'native-amd64-bounded-v1' }
+  expect(validateTypedView(amd64, repo)).toEqual(amd64)
+  expect(validateTypedPreview({ ...preview, resource_profile: amd64.resource_profile }, selection, view.commit)).toEqual({ ...preview, resource_profile: amd64.resource_profile })
+  for (const resource_profile of ['native-386-bounded-v1', 'native-arm64-bounded-v2', 'Native-amd64-bounded-v1', '']) {
+    expect(() => validateTypedView({ ...view, resource_profile }, repo)).toThrow()
+    expect(() => validateTypedPreview({ ...preview, resource_profile }, selection, view.commit)).toThrow()
+  }
+  expect(validateTypedView({ ...view, available: false, resource_profile: '' }, repo).available).toBe(false)
+})
 test('refuses crossed, unknown, malformed and oversized status; accepts closed refusal', () => {
   expect(validateTypedView(view, repo)).toEqual(view)
   expect(validateTypedView({ ...view, reason: 'capacity_refused' }, repo).reason).toBe('capacity_refused')

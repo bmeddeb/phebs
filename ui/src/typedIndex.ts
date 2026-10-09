@@ -9,6 +9,7 @@ export type TypedIndexEnqueue = Schemas['TypedIndexEnqueue']
 export const TYPED_PROVIDERS = ['bazel-rules-go-scip-v1', 'go-module-scip-v1', 'imported-artifact-scip-v1'] as const
 export const TYPED_STATES = ['absent', 'current', 'stale', 'planning', 'indexing', 'validating', 'publishing', 'failed', 'canceled'] as const
 const PATH = '/api/code-navigation-indexing'
+const admittedResourceProfile = (value: unknown) => value === 'native-amd64-bounded-v1' || value === 'native-arm64-bounded-v1'
 const digest = (v: unknown) => typeof v === 'string' && /^sha256:[a-f0-9]{64}$/.test(v)
 const commit = (v: unknown) => typeof v === 'string' && (v === '' || /^[a-f0-9]{40}$/.test(v))
 const word = (v: unknown, limit = 128) => typeof v === 'string' && v.length <= limit && ![...v].some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
@@ -37,13 +38,13 @@ export function validateTypedView(value: unknown, repository: string): TypedInde
   const reasons = ['', 'invalid_contract', 'administrator_required', 'disabled', 'authority_changed', 'unsupported_profile', 'prehydration_unverified', 'capacity_refused', 'canceled', 'wall_limit', 'execution_failed', 'containment_failed']
   // Accept only the managed contract's closed refusal vocabulary.
   if (!word(v.reason, 64) || (v.reason !== '' && !reasons.includes(String(v.reason)))) throw invalid()
-  if (v.available && (!digest(v.revision) || !/^[a-f0-9]{40}$/.test(String(v.commit)) || v.provider === '' || !v.profile || v.target_profile !== v.profile || v.resource_profile !== 'native-arm64-bounded-v1')) throw invalid()
+  if (v.available && (!digest(v.revision) || !/^[a-f0-9]{40}$/.test(String(v.commit)) || v.provider === '' || !v.profile || v.target_profile !== v.profile || !admittedResourceProfile(v.resource_profile))) throw invalid()
   return value as TypedIndexView
 }
 export function validateTypedPreview(value: unknown, selection: TypedIndexSelection, exactCommit: string): TypedIndexPreview {
   const v = record(value, ['schema', 'selection', 'commit', 'request_digest', 'idempotency_key', 'resource_profile'])
   const s = record(v.selection, ['repository', 'expected_revision', 'provider', 'profile', 'purpose'])
-  if (v.schema !== 'phebs-typed-index-preview-v1' || v.commit !== exactCommit || !digest(v.request_digest) || !/^[a-f0-9]{64}$/.test(String(v.idempotency_key)) || v.resource_profile !== 'native-arm64-bounded-v1' || Object.entries(selection).some(([key, val]) => s[key] !== val)) throw invalid()
+  if (v.schema !== 'phebs-typed-index-preview-v1' || v.commit !== exactCommit || !digest(v.request_digest) || !/^[a-f0-9]{64}$/.test(String(v.idempotency_key)) || !admittedResourceProfile(v.resource_profile) || Object.entries(selection).some(([key, val]) => s[key] !== val)) throw invalid()
   return value as TypedIndexPreview
 }
 async function typedJSON(path: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
