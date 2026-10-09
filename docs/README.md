@@ -79,6 +79,8 @@ replace the user manual.
   consumer, and field-reference pack cards.
 - [KAFKA_PACK_CARDS.md](./KAFKA_PACK_CARDS.md) — Kafka producer and consumer
   pack cards.
+- [CALLER_QUALITY_PROTOCOL.md](./CALLER_QUALITY_PROTOCOL.md) — prospective
+  caller-quality preregistration draft for the Epic 47 Caller Map recipe.
 
 These packs remain experimental-dark unless the manual and capability response
 explicitly say otherwise. Their retained validation result is not an accuracy
