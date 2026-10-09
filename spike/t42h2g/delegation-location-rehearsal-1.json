@@ -1,0 +1,596 @@
+{
+ "schema": "phebs-t42h2g-linux-delegation-location-rehearsal-v1",
+ "measured_at_utc": "2026-10-09T06:56:52.875601675+00:00",
+ "source_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
+ "implementation_commit": "e75680a8929201a1ff73541ceaa383e4bd8ee8fd",
+ "review_correction_commit": "6895dbb0584fee3a146fd1822ff7d86507b1305e",
+ "delta_correction_commit": "52910021621ca3f12e7aefeb9bc3f4a07bcaf019",
+ "lint_correction_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
+ "base_commit": "98457ae4a161cbae62180c58177f40477b2e0766",
+ "commit_note": "This record binds to source_commit 8793fe4d, which is also the lint_correction_commit. Four commits carry this slice: e75680a8 is the reviewed implementation of both delegation-location recipes and their shared bounded census layer; 6895dbb0 corrects all seven low findings that review returned, three in production source and four in tests, and it changed four hashed source files; 52910021 corrects the single low finding the first delta re-review returned, which was a false comment rather than a false behaviour, and it changed one hashed source file; 8793fe4d checks the three deferred returns the scoped lint gate caught in this slice's own new test files, and it changed two hashed source files. No compiled production expression, bound, refusal message, struct field or production behaviour changed across either of the last two deltas: 6895dbb0..52910021 is five added and two removed comment lines in one file, and 52910021..8793fe4d is three in-place line replacements across two test files. Because this record binds exact file bytes rather than an approximate tree, every measurement taken at e75680a8 was discarded and re-taken at 6895dbb0; the in-flight whole-package census at 6895dbb0 was then terminated at about 32 of an expected 110 minutes rather than allowed to finish and be thrown away; the complete census and gate set that did finish at 52910021 was then discarded in its turn when the lint gate, not a reviewer, found three new findings in this slice's own files. Every number below is measured at 8793fe4d and nothing is carried over from any earlier commit. Both discarded sets are archived for attribution only and are never hashed into this record. All runs below were measured in one driver pass at 8793fe4d against a completely clean detached worktree, guarded so the driver refuses to start if the worktree holds any uncommitted entry or if HEAD is not this exact commit. No documentation or record file is a compiled, embedded, fixture or harness input to any number below: spike/t421 carries no go:embed directive and reads no documentation path. The record commit that rewrites this file and the four documents changes no such input either, so these measurements stay bound to 8793fe4d exactly as the earlier slices' documentation-only follow-ups did.",
+ "source_files_sha256": {
+  "spike/t421/external_delegation_linux.go": "sha256:d6227ff43aaa333553c04c795bf8c90621c1cc7373550e461afa1df5020b1001",
+  "spike/t421/external_delegation_linux_test.go": "sha256:b88fd6ee04b0e628363945d603748133eed2dfe62cc77a7463ab5cbf3c87b89d",
+  "spike/t421/external_exec_path_linux.go": "sha256:88f3635cce22e463236e3d411224ef325e870709131767115910345f916a2de3",
+  "spike/t421/external_exec_path_linux_test.go": "sha256:e02f7a927a0ae59b01d4e9ffe8104d1868625307a429634344016facfdc0e5e2",
+  "spike/t421/external_sdk_location_linux.go": "sha256:358b4dbaf7f4ed197a33b720ed5a2a0f128534333c999cfa661ceaee06d882ce",
+  "spike/t421/external_sdk_location_linux_test.go": "sha256:9874f9ea59cb12278d4ee924a9089b6c97b2519c9b3554ab25aff8e49e66926c",
+  "spike/t421/external_tool.go": "sha256:06506fb7aa9e03ac76239ce7017f2ed6370b74c0cf32fb7c7d62ddbd9ea10eba"
+ },
+ "source_files_sha256_note": "computed as git show 8793fe4d:<path> | sha256sum. Exactly two of the seven differ from the 52910021-bound values: external_delegation_linux_test.go and external_exec_path_linux_test.go, the two files the lint correction touched. The other five are unchanged because no commit after 52910021 touched them. Exactly one of the seven differed between 6895dbb0 and 52910021, and four of the seven differed between e75680a8 and 6895dbb0.",
+ "untouched_darwin_proof": {
+  "command": "git diff --name-only 98457ae4..8793fe4d -- 'spike/t421/*_darwin.go' 'spike/t421/*_darwin_test.go' | wc -l",
+  "names_returned": 0,
+  "meaning": "No Darwin-constrained file in spike/t421 changed across the whole slice including all three corrections, so the sealed V1-V32 evidence, frozen plans, signed packages and retained receipts keep their meaning. Both new recipes sit behind //go:build linux files and add a runtime.GOARCH != \"amd64\" refusal of their own, so the Darwin side neither gains nor loses an admission; the two delegation locations stay unadmitted there. The only pre-existing file this slice touches at all is external_tool.go, and that change is comment-only: ten insertions and three deletions that narrow a comment which had said both locations stay unadmitted on both hosts, and add no field to ExecutionToolIdentity."
+ },
+ "host": {
+  "goos": "linux",
+  "goarch": "amd64",
+  "kernel_release": "7.0.0-38-generic",
+  "logical_cpus": 12,
+  "physical_memory_bytes": 15991742464,
+  "go_version": "go1.26.5 linux/amd64",
+  "aggregate_effective_cgroup_capacity_admitted": false,
+  "test_invocation": "GOMAXPROCS=2 go test -p=2, chosen so the finite gates and the whole-package census do not contend with each other for the twelve logical CPUs and so the measured durations describe the code rather than scheduler queueing. The census runs first and the finite gate set runs after it in the same detached clean worktree, with nothing else scheduled concurrently."
+ },
+ "scope": "Two bounded Linux amd64 delegation-location recipes over the T42.H2e admitted external-tool observations: ObserveExecutionGitExecPathManifest structurally censuses the directory a closed git --exec-path probe reports and binds its core helper to an explicitly selected native Git image, and ObserveExecutionGoSDKLocation binds the GOROOT/GOTOOLDIR pair a closed go env probe reports to an explicitly selected native Go image. Both share one new bounded Linux census layer rather than each reimplementing a directory walk. Neither observation is admitted on Darwin. This slice supplies no launcher authority, no session teardown, no dispatch admission, no Linux input-custody immutability model, no pressure/allocation/restore adapter, no Linux plan version, no resource admission, no freeze, ceremony or scale claim.",
+ "diff_stat": {
+  "files_changed": 7,
+  "insertions": 2787,
+  "deletions": 3,
+  "range": "git diff --stat 98457ae4..8793fe4d -- spike/t421",
+  "per_file_numstat": {
+   "external_delegation_linux.go": "392 insertions, 0 deletions",
+   "external_delegation_linux_test.go": "475 insertions, 0 deletions",
+   "external_exec_path_linux.go": "237 insertions, 0 deletions",
+   "external_exec_path_linux_test.go": "597 insertions, 0 deletions",
+   "external_sdk_location_linux.go": "308 insertions, 0 deletions",
+   "external_sdk_location_linux_test.go": "768 insertions, 0 deletions",
+   "external_tool.go": "10 insertions, 3 deletions"
+  },
+  "whole_range_including_docs": "git diff --stat 98457ae4..8793fe4d over the whole tree reports the same seven files, because at the commit this record binds the four documentation edits and this record itself were still uncommitted. The documentation commit that follows adds PLAN.md, docs/BACKLOG.md, docs/ROADMAP.md, docs/guides/OPERATIONS.md and this record, and changes no compiled, embedded, fixture or harness input.",
+  "note": "external_tool.go is the only pre-existing file in the range and contributes all three deletions; its change is comment-only. The other six files are new. The delta correction alone is one file changed with five insertions and two deletions, and the lint correction alone is two files changed with three insertions and three deletions. Because those three replacements each rewrite a line this slice itself added, the whole-range totals above are byte-for-byte the same at 52910021 and at 8793fe4d, which is why per_file_numstat needs no correction for the lint commit."
+ },
+ "census_contract": {
+  "shared_layer": "readExternalDelegationRows performs one refuse-don't-truncate ReadDir batch loop per directory, in batches of 128 entries, and censusExternalDelegationRoot wraps it with an explicit entry bound.",
+  "identity_fence": "The directory identity is snapshotted before the first read and re-checked after the last against both the open handle and the path, so a concurrent replacement or resize cannot supply the observed rows.",
+  "entry_name_rules": "A name that is empty, \".\" or \"..\", longer than maxInputCustodyPathBytes, or containing NUL, CR or LF is refused.",
+  "sort_requirement": "Rows are sorted explicitly with slices.SortFunc over strings.Compare because (*os.File).ReadDir returns kernel directory order rather than a sorted sequence, and every downstream digest depends on that ordering.",
+  "over_bound_behavior": "A directory that exceeds its entry bound refuses outright; the census never emits a digest describing a prefix of an unadmitted shape.",
+  "classes_admitted": [
+   "regular",
+   "symlink",
+   "directory"
+  ],
+  "classes_refused": [
+   "socket",
+   "fifo",
+   "device",
+   "other typed entry",
+   "any entry carrying a setuid or setgid bit",
+   "an empty regular helper",
+   "a regular helper above maxExternalDelegationHelperBytes"
+  ],
+  "symlink_recording": "A symlink contributes its target alone, capped at maxExternalDelegationSymlinkBytes, because its size and permission bits are kernel conventions rather than delegated structure.",
+  "header_screen": "A regular helper's own class comes from externalDelegationHelperClass, which reads at most maxExternalDelegationHeaderBytes through the existing non-following t4013.OpenHostImage and separates \\x7fELF native from #! script from sourced text. It never executes, loads, vendor-validates or reads a helper body.",
+  "canonical_encoding": "externalDelegationCanonical encodes each sorted row as its class, a space, then the length-prefixed fields name, helper, size, perm and target, then a newline. Prefixing each field with its own byte length makes the digest input injective, so a hostile entry name cannot resplit a row.",
+  "observation_carries": "No absolute host path, no entry name and no entry content. The assertion is not vacuous by collision: it forbids real entry names of this host's exec-path and GOROOT (mergetools, git-remote-http, VERSION, gofmt, preprofile) against the %#v encoding, each verified present on the host first.",
+  "bounds": {
+   "maxExternalDelegationHelperBytes": 67108864,
+   "maxExternalDelegationSymlinkBytes": 256,
+   "maxExternalDelegationHeaderBytes": 64,
+   "readDir_batch_entries": 128,
+   "maxGitExecPathEntries": 512,
+   "maxGitExecPathSubdirectories": 4,
+   "maxGitExecPathSubdirectoryEntries": 128,
+   "maxGitExecPathSubdirectoryBytes": 67108864,
+   "maxGitExecPathSymlinkTargets": 8,
+   "maxGoSDKRootEntries": 64,
+   "maxGoSDKBinEntries": 8,
+   "maxGoSDKToolEntries": 64,
+   "maxGoSDKVersionBytes": 4096
+  },
+  "bounds_rationale": "Directory bounds are entry counts rather than byte counts because the shape being proved is structural; the two byte bounds that matter, 64 MiB per helper and 64 MiB per subdirectory, are enforced from Lstat sizes without opening a body. The measured host shapes sit inside every bound with headroom: 172 exec-path root entries against 512, one subdirectory against four, 24 mergetools entries against 128, 16 GOROOT root entries against 64, 2 bin entries against 8 and 8 tool entries against 64.",
+  "git_oracle": "The manifest requires exactly one regular native git entry that hashes byte-equal to the selected image, plus at least one symlink whose target map names git, so neither a directory of unrelated helpers nor a lone copied core satisfies the recipe. Every symlink must name a bare sibling - not \".\", not \"..\", not itself, and not a path carrying a separator - that is itself an admitted regular helper in the same census, so a link that escapes the directory, points at a directory or chains to another link refuses. At most four subdirectories are admitted, each as a flat non-empty collection of bounded regular files totalling at most 64 MiB. The census re-checks that NativeHelpers+ScriptHelpers+TextHelpers == RegularFiles+SubdirectoryEntries before it will emit a digest.",
+  "go_oracle": "The recipe binds the reported pair rather than either field alone: GOTOOLDIR must equal exactly GOROOT/pkg/tool/<goos>_<goarch>, GOROOT/bin/go must resolve back to the admitted image and hash byte-equal to it, and both the on-disk VERSION marker's first line and the image's own go version output must equal runtime.Version(), so the recorded release never reaches a caller through a path that skipped that check. The root census admits regular files and real directories only and requires the five directory markers api, bin, lib, pkg and src plus the two non-empty regular markers VERSION and go.env; bin must hold exactly the two native executables go and gofmt; the tool directory must be a non-empty flat set of native executables and is digested without reading a single tool body.",
+  "go_census_precedence": "The bin census and its exact-pair admission run before the bin/go digest, which is the precedence the Git recipe already keeps between its census and its core-image digest, so an oversized or otherwise unadmitted bin entry is refused on its metadata alone and no body of it is read.",
+  "in_sdk_reads": "Exactly three reads reach inside the SDK, and they differ by purpose rather than by size: the VERSION marker is the only read of SDK content for that content's own sake, bounded at 4,096 bytes; the shared census layer reads at most 64 header bytes per regular entry purely to classify it; and censusExternalGoSDKLocation fully reads GOROOT/bin/go once to bind the SDK to the admitted image. None of the three walks the tree around it.",
+  "closed_environment": "Both recipes run under the existing externalToolEnvironment, which sets neither GIT_EXEC_PATH nor GOROOT, so a hostile ambient value cannot reach either census. Every refusal case is therefore produced by calling the unexported censuses directly on synthetic fixture directories rather than by poisoning an environment.",
+  "validPublicToolVersion_exception": "validPublicToolVersion deliberately does not apply to the path-valued probe output, because it is a location rather than a version; go version output is instead compared by strict exact equality.",
+  "named_result_convention": "Both observers accumulate into a local and assign their named result only at the single success return, so a refusal yields the zero value rather than a partial description of an unadmitted shape. The shared layer keeps that convention at its own two boundaries: a refused probe zeroes its named output even when its deferred cleanup also failed, and every classification refusal returns an explicit zero entry, so a refused row's name or symlink target cannot travel past the error that rejected it.",
+  "descriptor_bound": "Each census holds at most one directory descriptor plus one header-read descriptor at a time and closes both with checked errors, and os.OpenRoot containment means no entry name is ever concatenated into an escaping path.",
+  "platform_fence": "Both stay Linux-amd64-only behind a //go:build linux file and a runtime.GOARCH != \"amd64\" refusal, issue no CheckoutAdmissionBinding, add no field to ExecutionToolIdentity, and leave validateExecutionHost as the separate freeze-platform fence, so an observed identity remains neither a launch recipe nor dispatch authority.",
+  "measured_host_shape": {
+   "git_exec_path_root_entries": 172,
+   "git_exec_path_symlinks": 145,
+   "git_exec_path_symlinks_to_core": 142,
+   "git_exec_path_symlinks_to_git_remote_http": 3,
+   "git_exec_path_regular_helpers": 26,
+   "git_exec_path_subdirectories": 1,
+   "mergetools_entries": 24,
+   "mergetools_bytes": 31571,
+   "git_census_rows": 196,
+   "git_readlink_calls": 145,
+   "git_header_reads": 50,
+   "git_core_image_bytes": 4547768,
+   "git_core_image_full_reads": 5,
+   "git_core_image_bytes_hashed": 22738840,
+   "go_root_entries": 16,
+   "go_root_directories": 8,
+   "go_root_regular_files": 8,
+   "go_bin_entries": 2,
+   "go_tool_entries": 8,
+   "go_census_rows": 26,
+   "go_header_reads": 18,
+   "go_version_marker_bytes": 35,
+   "go_bin_go_bytes": 15434568,
+   "go_bin_go_full_reads": 7,
+   "go_bin_go_bytes_hashed": 108041976,
+   "go_sdk_files_never_walked": 15026,
+   "go_sdk_directories_never_walked": 1667,
+   "go_sdk_bytes_never_walked": 232413581
+  }
+ },
+ "native_runs": {
+  "selector": "^(TestLinuxExternalDelegation|TestLinuxExternalGitExecPath|TestLinuxExternalGoSDK)",
+  "selector_count": 14,
+  "selector_note": "spike/t421's test sources declare 880 test functions and this prefix matches exactly fourteen of them. The prefix form and an anchored alternation of the same fourteen exact names select an identical set, proven by diffing the two derived name lists at this exact commit and reproduced across three separate derivations with byte-identical md5s, so an operator can retype the short command without narrowing coverage.",
+  "targeted_normal": {
+   "top_level_pass": 14,
+   "top_level_fail": 0,
+   "top_level_skip": 0,
+   "subtests_pass": 110,
+   "subtests_fail": 0,
+   "subtests_skip": 0,
+   "package_seconds": 1.15,
+   "exit": "0",
+   "wall_seconds": "4.058",
+   "log": "sha256:ccd1b429f3ecd41d3b5ca1cfd846e3afd8aec0581416ad2fd5e54426bf8a2825",
+   "log_bytes": 21815,
+   "log_lines": 250,
+   "fail_names": []
+  },
+  "targeted_race": {
+   "data_races": 0,
+   "top_level_pass": 14,
+   "top_level_fail": 0,
+   "top_level_skip": 0,
+   "subtests_pass": 110,
+   "subtests_fail": 0,
+   "subtests_skip": 0,
+   "package_seconds": 2.529,
+   "exit": "0",
+   "wall_seconds": "29.761",
+   "log": "sha256:6bf0979753566fbbb82ab4aebda82304cf207b831ce7bab96dd3656068954a0c",
+   "log_bytes": 21815,
+   "log_lines": 250,
+   "fail_names": []
+  },
+  "twenty_repetition_boundary_normal": {
+   "count": 20,
+   "top_level_pass": 280,
+   "top_level_fail": 0,
+   "top_level_skip": 0,
+   "subtests_pass": 2200,
+   "subtests_fail": 0,
+   "subtests_skip": 0,
+   "package_seconds": 22.016,
+   "exit": "0",
+   "wall_seconds": "24.684",
+   "log": "sha256:47e21d659f336cc167a8f140b10a0276454a9addc3ce703b957ba4de22a8ba95",
+   "log_bytes": 435294,
+   "log_lines": 4962,
+   "fail_names": []
+  },
+  "twenty_repetition_boundary_race": {
+   "count": 20,
+   "data_races": 0,
+   "top_level_pass": 280,
+   "top_level_fail": 0,
+   "top_level_skip": 0,
+   "subtests_pass": 2200,
+   "subtests_fail": 0,
+   "subtests_skip": 0,
+   "package_seconds": 29.121,
+   "exit": "0",
+   "wall_seconds": "32.715",
+   "log": "sha256:fecbe0f8c5efea91443e8015d214b5ee75d3439b797ee1178b8ec5c7db7ff91b",
+   "log_bytes": 435294,
+   "log_lines": 4962,
+   "fail_names": []
+  },
+  "affected_wide_normal": {
+   "selector": "ExternalTool|ExternalProbe|LinuxToolCustody|ExternalDelegation|ExternalGitExecPath|ExternalGoSDK",
+   "top_level_pass": 33,
+   "top_level_fail": 0,
+   "top_level_skip": 6,
+   "subtests_pass": 196,
+   "subtests_fail": 0,
+   "subtests_skip": 0,
+   "package_seconds": 40.821,
+   "exit": "0",
+   "wall_seconds": "43.515",
+   "log": "sha256:589bd124ff67cd4764dc4736c00c85755ed812716f62ce8a6cad5f7ec1124f55",
+   "log_bytes": 40479,
+   "log_lines": 478,
+   "fail_names": []
+  },
+  "affected_wide_race": {
+   "selector": "ExternalTool|ExternalProbe|LinuxToolCustody|ExternalDelegation|ExternalGitExecPath|ExternalGoSDK",
+   "data_races": 0,
+   "top_level_pass": 33,
+   "top_level_fail": 0,
+   "top_level_skip": 6,
+   "subtests_pass": 196,
+   "subtests_fail": 0,
+   "subtests_skip": 0,
+   "package_seconds": 45.251,
+   "exit": "0",
+   "wall_seconds": "48.861",
+   "log": "sha256:c6fff826762d4fbea2569d1901ad014a960ad62e58237e63d42ba2d9c2e6ed75",
+   "log_bytes": 40479,
+   "log_lines": 478,
+   "fail_names": []
+  },
+  "whole_package_normal": {
+   "data_races": 0,
+   "top_level_pass": 653,
+   "top_level_fail": 2,
+   "top_level_skip": 11,
+   "subtests_pass": 3335,
+   "subtests_fail": 0,
+   "subtests_skip": 0,
+   "package_seconds": 6247.895,
+   "exit": "1",
+   "wall_seconds": "6251.235",
+   "log": "sha256:e6d3beebac7c2ff5f384e1b1adab7c962eeff1106a24d1f621c2a29feb7327d0",
+   "log_bytes": 669952,
+   "log_lines": 8847,
+   "fail_names": [
+    "TestProductionDispatchSitesMatchActualBoundaries",
+    "TestZoektOfferNativePinnedGraph"
+   ]
+  },
+  "whole_package_note": "The whole spike/t421 package is qualified, not green, and it carries two pre-existing inherited failures reproduced at this slice's base. It is run normal only: a whole-package race run was deliberately not taken because it would add hours to a package that already needs the duration recorded here, so race evidence is carried by the targeted, twenty-repetition and affected-wide race selectors instead, matching how T42.H2e was qualified.",
+  "driver_log": "sha256:5961cdf8b9bf31c5a8f89b9a498fef878d938b132871bc707201c57d5873f784",
+  "driver_log_note": "hashed after the driver exited. The driver's own trailing sha256sum section reports a value for this same file that is necessarily a self-reference taken before the log's final lines were written; the value recorded here is the completed log.",
+  "note": "No log content is reproduced anywhere in this record: each run is reduced to its counts, a sha256 of the whole log, and that log's byte and line lengths, so no private source or raw output survives."
+ },
+ "static_gates": {
+  "affected_vet": {
+   "exit": "0",
+   "log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "log_bytes": 0
+  },
+  "linux_arm64_cross_vet": {
+   "exit": "0",
+   "log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "log_bytes": 0
+  },
+  "darwin_arm64_cross_build_and_vet": {
+   "build": {
+    "exit": "0",
+    "log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "log_bytes": 0
+   },
+   "vet": {
+    "exit": "0",
+    "log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "log_bytes": 0
+   }
+  },
+  "whole_repository_build_linux_amd64": {
+   "exit": "0",
+   "log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "log_bytes": 0
+  },
+  "module_verification": {
+   "exit": "0",
+   "log": "sha256:b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd",
+   "log_bytes": 21
+  },
+  "gofmt": {
+   "exit": "0",
+   "log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "log_bytes": 0
+  },
+  "whitespace": {
+   "exit": "0",
+   "log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "log_bytes": 0
+  },
+  "whitespace_note": "git diff --check 98457ae4..HEAD, run in the clean census worktree, so it inspects the seven committed source bytes and none of the applied document text. A bare git diff --check would compare the index against itself and prove nothing; ranging the check across the slice makes it inspect the bytes this ticket actually adds.",
+  "whitespace_final_document_text": "git diff --check 98457ae4 clean over the final document text as well as the seven committed source files; exit 0, log 24 bytes sha256:7a3db04a7c9b58e7c9954718a758d18ad0b1c4480799dfcd3eb9a37f2a55cc80. This is a second, wider whitespace check than the driver's own git diff --check 98457ae4..HEAD, which ran in the clean census worktree and therefore saw only the committed source bytes and none of the applied document text. A confirmation re-run after this record's own rewrite was also clean (log 24 bytes sha256:7a3db04a7c9b58e7c9954718a758d18ad0b1c4480799dfcd3eb9a37f2a55cc80).",
+  "scoped_pinned_lint_t421": {
+   "command": "golangci-lint run --new-from-rev=98457ae4 --whole-files ./spike/t421/...",
+   "exit": "0",
+   "log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+   "log_bytes": 10
+  },
+  "scoped_pinned_lint_t421_note": "golangci-lint run --new-from-rev=98457ae4 --whole-files ./spike/t421/... with the repository-pinned 2.12.2 binary.",
+  "unscoped_pinned_lint_t421": {
+   "command": "golangci-lint run ./spike/t421/... --max-issues-per-linter=0 --max-same-issues=0",
+   "exit": "1",
+   "log": "sha256:cf0597cd09c4ddebfd36d99ef58bce80cc76da3d97dda4284f04385af1366adb",
+   "log_bytes": 14688
+  },
+  "unscoped_pinned_lint_t421_note": "Reported qualified rather than green: an unscoped run over ./spike/t421/... carries a pre-existing unused-symbol baseline that this slice neither introduced nor repaired, so its issue count is attributed below rather than treated as a failure of this ticket.",
+  "documentation": "make docs-check exit 0; log 189 bytes sha256:5ad7299bbfa1c73e28b2c05d15484cfbbc5181679e0aa31487ee495ca029d433 (ok  \tgithub.com/bmeddeb/phebs/scripts\t0.872s). The log embeds the scripts package's own elapsed time, so its hash can vary between runs even for identical text. This hash is the run taken over the final document text after every H2g edit including all three correction rounds. docs-check resolves the OPERATIONS link to this record's path but never hashes its content, so the placeholder bytes this record carried at that moment are not an input to the hash. A confirmation re-run after this record's own rewrite also exited 0 (log 189 bytes sha256:c0081c7846b399982983048a10ce25ae91a749e543b023bc3ba2d76e008bf669, ok  \tgithub.com/bmeddeb/phebs/scripts\t0.883s). The two hashes differ only because the elapsed time in that ok line differs; both runs appended the same explicit docs-exit=0 marker, and neither run reads this record's bytes.",
+  "glossary": "make verify-glossary exit 0; log 76 bytes sha256:348abafb342cb261180eef8227eb062ba958a7029830f3186f4c67df935594d6. glossary-gen -verify wrote nothing and prints no timing, so this log is static text plus the appended glossary-exit=0 marker. A confirmation re-run after this record's own rewrite produced the byte-identical log and the same sha256:348abafb342cb261180eef8227eb062ba958a7029830f3186f4c67df935594d6, which is the expected result for a gate whose output carries no elapsed time."
+ },
+ "baseline_qualifications": {
+  "whole_t421_package": "Qualified, not green. The whole ./spike/t421 package census at source_commit 8793fe4d completed under its 120-minute allowance rather than timing out, in 6247.895 seconds of package time, and enumerated 653 top-level passes, 2 failures and 11 skips against the 666 top-level test functions that compile and report on Linux: the 652 that compiled at the T42.H2e head plus the 14 this slice adds. It recorded 3335 indented passes and no indented failure or skip. A whole-package race run was deliberately not taken.",
+  "inherited_whole_package_failures": "Both top-level failures pre-date this slice and neither sits in a file this slice changes. TestProductionDispatchSitesMatchActualBoundaries is the retained T42.H2a production-dispatch inventory failure, and it was re-run alone at base 98457ae4 so the claim that it is unchanged is measured rather than assumed; see base_inherited_failure_comparison. TestZoektOfferNativePinnedGraph is a deterministic Linux refusal at zoekt_offer_build_test.go:90: walkGoBuildTree requires inputCustodyOwned, which on Linux requires FS_IMMUTABLE_FL and therefore CAP_LINUX_IMMUTABLE, and the four files in that call chain are unchanged between base and head.",
+  "base_inherited_failure_comparison": {
+   "measured_at_utc": "2026-10-09T06:38:04.904658953+00:00",
+   "test": "TestProductionDispatchSitesMatchActualBoundaries",
+   "base_commit": "98457ae4a161cbae62180c58177f40477b2e0766",
+   "head_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
+   "purpose": "Substantiate the qualification claim that the inherited whole-package failure is unchanged between base and head by measuring both runs, rather than inferring it from the fact that neither the test file nor the production files it inventories are in this slice's changed set.",
+   "base_worktree": {
+    "path": "/home/ben/phebs",
+    "head": "98457ae4a161cbae62180c58177f40477b2e0766",
+    "branch": "main",
+    "tracked_porcelain_entries": 0,
+    "untracked_paths": [
+     "package-lock.json"
+    ]
+   },
+   "base_run": {
+    "command": "GOMAXPROCS=2 go test -p=2 -count=1 -timeout=10m -run ^TestProductionDispatchSitesMatchActualBoundaries$ -v ./spike/t421/",
+    "exit": 1,
+    "wall_seconds": 5.498,
+    "log": "/tmp/h2g-gates/basefail_base.log",
+    "log_bytes": 3736,
+    "log_lines": 12,
+    "log_sha256": "sha256:f4e012ff203f983be110adefe3794fe8165d5a3d9ebf8e5cc742f2cd0e1ef192",
+    "worktree": {
+     "path": "/home/ben/phebs",
+     "head": "98457ae4a161cbae62180c58177f40477b2e0766",
+     "branch": "main",
+     "tracked_porcelain_entries": 0,
+     "untracked_paths": [
+      "package-lock.json"
+     ]
+    }
+   },
+   "head_binding": {
+    "sequence_log": "/tmp/h2g-gates/sequence.log",
+    "provenance_log": "/tmp/h2g-gates/whole_package_provenance.log",
+    "sequence_bound_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
+    "sequence_observed_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
+    "provenance_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
+    "sequence_porcelain_entries": "0",
+    "provenance_porcelain_entries": "0",
+    "provenance_worktree": "/tmp/phebs-h2g-pkg (detached)"
+   },
+   "head_source": {
+    "log": "/tmp/h2g-gates/whole_package_normal.log",
+    "log_bytes": 669952,
+    "log_sha256": "sha256:e6d3beebac7c2ff5f384e1b1adab7c962eeff1106a24d1f621c2a29feb7327d0",
+    "block_start_line": 516,
+    "block_end_line": 523,
+    "retained_block": "/tmp/h2g-gates/basefail_head_block.txt"
+   },
+   "base_block": {
+    "lines": 8,
+    "bytes": 3662,
+    "outcome": "FAIL",
+    "raw_sha256": "sha256:705139199a568f77ec09ad67ee1c984d2397d09437979a1efc4a31c9db15370c",
+    "normalized_sha256": "sha256:e316d94eb723708a88d132455d28a6d417d5ca5908e915003b39c739a777ef80",
+    "normalized_bytes": 3665,
+    "duration_substitutions": 1,
+    "short_lines": [
+     {
+      "line": 1,
+      "text": "=== RUN   TestProductionDispatchSitesMatchActualBoundaries"
+     },
+     {
+      "line": 2,
+      "text": "    accounting_work_test.go:240: dispatch site internal/store/child.go:inspectSurrealBinary has 0 controlled calls, want one"
+     },
+     {
+      "line": 3,
+      "text": "    accounting_work_test.go:240: dispatch site internal/store/child.go:startOwnedEngine has 0 controlled calls, want one"
+     },
+     {
+      "line": 4,
+      "text": "    accounting_work_test.go:240: dispatch site internal/recovery/recovery.go:runSurreal has 0 controlled calls, want one"
+     },
+     {
+      "line": 5,
+      "text": "    accounting_work_test.go:244: complete production launch boundary inventory differs:"
+     },
+     {
+      "line": 8,
+      "text": "--- FAIL: TestProductionDispatchSitesMatchActualBoundaries (DURATION)"
+     }
+    ],
+    "long_lines": [
+     {
+      "line": 6,
+      "bytes": 1677,
+      "sha256": "sha256:e22f84d9289d151a47414aec22727a9e03928dba2274325c9a6ec20b20a09dd9",
+      "quoted": false
+     },
+     {
+      "line": 7,
+      "bytes": 1402,
+      "sha256": "sha256:c0fda073d3b497cda7a0c363f6887b05f6f88401cb9d4fdf35ce95bcc02bdb6c",
+      "quoted": false
+     }
+    ],
+    "start_line": 1,
+    "end_line": 8,
+    "retained_block": "/tmp/h2g-gates/basefail_base_block.txt"
+   },
+   "head_block": {
+    "lines": 8,
+    "bytes": 3662,
+    "outcome": "FAIL",
+    "raw_sha256": "sha256:40b22b455f6769330cbd25b65bfc5107daa1abdee184ac59ba30c63058e346f5",
+    "normalized_sha256": "sha256:e316d94eb723708a88d132455d28a6d417d5ca5908e915003b39c739a777ef80",
+    "normalized_bytes": 3665,
+    "duration_substitutions": 1,
+    "short_lines": [
+     {
+      "line": 1,
+      "text": "=== RUN   TestProductionDispatchSitesMatchActualBoundaries"
+     },
+     {
+      "line": 2,
+      "text": "    accounting_work_test.go:240: dispatch site internal/store/child.go:inspectSurrealBinary has 0 controlled calls, want one"
+     },
+     {
+      "line": 3,
+      "text": "    accounting_work_test.go:240: dispatch site internal/store/child.go:startOwnedEngine has 0 controlled calls, want one"
+     },
+     {
+      "line": 4,
+      "text": "    accounting_work_test.go:240: dispatch site internal/recovery/recovery.go:runSurreal has 0 controlled calls, want one"
+     },
+     {
+      "line": 5,
+      "text": "    accounting_work_test.go:244: complete production launch boundary inventory differs:"
+     },
+     {
+      "line": 8,
+      "text": "--- FAIL: TestProductionDispatchSitesMatchActualBoundaries (DURATION)"
+     }
+    ],
+    "long_lines": [
+     {
+      "line": 6,
+      "bytes": 1677,
+      "sha256": "sha256:e22f84d9289d151a47414aec22727a9e03928dba2274325c9a6ec20b20a09dd9",
+      "quoted": false
+     },
+     {
+      "line": 7,
+      "bytes": 1402,
+      "sha256": "sha256:c0fda073d3b497cda7a0c363f6887b05f6f88401cb9d4fdf35ce95bcc02bdb6c",
+      "quoted": false
+     }
+    ],
+    "start_line": 516,
+    "end_line": 523,
+    "retained_block": "/tmp/h2g-gates/basefail_head_block.txt"
+   },
+   "identical_raw": false,
+   "identical_modulo_timings": true,
+   "normalized_diff": {
+    "path": "/tmp/h2g-gates/basefail_normalized_diff.txt",
+    "lines": 0,
+    "bytes": 0,
+    "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   "verdict": "Identical modulo timings: the two blocks differ only in the duration Go printed on the --- FAIL line, and every assertion line and both inventory map lines are byte for byte the same. The retained T42.H2a production-dispatch inventory failure is therefore measured to be unchanged between base 98457ae4 and head 8793fe4d, rather than assumed unchanged from reading the test source.",
+   "note": "Retained as hashes, counts and only the block's short lines rather than as raw log bytes. The long production launch-boundary inventory dumps are represented by length and digest alone (base 1,677 and 1,402 bytes; head 1,677 and 1,402 bytes); the complete base and head blocks stay retained beside the census log for anyone who wants to read them. Identical normalized digests are the whole proof: they show the two runs agree on every line the block carries, and differ at most in the duration Go printed on the terminating line."
+  },
+  "unscoped_pinned_lint_t421": "Qualified, not green, and attributed rather than repaired. The pinned scoped run over this slice's changed files reports 0 issues, while an unbounded unscoped golangci-lint run ./spike/t421/... --max-issues-per-linter=0 --max-same-issues=0 reports 72 findings, every one unused, across 11 files. Those 11 files are untouched: git diff --name-only 98457ae4..8793fe4d returns exactly 7 paths and none of them is one of the 11, so the inherited count cannot have moved. That alone would not make 72 the inherited total, since this slice's own new files could add findings the unscoped run sees; at the discarded 52910021 run they did, and the total measured three higher than the inherited baseline, so the scoped zero above is what rules that out and it is why the two runs are reported together. See lint_gate_correction. The 50 an operator would measure with golangci-lint's defaults is that tool's max-issues-per-linter cap rather than a total.",
+  "linux_arm64": "Unclaimed, not disqualified. Both recipes sit behind //go:build linux files and add their own runtime.GOARCH != \"amd64\" refusal, so on linux/arm64 they refuse with their platform message. The new tests assert exact refusal messages and are architecture-agnostic: nothing in them reads GOARCH, and GOOS=linux GOARCH=arm64 go vet ./spike/t421/ is clean. arm64 Linux was not executed on this amd64 host, so no arm64 result is asserted in either direction.",
+  "whole_package_race_not_taken": "A whole-package race run of ./spike/t421 was deliberately not taken. Race evidence is carried by the targeted, twenty-repetition and affected-wide race selectors above instead, which is how T42.H2e was qualified.",
+  "synthetic_refusal_coverage": "Neither census can be reached through a hostile ambient GIT_EXEC_PATH or GOROOT, because the closed probe environment sets neither. Every refusal case is therefore produced by calling the unexported census functions directly on synthetic fixture directories. That is deliberate: the tables prove the census layer rather than the probe plumbing, and the plumbing is covered separately by TestLinuxExternalDelegationProbeRefusesBeforeLaunching and the retained T42.H2e observer tests.",
+  "structural_dominance": "Two refusal rules are effectively unreachable in isolation and are recorded rather than forced. In admitExternalGitExecPath the core.class != regular branch cannot fire alone, because a nonzero symlink target count for git implies a symlink already passed the sibling rule, which requires the named git entry to be regular; the sibling rule therefore always refuses first. The duplicate refusal in externalDelegationNamed is likewise dominated. Both stay in the source as defence in depth and neither is claimed as covered by a dedicated case."
+ },
+ "newly_named_prerequisite": "None. This slice names no new H2 prerequisite. The Linux immutable-flag input-custody model that T42.H2f named remains recorded in docs/BACKLOG.md under both tickets, and this slice neither implements nor weakens it.",
+ "cost_pass": {
+  "steady_state": "No new per-query/request, sync tick, startup/restart, retry/no-op or publication work; ordinary runtime is unchanged and no production dispatch site is added or removed. Neither observer is called from any production path, so both cost nothing until a future ceremony entry point wires them, and each is bounded by construction rather than by a deadline on a subprocess.",
+  "git_observation": "One 30-second outer context, one image admission (EvalSymlinks, one full hash of the 4,547,768-byte core image and one ELF64 header screen), one --exec-path child under the existing ten-second probe context with its 4-KiB stdout and stderr caps, one private scratch directory, and one bounded census of at most 512 root entries plus at most four subdirectories of at most 128 entries each. On this host that measured 196 census rows, 145 Readlink calls, 50 header reads of at most 64 bytes each, and five full reads of the one core image for 22,738,840 bytes hashed. No other helper body is read at all, and the 31,571 bytes of mergetools content contribute only their Lstat sizes.",
+  "go_observation": "The same outer context and image admission over the 15,434,568-byte bin/go, two children, and 26 census rows with 18 header reads, at most 4,096 bytes of the one VERSION marker (35 bytes measured) and two source-marker directory admissions. It hashes that single path in full at each of its verification points, for 108,041,976 bytes across seven reads: admission, before and after each of the two probes, the GOROOT/bin/go equality read and the final re-verification. The SDK is never walked, so its measured 15,026 files across 1,667 directories and 232,413,581 bytes stay entirely outside every bound, and no tool body is read.",
+  "rejected_on_cost": "Content-hashing all 172 exec-path entries, which would read 26 helper bodies plus 24 text files for no version-probe value, and a GOROOT tree digest through the existing hostTreeDigest, which would turn one location recipe into a 232,413,581-byte scan.",
+  "held_resources": "Each census holds at most one directory descriptor plus one header-read descriptor at a time and closes both with checked errors. No new persistent lock, cache, timer, goroutine, store/schema, corpus/shard, publication or disk work. Probe scratch is removed by the existing deferred cleanup unless a volume-owned preparation parent deliberately retains it, which is the retained T42.H2e behaviour and is asserted unchanged by TestExternalProbePreparationParentRetainsScratch."
+ },
+ "independent_review": {
+  "reviewed_commit": "e75680a8929201a1ff73541ceaa383e4bd8ee8fd",
+  "verdict": "APPROVE-WITH-NITS",
+  "critical": 0,
+  "high": 0,
+  "medium": 0,
+  "low": 7,
+  "low_findings": [
+   "censusExternalGoSDKLocation digested GOROOT/bin/go before the bin census, so that path was hashed in full before maxExternalDelegationHelperBytes bounded its row; the Git recipe already kept the safer precedence. Corrected by running the bin census and admitExternalGoSDKBin ahead of the digest, with the precedence and its consequence stated in the census comment. The only changed expectation is bin_go_is_absent, which now reaches the exact-pair fence before the digest fence; the digest fence stays covered by bin_go_differs_from_the_admitted_image.",
+   "runExternalDelegationProbe joined a cleanup failure into retErr but left its named output populated, so a refused probe could hand partial output to a caller beside a non-nil error. The defer now zeroes output whenever retErr is non-nil, matching the observers' own convention.",
+   "classifyExternalDelegationRow returned a partially filled entry carrying the refused row's name and symlink target alongside its error. All four refusal paths now return an explicit zero entry, and the function comment records why.",
+   "Both census tests took their expected digests from the production externalDelegationDigest, which made the assertion tautological against a change to the \"sha256:\" prefix or the hash function. Each fixture now also carries one independently computed hard-coded hex digest, asserted equal to externalDelegationDigest of the hand-written canonical string before use.",
+   "Both new test files asserted refusals with strings.Contains, weaker than the exact-equality precedent in external_delegation_linux_test.go. Every refusal assertion in the two new tables, the SDK directory-admission table and its bin_go_is_absent subtest now compares err.Error() to the complete production message, so a fence reordering that lets one rule refuse where another was expected fails instead of passing on a shared prefix.",
+   "The two RefusesUnadmittedImages tables asserted only that a refusal occurred. Each gains a want field pinning the exact message for all eight cases, derived from the production guard order: the platform and context guards, then the absolute-path, resolution and native-image screens, then the single generic probe refusal that catches a real native image of the wrong role.",
+   "The real-host assertions forbade only private directories, so a bare leaked entry name was unpinned outside the synthetic tests. They now forbid names that are real entries of this host's exec-path and GOROOT (mergetools, git-remote-http; VERSION, gofmt, preprofile), each verified present on the host and each checked against the %#v encoding so the assertion is not vacuous by collision."
+  ],
+  "correction_commits": [
+   "6895dbb0584fee3a146fd1822ff7d86507b1305e"
+  ],
+  "consequence": "The established bar for this ladder, carried from T42.H2d/H2e/H2f, is a re-review with every severity count at zero, so all seven lows were corrected rather than accepted as nits. Three corrections are in production source and four are in tests. Because 6895dbb0 changed four hashed source files, every measurement taken at e75680a8 was discarded and the whole gate set re-taken.",
+  "delta_re_review_of_the_corrections": {
+   "reviewed_commits": [
+    "e75680a8929201a1ff73541ceaa383e4bd8ee8fd",
+    "6895dbb0584fee3a146fd1822ff7d86507b1305e"
+   ],
+   "reviewed_against": "The seven corrections as a delta, plus the whole changed set for consistency.",
+   "verdict": "APPROVE-WITH-NITS",
+   "critical": 0,
+   "high": 0,
+   "medium": 0,
+   "low": 1,
+   "low_findings": [
+    "external_sdk_location_linux.go claimed above admitExternalGoSDKVersionMarker that the VERSION marker was \"the one bounded content read the recipe performs inside the SDK, and it never walks the tree around it\". That is a false comment, not a false behaviour: censusExternalGoSDKLocation fully reads and hashes GOROOT/bin/go, 15,434,568 bytes on this host and roughly 3,768 times the marker's 4,096-byte ceiling, and the paragraph 6895dbb0 had added above that same function acknowledges the body read, so the file contradicted itself across about 100 lines."
+   ],
+   "independently_validated": [
+    "recomputed all three canonical digests with hashlib over the hand-written canonical constants and got byte-identical values",
+    "mechanically cross-checked all 72 pinned refusal strings (41 distinct) across the three test files against the errors.New literals of the production files, with zero mismatches",
+    "confirmed all four classifyExternalDelegationRow refusals return an explicit zero entry and that the symlink and directory branches contain no refusal, so the set is complete",
+    "confirmed the output = \"\" zeroing sits inside the existing defer and therefore also covers the post-probe verification failure path"
+   ],
+   "corrections": "52910021621ca3f12e7aefeb9bc3f4a07bcaf019",
+   "consequence": "The zero-severity bar means the low is corrected rather than accepted as a nit. The corrected comment names all three in-SDK reads and distinguishes them by purpose rather than by size: the marker is the only read of SDK content for that content's own sake, the shared census layer reads at most 64 header bytes per regular entry to classify it, and censusExternalGoSDKLocation fully reads GOROOT/bin/go once to bind the SDK to the admitted image. The true claim that none of the three walks the tree is kept, since the SDK's measured 15,026 files across 1,667 directories and 232,413,581 bytes stay outside every bound. No compiled expression, bound, refusal message or production behaviour changed: five added and two removed comment lines in one file. Because this file is one of the seven the record hashes, every measurement at 6895dbb0 was discarded; the in-flight whole-package census was terminated at about 32 of an expected 110 minutes rather than allowed to finish and be thrown away, and no rehearsal process, test binary or port-65499 listener survived the termination."
+  },
+  "second_delta_re_review_of_the_comment_correction": {
+   "reviewed_commits": [
+    "6895dbb0584fee3a146fd1822ff7d86507b1305e",
+    "52910021621ca3f12e7aefeb9bc3f4a07bcaf019"
+   ],
+   "reviewed_against": "The single comment correction as a delta, then the corrected file and its three siblings for any surviving contradiction or stale copy of the retired claim.",
+   "verdict": "APPROVE",
+   "critical": 0,
+   "high": 0,
+   "medium": 0,
+   "low": 0,
+   "findings": [],
+   "verified_claims": [
+    "the delta is comment-only in one file: git diff --numstat 6895dbb0..52910021 reports 5 and 2 for external_sdk_location_linux.go, and filtering that diff for added or removed lines that are not // comments yields the empty set, so no compiled expression, constant, bound, control-flow path, refusal message, struct field, import or build tag changed",
+    "the 4,096-byte marker bound is maxGoSDKVersionBytes, refused on Lstat size before the read, and the host VERSION measures 35 bytes",
+    "the at-most-64-header-bytes claim is right on both the bound and the entry set: externalDelegationHelperClass is called only in the mode.IsRegular() branch, the symlink and directory branches record without reading, irregular and setuid entries refuse without reading, and a regular entry of size 0 or above 64 MiB refuses before any read; the host shape corroborates it at 18 header reads across 26 census rows",
+    "the word separately is load-bearing and correct, because VERSION is itself a regular root entry and so receives both the marker read and a 64-byte header read; the wording covers that double read rather than hiding it",
+    "censusExternalGoSDKLocation makes exactly one call to t4013.DigestHostExecutable on GOROOT/bin/go, and that call performs a single streaming io.Copy pass with no seek-back and requires written == before.Size(), so it is a genuine full read and one read; nothing else in that function reads bin/go content",
+    "the once is correctly function-scoped rather than recipe-scoped: GOROOT/bin/go is the admitted image, so the recipe as a whole fully reads it seven times, and the comment attributes its once to censusExternalGoSDKLocation, which does not contradict that total",
+    "none of the three reads walks the tree: the marker read opens one path, readExternalDelegationRows lists exactly one level and never recurses, and DigestHostExecutable opens one file; the SDK file never calls the subdirectory census the Git recipe uses, so each of its three censuses is an independent one-level listing",
+    "no contradiction is introduced against the same file's bin-precedence comment or its no-tool-body-read claim, nor against external_exec_path_linux.go or external_tool.go",
+    "no stale copy of the retired claim survives: grepping the seven changed files and the four documents for the old phrasings returns only the new corrected line"
+   ],
+   "not_verified_by_source_reading": [
+    "that the package compiles and that gofmt, go vet, lint and docs-check are clean, which the reviewer was instructed not to run; a comment-only change cannot alter compilation, but that is source reading rather than a gate result, and the gates below supply it",
+    "runtime behaviour of DigestHostExecutable as a single pass and of the seven full reads, derived from source rather than from an executed observation",
+    "the measured host counts, confirmed by directory listing rather than by running either observer"
+   ],
+   "consequence": "This is the all-zero verdict the ladder's bar requires, so no third review correction was needed. It was obtained before the measurement sequence was relaunched, deliberately: a further comment correction would have invalidated a third census, and the cost of waiting for the verdict is only the review's own wall time. That deliberation did not survive contact with the gates. The relaunch it protected ran to completion at 52910021 and was then discarded anyway, because the scoped lint gate rather than any reviewer found three new errcheck findings in this slice's own new test files and the correction changed two hashed source files. The measurements below therefore bind to 8793fe4d, not to the commit this verdict cleared, and the review's own not-verified list names the gap precisely: it was instructed not to run lint, so a clean review verdict was never evidence of a clean gate."
+  }
+ },
+ "lint_gate_correction": {
+  "found_by": "the scoped changed-file lint gate, not a reviewer. It is recorded as its own entry beside independent_review rather than as a fourth review round, because attributing a mechanical gate finding to an independent review would misstate both what the reviews checked and what the gates are for.",
+  "corrected_from": "52910021621ca3f12e7aefeb9bc3f4a07bcaf019",
+  "corrected_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
+  "gate_command": "golangci-lint run --new-from-rev=98457ae4 --whole-files ./spike/t421/..., with the tool pinned to 2.12.2 by the repository's .golangci-lint-version file",
+  "findings": [
+   "spike/t421/external_delegation_linux_test.go:377:33: Error return value of `os.RemoveAll` is not checked (errcheck)",
+   "spike/t421/external_delegation_linux_test.go:382:22: Error return value of `listener.Close` is not checked (errcheck)",
+   "spike/t421/external_exec_path_linux_test.go:482:19: Error return value of `image.Close` is not checked (errcheck)"
+  ],
+  "why_they_are_new": "The repository's .golangci.yml selects default: standard and carries no std-error-handling exclusion preset, so errcheck reports an unchecked Close or RemoveAll return; its only path exclusion is spike/t111/, whose sealed T11.1 evidence is retained byte-for-byte. The base carries zero errcheck findings across spike/t421, so all three are new work in this slice's own files rather than inherited baseline, and documenting them as an accepted deviation would have contradicted the golangci-lint clean convention.",
+  "why_the_reviews_missed_them": "Both independent reviews were scoped to design, correctness, cost and documentation and were explicitly instructed not to run the gates; the second one lists that instruction among its own not-verified claims. Neither review was wrong to pass. The three findings are exactly the class a mechanical gate exists to catch, and the gate did catch them on the first complete run that reached it, which is the argument for keeping lint inside the finite gate set and running that set to completion rather than stopping at the census.",
+  "correction": "Adopt the package's existing idioms rather than drop the return: t.Cleanup(func() { _ = os.RemoveAll(x) }) as at signer_claim_unix_test.go:19 and execution_failure_diagnostic_darwin_test.go:22, and defer func() { _ = x.Close() }() as at the 309 other Close sites in spike/t421. The six plain defer server.Close() calls that remain in the package are not counterexamples: each is on an *httptest.Server, whose Close returns nothing and so is never flagged. Three in-place line replacements across two test files; no compiled production expression, bound, refusal message, struct field or behaviour changed.",
+  "restored_baseline": "After the correction the scoped gate reports 0 issues and exit 0, and the unscoped spike/t421 baseline returns to exactly 72 pre-existing findings, every one unused, across eleven files with no errcheck among them; none of the eleven is a file this slice changes. The discarded 52910021 run had measured 75, which is that same 72 plus these three. The earlier reasoning that the baseline could not have moved was sound for its unused component and silently wrong about the slice's own new files, so from that point the baseline was measured rather than inferred.",
+  "consequence": "Two of the seven hashed source files changed, so under this ladder's evidence discipline the complete census and sixteen-gate set that had just finished at 52910021 was discarded and re-taken at 8793fe4d. That is the third discard on this slice and the most expensive of the three, since unlike the first it threw away a finished sequence rather than terminating an in-flight one. The whole discarded set is archived for attribution only and is never hashed into this record."
+ },
+ "remaining": "The Linux immutable-flag input-custody model; isolated pressure/allocation/restore adapters; new Linux-bound plan versions; aggregate physical and effective-cgroup resource, child and headroom admission; complete readiness; ceremony entry-point integration; freeze; execution.",
+ "release_or_scale_claim": "None. This record establishes no complete readiness, no new canonical plan, no freeze, no ceremony execution, no seal, no release, no Epic 42 closure and no scale or SLO claim. GATE2-V2 remains NOT_ESTABLISHED and DO_NOT_RELEASE stands."
+}

@@ -3753,20 +3753,193 @@ adapters/admission and ceremony entry-point integration remain pending; no
 complete readiness, new plan, freeze, ceremony or scale claim follows.
 
 **T42.H2g · Linux Git exec-path helper manifest and Go SDK location recipes**
-*(next H2 slice)* — extend the admitted Linux external-tool observation from one
-core image to the locations the tools actually delegate to: a bounded
-`git --exec-path` helper manifest observation and a Go GOROOT/SDK location
-recipe, each fail-closed, each structural rather than nominal, and neither
-hashing enough content to become an unbounded host scan. The 172-entry exec-path
-on this host holds 142 symlinks to the core image, 3 symlinks to
+*(seventh H2 slice, 2026-10-08)* — extend the admitted Linux external-tool
+observation from one core image to the two locations those tools actually
+delegate to: a bounded `git --exec-path` helper manifest and a Go GOROOT/SDK
+location recipe. Both are fail-closed, both are structural rather than nominal,
+and neither hashes enough content to become an unbounded host scan, so the gap
+T42.H2e named — native-image headers and Git core equality reject scripts and a
+delegating shim but prove nothing about helper closure or SDK location — is now
+bounded on Linux amd64 without widening the identity itself. The 172-entry
+exec-path on this host holds 142 symlinks to the core image, 3 symlinks to
 `git-remote-http`, 25 other separate regular helpers, the core regular file that
 already hashes equal to the selected image and one `mergetools` directory, so
-content-hashing every entry is the wrong shape for a version probe. This slice
-supplies no launcher authority, no session teardown and no dispatch admission.
-The Linux immutable-flag input-custody model, isolated
-pressure/allocation/restore adapters, new Linux-bound plan versions and
-aggregate physical/effective-cgroup resource admission remain H2 prerequisites
-before complete readiness, freeze or execution.
+content-hashing every entry is the wrong shape for a version probe; the SDK side
+is worse, because the measured GOROOT holds 15,026 files across 1,667
+directories and 232,413,581 bytes. AC: one shared Linux census layer serves both
+recipes rather than each reimplementing a directory walk, and it refuses instead
+of truncating when a directory exceeds its entry bound, so no observation can
+describe a prefix of an unadmitted shape; every row is classified by Lstat type,
+symlink target, size, permission bits and a 64-byte header screen, and a setuid,
+setgid, socket, FIFO, device or empty helper refuses; the canonical digest input
+is sorted explicitly because `(*os.File).ReadDir` returns kernel order rather
+than a sorted sequence, and every field is length-prefixed so a hostile name
+cannot resplit a row; the directory identity is snapshotted before the first
+read and re-checked after the last, so a concurrent replacement or resize cannot
+supply the observed rows; the Git manifest requires exactly one regular native
+`git` entry that hashes byte-equal to the selected image plus at least one
+symlink delegating to it, so neither a directory of unrelated helpers nor a lone
+copied core satisfies it; every symlink must name a bare sibling that is itself
+an admitted regular helper in the same census, so a link that escapes the
+directory, points at a directory, chains to another link or names itself refuses;
+the Go recipe binds the reported pair rather than either field alone, requiring
+`GOTOOLDIR` to be exactly `GOROOT/pkg/tool/<goos>_<goarch>`, `GOROOT/bin/go` to
+resolve to the admitted image, and the on-disk `VERSION` marker's first line and
+a second `go version` probe to both equal the verifier toolchain release; the
+closed probe environment sets neither `GIT_EXEC_PATH` nor `GOROOT`, so a hostile
+ambient value cannot reach either census and every refusal is exercised by
+calling the unexported censuses directly on synthetic directories; neither
+observation walks the SDK or the exec-path tree, and neither adds a field to
+`ExecutionToolIdentity`; and a refusal always yields the zero value rather than a
+partial description, because counters accumulate in a local and reach the caller
+only through the single success return. This slice supplies no launcher
+authority, no session teardown and no dispatch admission. The Linux
+immutable-flag input-custody model, isolated pressure/allocation/restore
+adapters, new Linux-bound plan versions and aggregate physical/effective-cgroup
+resource admission remain H2 prerequisites before complete readiness, freeze or
+execution.
+
+T42.H2g's exact implementation `e75680a8929201a1ff73541ceaa383e4bd8ee8fd`
+received an independent review that returned APPROVE-WITH-NITS with 0 critical,
+0 high, 0 medium and 7 low findings. The bar this ladder carries from T42.H2d,
+T42.H2e and T42.H2f is a re-review with every severity count at zero, so all
+seven were corrected rather than accepted as nits: three corrections landed in
+production source and four in tests. `censusExternalGoSDKLocation` digested
+`GOROOT/bin/go` before the `bin` census, so that path was hashed in full before
+`maxExternalDelegationHelperBytes` bounded its row, and it now runs that census
+and its exact-pair admission first, matching the precedence the Git recipe
+already kept. `runExternalDelegationProbe` joined a cleanup failure into
+`retErr` while leaving its named `output` populated, so a refused probe could
+hand partial output to a caller beside a non-nil error; the existing defer now
+zeroes it. `classifyExternalDelegationRow` returned a partially filled entry
+carrying the refused row's name and symlink target alongside its error, and all
+four of its refusal paths now return an explicit zero entry. Both census tests
+took their expected digests from the production `externalDelegationDigest`,
+which made the assertion tautological against a change to the `sha256:` prefix
+or the hash function, so each fixture now also carries one independently
+computed hard-coded hex digest asserted equal to that function's output over
+the hand-written canonical string before it is used. Both new test files
+asserted refusals with `strings.Contains`, weaker than the exact-equality
+precedent in `external_delegation_linux_test.go`, so every refusal assertion in
+the two new tables, the SDK directory-admission table and its
+`bin_go_is_absent` subtest now compares `err.Error()` to the complete
+production message; the two `RefusesUnadmittedImages` tables additionally
+gained a `want` field pinning the exact message for all eight cases from the
+production guard order. The real-host assertions forbade only private
+directories, so a bare leaked entry name was unpinned outside the synthetic
+tests; they now also forbid names that are real entries of this host's
+exec-path and `GOROOT` — `mergetools`, `git-remote-http`, `VERSION`, `gofmt`,
+`preprofile` — each verified present on the host and each checked against the
+`%#v` encoding so the assertion is not vacuous by collision. Because those
+corrections changed four of the seven hashed source files, every measurement
+bound to `e75680a8` was discarded and the whole gate set re-taken at
+`6895dbb0584fee3a146fd1822ff7d86507b1305e`.
+
+A delta re-review of that correction returned APPROVE-WITH-NITS with 0
+critical, 0 high, 0 medium and 1 low finding. `external_sdk_location_linux.go`
+claimed above `admitExternalGoSDKVersionMarker` that the `VERSION` marker was
+the recipe's one bounded content read inside the SDK, which the shared census
+layer's 64-header-byte screen per regular entry and
+`censusExternalGoSDKLocation`'s single full read of `GOROOT/bin/go` —
+15,434,568 bytes on this host, roughly 3,768 times that marker's 4,096-byte
+ceiling — both contradicted, so the file contradicted itself across about 100
+lines. That was a false comment rather than a false behaviour, and the
+correction is comment-only: five added and two removed lines in one file,
+naming all three in-SDK reads and distinguishing them by purpose rather than by
+size while keeping the true claim that none of the three walks the tree. It is
+`52910021621ca3f12e7aefeb9bc3f4a07bcaf019`. Because that file is one of the
+seven the sealed record hashes, every `6895dbb0` measurement was discarded in
+turn — the in-flight whole-package census was terminated at 31m33s of an
+expected 110 minutes rather than allowed to finish against bytes the record
+would no longer name — and re-taken at `52910021`, this pass against a
+completely clean working tree. A second delta re-review of the comment
+correction returned APPROVE with 0 critical, 0 high, 0 medium and 0 low
+findings.
+
+That all-zero verdict did not end the sequence, and the reason is retained here
+because it is the one correction in this ladder that no reviewer found. The
+third pass ran to completion and its pinned scoped changed-file lint gate then
+failed: `golangci-lint` 2.12.2 reported three `errcheck` findings, all in this
+slice's own new test files — an unchecked `os.RemoveAll` inside a `t.Cleanup`
+at `external_delegation_linux_test.go:377`, an unchecked `net.Listener` `Close`
+at `:382`, and an unchecked host-image `Close` at
+`external_exec_path_linux_test.go:482`. `.golangci.yml` selects `default:
+standard` with no `std-error-handling` exclusion preset and excludes only
+`spike/t111/`, and the base carries zero `errcheck` findings across
+`spike/t421`, so all three were new and the slice did not meet the
+`golangci-lint clean` merge bar. Both reviewers had been instructed not to run
+the gates, so a clean review verdict was never evidence of a clean gate; only a
+finite mechanical gate set run to completion could have found this, which is
+the argument for keeping lint inside that set rather than treating the census
+as its end. The correction adopts the package's own idioms: `t.Cleanup(func() {
+_ = os.RemoveAll(x) })` as in `signer_claim_unix_test.go`, and `defer func() {
+_ = x.Close() }()`, the form used at 309 other `Close` sites in this package.
+The six plain `defer server.Close()` calls that remain are not counterexamples,
+because `httptest.Server.Close` returns nothing and is therefore never flagged.
+All three are in-place replacements of lines this slice itself added, so the
+whole-range diffstat is unchanged at seven files, 2787 insertions and 3
+deletions while `52910021..8793fe4d` alone is two files, three insertions and
+three deletions. Two of the seven hashed files changed, so the completed third
+pass was discarded in full and the whole set re-taken a fourth time at
+`8793fe4db180e3ff63eef733a5b814f11e81c57d`. Every number below binds uniformly
+to `8793fe4d`.
+
+The fourteen selectors this slice adds are finite and green at that tree. They
+pass 14/14 with 110 subtests in 4.058s normal and 29.761s under race, and a
+twenty-repetition boundary passes 280/280 with 2200 subtests in 24.684s normal
+and 32.715s under race, with zero data races in either race run. The
+affected-wide selector
+`ExternalTool|ExternalProbe|LinuxToolCustody|ExternalDelegation|ExternalGitExecPath|ExternalGoSDK`
+passes 33/39 with 196 subtests in 43.515s normal and 48.861s under race, also
+with zero data races, so the retained H2e observer tests and the new delegation
+tests are green together rather than only separately. `go vet ./spike/t421/` is
+clean on `linux/amd64` and on `linux/arm64`; `GOOS=darwin GOARCH=arm64 go build
+./spike/...` and its matching vet are clean, so the new Linux-only symbols leak
+nothing into the Darwin build; `go build ./...` is clean on `linux/amd64`; `go
+mod verify` reports all modules verified; `gofmt -l spike/t421/` names nothing;
+and `git diff --check 98457ae4..HEAD` reports no whitespace error.
+
+Four results are reported qualified rather than green and one coverage boundary
+is named. The whole `./spike/t421` package is still not green: `-timeout=120m
+./spike/t421` completed rather than timing out in 6247.895s and enumerated 653
+top-level passes, 2 failures and 11 skips, matching the 666 top-level test
+functions that compile on Linux — the 652 that compiled at the T42.H2e head
+plus the 14 this slice adds — with 3335 indented passes and no indented failure
+or skip. Both failures pre-date this slice.
+`TestProductionDispatchSitesMatchActualBoundaries` is the retained T42.H2a
+production-dispatch inventory failure and is byte-identical modulo timings at
+base `98457ae4` and at head. `TestZoektOfferNativePinnedGraph` is a
+deterministic Linux refusal at `zoekt_offer_build_test.go:90`:
+`walkGoBuildTree` requires `inputCustodyOwned`, which on Linux requires
+`FS_IMMUTABLE_FL` and therefore `CAP_LINUX_IMMUTABLE`, and the four files in
+that call chain are unchanged between base and head. A whole-package race run
+was deliberately not taken, since it would add two to three hours to a package
+that already needs 6247.895s normal, so race evidence is carried by the
+targeted, twenty-repetition and affected-wide race selectors above instead,
+matching how T42.H2e was qualified. The inherited T421 lint baseline stays
+qualified while only this slice's changed-file result is claimed green, and
+that green claim needs both halves of an argument rather than one: the pinned
+scoped run reports `0 issues.`, and an unbounded unscoped `golangci-lint run
+./spike/t421/... --max-issues-per-linter=0 --max-same-issues=0` reports 72
+findings, every one `unused`, across 11 untouched files — `git diff --name-only
+98457ae4..8793fe4d` returns exactly 7 paths and none of them is one of the 11,
+so the inherited count cannot have moved. That half alone would not make 72 the
+inherited total, because this slice's own new files could add findings the
+unscoped run also sees; at `52910021` they did, three `errcheck` findings, and
+the total measured 75 rather than 72. The scoped zero above is what rules that
+out, which is why the two runs are reported together. The `50` an operator
+would measure with golangci-lint's defaults is that tool's
+`max-issues-per-linter` cap rather than a total. `linux/arm64` stays unclaimed
+rather than disqualified: nothing in the new tests reads `GOARCH` and
+`GOOS=linux GOARCH=arm64 go vet ./spike/t421/` is clean, but arm64 Linux was
+not executed on this amd64 host. The named coverage boundary is that, because
+the closed probe environment sets neither `GIT_EXEC_PATH` nor `GOROOT`, every
+refusal case in the two mutation tables is produced by calling the unexported
+census functions directly on synthetic fixture directories; those tables
+therefore prove the census layer rather than the probe plumbing, which is
+covered by `TestLinuxExternalDelegationProbeRefusesBeforeLaunching` and by the
+retained H2e observer tests. No `t421.test`, `go test` or SurrealDB process and
+no port-65499 listener survived the sequence.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

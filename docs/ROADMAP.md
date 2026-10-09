@@ -107,6 +107,30 @@ isolated pressure/allocation/restore adapters, new Linux-bound plan versions and
 aggregate physical/effective-cgroup resource/readiness admission remain open; no
 ceremony entry point is enabled.
 
+T42.H2g bounds the two delegation locations the admitted Linux Git and Go
+observations could not see. `ObserveExecutionGitExecPathManifest` measures the
+exec-path one selected Git core image reports and censuses it structurally —
+each entry classified by Lstat type, symlink target, size, permission bits and a
+64-byte header screen — requiring exactly one regular native `git` that hashes
+byte-equal to the selected image and at least one bare-sibling symlink delegating
+to it, so neither a directory of unrelated helpers nor a lone copied core
+satisfies the recipe. `ObserveExecutionGoSDKLocation` measures the GOROOT and
+GOTOOLDIR one selected Go image reports for itself under `GOTOOLCHAIN=local`,
+binds the pair rather than either field alone, and requires the on-disk `VERSION`
+marker and a second `go version` probe to both equal the verifier toolchain
+release. Both share one bounded Linux census layer that refuses instead of
+truncating, sorts explicitly because `ReadDir` returns kernel order, and
+length-prefixes every canonical field. Neither hashes a tree: only two paths are
+ever read in full on the Git side and one on the Go side, so the 172-entry
+exec-path and the 15,026-file SDK stay bounded at 196 and 26 metadata
+inspections respectively, and the SDK is never walked. Neither observation adds
+a field to `ExecutionToolIdentity`, so an observed identity remains neither a
+launch recipe nor dispatch authority, and both stay unadmitted on Darwin. No
+launcher authority, session teardown or dispatch admission follows. The Linux
+immutable-flag input-custody model, isolated pressure/allocation/restore
+adapters, new Linux-bound plan versions and aggregate physical/effective-cgroup
+resource/readiness admission remain open; no ceremony entry point is enabled.
+
 ## Current product posture
 
 phebs ships as a self-hosted, single-node Go application with:
