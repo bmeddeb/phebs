@@ -1,6 +1,6 @@
 {
  "schema": "phebs-t42h2g-linux-delegation-location-rehearsal-v1",
- "measured_at_utc": "2026-10-09T06:56:52.875601675+00:00",
+ "measured_at_utc": "2026-10-09T07:25:29.083166343+00:00",
  "source_commit": "8793fe4db180e3ff63eef733a5b814f11e81c57d",
  "implementation_commit": "e75680a8929201a1ff73541ceaa383e4bd8ee8fd",
  "review_correction_commit": "6895dbb0584fee3a146fd1822ff7d86507b1305e",
@@ -134,7 +134,7 @@
  "native_runs": {
   "selector": "^(TestLinuxExternalDelegation|TestLinuxExternalGitExecPath|TestLinuxExternalGoSDK)",
   "selector_count": 14,
-  "selector_note": "spike/t421's test sources declare 880 test functions and this prefix matches exactly fourteen of them. The prefix form and an anchored alternation of the same fourteen exact names select an identical set, proven by diffing the two derived name lists at this exact commit and reproduced across three separate derivations with byte-identical md5s, so an operator can retype the short command without narrowing coverage.",
+  "selector_note": "spike/t421's package test sources declare 879 test functions -- 880 Test-prefixed functions, the extra being the darwin-tagged TestMain -- and this prefix matches exactly fourteen of the test functions. The prefix form and an anchored alternation of the same fourteen exact names select an identical set, proven by diffing the two derived name lists at this exact commit and reproduced across three separate derivations with byte-identical md5s, so an operator can retype the short command without narrowing coverage.",
   "targeted_normal": {
    "top_level_pass": 14,
    "top_level_fail": 0,
@@ -254,7 +254,7 @@
   "whole_package_note": "The whole spike/t421 package is qualified, not green, and it carries two pre-existing inherited failures reproduced at this slice's base. It is run normal only: a whole-package race run was deliberately not taken because it would add hours to a package that already needs the duration recorded here, so race evidence is carried by the targeted, twenty-repetition and affected-wide race selectors instead, matching how T42.H2e was qualified.",
   "driver_log": "sha256:5961cdf8b9bf31c5a8f89b9a498fef878d938b132871bc707201c57d5873f784",
   "driver_log_note": "hashed after the driver exited. The driver's own trailing sha256sum section reports a value for this same file that is necessarily a self-reference taken before the log's final lines were written; the value recorded here is the completed log.",
-  "note": "No log content is reproduced anywhere in this record: each run is reduced to its counts, a sha256 of the whole log, and that log's byte and line lengths, so no private source or raw output survives."
+  "note": "One deliberate exception is named here rather than left implicit: base_inherited_failure_comparison quotes the six short failure-identity lines each side's run produced -- the RUN and FAIL headers plus the four accounting_work_test.go lines -- because those lines are that comparison's whole evidence, and they are repo-relative test output naming production symbols and test files, never a host path. Every other run is reduced to its counts, a sha256 of the whole log, and that log's byte and line lengths; the comparison's two long inventory lines stay digest-only, and no other log content is reproduced anywhere in this record."
  },
  "static_gates": {
   "affected_vet": {
@@ -315,7 +315,7 @@
    "log_bytes": 14688
   },
   "unscoped_pinned_lint_t421_note": "Reported qualified rather than green: an unscoped run over ./spike/t421/... carries a pre-existing unused-symbol baseline that this slice neither introduced nor repaired, so its issue count is attributed below rather than treated as a failure of this ticket.",
-  "documentation": "make docs-check exit 0; log 189 bytes sha256:5ad7299bbfa1c73e28b2c05d15484cfbbc5181679e0aa31487ee495ca029d433 (ok  \tgithub.com/bmeddeb/phebs/scripts\t0.872s). The log embeds the scripts package's own elapsed time, so its hash can vary between runs even for identical text. This hash is the run taken over the final document text after every H2g edit including all three correction rounds. docs-check resolves the OPERATIONS link to this record's path but never hashes its content, so the placeholder bytes this record carried at that moment are not an input to the hash. A confirmation re-run after this record's own rewrite also exited 0 (log 189 bytes sha256:c0081c7846b399982983048a10ce25ae91a749e543b023bc3ba2d76e008bf669, ok  \tgithub.com/bmeddeb/phebs/scripts\t0.883s). The two hashes differ only because the elapsed time in that ok line differs; both runs appended the same explicit docs-exit=0 marker, and neither run reads this record's bytes.",
+  "documentation": "make docs-check exit 0; log 189 bytes sha256:9f1dc1d4c1af18677bb58deb6859801caf72af158c43ce05b7e92adfc64a0518 (ok  \tgithub.com/bmeddeb/phebs/scripts\t0.899s). The log embeds the scripts package's own elapsed time, so its hash can vary between runs even for identical text. This hash is the run taken over the final document text after every H2g edit, including every correction round. docs-check resolves the OPERATIONS link to this record's path but never hashes its content, so the placeholder bytes this record carried at that moment are not an input to the hash. A confirmation re-run after this record's own rewrite also exited 0 (log 189 bytes sha256:114f9b674d3c8a9df2e71b299c51cdd25d80bd1e97d4d55526b362b4484e2126, ok  \tgithub.com/bmeddeb/phebs/scripts\t0.848s). The two hashes differ only because the elapsed time in that ok line differs; both runs appended the same explicit docs-exit=0 marker, and neither run reads this record's bytes.",
   "glossary": "make verify-glossary exit 0; log 76 bytes sha256:348abafb342cb261180eef8227eb062ba958a7029830f3186f4c67df935594d6. glossary-gen -verify wrote nothing and prints no timing, so this log is static text plus the appended glossary-exit=0 marker. A confirmation re-run after this record's own rewrite produced the byte-identical log and the same sha256:348abafb342cb261180eef8227eb062ba958a7029830f3186f4c67df935594d6, which is the expected result for a gate whose output carries no elapsed time."
  },
  "baseline_qualifications": {
@@ -573,6 +573,31 @@
     "the measured host counts, confirmed by directory listing rather than by running either observer"
    ],
    "consequence": "This is the all-zero verdict the ladder's bar requires, so no third review correction was needed. It was obtained before the measurement sequence was relaunched, deliberately: a further comment correction would have invalidated a third census, and the cost of waiting for the verdict is only the review's own wall time. That deliberation did not survive contact with the gates. The relaunch it protected ran to completion at 52910021 and was then discarded anyway, because the scoped lint gate rather than any reviewer found three new errcheck findings in this slice's own new test files and the correction changed two hashed source files. The measurements below therefore bind to 8793fe4d, not to the commit this verdict cleared, and the review's own not-verified list names the gap precisely: it was instructed not to run lint, so a clean review verdict was never evidence of a clean gate."
+  },
+  "review_of_the_record_commit": {
+   "reviewed_commit": "2536d04ea8708e82e473544806a3edb036052838",
+   "reviewed_against": "A read-only audit of the committed record as a whole: its five-file commit shape, its seven-file binding to 8793fe4d, its internal consistency, and the documents it lands beside. No gate was re-run for this audit.",
+   "verdict": "APPROVE-WITH-NITS",
+   "critical": 0,
+   "high": 0,
+   "medium": 1,
+   "low": 2,
+   "medium_finding": "The record's own blanket no-log-content claim was false. native_runs.note said no log content is reproduced anywhere in this record, while base_inherited_failure_comparison quotes six short lines per side copied verbatim from the retained logs, and scoping the sentence to native_runs alone would not have rescued it, because the head block is drawn from the whole-package run the same section lists. The impact was limited: the quoted lines are public, repo-relative test output naming production symbols and test files, never a host path, and the quoting is deliberate so the two sides' failure identity can be compared. The defect was the sentence's absolute scope, not the quoting itself. Corrected in this rewrite: native_runs.note now names the comparison as its one deliberate exception and states that the comparison's two long inventory lines stay digest-only, and the builder docstring carries the same scoped claim.",
+   "low_findings": [
+    "Eleven absolute host-path citations, every one inside baseline_qualifications.base_inherited_failure_comparison, where they are retained-block provenance for a comparison carried whole by design. The audit noted that committed sibling records carry the same class (T42.H2e's and T42.H2f's records) and that this record claims path-freeness only for observation payloads in census_contract.observation_carries, which remained true. The citations are kept deliberately rather than scrubbed, and this disposition is recorded so the delta re-review can weigh it against the committed sibling practice rather than an unwritten expectation.",
+    "spike/t421's package test sources were said to declare 880 test functions, in both native_runs.selector_note and docs/guides/OPERATIONS.md. The strict count is 879 test functions: 880 Test-prefixed functions in the selected package once the single darwin-tagged TestMain in execution_launcher_darwin_test.go is counted, with the nested cmd/author package's three declarations outside the selected package. The load-bearing claim, that the prefix selector matches exactly fourteen functions, was verified exactly correct. Both loci now carry the strict wording."
+   ],
+   "independently_validated": [
+    "the commit shape and binding: parent 8793fe4d, exactly five files, clean status, in-sync origin, and all seven source_files_sha256 values matching git show 8793fe4d:<path>, with none of the seven among the eleven files carrying the inherited unscoped unused findings",
+    "the retained evidence: the census summary, the six doc-gate log hashes against the logs on disk and the doc-gates JSON, the driver log hash against sequence.log, and both base and head block raw hashes with the identical normalized hash and empty normalized diff",
+    "the record's structure and the documents' consistency: valid JSON, exactly 25 top-level keys, no field left holding an unresolved measurement placeholder, the H2g numbers matching across the documents, the OPERATIONS link resolving to this record's path, and the residual older numbers in the documents being correctly attributed pre-existing T42.H2e facts rather than contradictions"
+   ],
+   "not_verified_by_source_reading": [
+    "the selector note's three-derivations claim, whose name-list artifacts were not retained, although the end state it proves -- fourteen exact matches -- was confirmed",
+    "base_run.wall_seconds, which has no retained timing artifact"
+   ],
+   "corrections": "This record rewrite and the docs/guides/OPERATIONS.md wording fix it carries: native_runs.note now names the comparison exception and the digest-only treatment of its two long inventory lines, native_runs.selector_note and the guide carry the strict 879 count, and the builder docstring makes the same scoped claim as the note. The record was re-rendered through the twin doc-gate chain so its documentation hash binds the corrected document text. No compiled, embedded, fixture or harness input changed, and every measurement stays bound to 8793fe4d.",
+   "consequence": "The ladder's all-zero bar applies to the delta re-review of this correction, so the medium was corrected rather than excused. Because no compiled, embedded, fixture or harness input changes, no census or native gate was re-taken and the recorded measurements stay bound to 8793fe4d; only the twin doc-gate chain was re-run, because the documentation gate measures the document text this rewrite corrects. The host-path low is deliberately kept, with its disposition stated above."
   }
  },
  "lint_gate_correction": {

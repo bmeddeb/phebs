@@ -524,9 +524,10 @@ GOMAXPROCS=2 go test -p=2 -count=1 -timeout=30m ./spike/t421 \
 ```
 
 That first selector is a prefix form and is provably equivalent to the fourteen
-exact test names this slice adds: `spike/t421`'s test sources define 880 test
-functions and the prefix matches exactly fourteen of them, so an operator can
-retype the short command without narrowing coverage.
+exact test names this slice adds: the `spike/t421` package's test sources
+declare 879 test functions (880 `Test`-prefixed functions when the
+darwin-tagged `TestMain` is counted) and the prefix matches exactly fourteen of
+them, so an operator can retype the short command without narrowing coverage.
 
 The native gates are finite and green at the thrice-corrected tree: the
 fourteen selectors pass 14/14 with all 110 subtests in 4.058s normal and
