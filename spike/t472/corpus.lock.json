@@ -1,0 +1,774 @@
+{
+  "schema": "t472-caller-corpus-lock-v1",
+  "selected_utc": "2026-10-09",
+  "derived_utc": "2026-10-09",
+  "protocol": "docs/CALLER_QUALITY_PROTOCOL.md",
+  "selection_rule": "Go/gRPC-protobuf repositories containing (1) checked-in *_grpc.pb.go files carrying the unique protoc-gen-go-grpc DO NOT EDIT header, (2) committed .proto declarations corresponding to those generated clients, (3) real in-repo callers of the generated clients, and (4) a permissive license recorded at the pinned commit.",
+  "repos": [
+    {
+      "name": "etcd-io/etcd",
+      "git_url": "https://github.com/etcd-io/etcd.git",
+      "default_branch": "main",
+      "commit": "f061acd0902d489041448cdd19d71a345d27b9f5",
+      "commit_utc": "2026-10-08T09:31:33Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "3 generated clients; declarations and generated clients co-located under api/etcdserverpb/ (rpc.proto + rpc.pb.go + rpc_grpc.pb.go, header protoc-gen-go-grpc v1.6.2), server/etcdserver/api/v3lock/v3lockpb, server/etcdserver/api/v3election/v3electionpb; production caller client/v3/retry.go (NewKVClient), integration tests, in-repo gateway api/etcdserverpb/gw/rpc.pb.gw.go. Checks returned the pinned ref.",
+      "derived": {
+        "status": "committed",
+        "corpus_admitted": true,
+        "derived_utc": "2026-10-09",
+        "clone": "spike/t472/corpus/etcd",
+        "derived_commit": "b0e608e23027ab640ed336f4318a8fa804819bff",
+        "derived_tree": "ec2081df4f6bcfe53a757bf59e1ccbd2fdc175ef",
+        "parent_commits": [
+          "f061acd0902d489041448cdd19d71a345d27b9f5"
+        ],
+        "pushed": false,
+        "files": {
+          "index.scip": {
+            "sha256": "65de33afb042b96c742fd2ca5ef2df5ee5f4ba06a59cdc43b21f4bfe6bdac3d9",
+            "bytes": 33498092,
+            "git_blob_sha1": "0900f8f2a43974930e7f38636f4be26cb399bc98"
+          },
+          "layout-snapshot.json": {
+            "sha256": "21cf18371cb980d6ded5fd3c769543aa339ff5ecbbffcb11341d83f585a40da1",
+            "bytes": 830,
+            "git_blob_sha1": "246a0b3f4e200b43dbfb4d66aaef3f7088571df6"
+          },
+          "generated-from-snapshot.json": {
+            "sha256": "6bd76e59f1764deb648d3f941733735cfad6b8bc71c74eaad78f35ae6fda405a",
+            "bytes": 710,
+            "git_blob_sha1": "d4ecf6ae7eaa6765db3a8e9be611e0130d209257"
+          }
+        },
+        "index": {
+          "documents": 1076,
+          "occurrences": 395236,
+          "symbols": 63330,
+          "out_of_tree_build_cache_documents_dropped": 101,
+          "external_symbols_dropped": 0,
+          "round_trip_unstable_documents": 0,
+          "bytes": 33498092,
+          "module_runs": 14,
+          "module_rels": [
+            ".",
+            "api",
+            "cache",
+            "client/pkg",
+            "client/v3",
+            "etcdctl",
+            "etcdutl",
+            "pkg",
+            "server",
+            "tests",
+            "tests/antithesis/pkg",
+            "tools/mod",
+            "tools/rw-heatmaps",
+            "tools/testgrid-analysis"
+          ]
+        },
+        "snapshots": {
+          "clients": 3,
+          "mapped": 3,
+          "abstained": 0,
+          "mappings": 3,
+          "layout_roots": 6,
+          "layout_roots_deduped": 0,
+          "regular_files": 1493,
+          "gitlinks": 0,
+          "symlinks": 11,
+          "max_blob_path": "Documentation/etcd-internals/diagrams/write_workflow_follower.png",
+          "max_blob_bytes": 630280,
+          "vendored_mapped": 0,
+          "nonvendored_mapped": 3,
+          "abstentions": [],
+          "gates_passed": [
+            "decode_layout_production_decoder",
+            "decode_generated_from_production_decoder",
+            "layout_root_limit",
+            "generated_mapping_limit",
+            "invocation_limit_empty",
+            "known_kinds_and_protocols",
+            "source_protocol_empty",
+            "roots_match_regular_files",
+            "roots_pairwise_non_overlapping",
+            "mapping_paths_valid_and_regular",
+            "grpc_generator_relative_path_suffix",
+            "protocol_derives_grpc",
+            "layout_coverage_generated_idl_grpc"
+          ]
+        },
+        "bounds": {
+          "corpus_files": {
+            "measured": 1493,
+            "max": 200000,
+            "within": true
+          },
+          "max_blob_bytes": {
+            "measured": 630280,
+            "max": 10485760,
+            "within": true,
+            "over_bound": []
+          },
+          "index_scip_bytes": {
+            "measured": 33498092,
+            "max": 67108864,
+            "within": true
+          }
+        }
+      }
+    },
+    {
+      "name": "grpc/grpc-go",
+      "git_url": "https://github.com/grpc/grpc-go.git",
+      "default_branch": "master",
+      "commit": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+      "commit_utc": "2026-10-09T06:21:36Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "17 generated clients with the unique header; in-repo declaration/generated/caller triples under examples/ (helloworld, route_guide, features/*) plus interop/; 12 NewGreeterClient( call sites incl. examples/helloworld/greeter_client/main.go; the helloworld triple and its caller were re-checked at the pinned ref. health/grpc_health_v1 commits the generated pair without an in-repo .proto (declaration upstream in grpc/grpc-proto); broader file/caller counts were recorded at the then-live default-branch head and are re-run at the pin during sealing.",
+      "derived": {
+        "status": "committed",
+        "corpus_admitted": true,
+        "derived_utc": "2026-10-09",
+        "clone": "spike/t472/corpus/grpc-go",
+        "derived_commit": "ccda7b9d5f2953fa091a8c96a0b53098e35775c3",
+        "derived_tree": "e714a5d3ddc67bc36a6fcb8d948638b349022ad1",
+        "parent_commits": [
+          "5f1ccf56ea5ec964bbf447a10b561214f86387a6"
+        ],
+        "pushed": false,
+        "files": {
+          "index.scip": {
+            "sha256": "2e4fd7905a1d85f3231913d938f273269fec74c96fd8400b86d85bfd595dbd9a",
+            "bytes": 51916163,
+            "git_blob_sha1": "c91e12bfe3b199833eb102eeeb722c9a86e23292"
+          },
+          "layout-snapshot.json": {
+            "sha256": "3767d960e1f553d4b0a8e2d7dca94e834e3d4f0aaf396c734fbe3d3b36dc4275",
+            "bytes": 1527,
+            "git_blob_sha1": "c19326bd07ec4dba3c9108ab087b973a394ebd22"
+          },
+          "generated-from-snapshot.json": {
+            "sha256": "72281f62d178a649a2403169b1394adbaf0d013654cc9da34f7f831a238ba15f",
+            "bytes": 1450,
+            "git_blob_sha1": "626a94e26876652fe66a6f202482e0e871e21902"
+          }
+        },
+        "index": {
+          "documents": 1064,
+          "occurrences": 544909,
+          "symbols": 85113,
+          "out_of_tree_build_cache_documents_dropped": 156,
+          "external_symbols_dropped": 0,
+          "round_trip_unstable_documents": 0,
+          "bytes": 51916163,
+          "module_runs": 10,
+          "module_rels": [
+            ".",
+            "cmd/protoc-gen-go-grpc",
+            "examples",
+            "gcp/observability",
+            "interop/observability",
+            "interop/xds",
+            "security/advancedtls",
+            "security/advancedtls/examples",
+            "stats/opencensus",
+            "test/tools"
+          ]
+        },
+        "snapshots": {
+          "clients": 17,
+          "mapped": 6,
+          "abstained": 11,
+          "mappings": 6,
+          "layout_roots": 12,
+          "layout_roots_deduped": 0,
+          "regular_files": 1381,
+          "gitlinks": 0,
+          "symlinks": 7,
+          "max_blob_path": "examples/go.sum",
+          "max_blob_bytes": 567170,
+          "vendored_mapped": 0,
+          "nonvendored_mapped": 6,
+          "abstentions": [
+            {
+              "generated_path": "balancer/grpclb/grpc_lb_v1/load_balancer_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/lb/v1/load_balancer.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "channelz/grpc_channelz_v1/channelz_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/channelz/v1/channelz.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "credentials/alts/internal/proto/grpc_gcp/handshaker_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/gcp/handshaker.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "health/grpc_health_v1/health_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/health/v1/health.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "internal/proto/grpc_lookup_v1/rls_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/lookup/v1/rls.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "interop/grpc_testing/benchmark_service_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/testing/benchmark_service.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "interop/grpc_testing/report_qps_scenario_service_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/testing/report_qps_scenario_service.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "interop/grpc_testing/test_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/testing/test.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "interop/grpc_testing/worker_service_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/testing/worker_service.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "reflection/grpc_reflection_v1/reflection_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/reflection/v1/reflection.proto",
+              "vendored": false,
+              "generated_header": true
+            },
+            {
+              "generated_path": "reflection/grpc_reflection_v1alpha/reflection_grpc.pb.go",
+              "reason": "no_source_line",
+              "source_line": "",
+              "vendored": false,
+              "generated_header": true
+            }
+          ],
+          "gates_passed": [
+            "decode_layout_production_decoder",
+            "decode_generated_from_production_decoder",
+            "layout_root_limit",
+            "generated_mapping_limit",
+            "invocation_limit_empty",
+            "known_kinds_and_protocols",
+            "source_protocol_empty",
+            "roots_match_regular_files",
+            "roots_pairwise_non_overlapping",
+            "mapping_paths_valid_and_regular",
+            "grpc_generator_relative_path_suffix",
+            "protocol_derives_grpc",
+            "layout_coverage_generated_idl_grpc"
+          ]
+        },
+        "bounds": {
+          "corpus_files": {
+            "measured": 1381,
+            "max": 200000,
+            "within": true
+          },
+          "max_blob_bytes": {
+            "measured": 567170,
+            "max": 10485760,
+            "within": true,
+            "over_bound": []
+          },
+          "index_scip_bytes": {
+            "measured": 51916163,
+            "max": 67108864,
+            "within": true
+          }
+        }
+      }
+    },
+    {
+      "name": "containerd/containerd",
+      "git_url": "https://github.com/containerd/containerd.git",
+      "default_branch": "main",
+      "commit": "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9",
+      "commit_utc": "2026-10-07T14:18:08Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "17 generated clients under api/services/*/v1 with co-located .proto (e.g. api/services/events/v1/events.proto declaring service Events); production callers core/events/proxy/remote_events.go and cmd/containerd/command/publish.go (NewEventsClient). Default-branch head unchanged since 2026-10-07T16:30Z, the date of every check recorded here; the sealing step re-runs every cell at the pinned commit.",
+      "derived": {
+        "status": "committed",
+        "corpus_admitted": true,
+        "derived_utc": "2026-10-09",
+        "clone": "spike/t472/corpus/containerd",
+        "derived_commit": "abe7dcb1e3b9a3e52cfe322b9b5c7c293a88db2c",
+        "derived_tree": "febc0a2af926af3abff72e746f4a5631764bb41e",
+        "parent_commits": [
+          "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9"
+        ],
+        "pushed": false,
+        "files": {
+          "index.scip": {
+            "sha256": "b3683169c822bd99a64d10372ed5ce0d35370ffb45d8d7472cd78dd0bb080503",
+            "bytes": 38653529,
+            "git_blob_sha1": "af829a2cfe13b188d48e7d4ee4bca7b5ac18bd39"
+          },
+          "layout-snapshot.json": {
+            "sha256": "c7302852db8a245cd8ff5865f6908465cb0e8e9ccbe3dd2372304aa25cdc8220",
+            "bytes": 9884,
+            "git_blob_sha1": "72d59eac92f7f771a1b5ddff747385594e29ea5f"
+          },
+          "generated-from-snapshot.json": {
+            "sha256": "d0e7e4909bdddedf0182a095e6b69a17767100ce793fa6c6190052e25407823e",
+            "bytes": 9184,
+            "git_blob_sha1": "9963270654e58fb638860194944578b2813bacd8"
+          }
+        },
+        "index": {
+          "documents": 1196,
+          "occurrences": 412229,
+          "symbols": 70547,
+          "out_of_tree_build_cache_documents_dropped": 116,
+          "external_symbols_dropped": 0,
+          "round_trip_unstable_documents": 0,
+          "bytes": 38653529,
+          "module_runs": 2,
+          "module_rels": [
+            ".",
+            "api"
+          ]
+        },
+        "snapshots": {
+          "clients": 40,
+          "mapped": 35,
+          "abstained": 5,
+          "mappings": 35,
+          "layout_roots": 70,
+          "layout_roots_deduped": 0,
+          "regular_files": 6669,
+          "gitlinks": 0,
+          "symlinks": 4,
+          "max_blob_path": "vendor/k8s.io/api/core/v1/generated.pb.go",
+          "max_blob_bytes": 1704050,
+          "vendored_mapped": 18,
+          "nonvendored_mapped": 17,
+          "abstentions": [
+            {
+              "generated_path": "vendor/go.opentelemetry.io/proto/otlp/collector/trace/v1/trace_service_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "opentelemetry/proto/collector/trace/v1/trace_service.proto",
+              "vendored": true,
+              "generated_header": true
+            },
+            {
+              "generated_path": "vendor/google.golang.org/grpc/health/grpc_health_v1/health_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/health/v1/health.proto",
+              "vendored": true,
+              "generated_header": true
+            },
+            {
+              "generated_path": "vendor/google.golang.org/grpc/reflection/grpc_reflection_v1/reflection_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "grpc/reflection/v1/reflection.proto",
+              "vendored": true,
+              "generated_header": true
+            },
+            {
+              "generated_path": "vendor/google.golang.org/grpc/reflection/grpc_reflection_v1alpha/reflection_grpc.pb.go",
+              "reason": "no_source_line",
+              "source_line": "",
+              "vendored": true,
+              "generated_header": true
+            },
+            {
+              "generated_path": "vendor/k8s.io/cri-api/pkg/apis/runtime/v1/api_grpc.pb.go",
+              "reason": "declaration_not_found",
+              "source_line": "staging/src/k8s.io/cri-api/pkg/apis/runtime/v1/api.proto",
+              "vendored": true,
+              "generated_header": true
+            }
+          ],
+          "gates_passed": [
+            "decode_layout_production_decoder",
+            "decode_generated_from_production_decoder",
+            "layout_root_limit",
+            "generated_mapping_limit",
+            "invocation_limit_empty",
+            "known_kinds_and_protocols",
+            "source_protocol_empty",
+            "roots_match_regular_files",
+            "roots_pairwise_non_overlapping",
+            "mapping_paths_valid_and_regular",
+            "grpc_generator_relative_path_suffix",
+            "protocol_derives_grpc",
+            "layout_coverage_generated_idl_grpc"
+          ]
+        },
+        "bounds": {
+          "corpus_files": {
+            "measured": 6669,
+            "max": 200000,
+            "within": true
+          },
+          "max_blob_bytes": {
+            "measured": 1704050,
+            "max": 10485760,
+            "within": true,
+            "over_bound": []
+          },
+          "index_scip_bytes": {
+            "measured": 38653529,
+            "max": 67108864,
+            "within": true
+          }
+        }
+      }
+    },
+    {
+      "name": "vitessio/vitess",
+      "git_url": "https://github.com/vitessio/vitess.git",
+      "default_branch": "main",
+      "commit": "0ee525542d4157460b40af0951016236fc213afd",
+      "commit_utc": "2026-10-08T17:48:24Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "application + test",
+      "note": "8 generated clients; declarations under proto/ with generated pairs under go/vt/proto/* (proto/queryservice.proto declares service Query; go/vt/proto/queryservice/queryservice_grpc.pb.go); production caller go/vt/vttablet/grpctabletconn/conn.go using queryservicepb.NewQueryClient, plus bench test. Checks returned the pinned ref.",
+      "derived": {
+        "status": "refused_bound_miss",
+        "corpus_admitted": false,
+        "refused_utc": "2026-10-09",
+        "missed_bounds": [
+          "index_scip_bytes",
+          "max_blob_bytes"
+        ],
+        "index_scip_bytes": {
+          "measured": 188191177,
+          "max": 67108864,
+          "ratio": 2.8,
+          "sha256": "ea5a71708e8b680bbea78b92e71c4a6e84d9130ac25be015667a9161df05ec86"
+        },
+        "max_blob_bytes": {
+          "measured": 12724483,
+          "max": 10485760,
+          "within": false,
+          "over_bound": [
+            "web/vtadmin/src/proto/vtadmin.js (12724483 bytes)"
+          ]
+        },
+        "raw_root_index": {
+          "bytes": 191695210,
+          "sha256": "4be9ea65d7cafd3455b8d1d5010990e30d2959f74fb18f25267a923f5a618ac5"
+        },
+        "merge_refusal": "scipmerge measured the merged stream over the frozen 67108864-byte bound and refused to place an over-bound artifact; the measured stream is retained unrenamed at /home/ben/phebs-rehearsals/t472-derivation/merged/vitess/index.scip.tmp",
+        "snapshots_authored_unplaced": {
+          "layout_snapshot": {
+            "sha256": "c1863c5ab82a02af3c323234cb93bfd50310250b4e1628a0eda80e3230aa812a",
+            "bytes": 1930
+          },
+          "generated_from_snapshot": {
+            "sha256": "fb4204f6d890000d8c99fa7d45883147414c77867694fdf657f3d8e9586e0f2d",
+            "bytes": 1657
+          },
+          "detail": {
+            "clients": 8,
+            "mapped": 8,
+            "abstained": 0,
+            "mappings": 8,
+            "layout_roots": 16,
+            "layout_roots_deduped": 0,
+            "regular_files": 5163,
+            "gitlinks": 0,
+            "symlinks": 7,
+            "max_blob_path": "web/vtadmin/src/proto/vtadmin.js",
+            "max_blob_bytes": 12724483,
+            "vendored_mapped": 0,
+            "nonvendored_mapped": 8,
+            "abstentions": [],
+            "gates_passed": [
+              "decode_layout_production_decoder",
+              "decode_generated_from_production_decoder",
+              "layout_root_limit",
+              "generated_mapping_limit",
+              "invocation_limit_empty",
+              "known_kinds_and_protocols",
+              "source_protocol_empty",
+              "roots_match_regular_files",
+              "roots_pairwise_non_overlapping",
+              "mapping_paths_valid_and_regular",
+              "grpc_generator_relative_path_suffix",
+              "protocol_derives_grpc",
+              "layout_coverage_generated_idl_grpc"
+            ]
+          },
+          "note": "both snapshots were authored and passed every gate (two production decoders plus re-implemented production refusal conditions), but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
+        },
+        "clone_state": "spike/t472/corpus/vitess remains at the pinned commit 0ee525542d4157460b40af0951016236fc213afd with a clean working tree and no derived commit",
+        "disposition": "dropped from the admitted corpus under option A (Ben, 2026-10-09); refusal evidence retained; see derivation.disposition"
+      }
+    },
+    {
+      "name": "istio/istio",
+      "git_url": "https://github.com/istio/istio.git",
+      "default_branch": "master",
+      "commit": "d501e135abadd7492774f428e0873f7d16494d41",
+      "commit_utc": "2026-10-09T10:21:22Z",
+      "license_spdx": "Apache-2.0",
+      "license_source": "GitHub repository metadata via search_repositories, recorded 2026-10-09",
+      "role_coverage": "test + generated only (no application-role callers in-repo)",
+      "note": "Single generated client pkg/test/echo/proto/echo_grpc.pb.go with co-located echo.proto (service EchoTestService); all in-repo callers are test-role (pkg/test/echo/client.go, pkg/test/echo/server/forwarder/grpc.go, pilot/pkg/networking/grpcgen/grpcgen_test.go). Mainstream Istio API clients live in the istio.io/api module outside this repository. Included for generated-client/test stratum coverage; contributes no application-role callers. Checks returned the pinned ref.",
+      "derived": {
+        "status": "refused_bound_miss",
+        "corpus_admitted": false,
+        "refused_utc": "2026-10-09",
+        "missed_bounds": [
+          "index_scip_bytes"
+        ],
+        "index_scip_bytes": {
+          "measured": 77222752,
+          "max": 67108864,
+          "ratio": 1.15,
+          "sha256": "bea6784bca8592358ef34f6eb054cd63f5588bf85777925f5fa6099c879c8616"
+        },
+        "max_blob_bytes": {
+          "measured": 1400591,
+          "max": 10485760,
+          "within": true,
+          "over_bound": []
+        },
+        "raw_root_index": {
+          "bytes": 78943875,
+          "sha256": "1c25282b728fc84cc6702dff9920f9bf2306bb9946734adef9bb0a6c09bdfdd3"
+        },
+        "merge_refusal": "scipmerge measured the merged stream over the frozen 67108864-byte bound and refused to place an over-bound artifact; the measured stream is retained unrenamed at /home/ben/phebs-rehearsals/t472-derivation/merged/istio/index.scip.tmp",
+        "snapshots_authored_unplaced": {
+          "layout_snapshot": {
+            "sha256": "e14812b2eca92c4b169d5d26366e1b3ba34081df71b8a7a7d4c91095ef0ea89e",
+            "bytes": 284
+          },
+          "generated_from_snapshot": {
+            "sha256": "65ab04c06a30cbe3928f52e9df49299de48d033689963269dbaff6af4b00a90a",
+            "bytes": 259
+          },
+          "detail": {
+            "clients": 1,
+            "mapped": 1,
+            "abstained": 0,
+            "mappings": 1,
+            "layout_roots": 2,
+            "layout_roots_deduped": 0,
+            "regular_files": 6744,
+            "gitlinks": 0,
+            "symlinks": 0,
+            "max_blob_path": "tests/integration/pilot/testdata/gateway-api-crd.yaml",
+            "max_blob_bytes": 1400591,
+            "vendored_mapped": 0,
+            "nonvendored_mapped": 1,
+            "abstentions": [],
+            "gates_passed": [
+              "decode_layout_production_decoder",
+              "decode_generated_from_production_decoder",
+              "layout_root_limit",
+              "generated_mapping_limit",
+              "invocation_limit_empty",
+              "known_kinds_and_protocols",
+              "source_protocol_empty",
+              "roots_match_regular_files",
+              "roots_pairwise_non_overlapping",
+              "mapping_paths_valid_and_regular",
+              "grpc_generator_relative_path_suffix",
+              "protocol_derives_grpc",
+              "layout_coverage_generated_idl_grpc"
+            ]
+          },
+          "note": "both snapshots were authored and passed every gate (two production decoders plus re-implemented production refusal conditions), but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
+        },
+        "clone_state": "spike/t472/corpus/istio remains at the pinned commit d501e135abadd7492774f428e0873f7d16494d41 with a clean working tree and no derived commit",
+        "disposition": "dropped from the admitted corpus under option A (Ben, 2026-10-09); refusal evidence retained; see derivation.disposition"
+      }
+    }
+  ],
+  "excluded": [
+    {
+      "name": "grafana/mimir",
+      "reason": "AGPL-3.0 license is not permissive (eligibility axis 4)."
+    },
+    {
+      "name": "cockroachdb/cockroach",
+      "reason": "no protoc-gen-go-grpc generated clients carrying the unique header (0 matches; gogo-style inline generation) and license recorded NOASSERTION."
+    }
+  ],
+  "derivation": {
+    "derived_utc": "2026-10-09",
+    "status": "resolved: the admitted T47.2b corpus is the three committed repositories (etcd-io/etcd, containerd/containerd, grpc/grpc-go); vitessio/vitess and istio/istio were dropped under option A after refusing the frozen §2 bounds at derivation",
+    "bounds": {
+      "source": "docs/CALLER_QUALITY_PROTOCOL.md §2, frozen by T47.2a; the bounds were enforced as written and are not adjusted here",
+      "corpus_files_max": 200000,
+      "blob_bytes_max": 10485760,
+      "index_scip_bytes_max": 67108864
+    },
+    "recipe": {
+      "index_command": "GOTOOLCHAIN=go1.27.1 scip-go index --module-root <abs module dir> --repository-remote github.com/<owner>/<repo> --module-version <pin12> --skip-implementations --output <abs path>, one run per Go module in run-plan order",
+      "gotoolchain": "go1.27.1",
+      "scip_go": {
+        "version": "v0.2.7",
+        "sha256": "31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4",
+        "bytes": 18104856,
+        "pin_source": "spike/t457/native_tool_pins_amd64.json"
+      },
+      "merge_tool": {
+        "source": "spike/t472/derivation/merge",
+        "sha256": "4c22c00f3ed7a17097da5fa32c55561703394a8f8bf80a2400c3c169e3324cce",
+        "bytes": 6807487,
+        "role": "canonicalizes every run to sorted unique document paths under one tool version and canonical field order, drops out-of-tree build-cache documents, then refuses a merged stream over the frozen bound (the recorded runs used the tool at 6acae5a1, which did not classify the drops)"
+      },
+      "snapshot_tool": {
+        "source": "spike/t472/derivation/snapshots",
+        "sha256": "8bd8fd8c4924b4ab9839acd1632b98b8648796431f88895b6f24200c8d534a2f",
+        "bytes": 4163718,
+        "role": "authors t20-layout-snapshot-v1 and t20-generated-from-v1 from a per-repository resolution table outside the repository, decodes both with the production internal/resolverinput decoders and limits, and checks them against re-implemented production refusal conditions plus the §2 corpus bounds measured at the pin"
+      },
+      "runner": {
+        "script": "spike/t472/derivation/run_scip.sh",
+        "policy": "serial and fail-closed; preflight re-verifies the scip-go digest before any run",
+        "module_runs": 27,
+        "ledger": "RUN_STATUS in the derivation workspace; one honest FAIL row for the containerd root module caused by a runner IFS bug that collapsed the empty module rel, corrected with an explicit '.' marker and re-run"
+      },
+      "derived_commit_policy": "the three §2 files are committed inside each clone on a local derived commit whose only parent is the pinned upstream commit; the clones are gitignored in phebs, nothing is pushed, and no upstream file is modified",
+      "host": "Ubuntu Linux amd64, the rehearsal and ceremony host baseline recorded in AGENTS.md"
+    },
+    "totals": {
+      "repositories_committed": 3,
+      "repositories_refused": 2,
+      "module_runs": 27,
+      "generated_clients": 69,
+      "mapped_declarations": 53,
+      "abstentions": 16,
+      "abstention_reasons": {
+        "declaration_not_found": 14,
+        "no_source_line": 2
+      }
+    },
+    "refusals": [
+      {
+        "name": "vitessio/vitess",
+        "missed_bounds": [
+          "index_scip_bytes",
+          "max_blob_bytes"
+        ],
+        "index_scip_bytes": {
+          "measured": 188191177,
+          "max": 67108864,
+          "ratio": 2.8,
+          "sha256": "ea5a71708e8b680bbea78b92e71c4a6e84d9130ac25be015667a9161df05ec86"
+        },
+        "max_blob_bytes": {
+          "measured": 12724483,
+          "max": 10485760,
+          "within": false,
+          "over_bound": [
+            "web/vtadmin/src/proto/vtadmin.js (12724483 bytes)"
+          ]
+        },
+        "raw_root_index": {
+          "bytes": 191695210,
+          "sha256": "4be9ea65d7cafd3455b8d1d5010990e30d2959f74fb18f25267a923f5a618ac5"
+        },
+        "retained_evidence": "/home/ben/phebs-rehearsals/t472-derivation/merged/vitess/index.scip.tmp"
+      },
+      {
+        "name": "istio/istio",
+        "missed_bounds": [
+          "index_scip_bytes"
+        ],
+        "index_scip_bytes": {
+          "measured": 77222752,
+          "max": 67108864,
+          "ratio": 1.15,
+          "sha256": "bea6784bca8592358ef34f6eb054cd63f5588bf85777925f5fa6099c879c8616"
+        },
+        "max_blob_bytes": {
+          "measured": 1400591,
+          "max": 10485760,
+          "within": true,
+          "over_bound": []
+        },
+        "raw_root_index": {
+          "bytes": 78943875,
+          "sha256": "1c25282b728fc84cc6702dff9920f9bf2306bb9946734adef9bb0a6c09bdfdd3"
+        },
+        "retained_evidence": "/home/ben/phebs-rehearsals/t472-derivation/merged/istio/index.scip.tmp"
+      }
+    ],
+    "disposition": {
+      "status": "resolved — option A (Ben, 2026-10-09)",
+      "rule": "a §2 bound miss is a selection change recorded here, never a silent adjustment; the frozen bound is not raised after measurement because the §2 thresholds were preregistered in T47.2a and a different byte is a different protocol",
+      "options": [
+        {
+          "id": "A",
+          "option": "drop vitessio/vitess and istio/istio, leaving a three-repository corpus",
+          "consequence": "loses the largest production multi-module monorepo and the degenerate test/generated-only stratum; the §6 strata and the §3 denominators shrink accordingly and are re-recorded before sealing",
+          "chosen": true
+        },
+        {
+          "id": "B",
+          "option": "replace one or both through a fresh four-axis selection run",
+          "consequence": "each replacement must itself pass §2 at its own pin, including the 64 MiB index bound and the 10 MiB blob bound; the selection table and this lock are re-dated and the derivation re-run for the replacement",
+          "chosen": false
+        },
+        {
+          "id": "C",
+          "option": "amend the §2 bound",
+          "consequence": "rejected as a post-hoc preregistration violation unless Ben explicitly directs it, in which case it is recorded as a dated protocol amendment with its own digest and the pre-amendment measurements are preserved beside it",
+          "chosen": false
+        }
+      ],
+      "resolved_utc": "2026-10-09",
+      "resolved_by": "Ben (option A routing)",
+      "chosen": "A",
+      "decision": "drop vitessio/vitess and istio/istio; the admitted T47.2b corpus is the three committed repositories",
+      "admitted_corpus": [
+        "etcd-io/etcd",
+        "containerd/containerd",
+        "grpc/grpc-go"
+      ],
+      "dropped": [
+        "vitessio/vitess",
+        "istio/istio"
+      ],
+      "post_decision": "the §6 strata and §3 denominators are re-recorded against the three-repository admitted corpus before sealing; the dropped repositories' refusal evidence (retained unrenamed .tmp merged streams, raw root indexes, authored-unplaced gate-passed snapshots) is preserved and their clones remain at their pins with clean working trees; the frozen §2 bound is unchanged"
+    },
+    "rederivation_required": "the recorded inputs were derived with the t472 tools at 6acae5a1; before sealing, re-derive every admitted repository with the corrected tools so the lock records the go env, the resolution-table digests, every non-testmain build-cache drop, the version-skewed in-repo reference count and reproducible derived commits, and re-record every digest here",
+    "admitted_totals": {
+      "repositories": 3,
+      "module_runs": 26,
+      "generated_clients": 60,
+      "mapped_declarations": 44,
+      "abstentions": 16
+    }
+  }
+}
