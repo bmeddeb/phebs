@@ -17106,6 +17106,35 @@ the provisional repo/path versus descriptor/module identity gate and share
 one reviewed identity/input contract with T47.2; freeze and independently
 score declaration/operation/message/field facts and explicit parser gaps.
 
+**T49.1a · Protobuf declaration identity and scorable-surface freeze**
+*(split from T49.1; no scoring in this ticket)* — resolve the identity gate for
+the `phebs.protobuf.contract` pure reader in
+[`./PROTOBUF_DECLARATION_IDENTITY.md`](./PROTOBUF_DECLARATION_IDENTITY.md): the
+file-scoped `provisional_repo_path_v1_…` token is the admitted declaration
+identity; canonical descriptor/module lineage is not provable from the inputs
+this reader consults and must arrive later as a separate prefix-disjoint family,
+never a silent rename. State the declaration side of the `DeclarationLineage`
+join with T47.2, including its single-declaration-repository scope, and freeze
+the `DECLARES_*` fact contract, the per-reference type-resolution states and
+gap taxonomy (including `IMPORT_LINKING_UNAVAILABLE`) and the non-emitted kinds
+as the scorable surface. AC: no extractor, token, schema, published assertion
+or evidence status changes; `TestFrozenDeclarationContract` and
+`TestDeclarationLineageMatchesFrozenProtodeclToken` pin the rule IDs, detail
+schemas and the shared lineage literal; GATE2-V2 stays `NOT_ESTABLISHED` and
+the pack stays experimental-dark; `make docs-check`, `make verify-glossary` and
+whitespace checks pass; the steady-state-cost pass records zero runtime work.
+
+**T49.1b · Independent declaration scoring** *(needs T49.1a)* — fill every
+`<Gate 0>` placeholder of the T49.1a scoring shape: enumerate the declaration
+universe independently of phebs output, name the independent validation owner,
+reviewers and adjudicator, obtain a real public randomness seed, and seal the
+protocol and thresholds before any result is unsealed. Score exact-emission
+precision, per-reference gap classification and declaration recall with the
+existing label and Wilson machinery byte-for-byte. AC: every placeholder is
+filled by real humans and a real beacon pulse (none fabricated); non-emitted
+kinds are never counted as misses; one sealed round, no interim looks; no
+release or status change follows from the score alone.
+
 **T49.2 · Thrift declaration identity and validation contract** — independently
 freeze namespace/include/generator lineage and declarations, ambiguity,
 missing/unsupported input and gap accounting; protobuf results grant no Thrift
