@@ -81,6 +81,15 @@ type ReleaseSelection struct {
 	// Keys is the ed25519 trust anchor. A record signed by a key absent here is
 	// refused. The ring is never populated from a record's own key material.
 	Keys []ReleaseKey `yaml:"keys"`
+	// Revoked lists release_ids withdrawn by operator decision: a suspension,
+	// revocation or supersession recorded out of band. Listing the record that
+	// governs its pack withdraws that pack, which is the supported suspension
+	// and rollback control. Withdrawal never falls back to an older released
+	// record in the same directory; a rollback is a newly signed record. Each
+	// entry must match a release_id's grammar and must be unique. The list is
+	// inert while Path is empty, so a revocation can be staged before the
+	// selection directory is configured.
+	Revoked []string `yaml:"revoked"`
 }
 
 // ReleaseKey binds an approved key identifier to its base64-encoded ed25519
@@ -836,7 +845,7 @@ func (c *Config) validate(lines []int) error {
 			}); err != nil {
 				errs = append(errs, fmt.Errorf("service_catalogs[%s]: %v", repo, err))
 			}
-			if !validCatalogFilePath(selection.Path) {
+			if !validAbsoluteConfigPath(selection.Path) {
 				errs = append(errs, fmt.Errorf(
 					"service_catalogs[%s]: committed path must be absolute, clean, and unpadded",
 					repo,
@@ -848,7 +857,7 @@ func (c *Config) validate(lines []int) error {
 			}); err != nil {
 				errs = append(errs, fmt.Errorf("service_catalogs[%s]: %v", repo, err))
 			}
-			if !validCatalogFilePath(selection.Path) {
+			if !validAbsoluteConfigPath(selection.Path) {
 				errs = append(errs, fmt.Errorf(
 					"service_catalogs[%s]: operator path must be absolute, clean, and unpadded",
 					repo,
@@ -1021,10 +1030,42 @@ func (c *Config) validate(lines []int) error {
 		}
 	}
 
+	if c.ReleaseSelection.Path != "" && !validAbsoluteConfigPath(c.ReleaseSelection.Path) {
+		errs = append(errs, fmt.Errorf(
+			"release_selection: path must be absolute, clean, and unpadded, got %q", c.ReleaseSelection.Path))
+	}
+	// A configured selection directory is an operator intent to admit released
+	// packs, so the trust anchor that makes any record verifiable must be
+	// present with it. Refusing here keeps a half-configured gate from reaching
+	// startup, where every record would fail closed anyway but only after the
+	// directory had been read.
+	if c.ReleaseSelection.Path != "" && len(c.ReleaseSelection.Keys) == 0 {
+		errs = append(errs, errors.New(
+			"release_selection: path is set but keys is empty, so no record could ever be admitted"))
+	}
+
+	seenReleaseIDs := map[string]bool{}
+	for i, id := range c.ReleaseSelection.Revoked {
+		switch {
+		case strings.TrimSpace(id) == "":
+			errs = append(errs, fmt.Errorf("release_selection.revoked[%d]: release id is required", i))
+		case !packrelease.ValidReleaseID(id):
+			errs = append(errs, fmt.Errorf(
+				"release_selection.revoked[%d]: id %q must match [A-Za-z0-9._:/-]{1,256}, as a record's release_id does", i, id))
+		case seenReleaseIDs[id]:
+			errs = append(errs, fmt.Errorf("release_selection.revoked[%d]: duplicate release id %q", i, id))
+		}
+		seenReleaseIDs[id] = true
+	}
+
 	return errors.Join(errs...)
 }
 
-func validCatalogFilePath(value string) bool {
+// validAbsoluteConfigPath reports whether value is a stable operator-supplied
+// filesystem path: absolute, already clean, unpadded and free of control
+// characters. Both a committed service catalog and the signed-release selection
+// directory use it, so neither resolves against the process working directory.
+func validAbsoluteConfigPath(value string) bool {
 	if value == "" || !filepath.IsAbs(value) || filepath.Clean(value) != value ||
 		strings.TrimSpace(value) != value {
 		return false

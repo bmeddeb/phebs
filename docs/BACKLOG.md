@@ -17188,7 +17188,42 @@ revalidation; test the absent/one-pack/mixed-pack startup and API/MCP discovery
 matrix. AC: one released component does not activate another; denied source
 stays undisclosed; a suspended dependency cannot appear as current released
 evidence; required source/runtime/cost review and shared machine checks pass.
-This common substrate releases no product by itself.
+This common substrate releases no product by itself. *Slice a landed
+2026-10-09: `docs/guides/OPERATIONS.md` now owns the shared operating contract
+— the six supported statuses with their exact `PACK_MANIFEST` §5 load modes,
+status coming from the verified record and never from the pack, validation
+expiry as automatic suspension, the two composing suspension controls,
+rollback, §8's minimum revalidation table beside §5's comparability list, and
+cost/blast radius — and `docs/guides/CONFIGURATION.md` plus
+`docs/config.example.yaml` own its configuration half. It also closes slice 2's
+one operating gap: `Options.Revoked` was enforced by `Verify` but no production
+caller populated it, so a release could be withdrawn only by deleting its file.
+`release_selection.revoked` is now that caller, validated at parse time against
+the record `release_id` grammar through the exported
+`packrelease.ValidReleaseID`, inert while no path is configured so a withdrawal
+can be staged ahead of the gate, and judged once against the record that governs
+its pack rather than inside every record's `Verify` — which would have refused
+the whole selection when a superseded older release was revoked. A revoked pack
+withdraws with a bounded cause instead of refusing startup and never falls back
+to an older release, while verify-before-govern is preserved so a foreign-keyed
+record still refuses with `unknown_key` instead of being quietly withdrawn.
+`Selection.Withdrawn()` is sorted, copied, and logged as bounded `pack_id=cause`
+pairs before the empty-selection return, so a directory holding only suspended
+or revoked records still tells the operator the withdrawal took effect. No
+product is released, `packRecipes`/`releaseLoadBindings` stay empty and the dark
+startup is unchanged. Independent review of the exact implementation commit
+reported critical/high/medium/low `0/0/1/1`: the medium observed that
+`OPERATIONS.md` described an expiry remedy that could not work, because a
+failing record refuses the whole selection before any successor or revocation
+can apply, and the low listed operator revocation among startup refusals, when
+it withdraws instead. Both are documentation-accuracy findings against
+intended, test-pinned behavior; a documentation-only correction on the same
+branch states the two-step expiry remedy, scopes the removal note to
+withdrawal, qualifies retained-record rollback with continued verification, and
+drops the revocation example from the refusal list. T48.4b pins the
+absent/one-pack/mixed-pack startup and API/MCP discovery matrix; T48.4c supplies
+the machine-derived referenced-artifact census and running implementation
+identity that make the bindings bindable.*
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 

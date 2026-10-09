@@ -164,7 +164,9 @@ specific released caller/field/verdict inputs it claims. Apache/thriftrw
 fields (52), RPC syntactic consumer/registration evidence (58), Kafka producer
 (55) and Kafka consumer (56) have independent recipe gates; Topics (57)
 composes only admitted Kafka planes. A producer result never promotes the
-consumer. The next tickets are T47.2, T49.1 and T48.2; prepare independent
+consumer. The first tickets landed: T47.2a, T49.1a and both T48.2 slices froze
+their contracts and built the shared release verifier and startup admission
+gate. The next are T47.3, T48.3, T48.4b/c and T49.1b; prepare independent
 contracts/corpora while shared runtime enforcement is built, but serialize
 expensive host execution and Git/spine edits. Production support starts inside
 measured limits with headroom; existing safety ceilings alone are not an

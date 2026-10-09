@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
@@ -155,6 +156,12 @@ var releaseLoadBindings = func(context.Context) (packrelease.Options, error) {
 //   - A configured Path whose records fail verification refuses startup, and a
 //     governing released record refuses it until releaseLoadBindings can bind
 //     it to this binary and its artifacts.
+//   - A pack whose governing record is suspended, retired, design, shadow or
+//     experimental-dark, has expired or is not yet approved, or whose
+//     release_id the operator revoked, is withdrawn rather than refused: it is
+//     not admitted and no older record replaces it.
+//     Each withdrawal is named in one bounded startup log line, so suspension
+//     and rollback are observable instead of only an absent pack.
 //   - A verified released pack with no fixed in-tree recipe is an unresolved
 //     release inconsistency and refuses startup rather than silently admitting
 //     nothing, so a released authorization can never outrun its implementation.
@@ -171,10 +178,15 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 		return nil, fmt.Errorf("pack release selection bindings: %w", err)
 	}
 	opts.Keys = keys
+	opts.Revoked = revokedReleaseIDs(cfg.ReleaseSelection.Revoked)
 	selection, err := packrelease.LoadSelection(ctx, cfg.ReleaseSelection.Path, opts)
 	if err != nil {
 		return nil, fmt.Errorf("pack release selection: %w", err)
 	}
+	// Named before the empty-selection return: a directory holding only
+	// suspended or revoked records admits nothing, which is exactly when the
+	// operator needs to see that the withdrawal took effect.
+	logWithdrawnSelection(selection.Withdrawn())
 	if selection.Empty() {
 		return nil, nil
 	}
@@ -205,6 +217,53 @@ func releaseKeyRing(keys []config.ReleaseKey) (packrelease.KeyRing, error) {
 		ring[key.ID] = public
 	}
 	return ring, nil
+}
+
+// revokedReleaseIDs reshapes the operator's configured revocation list into the
+// lookup the selection judges a governing record against. Configuration parsing
+// already proved each entry unique and within a release_id's grammar, so this
+// only changes the shape. An empty list yields nil, which keeps the dark default
+// allocation-free and the selection's behavior unchanged.
+func revokedReleaseIDs(ids []string) map[string]struct{} {
+	if len(ids) == 0 {
+		return nil
+	}
+	revoked := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		revoked[id] = struct{}{}
+	}
+	return revoked
+}
+
+// maxLoggedWithdrawals bounds how much withdrawal detail one startup logs. The
+// selection already bounds the governing-record count, so this caps only the
+// diagnostic's own length and never the selection's contents.
+const maxLoggedWithdrawals = 16
+
+// logWithdrawnSelection names the packs a configured selection directory holds
+// that are not admitted, so a suspension or a revocation has an observable
+// startup effect instead of only an absent pack. It discloses a pack identifier
+// taken from an authenticated record (already within the identifier grammar)
+// and a bounded cause, never a record's contents, signature, artifacts or any
+// repository data.
+func logWithdrawnSelection(withdrawn []packrelease.Withdrawal) {
+	if len(withdrawn) == 0 {
+		return
+	}
+	detailed := withdrawn
+	if len(detailed) > maxLoggedWithdrawals {
+		detailed = detailed[:maxLoggedWithdrawals]
+	}
+	pairs := make([]string, 0, len(detailed))
+	for _, entry := range detailed {
+		pairs = append(pairs, entry.PackID+"="+entry.Cause)
+	}
+	suffix := ""
+	if omitted := len(withdrawn) - len(detailed); omitted > 0 {
+		suffix = fmt.Sprintf(", %d more omitted", omitted)
+	}
+	log.Printf("pack release selection: %d configured pack(s) not admitted: %s%s",
+		len(withdrawn), strings.Join(pairs, ", "), suffix)
 }
 
 // mergeExtractors concatenates the provisional-dark and released admission sets

@@ -118,6 +118,7 @@ service_catalogs:
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 | `analysis_units`                            | `{}`             | repo name → one strict service scope; omitted repositories keep whole-repository behavior; restart after changing it                                           |
 | `service_catalogs`                          | `{}`             | repo name → one explicit normalized `committed` or `operator` catalog file; exact replacement is reconciled at startup and after indexing; see [Service catalogs](#service-catalogs) |
+| `release_selection`                         | *(empty)*        | directory of signed `PackRelease` records plus their ed25519 trust anchor and operator revocations; the only path into the ordinary/released admission set, read once at startup; see [Signed pack-release selection](#signed-pack-release-selection-t482-t484) |
 
 ### Historical publication retention
 
@@ -503,6 +504,73 @@ and labels paths and successors as source-free catalog metadata. It adds no
 configuration key and never makes a runtime-relationship claim. T34.3 owns
 real active physical generation transitions, and T35 owns retained-generation
 GC.
+
+
+### Signed pack-release selection (T48.2, T48.4)
+
+`release_selection` is the only path into the ordinary/released admission set,
+and it ships dark. Omit the block, or leave `path` empty, and phebs admits no
+released pack, performs no release read, and adds no pack work. Toggling a
+provisional `experimental:` extraction switch is never a route into this set:
+those switches register experimental-dark extractors, which a released record
+later governs and replaces rather than joins.
+
+```yaml
+release_selection:
+  path: /etc/phebs/pack-releases
+  keys:
+    - id: release-signer
+      public_key: "base64-ed25519-public-key"
+  revoked: []
+```
+
+`path` is a directory of signed `PackRelease` JSON records. It must be
+absolute, clean and unpadded, so a selection never resolves against the process
+working directory. `keys` is the ed25519 trust anchor: each `id` must match
+`[A-Za-z0-9._:/-]{1,256}` and be unique within the ring, and each `public_key`
+must decode to a 32-byte ed25519 key. The ring is never populated from a
+record's own key material. `revoked` is the operator's suspension and rollback
+control, documented under
+[Pack-release status, expiry, suspension and rollback](./OPERATIONS.md#pack-release-status-expiry-suspension-and-rollback-t484).
+
+Strict parsing refuses an unstable or half-configured gate before startup ever
+reaches it:
+
+| Refused while parsing | Why |
+| --- | --- |
+| `path` relative, `.`/`..`-bearing, or padded | it would resolve against the process working directory |
+| `path` set with an empty `keys` | no record could ever be admitted, so the gate is configured but inert |
+| `keys[i].id` empty, outside the identifier grammar, or duplicated | the trust anchor would not be a stable identity |
+| `keys[i].public_key` not base64, or not 32 bytes | not an ed25519 verification key |
+| `revoked[i]` empty, outside the identifier grammar, or duplicated | a revocation must name something a signed record's `release_id` could actually carry |
+
+Startup then reads the directory once, at this admitted boundary, and never on
+a request, sync, or per-query path. Every record present must verify, so a
+malformed or non-canonical record, an unknown or foreign signing key, a
+mismatched digest, an unsupported schema or
+component version, a non-regular or symlinked `*.json` entry, an oversized
+record, more than 1,024 directory entries, or two records naming one pack at
+the same `release_version` refuses startup rather than being skipped. That is
+deliberate: an unverifiable record claiming a higher `release_version` could
+otherwise suppress the record that legitimately governs its pack.
+
+Per pack, the record with the highest `release_version` governs. Only a
+governing record that verifies, is unexpired and applicable, and carries the
+`released` lifecycle status is admitted — and only when its pack identifier is
+bound to a fixed in-tree recipe compiled into this binary. A verified released
+pack with no bound recipe is an unresolved release inconsistency and refuses
+startup rather than silently admitting nothing, so a released authorization can
+never outrun its implementation. A governing record in any other status, or
+a governing released record whose validation has expired or whose approval
+lies in the future, withdraws its pack instead of refusing the server; a
+superseded record's expiry has no effect. See
+[Pack-release status, expiry, suspension and rollback](./OPERATIONS.md#pack-release-status-expiry-suspension-and-rollback-t484)
+for the statuses, what each permits, and how a withdrawal is observed.
+
+This build binds no recipe and cannot yet bind a released record to its own
+binary, toolchain and referenced artifacts, so any governing `released` record
+refuses startup today with an unresolved-reference cause. The gate is
+implemented and dark, not absent.
 
 
 ### Authentication
