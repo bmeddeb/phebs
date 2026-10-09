@@ -16780,6 +16780,151 @@ retired-state migration/restore boundary. Retention status has 11 owners and 28
 components after removal. Integration into `main` requires a
 verified fast-forward and Ben's explicit authorization.
 
+## Epic 47 · Caller Map production release within measured limits *(Ben-directed, 2026-10-09; follows immediate SCIP availability)*
+
+Ben requests moving Caller Map from experimental/default-dark to supported
+production and explicitly chooses current admitted limits first, with
+large-monorepo claims still gated. This program owns the existing exact
+repository-overlay caller inventory, the declaration discovery needed to
+select its complete endpoint identity, immutable source citations and parity
+across ordinary server startup, HTTP, UI and read-only MCP. Necessary
+declaration discovery does not release every Contract Atlas/Impact feature.
+Caller comparison and unrelated evidence packs require their own stated scope
+and validation; they are not implicitly promoted by Caller Map.
+
+Go callers of protobuf/gRPC and Thrift operations are the existing candidate
+recipes. Each protocol, generator and input recipe earns support separately.
+First-production scope remains static source evidence: declared resolved
+callers, unresolved name matches and extractor abstentions stay distinguishable;
+no empty page establishes absence of callers, runtime use or decommission safety.
+Source occurrences, build targets, deployables, logical services and owners
+remain separate identities, with unavailable and ambiguous attribution visible.
+
+### Existing implementation and admission limits
+
+- Exact public reads require one declaration repository and complete protocol,
+  lineage and canonical operation identity, then consume one complete published
+  caller generation. They do not union arbitrary repositories.
+- Pages default to 50 and admit at most 100 rows. The reverse index has a
+  128-MiB identity ceiling, at most eight retained indexes and eight bindings,
+  a five-minute binding lifetime, eight concurrent exact reads and two citation
+  reads. Each displayed attribution list admits at most 64 values and reports
+  the pre-truncation total.
+- The caller writer admits at most 100,000 result records plus 100,000
+  abstention records per aggregate result. Writer-valid input may still exceed
+  a reader ceiling and must return an explicit refusal rather than partial or
+  zero rows. The legacy/comparison 50,000-record scan ceiling is a distinct
+  bound; do not conflate it with the exact reader's aggregate record ceiling.
+- These source constants define current refusal behavior, not a tested
+  production operating envelope. Supporting a workload requires an independently
+  measured envelope below every applicable bound with explicit headroom.
+
+### Promotion gaps found at the current baseline
+
+- Ordinary Caller Map registration is derived from
+  `experimental.provisional_proto_extraction` or
+  `experimental.provisional_thrift_extraction` in `cmd/phebs/serve_api.go`.
+  `internal/config/config.go` explicitly retains the unfinished canonical
+  descriptor/module lineage gate for protobuf and provisional repo/path
+  lineage for Thrift. Production identity must be validated or replaced with a
+  separately reviewed narrower identity contract; removing the word
+  provisional does not repair this boundary.
+- Implemented exact publication, authorization, cursor/citation, recovery,
+  lifecycle and neutral correctness gates are reusable evidence for their
+  exact claims. They supply neither independent caller extraction/attribution
+  quality nor a measured interactive production envelope. The retained
+  external validation remains `NOT_ESTABLISHED`, and historical release
+  decisions remain exact.
+- Generated managed SCIP has navigation authority but its admission as
+  extraction evidence remains the separate T45.9 STOP. A Caller Map recipe
+  that requires those bytes must first earn a prospective evidence-admission
+  decision; successful native SCIP navigation cannot silently fill that gap.
+- The capability-driven UI and MCP services exist, but the production path
+  must prove ordinary startup and real-source end-to-end discovery, generation,
+  paging and citations rather than fixture-only registration.
+
+**T47.1 · Bounded production contract and promotion inventory** — record this
+Ben-directed sequence, the exact supported surface, candidate recipes,
+existing limits and unresolved identity/quality/runtime/operating gates in
+BACKLOG, ROADMAP and a same-change PLAN decision. AC: no feature default,
+runtime, schema, UI, evidence status or historical record changes; prior
+pilot/employer authorization is not reused; personal/public-source validation
+only; no current limit becomes a scale/SLO claim; `make docs-check`,
+`make verify-glossary` and whitespace checks pass. The steady-state-cost pass
+records zero runtime work because this ticket changes documentation only.
+
+**T47.2 · Supported identity, input recipes and independent caller quality**
+*(needs T47.1; split identity corrections from validation execution if needed)*
+— inventory and freeze one exact supported tuple of language/protocol,
+generator, declaration identity, source/input format and extractor version
+before scoring. Use reproducible personal/public source with license/provenance
+records; independently reviewed labels cover resolved callers, same-name
+unrelated methods, imports/aliases, wrappers/interfaces/dynamic paths,
+generated/vendored/test code, excluded/failed paths, and ambiguous/missing
+attribution. AC: preregister precision/recall, processing-state and claimed
+attribution/end-to-end denominators, thresholds, uncertainty handling and stop
+rules before results; no guessed canonical lineage; every required metric is
+measured and passes on the frozen population; old validation receipts are
+neither re-scored nor relabelled. Admit one recipe without claiming another.
+If a selected recipe needs generated managed SCIP evidence, its prospective
+T45.9 admission is an explicit prerequisite with a same-change PLAN decision.
+Bind the card/manifest/implementation/input/validation digests and name an
+independent validation owner. No release follows from synthetic correctness
+tests alone, and an unfilled gate leaves that recipe unavailable.
+
+**T47.3 · Ordinary production configuration and registration** *(needs the
+T47.2 supported recipe contract; activation remains gated until T47.5)* —
+introduce the stable Caller Map configuration/recipe selection, wire the
+existing extraction/resolver/caller/publication services and exact readers at
+ordinary startup, and separate necessary declaration discovery from the
+experimental umbrella. AC: unsupported or unvalidated recipes refuse;
+missing/stale/failed input stays visibly unavailable; enabling Caller Map
+does not enable Thrift-field, Kafka, Impact, caller comparison or retired
+Investigation/Workbench capabilities; HTTP and read-only MCP agree; existing
+authorization-first access, source/generation fences, exact publication,
+cursor invalidation and citations remain exact. Existing provisional
+configuration has an explicit compatibility/migration decision, not a silent
+reinterpretation as released authority. Provide rollback and revalidation
+behavior. Update the configuration/workflow guide in the same implementation
+PR; enumerate query, tick, startup/restart, no-op/retry, publication, locks,
+cache invalidation and bounded memory/disk/child costs.
+
+**T47.4 · Current-host operating, security and lifecycle acceptance** *(needs
+T47.2 and the T47.3 candidate)* — run the real ordinary binary on this Linux
+amd64 host against the admitted workload, including cold/warm generation,
+incremental source updates, concurrent publication/read paging, permission
+changes, interruption/hard-death/restart, backup/restore, pressure, collection
+and clean teardown. AC: denied source never reaches identity/citation reads;
+real HTTP/UI/MCP give the same exact result and uncertainty states;
+overflow and unsupported input refuse rather than returning partial/zero
+results; measure latency distribution, RSS including children, disk growth,
+store work, Git reads, locks, cache invalidation and no-op costs. Freeze the
+operating class and thresholds prospectively; publish measured limits and
+headroom below existing ceilings, validation expiry, an operational owner and
+suspension/rollback triggers. Table-driven regression, meaningful normal/race,
+static and required machine checks pass; no native prerequisite silently skips.
+No 5,000/10,000-service, 12-GB, freshness-under-cadence or general release claim
+is inferred from this smaller workload.
+
+**T47.5 · Exact Caller Map promotion and supported product closure** *(needs
+T47.2–T47.4; presentation-track handoff for any UI change)* — release only
+the validated Caller Map artifact and selected recipes through a
+caller-specific signed release record binding card, executable manifest,
+implementation/binary and validation digests. AC: independent source,
+security/authorization, evidence-quality and steady-state-cost reviews have
+no unresolved release blockers; every required ownership/approval/expiry and
+operating field is filled; the release decision identifies exactly which
+current hold it supersedes for this caller artifact and claim without
+rewriting historical records or releasing another pack. Ordinary startup and
+the authenticated discovery-to-Caller-Map-to-citation UI/API/MCP flow are
+demoable with real source via `make dev`; supported and unsupported states,
+configuration, operations, bounded limits and suspension behavior agree across
+guides and surfaces. Any change to UI or DESIGN_CHARTER requires Ben's routed
+presentation handoff; backend planning does not cross that boundary. Preserve
+large-monorepo and separate pilot/SCIP-evidence gates. Integrating a passing
+ticket still requires Ben's explicit merge request; no merge or current
+production promotion is authorized merely by this backlog entry.
+
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
 Serve the repository's markdown documentation, rendered, from the phebs binary
