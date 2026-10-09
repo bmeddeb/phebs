@@ -17,6 +17,7 @@
       "note": "3 generated clients; declarations and generated clients co-located under api/etcdserverpb/ (rpc.proto + rpc.pb.go + rpc_grpc.pb.go, header protoc-gen-go-grpc v1.6.2), server/etcdserver/api/v3lock/v3lockpb, server/etcdserver/api/v3election/v3electionpb; production caller client/v3/retry.go (NewKVClient), integration tests, in-repo gateway api/etcdserverpb/gw/rpc.pb.gw.go. Checks returned the pinned ref.",
       "derived": {
         "status": "committed",
+        "corpus_admitted": true,
         "derived_utc": "2026-10-09",
         "clone": "spike/t472/corpus/etcd",
         "derived_commit": "b0e608e23027ab640ed336f4318a8fa804819bff",
@@ -131,6 +132,7 @@
       "note": "17 generated clients with the unique header; in-repo declaration/generated/caller triples under examples/ (helloworld, route_guide, features/*) plus interop/; 12 NewGreeterClient( call sites incl. examples/helloworld/greeter_client/main.go; the helloworld triple and its caller were re-checked at the pinned ref. health/grpc_health_v1 commits the generated pair without an in-repo .proto (declaration upstream in grpc/grpc-proto); broader file/caller counts were recorded at the then-live default-branch head and are re-run at the pin during sealing.",
       "derived": {
         "status": "committed",
+        "corpus_admitted": true,
         "derived_utc": "2026-10-09",
         "clone": "spike/t472/corpus/grpc-go",
         "derived_commit": "ccda7b9d5f2953fa091a8c96a0b53098e35775c3",
@@ -319,6 +321,7 @@
       "note": "17 generated clients under api/services/*/v1 with co-located .proto (e.g. api/services/events/v1/events.proto declaring service Events); production callers core/events/proxy/remote_events.go and cmd/containerd/command/publish.go (NewEventsClient). Default-branch head unchanged since 2026-10-07T16:30Z, the date of every check recorded here; the sealing step re-runs every cell at the pinned commit.",
       "derived": {
         "status": "committed",
+        "corpus_admitted": true,
         "derived_utc": "2026-10-09",
         "clone": "spike/t472/corpus/containerd",
         "derived_commit": "abe7dcb1e3b9a3e52cfe322b9b5c7c293a88db2c",
@@ -457,6 +460,7 @@
       "note": "8 generated clients; declarations under proto/ with generated pairs under go/vt/proto/* (proto/queryservice.proto declares service Query; go/vt/proto/queryservice/queryservice_grpc.pb.go); production caller go/vt/vttablet/grpctabletconn/conn.go using queryservicepb.NewQueryClient, plus bench test. Checks returned the pinned ref.",
       "derived": {
         "status": "refused_bound_miss",
+        "corpus_admitted": false,
         "refused_utc": "2026-10-09",
         "missed_bounds": [
           "index_scip_bytes",
@@ -524,7 +528,7 @@
           "note": "both snapshots were authored and passed every production gate, but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
         },
         "clone_state": "spike/t472/corpus/vitess remains at the pinned commit 0ee525542d4157460b40af0951016236fc213afd with a clean working tree and no derived commit",
-        "disposition": "open — recorded as a §2 selection change awaiting Ben's routing; see derivation.disposition"
+        "disposition": "dropped from the admitted corpus under option A (Ben, 2026-10-09); refusal evidence retained; see derivation.disposition"
       }
     },
     {
@@ -539,6 +543,7 @@
       "note": "Single generated client pkg/test/echo/proto/echo_grpc.pb.go with co-located echo.proto (service EchoTestService); all in-repo callers are test-role (pkg/test/echo/client.go, pkg/test/echo/server/forwarder/grpc.go, pilot/pkg/networking/grpcgen/grpcgen_test.go). Mainstream Istio API clients live in the istio.io/api module outside this repository. Included for generated-client/test stratum coverage; contributes no application-role callers. Checks returned the pinned ref.",
       "derived": {
         "status": "refused_bound_miss",
+        "corpus_admitted": false,
         "refused_utc": "2026-10-09",
         "missed_bounds": [
           "index_scip_bytes"
@@ -603,7 +608,7 @@
           "note": "both snapshots were authored and passed every production gate, but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
         },
         "clone_state": "spike/t472/corpus/istio remains at the pinned commit d501e135abadd7492774f428e0873f7d16494d41 with a clean working tree and no derived commit",
-        "disposition": "open — recorded as a §2 selection change awaiting Ben's routing; see derivation.disposition"
+        "disposition": "dropped from the admitted corpus under option A (Ben, 2026-10-09); refusal evidence retained; see derivation.disposition"
       }
     }
   ],
@@ -619,7 +624,7 @@
   ],
   "derivation": {
     "derived_utc": "2026-10-09",
-    "status": "partial: 3 of 5 selected repositories carry committed §2 inputs; vitessio/vitess and istio/istio were refused at the frozen bounds and their disposition is open",
+    "status": "resolved: the admitted T47.2b corpus is the three committed repositories (etcd-io/etcd, containerd/containerd, grpc/grpc-go); vitessio/vitess and istio/istio were dropped under option A after refusing the frozen §2 bounds at derivation",
     "bounds": {
       "source": "docs/CALLER_QUALITY_PROTOCOL.md §2, frozen by T47.2a; the bounds were enforced as written and are not adjusted here",
       "corpus_files_max": 200000,
@@ -720,25 +725,42 @@
       }
     ],
     "disposition": {
-      "status": "open — Ben's routing",
+      "status": "resolved — option A (Ben, 2026-10-09)",
       "rule": "a §2 bound miss is a selection change recorded here, never a silent adjustment; the frozen bound is not raised after measurement because the §2 thresholds were preregistered in T47.2a and a different byte is a different protocol",
       "options": [
         {
           "id": "A",
           "option": "drop vitessio/vitess and istio/istio, leaving a three-repository corpus",
-          "consequence": "loses the largest production multi-module monorepo and the degenerate test/generated-only stratum; the §6 strata and the §3 denominators shrink accordingly and are re-recorded before sealing"
+          "consequence": "loses the largest production multi-module monorepo and the degenerate test/generated-only stratum; the §6 strata and the §3 denominators shrink accordingly and are re-recorded before sealing",
+          "chosen": true
         },
         {
           "id": "B",
           "option": "replace one or both through a fresh four-axis selection run",
-          "consequence": "each replacement must itself pass §2 at its own pin, including the 64 MiB index bound and the 10 MiB blob bound; the selection table and this lock are re-dated and the derivation re-run for the replacement"
+          "consequence": "each replacement must itself pass §2 at its own pin, including the 64 MiB index bound and the 10 MiB blob bound; the selection table and this lock are re-dated and the derivation re-run for the replacement",
+          "chosen": false
         },
         {
           "id": "C",
           "option": "amend the §2 bound",
-          "consequence": "rejected as a post-hoc preregistration violation unless Ben explicitly directs it, in which case it is recorded as a dated protocol amendment with its own digest and the pre-amendment measurements are preserved beside it"
+          "consequence": "rejected as a post-hoc preregistration violation unless Ben explicitly directs it, in which case it is recorded as a dated protocol amendment with its own digest and the pre-amendment measurements are preserved beside it",
+          "chosen": false
         }
-      ]
+      ],
+      "resolved_utc": "2026-10-09",
+      "resolved_by": "Ben (option A routing)",
+      "chosen": "A",
+      "decision": "drop vitessio/vitess and istio/istio; the admitted T47.2b corpus is the three committed repositories",
+      "admitted_corpus": [
+        "etcd-io/etcd",
+        "containerd/containerd",
+        "grpc/grpc-go"
+      ],
+      "dropped": [
+        "vitessio/vitess",
+        "istio/istio"
+      ],
+      "post_decision": "the §6 strata and §3 denominators are re-recorded against the three-repository admitted corpus before sealing; the dropped repositories' refusal evidence (retained unrenamed .tmp merged streams, raw root indexes, authored-unplaced gate-passed snapshots) is preserved and their clones remain at their pins with clean working trees; the frozen §2 bound is unchanged"
     }
   }
 }

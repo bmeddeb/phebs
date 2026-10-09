@@ -184,24 +184,32 @@ exactly `3 files changed` (the binary index plus two small JSON snapshots) and
 are gitignored in phebs, and nothing is pushed. The derived commits, trees and
 every digest are locked in `corpus.lock.json`.
 
-### Corpus disposition — open, Ben's routing
+### Corpus disposition — resolved, option A (Ben, 2026-10-09)
 
 A §2 bound miss is a selection change recorded here, never a silent adjustment.
-Because vitess and istio miss §2, the corpus disposition is **open** with three
-recorded options (full text in `derivation.disposition`):
+Three options were recorded when the disposition was open; Ben routed **option
+A** on 2026-10-09. The decision and the full option text are preserved in
+`derivation.disposition` (`chosen: "A"`, every option carries its `chosen`
+boolean, and the original A/B/C consequence text is unchanged):
 
-- **A** — drop vitess and istio, leaving a three-repository corpus. Loses the
-  largest production multi-module monorepo and the degenerate test/generated-only
-  stratum; the §6 strata and §3 denominators shrink and are re-recorded before
-  sealing.
-- **B** — replace one or both through a fresh four-axis selection run. Each
-  replacement must itself pass §2 at its own pin, including both bounds; the
-  selection table and this lock are re-dated and the derivation re-run.
-- **C** — amend the §2 bound. Rejected as a post-hoc preregistration violation
-  unless Ben explicitly directs it, in which case it is recorded as a dated
-  protocol amendment with its own digest and the pre-amendment measurements are
-  preserved beside it.
+- **A — chosen.** Drop vitess and istio, leaving a three-repository corpus
+  (etcd-io/etcd, containerd/containerd, grpc/grpc-go). This loses the largest
+  production multi-module monorepo and the degenerate test/generated-only
+  stratum; the §6 strata and the §3 denominators shrink and are re-recorded
+  against the admitted three-repository corpus **before sealing**.
+- **B — not chosen.** Replace one or both through a fresh four-axis selection
+  run; each replacement must itself pass §2 at its own pin, including both
+  bounds, and the selection table and lock are re-dated and re-derived.
+- **C — not chosen.** Amend the §2 bound; rejected as a post-hoc
+  preregistration violation, and the frozen §2 bound is unchanged here.
 
-No option is chosen unilaterally: the drop-vs-replace decision changes the
-preregistered corpus, the §6 strata and the §3 denominators, so it is left for
-Ben's routing before sealing.
+The drop is a recorded selection change, not a deletion of evidence: vitess and
+istio keep their `refused_bound_miss` status, their retained unrenamed `.tmp`
+merged streams, their raw single-module root indexes, and their authored,
+gate-passed but unplaced snapshots, all in the lock; each carries
+`corpus_admitted: false` and a `disposition` naming option A. Their clones
+remain at their pins with clean working trees and no derived commit. The
+admitted corpus is therefore the three committed repositories, each with
+`corpus_admitted: true`, a derived commit, and all three §2 files in place.
+Sealing re-records the §6 strata and §3 denominators against these three
+repositories; no label, extraction or score precedes that.
