@@ -150,10 +150,10 @@ func TestLoadSelectionGoverningRecord(t *testing.T) {
 }
 
 // TestLoadSelectionRevocation pins the operator revocation control. Revocation
-// is judged once, against the record that governs its pack, so a rollback to a
-// signed earlier release is expressible as revoking the bad record instead of
-// refusing the whole selection, and revoking the governing record withdraws the
-// pack instead of silently falling back to an older record.
+// is judged once, against the record that governs its pack, so revoking a
+// superseded record withdraws nothing instead of refusing the whole selection,
+// and revoking the governing record withdraws the pack instead of silently
+// falling back to an older record.
 func TestLoadSelectionRevocation(t *testing.T) {
 	onlyBaseline := func(t *testing.T, dir string, private ed25519.PrivateKey) {
 		writeSigned(t, dir, "a.json", "key-1", private, nil)
@@ -321,11 +321,6 @@ func TestLoadSelectionRefuses(t *testing.T) {
 				r.PackID = "phebs.foreign.pack"
 			})
 		}, nil, ReasonUnknownKey},
-		{"expired released", func(t *testing.T, dir string, private ed25519.PrivateKey) {
-			writeSigned(t, dir, "expired.json", "key-1", private, func(r *PackRelease) {
-				r.Validation.ExpiresAt = "2020-01-01T00:00:00Z"
-			})
-		}, nil, ReasonExpired},
 		{"same pack and version twice", func(t *testing.T, dir string, private ed25519.PrivateKey) {
 			writeSigned(t, dir, "a.json", "key-1", private, nil)
 			writeSigned(t, dir, "b.json", "key-1", private, func(r *PackRelease) { r.ReleaseID = "rel-0002" })
@@ -369,6 +364,49 @@ func TestLoadSelectionRefuses(t *testing.T) {
 			}
 			if reason, _ := ReasonOf(err); test.reason != "" && reason != test.reason {
 				t.Fatalf("reason = %q (%v), want %q", reason, err, test.reason)
+			}
+		})
+	}
+}
+
+// TestLoadSelectionExpiryWithdraws pins validation expiry as automatic
+// suspension: an expired or not-yet-approved governing record withdraws its
+// pack without refusing startup, and a superseded record expiring later
+// changes nothing.
+func TestLoadSelectionExpiryWithdraws(t *testing.T) {
+	expired := func(r *PackRelease) { r.Validation.ExpiresAt = "2020-01-01T00:00:00Z" }
+	tests := []struct {
+		name     string
+		build    func(t *testing.T, dir string, private ed25519.PrivateKey)
+		admits   string
+		withdraw []Withdrawal
+	}{
+		{"expired governing record withdraws", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "a.json", "key-1", private, expired)
+		}, "", []Withdrawal{{PackID: validRelease().PackID, Cause: string(ReasonExpired)}}},
+		{"future approval withdraws", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "a.json", "key-1", private, func(r *PackRelease) { r.ApprovedAt = "2030-01-01T00:00:00Z" })
+		}, "", []Withdrawal{{PackID: validRelease().PackID, Cause: string(ReasonFutureApproval)}}},
+		{"expired superseded record changes nothing", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "a.json", "key-1", private, expired)
+			writeSigned(t, dir, "b.json", "key-1", private, func(r *PackRelease) { r.ReleaseID, r.ReleaseVersion = "rel-0002", "1.1.0" })
+		}, "1.1.0", nil},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dir := t.TempDir()
+			public, private := testKey(t)
+			test.build(t, dir, private)
+			selection, err := LoadSelection(context.Background(), dir, loadOptions(public))
+			if err != nil {
+				t.Fatalf("LoadSelection refused startup: %v", err)
+			}
+			release, ok := selection.Released(validRelease().PackID)
+			if ok != (test.admits != "") || ok && release.ReleaseVersion != test.admits {
+				t.Fatalf("admitted = %t (%v), want %q", ok, release, test.admits)
+			}
+			if got := selection.Withdrawn(); !reflect.DeepEqual(got, test.withdraw) {
+				t.Fatalf("withdrawn = %#v, want %#v", got, test.withdraw)
 			}
 		})
 	}

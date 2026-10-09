@@ -109,6 +109,28 @@ const (
 // only after the signature proves the record authentic, so an unsigned record
 // learns nothing about expiry or artifacts and never reaches the resolver.
 func Verify(ctx context.Context, raw []byte, opts Options) (*PackRelease, error) {
+	release, err := verifyRecord(raw, opts)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateReleasedTime(release, opts.now()); err != nil {
+		return nil, err
+	}
+	if err := bindImplementation(release, opts); err != nil {
+		return nil, err
+	}
+	if err := resolveReferences(ctx, release, opts.Resolver); err != nil {
+		return nil, err
+	}
+	return release, nil
+}
+
+// verifyRecord authenticates raw and checks everything about the record that
+// depends neither on the clock nor on what is present: canonical form,
+// envelope, signature, revocation, structure and the released record's own
+// facts. LoadSelection applies it to every record and judges time only for the
+// record that governs its pack.
+func verifyRecord(raw []byte, opts Options) (*PackRelease, error) {
 	release, err := decodeCanonical(raw)
 	if err != nil {
 		return nil, err
@@ -125,13 +147,7 @@ func Verify(ctx context.Context, raw []byte, opts Options) (*PackRelease, error)
 	if err := validateStructure(release); err != nil {
 		return nil, err
 	}
-	if err := validateStatusGate(release, opts.now()); err != nil {
-		return nil, err
-	}
-	if err := bindImplementation(release, opts); err != nil {
-		return nil, err
-	}
-	if err := resolveReferences(ctx, release, opts.Resolver); err != nil {
+	if err := validateStatusGate(release, time.Time{}); err != nil {
 		return nil, err
 	}
 	return release, nil
@@ -385,6 +401,16 @@ func validateStatusGate(release *PackRelease, now time.Time) error {
 		return reject(ReasonMissingApproval, "released status requires at least one approval record")
 	}
 	if now.IsZero() {
+		return nil
+	}
+	return validateReleasedTime(release, now)
+}
+
+// validateReleasedTime judges a released record against the clock: its
+// validation must not have expired and its approval must not lie in the future.
+// Other states carry no time gate.
+func validateReleasedTime(release *PackRelease, now time.Time) error {
+	if release.DerivedStatus != StatusReleased {
 		return nil
 	}
 	expires, err := time.Parse(time.RFC3339, release.Validation.ExpiresAt)

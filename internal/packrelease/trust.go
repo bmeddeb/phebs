@@ -56,10 +56,11 @@ type Options struct {
 	// state, so a withdrawn record cannot be replayed before it expires.
 	//
 	// Selection judges revocation once, against the record that governs its
-	// pack, rather than against every record present: see LoadSelection. That
-	// keeps a rollback to a signed earlier release expressible as revoking the
-	// bad record, which would otherwise refuse the whole selection because the
-	// revoked record is still one of the records in the directory.
+	// pack, rather than against every record present: see LoadSelection.
+	// Revoking a superseded record therefore withdraws nothing instead of
+	// refusing the whole selection, and revoking the governing record
+	// withdraws its pack without falling back to an older one; a rollback is a
+	// newly signed record.
 	Revoked map[string]struct{}
 }
 

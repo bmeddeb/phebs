@@ -3522,15 +3522,23 @@ Withdrawal is not a server failure, so one suspended pack never refuses an
 otherwise healthy startup.
 
 **Validation expiry is automatic suspension.** A release carries its own
-approval time and expiry triggers. An expired released record fails
-verification, and validation expiry, a failed drift check, a provenance break,
-or an unresolved release inconsistency each require automatic suspension with
-no ordinary claim-bearing load. There is no expiry override, no grace window,
-and no configuration key that re-admits an expired record; the correction is a
-new signed release produced by revalidation.
+approval time and expiry triggers. A governing released record whose validation
+has expired withdraws its pack with cause `expired`, exactly like a signed
+suspension: the pack is not admitted and startup continues. A governing record
+whose approval time still lies in the future withdraws the same way with cause
+`future_approval`. Only the governing record is judged against the clock, so a
+superseded record whose validation later expires changes nothing. Validation
+expiry, a failed drift check, a provenance break, or an unresolved release
+inconsistency each require automatic suspension with no ordinary claim-bearing
+load. There is no expiry override, no grace window, and no configuration key
+that re-admits an expired record; the correction is a new signed release
+produced by revalidation.
 
-A failed verification is stronger than a withdrawal: while any record present
-fails verification, the selection refuses startup before any record can
+A failed verification is stronger than a withdrawal. Verification here means
+authenticity and structure — canonical form, schema and canonicalization
+version, signature and key, digests and identifiers, and a released record's
+own facts — not the clock. While any record present fails verification, the
+selection refuses startup before any record can
 govern. A revalidated successor published at a higher `release_version` does
 not lift that refusal while the failed record remains, and an operator
 `revoked` entry cannot either, because revocation is judged only against a
@@ -3554,6 +3562,10 @@ away.
    revoking an already-superseded record withdraws nothing and does not refuse
    the selection.
 
+Two records naming one pack at the same `release_version` refuse startup
+before revocation is judged, so revoking either cannot clear the tie: remove or
+replace one of the two files.
+
 Revoking or suspending the governing record withdraws the whole pack. It never
 falls back to an earlier released record in the same directory, because a
 fallback would silently re-admit the very behavior the withdrawal was meant to
@@ -3565,10 +3577,10 @@ refuses startup until its file is removed or replaced, as described above.
 **Rolling back.** A rollback is a newly signed record, not a consequence of
 withdrawing a later one. Sign the intended earlier content at a
 `release_version` higher than the bad record's, publish it, and restart. The
-withdrawn record may stay in the directory only while it still verifies —
-supersession does not stop a retained record's validation from expiring, and a
-retained record that fails verification refuses startup until its file is
-removed or replaced. A retained, still-verifying record is superseded by
+withdrawn record may stay in the directory: once it is superseded its
+validation expiring has no effect, but it must keep verifying, and a retained
+record that fails verification refuses startup until its file is removed or
+replaced. A retained, still-verifying record is superseded by
 version, and additionally listing its `release_id` in `revoked` records the
 intent explicitly. Retained evidence from the bad release is never rewritten:
 already published results keep their own release binding, and a compatibility
@@ -3595,10 +3607,11 @@ schema, rule, extractor, adapter, universe, enumeration, snapshot policy, build
 configuration, external-input semantics, and current principal visibility.
 
 **Observing a withdrawal.** One bounded startup log line names each configured
-pack that was not admitted, as `pack_id=cause`, where the cause is `revoked` or
-the governing record's own lifecycle status. The line reports at most sixteen
-entries and then an omitted count. It discloses only a pack identifier the
-operator configured and a bounded status word — never a record's contents,
+pack that was not admitted, as `pack_id=cause`, where the cause is `revoked`,
+`expired`, `future_approval` or the governing record's own lifecycle status.
+The line reports at most sixteen entries and then an omitted count. It
+discloses only a pack identifier taken from an authenticated record and a
+bounded cause word — never a record's contents,
 signature, approval set, referenced artifacts, or any repository source, so a
 denied pack stays as undisclosed as an absent one.
 

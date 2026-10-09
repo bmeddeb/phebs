@@ -253,11 +253,12 @@ service_catalogs: {}
 # a fixed in-tree recipe; a verified released pack with no bound recipe refuses
 # startup rather than loading unbound code. Toggling a provisional extraction
 # switch below is never a path to this set, and there is no third-party or
-# manifest-selected code loader. Every record must verify: a malformed,
-# foreign-keyed or expired record, a non-regular *.json entry, or two records
-# naming one pack at the same release_version refuses startup. Per pack, the
-# record with the highest release_version governs, so a later signed suspension
-# withdraws an older release. This build cannot yet bind a released record to
+# manifest-selected code loader. Every record must verify: a malformed or
+# foreign-keyed record, a non-regular *.json entry, or two records naming one
+# pack at the same release_version refuses startup. Per pack, the record with
+# the highest release_version governs, so a later signed suspension withdraws an
+# older release, and an expired governing record withdraws its pack; a
+# superseded record's expiry has no effect. This build cannot yet bind a released record to
 # its own binary and artifacts, so any governing released record refuses
 # startup until a later slice supplies those bindings.
 #

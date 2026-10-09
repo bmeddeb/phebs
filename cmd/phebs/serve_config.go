@@ -157,8 +157,9 @@ var releaseLoadBindings = func(context.Context) (packrelease.Options, error) {
 //     governing released record refuses it until releaseLoadBindings can bind
 //     it to this binary and its artifacts.
 //   - A pack whose governing record is suspended, retired, design, shadow or
-//     experimental-dark, or whose release_id the operator revoked, is withdrawn
-//     rather than refused: it is not admitted and no older record replaces it.
+//     experimental-dark, has expired or is not yet approved, or whose
+//     release_id the operator revoked, is withdrawn rather than refused: it is
+//     not admitted and no older record replaces it.
 //     Each withdrawal is named in one bounded startup log line, so suspension
 //     and rollback are observable instead of only an absent pack.
 //   - A verified released pack with no fixed in-tree recipe is an unresolved
@@ -242,8 +243,9 @@ const maxLoggedWithdrawals = 16
 // logWithdrawnSelection names the packs a configured selection directory holds
 // that are not admitted, so a suspension or a revocation has an observable
 // startup effect instead of only an absent pack. It discloses a pack identifier
-// the operator configured and a bounded lifecycle cause, never a record's
-// contents, signature, artifacts or any repository data.
+// taken from an authenticated record (already within the identifier grammar)
+// and a bounded cause, never a record's contents, signature, artifacts or any
+// repository data.
 func logWithdrawnSelection(withdrawn []packrelease.Withdrawal) {
 	if len(withdrawn) == 0 {
 		return
