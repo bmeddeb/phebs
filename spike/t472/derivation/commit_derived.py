@@ -7,7 +7,9 @@ frozen pin inside the clone's own git repository, verifies the commit contents,
 and emits every measured fact to derived_facts.json for the phebs corpus lock.
 
 Nothing here is pushed. The clones are detached at their pins, so each commit is
-a local derived commit whose only parent is the pinned upstream commit.
+a local derived commit whose only parent is the pinned upstream commit. The
+commit identity and both dates are fixed (the pin's committer date), so the
+derived commit SHA is reproducible from the same three files.
 """
 
 import hashlib
@@ -16,9 +18,11 @@ import os
 import subprocess
 import sys
 
-DER = "/home/ben/phebs-rehearsals/t472-derivation"
-CORPUS = "/home/ben/.codex/worktrees/t47-2-caller-identity/phebs/spike/t472/corpus"
-LOCK = "/home/ben/.codex/worktrees/t47-2-caller-identity/phebs/spike/t472/corpus.lock.json"
+HERE = os.path.dirname(os.path.abspath(__file__))
+DER = os.environ.get("T472_ROOT", "/home/ben/phebs-rehearsals/t472-derivation")
+CORPUS = os.path.normpath(os.path.join(HERE, "..", "corpus"))
+LOCK = os.path.normpath(os.path.join(HERE, "..", "corpus.lock.json"))
+DERIVED_IDENTITY = ("phebs t472 derivation", "t472-derivation@phebs.invalid")
 
 SCIP_GO_SHA = "31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
 SCIP_GO_BYTES = 18104856
@@ -71,6 +75,10 @@ def rels_for(repo):
     return rels
 
 
+def other_paths(merge):
+    return sorted(p for run in merge["runs"] for p in run["out_of_tree_other"] or [])
+
+
 def main():
     remote_of = remotes()
     facts = {}
@@ -120,8 +128,9 @@ upstream repository; its only parent is the pinned commit %s. No upstream
 file is modified.
 
 index.scip \u2014 root merged SCIP index, %d bytes, sha256 %s, %d documents,
-%d occurrences, %d symbols, %d out-of-tree cgo build-cache documents dropped,
-%d external symbols dropped, %d round-trip-unstable documents. Built with
+%d occurrences, %d symbols, %d out-of-tree build-cache documents dropped (%d
+synthesized test mains, %d other), %d external symbols dropped, %d
+round-trip-unstable documents, %d version-skewed in-repo references. Built with
 scip-go v0.2.7 (sha256 %s, %d bytes) under GOTOOLCHAIN=%s, one run per Go
 module with --skip-implementations, --repository-remote %s and
 --module-version %s, over module roots: %s. The runs were canonicalized and
@@ -134,10 +143,11 @@ over %d regular corpus files.
 generated-from-snapshot.json \u2014 t20-generated-from-v1, %d bytes, sha256 %s,
 %d generated clients, %d mapped, %d abstained.
 
-Both snapshots were authored from the checked-in tree by the T47.2b snapshot
-tool (sha256 %s, %d bytes) and validated by the production decoders and limits
-in internal/resolverinput, plus the corpus bounds (\u2264 %d files, blob \u2264 10 MiB;
-largest blob %s at %d bytes).
+Both snapshots were authored from the resolution table (sha256 %s) by the
+T47.2b snapshot tool (sha256 %s, %d bytes), decoded by the production
+internal/resolverinput decoders and limits and checked against re-implemented
+production refusal conditions, plus the corpus bounds measured at the pin
+(\u2264 %d files, blob \u2264 10 MiB; largest blob %s at %d bytes).
 
 Digests, counts and the recipe are locked in phebs
 spike/t472/corpus.lock.json.
@@ -145,13 +155,15 @@ spike/t472/corpus.lock.json.
             pin[:12], pin,
             merge["bytes"], files["index.scip"]["sha256"], merge["docs"],
             merge["occurrences"], merge["symbols"], merge["out_of_tree_dropped"],
+            merge["out_of_tree_testmain"], len(other_paths(merge)),
             merge["external_symbols_dropped"], merge["round_trip_unstable_docs"],
+            merge["version_skew_references"],
             SCIP_GO_SHA, SCIP_GO_BYTES, GOTOOLCHAIN, remote, pin[:12], rels_text,
             SCIPMERGE_SHA, SCIPMERGE_BYTES,
             snap["layout_bytes"], snap["layout_sha256"], snap["roots"], snap["regular_files"],
             snap["generated_from_bytes"], snap["generated_from_sha256"],
             snap["clients"], snap["mapped"], snap["abstained"],
-            SNAPSHOTS_SHA, SNAPSHOTS_BYTES,
+            snap["mapping_table_sha256"], SNAPSHOTS_SHA, SNAPSHOTS_BYTES,
             BOUND_FILES, snap["max_blob_path"], snap["max_blob_bytes"],
         )
 
@@ -159,8 +171,13 @@ spike/t472/corpus.lock.json.
         staged = run(["git", "diff", "--cached", "--name-only"], cwd=clone).split()
         if sorted(staged) != sorted(DERIVED_PATHS):
             raise SystemExit("%s: staged set %s != %s" % (repo, staged, DERIVED_PATHS))
-        p = subprocess.run(["git", "commit", "-q", "-F", "-"], cwd=clone, input=message, text=True,
-                           capture_output=True)
+        date = run(["git", "show", "-s", "--format=%cI", pin], cwd=clone).strip()
+        env = dict(os.environ,
+                   GIT_AUTHOR_NAME=DERIVED_IDENTITY[0], GIT_AUTHOR_EMAIL=DERIVED_IDENTITY[1],
+                   GIT_COMMITTER_NAME=DERIVED_IDENTITY[0], GIT_COMMITTER_EMAIL=DERIVED_IDENTITY[1],
+                   GIT_AUTHOR_DATE=date, GIT_COMMITTER_DATE=date)
+        p = subprocess.run(["git", "-c", "commit.gpgsign=false", "commit", "-q", "--no-verify", "-F", "-"],
+                           cwd=clone, input=message, text=True, capture_output=True, env=env)
         if p.returncode != 0:
             raise SystemExit("%s: commit failed\n%s\n%s" % (repo, p.stdout, p.stderr))
 
@@ -198,6 +215,10 @@ spike/t472/corpus.lock.json.
                 "occurrences": merge["occurrences"],
                 "symbols": merge["symbols"],
                 "out_of_tree_dropped": merge["out_of_tree_dropped"],
+                "out_of_tree_testmain": merge["out_of_tree_testmain"],
+                "out_of_tree_other": other_paths(merge),
+                "version_skew_references": merge["version_skew_references"],
+                "version_skew_sample": merge["version_skew_sample"],
                 "external_symbols_dropped": merge["external_symbols_dropped"],
                 "round_trip_unstable_docs": merge["round_trip_unstable_docs"],
                 "bytes": merge["bytes"],
@@ -213,6 +234,7 @@ spike/t472/corpus.lock.json.
                 "files_within_bound": snap["files_within_bound"], "blobs_within_bound": snap["blobs_within_bound"],
                 "vendored_mapped": snap["vendored_mapped"], "nonvendored_mapped": snap["nonvendored_mapped"],
                 "gates": snap["gates"],
+                "mapping_table_sha256": snap["mapping_table_sha256"],
                 "abstention_summary": snap["abstention_summary"],
             },
             "remote": remote,

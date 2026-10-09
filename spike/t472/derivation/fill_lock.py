@@ -14,8 +14,9 @@ import collections
 import json
 import os
 
-DER = "/home/ben/phebs-rehearsals/t472-derivation"
-LOCK = "/home/ben/.codex/worktrees/t47-2-caller-identity/phebs/spike/t472/corpus.lock.json"
+HERE = os.path.dirname(os.path.abspath(__file__))
+DER = os.environ.get("T472_ROOT", "/home/ben/phebs-rehearsals/t472-derivation")
+LOCK = os.path.normpath(os.path.join(HERE, "..", "corpus.lock.json"))
 
 BOUND_FILES = 200_000
 BOUND_BLOB = 10 << 20
@@ -83,6 +84,7 @@ def main():
             ("nonvendored_mapped", snap["nonvendored_mapped"]),
             ("abstentions", abstentions),
             ("gates_passed", snap["gates"]),
+            ("mapping_table_sha256", snap["mapping_table_sha256"]),
         ])
         bounds = collections.OrderedDict([
             ("corpus_files", {"measured": snap["regular_files"], "max": BOUND_FILES, "within": snap["files_within_bound"]}),
@@ -114,7 +116,11 @@ def main():
                     ("documents", f["merge"]["docs"]),
                     ("occurrences", f["merge"]["occurrences"]),
                     ("symbols", f["merge"]["symbols"]),
-                    ("out_of_tree_cgo_documents_dropped", f["merge"]["out_of_tree_dropped"]),
+                    ("out_of_tree_build_cache_documents_dropped", f["merge"]["out_of_tree_dropped"]),
+                    ("out_of_tree_testmain_documents", f["merge"]["out_of_tree_testmain"]),
+                    ("out_of_tree_other_documents", f["merge"]["out_of_tree_other"]),
+                    ("version_skew_references", f["merge"]["version_skew_references"]),
+                    ("version_skew_sample", f["merge"]["version_skew_sample"]),
                     ("external_symbols_dropped", f["merge"]["external_symbols_dropped"]),
                     ("round_trip_unstable_documents", f["merge"]["round_trip_unstable_docs"]),
                     ("bytes", index_bytes),
@@ -158,11 +164,14 @@ def main():
                 ("layout_snapshot", {"sha256": snap["layout_sha256"], "bytes": snap["layout_bytes"]}),
                 ("generated_from_snapshot", {"sha256": snap["generated_from_sha256"], "bytes": snap["generated_from_bytes"]}),
                 ("detail", snapshot_record),
-                ("note", "both snapshots were authored and passed every production gate, but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"),
+                ("note", "both snapshots were authored and passed every gate (two production decoders plus re-implemented production refusal conditions), but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"),
             ])),
             ("clone_state", "spike/t472/corpus/%s remains at the pinned commit %s with a clean working tree and no derived commit" % (short, repo["commit"])),
             ("disposition", "open — recorded as a §2 selection change awaiting Ben's routing; see derivation.disposition"),
         ])
+
+    with open(os.path.join(DER, "scip", "run_plan.tsv")) as plan:
+        module_runs = sum(1 for line in plan if line.strip())
 
     derivation = collections.OrderedDict([
         ("derived_utc", "2026-10-09"),
@@ -186,18 +195,18 @@ def main():
                 ("source", "spike/t472/derivation/merge"),
                 ("sha256", "4c22c00f3ed7a17097da5fa32c55561703394a8f8bf80a2400c3c169e3324cce"),
                 ("bytes", 6807487),
-                ("role", "canonicalizes every run to sorted unique document paths under one tool version and canonical field order, drops out-of-tree cgo build-cache documents, then refuses a merged stream over the frozen bound"),
+                ("role", "canonicalizes every run to sorted unique document paths under one tool version and canonical field order, drops out-of-tree build-cache documents (listing every one that is not a synthesized test main), reports version-skewed in-repo references, then refuses a merged stream over the frozen bound"),
             ])),
             ("snapshot_tool", collections.OrderedDict([
                 ("source", "spike/t472/derivation/snapshots"),
                 ("sha256", "8bd8fd8c4924b4ab9839acd1632b98b8648796431f88895b6f24200c8d534a2f"),
                 ("bytes", 4163718),
-                ("role", "authors t20-layout-snapshot-v1 and t20-generated-from-v1 from the checked-in tree and validates both through the production decoders and limits in internal/resolverinput plus the §2 corpus bounds"),
+                ("role", "authors t20-layout-snapshot-v1 and t20-generated-from-v1 from a per-repository resolution table outside the repository (digest recorded), decodes both with the production internal/resolverinput decoders and limits, and checks them against re-implemented production refusal conditions plus the §2 corpus bounds measured at the pin"),
             ])),
             ("runner", collections.OrderedDict([
                 ("script", "spike/t472/derivation/run_scip.sh"),
                 ("policy", "serial and fail-closed; preflight re-verifies the scip-go digest before any run"),
-                ("module_runs", 27),
+                ("module_runs", module_runs),
                 ("ledger", "RUN_STATUS in the derivation workspace; one honest FAIL row for the containerd root module caused by a runner IFS bug that collapsed the empty module rel, corrected with an explicit '.' marker and re-run"),
             ])),
             ("derived_commit_policy", "the three §2 files are committed inside each clone on a local derived commit whose only parent is the pinned upstream commit; the clones are gitignored in phebs, nothing is pushed, and no upstream file is modified"),
@@ -206,11 +215,14 @@ def main():
         ("totals", collections.OrderedDict([
             ("repositories_committed", len(IN_BOUND)),
             ("repositories_refused", len(refusals)),
-            ("module_runs", 27),
+            ("module_runs", module_runs),
             ("generated_clients", sum(all_snap[s]["clients"] for s in all_snap)),
             ("mapped_declarations", sum(all_snap[s]["mapped"] for s in all_snap)),
             ("abstentions", sum(all_snap[s]["abstained"] for s in all_snap)),
-            ("abstention_reasons", collections.OrderedDict([("declaration_not_found", 14), ("no_source_line", 2)])),
+            ("abstention_reasons", collections.OrderedDict(sorted(collections.Counter(
+                a["reason"] for r in lock["repos"]
+                for a in load(os.path.join(DER, "mappings", "%s.json" % r["name"].split("/")[1]))["abstentions"]
+            ).items()))),
         ])),
         ("refusals", refusals),
         ("disposition", collections.OrderedDict([

@@ -59,8 +59,9 @@ selection change.
 
 ### Recipe and tool identity
 
-One `scip-go index` run per Go module in run-plan order (27 runs total across
-the five repositories), then a canonical merge, then snapshot authoring:
+One `scip-go index` run per Go module in run-plan order (recorded as 27 runs
+across the five repositories; see the re-derivation section for why that total
+does not reconcile), then a canonical merge, then snapshot authoring:
 
 ```
 GOTOOLCHAIN=go1.27.1 scip-go index \
@@ -77,13 +78,17 @@ GOTOOLCHAIN=go1.27.1 scip-go index \
 | `snapshots` | `spike/t472/derivation/snapshots` | `8bd8fd8c4924b4ab9839acd1632b98b8648796431f88895b6f24200c8d534a2f` | 4,163,718 |
 
 `merge` canonicalizes every run to sorted unique document paths under one tool
-version and canonical field order, drops out-of-tree cgo build-cache documents,
+version and canonical field order, drops out-of-tree build-cache documents,
 and refuses a merged stream over the frozen bound. `snapshots` authors both
-resolver snapshots from the checked-in tree and validates them through the
-production decoders and limits in `internal/resolverinput` plus the §2 corpus
-bounds — the same 13 gates for all five repositories, including the two
-refused ones. The runner is serial and fail-closed and re-verifies the
-`scip-go` digest before any run.
+resolver snapshots from a per-repository resolution table kept in the
+rehearsal directory, outside this repository, decodes them with the production
+decoders and limits in `internal/resolverinput`, and checks them against 11
+re-implemented production refusal conditions plus the §2 corpus bounds — the
+same 13 gates for all five repositories, including the two refused ones. The
+runner is serial and re-verifies the `scip-go` digest before any run. The
+recorded runs used the tools at `6acae5a1`; they were corrected afterwards (see
+the re-derivation section), so the tool digests above describe the recorded
+derivation, not the current source.
 
 ### §2 bounds (frozen by T47.2a, enforced as written)
 
@@ -93,7 +98,7 @@ measurement; a different byte is a different protocol.
 
 ### Committed repositories (3 of 5)
 
-| Repository | Pin → derived commit | `index.scip` bytes (SHA-256) | merge docs / occurrences / symbols | cgo out-of-tree dropped | module runs |
+| Repository | Pin → derived commit | `index.scip` bytes (SHA-256) | merge docs / occurrences / symbols | build-cache docs dropped (unclassified) | module runs |
 |---|---|---|---|---|---|
 | etcd-io/etcd | `f061acd0…` → `b0e608e2…` | 33,498,092 (31.9 MiB) `65de33af…` | 1,076 / 395,236 / 63,330 | 101 | 14 |
 | containerd/containerd | `3ea5bdbf…` → `abe7dcb1…` | 38,653,529 (36.9 MiB) `b3683169…` | 1,196 / 412,229 / 70,547 | 116 | 2 |
@@ -110,7 +115,11 @@ round-trip-unstable documents. Snapshot digests and corpus-inventory facts:
 
 Full 64-hex digests, git blob SHA-1s, derived tree hashes and per-module rel
 lists are in the `derived` objects of [`corpus.lock.json`](corpus.lock.json).
-All file counts are far under 200,000 and all blobs are under 10 MiB.
+File counts and blob sizes were measured on the pin's tree. Each derived commit
+adds exactly three files: `index.scip`, which §2 bounds separately at 64 MiB,
+and two snapshots under 10 KB. The tree phebs reads therefore has the recorded
+count plus three files, still far under 200,000, and its largest source blob
+is unchanged and under 10 MiB.
 
 ### Refused repositories (2 of 5) — bound miss
 
@@ -140,8 +149,10 @@ re-admitted.
 
 ### Abstentions (16 total, all honest)
 
-53 of 69 generated clients mapped to a committed declaration; 16 abstained
-rather than inventing an attribution: **14 `declaration_not_found`** (the
+Across all five derived repositories 53 of 69 generated clients mapped to a
+committed declaration. The admitted three-repository corpus has 60 clients, 44
+mapped and 16 abstained (`derivation.admitted_totals`); every abstention is in
+an admitted repository. The 16 abstained rather than inventing an attribution: **14 `declaration_not_found`** (the
 `.proto` lives outside the repository — upstream `grpc/grpc-proto`,
 `opentelemetry-proto`, `k8s.io` staging — so the checked-in generated client
 has no in-repo declaration to attribute) and **2 `no_source_line`** (the two
@@ -167,7 +178,7 @@ records 40 as the derived `clients` count and 17 as the non-vendored
   in `run_scip.sh` that collapsed the empty module rel for the root module into
   a missing argument — not a `scip-go` failure. It was corrected with an
   explicit `.` root marker and the containerd root module was re-run (1,079
-  docs, 115 cgo out-of-tree dropped). No measurement was salvaged from the
+  docs, 115 build-cache documents dropped). No measurement was salvaged from the
   failed invocation.
 - **`scipmerge --stats` misuse.** `--stats` is an inspect-mode **input** (it
   reads a prior stats file), not an output path; the merge report is emitted as
@@ -182,7 +193,10 @@ whose only parent is the pinned upstream commit; each derived commit's stat is
 exactly `3 files changed` (the binary index plus two small JSON snapshots) and
 **no upstream file is modified**. The clones live at `spike/t472/corpus/<repo>`,
 are gitignored in phebs, and nothing is pushed. The derived commits, trees and
-every digest are locked in `corpus.lock.json`.
+every digest are locked in `corpus.lock.json`. The recorded derived commits
+carry the operator's identity and commit time, so only their trees are
+reproducible; `commit_derived.py` now fixes the identity and uses the pin's
+committer date, so re-derived commit SHAs are reproducible too.
 
 ### Corpus disposition — resolved, option A (Ben, 2026-10-09)
 
@@ -213,3 +227,44 @@ admitted corpus is therefore the three committed repositories, each with
 `corpus_admitted: true`, a derived commit, and all three §2 files in place.
 Sealing re-records the §6 strata and §3 denominators against these three
 repositories; no label, extraction or score precedes that.
+
+### Re-derivation required before sealing (review, 2026-10-09)
+
+Review of this slice found defects in the derivation that the recorded inputs
+cannot show and that this checkout cannot re-run, because the clones and the
+rehearsal directory live on the Linux host. The tools are corrected here;
+the recorded derivation stays as measured, `derivation.rederivation_required`
+in the lock names the obligation, and nothing below is sealed or scored.
+
+- **Cross-module symbol binding.** Each Go module is indexed in its own
+  `scip-go` run with `--module-version <pin12>`, while a caller in another
+  in-repo module may name the same symbol with its go.mod or vendored
+  version. `grpc-caller` binds by exact symbol string, so such references
+  cannot join: etcd's `client/v3` calls into `api`, and containerd's root
+  module calls the vendored copy of its own `api` module. `merge` now reports
+  `version_skew_references` with a sample. A nonzero count is a recipe and
+  selection decision recorded here before sealing, never a silent rewrite of
+  symbols.
+- **Build-cache drops.** The recorded counts (101 / 116 / 156) were labelled
+  cgo, but no paths were kept and the counts track each repository's
+  test-package count, which suggests synthesized `_testmain.go` files. `merge`
+  now counts test mains separately and lists every other dropped document;
+  any listed in-tree cgo source has no SCIP document and is an exclusion in
+  the §4 universe.
+- **Resolution tables.** The generated-from mappings are authored from
+  per-repository tables that are not in this repository. Commit them, and
+  `snapshots` now records each table's digest beside the snapshots.
+- **Environment.** `run_scip.sh` now records `go_env.json` (build flags, cgo,
+  platform, proxy and cache locations), fails closed under `set -euo
+  pipefail`, refuses colliding output names and re-verifies a recorded output
+  before resuming past it.
+- **Unit snapshot.** The derived tuple has no `unit-snapshot.json`, so the
+  protocol's end-to-end family is declared unavailable for this corpus unless a
+  unit snapshot is derived and added.
+- **Module-run total.** The recorded 27 does not reconcile with the
+  per-repository counts (26 admitted runs plus one root run each for vitess and
+  istio); `fill_lock.py` now derives the total from the run plan.
+- **Merged metadata.** The merged index's tool arguments now name the merge and
+  its module runs instead of a single `scip-go` invocation that never ran.
+
+Re-derivation re-records every digest, derived commit and count in the lock.

@@ -31,14 +31,16 @@ re-scored, reinterpreted or relabelled under this protocol.
 |---|---|
 | Language / protocol | Go callers of gRPC-Protobuf operations |
 | Generated client | Checked-in `*_grpc.pb.go` with the unique `Code generated ... DO NOT EDIT` header; mock and vendored copies follow §6 |
-| Declaration identity | `provisional_repo_path_v1_<sha256(repository "\x00" declarationPath)>` — the exact persisted repository/path token, reviewed as the narrower contract for the single-declaration-repository reader scope. It establishes repository/path provenance of the declaration input; it is not canonical descriptor or module lineage, which is not guessed here and remains a separate T49.1 identity contract |
-| Input format | Repository-committed at the exact commit: root `index.scip` (≤ 64 MiB), `layout-snapshot.json` (`t20-layout-snapshot-v1`), `generated-from-snapshot.json` (`t20-generated-from-v1`), plus the checked-in declarations and generated clients; corpus inventory ≤ 200,000 files, blob ≤ 10 MiB |
+| Declaration identity | The repository/path declaration lineage defined by [PROTOBUF_DECLARATION_IDENTITY.md](./PROTOBUF_DECLARATION_IDENTITY.md) §7, within its single-declaration-repository scope: a caller joins only a `.proto` declaration committed in the same repository. It is not canonical descriptor or module lineage, which is not guessed here |
+| Input format | Repository-committed at the exact commit: root `index.scip` (≤ 64 MiB), `layout-snapshot.json` (`t20-layout-snapshot-v1`), `generated-from-snapshot.json` (`t20-generated-from-v1`), optionally `unit-snapshot.json` (`t20-unit-snapshot-v1`), plus the checked-in declarations and generated clients; corpus inventory ≤ 200,000 files and every source blob ≤ 10 MiB, measured on the tree phebs reads (`index.scip` is bounded separately) |
 | Extractor | `grpc-caller` 1.5.0, schema `t20-caller-v1`; a resolved occurrence requires the SCIP call edge, generated-client wire operation and declaration attribution to agree on exactly one lineage and operation |
-| Managed-generated inputs | Not consumed. The committed-index recipe reads only repository-committed bytes; a recipe that consumes managed-generated SCIP evidence would require its prospective T45.9 admission and a same-change PLAN decision before it may be scored |
+| Managed-generated inputs | Not consumed. The committed-index recipe reads only repository-committed bytes; a recipe that consumes managed-generated SCIP evidence would require its prospective T45.9 admission and a same-change PLAN decision before it may be scored. When the validation corpus's committed index is evaluator-derived (T47.2b), it stands in for an owner-committed index and is admissible only with its complete recipe, Go environment, tool digests and input tables recorded |
 
-Any change to the persisted declaration token shape is a versioned
-compatibility decision owned by T47.3, never a silent rename. A different
-tuple is a different recipe and needs its own preregistration.
+The declaration token follows the T49.1 contract: a canonical
+descriptor/module identity arrives as a separate prefix-disjoint family under
+its own ticket, never a silent rename, and T47.3 owns only the Caller Map's
+compatibility handling of such a family. A different tuple is a different
+recipe and needs its own preregistration.
 
 ## 3. Claim families and metrics
 
@@ -49,6 +51,12 @@ tuple is a different recipe and needs its own preregistration.
 | Abstention correctness | explicit unresolved caller evidence | declared-unresolved accuracy | sampled abstention frame | `invocation` (unresolved) |
 | Processing state | per-unit terminal state | analyzed / excluded / partial + failed rates | independently enumerated eligible units | `processing_state` |
 | Attribution and end-to-end | resolved caller joined to its declaration | attributed-edge and `(canonical service, operation)` edge precision/recall | that frame's own precision and recall-positive frames | `attribution` |
+
+The canonical service of an end-to-end edge comes from consumer-unit
+attribution, so the end-to-end family is measurable only when the round's
+tuple includes `unit-snapshot.json`. A round without it declares the
+end-to-end family unavailable before sealing; attributed-edge precision and
+recall remain measurable.
 
 Thresholds are prospective and filled before scoring:
 
@@ -97,8 +105,9 @@ unsealed.
 ## 6. Sampling unit, strata, and anti-domination
 
 The sampling unit is one site ID as defined in §5. Strata are
-`repository × code_role` with `code_role ∈ {application, test,
-generated-client, vendored}`. The collapse rule from the accuracy-gold
+`repository × code_role` with `code_role ∈ {production, test, generated, mock,
+vendor}`, the exact roles `grpc-caller` assigns; the independent frames assign
+the same roles by the same path and header rules. The collapse rule from the accuracy-gold
 protocol carries over: occurrences inside generated, vendored or wrapper
 files are sampled as their own strata so repeated machine-produced patterns
 cannot dominate any estimate, and each of the T47.2 label categories —
@@ -160,7 +169,11 @@ result; it becomes release input only through T47.5.
    currently records "none assigned; release-blocking".
 4. Machinery digests, public randomness seed and card/manifest/binary/input
    digests recorded in the commitment record.
-5. `phebs.grpc.caller.go` remains `experimental-dark` until T47.5 promotes
+5. A corpus derivation that passes the T47.2b re-derivation checks in
+   [`spike/t472/README.md`](../spike/t472/README.md): recorded Go environment
+   and resolution tables, every non-test-main build-cache drop listed, and the
+   version-skewed in-repo reference count reviewed.
+6. `phebs.grpc.caller.go` remains `experimental-dark` until T47.5 promotes
    the exact validated artifact; an unfilled gate leaves this recipe
    unavailable.
 

@@ -68,17 +68,33 @@ def main() -> None:
     for repo in lock["repos"]:
         der_repo = repo["derived"]
         admitted = repo["name"] in admitted_set
-        # corpus_admitted sits inside derived, keeping repo top-level keys stable
+        # corpus_admitted sits inside derived, keeping repo top-level keys stable;
+        # an existing value is replaced, never carried over from a prior run.
         rebuilt = collections.OrderedDict()
         for key, value in der_repo.items():
+            if key == "corpus_admitted":
+                continue
             rebuilt[key] = value
             if key == "status":
                 rebuilt["corpus_admitted"] = admitted
         if "corpus_admitted" not in rebuilt:
             rebuilt["corpus_admitted"] = admitted
-        if not admitted:
+        if admitted:
+            rebuilt.pop("disposition", None)
+        else:
             rebuilt["disposition"] = DROPPED_DISPOSITION
         repo["derived"] = rebuilt
+
+    # derivation.totals covers every selected repository; the denominators
+    # re-recorded before sealing start from the admitted corpus only.
+    admitted_repos = [r["derived"] for r in lock["repos"] if r["name"] in admitted_set]
+    der["admitted_totals"] = collections.OrderedDict([
+        ("repositories", len(admitted_repos)),
+        ("module_runs", sum(r["index"]["module_runs"] for r in admitted_repos)),
+        ("generated_clients", sum(r["snapshots"]["clients"] for r in admitted_repos)),
+        ("mapped_declarations", sum(r["snapshots"]["mapped"] for r in admitted_repos)),
+        ("abstentions", sum(r["snapshots"]["abstained"] for r in admitted_repos)),
+    ])
 
     with open(LOCK, "w", encoding="utf-8") as fh:
         json.dump(lock, fh, indent=2, ensure_ascii=False)

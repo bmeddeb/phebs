@@ -11,15 +11,20 @@
 //
 // Canonicalization (recorded in spike/t472/README.md):
 //   - Metadata is rewritten to one fixed canonical form: project root
-//     file:///phebs/t472-corpus/<repo> and argv tokens canonicalized to the
-//     corpus-root recipe. The original metadata is validated first
-//     (tool name scip-go, UTF-8 encoding, absolute file:// project root).
+//     file:///phebs/t472-corpus/<repo> and argv naming this merge and its
+//     module runs, so the index never claims a single scip-go invocation.
+//     The original metadata is validated first (tool name scip-go, UTF-8
+//     encoding, absolute file:// project root), and every non-root run's
+//     project root must equal the root run's project root plus its REL.
 //   - Document relative paths are rebased from module-relative to
 //     repository-relative by prefixing the run's module rel (empty for the
 //     root module).
 //   - Documents are emitted sorted by relative path, duplicates refused;
 //     external symbols are dropped and counted (the pinned recipe passes
 //     --skip-implementations, so zero are expected).
+//   - The report counts references named with an in-repo symbol's
+//     version-less identity but a different module version: gocaller binds
+//     by exact symbol string, so those references cannot join.
 //
 // The output is the same LEN-framed stream, re-marshaled with this module's
 // scip bindings. Exit status is nonzero on any refusal.
@@ -85,10 +90,13 @@ func checkRel(rel string) error {
 }
 
 type runStats struct {
-	Rel               string   `json:"rel"`
-	Docs              int      `json:"docs"`
-	OutOfTreeDropped  int      `json:"out_of_tree_dropped"`
-	OutOfTreeSample   []string `json:"out_of_tree_sample,omitempty"`
+	Rel               string `json:"rel"`
+	Docs              int    `json:"docs"`
+	OutOfTreeDropped  int    `json:"out_of_tree_dropped"`
+	OutOfTreeTestmain int    `json:"out_of_tree_testmain"`
+	// OutOfTreeOther lists every dropped build-cache document that is not a
+	// synthesized test main: an in-tree source left without a document.
+	OutOfTreeOther    []string `json:"out_of_tree_other"`
 	Occurrences       int64    `json:"occurrences"`
 	Symbols           int64    `json:"symbols"`
 	ExternalSymbols   int      `json:"external_symbols"`
@@ -105,6 +113,8 @@ type report struct {
 	Symbols                int64      `json:"symbols"`
 	ExternalSymbolsDropped int        `json:"external_symbols_dropped"`
 	RoundTripUnstableDocs  int        `json:"round_trip_unstable_docs"`
+	VersionSkewReferences  int        `json:"version_skew_references"`
+	VersionSkewSample      []string   `json:"version_skew_sample"`
 	Bytes                  int64      `json:"bytes"`
 	Runs                   []runStats `json:"runs"`
 }
@@ -182,7 +192,7 @@ func loadRun(rel, file string) (*scip.Metadata, []*scip.Document, runStats, erro
 	if err != nil {
 		return nil, nil, st, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	br := bufio.NewReaderSize(f, 1<<20)
 
 	field, payload, err := readFrame(br)
@@ -220,22 +230,23 @@ func loadRun(rel, file string) (*scip.Metadata, []*scip.Document, runStats, erro
 			} else {
 				st.RoundTripUnstable++
 			}
-			// scip-go emits documents for every file of every project
-			// package, including cgo-processed copies that live in the
-			// shared Go build cache outside the module. A cgo source file
-			// ("import \"C\"") is compiled from its cache copy, so the
-			// cache copy is the only document such a file gets; its path
-			// escapes the module root ("../..") and is host- and
-			// cache-dependent. Those documents are dropped and counted.
-			// Any out-of-tree document from another class is refused
-			// rather than dropped, so nothing silent can vanish.
+			// scip-go emits documents for compiled files that live in the
+			// shared Go build cache outside the module: synthesized test
+			// mains (_testmain.go) and cgo-processed copies. Their paths
+			// escape the module root ("../..") and are host- and
+			// cache-dependent, so they are dropped. A test main has no
+			// in-tree source; any other build-cache document may be the only
+			// document an in-tree cgo file gets, so each one is listed.
+			// Any out-of-tree document outside the build cache is refused.
 			if !cleanRel(doc.RelativePath) {
 				if !strings.Contains(doc.RelativePath, "/.cache/go-build/") {
 					return nil, nil, st, fmt.Errorf("%s: unrecognized out-of-tree document %q", file, doc.RelativePath)
 				}
 				st.OutOfTreeDropped++
-				if len(st.OutOfTreeSample) < 8 {
-					st.OutOfTreeSample = append(st.OutOfTreeSample, doc.RelativePath)
+				if path.Base(doc.RelativePath) == "_testmain.go" {
+					st.OutOfTreeTestmain++
+				} else {
+					st.OutOfTreeOther = append(st.OutOfTreeOther, doc.RelativePath)
 				}
 				continue
 			}
@@ -291,19 +302,21 @@ func validateMetadata(m *scip.Metadata) error {
 	return nil
 }
 
-// canonicalMetadata returns the fixed merged metadata for a repository.
-func canonicalMetadata(version, repo, remote, pin string) *scip.Metadata {
+// canonicalMetadata returns the fixed merged metadata for a repository. The
+// tool name and version stay scip-go's (production readers check them); the
+// arguments name this merge and its module runs rather than an invocation
+// that never ran.
+func canonicalMetadata(version, repo, remote, pin string, rels []string) *scip.Metadata {
 	return &scip.Metadata{
 		ToolInfo: &scip.ToolInfo{
 			Name:    "scip-go",
 			Version: version,
 			Arguments: []string{
-				"index",
-				"--module-root", canonicalRootPrefix + repo,
+				"t472-merge",
 				"--repository-remote", remote,
 				"--module-version", pin,
 				"--skip-implementations",
-				"--output", "index.scip",
+				"--module-rels", strings.Join(rels, ","),
 			},
 		},
 		ProjectRoot:          canonicalRootPrefix + repo,
@@ -325,7 +338,7 @@ func statsOnly(file string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	br := bufio.NewReaderSize(f, 1<<20)
 	var st runStats
 	seen := map[string]int{}
@@ -356,8 +369,10 @@ func statsOnly(file string) error {
 					return fmt.Errorf("unrecognized out-of-tree document %q", doc.RelativePath)
 				}
 				st.OutOfTreeDropped++
-				if len(st.OutOfTreeSample) < 8 {
-					st.OutOfTreeSample = append(st.OutOfTreeSample, doc.RelativePath)
+				if path.Base(doc.RelativePath) == "_testmain.go" {
+					st.OutOfTreeTestmain++
+				} else {
+					st.OutOfTreeOther = append(st.OutOfTreeOther, doc.RelativePath)
 				}
 				continue
 			}
@@ -388,7 +403,7 @@ func statsOnly(file string) error {
 	}
 	fmt.Printf("docs=%d out_of_tree_dropped=%d occurrences=%d symbols=%d external=%d dupes=%d vendor_docs=%d test_docs=%d\n",
 		st.Docs, st.OutOfTreeDropped, st.Occurrences, st.Symbols, st.ExternalSymbols, dupes, vendor, testdoc)
-	fmt.Printf("out_of_tree_sample: %q\n", st.OutOfTreeSample)
+	fmt.Printf("out_of_tree_testmain=%d out_of_tree_other: %q\n", st.OutOfTreeTestmain, st.OutOfTreeOther)
 	return nil
 }
 
@@ -437,6 +452,7 @@ func main() {
 
 	var metas []*scip.Metadata
 	var docs []*scip.Document
+	var runRels []string
 	var rep report
 	rep.Repo, rep.Pin = repo, pin
 	var version string
@@ -454,6 +470,7 @@ func main() {
 			os.Exit(1)
 		}
 		metas = append(metas, meta)
+		runRels = append(runRels, r.rel)
 		docs = append(docs, d...)
 		rep.ExternalSymbolsDropped += st.ExternalSymbols
 		rep.OutOfTreeDropped += st.OutOfTreeDropped
@@ -472,7 +489,27 @@ func main() {
 		}
 	}
 
-	_ = metas // parsed and validated; the merged stream carries the canonical metadata
+	// A mislabelled --run would otherwise rebase documents under the wrong
+	// module silently: each non-root run must sit exactly at root + REL.
+	rootProject := ""
+	for i, r := range runs {
+		if r.rel == "" {
+			rootProject = strings.TrimSuffix(metas[i].GetProjectRoot(), "/")
+		}
+	}
+	for i, r := range runs {
+		got := strings.TrimSuffix(metas[i].GetProjectRoot(), "/")
+		if r.rel != "" && got != rootProject+"/"+r.rel {
+			fmt.Fprintf(os.Stderr, "merge: run %q project root %q is not %q\n", r.rel, got, rootProject+"/"+r.rel)
+			os.Exit(1)
+		}
+	}
+	for i := range runRels {
+		if runRels[i] == "" {
+			runRels[i] = "."
+		}
+	}
+	rep.VersionSkewReferences, rep.VersionSkewSample = versionSkew(docs)
 
 	tmp := out + ".tmp"
 	f, err := os.Create(tmp)
@@ -481,7 +518,7 @@ func main() {
 		os.Exit(1)
 	}
 	w := bufio.NewWriterSize(f, 1<<20)
-	if err := writeFrame(w, fieldMetadata, canonicalMetadata(version, repo, remote, pin)); err != nil {
+	if err := writeFrame(w, fieldMetadata, canonicalMetadata(version, repo, remote, pin, runRels)); err != nil {
 		fmt.Fprintln(os.Stderr, "merge:", err)
 		os.Exit(1)
 	}
@@ -530,6 +567,47 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println(string(enc))
+}
+
+// versionSkew counts reference occurrences whose symbol is defined nowhere in
+// the merged index while its version-less form is: an in-repo symbol named
+// with another module version (a cross-module call or a vendored copy). The
+// count is reported, not repaired; deciding whether such references should
+// bind is a corpus decision recorded in the README.
+func versionSkew(docs []*scip.Document) (int, []string) {
+	unversioned := scip.VerboseSymbolFormatter
+	unversioned.IncludePackageVersion = func(string) bool { return false }
+	isDefinition := func(o *scip.Occurrence) bool {
+		return o.GetSymbolRoles()&int32(scip.SymbolRole_Definition) != 0
+	}
+	defined := map[string]bool{}
+	definedUnversioned := map[string]bool{}
+	for _, d := range docs {
+		for _, o := range d.GetOccurrences() {
+			if !isDefinition(o) || strings.HasPrefix(o.GetSymbol(), "local ") {
+				continue
+			}
+			defined[o.GetSymbol()] = true
+			if s, err := unversioned.Format(o.GetSymbol()); err == nil {
+				definedUnversioned[s] = true
+			}
+		}
+	}
+	count, sample := 0, []string{}
+	for _, d := range docs {
+		for _, o := range d.GetOccurrences() {
+			if isDefinition(o) || defined[o.GetSymbol()] || strings.HasPrefix(o.GetSymbol(), "local ") {
+				continue
+			}
+			if s, err := unversioned.Format(o.GetSymbol()); err == nil && definedUnversioned[s] {
+				count++
+				if len(sample) < 8 {
+					sample = append(sample, d.GetRelativePath()+" "+o.GetSymbol())
+				}
+			}
+		}
+	}
+	return count, sample
 }
 
 type multiFlag []runFlag

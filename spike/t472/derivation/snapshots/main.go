@@ -10,10 +10,11 @@
 // root because pathWithinRoot includes equality and every consumer matches
 // roots against the exact immutable tree.
 //
-// Every gate below mirrors a production gate exactly: the strict decoders
-// and limits are the shipped resolverinput functions, and the semantic
-// checks re-implement the shipped refusal conditions from extract's
-// loadRoots/loadGeneratedFrom and resolvermaterialize's validateLayout.
+// Two gates are production code (the strict resolverinput decoders and
+// limits); the others re-implement the shipped refusal conditions from
+// extract's loadRoots/loadGeneratedFrom and resolvermaterialize's
+// validateLayout and can drift from them. The resolution table is an input
+// outside the repository, so its digest is recorded beside the snapshots.
 // The tool refuses to write anything when any gate fails.
 package main
 
@@ -100,7 +101,7 @@ type stats struct {
 	AbstentionSummary  []string `json:"abstention_summary"`
 	VendoredMapped     int      `json:"vendored_mapped"`
 	NonVendoredMapped  int      `json:"nonvendored_mapped"`
-	CgoOutOfTreeUnseen string   `json:"cgo_out_of_tree"`
+	MappingTableSHA256 string   `json:"mapping_table_sha256"`
 }
 
 func main() {
@@ -114,7 +115,7 @@ func main() {
 		fatal("all of --repo --mappings --out --clone --commit are required")
 	}
 
-	table := readTable(path.Join(*mappingsDir, *repo+".json"))
+	table, tableDigest := readTable(path.Join(*mappingsDir, *repo+".json"))
 	if table.Repo != *repo {
 		fatal("table repo %q does not match %q", table.Repo, *repo)
 	}
@@ -171,6 +172,13 @@ func main() {
 	if decodedGenerated.Version != resolverinput.GeneratedFromSnapshotVersion {
 		fatal("generated-from version mismatch after decode")
 	}
+	if err := checkRoots(decodedLayout.Roots, files); err != nil {
+		fatal("layout gate: %v", err)
+	}
+	if err := checkMappings(decodedGenerated, files, decodedLayout.Roots); err != nil {
+		fatal("generated-from gate: %v", err)
+	}
+	// Re-implemented gates, listed only after they pass.
 	gates = append(gates,
 		"layout_root_limit", "generated_mapping_limit", "invocation_limit_empty",
 		"known_kinds_and_protocols", "source_protocol_empty", "roots_match_regular_files",
@@ -178,12 +186,6 @@ func main() {
 		"grpc_generator_relative_path_suffix", "protocol_derives_grpc",
 		"layout_coverage_generated_idl_grpc",
 	)
-	if err := checkRoots(decodedLayout.Roots, files); err != nil {
-		fatal("layout gate: %v", err)
-	}
-	if err := checkMappings(decodedGenerated, files, decodedLayout.Roots); err != nil {
-		fatal("generated-from gate: %v", err)
-	}
 
 	overBound, maxPath, maxBytes := inventory(files)
 	st := stats{
@@ -198,7 +200,7 @@ func main() {
 		GeneratedSHA256: digest(generatedBytes), GeneratedBytes: len(generatedBytes),
 		Gates:          gates,
 		VendoredMapped: vendors[0], NonVendoredMapped: vendors[1],
-		CgoOutOfTreeUnseen: "cgo build-cache documents are a scipmerge concern, not an input concern",
+		MappingTableSHA256: tableDigest,
 	}
 	for _, abstention := range table.Abstentions {
 		sourceLine := abstention.SourceLine
@@ -220,7 +222,9 @@ func main() {
 	writeFile(path.Join(repoDir, "generated-from-snapshot.json"), generatedBytes)
 	statsBytes := marshal(st)
 	writeFile(path.Join(*outDir, *repo+".stats.json"), statsBytes)
-	os.Stdout.Write(statsBytes)
+	if _, err := os.Stdout.Write(statsBytes); err != nil {
+		fatal("write stats: %v", err)
+	}
 }
 
 // buildRoots mirrors the frozen decision: one generated root and one idl
@@ -509,7 +513,7 @@ func inventory(files map[string]treeFile) ([]string, string, int64) {
 	return over, maxPath, maxBytes
 }
 
-func readTable(filePath string) resolutionTable {
+func readTable(filePath string) (resolutionTable, string) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		fatal("read table: %v", err)
@@ -518,7 +522,7 @@ func readTable(filePath string) resolutionTable {
 	if err := json.Unmarshal(content, &table); err != nil {
 		fatal("parse table: %v", err)
 	}
-	return table
+	return table, digest(content)
 }
 
 func marshal(value any) []byte {

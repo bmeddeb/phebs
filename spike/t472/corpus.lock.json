@@ -47,7 +47,7 @@
           "documents": 1076,
           "occurrences": 395236,
           "symbols": 63330,
-          "out_of_tree_cgo_documents_dropped": 101,
+          "out_of_tree_build_cache_documents_dropped": 101,
           "external_symbols_dropped": 0,
           "round_trip_unstable_documents": 0,
           "bytes": 33498092,
@@ -162,7 +162,7 @@
           "documents": 1064,
           "occurrences": 544909,
           "symbols": 85113,
-          "out_of_tree_cgo_documents_dropped": 156,
+          "out_of_tree_build_cache_documents_dropped": 156,
           "external_symbols_dropped": 0,
           "round_trip_unstable_documents": 0,
           "bytes": 51916163,
@@ -351,7 +351,7 @@
           "documents": 1196,
           "occurrences": 412229,
           "symbols": 70547,
-          "out_of_tree_cgo_documents_dropped": 116,
+          "out_of_tree_build_cache_documents_dropped": 116,
           "external_symbols_dropped": 0,
           "round_trip_unstable_documents": 0,
           "bytes": 38653529,
@@ -525,7 +525,7 @@
               "layout_coverage_generated_idl_grpc"
             ]
           },
-          "note": "both snapshots were authored and passed every production gate, but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
+          "note": "both snapshots were authored and passed every gate (two production decoders plus re-implemented production refusal conditions), but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
         },
         "clone_state": "spike/t472/corpus/vitess remains at the pinned commit 0ee525542d4157460b40af0951016236fc213afd with a clean working tree and no derived commit",
         "disposition": "dropped from the admitted corpus under option A (Ben, 2026-10-09); refusal evidence retained; see derivation.disposition"
@@ -605,7 +605,7 @@
               "layout_coverage_generated_idl_grpc"
             ]
           },
-          "note": "both snapshots were authored and passed every production gate, but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
+          "note": "both snapshots were authored and passed every gate (two production decoders plus re-implemented production refusal conditions), but §2 admits a repository only as a whole tuple; with no admissible index.scip nothing was placed in the clone and no derived commit exists"
         },
         "clone_state": "spike/t472/corpus/istio remains at the pinned commit d501e135abadd7492774f428e0873f7d16494d41 with a clean working tree and no derived commit",
         "disposition": "dropped from the admitted corpus under option A (Ben, 2026-10-09); refusal evidence retained; see derivation.disposition"
@@ -644,13 +644,13 @@
         "source": "spike/t472/derivation/merge",
         "sha256": "4c22c00f3ed7a17097da5fa32c55561703394a8f8bf80a2400c3c169e3324cce",
         "bytes": 6807487,
-        "role": "canonicalizes every run to sorted unique document paths under one tool version and canonical field order, drops out-of-tree cgo build-cache documents, then refuses a merged stream over the frozen bound"
+        "role": "canonicalizes every run to sorted unique document paths under one tool version and canonical field order, drops out-of-tree build-cache documents, then refuses a merged stream over the frozen bound (the recorded runs used the tool at 6acae5a1, which did not classify the drops)"
       },
       "snapshot_tool": {
         "source": "spike/t472/derivation/snapshots",
         "sha256": "8bd8fd8c4924b4ab9839acd1632b98b8648796431f88895b6f24200c8d534a2f",
         "bytes": 4163718,
-        "role": "authors t20-layout-snapshot-v1 and t20-generated-from-v1 from the checked-in tree and validates both through the production decoders and limits in internal/resolverinput plus the §2 corpus bounds"
+        "role": "authors t20-layout-snapshot-v1 and t20-generated-from-v1 from a per-repository resolution table outside the repository, decodes both with the production internal/resolverinput decoders and limits, and checks them against re-implemented production refusal conditions plus the §2 corpus bounds measured at the pin"
       },
       "runner": {
         "script": "spike/t472/derivation/run_scip.sh",
@@ -761,6 +761,14 @@
         "istio/istio"
       ],
       "post_decision": "the §6 strata and §3 denominators are re-recorded against the three-repository admitted corpus before sealing; the dropped repositories' refusal evidence (retained unrenamed .tmp merged streams, raw root indexes, authored-unplaced gate-passed snapshots) is preserved and their clones remain at their pins with clean working trees; the frozen §2 bound is unchanged"
+    },
+    "rederivation_required": "the recorded inputs were derived with the t472 tools at 6acae5a1; before sealing, re-derive every admitted repository with the corrected tools so the lock records the go env, the resolution-table digests, every non-testmain build-cache drop, the version-skewed in-repo reference count and reproducible derived commits, and re-record every digest here",
+    "admitted_totals": {
+      "repositories": 3,
+      "module_runs": 26,
+      "generated_clients": 60,
+      "mapped_declarations": 44,
+      "abstentions": 16
     }
   }
 }

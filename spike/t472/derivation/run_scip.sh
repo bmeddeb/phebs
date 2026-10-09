@@ -20,7 +20,9 @@
 #   <repo>/<module>.log    scip-go stdout/stderr
 #   <repo>/<module>.time   GNU time wall/user/sys/maxrss
 #   run_plan.tsv, skips.tsv, RUN_STATUS (append-only run ledger)
-set -u
+#   go_env.json   the effective Go environment of the runs (build tags, cgo,
+#                 platform, proxy and cache locations change index bytes)
+set -euo pipefail
 
 T472_ROOT="${T472_ROOT:-/home/ben/phebs-rehearsals/t472-derivation}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -43,6 +45,8 @@ touch "$STATUS"
 sha="$(sha256sum "$SCIPGO" | cut -d' ' -f1)"
 [ "$sha" = "$SCIPGO_SHA_PIN" ] || fail "scip-go sha256 $sha != pinned $SCIPGO_SHA_PIN"
 [ -f "$MODULES_JSON" ] || fail "missing $MODULES_JSON"
+env GOTOOLCHAIN="$GO_TOOLCHAIN" go env -json GOVERSION GOFLAGS CGO_ENABLED GOOS GOARCH \
+  GOPROXY GONOSUMDB GOCACHE GOMODCACHE > "$OUT/go_env.json" || fail "cannot record go env"
 
 declare -A PIN=(
   [containerd]=3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9
@@ -87,6 +91,7 @@ with open(plan_path, "w") as plan, open(skips_path, "w") as skips:
 PY
 
 # --- serial runs -----------------------------------------------------------
+declare -A SUB_OF=()
 while IFS=$'\t' read -r repo rel gofiles; do
   clone="$CORPUS_DIR/$repo"
   if [ "$rel" = "." ]; then
@@ -94,24 +99,34 @@ while IFS=$'\t' read -r repo rel gofiles; do
   else
     moddir="$clone/$rel"; sub="${rel//\//-}"
   fi
+  # "a/b" and "a-b" would share one output name.
+  [ -z "${SUB_OF[$repo/$sub]:-}" ] || fail "$repo modules '${SUB_OF[$repo/$sub]}' and '$rel' share output $sub"
+  SUB_OF[$repo/$sub]="$rel"
   out="$OUT/$repo/$sub.scip"
   log="$OUT/$repo/$sub.log"
   timef="$OUT/$repo/$sub.time"
   mkdir -p "$OUT/$repo"
-  if grep -qE $'^(OK|pre)\t'"$repo"$'\t'"$sub"$'\t' "$STATUS"; then
+  recorded="$(awk -F'\t' -v r="$repo" -v s="$sub" \
+    '($1 == "OK" || $1 == "pre") && $2 == r && $3 == s { print $1 "\t" $6 }' "$STATUS" | tail -n 1)"
+  if [ -n "$recorded" ]; then
+    if [ "${recorded%%$'\t'*}" = "OK" ]; then
+      want="${recorded#*$'\t'}"
+      [ -f "$out" ] && [ "$(sha256sum "$out" | cut -d' ' -f1)" = "$want" ] ||
+        fail "$repo $sub: recorded output is missing or no longer matches $want"
+    fi
     echo "skip (already recorded): $repo $sub"
     continue
   fi
   echo "=== run $repo $sub (rel='$rel', go_files=$gofiles) $(date -u +%FT%TZ)"
   rm -f "$out" "$log" "$timef"
+  rc=0
   ( cd "$moddir" && exec /usr/bin/time -f 'wall_s=%e user_s=%U sys_s=%S maxrss_kb=%M' -o "$timef" \
       env GOTOOLCHAIN="$GO_TOOLCHAIN" "$SCIPGO" index \
         --module-root "$PWD" \
         --repository-remote "${REMOTE[$repo]}" \
         --module-version "${PIN[$repo]:0:12}" \
         --skip-implementations \
-        --output "$out" ) > "$log" 2>&1
-  rc=$?
+        --output "$out" ) > "$log" 2>&1 || rc=$?
   if [ $rc -ne 0 ]; then
     echo "FAIL $repo $sub rc=$rc" | tee -a "$STATUS"
     tail -n 20 "$log" >&2 || true
