@@ -17082,7 +17082,18 @@ for already published results without rewriting retained evidence. No
 third-party code/manifest loader or retired workflow returns. Verify release
 metadata once at its admitted boundary and define exact invalidation; no
 per-query full artifact hashing or corpus scan. Every owning product still
-needs its own passing record before activation.
+needs its own passing record before activation. *Slice 1 landed 2026-10-09:
+`internal/packrelease` owns the `PackRelease` schema, the frozen
+`phebs-canonical-json`/1 encoding, native ed25519 signing over the value-cleared
+canonical payload, and the fail-closed verifier with its 23-code rejection
+taxonomy, plus the normative `schemas/pack-release-v1.0.json`. `Verify`
+authenticates before judging content and binds a supplied implementation
+identity, artifact root and revocation set; `VerifyForLoad` alone admits an
+ordinary load. This slice wires no runtime registration, startup selection or
+pack execution — an absent production selection adds no pack work and
+registration stays unreachable through a provisional extraction switch;
+startup/runtime recipe selection consuming `VerifyForLoad`, with derived status
+computed from card gates and suspension records, remains a later slice.*
 
 **T48.3 · Reusable independent validation and operating receipt harness** —
 share corpus sealing, label separation, scoring/denominator checks,
