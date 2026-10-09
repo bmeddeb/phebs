@@ -1,10 +1,14 @@
 package packrelease
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 // maxSelectionEntries bounds how many directory entries one admitted selection
@@ -15,8 +19,9 @@ const maxSelectionEntries = 1024
 // Selection is the verified set of released PackRelease records admitted at one
 // startup boundary. It is the only path by which a fixed in-tree pack enters
 // the ordinary/released admission set: a record is admitted solely because it
-// verified and carries the released lifecycle status, never because a
-// provisional extraction switch was toggled. The zero value admits nothing.
+// verified, governs its pack and carries the released lifecycle status, never
+// because a provisional extraction switch was toggled. The zero value admits
+// nothing.
 type Selection struct {
 	released map[string]*PackRelease
 }
@@ -53,19 +58,19 @@ func (s Selection) Released(packID string) (*PackRelease, bool) {
 //
 //   - An empty dir admits nothing and performs no read, so an absent production
 //     selection adds no pack work.
-//   - A configured directory that cannot be read is refused rather than
-//     silently treated as empty, so a misconfigured operator intent is loud.
-//   - Any record that fails Verify refuses the whole selection; a verified
-//     record whose derived_status is not released is structurally valid but
-//     never admits an ordinary claim load, so it is skipped, not refused.
-//   - Two admitted records naming the same pack identifier refuse the
-//     selection: the release record, not a self-asserted field, is the sole
-//     authority, and a duplicate is an unresolved release inconsistency.
-//
-// Reference resolution is governed by opts.Resolver exactly as in Verify: a nil
-// resolver skips artifact-byte resolution but never skips digest-format or
-// signature validation.
-func LoadSelection(dir string, opts Options) (Selection, error) {
+//   - A configured directory that cannot be read, a *.json entry that is not a
+//     regular file, or any record that fails authentication or structure
+//     refuses the whole selection rather than being skipped.
+//   - For each pack, the record with the highest release_version governs; two
+//     records sharing that version refuse the selection. A governing record
+//     that is not released (for example a later signed suspension) withdraws
+//     the pack, so an older released record never outlives its suspension or
+//     supersession.
+//   - A governing released record is admitted only through the VerifyForLoad
+//     bindings: the caller must supply the artifact resolver, the running
+//     implementation identity and the present artifact root, and the record
+//     must match them.
+func LoadSelection(ctx context.Context, dir string, opts Options) (Selection, error) {
 	selection := Selection{released: map[string]*PackRelease{}}
 	if dir == "" {
 		return selection, nil
@@ -80,32 +85,102 @@ func LoadSelection(dir string, opts Options) (Selection, error) {
 			dir, len(entries), maxSelectionEntries,
 		)
 	}
-	names := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		names = append(names, entry.Name())
+
+	// Authenticity and structure are judged for every record; the load
+	// bindings belong to the governing released record only, so a suspension
+	// written for an older implementation still withdraws its pack.
+	authOpts := opts
+	authOpts.Implementation, authOpts.ReferencedArtifactsRootDigest, authOpts.Resolver = nil, "", nil
+
+	type candidate struct {
+		name    string
+		release *PackRelease
 	}
-	sort.Strings(names)
-	for _, name := range names {
-		raw, err := os.ReadFile(filepath.Join(dir, name))
-		if err != nil {
-			return selection, fmt.Errorf("read release record %q: %w", name, err)
-		}
-		release, err := Verify(raw, opts)
-		if err != nil {
-			return selection, fmt.Errorf("release record %q: %w", name, err)
-		}
-		if release.DerivedStatus != StatusReleased {
+	governing := map[string]candidate{}
+	tied := map[string]string{}
+	for _, entry := range entries {
+		if filepath.Ext(entry.Name()) != ".json" {
 			continue
 		}
-		if _, duplicate := selection.released[release.PackID]; duplicate {
-			return selection, fmt.Errorf(
-				"release record %q: duplicate released pack identifier %q", name, release.PackID,
-			)
+		// ponytail: the ReadDir type is checked, not re-checked after open;
+		// an operator racing a FIFO into place is outside this boundary.
+		if !entry.Type().IsRegular() {
+			return selection, fmt.Errorf("release record %q is not a regular file", entry.Name())
 		}
-		selection.released[release.PackID] = release
+		raw, err := readBounded(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			return selection, fmt.Errorf("read release record %q: %w", entry.Name(), err)
+		}
+		release, err := Verify(ctx, raw, authOpts)
+		if err != nil {
+			return selection, fmt.Errorf("release record %q: %w", entry.Name(), err)
+		}
+		current, seen := governing[release.PackID]
+		switch order := compareVersion(release.ReleaseVersion, current.release); {
+		case !seen || order > 0:
+			governing[release.PackID] = candidate{entry.Name(), release}
+			delete(tied, release.PackID)
+		case order == 0:
+			tied[release.PackID] = entry.Name()
+		}
+	}
+
+	packIDs := make([]string, 0, len(governing))
+	for packID := range governing {
+		packIDs = append(packIDs, packID)
+	}
+	sort.Strings(packIDs)
+	for _, packID := range packIDs {
+		winner := governing[packID]
+		if other, ok := tied[packID]; ok {
+			return selection, fmt.Errorf("release records %q and %q both name pack %q at release_version %s",
+				winner.name, other, packID, winner.release.ReleaseVersion)
+		}
+		if winner.release.DerivedStatus != StatusReleased {
+			continue
+		}
+		if err := requireLoadBindings(opts); err != nil {
+			return selection, fmt.Errorf("release record %q: %w", winner.name, err)
+		}
+		if err := bindImplementation(winner.release, opts); err != nil {
+			return selection, fmt.Errorf("release record %q: %w", winner.name, err)
+		}
+		if err := resolveReferences(ctx, winner.release, opts.Resolver); err != nil {
+			return selection, fmt.Errorf("release record %q: %w", winner.name, err)
+		}
+		selection.released[packID] = winner.release
 	}
 	return selection, nil
+}
+
+// readBounded reads at most MaxReleaseBytes+1 bytes, so Verify refuses an
+// oversized record without the whole file entering memory.
+func readBounded(path string) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	return io.ReadAll(io.LimitReader(file, MaxReleaseBytes+1))
+}
+
+// compareVersion orders a verified MAJOR.MINOR.PATCH against the current
+// governing record's version; a nil current orders below everything.
+func compareVersion(version string, current *PackRelease) int {
+	if current == nil {
+		return 1
+	}
+	left, right := strings.Split(version, "."), strings.Split(current.ReleaseVersion, ".")
+	for i := range left {
+		// Verify already matched both against the semver grammar.
+		a, _ := strconv.Atoi(left[i])
+		b, _ := strconv.Atoi(right[i])
+		if a != b {
+			if a > b {
+				return 1
+			}
+			return -1
+		}
+	}
+	return 0
 }

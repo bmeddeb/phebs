@@ -3,6 +3,8 @@ package packrelease
 import (
 	"context"
 	"crypto/ed25519"
+	"encoding/base64"
+	"fmt"
 	"time"
 )
 
@@ -54,6 +56,19 @@ type Options struct {
 	// state, so a withdrawn record cannot be replayed before it expires.
 	Revoked map[string]struct{}
 }
+
+// ParsePublicKey decodes a configured base64 ed25519 public key.
+func ParsePublicKey(encoded string) (ed25519.PublicKey, error) {
+	public, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil || len(public) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("public key is not a base64 %d-byte ed25519 public key", ed25519.PublicKeySize)
+	}
+	return ed25519.PublicKey(public), nil
+}
+
+// ValidKeyID reports whether id can name a release signing key: a record's
+// signature.key_id must match the same identifier grammar.
+func ValidKeyID(id string) bool { return idRE.MatchString(id) }
 
 // now returns the evaluation instant, defaulting to the current wall clock.
 func (o Options) now() time.Time {

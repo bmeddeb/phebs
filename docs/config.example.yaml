@@ -250,15 +250,20 @@ service_catalogs: {}
 # startup rather than loading unbound code. Toggling a provisional extraction
 # switch below is never a path to this set, and there is no third-party or
 # manifest-selected code loader. Every record must verify: a malformed,
-# foreign-keyed, expired, or duplicate-identifier record refuses startup.
+# foreign-keyed or expired record, a non-regular *.json entry, or two records
+# naming one pack at the same release_version refuses startup. Per pack, the
+# record with the highest release_version governs, so a later signed suspension
+# withdraws an older release. This build cannot yet bind a released record to
+# its own binary and artifacts, so any governing released record refuses
+# startup until a later slice supplies those bindings.
 release_selection:
   path: ""
   keys: []
 # release_selection:
 #   path: /etc/phebs/pack-releases
 #   keys:
-#     id: release-signer
-#     public_key: "base64-ed25519-public-key"
+#     - id: release-signer
+#       public_key: "base64-ed25519-public-key"
 
 # Sources of repos to sync (Epic 2). Names are required, unique, and match
 # [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must

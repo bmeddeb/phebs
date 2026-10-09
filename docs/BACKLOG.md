@@ -17093,23 +17093,21 @@ ordinary load. This slice wires no runtime registration, startup selection or
 pack execution — an absent production selection adds no pack work and
 registration stays unreachable through a provisional extraction switch;
 startup/runtime recipe selection consuming `VerifyForLoad`, with derived status
-computed from card gates and suspension records, remains a later slice.* *Slice 2 landed 2026-10-09: a startup
-admission gate now consumes `packrelease.Verify` and gates a new
-ordinary/released extraction admission set, while the provisional switches stay
-experimental-dark and unchanged. `internal/packrelease.LoadSelection` reads one
-bounded operator directory of signed records once at the admitted startup
-boundary and admits only verified `released` records; the new `release_selection`
-config block supplies that path plus its ed25519 trust-anchor keys; and
-`newServeExtractionRegistries` merges the unchanged dark set with the released
-set resolved solely through a fixed in-tree `packRecipes` registry. The registry
-ships empty, so no released pack exists and today's runtime is byte-identical; a
-verified released pack with no bound recipe refuses startup rather than loading
-unbound code. Registration stays unreachable through a provisional switch, an
-absent production selection adds no pack work and no read, release metadata is
-verified once at its boundary with no per-query hashing or corpus scan, and no
-third-party loader returns. Per-workflow load-mode enforcement (`PACK_MANIFEST`
-§6 #14) and each owning product's own passing record and bound recipe remain
-later work.*
+computed from card gates and suspension records, remains a later slice.* *Slice 2 landed 2026-10-09: a startup admission
+gate now consumes the slice-1 verifier. `packrelease.LoadSelection` reads one
+bounded operator directory of signed records once at startup, lets the highest
+`release_version` per pack govern so a later signed suspension withdraws an
+older release, and admits a governing `released` record only through the
+`VerifyForLoad` bindings; the new `release_selection` config block supplies the
+path and its ed25519 key ring; and `newServeExtractionRegistries` merges the
+unchanged dark set with the released set resolved solely through the fixed
+in-tree `packRecipes` registry, a released recipe governing its domain. Both
+`packRecipes` and `releaseLoadBindings` ship empty, so today's runtime is
+unchanged and a governing released record refuses startup rather than loading
+unbound code. The slice that binds the first recipe must supply the running
+implementation identity, artifact root and resolver; per-workflow load-mode
+enforcement (`PACK_MANIFEST` §6 #14) and each owning product's own passing
+record and bound recipe remain later work.*
 
 **T48.3 · Reusable independent validation and operating receipt harness** —
 share corpus sealing, label separation, scoring/denominator checks,

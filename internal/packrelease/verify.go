@@ -143,9 +143,8 @@ func Verify(ctx context.Context, raw []byte, opts Options) (*PackRelease, error)
 // referenced-artifacts root — and the record to be StatusReleased. Every
 // other lifecycle state is refused.
 func VerifyForLoad(ctx context.Context, raw []byte, opts Options) (*PackRelease, error) {
-	if opts.Resolver == nil || opts.Implementation == nil || opts.ReferencedArtifactsRootDigest == "" {
-		return nil, reject(ReasonUnresolvedReference,
-			"a load requires the artifact resolver, implementation identity and referenced-artifacts root")
+	if err := requireLoadBindings(opts); err != nil {
+		return nil, err
 	}
 	release, err := Verify(ctx, raw, opts)
 	if err != nil {
@@ -155,6 +154,16 @@ func VerifyForLoad(ctx context.Context, raw []byte, opts Options) (*PackRelease,
 		return nil, reject(ReasonNotReleased, "derived_status %q admits no ordinary load", release.DerivedStatus)
 	}
 	return release, nil
+}
+
+// requireLoadBindings refuses a load whose caller supplied no artifact
+// resolver, running implementation identity or present artifact root.
+func requireLoadBindings(opts Options) error {
+	if opts.Resolver == nil || opts.Implementation == nil || opts.ReferencedArtifactsRootDigest == "" {
+		return reject(ReasonUnresolvedReference,
+			"a load requires the artifact resolver, implementation identity and referenced-artifacts root")
+	}
+	return nil
 }
 
 // decodeCanonical bounds, strictly decodes and canonicalizes raw bytes.

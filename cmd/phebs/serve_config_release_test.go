@@ -25,8 +25,8 @@ type stubExtractor struct {
 	version string
 }
 
-func (s stubExtractor) Domain() string  { return s.domain }
-func (s stubExtractor) Version() string { return s.version }
+func (s stubExtractor) Domain() string        { return s.domain }
+func (s stubExtractor) Version() string       { return s.version }
 func (s stubExtractor) Candidate(string) bool { return false }
 func (s stubExtractor) Extract(context.Context, sdk.Corpus, sdk.Emit) (sdk.Coverage, error) {
 	return sdk.Coverage{}, nil
@@ -37,9 +37,36 @@ func testReleaseDigest(seed string) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
+type releaseArtifacts map[string]string
+
+func (r releaseArtifacts) Resolve(_ context.Context, id string) (string, bool, error) {
+	digest, ok := r[id]
+	return digest, ok, nil
+}
+
+// bindReleaseLoad makes releaseLoadBindings supply exactly the implementation,
+// artifact root and artifacts the record names, for the rest of the test.
+func bindReleaseLoad(t *testing.T, release *packrelease.PackRelease) {
+	t.Helper()
+	restore := releaseLoadBindings
+	releaseLoadBindings = func(context.Context) (packrelease.Options, error) {
+		implementation := release.Implementation
+		return packrelease.Options{
+			Implementation:                &implementation,
+			ReferencedArtifactsRootDigest: release.ReferencedArtifactsRootDigest,
+			Resolver: releaseArtifacts{
+				release.Card.ArtifactID:       release.Card.Digest,
+				release.Manifest.ArtifactID:   release.Manifest.Digest,
+				release.Validation.ArtifactID: release.Validation.Digest,
+			},
+		}, nil
+	}
+	t.Cleanup(func() { releaseLoadBindings = restore })
+}
+
 // writeReleasedRecord signs a well-formed released PackRelease for packID into
-// dir and returns the base64 public key that admits it.
-func writeReleasedRecord(t *testing.T, dir, packID, keyID string) string {
+// dir and returns the base64 public key that admits it and the record.
+func writeReleasedRecord(t *testing.T, dir, packID, keyID string) (string, *packrelease.PackRelease) {
 	t.Helper()
 	public, private, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -80,12 +107,12 @@ func writeReleasedRecord(t *testing.T, dir, packID, keyID string) string {
 	if err := os.WriteFile(filepath.Join(dir, packID+".json"), raw, 0o600); err != nil {
 		t.Fatalf("write record: %v", err)
 	}
-	return base64.StdEncoding.EncodeToString(public)
+	return base64.StdEncoding.EncodeToString(public), release
 }
 
 func TestReleasedExtractorsEmptyPathAdmitsNothing(t *testing.T) {
 	cfg := &config.Config{}
-	extractors, err := releasedExtractors(cfg)
+	extractors, err := releasedExtractors(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("releasedExtractors: %v", err)
 	}
@@ -94,23 +121,40 @@ func TestReleasedExtractorsEmptyPathAdmitsNothing(t *testing.T) {
 	}
 }
 
+func TestReleasedExtractorsRefusesWithoutLoadBindings(t *testing.T) {
+	dir := t.TempDir()
+	public, _ := writeReleasedRecord(t, dir, "phebs.unbound.pack", "key-1")
+	cfg := &config.Config{}
+	cfg.ReleaseSelection.Path = dir
+	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+
+	// releaseLoadBindings ships unset, so a governing released record cannot be
+	// bound to this binary and must refuse startup.
+	_, err := releasedExtractors(context.Background(), cfg)
+	if reason, _ := packrelease.ReasonOf(err); reason != packrelease.ReasonUnresolvedReference {
+		t.Fatalf("reason = %q (%v), want %q", reason, err, packrelease.ReasonUnresolvedReference)
+	}
+}
+
 func TestReleasedExtractorsRefusesUnboundReleasedPack(t *testing.T) {
 	dir := t.TempDir()
-	public := writeReleasedRecord(t, dir, "phebs.unbound.pack", "key-1")
+	public, release := writeReleasedRecord(t, dir, "phebs.unbound.pack", "key-1")
+	bindReleaseLoad(t, release)
 	cfg := &config.Config{}
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
 
 	// packRecipes ships empty, so a verified released pack has no in-tree recipe
 	// and must refuse startup rather than silently admit nothing.
-	if _, err := releasedExtractors(cfg); err == nil {
+	if _, err := releasedExtractors(context.Background(), cfg); err == nil {
 		t.Fatal("a released pack with no fixed in-tree recipe must refuse startup")
 	}
 }
 
 func TestReleasedExtractorsResolvesBoundRecipe(t *testing.T) {
 	dir := t.TempDir()
-	public := writeReleasedRecord(t, dir, "phebs.bound.pack", "key-1")
+	public, release := writeReleasedRecord(t, dir, "phebs.bound.pack", "key-1")
+	bindReleaseLoad(t, release)
 	cfg := &config.Config{}
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
@@ -123,7 +167,7 @@ func TestReleasedExtractorsResolvesBoundRecipe(t *testing.T) {
 	}
 	t.Cleanup(func() { packRecipes = restore })
 
-	extractors, err := releasedExtractors(cfg)
+	extractors, err := releasedExtractors(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("releasedExtractors: %v", err)
 	}
@@ -134,31 +178,31 @@ func TestReleasedExtractorsResolvesBoundRecipe(t *testing.T) {
 
 func TestReleasedExtractorsRefusesMalformedKey(t *testing.T) {
 	dir := t.TempDir()
-	writeReleasedRecord(t, dir, "phebs.any.pack", "key-1")
+	_, _ = writeReleasedRecord(t, dir, "phebs.any.pack", "key-1")
 	cfg := &config.Config{}
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: "not-base64!"}}
-	if _, err := releasedExtractors(cfg); err == nil {
+	if _, err := releasedExtractors(context.Background(), cfg); err == nil {
 		t.Fatal("a malformed trust-anchor key must refuse startup")
 	}
 }
 
-func TestMergeExtractorsDedupsByIdentity(t *testing.T) {
+func TestMergeExtractorsReleasedGovernsDomain(t *testing.T) {
 	dark := []extract.Extractor{
 		stubExtractor{domain: "a", version: "1"},
-		stubExtractor{domain: "b", version: "1"},
+		stubExtractor{domain: "b", version: "1"}, // governed by the released b
 	}
 	released := []extract.Extractor{
-		stubExtractor{domain: "b", version: "1"}, // duplicate identity
+		stubExtractor{domain: "b", version: "2"},
 		stubExtractor{domain: "c", version: "1"},
 	}
 	merged := mergeExtractors(dark, released)
-	if len(merged) != 3 {
-		t.Fatalf("expected 3 unique extractors, got %d", len(merged))
+	var order []string
+	for _, extractor := range merged {
+		order = append(order, extractor.Domain()+"@"+extractor.Version())
 	}
-	order := []string{merged[0].Domain(), merged[1].Domain(), merged[2].Domain()}
-	if strings.Join(order, ",") != "a,b,c" {
-		t.Fatalf("unexpected dark-then-released order: %v", order)
+	if strings.Join(order, ",") != "a@1,b@2,c@1" {
+		t.Fatalf("merged = %v, want a@1,b@2,c@1 (one extractor per domain, released wins)", order)
 	}
 }
 

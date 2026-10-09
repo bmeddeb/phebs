@@ -1,6 +1,7 @@
 package packrelease
 
 import (
+	"context"
 	"crypto/ed25519"
 	"os"
 	"path/filepath"
@@ -8,8 +9,7 @@ import (
 )
 
 // writeSigned writes a canonically signed release record into dir under name,
-// mutated from the well-formed released baseline, and returns the public key
-// half of the signing key so the caller can build the admitting KeyRing.
+// mutated from the well-formed released baseline.
 func writeSigned(t *testing.T, dir, name, keyID string, private ed25519.PrivateKey, mutate func(*PackRelease)) {
 	t.Helper()
 	release := validRelease()
@@ -28,8 +28,25 @@ func writeSigned(t *testing.T, dir, name, keyID string, private ed25519.PrivateK
 	}
 }
 
+// loadOptions admits records signed by public and binds them to the baseline
+// implementation, artifact root and artifacts of validRelease.
+func loadOptions(public ed25519.PublicKey) Options {
+	baseline := validRelease()
+	return Options{
+		Now:                           fixedNow,
+		Keys:                          KeyRing{"key-1": public},
+		Implementation:                &baseline.Implementation,
+		ReferencedArtifactsRootDigest: baseline.ReferencedArtifactsRootDigest,
+		Resolver: mapResolver{
+			baseline.Card.ArtifactID:       baseline.Card.Digest,
+			baseline.Manifest.ArtifactID:   baseline.Manifest.Digest,
+			baseline.Validation.ArtifactID: baseline.Validation.Digest,
+		},
+	}
+}
+
 func TestLoadSelectionEmptyPathAdmitsNothing(t *testing.T) {
-	selection, err := LoadSelection("", Options{Now: fixedNow})
+	selection, err := LoadSelection(context.Background(), "", Options{Now: fixedNow})
 	if err != nil {
 		t.Fatalf("LoadSelection(\"\"): %v", err)
 	}
@@ -40,7 +57,7 @@ func TestLoadSelectionEmptyPathAdmitsNothing(t *testing.T) {
 
 func TestLoadSelectionAbsentDirectoryRefuses(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "does-not-exist")
-	if _, err := LoadSelection(missing, Options{Now: fixedNow}); err == nil {
+	if _, err := LoadSelection(context.Background(), missing, Options{Now: fixedNow}); err == nil {
 		t.Fatal("a configured but absent directory must refuse, not silently admit nothing")
 	}
 }
@@ -64,7 +81,7 @@ func TestLoadSelectionAdmitsOnlyReleased(t *testing.T) {
 		t.Fatalf("write notes.txt: %v", err)
 	}
 
-	selection, err := LoadSelection(dir, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
+	selection, err := LoadSelection(context.Background(), dir, loadOptions(public))
 	if err != nil {
 		t.Fatalf("LoadSelection: %v", err)
 	}
@@ -79,53 +96,106 @@ func TestLoadSelectionAdmitsOnlyReleased(t *testing.T) {
 	}
 }
 
-func TestLoadSelectionRefusesInvalidRecord(t *testing.T) {
-	dir := t.TempDir()
-	public, private := testKey(t)
-	writeSigned(t, dir, "good.json", "key-1", private, func(r *PackRelease) {
-		r.PackID = "phebs.good.pack"
-	})
-	// A record signed by an unknown key fails Verify and must refuse the whole
-	// selection rather than being skipped.
-	writeSigned(t, dir, "foreign.json", "key-unknown", private, func(r *PackRelease) {
-		r.PackID = "phebs.foreign.pack"
-	})
-
-	_, err := LoadSelection(dir, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
-	if err == nil {
-		t.Fatal("an unverifiable record must refuse the selection")
+// TestLoadSelectionGoverningRecord: the highest release_version per pack
+// governs, so a later suspension withdraws an older release and a later
+// release supersedes an older one.
+func TestLoadSelectionGoverningRecord(t *testing.T) {
+	tests := []struct {
+		name    string
+		second  func(*PackRelease)
+		admits  bool
+		version string
+	}{
+		{"suspension withdraws", func(r *PackRelease) {
+			r.ReleaseID, r.ReleaseVersion, r.DerivedStatus = "rel-0002", "1.0.1", StatusSuspended
+		}, false, ""},
+		{"newer release supersedes", func(r *PackRelease) {
+			r.ReleaseID, r.ReleaseVersion = "rel-0002", "1.10.0"
+		}, true, "1.10.0"},
+		{"older suspension is superseded", func(r *PackRelease) {
+			r.ReleaseID, r.ReleaseVersion, r.DerivedStatus = "rel-0002", "0.9.0", StatusSuspended
+		}, true, "1.0.0"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dir := t.TempDir()
+			public, private := testKey(t)
+			writeSigned(t, dir, "a.json", "key-1", private, nil)
+			writeSigned(t, dir, "b.json", "key-1", private, test.second)
+			selection, err := LoadSelection(context.Background(), dir, loadOptions(public))
+			if err != nil {
+				t.Fatalf("LoadSelection: %v", err)
+			}
+			release, ok := selection.Released(validRelease().PackID)
+			if ok != test.admits || ok && release.ReleaseVersion != test.version {
+				t.Fatalf("admitted = %t (%v), want %t at %q", ok, release, test.admits, test.version)
+			}
+		})
 	}
 }
 
-func TestLoadSelectionRefusesExpiredReleased(t *testing.T) {
-	dir := t.TempDir()
-	public, private := testKey(t)
-	writeSigned(t, dir, "expired.json", "key-1", private, func(r *PackRelease) {
-		r.PackID = "phebs.expired.pack"
-		r.Validation.ExpiresAt = "2020-01-01T00:00:00Z"
-	})
-	_, err := LoadSelection(dir, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
-	if err == nil {
-		t.Fatal("an expired released record must refuse the selection")
+func TestLoadSelectionRefuses(t *testing.T) {
+	tests := []struct {
+		name   string
+		build  func(t *testing.T, dir string, private ed25519.PrivateKey)
+		opts   func(Options) Options
+		reason Reason
+	}{
+		{"unverifiable record", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "good.json", "key-1", private, nil)
+			writeSigned(t, dir, "foreign.json", "key-unknown", private, func(r *PackRelease) {
+				r.PackID = "phebs.foreign.pack"
+			})
+		}, nil, ReasonUnknownKey},
+		{"expired released", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "expired.json", "key-1", private, func(r *PackRelease) {
+				r.Validation.ExpiresAt = "2020-01-01T00:00:00Z"
+			})
+		}, nil, ReasonExpired},
+		{"same pack and version twice", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "a.json", "key-1", private, nil)
+			writeSigned(t, dir, "b.json", "key-1", private, func(r *PackRelease) { r.ReleaseID = "rel-0002" })
+		}, nil, ""},
+		{"released without load bindings", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "a.json", "key-1", private, nil)
+		}, func(o Options) Options {
+			o.Implementation = nil
+			return o
+		}, ReasonUnresolvedReference},
+		{"foreign implementation", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			writeSigned(t, dir, "a.json", "key-1", private, func(r *PackRelease) {
+				r.Implementation.PhebsBinaryDigest = testDigest("other-binary")
+			})
+		}, nil, ReasonDigestMismatch},
+		{"symlinked record", func(t *testing.T, dir string, private ed25519.PrivateKey) {
+			outside := t.TempDir()
+			writeSigned(t, outside, "a.json", "key-1", private, nil)
+			if err := os.Symlink(filepath.Join(outside, "a.json"), filepath.Join(dir, "a.json")); err != nil {
+				t.Fatalf("symlink: %v", err)
+			}
+		}, nil, ""},
+		{"oversized record", func(t *testing.T, dir string, _ ed25519.PrivateKey) {
+			if err := os.WriteFile(filepath.Join(dir, "big.json"), make([]byte, 2*MaxReleaseBytes), 0o600); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+		}, nil, ReasonOversized},
 	}
-	reason, ok := ReasonOf(err)
-	if !ok || reason != ReasonExpired {
-		t.Fatalf("expected an expired rejection unwrapping to ErrInvalidRelease, got %v (%v)", err, ok)
-	}
-}
-
-func TestLoadSelectionRefusesDuplicatePackID(t *testing.T) {
-	dir := t.TempDir()
-	public, private := testKey(t)
-	writeSigned(t, dir, "a.json", "key-1", private, func(r *PackRelease) {
-		r.PackID = "phebs.dup.pack"
-		r.ReleaseID = "rel-a"
-	})
-	writeSigned(t, dir, "b.json", "key-1", private, func(r *PackRelease) {
-		r.PackID = "phebs.dup.pack"
-		r.ReleaseID = "rel-b"
-	})
-	if _, err := LoadSelection(dir, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}}); err == nil {
-		t.Fatal("two admitted records naming the same pack must refuse the selection")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dir := t.TempDir()
+			public, private := testKey(t)
+			test.build(t, dir, private)
+			opts := loadOptions(public)
+			if test.opts != nil {
+				opts = test.opts(opts)
+			}
+			_, err := LoadSelection(context.Background(), dir, opts)
+			if err == nil {
+				t.Fatal("LoadSelection admitted a selection it must refuse")
+			}
+			if reason, _ := ReasonOf(err); test.reason != "" && reason != test.reason {
+				t.Fatalf("reason = %q (%v), want %q", reason, err, test.reason)
+			}
+		})
 	}
 }

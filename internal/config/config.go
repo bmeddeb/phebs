@@ -5,8 +5,6 @@ package config
 
 import (
 	"bytes"
-	"crypto/ed25519"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"gopkg.in/yaml.v3"
@@ -994,16 +993,15 @@ func (c *Config) validate(lines []int) error {
 		switch {
 		case strings.TrimSpace(key.ID) == "":
 			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: id is required", i))
+		case !packrelease.ValidKeyID(key.ID):
+			errs = append(errs, fmt.Errorf(
+				"release_selection.keys[%d]: id %q must match [A-Za-z0-9._:/-]{1,256}, as a record's key_id does", i, key.ID))
 		case seenKeyIDs[key.ID]:
 			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: duplicate id %q", i, key.ID))
 		}
 		seenKeyIDs[key.ID] = true
-		public, err := base64.StdEncoding.DecodeString(key.PublicKey)
-		if err != nil || len(public) != ed25519.PublicKeySize {
-			errs = append(errs, fmt.Errorf(
-				"release_selection.keys[%d]: public_key must be a base64 %d-byte ed25519 public key",
-				i, ed25519.PublicKeySize,
-			))
+		if _, err := packrelease.ParsePublicKey(key.PublicKey); err != nil {
+			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: public_key: %w", i, err))
 		}
 	}
 
