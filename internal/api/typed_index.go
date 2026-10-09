@@ -13,13 +13,19 @@ import (
 )
 
 const TypedIndexPath = "/api/code-navigation-indexing"
-const TypedIndexResourceProfile = "native-arm64-bounded-v1"
 
+// The two admitted resource-profile names; Settings accepts exactly these.
+const (
+	typedIndexArm64ResourceProfile = "native-arm64-bounded-v1"
+	typedIndexAmd64ResourceProfile = "native-amd64-bounded-v1"
+)
+
+// typedIndexResourceProfile names the installed profile's architecture.
 func typedIndexResourceProfile(profile typedindex.Profile) string {
 	if profile.Definition().Config.GOARCH == "amd64" {
-		return "native-amd64-bounded-v1"
+		return typedIndexAmd64ResourceProfile
 	}
-	return TypedIndexResourceProfile
+	return typedIndexArm64ResourceProfile
 }
 
 type typedOperatorStore interface {

@@ -10748,3 +10748,30 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   or offline bundle, and no passwordless sudo. No actual installed-generation
   PASS, completed activation, independent review, merge, scale, release or
   ceremony claim is established by these unit checks.
+
+- **2026-10-08 — T45.10a Settings admits both native resource profiles.** The
+  T45.10 review found that an available amd64 status and plan return
+  `native-amd64-bounded-v1`, while Settings accepts only
+  `native-arm64-bounded-v1`. Ben directed the next SCIP-availability step in a
+  separate worktree. This is a flagged presentation handoff: Settings now
+  accepts exactly those two names on an available status and on a plan preview,
+  and refuses every other name. An unavailable status with an empty resource
+  profile stays readable. The server name continues to follow the installed
+  profile architecture. No worker, schema, sandbox, publication, or execution
+  path changes. Historical arm64 receipt bytes stay exact.
+
+  **Steady-state cost.** Configured startup's read-only daemon preflight, omitted
+  from the T45.10 cost paragraph, performs two bounded HTTP reads on the
+  configured Unix socket: daemon `/info` and one image inspect. Each uses the
+  existing 10-second non-wait request timeout, creates no container, and adds
+  no production request, job, or child. Settings validation is a closed
+  client-side name comparison with no new server work. Query, sync, retry,
+  publication, lock, and child costs remain the T45.10 costs.
+
+  **Validation posture.** The focused API selector
+  `TestTypedIndexAPIResourceProfileMatchesInstalledArchitecture` passes, and
+  `ui/src/typedIndex.test.ts` passes all five tests, including acceptance of
+  both native names and refusal of every other name. Documentation and glossary
+  checks pass. No installed-generation PASS, host image, offline bundle,
+  privilege, review, merge, scale, release, or ceremony claim follows from
+  this handoff.
