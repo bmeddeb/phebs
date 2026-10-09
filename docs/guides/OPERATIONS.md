@@ -3610,6 +3610,47 @@ admitted only through its own governing record bound to its own fixed in-tree
 recipe, and a released pack replaces the experimental-dark extractor for its
 own domain rather than widening any other domain's registration.
 
+**Startup and discovery matrix.** Table-driven tests pin the three observable
+startup shapes over the real admission boundary:
+
+1. **Absent selection** — no read, no pack admitted, and only the
+   provisional-dark set registers (nothing when every switch is off).
+2. **One released pack** — admitted only through its own bound recipe, it
+   governs only its own domain, and it enables no other registry that the API
+   or MCP discovery surfaces read.
+3. **Mixed released and provisional** — the released pack replaces the
+   experimental-dark extractor for its own domain, while every other domain
+   keeps its switch-gated admission.
+
+**Refusal is whole-startup; withdrawal is per-pack.** A suspended or revoked
+pack withdraws cleanly and never refuses an otherwise healthy startup, but a
+released record that verifies and cannot be bound — no load bindings, or no
+fixed in-tree recipe — refuses the whole startup rather than being skipped:
+one unbound release blocks the server, not one pack. The bounded startup error
+names the pack, and the correction is the missing binding or recipe, never a
+looser gate.
+
+**Discovery follows the provisional switches alone.** Admitting or withdrawing
+a released pack changes what runs; it never changes what the API or MCP
+surface advertises. A released component does not make another surface
+discoverable, and withdrawal changes only admission, never discovery.
+
+**Mixed-provenance caution.** With the proto (or Thrift) switch on, a
+provisional declaration extractor registers the declaration domain even while
+the signed declaration record for it is suspended or revoked. A released
+caller pack can therefore stay admitted structurally against an
+experimental-dark declaration the signed record never named. The startup
+matrix pins this joined behavior as today's exact contract — the released path
+never consults the provisional switches for its own admission, and the gate
+does not refuse the join — and the disposition of that mixed provenance is
+owned by the caller-quality follow-up T47.3, not decided here.
+
+**Withdrawal does not recall evidence.** Withdrawal decides admission and
+future work only: evidence already published by an earlier admitted run stays
+in the store under its own release binding, and the gate neither deletes nor
+re-labels it. Any disposition of retained evidence is recorded forward, never
+executed by a startup transition.
+
 **Current posture.** This gate ships dark. No pack recipe is bound in this
 binary, and this build cannot yet bind a released record to its own binary,
 toolchain, and referenced artifacts. Any governing `released` record therefore

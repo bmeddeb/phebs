@@ -166,7 +166,9 @@ fields (52), RPC syntactic consumer/registration evidence (58), Kafka producer
 composes only admitted Kafka planes. A producer result never promotes the
 consumer. The first tickets landed: T47.2a, T49.1a and both T48.2 slices froze
 their contracts and built the shared release verifier and startup admission
-gate. The next are T47.3, T48.3, T48.4b/c and T49.1b; prepare independent
+gate; T48.4a/b documented the shared operating surface and pinned the
+absent/one-pack/mixed-pack startup and discovery matrix. The next are T47.3,
+T48.3, T48.4c and T49.1b; prepare independent
 contracts/corpora while shared runtime enforcement is built, but serialize
 expensive host execution and Git/spine edits. Production support starts inside
 measured limits with headroom; existing safety ceilings alone are not an

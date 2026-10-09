@@ -68,6 +68,15 @@ func bindReleaseLoad(t *testing.T, release *packrelease.PackRelease) {
 // dir and returns the base64 public key that admits it and the record.
 func writeReleasedRecord(t *testing.T, dir, packID, keyID string) (string, *packrelease.PackRelease) {
 	t.Helper()
+	return writeStatusRecord(t, dir, packID, keyID, packrelease.StatusReleased)
+}
+
+// writeStatusRecord signs a well-formed PackRelease for packID carrying status
+// into dir and returns the base64 public key that admits it and the record. A
+// non-released status (for example a suspension) still verifies against the
+// trust anchors; it withdraws its pack instead of admitting it.
+func writeStatusRecord(t *testing.T, dir, packID, keyID string, status string) (string, *packrelease.PackRelease) {
+	t.Helper()
 	public, private, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("generate key: %v", err)
@@ -93,7 +102,7 @@ func writeReleasedRecord(t *testing.T, dir, packID, keyID string) (string, *pack
 			Applies:    true,
 			ExpiresAt:  "2999-12-31T23:59:59Z",
 		},
-		DerivedStatus:   packrelease.StatusReleased,
+		DerivedStatus:   status,
 		ApprovedAt:      "2026-07-17T20:00:00Z",
 		ApprovalRecords: []string{"approval-" + packID},
 	}

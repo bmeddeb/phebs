@@ -17225,6 +17225,37 @@ absent/one-pack/mixed-pack startup and API/MCP discovery matrix; T48.4c supplies
 the machine-derived referenced-artifact census and running implementation
 identity that make the bindings bindable.*
 
+*Slice b landed 2026-10-09: `cmd/phebs/serve_config_matrix_test.go` pins the
+absent/one-pack/mixed-pack startup and API/MCP discovery matrix by driving the
+real `newServeExtractionRegistries` admission boundary rather than a
+re-implementation
+— nine table scenarios over an absent selection (no read, nothing admitted,
+both downstream registries' `Enabled()` false), the proto switch alone
+admitting exactly the four experimental-dark domains, one released declaration
+pack governing only its own domain (the "one released component does not
+activate another" AC), a released caller pack without its declaration refusing
+with the resolver's exact `resolver caller %q requires declaration domain %q`
+message, a suspended declaration withdrawing instead of satisfying that caller,
+the same declaration admitted through the provisional switch beside the
+released caller (pinning the mixed-provenance join), an all-withdrawn directory
+admitting nothing, and both refusal shapes of an unbound release (no recipe; no
+load bindings as `ReasonUnresolvedReference`). Withdrawal log lines are pinned
+byte-for-byte through one shared `captureLogDuring` helper, record/recipe
+fixtures are shared with the existing release tests, and `callerMapDiscoverable`
+was extracted behavior-preserving in `cmd/phebs/serve_api.go` so
+`TestCallerMapDiscoveryFollowsTheProvisionalSwitchesAlone` holds discovery as
+following the provisional switches alone — admission and withdrawal never flip
+it. `docs/guides/OPERATIONS.md` gains the "Startup and discovery matrix"
+subsection: the three shapes, whole-startup refusal versus per-pack withdrawal
+(one unbound release blocks the server, not one pack), discovery following the
+switches alone, the mixed-provenance caution whose disposition is owned by
+T47.3, and that withdrawal decides admission and future work only, never
+recalling published evidence. Tests and documentation only: no runtime
+behavior change, `packRecipes`/`releaseLoadBindings` still empty and the dark
+startup byte-for-byte unchanged. T48.4c still supplies the machine-derived
+referenced-artifact census and running implementation identity that make the
+bindings bindable.*
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 Own `phebs.protobuf.contract` and `phebs.thrift.contract` separately, plus

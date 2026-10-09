@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -176,6 +177,16 @@ func openServeSearcher(d *serveDeps) error {
 	return nil
 }
 
+// callerMapDiscoverable reports whether the Caller Map discovery surface is
+// offered at startup. Discovery follows the provisional extraction switches
+// alone: admitting a pack through the ordinary/released selection never flips
+// it, because one released component must not make another surface
+// discoverable, and withdrawal changes only admission, never discovery.
+func callerMapDiscoverable(cfg *config.Config) bool {
+	return cfg.Experimental.ProvisionalProtoExtraction ||
+		cfg.Experimental.ProvisionalThriftExtraction
+}
+
 // newServeAPIOptions assembles the API options: search/code-navigation
 // services, fixture bindings, and catalog/caller/relationship services.
 func newServeAPIOptions(d *serveDeps) (api.Options, error) {
@@ -218,8 +229,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
 		Evidence: d.evidenceView, ProofBundles: d.proofBundles,
-		CallerMapEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
-			cfg.Experimental.ProvisionalThriftExtraction,
+		CallerMapEnabled:     callerMapDiscoverable(cfg),
 		CallerReader:         d.callerReader,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
 		Compatibility:        d.compatibility, Visible: d.visibleFor,
