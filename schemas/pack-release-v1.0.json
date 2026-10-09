@@ -1,0 +1,206 @@
+{
+  "$id": "https://phebs.local/schemas/pack-release-v1.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "phebs pack release binding v1.0",
+  "description": "The signed immutable PackRelease record that binds an approved card, manifest, implementation, referenced-artifact root, validation result, and approvals. It, not a self-asserted manifest or card field, determines what may load and in which mode. Normative counterpart of docs/PACK_MANIFEST.md section 4; on semantic conflict the domain contract wins.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "release_schema_version",
+    "release_id",
+    "release_version",
+    "pack_id",
+    "pack_claim_version",
+    "card",
+    "manifest",
+    "implementation",
+    "referenced_artifacts_root_digest",
+    "validation",
+    "derived_status",
+    "approved_at",
+    "approval_records",
+    "canonicalization",
+    "signature"
+  ],
+  "properties": {
+    "release_schema_version": {
+      "const": "1.0",
+      "type": "string"
+    },
+    "release_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "release_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "pack_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "pack_claim_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "card": {
+      "$ref": "#/$defs/artifactRef"
+    },
+    "manifest": {
+      "$ref": "#/$defs/artifactRef"
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phebs_source_commit",
+        "phebs_binary_digest",
+        "pack_implementation_digest",
+        "toolchain_digest"
+      ],
+      "properties": {
+        "phebs_source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "phebs_binary_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "pack_implementation_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "toolchain_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "referenced_artifacts_root_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "digest",
+        "applies",
+        "expires_at",
+        "expiry_trigger"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "applies": {
+          "type": "boolean"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiry_trigger": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        }
+      }
+    },
+    "derived_status": {
+      "type": "string",
+      "enum": [
+        "design",
+        "experimental-dark",
+        "shadow",
+        "released",
+        "suspended",
+        "retired"
+      ]
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approval_records": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "version"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "phebs-canonical-json",
+          "type": "string"
+        },
+        "version": {
+          "const": "1",
+          "type": "string"
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_id",
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "key_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "algorithm": {
+          "const": "ed25519",
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9._:/-]+$"
+    },
+    "artifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "digest"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    }
+  }
+}

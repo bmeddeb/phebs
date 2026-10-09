@@ -1,0 +1,37 @@
+package packrelease
+
+import (
+	"crypto/ed25519"
+	"encoding/base64"
+)
+
+// Sign authoritatively signs a release record in place. It is an offline
+// authoring and operator action, mirroring the release-bundle build step; it is
+// never invoked on the ordinary request, sync, or startup path. The signature
+// covers the canonical record with the signature value cleared, so the recorded
+// value round-trips through Verify's SigningPayload.
+//
+// Sign sets the frozen canonicalization binding and the ed25519 algorithm so an
+// authored record cannot drift from what Verify admits.
+func Sign(release *PackRelease, keyID string, privateKey ed25519.PrivateKey) error {
+	if release == nil {
+		return reject(ReasonInvalidField, "cannot sign a nil release record")
+	}
+	if len(privateKey) != ed25519.PrivateKeySize {
+		return reject(ReasonUnknownKey, "signing key %q is not a valid ed25519 private key", keyID)
+	}
+	if err := validID("signature.key_id", keyID); err != nil {
+		return err
+	}
+	release.Canonicalization = Canonicalization{
+		Algorithm: CanonicalAlgorithm,
+		Version:   CanonicalVersion,
+	}
+	release.Signature = Signature{KeyID: keyID, Algorithm: SignatureAlgorithmEd25519}
+	payload, err := SigningPayload(release)
+	if err != nil {
+		return err
+	}
+	release.Signature.Value = base64.StdEncoding.EncodeToString(ed25519.Sign(privateKey, payload))
+	return nil
+}
