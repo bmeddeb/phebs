@@ -17059,6 +17059,24 @@ the provisional repo/path versus descriptor/module identity gate and share
 one reviewed identity/input contract with T47.2; freeze and independently
 score declaration/operation/message/field facts and explicit parser gaps.
 
+Status (2026-10-09, documentation-only first slice): the identity gate is
+resolved and the fact contract is frozen in
+[`docs/PROTOBUF_DECLARATION_IDENTITY.md`](./PROTOBUF_DECLARATION_IDENTITY.md).
+The file-scoped `provisional_repo_path_v1_…` token is the admitted pure-reader
+declaration identity and the `DeclarationLineage` join with T47.2 is stated
+against the four enforcing validators; canonical descriptor/module lineage is
+underivable from the current `sdk.Corpus` input and must arrive later as a
+separate prefix-disjoint family, never a silent rename. The declaration fact
+contract, type-reference resolution states and gap taxonomy (including
+`IMPORT_LINKING_UNAVAILABLE`) are frozen as the scorable surface. Independent
+scoring is defined in shape only and remains unsealed: real independent human
+labelers and a genuine beacon seed are non-fabricable prerequisites. No
+extractor, token, schema or published assertion changed; GATE2-V2 stays
+`NOT_ESTABLISHED` and the pack stays experimental-dark. Remaining T49.1 work:
+the sealed independent-scoring run once reviewers exist, and any
+descriptor/module identity family that a future trusted-import-root input
+admits.
+
 **T49.2 · Thrift declaration identity and validation contract** — independently
 freeze namespace/include/generator lineage and declarations, ambiguity,
 missing/unsupported input and gap accounting; protobuf results grant no Thrift

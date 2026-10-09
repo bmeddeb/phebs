@@ -34,6 +34,15 @@ registration, source-universe completeness, migration completion, or safety to
 remove a contract. One malformed or unsupported declaration input cannot be
 reworded as an empty contract.
 
+**Identity and fact contract (T49.1).** The declaration identity gate, the
+frozen declaration/operation/message/field fact contract, the type-reference
+resolution states and the explicit gap taxonomy (including
+`IMPORT_LINKING_UNAVAILABLE`) are recorded in
+[`docs/PROTOBUF_DECLARATION_IDENTITY.md`](./PROTOBUF_DECLARATION_IDENTITY.md).
+That contract resolves the identity and freezes the scorable surface only; it
+seals no validation, adds no PackRelease and changes this card's `experimental-dark`
+status, `not_run` validation and unassigned independent-validation owner.
+
 ## Pack: Go gRPC syntactic consumers
 
 | Field | Value |

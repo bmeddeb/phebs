@@ -70,6 +70,10 @@ replace the user manual.
 - [PACK_MANIFEST.md](./PACK_MANIFEST.md) — manifest schema and lifecycle.
 - [PROTO_GRPC_PACK_CARDS.md](./PROTO_GRPC_PACK_CARDS.md) — Protobuf/gRPC
   declaration, consumer, exact-caller, and field-reference pack cards.
+- [PROTOBUF_DECLARATION_IDENTITY.md](./PROTOBUF_DECLARATION_IDENTITY.md) — T49.1
+  Protobuf declaration identity/input contract: resolves the provisional
+  repo/path versus descriptor/module gate and shares the `DeclarationLineage`
+  join with T47.2. Design draft; grants no release or accuracy claim.
 - [THRIFT_PACK_CARDS.md](./THRIFT_PACK_CARDS.md) — Thrift declaration,
   consumer, and field-reference pack cards.
 - [KAFKA_PACK_CARDS.md](./KAFKA_PACK_CARDS.md) — Kafka producer and consumer
