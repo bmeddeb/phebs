@@ -3522,12 +3522,23 @@ Withdrawal is not a server failure, so one suspended pack never refuses an
 otherwise healthy startup.
 
 **Validation expiry is automatic suspension.** A release carries its own
-approval time and expiry triggers. An expired record fails verification, and
-validation expiry, a failed drift check, a provenance break, or an unresolved
-release inconsistency each require automatic suspension with no ordinary
-claim-bearing load. There is no expiry override, no grace window, and no
-configuration key that re-admits an expired record; the correction is a new
-signed release produced by revalidation.
+approval time and expiry triggers. An expired released record fails
+verification, and validation expiry, a failed drift check, a provenance break,
+or an unresolved release inconsistency each require automatic suspension with
+no ordinary claim-bearing load. There is no expiry override, no grace window,
+and no configuration key that re-admits an expired record; the correction is a
+new signed release produced by revalidation.
+
+A failed verification is stronger than a withdrawal: while any record present
+fails verification, the selection refuses startup before any record can
+govern. A revalidated successor published at a higher `release_version` does
+not lift that refusal while the failed record remains, and an operator
+`revoked` entry cannot either, because revocation is judged only against a
+record that verified. The correction is therefore two steps: the new signed
+release produced by revalidation, and removing the failed record from the
+directory — deleting its file or replacing it with a verifying record — since
+a record that fails verification cannot be superseded, suspended, or revoked
+away.
 
 **Suspending a release.** Two supported controls, and they compose:
 
@@ -3546,17 +3557,22 @@ signed release produced by revalidation.
 Revoking or suspending the governing record withdraws the whole pack. It never
 falls back to an earlier released record in the same directory, because a
 fallback would silently re-admit the very behavior the withdrawal was meant to
-stop. Removing a record from the directory is not a supported control: every
-record present must verify, and a deletion leaves no signed cause behind.
+stop. Removing a record from the directory is not a supported way to withdraw
+a pack: every record present must verify, and a deletion leaves no signed
+cause behind. A record that fails verification is not withdrawn at all — it
+refuses startup until its file is removed or replaced, as described above.
 
 **Rolling back.** A rollback is a newly signed record, not a consequence of
 withdrawing a later one. Sign the intended earlier content at a
 `release_version` higher than the bad record's, publish it, and restart. The
-withdrawn record may stay in the directory — it is superseded by version, and
-additionally listing its `release_id` in `revoked` records the intent
-explicitly. Retained evidence from the bad release is never rewritten: already
-published results keep their own release binding, and a compatibility or
-suspension decision about them is recorded forward.
+withdrawn record may stay in the directory only while it still verifies —
+supersession does not stop a retained record's validation from expiring, and a
+retained record that fails verification refuses startup until its file is
+removed or replaced. A retained, still-verifying record is superseded by
+version, and additionally listing its `release_id` in `revoked` records the
+intent explicitly. Retained evidence from the bad release is never rewritten:
+already published results keep their own release binding, and a compatibility
+or suspension decision about them is recorded forward.
 
 **Revalidation.** Every byte change creates a new manifest digest and therefore
 a new `PackRelease`, which does not by itself imply a new measured claim. The

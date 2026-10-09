@@ -547,7 +547,7 @@ reaches it:
 Startup then reads the directory once, at this admitted boundary, and never on
 a request, sync, or per-query path. Every record present must verify, so a
 malformed or non-canonical record, an unknown or foreign signing key, a
-mismatched digest, an expired or revoked release, an unsupported schema or
+mismatched digest, an expired release, an unsupported schema or
 component version, a non-regular or symlinked `*.json` entry, an oversized
 record, more than 1,024 directory entries, or two records naming one pack at
 the same `release_version` refuses startup rather than being skipped. That is

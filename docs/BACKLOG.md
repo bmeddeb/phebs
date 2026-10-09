@@ -17211,9 +17211,19 @@ record still refuses with `unknown_key` instead of being quietly withdrawn.
 pairs before the empty-selection return, so a directory holding only suspended
 or revoked records still tells the operator the withdrawal took effect. No
 product is released, `packRecipes`/`releaseLoadBindings` stay empty and the dark
-startup is unchanged. T48.4b pins the absent/one-pack/mixed-pack startup and
-API/MCP discovery matrix; T48.4c supplies the machine-derived referenced-artifact
-census and running implementation identity that make the bindings bindable.*
+startup is unchanged. Independent review of the exact implementation commit
+reported critical/high/medium/low `0/0/1/1`: the medium observed that
+`OPERATIONS.md` described an expiry remedy that could not work, because a
+failing record refuses the whole selection before any successor or revocation
+can apply, and the low listed operator revocation among startup refusals, when
+it withdraws instead. Both are documentation-accuracy findings against
+intended, test-pinned behavior; a documentation-only correction on the same
+branch states the two-step expiry remedy, scopes the removal note to
+withdrawal, qualifies retained-record rollback with continued verification, and
+drops the revocation example from the refusal list. T48.4b pins the
+absent/one-pack/mixed-pack startup and API/MCP discovery matrix; T48.4c supplies
+the machine-derived referenced-artifact census and running implementation
+identity that make the bindings bindable.*
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 
