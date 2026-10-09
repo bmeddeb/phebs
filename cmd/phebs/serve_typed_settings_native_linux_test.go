@@ -549,9 +549,14 @@ func typedSettingsNativeSettle(ctx context.Context, t *testing.T, state *store.S
 					phases[i] = typedSettingsNativePhase{phase.Phase, phase.ExitCode, phase.Removed, phase.StopReason, phase.Resources, phase.FailureOperation, phase.CleanupOperation}
 				}
 				// Keep classification and bounded public measurements; never log
-				// the private error, watchdog or worker failure envelope.
+				// the private error, watchdog or worker failure envelope. The site
+				// note decodes only the closed-vocabulary phebs_site= token out of
+				// the stderr hex the sandbox already retains in the error text, so a
+				// refusal on a content-dependent predicate names its cause class; it
+				// carries no stderr bytes beyond that validated token.
 				diagnostic, err := json.Marshal(map[string]any{
-					"reason": typedServeReason(r.err), "deadline": errors.Is(r.err, context.DeadlineExceeded),
+					"reason": typedServeReason(r.err), "site": typedSettingsNativeRefusalSite(r.err.Error()),
+					"deadline": errors.Is(r.err, context.DeadlineExceeded),
 					"canceled": errors.Is(r.err, context.Canceled), "phaseReports": phases,
 				})
 				if err != nil {
