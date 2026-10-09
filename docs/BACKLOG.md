@@ -17036,7 +17036,23 @@ taxonomy, plus the normative `schemas/pack-release-v1.0.json`. This slice wires
 no runtime registration, startup selection or pack execution — an absent
 production selection adds no pack work and registration stays unreachable
 through a provisional extraction switch; startup/runtime recipe selection
-consuming `Verify` remains a later slice.*
+consuming `Verify` remains a later slice.* *Slice 2 landed 2026-10-09: a startup
+admission gate now consumes `packrelease.Verify` and gates a new
+ordinary/released extraction admission set, while the provisional switches stay
+experimental-dark and unchanged. `internal/packrelease.LoadSelection` reads one
+bounded operator directory of signed records once at the admitted startup
+boundary and admits only verified `released` records; the new `release_selection`
+config block supplies that path plus its ed25519 trust-anchor keys; and
+`newServeExtractionRegistries` merges the unchanged dark set with the released
+set resolved solely through a fixed in-tree `packRecipes` registry. The registry
+ships empty, so no released pack exists and today's runtime is byte-identical; a
+verified released pack with no bound recipe refuses startup rather than loading
+unbound code. Registration stays unreachable through a provisional switch, an
+absent production selection adds no pack work and no read, release metadata is
+verified once at its boundary with no per-query hashing or corpus scan, and no
+third-party loader returns. Per-workflow load-mode enforcement (`PACK_MANIFEST`
+§6 #14) and each owning product's own passing record and bound recipe remain
+later work.*
 
 **T48.3 · Reusable independent validation and operating receipt harness** —
 share corpus sealing, label separation, scoring/denominator checks,

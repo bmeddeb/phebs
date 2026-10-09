@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"encoding/base64"
+	"fmt"
 	"log"
 	"os"
 
@@ -8,6 +11,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 )
 
@@ -89,15 +94,24 @@ func loadServeConfig(semanticLaunch *t422SemanticLaunch, flags *serveFlags) (*co
 }
 
 // newServeExtractionRegistries wires the extractor set and the resolver,
-// caller-leaf, and caller-publication registries.
+// caller-leaf, and caller-publication registries. The extractor set is the union
+// of the provisional-dark admission (unchanged, gated by the experimental
+// switches) and the ordinary/released admission computed solely from verified
+// signed PackRelease records. Registration into the released set is never
+// obtained by toggling a provisional extraction switch.
 func newServeExtractionRegistries(d *serveDeps) error {
 	cfg := d.cfg
-	d.exs = evidenceExtractors(
+	dark := evidenceExtractors(
 		cfg.Experimental.ProvisionalProtoExtraction,
 		cfg.Experimental.ProvisionalThriftExtraction,
 		cfg.Experimental.ProvisionalThriftFieldExtraction,
 		cfg.Experimental.ProvisionalKafkaExtraction,
 	)
+	released, err := releasedExtractors(cfg)
+	if err != nil {
+		return err
+	}
+	d.exs = mergeExtractors(dark, released)
 	resolverRegistry, err := resolvermaterialize.NewRegistry(d.exs)
 	if err != nil {
 		return err
@@ -112,4 +126,94 @@ func newServeExtractionRegistries(d *serveDeps) error {
 		callerexecute.Root(cfg.Server.DataDir),
 	)
 	return nil
+}
+
+// packRecipes is the fixed in-tree registry mapping a canonical pack identifier
+// to the extractors that implement it. It ships EMPTY on purpose: no pack has
+// yet earned a signed released PackRelease, so binding a recipe now would assert
+// an authorization that does not exist. Each owning epic binds its recipe here in
+// the same PR that records its first passing released record. There is no
+// third-party loader and no manifest-selected arbitrary code: a released pack
+// resolves only through this exact in-tree registry.
+var packRecipes = map[string]func() []extract.Extractor{}
+
+// releasedExtractors computes the ordinary/released admission set from the
+// verified signed PackRelease records named by cfg.ReleaseSelection. It is the
+// sole path into that set and is read once at this admitted startup boundary,
+// never on a request, sync, or per-query path:
+//
+//   - An empty Path admits nothing, performs no read, and adds no pack work.
+//   - A configured Path whose records fail verification refuses startup.
+//   - A verified released pack with no fixed in-tree recipe is an unresolved
+//     release inconsistency and refuses startup rather than silently admitting
+//     nothing, so a released authorization can never outrun its implementation.
+func releasedExtractors(cfg *config.Config) ([]extract.Extractor, error) {
+	if cfg.ReleaseSelection.Path == "" {
+		return nil, nil
+	}
+	keys, err := releaseKeyRing(cfg.ReleaseSelection.Keys)
+	if err != nil {
+		return nil, err
+	}
+	selection, err := packrelease.LoadSelection(
+		cfg.ReleaseSelection.Path, packrelease.Options{Keys: keys},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pack release selection: %w", err)
+	}
+	if selection.Empty() {
+		return nil, nil
+	}
+	released := make([]extract.Extractor, 0, selection.Count())
+	for _, packID := range selection.PackIDs() {
+		recipe, ok := packRecipes[packID]
+		if !ok {
+			return nil, fmt.Errorf(
+				"pack release selection: released pack %q has no fixed in-tree recipe; "+
+					"refusing to admit an unbound release", packID,
+			)
+		}
+		released = append(released, recipe()...)
+	}
+	return released, nil
+}
+
+// releaseKeyRing builds the operator-controlled ed25519 trust anchor from the
+// configured keys. A malformed key refuses startup; the ring is never populated
+// from a release record's own embedded key material.
+func releaseKeyRing(keys []config.ReleaseKey) (packrelease.KeyRing, error) {
+	ring := make(packrelease.KeyRing, len(keys))
+	for _, key := range keys {
+		public, err := base64.StdEncoding.DecodeString(key.PublicKey)
+		if err != nil || len(public) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf(
+				"pack release key %q: public_key is not a base64 %d-byte ed25519 public key",
+				key.ID, ed25519.PublicKeySize,
+			)
+		}
+		ring[key.ID] = ed25519.PublicKey(public)
+	}
+	return ring, nil
+}
+
+// mergeExtractors concatenates the provisional-dark and released admission sets,
+// de-duplicating by extractor identity (Domain + Version) so a pack that is both
+// dark-flagged and released registers exactly once. Order is dark-then-released
+// for deterministic registry construction. With no released extractors it returns
+// the dark set unchanged, preserving today's behavior byte for byte.
+func mergeExtractors(dark, released []extract.Extractor) []extract.Extractor {
+	if len(released) == 0 {
+		return dark
+	}
+	merged := make([]extract.Extractor, 0, len(dark)+len(released))
+	seen := make(map[string]struct{}, len(dark)+len(released))
+	for _, extractor := range append(append([]extract.Extractor{}, dark...), released...) {
+		identity := extractor.Domain() + "@" + extractor.Version()
+		if _, duplicate := seen[identity]; duplicate {
+			continue
+		}
+		seen[identity] = struct{}{}
+		merged = append(merged, extractor)
+	}
+	return merged
 }

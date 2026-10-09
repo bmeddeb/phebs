@@ -5,6 +5,8 @@ package config
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -58,6 +60,34 @@ type Config struct {
 	// ServiceCatalogs explicitly selects one v2 base authority per repository.
 	// When absent, T33.2 imports the committed analysis-unit-v1 state instead.
 	ServiceCatalogs map[string]ServiceCatalog `yaml:"service_catalogs"`
+	// ReleaseSelection names the signed PackRelease records admitted at startup
+	// (T48.2). It ships dark and empty: an absent Path admits no released pack
+	// and adds no pack work. A provisional extraction switch is never a path to
+	// this ordinary/released admission set.
+	ReleaseSelection ReleaseSelection `yaml:"release_selection"`
+}
+
+// ReleaseSelection is the operator-controlled signed-release admission block
+// consumed once at the admitted startup boundary. See docs/PACK_MANIFEST.md
+// section 4: the release record, not a self-asserted manifest or card field,
+// determines what may load. Only a record that verifies against Keys and
+// carries the released lifecycle status enters the ordinary admission set.
+type ReleaseSelection struct {
+	// Path is a directory of signed PackRelease JSON records. Empty admits no
+	// released pack and performs no read. When set, the directory must exist
+	// and every record it holds must verify; a malformed or unverifiable record
+	// refuses startup rather than being skipped.
+	Path string `yaml:"path"`
+	// Keys is the ed25519 trust anchor. A record signed by a key absent here is
+	// refused. The ring is never populated from a record's own key material.
+	Keys []ReleaseKey `yaml:"keys"`
+}
+
+// ReleaseKey binds an approved key identifier to its base64-encoded ed25519
+// public key.
+type ReleaseKey struct {
+	ID        string `yaml:"id"`
+	PublicKey string `yaml:"public_key"`
 }
 
 const (
@@ -958,6 +988,25 @@ func (c *Config) validate(lines []int) error {
 			fail(i, "unknown type %q (want github, gitlab, gitea, or git)", conn.Type)
 		}
 	}
+
+	seenKeyIDs := map[string]bool{}
+	for i, key := range c.ReleaseSelection.Keys {
+		switch {
+		case strings.TrimSpace(key.ID) == "":
+			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: id is required", i))
+		case seenKeyIDs[key.ID]:
+			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: duplicate id %q", i, key.ID))
+		}
+		seenKeyIDs[key.ID] = true
+		public, err := base64.StdEncoding.DecodeString(key.PublicKey)
+		if err != nil || len(public) != ed25519.PublicKeySize {
+			errs = append(errs, fmt.Errorf(
+				"release_selection.keys[%d]: public_key must be a base64 %d-byte ed25519 public key",
+				i, ed25519.PublicKeySize,
+			))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 

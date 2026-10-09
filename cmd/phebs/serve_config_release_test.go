@@ -1,0 +1,170 @@
+package main
+
+import (
+	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/packrelease"
+)
+
+// stubExtractor is a minimal in-tree extractor identity used only to exercise
+// the released-admission merge and recipe plumbing.
+type stubExtractor struct {
+	domain  string
+	version string
+}
+
+func (s stubExtractor) Domain() string  { return s.domain }
+func (s stubExtractor) Version() string { return s.version }
+func (s stubExtractor) Candidate(string) bool { return false }
+func (s stubExtractor) Extract(context.Context, sdk.Corpus, sdk.Emit) (sdk.Coverage, error) {
+	return sdk.Coverage{}, nil
+}
+
+func testReleaseDigest(seed string) string {
+	sum := sha256.Sum256([]byte(seed))
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// writeReleasedRecord signs a well-formed released PackRelease for packID into
+// dir and returns the base64 public key that admits it.
+func writeReleasedRecord(t *testing.T, dir, packID, keyID string) string {
+	t.Helper()
+	public, private, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	release := &packrelease.PackRelease{
+		ReleaseSchemaVersion: packrelease.ReleaseSchemaVersion,
+		ReleaseID:            "rel-" + packID,
+		ReleaseVersion:       "1.0.0",
+		PackID:               packID,
+		PackClaimVersion:     "1.0.0",
+		Card:                 packrelease.ArtifactRef{ArtifactID: "card." + packID, Digest: testReleaseDigest("card" + packID)},
+		Manifest:             packrelease.ArtifactRef{ArtifactID: "manifest." + packID, Digest: testReleaseDigest("manifest" + packID)},
+		Implementation: packrelease.Implementation{
+			PhebsSourceCommit:        strings.Repeat("c", 40),
+			PhebsBinaryDigest:        testReleaseDigest("binary"),
+			PackImplementationDigest: testReleaseDigest("pack" + packID),
+			ToolchainDigest:          testReleaseDigest("toolchain"),
+		},
+		ReferencedArtifactsRootDigest: testReleaseDigest("root" + packID),
+		Validation: packrelease.Validation{
+			ArtifactID: "validation." + packID,
+			Digest:     testReleaseDigest("validation" + packID),
+			Applies:    true,
+			ExpiresAt:  "2999-12-31T23:59:59Z",
+		},
+		DerivedStatus:   packrelease.StatusReleased,
+		ApprovedAt:      "2026-07-17T20:00:00Z",
+		ApprovalRecords: []string{"approval-" + packID},
+	}
+	if err := packrelease.Sign(release, keyID, private); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	raw, err := packrelease.CanonicalPayload(release)
+	if err != nil {
+		t.Fatalf("CanonicalPayload: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, packID+".json"), raw, 0o600); err != nil {
+		t.Fatalf("write record: %v", err)
+	}
+	return base64.StdEncoding.EncodeToString(public)
+}
+
+func TestReleasedExtractorsEmptyPathAdmitsNothing(t *testing.T) {
+	cfg := &config.Config{}
+	extractors, err := releasedExtractors(cfg)
+	if err != nil {
+		t.Fatalf("releasedExtractors: %v", err)
+	}
+	if extractors != nil {
+		t.Fatalf("empty path must add no pack work, got %d extractors", len(extractors))
+	}
+}
+
+func TestReleasedExtractorsRefusesUnboundReleasedPack(t *testing.T) {
+	dir := t.TempDir()
+	public := writeReleasedRecord(t, dir, "phebs.unbound.pack", "key-1")
+	cfg := &config.Config{}
+	cfg.ReleaseSelection.Path = dir
+	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+
+	// packRecipes ships empty, so a verified released pack has no in-tree recipe
+	// and must refuse startup rather than silently admit nothing.
+	if _, err := releasedExtractors(cfg); err == nil {
+		t.Fatal("a released pack with no fixed in-tree recipe must refuse startup")
+	}
+}
+
+func TestReleasedExtractorsResolvesBoundRecipe(t *testing.T) {
+	dir := t.TempDir()
+	public := writeReleasedRecord(t, dir, "phebs.bound.pack", "key-1")
+	cfg := &config.Config{}
+	cfg.ReleaseSelection.Path = dir
+	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+
+	restore := packRecipes
+	packRecipes = map[string]func() []extract.Extractor{
+		"phebs.bound.pack": func() []extract.Extractor {
+			return []extract.Extractor{stubExtractor{domain: "bound", version: "1"}}
+		},
+	}
+	t.Cleanup(func() { packRecipes = restore })
+
+	extractors, err := releasedExtractors(cfg)
+	if err != nil {
+		t.Fatalf("releasedExtractors: %v", err)
+	}
+	if len(extractors) != 1 || extractors[0].Domain() != "bound" {
+		t.Fatalf("expected the bound recipe's extractor, got %#v", extractors)
+	}
+}
+
+func TestReleasedExtractorsRefusesMalformedKey(t *testing.T) {
+	dir := t.TempDir()
+	writeReleasedRecord(t, dir, "phebs.any.pack", "key-1")
+	cfg := &config.Config{}
+	cfg.ReleaseSelection.Path = dir
+	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: "not-base64!"}}
+	if _, err := releasedExtractors(cfg); err == nil {
+		t.Fatal("a malformed trust-anchor key must refuse startup")
+	}
+}
+
+func TestMergeExtractorsDedupsByIdentity(t *testing.T) {
+	dark := []extract.Extractor{
+		stubExtractor{domain: "a", version: "1"},
+		stubExtractor{domain: "b", version: "1"},
+	}
+	released := []extract.Extractor{
+		stubExtractor{domain: "b", version: "1"}, // duplicate identity
+		stubExtractor{domain: "c", version: "1"},
+	}
+	merged := mergeExtractors(dark, released)
+	if len(merged) != 3 {
+		t.Fatalf("expected 3 unique extractors, got %d", len(merged))
+	}
+	order := []string{merged[0].Domain(), merged[1].Domain(), merged[2].Domain()}
+	if strings.Join(order, ",") != "a,b,c" {
+		t.Fatalf("unexpected dark-then-released order: %v", order)
+	}
+}
+
+func TestMergeExtractorsNoReleasedReturnsDarkUnchanged(t *testing.T) {
+	dark := []extract.Extractor{stubExtractor{domain: "a", version: "1"}}
+	if merged := mergeExtractors(dark, nil); len(merged) != 1 || merged[0].Domain() != "a" {
+		t.Fatalf("no released extractors must leave the dark set unchanged, got %#v", merged)
+	}
+}
