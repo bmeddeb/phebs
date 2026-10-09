@@ -7,14 +7,17 @@
 // registration, no startup selection, and no pack execution: an absent
 // production selection adds no pack work, and registration is never obtained
 // by toggling a provisional extraction switch. Startup and runtime recipe
-// selection are a later slice that consumes Verify.
+// selection are a later slice that consumes VerifyForLoad, which alone decides
+// that a record admits an ordinary load.
 //
-// The verifier is fail closed. It rejects an unsupported schema major, an
-// unknown field, a duplicate object key, a non-canonical artifact, trailing
-// JSON, a malformed digest, an unsatisfied reference, an unknown enum, an
-// invalid timestamp, an unmeasured or expired or revoked claim, and an
-// invalid or unapproved signature. Every rejection carries a stable Reason
-// code and unwraps to ErrInvalidRelease.
+// The verifier is fail closed. It authenticates the record before judging any
+// field beyond its schema version and canonicalization, and it rejects an
+// unsupported schema major, an unknown field, a duplicate object key, a
+// non-canonical artifact or signature encoding, trailing JSON, a malformed
+// digest, a foreign implementation or artifact root, an unsatisfied reference,
+// an unknown enum, an invalid timestamp, an unmeasured, expired, revoked or
+// withdrawn claim, and an invalid or unapproved signature. Every rejection
+// carries a stable Reason code and unwraps to ErrInvalidRelease.
 package packrelease
 
 import (
@@ -120,12 +123,17 @@ type Signature struct {
 
 // CanonicalPayload returns the frozen canonical bytes of the release: compact
 // JSON in field-declaration order followed by a single trailing newline. These
-// are the bytes a digest covers.
+// are the bytes a digest covers. An absent approval list encodes as [], never
+// null, so "no approvals" has exactly one canonical form.
 func CanonicalPayload(release *PackRelease) ([]byte, error) {
 	if release == nil {
 		return nil, fmt.Errorf("encode pack release: nil record")
 	}
-	data, err := json.Marshal(release)
+	clone := *release
+	if clone.ApprovalRecords == nil {
+		clone.ApprovalRecords = []string{}
+	}
+	data, err := json.Marshal(&clone)
 	if err != nil {
 		return nil, fmt.Errorf("encode pack release: %w", err)
 	}

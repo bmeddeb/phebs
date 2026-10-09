@@ -1,6 +1,7 @@
 package packrelease
 
 import (
+	"context"
 	"crypto/ed25519"
 	"time"
 )
@@ -15,9 +16,10 @@ type KeyRing map[string]ed25519.PublicKey
 // bytes actually present. When supplied, the verifier confirms that the card,
 // manifest, and validation references resolve and match their recorded
 // digests, rejecting a foreign or mismatched artifact. A nil resolver skips
-// reference resolution but never skips digest-format validation.
+// reference resolution in Verify but never skips digest-format validation;
+// VerifyForLoad requires one. A lookup error refuses the release.
 type ArtifactResolver interface {
-	Resolve(artifactID string) (digest string, found bool)
+	Resolve(ctx context.Context, artifactID string) (digest string, found bool, err error)
 }
 
 // Options carry the trust anchors and evaluation instant for Verify. The zero
@@ -35,8 +37,22 @@ type Options struct {
 	// empty, only SignatureAlgorithmEd25519 is approved.
 	ApprovedAlgorithms []string
 
-	// Resolver optionally binds recorded references to present artifact bytes.
+	// Resolver binds recorded references to present artifact bytes.
 	Resolver ArtifactResolver
+
+	// Implementation is the running phebs and pack identity. When set, a
+	// release must name it exactly; VerifyForLoad requires it.
+	Implementation *Implementation
+
+	// ReferencedArtifactsRootDigest is the digest of the referenced artifacts
+	// actually present. When set, a release must name it exactly;
+	// VerifyForLoad requires it.
+	ReferencedArtifactsRootDigest string
+
+	// Revoked lists release IDs withdrawn by a later suspension, revocation or
+	// superseding release. A listed release is rejected in every lifecycle
+	// state, so a withdrawn record cannot be replayed before it expires.
+	Revoked map[string]struct{}
 }
 
 // now returns the evaluation instant, defaulting to the current wall clock.

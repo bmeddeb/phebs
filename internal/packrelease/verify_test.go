@@ -1,12 +1,15 @@
 package packrelease
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -67,11 +70,13 @@ func signed(t *testing.T, mutate func(*PackRelease)) ([]byte, Options) {
 	t.Helper()
 	public, private := testKey(t)
 	release := validRelease()
+	release.Canonicalization = Canonicalization{Algorithm: CanonicalAlgorithm, Version: CanonicalVersion}
+	release.Signature = Signature{KeyID: "key-1", Algorithm: SignatureAlgorithmEd25519}
 	if mutate != nil {
 		mutate(release)
 	}
-	if err := Sign(release, "key-1", private); err != nil {
-		t.Fatalf("Sign: %v", err)
+	if err := sign(release, private); err != nil {
+		t.Fatalf("sign: %v", err)
 	}
 	raw, err := CanonicalPayload(release)
 	if err != nil {
@@ -82,7 +87,7 @@ func signed(t *testing.T, mutate func(*PackRelease)) ([]byte, Options) {
 
 func TestVerifyAcceptsSignedRelease(t *testing.T) {
 	raw, opts := signed(t, nil)
-	release, err := Verify(raw, opts)
+	release, err := Verify(context.Background(), raw, opts)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
@@ -95,7 +100,7 @@ func TestVerifyAcceptsNonReleasedLifecycle(t *testing.T) {
 	for _, status := range []string{StatusDesign, StatusExperimentalDark, StatusShadow, StatusSuspended, StatusRetired} {
 		status := status
 		raw, opts := signed(t, func(r *PackRelease) { r.DerivedStatus = status })
-		if _, err := Verify(raw, opts); err != nil {
+		if _, err := Verify(context.Background(), raw, opts); err != nil {
 			t.Fatalf("Verify(%s): %v", status, err)
 		}
 	}
@@ -176,7 +181,7 @@ func TestVerifyRejects(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			raw, opts := signed(t, test.mutate)
-			_, err := Verify(raw, opts)
+			_, err := Verify(context.Background(), raw, opts)
 			if err == nil {
 				t.Fatalf("Verify accepted an invalid release, want %s", test.reason)
 			}
@@ -218,7 +223,7 @@ func TestVerifyRejectsRawBytes(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			_, err := Verify(test.raw, opts)
+			_, err := Verify(context.Background(), test.raw, opts)
 			if err == nil {
 				t.Fatalf("Verify accepted invalid bytes, want %s", test.reason)
 			}
@@ -238,7 +243,7 @@ func TestVerifyRejectsSignatureDefects(t *testing.T) {
 
 	t.Run("unknown key", func(t *testing.T) {
 		raw, _ := CanonicalPayload(release)
-		_, err := Verify(raw, Options{Now: fixedNow, Keys: KeyRing{"other": public}})
+		_, err := Verify(context.Background(), raw, Options{Now: fixedNow, Keys: KeyRing{"other": public}})
 		if reason, _ := ReasonOf(err); reason != ReasonUnknownKey {
 			t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonUnknownKey)
 		}
@@ -253,7 +258,7 @@ func TestVerifyRejectsSignatureDefects(t *testing.T) {
 		raw[0] ^= 0xff
 		tampered.Signature.Value = base64.StdEncoding.EncodeToString(raw)
 		bytes, _ := CanonicalPayload(&tampered)
-		_, err = Verify(bytes, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
+		_, err = Verify(context.Background(), bytes, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
 		if reason, _ := ReasonOf(err); reason != ReasonInvalidSignature {
 			t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonInvalidSignature)
 		}
@@ -263,7 +268,7 @@ func TestVerifyRejectsSignatureDefects(t *testing.T) {
 		tampered := *release
 		tampered.Signature.Algorithm = "rsa-pss"
 		bytes, _ := CanonicalPayload(&tampered)
-		_, err := Verify(bytes, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
+		_, err := Verify(context.Background(), bytes, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
 		if reason, _ := ReasonOf(err); reason != ReasonUnapprovedAlgorithm {
 			t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonUnapprovedAlgorithm)
 		}
@@ -273,7 +278,7 @@ func TestVerifyRejectsSignatureDefects(t *testing.T) {
 		tampered := *release
 		tampered.Canonicalization.Algorithm = "something-else"
 		bytes, _ := CanonicalPayload(&tampered)
-		_, err := Verify(bytes, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
+		_, err := Verify(context.Background(), bytes, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
 		if reason, _ := ReasonOf(err); reason != ReasonUnsupportedCanon {
 			t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonUnsupportedCanon)
 		}
@@ -282,9 +287,9 @@ func TestVerifyRejectsSignatureDefects(t *testing.T) {
 
 type mapResolver map[string]string
 
-func (m mapResolver) Resolve(id string) (string, bool) {
+func (m mapResolver) Resolve(_ context.Context, id string) (string, bool, error) {
 	digest, ok := m[id]
-	return digest, ok
+	return digest, ok, nil
 }
 
 func TestVerifyReferenceResolution(t *testing.T) {
@@ -302,7 +307,7 @@ func TestVerifyReferenceResolution(t *testing.T) {
 			release.Manifest.ArtifactID:   release.Manifest.Digest,
 			release.Validation.ArtifactID: release.Validation.Digest,
 		}
-		if _, err := Verify(raw, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}, Resolver: resolver}); err != nil {
+		if _, err := Verify(context.Background(), raw, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}, Resolver: resolver}); err != nil {
 			t.Fatalf("Verify: %v", err)
 		}
 	})
@@ -313,7 +318,7 @@ func TestVerifyReferenceResolution(t *testing.T) {
 			release.Manifest.ArtifactID:   release.Manifest.Digest,
 			release.Validation.ArtifactID: release.Validation.Digest,
 		}
-		_, err := Verify(raw, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}, Resolver: resolver})
+		_, err := Verify(context.Background(), raw, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}, Resolver: resolver})
 		if reason, _ := ReasonOf(err); reason != ReasonDigestMismatch {
 			t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonDigestMismatch)
 		}
@@ -321,7 +326,7 @@ func TestVerifyReferenceResolution(t *testing.T) {
 
 	t.Run("unresolved reference rejects", func(t *testing.T) {
 		resolver := mapResolver{release.Card.ArtifactID: release.Card.Digest}
-		_, err := Verify(raw, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}, Resolver: resolver})
+		_, err := Verify(context.Background(), raw, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}, Resolver: resolver})
 		if reason, _ := ReasonOf(err); reason != ReasonUnresolvedReference {
 			t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonUnresolvedReference)
 		}
@@ -329,8 +334,9 @@ func TestVerifyReferenceResolution(t *testing.T) {
 }
 
 // TestSchemaMatchesStruct guards against drift between the normative JSON
-// schema and the Go record: the root required set, the property set, and the
-// derived_status enum must match exactly.
+// schema and the Go record: the root required set, the property set, the
+// derived_status enum, and additionalProperties:false on every object. The
+// value bounds are held by TestVerifyEnforcesSchemaBounds.
 func TestSchemaMatchesStruct(t *testing.T) {
 	path := filepath.Join("..", "..", "schemas", "pack-release-v1.0.json")
 	data, err := os.ReadFile(path)
@@ -338,7 +344,7 @@ func TestSchemaMatchesStruct(t *testing.T) {
 		t.Fatalf("read schema: %v", err)
 	}
 	var schema struct {
-		AdditionalProperties bool           `json:"additionalProperties"`
+		AdditionalProperties *bool          `json:"additionalProperties"`
 		Required             []string       `json:"required"`
 		Properties           map[string]any `json:"properties"`
 		Defs                 map[string]struct {
@@ -348,9 +354,30 @@ func TestSchemaMatchesStruct(t *testing.T) {
 	if err := json.Unmarshal(data, &schema); err != nil {
 		t.Fatalf("parse schema: %v", err)
 	}
-	if schema.AdditionalProperties {
+	if schema.AdditionalProperties == nil || *schema.AdditionalProperties {
 		t.Fatal("schema root must set additionalProperties:false")
 	}
+	var generic any
+	if err := json.Unmarshal(data, &generic); err != nil {
+		t.Fatalf("parse schema: %v", err)
+	}
+	var walk func(path string, node any)
+	walk = func(path string, node any) {
+		switch value := node.(type) {
+		case map[string]any:
+			if value["type"] == "object" && value["additionalProperties"] != false {
+				t.Errorf("schema object %s must set additionalProperties:false", path)
+			}
+			for key, child := range value {
+				walk(path+"/"+key, child)
+			}
+		case []any:
+			for index, child := range value {
+				walk(fmt.Sprintf("%s/%d", path, index), child)
+			}
+		}
+	}
+	walk("#", generic)
 
 	structTags := map[string]struct{}{}
 	recordType := reflect.TypeOf(PackRelease{})
@@ -391,5 +418,194 @@ func TestSchemaMatchesStruct(t *testing.T) {
 	}
 	if !reflect.DeepEqual(enum, wantStatuses) {
 		t.Fatalf("schema derived_status enum %v != %v", enum, wantStatuses)
+	}
+}
+
+type countingResolver struct{ calls int }
+
+func (r *countingResolver) Resolve(context.Context, string) (string, bool, error) {
+	r.calls++
+	return "", false, nil
+}
+
+type failingResolver struct{}
+
+func (failingResolver) Resolve(context.Context, string) (string, bool, error) {
+	return "", false, errors.New("artifact store unavailable")
+}
+
+// TestVerifyChecksSignatureFirst: an unsigned record learns nothing about its
+// own expiry and never reaches the resolver.
+func TestVerifyChecksSignatureFirst(t *testing.T) {
+	raw, _ := signed(t, func(r *PackRelease) { r.Validation.ExpiresAt = "2020-01-01T00:00:00Z" })
+	resolver := &countingResolver{}
+	_, err := Verify(context.Background(), raw, Options{Now: fixedNow, Resolver: resolver})
+	if reason, _ := ReasonOf(err); reason != ReasonUnknownKey || resolver.calls != 0 {
+		t.Fatalf("reason = %q (%v), resolver calls = %d; want %q and 0", reason, err, resolver.calls, ReasonUnknownKey)
+	}
+}
+
+// TestVerifyRejectsNonCanonicalSignatureEncoding: the value is outside the
+// signed payload, so a line break or stray padding bits must not yield a
+// second record that verifies.
+func TestVerifyRejectsNonCanonicalSignatureEncoding(t *testing.T) {
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	for name, respell := range map[string]func(string) string{
+		"line break": func(v string) string { return v[:10] + "\n" + v[10:] },
+		"padding bits": func(v string) string {
+			chars := []byte(v)
+			last := len(chars) - 3 // the character before "=="
+			chars[last] = alphabet[strings.IndexByte(alphabet, chars[last])|1]
+			return string(chars)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			public, private := testKey(t)
+			release := validRelease()
+			if err := Sign(release, "key-1", private); err != nil {
+				t.Fatalf("Sign: %v", err)
+			}
+			release.Signature.Value = respell(release.Signature.Value)
+			raw, _ := CanonicalPayload(release)
+			_, err := Verify(context.Background(), raw, Options{Now: fixedNow, Keys: KeyRing{"key-1": public}})
+			if reason, _ := ReasonOf(err); reason != ReasonInvalidSignature {
+				t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonInvalidSignature)
+			}
+		})
+	}
+}
+
+// TestVerifyEnforcesSchemaBounds holds the Go verifier to the value bounds of
+// schemas/pack-release-v1.0.json.
+func TestVerifyEnforcesSchemaBounds(t *testing.T) {
+	longTrigger := strings.Repeat("x", 257)
+	tests := []struct {
+		name   string
+		mutate func(*PackRelease)
+		reason Reason
+	}{
+		{"uppercase digest", func(r *PackRelease) { r.Card.Digest = "sha256:" + strings.ToUpper(r.Card.Digest[7:]) }, ReasonMalformedDigest},
+		{"65 approval records", func(r *PackRelease) {
+			r.ApprovalRecords = nil
+			for i := 0; i < 65; i++ {
+				r.ApprovalRecords = append(r.ApprovalRecords, fmt.Sprintf("approval-%d", i))
+			}
+		}, ReasonInvalidField},
+		{"257-character expiry trigger", func(r *PackRelease) {
+			r.DerivedStatus = StatusSuspended
+			r.Validation.ExpiryTrigger = &longTrigger
+		}, ReasonInvalidField},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			raw, opts := signed(t, test.mutate)
+			_, err := Verify(context.Background(), raw, opts)
+			if reason, _ := ReasonOf(err); reason != test.reason {
+				t.Fatalf("reason = %q (%v), want %q", reason, err, test.reason)
+			}
+		})
+	}
+
+	t.Run("null approval records", func(t *testing.T) {
+		raw, opts := signed(t, func(r *PackRelease) { r.DerivedStatus = StatusSuspended; r.ApprovalRecords = nil })
+		if !strings.Contains(string(raw), `"approval_records":[]`) {
+			t.Fatalf("absent approvals are not canonically []:\n%s", raw)
+		}
+		null := strings.Replace(string(raw), `"approval_records":[]`, `"approval_records":null`, 1)
+		_, err := Verify(context.Background(), []byte(null), opts)
+		if reason, _ := ReasonOf(err); reason != ReasonNonCanonical {
+			t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonNonCanonical)
+		}
+	})
+}
+
+func TestVerifyBindings(t *testing.T) {
+	raw, opts := signed(t, nil)
+	release := validRelease()
+	foreign := release.Implementation
+	foreign.PhebsBinaryDigest = testDigest("other-binary")
+	tests := []struct {
+		name   string
+		adjust func(*Options)
+		reason Reason
+	}{
+		{"foreign implementation", func(o *Options) { o.Implementation = &foreign }, ReasonDigestMismatch},
+		{"foreign artifact root", func(o *Options) { o.ReferencedArtifactsRootDigest = testDigest("other-root") }, ReasonDigestMismatch},
+		{"withdrawn release", func(o *Options) { o.Revoked = map[string]struct{}{release.ReleaseID: {}} }, ReasonRevoked},
+		{"resolver failure", func(o *Options) { o.Resolver = failingResolver{} }, ReasonUnresolvedReference},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			adjusted := opts
+			test.adjust(&adjusted)
+			_, err := Verify(context.Background(), raw, adjusted)
+			if reason, _ := ReasonOf(err); reason != test.reason {
+				t.Fatalf("reason = %q (%v), want %q", reason, err, test.reason)
+			}
+		})
+	}
+}
+
+func TestVerifyForLoad(t *testing.T) {
+	release := validRelease()
+	bound := func(opts Options) Options {
+		opts.Implementation = &release.Implementation
+		opts.ReferencedArtifactsRootDigest = release.ReferencedArtifactsRootDigest
+		opts.Resolver = mapResolver{
+			release.Card.ArtifactID:       release.Card.Digest,
+			release.Manifest.ArtifactID:   release.Manifest.Digest,
+			release.Validation.ArtifactID: release.Validation.Digest,
+		}
+		return opts
+	}
+
+	raw, opts := signed(t, nil)
+	if _, err := VerifyForLoad(context.Background(), raw, bound(opts)); err != nil {
+		t.Fatalf("VerifyForLoad: %v", err)
+	}
+	if _, err := VerifyForLoad(context.Background(), raw, opts); err == nil {
+		t.Fatal("VerifyForLoad admitted a release without its bindings")
+	} else if reason, _ := ReasonOf(err); reason != ReasonUnresolvedReference {
+		t.Fatalf("reason = %q (%v), want %q", reason, err, ReasonUnresolvedReference)
+	}
+	for _, status := range []string{StatusDesign, StatusExperimentalDark, StatusShadow, StatusSuspended, StatusRetired} {
+		raw, opts := signed(t, func(r *PackRelease) { r.DerivedStatus = status })
+		_, err := VerifyForLoad(context.Background(), raw, bound(opts))
+		if reason, _ := ReasonOf(err); reason != ReasonNotReleased {
+			t.Fatalf("VerifyForLoad(%s): reason = %q (%v), want %q", status, reason, err, ReasonNotReleased)
+		}
+	}
+}
+
+func TestSignRefusesRecordsVerifyRejects(t *testing.T) {
+	_, private := testKey(t)
+	tests := []struct {
+		name   string
+		mutate func(*PackRelease)
+		reason Reason
+	}{
+		{"released without approvals", func(r *PackRelease) { r.ApprovalRecords = nil }, ReasonMissingApproval},
+		{"malformed digest", func(r *PackRelease) { r.Manifest.Digest = "sha256:zz" }, ReasonMalformedDigest},
+		{"unsupported schema", func(r *PackRelease) { r.ReleaseSchemaVersion = "2.0" }, ReasonUnsupportedSchema},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			release := validRelease()
+			test.mutate(release)
+			err := Sign(release, "key-1", private)
+			if reason, _ := ReasonOf(err); reason != test.reason || release.Signature.Value != "" {
+				t.Fatalf("Sign reason = %q (%v), value %q; want %q and no value",
+					reason, err, release.Signature.Value, test.reason)
+			}
+		})
+	}
+}
+
+func TestReleaseErrorUnwrapsCause(t *testing.T) {
+	raw, opts := signed(t, func(r *PackRelease) { r.ApprovedAt = "yesterday" })
+	_, err := Verify(context.Background(), raw, opts)
+	var parseErr *time.ParseError
+	if !errors.Is(err, ErrInvalidRelease) || !errors.As(err, &parseErr) {
+		t.Fatalf("err = %v; want ErrInvalidRelease wrapping a *time.ParseError", err)
 	}
 }
