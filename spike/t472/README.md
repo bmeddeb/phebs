@@ -4,9 +4,12 @@ This directory freezes the T47.2b caller-quality corpus **selection**: the
 public repositories, pinned commits and license/provenance records the
 preregistered caller-quality protocol
 ([`docs/CALLER_QUALITY_PROTOCOL.md`](../../docs/CALLER_QUALITY_PROTOCOL.md),
-§2 and §4) will validate. It selects no labels, derives no inputs, runs no
-extraction and scores no metric. Sealing under T47.2b fills the remaining
-protocol placeholders and unseals nothing before every placeholder is filled.
+§2 and §4) will validate. It selects no labels, runs no extraction and scores
+no metric. A later slice derives the §2 inputs — a root `index.scip` plus the
+`t20-layout-snapshot-v1` and `t20-generated-from-v1` resolver snapshots — at
+each pin and records them below and in [`corpus.lock.json`](corpus.lock.json);
+derivation is not sealing. Sealing under T47.2b fills the remaining protocol
+placeholders and unseals nothing before every placeholder is filled.
 
 ## Four-axis eligibility (checked 2026-10-09)
 
@@ -44,19 +47,161 @@ pinned commit. Full 40-hex pins and the machine-readable record live in
   result is adopted from them, and their retained bytes are untouched
   (`TestSealedT111TreeDigest` stays exact).
 
-## What is not here (and the derivation plan)
+## Derivation record (2026-10-09)
 
-No clones, no derived `index.scip`, no `layout-snapshot.json` /
-`generated-from-snapshot.json`, no labels, no scores. The next slice derives,
-per repository, the §2 inputs at the pinned commit: root `index.scip` built
-with the pinned `scip-go` recipe in
-[`../t457/native_tool_pins_amd64.json`](../t457/native_tool_pins_amd64.json),
-plus `t20-layout-snapshot-v1` and `t20-generated-from-v1` snapshots authored
-from the checked-in tree, committed as a derived local commit with SHA-256
-digests locked here in the `derived` objects, in the shape precedented by
-[`../t221/corpus.lock.json`](../t221/corpus.lock.json) and
-[`../t201/README.md`](../t201/README.md). Derivation enforces the §2 bounds
-(≤ 200,000 files, blob ≤ 10 MiB, `index.scip` ≤ 64 MiB) and measures the
-measured risk that vitess or istio full-repo `index.scip` may approach the
-64 MiB bound; a bound miss is a selection change recorded here, never a silent
-adjustment.
+The §2 inputs were derived at each frozen pin. Nothing here is a label, an
+extraction, a score or a seal; this is the input tuple only. The recipe, every
+tool digest and every measured fact are locked in
+[`corpus.lock.json`](corpus.lock.json) (`derived` per repository, plus the
+top-level `derivation` object). Three of five repositories pass §2 and carry a
+derived commit; two are refused on a bound miss and are recorded as an open
+selection change.
+
+### Recipe and tool identity
+
+One `scip-go index` run per Go module in run-plan order (27 runs total across
+the five repositories), then a canonical merge, then snapshot authoring:
+
+```
+GOTOOLCHAIN=go1.27.1 scip-go index \
+  --module-root <abs module dir> \
+  --repository-remote github.com/<owner>/<repo> \
+  --module-version <pin12> \
+  --skip-implementations --output <abs path>
+```
+
+| Tool | Version / source | SHA-256 | Bytes |
+|---|---|---|---|
+| `scip-go` | v0.2.7 (`spike/t457/native_tool_pins_amd64.json`) | `31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4` | 18,104,856 |
+| `merge` | `spike/t472/derivation/merge` | `4c22c00f3ed7a17097da5fa32c55561703394a8f8bf80a2400c3c169e3324cce` | 6,807,487 |
+| `snapshots` | `spike/t472/derivation/snapshots` | `8bd8fd8c4924b4ab9839acd1632b98b8648796431f88895b6f24200c8d534a2f` | 4,163,718 |
+
+`merge` canonicalizes every run to sorted unique document paths under one tool
+version and canonical field order, drops out-of-tree cgo build-cache documents,
+and refuses a merged stream over the frozen bound. `snapshots` authors both
+resolver snapshots from the checked-in tree and validates them through the
+production decoders and limits in `internal/resolverinput` plus the §2 corpus
+bounds — the same 13 gates for all five repositories, including the two
+refused ones. The runner is serial and fail-closed and re-verifies the
+`scip-go` digest before any run.
+
+### §2 bounds (frozen by T47.2a, enforced as written)
+
+Corpus inventory ≤ 200,000 files; blob ≤ 10 MiB (10,485,760 B); root
+`index.scip` ≤ 64 MiB (67,108,864 B). The bounds were **not** raised after
+measurement; a different byte is a different protocol.
+
+### Committed repositories (3 of 5)
+
+| Repository | Pin → derived commit | `index.scip` bytes (SHA-256) | merge docs / occurrences / symbols | cgo out-of-tree dropped | module runs |
+|---|---|---|---|---|---|
+| etcd-io/etcd | `f061acd0…` → `b0e608e2…` | 33,498,092 (31.9 MiB) `65de33af…` | 1,076 / 395,236 / 63,330 | 101 | 14 |
+| containerd/containerd | `3ea5bdbf…` → `abe7dcb1…` | 38,653,529 (36.9 MiB) `b3683169…` | 1,196 / 412,229 / 70,547 | 116 | 2 |
+| grpc/grpc-go | `5f1ccf56…` → `ccda7b9d…` | 51,916,163 (49.5 MiB, 77% of bound) `2e4fd790…` | 1,064 / 544,909 / 85,113 | 156 | 10 |
+
+Every merged stream reports 0 external symbols dropped and 0
+round-trip-unstable documents. Snapshot digests and corpus-inventory facts:
+
+| Repository | `layout-snapshot.json` (bytes · SHA-256) | `generated-from-snapshot.json` (bytes · SHA-256) | clients / mapped / abstained | layout roots | regular files | symlinks | max blob |
+|---|---|---|---|---|---|---|---|
+| etcd-io/etcd | 830 · `21cf1837…` | 710 · `6bd76e59…` | 3 / 3 / 0 | 6 | 1,493 | 11 | 630,280 (`Documentation/etcd-internals/diagrams/write_workflow_follower.png`) |
+| containerd/containerd | 9,884 · `c7302852…` | 9,184 · `d0e7e490…` | 40 / 35 / 5 | 70 | 6,669 | 4 | 1,704,050 (`vendor/k8s.io/api/core/v1/generated.pb.go`) |
+| grpc/grpc-go | 1,527 · `3767d960…` | 1,450 · `72281f62…` | 17 / 6 / 11 | 12 | 1,381 | 7 | 567,170 (`examples/go.sum`) |
+
+Full 64-hex digests, git blob SHA-1s, derived tree hashes and per-module rel
+lists are in the `derived` objects of [`corpus.lock.json`](corpus.lock.json).
+All file counts are far under 200,000 and all blobs are under 10 MiB.
+
+### Refused repositories (2 of 5) — bound miss
+
+| Repository | Pin | merged stream bytes (SHA-256) | ratio to 64 MiB | blob bound |
+|---|---|---|---|---|
+| vitessio/vitess | `0ee52554…` | 188,191,177 (179.5 MiB) `ea5a7170…` | **2.80× over** | **miss** — `web/vtadmin/src/proto/vtadmin.js` 12,724,483 B > 10 MiB |
+| istio/istio | `d501e135…` | 77,222,752 (73.6 MiB) `bea6784b…` | **1.15× over** | satisfied (max 1,400,591 B) |
+
+`scipmerge` measured each merged stream over the frozen 67,108,864-byte bound
+and refused to place an over-bound artifact (verbatim: `merge: merged stream is
+188191177 bytes, over the 67108864-byte bound; refusing to place an
+over-bound artifact` and the same shape for istio). Each refused stream is
+retained unrenamed at
+`/home/ben/phebs-rehearsals/t472-derivation/merged/{vitess,istio}/index.scip.tmp`
+with its digest recorded in the lock. The single-module raw root indexes before
+merge were vitess 191,695,210 B `4be9ea65…` and istio 78,943,875 B `1c25282b…`.
+
+For both refused repositories the snapshots were still authored and passed all
+13 production gates, but §2 admits a repository only as a whole tuple; with no
+admissible `index.scip` nothing was placed in the clone and no derived commit
+exists. The clones remain at their pins with clean working trees. Unplaced
+snapshot digests (vitess layout `c1863c5a…` / generated-from `fb4204f6…`, 8/8
+clients mapped, 16 roots, 5,163 files; istio layout `e14812b2…` /
+generated-from `65ab04c0…`, 1/1 mapped, 2 roots, 6,744 files) are recorded in
+the lock so a re-selection can reuse the authored bytes only if the same pin is
+re-admitted.
+
+### Abstentions (16 total, all honest)
+
+53 of 69 generated clients mapped to a committed declaration; 16 abstained
+rather than inventing an attribution: **14 `declaration_not_found`** (the
+`.proto` lives outside the repository — upstream `grpc/grpc-proto`,
+`opentelemetry-proto`, `k8s.io` staging — so the checked-in generated client
+has no in-repo declaration to attribute) and **2 `no_source_line`** (the two
+`grpc_reflection_v1alpha` clients whose generated header carries no source-line
+annotation). grpc-go abstains 11 of 17; containerd abstains 5 of 40 (all five
+vendored). etcd, vitess and istio abstain 0. These are declines to guess, not
+extraction failures.
+
+### Containerd client-count reconciliation
+
+The four-axis table records **17** generated clients under `api/services/*/v1`
+— the non-vendored production clients that motivated selection. The snapshot
+tool enumerates every checked-in file carrying the unique header, which is
+**40**: the same 17 non-vendored (all mapped) plus 23 vendored copies (18
+mapped, 5 abstained). Both numbers are correct for their own scope; the lock
+records 40 as the derived `clients` count and 17 as the non-vendored
+`nonvendored_mapped` figure.
+
+### Operator incidents (recorded honestly)
+
+- **Runner IFS bug.** The run ledger (`RUN_STATUS`) first showed
+  `FAIL containerd 5391 rc=1`. The cause was a shell `IFS` word-splitting bug
+  in `run_scip.sh` that collapsed the empty module rel for the root module into
+  a missing argument — not a `scip-go` failure. It was corrected with an
+  explicit `.` root marker and the containerd root module was re-run (1,079
+  docs, 115 cgo out-of-tree dropped). No measurement was salvaged from the
+  failed invocation.
+- **`scipmerge --stats` misuse.** `--stats` is an inspect-mode **input** (it
+  reads a prior stats file), not an output path; the merge report is emitted as
+  indented JSON on **stdout**. An early invocation passed `--stats
+  <out>.merge.json` and failed with `merge: open …merge.json: no such file or
+  directory`. Corrected by capturing stdout; no artifact was mis-recorded.
+
+### Derived-commit and custody policy
+
+The three §2 files are committed inside each clone on a local derived commit
+whose only parent is the pinned upstream commit; each derived commit's stat is
+exactly `3 files changed` (the binary index plus two small JSON snapshots) and
+**no upstream file is modified**. The clones live at `spike/t472/corpus/<repo>`,
+are gitignored in phebs, and nothing is pushed. The derived commits, trees and
+every digest are locked in `corpus.lock.json`.
+
+### Corpus disposition — open, Ben's routing
+
+A §2 bound miss is a selection change recorded here, never a silent adjustment.
+Because vitess and istio miss §2, the corpus disposition is **open** with three
+recorded options (full text in `derivation.disposition`):
+
+- **A** — drop vitess and istio, leaving a three-repository corpus. Loses the
+  largest production multi-module monorepo and the degenerate test/generated-only
+  stratum; the §6 strata and §3 denominators shrink and are re-recorded before
+  sealing.
+- **B** — replace one or both through a fresh four-axis selection run. Each
+  replacement must itself pass §2 at its own pin, including both bounds; the
+  selection table and this lock are re-dated and the derivation re-run.
+- **C** — amend the §2 bound. Rejected as a post-hoc preregistration violation
+  unless Ben explicitly directs it, in which case it is recorded as a dated
+  protocol amendment with its own digest and the pre-amendment measurements are
+  preserved beside it.
+
+No option is chosen unilaterally: the drop-vs-replace decision changes the
+preregistered corpus, the §6 strata and the §3 denominators, so it is left for
+Ben's routing before sealing.
