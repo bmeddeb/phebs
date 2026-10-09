@@ -547,7 +547,7 @@ reaches it:
 Startup then reads the directory once, at this admitted boundary, and never on
 a request, sync, or per-query path. Every record present must verify, so a
 malformed or non-canonical record, an unknown or foreign signing key, a
-mismatched digest, an expired release, an unsupported schema or
+mismatched digest, an unsupported schema or
 component version, a non-regular or symlinked `*.json` entry, an oversized
 record, more than 1,024 directory entries, or two records naming one pack at
 the same `release_version` refuses startup rather than being skipped. That is
@@ -560,8 +560,10 @@ governing record that verifies, is unexpired and applicable, and carries the
 bound to a fixed in-tree recipe compiled into this binary. A verified released
 pack with no bound recipe is an unresolved release inconsistency and refuses
 startup rather than silently admitting nothing, so a released authorization can
-never outrun its implementation. A governing record in any other status
-withdraws its pack instead of refusing the server; see
+never outrun its implementation. A governing record in any other status, or
+a governing released record whose validation has expired or whose approval
+lies in the future, withdraws its pack instead of refusing the server; a
+superseded record's expiry has no effect. See
 [Pack-release status, expiry, suspension and rollback](./OPERATIONS.md#pack-release-status-expiry-suspension-and-rollback-t484)
 for the statuses, what each permits, and how a withdrawal is observed.
 

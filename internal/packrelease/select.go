@@ -28,16 +28,17 @@ type Selection struct {
 }
 
 // Withdrawal records a pack the selection directory named that is not admitted.
-// It is operator-facing startup evidence: it carries a pack identifier the
-// operator configured and a bounded lifecycle cause, never a record's contents,
+// It is operator-facing startup evidence: it carries a pack identifier from an
+// authenticated record and a bounded cause, never a record's contents,
 // signature, artifacts or any repository data.
 type Withdrawal struct {
 	// PackID is the canonical pack identifier the governing record carries.
 	PackID string
 	// Cause is CauseRevoked when operator configuration withdraws the governing
-	// record, or that record's own lifecycle status when the status admits no
-	// ordinary load. Both are bounded: a status has already matched the closed
-	// lifecycle set before a record can govern.
+	// record, that record's own lifecycle status when the status admits no
+	// ordinary load, or "expired" / "future_approval" when a released governing
+	// record fails its clock check. All are bounded: a status has already
+	// matched the closed lifecycle set before a record can govern.
 	Cause string
 }
 
@@ -89,11 +90,14 @@ func (s Selection) Released(packID string) (*PackRelease, bool) {
 //     selection adds no pack work.
 //   - A configured directory that cannot be read, a *.json entry that is not a
 //     regular file, or any record that fails authentication or structure
-//     refuses the whole selection rather than being skipped.
+//     refuses the whole selection rather than being skipped. The clock is not
+//     part of that check: a superseded record whose validation later expires
+//     changes nothing.
 //   - For each pack, the record with the highest release_version governs; two
 //     records sharing that version refuse the selection. A governing record
-//     that is not released (for example a later signed suspension), or whose
-//     release_id the operator revoked, withdraws the pack, so an older released
+//     that is not released (for example a later signed suspension), whose
+//     release_id the operator revoked, or whose validation has expired or whose
+//     approval lies in the future, withdraws the pack, so an older released
 //     record never outlives its suspension or supersession. Withdrawal is the
 //     whole effect: the pack is not admitted and no older record replaces it,
 //     because a rollback is a newly signed record rather than a consequence of
@@ -148,7 +152,7 @@ func LoadSelection(ctx context.Context, dir string, opts Options) (Selection, er
 		if err != nil {
 			return selection, fmt.Errorf("read release record %q: %w", entry.Name(), err)
 		}
-		release, err := Verify(ctx, raw, authOpts)
+		release, err := verifyRecord(raw, authOpts)
 		if err != nil {
 			return selection, fmt.Errorf("release record %q: %w", entry.Name(), err)
 		}
@@ -186,6 +190,18 @@ func LoadSelection(ctx context.Context, dir string, opts Options) (Selection, er
 			selection.withdrawn = append(selection.withdrawn, Withdrawal{
 				PackID: packID, Cause: winner.release.DerivedStatus,
 			})
+			continue
+		}
+		// Validation expiry is automatic suspension: an expired (or not yet
+		// approved) governing record withdraws its pack like a signed
+		// suspension. Only the governing record is judged against the clock,
+		// so a superseded record expiring later changes nothing.
+		if err := validateReleasedTime(winner.release, opts.now()); err != nil {
+			reason, _ := ReasonOf(err)
+			if reason != ReasonExpired && reason != ReasonFutureApproval {
+				return selection, fmt.Errorf("release record %q: %w", winner.name, err)
+			}
+			selection.withdrawn = append(selection.withdrawn, Withdrawal{PackID: packID, Cause: string(reason)})
 			continue
 		}
 		if err := requireLoadBindings(opts); err != nil {
