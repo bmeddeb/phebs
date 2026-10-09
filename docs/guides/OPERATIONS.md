@@ -3616,8 +3616,9 @@ startup shapes over the real admission boundary:
 1. **Absent selection** — no read, no pack admitted, and only the
    provisional-dark set registers (nothing when every switch is off).
 2. **One released pack** — admitted only through its own bound recipe, it
-   governs only its own domain, and it enables no other registry that the API
-   or MCP discovery surfaces read.
+   governs only its own domain and leaves the downstream resolver and
+   caller-execute registries — read by runtime scheduling and reconciliation,
+   never by the API or MCP discovery surfaces — disabled.
 3. **Mixed released and provisional** — the released pack replaces the
    experimental-dark extractor for its own domain, while every other domain
    keeps its switch-gated admission.
@@ -3627,8 +3628,9 @@ pack withdraws cleanly and never refuses an otherwise healthy startup, but a
 released record that verifies and cannot be bound — no load bindings, or no
 fixed in-tree recipe — refuses the whole startup rather than being skipped:
 one unbound release blocks the server, not one pack. The bounded startup error
-names the pack, and the correction is the missing binding or recipe, never a
-looser gate.
+names what to repair: the pack for a missing recipe, and the release record
+file for a missing or unmatched load binding. The correction is that binding
+or recipe, never a looser gate.
 
 **Discovery follows the provisional switches alone.** Admitting or withdrawing
 a released pack changes what runs; it never changes what the API or MCP

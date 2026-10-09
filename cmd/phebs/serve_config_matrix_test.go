@@ -88,10 +88,13 @@ func captureLogDuring(t *testing.T, run func()) string {
 // TestStartupAdmissionAndDiscoveryMatrix drives the real ordinary startup
 // boundary (newServeExtractionRegistries) across the absent, one-pack and
 // mixed-pack configuration matrix T48.4 must qualify. Every scenario asserts
-// the admitted domain set, both registry gates the API/MCP discovery surfaces
-// read, the exact startup refusal when admission refuses, and the exact
-// startup log — including silence, because a dark startup must stay
-// byte-for-byte unchanged.
+// the admitted domain set, both downstream registry gates that the runtime
+// scheduling and reconciliation paths read, the exact startup refusal when
+// admission refuses, and the exact startup log — including silence, because a
+// dark startup must stay byte-for-byte unchanged. The Caller Map discovery
+// predicate is the other half of the matrix and is pinned by
+// TestCallerMapDiscoveryFollowsTheProvisionalSwitchesAlone over this same
+// boundary.
 func TestStartupAdmissionAndDiscoveryMatrix(t *testing.T) {
 	tests := []struct {
 		name string
@@ -107,8 +110,9 @@ func TestStartupAdmissionAndDiscoveryMatrix(t *testing.T) {
 		refuseReason packrelease.Reason
 		// wantDomains is the sorted admitted domain set.
 		wantDomains []string
-		// wantResolver and wantCaller are the registry gates the discovery
-		// surfaces read.
+		// wantResolver and wantCaller are the downstream registry gates the
+		// runtime scheduling and reconciliation paths read; the API/MCP
+		// discovery surfaces never consult them.
 		wantResolver bool
 		wantCaller   bool
 		// wantLog is the exact startup log, silence included.
@@ -291,38 +295,86 @@ func TestStartupAdmissionAndDiscoveryMatrix(t *testing.T) {
 	}
 }
 
-// TestCallerMapDiscoveryFollowsTheProvisionalSwitchesAlone pins that the
-// Caller Map discovery predicate reads the provisional extraction switches and
-// nothing else: a configured selection — even one naming a signed admitted
-// pack — never flips the surface, so the ordinary/released path cannot make
-// another component discoverable and only an explicit future ticket can move
-// discovery to selection-aware behavior.
+// TestCallerMapDiscoveryFollowsTheProvisionalSwitchesAlone holds the discovery
+// predicate across every provisional switch combination under three real
+// startup shapes: no selection, a signed released pack genuinely admitted by
+// newServeExtractionRegistries, and a suspended pack it withdraws. Discovery
+// follows the provisional switches alone, so neither admission nor withdrawal
+// can make another component discoverable, and only an explicit future ticket
+// can move discovery to selection-aware behavior.
 func TestCallerMapDiscoveryFollowsTheProvisionalSwitchesAlone(t *testing.T) {
-	selection := newReleasedSelection(t)
-	selection.admit(t, "phebs.proto.contract", "key-1", packrelease.StatusReleased)
-
+	// A withdrawn pack is withdrawn visibly: the startup log names it exactly.
+	withdrawnLog := "pack release selection: 1 configured pack(s) not admitted: phebs.proto.contract=suspended\n"
+	// The stub recipe's version is deliberately distinct from every dark
+	// extractor's identity — the real proto-contract extractor reports the same
+	// "3.0.0" a fixture would naively reuse — so presence of this exact
+	// (domain, version) pair proves the signed released pack was admitted
+	// rather than the switch-gated dark extractor that shares its domain.
+	const releasedVersion = "9.9.9"
 	tests := []struct {
-		name        string
-		proto       bool
-		thrift      bool
-		wantOffered bool
+		name   string
+		proto  bool
+		thrift bool
+		// status is the governing record's derived status; "" means no
+		// selection path is configured at all.
+		status string
+		// wantAdmitted is whether the released pack's own extractor reached the
+		// admitted set, which only the signed released shape earns and the
+		// suspended shape is refused.
+		wantAdmitted bool
+		wantOffered  bool
+		wantLog      string
 	}{
-		{"both switches dark", false, false, false},
-		{"the proto switch alone", true, false, true},
-		{"the thrift switch alone", false, true, true},
-		{"both switches", true, true, true},
+		{"no selection, both switches dark", false, false, "", false, false, ""},
+		{"no selection, the proto switch alone", true, false, "", false, true, ""},
+		{"no selection, the thrift switch alone", false, true, "", false, true, ""},
+		{"no selection, both switches", true, true, "", false, true, ""},
+		{"a released pack admitted, both switches dark", false, false, packrelease.StatusReleased, true, false, ""},
+		{"a released pack admitted, the proto switch alone", true, false, packrelease.StatusReleased, true, true, ""},
+		{"a released pack admitted, the thrift switch alone", false, true, packrelease.StatusReleased, true, true, ""},
+		{"a released pack admitted, both switches", true, true, packrelease.StatusReleased, true, true, ""},
+		{"a suspended pack withdrawn, both switches dark", false, false, packrelease.StatusSuspended, false, false, withdrawnLog},
+		{"a suspended pack withdrawn, the proto switch alone", true, false, packrelease.StatusSuspended, false, true, withdrawnLog},
+		{"a suspended pack withdrawn, the thrift switch alone", false, true, packrelease.StatusSuspended, false, true, withdrawnLog},
+		{"a suspended pack withdrawn, both switches", true, true, packrelease.StatusSuspended, false, true, withdrawnLog},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cfg := &config.Config{}
 			cfg.Experimental.ProvisionalProtoExtraction = test.proto
 			cfg.Experimental.ProvisionalThriftExtraction = test.thrift
-			if got := callerMapDiscoverable(cfg); got != test.wantOffered {
-				t.Fatalf("without a selection: discoverable = %v, want %v", got, test.wantOffered)
+			if test.status != "" {
+				selection := newReleasedSelection(t)
+				record := selection.admit(t, "phebs.proto.contract", "key-1", test.status)
+				if test.status == packrelease.StatusReleased {
+					bindReleaseLoad(t, record)
+					bindRecipes(t, map[string][]extract.Extractor{
+						"phebs.proto.contract": {stubExtractor{domain: "proto-contract", version: releasedVersion}},
+					})
+				}
+				selection.bind(cfg)
 			}
-			selection.bind(cfg)
 			if got := callerMapDiscoverable(cfg); got != test.wantOffered {
-				t.Fatalf("with a selection: discoverable = %v, want %v", got, test.wantOffered)
+				t.Fatalf("before startup: discoverable = %v, want %v", got, test.wantOffered)
+			}
+			deps := &serveDeps{ctx: context.Background(), cfg: cfg}
+			var err error
+			output := captureLogDuring(t, func() { err = newServeExtractionRegistries(deps) })
+			if err != nil {
+				t.Fatalf("newServeExtractionRegistries: %v", err)
+			}
+			if output != test.wantLog {
+				t.Fatalf("startup log = %q, want %q", output, test.wantLog)
+			}
+			admitted := slices.ContainsFunc(deps.exs, func(candidate extract.Extractor) bool {
+				return candidate.Domain() == "proto-contract" && candidate.Version() == releasedVersion
+			})
+			if admitted != test.wantAdmitted {
+				t.Fatalf("released pack extractor admitted = %v (domains %v), want %v",
+					admitted, extractorDomains(deps.exs), test.wantAdmitted)
+			}
+			if got := callerMapDiscoverable(deps.cfg); got != test.wantOffered {
+				t.Fatalf("after startup: discoverable = %v, want %v", got, test.wantOffered)
 			}
 		})
 	}
