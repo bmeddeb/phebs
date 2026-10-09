@@ -107,7 +107,70 @@ isolated pressure/allocation/restore adapters, new Linux-bound plan versions and
 aggregate physical/effective-cgroup resource/readiness admission remain open; no
 ceremony entry point is enabled.
 
+T42.H2g bounds the two delegation locations the admitted Linux Git and Go
+observations could not see. `ObserveExecutionGitExecPathManifest` measures the
+exec-path one selected Git core image reports and censuses it structurally —
+each entry classified by Lstat type, symlink target, size, permission bits and a
+64-byte header screen — requiring exactly one regular native `git` that hashes
+byte-equal to the selected image and at least one bare-sibling symlink delegating
+to it, so neither a directory of unrelated helpers nor a lone copied core
+satisfies the recipe. `ObserveExecutionGoSDKLocation` measures the GOROOT and
+GOTOOLDIR one selected Go image reports for itself under `GOTOOLCHAIN=local`,
+binds the pair rather than either field alone, and requires the on-disk `VERSION`
+marker and a second `go version` probe to both equal the verifier toolchain
+release. Both share one bounded Linux census layer that refuses instead of
+truncating, sorts explicitly because `ReadDir` returns kernel order, and
+length-prefixes every canonical field. Neither hashes a tree: only two paths are
+ever read in full on the Git side and one on the Go side, so the 172-entry
+exec-path and the 15,026-file SDK stay bounded at 196 and 26 metadata
+inspections respectively, and the SDK is never walked. Neither observation adds
+a field to `ExecutionToolIdentity`, so an observed identity remains neither a
+launch recipe nor dispatch authority, and both stay unadmitted on Darwin. No
+launcher authority, session teardown or dispatch admission follows. The Linux
+immutable-flag input-custody model, isolated pressure/allocation/restore
+adapters, new Linux-bound plan versions and aggregate physical/effective-cgroup
+resource/readiness admission remain open; no ceremony entry point is enabled.
+
 ## Current product posture
+
+**Caller Map production priority (2026-10-09, Ben-directed):** after immediate
+SCIP operational availability, Epic 47 targets a supported Caller Map release
+for repositories within current admitted limits. Ben explicitly keeps
+large-monorepo claims gated rather than making the Epic 42 scale ceremony a
+prerequisite for this smaller release. T47.1 records the contract and current
+gaps; T47.2 freezes and independently validates the selected identity and input
+recipes, split into T47.2a (docs-only freeze of the Go/gRPC committed-index
+recipe tuple and the prospective caller-quality preregistration) and T47.2b
+(corpus sealing with license/provenance records, independent labels and
+measurement); T47.3 separates ordinary runtime registration from provisional
+extraction switches; T47.4 measures security, lifecycle and operating limits;
+T47.5 performs the exact-artifact promotion and product closure. Current
+limits are safety ceilings, not measured production capacity. Each Go/gRPC or
+Go/Thrift recipe earns support separately. Caller-quality evidence and a
+caller-specific release record remain mandatory; the existing dark posture
+does not change through this planning decision. Epic 42 continues as the
+separate Linux/scale track, and the retained pilot, generated-SCIP evidence
+hold and unrelated experimental packs retain their own authority and gates.
+
+**Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
+give every current experimental evidence pack and composed product surface a
+named production path. Epic 48 implements the currently design-only signed
+release enforcement and shares validation/operating machinery; each other
+epic owns its own scope and measured decision. Priority is SCIP availability,
+then Caller Map (47) with the declaration identity/discovery subset of Atlas
+(49), then caller comparison (50). Protobuf fields (51) and compatibility
+(53) follow their input/declaration prerequisites; Impact (54) follows the
+specific released caller/field/verdict inputs it claims. Apache/thriftrw
+fields (52), RPC syntactic consumer/registration evidence (58), Kafka producer
+(55) and Kafka consumer (56) have independent recipe gates; Topics (57)
+composes only admitted Kafka planes. A producer result never promotes the
+consumer. The next tickets are T47.2, T49.1 and T48.2; prepare independent
+contracts/corpora while shared runtime enforcement is built, but serialize
+expensive host execution and Git/spine edits. Production support starts inside
+measured limits with headroom; existing safety ceilings alone are not an
+operating result. No capability waits on an unrelated pack or an unclaimed
+large-scale workflow, and no new status is granted by this plan. The full
+dependency and pack-ownership matrix is in the Epic 48 backlog section.
 
 phebs ships as a self-hosted, single-node Go application with:
 

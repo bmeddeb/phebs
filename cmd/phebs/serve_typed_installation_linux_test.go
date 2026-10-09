@@ -109,13 +109,17 @@ func (f *installationFixture) save(t *testing.T) {
 }
 
 type installationTestStore struct {
-	source typedindex.Source
-	intent store.TypedIndexIntent
-	writes int
-	drift  bool
+	source  typedindex.Source
+	intent  store.TypedIndexIntent
+	writes  int
+	drift   bool
+	missing bool
 }
 
 func (s *installationTestStore) GetTypedSource(context.Context, string) (typedindex.Source, error) {
+	if s.missing {
+		return typedindex.Source{}, store.ErrNotFound
+	}
 	return s.source, nil
 }
 func (s *installationTestStore) GetTypedIndexIntent(context.Context, string) (store.TypedIndexIntent, error) {
@@ -172,12 +176,32 @@ func TestManagedSCIPInstallationRestartAndSourceFences(t *testing.T) {
 		t.Fatal("changed control admitted")
 	}
 	writeInstallationControl(t, filepath.Join(f.directory, "inventory.json"), f.inventory)
-	for _, mode := range []string{"source", "restore", "epoch", "write-drift"} {
+	// A moved or removed source withdraws the repository; startup continues.
+	for _, mode := range []string{"source", "removed"} {
 		t.Run(mode, func(t *testing.T) {
+			fresh, err := loadTypedServeInstallation(t.Context(), f.selected)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := &installationTestStore{source: entry.Source, missing: mode == "removed"}
+			s.source.Generation = typedNavigationBytes([]byte("other"))
+			if err := fresh.Registry.install(t.Context(), s, f.data); err != nil || s.writes != 0 {
+				t.Fatal("moved source refused startup or wrote", err, s.writes)
+			}
+			if fresh.Registry.admits(store.TypedIndexOperator{Source: entry.Source, Profile: profile, ProfileEpoch: entry.ProfileEpoch, UniverseDigest: entry.UniverseDigest}) || fresh.Registry.provider(typedindex.ModuleProviderID) {
+				t.Fatal("withdrawn repository still admitted")
+			}
+		})
+	}
+	for _, mode := range []string{"restore", "epoch", "write-drift"} {
+		t.Run(mode, func(t *testing.T) {
+			fresh, err := loadTypedServeInstallation(t.Context(), f.selected)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := fresh.Registry
 			s := &installationTestStore{source: entry.Source}
 			switch mode {
-			case "source":
-				s.source.Generation = typedNavigationBytes([]byte("other"))
 			case "restore":
 				s.intent = store.TypedIndexIntent{ProfileEpoch: 1, ProfileDigest: entry.ProfileDigest, UniverseDigest: entry.UniverseDigest, RestoreRequired: true}
 			case "epoch":

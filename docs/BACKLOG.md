@@ -3753,20 +3753,193 @@ adapters/admission and ceremony entry-point integration remain pending; no
 complete readiness, new plan, freeze, ceremony or scale claim follows.
 
 **T42.H2g · Linux Git exec-path helper manifest and Go SDK location recipes**
-*(next H2 slice)* — extend the admitted Linux external-tool observation from one
-core image to the locations the tools actually delegate to: a bounded
-`git --exec-path` helper manifest observation and a Go GOROOT/SDK location
-recipe, each fail-closed, each structural rather than nominal, and neither
-hashing enough content to become an unbounded host scan. The 172-entry exec-path
-on this host holds 142 symlinks to the core image, 3 symlinks to
+*(seventh H2 slice, 2026-10-08)* — extend the admitted Linux external-tool
+observation from one core image to the two locations those tools actually
+delegate to: a bounded `git --exec-path` helper manifest and a Go GOROOT/SDK
+location recipe. Both are fail-closed, both are structural rather than nominal,
+and neither hashes enough content to become an unbounded host scan, so the gap
+T42.H2e named — native-image headers and Git core equality reject scripts and a
+delegating shim but prove nothing about helper closure or SDK location — is now
+bounded on Linux amd64 without widening the identity itself. The 172-entry
+exec-path on this host holds 142 symlinks to the core image, 3 symlinks to
 `git-remote-http`, 25 other separate regular helpers, the core regular file that
 already hashes equal to the selected image and one `mergetools` directory, so
-content-hashing every entry is the wrong shape for a version probe. This slice
-supplies no launcher authority, no session teardown and no dispatch admission.
-The Linux immutable-flag input-custody model, isolated
-pressure/allocation/restore adapters, new Linux-bound plan versions and
-aggregate physical/effective-cgroup resource admission remain H2 prerequisites
-before complete readiness, freeze or execution.
+content-hashing every entry is the wrong shape for a version probe; the SDK side
+is worse, because the measured GOROOT holds 15,026 files across 1,667
+directories and 232,413,581 bytes. AC: one shared Linux census layer serves both
+recipes rather than each reimplementing a directory walk, and it refuses instead
+of truncating when a directory exceeds its entry bound, so no observation can
+describe a prefix of an unadmitted shape; every row is classified by Lstat type,
+symlink target, size, permission bits and a 64-byte header screen, and a setuid,
+setgid, socket, FIFO, device or empty helper refuses; the canonical digest input
+is sorted explicitly because `(*os.File).ReadDir` returns kernel order rather
+than a sorted sequence, and every field is length-prefixed so a hostile name
+cannot resplit a row; the directory identity is snapshotted before the first
+read and re-checked after the last, so a concurrent replacement or resize cannot
+supply the observed rows; the Git manifest requires exactly one regular native
+`git` entry that hashes byte-equal to the selected image plus at least one
+symlink delegating to it, so neither a directory of unrelated helpers nor a lone
+copied core satisfies it; every symlink must name a bare sibling that is itself
+an admitted regular helper in the same census, so a link that escapes the
+directory, points at a directory, chains to another link or names itself refuses;
+the Go recipe binds the reported pair rather than either field alone, requiring
+`GOTOOLDIR` to be exactly `GOROOT/pkg/tool/<goos>_<goarch>`, `GOROOT/bin/go` to
+resolve to the admitted image, and the on-disk `VERSION` marker's first line and
+a second `go version` probe to both equal the verifier toolchain release; the
+closed probe environment sets neither `GIT_EXEC_PATH` nor `GOROOT`, so a hostile
+ambient value cannot reach either census and every refusal is exercised by
+calling the unexported censuses directly on synthetic directories; neither
+observation walks the SDK or the exec-path tree, and neither adds a field to
+`ExecutionToolIdentity`; and a refusal always yields the zero value rather than a
+partial description, because counters accumulate in a local and reach the caller
+only through the single success return. This slice supplies no launcher
+authority, no session teardown and no dispatch admission. The Linux
+immutable-flag input-custody model, isolated pressure/allocation/restore
+adapters, new Linux-bound plan versions and aggregate physical/effective-cgroup
+resource admission remain H2 prerequisites before complete readiness, freeze or
+execution.
+
+T42.H2g's exact implementation `e75680a8929201a1ff73541ceaa383e4bd8ee8fd`
+received an independent review that returned APPROVE-WITH-NITS with 0 critical,
+0 high, 0 medium and 7 low findings. The bar this ladder carries from T42.H2d,
+T42.H2e and T42.H2f is a re-review with every severity count at zero, so all
+seven were corrected rather than accepted as nits: three corrections landed in
+production source and four in tests. `censusExternalGoSDKLocation` digested
+`GOROOT/bin/go` before the `bin` census, so that path was hashed in full before
+`maxExternalDelegationHelperBytes` bounded its row, and it now runs that census
+and its exact-pair admission first, matching the precedence the Git recipe
+already kept. `runExternalDelegationProbe` joined a cleanup failure into
+`retErr` while leaving its named `output` populated, so a refused probe could
+hand partial output to a caller beside a non-nil error; the existing defer now
+zeroes it. `classifyExternalDelegationRow` returned a partially filled entry
+carrying the refused row's name and symlink target alongside its error, and all
+four of its refusal paths now return an explicit zero entry. Both census tests
+took their expected digests from the production `externalDelegationDigest`,
+which made the assertion tautological against a change to the `sha256:` prefix
+or the hash function, so each fixture now also carries one independently
+computed hard-coded hex digest asserted equal to that function's output over
+the hand-written canonical string before it is used. Both new test files
+asserted refusals with `strings.Contains`, weaker than the exact-equality
+precedent in `external_delegation_linux_test.go`, so every refusal assertion in
+the two new tables, the SDK directory-admission table and its
+`bin_go_is_absent` subtest now compares `err.Error()` to the complete
+production message; the two `RefusesUnadmittedImages` tables additionally
+gained a `want` field pinning the exact message for all eight cases from the
+production guard order. The real-host assertions forbade only private
+directories, so a bare leaked entry name was unpinned outside the synthetic
+tests; they now also forbid names that are real entries of this host's
+exec-path and `GOROOT` — `mergetools`, `git-remote-http`, `VERSION`, `gofmt`,
+`preprofile` — each verified present on the host and each checked against the
+`%#v` encoding so the assertion is not vacuous by collision. Because those
+corrections changed four of the seven hashed source files, every measurement
+bound to `e75680a8` was discarded and the whole gate set re-taken at
+`6895dbb0584fee3a146fd1822ff7d86507b1305e`.
+
+A delta re-review of that correction returned APPROVE-WITH-NITS with 0
+critical, 0 high, 0 medium and 1 low finding. `external_sdk_location_linux.go`
+claimed above `admitExternalGoSDKVersionMarker` that the `VERSION` marker was
+the recipe's one bounded content read inside the SDK, which the shared census
+layer's 64-header-byte screen per regular entry and
+`censusExternalGoSDKLocation`'s single full read of `GOROOT/bin/go` —
+15,434,568 bytes on this host, roughly 3,768 times that marker's 4,096-byte
+ceiling — both contradicted, so the file contradicted itself across about 100
+lines. That was a false comment rather than a false behaviour, and the
+correction is comment-only: five added and two removed lines in one file,
+naming all three in-SDK reads and distinguishing them by purpose rather than by
+size while keeping the true claim that none of the three walks the tree. It is
+`52910021621ca3f12e7aefeb9bc3f4a07bcaf019`. Because that file is one of the
+seven the sealed record hashes, every `6895dbb0` measurement was discarded in
+turn — the in-flight whole-package census was terminated at 31m33s of an
+expected 110 minutes rather than allowed to finish against bytes the record
+would no longer name — and re-taken at `52910021`, this pass against a
+completely clean working tree. A second delta re-review of the comment
+correction returned APPROVE with 0 critical, 0 high, 0 medium and 0 low
+findings.
+
+That all-zero verdict did not end the sequence, and the reason is retained here
+because it is the one correction in this ladder that no reviewer found. The
+third pass ran to completion and its pinned scoped changed-file lint gate then
+failed: `golangci-lint` 2.12.2 reported three `errcheck` findings, all in this
+slice's own new test files — an unchecked `os.RemoveAll` inside a `t.Cleanup`
+at `external_delegation_linux_test.go:377`, an unchecked `net.Listener` `Close`
+at `:382`, and an unchecked host-image `Close` at
+`external_exec_path_linux_test.go:482`. `.golangci.yml` selects `default:
+standard` with no `std-error-handling` exclusion preset and excludes only
+`spike/t111/`, and the base carries zero `errcheck` findings across
+`spike/t421`, so all three were new and the slice did not meet the
+`golangci-lint clean` merge bar. Both reviewers had been instructed not to run
+the gates, so a clean review verdict was never evidence of a clean gate; only a
+finite mechanical gate set run to completion could have found this, which is
+the argument for keeping lint inside that set rather than treating the census
+as its end. The correction adopts the package's own idioms: `t.Cleanup(func() {
+_ = os.RemoveAll(x) })` as in `signer_claim_unix_test.go`, and `defer func() {
+_ = x.Close() }()`, the form used at 309 other `Close` sites in this package.
+The six plain `defer server.Close()` calls that remain are not counterexamples,
+because `httptest.Server.Close` returns nothing and is therefore never flagged.
+All three are in-place replacements of lines this slice itself added, so the
+whole-range diffstat is unchanged at seven files, 2787 insertions and 3
+deletions while `52910021..8793fe4d` alone is two files, three insertions and
+three deletions. Two of the seven hashed files changed, so the completed third
+pass was discarded in full and the whole set re-taken a fourth time at
+`8793fe4db180e3ff63eef733a5b814f11e81c57d`. Every number below binds uniformly
+to `8793fe4d`.
+
+The fourteen selectors this slice adds are finite and green at that tree. They
+pass 14/14 with 110 subtests in 4.058s normal and 29.761s under race, and a
+twenty-repetition boundary passes 280/280 with 2200 subtests in 24.684s normal
+and 32.715s under race, with zero data races in either race run. The
+affected-wide selector
+`ExternalTool|ExternalProbe|LinuxToolCustody|ExternalDelegation|ExternalGitExecPath|ExternalGoSDK`
+passes 33/39 with 196 subtests in 43.515s normal and 48.861s under race, also
+with zero data races, so the retained H2e observer tests and the new delegation
+tests are green together rather than only separately. `go vet ./spike/t421/` is
+clean on `linux/amd64` and on `linux/arm64`; `GOOS=darwin GOARCH=arm64 go build
+./spike/...` and its matching vet are clean, so the new Linux-only symbols leak
+nothing into the Darwin build; `go build ./...` is clean on `linux/amd64`; `go
+mod verify` reports all modules verified; `gofmt -l spike/t421/` names nothing;
+and `git diff --check 98457ae4..HEAD` reports no whitespace error.
+
+Four results are reported qualified rather than green and one coverage boundary
+is named. The whole `./spike/t421` package is still not green: `-timeout=120m
+./spike/t421` completed rather than timing out in 6247.895s and enumerated 653
+top-level passes, 2 failures and 11 skips, matching the 666 top-level test
+functions that compile on Linux — the 652 that compiled at the T42.H2e head
+plus the 14 this slice adds — with 3335 indented passes and no indented failure
+or skip. Both failures pre-date this slice.
+`TestProductionDispatchSitesMatchActualBoundaries` is the retained T42.H2a
+production-dispatch inventory failure and is byte-identical modulo timings at
+base `98457ae4` and at head. `TestZoektOfferNativePinnedGraph` is a
+deterministic Linux refusal at `zoekt_offer_build_test.go:90`:
+`walkGoBuildTree` requires `inputCustodyOwned`, which on Linux requires
+`FS_IMMUTABLE_FL` and therefore `CAP_LINUX_IMMUTABLE`, and the four files in
+that call chain are unchanged between base and head. A whole-package race run
+was deliberately not taken, since it would add two to three hours to a package
+that already needs 6247.895s normal, so race evidence is carried by the
+targeted, twenty-repetition and affected-wide race selectors above instead,
+matching how T42.H2e was qualified. The inherited T421 lint baseline stays
+qualified while only this slice's changed-file result is claimed green, and
+that green claim needs both halves of an argument rather than one: the pinned
+scoped run reports `0 issues.`, and an unbounded unscoped `golangci-lint run
+./spike/t421/... --max-issues-per-linter=0 --max-same-issues=0` reports 72
+findings, every one `unused`, across 11 untouched files — `git diff --name-only
+98457ae4..8793fe4d` returns exactly 7 paths and none of them is one of the 11,
+so the inherited count cannot have moved. That half alone would not make 72 the
+inherited total, because this slice's own new files could add findings the
+unscoped run also sees; at `52910021` they did, three `errcheck` findings, and
+the total measured 75 rather than 72. The scoped zero above is what rules that
+out, which is why the two runs are reported together. The `50` an operator
+would measure with golangci-lint's defaults is that tool's
+`max-issues-per-linter` cap rather than a total. `linux/arm64` stays unclaimed
+rather than disqualified: nothing in the new tests reads `GOARCH` and
+`GOOS=linux GOARCH=arm64 go vet ./spike/t421/` is clean, but arm64 Linux was
+not executed on this amd64 host. The named coverage boundary is that, because
+the closed probe environment sets neither `GIT_EXEC_PATH` nor `GOROOT`, every
+refusal case in the two mutation tables is produced by calling the unexported
+census functions directly on synthetic fixture directories; those tables
+therefore prove the census layer rather than the probe plumbing, which is
+covered by `TestLinuxExternalDelegationProbeRefusesBeforeLaunching` and by the
+retained H2e observer tests. No `t421.test`, `go test` or SurrealDB process and
+no port-65499 listener survived the sequence.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
@@ -16669,6 +16842,540 @@ sync, startup/restart, retry/no-op, and publication transition, plus the
 retired-state migration/restore boundary. Retention status has 11 owners and 28
 components after removal. Integration into `main` requires a
 verified fast-forward and Ben's explicit authorization.
+
+## Epic 47 · Caller Map production release within measured limits *(Ben-directed, 2026-10-09; follows immediate SCIP availability)*
+
+Ben requests moving Caller Map from experimental/default-dark to supported
+production and explicitly chooses current admitted limits first, with
+large-monorepo claims still gated. This program owns the existing exact
+repository-overlay caller inventory, the declaration discovery needed to
+select its complete endpoint identity, immutable source citations and parity
+across ordinary server startup, HTTP, UI and read-only MCP. Necessary
+declaration discovery does not release every Contract Atlas/Impact feature.
+Caller comparison and unrelated evidence packs require their own stated scope
+and validation; they are not implicitly promoted by Caller Map.
+
+Go callers of protobuf/gRPC and Thrift operations are the existing candidate
+recipes. Each protocol, generator and input recipe earns support separately.
+First-production scope remains static source evidence: declared resolved
+callers, unresolved name matches and extractor abstentions stay distinguishable;
+no empty page establishes absence of callers, runtime use or decommission safety.
+Source occurrences, build targets, deployables, logical services and owners
+remain separate identities, with unavailable and ambiguous attribution visible.
+
+### Existing implementation and admission limits
+
+- Exact public reads require one declaration repository and complete protocol,
+  lineage and canonical operation identity, then consume one complete published
+  caller generation. They do not union arbitrary repositories.
+- Pages default to 50 and admit at most 100 rows. The reverse index has a
+  128-MiB identity ceiling, at most eight retained indexes and eight bindings,
+  a five-minute binding lifetime, eight concurrent exact reads and two citation
+  reads. Each displayed attribution list admits at most 64 values and reports
+  the pre-truncation total.
+- The caller writer admits at most 100,000 result records plus 100,000
+  abstention records per aggregate result. Writer-valid input may still exceed
+  a reader ceiling and must return an explicit refusal rather than partial or
+  zero rows. The legacy/comparison 50,000-record scan ceiling is a distinct
+  bound; do not conflate it with the exact reader's aggregate record ceiling.
+- These source constants define current refusal behavior, not a tested
+  production operating envelope. Supporting a workload requires an independently
+  measured envelope below every applicable bound with explicit headroom.
+
+### Promotion gaps found at the current baseline
+
+- Ordinary Caller Map registration is derived from
+  `experimental.provisional_proto_extraction` or
+  `experimental.provisional_thrift_extraction` in `cmd/phebs/serve_api.go`.
+  `internal/config/config.go` explicitly retains the unfinished canonical
+  descriptor/module lineage gate for protobuf and provisional repo/path
+  lineage for Thrift. Production identity must be validated or replaced with a
+  separately reviewed narrower identity contract; removing the word
+  provisional does not repair this boundary.
+- Implemented exact publication, authorization, cursor/citation, recovery,
+  lifecycle and neutral correctness gates are reusable evidence for their
+  exact claims. They supply neither independent caller extraction/attribution
+  quality nor a measured interactive production envelope. The retained
+  external validation remains `NOT_ESTABLISHED`, and historical release
+  decisions remain exact.
+- Generated managed SCIP has navigation authority but its admission as
+  extraction evidence remains the separate T45.9 STOP. A Caller Map recipe
+  that requires those bytes must first earn a prospective evidence-admission
+  decision; successful native SCIP navigation cannot silently fill that gap.
+- The capability-driven UI and MCP services exist, but the production path
+  must prove ordinary startup and real-source end-to-end discovery, generation,
+  paging and citations rather than fixture-only registration.
+
+**T47.1 · Bounded production contract and promotion inventory** — record this
+Ben-directed sequence, the exact supported surface, candidate recipes,
+existing limits and unresolved identity/quality/runtime/operating gates in
+BACKLOG, ROADMAP and a same-change PLAN decision. AC: no feature default,
+runtime, schema, UI, evidence status or historical record changes; prior
+pilot/employer authorization is not reused; personal/public-source validation
+only; no current limit becomes a scale/SLO claim; `make docs-check`,
+`make verify-glossary` and whitespace checks pass. The steady-state-cost pass
+records zero runtime work because this ticket changes documentation only.
+
+**T47.2 · Supported identity, input recipes and independent caller quality**
+*(needs T47.1; split identity corrections from validation execution if needed)*
+— inventory and freeze one exact supported tuple of language/protocol,
+generator, declaration identity, source/input format and extractor version
+before scoring. Use reproducible personal/public source with license/provenance
+records; independently reviewed labels cover resolved callers, same-name
+unrelated methods, imports/aliases, wrappers/interfaces/dynamic paths,
+generated/vendored/test code, excluded/failed paths, and ambiguous/missing
+attribution. AC: preregister precision/recall, processing-state and claimed
+attribution/end-to-end denominators, thresholds, uncertainty handling and stop
+rules before results; no guessed canonical lineage; every required metric is
+measured and passes on the frozen population; old validation receipts are
+neither re-scored nor relabelled. Admit one recipe without claiming another.
+If a selected recipe needs generated managed SCIP evidence, its prospective
+T45.9 admission is an explicit prerequisite with a same-change PLAN decision.
+Bind the card/manifest/implementation/input/validation digests and name an
+independent validation owner. No release follows from synthetic correctness
+tests alone, and an unfilled gate leaves that recipe unavailable.
+
+**T47.2a · Supported identity and input recipe freeze and caller-quality
+preregistration** *(split from T47.2; needs T47.1; no scoring in this ticket)*
+— freeze one exact supported tuple before any scoring: Go / gRPC-Protobuf
+callers through checked-in generated clients (`*_grpc.pb.go` carrying the
+unique `Code generated ... DO NOT EDIT` header); the repository/path
+declaration lineage of
+[`./PROTOBUF_DECLARATION_IDENTITY.md`](./PROTOBUF_DECLARATION_IDENTITY.md) §7
+within its single-declaration-repository scope, never canonical
+descriptor/module lineage, which is not guessed;
+committed input format of repository-root `index.scip` (≤ 64 MiB),
+`layout-snapshot.json` (`t20-layout-snapshot-v1`) and
+`generated-from-snapshot.json` (`t20-generated-from-v1`) plus checked-in
+declarations and clients at the exact commit; extractor `grpc-caller` 1.5.0,
+schema `t20-caller-v1`. Author the prospective preregistration protocol in
+[`./CALLER_QUALITY_PROTOCOL.md`](./CALLER_QUALITY_PROTOCOL.md) (draft until
+sealed): personal/public-source corpus eligibility with license/provenance
+records; independently reviewed label coverage for resolved callers, same-name
+unrelated methods, imports/aliases, wrappers/interfaces/dynamic paths,
+generated/vendored/test code, excluded/failed paths and ambiguous/missing
+attribution; precision/recall, processing-state and claimed
+attribution/end-to-end denominators; thresholds, uncertainty handling and stop
+rules; blind-label custody; digest bindings; independent-owner fields. AC: no
+runtime, schema, registration, evidence status or historical record changes;
+the committed-index recipe consumes only repository-committed inputs, so the
+prospective T45.9 managed-generated-SCIP admission is not a prerequisite here
+— any future recipe that consumes managed-generated bytes needs that separate
+admission with its same-change PLAN decision; old validation receipts are
+neither re-scored nor relabelled; the declaration token follows the T49.1
+contract — a canonical identity is a separate prefix-disjoint family under its
+own ticket, never a silent rename, and T47.3 owns only Caller Map compatibility
+handling of it; the end-to-end family needs `unit-snapshot.json` in the round's
+tuple or is declared unavailable before sealing;
+`make docs-check`, `make verify-glossary` and whitespace checks pass; the
+steady-state-cost pass records zero runtime work.
+
+**T47.2b · Frozen corpus, independent labels and measured caller quality**
+*(needs T47.2a)* — select the reproducible personal/public-source corpus at
+pinned commits with license/provenance records; construct and freeze the
+eligible universe and sampling frames without consulting phebs output; fill
+every placeholder in the sealed protocol, name the independent validation
+owner and reviewers, and seal the protocol and thresholds before any result is
+unsealed. Re-derive the corpus inputs with the corrected `spike/t472` tools
+first, recording the Go environment, committed resolution tables, every
+non-test-main build-cache drop and the version-skewed in-repo reference count,
+and record the cross-module binding decision. Execute the sealed protocol
+against the exact frozen tuple and bind card, manifest, implementation/binary,
+input and validation digests. AC: every
+required metric is measured and passes on the frozen population before the
+recipe is admitted; one recipe is admitted without claiming another (Go/Thrift
+support is never inferred); ambiguous/missing attribution stays visible; no
+guessed canonical lineage; no release follows from synthetic correctness tests
+alone and an unfilled gate leaves that recipe unavailable; T47.3 activation,
+T47.4 operating acceptance and T47.5 promotion remain separate.
+
+**T47.3 · Ordinary production configuration and registration** *(needs the
+T47.2 supported recipe contract; activation remains gated until T47.5)* —
+introduce the stable Caller Map configuration/recipe selection, wire the
+existing extraction/resolver/caller/publication services and exact readers at
+ordinary startup, and separate necessary declaration discovery from the
+experimental umbrella. AC: unsupported or unvalidated recipes refuse;
+missing/stale/failed input stays visibly unavailable; enabling Caller Map
+does not enable Thrift-field, Kafka, Impact, caller comparison or retired
+Investigation/Workbench capabilities; HTTP and read-only MCP agree; existing
+authorization-first access, source/generation fences, exact publication,
+cursor invalidation and citations remain exact. Existing provisional
+configuration has an explicit compatibility/migration decision, not a silent
+reinterpretation as released authority. Provide rollback and revalidation
+behavior. Update the configuration/workflow guide in the same implementation
+PR; enumerate query, tick, startup/restart, no-op/retry, publication, locks,
+cache invalidation and bounded memory/disk/child costs.
+
+**T47.4 · Current-host operating, security and lifecycle acceptance** *(needs
+T47.2 and the T47.3 candidate)* — run the real ordinary binary on this Linux
+amd64 host against the admitted workload, including cold/warm generation,
+incremental source updates, concurrent publication/read paging, permission
+changes, interruption/hard-death/restart, backup/restore, pressure, collection
+and clean teardown. AC: denied source never reaches identity/citation reads;
+real HTTP/UI/MCP give the same exact result and uncertainty states;
+overflow and unsupported input refuse rather than returning partial/zero
+results; measure latency distribution, RSS including children, disk growth,
+store work, Git reads, locks, cache invalidation and no-op costs. Freeze the
+operating class and thresholds prospectively; publish measured limits and
+headroom below existing ceilings, validation expiry, an operational owner and
+suspension/rollback triggers. Table-driven regression, meaningful normal/race,
+static and required machine checks pass; no native prerequisite silently skips.
+No 5,000/10,000-service, 12-GB, freshness-under-cadence or general release claim
+is inferred from this smaller workload.
+
+**T47.5 · Exact Caller Map promotion and supported product closure** *(needs
+T47.2–T47.4; presentation-track handoff for any UI change)* — release only
+the validated Caller Map artifact and selected recipes through a
+caller-specific signed release record binding card, executable manifest,
+implementation/binary and validation digests. AC: independent source,
+security/authorization, evidence-quality and steady-state-cost reviews have
+no unresolved release blockers; every required ownership/approval/expiry and
+operating field is filled; the release decision identifies exactly which
+current hold it supersedes for this caller artifact and claim without
+rewriting historical records or releasing another pack. Ordinary startup and
+the authenticated discovery-to-Caller-Map-to-citation UI/API/MCP flow are
+demoable with real source via `make dev`; supported and unsupported states,
+configuration, operations, bounded limits and suspension behavior agree across
+guides and surfaces. Any change to UI or DESIGN_CHARTER requires Ben's routed
+presentation handoff; backend planning does not cross that boundary. Preserve
+large-monorepo and separate pilot/SCIP-evidence gates. Integrating a passing
+ticket still requires Ben's explicit merge request; no merge or current
+production promotion is authorized merely by this backlog entry.
+
+## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
+
+Ben requests a fast plan that starts a production epic for every currently
+experimental/dark capability. Epic 47 remains the first product priority after
+SCIP operational availability. Epics 48–58 reuse implemented readers, workers,
+publication, security and lifecycle mechanics; work closes the actual identity,
+quality, registration and operating gaps instead of rebuilding those systems.
+This program creates no current production status or large-scale claim.
+
+### Order and dependencies
+
+| Lane | Next work | Dependencies and first deliverable |
+|---|---|---|
+| Immediate SCIP | Existing T45.10/T45.10a activation lineage | Retain exact native installed-generation/navigation/teardown proof and its separate merge decision |
+| First production product | T47.2 Caller Map; T49.1 protobuf declaration identity/discovery | One shared identity/input contract, frozen caller-quality corpus, independent labels and prospective thresholds |
+| Shared release path | T48.2 enforcement; T48.3 validation/operating tooling | Exact release schema/status/signature model and refusal tests; no extractor activation required to build it |
+| Next product | Epic 50 caller comparison | Released exact Caller Map recipe and a directly validated old/replacement comparison |
+| Protobuf follow-ons | Epics 51 and 53 | Proven declaration identity; independently admitted SCIP input for fields and pinned sandboxed Buf for WIRE |
+| Composed Impact | Epic 54 | Only the specific released caller, field, declaration and verdict dependencies the selected report claims |
+| Independent protocol lanes | Epic 52 Thrift fields; Epic 58 RPC syntactic evidence; Epics 55/56 Kafka planes | Separate protocol/generator/library corpus, quality and operating results; no wait for unrelated product promotion |
+| Kafka product | Epic 57 Topics | One or both independently released Kafka planes, with the other explicitly unavailable |
+
+These are dependencies, not permission to run expensive jobs concurrently on
+the 14.89-GiB host. Keep at most one expensive package/race/native rehearsal
+running at a time, freeze its resource/headroom envelope, and serialize Git
+and shared-spine edits through the lead. Independent contract, corpus and
+implementation preparation can proceed while that host gate runs. Backend
+work owns no UI change: each product's presentation ticket receives Ben's
+routed handoff before editing UI or DESIGN_CHARTER. There is no promised
+calendar completion date before the corpus, workload and review work is sized.
+
+### Every retained experimental evidence pack has a release owner
+
+| Retained pack ID | Owning promotion epic | Independent result required |
+|---|---|---|
+| `phebs.protobuf.contract` | 49 Contract Atlas/declarations | Canonical declaration identity and exact declaration quality |
+| `phebs.grpc.consumer.go` | 58 Go RPC syntactic evidence | Call/registration shape accuracy and unresolved accounting |
+| `phebs.grpc.caller.go` | 47 Caller Map | Exact declaration-resolved caller and claimed attribution quality |
+| `phebs.protobuf.field.go` | 51 Protobuf fields | Exact field identity and supported Go generated-field reference quality |
+| `phebs.thrift.contract` | 49 Contract Atlas/declarations | Thrift identity and declaration quality, separate from protobuf |
+| `phebs.thrift.consumer.go` | 58 Go RPC syntactic evidence | Thrift generator/library call and registration quality |
+| `phebs.thrift.field.apache` | 52 Thrift fields | Apache generator-specific field identity/reference quality |
+| `phebs.thrift.field.thriftrw` | 52 Thrift fields | thriftrw generator-specific field identity/reference quality |
+| `phebs.kafka.producer` | 55 Kafka producer | Supported library/topic-expression producer precision/recall and gap accounting |
+| `phebs.kafka.consumer` | 56 Kafka consumer | Supported library/topic-expression consumer precision/recall and gap accounting |
+
+Caller comparison, Buf WIRE, composed Impact and Topics are product claims
+with additional release contracts; they are not extra successful results
+inferred from this ten-pack inventory. If a proposed exact Thrift caller or
+other recipe asserts a claim not covered by an existing card, author and
+validate a prospective claim-specific card rather than borrowing a consumer
+card. Coverage certificates, immutable proof/citation readers and release
+status are common infrastructure, but every projected fact carries its own
+admitted recipe and freshness/authorization identity.
+
+### Common promotion bar, applied independently
+
+Every product/pack ticket below must: freeze supported claims, non-claims,
+canonical identity/input/tool/schema versions and current numerical ceilings;
+preregister a reproducible personal/public-source population, independently
+reviewed labels, metric denominators, thresholds and stop rules before scoring;
+measure all claimed quality/coverage/attribution or composed relationships;
+prove ordinary startup plus each declared authorized HTTP/UI/read-only-MCP surface;
+retain meaningful normal/race, recovery/hard-death, backup/restore, pressure,
+generation/cursor/citation and denied-source gates for its actual boundaries;
+measure an operating envelope below ceilings with headroom on this host; and
+record owner, independent reviewer, expiry/revalidation and suspension/rollback
+behavior. Existing evidence is reusable only for its exact version/scope.
+
+Each promotion binds exact card/manifest/implementation/binary/validation
+digests in its own release decision and names the hold superseded for only
+that claim. Unknown/unavailable/partial/stale/failed/overflow states stay
+explicit; empty results are not universal negatives. Review enumerates
+per-query/request, sync, startup/restart, retry/no-op, publication, locks,
+cache invalidation and worst-case bounded memory/disk/children. Same-PR PLAN
+and owning configuration/workflow/operations guides agree. No release field
+is blank or unmeasured, and a test/fixture demo alone cannot establish quality
+or production support. Historical STOP/NOT_ESTABLISHED/DO_NOT_RELEASE bytes,
+large-scale and pilot authority remain exact; a new scoped decision earns any
+supersession. Generated managed SCIP extraction evidence still needs its
+prospective T45.9 admission. Investigations and Workbench remain retired.
+
+**T48.1 · Production capability inventory and fast dependency plan** — record
+the matrix, execution order, shared gaps, independent release units and all
+named epics in BACKLOG, ROADMAP and a same-change PLAN decision. AC: all ten
+retained packs have owners; existing dark product surfaces have promotion
+tickets; prerequisites have no dependency cycle or unrelated all-packs gate;
+no runtime/default/status/UI/historical artifact changes; docs/glossary and
+whitespace pass. Cost: no new runtime work or resources.
+
+**T48.2 · Prospective signed release enforcement and stable recipe selection**
+*(first shared implementation; needs T48.1)* — implement the current
+design-only release boundary for fixed in-tree modules. PR-sized slices own
+the schema/verifier first, then startup/runtime selection. AC: reject unknown,
+duplicate/noncanonical fields, foreign/mismatched digests, invalid signatures,
+unmeasured claims, expired/revoked releases and unsupported versions;
+registration cannot be obtained by toggling a provisional extraction switch;
+ordinary startup admits only the selected validated recipes; an absent
+production selection adds no pack work. Define compatibility and suspension
+for already published results without rewriting retained evidence. No
+third-party code/manifest loader or retired workflow returns. Verify release
+metadata once at its admitted boundary and define exact invalidation; no
+per-query full artifact hashing or corpus scan. Every owning product still
+needs its own passing record before activation. *Slice 1 landed 2026-10-09:
+`internal/packrelease` owns the `PackRelease` schema, the frozen
+`phebs-canonical-json`/1 encoding, native ed25519 signing over the value-cleared
+canonical payload, and the fail-closed verifier with its 23-code rejection
+taxonomy, plus the normative `schemas/pack-release-v1.0.json`. `Verify`
+authenticates before judging content and binds a supplied implementation
+identity, artifact root and revocation set; `VerifyForLoad` alone admits an
+ordinary load. This slice wires no runtime registration, startup selection or
+pack execution — an absent production selection adds no pack work and
+registration stays unreachable through a provisional extraction switch;
+startup/runtime recipe selection consuming `VerifyForLoad`, with derived status
+computed from card gates and suspension records, remains a later slice.* *Slice 2 landed 2026-10-09: a startup admission
+gate now consumes the slice-1 verifier. `packrelease.LoadSelection` reads one
+bounded operator directory of signed records once at startup, lets the highest
+`release_version` per pack govern so a later signed suspension withdraws an
+older release, and admits a governing `released` record only through the
+`VerifyForLoad` bindings; the new `release_selection` config block supplies the
+path and its ed25519 key ring; and `newServeExtractionRegistries` merges the
+unchanged dark set with the released set resolved solely through the fixed
+in-tree `packRecipes` registry, a released recipe governing its domain. Both
+`packRecipes` and `releaseLoadBindings` ship empty, so today's runtime is
+unchanged and a governing released record refuses startup rather than loading
+unbound code. The slice that binds the first recipe must supply the running
+implementation identity, artifact root and resolver; per-workflow load-mode
+enforcement (`PACK_MANIFEST` §6 #14) and each owning product's own passing
+record and bound recipe remain later work.*
+
+**T48.3 · Reusable independent validation and operating receipt harness** —
+share corpus sealing, label separation, scoring/denominator checks,
+authorization/lifecycle test drivers and current-host cost receipts. AC:
+blind/independent label custody and protocol-specific scoring remain separate;
+missing denominators/labels/thresholds refuse; composed accuracy is directly
+measured rather than multiplied from component metrics; no code paths label
+historical `not_run` or capacity STOP as PASS; each run is exact-source/input
+bound and each pack gets its own quality and operating result. Expensive runs
+are serial with retained failure custody, joined children and real teardown.
+
+**T48.4 · Shared release operations and qualification** — document stable
+configuration, supported status, validation expiry, suspension, rollback and
+revalidation; test the absent/one-pack/mixed-pack startup and API/MCP discovery
+matrix. AC: one released component does not activate another; denied source
+stays undisclosed; a suspended dependency cannot appear as current released
+evidence; required source/runtime/cost review and shared machine checks pass.
+This common substrate releases no product by itself.
+
+## Epic 49 · Contract Atlas and declaration production readiness
+
+Own `phebs.protobuf.contract` and `phebs.thrift.contract` separately, plus
+the exact bounded declaration discovery/detail surface. Caller Map uses only
+the necessary admitted discovery subset; Atlas-wide promotion is independent.
+
+**T49.1 · Protobuf declaration identity and validation contract** — resolve
+the provisional repo/path versus descriptor/module identity gate and share
+one reviewed identity/input contract with T47.2; freeze and independently
+score declaration/operation/message/field facts and explicit parser gaps.
+
+**T49.1a · Protobuf declaration identity and scorable-surface freeze**
+*(split from T49.1; no scoring in this ticket)* — resolve the identity gate for
+the `phebs.protobuf.contract` pure reader in
+[`./PROTOBUF_DECLARATION_IDENTITY.md`](./PROTOBUF_DECLARATION_IDENTITY.md): the
+file-scoped `provisional_repo_path_v1_…` token is the admitted declaration
+identity; canonical descriptor/module lineage is not provable from the inputs
+this reader consults and must arrive later as a separate prefix-disjoint family,
+never a silent rename. State the declaration side of the `DeclarationLineage`
+join with T47.2, including its single-declaration-repository scope, and freeze
+the `DECLARES_*` fact contract, the per-reference type-resolution states and
+gap taxonomy (including `IMPORT_LINKING_UNAVAILABLE`) and the non-emitted kinds
+as the scorable surface. AC: no extractor, token, schema, published assertion
+or evidence status changes; `TestFrozenDeclarationContract` and
+`TestDeclarationLineageMatchesFrozenProtodeclToken` pin the rule IDs, detail
+schemas and the shared lineage literal; GATE2-V2 stays `NOT_ESTABLISHED` and
+the pack stays experimental-dark; `make docs-check`, `make verify-glossary` and
+whitespace checks pass; the steady-state-cost pass records zero runtime work.
+
+**T49.1b · Independent declaration scoring** *(needs T49.1a)* — fill every
+`<Gate 0>` placeholder of the T49.1a scoring shape: enumerate the declaration
+universe independently of phebs output, name the independent validation owner,
+reviewers and adjudicator, obtain a real public randomness seed, and seal the
+protocol and thresholds before any result is unsealed. Score exact-emission
+precision, per-reference gap classification and declaration recall with the
+existing label and Wilson machinery byte-for-byte. AC: every placeholder is
+filled by real humans and a real beacon pulse (none fabricated); non-emitted
+kinds are never counted as misses; one sealed round, no interim looks; no
+release or status change follows from the score alone.
+
+**T49.2 · Thrift declaration identity and validation contract** — independently
+freeze namespace/include/generator lineage and declarations, ambiguity,
+missing/unsupported input and gap accounting; protobuf results grant no Thrift
+support.
+
+**T49.3 · Stable Atlas startup and exact discovery/detail** — use T48's
+release selection for only admitted declaration recipes; prove real source,
+authorization, paging/currentness and immutable citations; unrelated
+implementation/consumer evidence remains unavailable unless separately released.
+
+**T49.4 · Measured Atlas promotion and product closure** — satisfy the common
+promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
+One protocol may release while the other remains explicitly unavailable.
+
+## Epic 50 · Caller comparison production readiness
+
+**T50.1 · Exact old/replacement comparison contract and gold cases** — depends
+on the supported Epic 47 identity; independently validate source/unit unions,
+`old_only_evidence`, `both_evidence`, `new_only_evidence` and unresolved states.
+No comparison asserts migration completion or decommission safety.
+
+**T50.2 · Stable comparison registration and joint generation fencing** —
+retain two-publication authorization, cursor/lease/citation binding and
+generation drift/refusal; unsupported endpoint pairs are unavailable.
+
+**T50.3 · Measured comparison promotion** — satisfy the common bar on real
+old/replacement source, concurrent publication and bounded combined read cost;
+release requires its own result even when both Caller Maps are released.
+
+## Epic 51 · Protobuf field-reference production readiness
+
+**T51.1 · Exact field/SCIP identity and independent quality** — depend on
+T49.1 and an admitted SCIP input recipe; freeze generator/indexer/version,
+descriptor field identity, reflection/dynamic/unknown exclusions and direct
+reference quality. Managed navigation authority alone is insufficient.
+
+**T51.2 · Stable field reader registration and source fencing** — isolate
+this recipe from the provisional proto umbrella; preserve exact committed
+source, declaration, SCIP, authorization and gap identity.
+
+**T51.3 · Measured field-reference promotion** — satisfy the common bar and
+publish exact supported generators, input formats, operating bounds and expiry.
+
+## Epic 52 · Thrift field-reference production readiness
+
+**T52.1 · Apache Thrift field contract and independent quality** — freeze
+generator versions, stable field IDs, symbol/tag binding and unsupported shapes;
+depend on the selected T49.2 declaration and independently admitted SCIP recipe.
+
+**T52.2 · thriftrw field contract and independent quality** — separate
+generator-specific identity and quality population; no Apache result transfers.
+
+**T52.3 · Independent stable registration and measured promotion** — split
+the current shared experimental switch into explicitly selected admitted
+recipes; satisfy the common bar for each. Either generator may release alone.
+
+## Epic 53 · Protobuf Buf WIRE compatibility production readiness
+
+**T53.1 · Verdict/input contract and independent golden changes** — freeze
+pinned Buf/tool/config/source bytes, WIRE-only semantics and positive/negative/
+unsupported IDL changes; depend on admitted protobuf input identity. The
+verdict covers those bytes, not runtime or deployment compatibility.
+
+**T53.2 · Stable sandboxed compatibility registration** — retain bounded
+closed execution, no source escape/network discovery, exact digest-bound
+result and authorization; optional unreleased field evidence stays unavailable.
+
+**T53.3 · Measured compatibility promotion** — satisfy the common bar for
+the standalone WIRE verdict and separately qualify any enrichment it claims.
+Thrift has no Buf WIRE support by implication.
+
+## Epic 54 · Contract Impact production readiness
+
+**T54.1 · Supported report contract and direct end-to-end quality** — freeze
+operation/field/proposed-change report shapes and dependencies; measure the
+actual composed output and uncertainty, not a product of component metrics.
+
+**T54.2 · Stable report registration with per-input release checks** — consume
+only the selected admitted declaration/caller/field/compatibility recipes;
+missing/stale/unreleased inputs remain visibly unavailable. Preserve exact
+source, coverage and citations; a supported report never asserts migration
+completion, universal consumer absence or safe retirement.
+
+**T54.3 · Measured Impact promotion** — satisfy the common bar per report
+shape; one shape may release without claiming the others. Dependencies are
+the specific inputs it actually consumes, not every experimental pack.
+
+## Epic 55 · Kafka producer-evidence production readiness
+
+**T55.1 · Producer topic identity and independent quality** — freeze
+supported Go client versions and literal/constant expression shapes, plus
+dynamic/ambiguous/import and extraction-gap denominators; retain static
+source-spelled topic evidence, not a runtime broker identity.
+
+**T55.2 · Independent stable producer registration** — select only admitted
+producer recipes and publication; do not enable consumers through the existing
+shared provisional Kafka switch. Preserve first-class unresolved census.
+
+**T55.3 · Measured producer promotion** — satisfy the common bar, explicit
+library/version/topic-expression scope and bounded topic query/citation costs.
+
+## Epic 56 · Kafka consumer-evidence production readiness
+
+**T56.1 · Consumer subscription identity and independent quality** — freeze
+supported Go client and subscription/expression shapes, consumer-specific
+precision/recall and unresolved/gap population; producer quality is not reuse.
+
+**T56.2 · Independent stable consumer registration** — select only admitted
+consumer recipes; missing publication never appears as a measured zero and
+topic-dependent rows stay separate from topic-independent abstention census.
+
+**T56.3 · Measured consumer promotion** — satisfy the common bar independently
+of Epic 55, including exact source, permission, recovery and per-plane costs.
+
+## Epic 57 · Topics product production readiness
+
+**T57.1 · Topic overview/detail composition contract** — consume one or both
+released Kafka planes, with separate per-plane publication/coverage/quality
+state; directly validate the composed topic inventory and paging/citations.
+
+**T57.2 · Stable Topics UI/HTTP/MCP exposure** — route only admitted evidence,
+keep unsupported/unreleased planes explicitly unavailable, retain the complete
+unresolved census, and receive the presentation handoff for any UI change.
+
+**T57.3 · Measured Topics promotion** — satisfy the common bar for the stated
+producer-only, consumer-only or combined product; none implies runtime topic
+activity, complete topology or equality across broker environments.
+
+## Epic 58 · Go RPC syntactic consumer and registration production readiness
+
+This owns the existing consumer/registration cards independently from exact
+Caller Map, rather than promoting bare-operation matching as resolved callers.
+
+**T58.1 · Go gRPC syntactic consumer/registration quality** — freeze supported
+client/server registration shapes and Go/generator/tool versions; independently
+measure matching evidence and unresolved outcomes; bind declaration facts when
+claimed and never relabel a name match as an exact caller.
+
+**T58.2 · Go Thrift syntactic consumer/registration quality** — independently
+freeze thriftgo/other admitted generator/library shapes and input identity;
+measure unsupported/dynamic/ambiguous cases and registration claims separately.
+
+**T58.3 · Independent stable recipe registration and measured promotion** —
+satisfy the common bar per protocol/claim, retain proof/coverage/HTTP/MCP
+parity, and expose only admitted matching evidence. These results neither
+promote Epic 47 exact resolution nor all Contract Atlas implementation detail.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 

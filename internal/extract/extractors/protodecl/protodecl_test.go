@@ -780,3 +780,44 @@ func TestEmitterErrorPropagates(t *testing.T) {
 		t.Fatalf("Extract error = %v, want emitter failure", err)
 	}
 }
+
+// TestFrozenDeclarationContract pins the T49.1a surface frozen in
+// docs/PROTOBUF_DECLARATION_IDENTITY.md §5. The lineage literal is shared with
+// TestDeclarationLineageMatchesFrozenProtodeclToken in internal/extract: the
+// exact Caller Map join needs both mints byte-identical.
+func TestFrozenDeclarationContract(t *testing.T) {
+	const lineage = "provisional_repo_path_v1_" +
+		"6e127396d596565b5bed47920640d088886844fc19301c0d4ffde297f2eec947"
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "example/repo", commit: "c", files: map[string]string{
+			"api/v1/service.proto": `syntax = "proto3"; package demo;
+service S { rpc Get(M) returns (M); }
+message M { string a = 1; }`,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][2]string{ // predicate -> rule ID, detail schema
+		"DECLARES_SERVICE":   {"proto-service-v3", "proto-service-detail-v1"},
+		"DECLARES_OPERATION": {"proto-rpc-v3", "proto-operation-detail-v1"},
+		"DECLARES_MESSAGE":   {"proto-message-v3", "proto-message-detail-v1"},
+		"DECLARES_FIELD":     {"proto-field-v3", "proto-field-detail-v2"},
+	}
+	seen := map[string]bool{}
+	for _, fact := range facts {
+		var detail struct {
+			Schema string `json:"schema"`
+		}
+		rule, ok := want[fact.Assertion.Predicate]
+		if !ok || json.Unmarshal([]byte(fact.Assertion.Detail), &detail) != nil ||
+			fact.Atom.RuleID != rule[0] || detail.Schema != rule[1] ||
+			fact.Assertion.Lineage != lineage || fact.Assertion.Tier != "exact" {
+			t.Fatalf("fact drifted from the frozen contract: %+v", fact)
+		}
+		seen[fact.Assertion.Predicate] = true
+	}
+	if len(seen) != len(want) {
+		t.Fatalf("predicates = %v, want %d", seen, len(want))
+	}
+}

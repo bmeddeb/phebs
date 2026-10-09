@@ -275,7 +275,7 @@ func collectCommentedConfigPaths(data []byte, root reflect.Type, active []config
 }
 
 // commentedYAMLKey accepts only comment-only lines whose content is a single
-// YAML mapping entry. One space after '#' is formatting; further spaces retain
+// YAML mapping entry, optionally as a sequence item. One space after '#' is formatting; further spaces retain
 // the example's nesting relative to the comment marker.
 func commentedYAMLKey(line string) (int, string, bool) {
 	leading := len(line) - len(strings.TrimLeft(line, " "))
@@ -286,6 +286,11 @@ func commentedYAMLKey(line string) (int, string, bool) {
 	content := strings.TrimPrefix(rest, "# ")
 	nested := len(content) - len(strings.TrimLeft(content, " "))
 	content = strings.TrimSpace(content)
+	// A sequence item "- key: value" documents the item's first field at the
+	// column after the dash, where its sibling fields sit.
+	if item, ok := strings.CutPrefix(content, "- "); ok {
+		content, nested = item, nested+2
+	}
 
 	var node yaml.Node
 	if err := yaml.Unmarshal([]byte(content), &node); err != nil || len(node.Content) != 1 {

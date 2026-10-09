@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"gopkg.in/yaml.v3"
@@ -59,6 +60,34 @@ type Config struct {
 	// ServiceCatalogs explicitly selects one v2 base authority per repository.
 	// When absent, T33.2 imports the committed analysis-unit-v1 state instead.
 	ServiceCatalogs map[string]ServiceCatalog `yaml:"service_catalogs"`
+	// ReleaseSelection names the signed PackRelease records admitted at startup
+	// (T48.2). It ships dark and empty: an absent Path admits no released pack
+	// and adds no pack work. A provisional extraction switch is never a path to
+	// this ordinary/released admission set.
+	ReleaseSelection ReleaseSelection `yaml:"release_selection"`
+}
+
+// ReleaseSelection is the operator-controlled signed-release admission block
+// consumed once at the admitted startup boundary. See docs/PACK_MANIFEST.md
+// section 4: the release record, not a self-asserted manifest or card field,
+// determines what may load. Only a record that verifies against Keys and
+// carries the released lifecycle status enters the ordinary admission set.
+type ReleaseSelection struct {
+	// Path is a directory of signed PackRelease JSON records. Empty admits no
+	// released pack and performs no read. When set, the directory must exist
+	// and every record it holds must verify; a malformed or unverifiable record
+	// refuses startup rather than being skipped.
+	Path string `yaml:"path"`
+	// Keys is the ed25519 trust anchor. A record signed by a key absent here is
+	// refused. The ring is never populated from a record's own key material.
+	Keys []ReleaseKey `yaml:"keys"`
+}
+
+// ReleaseKey binds an approved key identifier to its base64-encoded ed25519
+// public key.
+type ReleaseKey struct {
+	ID        string `yaml:"id"`
+	PublicKey string `yaml:"public_key"`
 }
 
 // ManagedSCIP selects a trusted, digest-bound local installation. It never
@@ -475,6 +504,8 @@ func (e Exclude) isZero() bool {
 
 var nameRE = regexp.MustCompile(`^[a-z0-9-]+$`)
 
+var managedSCIPDigestRE = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+
 // Load reads and validates the config at path.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
@@ -614,8 +645,9 @@ func connectionLines(doc *yaml.Node) []int {
 func (c *Config) validate(lines []int) error {
 	var errs []error
 	if m := c.ManagedSCIP; m != nil {
-		if !filepath.IsAbs(m.Manifest) || filepath.Clean(m.Manifest) != m.Manifest || len(m.Manifest) > 4096 || !regexp.MustCompile(`^sha256:[a-f0-9]{64}$`).MatchString(m.SHA256) {
-			errs = append(errs, errors.New("managed_scip requires a clean absolute manifest and explicit sha256 digest"))
+		if !filepath.IsAbs(m.Manifest) || filepath.Clean(m.Manifest) != m.Manifest || len(m.Manifest) > 4096 ||
+			strings.ContainsAny(m.Manifest, ":\x00\r\n") || !managedSCIPDigestRE.MatchString(m.SHA256) {
+			errs = append(errs, errors.New("managed_scip requires a clean absolute manifest path without ':' or control characters and an explicit sha256 digest"))
 		}
 	}
 	if c.Diagnostics.ExtractorDetails && !c.Diagnostics.Extraction {
@@ -971,6 +1003,24 @@ func (c *Config) validate(lines []int) error {
 			fail(i, "unknown type %q (want github, gitlab, gitea, or git)", conn.Type)
 		}
 	}
+
+	seenKeyIDs := map[string]bool{}
+	for i, key := range c.ReleaseSelection.Keys {
+		switch {
+		case strings.TrimSpace(key.ID) == "":
+			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: id is required", i))
+		case !packrelease.ValidKeyID(key.ID):
+			errs = append(errs, fmt.Errorf(
+				"release_selection.keys[%d]: id %q must match [A-Za-z0-9._:/-]{1,256}, as a record's key_id does", i, key.ID))
+		case seenKeyIDs[key.ID]:
+			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: duplicate id %q", i, key.ID))
+		}
+		seenKeyIDs[key.ID] = true
+		if _, err := packrelease.ParsePublicKey(key.PublicKey); err != nil {
+			errs = append(errs, fmt.Errorf("release_selection.keys[%d]: public_key: %w", i, err))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 
