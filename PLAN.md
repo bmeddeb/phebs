@@ -10680,7 +10680,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   container. Existing reconciliation authenticates all retained custody before
   registration. Immutable Git source verification admits regular/executable
   modes and hashes only declared source blobs. Source-bound profile installation
-  CAS refuses a source transition after that physical validation. Equal restarts
+  CAS refuses a source transition after that physical validation. A repository
+  whose current source already differs from its installed source at startup
+  (sync advanced HEAD, or it was removed) is withdrawn from the registry with a
+  diagnostic rather than refusing all of serve, matching how a running process
+  makes it unavailable; every other epoch/profile mismatch still refuses. Equal restarts
   preserve desire/epochs/publications; partial installation prefixes resume
   idempotently and never install an enabled runtime in the failing startup.
   Restore requires newly verified controls with a successor epoch. Exact-control

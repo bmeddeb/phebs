@@ -14,6 +14,7 @@ func TestManagedSCIPRequiresExplicitInstallation(t *testing.T) {
 		{"explicit", "managed_scip: {manifest: /var/lib/phebs-scip/installation.json, sha256: 'sha256:" + strings.Repeat("a", 64) + "'}\n", true},
 		{"empty", "managed_scip: {}\n", false},
 		{"relative", "managed_scip: {manifest: install.json, sha256: 'sha256:" + strings.Repeat("a", 64) + "'}\n", false},
+		{"colon", "managed_scip: {manifest: '/var/lib/phebs:scip/installation.json', sha256: 'sha256:" + strings.Repeat("a", 64) + "'}\n", false},
 		{"missing-digest", "managed_scip: {manifest: /var/lib/phebs-scip/installation.json}\n", false},
 		{"command", "managed_scip: {manifest: /var/lib/phebs-scip/installation.json, command: scip-go}\n", false},
 	} {

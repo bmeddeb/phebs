@@ -1291,7 +1291,8 @@ certify that repository code compiles. `profile.json` must be canonical JSON so
 its file SHA256 equals its decoded identity. Inventory hashes identify exact
 bytes. All profiles select the same image and the server's native architecture.
 
-Set the manifest's exact SHA256 in server YAML and restart:
+Set the manifest's exact SHA256 in server YAML and restart. The manifest path
+must be a clean absolute path without `:` or control characters:
 
 ```yaml
 managed_scip:
@@ -1304,8 +1305,11 @@ retained executor custody, every selected source blob against immutable Git
 (including regular/executable file mode), and expected profile epochs. It then
 installs missing/successor profiles and registers existing workers, the lifecycle
 owner and routed navigation reader. Equal restarts preserve epochs, desired
-requests and publications. A source/epoch mismatch refuses; updating only the
-manifest hash cannot rebind source. Restored intent requires revalidated controls
+requests and publications. A repository whose current source no longer matches
+its installed source — sync advanced its HEAD, or it was removed — is withdrawn
+with a logged diagnostic and stays unavailable until a new installation binds
+the new source, while startup continues. Any other epoch or profile mismatch
+refuses startup, and updating only the manifest hash cannot rebind source. Restored intent requires revalidated controls
 and a successor epoch. An interrupted installation prefix completes idempotently
 on a later restart; its failing startup installs no enabled runtime.
 

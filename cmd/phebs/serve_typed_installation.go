@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -97,7 +98,8 @@ func loadTypedServeInstallation(ctx context.Context, selected *config.ManagedSCI
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		if entry.Source.Validate() != nil || entry.ProfileEpoch == 0 || entry.ProfileEpoch > math.MaxInt64 || !typedInstallationName.MatchString(entry.Directory) || directories[entry.Directory] || registry.entries[entry.Source.Repository].profile.Digest() != "" {
+		_, repeated := registry.entries[entry.Source.Repository]
+		if entry.Source.Validate() != nil || entry.ProfileEpoch == 0 || entry.ProfileEpoch > math.MaxInt64 || !typedInstallationName.MatchString(entry.Directory) || directories[entry.Directory] || repeated {
 			return nil, typedindex.Invalid
 		}
 		directory := filepath.Join(base, entry.Directory)
@@ -112,7 +114,11 @@ func loadTypedServeInstallation(ctx context.Context, selected *config.ManagedSCI
 		if profile.Digest() != entry.ProfileDigest || profile.Definition().BundleDigest != entry.InventoryDigest || profile.Definition().ImageDigest != manifest.Image || profile.Definition().Config.GOARCH != runtime.GOARCH {
 			return nil, typedindex.Stale
 		}
-		if _, err = typedindex.Admit(ctx, typedindex.Authority{Enabled: true, Administrator: true, Source: entry.Source, Profile: typedindex.Epoch{Number: entry.ProfileEpoch, Digest: entry.ProfileDigest}, UniverseDigest: entry.UniverseDigest}, profile, mustTypedInstallationRequest(entry, profile)); err != nil {
+		request, err := json.Marshal(typedindex.NewManagedRequest(entry.Source, profile, entry.ProfileEpoch, entry.UniverseDigest, typedindex.Publish))
+		if err != nil {
+			return nil, err
+		}
+		if _, err = typedindex.Admit(ctx, typedindex.Authority{Enabled: true, Administrator: true, Source: entry.Source, Profile: typedindex.Epoch{Number: entry.ProfileEpoch, Digest: entry.ProfileDigest}, UniverseDigest: entry.UniverseDigest}, profile, request); err != nil {
 			return nil, err
 		}
 		inventoryRaw, err := typedworkspace.ReadInstallationControl(ctx, directory, "inventory.json", entry.InventoryDigest, int64(min(typedindex.MaxInventoryBytes, maxTypedInstalledInventoryBytes-controlBytes)))
@@ -138,11 +144,6 @@ func loadTypedServeInstallation(ctx context.Context, selected *config.ManagedSCI
 		directories[entry.Directory] = true
 	}
 	return &typedServeInstallation{Workspace: manifest.Workspace, Socket: manifest.Socket, Image: manifest.Image, Bundle: registry.bundle, Registry: registry}, ctx.Err()
-}
-
-func mustTypedInstallationRequest(entry typedInstalledRepository, profile typedindex.Profile) []byte {
-	raw, _ := json.Marshal(typedindex.NewManagedRequest(entry.Source, profile, entry.ProfileEpoch, entry.UniverseDigest, typedindex.Publish))
-	return raw
 }
 
 func (r *typedInstallationRegistry) admits(snapshot store.TypedIndexOperator) bool {
@@ -176,19 +177,30 @@ type typedInstallationStore interface {
 // Installation first validates every exact source and profile epoch, then writes
 // only missing/successor profiles. Equal restarts preserve desires and epochs.
 // An interrupted prefix is idempotently completed on the next restart.
+//
+// A repository whose current source no longer matches its installed source
+// (sync advanced HEAD, or the repository was removed) is withdrawn from the
+// registry, exactly as a running process makes it unavailable: the optional
+// installation stops admitting it instead of refusing all of serve. Every other
+// mismatch still refuses startup. It runs before the runtime starts, so the
+// registry has no concurrent readers yet.
 func (r *typedInstallationRegistry) install(ctx context.Context, s typedInstallationStore, data string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	var pending []typedInstalledProfile
+	admitted := make([]string, 0, len(r.order))
 	for _, name := range r.order {
 		installed := r.entries[name]
 		source, err := s.GetTypedSource(ctx, name)
-		if err != nil {
+		if err != nil && !errors.Is(err, store.ErrNotFound) {
 			return err
 		}
-		if source != installed.entry.Source {
-			return typedindex.Stale
+		if err != nil || source != installed.entry.Source {
+			diagnostics.Logf("typed-index installation withdrew %s: installed source is no longer current", name)
+			delete(r.entries, name)
+			continue
 		}
+		admitted = append(admitted, name)
 		intent, err := s.GetTypedIndexIntent(ctx, name)
 		if err != nil && !errors.Is(err, store.ErrNotFound) {
 			return err
@@ -206,6 +218,7 @@ func (r *typedInstallationRegistry) install(ctx context.Context, s typedInstalla
 			return err
 		}
 	}
+	r.order = admitted
 	for _, installed := range pending {
 		if err := ctx.Err(); err != nil {
 			return err

@@ -475,6 +475,8 @@ func (e Exclude) isZero() bool {
 
 var nameRE = regexp.MustCompile(`^[a-z0-9-]+$`)
 
+var managedSCIPDigestRE = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+
 // Load reads and validates the config at path.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
@@ -614,8 +616,9 @@ func connectionLines(doc *yaml.Node) []int {
 func (c *Config) validate(lines []int) error {
 	var errs []error
 	if m := c.ManagedSCIP; m != nil {
-		if !filepath.IsAbs(m.Manifest) || filepath.Clean(m.Manifest) != m.Manifest || len(m.Manifest) > 4096 || !regexp.MustCompile(`^sha256:[a-f0-9]{64}$`).MatchString(m.SHA256) {
-			errs = append(errs, errors.New("managed_scip requires a clean absolute manifest and explicit sha256 digest"))
+		if !filepath.IsAbs(m.Manifest) || filepath.Clean(m.Manifest) != m.Manifest || len(m.Manifest) > 4096 ||
+			strings.ContainsAny(m.Manifest, ":\x00\r\n") || !managedSCIPDigestRE.MatchString(m.SHA256) {
+			errs = append(errs, errors.New("managed_scip requires a clean absolute manifest path without ':' or control characters and an explicit sha256 digest"))
 		}
 	}
 	if c.Diagnostics.ExtractorDetails && !c.Diagnostics.Extraction {
