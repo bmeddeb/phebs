@@ -70,10 +70,17 @@ replace the user manual.
 - [PACK_MANIFEST.md](./PACK_MANIFEST.md) — manifest schema and lifecycle.
 - [PROTO_GRPC_PACK_CARDS.md](./PROTO_GRPC_PACK_CARDS.md) — Protobuf/gRPC
   declaration, consumer, exact-caller, and field-reference pack cards.
+- [PROTOBUF_DECLARATION_IDENTITY.md](./PROTOBUF_DECLARATION_IDENTITY.md) — T49.1
+  Protobuf declaration identity/input contract: resolves the provisional
+  repo/path versus descriptor/module gate, freezes the scorable fact surface and
+  states the declaration side of the `DeclarationLineage` join with T47.2.
+  Scoring is unsealed (T49.1b); grants no release or accuracy claim.
 - [THRIFT_PACK_CARDS.md](./THRIFT_PACK_CARDS.md) — Thrift declaration,
   consumer, and field-reference pack cards.
 - [KAFKA_PACK_CARDS.md](./KAFKA_PACK_CARDS.md) — Kafka producer and consumer
   pack cards.
+- [CALLER_QUALITY_PROTOCOL.md](./CALLER_QUALITY_PROTOCOL.md) — prospective
+  caller-quality preregistration draft for the Epic 47 Caller Map recipe.
 
 These packs remain experimental-dark unless the manual and capability response
 explicitly say otherwise. Their retained validation result is not an accuracy

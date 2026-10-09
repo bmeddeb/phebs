@@ -139,7 +139,10 @@ for repositories within current admitted limits. Ben explicitly keeps
 large-monorepo claims gated rather than making the Epic 42 scale ceremony a
 prerequisite for this smaller release. T47.1 records the contract and current
 gaps; T47.2 freezes and independently validates the selected identity and input
-recipes; T47.3 separates ordinary runtime registration from provisional
+recipes, split into T47.2a (docs-only freeze of the Go/gRPC committed-index
+recipe tuple and the prospective caller-quality preregistration) and T47.2b
+(corpus sealing with license/provenance records, independent labels and
+measurement); T47.3 separates ordinary runtime registration from provisional
 extraction switches; T47.4 measures security, lifecycle and operating limits;
 T47.5 performs the exact-artifact promotion and product closure. Current
 limits are safety ceilings, not measured production capacity. Each Go/gRPC or

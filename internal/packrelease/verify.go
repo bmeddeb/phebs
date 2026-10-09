@@ -2,10 +2,9 @@ package packrelease
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // ErrInvalidRelease is the sentinel every verification failure unwraps to.
@@ -50,6 +50,7 @@ const (
 	ReasonUnapprovedAlgorithm Reason = "unapproved_algorithm"
 	ReasonUnknownKey          Reason = "unknown_key"
 	ReasonInvalidSignature    Reason = "invalid_signature"
+	ReasonNotReleased         Reason = "not_released"
 )
 
 // ReleaseError is a typed verification failure carrying a stable Reason.
@@ -60,14 +61,15 @@ type ReleaseError struct {
 
 func (e *ReleaseError) Error() string {
 	if e.Detail != nil {
-		return string(ErrInvalidRelease.Error()) + ": " + string(e.Reason) + ": " + e.Detail.Error()
+		return ErrInvalidRelease.Error() + ": " + string(e.Reason) + ": " + e.Detail.Error()
 	}
 	return ErrInvalidRelease.Error() + ": " + string(e.Reason)
 }
 
-// Unwrap reports the sentinel so errors.Is(err, ErrInvalidRelease) holds for
-// every rejection in the taxonomy.
-func (e *ReleaseError) Unwrap() error { return ErrInvalidRelease }
+// Unwrap reports the sentinel, so errors.Is(err, ErrInvalidRelease) holds for
+// every rejection in the taxonomy, and the wrapped cause, so errors.As still
+// reaches a decoder or timestamp error.
+func (e *ReleaseError) Unwrap() []error { return []error{ErrInvalidRelease, e.Detail} }
 
 // ReasonOf extracts the stable rejection code from err, if it is one.
 func ReasonOf(err error) (Reason, bool) {
@@ -84,17 +86,79 @@ func reject(reason Reason, format string, args ...any) error {
 
 var (
 	commitRE = regexp.MustCompile(`^[0-9a-f]{40}$`)
+	digestRE = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 	semverRE = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 	idRE     = regexp.MustCompile(`^[A-Za-z0-9._:/-]{1,256}$`)
 )
 
-const maxIDLen = 256
+// Schema bounds mirrored from schemas/pack-release-v1.0.json.
+const (
+	maxApprovalRecords = 64
+	maxExpiryTrigger   = 256
+)
 
 // Verify parses and validates raw canonical release bytes against the supplied
 // trust anchors. It is fail closed: any structural, canonicalization, binding,
 // lifecycle, or signature defect returns a typed ReleaseError wrapping
-// ErrInvalidRelease. On success it returns the parsed record.
-func Verify(raw []byte, opts Options) (*PackRelease, error) {
+// ErrInvalidRelease. On success it returns the parsed record in whatever
+// lifecycle state it carries; only VerifyForLoad decides that a record admits
+// an ordinary load.
+//
+// The schema version and canonicalization decide how the signed bytes are
+// read, so they are checked before the signature. Every other field is judged
+// only after the signature proves the record authentic, so an unsigned record
+// learns nothing about expiry or artifacts and never reaches the resolver.
+func Verify(ctx context.Context, raw []byte, opts Options) (*PackRelease, error) {
+	release, err := decodeCanonical(raw)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateEnvelope(release); err != nil {
+		return nil, err
+	}
+	if err := verifySignature(release, opts); err != nil {
+		return nil, err
+	}
+	if _, revoked := opts.Revoked[release.ReleaseID]; revoked {
+		return nil, reject(ReasonRevoked, "release %q is withdrawn", release.ReleaseID)
+	}
+	if err := validateStructure(release); err != nil {
+		return nil, err
+	}
+	if err := validateStatusGate(release, opts.now()); err != nil {
+		return nil, err
+	}
+	if err := bindImplementation(release, opts); err != nil {
+		return nil, err
+	}
+	if err := resolveReferences(ctx, release, opts.Resolver); err != nil {
+		return nil, err
+	}
+	return release, nil
+}
+
+// VerifyForLoad admits a release for an ordinary claim or decision-support
+// load. Beyond Verify it requires every binding to be supplied — the artifact
+// resolver, the running implementation identity and the present
+// referenced-artifacts root — and the record to be StatusReleased. Every
+// other lifecycle state is refused.
+func VerifyForLoad(ctx context.Context, raw []byte, opts Options) (*PackRelease, error) {
+	if opts.Resolver == nil || opts.Implementation == nil || opts.ReferencedArtifactsRootDigest == "" {
+		return nil, reject(ReasonUnresolvedReference,
+			"a load requires the artifact resolver, implementation identity and referenced-artifacts root")
+	}
+	release, err := Verify(ctx, raw, opts)
+	if err != nil {
+		return nil, err
+	}
+	if release.DerivedStatus != StatusReleased {
+		return nil, reject(ReasonNotReleased, "derived_status %q admits no ordinary load", release.DerivedStatus)
+	}
+	return release, nil
+}
+
+// decodeCanonical bounds, strictly decodes and canonicalizes raw bytes.
+func decodeCanonical(raw []byte) (*PackRelease, error) {
 	if len(raw) == 0 {
 		return nil, reject(ReasonDecode, "release record is empty")
 	}
@@ -112,34 +176,24 @@ func Verify(raw []byte, opts Options) (*PackRelease, error) {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(release); err != nil {
-		if strings.Contains(err.Error(), "unknown field") {
-			return nil, reject(ReasonUnknownField, "decode release record: %v", err)
+		// A strict decode fails on an unknown field and on malformed input
+		// alike; a lenient decode of the same value tells them apart without
+		// matching error text.
+		if json.NewDecoder(bytes.NewReader(raw)).Decode(&PackRelease{}) == nil {
+			return nil, reject(ReasonUnknownField, "decode release record: %w", err)
 		}
-		return nil, reject(ReasonDecode, "decode release record: %v", err)
+		return nil, reject(ReasonDecode, "decode release record: %w", err)
 	}
 	if err := requireJSONEOF(decoder); err != nil {
-		return nil, reject(ReasonTrailingJSON, "%v", err)
+		return nil, reject(ReasonTrailingJSON, "%w", err)
 	}
 
 	canonical, err := CanonicalPayload(release)
 	if err != nil {
-		return nil, reject(ReasonNonCanonical, "%v", err)
+		return nil, reject(ReasonNonCanonical, "%w", err)
 	}
 	if !bytes.Equal(raw, canonical) {
 		return nil, reject(ReasonNonCanonical, "release record is not canonical JSON")
-	}
-
-	if err := validateStructure(release); err != nil {
-		return nil, err
-	}
-	if err := validateStatusGate(release, opts.now()); err != nil {
-		return nil, err
-	}
-	if err := resolveReferences(release, opts.Resolver); err != nil {
-		return nil, err
-	}
-	if err := verifySignature(release, opts); err != nil {
-		return nil, err
 	}
 	return release, nil
 }
@@ -163,7 +217,7 @@ func scanStructure(raw []byte) error {
 			return nil
 		}
 		if err != nil {
-			return reject(ReasonDecode, "scan JSON: %v", err)
+			return reject(ReasonDecode, "scan JSON: %w", err)
 		}
 		if delim, ok := token.(json.Delim); ok {
 			switch delim {
@@ -216,10 +270,9 @@ func requireJSONEOF(decoder *json.Decoder) error {
 	return nil
 }
 
-// validateStructure enforces the exact supported version, canonicalization
-// binding, digest and timestamp formats, enums, and identifier bounds. It is
-// lifecycle-agnostic; validateStatusGate applies the released-load gate.
-func validateStructure(release *PackRelease) error {
+// validateEnvelope checks the two fields that decide how the signed bytes are
+// read: the exact supported schema version and the canonicalization binding.
+func validateEnvelope(release *PackRelease) error {
 	if err := validateSchemaVersion(release.ReleaseSchemaVersion); err != nil {
 		return err
 	}
@@ -229,7 +282,13 @@ func validateStructure(release *PackRelease) error {
 			release.Canonicalization.Algorithm, release.Canonicalization.Version,
 			CanonicalAlgorithm, CanonicalVersion)
 	}
+	return nil
+}
 
+// validateStructure enforces digest and timestamp formats, enums, and the
+// identifier and collection bounds of the normative schema. It is
+// lifecycle-agnostic; validateStatusGate applies the released-load gate.
+func validateStructure(release *PackRelease) error {
 	for label, value := range map[string]string{
 		"release_id":             release.ReleaseID,
 		"pack_id":                release.PackID,
@@ -258,8 +317,8 @@ func validateStructure(release *PackRelease) error {
 		"implementation.toolchain":           release.Implementation.ToolchainDigest,
 		"referenced_artifacts_root":          release.ReferencedArtifactsRootDigest,
 	} {
-		if !validDigest(value) {
-			return reject(ReasonMalformedDigest, "%s is not a sha256 digest", label)
+		if !digestRE.MatchString(value) {
+			return reject(ReasonMalformedDigest, "%s is not a lowercase sha256 digest", label)
 		}
 	}
 	if !commitRE.MatchString(release.Implementation.PhebsSourceCommit) {
@@ -272,11 +331,19 @@ func validateStructure(release *PackRelease) error {
 	if err := validTimestamp("validation.expires_at", release.Validation.ExpiresAt); err != nil {
 		return err
 	}
+	if trigger := release.Validation.ExpiryTrigger; trigger != nil &&
+		utf8.RuneCountInString(*trigger) > maxExpiryTrigger {
+		return reject(ReasonInvalidField, "validation.expiry_trigger exceeds %d characters", maxExpiryTrigger)
+	}
 
 	if !knownStatus(release.DerivedStatus) {
 		return reject(ReasonUnknownEnum, "derived_status %q", release.DerivedStatus)
 	}
 
+	if len(release.ApprovalRecords) > maxApprovalRecords {
+		return reject(ReasonInvalidField, "approval_records has %d entries, exceeds %d",
+			len(release.ApprovalRecords), maxApprovalRecords)
+	}
 	seen := make(map[string]struct{}, len(release.ApprovalRecords))
 	for _, record := range release.ApprovalRecords {
 		if err := validID("approval_records", record); err != nil {
@@ -290,46 +357,59 @@ func validateStructure(release *PackRelease) error {
 	return nil
 }
 
-// validateStatusGate verifies the derived lifecycle status against the record's
-// own observable facts rather than trusting it as an owner-supplied assertion.
-// Only an unexpired, applicable, approved StatusReleased record admits an
-// ordinary load; expired and revoked claims are rejected here.
+// validateStatusGate verifies a released record against its own observable
+// facts rather than trusting the status as an owner-supplied assertion. Only
+// an unexpired, applicable, approved StatusReleased record can admit an
+// ordinary load. The other states never admit one, so they carry no gate. A
+// zero now skips the time checks: signing judges facts, loading judges time.
 func validateStatusGate(release *PackRelease, now time.Time) error {
-	switch release.DerivedStatus {
-	case StatusReleased:
-		if !release.Validation.Applies {
-			return reject(ReasonUnmeasuredClaim, "released status requires an applicable validation")
-		}
-		if release.Validation.ExpiryTrigger != nil {
-			return reject(ReasonRevoked, "released status carries expiry trigger %q", *release.Validation.ExpiryTrigger)
-		}
-		expires, err := time.Parse(time.RFC3339, release.Validation.ExpiresAt)
-		if err != nil {
-			return reject(ReasonInvalidTimestamp, "validation.expires_at: %v", err)
-		}
-		if !expires.After(now) {
-			return reject(ReasonExpired, "validation expired at %s", release.Validation.ExpiresAt)
-		}
-		if len(release.ApprovalRecords) == 0 {
-			return reject(ReasonMissingApproval, "released status requires at least one approval record")
-		}
-		approved, err := time.Parse(time.RFC3339, release.ApprovedAt)
-		if err != nil {
-			return reject(ReasonInvalidTimestamp, "approved_at: %v", err)
-		}
-		if approved.After(now) {
-			return reject(ReasonFutureApproval, "approved_at %s is in the future", release.ApprovedAt)
-		}
-	case StatusDesign, StatusExperimentalDark, StatusShadow, StatusSuspended, StatusRetired:
-		// Structurally valid non-released states. They never admit an ordinary
-		// claim load; runtime selection among them is a later slice.
-	default:
-		return reject(ReasonUnknownEnum, "derived_status %q", release.DerivedStatus)
+	if release.DerivedStatus != StatusReleased {
+		return nil
+	}
+	if !release.Validation.Applies {
+		return reject(ReasonUnmeasuredClaim, "released status requires an applicable validation")
+	}
+	if release.Validation.ExpiryTrigger != nil {
+		return reject(ReasonRevoked, "released status carries expiry trigger %q", *release.Validation.ExpiryTrigger)
+	}
+	if len(release.ApprovalRecords) == 0 {
+		return reject(ReasonMissingApproval, "released status requires at least one approval record")
+	}
+	if now.IsZero() {
+		return nil
+	}
+	expires, err := time.Parse(time.RFC3339, release.Validation.ExpiresAt)
+	if err != nil {
+		return reject(ReasonInvalidTimestamp, "validation.expires_at: %w", err)
+	}
+	if !expires.After(now) {
+		return reject(ReasonExpired, "validation expired at %s", release.Validation.ExpiresAt)
+	}
+	approved, err := time.Parse(time.RFC3339, release.ApprovedAt)
+	if err != nil {
+		return reject(ReasonInvalidTimestamp, "approved_at: %w", err)
+	}
+	if approved.After(now) {
+		return reject(ReasonFutureApproval, "approved_at %s is in the future", release.ApprovedAt)
 	}
 	return nil
 }
 
-func resolveReferences(release *PackRelease, resolver ArtifactResolver) error {
+// bindImplementation compares the recorded implementation identity and
+// referenced-artifacts root with the present ones, when the caller supplies
+// them, so a release signed for another binary or artifact set is refused.
+func bindImplementation(release *PackRelease, opts Options) error {
+	if opts.Implementation != nil && release.Implementation != *opts.Implementation {
+		return reject(ReasonDigestMismatch, "implementation identity does not match the running implementation")
+	}
+	if opts.ReferencedArtifactsRootDigest != "" &&
+		release.ReferencedArtifactsRootDigest != opts.ReferencedArtifactsRootDigest {
+		return reject(ReasonDigestMismatch, "referenced_artifacts_root_digest does not match the present artifacts")
+	}
+	return nil
+}
+
+func resolveReferences(ctx context.Context, release *PackRelease, resolver ArtifactResolver) error {
 	if resolver == nil {
 		return nil
 	}
@@ -343,7 +423,10 @@ func resolveReferences(release *PackRelease, resolver ArtifactResolver) error {
 		{"validation", release.Validation.ArtifactID, release.Validation.Digest},
 	}
 	for _, ref := range refs {
-		got, found := resolver.Resolve(ref.id)
+		got, found, err := resolver.Resolve(ctx, ref.id)
+		if err != nil {
+			return reject(ReasonUnresolvedReference, "resolve %s artifact %q: %w", ref.kind, ref.id, err)
+		}
 		if !found {
 			return reject(ReasonUnresolvedReference, "%s artifact %q is not resolvable", ref.kind, ref.id)
 		}
@@ -365,13 +448,17 @@ func verifySignature(release *PackRelease, opts Options) error {
 	if !ok || len(public) != ed25519.PublicKeySize {
 		return reject(ReasonUnknownKey, "key %q is not an approved signing key", release.Signature.KeyID)
 	}
+	// The value is excluded from the signed payload, so it must have exactly
+	// one accepted spelling: padded standard base64 that re-encodes to itself
+	// (no line breaks, no stray padding bits).
 	signature, err := base64.StdEncoding.DecodeString(release.Signature.Value)
-	if err != nil || len(signature) != ed25519.SignatureSize {
-		return reject(ReasonInvalidSignature, "signature value is not a well-formed ed25519 signature")
+	if err != nil || len(signature) != ed25519.SignatureSize ||
+		base64.StdEncoding.EncodeToString(signature) != release.Signature.Value {
+		return reject(ReasonInvalidSignature, "signature value is not a canonical base64 ed25519 signature")
 	}
 	payload, err := SigningPayload(release)
 	if err != nil {
-		return reject(ReasonInvalidSignature, "%v", err)
+		return reject(ReasonInvalidSignature, "%w", err)
 	}
 	if !ed25519.Verify(public, payload, signature) {
 		return reject(ReasonInvalidSignature, "signature does not verify over the canonical payload")
@@ -418,7 +505,7 @@ func knownStatus(status string) bool {
 }
 
 func validID(label, value string) error {
-	if len(value) > maxIDLen || !idRE.MatchString(value) {
+	if !idRE.MatchString(value) {
 		return reject(ReasonInvalidField, "%s %q is not a bounded identifier", label, value)
 	}
 	return nil
@@ -433,16 +520,7 @@ func validSemver(label, value string) error {
 
 func validTimestamp(label, value string) error {
 	if _, err := time.Parse(time.RFC3339, value); err != nil {
-		return reject(ReasonInvalidTimestamp, "%s %q is not RFC3339", label, value)
+		return reject(ReasonInvalidTimestamp, "%s %q is not RFC3339: %w", label, value, err)
 	}
 	return nil
-}
-
-func validDigest(value string) bool {
-	const prefix = "sha256:"
-	if !strings.HasPrefix(value, prefix) || len(value) != len(prefix)+sha256.Size*2 {
-		return false
-	}
-	_, err := hex.DecodeString(strings.TrimPrefix(value, prefix))
-	return err == nil
 }
