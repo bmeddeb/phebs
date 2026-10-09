@@ -541,3 +541,14 @@ func sortedCopy(values []string) []string {
 	sort.Strings(out)
 	return out
 }
+
+// TestDeclarationLineageMatchesFrozenProtodeclToken shares its literal with
+// protodecl's TestFrozenDeclarationContract, so the two independent mints of
+// the T49.1a declaration identity cannot drift apart unnoticed.
+func TestDeclarationLineageMatchesFrozenProtodeclToken(t *testing.T) {
+	const want = "provisional_repo_path_v1_" +
+		"6e127396d596565b5bed47920640d088886844fc19301c0d4ffde297f2eec947"
+	if got := declarationLineageID("example/repo", "api/v1/service.proto"); got != want {
+		t.Fatalf("declarationLineageID = %q, want %q", got, want)
+	}
+}
