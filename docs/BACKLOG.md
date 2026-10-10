@@ -17113,6 +17113,60 @@ artifacts that bind `75771dd7…` are rebound with the regenerated preparation
 (item 4). No label, prediction, score or seal; slices B/C and the fresh
 candidate run remain separate.*
 
+*Slice B — typed-scope partition reservations under a new policy identity
+(2026-10-10): the reserved-plan allocator weights a typed partition by its
+validated `TypedScope.Records` with a floor of one, instead of the historical
+weight-one sliver that treated the typed partition's zero `AdmittedRecords` as
+weight one; member partitions keep their admitted-record weight and the
+aggregate ceilings (facts 49,152 / rows 98,304 / references 98,304 / canonical
+and encoded 64 MiB), per-partition caps (facts 12,500 / rows 25,000 /
+references 20,000), the member-byte bound, deterministic largest-remainder
+allocation and the fail-closed sink are unchanged.
+`candidate.ExtractionPolicyDigest` composes a second versioned layer
+`phebs-extraction-typed-scope-reservations-v1` over the store-accounting layer;
+the composed digest flows into the plan, the authority/reuse binding and the
+executor staleness gate, so historical plans, bindings and generations
+reconstruct byte-exactly with both layers off and a corrected allocation can
+never silently share a generation or reuse authority with a historical plan.
+The new `experimental.typed_scope_reservations` switch (default false) gates
+the layer and is documented in `docs/config.example.yaml` and
+`docs/guides/CONFIGURATION.md`. Tests cover mixed member/typed plans, empty
+scopes, rounding, caps, arithmetic boundaries and deterministic replay
+(`TestReservationWeightsTypedScopePolicy`,
+`TestAssignReservedRoundingCapsAndBoundaries`,
+`TestReservedPlanTypedScopeWeightsAndPolicyIdentity`,
+`TestEvidencePartitionTypedScopeReservationFence`). All four executable typed
+partitions of the retained refused run were then executed under the corrected
+allocation with the production extractors and in-memory evidence, read-only,
+with historical rebuilds byte-matching every recorded plan digest
+(`T472D-MEASUREMENT-20261010.md` in the run root carries the full table):
+grpc-go grpc-caller@1.5.0 ord4 (`sha256:47973e82…` → `sha256:efda0ef2…`,
+success) reserved facts 47→12,500 / rows 96→25,000 / references
+18,304→20,000 / canonical and encoded 61,230→33,554,434 and observed
+960 / 1,920 / 960 / 1,122,711; grpc-go scip-proto-field@1.4.0 ord1
+(`0fafea45…` → `3e8d0fa6…`, success) with encoded 61,174→33,554,432 observed
+440 / 880 / 440 / 390,756; containerd scip-proto-field@1.4.0 ord2
+(`b3e0a221…` → `2cbc92ef…`, success) with encoded 11,947→33,554,433 observed
+873 / 1,746 / 873 / 791,981; containerd grpc-caller@1.5.0 ord4
+(`e7379bb9…` → `f27c386d…`, disposition empty) with facts 8→12,500 and encoded
+12,172→33,554,434 observed 0 throughout. The diagnosis receipts (facts 48>47;
+encoded 229,542>61,174 and 228,952>11,947) were refusal-point truncations, not
+complete emissions; the measured emissions leave at least 11,540 reserved
+facts and 30.9 MiB of reserved encoded bytes unused, which measures these four
+partitions only and is not a general sufficiency claim. In-memory accounting
+charges every submitted association and assertion (rows = 2×facts,
+references = facts, canonical == encoded), a conservative upper bound versus a
+deduplicating store. Etcd's typed partitions remain slice-A-blocked on the
+retained old `index.scip` and are measured only in the fresh candidate run
+against derived commit `f9ecd8dc…`. Steady-state cost: O(partitions)
+arithmetic over `TypedScope.Records` metadata already read and validated for
+the plan, inside the existing startup/restart/reconcile plan builds, plus one
+two-layer digest composition per plan build; no additional corpus read, blob
+fetch, child process, lock, cache, timer, goroutine, store/schema or
+persistent work, and no per-query/request, sync, retry/no-op or publication
+cost. No label, prediction, score, seal or merge; slice C and the fresh
+candidate run remain separate.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the
