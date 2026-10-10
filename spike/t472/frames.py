@@ -36,7 +36,7 @@ import harness as pilot_harness  # noqa: E402
 FRAMES_PLAN_SCHEMA = "t472-frames-plan-v2"
 RECALL_FRAME_SCHEMA = "t472-recall-frame-v2"
 ATTRIBUTION_FRAME_SCHEMA = "t472-attribution-frame-v2"
-CANDIDATE_FRAME_SCHEMA = "t472-candidate-frame-v2"
+CANDIDATE_FRAME_SCHEMA = "t472-candidate-frame-v3"
 
 RECALL_ELIGIBLE_KINDS = frozenset({"constructor_call", "operation_invocation",
                                     "indirect_or_other_call", "operation_reference",
@@ -206,9 +206,9 @@ def project_candidate_frames(envelope: Mapping, universe: Mapping,
         if detail.get("schema") != "go-caller-detail-v1" or detail.get("protocol") != "grpc":
             raise FramesError("candidate is not a grpc-caller fact")
         reason = detail.get("unresolved_reason", "")
-        if (predicate == "UNRESOLVED_CALLER") != bool(reason):
+        if not isinstance(reason, str) or (predicate == "UNRESOLVED_CALLER") != bool(reason):
             raise FramesError("caller resolution and reason disagree")
-        if predicate == "CALLS_OPERATION" and not a.get("lineage"):
+        if not isinstance(a.get("lineage", ""), str) or predicate == "CALLS_OPERATION" and not a.get("lineage"):
             raise FramesError("resolved caller has no declaration lineage")
         adapted = {**a, "object": obj[1:],
                    "predicate": "UNRESOLVED_GRPC_CALL" if predicate == "UNRESOLVED_CALLER" else predicate}
@@ -223,17 +223,19 @@ def project_candidate_frames(envelope: Mapping, universe: Mapping,
                     raise FramesError(f"candidate citation is outside the exact source universe: {raw}")
                 if a.get("code_role") != source["code_role"]:
                     raise FramesError("candidate code role disagrees with independent source role")
-                claim = (predicate, adapted["object"], a.get("lineage", ""), reason)
-                canonical_id = source["site_id"]
-                # The frozen harness drops raw duplicates before comparing role/lineage.
-                if canonical_id in claims and claims[canonical_id] != claim:
-                    raise FramesError("conflicting claims at one caller site")
-                claims[canonical_id] = claim
+                claim = (predicate, a.get("lineage", ""), reason)
+                previous = claims.setdefault(source["site_id"], {})
+                # Validate raw duplicates before the frozen harness can discard them.
+                if adapted["object"] in previous and previous[adapted["object"]] != claim:
+                    raise FramesError("conflicting claims for one operation at a caller site")
+                if previous and (next(iter(previous.values()))[0] != predicate or
+                                 predicate == "CALLS_OPERATION" and adapted["object"] not in previous):
+                    raise FramesError("conflicting resolution claims at one caller site")
+                previous[adapted["object"]] = claim
                 key = (raw, adapted["predicate"], adapted["object"], a.get("lineage", ""))
                 reasons[key] = reason
     rows = pilot_harness.candidate_rows({"bundle": {**bundle, "assertions": assertions}})
-    projected = {name: [] for name in CANDIDATE_PREDICATES.values()}
-    seen = set()
+    projected = {name: {} for name in CANDIDATE_PREDICATES.values()}
     for row in rows:
         source = citations[row["site_id"]]
         predicate = "UNRESOLVED_CALLER" if row["predicate"] == "UNRESOLVED_GRPC_CALL" else row["predicate"]
@@ -241,12 +243,26 @@ def project_candidate_frames(envelope: Mapping, universe: Mapping,
                      "predicate": predicate, "stratum": source["stratum"],
                      "unresolved_reason": reasons[(row["site_id"], row["predicate"], row["object"], row["lineage"])]}
         key = source["site_id"]
-        if key in seen:
-            continue
-        seen.add(key)
-        projected[CANDIDATE_PREDICATES[predicate]].append(canonical)
+        frame_id = CANDIDATE_PREDICATES[predicate]
+        if key not in projected[frame_id]:
+            projected[frame_id][key] = canonical
+            if frame_id == "unresolved":
+                canonical["alternatives"] = {}
+        if frame_id == "unresolved":
+            alternatives = projected[frame_id][key]["alternatives"]
+            alternatives.setdefault(row["object"], {
+                "operation": row["object"], "reason": canonical["unresolved_reason"],
+                "lineage": row["lineage"], "source_citation": row["site_id"],
+            })
     frames = {}
-    for name, members in projected.items():
+    for name, by_site in projected.items():
+        members = list(by_site.values())
+        if name == "unresolved":
+            for member in members:
+                alternatives = member["alternatives"]
+                member["alternatives"] = [alternatives[op] for op in sorted(alternatives)]
+                if len(alternatives) > 1:
+                    member.update(object=None, lineage=None, unresolved_reason=None)
         strata = stratify_population(members)
         frames[name] = {"schema": CANDIDATE_FRAME_SCHEMA, "rows": members,
                         "site_ids": sorted(r["site_id"] for r in members), "population": len(members),

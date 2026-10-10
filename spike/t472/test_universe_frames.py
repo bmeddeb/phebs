@@ -390,6 +390,57 @@ class TestFrames(SyntheticRepoCase):
         out = frames.project_candidate_frames(env, {"sites": self.result["sites"]})
         self.assertEqual(out["precision"]["population"], 1)
 
+    def test_unresolved_ambiguity_retains_all_alternatives_once(self):
+        for first, second in (("ambiguous_method_candidates", "ambiguous_method_candidates"),
+                              ("ambiguous_receiver_provenance", "ambiguous_receiver_provenance"),
+                              ("ambiguous_receiver_provenance", "missing_declaration")):
+            env = self.envelope("UNRESOLVED_CALLER")
+            a = env["bundle"]["assertions"][0]
+            a["lineage"] = ""
+            detail = json.loads(a["detail"]); detail["unresolved_reason"] = first
+            a["detail"] = json.dumps(detail)
+            detail = {**detail, "unresolved_reason": second}
+            env["bundle"]["assertions"].append({**a, "id": "second", "object": "/other.v1.Other/SayHello",
+                                               "detail": json.dumps(detail)})
+            out = frames.project_candidate_frames(env, {"sites": self.result["sites"]})
+            env["bundle"]["assertions"].reverse()
+            self.assertEqual(out, frames.project_candidate_frames(env, {"sites": self.result["sites"]}))
+            self.assertEqual(out["unresolved"]["population"], 1)
+            row = out["unresolved"]["rows"][0]
+            self.assertIsNone(row["object"])
+            self.assertIsNone(row["unresolved_reason"])
+            self.assertEqual(len(row["alternatives"]), 2)
+            truth = [{"site_id": row["site_id"], "state": "unresolved", "rationale": "synthetic source alternatives",
+                      "alternatives": [{k: alt[k] for k in ("operation", "reason")} for alt in row["alternatives"]]}]
+            score = caller_scoring.score_unresolved([row["site_id"]],
+                [label_row(row["site_id"], "yes", "greeter.v1.Greeter/SayHello")],
+                {row["site_id"]: row["alternatives"]}, {row["site_id"]: row["stratum"]}, 1.96, truth)[0]
+            self.assertEqual((score["sampled"], score["yes"]), (1, 1))
+
+    def test_same_operation_unresolved_duplicates_must_agree(self):
+        for field, bad in (("lineage", "different"), ("reason", "ambiguous_method_candidates")):
+            env = self.envelope("UNRESOLVED_CALLER")
+            second = copy.deepcopy(env["bundle"]["assertions"][0]); second["id"] = "second"
+            if field == "reason":
+                detail = json.loads(second["detail"]); detail["unresolved_reason"] = bad
+                second["detail"] = json.dumps(detail)
+            else:
+                second[field] = bad
+            env["bundle"]["assertions"].append(second)
+            with self.subTest(field=field), self.assertRaises(frames.FramesError):
+                frames.project_candidate_frames(env, {"sites": self.result["sites"]})
+
+    def test_resolved_and_unresolved_mixing_refuses_in_both_orders(self):
+        for operation in ("/greeter.v1.Greeter/SayHello", "/other.v1.Other/SayHello"):
+            env = self.envelope()
+            second = self.envelope("UNRESOLVED_CALLER")["bundle"]["assertions"][0]
+            second.update(id="second", object=operation)
+            env["bundle"]["assertions"].append(second)
+            for _ in range(2):
+                with self.assertRaises(frames.FramesError):
+                    frames.project_candidate_frames(env, {"sites": self.result["sites"]})
+                env["bundle"]["assertions"].reverse()
+
     def test_census_and_draw_mechanics_use_synthetic_seed_only(self):
         sizes = frames.frame_strata_sizes({"s": ["a", "b"]}, 97)
         self.assertEqual(sizes["s"], {"population": 2, "sample_size": 2, "census": True})
@@ -495,18 +546,38 @@ class TestScoring(unittest.TestCase):
 
     def test_wrong_abstention_fails_and_correct_abstention_passes(self):
         ids = [self.s1, self.s2]
-        truth = [{"site_id": self.s1, "state": "resolved", "reason": "", "rationale": "synthetic"},
-                 {"site_id": self.s2, "state": "unresolved", "reason": "missing_declaration", "rationale": "synthetic"}]
+        truth = [{"site_id": self.s1, "state": "resolved", "alternatives": [], "rationale": "synthetic"},
+                 {"site_id": self.s2, "state": "unresolved", "alternatives": [{"operation": self.operation, "reason": "missing_declaration"}], "rationale": "synthetic"}]
         result = caller_scoring.score_unresolved(ids, [label_row(s, "yes", self.operation) for s in ids],
-                 {s: "missing_declaration" for s in ids}, {s: "example/mini:production" for s in ids}, 1.96, truth)[0]
+                 {s: [{"operation": self.operation, "reason": "missing_declaration"}] for s in ids}, {s: "example/mini:production" for s in ids}, 1.96, truth)[0]
         self.assertEqual((result["yes"], result["no"]), (1, 1))
         with self.assertRaises(caller_scoring.ScoringError):
             caller_scoring.score_precision_family("unresolved_accuracy", [], [], {}, 1.96)
 
+    def test_unresolved_accuracy_compares_complete_operation_reason_pairs(self):
+        alternatives = [{"operation": self.operation, "reason": "ambiguous_receiver_provenance"},
+                        {"operation": "other.v1.Other/SayHello", "reason": "missing_declaration"}]
+        truth = [{"site_id": self.s1, "state": "unresolved", "alternatives": alternatives, "rationale": "synthetic"}]
+        cases = [(list(reversed(alternatives)), 1), (alternatives[:1], 0),
+                 ([{**alternatives[0], "reason": alternatives[1]["reason"]},
+                   {**alternatives[1], "reason": alternatives[0]["reason"]}], 0)]
+        for predicted, yes in cases:
+            result = caller_scoring.score_unresolved([self.s1], [label_row(self.s1, "yes", self.operation)],
+                {self.s1: predicted}, {self.s1: "example/mini:production"}, 1.96, truth)[0]
+            self.assertEqual((result["sampled"], result["yes"], result["no"]), (1, yes, 1-yes))
+
+    def test_invalid_alternative_lists_refuse_even_with_unsure_labels(self):
+        alt = {"operation": self.operation, "reason": "missing_declaration"}
+        truth = [{"site_id": self.s1, "state": "unsure", "alternatives": [], "rationale": "synthetic"}]
+        for predicted in ([], [alt, alt], "missing_declaration", [{**alt, "reason": ""}]):
+            with self.subTest(predicted=predicted), self.assertRaises(caller_scoring.ScoringError):
+                caller_scoring.score_unresolved([self.s1], [label_row(self.s1, "unsure")],
+                    {self.s1: predicted}, {self.s1: "example/mini:production"}, 1.96, truth)
+
     def test_missing_resolution_ledger_refuses(self):
         with self.assertRaises(caller_scoring.ScoringError):
             caller_scoring.score_unresolved([self.s1], [label_row(self.s1, "yes", self.operation)],
-                {self.s1: "missing_declaration"}, {self.s1: "example/mini:production"}, 1.96, [])
+                {self.s1: [{"operation": self.operation, "reason": "missing_declaration"}]}, {self.s1: "example/mini:production"}, 1.96, [])
 
     def gate_fixture(self, yes=10, unsure=0):
         ids = [self.s1 + f"-{n}" for n in range(yes + unsure)]

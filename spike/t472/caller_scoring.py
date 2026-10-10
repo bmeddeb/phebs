@@ -19,7 +19,7 @@ for extra in ("../t111", "../../pilot/validation"):
 import label_protocol as protocol
 import harness as pilot_harness
 
-SCORING_SCHEMA = "t472-caller-scoring-v2"
+SCORING_SCHEMA = "t472-caller-scoring-v3"
 LEDGER_SCHEMA = "t472-eligible-unit-ledger-v2"
 OUTCOME_STATES = frozenset({"analyzed", "excluded", "partial", "failed"})
 QUALITY_FAMILIES = frozenset({"caller_precision", "caller_recall", "unresolved_accuracy",
@@ -55,7 +55,7 @@ def _truth(ids: Sequence[str], records: Sequence[Mapping] | None, labels: Mappin
     if records is None:
         raise ScoringError("independent committed ledger is required")
     expected_fields = {"site_id", "state", "rationale"} | (
-        {"operation", "lineage", "declaration_site_id"} if declaration else {"reason"})
+        {"operation", "lineage", "declaration_site_id"} if declaration else {"alternatives"})
     found = {}
     for rec in records:
         if set(rec) != expected_fields or rec["site_id"] in found:
@@ -89,9 +89,13 @@ def _truth(ids: Sequence[str], records: Sequence[Mapping] | None, labels: Mappin
                     raise ScoringError("declaration ledger contradicts blind operation label")
             elif any(rec[k] is not None for k in ("lineage", "operation", "declaration_site_id")):
                 raise ScoringError("nonresolved declaration ledger record must have null attribution")
-        elif not isinstance(rec["reason"], str) or (
-                rec["state"] in {"unresolved", "not_call"} and not rec["reason"].strip()):
-            raise ScoringError("independent abstention requires a reason")
+        else:
+            alternatives = _unresolved_alternatives(rec["alternatives"])
+            if bool(alternatives) != (rec["state"] in {"unresolved", "not_call"}):
+                raise ScoringError("independent resolution state and alternatives disagree")
+            if rec["state"] == "unresolved" and invocation == "yes" \
+                    and labels[site_id]["operation"] not in {op for op, _ in alternatives}:
+                raise ScoringError("independent alternatives contradict the blind operation label")
     return found
 
 
@@ -182,13 +186,37 @@ def score_precision_family(family: str, sampled_site_ids: Sequence[str], labels:
     return _finish(family, tallies, z)
 
 
+def _unresolved_alternatives(records: Sequence[Mapping], predicted: bool = False) -> frozenset:
+    if not isinstance(records, (list, tuple)):
+        raise ScoringError("unresolved comparison requires the complete alternative list")
+    alternatives, operations = set(), set()
+    for rec in records:
+        if not isinstance(rec, Mapping):
+            raise ScoringError("unresolved alternative must be a record")
+        allowed = {"operation", "reason"}
+        if predicted and set(rec) == allowed | {"lineage", "source_citation"}:
+            allowed |= {"lineage", "source_citation"}
+        if set(rec) != allowed or not isinstance(rec["operation"], str) \
+                or not _OPERATION.fullmatch(rec["operation"]) \
+                or not isinstance(rec["reason"], str) or not rec["reason"].strip() \
+                or rec["operation"] in operations:
+            raise ScoringError("unresolved alternative identity, reason or duplicate is invalid")
+        operations.add(rec["operation"])
+        alternatives.add((rec["operation"], rec["reason"]))
+    return frozenset(alternatives)
+
+
 def score_unresolved(sampled_site_ids: Sequence[str], labels: Sequence[Mapping],
-                     predicted_reasons: Mapping[str, str], stratum_of: Mapping[str, str],
+                     predicted_alternatives: Mapping[str, Sequence[Mapping]], stratum_of: Mapping[str, str],
                      z: float, resolution_ledger: Sequence[Mapping]) -> list[dict]:
     by_site = _labels(sampled_site_ids, labels, stratum_of)
     truth = _truth(sampled_site_ids, resolution_ledger, by_site, False)
-    if not set(sampled_site_ids) <= set(predicted_reasons):
-        raise ScoringError("sampled unresolved candidate has no recorded reason")
+    if not set(sampled_site_ids) <= set(predicted_alternatives):
+        raise ScoringError("sampled unresolved candidate has no recorded alternatives")
+    predicted_sets = {s: _unresolved_alternatives(predicted_alternatives[s], predicted=True)
+                      for s in sampled_site_ids}
+    if any(not alternatives for alternatives in predicted_sets.values()):
+        raise ScoringError("unresolved candidate has no alternatives")
     tallies = {}
     for site_id in sampled_site_ids:
         t = _tally(tallies, stratum_of[site_id], site_id)
@@ -196,7 +224,8 @@ def score_unresolved(sampled_site_ids: Sequence[str], labels: Sequence[Mapping],
         if by_site[site_id]["invocation"] == "unsure" or rec["state"] == "unsure":
             t["unsure"] += 1
             continue
-        correct = rec["state"] in {"unresolved", "not_call"} and rec["reason"] == predicted_reasons[site_id]
+        correct = rec["state"] in {"unresolved", "not_call"} \
+            and _unresolved_alternatives(rec["alternatives"]) == predicted_sets[site_id]
         t["yes" if correct else "no"] += 1
     return _finish("unresolved_accuracy", tallies, z)
 

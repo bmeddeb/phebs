@@ -89,8 +89,8 @@ unchanged Wilson helper; they are never passed to `score_claim` as invented
 fields. The corrected projection is preparation machinery, not a claim that the old
 harness already measures these families. Each sampled site receives an
 independently committed expected-resolution record (`resolved`, `unresolved`,
-`not_call` or `unsure`, with a source rationale and a reason for abstention)
-and, for attribution, an independently committed declaration-citation record.
+`not_call` or `unsure`, with a source rationale and the complete expected
+operation/reason alternative set for abstention) and, for attribution, an independently committed declaration-citation record.
 A resolved declaration record binds the canonical operation, provisional
 repo/path lineage and same-repository, same-commit `.proto` citation.
 Caller recall uses true invocation labels. Attributed-edge recall uses true
@@ -99,8 +99,18 @@ lineage equality; attributed-edge precision uses all decided claimed sites
 and the same equality. Correct negative abstentions never enter either
 edge numerator. Missing declarations remain in caller recall and the
 resolution/outcome accounting; a zero true-edge denominator is unavailable.
-Unresolved accuracy compares the candidate's unresolved decision and reason
-with the expected-resolution ledger, never invocation truth alone.
+Unresolved accuracy compares the candidate's unresolved decision and complete
+set of canonical `(operation, reason)` alternatives with the expected-resolution
+ledger, never invocation truth alone or a reason selected by input order.
+Resolution records require `site_id`, `state`, `rationale` and `alternatives`;
+that last field is a list of unique `{operation, reason}` records, nonempty
+for `unresolved`/`not_call` and empty for `resolved`/`unsure`. For a true call,
+its blind operation label must belong to the independently expected unresolved
+alternatives. These records are constructed from source without predictions.
+Production may emit different operations and per-binding override reasons at
+one unresolved call: retain every alternative, lineage and citation in one
+sampling row per source site. Conflicting duplicates of the same operation,
+resolved/unresolved mixtures and conflicting resolved claims still refuse.
 
 The 74 individual service-client interface coordinates are source census
 units for preparing and checking the declaration-citation ledger. They retain
@@ -162,8 +172,8 @@ also freezes its accepted production citation spans: the token, AST callee
 span and typed identifier/dot selector spelling. The caller adapter must join
 an exact span in the exact repository/commit/path, preserve code role and
 declaration lineage, and normalize `/package.Service/Method` to the unchanged
-label spelling `package.Service/Method`. Conflicting claims refuse rather
-than being silently collapsed. `UNRESOLVED_CALLER` is the supported recipe's
+label spelling `package.Service/Method`. Conflicting resolved claims and inconsistent same-operation duplicates refuse;
+explicit unresolved alternatives remain represented at one sampling site. `UNRESOLVED_CALLER` is the supported recipe's
 unresolved predicate; adapting it for the frozen harness does not change the
 harness bytes or reinterpret the older consumer recipe.
 

@@ -71,7 +71,7 @@
    }
   },
   "path": "spike/t472/frames/frames.plan.json",
-  "sha256": "sha256:802d346d2874caae50919272b153a692bdc5a5880d3814c153c65463e0908a5e"
+  "sha256": "sha256:5127105799646f34c772a311ce0f4d7c7a5439d86c8e9f704835ed7429747fcb"
  },
  "frozen_machinery_unedited": true,
  "harness_schema": "pilot-accuracy-gold-harness-v1",
@@ -83,7 +83,7 @@
   },
   "caller_scoring": {
    "path": "spike/t472/caller_scoring.py",
-   "sha256": "sha256:e290cfb1ef3fc979e0d5966b3e82ea15562b6f6e8ae049894608cb4909c42351"
+   "sha256": "sha256:c3bab8f918a40b3400bad73d75c8a130b5d62f4553e033b3ba71e929638d3d83"
   },
   "enumerate_universe": {
    "path": "spike/t472/enumerate_universe.py",
@@ -91,7 +91,7 @@
   },
   "frames": {
    "path": "spike/t472/frames.py",
-   "sha256": "sha256:66837b89ea1b3319f4ae350d8e67ff742148e521c23f034ea512cb5886af680a"
+   "sha256": "sha256:db8970f86482de4a899f9a003812abbe088a9629161e096c748446d4cf8227fe"
   },
   "go_source_parser": {
    "path": "spike/t472/gosites/main.go",
@@ -141,7 +141,7 @@
  "predictions_disclosed": false,
  "protocol_doc": {
   "path": "docs/CALLER_QUALITY_PROTOCOL.md",
-  "sha256": "sha256:412da365ad6dd1dacf1bf953f6361d897b695ae1f870a35b78694f4280a9dc37"
+  "sha256": "sha256:0b8859fc5d4426887fdcb22d370994af8a8cae5bb5ba60c70f1b364599ca8361"
  },
  "quality_scored": false,
  "randomness_commitment_sequence": [

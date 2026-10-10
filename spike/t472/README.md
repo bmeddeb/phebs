@@ -439,14 +439,18 @@ Three consecutive universe/frame generations are byte-identical.
 and `UNRESOLVED_CALLER`, normalizes leading-slash operations for the unchanged
 label schema, preserves reason/lineage/role, and joins exact production spans
 to independent source IDs. Unsupported predicates, wrong source fences,
-role disagreement and conflicting claims refuse. Frozen `candidate_rows`
+role disagreement, inconsistent same-operation claims and conflicting
+resolution decisions refuse. Distinct unresolved operations remain a
+complete deterministic alternative set at one sampled source site, including
+per-binding reasons and lineages; they are never chosen by assertion order. Frozen `candidate_rows`
 is reused through this adapter; its old unresolved predicate is not rewritten.
 
 `caller_scoring.py` keeps the entire sampled sheet for uncertainty accounting.
 All five approved quality families must have their complete planned results;
 missing labels/results refuse, an all-unsure stratum invalidates, uncertainty
 above 10% fails, and zero denominators are unavailable. Unresolved accuracy
-compares independent resolution and reason, rather than invocation alone.
+compares independent resolution and the complete operation/reason alternative
+set, rather than invocation alone or a scalar reason.
 Attributed precision/recall compare canonical operation and exact declaration
 lineage against an independently committed citation ledger. Correct negative
 abstentions cannot raise edge recall. The source interface census supports

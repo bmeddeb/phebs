@@ -17,11 +17,11 @@ real-round score or external publication.
 |---|---|
 | 1 · ordinary citations miss recall IDs | Freeze canonical source callee coordinates plus AST/typed production citation spans; adapter joins exact repository/commit/path/span and preserves source role. Production-shaped selector test scores the synthetic hit correctly. |
 | 2 · aliases/wrappers/method values excluded | Standard Go parser inventories every call expression; import provenance never filters recall. Cross-file aliases/interfaces, method values, bare calls, factories/reflection, generics and parse refusals are exercised. |
-| 3 · unresolved truth mistaken for invocation truth | Independent resolution/state/reason ledger is mandatory; a resolvable true call incorrectly withheld counts wrong, while a justified matching abstention counts correct. |
+| 3 · unresolved truth mistaken for invocation truth | Independent resolution/state/operation-reason-alternative ledger is mandatory; a resolvable true call incorrectly withheld counts wrong, while a justified matching abstention counts correct. |
 | 4 · uncertainty/missing results can pass | Keep every sampled label, enforce the 10% cap, reconcile all five families and every planned sample/stratum. Empty/missing/duplicate results refuse; all-unsure invalidates and genuine zero-positive denominators are unavailable. |
 | 5 · attributed-edge accuracy replaces precision/recall | Separate approved precision/recall families require independent declaration citations and exact operation/lineage comparisons. Wrong lineage fails despite the same operation; correct negative abstentions cannot rescue edge recall. |
 | 6 · several interfaces share one coordinate/label | Preserve each of 74 service-client interfaces separately across four repository×role strata; a synthetic two-service file yields two scalar-label units with distinct spans. |
-| 7 · older predicate/object dialect rejects the recipe | Caller-specific adapter handles `UNRESOLVED_CALLER`, preserves reason/lineage and converts only the leading slash/harness representation. Unsupported dialects and conflicting claims refuse. Frozen harness remains unedited. |
+| 7 · older predicate/object dialect rejects the recipe | Caller-specific adapter handles `UNRESOLVED_CALLER`, preserves reason/lineage and converts only the leading slash/harness representation. Unsupported dialects, conflicting resolved claims and inconsistent same-operation duplicates refuse; distinct unresolved alternatives remain complete at one source site. Frozen harness remains unedited. |
 | 8 · pooled outcomes conceal a failed stratum | Explicit repo/commit/path outcomes reconcile every source and gate each repository×role. A 95-analyzed/5-failed synthetic corpus fails in the smaller wholly failed stratum. |
 | 9 · empty/corrupt bundles appear complete | Require the entire preparation structure; validate all nested digests without skipping subtrees; verify current source/member/provenance bytes at assembly. Missing fields, malformed digests, stale missing lists, changed members and invalid paths/counts/skeletons refuse. |
 
@@ -36,6 +36,24 @@ The low finding corrected the mock recall count to 75 (76 universe sites minus
 one excluded import). The independently reproduced populations stay unchanged;
 only source-provenance/plan/bundle identities regenerate. Exact corrected
 commit re-review remains pending until recorded below.
+
+## Connected production ambiguity correction
+
+The targeted audit of `4e978b8f9b68899d34b0fe65e92ea8156fdd7416` superseded its
+initial clean re-review: critical 0, high 0, medium 1, low 0. Production's
+syntax fallback legitimately emits multiple operation-keyed unresolved
+alternatives at one selector, including different per-binding override reasons.
+The adapter now retains their complete deterministic operation/reason/lineage/
+citation set at one source sampling site; conflicting resolved claims,
+resolved/unresolved mixtures and inconsistent same-operation duplicates refuse.
+Unresolved accuracy compares the complete independently expected operation/
+reason set. Missing, extra or incorrectly paired alternatives count wrong;
+input order cannot select a favorable reason. Source/uncertainty denominators,
+approved thresholds and frozen machinery stay exact. New synthetic regressions
+cover both production ambiguity classes, mixed reasons, ordering, incomplete/
+mispaired sets and malformed input. Corrected candidate rows and scoring use
+v3 schemas; existing source populations remain v2 and unchanged. Exact final
+source re-review remains pending until recorded below.
 
 ## Regenerated artifacts
 
@@ -60,7 +78,7 @@ fields remain null (25 explicit missing paths). No known digest is null.
 
 ## Gates
 
-- `python3 -m unittest spike.t472.test_universe_frames` — 41/41 pass,
+- `python3 -m unittest spike.t472.test_universe_frames` — 46/46 pass,
   synthetic regression data only.
 - `python3 -m unittest discover -s spike/t472/derivation -p 'test_*.py'` —
   inherited 3/3 pass.
