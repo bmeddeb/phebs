@@ -54,7 +54,7 @@ func TestStoreBoundEvidenceGroupingOracle(t *testing.T) {
 	}
 	policy := "sha256:" + strings.Repeat("a", 64)
 	expectedPolicy := fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("phebs-extraction-evidence-chunks-169-v1\x00"+policy)))
-	if actual, err := candidate.ExtractionPolicyDigest(policy, true); err != nil || actual != expectedPolicy {
+	if actual, err := candidate.ExtractionPolicyDigest(policy, true, false); err != nil || actual != expectedPolicy {
 		t.Fatalf("production policy identity differs from V3: %s %v", actual, err)
 	}
 	old, next := frozenExtractionDomains(), storeBoundExtractionDomains()

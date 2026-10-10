@@ -158,6 +158,14 @@ type Experimental struct {
 	// T11.1 remains STOP/not established and its repo/path lineage is not the
 	// canonical descriptor/module lineage required to complete T12.3.
 	ProvisionalProtoExtraction bool `yaml:"provisional_proto_extraction"`
+	// TypedScopeReservations selects the corrected typed-partition reservation
+	// policy: a typed partition's weight is its validated TypedScope.Records
+	// with a minimum of one instead of the historical zero-record weight-one
+	// sliver. It layers a distinct policy identity onto plans, bindings and the
+	// execution gate, so plans allocated under the historical policy are never
+	// silently reused; off (the default) reconstructs historical identities
+	// byte-exactly. The T47.2 candidate run enables it explicitly.
+	TypedScopeReservations bool `yaml:"typed_scope_reservations"`
 	// ProvisionalThriftExtraction enables the T19 Thrift protocol pack
 	// (thrift-contract declarations and thrift-consumer Go evidence). Rule
 	// validation is the T19.1 spike; the same provisional repo/path lineage

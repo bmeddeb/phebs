@@ -376,7 +376,9 @@ func (reconciler *Reconciler) confirmRecoveryReferences(ctx context.Context, aut
 		state.PolicyDigest != authority.CandidatePolicyDigest {
 		return errors.Join(err, ErrStale)
 	}
-	policy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, reconciler.StoreAccounting)
+	policy, err := candidate.ExtractionPolicyDigest(
+		state.PolicyDigest, reconciler.StoreAccounting, reconciler.TypedScopeReservations,
+	)
 	if err != nil {
 		return err
 	}

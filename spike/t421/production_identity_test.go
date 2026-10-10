@@ -81,7 +81,7 @@ func TestProductionFixtureVersionedInputRouting(t *testing.T) {
 		if caches[index] != productionIdentityCacheFor(t, input) {
 			t.Fatal("same version lost its exact-plan cache")
 		}
-		policy, err := candidate.ExtractionPolicyDigest("sha256:"+strings.Repeat("a", 64), input.Schema == PlanV3Schema)
+		policy, err := candidate.ExtractionPolicyDigest("sha256:"+strings.Repeat("a", 64), input.Schema == PlanV3Schema, false)
 		if err != nil || (policy == "sha256:"+strings.Repeat("a", 64)) != (index == 0) {
 			t.Fatalf("%s grouping route = %s, %v", input.Schema, policy, err)
 		}

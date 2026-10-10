@@ -621,7 +621,7 @@ func runtimeHandleDomains(
 			SourceGenerationDigest:      observation.SourceGenerationDigest,
 			ObservationGenerationDigest: observation.ObservationGenerationDigest,
 			ExtractorVersion:            "1.0.0", ExtractionPolicyDigest: fixedDigest(string(rune('d' + index))),
-		})
+		}, false)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -500,7 +500,7 @@ func runProductionIdentityPipeline(
 	}
 	roots := make(map[string]candidate.DomainResultRoot, len(combined.Profile.Pipeline.ExtractionDomains))
 	plans := make(map[string]candidate.DomainResultPlan, len(combined.Profile.Pipeline.ExtractionDomains))
-	extractionPolicy, err := candidate.ExtractionPolicyDigest(sparseRoot.PolicyDigest, input.StoreAccounting)
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(sparseRoot.PolicyDigest, input.StoreAccounting, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +514,7 @@ func runProductionIdentityPipeline(
 			ObservationGenerationDigest: input.ObservationDigest,
 			ExtractorVersion:            versions[expectedDomain.Domain],
 			ExtractionPolicyDigest:      extractionPolicy,
-		})
+		}, false)
 		if planErr != nil {
 			t.Fatalf("build reserved plan %s: %v", expectedDomain.Domain, planErr)
 		}

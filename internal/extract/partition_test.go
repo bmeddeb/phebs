@@ -395,6 +395,18 @@ func partitionExecutorPlanForAccounting(
 	storeAccounting bool,
 	controls ...partitionExecutorControl,
 ) (candidate.DomainResultPlan, string, string) {
+	return partitionExecutorPlanForModes(
+		t, domainName, version, suffix, content, storeAccounting, false, controls...,
+	)
+}
+
+func partitionExecutorPlanForModes(
+	t *testing.T,
+	domainName, version, suffix, content string,
+	storeAccounting,
+	typedScopeReservations bool,
+	controls ...partitionExecutorControl,
+) (candidate.DomainResultPlan, string, string) {
 	t.Helper()
 	repository := "example.invalid/executor"
 	directory := t.TempDir()
@@ -468,7 +480,7 @@ func partitionExecutorPlanForAccounting(
 	if err != nil {
 		t.Fatal(err)
 	}
-	extractionPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, storeAccounting)
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, storeAccounting, typedScopeReservations)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -477,7 +489,7 @@ func partitionExecutorPlanForAccounting(
 		ObservationGenerationDigest: "sha256:" + strings.Repeat("d", 64),
 		ExtractorVersion:            version,
 		ExtractionPolicyDigest:      extractionPolicy,
-	})
+	}, typedScopeReservations)
 	if err != nil {
 		t.Fatal(err)
 	}

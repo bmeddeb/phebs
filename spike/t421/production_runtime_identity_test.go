@@ -103,7 +103,7 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 				return err
 			}
 			current := publication.State()
-			policy, policyErr := candidate.ExtractionPolicyDigest(current.PolicyDigest, storeAccounting)
+			policy, policyErr := candidate.ExtractionPolicyDigest(current.PolicyDigest, storeAccounting, false)
 			if policyErr != nil || plan.ExtractionPolicyDigest != policy {
 				return errors.Join(policyErr, extractionpublication.ErrStale)
 			}

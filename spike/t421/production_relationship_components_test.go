@@ -257,7 +257,7 @@ func frozenOverlayComponentResolver(
 	plan, err := extractionpublication.BuildReservedPlan(domain, candidate.DomainResultAuthority{
 		SourceGenerationDigest: observed.SourceGenerationDigest, ObservationGenerationDigest: observed.ObservationGenerationDigest,
 		ExtractorVersion: proto.Version(), ExtractionPolicyDigest: sparseRoot.PolicyDigest,
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -40,7 +40,8 @@ func newT422CheckpointControl(ctx context.Context, stale *t422StaleControl, reus
 	}
 	lifetime, cancel := context.WithCancel(ctx)
 	base := &t422StaleControl{ctx: lifetime, cancel: cancel, launch: stale.launch, reconciler: stale.reconciler,
-		sink: t4013ExactReportSink("exact checkpoint preparation: "), workspacePreparation: stale.workspacePreparation}
+		typedScopeReservations: stale.typedScopeReservations,
+		sink:                   t4013ExactReportSink("exact checkpoint preparation: "), workspacePreparation: stale.workspacePreparation}
 	base.hit.ready, base.hit.release = make(chan struct{}), make(chan struct{})
 	return &t422CheckpointControl{t422StaleControl: base, reuse: reuse}, nil
 }
@@ -56,7 +57,7 @@ func (control *t422CheckpointControl) captureFinal(ctx context.Context, state ca
 	if !control.current(ctx, 7, true, true) {
 		return control.stop(errT422StaleControl)
 	}
-	value, err := t422StaleFinalSnapshot(state, response)
+	value, err := t422StaleFinalSnapshot(state, response, control.typedScopeReservations)
 	if err != nil {
 		return control.stop(err)
 	}

@@ -41,11 +41,11 @@ func t422StaleFixtureFinal() (candidate.State, t421FinalAuthorityResponse) {
 // This is a supplied bounded identity fixture, not a native nine-root F proof.
 func TestT422StaleFinalSnapshot(t *testing.T) {
 	state, response := t422StaleFixtureFinal()
-	got, err := t422StaleFinalSnapshot(state, response)
+	got, err := t422StaleFinalSnapshot(state, response, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	policy, _ := candidate.ExtractionPolicyDigest(state.PolicyDigest, true)
+	policy, _ := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, false)
 	if got.authority.ExtractionPolicyDigest != policy || got.authority.CandidateManifestDigest != state.ManifestDigest ||
 		got.final != response.Authority || got.roots[0].Domain != "grpc-caller" || got.generation != response.ExtractionRoots[0].GenerationSHA256 {
 		t.Fatal("native scalar authority lost", got)
@@ -80,7 +80,7 @@ func TestT422StaleFinalSnapshot(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			s, r := t422StaleFixtureFinal()
 			test.mutate(&s, &r)
-			if value, err := t422StaleFinalSnapshot(s, r); err == nil || value != (t422StaleFinal{}) {
+			if value, err := t422StaleFinalSnapshot(s, r, false); err == nil || value != (t422StaleFinal{}) {
 				t.Fatal("malformed authority retained", value, err)
 			}
 		})

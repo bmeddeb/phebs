@@ -1487,7 +1487,7 @@ func buildTestPlanForDomainAndTyped(
 		ObservationGenerationDigest: "sha256:" + strings.Repeat("a", 64),
 		ExtractorVersion:            "3.0.0",
 		ExtractionPolicyDigest:      "sha256:" + strings.Repeat("b", 64),
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

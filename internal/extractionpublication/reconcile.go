@@ -47,6 +47,12 @@ type Reconciler struct {
 	RecoveryPreparationEnabled bool
 	// StoreAccounting selects the versioned 169-fact policy before workers start.
 	StoreAccounting bool
+	// TypedScopeReservations selects the corrected typed-scope reservation
+	// policy before workers start. It layers a distinct policy identity onto
+	// the same durable controls, so plans allocated under the historical
+	// weight-one sliver are never silently reused. Ordinary servers leave it
+	// false and reconstruct historical identities byte-exactly.
+	TypedScopeReservations bool
 
 	mu [64]sync.Mutex
 }
@@ -74,7 +80,9 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 	if err != nil {
 		return "", err
 	}
-	extractionPolicy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, reconciler.StoreAccounting)
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(
+		state.PolicyDigest, reconciler.StoreAccounting, reconciler.TypedScopeReservations,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -118,7 +126,9 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 		return "", err
 	}
 	root := sparse.Root()
-	extractionPolicy, err = candidate.ExtractionPolicyDigest(root.PolicyDigest, reconciler.StoreAccounting)
+	extractionPolicy, err = candidate.ExtractionPolicyDigest(
+		root.PolicyDigest, reconciler.StoreAccounting, reconciler.TypedScopeReservations,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -133,7 +143,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 			ObservationGenerationDigest: observationDigest,
 			ExtractorVersion:            descriptor.Version,
 			ExtractionPolicyDigest:      extractionPolicy,
-		})
+		}, reconciler.TypedScopeReservations)
 		if err != nil {
 			return "", terminalPlanFailure(err)
 		}

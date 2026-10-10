@@ -550,7 +550,7 @@ func TestGitSparseSourceReadsOnlySelectedImmutableObjects(t *testing.T) {
 		ObservationGenerationDigest: "sha256:" + strings.Repeat("5", 64),
 		ExtractorVersion:            "3.0.0",
 		ExtractionPolicyDigest:      "sha256:" + strings.Repeat("6", 64),
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -674,7 +674,7 @@ func TestGitSparseSourcePreservesWholeRepositoryExecutionSubranges(t *testing.T)
 		ObservationGenerationDigest: "sha256:" + strings.Repeat("5", 64),
 		ExtractorVersion:            "3.0.0",
 		ExtractionPolicyDigest:      "sha256:" + strings.Repeat("6", 64),
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -750,7 +750,7 @@ func TestGitTypedPartitionReadsIndexAndAdmittedDocumentsOnce(t *testing.T) {
 		ObservationGenerationDigest: "sha256:" + strings.Repeat("5", 64),
 		ExtractorVersion:            "3.0.0",
 		ExtractionPolicyDigest:      "sha256:" + strings.Repeat("6", 64),
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
