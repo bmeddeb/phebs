@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 )
 
 // Artifact-directory bounds. They keep the one startup census bounded by
@@ -47,62 +48,39 @@ type ArtifactDirectory struct {
 //
 // This is startup work at the admitted boundary, never per-query work: after
 // the census Resolve is a map lookup and reads nothing. The cost is one
-// ReadDir plus one full read and hash per regular file, bounded by
+// bounded directory read plus one full read and hash per regular file, bounded by
 // maxArtifactEntries files and maxArtifactTotalBytes total bytes.
 func OpenArtifactDirectory(dir string) (*ArtifactDirectory, error) {
-	entries, err := os.ReadDir(dir)
+	fd, err := unix.Open(dir, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, fmt.Errorf("read referenced artifacts directory %q: %w", dir, err)
 	}
+	directory := os.NewFile(uintptr(fd), dir)
+	defer func() { _ = directory.Close() }()
+	entries, err := directory.ReadDir(maxArtifactEntries + 1)
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("read referenced artifacts directory %q: %w", dir, err)
+	}
 	if len(entries) > maxArtifactEntries {
-		return nil, fmt.Errorf(
-			"referenced artifacts directory %q holds %d entries, exceeds the %d bound",
-			dir, len(entries), maxArtifactEntries,
-		)
+		return nil, fmt.Errorf("referenced artifacts directory %q exceeds the %d bound", dir, maxArtifactEntries)
 	}
-
 	names := make([]string, 0, len(entries))
-	var total int64
 	for _, entry := range entries {
-		name := entry.Name()
-		if !validArtifactName(name) {
-			return nil, fmt.Errorf("referenced artifacts directory %q: refused entry name %q", dir, name)
+		if !validArtifactName(entry.Name()) {
+			return nil, fmt.Errorf("referenced artifacts directory %q: refused entry name %q", dir, entry.Name())
 		}
-		info, err := entry.Info()
-		if err != nil {
-			return nil, fmt.Errorf("stat referenced artifact %q: %w", name, err)
-		}
-		if !info.Mode().IsRegular() {
-			return nil, fmt.Errorf(
-				"referenced artifact %q is %s, want a regular file", name, info.Mode().Type(),
-			)
-		}
-		if info.Size() > maxArtifactBytes {
-			return nil, fmt.Errorf(
-				"referenced artifact %q is %d bytes, exceeds the %d bound", name, info.Size(), maxArtifactBytes,
-			)
-		}
-		total += info.Size()
-		if total > maxArtifactTotalBytes {
-			return nil, fmt.Errorf(
-				"referenced artifacts directory %q exceeds the %d total-byte bound", dir, maxArtifactTotalBytes,
-			)
-		}
-		names = append(names, name)
+		names = append(names, entry.Name())
 	}
-
-	// Sorting is load-bearing: the root digest is derived from the row order,
-	// and ReadDir returns entries in directory order rather than a sorted
-	// sequence, so an unsorted census would make the digest host-dependent.
 	sort.Strings(names)
-
 	digests := make(map[string]string, len(names))
 	rows := make([]byte, 0, len(names)*96)
+	var total int64
 	for _, name := range names {
-		digest, err := hashArtifactFile(filepath.Join(dir, name))
+		digest, size, err := hashArtifactFile(directory, name, maxArtifactTotalBytes-total)
 		if err != nil {
 			return nil, err
 		}
+		total += size
 		digests[name] = digest
 		rows = append(rows, name...)
 		rows = append(rows, ' ')
@@ -149,34 +127,87 @@ func (d *ArtifactDirectory) Count() int {
 	return len(d.digests)
 }
 
-// validArtifactName reports whether name is usable as exactly one artifact
-// identifier inside the flat directory. It refuses the empty name, the two
-// relative markers, any name carrying a path separator or a NUL, and any name
-// that is not trimmed of surrounding space, so no identifier can address
-// anything but one entry of the censused directory.
+// validArtifactName accepts the bounded release identifier grammar restricted
+// to one path segment. Spaces and newlines are excluded, so the root's row
+// separators cannot occur in a name and two artifact sets cannot share rows.
 func validArtifactName(name string) bool {
-	if name == "" || name == "." || name == ".." {
-		return false
-	}
-	if strings.ContainsRune(name, '/') || strings.ContainsRune(name, '\\') ||
-		strings.ContainsRune(name, 0) {
-		return false
-	}
-	return strings.TrimSpace(name) == name
+	return name != "." && name != ".." && idRE.MatchString(name) && !containsSeparator(name)
 }
 
-func hashArtifactFile(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", fmt.Errorf("open referenced artifact %q: %w", filepath.Base(path), err)
+func containsSeparator(name string) bool {
+	for _, char := range name {
+		if char == '/' || char == '\\' {
+			return true
+		}
 	}
-	// Read-only, so a Close failure carries no lost write and cannot change the
-	// digest already derived from the bytes read.
-	defer func() { _ = file.Close() }()
+	return false
+}
 
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
-		return "", fmt.Errorf("read referenced artifact %q: %w", filepath.Base(path), err)
+func hashArtifactFile(directory *os.File, name string, remaining int64) (string, int64, error) {
+	fd, err := unix.Openat(int(directory.Fd()), name,
+		unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return "", 0, fmt.Errorf("open referenced artifact %q: %w", name, err)
 	}
-	return "sha256:" + hex.EncodeToString(hasher.Sum(nil)), nil
+	file := os.NewFile(uintptr(fd), filepath.Join(directory.Name(), name))
+	defer func() { _ = file.Close() }()
+	before, err := file.Stat()
+	if err != nil {
+		return "", 0, fmt.Errorf("stat referenced artifact %q: %w", name, err)
+	}
+	digest, size, err := hashOpenedArtifact(file, before, remaining)
+	if err != nil {
+		return "", 0, fmt.Errorf("referenced artifact %q: %w", name, err)
+	}
+	// Verify that the directory entry still names the descriptor just hashed.
+	// The second open cannot follow a symlink or block on a substituted FIFO.
+	checkFD, err := unix.Openat(int(directory.Fd()), name,
+		unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return "", 0, fmt.Errorf("recheck referenced artifact %q: %w", name, err)
+	}
+	check := os.NewFile(uintptr(checkFD), name)
+	after, statErr := check.Stat()
+	closeErr := check.Close()
+	if statErr != nil || closeErr != nil {
+		return "", 0, fmt.Errorf("recheck referenced artifact %q: %w", name, errors.Join(statErr, closeErr))
+	}
+	if !sameArtifact(before, after) {
+		return "", 0, fmt.Errorf("referenced artifact %q changed during census", name)
+	}
+	return digest, size, nil
+}
+
+func hashOpenedArtifact(file *os.File, before os.FileInfo, remaining int64) (string, int64, error) {
+	if !before.Mode().IsRegular() {
+		return "", 0, fmt.Errorf("is %s, want a regular file", before.Mode().Type())
+	}
+	if before.Size() > maxArtifactBytes {
+		return "", 0, fmt.Errorf("is %d bytes, exceeds the %d bound", before.Size(), maxArtifactBytes)
+	}
+	if before.Size() > remaining {
+		return "", 0, fmt.Errorf("exceeds the %d total-byte bound", maxArtifactTotalBytes)
+	}
+	limit := min(int64(maxArtifactBytes), remaining)
+	hasher := sha256.New()
+	read, err := io.Copy(hasher, io.LimitReader(file, limit+1))
+	if err != nil {
+		return "", read, fmt.Errorf("read: %w", err)
+	}
+	if read > limit {
+		return "", read, fmt.Errorf("grew beyond the %d byte read bound", limit)
+	}
+	after, err := file.Stat()
+	if err != nil {
+		return "", read, fmt.Errorf("stat after read: %w", err)
+	}
+	if read != before.Size() || !sameArtifact(before, after) {
+		return "", read, fmt.Errorf("changed during census")
+	}
+	return "sha256:" + hex.EncodeToString(hasher.Sum(nil)), read, nil
+}
+
+func sameArtifact(before, after os.FileInfo) bool {
+	return os.SameFile(before, after) && before.Mode() == after.Mode() &&
+		before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
 }

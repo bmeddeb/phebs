@@ -369,3 +369,44 @@ func TestReleasedExtractorsRefusesRecordForAnotherBinary(t *testing.T) {
 		t.Fatalf("reason = %q (%v), want %q", reason, err, packrelease.ReasonDigestMismatch)
 	}
 }
+
+func TestReleasedExtractorsWithdrawalNeedsNoBuildOrArtifactFacts(t *testing.T) {
+	cases := []struct {
+		name, status, cause string
+		revoked, expired    bool
+	}{
+		{name: "suspended", status: packrelease.StatusSuspended, cause: "suspended"},
+		{name: "retired", status: packrelease.StatusRetired, cause: "retired"},
+		{name: "revoked", status: packrelease.StatusReleased, cause: "revoked", revoked: true},
+		{name: "expired", status: packrelease.StatusReleased, cause: "expired", expired: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			public, record := writeShapedRecord(t, dir, "phebs.withdrawn", "key-1", func(record *packrelease.PackRelease) {
+				record.DerivedStatus = tc.status
+				if tc.expired {
+					record.ApprovedAt = "2019-07-17T20:00:00Z"
+					record.Validation.ExpiresAt = "2020-01-01T00:00:00Z"
+				}
+			})
+			cfg := &config.Config{}
+			cfg.ReleaseSelection.Path = dir
+			cfg.ReleaseSelection.ArtifactsPath = filepath.Join(t.TempDir(), "missing")
+			cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+			if tc.revoked {
+				cfg.ReleaseSelection.Revoked = []string{record.ReleaseID}
+			}
+			restore := releaseLoadBindings
+			releaseLoadBindings = func(context.Context, string) (packrelease.Options, error) {
+				t.Error("withdrawal attempted to derive load bindings")
+				return packrelease.Options{}, fmt.Errorf("unavailable build and artifact facts")
+			}
+			t.Cleanup(func() { releaseLoadBindings = restore })
+			extractors, err := releasedExtractors(t.Context(), cfg)
+			if err != nil || len(extractors) != 0 {
+				t.Fatalf("withdrawal = %v, %v; want no admission and no refusal", extractors, err)
+			}
+		})
+	}
+}

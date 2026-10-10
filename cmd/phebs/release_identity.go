@@ -20,6 +20,7 @@ import (
 // values is operator-declared or self-asserted by a release.
 type releaseFacts struct {
 	executable   string
+	binaryDigest string
 	goVersion    string
 	sourceCommit string
 }
@@ -56,7 +57,15 @@ func readReleaseBuildFacts() (releaseFacts, error) {
 	if err != nil {
 		return releaseFacts{}, fmt.Errorf("resolve running executable: %w", err)
 	}
-	return buildFacts(info, executable)
+	facts, err := buildFacts(info, executable)
+	if err != nil {
+		return releaseFacts{}, err
+	}
+	facts.binaryDigest, err = executableidentity.RunningDigest()
+	if err != nil {
+		return releaseFacts{}, fmt.Errorf("digest running executable: %w", err)
+	}
+	return facts, nil
 }
 
 // buildFacts validates embedded build metadata and derives the release facts.
@@ -114,9 +123,15 @@ func validSourceCommit(value string) bool {
 // bytes actually present, so every binding a released record must match comes
 // from present fact rather than from the record or from configuration.
 func releaseLoadBindingsFor(artifactsPath string, facts releaseFacts) (packrelease.Options, error) {
-	binaryDigest, err := executableidentity.Digest(facts.executable)
-	if err != nil {
-		return packrelease.Options{}, fmt.Errorf("running executable identity: %w", err)
+	binaryDigest := facts.binaryDigest
+	if binaryDigest == "" {
+		// Synthetic test facts bind a fixture executable. Production always
+		// supplies the descriptor-derived running-image digest above.
+		var err error
+		binaryDigest, err = executableidentity.Digest(facts.executable)
+		if err != nil {
+			return packrelease.Options{}, fmt.Errorf("running executable identity: %w", err)
+		}
 	}
 	implementation := packrelease.Implementation{
 		PhebsSourceCommit:        facts.sourceCommit,

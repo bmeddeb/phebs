@@ -175,13 +175,11 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 	if err != nil {
 		return nil, err
 	}
-	opts, err := releaseLoadBindings(ctx, cfg.ReleaseSelection.ArtifactsPath)
-	if err != nil {
-		return nil, fmt.Errorf("pack release selection bindings: %w", err)
-	}
-	opts.Keys = keys
-	opts.Revoked = revokedReleaseIDs(cfg.ReleaseSelection.Revoked)
-	selection, err := packrelease.LoadSelection(ctx, cfg.ReleaseSelection.Path, opts)
+	opts := packrelease.Options{Keys: keys, Revoked: revokedReleaseIDs(cfg.ReleaseSelection.Revoked)}
+	selection, err := packrelease.LoadSelectionWithBindings(ctx, cfg.ReleaseSelection.Path, opts,
+		func(ctx context.Context) (packrelease.Options, error) {
+			return releaseLoadBindings(ctx, cfg.ReleaseSelection.ArtifactsPath)
+		})
 	if err != nil {
 		return nil, fmt.Errorf("pack release selection: %w", err)
 	}

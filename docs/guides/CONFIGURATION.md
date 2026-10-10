@@ -542,7 +542,10 @@ at most 1 MiB per artifact and 64 MiB in total — and the referenced-artifacts
 root digest and the resolver each record is checked against are derived from
 the bytes actually present, never from an asserted value. The field is inert
 while `path` is empty, so an artifact directory can be staged before its
-release records arrive.
+release records arrive. The directory must be flat and non-symlink; each regular file has a bounded release identifier
+as its single-segment name, with no spaces, newlines or path separators.
+Binding derivation is skipped for a wholly withdrawn selection; an unavailable
+artifact directory cannot defeat suspension or revocation.
 
 Strict parsing refuses an unstable or half-configured gate before startup ever
 reaches it:

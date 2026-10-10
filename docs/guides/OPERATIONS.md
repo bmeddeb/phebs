@@ -3623,6 +3623,30 @@ admitted only through its own governing record bound to its own fixed in-tree
 recipe, and a released pack replaces the experimental-dark extractor for its
 own domain rather than widening any other domain's registration.
 
+**Load-binding census.** Build facts and artifact bytes are read only when an
+authenticated governing release survives withdrawal and clock checks. A
+selection containing only suspended, retired, revoked or expired records
+continues without an artifact directory or executable build facts. An eligible
+release shares one derived binding with every other eligible release.
+
+Artifacts live in one flat, non-symlink directory. Names use the bounded release
+identifier grammar restricted to one segment, excluding spaces, newlines and
+path separators. Enumeration accepts at most 1,024 entries plus one overflow
+sentinel. Opened regular files are read through enforced 1 MiB per-file and
+64 MiB aggregate limits, each with one overflow byte for refusal; symlink or
+FIFO substitution cannot be followed or block an open. Descriptor metadata and
+the directory entry are rechecked after hashing. The census streams content,
+retains bounded names and digests, and holds at most three descriptors; later
+reference resolution reads nothing.
+
+The binary digest names the executed image. Linux opens `/proc/self/exe`;
+Darwin checks the opened file against its executable mapping's vnode identity.
+A symlink launch is supported and a replacement at the launch pathname cannot
+supply another image's digest. If the Darwin image's vnode path cannot be
+opened, release binding refuses. The executable hash is bounded at 2 GiB plus
+one overflow byte. These are startup/restart costs only, with no request, sync,
+retry/no-op, publication, lock, persistent-cache, disk-write or child work.
+
 **Current posture.** This gate ships dark. No pack recipe is bound in this
 binary, so a verified released record still refuses startup for its missing
 recipe. The load bindings themselves are no longer the missing half: at the

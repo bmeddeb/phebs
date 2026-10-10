@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 // The census is the machine-derived source of both bindings VerifyForLoad
@@ -272,5 +274,65 @@ func TestArtifactDirectoryZeroValueIsInert(t *testing.T) {
 	}
 	if got := opened.Count(); got != 0 {
 		t.Fatalf("Count() on a nil directory = %d, want 0", got)
+	}
+}
+
+func TestArtifactRootRefusesDelimiterCollision(t *testing.T) {
+	dir := t.TempDir()
+	// These bytes formerly encoded the same two rows as files a and b.
+	forged := "a " + testDigest("first") + "\nb"
+	if err := os.WriteFile(filepath.Join(dir, forged), []byte("second"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenArtifactDirectory(dir); err == nil {
+		t.Fatal("a filename containing root row delimiters must refuse")
+	}
+}
+
+func TestArtifactReadBoundsUseOpenedBytes(t *testing.T) {
+	for _, remaining := range []int64{maxArtifactBytes, 7} {
+		t.Run(fmt.Sprint(remaining), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "growing")
+			writeSparseArtifact(t, filepath.Dir(path), filepath.Base(path), 0)
+			file, err := os.Open(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = file.Close() }()
+			before, err := file.Stat()
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Growth after descriptor metadata was sampled must consume only
+			// the allowed bytes plus one overflow sentinel.
+			if err := os.Truncate(path, 2*maxArtifactBytes); err != nil {
+				t.Fatal(err)
+			}
+			_, read, err := hashOpenedArtifact(file, before, remaining)
+			if err == nil || read != remaining+1 {
+				t.Fatalf("read = %d, error = %v; want %d bytes and refusal", read, err, remaining+1)
+			}
+		})
+	}
+}
+
+func TestArtifactOpenRefusesFIFOAndSymlink(t *testing.T) {
+	for _, kind := range []string{"fifo", "symlink"} {
+		t.Run(kind, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "card")
+			var err error
+			if kind == "fifo" {
+				err = unix.Mkfifo(path, 0o600)
+			} else {
+				err = os.Symlink(filepath.Join(t.TempDir(), "absent"), path)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := OpenArtifactDirectory(dir); err == nil {
+				t.Fatal("a FIFO or symlink must refuse without being read")
+			}
+		})
 	}
 }
